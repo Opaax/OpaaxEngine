@@ -1,0 +1,17 @@
+#int WindowWidth, int WindowHeight, int FrameRate, int FullScreen == 1 ? Yes : No
+Window 1200 720 60 0
+
+#int Shape Radius, int Collision Radius, float Speed, int Fill Color[3], int Outline Color[3], int outline Thickness, int Vertices Count
+Player 30 30 3 204 17 242 249 155 15 3 8
+
+#int Shape Radius, int Collision Radius, float Speed, int Fill Color[3], int Outline Color[3], int outline Thickness, int Vertices Count, int Lifespan
+Bullet 15 15 8 255 0 0 255 100 150 4 9 90
+
+#int Shape Radius, int Collision Radius, float MinSpeed, float MaxSpeed, int Fill Color[3], int Outline Color[3], int outline Thickness, int MinVertices Count, int Max Vertices Count, int LifeSpan
+Enemy 35 35 1 4 255 255 255 255 255 255 3 3 9 540
+
+#int xSafeZone, int ySafeZone, int Spawn Interval
+EnemySpawn 30 30 50
+
+#int Enemy, int SmallEnemy
+Score 500 250
