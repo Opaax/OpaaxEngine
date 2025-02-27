@@ -3,6 +3,7 @@
 #include <SFML/Graphics.hpp>
 #include "EngineType.hpp"
 #include "EntityManager.h"
+#include "Asset/AssetsManager.h"
 
 class Entity;
 
@@ -15,6 +16,10 @@ class GameEngine
 {
 private:
     std::string m_config_path;
+
+    //Assets
+    // Store it on heap.
+    TUniquePtr<AssetsManager> m_assetMgr;
 
     //Window
     sf::RenderWindow    m_window{};
@@ -87,6 +92,7 @@ private:
 
     void ConstructGUIGeneralTab();
     void ConstructGUIEntitiesTab() const;
+    void ConstructAssetsTab() const;
 
     void OnBulletColliding(TSharedPtr<Entity> Bullet, TSharedPtr<Entity> Enemy);
     void SpawnSmallEnemy(TSharedPtr<Entity> Enemy);

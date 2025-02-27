@@ -137,6 +137,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="src\Engine\Asset\AssetEnumType.cpp" />
+    <ClCompile Include="src\Engine\Asset\AssetsManager.cpp" />
     <ClCompile Include="src\Engine\Entity.cpp" />
     <ClCompile Include="src\Engine\EntityManager.cpp" />
     <ClCompile Include="src\Engine\GameEngine.cpp" />
@@ -148,6 +150,8 @@
     <ClCompile Include="src\imgui\imgui_widgets.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Engine\Asset\AssetEnumType.h" />
+    <ClInclude Include="src\Engine\Asset\AssetsManager.h" />
     <ClInclude Include="src\Engine\Component.hpp" />
     <ClInclude Include="src\Engine\EngineType.hpp" />
     <ClInclude Include="src\Engine\Entity.h" />
@@ -167,9 +171,14 @@
     <ClInclude Include="src\imgui\imstb_truetype.h" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="config\AssetsConfig.txt" />
+    <Content Include="config\GameEngineConfig.txt" />
     <Content Include="config\GeometryWarsConfig.txt" />
     <Content Include="resources\bell-mt.ttf" />
     <Content Include="src\ReadMe.MD" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="resources\arts\" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

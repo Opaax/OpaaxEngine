@@ -27,7 +27,9 @@ GameEngine::GameEngine(const std::string& config_path): m_scoreText(m_scoreFont)
 void GameEngine::Init()
 {
     Math::RandInit();
+
     
+    m_assetMgr = std::make_unique<AssetsManager>();
     m_entityMgr = std::make_unique<EntityManager>();
 
     if (!m_scoreFont.openFromFile("resources/bell-mt.ttf"))
@@ -240,6 +242,17 @@ void GameEngine::ConstructGUIEntitiesTab() const
                     }
                 }
             }
+}
+
+void GameEngine::ConstructAssetsTab() const
+{
+    //Asset can be select from GUI, so we need static index (took from demo)
+    static int lAssetCurrentGUIListBox = 1;
+    //Convert vector to raw const char* array.
+    const char* lItem[EAssetsType::Asset_Count];
+    std::transform(m_assetMgr->AllAssetType.begin(), m_assetMgr->AllAssetType.end(), lItem, 
+                   [](const std::string& str) { return str.c_str(); });
+    ImGui::ListBox("All Type", &lAssetCurrentGUIListBox, lItem, EAssetsType::Asset_Count, 4);
 }
 
 void GameEngine::OnBulletColliding(TSharedPtr<Entity> Bullet, TSharedPtr<Entity> Enemy)
@@ -604,7 +617,7 @@ void GameEngine::sImGUI()
 {
     ImGui::SFML::Update(m_window, m_deltaClock.restart());
 
-    //ImGui::ShowDemoWindow();
+    ImGui::ShowDemoWindow();
 
     ImGui::SetNextWindowSize(ImVec2(300, 300), ImGuiCond_Always);
     ImGui::SetNextWindowPos({m_width - 310.f, 10}, ImGuiCond_Always);
@@ -612,7 +625,7 @@ void GameEngine::sImGUI()
     ImGuiWindowFlags lDefaultWindowFlag{};
     bool* lDefaultWindowOpenState{};
     
-    ImGui::Begin("SFML Engine", lDefaultWindowOpenState, lDefaultWindowFlag);
+    ImGui::Begin("Opaax Engine", lDefaultWindowOpenState, lDefaultWindowFlag);
     ImGuiTabBarFlags lTabFlags = ImGuiTabBarFlags_None;
     if(ImGui::BeginTabBar("EngineTabBar#Default"))
     {
@@ -624,6 +637,12 @@ void GameEngine::sImGUI()
         if (ImGui::BeginTabItem("Entities"))
         {
             ConstructGUIEntitiesTab();
+            ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem("Assets"))
+        {
+            ImGui::SeparatorText("All Assets Type");
+            ConstructAssetsTab();
             ImGui::EndTabItem();
         }
         ImGui::EndTabBar();

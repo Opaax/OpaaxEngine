@@ -16,3 +16,17 @@ using STDString = std::string;
 using FVector2D = Vector2D<float>;
 using IVector2D = Vector2D<int>;
 using DVector2D = Vector2D<double>;
+
+/**
+ * Allocates a new object of type T with the given arguments and returns it as a TUniquePtr.  Disabled for array-type TUniquePtrs.
+ * The object is value-initialized, which will call a user-defined default constructor if it exists, but a trivial type will be zeroed.
+ *
+ * @param Args The arguments to pass to the constructor of T.
+ *
+ * @return A TUniquePtr which points to a newly-constructed T with the specified Args.
+ */
+template < typename T, typename... TArgs, std::enable_if_t<(!std::is_array_v<T>), int> = 0>
+[[nodiscard]] TUniquePtr<T> MakeUnique(TArgs&&... Args)
+{
+    return TUniquePtr<T>(std::make_unique<T>(std::forward<TArgs>(Args)...));
+}

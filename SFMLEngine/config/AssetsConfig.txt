@@ -1,0 +1,2 @@
+﻿#string AssetType, string Asset Name (should be unique), string Asset path
+Font Bell-mt resources/bell-mt.ttf
