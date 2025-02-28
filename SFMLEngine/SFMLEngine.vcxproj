@@ -144,6 +144,7 @@
     <ClCompile Include="src\Engine\Entity.cpp" />
     <ClCompile Include="src\Engine\EntityManager.cpp" />
     <ClCompile Include="src\Engine\GameEngine.cpp" />
+    <ClCompile Include="src\Engine\Scene\SceneBase.cpp" />
     <ClCompile Include="src\imgui\imgui-SFML.cpp" />
     <ClCompile Include="src\imgui\imgui.cpp" />
     <ClCompile Include="src\imgui\imgui_demo.cpp" />
@@ -163,6 +164,7 @@
     <ClInclude Include="src\Engine\GameEngine.h" />
     <ClInclude Include="src\Engine\Math\Math.hpp" />
     <ClInclude Include="src\Engine\Math\Vector2D.hpp" />
+    <ClInclude Include="src\Engine\Scene\SceneBase.h" />
     <ClInclude Include="src\Engine\SFMLExtension\SFMLExtension.hpp" />
     <ClInclude Include="src\imgui\imconfig-SFML.h" />
     <ClInclude Include="src\imgui\imconfig.h" />

@@ -76,6 +76,6 @@ void AssetsManager::ReadConfig()
 void AssetsManager::GatherDefaultFont()
 {
     //will be exception if this path is not valid.
-    sf::Font lDefaultFont{EnginePath::FONT_DEFAULT};
+    sf::Font lDefaultFont{Engine::FONT_DEFAULT};
     m_fonts["Default"] = lDefaultFont;
 }

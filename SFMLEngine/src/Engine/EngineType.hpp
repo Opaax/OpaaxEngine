@@ -9,6 +9,12 @@ template <typename T>
 using TSharedPtr = std::shared_ptr<T>;
 
 template <typename T>
+using TOptional = std::optional<T>;
+
+template <typename T>
+using TRefWrapper = std::reference_wrapper<T>;
+
+template <typename T>
 using TUniquePtr = std::unique_ptr<T>;
 
 using STDString = std::string;
@@ -29,4 +35,10 @@ template < typename T, typename... TArgs, std::enable_if_t<(!std::is_array_v<T>)
 [[nodiscard]] TUniquePtr<T> MakeUnique(TArgs&&... Args)
 {
     return TUniquePtr<T>(std::make_unique<T>(std::forward<TArgs>(Args)...));
+}
+
+template <typename T>
+[[nodiscard]] TRefWrapper<T> Make_RefWrapper(T& Ref) noexcept
+{
+    return std::ref(Ref);
 }
