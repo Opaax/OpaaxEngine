@@ -6,6 +6,9 @@
 # Copyright Arts
 */resources/arts/*
 
+# Copyright fonts
+*/resources/fonts/*
+
 # User-specific files
 *.rsuser
 *.suo

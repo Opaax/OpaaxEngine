@@ -4,6 +4,7 @@
 #include <iostream>
 #include <sstream>
 
+#include "EngineConstant.h"
 #include "EntityManager.h"
 #include "../imgui/imgui.h"
 #include "../imgui/imgui-SFML.h"
@@ -27,17 +28,11 @@ GameEngine::GameEngine(const std::string& config_path): m_scoreText(m_scoreFont)
 void GameEngine::Init()
 {
     Math::RandInit();
-
     
-    m_assetMgr = std::make_unique<AssetsManager>();
-    m_entityMgr = std::make_unique<EntityManager>();
-
-    if (!m_scoreFont.openFromFile("resources/bell-mt.ttf"))
-    {
-        std::cerr << "Failed to load font. Filepath: " << std::endl;
-    }
-
-    m_scoreText.setFont(m_scoreFont);
+    m_assetMgr = MakeUnique<AssetsManager>(EnginePath::ASSET_CONFIG_PATH);
+    m_entityMgr = MakeUnique<EntityManager>();
+    
+    m_scoreText.setFont(m_assetMgr->GetFont("KennyPixel"));
     m_scoreText.setCharacterSize(20);
     
     if(!m_config_path.empty())
@@ -244,7 +239,7 @@ void GameEngine::ConstructGUIEntitiesTab() const
             }
 }
 
-void GameEngine::ConstructAssetsTab() const
+void GameEngine::ConstructAssetsTypeTab() const
 {
     //Asset can be select from GUI, so we need static index (took from demo)
     static int lAssetCurrentGUIListBox = 1;
@@ -253,6 +248,19 @@ void GameEngine::ConstructAssetsTab() const
     std::transform(m_assetMgr->AllAssetType.begin(), m_assetMgr->AllAssetType.end(), lItem, 
                    [](const std::string& str) { return str.c_str(); });
     ImGui::ListBox("All Type", &lAssetCurrentGUIListBox, lItem, EAssetsType::Asset_Count, 4);
+}
+
+void GameEngine::ConstructAssetsFontTab() const
+{
+    if(ImGui::CollapsingHeader("Fonts"))
+    {
+        for (auto& lFontPair : m_assetMgr->GetFonts())
+        {
+            ImGui::Text(lFontPair.first.c_str());
+            ImGui::SameLine();
+            ImGui::Text(lFontPair.second.getInfo().family.c_str());
+        }
+    }
 }
 
 void GameEngine::OnBulletColliding(TSharedPtr<Entity> Bullet, TSharedPtr<Entity> Enemy)
@@ -642,7 +650,11 @@ void GameEngine::sImGUI()
         if (ImGui::BeginTabItem("Assets"))
         {
             ImGui::SeparatorText("All Assets Type");
-            ConstructAssetsTab();
+            ConstructAssetsTypeTab();
+            
+            ImGui::Separator();
+            ImGui::SeparatorText("All Loaded Fonts");
+            ConstructAssetsFontTab();
             ImGui::EndTabItem();
         }
         ImGui::EndTabBar();

@@ -92,7 +92,8 @@ private:
 
     void ConstructGUIGeneralTab();
     void ConstructGUIEntitiesTab() const;
-    void ConstructAssetsTab() const;
+    void ConstructAssetsTypeTab() const;
+    void ConstructAssetsFontTab() const;
 
     void OnBulletColliding(TSharedPtr<Entity> Bullet, TSharedPtr<Entity> Enemy);
     void SpawnSmallEnemy(TSharedPtr<Entity> Enemy);

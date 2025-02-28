@@ -1,2 +1,4 @@
 ﻿#string AssetType, string Asset Name (should be unique), string Asset path
 Font Bell-mt resources/bell-mt.ttf
+Font KennyPixel resources/fonts/Kenney_Pixel.ttf
+Font KennyPixelSquared resources/fonts/Kenney_Pixel_Square.ttf
