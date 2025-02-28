@@ -61,6 +61,7 @@ public:
     ~GameEngine() = default;
 
     void Run();
+    void Quit() const;
 
     sf::RenderWindow& GetWindow() const {return *const_cast<sf::RenderWindow*>(&m_window);}
     AssetsManager* GetAssetManager() const {return m_assetMgr.get();}

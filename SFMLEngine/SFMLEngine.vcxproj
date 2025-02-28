@@ -137,6 +137,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="src\Engine\Actions\ActionBase.cpp" />
     <ClCompile Include="src\Engine\Asset\AssetEnumType.cpp" />
     <ClCompile Include="src\Engine\Asset\AssetsManager.cpp" />
     <ClCompile Include="src\Engine\ConfigHelper.cpp" />
@@ -145,6 +146,8 @@
     <ClCompile Include="src\Engine\EntityManager.cpp" />
     <ClCompile Include="src\Engine\GameEngine.cpp" />
     <ClCompile Include="src\Engine\Scene\SceneBase.cpp" />
+    <ClCompile Include="src\Engine\Scene\Scene_Game.cpp" />
+    <ClCompile Include="src\Engine\Scene\Scene_Menu.cpp" />
     <ClCompile Include="src\imgui\imgui-SFML.cpp" />
     <ClCompile Include="src\imgui\imgui.cpp" />
     <ClCompile Include="src\imgui\imgui_demo.cpp" />
@@ -153,6 +156,7 @@
     <ClCompile Include="src\imgui\imgui_widgets.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Engine\Actions\ActionBase.h" />
     <ClInclude Include="src\Engine\Asset\AssetEnumType.h" />
     <ClInclude Include="src\Engine\Asset\AssetsManager.h" />
     <ClInclude Include="src\Engine\Component.hpp" />
@@ -165,6 +169,8 @@
     <ClInclude Include="src\Engine\Math\Math.hpp" />
     <ClInclude Include="src\Engine\Math\Vector2D.hpp" />
     <ClInclude Include="src\Engine\Scene\SceneBase.h" />
+    <ClInclude Include="src\Engine\Scene\Scene_Game.h" />
+    <ClInclude Include="src\Engine\Scene\Scene_Menu.h" />
     <ClInclude Include="src\Engine\SFMLExtension\SFMLExtension.hpp" />
     <ClInclude Include="src\imgui\imconfig-SFML.h" />
     <ClInclude Include="src\imgui\imconfig.h" />

@@ -10,9 +10,9 @@
 #include "../imgui/imgui.h"
 #include "../imgui/imgui-SFML.h"
 #include "Math/Math.hpp"
-#include "Math/Vector2D.hpp"
 #include "Scene/SceneBase.h"
-#include "SFMLExtension/SFMLExtension.hpp"
+#include "Scene/Scene_Game.h"
+#include "Scene/Scene_Menu.h"
 
 //CTOR Default
 GameEngine::GameEngine()
@@ -33,6 +33,7 @@ void GameEngine::Init()
     
     m_assetMgr = MakeUnique<AssetsManager>(Engine::ASSET_CONFIG_PATH);
 
+    //TODO Make a factory for these class
     m_loadedScene["MainMenu"] = MakeUnique<Scene_Menu>(*this);
     m_loadedScene["Game"] = MakeUnique<Scene_Game>(*this);
     
@@ -89,6 +90,8 @@ void GameEngine::Init()
     }else
     {
         SetupDefaultConfig();
+        m_firstSceneName = "MainMenu";
+        SetActiveFirstScene();
     }
 }
 
@@ -314,4 +317,9 @@ void GameEngine::Run()
         ImGui::SFML::Render(m_window);
         m_window.display();
     }
+}
+
+void GameEngine::Quit() const
+{
+    GetWindow().close();
 }

@@ -1,8 +1,31 @@
 ﻿#include "SceneBase.h"
 #include "../GameEngine.h"
 
+void SceneBase::Init()
+{
+    RegisterKeyAction(sf::Keyboard::Key::Escape, "QUIT");
+    
+    RegisterActions();
+}
+
+void SceneBase::OnKeyboardPressed(sf::Keyboard::Key Key)
+{
+    if(m_keyActions.find(Key) != m_keyActions.end())
+    {
+        EActionType lType = EActionType::EAT_Start;
+        ActionBase lAction(m_keyActions.at(Key), lType);
+        DoAction(lAction);
+    }
+}
+
+void SceneBase::RegisterKeyAction(sf::Keyboard::Key Key, STDString ActionName)
+{
+    m_keyActions[Key] = ActionName;
+}
+
 SceneBase::SceneBase(const GameEngine& GameEngine):m_gameEngine{GameEngine}
 {
+    Init();
 }
 
 SceneBase::~SceneBase() = default;
@@ -33,36 +56,18 @@ void SceneBase::ProcessMouseInput(sf::Mouse::Button Button, EInputActionType Act
     }
 }
 
-void Scene_Menu::Render()
+void SceneBase::DoAction(const ActionBase& Action)
 {
-    m_testFont = m_gameEngine.GetAssetManager()->GetFont("KennyPixel");
-    m_text.setFont(m_testFont);
-    m_text.setString("Its Menu Scene");
-
-    m_gameEngine.GetWindow().draw(m_text);
-}
-
-void Scene_Menu::OnKeyboardPressed(sf::Keyboard::Key Key)
-{
-    if(Key == sf::Keyboard::Key::W)
+    switch (Action.GetActionType())
     {
-        m_text.setPosition({500,500});
-    }
-}
-
-void Scene_Game::Render()
-{
-    m_testFont = m_gameEngine.GetAssetManager()->GetFont("KennyPixel");
-    m_text.setFont(m_testFont);
-    m_text.setString("Its Game Scene");
-
-    m_gameEngine.GetWindow().draw(m_text);
-}
-
-void Scene_Game::OnKeyboardPressed(sf::Keyboard::Key Key)
-{
-    if(Key == sf::Keyboard::Key::W)
-    {
-        m_text.setPosition({500,500});
+    case EActionType::EAT_Start:
+        if(Action.GetActionName() == "QUIT")
+        {
+            m_gameEngine.Quit();
+        }
+        break;
+    case EActionType::EAT_End:
+        break;
+    default: ;
     }
 }
