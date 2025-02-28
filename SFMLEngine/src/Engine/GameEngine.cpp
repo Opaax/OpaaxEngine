@@ -223,52 +223,33 @@ void GameEngine::sRender()
     }
 }
 
-void GameEngine::sUserInput(const std::optional<sf::Event>& Event)
+void GameEngine::sUserInput(const TOptional<sf::Event>& Event)
 {
-    if(Event.value().getIf<sf::Event::KeyPressed>())
+    if(Event.value().is<sf::Event::KeyPressed>() || Event.value().is<sf::Event::KeyReleased>())
     {
-        switch (sf::Keyboard::Key lKey = Event.value().getIf<sf::Event::KeyPressed>()->code)
+        if(m_currentScene)
         {
-        case sf::Keyboard::Key::W:
-            break;
-        case sf::Keyboard::Key::S:
-            break;
-        case sf::Keyboard::Key::D:
-            break;
-        case sf::Keyboard::Key::A:
-            break;
-        case sf::Keyboard::Key::P:
-            break;
-        case sf::Keyboard::Key::Escape:
-            m_window.close();
-            break;
-        default: ;
+            if(auto* lPressedEvent = Event.value().getIf<sf::Event::KeyPressed>())
+            {
+                m_currentScene->get().ProcessKeyboardInput(lPressedEvent->code, EInputActionType::Pressed);
+            }else if(auto* lReleaseEvent = Event.value().getIf<sf::Event::KeyReleased>())
+            {
+                m_currentScene->get().ProcessKeyboardInput(lReleaseEvent->code, EInputActionType::Released);
+            }
         }
     }
 
-    if(Event.value().getIf<sf::Event::KeyReleased>())
+    if(Event.value().is<sf::Event::MouseButtonPressed>() || Event.value().is<sf::Event::MouseButtonReleased>())
     {
-        switch (sf::Keyboard::Key lKey = Event.value().getIf<sf::Event::KeyReleased>()->code)
+        if(m_currentScene)
         {
-        case sf::Keyboard::Key::W:
-        case sf::Keyboard::Key::Escape:
-            m_window.close();
-            break;
-        default: ;
-        }
-    }
-
-    if(const auto& lEvent = Event.value().getIf<sf::Event::MouseButtonPressed>())
-    {
-        if(lEvent->button == sf::Mouse::Button::Left)
-        {
-        }
-    }
-
-    if(Event.value().getIf<sf::Event::MouseButtonReleased>())
-    {
-        if(Event.value().getIf<sf::Event::MouseButtonReleased>()->button == sf::Mouse::Button::Left)
-        {
+            if(auto* lPressedEvent = Event.value().getIf<sf::Event::MouseButtonPressed>())
+            {
+                m_currentScene->get().ProcessMouseInput(lPressedEvent->button, EInputActionType::Pressed);
+            }else if(auto* lReleaseEvent = Event.value().getIf<sf::Event::MouseButtonReleased>())
+            {
+                m_currentScene->get().ProcessMouseInput(lReleaseEvent->button, EInputActionType::Released);
+            }
         }
     }
 }

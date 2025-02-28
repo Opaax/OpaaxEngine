@@ -2,4 +2,4 @@
 Window 1200 720 60 0
 
 #string First Scene Name
-FirstScene Game
+FirstScene MainMenu
