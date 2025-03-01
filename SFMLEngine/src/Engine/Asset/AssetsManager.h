@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 #include <SFML/Graphics/Font.hpp>
-
+#include "../ConfigIni/ConfigIni.h"
 #include "../EngineType.hpp"
 
 /**
@@ -28,6 +28,8 @@ private:
     
     AssetMap<sf::Font> m_fonts;
 
+    TUniquePtr<ConfigIni> m_config;
+
 private:
     void ReadConfig();
     void GatherDefaultFont();
@@ -45,7 +47,6 @@ public:
 #undef ACTION_TYPE_AS_STRING
     };
 public:
-    AssetsManager() = default;
     AssetsManager(const STDString& AssetsConfigPath);
 
     const AssetMap<sf::Font>& GetFonts() const {return m_fonts;}

@@ -24,6 +24,7 @@ private:
 
     //Window
     sf::RenderWindow    m_window{};
+    sf::Color           m_windowColor{130, 250, 100,255};
     unsigned int        m_width         = 1280;
     unsigned int        m_height        = 720;
     int                 m_framerate     = 60;
@@ -32,6 +33,7 @@ private:
     //ImGUI
     bool bIsImguiInit{false};
     sf::Clock m_deltaClock;
+    float m_ImguiDebugBackgroundColor[3] = {130, 250, 100};
 
     //Scene
     STDString m_firstSceneName;

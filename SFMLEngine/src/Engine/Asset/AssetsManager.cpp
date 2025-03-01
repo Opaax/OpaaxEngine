@@ -7,15 +7,20 @@
 #include "../ConfigHelper.h"
 #include "../EngineConstant.h"
 
+#include "SimpleIni.h"
+
 AssetsManager::AssetsManager(const STDString& AssetsConfigPath)
 {
     m_configPath = AssetsConfigPath;
+
+    m_config = MakeUnique<ConfigIni>("config/AssetsConfig.ini");
 
     ReadConfig();
 }
 
 void AssetsManager::ReadConfig()
 {
+    
     if(!m_configPath.empty())
     {
         //Read in the config file.

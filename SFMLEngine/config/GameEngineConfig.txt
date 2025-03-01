@@ -1,3 +1,6 @@
+#WindowBackgroundColor, uint 0-255 (rgb) alpha will be 255 always.
+WindowColor 150 150 150
+
 #int WindowWidth, int WindowHeight, int FrameRate, int FullScreen == 1 ? Yes : No
 Window 1200 720 60 0
 

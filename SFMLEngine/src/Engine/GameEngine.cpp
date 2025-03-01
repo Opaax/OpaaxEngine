@@ -68,6 +68,16 @@ void GameEngine::Init()
                 continue;
             }
 
+            //Window Color properties
+            if(lPropName == "WindowColor" && lLineStream >> m_windowColor.r >> m_windowColor.g >> m_windowColor.b)
+            {
+                //cast to remove warnings (narrow cast int to float)
+                //Create some Macro to avoid warning as UE?
+                m_ImguiDebugBackgroundColor[0] = static_cast<float>(m_windowColor.r) / 255.f;
+                m_ImguiDebugBackgroundColor[1] = static_cast<float>(m_windowColor.g) / 255.f;
+                m_ImguiDebugBackgroundColor[2] = static_cast<float>(m_windowColor.b) / 255.f;
+            }
+
             //Windows properties
             if(lPropName == "Window" &&
                 lLineStream >> m_width
@@ -90,8 +100,6 @@ void GameEngine::Init()
     }else
     {
         SetupDefaultConfig();
-        m_firstSceneName = "MainMenu";
-        SetActiveFirstScene();
     }
 }
 
@@ -99,6 +107,8 @@ void GameEngine::SetupDefaultConfig()
 {
     std::cout << "The Game is setup with default config" << '\n';
     CreateSFMLWindow();
+    m_firstSceneName = "MainMenu";
+    SetActiveFirstScene();
 }
 
 void GameEngine::CreateSFMLWindow()
@@ -116,8 +126,11 @@ void GameEngine::CreateSFMLWindow()
         break;
     }
 
+    sf::ContextSettings lSetting;
+
     m_window.create(lVideoMode, "Geometry Wars", lWindowState);
     m_window.setFramerateLimit(m_framerate);
+    m_window.clear(m_windowColor);
 
     bIsImguiInit = ImGui::SFML::Init(m_window);
 }
@@ -137,6 +150,13 @@ void GameEngine::ConstructGUIGeneralTab()
 {
     ImGui::Text("Debug General settings.");
     ImGui::Spacing();
+    if(ImGui::ColorEdit3("Window Background Color", m_ImguiDebugBackgroundColor))
+    {
+        //cast to remove warnings (narrow cast int to float)
+        m_windowColor.r = static_cast<uint8_t>(m_ImguiDebugBackgroundColor[0] * 255);
+        m_windowColor.g = static_cast<uint8_t>(m_ImguiDebugBackgroundColor[1] * 255);
+        m_windowColor.b = static_cast<uint8_t>(m_ImguiDebugBackgroundColor[2] * 255);
+    }
 }
 
 // void GameEngine::ConstructGUIEntitiesTab() const
@@ -312,7 +332,7 @@ void GameEngine::Run()
         
         sImGUI();
 
-        m_window.clear();
+        m_window.clear(m_windowColor);
         sRender();
         ImGui::SFML::Render(m_window);
         m_window.display();

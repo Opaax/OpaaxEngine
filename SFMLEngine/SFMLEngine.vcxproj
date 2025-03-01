@@ -106,7 +106,7 @@
       </PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>C:\Dev\Libs\SFML-3.0.0\include;$(SolutionDir)\src\imgui\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Dev\Libs\SFML-3.0.0\include;$(SolutionDir)\src\imgui\;%(AdditionalIncludeDirectories);C:\Dev\Libs\SimpleIni</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -124,7 +124,7 @@
       <PreprocessorDefinitions>SFML_STATIC</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>C:\Dev\Libs\SFML-3.0.0\include;$(SolutionDir)\src\imgui\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Dev\Libs\SFML-3.0.0\include;$(SolutionDir)\src\imgui\;%(AdditionalIncludeDirectories);C:\Dev\Libs\SimpleIni</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -141,6 +141,7 @@
     <ClCompile Include="src\Engine\Asset\AssetEnumType.cpp" />
     <ClCompile Include="src\Engine\Asset\AssetsManager.cpp" />
     <ClCompile Include="src\Engine\ConfigHelper.cpp" />
+    <ClCompile Include="src\Engine\ConfigIni\ConfigIni.cpp" />
     <ClCompile Include="src\Engine\EngineConstant.cpp" />
     <ClCompile Include="src\Engine\Entity.cpp" />
     <ClCompile Include="src\Engine\EntityManager.cpp" />
@@ -161,6 +162,7 @@
     <ClInclude Include="src\Engine\Asset\AssetsManager.h" />
     <ClInclude Include="src\Engine\Component.hpp" />
     <ClInclude Include="src\Engine\ConfigHelper.h" />
+    <ClInclude Include="src\Engine\ConfigIni\ConfigIni.h" />
     <ClInclude Include="src\Engine\EngineConstant.h" />
     <ClInclude Include="src\Engine\EngineType.hpp" />
     <ClInclude Include="src\Engine\Entity.h" />
