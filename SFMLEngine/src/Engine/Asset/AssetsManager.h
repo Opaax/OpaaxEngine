@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 #include <SFML/Graphics/Font.hpp>
+
+#include "SpriteSheet.h"
 #include "../ConfigIni/ConfigIni.h"
 #include "../EngineType.hpp"
 
@@ -25,7 +27,9 @@ class AssetsManager
 {
 private:
     STDString m_configPath;
-    AssetMap<sf::Font> m_fonts;
+    AssetMap<TUniquePtr<sf::Font>> m_fonts;
+    AssetMap<TUniquePtr<sf::Texture>> m_texture;
+    AssetMap<TUniquePtr<SpriteSheet>> m_spriteSheet;
     TUniquePtr<ConfigIni> m_config;
 
 private:
@@ -50,6 +54,8 @@ public:
 public:
     AssetsManager(const STDString& AssetsConfigPath);
 
-    const AssetMap<sf::Font>& GetFonts() const {return m_fonts;}
-    sf::Font& GetFont(const STDString& FontName) {return m_fonts[FontName];}
+    const AssetMap<TUniquePtr<sf::Font>>& GetFonts() const {return m_fonts;}
+    sf::Font& GetFont(const STDString& FontName) {return *m_fonts[FontName].get();}
+    sf::Texture& GetTexture(const STDString& TextureName) {return *m_texture[TextureName].get();}
+    SpriteSheet& GetSpriteSheet(const STDString& SpriteSheetName) {return *m_spriteSheet[SpriteSheetName].get();}
 };

@@ -140,6 +140,7 @@
     <ClCompile Include="src\Engine\Actions\ActionBase.cpp" />
     <ClCompile Include="src\Engine\Asset\AssetEnumType.cpp" />
     <ClCompile Include="src\Engine\Asset\AssetsManager.cpp" />
+    <ClCompile Include="src\Engine\Asset\SpriteSheet.cpp" />
     <ClCompile Include="src\Engine\ConfigHelper.cpp" />
     <ClCompile Include="src\Engine\ConfigIni\ConfigIni.cpp" />
     <ClCompile Include="src\Engine\EngineConstant.cpp" />
@@ -160,6 +161,7 @@
     <ClInclude Include="src\Engine\Actions\ActionBase.h" />
     <ClInclude Include="src\Engine\Asset\AssetEnumType.h" />
     <ClInclude Include="src\Engine\Asset\AssetsManager.h" />
+    <ClInclude Include="src\Engine\Asset\SpriteSheet.h" />
     <ClInclude Include="src\Engine\Component.hpp" />
     <ClInclude Include="src\Engine\ConfigHelper.h" />
     <ClInclude Include="src\Engine\ConfigIni\ConfigIni.h" />
@@ -186,7 +188,6 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="config\AssetsConfig.ini" />
-    <Content Include="config\AssetsConfig.txt" />
     <Content Include="config\GameEngineConfig.txt" />
     <Content Include="config\GeometryWarsConfig.txt" />
     <Content Include="resources\arts\tilemap-characters_packed.png" />

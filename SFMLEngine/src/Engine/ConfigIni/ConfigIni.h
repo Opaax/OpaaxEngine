@@ -14,6 +14,7 @@ private:
 private:
     void CheckNIfCreate();
     ConfigIni() = default;
+
 public:
     /**
      * 
@@ -21,8 +22,10 @@ public:
      */
     explicit ConfigIni(const STDString& IniPath);
 
-    bool IsReadable() const {return bCanBeRead;}
-    bool IsJustCreated() const {return bIsJustCreated;}
+    bool IsReadable() const { return bCanBeRead; }
+    bool IsJustCreated() const { return bIsJustCreated; }
+
+    void GetValue();
 
     /**
      * 
@@ -82,4 +85,6 @@ public:
      * 
      */
     void Save() const;
+
+    CSimpleIni& GetIni() const { return *m_ini; }
 };

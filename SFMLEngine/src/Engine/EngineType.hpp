@@ -18,6 +18,7 @@ template <typename T>
 using TUniquePtr = std::unique_ptr<T>;
 
 using STDString = std::string;
+using UInt8 = std::uint8_t;
 
 using FVector2D = Vector2D<float>;
 using IVector2D = Vector2D<int>;

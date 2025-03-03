@@ -4,7 +4,7 @@
 #include "Component.hpp"
 #include "EngineType.hpp"
 
-using ComponentTuple = std::tuple<CTransform, CCircleShape, CPlayerInput, CLifeSpan, CCollision>;
+using ComponentTuple = std::tuple<CTransform, CCircleShape, CPlayerInput, CLifeSpan, CCollision, CRender, CAnimation>;
 
 //Use struct because all my tags are public by default, make more sense using struct.
 enum struct EntityTags 

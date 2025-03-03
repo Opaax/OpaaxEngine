@@ -22,10 +22,8 @@ protected:
     const GameEngine& m_gameEngine;
     TUniquePtr<EntityManager> m_entityMgr;
     ActionMap m_keyActions;
+    bool bIsInit = false;
 
-private:
-    void Init();
-    
 protected:
     virtual void OnKeyboardPressed(sf::Keyboard::Key Key);
     virtual void OnKeyboardReleased(sf::Keyboard::Key Key) = 0;
@@ -33,12 +31,15 @@ protected:
     virtual void OnMouseReleased(sf::Mouse::Button Button) = 0;
 
     virtual void RegisterActions() {}
+    virtual void OnInit() {}
 
     void RegisterKeyAction(sf::Keyboard::Key Key, STDString ActionName);
 
 public:
     explicit SceneBase(const GameEngine& GameEngine);
     virtual ~SceneBase();
+
+    void Init();
 
     void ProcessKeyboardInput(sf::Keyboard::Key Key, EInputActionType ActionType);
     void ProcessMouseInput(sf::Mouse::Button Button, EInputActionType ActionType);

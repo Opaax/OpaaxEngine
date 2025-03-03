@@ -9,6 +9,7 @@ ConfigIni::ConfigIni(const STDString& IniPath):m_iniPath{IniPath}
     
     m_ini = MakeUnique<CSimpleIni>(true, true, true);
     m_ini->SetUnicode();
+    m_ini->SetMultiLine(true);
 
     switch (m_ini->LoadFile(m_iniPath.c_str()))
     {

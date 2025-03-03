@@ -36,7 +36,8 @@ void GameEngine::Init()
     //TODO Make a factory for these class
     m_loadedScene["MainMenu"] = MakeUnique<Scene_Menu>(*this);
     m_loadedScene["Game"] = MakeUnique<Scene_Game>(*this);
-    
+
+    //Config ini
     if(!m_config_path.empty())
     {
         //Read in the config file.
@@ -128,7 +129,7 @@ void GameEngine::CreateSFMLWindow()
 
     sf::ContextSettings lSetting;
 
-    m_window.create(lVideoMode, "Geometry Wars", lWindowState);
+    m_window.create(lVideoMode, Engine::ENGINE_NAME, lWindowState);
     m_window.setFramerateLimit(m_framerate);
     m_window.clear(m_windowColor);
 
@@ -142,6 +143,7 @@ void GameEngine::SetActiveFirstScene()
         if(lSceneInfo.first == m_firstSceneName)
         {
             m_currentScene = Make_RefWrapper(*lSceneInfo.second);
+            m_currentScene->get().Init();
         }
     }
 }
@@ -233,12 +235,20 @@ void GameEngine::ConstructAssetsFontTab() const
         {
             ImGui::Text(lFontPair.first.c_str());
             ImGui::SameLine();
-            ImGui::Text(lFontPair.second.getInfo().family.c_str());
+            ImGui::Text(lFontPair.second->getInfo().family.c_str());
         }
     }
 }
 
-void GameEngine::sRender()
+void GameEngine::sUpdate() const
+{
+    if(m_currentScene)
+    {
+        m_currentScene->get().Update();
+    }
+}
+
+void GameEngine::sRender() const
 {
     if(m_currentScene)
     {
@@ -246,7 +256,7 @@ void GameEngine::sRender()
     }
 }
 
-void GameEngine::sUserInput(const TOptional<sf::Event>& Event)
+void GameEngine::sUserInput(const TOptional<sf::Event>& Event) const
 {
     if(Event.value().is<sf::Event::KeyPressed>() || Event.value().is<sf::Event::KeyReleased>())
     {
@@ -281,7 +291,7 @@ void GameEngine::sImGUI()
 {
     ImGui::SFML::Update(m_window, m_deltaClock.restart());
 
-    ImGui::ShowDemoWindow();
+    //ImGui::ShowDemoWindow();
 
     ImGui::SetNextWindowSize(ImVec2(300, 300), ImGuiCond_Always);
     ImGui::SetNextWindowPos({m_width - 310.f, 10}, ImGuiCond_Always);
@@ -317,6 +327,7 @@ void GameEngine::Run()
 {
     while (m_window.isOpen())
     {
+        sUpdate();
         while (const std::optional<sf::Event> lEvent = m_window.pollEvent())
         {
             ImGui::SFML::ProcessEvent(m_window, *lEvent);

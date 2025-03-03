@@ -4,8 +4,9 @@
 void SceneBase::Init()
 {
     RegisterKeyAction(sf::Keyboard::Key::Escape, "QUIT");
-    
     RegisterActions();
+    OnInit();
+    bIsInit = true;
 }
 
 void SceneBase::OnKeyboardPressed(sf::Keyboard::Key Key)
@@ -25,7 +26,7 @@ void SceneBase::RegisterKeyAction(sf::Keyboard::Key Key, STDString ActionName)
 
 SceneBase::SceneBase(const GameEngine& GameEngine):m_gameEngine{GameEngine}
 {
-    Init();
+    m_entityMgr = MakeUnique<EntityManager>();
 }
 
 SceneBase::~SceneBase() = default;

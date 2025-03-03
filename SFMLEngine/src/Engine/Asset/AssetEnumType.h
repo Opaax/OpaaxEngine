@@ -31,6 +31,7 @@
 
 ADD_ACTION_TYPE(Font)
 ADD_ACTION_TYPE(Texture)
+ADD_ACTION_TYPE(SpriteSheet)
 
 #endif // ASSET_ENUM_TYPE_H
 #undef ASSET_ENUM_TYPE_H

@@ -1,6 +1,9 @@
 ﻿#pragma once
 
 #include <SFML/Graphics/CircleShape.hpp>
+#include <SFML/Graphics/Sprite.hpp>
+
+#include "Asset/SpriteSheet.h"
 #include "Math/Vector2D.hpp"
 
 //For now component are just Data.
@@ -124,4 +127,47 @@ public:
     CCollision(int InRadius): m_radius{static_cast<float>(InRadius)}{}
 
     float GetRadius() const {return m_radius;}
+};
+
+class CRender : public Component
+{
+private:
+    TUniquePtr<sf::Sprite> m_sprite;
+    
+public:
+    CRender() = default;
+    CRender(const sf::Texture& InTexture)
+    {
+        m_sprite = MakeUnique<sf::Sprite>(InTexture);
+    }
+
+    sf::Sprite& GetSprite() const {return *m_sprite;}
+};
+
+class CAnimation : public Component
+{
+private:
+    CRender* m_render;
+    SpriteSheet* m_spriteSheet;
+    int m_animSpeed{30};
+    int m_currentFrame{0};
+    
+public:
+    CAnimation() = default;
+    CAnimation(CRender& InRender, SpriteSheet& InSpriteSheet, int InAnimSpeed = 20)
+    :m_render{&InRender},m_spriteSheet{&InSpriteSheet},
+    m_animSpeed{InAnimSpeed}
+    {
+        if(m_render && m_spriteSheet)
+        {
+            m_render->GetSprite().setTextureRect({{0,0},{m_spriteSheet->GetSize(), m_spriteSheet->GetSize()}});
+        }
+    }
+
+    void Update()
+    {
+        m_currentFrame++;
+        int lXPos = m_currentFrame / m_animSpeed % m_spriteSheet->GetImgCount();
+        m_render->GetSprite().setTextureRect({{lXPos * m_spriteSheet->GetSize(),0},{m_spriteSheet->GetSize(), m_spriteSheet->GetSize()}});
+    }
 };

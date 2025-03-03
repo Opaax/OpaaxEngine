@@ -53,8 +53,9 @@ private:
     void ConstructAssetsTypeTab() const;
     void ConstructAssetsFontTab() const;
     
-    void sRender();
-    void sUserInput(const std::optional<sf::Event>& Event);
+    void sUpdate() const;
+    void sRender() const;
+    void sUserInput(const std::optional<sf::Event>& Event) const;
     void sImGUI();
     
 public:
