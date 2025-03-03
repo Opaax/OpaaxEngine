@@ -1,12 +1,6 @@
 ﻿#include "AssetsManager.h"
 
-#include <fstream>
-#include <iostream>
-#include <sstream>
-
-#include "../ConfigHelper.h"
 #include "../EngineConstant.h"
-
 #include "SimpleIni.h"
 
 AssetsManager::AssetsManager(const STDString& AssetsConfigPath)
@@ -18,69 +12,43 @@ AssetsManager::AssetsManager(const STDString& AssetsConfigPath)
     ReadConfig();
 }
 
+void AssetsManager::SetupDefaultConfig() const
+{
+    if(m_config->IsJustCreated())
+    {
+        m_config->SetString(AllAssetType[EAsset_Font], "Default", Engine::FONT_DEFAULT);
+        m_config->Save();
+    }
+}
+
 void AssetsManager::ReadConfig()
 {
-    
-    if(!m_configPath.empty())
+    if(!m_config || !m_config->IsReadable())
     {
-        //Read in the config file.
-        std::fstream lConfigInput{m_configPath};
+        return;
+    }
 
-        //Check if the config is valid, else create only a default fonts with defaults.
-        if (!lConfigInput.is_open())
+    SetupDefaultConfig();
+
+    CSimpleIni::TNamesDepend lSectionsNames;
+    m_config->GetAllSection(lSectionsNames);
+    
+    for (auto& lSection : lSectionsNames)
+    {
+        CSimpleIni::TNamesDepend lSectionsKeys;
+        m_config->GetAllKeysInSection(lSection.pItem, lSectionsKeys);
+        
+        if(lSection.pItem == AllAssetType[EAsset_Font])
         {
-            std::cerr << "Failed to open: " << m_configPath << '\n' << "The Asset config path is empty. Will try to load only default fonts" << '\n';
-            GatherDefaultFont();
-            return;
-        }
-
-        GatherDefaultFont();
-
-        STDString lLine;
-        while (std::getline(lConfigInput, lLine)) {
-
-            if(ConfigHelper::IsCommentLine(lLine))
+            for (auto& lKey : lSectionsKeys)
             {
-                continue;
-            }
-            
-            //Read properties from the config. But Ignore Empty
-            std::istringstream lLineStream(lLine);
-            std::string lPropName{};
-            
-            if (!(lLineStream >> lPropName))
-            {
-                continue;
-            }
-
-            //Windows properties
-            if(lPropName == AllAssetType[EAsset_Font])
-            {
-                STDString lFontName;
-                STDString lFontPath;
-                
-                lLineStream >> lFontName;
-                lLineStream >> lFontPath;
-
                 sf::Font lFont;
-
-                if(!lFontName.empty() && lFont.openFromFile(lFontPath))
+                STDString lPath = m_config->GetString(AllAssetType[EAsset_Font], lKey.pItem);
+                if(lFont.openFromFile(lPath))
                 {
-                    m_fonts[lFontName] = lFont;
-                }else
-                {
-                    std::cerr << "New font not valid name or path -- Name: " << lFontName << " -- Path: " << "lFontPath";
+                    m_fonts[lKey.pItem] = lFont;
                 }
             }
         }
     }
-
-    GatherDefaultFont();
-}
-
-void AssetsManager::GatherDefaultFont()
-{
-    //will be exception if this path is not valid.
-    sf::Font lDefaultFont{Engine::FONT_DEFAULT};
-    m_fonts["Default"] = lDefaultFont;
 }

@@ -25,14 +25,15 @@ class AssetsManager
 {
 private:
     STDString m_configPath;
-    
     AssetMap<sf::Font> m_fonts;
-
     TUniquePtr<ConfigIni> m_config;
 
 private:
+    /**
+     * This func will add some default section, keys and value to have default values in the engine.
+     */
+    void SetupDefaultConfig() const;
     void ReadConfig();
-    void GatherDefaultFont();
     
 public:
     /**

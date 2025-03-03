@@ -1,12 +1,11 @@
 ﻿#include "ConfigIni.h"
 
+#include <filesystem>
 #include <fstream>
 
 ConfigIni::ConfigIni(const STDString& IniPath):m_iniPath{IniPath}
 {
-    std::ofstream myfile;
-    myfile.open (m_iniPath, std::fstream::app);
-    myfile.close();
+    CheckNIfCreate();
     
     m_ini = MakeUnique<CSimpleIni>(true, true, true);
     m_ini->SetUnicode();
@@ -19,16 +18,34 @@ ConfigIni::ConfigIni(const STDString& IniPath):m_iniPath{IniPath}
         //Out of memory error
     case SI_FAIL:
         //Generic failure
+        bCanBeRead = false;
         std::cerr << "Config ini path:" << m_iniPath << " cannot be open" << std::endl;
         break;
     case SI_OK:
         //No Error
     case SI_INSERTED:
+        bCanBeRead = true;
         std::cout << "Config ini path:" << m_iniPath << " opened" << std::endl;
         break;
     default:
         break;
     }
+}
+
+void ConfigIni::CheckNIfCreate()
+{
+    if(std::filesystem::exists(m_iniPath))
+    {
+        bIsJustCreated = false;
+        return;
+    }
+    
+    std::ofstream lNewFile;
+    
+    lNewFile.open (m_iniPath, std::fstream::app);
+    lNewFile.close();
+
+    bIsJustCreated = true;
 }
 
 STDString ConfigIni::GetString(const STDString& InSection, const STDString& InKey, const STDString& InDefaultValue) const
@@ -59,6 +76,26 @@ bool ConfigIni::GetBool(const STDString& InSection, const STDString& InKey, bool
     }
     
     return m_ini->GetBoolValue(InSection.c_str(), InKey.c_str(), InDefaultValue);
+}
+
+void ConfigIni::GetAllSection(CSimpleIni::TNamesDepend& OutSectionsNames) const
+{
+    if(!m_ini)
+    {
+        return;
+    }
+    
+    m_ini->GetAllSections(OutSectionsNames);
+}
+
+void ConfigIni::GetAllKeysInSection(const STDString& InSectionName, CSimpleIniA::TNamesDepend& OutKeys) const
+{
+    if(!m_ini)
+    {
+        return;
+    }
+    
+    m_ini->GetAllKeys(InSectionName.c_str(), OutKeys);
 }
 
 void ConfigIni::SetString(const STDString& InSection, const STDString& InKey, const STDString& Value) const

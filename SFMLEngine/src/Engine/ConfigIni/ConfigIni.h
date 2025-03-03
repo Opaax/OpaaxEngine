@@ -8,7 +8,11 @@ class ConfigIni
 private:
     TUniquePtr<CSimpleIni> m_ini;
     STDString m_iniPath;
+    bool bCanBeRead{false};
+    bool bIsJustCreated{false};
 
+private:
+    void CheckNIfCreate();
     ConfigIni() = default;
 public:
     /**
@@ -16,6 +20,9 @@ public:
      * @param IniPath 
      */
     explicit ConfigIni(const STDString& IniPath);
+
+    bool IsReadable() const {return bCanBeRead;}
+    bool IsJustCreated() const {return bIsJustCreated;}
 
     /**
      * 
@@ -43,6 +50,9 @@ public:
      * @return 
      */
     bool GetBool(const STDString& InSection, const STDString& InKey, bool InDefaultValue = false) const;
+
+    void GetAllSection(CSimpleIni::TNamesDepend& OutSectionsNames) const;
+    void GetAllKeysInSection(const STDString& InSectionName, CSimpleIni::TNamesDepend& OutKeys) const;
 
     /**
      * 

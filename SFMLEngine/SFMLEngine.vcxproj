@@ -185,6 +185,7 @@
     <ClInclude Include="src\imgui\imstb_truetype.h" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="config\AssetsConfig.ini" />
     <Content Include="config\AssetsConfig.txt" />
     <Content Include="config\GameEngineConfig.txt" />
     <Content Include="config\GeometryWarsConfig.txt" />
