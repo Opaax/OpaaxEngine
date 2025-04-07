@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "OpaaxTypes.hpp"
+#include "OpaaxTypes.h"
 
 namespace OpaaxEngine
 {

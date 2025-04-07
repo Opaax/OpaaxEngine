@@ -1,6 +1,6 @@
 ﻿#include "Core/OPFileSystem.h"
-#include "Boost/OPBoostTypes.hpp"
-#include "Core/OPLogMacro.hpp"
+#include "Boost/OPBoostTypes.h"
+#include "Core/OPLogMacro.h"
 
 
 bool OPFileSystem::CreateDirectories(const STDFileSystem::path& InPath)

@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include <filesystem>
-#include "OpaaxTypes.hpp"
+#include "OpaaxTypes.h"
 
 namespace STDFileSystem = std::filesystem;
 

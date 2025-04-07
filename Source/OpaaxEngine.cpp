@@ -1,6 +1,6 @@
 ﻿#include "OpaaxEngine.h"
 #include "Core/OPLogger.h"
-#include "Core/OPLogMacro.hpp"
+#include "Core/OPLogMacro.h"
 
 Engine& Engine::Get()
 {
@@ -10,16 +10,17 @@ Engine& Engine::Get()
 
 void Engine::Run()
 {
-	OPAAX_LOG("Opaax Engine is running!");
+	OPAAX_LOG("Opaax Engine is running!")
 
 	int loop = 10;
-	while (loop-- > 0) {
+	while (loop-- > 0)
+	{
 		// Main loop placeholder
 	}
 }
 
 void Engine::Shutdown()
 {
-	OPAAX_LOG("Opaax Engine is shutting down!");
+	OPAAX_LOG("Opaax Engine is shutting down!")
 	// Cleanup code placeholder
 }

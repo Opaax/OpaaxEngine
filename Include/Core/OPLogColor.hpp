@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include <array>
-#include "../OpaaxTypes.hpp"
+#include "../OpaaxTypes.h"
 
 enum struct ELogColor : Int8
 {

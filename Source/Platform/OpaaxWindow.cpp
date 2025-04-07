@@ -1,14 +1,47 @@
 #include "Platform/OpaaxWindow.h"
-#include <iostream>
+#include <Core/OPLogMacro.h>
 
-void OPWindow::Create()
+OPWindow::OPWindow(int width, int height, const OString& title)
+: m_width(width), m_height(height), m_title(title), m_window(nullptr)
 {
-	// Create a window using the OPAAX library
-	// This is a placeholder for the actual implementation
-	// You would typically use OPAAX functions to create a window here
-	// For example:
-	// OPAAX_CreateWindow(...);
+	InitWindow();
+}
 
-	// For now, just print a message to indicate that the function was called
-	std::cout << "Creating OPAAX window..." << std::endl;
+OPWindow::~OPWindow()
+{
+	glfwDestroyWindow(m_window);
+	glfwTerminate();
+}
+
+void OPWindow::InitWindow()
+{
+	if (!glfwInit()) {
+		std::cerr << "Failed to initialize GLFW!" << std::endl;
+		return;
+	}
+
+	// Enable Vulkan support
+	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+
+	m_window = glfwCreateWindow(m_width, m_height, m_title.c_str(), nullptr, nullptr);
+	
+	if (!m_window)
+	{
+		OPAAX_ERROR("Failed to create GLFW window!")
+		glfwTerminate();
+		return;
+	}
+
+	OPAAX_LOG("OPWindow::InitWindow")
+}
+
+void OPWindow::PollEvents()
+{
+	glfwPollEvents();
+}
+
+bool OPWindow::ShouldClose() const
+{
+	return glfwWindowShouldClose(m_window);
 }

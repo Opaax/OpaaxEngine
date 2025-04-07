@@ -2,10 +2,10 @@
 #include <fstream>
 #include <mutex>
 
-#include "Boost/OPBoostTypes.hpp"
-#include "Core/OPLogCategory.hpp"
-#include "OpaaxTypes.hpp"
-#include "OpaaxConst.hpp"
+#include "Boost/OPBoostTypes.h"
+#include "Core/OPLogCategory.h"
+#include "OpaaxTypes.h"
+#include "OpaaxConst.h"
 
 /**
  * @class OPLogger
