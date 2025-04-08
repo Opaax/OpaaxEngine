@@ -192,7 +192,7 @@ void OpaaxVulkanContext::PickPhysicalDevice()
 
     VkPhysicalDeviceProperties props;
     vkGetPhysicalDeviceProperties(m_vkPhysicalDevice, &props);
-   OPAAX_VERBOSE("[OpaaxVulkanContext] Picked GPU: %1%", %props.deviceName)
+    OPAAX_VERBOSE("[OpaaxVulkanContext] Picked GPU: %1%", %props.deviceName)
 }
 
 bool OpaaxVulkanContext::IsDeviceSuitable(VkPhysicalDevice Device)
@@ -202,7 +202,7 @@ bool OpaaxVulkanContext::IsDeviceSuitable(VkPhysicalDevice Device)
 
     VkPhysicalDeviceFeatures lDeviceFeatures;
     vkGetPhysicalDeviceFeatures(Device, &lDeviceFeatures);
-    
+
     return lDeviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU
         || lDeviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU;
 }
@@ -257,16 +257,16 @@ void OpaaxVulkanContext::CreateLogicalDevice()
     }
 
     std::vector<VkDeviceQueueCreateInfo> lQueueCreateInfos;
-    std::set<UInt32> uniqueFamilies = {
+    std::set<UInt32> lUniqueFamilies = {
         m_queueIndices.GraphicsFamily.value(),
         m_queueIndices.PresentFamily.value()
     };
 
     float lQueuePriority = 1.0f;
-    for (uint32_t lQueueFamily : uniqueFamilies)
+    for (uint32_t lQueueFamily : lUniqueFamilies)
     {
         VkDeviceQueueCreateInfo lQueueCreateInfo{};
-        
+
         lQueueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
         lQueueCreateInfo.queueFamilyIndex = lQueueFamily;
         lQueueCreateInfo.queueCount = 1;
@@ -276,23 +276,28 @@ void OpaaxVulkanContext::CreateLogicalDevice()
 
     VkPhysicalDeviceFeatures lDeviceFeatures{}; // Fill later
 
-    VkDeviceCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    createInfo.queueCreateInfoCount = static_cast<uint32_t>(lQueueCreateInfos.size());
-    createInfo.pQueueCreateInfos = lQueueCreateInfos.data();
-    createInfo.pEnabledFeatures = &lDeviceFeatures;
+    VkDeviceCreateInfo lCreateInfo{};
+    lCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    lCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(lQueueCreateInfos.size());
+    lCreateInfo.pQueueCreateInfos = lQueueCreateInfos.data();
+    lCreateInfo.pEnabledFeatures = &lDeviceFeatures;
+
+    // Enable swapchain extension
+    lCreateInfo.enabledExtensionCount = static_cast<uint32_t>(gDeviceExtensions.size());
+    lCreateInfo.ppEnabledExtensionNames = gDeviceExtensions.data();
 
     // Validation layers for logical device (legacy)
     if (gEnableValidationLayers)
     {
-        createInfo.enabledLayerCount = static_cast<UInt32>(gValidationLayers.size());
-        createInfo.ppEnabledLayerNames = gValidationLayers.data();
-    } else
+        lCreateInfo.enabledLayerCount = static_cast<UInt32>(gValidationLayers.size());
+        lCreateInfo.ppEnabledLayerNames = gValidationLayers.data();
+    }
+    else
     {
-        createInfo.enabledLayerCount = 0;
+        lCreateInfo.enabledLayerCount = 0;
     }
 
-    if (vkCreateDevice(m_vkPhysicalDevice, &createInfo, nullptr, &m_vkDevice) != VK_SUCCESS)
+    if (vkCreateDevice(m_vkPhysicalDevice, &lCreateInfo, nullptr, &m_vkDevice) != VK_SUCCESS)
     {
         OPAAX_ERROR("[OpaaxVulkanContext] Failed to create logical device.")
         throw std::runtime_error("Failed to create logical device.");
@@ -384,7 +389,8 @@ SwapChainSupportDetails OpaaxVulkanContext::QuerySwapChainSupportForVK(VkPhysica
     if (lPresentModeCount != 0)
     {
         lDetails.presentModes.resize(lPresentModeCount);
-        vkGetPhysicalDeviceSurfacePresentModesKHR(Device, m_vkSurface, &lPresentModeCount, lDetails.presentModes.data());
+        vkGetPhysicalDeviceSurfacePresentModesKHR(Device, m_vkSurface, &lPresentModeCount,
+                                                  lDetails.presentModes.data());
     }
 
     return lDetails;
@@ -399,8 +405,309 @@ VkSurfaceFormatKHR OpaaxVulkanContext::ChooseSwapSurfaceFormat(const std::vector
             return lFormat;
         }
     }
-    
+
     return Formats[0];
+}
+
+void OpaaxVulkanContext::CreateImageViews()
+{
+    m_vkSwapchainImageViews.resize(m_vkSwapchainImages.size());
+
+    for (size_t i = 0; i < m_vkSwapchainImages.size(); i++)
+    {
+        VkImageViewCreateInfo viewInfo{};
+        viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        viewInfo.image = m_vkSwapchainImages[i];
+
+        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        viewInfo.format = m_vkSwapchainImageFormat;
+
+        viewInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+        viewInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+        viewInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+        viewInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+        viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        viewInfo.subresourceRange.baseMipLevel = 0;
+        viewInfo.subresourceRange.levelCount = 1;
+        viewInfo.subresourceRange.baseArrayLayer = 0;
+        viewInfo.subresourceRange.layerCount = 1;
+
+        if (vkCreateImageView(m_vkDevice, &viewInfo, nullptr, &m_vkSwapchainImageViews[i]) != VK_SUCCESS)
+        {
+            OPAAX_ERROR("[OpaaxVulkanContext] Failed to create image view at index %1%", %static_cast<int>(i))
+            throw std::runtime_error("Failed to create image views.");
+        }
+    }
+
+    OPAAX_VERBOSE("[OpaaxVulkanContext] Swapchain image views created.")
+}
+
+void OpaaxVulkanContext::CreateRenderPass()
+{
+    // Color attachment (swapchain image)
+    VkAttachmentDescription lColorAttachment{};
+    lColorAttachment.format = m_vkSwapchainImageFormat;
+    lColorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+
+    lColorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR; // Clear on start
+    lColorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE; // Store result for presentation
+
+    lColorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    lColorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+
+    lColorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    lColorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+    // Attachment reference for subpass
+    VkAttachmentReference lColorAttachmentRef{};
+    lColorAttachmentRef.attachment = 0;
+    lColorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    // Subpass definition
+    VkSubpassDescription lSubpass{};
+    lSubpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    lSubpass.colorAttachmentCount = 1;
+    lSubpass.pColorAttachments = &lColorAttachmentRef;
+
+    // Subpass dependency (for layout transitions)
+    VkSubpassDependency lDependency{};
+    lDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    lDependency.dstSubpass = 0;
+    lDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    lDependency.srcAccessMask = 0;
+    lDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    lDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+    // Create render pass
+    VkRenderPassCreateInfo lRenderPassInfo{};
+    lRenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    lRenderPassInfo.attachmentCount = 1;
+    lRenderPassInfo.pAttachments = &lColorAttachment;
+    lRenderPassInfo.subpassCount = 1;
+    lRenderPassInfo.pSubpasses = &lSubpass;
+    lRenderPassInfo.dependencyCount = 1;
+    lRenderPassInfo.pDependencies = &lDependency;
+
+    if (vkCreateRenderPass(m_vkDevice, &lRenderPassInfo, nullptr, &m_vkRenderPass) != VK_SUCCESS)
+    {
+        OPAAX_ERROR("[OpaaxVulkanContext] Failed to create render pass!")
+        throw std::runtime_error("Failed to create render pass.");
+    }
+
+    OPAAX_VERBOSE("[OpaaxVulkanContext] Render pass created.")
+}
+
+void OpaaxVulkanContext::CreateFrameBuffers()
+{
+    m_vkSwapchainFrameBuffers.resize(m_vkSwapchainImageViews.size());
+
+    for (size_t i = 0; i < m_vkSwapchainImageViews.size(); i++)
+    {
+        VkImageView lAttachments[] = {m_vkSwapchainImageViews[i]};
+
+        VkFramebufferCreateInfo lFramebufferInfo{};
+        lFramebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        lFramebufferInfo.renderPass = m_vkRenderPass;
+        lFramebufferInfo.attachmentCount = 1;
+        lFramebufferInfo.pAttachments = lAttachments;
+        lFramebufferInfo.width = m_vkSwapchainExtent.width;
+        lFramebufferInfo.height = m_vkSwapchainExtent.height;
+        lFramebufferInfo.layers = 1;
+
+        if (vkCreateFramebuffer(m_vkDevice, &lFramebufferInfo, nullptr, &m_vkSwapchainFrameBuffers[i]) != VK_SUCCESS)
+        {
+            OPAAX_ERROR("[OpaaxVulkanContext] Failed to create frame buffer for swapchain image index %1%",
+                        %static_cast<int>(i))
+            throw std::runtime_error("Failed to create frame buffers.");
+        }
+    }
+
+    OPAAX_VERBOSE("[OpaaxVulkanContext] Frame buffers created for all swapchain images.")
+}
+
+void OpaaxVulkanContext::CreateCommandPool()
+{
+    QueueFamilyIndices lIndices = FindQueueFamilies(m_vkPhysicalDevice);
+
+    VkCommandPoolCreateInfo lPoolInfo{};
+    lPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    lPoolInfo.queueFamilyIndex = lIndices.GraphicsFamily.value(); // Assuming std::optional<uint32_t>
+    lPoolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+
+    if (vkCreateCommandPool(m_vkDevice, &lPoolInfo, nullptr, &m_vkCommandPool) != VK_SUCCESS)
+    {
+        OPAAX_ERROR("[OpaaxVulkanContext] Failed to create command pool.")
+        throw std::runtime_error("Failed to create command pool.");
+    }
+
+    OPAAX_VERBOSE("[OpaaxVulkanContext] Command pool created.")
+}
+
+void OpaaxVulkanContext::CreateCommandBuffers()
+{
+    m_vkCommandBuffers.resize(m_vkSwapchainFrameBuffers.size());
+
+    VkCommandBufferAllocateInfo lAllocInfo{};
+    lAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    lAllocInfo.commandPool = m_vkCommandPool;
+    lAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    lAllocInfo.commandBufferCount = static_cast<uint32_t>(m_vkCommandBuffers.size());
+
+    if (vkAllocateCommandBuffers(m_vkDevice, &lAllocInfo, m_vkCommandBuffers.data()) != VK_SUCCESS)
+    {
+        OPAAX_ERROR("[OpaaxVulkanContext] Failed to allocate command buffers.")
+        throw std::runtime_error("Failed to allocate command buffers.");
+    }
+
+    OPAAX_VERBOSE("[OpaaxVulkanContext] Allocated %1% command buffers.", %m_vkCommandBuffers.size())
+}
+
+void OpaaxVulkanContext::RecordCommandBuffers()
+{
+    for (size_t i = 0; i < m_vkCommandBuffers.size(); ++i)
+    {
+        VkCommandBufferBeginInfo lBeginInfo{};
+        lBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        lBeginInfo.flags = 0; // Optional
+        lBeginInfo.pInheritanceInfo = nullptr; // Optional
+
+        if (vkBeginCommandBuffer(m_vkCommandBuffers[i], &lBeginInfo) != VK_SUCCESS)
+        {
+            OPAAX_ERROR("[OpaaxVulkanContext] Failed to begin recording command buffer %1%.", %i)
+            throw std::runtime_error("Failed to begin recording command buffer.");
+        }
+
+        VkClearValue lClearColor = {{{0.1f, 0.1f, 0.1f, 1.0f}}};
+
+        VkRenderPassBeginInfo lRenderPassInfo{};
+        lRenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        lRenderPassInfo.renderPass = m_vkRenderPass;
+        lRenderPassInfo.framebuffer = m_vkSwapchainFrameBuffers[i];
+        lRenderPassInfo.renderArea.offset = {0, 0};
+        lRenderPassInfo.renderArea.extent = m_vkSwapchainExtent;
+        lRenderPassInfo.clearValueCount = 1;
+        lRenderPassInfo.pClearValues = &lClearColor;
+
+        vkCmdBeginRenderPass(m_vkCommandBuffers[i], &lRenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+        vkCmdEndRenderPass(m_vkCommandBuffers[i]);
+
+        if (vkEndCommandBuffer(m_vkCommandBuffers[i]) != VK_SUCCESS)
+        {
+            OPAAX_ERROR("[OpaaxVulkanContext] Failed to record command buffer %1%.", %i)
+            throw std::runtime_error("Failed to record command buffer.");
+        }
+    }
+
+    OPAAX_VERBOSE("[OpaaxVulkanContext] Recorded %1% command buffers.", %m_vkCommandBuffers.size())
+}
+
+void OpaaxVulkanContext::CreateSyncObjects()
+{
+    m_vkImageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+    m_vkRenderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+    m_vkInFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+
+    VkSemaphoreCreateInfo lSemaphoreInfo{};
+    lSemaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+    VkFenceCreateInfo fenceInfo{};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT; // So we don’t wait on first frame
+
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+    {
+        if (vkCreateSemaphore(m_vkDevice, &lSemaphoreInfo, nullptr, &m_vkImageAvailableSemaphores[i]) != VK_SUCCESS ||
+            vkCreateSemaphore(m_vkDevice, &lSemaphoreInfo, nullptr, &m_vkRenderFinishedSemaphores[i]) != VK_SUCCESS ||
+            vkCreateFence(m_vkDevice, &fenceInfo, nullptr, &m_vkInFlightFences[i]) != VK_SUCCESS)
+        {
+            OPAAX_ERROR("[OpaaxVulkanContext] Failed to create synchronization objects for frame %1%!", %i)
+            throw std::runtime_error("Failed to create sync objects!");
+        }
+    }
+
+    OPAAX_VERBOSE("[OpaaxVulkanContext] Synchronization objects created for %1% frames in flight.", %MAX_FRAMES_IN_FLIGHT)
+}
+
+void OpaaxVulkanContext::DrawFrame()
+{
+    vkWaitForFences(m_vkDevice, 1, &m_vkInFlightFences[m_currentFrame], VK_TRUE, UINT64_MAX);
+
+    UInt32 lImageIndex;
+    VkResult lAcquireResult = vkAcquireNextImageKHR(
+        m_vkDevice,
+        m_vkSwapchain,
+        UINT64_MAX,
+        m_vkImageAvailableSemaphores[m_currentFrame], // signal
+        VK_NULL_HANDLE,
+        &lImageIndex
+    );
+
+    if (lAcquireResult == VK_ERROR_OUT_OF_DATE_KHR)
+    {
+        OPAAX_WARNING("[OpaaxVulkanContext] Swapchain out of date!")
+        // TODO: recreate swapchain
+        return;
+    }
+
+    if (lAcquireResult != VK_SUCCESS && lAcquireResult != VK_SUBOPTIMAL_KHR)
+    {
+        OPAAX_ERROR("[OpaaxVulkanContext] Failed to acquire swapchain image!")
+        throw std::runtime_error("Failed to acquire swapchain image!");
+    }
+
+    // Reset fence for current frame
+    vkResetFences(m_vkDevice, 1, &m_vkInFlightFences[m_currentFrame]);
+
+    // Submit command buffer
+    VkSubmitInfo lSubmitInfo{};
+    lSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+    VkSemaphore waitSemaphores[] = { m_vkImageAvailableSemaphores[m_currentFrame] };
+    VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+    lSubmitInfo.waitSemaphoreCount = 1;
+    lSubmitInfo.pWaitSemaphores = waitSemaphores;
+    lSubmitInfo.pWaitDstStageMask = waitStages;
+
+    lSubmitInfo.commandBufferCount = 1;
+    lSubmitInfo.pCommandBuffers = &m_vkCommandBuffers[lImageIndex];
+
+    VkSemaphore signalSemaphores[] = { m_vkRenderFinishedSemaphores[m_currentFrame] };
+    lSubmitInfo.signalSemaphoreCount = 1;
+    lSubmitInfo.pSignalSemaphores = signalSemaphores;
+
+    if (vkQueueSubmit(m_vkGraphicsQueue, 1, &lSubmitInfo, m_vkInFlightFences[m_currentFrame]) != VK_SUCCESS)
+    {
+        OPAAX_ERROR("[OpaaxVulkanContext] Failed to submit draw command buffer!")
+        throw std::runtime_error("Failed to submit draw command buffer!");
+    }
+
+    // Present
+    VkPresentInfoKHR lPresentInfo{};
+    lPresentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+    lPresentInfo.waitSemaphoreCount = 1;
+    lPresentInfo.pWaitSemaphores = signalSemaphores;
+
+    VkSwapchainKHR swapChains[] = { m_vkSwapchain };
+    lPresentInfo.swapchainCount = 1;
+    lPresentInfo.pSwapchains = swapChains;
+    lPresentInfo.pImageIndices = &lImageIndex;
+
+    lAcquireResult = vkQueuePresentKHR(m_vkPresentQueue, &lPresentInfo);
+
+    if (lAcquireResult == VK_ERROR_OUT_OF_DATE_KHR || lAcquireResult == VK_SUBOPTIMAL_KHR)
+    {
+        OPAAX_WARNING("[OpaaxVulkanContext] Swapchain out of date or suboptimal!")
+        // TODO: recreate swapchain
+    } else if (lAcquireResult != VK_SUCCESS)
+    {
+        OPAAX_ERROR("[OpaaxVulkanContext] Failed to present swapchain image!")
+        throw std::runtime_error("Failed to present swapchain image!");
+    }
+
+    m_currentFrame = (m_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
 VkPresentModeKHR OpaaxVulkanContext::ChoosePresentMode(const std::vector<VkPresentModeKHR>& PresentModes)
@@ -427,18 +734,18 @@ VkExtent2D OpaaxVulkanContext::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& 
         int lWidth, lHeight;
         glfwGetFramebufferSize(m_window, &lWidth, &lHeight);
 
-        VkExtent2D actualExtent = {
+        VkExtent2D lActualExtent = {
             static_cast<uint32_t>(lWidth),
             static_cast<uint32_t>(lHeight)
         };
 
         //TODO Use Custom math
-        actualExtent.width = std::max(Capabilities.minImageExtent.width,
-                                      std::min(Capabilities.maxImageExtent.width, actualExtent.width));
-        actualExtent.height = std::max(Capabilities.minImageExtent.height,
-                                       std::min(Capabilities.maxImageExtent.height, actualExtent.height));
+        lActualExtent.width = std::max(Capabilities.minImageExtent.width,
+                                       std::min(Capabilities.maxImageExtent.width, lActualExtent.width));
+        lActualExtent.height = std::max(Capabilities.minImageExtent.height,
+                                        std::min(Capabilities.maxImageExtent.height, lActualExtent.height));
 
-        return actualExtent;
+        return lActualExtent;
     }
 }
 
@@ -487,13 +794,46 @@ void OpaaxVulkanContext::Init()
     PickPhysicalDevice();
     CreateLogicalDevice();
     CreateSwapchain();
+    CreateImageViews();
+    CreateRenderPass();
+    CreateFrameBuffers();
+    CreateCommandPool();
+    CreateCommandBuffers();
+    RecordCommandBuffers();
+    CreateSyncObjects();
 }
 
 void OpaaxVulkanContext::Shutdown()
 {
-    if (gEnableValidationLayers)
+    if (m_vkCommandPool != VK_NULL_HANDLE)
     {
-        DestroyDebugUtilsMessengerEXT(m_vkInstance, m_vkDebugMessenger, nullptr);
+        vkDestroyCommandPool(m_vkDevice, m_vkCommandPool, nullptr);
+    }
+
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+    {
+        vkDestroySemaphore(m_vkDevice, m_vkImageAvailableSemaphores[i], nullptr);
+        vkDestroySemaphore(m_vkDevice, m_vkRenderFinishedSemaphores[i], nullptr);
+        vkDestroyFence(m_vkDevice, m_vkInFlightFences[i], nullptr);
+    }
+
+    m_vkImageAvailableSemaphores.clear();
+    m_vkRenderFinishedSemaphores.clear();
+    m_vkInFlightFences.clear();
+
+    for (auto lFrameBuffer : m_vkSwapchainFrameBuffers)
+    {
+        vkDestroyFramebuffer(m_vkDevice, lFrameBuffer, nullptr);
+    }
+
+    if (m_vkRenderPass != VK_NULL_HANDLE)
+    {
+        vkDestroyRenderPass(m_vkDevice, m_vkRenderPass, nullptr);
+    }
+
+    for (auto lImageView : m_vkSwapchainImageViews)
+    {
+        vkDestroyImageView(m_vkDevice, lImageView, nullptr);
     }
 
     if (m_vkSwapchain != VK_NULL_HANDLE)
@@ -506,7 +846,7 @@ void OpaaxVulkanContext::Shutdown()
         vkDestroyDevice(m_vkDevice, nullptr);
     }
 
-    if (gEnableValidationLayers)
+    if (gEnableValidationLayers && m_vkDebugMessenger != VK_NULL_HANDLE)
     {
         DestroyDebugUtilsMessengerEXT(m_vkInstance, m_vkDebugMessenger, nullptr);
     }
@@ -515,6 +855,6 @@ void OpaaxVulkanContext::Shutdown()
     {
         vkDestroySurfaceKHR(m_vkInstance, m_vkSurface, nullptr);
     }
-    
+
     vkDestroyInstance(m_vkInstance, nullptr);
 }

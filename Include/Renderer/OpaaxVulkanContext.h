@@ -63,6 +63,8 @@ struct SwapChainSupportDetails
     std::vector<VkPresentModeKHR> presentModes;
 };
 
+static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
+
 class OpaaxVulkanContext
 {
     //-----------------------------------------------------------------
@@ -88,6 +90,21 @@ class OpaaxVulkanContext
     std::vector<VkImage> m_vkSwapchainImages;
     VkFormat m_vkSwapchainImageFormat;
     VkExtent2D m_vkSwapchainExtent;
+
+    std::vector<VkImageView> m_vkSwapchainImageViews;
+
+    VkRenderPass m_vkRenderPass = VK_NULL_HANDLE;
+    
+    std::vector<VkFramebuffer> m_vkSwapchainFrameBuffers;
+
+    VkCommandPool m_vkCommandPool = VK_NULL_HANDLE;
+    std::vector<VkCommandBuffer> m_vkCommandBuffers;
+
+    std::vector<VkSemaphore> m_vkImageAvailableSemaphores;
+    std::vector<VkSemaphore> m_vkRenderFinishedSemaphores;
+    std::vector<VkFence>     m_vkInFlightFences;
+
+    size_t m_currentFrame = 0;
     
     //-----------------------------------------------------------------
     // CTOR DTOR
@@ -118,6 +135,19 @@ public:
 
     QueueFamilyIndices FindQueueFamiliesForVK(VkPhysicalDevice Device);
     VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& Formats);
+
+    void CreateImageViews();
+    
+    void CreateRenderPass();
+    
+    void CreateFrameBuffers();
+
+    void CreateCommandPool();
+    void CreateCommandBuffers();
+    void RecordCommandBuffers();
+
+    void CreateSyncObjects();
+    void DrawFrame();
     
     /*---------------------------- PUBLIC ----------------------------*/
     void Init();
