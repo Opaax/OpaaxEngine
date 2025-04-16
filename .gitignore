@@ -25,4 +25,8 @@ x64
 Thumbs.db
 
 # Dependencies
-ThirdParty/
+/OpaaxGameEngine/ThirdParty/*
+
+#Save
+/OpaaxGameEngine/Save/*
+
