@@ -24,9 +24,8 @@ x64
 .DS_Store
 Thumbs.db
 
-# Dependencies
-/OpaaxGameEngine/ThirdParty/*
+#Binaries
+Binaries
 
-#Save
-/OpaaxGameEngine/Save/*
-
+#Intermediate
+Intermediate
