@@ -1,5 +1,4 @@
 ﻿#pragma once
-#include <mutex>
 #include "OpaaxEventBusBase.h"
 #include "OpaaxEventBusHandle.h"
 #include "Opaax/OpaaxNonCopyableAndMovable.h"

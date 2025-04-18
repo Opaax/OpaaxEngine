@@ -1,6 +1,5 @@
-﻿#include "Opaax/EventSystem/EventBus/OpaaxEventBus.h"
-#include <ranges>
-
+﻿#include "OPpch.h"
+#include "Opaax/EventSystem/EventBus/OpaaxEventBus.h"
 
 OPAAX::OpaaxEventBus::~OpaaxEventBus()
 {

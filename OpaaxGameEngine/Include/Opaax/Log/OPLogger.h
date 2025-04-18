@@ -1,6 +1,4 @@
 ﻿#pragma once
-#include <fstream>
-#include <mutex>
 
 #include "Opaax/Boost/OPBoostTypes.h"
 #include "OPLogCategory.h"

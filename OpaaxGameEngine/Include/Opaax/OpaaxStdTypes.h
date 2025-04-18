@@ -1,10 +1,4 @@
 ﻿#pragma once
-#include <string>
-#include <cstdint>
-#include <memory>
-#include <functional>
-#include <typeindex>
-
 #include "OpaaxCoreMacros.h"
 
 using OSTDString = std::string;

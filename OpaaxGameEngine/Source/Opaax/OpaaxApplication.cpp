@@ -1,3 +1,4 @@
+#include "OPpch.h"
 #include "Opaax/OpaaxApplication.h"
 
 using namespace OPAAX;

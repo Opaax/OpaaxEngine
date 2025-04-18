@@ -1,8 +1,7 @@
-﻿#include "Opaax/Filesystem/OpaaxFileSystem.h"
-
+﻿#include "OPpch.h"
+#include "Opaax/Filesystem/OpaaxFileSystem.h"
 #include "Opaax/Boost/OPBoostTypes.h"
 #include "Opaax/Log/OPLogMacro.h"
-
 
 bool OpaaxFileSystem::CreateDirectories(const STDFileSystem::path& InPath)
 {

@@ -1,8 +1,5 @@
-﻿#include "Opaax/Log/OPLogger.h"
-
-#include <filesystem>
-#include <iostream>
-
+﻿#include "OPpch.h"
+#include "Opaax/Log/OPLogger.h"
 #include "Opaax/Filesystem/OpaaxFileSystem.h"
 #include "Opaax/Log/OPLogColor.hpp"
 
@@ -23,7 +20,7 @@ void OPLogger::Init()
 {
     //Define log file path
     OSTDString lNameSuffix = OpaaxFileSystem::GetTimeStampDirectoryFriendly();
-    m_logPath = OPAAX::CONST::LOG_DIRECTORY + OPAAX::CONST::LOG_PREFIX + lNameSuffix + OPAAX::CONST::LOG_FILE_TYPE;
+    m_logPath = OPAAX_CONST::LOG_DIRECTORY + OPAAX_CONST::LOG_PREFIX + lNameSuffix + OPAAX_CONST::LOG_FILE_TYPE;
 
     //make it relative to the project.
     STDFileSystem::path lDirPath = OpaaxFileSystem::GetPathIfNCreate(m_logPath);

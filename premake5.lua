@@ -17,6 +17,9 @@ project "OpaaxGameEngine"
 
     targetdir ("Binaries/" .. outputDir .. "/%{prj.name}")
     objdir ("Intermediate/" .. outputDir .. "/%{prj.name}")
+    
+    pchheader "OPpch.h"
+    pchsource "OpaaxGameEngine/Source/OPpch.cpp"
 
     files {
         "%{prj.name}/Include/**.h",
