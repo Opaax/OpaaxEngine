@@ -7,6 +7,7 @@ public:
 	SandboxApplication()
 	{
 	}
+	
 	~SandboxApplication()
 	{
 	}
