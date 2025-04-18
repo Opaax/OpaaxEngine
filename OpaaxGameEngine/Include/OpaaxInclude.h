@@ -31,3 +31,8 @@
 //#include "Opaax/EventSystem/OpaaxEventBase.h"  include with macros
 //#include "Opaax/EventSystem/OpaaxEventBus.h" include with macros
 #include "Opaax/EventSystem/EventBus/OpaaxEventBusMacros.h"
+
+//------------------------------------------------
+// Window
+//------------------------------------------------
+#include "Opaax/Window/Platform/OpaaxWindowsWindow.h"

@@ -8,8 +8,7 @@ public:
 	{
 	}
 	
-	~SandboxApplication()
-	{
+	~SandboxApplication() override {
 	}
 };
 

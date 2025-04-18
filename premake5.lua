@@ -29,14 +29,17 @@ project "OpaaxGameEngine"
 
     includedirs {
         "%{prj.name}/Include",
-        boostincludedir
+        boostincludedir,
+        "%{prj.name}/ThirdParty/glfw-3.4.bin.WIN64/include",
     }
 
     libdirs {
-        boostlibsdir
+        boostlibsdir,
+        "%{prj.name}/ThirdParty/glfw-3.4.bin.WIN64/lib-vc2022"
     }
 
     links {
+        "glfw3.lib"
     }
 
     filter "system:windows"
@@ -80,15 +83,18 @@ project "Sandbox"
     includedirs {
         "%{prj.name}/Include",
         "OpaaxGameEngine/Include",
-        boostincludedir
+        boostincludedir,
+        "OpaaxGameEngine/ThirdParty/glfw-3.4.bin.WIN64/include",
     }
 
     libdirs {
-        boostlibsdir
+        boostlibsdir,
+        "OpaaxGameEngine/ThirdParty/glfw-3.4.bin.WIN64/lib-vc2022"
     }
 
     links {
-        "OpaaxGameEngine"
+        "OpaaxGameEngine",
+        "glfw3.lib"
     }
 
     filter "system:windows"

@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include <string>
+#include <cstring>
 #include <filesystem>
 #include <iostream>
 #include <fstream>
@@ -20,6 +21,8 @@
 
 #include <typeindex>
 #include <ranges>
+
+#include <intrin.h>
 
 #ifdef OPAAX_PLATFORM_WINDOWS
     #include "Windows.h"
