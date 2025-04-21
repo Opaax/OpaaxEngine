@@ -15,24 +15,42 @@ namespace OPAAX
      */
     class OPAAX_API OpaaxWindow
     {
+        //-----------------------------------------------------------------
+        // Members
+        //-----------------------------------------------------------------
+        /*---------------------------- PRIVATE ----------------------------*/
+    private:
+        bool bShouldQuit = false;
+
+        //-----------------------------------------------------------------
+        // CTOR/DTOR
+        //-----------------------------------------------------------------
+        /*---------------------------- PUBLIC ----------------------------*/
     public:
-        virtual ~OpaaxWindow() {}
+        virtual ~OpaaxWindow() = default;
 
-        virtual void OnUpdate() = 0;
-        virtual bool ShouldClose() = 0;
-        virtual void Init() = 0;
-        virtual void Shutdown() = 0;
+        //-----------------------------------------------------------------
+        // Functions
+        //-----------------------------------------------------------------
+        /*---------------------------- PROTECTED ----------------------------*/
+    protected:
+        virtual void SetShouldQuit(bool NewVal) { bShouldQuit = NewVal; }
 
-        virtual UInt32 GetWidth() const = 0;
-        virtual UInt32 GetHeight() const = 0;
-
-        // Window attributes
-        //virtual void SetEventCallback(const EventCallbackFn& callback) = 0;
-        virtual void SetVSync(bool Enabled) = 0;
-        virtual bool IsVSync() const = 0;
-
-        virtual void* GetNativeWindow() const = 0;
-
-        static OpaaxWindow* Create(const OpaaxWindowSpecs& Specs = OpaaxWindowSpecs());
+        /*---------------------------- PUBLIC ----------------------------*/
+    public:
+        virtual void Initialize()         = 0;
+        virtual void PollEvents()   = 0;
+        virtual void OnUpdate()     = 0;
+        virtual void Shutdown()     = 0;
+        
+        /*---------------------------- Getter / Setters ----------------------------*/
+        virtual UInt32  GetWidth()              const   = 0;
+        virtual UInt32  GetHeight()             const   = 0;
+        virtual bool    IsVSync()               const   = 0;
+        virtual void*   GetNativeWindow()       const   = 0;
+        
+        virtual void    SetVSync(bool Enabled)          = 0;
+        
+        FORCEINLINE virtual bool ShouldClose() { return bShouldQuit; }
     };
 }

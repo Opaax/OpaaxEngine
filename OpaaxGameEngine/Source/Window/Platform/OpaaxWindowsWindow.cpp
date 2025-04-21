@@ -4,6 +4,11 @@
 #include "Opaax/OpaaxAssertion.h"
 #include "Opaax/Log/OPLogMacro.h"
 
+#include <SDL3/SDL.h>
+
+#include "Opaax/OpaaxEngine.h"
+#include "Opaax/Renderer/Vulkan/OpaaxVulkanRenderer.h"
+
 using namespace OPAAX;
 
 OpaaxWindowsWindow::OpaaxWindowsWindow(const OpaaxWindowSpecs& Specs):m_window(nullptr),
@@ -13,62 +18,127 @@ OpaaxWindowsWindow::OpaaxWindowsWindow(const OpaaxWindowSpecs& Specs):m_window(n
 
 OpaaxWindowsWindow::~OpaaxWindowsWindow()
 {
-	if(GbIsGLFWInitialized)
+	if(GbIsNativeWindowInitialized)
 	{
 		OPAAX_WARNING("[OpaaxWindowsWindow] please use shut down before destroying the window.")
 		Shutdown();
 	}
 }
 
-void OpaaxWindowsWindow::Init()
+void OpaaxWindowsWindow::InitSDLWindow()
 {
+	OPAAX_LOG("[OpaaxWindowsWindow], Init SDL")
+	
+	if(!GbIsNativeWindowInitialized)
+	{
+		Int32 lResult = SDL_Init(SDL_INIT_VIDEO);
+		OPAAX_ASSERT(lResult, "SDL couldn't be init")
+	}
+#if OPAAX_DEBUG_MODE
+	else
+	{
+		OPAAX_WARNING("[OpaaxWindowsWindow][OpaaxWindowsWindow::InitSDLWindow], SDL Already Init")
+	}
+#endif
+}
+
+void OpaaxWindowsWindow::Initialize()
+{
+	OPAAX_VERBOSE("======================= Platform - Windows Init =======================")
 	OPAAX_VERBOSE("[OpaaxWindowsWindow] Creating window %1% (%2%, %3%)", %m_windowData.Title %m_windowData.Width %m_windowData.Height)
 
-	if(!GbIsGLFWInitialized)
+	InitSDLWindow();
+	
+	if(!GbIsNativeWindowInitialized)
 	{
-		Int32 lResult = glfwInit();
-		OPAAX_ASSERT(lResult, "GLFW couldn't be init")
+		// We initialize SDL and create a window with it.
+		Int32 lResult = SDL_Init(SDL_INIT_VIDEO);
+		OPAAX_ASSERT(lResult, "SDL couldn't be init")
 	}
 
-	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+	//Since the engine can cover multiple RendererContext I need to know which flags I will pass to SDL
+	SDL_WindowFlags lWindowsFlags = GetSDLWindowFlags(OpaaxEngine::Get().GetRenderer());
 	
-	m_window = glfwCreateWindow(static_cast<Int32>(m_windowData.Width), static_cast<Int32>(m_windowData.Height), m_windowData.Title.c_str(), nullptr, nullptr);
+	m_window = SDL_CreateWindow(
+			OPAAX_CONST::ENGINE_NAME.c_str(),
+			static_cast<Int32>(m_windowData.Width),
+			static_cast<Int32>(m_windowData.Height),
+			lWindowsFlags);
 
 	OPAAX_LOG("[OpaaxWindowsWindow] Window created")
-
-	glfwMakeContextCurrent(m_window);
-	glfwSetWindowUserPointer(m_window, this);
+	
 	SetVSync(true);
+	
+	OPAAX_VERBOSE("======================= Platform - End Windows Init =======================")
 }
 
 void OpaaxWindowsWindow::Shutdown()
 {
-	glfwDestroyWindow(m_window);
-	glfwTerminate();
-	GbIsGLFWInitialized = false;
+	OPAAX_VERBOSE("======================= Platform - Windows Shutting Down =======================")
+	
+	SDL_DestroyWindow(m_window);
+	
+	GbIsNativeWindowInitialized = false;
+
+	OPAAX_VERBOSE("======================= Platform - Windows Shutting Down End =======================")
+}
+
+void OpaaxWindowsWindow::PollEvents()
+{
+	SDL_Event lEvent;
+	SDL_PollEvent(&lEvent);
+
+	// Take care of this later, maybe implement some kind of wheel controller in the future?
+	//case SDL_EVENT_JOYSTICK_AXIS_MOTION:
+	//	case SDL_EVENT_JOYSTICK_BUTTON_DOWN:
+	//	case SDL_EVENT_JOYSTICK_BUTTON_UP:
+	//Take care of touch later
+	//	case (SDL_TouchFingerEvent):
+
+	switch(lEvent.type)
+	{
+		case SDL_EVENT_QUIT:
+			SetShouldQuit(true);
+			break;
+		case SDL_EVENT_WINDOW_MINIMIZED: 
+		case SDL_EVENT_WINDOW_MAXIMIZED:
+		case SDL_EVENT_WINDOW_RESTORED:
+		case SDL_EVENT_KEY_DOWN:
+		case SDL_EVENT_KEY_UP:
+		case SDL_EVENT_MOUSE_MOTION:
+		case SDL_EVENT_MOUSE_BUTTON_DOWN:
+		case SDL_EVENT_MOUSE_BUTTON_UP:
+		case SDL_EVENT_MOUSE_WHEEL:
+		case SDL_EVENT_GAMEPAD_AXIS_MOTION:
+		case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+		case SDL_EVENT_GAMEPAD_BUTTON_UP:
+		case SDL_EVENT_GAMEPAD_ADDED:
+		case SDL_EVENT_GAMEPAD_REMOVED:
+		case SDL_EVENT_GAMEPAD_REMAPPED:
+		case SDL_EVENT_GAMEPAD_UPDATE_COMPLETE:
+		case SDL_EVENT_GAMEPAD_STEAM_HANDLE_UPDATED:
+		case SDL_EVENT_GAMEPAD_TOUCHPAD_DOWN:
+		case SDL_EVENT_GAMEPAD_TOUCHPAD_MOTION:
+		case SDL_EVENT_GAMEPAD_TOUCHPAD_UP:
+	default: ;
+	}
 }
 
 void OpaaxWindowsWindow::OnUpdate()
 {
-	glfwPollEvents();
+	
 }
 
 void OpaaxWindowsWindow::SetVSync(bool Enabled)
 {
 	if (Enabled)
 	{
-		glfwSwapInterval(1);
+		
 	}
 	else
 	{
-		glfwSwapInterval(0);
+		
 	}
 
 	m_windowData.bVSync = Enabled;
-}
-
-bool OpaaxWindowsWindow::ShouldClose()
-{
-	return glfwWindowShouldClose(m_window);
 }

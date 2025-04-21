@@ -18,6 +18,8 @@ using OPSTDFunc = std::function<FuncArg>;
 
 using OPSTDTypeID = std::type_index;
 
+#pragma warning(push)        // Save the current warning state
+#pragma warning(disable:4251) // Disable warning C4251
 template <typename T>
 using TSharedPtr = std::shared_ptr<T>;
 
@@ -35,3 +37,4 @@ template <typename T, typename... TArgs>
 {
     return std::make_unique<T>(std::forward<TArgs>(Args)...);
 }
+#pragma warning(pop)         // Restore the previous

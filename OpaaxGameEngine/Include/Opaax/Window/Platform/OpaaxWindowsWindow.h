@@ -1,16 +1,21 @@
 ﻿#pragma once
-
-#include <GLFW/glfw3.h>
+#include "Opaax/Renderer/IOpaaxRendererContext.h"
 #include "Opaax/Window/OpaaxWindow.h"
+
+struct SDL_Window;
 
 namespace OPAAX
 {
-    inline bool GbIsGLFWInitialized = false;
+    inline bool GbIsNativeWindowInitialized = false;
     
     class OPAAX_API OpaaxWindowsWindow : public OpaaxWindow
     {
+        //-----------------------------------------------------------------
+        // Members
+        //-----------------------------------------------------------------
+        /*---------------------------- PRIVATE ----------------------------*/
     private:
-        GLFWwindow* m_window;
+        SDL_Window*                         m_window            = nullptr;
 
         struct OPWindowData
         {
@@ -22,26 +27,36 @@ namespace OPAAX
 
             OPWindowData(const OSTDString& InTitle, UInt32 InWidth, UInt32 InHeight) : Title(InTitle), Width(InWidth),
                 Height(InHeight) {}
-        };
+        } m_windowData;
 
-        OPWindowData m_windowData;
-
+        //-----------------------------------------------------------------
+        // CTOR / DTOR
+        //-----------------------------------------------------------------
+        /*---------------------------- PUBLIC ----------------------------*/
     public:
         OpaaxWindowsWindow(const OpaaxWindowSpecs& Specs);
         ~OpaaxWindowsWindow() override;
-        
-        virtual void Init() override;
-        virtual void Shutdown() override;
 
+        //-----------------------------------------------------------------
+        // Function
+        //-----------------------------------------------------------------
+        /*---------------------------- PRIVATE ----------------------------*/
+        void InitSDLWindow();
+
+        //-----------------------------------------------------------------
+        // Override
+        //-----------------------------------------------------------------
+        /*---------------------------- PUBLIC ----------------------------*/
     public:
-        void OnUpdate() override;
-        UInt32 GetWidth() const override { return m_windowData.Width; }
-        UInt32 GetHeight() const override { return m_windowData.Height; }
-        // Window attributes
-        //void SetEventCallback(const EventCallbackFn& callback) override { m_Data.EventCallback = callback; }
-        void SetVSync(bool Enabled) override;
-        bool IsVSync() const override { return m_windowData.bVSync; }
-        void* GetNativeWindow() const override { return m_window; }
-        bool ShouldClose() override;
+        virtual void Initialize()         override;
+        virtual void PollEvents()   override;
+        virtual void OnUpdate()     override;
+        virtual void Shutdown()     override;
+
+        UInt32  GetWidth()          const   override { return m_windowData.Width; }
+        UInt32  GetHeight()         const   override { return m_windowData.Height; }
+        bool    IsVSync()           const   override { return m_windowData.bVSync; }
+        void*   GetNativeWindow()   const   override { return m_window; }
+        void    SetVSync(bool Enabled)      override;
     };
 }

@@ -14,5 +14,6 @@ public:
 
 OPAAX::OpaaxApplication* OPAAX::CreateApplication()
 {
+	OPAAX_VERBOSE("======================= Creating Application =======================")
 	return new SandboxApplication();
 }

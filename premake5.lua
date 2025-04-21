@@ -30,16 +30,16 @@ project "OpaaxGameEngine"
     includedirs {
         "%{prj.name}/Include",
         boostincludedir,
-        "%{prj.name}/ThirdParty/glfw-3.4.bin.WIN64/include",
+        "%{prj.name}/ThirdParty/SDL3-3.2.10/include"
     }
 
     libdirs {
         boostlibsdir,
-        "%{prj.name}/ThirdParty/glfw-3.4.bin.WIN64/lib-vc2022"
+        "%{prj.name}/ThirdParty/SDL3-3.2.10/lib/x64"
     }
 
     links {
-        "glfw3.lib"
+        "SDL3"
     }
 
     filter "system:windows"
@@ -84,17 +84,17 @@ project "Sandbox"
         "%{prj.name}/Include",
         "OpaaxGameEngine/Include",
         boostincludedir,
-        "OpaaxGameEngine/ThirdParty/glfw-3.4.bin.WIN64/include",
+        "OpaaxGameEngine/ThirdParty/SDL3-3.2.10/include"
     }
 
     libdirs {
         boostlibsdir,
-        "OpaaxGameEngine/ThirdParty/glfw-3.4.bin.WIN64/lib-vc2022"
+        "OpaaxGameEngine/ThirdParty/SDL3-3.2.10/lib/x64"
     }
 
     links {
         "OpaaxGameEngine",
-        "glfw3.lib"
+        "SDL3"
     }
 
     filter "system:windows"

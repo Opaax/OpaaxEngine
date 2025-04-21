@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "Opaax/OpaaxCoreMacros.h"
 
 /**
  * @class OpaaxNonCopyableAndMovable
