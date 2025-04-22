@@ -80,14 +80,6 @@ namespace OPAAX
 
                 return lRequiredExtensions.empty();
             }
-        
-            static bool IsPhysicalDeviceSuitable(VkPhysicalDevice Device, VkSurfaceKHR Surface)
-            {
-                VULKAN::OpaaxQueueFamilyIndices lIndices = FindQueueFamilies(Device, Surface);
-                bool lExtensionsSupported = CheckDeviceExtensionSupport(Device);
-
-                return lIndices.IsComplete() && lExtensionsSupported;
-            }
 
             static void CreateBuffer(VkPhysicalDevice PhysicalDevice, VkDevice LogicalDevice, VkDeviceSize Size, VkBufferUsageFlags Usage,
                           VkMemoryPropertyFlags Properties, VkBuffer& Buffer, VkDeviceMemory& BufferMemory)

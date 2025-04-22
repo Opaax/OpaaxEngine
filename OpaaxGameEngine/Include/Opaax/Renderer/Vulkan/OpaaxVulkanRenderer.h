@@ -2,8 +2,6 @@
 #include "OpaaxVKTypes.h"
 #include "OpaaxVulkanInclude.h"
 #include "Opaax/Renderer/IOpaaxRendererContext.h"
-#include "Opaax/Renderer/Vulkan/OpaaxVKInstance.h"
-#include "Opaax/Renderer/Vulkan/OpaaxVKPhysicalDevice.h"
 
 namespace OPAAX
 {

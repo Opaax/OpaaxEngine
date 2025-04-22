@@ -1,6 +1,8 @@
 ﻿#include "OPpch.h"
 #include "Opaax/Renderer/Vulkan/OpaaxVulkanRenderer.h"
 
+#include <VkBootstrap.h>
+
 #include "Opaax/Renderer/Vulkan/OpaaxVKGlobal.h"
 #include "Opaax/Renderer/Vulkan/OpaaxVKHelper.h"
 #include "Opaax/Window/OpaaxWindow.h"
