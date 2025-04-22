@@ -38,3 +38,6 @@ template <typename T, typename... TArgs>
     return std::make_unique<T>(std::forward<TArgs>(Args)...);
 }
 #pragma warning(pop)         // Restore the previous
+
+template <typename T>
+using TOptional = std::optional<T>;

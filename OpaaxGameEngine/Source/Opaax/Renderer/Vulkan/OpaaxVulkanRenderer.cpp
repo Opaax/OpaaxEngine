@@ -24,11 +24,23 @@ OpaaxVulkanRenderer::~OpaaxVulkanRenderer()
 bool OpaaxVulkanRenderer::Initialize()
 {
     OPAAX_VERBOSE("======================= Renderer - Vulkan Init =======================")
-    
-    m_opaaxVKInstance = MakeUnique<OpaaxVKInstance>();
-    m_opaaxVKInstance->Init();
 
-    CreateVulkanSurface();
+    //Instance
+    {
+        m_opaaxVKInstance = MakeUnique<OpaaxVKInstance>();
+        m_opaaxVKInstance->Init();
+    }
+
+    //SURFACE
+    {
+        CreateVulkanSurface();
+    }
+
+    //PHYSICAL DEVICE
+    {
+        m_opaaxVKPhysicalDevice = MakeUnique<OpaaxVKPhysicalDevice>();
+        m_opaaxVKPhysicalDevice->Init(m_opaaxVKInstance->GetInstance(), m_vkSurface);
+    }
     
     OPAAX_VERBOSE("======================= Renderer - Vulkan End Init =======================")
     return false;
@@ -40,6 +52,7 @@ void OpaaxVulkanRenderer::Shutdown()
 {
     OPAAX_VERBOSE("======================= Renderer - Vulkan Shutting Down =======================")
 
+    m_opaaxVKPhysicalDevice->Cleanup();
     vkDestroySurfaceKHR(m_opaaxVKInstance->GetInstance(), m_vkSurface, nullptr);
     m_opaaxVKInstance->Cleanup();
     

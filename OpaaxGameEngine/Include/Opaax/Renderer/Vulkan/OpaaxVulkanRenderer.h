@@ -2,10 +2,7 @@
 #include "OpaaxVulkanInclude.h"
 #include "Opaax/Renderer/IOpaaxRendererContext.h"
 #include "Opaax/Renderer/Vulkan/OpaaxVKInstance.h"
-
-namespace OPAAX::RENDERER::VULKAN {
-    class OpaaxVKInstance;
-}
+#include "Opaax/Renderer/Vulkan/OpaaxVKPhysicalDevice.h"
 
 namespace OPAAX
 {
@@ -17,6 +14,7 @@ namespace OPAAX
             {
                 TUniquePtr<RENDERER::VULKAN::OpaaxVKInstance> m_opaaxVKInstance = nullptr;
                 VkSurfaceKHR m_vkSurface = VK_NULL_HANDLE;
+                TUniquePtr<RENDERER::VULKAN::OpaaxVKPhysicalDevice> m_opaaxVKPhysicalDevice = nullptr;
 
                 void CreateVulkanSurface();
             
