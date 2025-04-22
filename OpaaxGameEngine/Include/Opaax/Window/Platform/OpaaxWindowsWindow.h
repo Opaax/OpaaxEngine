@@ -48,10 +48,10 @@ namespace OPAAX
         //-----------------------------------------------------------------
         /*---------------------------- PUBLIC ----------------------------*/
     public:
-        virtual void Initialize()         override;
-        virtual void PollEvents()   override;
-        virtual void OnUpdate()     override;
-        virtual void Shutdown()     override;
+        virtual void Initialize()                   override;
+        virtual bool PollEvents(SDL_Event& Event)   override;
+        virtual void OnUpdate()                     override;
+        virtual void Shutdown()                     override;
 
         UInt32  GetWidth()          const   override { return m_windowData.Width; }
         UInt32  GetHeight()         const   override { return m_windowData.Height; }

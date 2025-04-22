@@ -6,6 +6,9 @@ workspace "OpaaxGameEngine"
 outputDir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 boostincludedir = os.getenv("BOOST_INCLUDE_DIR")
 boostlibsdir = os.getenv("BOOST_LIBRARY_DIR")
+vulkansdk = os.getenv("VULKAN_SDK")
+vulkaninclude = (vulkansdk.."/Include")
+vulkanlib = (vulkansdk.."/Lib")
 
 -- === Projet OpaaxGameEngine ===
 project "OpaaxGameEngine"
@@ -30,12 +33,17 @@ project "OpaaxGameEngine"
     includedirs {
         "%{prj.name}/Include",
         boostincludedir,
-        "%{prj.name}/ThirdParty/SDL3-3.2.10/include"
+        "%{prj.name}/ThirdParty/SDL3-3.2.10/include",
+        vulkaninclude,
+        "%{prj.name}/ThirdParty/glm",
+        "%{prj.name}/ThirdParty/VulkanMemoryAllocator/include"
+       
     }
 
     libdirs {
         boostlibsdir,
-        "%{prj.name}/ThirdParty/SDL3-3.2.10/lib/x64"
+        "%{prj.name}/ThirdParty/SDL3-3.2.10/lib/x64",
+        vulkanlib
     }
 
     links {
@@ -84,12 +92,16 @@ project "Sandbox"
         "%{prj.name}/Include",
         "OpaaxGameEngine/Include",
         boostincludedir,
-        "OpaaxGameEngine/ThirdParty/SDL3-3.2.10/include"
+        "OpaaxGameEngine/ThirdParty/SDL3-3.2.10/include",
+        "OpaaxGameEngine/ThirdParty/glm",
+        "OpaaxGameEngine/ThirdParty/VulkanMemoryAllocator/include",
+        vulkaninclude
     }
 
     libdirs {
         boostlibsdir,
-        "OpaaxGameEngine/ThirdParty/SDL3-3.2.10/lib/x64"
+        "OpaaxGameEngine/ThirdParty/SDL3-3.2.10/lib/x64",
+        vulkanlib
     }
 
     links {

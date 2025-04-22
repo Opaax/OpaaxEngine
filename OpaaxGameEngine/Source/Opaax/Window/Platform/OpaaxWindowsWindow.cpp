@@ -83,10 +83,9 @@ void OpaaxWindowsWindow::Shutdown()
 	OPAAX_VERBOSE("======================= Platform - Windows Shutting Down End =======================")
 }
 
-void OpaaxWindowsWindow::PollEvents()
+bool OpaaxWindowsWindow::PollEvents(SDL_Event& Event)
 {
-	SDL_Event lEvent;
-	SDL_PollEvent(&lEvent);
+	bool lPollResult = SDL_PollEvent(&Event);
 
 	// Take care of this later, maybe implement some kind of wheel controller in the future?
 	//case SDL_EVENT_JOYSTICK_AXIS_MOTION:
@@ -95,16 +94,24 @@ void OpaaxWindowsWindow::PollEvents()
 	//Take care of touch later
 	//	case (SDL_TouchFingerEvent):
 
-	switch(lEvent.type)
+	switch(Event.type)
 	{
 		case SDL_EVENT_QUIT:
 			SetShouldQuit(true);
 			break;
-		case SDL_EVENT_WINDOW_MINIMIZED: 
+		case SDL_EVENT_WINDOW_MINIMIZED:
+			SetIsMinimized(true);
+			break;
 		case SDL_EVENT_WINDOW_MAXIMIZED:
+			SetIsMinimized(false);
+			break;
 		case SDL_EVENT_WINDOW_RESTORED:
+			SetIsMinimized(false);
+			break;
 		case SDL_EVENT_KEY_DOWN:
 		case SDL_EVENT_KEY_UP:
+			OpaaxEngine::Get().GetInput().RegisterKeyboardInput(Event.key);
+			break;
 		case SDL_EVENT_MOUSE_MOTION:
 		case SDL_EVENT_MOUSE_BUTTON_DOWN:
 		case SDL_EVENT_MOUSE_BUTTON_UP:
@@ -122,6 +129,8 @@ void OpaaxWindowsWindow::PollEvents()
 		case SDL_EVENT_GAMEPAD_TOUCHPAD_UP:
 	default: ;
 	}
+
+	return lPollResult;
 }
 
 void OpaaxWindowsWindow::OnUpdate()

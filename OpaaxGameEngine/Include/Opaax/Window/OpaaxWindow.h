@@ -1,4 +1,6 @@
 #pragma once
+#include <SDL3/SDL_events.h>
+
 #include "OpaaxWindowSpecs.h"
 #include "Opaax/OpaaxStdTypes.h"
 
@@ -21,6 +23,7 @@ namespace OPAAX
         /*---------------------------- PRIVATE ----------------------------*/
     private:
         bool bShouldQuit = false;
+        bool bIsMinimized = false;
 
         //-----------------------------------------------------------------
         // CTOR/DTOR
@@ -34,14 +37,15 @@ namespace OPAAX
         //-----------------------------------------------------------------
         /*---------------------------- PROTECTED ----------------------------*/
     protected:
-        virtual void SetShouldQuit(bool NewVal) { bShouldQuit = NewVal; }
+        virtual void SetShouldQuit(bool NewVal)     { bShouldQuit = NewVal; }
+        virtual void SetIsMinimized(bool NewVal)    { bIsMinimized = NewVal; }
 
         /*---------------------------- PUBLIC ----------------------------*/
     public:
-        virtual void Initialize()         = 0;
-        virtual void PollEvents()   = 0;
-        virtual void OnUpdate()     = 0;
-        virtual void Shutdown()     = 0;
+        virtual void Initialize()                   = 0;
+        virtual bool PollEvents(SDL_Event& Event)   = 0;
+        virtual void OnUpdate()                     = 0;
+        virtual void Shutdown()                     = 0;
         
         /*---------------------------- Getter / Setters ----------------------------*/
         virtual UInt32  GetWidth()              const   = 0;
@@ -52,5 +56,6 @@ namespace OPAAX
         virtual void    SetVSync(bool Enabled)          = 0;
         
         FORCEINLINE virtual bool ShouldClose() { return bShouldQuit; }
+        FORCEINLINE virtual bool IsMinimized() { return bIsMinimized; }
     };
 }

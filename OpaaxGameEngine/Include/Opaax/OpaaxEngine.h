@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "OpaaxNonCopyableAndMovable.h"
+#include "Input/OpaaxInputSystem.h"
 #include "Renderer/OpaaxBackendRenderer.h"
 
 namespace OPAAX
@@ -8,6 +9,8 @@ namespace OPAAX
     {
     private:
         RENDERER::EOPBackendRenderer m_renderer;
+
+        OpaaxInputSystem m_input;
         
     public:
         OpaaxEngine();
@@ -19,5 +22,6 @@ namespace OPAAX
         static OpaaxEngine& Get();
 
         FORCEINLINE RENDERER::EOPBackendRenderer& GetRenderer() { return m_renderer; }
+        FORCEINLINE OpaaxInputSystem& GetInput() { return m_input; }
     };
 }

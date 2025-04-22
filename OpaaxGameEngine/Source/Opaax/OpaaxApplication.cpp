@@ -73,15 +73,30 @@ void OPAAX::OpaaxApplication::Run()
 	
 	while (bIsRunning)
 	{
-		m_opaaxWindow->PollEvents();
-		
+		// Handle events on queue
+		SDL_Event lEvent;
+		while (m_opaaxWindow->PollEvents(lEvent))
+		{
+			//TODO: Some kind of event here?
+		}
+
+		//The app will close
 		if(m_opaaxWindow->ShouldClose())
 		{
+			//TODO Close event to make some save or other stuff
 			bIsRunning = false;
 			break;
 		}
+
+		if(m_opaaxWindow->IsMinimized())
+		{
+			//TODO Stop rendering
+			//TODO Make a save?
+			//std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
 		
 		m_opaaxWindow->OnUpdate();
+		m_opaaxRenderer->RenderFrame();
 	}
 	
 	Shutdown();
