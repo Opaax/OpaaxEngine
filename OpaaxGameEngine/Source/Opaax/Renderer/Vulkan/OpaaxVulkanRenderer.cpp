@@ -1,16 +1,35 @@
 ﻿#include "OPpch.h"
 #include "Opaax/Renderer/Vulkan/OpaaxVulkanRenderer.h"
+#include "Opaax/Window/OpaaxWindow.h"
 
-using namespace OPAAX::Vulkan;
+#include "SDL3/SDL.h"
+#include "SDL3/SDL_vulkan.h"
+
+using namespace OPAAX::RENDERER::VULKAN;
+
+void OpaaxVulkanRenderer::CreateVulkanSurface()
+{
+    OPAAX_LOG("[OpaaxVulkanRenderer]: Creating the vulkan surface...")
+    
+    SDL_Vulkan_CreateSurface(reinterpret_cast<SDL_Window*>(GetOpaaxWindow()->GetNativeWindow()), m_opaaxVKInstance->GetInstance(), nullptr, &m_vkSurface);
+
+    OPAAX_LOG("[OpaaxVulkanRenderer]: Vulkan surface created!")
+}
 
 OpaaxVulkanRenderer::~OpaaxVulkanRenderer()
 {
-    
+    IOpaaxRendererContext::~IOpaaxRendererContext();
 }
 
 bool OpaaxVulkanRenderer::Initialize()
 {
     OPAAX_VERBOSE("======================= Renderer - Vulkan Init =======================")
+    
+    m_opaaxVKInstance = MakeUnique<OpaaxVKInstance>();
+    m_opaaxVKInstance->Init();
+
+    CreateVulkanSurface();
+    
     OPAAX_VERBOSE("======================= Renderer - Vulkan End Init =======================")
     return false;
 }
@@ -20,5 +39,9 @@ void OpaaxVulkanRenderer::RenderFrame() {}
 void OpaaxVulkanRenderer::Shutdown()
 {
     OPAAX_VERBOSE("======================= Renderer - Vulkan Shutting Down =======================")
+
+    vkDestroySurfaceKHR(m_opaaxVKInstance->GetInstance(), m_vkSurface, nullptr);
+    m_opaaxVKInstance->Cleanup();
+    
     OPAAX_VERBOSE("======================= Renderer - Vulkan Shutting Down End =======================")
 }

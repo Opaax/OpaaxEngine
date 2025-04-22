@@ -36,8 +36,7 @@ project "OpaaxGameEngine"
         "%{prj.name}/ThirdParty/SDL3-3.2.10/include",
         vulkaninclude,
         "%{prj.name}/ThirdParty/glm",
-        "%{prj.name}/ThirdParty/VulkanMemoryAllocator/include"
-       
+        "%{prj.name}/ThirdParty/VulkanMemoryAllocator/include",
     }
 
     libdirs {
@@ -47,7 +46,8 @@ project "OpaaxGameEngine"
     }
 
     links {
-        "SDL3"
+        "SDL3",
+        "vulkan-1"
     }
 
     filter "system:windows"
@@ -106,7 +106,8 @@ project "Sandbox"
 
     links {
         "OpaaxGameEngine",
-        "SDL3"
+        "SDL3",
+        "vulkan-1"
     }
 
     filter "system:windows"

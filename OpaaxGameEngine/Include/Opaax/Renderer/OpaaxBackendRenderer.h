@@ -5,10 +5,6 @@
 #include "Opaax/OpaaxStdTypes.h"
 #include "Vulkan/OpaaxVulkanRenderer.h"
 
-namespace OPAAX::Vulkan {
-    class OpaaxVulkanRenderer;
-}
-
 namespace OPAAX
 {
     namespace RENDERER

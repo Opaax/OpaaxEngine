@@ -40,7 +40,7 @@ void OpaaxApplication::CreateInitRenderer()
 	case RENDERER::EOPBackendRenderer::Unknown:
 		break;
 	case RENDERER::EOPBackendRenderer::Vulkan:
-		m_opaaxRenderer = MakeUnique<Vulkan::OpaaxVulkanRenderer>(m_opaaxWindow.get());
+		m_opaaxRenderer = MakeUnique<RENDERER::VULKAN::OpaaxVulkanRenderer>(m_opaaxWindow.get());
 		break;
 	case RENDERER::EOPBackendRenderer::Dx12:
 		break;
@@ -67,7 +67,7 @@ void OpaaxApplication::Initialize()
 	OPAAX_VERBOSE("======================= Application End Initialize =======================")
 }
 
-void OPAAX::OpaaxApplication::Run()
+void OpaaxApplication::Run()
 {
 	bIsRunning = true;
 	
