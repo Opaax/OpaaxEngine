@@ -1,8 +1,7 @@
 ﻿#pragma once
 #include <set>
+#include <SDL3/SDL_vulkan.h>
 
-#include "OpaaxQueueFamilyIndices.h"
-#include "OpaaxSwapChainSupportDetails.h"
 #include "OpaaxVKGlobal.h"
 #include "OpaaxVulkanInclude.h"
 #include "Opaax/OpaaxStdTypes.h"
@@ -13,9 +12,40 @@ namespace OPAAX
     namespace RENDERER
     {
         namespace VULKAN_HELPER
-        {        
-            static UInt32 FindMemoryType(VkPhysicalDevice PhysicalDevice, UInt32 TypeFilter,
-                                         VkMemoryPropertyFlags Properties)
+        {
+            static std::vector<const char*> GetRequiredExtensions()
+            {
+                UInt32 lExtensionCount = 0;
+                const char* const* lFetchedExtensions = SDL_Vulkan_GetInstanceExtensions(&lExtensionCount);
+
+                if (lFetchedExtensions == NULL)
+                {
+                    OPAAX_ERROR("[OpaaxVKInstance]: Failed to extension for VK instance!")
+                    throw std::runtime_error("Failed to extension for VK instance!");
+                }
+
+                std::vector<const char*> lExtensions(lFetchedExtensions, lFetchedExtensions + lExtensionCount);
+
+                if (VULKAN_CONST::G_ENABLE_VALIDATION_LAYERS)
+                {
+                    lExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+                }
+
+                return lExtensions;
+            }
+
+            static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT MessageSeverity,
+                                                        VkDebugUtilsMessageTypeFlagsEXT MessageType,
+                                                        const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+                                                        void* pUserData)
+            {
+                OPAAX_DEBUG("Validation Layer %1%", %pCallbackData->pMessage)
+                std::cerr << "Validation layer: " << pCallbackData->pMessage << std::endl;
+
+                return VK_FALSE;
+            }
+            
+            static UInt32 FindMemoryType(VkPhysicalDevice PhysicalDevice, UInt32 TypeFilter, VkMemoryPropertyFlags Properties)
             {
                 VkPhysicalDeviceMemoryProperties lMemProperties;
 
@@ -33,78 +63,18 @@ namespace OPAAX
                 throw std::runtime_error("Failed to find suitable memory type!");
             }
 
-            static VULKAN::OpaaxSwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice Device, VkSurfaceKHR Surface)
+            static bool CheckDeviceExtensionSupport(VkPhysicalDevice Device)
             {
-                VULKAN::OpaaxSwapChainSupportDetails lDetails{};
-                vkGetPhysicalDeviceSurfaceCapabilitiesKHR(Device, Surface, &lDetails.Capabilities);
-
-                UInt32 lFormatCount;
-                vkGetPhysicalDeviceSurfaceFormatsKHR(Device, Surface, &lFormatCount, nullptr);
-
-                if (lFormatCount != 0)
-                {
-                    lDetails.Formats.resize(lFormatCount);
-                    vkGetPhysicalDeviceSurfaceFormatsKHR(Device, Surface, &lFormatCount, lDetails.Formats.data());
-                }
-
-                UInt32 lPresentModeCount;
-                vkGetPhysicalDeviceSurfacePresentModesKHR(Device, Surface, &lPresentModeCount, nullptr);
-
-                if (lPresentModeCount != 0)
-                {
-                    lDetails.PresentModes.resize(lPresentModeCount);
-                    vkGetPhysicalDeviceSurfacePresentModesKHR(Device, Surface, &lPresentModeCount, lDetails.PresentModes.data());
-                }
-            
-                return lDetails;
-            }
-
-            static VULKAN::OpaaxQueueFamilyIndices FindQueueFamilies(VkPhysicalDevice Device, VkSurfaceKHR Surface) {
-                VULKAN::OpaaxQueueFamilyIndices lIndices;
-
-                UInt32 lQueueFamilyCount = 0;
-                vkGetPhysicalDeviceQueueFamilyProperties(Device, &lQueueFamilyCount, nullptr);
-
-                std::vector<VkQueueFamilyProperties> lQueueFamilies(lQueueFamilyCount);
-                vkGetPhysicalDeviceQueueFamilyProperties(Device, &lQueueFamilyCount, lQueueFamilies.data());
-
-                int i = 0;
-                for (const auto& lQueueFamily : lQueueFamilies)
-                {
-                    if (lQueueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
-                    {
-                        VkBool32 lPresentSupport = false;
-                        vkGetPhysicalDeviceSurfaceSupportKHR(Device, i, Surface, &lPresentSupport);
-
-                        if (lPresentSupport)
-                        {
-                            lIndices.PresentFamily = i;
-                        }
-
-                        lIndices.GraphicsFamily = i;
-                    }
-
-                    if (lIndices.IsComplete())
-                    {
-                        break;
-                    }
-
-                    i++;
-                }
-
-                return lIndices;
-            }
-
-            static bool CheckDeviceExtensionSupport(VkPhysicalDevice device) {
                 UInt32 lExtensionCount;
-                vkEnumerateDeviceExtensionProperties(device, nullptr, &lExtensionCount, nullptr);
+                vkEnumerateDeviceExtensionProperties(Device, nullptr, &lExtensionCount, nullptr);
 
                 std::vector<VkExtensionProperties> lAvailableExtensions(lExtensionCount);
-                vkEnumerateDeviceExtensionProperties(device, nullptr, &lExtensionCount, lAvailableExtensions.data());
+                vkEnumerateDeviceExtensionProperties(Device, nullptr, &lExtensionCount, lAvailableExtensions.data());
 
                 std::set<std::string> lRequiredExtensions(VULKAN_CONST::G_DEVICES_EXTENSIONS.begin(), VULKAN_CONST::G_DEVICES_EXTENSIONS.end());
 
-                for (const auto& extension : lAvailableExtensions) {
+                for (const auto& extension : lAvailableExtensions)
+                {
                     lRequiredExtensions.erase(extension.extensionName);
                 }
 

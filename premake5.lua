@@ -27,7 +27,8 @@ project "OpaaxGameEngine"
     files {
         "%{prj.name}/Include/**.h",
         "%{prj.name}/Include/**.hpp",
-        "%{prj.name}/Source/**.cpp"
+        "%{prj.name}/Source/**.cpp",
+        "%{prj.name}/ThirdParty/vkBootStrapWrapper.cpp",
     }
 
     includedirs {
@@ -37,6 +38,7 @@ project "OpaaxGameEngine"
         vulkaninclude,
         "%{prj.name}/ThirdParty/glm",
         "%{prj.name}/ThirdParty/VulkanMemoryAllocator/include",
+        "%{prj.name}/ThirdParty/vkbootstrap"
     }
 
     libdirs {
@@ -95,7 +97,8 @@ project "Sandbox"
         "OpaaxGameEngine/ThirdParty/SDL3-3.2.10/include",
         "OpaaxGameEngine/ThirdParty/glm",
         "OpaaxGameEngine/ThirdParty/VulkanMemoryAllocator/include",
-        vulkaninclude
+        vulkaninclude,
+        "OpaaxGameEngine/ThirdParty/vkbootstrap"
     }
 
     libdirs {

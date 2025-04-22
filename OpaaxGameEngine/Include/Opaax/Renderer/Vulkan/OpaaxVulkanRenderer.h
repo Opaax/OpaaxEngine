@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "OpaaxVKTypes.h"
 #include "OpaaxVulkanInclude.h"
 #include "Opaax/Renderer/IOpaaxRendererContext.h"
 #include "Opaax/Renderer/Vulkan/OpaaxVKInstance.h"
@@ -12,17 +13,34 @@ namespace OPAAX
         {
             class OPAAX_API OpaaxVulkanRenderer final : public OPAAX::IOpaaxRendererContext
             {
-                TUniquePtr<RENDERER::VULKAN::OpaaxVKInstance> m_opaaxVKInstance = nullptr;
-                VkSurfaceKHR m_vkSurface = VK_NULL_HANDLE;
-                TUniquePtr<RENDERER::VULKAN::OpaaxVKPhysicalDevice> m_opaaxVKPhysicalDevice = nullptr;
+                VkExtent2D                  m_windowExtent{ 1280 , 720 };
+                
+                VkSurfaceKHR                m_vkSurface         = VK_NULL_HANDLE;
+                VkInstance                  m_vkInstance        = VK_NULL_HANDLE;
+                VkDebugUtilsMessengerEXT    m_vkDebugMessenger  = VK_NULL_HANDLE;
+                VkPhysicalDevice            m_vkPhysicalDevice  = VK_NULL_HANDLE;
+                VkDevice                    m_vkDevice          = VK_NULL_HANDLE;
+                VkSwapchainKHR              m_vkSwapchain       = VK_NULL_HANDLE;
+                
+                VkFormat                    m_vkSwapchainImageFormat;
 
-                void CreateVulkanSurface();
-            
+                VecVkImg                    m_vkSwapchainImages;
+                VecVkImgView                m_vkSwapchainImageViews;
+                VkExtent2D                  m_vkSwapchainExtent;
+                
             public:
-                explicit OpaaxVulkanRenderer(OPAAX::OpaaxWindow* const Window)
-                    : IOpaaxRendererContext(Window) {}
+                explicit OpaaxVulkanRenderer(OPAAX::OpaaxWindow* const Window);
 
                 ~OpaaxVulkanRenderer() override;
+
+            private:
+                void InitVulkanBootStrap();
+                void CreateVulkanSurface();
+                void InitVulkanSwapchain();
+
+                void CreateSwapchain(UInt32 Width, UInt32 Height);
+                void DestroySwapchain();
+            public:
             
                 bool Initialize() override;
                 void Resize() override;
