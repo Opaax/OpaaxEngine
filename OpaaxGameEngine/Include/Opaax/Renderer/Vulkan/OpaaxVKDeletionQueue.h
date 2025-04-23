@@ -10,7 +10,7 @@ namespace OPAAX
     {
         namespace VULKAN
         {
-            struct OpaaxVKDeletionQueue
+            struct OPAAX_API OpaaxVKDeletionQueue
             {
                 std::deque<OPSTDFunc<void()>> Deletors;
 

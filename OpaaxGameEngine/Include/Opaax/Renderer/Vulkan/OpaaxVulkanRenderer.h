@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "OpaaxVKAllocatedImage.h"
+#include "OpaaxVKDescriptorAllocator.h"
 #include "OpaaxVKGlobal.h"
 #include "OpaaxVKTypes.h"
 #include "OpaaxVulkanInclude.h"
@@ -43,6 +44,14 @@ namespace OPAAX
                 //draw resources
                 OpaaxVKAllocatedImage       m_drawImage;
                 VkExtent2D                  m_drawExtent;
+
+                OpaaxVKDescriptorAllocator  m_globalDescriptorAllocator;
+
+                VkDescriptorSet             m_vkDrawImageDescriptors;
+                VkDescriptorSetLayout       m_vkDrawImageDescriptorLayout;
+
+                VkPipeline                  m_gradientPipeline;
+                VkPipelineLayout            m_gradientPipelineLayout;
                 
             public:
                 explicit OpaaxVulkanRenderer(OPAAX::OpaaxWindow* const Window);
@@ -76,6 +85,10 @@ namespace OPAAX
                 void InitVulkanSwapchain();
                 void InitVulkanCommands();
                 void InitVulkanSyncs();
+                void InitDescriptors();
+                void InitPipelines();
+                void InitBackgroundPipelines();
+                
                 void CreateSwapchain(UInt32 Width, UInt32 Height);
 
                 void DrawBackground(VkCommandBuffer CommandBuffer);

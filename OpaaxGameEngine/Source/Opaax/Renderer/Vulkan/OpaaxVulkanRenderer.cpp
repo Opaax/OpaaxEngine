@@ -14,6 +14,8 @@
 
 #define VMA_IMPLEMENTATION
 #include "vk_mem_alloc.h"
+#include "Opaax/Renderer/Vulkan/OpaaxVKDescriptorLayoutBuilder.h"
+#include "Opaax/Renderer/Vulkan/OpaaxVKPipelineBuilder.h"
 
 using namespace OPAAX::RENDERER::VULKAN;
 
@@ -123,6 +125,94 @@ void OpaaxVulkanRenderer::InitVulkanSyncs()
     OPAAX_LOG("[OpaaxVulkanRenderer]: Vulkan Syncs objects initialized!")
 }
 
+void OpaaxVulkanRenderer::InitDescriptors()
+{
+    //create a descriptor pool that will hold 10 sets with 1 image each
+    std::vector<OpaaxVKDescriptorAllocator::OpaaxPoolSizeRatio> lSizes =
+    {
+        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 }
+    };
+
+    m_globalDescriptorAllocator.InitPool(m_vkDevice, 10, lSizes);
+
+    //make the descriptor set layout for our compute draw
+    {
+        OpaaxVKDescriptorLayoutBuilder lBuilder;
+        lBuilder.AddBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+        m_vkDrawImageDescriptorLayout = lBuilder.Build(m_vkDevice, VK_SHADER_STAGE_COMPUTE_BIT);
+    }
+
+    //allocate a descriptor set for our draw image
+    m_vkDrawImageDescriptors = m_globalDescriptorAllocator.Allocate(m_vkDevice, m_vkDrawImageDescriptorLayout);	
+
+    VkDescriptorImageInfo lImgInfo{};
+    lImgInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+    lImgInfo.imageView = m_drawImage.ImageView;
+	
+    VkWriteDescriptorSet lDrawImageWrite = {};
+    lDrawImageWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    lDrawImageWrite.pNext = nullptr;
+	
+    lDrawImageWrite.dstBinding = 0;
+    lDrawImageWrite.dstSet = m_vkDrawImageDescriptors;
+    lDrawImageWrite.descriptorCount = 1;
+    lDrawImageWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    lDrawImageWrite.pImageInfo = &lImgInfo;
+
+    vkUpdateDescriptorSets(m_vkDevice, 1, &lDrawImageWrite, 0, nullptr);
+
+    //make sure both the descriptor allocator and the new layout get cleaned up properly
+    m_mainDeletionQueue.PushFunction([&]() {
+        m_globalDescriptorAllocator.DestroyPool(m_vkDevice);
+
+        vkDestroyDescriptorSetLayout(m_vkDevice, m_vkDrawImageDescriptorLayout, nullptr);
+    });
+}
+
+void OpaaxVulkanRenderer::InitPipelines()
+{
+    InitBackgroundPipelines();
+}
+
+void OpaaxVulkanRenderer::InitBackgroundPipelines()
+{
+    VkPipelineLayoutCreateInfo lComputeLayout{};
+    lComputeLayout.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    lComputeLayout.pNext = nullptr;
+    lComputeLayout.pSetLayouts = &m_vkDrawImageDescriptorLayout;
+    lComputeLayout.setLayoutCount = 1;
+
+    VK_CHECK(vkCreatePipelineLayout(m_vkDevice, &lComputeLayout, nullptr, &m_gradientPipelineLayout));
+
+    VkShaderModule lComputeDrawShader;
+    if (!VULKAN_HELPER::LoadShaderModule("Shaders/Gradient.comp.spv", m_vkDevice, &lComputeDrawShader))
+    {
+        OPAAX_ERROR("Failed to load shaders!");
+    }
+
+    VkPipelineShaderStageCreateInfo lStageinfo{};
+    lStageinfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    lStageinfo.pNext = nullptr;
+    lStageinfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    lStageinfo.module = lComputeDrawShader;
+    lStageinfo.pName = "main";
+
+    VkComputePipelineCreateInfo computePipelineCreateInfo{};
+    computePipelineCreateInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    computePipelineCreateInfo.pNext = nullptr;
+    computePipelineCreateInfo.layout = m_gradientPipelineLayout;
+    computePipelineCreateInfo.stage = lStageinfo;
+	
+    VK_CHECK(vkCreateComputePipelines(m_vkDevice,VK_NULL_HANDLE,1,&computePipelineCreateInfo, nullptr, &m_gradientPipeline));
+    
+    vkDestroyShaderModule(m_vkDevice, lComputeDrawShader, nullptr);
+
+    m_mainDeletionQueue.PushFunction([&]() {
+        vkDestroyPipelineLayout(m_vkDevice, m_gradientPipelineLayout, nullptr);
+        vkDestroyPipeline(m_vkDevice, m_gradientPipeline, nullptr);
+        });
+}
+
 void OpaaxVulkanRenderer::CreateSwapchain(UInt32 Width, UInt32 Height)
 {
     vkb::SwapchainBuilder lSwapchainBuilder{ m_vkPhysicalDevice, m_vkDevice, m_vkSurface };
@@ -149,15 +239,24 @@ void OpaaxVulkanRenderer::CreateSwapchain(UInt32 Width, UInt32 Height)
 
 void OpaaxVulkanRenderer::DrawBackground(VkCommandBuffer CommandBuffer)
 {
-    //make a clear-color from frame number. This will flash with a 120 frame period.
-    VkClearColorValue lClearValue;
-    float flash = std::abs(std::sin(m_frameNumber / 120.f));
-    lClearValue = { { 0.0f, 0.0f, flash, 1.0f } };
+    // //make a clear-color from frame number. This will flash with a 120 frame period.
+    // VkClearColorValue lClearValue;
+    // float flash = std::abs(std::sin(m_frameNumber / 120.f));
+    // lClearValue = { { 0.0f, 0.0f, flash, 1.0f } };
+    //
+    // VkImageSubresourceRange lClearRange = VULKAN_HELPER::ImageSubResourceRange(VK_IMAGE_ASPECT_COLOR_BIT);
+    //
+    // //clear image
+    // vkCmdClearColorImage(CommandBuffer, m_drawImage.Image, VK_IMAGE_LAYOUT_GENERAL, &lClearValue, 1, &lClearRange);
 
-    VkImageSubresourceRange lClearRange = VULKAN_HELPER::ImageSubResourceRange(VK_IMAGE_ASPECT_COLOR_BIT);
+    // bind the gradient drawing compute pipeline
+    vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_gradientPipeline);
 
-    //clear image
-    vkCmdClearColorImage(CommandBuffer, m_drawImage.Image, VK_IMAGE_LAYOUT_GENERAL, &lClearValue, 1, &lClearRange);
+    // bind the descriptor set containing the draw image for the compute pipeline
+    vkCmdBindDescriptorSets(CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_gradientPipelineLayout, 0, 1, &m_vkDrawImageDescriptors, 0, nullptr);
+
+    // execute the compute pipeline dispatch. We are using 16x16 workgroup size so we need to divide by it
+    vkCmdDispatch(CommandBuffer, std::ceil(m_drawExtent.width / 16.0), std::ceil(m_drawExtent.height / 16.0), 1);
 }
 
 void OpaaxVulkanRenderer::DestroySwapchain()
@@ -312,6 +411,8 @@ bool OpaaxVulkanRenderer::Initialize()
     InitVulkanSwapchain();
     InitVulkanCommands();
     InitVulkanSyncs();
+    InitDescriptors();
+    InitPipelines();
     
     OPAAX_VERBOSE("======================= Renderer - Vulkan End Init =======================")
     return false;

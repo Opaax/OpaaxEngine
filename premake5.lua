@@ -10,6 +10,9 @@ vulkansdk = os.getenv("VULKAN_SDK")
 vulkaninclude = (vulkansdk.."/Include")
 vulkanlib = (vulkansdk.."/Lib")
 
+-- === Compilation auto des shaders avec glslangValidator ===
+glslangValidator = vulkansdk and (vulkansdk .. "/Bin/glslangValidator.exe") or "glslangValidator"
+
 -- === Projet OpaaxGameEngine ===
 project "OpaaxGameEngine"
     location "OpaaxGameEngine"
@@ -62,7 +65,7 @@ project "OpaaxGameEngine"
             "UNICODE"
         }
         postbuildcommands {
-            "{COPY} %{cfg.buildtarget.relpath} ../Binaries/" .. outputDir .. "/Sandbox"
+            "{COPY} %{cfg.buildtarget.relpath} ../Binaries/" .. outputDir .. "/Sandbox",
         }
 
     filter "configurations:Debug"

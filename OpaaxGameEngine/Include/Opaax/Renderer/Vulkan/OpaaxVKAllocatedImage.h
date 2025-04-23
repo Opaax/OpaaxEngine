@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "OpaaxVulkanInclude.h"
+#include "Opaax/OpaaxCoreMacros.h"
 
 namespace OPAAX
 {
@@ -7,7 +8,7 @@ namespace OPAAX
     {
         namespace VULKAN
         {
-            struct OpaaxVKAllocatedImage
+            struct OPAAX_API OpaaxVKAllocatedImage
             {
                 VkImage         Image       = VK_NULL_HANDLE;
                 VkImageView     ImageView   = VK_NULL_HANDLE;
