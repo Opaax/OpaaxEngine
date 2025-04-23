@@ -38,6 +38,44 @@ void OpaaxVulkanRenderer::InitVulkanSwapchain()
     
     CreateSwapchain(m_windowExtent.width, m_windowExtent.height);
 
+    //draw image size will match the window
+    VkExtent3D lDrawImageExtent = {
+        m_windowExtent.width,
+        m_windowExtent.height,
+        1
+    };
+
+    //hardcoding the draw format to 32-bit float
+    m_drawImage.ImageFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
+    m_drawImage.ImageExtent = lDrawImageExtent;
+
+    VkImageUsageFlags lDrawImageUsages{};
+    lDrawImageUsages |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    lDrawImageUsages |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    lDrawImageUsages |= VK_IMAGE_USAGE_STORAGE_BIT;
+    lDrawImageUsages |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+    VkImageCreateInfo lRenderImgInfo = VULKAN_HELPER::ImageCreateInfo(m_drawImage.ImageFormat, lDrawImageUsages, lDrawImageExtent);
+
+    //for the draw image, we want to allocate it from gpu local memory
+    VmaAllocationCreateInfo lRenderImgAllocationInfo = {};
+    lRenderImgAllocationInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+    lRenderImgAllocationInfo.requiredFlags = static_cast<VkMemoryPropertyFlags>(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    //allocate and create the image
+    vmaCreateImage(m_vmaAllocator, &lRenderImgInfo, &lRenderImgAllocationInfo, &m_drawImage.Image, &m_drawImage.Allocation, nullptr);
+
+    //build an image-view for the draw image to use for rendering
+    VkImageViewCreateInfo lRenderViewInfo = VULKAN_HELPER::ImageviewCreateInfo(m_drawImage.ImageFormat, m_drawImage.Image, VK_IMAGE_ASPECT_COLOR_BIT);
+
+    VK_CHECK(vkCreateImageView(m_vkDevice, &lRenderViewInfo, nullptr, &m_drawImage.ImageView));
+
+    //add to deletion queues
+    m_mainDeletionQueue.PushFunction([this]() {
+        vkDestroyImageView(m_vkDevice, m_drawImage.ImageView, nullptr);
+        vmaDestroyImage(m_vmaAllocator, m_drawImage.Image, m_drawImage.Allocation);
+    });
+
     OPAAX_LOG("[OpaaxVulkanRenderer]: Vulkan swapchain initialized!")
 }
 
@@ -107,6 +145,19 @@ void OpaaxVulkanRenderer::CreateSwapchain(UInt32 Width, UInt32 Height)
     m_vkSwapchain = lVKBSwapchain.swapchain;
     m_vkSwapchainImages = lVKBSwapchain.get_images().value();
     m_vkSwapchainImageViews = lVKBSwapchain.get_image_views().value();
+}
+
+void OpaaxVulkanRenderer::DrawBackground(VkCommandBuffer CommandBuffer)
+{
+    //make a clear-color from frame number. This will flash with a 120 frame period.
+    VkClearColorValue lClearValue;
+    float flash = std::abs(std::sin(m_frameNumber / 120.f));
+    lClearValue = { { 0.0f, 0.0f, flash, 1.0f } };
+
+    VkImageSubresourceRange lClearRange = VULKAN_HELPER::ImageSubResourceRange(VK_IMAGE_ASPECT_COLOR_BIT);
+
+    //clear image
+    vkCmdClearColorImage(CommandBuffer, m_drawImage.Image, VK_IMAGE_LAYOUT_GENERAL, &lClearValue, 1, &lClearRange);
 }
 
 void OpaaxVulkanRenderer::DestroySwapchain()
@@ -234,10 +285,22 @@ void OpaaxVulkanRenderer::InitVulkanBootStrap()
     // Get the VkDevice handle used in the rest of a vulkan application
     m_vkDevice = lVKBDevice.device;
 
-
     // use vkbootstrap to get a Graphics queue
     m_vkGraphicsQueue       = lVKBDevice.get_queue(vkb::QueueType::graphics).value();
     m_graphicsQueueFamily   = lVKBDevice.get_queue_index(vkb::QueueType::graphics).value();
+}
+
+void OpaaxVulkanRenderer::InitVMAAllocator()
+{
+    // initialize the memory allocator
+    VmaAllocatorCreateInfo lAllocatorInfo = {};
+    lAllocatorInfo.physicalDevice = m_vkPhysicalDevice;
+    lAllocatorInfo.device = m_vkDevice;
+    lAllocatorInfo.instance = m_vkInstance;
+    lAllocatorInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+    vmaCreateAllocator(&lAllocatorInfo, &m_vmaAllocator);
+
+    m_mainDeletionQueue.PushFunction([&]() { vmaDestroyAllocator(m_vmaAllocator); });
 }
 
 bool OpaaxVulkanRenderer::Initialize()
@@ -245,6 +308,7 @@ bool OpaaxVulkanRenderer::Initialize()
     OPAAX_VERBOSE("======================= Renderer - Vulkan Init =======================")
 
     InitVulkanBootStrap();
+    InitVMAAllocator();
     InitVulkanSwapchain();
     InitVulkanCommands();
     InitVulkanSyncs();
@@ -276,25 +340,28 @@ void OpaaxVulkanRenderer::RenderFrame()
     //begin the command buffer recording. We will use this command buffer exactly once, so we want to let vulkan know that
     VkCommandBufferBeginInfo lCommandBufferBeginInfo = VULKAN_HELPER::CommandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
+    m_drawExtent.width = m_drawImage.ImageExtent.width;
+    m_drawExtent.height = m_drawImage.ImageExtent.height;
+
     //start the command buffer recording
     VK_CHECK(vkBeginCommandBuffer(lCommandBuffer, &lCommandBufferBeginInfo));
 
     //@https://docs.vulkan.org/spec/latest/chapters/resources.html#resources-image-layouts
-    //make the swapchain image into writeable mode before rendering
-    VULKAN_HELPER::TransitionImage(lCommandBuffer, m_vkSwapchainImages[lSwapchainImageIndex], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+    // transition our main draw image into general layout so we can write into it
+    // we will overwrite it all so we dont care about what was the older layout
+    VULKAN_HELPER::TransitionImage(lCommandBuffer, m_drawImage.Image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+    
+    DrawBackground(lCommandBuffer);
 
-    //make a clear-color from frame number. This will flash with a 120 frame period.
-    VkClearColorValue lClearValue;
-    float flash = std::abs(std::sin(m_frameNumber / 120.f));
-    lClearValue = { { 0.0f, 0.0f, flash, 1.0f } };
+    //transition the draw image and the swapchain image into their correct transfer layouts
+    VULKAN_HELPER::TransitionImage(lCommandBuffer, m_drawImage.Image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    VULKAN_HELPER::TransitionImage(lCommandBuffer, m_vkSwapchainImages[lSwapchainImageIndex], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-    VkImageSubresourceRange clearRange = VULKAN_HELPER::ImageSubResourceRange(VK_IMAGE_ASPECT_COLOR_BIT);
+    // execute a copy from the draw image into the swapchain
+    VULKAN_HELPER::CopyImageToImage(lCommandBuffer, m_drawImage.Image, m_vkSwapchainImages[lSwapchainImageIndex], m_drawExtent, m_vkSwapchainExtent);
 
-    //clear image
-    vkCmdClearColorImage(lCommandBuffer, m_vkSwapchainImages[lSwapchainImageIndex], VK_IMAGE_LAYOUT_GENERAL, &lClearValue, 1, &clearRange);
-
-    //make the swapchain image into presentable mode
-    VULKAN_HELPER::TransitionImage(lCommandBuffer, m_vkSwapchainImages[lSwapchainImageIndex],VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    // set swapchain image layout to Present so we can show it on the screen
+    VULKAN_HELPER::TransitionImage(lCommandBuffer, m_vkSwapchainImages[lSwapchainImageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
     //finalize the command buffer (we can no longer add commands, but it can now be executed)
     VK_CHECK(vkEndCommandBuffer(lCommandBuffer));
@@ -341,6 +408,8 @@ void OpaaxVulkanRenderer::Shutdown()
 
     //make sure the gpu has stopped doing its things
     vkDeviceWaitIdle(m_vkDevice);
+
+    m_mainDeletionQueue.Flush();
 
     for(int i = 0; i < VULKAN_CONST::MAX_FRAMES_IN_FLIGHT; i++)
     {

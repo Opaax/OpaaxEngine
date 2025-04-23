@@ -184,6 +184,67 @@ namespace OPAAX
                 return lInfo;
             }
 
+            /**
+             * Creates and returns a VkImageCreateInfo object, which specifies parameters for creating a Vulkan image.
+             * This function configures the image properties such as format, usage flags, and extent.
+             * 
+             * @param Format The format of the image, specifying the type and layout of texel blocks.
+             * @param UsageFlags A bitmask specifying intended usage of the image, such as transfer or sampling operations.
+             * @param Extent The dimensions of the image, defined as a 3D extent with width, height, and depth.
+             * @return A VkImageCreateInfo instance configured with the provided parameters for image creation.
+             */
+            FORCEINLINE VkImageCreateInfo ImageCreateInfo(VkFormat Format, VkImageUsageFlags UsageFlags, VkExtent3D Extent)
+            {
+                VkImageCreateInfo lInfo = {};
+                lInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+                lInfo.pNext = nullptr;
+
+                lInfo.imageType = VK_IMAGE_TYPE_2D;
+
+                lInfo.format = Format;
+                lInfo.extent = Extent;
+
+                lInfo.mipLevels = 1;
+                lInfo.arrayLayers = 1;
+
+                //for MSAA. we will not be using it by default, so default it to 1 sample per pixel.
+                lInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+
+                //optimal tiling, which means the image is stored on the best gpu format
+                lInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+                lInfo.usage = UsageFlags;
+
+                return lInfo;
+            }
+
+            /**
+             * Constructs and returns a VkImageViewCreateInfo structure, which is used to specify parameters for creating a Vulkan image view.
+             * This function is typically used to create a 2D image view for a specified image, format, and aspect configuration.
+             *
+             * @param Format The format of the image view. Specifies how the image data will be interpreted.
+             * @param Image The Vulkan image handle to associate with the image view.
+             * @param AspectFlags A bitmask of VkImageAspectFlags defining which aspects of the image will be included in the view (e.g., color, depth, stencil).
+             * @return A configured VkImageViewCreateInfo structure ready for image view creation.
+             */
+            FORCEINLINE VkImageViewCreateInfo ImageviewCreateInfo(VkFormat Format, VkImage Image, VkImageAspectFlags AspectFlags)
+            {
+                // build a image-view for the depth image to use for rendering
+                VkImageViewCreateInfo lInfo = {};
+                lInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+                lInfo.pNext = nullptr;
+
+                lInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+                lInfo.image = Image;
+                lInfo.format = Format;
+                lInfo.subresourceRange.baseMipLevel = 0;
+                lInfo.subresourceRange.levelCount = 1;
+                lInfo.subresourceRange.baseArrayLayer = 0;
+                lInfo.subresourceRange.layerCount = 1;
+                lInfo.subresourceRange.aspectMask = AspectFlags;
+
+                return lInfo;
+            }
+
             FORCEINLINE VkImageSubresourceRange ImageSubResourceRange(VkImageAspectFlags AspectMask)
             {
                 VkImageSubresourceRange lSubImage{};
@@ -242,8 +303,50 @@ namespace OPAAX
                 vkCmdPipelineBarrier2(CommandBuffer, &lDepInfo);
             }
 
-            static void CopyImageToImage(VkCommandBuffer CommandBuffer, VkImage ImgSource, VkImage ImgDestination,
-                                         VkExtent2D SourceSize, VkExtent2D DestinationSize) {}
+            /**
+             * Copies image data from a source image to a destination image using specified extents and regions.
+             * This function utilizes `vkCmdBlitImage2` for blitting operations, including scaling if necessary.
+             * Vulkan has 2 main ways of copying one image to another. you can use VkCmdCopyImage or VkCmdBlitImage.
+             * CopyImage is faster, but its much more restricted.
+             * @param CommandBuffer The command buffer to record the blit operation onto. It must be in a recording state.
+             * @param ImgSource The source Vulkan image that contains the data to be copied.
+             * @param ImgDestination The destination Vulkan image to which the data will be copied.
+             * @param SourceSize The dimensions of the source image region to be copied.
+             * @param DestinationSize The dimensions of the destination image region where data will be copied.
+             */
+            static void CopyImageToImage(VkCommandBuffer CommandBuffer, VkImage ImgSource, VkImage ImgDestination, VkExtent2D SourceSize, VkExtent2D DestinationSize)
+            {
+                VkImageBlit2 lBlitRegion{ .sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2, .pNext = nullptr };
+
+                lBlitRegion.srcOffsets[1].x = SourceSize.width;
+                lBlitRegion.srcOffsets[1].y = SourceSize.height;
+                lBlitRegion.srcOffsets[1].z = 1;
+
+                lBlitRegion.dstOffsets[1].x = DestinationSize.width;
+                lBlitRegion.dstOffsets[1].y = DestinationSize.height;
+                lBlitRegion.dstOffsets[1].z = 1;
+
+                lBlitRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                lBlitRegion.srcSubresource.baseArrayLayer = 0;
+                lBlitRegion.srcSubresource.layerCount = 1;
+                lBlitRegion.srcSubresource.mipLevel = 0;
+
+                lBlitRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                lBlitRegion.dstSubresource.baseArrayLayer = 0;
+                lBlitRegion.dstSubresource.layerCount = 1;
+                lBlitRegion.dstSubresource.mipLevel = 0;
+
+                VkBlitImageInfo2 blitInfo{ .sType = VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2, .pNext = nullptr };
+                blitInfo.dstImage = ImgDestination;
+                blitInfo.dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+                blitInfo.srcImage = ImgSource;
+                blitInfo.srcImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+                blitInfo.filter = VK_FILTER_LINEAR;
+                blitInfo.regionCount = 1;
+                blitInfo.pRegions = &lBlitRegion;
+
+                vkCmdBlitImage2(CommandBuffer, &blitInfo);
+            }
 
             static void GenerateMipmaps(VkCommandBuffer CommandBuffer, VkImage Image, VkExtent2D ImageSize) {}
         }

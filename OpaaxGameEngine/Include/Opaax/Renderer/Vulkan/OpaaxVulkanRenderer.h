@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "OpaaxVKAllocatedImage.h"
 #include "OpaaxVKGlobal.h"
 #include "OpaaxVKTypes.h"
 #include "OpaaxVulkanInclude.h"
@@ -35,7 +36,13 @@ namespace OPAAX
                 
                 Int32                       m_frameNumber{0};
 
-                OpaaxVKDeletionQueue      m_mainDeletionQueue;
+                OpaaxVKDeletionQueue        m_mainDeletionQueue;
+
+                VmaAllocator                m_vmaAllocator;
+
+                //draw resources
+                OpaaxVKAllocatedImage       m_drawImage;
+                VkExtent2D                  m_drawExtent;
                 
             public:
                 explicit OpaaxVulkanRenderer(OPAAX::OpaaxWindow* const Window);
@@ -64,15 +71,18 @@ namespace OPAAX
                  *         surface creation, GPU selection, or logical device creation.
                  */
                 void InitVulkanBootStrap();
+                void InitVMAAllocator();
                 void CreateVulkanSurface();
                 void InitVulkanSwapchain();
                 void InitVulkanCommands();
                 void InitVulkanSyncs();
-
                 void CreateSwapchain(UInt32 Width, UInt32 Height);
+
+                void DrawBackground(VkCommandBuffer CommandBuffer);
+                
                 void DestroySwapchain();
-            public:
             
+            public:
                 bool Initialize()   override;
                 void Resize()       override;
                 void RenderFrame()  override;
