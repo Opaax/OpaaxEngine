@@ -3,12 +3,17 @@
 
 #include <VkBootstrap.h>
 
+#include "Opaax/Math/OpaaxMathMacro.h"
 #include "Opaax/Renderer/Vulkan/OpaaxVKGlobal.h"
 #include "Opaax/Renderer/Vulkan/OpaaxVKHelper.h"
+#include "Opaax/Renderer/Vulkan/OpaaxVulkanMacro.h"
 #include "Opaax/Window/OpaaxWindow.h"
 
 #include "SDL3/SDL.h"
 #include "SDL3/SDL_vulkan.h"
+
+#define VMA_IMPLEMENTATION
+#include "vk_mem_alloc.h"
 
 using namespace OPAAX::RENDERER::VULKAN;
 
@@ -29,7 +34,55 @@ void OpaaxVulkanRenderer::CreateVulkanSurface()
 
 void OpaaxVulkanRenderer::InitVulkanSwapchain()
 {
+    OPAAX_LOG("[OpaaxVulkanRenderer]: Initializing Vulkan swapchain...")
+    
     CreateSwapchain(m_windowExtent.width, m_windowExtent.height);
+
+    OPAAX_LOG("[OpaaxVulkanRenderer]: Vulkan swapchain initialized!")
+}
+
+void OpaaxVulkanRenderer::InitVulkanCommands()
+{
+    OPAAX_LOG("[OpaaxVulkanRenderer]: Initializing Vulkan Commands...")
+
+    /*
+     * We are sending VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+     * which tells Vulkan that we expect to be able to reset individual command buffers made from that pool.
+     */
+    VkCommandPoolCreateInfo lCommandPoolInfo = VULKAN_HELPER::CommandPoolCreateInfo(m_graphicsQueueFamily, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+
+    for(int i = 0; i < VULKAN_CONST::MAX_FRAMES_IN_FLIGHT; i++)
+    {
+        VK_CHECK(vkCreateCommandPool(m_vkDevice, &lCommandPoolInfo, nullptr, &m_framesData[i].CommandPool));
+
+        // allocate the default command buffer that we will use for rendering
+        VkCommandBufferAllocateInfo lCmdAllocInfo = VULKAN_HELPER::CommandBufferAllocateInfo(m_framesData[i].CommandPool, 1);
+
+        VK_CHECK(vkAllocateCommandBuffers(m_vkDevice, &lCmdAllocInfo, &m_framesData[i].MainCommandBuffer));
+    }
+
+    OPAAX_LOG("[OpaaxVulkanRenderer]: Vulkan Commands initialized!")
+}
+
+void OpaaxVulkanRenderer::InitVulkanSyncs()
+{
+    OPAAX_LOG("[OpaaxVulkanRenderer]: Initializing Vulkan Syncs objects...")
+    
+    //create syncronization structures
+    //one fence to control when the gpu has finished rendering the frame,
+    //and 2 semaphores to synchronize rendering with swapchain
+    //we want the fence to start signalled so we can wait on it on the first frame
+    VkFenceCreateInfo lFenceCreateInfo = VULKAN_HELPER::FenceCreateInfo(VK_FENCE_CREATE_SIGNALED_BIT);
+    VkSemaphoreCreateInfo lSemaphoreCreateInfo = VULKAN_HELPER::SemaphoreCreateInfo();
+
+    for (int i = 0; i < VULKAN_CONST::MAX_FRAMES_IN_FLIGHT; i++)
+    {
+        VK_CHECK(vkCreateFence(m_vkDevice, &lFenceCreateInfo, nullptr, &m_framesData[i].RenderFence));
+        VK_CHECK(vkCreateSemaphore(m_vkDevice, &lSemaphoreCreateInfo, nullptr, &m_framesData[i].SwapchainSemaphore));
+        VK_CHECK(vkCreateSemaphore(m_vkDevice, &lSemaphoreCreateInfo, nullptr, &m_framesData[i].RenderSemaphore));
+    }
+
+    OPAAX_LOG("[OpaaxVulkanRenderer]: Vulkan Syncs objects initialized!")
 }
 
 void OpaaxVulkanRenderer::CreateSwapchain(UInt32 Width, UInt32 Height)
@@ -180,6 +233,11 @@ void OpaaxVulkanRenderer::InitVulkanBootStrap()
 
     // Get the VkDevice handle used in the rest of a vulkan application
     m_vkDevice = lVKBDevice.device;
+
+
+    // use vkbootstrap to get a Graphics queue
+    m_vkGraphicsQueue       = lVKBDevice.get_queue(vkb::QueueType::graphics).value();
+    m_graphicsQueueFamily   = lVKBDevice.get_queue_index(vkb::QueueType::graphics).value();
 }
 
 bool OpaaxVulkanRenderer::Initialize()
@@ -188,16 +246,113 @@ bool OpaaxVulkanRenderer::Initialize()
 
     InitVulkanBootStrap();
     InitVulkanSwapchain();
+    InitVulkanCommands();
+    InitVulkanSyncs();
     
     OPAAX_VERBOSE("======================= Renderer - Vulkan End Init =======================")
     return false;
 }
 
 void OpaaxVulkanRenderer::Resize() {}
-void OpaaxVulkanRenderer::RenderFrame() {}
+void OpaaxVulkanRenderer::RenderFrame()
+{
+    const OpaaxVKFrameData& lCurrFrameData = GetCurrentFrameData();
+    
+    // wait until the gpu has finished rendering the last frame.
+    VK_CHECK(vkWaitForFences(m_vkDevice, 1, &lCurrFrameData.RenderFence, true, OP_UMAX_64));
+    VK_CHECK(vkResetFences(m_vkDevice, 1, &lCurrFrameData.RenderFence));
+
+    //request image from the swapchain
+    UInt32 lSwapchainImageIndex;
+    VK_CHECK(vkAcquireNextImageKHR(m_vkDevice, m_vkSwapchain, 1000000000,
+        lCurrFrameData.SwapchainSemaphore, nullptr, &lSwapchainImageIndex));
+
+    VkCommandBuffer lCommandBuffer = lCurrFrameData.MainCommandBuffer;
+
+    // now that we are sure that the commands finished executing, we can safely
+    // reset the command buffer to begin recording again.
+    VK_CHECK(vkResetCommandBuffer(lCommandBuffer, 0));
+
+    //begin the command buffer recording. We will use this command buffer exactly once, so we want to let vulkan know that
+    VkCommandBufferBeginInfo lCommandBufferBeginInfo = VULKAN_HELPER::CommandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+
+    //start the command buffer recording
+    VK_CHECK(vkBeginCommandBuffer(lCommandBuffer, &lCommandBufferBeginInfo));
+
+    //@https://docs.vulkan.org/spec/latest/chapters/resources.html#resources-image-layouts
+    //make the swapchain image into writeable mode before rendering
+    VULKAN_HELPER::TransitionImage(lCommandBuffer, m_vkSwapchainImages[lSwapchainImageIndex], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+
+    //make a clear-color from frame number. This will flash with a 120 frame period.
+    VkClearColorValue lClearValue;
+    float flash = std::abs(std::sin(m_frameNumber / 120.f));
+    lClearValue = { { 0.0f, 0.0f, flash, 1.0f } };
+
+    VkImageSubresourceRange clearRange = VULKAN_HELPER::ImageSubResourceRange(VK_IMAGE_ASPECT_COLOR_BIT);
+
+    //clear image
+    vkCmdClearColorImage(lCommandBuffer, m_vkSwapchainImages[lSwapchainImageIndex], VK_IMAGE_LAYOUT_GENERAL, &lClearValue, 1, &clearRange);
+
+    //make the swapchain image into presentable mode
+    VULKAN_HELPER::TransitionImage(lCommandBuffer, m_vkSwapchainImages[lSwapchainImageIndex],VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+
+    //finalize the command buffer (we can no longer add commands, but it can now be executed)
+    VK_CHECK(vkEndCommandBuffer(lCommandBuffer));
+
+    //prepare the submission to the queue. 
+    //we want to wait on the _presentSemaphore, as that semaphore is signaled when the swapchain is ready
+    //we will signal the _renderSemaphore, to signal that rendering has finished
+    VkCommandBufferSubmitInfo lCommandBufferSubmitInfo = VULKAN_HELPER::CommandBufferSubmitInfo(lCommandBuffer);	
+
+    VkSemaphoreSubmitInfo lSemaphoreWaitInfo = VULKAN_HELPER::SemaphoreSubmitInfo(VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR, GetCurrentFrameData().SwapchainSemaphore);
+    VkSemaphoreSubmitInfo lSemaphoreSignalInfo = VULKAN_HELPER::SemaphoreSubmitInfo(VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT, GetCurrentFrameData().RenderSemaphore);	
+
+    VkSubmitInfo2 lSubmitInfo = VULKAN_HELPER::SubmitInfo(&lCommandBufferSubmitInfo,&lSemaphoreSignalInfo,&lSemaphoreWaitInfo);	
+
+    //submit command buffer to the queue and execute it.
+    // _renderFence will now block until the graphic commands finish execution
+    VK_CHECK(vkQueueSubmit2(m_vkGraphicsQueue, 1, &lSubmitInfo, GetCurrentFrameData().RenderFence));
+
+    //prepare present
+    // this will put the image we just rendered to into the visible window.
+    // we want to wait on the _renderSemaphore for that, 
+    // as its necessary that drawing commands have finished before the image is displayed to the user
+    VkPresentInfoKHR lPresentInfo = {};
+    lPresentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    lPresentInfo.pNext = nullptr;
+    lPresentInfo.pSwapchains = &m_vkSwapchain;
+    lPresentInfo.swapchainCount = 1;
+
+    lPresentInfo.pWaitSemaphores = &GetCurrentFrameData().RenderSemaphore;
+    lPresentInfo.waitSemaphoreCount = 1;
+
+    lPresentInfo.pImageIndices = &lSwapchainImageIndex;
+
+    VK_CHECK(vkQueuePresentKHR(m_vkGraphicsQueue, &lPresentInfo));
+
+    GetCurrentFrameData().DeletionQueue.Flush();
+    
+    //increase the number of frames drawn
+    m_frameNumber++;
+}
 void OpaaxVulkanRenderer::Shutdown()
 {
     OPAAX_VERBOSE("======================= Renderer - Vulkan Shutting Down =======================")
+
+    //make sure the gpu has stopped doing its things
+    vkDeviceWaitIdle(m_vkDevice);
+
+    for(int i = 0; i < VULKAN_CONST::MAX_FRAMES_IN_FLIGHT; i++)
+    {
+        vkDestroyCommandPool(m_vkDevice, m_framesData[i].CommandPool, nullptr);
+
+        //destroy sync objects
+        vkDestroyFence(m_vkDevice, m_framesData[i].RenderFence, nullptr);
+        vkDestroySemaphore(m_vkDevice, m_framesData[i].RenderSemaphore, nullptr);
+        vkDestroySemaphore(m_vkDevice ,m_framesData[i].SwapchainSemaphore, nullptr);
+
+        m_framesData[i].DeletionQueue.Flush();
+    }
 
     DestroySwapchain();
     
