@@ -224,6 +224,12 @@ void OpaaxVulkanRenderer::InitBackgroundPipelines()
         OPAAX_ERROR("Failed to load shaders!")
     }
 
+    VkShaderModule lSkyShader;
+    if (!VULKAN_HELPER::LoadShaderModule("Shaders/Sky.comp.spv", m_vkDevice, &lSkyShader))
+    {
+        OPAAX_ERROR("Failed to load shaders!")
+    }
+
     VkPipelineShaderStageCreateInfo lStageinfo{};
     lStageinfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     lStageinfo.pNext = nullptr;
@@ -236,14 +242,41 @@ void OpaaxVulkanRenderer::InitBackgroundPipelines()
     computePipelineCreateInfo.pNext = nullptr;
     computePipelineCreateInfo.layout = m_gradientPipelineLayout;
     computePipelineCreateInfo.stage = lStageinfo;
+
+    OpaaxVKComputeEffect lGradient;
+    lGradient.Layout = m_gradientPipelineLayout;
+    lGradient.Name = "GradientColor";
+    lGradient.Data = {};
+
+    //default colors
+    lGradient.Data.data1 = glm::vec4(1, 0, 0, 1);
+    lGradient.Data.data2 = glm::vec4(0, 0, 1, 1);
 	
-    VK_CHECK(vkCreateComputePipelines(m_vkDevice,VK_NULL_HANDLE,1,&computePipelineCreateInfo, nullptr, &m_gradientPipeline));
+    VK_CHECK(vkCreateComputePipelines(m_vkDevice,VK_NULL_HANDLE,1,&computePipelineCreateInfo, nullptr, &lGradient.Pipeline));
+
+    //change the shader module only to create the sky shader
+    computePipelineCreateInfo.stage.module = lSkyShader;
+
+    OpaaxVKComputeEffect lSky;
+    lSky.Layout = m_gradientPipelineLayout;
+    lSky.Name = "sky";
+    lSky.Data = {};
+    //default sky parameters
+    lSky.Data.data1 = glm::vec4(0.1, 0.2, 0.4 ,0.97);
+
+    VK_CHECK(vkCreateComputePipelines(m_vkDevice, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &lSky.Pipeline));
+
+    //add the 2 background effects into the array
+    m_backgroundEffects.push_back(lGradient);
+    m_backgroundEffects.push_back(lSky);
     
     vkDestroyShaderModule(m_vkDevice, lComputeDrawShader, nullptr);
+    vkDestroyShaderModule(m_vkDevice, lSkyShader, nullptr);
 
     m_mainDeletionQueue.PushFunction([&]() {
         vkDestroyPipelineLayout(m_vkDevice, m_gradientPipelineLayout, nullptr);
-        vkDestroyPipeline(m_vkDevice, m_gradientPipeline, nullptr);
+        vkDestroyPipeline(m_vkDevice, lSky.Pipeline, nullptr);
+        vkDestroyPipeline(m_vkDevice, lGradient.Pipeline, nullptr);
         });
 }
 
@@ -360,16 +393,28 @@ void OpaaxVulkanRenderer::DrawBackground(VkCommandBuffer CommandBuffer)
     // vkCmdDispatch(CommandBuffer, std::ceil(m_drawExtent.width / 16.0), std::ceil(m_drawExtent.height / 16.0), 1);
 
     // bind the gradient drawing compute pipeline
-    vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_gradientPipeline);
+    //vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_gradientPipeline);
+
+    // // bind the descriptor set containing the draw image for the compute pipeline
+    // vkCmdBindDescriptorSets(CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_gradientPipelineLayout, 0, 1, &m_vkDrawImageDescriptors, 0, nullptr);
+    //
+    // SHADER::OpaaxComputeShaderPushConstants lPushConst;
+    // lPushConst.data1 = glm::vec4(1, 0, 0, 1);
+    // lPushConst.data2 = glm::vec4(0, 0, 1, 1);
+    //
+    // vkCmdPushConstants(CommandBuffer, m_gradientPipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(SHADER::OpaaxComputeShaderPushConstants), &lPushConst);
+    // // execute the compute pipeline dispatch. We are using 16x16 workgroup size so we need to divide by it
+    // vkCmdDispatch(CommandBuffer, std::ceil(m_drawExtent.width / 16.0), std::ceil(m_drawExtent.height / 16.0), 1);
+
+    OpaaxVKComputeEffect& lEffect = m_backgroundEffects[m_currentBackgroundEffect];
+
+    // bind the background compute pipeline
+    vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, lEffect.Pipeline);
 
     // bind the descriptor set containing the draw image for the compute pipeline
     vkCmdBindDescriptorSets(CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_gradientPipelineLayout, 0, 1, &m_vkDrawImageDescriptors, 0, nullptr);
 
-    SHADER::OpaaxComputeShaderPushConstants lPushConst;
-    lPushConst.data1 = glm::vec4(1, 0, 0, 1);
-    lPushConst.data2 = glm::vec4(0, 0, 1, 1);
-
-    vkCmdPushConstants(CommandBuffer, m_gradientPipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(SHADER::OpaaxComputeShaderPushConstants), &lPushConst);
+    vkCmdPushConstants(CommandBuffer, m_gradientPipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(SHADER::OpaaxComputeShaderPushConstants), &lEffect.Data);
     // execute the compute pipeline dispatch. We are using 16x16 workgroup size so we need to divide by it
     vkCmdDispatch(CommandBuffer, std::ceil(m_drawExtent.width / 16.0), std::ceil(m_drawExtent.height / 16.0), 1);
 }
@@ -571,6 +616,25 @@ bool OpaaxVulkanRenderer::Initialize()
 }
 
 void OpaaxVulkanRenderer::Resize() {}
+void OpaaxVulkanRenderer::DrawImgui()
+{
+    if (ImGui::Begin("background"))
+    {
+        OpaaxVKComputeEffect& lEffectSelected = m_backgroundEffects[m_currentBackgroundEffect];
+		
+        ImGui::Text("Selected effect: ", lEffectSelected.Name);
+		
+        ImGui::SliderInt("Effect Index", &m_currentBackgroundEffect,0, m_backgroundEffects.size() - 1);
+		
+        ImGui::InputFloat4("Data1",reinterpret_cast<float*>(&lEffectSelected.Data.data1));
+        ImGui::InputFloat4("Data2",reinterpret_cast<float*>(&lEffectSelected.Data.data2));
+        ImGui::InputFloat4("Data3",reinterpret_cast<float*>(&lEffectSelected.Data.data3));
+        ImGui::InputFloat4("Data4",reinterpret_cast<float*>(&lEffectSelected.Data.data4));
+        
+        ImGui::End();
+    }
+}
+
 void OpaaxVulkanRenderer::RenderFrame()
 {
     const OpaaxVKFrameData& lCurrFrameData = GetCurrentFrameData();

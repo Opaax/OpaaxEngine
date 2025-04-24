@@ -107,14 +107,13 @@ void OpaaxApplication::Run()
 		ImGui_ImplVulkan_NewFrame();
 		ImGui_ImplSDL3_NewFrame();
 		ImGui::NewFrame();
-
-		//some imgui UI to test
-		ImGui::ShowDemoWindow();
+		
+		m_opaaxWindow->OnUpdate();
+		m_opaaxRenderer->DrawImgui();
 
 		//make imgui calculate internal draw structures
 		ImGui::Render();
 		
-		m_opaaxWindow->OnUpdate();
 		m_opaaxRenderer->RenderFrame();
 	}
 	

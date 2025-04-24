@@ -47,6 +47,7 @@ namespace OPAAX
     public:
         virtual bool Initialize() = 0;
         virtual void Resize() = 0;
+        virtual void DrawImgui() = 0;
         virtual void RenderFrame() = 0;
         virtual void Shutdown() = 0;
         virtual SDL_WindowFlags GetWindowFlags() = 0;

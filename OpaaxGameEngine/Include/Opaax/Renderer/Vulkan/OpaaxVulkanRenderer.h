@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "OpaaxVKAllocatedImage.h"
+#include "OpaaxVKComputeEffect.h"
 #include "OpaaxVKDescriptorAllocator.h"
 #include "OpaaxVKGlobal.h"
 #include "OpaaxVKTypes.h"
@@ -17,13 +18,17 @@ namespace OPAAX
             {
                 VkExtent2D                  m_windowExtent{ 1280 , 720 };
                 
-                VkSurfaceKHR                m_vkSurface         = VK_NULL_HANDLE;
-                VkInstance                  m_vkInstance        = VK_NULL_HANDLE;
-                VkDebugUtilsMessengerEXT    m_vkDebugMessenger  = VK_NULL_HANDLE;
-                VkPhysicalDevice            m_vkPhysicalDevice  = VK_NULL_HANDLE;
-                VkDevice                    m_vkDevice          = VK_NULL_HANDLE;
-                VkSwapchainKHR              m_vkSwapchain       = VK_NULL_HANDLE;
-                VkQueue                     m_vkGraphicsQueue   = VK_NULL_HANDLE;
+                VkSurfaceKHR                m_vkSurface                 = VK_NULL_HANDLE;
+                VkInstance                  m_vkInstance                = VK_NULL_HANDLE;
+                VkDebugUtilsMessengerEXT    m_vkDebugMessenger          = VK_NULL_HANDLE;
+                VkPhysicalDevice            m_vkPhysicalDevice          = VK_NULL_HANDLE;
+                VkDevice                    m_vkDevice                  = VK_NULL_HANDLE;
+                VkSwapchainKHR              m_vkSwapchain               = VK_NULL_HANDLE;
+                VkQueue                     m_vkGraphicsQueue           = VK_NULL_HANDLE;
+                //Immediate submit structures
+                VkFence                     m_immediateFence            = VK_NULL_HANDLE;
+                VkCommandBuffer             m_immediateCommandBuffer    = VK_NULL_HANDLE;
+                VkCommandPool               m_immediateCommandPool      = VK_NULL_HANDLE;
                 
                 VkFormat                    m_vkSwapchainImageFormat;
 
@@ -53,10 +58,8 @@ namespace OPAAX
                 VkPipeline                  m_gradientPipeline;
                 VkPipelineLayout            m_gradientPipelineLayout;
 
-                //Immediate submit structures
-                VkFence         m_immediateFence            = VK_NULL_HANDLE;
-                VkCommandBuffer m_immediateCommandBuffer    = VK_NULL_HANDLE;
-                VkCommandPool   m_immediateCommandPool      = VK_NULL_HANDLE;
+                std::vector<OpaaxVKComputeEffect> m_backgroundEffects;
+                Int32 m_currentBackgroundEffect{0};
                 
             public:
                 explicit OpaaxVulkanRenderer(OPAAX::OpaaxWindow* const Window);
@@ -119,6 +122,7 @@ namespace OPAAX
             public:
                 bool Initialize()   override;
                 void Resize()       override;
+                void DrawImgui()    override;
                 void RenderFrame()  override;
                 void Shutdown()     override;
                 
