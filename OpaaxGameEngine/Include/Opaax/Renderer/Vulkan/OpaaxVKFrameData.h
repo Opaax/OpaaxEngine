@@ -1,6 +1,7 @@
 ﻿#pragma once
-#include "OpaaxVKDeletionQueue.h"
+
 #include "OpaaxVulkanInclude.h"
+#include "Opaax/OpaaxDeletionQueue.h"
 
 namespace OPAAX
 {
@@ -18,7 +19,7 @@ namespace OPAAX
                 VkCommandPool           CommandPool         = VK_NULL_HANDLE;
                 VkCommandBuffer         MainCommandBuffer   = VK_NULL_HANDLE;
 
-                OpaaxVKDeletionQueue    DeletionQueue;
+                OpaaxDeletionQueue    DeletionQueue;
             };
         }
     }

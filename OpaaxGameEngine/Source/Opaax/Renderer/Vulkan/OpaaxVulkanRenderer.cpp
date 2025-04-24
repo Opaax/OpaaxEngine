@@ -21,9 +21,31 @@
 #include "imgui.h"
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_vulkan.h"
+#include "Opaax/OpaaxEngine.h"
+#include "Opaax/Imgui/OpaaxImguiBase.h"
+#include "Opaax/Imgui/OpaaxImguiVulkan.h"
 #include "Opaax/Renderer/OpaaxShaderTypes.h"
 
 using namespace OPAAX::RENDERER::VULKAN;
+
+OpaaxVulkanRenderer::OpaaxVulkanRenderer(OPAAX::OpaaxWindow* const Window): IOpaaxRendererContext(Window),
+                                                                            m_vkSwapchainImageFormat(),
+                                                                            m_vkSwapchainExtent(),
+                                                                            m_vmaAllocator(nullptr),
+                                                                            m_drawExtent(),
+                                                                            m_globalDescriptorAllocator(),
+                                                                            m_vkDrawImageDescriptors(nullptr),
+                                                                            m_vkDrawImageDescriptorLayout(nullptr),
+                                                                            m_gradientPipelineLayout(nullptr)
+{
+    m_windowExtent.width = Window->GetWidth();
+    m_windowExtent.height = Window->GetHeight();
+}
+
+OpaaxVulkanRenderer::~OpaaxVulkanRenderer()
+{
+    IOpaaxRendererContext::~IOpaaxRendererContext();
+}
 
 void OpaaxVulkanRenderer::CreateVulkanSurface()
 {
@@ -165,7 +187,7 @@ void OpaaxVulkanRenderer::InitDescriptors()
     {
         OpaaxVKDescriptorLayoutBuilder lBuilder;
         lBuilder.AddBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
-        m_vkDrawImageDescriptorLayout = lBuilder.Build(m_vkDevice, VK_SHADER_STAGE_COMPUTE_BIT);
+        m_vkDrawImageDescriptorLayout = lBuilder.Build(m_vkDevice, VK_SHADER_STAGE_COMPUTE_BIT | VK_FORMAT_R16G16B16A16_SFLOAT);
     }
 
     //allocate a descriptor set for our draw image
@@ -190,7 +212,6 @@ void OpaaxVulkanRenderer::InitDescriptors()
     //make sure both the descriptor allocator and the new layout get cleaned up properly
     m_mainDeletionQueue.PushFunction([&]() {
         m_globalDescriptorAllocator.DestroyPool(m_vkDevice);
-
         vkDestroyDescriptorSetLayout(m_vkDevice, m_vkDrawImageDescriptorLayout, nullptr);
     });
 }
@@ -237,11 +258,11 @@ void OpaaxVulkanRenderer::InitBackgroundPipelines()
     lStageinfo.module = lComputeDrawShader;
     lStageinfo.pName = "main";
 
-    VkComputePipelineCreateInfo computePipelineCreateInfo{};
-    computePipelineCreateInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-    computePipelineCreateInfo.pNext = nullptr;
-    computePipelineCreateInfo.layout = m_gradientPipelineLayout;
-    computePipelineCreateInfo.stage = lStageinfo;
+    VkComputePipelineCreateInfo lComputePipelineCreateInfo{};
+    lComputePipelineCreateInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    lComputePipelineCreateInfo.pNext = nullptr;
+    lComputePipelineCreateInfo.layout = m_gradientPipelineLayout;
+    lComputePipelineCreateInfo.stage = lStageinfo;
 
     OpaaxVKComputeEffect lGradient;
     lGradient.Layout = m_gradientPipelineLayout;
@@ -249,22 +270,22 @@ void OpaaxVulkanRenderer::InitBackgroundPipelines()
     lGradient.Data = {};
 
     //default colors
-    lGradient.Data.data1 = glm::vec4(1, 0, 0, 1);
-    lGradient.Data.data2 = glm::vec4(0, 0, 1, 1);
+    lGradient.Data.Data1 = glm::vec4(1, 0, 0, 1);
+    lGradient.Data.Data2 = glm::vec4(0, 0, 1, 1);
 	
-    VK_CHECK(vkCreateComputePipelines(m_vkDevice,VK_NULL_HANDLE,1,&computePipelineCreateInfo, nullptr, &lGradient.Pipeline));
+    VK_CHECK(vkCreateComputePipelines(m_vkDevice,VK_NULL_HANDLE,1,&lComputePipelineCreateInfo, nullptr, &lGradient.Pipeline));
 
     //change the shader module only to create the sky shader
-    computePipelineCreateInfo.stage.module = lSkyShader;
+    lComputePipelineCreateInfo.stage.module = lSkyShader;
 
     OpaaxVKComputeEffect lSky;
     lSky.Layout = m_gradientPipelineLayout;
     lSky.Name = "sky";
     lSky.Data = {};
     //default sky parameters
-    lSky.Data.data1 = glm::vec4(0.1, 0.2, 0.4 ,0.97);
+    lSky.Data.Data1 = glm::vec4(0.1, 0.2, 0.4 ,0.97);
 
-    VK_CHECK(vkCreateComputePipelines(m_vkDevice, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &lSky.Pipeline));
+    VK_CHECK(vkCreateComputePipelines(m_vkDevice, VK_NULL_HANDLE, 1, &lComputePipelineCreateInfo, nullptr, &lSky.Pipeline));
 
     //add the 2 background effects into the array
     m_backgroundEffects.push_back(lGradient);
@@ -273,78 +294,21 @@ void OpaaxVulkanRenderer::InitBackgroundPipelines()
     vkDestroyShaderModule(m_vkDevice, lComputeDrawShader, nullptr);
     vkDestroyShaderModule(m_vkDevice, lSkyShader, nullptr);
 
-    m_mainDeletionQueue.PushFunction([&]() {
+    m_mainDeletionQueue.PushFunction([this]() {
         vkDestroyPipelineLayout(m_vkDevice, m_gradientPipelineLayout, nullptr);
-        vkDestroyPipeline(m_vkDevice, lSky.Pipeline, nullptr);
-        vkDestroyPipeline(m_vkDevice, lGradient.Pipeline, nullptr);
-        });
+
+        for (auto& lEffect : m_backgroundEffects)
+        {
+            vkDestroyPipeline(m_vkDevice, lEffect.Pipeline, nullptr);
+        }
+    });
 }
 
 void OpaaxVulkanRenderer::InitImgui()
 {
-    // 1: create descriptor pool for IMGUI
-	//  the size of the pool is very oversize, but it's copied from imgui demo
-	//  itself.
-	VkDescriptorPoolSize lPoolSizes[] = {
-	    { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
-		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
-		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
-		{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
-	};
-
-	VkDescriptorPoolCreateInfo lPoolInfo = {};
-	lPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	lPoolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-	lPoolInfo.maxSets = 1000;
-	lPoolInfo.poolSizeCount = (uint32_t)std::size(lPoolSizes);
-	lPoolInfo.pPoolSizes = lPoolSizes;
-
-	VkDescriptorPool lImguiPool;
-	VK_CHECK(vkCreateDescriptorPool(m_vkDevice, &lPoolInfo, nullptr, &lImguiPool));
-
-	// 2: initialize imgui library
-
-	// this initializes the core structures of imgui
-	ImGui::CreateContext();
-
-	// this initializes imgui for SDL
-	ImGui_ImplSDL3_InitForVulkan(static_cast<SDL_Window*>(GetOpaaxWindow()->GetNativeWindow()));
-
-	// this initializes imgui for Vulkan
-	ImGui_ImplVulkan_InitInfo lInitInfo = {};
-	lInitInfo.Instance = m_vkInstance;
-	lInitInfo.PhysicalDevice = m_vkPhysicalDevice;
-	lInitInfo.Device = m_vkDevice;
-	lInitInfo.Queue = m_vkGraphicsQueue;
-	lInitInfo.DescriptorPool = lImguiPool;
-	lInitInfo.MinImageCount = 3;
-	lInitInfo.ImageCount = 3;
-	lInitInfo.UseDynamicRendering = true;
-
-	//dynamic rendering parameters for imgui to use
-	lInitInfo.PipelineRenderingCreateInfo = {.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO};
-	lInitInfo.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
-	lInitInfo.PipelineRenderingCreateInfo.pColorAttachmentFormats = &m_vkSwapchainImageFormat;
-	
-
-	lInitInfo.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
-
-	ImGui_ImplVulkan_Init(&lInitInfo);
-
-	ImGui_ImplVulkan_CreateFontsTexture();
-
-	// add to destroy the imgui created structures
-	m_mainDeletionQueue.PushFunction([this, lImguiPool]() {
-		ImGui_ImplVulkan_Shutdown();
-		vkDestroyDescriptorPool(m_vkDevice, lImguiPool, nullptr);
-	});
+    SDL_Window* lWindow = static_cast<SDL_Window*>(GetOpaaxWindow()->GetNativeWindow());
+    IMGUI::OpaaxImguiVulkan* lImguiReintepreted = static_cast<IMGUI::OpaaxImguiVulkan*>(&OpaaxEngine::Get().GetImgui());
+    lImguiReintepreted->Initialize(lWindow, m_vkInstance, m_vkPhysicalDevice, m_vkDevice, m_vkGraphicsQueue, m_vkSwapchainImageFormat);
 }
 
 void OpaaxVulkanRenderer::CreateSwapchain(UInt32 Width, UInt32 Height)
@@ -464,17 +428,6 @@ void OpaaxVulkanRenderer::DrawImgui(VkCommandBuffer CommandBuffer, VkImageView T
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), CommandBuffer);
 
     vkCmdEndRendering(CommandBuffer);
-}
-
-OpaaxVulkanRenderer::OpaaxVulkanRenderer(OPAAX::OpaaxWindow* const Window):IOpaaxRendererContext(Window)
-{
-    m_windowExtent.width = Window->GetWidth();
-    m_windowExtent.height = Window->GetHeight();
-}
-
-OpaaxVulkanRenderer::~OpaaxVulkanRenderer()
-{
-    IOpaaxRendererContext::~IOpaaxRendererContext();
 }
 
 void OpaaxVulkanRenderer::InitVulkanBootStrap()
@@ -626,10 +579,8 @@ void OpaaxVulkanRenderer::DrawImgui()
 		
         ImGui::SliderInt("Effect Index", &m_currentBackgroundEffect,0, m_backgroundEffects.size() - 1);
 		
-        ImGui::InputFloat4("Data1",reinterpret_cast<float*>(&lEffectSelected.Data.data1));
-        ImGui::InputFloat4("Data2",reinterpret_cast<float*>(&lEffectSelected.Data.data2));
-        ImGui::InputFloat4("Data3",reinterpret_cast<float*>(&lEffectSelected.Data.data3));
-        ImGui::InputFloat4("Data4",reinterpret_cast<float*>(&lEffectSelected.Data.data4));
+        ImGui::ColorEdit4("Data1", reinterpret_cast<float*>(&lEffectSelected.Data.Data1));
+        ImGui::ColorEdit4("Data2", reinterpret_cast<float*>(&lEffectSelected.Data.Data2));
         
         ImGui::End();
     }
@@ -728,6 +679,8 @@ void OpaaxVulkanRenderer::Shutdown()
 
     //make sure the gpu has stopped doing its things
     vkDeviceWaitIdle(m_vkDevice);
+
+    OpaaxEngine::Get().GetImgui().Shutdown();
 
     m_mainDeletionQueue.Flush();
 

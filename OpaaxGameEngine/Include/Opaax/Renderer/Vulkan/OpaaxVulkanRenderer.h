@@ -7,6 +7,7 @@
 #include "OpaaxVulkanInclude.h"
 #include "Opaax/Renderer/IOpaaxRendererContext.h"
 #include "OpaaxVKFrameData.h"
+#include "Opaax/OpaaxDeletionQueue.h"
 
 namespace OPAAX
 {
@@ -42,7 +43,7 @@ namespace OPAAX
                 
                 Int32                       m_frameNumber{0};
 
-                OpaaxVKDeletionQueue        m_mainDeletionQueue;
+                OpaaxDeletionQueue        m_mainDeletionQueue;
 
                 VmaAllocator                m_vmaAllocator;
 
@@ -55,7 +56,7 @@ namespace OPAAX
                 VkDescriptorSet             m_vkDrawImageDescriptors;
                 VkDescriptorSetLayout       m_vkDrawImageDescriptorLayout;
 
-                VkPipeline                  m_gradientPipeline;
+                //VkPipeline                  m_gradientPipeline;
                 VkPipelineLayout            m_gradientPipelineLayout;
 
                 std::vector<OpaaxVKComputeEffect> m_backgroundEffects;

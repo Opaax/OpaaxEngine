@@ -64,7 +64,8 @@ void OpaaxApplication::Initialize()
 	OPAAX_VERBOSE("======================= Application Initialize =======================")
 	
 	OpaaxEngine::Get().LoadConfig();
-	
+
+	OpaaxEngine::Get().Initialize();
 	CreateInitMainWindow();
 	CreateInitRenderer();
 
