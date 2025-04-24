@@ -5,6 +5,11 @@
 #include "Opaax/OpaaxEngine.h"
 #include "Opaax/Window/Platform/OpaaxWindowsWindow.h"
 
+//IMGUi
+#include "imgui.h"
+#include "imgui_impl_sdl3.h"
+#include "imgui_impl_vulkan.h"
+
 using namespace OPAAX;
 
 OpaaxApplication::OpaaxApplication()
@@ -78,6 +83,9 @@ void OpaaxApplication::Run()
 		while (m_opaaxWindow->PollEvents(lEvent))
 		{
 			//TODO: Some kind of event here?
+
+			//send SDL event to imgui for handling
+			ImGui_ImplSDL3_ProcessEvent(&lEvent);
 		}
 
 		//The app will close
@@ -94,6 +102,17 @@ void OpaaxApplication::Run()
 			//TODO Make a save?
 			//std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
+
+		//Imgui new frame
+		ImGui_ImplVulkan_NewFrame();
+		ImGui_ImplSDL3_NewFrame();
+		ImGui::NewFrame();
+
+		//some imgui UI to test
+		ImGui::ShowDemoWindow();
+
+		//make imgui calculate internal draw structures
+		ImGui::Render();
 		
 		m_opaaxWindow->OnUpdate();
 		m_opaaxRenderer->RenderFrame();

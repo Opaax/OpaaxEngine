@@ -52,6 +52,11 @@ namespace OPAAX
 
                 VkPipeline                  m_gradientPipeline;
                 VkPipelineLayout            m_gradientPipelineLayout;
+
+                //Immediate submit structures
+                VkFence         m_immediateFence            = VK_NULL_HANDLE;
+                VkCommandBuffer m_immediateCommandBuffer    = VK_NULL_HANDLE;
+                VkCommandPool   m_immediateCommandPool      = VK_NULL_HANDLE;
                 
             public:
                 explicit OpaaxVulkanRenderer(OPAAX::OpaaxWindow* const Window);
@@ -88,12 +93,28 @@ namespace OPAAX
                 void InitDescriptors();
                 void InitPipelines();
                 void InitBackgroundPipelines();
+                void InitImgui();
                 
                 void CreateSwapchain(UInt32 Width, UInt32 Height);
 
                 void DrawBackground(VkCommandBuffer CommandBuffer);
                 
                 void DestroySwapchain();
+
+                /**
+                 * Executes a user-provided function on a Vulkan command buffer through an immediate submission process.
+                 * This method is designed for single-use command buffers and ensures the associated GPU operations
+                 * are fully completed before returning.
+                 *
+                 * One way to improve it, would be to run it on a different queue than the graphics queue,
+                 * and that way we could overlap the execution from this with the main render loop.
+                 *
+                 * @param Function Function object or lambda that defines the commands to be executed on the command buffer.
+                 *        The provided command buffer is passed as a parameter to the function.
+                 */
+                void ImmediateSubmit(OPSTDFunc<void(VkCommandBuffer CommandBuffer)>&& Function);
+
+                void DrawImgui(VkCommandBuffer CommandBuffer,  VkImageView TargetImageView);
             
             public:
                 bool Initialize()   override;

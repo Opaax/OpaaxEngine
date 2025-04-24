@@ -17,6 +17,11 @@
 #include "Opaax/Renderer/Vulkan/OpaaxVKDescriptorLayoutBuilder.h"
 #include "Opaax/Renderer/Vulkan/OpaaxVKPipelineBuilder.h"
 
+//IMGUi
+#include "imgui.h"
+#include "imgui_impl_sdl3.h"
+#include "imgui_impl_vulkan.h"
+
 using namespace OPAAX::RENDERER::VULKAN;
 
 void OpaaxVulkanRenderer::CreateVulkanSurface()
@@ -101,6 +106,20 @@ void OpaaxVulkanRenderer::InitVulkanCommands()
         VK_CHECK(vkAllocateCommandBuffers(m_vkDevice, &lCmdAllocInfo, &m_framesData[i].MainCommandBuffer));
     }
 
+    //Immediate Submit
+    {
+        VK_CHECK(vkCreateCommandPool(m_vkDevice, &lCommandPoolInfo, nullptr, &m_immediateCommandPool));
+
+        // allocate the command buffer for immediate submits
+        VkCommandBufferAllocateInfo lCommandAllocInfo = VULKAN_HELPER::CommandBufferAllocateInfo(m_immediateCommandPool, 1);
+
+        VK_CHECK(vkAllocateCommandBuffers(m_vkDevice, &lCommandAllocInfo, &m_immediateCommandBuffer));
+
+        m_mainDeletionQueue.PushFunction([this]() { 
+            vkDestroyCommandPool(m_vkDevice, m_immediateCommandPool, nullptr);
+        });
+    }
+
     OPAAX_LOG("[OpaaxVulkanRenderer]: Vulkan Commands initialized!")
 }
 
@@ -120,6 +139,12 @@ void OpaaxVulkanRenderer::InitVulkanSyncs()
         VK_CHECK(vkCreateFence(m_vkDevice, &lFenceCreateInfo, nullptr, &m_framesData[i].RenderFence));
         VK_CHECK(vkCreateSemaphore(m_vkDevice, &lSemaphoreCreateInfo, nullptr, &m_framesData[i].SwapchainSemaphore));
         VK_CHECK(vkCreateSemaphore(m_vkDevice, &lSemaphoreCreateInfo, nullptr, &m_framesData[i].RenderSemaphore));
+    }
+
+    //Immediate submit
+    {
+        VK_CHECK(vkCreateFence(m_vkDevice, &lFenceCreateInfo, nullptr, &m_immediateFence));
+        m_mainDeletionQueue.PushFunction([this]() { vkDestroyFence(m_vkDevice, m_immediateFence, nullptr); });
     }
 
     OPAAX_LOG("[OpaaxVulkanRenderer]: Vulkan Syncs objects initialized!")
@@ -213,6 +238,73 @@ void OpaaxVulkanRenderer::InitBackgroundPipelines()
         });
 }
 
+void OpaaxVulkanRenderer::InitImgui()
+{
+    // 1: create descriptor pool for IMGUI
+	//  the size of the pool is very oversize, but it's copied from imgui demo
+	//  itself.
+	VkDescriptorPoolSize lPoolSizes[] = {
+	    { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
+		{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
+	};
+
+	VkDescriptorPoolCreateInfo lPoolInfo = {};
+	lPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	lPoolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+	lPoolInfo.maxSets = 1000;
+	lPoolInfo.poolSizeCount = (uint32_t)std::size(lPoolSizes);
+	lPoolInfo.pPoolSizes = lPoolSizes;
+
+	VkDescriptorPool lImguiPool;
+	VK_CHECK(vkCreateDescriptorPool(m_vkDevice, &lPoolInfo, nullptr, &lImguiPool));
+
+	// 2: initialize imgui library
+
+	// this initializes the core structures of imgui
+	ImGui::CreateContext();
+
+	// this initializes imgui for SDL
+	ImGui_ImplSDL3_InitForVulkan(static_cast<SDL_Window*>(GetOpaaxWindow()->GetNativeWindow()));
+
+	// this initializes imgui for Vulkan
+	ImGui_ImplVulkan_InitInfo lInitInfo = {};
+	lInitInfo.Instance = m_vkInstance;
+	lInitInfo.PhysicalDevice = m_vkPhysicalDevice;
+	lInitInfo.Device = m_vkDevice;
+	lInitInfo.Queue = m_vkGraphicsQueue;
+	lInitInfo.DescriptorPool = lImguiPool;
+	lInitInfo.MinImageCount = 3;
+	lInitInfo.ImageCount = 3;
+	lInitInfo.UseDynamicRendering = true;
+
+	//dynamic rendering parameters for imgui to use
+	lInitInfo.PipelineRenderingCreateInfo = {.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO};
+	lInitInfo.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
+	lInitInfo.PipelineRenderingCreateInfo.pColorAttachmentFormats = &m_vkSwapchainImageFormat;
+	
+
+	lInitInfo.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+
+	ImGui_ImplVulkan_Init(&lInitInfo);
+
+	ImGui_ImplVulkan_CreateFontsTexture();
+
+	// add to destroy the imgui created structures
+	m_mainDeletionQueue.PushFunction([this, lImguiPool]() {
+		ImGui_ImplVulkan_Shutdown();
+		vkDestroyDescriptorPool(m_vkDevice, lImguiPool, nullptr);
+	});
+}
+
 void OpaaxVulkanRenderer::CreateSwapchain(UInt32 Width, UInt32 Height)
 {
     vkb::SwapchainBuilder lSwapchainBuilder{ m_vkPhysicalDevice, m_vkDevice, m_vkSurface };
@@ -268,6 +360,42 @@ void OpaaxVulkanRenderer::DestroySwapchain()
     {
         vkDestroyImageView(m_vkDevice, m_vkSwapchainImageViews[i], nullptr);
     }
+}
+
+void OpaaxVulkanRenderer::ImmediateSubmit(OPSTDFunc<void(VkCommandBuffer CommandBuffer)>&& Function)
+{
+    VK_CHECK(vkResetFences(m_vkDevice, 1, &m_immediateFence));
+    VK_CHECK(vkResetCommandBuffer(m_immediateCommandBuffer, 0));
+
+    VkCommandBuffer lCommandBuffer = m_immediateCommandBuffer;
+
+    VkCommandBufferBeginInfo lCommandBufferBeginInfo = VULKAN_HELPER::CommandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+
+    VK_CHECK(vkBeginCommandBuffer(lCommandBuffer, &lCommandBufferBeginInfo));
+
+    Function(lCommandBuffer);
+
+    VK_CHECK(vkEndCommandBuffer(lCommandBuffer));
+
+    VkCommandBufferSubmitInfo lCommandBufferInfo = VULKAN_HELPER::CommandBufferSubmitInfo(lCommandBuffer);
+    VkSubmitInfo2 lSubmit = VULKAN_HELPER::SubmitInfo(&lCommandBufferInfo, nullptr, nullptr);
+
+    // submit command buffer to the queue and execute it.
+    // m_renderFence will now block until the graphic commands finish execution
+    VK_CHECK(vkQueueSubmit2(m_vkGraphicsQueue, 1, &lSubmit, m_immediateFence));
+    VK_CHECK(vkWaitForFences(m_vkDevice, 1, &m_immediateFence, true, OP_UMAX_64));
+}
+
+void OpaaxVulkanRenderer::DrawImgui(VkCommandBuffer CommandBuffer, VkImageView TargetImageView)
+{
+    VkRenderingAttachmentInfo lColorAttachment = VULKAN_HELPER::AttachmentInfo(TargetImageView, nullptr, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    VkRenderingInfo lRenderInfo = VULKAN_HELPER::RenderingInfo(m_vkSwapchainExtent, &lColorAttachment, nullptr);
+
+    vkCmdBeginRendering(CommandBuffer, &lRenderInfo);
+
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), CommandBuffer);
+
+    vkCmdEndRendering(CommandBuffer);
 }
 
 OpaaxVulkanRenderer::OpaaxVulkanRenderer(OPAAX::OpaaxWindow* const Window):IOpaaxRendererContext(Window)
@@ -413,6 +541,7 @@ bool OpaaxVulkanRenderer::Initialize()
     InitVulkanSyncs();
     InitDescriptors();
     InitPipelines();
+    InitImgui();
     
     OPAAX_VERBOSE("======================= Renderer - Vulkan End Init =======================")
     return false;
@@ -461,6 +590,9 @@ void OpaaxVulkanRenderer::RenderFrame()
     // execute a copy from the draw image into the swapchain
     VULKAN_HELPER::CopyImageToImage(lCommandBuffer, m_drawImage.Image, m_vkSwapchainImages[lSwapchainImageIndex], m_drawExtent, m_vkSwapchainExtent);
 
+    //draw imgui into the swapchain image
+    DrawImgui(lCommandBuffer,  m_vkSwapchainImageViews[lSwapchainImageIndex]);
+    
     // set swapchain image layout to Present so we can show it on the screen
     VULKAN_HELPER::TransitionImage(lCommandBuffer, m_vkSwapchainImages[lSwapchainImageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
@@ -468,8 +600,8 @@ void OpaaxVulkanRenderer::RenderFrame()
     VK_CHECK(vkEndCommandBuffer(lCommandBuffer));
 
     //prepare the submission to the queue. 
-    //we want to wait on the _presentSemaphore, as that semaphore is signaled when the swapchain is ready
-    //we will signal the _renderSemaphore, to signal that rendering has finished
+    //we want to wait on the m_presentSemaphore, as that semaphore is signaled when the swapchain is ready
+    //we will signal the m_renderSemaphore, to signal that rendering has finished
     VkCommandBufferSubmitInfo lCommandBufferSubmitInfo = VULKAN_HELPER::CommandBufferSubmitInfo(lCommandBuffer);	
 
     VkSemaphoreSubmitInfo lSemaphoreWaitInfo = VULKAN_HELPER::SemaphoreSubmitInfo(VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR, GetCurrentFrameData().SwapchainSemaphore);
@@ -478,7 +610,7 @@ void OpaaxVulkanRenderer::RenderFrame()
     VkSubmitInfo2 lSubmitInfo = VULKAN_HELPER::SubmitInfo(&lCommandBufferSubmitInfo,&lSemaphoreSignalInfo,&lSemaphoreWaitInfo);	
 
     //submit command buffer to the queue and execute it.
-    // _renderFence will now block until the graphic commands finish execution
+    //m_renderFence will now block until the graphic commands finish execution
     VK_CHECK(vkQueueSubmit2(m_vkGraphicsQueue, 1, &lSubmitInfo, GetCurrentFrameData().RenderFence));
 
     //prepare present

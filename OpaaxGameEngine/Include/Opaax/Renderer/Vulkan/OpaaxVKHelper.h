@@ -349,6 +349,41 @@ namespace OPAAX
             }
 
             static void GenerateMipmaps(VkCommandBuffer CommandBuffer, VkImage Image, VkExtent2D ImageSize) {}
+
+            FORCEINLINE VkRenderingAttachmentInfo AttachmentInfo(VkImageView View, const VkClearValue* Clear, VkImageLayout Layout /*= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL*/)
+            {
+                VkRenderingAttachmentInfo lColorAttachment {};
+                lColorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+                lColorAttachment.pNext = nullptr;
+
+                lColorAttachment.imageView = View;
+                lColorAttachment.imageLayout = Layout;
+                lColorAttachment.loadOp = Clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+                lColorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+
+                if (Clear)
+                {
+                    lColorAttachment.clearValue = *Clear;
+                }
+
+                return lColorAttachment;
+            }
+
+            FORCEINLINE VkRenderingInfo RenderingInfo(VkExtent2D RenderExtent, const VkRenderingAttachmentInfo* ColorAttachment, const VkRenderingAttachmentInfo* DepthAttachment)
+            {
+                VkRenderingInfo lRenderInfo {};
+                lRenderInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+                lRenderInfo.pNext = nullptr;
+
+                lRenderInfo.renderArea = VkRect2D { VkOffset2D { 0, 0 }, RenderExtent };
+                lRenderInfo.layerCount = 1;
+                lRenderInfo.colorAttachmentCount = 1;
+                lRenderInfo.pColorAttachments = ColorAttachment;
+                lRenderInfo.pDepthAttachment = DepthAttachment;
+                lRenderInfo.pStencilAttachment = nullptr;
+
+                return lRenderInfo;
+            }
         }
     }
 }
