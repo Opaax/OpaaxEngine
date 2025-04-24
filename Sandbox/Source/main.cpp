@@ -7,12 +7,13 @@ public:
 	SandboxApplication()
 	{
 	}
-	~SandboxApplication()
-	{
+	
+	~SandboxApplication() override {
 	}
 };
 
 OPAAX::OpaaxApplication* OPAAX::CreateApplication()
 {
+	OPAAX_VERBOSE("======================= Creating Application =======================")
 	return new SandboxApplication();
 }

@@ -29,3 +29,12 @@ Binaries
 
 #Intermediate
 Intermediate
+
+#Save in all apps
+*/Save/*
+
+#ThirdParty
+*/ThirdParty/*
+
+#imgui
+*/imgui.ini
