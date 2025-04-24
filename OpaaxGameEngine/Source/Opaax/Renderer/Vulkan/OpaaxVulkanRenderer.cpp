@@ -21,6 +21,7 @@
 #include "imgui.h"
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_vulkan.h"
+#include "Opaax/Renderer/OpaaxShaderTypes.h"
 
 using namespace OPAAX::RENDERER::VULKAN;
 
@@ -207,12 +208,20 @@ void OpaaxVulkanRenderer::InitBackgroundPipelines()
     lComputeLayout.pSetLayouts = &m_vkDrawImageDescriptorLayout;
     lComputeLayout.setLayoutCount = 1;
 
+    VkPushConstantRange lPushConstant{};
+    lPushConstant.offset = 0;
+    lPushConstant.size = sizeof(SHADER::OpaaxComputeShaderPushConstants) ;
+    lPushConstant.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+    lComputeLayout.pPushConstantRanges = &lPushConstant;
+    lComputeLayout.pushConstantRangeCount = 1;
+
     VK_CHECK(vkCreatePipelineLayout(m_vkDevice, &lComputeLayout, nullptr, &m_gradientPipelineLayout));
 
     VkShaderModule lComputeDrawShader;
-    if (!VULKAN_HELPER::LoadShaderModule("Shaders/Gradient.comp.spv", m_vkDevice, &lComputeDrawShader))
+    if (!VULKAN_HELPER::LoadShaderModule("Shaders/GradientColor.comp.spv", m_vkDevice, &lComputeDrawShader))
     {
-        OPAAX_ERROR("Failed to load shaders!");
+        OPAAX_ERROR("Failed to load shaders!")
     }
 
     VkPipelineShaderStageCreateInfo lStageinfo{};
@@ -341,12 +350,26 @@ void OpaaxVulkanRenderer::DrawBackground(VkCommandBuffer CommandBuffer)
     // //clear image
     // vkCmdClearColorImage(CommandBuffer, m_drawImage.Image, VK_IMAGE_LAYOUT_GENERAL, &lClearValue, 1, &lClearRange);
 
+    // // bind the gradient drawing compute pipeline
+    // vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_gradientPipeline);
+    //
+    // // bind the descriptor set containing the draw image for the compute pipeline
+    // vkCmdBindDescriptorSets(CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_gradientPipelineLayout, 0, 1, &m_vkDrawImageDescriptors, 0, nullptr);
+    //
+    // // execute the compute pipeline dispatch. We are using 16x16 workgroup size so we need to divide by it
+    // vkCmdDispatch(CommandBuffer, std::ceil(m_drawExtent.width / 16.0), std::ceil(m_drawExtent.height / 16.0), 1);
+
     // bind the gradient drawing compute pipeline
     vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_gradientPipeline);
 
     // bind the descriptor set containing the draw image for the compute pipeline
     vkCmdBindDescriptorSets(CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_gradientPipelineLayout, 0, 1, &m_vkDrawImageDescriptors, 0, nullptr);
 
+    SHADER::OpaaxComputeShaderPushConstants lPushConst;
+    lPushConst.data1 = glm::vec4(1, 0, 0, 1);
+    lPushConst.data2 = glm::vec4(0, 0, 1, 1);
+
+    vkCmdPushConstants(CommandBuffer, m_gradientPipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(SHADER::OpaaxComputeShaderPushConstants), &lPushConst);
     // execute the compute pipeline dispatch. We are using 16x16 workgroup size so we need to divide by it
     vkCmdDispatch(CommandBuffer, std::ceil(m_drawExtent.width / 16.0), std::ceil(m_drawExtent.height / 16.0), 1);
 }
