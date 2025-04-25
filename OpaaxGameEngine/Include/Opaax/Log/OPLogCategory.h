@@ -27,7 +27,7 @@
  * Log category for verbose messages.
  * Used for detailed logging that may include exhaustive operational details.
  */
-enum struct ELogCategory
+OPAAX_API enum struct ELogCategory
 {
     ELC_Info = 0,
     ELC_Warning = 1,

@@ -70,6 +70,7 @@ void OpaaxApplication::Initialize()
 	CreateInitRenderer();
 
 	bIsInitialize = true;
+	
 	OPAAX_VERBOSE("======================= Application End Initialize =======================")
 }
 

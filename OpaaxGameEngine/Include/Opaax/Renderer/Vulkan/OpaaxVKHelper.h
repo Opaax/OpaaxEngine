@@ -13,6 +13,13 @@ namespace OPAAX
     {
         namespace VULKAN_HELPER
         {
+            /**
+             * Retrieves the list of instance extensions required for creating a Vulkan instance.
+             * These extensions are typically necessary for enabling specific platform integrations
+             * or validation layers during Vulkan initialization.
+             *
+             * @return A vector containing the names of required Vulkan instance extensions as strings.
+             */
             static std::vector<const char*> GetRequiredExtensions()
             {
                 UInt32 lExtensionCount = 0;
@@ -34,6 +41,17 @@ namespace OPAAX
                 return lExtensions;
             }
 
+            /**
+             * Represents a callback function used for debugging Vulkan operations.
+             * This callback is invoked by the Vulkan validation layers during runtime
+             * to report errors, warnings, or other diagnostic messages.
+             *
+             * @param MessageSeverity Specifies the severity of the message, such as error, warning, or info.
+             * @param MessageType Indicates the type of message, such as validation error, performance issue, or general information.
+             * @param pCallbackData A structure containing details about the message, including the specific error or warning.
+             * @param pUserData Optional user-defined data that can be passed to the callback.
+             * @return A boolean value indicating whether the Vulkan call that triggered the callback should be aborted (VK_TRUE) or continued (VK_FALSE).
+             */
             static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT MessageSeverity,
                                                                 VkDebugUtilsMessageTypeFlagsEXT MessageType,
                                                                 const VkDebugUtilsMessengerCallbackDataEXT*
@@ -46,6 +64,14 @@ namespace OPAAX
                 return VK_FALSE;
             }
 
+            /**
+             * Creates and returns a VkCommandPoolCreateInfo object, which specifies the parameters for creating a command pool.
+             * The command pool is used for managing the memory and command buffers associated with a specific queue family.
+             *
+             * @param QueueFamilyIndex The index of the queue family for which the command pool will allocate command buffers.
+             * @param Flags Optional flags specifying behavior for command pool creation. Defaults to 0 if not provided.
+             * @return A VkCommandPoolCreateInfo instance with the specified parameters for command pool creation.
+             */
             FORCEINLINE VkCommandPoolCreateInfo CommandPoolCreateInfo(UInt32 QueueFamilyIndex,
                                                                       VkCommandPoolCreateFlags Flags = 0)
             {
@@ -63,6 +89,14 @@ namespace OPAAX
                 return lInfo;
             }
 
+            /**
+             * Creates and returns a VkCommandBufferAllocateInfo object, which specifies the parameters for allocating command buffers from a command pool.
+             * The command buffer allocation defines how many command buffers to create and their respective levels.
+             *
+             * @param Pool The command pool from which the command buffers will be allocated.
+             * @param Count The number of command buffers to allocate. Defaults to 1 if not specified.
+             * @return A VkCommandBufferAllocateInfo instance with the specified parameters for command buffer allocation.
+             */
             FORCEINLINE VkCommandBufferAllocateInfo CommandBufferAllocateInfo(VkCommandPool Pool, UInt32 Count = 1)
             {
                 VkCommandBufferAllocateInfo lInfo = {};
@@ -74,7 +108,6 @@ namespace OPAAX
                 lInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
                 return lInfo;
             }
-
 
             /**
              * Creates and returns a new FenceCreateInfo object, which is used to specify parameters for creating a synchronization fence.
@@ -127,6 +160,12 @@ namespace OPAAX
                 return lSubmitInfo;
             }
 
+            /**
+             * Creates and returns a new VkCommandBufferBeginInfo object, used to specify parameters for beginning the recording of a command buffer.
+             * @param Flags A bitmask of VkCommandBufferUsageFlags specifying how the command buffer will be used.
+             * Examples include simultaneous use, multiple submits, or being a secondary command buffer.
+             * @return A VkCommandBufferBeginInfo instance initialized with the provided usage flags and default setup.
+             */
             FORCEINLINE VkCommandBufferBeginInfo CommandBufferBeginInfo(VkCommandBufferUsageFlags Flags = 0)
             {
                 VkCommandBufferBeginInfo lInfo = {};
@@ -245,6 +284,13 @@ namespace OPAAX
                 return lInfo;
             }
 
+            /**
+             * Creates and initializes a `VkImageSubresourceRange` structure with the specified aspect mask,
+             * defaulting other values to span the entire image's mip levels and array layers.
+             *
+             * @param AspectMask A bitmask specifying which aspects of the image are included in the subresource range.
+             * @return A fully initialized `VkImageSubresourceRange` structure.
+             */
             FORCEINLINE VkImageSubresourceRange ImageSubResourceRange(VkImageAspectFlags AspectMask)
             {
                 VkImageSubresourceRange lSubImage{};
@@ -350,6 +396,18 @@ namespace OPAAX
 
             static void GenerateMipmaps(VkCommandBuffer CommandBuffer, VkImage Image, VkExtent2D ImageSize) {}
 
+            /**
+             * Configures and returns a VkRenderingAttachmentInfo structure for use in Vulkan rendering operations.
+             * This function initializes and populates the attachment info based on the provided parameters such as
+             * the image view, clear value, and image layout.
+             *
+             * @param View The VkImageView that represents the image attached to the rendering operation.
+             * @param Clear An optional pointer to a VkClearValue structure, used to define the clear color or depth/stencil value.
+             *              If nullptr, the load operation is set to VK_ATTACHMENT_LOAD_OP_LOAD.
+             * @param Layout The VkImageLayout specifying the layout of the attachment image. Defaults to VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL.
+             *
+             * @return A configured VkRenderingAttachmentInfo structure ready to be used for Vulkan rendering commands.
+             */
             FORCEINLINE VkRenderingAttachmentInfo AttachmentInfo(VkImageView View, const VkClearValue* Clear, VkImageLayout Layout /*= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL*/)
             {
                 VkRenderingAttachmentInfo lColorAttachment {};
@@ -369,6 +427,16 @@ namespace OPAAX
                 return lColorAttachment;
             }
 
+            /**
+             * Configures and returns a VkRenderingInfo structure used for defining rendering details
+             * in a Vulkan rendering operation.
+             *
+             * @param RenderExtent The 2D extent of the rendering area, defining the width and height of the target region.
+             * @param ColorAttachment A pointer to a VkRenderingAttachmentInfo structure describing the color attachment, such as the image and layout.
+             * @param DepthAttachment A pointer to a VkRenderingAttachmentInfo structure describing the depth attachment, if applicable.
+             *
+             * @return A VkRenderingInfo structure populated with the provided attachment and rendering area details.
+             */
             FORCEINLINE VkRenderingInfo RenderingInfo(VkExtent2D RenderExtent, const VkRenderingAttachmentInfo* ColorAttachment, const VkRenderingAttachmentInfo* DepthAttachment)
             {
                 VkRenderingInfo lRenderInfo {};
