@@ -57,7 +57,7 @@ void OpaaxWindowsWindow::Initialize()
 	}
 
 	//Since the engine can cover multiple RendererContext I need to know which flags I will pass to SDL
-	SDL_WindowFlags lWindowsFlags = GetSDLWindowFlags(OpaaxEngine::Get().GetRenderer());
+	SDL_WindowFlags lWindowsFlags = GetSDLWindowFlags(OpaaxEngine::Get().GetBackendRenderer());
 	
 	m_window = SDL_CreateWindow(
 			OPAAX_CONST::ENGINE_NAME.c_str(),

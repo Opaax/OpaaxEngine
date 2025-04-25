@@ -78,6 +78,26 @@ void OpaaxImguiVulkan::Draw(VkCommandBuffer CommandBuffer)
 	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), CommandBuffer);
 }
 
+void OpaaxImguiVulkan::PollEvents(SDL_Event& Event)
+{
+	//send SDL event to imgui for handling
+	ImGui_ImplSDL3_ProcessEvent(&Event);
+}
+
+void OpaaxImguiVulkan::PreUpdate()
+{
+	//Imgui new frame
+	ImGui_ImplVulkan_NewFrame();
+	ImGui_ImplSDL3_NewFrame();
+	ImGui::NewFrame();
+}
+
+void OpaaxImguiVulkan::PostUpdate()
+{
+	//make imgui calculate internal draw structures
+	ImGui::Render();
+}
+
 void OpaaxImguiVulkan::Shutdown()
 {
 	m_mainDeletionQueue.Flush();

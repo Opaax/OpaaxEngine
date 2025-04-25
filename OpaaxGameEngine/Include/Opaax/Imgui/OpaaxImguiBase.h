@@ -15,6 +15,9 @@ namespace OPAAX
             OpaaxImguiBase() = default;
             virtual ~OpaaxImguiBase() = default;
 
+            virtual void PollEvents(SDL_Event& Event) = 0;
+            virtual void PreUpdate() = 0;
+            virtual void PostUpdate() = 0;
             virtual void Shutdown() = 0;
         };
     }

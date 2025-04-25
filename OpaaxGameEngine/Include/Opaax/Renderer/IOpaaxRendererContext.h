@@ -35,7 +35,7 @@ namespace OPAAX
         //-----------------------------------------------------------------
         /*---------------------------- PUBLIC ----------------------------*/
     public:
-        IOpaaxRendererContext(OPAAX::OpaaxWindow* Window): m_window(Window), bIsInitialized(false) {}
+        IOpaaxRendererContext(): m_window(nullptr), bIsInitialized(false) {}
 
         virtual ~IOpaaxRendererContext()
         {
@@ -52,16 +52,17 @@ namespace OPAAX
         /*---------------------------- Getter - Setter ----------------------------*/
     protected:
         FORCEINLINE OPAAX::OpaaxWindow* GetOpaaxWindow() const { return m_window; }
+        FORCEINLINE void SetOpaaxWindow(OPAAX::OpaaxWindow* Window) { m_window = Window; }
         void SetIsInitialized(bool NewIsInitialized) { bIsInitialized = NewIsInitialized; }
 
         /*---------------------------- PUBLIC ----------------------------*/
     public:
-        virtual bool Initialize()                   = 0;
-        virtual void Resize()                       = 0;
-        virtual void DrawImgui()                    = 0;
-        virtual void RenderFrame()                  = 0;
-        virtual void Shutdown()                     = 0;
-        virtual SDL_WindowFlags GetWindowFlags()    = 0;
+        virtual bool            Initialize(OpaaxWindow& OpaaxWindow)           = 0;
+        virtual void            Resize()                                       = 0;
+        virtual void            DrawImgui()                                    = 0;
+        virtual void            RenderFrame()                                  = 0;
+        virtual void            Shutdown()                                     = 0;
+        virtual SDL_WindowFlags GetWindowFlags()                               = 0;
         //virtual void DrawObject(const Object& obj) = 0;
 
         /*---------------------------- Getter - Setter ----------------------------*/

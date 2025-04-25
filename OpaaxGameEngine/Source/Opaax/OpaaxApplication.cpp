@@ -37,38 +37,15 @@ void OpaaxApplication::CreateInitMainWindow()
 	m_opaaxWindow->Initialize();
 }
 
-void OpaaxApplication::CreateInitRenderer()
-{
-	OPAAX_LOG("[OpaaxApplication] Creating Renderer...")
-	switch (OpaaxEngine::Get().GetRenderer())
-	{
-	case RENDERER::EOPBackendRenderer::Unknown:
-		break;
-	case RENDERER::EOPBackendRenderer::Vulkan:
-		m_opaaxRenderer = MakeUnique<RENDERER::VULKAN::OpaaxVulkanRenderer>(m_opaaxWindow.get());
-		break;
-	case RENDERER::EOPBackendRenderer::Dx12:
-		break;
-	case RENDERER::EOPBackendRenderer::Metal:
-		break;
-	default: ;
-	}
-
-	OPAAX_ASSERT(m_opaaxRenderer != nullptr, "Renderer not created")
-	
-	m_opaaxRenderer->Initialize();
-}
-
 void OpaaxApplication::Initialize()
 {
 	OPAAX_VERBOSE("======================= Application Initialize =======================")
-	
+
+	//Loading base config for the engine
 	OpaaxEngine::Get().LoadConfig();
-
-	OpaaxEngine::Get().Initialize();
 	CreateInitMainWindow();
-	CreateInitRenderer();
-
+	OpaaxEngine::Get().Initialize(*m_opaaxWindow);
+	
 	bIsInitialize = true;
 	
 	OPAAX_VERBOSE("======================= Application End Initialize =======================")
@@ -84,10 +61,7 @@ void OpaaxApplication::Run()
 		SDL_Event lEvent;
 		while (m_opaaxWindow->PollEvents(lEvent))
 		{
-			//TODO: Some kind of event here?
-
-			//send SDL event to imgui for handling
-			ImGui_ImplSDL3_ProcessEvent(&lEvent);
+			OpaaxEngine::Get().PollEvents(lEvent);
 		}
 
 		//The app will close
@@ -105,18 +79,9 @@ void OpaaxApplication::Run()
 			//std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 
-		//Imgui new frame
-		ImGui_ImplVulkan_NewFrame();
-		ImGui_ImplSDL3_NewFrame();
-		ImGui::NewFrame();
-		
-		m_opaaxWindow->OnUpdate();
-		m_opaaxRenderer->DrawImgui();
-
-		//make imgui calculate internal draw structures
-		ImGui::Render();
-		
-		m_opaaxRenderer->RenderFrame();
+		OpaaxEngine::Get().PreUpdate();
+		OpaaxEngine::Get().Update();
+		OpaaxEngine::Get().PostUpdate();
 	}
 	
 	Shutdown();
@@ -128,7 +93,7 @@ void OpaaxApplication::Shutdown()
 	
 	bIsRunning = false;
 	
-	m_opaaxRenderer->Shutdown();
+	OpaaxEngine::Get().Shutdown();
 	m_opaaxWindow->Shutdown();
 	
 	OPAAX_VERBOSE("======================= Application Shutting down End =======================")

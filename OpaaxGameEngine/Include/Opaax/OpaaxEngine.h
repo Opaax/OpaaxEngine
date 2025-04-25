@@ -32,7 +32,9 @@ namespace OPAAX
     private:
         RENDERER::EOPBackendRenderer m_renderer;
 
-        TUniquePtr<IMGUI::OpaaxImguiBase> m_imgui;
+        OPAAX::OpaaxWindow*                 m_opaaxWindow   = nullptr;
+        TUniquePtr<IOpaaxRendererContext>	m_opaaxRenderer = nullptr;
+        TUniquePtr<IMGUI::OpaaxImguiBase>   m_imgui         = nullptr;
 
         OpaaxInputSystem m_input;
 
@@ -60,6 +62,7 @@ namespace OPAAX
          * and GUI interactions within the Opaax framework when supported backend renderers are selected.
          */
         void CreateImgui();
+        void CreateRenderer();
         
         /*---------------------------- PUBLIC ----------------------------*/
     public:
@@ -80,14 +83,19 @@ namespace OPAAX
          * The function abstracts the complexities of initializing essential components
          * and acts as a central entry point for the setup process within the engine.
          */
-        void Initialize();
+        void Initialize(OpaaxWindow& OpaaxWindow);
+        void PollEvents(SDL_Event& Event);
+        void PreUpdate();
+        void Update();
+        void PostUpdate();
+        void Shutdown();
 
         /*---------------------------- Getter ----------------------------*/
         static OpaaxEngine& Get();
 
-        FORCEINLINE RENDERER::EOPBackendRenderer&   GetRenderer()       { return m_renderer; }
-        FORCEINLINE OpaaxInputSystem&               GetInput()          { return m_input; }
-        FORCEINLINE IMGUI::OpaaxImguiBase&          GetImgui() const    { return *m_imgui; }
+        FORCEINLINE RENDERER::EOPBackendRenderer&   GetBackendRenderer()        { return m_renderer; }
+        FORCEINLINE OpaaxInputSystem&               GetInput()                  { return m_input; }
+        FORCEINLINE IMGUI::OpaaxImguiBase&          GetImgui() const            { return *m_imgui; }
 
         template<typename T>
         T& GetImguiAs()

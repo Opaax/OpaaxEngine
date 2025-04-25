@@ -89,7 +89,7 @@ namespace OPAAX
                 //-----------------------------------------------------------------
                 /*---------------------------- PUBLIC ----------------------------*/
             public:
-                explicit OpaaxVulkanRenderer(OPAAX::OpaaxWindow* const Window);
+                explicit OpaaxVulkanRenderer();
                 ~OpaaxVulkanRenderer() override;
 
                 //-----------------------------------------------------------------
@@ -325,15 +325,15 @@ namespace OPAAX
                  *
                  * @return SDL_WindowFlags indicating the Vulkan-specific configuration for the SDL window.
                  */
-                FORCEINLINE SDL_WindowFlags GetWindowFlags() override { return (SDL_WindowFlags)(SDL_WINDOW_VULKAN); }
-                FORCEINLINE OpaaxVKFrameData& GetCurrentFrameData() { return m_framesData[m_frameNumber % VULKAN_CONST::MAX_FRAMES_IN_FLIGHT]; }
+                FORCEINLINE SDL_WindowFlags   GetWindowFlags() override { return (SDL_WindowFlags)(SDL_WINDOW_VULKAN); }
+                FORCEINLINE OpaaxVKFrameData& GetCurrentFrameData()     { return m_framesData[m_frameNumber % VULKAN_CONST::MAX_FRAMES_IN_FLIGHT]; }
 
                 //-----------------------------------------------------------------
                 // Override
                 //-----------------------------------------------------------------
                 /*---------------------------- PUBLIC ----------------------------*/
             public:
-                bool Initialize()   override;
+                bool Initialize(OpaaxWindow& OpaaxWindow)   override;
                 void Resize()       override;
                 void DrawImgui()    override;
                 void RenderFrame()  override;

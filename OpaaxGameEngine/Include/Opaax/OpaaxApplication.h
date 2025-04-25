@@ -27,7 +27,6 @@ namespace OPAAX
 		/*---------------------------- PRIVATE ----------------------------*/
 	private:
 		TUniquePtr<OpaaxWindow>				m_opaaxWindow	= nullptr;
-		TUniquePtr<IOpaaxRendererContext>	m_opaaxRenderer = nullptr;
 
 		bool bIsInitialize	= false;
 		bool bIsRunning		= false;
@@ -59,24 +58,6 @@ namespace OPAAX
 		 * @note This function is invoked during the application's initialization process.
 		 */
 		void CreateInitMainWindow();
-		/**
-		 * @brief Creates and initializes the rendering context for the application.
-		 *
-		 * This function is responsible for detecting the rendering backend configured in the engine
-		 * and creating the appropriate renderer instance. Supported backends include Vulkan,
-		 * DirectX12, and Metal, with Vulkan being implemented.
-		 *
-		 * The method first identifies the backend renderer specified by the engine and then creates
-		 * an instance of the corresponding renderer class (currently only Vulkan is implemented).
-		 * It performs an assertion to ensure that the renderer is properly created. The rendering
-		 * context is then initialized by calling the `Initialize` method on the renderer.
-		 *
-		 * This function is expected to be invoked during the application's initialization process.
-		 *
-		 * @throws std::runtime_error If the renderer creation or initialization fails.
-		 * @note Additional backends may require modifications to this method for support.
-		 */
-		void CreateInitRenderer();
 
 		/**
 		 * @brief Initializes the Opaax application and its core systems.

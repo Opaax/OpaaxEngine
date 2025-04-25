@@ -32,6 +32,10 @@ namespace OPAAX
         public:
             void Initialize(SDL_Window* SLDWindow, VkInstance Instance, VkPhysicalDevice PhysicalDevice, VkDevice Device, VkQueue GraphicsQueue, VkFormat Format);
             void Draw(VkCommandBuffer CommandBuffer);
+
+            void PollEvents(SDL_Event& Event) override;
+            void PreUpdate() override;
+            void PostUpdate() override;
             void Shutdown() override;
         };
     }
