@@ -73,6 +73,11 @@ void OpaaxImguiVulkan::Initialize(SDL_Window* SLDWindow, VkInstance Instance, Vk
 	});
 }
 
+void OpaaxImguiVulkan::Draw(VkCommandBuffer CommandBuffer)
+{
+	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), CommandBuffer);
+}
+
 void OpaaxImguiVulkan::Shutdown()
 {
 	m_mainDeletionQueue.Flush();

@@ -307,8 +307,8 @@ void OpaaxVulkanRenderer::InitBackgroundPipelines()
 void OpaaxVulkanRenderer::InitImgui()
 {
     SDL_Window* lWindow = static_cast<SDL_Window*>(GetOpaaxWindow()->GetNativeWindow());
-    IMGUI::OpaaxImguiVulkan* lImguiReintepreted = static_cast<IMGUI::OpaaxImguiVulkan*>(&OpaaxEngine::Get().GetImgui());
-    lImguiReintepreted->Initialize(lWindow, m_vkInstance, m_vkPhysicalDevice, m_vkDevice, m_vkGraphicsQueue, m_vkSwapchainImageFormat);
+    IMGUI::OpaaxImguiVulkan& lImguiReintepreted = OpaaxEngine::Get().GetImguiAs<IMGUI::OpaaxImguiVulkan>();
+    lImguiReintepreted.Initialize(lWindow, m_vkInstance, m_vkPhysicalDevice, m_vkDevice, m_vkGraphicsQueue, m_vkSwapchainImageFormat);
 }
 
 void OpaaxVulkanRenderer::CreateSwapchain(UInt32 Width, UInt32 Height)
@@ -425,7 +425,8 @@ void OpaaxVulkanRenderer::DrawImgui(VkCommandBuffer CommandBuffer, VkImageView T
 
     vkCmdBeginRendering(CommandBuffer, &lRenderInfo);
 
-    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), CommandBuffer);
+    IMGUI::OpaaxImguiVulkan& lImguiReintepreted = OpaaxEngine::Get().GetImguiAs<IMGUI::OpaaxImguiVulkan>();
+    lImguiReintepreted.Draw(CommandBuffer);
 
     vkCmdEndRendering(CommandBuffer);
 }

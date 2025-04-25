@@ -35,5 +35,11 @@ namespace OPAAX
         FORCEINLINE RENDERER::EOPBackendRenderer&   GetRenderer()       { return m_renderer; }
         FORCEINLINE OpaaxInputSystem&               GetInput()          { return m_input; }
         FORCEINLINE IMGUI::OpaaxImguiBase&          GetImgui() const    { return *m_imgui; }
+
+        template<typename T>
+        T& GetImguiAs()
+        {
+            return *static_cast<T*>(&OpaaxEngine::Get().GetImgui());
+        }
     };
 }
