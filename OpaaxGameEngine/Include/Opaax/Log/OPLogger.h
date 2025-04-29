@@ -9,8 +9,6 @@
  * @class OPLogger
  * 
  * The Logger class provides functionality to log messages to a file and console with thread safety.
- * TODO: Give the possibility to use c++ 20 format?
- * TODO: Use spdlog?
  */
 #pragma warning(disable: 4251)//Mutex not dll safe
 class OPAAX_API OPLogger final
