@@ -8,15 +8,15 @@ namespace OPAAX
     namespace MATH
     {
         /**
-         *@struct OpaaxTVector3D
-         * Represents a 3D vector that supports various arithmetic operations such
-         * as addition, subtraction, multiplication, and division, component-wise
+         *@struct OpaaxTVector2D
+         * Represents a 2D vector that supports various arithmetic operations such
+         * as addition, subtraction, multiplication, and division, both component-wise
          * and with scalar values.
          *
          * @tparam T The template type representing the data type of the vector's components.
          */
         template <CONCEPT_TIsFloat T>
-        struct OPAAX_API OpaaxTVector3D final
+        struct OPAAX_API OpaaxTVector2D final
         {
         private:
             using FReal = T;
@@ -28,69 +28,64 @@ namespace OPAAX
         public:
             FReal X;
             FReal Y;
-            FReal Z;
 
-            static const OpaaxTVector3D<FReal> ZERO;
-            static const OpaaxTVector3D<FReal> XUNIT;
-            static const OpaaxTVector3D<FReal> YUNIT;
-            static const OpaaxTVector3D<FReal> ZUNIT;
-            static const OpaaxTVector3D<FReal> UP;
-            static const OpaaxTVector3D<FReal> LEFT;
-            static const OpaaxTVector3D<FReal> DOWN;
-            static const OpaaxTVector3D<FReal> RIGHT;
-            static const OpaaxTVector3D<FReal> FORWARD;
-            static const OpaaxTVector3D<FReal> BACKWARD;
+            static const OpaaxTVector2D<FReal> ZERO;
+            static const OpaaxTVector2D<FReal> XUNIT;
+            static const OpaaxTVector2D<FReal> YUNIT;
+            static const OpaaxTVector2D<FReal> UP;
+            static const OpaaxTVector2D<FReal> LEFT;
+            static const OpaaxTVector2D<FReal> DOWN;
+            static const OpaaxTVector2D<FReal> RIGHT;
 
             //-----------------------------------------------------------------
             // CTOR/DTOR
             //-----------------------------------------------------------------
             //-------------------------- Public -----------------------------//
-            OpaaxTVector3D();
-
+            OpaaxTVector2D();
+            
             /**
              * Constructor initializing both X and Y components to the given values.
              *
              * @param InX Value to set the X component to.
              * @param InY Value to set the Y component to.
-             * @param InZ Value to set the Z component to.
+             * @return None
              */
-            explicit FORCEINLINE OpaaxTVector3D(const FReal InX, const FReal InY, const FReal InZ);
+            explicit FORCEINLINE OpaaxTVector2D(const FReal InX, const FReal InY);
 
             /**
             * Constructor initializing both components to a single T value.
             *
             * @param InF Value to set both components to.
             */
-            explicit FORCEINLINE OpaaxTVector3D(const FReal InF);
+            explicit FORCEINLINE OpaaxTVector2D(const FReal InF);
 
             /**
              * Copy constructor that initializes a new TVector2D with the values from the provided TVector2D.
              *
-             * @param Other The OpaaxTVector3D object to copy values from.
+             * @param Other The TVector2D object to copy values from.
              */
-            FORCEINLINE OpaaxTVector3D(const OpaaxTVector3D& Other);
+            FORCEINLINE OpaaxTVector2D(const OpaaxTVector2D& Other);
 
             /**
              * Constructor initializing both X and Y components to the given values.
              *
              * @param InX Value to set the X component to.
              * @param InY Value to set the Y component to.
-             * @param InZ Value to set the Z component to.
+             * @return None
              */
-            explicit FORCEINLINE OpaaxTVector3D(const Int32 InX, const Int32 InY, const Int32 InZ);
+            explicit FORCEINLINE OpaaxTVector2D(const Int32 InX, const Int32 InY);
 
             /**
              * Constructor initializing both X and Y components using the provided integer values.
              *
              * @param InX The integer value to set the X component.
              * @param InY The integer value to set the Y component.
-             * @param InZ The integer value to set the Z component.
+             * @return None
              */
-            explicit FORCEINLINE OpaaxTVector3D(const Int64 InX, const Int64 InY, const Int64 InZ);
-
-
-            OpaaxTVector3D(OpaaxTVector3D&& Other) noexcept = default;
-            ~OpaaxTVector3D() = default;
+            explicit FORCEINLINE OpaaxTVector2D(const Int64 InX, const Int64 InY);
+            
+            OpaaxTVector2D(OpaaxTVector2D&& Other) noexcept = default;
+            ~OpaaxTVector2D();
 
             //-----------------------------------------------------------------
             // Operation
@@ -103,9 +98,9 @@ namespace OPAAX
              * @param Other The vector whose components will be multiplied with this vector's components.
              * @return A new vector resulting from the component-wise multiplication.
              */
-            FORCEINLINE OpaaxTVector3D operator*(const OpaaxTVector3D& Other) const
+            FORCEINLINE OpaaxTVector2D operator*(const OpaaxTVector2D& Other) const
             {
-                return OpaaxTVector3D(X * Other.X, Y * Other.Y, Z * Other.Z);
+                return OpaaxTVector2D(X * Other.X, Y * Other.Y);
             }
 
             /**
@@ -114,11 +109,10 @@ namespace OPAAX
              * @param Other The vector whose components are multiplied with this vector's components.
              * @return A reference to this vector after the operation.
              */
-            FORCEINLINE OpaaxTVector3D operator*=(const OpaaxTVector3D& Other)
+            FORCEINLINE OpaaxTVector2D operator*=(const OpaaxTVector2D& Other)
             {
                 X *= Other.X;
                 Y *= Other.Y;
-                Z *= Other.Z;
                 return *this;
             }
 
@@ -128,11 +122,10 @@ namespace OPAAX
              * @param Scalar The scalar value by which both X and Y components of the vector are multiplied.
              * @return A reference to the modified vector (this) after the multiplication operation.
              */
-            FORCEINLINE OpaaxTVector3D& operator*=(const FReal Scalar)
+            FORCEINLINE OpaaxTVector2D& operator*=(const FReal Scalar)
             {
                 X *= Scalar;
                 Y *= Scalar;
-                Z *= Scalar;
                 return *this;
             }
 
@@ -143,9 +136,9 @@ namespace OPAAX
              * @param Other The vector to add to this vector.
              * @return A new vector that is the result of adding the corresponding components of the two vectors.
              */
-            FORCEINLINE OpaaxTVector3D operator+(const OpaaxTVector3D& Other) const
+            FORCEINLINE OpaaxTVector2D operator+(const OpaaxTVector2D& Other) const
             {
-                return OpaaxTVector3D{X + Other.X, Y + Other.Y, Z + Other.Z};
+                return OpaaxTVector2D{X + Other.X, Y + Other.Y};
             }
 
             /**
@@ -154,9 +147,9 @@ namespace OPAAX
              * @param Scalar The scalar value to be added to the X and Y components of the vector.
              * @return A new TVector2D instance with the scalar added to its components.
              */
-            FORCEINLINE OpaaxTVector3D operator+(const FReal Scalar) const
+            FORCEINLINE OpaaxTVector2D operator+(const FReal Scalar) const
             {
-                return OpaaxTVector3D{X + Scalar, Y + Scalar, Z + Scalar};
+                return OpaaxTVector2D{X + Scalar, Y + Scalar};
             }
 
             /**
@@ -165,11 +158,10 @@ namespace OPAAX
              * @param Other The vector whose components are to be added to this vector.
              * @return A reference to this updated vector instance.
              */
-            FORCEINLINE OpaaxTVector3D& operator+=(const OpaaxTVector3D& Other)
+            FORCEINLINE OpaaxTVector2D& operator+=(const OpaaxTVector2D& Other)
             {
                 X += Other.X;
                 Y += Other.Y;
-                Z += Other.Z;
                 return *this;
             }
 
@@ -180,11 +172,10 @@ namespace OPAAX
              * @param Scalar The scalar value to add to both the X and Y components.
              * @return A reference to the modified vector (this) after the addition operation.
              */
-            FORCEINLINE OpaaxTVector3D& operator+=(const FReal Scalar)
+            FORCEINLINE OpaaxTVector2D& operator+=(const FReal Scalar)
             {
                 X += Scalar;
                 Y += Scalar;
-                Z += Scalar;
                 return *this;
             }
 
@@ -195,9 +186,9 @@ namespace OPAAX
              * @param Other The vector to subtract from this vector.
              * @return A new vector that represents the result of the subtraction.
              */
-            FORCEINLINE OpaaxTVector3D operator-(const OpaaxTVector3D& Other) const
+            FORCEINLINE OpaaxTVector2D operator-(const OpaaxTVector2D& Other) const
             {
-                return OpaaxTVector3D(X - Other.X, Y - Other.Y, Z - Other.Z);
+                return OpaaxTVector2D(X - Other.X, Y - Other.Y);
             }
 
             /**
@@ -206,9 +197,9 @@ namespace OPAAX
              * @param Scalar The scalar value to subtract from the X and Y components.
              * @return A new TVector2D instance with the scalar subtracted from both components.
              */
-            FORCEINLINE OpaaxTVector3D operator-(const FReal Scalar) const
+            FORCEINLINE OpaaxTVector2D operator-(const FReal Scalar) const
             {
-                return OpaaxTVector3D(X - Scalar, Y - Scalar, Z - Scalar);
+                return OpaaxTVector2D(X - Scalar, Y - Scalar);
             }
 
             /**
@@ -217,11 +208,10 @@ namespace OPAAX
              * @param Other The vector to be subtracted.
              * @return A reference to this vector after modification.
              */
-            FORCEINLINE OpaaxTVector3D& operator-=(const OpaaxTVector3D& Other)
+            FORCEINLINE OpaaxTVector2D& operator-=(const OpaaxTVector2D& Other)
             {
                 X -= Other.X;
                 Y -= Other.Y;
-                Z -= Other.Z;
                 return *this;
             }
 
@@ -232,9 +222,9 @@ namespace OPAAX
              * @param Other The vector to divide the current vector by.
              * @return A new vector resulting from the division of corresponding components.
              */
-            FORCEINLINE OpaaxTVector3D operator/(const OpaaxTVector3D& Other) const
+            FORCEINLINE OpaaxTVector2D operator/(const OpaaxTVector2D& Other) const
             {
-                return OpaaxTVector3D(X / Other.X, Y / Other.Y, Z / Other.Z);
+                return OpaaxTVector2D(X / Other.X, Y / Other.Y);
             }
 
             /**
@@ -243,9 +233,9 @@ namespace OPAAX
              * @param Scalar The scalar value to divide this vector's components by.
              * @return A new vector with each component divided by the given scalar value.
              */
-            FORCEINLINE OpaaxTVector3D operator/(const FReal Scalar) const
+            FORCEINLINE OpaaxTVector2D operator/(const FReal Scalar) const
             {
-                return OpaaxTVector3D(X / Scalar, Y / Scalar, Z / Scalar);
+                return OpaaxTVector2D(X / Scalar, Y / Scalar);
             }
 
             /**
@@ -255,11 +245,10 @@ namespace OPAAX
              * @param Other The vector whose components are used as divisors for the X and Y components of this vector.
              * @return A reference to the modified vector (this) after the division operation.
              */
-            FORCEINLINE OpaaxTVector3D operator/=(const OpaaxTVector3D& Other)
+            FORCEINLINE OpaaxTVector2D operator/=(const OpaaxTVector2D& Other)
             {
                 X /= Other.X;
                 Y /= Other.Y;
-                Z /= Other.Z;
                 return *this;
             }
 
@@ -269,16 +258,15 @@ namespace OPAAX
              * @param Scalar The scalar value by which both X and Y components of the vector are divided.
              * @return A reference to the modified vector (this) after the division operation.
              */
-            FORCEINLINE OpaaxTVector3D& operator/=(const FReal Scalar)
+            FORCEINLINE OpaaxTVector2D& operator/=(const FReal Scalar)
             {
                 X /= Scalar;
                 Y /= Scalar;
-                Z /= Scalar;
                 return *this;
             }
             
             //-------------------------- Equals -----------------------------//
-            OpaaxTVector3D& operator=(const OpaaxTVector3D& Other)
+            OpaaxTVector2D& operator=(const OpaaxTVector2D& Other)
             {
                 if (this == &Other)
                 {
@@ -287,17 +275,15 @@ namespace OPAAX
 
                 X = Other.X;
                 Y = Other.Y;
-                Z = Other.Z;
-
                 return *this;
             }
 
-            OpaaxTVector3D& operator=(OpaaxTVector3D&& Other) noexcept = default;
+            OpaaxTVector2D& operator=(OpaaxTVector2D&& Other) noexcept = default;
 
             //-------------------------- Other  -----------------------------//
-            friend std::ostream& operator<<(std::ostream& OS, const OpaaxTVector3D& Vector)
+            friend std::ostream& operator<<(std::ostream& OS, const OpaaxTVector2D& Vector)
             {
-                return OS << (BSTFormat("{[X: %1%],[Y: %2%], [Z: %3%]}") % Vector.X % Vector.Y % Vector.Z).str();
+                return OS << (BSTFormat("{[X: %1%],[Y: %2%]}") %Vector.X %Vector.Y).str();
             }
 
             //-------------------------- Dot  -----------------------------//
@@ -311,21 +297,9 @@ namespace OPAAX
             * @param Other The other vector.
             * @return The dot product.
             */
-            FORCEINLINE FReal operator|(const OpaaxTVector3D& Other) const
+            FORCEINLINE FReal operator|(const OpaaxTVector2D& Other) const
             {
-                return X * Other.X + Y * Other.Y + Z * Other.Z;
-            }
-
-            //-------------------------- Cross  -----------------------------//
-            /**
-             * Calculates the Cross product of this vector and another vector.
-             *
-             * @param Other The vector to calculate the perpendicular dot product with.
-             * @return The Cross product of the two vectors.
-             */
-            FORCEINLINE OpaaxTVector3D<FReal> operator^(const OpaaxTVector3D& Other) const
-            {
-                return Y * Other.Z - Z * Other.Y, Z * Other.X - X * Other.Z, X * Other.Y - Y * Other.X;
+                return X * Other.X + Y * Other.Y;
             }
 
             //-----------------------------------------------------------------
@@ -337,71 +311,49 @@ namespace OPAAX
              *
              * @return [0,0,0] vector.
              */
-            static FORCEINLINE OpaaxTVector3D<FReal> Zero() { return OpaaxTVector3D<T>::ZERO; }
+            static FORCEINLINE OpaaxTVector2D<FReal> Zero() { return OpaaxTVector2D<T>::ZERO; }
 
             /**
              * Returns a unit vector representing the X axis.
              *
              * @return A unit vector along the X axis.
              */
-            static FORCEINLINE OpaaxTVector3D<FReal> UnitX() { return OpaaxTVector3D<T>::XUNIT; }
+            static FORCEINLINE OpaaxTVector2D<FReal> UnitX() { return OpaaxTVector2D<T>::XUNIT; }
 
             /**
              * Returns a vector representing the unit vector along the Y-axis.
              *
              * @return A vector with a magnitude of 1 pointing in the positive Y direction.
              */
-            static FORCEINLINE OpaaxTVector3D<FReal> UnitY() { return OpaaxTVector3D<T>::YUNIT; }
-
-
-            /**
-             * Retrieves a vector representing the unit vector along the Z-axis.
-             *
-             * @return A vector with a magnitude of 1 in the Z direction.
-             */
-            static FORCEINLINE OpaaxTVector3D<FReal> UnitZ() { return OpaaxTVector3D<T>::ZUNIT; }
+            static FORCEINLINE OpaaxTVector2D<FReal> UnitY() { return OpaaxTVector2D<T>::YUNIT; }
 
             /**
              * Returns the constant vector representing the upward direction.
              *
              * @return A constant vector pointing upwards.
              */
-            static FORCEINLINE OpaaxTVector3D<FReal> Up() { return OpaaxTVector3D<T>::UP; }
+            static FORCEINLINE OpaaxTVector2D<FReal> Up() { return OpaaxTVector2D<T>::UP; }
 
             /**
              * Returns a vector representing the left direction.
              *
              * @return A vector constant representing the left direction.
              */
-            static FORCEINLINE OpaaxTVector3D<FReal> Left() { return OpaaxTVector3D<T>::LEFT; }
+            static FORCEINLINE OpaaxTVector2D<FReal> Left() { return OpaaxTVector2D<T>::LEFT; }
 
             /**
              * Returns a vector representing the down direction.
              *
              * @return A vector pointing in the down direction.
              */
-            static FORCEINLINE OpaaxTVector3D<FReal> Down() { return OpaaxTVector3D<T>::DOWN; }
+            static FORCEINLINE OpaaxTVector2D<FReal> Down() { return OpaaxTVector2D<T>::DOWN; }
 
             /**
              * Retrieves a vector representing the right direction.
              *
              * @return A vector pointing to the right direction.
              */
-            static FORCEINLINE OpaaxTVector3D<FReal> Right() { return OpaaxTVector3D<T>::RIGHT; }
-
-            /**
-             * Provides a unit vector representing the forward direction.
-             *
-             * @return A unit vector pointing in the forward direction.
-             */
-            static FORCEINLINE OpaaxTVector3D<FReal> Forward() { return OpaaxTVector3D<T>::FORWARD; }
-
-            /**
-             * Provides a unit vector representing the backward direction.
-             *
-             * @return A unit vector pointing in the backward direction.
-             */
-            static FORCEINLINE OpaaxTVector3D<FReal> Backward() {return OpaaxTVector3D<T>::BACKWARD; }
+            static FORCEINLINE OpaaxTVector2D<FReal> Right() { return OpaaxTVector2D<T>::RIGHT; }
 
             /**
              * Calculates the squared magnitude of the vector (more efficient than Magnitude for comparisons).
@@ -430,7 +382,7 @@ namespace OPAAX
              * @param Tolerance The threshold below which the vector is considered too small to be normalized.
              * @return A safely normalized vector or a zero vector if below the tolerance.
              */
-            OpaaxTVector3D GetSafeNormalized(FReal Tolerance = OP_SMALL_NUMBER) const;
+            OpaaxTVector2D GetSafeNormalized(FReal Tolerance = OP_SMALL_NUMBER) const;
 
             /**
              * Normalizes the vector to have a magnitude of 1 if its magnitude is above the specified tolerance.
@@ -447,7 +399,7 @@ namespace OPAAX
              * @param Other The other vector to which the squared distance is calculated.
              * @return The squared distance between this vector and the specified vector.
              */
-            FReal DistanceToSquared(const OpaaxTVector3D& Other);
+            FReal DistanceToSquared(const OpaaxTVector2D& Other);
 
             /**
              * Calculates the Euclidean distance from this vector to another vector.
@@ -455,7 +407,7 @@ namespace OPAAX
              * @param Other The other vector to calculate the distance to.
              * @return The Euclidean distance between this vector and the specified vector.
              */
-            FReal DistanceTo(const OpaaxTVector3D& Other);
+            FReal DistanceTo(const OpaaxTVector2D& Other);
 
             bool IsZero() const;
 
@@ -466,62 +418,56 @@ namespace OPAAX
              * @param Other The vector onto which this vector will be projected.
              * @return The projection of this vector onto the other, or a zero vector if B's magnitude is zero.
              */
-            OpaaxTVector3D ProjectOn(const OpaaxTVector3D& Other)
+            OpaaxTVector2D ProjectOn(const OpaaxTVector2D& Other)
             {
-                const OpaaxTVector3D& A = *this; // Reference to this vector
-                const FReal lDotProduct = A | Other; // Dot product of this vector and B
-                const FReal bMagnitudeSquared = Other.MagnitudeSquared(); // Squared magnitude of B
+                const OpaaxTVector2D& A = *this; // Reference to this vector
+                const FReal lDotProduct = A | Other; // Dot product of this vector and Other
+                const FReal bMagnitudeSquared = Other.MagnitudeSquared(); // Squared magnitude of Other
                 
                 if (bMagnitudeSquared > 0) // Ensure we don't divide by zero
                 {
-                    return Other * (lDotProduct / bMagnitudeSquared); // Vector projection formula: (A·B / B·B) * B
+                    return OpaaxTVector2D((lDotProduct / bMagnitudeSquared) * Other.X, (lDotProduct / bMagnitudeSquared) * Other.Y); // Vector projection for 2D
                 }
                 
-                return OpaaxTVector3D::ZERO; // Return a zero vector if B's magnitude squared is zero
+                return OpaaxTVector2D::ZERO; // Return a zero vector if Other's magnitude squared is zero
             }
         };
 
         template <CONCEPT_TIsFloat T>
-        OpaaxTVector3D<T>::OpaaxTVector3D(): X{0}, Y{0}, Z{0} {}
+        OpaaxTVector2D<T>::OpaaxTVector2D():X{0}, Y {0}{}
 
         template <CONCEPT_TIsFloat T>
-        OpaaxTVector3D<T>::OpaaxTVector3D(const FReal InX, const FReal InY, const FReal InZ): X{InX}, Y{InY}, Z{InZ} {}
+        OpaaxTVector2D<T>::OpaaxTVector2D(const FReal InX, const FReal InY):X{InX}, Y {InY} {}
 
         template <CONCEPT_TIsFloat T>
-        OpaaxTVector3D<T>::OpaaxTVector3D(const FReal InF): X{InF}, Y{InF}, Z{InF} {}
+        OpaaxTVector2D<T>::OpaaxTVector2D(const FReal InF):X{InF}, Y {InF} {}
 
         template <CONCEPT_TIsFloat T>
-        OpaaxTVector3D<T>::OpaaxTVector3D(const OpaaxTVector3D& Other): X{Other.X}, Y{Other.Y}, Z{Other.Z} {}
+        OpaaxTVector2D<T>::OpaaxTVector2D(const OpaaxTVector2D& Other):X{Other.X}, Y {Other.Y} {}
 
         template <CONCEPT_TIsFloat T>
-        OpaaxTVector3D<T>::OpaaxTVector3D(const Int32 InX, const Int32 InY, const Int32 InZ)
-        :   X{static_cast<FReal>(InX)},
-            Y{static_cast<FReal>(InY)},
-            Z{static_cast<FReal>(InZ)} {}
+        OpaaxTVector2D<T>::OpaaxTVector2D(const Int32 InX, const Int32 InY):X{static_cast<FReal>(InX)}, Y {static_cast<FReal>(InY)} {}
 
         template <CONCEPT_TIsFloat T>
-        OpaaxTVector3D<T>::OpaaxTVector3D(const Int64 InX, const Int64 InY, const Int64 InZ)
-        :   X{static_cast<FReal>(InX)},
-            Y{static_cast<FReal>(InY)},
-            Z{static_cast<FReal>(InZ)} {}
+        OpaaxTVector2D<T>::OpaaxTVector2D(const Int64 InX, const Int64 InY):X{static_cast<FReal>(InX)}, Y {static_cast<FReal>(InY)} {}
 
         template <CONCEPT_TIsFloat T>
-        OpaaxTVector3D<T> OpaaxTVector3D<T>::GetSafeNormalized(FReal Tolerance) const
+        OpaaxTVector2D<T> OpaaxTVector2D<T>::GetSafeNormalized(FReal Tolerance) const
         {
             const T lSquareSum = MagnitudeSquared();
-
-            if (lSquareSum > Tolerance)
+    
+            if(lSquareSum > Tolerance)
             {
                 const T lScale = OpaaxMath::InvSqrt(lSquareSum);
-
-                return OpaaxTVector3D{X * lScale, Y * lScale, Z * lScale};
+        
+                return OpaaxTVector2D{X * lScale, Y * lScale};
             }
 
             return ZERO;
         }
 
         template <CONCEPT_TIsFloat T>
-        bool OpaaxTVector3D<T>::Normalize(FReal Tolerance)
+        bool OpaaxTVector2D<T>::Normalize(FReal Tolerance)
         {
             const T lSquareSum = MagnitudeSquared();
 
@@ -531,34 +477,36 @@ namespace OPAAX
     
                 X *= lScale;
                 Y *= lScale;
-                Z *= lScale;
     
                 return true;
             }
 
             X = 0.0f;
             Y = 0.0f;
-            Z = 0.0f;
 
             return false;
         }
 
         template <CONCEPT_TIsFloat T>
-        typename OpaaxTVector3D<T>::FReal OpaaxTVector3D<T>::DistanceToSquared(const OpaaxTVector3D& Other)
+        typename OpaaxTVector2D<T>::FReal OpaaxTVector2D<T>::DistanceToSquared(const OpaaxTVector2D& Other)
         {
-            return OpaaxMath::Square(X - Other.X) + OpaaxMath::Square(Y - Other.Y) + OpaaxMath::Square(Z - Other.Z);
+            return OpaaxMath::Square(X - Other.X) + OpaaxMath::Square(Y - Other.Y);
+        }
+
+        
+        template <CONCEPT_TIsFloat T>
+        typename OpaaxTVector2D<T>::FReal OpaaxTVector2D<T>::DistanceTo(const OpaaxTVector2D& Other)
+        {
+            return OpaaxMath::Sqrt(OpaaxTVector2D<T>::DistanceToSquared(Other));
         }
 
         template <CONCEPT_TIsFloat T>
-        typename OpaaxTVector3D<T>::FReal OpaaxTVector3D<T>::DistanceTo(const OpaaxTVector3D& Other)
+        bool OpaaxTVector2D<T>::IsZero() const
         {
-            return OpaaxMath::Sqrt(OpaaxTVector3D<T>::DistanceToSquared(Other));
+            return OpaaxMath::IsZero(X) && OpaaxMath::IsZero(Y);
         }
 
         template <CONCEPT_TIsFloat T>
-        bool OpaaxTVector3D<T>::IsZero() const
-        {
-            return OpaaxMath::IsZero(X) && OpaaxMath::IsZero(Y) && OpaaxMath::IsZero(Z);
-        }
+        OpaaxTVector2D<T>::~OpaaxTVector2D() = default;
     }
 }
