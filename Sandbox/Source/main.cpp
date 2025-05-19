@@ -1,4 +1,3 @@
-#include <iostream>
 #include "OpaaxInclude.h"
 
 class SandboxApplication : public OPAAX::OpaaxApplication
