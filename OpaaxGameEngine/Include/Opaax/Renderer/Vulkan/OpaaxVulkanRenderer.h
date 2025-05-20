@@ -38,51 +38,54 @@ namespace OPAAX
                 // Members
                 //-----------------------------------------------------------------
                 /*---------------------------- PRIVATE ----------------------------*/
-                private:
-                VkExtent2D                  m_windowExtent{ 1280 , 720 };
-                
-                VkSurfaceKHR                m_vkSurface                 = VK_NULL_HANDLE;
-                VkInstance                  m_vkInstance                = VK_NULL_HANDLE;
-                VkDebugUtilsMessengerEXT    m_vkDebugMessenger          = VK_NULL_HANDLE;
-                VkPhysicalDevice            m_vkPhysicalDevice          = VK_NULL_HANDLE;
-                VkDevice                    m_vkDevice                  = VK_NULL_HANDLE;
-                VkSwapchainKHR              m_vkSwapchain               = VK_NULL_HANDLE;
-                VkQueue                     m_vkGraphicsQueue           = VK_NULL_HANDLE;
+            private:
+                VkExtent2D m_windowExtent{1280, 720};
+
+                VkSurfaceKHR m_vkSurface = VK_NULL_HANDLE;
+                VkInstance m_vkInstance = VK_NULL_HANDLE;
+                VkDebugUtilsMessengerEXT m_vkDebugMessenger = VK_NULL_HANDLE;
+                VkPhysicalDevice m_vkPhysicalDevice = VK_NULL_HANDLE;
+                VkDevice m_vkDevice = VK_NULL_HANDLE;
+                VkSwapchainKHR m_vkSwapchain = VK_NULL_HANDLE;
+                VkQueue m_vkGraphicsQueue = VK_NULL_HANDLE;
                 //Immediate submit structures
-                VkFence                     m_immediateFence            = VK_NULL_HANDLE;
-                VkCommandBuffer             m_immediateCommandBuffer    = VK_NULL_HANDLE;
-                VkCommandPool               m_immediateCommandPool      = VK_NULL_HANDLE;
-                
-                VkFormat                    m_vkSwapchainImageFormat;
+                VkFence m_immediateFence = VK_NULL_HANDLE;
+                VkCommandBuffer m_immediateCommandBuffer = VK_NULL_HANDLE;
+                VkCommandPool m_immediateCommandPool = VK_NULL_HANDLE;
 
-                VecVkImg                    m_vkSwapchainImages;
-                VecVkImgView                m_vkSwapchainImageViews;
-                VkExtent2D                  m_vkSwapchainExtent;
+                VkFormat m_vkSwapchainImageFormat;
 
-                UInt32                      m_graphicsQueueFamily{0};
+                VecVkImg m_vkSwapchainImages;
+                VecVkImgView m_vkSwapchainImageViews;
+                VkExtent2D m_vkSwapchainExtent;
 
-                OpaaxVKFrameData            m_framesData[VULKAN_CONST::MAX_FRAMES_IN_FLIGHT];
-                
-                Int32                       m_frameNumber{0};
+                UInt32 m_graphicsQueueFamily{0};
 
-                OpaaxDeletionQueue          m_mainDeletionQueue;
+                OpaaxVKFrameData m_framesData[VULKAN_CONST::MAX_FRAMES_IN_FLIGHT];
 
-                VmaAllocator                m_vmaAllocator;
+                Int32 m_frameNumber{0};
+
+                OpaaxDeletionQueue m_mainDeletionQueue;
+
+                VmaAllocator m_vmaAllocator;
 
                 //draw resources
-                OpaaxVKAllocatedImage       m_drawImage;
-                VkExtent2D                  m_drawExtent;
+                OpaaxVKAllocatedImage m_drawImage;
+                VkExtent2D m_drawExtent;
 
-                OpaaxVKDescriptorAllocator  m_globalDescriptorAllocator;
+                OpaaxVKDescriptorAllocator m_globalDescriptorAllocator;
 
-                VkDescriptorSet             m_vkDrawImageDescriptors;
-                VkDescriptorSetLayout       m_vkDrawImageDescriptorLayout;
+                VkDescriptorSet m_vkDrawImageDescriptors;
+                VkDescriptorSetLayout m_vkDrawImageDescriptorLayout;
 
                 //VkPipeline                  m_gradientPipeline;
-                VkPipelineLayout            m_gradientPipelineLayout;
+                VkPipelineLayout m_gradientPipelineLayout;
 
-                std::vector<OpaaxVKComputeEffect>   m_backgroundEffects;
-                Int32                               m_currentBackgroundEffect{0};
+                VkPipelineLayout m_trianglePipelineLayout;
+                VkPipeline m_trianglePipeline;
+
+                std::vector<OpaaxVKComputeEffect> m_backgroundEffects;
+                Int32 m_currentBackgroundEffect{0};
 
                 //-----------------------------------------------------------------
                 // CTOR - DTOR
@@ -251,6 +254,8 @@ namespace OPAAX
                  * in the OpaaxVulkanRenderer.
                  */
                 void InitBackgroundPipelines();
+
+                void InitTrianglePipeline();
                 /**
                  * Initializes the ImGui interface with Vulkan-specific implementations for rendering debugging tools and UI.
                  *
@@ -275,8 +280,9 @@ namespace OPAAX
                  * @param Height The height of the swapchain surface in pixels.
                  */
                 void CreateSwapchain(UInt32 Width, UInt32 Height);
-             
+
                 void DrawBackground(VkCommandBuffer CommandBuffer);
+                void DrawGeometry(VkCommandBuffer CommandBuffer);
 
                 /**
                  * Destroys the Vulkan swapchain and its associated resources.
@@ -316,7 +322,7 @@ namespace OPAAX
                  * @param TargetImageView The target image view where the UI will be rendered. This represents
                  *                        the image to be used as the color attachment for rendering.
                  */
-                void DrawImgui(VkCommandBuffer CommandBuffer,  VkImageView TargetImageView);
+                void DrawImgui(VkCommandBuffer CommandBuffer, VkImageView TargetImageView);
 
                 /*---------------------------- GETTER  ----------------------------*/
                 /**
@@ -325,19 +331,22 @@ namespace OPAAX
                  *
                  * @return SDL_WindowFlags indicating the Vulkan-specific configuration for the SDL window.
                  */
-                FORCEINLINE SDL_WindowFlags   GetWindowFlags() override { return (SDL_WindowFlags)(SDL_WINDOW_VULKAN); }
-                FORCEINLINE OpaaxVKFrameData& GetCurrentFrameData()     { return m_framesData[m_frameNumber % VULKAN_CONST::MAX_FRAMES_IN_FLIGHT]; }
+                FORCEINLINE SDL_WindowFlags GetWindowFlags() override { return (SDL_WindowFlags)(SDL_WINDOW_VULKAN); }
+                FORCEINLINE OpaaxVKFrameData& GetCurrentFrameData()
+                {
+                    return m_framesData[m_frameNumber % VULKAN_CONST::MAX_FRAMES_IN_FLIGHT];
+                }
 
                 //-----------------------------------------------------------------
                 // Override
                 //-----------------------------------------------------------------
                 /*---------------------------- PUBLIC ----------------------------*/
             public:
-                bool Initialize(OpaaxWindow& OpaaxWindow)   override;
-                void Resize()       override;
-                void DrawImgui()    override;
-                void RenderFrame()  override;
-                void Shutdown()     override;
+                bool Initialize(OpaaxWindow& OpaaxWindow) override;
+                void Resize() override;
+                void DrawImgui() override;
+                void RenderFrame() override;
+                void Shutdown() override;
             };
         }
     }

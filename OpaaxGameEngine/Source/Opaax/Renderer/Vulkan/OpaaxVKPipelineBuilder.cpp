@@ -56,6 +56,38 @@ bool OPAAX::RENDERER::VULKAN_HELPER::LoadShaderModule(const char* FilePath, VkDe
     return true;
 }
 
+VkPipelineLayoutCreateInfo OPAAX::RENDERER::VULKAN_HELPER::PipelineLayoutCreateInfo()
+{
+    VkPipelineLayoutCreateInfo lInfo {};
+    lInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    lInfo.pNext = nullptr;
+
+    // empty defaults
+    lInfo.flags = 0;
+    lInfo.setLayoutCount = 0;
+    lInfo.pSetLayouts = nullptr;
+    lInfo.pushConstantRangeCount = 0;
+    lInfo.pPushConstantRanges = nullptr;
+    return lInfo;
+}
+
+VkPipelineShaderStageCreateInfo OPAAX::RENDERER::VULKAN_HELPER::PipelineShaderStageCreateInfo(
+    VkShaderStageFlagBits Stage, VkShaderModule ShaderModule, const char* Entry)
+{
+    VkPipelineShaderStageCreateInfo lInfo {};
+    lInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    lInfo.pNext = nullptr;
+
+    // shader stage
+    lInfo.stage = Stage;
+    // module containing the code for this shader stage
+    lInfo.module = ShaderModule;
+    // the entry point of the shader
+    lInfo.pName = Entry;
+                
+    return lInfo;
+}
+
 void OPAAX::RENDERER::VULKAN::OpaaxVKPipelineBuilder::Clear()
 {
     // clear all structs we need back to 0 with their correct stype
@@ -88,26 +120,24 @@ VkPipeline OPAAX::RENDERER::VULKAN::OpaaxVKPipelineBuilder::BuildPipeline(VkDevi
     lViewportState.viewportCount = 1;
     lViewportState.scissorCount = 1;
 
-    // setup dummy color blending. We aren't using transparent objects yet
+    // setup dummy color blending. We arent using transparent objects yet
     // the blending is just "no blend", but we do write to the color attachment
-    VkPipelineColorBlendStateCreateInfo colorBlending = {};
-    colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-    colorBlending.pNext = nullptr;
+    VkPipelineColorBlendStateCreateInfo lColorBlending = {};
+    lColorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    lColorBlending.pNext = nullptr;
 
-    colorBlending.logicOpEnable = VK_FALSE;
-    colorBlending.logicOp = VK_LOGIC_OP_COPY;
-    colorBlending.attachmentCount = 1;
-    colorBlending.pAttachments = &ColorBlendAttachment;
+    lColorBlending.logicOpEnable = VK_FALSE;
+    lColorBlending.logicOp = VK_LOGIC_OP_COPY;
+    lColorBlending.attachmentCount = 1;
+    lColorBlending.pAttachments = &ColorBlendAttachment;
 
     // completely clear VertexInputStateCreateInfo, as we have no need for it
-    VkPipelineVertexInputStateCreateInfo lVertexInputInfo = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO
-    };
+    VkPipelineVertexInputStateCreateInfo lVertexInputInfo = { .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
 
     // build the actual pipeline
     // we now use all the info structs we have been writing into this one
     // to create the pipeline
-    VkGraphicsPipelineCreateInfo lPipelineInfo = {.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
+    VkGraphicsPipelineCreateInfo lPipelineInfo = { .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
     // connect the renderInfo to the pNext extension mechanism
     lPipelineInfo.pNext = &RenderInfo;
 
@@ -118,31 +148,30 @@ VkPipeline OPAAX::RENDERER::VULKAN::OpaaxVKPipelineBuilder::BuildPipeline(VkDevi
     lPipelineInfo.pViewportState = &lViewportState;
     lPipelineInfo.pRasterizationState = &Rasterizer;
     lPipelineInfo.pMultisampleState = &Multisampling;
-    lPipelineInfo.pColorBlendState = &colorBlending;
+    lPipelineInfo.pColorBlendState = &lColorBlending;
     lPipelineInfo.pDepthStencilState = &DepthStencil;
     lPipelineInfo.layout = PipelineLayout;
 
-    //< build_pipeline_2
-    //> build_pipeline_3
-    VkDynamicState States[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
+    VkDynamicState lState[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
 
-    VkPipelineDynamicStateCreateInfo lDynamicInfo = {.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO};
-    lDynamicInfo.pDynamicStates = &States[0];
+    VkPipelineDynamicStateCreateInfo lDynamicInfo = { .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
+    lDynamicInfo.pDynamicStates = &lState[0];
     lDynamicInfo.dynamicStateCount = 2;
 
     lPipelineInfo.pDynamicState = &lDynamicInfo;
-    
+
     // it's easy to error out on create graphics pipeline, so we handle it a bit
     // better than the common VK_CHECK case
     VkPipeline lNewPipeline;
-    if (vkCreateGraphicsPipelines(Device, VK_NULL_HANDLE, 1, &lPipelineInfo,
-                                  nullptr, &lNewPipeline) != VK_SUCCESS)
+    if (vkCreateGraphicsPipelines(Device, VK_NULL_HANDLE, 1, &lPipelineInfo, nullptr, &lNewPipeline) != VK_SUCCESS)
     {
-        OPAAX_ERROR("[OpaaxVKPipelineBuilder] Failed to create pipeline")
+        OPAAX_ERROR("[OpaaxVKPipelineBuilder] Failed to create pipeline");
         return VK_NULL_HANDLE; // failed to create graphics pipeline
     }
-    
-    return lNewPipeline;
+    else
+    {
+        return lNewPipeline;
+    }
 }
 
 void OPAAX::RENDERER::VULKAN::OpaaxVKPipelineBuilder::SetShaders(VkShaderModule VertexShader,
@@ -155,4 +184,69 @@ void OPAAX::RENDERER::VULKAN::OpaaxVKPipelineBuilder::SetShaders(VkShaderModule 
 
     ShaderStages.push_back(
         VULKAN_HELPER::PipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, FragmentShader));
+}
+
+void OPAAX::RENDERER::VULKAN::OpaaxVKPipelineBuilder::SetInputTopology(VkPrimitiveTopology Topology)
+{
+    InputAssembly.topology = Topology;
+    // noy used yet, leave it on false
+    InputAssembly.primitiveRestartEnable = VK_FALSE;
+}
+
+void OPAAX::RENDERER::VULKAN::OpaaxVKPipelineBuilder::SetPolygonMode(VkPolygonMode Mode)
+{
+    Rasterizer.polygonMode = Mode;
+    Rasterizer.lineWidth = 1.f;
+}
+
+void OPAAX::RENDERER::VULKAN::OpaaxVKPipelineBuilder::SetCullMode(VkCullModeFlags CullMode, VkFrontFace FrontFace)
+{
+    Rasterizer.cullMode = CullMode;
+    Rasterizer.frontFace = FrontFace;
+}
+
+void OPAAX::RENDERER::VULKAN::OpaaxVKPipelineBuilder::SetMultisamplingNone()
+{
+    Multisampling.sampleShadingEnable = VK_FALSE;
+    // multisampling defaulted to no multisampling (1 sample per pixel)
+    Multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+    Multisampling.minSampleShading = 1.0f;
+    Multisampling.pSampleMask = nullptr;
+    // no alpha to coverage either
+    Multisampling.alphaToCoverageEnable = VK_FALSE;
+    Multisampling.alphaToOneEnable = VK_FALSE;
+}
+
+void OPAAX::RENDERER::VULKAN::OpaaxVKPipelineBuilder::DisableBlending()
+{
+    // default write mask
+    ColorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    // no blending
+    ColorBlendAttachment.blendEnable = VK_FALSE;
+}
+
+void OPAAX::RENDERER::VULKAN::OpaaxVKPipelineBuilder::SetColorAttachmentFormat(VkFormat Format)
+{
+    ColorAttachmentformat = Format;
+    // connect the format to the renderInfo  structure
+    RenderInfo.colorAttachmentCount = 1;
+    RenderInfo.pColorAttachmentFormats = &ColorAttachmentformat;
+}
+
+void OPAAX::RENDERER::VULKAN::OpaaxVKPipelineBuilder::SetDepthFormat(VkFormat Format)
+{
+    RenderInfo.depthAttachmentFormat = Format;
+}
+
+void OPAAX::RENDERER::VULKAN::OpaaxVKPipelineBuilder::DisableDepthTest()
+{
+    DepthStencil.depthTestEnable = VK_FALSE;
+    DepthStencil.depthWriteEnable = VK_FALSE;
+    DepthStencil.depthCompareOp = VK_COMPARE_OP_NEVER;
+    DepthStencil.depthBoundsTestEnable = VK_FALSE;
+    DepthStencil.stencilTestEnable = VK_FALSE;
+    DepthStencil.front = {};
+    DepthStencil.back = {};
+    DepthStencil.minDepthBounds = 0.f;
+    DepthStencil.maxDepthBounds = 1.f;
 }

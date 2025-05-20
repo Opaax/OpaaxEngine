@@ -248,6 +248,7 @@ void OpaaxVulkanRenderer::InitDescriptors()
 void OpaaxVulkanRenderer::InitPipelines()
 {
     InitBackgroundPipelines();
+    InitTrianglePipeline();
 }
 
 void OpaaxVulkanRenderer::InitBackgroundPipelines()
@@ -337,6 +338,67 @@ void OpaaxVulkanRenderer::InitBackgroundPipelines()
     });
 }
 
+void OpaaxVulkanRenderer::InitTrianglePipeline()
+{
+    VkShaderModule lTriangleFragShader;
+    
+    if (!VULKAN_HELPER::LoadShaderModule("Shaders/Triangle.frag.spv", m_vkDevice, &lTriangleFragShader)) {
+        OPAAX_ERROR("Error when building the triangle fragment shader module")
+    }
+    else {
+        OPAAX_LOG("Triangle fragment shader successfully loaded")
+    }
+
+    VkShaderModule lTriangleVertexShader;
+
+    if (!VULKAN_HELPER::LoadShaderModule("Shaders/Triangle.vert.spv", m_vkDevice, &lTriangleVertexShader)) {
+        OPAAX_ERROR("Error when building the triangle vertex shader module")
+    }
+    else {
+        OPAAX_LOG("Triangle vertex shader successfully loaded")
+    }
+
+    //build the pipeline layout that controls the inputs/outputs of the shader
+    //we are not using descriptor sets or other systems yet, so no need to use anything other than empty default
+    VkPipelineLayoutCreateInfo lPipelineLayoutInfo = VULKAN_HELPER::PipelineLayoutCreateInfo();
+    VK_CHECK(vkCreatePipelineLayout(m_vkDevice, &lPipelineLayoutInfo, nullptr, &m_trianglePipelineLayout));
+
+    OpaaxVKPipelineBuilder lPipelineBuilder;
+
+    //use the triangle layout we created
+    lPipelineBuilder.PipelineLayout = m_trianglePipelineLayout;
+    //connecting the vertex and pixel shaders to the pipeline
+    lPipelineBuilder.SetShaders(lTriangleVertexShader, lTriangleFragShader);
+    //it will draw triangles
+    lPipelineBuilder.SetInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+    //filled triangles
+    lPipelineBuilder.SetPolygonMode(VK_POLYGON_MODE_FILL);
+    //no backface culling
+    lPipelineBuilder.SetCullMode(VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
+    //no multisampling
+    lPipelineBuilder.SetMultisamplingNone();
+    //no blending
+    lPipelineBuilder.DisableBlending();
+    //no depth testing
+    lPipelineBuilder.DisableDepthTest();
+
+    //connect the image format we will draw into, from draw image
+    lPipelineBuilder.SetColorAttachmentFormat(m_drawImage.ImageFormat);
+    lPipelineBuilder.SetDepthFormat(VK_FORMAT_UNDEFINED);
+
+    //finally build the pipeline
+    m_trianglePipeline = lPipelineBuilder.BuildPipeline(m_vkDevice);
+
+    //clean structures
+    vkDestroyShaderModule(m_vkDevice, lTriangleFragShader, nullptr);
+    vkDestroyShaderModule(m_vkDevice, lTriangleVertexShader, nullptr);
+
+    m_mainDeletionQueue.PushFunction([&]() {
+        vkDestroyPipelineLayout(m_vkDevice, m_trianglePipelineLayout, nullptr);
+        vkDestroyPipeline(m_vkDevice, m_trianglePipeline, nullptr);
+    });
+}
+
 void OpaaxVulkanRenderer::InitImgui()
 {
     SDL_Window* lWindow = static_cast<SDL_Window*>(GetOpaaxWindow()->GetNativeWindow());
@@ -421,6 +483,41 @@ void OpaaxVulkanRenderer::DrawBackground(VkCommandBuffer CommandBuffer)
 
     // execute the compute pipeline dispatch. We are using 16x16 workgroup size so we need to divide by it
     vkCmdDispatch(CommandBuffer, std::ceil(m_drawExtent.width / 16.0), std::ceil(m_drawExtent.height / 16.0), 1);
+}
+
+void OpaaxVulkanRenderer::DrawGeometry(VkCommandBuffer CommandBuffer)
+{
+    //begin a render pass  connected to our draw image
+    VkRenderingAttachmentInfo lColorAttachment = VULKAN_HELPER::AttachmentInfo(m_drawImage.ImageView, nullptr, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+    VkRenderingInfo lRenderInfo = VULKAN_HELPER::RenderingInfo(m_drawExtent, &lColorAttachment, nullptr);
+    vkCmdBeginRendering(CommandBuffer, &lRenderInfo);
+
+    vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_trianglePipeline);
+
+    //set dynamic viewport and scissor
+    VkViewport viewport = {};
+    viewport.x = 0;
+    viewport.y = 0;
+    viewport.width = m_drawExtent.width;
+    viewport.height = m_drawExtent.height;
+    viewport.minDepth = 0.f;
+    viewport.maxDepth = 1.f;
+
+    vkCmdSetViewport(CommandBuffer, 0, 1, &viewport);
+
+    VkRect2D scissor = {};
+    scissor.offset.x = 0;
+    scissor.offset.y = 0;
+    scissor.extent.width = m_drawExtent.width;
+    scissor.extent.height = m_drawExtent.height;
+
+    vkCmdSetScissor(CommandBuffer, 0, 1, &scissor);
+
+    //launch a draw command to draw 3 vertices
+    vkCmdDraw(CommandBuffer, 3, 1, 0, 0);
+
+    vkCmdEndRendering(CommandBuffer);
 }
 
 void OpaaxVulkanRenderer::DestroySwapchain()
@@ -652,11 +749,13 @@ void OpaaxVulkanRenderer::RenderFrame()
 
     DrawBackground(lCommandBuffer);
 
-    //transition the draw image and the swapchain image into their correct transfer layouts
-    VULKAN_HELPER::TransitionImage(lCommandBuffer, m_drawImage.Image, VK_IMAGE_LAYOUT_GENERAL,
-                                   VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-    VULKAN_HELPER::TransitionImage(lCommandBuffer, m_vkSwapchainImages[lSwapchainImageIndex], VK_IMAGE_LAYOUT_UNDEFINED,
-                                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    VULKAN_HELPER::TransitionImage(lCommandBuffer, m_drawImage.Image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+    DrawGeometry(lCommandBuffer);
+
+    //Transition the draw image and the swapchain image into their correct transfer layouts
+    VULKAN_HELPER::TransitionImage(lCommandBuffer, m_drawImage.Image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    VULKAN_HELPER::TransitionImage(lCommandBuffer, m_vkSwapchainImages[lSwapchainImageIndex], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
     // execute a copy from the draw image into the swapchain
     VULKAN_HELPER::CopyImageToImage(lCommandBuffer, m_drawImage.Image, m_vkSwapchainImages[lSwapchainImageIndex],
