@@ -1,0 +1,25 @@
+[2026-02-03 20:02:52.303] [OPAAX_Engine] [info] Log system initialized!
+[2026-02-03 20:02:52.304] [OPAAX_Engine] [trace] CoreEngineApp created
+[2026-02-03 20:02:52.304] [OPAAX_Engine] [info] Creating window Opaax Engine (1280, 720)
+[2026-02-03 20:02:52.814] [APP] [trace] ==================================
+[2026-02-03 20:02:52.814] [APP] [trace] Opaax Engine - Game Start
+[2026-02-03 20:02:52.814] [APP] [trace] ==================================
+[2026-02-03 20:02:52.814] [OPAAX_Engine] [trace] CoreEngineApp::Initialize()
+[2026-02-03 20:02:52.815] [OPAAX_Engine] [trace] Loading engine assets...
+[2026-02-03 20:02:52.815] [APP] [trace] [MyGame] Initialize - Game starting!
+[2026-02-03 20:02:52.815] [OPAAX_Engine] [trace] CoreEngineApp::Startup()
+[2026-02-03 20:02:52.815] [OPAAX_Engine] [info] EngineSubsystemBase::Startup Is Engine Valid:true
+[2026-02-03 20:02:52.815] [OPAAX_Engine] [trace] CoreEngineApp::Run() - Game loop started
+[2026-02-03 20:02:52.815] [OPAAX_Engine] [trace] lStringID == lStringID2 true
+[2026-02-03 20:02:52.815] [OPAAX_Engine] [trace] lStringID == lString true
+[2026-02-03 20:02:52.815] [OPAAX_Engine] [trace] lStringID2 == lString true
+[2026-02-03 20:02:53.819] [APP] [trace] [MyGame] Update - Running for 1.0036691 seconds
+[2026-02-03 20:02:54.825] [APP] [trace] [MyGame] Update - Running for 2.0096424 seconds
+[2026-02-03 20:02:56.073] [APP] [trace] [MyGame] Update - Running for 3.0134308 seconds
+[2026-02-03 20:02:57.073] [APP] [trace] [MyGame] Update - Running for 4.013472 seconds
+[2026-02-03 20:02:58.073] [APP] [trace] [MyGame] Update - Running for 5.013515 seconds
+[2026-02-03 20:02:58.336] [OPAAX_Engine] [trace] CoreEngineApp::Run() - Game loop ended
+[2026-02-03 20:02:58.336] [OPAAX_Engine] [trace] CoreEngineApp::Shutdown()
+[2026-02-03 20:02:58.337] [APP] [trace] [MyGame] Shutdown - Game ended after 5.1286616 seconds
+[2026-02-03 20:02:58.337] [OPAAX_Engine] [info] EngineSubsystemBase::Shutdown Is Engine Valid:true
+[2026-02-03 20:02:58.337] [OPAAX_Engine] [trace] CoreEngineApp destroyed

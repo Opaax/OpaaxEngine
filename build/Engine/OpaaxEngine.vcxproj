@@ -1,0 +1,527 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="MinSizeRel|x64">
+      <Configuration>MinSizeRel</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="RelWithDebInfo|x64">
+      <Configuration>RelWithDebInfo</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{7ACB60C0-EF91-3938-8D95-BD4B224F6969}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
+    <Platform>x64</Platform>
+    <ProjectName>OpaaxEngine</ProjectName>
+    <VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">W:\Projet_Perso\Engines\OpaaxEngine\build\bin\Debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">OpaaxEngine.dir\Debug\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">OpaaxEngine</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">W:\Projet_Perso\Engines\OpaaxEngine\build\bin\Release\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">OpaaxEngine.dir\Release\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">OpaaxEngine</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">W:\Projet_Perso\Engines\OpaaxEngine\build\bin\MinSizeRel\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">OpaaxEngine.dir\MinSizeRel\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">OpaaxEngine</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">true</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">W:\Projet_Perso\Engines\OpaaxEngine\build\bin\RelWithDebInfo\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">OpaaxEngine.dir\RelWithDebInfo\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">OpaaxEngine</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</GenerateManifest>
+  </PropertyGroup>
+  <PropertyGroup />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source;W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Private;W:\Projet_Perso\Engines\OpaaxEngine\Engine\Vendors\GLFW\include;W:\Projet_Perso\Engines\OpaaxEngine\Engine\Vendors\spdlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /Zc:__cplusplus /utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <SupportJustMyCode></SupportJustMyCode>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;ENGINE_EXPORTS;OPAAX_WITH_EDITOR=1;OPAAX_DEBUG;_WIN32;SPDLOG_FWRITE_UNLOCKED;CMAKE_INTDIR="Debug";OpaaxEngine_EXPORTS</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;ENGINE_EXPORTS;OPAAX_WITH_EDITOR=1;OPAAX_DEBUG;_WIN32;SPDLOG_FWRITE_UNLOCKED;CMAKE_INTDIR=\"Debug\";OpaaxEngine_EXPORTS</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source;W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Private;W:\Projet_Perso\Engines\OpaaxEngine\Engine\Vendors\GLFW\include;W:\Projet_Perso\Engines\OpaaxEngine\Engine\Vendors\spdlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source;W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Private;W:\Projet_Perso\Engines\OpaaxEngine\Engine\Vendors\GLFW\include;W:\Projet_Perso\Engines\OpaaxEngine\Engine\Vendors\spdlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <PostBuildEvent>
+      <Message>Creating EngineAssets directory...	Copying engine shaders...	Copying engine textures...	Copying engine meshes...</Message>
+      <Command>setlocal
+C:\Dev\CMake\bin\cmake.exe -E make_directory W:/Projet_Perso/Engines/OpaaxEngine/build/bin/EngineAssets
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+C:\Dev\CMake\bin\cmake.exe -E copy_directory W:/Projet_Perso/Engines/OpaaxEngine/Engine/Assets/Shaders W:/Projet_Perso/Engines/OpaaxEngine/build/bin/EngineAssets/Shaders
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+C:\Dev\CMake\bin\cmake.exe -E copy_directory W:/Projet_Perso/Engines/OpaaxEngine/Engine/Assets/Textures W:/Projet_Perso/Engines/OpaaxEngine/build/bin/EngineAssets/Textures
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+C:\Dev\CMake\bin\cmake.exe -E copy_directory W:/Projet_Perso/Engines/OpaaxEngine/Engine/Assets/Meshes W:/Projet_Perso/Engines/OpaaxEngine/build/bin/EngineAssets/Meshes
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+    </PostBuildEvent>
+    <Link>
+      <AdditionalDependencies>..\lib\Debug\glfw3.lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>W:/Projet_Perso/Engines/OpaaxEngine/build/lib/Debug/OpaaxEngine.lib</ImportLibrary>
+      <ProgramDataBaseFile>W:/Projet_Perso/Engines/OpaaxEngine/build/bin/Debug/OpaaxEngine.pdb</ProgramDataBaseFile>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source;W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Private;W:\Projet_Perso\Engines\OpaaxEngine\Engine\Vendors\GLFW\include;W:\Projet_Perso\Engines\OpaaxEngine\Engine\Vendors\spdlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /Zc:__cplusplus /utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <SupportJustMyCode></SupportJustMyCode>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;ENGINE_EXPORTS;OPAAX_WITH_EDITOR=1;OPAAX_DEBUG;_WIN32;SPDLOG_FWRITE_UNLOCKED;CMAKE_INTDIR="Release";OpaaxEngine_EXPORTS</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <DebugInformationFormat>
+      </DebugInformationFormat>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;ENGINE_EXPORTS;OPAAX_WITH_EDITOR=1;OPAAX_DEBUG;_WIN32;SPDLOG_FWRITE_UNLOCKED;CMAKE_INTDIR=\"Release\";OpaaxEngine_EXPORTS</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source;W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Private;W:\Projet_Perso\Engines\OpaaxEngine\Engine\Vendors\GLFW\include;W:\Projet_Perso\Engines\OpaaxEngine\Engine\Vendors\spdlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source;W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Private;W:\Projet_Perso\Engines\OpaaxEngine\Engine\Vendors\GLFW\include;W:\Projet_Perso\Engines\OpaaxEngine\Engine\Vendors\spdlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <PostBuildEvent>
+      <Message>Creating EngineAssets directory...	Copying engine shaders...	Copying engine textures...	Copying engine meshes...</Message>
+      <Command>setlocal
+C:\Dev\CMake\bin\cmake.exe -E make_directory W:/Projet_Perso/Engines/OpaaxEngine/build/bin/EngineAssets
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+C:\Dev\CMake\bin\cmake.exe -E copy_directory W:/Projet_Perso/Engines/OpaaxEngine/Engine/Assets/Shaders W:/Projet_Perso/Engines/OpaaxEngine/build/bin/EngineAssets/Shaders
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+C:\Dev\CMake\bin\cmake.exe -E copy_directory W:/Projet_Perso/Engines/OpaaxEngine/Engine/Assets/Textures W:/Projet_Perso/Engines/OpaaxEngine/build/bin/EngineAssets/Textures
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+C:\Dev\CMake\bin\cmake.exe -E copy_directory W:/Projet_Perso/Engines/OpaaxEngine/Engine/Assets/Meshes W:/Projet_Perso/Engines/OpaaxEngine/build/bin/EngineAssets/Meshes
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+    </PostBuildEvent>
+    <Link>
+      <AdditionalDependencies>..\lib\Release\glfw3.lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>W:/Projet_Perso/Engines/OpaaxEngine/build/lib/Release/OpaaxEngine.lib</ImportLibrary>
+      <ProgramDataBaseFile>W:/Projet_Perso/Engines/OpaaxEngine/build/bin/Release/OpaaxEngine.pdb</ProgramDataBaseFile>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source;W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Private;W:\Projet_Perso\Engines\OpaaxEngine\Engine\Vendors\GLFW\include;W:\Projet_Perso\Engines\OpaaxEngine\Engine\Vendors\spdlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /Zc:__cplusplus /utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <Optimization>MinSpace</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <SupportJustMyCode></SupportJustMyCode>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;ENGINE_EXPORTS;OPAAX_WITH_EDITOR=1;OPAAX_DEBUG;_WIN32;SPDLOG_FWRITE_UNLOCKED;CMAKE_INTDIR="MinSizeRel";OpaaxEngine_EXPORTS</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <DebugInformationFormat>
+      </DebugInformationFormat>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;ENGINE_EXPORTS;OPAAX_WITH_EDITOR=1;OPAAX_DEBUG;_WIN32;SPDLOG_FWRITE_UNLOCKED;CMAKE_INTDIR=\"MinSizeRel\";OpaaxEngine_EXPORTS</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source;W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Private;W:\Projet_Perso\Engines\OpaaxEngine\Engine\Vendors\GLFW\include;W:\Projet_Perso\Engines\OpaaxEngine\Engine\Vendors\spdlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source;W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Private;W:\Projet_Perso\Engines\OpaaxEngine\Engine\Vendors\GLFW\include;W:\Projet_Perso\Engines\OpaaxEngine\Engine\Vendors\spdlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <PostBuildEvent>
+      <Message>Creating EngineAssets directory...	Copying engine shaders...	Copying engine textures...	Copying engine meshes...</Message>
+      <Command>setlocal
+C:\Dev\CMake\bin\cmake.exe -E make_directory W:/Projet_Perso/Engines/OpaaxEngine/build/bin/EngineAssets
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+C:\Dev\CMake\bin\cmake.exe -E copy_directory W:/Projet_Perso/Engines/OpaaxEngine/Engine/Assets/Shaders W:/Projet_Perso/Engines/OpaaxEngine/build/bin/EngineAssets/Shaders
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+C:\Dev\CMake\bin\cmake.exe -E copy_directory W:/Projet_Perso/Engines/OpaaxEngine/Engine/Assets/Textures W:/Projet_Perso/Engines/OpaaxEngine/build/bin/EngineAssets/Textures
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+C:\Dev\CMake\bin\cmake.exe -E copy_directory W:/Projet_Perso/Engines/OpaaxEngine/Engine/Assets/Meshes W:/Projet_Perso/Engines/OpaaxEngine/build/bin/EngineAssets/Meshes
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+    </PostBuildEvent>
+    <Link>
+      <AdditionalDependencies>..\lib\MinSizeRel\glfw3.lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>W:/Projet_Perso/Engines/OpaaxEngine/build/lib/MinSizeRel/OpaaxEngine.lib</ImportLibrary>
+      <ProgramDataBaseFile>W:/Projet_Perso/Engines/OpaaxEngine/build/bin/MinSizeRel/OpaaxEngine.pdb</ProgramDataBaseFile>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source;W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Private;W:\Projet_Perso\Engines\OpaaxEngine\Engine\Vendors\GLFW\include;W:\Projet_Perso\Engines\OpaaxEngine\Engine\Vendors\spdlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /Zc:__cplusplus /utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <SupportJustMyCode></SupportJustMyCode>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;ENGINE_EXPORTS;OPAAX_WITH_EDITOR=1;OPAAX_DEBUG;_WIN32;SPDLOG_FWRITE_UNLOCKED;CMAKE_INTDIR="RelWithDebInfo";OpaaxEngine_EXPORTS</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;ENGINE_EXPORTS;OPAAX_WITH_EDITOR=1;OPAAX_DEBUG;_WIN32;SPDLOG_FWRITE_UNLOCKED;CMAKE_INTDIR=\"RelWithDebInfo\";OpaaxEngine_EXPORTS</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source;W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Private;W:\Projet_Perso\Engines\OpaaxEngine\Engine\Vendors\GLFW\include;W:\Projet_Perso\Engines\OpaaxEngine\Engine\Vendors\spdlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source;W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Private;W:\Projet_Perso\Engines\OpaaxEngine\Engine\Vendors\GLFW\include;W:\Projet_Perso\Engines\OpaaxEngine\Engine\Vendors\spdlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <PostBuildEvent>
+      <Message>Creating EngineAssets directory...	Copying engine shaders...	Copying engine textures...	Copying engine meshes...</Message>
+      <Command>setlocal
+C:\Dev\CMake\bin\cmake.exe -E make_directory W:/Projet_Perso/Engines/OpaaxEngine/build/bin/EngineAssets
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+C:\Dev\CMake\bin\cmake.exe -E copy_directory W:/Projet_Perso/Engines/OpaaxEngine/Engine/Assets/Shaders W:/Projet_Perso/Engines/OpaaxEngine/build/bin/EngineAssets/Shaders
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+C:\Dev\CMake\bin\cmake.exe -E copy_directory W:/Projet_Perso/Engines/OpaaxEngine/Engine/Assets/Textures W:/Projet_Perso/Engines/OpaaxEngine/build/bin/EngineAssets/Textures
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+C:\Dev\CMake\bin\cmake.exe -E copy_directory W:/Projet_Perso/Engines/OpaaxEngine/Engine/Assets/Meshes W:/Projet_Perso/Engines/OpaaxEngine/build/bin/EngineAssets/Meshes
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+    </PostBuildEvent>
+    <Link>
+      <AdditionalDependencies>..\lib\RelWithDebInfo\glfw3.lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>W:/Projet_Perso/Engines/OpaaxEngine/build/lib/RelWithDebInfo/OpaaxEngine.lib</ImportLibrary>
+      <ProgramDataBaseFile>W:/Projet_Perso/Engines/OpaaxEngine/build/bin/RelWithDebInfo/OpaaxEngine.pdb</ProgramDataBaseFile>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\CMakeLists.txt">
+      <UseUtf8Encoding>Always</UseUtf8Encoding>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule W:/Projet_Perso/Engines/OpaaxEngine/Engine/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+C:\Dev\CMake\bin\cmake.exe -SW:/Projet_Perso/Engines/OpaaxEngine -BW:/Projet_Perso/Engines/OpaaxEngine/build --check-stamp-file W:/Projet_Perso/Engines/OpaaxEngine/build/Engine/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">W:\Projet_Perso\Engines\OpaaxEngine\build\Engine\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule W:/Projet_Perso/Engines/OpaaxEngine/Engine/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+C:\Dev\CMake\bin\cmake.exe -SW:/Projet_Perso/Engines/OpaaxEngine -BW:/Projet_Perso/Engines/OpaaxEngine/build --check-stamp-file W:/Projet_Perso/Engines/OpaaxEngine/build/Engine/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">W:\Projet_Perso\Engines\OpaaxEngine\build\Engine\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Building Custom Rule W:/Projet_Perso/Engines/OpaaxEngine/Engine/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">setlocal
+C:\Dev\CMake\bin\cmake.exe -SW:/Projet_Perso/Engines/OpaaxEngine -BW:/Projet_Perso/Engines/OpaaxEngine/build --check-stamp-file W:/Projet_Perso/Engines/OpaaxEngine/build/Engine/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">W:\Projet_Perso\Engines\OpaaxEngine\build\Engine\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Building Custom Rule W:/Projet_Perso/Engines/OpaaxEngine/Engine/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">setlocal
+C:\Dev\CMake\bin\cmake.exe -SW:/Projet_Perso/Engines/OpaaxEngine -BW:/Projet_Perso/Engines/OpaaxEngine/build --check-stamp-file W:/Projet_Perso/Engines/OpaaxEngine/build/Engine/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">W:\Projet_Perso\Engines\OpaaxEngine\build\Engine\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\CoreEngineApp.cpp" />
+    <ClInclude Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\CoreEngineApp.h" />
+    <ClInclude Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\EngineAPI.h" />
+    <ClCompile Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\Log\OpaaxLog.cpp" />
+    <ClInclude Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\Log\OpaaxLog.h" />
+    <ClInclude Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\OpaaxEntryPoint.h" />
+    <ClCompile Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\OpaaxForward.cpp" />
+    <ClInclude Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\OpaaxForward.h" />
+    <ClCompile Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\OpaaxGlobal.cpp" />
+    <ClInclude Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\OpaaxGlobal.h" />
+    <ClCompile Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\OpaaxHash.cpp" />
+    <ClInclude Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\OpaaxHash.h" />
+    <ClInclude Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\OpaaxString.hpp" />
+    <ClInclude Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\OpaaxStringID.hpp" />
+    <ClInclude Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\OpaaxTypes.h" />
+    <ClCompile Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\Systems\EngineSubsystem.cpp" />
+    <ClInclude Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\Systems\EngineSubsystem.h" />
+    <ClInclude Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\Systems\Subsystem.h" />
+    <ClCompile Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\Window.cpp" />
+    <ClInclude Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\Window.h" />
+    <ClCompile Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Platform\WindowsWindow.cpp" />
+    <ClInclude Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Platform\WindowsWindow.h" />
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="W:\Projet_Perso\Engines\OpaaxEngine\build\ZERO_CHECK.vcxproj">
+      <Project>{04704336-9ABB-318C-81C7-C7EFABCC4F0A}</Project>
+      <Name>ZERO_CHECK</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+    <ProjectReference Include="W:\Projet_Perso\Engines\OpaaxEngine\build\Engine\Vendors\GLFW\src\glfw.vcxproj">
+      <Project>{5EFBD0F4-21C7-3AA3-B7B2-FAEDF68546BB}</Project>
+      <Name>glfw</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

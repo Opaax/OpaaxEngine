@@ -1,0 +1,10 @@
+^W:\PROJET_PERSO\ENGINES\OPAAXENGINE\GAME\CMAKELISTS.TXT
+setlocal
+C:\Dev\CMake\bin\cmake.exe -SW:/Projet_Perso/Engines/OpaaxEngine -BW:/Projet_Perso/Engines/OpaaxEngine/build --check-stamp-file W:/Projet_Perso/Engines/OpaaxEngine/build/Game/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

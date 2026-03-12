@@ -1,0 +1,84 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\CoreEngineApp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\Log\OpaaxLog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\OpaaxForward.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\OpaaxGlobal.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\OpaaxHash.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\Systems\EngineSubsystem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\Window.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Platform\WindowsWindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\CoreEngineApp.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\EngineAPI.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\Log\OpaaxLog.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\OpaaxEntryPoint.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\OpaaxForward.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\OpaaxGlobal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\OpaaxHash.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\OpaaxString.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\OpaaxStringID.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\OpaaxTypes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\Systems\EngineSubsystem.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\Systems\Subsystem.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Core\Window.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\Source\Platform\WindowsWindow.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="W:\Projet_Perso\Engines\OpaaxEngine\Engine\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{831BDD5E-DDC0-31C6-B8F9-E7CB90F0AF48}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{C9D57722-3B39-3832-A8C4-3252C87D279B}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

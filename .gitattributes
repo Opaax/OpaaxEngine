@@ -1,0 +1,44 @@
+# =============================================================================
+# .gitattributes — enforce LF line endings engine-wide
+# NOTE: This fixes the "LF will be replaced by CRLF" warnings on Windows.
+# All text files are stored as LF in the repo regardless of the OS.
+# =============================================================================
+
+# Default — auto-detect text files and normalize to LF
+* text=auto eol=lf
+
+# C++ source
+*.cpp   text eol=lf
+*.h     text eol=lf
+*.hpp   text eol=lf
+*.c     text eol=lf
+*.inl   text eol=lf
+
+# Build & config
+CMakeLists.txt  text eol=lf
+*.cmake         text eol=lf
+*.json          text eol=lf
+*.md            text eol=lf
+*.txt           text eol=lf
+*.gitignore     text eol=lf
+*.gitattributes text eol=lf
+*.sh            text eol=lf
+
+# Windows scripts — keep CRLF for .bat/.cmd (required by Windows)
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+
+# Binary files — never modify
+*.png   binary
+*.jpg   binary
+*.bmp   binary
+*.tga   binary
+*.wav   binary
+*.ogg   binary
+*.mp3   binary
+*.ttf   binary
+*.otf   binary
+*.lib   binary
+*.dll   binary
+*.exe   binary
+*.pdb   binary

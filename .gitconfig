@@ -1,0 +1,19 @@
+# Désactive le warning embedded repo
+git config advice.addEmbeddedRepo false
+
+# Identité
+git config user.name "Ton Nom"
+git config user.email "ton@email.com"
+
+# Line endings — critique Windows <-> console cross-platform
+git config core.autocrlf false
+git config core.eol lf
+
+# Évite les merges automatiques parasites
+git config pull.rebase true
+
+# Meilleur diff pour le C++
+git config diff.algorithm histogram
+
+# Affiche toujours le branch tracking
+git config push.autoSetupRemote true

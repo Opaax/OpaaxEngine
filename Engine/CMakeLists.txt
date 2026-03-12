@@ -1,0 +1,209 @@
+# Sources du moteur (core)
+file(GLOB_RECURSE ENGINE_CORE_SOURCES
+    "Source/Core/*.cpp"
+    "Source/Core/*.h"
+    "Source/Core/*.hpp"
+    "Source/Systems/*.cpp"
+    "Source/Systems/*.h"
+    "Source/Systems/*.hpp"
+    "Source/RHI/*.cpp"
+    "Source/RHI/*.h"
+    "Source/RHI/*.hpp"
+    "Source/Platform/*.cpp"
+    "Source/Platform/*.h"
+    "Source/Platform/*.hpp"
+)
+
+set(ENGINE_SOURCES ${ENGINE_CORE_SOURCES})
+
+# Ajouter l'éditeur si activé
+if(OPAAX_EDITOR_SUPPORT)
+    file(GLOB_RECURSE ENGINE_EDITOR_SOURCES
+        "Source/Editor/*.cpp"
+        "Source/Editor/*.h"
+    )
+    list(APPEND ENGINE_SOURCES ${ENGINE_EDITOR_SOURCES})
+    
+    message(STATUS "Editor support enabled in engine")
+endif()
+
+# ==================================
+# GLFW Configuration
+# ==================================
+
+# Vérifier que GLFW existe
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Vendors/GLFW/CMakeLists.txt")
+    message(FATAL_ERROR 
+        "GLFW not found in Engine/Vendors/GLFW!\n"
+        "Please run: git clone https://github.com/glfw/glfw.git Engine/Vendors/GLFW"
+    )
+endif()
+
+# Option pour build GLFW examples/tests (on les veut pas)
+set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
+
+# ADD GLFW subdirectory
+add_subdirectory(Vendors/GLFW)
+
+# GLFW crée automatiquement la target "glfw"
+# On vérifie qu'elle existe
+if(NOT TARGET glfw)
+    message(FATAL_ERROR "GLFW target 'glfw' was not created!")
+endif()
+
+# ==================================
+# END GLFW Configuration
+# ==================================
+
+# ==================================
+# spdlog Configuration (Header-Only)
+# ==================================
+
+# Vérifier que spdlog existe
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Vendors/spdlog/include/spdlog/spdlog.h")
+    message(FATAL_ERROR 
+        "spdlog not found in Engine/Vendors/spdlog!\n"
+        "Please run: git clone https://github.com/gabime/spdlog.git Engine/Vendors/spdlog"
+    )
+endif()
+
+# Définir spdlog en header-only
+set(SPDLOG_FMT_EXTERNAL OFF CACHE BOOL "" FORCE)
+set(SPDLOG_BUILD_SHARED OFF CACHE BOOL "" FORCE)
+set(SPDLOG_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(SPDLOG_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(SPDLOG_INSTALL OFF CACHE BOOL "" FORCE)
+
+# Ajouter spdlog
+add_subdirectory(Vendors/spdlog)
+
+message(STATUS "spdlog: Header-Only mode")
+
+# ==================================
+# END spdlog Configuration (Header-Only)
+# ==================================
+
+# ==================================
+# Créer la DLL du moteur
+# ==================================
+add_library(OpaaxEngine SHARED ${ENGINE_SOURCES})
+
+# Définir ENGINE_EXPORTS
+target_compile_definitions(OpaaxEngine PRIVATE ENGINE_EXPORTS)
+
+# Editor support
+if(OPAAX_EDITOR_SUPPORT)
+    target_compile_definitions(OpaaxEngine PUBLIC OPAAX_WITH_EDITOR=1)
+    target_compile_definitions(OpaaxEngine PUBLIC OPAAX_DEBUG)
+else()
+    target_compile_definitions(OpaaxEngine PUBLIC OPAAX_WITH_EDITOR=0)
+endif()
+
+# ==================================
+# Link GLFW
+# ==================================
+target_link_libraries(OpaaxEngine 
+    PUBLIC 
+        glfw
+        spdlog::spdlog_header_only
+)
+
+# Include directories
+target_include_directories(OpaaxEngine
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Source>
+        $<INSTALL_INTERFACE:include>
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/Source/Private
+        ${CMAKE_CURRENT_SOURCE_DIR}/Vendors/GLFW/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/Vendors/spdlog/include
+)
+
+if(WIN32)
+    target_compile_definitions(OpaaxEngine PRIVATE _WIN32)
+    
+    # Lier les libs Windows nécessaires pour GLFW
+    target_link_libraries(OpaaxEngine PRIVATE
+        opengl32
+    )
+endif()
+
+# ==================================
+# Copier les Engine Assets
+# ==================================
+set(ENGINE_ASSETS_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/Assets)
+set(ENGINE_ASSETS_DEST ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/EngineAssets)
+
+# Créer le dossier de destination
+add_custom_command(TARGET OpaaxEngine POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${ENGINE_ASSETS_DEST}
+    COMMENT "Creating EngineAssets directory..."
+)
+
+# Copier les shaders
+add_custom_command(TARGET OpaaxEngine POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${ENGINE_ASSETS_SOURCE}/Shaders
+        ${ENGINE_ASSETS_DEST}/Shaders
+    COMMENT "Copying engine shaders..."
+)
+
+# Copier les textures
+add_custom_command(TARGET OpaaxEngine POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${ENGINE_ASSETS_SOURCE}/Textures
+        ${ENGINE_ASSETS_DEST}/Textures
+    COMMENT "Copying engine textures..."
+)
+
+# Copier les meshes
+add_custom_command(TARGET OpaaxEngine POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${ENGINE_ASSETS_SOURCE}/Meshes
+        ${ENGINE_ASSETS_DEST}/Meshes
+    COMMENT "Copying engine meshes..."
+)
+
+# ==================================
+# Compiler les shaders (optionnel)
+# ==================================
+#if(WIN32)
+#    # Trouver le compilateur de shaders DirectX
+#    find_program(DXC_EXECUTABLE dxc.exe
+#        HINTS
+#            "C:/Program Files (x86)/Windows Kits/10/bin/*/x64"
+#            "$ENV{WindowsSdkDir}/bin/*/x64"
+#    )
+#
+#    if(DXC_EXECUTABLE)
+#        # Liste des shaders à compiler
+#        set(SHADER_FILES
+#            ${ENGINE_ASSETS_SOURCE}/Shaders/Sprite.hlsl
+#            ${ENGINE_ASSETS_SOURCE}/Shaders/UI.hlsl
+#            ${ENGINE_ASSETS_SOURCE}/Shaders/Debug.hlsl
+#        )
+#
+#        foreach(SHADER ${SHADER_FILES})
+#            get_filename_component(SHADER_NAME ${SHADER} NAME_WE)
+#            
+#            # Compiler vertex shader
+#            add_custom_command(TARGET OpaaxEngine POST_BUILD
+#                COMMAND ${DXC_EXECUTABLE} -T vs_6_0 -E VSMain
+#                    ${SHADER}
+#                    -Fo ${ENGINE_ASSETS_DEST}/Shaders/${SHADER_NAME}_VS.cso
+#                COMMENT "Compiling ${SHADER_NAME} vertex shader..."
+#            )
+#            
+#            # Compiler pixel shader
+#            add_custom_command(TARGET OpaaxEngine POST_BUILD
+#                COMMAND ${DXC_EXECUTABLE} -T ps_6_0 -E PSMain
+#                    ${SHADER}
+#                    -Fo ${ENGINE_ASSETS_DEST}/Shaders/${SHADER_NAME}_PS.cso
+#                COMMENT "Compiling ${SHADER_NAME} pixel shader..."
+#            )
+#        endforeach()
+#    endif()
+#endif()
