@@ -255,10 +255,7 @@ namespace Opaax
             HeapData[Length] = OpaaxString_InvalidCharacter;
         }
 
-        void Append(const OpaaxString& Other)
-        {
-            Append(Other.CStr());
-        }
+        void Append(const OpaaxString& Other) { Append(Other.CStr()); }
 
         /**
          * Reserve capacity without changing length.
@@ -275,15 +272,8 @@ namespace Opaax
             GrowHeap(InCapacity);
         }
 
-        std::string ToStdString() const
-        {
-            return std::string(CStr());
-        }
-
-        OpaaxString SubString(Uint32 Start, Uint32 InLength = UINT32_MAX) const
-        {
-            return SubString(*this, Start, InLength);
-        }
+        std::string ToStdString() const                                         { return std::string(CStr()); }
+        OpaaxString SubString(Uint32 Start, Uint32 InLength = UINT32_MAX) const { return SubString(*this, Start, InLength); }
 
         Int32 Find(const char* Str, Uint32 StartPos = 0) const
         {
@@ -375,10 +365,10 @@ namespace Opaax
             return *this;
         }
 
-        bool operator==(const OpaaxString& Other) const noexcept { return std::strcmp(CStr(), Other.CStr()) == 0; }
-        bool operator==(const char* Str) const noexcept { return std::strcmp(CStr(), Str) == 0; }
-        bool operator!=(const OpaaxString& Other) const noexcept { return !(*this == Other); }
-        bool operator!=(const char* Str) const noexcept { return !(*this == Str); }
+        bool operator==(const OpaaxString& Other)   const noexcept { return std::strcmp(CStr(), Other.CStr()) == 0; }
+        bool operator==(const char* Str)            const noexcept { return std::strcmp(CStr(), Str) == 0; }
+        bool operator!=(const OpaaxString& Other)   const noexcept { return !(*this == Other); }
+        bool operator!=(const char* Str)            const noexcept { return !(*this == Str); }
 
         OpaaxString operator+(const char* RHS) const
         {
@@ -394,10 +384,7 @@ namespace Opaax
             return lR;
         }
 
-        friend std::ostream& operator<<(std::ostream& OS, const OpaaxString& Str)
-        {
-            return OS << Str.CStr();
-        }
+        friend std::ostream& operator<<(std::ostream& OS, const OpaaxString& Str) { return OS << Str.CStr(); }
 
         // =============================================================================
         // Members

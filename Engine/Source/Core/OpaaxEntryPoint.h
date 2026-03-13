@@ -7,7 +7,6 @@ int main(int argc, char** argv)
 {
     auto lApp = Opaax::UniquePtr<Opaax::CoreEngineApp>(CreateApplication());
     lApp->Run();
-    lApp->Shutdown();
     return 0;
 }
 #else

@@ -10,7 +10,7 @@ namespace Opaax
     /**
      * @class ISubsystem
      *
-     * 
+     * Base interface for subsystem
      */
     class OPAAX_API ISubsystem
     {
@@ -123,6 +123,14 @@ namespace Opaax
             for (auto& lSystem : m_Systems)
             {
                 lSystem->FixedUpdate(FixedDeltaTime);
+            }
+        }
+
+        virtual void RenderAll(double Alpha)
+        {
+            for (auto& lSystem : m_Systems)
+            {
+                lSystem->Render(Alpha);
             }
         }
 

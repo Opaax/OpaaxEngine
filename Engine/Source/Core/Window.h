@@ -60,19 +60,14 @@ namespace Opaax
         // Functions
         // =============================================================================
     public:
-        virtual void PollEvents() = 0;
-        virtual bool ShouldClose() const = 0;
-        virtual void SwapBuffers() = 0;
-        /**
-        * Poll Events and Swap buffers by default
-        */
-        virtual void Update() { PollEvents(); SwapBuffers(); }
+        virtual void PollEvents()           = 0;
+        virtual void SwapBuffers()          = 0;
+        virtual bool ShouldClose() const    = 0;
 
         /*----------------------------- Get - Set -------------------------------*/
         
         virtual void* GetNativeWindow() const = 0;
-    
-        virtual Uint32 GetWidth() const = 0;
-        virtual Uint32 GetHeight() const = 0;
+        virtual Uint32 GetWidth()       const = 0;
+        virtual Uint32 GetHeight()      const = 0;
     };
 }

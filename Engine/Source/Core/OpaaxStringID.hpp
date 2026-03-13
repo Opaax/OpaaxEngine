@@ -6,124 +6,149 @@
 #include "OpaaxHash.h"
 #include "OpaaxString.hpp"
 
+#include <unordered_map>
+#include <mutex>
+
 namespace Opaax
 {
-    /*
-    * @struct StringId
-    * 
-    * Hash string for fast comparisons and lookups.
-    */
+    /**
+     * @class OpaaxStringIDPool
+     *
+     * Thread-safe intern table. Maps OpaaxString <-> Uint32 index.
+     * Index 0 is reserved for "None".
+     */
+    class OpaaxStringIDPool final
+    {
+    public:
+        OpaaxStringIDPool()
+        {
+            // Index 0 = "None" — always valid, never removed
+            m_Strings.reserve(256);
+            m_Strings.push_back(OpaaxGlobal::String_None);
+            m_Lookups[OpaaxGlobal::String_None] = OpaaxGlobal::ID_None;
+        }
+
+        Uint32 GetOrAdd(const OpaaxString& String)
+        {
+            std::scoped_lock lLock(m_Mutex);
+
+            auto lIt = m_Lookups.find(String);
+            if (lIt != m_Lookups.end())
+            {
+                return lIt->second;
+            }
+
+            const Uint32 lID = static_cast<Uint32>(m_Strings.size());
+            m_Strings.push_back(String);
+            m_Lookups[String] = lID;
+            return lID;
+        }
+
+        const OpaaxString& Get(Uint32 Index) const noexcept
+        {
+            //Safe as long as we never remove or reorder entries, which we never do.
+            return (Index < m_Strings.size()) ? m_Strings[Index] : m_Strings[OpaaxGlobal::ID_None];
+        }
+
+        Uint32 GetPoolSize() const noexcept
+        {
+            std::scoped_lock lLock(m_Mutex);
+            return static_cast<Uint32>(m_Strings.size());
+        }
+
+    private:
+        TDynArray<OpaaxString>                                    m_Strings;
+        std::unordered_map<OpaaxString, Uint32, OpaaxHash>        m_Lookups;
+        mutable std::mutex                                         m_Mutex;
+    };
+
+} // namespace Opaax::Internal
+
+namespace Opaax
+{
+    /**
+     * @struct OpaaxStringID
+     *
+     * Interned string handle. Comparison is always O(1) integer compare.
+     * Construction from a string is O(1) amortized (hash lookup + possible insert).
+     *
+     * Use OPAAX_ID("MyString") to construct at callsites.
+     */
     struct OPAAX_API OpaaxStringID final
     {
-        //  thread-safe Pool global
-        struct OpaaxStringIDPool
-        {
-            TDynArray<OpaaxString> Strings;// Index -> String
-            std::unordered_map<OpaaxString, Uint32, OpaaxHash> Lookups;// String -> Index
-            std::mutex Mutex;
-        
-            OpaaxStringIDPool()
-            {
-                // Index 0 = "None"
-                Strings.push_back(OpaaxGlobal::String_None);
-                Lookups[OpaaxGlobal::String_None] = OpaaxGlobal::ID_None;
-            }
-        
-            Uint32 GetOrAdd(const OpaaxString& String)
-            {
-                std::scoped_lock lLock(Mutex);
-            
-                auto it = Lookups.find(String);
-                if (it != Lookups.end())
-                {
-                    return it->second;
-                }
-            
-                Uint32 lID = static_cast<Uint32>(Strings.size());
-                
-                Strings.push_back(String);
-                Lookups[String] = lID;
-                
-                return lID;
-            }
-        
-            const OpaaxString& Get(Uint32 Index) const
-            {
-                return (Index < Strings.size()) ? Strings[Index] : Strings[OpaaxGlobal::ID_None];
-            }
-        
-            Uint32 GetPoolSize() const
-            {
-                return static_cast<Uint32>(Strings.size());
-            }
-        };
-        
-        // =============================================================================
-        // Statics
-        // =============================================================================
-    private:
-        static OpaaxStringIDPool& GetPool()
-        {
-            static OpaaxStringIDPool lPool;
-            return lPool;
-        }
-        
         // =============================================================================
         // CTOR - DTOR
         // =============================================================================
     public:
-        OpaaxStringID(const OpaaxString& String)
+        OpaaxStringID() noexcept : m_ID(OpaaxGlobal::ID_None) {}
+
+        explicit OpaaxStringID(const OpaaxString& String)
         {
             m_ID = String.IsEmpty() ? OpaaxGlobal::ID_None : GetPool().GetOrAdd(String);
         }
-        
-        OpaaxStringID(const char* String) : OpaaxStringID(OpaaxString(String)) {}
+
+        OpaaxStringID(const char*        String) : OpaaxStringID(OpaaxString(String)) {}
         OpaaxStringID(const std::string& String) : OpaaxStringID(OpaaxString(String.c_str())) {}
-    
-        // Copy & Move
-        OpaaxStringID(const OpaaxStringID& Other) = default;
-        OpaaxStringID(OpaaxStringID&& Other) noexcept = default;
+
+        OpaaxStringID(const OpaaxStringID&)            = default;
+        OpaaxStringID(OpaaxStringID&&) noexcept        = default;
+        OpaaxStringID& operator=(const OpaaxStringID&) = default;
+        OpaaxStringID& operator=(OpaaxStringID&&) noexcept = default;
 
         // =============================================================================
-        // FUNCTIONS
+        // Functions
         // =============================================================================
     public:
-        //--------------------------------- GET - SET ---------------------------------//
-        FORCEINLINE Uint32 GetId() const { return m_ID; }
-        FORCEINLINE bool IsValid() const { return m_ID != OpaaxGlobal::ID_None; }
+        const OpaaxString& ToString() const { return GetPool().Get(m_ID); }
+        
+        // ----------------------------------------------------------------------------
+        // Get - Set
+    public:
+        FORCEINLINE Uint32 GetId()   const noexcept { return m_ID; }
+        FORCEINLINE bool   IsValid() const noexcept { return m_ID != OpaaxGlobal::ID_None; }
 
-        OpaaxString ToString()
-        {
-            return GetPool().Get(m_ID);
-        }
-
-        const OpaaxString& ToString() const
-        {
-            return GetPool().Get(m_ID);
-        }
 
         // =============================================================================
-        // MEMBERS
+        // Operators
+        // =============================================================================
+    public:
+        constexpr bool operator==(const OpaaxStringID& Other) const noexcept { return m_ID == Other.m_ID; }
+        constexpr bool operator!=(const OpaaxStringID& Other) const noexcept { return m_ID != Other.m_ID; }
+        
+        // This does NOT intern the string — it is a read-only lookup.
+        bool operator==(const OpaaxString& Other) const
+        {
+            return ToString() == Other;
+        }
+
+        bool operator!=(const OpaaxString& Other) const { return !(*this == Other); }
+
+        // =============================================================================
+        // Members
         // =============================================================================
     private:
         Uint32 m_ID;
 
         // =============================================================================
-        // OPERATORS
+        // Pool accessor — single static instance, lazy-initialized, thread-safe (C++11)
         // =============================================================================
-    public:
-        OpaaxStringID& operator=(const OpaaxStringID& Other) = default;
-        OpaaxStringID& operator=(OpaaxStringID&& Other) noexcept = default;
-        
-        constexpr bool operator==(const OpaaxStringID& Other) const { return m_ID == Other.m_ID; }
-        constexpr bool operator!=(const OpaaxStringID& Other) const { return m_ID != Other.m_ID; }
+        static OpaaxStringIDPool& GetPool()
+        {
+            static OpaaxStringIDPool s_Pool;
+            return s_Pool;
+        }
     };
-    
-#define OPAAX_ID(STR) ::Opaax::OpaaxStringID(STR)
-}
 
-template <typename T>
-struct fmt::formatter<T, std::enable_if_t<std::is_base_of<Opaax::OpaaxStringID, T>::value, char>>
+    // Convenience macro — keeps callsite noise down
+    #define OPAAX_ID(STR) ::Opaax::OpaaxStringID(STR)
+
+} // namespace Opaax
+
+// fmtlib / spdlog formatter
+#include <spdlog/fmt/fmt.h>
+
+template<typename T>
+struct fmt::formatter<T, std::enable_if_t<std::is_same_v<T, Opaax::OpaaxStringID>, char>>
     : fmt::formatter<std::string>
 {
     auto format(const T& StringID, format_context& CTX) const

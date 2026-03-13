@@ -29,10 +29,25 @@ namespace Opaax
         IEngineSubsystem(CoreEngineApp* InEngineApp):m_EngineApp(InEngineApp){}
         
         virtual ~IEngineSubsystem() override                        = default;
+        
         IEngineSubsystem(const IEngineSubsystem&)                   = delete;
         IEngineSubsystem& operator=(const IEngineSubsystem&)        = delete;
-        IEngineSubsystem(IEngineSubsystem&&) noexcept               = default;
-        IEngineSubsystem& operator=(IEngineSubsystem&&) noexcept    = default;
+        
+        IEngineSubsystem(IEngineSubsystem&& Other) noexcept
+            : m_EngineApp(Other.m_EngineApp)
+        {
+            Other.m_EngineApp = nullptr;
+        }
+ 
+        IEngineSubsystem& operator=(IEngineSubsystem&& Other) noexcept
+        {
+            if (this != &Other)
+            {
+                m_EngineApp       = Other.m_EngineApp;
+                Other.m_EngineApp = nullptr;
+            }
+            return *this;
+        }
 
         // =============================================================================
         // Functions
@@ -75,7 +90,7 @@ namespace Opaax
         // =============================================================================
     public:
         EngineSubsystemBase() = default;
-        EngineSubsystemBase(CoreEngineApp* InEngineApp) : IEngineSubsystem(InEngineApp) {}
+        explicit EngineSubsystemBase(CoreEngineApp* InEngineApp) : IEngineSubsystem(InEngineApp) {}
         virtual ~EngineSubsystemBase() override = default;
 
         EngineSubsystemBase(const EngineSubsystemBase&)                   = delete;
