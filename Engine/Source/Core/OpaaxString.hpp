@@ -9,11 +9,21 @@
 namespace Opaax
 {
     constexpr char OpaaxString_InvalidCharacter = '\0';
-    
+
     /**
      * @class OpaaxString
      *
-     * SSO of 15 + 1.
+     * Custom string with SSO (Small String Optimisation) of 15 chars inline.
+     * Heap strings use a 2x growth strategy.
+     *
+     * Layout (24 bytes total, no padding waste):
+     *  union { SSOBuffer[16], HeapData* }  — 8 bytes (pointer-aligned)
+     *  Uint32 Length                        — 4 bytes
+     *  Uint32 Capacity                      — 4 bytes  (heap capacity, 0 when SSO)
+     *  bool   bUsingHeap                    — 1 byte   (moved after the two Uint32s)
+     *  [3 bytes padding — unavoidable with bool, acceptable]
+     *
+     * NOTE: SSOCapacity is 15 to keep null terminator within the 16-byte SSO slot.
      */
     class OPAAX_API OpaaxString final
     {
@@ -23,45 +33,89 @@ namespace Opaax
     private:
         static constexpr Uint32 SSOCapacity = 15;
 
+        //When growing heap, we at least double. This avoids O(n^2) append cost.
+        static constexpr Uint32 GROWTH_FACTOR = 2;
+        static constexpr Uint32 MIN_HEAP_CAPACITY = 32;
+
+        // Static substring — allocates a new OpaaxString
+        static OpaaxString SubString(const OpaaxString& InStr, Uint32 Start, Uint32 InLength = UINT32_MAX)
+        {
+            if (Start >= InStr.Length) { return OpaaxString(); }
+
+            const Uint32 lActual = (InLength == UINT32_MAX || Start + InLength > InStr.Length)
+                                       ? (InStr.Length - Start)
+                                       : InLength;
+
+            // PERF: Avoid double alloc — construct directly from pointer range.
+            OpaaxString lResult;
+            lResult.Reserve(lActual);
+            lResult.Append(InStr.CStr() + Start); // TODO: add Append(const char*, Uint32 count) to avoid over-copy
+            lResult.Length = lActual;
+            if (lResult.bUsingHeap) { lResult.HeapData[lActual] = '\0'; }
+            else { lResult.SSOBuffer[lActual] = '\0'; }
+            return lResult;
+        }
+
         // =============================================================================
         // CTOR - DTOR
         // =============================================================================
     public:
         OpaaxString() = default;
+
         ~OpaaxString() { Clear(); }
-        
-        OpaaxString(const char* Str) : SSOBuffer{0}, Length(0)
+
+        OpaaxString(const char* Str) : SSOBuffer{0}, Length(0), Capacity(0), bUsingHeap(false)
         {
-            Uint32 lLength = static_cast<Uint32>(std::strlen(Str));
+            if (!Str) { return; }
+
+            const Uint32 lLength = static_cast<Uint32>(std::strlen(Str));
             Length = lLength;
 
             if (lLength <= SSOCapacity)
             {
-                for (Uint32 i = 0; i < lLength; ++i)
-                {
-                    SSOBuffer[i] = Str[i];
-                }
+                std::memcpy(SSOBuffer, Str, lLength);
                 SSOBuffer[lLength] = OpaaxString_InvalidCharacter;
             }
             else
             {
-                AllocateAndCopyHeap(Str, Length);
+                AllocateAndCopyHeap(Str, lLength, lLength);
             }
         }
 
         OpaaxString(const OpaaxString& Other)
+            : Length(Other.Length), Capacity(0), bUsingHeap(false)
         {
-            Length      = Other.Length;
-            bUsingHeap  = Other.bUsingHeap;
-
-            if (bUsingHeap)
+            if (Other.bUsingHeap)
             {
-                AllocateAndCopyHeap(Other.HeapData, Length);
+                AllocateAndCopyHeap(Other.HeapData, Other.Length, Other.Capacity);
             }
             else
             {
-                std::memcpy(SSOBuffer, Other.SSOBuffer, Length + 1);
+                std::memcpy(SSOBuffer, Other.SSOBuffer, Other.Length + 1);
             }
+        }
+
+        /**
+         * Steal the heap pointer; leave the source in a valid empty SSO state.
+         * @param Other 
+         */
+        OpaaxString(OpaaxString&& Other) noexcept
+            : Length(Other.Length), Capacity(Other.Capacity), bUsingHeap(Other.bUsingHeap)
+        {
+            if (Other.bUsingHeap)
+            {
+                HeapData = Other.HeapData;
+                Other.HeapData = nullptr;
+            }
+            else
+            {
+                std::memcpy(SSOBuffer, Other.SSOBuffer, Other.Length + 1);
+            }
+
+            Other.Length = 0;
+            Other.Capacity = 0;
+            Other.bUsingHeap = false;
+            Other.SSOBuffer[0] = OpaaxString_InvalidCharacter;
         }
 
         OpaaxString& operator=(const OpaaxString& Other)
@@ -69,18 +123,46 @@ namespace Opaax
             if (this != &Other)
             {
                 Clear();
-                
-                Length      = Other.Length;
-                bUsingHeap  = Other.bUsingHeap;
+                Length = Other.Length;
+                Capacity = 0;
 
-                if (bUsingHeap)
+                if (Other.bUsingHeap)
                 {
-                    AllocateAndCopyHeap(Other.HeapData, Length);
+                    AllocateAndCopyHeap(Other.HeapData, Other.Length, Other.Capacity);
                 }
                 else
                 {
-                    std::memcpy(SSOBuffer, Other.SSOBuffer, Length + 1);
+                    bUsingHeap = false;
+                    std::memcpy(SSOBuffer, Other.SSOBuffer, Other.Length + 1);
                 }
+            }
+            return *this;
+        }
+
+        OpaaxString& operator=(OpaaxString&& Other) noexcept
+        {
+            if (this != &Other)
+            {
+                Clear();
+
+                Length = Other.Length;
+                Capacity = Other.Capacity;
+                bUsingHeap = Other.bUsingHeap;
+
+                if (Other.bUsingHeap)
+                {
+                    HeapData = Other.HeapData;
+                    Other.HeapData = nullptr;
+                }
+                else
+                {
+                    std::memcpy(SSOBuffer, Other.SSOBuffer, Other.Length + 1);
+                }
+
+                Other.Length = 0;
+                Other.Capacity = 0;
+                Other.bUsingHeap = false;
+                Other.SSOBuffer[0] = OpaaxString_InvalidCharacter;
             }
             return *this;
         }
@@ -89,101 +171,88 @@ namespace Opaax
         // Functions
         // =============================================================================
     private:
-        void AllocateAndCopyHeap(const char* Str, Uint32 InLength)
+        //Capacity param lets copy preserve the source's reserved capacity.
+        void AllocateAndCopyHeap(const char* Str, Uint32 InLength, Uint32 InCapacity)
         {
-            HeapData = new char[InLength + 1];
+            const Uint32 lCapacity = (InCapacity >= InLength) ? InCapacity : InLength;
+            HeapData = new char[lCapacity + 1];
             std::memcpy(HeapData, Str, InLength);
             HeapData[InLength] = '\0';
+            Capacity = lCapacity;
             bUsingHeap = true;
         }
 
-        constexpr Uint32 ConstexprStrlen(const char* Str)
+        /**
+         *growth strategy: new capacity = max(current*2, needed, MIN_HEAP_CAPACITY).
+         */
+        void GrowHeap(Uint32 NewLength)
         {
-            Uint32 lLenght = 0;
-            
-            while (Str[lLenght] != '\0')
+            const Uint32 lNewCapacity = [&]() -> Uint32
             {
-                ++lLenght;
-            }
-            
-            return lLenght;
-        }
-        
-    public:
-        void Clear()
-        {
+                Uint32 lCap = bUsingHeap ? Capacity * GROWTH_FACTOR : MIN_HEAP_CAPACITY;
+                if (lCap < NewLength) { lCap = NewLength; }
+                return lCap;
+            }();
+
+            char* lNewHeap = new char[lNewCapacity + 1];
+
             if (bUsingHeap)
             {
+                std::memcpy(lNewHeap, HeapData, Length);
                 delete[] HeapData;
-                bUsingHeap = false;
+            }
+            else
+            {
+                std::memcpy(lNewHeap, SSOBuffer, Length);
             }
 
-            SSOBuffer[0] = '\0';
+            HeapData = lNewHeap;
+            Capacity = lNewCapacity;
+            bUsingHeap = true;
         }
 
-        const char* CStr() const
-        {
-            return bUsingHeap ? HeapData : SSOBuffer;
-        }
+        //----------------------------------------------------------------------------------------
 
-        char* Data()
+    public:
+        void Clear() noexcept
         {
-            return bUsingHeap ? HeapData : SSOBuffer;
-        }
+            if (bUsingHeap && HeapData)
+            {
+                delete[] HeapData;
+                HeapData = nullptr;
+            }
 
-        
-        Uint32 GetMemoryUsage() const
-        {
-            Uint32 lCharSize = sizeof(char);
-            return bUsingHeap ? Length * lCharSize + lCharSize : sizeof(SSOBuffer);
+            bUsingHeap = false;
+            Length = 0;
+            Capacity = 0;
+            SSOBuffer[0] = OpaaxString_InvalidCharacter;
         }
 
         void Append(const char* Str)
         {
-            
-            if (!Str || Str[0] == '\0') 
-            {
-                return; // No operation if the input is null or empty
-            }
+            if (!Str || Str[0] == '\0') { return; }
 
-            Uint32 lStrLen = static_cast<Uint32>(std::strlen(Str));
-            Uint32 lNewLength = Length + lStrLen;
+            const Uint32 lStrLen = static_cast<Uint32>(std::strlen(Str));
+            const Uint32 lNewLength = Length + lStrLen;
 
-            if (lNewLength <= SSOCapacity)
+            if (!bUsingHeap && lNewLength <= SSOCapacity)
             {
-                // Fits in SSO buffer
+                // Fast path: still fits in SSO
                 std::memcpy(SSOBuffer + Length, Str, lStrLen);
                 Length = lNewLength;
                 SSOBuffer[Length] = OpaaxString_InvalidCharacter;
+                return;
             }
-            else
+
+            // Heap path: grow only if needed
+            if (!bUsingHeap || lNewLength > Capacity)
             {
-                // Needs to use heap memory or expand existing heap
-                if (!bUsingHeap)
-                {
-                    // Transition from SSO to heap
-                    char* lNewHeap = new char[lNewLength + 1];
-                    std::memcpy(lNewHeap, SSOBuffer, Length);
-                    std::memcpy(lNewHeap + Length, Str, lStrLen);
-                    lNewHeap[lNewLength] = '\0';
-
-                    HeapData = lNewHeap;
-                    bUsingHeap = true;
-                }
-                else
-                {
-                    // Expand existing heap
-                    char* NewHeap = new char[lNewLength + 1];
-                    std::memcpy(NewHeap, HeapData, Length);
-                    std::memcpy(NewHeap + Length, Str, lStrLen);
-                    NewHeap[lNewLength] = '\0';
-
-                    delete[] HeapData;
-                    HeapData = NewHeap;
-                }
-
-                Length = lNewLength;
+                GrowHeap(lNewLength);
             }
+
+            std::memcpy(HeapData + Length, Str, lStrLen);
+            Length = lNewLength;
+            HeapData[Length] = OpaaxString_InvalidCharacter;
         }
 
         void Append(const OpaaxString& Other)
@@ -191,33 +260,98 @@ namespace Opaax
             Append(Other.CStr());
         }
 
-        Uint32 GetLength() const { return Length; }
-        bool IsUsingHeap() const { return bUsingHeap; }
-        bool IsEmpty() const { return Length == 0; }
+        /**
+         * Reserve capacity without changing length.
+         * Call this before a known sequence of appends to avoid repeated reallocs.
+         * @param InCapacity 
+         */
+        void Reserve(Uint32 InCapacity)
+        {
+            if ((bUsingHeap && InCapacity <= Capacity) || (!bUsingHeap && InCapacity <= SSOCapacity))
+            {
+                return;
+            }
+
+            GrowHeap(InCapacity);
+        }
+
+        std::string ToStdString() const
+        {
+            return std::string(CStr());
+        }
+
+        OpaaxString SubString(Uint32 Start, Uint32 InLength = UINT32_MAX) const
+        {
+            return SubString(*this, Start, InLength);
+        }
+
+        Int32 Find(const char* Str, Uint32 StartPos = 0) const
+        {
+            const char* lResult = std::strstr(CStr() + StartPos, Str);
+            return lResult ? static_cast<Int32>(lResult - CStr()) : -1;
+        }
+
+        char ToUpperChar(char Char) const noexcept
+        {
+            return (Char >= 'a' && Char <= 'z') ? static_cast<char>(Char - 'a' + 'A') : Char;
+        }
+
+        char ToLowerChar(char Char) const noexcept
+        {
+            return (Char >= 'A' && Char <= 'Z') ? static_cast<char>(Char - 'A' + 'a') : Char;
+        }
+
+        OpaaxString ToUpper() const
+        {
+            OpaaxString lResult(*this);
+            char* lData = lResult.Data();
+            for (Uint32 i = 0; i < lResult.Length; ++i)
+            {
+                lData[i] = ToUpperChar(lData[i]);
+            }
+            return lResult;
+        }
+
+        OpaaxString ToLower() const
+        {
+            OpaaxString lResult(*this);
+            char* lData = lResult.Data();
+            for (Uint32 i = 0; i < lResult.Length; ++i)
+            {
+                lData[i] = ToLowerChar(lData[i]);
+            }
+            return lResult;
+        }
+
+        //----------------------------------------------------------------------------------------
+        //Get - Set
+
+        const char* CStr() const noexcept   { return bUsingHeap ? HeapData : SSOBuffer; }
+        char*       Data() noexcept         { return bUsingHeap ? HeapData : SSOBuffer; }
+
+        Uint32  GetLength()     const noexcept { return Length; }
+        Uint32  GetCapacity()   const noexcept { return bUsingHeap ? Capacity : SSOCapacity; }
+        bool    IsUsingHeap()   const noexcept { return bUsingHeap; }
+        bool    IsEmpty()       const noexcept { return Length == 0; }
+
         bool IsValidIndex(Uint32 Index) const
         {
-            if (Index >= GetLength())
+            if (Index >= Length)
             {
-                OPAAX_CORE_ERROR("OpaaxString::IsValidIndex, Index is out of bounds!");
+                OPAAX_CORE_ERROR("OpaaxString::IsValidIndex — Index {} out of bounds (Length={})", Index, Length);
                 return false;
             }
-            
             return true;
         }
 
-        // =============================================================================
-        // Members
-        // =============================================================================
-    private:
-        union
+        Uint32 GetMemoryUsage() const noexcept
         {
-            char SSOBuffer[SSOCapacity + 1]{0}; // Inline buffer for SSO
-            char* HeapData; // Pointer for dynamically allocated strings
-        };
-    
-        Uint32 Length = 0;
-        bool bUsingHeap = false;
+            return bUsingHeap ? (Capacity + 1) * sizeof(char) : sizeof(SSOBuffer);
+        }
 
+        // =============================================================================
+        // Operators
+        // =============================================================================
     public:
         char operator[](Uint32 Index) const
         {
@@ -226,8 +360,7 @@ namespace Opaax
 
         char operator[](Int32 Index) const
         {
-            Uint32 lIndex = static_cast<Uint32>(Index);
-            return IsValidIndex(lIndex) ? CStr()[lIndex] : OpaaxString_InvalidCharacter;
+            return IsValidIndex(static_cast<Uint32>(Index)) ? CStr()[Index] : OpaaxString_InvalidCharacter;
         }
 
         OpaaxString& operator+=(const char* Other)
@@ -242,150 +375,52 @@ namespace Opaax
             return *this;
         }
 
-        bool operator==(const OpaaxString& Other) const
+        bool operator==(const OpaaxString& Other) const noexcept { return std::strcmp(CStr(), Other.CStr()) == 0; }
+        bool operator==(const char* Str) const noexcept { return std::strcmp(CStr(), Str) == 0; }
+        bool operator!=(const OpaaxString& Other) const noexcept { return !(*this == Other); }
+        bool operator!=(const char* Str) const noexcept { return !(*this == Str); }
+
+        OpaaxString operator+(const char* RHS) const
         {
-            return std::strcmp(CStr(), Other.CStr()) == 0;
-        }
-        
-        bool operator==(const char* Str) const
-        {
-            return std::strcmp(CStr(), Str) == 0;
-        }
-        
-        bool operator!=(const OpaaxString& Other) const
-        {
-            return !(*this == Other);
-        }
-        
-        inline OpaaxString operator+(const char* RHS) const
-        {
-            OpaaxString lResult(*this);
-            lResult += RHS;
-            return lResult;
-        }
-        
-        inline OpaaxString operator+(const OpaaxString& RHS) const
-        {
-            OpaaxString lResult(*this);
-            lResult += RHS;
-            return lResult;
+            OpaaxString lR(*this);
+            lR += RHS;
+            return lR;
         }
 
-        std::string ToStdString() const
+        OpaaxString operator+(const OpaaxString& RHS) const
         {
-            return std::string(CStr());
-        }
-
-        static OpaaxString SubString(const OpaaxString& InOpaaxString, Uint32 Start, Uint32 InLength = UINT32_MAX)
-        {
-            
-            if (Start >= InOpaaxString.GetLength())
-            {
-                return OpaaxString();
-            }
-
-            Uint32 lActualLength = (InLength == UINT32_MAX) ? (InOpaaxString.GetLength() - Start) : InLength;
-
-            if (Start + lActualLength > InOpaaxString.GetLength())
-            {
-                lActualLength = InOpaaxString.GetLength() - Start;
-            }
-
-            char* lTemp = new char[lActualLength + 1];
-            std::memcpy(lTemp, InOpaaxString.CStr() + Start, lActualLength);
-            lTemp[lActualLength] = '\0';
-
-            OpaaxString lResult(lTemp);
-            delete[] lTemp;
-            return lResult;
-        }
-        
-        OpaaxString SubString(Uint32 Start, Uint32 InLength = UINT32_MAX) const
-        {
-            Uint32 lStringLength = Length;
-            
-            if (Start >= lStringLength)
-            {
-                return OpaaxString();
-            }
-            
-            Uint32 lActualLength = (InLength == UINT32_MAX) ? (lStringLength - Start) : InLength;
-            
-            if (Start + lActualLength > lStringLength)
-            {
-                lActualLength = lStringLength - Start;
-            }
-            
-            char* lTemp = new char[lActualLength + 1];
-            std::memcpy(lTemp, CStr() + Start, lActualLength);
-            lTemp[lActualLength] = '\0';
-            
-            OpaaxString lResult(lTemp);
-            delete[] lTemp;
-            return lResult;
-        }
-        
-        Int32 Find(const char* Str, Uint32 StartPos = 0) const
-        {
-            const char* lResult = std::strstr(CStr() + StartPos, Str);
-            return lResult ? static_cast<Int32>(lResult - CStr()) : -1;
-        }
-
-        char ToUpperChar(char Char) const
-        {
-            return (Char >= 'a' && Char <= 'z') ? Char - 'a' + 'A' : Char;
-        }
-
-        char ToLowerChar(char Char) const
-        {
-            return (Char >= 'A' && Char <= 'Z') ? Char - 'A' + 'a' : Char;
-        }
-        
-        OpaaxString ToUpper() const
-        {
-            OpaaxString lResult(*this);
-            
-            char* lData = lResult.Data();
-            
-            for (size_t i = 0; i < lResult.GetLength(); ++i)
-            {
-                if (lData[i] >= 'a' && lData[i] <= 'z')
-                {
-                    lData[i] = ToUpperChar(lData[i]);
-                }
-            }
-            
-            return lResult;
-        }
-        
-        OpaaxString ToLower() const
-        {
-            OpaaxString lResult(*this);
-            
-            char* lData = lResult.Data();
-            
-            for (size_t i = 0; i < lResult.GetLength(); ++i)
-            {
-                if (lData[i] >= 'A' && lData[i] <= 'Z')
-                {
-                    lData[i] = ToLowerChar(lData[i]);
-                }
-            }
-            
-            return lResult;
+            OpaaxString lR(*this);
+            lR += RHS;
+            return lR;
         }
 
         friend std::ostream& operator<<(std::ostream& OS, const OpaaxString& Str)
         {
             return OS << Str.CStr();
         }
-    };
-}
 
-// Formatter for spdlog
+        // =============================================================================
+        // Members
+        // NOTE: Layout ordered to minimise padding:
+        //   union(8) | Length(4) | Capacity(4) | bUsingHeap(1) + [3 pad]
+        // =============================================================================
+    private:
+        union
+        {
+            char SSOBuffer[SSOCapacity + 1]{0};
+            char* HeapData;
+        };
+
+        Uint32 Length = 0;
+        Uint32 Capacity = 0; // 0 when using SSO; heap allocated capacity when on heap
+        bool bUsingHeap = false;
+    };
+} // namespace Opaax
+
+// Formatter for spdlog / fmtlib
 #include <spdlog/fmt/fmt.h>
 
-template<typename T>
+template <typename T>
 struct fmt::formatter<T, std::enable_if_t<std::is_base_of<Opaax::OpaaxString, T>::value, char>>
     : fmt::formatter<std::string>
 {
