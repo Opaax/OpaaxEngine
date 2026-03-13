@@ -1,6 +1,4 @@
 #include "CoreEngineApp.h"
-#include <iostream>
-#include <chrono>
 #include "Window.h"
 #include <GLFW/glfw3.h>
 
@@ -73,14 +71,6 @@ void CoreEngineApp::Run()
     const double lFixedDeltaTime = 1.0 / 60.0;  // physics at 60 Hz
     double lAccumulator = 0.0;
     double lLastTime = glfwGetTime();
-
-    OpaaxString lString("MyString");
-    OpaaxStringID lStringID = OPAAX_ID(lString);
-    OpaaxStringID lStringID2 = OPAAX_ID("MyString");
-
-    OPAAX_CORE_TRACE("lStringID == lStringID2 {}", lStringID ==  lStringID2);
-    OPAAX_CORE_TRACE("lStringID == lString {}", lStringID == lString);
-    OPAAX_CORE_TRACE("lStringID2 == lString {}", lStringID2 == lString);
     
     while (bIsRunning)
     {

@@ -35,13 +35,12 @@ namespace Opaax
 
 	void WindowsWindow::Init(const WindowProps& Props)
 	{
-		m_Data.Title = Props.Title;
-		m_Data.Width = Props.Width;
+		m_Data.Title  = Props.Title;
+		m_Data.Width  = Props.Width;
 		m_Data.Height = Props.Height;
 
 		OPAAX_CORE_INFO("Creating window {0} ({1}, {2})", Props.Title, Props.Width, Props.Height);
 
-		// INIT GLFW
 		if (!s_GLFWInitialized)
 		{
 			int bSuccess = glfwInit();
@@ -50,8 +49,26 @@ namespace Opaax
 			s_GLFWInitialized = true;
 		}
 
-		m_Window = glfwCreateWindow((Int32)Props.Width, (Int32)Props.Height, m_Data.Title.CStr(), nullptr, nullptr);
+		m_Window = glfwCreateWindow(
+			static_cast<int>(Props.Width),
+			static_cast<int>(Props.Height),
+			m_Data.Title.CStr(),
+			nullptr, nullptr
+		);
+
+		// NOTE: Hard crash here is correct — a null window is unrecoverable.
+		OPAAX_CORE_ASSERT(m_Window)
+
 		glfwMakeContextCurrent(m_Window);
+
+		// NOTE: VSync on by default. Must be configurable via WindowProps eventually.
+		glfwSwapInterval(1);
+
+		// NOTE: User pointer needed for all GLFW callbacks to reach WindowData safely.
+		glfwSetWindowUserPointer(m_Window, &m_Data);
+
+		// TODO: Plug GraphicsContext here once the RHI layer is implemented.
+		//       GraphicsContext::Create(m_Window)->Init();
 //
 		//m_Context = UniquePtr<GraphicsContext>(GraphicsContext::Create(m_Window));
 		//m_Context->Init();

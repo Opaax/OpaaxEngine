@@ -96,6 +96,10 @@ namespace Opaax
             {
                 lSystem->Startup();
             }
+
+            //consumes it
+            m_Factories.clear();
+            m_Factories.shrink_to_fit();
         }
 
         /**

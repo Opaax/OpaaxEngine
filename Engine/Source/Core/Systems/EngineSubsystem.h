@@ -27,26 +27,12 @@ namespace Opaax
         // =============================================================================
         IEngineSubsystem():m_EngineApp(nullptr){}
         IEngineSubsystem(CoreEngineApp* InEngineApp):m_EngineApp(InEngineApp){}
-        virtual ~IEngineSubsystem() override { ISubsystem::~ISubsystem(); }
         
-        IEngineSubsystem(const IEngineSubsystem& other) = default;
-
-        IEngineSubsystem(IEngineSubsystem&& other) noexcept = default;
-
-        IEngineSubsystem& operator=(const IEngineSubsystem& other)
-        {
-            if (this == &other)
-            {
-                return *this;
-            }
-            
-            Opaax::ISubsystem::operator =(other);
-            m_EngineApp = other.m_EngineApp;
-            
-            return *this;
-        }
-
-        IEngineSubsystem& operator=(IEngineSubsystem&& other) noexcept = default;
+        virtual ~IEngineSubsystem() override                        = default;
+        IEngineSubsystem(const IEngineSubsystem&)                   = delete;
+        IEngineSubsystem& operator=(const IEngineSubsystem&)        = delete;
+        IEngineSubsystem(IEngineSubsystem&&) noexcept               = default;
+        IEngineSubsystem& operator=(IEngineSubsystem&&) noexcept    = default;
 
         // =============================================================================
         // Functions
@@ -56,8 +42,7 @@ namespace Opaax
 
         /*----------------------------- Get - Set -------------------------------*/
     public:
-        CoreEngineApp* GetEngineApp() const { return m_EngineApp; }
-        CoreEngineApp* GetEngineApp() { return m_EngineApp; }
+        CoreEngineApp* GetEngineApp() const noexcept { return m_EngineApp; }
 
         // =============================================================================
         // Override
@@ -69,7 +54,7 @@ namespace Opaax
         void Shutdown() override = 0;
         void Update(double DeltaTime) override {}
         void FixedUpdate(double FixedDeltaTime) override {}
-        void Render(double AlphaPhysicStep) override {}
+        void Render(double Alpha) override {}
         //~End ISubsystem interface
 
         // =============================================================================
@@ -91,24 +76,12 @@ namespace Opaax
     public:
         EngineSubsystemBase() = default;
         EngineSubsystemBase(CoreEngineApp* InEngineApp) : IEngineSubsystem(InEngineApp) {}
-        virtual ~EngineSubsystemBase() override { IEngineSubsystem::~IEngineSubsystem(); }
+        virtual ~EngineSubsystemBase() override = default;
 
-        EngineSubsystemBase(const EngineSubsystemBase& Other) = delete;
-        EngineSubsystemBase(EngineSubsystemBase&& Other) noexcept = default;
-
-        EngineSubsystemBase& operator=(const EngineSubsystemBase& Other)
-        {
-            if (this == &Other)
-            {
-                return *this;
-            }
-            
-            IEngineSubsystem::operator =(Other);
-            
-            return *this;
-        }
-
-        EngineSubsystemBase& operator=(EngineSubsystemBase&& Other) noexcept = default;
+        EngineSubsystemBase(const EngineSubsystemBase&)                   = delete;
+        EngineSubsystemBase& operator=(const EngineSubsystemBase&)        = delete;
+        EngineSubsystemBase(EngineSubsystemBase&&) noexcept               = default;
+        EngineSubsystemBase& operator=(EngineSubsystemBase&&) noexcept    = default;
 
         // =============================================================================
         // Override
@@ -127,7 +100,7 @@ namespace Opaax
         
         void Update(double DeltaTime) override {}
         void FixedUpdate(double FixedDeltaTime) override {}
-        void Render(double AlphaPhysicStep) override {}
+        void Render(double Alpha) override {}
         //~End IEngineSubsystem Interface
     };
 

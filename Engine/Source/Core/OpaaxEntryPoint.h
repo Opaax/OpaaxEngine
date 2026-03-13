@@ -5,10 +5,9 @@
 
 int main(int argc, char** argv)
 {
-    auto lApp = CreateApplication();
+    auto lApp = Opaax::UniquePtr<Opaax::CoreEngineApp>(CreateApplication());
     lApp->Run();
     lApp->Shutdown();
-    delete lApp;
     return 0;
 }
 #else
