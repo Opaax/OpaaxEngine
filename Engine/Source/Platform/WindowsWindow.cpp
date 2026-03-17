@@ -1,5 +1,9 @@
 ﻿#include "WindowsWindow.h"
 #include <GLFW/glfw3.h>
+
+#include "Core/ApplicationEvents.hpp"
+#include "Core/Input/OpaaxInputEvents.hpp"
+#include "Core/Input/OpaaxInputTypes.hpp"
 #include "Core/Log/OpaaxLog.h"
 
 namespace Opaax
@@ -66,6 +70,8 @@ namespace Opaax
 
 		// NOTE: User pointer needed for all GLFW callbacks to reach WindowData safely.
 		glfwSetWindowUserPointer(m_Window, &m_Data);
+
+		RegisterGLFWCallbacks();
 
 		// TODO: Plug GraphicsContext here once the RHI layer is implemented.
 		//       GraphicsContext::Create(m_Window)->Init();
@@ -182,6 +188,167 @@ namespace Opaax
 		glfwDestroyWindow(m_Window);
 		// Note: On ne shutdown pas GLFW ici car il pourrait y avoir d'autres fenetres
 	}
+
+	void WindowsWindow::RegisterGLFWCallbacks()
+	{
+		// ---- Window resize -------------------------------------------------------
+        glfwSetWindowSizeCallback(m_Window, [](GLFWwindow* InWindow, int InWidth, int InHeight)
+        {
+            WindowData& lData = *static_cast<WindowData*>(glfwGetWindowUserPointer(InWindow));
+            lData.Width  = static_cast<Uint32>(InWidth);
+            lData.Height = static_cast<Uint32>(InHeight);
+ 
+            WindowResizeEvent lEvent(lData.Width, lData.Height);
+            if (lData.EventCallback) { lData.EventCallback(lEvent); }
+        });
+ 
+        // ---- Window close --------------------------------------------------------
+        glfwSetWindowCloseCallback(m_Window, [](GLFWwindow* InWindow)
+        {
+            WindowData& lData = *static_cast<WindowData*>(glfwGetWindowUserPointer(InWindow));
+            WindowCloseEvent lEvent;
+            if (lData.EventCallback) { lData.EventCallback(lEvent); }
+        });
+ 
+        // ---- Window focus --------------------------------------------------------
+        glfwSetWindowFocusCallback(m_Window, [](GLFWwindow* InWindow, int InFocused)
+        {
+            WindowData& lData = *static_cast<WindowData*>(glfwGetWindowUserPointer(InWindow));
+            if (InFocused)
+            {
+                WindowFocusEvent lEvent;
+                if (lData.EventCallback) { lData.EventCallback(lEvent); }
+            }
+            else
+            {
+                WindowLostFocusEvent lEvent;
+                if (lData.EventCallback) { lData.EventCallback(lEvent); }
+            }
+        });
+ 
+        // ---- Window moved --------------------------------------------------------
+        glfwSetWindowPosCallback(m_Window, [](GLFWwindow* InWindow, int InX, int InY)
+        {
+            WindowData& lData = *static_cast<WindowData*>(glfwGetWindowUserPointer(InWindow));
+            WindowMovedEvent lEvent(InX, InY);
+            if (lData.EventCallback) { lData.EventCallback(lEvent); }
+        });
+ 
+        // ---- Key events ----------------------------------------------------------
+        glfwSetKeyCallback(m_Window, [](GLFWwindow* InWindow, int InKey, int /*Scancode*/, int InAction, int /*Mods*/)
+        {
+            WindowData& lData = *static_cast<WindowData*>(glfwGetWindowUserPointer(InWindow));
+            if (!lData.EventCallback) { return; }
+ 
+            const auto lKeyCode = static_cast<EOpaaxKeyCode>(InKey);
+ 
+            switch (InAction)
+            {
+            case GLFW_PRESS:
+            {
+                KeyPressedEvent lEvent(lKeyCode, false);
+                lData.EventCallback(lEvent);
+                break;
+            }
+            case GLFW_REPEAT:
+            {
+                KeyPressedEvent lEvent(lKeyCode, true);
+                lData.EventCallback(lEvent);
+                break;
+            }
+            case GLFW_RELEASE:
+            {
+                KeyReleasedEvent lEvent(lKeyCode);
+                lData.EventCallback(lEvent);
+                break;
+            }
+            default: break;
+            }
+        });
+ 
+        // ---- Char / text input ---------------------------------------------------
+        // NOTE: Use this for text fields, debug console — NOT for gameplay input.
+        glfwSetCharCallback(m_Window, [](GLFWwindow* InWindow, unsigned int InCodepoint)
+        {
+            WindowData& lData = *static_cast<WindowData*>(glfwGetWindowUserPointer(InWindow));
+            KeyTypedEvent lEvent(InCodepoint);
+            if (lData.EventCallback) { lData.EventCallback(lEvent); }
+        });
+ 
+        // ---- Mouse button --------------------------------------------------------
+        glfwSetMouseButtonCallback(m_Window, [](GLFWwindow* InWindow, int InButton, int InAction, int Mods)
+        {
+            WindowData& lData = *static_cast<WindowData*>(glfwGetWindowUserPointer(InWindow));
+            if (!lData.EventCallback)
+            {
+	            return;
+            }
+
+        	EOpaaxKeyCode lButton = EOpaaxKeyCode::None;
+
+            switch (InButton)
+            {
+            case GLFW_MOUSE_BUTTON_LEFT:
+            	lButton = EOpaaxKeyCode::Mouse_Left;
+	            break;
+            case GLFW_MOUSE_BUTTON_RIGHT:
+            	lButton = EOpaaxKeyCode::Mouse_Right;
+	            break;
+            case GLFW_MOUSE_BUTTON_MIDDLE:
+            	lButton = EOpaaxKeyCode::Mouse_Middle;
+	            break;
+            case GLFW_MOUSE_BUTTON_4:
+            	lButton = EOpaaxKeyCode::Mouse_Button4;
+	            break;
+            case GLFW_MOUSE_BUTTON_5:
+            	lButton = EOpaaxKeyCode::Mouse_Button5;
+	            break;
+            case GLFW_MOUSE_BUTTON_6:
+            	lButton = EOpaaxKeyCode::Mouse_Button6;
+	            break;
+            case GLFW_MOUSE_BUTTON_7:
+            	lButton = EOpaaxKeyCode::Mouse_Button7;
+	            break;
+            case GLFW_MOUSE_BUTTON_8:
+            	lButton = EOpaaxKeyCode::Mouse_Button8;
+	            break;
+            default: ;
+            }
+        	
+            switch (InAction)
+            {
+            case GLFW_PRESS:
+            {
+                MouseButtonPressedEvent lEvent(lButton);
+                lData.EventCallback(lEvent);
+                break;
+            }
+            case GLFW_RELEASE:
+            {
+                MouseButtonReleasedEvent lEvent(lButton);
+                lData.EventCallback(lEvent);
+                break;
+            }
+            default: break;
+            }
+        });
+ 
+        // ---- Mouse scroll --------------------------------------------------------
+        glfwSetScrollCallback(m_Window, [](GLFWwindow* InWindow, double InXOffset, double InYOffset)
+        {
+            WindowData& lData = *static_cast<WindowData*>(glfwGetWindowUserPointer(InWindow));
+            MouseScrolledEvent lEvent(static_cast<float>(InXOffset), static_cast<float>(InYOffset));
+            if (lData.EventCallback) { lData.EventCallback(lEvent); }
+        });
+ 
+        // ---- Mouse position ------------------------------------------------------
+        glfwSetCursorPosCallback(m_Window, [](GLFWwindow* InWindow, double InX, double InY)
+        {
+            WindowData& lData = *static_cast<WindowData*>(glfwGetWindowUserPointer(InWindow));
+            MouseMovedEvent lEvent(static_cast<float>(InX), static_cast<float>(InY));
+            if (lData.EventCallback) { lData.EventCallback(lEvent); }
+        });
+    }
 
 	void WindowsWindow::PollEvents()
     {

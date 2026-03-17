@@ -23,6 +23,7 @@ namespace Opaax
     private:
         void Init(const WindowProps& Props);
         void Shutdown();
+        void RegisterGLFWCallbacks();
         
         // =============================================================================
         // Overrides
@@ -38,6 +39,8 @@ namespace Opaax
         virtual void SwapBuffers() override;
 
         void* GetNativeWindow() const override { return m_Window; }
+
+        void SetEventCallback(const EventCallbackFunc& Callback) override { m_Data.EventCallback = Callback; }
         //~End Window interface
 
         // =============================================================================
@@ -50,6 +53,8 @@ namespace Opaax
         {
             String Title;
             Uint32 Width, Height;
+
+            EventCallbackFunc EventCallback;
         };
 
         WindowData m_Data;

@@ -125,4 +125,159 @@ namespace Opaax
     private:
         Uint32 m_Codepoint;
     };
+
+    // ==========================================================================================================
+    //
+    // Mouse button events.
+    // Is kind of duplicated of KeyEvent since the enum keycode is the same for mouse input/Key input.
+    // But I think its worth in this case.
+    // Use variant in the future ? std::variant<EKeycode, EMouseCode, EGamepadCode>?
+    //    
+    // ==========================================================================================================
+
+    /**
+     * @class MouseButtonEvent
+     *
+     * Base, not dispatched directly
+     */
+    class OPAAX_API abstract MouseButtonEvent : public OpaaxEvent
+    {
+        // =============================================================================
+        // CTOR 
+        // =============================================================================
+    protected:
+        explicit MouseButtonEvent(EOpaaxKeyCode InButton) noexcept
+            : m_Button(InButton) {}
+
+        // =============================================================================
+        // Functions 
+        // =============================================================================
+    public:
+        // -----------------------------------------------------------------------------
+        // Getters
+        FORCEINLINE EOpaaxKeyCode GetMouseButton() const noexcept { return m_Button; }
+
+        // =============================================================================
+        // Implementation 
+        // =============================================================================
+
+        OPAAX_EVENT_CLASS_CATEGORY(EEventCategory_Input | EEventCategory_Mouse | EEventCategory_MouseButton)
+
+        // =============================================================================
+        // Members 
+        // =============================================================================
+    private:
+        EOpaaxKeyCode m_Button;
+    };
+
+    /**
+     * @class MouseButtonPressedEvent
+     */
+    class OPAAX_API MouseButtonPressedEvent final : public MouseButtonEvent
+    {
+        // =============================================================================
+        // CTOR  
+        // =============================================================================
+    public:
+        explicit MouseButtonPressedEvent(EOpaaxKeyCode InButton) noexcept
+            : MouseButtonEvent(InButton) {}
+
+        // =============================================================================
+        // Implementation 
+        // =============================================================================
+
+        OPAAX_EVENT_CLASS_TYPE(EEventType::MouseButtonPressed)
+    };
+
+    /**
+     * @class MouseButtonReleasedEvent
+     */
+    class OPAAX_API MouseButtonReleasedEvent final : public MouseButtonEvent
+    {
+        // =============================================================================
+        // CTOR  
+        // =============================================================================
+    public:
+        explicit MouseButtonReleasedEvent(EOpaaxKeyCode InButton) noexcept
+            : MouseButtonEvent(InButton) {}
+
+        // =============================================================================
+        // Implementation 
+        // =============================================================================
+
+        OPAAX_EVENT_CLASS_TYPE(EEventType::MouseButtonReleased)
+    };
+
+    /**
+     * @class MouseMovedEvent
+     */
+    class OPAAX_API MouseMovedEvent final : public OpaaxEvent
+    {
+        // =============================================================================
+        // CTOR  
+        // =============================================================================
+    public:
+        MouseMovedEvent(float InX, float InY) noexcept
+            : m_X(InX), m_Y(InY)
+        {}
+
+        // =============================================================================
+        // Functions 
+        // =============================================================================
+    public:
+        // -----------------------------------------------------------------------------
+        // Getters
+        FORCEINLINE float GetX() const noexcept { return m_X; }
+        FORCEINLINE float GetY() const noexcept { return m_Y; }
+
+        // =============================================================================
+        // Implementation 
+        // =============================================================================
+        
+        OPAAX_EVENT_CLASS_TYPE(EEventType::MouseMoved)
+        OPAAX_EVENT_CLASS_CATEGORY(EEventCategory_Input | EEventCategory_Mouse)
+
+        // =============================================================================
+        // Members 
+        // =============================================================================
+    private:
+        float m_X;
+        float m_Y;
+    };
+ 
+    /**
+     * @class MouseScrolledEvent
+     */
+    class OPAAX_API MouseScrolledEvent final : public OpaaxEvent
+    {
+        // =============================================================================
+        // CTOR 
+        // =============================================================================
+    public:
+        MouseScrolledEvent(float InXOffset, float InYOffset) noexcept
+            : m_XOffset(InXOffset), m_YOffset(InYOffset)
+        {}
+
+        // =============================================================================
+        // Functions 
+        // =============================================================================
+    public:
+        // -----------------------------------------------------------------------------
+        // Getters
+        FORCEINLINE float GetXOffset() const noexcept { return m_XOffset; }
+        FORCEINLINE float GetYOffset() const noexcept { return m_YOffset; }
+
+        // =============================================================================
+        // Implementation 
+        // =============================================================================
+        OPAAX_EVENT_CLASS_TYPE(EEventType::MouseScrolled)
+        OPAAX_EVENT_CLASS_CATEGORY(EEventCategory_Input | EEventCategory_Mouse)
+
+        // =============================================================================
+        // Members 
+        // =============================================================================
+    private:
+        float m_XOffset;
+        float m_YOffset;
+    };
 }

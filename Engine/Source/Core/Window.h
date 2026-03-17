@@ -3,9 +3,12 @@
 #include "EngineAPI.h"
 #include "OpaaxTypes.h"
 #include "OpaaxForward.h"
+#include "Event/OpaaxEvent.hpp"
 
 namespace Opaax
 {
+    using EventCallbackFunc = TFunction<void(OpaaxEvent&)>;
+    
     /**
      * @struct WindowProps
      * 
@@ -65,6 +68,8 @@ namespace Opaax
         virtual bool ShouldClose() const    = 0;
 
         /*----------------------------- Get - Set -------------------------------*/
+
+        virtual void SetEventCallback(const EventCallbackFunc& Callback) = 0;
         
         virtual void* GetNativeWindow() const = 0;
         virtual Uint32 GetWidth()       const = 0;

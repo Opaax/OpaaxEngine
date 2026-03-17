@@ -162,6 +162,17 @@ namespace Opaax
         Numpad_Decimal  = 335,
 
         // -----------------------------------------------------------------------------
+        // Mouse Buttons
+        Mouse_Left      = 500,
+        Mouse_Right     = 501,
+        Mouse_Middle    = 502,
+        Mouse_Button4   = 503, // Side button 1
+        Mouse_Button5   = 504, // Side button 2
+        Mouse_Button6   = 505,
+        Mouse_Button7   = 506,
+        Mouse_Button8   = 507,
+
+        // -----------------------------------------------------------------------------
         // Gamepad - Buttons
         
         Gamepad_FaceButton_Bottom   = 10000,
