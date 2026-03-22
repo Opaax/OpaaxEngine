@@ -6,6 +6,9 @@
 
 namespace Opaax
 {
+    class WindowResizeEvent;
+    class WindowCloseEvent;
+    class OpaaxEvent;
     class Window;
 
     class OPAAX_API CoreEngineApp
@@ -29,6 +32,20 @@ namespace Opaax
         // =============================================================================
         // Functions
         // =============================================================================
+    private:
+        void DispatchEvent(OpaaxEvent& Event);
+        bool OnWindowClose(WindowCloseEvent& Event);
+        bool OnWindowResize(WindowResizeEvent& Event);
+
+    protected:
+        virtual void OnInitialize() {}
+        virtual void OnStartup() {}
+        virtual void OnUpdate(double DeltaTime) {}
+        virtual void OnFixedUpdate(double FixedDeltaTime) {}
+        virtual void OnRender(double AlphaPhysicStep) {}
+        virtual void OnShutdown() {}
+        virtual bool OnEvent(OpaaxEvent& Event) { return false; }
+        
     public:
         void Initialize();
         void Startup();
@@ -38,14 +55,6 @@ namespace Opaax
         /*----------------------------- Get - Set -------------------------------*/
         
         Window& GetWindow() const { return *m_Window; }
-
-    protected:
-        virtual void OnInitialize() {}
-        virtual void OnStartup() {}
-        virtual void OnUpdate(double DeltaTime) {}
-        virtual void OnFixedUpdate(double FixedDeltaTime) {}
-        virtual void OnRender(double AlphaPhysicStep) {}
-        virtual void OnShutdown() {}
 
         // =============================================================================
         // Members

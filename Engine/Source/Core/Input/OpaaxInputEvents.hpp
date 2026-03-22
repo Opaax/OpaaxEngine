@@ -9,7 +9,7 @@ namespace Opaax
      *
      * Base, not dispatched directly
      */
-    class OPAAX_API abstract KeyEvent : public OpaaxEvent
+    class OPAAX_API KeyEvent : public OpaaxEvent
     {
         // =============================================================================
         // CTOR 
@@ -140,7 +140,7 @@ namespace Opaax
      *
      * Base, not dispatched directly
      */
-    class OPAAX_API abstract MouseButtonEvent : public OpaaxEvent
+    class OPAAX_API MouseButtonEvent : public OpaaxEvent
     {
         // =============================================================================
         // CTOR 

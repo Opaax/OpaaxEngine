@@ -1,9 +1,11 @@
 ﻿#pragma once
 
 #include "Subsystem.h"
+#include "Core/Event/OpaaxEventTypes.hpp"
 #include "Core/Log/OpaaxLog.h"
 
 namespace Opaax {
+    class OpaaxEvent;
     class CoreEngineApp;
 }
 
@@ -54,6 +56,21 @@ namespace Opaax
         // =============================================================================
     protected:
         void SetEngineApp(CoreEngineApp* InApp) { m_EngineApp = InApp; }
+
+    public:
+        /**
+         * The manager checks this bitmask before calling OnEvent, so subsystems that return EEventCategory_None
+         * receive zero event calls — no wasted virtual dispatch.
+         * @return return the OR of every EEventCategory this subsystem cares about.
+         */
+        virtual Uint32 GetEventCategoryFilter() const noexcept  { return EEventCategory_None; }
+
+        /**
+         * called only when the event's category intersects the filter.
+         * @param Event the event
+         * @return Return true to mark bHandled. Does NOT stop dispatch to other subsystems.
+         */
+        virtual bool   OnEvent(OpaaxEvent& Event)               { return false; }
 
         /*----------------------------- Get - Set -------------------------------*/
     public:
@@ -131,5 +148,11 @@ namespace Opaax
         // =============================================================================
     public:
         ~EngineSubsystemMgr() override = default;
+
+        // =============================================================================
+        // Functions
+        // =============================================================================
+    public:
+        void DispatchEventAll(OpaaxEvent& Event);
     };
 }

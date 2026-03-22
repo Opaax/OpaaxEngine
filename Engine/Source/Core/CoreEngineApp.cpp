@@ -2,8 +2,10 @@
 #include "Window.h"
 #include <GLFW/glfw3.h>
 
+#include "ApplicationEvents.hpp"
 #include "OpaaxString.hpp"
 #include "OpaaxStringID.hpp"
+#include "Event/OpaaxEventDispatcher.hpp"
 #include "Log/OpaaxLog.h"
 #include "Systems/EngineSubsystem.h"
 
@@ -22,6 +24,47 @@ CoreEngineApp::CoreEngineApp()
 CoreEngineApp::~CoreEngineApp()
 {
     OPAAX_CORE_TRACE("CoreEngineApp destroyed");
+}
+
+void CoreEngineApp::DispatchEvent(OpaaxEvent& Event)
+{
+    // NOTE: Dispatch order matters.
+    //   1. Engine handles WindowClose / WindowResize first — these affect loop state.
+    //   2. Game layer gets a chance to consume the event via OnEvent override.
+    //   3. Subsystems receive the event last (input system will live here).
+    //   If a layer marks bHandled = true, subsequent layers still see the event
+    //   but can choose to skip it. We do not hard-stop on bHandled — the engine
+    //   always processes WindowClose regardless.
+ 
+    OpaaxEventDispatcher lDispatcher(Event);
+ 
+    // Engine-owned handlers — always run, not blockable by game code
+    lDispatcher.Dispatch<WindowCloseEvent> ([this](WindowCloseEvent&  Event) { return OnWindowClose(Event);  });
+    lDispatcher.Dispatch<WindowResizeEvent>([this](WindowResizeEvent& Event) { return OnWindowResize(Event); });
+ 
+    // Game layer
+    if (!Event.IsHandled())
+    {
+        OnEvent(Event);
+    }
+ 
+    // Subsystem chain — each subsystem pre-filters by category internally.
+    // InputSubsystem will register EEventCategory_Input here in Milestone 2.
+    m_EngineSubsystemManager.DispatchEventAll(Event);
+}
+
+bool CoreEngineApp::OnWindowClose(WindowCloseEvent& Event)
+{
+    OPAAX_CORE_TRACE("CoreEngineApp::OnWindowClose()");
+    bIsRunning = false;
+    return true;
+}
+
+bool CoreEngineApp::OnWindowResize(WindowResizeEvent& Event)
+{
+    OPAAX_CORE_TRACE("CoreEngineApp::OnWindowResize() — {0}x{1}", Event.GetWidth(), Event.GetHeight());
+    // TODO: Notify renderer of viewport change when renderer subsystem exists.
+    return false;  // not consumed — game code may also want resize events
 }
 
 void CoreEngineApp::Initialize()
