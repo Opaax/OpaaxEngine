@@ -19,6 +19,7 @@ CoreEngineApp::CoreEngineApp()
     OPAAX_CORE_TRACE("CoreEngineApp created");
 
     m_Window = UniquePtr<Window>(Opaax::Window::Create());
+    m_Window->SetEventCallback([this](OpaaxEvent& Event) { DispatchEvent(Event); });
 }
 
 CoreEngineApp::~CoreEngineApp()
