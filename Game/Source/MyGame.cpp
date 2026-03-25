@@ -1,6 +1,7 @@
 #include "MyGame.h"
 #include <iostream>
 
+#include "Core/Input/InputSubsystem.h"
 #include "Core/Log/OpaaxLog.h"
 
 MyGame::MyGame():Opaax::CoreEngineApp()
@@ -28,6 +29,8 @@ void MyGame::OnUpdate(double deltaTime)
         OPAAX_TRACE("[MyGame] Update - Running for {0} seconds", m_TotalTime);
         printTimer = 0.0f;
     }
+
+    //OPAAX_TRACE("Input A Pressed? {0}", GetSubsystem<Opaax::InputSubsystem>()->IsKeyPressed(Opaax::EOpaaxKeyCode::A));
 }
 
 void MyGame::OnShutdown()

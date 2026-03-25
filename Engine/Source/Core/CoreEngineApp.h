@@ -56,6 +56,22 @@ namespace Opaax
         
         Window& GetWindow() const { return *m_Window; }
 
+        template<typename T>
+        T* GetSubsystem()
+        {
+            T* lResult = m_EngineSubsystemManager.GetSubsystem<T>();
+            OPAAX_CORE_ASSERT(lResult)
+            return lResult;
+        }
+ 
+        template<typename T>
+        const T* GetSubsystem() const
+        {
+            const T* lResult = m_EngineSubsystemManager.GetSubsystem<T>();
+            OPAAX_CORE_ASSERT(lResult)
+            return lResult;
+        }
+
         // =============================================================================
         // Members
         // =============================================================================

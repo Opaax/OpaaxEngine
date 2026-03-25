@@ -6,6 +6,7 @@
 #include "OpaaxString.hpp"
 #include "OpaaxStringID.hpp"
 #include "Event/OpaaxEventDispatcher.hpp"
+#include "Input/InputSubsystem.h"
 #include "Log/OpaaxLog.h"
 #include "Systems/EngineSubsystem.h"
 
@@ -83,7 +84,7 @@ void CoreEngineApp::Initialize()
     // Load engine assets
     OPAAX_CORE_TRACE("Loading engine assets...");
     
-    m_EngineSubsystemManager.RegisterSubsystem<EngineSubsystemBase>(this);
+    m_EngineSubsystemManager.RegisterSubsystem<InputSubsystem>(this);
     
     // Call derived class initialization
     OnInitialize();

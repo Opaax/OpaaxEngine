@@ -267,7 +267,7 @@ namespace Opaax
         });
  
         // ---- Char / text input ---------------------------------------------------
-        // NOTE: Use this for text fields, debug console — NOT for gameplay input.
+        //Use this for text fields, debug console — NOT for gameplay input.
         glfwSetCharCallback(m_Window, [](GLFWwindow* InWindow, unsigned int InCodepoint)
         {
             WindowData& lData = *static_cast<WindowData*>(glfwGetWindowUserPointer(InWindow));
@@ -314,6 +314,12 @@ namespace Opaax
 	            break;
             default: ;
             }
+
+        	if (lButton == EOpaaxKeyCode::None)
+        	{
+        		OPAAX_CORE_ERROR("Receive Mouse button pressed, but no conversion to Opaax Type is found");
+        		return;
+        	}
         	
             switch (InAction)
             {
@@ -364,20 +370,4 @@ namespace Opaax
     {
 	    glfwSwapBuffers(m_Window);
     }
-
-	//void WindowsWindow::OnUpdate()
-	//{
-	//	glfwPollEvents();
-	//	m_Context->SwapBuffers();
-	//}
-
-	//void WindowsWindow::SetVSync(bool enabled)
-	//{
-	//	if (enabled)
-	//		glfwSwapInterval(1);
-	//	else
-	//		glfwSwapInterval(0);
-	//
-	//	m_Data.VSync = enabled;
-	//}
 }

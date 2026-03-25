@@ -154,6 +154,34 @@ namespace Opaax
 
         const TDynArray<UniquePtr<SubsystemType>>& GetSystems() const { return m_Systems; }
 
+        template<typename T>
+        requires std::is_base_of_v<SubsystemType, T>
+        T* GetSubsystem()
+        {
+            for (auto& lSystem : m_Systems)
+            {
+                if (T* lTyped = dynamic_cast<T*>(lSystem.get()))
+                {
+                    return lTyped;
+                }
+            }
+            return nullptr;
+        }
+ 
+        template<typename T>
+        requires std::is_base_of_v<SubsystemType, T>
+        const T* GetSubsystem() const
+        {
+            for (const auto& lSystem : m_Systems)
+            {
+                if (const T* lTyped = dynamic_cast<const T*>(lSystem.get()))
+                {
+                    return lTyped;
+                }
+            }
+            return nullptr;
+        }
+
         // =============================================================================
         // MEMBERS
         // =============================================================================
