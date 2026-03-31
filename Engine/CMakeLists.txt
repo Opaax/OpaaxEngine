@@ -12,6 +12,9 @@ file(GLOB_RECURSE ENGINE_CORE_SOURCES
     "Source/Platform/*.cpp"
     "Source/Platform/*.h"
     "Source/Platform/*.hpp"
+    "Source/Renderer/*.cpp"
+    "Source/Renderer/*.h"
+    "Source/Renderer/*.hpp"
 )
 
 set(ENGINE_SOURCES ${ENGINE_CORE_SOURCES})
@@ -59,6 +62,29 @@ endif()
 # ==================================
 
 # ==================================
+# glad
+# ==================================
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Vendors/glad/include/glad/glad.h")
+    message(FATAL_ERROR
+        "glad not found in Engine/Vendors/glad!\n"
+        "Generate it at https://glad.dav1d.de (OpenGL 4.5 core, C/C++) and place\n"
+        "include/ and src/ under Engine/Vendors/glad/"
+    )
+endif()
+ 
+add_library(glad STATIC
+    Vendors/glad/src/glad.c
+)
+ 
+target_include_directories(glad PUBLIC
+    Vendors/glad/include
+)
+
+# ==================================
+# End glad
+# ==================================
+
+# ==================================
 # spdlog Configuration (Header-Only)
 # ==================================
 
@@ -87,6 +113,46 @@ message(STATUS "spdlog: Header-Only mode")
 # ==================================
 
 # ==================================
+# glm (Header-Only)
+# ==================================
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Vendors/glm/glm/glm.hpp")
+    message(FATAL_ERROR
+        "glm not found in Engine/Vendors/glm!\n"
+        "Please run: git clone https://github.com/g-truc/glm.git Engine/Vendors/glm"
+    )
+endif()
+ 
+add_library(glm INTERFACE)
+target_include_directories(glm INTERFACE Vendors/glm)
+message(STATUS "glm: header-only interface target created")
+
+# ==================================
+# END glm (Header-Only)
+# ==================================
+
+
+# ==================================
+# stb_image (Header-Only)
+# ==================================
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Vendors/stb/stb_image.h")
+    message(FATAL_ERROR
+        "stb_image not found in Engine/Vendors/stb/stb_image.h!\n"
+        "Download from: https://github.com/nothings/stb/blob/master/stb_image.h"
+    )
+endif()
+ 
+# stb is header-only. We expose the include path as an interface library.
+# STB_IMAGE_IMPLEMENTATION is defined in OpenGLTexture2D.cpp only — do NOT define
+# it globally or you will get multiple definition linker errors.
+add_library(stb INTERFACE)
+target_include_directories(stb INTERFACE Vendors)
+message(STATUS "stb: header-only interface target created")
+
+# ==================================
+# END stb_image (Header-Only)
+# ==================================
+
+# ==================================
 # Créer la DLL du moteur
 # ==================================
 add_library(OpaaxEngine SHARED ${ENGINE_SOURCES})
@@ -103,12 +169,14 @@ else()
 endif()
 
 # ==================================
-# Link GLFW
+# Link
 # ==================================
 target_link_libraries(OpaaxEngine 
     PUBLIC 
         glfw
         spdlog::spdlog_header_only
+        glm
+        stb
 )
 
 # Include directories
@@ -120,13 +188,16 @@ target_include_directories(OpaaxEngine
         ${CMAKE_CURRENT_SOURCE_DIR}/Source/Private
         ${CMAKE_CURRENT_SOURCE_DIR}/Vendors/GLFW/include
         ${CMAKE_CURRENT_SOURCE_DIR}/Vendors/spdlog/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/Vendors/glad/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/Vendors/glm
+        ${CMAKE_CURRENT_SOURCE_DIR}/Vendors
 )
 
 if(WIN32)
     target_compile_definitions(OpaaxEngine PRIVATE _WIN32)
     
-    # Lier les libs Windows nécessaires pour GLFW
     target_link_libraries(OpaaxEngine PRIVATE
+        glad
         opengl32
     )
 endif()

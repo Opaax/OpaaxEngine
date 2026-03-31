@@ -8,6 +8,8 @@
 #include "Event/OpaaxEventDispatcher.hpp"
 #include "Input/InputSubsystem.h"
 #include "Log/OpaaxLog.h"
+#include "Renderer/Camera2D.h"
+#include "Renderer/RenderSubsystem.h"
 #include "Systems/EngineSubsystem.h"
 
 using namespace Opaax;
@@ -83,6 +85,9 @@ void CoreEngineApp::Initialize()
     
     // Load engine assets
     OPAAX_CORE_TRACE("Loading engine assets...");
+    
+    m_EngineSubsystemManager.RegisterSubsystem<RenderSubsystem>(this);
+    m_EngineSubsystemManager.RegisterSubsystem<Camera2D>(this);
     
     m_EngineSubsystemManager.RegisterSubsystem<InputSubsystem>(this);
     

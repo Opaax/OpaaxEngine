@@ -31,6 +31,18 @@ namespace Opaax
     template<typename T, size_t Size>
     using TFixedArray = std::array<T, Size>;
 
+    template<typename FType>
+    using TInitArray = std::initializer_list<FType>;
+    
+    template <
+        typename TKey,
+        typename TValue,
+        typename Hash = std::hash<TKey>,
+        typename KeyEqual = std::equal_to<TKey>,
+        typename Allocator = std::allocator<std::pair<const TKey, TValue>>
+    >
+    using UnorderedMap = std::unordered_map<TKey, TValue, Hash, KeyEqual, Allocator>;
+
     // =============================================================================
     // Function Aliases
     // =============================================================================
@@ -56,5 +68,14 @@ namespace Opaax
     constexpr SharedPtr<T> MakeShared(Args&& ... InArgs)
     {
         return std::make_shared<T>(std::forward<Args>(InArgs)...);
+    }
+
+    // =============================================================================
+    // Misc Aliases
+    // =============================================================================
+    template <typename T>
+    constexpr std::remove_reference_t<T>&& Move(T&& Arg) noexcept
+    {
+        return std::move(Arg);
     }
 }
