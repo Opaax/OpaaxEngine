@@ -1,4 +1,4 @@
-# Sources du moteur (core)
+# Src Engine core
 file(GLOB_RECURSE ENGINE_CORE_SOURCES
     "Source/Core/*.cpp"
     "Source/Core/*.h"
