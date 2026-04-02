@@ -19,7 +19,6 @@ file(GLOB_RECURSE ENGINE_CORE_SOURCES
 
 set(ENGINE_SOURCES ${ENGINE_CORE_SOURCES})
 
-# Ajouter l'éditeur si activé
 if(OPAAX_EDITOR_SUPPORT)
     file(GLOB_RECURSE ENGINE_EDITOR_SOURCES
         "Source/Editor/*.cpp"
@@ -33,8 +32,6 @@ endif()
 # ==================================
 # GLFW Configuration
 # ==================================
-
-# Vérifier que GLFW existe
 if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Vendors/GLFW/CMakeLists.txt")
     message(FATAL_ERROR 
         "GLFW not found in Engine/Vendors/GLFW!\n"
@@ -42,7 +39,6 @@ if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Vendors/GLFW/CMakeLists.txt")
     )
 endif()
 
-# Option pour build GLFW examples/tests (on les veut pas)
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
@@ -51,8 +47,6 @@ set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
 # ADD GLFW subdirectory
 add_subdirectory(Vendors/GLFW)
 
-# GLFW crée automatiquement la target "glfw"
-# On vérifie qu'elle existe
 if(NOT TARGET glfw)
     message(FATAL_ERROR "GLFW target 'glfw' was not created!")
 endif()
@@ -88,7 +82,7 @@ target_include_directories(glad PUBLIC
 # spdlog Configuration (Header-Only)
 # ==================================
 
-# Vérifier que spdlog existe
+# spdlog check
 if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Vendors/spdlog/include/spdlog/spdlog.h")
     message(FATAL_ERROR 
         "spdlog not found in Engine/Vendors/spdlog!\n"
@@ -96,14 +90,14 @@ if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Vendors/spdlog/include/spdlog/spdlog.
     )
 endif()
 
-# Définir spdlog en header-only
+# spdlog header-only
 set(SPDLOG_FMT_EXTERNAL OFF CACHE BOOL "" FORCE)
 set(SPDLOG_BUILD_SHARED OFF CACHE BOOL "" FORCE)
 set(SPDLOG_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(SPDLOG_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(SPDLOG_INSTALL OFF CACHE BOOL "" FORCE)
 
-# Ajouter spdlog
+# spdlog
 add_subdirectory(Vendors/spdlog)
 
 message(STATUS "spdlog: Header-Only mode")
@@ -157,10 +151,10 @@ message(STATUS "stb: header-only interface target created")
 # ==================================
 add_library(OpaaxEngine SHARED ${ENGINE_SOURCES})
 
-# Définir ENGINE_EXPORTS
+# ENGINE_EXPORTS
 target_compile_definitions(OpaaxEngine PRIVATE ENGINE_EXPORTS)
 
-# Editor support
+# Editor
 if(OPAAX_EDITOR_SUPPORT)
     target_compile_definitions(OpaaxEngine PUBLIC OPAAX_WITH_EDITOR=1)
     target_compile_definitions(OpaaxEngine PUBLIC OPAAX_DEBUG)
@@ -203,18 +197,18 @@ if(WIN32)
 endif()
 
 # ==================================
-# Copier les Engine Assets
+# Copy engine assets post-build
 # ==================================
 set(ENGINE_ASSETS_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/Assets)
 set(ENGINE_ASSETS_DEST ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/EngineAssets)
 
-# Créer le dossier de destination
+
 add_custom_command(TARGET OpaaxEngine POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory ${ENGINE_ASSETS_DEST}
     COMMENT "Creating EngineAssets directory..."
 )
 
-# Copier les shaders
+# Shader
 add_custom_command(TARGET OpaaxEngine POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${ENGINE_ASSETS_SOURCE}/Shaders
@@ -222,7 +216,7 @@ add_custom_command(TARGET OpaaxEngine POST_BUILD
     COMMENT "Copying engine shaders..."
 )
 
-# Copier les textures
+# Texture
 add_custom_command(TARGET OpaaxEngine POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${ENGINE_ASSETS_SOURCE}/Textures
@@ -230,7 +224,7 @@ add_custom_command(TARGET OpaaxEngine POST_BUILD
     COMMENT "Copying engine textures..."
 )
 
-# Copier les meshes
+# Mesh
 add_custom_command(TARGET OpaaxEngine POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${ENGINE_ASSETS_SOURCE}/Meshes
@@ -239,7 +233,7 @@ add_custom_command(TARGET OpaaxEngine POST_BUILD
 )
 
 # ==================================
-# Compiler les shaders (optionnel)
+# Shader compile
 # ==================================
 #if(WIN32)
 #    # Trouver le compilateur de shaders DirectX
