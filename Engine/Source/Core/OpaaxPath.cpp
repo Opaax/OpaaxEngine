@@ -2,6 +2,8 @@
 
 namespace Opaax
 {
+    Opaax::OpaaxString OpaaxPath::s_BasePath = {};
+    
     bool OpaaxPath::IsAbsolute(const char* InPath) noexcept
     {
         if (!InPath || InPath[0] == '\0')
