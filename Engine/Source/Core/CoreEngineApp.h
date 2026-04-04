@@ -38,12 +38,12 @@ namespace Opaax
         bool OnWindowResize(WindowResizeEvent& Event);
 
     protected:
-        virtual void OnInitialize() {}
+        virtual void OnInitialize();
         virtual void OnStartup() {}
         virtual void OnUpdate(double DeltaTime) {}
         virtual void OnFixedUpdate(double FixedDeltaTime) {}
         virtual void OnRender(double AlphaPhysicStep) {}
-        virtual void OnShutdown() {}
+        virtual void OnShutdown();
         virtual bool OnEvent(OpaaxEvent& Event) { return false; }
         
     public:

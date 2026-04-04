@@ -3,19 +3,19 @@ file(GLOB_RECURSE GAME_SOURCES
     "Source/*.h"
 )
 
-# Créer l'exécutable du jeu
+# Exe
 add_executable(Game ${GAME_SOURCES})
 
-# Lier avec le moteur
+# Link Engine
 target_link_libraries(Game PRIVATE OpaaxEngine)
 
-# Include directories
+# Include dirs
 target_include_directories(Game PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/Source
     ${CMAKE_CURRENT_SOURCE_DIR}/Source/Core
 )
 
-# Copier la DLL du moteur à côté de l'exe
+# COPY Dll
 add_custom_command(TARGET Game POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         $<TARGET_FILE:OpaaxEngine>
@@ -23,7 +23,7 @@ add_custom_command(TARGET Game POST_BUILD
     COMMENT "Copying OpaaxEngine.dll to game directory..."
 )
 
-# Copier les assets du jeu
+# Copy Asset
 set(GAME_ASSETS_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/Assets)
 set(GAME_ASSETS_DEST ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/GameAssets)
 

@@ -15,6 +15,8 @@ file(GLOB_RECURSE ENGINE_CORE_SOURCES
     "Source/Renderer/*.cpp"
     "Source/Renderer/*.h"
     "Source/Renderer/*.hpp"
+    "Source/Assets/*.cpp"
+    "Source/Assets/*.h"
 )
 
 set(ENGINE_SOURCES ${ENGINE_CORE_SOURCES})
@@ -171,6 +173,7 @@ target_link_libraries(OpaaxEngine
         spdlog::spdlog_header_only
         glm
         stb
+        glad
 )
 
 # Include directories

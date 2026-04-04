@@ -1,6 +1,7 @@
 #include "MyGame.h"
 #include <iostream>
 
+#include "Assets/AssetRegistry.h"
 #include "Core/Input/InputSubsystem.h"
 #include "Core/Log/OpaaxLog.h"
 #include "Renderer/Renderer2D.h"
@@ -16,6 +17,15 @@ MyGame::MyGame():Opaax::CoreEngineApp()
 void MyGame::OnInitialize()
 {
     OPAAX_TRACE("[MyGame] Initialize - Game starting!");
+}
+
+void MyGame::OnStartup()
+{
+    OPAAX_TRACE("[MyGame] On Startup- Game starting!");
+    
+    m_PlayerTexture = Opaax::AssetRegistry::Load<Opaax::OpenGLTexture2D>(OPAAX_ASSET("EngineAssets/Textures/Player.png"));
+    m_AtlasTexture = Opaax::AssetRegistry::Load<Opaax::OpenGLTexture2D>(OPAAX_ASSET("EngineAssets/Textures/PlayerSheet.png"));
+
 }
 
 void MyGame::OnUpdate(double deltaTime)
@@ -54,10 +64,11 @@ void MyGame::OnRender(double AlphaPhysicStep)
     Opaax::Renderer2D::DrawQuad({0.f, 0.f}, {100.f, 100.f}, {1.f, 0.2f, 0.2f, 1.f});
     Opaax::Renderer2D::DrawQuad({100.f, 0.f}, {100.f, 100.f}, {.7f, 0.35f, 0.2f, 1.f});
     Opaax::Renderer2D::DrawQuad({200.f, 0.f}, {100.f, 100.f}, {.12f, 0.25f, 0.9f, 1.f});
-
-    //// Textured sprite (full texture)
-    //Opaax::Renderer2D::DrawSprite({200.f, 0.f}, {64.f, 64.f}, *m_PlayerTexture);
-    //
+    
+    Opaax::Renderer2D::DrawSprite({0.f, 0.f},    {64.f, 64.f}, m_PlayerTexture);
+    Opaax::Renderer2D::DrawSprite({100.f, 0.f},  {64.f, 64.f}, m_AtlasTexture,
+                           {0.f, 0.f}, {0.25f, 0.25f});  // first tile in 4x4 atlas
+    
     //// Sprite sheet sub-region
     //Opaax::Renderer2D::DrawSprite({-200.f, 0.f}, {64.f, 64.f}, *m_Atlas,
     //                       {0.f, 0.f}, {0.25f, 0.25f});

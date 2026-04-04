@@ -3,8 +3,10 @@
 #include <GLFW/glfw3.h>
 
 #include "ApplicationEvents.hpp"
+#include "OpaaxPath.h"
 #include "OpaaxString.hpp"
 #include "OpaaxStringID.hpp"
+#include "Assets/AssetRegistry.h"
 #include "Event/OpaaxEventDispatcher.hpp"
 #include "Input/InputSubsystem.h"
 #include "Log/OpaaxLog.h"
@@ -18,6 +20,7 @@ CoreEngineApp::CoreEngineApp()
 {
     //The only system to be created at very first
     OpaaxLog::Init();
+    OpaaxPath::Init();
     
     OPAAX_CORE_TRACE("CoreEngineApp created");
 
@@ -71,6 +74,21 @@ bool CoreEngineApp::OnWindowResize(WindowResizeEvent& Event)
     return false;  // not consumed — game code may also want resize events
 }
 
+void CoreEngineApp::OnInitialize()
+{
+    OPAAX_CORE_TRACE("CoreEngineApp::OnInitialize()");
+}
+
+void CoreEngineApp::OnShutdown()
+{
+    OPAAX_CORE_TRACE("CoreEngineApp::OnShutdown()");
+
+    // NOTE: Assets must be destroyed before subsystems — textures and GPU resources
+    //   must be freed while the GL context (owned by RenderSubsystem) is still alive.
+    //OnShutdown is called before subsystem shutdown
+    AssetRegistry::Shutdown();
+}
+
 void CoreEngineApp::Initialize()
 {
     OPAAX_CORE_TRACE("CoreEngineApp::Initialize()");
@@ -102,6 +120,8 @@ void CoreEngineApp::Startup()
     OPAAX_CORE_TRACE("CoreEngineApp::Startup()");
 
     m_EngineSubsystemManager.StartupAll();
+
+    OnStartup();
 }
 
 void CoreEngineApp::Run()

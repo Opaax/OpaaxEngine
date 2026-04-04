@@ -289,11 +289,25 @@ namespace Opaax
  
         ++s_Data.QuadCount;
     }
- 
+
+    void Renderer2D::DrawSprite(const Vector2F& InPosition, const Vector2F& InSize, const TextureHandle& InTexture,
+        const Vector4F& InColor)
+    {
+        OPAAX_CORE_ASSERT(InTexture.IsValid())
+        DrawSprite(InPosition, InSize, *InTexture.Get(), InColor);
+    }
+
+    void Renderer2D::DrawSprite(const Vector2F& InPosition, const Vector2F& InSize, const TextureHandle& InTexture,
+        const Vector2F& InUVMin, const Vector2F& InUVMax, const Vector4F& InColor)
+    {
+        OPAAX_CORE_ASSERT(InTexture.IsValid())
+        DrawSprite(InPosition, InSize, *InTexture.Get(), InUVMin, InUVMax, InColor);
+    }
+
     void Renderer2D::DrawSprite(const Vector2F& InPosition,
-                                 const Vector2F& InSize,
-                                 OpenGLTexture2D& InTexture,
-                                 const Vector4F& InColor)
+                                const Vector2F& InSize,
+                                OpenGLTexture2D& InTexture,
+                                const Vector4F& InColor)
     {
         DrawSprite(InPosition, InSize, InTexture,
                    { 0.f, 0.f }, { 1.f, 1.f }, InColor);

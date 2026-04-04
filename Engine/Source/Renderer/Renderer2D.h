@@ -5,7 +5,9 @@
 #include "Camera2D.h"
  
 #include <glm/glm.hpp>
- 
+
+#include "Assets/AssetHandle.hpp"
+
 namespace Opaax
 {
     class OpenGLTexture2D;
@@ -29,43 +31,98 @@ namespace Opaax
      */
     class OPAAX_API Renderer2D
     {
-    public:
-        static void Init();
-        static void Shutdown();
- 
-        // Call once per frame before any draw calls
-        static void Begin(Camera2D& InCamera);
- 
-        // Call once per frame after all draw calls — flushes remaining batch
-        static void End();
- 
-        // Draw a solid-colour quad
-        // InPosition: centre of the quad (Y-up world space)
-        // InSize:     full width and height
-        // InColor:    RGBA normalised [0,1]
-        static void DrawQuad(const Vector2F& InPosition,
-                             const Vector2F& InSize,
-                             const Vector4F& InColor);
- 
-        // Draw a textured sprite, tinted by InColor (default white = no tint)
-        static void DrawSprite(const Vector2F&     InPosition,
-                               const Vector2F&     InSize,
-                               OpenGLTexture2D&     InTexture,
-                               const Vector4F&     InColor = Vector4F(1.f));
- 
-        // Draw a textured sprite with UV sub-region (sprite sheet / atlas)
-        // InUVMin / InUVMax: normalised texture coordinates [0,1]
-        static void DrawSprite(const Vector2F&     InPosition,
-                               const Vector2F&     InSize,
-                               OpenGLTexture2D&     InTexture,
-                               const Vector2F&     InUVMin,
-                               const Vector2F&     InUVMax,
-                               const Vector4F&     InColor = Vector4F(1.f));
- 
+        // =============================================================================
+        // Functions
+        // =============================================================================
     private:
         static void Flush();
         static void StartBatch();
         static float GetTextureSlot(OpenGLTexture2D& InTexture);
+
+        //------------------------------------------------------------------------------
+        
+    public:
+        static void Init();
+        static void Shutdown();
+     
+        /**
+         * Call once per frame before any draw calls
+         * @param InCamera 
+         */
+        static void Begin(Camera2D& InCamera);
+
+        /**
+         * Call once per frame after all draw calls — flushes remaining batch
+         */
+        static void End();
+     
+        /**
+         * Draw a solid-colour quad
+         * @param InPosition centre of the quad (Y-up world space)
+         * @param InSize full width and height
+         * @param InColor RGBA normalised [0,1]
+         */
+        static void DrawQuad(const Vector2F& InPosition,
+                             const Vector2F& InSize,
+                             const Vector4F& InColor);
+
+        /**
+         * Textured sprite — via AssetHandle (preferred, safe)
+         * @param InPosition 
+         * @param InSize 
+         * @param InTexture 
+         * @param InColor 
+         */
+        static void DrawSprite(const Vector2F&      InPosition,
+                               const Vector2F&      InSize,
+                               const TextureHandle& InTexture,
+                               const Vector4F&      InColor = Vector4F(1.f));
+
+        /**
+         * Textured Atlas — via AssetHandle (preferred, safe)
+         * Sprite sheet / atlas sub-region — UV in normalised [0,1] space
+         * @param InPosition 
+         * @param InSize 
+         * @param InTexture 
+         * @param InUVMin 
+         * @param InUVMax 
+         * @param InColor 
+         */
+        static void DrawSprite(const Vector2F&      InPosition,
+                               const Vector2F&      InSize,
+                               const TextureHandle& InTexture,
+                               const Vector2F&      InUVMin,
+                               const Vector2F&      InUVMax,
+                               const Vector4F&      InColor = Vector4F(1.f));
+        
+        /**
+         * Draw a textured sprite, tinted by InColor (default white = no tint)
+         * @param InPosition 
+         * @param InSize 
+         * @param InTexture 
+         * @param InColor 
+         */
+        static void DrawSprite(const Vector2F&  InPosition,
+                               const Vector2F&  InSize,
+                               OpenGLTexture2D& InTexture,
+                               const Vector4F&  InColor = Vector4F(1.f));
+        
+        /**
+         * Draw a textured sprite with UV sub-region (sprite sheet / atlas)
+         * InUVMin / InUVMax: normalised texture coordinates [0,1]
+         * @param InPosition 
+         * @param InSize 
+         * @param InTexture 
+         * @param InUVMin 
+         * @param InUVMax 
+         * @param InColor 
+         */
+        static void DrawSprite(const Vector2F&  InPosition,
+                               const Vector2F&  InSize,
+                               OpenGLTexture2D& InTexture,
+                               const Vector2F&  InUVMin,
+                               const Vector2F&  InUVMax,
+                               const Vector4F&  InColor = Vector4F(1.f));
     };
  
 } // namespace Opaax
