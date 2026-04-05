@@ -15,6 +15,9 @@ namespace Opaax
      */
     class OPAAX_API RenderSubsystem final : public EngineSubsystemBase
     {
+    public:
+        OPAAX_SUBSYSTEM_TYPE(RenderSubsystem)
+        
         // =============================================================================
         // CTORs - DTOR
         // =============================================================================

@@ -65,14 +65,14 @@ namespace Opaax
     private:
         static OpaaxString s_BasePath;
     };
-    
-       /**
-        * 
-        * @param RelPath: Resolves a relative asset path at the callsite.
-        * The resolved OpaaxString is interned into an OpaaxStringID.
-        *
-        * auto lTex = AssetRegistry::Load<OpenGLTexture2D>(OPAAX_ASSET("EngineAssets/Textures/Player.png"));
-        */
+
+    /**
+     * 
+     * @param RelPath: Resolves a relative asset path at the callsite.
+     * The resolved OpaaxString is interned into an OpaaxStringID.
+     *
+     * auto lTex = AssetRegistry::Load<OpenGLTexture2D>(OPAAX_ASSET("EngineAssets/Textures/Player.png"));
+     */
 #define OPAAX_ASSET(RelPath) ::Opaax::OpaaxStringID(::Opaax::OpaaxPath::Resolve(RelPath))
  
 } // namespace Opaax

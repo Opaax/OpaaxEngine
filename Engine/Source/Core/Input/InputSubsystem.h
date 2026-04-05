@@ -41,6 +41,9 @@ namespace Opaax
      */
     class OPAAX_API InputSubsystem final : public EngineSubsystemBase
     {
+    public:
+        OPAAX_SUBSYSTEM_TYPE(InputSubsystem)
+        
         // =============================================================================
         // CTORs
         // =============================================================================

@@ -8,6 +8,7 @@
 
 #include <unordered_map>
 #include <mutex>
+#include <shared_mutex>
 
 namespace Opaax
 {
@@ -30,7 +31,7 @@ namespace Opaax
 
         Uint32 GetOrAdd(const OpaaxString& String)
         {
-            std::scoped_lock lLock(m_Mutex);
+            std::unique_lock lLock(m_Mutex);
 
             auto lIt = m_Lookups.find(String);
             if (lIt != m_Lookups.end())
@@ -46,20 +47,20 @@ namespace Opaax
 
         const OpaaxString& Get(Uint32 Index) const noexcept
         {
-            //Safe as long as we never remove or reorder entries, which we never do.
+            std::shared_lock lLock(m_Mutex);
             return (Index < m_Strings.size()) ? m_Strings[Index] : m_Strings[OpaaxGlobal::ID_None];
         }
 
         Uint32 GetPoolSize() const noexcept
         {
-            std::scoped_lock lLock(m_Mutex);
+            std::shared_lock lLock(m_Mutex);
             return static_cast<Uint32>(m_Strings.size());
         }
 
     private:
-        TDynArray<OpaaxString>                                    m_Strings;
-        std::unordered_map<OpaaxString, Uint32, OpaaxHash>        m_Lookups;
-        mutable std::mutex                                         m_Mutex;
+        TDynArray<OpaaxString>                              m_Strings;
+        std::unordered_map<OpaaxString, Uint32, OpaaxHash>  m_Lookups;
+        mutable std::shared_mutex                           m_Mutex;
     };
 
 } // namespace Opaax::Internal
@@ -99,7 +100,7 @@ namespace Opaax
         // Functions
         // =============================================================================
     public:
-        const OpaaxString& ToString() const { return GetPool().Get(m_ID); }
+        OpaaxString ToString() const { return GetPool().Get(m_ID); }
         
         // ----------------------------------------------------------------------------
         // Get - Set

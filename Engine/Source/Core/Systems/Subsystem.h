@@ -7,6 +7,8 @@
 
 namespace Opaax
 {
+    using SubsystemTypeID = uintptr_t;
+    
     /**
      * @class ISubsystem
      *
@@ -23,12 +25,27 @@ namespace Opaax
         // =============================================================================
         // Functions
         // =============================================================================
-        virtual bool Startup() = 0;
-        virtual void Shutdown() = 0;
-        virtual void Update(double DeltaTime) {}
-        virtual void FixedUpdate(double FixedDeltaTime) {}
-        virtual void Render(double AlphaPhysicStep) {}
+        virtual bool            Startup()                           = 0;
+        virtual void            Shutdown()                          = 0;
+        virtual void            Update(double DeltaTime)            {}
+        virtual void            FixedUpdate(double FixedDeltaTime)  {}
+        virtual void            Render(double AlphaPhysicStep)      {}
+        virtual SubsystemTypeID GetTypeID() const noexcept          = 0;
     };
+
+    // Stamp onto any concrete subsystem class.
+    // StaticTypeID() returns the address of a function-local static — unique per type,
+    // determined at link time, zero runtime cost.
+#define OPAAX_SUBSYSTEM_TYPE(ClassName)                                         \
+static ::Opaax::SubsystemTypeID StaticTypeID() noexcept                     \
+{                                                                            \
+static const int s_TypeTag = 0;                                         \
+return reinterpret_cast<::Opaax::SubsystemTypeID>(&s_TypeTag);          \
+}                                                                            \
+::Opaax::SubsystemTypeID GetTypeID() const noexcept override                \
+{                                                                            \
+return StaticTypeID();                                                   \
+}
 
     /**
      * @class ISubsystemManager
@@ -153,30 +170,31 @@ namespace Opaax
         /*----------------------------- Get - Set -------------------------------*/
 
         const TDynArray<UniquePtr<SubsystemType>>& GetSystems() const { return m_Systems; }
-
+        
         template<typename T>
         requires std::is_base_of_v<SubsystemType, T>
         T* GetSubsystem()
         {
             for (auto& lSystem : m_Systems)
             {
-                if (T* lTyped = dynamic_cast<T*>(lSystem.get()))
+                if (lSystem->GetTypeID() == T::StaticTypeID())
                 {
-                    return lTyped;
+                    // NOTE: static_cast est safe ici — on a vérifié le type via StaticTypeID().
+                    return static_cast<T*>(lSystem.get());
                 }
             }
             return nullptr;
         }
- 
+
         template<typename T>
         requires std::is_base_of_v<SubsystemType, T>
         const T* GetSubsystem() const
         {
             for (const auto& lSystem : m_Systems)
             {
-                if (const T* lTyped = dynamic_cast<const T*>(lSystem.get()))
+                if (lSystem->GetTypeID() == T::StaticTypeID())
                 {
-                    return lTyped;
+                    return static_cast<const T*>(lSystem.get());
                 }
             }
             return nullptr;

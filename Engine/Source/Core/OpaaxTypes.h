@@ -70,6 +70,9 @@ namespace Opaax
         return std::make_shared<T>(std::forward<Args>(InArgs)...);
     }
 
+    template<typename T>
+    using Atomic = std::atomic<T>;
+
     // =============================================================================
     // Misc Aliases
     // =============================================================================

@@ -27,30 +27,91 @@ namespace Opaax
     struct AssetHandle
     {
         // =============================================================================
-        // CTORs
+        // CTORs - DTOR
         // =============================================================================
         AssetHandle() noexcept = default;
  
         AssetHandle(T* InPtr, OpaaxStringID InID) noexcept
             : m_Ptr(InPtr), m_ID(InID)
-        {}
+        {
+            AddRef();
+        }
+
+        ~AssetHandle()
+        {
+            Release();
+        }
 
         // =============================================================================
         // Copy - cheap, both handles point to the same registry-owned asset
         // =============================================================================
-        AssetHandle(const AssetHandle&)            = default;
-        AssetHandle& operator=(const AssetHandle&) = default;
+        AssetHandle(const AssetHandle& Other)noexcept
+            : m_Ptr(Other.m_Ptr), m_ID(Other.m_ID)
+        {
+            AddRef();
+        }
+        
+        AssetHandle& operator=(const AssetHandle& Other) noexcept
+        {
+            if (this != &Other)
+            {
+                Release();
+                m_Ptr = Other.m_Ptr;
+                m_ID  = Other.m_ID;
+                AddRef();
+            }
+            return *this;
+        }
  
         // =============================================================================
         // Move
         // =============================================================================
-        AssetHandle(AssetHandle&&)            noexcept = default;
-        AssetHandle& operator=(AssetHandle&&) noexcept = default;
+        AssetHandle(AssetHandle&& Other) noexcept
+        {
+            Other.m_Ptr = nullptr;
+            Other.m_ID  = OpaaxStringID{};
+        }
+        
+        AssetHandle& operator=(AssetHandle&& Other) noexcept
+        {
+            if (this != &Other)
+            {
+                Release();
+                m_Ptr       = Other.m_Ptr;
+                m_ID        = Other.m_ID;
+                Other.m_Ptr = nullptr;
+                Other.m_ID  = OpaaxStringID{};
+            }
+            return *this;
+        }
  
         // =============================================================================
         // Function
         // =============================================================================
+    private:
+        // NOTE: AddRef/Release are no-ops on null handles.
+        //   They forward into AssetRegistry — the handle itself stores no count.
+
+        /**
+         * AddRef is no-ops on null handles.
+         * Forward into AssetRegistry — the handle itself stores no count.
+         */
+        void AddRef() noexcept;
+
+        /**
+         * Release is no-ops on null handles.
+         * Forward into AssetRegistry — the handle itself stores no count.
+         */
+        void Release() noexcept;
+        
     public:
+        void Reset() noexcept
+        {
+            Release();
+            m_Ptr = nullptr;
+            m_ID  = OpaaxStringID{};
+        }
+        
         //------------------------------------------------------------------------------
         //  Get - Set
         FORCEINLINE bool             IsValid()  const noexcept { return m_Ptr != nullptr; }
@@ -85,7 +146,8 @@ namespace Opaax
         T*            m_Ptr = nullptr;   // non-owning — registry owns the asset
         OpaaxStringID m_ID;              // stable identity key
     };
- 
+
+    // Forward — implementation is in AssetRegistry.h after AssetRegistry is defined.
     // Convenience alias for the most common case
     // FIXME: replace OpenGLTexture2D with a backend-agnostic Texture2D handle
     //   when the RHI abstraction is extended to textures.

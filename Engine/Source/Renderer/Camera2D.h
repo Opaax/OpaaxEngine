@@ -23,6 +23,9 @@ namespace Opaax
      */
     class OPAAX_API Camera2D final : public EngineSubsystemBase
     {
+    public:
+        OPAAX_SUBSYSTEM_TYPE(Camera2D)
+        
         // =============================================================================
         // CTORs - DTOR
         // =============================================================================
