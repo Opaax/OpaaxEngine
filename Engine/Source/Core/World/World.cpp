@@ -18,8 +18,7 @@ namespace Opaax::ECS
         }
         else
         {
-            // New slot
-            lIndex = static_cast<Uint32>(m_EntitySlots.size());
+            lIndex = static_cast<Uint32>(m_EntitySlots.size()) + 1;
 
             if (lIndex > ENTITY_INDEX_MASK)
             {
@@ -30,10 +29,11 @@ namespace Opaax::ECS
             m_EntitySlots.push_back({ 0, false });
         }
 
-        m_EntitySlots[lIndex].bAlive = true;
+        m_EntitySlots[m_EntitySlots.size() - 1].bAlive = true;
         ++m_EntityCount;
 
-        const EntityID lID = EntityID::Make(lIndex + 1, lGeneration);
+        const EntityID lID = EntityID::Make(lIndex, lGeneration);
+        OPAAX_CORE_ASSERT(lID.IsValid()) // Never hand out ENTITY_NONE
 
         // Every entity gets a tag — makes debugging and editor hierarchy trivial.
         GetStorage<TagComponent>().Add(lID, InTag);
@@ -81,11 +81,17 @@ namespace Opaax::ECS
 
     bool World::IsValid(EntityID InEntity) const noexcept
     {
-        if (!InEntity.IsValid()) { return false; }
+        if (!InEntity.IsValid())
+        {
+            return false;
+        }
 
         const Uint32 lIndex = InEntity.GetIndex();
 
-        if (lIndex >= static_cast<Uint32>(m_EntitySlots.size())) { return false; }
+        if (lIndex >= static_cast<Uint32>(m_EntitySlots.size()))
+        {
+            return false;
+        }
 
         const EntitySlot& lSlot = m_EntitySlots[lIndex];
 

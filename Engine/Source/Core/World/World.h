@@ -4,6 +4,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/Log/OpaaxLog.h"
 #include "ECS/ComponentStorage.hpp"
+#include "ECS/ComponentTypeID.h"
 
 namespace Opaax::ECS
 {
@@ -81,14 +82,14 @@ namespace Opaax::ECS
         template<typename T, typename... Args>
         T& AddComponent(EntityID InEntity, Args&&... InArgs)
         {
-            //OPAAX_CORE_ASSERT(IsValid(InEntity))
+            OPAAX_CORE_ASSERT(IsValid(InEntity))
             return GetStorage<T>().Add(InEntity, std::forward<Args>(InArgs)...);
         }
 
         template<typename T>
         void RemoveComponent(EntityID InEntity)
         {
-            //OPAAX_CORE_ASSERT(IsValid(InEntity))
+            OPAAX_CORE_ASSERT(IsValid(InEntity))
             GetStorage<T>().Remove(InEntity);
         }
 
@@ -128,6 +129,7 @@ namespace Opaax::ECS
         {
             const auto lKey = GetStorageKey<T>();
             auto lIt = m_Storages.find(lKey);
+            OPAAX_CORE_ASSERT(lIt != m_Storages.end())
             if (lIt == m_Storages.end())
             {
                 m_Storages.emplace(lKey, MakeUnique<StorageWrapper<T>>());
@@ -147,6 +149,11 @@ namespace Opaax::ECS
             const auto lKey = GetStorageKey<T>();
             auto lIt = m_Storages.find(lKey);
             OPAAX_CORE_ASSERT(lIt != m_Storages.end())
+            if (lIt == m_Storages.end())
+            {
+                m_Storages.emplace(lKey, MakeUnique<StorageWrapper<T>>());
+                lIt = m_Storages.find(lKey);
+            }
             return static_cast<const StorageWrapper<T>*>(lIt->second.get())->Storage;
         }
 
@@ -155,27 +162,7 @@ namespace Opaax::ECS
 
     public:
         /**
-         * Calls InFunc(EntityID, T&) for every entity that has component T.
-         * @tparam T 
-         * @tparam TFunc 
-         * @param InFunc 
-         */
-        template<typename T, typename TFunc>
-        void Each(TFunc&& InFunc)
-        {
-            auto& lStorage = GetStorage<T>();
-            const auto& lEntities   = lStorage.GetEntities();
-            auto&       lComponents = lStorage.GetComponents();
-
-            for (Uint32 i = 0; i < static_cast<Uint32>(lComponents.size()); ++i)
-            {
-                InFunc(lEntities[i], lComponents[i]);
-            }
-        }
-        
-        /**
-         * Calls InFunc(EntityID, A&, B&) for every entity that has BOTH A and B.
-         * Iterates over the smaller storage for efficiency.
+         * 
          * @tparam A 
          * @tparam B 
          * @tparam TFunc 
@@ -184,14 +171,19 @@ namespace Opaax::ECS
         template<typename A, typename B, typename TFunc>
         void Each(TFunc&& InFunc)
         {
+            // Ensure both storages exist before taking any references.
+            // Any rehash happens here — before refs are taken.
+            EnsureStorage<A>();
+            EnsureStorage<B>();
+
+            // Map is stable now — refs are safe.
             auto& lStorageA = GetStorage<A>();
             auto& lStorageB = GetStorage<B>();
 
-            // Iterate the smaller set
             if (lStorageA.Count() <= lStorageB.Count())
             {
-                const auto& lEntities= lStorageA.GetEntities();
-                auto& lCompsA= lStorageA.GetComponents();
+                const auto& lEntities = lStorageA.GetEntities();
+                auto&       lCompsA   = lStorageA.GetComponents();
 
                 for (Uint32 i = 0; i < static_cast<Uint32>(lCompsA.size()); ++i)
                 {
@@ -201,14 +193,35 @@ namespace Opaax::ECS
             }
             else
             {
-                const auto& lEntities= lStorageB.GetEntities();
-                auto& lCompsB= lStorageB.GetComponents();
+                const auto& lEntities = lStorageB.GetEntities();
+                auto&       lCompsB   = lStorageB.GetComponents();
 
                 for (Uint32 i = 0; i < static_cast<Uint32>(lCompsB.size()); ++i)
                 {
                     A* lA = lStorageA.Get(lEntities[i]);
                     if (lA) { InFunc(lEntities[i], *lA, lCompsB[i]); }
                 }
+            }
+        }
+        
+        /**
+         * 
+         * @tparam T 
+         * @tparam TFunc 
+         * @param InFunc 
+         */
+        template<typename T, typename TFunc>
+        void Each(TFunc&& InFunc)
+        {
+            EnsureStorage<T>();
+            auto& lStorage = GetStorage<T>();
+
+            const auto& lEntities   = lStorage.GetEntities();
+            auto&       lComponents = lStorage.GetComponents();
+
+            for (Uint32 i = 0; i < static_cast<Uint32>(lComponents.size()); ++i)
+            {
+                InFunc(lEntities[i], lComponents[i]);
             }
         }
 
@@ -240,6 +253,7 @@ namespace Opaax::ECS
         //   GetStorageKey<T>() returns the address of a static local — unique per T,
         //   stable across TUs, zero RTTI. Same pattern as OPAAX_SUBSYSTEM_TYPE.
 
+    private:
         struct IStorageBase
         {
             virtual ~IStorageBase() = default;
@@ -251,16 +265,29 @@ namespace Opaax::ECS
             ComponentStorage<T> Storage;
         };
 
-        using StorageKey = uintptr_t;
+        using StorageKey = Uint32;
 
         template<typename T>
         static StorageKey GetStorageKey() noexcept
         {
-            static const int s_Tag = 0;
-            return reinterpret_cast<StorageKey>(&s_Tag);
+            return GetComponentTypeID<T>();
         }
 
         UnorderedMap<StorageKey, UniquePtr<IStorageBase>> m_Storages;
+
+    private:
+        // Creates the storage slot for T if it doesn't exist yet.
+        // Does NOT return a reference — call GetStorage<T>() after.
+        // Separated from GetStorage to avoid taking refs across a potential rehash.
+        template<typename T>
+        void EnsureStorage()
+        {
+            const StorageKey lKey = GetStorageKey<T>();
+            if (m_Storages.find(lKey) == m_Storages.end())
+            {
+                m_Storages.emplace(lKey, MakeUnique<StorageWrapper<T>>());
+            }
+        }
     };
 
 } // namespace Opaax::ECS

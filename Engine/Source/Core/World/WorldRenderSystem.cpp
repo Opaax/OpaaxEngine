@@ -13,7 +13,10 @@ namespace Opaax::ECS
         InWorld.Each<TransformComponent, SpriteComponent>(
             [](EntityID /*InEntity*/, TransformComponent& InTransform, SpriteComponent& InSprite)
             {
-                if (!InSprite.Visible || !InSprite.Texture.IsValid()) { return; }
+                if (!InSprite.Visible || !InSprite.Texture.IsValid())
+                {
+                    return;
+                }
 
                 Renderer2D::DrawSprite(
                     InTransform.Position,

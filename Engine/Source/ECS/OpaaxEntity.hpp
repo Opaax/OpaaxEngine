@@ -49,10 +49,10 @@ namespace Opaax::ECS
         //------------------------------------------------------------------------------
         //  Get - Set
         
-        constexpr Uint32 GetIndex()      const noexcept { return m_Value & ENTITY_INDEX_MASK; }
+        constexpr Uint32 GetIndex()      const noexcept { return (m_Value - 1) & ENTITY_INDEX_MASK; }
         constexpr Uint32 GetGeneration() const noexcept { return (m_Value >> ENTITY_INDEX_BITS) & ENTITY_GEN_MASK; }
         constexpr Uint32 GetValue()      const noexcept { return m_Value; }
-        constexpr bool   IsValid()       const noexcept { return m_Value != ENTITY_ID_NONE; }
+        constexpr bool   IsValid()       const noexcept { return m_Value > ENTITY_ID_NONE; }
 
         // =============================================================================
         // Operators
