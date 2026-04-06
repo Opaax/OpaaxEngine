@@ -1,9 +1,9 @@
 ﻿#pragma once
 
+#include "Assets/AssetHandle.hpp"
 #include "Core/OpaaxTypes.h"
 #include "Core/OpaaxMathTypes.h"
 #include "Core/OpaaxStringID.hpp"
-#include "RHI/RHITypes.hpp"
 
 namespace Opaax::ECS
 {

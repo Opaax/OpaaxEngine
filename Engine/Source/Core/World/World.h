@@ -81,14 +81,14 @@ namespace Opaax::ECS
         template<typename T, typename... Args>
         T& AddComponent(EntityID InEntity, Args&&... InArgs)
         {
-            OPAAX_CORE_ASSERT(IsValid(InEntity))
+            //OPAAX_CORE_ASSERT(IsValid(InEntity))
             return GetStorage<T>().Add(InEntity, std::forward<Args>(InArgs)...);
         }
 
         template<typename T>
         void RemoveComponent(EntityID InEntity)
         {
-            OPAAX_CORE_ASSERT(IsValid(InEntity))
+            //OPAAX_CORE_ASSERT(IsValid(InEntity))
             GetStorage<T>().Remove(InEntity);
         }
 

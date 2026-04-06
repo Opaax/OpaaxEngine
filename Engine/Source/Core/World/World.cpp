@@ -33,7 +33,7 @@ namespace Opaax::ECS
         m_EntitySlots[lIndex].bAlive = true;
         ++m_EntityCount;
 
-        const EntityID lID = EntityID::Make(lIndex, lGeneration);
+        const EntityID lID = EntityID::Make(lIndex + 1, lGeneration);
 
         // Every entity gets a tag — makes debugging and editor hierarchy trivial.
         GetStorage<TagComponent>().Add(lID, InTag);

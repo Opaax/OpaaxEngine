@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "AssetRefBlock.hpp"
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/OpaaxStringID.hpp"
@@ -24,134 +25,137 @@ namespace Opaax
      * @tparam T 
      */
     template<typename T>
-    struct AssetHandle
+    class AssetHandle
     {
         // =============================================================================
-        // CTORs - DTOR
+        // CTORs
         // =============================================================================
+    public:
         AssetHandle() noexcept = default;
- 
-        AssetHandle(T* InPtr, OpaaxStringID InID) noexcept
-            : m_Ptr(InPtr), m_ID(InID)
+
+        // NOTE: Only AssetRegistry calls this constructor.
+        AssetHandle(T* InPtr, OpaaxStringID InID, AssetRefBlock* InBlock) noexcept
+            : m_Ptr(InPtr), m_ID(InID), m_Block(InBlock)
         {
-            AddRef();
+            if (m_Block)
+            {
+                m_Block->AddRef();
+            }
         }
 
         ~AssetHandle()
         {
-            Release();
+            ReleaseRef();
         }
 
         // =============================================================================
-        // Copy - cheap, both handles point to the same registry-owned asset
+        // Copy — increments ref count
         // =============================================================================
-        AssetHandle(const AssetHandle& Other)noexcept
-            : m_Ptr(Other.m_Ptr), m_ID(Other.m_ID)
+        AssetHandle(const AssetHandle& Other) noexcept
+            : m_Ptr(Other.m_Ptr), m_ID(Other.m_ID), m_Block(Other.m_Block)
         {
-            AddRef();
+            if (m_Block)
+            {
+                m_Block->AddRef();
+            }
         }
-        
+
         AssetHandle& operator=(const AssetHandle& Other) noexcept
         {
             if (this != &Other)
             {
-                Release();
-                m_Ptr = Other.m_Ptr;
-                m_ID  = Other.m_ID;
-                AddRef();
+                ReleaseRef();
+                m_Ptr   = Other.m_Ptr;
+                m_ID    = Other.m_ID;
+                m_Block = Other.m_Block;
+                if (m_Block) { m_Block->AddRef(); }
             }
             return *this;
         }
- 
+
         // =============================================================================
-        // Move
+        // Move — transfers ownership, no ref count change
         // =============================================================================
         AssetHandle(AssetHandle&& Other) noexcept
+            : m_Ptr(Other.m_Ptr), m_ID(Other.m_ID), m_Block(Other.m_Block)
         {
-            Other.m_Ptr = nullptr;
-            Other.m_ID  = OpaaxStringID{};
+            Other.m_Ptr   = nullptr;
+            Other.m_ID    = OpaaxStringID{};
+            Other.m_Block = nullptr;
         }
-        
+
         AssetHandle& operator=(AssetHandle&& Other) noexcept
         {
             if (this != &Other)
             {
-                Release();
-                m_Ptr       = Other.m_Ptr;
-                m_ID        = Other.m_ID;
-                Other.m_Ptr = nullptr;
-                Other.m_ID  = OpaaxStringID{};
+                ReleaseRef();
+                m_Ptr         = Other.m_Ptr;
+                m_ID          = Other.m_ID;
+                m_Block       = Other.m_Block;
+                Other.m_Ptr   = nullptr;
+                Other.m_ID    = OpaaxStringID{};
+                Other.m_Block = nullptr;
             }
             return *this;
         }
- 
+
         // =============================================================================
         // Function
         // =============================================================================
-    private:
-        // NOTE: AddRef/Release are no-ops on null handles.
-        //   They forward into AssetRegistry — the handle itself stores no count.
-
-        /**
-         * AddRef is no-ops on null handles.
-         * Forward into AssetRegistry — the handle itself stores no count.
-         */
-        void AddRef() noexcept;
-
-        /**
-         * Release is no-ops on null handles.
-         * Forward into AssetRegistry — the handle itself stores no count.
-         */
-        void Release() noexcept;
-        
     public:
         void Reset() noexcept
         {
-            Release();
-            m_Ptr = nullptr;
-            m_ID  = OpaaxStringID{};
+            ReleaseRef();
+            m_Ptr   = nullptr;
+            m_ID    = OpaaxStringID{};
+            m_Block = nullptr;
         }
-        
+
         //------------------------------------------------------------------------------
         //  Get - Set
-        FORCEINLINE bool             IsValid()  const noexcept { return m_Ptr != nullptr; }
-        FORCEINLINE T*               Get()      const noexcept { return m_Ptr; }
-        FORCEINLINE OpaaxStringID    GetID()    const noexcept { return m_ID;  }
- 
+        
+        FORCEINLINE bool           IsValid()        const noexcept { return m_Ptr != nullptr; }
+        FORCEINLINE T*             Get()            const noexcept { return m_Ptr; }
+        FORCEINLINE OpaaxStringID  GetID()          const noexcept { return m_ID; }
+        FORCEINLINE Uint32         GetRefCount()    const noexcept { return m_Block ? m_Block->Get() : 0u; }
+
         // =============================================================================
-        // Operator
+        // Operators
         // =============================================================================
-    public:
         T* operator->() const noexcept
         {
             OPAAX_CORE_ASSERT(m_Ptr)
             return m_Ptr;
         }
- 
+
         T& operator*() const noexcept
         {
             OPAAX_CORE_ASSERT(m_Ptr)
             return *m_Ptr;
         }
- 
-        explicit operator bool() const noexcept { return IsValid(); }
- 
-        bool operator==(const AssetHandle& Other) const noexcept { return m_ID == Other.m_ID; }
-        bool operator!=(const AssetHandle& Other) const noexcept { return m_ID != Other.m_ID; }
- 
+
+        explicit operator bool()                    const noexcept { return IsValid(); }
+        bool operator==(const AssetHandle& Other)   const noexcept { return m_ID == Other.m_ID; }
+        bool operator!=(const AssetHandle& Other)   const noexcept { return m_ID != Other.m_ID; }
+
         // =============================================================================
         // Members
         // =============================================================================
     private:
-        T*            m_Ptr = nullptr;   // non-owning — registry owns the asset
-        OpaaxStringID m_ID;              // stable identity key
+        T*             m_Ptr   = nullptr;
+        OpaaxStringID  m_ID    = {};
+        AssetRefBlock* m_Block = nullptr;   // non-owning — registry owns the block
+
+        void ReleaseRef() noexcept
+        {
+            // NOTE: We release but never destroy — the registry checks RefCount
+            //   and handles destruction. AssetHandle is never the last owner.
+            if (m_Block) { m_Block->Release(); }
+        }
     };
 
-    // Forward — implementation is in AssetRegistry.h after AssetRegistry is defined.
-    // Convenience alias for the most common case
-    // FIXME: replace OpenGLTexture2D with a backend-agnostic Texture2D handle
-    //   when the RHI abstraction is extended to textures.
+    // Convenience alias
     class OpenGLTexture2D;
     using TextureHandle = AssetHandle<OpenGLTexture2D>;
- 
+
 } // namespace Opaax
