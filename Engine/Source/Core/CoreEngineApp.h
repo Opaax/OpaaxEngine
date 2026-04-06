@@ -2,10 +2,14 @@
 
 #include "EngineAPI.h"
 #include "OpaaxTypes.h"
+#include "ECS/ComponentStorage.hpp"
 #include "Systems/EngineSubsystem.h"
+#include "World/World.h"
 
 namespace Opaax
 {
+    using namespace ECS;
+    
     class WindowResizeEvent;
     class WindowCloseEvent;
     class OpaaxEvent;
@@ -52,9 +56,11 @@ namespace Opaax
         void Run();
         void Shutdown();
 
-        /*----------------------------- Get - Set -------------------------------*/
+        //------------------------------------------------------------------------------
+        //  Get - Set
         
         Window& GetWindow() const { return *m_Window; }
+        World& GetWorld() noexcept { return m_World; }
 
         template<typename T>
         T* GetSubsystem()
@@ -79,6 +85,8 @@ namespace Opaax
         bool bIsRunning = false;
         UniquePtr<Window> m_Window;
         EngineSubsystemMgr m_EngineSubsystemManager;
+
+        World m_World;
 
 #if OPAAX_WITH_EDITOR
         void LaunchEditor();

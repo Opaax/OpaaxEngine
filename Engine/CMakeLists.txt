@@ -17,6 +17,12 @@ file(GLOB_RECURSE ENGINE_CORE_SOURCES
     "Source/Renderer/*.hpp"
     "Source/Assets/*.cpp"
     "Source/Assets/*.h"
+    "Source/Assets/*.hpp"
+    "Source/Assets/*.cpp"
+    "Source/Assets/*.hpp"
+    "Source/ECS/*.cpp"
+    "Source/ECS/*.h"
+    "Source/ECS/*.hpp"
 )
 
 set(ENGINE_SOURCES ${ENGINE_CORE_SOURCES})
