@@ -2,7 +2,6 @@
 
 #include "EngineAPI.h"
 #include "OpaaxTypes.h"
-#include "ECS/ComponentStorage.hpp"
 #include "Systems/EngineSubsystem.h"
 #include "World/World.h"
 

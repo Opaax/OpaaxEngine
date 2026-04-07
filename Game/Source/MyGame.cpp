@@ -60,8 +60,7 @@ void MyGame::OnStartup()
                 .Position = { static_cast<float>(i) * 120.f, -150.f },
                 .Scale    = { 100.f, 100.f }
             });
-        // NOTE: No texture on these — WorldRenderSystem skips entities with no valid texture.
-        //   DrawQuad path will be handled by a separate ColourComponent in a future pass.
+        
     }
 }
 
@@ -93,6 +92,8 @@ void MyGame::OnRender(double AlphaPhysicStep)
 
     Opaax::RenderCommand::SetClearColor(0.1f, 0.1f, 0.1f, 1.f);
     Opaax::RenderCommand::Clear();
+
+    Opaax::Renderer2D::DrawQuad();
 
     auto* lCamera = GetSubsystem<Opaax::Camera2D>();
     Opaax::Renderer2D::Begin(*lCamera);

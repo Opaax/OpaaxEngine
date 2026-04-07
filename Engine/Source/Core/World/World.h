@@ -3,8 +3,8 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Log/OpaaxLog.h"
-#include "ECS/ComponentStorage.hpp"
-#include "ECS/ComponentTypeID.h"
+#include "ECS/BaseComponents.hpp"
+#include "ECS/OpaaxEntity.hpp"
 
 namespace Opaax::ECS
 {
@@ -53,241 +53,105 @@ namespace Opaax::ECS
         //------------------------------------------------------------------------------
         //  Entity Life cycle
     public:
-        /**
-         * Creates a new entity with a TagComponent.
-         * @param InTag 
-         * @return ENTITY_NONE if the entity pool is exhausted (should never happen in practice).
-         */
-        EntityID CreateEntity(const char* InTag = "Entity");
+        EntityID CreateEntity(const char* InTag = "Entity")
+        {
+            const EntityID lID = m_Registry.create();
+            m_Registry.emplace<TagComponent>(lID, InTag);
+            OPAAX_CORE_TRACE("World::CreateEntity '{}' — id={}", InTag, static_cast<Uint32>(lID));
+            m_EntityCount.fetch_add(1, std::memory_order_relaxed);
+            return lID;
+        }
 
-        /**
-         * Destroys an entity and removes all its components.
-         * After this call, InEntity is invalid — any stored copy will fail IsValid() checks.
-         * @param InEntity 
-         */
-        void DestroyEntity(EntityID InEntity);
-        
-        /**
-         * 
-         * @param InEntity 
-         * @return True if the entity was created by this world and has not been destroyed.
-         */
-        bool IsValid(EntityID InEntity) const noexcept;
+        void DestroyEntity(EntityID InEntity)
+        {
+            if (!IsValid(InEntity))
+            {
+                OPAAX_CORE_WARN("World::DestroyEntity — invalid entity, ignored.");
+                return;
+            }
+            m_Registry.destroy(InEntity);
+            m_EntityCount.fetch_sub(1, std::memory_order_relaxed);
+        }
+
+        bool IsValid(EntityID InEntity) const noexcept
+        {
+            return m_Registry.valid(InEntity);
+        }
 
         //------------------------------------------------------------------------------
-
-        //------------------------------------------------------------------------------
-        // API
+        //  API
     public:
         template<typename T, typename... Args>
         T& AddComponent(EntityID InEntity, Args&&... InArgs)
         {
             OPAAX_CORE_ASSERT(IsValid(InEntity))
-            return GetStorage<T>().Add(InEntity, std::forward<Args>(InArgs)...);
+            return m_Registry.emplace<T>(InEntity, std::forward<Args>(InArgs)...);
         }
 
         template<typename T>
         void RemoveComponent(EntityID InEntity)
         {
             OPAAX_CORE_ASSERT(IsValid(InEntity))
-            GetStorage<T>().Remove(InEntity);
+            m_Registry.remove<T>(InEntity);
         }
 
         template<typename T>
         T* GetComponent(EntityID InEntity) noexcept
         {
-            return GetStorage<T>().Get(InEntity);
+            return m_Registry.try_get<T>(InEntity);
         }
 
         template<typename T>
         const T* GetComponent(EntityID InEntity) const noexcept
         {
-            return GetStorage<T>().Get(InEntity);
+            return m_Registry.try_get<T>(InEntity);
         }
 
         template<typename T>
         bool HasComponent(EntityID InEntity) const noexcept
         {
-            return GetStorage<T>().Has(InEntity);
-        }
-
-        //------------------------------------------------------------------------------
-        
-        //------------------------------------------------------------------------------
-        // Storage access — for systems that iterate over all components of a type
-        // Usage:
-        //   auto& lStorage = World.GetStorage<TransformComponent>();
-        //   for (auto& lTr : lStorage.GetComponents()) { ... }
-
-        /**
-         * 
-         * @tparam T 
-         * @return 
-         */
-        template<typename T>
-        ComponentStorage<T>& GetStorage()
-        {
-            const auto lKey = GetStorageKey<T>();
-            auto lIt = m_Storages.find(lKey);
-            OPAAX_CORE_ASSERT(lIt != m_Storages.end())
-            if (lIt == m_Storages.end())
-            {
-                m_Storages.emplace(lKey, MakeUnique<StorageWrapper<T>>());
-                lIt = m_Storages.find(lKey);
-            }
-            return static_cast<StorageWrapper<T>*>(lIt->second.get())->Storage;
-        }
-
-        /**
-         * 
-         * @tparam T 
-         * @return 
-         */
-        template<typename T>
-        const ComponentStorage<T>& GetStorage() const
-        {
-            const auto lKey = GetStorageKey<T>();
-            auto lIt = m_Storages.find(lKey);
-            OPAAX_CORE_ASSERT(lIt != m_Storages.end())
-            if (lIt == m_Storages.end())
-            {
-                m_Storages.emplace(lKey, MakeUnique<StorageWrapper<T>>());
-                lIt = m_Storages.find(lKey);
-            }
-            return static_cast<const StorageWrapper<T>*>(lIt->second.get())->Storage;
-        }
-
-        //------------------------------------------------------------------------------
-        // Queries — convenience iteration helpers
-
-    public:
-        /**
-         * 
-         * @tparam A 
-         * @tparam B 
-         * @tparam TFunc 
-         * @param InFunc 
-         */
-        template<typename A, typename B, typename TFunc>
-        void Each(TFunc&& InFunc)
-        {
-            // Ensure both storages exist before taking any references.
-            // Any rehash happens here — before refs are taken.
-            EnsureStorage<A>();
-            EnsureStorage<B>();
-
-            // Map is stable now — refs are safe.
-            auto& lStorageA = GetStorage<A>();
-            auto& lStorageB = GetStorage<B>();
-
-            if (lStorageA.Count() <= lStorageB.Count())
-            {
-                const auto& lEntities = lStorageA.GetEntities();
-                auto&       lCompsA   = lStorageA.GetComponents();
-
-                for (Uint32 i = 0; i < static_cast<Uint32>(lCompsA.size()); ++i)
-                {
-                    B* lB = lStorageB.Get(lEntities[i]);
-                    if (lB) { InFunc(lEntities[i], lCompsA[i], *lB); }
-                }
-            }
-            else
-            {
-                const auto& lEntities = lStorageB.GetEntities();
-                auto&       lCompsB   = lStorageB.GetComponents();
-
-                for (Uint32 i = 0; i < static_cast<Uint32>(lCompsB.size()); ++i)
-                {
-                    A* lA = lStorageA.Get(lEntities[i]);
-                    if (lA) { InFunc(lEntities[i], *lA, lCompsB[i]); }
-                }
-            }
+            return m_Registry.all_of<T>(InEntity);
         }
         
-        /**
-         * 
-         * @tparam T 
-         * @tparam TFunc 
-         * @param InFunc 
-         */
+        //------------------------------------------------------------------------------
+
+        // Single component — calls InFunc(EntityID, T&)
         template<typename T, typename TFunc>
         void Each(TFunc&& InFunc)
         {
-            EnsureStorage<T>();
-            auto& lStorage = GetStorage<T>();
-
-            const auto& lEntities   = lStorage.GetEntities();
-            auto&       lComponents = lStorage.GetComponents();
-
-            for (Uint32 i = 0; i < static_cast<Uint32>(lComponents.size()); ++i)
-            {
-                InFunc(lEntities[i], lComponents[i]);
-            }
+            m_Registry.view<T>().each(std::forward<TFunc>(InFunc));
         }
 
+        // Two components — calls InFunc(EntityID, A&, B&)
+        template<typename A, typename B, typename TFunc>
+        void Each(TFunc&& InFunc)
+        {
+            m_Registry.view<A, B>().each(std::forward<TFunc>(InFunc));
+        }
+
+        // Three components — calls InFunc(EntityID, A&, B&, C&)
+        template<typename A, typename B, typename C, typename TFunc>
+        void Each(TFunc&& InFunc)
+        {
+            m_Registry.view<A, B, C>().each(std::forward<TFunc>(InFunc));
+        }
+
+        // Raw registry access — for advanced use (editor, serializer).
+        // NOTE: Prefer the typed API above for game code.
+        entt::registry& GetRegistry() noexcept { return m_Registry; }
+        const entt::registry& GetRegistry() const noexcept { return m_Registry; }
+        
         //------------------------------------------------------------------------------
         // Get - Set
     public:
-        Uint32 GetEntityCount() const noexcept { return m_EntityCount; }
+        Uint32 GetEntityCount() const noexcept;
 
         // =============================================================================
         // Members
         // =============================================================================
     private:
-        // -------------------------------------------------------------------------
-        // Entity pool
-        struct EntitySlot
-        {
-            Uint32 Generation = 0;
-            bool   bAlive     = false;
-        };
-
-        TDynArray<EntitySlot>  m_EntitySlots;   // indexed by entity index
-        TDynArray<Uint32>      m_FreeList;       // recycled indices
-        Uint32                 m_EntityCount = 0;
-
-        // -------------------------------------------------------------------------
-        // Storage map — type-erased
-        //
-        // We avoid RTTI by using a function pointer address as the type key.
-        //   GetStorageKey<T>() returns the address of a static local — unique per T,
-        //   stable across TUs, zero RTTI. Same pattern as OPAAX_SUBSYSTEM_TYPE.
-
-    private:
-        struct IStorageBase
-        {
-            virtual ~IStorageBase() = default;
-        };
-
-        template<typename T>
-        struct StorageWrapper final : IStorageBase
-        {
-            ComponentStorage<T> Storage;
-        };
-
-        using StorageKey = Uint32;
-
-        template<typename T>
-        static StorageKey GetStorageKey() noexcept
-        {
-            return GetComponentTypeID<T>();
-        }
-
-        UnorderedMap<StorageKey, UniquePtr<IStorageBase>> m_Storages;
-
-    private:
-        // Creates the storage slot for T if it doesn't exist yet.
-        // Does NOT return a reference — call GetStorage<T>() after.
-        // Separated from GetStorage to avoid taking refs across a potential rehash.
-        template<typename T>
-        void EnsureStorage()
-        {
-            const StorageKey lKey = GetStorageKey<T>();
-            if (m_Storages.find(lKey) == m_Storages.end())
-            {
-                m_Storages.emplace(lKey, MakeUnique<StorageWrapper<T>>());
-            }
-        }
+        entt::registry m_Registry;
+        Atomic<Uint32> m_EntityCount{ 0 };
     };
 
 } // namespace Opaax::ECS

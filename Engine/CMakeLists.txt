@@ -155,7 +155,24 @@ message(STATUS "stb: header-only interface target created")
 # ==================================
 
 # ==================================
-# Créer la DLL du moteur
+# EnTT (Header-Only)
+# ==================================
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Vendors/Entt/entt/single_include/entt/entt.hpp")
+    message(FATAL_ERROR
+        "EnTT not found in Engine/Vendors/Entt!\n"
+        "Please run: git clone https://github.com/skypjack/entt.git Engine/Vendors/Entt"
+    )
+endif()
+
+add_library(entt INTERFACE)
+target_include_directories(entt INTERFACE Vendors/Entt/entt/single_include)
+message(STATUS "EnTT: header-only interface target created")
+# ==================================
+# END EnTT
+# ==================================
+
+# ==================================
+# Dll Engine
 # ==================================
 add_library(OpaaxEngine SHARED ${ENGINE_SOURCES})
 
@@ -180,6 +197,7 @@ target_link_libraries(OpaaxEngine
         glm
         stb
         glad
+        entt
 )
 
 # Include directories
@@ -194,6 +212,7 @@ target_include_directories(OpaaxEngine
         ${CMAKE_CURRENT_SOURCE_DIR}/Vendors/glad/include
         ${CMAKE_CURRENT_SOURCE_DIR}/Vendors/glm
         ${CMAKE_CURRENT_SOURCE_DIR}/Vendors
+        ${CMAKE_CURRENT_SOURCE_DIR}/Vendors/entt/single_include
 )
 
 if(WIN32)
