@@ -5,7 +5,7 @@
 #include "World.h"
 #include "Core/EngineAPI.h"
 
-namespace Opaax::ECS
+namespace Opaax
 {
     /**
      * @class WorldRenderSystem

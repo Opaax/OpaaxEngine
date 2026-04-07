@@ -12,6 +12,7 @@
 #include "Log/OpaaxLog.h"
 #include "Renderer/Camera2D.h"
 #include "Renderer/RenderSubsystem.h"
+#include "Scene/SceneManager.h"
 #include "Systems/EngineSubsystem.h"
 
 using namespace Opaax;
@@ -108,6 +109,8 @@ void CoreEngineApp::Initialize()
     m_EngineSubsystemManager.RegisterSubsystem<Camera2D>(this);
     
     m_EngineSubsystemManager.RegisterSubsystem<InputSubsystem>(this);
+
+    m_EngineSubsystemManager.RegisterSubsystem<SceneManager>(this);
     
     // Call derived class initialization
     OnInitialize();
@@ -220,6 +223,18 @@ void CoreEngineApp::Shutdown()
     m_EngineSubsystemManager.ShutdownAll();
 
     OpaaxLog::Shutdown();
+}
+
+World& CoreEngineApp::GetWorld() noexcept
+{
+    auto* lSceneMgr = m_EngineSubsystemManager.GetSubsystem<SceneManager>();
+    OPAAX_CORE_ASSERT(lSceneMgr && lSceneMgr->GetActiveScene())
+    return lSceneMgr->GetActiveScene()->GetWorld();
+}
+
+SceneManager* CoreEngineApp::GetSceneManager() noexcept
+{
+    return m_EngineSubsystemManager.GetSubsystem<SceneManager>();
 }
 
 #if OPAAX_WITH_EDITOR

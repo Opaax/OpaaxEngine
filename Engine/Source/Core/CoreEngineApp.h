@@ -13,6 +13,8 @@ namespace Opaax
     class WindowCloseEvent;
     class OpaaxEvent;
     class Window;
+    class SceneManager;
+    class Window;
 
     class OPAAX_API CoreEngineApp
     {
@@ -58,8 +60,9 @@ namespace Opaax
         //------------------------------------------------------------------------------
         //  Get - Set
         
-        Window& GetWindow() const { return *m_Window; }
-        World& GetWorld() noexcept { return m_World; }
+        Window&         GetWindow() const { return *m_Window; }
+        World&          GetWorld() noexcept;
+        SceneManager*   GetSceneManager() noexcept;
 
         template<typename T>
         T* GetSubsystem()

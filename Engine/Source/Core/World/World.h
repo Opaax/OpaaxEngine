@@ -6,7 +6,7 @@
 #include "ECS/BaseComponents.hpp"
 #include "ECS/OpaaxEntity.hpp"
 
-namespace Opaax::ECS
+namespace Opaax
 {
     // =============================================================================
     // Usage:
@@ -56,7 +56,7 @@ namespace Opaax::ECS
         EntityID CreateEntity(const char* InTag = "Entity")
         {
             const EntityID lID = m_Registry.create();
-            m_Registry.emplace<TagComponent>(lID, InTag);
+            m_Registry.emplace<ECS::TagComponent>(lID, InTag);
             OPAAX_CORE_TRACE("World::CreateEntity '{}' — id={}", InTag, static_cast<Uint32>(lID));
             m_EntityCount.fetch_add(1, std::memory_order_relaxed);
             return lID;

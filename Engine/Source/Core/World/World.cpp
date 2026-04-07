@@ -2,7 +2,7 @@
 
 #include <Entt/entt/src/entt/entity/registry.hpp>
 
-namespace Opaax::ECS
+namespace Opaax
 {
     Uint32 World::GetEntityCount() const noexcept
     {

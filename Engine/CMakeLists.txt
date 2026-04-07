@@ -23,6 +23,9 @@ file(GLOB_RECURSE ENGINE_CORE_SOURCES
     "Source/ECS/*.cpp"
     "Source/ECS/*.h"
     "Source/ECS/*.hpp"
+    "Source/Scene/*.cpp"
+    "Source/Scene/*.h"
+    "Source/Scene/*.hpp"
 )
 
 set(ENGINE_SOURCES ${ENGINE_CORE_SOURCES})
