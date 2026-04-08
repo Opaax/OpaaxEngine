@@ -84,6 +84,8 @@ void CoreEngineApp::OnShutdown()
 {
     OPAAX_CORE_TRACE("CoreEngineApp::OnShutdown()");
 
+    GetSubsystem<SceneManager>()->SaveCurrentSave();
+
     // NOTE: Assets must be destroyed before subsystems — textures and GPU resources
     //   must be freed while the GL context (owned by RenderSubsystem) is still alive.
     //OnShutdown is called before subsystem shutdown

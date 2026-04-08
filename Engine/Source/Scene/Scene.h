@@ -79,6 +79,12 @@ namespace Opaax
          * Pause music, disable input, etc.
          */
         virtual void OnExit()   {}
+
+        /**
+         * Called every time another scene is pushed on top of this one.
+         * Pause music, disable input, etc.
+         */
+        virtual void SaveScene()   {}
         
         //------------------------------------------------------------------------------
         // Per-frame

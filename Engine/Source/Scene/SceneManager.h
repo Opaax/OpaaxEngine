@@ -110,6 +110,12 @@ namespace Opaax
             m_Stack.push_back(std::move(InScene));
         }
 
+        void SaveCurrentSave()
+        {
+            OPAAX_CORE_ASSERT(GetActiveScene() != nullptr)
+            GetActiveScene()->SaveScene();
+        }
+
         //------------------------------------------------------------------------------
         // Get - Set
     public:

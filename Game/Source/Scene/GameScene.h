@@ -8,10 +8,13 @@ class GameScene final : public Opaax::Scene
 public:
     GameScene() : Scene("GameScene") {}
 
-    void OnLoad()   override;
-    void OnUnload() override;
+    void OnLoad()                   override;
+    void OnUnload()                 override;
     void OnUpdate(double DeltaTime) override;
     void OnRender(double Alpha)     override;
+    void SaveScene()                override;
+
+    void BuildDefaultScene();
 
 private:
     float m_TotalTime = 0.0f;

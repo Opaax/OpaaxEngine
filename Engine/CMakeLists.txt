@@ -84,7 +84,6 @@ add_library(glad STATIC
 target_include_directories(glad PUBLIC
     Vendors/glad/include
 )
-
 # ==================================
 # End glad
 # ==================================
@@ -92,7 +91,6 @@ target_include_directories(glad PUBLIC
 # ==================================
 # spdlog Configuration (Header-Only)
 # ==================================
-
 # spdlog check
 if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Vendors/spdlog/include/spdlog/spdlog.h")
     message(FATAL_ERROR 
@@ -112,7 +110,6 @@ set(SPDLOG_INSTALL OFF CACHE BOOL "" FORCE)
 add_subdirectory(Vendors/spdlog)
 
 message(STATUS "spdlog: Header-Only mode")
-
 # ==================================
 # END spdlog Configuration (Header-Only)
 # ==================================
@@ -130,7 +127,6 @@ endif()
 add_library(glm INTERFACE)
 target_include_directories(glm INTERFACE Vendors/glm)
 message(STATUS "glm: header-only interface target created")
-
 # ==================================
 # END glm (Header-Only)
 # ==================================
@@ -152,7 +148,6 @@ endif()
 add_library(stb INTERFACE)
 target_include_directories(stb INTERFACE Vendors)
 message(STATUS "stb: header-only interface target created")
-
 # ==================================
 # END stb_image (Header-Only)
 # ==================================
@@ -172,6 +167,23 @@ target_include_directories(entt INTERFACE Vendors/Entt/entt/single_include)
 message(STATUS "EnTT: header-only interface target created")
 # ==================================
 # END EnTT
+# ==================================
+
+# ==================================
+# nlohmann/json (Header-Only)
+# ==================================
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Vendors/nlohmann/json.hpp")
+    message(FATAL_ERROR
+        "nlohmann/json not found in Engine/Vendors/nlohmann/json.hpp!\n"
+        "Download from: https://github.com/nlohmann/json/releases"
+    )
+endif()
+
+add_library(nlohmann_json INTERFACE)
+target_include_directories(nlohmann_json INTERFACE Vendors/nlohmann)
+message(STATUS "nlohmann/json: header-only interface target created")
+# ==================================
+# END nlohmann/json
 # ==================================
 
 # ==================================
@@ -201,6 +213,7 @@ target_link_libraries(OpaaxEngine
         stb
         glad
         entt
+        nlohmann_json
 )
 
 # Include directories
@@ -215,7 +228,8 @@ target_include_directories(OpaaxEngine
         ${CMAKE_CURRENT_SOURCE_DIR}/Vendors/glad/include
         ${CMAKE_CURRENT_SOURCE_DIR}/Vendors/glm
         ${CMAKE_CURRENT_SOURCE_DIR}/Vendors
-        ${CMAKE_CURRENT_SOURCE_DIR}/Vendors/entt/single_include
+        ${CMAKE_CURRENT_SOURCE_DIR}/Vendors/Entt/entt/single_include
+        ${CMAKE_CURRENT_SOURCE_DIR}/Vendors/nlohmann
 )
 
 if(WIN32)
