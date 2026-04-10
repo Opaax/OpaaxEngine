@@ -41,7 +41,10 @@
 *.dwo
 
 #idea files
-*.idea
+.idea
+
+#vs files
+.vs
 
 # Builds
 build/*
