@@ -7,6 +7,7 @@
 #include "OpaaxString.hpp"
 #include "OpaaxStringID.hpp"
 #include "Assets/AssetRegistry.h"
+#include "Editor/EditorSubsystem.h"
 #include "Event/OpaaxEventDispatcher.hpp"
 #include "Input/InputSubsystem.h"
 #include "Log/OpaaxLog.h"
@@ -14,6 +15,10 @@
 #include "Renderer/RenderSubsystem.h"
 #include "Scene/SceneManager.h"
 #include "Systems/EngineSubsystem.h"
+
+#if OPAAX_WITH_EDITOR
+#include "Editor/EditorSubsystem.h"
+#endif
 
 using namespace Opaax;
 
@@ -113,6 +118,10 @@ void CoreEngineApp::Initialize()
     m_EngineSubsystemManager.RegisterSubsystem<InputSubsystem>(this);
 
     m_EngineSubsystemManager.RegisterSubsystem<SceneManager>(this);
+
+#if OPAAX_WITH_EDITOR
+    m_EngineSubsystemManager.RegisterSubsystem<EditorSubsystem>(this);
+#endif
     
     // Call derived class initialization
     OnInitialize();
@@ -234,7 +243,7 @@ World& CoreEngineApp::GetWorld() noexcept
     return lSceneMgr->GetActiveScene()->GetWorld();
 }
 
-SceneManager* CoreEngineApp::GetSceneManager() noexcept
+Opaax::SceneManager* CoreEngineApp::GetSceneManager() noexcept
 {
     return m_EngineSubsystemManager.GetSubsystem<SceneManager>();
 }

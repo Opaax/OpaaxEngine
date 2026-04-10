@@ -11,6 +11,7 @@
 #include "Scene/GameScene.h"
 #include "Scene/SceneManager.h"
 #include "Core/OpaaxTypes.h"
+#include "Editor/EditorSubsystem.h"
 
 MyGame::MyGame():Opaax::CoreEngineApp()
 {
@@ -45,6 +46,29 @@ void MyGame::OnShutdown()
 
 void MyGame::OnRender(double AlphaPhysicStep)
 {
+#if OPAAX_WITH_EDITOR
+    // En mode editor, on render dans le FBO du viewport panel
+    auto* lEditor = GetSubsystem<Opaax::EditorSubsystem>();
+
+    lEditor->GetViewport().BindFBO();
+
+    Opaax::RenderCommand::SetClearColor(0.1f, 0.1f, 0.1f, 1.f);
+    Opaax::RenderCommand::Clear();
+
+    auto* lCamera = GetSubsystem<Opaax::Camera2D>();
+    Opaax::Renderer2D::Begin(*lCamera);
+
+    if (auto* lScene = GetSubsystem<Opaax::SceneManager>()->GetActiveScene())
+    {
+        Opaax::WorldRenderSystem::Render(lScene->GetWorld());
+    }
+
+    Opaax::Renderer2D::End();
+
+    lEditor->GetViewport().UnbindFBO();
+
+#else
+    
     auto* lCamera = GetSubsystem<Opaax::Camera2D>();
 
     Opaax::RenderCommand::SetClearColor(0.1f, 0.1f, 0.1f, 1.f);
@@ -58,4 +82,5 @@ void MyGame::OnRender(double AlphaPhysicStep)
     }
 
     Opaax::Renderer2D::End();
+#endif
 }

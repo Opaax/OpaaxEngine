@@ -210,6 +210,11 @@ namespace Opaax
             }
             s_Assets.clear();
         }
+
+        static const UnorderedMap<Uint32, AssetEntry>& GetAssets() noexcept
+        {
+            return s_Assets;
+        }
          
         // TODO: async loading interface
         //   static void LoadAsync<T>(OpaaxStringID InID, TFunction<void(AssetHandle<T>)> InCallback);

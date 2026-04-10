@@ -88,6 +88,8 @@ namespace Opaax
             m_ID = String.IsEmpty() ? OpaaxGlobal::ID_None : GetPool().GetOrAdd(String);
         }
 
+        explicit OpaaxStringID(Uint32 InID) noexcept : m_ID(InID) {}
+
         OpaaxStringID(const char*        String) : OpaaxStringID(OpaaxString(String)) {}
         OpaaxStringID(const std::string& String) : OpaaxStringID(OpaaxString(String.c_str())) {}
 

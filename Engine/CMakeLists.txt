@@ -187,6 +187,44 @@ message(STATUS "nlohmann/json: header-only interface target created")
 # ==================================
 
 # ==================================
+# ImGui
+# ==================================
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Vendors/imgui/imgui.h")
+    message(FATAL_ERROR
+        "ImGui not found in Engine/Vendors/imgui!\n"
+        "Please run: git clone https://github.com/ocornut/imgui.git Engine/Vendors/imgui"
+    )
+endif()
+
+add_library(imgui STATIC
+    Vendors/imgui/imgui.cpp
+    Vendors/imgui/imgui_draw.cpp
+    Vendors/imgui/imgui_tables.cpp
+    Vendors/imgui/imgui_widgets.cpp
+    Vendors/imgui/imgui_demo.cpp
+    # GLFW + OpenGL3 backends
+    Vendors/imgui/backends/imgui_impl_glfw.cpp
+    Vendors/imgui/backends/imgui_impl_opengl3.cpp
+)
+
+target_include_directories(imgui
+    PUBLIC
+        Vendors/imgui
+        Vendors/imgui/backends
+        Vendors/GLFW/include
+)
+
+target_compile_definitions(imgui
+    PRIVATE
+        IMGUI_IMPL_OPENGL_LOADER_GLAD
+)
+
+message(STATUS "ImGui: static lib created")
+# ==================================
+# END ImGui
+# ==================================
+
+# ==================================
 # Dll Engine
 # ==================================
 add_library(OpaaxEngine SHARED ${ENGINE_SOURCES})
@@ -205,6 +243,7 @@ endif()
 # ==================================
 # Link
 # ==================================
+
 target_link_libraries(OpaaxEngine 
     PUBLIC 
         glfw
@@ -214,6 +253,7 @@ target_link_libraries(OpaaxEngine
         glad
         entt
         nlohmann_json
+        imgui
 )
 
 # Include directories
@@ -223,6 +263,8 @@ target_include_directories(OpaaxEngine
         $<INSTALL_INTERFACE:include>
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/Source/Private
+        ${CMAKE_CURRENT_SOURCE_DIR}/Vendors/imgui
+        ${CMAKE_CURRENT_SOURCE_DIR}/Vendors/imgui/backends
         ${CMAKE_CURRENT_SOURCE_DIR}/Vendors/GLFW/include
         ${CMAKE_CURRENT_SOURCE_DIR}/Vendors/spdlog/include
         ${CMAKE_CURRENT_SOURCE_DIR}/Vendors/glad/include
