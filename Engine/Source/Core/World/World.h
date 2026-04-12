@@ -5,6 +5,7 @@
 #include "Core/Log/OpaaxLog.h"
 #include "ECS/BaseComponents.hpp"
 #include "ECS/OpaaxEntity.hpp"
+#include "ECS/Components/TagComponent.h"
 
 namespace Opaax
 {

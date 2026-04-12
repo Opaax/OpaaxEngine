@@ -8,6 +8,8 @@
 #include "Renderer/Renderer2D.h"
 #include "RHI/RenderCommand.h"
 #include "Core/Log/OpaaxLog.h"
+#include "ECS/Components/SpriteComponent.h"
+#include "ECS/Components/TransformComponent.h"
 #include "Scene/SceneSerializer.h"
 
 void GameScene::OnLoad()
@@ -73,17 +75,10 @@ void GameScene::BuildDefaultScene()
 
     auto lPlayer = lWorld.CreateEntity("Player");
     lWorld.AddComponent<Opaax::ECS::TransformComponent>(lPlayer,
-        Opaax::ECS::TransformComponent{ .Position = {0.f, 0.f}, .Scale = {64.f, 64.f} });
-    lWorld.AddComponent<Opaax::ECS::SpriteComponent>(lPlayer,
-        Opaax::ECS::SpriteComponent{ .Texture = m_PlayerTexture });
-
+        Opaax::ECS::TransformComponent{ {0.f, 0.f}, {64.f, 64.f} });
+    Opaax::ECS::SpriteComponent& lSP1 = lWorld.AddComponent<Opaax::ECS::SpriteComponent>(lPlayer, Opaax::ECS::SpriteComponent{m_PlayerTexture});
+    
     auto lAtlas = lWorld.CreateEntity("AtlasSprite");
-    lWorld.AddComponent<Opaax::ECS::TransformComponent>(lAtlas,
-        Opaax::ECS::TransformComponent{ .Position = {100.f, 0.f}, .Scale = {64.f, 64.f} });
-    lWorld.AddComponent<Opaax::ECS::SpriteComponent>(lAtlas,
-        Opaax::ECS::SpriteComponent{
-            .Texture = m_AtlasTexture,
-            .UVMin   = {0.f,   0.f},
-            .UVMax   = {0.25f, 0.25f}
-        });
+    lWorld.AddComponent<Opaax::ECS::TransformComponent>(lAtlas, Opaax::ECS::TransformComponent{ {100.f, 0.f}, {64.f, 64.f} });
+    Opaax::ECS::SpriteComponent& lSP = lWorld.AddComponent<Opaax::ECS::SpriteComponent>(lAtlas, Opaax::ECS::SpriteComponent{m_AtlasTexture, {0.f,   0.f}, {0.25f, 0.25f}});
 }
