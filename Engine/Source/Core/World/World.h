@@ -3,7 +3,6 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Log/OpaaxLog.h"
-#include "ECS/BaseComponents.hpp"
 #include "ECS/OpaaxEntity.hpp"
 #include "ECS/Components/TagComponent.h"
 

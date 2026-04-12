@@ -4,8 +4,6 @@
 
 #include <imgui.h>
 #include <entt/entt.hpp>
-
-#include "ECS/BaseComponents.hpp"
 #include "Core/Log/OpaaxLog.h"
 
 namespace Opaax::Editor

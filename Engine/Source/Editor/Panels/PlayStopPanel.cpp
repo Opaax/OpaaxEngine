@@ -1,7 +1,5 @@
 ﻿#include "PlayStopPanel.h"
 
-#include "Scene/SceneManager.h"
-#include "Scene/SceneSerializer.h"
 
 #if OPAAX_WITH_EDITOR
 

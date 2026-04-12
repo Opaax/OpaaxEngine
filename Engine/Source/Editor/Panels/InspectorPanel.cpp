@@ -1,6 +1,5 @@
 ﻿#include "InspectorPanel.h"
 
-#include "ECS/Components/SpriteComponent.h"
 
 
 #if OPAAX_WITH_EDITOR
@@ -8,6 +7,7 @@
 #include <imgui.h>
 #include "ECS/Components/TransformComponent.h"
 #include "ECS/Components/TagComponent.h"
+#include "ECS/Components/SpriteComponent.h"
 #include "Core/Log/OpaaxLog.h"
 
 namespace Opaax::Editor

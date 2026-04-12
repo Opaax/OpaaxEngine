@@ -2,8 +2,6 @@
 
 #include <fstream>
 #include <nlohmann/json.hpp>
-
-#include "ECS/BaseComponents.hpp"
 #include "Assets/AssetRegistry.h"
 #include "Core/OpaaxPath.h"
 #include "ECS/Components/SpriteComponent.h"

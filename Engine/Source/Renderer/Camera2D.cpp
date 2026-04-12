@@ -90,7 +90,10 @@ namespace Opaax
  
     void Camera2D::SetViewportSize(Uint32 InWidth, Uint32 InHeight)
     {
-        if (m_ViewportWidth == InWidth && m_ViewportHeight == InHeight) { return; }
+        if (m_ViewportWidth == InWidth && m_ViewportHeight == InHeight)
+        {
+            return;
+        }
  
         m_ViewportWidth  = InWidth;
         m_ViewportHeight = InHeight;

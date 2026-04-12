@@ -1,6 +1,4 @@
 ﻿#include "WorldRenderSystem.h"
-
-#include "ECS/BaseComponents.hpp"
 #include "ECS/Components/SpriteComponent.h"
 #include "ECS/Components/TransformComponent.h"
 #include "Renderer/Renderer2D.h"

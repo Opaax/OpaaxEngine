@@ -29,7 +29,10 @@ namespace Opaax::Editor
 
     void ViewportPanel::Resize(Uint32 InWidth, Uint32 InHeight)
     {
-        if (m_FBO) { Shutdown(); }
+        if (m_FBO)
+        {
+            Shutdown();
+        }
 
         m_Width  = InWidth;
         m_Height = InHeight;
