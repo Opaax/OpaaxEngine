@@ -235,9 +235,15 @@ target_compile_definitions(OpaaxEngine PRIVATE ENGINE_EXPORTS)
 # Editor
 if(OPAAX_EDITOR_SUPPORT)
     target_compile_definitions(OpaaxEngine PUBLIC OPAAX_WITH_EDITOR=1)
-    target_compile_definitions(OpaaxEngine PUBLIC OPAAX_DEBUG)
+    message(STATUS "[Opaax] Editor support: ON")
 else()
     target_compile_definitions(OpaaxEngine PUBLIC OPAAX_WITH_EDITOR=0)
+    message(STATUS "[Opaax] Editor support: OFF (Release build)")
+endif()
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+    target_compile_definitions(OpaaxEngine PUBLIC OPAAX_DEBUG)
+    message(STATUS "[Opaax] Debug mode: ON")
 endif()
 
 # ==================================

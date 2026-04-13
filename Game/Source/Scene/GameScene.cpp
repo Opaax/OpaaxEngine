@@ -3,7 +3,6 @@
 #include "Assets/AssetRegistry.h"
 #include "Core/OpaaxPath.h"
 #include "Core/World/WorldRenderSystem.h"
-#include "ECS/BaseComponents.hpp"
 #include "Renderer/Camera2D.h"
 #include "Renderer/Renderer2D.h"
 #include "RHI/RenderCommand.h"

@@ -1,5 +1,4 @@
 ﻿#include "EditorSubsystem.h"
-
 #include "GLFW/glfw3.h"
 
 #if OPAAX_WITH_EDITOR
@@ -12,6 +11,8 @@
 #include "Core/Window.h"
 #include "Scene/SceneManager.h"
 #include "Core/Log/OpaaxLog.h"
+#include "Renderer/Camera2D.h"
+#include "RHI/RenderCommand.h"
 
 namespace Opaax
 {
@@ -41,11 +42,36 @@ namespace Opaax
         ImGui_ImplGlfw_InitForOpenGL(lNativeWindow, true);
         ImGui_ImplOpenGL3_Init("#version 450");
 
-        // Viewport FBO
         m_ViewportPanel.Startup();
+        
+        RegisterViewportCallbacks();
+
+        GetEngineApp()->SetRenderTarget(&m_ViewportPanel);
 
         OPAAX_CORE_INFO("EditorSubsystem: ready.");
         return true;
+    }
+
+    void EditorSubsystem::RegisterViewportCallbacks()
+    {
+        // NOTE: This lambda captures 'this'. EditorSubsystem outlives ViewportPanel
+        //   (it owns it), so the capture is safe.
+        m_ViewportPanel.OnResized = [this](Uint32 InWidth, Uint32 InHeight)
+        {
+            OPAAX_CORE_TRACE("EditorSubsystem: viewport resized to {}x{} — syncing camera.",
+                InWidth, InHeight);
+
+            // Sync Camera2D projection to the new viewport size.
+            if (auto* lCamera = GetEngineApp()->GetSubsystem<Camera2D>())
+            {
+                lCamera->SetViewportSize(InWidth, InHeight);
+            }
+
+            // Sync GL viewport for subsequent draw calls inside the FBO.
+            // NOTE: Bind() already calls glViewport, but RenderCommand must also
+            //   know the size for any system that queries it (future deferred passes).
+            RenderCommand::SetViewport(0, 0, InWidth, InHeight);
+        };
     }
 
     void EditorSubsystem::Shutdown()
@@ -110,19 +136,10 @@ namespace Opaax
             ? &lSceneMgr->GetActiveScene()->GetWorld()
             : nullptr;
 
-        // Toolbar
         m_PlayStopPanel.Draw(lSceneMgr);
-
-        // Hierarchy — updates selected entity
         m_HierarchyPanel.Draw(lSceneMgr);
-
-        // Inspector — reads selected entity from hierarchy
         m_InspectorPanel.Draw(lWorld, m_HierarchyPanel.GetSelectedEntity());
-
-        // Viewport
         m_ViewportPanel.Draw();
-
-        // Asset Browser
         m_AssetBrowserPanel.Draw();
     }
 

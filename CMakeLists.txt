@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Options
-option(OPAAX_EDITOR_SUPPORT "Include editor support in engine" ON)
+option(OPAAX_EDITOR_SUPPORT "Include editor support in engine" OFF)
 option(OPAAX_BUILD_EXAMPLES "Build example games" ON)
 
 # Output directories

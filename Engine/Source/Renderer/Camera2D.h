@@ -51,7 +51,6 @@ namespace Opaax
         // =============================================================================
     private:
         void RecalculateViewProjection();
-        void SetViewportSize(Uint32 InWidth, Uint32 InHeight);
         bool OnWindowResize(WindowResizeEvent& Event);
 
         //------------------------------------------------------------------------------
@@ -59,12 +58,15 @@ namespace Opaax
     public:
         void SetPosition(const Vector2F& InPosition);
         void SetZoom    (float InZoom);
+        void SetViewportSize(Uint32 InWidth, Uint32 InHeight);
  
         FORCEINLINE const Vector2F&     GetPosition()   const noexcept { return m_Position; }
         FORCEINLINE float               GetZoom()       const noexcept { return m_Zoom; }
- 
-        // Returns the combined ViewProjection matrix.
-        // Recomputes only if dirty.
+
+        /**
+         * Recomputes only if dirty.
+         * @return the combined ViewProjection matrix.
+         */
         const Matrix44F& GetViewProjection();
  
         

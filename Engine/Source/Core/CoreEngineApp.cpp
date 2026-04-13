@@ -32,6 +32,9 @@ CoreEngineApp::CoreEngineApp()
 
     m_Window = UniquePtr<Window>(Opaax::Window::Create());
     m_Window->SetEventCallback([this](OpaaxEvent& Event) { DispatchEvent(Event); });
+
+    m_DefaultRenderTarget = MakeUnique<DefaultRenderTarget>(m_Window->GetWidth(), m_Window->GetHeight());
+    m_RenderTarget = m_DefaultRenderTarget.get();
 }
 
 CoreEngineApp::~CoreEngineApp()
@@ -76,7 +79,9 @@ bool CoreEngineApp::OnWindowClose(WindowCloseEvent& Event)
 bool CoreEngineApp::OnWindowResize(WindowResizeEvent& Event)
 {
     OPAAX_CORE_TRACE("CoreEngineApp::OnWindowResize() — {0}x{1}", Event.GetWidth(), Event.GetHeight());
-    // TODO: Notify renderer of viewport change when renderer subsystem exists.
+
+    m_DefaultRenderTarget->OnResize(Event.GetWidth(), Event.GetHeight());
+
     return false;  // not consumed — game code may also want resize events
 }
 

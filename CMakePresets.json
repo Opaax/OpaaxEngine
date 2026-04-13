@@ -1,0 +1,52 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "debug-editor",
+      "displayName": "Debug + Editor",
+      "description": "Development build with editor and debug tools",
+      "binaryDir": "${sourceDir}/build/debug-editor",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "OPAAX_EDITOR_SUPPORT": "ON",
+        "OPAAX_BUILD_EXAMPLES": "ON"
+      }
+    },
+    {
+      "name": "release",
+      "displayName": "Release",
+      "description": "Shipping build — no editor, no debug overhead",
+      "binaryDir": "${sourceDir}/build/release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "OPAAX_EDITOR_SUPPORT": "OFF",
+        "OPAAX_BUILD_EXAMPLES": "OFF"
+      }
+    },
+    {
+      "name": "release-editor",
+      "displayName": "Release + Editor",
+      "description": "Optimised build with editor — for level design sessions",
+      "binaryDir": "${sourceDir}/build/release-editor",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "OPAAX_EDITOR_SUPPORT": "ON",
+        "OPAAX_BUILD_EXAMPLES": "OFF"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "debug-editor",
+      "configurePreset": "debug-editor"
+    },
+    {
+      "name": "release",
+      "configurePreset": "release"
+    },
+    {
+      "name": "release-editor",
+      "configurePreset": "release-editor"
+    }
+  ]
+}

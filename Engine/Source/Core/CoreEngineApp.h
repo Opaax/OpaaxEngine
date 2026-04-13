@@ -2,6 +2,7 @@
 
 #include "EngineAPI.h"
 #include "OpaaxTypes.h"
+#include "Renderer/RenderTarget.hpp"
 #include "Systems/EngineSubsystem.h"
 #include "World/World.h"
 
@@ -64,6 +65,28 @@ namespace Opaax
         World&          GetWorld() noexcept;
         SceneManager*   GetSceneManager() noexcept;
 
+        // [NEW] Active render target — backbuffer in game mode, FBO in editor mode.
+        // Game layer calls this to know where to render. Never queries EditorSubsystem.
+        /**
+         * 
+         * @return 
+         */
+        FORCEINLINE IRenderTarget& GetRenderTarget() noexcept
+        {
+            OPAAX_CORE_ASSERT(m_RenderTarget != nullptr)
+            return *m_RenderTarget;
+        }
+        
+        /**
+         * 
+         * @param InTarget 
+         */
+        void SetRenderTarget(IRenderTarget* InTarget) noexcept
+        {
+            OPAAX_CORE_ASSERT(InTarget != nullptr)
+            m_RenderTarget = InTarget;
+        }
+
         template<typename T>
         T* GetSubsystem()
         {
@@ -89,6 +112,9 @@ namespace Opaax
         EngineSubsystemMgr m_EngineSubsystemManager;
 
         World m_World;
+        
+        IRenderTarget*              m_RenderTarget        = nullptr;
+        UniquePtr<DefaultRenderTarget> m_DefaultRenderTarget;
 
 #if OPAAX_WITH_EDITOR
         void LaunchEditor();
