@@ -196,30 +196,40 @@ if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Vendors/imgui/imgui.h")
     )
 endif()
 
-add_library(imgui STATIC
-    Vendors/imgui/imgui.cpp
-    Vendors/imgui/imgui_draw.cpp
-    Vendors/imgui/imgui_tables.cpp
-    Vendors/imgui/imgui_widgets.cpp
-    Vendors/imgui/imgui_demo.cpp
-    # GLFW + OpenGL3 backends
-    Vendors/imgui/backends/imgui_impl_glfw.cpp
-    Vendors/imgui/backends/imgui_impl_opengl3.cpp
-)
+if(OPAAX_EDITOR_SUPPORT)
+    if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Vendors/imgui/imgui.h")
+        message(FATAL_ERROR
+            "ImGui not found in Engine/Vendors/imgui!\n"
+            "Please run: git clone https://github.com/ocornut/imgui.git Engine/Vendors/imgui"
+        )
+    endif()
 
-target_include_directories(imgui
-    PUBLIC
-        Vendors/imgui
-        Vendors/imgui/backends
-        Vendors/GLFW/include
-)
+    add_library(imgui STATIC
+        Vendors/imgui/imgui.cpp
+        Vendors/imgui/imgui_draw.cpp
+        Vendors/imgui/imgui_tables.cpp
+        Vendors/imgui/imgui_widgets.cpp
+        Vendors/imgui/imgui_demo.cpp
+        Vendors/imgui/backends/imgui_impl_glfw.cpp
+        Vendors/imgui/backends/imgui_impl_opengl3.cpp
+    )
 
-target_compile_definitions(imgui
-    PRIVATE
-        IMGUI_IMPL_OPENGL_LOADER_GLAD
-)
+    target_include_directories(imgui
+        PUBLIC
+            Vendors/imgui
+            Vendors/imgui/backends
+            Vendors/GLFW/include
+    )
 
-message(STATUS "ImGui: static lib created")
+    target_compile_definitions(imgui
+        PRIVATE
+            IMGUI_IMPL_OPENGL_LOADER_GLAD
+    )
+
+    message(STATUS "[Opaax] ImGui: static lib created (editor mode)")
+else()
+    message(STATUS "[Opaax] ImGui: skipped (release mode)")
+endif()
 # ==================================
 # END ImGui
 # ==================================
@@ -259,8 +269,11 @@ target_link_libraries(OpaaxEngine
         glad
         entt
         nlohmann_json
-        imgui
 )
+
+if(OPAAX_EDITOR_SUPPORT)
+    target_link_libraries(OpaaxEngine PRIVATE imgui)
+endif()
 
 # Include directories
 target_include_directories(OpaaxEngine
