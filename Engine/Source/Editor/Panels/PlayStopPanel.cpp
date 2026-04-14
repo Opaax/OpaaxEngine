@@ -83,12 +83,9 @@ namespace Opaax::Editor
         // Get scene name before replacing
         const OpaaxString lSceneName = InSceneManager->GetActiveScene()->GetName();
 
-        // Replace active scene with a fresh one deserialized from temp
-        // NOTE: We can't clear the World in-place cleanly yet (FIXME in World.cpp).
-        //   Replace() is the safe path — unloads current, loads fresh.
-        auto lFreshScene = MakeUnique<Scene>(lSceneName.CStr());
-        SceneSerializer::Deserialize(*lFreshScene, lTempPath.CStr());
-        InSceneManager->Replace(std::move(lFreshScene));
+        Scene* lScene = InSceneManager->GetActiveScene();
+        lScene->GetWorld().Clear();
+        SceneSerializer::Deserialize(*lScene, lTempPath.CStr());
 
         m_bPlaying = false;
     }

@@ -6,7 +6,9 @@ Opaax::ECS::json Opaax::ECS::SpriteComponent::Serialize() const
 {
     OpaaxString lPath;
     if (Texture.IsValid()) {
-        lPath = Texture.GetID().ToString();
+        // lPath = Texture.GetID().ToString();
+        const OpaaxString lAbsPath = Texture.GetID().ToString();
+        lPath = OpaaxPath::MakeRelative(lAbsPath);
         OPAAX_CORE_WARN("Sprite texture path: {}", lPath);
     } else {
         lPath = "";
@@ -29,7 +31,8 @@ void Opaax::ECS::SpriteComponent::DeserializeImplementation(const json& Json)
     {
         // NOTE: Path stored in JSON is already absolute (written by serializer).
         //   We construct the StringID directly — no second Resolve() call.
-        Texture = AssetRegistry::Load<OpenGLTexture2D>(OpaaxStringID(lPath));
+        const OpaaxString lAbsPath = OpaaxPath::Resolve(lPath);
+        Texture = AssetRegistry::Load<OpenGLTexture2D>(OpaaxStringID(lAbsPath));
     }
 
     Color.r = Json["color"][0].get<float>();

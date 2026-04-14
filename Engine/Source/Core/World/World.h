@@ -78,6 +78,8 @@ namespace Opaax
             return m_Registry.valid(InEntity);
         }
 
+        void Clear() noexcept;
+
         //------------------------------------------------------------------------------
         //  API
     public:

@@ -1,4 +1,7 @@
 #include "CoreEngineApp.h"
+
+#include <iostream>
+
 #include "Window.h"
 #include <GLFW/glfw3.h>
 
@@ -39,7 +42,7 @@ CoreEngineApp::CoreEngineApp()
 
 CoreEngineApp::~CoreEngineApp()
 {
-    OPAAX_CORE_TRACE("CoreEngineApp destroyed");
+    std::cout << "CoreEngineApp -- DESTROYED!" << std::endl;
 }
 
 void CoreEngineApp::DispatchEvent(OpaaxEvent& Event)

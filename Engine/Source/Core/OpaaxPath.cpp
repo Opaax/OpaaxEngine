@@ -30,20 +30,6 @@ namespace Opaax
 
     void OpaaxPath::Init()
     {
-        // std::filesystem::current_path() is the working directory — unreliable.
-        // We don't use it.
-        //
-        // On Windows, the exe path comes from the process image path.
-        // std::filesystem doesn't expose this directly, but we can use
-        // argv[0] captured at main() entry, or the platform API.
-        // We use the CMake-injected compile definition as the fallback for
-        // cases where the exe path API isn't available.
-        //
-        // NOTE: We try three sources in priority order:
-        //   1. Platform API (most reliable — actual exe location)
-        //   2. CMAKE_BINARY_DIR compile definition (reliable in dev builds)
-        //   3. Working directory (last resort, may be wrong)
- 
 #if defined(OPAAX_PLATFORM_WINDOWS)
         wchar_t lBuffer[MAX_PATH];
         GetModuleFileNameW(nullptr, lBuffer, MAX_PATH);
@@ -86,5 +72,41 @@ namespace Opaax
     OpaaxString OpaaxPath::Resolve(const OpaaxString& InRelativePath)
     {
         return Resolve(InRelativePath.CStr());
+    }
+
+    OpaaxString OpaaxPath::MakeRelative(const char* InAbsPath) noexcept
+    {
+        if (!InAbsPath || InAbsPath[0] == '\0')
+        {
+            return OpaaxString();
+        }
+
+        const OpaaxString lAbs(InAbsPath);
+        const OpaaxString& lBase = s_BasePath;
+        
+        const OpaaxString lAbsLower  = lAbs.ToLower();
+        const OpaaxString lBaseLower = lBase.ToLower();
+
+        if (lAbsLower.Find(lBaseLower.CStr()) != 0)
+        {
+            // Does not start with base path — return unchanged.
+            // This handles absolute paths outside the project (system assets, etc.)
+            OPAAX_CORE_WARN("OpaaxPath::MakeRelative — '{}' is not under base path '{}'", InAbsPath, lBase);
+            return lAbs;
+        }
+
+        // Skip base path + trailing separator
+        const Uint32 lSkip = lBase.GetLength() + 1; // +1 for '/'
+        if (lSkip >= lAbs.GetLength())
+        {
+            return OpaaxString();
+        }
+
+        return lAbs.SubString(lSkip);
+    }
+
+    OpaaxString OpaaxPath::MakeRelative(const OpaaxString& InAbsPath) noexcept
+    {
+        return MakeRelative(InAbsPath.CStr());
     }
 }

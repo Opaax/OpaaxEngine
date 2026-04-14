@@ -1,4 +1,6 @@
 #include "RenderCommand.h"
+
+#include "Core/Log/OpaaxLog.h"
 #include "RHI/IRenderAPI.h"
 
 namespace Opaax
@@ -13,7 +15,14 @@ namespace Opaax
         s_API->Init();
     }
 
-    void RenderCommand::Shutdown() {}
+    void RenderCommand::Shutdown()
+    {
+        if (s_API)
+        {
+            s_API.reset();
+            OPAAX_CORE_TRACE("RenderCommand::Shutdown() — API released.");
+        }
+    }
 
     void RenderCommand::SetViewport(Uint32 X, Uint32 Y, Uint32 Width, Uint32 Height)
     {

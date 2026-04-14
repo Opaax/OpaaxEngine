@@ -40,7 +40,21 @@ namespace Opaax {
 
     void OpaaxLog::Shutdown()
     {
-        
+        if (s_CoreLogger != nullptr)
+        {
+            s_CoreLogger->flush();
+            s_CoreLogger.reset();
+        }
+
+        if (s_ClientLogger != nullptr)
+        {
+            s_ClientLogger->flush();
+            s_ClientLogger.reset();
+        }
+
+        // NOTE: spdlog::shutdown() joins the async thread if one exists and
+        //   flushes all remaining sinks. Safe to call even in header-only mode.
+        spdlog::shutdown();
     }
 
     SharedPtr<spdlog::logger>& OpaaxLog::GetCoreLogger()

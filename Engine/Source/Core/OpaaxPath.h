@@ -56,8 +56,26 @@ namespace Opaax
 
         //------------------------------------------------------------------------------
         //  Get - Set
- 
+
+        /**
+         * 
+         * @return 
+         */
         FORCEINLINE static const OpaaxString& GetBasePath() noexcept { return s_BasePath; }
+     
+        /**
+         * Convert an absolute path to a path relative to the base path.
+         * @param InAbsPath Absolute path as char*
+         * @return If InAbsPath does not start with the base path, returns InAbsPath unchanged
+         */
+        FORCEINLINE static OpaaxString MakeRelative(const char* InAbsPath) noexcept;
+
+       /**
+         * Convert an absolute path to a path relative to the base path.
+         * @param InAbsPath Absolute path as OpaaxString
+         * @return If InAbsPath does not start with the base path, returns InAbsPath unchanged
+         */
+        FORCEINLINE static OpaaxString MakeRelative(const OpaaxString& InAbsPath) noexcept;
 
         // =============================================================================
         // Members

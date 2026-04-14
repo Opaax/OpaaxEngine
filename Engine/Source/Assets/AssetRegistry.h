@@ -22,6 +22,17 @@ namespace Opaax
      *
      * NOTE: Thread safety — Load/Unload are NOT thread-safe. Call from the main
      * thread only. Async loading (TODO) will require a job queue + staging area.
+     *
+     * Load<T>
+     * Key = OpaaxStringID of the ABSOLUTE resolved path.
+     * Always pass paths through OpaaxPath::Resolve() before calling Load().
+     * Use the OPAAX_ASSET(relative) macro at callsites — it calls Resolve() for you.
+     *
+     * Example:
+     *   AssetRegistry::Load<OpenGLTexture2D>(OPAAX_ASSET("EngineAssets/Textures/Player.png"))
+     *
+     * NOTE: Never pass raw relative paths directly — the cache key would differ
+     *   from the resolved key and you would get duplicate loads.
      */
     class OPAAX_API AssetRegistry
     {
