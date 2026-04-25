@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <typeindex>
 
+#include "AssetManifest.h"
 #include "Core/OpaaxPath.h"
 #include "Loader/AssetLoaderRegistry.h"
 
@@ -126,14 +127,27 @@ namespace Opaax
 
             if (lIDStr.IsEmpty()) { return OpaaxString(); }
 
-            // Already absolute — pass through
+            // Step 1 — already absolute
             if (OpaaxPath::IsAbsolutePath(lIDStr))
             {
                 return lIDStr;
             }
 
-            // Treat as relative path — resolve against base path
-            // NOTE: M8.2 inserts manifest lookup here before this fallback.
+            // Step 2 — manifest lookup
+            // NOTE: Find() is O(1) — Uint32 hash map lookup, no string comparison.
+            const AssetDescriptor* lDesc = AssetManifest::Find(InID);
+            if (lDesc)
+            {
+                OPAAX_CORE_TRACE("AssetRegistry: '{}' → manifest → '{}'",
+                    InID, lDesc->RelPath);
+                return OpaaxPath::Resolve(lDesc->RelPath);
+            }
+
+            // Step 3 — direct path fallback
+            // NOTE: Allows OPAAX_ASSET("GameAssets/Textures/Player.png") to keep working
+            //   without a manifest entry. Useful for tools, debug, and migration.
+            OPAAX_CORE_TRACE("AssetRegistry: '{}' not in manifest — treating as relative path.",
+                InID);
             return OpaaxPath::Resolve(lIDStr);
         }
         
@@ -356,6 +370,7 @@ namespace Opaax
             s_Assets.clear();
 
             AssetLoaderRegistry::Shutdown();
+            AssetManifest::Clear();
         }
 
         static const UnorderedMap<Uint32, AssetEntry>& GetAssets() noexcept

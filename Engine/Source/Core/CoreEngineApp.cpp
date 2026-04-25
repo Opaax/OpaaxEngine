@@ -123,6 +123,14 @@ void CoreEngineApp::Initialize()
 
     AssetLoaderRegistry::Register<OpenGLTexture2D>(MakeUnique<TextureLoader>());
     
+    const OpaaxString lEngineManifest =
+        OpaaxPath::Resolve("EngineAssets/AssetManifest.json");
+    const OpaaxString lGameManifest =
+        OpaaxPath::Resolve("GameAssets/AssetManifest.json");
+
+    AssetManifest::LoadFile(lEngineManifest);
+    AssetManifest::LoadFile(lGameManifest);
+    
     m_EngineSubsystemManager.RegisterSubsystem<RenderSubsystem>(this);
     m_EngineSubsystemManager.RegisterSubsystem<Camera2D>(this);
     

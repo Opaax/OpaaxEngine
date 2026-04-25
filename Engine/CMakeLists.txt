@@ -314,6 +314,23 @@ add_custom_command(TARGET OpaaxEngine POST_BUILD
     COMMENT "Creating EngineAssets directory..."
 )
 
+set(ENGINE_MANIFEST_SOURCE ${ENGINE_ASSETS_SOURCE}/AssetManifest.json)
+
+if(NOT EXISTS ${ENGINE_MANIFEST_SOURCE})
+    message(STATUS "[Opaax] Engine manifest not found — generating empty manifest.")
+    file(WRITE ${ENGINE_MANIFEST_SOURCE}
+"{\n    \"assets\": []\n}\n"
+    )
+    message(STATUS "[Opaax] Generated: ${ENGINE_MANIFEST_SOURCE}")
+endif()
+
+add_custom_command(TARGET OpaaxEngine POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${ENGINE_ASSETS_SOURCE}/AssetManifest.json
+        ${ENGINE_ASSETS_DEST}/AssetManifest.json
+    COMMENT "Copying engine asset manifest..."
+)
+
 # Shader
 add_custom_command(TARGET OpaaxEngine POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory

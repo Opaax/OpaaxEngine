@@ -4,23 +4,34 @@
 
 Opaax::ECS::json Opaax::ECS::SpriteComponent::Serialize() const
 {
-    OpaaxString lPath;
-    if (Texture.IsValid()) {
-        // lPath = Texture.GetID().ToString();
-        const OpaaxString lAbsPath = Texture.GetID().ToString();
-        lPath = OpaaxPath::MakeRelative(lAbsPath);
-        OPAAX_CORE_WARN("Sprite texture path: {}", lPath);
-    } else {
-        lPath = "";
-        OPAAX_CORE_WARN("Sprite has no valid texture!");
-    }
+    OpaaxString lSerializedRef;
+
+    if (Texture.IsValid())
+    {
+        const OpaaxStringID lID = Texture.GetID();
         
+        const OpaaxString lAbsPath = lID.ToString();
+        const OpaaxString lRelPath = OpaaxPath::MakeRelative(lAbsPath);
+        const AssetDescriptor* lDesc = AssetManifest::FindByPath(lRelPath);
+        
+        if (lDesc != nullptr)
+        {
+            lSerializedRef = lDesc->ID.ToString();
+            OPAAX_CORE_TRACE("SpriteComponent::Serialize — using logical ID '{}'", lSerializedRef);
+        }
+        else
+        {
+            lSerializedRef = lRelPath;
+            OPAAX_CORE_TRACE("SpriteComponent::Serialize — using relative path '{}'", lSerializedRef);
+        }
+    }
+
     return {
-                { "texture", lPath.CStr() },
-                { "color",   { Color.r, Color.g, Color.b, Color.a } },
-                { "uv_min",  { UVMin.x, UVMin.y } },
-                { "uv_max",  { UVMax.x, UVMax.y } },
-                { "visible", Visible }
+            { "texture", lSerializedRef.CStr() },
+            { "color",   { Color.r, Color.g, Color.b, Color.a } },
+            { "uv_min",  { UVMin.x, UVMin.y } },
+            { "uv_max",  { UVMax.x, UVMax.y } },
+            { "visible", Visible }
     };
 }
 
@@ -29,8 +40,6 @@ void Opaax::ECS::SpriteComponent::DeserializeImplementation(const json& Json)
     const OpaaxString lPath = Json["texture"].get<std::string>().c_str();
     if (!lPath.IsEmpty())
     {
-        // NOTE: Path stored in JSON is already absolute (written by serializer).
-        //   We construct the StringID directly — no second Resolve() call.
         const OpaaxString lAbsPath = OpaaxPath::Resolve(lPath);
         Texture = AssetRegistry::Load<OpenGLTexture2D>(OpaaxStringID(lAbsPath));
     }

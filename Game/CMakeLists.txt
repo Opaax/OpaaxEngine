@@ -33,3 +33,20 @@ add_custom_command(TARGET Game POST_BUILD
         ${GAME_ASSETS_DEST}
     COMMENT "Copying game assets..."
 )
+
+set(GAME_MANIFEST_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/Assets/AssetManifest.json)
+
+if(NOT EXISTS ${GAME_MANIFEST_SOURCE})
+    message(STATUS "[Opaax] Game manifest not found — generating empty manifest.")
+    file(WRITE ${GAME_MANIFEST_SOURCE}
+"{\n    \"assets\": []\n}\n"
+    )
+    message(STATUS "[Opaax] Generated: ${GAME_MANIFEST_SOURCE}")
+endif()
+
+add_custom_command(TARGET Game POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${GAME_ASSETS_SOURCE}/AssetManifest.json
+        ${GAME_ASSETS_DEST}/AssetManifest.json
+    COMMENT "Copying game asset manifest..."
+)
