@@ -10,6 +10,7 @@
 #include "OpaaxString.hpp"
 #include "OpaaxStringID.hpp"
 #include "Assets/AssetRegistry.h"
+#include "Assets/Loader/TextureLoader.h"
 #include "Editor/EditorSubsystem.h"
 #include "Event/OpaaxEventDispatcher.hpp"
 #include "Input/InputSubsystem.h"
@@ -36,8 +37,8 @@ CoreEngineApp::CoreEngineApp()
     m_Window = UniquePtr<Window>(Opaax::Window::Create());
     m_Window->SetEventCallback([this](OpaaxEvent& Event) { DispatchEvent(Event); });
 
-    m_DefaultRenderTarget = MakeUnique<DefaultRenderTarget>(m_Window->GetWidth(), m_Window->GetHeight());
-    m_RenderTarget = m_DefaultRenderTarget.get();
+    m_DefaultRenderTarget   = MakeUnique<DefaultRenderTarget>(m_Window->GetWidth(), m_Window->GetHeight());
+    m_RenderTarget          = m_DefaultRenderTarget.get();
 }
 
 CoreEngineApp::~CoreEngineApp()
@@ -119,6 +120,8 @@ void CoreEngineApp::Initialize()
     
     // Load engine assets
     OPAAX_CORE_TRACE("Loading engine assets...");
+
+    AssetLoaderRegistry::Register<OpenGLTexture2D>(MakeUnique<TextureLoader>());
     
     m_EngineSubsystemManager.RegisterSubsystem<RenderSubsystem>(this);
     m_EngineSubsystemManager.RegisterSubsystem<Camera2D>(this);

@@ -109,4 +109,9 @@ namespace Opaax
     {
         return MakeRelative(InAbsPath.CStr());
     }
+
+    bool OpaaxPath::IsAbsolutePath(const OpaaxString& InPath) noexcept
+    {
+        return IsAbsolute(InPath.CStr());
+    }
 }

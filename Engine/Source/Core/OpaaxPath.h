@@ -76,6 +76,13 @@ namespace Opaax
          * @return If InAbsPath does not start with the base path, returns InAbsPath unchanged
          */
         FORCEINLINE static OpaaxString MakeRelative(const OpaaxString& InAbsPath) noexcept;
+     
+        /**
+         * To detect whether an ID string is already an absolute path.
+         * @param InPath 
+         * @return 
+         */
+        FORCEINLINE static bool IsAbsolutePath(const OpaaxString& InPath) noexcept;
 
         // =============================================================================
         // Members
