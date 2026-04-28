@@ -25,6 +25,8 @@ namespace Opaax
         OpaaxStringID  ID;          // logical name  — OPAAX_ID("Player")
         OpaaxString    RelPath;     // relative path — "GameAssets/Textures/Player.png"
         OpaaxStringID  Type;        // "Texture2D", "AudioClip", etc. — editor only
+
+        bool bMissing = false;
     };
     
     /**
@@ -40,9 +42,9 @@ namespace Opaax
      */
     class OPAAX_API AssetManifest
     {
-        // =============================================================================
+        //-----------------------------------------------------------------------------
         // Statics
-        // =============================================================================
+        //-----------------------------------------------------------------------------
     private:
         static bool GenerateEmpty(const char* InAbsPath) noexcept;
         
@@ -83,7 +85,13 @@ namespace Opaax
          * Clear all loaded descriptors — called by AssetRegistry::Shutdown().
          */
         static void Clear() noexcept;
+
+        static void Add(AssetDescriptor&& InDesc);
+
+        // [NEW] Update missing flag for an existing entry.
+        static void SetMissing(OpaaxStringID InID, bool bMissing) noexcept;
         
+        //-----------------------------------------------------------------------------
         /**
          * 
          * @return Read-only access for editor (AssetBrowserPanel)
@@ -93,9 +101,9 @@ namespace Opaax
             return s_Descriptors;
         }
 
-        // =============================================================================
+        //-----------------------------------------------------------------------------
         // Members
-        // =============================================================================
+        //-----------------------------------------------------------------------------
     private:
         static UnorderedMap<Uint32, AssetDescriptor> s_Descriptors;
     };

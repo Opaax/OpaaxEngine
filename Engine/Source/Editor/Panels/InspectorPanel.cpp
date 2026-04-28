@@ -1,5 +1,7 @@
 ﻿#include "InspectorPanel.h"
 
+#include "AssetBrowserPanel.h"
+#include "Assets/AssetRegistry.h"
 
 
 #if OPAAX_WITH_EDITOR
@@ -126,7 +128,6 @@ namespace Opaax::Editor
 
         bool bOpen = ImGui::CollapsingHeader("Sprite", ImGuiTreeNodeFlags_DefaultOpen);
 
-        // Remove component button — aligned right
         ImGui::SameLine(ImGui::GetContentRegionAvail().x + ImGui::GetStyle().ItemSpacing.x);
         if (ImGui::SmallButton("X##RemoveSprite"))
         {
@@ -136,17 +137,46 @@ namespace Opaax::Editor
 
         if (!bOpen) { return; }
 
-        // Texture path — read only for now
-        // TODO: drag & drop from asset browser (M7 étape 7)
+        // Texture field — read + drag & drop target
         const char* lPath = lS->Texture.IsValid()
             ? lS->Texture.GetID().ToString().CStr()
             : "None";
 
         ImGui::LabelText("Texture", "%s", lPath);
 
-        ImGui::ColorEdit4("Color",  &lS->Color.r);
-        ImGui::DragFloat2("UV Min", &lS->UVMin.x, 0.01f, 0.f, 1.f);
-        ImGui::DragFloat2("UV Max", &lS->UVMax.x, 0.01f, 0.f, 1.f);
+        // [NEW] Drag & drop target — accepts ASSET_ID payload from AssetBrowserPanel
+        if (ImGui::BeginDragDropTarget())
+        {
+            if (const ImGuiPayload* lPayload =
+                    ImGui::AcceptDragDropPayload(
+                        Editor::AssetBrowserPanel::DragDropPayloadType))
+            {
+                OPAAX_CORE_ASSERT(lPayload->DataSize == sizeof(Uint32))
+
+                const Uint32 lRawID = *static_cast<const Uint32*>(lPayload->Data);
+                const OpaaxStringID lAssetID(lRawID);
+
+                // Load the texture — cache hit if already loaded
+                const auto lHandle =
+                    AssetRegistry::Load<OpenGLTexture2D>(lAssetID);
+
+                if (lHandle.IsValid())
+                {
+                    lS->Texture = lHandle;
+                    OPAAX_CORE_INFO("InspectorPanel: texture set to '{}'", lAssetID);
+                }
+                else
+                {
+                    OPAAX_CORE_WARN("InspectorPanel: drag & drop failed for '{}'",
+                        lAssetID);
+                }
+            }
+            ImGui::EndDragDropTarget();
+        }
+
+        ImGui::ColorEdit4("Color",   &lS->Color.r);
+        ImGui::DragFloat2("UV Min",  &lS->UVMin.x, 0.01f, 0.f, 1.f);
+        ImGui::DragFloat2("UV Max",  &lS->UVMax.x, 0.01f, 0.f, 1.f);
         ImGui::Checkbox  ("Visible", &lS->Visible);
     }
 

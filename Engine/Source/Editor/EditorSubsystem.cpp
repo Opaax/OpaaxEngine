@@ -41,10 +41,10 @@ namespace Opaax
 
         ImGui_ImplGlfw_InitForOpenGL(lNativeWindow, true);
         ImGui_ImplOpenGL3_Init("#version 450");
-
-        m_ViewportPanel.Startup();
         
+        m_ViewportPanel.Startup();
         RegisterViewportCallbacks();
+        m_AssetBrowserPanel.Startup();
 
         GetEngineApp()->SetRenderTarget(&m_ViewportPanel);
 

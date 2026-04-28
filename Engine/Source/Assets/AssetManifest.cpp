@@ -136,5 +136,27 @@ namespace Opaax
     {
         s_Descriptors.clear();
     }
+
+    void AssetManifest::Add(AssetDescriptor&& InDesc)
+    {
+        const Uint32 lKey = InDesc.ID.GetId();
+
+        // NOTE: Never overwrite existing entries — scanner preserves manual edits.
+        if (s_Descriptors.count(lKey))
+        {
+            return;
+        }
+
+        s_Descriptors.emplace(lKey, std::move(InDesc));
+    }
+    
+    void AssetManifest::SetMissing(OpaaxStringID InID, bool bIsMissing) noexcept
+    {
+        auto lIt = s_Descriptors.find(InID.GetId());
+        if (lIt != s_Descriptors.end())
+        {
+            lIt->second.bMissing = bIsMissing;
+        }
+    }
 }
 
