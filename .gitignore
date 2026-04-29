@@ -48,3 +48,8 @@
 
 # Builds
 build/*
+
+#Claude AI
+.claude/CLAUDE.local.md
+.claude/task/*
+.claude/Milestone/*

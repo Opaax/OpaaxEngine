@@ -1,0 +1,52 @@
+# .claudeignore
+# Paths Claude Code will not read, index, or modify.
+# Syntax mirrors .gitignore.
+
+# -------------------------------------------------------
+# Vendor source — read-only reference, never edit
+# -------------------------------------------------------
+Engine/Vendors/GLFW/
+Engine/Vendors/glad/
+Engine/Vendors/imgui/
+Engine/Vendors/spdlog/
+Engine/Vendors/glm/
+Engine/Vendors/entt/
+
+# -------------------------------------------------------
+# Build artifacts
+# -------------------------------------------------------
+build/
+out/
+cmake-build-*/
+*.dir/
+*.ilk
+*.pdb
+*.exp
+*.lib
+*.dll
+*.exe
+*.obj
+*.o
+
+# -------------------------------------------------------
+# IDE / editor noise
+# -------------------------------------------------------
+.vs/
+.vscode/settings.json
+.idea/
+*.user
+*.suo
+*.sdf
+*.opensdf
+*.VC.db
+*.VC.opendb
+
+# -------------------------------------------------------
+# Logs generated at runtime
+# -------------------------------------------------------
+*.log
+
+# -------------------------------------------------------
+# Local Claude session file — never index, never commit
+# -------------------------------------------------------
+CLAUDE.local.md
