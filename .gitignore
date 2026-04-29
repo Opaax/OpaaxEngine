@@ -53,3 +53,4 @@ build/*
 .claude/CLAUDE.local.md
 .claude/task/*
 .claude/Milestone/*
+.claude/worktrees/*
