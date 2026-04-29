@@ -64,9 +64,7 @@ namespace Opaax
         Window&         GetWindow() const { return *m_Window; }
         World&          GetWorld() noexcept;
         SceneManager*   GetSceneManager() noexcept;
-
-        // [NEW] Active render target — backbuffer in game mode, FBO in editor mode.
-        // Game layer calls this to know where to render. Never queries EditorSubsystem.
+        
         /**
          * 
          * @return 

@@ -54,3 +54,4 @@ build/*
 .claude/task/*
 .claude/Milestone/*
 .claude/worktrees/*
+.claude/code/*
