@@ -1,19 +1,20 @@
-﻿#include "AssetBrowserPanel.h"
-
-#include "Assets/AssetRegistry.h"
+#include "AssetBrowserPanel.h"
 
 #if OPAAX_WITH_EDITOR
 
 #include <imgui.h>
-#include "Assets/Loader/TextureLoader.h"
+#include "Assets/AssetRegistry.h"
+#include "Assets/AssetManifest.h"
+#include "Assets/AssetScanner.h"
 #include "Core/OpaaxPath.h"
 #include "Core/Log/OpaaxLog.h"
-#include "RHI/OpenGL/OpenGLTexture2D.h"
+#include "Editor/Assets/AssetTypeRegistry.h"
+#include "Editor/Assets/IAssetTypeActions.h"
 
 namespace Opaax::Editor
 {
     // =============================================================================
-    // Startup — first scan
+    // Startup
     // =============================================================================
     void AssetBrowserPanel::Startup()
     {
@@ -26,32 +27,30 @@ namespace Opaax::Editor
     // =============================================================================
     void AssetBrowserPanel::RunScan()
     {
-        AssetScanner::ScanConfig lConfig;
-        lConfig.RootDir         = "GameAssets";
-        lConfig.ManifestAbsPath = m_ManifestAbsPath;
-        lConfig.bFlagMissing    = true;
+        struct ScanTarget { const char* RootDir; const char* ManifestRelPath; };
+        static constexpr ScanTarget k_ScanTargets[] =
+        {
+            { "GameAssets",   "GameAssets/AssetManifest.json"   },
+            { "EngineAssets", "EngineAssets/AssetManifest.json" },
+        };
 
-        m_LastScanResult = AssetScanner::Scan(lConfig);
+        for (const auto& lTarget : k_ScanTargets)
+        {
+            AssetScanner::ScanConfig lConfig;
+            lConfig.RootDir         = lTarget.RootDir;
+            lConfig.ManifestAbsPath = OpaaxPath::Resolve(lTarget.ManifestRelPath);
+            lConfig.bFlagMissing    = true;
 
-        OPAAX_CORE_INFO("AssetBrowserPanel: scan complete — +{} new, {} existing, {} missing",
-            m_LastScanResult.Added,
-            m_LastScanResult.Existing,
-            m_LastScanResult.Missing);
+            m_LastScanResult = AssetScanner::Scan(lConfig);
 
-        AssetScanner::ScanConfig lConfig1;
-        lConfig1.RootDir         = "EngineAssets";
-        lConfig1.ManifestAbsPath = OpaaxPath::Resolve("EngineAssets/AssetManifest.json");
-        lConfig1.bFlagMissing    = true;
+            OPAAX_CORE_INFO("AssetBrowserPanel: scan '{}' — +{} new, {} existing, {} missing",
+                lTarget.RootDir,
+                m_LastScanResult.Added,
+                m_LastScanResult.Existing,
+                m_LastScanResult.Missing);
+        }
 
-        m_LastScanResult = AssetScanner::Scan(lConfig1);
-
-        OPAAX_CORE_INFO("AssetBrowserPanel: scan complete — +{} new, {} existing, {} missing",
-            m_LastScanResult.Added,
-            m_LastScanResult.Existing,
-            m_LastScanResult.Missing);
-
-        
-        m_bScanned       = true;
+        m_bScanned = true;
     }
 
     // =============================================================================
@@ -60,11 +59,9 @@ namespace Opaax::Editor
     void AssetBrowserPanel::Draw()
     {
         ImGui::Begin("Asset Browser");
-
         DrawToolbar();
         ImGui::Separator();
         DrawAssetList();
-
         ImGui::End();
     }
 
@@ -73,13 +70,11 @@ namespace Opaax::Editor
     // =============================================================================
     void AssetBrowserPanel::DrawToolbar()
     {
-        // Refresh button
         if (ImGui::Button("  Refresh  "))
         {
             RunScan();
         }
 
-        // Scan stats
         if (m_bScanned)
         {
             ImGui::SameLine();
@@ -98,53 +93,59 @@ namespace Opaax::Editor
 
         ImGui::Spacing();
 
-        // Filter by text
+        // Text filter
         {
             char lBuf[128];
-            strncpy_s(lBuf, sizeof(lBuf), m_FilterText.CStr(), _TRUNCATE);
+            strncpy_s(lBuf, sizeof(lBuf), m_Filter.Text.CStr(), _TRUNCATE);
             ImGui::SetNextItemWidth(-1.f);
             if (ImGui::InputTextWithHint("##Filter", "Filter assets...", lBuf, sizeof(lBuf)))
             {
-                m_FilterText = OpaaxString(lBuf);
+                m_Filter.Text = OpaaxString(lBuf);
             }
         }
 
         ImGui::Spacing();
 
-        // Filter by type buttons
-        const OpaaxStringID lTypes[] = {
-            OpaaxStringID(""),
-            OpaaxStringID("Texture2D"),
-            OpaaxStringID("AudioClip"),
-            OpaaxStringID("Animation"),
-            OpaaxStringID("InputMap"),
-            OpaaxStringID("Shader"),
-            OpaaxStringID("Data"),
-            OpaaxStringID("Scene"),
-        };
-
-        const char* lTypeLabels[] = {
-            "All", "Texture", "Audio", "Anim", "Input", "Shader", "Data", "Scene"
-        };
-
-        for (Int32 i = 0; i < 8; ++i)
+        // Type filter — "All" button, then one per registered asset type
         {
-            if (i > 0) { ImGui::SameLine(); }
+            const bool bAllSelected = !m_Filter.TypeID.IsValid();
+            
+            if (bAllSelected)
+            {
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.26f, 0.59f, 0.98f, 1.f));
+            }
+            
+            if (ImGui::SmallButton("All"))
+            {
+                m_Filter.TypeID = OpaaxStringID{};
+            }
+            
+            if (bAllSelected)
+            {
+                ImGui::PopStyleColor();
+            }
+        }
 
-            const bool bSelected = (m_FilterType == lTypes[i]);
-
+        for (const auto& lActions : AssetTypeRegistry::GetAll())
+        {
+            ImGui::SameLine();
+            
+            const bool bSelected = (m_Filter.TypeID == lActions->GetTypeID());
+            
             if (bSelected)
             {
-                ImGui::PushStyleColor(ImGuiCol_Button,
-                    ImVec4(0.26f, 0.59f, 0.98f, 1.f));
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.26f, 0.59f, 0.98f, 1.f));
             }
-
-            if (ImGui::SmallButton(lTypeLabels[i]))
+            
+            if (ImGui::SmallButton(lActions->GetLabel()))
             {
-                m_FilterType = lTypes[i];
+                m_Filter.TypeID = lActions->GetTypeID();
             }
-
-            if (bSelected) { ImGui::PopStyleColor(); }
+            
+            if (bSelected)
+            {
+                ImGui::PopStyleColor();
+            }
         }
     }
 
@@ -161,25 +162,11 @@ namespace Opaax::Editor
             return;
         }
 
-        // Count visible for display
         Int32 lVisible = 0;
 
         for (const auto& [lKey, lDesc] : lAll)
         {
-            // Type filter
-            if (m_FilterType.IsValid() && lDesc.Type != m_FilterType)
-            {
-                continue;
-            }
-
-            // Text filter
-            if (!m_FilterText.IsEmpty())
-            {
-                const OpaaxString lIDStr  = lDesc.ID.ToString().ToLower();
-                const OpaaxString lFilter = m_FilterText.ToLower();
-                if (lIDStr.Find(lFilter.CStr()) == -1) { continue; }
-            }
-
+            if (!m_Filter.Matches(lDesc)) { continue; }
             DrawAssetEntry(lDesc);
             ++lVisible;
         }
@@ -191,55 +178,41 @@ namespace Opaax::Editor
     }
 
     // =============================================================================
-    // Single entry
+    // Single entry — icon, colour, D&D source, tooltip, context menu
     // =============================================================================
     void AssetBrowserPanel::DrawAssetEntry(const AssetDescriptor& InDesc)
     {
         const bool bLoaded  = AssetRegistry::IsLoaded(InDesc.ID);
         const bool bMissing = InDesc.bMissing;
 
-        // Color coding
+        // Status colour
         ImVec4 lColor;
-        if (bMissing)       { lColor = ImVec4(1.f,  0.3f, 0.3f, 1.f); }  // red
-        else if (bLoaded)   { lColor = ImVec4(0.4f, 1.f,  0.4f, 1.f); }  // green
-        else                { lColor = ImVec4(1.f,  1.f,  1.f,  1.f); }  // white
+        if (bMissing)       { lColor = ImVec4(1.f,  0.3f, 0.3f, 1.f); }
+        else if (bLoaded)   { lColor = ImVec4(0.4f, 1.f,  0.4f, 1.f); }
+        else                { lColor = ImVec4(1.f,  1.f,  1.f,  1.f); }
 
         ImGui::PushStyleColor(ImGuiCol_Text, lColor);
 
-        // Type icon prefix — simple text icon
-        const char* lIcon = "[ ? ]";
-        if      (InDesc.Type == OpaaxStringID("Texture2D")) { lIcon = "[ T ]"; }
-        else if (InDesc.Type == OpaaxStringID("AudioClip")) { lIcon = "[ A ]"; }
-        else if (InDesc.Type == OpaaxStringID("Animation")) { lIcon = "[ @ ]"; }
-        else if (InDesc.Type == OpaaxStringID("InputMap"))  { lIcon = "[ I ]"; }
-        else if (InDesc.Type == OpaaxStringID("Shader"))    { lIcon = "[ S ]"; }
-        else if (InDesc.Type == OpaaxStringID("Data"))      { lIcon = "[ D ]"; }
-        else if (InDesc.Type == OpaaxStringID("Scene"))     { lIcon = "[ # ]"; }
-
-        // Selectable row
+        const char*       lIcon  = AssetTypeRegistry::GetIcon(InDesc.Type);
         const OpaaxString lIDStr = InDesc.ID.ToString();
+
         char lLabel[256];
-        snprintf(lLabel, sizeof(lLabel), "%s  %s##%u",
-            lIcon, lIDStr.CStr(), InDesc.ID.GetId());
+        snprintf(lLabel, sizeof(lLabel), "%s  %s##%u", lIcon, lIDStr.CStr(), InDesc.ID.GetId());
 
-        const bool bSelected = (m_HoveredID == InDesc.ID);
-        ImGui::Selectable(lLabel, bSelected);
-
+        ImGui::Selectable(lLabel, m_HoveredID == InDesc.ID);
         ImGui::PopStyleColor();
 
         // --- Drag & Drop source ---
         if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
         {
             const Uint32 lID = InDesc.ID.GetId();
-            ImGui::SetDragDropPayload(DragDropPayloadType, &lID, sizeof(Uint32));
-
-            // Preview while dragging
+            ImGui::SetDragDropPayload(IAssetTypeActions::DragDropPayloadType, &lID, sizeof(Uint32));
             ImGui::Text("  %s  %s", lIcon, lIDStr.CStr());
 
-            // Show texture preview while dragging if it's a texture
-            if (InDesc.Type == OpaaxStringID("Texture2D") && bLoaded)
+            IAssetTypeActions* lActions = AssetTypeRegistry::Find(InDesc.Type);
+            if (lActions && lActions->CanPreview() && bLoaded)
             {
-                DrawTexturePreview(InDesc);
+                lActions->DrawPreview(InDesc.ID);
             }
 
             ImGui::EndDragDropSource();
@@ -257,11 +230,11 @@ namespace Opaax::Editor
             ImGui::TextDisabled("Status : %s",
                 bMissing ? "MISSING" : bLoaded ? "Loaded" : "Not loaded");
 
-            // Inline texture preview in tooltip
-            if (InDesc.Type == OpaaxStringID("Texture2D") && bLoaded)
+            IAssetTypeActions* lActions = AssetTypeRegistry::Find(InDesc.Type);
+            if (lActions && lActions->CanPreview() && bLoaded)
             {
                 ImGui::Spacing();
-                DrawTexturePreview(InDesc);
+                lActions->DrawPreview(InDesc.ID);
             }
 
             ImGui::EndTooltip();
@@ -274,88 +247,34 @@ namespace Opaax::Editor
         // --- Right-click context menu ---
         if (ImGui::BeginPopupContextItem())
         {
-            if (!bMissing && !bLoaded)
+            IAssetTypeActions* lActions = AssetTypeRegistry::Find(InDesc.Type);
+
+            if (!bMissing && !bLoaded && lActions)
             {
-                if (ImGui::MenuItem("Load"))
-                {
-                    // NOTE: We load as Texture2D if that's the type.
-                    //   M8.4 will generalize this with a type-dispatch mechanism.
-                    if (InDesc.Type == OpaaxStringID("Texture2D"))
-                    {
-                        AssetRegistry::Load<OpenGLTexture2D>(InDesc.ID);
-                    }
-                }
+                if (ImGui::MenuItem("Load")) { lActions->Load(InDesc.ID); }
             }
 
-            if (bLoaded)
+            if (bLoaded && lActions)
             {
-                if (ImGui::MenuItem("Reload"))
-                {
-                    if (InDesc.Type == OpaaxStringID("Texture2D"))
-                    {
-                        AssetRegistry::Reload<OpenGLTexture2D>(InDesc.ID);
-                    }
-                }
-
-                if (ImGui::MenuItem("Unload"))
-                {
-                    AssetRegistry::Unload(InDesc.ID);
-                }
+                if (ImGui::MenuItem("Reload")) { lActions->Reload(InDesc.ID); }
+                if (ImGui::MenuItem("Unload")) { AssetRegistry::Unload(InDesc.ID); }
             }
 
             ImGui::Separator();
             ImGui::TextDisabled("%s", InDesc.RelPath.CStr());
-
             ImGui::EndPopup();
         }
 
+        // --- Double-click ---
         if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0))
         {
             if (InDesc.Type == OpaaxStringID("Scene"))
             {
-                // FIXME: M_Scene — SceneManager::LoadFromFile(InDesc.RelPath)
-                //   Pas implémenté — SceneManager ne sait pas encore charger
-                //   depuis un AssetDescriptor. À connecter quand Scene devient
-                //   un asset first-class.
-                OPAAX_CORE_WARN("AssetBrowserPanel: Scene loading not yet implemented. "
-                    "Coming in M_Scene. File: '{}'", InDesc.RelPath);
+                // FIXME: M_Scene — connect SceneManager::LoadFromFile when Scene becomes a first-class asset
+                OPAAX_CORE_WARN("AssetBrowserPanel: Scene loading not yet implemented. File: '{}'",
+                    InDesc.RelPath);
             }
         }
-    }
-
-    // =============================================================================
-    // Texture preview
-    // =============================================================================
-    void AssetBrowserPanel::DrawTexturePreview(const AssetDescriptor& InDesc)
-    {
-        // NOTE: IsLoaded check done by caller — we assume the asset is in cache.
-        const auto lHandle =
-            AssetRegistry::Load<OpenGLTexture2D>(InDesc.ID);
-
-        if (!lHandle.IsValid()) { return; }
-
-        const OpenGLTexture2D* lTex = lHandle.Get();
-
-        // Scale preview to fit — max 128px, preserve aspect ratio
-        constexpr float lMaxSize = 128.f;
-        const float lW = static_cast<float>(lTex->GetWidth());
-        const float lH = static_cast<float>(lTex->GetHeight());
-        const float lAspect = (lH > 0.f) ? (lW / lH) : 1.f;
-
-        float lDrawW = lMaxSize;
-        float lDrawH = lMaxSize;
-
-        if (lAspect > 1.f) { lDrawH = lMaxSize / lAspect; }
-        else               { lDrawW = lMaxSize * lAspect;  }
-
-        ImGui::Image(
-            lTex->GetRendererID(),
-            ImVec2(lDrawW, lDrawH),
-            ImVec2(0.f, 1.f),
-            ImVec2(1.f, 0.f)
-        );
-
-        ImGui::TextDisabled("%ux%u", lTex->GetWidth(), lTex->GetHeight());
     }
 
 } // namespace Opaax::Editor

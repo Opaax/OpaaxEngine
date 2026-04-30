@@ -50,12 +50,12 @@
 4. **Explain changes**: Provide a high-level summary at each step
 5. **Document results**: Add a review section in `tasks/todo.md`
 6. **Capture lessons**: Update `tasks/lessons.md` after corrections
-7. **Code Base**: Update `code/code-base.md` after milestone or if empty from the current project
+7. **Code Base**: Update `code/code-base.md` after milestone, after coding/editing files or if empty from the current project
 
 # Core Principles
 
 - **Main Principles**: Look for `code/code.md` ask and update if you find other things
-- **Code Base**: Look for `code/code-base.md`
+- **Code Base**: Look for `code/code-base.md` you can find here the project structure
 - **Simplicity first**: Make every change as simple as possible. Minimal impact on the code.
 - **No laziness**: Find root causes. No temporary patches. Senior engineering standards.
 - **Minimal impact**: Changes should touch only what is necessary. Avoid introducing bugs.

@@ -1,16 +1,9 @@
-﻿#include "InspectorPanel.h"
-
-#include "AssetBrowserPanel.h"
-#include "Assets/AssetRegistry.h"
-
+#include "InspectorPanel.h"
 
 #if OPAAX_WITH_EDITOR
 
 #include <imgui.h>
-#include "ECS/Components/TransformComponent.h"
-#include "ECS/Components/TagComponent.h"
-#include "ECS/Components/SpriteComponent.h"
-#include "Core/Log/OpaaxLog.h"
+#include "Editor/Inspector/ComponentDrawerRegistry.h"
 
 namespace Opaax::Editor
 {
@@ -32,15 +25,10 @@ namespace Opaax::Editor
             return;
         }
 
-        DrawTagComponent      (*InWorld, InSelected);
-        DrawTransformComponent(*InWorld, InSelected);
-        DrawSpriteComponent   (*InWorld, InSelected);
-
-        // TODO: DrawPhysicsComponent, DrawScriptComponent, etc. — add as components are added.
+        ComponentDrawerRegistry::DrawAll(*InWorld, InSelected);
 
         ImGui::Separator();
 
-        // Add component menu
         if (ImGui::Button("+ Add Component", ImVec2(-1.f, 0.f)))
         {
             ImGui::OpenPopup("AddComponentPopup");
@@ -48,136 +36,11 @@ namespace Opaax::Editor
 
         if (ImGui::BeginPopup("AddComponentPopup"))
         {
-            if (!InWorld->HasComponent<ECS::TransformComponent>(InSelected))
-            {
-                if (ImGui::MenuItem("Transform"))
-                {
-                    InWorld->AddComponent<ECS::TransformComponent>(InSelected);
-                    ImGui::CloseCurrentPopup();
-                }
-            }
-
-            if (!InWorld->HasComponent<ECS::SpriteComponent>(InSelected))
-            {
-                if (ImGui::MenuItem("Sprite"))
-                {
-                    InWorld->AddComponent<ECS::SpriteComponent>(InSelected);
-                    ImGui::CloseCurrentPopup();
-                }
-            }
-
+            ComponentDrawerRegistry::DrawAddComponentMenu(*InWorld, InSelected);
             ImGui::EndPopup();
         }
 
         ImGui::End();
-    }
-
-    // =============================================================================
-    // TagComponent
-    // =============================================================================
-    void InspectorPanel::DrawTagComponent(World& InWorld, EntityID InEntity)
-    {
-        auto* lTag = InWorld.GetComponent<ECS::TagComponent>(InEntity);
-        if (!lTag) { return; }
-
-        if (ImGui::CollapsingHeader("Tag", ImGuiTreeNodeFlags_DefaultOpen))
-        {
-            char lBuffer[256];
-            strncpy_s(lBuffer, sizeof(lBuffer), lTag->Tag.ToString().CStr(), _TRUNCATE);
-
-            if (ImGui::InputText("##Tag", lBuffer, sizeof(lBuffer)))
-            {
-                lTag->Tag = OpaaxStringID(lBuffer);
-            }
-        }
-    }
-
-    // =============================================================================
-    // TransformComponent
-    // =============================================================================
-    void InspectorPanel::DrawTransformComponent(World& InWorld, EntityID InEntity)
-    {
-        auto* lT = InWorld.GetComponent<ECS::TransformComponent>(InEntity);
-        if (!lT) { return; }
-
-        bool bOpen = ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen);
-
-        // Remove component button — aligned right
-        ImGui::SameLine(ImGui::GetContentRegionAvail().x + ImGui::GetStyle().ItemSpacing.x);
-        if (ImGui::SmallButton("X##RemoveTransform"))
-        {
-            InWorld.RemoveComponent<ECS::TransformComponent>(InEntity);
-            return;
-        }
-
-        if (!bOpen) { return; }
-
-        ImGui::DragFloat2("Position", &lT->Position.x, 1.f);
-        ImGui::DragFloat2("Scale",    &lT->Scale.x,    0.5f, 0.01f, 10000.f);
-        ImGui::DragFloat ("Rotation", &lT->Rotation,   0.01f);
-        ImGui::DragFloat ("Z Order",  &lT->ZOrder,     0.1f);
-    }
-
-    // =============================================================================
-    // SpriteComponent
-    // =============================================================================
-    void InspectorPanel::DrawSpriteComponent(World& InWorld, EntityID InEntity)
-    {
-        auto* lS = InWorld.GetComponent<ECS::SpriteComponent>(InEntity);
-        if (!lS) { return; }
-
-        bool bOpen = ImGui::CollapsingHeader("Sprite", ImGuiTreeNodeFlags_DefaultOpen);
-
-        ImGui::SameLine(ImGui::GetContentRegionAvail().x + ImGui::GetStyle().ItemSpacing.x);
-        if (ImGui::SmallButton("X##RemoveSprite"))
-        {
-            InWorld.RemoveComponent<ECS::SpriteComponent>(InEntity);
-            return;
-        }
-
-        if (!bOpen) { return; }
-
-        // Texture field — read + drag & drop target
-        const char* lPath = lS->Texture.IsValid()
-            ? lS->Texture.GetID().ToString().CStr()
-            : "None";
-
-        ImGui::LabelText("Texture", "%s", lPath);
-
-        // [NEW] Drag & drop target — accepts ASSET_ID payload from AssetBrowserPanel
-        if (ImGui::BeginDragDropTarget())
-        {
-            if (const ImGuiPayload* lPayload =
-                    ImGui::AcceptDragDropPayload(
-                        Editor::AssetBrowserPanel::DragDropPayloadType))
-            {
-                OPAAX_CORE_ASSERT(lPayload->DataSize == sizeof(Uint32))
-
-                const Uint32 lRawID = *static_cast<const Uint32*>(lPayload->Data);
-                const OpaaxStringID lAssetID(lRawID);
-
-                // Load the texture — cache hit if already loaded
-                const auto lHandle =
-                    AssetRegistry::Load<OpenGLTexture2D>(lAssetID);
-
-                if (lHandle.IsValid())
-                {
-                    lS->Texture = lHandle;
-                    OPAAX_CORE_INFO("InspectorPanel: texture set to '{}'", lAssetID);
-                }
-                else
-                {
-                    OPAAX_CORE_WARN("InspectorPanel: drag & drop failed for '{}'",
-                        lAssetID);
-                }
-            }
-            ImGui::EndDragDropTarget();
-        }
-
-        ImGui::ColorEdit4("Color",   &lS->Color.r);
-        ImGui::DragFloat2("UV Min",  &lS->UVMin.x, 0.01f, 0.f, 1.f);
-        ImGui::DragFloat2("UV Max",  &lS->UVMax.x, 0.01f, 0.f, 1.f);
-        ImGui::Checkbox  ("Visible", &lS->Visible);
     }
 
 } // namespace Opaax::Editor

@@ -1,68 +1,66 @@
-﻿#pragma once
-#include "Assets/AssetManifest.h"
-#include "Assets/AssetScanner.h"
+#pragma once
 
 #if OPAAX_WITH_EDITOR
 
 #include "Core/EngineAPI.h"
-#include "Core/OpaaxTypes.h"
+#include "Core/OpaaxString.hpp"
 #include "Core/OpaaxStringID.hpp"
 #include "Assets/AssetScanner.h"
+#include "Editor/IEditorPanel.h"
+#include "Editor/Panels/AssetBrowserFilter.h"
 
 namespace Opaax::Editor
 {
-    // =============================================================================
-    // AssetBrowserPanel
-    //
-    // Displays all assets from the manifest — loaded, unloaded, and missing.
-    // Triggers AssetScanner on startup and on manual Refresh.
-    //
-    // Features:
-    //   - Scan on startup
-    //   - Refresh button
-    //   - Filter by type
-    //   - Visual status : loaded (green) / unloaded (white) / missing (red)
-    //   - Texture preview on hover
-    //   - Drag & drop → SpriteComponent in Inspector
-    //
-    // Drag & Drop protocol:
-    //   Begin : ImGui::SetDragDropPayload("ASSET_ID", &id, sizeof(Uint32))
-    //   Accept: InspectorPanel reads "ASSET_ID" payload, calls AssetRegistry::Load<T>
-    // =============================================================================
-    class OPAAX_API AssetBrowserPanel
+    /**
+     * @class AssetBrowserPanel
+     * Displays all assets from the manifest — loaded, unloaded, and missing.
+     * Triggers AssetScanner on Startup and on manual Refresh.
+     *
+     * Extension: register an IAssetTypeActions via AssetTypeRegistry::Register()
+     * to add icon, load/reload, and preview for a new asset type.
+     * This panel adapts automatically — no changes required here.
+     *
+     * Drag & Drop protocol:
+     *   Begin : SetDragDropPayload(IAssetTypeActions::DragDropPayloadType, &id, sizeof(Uint32))
+     *   Accept: component drawers call AcceptDragDropPayload with the same tag
+     */
+    class OPAAX_API AssetBrowserPanel final : public IEditorPanel
     {
+        // =============================================================================
+        // CTOR - DTOR
+        // =============================================================================
     public:
-        AssetBrowserPanel()  = default;
-        ~AssetBrowserPanel() = default;
-
-        // Called by EditorSubsystem::Startup() — triggers first scan
-        void Startup();
-
-        void Draw();
-
-        // Drag & drop payload type — shared with InspectorPanel
-        static constexpr const char* DragDropPayloadType = "ASSET_ID";
-
+        AssetBrowserPanel()           = default;
+        ~AssetBrowserPanel() override = default;
+        
+        // =============================================================================
+        // Functions
+        // =============================================================================
     private:
         void RunScan();
         void DrawToolbar();
         void DrawAssetList();
         void DrawAssetEntry(const AssetDescriptor& InDesc);
-        void DrawTexturePreview(const AssetDescriptor& InDesc);
-
-        // Filter state
-        OpaaxString     m_FilterText;
-        OpaaxStringID   m_FilterType;   // empty = show all
-
-        // Last scan result — displayed in toolbar
+        
+        // =============================================================================
+        // Override
+        // =============================================================================
+        //~Begin IEditorPanel interface
+    public:
+        void        Startup()            override;
+        void        Draw()               override;
+        const char* GetPanelName() const override { return "Asset Browser"; }
+        //~End IEditorPanel interface
+        
+        // =============================================================================
+        // Members
+        // =============================================================================
+    private:
+        AssetBrowserFilter       m_Filter;
         AssetScanner::ScanResult m_LastScanResult;
-        bool m_bScanned = false;
-
-        // Currently hovered asset for preview
-        OpaaxStringID m_HoveredID;
-
-        // Cached manifest abs path for saves
-        OpaaxString m_ManifestAbsPath;
+        bool                     m_bScanned = false;
+        OpaaxStringID            m_HoveredID;
+        OpaaxString              m_ManifestAbsPath;
     };
 
 } // namespace Opaax::Editor

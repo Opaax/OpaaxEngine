@@ -1,43 +1,46 @@
-﻿#pragma once
+#pragma once
 
 #if OPAAX_WITH_EDITOR
 
 #include "Core/EngineAPI.h"
 #include "Core/World/World.h"
+#include "Editor/IEditorPanel.h"
 
 namespace Opaax::Editor
 {
-    // =============================================================================
-    // InspectorPanel
-    //
-    // Displays and edits components of the selected entity.
-    // Reads selected entity from HierarchyPanel each frame.
-    //
-    // NOTE: Each component type has a dedicated DrawXxx() method.
-    //   Adding a new component type = adding a DrawXxx() + a check in Draw().
-    // =============================================================================
-    class InspectorPanel
+    /**
+     * @class InspectorPanel
+     * Displays and edits components of the selected entity.
+     *
+     * Extension: register an IComponentDrawer via ComponentDrawerRegistry::Register()
+     * to support a new component type. No changes required here.
+     */
+    class InspectorPanel : public IEditorPanel
     {
         // =============================================================================
-        // CTORs
+        // CTOR - DTOR
         // =============================================================================
     public:
         InspectorPanel()  = default;
         ~InspectorPanel() = default;
 
         // =============================================================================
-        // API
+        // Function
         // =============================================================================
     public:
+        /**
+         * API — parameterised draw called directly by EditorSubsystem
+         * @param InWorld 
+         * @param InSelected 
+         */
         void Draw(World* InWorld, EntityID InSelected);
 
         // =============================================================================
-        // Private — per-component drawers
+        // Override
         // =============================================================================
-    private:
-        void DrawTagComponent       (World& InWorld, EntityID InEntity);
-        void DrawTransformComponent (World& InWorld, EntityID InEntity);
-        void DrawSpriteComponent    (World& InWorld, EntityID InEntity);
+        //~Begin  IEditorPanel interface
+        const char* GetPanelName() const override { return "Inspector"; }
+        //~End  IEditorPanel interface
     };
 
 } // namespace Opaax::Editor

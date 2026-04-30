@@ -1,4 +1,4 @@
-﻿#include "EditorSubsystem.h"
+#include "EditorSubsystem.h"
 #include "GLFW/glfw3.h"
 
 #if OPAAX_WITH_EDITOR
@@ -14,8 +14,18 @@
 #include "Renderer/Camera2D.h"
 #include "RHI/RenderCommand.h"
 
+#include "Editor/Assets/AssetTypeRegistry.h"
+#include "Editor/Assets/Types/Texture2DTypeActions.h"
+#include "Editor/Inspector/ComponentDrawerRegistry.h"
+#include "Editor/Inspector/Drawers/TagDrawer.h"
+#include "Editor/Inspector/Drawers/TransformDrawer.h"
+#include "Editor/Inspector/Drawers/SpriteDrawer.h"
+
 namespace Opaax
 {
+    // =============================================================================
+    // Startup
+    // =============================================================================
     bool EditorSubsystem::Startup()
     {
         OPAAX_CORE_INFO("EditorSubsystem::Startup()");
@@ -41,9 +51,13 @@ namespace Opaax
 
         ImGui_ImplGlfw_InitForOpenGL(lNativeWindow, true);
         ImGui_ImplOpenGL3_Init("#version 450");
-        
+
         m_ViewportPanel.Startup();
         RegisterViewportCallbacks();
+
+        RegisterAssetTypeActions();
+        RegisterComponentDrawers();
+
         m_AssetBrowserPanel.Startup();
 
         GetEngineApp()->SetRenderTarget(&m_ViewportPanel);
@@ -52,31 +66,54 @@ namespace Opaax
         return true;
     }
 
+    // =============================================================================
+    // Registration
+    // =============================================================================
+    void EditorSubsystem::RegisterAssetTypeActions()
+    {
+        Editor::AssetTypeRegistry::Register(MakeUnique<Editor::Texture2DTypeActions>());
+
+        OPAAX_CORE_TRACE("EditorSubsystem: asset type actions registered.");
+    }
+
+    void EditorSubsystem::RegisterComponentDrawers()
+    {
+        Editor::ComponentDrawerRegistry::Register(MakeUnique<Editor::TagDrawer>());
+        Editor::ComponentDrawerRegistry::Register(MakeUnique<Editor::TransformDrawer>());
+        Editor::ComponentDrawerRegistry::Register(MakeUnique<Editor::SpriteDrawer>());
+
+        OPAAX_CORE_TRACE("EditorSubsystem: component drawers registered.");
+    }
+
+    // =============================================================================
+    // Viewport callbacks
+    // =============================================================================
     void EditorSubsystem::RegisterViewportCallbacks()
     {
-        // NOTE: This lambda captures 'this'. EditorSubsystem outlives ViewportPanel
-        //   (it owns it), so the capture is safe.
+        // NOTE: Lambda captures 'this'. EditorSubsystem outlives ViewportPanel (it owns it).
         m_ViewportPanel.OnResized = [this](Uint32 InWidth, Uint32 InHeight)
         {
             OPAAX_CORE_TRACE("EditorSubsystem: viewport resized to {}x{} — syncing camera.",
                 InWidth, InHeight);
 
-            // Sync Camera2D projection to the new viewport size.
             if (auto* lCamera = GetEngineApp()->GetSubsystem<Camera2D>())
             {
                 lCamera->SetViewportSize(InWidth, InHeight);
             }
 
-            // Sync GL viewport for subsequent draw calls inside the FBO.
-            // NOTE: Bind() already calls glViewport, but RenderCommand must also
-            //   know the size for any system that queries it (future deferred passes).
             RenderCommand::SetViewport(0, 0, InWidth, InHeight);
         };
     }
 
+    // =============================================================================
+    // Shutdown
+    // =============================================================================
     void EditorSubsystem::Shutdown()
     {
         OPAAX_CORE_INFO("EditorSubsystem::Shutdown()");
+
+        Editor::AssetTypeRegistry::Clear();
+        Editor::ComponentDrawerRegistry::Clear();
 
         m_ViewportPanel.Shutdown();
 
@@ -85,6 +122,9 @@ namespace Opaax
         ImGui::DestroyContext();
     }
 
+    // =============================================================================
+    // Render
+    // =============================================================================
     void EditorSubsystem::Render(double /*Alpha*/)
     {
         BeginFrame();

@@ -1,5 +1,7 @@
-﻿#pragma once
+#pragma once
 #if OPAAX_WITH_EDITOR
+
+#include "Editor/IEditorPanel.h"
 #include "Panels/AssetBrowserPanel.h"
 #include "Panels/HierarchyPanel.h"
 #include "Panels/InspectorPanel.h"
@@ -16,15 +18,14 @@ namespace Opaax
 {
     /**
      * @class EditorSubsystem
-     *
-     * Owns the ImGui context lifetime.
-     * Drives the per-frame ImGui Begin/End cycle.
+     * Owns the ImGui context lifetime and drives the per-frame Begin/End cycle.
+     * Registers all IAssetTypeActions and IComponentDrawers at Startup.
      */
     class OPAAX_API EditorSubsystem final : public EngineSubsystemBase
     {
     public:
         OPAAX_SUBSYSTEM_TYPE(EditorSubsystem)
-        
+
         // =============================================================================
         // CTORs - DTOR
         // =============================================================================
@@ -36,11 +37,11 @@ namespace Opaax
         ~EditorSubsystem() override = default;
 
         // =============================================================================
-        // COPY - Delete
+        // Copy - Delete
         // =============================================================================
         EditorSubsystem(const EditorSubsystem&)            = delete;
         EditorSubsystem& operator=(const EditorSubsystem&) = delete;
-        
+
         // =============================================================================
         // Move
         // =============================================================================
@@ -48,7 +49,7 @@ namespace Opaax
         EditorSubsystem& operator=(EditorSubsystem&&)      = default;
 
         // =============================================================================
-        // Function
+        // Functions
         // =============================================================================
     private:
         void BeginFrame();
@@ -56,7 +57,9 @@ namespace Opaax
         void DrawPanels();
 
         void RegisterViewportCallbacks();
-        
+        void RegisterAssetTypeActions();
+        void RegisterComponentDrawers();
+
         //------------------------------------------------------------------------------
         // Get
     public:
@@ -64,7 +67,7 @@ namespace Opaax
         FORCEINLINE bool IsPlaying() const noexcept { return m_PlayStopPanel.IsPlaying(); }
 
         // =============================================================================
-        // Override
+        // Override EngineSubsystemBase
         // =============================================================================
         //~Begin EngineSubsystemBase interface
     public:
@@ -73,14 +76,17 @@ namespace Opaax
         void Render(double Alpha) override;
 
         Uint32 GetEventCategoryFilter() const noexcept override { return EEventCategory_None; }
-        // Viewport FBO accessors — used by MyGame::OnRender
+        //~End EngineSubsystemBase interface
 
+        // =============================================================================
+        // Members
+        // =============================================================================
     private:
-        Editor::HierarchyPanel   m_HierarchyPanel;
-        Editor::InspectorPanel   m_InspectorPanel;
-        Editor::ViewportPanel    m_ViewportPanel;
+        Editor::HierarchyPanel    m_HierarchyPanel;
+        Editor::InspectorPanel    m_InspectorPanel;
+        Editor::ViewportPanel     m_ViewportPanel;
         Editor::AssetBrowserPanel m_AssetBrowserPanel;
-        Editor::PlayStopPanel    m_PlayStopPanel;
+        Editor::PlayStopPanel     m_PlayStopPanel;
     };
 
 } // namespace Opaax

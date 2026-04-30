@@ -5,38 +5,39 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/World/World.h"
+#include "Editor/IEditorPanel.h"
 
 namespace Opaax::Editor
 {
-    // =============================================================================
-    // HierarchyPanel
-    //
-    // Displays all entities in the active scene.
-    // Owns the "selected entity" state — other panels read from it.
-    //
-    // NOTE: HierarchyPanel does not own the World — it holds a raw ptr.
-    //   The ptr is refreshed every frame from the active scene.
-    //   If no scene is active, the panel renders nothing.
-    // =============================================================================
-    class HierarchyPanel
+    /**
+     * @class HierarchyPanel
+     * Displays all entities in the active scene.
+     * Owns the "selected entity" state — other panels read from it via GetSelectedEntity().
+     *
+     * NOTE: Draw(SceneManager*) is the primary entry point; it is called directly
+     * by EditorSubsystem rather than through the IEditorPanel::Draw() interface.
+     */
+    class HierarchyPanel : public IEditorPanel
     {
         // =============================================================================
-        // CTORs
+        // CTORs - DTOR
         // =============================================================================
     public:
         HierarchyPanel()  = default;
         ~HierarchyPanel() = default;
 
         // =============================================================================
-        // API
+        // Function
         // =============================================================================
     public:
+        /**
+         * API call by EditorSubsystem
+         * @param InSceneManager 
+         */
         void Draw(SceneManager* InSceneManager);
 
-        // =============================================================================
+        //------------------------------------------------------------------------------
         // Get - Set
-        // =============================================================================
-    public:
         FORCEINLINE EntityID GetSelectedEntity() const noexcept
         {
             return m_SelectedEntity;
@@ -51,6 +52,13 @@ namespace Opaax::Editor
         {
             m_SelectedEntity = ENTITY_NONE;
         }
+
+        // =============================================================================
+        // Override
+        // =============================================================================
+        //~Begin IEditorPanel interface
+        const char* GetPanelName() const override { return "Hierarchy"; }
+        //~End IEditorPanel interface
 
         // =============================================================================
         // Members
