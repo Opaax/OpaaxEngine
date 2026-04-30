@@ -215,47 +215,6 @@ namespace Opaax
             OPAAX_CORE_INFO("AssetRegistry: loaded '{}' as '{}'", lAbsPath, InID);
 
             return AssetHandle<T>{ lAsset, lResolvedID, lEntry.Block.get() };
-            
-            // const Uint32 lKey = InID.GetId();
-            //
-            // auto lIt = s_Assets.find(lKey);
-            // if (lIt != s_Assets.end())
-            // {
-            //     // Cache hit — validate type matches
-            //     if (lIt->second.Type != typeid(T))
-            //     {
-            //         OPAAX_CORE_ERROR("AssetRegistry::Load — type mismatch for '{}'", InID);
-            //         return AssetHandle<T>{};
-            //     }
-            //     
-            //     return AssetHandle<T>{
-            //         static_cast<T*>(lIt->second.Ptr),
-            //         InID,
-            //         lIt->second.Block.get()
-            //     };
-            // }
-            //
-            // // Cache miss — construct from path
-            // const OpaaxString lAbsPath = InID.ToString().CStr();
-            // T* lAsset = new T(lAbsPath.CStr());
-            //
-            // // NOTE: Check IsLoaded() if the type exposes it (textures, audio, etc.).
-            // //   If the load failed, destroy immediately and return an invalid handle.
-            // //   We do NOT cache failed loads — the caller can retry with a corrected path.
-            // if constexpr (requires { lAsset->IsLoaded(); })
-            // {
-            //     if (!lAsset->IsLoaded())
-            //     {
-            //         OPAAX_CORE_ERROR("AssetRegistry::Load — failed to load '{}', handle is invalid.", InID);
-            //         delete lAsset;
-            //         return AssetHandle<T>{};
-            //     }
-            // }
-            //
-            // auto& lEntry = s_Assets.emplace(lKey, AssetEntry::Make(lAsset)).first->second;
-            //
-            // OPAAX_CORE_INFO("AssetRegistry: loaded '{}'", InID);
-            // return AssetHandle<T>{ lAsset, InID, lEntry.Block.get() };
         }
 
         /**
@@ -319,26 +278,6 @@ namespace Opaax
             lIt->second.Destroy();
             s_Assets.erase(lIt);
             OPAAX_CORE_INFO("AssetRegistry: unloaded '{}'", InID);
-            
-            // const Uint32 lKey = InID.GetId();
-            // auto lIt = s_Assets.find(lKey);
-            //
-            // if (lIt == s_Assets.end())
-            // {
-            //     OPAAX_CORE_WARN("AssetRegistry::Unload — '{}' not found", InID);
-            //     return;
-            // }
-            //
-            // if (lIt->second.IsAlive())
-            // {
-            //     OPAAX_CORE_WARN("AssetRegistry::Unload — '{}' has {} live handle(s), deferred.", InID, lIt->second.Block->Get());
-            //     lIt->second.Destroy(); // nulls Ptr, block stays
-            //     return;
-            // }
-            //
-            // lIt->second.Destroy();
-            // s_Assets.erase(lIt);
-            // OPAAX_CORE_INFO("AssetRegistry: unloaded '{}'", InID);
         }
 
         static bool IsLoaded(OpaaxStringID InID)

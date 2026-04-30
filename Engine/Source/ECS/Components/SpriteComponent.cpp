@@ -9,10 +9,8 @@ Opaax::ECS::json Opaax::ECS::SpriteComponent::Serialize() const
     if (Texture.IsValid())
     {
         const OpaaxStringID lID = Texture.GetID();
-        
-        const OpaaxString lAbsPath = lID.ToString();
-        const OpaaxString lRelPath = OpaaxPath::MakeRelative(lAbsPath);
-        const AssetDescriptor* lDesc = AssetManifest::FindByPath(lRelPath);
+
+        const AssetDescriptor* lDesc = AssetManifest::Find(lID);
         
         if (lDesc != nullptr)
         {
@@ -21,6 +19,9 @@ Opaax::ECS::json Opaax::ECS::SpriteComponent::Serialize() const
         }
         else
         {
+            const OpaaxString lAbsPath = lID.ToString();
+            const OpaaxString lRelPath = OpaaxPath::MakeRelative(lAbsPath);
+            
             lSerializedRef = lRelPath;
             OPAAX_CORE_TRACE("SpriteComponent::Serialize — using relative path '{}'", lSerializedRef);
         }
