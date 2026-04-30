@@ -138,16 +138,12 @@ namespace Opaax
             const AssetDescriptor* lDesc = AssetManifest::Find(InID);
             if (lDesc)
             {
-                OPAAX_CORE_TRACE("AssetRegistry: '{}' → manifest → '{}'",
-                    InID, lDesc->RelPath);
                 return OpaaxPath::Resolve(lDesc->RelPath);
             }
 
             // Step 3 — direct path fallback
             // NOTE: Allows OPAAX_ASSET("GameAssets/Textures/Player.png") to keep working
             //   without a manifest entry. Useful for tools, debug, and migration.
-            OPAAX_CORE_TRACE("AssetRegistry: '{}' not in manifest — treating as relative path.",
-                InID);
             return OpaaxPath::Resolve(lIDStr);
         }
         
