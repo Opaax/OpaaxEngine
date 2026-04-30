@@ -10,7 +10,6 @@ InputSubsystem — pas de gamepad polling GLFWInputSubsystem
 AssetHandle — thread safety partielle (Load/Unload main thread only)AssetRegistry.h
 Renderer2D — pas de rotation sur les quads
 Renderer2D SceneSerializer — composants hardcodés (pas de registry)SceneSerializer.cpp
-World.cpp inclut entt/src/ — mauvaise inclusion
 World.cppCamera2D hardcode viewport 1280x720 en fallback
 Camera2D.h OpenGLShader utilise std::unordered\_map[std::string](std::string)OpenGLShader.h
 Renderer2D::s\_Data static global — non thread-safe Renderer2D.cpp

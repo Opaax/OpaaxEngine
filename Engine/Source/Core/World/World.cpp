@@ -1,7 +1,5 @@
 ﻿#include "World.h"
 
-#include <Entt/entt/src/entt/entity/registry.hpp>
-
 namespace Opaax
 {
     void World::Clear() noexcept

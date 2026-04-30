@@ -2,7 +2,9 @@
 
 name: low-credit-mode
 
-description: choose a task that can be done with the remaining credits of the account
+description: Choose a task that can be done with the remaining credits of the account.
+
+disable-model-invocation: true
 
 \---
 
