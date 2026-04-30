@@ -5,6 +5,8 @@
 #include "Core/Log/OpaaxLog.h"
 #include "ECS/OpaaxEntity.hpp"
 #include "ECS/Components/TagComponent.h"
+#include "ECS/Components/UuidComponent.h"
+#include "ECS/Components/ParentComponent.h"
 
 namespace Opaax
 {
@@ -57,21 +59,19 @@ namespace Opaax
         {
             const EntityID lID = m_Registry.create();
             m_Registry.emplace<ECS::TagComponent>(lID, InTag);
+            m_Registry.emplace<ECS::UuidComponent>(lID, ECS::GenerateUuid());
             OPAAX_CORE_TRACE("World::CreateEntity '{}' — id={}", InTag, static_cast<Uint32>(lID));
             m_EntityCount.fetch_add(1, std::memory_order_relaxed);
             return lID;
         }
 
-        void DestroyEntity(EntityID InEntity)
-        {
-            if (!IsValid(InEntity))
-            {
-                OPAAX_CORE_WARN("World::DestroyEntity — invalid entity, ignored.");
-                return;
-            }
-            m_Registry.destroy(InEntity);
-            m_EntityCount.fetch_sub(1, std::memory_order_relaxed);
-        }
+        // Cascades by default: every entity whose ParentComponent.Parent == InEntity
+        // (and recursively their descendants) is destroyed too.
+        // bDestroyChildren = false re-parents direct children to the root instead.
+        void DestroyEntity(EntityID InEntity, bool bDestroyChildren = true);
+
+        // Resolve a stable UUID back to its runtime entity. Returns ENTITY_NONE if no match.
+        EntityID FindByUuid(Uint64 InUuid) const noexcept;
 
         bool IsValid(EntityID InEntity) const noexcept
         {

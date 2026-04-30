@@ -9,6 +9,7 @@
  
 #include <glm/gtc/matrix_transform.hpp>
 #include <array>
+#include <cmath>
  
 namespace Opaax
 {
@@ -244,120 +245,170 @@ namespace Opaax
     // Draw calls
     // =============================================================================
  
+    namespace
+    {
+        // Rotates an axis-aligned offset (Ox, Oy) around origin by (Cos, Sin), then translates by Center.
+        FORCEINLINE Vector2F RotateOffset(const Vector2F& InCenter, float InCos, float InSin, float InOx, float InOy)
+        {
+            return { InCenter.x + (InCos * InOx - InSin * InOy),
+                     InCenter.y + (InSin * InOx + InCos * InOy) };
+        }
+    }
+
     void Renderer2D::DrawQuad(const Vector2F& InPosition,
                                const Vector2F& InSize,
-                               const Vector4F& InColor)
+                               const Vector4F& InColor,
+                               float           InRotationRad)
     {
         if (s_Data.QuadCount >= MAX_QUADS)
         {
             Flush();
             StartBatch();
         }
- 
+
         constexpr float lTexIndex = 0.f;  // white texture
- 
+
         const float lHalfW = InSize.x * 0.5f;
         const float lHalfH = InSize.y * 0.5f;
- 
+
+        // Compute corners (BL, BR, TR, TL). Skip trig when un-rotated.
+        Vector2F lBL, lBR, lTR, lTL;
+        if (InRotationRad == 0.f)
+        {
+            lBL = { InPosition.x - lHalfW, InPosition.y - lHalfH };
+            lBR = { InPosition.x + lHalfW, InPosition.y - lHalfH };
+            lTR = { InPosition.x + lHalfW, InPosition.y + lHalfH };
+            lTL = { InPosition.x - lHalfW, InPosition.y + lHalfH };
+        }
+        else
+        {
+            const float lCos = std::cos(InRotationRad);
+            const float lSin = std::sin(InRotationRad);
+            lBL = RotateOffset(InPosition, lCos, lSin, -lHalfW, -lHalfH);
+            lBR = RotateOffset(InPosition, lCos, lSin, +lHalfW, -lHalfH);
+            lTR = RotateOffset(InPosition, lCos, lSin, +lHalfW, +lHalfH);
+            lTL = RotateOffset(InPosition, lCos, lSin, -lHalfW, +lHalfH);
+        }
+
         // Bottom-left
-        s_Data.VertexBufferPtr->Position = { InPosition.x - lHalfW, InPosition.y - lHalfH, 0.f };
+        s_Data.VertexBufferPtr->Position = { lBL.x, lBL.y, 0.f };
         s_Data.VertexBufferPtr->Color    = InColor;
         s_Data.VertexBufferPtr->TexCoord = { 0.f, 0.f };
         s_Data.VertexBufferPtr->TexIndex = lTexIndex;
         ++s_Data.VertexBufferPtr;
- 
+
         // Bottom-right
-        s_Data.VertexBufferPtr->Position = { InPosition.x + lHalfW, InPosition.y - lHalfH, 0.f };
+        s_Data.VertexBufferPtr->Position = { lBR.x, lBR.y, 0.f };
         s_Data.VertexBufferPtr->Color    = InColor;
         s_Data.VertexBufferPtr->TexCoord = { 1.f, 0.f };
         s_Data.VertexBufferPtr->TexIndex = lTexIndex;
         ++s_Data.VertexBufferPtr;
- 
+
         // Top-right
-        s_Data.VertexBufferPtr->Position = { InPosition.x + lHalfW, InPosition.y + lHalfH, 0.f };
+        s_Data.VertexBufferPtr->Position = { lTR.x, lTR.y, 0.f };
         s_Data.VertexBufferPtr->Color    = InColor;
         s_Data.VertexBufferPtr->TexCoord = { 1.f, 1.f };
         s_Data.VertexBufferPtr->TexIndex = lTexIndex;
         ++s_Data.VertexBufferPtr;
- 
+
         // Top-left
-        s_Data.VertexBufferPtr->Position = { InPosition.x - lHalfW, InPosition.y + lHalfH, 0.f };
+        s_Data.VertexBufferPtr->Position = { lTL.x, lTL.y, 0.f };
         s_Data.VertexBufferPtr->Color    = InColor;
         s_Data.VertexBufferPtr->TexCoord = { 0.f, 1.f };
         s_Data.VertexBufferPtr->TexIndex = lTexIndex;
         ++s_Data.VertexBufferPtr;
- 
+
         ++s_Data.QuadCount;
     }
 
     void Renderer2D::DrawSprite(const Vector2F& InPosition, const Vector2F& InSize, const TextureHandle& InTexture,
-        const Vector4F& InColor)
+        const Vector4F& InColor, float InRotationRad)
     {
         OPAAX_CORE_ASSERT(InTexture.IsValid())
-        DrawSprite(InPosition, InSize, *InTexture.Get(), InColor);
+        DrawSprite(InPosition, InSize, *InTexture.Get(), InColor, InRotationRad);
     }
 
     void Renderer2D::DrawSprite(const Vector2F& InPosition, const Vector2F& InSize, const TextureHandle& InTexture,
-        const Vector2F& InUVMin, const Vector2F& InUVMax, const Vector4F& InColor)
+        const Vector2F& InUVMin, const Vector2F& InUVMax, const Vector4F& InColor, float InRotationRad)
     {
         OPAAX_CORE_ASSERT(InTexture.IsValid())
-        DrawSprite(InPosition, InSize, *InTexture.Get(), InUVMin, InUVMax, InColor);
+        DrawSprite(InPosition, InSize, *InTexture.Get(), InUVMin, InUVMax, InColor, InRotationRad);
     }
 
     void Renderer2D::DrawSprite(const Vector2F& InPosition,
                                 const Vector2F& InSize,
                                 OpenGLTexture2D& InTexture,
-                                const Vector4F& InColor)
+                                const Vector4F& InColor,
+                                float           InRotationRad)
     {
         DrawSprite(InPosition, InSize, InTexture,
-                   { 0.f, 0.f }, { 1.f, 1.f }, InColor);
+                   { 0.f, 0.f }, { 1.f, 1.f }, InColor, InRotationRad);
     }
- 
+
     void Renderer2D::DrawSprite(const Vector2F& InPosition,
                                  const Vector2F& InSize,
                                  OpenGLTexture2D& InTexture,
                                  const Vector2F& InUVMin,
                                  const Vector2F& InUVMax,
-                                 const Vector4F& InColor)
+                                 const Vector4F& InColor,
+                                 float           InRotationRad)
     {
         if (s_Data.QuadCount >= MAX_QUADS)
         {
             Flush();
             StartBatch();
         }
- 
+
         const float lTexIndex = GetTextureSlot(InTexture);
         const float lHalfW    = InSize.x * 0.5f;
         const float lHalfH    = InSize.y * 0.5f;
- 
+
+        Vector2F lBL, lBR, lTR, lTL;
+        if (InRotationRad == 0.f)
+        {
+            lBL = { InPosition.x - lHalfW, InPosition.y - lHalfH };
+            lBR = { InPosition.x + lHalfW, InPosition.y - lHalfH };
+            lTR = { InPosition.x + lHalfW, InPosition.y + lHalfH };
+            lTL = { InPosition.x - lHalfW, InPosition.y + lHalfH };
+        }
+        else
+        {
+            const float lCos = std::cos(InRotationRad);
+            const float lSin = std::sin(InRotationRad);
+            lBL = RotateOffset(InPosition, lCos, lSin, -lHalfW, -lHalfH);
+            lBR = RotateOffset(InPosition, lCos, lSin, +lHalfW, -lHalfH);
+            lTR = RotateOffset(InPosition, lCos, lSin, +lHalfW, +lHalfH);
+            lTL = RotateOffset(InPosition, lCos, lSin, -lHalfW, +lHalfH);
+        }
+
         // Bottom-left
-        s_Data.VertexBufferPtr->Position = { InPosition.x - lHalfW, InPosition.y - lHalfH, 0.f };
+        s_Data.VertexBufferPtr->Position = { lBL.x, lBL.y, 0.f };
         s_Data.VertexBufferPtr->Color    = InColor;
         s_Data.VertexBufferPtr->TexCoord = { InUVMin.x, InUVMin.y };
         s_Data.VertexBufferPtr->TexIndex = lTexIndex;
         ++s_Data.VertexBufferPtr;
- 
+
         // Bottom-right
-        s_Data.VertexBufferPtr->Position = { InPosition.x + lHalfW, InPosition.y - lHalfH, 0.f };
+        s_Data.VertexBufferPtr->Position = { lBR.x, lBR.y, 0.f };
         s_Data.VertexBufferPtr->Color    = InColor;
         s_Data.VertexBufferPtr->TexCoord = { InUVMax.x, InUVMin.y };
         s_Data.VertexBufferPtr->TexIndex = lTexIndex;
         ++s_Data.VertexBufferPtr;
- 
+
         // Top-right
-        s_Data.VertexBufferPtr->Position = { InPosition.x + lHalfW, InPosition.y + lHalfH, 0.f };
+        s_Data.VertexBufferPtr->Position = { lTR.x, lTR.y, 0.f };
         s_Data.VertexBufferPtr->Color    = InColor;
         s_Data.VertexBufferPtr->TexCoord = { InUVMax.x, InUVMax.y };
         s_Data.VertexBufferPtr->TexIndex = lTexIndex;
         ++s_Data.VertexBufferPtr;
- 
+
         // Top-left
-        s_Data.VertexBufferPtr->Position = { InPosition.x - lHalfW, InPosition.y + lHalfH, 0.f };
+        s_Data.VertexBufferPtr->Position = { lTL.x, lTL.y, 0.f };
         s_Data.VertexBufferPtr->Color    = InColor;
         s_Data.VertexBufferPtr->TexCoord = { InUVMin.x, InUVMax.y };
         s_Data.VertexBufferPtr->TexIndex = lTexIndex;
         ++s_Data.VertexBufferPtr;
- 
+
         ++s_Data.QuadCount;
     }
  

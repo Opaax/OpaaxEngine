@@ -61,68 +61,54 @@ namespace Opaax
          * @param InPosition centre of the quad (Y-up world space)
          * @param InSize full width and height
          * @param InColor RGBA normalised [0,1]
+         * @param InRotationRad rotation around the quad centre, radians, CCW (default 0 = axis-aligned fast path)
          */
         static void DrawQuad(const Vector2F& InPosition,
                              const Vector2F& InSize,
-                             const Vector4F& InColor);
+                             const Vector4F& InColor,
+                             float           InRotationRad = 0.f);
 
         /**
          * Textured sprite — via AssetHandle (preferred, safe)
-         * @param InPosition 
-         * @param InSize 
-         * @param InTexture 
-         * @param InColor 
          */
         static void DrawSprite(const Vector2F&      InPosition,
                                const Vector2F&      InSize,
                                const TextureHandle& InTexture,
-                               const Vector4F&      InColor = Vector4F(1.f));
+                               const Vector4F&      InColor       = Vector4F(1.f),
+                               float                InRotationRad = 0.f);
 
         /**
          * Textured Atlas — via AssetHandle (preferred, safe)
          * Sprite sheet / atlas sub-region — UV in normalised [0,1] space
-         * @param InPosition 
-         * @param InSize 
-         * @param InTexture 
-         * @param InUVMin 
-         * @param InUVMax 
-         * @param InColor 
          */
         static void DrawSprite(const Vector2F&      InPosition,
                                const Vector2F&      InSize,
                                const TextureHandle& InTexture,
                                const Vector2F&      InUVMin,
                                const Vector2F&      InUVMax,
-                               const Vector4F&      InColor = Vector4F(1.f));
-        
+                               const Vector4F&      InColor       = Vector4F(1.f),
+                               float                InRotationRad = 0.f);
+
         /**
          * Draw a textured sprite, tinted by InColor (default white = no tint)
-         * @param InPosition 
-         * @param InSize 
-         * @param InTexture 
-         * @param InColor 
          */
         static void DrawSprite(const Vector2F&  InPosition,
                                const Vector2F&  InSize,
                                OpenGLTexture2D& InTexture,
-                               const Vector4F&  InColor = Vector4F(1.f));
-        
+                               const Vector4F&  InColor       = Vector4F(1.f),
+                               float            InRotationRad = 0.f);
+
         /**
          * Draw a textured sprite with UV sub-region (sprite sheet / atlas)
          * InUVMin / InUVMax: normalised texture coordinates [0,1]
-         * @param InPosition 
-         * @param InSize 
-         * @param InTexture 
-         * @param InUVMin 
-         * @param InUVMax 
-         * @param InColor 
          */
         static void DrawSprite(const Vector2F&  InPosition,
                                const Vector2F&  InSize,
                                OpenGLTexture2D& InTexture,
                                const Vector2F&  InUVMin,
                                const Vector2F&  InUVMax,
-                               const Vector4F&  InColor = Vector4F(1.f));
+                               const Vector4F&  InColor       = Vector4F(1.f),
+                               float            InRotationRad = 0.f);
     };
  
 } // namespace Opaax

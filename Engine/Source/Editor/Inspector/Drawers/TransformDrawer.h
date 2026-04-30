@@ -19,6 +19,9 @@ namespace Opaax::Editor
 
         const char* GetComponentName() const override { return "Transform"; }
         bool        CanAdd()           const override { return true; }
+
+    private:
+        void DrawParentPicker(World& InWorld, EntityID InEntity);
     };
 
 } // namespace Opaax::Editor
