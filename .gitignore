@@ -55,4 +55,4 @@ build/*
 .claude/Milestone/*
 .claude/worktrees/*
 .claude/code/*
-.claude/CLAUSE.Dev.md
+.claude/CLAUDE.Dev.md
