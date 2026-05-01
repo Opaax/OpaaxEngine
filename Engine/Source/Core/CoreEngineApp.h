@@ -57,6 +57,7 @@ namespace Opaax
         void Startup();
         void Run();
         void Shutdown();
+        void RequestQuit() noexcept;
 
         //------------------------------------------------------------------------------
         //  Get - Set

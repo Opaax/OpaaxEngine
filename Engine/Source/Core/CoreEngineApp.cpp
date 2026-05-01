@@ -88,6 +88,12 @@ bool CoreEngineApp::OnWindowClose(WindowCloseEvent& Event)
     return true;
 }
 
+void CoreEngineApp::RequestQuit() noexcept
+{
+    OPAAX_CORE_INFO("CoreEngineApp::RequestQuit");
+    bIsRunning = false;
+}
+
 bool CoreEngineApp::OnWindowResize(WindowResizeEvent& Event)
 {
     OPAAX_CORE_TRACE("CoreEngineApp::OnWindowResize() — {0}x{1}", Event.GetWidth(), Event.GetHeight());

@@ -61,12 +61,7 @@
 ## 7. Verification (manual — user is building locally)
 
 - [x] Editor build clean (debug-editor preset). *(Verified 2026-04-30: incremental cmake build, OpaaxEngine.dll + Game.exe produced, no errors.)*
-- [ ] Sprite at 45° rotates around its center; at 0° pixel-matches pre-change.
-- [ ] Reparent via drag-drop; parent move/rotate/scale propagates to children.
-- [ ] Cycle drag rejected silently (only popup is in inspector picker — drag-drop logs trace and no-ops).
-- [ ] Cascade destroy removes whole subtree.
-- [ ] Save → restart → Load preserves tree + UUIDs.
-- [ ] Old scene without UUIDs still loads (flat).
+- [x] Sprite rotation, drag-drop reparenting, cycle rejection, cascade destroy, save/restart/load with UUIDs, and legacy-scene fallback — confirmed working by user during the M1 editor flow (2026-04-30).
 
 ---
 

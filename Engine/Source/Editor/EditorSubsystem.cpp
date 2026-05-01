@@ -176,11 +176,13 @@ namespace Opaax
             ? &lSceneMgr->GetActiveScene()->GetWorld()
             : nullptr;
 
-        m_PlayStopPanel.Draw(lSceneMgr);
-        m_HierarchyPanel.Draw(lSceneMgr);
-        m_InspectorPanel.Draw(lWorld, m_HierarchyPanel.GetSelectedEntity());
-        m_ViewportPanel.Draw();
-        m_AssetBrowserPanel.Draw();
+        m_MainMenuBar.Draw(*this);
+
+        if (m_bShowPlayStop)     m_PlayStopPanel.Draw(lSceneMgr);
+        if (m_bShowHierarchy)    m_HierarchyPanel.Draw(lSceneMgr);
+        if (m_bShowInspector)    m_InspectorPanel.Draw(lWorld, m_HierarchyPanel.GetSelectedEntity());
+        if (m_bShowViewport)     m_ViewportPanel.Draw();
+        if (m_bShowAssetBrowser) m_AssetBrowserPanel.Draw();
     }
 
     void EditorSubsystem::EndFrame()

@@ -7,6 +7,7 @@
 #include "Panels/InspectorPanel.h"
 #include "Panels/PlayStopPanel.h"
 #include "Panels/ViewportPanel.h"
+#include "Toolbar/MainMenuBar.h"
 #include "Core/Event/OpaaxEventTypes.hpp"
 #include "Core/Systems/EngineSubsystem.h"
 
@@ -66,6 +67,13 @@ namespace Opaax
         FORCEINLINE IRenderTarget& GetRenderTarget() noexcept { return m_ViewportPanel; }
         FORCEINLINE bool IsPlaying() const noexcept { return m_PlayStopPanel.IsPlaying(); }
 
+        // Panel visibility — references so the menu bar can toggle them in-place via ImGui::MenuItem.
+        FORCEINLINE bool& GetShowHierarchyRef()    noexcept { return m_bShowHierarchy; }
+        FORCEINLINE bool& GetShowInspectorRef()    noexcept { return m_bShowInspector; }
+        FORCEINLINE bool& GetShowAssetBrowserRef() noexcept { return m_bShowAssetBrowser; }
+        FORCEINLINE bool& GetShowViewportRef()     noexcept { return m_bShowViewport; }
+        FORCEINLINE bool& GetShowPlayStopRef()     noexcept { return m_bShowPlayStop; }
+
         // =============================================================================
         // Override EngineSubsystemBase
         // =============================================================================
@@ -82,11 +90,18 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
+        Editor::MainMenuBar       m_MainMenuBar;
         Editor::HierarchyPanel    m_HierarchyPanel;
         Editor::InspectorPanel    m_InspectorPanel;
         Editor::ViewportPanel     m_ViewportPanel;
         Editor::AssetBrowserPanel m_AssetBrowserPanel;
         Editor::PlayStopPanel     m_PlayStopPanel;
+
+        bool m_bShowHierarchy    = true;
+        bool m_bShowInspector    = true;
+        bool m_bShowAssetBrowser = true;
+        bool m_bShowViewport     = true;
+        bool m_bShowPlayStop     = true;
     };
 
 } // namespace Opaax
