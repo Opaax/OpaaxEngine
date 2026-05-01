@@ -8,23 +8,16 @@ Opaax::ECS::json Opaax::ECS::SpriteComponent::Serialize() const
 
     if (Texture.IsValid())
     {
-        const OpaaxStringID lID = Texture.GetID();
+        // Texture handles always carry the resolved absolute path as their ID
+        // (AssetRegistry::Load keys on the absolute path). Convert to the
+        // relative form the manifest stores and reverse-look up to get the
+        // logical ID. Falls back to the relative path when the manifest has
+        // not been populated (no editor scan yet, or runtime build).
+        const OpaaxString lAbsPath = Texture.GetID().ToString();
+        const OpaaxString lRelPath = OpaaxPath::MakeRelative(lAbsPath);
 
-        const AssetDescriptor* lDesc = AssetManifest::Find(lID);
-        
-        if (lDesc != nullptr)
-        {
-            lSerializedRef = lDesc->ID.ToString();
-            OPAAX_CORE_TRACE("SpriteComponent::Serialize — using logical ID '{}'", lSerializedRef);
-        }
-        else
-        {
-            const OpaaxString lAbsPath = lID.ToString();
-            const OpaaxString lRelPath = OpaaxPath::MakeRelative(lAbsPath);
-            
-            lSerializedRef = lRelPath;
-            OPAAX_CORE_TRACE("SpriteComponent::Serialize — using relative path '{}'", lSerializedRef);
-        }
+        const AssetDescriptor* lDesc = AssetManifest::FindByPath(lRelPath);
+        lSerializedRef = lDesc ? lDesc->ID.ToString() : lRelPath;
     }
 
     return {
@@ -38,11 +31,13 @@ Opaax::ECS::json Opaax::ECS::SpriteComponent::Serialize() const
 
 void Opaax::ECS::SpriteComponent::DeserializeImplementation(const json& Json)
 {
-    const OpaaxString lPath = Json["texture"].get<std::string>().c_str();
-    if (!lPath.IsEmpty())
+    // Pass the raw stored reference to AssetRegistry::Load — its ResolveToAbsPath
+    // already handles all three cases: absolute path, manifest logical ID, raw
+    // relative path. Pre-resolving here would skip the manifest lookup.
+    const OpaaxString lRef = Json["texture"].get<std::string>().c_str();
+    if (!lRef.IsEmpty())
     {
-        const OpaaxString lAbsPath = OpaaxPath::Resolve(lPath);
-        Texture = AssetRegistry::Load<OpenGLTexture2D>(OpaaxStringID(lAbsPath));
+        Texture = AssetRegistry::Load<OpenGLTexture2D>(OpaaxStringID(lRef));
     }
 
     Color.r = Json["color"][0].get<float>();

@@ -11,6 +11,7 @@
 #include "OpaaxStringID.hpp"
 #include "Assets/AssetRegistry.h"
 #include "Assets/Loader/TextureLoader.h"
+#include "Config/EngineConfig.h"
 #include "Editor/EditorSubsystem.h"
 #include "Event/OpaaxEventDispatcher.hpp"
 #include "Input/InputSubsystem.h"
@@ -31,10 +32,17 @@ CoreEngineApp::CoreEngineApp()
     //The only system to be created at very first
     OpaaxLog::Init();
     OpaaxPath::Init();
-    
+
+    EngineConfig::Load(OpaaxPath::Resolve("engine.config.json"));
+
     OPAAX_CORE_TRACE("CoreEngineApp created");
 
-    m_Window = UniquePtr<Window>(Opaax::Window::Create());
+    const WindowProps lProps(
+        EngineConfig::WindowTitle(),
+        EngineConfig::WindowWidth(),
+        EngineConfig::WindowHeight());
+
+    m_Window = UniquePtr<Window>(Opaax::Window::Create(lProps));
     m_Window->SetEventCallback([this](OpaaxEvent& Event) { DispatchEvent(Event); });
 
     m_DefaultRenderTarget   = MakeUnique<DefaultRenderTarget>(m_Window->GetWidth(), m_Window->GetHeight());
@@ -122,11 +130,11 @@ void CoreEngineApp::Initialize()
     OPAAX_CORE_TRACE("Loading engine assets...");
 
     AssetLoaderRegistry::Register<OpenGLTexture2D>(MakeUnique<TextureLoader>());
-    
+
     const OpaaxString lEngineManifest =
-        OpaaxPath::Resolve("EngineAssets/AssetManifest.json");
+        OpaaxPath::Resolve(EngineConfig::EngineManifestRelPath());
     const OpaaxString lGameManifest =
-        OpaaxPath::Resolve("GameAssets/AssetManifest.json");
+        OpaaxPath::Resolve(EngineConfig::GameManifestRelPath());
 
     AssetManifest::LoadFile(lEngineManifest);
     AssetManifest::LoadFile(lGameManifest);

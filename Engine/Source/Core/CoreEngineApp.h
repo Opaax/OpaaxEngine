@@ -109,8 +109,6 @@ namespace Opaax
         UniquePtr<Window> m_Window;
         EngineSubsystemMgr m_EngineSubsystemManager;
 
-        World m_World;
-        
         IRenderTarget*              m_RenderTarget        = nullptr;
         UniquePtr<DefaultRenderTarget> m_DefaultRenderTarget;
 

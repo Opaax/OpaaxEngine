@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(cmake --preset debug-editor)"
+      "Bash(cmake --preset debug-editor)",
+      "Bash(xargs grep *)"
     ]
   }
 }
