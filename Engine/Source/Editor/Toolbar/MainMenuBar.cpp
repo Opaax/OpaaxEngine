@@ -4,6 +4,7 @@
 
 #include <imgui.h>
 
+#include "Editor/EditorState.h"
 #include "Editor/EditorSubsystem.h"
 #include "Core/CoreEngineApp.h"
 #include "Core/Log/OpaaxLog.h"
@@ -26,6 +27,8 @@ namespace Opaax::Editor
             DrawViewMenu(Owner);
             DrawWindowMenu();
             DrawHelpMenu();
+
+            DrawPieControls(Owner);
 
             ImGui::EndMainMenuBar();
         }
@@ -108,8 +111,6 @@ namespace Opaax::Editor
         ImGui::MenuItem("Inspector",     nullptr, &Owner.GetShowInspectorRef());
         ImGui::MenuItem("Asset Browser", nullptr, &Owner.GetShowAssetBrowserRef());
         ImGui::MenuItem("Viewport",      nullptr, &Owner.GetShowViewportRef());
-        ImGui::Separator();
-        ImGui::MenuItem("Play/Stop",     nullptr, &Owner.GetShowPlayStopRef());
 
         ImGui::EndMenu();
     }
@@ -142,6 +143,52 @@ namespace Opaax::Editor
         }
 
         ImGui::EndMenu();
+    }
+
+    // =============================================================================
+    // PIE controls (right-aligned Play / Pause / Stop)
+    // =============================================================================
+    void MainMenuBar::DrawPieControls(EditorSubsystem& Owner)
+    {
+        const Editor::EEditorState lState = Owner.GetEditorState();
+
+        const float lBtnW       = 28.f;
+        const float lSpacing    = ImGui::GetStyle().ItemSpacing.x;
+        const float lTotalWidth = (lBtnW * 3.f) + (lSpacing * 2.f);
+        const float lMargin     = 8.f;
+
+        ImGui::SetCursorPosX(ImGui::GetWindowWidth() - lTotalWidth - lMargin);
+
+        // Play — enabled in Editing only (Resume from Paused goes through Pause toggle).
+        const bool bCanPlay = (lState == Editor::EEditorState::Editing);
+        ImGui::BeginDisabled(!bCanPlay);
+        if (ImGui::Button("|>", ImVec2(lBtnW, 0.f)))
+        {
+            Owner.EnterPlayMode();
+        }
+        ImGui::EndDisabled();
+        ImGui::SameLine();
+
+        // Pause — toggles Playing <-> Paused.
+        const bool bCanPause = (lState == Editor::EEditorState::Playing
+                             || lState == Editor::EEditorState::Paused);
+        ImGui::BeginDisabled(!bCanPause);
+        if (ImGui::Button("||", ImVec2(lBtnW, 0.f)))
+        {
+            Owner.PauseToggle();
+        }
+        ImGui::EndDisabled();
+        ImGui::SameLine();
+
+        // Stop — exits PIE from Playing or Paused.
+        const bool bCanStop = (lState == Editor::EEditorState::Playing
+                            || lState == Editor::EEditorState::Paused);
+        ImGui::BeginDisabled(!bCanStop);
+        if (ImGui::Button("[]", ImVec2(lBtnW, 0.f)))
+        {
+            Owner.ExitPlayMode();
+        }
+        ImGui::EndDisabled();
     }
 
     // =============================================================================

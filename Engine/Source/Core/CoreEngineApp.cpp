@@ -222,9 +222,22 @@ void CoreEngineApp::Run()
         lAccumulator += lDeltaTime;
         
         // ----------------------------------------------------------------
+        // 2.0 PIE gating — play-only subsystems tick only when Playing.
+        //   Editor builds: derived from EditorSubsystem state.
+        //   Non-editor builds: always true (gameplay always runs).
+        // ----------------------------------------------------------------
+#if OPAAX_WITH_EDITOR
+        const bool bAllowPlayOnly =
+            (m_EngineSubsystemManager.GetSubsystem<EditorSubsystem>()->GetEditorState()
+                == Editor::EEditorState::Playing);
+#else
+        constexpr bool bAllowPlayOnly = true;
+#endif
+
+        // ----------------------------------------------------------------
         // 2.1 Variable update — gameplay, animations, AI
         // ----------------------------------------------------------------
-        m_EngineSubsystemManager.UpdateAll(lDeltaTime);
+        m_EngineSubsystemManager.UpdateAll(lDeltaTime, bAllowPlayOnly);
         OnUpdate(lDeltaTime);
 
         // ----------------------------------------------------------------
@@ -232,7 +245,7 @@ void CoreEngineApp::Run()
         // ----------------------------------------------------------------
         while (lAccumulator >= FIXED_DELTA_TIME)
         {
-            m_EngineSubsystemManager.FixedUpdateAll(FIXED_DELTA_TIME);
+            m_EngineSubsystemManager.FixedUpdateAll(FIXED_DELTA_TIME, bAllowPlayOnly);
             OnFixedUpdate(FIXED_DELTA_TIME);
             lAccumulator -= FIXED_DELTA_TIME;
         }

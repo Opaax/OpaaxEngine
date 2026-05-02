@@ -5,6 +5,7 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
+#include "Editor/EditorState.h"
 
 namespace Opaax::Editor
 {
@@ -43,7 +44,7 @@ namespace Opaax::Editor
         bool Startup();
         void Shutdown();
 
-        bool Draw();
+        bool Draw(EEditorState State);
 
         //------------------------------------------------------------------------------
         // Get

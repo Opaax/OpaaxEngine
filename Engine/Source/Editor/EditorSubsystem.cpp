@@ -3,13 +3,17 @@
 
 #if OPAAX_WITH_EDITOR
 
+#include <filesystem>
+
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
 #include "Core/CoreEngineApp.h"
+#include "Core/OpaaxPath.h"
 #include "Core/Window.h"
 #include "Scene/SceneManager.h"
+#include "Scene/SceneSerializer.h"
 #include "Core/Log/OpaaxLog.h"
 #include "Renderer/Camera2D.h"
 #include "RHI/RenderCommand.h"
@@ -23,6 +27,11 @@
 
 namespace Opaax
 {
+    // =============================================================================
+    // PIE — temp snapshot file used for Play→Stop scene restore
+    // =============================================================================
+    static constexpr const char* PIE_TEMP_SCENE_PATH = "EditorTemp/PlaySession.json";
+
     // =============================================================================
     // Startup
     // =============================================================================
@@ -178,11 +187,97 @@ namespace Opaax
 
         m_MainMenuBar.Draw(*this);
 
-        if (m_bShowPlayStop)     m_PlayStopPanel.Draw(lSceneMgr);
         if (m_bShowHierarchy)    m_HierarchyPanel.Draw(lSceneMgr);
         if (m_bShowInspector)    m_InspectorPanel.Draw(lWorld, m_HierarchyPanel.GetSelectedEntity());
-        if (m_bShowViewport)     m_ViewportPanel.Draw();
+        if (m_bShowViewport)     m_ViewportPanel.Draw(m_EditorState);
         if (m_bShowAssetBrowser) m_AssetBrowserPanel.Draw();
+    }
+
+    // =============================================================================
+    // PIE state machine
+    // =============================================================================
+    void EditorSubsystem::SetEditorState(Editor::EEditorState NewState)
+    {
+        if (NewState == m_EditorState) { return; }
+
+        OPAAX_CORE_INFO("EditorSubsystem: {} -> {}",
+            Editor::EditorStateToString(m_EditorState),
+            Editor::EditorStateToString(NewState));
+
+        m_EditorState = NewState;
+    }
+
+    void EditorSubsystem::EnterPlayMode()
+    {
+        if (m_EditorState != Editor::EEditorState::Editing)
+        {
+            OPAAX_CORE_WARN("EditorSubsystem::EnterPlayMode — invalid from state {}",
+                Editor::EditorStateToString(m_EditorState));
+            return;
+        }
+
+        SceneManager* lSceneMgr = GetEngineApp() ? GetEngineApp()->GetSceneManager() : nullptr;
+        if (!lSceneMgr || !lSceneMgr->GetActiveScene())
+        {
+            OPAAX_CORE_WARN("EditorSubsystem::EnterPlayMode — no active scene, aborting.");
+            return;
+        }
+
+        const OpaaxString lTempPath = OpaaxPath::Resolve(PIE_TEMP_SCENE_PATH);
+        std::filesystem::create_directories(
+            std::filesystem::path(lTempPath.CStr()).parent_path());
+
+        SceneSerializer::Serialize(*lSceneMgr->GetActiveScene(), lTempPath.CStr());
+
+        SetEditorState(Editor::EEditorState::Playing);
+    }
+
+    void EditorSubsystem::PauseToggle()
+    {
+        switch (m_EditorState)
+        {
+            case Editor::EEditorState::Playing:
+                SetEditorState(Editor::EEditorState::Paused);
+                break;
+            case Editor::EEditorState::Paused:
+                SetEditorState(Editor::EEditorState::Playing);
+                break;
+            case Editor::EEditorState::Editing:
+                OPAAX_CORE_WARN("EditorSubsystem::PauseToggle — ignored in Editing state.");
+                break;
+        }
+    }
+
+    void EditorSubsystem::ExitPlayMode()
+    {
+        if (m_EditorState == Editor::EEditorState::Editing)
+        {
+            OPAAX_CORE_WARN("EditorSubsystem::ExitPlayMode — already in Editing.");
+            return;
+        }
+
+        SceneManager* lSceneMgr = GetEngineApp() ? GetEngineApp()->GetSceneManager() : nullptr;
+        if (!lSceneMgr || !lSceneMgr->GetActiveScene())
+        {
+            OPAAX_CORE_WARN("EditorSubsystem::ExitPlayMode — no active scene, dropping snapshot restore.");
+            SetEditorState(Editor::EEditorState::Editing);
+            return;
+        }
+
+        const OpaaxString lTempPath = OpaaxPath::Resolve(PIE_TEMP_SCENE_PATH);
+        if (!std::filesystem::exists(lTempPath.CStr()))
+        {
+            OPAAX_CORE_WARN("EditorSubsystem::ExitPlayMode — no temp snapshot found at {}",
+                lTempPath.CStr());
+            SetEditorState(Editor::EEditorState::Editing);
+            return;
+        }
+
+        Scene* lScene = lSceneMgr->GetActiveScene();
+        lScene->GetWorld().Clear();
+        SceneSerializer::Deserialize(*lScene, lTempPath.CStr());
+
+        SetEditorState(Editor::EEditorState::Editing);
     }
 
     void EditorSubsystem::EndFrame()

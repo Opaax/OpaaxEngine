@@ -2,7 +2,7 @@
 
 > Source plan: `C:\Users\engue\.claude\plans\silly-petting-charm.md`
 > Audit date: 2026-04-30 — verified against current code via three parallel Explore agents.
-> Archives: `tasks/done/2026-04-30_rotation-parenting.md`, `tasks/done/2026-04-30_m1-asset-config.md` (both verified & pushed).
+> Archives: `tasks/done/2026-04-30_rotation-parenting.md`, `tasks/done/2026-04-30_m1-asset-config.md`, `tasks/done/2026-05-01_m2-step1-step2.md` (all verified & pushed).
 
 ## Status legend
 - [ ] pending
@@ -15,10 +15,11 @@
 
 > **Why now:** the rotation+parenting + M1 work produced richer, persistable scenes. The editor still has only an ad-hoc Play/Stop bar — users need a real File menu, a proper Editing/Playing/Paused state machine, and Save/Open dialogs before physics (M5) lands.
 
-### Pre-flight (do first when reopening)
-- [x] Re-read `tasks/done/2026-04-30_m1-asset-config.md` for the current asset-ID conventions (logical IDs in scenes when manifest is populated).
-- [x] Skim `Engine/Source/Editor/Panels/PlayStopPanel.{h,cpp}` and `Engine/Source/Editor/EditorSubsystem.{h,cpp}` (around `DrawPanels` lines 179-183) — these are the integration points.
-- [ ] Decide file-dialog approach (recommendation: vendor `tinyfiledialogs` — single header, native dialogs, ~5 KB). *(deferred to Step 3)*
+### Pre-flight (do first when reopening — Step 3 next)
+- [x] Re-read `tasks/done/2026-04-30_m1-asset-config.md` for the current asset-ID conventions.
+- [x] Skim `Engine/Source/Editor/EditorSubsystem.{h,cpp}` and the new `Engine/Source/Editor/Toolbar/MainMenuBar.{h,cpp}` — Step 3 wires the existing stubbed File-menu callbacks (`MainMenuBar.cpp` Draw* methods) to real dialog calls.
+- [x] Steps 1 + 2 archived in `tasks/done/2026-05-01_m2-step1-step2.md`.
+- [ ] **Step 3 entry point**: drop straight into a plan-mode pass for Save/Open dialogs. Confirm `tinyfiledialogs` vs alternatives (current recommendation: vendor `tinyfiledialogs` — single header, native dialogs, ~5 KB).
 
 ### 1. Main menu bar
 - [x] New `Engine/Source/Editor/Toolbar/MainMenuBar.{h,cpp}` — encapsulates `ImGui::BeginMainMenuBar` / `BeginMenu` blocks. Drawn first per frame from `EditorSubsystem::DrawPanels`.
@@ -29,12 +30,12 @@
 - [x] **Help**: About modal (hardcoded `0.1.0-dev` for now — `EngineConfig` exposes no version yet; TODO M8 polish to wire CMake-generated `BuildVersion.h` with commit hash).
 
 ### 2. PIE state machine
-- [ ] New `Engine/Source/Editor/EditorState.h` — `enum class EEditorState { Editing, Playing, Paused };`.
-- [ ] `EditorSubsystem` owns the current state + getter/setter that logs transitions.
-- [ ] Replace `PlayStopPanel` content: Play / Pause / Stop buttons move into the toolbar (right-aligned, after the menu list). Delete `PlayStopPanel.{h,cpp}` once empty.
-- [ ] Transitions: `Editing → Playing` (Play), `Playing ↔ Paused` (Pause toggle), `Playing|Paused → Editing` (Stop).
-- [ ] Gate the world's gameplay update: `EngineSubsystemMgr::UpdateAll` only ticks systems flagged "play-only" when `state == Playing`. Choose minimal hook now (boolean on subsystem? state read from `EditorSubsystem::GetState()`?) — confirm pattern in plan mode for M2.
-- [ ] `ViewportPanel` border tint reflects state: editing = grey, playing = green, paused = amber.
+- [x] New `Engine/Source/Editor/EditorState.h` — `enum class EEditorState { Editing, Playing, Paused };` + `EditorStateToString()`.
+- [x] `EditorSubsystem` owns the current state + `GetEditorState()` + transitions (`EnterPlayMode` / `PauseToggle` / `ExitPlayMode`); `SetEditorState()` logs every transition.
+- [x] Replace `PlayStopPanel` content: Play / Pause / Stop buttons moved into `MainMenuBar` (right-aligned via `SetCursorPosX`). `PlayStopPanel.{h,cpp}` deleted; member, show-flag, View-menu entry, and `IsPlaying()` getter removed.
+- [x] Transitions: `Editing → Playing` (Play), `Playing ↔ Paused` (Pause toggle), `Playing|Paused → Editing` (Stop). Snapshot taken once on Enter; Pause does NOT re-serialize.
+- [x] Gate the world's gameplay update — chose **(a) boolean on subsystem**: `IEngineSubsystem::IsPlayOnly()` virtual default false; `EngineSubsystemMgr::UpdateAll(dt, bAllowPlayOnly)` and `FixedUpdateAll(dt, bAllowPlayOnly)` skip play-only when not allowed. `CoreEngineApp::Run` computes `bAllowPlayOnly` from `EditorSubsystem::GetEditorState() == Playing` (`#if OPAAX_WITH_EDITOR`); release build hardcodes `true`. No production play-only subsystem exists yet — physics (M5) will be the first consumer.
+- [x] `ViewportPanel::Draw(EEditorState)` — `ImGuiCol_Border` tint pushed (grey/green/amber). NOTE 2026-05-01: user reverted the explicit `WindowBorderSize=3.f` push in `ViewportPanel.cpp` — only the color is pushed now, so tint visibility depends on the default border size of the active style. Don't re-add the `WindowBorderSize` push.
 
 ### 3. Save / Open dialogs
 - [ ] Vendor `tinyfiledialogs` under `Engine/Vendors/tinyfiledialogs/` (single header + .c, append to `Engine/CMakeLists.txt` via the existing vendor pattern around line 80).
@@ -125,9 +126,11 @@
 
 ---
 
-## Pre-flight before starting M2
+## Pre-flight before resuming M2
 
 - [x] Rotation+parenting verification complete (archive note 2026-04-30).
 - [x] M1 verified & pushed.
 - [x] `CLAUDE.local.md` "CURRENT MILESTONE" set to **M-02 — Editor: Real Toolbar + PIE State + Save/Open**.
-- [ ] When session reopens: read the **Active milestone — M2** section above, then call `/engine-planning` is NOT needed — drop straight into a plan-mode pass for M2 step 1 (Main menu bar) using the current code paths in `EditorSubsystem` and `PlayStopPanel`.
+- [x] Step 1 (Main menu bar) — done & pushed.
+- [x] Step 2 (PIE state machine) — done & pushed (note: user disabled explicit `WindowBorderSize` push in `ViewportPanel.cpp`).
+- [ ] **Next session**: read the **Active milestone — M2 §3 Save / Open dialogs** section above. Skip `/engine-planning`; drop straight into a plan-mode pass for Step 3. Critical files: `Engine/Source/Editor/Toolbar/MainMenuBar.cpp` (existing TBD callbacks), `Engine/Source/Scene/SceneManager.{h,cpp}`, `Engine/CMakeLists.txt` (vendor add).

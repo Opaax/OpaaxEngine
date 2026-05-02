@@ -1,11 +1,11 @@
 #pragma once
 #if OPAAX_WITH_EDITOR
 
+#include "Editor/EditorState.h"
 #include "Editor/IEditorPanel.h"
 #include "Panels/AssetBrowserPanel.h"
 #include "Panels/HierarchyPanel.h"
 #include "Panels/InspectorPanel.h"
-#include "Panels/PlayStopPanel.h"
 #include "Panels/ViewportPanel.h"
 #include "Toolbar/MainMenuBar.h"
 #include "Core/Event/OpaaxEventTypes.hpp"
@@ -65,14 +65,21 @@ namespace Opaax
         // Get
     public:
         FORCEINLINE IRenderTarget& GetRenderTarget() noexcept { return m_ViewportPanel; }
-        FORCEINLINE bool IsPlaying() const noexcept { return m_PlayStopPanel.IsPlaying(); }
+
+        FORCEINLINE Editor::EEditorState GetEditorState() const noexcept { return m_EditorState; }
 
         // Panel visibility — references so the menu bar can toggle them in-place via ImGui::MenuItem.
         FORCEINLINE bool& GetShowHierarchyRef()    noexcept { return m_bShowHierarchy; }
         FORCEINLINE bool& GetShowInspectorRef()    noexcept { return m_bShowInspector; }
         FORCEINLINE bool& GetShowAssetBrowserRef() noexcept { return m_bShowAssetBrowser; }
         FORCEINLINE bool& GetShowViewportRef()     noexcept { return m_bShowViewport; }
-        FORCEINLINE bool& GetShowPlayStopRef()     noexcept { return m_bShowPlayStop; }
+
+        //------------------------------------------------------------------------------
+        // PIE transitions
+
+        void EnterPlayMode();   // Editing → Playing  (snapshots scene to temp file)
+        void PauseToggle();     // Playing ↔ Paused
+        void ExitPlayMode();    // Playing|Paused → Editing  (restores scene from temp)
 
         // =============================================================================
         // Override EngineSubsystemBase
@@ -90,18 +97,21 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
+        void SetEditorState(Editor::EEditorState NewState);
+
+    private:
         Editor::MainMenuBar       m_MainMenuBar;
         Editor::HierarchyPanel    m_HierarchyPanel;
         Editor::InspectorPanel    m_InspectorPanel;
         Editor::ViewportPanel     m_ViewportPanel;
         Editor::AssetBrowserPanel m_AssetBrowserPanel;
-        Editor::PlayStopPanel     m_PlayStopPanel;
+
+        Editor::EEditorState m_EditorState = Editor::EEditorState::Editing;
 
         bool m_bShowHierarchy    = true;
         bool m_bShowInspector    = true;
         bool m_bShowAssetBrowser = true;
         bool m_bShowViewport     = true;
-        bool m_bShowPlayStop     = true;
     };
 
 } // namespace Opaax

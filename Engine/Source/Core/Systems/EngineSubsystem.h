@@ -72,6 +72,13 @@ namespace Opaax
          */
         virtual bool   OnEvent(OpaaxEvent& Event)               { return false; }
 
+        /**
+         * Play-only subsystems are skipped by EngineSubsystemMgr's Update/FixedUpdate
+         * loops when the editor is in Editing or Paused state. Default false: subsystem
+         * always ticks. Override to true for gameplay-only systems (physics, AI, scripts).
+         */
+        virtual bool   IsPlayOnly() const noexcept              { return false; }
+
         /*----------------------------- Get - Set -------------------------------*/
     public:
         CoreEngineApp* GetEngineApp() const noexcept { return m_EngineApp; }
@@ -153,6 +160,15 @@ namespace Opaax
         // Functions
         // =============================================================================
     public:
+        // Keep base no-arg overloads available alongside the gated versions below.
+        using ISubsystemManager<IEngineSubsystem>::UpdateAll;
+        using ISubsystemManager<IEngineSubsystem>::FixedUpdateAll;
+
+        // Gated variants — skip subsystems whose IsPlayOnly() returns true when
+        // bAllowPlayOnly is false (editor in Editing or Paused state).
+        void UpdateAll(double DeltaTime, bool bAllowPlayOnly);
+        void FixedUpdateAll(double FixedDeltaTime, bool bAllowPlayOnly);
+
         void DispatchEventAll(OpaaxEvent& Event);
     };
 }

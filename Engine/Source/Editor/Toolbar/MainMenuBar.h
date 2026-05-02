@@ -46,12 +46,13 @@ namespace Opaax::Editor
         // Internals
         // =============================================================================
     private:
-        void DrawFileMenu  (EditorSubsystem& Owner);
-        void DrawEditMenu  ();
-        void DrawViewMenu  (EditorSubsystem& Owner);
-        void DrawWindowMenu();
-        void DrawHelpMenu  ();
-        void DrawAboutModal();
+        void DrawFileMenu   (EditorSubsystem& Owner);
+        void DrawEditMenu   ();
+        void DrawViewMenu   (EditorSubsystem& Owner);
+        void DrawWindowMenu ();
+        void DrawHelpMenu   ();
+        void DrawPieControls(EditorSubsystem& Owner);
+        void DrawAboutModal ();
 
         // =============================================================================
         // Members

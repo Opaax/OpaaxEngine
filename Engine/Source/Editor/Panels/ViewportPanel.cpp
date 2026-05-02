@@ -84,10 +84,28 @@ namespace Opaax::Editor
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
-    bool ViewportPanel::Draw()
+    static ImVec4 GetEditorStateBorderColor(EEditorState State)
     {
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.f, 0.f));
+        switch (State)
+        {
+            case EEditorState::Playing: return ImVec4(0.30f, 0.70f, 0.30f, 1.f); // green
+            case EEditorState::Paused:  return ImVec4(0.90f, 0.60f, 0.10f, 1.f); // amber
+            case EEditorState::Editing:
+            default:                    return ImVec4(0.40f, 0.40f, 0.40f, 1.f); // grey
+        }
+    }
+
+    bool ViewportPanel::Draw(EEditorState State)
+    {
+        const ImVec4 lBorderColor = GetEditorStateBorderColor(State);
+
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,    ImVec2(0.f, 0.f));
+        //ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 3.f);
+        ImGui::PushStyleColor(ImGuiCol_Border, lBorderColor);
+
         ImGui::Begin("Viewport");
+
+        ImGui::PopStyleColor();
         ImGui::PopStyleVar();
 
         m_bHovered = ImGui::IsWindowHovered();
