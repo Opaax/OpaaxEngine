@@ -12,7 +12,6 @@ namespace Opaax
     OpaaxStringID AssetScanner::ResolveType(const std::filesystem::path& InPath) noexcept
     {
         const std::string lExt = InPath.extension().string();
-        const std::string lDir = InPath.parent_path().filename().string();
 
         // Textures
         if (lExt == ".png"  || lExt == ".jpg" || lExt == ".jpeg" ||
@@ -33,13 +32,15 @@ namespace Opaax
             return OpaaxStringID("Shader");
         }
 
-        // JSON — disambiguate by parent directory name
+        // JSON — disambiguate by compound extension on the filename, not by parent dir.
+        // Foo.scene.json → stem "Foo.scene" → inner extension ".scene" → Scene.
+        // A bare Foo.json with no inner extension falls through to "Data".
         if (lExt == ".json")
         {
-            if (lDir == "Animations") { return OpaaxStringID("Animation"); }
-            if (lDir == "InputMaps")  { return OpaaxStringID("InputMap");  }
-            if (lDir == "Scenes")     { return OpaaxStringID("Scene");     }
-            // Generic JSON — could be anything
+            const std::string lInner = InPath.stem().extension().string();
+            if (lInner == ".scene") { return OpaaxStringID("Scene");     }
+            if (lInner == ".anim")  { return OpaaxStringID("Animation"); }
+            if (lInner == ".input") { return OpaaxStringID("InputMap");  }
             return OpaaxStringID("Data");
         }
 
@@ -57,9 +58,13 @@ namespace Opaax
         const std::filesystem::path lRelPath =
             std::filesystem::relative(InAbsFilePath, InAbsRootPath);
 
-        // Remove extension
+        // Strip every extension iteratively — handles compound names like Foo.scene.json
+        // (single replace_extension would leave ".scene" attached to the ID).
         std::filesystem::path lIDPath = lRelPath;
-        lIDPath.replace_extension("");
+        while (lIDPath.has_extension())
+        {
+            lIDPath.replace_extension("");
+        }
 
         // Normalise separators to forward slash
         std::string lID = lIDPath.generic_string();
@@ -95,7 +100,7 @@ namespace Opaax
             const std::filesystem::path& lFilePath = lDirEntry.path();
             const OpaaxStringID lType = ResolveType(lFilePath);
 
-            // Skip unknown types and scenes (managed by SceneManager)
+            // Skip unknown extensions; every other type — including Scene — flows into the manifest.
             if (lType == OpaaxStringID("Unknown"))
             {
                 ++lResult.Skipped;

@@ -17,15 +17,21 @@ namespace Opaax
     // ID generation rule:
     //   Root     : "GameAssets"
     //   File     : "GameAssets/Textures/Player.png"
-    //   ID       : "Textures/Player"    (relative to root, no extension)
+    //   ID       : "Textures/Player"    (relative to root, all extensions stripped)
+    //   Compound : "GameAssets/Foo.scene.json" → "Foo"
+    //
+    // Type discovery is filename-pattern based (no parent-directory dependency),
+    // so any asset can live in any folder.
     //
     // Supported extensions → asset type mapping:
     //   .png .jpg .jpeg .bmp .tga  →  "Texture2D"
     //   .wav .ogg .mp3             →  "AudioClip"
-    //   .json (Animations/)        →  "Animation"
-    //   .json (InputMaps/)         →  "InputMap"
-    //   .json (Scenes/)            →  skipped  (managed by SceneManager)
     //   .glsl .vert .frag          →  "Shader"
+    //   *.scene.json               →  "Scene"      (lifecycle handled by SceneManager,
+    //                                                manifest entry is informational)
+    //   *.anim.json                →  "Animation"
+    //   *.input.json               →  "InputMap"
+    //   *.json (no compound)       →  "Data"
     //
     // NOTE: Scan is synchronous — call from main thread only.
     //   For large asset libraries this could be moved to a job,
@@ -66,11 +72,12 @@ namespace Opaax
         static ScanResult Scan(const ScanConfig& InConfig);
 
     private:
-        // Derive asset type string from file extension + directory hint.
+        // Derive asset type string from filename pattern (extension + compound extension).
         static OpaaxStringID ResolveType(const std::filesystem::path& InPath) noexcept;
 
-        // Generate logical ID from file path relative to root.
-        // "GameAssets/Textures/Player.png" with root "GameAssets" → "Textures/Player"
+        // Generate logical ID from file path relative to root, stripping every extension.
+        // "GameAssets/Textures/Player.png"   with root "GameAssets" → "Textures/Player"
+        // "GameAssets/Scenes/Foo.scene.json" with root "GameAssets" → "Scenes/Foo"
         static OpaaxString GenerateID(const std::filesystem::path& InAbsFilePath,
                                       const std::filesystem::path& InAbsRootPath) noexcept;
 
