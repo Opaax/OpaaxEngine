@@ -2,8 +2,9 @@
 
 namespace Opaax
 {
-    Opaax::OpaaxString OpaaxPath::s_BasePath = {};
-    
+    Opaax::OpaaxString OpaaxPath::s_BasePath    = {};
+    Opaax::OpaaxString OpaaxPath::s_ProjectRoot = {};
+
     bool OpaaxPath::IsAbsolute(const char* InPath) noexcept
     {
         if (!InPath || InPath[0] == '\0')
@@ -45,8 +46,17 @@ namespace Opaax
         {
             if (s_BasePath.Data()[i] == '\\') { s_BasePath.Data()[i] = '/'; }
         }
- 
+
         OPAAX_CORE_INFO("OpaaxPath::Init() — base path: {}", s_BasePath);
+
+#if defined(OPAAX_PROJECT_ROOT)
+        s_ProjectRoot = OpaaxString(OPAAX_PROJECT_ROOT);
+        for (Uint32 i = 0; i < s_ProjectRoot.GetLength(); ++i)
+        {
+            if (s_ProjectRoot.Data()[i] == '\\') { s_ProjectRoot.Data()[i] = '/'; }
+        }
+        OPAAX_CORE_INFO("OpaaxPath::Init() — project root: {}", s_ProjectRoot);
+#endif
     }
 
     OpaaxString OpaaxPath::Resolve(const char* InRelativePath)
@@ -72,6 +82,35 @@ namespace Opaax
     OpaaxString OpaaxPath::Resolve(const OpaaxString& InRelativePath)
     {
         return Resolve(InRelativePath.CStr());
+    }
+
+    OpaaxString OpaaxPath::ResolveFromProject(const char* InRelativePath)
+    {
+        // No project root baked in (release build) — fall back to exe-relative resolution.
+        if (s_ProjectRoot.IsEmpty())
+        {
+            return Resolve(InRelativePath);
+        }
+
+        if (!InRelativePath || InRelativePath[0] == '\0')
+        {
+            return s_ProjectRoot;
+        }
+
+        if (IsAbsolute(InRelativePath))
+        {
+            return OpaaxString(InRelativePath);
+        }
+
+        OpaaxString lResult = s_ProjectRoot;
+        lResult += "/";
+        lResult += InRelativePath;
+        return lResult;
+    }
+
+    OpaaxString OpaaxPath::ResolveFromProject(const OpaaxString& InRelativePath)
+    {
+        return ResolveFromProject(InRelativePath.CStr());
     }
 
     OpaaxString OpaaxPath::MakeRelative(const char* InAbsPath) noexcept

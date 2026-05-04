@@ -19,6 +19,7 @@ namespace Opaax
     OpaaxString EngineConfig::s_GameManifestRelPath   = OpaaxString("GameAssets/AssetManifest.json");
     OpaaxString EngineConfig::s_LogLevel              = OpaaxString("trace");
     OpaaxString EngineConfig::s_DefaultSceneRelPath   = OpaaxString("");
+    OpaaxString EngineConfig::s_EditorDefaultScenePath = OpaaxString("Game/Assets/Scenes");
 
     bool EngineConfig::GenerateDefault(const OpaaxString& InAbsPath)
     {
@@ -50,6 +51,9 @@ namespace Opaax
             };
             lRoot["log"]          = { { "level", s_LogLevel.CStr() } };
             lRoot["defaultScene"] = s_DefaultSceneRelPath.CStr();
+            lRoot["editor"]       = {
+                { "defaultScenePath", s_EditorDefaultScenePath.CStr() }
+            };
 
             lFile << lRoot.dump(4);
 
@@ -140,6 +144,15 @@ namespace Opaax
             s_DefaultSceneRelPath = OpaaxString(lRoot["defaultScene"].get<std::string>().c_str());
         }
 
+        if (lRoot.contains("editor") && lRoot["editor"].is_object())
+        {
+            const auto& lEd = lRoot["editor"];
+            if (lEd.contains("defaultScenePath") && lEd["defaultScenePath"].is_string())
+            {
+                s_EditorDefaultScenePath = OpaaxString(lEd["defaultScenePath"].get<std::string>().c_str());
+            }
+        }
+
         OPAAX_CORE_INFO("EngineConfig: loaded '{}' (window={}x{}, log={})",
             InAbsPath, s_WindowWidth, s_WindowHeight, s_LogLevel);
 
@@ -176,6 +189,9 @@ namespace Opaax
             };
             lRoot["log"]          = { { "level", s_LogLevel.CStr() } };
             lRoot["defaultScene"] = s_DefaultSceneRelPath.CStr();
+            lRoot["editor"]       = {
+                { "defaultScenePath", s_EditorDefaultScenePath.CStr() }
+            };
 
             lFile << lRoot.dump(4);
 

@@ -9,6 +9,7 @@
 #include "Panels/ViewportPanel.h"
 #include "Toolbar/MainMenuBar.h"
 #include "Core/Event/OpaaxEventTypes.hpp"
+#include "Core/OpaaxString.hpp"
 #include "Core/Systems/EngineSubsystem.h"
 
 
@@ -85,6 +86,13 @@ namespace Opaax
         // so a freshly written .scene.json shows up without a manual Refresh click.
         void RefreshAssetBrowser();
 
+        //------------------------------------------------------------------------------
+        // Last-used dialog dir — volatile (lives for the editor session, no persistence).
+        // Saved by MainMenuBar after a successful Open / SaveAs so the next dialog opens
+        // where the user left off. Empty until the first successful dialog.
+        const OpaaxString& GetLastDialogDir() const noexcept { return m_LastDialogDir; }
+        void               SetLastDialogDir(const char* InAbsDir) { m_LastDialogDir = OpaaxString(InAbsDir); }
+
         // =============================================================================
         // Override EngineSubsystemBase
         // =============================================================================
@@ -116,6 +124,8 @@ namespace Opaax
         bool m_bShowInspector    = true;
         bool m_bShowAssetBrowser = true;
         bool m_bShowViewport     = true;
+
+        OpaaxString m_LastDialogDir;
     };
 
 } // namespace Opaax

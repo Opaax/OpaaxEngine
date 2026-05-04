@@ -2,6 +2,7 @@
 
 #if OPAAX_WITH_EDITOR
 
+#include <filesystem>
 #include <imgui.h>
 #include <tinyfiledialogs.h>
 
@@ -9,6 +10,8 @@
 #include "Editor/EditorSubsystem.h"
 #include "Core/CoreEngineApp.h"
 #include "Core/Log/OpaaxLog.h"
+#include "Core/OpaaxPath.h"
+#include "Core/Config/EngineConfig.h"
 #include "Scene/SceneManager.h"
 
 namespace Opaax::Editor
@@ -25,6 +28,42 @@ namespace Opaax::Editor
     {
         CoreEngineApp* lApp = Owner.GetEngineApp();
         return lApp ? lApp->GetSceneManager() : nullptr;
+    }
+
+    // Returns the directory the next file dialog should open in:
+    // - last-used dir from this session if the user already opened/saved once, else
+    // - the configured editor.defaultScenePath resolved against the project root
+    //   (or exe-relative when no project root is baked in — release fallback).
+    // Trailing slash matters on Windows: tinyfiledialogs treats it as a directory hint.
+    static OpaaxString GetDialogDefaultDir(EditorSubsystem& Owner)
+    {
+        const OpaaxString& lLast = Owner.GetLastDialogDir();
+        OpaaxString lDir = lLast.IsEmpty()
+            ? OpaaxPath::ResolveFromProject(EngineConfig::EditorDefaultScenePath())
+            : lLast;
+
+        // Ensure the dir exists so tinyfiledialogs has something to open.
+        std::error_code lEc;
+        std::filesystem::create_directories(std::filesystem::path(lDir.CStr()), lEc);
+
+        // Append trailing slash for tinyfd "directory" semantics.
+        if (!lDir.IsEmpty() &&
+            lDir.Data()[lDir.GetLength() - 1] != '/' &&
+            lDir.Data()[lDir.GetLength() - 1] != '\\')
+        {
+            lDir += "/";
+        }
+        return lDir;
+    }
+
+    // Stores the parent directory of InAbsPath into EditorSubsystem so the next dialog
+    // opens at the same location.
+    static void RememberDialogDir(EditorSubsystem& Owner, const char* InAbsPath)
+    {
+        if (!InAbsPath || InAbsPath[0] == '\0') { return; }
+        const std::filesystem::path lParent =
+            std::filesystem::path(InAbsPath).parent_path();
+        Owner.SetLastDialogDir(lParent.generic_string().c_str());
     }
 
     // =============================================================================
@@ -225,16 +264,21 @@ namespace Opaax::Editor
             return;
         }
 
+        const OpaaxString lDefaultDir = GetDialogDefaultDir(Owner);
+
         // tinyfiledialogs takes the filter list as a (char const* const*) array.
         const char* lPath = tinyfd_openFileDialog(
             "Open Scene",
-            /*default*/ "",
+            lDefaultDir.CStr(),
             /*nFilters*/ 1,
             &SCENE_FILTER_PATTERN,
             SCENE_FILTER_DESC,
             /*allowMulti*/ 0);
 
-        if (lPath) { lMgr->Open(lPath); }
+        if (lPath && lMgr->Open(lPath))
+        {
+            RememberDialogDir(Owner, lPath);
+        }
     }
 
     void MainMenuBar::DoSaveAs(EditorSubsystem& Owner)
@@ -246,15 +290,21 @@ namespace Opaax::Editor
             return;
         }
 
+        // Combine default dir with a placeholder filename so the save dialog opens
+        // in the right location with a sensible suggested name pre-filled.
+        OpaaxString lDefaultPath = GetDialogDefaultDir(Owner);
+        lDefaultPath += "untitled.scene.json";
+
         const char* lPath = tinyfd_saveFileDialog(
             "Save Scene As",
-            /*default*/ "untitled.scene.json",
+            lDefaultPath.CStr(),
             /*nFilters*/ 1,
             &SCENE_FILTER_PATTERN,
             SCENE_FILTER_DESC);
 
         if (lPath && lMgr->SaveAs(lPath))
         {
+            RememberDialogDir(Owner, lPath);
             // Auto-refresh so the new file appears in the Asset Browser without a manual Refresh.
             Owner.RefreshAssetBrowser();
         }

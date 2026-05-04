@@ -1,0 +1,78 @@
+{
+    "entities": [
+        {
+            "Tag": "AtlasSprite",
+            "components": {
+                "SpriteComponent": {
+                    "color": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "texture": "",
+                    "uv_max": [
+                        0.25,
+                        0.25
+                    ],
+                    "uv_min": [
+                        0.0,
+                        0.0
+                    ],
+                    "visible": true
+                },
+                "TransformComponent": {
+                    "position": [
+                        100.0,
+                        0.0
+                    ],
+                    "rotation": 0.0,
+                    "scale": [
+                        64.0,
+                        64.0
+                    ],
+                    "z_order": 0.0
+                }
+            },
+            "uuid": "1131153137990789912"
+        },
+        {
+            "Tag": "Player",
+            "components": {
+                "SpriteComponent": {
+                    "color": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "texture": "",
+                    "uv_max": [
+                        1.0,
+                        1.0
+                    ],
+                    "uv_min": [
+                        0.0,
+                        0.0
+                    ],
+                    "visible": true
+                },
+                "TransformComponent": {
+                    "position": [
+                        0.0,
+                        0.0
+                    ],
+                    "rotation": 0.0,
+                    "scale": [
+                        64.0,
+                        64.0
+                    ],
+                    "z_order": 0.0
+                }
+            },
+            "uuid": "13776407211557945101"
+        }
+    ],
+    "scene": "GameScene",
+    "version": 2
+}

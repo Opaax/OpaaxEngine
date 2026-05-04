@@ -54,14 +54,31 @@ namespace Opaax
          */
         static OpaaxString Resolve(const OpaaxString& InRelativePath);
 
+        /**
+         * Resolve a relative path against the project root (source tree) when available.
+         * Falls back to Resolve() (exe-relative base path) when OPAAX_PROJECT_ROOT is not
+         * baked in — i.e. release builds. Editor-only utilities (file dialogs, source-tree
+         * tooling) should call this instead of Resolve() so authoring stays in the source tree.
+         */
+        static OpaaxString ResolveFromProject(const char* InRelativePath);
+        static OpaaxString ResolveFromProject(const OpaaxString& InRelativePath);
+
         //------------------------------------------------------------------------------
         //  Get - Set
 
         /**
-         * 
-         * @return 
+         *
+         * @return
          */
         static const OpaaxString& GetBasePath() noexcept { return s_BasePath; }
+
+        /**
+         * Project source-tree root. Populated from the OPAAX_PROJECT_ROOT compile-time
+         * define when present (editor builds). Empty in release — caller falls back to
+         * GetBasePath() in that case.
+         */
+        static const OpaaxString& GetProjectRoot() noexcept { return s_ProjectRoot; }
+        static bool HasProjectRoot() noexcept { return !s_ProjectRoot.IsEmpty(); }
      
         /**
          * Convert an absolute path to a path relative to the base path.
@@ -89,6 +106,7 @@ namespace Opaax
         // =============================================================================
     private:
         static OpaaxString s_BasePath;
+        static OpaaxString s_ProjectRoot;
     };
 
     /**
