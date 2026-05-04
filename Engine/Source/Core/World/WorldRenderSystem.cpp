@@ -23,9 +23,13 @@ namespace Opaax
                 const ECS::Hierarchy::WorldTransform lWT =
                     ECS::Hierarchy::GetWorldTransform(InWorld, InEntity);
 
+                // Final draw size = sprite intrinsic size × hierarchical scale.
+                // Component-wise multiply (Hadamard) — glm::vec2 operator* does this.
+                const Vector2F lDrawSize = lWT.Scale * InSprite.Size;
+
                 Renderer2D::DrawSprite(
                     lWT.Position,
-                    lWT.Scale,
+                    lDrawSize,
                     InSprite.Texture,
                     InSprite.UVMin,
                     InSprite.UVMax,

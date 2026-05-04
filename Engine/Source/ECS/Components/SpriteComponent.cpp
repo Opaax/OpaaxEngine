@@ -22,6 +22,7 @@ Opaax::ECS::json Opaax::ECS::SpriteComponent::Serialize() const
 
     return {
             { "texture", lSerializedRef.CStr() },
+            { "size",    { Size.x, Size.y } },
             { "color",   { Color.r, Color.g, Color.b, Color.a } },
             { "uv_min",  { UVMin.x, UVMin.y } },
             { "uv_max",  { UVMax.x, UVMax.y } },
@@ -38,6 +39,14 @@ void Opaax::ECS::SpriteComponent::DeserializeImplementation(const json& Json)
     if (!lRef.IsEmpty())
     {
         Texture = AssetRegistry::Load<OpenGLTexture2D>(OpaaxStringID(lRef));
+    }
+
+    // Backward compat: pre-M3 scenes don't carry "size" — default to (1,1) so
+    // existing scenes render unchanged (Transform.Scale used to be the de facto size).
+    if (Json.contains("size"))
+    {
+        Size.x = Json["size"][0].get<float>();
+        Size.y = Json["size"][1].get<float>();
     }
 
     Color.r = Json["color"][0].get<float>();

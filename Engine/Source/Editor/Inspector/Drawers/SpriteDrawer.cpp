@@ -63,6 +63,7 @@ namespace Opaax::Editor
             ImGui::EndDragDropTarget();
         }
 
+        ImGui::DragFloat2("Size",    &lS->Size.x, 1.f, 0.f, 0.f, "%.2f");
         ImGui::ColorEdit4("Color",   &lS->Color.r);
         ImGui::DragFloat2("UV Min",  &lS->UVMin.x, 0.01f, 0.f, 1.f);
         ImGui::DragFloat2("UV Max",  &lS->UVMax.x, 0.01f, 0.f, 1.f);
