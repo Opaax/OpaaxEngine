@@ -190,7 +190,15 @@ namespace Opaax
         if (m_bShowHierarchy)    m_HierarchyPanel.Draw(lSceneMgr);
         if (m_bShowInspector)    m_InspectorPanel.Draw(lWorld, m_HierarchyPanel.GetSelectedEntity());
         if (m_bShowViewport)     m_ViewportPanel.Draw(m_EditorState);
-        if (m_bShowAssetBrowser) m_AssetBrowserPanel.Draw();
+        if (m_bShowAssetBrowser) m_AssetBrowserPanel.Draw(lSceneMgr);
+    }
+
+    // =============================================================================
+    // Asset browser refresh
+    // =============================================================================
+    void EditorSubsystem::RefreshAssetBrowser()
+    {
+        m_AssetBrowserPanel.RunScan();
     }
 
     // =============================================================================

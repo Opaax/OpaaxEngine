@@ -2,6 +2,7 @@
 
 #if OPAAX_WITH_EDITOR
 
+#include <filesystem>
 #include <imgui.h>
 #include "Assets/AssetRegistry.h"
 #include "Assets/AssetManifest.h"
@@ -10,9 +11,28 @@
 #include "Core/Log/OpaaxLog.h"
 #include "Editor/Assets/AssetTypeRegistry.h"
 #include "Editor/Assets/IAssetTypeActions.h"
+#include "Scene/SceneManager.h"
 
 namespace Opaax::Editor
 {
+    // Compares an entry's resolved abs path against SceneManager::GetCurrentScenePath()
+    // via std::filesystem::equivalent so slash/case differences don't cause false negatives.
+    // Returns false for non-Scene entries, missing files, or when no scene is loaded.
+    static bool IsLoadedScene(const SceneManager* InMgr, const AssetDescriptor& InDesc)
+    {
+        if (!InMgr || !InMgr->HasCurrentScenePath()) { return false; }
+        if (InDesc.Type != OpaaxStringID("Scene"))   { return false; }
+        if (InDesc.bMissing)                         { return false; }
+
+        std::error_code lEc;
+        const OpaaxString lEntryAbs = OpaaxPath::Resolve(InDesc.RelPath);
+        const bool bSame = std::filesystem::equivalent(
+            std::filesystem::path(InMgr->GetCurrentScenePath().CStr()),
+            std::filesystem::path(lEntryAbs.CStr()),
+            lEc);
+        return bSame && !lEc;
+    }
+
     // =============================================================================
     // Startup
     // =============================================================================
@@ -56,12 +76,12 @@ namespace Opaax::Editor
     // =============================================================================
     // Draw
     // =============================================================================
-    void AssetBrowserPanel::Draw()
+    void AssetBrowserPanel::Draw(SceneManager* InSceneManager)
     {
         ImGui::Begin("Asset Browser");
         DrawToolbar();
         ImGui::Separator();
-        DrawAssetList();
+        DrawAssetList(InSceneManager);
         ImGui::End();
     }
 
@@ -152,7 +172,7 @@ namespace Opaax::Editor
     // =============================================================================
     // Asset list
     // =============================================================================
-    void AssetBrowserPanel::DrawAssetList()
+    void AssetBrowserPanel::DrawAssetList(SceneManager* InSceneManager)
     {
         const auto& lAll = AssetManifest::GetAll();
 
@@ -167,7 +187,7 @@ namespace Opaax::Editor
         for (const auto& [lKey, lDesc] : lAll)
         {
             if (!m_Filter.Matches(lDesc)) { continue; }
-            DrawAssetEntry(lDesc);
+            DrawAssetEntry(lDesc, InSceneManager);
             ++lVisible;
         }
 
@@ -180,9 +200,12 @@ namespace Opaax::Editor
     // =============================================================================
     // Single entry — icon, colour, D&D source, tooltip, context menu
     // =============================================================================
-    void AssetBrowserPanel::DrawAssetEntry(const AssetDescriptor& InDesc)
+    void AssetBrowserPanel::DrawAssetEntry(const AssetDescriptor& InDesc, SceneManager* InSceneManager)
     {
-        const bool bLoaded  = AssetRegistry::IsLoaded(InDesc.ID);
+        // Scenes don't go through AssetRegistry — they're owned by SceneManager.
+        // Treat the entry that matches GetCurrentScenePath() as "loaded" for display parity with textures.
+        const bool bLoaded  = AssetRegistry::IsLoaded(InDesc.ID)
+                           || IsLoadedScene(InSceneManager, InDesc);
         const bool bMissing = InDesc.bMissing;
 
         // Status colour

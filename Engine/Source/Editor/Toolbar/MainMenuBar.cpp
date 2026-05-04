@@ -253,7 +253,11 @@ namespace Opaax::Editor
             &SCENE_FILTER_PATTERN,
             SCENE_FILTER_DESC);
 
-        if (lPath) { lMgr->SaveAs(lPath); }
+        if (lPath && lMgr->SaveAs(lPath))
+        {
+            // Auto-refresh so the new file appears in the Asset Browser without a manual Refresh.
+            Owner.RefreshAssetBrowser();
+        }
     }
 
     void MainMenuBar::DoSaveOrSaveAs(EditorSubsystem& Owner)

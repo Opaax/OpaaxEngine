@@ -9,6 +9,11 @@
 #include "Editor/IEditorPanel.h"
 #include "Editor/Panels/AssetBrowserFilter.h"
 
+namespace Opaax
+{
+    class SceneManager;
+}
+
 namespace Opaax::Editor
 {
     /**
@@ -36,19 +41,25 @@ namespace Opaax::Editor
         // =============================================================================
         // Functions
         // =============================================================================
-    private:
+    public:
+        // Public so EditorSubsystem can trigger a rescan after Save Scene As — see RefreshAssetBrowser().
         void RunScan();
+
+        // Primary entry point — called directly by EditorSubsystem (mirrors HierarchyPanel pattern).
+        // The SceneManager is needed to mark the currently loaded scene as such in the list.
+        void Draw(SceneManager* InSceneManager);
+
+    private:
         void DrawToolbar();
-        void DrawAssetList();
-        void DrawAssetEntry(const AssetDescriptor& InDesc);
-        
+        void DrawAssetList(SceneManager* InSceneManager);
+        void DrawAssetEntry(const AssetDescriptor& InDesc, SceneManager* InSceneManager);
+
         // =============================================================================
         // Override
         // =============================================================================
         //~Begin IEditorPanel interface
     public:
         void        Startup()            override;
-        void        Draw()               override;
         const char* GetPanelName() const override { return "Asset Browser"; }
         //~End IEditorPanel interface
         
