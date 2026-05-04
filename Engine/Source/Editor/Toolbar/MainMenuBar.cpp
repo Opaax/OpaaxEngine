@@ -3,17 +3,29 @@
 #if OPAAX_WITH_EDITOR
 
 #include <imgui.h>
+#include <tinyfiledialogs.h>
 
 #include "Editor/EditorState.h"
 #include "Editor/EditorSubsystem.h"
 #include "Core/CoreEngineApp.h"
 #include "Core/Log/OpaaxLog.h"
+#include "Scene/SceneManager.h"
 
 namespace Opaax::Editor
 {
     // TODO: M8 polish — wire CMake-generated version + commit hash.
     static constexpr const char* OPAAX_ENGINE_VERSION = "0.1.0-dev";
     static constexpr const char* ABOUT_POPUP_ID       = "About OpaaxEngine";
+    static constexpr const char* DISCARD_POPUP_ID     = "Discard current scene?";
+
+    static const char* SCENE_FILTER_PATTERN = "*.scene.json";
+    static const char* SCENE_FILTER_DESC    = "OpaaxEngine Scene (*.scene.json)";
+
+    static SceneManager* GetSceneManager(EditorSubsystem& Owner)
+    {
+        CoreEngineApp* lApp = Owner.GetEngineApp();
+        return lApp ? lApp->GetSceneManager() : nullptr;
+    }
 
     // =============================================================================
     // Draw
@@ -33,7 +45,16 @@ namespace Opaax::Editor
             ImGui::EndMainMenuBar();
         }
 
+        // Global Ctrl+S — fires regardless of which window has focus, as long as
+        // no widget is currently consuming the key chord. ImGui::IsKeyChordPressed
+        // already routes through the global shortcut/route system in 1.92.x.
+        if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_S))
+        {
+            DoSaveOrSaveAs(Owner);
+        }
+
         DrawAboutModal();
+        DrawDiscardModal(Owner);
     }
 
     // =============================================================================
@@ -45,24 +66,25 @@ namespace Opaax::Editor
 
         if (ImGui::MenuItem("New Scene"))
         {
-            OPAAX_CORE_INFO("MainMenuBar: New Scene — TBD M2 Step 3");
+            // Always confirm — no dirty tracking yet (deferred per M2 scope).
+            m_bOpenDiscardModal = true;
         }
 
         if (ImGui::MenuItem("Open Scene..."))
         {
-            OPAAX_CORE_INFO("MainMenuBar: Open Scene — TBD M2 Step 3");
+            DoOpen(Owner);
         }
 
         ImGui::Separator();
 
         if (ImGui::MenuItem("Save Scene", "Ctrl+S"))
         {
-            OPAAX_CORE_INFO("MainMenuBar: Save Scene — TBD M2 Step 3");
+            DoSaveOrSaveAs(Owner);
         }
 
         if (ImGui::MenuItem("Save Scene As..."))
         {
-            OPAAX_CORE_INFO("MainMenuBar: Save Scene As — TBD M2 Step 3");
+            DoSaveAs(Owner);
         }
 
         ImGui::Separator();
@@ -192,6 +214,62 @@ namespace Opaax::Editor
     }
 
     // =============================================================================
+    // File-menu helpers
+    // =============================================================================
+    void MainMenuBar::DoOpen(EditorSubsystem& Owner)
+    {
+        SceneManager* lMgr = GetSceneManager(Owner);
+        if (!lMgr)
+        {
+            OPAAX_CORE_WARN("MainMenuBar::DoOpen — SceneManager unavailable.");
+            return;
+        }
+
+        // tinyfiledialogs takes the filter list as a (char const* const*) array.
+        const char* lPath = tinyfd_openFileDialog(
+            "Open Scene",
+            /*default*/ "",
+            /*nFilters*/ 1,
+            &SCENE_FILTER_PATTERN,
+            SCENE_FILTER_DESC,
+            /*allowMulti*/ 0);
+
+        if (lPath) { lMgr->Open(lPath); }
+    }
+
+    void MainMenuBar::DoSaveAs(EditorSubsystem& Owner)
+    {
+        SceneManager* lMgr = GetSceneManager(Owner);
+        if (!lMgr)
+        {
+            OPAAX_CORE_WARN("MainMenuBar::DoSaveAs — SceneManager unavailable.");
+            return;
+        }
+
+        const char* lPath = tinyfd_saveFileDialog(
+            "Save Scene As",
+            /*default*/ "untitled.scene.json",
+            /*nFilters*/ 1,
+            &SCENE_FILTER_PATTERN,
+            SCENE_FILTER_DESC);
+
+        if (lPath) { lMgr->SaveAs(lPath); }
+    }
+
+    void MainMenuBar::DoSaveOrSaveAs(EditorSubsystem& Owner)
+    {
+        SceneManager* lMgr = GetSceneManager(Owner);
+        if (!lMgr)
+        {
+            OPAAX_CORE_WARN("MainMenuBar::DoSaveOrSaveAs — SceneManager unavailable.");
+            return;
+        }
+
+        if (lMgr->HasCurrentScenePath()) { lMgr->Save(); }
+        else                             { DoSaveAs(Owner); }
+    }
+
+    // =============================================================================
     // About modal
     // =============================================================================
     void MainMenuBar::DrawAboutModal()
@@ -214,6 +292,44 @@ namespace Opaax::Editor
             ImGui::Separator();
 
             if (ImGui::Button("Close", ImVec2(120, 0)))
+            {
+                ImGui::CloseCurrentPopup();
+            }
+
+            ImGui::EndPopup();
+        }
+    }
+
+    // =============================================================================
+    // Discard modal — confirms "New Scene" wipes the current world
+    // =============================================================================
+    void MainMenuBar::DrawDiscardModal(EditorSubsystem& Owner)
+    {
+        if (m_bOpenDiscardModal)
+        {
+            ImGui::OpenPopup(DISCARD_POPUP_ID);
+            m_bOpenDiscardModal = false;
+        }
+
+        const ImVec2 lCenter = ImGui::GetMainViewport()->GetCenter();
+        ImGui::SetNextWindowPos(lCenter, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+
+        if (ImGui::BeginPopupModal(DISCARD_POPUP_ID, nullptr,
+            ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings))
+        {
+            ImGui::Text("Unsaved changes will be lost. Continue?");
+            ImGui::Separator();
+
+            if (ImGui::Button("Discard", ImVec2(120, 0)))
+            {
+                if (SceneManager* lMgr = GetSceneManager(Owner))
+                {
+                    lMgr->NewScene();
+                }
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel", ImVec2(120, 0)))
             {
                 ImGui::CloseCurrentPopup();
             }

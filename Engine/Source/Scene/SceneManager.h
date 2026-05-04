@@ -2,6 +2,7 @@
 
 #include "Scene.h"
 #include "Core/EngineAPI.h"
+#include "Core/OpaaxString.hpp"
 #include "Core/OpaaxTypes.h"
 #include "Core/Log/OpaaxLog.h"
 #include "Core/Systems/EngineSubsystem.h"
@@ -117,6 +118,17 @@ namespace Opaax
         }
 
         //------------------------------------------------------------------------------
+        // Editor scene file API
+        //
+        // Save / Open route through SceneSerializer and operate on the active scene
+        // (no Replace) so a derived Scene type pushed by the game is preserved.
+
+        bool Save();
+        bool SaveAs(const char* InPath);
+        bool Open(const char* InPath);
+        void NewScene();
+
+        //------------------------------------------------------------------------------
         // Get - Set
     public:
         FORCEINLINE Scene* GetActiveScene() noexcept
@@ -131,6 +143,9 @@ namespace Opaax
 
         FORCEINLINE bool   IsEmpty()       const noexcept { return m_Stack.empty(); }
         FORCEINLINE Uint32 GetStackDepth() const noexcept { return static_cast<Uint32>(m_Stack.size()); }
+
+        FORCEINLINE const OpaaxString& GetCurrentScenePath() const noexcept { return m_CurrentScenePath; }
+        FORCEINLINE bool               HasCurrentScenePath() const noexcept { return !m_CurrentScenePath.IsEmpty(); }
 
         // =============================================================================
         // Override
@@ -192,6 +207,7 @@ namespace Opaax
         // =============================================================================
     private:
         TDynArray<UniquePtr<Scene>> m_Stack;
+        OpaaxString                 m_CurrentScenePath;
     };
 
 } // namespace Opaax

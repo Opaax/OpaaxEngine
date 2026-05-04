@@ -112,7 +112,9 @@ void CoreEngineApp::OnShutdown()
 {
     OPAAX_CORE_TRACE("CoreEngineApp::OnShutdown()");
 
-    GetSubsystem<SceneManager>()->SaveCurrentSave();
+    // NOTE: Scene persistence at shutdown is a game/editor concern, not engine-mandatory.
+    //   In editor builds the user drives saves explicitly (Ctrl+S / Save As).
+    //   Shipping games can override OnShutdown or persist via Scene::OnUnload as needed.
 
     // NOTE: Assets must be destroyed before subsystems — textures and GPU resources
     //   must be freed while the GL context (owned by RenderSubsystem) is still alive.

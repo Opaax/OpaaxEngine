@@ -53,12 +53,19 @@ namespace Opaax::Editor
         void DrawHelpMenu   ();
         void DrawPieControls(EditorSubsystem& Owner);
         void DrawAboutModal ();
+        void DrawDiscardModal(EditorSubsystem& Owner);
+
+        // Save/Open helpers — Save routes to SaveAs when no current path is set.
+        void DoSaveOrSaveAs(EditorSubsystem& Owner);
+        void DoSaveAs      (EditorSubsystem& Owner);
+        void DoOpen        (EditorSubsystem& Owner);
 
         // =============================================================================
         // Members
         // =============================================================================
     private:
-        bool m_bOpenAboutModal = false;
+        bool m_bOpenAboutModal   = false;
+        bool m_bOpenDiscardModal = false;
     };
 
 } // namespace Opaax::Editor

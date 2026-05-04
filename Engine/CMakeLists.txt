@@ -80,12 +80,41 @@ endif()
 add_library(glad STATIC
     Vendors/glad/src/glad.c
 )
- 
+
 target_include_directories(glad PUBLIC
     Vendors/glad/include
 )
 # ==================================
 # End glad
+# ==================================
+
+# ==================================
+# tinyfiledialogs (editor only)
+# ==================================
+if(OPAAX_EDITOR_SUPPORT)
+    if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Vendors/tinyfiledialogs/tinyfiledialogs.h")
+        message(FATAL_ERROR
+            "tinyfiledialogs not found in Engine/Vendors/tinyfiledialogs!\n"
+            "Drop tinyfiledialogs.h + tinyfiledialogs.c into that folder."
+        )
+    endif()
+
+    add_library(tinyfiledialogs STATIC
+        Vendors/tinyfiledialogs/tinyfiledialogs.c
+    )
+
+    target_include_directories(tinyfiledialogs PUBLIC
+        Vendors/tinyfiledialogs
+    )
+
+    if(WIN32)
+        target_link_libraries(tinyfiledialogs PUBLIC comdlg32 ole32 user32 shell32)
+    endif()
+
+    message(STATUS "[Opaax] tinyfiledialogs: static lib created (editor mode)")
+endif()
+# ==================================
+# END tinyfiledialogs
 # ==================================
 
 # ==================================
@@ -272,7 +301,7 @@ target_link_libraries(OpaaxEngine
 )
 
 if(OPAAX_EDITOR_SUPPORT)
-    target_link_libraries(OpaaxEngine PRIVATE imgui)
+    target_link_libraries(OpaaxEngine PRIVATE imgui tinyfiledialogs)
 endif()
 
 # Include directories

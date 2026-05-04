@@ -32,10 +32,16 @@ void GameScene::OnLoad()
 
 void GameScene::OnUnload()
 {
+#if OPAAX_WITH_EDITOR
+    // Editor builds: the user owns scene persistence via the File menu / Ctrl+S.
+    // Auto-saving here would overwrite the hardcoded GameScene.json regardless of
+    // what the user did with New/Open/Save As, which silently nukes their work.
+    OPAAX_TRACE("[GameScene] OnUnload — editor build, skipping implicit save.");
+#else
     OPAAX_TRACE("[GameScene] OnUnload — saving scene.");
-
     SaveScene();
-    
+#endif
+
     m_PlayerTexture.Reset();
     m_AtlasTexture.Reset();
 }

@@ -38,20 +38,22 @@
 - [x] `ViewportPanel::Draw(EEditorState)` — `ImGuiCol_Border` tint pushed (grey/green/amber). NOTE 2026-05-01: user reverted the explicit `WindowBorderSize=3.f` push in `ViewportPanel.cpp` — only the color is pushed now, so tint visibility depends on the default border size of the active style. Don't re-add the `WindowBorderSize` push.
 
 ### 3. Save / Open dialogs
-- [ ] Vendor `tinyfiledialogs` under `Engine/Vendors/tinyfiledialogs/` (single header + .c, append to `Engine/CMakeLists.txt` via the existing vendor pattern around line 80).
-- [ ] `SceneManager`: track current scene path (`OpaaxString m_CurrentScenePath`); expose `Save()`, `SaveAs(const char*)`, `Open(const char*)`, `IsDirty()` if cheap.
-- [ ] **Open Scene…** → `tinyfd_openFileDialog` (`*.scene.json` filter) → `SceneManager::Open(path)`.
-- [ ] **Save Scene** (Ctrl+S) → if `m_CurrentScenePath` empty, route to Save As; else `SceneManager::Save()`.
-- [ ] **Save Scene As…** → `tinyfd_saveFileDialog` → `SceneManager::SaveAs(path)`.
-- [ ] **New Scene** → confirm-discard modal if dirty → clear world + reset path.
+- [x] Vendor `tinyfiledialogs` under `Engine/Vendors/tinyfiledialogs/` (single header + .c, editor-gated `add_library` block in `Engine/CMakeLists.txt` after the `glad` block, Win32 link libs `comdlg32 ole32 user32 shell32`).
+- [x] `SceneManager`: tracks current scene path (`OpaaxString m_CurrentScenePath`); exposes `Save()`, `SaveAs(const char*)`, `Open(const char*)`, `NewScene()`, `HasCurrentScenePath()`, `GetCurrentScenePath()`. **`IsDirty()` deferred** — would need per-mutation hooks; modal always confirms instead.
+- [x] **Open Scene…** → `tinyfd_openFileDialog` (`*.scene.json` filter) → `SceneManager::Open(path)`. Reuses active scene (`World::Clear()` + `Deserialize`) to preserve the derived `GameScene` instance.
+- [x] **Save Scene** (Ctrl+S) → routes to `DoSaveOrSaveAs`: if `m_CurrentScenePath` empty, calls Save As dialog; else `SceneManager::Save()`. Wired via `ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_S)` in `MainMenuBar::Draw`.
+- [x] **Save Scene As…** → `tinyfd_saveFileDialog` → `SceneManager::SaveAs(path)`.
+- [x] **New Scene** → confirm-discard modal (mirrors About-modal pattern) → `SceneManager::NewScene()` (clears world + resets path).
 
 ### Verification
-- [ ] Build clean (`debug-editor`).
-- [ ] Toolbar renders; every menu item either works or shows a clear "TBD" tooltip.
-- [ ] Save Scene As writes a `.scene.json`; Open Scene loads it; entities + parents + UUIDs intact.
-- [ ] Ctrl+S triggers save; reflects "untitled → Save As" prompt when no path is set.
-- [ ] Play → Pause → Stop transitions log; viewport border tint changes.
-- [ ] Gameplay-tick gating: a system marked play-only does not tick in Editing state.
+- [x] Build clean (`debug-editor`) — only pre-existing `APIENTRY` redef + `LIBCMT` warnings; `tinyfiledialogs.lib` produced; `OpaaxEngine.dll` + `Game.exe` linked.
+- [ ] **Manual UI checks (run `Game.exe` from `build/debug-editor/bin/Debug/`)**:
+    - [x] Toolbar renders; every menu item works or shows a clear disabled state.
+    - [x] Save Scene As writes a `.scene.json`; Open Scene loads it; entities + parents + UUIDs intact.
+    - [x] Ctrl+S triggers save; with no path set, opens the Save As prompt.
+    - [x] New Scene → modal confirms; Discard wipes world; Cancel keeps everything.
+    - [ ] Play → Pause → Stop transitions log; viewport border tint changes (regression).
+    - [ ] Gameplay-tick gating: a system marked play-only does not tick in Editing state (regression).
 
 ### Scope (out — deferred)
 - Recent files persistence (would need a config slot + LRU list).
@@ -80,6 +82,22 @@
 ### ✅ M1 — Asset Unification + Config Foundation (DONE — see `tasks/done/2026-04-30_m1-asset-config.md`)
 
 ### M2 — Editor: Real Toolbar + PIE State + Save/Open  *(NEXT — see Active milestone above for details)*
+
+### M2.5 — Editor Project Paths & Dialog UX  *(POST-M2 polish, blocks comfortable scene authoring)*
+
+> **Why now:** M2 Step 3 wired native Save/Open dialogs, but `OpaaxPath::Resolve` is exe-relative (`build/debug-editor/bin/Debug/`). The dialogs default to that bin folder — wrong location for scene files we want versioned with sources. Also formalises a "Project Root" abstraction we'll need for thumbnails (M8) and any source-tree-aware tooling.
+
+- [ ] Inject `-DOPAAX_PROJECT_ROOT="${CMAKE_SOURCE_DIR}"` from the top-level `CMakeLists.txt` as a compile definition (editor builds only — release shouldn't bake source paths).
+- [ ] `OpaaxPath::GetProjectRoot()` — new static returning the injected path; `s_ProjectRoot` populated in `Init()` next to `s_BasePath`. Falls back to `s_BasePath` when undefined.
+- [ ] `EngineConfig` JSON: add `editor.defaultScenePath` (default `"Game/Assets/Scenes"`) — directory the dialogs default to when `m_CurrentScenePath` is empty. Resolved via `GetProjectRoot()`.
+- [ ] `MainMenuBar::DoOpen` / `DoSaveAs` — pass the resolved default as `aDefaultPathAndFile` to `tinyfd_*`. Trailing slash matters on Windows: `tinyfiledialogs` interprets paths without an extension as a directory only if they end in `/` or `\`.
+- [ ] `EditorSubsystem` — remember the last-used dir across dialogs (volatile member; no persistence). After a successful Open/SaveAs, store the parent dir; next dialog defaults to it instead of the engine default.
+- [ ] Optional polish: status-bar label in `MainMenuBar` showing the current scene path relative to project root (e.g. `Scene: Game/Assets/Scenes/Test.scene.json` or `Scene: <untitled>`). Use `OpaaxPath::MakeRelative` against `GetProjectRoot()`.
+- [ ] Verification:
+    - [ ] First Save As opens at `Game/Assets/Scenes/`, not `bin/Debug/`.
+    - [ ] After a save, opening Save Scene As again defaults to the same folder.
+    - [ ] Release build still configures + links cleanly (project-root define is editor-gated).
+    - [ ] `OPAAX_PROJECT_ROOT` is **not** present in any release-mode binary (grep the strings table or accept a build-time check).
 
 ### M3 — Sprite UX: Intrinsic Size + SpriteSheet + Animation
 
@@ -133,4 +151,9 @@
 - [x] `CLAUDE.local.md` "CURRENT MILESTONE" set to **M-02 — Editor: Real Toolbar + PIE State + Save/Open**.
 - [x] Step 1 (Main menu bar) — done & pushed.
 - [x] Step 2 (PIE state machine) — done & pushed (note: user disabled explicit `WindowBorderSize` push in `ViewportPanel.cpp`).
-- [ ] **Next session**: read the **Active milestone — M2 §3 Save / Open dialogs** section above. Skip `/engine-planning`; drop straight into a plan-mode pass for Step 3. Critical files: `Engine/Source/Editor/Toolbar/MainMenuBar.cpp` (existing TBD callbacks), `Engine/Source/Scene/SceneManager.{h,cpp}`, `Engine/CMakeLists.txt` (vendor add).
+- [x] Step 3 (Save / Open dialogs) — built clean on `debug-editor` 2026-05-02. **Pending: manual UI verification + commit/push.** Plan archived at `C:/Users/engue/.claude/plans/mighty-percolating-finch.md`.
+- [x] Step 3 follow-up fix (2026-05-02) — removed implicit shutdown auto-save in `CoreEngineApp::OnShutdown`; gated `GameScene::OnUnload`'s SaveScene with `#if !OPAAX_WITH_EDITOR`. Editor mode no longer overwrites `GameScene.json` at quit.
+- [ ] **Step 3 follow-up bug (reported 2026-05-02)**: after Save Scene As… writes a new `.scene.json`, the file does not appear in the Asset Browser until the editor is restarted (no live refresh). Likely the AssetBrowserPanel scan only runs at startup. Fix options: trigger an `AssetScanner::Rescan()` (or equivalent) on successful `SceneManager::SaveAs`, or make `AssetBrowserPanel` watch its target dir / poll on focus. Pick the cheaper path for M2; full filesystem-watch lives in M8.
+- [ ] **Step 3 follow-up UX (reported 2026-05-02)**: Asset Browser does not surface which scene is currently loaded. Hovering / inspecting the entry that matches `SceneManager::GetCurrentScenePath()` shows nothing distinctive — no badge, no tooltip, no highlight. Fix: in `AssetBrowserPanel`, when rendering a `.scene.json` entry, compare its path against the active `SceneManager::GetCurrentScenePath()` and apply a visual marker (bold label, leading dot, accent tint, or "(loaded)" suffix). Add a tooltip on hover. Cheap and self-contained.
+- [ ] **Step 3 follow-up bug — `.scene.json` poisons the manifest on reload (reported 2026-05-02)**: `std::filesystem::path::extension()` returns only the last extension, so `Test.scene.json` yields `.json`. `AssetScanner::ResolveType` then maps it to type `Scene` (correct), but `AssetScanner::Scan` only skips when type == `Unknown` — so scenes get **added to the asset manifest** despite the doc comment at `AssetScanner.h:27` claiming "Scenes/ → skipped (managed by SceneManager)". `GenerateID` strips only `.json`, leaving IDs like `Scenes/Test.scene` (broken — `.scene` still attached). On next engine launch the manifest already contains these entries; AssetRegistry tries to reconcile them and the editor shows an inconsistent state. **Fix**: honor the doc comment — make `Scan` skip `lType == "Scene"` entries entirely (don't write them to the manifest). Scenes belong to `SceneManager`, not `AssetRegistry`. Bonus: `GenerateID` should strip the full multi-extension when the type is Scene, but if scenes are skipped this becomes moot.
+- [ ] **Next session**: run the manual UI checklist (Save As → Open round-trip, Ctrl+S, New Scene confirm, PIE regression, **verify quitting the editor no longer clobbers `GameAssets/Scenes/GameScene.json`**, and the asset-browser refresh follow-up bug above). If green, commit Step 3 and archive `tasks/done/2026-05-02_m2-step3.md`. After M2 closure, candidate next: **M2.5 (paths/dialog UX)** — confirm with user.
