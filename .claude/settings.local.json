@@ -1,8 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(cmake --preset debug-editor)",
-      "Bash(xargs grep *)"
+      "Bash(build/debug-editor/Debug/*.exe)",
+      "Bash(build/release/Release/*.exe)"
     ]
+  },
+  "env": {
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1"
   }
 }
