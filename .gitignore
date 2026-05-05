@@ -56,3 +56,4 @@ build/*
 .claude/worktrees/*
 .claude/code/*
 .claude/CLAUDE.Dev.md
+.claude/data/*
