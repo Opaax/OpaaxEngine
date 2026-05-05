@@ -57,3 +57,5 @@ build/*
 .claude/code/*
 .claude/CLAUDE.Dev.md
 .claude/data/*
+.claude/settings.local.json
+tasks/*
