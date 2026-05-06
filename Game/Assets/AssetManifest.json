@@ -1,3 +1,29 @@
 {
-    "assets": []
+    "assets": [
+        {
+            "id": "AssetManifest",
+            "path": "Game/Assets/AssetManifest.json",
+            "type": "Data"
+        },
+        {
+            "id": "Scenes/NewScene",
+            "path": "Game/Assets/Scenes/NewScene.scene.json",
+            "type": "Scene"
+        },
+        {
+            "id": "Scenes/TestSceneGameFolder",
+            "path": "Game/Assets/Scenes/TestSceneGameFolder.scene.json",
+            "type": "Scene"
+        },
+        {
+            "id": "Textures/Player",
+            "path": "Engine/Assets/Textures/Player.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/PlayerSheet",
+            "path": "Engine/Assets/Textures/PlayerSheet.png",
+            "type": "Texture2D"
+        }
+    ]
 }

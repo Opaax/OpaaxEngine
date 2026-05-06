@@ -1,29 +1,44 @@
 {
     "entities": [
         {
-            "Tag": "NewEntity",
-            "components": {},
-            "uuid": "12112874922408098433"
-        },
-        {
-            "Tag": "NewEntity",
-            "components": {},
-            "uuid": "12104509022046932244"
-        },
-        {
-            "Tag": "NewEntity",
-            "components": {},
-            "uuid": "1441401604210892036"
-        },
-        {
-            "Tag": "NewEntity",
-            "components": {},
-            "uuid": "14048948635838781420"
-        },
-        {
-            "Tag": "NewEntity",
-            "components": {},
-            "uuid": "3888746933648257109"
+            "Tag": "AtlasSprite",
+            "components": {
+                "SpriteComponent": {
+                    "color": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "size": [
+                        64.0,
+                        64.0
+                    ],
+                    "texture": "Textures/PlayerSheet",
+                    "uv_max": [
+                        0.23999999463558197,
+                        1.0
+                    ],
+                    "uv_min": [
+                        0.0,
+                        0.7900000214576721
+                    ],
+                    "visible": true
+                },
+                "TransformComponent": {
+                    "position": [
+                        100.0,
+                        0.0
+                    ],
+                    "rotation": 0.0,
+                    "scale": [
+                        1.0,
+                        1.0
+                    ],
+                    "z_order": 0.0
+                }
+            },
+            "uuid": "818560715208120143"
         },
         {
             "Tag": "Player",
@@ -34,6 +49,10 @@
                         1.0,
                         1.0,
                         1.0
+                    ],
+                    "size": [
+                        64.0,
+                        64.0
                     ],
                     "texture": "Textures/Player",
                     "uv_max": [
@@ -53,13 +72,13 @@
                     ],
                     "rotation": 0.0,
                     "scale": [
-                        64.0,
-                        64.0
+                        1.0,
+                        1.0
                     ],
                     "z_order": 0.0
                 }
             },
-            "uuid": "14310123106759582695"
+            "uuid": "11460588663453052075"
         }
     ],
     "scene": "GameScene",

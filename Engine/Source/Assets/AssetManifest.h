@@ -17,13 +17,13 @@ namespace Opaax
      * One entry in the manifest.
      *
      * ID           = logical name used in code via OPAAX_ID("Player")
-     * RelPath      = path relative to base path — resolved at load time via OpaaxPath::Resolve()
+     * RelPath      = project-root-relative path — resolved at load time via OpaaxPath::ToAbsolute()
      * type         = Type tag — informational for editor, not used by runtime loader
      */
     struct AssetDescriptor
     {
         OpaaxStringID  ID;          // logical name  — OPAAX_ID("Player")
-        OpaaxString    RelPath;     // relative path — "GameAssets/Textures/Player.png"
+        OpaaxString    RelPath;     // project-root-relative path — "Game/Assets/Textures/Player.png"
         OpaaxStringID  Type;        // "Texture2D", "AudioClip", etc. — editor only
 
         bool bMissing = false;
@@ -36,8 +36,8 @@ namespace Opaax
      * Multiple manifests can be loaded (engine manifest + game manifest).
      *
      * Usage:
-     *  AssetManifest::LoadFile("EngineAssets/AssetManifest.json");
-     *  AssetManifest::LoadFile("GameAssets/AssetManifest.json");
+     *  AssetManifest::LoadFile("Engine/Assets/AssetManifest.json");
+     *  AssetManifest::LoadFile("Game/Assets/AssetManifest.json");
      *  const AssetDescriptor* lDesc = AssetManifest::Find(OPAAX_ID("Player"));
      */
     class OPAAX_API AssetManifest

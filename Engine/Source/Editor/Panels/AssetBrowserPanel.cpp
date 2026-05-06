@@ -25,7 +25,7 @@ namespace Opaax::Editor
         if (InDesc.bMissing)                         { return false; }
 
         std::error_code lEc;
-        const OpaaxString lEntryAbs = OpaaxPath::Resolve(InDesc.RelPath);
+        const OpaaxString lEntryAbs = OpaaxPath::ToAbsolute(InDesc.RelPath);
         const bool bSame = std::filesystem::equivalent(
             std::filesystem::path(InMgr->GetCurrentScenePath().CStr()),
             std::filesystem::path(lEntryAbs.CStr()),
@@ -38,7 +38,7 @@ namespace Opaax::Editor
     // =============================================================================
     void AssetBrowserPanel::Startup()
     {
-        m_ManifestAbsPath = OpaaxPath::Resolve("GameAssets/AssetManifest.json");
+        m_ManifestAbsPath = OpaaxPath::ToAbsolute("Game/Assets/AssetManifest.json");
         RunScan();
     }
 
@@ -50,15 +50,15 @@ namespace Opaax::Editor
         struct ScanTarget { const char* RootDir; const char* ManifestRelPath; };
         static constexpr ScanTarget k_ScanTargets[] =
         {
-            { "GameAssets",   "GameAssets/AssetManifest.json"   },
-            { "EngineAssets", "EngineAssets/AssetManifest.json" },
+            { "Game/Assets",   "Game/Assets/AssetManifest.json"   },
+            { "Engine/Assets", "Engine/Assets/AssetManifest.json" },
         };
 
         for (const auto& lTarget : k_ScanTargets)
         {
             AssetScanner::ScanConfig lConfig;
             lConfig.RootDir         = lTarget.RootDir;
-            lConfig.ManifestAbsPath = OpaaxPath::Resolve(lTarget.ManifestRelPath);
+            lConfig.ManifestAbsPath = OpaaxPath::ToAbsolute(lTarget.ManifestRelPath);
             lConfig.bFlagMissing    = true;
 
             m_LastScanResult = AssetScanner::Scan(lConfig);

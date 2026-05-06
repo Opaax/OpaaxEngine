@@ -14,7 +14,7 @@ Opaax::ECS::json Opaax::ECS::SpriteComponent::Serialize() const
         // logical ID. Falls back to the relative path when the manifest has
         // not been populated (no editor scan yet, or runtime build).
         const OpaaxString lAbsPath = Texture.GetID().ToString();
-        const OpaaxString lRelPath = OpaaxPath::MakeRelative(lAbsPath);
+        const OpaaxString lRelPath = OpaaxPath::ToProjectRelative(lAbsPath);
 
         const AssetDescriptor* lDesc = AssetManifest::FindByPath(lRelPath);
         lSerializedRef = lDesc ? lDesc->ID.ToString() : lRelPath;

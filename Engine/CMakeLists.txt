@@ -340,12 +340,12 @@ endif()
 # Copy engine assets post-build
 # ==================================
 set(ENGINE_ASSETS_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/Assets)
-set(ENGINE_ASSETS_DEST ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIGURATION>/EngineAssets)
+set(ENGINE_ASSETS_DEST ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIGURATION>/Engine/Assets)
 
 
 add_custom_command(TARGET OpaaxEngine POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory ${ENGINE_ASSETS_DEST}
-    COMMENT "Creating EngineAssets directory..."
+    COMMENT "Creating Engine/Assets directory..."
 )
 
 set(ENGINE_MANIFEST_SOURCE ${ENGINE_ASSETS_SOURCE}/AssetManifest.json)

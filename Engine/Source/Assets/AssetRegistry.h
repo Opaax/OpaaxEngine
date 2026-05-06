@@ -27,11 +27,11 @@ namespace Opaax
      *
      * Load<T>
      * Key = OpaaxStringID of the ABSOLUTE resolved path.
-     * Always pass paths through OpaaxPath::Resolve() before calling Load().
-     * Use the OPAAX_ASSET(relative) macro at callsites — it calls Resolve() for you.
+     * Always pass paths through OpaaxPath::ToAbsolute() before calling Load().
+     * Use the OPAAX_ASSET(relative) macro at callsites — it calls ToAbsolute() for you.
      *
      * Example:
-     *   AssetRegistry::Load<OpenGLTexture2D>(OPAAX_ASSET("EngineAssets/Textures/Player.png"))
+     *   AssetRegistry::Load<OpenGLTexture2D>(OPAAX_ASSET("Engine/Assets/Textures/Player.png"))
      *
      * NOTE: Never pass raw relative paths directly — the cache key would differ
      *   from the resolved key and you would get duplicate loads.
@@ -138,13 +138,11 @@ namespace Opaax
             const AssetDescriptor* lDesc = AssetManifest::Find(InID);
             if (lDesc)
             {
-                return OpaaxPath::Resolve(lDesc->RelPath);
+                return OpaaxPath::ToAbsolute(lDesc->RelPath);
             }
 
-            // Step 3 — direct path fallback
-            // NOTE: Allows OPAAX_ASSET("GameAssets/Textures/Player.png") to keep working
-            //   without a manifest entry. Useful for tools, debug, and migration.
-            return OpaaxPath::Resolve(lIDStr);
+            // Step 3 — direct path fallback — direct project-relative path without a manifest entry.
+            return OpaaxPath::ToAbsolute(lIDStr);
         }
         
     public:

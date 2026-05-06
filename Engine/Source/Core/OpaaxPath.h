@@ -1,23 +1,28 @@
-﻿#pragma once
+#pragma once
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxString.hpp"
 #include "Core/Log/OpaaxLog.h"
- 
+
 #include <filesystem>
- 
+
 namespace Opaax
 {
     /**
      * @class OpaaxPath
      *
-     * Resolves asset paths relative to the executable, not the working directory.
-     * The executable location is always reliable. Assets are deployed next to the exe by CMake post-build commands. So we resolve from there.
+     * Path resolver. The canonical "relative path" form is project-root-relative
+     * (e.g. "Game/Assets/Textures/Player.png"). ToAbsolute() resolves against the
+     * project source tree in editor builds, and falls back to the exe directory
+     * in release/standalone builds — CMake post-build deploys assets under the
+     * same relative paths in both, so a single canonical form works everywhere.
      *
-     * OpaaxString lFull = OpaaxPath::Resolve("EngineAssets/Textures/Player.png");
+     * Usage:
+     *   OpaaxString lFull = OpaaxPath::ToAbsolute("Engine/Assets/Textures/Player.png");
      *
-     * // Use the OPAAX_ASSET macro to keep callsites clean
-     * auto lTex = AssetRegistry::Load<OpenGLTexture2D>(OPAAX_ASSET("EngineAssets/Textures/Player.png"));
+     *   // Use OPAAX_ASSET to keep callsites clean:
+     *   auto lTex = AssetRegistry::Load<OpenGLTexture2D>(
+     *       OPAAX_ASSET("Engine/Assets/Textures/Player.png"));
      */
     class OPAAX_API OpaaxPath
     {
@@ -25,79 +30,48 @@ namespace Opaax
         // Static
         // =============================================================================
     private:
-        /**
-         * 
-         * @param InPath 
-         * @return
-         */
         static bool IsAbsolute(const char* InPath) noexcept;
 
         //------------------------------------------------------------------------------
-        
+
     public:
         /**
-         * Should be call at engine init
+         * Should be called at engine init.
          */
         static void Init();
-        
-        /**
-         * Convert a relative path to an absolute path
-         * @param InRelativePath The path to resolve
-         * @return Absolute paths (start with drive letter or /) pass through unchanged.
-         */
-        static OpaaxString Resolve(const char* InRelativePath);
 
         /**
-         * Convert a relative path to an absolute path
-         * @param InRelativePath The path to resolve as OpaaxString
-         * @return Absolute paths (start with drive letter or /) pass through unchanged.
+         * Resolve a project-root-relative path to an absolute path.
+         * In editor builds (OPAAX_PROJECT_ROOT defined) → resolves against the
+         * source tree. In release builds → falls back to the exe directory.
+         * Already-absolute paths pass through unchanged.
          */
-        static OpaaxString Resolve(const OpaaxString& InRelativePath);
+        static OpaaxString ToAbsolute(const char* InRelativePath);
+        static OpaaxString ToAbsolute(const OpaaxString& InRelativePath);
 
         /**
-         * Resolve a relative path against the project root (source tree) when available.
-         * Falls back to Resolve() (exe-relative base path) when OPAAX_PROJECT_ROOT is not
-         * baked in — i.e. release builds. Editor-only utilities (file dialogs, source-tree
-         * tooling) should call this instead of Resolve() so authoring stays in the source tree.
+         * Convert an absolute path to a project-root-relative path.
+         * Strips s_ProjectRoot when available; otherwise strips s_BasePath
+         * (release-build behavior). If InAbsPath is under neither, returns it
+         * unchanged with a warning.
          */
-        static OpaaxString ResolveFromProject(const char* InRelativePath);
-        static OpaaxString ResolveFromProject(const OpaaxString& InRelativePath);
+        static OpaaxString ToProjectRelative(const char* InAbsPath) noexcept;
+        static OpaaxString ToProjectRelative(const OpaaxString& InAbsPath) noexcept;
 
         //------------------------------------------------------------------------------
         //  Get - Set
 
-        /**
-         *
-         * @return
-         */
         static const OpaaxString& GetBasePath() noexcept { return s_BasePath; }
 
         /**
          * Project source-tree root. Populated from the OPAAX_PROJECT_ROOT compile-time
-         * define when present (editor builds). Empty in release — caller falls back to
-         * GetBasePath() in that case.
+         * define when present (editor builds). Empty in release.
          */
         static const OpaaxString& GetProjectRoot() noexcept { return s_ProjectRoot; }
         static bool HasProjectRoot() noexcept { return !s_ProjectRoot.IsEmpty(); }
-     
-        /**
-         * Convert an absolute path to a path relative to the base path.
-         * @param InAbsPath Absolute path as char*
-         * @return If InAbsPath does not start with the base path, returns InAbsPath unchanged
-         */
-        static OpaaxString MakeRelative(const char* InAbsPath) noexcept;
 
-       /**
-         * Convert an absolute path to a path relative to the base path.
-         * @param InAbsPath Absolute path as OpaaxString
-         * @return If InAbsPath does not start with the base path, returns InAbsPath unchanged
-         */
-        static OpaaxString MakeRelative(const OpaaxString& InAbsPath) noexcept;
-     
         /**
-         * To detect whether an ID string is already an absolute path.
-         * @param InPath 
-         * @return 
+         * Detect whether a path string is already absolute.
          */
         static bool IsAbsolutePath(const OpaaxString& InPath) noexcept;
 
@@ -110,12 +84,12 @@ namespace Opaax
     };
 
     /**
-     * 
-     * @param RelPath: Resolves a relative asset path at the callsite.
-     * The resolved OpaaxString is interned into an OpaaxStringID.
+     * Resolves a project-root-relative asset path at the callsite. The resolved
+     * absolute OpaaxString is interned into an OpaaxStringID.
      *
-     * auto lTex = AssetRegistry::Load<OpenGLTexture2D>(OPAAX_ASSET("EngineAssets/Textures/Player.png"));
+     *   auto lTex = AssetRegistry::Load<OpenGLTexture2D>(
+     *       OPAAX_ASSET("Engine/Assets/Textures/Player.png"));
      */
-#define OPAAX_ASSET(RelPath) ::Opaax::OpaaxStringID(::Opaax::OpaaxPath::Resolve(RelPath))
- 
+#define OPAAX_ASSET(RelPath) ::Opaax::OpaaxStringID(::Opaax::OpaaxPath::ToAbsolute(RelPath))
+
 } // namespace Opaax

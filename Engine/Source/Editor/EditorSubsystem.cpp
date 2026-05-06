@@ -231,7 +231,7 @@ namespace Opaax
             return;
         }
 
-        const OpaaxString lTempPath = OpaaxPath::Resolve(PIE_TEMP_SCENE_PATH);
+        const OpaaxString lTempPath = OpaaxPath::ToAbsolute(PIE_TEMP_SCENE_PATH);
         std::filesystem::create_directories(
             std::filesystem::path(lTempPath.CStr()).parent_path());
 
@@ -272,7 +272,7 @@ namespace Opaax
             return;
         }
 
-        const OpaaxString lTempPath = OpaaxPath::Resolve(PIE_TEMP_SCENE_PATH);
+        const OpaaxString lTempPath = OpaaxPath::ToAbsolute(PIE_TEMP_SCENE_PATH);
         if (!std::filesystem::exists(lTempPath.CStr()))
         {
             OPAAX_CORE_WARN("EditorSubsystem::ExitPlayMode — no temp snapshot found at {}",

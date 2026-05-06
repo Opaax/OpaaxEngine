@@ -79,7 +79,7 @@ namespace Opaax
     {
         ScanResult lResult;
 
-        const OpaaxString lAbsRoot = OpaaxPath::Resolve(InConfig.RootDir);
+        const OpaaxString lAbsRoot = OpaaxPath::ToAbsolute(InConfig.RootDir);
         const std::filesystem::path lRootPath(lAbsRoot.CStr());
 
         if (!std::filesystem::exists(lRootPath))
@@ -111,10 +111,10 @@ namespace Opaax
             const OpaaxString lID = GenerateID(lFilePath, lRootPath);
             const OpaaxStringID lStringID(lID);
 
-            // Generate relative path (relative to base path, not root)
+            // Generate relative path (project-root-relative — not relative to scan root)
             const std::string lAbsFileStr = lFilePath.generic_string();
             const OpaaxString lRelPath =
-                OpaaxPath::MakeRelative(OpaaxString(lAbsFileStr.c_str()));
+                OpaaxPath::ToProjectRelative(OpaaxString(lAbsFileStr.c_str()));
 
             // --- Merge logic ---
             if (AssetManifest::Contains(lStringID))
@@ -143,7 +143,7 @@ namespace Opaax
         {
             for (const auto& [lKey, lDesc] : AssetManifest::GetAll())
             {
-                const OpaaxString lAbsPath = OpaaxPath::Resolve(lDesc.RelPath);
+                const OpaaxString lAbsPath = OpaaxPath::ToAbsolute(lDesc.RelPath);
                 if (!std::filesystem::exists(lAbsPath.CStr()))
                 {
                     AssetManifest::SetMissing(lDesc.ID, true);

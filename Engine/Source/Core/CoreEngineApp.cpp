@@ -33,7 +33,7 @@ CoreEngineApp::CoreEngineApp()
     OpaaxLog::Init();
     OpaaxPath::Init();
 
-    EngineConfig::Load(OpaaxPath::Resolve("engine.config.json"));
+    EngineConfig::Load(OpaaxPath::ToAbsolute("engine.config.json"));
 
     OPAAX_CORE_TRACE("CoreEngineApp created");
 
@@ -140,9 +140,9 @@ void CoreEngineApp::Initialize()
     AssetLoaderRegistry::Register<OpenGLTexture2D>(MakeUnique<TextureLoader>());
 
     const OpaaxString lEngineManifest =
-        OpaaxPath::Resolve(EngineConfig::EngineManifestRelPath());
+        OpaaxPath::ToAbsolute(EngineConfig::EngineManifestRelPath());
     const OpaaxString lGameManifest =
-        OpaaxPath::Resolve(EngineConfig::GameManifestRelPath());
+        OpaaxPath::ToAbsolute(EngineConfig::GameManifestRelPath());
 
     AssetManifest::LoadFile(lEngineManifest);
     AssetManifest::LoadFile(lGameManifest);

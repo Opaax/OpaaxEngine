@@ -1,4 +1,4 @@
-﻿#include "OpaaxPath.h"
+#include "OpaaxPath.h"
 
 namespace Opaax
 {
@@ -11,21 +11,19 @@ namespace Opaax
         {
             return false;
         }
- 
+
         // Unix absolute: starts with /
         if (InPath[0] == '/')
         {
             return true;
         }
- 
-        /**
-         * Windows absolute: starts with drive letter e.g. C:/  or C:\
-         */
+
+        // Windows absolute: drive letter e.g. C:/ or C:\\ (trailing backslash escaped to avoid C4010 line-continuation)
         if (InPath[1] == ':' && (InPath[2] == '/' || InPath[2] == '\\'))
         {
             return true;
         }
- 
+
         return false;
     }
 
@@ -59,42 +57,17 @@ namespace Opaax
 #endif
     }
 
-    OpaaxString OpaaxPath::Resolve(const char* InRelativePath)
+    OpaaxString OpaaxPath::ToAbsolute(const char* InRelativePath)
     {
-        if (!InRelativePath || InRelativePath[0] == '\0')
-        {
-            return s_BasePath;
-        }
- 
-        // Already absolute — pass through
-        if (IsAbsolute(InRelativePath))
-        {
-            return OpaaxString(InRelativePath);
-        }
- 
-        // Combine base + relative
-        OpaaxString lResult = s_BasePath;
-        lResult += "/";
-        lResult += InRelativePath;
-        return lResult;
-    }
-
-    OpaaxString OpaaxPath::Resolve(const OpaaxString& InRelativePath)
-    {
-        return Resolve(InRelativePath.CStr());
-    }
-
-    OpaaxString OpaaxPath::ResolveFromProject(const char* InRelativePath)
-    {
-        // No project root baked in (release build) — fall back to exe-relative resolution.
-        if (s_ProjectRoot.IsEmpty())
-        {
-            return Resolve(InRelativePath);
-        }
+        // NOTE: Project root is the canonical base in editor builds; base path
+        // (exe dir) is the fallback for release builds where OPAAX_PROJECT_ROOT
+        // is undefined. CMake deploys under the same relative names so the same
+        // input string resolves correctly in both modes.
+        const OpaaxString& lBase = !s_ProjectRoot.IsEmpty() ? s_ProjectRoot : s_BasePath;
 
         if (!InRelativePath || InRelativePath[0] == '\0')
         {
-            return s_ProjectRoot;
+            return lBase;
         }
 
         if (IsAbsolute(InRelativePath))
@@ -102,18 +75,18 @@ namespace Opaax
             return OpaaxString(InRelativePath);
         }
 
-        OpaaxString lResult = s_ProjectRoot;
+        OpaaxString lResult = lBase;
         lResult += "/";
         lResult += InRelativePath;
         return lResult;
     }
 
-    OpaaxString OpaaxPath::ResolveFromProject(const OpaaxString& InRelativePath)
+    OpaaxString OpaaxPath::ToAbsolute(const OpaaxString& InRelativePath)
     {
-        return ResolveFromProject(InRelativePath.CStr());
+        return ToAbsolute(InRelativePath.CStr());
     }
 
-    OpaaxString OpaaxPath::MakeRelative(const char* InAbsPath) noexcept
+    OpaaxString OpaaxPath::ToProjectRelative(const char* InAbsPath) noexcept
     {
         if (!InAbsPath || InAbsPath[0] == '\0')
         {
@@ -121,20 +94,22 @@ namespace Opaax
         }
 
         const OpaaxString lAbs(InAbsPath);
-        const OpaaxString& lBase = s_BasePath;
-        
+        // NOTE: Match against project root first (editor); fall back to base path
+        // (release) so the function still produces something useful when no
+        // project root is baked in.
+        const OpaaxString& lBase = !s_ProjectRoot.IsEmpty() ? s_ProjectRoot : s_BasePath;
+
         const OpaaxString lAbsLower  = lAbs.ToLower();
         const OpaaxString lBaseLower = lBase.ToLower();
 
         if (lAbsLower.Find(lBaseLower.CStr()) != 0)
         {
-            // Does not start with base path — return unchanged.
-            // This handles absolute paths outside the project (system assets, etc.)
-            OPAAX_CORE_WARN("OpaaxPath::MakeRelative — '{}' is not under base path '{}'", InAbsPath, lBase);
+            // Outside the known roots — return unchanged. Handles system / external paths.
+            OPAAX_CORE_WARN("OpaaxPath::ToProjectRelative — '{}' is not under '{}'", InAbsPath, lBase);
             return lAbs;
         }
 
-        // Skip base path + trailing separator
+        // Skip base + trailing separator
         const Uint32 lSkip = lBase.GetLength() + 1; // +1 for '/'
         if (lSkip >= lAbs.GetLength())
         {
@@ -144,9 +119,9 @@ namespace Opaax
         return lAbs.SubString(lSkip);
     }
 
-    OpaaxString OpaaxPath::MakeRelative(const OpaaxString& InAbsPath) noexcept
+    OpaaxString OpaaxPath::ToProjectRelative(const OpaaxString& InAbsPath) noexcept
     {
-        return MakeRelative(InAbsPath.CStr());
+        return ToProjectRelative(InAbsPath.CStr());
     }
 
     bool OpaaxPath::IsAbsolutePath(const OpaaxString& InPath) noexcept

@@ -16,7 +16,7 @@ void GameScene::OnLoad()
     OPAAX_TRACE("[GameScene] OnLoad");
 
     // Try to load 
-    const Opaax::OpaaxString lSavePath = Opaax::OpaaxPath::Resolve("GameAssets/Scenes/GameScene.json");
+    const Opaax::OpaaxString lSavePath = Opaax::OpaaxPath::ToAbsolute("Game/Assets/Scenes/GameScene.json");
 
     if (std::filesystem::exists(lSavePath.CStr()))
     {
@@ -59,7 +59,7 @@ void GameScene::OnRender(double /*Alpha*/)
 
 void GameScene::SaveScene()
 {
-    const Opaax::OpaaxString lSavePath = Opaax::OpaaxPath::Resolve("GameAssets/Scenes/GameScene.json");
+    const Opaax::OpaaxString lSavePath = Opaax::OpaaxPath::ToAbsolute("Game/Assets/Scenes/GameScene.json");
 
     // Create File 
     std::filesystem::create_directories(
@@ -71,10 +71,10 @@ void GameScene::SaveScene()
 void GameScene::BuildDefaultScene()
 {
     // m_PlayerTexture = Opaax::AssetRegistry::Load<Opaax::OpenGLTexture2D>(
-    //     OPAAX_ASSET("EngineAssets/Textures/Player.png"));
+    //     OPAAX_ASSET("Engine/Assets/Textures/Player.png"));
     //
     // m_AtlasTexture = Opaax::AssetRegistry::Load<Opaax::OpenGLTexture2D>(
-    //     OPAAX_ASSET("EngineAssets/Textures/PlayerSheet.png"));
+    //     OPAAX_ASSET("Engine/Assets/Textures/PlayerSheet.png"));
 
     m_PlayerTexture = Opaax::AssetRegistry::Load<Opaax::OpenGLTexture2D>(OPAAX_ID("Player"));
     m_AtlasTexture  = Opaax::AssetRegistry::Load<Opaax::OpenGLTexture2D>(OPAAX_ID("PlayerSheet"));
