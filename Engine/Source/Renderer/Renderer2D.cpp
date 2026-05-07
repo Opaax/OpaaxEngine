@@ -2,7 +2,7 @@
 #include "RHI/RenderCommand.h"
 #include "RHI/OpenGL/OpenGLBuffer.h"
 #include "RHI/OpenGL/OpenGLVertexArray.h"
-#include "RHI/OpenGL/OpenGLShader.h"
+#include "Renderer/ShaderAsset.h"
 #include "Renderer/Texture2D.h"
 #include "Core/Log/OpaaxLog.h"
 #include "Core/EngineAPI.h"
@@ -38,7 +38,7 @@ namespace Opaax
     {
         UniquePtr<IVertexArray>  QuadVAO;
         IVertexBuffer*           QuadVBO      = nullptr;  // non-owning, owned by VAO
-        UniquePtr<OpenGLShader>  QuadShader;
+        UniquePtr<ShaderAsset>   QuadShader;
         UniquePtr<Texture2D>     WhiteTexture;
  
         // CPU-side vertex buffer — filled each frame, uploaded on flush
@@ -145,7 +145,7 @@ namespace Opaax
         s_Data.TextureSlots[0] = s_Data.WhiteTexture.get();
  
         // --- Shader ---
-        s_Data.QuadShader = MakeUnique<OpenGLShader>(s_VertexShaderSrc, s_FragmentShaderSrc);
+        s_Data.QuadShader = MakeUnique<ShaderAsset>(s_VertexShaderSrc, s_FragmentShaderSrc);
         s_Data.QuadShader->Bind();
  
         // Bind sampler uniforms once — slots don't change
