@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
@@ -9,53 +9,56 @@ namespace Opaax
     /**
      * @struct AssetRefBlock
      *
-     * Shared ref-count block allocated once per loaded asset.
-     * Both AssetRegistry (owner) and AssetHandle (borrower) hold a raw ptr to it.
-     *      AssetHandle never deletes it — only the registry does, after the asset itself is destroyed and RefCount hits 0.
+     * Intrusive ref-counted lifetime block, allocated once per loaded asset.
+     * Both AssetRegistry's AssetEntry (1 ref) and every live TAssetHandle (1 ref each)
+     * hold the block. Release() self-deletes the block on the last drop, so the
+     * block always outlives its observers even if AssetRegistry erases the entry
+     * while handles are still alive.
      *
-     * RefCount is atomic — AssetHandle copies/destructs are safe from any thread. Registry Load/Unload must still be called from the main thread.
+     * Always heap-allocate via `new AssetRefBlock`; never stack-allocate. AddRef and
+     * Release MUST be balanced. Release is defined in AssetRefBlock.cpp so the matching
+     * `delete this` always runs in the engine module — cross-module heap mismatch
+     * would be UB.
      *
-     * AssetRegistry allocates and owns the block lifetime.
+     * RefCount is atomic. Handle copies/destructs are safe from any thread.
+     * Registry mutations (Load/Unload/Reload/Shutdown) must still be main-thread.
      */
-    struct AssetRefBlock
+    struct OPAAX_API AssetRefBlock
     {
         // =============================================================================
         // CTOR
         // =============================================================================
-        
+
         AssetRefBlock()                                = default;
 
         // =============================================================================
         // Copy - Non-copyable
         // =============================================================================
-        
+
         AssetRefBlock(const AssetRefBlock&)            = delete;
         AssetRefBlock& operator=(const AssetRefBlock&) = delete;
 
         // =============================================================================
-        // Move - non-movable
+        // Move - Non-movable
         // =============================================================================
-        
+
         AssetRefBlock(AssetRefBlock&&)                 = delete;
         AssetRefBlock& operator=(AssetRefBlock&&)      = delete;
 
         // =============================================================================
-        // Function
+        // Functions
         // =============================================================================
 
         //------------------------------------------------------------------------------
         //  Get - Set
-        
+
         FORCEINLINE void AddRef() noexcept
         {
             RefCount.fetch_add(1, std::memory_order_relaxed);
         }
 
-        // Returns the ref count BEFORE the decrement.
-        FORCEINLINE Uint32 Release() noexcept
-        {
-            return RefCount.fetch_sub(1, std::memory_order_acq_rel);
-        }
+        /*** Decrement the ref count; self-deletes when the last ref is released. */
+        void Release() noexcept;
 
         FORCEINLINE Uint32 Get() const noexcept
         {
@@ -65,7 +68,7 @@ namespace Opaax
         // =============================================================================
         // Members
         // =============================================================================
-        
+
         Atomic<Uint32> RefCount { 0 };
     };
 

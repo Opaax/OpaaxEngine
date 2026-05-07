@@ -3,6 +3,7 @@
 #include "ECS/Components/TransformComponent.h"
 #include "ECS/Hierarchy.h"
 #include "Renderer/Renderer2D.h"
+#include "RHI/OpenGL/OpenGLTexture2D.h"
 
 namespace Opaax
 {
@@ -22,9 +23,7 @@ namespace Opaax
                 // Compound with any parent chain. Local-only sprites still get an identity walk.
                 const ECS::Hierarchy::WorldTransform lWT =
                     ECS::Hierarchy::GetWorldTransform(InWorld, InEntity);
-
-                // Final draw size = sprite intrinsic size × hierarchical scale.
-                // Component-wise multiply (Hadamard) — glm::vec2 operator* does this.
+                
                 const Vector2F lDrawSize = lWT.Scale * InSprite.Size;
 
                 Renderer2D::DrawSprite(

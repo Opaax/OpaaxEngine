@@ -39,21 +39,20 @@ namespace Opaax
     class OPAAX_API AssetRegistry
     {
         // =============================================================================
+        // Friends
+        // =============================================================================
+        friend void* Internal::AssetRegistry_TryResolveTyped(Uint32, const std::type_index&) noexcept;
+
+        // =============================================================================
         // Internal storage — type-erased asset entry
         // =============================================================================
     private:
         struct AssetEntry
         {
             // =============================================================================
-            // Static 
+            // Static
             // =============================================================================
 
-            /**
-             * 
-             * @tparam T 
-             * @param InPtr 
-             * @return 
-             */
             template<typename T>
             static AssetEntry Make(T* InPtr)
             {
@@ -61,18 +60,28 @@ namespace Opaax
                 lEntry.Ptr      = InPtr;
                 lEntry.Type     = typeid(T);
                 lEntry.Deleter  = [](void* InRaw) { delete static_cast<T*>(InRaw); };
-                lEntry.Block    = MakeUnique<AssetRefBlock>();
-                
+                lEntry.Block    = new AssetRefBlock();
+                lEntry.Block->AddRef(); // registry owns 1 ref; live handles add their own
                 return lEntry;
             }
-            
+
             // =============================================================================
-            // CTOR 
+            // CTOR - DTOR
             // =============================================================================
             AssetEntry() : Type(typeid(void)) {}
 
+            ~AssetEntry()
+            {
+                DestroyPayload();
+                if (Block)
+                {
+                    Block->Release();
+                    Block = nullptr;
+                }
+            }
+
             // =============================================================================
-            // Copy -- atomic is not copyable.
+            // Copy
             // =============================================================================
             AssetEntry(const AssetEntry&)               = delete;
             AssetEntry& operator=(const AssetEntry&)    = delete;
@@ -80,36 +89,64 @@ namespace Opaax
             // =============================================================================
             // Move
             // =============================================================================
-            AssetEntry(AssetEntry&&)            = default;
-            AssetEntry& operator=(AssetEntry&&) = default;
-            
+            AssetEntry(AssetEntry&& Other) noexcept
+                : Ptr(Other.Ptr), Type(Other.Type), Deleter(Other.Deleter), Block(Other.Block)
+            {
+                Other.Ptr     = nullptr;
+                Other.Deleter = nullptr;
+                Other.Block   = nullptr;
+            }
+
+            AssetEntry& operator=(AssetEntry&& Other) noexcept
+            {
+                if (this != &Other)
+                {
+                    DestroyPayload();
+                    if (Block) { Block->Release(); }
+                    Ptr           = Other.Ptr;
+                    Type          = Other.Type;
+                    Deleter       = Other.Deleter;
+                    Block         = Other.Block;
+                    Other.Ptr     = nullptr;
+                    Other.Deleter = nullptr;
+                    Other.Block   = nullptr;
+                }
+                return *this;
+            }
+
             // =============================================================================
-            // Function 
+            // Function
             // =============================================================================
         public:
-            void Destroy()
+            // Live HANDLE refs only (registry's own ref is excluded).
+            FORCEINLINE Uint32 LiveHandleCount() const noexcept
+            {
+                if (!Block) { return 0; }
+                const Uint32 lTotal = Block->Get();
+                return (lTotal > 0) ? (lTotal - 1) : 0;
+            }
+
+        private:
+            void DestroyPayload() noexcept
             {
                 if (Ptr && Deleter)
                 {
                     Deleter(Ptr);
-                    Ptr     = nullptr;
-                    Deleter = nullptr;
                 }
+                Ptr     = nullptr;
+                Deleter = nullptr;
             }
 
-            bool IsAlive() const noexcept
-            {
-                return Block && Block->Get() > 0;
-            }
-            
             // =============================================================================
-            // Members 
+            // Members
             // =============================================================================
         public:
-            void*      Ptr  = nullptr;
+            void*           Ptr     = nullptr;
             std::type_index Type;
-            void(*Deleter)(void*) = nullptr;
-            UniquePtr<AssetRefBlock> Block;
+            void(*Deleter)(void*)   = nullptr;
+            // Intrusive ref-counted block (heap, self-deletes on last Release).
+            // Entry holds 1 ref from Make() through ~AssetEntry / move-from.
+            AssetRefBlock*  Block   = nullptr;
         };
 
         // =============================================================================
@@ -155,14 +192,14 @@ namespace Opaax
          * @return handle to the asset identified by InID.
          */
         template <typename T>
-        static AssetHandle<T> Load(OpaaxStringID InID)
+        static TAssetHandle<T> Load(OpaaxStringID InID)
         {
             const OpaaxString lAbsPath = ResolveToAbsPath(InID);
 
             if (lAbsPath.IsEmpty())
             {
                 OPAAX_CORE_ERROR("AssetRegistry::Load — could not resolve '{}'", InID);
-                return AssetHandle<T>{};
+                return TAssetHandle<T>{};
             }
 
             // Key on the resolved absolute path — consistent regardless of
@@ -177,13 +214,9 @@ namespace Opaax
                 if (lIt->second.Type != typeid(T))
                 {
                     OPAAX_CORE_ERROR("AssetRegistry::Load — type mismatch for '{}'", InID);
-                    return AssetHandle<T>{};
+                    return TAssetHandle<T>{};
                 }
-                return AssetHandle<T>{
-                    static_cast<T*>(lIt->second.Ptr),
-                    lResolvedID,
-                    lIt->second.Block.get()
-                };
+                return TAssetHandle<T>{ lResolvedID, lIt->second.Block };
             }
 
             // --- Cache miss — delegate to loader ---
@@ -195,7 +228,7 @@ namespace Opaax
                     "AssetRegistry::Load — no loader registered for type '{}'. "
                     "Call AssetLoaderRegistry::Register<T>() at startup.",
                     typeid(T).name());
-                return AssetHandle<T>{};
+                return TAssetHandle<T>{};
             }
 
             T* lAsset = lLoader->Load(lAbsPath.CStr());
@@ -204,7 +237,7 @@ namespace Opaax
             {
                 OPAAX_CORE_ERROR("AssetRegistry::Load — loader failed for '{}'", lAbsPath);
                 delete lAsset;
-                return AssetHandle<T>{};
+                return TAssetHandle<T>{};
             }
 
             auto& lEntry = s_Assets.emplace(lKey, AssetEntry::Make(lAsset))
@@ -212,18 +245,20 @@ namespace Opaax
 
             OPAAX_CORE_INFO("AssetRegistry: loaded '{}' as '{}'", lAbsPath, InID);
 
-            return AssetHandle<T>{ lAsset, lResolvedID, lEntry.Block.get() };
+            return TAssetHandle<T>{ lResolvedID, lEntry.Block };
         }
 
         /**
          * Forces a reload from disk for an already-cached asset.
-         * Existing AssetHandles become invalid after this call — callers must re-request the handle.
-         * @tparam T 
-         * @param InID 
-         * @return 
+         * Live TAssetHandles begin resolving to the new payload on the next Get();
+         * the old AssetRefBlock survives in memory until its last handle releases
+         * (intrusive RC self-delete), so handle dtors stay safe.
+         * @tparam T
+         * @param InID
+         * @return
          */
         template<typename T>
-        static AssetHandle<T> Reload(OpaaxStringID InID)
+        static TAssetHandle<T> Reload(OpaaxStringID InID)
         {
             const OpaaxString lAbsPath  = ResolveToAbsPath(InID);
             const Uint32      lKey      = OpaaxStringID(lAbsPath).GetId();
@@ -231,14 +266,14 @@ namespace Opaax
             auto lIt = s_Assets.find(lKey);
             if (lIt != s_Assets.end())
             {
-                if (lIt->second.IsAlive())
+                const Uint32 lLiveHandles = lIt->second.LiveHandleCount();
+                if (lLiveHandles > 0)
                 {
                     OPAAX_CORE_WARN(
                         "AssetRegistry::Reload — '{}' has {} live handle(s). "
-                        "Existing handles will be invalid after reload.",
-                        InID, lIt->second.Block->Get());
+                        "They will resolve to the new asset on next Get().",
+                        InID, lLiveHandles);
                 }
-                lIt->second.Destroy();
                 s_Assets.erase(lIt);
             }
 
@@ -248,10 +283,10 @@ namespace Opaax
 
         /**
          * Unload
-         * Destroys the asset and removes it from the cache.
-         * All existing handles to this asset become invalid after this call.
-         * TODO: No ref-counting — caller is responsible for ensuring no live handles.
-         * @param InID 
+         * Removes the asset from the cache. Live TAssetHandles will report invalid
+         * (resolver miss) on next Get(). The underlying AssetRefBlock survives until
+         * the last handle releases — handle dtors remain safe to call.
+         * @param InID
          */
         static void Unload(OpaaxStringID InID)
         {
@@ -265,15 +300,13 @@ namespace Opaax
                 return;
             }
 
-            if (lIt->second.IsAlive())
+            const Uint32 lLiveHandles = lIt->second.LiveHandleCount();
+            if (lLiveHandles > 0)
             {
-                OPAAX_CORE_WARN("AssetRegistry::Unload — '{}' has {} live handle(s), deferred.",
-                    InID, lIt->second.Block->Get());
-                lIt->second.Destroy();
-                return;
+                OPAAX_CORE_WARN("AssetRegistry::Unload — '{}' has {} live handle(s); resolver will return null until they drop.",
+                    InID, lLiveHandles);
             }
 
-            lIt->second.Destroy();
             s_Assets.erase(lIt);
             OPAAX_CORE_INFO("AssetRegistry: unloaded '{}'", InID);
         }
@@ -286,19 +319,22 @@ namespace Opaax
         }
 
         /**
-         * Shutdown — destroy all assets
+         * Shutdown — drops the registry's ref on every asset.
+         * Surviving handles keep their AssetRefBlock alive (intrusive RC) so their
+         * dtors stay safe; the resolver returns null for them after this point.
          */
         static void Shutdown()
         {
             OPAAX_CORE_INFO("AssetRegistry::Shutdown() — {} asset(s)", s_Assets.size());
-            
+
             for (auto& [lKey, lEntry] : s_Assets)
             {
-                if (lEntry.IsAlive())
+                const Uint32 lLiveHandles = lEntry.LiveHandleCount();
+                if (lLiveHandles > 0)
                 {
-                    OPAAX_CORE_WARN("AssetRegistry::Shutdown — asset {} destroyed with {} live handle(s).", lKey, lEntry.Block->Get());
+                    OPAAX_CORE_WARN("AssetRegistry::Shutdown — asset {} still has {} live handle(s); their next Get() will return null.",
+                        lKey, lLiveHandles);
                 }
-                lEntry.Destroy();
             }
             s_Assets.clear();
 
@@ -312,7 +348,7 @@ namespace Opaax
         }
          
         // TODO: async loading interface
-        //   static void LoadAsync<T>(OpaaxStringID InID, TFunction<void(AssetHandle<T>)> InCallback);
+        //   static void LoadAsync<T>(OpaaxStringID InID, TFunction<void(TAssetHandle<T>)> InCallback);
         //   static void ProcessPendingLoads();   // call once per frame from RenderSubsystem
  
         // =============================================================================
