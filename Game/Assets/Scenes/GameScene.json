@@ -1,7 +1,7 @@
 {
     "entities": [
         {
-            "Tag": "AtlasSprite",
+            "Tag": "Child",
             "components": {
                 "SpriteComponent": {
                     "color": [
@@ -16,18 +16,18 @@
                     ],
                     "texture": "Textures/PlayerSheet",
                     "uv_max": [
-                        0.25,
-                        0.25
+                        0.23999999463558197,
+                        0.550000011920929
                     ],
                     "uv_min": [
                         0.0,
-                        0.0
+                        0.41999998688697815
                     ],
                     "visible": true
                 },
                 "TransformComponent": {
                     "position": [
-                        100.0,
+                        -51.0,
                         0.0
                     ],
                     "rotation": 0.0,
@@ -38,7 +38,48 @@
                     "z_order": 0.0
                 }
             },
-            "uuid": "8960042263973361396"
+            "parent_uuid": "426649881159972088",
+            "uuid": "2556292608924513258"
+        },
+        {
+            "Tag": "NewPlayer",
+            "components": {
+                "SpriteComponent": {
+                    "color": [
+                        0.779411792755127,
+                        0.18721163272857666,
+                        0.18721163272857666,
+                        1.0
+                    ],
+                    "size": [
+                        64.0,
+                        64.0
+                    ],
+                    "texture": "Textures/Player",
+                    "uv_max": [
+                        1.0,
+                        1.0
+                    ],
+                    "uv_min": [
+                        0.0,
+                        0.0
+                    ],
+                    "visible": true
+                },
+                "TransformComponent": {
+                    "position": [
+                        -76.0,
+                        0.0
+                    ],
+                    "rotation": 0.0,
+                    "scale": [
+                        1.0,
+                        1.0
+                    ],
+                    "z_order": 0.0
+                }
+            },
+            "uuid": "426649881159972088"
         },
         {
             "Tag": "Player",
@@ -79,6 +120,46 @@
                 }
             },
             "uuid": "3460834403771200200"
+        },
+        {
+            "Tag": "AtlasSprite",
+            "components": {
+                "SpriteComponent": {
+                    "color": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "size": [
+                        64.0,
+                        64.0
+                    ],
+                    "texture": "Textures/PlayerSheet",
+                    "uv_max": [
+                        0.25,
+                        0.25
+                    ],
+                    "uv_min": [
+                        0.0,
+                        0.0
+                    ],
+                    "visible": true
+                },
+                "TransformComponent": {
+                    "position": [
+                        100.0,
+                        0.0
+                    ],
+                    "rotation": 0.0,
+                    "scale": [
+                        1.0,
+                        1.0
+                    ],
+                    "z_order": 0.0
+                }
+            },
+            "uuid": "8960042263973361396"
         }
     ],
     "scene": "GameScene",

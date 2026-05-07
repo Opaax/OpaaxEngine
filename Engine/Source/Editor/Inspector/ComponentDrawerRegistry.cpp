@@ -6,23 +6,9 @@
 
 namespace Opaax::Editor
 {
-    namespace
-    {
-        TDynArray<UniquePtr<IComponentDrawer>>& GetRegistry()
-        {
-            static TDynArray<UniquePtr<IComponentDrawer>> s_Drawers;
-            return s_Drawers;
-        }
-    }
-
-    void ComponentDrawerRegistry::Register(UniquePtr<IComponentDrawer> InDrawer)
-    {
-        GetRegistry().push_back(Move(InDrawer));
-    }
-
     void ComponentDrawerRegistry::DrawAll(World& InWorld, EntityID InEntity)
     {
-        for (auto& lDrawer : GetRegistry())
+        for (auto& lDrawer : GetStorage())
         {
             if (lDrawer->HasComponent(InWorld, InEntity))
             {
@@ -33,13 +19,13 @@ namespace Opaax::Editor
 
     void ComponentDrawerRegistry::DrawAddComponentMenu(World& InWorld, EntityID InEntity)
     {
-        for (auto& lDrawer : GetRegistry())
+        for (auto& lDrawer : GetStorage())
         {
             if (!lDrawer->CanAdd())
             {
                 continue;
             }
-            
+
             if (lDrawer->HasComponent(InWorld, InEntity))
             {
                 continue;
@@ -51,11 +37,6 @@ namespace Opaax::Editor
                 ImGui::CloseCurrentPopup();
             }
         }
-    }
-
-    void ComponentDrawerRegistry::Clear()
-    {
-        GetRegistry().clear();
     }
 
 } // namespace Opaax::Editor

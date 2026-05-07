@@ -3,6 +3,7 @@
 #if OPAAX_WITH_EDITOR
 
 #include "IComponentDrawer.h"
+#include "Core/Container/TPolymorphicList.hpp"
 #include "Core/OpaaxTypes.h"
 
 namespace Opaax::Editor
@@ -12,12 +13,15 @@ namespace Opaax::Editor
      * Owns all registered component drawers.
      * Call Register() at startup (EditorSubsystem::Startup).
      * DrawAll() and DrawAddComponentMenu() are called by InspectorPanel each frame.
+     *
+     * Storage / Register / Clear / GetAll are inherited from TPolymorphicList.
      */
-    class OPAAX_API ComponentDrawerRegistry
+    class OPAAX_API ComponentDrawerRegistry : public TPolymorphicList<IComponentDrawer>
     {
+        //-----------------------------------------------------------------------------
+        // Statics
+        //-----------------------------------------------------------------------------
     public:
-        static void Register(UniquePtr<IComponentDrawer> InDrawer);
-
         /**
          * Iterates all drawers; calls Draw() on each whose HasComponent() is true.
          */
@@ -28,8 +32,6 @@ namespace Opaax::Editor
          * Must be called between ImGui::BeginPopup / EndPopup.
          */
         static void DrawAddComponentMenu(World& InWorld, EntityID InEntity);
-
-        static void Clear();
     };
 
 } // namespace Opaax::Editor
