@@ -1,4 +1,5 @@
 ﻿#include "AssetRegistry.h"
+#include "IAsset.hpp" //Future
 
 namespace Opaax
 {
