@@ -1,11 +1,12 @@
 {
+  "env": {
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1"
+  },
   "permissions": {
     "allow": [
       "Bash(build/debug-editor/Debug/*.exe)",
-      "Bash(build/release/Release/*.exe)"
+      "Bash(build/release/Release/*.exe)",
+      "Bash(py --version)"
     ]
-  },
-  "env": {
-    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1"
   }
 }

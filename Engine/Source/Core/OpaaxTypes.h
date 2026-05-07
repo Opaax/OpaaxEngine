@@ -1,12 +1,32 @@
 ﻿#pragma once
+#include <array>
+#include <atomic>
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <unordered_map>
 #include <vector>
 
-    // =============================================================================
-    // std type use alises
-    // =============================================================================
+// =============================================================================
+// Canonical type aliases — use these in engine code instead of bare std types.
+//
+//   Integers:   Uint8/16/32/64, Int8/16/32/64        (cstdint fixed-width)
+//   Container:  TDynArray<T>                         (std::vector<T>)
+//               TFixedArray<T, N>                    (std::array<T, N>)
+//               TInitArray<T>                        (std::initializer_list<T>)
+//               UnorderedMap<K, V[, Hash, Eq, Alloc]> (std::unordered_map)
+//   Function:   TFunction<Sig>                       (std::function<Sig>)
+//   Pointers:   UniquePtr<T>, MakeUnique<T>(args...)
+//               SharedPtr<T>, MakeShared<T>(args...)
+//               Atomic<T>                            (std::atomic<T>)
+//   Misc:       Move(arg)                            (std::move)
+//
+// Strings: see Core/OpaaxString.hpp (OpaaxString) and Core/OpaaxStringID.hpp.
+//
+// Bare primitives (`int`, `unsigned`, `size_t`) are tolerated only at third-party
+// API boundaries (GLFW callbacks, stb_image, std::filesystem, nlohmann::json,
+// spdlog, GL types). New engine code should prefer the aliases above.
+// =============================================================================
 namespace Opaax
 {
     // =============================================================================

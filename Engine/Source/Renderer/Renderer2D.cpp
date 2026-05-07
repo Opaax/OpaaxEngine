@@ -8,7 +8,6 @@
 #include "Core/EngineAPI.h"
  
 #include <glm/gtc/matrix_transform.hpp>
-#include <array>
 #include <cmath>
  
 namespace Opaax
@@ -43,12 +42,12 @@ namespace Opaax
         UniquePtr<OpenGLTexture2D> WhiteTexture;
  
         // CPU-side vertex buffer — filled each frame, uploaded on flush
-        std::array<QuadVertex, MAX_VERTICES> VertexBuffer;
-        QuadVertex*                          VertexBufferPtr = nullptr;  // write cursor
-        Uint32                               QuadCount       = 0;
- 
+        TFixedArray<QuadVertex, MAX_VERTICES> VertexBuffer;
+        QuadVertex*                           VertexBufferPtr = nullptr;  // write cursor
+        Uint32                                QuadCount       = 0;
+
         // Texture slot tracking
-        std::array<OpenGLTexture2D*, MAX_TEXTURE_SLOTS> TextureSlots;
+        TFixedArray<OpenGLTexture2D*, MAX_TEXTURE_SLOTS> TextureSlots;
         Uint32                                          TextureSlotIndex = 1; // slot 0 = white
  
         glm::mat4 ViewProjection = glm::mat4(1.f);
@@ -122,10 +121,10 @@ namespace Opaax
  
         // Store raw ptr before ownership transfer — needed for SetData on flush
         s_Data.QuadVBO = lVBO.get();
-        s_Data.QuadVAO->AddVertexBuffer(std::move(lVBO));
- 
+        s_Data.QuadVAO->AddVertexBuffer(Move(lVBO));
+
         // --- Static index buffer — indices never change for quads ---
-        std::array<Uint32, MAX_INDICES> lIndices;
+        TFixedArray<Uint32, MAX_INDICES> lIndices;
         Uint32 lOffset = 0;
         for (Uint32 i = 0; i < MAX_INDICES; i += 6)
         {
