@@ -4,7 +4,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/OpaaxString.hpp"
 #include "Core/Log/OpaaxLog.h"
-#include "RHI/OpenGL/OpenGLTexture2D.h"
+#include "Renderer/Texture2D.h"
  
 #include <unordered_map>
 #include <typeindex>
@@ -31,7 +31,7 @@ namespace Opaax
      * Use the OPAAX_ASSET(relative) macro at callsites — it calls ToAbsolute() for you.
      *
      * Example:
-     *   AssetRegistry::Load<OpenGLTexture2D>(OPAAX_ASSET("Engine/Assets/Textures/Player.png"))
+     *   AssetRegistry::Load<Texture2D>(OPAAX_ASSET("Engine/Assets/Textures/Player.png"))
      *
      * NOTE: Never pass raw relative paths directly — the cache key would differ
      *   from the resolved key and you would get duplicate loads.

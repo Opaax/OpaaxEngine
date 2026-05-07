@@ -3,7 +3,7 @@
 #include "ECS/Components/TransformComponent.h"
 #include "ECS/Hierarchy.h"
 #include "Renderer/Renderer2D.h"
-#include "RHI/OpenGL/OpenGLTexture2D.h"
+#include "Renderer/Texture2D.h"
 
 namespace Opaax
 {

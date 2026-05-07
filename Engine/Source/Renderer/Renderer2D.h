@@ -10,8 +10,8 @@
 
 namespace Opaax
 {
-    class OpenGLTexture2D;
-    
+    class Texture2D;
+
     /**
      * @class Renderer2D
      *
@@ -37,7 +37,7 @@ namespace Opaax
     private:
         static void Flush();
         static void StartBatch();
-        static float GetTextureSlot(OpenGLTexture2D& InTexture);
+        static float GetTextureSlot(Texture2D& InTexture);
 
         //------------------------------------------------------------------------------
         
@@ -92,23 +92,23 @@ namespace Opaax
         /**
          * Draw a textured sprite, tinted by InColor (default white = no tint)
          */
-        static void DrawSprite(const Vector2F&  InPosition,
-                               const Vector2F&  InSize,
-                               OpenGLTexture2D& InTexture,
-                               const Vector4F&  InColor       = Vector4F(1.f),
-                               float            InRotationRad = 0.f);
+        static void DrawSprite(const Vector2F& InPosition,
+                               const Vector2F& InSize,
+                               Texture2D&      InTexture,
+                               const Vector4F& InColor       = Vector4F(1.f),
+                               float           InRotationRad = 0.f);
 
         /**
          * Draw a textured sprite with UV sub-region (sprite sheet / atlas)
          * InUVMin / InUVMax: normalised texture coordinates [0,1]
          */
-        static void DrawSprite(const Vector2F&  InPosition,
-                               const Vector2F&  InSize,
-                               OpenGLTexture2D& InTexture,
-                               const Vector2F&  InUVMin,
-                               const Vector2F&  InUVMax,
-                               const Vector4F&  InColor       = Vector4F(1.f),
-                               float            InRotationRad = 0.f);
+        static void DrawSprite(const Vector2F& InPosition,
+                               const Vector2F& InSize,
+                               Texture2D&      InTexture,
+                               const Vector2F& InUVMin,
+                               const Vector2F& InUVMax,
+                               const Vector4F& InColor       = Vector4F(1.f),
+                               float           InRotationRad = 0.f);
     };
  
 } // namespace Opaax

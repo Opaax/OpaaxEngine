@@ -3,7 +3,7 @@
 #include "RHI/OpenGL/OpenGLBuffer.h"
 #include "RHI/OpenGL/OpenGLVertexArray.h"
 #include "RHI/OpenGL/OpenGLShader.h"
-#include "RHI/OpenGL/OpenGLTexture2D.h"
+#include "Renderer/Texture2D.h"
 #include "Core/Log/OpaaxLog.h"
 #include "Core/EngineAPI.h"
  
@@ -39,7 +39,7 @@ namespace Opaax
         UniquePtr<IVertexArray>  QuadVAO;
         IVertexBuffer*           QuadVBO      = nullptr;  // non-owning, owned by VAO
         UniquePtr<OpenGLShader>  QuadShader;
-        UniquePtr<OpenGLTexture2D> WhiteTexture;
+        UniquePtr<Texture2D>     WhiteTexture;
  
         // CPU-side vertex buffer — filled each frame, uploaded on flush
         TFixedArray<QuadVertex, MAX_VERTICES> VertexBuffer;
@@ -47,7 +47,7 @@ namespace Opaax
         Uint32                                QuadCount       = 0;
 
         // Texture slot tracking
-        TFixedArray<OpenGLTexture2D*, MAX_TEXTURE_SLOTS> TextureSlots;
+        TFixedArray<Texture2D*, MAX_TEXTURE_SLOTS> TextureSlots;
         Uint32                                          TextureSlotIndex = 1; // slot 0 = white
  
         glm::mat4 ViewProjection = glm::mat4(1.f);
@@ -141,7 +141,7 @@ namespace Opaax
             IIndexBuffer::Create(lIndices.data(), MAX_INDICES));
  
         // --- White 1x1 texture for solid colour quads ---
-        s_Data.WhiteTexture  = MakeUnique<OpenGLTexture2D>(1, 1);
+        s_Data.WhiteTexture  = MakeUnique<Texture2D>(1u, 1u);
         s_Data.TextureSlots[0] = s_Data.WhiteTexture.get();
  
         // --- Shader ---
@@ -216,7 +216,7 @@ namespace Opaax
     // If the texture is not already in a slot, assigns the next free one.
     // If all slots are full, flushes first to start a new batch.
     // =============================================================================
-    float Renderer2D::GetTextureSlot(OpenGLTexture2D& InTexture)
+    float Renderer2D::GetTextureSlot(Texture2D& InTexture)
     {
         // Search existing slots
         for (Uint32 i = 1; i < s_Data.TextureSlotIndex; ++i)
@@ -336,7 +336,7 @@ namespace Opaax
 
     void Renderer2D::DrawSprite(const Vector2F& InPosition,
                                 const Vector2F& InSize,
-                                OpenGLTexture2D& InTexture,
+                                Texture2D&      InTexture,
                                 const Vector4F& InColor,
                                 float           InRotationRad)
     {
@@ -345,12 +345,12 @@ namespace Opaax
     }
 
     void Renderer2D::DrawSprite(const Vector2F& InPosition,
-                                 const Vector2F& InSize,
-                                 OpenGLTexture2D& InTexture,
-                                 const Vector2F& InUVMin,
-                                 const Vector2F& InUVMax,
-                                 const Vector4F& InColor,
-                                 float           InRotationRad)
+                                const Vector2F& InSize,
+                                Texture2D&      InTexture,
+                                const Vector2F& InUVMin,
+                                const Vector2F& InUVMax,
+                                const Vector4F& InColor,
+                                float           InRotationRad)
     {
         if (s_Data.QuadCount >= MAX_QUADS)
         {

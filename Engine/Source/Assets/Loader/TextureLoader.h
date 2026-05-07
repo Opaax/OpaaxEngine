@@ -1,24 +1,26 @@
-﻿#pragma once
+#pragma once
 
 #include "Assets/Loader/IAssetLoader.hpp"
-#include "RHI/OpenGL/OpenGLTexture2D.h"
 
 namespace Opaax
 {
+    class Texture2D;
+
     /**
      * @class TextureLoader
      *
-     * Loads OpenGLTexture2D from disk via stb_image (inside OpenGLTexture2D ctor).
+     * Constructs a Texture2D asset from an absolute file path. The Texture2D
+     * ctor drives the underlying GPU upload via stb_image inside OpenGLTexture2D.
      */
-    class OPAAX_API TextureLoader final : public IAssetLoader<OpenGLTexture2D>
+    class OPAAX_API TextureLoader final : public IAssetLoader<Texture2D>
     {
         // =============================================================================
         // Override
         // =============================================================================
         //~ Begin IAssetLoader interface
     public:
-        OpenGLTexture2D* Load(const char* InAbsolutePath) override;
-        bool IsValid(OpenGLTexture2D* InAsset) override;
+        Texture2D* Load(const char* InAbsolutePath) override;
+        bool       IsValid(Texture2D* InAsset)      override;
         //~ End IAssetLoader interface
     };
 

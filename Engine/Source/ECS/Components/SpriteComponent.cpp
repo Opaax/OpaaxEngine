@@ -1,6 +1,7 @@
 ﻿#include "SpriteComponent.h"
 
 #include "Assets/AssetRegistry.h"
+#include "Renderer/Texture2D.h"
 
 Opaax::ECS::json Opaax::ECS::SpriteComponent::Serialize() const
 {
@@ -38,7 +39,7 @@ void Opaax::ECS::SpriteComponent::DeserializeImplementation(const json& Json)
     const OpaaxString lRef = Json["texture"].get<std::string>().c_str();
     if (!lRef.IsEmpty())
     {
-        Texture = AssetRegistry::Load<OpenGLTexture2D>(OpaaxStringID(lRef));
+        Texture = AssetRegistry::Load<Texture2D>(OpaaxStringID(lRef));
     }
 
     // Backward compat: pre-M3 scenes don't carry "size" — default to (1,1) so

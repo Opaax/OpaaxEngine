@@ -70,14 +70,8 @@ void GameScene::SaveScene()
 
 void GameScene::BuildDefaultScene()
 {
-    // m_PlayerTexture = Opaax::AssetRegistry::Load<Opaax::OpenGLTexture2D>(
-    //     OPAAX_ASSET("Engine/Assets/Textures/Player.png"));
-    //
-    // m_AtlasTexture = Opaax::AssetRegistry::Load<Opaax::OpenGLTexture2D>(
-    //     OPAAX_ASSET("Engine/Assets/Textures/PlayerSheet.png"));
-
-    m_PlayerTexture = Opaax::AssetRegistry::Load<Opaax::OpenGLTexture2D>(OPAAX_ID("Player"));
-    m_AtlasTexture  = Opaax::AssetRegistry::Load<Opaax::OpenGLTexture2D>(OPAAX_ID("PlayerSheet"));
+    m_PlayerTexture = Opaax::AssetRegistry::Load<Opaax::Texture2D>(OPAAX_ID("Player"));
+    m_AtlasTexture  = Opaax::AssetRegistry::Load<Opaax::Texture2D>(OPAAX_ID("PlayerSheet"));
 
     auto& lWorld = GetWorld();
 

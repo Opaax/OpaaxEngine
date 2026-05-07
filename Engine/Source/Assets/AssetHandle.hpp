@@ -41,8 +41,8 @@ namespace Opaax
      * payload access through Get(), making "is the asset live right now?" a
      * conscious check rather than an implicit one.
      *
-     *  TAssetHandle<OpenGLTexture2D> lHandle =
-     *      AssetRegistry::Load<OpenGLTexture2D>(OPAAX_ID("Engine/Assets/Textures/Player.png"));
+     *  TAssetHandle<Texture2D> lHandle =
+     *      AssetRegistry::Load<Texture2D>(OPAAX_ID("Engine/Assets/Textures/Player.png"));
      *  if (lHandle.IsValid()) Renderer2D::DrawSprite(pos, size, lHandle);
      *
      * The referenced asset and its AssetRefBlock are owned by AssetRegistry.
@@ -179,7 +179,7 @@ namespace Opaax
     // =============================================================================
     // Aliases
     // =============================================================================
-    class OpenGLTexture2D;
-    using TextureHandle = TAssetHandle<OpenGLTexture2D>;
+    class Texture2D;
+    using TextureHandle = TAssetHandle<Texture2D>;
 
 } // namespace Opaax

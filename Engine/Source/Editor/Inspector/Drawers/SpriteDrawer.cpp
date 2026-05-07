@@ -6,7 +6,7 @@
 #include "Assets/AssetRegistry.h"
 #include "ECS/Components/SpriteComponent.h"
 #include "Editor/Assets/IAssetTypeActions.h"
-#include "RHI/OpenGL/OpenGLTexture2D.h"
+#include "Renderer/Texture2D.h"
 #include "Core/Log/OpaaxLog.h"
 
 namespace Opaax::Editor
@@ -47,8 +47,7 @@ namespace Opaax::Editor
                 const Uint32        lRawID   = *static_cast<const Uint32*>(lPayload->Data);
                 const OpaaxStringID lAssetID(lRawID);
 
-                // NOTE: Direct load typed to Texture2D — SpriteComponent.Texture is TAssetHandle<OpenGLTexture2D>
-                const auto lHandle = AssetRegistry::Load<OpenGLTexture2D>(lAssetID);
+                const auto lHandle = AssetRegistry::Load<Texture2D>(lAssetID);
 
                 if (lHandle.IsValid())
                 {

@@ -137,7 +137,7 @@ void CoreEngineApp::Initialize()
     // Load engine assets
     OPAAX_CORE_TRACE("Loading engine assets...");
 
-    AssetLoaderRegistry::Register<OpenGLTexture2D>(MakeUnique<TextureLoader>());
+    AssetLoaderRegistry::Register<Texture2D>(MakeUnique<TextureLoader>());
 
     const OpaaxString lEngineManifest =
         OpaaxPath::ToAbsolute(EngineConfig::EngineManifestRelPath());

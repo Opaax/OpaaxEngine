@@ -9,7 +9,7 @@ namespace Opaax::Editor
     /**
      * @class Texture2DTypeActions
      * IAssetTypeActions for Texture2D assets.
-     * Centralises the OpenGLTexture2D coupling — load, reload, and ImGui thumbnail preview.
+     * Centralises the Texture2D coupling — load, reload, and ImGui thumbnail preview.
      */
     class OPAAX_API Texture2DTypeActions final : public IAssetTypeActions
     {
