@@ -13,8 +13,10 @@ namespace Opaax
      * Serializes a Scene (World + metadata) to JSON on disk.
      * Deserializes JSON back into a Scene.
      *
-     * Assets are stored as path strings — not as handles.
-     * Deserialization calls AssetRegistry::Load() for each texture path.
+     * Asset references are stored as the canonical asset ID — the manifest's
+     * logical name when one exists for the file ("Textures/Player"), otherwise
+     * the project-relative path. Never an absolute path. Deserialization calls
+     * AssetRegistry::Load() for each ID, which routes through Normalize().
      *
      * Only components registered in the component registry are serialized/deserialized. Unknown components are silently skipped.
      */

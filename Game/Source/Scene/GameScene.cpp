@@ -15,8 +15,8 @@ void GameScene::OnLoad()
 {
     OPAAX_TRACE("[GameScene] OnLoad");
 
-    // Try to load 
-    const Opaax::OpaaxString lSavePath = Opaax::OpaaxPath::ToAbsolute("Game/Assets/Scenes/GameScene.json");
+    // Try to load
+    const Opaax::OpaaxString lSavePath = Opaax::OpaaxPath::ToAbsolute("Game/Assets/Scenes/GameScene.scene.json");
 
     if (std::filesystem::exists(lSavePath.CStr()))
     {
@@ -34,7 +34,7 @@ void GameScene::OnUnload()
 {
 #if OPAAX_WITH_EDITOR
     // Editor builds: the user owns scene persistence via the File menu / Ctrl+S.
-    // Auto-saving here would overwrite the hardcoded GameScene.json regardless of
+    // Auto-saving here would overwrite the hardcoded GameScene.scene.json regardless of
     // what the user did with New/Open/Save As, which silently nukes their work.
     OPAAX_TRACE("[GameScene] OnUnload — editor build, skipping implicit save.");
 #else
@@ -59,9 +59,9 @@ void GameScene::OnRender(double /*Alpha*/)
 
 void GameScene::SaveScene()
 {
-    const Opaax::OpaaxString lSavePath = Opaax::OpaaxPath::ToAbsolute("Game/Assets/Scenes/GameScene.json");
+    const Opaax::OpaaxString lSavePath = Opaax::OpaaxPath::ToAbsolute("Game/Assets/Scenes/GameScene.scene.json");
 
-    // Create File 
+    // Create File
     std::filesystem::create_directories(
         std::filesystem::path(lSavePath.CStr()).parent_path());
 
@@ -70,8 +70,8 @@ void GameScene::SaveScene()
 
 void GameScene::BuildDefaultScene()
 {
-    m_PlayerTexture = Opaax::AssetRegistry::Load<Opaax::Texture2D>(OPAAX_ID("Player"));
-    m_AtlasTexture  = Opaax::AssetRegistry::Load<Opaax::Texture2D>(OPAAX_ID("PlayerSheet"));
+    m_PlayerTexture = Opaax::AssetRegistry::Load<Opaax::Texture2D>(OPAAX_ID("Textures/Player"));
+    m_AtlasTexture  = Opaax::AssetRegistry::Load<Opaax::Texture2D>(OPAAX_ID("Textures/PlayerSheet"));
 
     auto& lWorld = GetWorld();
 

@@ -22,8 +22,8 @@
         },
         {
             "id": "Scenes/GameScene",
-            "path": "Game/Assets/Scenes/GameScene.json",
-            "type": "Data"
+            "path": "Game/Assets/Scenes/GameScene.scene.json",
+            "type": "Scene"
         },
         {
             "id": "AssetManifest",

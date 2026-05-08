@@ -19,10 +19,6 @@ namespace Opaax
      *
      * Usage:
      *   OpaaxString lFull = OpaaxPath::ToAbsolute("Engine/Assets/Textures/Player.png");
-     *
-     *   // Use OPAAX_ASSET to keep callsites clean:
-     *   auto lTex = AssetRegistry::Load<Texture2D>(
-     *       OPAAX_ASSET("Engine/Assets/Textures/Player.png"));
      */
     class OPAAX_API OpaaxPath
     {
@@ -82,14 +78,5 @@ namespace Opaax
         static OpaaxString s_BasePath;
         static OpaaxString s_ProjectRoot;
     };
-
-    /**
-     * Resolves a project-root-relative asset path at the callsite. The resolved
-     * absolute OpaaxString is interned into an OpaaxStringID.
-     *
-     *   auto lTex = AssetRegistry::Load<Texture2D>(
-     *       OPAAX_ASSET("Engine/Assets/Textures/Player.png"));
-     */
-#define OPAAX_ASSET(RelPath) ::Opaax::OpaaxStringID(::Opaax::OpaaxPath::ToAbsolute(RelPath))
 
 } // namespace Opaax

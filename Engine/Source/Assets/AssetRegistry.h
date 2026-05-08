@@ -38,7 +38,7 @@ namespace Opaax
      *
      * Example:
      *   AssetRegistry::Load<Texture2D>(OpaaxStringID("Textures/Player"))
-     *   AssetRegistry::Load<Texture2D>(OPAAX_ASSET("Engine/Assets/Textures/Player.png"))
+     *   AssetRegistry::Load<Texture2D>(OpaaxStringID("Engine/Assets/Textures/Player.png"))
      *   // Both resolve to the same entry when the manifest maps "Textures/Player"
      *   // to "Engine/Assets/Textures/Player.png".
      */
