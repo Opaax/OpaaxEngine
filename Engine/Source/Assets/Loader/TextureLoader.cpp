@@ -4,11 +4,9 @@
 
 namespace Opaax
 {
-    Texture2D* TextureLoader::Load(const char* InAbsolutePath)
+    Texture2D* TextureLoader::Load(const char* InAbsPath, OpaaxStringID InCanonicalID)
     {
-        // Asset ID derived from the resolved absolute path — same scheme as
-        // AssetRegistry's cache key, so handle.GetID() and the registry key match.
-        return new Texture2D(OpaaxString(InAbsolutePath), OpaaxStringID(InAbsolutePath));
+        return new Texture2D(OpaaxString(InAbsPath), InCanonicalID);
     }
 
     bool TextureLoader::IsValid(Texture2D* InAsset)

@@ -26,15 +26,21 @@ namespace Opaax
      * thread only. Async loading (TODO) will require a job queue + staging area.
      *
      * Load<T>
-     * Key = OpaaxStringID of the ABSOLUTE resolved path.
-     * Always pass paths through OpaaxPath::ToAbsolute() before calling Load().
-     * Use the OPAAX_ASSET(relative) macro at callsites — it calls ToAbsolute() for you.
+     * Cache key = canonical asset ID, normalized from the input:
+     *   - Manifest logical ID    → kept as-is.
+     *   - Project-relative path  → swapped to the manifest's logical ID if the
+     *                              manifest has an entry for that path; otherwise
+     *                              kept as the relative path.
+     *   - Absolute path          → reduced to project-relative first, then the
+     *                              same swap as above.
+     * After normalization, every spelling that points at the same file collapses
+     * to one cache entry, and handle.GetID() == asset.GetAssetID() == cache key.
      *
      * Example:
+     *   AssetRegistry::Load<Texture2D>(OpaaxStringID("Textures/Player"))
      *   AssetRegistry::Load<Texture2D>(OPAAX_ASSET("Engine/Assets/Textures/Player.png"))
-     *
-     * NOTE: Never pass raw relative paths directly — the cache key would differ
-     *   from the resolved key and you would get duplicate loads.
+     *   // Both resolve to the same entry when the manifest maps "Textures/Player"
+     *   // to "Engine/Assets/Textures/Player.png".
      */
     class OPAAX_API AssetRegistry
     {
@@ -152,36 +158,69 @@ namespace Opaax
         // =============================================================================
         // Function - Static
         // =============================================================================
+    public:
+        /**
+         * Result of normalizing a caller-supplied asset ID.
+         * CanonicalID  — the registry's cache key + the value stamped on handles
+         *                and on the asset (asset.GetAssetID()). Stable across
+         *                machines because it never embeds an absolute path.
+         * AbsPath      — the resolved disk path the loader actually reads from.
+         *                Empty when the input was empty.
+         */
+        struct NormalizedAsset
+        {
+            OpaaxStringID CanonicalID;
+            OpaaxString   AbsPath;
+        };
+
     private:
         /**
-         * 
-         * @param InID 
-         * @return 
+         * Normalize a caller-supplied ID into (canonical ID, absolute path).
+         * Three input shapes are accepted; all collapse to the manifest's logical
+         * ID when one exists for the target file:
+         *   1. logical ID      ("Textures/Player")          → manifest hit by ID.
+         *   2. project-rel path ("Engine/Assets/Textures/Player.png")
+         *                                                   → manifest hit by path,
+         *                                                     else kept verbatim.
+         *   3. absolute path   reduced to (2) before lookup.
          */
-        static OpaaxString ResolveToAbsPath(OpaaxStringID InID)
+        static NormalizedAsset Normalize(OpaaxStringID InID)
         {
+            NormalizedAsset lOut;
+
             const OpaaxString lIDStr = InID.ToString();
+            if (lIDStr.IsEmpty()) { return lOut; }
 
-            if (lIDStr.IsEmpty()) { return OpaaxString(); }
-
-            // Step 1 — already absolute
-            if (OpaaxPath::IsAbsolutePath(lIDStr))
+            // Case 1 — ID is already a manifest logical key.
+            if (const AssetDescriptor* lDesc = AssetManifest::Find(InID))
             {
-                return lIDStr;
+                lOut.CanonicalID = InID;
+                lOut.AbsPath     = OpaaxPath::ToAbsolute(lDesc->RelPath);
+                return lOut;
             }
 
-            // Step 2 — manifest lookup
-            // NOTE: Find() is O(1) — Uint32 hash map lookup, no string comparison.
-            const AssetDescriptor* lDesc = AssetManifest::Find(InID);
-            if (lDesc)
+            // Reduce abs → project-relative so manifest path lookup can match.
+            const OpaaxString lRelPath = OpaaxPath::IsAbsolutePath(lIDStr)
+                                       ? OpaaxPath::ToProjectRelative(lIDStr)
+                                       : lIDStr;
+
+            // NOTE: If two manifest entries share the same path, FindByPath returns
+            // whichever the unordered_map iteration hits first — that's a manifest
+            // validation issue, not a registry concern.
+            if (const AssetDescriptor* lDesc = AssetManifest::FindByPath(lRelPath))
             {
-                return OpaaxPath::ToAbsolute(lDesc->RelPath);
+                lOut.CanonicalID = lDesc->ID;
+                lOut.AbsPath     = OpaaxPath::ToAbsolute(lDesc->RelPath);
+                return lOut;
             }
 
-            // Step 3 — direct path fallback — direct project-relative path without a manifest entry.
-            return OpaaxPath::ToAbsolute(lIDStr);
+            // Direct-path fallback — no manifest entry. The project-relative path
+            // becomes the canonical ID so subsequent Loads collide on the cache.
+            lOut.CanonicalID = OpaaxStringID(lRelPath);
+            lOut.AbsPath     = OpaaxPath::ToAbsolute(lRelPath);
+            return lOut;
         }
-        
+
     public:
         /**
          * Load<T>
@@ -194,18 +233,15 @@ namespace Opaax
         template <typename T>
         static TAssetHandle<T> Load(OpaaxStringID InID)
         {
-            const OpaaxString lAbsPath = ResolveToAbsPath(InID);
+            const NormalizedAsset lNorm = Normalize(InID);
 
-            if (lAbsPath.IsEmpty())
+            if (lNorm.AbsPath.IsEmpty())
             {
                 OPAAX_CORE_ERROR("AssetRegistry::Load — could not resolve '{}'", InID);
                 return TAssetHandle<T>{};
             }
 
-            // Key on the resolved absolute path — consistent regardless of
-            // whether InID was a logical name or a direct path.
-            const OpaaxStringID lResolvedID(lAbsPath);
-            const Uint32        lKey = lResolvedID.GetId();
+            const Uint32 lKey = lNorm.CanonicalID.GetId();
 
             // --- Cache hit ---
             auto lIt = s_Assets.find(lKey);
@@ -216,7 +252,7 @@ namespace Opaax
                     OPAAX_CORE_ERROR("AssetRegistry::Load — type mismatch for '{}'", InID);
                     return TAssetHandle<T>{};
                 }
-                return TAssetHandle<T>{ lResolvedID, lIt->second.Block };
+                return TAssetHandle<T>{ lNorm.CanonicalID, lIt->second.Block };
             }
 
             // --- Cache miss — delegate to loader ---
@@ -231,11 +267,11 @@ namespace Opaax
                 return TAssetHandle<T>{};
             }
 
-            T* lAsset = lLoader->Load(lAbsPath.CStr());
+            T* lAsset = lLoader->Load(lNorm.AbsPath.CStr(), lNorm.CanonicalID);
 
             if (!lLoader->IsValid(lAsset))
             {
-                OPAAX_CORE_ERROR("AssetRegistry::Load — loader failed for '{}'", lAbsPath);
+                OPAAX_CORE_ERROR("AssetRegistry::Load — loader failed for '{}'", lNorm.AbsPath);
                 delete lAsset;
                 return TAssetHandle<T>{};
             }
@@ -243,9 +279,9 @@ namespace Opaax
             auto& lEntry = s_Assets.emplace(lKey, AssetEntry::Make(lAsset))
                                     .first->second;
 
-            OPAAX_CORE_INFO("AssetRegistry: loaded '{}' as '{}'", lAbsPath, InID);
+            OPAAX_CORE_INFO("AssetRegistry: loaded '{}' as '{}'", lNorm.AbsPath, lNorm.CanonicalID);
 
-            return TAssetHandle<T>{ lResolvedID, lEntry.Block };
+            return TAssetHandle<T>{ lNorm.CanonicalID, lEntry.Block };
         }
 
         /**
@@ -260,8 +296,8 @@ namespace Opaax
         template<typename T>
         static TAssetHandle<T> Reload(OpaaxStringID InID)
         {
-            const OpaaxString lAbsPath  = ResolveToAbsPath(InID);
-            const Uint32      lKey      = OpaaxStringID(lAbsPath).GetId();
+            const NormalizedAsset lNorm = Normalize(InID);
+            const Uint32          lKey  = lNorm.CanonicalID.GetId();
 
             auto lIt = s_Assets.find(lKey);
             if (lIt != s_Assets.end())
@@ -290,8 +326,8 @@ namespace Opaax
          */
         static void Unload(OpaaxStringID InID)
         {
-            const OpaaxString lAbsPath = ResolveToAbsPath(InID);
-            const Uint32      lKey     = OpaaxStringID(lAbsPath).GetId();
+            const NormalizedAsset lNorm = Normalize(InID);
+            const Uint32          lKey  = lNorm.CanonicalID.GetId();
 
             auto lIt = s_Assets.find(lKey);
             if (lIt == s_Assets.end())
@@ -313,9 +349,8 @@ namespace Opaax
 
         static bool IsLoaded(OpaaxStringID InID)
         {
-            const OpaaxString lAbsPath = ResolveToAbsPath(InID);
-            return s_Assets.count(OpaaxStringID(lAbsPath).GetId()) > 0;
-            //return s_Assets.count(InID.GetId()) > 0;
+            const NormalizedAsset lNorm = Normalize(InID);
+            return s_Assets.count(lNorm.CanonicalID.GetId()) > 0;
         }
 
         /**

@@ -19,8 +19,8 @@ namespace Opaax
         // =============================================================================
         //~ Begin IAssetLoader interface
     public:
-        Texture2D* Load(const char* InAbsolutePath) override;
-        bool       IsValid(Texture2D* InAsset)      override;
+        Texture2D* Load(const char* InAbsPath, OpaaxStringID InCanonicalID) override;
+        bool       IsValid(Texture2D* InAsset)                              override;
         //~ End IAssetLoader interface
     };
 

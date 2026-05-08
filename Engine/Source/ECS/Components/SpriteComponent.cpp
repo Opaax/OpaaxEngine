@@ -5,21 +5,9 @@
 
 Opaax::ECS::json Opaax::ECS::SpriteComponent::Serialize() const
 {
-    OpaaxString lSerializedRef;
-
-    if (Texture.IsValid())
-    {
-        // Texture handles always carry the resolved absolute path as their ID
-        // (AssetRegistry::Load keys on the absolute path). Convert to the
-        // relative form the manifest stores and reverse-look up to get the
-        // logical ID. Falls back to the relative path when the manifest has
-        // not been populated (no editor scan yet, or runtime build).
-        const OpaaxString lAbsPath = Texture.GetID().ToString();
-        const OpaaxString lRelPath = OpaaxPath::ToProjectRelative(lAbsPath);
-
-        const AssetDescriptor* lDesc = AssetManifest::FindByPath(lRelPath);
-        lSerializedRef = lDesc ? lDesc->ID.ToString() : lRelPath;
-    }
+    const OpaaxString lSerializedRef = Texture.IsValid()
+                                     ? Texture.GetID().ToString()
+                                     : OpaaxString();
 
     return {
             { "texture", lSerializedRef.CStr() },

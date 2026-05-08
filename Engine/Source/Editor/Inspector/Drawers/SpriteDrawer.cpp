@@ -32,10 +32,13 @@ namespace Opaax::Editor
 
         if (!bOpen) { return; }
 
-        const char* lPath = lS->Texture.IsValid()
-            ? lS->Texture.GetID().ToString().CStr()
-            : "None";
-        ImGui::LabelText("Texture", "%s", lPath);
+        // OpaaxStringID::ToString returns by value — bind to a local so the
+        // backing OpaaxString outlives the ImGui call. CStr() into a temporary
+        // dangles past the semicolon.
+        const OpaaxString lPath = lS->Texture.IsValid()
+                                ? lS->Texture.GetID().ToString()
+                                : OpaaxString("None");
+        ImGui::LabelText("Texture", "%s", lPath.CStr());
 
         if (ImGui::BeginDragDropTarget())
         {
