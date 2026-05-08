@@ -10,7 +10,9 @@
 #include "OpaaxString.hpp"
 #include "OpaaxStringID.hpp"
 #include "Assets/AssetRegistry.h"
+#include "Assets/Loader/SceneLoader.h"
 #include "Assets/Loader/TextureLoader.h"
+#include "Scene/SceneAsset.h"
 #include "Config/EngineConfig.h"
 #include "Editor/EditorSubsystem.h"
 #include "Event/OpaaxEventDispatcher.hpp"
@@ -138,6 +140,7 @@ void CoreEngineApp::Initialize()
     OPAAX_CORE_TRACE("Loading engine assets...");
 
     AssetLoaderRegistry::Register<Texture2D>(MakeUnique<TextureLoader>());
+    AssetLoaderRegistry::Register<SceneAsset>(MakeUnique<SceneLoader>());
 
     const OpaaxString lEngineManifest =
         OpaaxPath::ToAbsolute(EngineConfig::EngineManifestRelPath());

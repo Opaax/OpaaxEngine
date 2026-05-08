@@ -288,14 +288,12 @@ namespace Opaax::Editor
             ImGui::EndPopup();
         }
 
-        // --- Double-click ---
+        // --- Double-click: invoke the type's primary action via IAssetTypeActions ---
         if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0))
         {
-            if (InDesc.Type == OpaaxStringID("Scene"))
+            if (IAssetTypeActions* lActions = AssetTypeRegistry::Find(InDesc.Type))
             {
-                // FIXME: M_Scene — connect SceneManager::LoadFromFile when Scene becomes a first-class asset
-                OPAAX_CORE_WARN("AssetBrowserPanel: Scene loading not yet implemented. File: '{}'",
-                    InDesc.RelPath);
+                lActions->Load(InDesc.ID);
             }
         }
     }

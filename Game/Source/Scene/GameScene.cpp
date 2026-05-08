@@ -22,6 +22,7 @@ void GameScene::OnLoad()
     {
         OPAAX_TRACE("[GameScene] Loading from file: {}", lSavePath);
         Opaax::SceneSerializer::Deserialize(*this, lSavePath.CStr());
+        SetSourcePath(lSavePath);
         return;
     }
 

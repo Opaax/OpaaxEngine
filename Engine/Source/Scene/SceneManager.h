@@ -70,6 +70,7 @@ namespace Opaax
             InScene->OnEnter();
 
             m_Stack.push_back(std::move(InScene));
+            SyncCurrentSceneFromActive();
         }
 
         void Pop()
@@ -109,6 +110,7 @@ namespace Opaax
             InScene->OnEnter();
 
             m_Stack.push_back(std::move(InScene));
+            SyncCurrentSceneFromActive();
         }
 
         void SaveCurrentSave()
@@ -122,10 +124,17 @@ namespace Opaax
         //
         // Save / Open route through SceneSerializer and operate on the active scene
         // (no Replace) so a derived Scene type pushed by the game is preserved.
+        //
+        // LoadScene(InID) is the high-level orchestrator: it owns the
+        // AssetRegistry-membership invariant for scenes (only one SceneAsset is
+        // live at a time), resolves the path through the manifest, swaps the
+        // world, and updates current-scene tracking. Editor entry points
+        // (asset-browser double-click, SceneTypeActions) route through this.
 
         bool Save();
         bool SaveAs(const char* InPath);
         bool Open(const char* InPath);
+        bool LoadScene(OpaaxStringID InAssetID);
         void NewScene();
 
         //------------------------------------------------------------------------------
@@ -144,8 +153,9 @@ namespace Opaax
         FORCEINLINE bool   IsEmpty()       const noexcept { return m_Stack.empty(); }
         FORCEINLINE Uint32 GetStackDepth() const noexcept { return static_cast<Uint32>(m_Stack.size()); }
 
-        FORCEINLINE const OpaaxString& GetCurrentScenePath() const noexcept { return m_CurrentScenePath; }
-        FORCEINLINE bool               HasCurrentScenePath() const noexcept { return !m_CurrentScenePath.IsEmpty(); }
+        FORCEINLINE const OpaaxString& GetCurrentScenePath()    const noexcept { return m_CurrentScenePath; }
+        FORCEINLINE bool               HasCurrentScenePath()    const noexcept { return !m_CurrentScenePath.IsEmpty(); }
+        FORCEINLINE OpaaxStringID      GetCurrentSceneAssetID() const noexcept { return m_CurrentSceneAssetID; }
 
         // =============================================================================
         // Override
@@ -206,8 +216,16 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
+        // Helpers
+        // After OnLoad, copy the scene's GetSourcePath() into m_CurrentScenePath and
+        // reverse-lookup the manifest to register the matching SceneAsset. Lets a
+        // scene that boots itself from a hardcoded path (e.g. GameScene) propagate
+        // its state into the manager without a back-pointer.
+        void SyncCurrentSceneFromActive();
+
         TDynArray<UniquePtr<Scene>> m_Stack;
         OpaaxString                 m_CurrentScenePath;
+        OpaaxStringID               m_CurrentSceneAssetID;
     };
 
 } // namespace Opaax

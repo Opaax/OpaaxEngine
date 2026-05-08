@@ -96,15 +96,24 @@ namespace Opaax
         //------------------------------------------------------------------------------
         // Get - Set
     public:
-        FORCEINLINE const OpaaxString&  GetName()   const noexcept { return m_Name; }
-        FORCEINLINE World&              GetWorld()  noexcept       { return m_World; }
-        FORCEINLINE const World&        GetWorld()  const noexcept { return m_World; }
+        FORCEINLINE const OpaaxString&  GetName()       const noexcept { return m_Name; }
+        FORCEINLINE World&              GetWorld()            noexcept { return m_World; }
+        FORCEINLINE const World&        GetWorld()      const noexcept { return m_World; }
+
+        // SourcePath: absolute path of the *.scene.json this scene was last loaded from
+        // / saved to. Empty for code-built scenes that never touched disk. SceneManager
+        // reads this post-OnLoad to populate its own current-scene-path tracking, so a
+        // scene that boots itself from a hardcoded path (e.g. GameScene) can inform the
+        // manager without needing a back-pointer.
+        FORCEINLINE const OpaaxString&  GetSourcePath() const noexcept { return m_SourcePath; }
+        FORCEINLINE void                SetSourcePath(const OpaaxString& InPath) noexcept { m_SourcePath = InPath; }
 
         // =============================================================================
         // Members
         // =============================================================================
     private:
         OpaaxString m_Name;
+        OpaaxString m_SourcePath;
         World       m_World;
     };
 

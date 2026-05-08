@@ -19,6 +19,7 @@
 #include "RHI/RenderCommand.h"
 
 #include "Editor/Assets/AssetTypeRegistry.h"
+#include "Editor/Assets/Types/SceneTypeActions.h"
 #include "Editor/Assets/Types/Texture2DTypeActions.h"
 #include "Editor/Inspector/ComponentDrawerRegistry.h"
 #include "Editor/Inspector/Drawers/TagDrawer.h"
@@ -81,6 +82,7 @@ namespace Opaax
     void EditorSubsystem::RegisterAssetTypeActions()
     {
         Editor::AssetTypeRegistry::Register(MakeUnique<Editor::Texture2DTypeActions>());
+        Editor::AssetTypeRegistry::Register(MakeUnique<Editor::SceneTypeActions>(GetEngineApp()));
 
         OPAAX_CORE_TRACE("EditorSubsystem: asset type actions registered.");
     }
