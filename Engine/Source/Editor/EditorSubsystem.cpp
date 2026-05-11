@@ -145,6 +145,12 @@ namespace Opaax
 
     void EditorSubsystem::BeginFrame()
     {
+        // Engine's OnRender clears the ViewportPanel FBO; ImGui draws to the default framebuffer,
+        // which would otherwise accumulate stale pixels behind any moving panel (PassthruCentralNode
+        // + NoBackground dockspace leak last frame's content through every gap).
+        RenderCommand::SetClearColor(0.1f, 0.1f, 0.1f, 1.f);
+        RenderCommand::Clear();
+
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();

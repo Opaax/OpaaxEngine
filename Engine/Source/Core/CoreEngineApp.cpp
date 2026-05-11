@@ -168,7 +168,8 @@ void CoreEngineApp::Initialize()
     m_EngineSubsystemManager.RegisterSubsystem<EditorSubsystem>(this);
 #endif
 
-    // Default world-render system. Games can append more before Run() — order is registration order.
+    // Default world-render system. Games append more in OnInitialize (called right after);
+    // dispatch order = registration order.
     TPolymorphicList<IWorldSystem>::Register(MakeUnique<WorldRenderSystem>());
 
     // Call derived class initialization
