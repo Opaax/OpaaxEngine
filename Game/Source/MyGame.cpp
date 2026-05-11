@@ -3,13 +3,14 @@
 #include "Assets/AssetRegistry.h"
 #include "Core/Input/InputSubsystem.h"
 #include "Core/Log/OpaaxLog.h"
-#include "Core/World/WorldRenderSystem.h"
 #include "Renderer/Renderer2D.h"
+#include "Renderer/Systems/WorldRenderSystem.h"
 #include "RHI/RenderCommand.h"
 #include "Scene/GameScene.h"
 #include "Scene/SceneManager.h"
 #include "Core/OpaaxTypes.h"
 #include "Editor/EditorSubsystem.h"
+#include "World/RenderContext.h"
 
 MyGame::MyGame():Opaax::CoreEngineApp()
 {
@@ -56,7 +57,9 @@ void MyGame::OnRender(double AlphaPhysicStep)
 
     if (auto* lScene = GetSceneManager()->GetActiveScene())
     {
-        Opaax::WorldRenderSystem::Render(lScene->GetWorld());
+        Opaax::WorldRenderSystem lSystem;
+        const Opaax::RenderContext lCtx{ *lCamera, AlphaPhysicStep };
+        lSystem.OnRender(lScene->GetWorld(), lCtx);
     }
 
     Opaax::Renderer2D::End();

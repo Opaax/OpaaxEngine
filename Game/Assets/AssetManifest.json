@@ -1,6 +1,11 @@
 {
     "assets": [
         {
+            "id": "AssetManifest",
+            "path": "Game/Assets/AssetManifest.json",
+            "type": "Data"
+        },
+        {
             "id": "Scenes/empty",
             "path": "Game/Assets/Scenes/empty.scene.json",
             "type": "Scene"
@@ -19,11 +24,6 @@
             "id": "Scenes/GameScene",
             "path": "Game/Assets/Scenes/GameScene.scene.json",
             "type": "Scene"
-        },
-        {
-            "id": "AssetManifest",
-            "path": "Game/Assets/AssetManifest.json",
-            "type": "Data"
         }
     ]
 }
