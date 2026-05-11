@@ -1,16 +1,9 @@
 #include "MyGame.h"
 #include <iostream>
-#include "Assets/AssetRegistry.h"
-#include "Core/Input/InputSubsystem.h"
 #include "Core/Log/OpaaxLog.h"
-#include "Renderer/Renderer2D.h"
-#include "Renderer/Systems/WorldRenderSystem.h"
-#include "RHI/RenderCommand.h"
 #include "Scene/GameScene.h"
 #include "Scene/SceneManager.h"
 #include "Core/OpaaxTypes.h"
-#include "Editor/EditorSubsystem.h"
-#include "World/RenderContext.h"
 
 MyGame::MyGame():Opaax::CoreEngineApp()
 {
@@ -41,28 +34,4 @@ void MyGame::OnShutdown()
     OPAAX_TRACE("==================================");
     OPAAX_TRACE("[Opaax Engine] [MyGame] Shutdown - Game Ending!");
     OPAAX_TRACE("==================================");
-}
-
-void MyGame::OnRender(double AlphaPhysicStep)
-{
-    Opaax::IRenderTarget& lTarget = GetRenderTarget();
-
-    lTarget.Bind();
-
-    Opaax::RenderCommand::SetClearColor(0.1f, 0.1f, 0.1f, 1.f);
-    Opaax::RenderCommand::Clear();
-
-    auto* lCamera = GetSubsystem<Opaax::Camera2D>();
-    Opaax::Renderer2D::Begin(*lCamera);
-
-    if (auto* lScene = GetSceneManager()->GetActiveScene())
-    {
-        Opaax::WorldRenderSystem lSystem;
-        const Opaax::RenderContext lCtx{ *lCamera, AlphaPhysicStep };
-        lSystem.OnRender(lScene->GetWorld(), lCtx);
-    }
-
-    Opaax::Renderer2D::End();
-
-    lTarget.Unbind();
 }

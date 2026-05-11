@@ -11,7 +11,6 @@ public:
     void OnLoad()                   override;
     void OnUnload()                 override;
     void OnUpdate(double DeltaTime) override;
-    void OnRender(double Alpha)     override;
     void SaveScene()                override;
 
     void BuildDefaultScene();

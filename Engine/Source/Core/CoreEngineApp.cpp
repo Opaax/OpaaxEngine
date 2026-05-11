@@ -18,10 +18,17 @@
 #include "Event/OpaaxEventDispatcher.hpp"
 #include "Input/InputSubsystem.h"
 #include "Log/OpaaxLog.h"
+#include "Container/TPolymorphicList.hpp"
 #include "Renderer/Camera2D.h"
+#include "Renderer/Renderer2D.h"
 #include "Renderer/RenderSubsystem.h"
+#include "Renderer/Systems/WorldRenderSystem.h"
+#include "RHI/RenderCommand.h"
+#include "Scene/Scene.h"
 #include "Scene/SceneManager.h"
 #include "Systems/EngineSubsystem.h"
+#include "World/IWorldSystem.h"
+#include "World/RenderContext.h"
 
 #if OPAAX_WITH_EDITOR
 #include "Editor/EditorSubsystem.h"
@@ -152,7 +159,7 @@ void CoreEngineApp::Initialize()
     
     m_EngineSubsystemManager.RegisterSubsystem<RenderSubsystem>(this);
     m_EngineSubsystemManager.RegisterSubsystem<Camera2D>(this);
-    
+
     m_EngineSubsystemManager.RegisterSubsystem<InputSubsystem>(this);
 
     m_EngineSubsystemManager.RegisterSubsystem<SceneManager>(this);
@@ -160,10 +167,13 @@ void CoreEngineApp::Initialize()
 #if OPAAX_WITH_EDITOR
     m_EngineSubsystemManager.RegisterSubsystem<EditorSubsystem>(this);
 #endif
-    
+
+    // Default world-render system. Games can append more before Run() — order is registration order.
+    TPolymorphicList<IWorldSystem>::Register(MakeUnique<WorldRenderSystem>());
+
     // Call derived class initialization
     OnInitialize();
-    
+
     bIsRunning = true;
 }
 
@@ -256,12 +266,15 @@ void CoreEngineApp::Run()
         }
 
         // ----------------------------------------------------------------
-        // 2.3 Render — interpolated between last and next physics step
+        // 2.3 Render — interpolated between last and next physics step.
+        //   Order matters: engine OnRender writes the world to the bound render target
+        //   (backbuffer in release, ViewportPanel FBO in editor). RenderAll runs after
+        //   so editor/overlay subsystems sample the fresh target this frame, not last.
         // ----------------------------------------------------------------
         const double lAlpha = lAccumulator / FIXED_DELTA_TIME;
- 
-        m_EngineSubsystemManager.RenderAll(lAlpha);
+
         OnRender(lAlpha);
+        m_EngineSubsystemManager.RenderAll(lAlpha);
         
         // ----------------------------------------------------------------
         // 3. Swap AFTER render, always last
@@ -285,6 +298,31 @@ void CoreEngineApp::Shutdown()
     m_EngineSubsystemManager.ShutdownAll();
 
     OpaaxLog::Shutdown();
+}
+
+void CoreEngineApp::OnRender(double AlphaPhysicStep)
+{
+    IRenderTarget& lTarget = GetRenderTarget();
+    lTarget.Bind();
+
+    RenderCommand::SetClearColor(0.1f, 0.1f, 0.1f, 1.f);
+    RenderCommand::Clear();
+
+    auto* lCamera = GetSubsystem<Camera2D>();
+    Renderer2D::Begin(*lCamera);
+
+    if (auto* lScene = GetSceneManager()->GetActiveScene())
+    {
+        World& lWorld = lScene->GetWorld();
+        const RenderContext lCtx{ *lCamera, AlphaPhysicStep };
+        for (const auto& lSystem : TPolymorphicList<IWorldSystem>::GetAll())
+        {
+            lSystem->OnRender(lWorld, lCtx);
+        }
+    }
+
+    Renderer2D::End();
+    lTarget.Unbind();
 }
 
 World& CoreEngineApp::GetWorld() noexcept

@@ -2,9 +2,6 @@
 
 #include "Assets/AssetRegistry.h"
 #include "Core/OpaaxPath.h"
-#include "Renderer/Camera2D.h"
-#include "Renderer/Renderer2D.h"
-#include "RHI/RenderCommand.h"
 #include "Core/Log/OpaaxLog.h"
 #include "ECS/Components/SpriteComponent.h"
 #include "ECS/Components/TransformComponent.h"
@@ -49,12 +46,6 @@ void GameScene::OnUnload()
 void GameScene::OnUpdate(double DeltaTime)
 {
     m_TotalTime += static_cast<float>(DeltaTime);
-}
-
-void GameScene::OnRender(double /*Alpha*/)
-{
-    Opaax::RenderCommand::SetClearColor(0.1f, 0.1f, 0.1f, 1.f);
-    Opaax::RenderCommand::Clear();
 }
 
 void GameScene::SaveScene()
