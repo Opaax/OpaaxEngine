@@ -91,6 +91,12 @@ namespace Opaax
 
         static void Add(AssetDescriptor&& InDesc);
 
+        /**
+         * Erase an entry by ID. Returns true if found and removed.
+         * In-memory only — caller is responsible for persisting via the scanner.
+         */
+        static bool Remove(OpaaxStringID InID) noexcept;
+
         // [NEW] Update missing flag for an existing entry.
         static void SetMissing(OpaaxStringID InID, bool bMissing) noexcept;
         

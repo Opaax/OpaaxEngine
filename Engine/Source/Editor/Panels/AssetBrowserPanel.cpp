@@ -83,6 +83,17 @@ namespace Opaax::Editor
         ImGui::Separator();
         DrawAssetList(InSceneManager);
         ImGui::End();
+
+        // Deferred manifest mutation — safe to mutate s_Descriptors here, after iteration ended.
+        if (m_PendingRemoveID.IsValid())
+        {
+            const OpaaxStringID lID = m_PendingRemoveID;
+            m_PendingRemoveID = OpaaxStringID{};
+
+            if (AssetRegistry::IsLoaded(lID)) { AssetRegistry::Unload(lID); }
+            AssetManifest::Remove(lID);
+            RunScan(); // persists the now-shorter manifest via SaveManifest's prefix filter
+        }
     }
 
     // =============================================================================
@@ -281,6 +292,16 @@ namespace Opaax::Editor
             {
                 if (ImGui::MenuItem("Reload")) { lActions->Reload(InDesc.ID); }
                 if (ImGui::MenuItem("Unload")) { AssetRegistry::Unload(InDesc.ID); }
+            }
+
+            if (bMissing)
+            {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 0.4f, 0.4f, 1.f));
+                if (ImGui::MenuItem("Remove from manifest"))
+                {
+                    m_PendingRemoveID = InDesc.ID;
+                }
+                ImGui::PopStyleColor();
             }
 
             ImGui::Separator();

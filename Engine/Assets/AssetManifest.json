@@ -9,48 +9,6 @@
             "id": "Textures/PlayerSheet",
             "path": "Engine/Assets/Textures/PlayerSheet.png",
             "type": "Texture2D"
-        },
-        {
-            "id": "Textures/T_Xbox_A",
-            "missing": true,
-            "path": "Engine/Assets/Textures/T_Xbox_A.png",
-            "type": "Texture2D"
-        },
-        {
-            "id": "Textures/T_Xbox_B",
-            "missing": true,
-            "path": "Engine/Assets/Textures/T_Xbox_B.png",
-            "type": "Texture2D"
-        },
-        {
-            "id": "Textures/T_Xbox_Pad_Down",
-            "missing": true,
-            "path": "Engine/Assets/Textures/T_Xbox_Pad_Down.png",
-            "type": "Texture2D"
-        },
-        {
-            "id": "Textures/T_Xbox_Pad_Left",
-            "missing": true,
-            "path": "Engine/Assets/Textures/T_Xbox_Pad_Left.png",
-            "type": "Texture2D"
-        },
-        {
-            "id": "Textures/T_Xbox_Pad_Right",
-            "missing": true,
-            "path": "Engine/Assets/Textures/T_Xbox_Pad_Right.png",
-            "type": "Texture2D"
-        },
-        {
-            "id": "Textures/T_Xbox_Pad_Up",
-            "missing": true,
-            "path": "Engine/Assets/Textures/T_Xbox_Pad_Up.png",
-            "type": "Texture2D"
-        },
-        {
-            "id": "Textures/T_Xbox_X",
-            "missing": true,
-            "path": "Engine/Assets/Textures/T_Xbox_X.png",
-            "type": "Texture2D"
         }
     ]
 }
