@@ -1,16 +1,6 @@
 {
     "assets": [
         {
-            "id": "Scenes/NewScene",
-            "path": "Game/Assets/Scenes/NewScene.scene.json",
-            "type": "Scene"
-        },
-        {
-            "id": "Scenes/TestSceneGameFolder",
-            "path": "Game/Assets/Scenes/TestSceneGameFolder.scene.json",
-            "type": "Scene"
-        },
-        {
             "id": "Textures/Player",
             "path": "Engine/Assets/Textures/Player.png",
             "type": "Texture2D"
@@ -21,14 +11,46 @@
             "type": "Texture2D"
         },
         {
-            "id": "Scenes/GameScene",
-            "path": "Game/Assets/Scenes/GameScene.scene.json",
-            "type": "Scene"
+            "id": "Textures/T_Xbox_A",
+            "missing": true,
+            "path": "Engine/Assets/Textures/T_Xbox_A.png",
+            "type": "Texture2D"
         },
         {
-            "id": "AssetManifest",
-            "path": "Game/Assets/AssetManifest.json",
-            "type": "Data"
+            "id": "Textures/T_Xbox_B",
+            "missing": true,
+            "path": "Engine/Assets/Textures/T_Xbox_B.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/T_Xbox_Pad_Down",
+            "missing": true,
+            "path": "Engine/Assets/Textures/T_Xbox_Pad_Down.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/T_Xbox_Pad_Left",
+            "missing": true,
+            "path": "Engine/Assets/Textures/T_Xbox_Pad_Left.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/T_Xbox_Pad_Right",
+            "missing": true,
+            "path": "Engine/Assets/Textures/T_Xbox_Pad_Right.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/T_Xbox_Pad_Up",
+            "missing": true,
+            "path": "Engine/Assets/Textures/T_Xbox_Pad_Up.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/T_Xbox_X",
+            "missing": true,
+            "path": "Engine/Assets/Textures/T_Xbox_X.png",
+            "type": "Texture2D"
         }
     ]
 }

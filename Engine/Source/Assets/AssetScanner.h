@@ -81,8 +81,10 @@ namespace Opaax
         static OpaaxString GenerateID(const std::filesystem::path& InAbsFilePath,
                                       const std::filesystem::path& InAbsRootPath) noexcept;
 
-        // Save current manifest state to disk.
-        static bool SaveManifest(const OpaaxString& InAbsPath) noexcept;
+        // Save manifest entries whose RelPath starts with InRootPrefix.
+        // The prefix filter is what makes the per-target manifest split work — the manifest
+        // pool is global, but each on-disk file only owns the subset under its scan root.
+        static bool SaveManifest(const OpaaxString& InAbsPath, const OpaaxString& InRootPrefix) noexcept;
     };
 
 } // namespace Opaax

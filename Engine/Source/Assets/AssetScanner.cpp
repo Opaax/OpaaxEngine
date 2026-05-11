@@ -159,7 +159,9 @@ namespace Opaax
         }
 
         // --- Save updated manifest ---
-        SaveManifest(InConfig.ManifestAbsPath);
+        // NOTE: AssetManifest::s_Descriptors is a single global pool shared across every
+        // manifest file. Filter by the scan root so each on-disk file only owns its own subset.
+        SaveManifest(InConfig.ManifestAbsPath, InConfig.RootDir);
 
         OPAAX_CORE_INFO("AssetScanner: done — added={} existing={} missing={} skipped={}",
             lResult.Added, lResult.Existing, lResult.Missing, lResult.Skipped);
@@ -170,13 +172,18 @@ namespace Opaax
     // =============================================================================
     // Save
     // =============================================================================
-    bool AssetScanner::SaveManifest(const OpaaxString& InAbsPath) noexcept
+    bool AssetScanner::SaveManifest(const OpaaxString& InAbsPath, const OpaaxString& InRootPrefix) noexcept
     {
         nlohmann::json lRoot;
         lRoot["assets"] = nlohmann::json::array();
 
+        const std::string_view lPrefix(InRootPrefix.CStr(), InRootPrefix.GetLength());
+
         for (const auto& [lKey, lDesc] : AssetManifest::GetAll())
         {
+            const std::string_view lRel(lDesc.RelPath.CStr(), lDesc.RelPath.GetLength());
+            if (!lRel.starts_with(lPrefix)) { continue; }
+
             nlohmann::json lEntry;
             lEntry["id"]   = lDesc.ID.ToString().CStr();
             lEntry["path"] = lDesc.RelPath.CStr();
