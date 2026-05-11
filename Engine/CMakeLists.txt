@@ -26,6 +26,9 @@ file(GLOB_RECURSE ENGINE_CORE_SOURCES
     "Source/Scene/*.cpp"
     "Source/Scene/*.h"
     "Source/Scene/*.hpp"
+    "Source/World/*.cpp"
+    "Source/World/*.h"
+    "Source/World/*.hpp"
 )
 
 set(ENGINE_SOURCES ${ENGINE_CORE_SOURCES})
