@@ -5,7 +5,7 @@
 #include "Assets/AssetManifest.h"
 #include "Assets/AssetRegistry.h"
 #include "Core/OpaaxPath.h"
-#include "Core/World/World.h"
+#include "World/World.h"
 
 namespace Opaax
 {

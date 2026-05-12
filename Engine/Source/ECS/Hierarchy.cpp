@@ -3,7 +3,7 @@
 #include <cmath>
 
 #include "Core/Log/OpaaxLog.h"
-#include "Core/World/World.h"
+#include "World/World.h"
 #include "ECS/Components/ParentComponent.h"
 #include "ECS/Components/TransformComponent.h"
 

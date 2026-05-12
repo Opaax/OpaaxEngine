@@ -1,6 +1,6 @@
 #include "WorldRenderSystem.h"
 
-#include "Core/World/World.h"
+#include "World/World.h"
 #include "ECS/Components/SpriteComponent.h"
 #include "ECS/Components/TransformComponent.h"
 #include "ECS/Hierarchy.h"

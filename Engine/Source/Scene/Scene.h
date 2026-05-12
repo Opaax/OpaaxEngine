@@ -4,7 +4,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/OpaaxStringID.hpp"
 #include "Core/Log/OpaaxLog.h"
-#include "Core/World/World.h"
+#include "World/World.h"
 
 namespace Opaax
 {

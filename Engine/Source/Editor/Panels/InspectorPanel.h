@@ -3,7 +3,7 @@
 #if OPAAX_WITH_EDITOR
 
 #include "Core/EngineAPI.h"
-#include "Core/World/World.h"
+#include "World/World.h"
 #include "Editor/IEditorPanel.h"
 
 namespace Opaax::Editor
