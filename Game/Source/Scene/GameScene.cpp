@@ -7,7 +7,7 @@
 #include "ECS/Components/TransformComponent.h"
 #include "Scene/SceneSerializer.h"
 
-void GameScene::OnLoad()
+void GameScene::OnLoad(Opaax::World& InWorld)
 {
     OPAAX_TRACE("[GameScene] OnLoad");
 
@@ -17,17 +17,17 @@ void GameScene::OnLoad()
     if (std::filesystem::exists(lSavePath.CStr()))
     {
         OPAAX_TRACE("[GameScene] Loading from file: {}", lSavePath);
-        Opaax::SceneSerializer::Deserialize(*this, lSavePath.CStr());
+        Opaax::SceneSerializer::Deserialize(*this, lSavePath.CStr(), InWorld);
         SetSourcePath(lSavePath);
         return;
     }
 
     // Default scene
     OPAAX_TRACE("[GameScene] No save file found, building scene from code.");
-    BuildDefaultScene();
+    BuildDefaultScene(InWorld);
 }
 
-void GameScene::OnUnload()
+void GameScene::OnUnload(Opaax::World& InWorld)
 {
 #if OPAAX_WITH_EDITOR
     // Editor builds: the user owns scene persistence via the File menu / Ctrl+S.
@@ -36,7 +36,7 @@ void GameScene::OnUnload()
     OPAAX_TRACE("[GameScene] OnUnload — editor build, skipping implicit save.");
 #else
     OPAAX_TRACE("[GameScene] OnUnload — saving scene.");
-    SaveScene();
+    SaveScene(InWorld);
 #endif
 
     m_PlayerTexture.Reset();
@@ -48,7 +48,7 @@ void GameScene::OnUpdate(double DeltaTime)
     m_TotalTime += static_cast<float>(DeltaTime);
 }
 
-void GameScene::SaveScene()
+void GameScene::SaveScene(Opaax::World& InWorld)
 {
     const Opaax::OpaaxString lSavePath = Opaax::OpaaxPath::ToAbsolute("Game/Assets/Scenes/GameScene.scene.json");
 
@@ -56,22 +56,20 @@ void GameScene::SaveScene()
     std::filesystem::create_directories(
         std::filesystem::path(lSavePath.CStr()).parent_path());
 
-    Opaax::SceneSerializer::Serialize(*this, lSavePath.CStr());
+    Opaax::SceneSerializer::Serialize(*this, lSavePath.CStr(), InWorld);
 }
 
-void GameScene::BuildDefaultScene()
+void GameScene::BuildDefaultScene(Opaax::World& InWorld)
 {
     m_PlayerTexture = Opaax::AssetRegistry::Load<Opaax::Texture2D>(OPAAX_ID("Textures/Player"));
     m_AtlasTexture  = Opaax::AssetRegistry::Load<Opaax::Texture2D>(OPAAX_ID("Textures/PlayerSheet"));
 
-    auto& lWorld = GetWorld();
-
-    auto lPlayer = lWorld.CreateEntity("Player");
-    lWorld.AddComponent<Opaax::ECS::TransformComponent>(lPlayer,
+    auto lPlayer = InWorld.CreateEntity("Player");
+    InWorld.AddComponent<Opaax::ECS::TransformComponent>(lPlayer,
         Opaax::ECS::TransformComponent{ {0.f, 0.f}, {64.f, 64.f} });
-    Opaax::ECS::SpriteComponent& lSP1 = lWorld.AddComponent<Opaax::ECS::SpriteComponent>(lPlayer, Opaax::ECS::SpriteComponent{m_PlayerTexture});
-    
-    auto lAtlas = lWorld.CreateEntity("AtlasSprite");
-    lWorld.AddComponent<Opaax::ECS::TransformComponent>(lAtlas, Opaax::ECS::TransformComponent{ {100.f, 0.f}, {64.f, 64.f} });
-    Opaax::ECS::SpriteComponent& lSP = lWorld.AddComponent<Opaax::ECS::SpriteComponent>(lAtlas, Opaax::ECS::SpriteComponent{m_AtlasTexture, {0.f,   0.f}, {0.25f, 0.25f}});
+    Opaax::ECS::SpriteComponent& lSP1 = InWorld.AddComponent<Opaax::ECS::SpriteComponent>(lPlayer, Opaax::ECS::SpriteComponent{m_PlayerTexture});
+
+    auto lAtlas = InWorld.CreateEntity("AtlasSprite");
+    InWorld.AddComponent<Opaax::ECS::TransformComponent>(lAtlas, Opaax::ECS::TransformComponent{ {100.f, 0.f}, {64.f, 64.f} });
+    Opaax::ECS::SpriteComponent& lSP = InWorld.AddComponent<Opaax::ECS::SpriteComponent>(lAtlas, Opaax::ECS::SpriteComponent{m_AtlasTexture, {0.f,   0.f}, {0.25f, 0.25f}});
 }

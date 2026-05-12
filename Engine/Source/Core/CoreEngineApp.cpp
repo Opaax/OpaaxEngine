@@ -312,9 +312,9 @@ void CoreEngineApp::OnRender(double AlphaPhysicStep)
     auto* lCamera = GetSubsystem<Camera2D>();
     Renderer2D::Begin(*lCamera);
 
-    if (auto* lScene = GetSceneManager()->GetActiveScene())
+    if (GetSceneManager()->GetActiveScene())
     {
-        World& lWorld = lScene->GetWorld();
+        World& lWorld = GetWorld();
         const RenderContext lCtx{ *lCamera, AlphaPhysicStep };
         for (const auto& lSystem : TPolymorphicList<IWorldSystem>::GetAll())
         {
@@ -328,9 +328,7 @@ void CoreEngineApp::OnRender(double AlphaPhysicStep)
 
 World& CoreEngineApp::GetWorld() noexcept
 {
-    auto* lSceneMgr = m_EngineSubsystemManager.GetSubsystem<SceneManager>();
-    OPAAX_CORE_ASSERT(lSceneMgr && lSceneMgr->GetActiveScene())
-    return lSceneMgr->GetActiveScene()->GetWorld();
+    return m_World;
 }
 
 Opaax::SceneManager* CoreEngineApp::GetSceneManager() noexcept

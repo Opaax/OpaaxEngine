@@ -118,20 +118,20 @@ namespace Opaax::Editor
         }
     }
 
-    void HierarchyPanel::Draw(SceneManager* InSceneManager)
+    void HierarchyPanel::Draw(Scene* InActiveScene, World* InWorld)
     {
         ImGui::Begin("Hierarchy");
 
         // No scene active
-        if (!InSceneManager || !InSceneManager->GetActiveScene())
+        if (!InActiveScene || !InWorld)
         {
             ImGui::TextDisabled("No active scene.");
             ImGui::End();
             return;
         }
 
-        Scene* lScene    = InSceneManager->GetActiveScene();
-        World& lWorld    = lScene->GetWorld();
+        Scene* lScene    = InActiveScene;
+        World& lWorld    = *InWorld;
         auto&  lRegistry = lWorld.GetRegistry();
 
         // Scene name as header

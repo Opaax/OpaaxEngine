@@ -116,7 +116,7 @@ namespace Opaax
         OPAAX_CORE_TRACE("World::PushScene — loading '{}' (SceneID={}).",
             InScene->GetName(), InScene->GetSceneID());
 
-        InScene->OnLoad();
+        InScene->OnLoad(*this);
         InScene->OnEnter();
 
         m_Scenes.push_back(std::move(InScene));
@@ -134,7 +134,7 @@ namespace Opaax
         OPAAX_CORE_TRACE("World::PopScene — unloading '{}' (SceneID={}).",
             m_Scenes.back()->GetName(), m_Scenes.back()->GetSceneID());
         m_Scenes.back()->OnExit();
-        m_Scenes.back()->OnUnload();
+        m_Scenes.back()->OnUnload(*this);
         m_Scenes.pop_back();
 
         if (!m_Scenes.empty())
@@ -152,7 +152,7 @@ namespace Opaax
         {
             OPAAX_CORE_TRACE("World::ReplaceScene — unloading '{}'.", m_Scenes.back()->GetName());
             m_Scenes.back()->OnExit();
-            m_Scenes.back()->OnUnload();
+            m_Scenes.back()->OnUnload(*this);
             m_Scenes.pop_back();
         }
 
@@ -160,7 +160,7 @@ namespace Opaax
         OPAAX_CORE_TRACE("World::ReplaceScene — loading '{}' (SceneID={}).",
             InScene->GetName(), InScene->GetSceneID());
 
-        InScene->OnLoad();
+        InScene->OnLoad(*this);
         InScene->OnEnter();
 
         m_Scenes.push_back(std::move(InScene));

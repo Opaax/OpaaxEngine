@@ -55,19 +55,20 @@ namespace Opaax
 
         //------------------------------------------------------------------------------
         // Life Cycle
-        
+
         /**
          * Called once when the scene is first loaded onto the stack.
-         * Load assets, create entities here.
+         * Load assets, create entities into InWorld here.
          */
-        virtual void OnLoad()   {}
-        
+        virtual void OnLoad(World& InWorld)   {}
+
         /**
          * Called once when the scene is popped from the stack.
-         * Release assets, cleanup here.
+         * Release assets, cleanup here. InWorld is the shared engine World
+         * the scene's entities live in.
          */
-        virtual void OnUnload() {}
-        
+        virtual void OnUnload(World& InWorld) {}
+
         /**
          * Called every time this scene becomes the active (top) scene.
          * Resume music, re-enable input, etc.
@@ -81,10 +82,10 @@ namespace Opaax
         virtual void OnExit()   {}
 
         /**
-         * Called every time another scene is pushed on top of this one.
-         * Pause music, disable input, etc.
+         * Persist the scene to disk. InWorld is the shared engine World the
+         * serializer reads entities from.
          */
-        virtual void SaveScene()   {}
+        virtual void SaveScene(World& InWorld) {}
         
         //------------------------------------------------------------------------------
         // Per-frame

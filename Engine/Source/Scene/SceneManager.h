@@ -55,69 +55,10 @@ namespace Opaax
 
         //------------------------------------------------------------------------------
         // API
-        void Push(UniquePtr<Scene> InScene)
-        {
-            OPAAX_CORE_ASSERT(InScene != nullptr)
-
-            if (!m_Stack.empty())
-            {
-                m_Stack.back()->OnExit();
-                OPAAX_CORE_TRACE("SceneManager::Push — '{}' exited.", m_Stack.back()->GetName());
-            }
-
-            OPAAX_CORE_TRACE("SceneManager::Push — loading '{}'.", InScene->GetName());
-            InScene->OnLoad();
-            InScene->OnEnter();
-
-            m_Stack.push_back(std::move(InScene));
-            SyncCurrentSceneFromActive();
-        }
-
-        void Pop()
-        {
-            if (m_Stack.empty())
-            {
-                OPAAX_CORE_WARN("SceneManager::Pop — stack is empty, ignored.");
-                return;
-            }
-
-            OPAAX_CORE_TRACE("SceneManager::Pop — unloading '{}'.", m_Stack.back()->GetName());
-            m_Stack.back()->OnExit();
-            m_Stack.back()->OnUnload();
-            m_Stack.pop_back();
-
-            if (!m_Stack.empty())
-            {
-                OPAAX_CORE_TRACE("SceneManager::Pop — '{}' entered.", m_Stack.back()->GetName());
-                m_Stack.back()->OnEnter();
-            }
-        }
-
-        void Replace(UniquePtr<Scene> InScene)
-        {
-            OPAAX_CORE_ASSERT(InScene != nullptr)
-
-            if (!m_Stack.empty())
-            {
-                OPAAX_CORE_TRACE("SceneManager::Replace — unloading '{}'.", m_Stack.back()->GetName());
-                m_Stack.back()->OnExit();
-                m_Stack.back()->OnUnload();
-                m_Stack.pop_back();
-            }
-
-            OPAAX_CORE_TRACE("SceneManager::Replace — loading '{}'.", InScene->GetName());
-            InScene->OnLoad();
-            InScene->OnEnter();
-
-            m_Stack.push_back(std::move(InScene));
-            SyncCurrentSceneFromActive();
-        }
-
-        void SaveCurrentSave()
-        {
-            OPAAX_CORE_ASSERT(GetActiveScene() != nullptr)
-            GetActiveScene()->SaveScene();
-        }
+        void Push(UniquePtr<Scene> InScene);
+        void Pop();
+        void Replace(UniquePtr<Scene> InScene);
+        void SaveCurrentSave();
 
         //------------------------------------------------------------------------------
         // Editor scene file API
@@ -168,18 +109,7 @@ namespace Opaax
             return true;
         }
 
-        void Shutdown() override
-        {
-            OPAAX_CORE_INFO("SceneManager::Shutdown() — clearing {} scene(s).", m_Stack.size());
-
-            // Unload in reverse order — top scene first.
-            while (!m_Stack.empty())
-            {
-                m_Stack.back()->OnExit();
-                m_Stack.back()->OnUnload();
-                m_Stack.pop_back();
-            }
-        }
+        void Shutdown() override;
 
         void Update(double DeltaTime) override
         {
