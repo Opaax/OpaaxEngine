@@ -100,6 +100,12 @@ namespace Opaax
         FORCEINLINE World&              GetWorld()            noexcept { return m_World; }
         FORCEINLINE const World&        GetWorld()      const noexcept { return m_World; }
 
+        // Runtime SceneID — stamped by World::PushScene on push. 0 = unassigned /
+        // persistent. Used to filter entities contributed by this scene in the
+        // shared World (see SceneIDComponent).
+        FORCEINLINE Uint32 GetSceneID() const noexcept              { return m_SceneID; }
+        FORCEINLINE void   SetSceneID(Uint32 InSceneID) noexcept    { m_SceneID = InSceneID; }
+
         // SourcePath: absolute path of the *.scene.json this scene was last loaded from
         // / saved to. Empty for code-built scenes that never touched disk. SceneManager
         // reads this post-OnLoad to populate its own current-scene-path tracking, so a
@@ -115,6 +121,7 @@ namespace Opaax
         OpaaxString m_Name;
         OpaaxString m_SourcePath;
         World       m_World;
+        Uint32      m_SceneID = 0;
     };
 
 } // namespace Opaax

@@ -6,6 +6,11 @@
             "type": "Data"
         },
         {
+            "id": "Scenes/Kfbuewbfuwea",
+            "path": "Game/Assets/Scenes/Kfbuewbfuwea.scene.json",
+            "type": "Scene"
+        },
+        {
             "id": "Scenes/empty",
             "path": "Game/Assets/Scenes/empty.scene.json",
             "type": "Scene"

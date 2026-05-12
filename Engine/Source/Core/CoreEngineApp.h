@@ -113,6 +113,11 @@ namespace Opaax
         IRenderTarget*              m_RenderTarget        = nullptr;
         UniquePtr<DefaultRenderTarget> m_DefaultRenderTarget;
 
+        // Persistent World — direct member, owns the scene stack post-M2.5.
+        // Dormant in Step 1: GetWorld() still routes through SceneManager →
+        // active Scene → Scene::m_World until the rewire lands.
+        World                       m_World;
+
 #if OPAAX_WITH_EDITOR
         void LaunchEditor();
         bool IsDebugMode() const;

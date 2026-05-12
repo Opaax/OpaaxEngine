@@ -10,6 +10,8 @@
 
 namespace Opaax
 {
+    class Scene;
+
     // =============================================================================
     // Usage:
     //   EntityID lEnt = World.CreateEntity("Player");
@@ -21,20 +23,28 @@ namespace Opaax
     /**
      * @class World
      *
-     * Owner of all entities and components.
-     * One World = one game scene (or editor scene).
+     * Owner of all entities and components, and (post-M2.5) the scene stack.
+     * Models Unreal's UWorld owning ULevels.
      *
-     * World does not tick systems — that is the responsibility of the caller (CoreEngineApp or a future SceneManager).
-     * World is pure data.
+     * World does not tick systems — that is the responsibility of the caller
+     * (CoreEngineApp / SceneManager subsystem facade). World is pure data + scene
+     * lifecycle orchestration.
      */
     class OPAAX_API World
     {
         // =============================================================================
+        // Constants
+        // =============================================================================
+    public:
+        // Sentinel SceneID for entities not owned by any Scene (persistent).
+        static constexpr Uint32 PersistentSceneID = 0;
+
+        // =============================================================================
         // CTORs - DTOR
         // =============================================================================
     public:
-        World()  = default;
-        ~World() = default;
+        World();
+        ~World();
 
         // =============================================================================
         // Copy - Delete
@@ -144,6 +154,34 @@ namespace Opaax
         const entt::registry& GetRegistry() const noexcept { return m_Registry; }
         
         //------------------------------------------------------------------------------
+        // Scene stack
+    public:
+        // Allocate a fresh runtime SceneID. Monotonic, skips 0 (PersistentSceneID).
+        Uint32 AllocateSceneID() noexcept;
+
+        // Take ownership of InScene, stamp it with a fresh SceneID, drive
+        // OnExit (previous top) → OnLoad → OnEnter. Returns observer pointer.
+        Scene* PushScene(UniquePtr<Scene> InScene);
+
+        // Drive OnExit + OnUnload on the top scene, drop it, then OnEnter on the
+        // new top (if any).
+        void   PopScene();
+
+        // PopScene + PushScene in one shot. Returns observer pointer to the new
+        // top scene.
+        Scene* ReplaceScene(UniquePtr<Scene> InScene);
+
+        Scene*       GetActiveScene() noexcept;
+        const Scene* GetActiveScene() const noexcept;
+
+        Uint32 GetSceneCount() const noexcept;
+
+        // Destroy every entity carrying SceneIDComponent.SceneID == InSceneID.
+        // Persistent entities (SceneID == PersistentSceneID) survive unless
+        // InSceneID == PersistentSceneID is passed explicitly.
+        void DestroyEntitiesWithSceneID(Uint32 InSceneID);
+
+        //------------------------------------------------------------------------------
         // Get - Set
     public:
         Uint32 GetEntityCount() const noexcept;
@@ -152,8 +190,10 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        entt::registry m_Registry;
-        Atomic<Uint32> m_EntityCount{ 0 };
+        entt::registry              m_Registry;
+        Atomic<Uint32>              m_EntityCount{ 0 };
+        TDynArray<UniquePtr<Scene>> m_Scenes;
+        Uint32                      m_NextSceneID = 1; // 0 reserved for PersistentSceneID
     };
 
 } // namespace Opaax::ECS
