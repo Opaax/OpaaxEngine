@@ -1,0 +1,75 @@
+{
+    "entities": [
+        {
+            "Tag": "NewEntity",
+            "components": {},
+            "uuid": "8098565647636872555"
+        },
+        {
+            "Tag": "NewEntity",
+            "components": {},
+            "uuid": "9088747929554024481"
+        },
+        {
+            "Tag": "NewEntity",
+            "components": {
+                "TransformComponent": {
+                    "position": [
+                        39.0,
+                        0.0
+                    ],
+                    "rotation": 0.0,
+                    "scale": [
+                        1.0,
+                        1.0
+                    ],
+                    "z_order": 0.0
+                }
+            },
+            "uuid": "12229625527022396256"
+        },
+        {
+            "Tag": "NewEntity",
+            "components": {
+                "SpriteComponent": {
+                    "color": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "size": [
+                        145.0,
+                        164.0
+                    ],
+                    "texture": "Textures/Player",
+                    "uv_max": [
+                        1.0,
+                        1.0
+                    ],
+                    "uv_min": [
+                        0.0,
+                        0.0
+                    ],
+                    "visible": true
+                },
+                "TransformComponent": {
+                    "position": [
+                        -70.0,
+                        0.0
+                    ],
+                    "rotation": 0.0,
+                    "scale": [
+                        1.0,
+                        1.0
+                    ],
+                    "z_order": 0.0
+                }
+            },
+            "parent_uuid": "12229625527022396256",
+            "uuid": "16059157667679222196"
+        }
+    ],
+    "scene": "GameScene",
+    "version": 2
+}

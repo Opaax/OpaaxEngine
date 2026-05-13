@@ -25,7 +25,11 @@ namespace Opaax
             OPAAX_CORE_TRACE("SceneManager::Push — '{}' exited.", m_Stack.back()->GetName());
         }
 
-        OPAAX_CORE_TRACE("SceneManager::Push — loading '{}'.", InScene->GetName());
+        InScene->SetSceneID(lWorld.AllocateSceneID());
+        lWorld.SetActiveSceneID(InScene->GetSceneID());
+        OPAAX_CORE_TRACE("SceneManager::Push — loading '{}' (SceneID={}).",
+            InScene->GetName(), InScene->GetSceneID());
+
         InScene->OnLoad(lWorld);
         InScene->OnEnter();
 
@@ -43,15 +47,22 @@ namespace Opaax
 
         World& lWorld = GetEngineApp()->GetWorld();
 
-        OPAAX_CORE_TRACE("SceneManager::Pop — unloading '{}'.", m_Stack.back()->GetName());
+        OPAAX_CORE_TRACE("SceneManager::Pop — unloading '{}' (SceneID={}).",
+            m_Stack.back()->GetName(), m_Stack.back()->GetSceneID());
         m_Stack.back()->OnExit();
         m_Stack.back()->OnUnload(lWorld);
+        lWorld.DestroyEntitiesWithSceneID(m_Stack.back()->GetSceneID());
         m_Stack.pop_back();
 
         if (!m_Stack.empty())
         {
+            lWorld.SetActiveSceneID(m_Stack.back()->GetSceneID());
             OPAAX_CORE_TRACE("SceneManager::Pop — '{}' entered.", m_Stack.back()->GetName());
             m_Stack.back()->OnEnter();
+        }
+        else
+        {
+            lWorld.SetActiveSceneID(World::PersistentSceneID);
         }
     }
 
@@ -62,13 +73,19 @@ namespace Opaax
 
         if (!m_Stack.empty())
         {
-            OPAAX_CORE_TRACE("SceneManager::Replace — unloading '{}'.", m_Stack.back()->GetName());
+            OPAAX_CORE_TRACE("SceneManager::Replace — unloading '{}' (SceneID={}).",
+                m_Stack.back()->GetName(), m_Stack.back()->GetSceneID());
             m_Stack.back()->OnExit();
             m_Stack.back()->OnUnload(lWorld);
+            lWorld.DestroyEntitiesWithSceneID(m_Stack.back()->GetSceneID());
             m_Stack.pop_back();
         }
 
-        OPAAX_CORE_TRACE("SceneManager::Replace — loading '{}'.", InScene->GetName());
+        InScene->SetSceneID(lWorld.AllocateSceneID());
+        lWorld.SetActiveSceneID(InScene->GetSceneID());
+        OPAAX_CORE_TRACE("SceneManager::Replace — loading '{}' (SceneID={}).",
+            InScene->GetName(), InScene->GetSceneID());
+
         InScene->OnLoad(lWorld);
         InScene->OnEnter();
 
@@ -93,8 +110,11 @@ namespace Opaax
         {
             m_Stack.back()->OnExit();
             m_Stack.back()->OnUnload(lWorld);
+            lWorld.DestroyEntitiesWithSceneID(m_Stack.back()->GetSceneID());
             m_Stack.pop_back();
         }
+
+        lWorld.SetActiveSceneID(World::PersistentSceneID);
     }
 
     // =============================================================================
@@ -147,11 +167,11 @@ namespace Opaax
             return false;
         }
 
-        // Wipe entities first; SceneSerializer::Deserialize creates new ones
-        // and does not clear the target world. Step 3 narrows this Clear() to
-        // entities tagged with the active scene's SceneID.
+        // Wipe entities owned by the active scene only; SceneSerializer::Deserialize
+        // creates new ones and does not clear the target world. Persistent entities
+        // (SceneID == 0) survive the swap.
         World& lWorld = GetEngineApp()->GetWorld();
-        lWorld.Clear();
+        lWorld.DestroyEntitiesWithSceneID(lScene->GetSceneID());
 
         if (!SceneSerializer::Deserialize(*lScene, InPath, lWorld))
         {
@@ -206,7 +226,8 @@ namespace Opaax
     {
         if (Scene* lScene = GetActiveScene())
         {
-            GetEngineApp()->GetWorld().Clear();
+            // Wipe entities owned by the active scene only; persistents survive.
+            GetEngineApp()->GetWorld().DestroyEntitiesWithSceneID(lScene->GetSceneID());
             lScene->SetSourcePath(OpaaxString{});
         }
 
@@ -217,7 +238,7 @@ namespace Opaax
         }
 
         m_CurrentScenePath.Clear();
-        OPAAX_CORE_INFO("SceneManager::NewScene — world cleared.");
+        OPAAX_CORE_INFO("SceneManager::NewScene — scene entities cleared.");
     }
 
     void SceneManager::SyncCurrentSceneFromActive()

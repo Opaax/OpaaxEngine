@@ -290,7 +290,10 @@ namespace Opaax
 
         Scene* lScene = lSceneMgr->GetActiveScene();
         World& lWorld = GetEngineApp()->GetWorld();
-        lWorld.Clear();
+        // Scene stayed on the stack through PIE — its SceneID is unchanged, and
+        // World::m_ActiveSceneID already matches. Wipe only this scene's entities
+        // so any persistents survive the round-trip.
+        lWorld.DestroyEntitiesWithSceneID(lScene->GetSceneID());
         SceneSerializer::Deserialize(*lScene, lTempPath.CStr(), lWorld);
 
         SetEditorState(Editor::EEditorState::Editing);

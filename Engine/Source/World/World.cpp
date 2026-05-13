@@ -113,6 +113,7 @@ namespace Opaax
         }
 
         InScene->SetSceneID(AllocateSceneID());
+        SetActiveSceneID(InScene->GetSceneID());
         OPAAX_CORE_TRACE("World::PushScene — loading '{}' (SceneID={}).",
             InScene->GetName(), InScene->GetSceneID());
 
@@ -135,12 +136,18 @@ namespace Opaax
             m_Scenes.back()->GetName(), m_Scenes.back()->GetSceneID());
         m_Scenes.back()->OnExit();
         m_Scenes.back()->OnUnload(*this);
+        DestroyEntitiesWithSceneID(m_Scenes.back()->GetSceneID());
         m_Scenes.pop_back();
 
         if (!m_Scenes.empty())
         {
+            SetActiveSceneID(m_Scenes.back()->GetSceneID());
             OPAAX_CORE_TRACE("World::PopScene — '{}' entered.", m_Scenes.back()->GetName());
             m_Scenes.back()->OnEnter();
+        }
+        else
+        {
+            SetActiveSceneID(PersistentSceneID);
         }
     }
 
@@ -153,10 +160,12 @@ namespace Opaax
             OPAAX_CORE_TRACE("World::ReplaceScene — unloading '{}'.", m_Scenes.back()->GetName());
             m_Scenes.back()->OnExit();
             m_Scenes.back()->OnUnload(*this);
+            DestroyEntitiesWithSceneID(m_Scenes.back()->GetSceneID());
             m_Scenes.pop_back();
         }
 
         InScene->SetSceneID(AllocateSceneID());
+        SetActiveSceneID(InScene->GetSceneID());
         OPAAX_CORE_TRACE("World::ReplaceScene — loading '{}' (SceneID={}).",
             InScene->GetName(), InScene->GetSceneID());
 

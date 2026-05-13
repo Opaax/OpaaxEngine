@@ -133,6 +133,8 @@ namespace Opaax
         for (const auto& lEntityJson : lRoot["entities"])
         {
             const std::string lTag = lEntityJson[Opaax::ECS::TagComponent::TagComponentName.CStr()].get<std::string>();
+            // CreateEntity auto-tags with World::m_ActiveSceneID — caller must set
+            // it to the target scene's SceneID before invoking Deserialize.
             const EntityID lEntity = InWorld.CreateEntity(lTag.c_str());
 
             // Restore the persisted UUID (CreateEntity already gave it a fresh one).

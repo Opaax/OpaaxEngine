@@ -7,6 +7,7 @@
 #include "ECS/Components/TagComponent.h"
 #include "ECS/Components/UuidComponent.h"
 #include "ECS/Components/ParentComponent.h"
+#include "ECS/Components/SceneIDComponent.h"
 
 namespace Opaax
 {
@@ -14,7 +15,8 @@ namespace Opaax
 
     // =============================================================================
     // Usage:
-    //   EntityID lEnt = World.CreateEntity("Player");
+    //   EntityID lEnt = World.CreateEntity("Player");                  // dies with the active scene
+    //   EntityID lHud = World.CreatePersistentEntity("HUD");           // survives scene transitions
     //   World.AddComponent<TransformComponent>(lEnt, {.Position = {100, 200}});
     //   auto* lTr = World.GetComponent<TransformComponent>(lEnt);
     //   World.DestroyEntity(lEnt);
@@ -65,12 +67,31 @@ namespace Opaax
         //------------------------------------------------------------------------------
         //  Entity Life cycle
     public:
+        // Auto-tags with the active SceneID. Entity dies on the next
+        // DestroyEntitiesWithSceneID(m_ActiveSceneID) call.
         EntityID CreateEntity(const char* InTag = "Entity")
         {
             const EntityID lID = m_Registry.create();
             m_Registry.emplace<ECS::TagComponent>(lID, InTag);
             m_Registry.emplace<ECS::UuidComponent>(lID, ECS::GenerateUuid());
-            OPAAX_CORE_TRACE("World::CreateEntity '{}' — id={}", InTag, static_cast<Uint32>(lID));
+            m_Registry.emplace<ECS::SceneIDComponent>(lID, m_ActiveSceneID);
+            OPAAX_CORE_TRACE("World::CreateEntity '{}' — id={} sceneId={}",
+                InTag, static_cast<Uint32>(lID), m_ActiveSceneID);
+            m_EntityCount.fetch_add(1, std::memory_order_relaxed);
+            return lID;
+        }
+
+        // Explicit opt-out of scene-bound lifetime — entity survives every
+        // scene transition until DestroyEntity is called on it. Use for player
+        // state, score, inventory, anything that must outlive a level change.
+        EntityID CreatePersistentEntity(const char* InTag = "Entity")
+        {
+            const EntityID lID = m_Registry.create();
+            m_Registry.emplace<ECS::TagComponent>(lID, InTag);
+            m_Registry.emplace<ECS::UuidComponent>(lID, ECS::GenerateUuid());
+            m_Registry.emplace<ECS::SceneIDComponent>(lID, PersistentSceneID);
+            OPAAX_CORE_TRACE("World::CreatePersistentEntity '{}' — id={}",
+                InTag, static_cast<Uint32>(lID));
             m_EntityCount.fetch_add(1, std::memory_order_relaxed);
             return lID;
         }
@@ -181,6 +202,12 @@ namespace Opaax
         // InSceneID == PersistentSceneID is passed explicitly.
         void DestroyEntitiesWithSceneID(Uint32 InSceneID);
 
+        // Active SceneID — every CreateEntity stamps freshly-created entities with
+        // this value. Set by SceneManager (today) and World::PushScene (when the
+        // ownership flip lands) before invoking scene OnLoad / scene Deserialize.
+        FORCEINLINE Uint32 GetActiveSceneID() const noexcept              { return m_ActiveSceneID; }
+        FORCEINLINE void   SetActiveSceneID(Uint32 InSceneID) noexcept    { m_ActiveSceneID = InSceneID; }
+
         //------------------------------------------------------------------------------
         // Get - Set
     public:
@@ -193,7 +220,8 @@ namespace Opaax
         entt::registry              m_Registry;
         Atomic<Uint32>              m_EntityCount{ 0 };
         TDynArray<UniquePtr<Scene>> m_Scenes;
-        Uint32                      m_NextSceneID = 1; // 0 reserved for PersistentSceneID
+        Uint32                      m_NextSceneID    = 1; // 0 reserved for PersistentSceneID
+        Uint32                      m_ActiveSceneID  = PersistentSceneID;
     };
 
 } // namespace Opaax::ECS

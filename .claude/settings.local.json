@@ -6,7 +6,9 @@
     "allow": [
       "Bash(build/debug-editor/Debug/*.exe)",
       "Bash(build/release/Release/*.exe)",
-      "Bash(py --version)"
+      "Bash(py --version)",
+      "Bash(\"/c/Dev/CMake/bin/cmake.exe\" --build build/debug-editor --config Debug)",
+      "Bash(\"/c/Dev/CMake/bin/cmake.exe\" --build build/release --config Release)"
     ]
   }
 }

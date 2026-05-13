@@ -1,6 +1,21 @@
 {
     "assets": [
         {
+            "id": "Scenes/Kfbuewbfuwea",
+            "path": "Game/Assets/Scenes/Kfbuewbfuwea.scene.json",
+            "type": "Scene"
+        },
+        {
+            "id": "Scenes/empty",
+            "path": "Game/Assets/Scenes/empty.scene.json",
+            "type": "Scene"
+        },
+        {
+            "id": "Scenes/NewScene",
+            "path": "Game/Assets/Scenes/NewScene.scene.json",
+            "type": "Scene"
+        },
+        {
             "id": "Scenes/TestSceneGameFolder",
             "path": "Game/Assets/Scenes/TestSceneGameFolder.scene.json",
             "type": "Scene"
@@ -16,18 +31,8 @@
             "type": "Data"
         },
         {
-            "id": "Scenes/Kfbuewbfuwea",
-            "path": "Game/Assets/Scenes/Kfbuewbfuwea.scene.json",
-            "type": "Scene"
-        },
-        {
-            "id": "Scenes/empty",
-            "path": "Game/Assets/Scenes/empty.scene.json",
-            "type": "Scene"
-        },
-        {
-            "id": "Scenes/NewScene",
-            "path": "Game/Assets/Scenes/NewScene.scene.json",
+            "id": "Scenes/wafwaufhd",
+            "path": "Game/Assets/Scenes/wafwaufhd.scene.json",
             "type": "Scene"
         }
     ]
