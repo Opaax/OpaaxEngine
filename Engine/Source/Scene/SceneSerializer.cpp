@@ -6,11 +6,13 @@
 #include "Assets/AssetRegistry.h"
 #include "Core/OpaaxPath.h"
 #include "ECS/Components/ParentComponent.h"
+#include "ECS/Components/SceneIDComponent.h"
 #include "ECS/Components/SpriteComponent.h"
 #include "ECS/Components/TagComponent.h"
 #include "ECS/Components/TransformComponent.h"
 #include "ECS/Components/UuidComponent.h"
 #include "ECS/Hierarchy.h"
+#include "World/World.h"
 
 using json = nlohmann::json;
 
@@ -23,44 +25,44 @@ namespace Opaax
     // =============================================================================
     // Serialize
     // =============================================================================
-    bool SceneSerializer::Serialize(const Scene& InScene, const char* InPath)
+    bool SceneSerializer::Serialize(const Scene& InScene, const char* InPath, const World& InWorld)
     {
         json lRoot;
         lRoot["version"]  = kSceneFormatVersion;
         lRoot["scene"]    = InScene.GetName().CStr();
         lRoot["entities"] = json::array();
 
-        const World& lWorld     = InScene.GetWorld();
-        const auto& lRegistry   = lWorld.GetRegistry();
+        const auto& lRegistry = InWorld.GetRegistry();
 
-
-        // Iterate all entities that have a TagComponent — every entity has one.
-        auto lView = lRegistry.view<const ECS::TagComponent>();
-
-        OPAAX_CORE_WARN("Number of entities in view: {}", std::distance(lView.begin(), lView.end()));
+        // Only entities owned by InScene get serialized. Persistent entities
+        // (SceneID == PersistentSceneID) are runtime-only and intentionally
+        // excluded — they belong to no on-disk scene.
+        const Uint32 lTargetSceneID = InScene.GetSceneID();
+        auto lView = lRegistry.view<const ECS::TagComponent, const ECS::SceneIDComponent>();
 
         for (auto lEntity : lView)
         {
+            if (lView.get<const ECS::SceneIDComponent>(lEntity).SceneID != lTargetSceneID) { continue; }
             OPAAX_ASSERT(lRegistry.valid(lEntity))
 
-            const ECS::TagComponent* lTagComp = lWorld.GetComponent<ECS::TagComponent>(lEntity);
+            const ECS::TagComponent* lTagComp = InWorld.GetComponent<ECS::TagComponent>(lEntity);
 
             json lEntityJson;
             lEntityJson.merge_patch(lTagComp->Serialize());
 
             // Stable id
-            if (const ECS::UuidComponent* lU = lWorld.GetComponent<ECS::UuidComponent>(lEntity))
+            if (const ECS::UuidComponent* lU = InWorld.GetComponent<ECS::UuidComponent>(lEntity))
             {
                 lEntityJson["uuid"] = std::to_string(lU->Id);
             }
 
             // Parent link — emitted only if the *parent* still has a UUID.
-            if (const ECS::ParentComponent* lP = lWorld.GetComponent<ECS::ParentComponent>(lEntity))
+            if (const ECS::ParentComponent* lP = InWorld.GetComponent<ECS::ParentComponent>(lEntity))
             {
-                if (lP->Parent != ENTITY_NONE && lWorld.GetRegistry().valid(lP->Parent))
+                if (lP->Parent != ENTITY_NONE && InWorld.GetRegistry().valid(lP->Parent))
                 {
                     if (const ECS::UuidComponent* lParentU =
-                            lWorld.GetComponent<ECS::UuidComponent>(lP->Parent))
+                            InWorld.GetComponent<ECS::UuidComponent>(lP->Parent))
                     {
                         lEntityJson["parent_uuid"] = std::to_string(lParentU->Id);
                     }
@@ -70,13 +72,13 @@ namespace Opaax
             lEntityJson["components"] = json::object();
 
             // TransformComponent
-            if (const ECS::TransformComponent* lT = lWorld.GetComponent<ECS::TransformComponent>(lEntity))
+            if (const ECS::TransformComponent* lT = InWorld.GetComponent<ECS::TransformComponent>(lEntity))
             {
                 lEntityJson["components"]["TransformComponent"] = lT->Serialize();
             }
 
             // SpriteComponent
-            if (const ECS::SpriteComponent* lS = lWorld.GetComponent<ECS::SpriteComponent>(lEntity))
+            if (const ECS::SpriteComponent* lS = InWorld.GetComponent<ECS::SpriteComponent>(lEntity))
             {
                 lEntityJson["components"]["SpriteComponent"] = lS->Serialize();
             }
@@ -104,7 +106,7 @@ namespace Opaax
     // =============================================================================
     // Deserialize
     // =============================================================================
-    bool SceneSerializer::Deserialize(Scene& InScene, const char* InPath)
+    bool SceneSerializer::Deserialize(Scene& InScene, const char* InPath, World& InWorld)
     {
         std::ifstream lFile(InPath);
         if (!lFile.is_open())
@@ -125,8 +127,6 @@ namespace Opaax
             return false;
         }
 
-        auto& lWorld = InScene.GetWorld();
-
         // Pass 1 — create entities, restore non-relational state. We collect (child, parent_uuid)
         // pairs as we go and resolve them once every UUID is in place.
         struct PendingLink { EntityID Child; Uint64 ParentUuid; };
@@ -135,7 +135,9 @@ namespace Opaax
         for (const auto& lEntityJson : lRoot["entities"])
         {
             const std::string lTag = lEntityJson[Opaax::ECS::TagComponent::TagComponentName.CStr()].get<std::string>();
-            const EntityID lEntity = lWorld.CreateEntity(lTag.c_str());
+            // CreateEntity auto-tags with World::m_ActiveSceneID — caller must set
+            // it to the target scene's SceneID before invoking Deserialize.
+            const EntityID lEntity = InWorld.CreateEntity(lTag.c_str());
 
             // Restore the persisted UUID (CreateEntity already gave it a fresh one).
             if (lEntityJson.contains("uuid"))
@@ -154,7 +156,7 @@ namespace Opaax
 
                 if (lParsed != 0)
                 {
-                    if (auto* lU = lWorld.GetComponent<ECS::UuidComponent>(lEntity))
+                    if (auto* lU = InWorld.GetComponent<ECS::UuidComponent>(lEntity))
                     {
                         lU->Id = lParsed;
                     }
@@ -186,13 +188,13 @@ namespace Opaax
 
             if (lComponents.contains("TransformComponent"))
             {
-                ECS::TransformComponent& lTS = lWorld.AddComponent<ECS::TransformComponent>(lEntity);
+                ECS::TransformComponent& lTS = InWorld.AddComponent<ECS::TransformComponent>(lEntity);
                 lTS.Deserialize(lComponents["TransformComponent"]);
             }
 
             if (lComponents.contains("SpriteComponent"))
             {
-                ECS::SpriteComponent& lSc = lWorld.AddComponent<ECS::SpriteComponent>(lEntity);
+                ECS::SpriteComponent& lSc = InWorld.AddComponent<ECS::SpriteComponent>(lEntity);
                 lSc.Deserialize(lComponents["SpriteComponent"]);
             }
         }
@@ -200,14 +202,14 @@ namespace Opaax
         // Pass 2 — resolve parent_uuid → EntityID and re-link.
         for (const PendingLink& lLink : lPending)
         {
-            const EntityID lParent = lWorld.FindByUuid(lLink.ParentUuid);
+            const EntityID lParent = InWorld.FindByUuid(lLink.ParentUuid);
             if (lParent == ENTITY_NONE)
             {
                 OPAAX_CORE_WARN("SceneSerializer: unresolved parent_uuid {} — child left at root.",
                     lLink.ParentUuid);
                 continue;
             }
-            if (!ECS::Hierarchy::SetParent(lWorld, lLink.Child, lParent))
+            if (!ECS::Hierarchy::SetParent(InWorld, lLink.Child, lParent))
             {
                 OPAAX_CORE_WARN("SceneSerializer: SetParent rejected (cycle or invalid) for uuid {}.",
                     lLink.ParentUuid);

@@ -49,10 +49,13 @@
 # Builds
 build/*
 
+# Editor PIE temp snapshots (project-root-relative under EditorTemp/)
+EditorTemp/
+
 #Claude AI
 .claude/CLAUDE.local.md
 .claude/task/*
-.claude/Milestone/*
+.claude/milestone/*
 .claude/worktrees/*
 .claude/code/*
 .claude/CLAUDE.Dev.md

@@ -1,13 +1,15 @@
-﻿#include "TextureLoader.h"
+#include "TextureLoader.h"
+
+#include "Renderer/Texture2D.h"
 
 namespace Opaax
 {
-    OpenGLTexture2D* TextureLoader::Load(const char* InAbsolutePath)
+    Texture2D* TextureLoader::Load(const char* InAbsPath, OpaaxStringID InCanonicalID)
     {
-        return new OpenGLTexture2D(InAbsolutePath);
+        return new Texture2D(OpaaxString(InAbsPath), InCanonicalID);
     }
 
-    bool TextureLoader::IsValid(OpenGLTexture2D* InAsset)
+    bool TextureLoader::IsValid(Texture2D* InAsset)
     {
         return InAsset && InAsset->IsLoaded();
     }

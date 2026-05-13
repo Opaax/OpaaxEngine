@@ -1,41 +1,65 @@
-﻿#pragma once
+#pragma once
 
 #include "AssetRefBlock.hpp"
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/OpaaxStringID.hpp"
- 
+
+#include <typeindex>
+#include <typeinfo>
+
 namespace Opaax
 {
+    // =============================================================================
+    // Internal — registry resolver entry point
+    // =============================================================================
+    namespace Internal
+    {
+        /**
+         * Returns the live payload pointer for InKey if the cached entry's runtime
+         * type matches InExpected; nullptr otherwise (missing key, type mismatch,
+         * or entry destroyed but still mapped).
+         * Defined in AssetRegistry.cpp; declared here to avoid the
+         * AssetRegistry.h <-> AssetHandle.hpp include cycle.
+         */
+        OPAAX_API void* AssetRegistry_TryResolveTyped(Uint32 InKey, const std::type_index& InExpected) noexcept;
+    }
+
+    // =============================================================================
+    // TAssetHandle
+    // =============================================================================
     /**
-     * @struct AssetHandle
+     * @class TAssetHandle
      *
-     * Typed, non-owning reference to an asset loaded by AssetRegistry.
-     * Cheap to copy — it is just a pointer + a StringID (one Uint32).
+     * Type-safe, ID-keyed reference to an asset owned by AssetRegistry.
+     * Storage = OpaaxStringID + AssetRefBlock* — no cached payload pointer.
+     * Every Get() resolves through the registry, so the handle correctly reports
+     * invalid after Unload / type-mismatch / Shutdown without manual cleanup.
      *
-     * The referenced asset is owned by AssetRegistry.
-     *  Do NOT store AssetHandle past the lifetime of the registry.
+     * Implicit-conversion policy: explicit Get() / IsValid() / operator-> / operator*
+     * only. There is intentionally no operator T* — call sites must opt in to
+     * payload access through Get(), making "is the asset live right now?" a
+     * conscious check rather than an implicit one.
+     *
+     *  TAssetHandle<Texture2D> lHandle =
+     *      AssetRegistry::Load<Texture2D>(OPAAX_ID("Engine/Assets/Textures/Player.png"));
+     *  if (lHandle.IsValid()) Renderer2D::DrawSprite(pos, size, lHandle);
+     *
+     * The referenced asset and its AssetRefBlock are owned by AssetRegistry.
+     *  Do NOT store TAssetHandle past the lifetime of the registry.
      *  Do NOT delete the pointer obtained from Get().
-     *
-     *  AssetHandle<OpenGLTexture2D> lHandle = AssetRegistry::Load<OpenGLTexture2D>(OPAAX_ID("Textures/Player.png"));
-     *
-     * if (lHandle.IsValid()) Renderer2D::DrawSprite(pos, size, lHandle);
-     *
-     * 
-     * @tparam T 
      */
     template<typename T>
-    class AssetHandle
+    class TAssetHandle
     {
         // =============================================================================
-        // CTORs
+        // CTORS - DTORS
         // =============================================================================
     public:
-        AssetHandle() noexcept = default;
+        TAssetHandle() noexcept = default;
 
-        // NOTE: Only AssetRegistry calls this constructor.
-        AssetHandle(T* InPtr, OpaaxStringID InID, AssetRefBlock* InBlock) noexcept
-            : m_Ptr(InPtr), m_ID(InID), m_Block(InBlock)
+        TAssetHandle(OpaaxStringID InID, AssetRefBlock* InBlock) noexcept
+            : m_ID(InID), m_Block(InBlock)
         {
             if (m_Block)
             {
@@ -43,16 +67,16 @@ namespace Opaax
             }
         }
 
-        ~AssetHandle()
+        ~TAssetHandle()
         {
             ReleaseRef();
         }
 
         // =============================================================================
-        // Copy — increments ref count
+        // Copy
         // =============================================================================
-        AssetHandle(const AssetHandle& Other) noexcept
-            : m_Ptr(Other.m_Ptr), m_ID(Other.m_ID), m_Block(Other.m_Block)
+        TAssetHandle(const TAssetHandle& Other) noexcept
+            : m_ID(Other.m_ID), m_Block(Other.m_Block)
         {
             if (m_Block)
             {
@@ -60,12 +84,11 @@ namespace Opaax
             }
         }
 
-        AssetHandle& operator=(const AssetHandle& Other) noexcept
+        TAssetHandle& operator=(const TAssetHandle& Other) noexcept
         {
             if (this != &Other)
             {
                 ReleaseRef();
-                m_Ptr   = Other.m_Ptr;
                 m_ID    = Other.m_ID;
                 m_Block = Other.m_Block;
                 if (m_Block) { m_Block->AddRef(); }
@@ -74,25 +97,22 @@ namespace Opaax
         }
 
         // =============================================================================
-        // Move — transfers ownership, no ref count change
+        // Move
         // =============================================================================
-        AssetHandle(AssetHandle&& Other) noexcept
-            : m_Ptr(Other.m_Ptr), m_ID(Other.m_ID), m_Block(Other.m_Block)
+        TAssetHandle(TAssetHandle&& Other) noexcept
+            : m_ID(Other.m_ID), m_Block(Other.m_Block)
         {
-            Other.m_Ptr   = nullptr;
             Other.m_ID    = OpaaxStringID{};
             Other.m_Block = nullptr;
         }
 
-        AssetHandle& operator=(AssetHandle&& Other) noexcept
+        TAssetHandle& operator=(TAssetHandle&& Other) noexcept
         {
             if (this != &Other)
             {
                 ReleaseRef();
-                m_Ptr         = Other.m_Ptr;
                 m_ID          = Other.m_ID;
                 m_Block       = Other.m_Block;
-                Other.m_Ptr   = nullptr;
                 Other.m_ID    = OpaaxStringID{};
                 Other.m_Block = nullptr;
             }
@@ -100,62 +120,66 @@ namespace Opaax
         }
 
         // =============================================================================
-        // Function
+        // Operators
+        // =============================================================================
+    public:
+        T* operator->() const noexcept
+        {
+            T* lPtr = Get();
+            OPAAX_CORE_ASSERT(lPtr)
+            return lPtr;
+        }
+
+        T& operator*() const noexcept
+        {
+            T* lPtr = Get();
+            OPAAX_CORE_ASSERT(lPtr)
+            return *lPtr;
+        }
+
+        explicit operator bool()                      const noexcept { return IsValid(); }
+        bool operator==(const TAssetHandle& Other)    const noexcept { return m_ID == Other.m_ID; }
+        bool operator!=(const TAssetHandle& Other)    const noexcept { return m_ID != Other.m_ID; }
+
+        // =============================================================================
+        // Functions
         // =============================================================================
     public:
         void Reset() noexcept
         {
             ReleaseRef();
-            m_Ptr   = nullptr;
             m_ID    = OpaaxStringID{};
             m_Block = nullptr;
         }
 
         //------------------------------------------------------------------------------
         //  Get - Set
-        
-        FORCEINLINE bool           IsValid()        const noexcept { return m_Ptr != nullptr; }
-        FORCEINLINE T*             Get()            const noexcept { return m_Ptr; }
-        FORCEINLINE OpaaxStringID  GetID()          const noexcept { return m_ID; }
-        FORCEINLINE Uint32         GetRefCount()    const noexcept { return m_Block ? m_Block->Get() : 0u; }
 
-        // =============================================================================
-        // Operators
-        // =============================================================================
-        T* operator->() const noexcept
+        FORCEINLINE T*             Get()         const noexcept
         {
-            OPAAX_CORE_ASSERT(m_Ptr)
-            return m_Ptr;
+            return static_cast<T*>(Internal::AssetRegistry_TryResolveTyped(m_ID.GetId(), typeid(T)));
         }
-
-        T& operator*() const noexcept
-        {
-            OPAAX_CORE_ASSERT(m_Ptr)
-            return *m_Ptr;
-        }
-
-        explicit operator bool()                    const noexcept { return IsValid(); }
-        bool operator==(const AssetHandle& Other)   const noexcept { return m_ID == Other.m_ID; }
-        bool operator!=(const AssetHandle& Other)   const noexcept { return m_ID != Other.m_ID; }
+        FORCEINLINE bool           IsValid()     const noexcept { return Get() != nullptr; }
+        FORCEINLINE OpaaxStringID  GetID()       const noexcept { return m_ID; }
+        FORCEINLINE Uint32         GetRefCount() const noexcept { return m_Block ? m_Block->Get() : 0u; }
 
         // =============================================================================
         // Members
         // =============================================================================
     private:
-        T*             m_Ptr   = nullptr;
         OpaaxStringID  m_ID    = {};
-        AssetRefBlock* m_Block = nullptr;   // non-owning — registry owns the block
+        AssetRefBlock* m_Block = nullptr;
 
         void ReleaseRef() noexcept
         {
-            // NOTE: We release but never destroy — the registry checks RefCount
-            //   and handles destruction. AssetHandle is never the last owner.
             if (m_Block) { m_Block->Release(); }
         }
     };
 
-    // Convenience alias
-    class OpenGLTexture2D;
-    using TextureHandle = AssetHandle<OpenGLTexture2D>;
+    // =============================================================================
+    // Aliases
+    // =============================================================================
+    class Texture2D;
+    using TextureHandle = TAssetHandle<Texture2D>;
 
 } // namespace Opaax

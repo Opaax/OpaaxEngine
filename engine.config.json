@@ -1,0 +1,21 @@
+{
+    "assets": {
+        "engineManifest": "Engine/Assets/AssetManifest.json",
+        "engineRoot": "Engine/Assets",
+        "gameManifest": "Game/Assets/AssetManifest.json",
+        "gameRoot": "Game/Assets"
+    },
+    "defaultScene": "",
+    "editor": {
+        "defaultScenePath": "Game/Assets/Scenes"
+    },
+    "log": {
+        "level": "trace"
+    },
+    "version": 1,
+    "window": {
+        "height": 720,
+        "title": "Opaax Engine",
+        "width": 1280
+    }
+}

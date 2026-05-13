@@ -4,26 +4,26 @@
 
 #include <imgui.h>
 #include "Assets/AssetRegistry.h"
-#include "RHI/OpenGL/OpenGLTexture2D.h"
+#include "Renderer/Texture2D.h"
 
 namespace Opaax::Editor
 {
     void Texture2DTypeActions::Load(OpaaxStringID InID)
     {
-        AssetRegistry::Load<OpenGLTexture2D>(InID);
+        AssetRegistry::Load<Texture2D>(InID);
     }
 
     void Texture2DTypeActions::Reload(OpaaxStringID InID)
     {
-        AssetRegistry::Reload<OpenGLTexture2D>(InID);
+        AssetRegistry::Reload<Texture2D>(InID);
     }
 
     void Texture2DTypeActions::DrawPreview(OpaaxStringID InID)
     {
-        const auto lHandle = AssetRegistry::Load<OpenGLTexture2D>(InID);
+        const auto lHandle = AssetRegistry::Load<Texture2D>(InID);
         if (!lHandle.IsValid()) { return; }
 
-        const OpenGLTexture2D* lTex = lHandle.Get();
+        const Texture2D* lTex = lHandle.Get();
 
         constexpr float lMaxSize = 128.f;
         const float lW      = static_cast<float>(lTex->GetWidth());

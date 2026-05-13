@@ -13,10 +13,10 @@ namespace Opaax
     OpaaxString EngineConfig::s_WindowTitle           = OpaaxString("Opaax Engine");
     Uint32      EngineConfig::s_WindowWidth           = 1280;
     Uint32      EngineConfig::s_WindowHeight          = 720;
-    OpaaxString EngineConfig::s_EngineAssetsRoot      = OpaaxString("EngineAssets");
-    OpaaxString EngineConfig::s_GameAssetsRoot        = OpaaxString("GameAssets");
-    OpaaxString EngineConfig::s_EngineManifestRelPath = OpaaxString("EngineAssets/AssetManifest.json");
-    OpaaxString EngineConfig::s_GameManifestRelPath   = OpaaxString("GameAssets/AssetManifest.json");
+    OpaaxString EngineConfig::s_EngineAssetsRoot      = OpaaxString("Engine/Assets");
+    OpaaxString EngineConfig::s_GameAssetsRoot        = OpaaxString("Game/Assets");
+    OpaaxString EngineConfig::s_EngineManifestRelPath = OpaaxString("Engine/Assets/AssetManifest.json");
+    OpaaxString EngineConfig::s_GameManifestRelPath   = OpaaxString("Game/Assets/AssetManifest.json");
     OpaaxString EngineConfig::s_LogLevel              = OpaaxString("trace");
     OpaaxString EngineConfig::s_DefaultSceneRelPath   = OpaaxString("");
     OpaaxString EngineConfig::s_EditorDefaultScenePath = OpaaxString("Game/Assets/Scenes");

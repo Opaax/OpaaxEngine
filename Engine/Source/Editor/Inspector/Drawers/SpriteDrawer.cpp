@@ -6,7 +6,7 @@
 #include "Assets/AssetRegistry.h"
 #include "ECS/Components/SpriteComponent.h"
 #include "Editor/Assets/IAssetTypeActions.h"
-#include "RHI/OpenGL/OpenGLTexture2D.h"
+#include "Renderer/Texture2D.h"
 #include "Core/Log/OpaaxLog.h"
 
 namespace Opaax::Editor
@@ -32,10 +32,13 @@ namespace Opaax::Editor
 
         if (!bOpen) { return; }
 
-        const char* lPath = lS->Texture.IsValid()
-            ? lS->Texture.GetID().ToString().CStr()
-            : "None";
-        ImGui::LabelText("Texture", "%s", lPath);
+        // OpaaxStringID::ToString returns by value — bind to a local so the
+        // backing OpaaxString outlives the ImGui call. CStr() into a temporary
+        // dangles past the semicolon.
+        const OpaaxString lPath = lS->Texture.IsValid()
+                                ? lS->Texture.GetID().ToString()
+                                : OpaaxString("None");
+        ImGui::LabelText("Texture", "%s", lPath.CStr());
 
         if (ImGui::BeginDragDropTarget())
         {
@@ -47,8 +50,7 @@ namespace Opaax::Editor
                 const Uint32        lRawID   = *static_cast<const Uint32*>(lPayload->Data);
                 const OpaaxStringID lAssetID(lRawID);
 
-                // NOTE: Direct load typed to Texture2D — SpriteComponent.Texture is AssetHandle<OpenGLTexture2D>
-                const auto lHandle = AssetRegistry::Load<OpenGLTexture2D>(lAssetID);
+                const auto lHandle = AssetRegistry::Load<Texture2D>(lAssetID);
 
                 if (lHandle.IsValid())
                 {

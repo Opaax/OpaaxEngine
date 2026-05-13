@@ -15,10 +15,10 @@ namespace Opaax
     // Saves the updated manifest to disk after each scan.
     //
     // ID generation rule:
-    //   Root     : "GameAssets"
-    //   File     : "GameAssets/Textures/Player.png"
+    //   Root     : "Game/Assets"
+    //   File     : "Game/Assets/Textures/Player.png"
     //   ID       : "Textures/Player"    (relative to root, all extensions stripped)
-    //   Compound : "GameAssets/Foo.scene.json" → "Foo"
+    //   Compound : "Game/Assets/Foo.scene.json" → "Foo"
     //
     // Type discovery is filename-pattern based (no parent-directory dependency),
     // so any asset can live in any folder.
@@ -48,7 +48,7 @@ namespace Opaax
     public:
         struct ScanConfig
         {
-            // Root directory to scan — relative to base path
+            // Root directory to scan — project-root-relative
             OpaaxString RootDir;
 
             // Absolute path to the manifest file to update
@@ -76,13 +76,15 @@ namespace Opaax
         static OpaaxStringID ResolveType(const std::filesystem::path& InPath) noexcept;
 
         // Generate logical ID from file path relative to root, stripping every extension.
-        // "GameAssets/Textures/Player.png"   with root "GameAssets" → "Textures/Player"
-        // "GameAssets/Scenes/Foo.scene.json" with root "GameAssets" → "Scenes/Foo"
+        // "Game/Assets/Textures/Player.png"   with root "Game/Assets" → "Textures/Player"
+        // "Game/Assets/Scenes/Foo.scene.json" with root "Game/Assets" → "Scenes/Foo"
         static OpaaxString GenerateID(const std::filesystem::path& InAbsFilePath,
                                       const std::filesystem::path& InAbsRootPath) noexcept;
 
-        // Save current manifest state to disk.
-        static bool SaveManifest(const OpaaxString& InAbsPath) noexcept;
+        // Save manifest entries whose RelPath starts with InRootPrefix.
+        // The prefix filter is what makes the per-target manifest split work — the manifest
+        // pool is global, but each on-disk file only owns the subset under its scan root.
+        static bool SaveManifest(const OpaaxString& InAbsPath, const OpaaxString& InRootPrefix) noexcept;
     };
 
 } // namespace Opaax

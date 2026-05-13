@@ -10,8 +10,9 @@ namespace Opaax
      * @class EngineConfig
      *
      * Static, process-wide engine configuration loaded from a single JSON file
-     * (typically engine.config.json next to the executable). Defaults match the
-     * historical hardcoded values, so behavior is unchanged when no file exists.
+     * (typically engine.config.json at the project root in editor builds, or
+     * next to the executable in release builds). Defaults match the historical
+     * hardcoded values, so behavior is unchanged when no file exists.
      *
      * NOTE: Load() must be called before any subsystem that consumes a value
      *   (window creation, asset manifest loading). Call site lives in

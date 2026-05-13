@@ -13,5 +13,4 @@ protected:
     void OnStartup() override;
     void OnUpdate(double deltaTime) override;
     void OnShutdown() override;
-    void OnRender(double AlphaPhysicStep) override;
 };

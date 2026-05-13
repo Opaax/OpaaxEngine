@@ -9,8 +9,10 @@
 
 #include "Core/Log/OpaaxLog.h"
 #include "ECS/Components/ParentComponent.h"
+#include "ECS/Components/SceneIDComponent.h"
 #include "ECS/Components/TagComponent.h"
 #include "ECS/Hierarchy.h"
+#include "World/World.h"
 
 namespace Opaax::Editor
 {
@@ -118,20 +120,20 @@ namespace Opaax::Editor
         }
     }
 
-    void HierarchyPanel::Draw(SceneManager* InSceneManager)
+    void HierarchyPanel::Draw(Scene* InActiveScene, World* InWorld)
     {
         ImGui::Begin("Hierarchy");
 
         // No scene active
-        if (!InSceneManager || !InSceneManager->GetActiveScene())
+        if (!InActiveScene || !InWorld)
         {
             ImGui::TextDisabled("No active scene.");
             ImGui::End();
             return;
         }
 
-        Scene* lScene    = InSceneManager->GetActiveScene();
-        World& lWorld    = lScene->GetWorld();
+        Scene* lScene    = InActiveScene;
+        World& lWorld    = *InWorld;
         auto&  lRegistry = lWorld.GetRegistry();
 
         // Scene name as header
@@ -141,13 +143,20 @@ namespace Opaax::Editor
         ImGui::TextDisabled("%u entities", lWorld.GetEntityCount());
         ImGui::Separator();
 
-        // Build a parent->children index for this frame.
+        // Build a parent->children index for this frame. Filter entities to the
+        // active scene's SceneID + persistents (SceneID == 0) so opening a
+        // different scene doesn't show the previous scene's entities, and so
+        // persistent state stays visible across transitions.
+        const Uint32 lActiveSceneID = lScene->GetSceneID();
         UnorderedMap<EntityID, TDynArray<EntityID>> lChildren;
         TDynArray<EntityID> lRoots;
         {
-            auto lTagView = lRegistry.view<const ECS::TagComponent>();
-            for (auto lEnt : lTagView)
+            auto lView = lRegistry.view<const ECS::TagComponent, const ECS::SceneIDComponent>();
+            for (auto lEnt : lView)
             {
+                const Uint32 lSID = lView.get<const ECS::SceneIDComponent>(lEnt).SceneID;
+                if (lSID != lActiveSceneID && lSID != World::PersistentSceneID) { continue; }
+
                 const auto* lP = lWorld.GetComponent<ECS::ParentComponent>(lEnt);
                 if (lP && lP->Parent != ENTITY_NONE && lRegistry.valid(lP->Parent))
                 {

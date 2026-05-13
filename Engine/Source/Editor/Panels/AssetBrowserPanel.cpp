@@ -25,7 +25,7 @@ namespace Opaax::Editor
         if (InDesc.bMissing)                         { return false; }
 
         std::error_code lEc;
-        const OpaaxString lEntryAbs = OpaaxPath::Resolve(InDesc.RelPath);
+        const OpaaxString lEntryAbs = OpaaxPath::ToAbsolute(InDesc.RelPath);
         const bool bSame = std::filesystem::equivalent(
             std::filesystem::path(InMgr->GetCurrentScenePath().CStr()),
             std::filesystem::path(lEntryAbs.CStr()),
@@ -38,7 +38,7 @@ namespace Opaax::Editor
     // =============================================================================
     void AssetBrowserPanel::Startup()
     {
-        m_ManifestAbsPath = OpaaxPath::Resolve("GameAssets/AssetManifest.json");
+        m_ManifestAbsPath = OpaaxPath::ToAbsolute("Game/Assets/AssetManifest.json");
         RunScan();
     }
 
@@ -50,15 +50,15 @@ namespace Opaax::Editor
         struct ScanTarget { const char* RootDir; const char* ManifestRelPath; };
         static constexpr ScanTarget k_ScanTargets[] =
         {
-            { "GameAssets",   "GameAssets/AssetManifest.json"   },
-            { "EngineAssets", "EngineAssets/AssetManifest.json" },
+            { "Game/Assets",   "Game/Assets/AssetManifest.json"   },
+            { "Engine/Assets", "Engine/Assets/AssetManifest.json" },
         };
 
         for (const auto& lTarget : k_ScanTargets)
         {
             AssetScanner::ScanConfig lConfig;
             lConfig.RootDir         = lTarget.RootDir;
-            lConfig.ManifestAbsPath = OpaaxPath::Resolve(lTarget.ManifestRelPath);
+            lConfig.ManifestAbsPath = OpaaxPath::ToAbsolute(lTarget.ManifestRelPath);
             lConfig.bFlagMissing    = true;
 
             m_LastScanResult = AssetScanner::Scan(lConfig);
@@ -83,6 +83,17 @@ namespace Opaax::Editor
         ImGui::Separator();
         DrawAssetList(InSceneManager);
         ImGui::End();
+
+        // Deferred manifest mutation — safe to mutate s_Descriptors here, after iteration ended.
+        if (m_PendingRemoveID.IsValid())
+        {
+            const OpaaxStringID lID = m_PendingRemoveID;
+            m_PendingRemoveID = OpaaxStringID{};
+
+            if (AssetRegistry::IsLoaded(lID)) { AssetRegistry::Unload(lID); }
+            AssetManifest::Remove(lID);
+            RunScan(); // persists the now-shorter manifest via SaveManifest's prefix filter
+        }
     }
 
     // =============================================================================
@@ -283,19 +294,27 @@ namespace Opaax::Editor
                 if (ImGui::MenuItem("Unload")) { AssetRegistry::Unload(InDesc.ID); }
             }
 
+            if (bMissing)
+            {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 0.4f, 0.4f, 1.f));
+                if (ImGui::MenuItem("Remove from manifest"))
+                {
+                    m_PendingRemoveID = InDesc.ID;
+                }
+                ImGui::PopStyleColor();
+            }
+
             ImGui::Separator();
             ImGui::TextDisabled("%s", InDesc.RelPath.CStr());
             ImGui::EndPopup();
         }
 
-        // --- Double-click ---
+        // --- Double-click: invoke the type's primary action via IAssetTypeActions ---
         if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0))
         {
-            if (InDesc.Type == OpaaxStringID("Scene"))
+            if (IAssetTypeActions* lActions = AssetTypeRegistry::Find(InDesc.Type))
             {
-                // FIXME: M_Scene — connect SceneManager::LoadFromFile when Scene becomes a first-class asset
-                OPAAX_CORE_WARN("AssetBrowserPanel: Scene loading not yet implemented. File: '{}'",
-                    InDesc.RelPath);
+                lActions->Load(InDesc.ID);
             }
         }
     }

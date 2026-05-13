@@ -2,6 +2,7 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
+#include "Core/OpaaxStringID.hpp"
 #include "Core/Log/OpaaxLog.h"
 
 namespace Opaax
@@ -12,7 +13,7 @@ namespace Opaax
      * Each asset type (Texture, Audio, Animation...) has its own loader.
      *
      * Load() return a raw ptr — AssetRegistry take ownership
-     * 
+     *
      * @tparam T Asset type
      */
     template<typename T>
@@ -29,10 +30,13 @@ namespace Opaax
         // =============================================================================
 
         /**
-         * @param InAbsPath Load an asset from an absolute path.
+         * Construct an asset from disk.
+         * @param InAbsPath     Resolved absolute path (the loader actually reads from this).
+         * @param InCanonicalID Registry-stable ID stamped onto the asset so
+         *                      asset->GetAssetID() == handle.GetID() == registry cache key.
          * @return nullptr on failure — never throws
          */
-        virtual T* Load(const char* InAbsPath) = 0;
+        virtual T* Load(const char* InAbsPath, OpaaxStringID InCanonicalID) = 0;
 
         /**
          * @param InAsset true if the loaded asset is valid and ready to use.

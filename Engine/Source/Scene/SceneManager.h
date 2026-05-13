@@ -55,77 +55,27 @@ namespace Opaax
 
         //------------------------------------------------------------------------------
         // API
-        void Push(UniquePtr<Scene> InScene)
-        {
-            OPAAX_CORE_ASSERT(InScene != nullptr)
-
-            if (!m_Stack.empty())
-            {
-                m_Stack.back()->OnExit();
-                OPAAX_CORE_TRACE("SceneManager::Push — '{}' exited.", m_Stack.back()->GetName());
-            }
-
-            OPAAX_CORE_TRACE("SceneManager::Push — loading '{}'.", InScene->GetName());
-            InScene->OnLoad();
-            InScene->OnEnter();
-
-            m_Stack.push_back(std::move(InScene));
-        }
-
-        void Pop()
-        {
-            if (m_Stack.empty())
-            {
-                OPAAX_CORE_WARN("SceneManager::Pop — stack is empty, ignored.");
-                return;
-            }
-
-            OPAAX_CORE_TRACE("SceneManager::Pop — unloading '{}'.", m_Stack.back()->GetName());
-            m_Stack.back()->OnExit();
-            m_Stack.back()->OnUnload();
-            m_Stack.pop_back();
-
-            if (!m_Stack.empty())
-            {
-                OPAAX_CORE_TRACE("SceneManager::Pop — '{}' entered.", m_Stack.back()->GetName());
-                m_Stack.back()->OnEnter();
-            }
-        }
-
-        void Replace(UniquePtr<Scene> InScene)
-        {
-            OPAAX_CORE_ASSERT(InScene != nullptr)
-
-            if (!m_Stack.empty())
-            {
-                OPAAX_CORE_TRACE("SceneManager::Replace — unloading '{}'.", m_Stack.back()->GetName());
-                m_Stack.back()->OnExit();
-                m_Stack.back()->OnUnload();
-                m_Stack.pop_back();
-            }
-
-            OPAAX_CORE_TRACE("SceneManager::Replace — loading '{}'.", InScene->GetName());
-            InScene->OnLoad();
-            InScene->OnEnter();
-
-            m_Stack.push_back(std::move(InScene));
-        }
-
-        void SaveCurrentSave()
-        {
-            OPAAX_CORE_ASSERT(GetActiveScene() != nullptr)
-            GetActiveScene()->SaveScene();
-        }
+        void Push(UniquePtr<Scene> InScene);
+        void Pop();
+        void Replace(UniquePtr<Scene> InScene);
+        void SaveCurrentSave();
 
         //------------------------------------------------------------------------------
         // Editor scene file API
         //
         // Save / Open route through SceneSerializer and operate on the active scene
         // (no Replace) so a derived Scene type pushed by the game is preserved.
+        //
+        // LoadScene(InID) is the high-level orchestrator: it owns the
+        // AssetRegistry-membership invariant for scenes (only one SceneAsset is
+        // live at a time), resolves the path through the manifest, swaps the
+        // world, and updates current-scene tracking. Editor entry points
+        // (asset-browser double-click, SceneTypeActions) route through this.
 
         bool Save();
         bool SaveAs(const char* InPath);
         bool Open(const char* InPath);
+        bool LoadScene(OpaaxStringID InAssetID);
         void NewScene();
 
         //------------------------------------------------------------------------------
@@ -144,8 +94,9 @@ namespace Opaax
         FORCEINLINE bool   IsEmpty()       const noexcept { return m_Stack.empty(); }
         FORCEINLINE Uint32 GetStackDepth() const noexcept { return static_cast<Uint32>(m_Stack.size()); }
 
-        FORCEINLINE const OpaaxString& GetCurrentScenePath() const noexcept { return m_CurrentScenePath; }
-        FORCEINLINE bool               HasCurrentScenePath() const noexcept { return !m_CurrentScenePath.IsEmpty(); }
+        FORCEINLINE const OpaaxString& GetCurrentScenePath()    const noexcept { return m_CurrentScenePath; }
+        FORCEINLINE bool               HasCurrentScenePath()    const noexcept { return !m_CurrentScenePath.IsEmpty(); }
+        FORCEINLINE OpaaxStringID      GetCurrentSceneAssetID() const noexcept { return m_CurrentSceneAssetID; }
 
         // =============================================================================
         // Override
@@ -158,18 +109,7 @@ namespace Opaax
             return true;
         }
 
-        void Shutdown() override
-        {
-            OPAAX_CORE_INFO("SceneManager::Shutdown() — clearing {} scene(s).", m_Stack.size());
-
-            // Unload in reverse order — top scene first.
-            while (!m_Stack.empty())
-            {
-                m_Stack.back()->OnExit();
-                m_Stack.back()->OnUnload();
-                m_Stack.pop_back();
-            }
-        }
+        void Shutdown() override;
 
         void Update(double DeltaTime) override
         {
@@ -206,8 +146,16 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
+        // Helpers
+        // After OnLoad, copy the scene's GetSourcePath() into m_CurrentScenePath and
+        // reverse-lookup the manifest to register the matching SceneAsset. Lets a
+        // scene that boots itself from a hardcoded path (e.g. GameScene) propagate
+        // its state into the manager without a back-pointer.
+        void SyncCurrentSceneFromActive();
+
         TDynArray<UniquePtr<Scene>> m_Stack;
         OpaaxString                 m_CurrentScenePath;
+        OpaaxStringID               m_CurrentSceneAssetID;
     };
 
 } // namespace Opaax

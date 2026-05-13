@@ -1,11 +1,11 @@
 #pragma once
 
 #include "Core/EngineAPI.h"
+#include "Core/OpaaxHash.h"
+#include "Core/OpaaxString.hpp"
 #include "Core/OpaaxTypes.h"
- 
+
 #include <glm/glm.hpp>
-#include <unordered_map>
-#include <string>
 
 #include "Core/OpaaxMathTypes.h"
 
@@ -66,9 +66,10 @@ namespace Opaax
         // =============================================================================
     private:
         Uint32 m_RendererID = 0;
- 
-        // std::unordered_map with std::string keys — uniform lookup is not
-        //   on the per-vertex hot path, only per draw call (batch flush). Acceptable.
-        UnorderedMap<std::string, Int32> m_UniformLocationCache;
+
+        // OpaaxString keys + OpaaxHash — uniform lookup is not on the per-vertex
+        //   hot path, only per draw call (batch flush). Per-call temporary
+        //   OpaaxString construction from const char* is acceptable.
+        UnorderedMap<OpaaxString, Int32, OpaaxHash> m_UniformLocationCache;
     };
 }

@@ -79,7 +79,7 @@ namespace Opaax
     {
         ScanResult lResult;
 
-        const OpaaxString lAbsRoot = OpaaxPath::Resolve(InConfig.RootDir);
+        const OpaaxString lAbsRoot = OpaaxPath::ToAbsolute(InConfig.RootDir);
         const std::filesystem::path lRootPath(lAbsRoot.CStr());
 
         if (!std::filesystem::exists(lRootPath))
@@ -111,10 +111,10 @@ namespace Opaax
             const OpaaxString lID = GenerateID(lFilePath, lRootPath);
             const OpaaxStringID lStringID(lID);
 
-            // Generate relative path (relative to base path, not root)
+            // Generate relative path (project-root-relative — not relative to scan root)
             const std::string lAbsFileStr = lFilePath.generic_string();
             const OpaaxString lRelPath =
-                OpaaxPath::MakeRelative(OpaaxString(lAbsFileStr.c_str()));
+                OpaaxPath::ToProjectRelative(OpaaxString(lAbsFileStr.c_str()));
 
             // --- Merge logic ---
             if (AssetManifest::Contains(lStringID))
@@ -143,7 +143,7 @@ namespace Opaax
         {
             for (const auto& [lKey, lDesc] : AssetManifest::GetAll())
             {
-                const OpaaxString lAbsPath = OpaaxPath::Resolve(lDesc.RelPath);
+                const OpaaxString lAbsPath = OpaaxPath::ToAbsolute(lDesc.RelPath);
                 if (!std::filesystem::exists(lAbsPath.CStr()))
                 {
                     AssetManifest::SetMissing(lDesc.ID, true);
@@ -159,7 +159,9 @@ namespace Opaax
         }
 
         // --- Save updated manifest ---
-        SaveManifest(InConfig.ManifestAbsPath);
+        // NOTE: AssetManifest::s_Descriptors is a single global pool shared across every
+        // manifest file. Filter by the scan root so each on-disk file only owns its own subset.
+        SaveManifest(InConfig.ManifestAbsPath, InConfig.RootDir);
 
         OPAAX_CORE_INFO("AssetScanner: done — added={} existing={} missing={} skipped={}",
             lResult.Added, lResult.Existing, lResult.Missing, lResult.Skipped);
@@ -170,13 +172,18 @@ namespace Opaax
     // =============================================================================
     // Save
     // =============================================================================
-    bool AssetScanner::SaveManifest(const OpaaxString& InAbsPath) noexcept
+    bool AssetScanner::SaveManifest(const OpaaxString& InAbsPath, const OpaaxString& InRootPrefix) noexcept
     {
         nlohmann::json lRoot;
         lRoot["assets"] = nlohmann::json::array();
 
+        const std::string_view lPrefix(InRootPrefix.CStr(), InRootPrefix.GetLength());
+
         for (const auto& [lKey, lDesc] : AssetManifest::GetAll())
         {
+            const std::string_view lRel(lDesc.RelPath.CStr(), lDesc.RelPath.GetLength());
+            if (!lRel.starts_with(lPrefix)) { continue; }
+
             nlohmann::json lEntry;
             lEntry["id"]   = lDesc.ID.ToString().CStr();
             lEntry["path"] = lDesc.RelPath.CStr();

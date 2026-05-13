@@ -1,3 +1,14 @@
 {
-    "assets": []
+    "assets": [
+        {
+            "id": "Textures/Player",
+            "path": "Engine/Assets/Textures/Player.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/PlayerSheet",
+            "path": "Engine/Assets/Textures/PlayerSheet.png",
+            "type": "Texture2D"
+        }
+    ]
 }

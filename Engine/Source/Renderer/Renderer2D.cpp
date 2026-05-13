@@ -2,13 +2,12 @@
 #include "RHI/RenderCommand.h"
 #include "RHI/OpenGL/OpenGLBuffer.h"
 #include "RHI/OpenGL/OpenGLVertexArray.h"
-#include "RHI/OpenGL/OpenGLShader.h"
-#include "RHI/OpenGL/OpenGLTexture2D.h"
+#include "Renderer/ShaderAsset.h"
+#include "Renderer/Texture2D.h"
 #include "Core/Log/OpaaxLog.h"
 #include "Core/EngineAPI.h"
  
 #include <glm/gtc/matrix_transform.hpp>
-#include <array>
 #include <cmath>
  
 namespace Opaax
@@ -39,16 +38,16 @@ namespace Opaax
     {
         UniquePtr<IVertexArray>  QuadVAO;
         IVertexBuffer*           QuadVBO      = nullptr;  // non-owning, owned by VAO
-        UniquePtr<OpenGLShader>  QuadShader;
-        UniquePtr<OpenGLTexture2D> WhiteTexture;
+        UniquePtr<ShaderAsset>   QuadShader;
+        UniquePtr<Texture2D>     WhiteTexture;
  
         // CPU-side vertex buffer — filled each frame, uploaded on flush
-        std::array<QuadVertex, MAX_VERTICES> VertexBuffer;
-        QuadVertex*                          VertexBufferPtr = nullptr;  // write cursor
-        Uint32                               QuadCount       = 0;
- 
+        TFixedArray<QuadVertex, MAX_VERTICES> VertexBuffer;
+        QuadVertex*                           VertexBufferPtr = nullptr;  // write cursor
+        Uint32                                QuadCount       = 0;
+
         // Texture slot tracking
-        std::array<OpenGLTexture2D*, MAX_TEXTURE_SLOTS> TextureSlots;
+        TFixedArray<Texture2D*, MAX_TEXTURE_SLOTS> TextureSlots;
         Uint32                                          TextureSlotIndex = 1; // slot 0 = white
  
         glm::mat4 ViewProjection = glm::mat4(1.f);
@@ -122,10 +121,10 @@ namespace Opaax
  
         // Store raw ptr before ownership transfer — needed for SetData on flush
         s_Data.QuadVBO = lVBO.get();
-        s_Data.QuadVAO->AddVertexBuffer(std::move(lVBO));
- 
+        s_Data.QuadVAO->AddVertexBuffer(Move(lVBO));
+
         // --- Static index buffer — indices never change for quads ---
-        std::array<Uint32, MAX_INDICES> lIndices;
+        TFixedArray<Uint32, MAX_INDICES> lIndices;
         Uint32 lOffset = 0;
         for (Uint32 i = 0; i < MAX_INDICES; i += 6)
         {
@@ -142,11 +141,11 @@ namespace Opaax
             IIndexBuffer::Create(lIndices.data(), MAX_INDICES));
  
         // --- White 1x1 texture for solid colour quads ---
-        s_Data.WhiteTexture  = MakeUnique<OpenGLTexture2D>(1, 1);
+        s_Data.WhiteTexture  = MakeUnique<Texture2D>(1u, 1u);
         s_Data.TextureSlots[0] = s_Data.WhiteTexture.get();
  
         // --- Shader ---
-        s_Data.QuadShader = MakeUnique<OpenGLShader>(s_VertexShaderSrc, s_FragmentShaderSrc);
+        s_Data.QuadShader = MakeUnique<ShaderAsset>(s_VertexShaderSrc, s_FragmentShaderSrc);
         s_Data.QuadShader->Bind();
  
         // Bind sampler uniforms once — slots don't change
@@ -217,7 +216,7 @@ namespace Opaax
     // If the texture is not already in a slot, assigns the next free one.
     // If all slots are full, flushes first to start a new batch.
     // =============================================================================
-    float Renderer2D::GetTextureSlot(OpenGLTexture2D& InTexture)
+    float Renderer2D::GetTextureSlot(Texture2D& InTexture)
     {
         // Search existing slots
         for (Uint32 i = 1; i < s_Data.TextureSlotIndex; ++i)
@@ -337,7 +336,7 @@ namespace Opaax
 
     void Renderer2D::DrawSprite(const Vector2F& InPosition,
                                 const Vector2F& InSize,
-                                OpenGLTexture2D& InTexture,
+                                Texture2D&      InTexture,
                                 const Vector4F& InColor,
                                 float           InRotationRad)
     {
@@ -346,12 +345,12 @@ namespace Opaax
     }
 
     void Renderer2D::DrawSprite(const Vector2F& InPosition,
-                                 const Vector2F& InSize,
-                                 OpenGLTexture2D& InTexture,
-                                 const Vector2F& InUVMin,
-                                 const Vector2F& InUVMax,
-                                 const Vector4F& InColor,
-                                 float           InRotationRad)
+                                const Vector2F& InSize,
+                                Texture2D&      InTexture,
+                                const Vector2F& InUVMin,
+                                const Vector2F& InUVMax,
+                                const Vector4F& InColor,
+                                float           InRotationRad)
     {
         if (s_Data.QuadCount >= MAX_QUADS)
         {

@@ -10,16 +10,25 @@
 #include "OpaaxString.hpp"
 #include "OpaaxStringID.hpp"
 #include "Assets/AssetRegistry.h"
+#include "Assets/Loader/SceneLoader.h"
 #include "Assets/Loader/TextureLoader.h"
+#include "Scene/SceneAsset.h"
 #include "Config/EngineConfig.h"
 #include "Editor/EditorSubsystem.h"
 #include "Event/OpaaxEventDispatcher.hpp"
 #include "Input/InputSubsystem.h"
 #include "Log/OpaaxLog.h"
+#include "Container/TPolymorphicList.hpp"
 #include "Renderer/Camera2D.h"
+#include "Renderer/Renderer2D.h"
 #include "Renderer/RenderSubsystem.h"
+#include "Renderer/Systems/WorldRenderSystem.h"
+#include "RHI/RenderCommand.h"
+#include "Scene/Scene.h"
 #include "Scene/SceneManager.h"
 #include "Systems/EngineSubsystem.h"
+#include "World/IWorldSystem.h"
+#include "World/RenderContext.h"
 
 #if OPAAX_WITH_EDITOR
 #include "Editor/EditorSubsystem.h"
@@ -33,7 +42,7 @@ CoreEngineApp::CoreEngineApp()
     OpaaxLog::Init();
     OpaaxPath::Init();
 
-    EngineConfig::Load(OpaaxPath::Resolve("engine.config.json"));
+    EngineConfig::Load(OpaaxPath::ToAbsolute("engine.config.json"));
 
     OPAAX_CORE_TRACE("CoreEngineApp created");
 
@@ -137,19 +146,20 @@ void CoreEngineApp::Initialize()
     // Load engine assets
     OPAAX_CORE_TRACE("Loading engine assets...");
 
-    AssetLoaderRegistry::Register<OpenGLTexture2D>(MakeUnique<TextureLoader>());
+    AssetLoaderRegistry::Register<Texture2D>(MakeUnique<TextureLoader>());
+    AssetLoaderRegistry::Register<SceneAsset>(MakeUnique<SceneLoader>());
 
     const OpaaxString lEngineManifest =
-        OpaaxPath::Resolve(EngineConfig::EngineManifestRelPath());
+        OpaaxPath::ToAbsolute(EngineConfig::EngineManifestRelPath());
     const OpaaxString lGameManifest =
-        OpaaxPath::Resolve(EngineConfig::GameManifestRelPath());
+        OpaaxPath::ToAbsolute(EngineConfig::GameManifestRelPath());
 
     AssetManifest::LoadFile(lEngineManifest);
     AssetManifest::LoadFile(lGameManifest);
     
     m_EngineSubsystemManager.RegisterSubsystem<RenderSubsystem>(this);
     m_EngineSubsystemManager.RegisterSubsystem<Camera2D>(this);
-    
+
     m_EngineSubsystemManager.RegisterSubsystem<InputSubsystem>(this);
 
     m_EngineSubsystemManager.RegisterSubsystem<SceneManager>(this);
@@ -157,10 +167,14 @@ void CoreEngineApp::Initialize()
 #if OPAAX_WITH_EDITOR
     m_EngineSubsystemManager.RegisterSubsystem<EditorSubsystem>(this);
 #endif
-    
+
+    // Default world-render system. Games append more in OnInitialize (called right after);
+    // dispatch order = registration order.
+    TPolymorphicList<IWorldSystem>::Register(MakeUnique<WorldRenderSystem>());
+
     // Call derived class initialization
     OnInitialize();
-    
+
     bIsRunning = true;
 }
 
@@ -253,12 +267,15 @@ void CoreEngineApp::Run()
         }
 
         // ----------------------------------------------------------------
-        // 2.3 Render — interpolated between last and next physics step
+        // 2.3 Render — interpolated between last and next physics step.
+        //   Order matters: engine OnRender writes the world to the bound render target
+        //   (backbuffer in release, ViewportPanel FBO in editor). RenderAll runs after
+        //   so editor/overlay subsystems sample the fresh target this frame, not last.
         // ----------------------------------------------------------------
         const double lAlpha = lAccumulator / FIXED_DELTA_TIME;
- 
-        m_EngineSubsystemManager.RenderAll(lAlpha);
+
         OnRender(lAlpha);
+        m_EngineSubsystemManager.RenderAll(lAlpha);
         
         // ----------------------------------------------------------------
         // 3. Swap AFTER render, always last
@@ -284,11 +301,34 @@ void CoreEngineApp::Shutdown()
     OpaaxLog::Shutdown();
 }
 
+void CoreEngineApp::OnRender(double AlphaPhysicStep)
+{
+    IRenderTarget& lTarget = GetRenderTarget();
+    lTarget.Bind();
+
+    RenderCommand::SetClearColor(0.1f, 0.1f, 0.1f, 1.f);
+    RenderCommand::Clear();
+
+    auto* lCamera = GetSubsystem<Camera2D>();
+    Renderer2D::Begin(*lCamera);
+
+    if (GetSceneManager()->GetActiveScene())
+    {
+        World& lWorld = GetWorld();
+        const RenderContext lCtx{ *lCamera, AlphaPhysicStep };
+        for (const auto& lSystem : TPolymorphicList<IWorldSystem>::GetAll())
+        {
+            lSystem->OnRender(lWorld, lCtx);
+        }
+    }
+
+    Renderer2D::End();
+    lTarget.Unbind();
+}
+
 World& CoreEngineApp::GetWorld() noexcept
 {
-    auto* lSceneMgr = m_EngineSubsystemManager.GetSubsystem<SceneManager>();
-    OPAAX_CORE_ASSERT(lSceneMgr && lSceneMgr->GetActiveScene())
-    return lSceneMgr->GetActiveScene()->GetWorld();
+    return m_World;
 }
 
 Opaax::SceneManager* CoreEngineApp::GetSceneManager() noexcept

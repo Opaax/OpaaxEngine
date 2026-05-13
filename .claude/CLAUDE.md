@@ -53,7 +53,7 @@
 
 # Milestone
 
-- **Create Milestone**: Use `milestone/Milestone_Template.md` as the template for every new milestone. Fill it out completely before starting work.
+- **Create Milestone**: Use `.claude/milestone/Milestone_Template.md` as the template for every new milestone. Fill it out completely before starting work.
 - **Update Local**: Keep `.claude/CLAUDE.local.md` updated with the current active milestone name and its objective. This is the single source of truth for "what are we building right now."
 - **Finishing Milestone**: A milestone is complete only when all its systems work end-to-end AND the user explicitly decides to move on. Do not self-close a milestone.
 - **Scope Guard**: If the user asks for something that falls outside the current milestone's scope, pause and ask: "This looks outside the current milestone — should we add it to the backlog, open a new milestone, or proceed anyway?"

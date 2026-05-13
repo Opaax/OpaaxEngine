@@ -19,6 +19,7 @@
 #include "RHI/RenderCommand.h"
 
 #include "Editor/Assets/AssetTypeRegistry.h"
+#include "Editor/Assets/Types/SceneTypeActions.h"
 #include "Editor/Assets/Types/Texture2DTypeActions.h"
 #include "Editor/Inspector/ComponentDrawerRegistry.h"
 #include "Editor/Inspector/Drawers/TagDrawer.h"
@@ -81,6 +82,7 @@ namespace Opaax
     void EditorSubsystem::RegisterAssetTypeActions()
     {
         Editor::AssetTypeRegistry::Register(MakeUnique<Editor::Texture2DTypeActions>());
+        Editor::AssetTypeRegistry::Register(MakeUnique<Editor::SceneTypeActions>(GetEngineApp()));
 
         OPAAX_CORE_TRACE("EditorSubsystem: asset type actions registered.");
     }
@@ -143,6 +145,12 @@ namespace Opaax
 
     void EditorSubsystem::BeginFrame()
     {
+        // Engine's OnRender clears the ViewportPanel FBO; ImGui draws to the default framebuffer,
+        // which would otherwise accumulate stale pixels behind any moving panel (PassthruCentralNode
+        // + NoBackground dockspace leak last frame's content through every gap).
+        RenderCommand::SetClearColor(0.1f, 0.1f, 0.1f, 1.f);
+        RenderCommand::Clear();
+
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
@@ -181,13 +189,12 @@ namespace Opaax
             ? GetEngineApp()->GetSubsystem<SceneManager>()
             : nullptr;
 
-        World* lWorld = (lSceneMgr && lSceneMgr->GetActiveScene())
-            ? &lSceneMgr->GetActiveScene()->GetWorld()
-            : nullptr;
+        Scene* lActiveScene = lSceneMgr ? lSceneMgr->GetActiveScene() : nullptr;
+        World* lWorld       = lActiveScene ? &GetEngineApp()->GetWorld() : nullptr;
 
         m_MainMenuBar.Draw(*this);
 
-        if (m_bShowHierarchy)    m_HierarchyPanel.Draw(lSceneMgr);
+        if (m_bShowHierarchy)    m_HierarchyPanel.Draw(lActiveScene, lWorld);
         if (m_bShowInspector)    m_InspectorPanel.Draw(lWorld, m_HierarchyPanel.GetSelectedEntity());
         if (m_bShowViewport)     m_ViewportPanel.Draw(m_EditorState);
         if (m_bShowAssetBrowser) m_AssetBrowserPanel.Draw(lSceneMgr);
@@ -231,11 +238,11 @@ namespace Opaax
             return;
         }
 
-        const OpaaxString lTempPath = OpaaxPath::Resolve(PIE_TEMP_SCENE_PATH);
+        const OpaaxString lTempPath = OpaaxPath::ToAbsolute(PIE_TEMP_SCENE_PATH);
         std::filesystem::create_directories(
             std::filesystem::path(lTempPath.CStr()).parent_path());
 
-        SceneSerializer::Serialize(*lSceneMgr->GetActiveScene(), lTempPath.CStr());
+        SceneSerializer::Serialize(*lSceneMgr->GetActiveScene(), lTempPath.CStr(), GetEngineApp()->GetWorld());
 
         SetEditorState(Editor::EEditorState::Playing);
     }
@@ -272,7 +279,7 @@ namespace Opaax
             return;
         }
 
-        const OpaaxString lTempPath = OpaaxPath::Resolve(PIE_TEMP_SCENE_PATH);
+        const OpaaxString lTempPath = OpaaxPath::ToAbsolute(PIE_TEMP_SCENE_PATH);
         if (!std::filesystem::exists(lTempPath.CStr()))
         {
             OPAAX_CORE_WARN("EditorSubsystem::ExitPlayMode — no temp snapshot found at {}",
@@ -282,8 +289,12 @@ namespace Opaax
         }
 
         Scene* lScene = lSceneMgr->GetActiveScene();
-        lScene->GetWorld().Clear();
-        SceneSerializer::Deserialize(*lScene, lTempPath.CStr());
+        World& lWorld = GetEngineApp()->GetWorld();
+        // Scene stayed on the stack through PIE — its SceneID is unchanged, and
+        // World::m_ActiveSceneID already matches. Wipe only this scene's entities
+        // so any persistents survive the round-trip.
+        lWorld.DestroyEntitiesWithSceneID(lScene->GetSceneID());
+        SceneSerializer::Deserialize(*lScene, lTempPath.CStr(), lWorld);
 
         SetEditorState(Editor::EEditorState::Editing);
     }

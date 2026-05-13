@@ -1,24 +1,13 @@
 ﻿#include "SpriteComponent.h"
 
 #include "Assets/AssetRegistry.h"
+#include "Renderer/Texture2D.h"
 
 Opaax::ECS::json Opaax::ECS::SpriteComponent::Serialize() const
 {
-    OpaaxString lSerializedRef;
-
-    if (Texture.IsValid())
-    {
-        // Texture handles always carry the resolved absolute path as their ID
-        // (AssetRegistry::Load keys on the absolute path). Convert to the
-        // relative form the manifest stores and reverse-look up to get the
-        // logical ID. Falls back to the relative path when the manifest has
-        // not been populated (no editor scan yet, or runtime build).
-        const OpaaxString lAbsPath = Texture.GetID().ToString();
-        const OpaaxString lRelPath = OpaaxPath::MakeRelative(lAbsPath);
-
-        const AssetDescriptor* lDesc = AssetManifest::FindByPath(lRelPath);
-        lSerializedRef = lDesc ? lDesc->ID.ToString() : lRelPath;
-    }
+    const OpaaxString lSerializedRef = Texture.IsValid()
+                                     ? Texture.GetID().ToString()
+                                     : OpaaxString();
 
     return {
             { "texture", lSerializedRef.CStr() },
@@ -38,7 +27,7 @@ void Opaax::ECS::SpriteComponent::DeserializeImplementation(const json& Json)
     const OpaaxString lRef = Json["texture"].get<std::string>().c_str();
     if (!lRef.IsEmpty())
     {
-        Texture = AssetRegistry::Load<OpenGLTexture2D>(OpaaxStringID(lRef));
+        Texture = AssetRegistry::Load<Texture2D>(OpaaxStringID(lRef));
     }
 
     // Backward compat: pre-M3 scenes don't carry "size" — default to (1,1) so

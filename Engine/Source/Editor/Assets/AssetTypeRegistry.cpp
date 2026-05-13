@@ -4,23 +4,9 @@
 
 namespace Opaax::Editor
 {
-    namespace
-    {
-        TDynArray<UniquePtr<IAssetTypeActions>>& GetRegistry()
-        {
-            static TDynArray<UniquePtr<IAssetTypeActions>> s_Actions;
-            return s_Actions;
-        }
-    }
-
-    void AssetTypeRegistry::Register(UniquePtr<IAssetTypeActions> InActions)
-    {
-        GetRegistry().push_back(Move(InActions));
-    }
-
     IAssetTypeActions* AssetTypeRegistry::Find(OpaaxStringID InTypeID)
     {
-        for (auto& lAction : GetRegistry())
+        for (auto& lAction : GetStorage())
         {
             if (lAction->GetTypeID() == InTypeID)
             {
@@ -34,16 +20,6 @@ namespace Opaax::Editor
     {
         const IAssetTypeActions* lAction = Find(InTypeID);
         return lAction ? lAction->GetIcon() : "[ ? ]";
-    }
-
-    const TDynArray<UniquePtr<IAssetTypeActions>>& AssetTypeRegistry::GetAll()
-    {
-        return GetRegistry();
-    }
-
-    void AssetTypeRegistry::Clear()
-    {
-        GetRegistry().clear();
     }
 
 } // namespace Opaax::Editor

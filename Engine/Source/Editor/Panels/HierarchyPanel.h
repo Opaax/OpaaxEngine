@@ -4,7 +4,7 @@
 #if OPAAX_WITH_EDITOR
 
 #include "Core/EngineAPI.h"
-#include "Core/World/World.h"
+#include "World/World.h"
 #include "Editor/IEditorPanel.h"
 
 namespace Opaax::Editor
@@ -14,8 +14,10 @@ namespace Opaax::Editor
      * Displays all entities in the active scene.
      * Owns the "selected entity" state — other panels read from it via GetSelectedEntity().
      *
-     * NOTE: Draw(SceneManager*) is the primary entry point; it is called directly
+     * NOTE: Draw(Scene*, World*) is the primary entry point; it is called directly
      * by EditorSubsystem rather than through the IEditorPanel::Draw() interface.
+     * Caller supplies the active scene (for name + null-state) and the engine's
+     * shared World (entity source).
      */
     class HierarchyPanel : public IEditorPanel
     {
@@ -31,10 +33,11 @@ namespace Opaax::Editor
         // =============================================================================
     public:
         /**
-         * API call by EditorSubsystem
-         * @param InSceneManager 
+         * API call by EditorSubsystem.
+         * @param InActiveScene active scene (null → render placeholder).
+         * @param InWorld       engine-shared World (must be non-null when InActiveScene is non-null).
          */
-        void Draw(SceneManager* InSceneManager);
+        void Draw(Scene* InActiveScene, World* InWorld);
 
         //------------------------------------------------------------------------------
         // Get - Set

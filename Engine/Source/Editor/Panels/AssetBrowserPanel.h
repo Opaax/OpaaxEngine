@@ -72,6 +72,10 @@ namespace Opaax::Editor
         bool                     m_bScanned = false;
         OpaaxStringID            m_HoveredID;
         OpaaxString              m_ManifestAbsPath;
+
+        // Set inside DrawAssetEntry's context menu; processed once after the iteration
+        // ends, so we never mutate AssetManifest::s_Descriptors while iterating it.
+        OpaaxStringID            m_PendingRemoveID;
     };
 
 } // namespace Opaax::Editor

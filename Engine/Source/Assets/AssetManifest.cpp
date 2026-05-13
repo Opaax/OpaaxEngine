@@ -150,6 +150,16 @@ namespace Opaax
         s_Descriptors.emplace(lKey, std::move(InDesc));
     }
     
+    bool AssetManifest::Remove(OpaaxStringID InID) noexcept
+    {
+        auto lIt = s_Descriptors.find(InID.GetId());
+        if (lIt == s_Descriptors.end()) { return false; }
+
+        s_Descriptors.erase(lIt);
+        OPAAX_CORE_INFO("AssetManifest: removed '{}'", InID);
+        return true;
+    }
+
     void AssetManifest::SetMissing(OpaaxStringID InID, bool bIsMissing) noexcept
     {
         auto lIt = s_Descriptors.find(InID.GetId());

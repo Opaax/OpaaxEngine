@@ -39,7 +39,7 @@ namespace Opaax::Editor
     {
         const OpaaxString& lLast = Owner.GetLastDialogDir();
         OpaaxString lDir = lLast.IsEmpty()
-            ? OpaaxPath::ResolveFromProject(EngineConfig::EditorDefaultScenePath())
+            ? OpaaxPath::ToAbsolute(EngineConfig::EditorDefaultScenePath())
             : lLast;
 
         // Ensure the dir exists so tinyfiledialogs has something to open.
