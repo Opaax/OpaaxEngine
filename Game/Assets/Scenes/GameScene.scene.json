@@ -38,7 +38,7 @@
                     "z_order": 0.0
                 }
             },
-            "uuid": "8960042263973361396"
+            "uuid": "7898491281392341776"
         },
         {
             "Tag": "Player",
@@ -51,8 +51,8 @@
                         1.0
                     ],
                     "size": [
-                        64.0,
-                        64.0
+                        1.0,
+                        1.0
                     ],
                     "texture": "Textures/Player",
                     "uv_max": [
@@ -72,94 +72,13 @@
                     ],
                     "rotation": 0.0,
                     "scale": [
-                        1.0,
-                        1.0
-                    ],
-                    "z_order": 0.0
-                }
-            },
-            "uuid": "3460834403771200200"
-        },
-        {
-            "Tag": "NewPlayer",
-            "components": {
-                "SpriteComponent": {
-                    "color": [
-                        0.779411792755127,
-                        0.18721163272857666,
-                        0.18721163272857666,
-                        1.0
-                    ],
-                    "size": [
                         64.0,
                         64.0
                     ],
-                    "texture": "Textures/Player",
-                    "uv_max": [
-                        1.0,
-                        1.0
-                    ],
-                    "uv_min": [
-                        0.0,
-                        0.0
-                    ],
-                    "visible": true
-                },
-                "TransformComponent": {
-                    "position": [
-                        -76.0,
-                        0.0
-                    ],
-                    "rotation": 0.0,
-                    "scale": [
-                        1.0,
-                        1.0
-                    ],
                     "z_order": 0.0
                 }
             },
-            "uuid": "426649881159972088"
-        },
-        {
-            "Tag": "Child",
-            "components": {
-                "SpriteComponent": {
-                    "color": [
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0
-                    ],
-                    "size": [
-                        64.0,
-                        64.0
-                    ],
-                    "texture": "Textures/PlayerSheet",
-                    "uv_max": [
-                        0.23999999463558197,
-                        0.550000011920929
-                    ],
-                    "uv_min": [
-                        0.0,
-                        0.41999998688697815
-                    ],
-                    "visible": true
-                },
-                "TransformComponent": {
-                    "position": [
-                        -51.0,
-                        0.0
-                    ],
-                    "rotation": 0.0,
-                    "scale": [
-                        1.0,
-                        1.0
-                    ],
-                    "z_order": 0.0
-                }
-            },
-            "parent_uuid": "426649881159972088",
-            "uuid": "2556292608924513258"
+            "uuid": "13095491762482508207"
         }
     ],
     "scene": "GameScene",

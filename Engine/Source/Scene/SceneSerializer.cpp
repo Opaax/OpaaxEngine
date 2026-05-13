@@ -6,6 +6,7 @@
 #include "Assets/AssetRegistry.h"
 #include "Core/OpaaxPath.h"
 #include "ECS/Components/ParentComponent.h"
+#include "ECS/Components/SceneIDComponent.h"
 #include "ECS/Components/SpriteComponent.h"
 #include "ECS/Components/TagComponent.h"
 #include "ECS/Components/TransformComponent.h"
@@ -33,14 +34,15 @@ namespace Opaax
 
         const auto& lRegistry = InWorld.GetRegistry();
 
-
-        // Iterate all entities that have a TagComponent — every entity has one.
-        auto lView = lRegistry.view<const ECS::TagComponent>();
-
-        OPAAX_CORE_WARN("Number of entities in view: {}", std::distance(lView.begin(), lView.end()));
+        // Only entities owned by InScene get serialized. Persistent entities
+        // (SceneID == PersistentSceneID) are runtime-only and intentionally
+        // excluded — they belong to no on-disk scene.
+        const Uint32 lTargetSceneID = InScene.GetSceneID();
+        auto lView = lRegistry.view<const ECS::TagComponent, const ECS::SceneIDComponent>();
 
         for (auto lEntity : lView)
         {
+            if (lView.get<const ECS::SceneIDComponent>(lEntity).SceneID != lTargetSceneID) { continue; }
             OPAAX_ASSERT(lRegistry.valid(lEntity))
 
             const ECS::TagComponent* lTagComp = InWorld.GetComponent<ECS::TagComponent>(lEntity);

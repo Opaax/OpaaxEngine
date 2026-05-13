@@ -1,21 +1,33 @@
 {
     "entities": [
         {
-            "Tag": "NewEntity",
-            "components": {},
-            "uuid": "8098565647636872555"
-        },
-        {
-            "Tag": "NewEntity",
-            "components": {},
-            "uuid": "9088747929554024481"
-        },
-        {
-            "Tag": "NewEntity",
+            "Tag": "Player Child",
             "components": {
+                "SpriteComponent": {
+                    "color": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "size": [
+                        64.0,
+                        64.0
+                    ],
+                    "texture": "Textures/PlayerSheet",
+                    "uv_max": [
+                        0.23999999463558197,
+                        0.41999998688697815
+                    ],
+                    "uv_min": [
+                        0.0,
+                        0.18000000715255737
+                    ],
+                    "visible": true
+                },
                 "TransformComponent": {
                     "position": [
-                        39.0,
+                        114.0,
                         0.0
                     ],
                     "rotation": 0.0,
@@ -26,10 +38,11 @@
                     "z_order": 0.0
                 }
             },
-            "uuid": "12229625527022396256"
+            "parent_uuid": "523358429660596033",
+            "uuid": "7717689749394538529"
         },
         {
-            "Tag": "NewEntity",
+            "Tag": "Player",
             "components": {
                 "SpriteComponent": {
                     "color": [
@@ -40,7 +53,7 @@
                     ],
                     "size": [
                         145.0,
-                        164.0
+                        150.0
                     ],
                     "texture": "Textures/Player",
                     "uv_max": [
@@ -55,7 +68,7 @@
                 },
                 "TransformComponent": {
                     "position": [
-                        -70.0,
+                        0.0,
                         0.0
                     ],
                     "rotation": 0.0,
@@ -66,8 +79,7 @@
                     "z_order": 0.0
                 }
             },
-            "parent_uuid": "12229625527022396256",
-            "uuid": "16059157667679222196"
+            "uuid": "523358429660596033"
         }
     ],
     "scene": "GameScene",

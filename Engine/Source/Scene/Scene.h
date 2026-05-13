@@ -11,13 +11,16 @@ namespace Opaax
     /**
      * @class Scene
      *
-     * Owns a World. Represents one game scene (level, menu, cutscene, etc.)
+     * Serializable contributor of entities into the shared World owned by
+     * CoreEngineApp. Represents one game scene (level, menu, cutscene, etc.).
+     * Entities created during OnLoad are auto-tagged with this scene's runtime
+     * SceneID so they can be wiped together on OnUnload — see SceneIDComponent.
      *
      * Lifecycle:
-     *      OnLoad()   — called once when the scene is pushed onto the stack.
-     *      OnUnload() — called once when the scene is popped.
-     *      OnEnter()  — called every time the scene becomes the active scene.
-     *      OnExit()   — called every time another scene is pushed on top.
+     *      OnLoad(World&)   — called once when the scene is pushed onto the stack.
+     *      OnUnload(World&) — called once when the scene is popped.
+     *      OnEnter()        — called every time the scene becomes the active scene.
+     *      OnExit()         — called every time another scene is pushed on top.
      *
      * Scene does not tick itself — SceneManager drives the lifecycle.
      * Override OnLoad/OnUnload/OnEnter/OnExit in derived classes for game logic.
@@ -98,8 +101,6 @@ namespace Opaax
         // Get - Set
     public:
         FORCEINLINE const OpaaxString&  GetName()       const noexcept { return m_Name; }
-        FORCEINLINE World&              GetWorld()            noexcept { return m_World; }
-        FORCEINLINE const World&        GetWorld()      const noexcept { return m_World; }
 
         // Runtime SceneID — stamped by World::PushScene on push. 0 = unassigned /
         // persistent. Used to filter entities contributed by this scene in the
@@ -121,7 +122,6 @@ namespace Opaax
     private:
         OpaaxString m_Name;
         OpaaxString m_SourcePath;
-        World       m_World;
         Uint32      m_SceneID = 0;
     };
 
