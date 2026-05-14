@@ -5,7 +5,7 @@
 #include "Scene/SceneManager.h"
 #include "Core/OpaaxTypes.h"
 
-MyGame::MyGame():Opaax::CoreEngineApp()
+MyGame::MyGame(int InArgc, char** InArgv) : Opaax::CoreEngineApp(InArgc, InArgv)
 {
     OPAAX_TRACE("==================================");
     OPAAX_TRACE("Opaax Engine - Game Start");

@@ -1,13 +1,7 @@
 {
     "assets": {
         "engineManifest": "Engine/Assets/AssetManifest.json",
-        "engineRoot": "Engine/Assets",
-        "gameManifest": "Game/Assets/AssetManifest.json",
-        "gameRoot": "Game/Assets"
-    },
-    "defaultScene": "",
-    "editor": {
-        "defaultScenePath": "Game/Assets/Scenes"
+        "engineRoot": "Engine/Assets"
     },
     "log": {
         "level": "trace"

@@ -6,8 +6,8 @@
 class MyGame : public Opaax::CoreEngineApp
 {
 public:
-    MyGame();
-    
+    MyGame(int InArgc, char** InArgv);
+
 protected:
     void OnInitialize() override;
     void OnStartup() override;

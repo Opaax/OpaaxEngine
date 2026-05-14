@@ -1,5 +1,7 @@
 #include "CoreEngineApp.h"
 
+#include <cstring>
+#include <filesystem>
 #include <iostream>
 
 #include "Window.h"
@@ -14,6 +16,7 @@
 #include "Assets/Loader/TextureLoader.h"
 #include "Scene/SceneAsset.h"
 #include "Config/EngineConfig.h"
+#include "Config/ProjectConfig.h"
 #include "Editor/EditorSubsystem.h"
 #include "Event/OpaaxEventDispatcher.hpp"
 #include "Input/InputSubsystem.h"
@@ -36,13 +39,54 @@
 
 using namespace Opaax;
 
-CoreEngineApp::CoreEngineApp()
+namespace
+{
+    // Resolution order:
+    //   1. CLI flag `--project <path>`
+    //   2. Adjacent-to-binary: <exe-basename>/<exe-basename>.opaaxproj
+    //      (matches the CMake POST_BUILD layout for each consumer project)
+    //   3. Hardcoded fallback for editor / dev runs from the repo root
+    OpaaxString ResolveProjectPath(int InArgc, char** InArgv)
+    {
+        for (int i = 1; i + 1 < InArgc; ++i)
+        {
+            if (std::strcmp(InArgv[i], "--project") == 0)
+            {
+                return OpaaxPath::ToAbsolute(InArgv[i + 1]);
+            }
+        }
+
+        if (InArgc > 0 && InArgv && InArgv[0])
+        {
+            const std::filesystem::path lExe(InArgv[0]);
+            const std::string lStem = lExe.stem().string();
+            if (!lStem.empty())
+            {
+                OpaaxString lRel(lStem.c_str());
+                lRel += "/";
+                lRel += lStem.c_str();
+                lRel += ".opaaxproj";
+                const OpaaxString lAbs = OpaaxPath::ToAbsolute(lRel);
+                std::error_code lEc;
+                if (std::filesystem::exists(lAbs.CStr(), lEc))
+                {
+                    return lAbs;
+                }
+            }
+        }
+
+        return OpaaxPath::ToAbsolute("Game/Game.opaaxproj");
+    }
+}
+
+CoreEngineApp::CoreEngineApp(int InArgc, char** InArgv)
 {
     //The only system to be created at very first
     OpaaxLog::Init();
     OpaaxPath::Init();
 
     EngineConfig::Load(OpaaxPath::ToAbsolute("engine.config.json"));
+    ProjectConfig::Load(ResolveProjectPath(InArgc, InArgv));
 
     OPAAX_CORE_TRACE("CoreEngineApp created");
 
@@ -151,11 +195,11 @@ void CoreEngineApp::Initialize()
 
     const OpaaxString lEngineManifest =
         OpaaxPath::ToAbsolute(EngineConfig::EngineManifestRelPath());
-    const OpaaxString lGameManifest =
-        OpaaxPath::ToAbsolute(EngineConfig::GameManifestRelPath());
+    const OpaaxString lProjectManifest =
+        OpaaxPath::ToAbsolute(ProjectConfig::AssetsManifestRelPath());
 
     AssetManifest::LoadFile(lEngineManifest);
-    AssetManifest::LoadFile(lGameManifest);
+    AssetManifest::LoadFile(lProjectManifest);
     
     m_EngineSubsystemManager.RegisterSubsystem<RenderSubsystem>(this);
     m_EngineSubsystemManager.RegisterSubsystem<Camera2D>(this);
@@ -185,6 +229,16 @@ void CoreEngineApp::Startup()
     m_EngineSubsystemManager.StartupAll();
 
     OnStartup();
+
+#if OPAAX_WITH_EDITOR
+    // If game code didn't push a scene, hand the editor a blank "Untitled"
+    // so a brand-new project is immediately editable (Unreal-style default).
+    if (SceneManager* lSceneMgr = GetSceneManager(); lSceneMgr && lSceneMgr->IsEmpty())
+    {
+        OPAAX_CORE_INFO("CoreEngineApp::Startup — no scene pushed; opening Untitled.");
+        lSceneMgr->NewScene();
+    }
+#endif
 }
 
 void CoreEngineApp::Run()

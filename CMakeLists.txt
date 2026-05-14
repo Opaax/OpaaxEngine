@@ -16,3 +16,4 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 # Subdirectories
 add_subdirectory(Engine)
 add_subdirectory(Game)
+add_subdirectory(SimpleShmup)

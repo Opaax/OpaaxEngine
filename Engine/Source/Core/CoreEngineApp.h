@@ -23,7 +23,7 @@ namespace Opaax
         // CTORS - DTORS
         // =============================================================================
     public:
-        CoreEngineApp();
+        CoreEngineApp(int InArgc, char** InArgv);
         virtual ~CoreEngineApp();
     
     private:

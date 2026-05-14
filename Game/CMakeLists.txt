@@ -50,3 +50,12 @@ add_custom_command(TARGET Game POST_BUILD
         ${GAME_ASSETS_DEST}/AssetManifest.json
     COMMENT "Copying game asset manifest..."
 )
+
+# Copy project file next to the exe's project subfolder so adjacent-to-binary
+# resolution in ResolveProjectPath finds it without a CLI flag.
+add_custom_command(TARGET Game POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${CMAKE_CURRENT_SOURCE_DIR}/Game.opaaxproj
+        ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIGURATION>/Game/Game.opaaxproj
+    COMMENT "Copying Game.opaaxproj..."
+)

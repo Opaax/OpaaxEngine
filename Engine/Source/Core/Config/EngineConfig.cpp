@@ -9,17 +9,13 @@
 namespace Opaax
 {
     // Default values mirror the previous hardcoded constants so a missing
-    // engine.config.json yields behaviour identical to pre-M1 builds.
+    // engine.config.json keeps the engine bootable with unchanged behavior.
     OpaaxString EngineConfig::s_WindowTitle           = OpaaxString("Opaax Engine");
     Uint32      EngineConfig::s_WindowWidth           = 1280;
     Uint32      EngineConfig::s_WindowHeight          = 720;
     OpaaxString EngineConfig::s_EngineAssetsRoot      = OpaaxString("Engine/Assets");
-    OpaaxString EngineConfig::s_GameAssetsRoot        = OpaaxString("Game/Assets");
     OpaaxString EngineConfig::s_EngineManifestRelPath = OpaaxString("Engine/Assets/AssetManifest.json");
-    OpaaxString EngineConfig::s_GameManifestRelPath   = OpaaxString("Game/Assets/AssetManifest.json");
     OpaaxString EngineConfig::s_LogLevel              = OpaaxString("trace");
-    OpaaxString EngineConfig::s_DefaultSceneRelPath   = OpaaxString("");
-    OpaaxString EngineConfig::s_EditorDefaultScenePath = OpaaxString("Game/Assets/Scenes");
 
     bool EngineConfig::GenerateDefault(const OpaaxString& InAbsPath)
     {
@@ -45,15 +41,9 @@ namespace Opaax
             };
             lRoot["assets"] = {
                 { "engineRoot",     s_EngineAssetsRoot.CStr()      },
-                { "gameRoot",       s_GameAssetsRoot.CStr()        },
-                { "engineManifest", s_EngineManifestRelPath.CStr() },
-                { "gameManifest",   s_GameManifestRelPath.CStr()   }
+                { "engineManifest", s_EngineManifestRelPath.CStr() }
             };
-            lRoot["log"]          = { { "level", s_LogLevel.CStr() } };
-            lRoot["defaultScene"] = s_DefaultSceneRelPath.CStr();
-            lRoot["editor"]       = {
-                { "defaultScenePath", s_EditorDefaultScenePath.CStr() }
-            };
+            lRoot["log"] = { { "level", s_LogLevel.CStr() } };
 
             lFile << lRoot.dump(4);
 
@@ -116,17 +106,9 @@ namespace Opaax
             {
                 s_EngineAssetsRoot = OpaaxString(lA["engineRoot"].get<std::string>().c_str());
             }
-            if (lA.contains("gameRoot")       && lA["gameRoot"].is_string())
-            {
-                s_GameAssetsRoot = OpaaxString(lA["gameRoot"].get<std::string>().c_str());
-            }
             if (lA.contains("engineManifest") && lA["engineManifest"].is_string())
             {
                 s_EngineManifestRelPath = OpaaxString(lA["engineManifest"].get<std::string>().c_str());
-            }
-            if (lA.contains("gameManifest")   && lA["gameManifest"].is_string())
-            {
-                s_GameManifestRelPath = OpaaxString(lA["gameManifest"].get<std::string>().c_str());
             }
         }
 
@@ -136,20 +118,6 @@ namespace Opaax
             if (lLog.contains("level") && lLog["level"].is_string())
             {
                 s_LogLevel = OpaaxString(lLog["level"].get<std::string>().c_str());
-            }
-        }
-
-        if (lRoot.contains("defaultScene") && lRoot["defaultScene"].is_string())
-        {
-            s_DefaultSceneRelPath = OpaaxString(lRoot["defaultScene"].get<std::string>().c_str());
-        }
-
-        if (lRoot.contains("editor") && lRoot["editor"].is_object())
-        {
-            const auto& lEd = lRoot["editor"];
-            if (lEd.contains("defaultScenePath") && lEd["defaultScenePath"].is_string())
-            {
-                s_EditorDefaultScenePath = OpaaxString(lEd["defaultScenePath"].get<std::string>().c_str());
             }
         }
 
@@ -183,15 +151,9 @@ namespace Opaax
             };
             lRoot["assets"] = {
                 { "engineRoot",     s_EngineAssetsRoot.CStr()      },
-                { "gameRoot",       s_GameAssetsRoot.CStr()        },
-                { "engineManifest", s_EngineManifestRelPath.CStr() },
-                { "gameManifest",   s_GameManifestRelPath.CStr()   }
+                { "engineManifest", s_EngineManifestRelPath.CStr() }
             };
-            lRoot["log"]          = { { "level", s_LogLevel.CStr() } };
-            lRoot["defaultScene"] = s_DefaultSceneRelPath.CStr();
-            lRoot["editor"]       = {
-                { "defaultScenePath", s_EditorDefaultScenePath.CStr() }
-            };
+            lRoot["log"] = { { "level", s_LogLevel.CStr() } };
 
             lFile << lRoot.dump(4);
 
