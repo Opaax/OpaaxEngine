@@ -1,0 +1,24 @@
+{
+    "assets": [
+        {
+            "id": "AssetManifest",
+            "path": "SimpleShmup/Assets/AssetManifest.json",
+            "type": "Data"
+        },
+        {
+            "id": "Scenes/wdadawda",
+            "path": "SimpleShmup/Assets/Scenes/wdadawda.scene.json",
+            "type": "Scene"
+        },
+        {
+            "id": "Scenes/awdawdawdwaf",
+            "path": "SimpleShmup/Assets/Scenes/awdawdawdwaf.scene.json",
+            "type": "Scene"
+        },
+        {
+            "id": "Scenes/Test",
+            "path": "SimpleShmup/Assets/Scenes/Test.scene.json",
+            "type": "Scene"
+        }
+    ]
+}

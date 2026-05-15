@@ -1,0 +1,16 @@
+{
+    "entities": [
+        {
+            "Tag": "NewEntity",
+            "components": {},
+            "uuid": "14646894853277408729"
+        },
+        {
+            "Tag": "NewEntity",
+            "components": {},
+            "uuid": "474852188167314202"
+        }
+    ],
+    "scene": "Untitled",
+    "version": 2
+}

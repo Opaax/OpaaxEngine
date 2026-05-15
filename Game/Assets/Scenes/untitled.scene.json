@@ -1,0 +1,16 @@
+{
+    "entities": [
+        {
+            "Tag": "NewEntity",
+            "components": {},
+            "uuid": "1203221341588421143"
+        },
+        {
+            "Tag": "NewEntity",
+            "components": {},
+            "uuid": "5187617282538298797"
+        }
+    ],
+    "scene": "GameScene",
+    "version": 2
+}
