@@ -27,6 +27,7 @@
 - Identify the difference between expected behavior and your changes when relevant
 - Ask yourself: "Would a senior engineer approve this?"
 - Run tests, check logs, demonstrate correctness
+- Never claim "build green" without running `./build.bat <preset> </dev/null` and showing the tail of the output. Reading code is not building it. (Lesson 10.)
 
 ## 5. Demand Elegance (Balanced)
 

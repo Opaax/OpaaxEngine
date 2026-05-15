@@ -6,6 +6,7 @@
 
 #include "Scene/ShmupGameScene.h"
 #include "Systems/PlayerControlSystem.h"
+#include "Systems/EnemySpawnSystem.h"
 #include "Systems/MovementSystem.h"
 #include "Systems/LifetimeSystem.h"
 
@@ -42,6 +43,7 @@ void SimpleShmupGame::OnInitialize()
     // Game subsystems — registration order is tick order: input-driven velocity
     // write → integration → reaping.
     RegisterGameSubsystem<PlayerControlSystem>(this);
+    RegisterGameSubsystem<EnemySpawnSystem>(this);
     RegisterGameSubsystem<MovementSystem>(this);
     RegisterGameSubsystem<LifetimeSystem>(this);
 }
