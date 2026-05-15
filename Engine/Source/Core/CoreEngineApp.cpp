@@ -33,6 +33,13 @@
 #include "World/IWorldSystem.h"
 #include "World/RenderContext.h"
 
+#include "ECS/ComponentRegistry.h"
+#include "ECS/Components/TagComponent.h"
+#include "ECS/Components/UuidComponent.h"
+#include "ECS/Components/TransformComponent.h"
+#include "ECS/Components/SpriteComponent.h"
+#include "ECS/Components/ParentComponent.h"
+
 #if OPAAX_WITH_EDITOR
 #include "Editor/EditorSubsystem.h"
 #endif
@@ -132,6 +139,10 @@ void CoreEngineApp::DispatchEvent(OpaaxEvent& Event)
     // Subsystem chain — each subsystem pre-filters by category internally.
     // InputSubsystem will register EEventCategory_Input here in Milestone 2.
     m_EngineSubsystemManager.DispatchEventAll(Event);
+
+    // Game subsystems receive events after engine subsystems — gameplay reacts
+    // to input that engine input/poll state has already latched this frame.
+    m_GameSubsystemMgr.DispatchEventAll(Event);
 }
 
 bool CoreEngineApp::OnWindowClose(WindowCloseEvent& Event)
@@ -193,6 +204,17 @@ void CoreEngineApp::Initialize()
     AssetLoaderRegistry::Register<Texture2D>(MakeUnique<TextureLoader>());
     AssetLoaderRegistry::Register<SceneAsset>(MakeUnique<SceneLoader>());
 
+    // Engine component types — every game-shared, scene-serializable type lives here.
+    // Tag / Uuid are special-cased at the entity-json top level (display name, stable id)
+    // so they're flagged bShowInAddMenu=false to keep them out of the Add menu.
+    // SceneIDComponent is intentionally NOT registered — it's a runtime-only POD that
+    // doesn't derive OpaaxComponentBase and never lands on disk (M2.5 design).
+    ComponentRegistry::Register<ECS::TagComponent>      ("TagComponent",       /*bShowInAddMenu*/ false);
+    ComponentRegistry::Register<ECS::UuidComponent>     ("UuidComponent",      /*bShowInAddMenu*/ false);
+    ComponentRegistry::Register<ECS::TransformComponent>("TransformComponent");
+    ComponentRegistry::Register<ECS::SpriteComponent>   ("SpriteComponent");
+    ComponentRegistry::Register<ECS::ParentComponent>   ("ParentComponent",    /*bShowInAddMenu*/ false);
+
     const OpaaxString lEngineManifest =
         OpaaxPath::ToAbsolute(EngineConfig::EngineManifestRelPath());
     const OpaaxString lProjectManifest =
@@ -227,6 +249,7 @@ void CoreEngineApp::Startup()
     OPAAX_CORE_TRACE("CoreEngineApp::Startup()");
 
     m_EngineSubsystemManager.StartupAll();
+    m_GameSubsystemMgr.StartupAll();
 
     OnStartup();
 
@@ -306,8 +329,11 @@ void CoreEngineApp::Run()
 
         // ----------------------------------------------------------------
         // 2.1 Variable update — gameplay, animations, AI
+        //   Engine layer first, then game layer. Game subsystems whose
+        //   IsPlayOnly() returns true are skipped when bAllowPlayOnly is false.
         // ----------------------------------------------------------------
         m_EngineSubsystemManager.UpdateAll(lDeltaTime, bAllowPlayOnly);
+        m_GameSubsystemMgr.UpdateAll(lDeltaTime, bAllowPlayOnly);
         OnUpdate(lDeltaTime);
 
         // ----------------------------------------------------------------
@@ -316,6 +342,7 @@ void CoreEngineApp::Run()
         while (lAccumulator >= FIXED_DELTA_TIME)
         {
             m_EngineSubsystemManager.FixedUpdateAll(FIXED_DELTA_TIME, bAllowPlayOnly);
+            m_GameSubsystemMgr.FixedUpdateAll(FIXED_DELTA_TIME, bAllowPlayOnly);
             OnFixedUpdate(FIXED_DELTA_TIME);
             lAccumulator -= FIXED_DELTA_TIME;
         }
@@ -349,6 +376,16 @@ void CoreEngineApp::Shutdown()
     bIsRunning = false;
     
     OnShutdown();
+
+    // Game subsystems shut down first — they may still call into engine services
+    // (Renderer, World, AssetRegistry) during their Shutdown.
+    m_GameSubsystemMgr.ShutdownAll();
+
+    // Component registry holds editor drawer pointers — clear before the editor
+    // subsystem dies so drawers don't outlive their owning subsystem. EditorSubsystem::Shutdown
+    // also calls Clear() in editor builds (idempotent — second call is a no-op);
+    // this call covers release builds where EditorSubsystem doesn't exist.
+    ComponentRegistry::Clear();
 
     m_EngineSubsystemManager.ShutdownAll();
 

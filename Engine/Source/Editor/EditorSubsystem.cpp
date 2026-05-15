@@ -21,10 +21,14 @@
 #include "Editor/Assets/AssetTypeRegistry.h"
 #include "Editor/Assets/Types/SceneTypeActions.h"
 #include "Editor/Assets/Types/Texture2DTypeActions.h"
-#include "Editor/Inspector/ComponentDrawerRegistry.h"
 #include "Editor/Inspector/Drawers/TagDrawer.h"
 #include "Editor/Inspector/Drawers/TransformDrawer.h"
 #include "Editor/Inspector/Drawers/SpriteDrawer.h"
+
+#include "ECS/ComponentRegistry.h"
+#include "ECS/Components/TagComponent.h"
+#include "ECS/Components/TransformComponent.h"
+#include "ECS/Components/SpriteComponent.h"
 
 namespace Opaax
 {
@@ -89,9 +93,12 @@ namespace Opaax
 
     void EditorSubsystem::RegisterComponentDrawers()
     {
-        Editor::ComponentDrawerRegistry::Register(MakeUnique<Editor::TagDrawer>());
-        Editor::ComponentDrawerRegistry::Register(MakeUnique<Editor::TransformDrawer>());
-        Editor::ComponentDrawerRegistry::Register(MakeUnique<Editor::SpriteDrawer>());
+        // Component types themselves are registered by CoreEngineApp::Initialize.
+        // Here we only attach custom drawers — components without one fall back to
+        // ComponentRegistry's default read-only json renderer.
+        ComponentRegistry::RegisterDrawer<ECS::TagComponent>      (MakeUnique<Editor::TagDrawer>());
+        ComponentRegistry::RegisterDrawer<ECS::TransformComponent>(MakeUnique<Editor::TransformDrawer>());
+        ComponentRegistry::RegisterDrawer<ECS::SpriteComponent>   (MakeUnique<Editor::SpriteDrawer>());
 
         OPAAX_CORE_TRACE("EditorSubsystem: component drawers registered.");
     }
@@ -124,7 +131,7 @@ namespace Opaax
         OPAAX_CORE_INFO("EditorSubsystem::Shutdown()");
 
         Editor::AssetTypeRegistry::Clear();
-        Editor::ComponentDrawerRegistry::Clear();
+        ComponentRegistry::Clear();
 
         m_ViewportPanel.Shutdown();
 

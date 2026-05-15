@@ -5,11 +5,10 @@
 #include <nlohmann/json.hpp>
 #include "Assets/AssetRegistry.h"
 #include "Core/OpaaxPath.h"
+#include "ECS/ComponentRegistry.h"
 #include "ECS/Components/ParentComponent.h"
 #include "ECS/Components/SceneIDComponent.h"
-#include "ECS/Components/SpriteComponent.h"
 #include "ECS/Components/TagComponent.h"
-#include "ECS/Components/TransformComponent.h"
 #include "ECS/Components/UuidComponent.h"
 #include "ECS/Hierarchy.h"
 #include "World/World.h"
@@ -71,17 +70,24 @@ namespace Opaax
 
             lEntityJson["components"] = json::object();
 
-            // TransformComponent
-            if (const ECS::TransformComponent* lT = InWorld.GetComponent<ECS::TransformComponent>(lEntity))
+            // Iterate every registered component type — engine built-ins were
+            // registered in CoreEngineApp::Initialize; game-side components were
+            // registered in the game-app's OnInitialize override. Tag and Uuid are
+            // special-cased above at the entity-json top level (display name +
+            // stable id) — skip them here so they don't appear twice in the file.
+            static const OpaaxStringID kTagName ("TagComponent");
+            static const OpaaxStringID kUuidName("UuidComponent");
+            ComponentRegistry::ForEach([&](const IComponentEntry& InEntry)
             {
-                lEntityJson["components"]["TransformComponent"] = lT->Serialize();
-            }
+                const OpaaxStringID lName = InEntry.GetName();
+                if (lName == kTagName || lName == kUuidName) { return; }
 
-            // SpriteComponent
-            if (const ECS::SpriteComponent* lS = InWorld.GetComponent<ECS::SpriteComponent>(lEntity))
-            {
-                lEntityJson["components"]["SpriteComponent"] = lS->Serialize();
-            }
+                if (InEntry.Has(InWorld, lEntity))
+                {
+                    lEntityJson["components"][lName.ToString().CStr()] =
+                        InEntry.Save(InWorld, lEntity);
+                }
+            });
 
             lRoot["entities"].push_back(lEntityJson);
 
@@ -186,16 +192,19 @@ namespace Opaax
 
             const auto& lComponents = lEntityJson["components"];
 
-            if (lComponents.contains("TransformComponent"))
+            // Registry-driven load — unknown component names are logged and skipped
+            // so a forward-compat or extension scene still loads cleanly.
+            for (auto it = lComponents.begin(); it != lComponents.end(); ++it)
             {
-                ECS::TransformComponent& lTS = InWorld.AddComponent<ECS::TransformComponent>(lEntity);
-                lTS.Deserialize(lComponents["TransformComponent"]);
-            }
-
-            if (lComponents.contains("SpriteComponent"))
-            {
-                ECS::SpriteComponent& lSc = InWorld.AddComponent<ECS::SpriteComponent>(lEntity);
-                lSc.Deserialize(lComponents["SpriteComponent"]);
+                const OpaaxStringID lKey(it.key().c_str());
+                const IComponentEntry* lEntry = ComponentRegistry::FindByName(lKey);
+                if (!lEntry)
+                {
+                    OPAAX_CORE_WARN("SceneSerializer: unknown component '{}' in scene file, skipping.",
+                        it.key());
+                    continue;
+                }
+                lEntry->Load(InWorld, lEntity, it.value());
             }
         }
 

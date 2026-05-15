@@ -111,6 +111,11 @@ namespace Opaax
 
         void Shutdown() override;
 
+        // Scenes are gameplay containers — their per-frame tick is PIE-gated.
+        // Edit mode still loads/saves/renders the scene; only OnUpdate/OnFixedUpdate
+        // are skipped, leaving the scene visible and editable.
+        bool IsPlayOnly() const noexcept override { return true; }
+
         void Update(double DeltaTime) override
         {
             if (!m_Stack.empty())
