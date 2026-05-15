@@ -62,3 +62,8 @@ EditorTemp/
 .claude/data/*
 .claude/settings.local.json
 tasks/*
+
+
+#Shmup
+SimpleShmup/Assets/Textures/Explosion Pack/*
+SimpleShmup/Assets/Textures/Enemy_Sheet.png
