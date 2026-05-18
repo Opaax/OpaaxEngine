@@ -2,6 +2,7 @@
 #include <iostream>
 #include "Core/Log/OpaaxLog.h"
 #include "Scene/GameScene.h"
+#include "Scene/SceneFactory.h"
 #include "Scene/SceneManager.h"
 #include "Core/OpaaxTypes.h"
 
@@ -17,6 +18,9 @@ void MyGame::OnInitialize()
     OPAAX_TRACE("==================================");
     OPAAX_TRACE("[Opaax Engine] [MyGame] Initialize - Game starting!");
     OPAAX_TRACE("==================================");
+
+    // Register scene factories — required for PIE Stop to rebuild the stack.
+    Opaax::SceneFactory::Register<GameScene>("GameScene");
 }
 
 void MyGame::OnStartup()

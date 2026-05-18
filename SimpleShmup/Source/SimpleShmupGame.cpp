@@ -1,14 +1,19 @@
 #include "SimpleShmupGame.h"
 
 #include "Core/Log/OpaaxLog.h"
+#include "Scene/SceneFactory.h"
 #include "Scene/SceneManager.h"
 #include "ECS/ComponentRegistry.h"
 
+#include "Scene/MenuScene.h"
 #include "Scene/ShmupGameScene.h"
 #include "Systems/PlayerControlSystem.h"
 #include "Systems/EnemySpawnSystem.h"
 #include "Systems/MovementSystem.h"
+#include "Systems/CollisionSystem.h"
+#include "Systems/ShmupGameRulesSystem.h"
 #include "Systems/LifetimeSystem.h"
+#include "Systems/SceneTransitionSystem.h"
 
 #include "ECS/Components/PlayerTagComponent.h"
 #include "ECS/Components/EnemyTagComponent.h"
@@ -40,19 +45,30 @@ void SimpleShmupGame::OnInitialize()
     Opaax::ComponentRegistry::Register<AABB2DComponent>   ("AABB2DComponent");
     Opaax::ComponentRegistry::Register<ScoreComponent>    ("ScoreComponent");
 
+    // Scene factories — required so PIE Stop can rebuild the stack after
+    // SceneTransitionSystem has called Replace() during play. Names must match
+    // each Scene subclass's ctor-supplied display name (used as the factory key).
+    Opaax::SceneFactory::Register<MenuScene>     ("Menu");
+    Opaax::SceneFactory::Register<ShmupGameScene>("ShmupGame");
+
     // Game subsystems — registration order is tick order: input-driven velocity
-    // write → integration → reaping.
+    // write → spawn → integration → collision detect → rules react → reaping.
+    // SceneTransitionSystem is last: it Replace()s the active scene, invalidating
+    // everything that came before this frame — let them finish first.
     RegisterGameSubsystem<PlayerControlSystem>(this);
     RegisterGameSubsystem<EnemySpawnSystem>(this);
     RegisterGameSubsystem<MovementSystem>(this);
+    RegisterGameSubsystem<CollisionSystem>(this);
+    RegisterGameSubsystem<ShmupGameRulesSystem>(this);
     RegisterGameSubsystem<LifetimeSystem>(this);
+    RegisterGameSubsystem<SceneTransitionSystem>(this);
 }
 
 void SimpleShmupGame::OnStartup()
 {
     OPAAX_TRACE("[SimpleShmupGame] OnStartup");
 
-    GetSceneManager()->Push(Opaax::MakeUnique<ShmupGameScene>());
+    GetSceneManager()->Push(Opaax::MakeUnique<MenuScene>());
 }
 
 void SimpleShmupGame::OnUpdate(double DeltaTime)

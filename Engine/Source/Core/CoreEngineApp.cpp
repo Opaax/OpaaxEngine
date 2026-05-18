@@ -28,6 +28,7 @@
 #include "Renderer/Systems/WorldRenderSystem.h"
 #include "RHI/RenderCommand.h"
 #include "Scene/Scene.h"
+#include "Scene/SceneFactory.h"
 #include "Scene/SceneManager.h"
 #include "Systems/EngineSubsystem.h"
 #include "World/IWorldSystem.h"
@@ -215,6 +216,11 @@ void CoreEngineApp::Initialize()
     ComponentRegistry::Register<ECS::SpriteComponent>   ("SpriteComponent");
     ComponentRegistry::Register<ECS::ParentComponent>   ("ParentComponent",    /*bShowInAddMenu*/ false);
 
+    // Scene types — engine knows about the base Scene under "Untitled" so the
+    // editor's empty-stack fallback (SceneManager::NewScene) survives PIE Stop.
+    // Game-app overrides register their own scene subclasses in OnInitialize.
+    SceneFactory::Register("Untitled", []() -> UniquePtr<Scene> { return MakeUnique<Scene>("Untitled"); });
+
     const OpaaxString lEngineManifest =
         OpaaxPath::ToAbsolute(EngineConfig::EngineManifestRelPath());
     const OpaaxString lProjectManifest =
@@ -386,6 +392,10 @@ void CoreEngineApp::Shutdown()
     // also calls Clear() in editor builds (idempotent — second call is a no-op);
     // this call covers release builds where EditorSubsystem doesn't exist.
     ComponentRegistry::Clear();
+
+    // Drop scene factories before subsystems die — captured lambdas could hold
+    // references into game-side types whose libraries unload after this point.
+    SceneFactory::Clear();
 
     m_EngineSubsystemManager.ShutdownAll();
 

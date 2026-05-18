@@ -1,6 +1,7 @@
 #include "EnemySpawnSystem.h"
 
 #include "Core/CoreEngineApp.h"
+#include "Scene/SceneManager.h"
 #include "World/World.h"
 
 #include "ECS/Components/TransformComponent.h"
@@ -22,6 +23,18 @@ EnemySpawnSystem::EnemySpawnSystem(CoreEngineApp* InEngineApp)
 
 void EnemySpawnSystem::Update(double DeltaTime)
 {
+    // Only spawn while the gameplay scene is active. In MenuScene (or any other
+    // scene) the spawner is dormant — reset the timer so the first spawn after
+    // entering ShmupGameScene is paced by SpawnInterval, not "everything queued
+    // up while we were idle".
+    SceneManager* lSceneMgr = GetEngineApp()->GetSceneManager();
+    Scene* lActive = lSceneMgr ? lSceneMgr->GetActiveScene() : nullptr;
+    if (!lActive || lActive->GetName() != "ShmupGame")
+    {
+        m_SpawnTimer = 0.f;
+        return;
+    }
+
     World& lWorld = GetEngineApp()->GetWorld();
 
     m_SpawnTimer += static_cast<float>(DeltaTime);
