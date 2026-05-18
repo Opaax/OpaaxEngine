@@ -45,9 +45,10 @@ namespace Opaax
     // entire current stack and rebuild from the manifest via SceneFactory —
     // tolerates games that Push/Replace scenes during PIE.
     // =============================================================================
-    static constexpr const char* PIE_TEMP_MANIFEST_PATH = "EditorTemp/PlaySession.json";
-    static constexpr const char* PIE_TEMP_SCENE_DIR    = "EditorTemp";
-    static constexpr int         PIE_MANIFEST_VERSION  = 1;
+    static constexpr const char* PIE_TEMP_MANIFEST_PATH    = "EditorTemp/PlaySession.json";
+    static constexpr const char* PIE_TEMP_SCENE_DIR        = "EditorTemp";
+    static constexpr const char* PIE_TEMP_PERSISTENTS_PATH = "EditorTemp/PlaySession_persistent.json";
+    static constexpr int         PIE_MANIFEST_VERSION      = 1;
 
     static OpaaxString MakePerScenePath(Uint32 InIndex)
     {
@@ -302,6 +303,12 @@ namespace Opaax
         }
         lFile << lManifest.dump(4);
 
+        // Persistent-bucket snapshot — entities created via World::CreatePersistentEntity
+        // (SceneID == 0) are not inside any scene's bucket and must be captured separately
+        // so PIE Stop can roll back any mutations made during Play.
+        const OpaaxString lPersistentPath = OpaaxPath::ToAbsolute(PIE_TEMP_PERSISTENTS_PATH);
+        SceneSerializer::SerializePersistents(GetEngineApp()->GetWorld(), lPersistentPath.CStr());
+
         OPAAX_CORE_INFO("EditorSubsystem::EnterPlayMode — snapshotted {} scene(s).", lDepth);
         SetEditorState(Editor::EEditorState::Playing);
     }
@@ -374,10 +381,10 @@ namespace Opaax
             return;
         }
 
-        // Tear down the current stack — destroys every play-mode entity. The
-        // World's persistent-tagged entities (SceneID == 0) survive because
-        // Pop() routes destruction through DestroyEntitiesWithSceneID(scene-id),
-        // which never matches PersistentSceneID.
+        // Tear down the current stack — destroys every play-mode scene entity.
+        // Persistent-tagged entities (SceneID == 0) pass through Pop() untouched
+        // (DestroyEntitiesWithSceneID never matches PersistentSceneID); they are
+        // rolled back further down via the persistent snapshot dance.
         OPAAX_CORE_INFO("EditorSubsystem::ExitPlayMode — popping {} scene(s) from current stack.",
             lSceneMgr->GetStackDepth());
         while (lSceneMgr->GetStackDepth() > 0)
@@ -426,6 +433,26 @@ namespace Opaax
                 OPAAX_CORE_WARN("EditorSubsystem::ExitPlayMode — Deserialize failed for '{}'.", lNameStr);
             }
             ++lRestored;
+        }
+
+        // Roll back the persistent bucket. The Pop loop above intentionally
+        // does not touch PersistentSceneID entities (that's the persistence
+        // guarantee for runtime); for PIE we own the rollback semantic and
+        // restore them from the EnterPlayMode snapshot. Scenes are restored
+        // first so any persistent parent_uuid links can resolve against
+        // already-deserialized scene entities.
+        const OpaaxString lPersistentPath = OpaaxPath::ToAbsolute(PIE_TEMP_PERSISTENTS_PATH);
+        if (std::filesystem::exists(lPersistentPath.CStr()))
+        {
+            lWorld.DestroyEntitiesWithSceneID(World::PersistentSceneID);
+            if (!SceneSerializer::DeserializePersistents(lWorld, lPersistentPath.CStr()))
+            {
+                OPAAX_CORE_WARN("EditorSubsystem::ExitPlayMode — persistent restore failed.");
+            }
+        }
+        else
+        {
+            OPAAX_CORE_INFO("EditorSubsystem::ExitPlayMode — no persistent snapshot, skipping rollback.");
         }
 
         OPAAX_CORE_INFO("EditorSubsystem::ExitPlayMode — restored {} scene(s) from snapshot.", lRestored);

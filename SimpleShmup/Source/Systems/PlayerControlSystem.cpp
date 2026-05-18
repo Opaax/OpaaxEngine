@@ -2,6 +2,7 @@
 
 #include <cmath>
 
+#include "Assets/AssetRegistry.h"
 #include "Core/CoreEngineApp.h"
 #include "Core/ApplicationEvents.hpp"
 #include "Core/Config/EngineConfig.h"
@@ -17,6 +18,7 @@
 #include "ECS/Components/AABB2DComponent.h"
 #include "ECS/Components/PlayerTagComponent.h"
 #include "ECS/Components/BulletTagComponent.h"
+#include "ECS/Components/SpriteComponent.h"
 
 using namespace Opaax;
 
@@ -164,6 +166,18 @@ void PlayerControlSystem::Update(double DeltaTime)
             Opaax::ECS::TransformComponent lTransform;
             lTransform.Position = lPlayerPos;
             lWorld.AddComponent<Opaax::ECS::TransformComponent>(lBullet, lTransform);
+
+            //Textures\Explosion Pack\PNG\Particles\burst.png
+
+            Opaax::TAssetHandle<Opaax::Texture2D> lBulletTxt = AssetRegistry::Load<Opaax::Texture2D>("Textures/Explosion Pack/PNG/Particles/burst");
+
+            Opaax::ECS::SpriteComponent lBulletSprite;
+
+            lBulletSprite.Texture = lBulletTxt;
+            lBulletSprite.Size = {16,16};
+            lBulletSprite.Visible = true;
+
+            lWorld.AddComponent<Opaax::ECS::SpriteComponent>(lBullet, lBulletSprite);
 
             VelocityComponent lVel;
             lVel.Velocity = { BulletSpeed, 0.f };

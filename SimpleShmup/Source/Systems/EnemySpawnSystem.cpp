@@ -1,5 +1,6 @@
 #include "EnemySpawnSystem.h"
 
+#include "Assets/AssetRegistry.h"
 #include "Core/CoreEngineApp.h"
 #include "Scene/SceneManager.h"
 #include "World/World.h"
@@ -9,6 +10,7 @@
 #include "ECS/Components/LifetimeComponent.h"
 #include "ECS/Components/AABB2DComponent.h"
 #include "ECS/Components/EnemyTagComponent.h"
+#include "ECS/Components/SpriteComponent.h"
 
 using namespace Opaax;
 
@@ -56,6 +58,16 @@ void EnemySpawnSystem::Update(double DeltaTime)
     Opaax::ECS::TransformComponent lTransform;
     lTransform.Position = { SpawnX, lY };
     lWorld.AddComponent<Opaax::ECS::TransformComponent>(lEnemy, lTransform);
+
+    Opaax::TAssetHandle<Opaax::Texture2D> lEnemyTxt = AssetRegistry::Load<Opaax::Texture2D>("Textures/Explosion Pack/PNG/Particles/redCloud2");
+
+    Opaax::ECS::SpriteComponent lEnemySprite;
+
+    lEnemySprite.Texture = lEnemyTxt;
+    lEnemySprite.Size = {16,16};
+    lEnemySprite.Visible = true;
+
+    lWorld.AddComponent<Opaax::ECS::SpriteComponent>(lEnemy, lEnemySprite);
 
     VelocityComponent lVel;
     lVel.Velocity = { -EnemySpeed, 0.f };

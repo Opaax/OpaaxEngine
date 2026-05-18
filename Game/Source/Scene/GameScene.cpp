@@ -71,10 +71,5 @@ void GameScene::BuildDefaultScene(Opaax::World& InWorld)
 
     auto lAtlas = InWorld.CreateEntity("AtlasSprite");
     InWorld.AddComponent<Opaax::ECS::TransformComponent>(lAtlas, Opaax::ECS::TransformComponent{ {100.f, 0.f}, {64.f, 64.f} });
-    Opaax::ECS::SpriteComponent& lSP = InWorld.AddComponent<Opaax::ECS::SpriteComponent>(lAtlas, Opaax::ECS::SpriteComponent{m_AtlasTexture, {0.f,   0.f}, {0.25f, 0.25f}});
-
-    auto lPersistant = InWorld.CreatePersistentEntity("Persistant_Debug");
-    InWorld.AddComponent<Opaax::ECS::TransformComponent>(lPersistant, Opaax::ECS::TransformComponent{ {-400.f, 0.f}, {1.f, 1.f} });
-    lSP = InWorld.AddComponent<Opaax::ECS::SpriteComponent>(lPersistant, Opaax::ECS::SpriteComponent{m_AtlasTexture, {0.f,   0.f}, {0.25f, 0.25f}});
-    lSP.Size = { 64.f, 64.f };
+    InWorld.AddComponent<Opaax::ECS::SpriteComponent>(lAtlas, Opaax::ECS::SpriteComponent{m_AtlasTexture, {0.f,   0.f}, {0.25f, 0.25f}});
 }

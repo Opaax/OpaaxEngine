@@ -4,6 +4,7 @@
 #include "Scene/SceneFactory.h"
 #include "Scene/SceneManager.h"
 #include "ECS/ComponentRegistry.h"
+#include "World/World.h"
 
 #include "Scene/MenuScene.h"
 #include "Scene/ShmupGameScene.h"
@@ -69,6 +70,13 @@ void SimpleShmupGame::OnStartup()
     OPAAX_TRACE("[SimpleShmupGame] OnStartup");
 
     GetSceneManager()->Push(Opaax::MakeUnique<MenuScene>());
+
+    // Persistent score entity — survives every scene transition (M2.5 opt-out).
+    // ShmupGameRulesSystem awards into it; Menu/Game OnLoad log it as the
+    // visible proof that persistence is doing its job.
+    Opaax::World& lWorld = GetWorld();
+    const Opaax::EntityID lScore = lWorld.CreatePersistentEntity("Score");
+    lWorld.AddComponent<ScoreComponent>(lScore);
 }
 
 void SimpleShmupGame::OnUpdate(double DeltaTime)
