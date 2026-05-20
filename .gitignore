@@ -52,6 +52,9 @@ build/*
 # Editor PIE temp snapshots (project-root-relative under EditorTemp/)
 EditorTemp/
 
+#shmup
+SimpleShmup/Assets/*
+
 #Claude AI
 .claude/CLAUDE.local.md
 .claude/task/*
