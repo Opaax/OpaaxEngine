@@ -1,0 +1,8 @@
+{
+    "version": 1,
+    "name": "SimpleShmup",
+    "assetsRoot": "SimpleShmup/Assets",
+    "assetsManifest": "SimpleShmup/Assets/AssetManifest.json",
+    "defaultScene": "",
+    "editorDefaultScenePath": "SimpleShmup/Assets/Scenes"
+}

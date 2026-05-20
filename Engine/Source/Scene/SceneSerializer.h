@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Scene.h"
 #include "Core/EngineAPI.h"
@@ -47,6 +47,22 @@ namespace Opaax
          * @return true on success.
          */
         static bool Deserialize(Scene& InScene, const char* InPath, World& InWorld);
+
+        /**
+         * Serialize the persistent-entity bucket (SceneID == PersistentSceneID)
+         * to JSON at InPath. Used by the editor PIE flow to snapshot persistent
+         * runtime state before play and restore it on stop.
+         * @return true on success.
+         */
+        static bool SerializePersistents(const World& InWorld, const char* InPath);
+
+        /**
+         * Deserialize a persistent-bucket dump back into InWorld. Saves and
+         * restores the World's active-SceneID around the load so the deserialized
+         * entities land in the persistent bucket regardless of the current scene.
+         * @return true on success; false if the file is missing or malformed.
+         */
+        static bool DeserializePersistents(World& InWorld, const char* InPath);
     };
 
 } // namespace Opaax

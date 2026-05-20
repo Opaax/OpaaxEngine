@@ -5,11 +5,10 @@
 #include <nlohmann/json.hpp>
 #include "Assets/AssetRegistry.h"
 #include "Core/OpaaxPath.h"
+#include "ECS/ComponentRegistry.h"
 #include "ECS/Components/ParentComponent.h"
 #include "ECS/Components/SceneIDComponent.h"
-#include "ECS/Components/SpriteComponent.h"
 #include "ECS/Components/TagComponent.h"
-#include "ECS/Components/TransformComponent.h"
 #include "ECS/Components/UuidComponent.h"
 #include "ECS/Hierarchy.h"
 #include "World/World.h"
@@ -19,30 +18,36 @@ using json = nlohmann::json;
 namespace Opaax
 {
     // Bump when the on-disk scene format gains a non-backward-compatible field.
-    // Loader treats absent / older versions leniently — see Deserialize.
+    // Loader treats absent / older versions leniently — see DeserializeIntoActiveSceneID.
     static constexpr int kSceneFormatVersion = 2;
 
+    // Label written into the "scene" field for the persistent-bucket dump.
+    // Informational only — the loader doesn't gate on it.
+    static constexpr const char* kPersistentSceneLabel = "__persistents__";
+
     // =============================================================================
-    // Serialize
+    // Shared serialize helper
+    //
+    // Filters World entities by SceneID and writes a {version, scene, entities}
+    // dump to InPath. Used by both Serialize(Scene&) and SerializePersistents.
     // =============================================================================
-    bool SceneSerializer::Serialize(const Scene& InScene, const char* InPath, const World& InWorld)
+    static bool SerializeEntitiesBySceneID(const World&   InWorld,
+                                           const char*    InPath,
+                                           Uint32         InSceneID,
+                                           const char*    InSceneLabel)
     {
         json lRoot;
         lRoot["version"]  = kSceneFormatVersion;
-        lRoot["scene"]    = InScene.GetName().CStr();
+        lRoot["scene"]    = InSceneLabel;
         lRoot["entities"] = json::array();
 
         const auto& lRegistry = InWorld.GetRegistry();
 
-        // Only entities owned by InScene get serialized. Persistent entities
-        // (SceneID == PersistentSceneID) are runtime-only and intentionally
-        // excluded — they belong to no on-disk scene.
-        const Uint32 lTargetSceneID = InScene.GetSceneID();
         auto lView = lRegistry.view<const ECS::TagComponent, const ECS::SceneIDComponent>();
 
         for (auto lEntity : lView)
         {
-            if (lView.get<const ECS::SceneIDComponent>(lEntity).SceneID != lTargetSceneID) { continue; }
+            if (lView.get<const ECS::SceneIDComponent>(lEntity).SceneID != InSceneID) { continue; }
             OPAAX_ASSERT(lRegistry.valid(lEntity))
 
             const ECS::TagComponent* lTagComp = InWorld.GetComponent<ECS::TagComponent>(lEntity);
@@ -71,23 +76,28 @@ namespace Opaax
 
             lEntityJson["components"] = json::object();
 
-            // TransformComponent
-            if (const ECS::TransformComponent* lT = InWorld.GetComponent<ECS::TransformComponent>(lEntity))
+            // Iterate every registered component type — engine built-ins were
+            // registered in CoreEngineApp::Initialize; game-side components were
+            // registered in the game-app's OnInitialize override. Tag and Uuid are
+            // special-cased above at the entity-json top level (display name +
+            // stable id) — skip them here so they don't appear twice in the file.
+            static const OpaaxStringID kTagName ("TagComponent");
+            static const OpaaxStringID kUuidName("UuidComponent");
+            ComponentRegistry::ForEach([&](const IComponentEntry& InEntry)
             {
-                lEntityJson["components"]["TransformComponent"] = lT->Serialize();
-            }
+                const OpaaxStringID lName = InEntry.GetName();
+                if (lName == kTagName || lName == kUuidName) { return; }
 
-            // SpriteComponent
-            if (const ECS::SpriteComponent* lS = InWorld.GetComponent<ECS::SpriteComponent>(lEntity))
-            {
-                lEntityJson["components"]["SpriteComponent"] = lS->Serialize();
-            }
+                if (InEntry.Has(InWorld, lEntity))
+                {
+                    lEntityJson["components"][lName.ToString().CStr()] =
+                        InEntry.Save(InWorld, lEntity);
+                }
+            });
 
             lRoot["entities"].push_back(lEntityJson);
-
         }
 
-        // Write to disk
         std::ofstream lFile(InPath);
         if (!lFile.is_open())
         {
@@ -104,9 +114,14 @@ namespace Opaax
     }
 
     // =============================================================================
-    // Deserialize
+    // Shared deserialize helper
+    //
+    // Reads the {version, scene, entities} dump from InPath and contributes
+    // entities to InWorld's current m_ActiveSceneID. Callers control that ID:
+    //   - Per-scene Push() sets it to the scene's runtime SceneID.
+    //   - DeserializePersistents() swaps it to PersistentSceneID for the call.
     // =============================================================================
-    bool SceneSerializer::Deserialize(Scene& InScene, const char* InPath, World& InWorld)
+    static bool DeserializeIntoActiveSceneID(World& InWorld, const char* InPath)
     {
         std::ifstream lFile(InPath);
         if (!lFile.is_open())
@@ -186,16 +201,19 @@ namespace Opaax
 
             const auto& lComponents = lEntityJson["components"];
 
-            if (lComponents.contains("TransformComponent"))
+            // Registry-driven load — unknown component names are logged and skipped
+            // so a forward-compat or extension scene still loads cleanly.
+            for (auto it = lComponents.begin(); it != lComponents.end(); ++it)
             {
-                ECS::TransformComponent& lTS = InWorld.AddComponent<ECS::TransformComponent>(lEntity);
-                lTS.Deserialize(lComponents["TransformComponent"]);
-            }
-
-            if (lComponents.contains("SpriteComponent"))
-            {
-                ECS::SpriteComponent& lSc = InWorld.AddComponent<ECS::SpriteComponent>(lEntity);
-                lSc.Deserialize(lComponents["SpriteComponent"]);
+                const OpaaxStringID lKey(it.key().c_str());
+                const IComponentEntry* lEntry = ComponentRegistry::FindByName(lKey);
+                if (!lEntry)
+                {
+                    OPAAX_CORE_WARN("SceneSerializer: unknown component '{}' in scene file, skipping.",
+                        it.key());
+                    continue;
+                }
+                lEntry->Load(InWorld, lEntity, it.value());
             }
         }
 
@@ -220,6 +238,43 @@ namespace Opaax
             InPath, lRoot["entities"].size(), lPending.size());
 
         return true;
+    }
+
+    // =============================================================================
+    // Public — scene-based
+    // =============================================================================
+    bool SceneSerializer::Serialize(const Scene& InScene, const char* InPath, const World& InWorld)
+    {
+        return SerializeEntitiesBySceneID(InWorld, InPath, InScene.GetSceneID(), InScene.GetName().CStr());
+    }
+
+    bool SceneSerializer::Deserialize(Scene& /*InScene*/, const char* InPath, World& InWorld)
+    {
+        // The caller (SceneManager::Push, EditorSubsystem::ExitPlayMode) must have
+        // already set World::m_ActiveSceneID to the destination scene's runtime ID
+        // before invoking us — see the helper's comment for the contract.
+        return DeserializeIntoActiveSceneID(InWorld, InPath);
+    }
+
+    // =============================================================================
+    // Public — persistent bucket (PIE snapshot/restore)
+    // =============================================================================
+    bool SceneSerializer::SerializePersistents(const World& InWorld, const char* InPath)
+    {
+        return SerializeEntitiesBySceneID(InWorld, InPath, World::PersistentSceneID, kPersistentSceneLabel);
+    }
+
+    bool SceneSerializer::DeserializePersistents(World& InWorld, const char* InPath)
+    {
+        // Swap the active SceneID for the duration of the load so CreateEntity
+        // tags every restored entity as persistent (SceneID == 0), then restore.
+        const Uint32 lSavedActive = InWorld.GetActiveSceneID();
+        InWorld.SetActiveSceneID(World::PersistentSceneID);
+
+        const bool bOk = DeserializeIntoActiveSceneID(InWorld, InPath);
+
+        InWorld.SetActiveSceneID(lSavedActive);
+        return bOk;
     }
 
 } // namespace Opaax

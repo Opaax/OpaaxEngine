@@ -4,12 +4,13 @@
 #include "OpaaxTypes.h"
 #include "Renderer/RenderTarget.hpp"
 #include "Systems/EngineSubsystem.h"
+#include "Systems/GameSubsystem.h"
 #include "World/World.h"
 
 namespace Opaax
 {
     using namespace ECS;
-    
+
     class WindowResizeEvent;
     class WindowCloseEvent;
     class OpaaxEvent;
@@ -23,7 +24,7 @@ namespace Opaax
         // CTORS - DTORS
         // =============================================================================
     public:
-        CoreEngineApp();
+        CoreEngineApp(int InArgc, char** InArgv);
         virtual ~CoreEngineApp();
     
     private:
@@ -93,11 +94,42 @@ namespace Opaax
             OPAAX_CORE_ASSERT(lResult)
             return lResult;
         }
- 
+
         template<typename T>
         const T* GetSubsystem() const
         {
             const T* lResult = m_EngineSubsystemManager.GetSubsystem<T>();
+            OPAAX_CORE_ASSERT(lResult)
+            return lResult;
+        }
+
+        // =============================================================================
+        // Game subsystems
+        //
+        // Parallel layer to engine subsystems — owns gameplay code (player control,
+        // AI, collision rules). Manager is PIE-aware via IsPlayOnly() so gameplay
+        // ticks only during Play, not edit mode. Register from the game-app's
+        // OnInitialize override via RegisterGameSubsystem<T>(this).
+        // =============================================================================
+
+        template<typename T, typename... Args>
+        void RegisterGameSubsystem(Args&&... InArgs)
+        {
+            m_GameSubsystemMgr.RegisterSubsystem<T>(std::forward<Args>(InArgs)...);
+        }
+
+        template<typename T>
+        T* GetGameSubsystem()
+        {
+            T* lResult = m_GameSubsystemMgr.GetSubsystem<T>();
+            OPAAX_CORE_ASSERT(lResult)
+            return lResult;
+        }
+
+        template<typename T>
+        const T* GetGameSubsystem() const
+        {
+            const T* lResult = m_GameSubsystemMgr.GetSubsystem<T>();
             OPAAX_CORE_ASSERT(lResult)
             return lResult;
         }
@@ -109,6 +141,7 @@ namespace Opaax
         bool bIsRunning = false;
         UniquePtr<Window> m_Window;
         EngineSubsystemMgr m_EngineSubsystemManager;
+        GameSubsystemMgr   m_GameSubsystemMgr;
 
         IRenderTarget*              m_RenderTarget        = nullptr;
         UniquePtr<DefaultRenderTarget> m_DefaultRenderTarget;

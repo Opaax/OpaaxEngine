@@ -1,0 +1,374 @@
+{
+    "assets": [
+        {
+            "id": "Textures/Explosion Pack/PNG/Pixel explosion/pixelExplosion05",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Pixel explosion/pixelExplosion05.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Pixel explosion/pixelExplosion06",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Pixel explosion/pixelExplosion06.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Pixel explosion/pixelExplosion07",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Pixel explosion/pixelExplosion07.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Pixel explosion/pixelExplosion08",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Pixel explosion/pixelExplosion08.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Regular explosion/regularExplosion00",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Regular explosion/regularExplosion00.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Regular explosion/regularExplosion01",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Regular explosion/regularExplosion01.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Regular explosion/regularExplosion02",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Regular explosion/regularExplosion02.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Regular explosion/regularExplosion03",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Regular explosion/regularExplosion03.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Regular explosion/regularExplosion04",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Regular explosion/regularExplosion04.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Regular explosion/regularExplosion05",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Regular explosion/regularExplosion05.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Regular explosion/regularExplosion06",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Regular explosion/regularExplosion06.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Regular explosion/regularExplosion07",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Regular explosion/regularExplosion07.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Regular explosion/regularExplosion08",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Regular explosion/regularExplosion08.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Simple explosion/simpleExplosion00",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Simple explosion/simpleExplosion00.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Simple explosion/simpleExplosion01",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Simple explosion/simpleExplosion01.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Simple explosion/simpleExplosion02",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Simple explosion/simpleExplosion02.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Simple explosion/simpleExplosion03",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Simple explosion/simpleExplosion03.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Simple explosion/simpleExplosion04",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Simple explosion/simpleExplosion04.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Simple explosion/simpleExplosion08",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Simple explosion/simpleExplosion08.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Scenes/wdadawda",
+            "path": "SimpleShmup/Assets/Scenes/wdadawda.scene.json",
+            "type": "Scene"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Sonic explosion/sonicExplosion03",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Sonic explosion/sonicExplosion03.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Simple explosion/simpleExplosion05",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Simple explosion/simpleExplosion05.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Simple explosion/simpleExplosion06",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Simple explosion/simpleExplosion06.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Simple explosion/simpleExplosion07",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Simple explosion/simpleExplosion07.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "AssetManifest",
+            "path": "SimpleShmup/Assets/AssetManifest.json",
+            "type": "Data"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Sonic explosion/sonicExplosion00",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Sonic explosion/sonicExplosion00.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Sonic explosion/sonicExplosion01",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Sonic explosion/sonicExplosion01.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Scenes/awdawdawdwaf",
+            "path": "SimpleShmup/Assets/Scenes/awdawdawdwaf.scene.json",
+            "type": "Scene"
+        },
+        {
+            "id": "Textures/Enemy_Sheet",
+            "path": "SimpleShmup/Assets/Textures/Enemy_Sheet.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Sonic explosion/sonicExplosion02",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Sonic explosion/sonicExplosion02.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Scenes/Test",
+            "path": "SimpleShmup/Assets/Scenes/Test.scene.json",
+            "type": "Scene"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Ground explosion/groundExplosion00",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Ground explosion/groundExplosion00.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Ground explosion/groundExplosion01",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Ground explosion/groundExplosion01.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Ground explosion/groundExplosion02",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Ground explosion/groundExplosion02.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Ground explosion/groundExplosion03",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Ground explosion/groundExplosion03.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Ground explosion/groundExplosion04",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Ground explosion/groundExplosion04.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Ground explosion/groundExplosion05",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Ground explosion/groundExplosion05.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Ground explosion/groundExplosion06",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Ground explosion/groundExplosion06.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Ground explosion/groundExplosion07",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Ground explosion/groundExplosion07.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Ground explosion/groundExplosion08",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Ground explosion/groundExplosion08.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Particles/burst",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Particles/burst.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Particles/greyCloud1",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Particles/greyCloud1.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Particles/greyCloud2",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Particles/greyCloud2.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Particles/greyCloud4",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Particles/greyCloud4.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Particles/greyCloudw3",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Particles/greyCloudw3.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Particles/orangeCloud1",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Particles/orangeCloud1.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Particles/orangeCloud2",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Particles/orangeCloud2.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Particles/orangeCloud3",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Particles/orangeCloud3.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Particles/orangeCloud4",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Particles/orangeCloud4.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Particles/redCloud1",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Particles/redCloud1.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Particles/redCloud2",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Particles/redCloud2.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Particles/redCloud3",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Particles/redCloud3.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Particles/redCloud4",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Particles/redCloud4.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Particles/yellowCloud1",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Particles/yellowCloud1.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Particles/yellowCloud2",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Particles/yellowCloud2.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Particles/yellowCloud3",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Particles/yellowCloud3.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Particles/yellowCloud4",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Particles/yellowCloud4.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Pixel explosion/pixelExplosion00",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Pixel explosion/pixelExplosion00.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Pixel explosion/pixelExplosion01",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Pixel explosion/pixelExplosion01.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Pixel explosion/pixelExplosion02",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Pixel explosion/pixelExplosion02.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Pixel explosion/pixelExplosion03",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Pixel explosion/pixelExplosion03.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Pixel explosion/pixelExplosion04",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Pixel explosion/pixelExplosion04.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Sonic explosion/sonicExplosion04",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Sonic explosion/sonicExplosion04.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Sonic explosion/sonicExplosion05",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Sonic explosion/sonicExplosion05.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Sonic explosion/sonicExplosion06",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Sonic explosion/sonicExplosion06.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Sonic explosion/sonicExplosion07",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Sonic explosion/sonicExplosion07.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/PNG/Sonic explosion/sonicExplosion08",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Sonic explosion/sonicExplosion08.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/Preview",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/Preview.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/Spritesheets/spritesheet_groundExplosion",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/Spritesheets/spritesheet_groundExplosion.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/Spritesheets/spritesheet_particles",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/Spritesheets/spritesheet_particles.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/Spritesheets/spritesheet_pixelExplosion",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/Spritesheets/spritesheet_pixelExplosion.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/Spritesheets/spritesheet_regularExplosion",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/Spritesheets/spritesheet_regularExplosion.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/Spritesheets/spritesheet_simpleExplosion",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/Spritesheets/spritesheet_simpleExplosion.png",
+            "type": "Texture2D"
+        },
+        {
+            "id": "Textures/Explosion Pack/Spritesheets/spritesheet_sonicExplosion",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/Spritesheets/spritesheet_sonicExplosion.png",
+            "type": "Texture2D"
+        }
+    ]
+}

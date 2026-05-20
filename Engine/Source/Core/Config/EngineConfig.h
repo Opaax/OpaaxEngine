@@ -41,21 +41,10 @@ namespace Opaax
 
         // ---- Assets ---------------------------------------------------------
         static const OpaaxString& EngineAssetsRoot()      noexcept { return s_EngineAssetsRoot; }
-        static const OpaaxString& GameAssetsRoot()        noexcept { return s_GameAssetsRoot; }
         static const OpaaxString& EngineManifestRelPath() noexcept { return s_EngineManifestRelPath; }
-        static const OpaaxString& GameManifestRelPath()   noexcept { return s_GameManifestRelPath; }
 
         // ---- Logging --------------------------------------------------------
         static const OpaaxString& LogLevel() noexcept { return s_LogLevel; }
-
-        // ---- Scene ----------------------------------------------------------
-        static const OpaaxString& DefaultSceneRelPath() noexcept { return s_DefaultSceneRelPath; }
-
-        // ---- Editor ---------------------------------------------------------
-        // Default directory for Save/Open scene dialogs. Relative to the project root
-        // when available (editor builds), exe-relative otherwise. Authoring layout —
-        // released games never read this.
-        static const OpaaxString& EditorDefaultScenePath() noexcept { return s_EditorDefaultScenePath; }
 
     private:
         static bool GenerateDefault(const OpaaxString& InAbsPath);
@@ -64,11 +53,7 @@ namespace Opaax
         static Uint32      s_WindowWidth;
         static Uint32      s_WindowHeight;
         static OpaaxString s_EngineAssetsRoot;
-        static OpaaxString s_GameAssetsRoot;
         static OpaaxString s_EngineManifestRelPath;
-        static OpaaxString s_GameManifestRelPath;
         static OpaaxString s_LogLevel;
-        static OpaaxString s_DefaultSceneRelPath;
-        static OpaaxString s_EditorDefaultScenePath;
     };
 } // namespace Opaax

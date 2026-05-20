@@ -9,6 +9,8 @@
 #include "Assets/AssetScanner.h"
 #include "Core/OpaaxPath.h"
 #include "Core/Log/OpaaxLog.h"
+#include "Core/Config/EngineConfig.h"
+#include "Core/Config/ProjectConfig.h"
 #include "Editor/Assets/AssetTypeRegistry.h"
 #include "Editor/Assets/IAssetTypeActions.h"
 #include "Scene/SceneManager.h"
@@ -38,7 +40,7 @@ namespace Opaax::Editor
     // =============================================================================
     void AssetBrowserPanel::Startup()
     {
-        m_ManifestAbsPath = OpaaxPath::ToAbsolute("Game/Assets/AssetManifest.json");
+        m_ManifestAbsPath = OpaaxPath::ToAbsolute(ProjectConfig::AssetsManifestRelPath());
         RunScan();
     }
 
@@ -48,13 +50,13 @@ namespace Opaax::Editor
     void AssetBrowserPanel::RunScan()
     {
         struct ScanTarget { const char* RootDir; const char* ManifestRelPath; };
-        static constexpr ScanTarget k_ScanTargets[] =
+        const ScanTarget lScanTargets[] =
         {
-            { "Game/Assets",   "Game/Assets/AssetManifest.json"   },
-            { "Engine/Assets", "Engine/Assets/AssetManifest.json" },
+            { ProjectConfig::AssetsRoot().CStr(),       ProjectConfig::AssetsManifestRelPath().CStr() },
+            { EngineConfig::EngineAssetsRoot().CStr(),  EngineConfig::EngineManifestRelPath().CStr()  },
         };
 
-        for (const auto& lTarget : k_ScanTargets)
+        for (const auto& lTarget : lScanTargets)
         {
             AssetScanner::ScanConfig lConfig;
             lConfig.RootDir         = lTarget.RootDir;

@@ -1,5 +1,7 @@
 #include "CoreEngineApp.h"
 
+#include <cstring>
+#include <filesystem>
 #include <iostream>
 
 #include "Window.h"
@@ -14,6 +16,7 @@
 #include "Assets/Loader/TextureLoader.h"
 #include "Scene/SceneAsset.h"
 #include "Config/EngineConfig.h"
+#include "Config/ProjectConfig.h"
 #include "Editor/EditorSubsystem.h"
 #include "Event/OpaaxEventDispatcher.hpp"
 #include "Input/InputSubsystem.h"
@@ -25,10 +28,18 @@
 #include "Renderer/Systems/WorldRenderSystem.h"
 #include "RHI/RenderCommand.h"
 #include "Scene/Scene.h"
+#include "Scene/SceneFactory.h"
 #include "Scene/SceneManager.h"
 #include "Systems/EngineSubsystem.h"
 #include "World/IWorldSystem.h"
 #include "World/RenderContext.h"
+
+#include "ECS/ComponentRegistry.h"
+#include "ECS/Components/TagComponent.h"
+#include "ECS/Components/UuidComponent.h"
+#include "ECS/Components/TransformComponent.h"
+#include "ECS/Components/SpriteComponent.h"
+#include "ECS/Components/ParentComponent.h"
 
 #if OPAAX_WITH_EDITOR
 #include "Editor/EditorSubsystem.h"
@@ -36,13 +47,54 @@
 
 using namespace Opaax;
 
-CoreEngineApp::CoreEngineApp()
+namespace
+{
+    // Resolution order:
+    //   1. CLI flag `--project <path>`
+    //   2. Adjacent-to-binary: <exe-basename>/<exe-basename>.opaaxproj
+    //      (matches the CMake POST_BUILD layout for each consumer project)
+    //   3. Hardcoded fallback for editor / dev runs from the repo root
+    OpaaxString ResolveProjectPath(int InArgc, char** InArgv)
+    {
+        for (int i = 1; i + 1 < InArgc; ++i)
+        {
+            if (std::strcmp(InArgv[i], "--project") == 0)
+            {
+                return OpaaxPath::ToAbsolute(InArgv[i + 1]);
+            }
+        }
+
+        if (InArgc > 0 && InArgv && InArgv[0])
+        {
+            const std::filesystem::path lExe(InArgv[0]);
+            const std::string lStem = lExe.stem().string();
+            if (!lStem.empty())
+            {
+                OpaaxString lRel(lStem.c_str());
+                lRel += "/";
+                lRel += lStem.c_str();
+                lRel += ".opaaxproj";
+                const OpaaxString lAbs = OpaaxPath::ToAbsolute(lRel);
+                std::error_code lEc;
+                if (std::filesystem::exists(lAbs.CStr(), lEc))
+                {
+                    return lAbs;
+                }
+            }
+        }
+
+        return OpaaxPath::ToAbsolute("Game/Game.opaaxproj");
+    }
+}
+
+CoreEngineApp::CoreEngineApp(int InArgc, char** InArgv)
 {
     //The only system to be created at very first
     OpaaxLog::Init();
     OpaaxPath::Init();
 
     EngineConfig::Load(OpaaxPath::ToAbsolute("engine.config.json"));
+    ProjectConfig::Load(ResolveProjectPath(InArgc, InArgv));
 
     OPAAX_CORE_TRACE("CoreEngineApp created");
 
@@ -88,6 +140,10 @@ void CoreEngineApp::DispatchEvent(OpaaxEvent& Event)
     // Subsystem chain — each subsystem pre-filters by category internally.
     // InputSubsystem will register EEventCategory_Input here in Milestone 2.
     m_EngineSubsystemManager.DispatchEventAll(Event);
+
+    // Game subsystems receive events after engine subsystems — gameplay reacts
+    // to input that engine input/poll state has already latched this frame.
+    m_GameSubsystemMgr.DispatchEventAll(Event);
 }
 
 bool CoreEngineApp::OnWindowClose(WindowCloseEvent& Event)
@@ -149,13 +205,29 @@ void CoreEngineApp::Initialize()
     AssetLoaderRegistry::Register<Texture2D>(MakeUnique<TextureLoader>());
     AssetLoaderRegistry::Register<SceneAsset>(MakeUnique<SceneLoader>());
 
+    // Engine component types — every game-shared, scene-serializable type lives here.
+    // Tag / Uuid are special-cased at the entity-json top level (display name, stable id)
+    // so they're flagged bShowInAddMenu=false to keep them out of the Add menu.
+    // SceneIDComponent is intentionally NOT registered — it's a runtime-only POD that
+    // doesn't derive OpaaxComponentBase and never lands on disk (M2.5 design).
+    ComponentRegistry::Register<ECS::TagComponent>      ("TagComponent",       /*bShowInAddMenu*/ false);
+    ComponentRegistry::Register<ECS::UuidComponent>     ("UuidComponent",      /*bShowInAddMenu*/ false);
+    ComponentRegistry::Register<ECS::TransformComponent>("TransformComponent");
+    ComponentRegistry::Register<ECS::SpriteComponent>   ("SpriteComponent");
+    ComponentRegistry::Register<ECS::ParentComponent>   ("ParentComponent",    /*bShowInAddMenu*/ false);
+
+    // Scene types — engine knows about the base Scene under "Untitled" so the
+    // editor's empty-stack fallback (SceneManager::NewScene) survives PIE Stop.
+    // Game-app overrides register their own scene subclasses in OnInitialize.
+    SceneFactory::Register("Untitled", []() -> UniquePtr<Scene> { return MakeUnique<Scene>("Untitled"); });
+
     const OpaaxString lEngineManifest =
         OpaaxPath::ToAbsolute(EngineConfig::EngineManifestRelPath());
-    const OpaaxString lGameManifest =
-        OpaaxPath::ToAbsolute(EngineConfig::GameManifestRelPath());
+    const OpaaxString lProjectManifest =
+        OpaaxPath::ToAbsolute(ProjectConfig::AssetsManifestRelPath());
 
     AssetManifest::LoadFile(lEngineManifest);
-    AssetManifest::LoadFile(lGameManifest);
+    AssetManifest::LoadFile(lProjectManifest);
     
     m_EngineSubsystemManager.RegisterSubsystem<RenderSubsystem>(this);
     m_EngineSubsystemManager.RegisterSubsystem<Camera2D>(this);
@@ -183,8 +255,19 @@ void CoreEngineApp::Startup()
     OPAAX_CORE_TRACE("CoreEngineApp::Startup()");
 
     m_EngineSubsystemManager.StartupAll();
+    m_GameSubsystemMgr.StartupAll();
 
     OnStartup();
+
+#if OPAAX_WITH_EDITOR
+    // If game code didn't push a scene, hand the editor a blank "Untitled"
+    // so a brand-new project is immediately editable (Unreal-style default).
+    if (SceneManager* lSceneMgr = GetSceneManager(); lSceneMgr && lSceneMgr->IsEmpty())
+    {
+        OPAAX_CORE_INFO("CoreEngineApp::Startup — no scene pushed; opening Untitled.");
+        lSceneMgr->NewScene();
+    }
+#endif
 }
 
 void CoreEngineApp::Run()
@@ -252,8 +335,11 @@ void CoreEngineApp::Run()
 
         // ----------------------------------------------------------------
         // 2.1 Variable update — gameplay, animations, AI
+        //   Engine layer first, then game layer. Game subsystems whose
+        //   IsPlayOnly() returns true are skipped when bAllowPlayOnly is false.
         // ----------------------------------------------------------------
         m_EngineSubsystemManager.UpdateAll(lDeltaTime, bAllowPlayOnly);
+        m_GameSubsystemMgr.UpdateAll(lDeltaTime, bAllowPlayOnly);
         OnUpdate(lDeltaTime);
 
         // ----------------------------------------------------------------
@@ -262,6 +348,7 @@ void CoreEngineApp::Run()
         while (lAccumulator >= FIXED_DELTA_TIME)
         {
             m_EngineSubsystemManager.FixedUpdateAll(FIXED_DELTA_TIME, bAllowPlayOnly);
+            m_GameSubsystemMgr.FixedUpdateAll(FIXED_DELTA_TIME, bAllowPlayOnly);
             OnFixedUpdate(FIXED_DELTA_TIME);
             lAccumulator -= FIXED_DELTA_TIME;
         }
@@ -295,6 +382,20 @@ void CoreEngineApp::Shutdown()
     bIsRunning = false;
     
     OnShutdown();
+
+    // Game subsystems shut down first — they may still call into engine services
+    // (Renderer, World, AssetRegistry) during their Shutdown.
+    m_GameSubsystemMgr.ShutdownAll();
+
+    // Component registry holds editor drawer pointers — clear before the editor
+    // subsystem dies so drawers don't outlive their owning subsystem. EditorSubsystem::Shutdown
+    // also calls Clear() in editor builds (idempotent — second call is a no-op);
+    // this call covers release builds where EditorSubsystem doesn't exist.
+    ComponentRegistry::Clear();
+
+    // Drop scene factories before subsystems die — captured lambdas could hold
+    // references into game-side types whose libraries unload after this point.
+    SceneFactory::Clear();
 
     m_EngineSubsystemManager.ShutdownAll();
 

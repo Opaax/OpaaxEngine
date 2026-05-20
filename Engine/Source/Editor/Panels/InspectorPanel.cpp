@@ -3,7 +3,7 @@
 #if OPAAX_WITH_EDITOR
 
 #include <imgui.h>
-#include "Editor/Inspector/ComponentDrawerRegistry.h"
+#include "ECS/ComponentRegistry.h"
 
 namespace Opaax::Editor
 {
@@ -25,7 +25,7 @@ namespace Opaax::Editor
             return;
         }
 
-        ComponentDrawerRegistry::DrawAll(*InWorld, InSelected);
+        ComponentRegistry::DrawAll(*InWorld, InSelected);
 
         ImGui::Separator();
 
@@ -36,7 +36,7 @@ namespace Opaax::Editor
 
         if (ImGui::BeginPopup("AddComponentPopup"))
         {
-            ComponentDrawerRegistry::DrawAddComponentMenu(*InWorld, InSelected);
+            ComponentRegistry::DrawAddComponentMenu(*InWorld, InSelected);
             ImGui::EndPopup();
         }
 

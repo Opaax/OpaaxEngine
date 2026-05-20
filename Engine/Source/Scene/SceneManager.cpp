@@ -230,6 +230,13 @@ namespace Opaax
             GetEngineApp()->GetWorld().DestroyEntitiesWithSceneID(lScene->GetSceneID());
             lScene->SetSourcePath(OpaaxString{});
         }
+        else
+        {
+            // Empty stack — a brand-new project has nothing to wipe. Push a
+            // fresh blank scene so the editor (Save As, Open, entity ops) has
+            // a target to operate on.
+            Push(MakeUnique<Scene>("Untitled"));
+        }
 
         if (m_CurrentSceneAssetID.IsValid())
         {

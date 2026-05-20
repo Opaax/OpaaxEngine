@@ -1,0 +1,8 @@
+{
+    "version": 1,
+    "name": "Game",
+    "assetsRoot": "Game/Assets",
+    "assetsManifest": "Game/Assets/AssetManifest.json",
+    "defaultScene": "",
+    "editorDefaultScenePath": "Game/Assets/Scenes"
+}

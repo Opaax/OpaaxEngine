@@ -1,0 +1,91 @@
+#include "SimpleShmupGame.h"
+
+#include "Core/Log/OpaaxLog.h"
+#include "Scene/SceneFactory.h"
+#include "Scene/SceneManager.h"
+#include "ECS/ComponentRegistry.h"
+#include "World/World.h"
+
+#include "Scene/MenuScene.h"
+#include "Scene/ShmupGameScene.h"
+#include "Systems/PlayerControlSystem.h"
+#include "Systems/EnemySpawnSystem.h"
+#include "Systems/MovementSystem.h"
+#include "Systems/CollisionSystem.h"
+#include "Systems/ShmupGameRulesSystem.h"
+#include "Systems/LifetimeSystem.h"
+#include "Systems/SceneTransitionSystem.h"
+
+#include "ECS/Components/PlayerTagComponent.h"
+#include "ECS/Components/EnemyTagComponent.h"
+#include "ECS/Components/BulletTagComponent.h"
+#include "ECS/Components/VelocityComponent.h"
+#include "ECS/Components/LifetimeComponent.h"
+#include "ECS/Components/AABB2DComponent.h"
+#include "ECS/Components/ScoreComponent.h"
+
+SimpleShmupGame::SimpleShmupGame(int InArgc, char** InArgv) : Opaax::CoreEngineApp(InArgc, InArgv)
+{
+    OPAAX_TRACE("==================================");
+    OPAAX_TRACE("Opaax Engine - SimpleShmup Start");
+    OPAAX_TRACE("==================================");
+}
+
+void SimpleShmupGame::OnInitialize()
+{
+    OPAAX_TRACE("[SimpleShmupGame] OnInitialize");
+
+    // Component registration — engine built-ins are registered in CoreEngineApp::Initialize;
+    // game-side types register here so the SceneSerializer (incl. PIE snapshot) and the
+    // inspector know they exist. Order is the json-key write order for serialized scenes.
+    Opaax::ComponentRegistry::Register<PlayerTagComponent>("PlayerTagComponent");
+    Opaax::ComponentRegistry::Register<EnemyTagComponent> ("EnemyTagComponent");
+    Opaax::ComponentRegistry::Register<BulletTagComponent>("BulletTagComponent");
+    Opaax::ComponentRegistry::Register<VelocityComponent> ("VelocityComponent");
+    Opaax::ComponentRegistry::Register<LifetimeComponent> ("LifetimeComponent");
+    Opaax::ComponentRegistry::Register<AABB2DComponent>   ("AABB2DComponent");
+    Opaax::ComponentRegistry::Register<ScoreComponent>    ("ScoreComponent");
+
+    // Scene factories — required so PIE Stop can rebuild the stack after
+    // SceneTransitionSystem has called Replace() during play. Names must match
+    // each Scene subclass's ctor-supplied display name (used as the factory key).
+    Opaax::SceneFactory::Register<MenuScene>     ("Menu");
+    Opaax::SceneFactory::Register<ShmupGameScene>("ShmupGame");
+
+    // Game subsystems — registration order is tick order: input-driven velocity
+    // write → spawn → integration → collision detect → rules react → reaping.
+    // SceneTransitionSystem is last: it Replace()s the active scene, invalidating
+    // everything that came before this frame — let them finish first.
+    RegisterGameSubsystem<PlayerControlSystem>(this);
+    RegisterGameSubsystem<EnemySpawnSystem>(this);
+    RegisterGameSubsystem<MovementSystem>(this);
+    RegisterGameSubsystem<CollisionSystem>(this);
+    RegisterGameSubsystem<ShmupGameRulesSystem>(this);
+    RegisterGameSubsystem<LifetimeSystem>(this);
+    RegisterGameSubsystem<SceneTransitionSystem>(this);
+}
+
+void SimpleShmupGame::OnStartup()
+{
+    OPAAX_TRACE("[SimpleShmupGame] OnStartup");
+
+    GetSceneManager()->Push(Opaax::MakeUnique<MenuScene>());
+
+    // Persistent score entity — survives every scene transition (M2.5 opt-out).
+    // ShmupGameRulesSystem awards into it; Menu/Game OnLoad log it as the
+    // visible proof that persistence is doing its job.
+    Opaax::World& lWorld = GetWorld();
+    const Opaax::EntityID lScore = lWorld.CreatePersistentEntity("Score");
+    lWorld.AddComponent<ScoreComponent>(lScore);
+}
+
+void SimpleShmupGame::OnUpdate(double DeltaTime)
+{
+}
+
+void SimpleShmupGame::OnShutdown()
+{
+    OPAAX_TRACE("==================================");
+    OPAAX_TRACE("[Opaax Engine] [SimpleShmupGame] Shutdown");
+    OPAAX_TRACE("==================================");
+}

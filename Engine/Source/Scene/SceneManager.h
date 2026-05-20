@@ -94,6 +94,18 @@ namespace Opaax
         FORCEINLINE bool   IsEmpty()       const noexcept { return m_Stack.empty(); }
         FORCEINLINE Uint32 GetStackDepth() const noexcept { return static_cast<Uint32>(m_Stack.size()); }
 
+        // Bottom-to-top stack accessor (index 0 = root, index GetStackDepth()-1 = top).
+        // Used by EditorSubsystem PIE snapshot to walk the full stack.
+        FORCEINLINE Scene* GetSceneAt(Uint32 InIndex) noexcept
+        {
+            return (InIndex < m_Stack.size()) ? m_Stack[InIndex].get() : nullptr;
+        }
+
+        FORCEINLINE const Scene* GetSceneAt(Uint32 InIndex) const noexcept
+        {
+            return (InIndex < m_Stack.size()) ? m_Stack[InIndex].get() : nullptr;
+        }
+
         FORCEINLINE const OpaaxString& GetCurrentScenePath()    const noexcept { return m_CurrentScenePath; }
         FORCEINLINE bool               HasCurrentScenePath()    const noexcept { return !m_CurrentScenePath.IsEmpty(); }
         FORCEINLINE OpaaxStringID      GetCurrentSceneAssetID() const noexcept { return m_CurrentSceneAssetID; }
@@ -110,6 +122,11 @@ namespace Opaax
         }
 
         void Shutdown() override;
+
+        // Scenes are gameplay containers — their per-frame tick is PIE-gated.
+        // Edit mode still loads/saves/renders the scene; only OnUpdate/OnFixedUpdate
+        // are skipped, leaving the scene visible and editable.
+        bool IsPlayOnly() const noexcept override { return true; }
 
         void Update(double DeltaTime) override
         {

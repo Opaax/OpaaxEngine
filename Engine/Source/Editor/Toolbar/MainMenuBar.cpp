@@ -11,7 +11,7 @@
 #include "Core/CoreEngineApp.h"
 #include "Core/Log/OpaaxLog.h"
 #include "Core/OpaaxPath.h"
-#include "Core/Config/EngineConfig.h"
+#include "Core/Config/ProjectConfig.h"
 #include "Scene/SceneManager.h"
 
 namespace Opaax::Editor
@@ -39,7 +39,7 @@ namespace Opaax::Editor
     {
         const OpaaxString& lLast = Owner.GetLastDialogDir();
         OpaaxString lDir = lLast.IsEmpty()
-            ? OpaaxPath::ToAbsolute(EngineConfig::EditorDefaultScenePath())
+            ? OpaaxPath::ToAbsolute(ProjectConfig::EditorDefaultScenePath())
             : lLast;
 
         // Ensure the dir exists so tinyfiledialogs has something to open.
