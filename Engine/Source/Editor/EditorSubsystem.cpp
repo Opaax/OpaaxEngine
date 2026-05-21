@@ -94,6 +94,14 @@ namespace Opaax
 
         m_AssetBrowserPanel.Startup();
 
+        // Editor event bus: panels register handlers here. Tokens stored as panel
+        // members; RAII unsubscribe at panel destruction. Order is not meaningful —
+        // Publish dispatches in registration order per event type.
+        m_MainMenuBar.OnSubscribe(*m_EventBus);
+        m_HierarchyPanel.OnSubscribe(*m_EventBus);
+        m_InspectorPanel.OnSubscribe(*m_EventBus);
+        m_AssetBrowserPanel.OnSubscribe(*m_EventBus);
+
         GetEngineApp()->SetRenderTarget(&m_ViewportPanel);
 
         OPAAX_CORE_INFO("EditorSubsystem: ready.");

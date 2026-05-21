@@ -1,6 +1,7 @@
 #pragma once
 #if OPAAX_WITH_EDITOR
 
+#include "Editor/EditorEventBus.h"
 #include "Editor/EditorState.h"
 #include "Editor/IEditorPanel.h"
 #include "Panels/AssetBrowserPanel.h"
@@ -69,6 +70,8 @@ namespace Opaax
 
         FORCEINLINE Editor::EEditorState GetEditorState() const noexcept { return m_EditorState; }
 
+        FORCEINLINE Editor::EditorEventBus& GetEventBus() noexcept { return *m_EventBus; }
+
         // Panel visibility — references so the menu bar can toggle them in-place via ImGui::MenuItem.
         FORCEINLINE bool& GetShowHierarchyRef()    noexcept { return m_bShowHierarchy; }
         FORCEINLINE bool& GetShowInspectorRef()    noexcept { return m_bShowInspector; }
@@ -112,6 +115,11 @@ namespace Opaax
         void SetEditorState(Editor::EEditorState NewState);
 
     private:
+        // Bus is held by UniquePtr so the EditorSubsystem stays movable (default move
+        // ctor) — EditorEventBus itself is non-movable because SubscriptionTokens hold
+        // a raw EditorEventBus* and a relocation would silently dangle them.
+        UniquePtr<Editor::EditorEventBus> m_EventBus = MakeUnique<Editor::EditorEventBus>();
+
         Editor::MainMenuBar       m_MainMenuBar;
         Editor::HierarchyPanel    m_HierarchyPanel;
         Editor::InspectorPanel    m_InspectorPanel;
