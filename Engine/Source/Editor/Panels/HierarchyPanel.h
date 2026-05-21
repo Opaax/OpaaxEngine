@@ -9,10 +9,13 @@
 
 namespace Opaax::Editor
 {
+    class EditorEventBus;
+
     /**
      * @class HierarchyPanel
      * Displays all entities in the active scene.
-     * Owns the "selected entity" state — other panels read from it via GetSelectedEntity().
+     * Owns the "selected entity" state — publishes OnEntitySelectedEvent on every
+     * change. Other panels subscribe via EditorEventBus (see Inspector).
      *
      * NOTE: Draw(Scene*, World*) is the primary entry point; it is called directly
      * by EditorSubsystem rather than through the IEditorPanel::Draw() interface.
@@ -40,26 +43,15 @@ namespace Opaax::Editor
         void Draw(Scene* InActiveScene, World* InWorld);
 
         //------------------------------------------------------------------------------
-        // Get - Set
-        FORCEINLINE EntityID GetSelectedEntity() const noexcept
-        {
-            return m_SelectedEntity;
-        }
-
-        FORCEINLINE void SetSelectedEntity(EntityID InEntity) noexcept
-        {
-            m_SelectedEntity = InEntity;
-        }
-
-        FORCEINLINE void ClearSelection() noexcept
-        {
-            m_SelectedEntity = ENTITY_NONE;
-        }
+        // Set — publish OnEntitySelectedEvent via the bus captured in OnSubscribe.
+        void SetSelectedEntity(EntityID InEntity);
+        void ClearSelection();
 
         // =============================================================================
         // Override
         // =============================================================================
         //~Begin IEditorPanel interface
+        void        OnSubscribe(EditorEventBus& InBus) override;
         const char* GetPanelName() const override { return "Hierarchy"; }
         //~End IEditorPanel interface
 
@@ -67,7 +59,11 @@ namespace Opaax::Editor
         // Members
         // =============================================================================
     private:
-        EntityID m_SelectedEntity = ENTITY_NONE;
+        /** Single mutation funnel — early-outs on same-value, then publishes. */
+        void SetSelection(EntityID InEntity);
+
+        EntityID        m_SelectedEntity = ENTITY_NONE;
+        EditorEventBus* m_Bus            = nullptr; // captured in OnSubscribe; non-owning
     };
 
 } // namespace Opaax::Editor

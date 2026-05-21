@@ -233,7 +233,7 @@ namespace Opaax
         World* lWorld       = lActiveScene ? &GetEngineApp()->GetWorld() : nullptr;
 
         if (m_bShowHierarchy)    m_HierarchyPanel.Draw(lActiveScene, lWorld);
-        if (m_bShowInspector)    m_InspectorPanel.Draw(lWorld, m_HierarchyPanel.GetSelectedEntity());
+        if (m_bShowInspector)    m_InspectorPanel.Draw(lWorld);
         if (m_bShowViewport)     m_ViewportPanel.Draw(m_EditorState);
         if (m_bShowAssetBrowser) m_AssetBrowserPanel.Draw(lSceneMgr);
     }
