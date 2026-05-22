@@ -11,7 +11,7 @@ namespace Opaax::Editor
      * @class IComponentDrawer
      * Per-component ImGui drawer interface.
      * Implement one concrete class per component type.
-     * Register with ComponentDrawerRegistry::Register() at startup.
+     * Attach to a component type with ComponentRegistry::RegisterDrawer<T>() at startup.
      *
      * Draw()  — called each frame when HasComponent() is true.
      * Add()   — called from the "Add Component" popup when CanAdd() is true and the component is absent.

@@ -17,8 +17,9 @@ namespace Opaax::Editor
      * in OnSubscribe). The panel caches the selection in m_SelectedEntity and reads
      * from the cache each frame — Draw takes only the World.
      *
-     * Extension: register an IComponentDrawer via ComponentDrawerRegistry::Register()
-     * to support a new component type. No changes required here.
+     * Extension: register an IComponentDrawer for a component type via
+     * ComponentRegistry::RegisterDrawer<T>() to customise its Inspector view.
+     * No changes required here.
      */
     class InspectorPanel : public IEditorPanel
     {

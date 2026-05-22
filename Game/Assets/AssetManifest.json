@@ -14,6 +14,11 @@
             "id": "Scenes/Test",
             "path": "Game/Assets/Scenes/Test.scene.json",
             "type": "Scene"
+        },
+        {
+            "id": "Scenes/untitled",
+            "path": "Game/Assets/Scenes/untitled.scene.json",
+            "type": "Scene"
         }
     ]
 }
