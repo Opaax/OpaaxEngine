@@ -85,10 +85,6 @@ namespace Opaax
         void PauseToggle();     // Playing ↔ Paused
         void ExitPlayMode();    // Playing|Paused → Editing  (restores scene from temp)
 
-        // Triggers an AssetBrowserPanel rescan — called by MainMenuBar after Save Scene As
-        // so a freshly written .scene.json shows up without a manual Refresh click.
-        void RefreshAssetBrowser();
-
         //------------------------------------------------------------------------------
         // Last-used dialog dir — volatile (lives for the editor session, no persistence).
         // Saved by MainMenuBar after a successful Open / SaveAs so the next dialog opens

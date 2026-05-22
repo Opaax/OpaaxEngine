@@ -239,14 +239,6 @@ namespace Opaax
     }
 
     // =============================================================================
-    // Asset browser refresh
-    // =============================================================================
-    void EditorSubsystem::RefreshAssetBrowser()
-    {
-        m_AssetBrowserPanel.RunScan();
-    }
-
-    // =============================================================================
     // PIE state machine
     // =============================================================================
     void EditorSubsystem::SetEditorState(Editor::EEditorState NewState)

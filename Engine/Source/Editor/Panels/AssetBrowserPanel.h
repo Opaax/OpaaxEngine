@@ -6,6 +6,7 @@
 #include "Core/OpaaxString.hpp"
 #include "Core/OpaaxStringID.hpp"
 #include "Assets/AssetScanner.h"
+#include "Editor/EditorEventBus.h"
 #include "Editor/IEditorPanel.h"
 #include "Editor/Panels/AssetBrowserFilter.h"
 
@@ -42,7 +43,7 @@ namespace Opaax::Editor
         // Functions
         // =============================================================================
     public:
-        // Public so EditorSubsystem can trigger a rescan after Save Scene As — see RefreshAssetBrowser().
+        // Public for the OnSceneSavedEvent subscriber + the manual Refresh toolbar button.
         void RunScan();
 
         // Primary entry point — called directly by EditorSubsystem (mirrors HierarchyPanel pattern).
@@ -59,10 +60,11 @@ namespace Opaax::Editor
         // =============================================================================
         //~Begin IEditorPanel interface
     public:
-        void        Startup()            override;
-        const char* GetPanelName() const override { return "Asset Browser"; }
+        void        Startup()                          override;
+        void        OnSubscribe(EditorEventBus& InBus) override;
+        const char* GetPanelName() const               override { return "Asset Browser"; }
         //~End IEditorPanel interface
-        
+
         // =============================================================================
         // Members
         // =============================================================================
@@ -76,6 +78,8 @@ namespace Opaax::Editor
         // Set inside DrawAssetEntry's context menu; processed once after the iteration
         // ends, so we never mutate AssetManifest::s_Descriptors while iterating it.
         OpaaxStringID            m_PendingRemoveID;
+
+        SubscriptionToken        m_SceneSavedToken;
     };
 
 } // namespace Opaax::Editor

@@ -6,8 +6,10 @@
 #include <imgui.h>
 #include <tinyfiledialogs.h>
 
+#include "Editor/EditorEventBus.h"
 #include "Editor/EditorState.h"
 #include "Editor/EditorSubsystem.h"
+#include "Editor/Events/EditorEvents.h"
 #include "Core/CoreEngineApp.h"
 #include "Core/Log/OpaaxLog.h"
 #include "Core/OpaaxPath.h"
@@ -305,8 +307,8 @@ namespace Opaax::Editor
         if (lPath && lMgr->SaveAs(lPath))
         {
             RememberDialogDir(Owner, lPath);
-            // Auto-refresh so the new file appears in the Asset Browser without a manual Refresh.
-            Owner.RefreshAssetBrowser();
+            OPAAX_CORE_INFO("MainMenuBar - Scene saved: {}", lPath);
+            Owner.GetEventBus().Publish(OnSceneSavedEvent{OpaaxString(lPath)});
         }
     }
 

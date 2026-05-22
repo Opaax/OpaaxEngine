@@ -13,6 +13,7 @@
 #include "Core/Config/ProjectConfig.h"
 #include "Editor/Assets/AssetTypeRegistry.h"
 #include "Editor/Assets/IAssetTypeActions.h"
+#include "Editor/Events/EditorEvents.h"
 #include "Scene/SceneManager.h"
 
 namespace Opaax::Editor
@@ -42,6 +43,20 @@ namespace Opaax::Editor
     {
         m_ManifestAbsPath = OpaaxPath::ToAbsolute(ProjectConfig::AssetsManifestRelPath());
         RunScan();
+    }
+
+    // =============================================================================
+    // Subscribe
+    // =============================================================================
+    void AssetBrowserPanel::OnSubscribe(EditorEventBus& InBus)
+    {
+        m_SceneSavedToken = InBus.Subscribe<OnSceneSavedEvent>(
+            [this](const OnSceneSavedEvent& InEvent)
+            {
+                OPAAX_CORE_INFO("AssetBrowserPanel - Scene saved received, rescanning: {}",
+                    InEvent.GetPath().CStr());
+                RunScan();
+            });
     }
 
     // =============================================================================

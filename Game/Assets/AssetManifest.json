@@ -1,8 +1,8 @@
 {
     "assets": [
         {
-            "id": "Scenes/untitled",
-            "path": "Game/Assets/Scenes/untitled.scene.json",
+            "id": "Scenes/TestSaveEvent",
+            "path": "Game/Assets/Scenes/TestSaveEvent.scene.json",
             "type": "Scene"
         },
         {
