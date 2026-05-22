@@ -53,6 +53,7 @@ namespace Opaax::Editor
     private:
         EntityID          m_SelectedEntity = ENTITY_NONE;
         SubscriptionToken m_SelectionToken;
+        SubscriptionToken m_NewSceneToken;
     };
 
 } // namespace Opaax::Editor

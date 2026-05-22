@@ -170,6 +170,12 @@ namespace Opaax
         // its state into the manager without a back-pointer.
         void SyncCurrentSceneFromActive();
 
+#if OPAAX_WITH_EDITOR
+        // Reaches the editor's bus via GetEngineApp()->GetSubsystem<EditorSubsystem>().
+        // Null-safe — early-out if the editor subsystem isn't alive yet (init/shutdown windows).
+        void PublishNewSceneEvent(const char* InSource);
+#endif
+
         TDynArray<UniquePtr<Scene>> m_Stack;
         OpaaxString                 m_CurrentScenePath;
         OpaaxStringID               m_CurrentSceneAssetID;

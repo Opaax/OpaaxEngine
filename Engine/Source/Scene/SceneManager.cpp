@@ -8,6 +8,12 @@
 #include "Core/OpaaxPath.h"
 #include "World/World.h"
 
+#if OPAAX_WITH_EDITOR
+#include "Editor/EditorEventBus.h"
+#include "Editor/EditorSubsystem.h"
+#include "Editor/Events/EditorEvents.h"
+#endif
+
 namespace Opaax
 {
     // =============================================================================
@@ -91,6 +97,10 @@ namespace Opaax
 
         m_Stack.push_back(std::move(InScene));
         SyncCurrentSceneFromActive();
+
+#if OPAAX_WITH_EDITOR
+        PublishNewSceneEvent("Replace");
+#endif
     }
 
     void SceneManager::SaveCurrentSave()
@@ -182,6 +192,10 @@ namespace Opaax
         m_CurrentScenePath = InPath;
         lScene->SetSourcePath(m_CurrentScenePath);
         OPAAX_CORE_INFO("SceneManager::Open — loaded '{}'.", InPath);
+
+#if OPAAX_WITH_EDITOR
+        PublishNewSceneEvent("Open");
+#endif
         return true;
     }
 
@@ -246,7 +260,23 @@ namespace Opaax
 
         m_CurrentScenePath.Clear();
         OPAAX_CORE_INFO("SceneManager::NewScene — scene entities cleared.");
+
+#if OPAAX_WITH_EDITOR
+        PublishNewSceneEvent("NewScene");
+#endif
     }
+
+#if OPAAX_WITH_EDITOR
+    void SceneManager::PublishNewSceneEvent(const char* InSource)
+    {
+        EditorSubsystem* lEditor = GetEngineApp() ? GetEngineApp()->GetSubsystem<EditorSubsystem>() : nullptr;
+        if (!lEditor) { return; }
+
+        OnNewSceneEvent lEvent;
+        lEditor->GetEventBus().Publish(lEvent);
+        OPAAX_CORE_INFO("SceneManager - OnNewSceneEvent published from {}", InSource);
+    }
+#endif
 
     void SceneManager::SyncCurrentSceneFromActive()
     {

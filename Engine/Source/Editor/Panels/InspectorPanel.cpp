@@ -16,6 +16,13 @@ namespace Opaax::Editor
                 m_SelectedEntity = InEvent.GetEntity();
                 OPAAX_CORE_INFO("Inspector Panel - New Entity selected: {}", "Implement Entity::GetName");
             });
+
+        m_NewSceneToken = InBus.Subscribe<OnNewSceneEvent>(
+            [this](const OnNewSceneEvent&)
+            {
+                OPAAX_CORE_INFO("Inspector Panel - OnNewSceneEvent received, clearing cached entity");
+                m_SelectedEntity = ENTITY_NONE;
+            });
     }
 
     void InspectorPanel::Draw(World* InWorld)

@@ -5,12 +5,11 @@
 
 #include "Core/EngineAPI.h"
 #include "World/World.h"
+#include "Editor/EditorEventBus.h"
 #include "Editor/IEditorPanel.h"
 
 namespace Opaax::Editor
 {
-    class EditorEventBus;
-
     /**
      * @class HierarchyPanel
      * Displays all entities in the active scene.
@@ -62,8 +61,9 @@ namespace Opaax::Editor
         /** Single mutation funnel — early-outs on same-value, then publishes. */
         void SetSelection(EntityID InEntity);
 
-        EntityID        m_SelectedEntity = ENTITY_NONE;
-        EditorEventBus* m_Bus            = nullptr; // captured in OnSubscribe; non-owning
+        EntityID          m_SelectedEntity = ENTITY_NONE;
+        EditorEventBus*   m_Bus            = nullptr; // captured in OnSubscribe; non-owning
+        SubscriptionToken m_NewSceneToken;
     };
 
 } // namespace Opaax::Editor

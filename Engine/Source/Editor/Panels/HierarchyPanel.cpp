@@ -125,6 +125,13 @@ namespace Opaax::Editor
     void HierarchyPanel::OnSubscribe(EditorEventBus& InBus)
     {
         m_Bus = &InBus;
+
+        m_NewSceneToken = InBus.Subscribe<OnNewSceneEvent>(
+            [this](const OnNewSceneEvent&)
+            {
+                OPAAX_CORE_INFO("Hierarchy Panel - OnNewSceneEvent received, clearing selection");
+                SetSelection(ENTITY_NONE);
+            });
     }
 
     void HierarchyPanel::SetSelectedEntity(EntityID InEntity) { SetSelection(InEntity); }
