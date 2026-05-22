@@ -5,6 +5,7 @@
 
 #include "Core/EngineAPI.h"
 #include "World/World.h"
+#include "Editor/EditorEventBus.h"
 #include "Editor/IEditorPanel.h"
 
 namespace Opaax::Editor
@@ -12,12 +13,14 @@ namespace Opaax::Editor
     /**
      * @class HierarchyPanel
      * Displays all entities in the active scene.
-     * Owns the "selected entity" state — other panels read from it via GetSelectedEntity().
+     * Owns the "selected entity" state — publishes OnEntitySelectedEvent on every
+     * change. Other panels subscribe via EditorEventBus (see Inspector).
      *
-     * NOTE: Draw(Scene*, World*) is the primary entry point; it is called directly
-     * by EditorSubsystem rather than through the IEditorPanel::Draw() interface.
-     * Caller supplies the active scene (for name + null-state) and the engine's
-     * shared World (entity source).
+     * NOTE: Draw(SceneManager&, World&) is the primary entry point; it is called
+     * directly by EditorSubsystem rather than through the IEditorPanel::Draw()
+     * interface. The panel self-fetches the active scene from the SceneManager at
+     * the top of every Draw — no Scene* cached across frames or upstream calls
+     * (structurally avoids the F7 dangling-Scene* class of bug).
      */
     class HierarchyPanel : public IEditorPanel
     {
@@ -34,32 +37,21 @@ namespace Opaax::Editor
     public:
         /**
          * API call by EditorSubsystem.
-         * @param InActiveScene active scene (null → render placeholder).
-         * @param InWorld       engine-shared World (must be non-null when InActiveScene is non-null).
+         * @param InSceneMgr active scene source (panel self-fetches GetActiveScene each frame).
+         * @param InWorld    engine-shared World (entity source).
          */
-        void Draw(Scene* InActiveScene, World* InWorld);
+        void Draw(SceneManager& InSceneMgr, World& InWorld);
 
         //------------------------------------------------------------------------------
-        // Get - Set
-        FORCEINLINE EntityID GetSelectedEntity() const noexcept
-        {
-            return m_SelectedEntity;
-        }
-
-        FORCEINLINE void SetSelectedEntity(EntityID InEntity) noexcept
-        {
-            m_SelectedEntity = InEntity;
-        }
-
-        FORCEINLINE void ClearSelection() noexcept
-        {
-            m_SelectedEntity = ENTITY_NONE;
-        }
+        // Set — publish OnEntitySelectedEvent via the bus captured in OnSubscribe.
+        void SetSelectedEntity(EntityID InEntity);
+        void ClearSelection();
 
         // =============================================================================
         // Override
         // =============================================================================
         //~Begin IEditorPanel interface
+        void        OnSubscribe(EditorEventBus& InBus) override;
         const char* GetPanelName() const override { return "Hierarchy"; }
         //~End IEditorPanel interface
 
@@ -67,7 +59,12 @@ namespace Opaax::Editor
         // Members
         // =============================================================================
     private:
-        EntityID m_SelectedEntity = ENTITY_NONE;
+        /** Single mutation funnel — early-outs on same-value, then publishes. */
+        void SetSelection(EntityID InEntity);
+
+        EntityID          m_SelectedEntity = ENTITY_NONE;
+        EditorEventBus*   m_Bus            = nullptr; // captured in OnSubscribe; non-owning
+        SubscriptionToken m_NewSceneToken;
     };
 
 } // namespace Opaax::Editor

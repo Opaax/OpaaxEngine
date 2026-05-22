@@ -12,6 +12,8 @@
 #include "ECS/Components/SceneIDComponent.h"
 #include "ECS/Components/TagComponent.h"
 #include "ECS/Hierarchy.h"
+#include "Editor/EditorEventBus.h"
+#include "Editor/Events/EditorEvents.h"
 #include "World/World.h"
 
 namespace Opaax::Editor
@@ -120,20 +122,52 @@ namespace Opaax::Editor
         }
     }
 
-    void HierarchyPanel::Draw(Scene* InActiveScene, World* InWorld)
+    void HierarchyPanel::OnSubscribe(EditorEventBus& InBus)
+    {
+        m_Bus = &InBus;
+
+        m_NewSceneToken = InBus.Subscribe<OnNewSceneEvent>(
+            [this](const OnNewSceneEvent&)
+            {
+                OPAAX_CORE_INFO("Hierarchy Panel - OnNewSceneEvent received, clearing selection");
+                SetSelection(ENTITY_NONE);
+            });
+    }
+
+    void HierarchyPanel::SetSelectedEntity(EntityID InEntity) { SetSelection(InEntity); }
+    void HierarchyPanel::ClearSelection()                     { SetSelection(ENTITY_NONE); }
+
+    void HierarchyPanel::SetSelection(EntityID InEntity)
+    {
+        if (InEntity == m_SelectedEntity) { return; } // idempotent — no spurious publishes
+
+        m_SelectedEntity = InEntity;
+
+        OPAAX_CORE_INFO("Hierarchy Panel - New Entity selected: {}", "Implement Entity::GetName");
+
+        if (m_Bus != nullptr)
+        {
+            OnEntitySelectedEvent lEvent{m_SelectedEntity};
+            m_Bus->Publish(lEvent);
+        }
+    }
+
+    void HierarchyPanel::Draw(SceneManager& InSceneMgr, World& InWorld)
     {
         ImGui::Begin("Hierarchy");
 
-        // No scene active
-        if (!InActiveScene || !InWorld)
+        // Self-fetch active scene per frame — never cache Scene* across MainMenuBar.Draw
+        // or any other panel call. Stack top can change mid-DrawPanels (PIE Stop,
+        // New Scene, Open Scene) so the freshest read is the only safe one.
+        Scene* lScene = InSceneMgr.GetActiveScene();
+        if (!lScene)
         {
             ImGui::TextDisabled("No active scene.");
             ImGui::End();
             return;
         }
 
-        Scene* lScene    = InActiveScene;
-        World& lWorld    = *InWorld;
+        World& lWorld    = InWorld;
         auto&  lRegistry = lWorld.GetRegistry();
 
         // Scene name as header
@@ -171,15 +205,20 @@ namespace Opaax::Editor
 
         // Render the tree. Collect a single delete request — the registry mutation
         // happens after iteration to avoid invalidating views mid-walk.
+        // DrawNode mutates its EntityID& parameter in-place on click; route through
+        // a local so SetSelection (which publishes) is the single sink.
+        EntityID lWorkingSelection = m_SelectedEntity;
         EntityID lToDelete = ENTITY_NONE;
         for (EntityID lRoot : lRoots)
         {
-            const EntityID lDel = DrawNode(lWorld, lRoot, lChildren, m_SelectedEntity);
+            const EntityID lDel = DrawNode(lWorld, lRoot, lChildren, lWorkingSelection);
             if (lDel != ENTITY_NONE && lToDelete == ENTITY_NONE)
             {
                 lToDelete = lDel;
             }
         }
+
+        SetSelection(lWorkingSelection);
 
         // Drop-to-root zone: the row IS the drop target AND the visible label, so the
         // user can never get confused about which surface receives the drop.
@@ -216,7 +255,7 @@ namespace Opaax::Editor
         if (ImGui::Button("+ Add Entity", ImVec2(-1.f, 0.f)))
         {
             const EntityID lNew = lWorld.CreateEntity("NewEntity");
-            m_SelectedEntity = lNew;
+            SetSelection(lNew);
         }
 
         ImGui::End();

@@ -1,6 +1,11 @@
 {
     "assets": [
         {
+            "id": "Textures/Explosion Pack/PNG/Pixel explosion/pixelExplosion04",
+            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Pixel explosion/pixelExplosion04.png",
+            "type": "Texture2D"
+        },
+        {
             "id": "Textures/Explosion Pack/PNG/Pixel explosion/pixelExplosion05",
             "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Pixel explosion/pixelExplosion05.png",
             "type": "Texture2D"
@@ -303,11 +308,6 @@
         {
             "id": "Textures/Explosion Pack/PNG/Pixel explosion/pixelExplosion03",
             "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Pixel explosion/pixelExplosion03.png",
-            "type": "Texture2D"
-        },
-        {
-            "id": "Textures/Explosion Pack/PNG/Pixel explosion/pixelExplosion04",
-            "path": "SimpleShmup/Assets/Textures/Explosion Pack/PNG/Pixel explosion/pixelExplosion04.png",
             "type": "Texture2D"
         },
         {

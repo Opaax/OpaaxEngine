@@ -55,6 +55,16 @@ namespace Opaax
         //   The subsystem filter (GetEventCategoryFilter) ensures engine subsystems
         //   never receive gameplay events even if entries are interleaved.
         GameplayEvent = 1000,  // sentinel — reserve space, avoid collisions
+
+        // --- Editor (editor-only; gated by OPAAX_WITH_EDITOR at consumer sites) ---
+        // NOTE: Editor events flow through EditorEventBus, NOT through the engine
+        //   subsystem dispatch path. The sentinel exists here only to keep the
+        //   global EEventType space collision-free.
+        EditorEvent = 2000,  // sentinel
+        EntitySelected,
+        SceneSaved,
+        NewScene,
+        AssetImported,
     };
  
     // =============================================================================
@@ -78,6 +88,7 @@ namespace Opaax
         EEventCategory_Mouse       = BIT(3),   // mouse move / scroll
         EEventCategory_MouseButton = BIT(4),   // mouse button press/release
         EEventCategory_Gameplay    = BIT(5),   // game-layer events (not used by engine subsystems)
-        // BIT(6..31) reserved for future engine domains or game extension
+        EEventCategory_Editor      = BIT(6),   // editor-only events dispatched via EditorEventBus
+        // BIT(7..31) reserved for future engine domains or game extension
     };
 }

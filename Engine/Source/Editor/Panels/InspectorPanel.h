@@ -4,16 +4,22 @@
 
 #include "Core/EngineAPI.h"
 #include "World/World.h"
+#include "Editor/EditorEventBus.h"
 #include "Editor/IEditorPanel.h"
 
 namespace Opaax::Editor
 {
     /**
      * @class InspectorPanel
-     * Displays and edits components of the selected entity.
+     * Displays and edits components of the currently selected entity.
      *
-     * Extension: register an IComponentDrawer via ComponentDrawerRegistry::Register()
-     * to support a new component type. No changes required here.
+     * Selection arrives via OnEntitySelectedEvent on the EditorEventBus (subscribed
+     * in OnSubscribe). The panel caches the selection in m_SelectedEntity and reads
+     * from the cache each frame — Draw takes only the World.
+     *
+     * Extension: register an IComponentDrawer for a component type via
+     * ComponentRegistry::RegisterDrawer<T>() to customise its Inspector view.
+     * No changes required here.
      */
     class InspectorPanel : public IEditorPanel
     {
@@ -29,18 +35,26 @@ namespace Opaax::Editor
         // =============================================================================
     public:
         /**
-         * API — parameterised draw called directly by EditorSubsystem
-         * @param InWorld 
-         * @param InSelected 
+         * API — parameterised draw called directly by EditorSubsystem.
+         * @param InWorld engine-shared World (entity source).
          */
-        void Draw(World* InWorld, EntityID InSelected);
+        void Draw(World& InWorld);
 
         // =============================================================================
         // Override
         // =============================================================================
         //~Begin  IEditorPanel interface
+        void        OnSubscribe(EditorEventBus& InBus) override;
         const char* GetPanelName() const override { return "Inspector"; }
         //~End  IEditorPanel interface
+
+        // =============================================================================
+        // Members
+        // =============================================================================
+    private:
+        EntityID          m_SelectedEntity = ENTITY_NONE;
+        SubscriptionToken m_SelectionToken;
+        SubscriptionToken m_NewSceneToken;
     };
 
 } // namespace Opaax::Editor

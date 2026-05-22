@@ -3,29 +3,50 @@
 #if OPAAX_WITH_EDITOR
 
 #include <imgui.h>
+#include "Editor/Events/EditorEvents.h"
 #include "ECS/ComponentRegistry.h"
 
 namespace Opaax::Editor
 {
-    void InspectorPanel::Draw(World* InWorld, EntityID InSelected)
+    void InspectorPanel::OnSubscribe(EditorEventBus& InBus)
+    {
+        m_SelectionToken = InBus.Subscribe<OnEntitySelectedEvent>(
+            [this](const OnEntitySelectedEvent& InEvent)
+            {
+                m_SelectedEntity = InEvent.GetEntity();
+                OPAAX_CORE_INFO("Inspector Panel - New Entity selected: {}", "Implement Entity::GetName");
+            });
+
+        m_NewSceneToken = InBus.Subscribe<OnNewSceneEvent>(
+            [this](const OnNewSceneEvent&)
+            {
+                OPAAX_CORE_INFO("Inspector Panel - OnNewSceneEvent received, clearing cached entity");
+                m_SelectedEntity = ENTITY_NONE;
+            });
+    }
+
+    void InspectorPanel::Draw(World& InWorld)
     {
         ImGui::Begin("Inspector");
 
-        if (!InWorld || InSelected == ENTITY_NONE)
+        if (m_SelectedEntity == ENTITY_NONE)
         {
             ImGui::TextDisabled("No entity selected.");
             ImGui::End();
             return;
         }
 
-        if (!InWorld->IsValid(InSelected))
+        // IsValid gate stays — the cache is advisory; an entity destroyed by a
+        // path that doesn't publish (game system, future code) would otherwise
+        // dereference an invalid handle.
+        if (!InWorld.IsValid(m_SelectedEntity))
         {
             ImGui::TextDisabled("Entity is no longer valid.");
             ImGui::End();
             return;
         }
 
-        ComponentRegistry::DrawAll(*InWorld, InSelected);
+        ComponentRegistry::DrawAll(InWorld, m_SelectedEntity);
 
         ImGui::Separator();
 
@@ -36,7 +57,7 @@ namespace Opaax::Editor
 
         if (ImGui::BeginPopup("AddComponentPopup"))
         {
-            ComponentRegistry::DrawAddComponentMenu(*InWorld, InSelected);
+            ComponentRegistry::DrawAddComponentMenu(InWorld, m_SelectedEntity);
             ImGui::EndPopup();
         }
 

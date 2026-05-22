@@ -1,11 +1,6 @@
 {
     "assets": [
         {
-            "id": "Scenes/untitled",
-            "path": "Game/Assets/Scenes/untitled.scene.json",
-            "type": "Scene"
-        },
-        {
             "id": "Scenes/GameScene",
             "path": "Game/Assets/Scenes/GameScene.scene.json",
             "type": "Scene"
@@ -18,6 +13,11 @@
         {
             "id": "Scenes/Test",
             "path": "Game/Assets/Scenes/Test.scene.json",
+            "type": "Scene"
+        },
+        {
+            "id": "Scenes/untitled",
+            "path": "Game/Assets/Scenes/untitled.scene.json",
             "type": "Scene"
         }
     ]

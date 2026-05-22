@@ -13,6 +13,7 @@
 #include "Core/Config/ProjectConfig.h"
 #include "Editor/Assets/AssetTypeRegistry.h"
 #include "Editor/Assets/IAssetTypeActions.h"
+#include "Editor/Events/EditorEvents.h"
 #include "Scene/SceneManager.h"
 
 namespace Opaax::Editor
@@ -20,16 +21,16 @@ namespace Opaax::Editor
     // Compares an entry's resolved abs path against SceneManager::GetCurrentScenePath()
     // via std::filesystem::equivalent so slash/case differences don't cause false negatives.
     // Returns false for non-Scene entries, missing files, or when no scene is loaded.
-    static bool IsLoadedScene(const SceneManager* InMgr, const AssetDescriptor& InDesc)
+    static bool IsLoadedScene(const SceneManager& InMgr, const AssetDescriptor& InDesc)
     {
-        if (!InMgr || !InMgr->HasCurrentScenePath()) { return false; }
-        if (InDesc.Type != OpaaxStringID("Scene"))   { return false; }
-        if (InDesc.bMissing)                         { return false; }
+        if (!InMgr.HasCurrentScenePath())          { return false; }
+        if (InDesc.Type != OpaaxStringID("Scene")) { return false; }
+        if (InDesc.bMissing)                       { return false; }
 
         std::error_code lEc;
         const OpaaxString lEntryAbs = OpaaxPath::ToAbsolute(InDesc.RelPath);
         const bool bSame = std::filesystem::equivalent(
-            std::filesystem::path(InMgr->GetCurrentScenePath().CStr()),
+            std::filesystem::path(InMgr.GetCurrentScenePath().CStr()),
             std::filesystem::path(lEntryAbs.CStr()),
             lEc);
         return bSame && !lEc;
@@ -42,6 +43,20 @@ namespace Opaax::Editor
     {
         m_ManifestAbsPath = OpaaxPath::ToAbsolute(ProjectConfig::AssetsManifestRelPath());
         RunScan();
+    }
+
+    // =============================================================================
+    // Subscribe
+    // =============================================================================
+    void AssetBrowserPanel::OnSubscribe(EditorEventBus& InBus)
+    {
+        m_SceneSavedToken = InBus.Subscribe<OnSceneSavedEvent>(
+            [this](const OnSceneSavedEvent& InEvent)
+            {
+                OPAAX_CORE_INFO("AssetBrowserPanel - Scene saved received, rescanning: {}",
+                    InEvent.GetPath().CStr());
+                RunScan();
+            });
     }
 
     // =============================================================================
@@ -78,12 +93,12 @@ namespace Opaax::Editor
     // =============================================================================
     // Draw
     // =============================================================================
-    void AssetBrowserPanel::Draw(SceneManager* InSceneManager)
+    void AssetBrowserPanel::Draw(SceneManager& InSceneMgr)
     {
         ImGui::Begin("Asset Browser");
         DrawToolbar();
         ImGui::Separator();
-        DrawAssetList(InSceneManager);
+        DrawAssetList(InSceneMgr);
         ImGui::End();
 
         // Deferred manifest mutation — safe to mutate s_Descriptors here, after iteration ended.
@@ -185,7 +200,7 @@ namespace Opaax::Editor
     // =============================================================================
     // Asset list
     // =============================================================================
-    void AssetBrowserPanel::DrawAssetList(SceneManager* InSceneManager)
+    void AssetBrowserPanel::DrawAssetList(SceneManager& InSceneMgr)
     {
         const auto& lAll = AssetManifest::GetAll();
 
@@ -200,7 +215,7 @@ namespace Opaax::Editor
         for (const auto& [lKey, lDesc] : lAll)
         {
             if (!m_Filter.Matches(lDesc)) { continue; }
-            DrawAssetEntry(lDesc, InSceneManager);
+            DrawAssetEntry(lDesc, InSceneMgr);
             ++lVisible;
         }
 
@@ -213,12 +228,12 @@ namespace Opaax::Editor
     // =============================================================================
     // Single entry — icon, colour, D&D source, tooltip, context menu
     // =============================================================================
-    void AssetBrowserPanel::DrawAssetEntry(const AssetDescriptor& InDesc, SceneManager* InSceneManager)
+    void AssetBrowserPanel::DrawAssetEntry(const AssetDescriptor& InDesc, SceneManager& InSceneMgr)
     {
         // Scenes don't go through AssetRegistry — they're owned by SceneManager.
         // Treat the entry that matches GetCurrentScenePath() as "loaded" for display parity with textures.
         const bool bLoaded  = AssetRegistry::IsLoaded(InDesc.ID)
-                           || IsLoadedScene(InSceneManager, InDesc);
+                           || IsLoadedScene(InSceneMgr, InDesc);
         const bool bMissing = InDesc.bMissing;
 
         // Status colour
