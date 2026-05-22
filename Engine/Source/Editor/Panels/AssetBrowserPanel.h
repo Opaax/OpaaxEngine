@@ -48,12 +48,12 @@ namespace Opaax::Editor
 
         // Primary entry point — called directly by EditorSubsystem (mirrors HierarchyPanel pattern).
         // The SceneManager is needed to mark the currently loaded scene as such in the list.
-        void Draw(SceneManager* InSceneManager);
+        void Draw(SceneManager& InSceneMgr);
 
     private:
         void DrawToolbar();
-        void DrawAssetList(SceneManager* InSceneManager);
-        void DrawAssetEntry(const AssetDescriptor& InDesc, SceneManager* InSceneManager);
+        void DrawAssetList(SceneManager& InSceneMgr);
+        void DrawAssetEntry(const AssetDescriptor& InDesc, SceneManager& InSceneMgr);
 
         // =============================================================================
         // Override

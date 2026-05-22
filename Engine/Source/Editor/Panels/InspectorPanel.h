@@ -37,7 +37,7 @@ namespace Opaax::Editor
          * API — parameterised draw called directly by EditorSubsystem.
          * @param InWorld engine-shared World (entity source).
          */
-        void Draw(World* InWorld);
+        void Draw(World& InWorld);
 
         // =============================================================================
         // Override

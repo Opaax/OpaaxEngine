@@ -25,11 +25,11 @@ namespace Opaax::Editor
             });
     }
 
-    void InspectorPanel::Draw(World* InWorld)
+    void InspectorPanel::Draw(World& InWorld)
     {
         ImGui::Begin("Inspector");
 
-        if (!InWorld || m_SelectedEntity == ENTITY_NONE)
+        if (m_SelectedEntity == ENTITY_NONE)
         {
             ImGui::TextDisabled("No entity selected.");
             ImGui::End();
@@ -39,14 +39,14 @@ namespace Opaax::Editor
         // IsValid gate stays — the cache is advisory; an entity destroyed by a
         // path that doesn't publish (game system, future code) would otherwise
         // dereference an invalid handle.
-        if (!InWorld->IsValid(m_SelectedEntity))
+        if (!InWorld.IsValid(m_SelectedEntity))
         {
             ImGui::TextDisabled("Entity is no longer valid.");
             ImGui::End();
             return;
         }
 
-        ComponentDrawerRegistry::DrawAll(*InWorld, m_SelectedEntity);
+        ComponentDrawerRegistry::DrawAll(InWorld, m_SelectedEntity);
 
         ImGui::Separator();
 
@@ -57,7 +57,7 @@ namespace Opaax::Editor
 
         if (ImGui::BeginPopup("AddComponentPopup"))
         {
-            ComponentDrawerRegistry::DrawAddComponentMenu(*InWorld, m_SelectedEntity);
+            ComponentDrawerRegistry::DrawAddComponentMenu(InWorld, m_SelectedEntity);
             ImGui::EndPopup();
         }
 

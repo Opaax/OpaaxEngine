@@ -152,20 +152,22 @@ namespace Opaax::Editor
         }
     }
 
-    void HierarchyPanel::Draw(Scene* InActiveScene, World* InWorld)
+    void HierarchyPanel::Draw(SceneManager& InSceneMgr, World& InWorld)
     {
         ImGui::Begin("Hierarchy");
 
-        // No scene active
-        if (!InActiveScene || !InWorld)
+        // Self-fetch active scene per frame — never cache Scene* across MainMenuBar.Draw
+        // or any other panel call. Stack top can change mid-DrawPanels (PIE Stop,
+        // New Scene, Open Scene) so the freshest read is the only safe one.
+        Scene* lScene = InSceneMgr.GetActiveScene();
+        if (!lScene)
         {
             ImGui::TextDisabled("No active scene.");
             ImGui::End();
             return;
         }
 
-        Scene* lScene    = InActiveScene;
-        World& lWorld    = *InWorld;
+        World& lWorld    = InWorld;
         auto&  lRegistry = lWorld.GetRegistry();
 
         // Scene name as header

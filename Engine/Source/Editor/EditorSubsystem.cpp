@@ -194,19 +194,23 @@ namespace Opaax
 
     void EditorSubsystem::DrawPanels()
     {
-        auto* lSceneMgr = GetEngineApp()
+        SceneManager* lSceneMgr = GetEngineApp()
             ? GetEngineApp()->GetSubsystem<SceneManager>()
             : nullptr;
-
-        Scene* lActiveScene = lSceneMgr ? lSceneMgr->GetActiveScene() : nullptr;
-        World* lWorld       = lActiveScene ? &GetEngineApp()->GetWorld() : nullptr;
+        if (!lSceneMgr) { return; }
 
         m_MainMenuBar.Draw(*this);
 
-        if (m_bShowHierarchy)    m_HierarchyPanel.Draw(lActiveScene, lWorld);
+        // World is owned by CoreEngineApp — stable across MainMenuBar mutations
+        // (scene transitions only swap entities, not the World container). Each
+        // panel that needs the active Scene fetches it just-in-time from SceneMgr
+        // (HierarchyPanel, AssetBrowserPanel) — no broker-level Scene* cache.
+        World& lWorld = GetEngineApp()->GetWorld();
+
+        if (m_bShowHierarchy)    m_HierarchyPanel.Draw(*lSceneMgr, lWorld);
         if (m_bShowInspector)    m_InspectorPanel.Draw(lWorld);
         if (m_bShowViewport)     m_ViewportPanel.Draw(m_EditorState);
-        if (m_bShowAssetBrowser) m_AssetBrowserPanel.Draw(lSceneMgr);
+        if (m_bShowAssetBrowser) m_AssetBrowserPanel.Draw(*lSceneMgr);
     }
 
     // =============================================================================
