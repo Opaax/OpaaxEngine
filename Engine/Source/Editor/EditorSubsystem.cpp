@@ -15,7 +15,9 @@
 #include "Scene/SceneManager.h"
 #include "Scene/SceneSerializer.h"
 #include "Core/Log/OpaaxLog.h"
+#include "Renderer/Camera/CameraControllerSystem.h"
 #include "Renderer/Camera/CameraSubsystem.h"
+#include "Renderer/Camera/OrthographicCamera.h"
 #include "RHI/RenderCommand.h"
 
 #include "Editor/Assets/AssetTypeRegistry.h"
@@ -85,6 +87,16 @@ namespace Opaax
 
         GetEngineApp()->SetRenderTarget(&m_ViewportPanel);
 
+        // Editor camera owned here; CameraSubsystem only holds a non-owning observer.
+        // CameraSubsystem::Startup already ran (registration order) and parked a default
+        // OrthographicCamera in its owned slot — we swap the active pointer to ours.
+        m_EditorCamera = MakeUnique<Editor::EditorCamera>();
+        if (auto* lCameras = GetEngineApp()->GetSubsystem<CameraSubsystem>())
+        {
+            lCameras->SetActiveCameraNonOwning(m_EditorCamera.get());
+            OPAAX_CORE_INFO("EditorSubsystem: EditorCamera installed as active (non-owning).");
+        }
+
         OPAAX_CORE_INFO("EditorSubsystem: ready.");
         return true;
     }
@@ -136,6 +148,16 @@ namespace Opaax
     {
         OPAAX_CORE_INFO("EditorSubsystem::Shutdown()");
 
+        // Subsystems tear down in reverse-of-registration so this runs BEFORE
+        // CameraSubsystem::Shutdown. The CameraSubsystem still holds a non-owning
+        // pointer to our EditorCamera — clear it explicitly so nothing inside
+        // any intermediate subsystem's Shutdown can dereference a freed camera.
+        if (auto* lCameras = GetEngineApp() ? GetEngineApp()->GetSubsystem<CameraSubsystem>() : nullptr)
+        {
+            lCameras->SetActiveCameraNonOwning(nullptr);
+        }
+        m_EditorCamera.reset();
+
         Editor::AssetTypeRegistry::Clear();
         ComponentRegistry::Clear();
 
@@ -147,11 +169,91 @@ namespace Opaax
     }
 
     // =============================================================================
+    // TickEditorCameraInput — ImGui-driven pan/zoom. MUST be called AFTER BeginFrame's
+    // NewFrame ingests this frame's input events; otherwise IsMouseClicked never fires
+    // and IO.MouseWheel reads stale (see feedback_imgui_input_after_newframe).
+    // =============================================================================
+    void EditorSubsystem::TickEditorCameraInput()
+    {
+        if (m_EditorState != Editor::EEditorState::Editing) { return; }
+        if (!m_EditorCamera)                                { return; }
+
+        const ImGuiIO& lIO = ImGui::GetIO();
+
+        //------------------------------------------------------------------------------
+        // Middle-mouse drag → pan. Latch only set when the press lands inside the
+        // viewport panel; continues regardless of where the cursor drifts after that.
+        if (!m_bMMBDragging
+            && ImGui::IsMouseClicked(ImGuiMouseButton_Middle)
+            && m_ViewportPanel.IsHovered())
+        {
+            m_bMMBDragging         = true;
+            const ImVec2 lPressPos = ImGui::GetMousePos();
+            m_LastDragPos          = { lPressPos.x, lPressPos.y };
+        }
+
+        if (m_bMMBDragging)
+        {
+            if (ImGui::IsMouseDown(ImGuiMouseButton_Middle))
+            {
+                const ImVec2 lNow    = ImGui::GetMousePos();
+                const Vector2F lCurr = { lNow.x, lNow.y };
+                const Vector2F lDelta = lCurr - m_LastDragPos;
+                if (lDelta.x != 0.f || lDelta.y != 0.f)
+                {
+                    m_EditorCamera->Pan(lDelta);
+                    m_LastDragPos = lCurr;
+                }
+            }
+            else
+            {
+                m_bMMBDragging = false;
+            }
+        }
+
+        //------------------------------------------------------------------------------
+        // Scroll wheel → zoom-at-cursor. Only fires when the cursor is over the viewport
+        // panel, so scrolling over Hierarchy / Inspector / AssetBrowser does NOT zoom.
+        if (lIO.MouseWheel != 0.f && m_ViewportPanel.IsHovered())
+        {
+            const ImVec2  lMouseAbs   = ImGui::GetMousePos();
+            const Vector2F lContent   = m_ViewportPanel.GetContentScreenPos();
+            const Vector2F lCursorLocal = { lMouseAbs.x - lContent.x, lMouseAbs.y - lContent.y };
+            m_EditorCamera->Zoom(lIO.MouseWheel, lCursorLocal, m_ViewportPanel.GetContentSize());
+        }
+    }
+
+    // =============================================================================
+    // RestoreEditorCamera — invoked from every ExitPlayMode transition-to-Editing branch.
+    // Detaches leftover Follow/Shake controllers so they can't tick on the editor camera
+    // next frame, then re-installs the EditorCamera as the active non-owning camera.
+    // =============================================================================
+    void EditorSubsystem::RestoreEditorCamera()
+    {
+        if (!GetEngineApp()) { return; }
+
+        if (auto* lCtrls = GetEngineApp()->GetGameSubsystem<CameraControllerSystem>())
+        {
+            lCtrls->DetachAll();
+        }
+
+        if (auto* lCameras = GetEngineApp()->GetSubsystem<CameraSubsystem>())
+        {
+            lCameras->SetActiveCameraNonOwning(m_EditorCamera.get());
+            OPAAX_CORE_INFO("EditorSubsystem: editor camera restored after PIE.");
+        }
+    }
+
+    // =============================================================================
     // Render
     // =============================================================================
     void EditorSubsystem::Render(double /*Alpha*/)
     {
         BeginFrame();
+        // Editor camera input must run AFTER NewFrame (inside BeginFrame) so ImGui's
+        // mouse / wheel state reflects this frame's input. Before DrawPanels so the
+        // camera deltas apply to this frame's render of the viewport texture.
+        TickEditorCameraInput();
         DrawPanels();
         EndFrame();
     }
@@ -254,6 +356,16 @@ namespace Opaax
         SceneSerializer::Serialize(*lSceneMgr->GetActiveScene(), lTempPath.CStr(), GetEngineApp()->GetWorld());
 
         SetEditorState(Editor::EEditorState::Playing);
+
+        // Install a fresh owned runtime camera. The editor camera (non-owning observer
+        // on CameraSubsystem) is structurally evicted; EditorSubsystem still owns the
+        // EditorCamera through its UniquePtr so pan/zoom state survives the cycle.
+        // First-frame viewport sizing flows through the existing OnResized callback.
+        if (auto* lCameras = GetEngineApp()->GetSubsystem<CameraSubsystem>())
+        {
+            lCameras->SetActiveCamera(MakeUnique<OrthographicCamera>());
+            OPAAX_CORE_INFO("EditorSubsystem: runtime camera installed for PIE.");
+        }
     }
 
     void EditorSubsystem::PauseToggle()
@@ -285,6 +397,7 @@ namespace Opaax
         {
             OPAAX_CORE_WARN("EditorSubsystem::ExitPlayMode — no active scene, dropping snapshot restore.");
             SetEditorState(Editor::EEditorState::Editing);
+            RestoreEditorCamera();
             return;
         }
 
@@ -294,6 +407,7 @@ namespace Opaax
             OPAAX_CORE_WARN("EditorSubsystem::ExitPlayMode — no temp snapshot found at {}",
                 lTempPath.CStr());
             SetEditorState(Editor::EEditorState::Editing);
+            RestoreEditorCamera();
             return;
         }
 
@@ -306,6 +420,7 @@ namespace Opaax
         SceneSerializer::Deserialize(*lScene, lTempPath.CStr(), lWorld);
 
         SetEditorState(Editor::EEditorState::Editing);
+        RestoreEditorCamera();
 
         // PIE rebuilds entities without going through SceneManager — publish so
         // selection caches in Hierarchy / Inspector reset (entt recycles IDs).

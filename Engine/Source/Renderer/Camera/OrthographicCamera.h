@@ -41,6 +41,23 @@ namespace Opaax
 
         FORCEINLINE float GetZoom() const noexcept { return m_Zoom; }
 
+        /**
+         * Convert a viewport-local pixel coordinate (origin at panel top-left, Y growing
+         * downward) into a world-space coordinate. Used by the editor for zoom-at-cursor:
+         * snapshot the world point under the cursor pre-zoom, change the zoom, snapshot
+         * again, then translate the camera so the post-zoom world point coincides with
+         * the pre-zoom one.
+         */
+        FORCEINLINE Vector2F ScreenToWorld(const Vector2F& InLocalPx, const Vector2F& InViewportPx) const noexcept
+        {
+            // Centred ortho: viewport-local (0,0) maps to (-w/2, +h/2) in world; screen-Y-down
+            // vs world-Y-up forces the Y flip on the centred coord. Effective camera position
+            // includes m_TransientOffset because that's what the view matrix actually translates by.
+            const Vector2F lCentred   = InLocalPx - InViewportPx * 0.5f;
+            const Vector2F lEffective = m_Position + m_TransientOffset;
+            return lEffective + Vector2F(lCentred.x, -lCentred.y) / m_Zoom;
+        }
+
         // =============================================================================
         // Override
         // =============================================================================

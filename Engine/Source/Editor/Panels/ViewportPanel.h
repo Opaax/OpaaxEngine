@@ -4,6 +4,7 @@
 #if OPAAX_WITH_EDITOR
 
 #include "Core/EngineAPI.h"
+#include "Core/OpaaxMathTypes.h"
 #include "Core/OpaaxTypes.h"
 #include "Editor/EditorState.h"
 
@@ -52,6 +53,13 @@ namespace Opaax::Editor
         FORCEINLINE bool IsHovered() const noexcept { return m_bHovered; }
         FORCEINLINE bool IsFocused() const noexcept { return m_bFocused; }
 
+        // Screen-absolute position of the content region's top-left (refreshed every Draw).
+        // Combined with ImGui::GetMousePos() — which also returns screen-absolute coords
+        // when ConfigFlags_ViewportsEnable is on — this gives a docked/undocked-invariant
+        // cursor-in-viewport-local position for editor camera input.
+        FORCEINLINE Vector2F GetContentScreenPos() const noexcept { return m_ContentScreenPos; }
+        FORCEINLINE Vector2F GetContentSize()      const noexcept { return { static_cast<float>(m_Width), static_cast<float>(m_Height) }; }
+
         // =============================================================================
         // Override
         // =============================================================================
@@ -77,6 +85,8 @@ namespace Opaax::Editor
                                 
         bool   m_bHovered       = false;
         bool   m_bFocused       = false;
+
+        Vector2F m_ContentScreenPos = { 0.f, 0.f };
 
     public:
         TFunction<void(Uint32, Uint32)> OnResized;

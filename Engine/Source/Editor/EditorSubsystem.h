@@ -1,6 +1,7 @@
 #pragma once
 #if OPAAX_WITH_EDITOR
 
+#include "Editor/Camera/EditorCamera.h"
 #include "Editor/EditorEventBus.h"
 #include "Editor/EditorState.h"
 #include "Editor/IEditorPanel.h"
@@ -10,6 +11,7 @@
 #include "Panels/ViewportPanel.h"
 #include "Toolbar/MainMenuBar.h"
 #include "Core/Event/OpaaxEventTypes.hpp"
+#include "Core/OpaaxMathTypes.h"
 #include "Core/OpaaxString.hpp"
 #include "Core/Systems/EngineSubsystem.h"
 
@@ -97,9 +99,9 @@ namespace Opaax
         // =============================================================================
         //~Begin EngineSubsystemBase interface
     public:
-        bool Startup()            override;
-        void Shutdown()           override;
-        void Render(double Alpha) override;
+        bool Startup()              override;
+        void Shutdown()             override;
+        void Render(double Alpha)   override;
 
         Uint32 GetEventCategoryFilter() const noexcept override { return EEventCategory_None; }
         //~End EngineSubsystemBase interface
@@ -109,12 +111,22 @@ namespace Opaax
         // =============================================================================
     private:
         void SetEditorState(Editor::EEditorState NewState);
+        void RestoreEditorCamera();
+        void TickEditorCameraInput();
 
     private:
         // Bus is held by UniquePtr so the EditorSubsystem stays movable (default move
         // ctor) — EditorEventBus itself is non-movable because SubscriptionTokens hold
         // a raw EditorEventBus* and a relocation would silently dangle them.
         UniquePtr<Editor::EditorEventBus> m_EventBus = MakeUnique<Editor::EditorEventBus>();
+
+        // Editor camera lives across PIE cycles so pan/zoom state persists. Installed as
+        // the non-owning active camera on CameraSubsystem in Editing; swapped out for a
+        // fresh runtime OrthographicCamera at PIE Start; restored at PIE Stop. Shutdown
+        // MUST clear CameraSubsystem's non-owning pointer before this UniquePtr resets,
+        // because subsystem teardown is reverse-of-registration and EditorSubsystem
+        // destroys before CameraSubsystem.
+        UniquePtr<Editor::EditorCamera> m_EditorCamera;
 
         Editor::MainMenuBar       m_MainMenuBar;
         Editor::HierarchyPanel    m_HierarchyPanel;
@@ -128,6 +140,11 @@ namespace Opaax
         bool m_bShowInspector    = true;
         bool m_bShowAssetBrowser = true;
         bool m_bShowViewport     = true;
+
+        // Middle-mouse drag latch + last cursor position for the editor-camera pan.
+        // Snapshot at MMB-press, advanced each Update frame while held.
+        bool     m_bMMBDragging = false;
+        Vector2F m_LastDragPos  = { 0.f, 0.f };
 
         OpaaxString m_LastDialogDir;
     };

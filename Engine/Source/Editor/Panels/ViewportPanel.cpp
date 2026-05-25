@@ -111,6 +111,14 @@ namespace Opaax::Editor
         m_bHovered = ImGui::IsWindowHovered();
         m_bFocused = ImGui::IsWindowFocused();
 
+        // Cache the content region's screen-absolute top-left. Under ConfigFlags_ViewportsEnable
+        // both GetWindowPos() and GetMousePos() return screen-absolute coords, so this works
+        // identically whether the Viewport panel is docked in the main window or undocked into
+        // its own OS window. Subtracting this from a mouse pos yields viewport-local pixels.
+        const ImVec2 lWinPos        = ImGui::GetWindowPos();
+        const ImVec2 lContentOffset = ImGui::GetWindowContentRegionMin();
+        m_ContentScreenPos          = { lWinPos.x + lContentOffset.x, lWinPos.y + lContentOffset.y };
+
         const ImVec2 lPanelSize = ImGui::GetContentRegionAvail();
         const Uint32 lNewW = static_cast<Uint32>(lPanelSize.x);
         const Uint32 lNewH = static_cast<Uint32>(lPanelSize.y);
