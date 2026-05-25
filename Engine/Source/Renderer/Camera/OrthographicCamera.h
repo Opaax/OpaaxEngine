@@ -37,11 +37,9 @@ namespace Opaax
         //------------------------------------------------------------------------------
         //  Get - Set
     public:
-        void SetPosition(const Vector2F& InPosition);
-        void SetZoom    (float InZoom);
+        void SetZoom(float InZoom);
 
-        FORCEINLINE const Vector2F& GetPosition() const noexcept { return m_Position; }
-        FORCEINLINE float           GetZoom()     const noexcept { return m_Zoom; }
+        FORCEINLINE float GetZoom() const noexcept { return m_Zoom; }
 
         // =============================================================================
         // Override
@@ -50,6 +48,9 @@ namespace Opaax
     public:
         const Matrix44F& GetViewProjection() override;
         void             SetViewportSize(Uint32 InWidth, Uint32 InHeight) override;
+
+        Vector2F GetPosition() const override { return m_Position; }
+        void     SetPosition(const Vector2F& InPosition) override;
         //~End ICamera Interface
 
         // =============================================================================

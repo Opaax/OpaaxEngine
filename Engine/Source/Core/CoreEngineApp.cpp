@@ -23,6 +23,7 @@
 #include "Log/OpaaxLog.h"
 #include "Container/TPolymorphicList.hpp"
 #include "Renderer/Camera/CameraSubsystem.h"
+#include "Renderer/Camera/CameraControllerSystem.h"
 #include "Renderer/Renderer2D.h"
 #include "Renderer/RenderSubsystem.h"
 #include "Renderer/Systems/WorldRenderSystem.h"
@@ -239,6 +240,10 @@ void CoreEngineApp::Initialize()
 #if OPAAX_WITH_EDITOR
     m_EngineSubsystemManager.RegisterSubsystem<EditorSubsystem>(this);
 #endif
+
+    // Engine-default camera controller system — registered before OnInitialize so games can
+    // grab it via GetGameSubsystem<CameraControllerSystem>() from their own setup hooks.
+    RegisterGameSubsystem<CameraControllerSystem>(this);
 
     // Default world-render system. Games append more in OnInitialize (called right after);
     // dispatch order = registration order.

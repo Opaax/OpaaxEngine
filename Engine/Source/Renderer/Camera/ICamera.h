@@ -45,6 +45,30 @@ namespace Opaax
          * extents accordingly.
          */
         virtual void SetViewportSize(Uint32 InWidth, Uint32 InHeight) = 0;
+
+        //------------------------------------------------------------------------------
+        // Position — defaulted so cameras without a positional concept (HUD, locked overlay)
+        // can ignore. Controllers (Follow, Shake) drive these on the active camera.
+
+        /**
+         * Returns the camera's world-space position. Defaults to origin for cameras
+         * with no positional concept.
+         */
+        virtual Vector2F GetPosition() const { return Vector2F(0.f, 0.f); }
+
+        /**
+         * Set the camera's base position. Default is no-op.
+         */
+        virtual void SetPosition(const Vector2F& /*InPosition*/) {}
+
+        /**
+         * Add an offset to the camera's position. Default routes through GetPosition + SetPosition;
+         * concretes that distinguish base from transient offsets (e.g. for shake) override.
+         */
+        virtual void AddPositionOffset(const Vector2F& InOffset)
+        {
+            SetPosition(GetPosition() + InOffset);
+        }
     };
 
 } // namespace Opaax
