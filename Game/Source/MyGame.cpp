@@ -1,10 +1,13 @@
 #include "MyGame.h"
+
 #include <iostream>
+
 #include "Core/Log/OpaaxLog.h"
+#include "Core/OpaaxTypes.h"
 #include "Scene/GameScene.h"
 #include "Scene/SceneFactory.h"
 #include "Scene/SceneManager.h"
-#include "Core/OpaaxTypes.h"
+#include "Systems/PlayerDemoSystem.h"
 
 MyGame::MyGame(int InArgc, char** InArgv) : Opaax::CoreEngineApp(InArgc, InArgv)
 {
@@ -21,6 +24,8 @@ void MyGame::OnInitialize()
 
     // Register scene factories — required for PIE Stop to rebuild the stack.
     Opaax::SceneFactory::Register<GameScene>("GameScene");
+
+    RegisterGameSubsystem<PlayerDemoSystem>(this);
 }
 
 void MyGame::OnStartup()
