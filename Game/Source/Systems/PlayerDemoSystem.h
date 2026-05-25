@@ -3,6 +3,11 @@
 #include "Core/Systems/GameSubsystem.h"
 #include "ECS/OpaaxEntity.hpp"
 
+namespace Opaax
+{
+    class OpaaxEvent;
+}
+
 /**
  * @class PlayerDemoSystem
  *
@@ -11,7 +16,8 @@
  * so the player stays still in editor edit mode.
  *
  * Re-attaches the follow controller when the Player's EntityID changes (first frame,
- * or after a PIE restart that rebuilds the world).
+ * or after a PIE restart that rebuilds the world). Press K during PIE to trigger a
+ * decaying camera shake that composes over the active follow.
  */
 class PlayerDemoSystem final : public Opaax::GameSubsystemBase
 {
@@ -33,7 +39,9 @@ public:
     // =============================================================================
     //~Begin IGameSubsystem Interface
 public:
-    void Update(double DeltaTime) override;
+    void          Update(double DeltaTime)               override;
+    bool          OnEvent(Opaax::OpaaxEvent& InEvent)    override;
+    Opaax::Uint32 GetEventCategoryFilter() const noexcept override;
     //~End IGameSubsystem Interface
 
     // =============================================================================

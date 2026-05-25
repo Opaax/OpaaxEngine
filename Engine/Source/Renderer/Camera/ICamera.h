@@ -63,12 +63,21 @@ namespace Opaax
 
         /**
          * Add an offset to the camera's position. Default routes through GetPosition + SetPosition;
-         * concretes that distinguish base from transient offsets (e.g. for shake) override.
+         * concretes that distinguish base from transient offsets (e.g. for shake) override to
+         * write into a transient slot so the offset does not bleed into the base position.
          */
         virtual void AddPositionOffset(const Vector2F& InOffset)
         {
             SetPosition(GetPosition() + InOffset);
         }
+
+        /**
+         * Zero any transient (per-frame, modifier-applied) offsets. Called by
+         * CameraControllerSystem at the start of each Update before iterating controllers,
+         * so modifiers like Shake start from a clean slate every frame and never accumulate.
+         * Default no-op for cameras with no transient concept.
+         */
+        virtual void ResetTransientOffsets() {}
     };
 
 } // namespace Opaax

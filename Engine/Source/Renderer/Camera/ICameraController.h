@@ -51,6 +51,13 @@ namespace Opaax
          * Called immediately before the controller is destroyed. Default no-op.
          */
         virtual void OnDetach(ICamera& /*InCamera*/) {}
+
+        /**
+         * Returns true when the controller has completed its work and should be auto-pruned
+         * by CameraControllerSystem at the end of the next Update. Default false (runs forever);
+         * one-shot modifiers like Shake override to return true once their Duration elapses.
+         */
+        virtual bool IsFinished() const { return false; }
     };
 
 } // namespace Opaax

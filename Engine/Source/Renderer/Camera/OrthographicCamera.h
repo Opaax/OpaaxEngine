@@ -51,14 +51,20 @@ namespace Opaax
 
         Vector2F GetPosition() const override { return m_Position; }
         void     SetPosition(const Vector2F& InPosition) override;
+        void     AddPositionOffset(const Vector2F& InOffset) override;
+        void     ResetTransientOffsets() override;
         //~End ICamera Interface
 
         // =============================================================================
         // Members
         // =============================================================================
     private:
-        Vector2F  m_Position = { 0.f, 0.f };
-        float     m_Zoom     = 1.f;
+        Vector2F  m_Position        = { 0.f, 0.f };
+        // Transient per-frame offset written by modifier controllers (Shake). Cleared
+        // at the start of every CameraControllerSystem::Update before controllers tick,
+        // so it never leaks into m_Position and never bleeds into Follow's lerp source.
+        Vector2F  m_TransientOffset = { 0.f, 0.f };
+        float     m_Zoom            = 1.f;
 
         Uint32    m_ViewportWidth  = 0;
         Uint32    m_ViewportHeight = 0;
