@@ -13,6 +13,7 @@
 
 #include "Core/CoreEngineApp.h"
 #include "Core/Window.h"
+#include "Core/ApplicationEvents.hpp"
 #include "Core/Event/OpaaxEventDispatcher.hpp"
 
 namespace Opaax

@@ -4,6 +4,7 @@
 #include "RHI/OpenGL/OpenGLVertexArray.h"
 #include "Renderer/ShaderAsset.h"
 #include "Renderer/Texture2D.h"
+#include "Renderer/Camera/ICamera.h"
 #include "Core/Log/OpaaxLog.h"
 #include "Core/EngineAPI.h"
  
@@ -166,7 +167,7 @@ namespace Opaax
     // Begin / End
     // =============================================================================
  
-    void Renderer2D::Begin(Camera2D& InCamera)
+    void Renderer2D::Begin(ICamera& InCamera)
     {
         s_Data.ViewProjection = InCamera.GetViewProjection();
  

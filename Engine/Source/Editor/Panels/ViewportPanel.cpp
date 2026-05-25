@@ -123,8 +123,7 @@ namespace Opaax::Editor
             bResized = true;
             OPAAX_CORE_TRACE("ViewportPanel: resized to {}x{}", m_Width, m_Height);
 
-            // [NEW] Fire callback so Camera2D and RenderCommand stay in sync.
-            // Previously resize was silent — nobody updated the camera projection.
+            // Forward resize so the active camera and RenderCommand viewport stay in sync.
             if (OnResized)
             {
                 OnResized(m_Width, m_Height);

@@ -15,7 +15,7 @@
 #include "Scene/SceneManager.h"
 #include "Scene/SceneSerializer.h"
 #include "Core/Log/OpaaxLog.h"
-#include "Renderer/Camera2D.h"
+#include "Renderer/Camera/CameraSubsystem.h"
 #include "RHI/RenderCommand.h"
 
 #include "Editor/Assets/AssetTypeRegistry.h"
@@ -120,9 +120,9 @@ namespace Opaax
             OPAAX_CORE_TRACE("EditorSubsystem: viewport resized to {}x{} — syncing camera.",
                 InWidth, InHeight);
 
-            if (auto* lCamera = GetEngineApp()->GetSubsystem<Camera2D>())
+            if (auto* lCameras = GetEngineApp()->GetSubsystem<CameraSubsystem>())
             {
-                lCamera->SetViewportSize(InWidth, InHeight);
+                lCameras->SetViewportSize(InWidth, InHeight);
             }
 
             RenderCommand::SetViewport(0, 0, InWidth, InHeight);

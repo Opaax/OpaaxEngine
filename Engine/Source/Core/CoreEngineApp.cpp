@@ -22,7 +22,7 @@
 #include "Input/InputSubsystem.h"
 #include "Log/OpaaxLog.h"
 #include "Container/TPolymorphicList.hpp"
-#include "Renderer/Camera2D.h"
+#include "Renderer/Camera/CameraSubsystem.h"
 #include "Renderer/Renderer2D.h"
 #include "Renderer/RenderSubsystem.h"
 #include "Renderer/Systems/WorldRenderSystem.h"
@@ -230,7 +230,7 @@ void CoreEngineApp::Initialize()
     AssetManifest::LoadFile(lProjectManifest);
     
     m_EngineSubsystemManager.RegisterSubsystem<RenderSubsystem>(this);
-    m_EngineSubsystemManager.RegisterSubsystem<Camera2D>(this);
+    m_EngineSubsystemManager.RegisterSubsystem<CameraSubsystem>(this);
 
     m_EngineSubsystemManager.RegisterSubsystem<InputSubsystem>(this);
 
@@ -410,13 +410,13 @@ void CoreEngineApp::OnRender(double AlphaPhysicStep)
     RenderCommand::SetClearColor(0.1f, 0.1f, 0.1f, 1.f);
     RenderCommand::Clear();
 
-    auto* lCamera = GetSubsystem<Camera2D>();
-    Renderer2D::Begin(*lCamera);
+    ICamera& lCamera = GetSubsystem<CameraSubsystem>()->GetActiveCamera();
+    Renderer2D::Begin(lCamera);
 
     if (GetSceneManager()->GetActiveScene())
     {
         World& lWorld = GetWorld();
-        const RenderContext lCtx{ *lCamera, AlphaPhysicStep };
+        const RenderContext lCtx{ lCamera, AlphaPhysicStep };
         for (const auto& lSystem : TPolymorphicList<IWorldSystem>::GetAll())
         {
             lSystem->OnRender(lWorld, lCtx);
