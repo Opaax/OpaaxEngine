@@ -2,8 +2,8 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
-#include "Camera2D.h"
- 
+#include "Core/OpaaxMathTypes.h"
+
 #include <glm/glm.hpp>
 
 #include "Assets/AssetHandle.hpp"
@@ -11,6 +11,7 @@
 namespace Opaax
 {
     class Texture2D;
+    class ICamera;
 
     /**
      * @class Renderer2D
@@ -49,7 +50,7 @@ namespace Opaax
          * Call once per frame before any draw calls
          * @param InCamera 
          */
-        static void Begin(Camera2D& InCamera);
+        static void Begin(ICamera& InCamera);
 
         /**
          * Call once per frame after all draw calls — flushes remaining batch

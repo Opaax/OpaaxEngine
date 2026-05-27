@@ -10,7 +10,9 @@
       "Bash(\"/c/Dev/CMake/bin/cmake.exe\" --build build/debug-editor --config Debug)",
       "Bash(\"/c/Dev/CMake/bin/cmake.exe\" --build build/release --config Release)",
       "Bash(\"/c/Dev/CMake/bin/cmake.exe\" -E cat \"W:/Projet_Perso/Engines/OpaaxEngine/.claude/data/engine-structure.md\")",
-      "Bash(\"/c/Dev/CMake/bin/cmake.exe\" -E echo_append)"
+      "Bash(\"/c/Dev/CMake/bin/cmake.exe\" -E echo_append)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }
