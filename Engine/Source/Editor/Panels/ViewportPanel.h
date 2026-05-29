@@ -7,6 +7,7 @@
 #include "Core/OpaaxMathTypes.h"
 #include "Core/OpaaxTypes.h"
 #include "Editor/EditorState.h"
+#include "RHI/Framebuffer.h"
 
 namespace Opaax::Editor
 {
@@ -76,13 +77,14 @@ namespace Opaax::Editor
         // Members
         // =============================================================================
     private:
-        Uint32 m_FBO            = 0;
-        Uint32 m_ColorTexture   = 0;
-        Uint32 m_DepthRBO       = 0;
-                                
-        Uint32 m_Width          = 1280;
-        Uint32 m_Height         = 720;
-                                
+        // Offscreen target — owns the GL handles (no raw GL in this panel anymore).
+        UniquePtr<IFramebuffer> m_Framebuffer;
+
+        // Authoritative panel size; the framebuffer is driven from the first Draw's
+        // content-region size (no hardcoded default — M7 Step 2 cleanup).
+        Uint32 m_Width          = 1;
+        Uint32 m_Height         = 1;
+
         bool   m_bHovered       = false;
         bool   m_bFocused       = false;
 

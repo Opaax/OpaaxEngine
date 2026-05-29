@@ -6,6 +6,9 @@
     "log": {
         "level": "trace"
     },
+    "render": {
+        "backend": "OpenGL"
+    },
     "version": 1,
     "window": {
         "height": 720,

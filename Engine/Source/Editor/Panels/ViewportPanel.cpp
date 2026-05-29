@@ -4,84 +4,40 @@
 
 #include <imgui.h>
 
-#define GLAD_APIENTRY
-#include <glad/glad.h>
-
 #include "Core/Log/OpaaxLog.h"
-#include "RHI/RenderCommand.h"
 
 namespace Opaax::Editor
 {
     bool ViewportPanel::Startup()
     {
-        Resize(m_Width, m_Height);
+        // Build the offscreen target via the RHI factory — no raw GL in this panel.
+        // Real size arrives on the first Draw's content-region resize.
+        m_Framebuffer = IFramebuffer::Create(FramebufferSpec{ m_Width, m_Height, /*DepthStencil*/ true });
         OPAAX_CORE_INFO("ViewportPanel::Startup() — FBO {}x{}", m_Width, m_Height);
-        return m_FBO != 0;
+        return m_Framebuffer != nullptr;
     }
 
     void ViewportPanel::Shutdown()
     {
-        if (m_ColorTexture) { glDeleteTextures(1, &m_ColorTexture);      m_ColorTexture = 0; }
-        if (m_DepthRBO)     { glDeleteRenderbuffers(1, &m_DepthRBO);     m_DepthRBO     = 0; }
-        if (m_FBO)          { glDeleteFramebuffers(1, &m_FBO);           m_FBO          = 0; }
-
+        m_Framebuffer.reset();
         OPAAX_CORE_INFO("ViewportPanel::Shutdown()");
     }
 
     void ViewportPanel::Bind()
     {
-        glBindFramebuffer(GL_FRAMEBUFFER, m_FBO);
-        // NOTE: Viewport must match the FBO dimensions, not the GLFW window.
-        //   This was the root cause of deformed sprites — the GL viewport was
-        //   set to window size while the FBO was a different size.
-        glViewport(0, 0,
-            static_cast<GLsizei>(m_Width),
-            static_cast<GLsizei>(m_Height));
+        if (m_Framebuffer) { m_Framebuffer->Bind(); }
     }
 
     void ViewportPanel::Unbind()
     {
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        if (m_Framebuffer) { m_Framebuffer->Unbind(); }
     }
 
     void ViewportPanel::Resize(Uint32 InWidth, Uint32 InHeight)
     {
-        if (m_FBO) { Shutdown(); }
-
         m_Width  = InWidth;
         m_Height = InHeight;
-
-        glGenTextures(1, &m_ColorTexture);
-        glBindTexture(GL_TEXTURE_2D, m_ColorTexture);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8,
-            static_cast<GLsizei>(m_Width),
-            static_cast<GLsizei>(m_Height),
-            0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glBindTexture(GL_TEXTURE_2D, 0);
-
-        glGenRenderbuffers(1, &m_DepthRBO);
-        glBindRenderbuffer(GL_RENDERBUFFER, m_DepthRBO);
-        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8,
-            static_cast<GLsizei>(m_Width),
-            static_cast<GLsizei>(m_Height));
-        glBindRenderbuffer(GL_RENDERBUFFER, 0);
-
-        glGenFramebuffers(1, &m_FBO);
-        glBindFramebuffer(GL_FRAMEBUFFER, m_FBO);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-            GL_TEXTURE_2D, m_ColorTexture, 0);
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
-            GL_RENDERBUFFER, m_DepthRBO);
-
-        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-        {
-            OPAAX_CORE_ERROR("ViewportPanel: FBO incomplete after resize to {}x{}!",
-                InWidth, InHeight);
-        }
-
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        if (m_Framebuffer) { m_Framebuffer->Resize(InWidth, InHeight); }
     }
 
     static ImVec4 GetEditorStateBorderColor(EEditorState State)
@@ -139,7 +95,7 @@ namespace Opaax::Editor
         }
 
         ImGui::Image(
-            m_ColorTexture,
+            m_Framebuffer ? m_Framebuffer->GetColorAttachmentID() : 0u,
             lPanelSize,
             ImVec2(0.f, 1.f),
             ImVec2(1.f, 0.f)

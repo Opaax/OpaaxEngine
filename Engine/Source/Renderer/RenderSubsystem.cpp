@@ -2,12 +2,14 @@
 
 #include "Renderer2D.h"
 #include "RHI/RenderCommand.h"
-#include "RHI/OpenGL/OpenGLRenderAPI.h"
+#include "RHI/RenderAPI.h"
+#include "Core/Config/EngineConfig.h"
 #include "Core/Log/OpaaxLog.h"
- 
-// glad must be initialised before any GL calls.
-// WindowsWindow::Init() calls glfwMakeContextCurrent which sets up the context,
-// but glad itself is loaded here — after the context exists.
+
+// glad/GLFW are the OpenGL context bootstrap. They live here (the one sanctioned
+// platform/GL touch-point) and are only invoked when the selected backend is OpenGL —
+// a future backend brings its own context-init path. WindowsWindow::Init() has already
+// called glfwMakeContextCurrent before this runs.
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -21,28 +23,43 @@ namespace Opaax
     bool RenderSubsystem::Startup()
     {
         OPAAX_CORE_INFO("RenderSubsystem::Startup()");
- 
-        // Load OpenGL function pointers via glad.
-        // glfwMakeContextCurrent must have been called first (done in WindowsWindow::Init).
-        if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress)))
+
+        // Backend comes from engine config (string -> EBackend), not hardcoded.
+        const EBackend lBackend = RenderAPI::BackendFromString(EngineConfig::RenderBackend());
+        OPAAX_CORE_INFO("RenderSubsystem: render backend = {}", RenderAPI::BackendToString(lBackend));
+
+        // OpenGL-only context bootstrap — load GL function pointers via glad.
+        // Other backends never touch glad. glfwMakeContextCurrent must run first
+        // (done in WindowsWindow::Init).
+        if (lBackend == EBackend::OpenGL)
         {
-            OPAAX_CORE_ERROR("RenderSubsystem: glad failed to load OpenGL functions.");
+            if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress)))
+            {
+                OPAAX_CORE_ERROR("RenderSubsystem: glad failed to load OpenGL functions.");
+                return false;
+            }
+        }
+
+        // RenderCommand takes ownership of the raw ptr (documented on RenderCommand);
+        // .release() hands the UniquePtr's payload over to that ownership contract.
+        UniquePtr<IRenderAPI> lAPI = RenderAPI::Create(lBackend);
+        if (!lAPI)
+        {
+            OPAAX_CORE_ERROR("RenderSubsystem: backend '{}' produced no IRenderAPI.",
+                EngineConfig::RenderBackend());
             return false;
         }
- 
-        // NOTE: new OpenGLRenderAPI() — RenderCommand takes ownership via raw ptr.
-        //   This is documented on RenderCommand. Acceptable for a singleton API object.
-        RenderCommand::Init(new OpenGLRenderAPI());
- 
+        RenderCommand::Init(lAPI.release());
+
         Renderer2D::Init();
- 
+
         // Set initial viewport
         if (GetEngineApp())
         {
             const auto& lWindow = GetEngineApp()->GetWindow();
             RenderCommand::SetViewport(0, 0, lWindow.GetWidth(), lWindow.GetHeight());
         }
- 
+
         return true;
     }
  

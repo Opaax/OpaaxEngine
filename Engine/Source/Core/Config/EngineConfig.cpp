@@ -16,6 +16,7 @@ namespace Opaax
     OpaaxString EngineConfig::s_EngineAssetsRoot      = OpaaxString("Engine/Assets");
     OpaaxString EngineConfig::s_EngineManifestRelPath = OpaaxString("Engine/Assets/AssetManifest.json");
     OpaaxString EngineConfig::s_LogLevel              = OpaaxString("trace");
+    OpaaxString EngineConfig::s_RenderBackend         = OpaaxString("OpenGL");
 
     bool EngineConfig::GenerateDefault(const OpaaxString& InAbsPath)
     {
@@ -43,7 +44,8 @@ namespace Opaax
                 { "engineRoot",     s_EngineAssetsRoot.CStr()      },
                 { "engineManifest", s_EngineManifestRelPath.CStr() }
             };
-            lRoot["log"] = { { "level", s_LogLevel.CStr() } };
+            lRoot["log"]    = { { "level",   s_LogLevel.CStr()      } };
+            lRoot["render"] = { { "backend", s_RenderBackend.CStr() } };
 
             lFile << lRoot.dump(4);
 
@@ -121,8 +123,17 @@ namespace Opaax
             }
         }
 
-        OPAAX_CORE_INFO("EngineConfig: loaded '{}' (window={}x{}, log={})",
-            InAbsPath, s_WindowWidth, s_WindowHeight, s_LogLevel);
+        if (lRoot.contains("render") && lRoot["render"].is_object())
+        {
+            const auto& lR = lRoot["render"];
+            if (lR.contains("backend") && lR["backend"].is_string())
+            {
+                s_RenderBackend = OpaaxString(lR["backend"].get<std::string>().c_str());
+            }
+        }
+
+        OPAAX_CORE_INFO("EngineConfig: loaded '{}' (window={}x{}, log={}, backend={})",
+            InAbsPath, s_WindowWidth, s_WindowHeight, s_LogLevel, s_RenderBackend);
 
         return true;
     }
@@ -153,7 +164,8 @@ namespace Opaax
                 { "engineRoot",     s_EngineAssetsRoot.CStr()      },
                 { "engineManifest", s_EngineManifestRelPath.CStr() }
             };
-            lRoot["log"] = { { "level", s_LogLevel.CStr() } };
+            lRoot["log"]    = { { "level",   s_LogLevel.CStr()      } };
+            lRoot["render"] = { { "backend", s_RenderBackend.CStr() } };
 
             lFile << lRoot.dump(4);
 
