@@ -12,8 +12,10 @@
 #include "OpaaxString.hpp"
 #include "OpaaxStringID.hpp"
 #include "Assets/AssetRegistry.h"
+#include "Assets/Loader/FontLoader.h"
 #include "Assets/Loader/SceneLoader.h"
 #include "Assets/Loader/TextureLoader.h"
+#include "Renderer/Text/FontAsset.h"
 #include "Scene/SceneAsset.h"
 #include "Config/EngineConfig.h"
 #include "Config/ProjectConfig.h"
@@ -205,6 +207,7 @@ void CoreEngineApp::Initialize()
 
     AssetLoaderRegistry::Register<Texture2D>(MakeUnique<TextureLoader>());
     AssetLoaderRegistry::Register<SceneAsset>(MakeUnique<SceneLoader>());
+    AssetLoaderRegistry::Register<FontAsset>(MakeUnique<FontLoader>());
 
     // Engine component types — every game-shared, scene-serializable type lives here.
     // Tag / Uuid are special-cased at the entity-json top level (display name, stable id)

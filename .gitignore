@@ -64,6 +64,7 @@ SimpleShmup/Assets/*
 .claude/CLAUDE.Dev.md
 .claude/data/*
 .claude/settings.local.json
+.claude/skills/*
 tasks/*
 
 

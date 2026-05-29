@@ -48,6 +48,13 @@ namespace Opaax
          */
         Texture2D(Uint32 InWidth, Uint32 InHeight);
 
+        /**
+         * Runtime-only texture from in-memory pixel bytes. Not registry-tracked.
+         * Channels: 4 = RGBA8, 3 = RGB8, 1 = R8 coverage (alpha-swizzled).
+         * Caller owns InData and may free it after the ctor returns.
+         */
+        Texture2D(const unsigned char* InData, Uint32 InWidth, Uint32 InHeight, Int32 InChannels);
+
         ~Texture2D() override;
 
         // =============================================================================
