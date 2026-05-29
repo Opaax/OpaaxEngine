@@ -34,7 +34,9 @@ namespace Opaax
                     InSprite.UVMin,
                     InSprite.UVMax,
                     InSprite.Color,
-                    lWT.Rotation
+                    lWT.Rotation,
+                    InSprite.Layer,
+                    InSprite.OrderInLayer
                 );
             });
     }

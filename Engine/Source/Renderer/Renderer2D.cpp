@@ -8,8 +8,9 @@
 #include "Core/EngineAPI.h"
  
 #include <glm/gtc/matrix_transform.hpp>
+#include <algorithm>
 #include <cmath>
- 
+
 namespace Opaax
 {
     // =============================================================================
@@ -46,10 +47,15 @@ namespace Opaax
         QuadVertex*                           VertexBufferPtr = nullptr;  // write cursor
         Uint32                                QuadCount       = 0;
 
+        // Per-quad draw-order key (parallel to the quads in VertexBuffer), and a scratch
+        // buffer the flush gathers vertices into in sorted order before upload.
+        TFixedArray<Uint64,     MAX_QUADS>    SortKeys;
+        TFixedArray<QuadVertex, MAX_VERTICES> SortedBuffer;
+
         // Texture slot tracking
         TFixedArray<Texture2D*, MAX_TEXTURE_SLOTS> TextureSlots;
         Uint32                                          TextureSlotIndex = 1; // slot 0 = white
- 
+
         glm::mat4 ViewProjection = glm::mat4(1.f);
     };
  
@@ -191,20 +197,42 @@ namespace Opaax
     void Renderer2D::Flush()
     {
         if (s_Data.QuadCount == 0) { return; }
- 
-        // Upload only the vertices we actually wrote
-        const Uint32 lDataSize = static_cast<Uint32>(
-            reinterpret_cast<uint8_t*>(s_Data.VertexBufferPtr) -
-            reinterpret_cast<uint8_t*>(s_Data.VertexBuffer.data()));
- 
-        s_Data.QuadVBO->SetData(s_Data.VertexBuffer.data(), lDataSize);
- 
+
+        // Sort the quad draw order by (Layer, OrderInLayer, textureSlot). Stable so equal
+        // keys keep submission order. Painter's algorithm — ascending key draws back-to-front;
+        // depth test stays OFF (correct for alpha-blended 2D).
+        //
+        // NOTE: this orders the CURRENT batch only. A frame exceeding MAX_QUADS or
+        //   MAX_TEXTURE_SLOTS splits into multiple flushes, ordered by batch emission. For the
+        //   target 2D games one batch is the norm, so layering is fully resolved per frame. A
+        //   global sort would need deferred flushing + sorted-emit texture assignment.
+        TFixedArray<Uint32, MAX_QUADS> lOrder;
+        for (Uint32 i = 0; i < s_Data.QuadCount; ++i) { lOrder[i] = i; }
+
+        std::stable_sort(lOrder.data(), lOrder.data() + s_Data.QuadCount,
+            [](Uint32 InA, Uint32 InB) { return s_Data.SortKeys[InA] < s_Data.SortKeys[InB]; });
+
+        // Gather each quad's 4 vertices into the upload buffer in sorted order. TexIndex values
+        // stay valid — reordering quads never changes which slot a texture lives in.
+        for (Uint32 i = 0; i < s_Data.QuadCount; ++i)
+        {
+            const Uint32 lSrc = lOrder[i] * 4;
+            const Uint32 lDst = i * 4;
+            s_Data.SortedBuffer[lDst + 0] = s_Data.VertexBuffer[lSrc + 0];
+            s_Data.SortedBuffer[lDst + 1] = s_Data.VertexBuffer[lSrc + 1];
+            s_Data.SortedBuffer[lDst + 2] = s_Data.VertexBuffer[lSrc + 2];
+            s_Data.SortedBuffer[lDst + 3] = s_Data.VertexBuffer[lSrc + 3];
+        }
+
+        const Uint32 lDataSize = s_Data.QuadCount * 4u * static_cast<Uint32>(sizeof(QuadVertex));
+        s_Data.QuadVBO->SetData(s_Data.SortedBuffer.data(), lDataSize);
+
         // Bind all active texture slots
         for (Uint32 i = 0; i < s_Data.TextureSlotIndex; ++i)
         {
             s_Data.TextureSlots[i]->Bind(i);
         }
- 
+
         s_Data.QuadVAO->Bind();
         RenderCommand::DrawIndexed(s_Data.QuadCount * 6);
     }
@@ -252,12 +280,24 @@ namespace Opaax
             return { InCenter.x + (InCos * InOx - InSin * InOy),
                      InCenter.y + (InSin * InOx + InCos * InOy) };
         }
+
+        // Pack draw order into one sortable key: [Layer:hi][OrderInLayer:mid][texSlot:lo].
+        // OrderInLayer (Int16) is biased to unsigned so negative orders sort before positive.
+        FORCEINLINE Uint64 MakeSortKey(ERenderLayer InLayer, Int16 InOrderInLayer, Uint32 InTexSlot)
+        {
+            const Uint64 lLayer = static_cast<Uint64>(static_cast<Uint8>(InLayer));
+            const Uint64 lOrder = static_cast<Uint64>(static_cast<Int32>(InOrderInLayer) + 32768); // [0, 65535]
+            const Uint64 lSlot  = static_cast<Uint64>(InTexSlot & 0xFFu);
+            return (lLayer << 32) | (lOrder << 8) | lSlot;
+        }
     }
 
     void Renderer2D::DrawQuad(const Vector2F& InPosition,
                                const Vector2F& InSize,
                                const Vector4F& InColor,
-                               float           InRotationRad)
+                               float           InRotationRad,
+                               ERenderLayer    InLayer,
+                               Int16           InOrderInLayer)
     {
         if (s_Data.QuadCount >= MAX_QUADS)
         {
@@ -265,7 +305,7 @@ namespace Opaax
             StartBatch();
         }
 
-        constexpr float lTexIndex = 0.f;  // white texture
+        constexpr float lTexIndex = 0.f;  // white texture (slot 0)
 
         const float lHalfW = InSize.x * 0.5f;
         const float lHalfH = InSize.y * 0.5f;
@@ -317,31 +357,35 @@ namespace Opaax
         s_Data.VertexBufferPtr->TexIndex = lTexIndex;
         ++s_Data.VertexBufferPtr;
 
+        s_Data.SortKeys[s_Data.QuadCount] = MakeSortKey(InLayer, InOrderInLayer, 0u);
         ++s_Data.QuadCount;
     }
 
     void Renderer2D::DrawSprite(const Vector2F& InPosition, const Vector2F& InSize, const TextureHandle& InTexture,
-        const Vector4F& InColor, float InRotationRad)
+        const Vector4F& InColor, float InRotationRad, ERenderLayer InLayer, Int16 InOrderInLayer)
     {
         OPAAX_CORE_ASSERT(InTexture.IsValid())
-        DrawSprite(InPosition, InSize, *InTexture.Get(), InColor, InRotationRad);
+        DrawSprite(InPosition, InSize, *InTexture.Get(), InColor, InRotationRad, InLayer, InOrderInLayer);
     }
 
     void Renderer2D::DrawSprite(const Vector2F& InPosition, const Vector2F& InSize, const TextureHandle& InTexture,
-        const Vector2F& InUVMin, const Vector2F& InUVMax, const Vector4F& InColor, float InRotationRad)
+        const Vector2F& InUVMin, const Vector2F& InUVMax, const Vector4F& InColor, float InRotationRad,
+        ERenderLayer InLayer, Int16 InOrderInLayer)
     {
         OPAAX_CORE_ASSERT(InTexture.IsValid())
-        DrawSprite(InPosition, InSize, *InTexture.Get(), InUVMin, InUVMax, InColor, InRotationRad);
+        DrawSprite(InPosition, InSize, *InTexture.Get(), InUVMin, InUVMax, InColor, InRotationRad, InLayer, InOrderInLayer);
     }
 
     void Renderer2D::DrawSprite(const Vector2F& InPosition,
                                 const Vector2F& InSize,
                                 Texture2D&      InTexture,
                                 const Vector4F& InColor,
-                                float           InRotationRad)
+                                float           InRotationRad,
+                                ERenderLayer    InLayer,
+                                Int16           InOrderInLayer)
     {
         DrawSprite(InPosition, InSize, InTexture,
-                   { 0.f, 0.f }, { 1.f, 1.f }, InColor, InRotationRad);
+                   { 0.f, 0.f }, { 1.f, 1.f }, InColor, InRotationRad, InLayer, InOrderInLayer);
     }
 
     void Renderer2D::DrawSprite(const Vector2F& InPosition,
@@ -350,7 +394,9 @@ namespace Opaax
                                 const Vector2F& InUVMin,
                                 const Vector2F& InUVMax,
                                 const Vector4F& InColor,
-                                float           InRotationRad)
+                                float           InRotationRad,
+                                ERenderLayer    InLayer,
+                                Int16           InOrderInLayer)
     {
         if (s_Data.QuadCount >= MAX_QUADS)
         {
@@ -408,7 +454,8 @@ namespace Opaax
         s_Data.VertexBufferPtr->TexIndex = lTexIndex;
         ++s_Data.VertexBufferPtr;
 
+        s_Data.SortKeys[s_Data.QuadCount] = MakeSortKey(InLayer, InOrderInLayer, static_cast<Uint32>(lTexIndex));
         ++s_Data.QuadCount;
     }
- 
+
 } // namespace Opaax

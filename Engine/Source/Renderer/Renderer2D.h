@@ -7,6 +7,7 @@
 #include <glm/glm.hpp>
 
 #include "Assets/AssetHandle.hpp"
+#include "Renderer/RenderLayer.h"
 
 namespace Opaax
 {
@@ -63,11 +64,15 @@ namespace Opaax
          * @param InSize full width and height
          * @param InColor RGBA normalised [0,1]
          * @param InRotationRad rotation around the quad centre, radians, CCW (default 0 = axis-aligned fast path)
+         * @param InLayer coarse draw-order band (default Default)
+         * @param InOrderInLayer fine tie-break within the band, lower = behind (default 0)
          */
         static void DrawQuad(const Vector2F& InPosition,
                              const Vector2F& InSize,
                              const Vector4F& InColor,
-                             float           InRotationRad = 0.f);
+                             float           InRotationRad  = 0.f,
+                             ERenderLayer    InLayer        = ERenderLayer::Default,
+                             Int16           InOrderInLayer = 0);
 
         /**
          * Textured sprite — via AssetHandle (preferred, safe)
@@ -75,8 +80,10 @@ namespace Opaax
         static void DrawSprite(const Vector2F&      InPosition,
                                const Vector2F&      InSize,
                                const TextureHandle& InTexture,
-                               const Vector4F&      InColor       = Vector4F(1.f),
-                               float                InRotationRad = 0.f);
+                               const Vector4F&      InColor        = Vector4F(1.f),
+                               float                InRotationRad  = 0.f,
+                               ERenderLayer         InLayer        = ERenderLayer::Default,
+                               Int16                InOrderInLayer = 0);
 
         /**
          * Textured Atlas — via AssetHandle (preferred, safe)
@@ -87,8 +94,10 @@ namespace Opaax
                                const TextureHandle& InTexture,
                                const Vector2F&      InUVMin,
                                const Vector2F&      InUVMax,
-                               const Vector4F&      InColor       = Vector4F(1.f),
-                               float                InRotationRad = 0.f);
+                               const Vector4F&      InColor        = Vector4F(1.f),
+                               float                InRotationRad  = 0.f,
+                               ERenderLayer         InLayer        = ERenderLayer::Default,
+                               Int16                InOrderInLayer = 0);
 
         /**
          * Draw a textured sprite, tinted by InColor (default white = no tint)
@@ -96,8 +105,10 @@ namespace Opaax
         static void DrawSprite(const Vector2F& InPosition,
                                const Vector2F& InSize,
                                Texture2D&      InTexture,
-                               const Vector4F& InColor       = Vector4F(1.f),
-                               float           InRotationRad = 0.f);
+                               const Vector4F& InColor        = Vector4F(1.f),
+                               float           InRotationRad  = 0.f,
+                               ERenderLayer    InLayer        = ERenderLayer::Default,
+                               Int16           InOrderInLayer = 0);
 
         /**
          * Draw a textured sprite with UV sub-region (sprite sheet / atlas)
@@ -108,8 +119,10 @@ namespace Opaax
                                Texture2D&      InTexture,
                                const Vector2F& InUVMin,
                                const Vector2F& InUVMax,
-                               const Vector4F& InColor       = Vector4F(1.f),
-                               float           InRotationRad = 0.f);
+                               const Vector4F& InColor        = Vector4F(1.f),
+                               float           InRotationRad  = 0.f,
+                               ERenderLayer    InLayer        = ERenderLayer::Default,
+                               Int16           InOrderInLayer = 0);
     };
  
 } // namespace Opaax

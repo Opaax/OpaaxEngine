@@ -419,27 +419,10 @@ void CoreEngineApp::Shutdown()
 
 void CoreEngineApp::OnRender(double AlphaPhysicStep)
 {
-    IRenderTarget& lTarget = GetRenderTarget();
-    lTarget.Bind();
-
-    RenderCommand::SetClearColor(0.1f, 0.1f, 0.1f, 1.f);
-    RenderCommand::Clear();
-
-    ICamera& lCamera = GetSubsystem<CameraSubsystem>()->GetActiveCamera();
-    Renderer2D::Begin(lCamera);
-
-    if (GetSceneManager()->GetActiveScene())
-    {
-        World& lWorld = GetWorld();
-        const RenderContext lCtx{ lCamera, AlphaPhysicStep };
-        for (const auto& lSystem : TPolymorphicList<IWorldSystem>::GetAll())
-        {
-            lSystem->OnRender(lWorld, lCtx);
-        }
-    }
-
-    Renderer2D::End();
-    lTarget.Unbind();
+    // The whole frame is the render pipeline now: an ordered IRenderPass list owned by
+    // RenderSubsystem. Each pass picks its own camera/clear and submits draws. The target
+    // (backbuffer in release, ViewportPanel FBO in editor) is selected the same way as before.
+    GetSubsystem<RenderSubsystem>()->GetPipeline().Execute(GetRenderTarget(), AlphaPhysicStep);
 }
 
 World& CoreEngineApp::GetWorld() noexcept

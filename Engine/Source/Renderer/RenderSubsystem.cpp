@@ -3,6 +3,8 @@
 #include "Renderer2D.h"
 #include "RHI/RenderCommand.h"
 #include "RHI/RenderAPI.h"
+#include "Renderer/Pass/WorldRenderPass.h"
+#include "Renderer/Pass/OverlayRenderPass.h"
 #include "Core/Config/EngineConfig.h"
 #include "Core/Log/OpaaxLog.h"
 
@@ -53,6 +55,12 @@ namespace Opaax
 
         Renderer2D::Init();
 
+        // Register the built-in passes (registration order = execution order).
+        // Passes hold the engine app by pointer (IoC) and re-fetch volatile state at Execute.
+        // World first (clears + draws the scene), then Overlay (screen-space, composites on top).
+        m_Pipeline.AddPass(MakeUnique<WorldRenderPass>(GetEngineApp()));
+        m_Pipeline.AddPass(MakeUnique<OverlayRenderPass>(GetEngineApp()));
+
         // Set initial viewport
         if (GetEngineApp())
         {
@@ -66,6 +74,7 @@ namespace Opaax
     void RenderSubsystem::Shutdown()
     {
         OPAAX_CORE_INFO("RenderSubsystem::Shutdown()");
+        m_Pipeline.Clear();          // drop passes before the render API/Renderer2D go away
         Renderer2D::Shutdown();
         RenderCommand::Shutdown();
     }
