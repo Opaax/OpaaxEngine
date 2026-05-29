@@ -1,14 +1,284 @@
 {
     "assets": [
         {
+            "id": "Fonts/Roboto-Black",
+            "path": "Engine/Assets/Fonts/Roboto-Black.ttf",
+            "type": "Font"
+        },
+        {
             "id": "Textures/Player",
             "path": "Engine/Assets/Textures/Player.png",
             "type": "Texture2D"
         },
         {
+            "id": "Fonts/Roboto-BlackItalic",
+            "path": "Engine/Assets/Fonts/Roboto-BlackItalic.ttf",
+            "type": "Font"
+        },
+        {
             "id": "Textures/PlayerSheet",
             "path": "Engine/Assets/Textures/PlayerSheet.png",
             "type": "Texture2D"
+        },
+        {
+            "id": "Fonts/Roboto-Bold",
+            "path": "Engine/Assets/Fonts/Roboto-Bold.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto-BoldItalic",
+            "path": "Engine/Assets/Fonts/Roboto-BoldItalic.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto-ExtraBold",
+            "path": "Engine/Assets/Fonts/Roboto-ExtraBold.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto-ExtraBoldItalic",
+            "path": "Engine/Assets/Fonts/Roboto-ExtraBoldItalic.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto-ExtraLight",
+            "path": "Engine/Assets/Fonts/Roboto-ExtraLight.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto-ExtraLightItalic",
+            "path": "Engine/Assets/Fonts/Roboto-ExtraLightItalic.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto-Italic",
+            "path": "Engine/Assets/Fonts/Roboto-Italic.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto-Light",
+            "path": "Engine/Assets/Fonts/Roboto-Light.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto-LightItalic",
+            "path": "Engine/Assets/Fonts/Roboto-LightItalic.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto-Medium",
+            "path": "Engine/Assets/Fonts/Roboto-Medium.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto-MediumItalic",
+            "path": "Engine/Assets/Fonts/Roboto-MediumItalic.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto-Regular",
+            "path": "Engine/Assets/Fonts/Roboto-Regular.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto-SemiBold",
+            "path": "Engine/Assets/Fonts/Roboto-SemiBold.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto-SemiBoldItalic",
+            "path": "Engine/Assets/Fonts/Roboto-SemiBoldItalic.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto-Thin",
+            "path": "Engine/Assets/Fonts/Roboto-Thin.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto-ThinItalic",
+            "path": "Engine/Assets/Fonts/Roboto-ThinItalic.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto_Condensed-Black",
+            "path": "Engine/Assets/Fonts/Roboto_Condensed-Black.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto_Condensed-BlackItalic",
+            "path": "Engine/Assets/Fonts/Roboto_Condensed-BlackItalic.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto_Condensed-Bold",
+            "path": "Engine/Assets/Fonts/Roboto_Condensed-Bold.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto_Condensed-BoldItalic",
+            "path": "Engine/Assets/Fonts/Roboto_Condensed-BoldItalic.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto_Condensed-ExtraBold",
+            "path": "Engine/Assets/Fonts/Roboto_Condensed-ExtraBold.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto_Condensed-ExtraBoldItalic",
+            "path": "Engine/Assets/Fonts/Roboto_Condensed-ExtraBoldItalic.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto_Condensed-ExtraLight",
+            "path": "Engine/Assets/Fonts/Roboto_Condensed-ExtraLight.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto_Condensed-ExtraLightItalic",
+            "path": "Engine/Assets/Fonts/Roboto_Condensed-ExtraLightItalic.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto_Condensed-Italic",
+            "path": "Engine/Assets/Fonts/Roboto_Condensed-Italic.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto_Condensed-Light",
+            "path": "Engine/Assets/Fonts/Roboto_Condensed-Light.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto_Condensed-LightItalic",
+            "path": "Engine/Assets/Fonts/Roboto_Condensed-LightItalic.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto_Condensed-Medium",
+            "path": "Engine/Assets/Fonts/Roboto_Condensed-Medium.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto_Condensed-MediumItalic",
+            "path": "Engine/Assets/Fonts/Roboto_Condensed-MediumItalic.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto_Condensed-Regular",
+            "path": "Engine/Assets/Fonts/Roboto_Condensed-Regular.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto_Condensed-SemiBold",
+            "path": "Engine/Assets/Fonts/Roboto_Condensed-SemiBold.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto_Condensed-SemiBoldItalic",
+            "path": "Engine/Assets/Fonts/Roboto_Condensed-SemiBoldItalic.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto_Condensed-Thin",
+            "path": "Engine/Assets/Fonts/Roboto_Condensed-Thin.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto_Condensed-ThinItalic",
+            "path": "Engine/Assets/Fonts/Roboto_Condensed-ThinItalic.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto_SemiCondensed-Black",
+            "path": "Engine/Assets/Fonts/Roboto_SemiCondensed-Black.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto_SemiCondensed-BlackItalic",
+            "path": "Engine/Assets/Fonts/Roboto_SemiCondensed-BlackItalic.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto_SemiCondensed-Bold",
+            "path": "Engine/Assets/Fonts/Roboto_SemiCondensed-Bold.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto_SemiCondensed-BoldItalic",
+            "path": "Engine/Assets/Fonts/Roboto_SemiCondensed-BoldItalic.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto_SemiCondensed-ExtraBold",
+            "path": "Engine/Assets/Fonts/Roboto_SemiCondensed-ExtraBold.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto_SemiCondensed-ExtraBoldItalic",
+            "path": "Engine/Assets/Fonts/Roboto_SemiCondensed-ExtraBoldItalic.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto_SemiCondensed-ExtraLight",
+            "path": "Engine/Assets/Fonts/Roboto_SemiCondensed-ExtraLight.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto_SemiCondensed-ExtraLightItalic",
+            "path": "Engine/Assets/Fonts/Roboto_SemiCondensed-ExtraLightItalic.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto_SemiCondensed-Italic",
+            "path": "Engine/Assets/Fonts/Roboto_SemiCondensed-Italic.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto_SemiCondensed-Light",
+            "path": "Engine/Assets/Fonts/Roboto_SemiCondensed-Light.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto_SemiCondensed-LightItalic",
+            "path": "Engine/Assets/Fonts/Roboto_SemiCondensed-LightItalic.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto_SemiCondensed-Medium",
+            "path": "Engine/Assets/Fonts/Roboto_SemiCondensed-Medium.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto_SemiCondensed-MediumItalic",
+            "path": "Engine/Assets/Fonts/Roboto_SemiCondensed-MediumItalic.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto_SemiCondensed-Regular",
+            "path": "Engine/Assets/Fonts/Roboto_SemiCondensed-Regular.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto_SemiCondensed-SemiBold",
+            "path": "Engine/Assets/Fonts/Roboto_SemiCondensed-SemiBold.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto_SemiCondensed-SemiBoldItalic",
+            "path": "Engine/Assets/Fonts/Roboto_SemiCondensed-SemiBoldItalic.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto_SemiCondensed-Thin",
+            "path": "Engine/Assets/Fonts/Roboto_SemiCondensed-Thin.ttf",
+            "type": "Font"
+        },
+        {
+            "id": "Fonts/Roboto_SemiCondensed-ThinItalic",
+            "path": "Engine/Assets/Fonts/Roboto_SemiCondensed-ThinItalic.ttf",
+            "type": "Font"
         }
     ]
 }

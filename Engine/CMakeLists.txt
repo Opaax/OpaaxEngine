@@ -165,7 +165,7 @@ message(STATUS "glm: header-only interface target created")
 
 
 # ==================================
-# stb_image (Header-Only)
+# stb_image / stb_truetype(Header-Only)
 # ==================================
 if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Vendors/stb/stb_image.h")
     message(FATAL_ERROR
@@ -181,7 +181,7 @@ add_library(stb INTERFACE)
 target_include_directories(stb INTERFACE Vendors)
 message(STATUS "stb: header-only interface target created")
 # ==================================
-# END stb_image (Header-Only)
+# END stb_image / stb_truetype(Header-Only)
 # ==================================
 
 # ==================================
@@ -390,6 +390,14 @@ add_custom_command(TARGET OpaaxEngine POST_BUILD
         ${ENGINE_ASSETS_SOURCE}/Meshes
         ${ENGINE_ASSETS_DEST}/Meshes
     COMMENT "Copying engine meshes..."
+)
+
+# Font
+add_custom_command(TARGET OpaaxEngine POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${ENGINE_ASSETS_SOURCE}/Fonts
+        ${ENGINE_ASSETS_DEST}/Fonts
+    COMMENT "Copying engine fonts..."
 )
 
 # ==================================

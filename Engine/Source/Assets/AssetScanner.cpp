@@ -31,6 +31,12 @@ namespace Opaax
         {
             return OpaaxStringID("Shader");
         }
+        
+        // Fonts
+        if (lExt == ".ttf" || lExt == ".otf")
+        {
+            return OpaaxStringID("Font");
+        }
 
         // JSON — disambiguate by compound extension on the filename, not by parent dir.
         // Foo.scene.json → stem "Foo.scene" → inner extension ".scene" → Scene.

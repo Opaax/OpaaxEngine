@@ -9,14 +9,16 @@ namespace Opaax
     // OpenGLTexture2D
     //
     // Loads an image via stb_image and uploads it to the GPU.
-    // Supports RGBA and RGB source images — always stored as RGBA on GPU.
+    // Supports R8 (single-channel coverage), RGB and RGBA source images.
+    // R8 path swizzles coverage into alpha so the existing RGBA sprite shader
+    // reads it as (1,1,1,coverage) without a shader fork.
     // =============================================================================
 
     /**
      * @class OpenGLTexture2D
      *
      * Loads an image via stb_image and uploads it to the GPU.
-     * Supports RGBA and RGB source images — always stored as RGBA on GPU.
+     * Supports R8 (single-channel coverage), RGB and RGBA source images.
      */
     class OPAAX_API OpenGLTexture2D
     {
@@ -26,18 +28,29 @@ namespace Opaax
     public:
         /**
          * Load from file path (stb_image)
-         * @param InPath 
+         * @param InPath
          */
         explicit OpenGLTexture2D(const char* InPath);
-        
+
         /**
          * Create a 1x1 solid colour texture — useful for coloured quads without
          * needing a real texture (white pixel * tint colour in the shader)
-         * @param InWidth 
-         * @param InHeight 
+         * @param InWidth
+         * @param InHeight
          */
         OpenGLTexture2D(Uint32 InWidth, Uint32 InHeight);
- 
+
+        /**
+         * Upload raw pixel bytes directly (no file/stb_image step).
+         * Channels: 4 = RGBA8, 3 = RGB8, 1 = R8 coverage (alpha-swizzled).
+         * Caller owns and frees InData after the ctor returns.
+         * @param InData
+         * @param InWidth
+         * @param InHeight
+         * @param InChannels
+         */
+        OpenGLTexture2D(const unsigned char* InData, Uint32 InWidth, Uint32 InHeight, Int32 InChannels);
+
         ~OpenGLTexture2D();
 
         // =============================================================================
