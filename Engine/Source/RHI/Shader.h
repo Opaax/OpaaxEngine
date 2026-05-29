@@ -3,9 +3,28 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/OpaaxMathTypes.h"
+#include "Core/OpaaxString.hpp"
 
 namespace Opaax
 {
+    // =============================================================================
+    // ShaderDesc
+    // =============================================================================
+    /**
+     * @struct ShaderDesc
+     *
+     * Backend-neutral description of a shader program — the input to IShader::Create.
+     * Today it carries per-stage GLSL source; the language is implicitly GLSL. A future
+     * backend (Step 8) extends this with a language/bytecode field (e.g. SPIR-V blob)
+     * WITHOUT changing the consumer call site.
+     */
+    struct ShaderDesc
+    {
+        OpaaxString DebugName;     // identification / log label
+        OpaaxString VertexSrc;     // vertex stage source
+        OpaaxString FragmentSrc;   // fragment stage source
+    };
+
     /**
      * @interface IShader
      *
@@ -30,7 +49,7 @@ namespace Opaax
         // Factory
         // =============================================================================
     public:
-        static UniquePtr<IShader> Create(const char* InVertexSrc, const char* InFragmentSrc);
+        static UniquePtr<IShader> Create(const ShaderDesc& InDesc);
 
         // =============================================================================
         // Functions

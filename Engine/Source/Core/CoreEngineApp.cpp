@@ -14,6 +14,7 @@
 #include "Assets/AssetRegistry.h"
 #include "Assets/Loader/FontLoader.h"
 #include "Assets/Loader/SceneLoader.h"
+#include "Assets/Loader/ShaderLoader.h"
 #include "Assets/Loader/TextureLoader.h"
 #include "Renderer/Text/FontAsset.h"
 #include "Scene/SceneAsset.h"
@@ -29,6 +30,7 @@
 #include "Renderer/Camera/CameraControllerSystem.h"
 #include "Renderer/Renderer2D.h"
 #include "Renderer/RenderSubsystem.h"
+#include "Renderer/ShaderAsset.h"
 #include "Renderer/Systems/WorldRenderSystem.h"
 #include "RHI/RenderCommand.h"
 #include "Scene/Scene.h"
@@ -209,6 +211,7 @@ void CoreEngineApp::Initialize()
     AssetLoaderRegistry::Register<Texture2D>(MakeUnique<TextureLoader>());
     AssetLoaderRegistry::Register<SceneAsset>(MakeUnique<SceneLoader>());
     AssetLoaderRegistry::Register<FontAsset>(MakeUnique<FontLoader>());
+    AssetLoaderRegistry::Register<ShaderAsset>(MakeUnique<ShaderLoader>());
 
     // Engine component types — every game-shared, scene-serializable type lives here.
     // Tag / Uuid are special-cased at the entity-json top level (display name, stable id)

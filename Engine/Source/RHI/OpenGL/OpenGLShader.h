@@ -24,7 +24,7 @@ namespace Opaax
         // CTOR - DTOR
         // =============================================================================
     public:
-        OpenGLShader(const char* InVertexSrc, const char* InFragmentSrc);
+        explicit OpenGLShader(const ShaderDesc& InDesc);
         ~OpenGLShader();
 
         // =============================================================================

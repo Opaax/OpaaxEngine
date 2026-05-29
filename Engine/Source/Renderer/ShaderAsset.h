@@ -36,11 +36,14 @@ namespace Opaax
         // =============================================================================
     public:
         /**
-         * Compile + link a vertex/fragment shader pair. Asset ID empty (runtime-built),
-         * source path empty. State ends as Loaded; OpenGLShader asserts on
-         * compile/link failure rather than reporting through state.
+         * Load a shader from a single on-disk file containing `#type vertex` / `#type fragment`
+         * sections (GLSL today). The ctor reads + splits the file into a ShaderDesc and builds
+         * the backend IShader via IShader::Create. State ends Loaded on success, Failed if the
+         * file is missing, a stage is empty, or GPU compile/link fails (fail-loud, logged).
+         * @param InSourcePath Path to the .glsl file (project/engine-relative; stored verbatim).
+         * @param InAssetID    Registry-stable logical ID.
          */
-        ShaderAsset(const char* InVertexSrc, const char* InFragmentSrc);
+        ShaderAsset(const OpaaxString& InSourcePath, OpaaxStringID InAssetID);
 
         ~ShaderAsset() override;
 
@@ -68,6 +71,8 @@ namespace Opaax
         //~ End IAsset interface
 
     public:
+        bool IsLoaded() const noexcept { return m_State == EAssetState::Loaded; }
+
         void Bind()   const;
         void Unbind() const;
 

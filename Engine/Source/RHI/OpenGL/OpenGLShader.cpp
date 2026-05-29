@@ -11,14 +11,14 @@ namespace Opaax
     // =============================================================================
     // IShader factory
     // =============================================================================
-    UniquePtr<IShader> IShader::Create(const char* InVertexSrc, const char* InFragmentSrc)
+    UniquePtr<IShader> IShader::Create(const ShaderDesc& InDesc)
     {
-        return MakeUnique<OpenGLShader>(InVertexSrc, InFragmentSrc);
+        return MakeUnique<OpenGLShader>(InDesc);
     }
 
-    OpenGLShader::OpenGLShader(const char* InVertexSrc, const char* InFragmentSrc)
+    OpenGLShader::OpenGLShader(const ShaderDesc& InDesc)
     {
-        CompileAndLink(InVertexSrc, InFragmentSrc);
+        CompileAndLink(InDesc.VertexSrc.CStr(), InDesc.FragmentSrc.CStr());
     }
     
     OpenGLShader::~OpenGLShader()
