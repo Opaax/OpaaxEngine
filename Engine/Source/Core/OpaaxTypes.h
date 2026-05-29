@@ -1,9 +1,13 @@
 ﻿#pragma once
 #include <array>
 #include <atomic>
+#include <condition_variable>
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <mutex>
+#include <queue>
+#include <thread>
 #include <unordered_map>
 #include <vector>
 
@@ -19,6 +23,12 @@
 //   Pointers:   UniquePtr<T>, MakeUnique<T>(args...)
 //               SharedPtr<T>, MakeShared<T>(args...)
 //               Atomic<T>                            (std::atomic<T>)
+//   Threading:  Thread                               (std::thread)
+//               Mutex                                (std::mutex)
+//               ConditionVariable                    (std::condition_variable)
+//               LockGuard<T>                          (std::lock_guard<T>)
+//               UniqueLock<T>                         (std::unique_lock<T>)
+//               TQueue<T>                            (std::queue<T>)
 //   Misc:       Move(arg)                            (std::move)
 //
 // Strings: see Core/OpaaxString.hpp (OpaaxString) and Core/OpaaxStringID.hpp.
@@ -92,6 +102,22 @@ namespace Opaax
 
     template<typename T>
     using Atomic = std::atomic<T>;
+
+    // =============================================================================
+    // Threading Aliases
+    // =============================================================================
+    using Thread            = std::thread;
+    using Mutex             = std::mutex;
+    using ConditionVariable = std::condition_variable;
+
+    template<typename T>
+    using LockGuard = std::lock_guard<T>;
+
+    template<typename T>
+    using UniqueLock = std::unique_lock<T>;
+
+    template<typename T>
+    using TQueue = std::queue<T>;
 
     // =============================================================================
     // Misc Aliases
