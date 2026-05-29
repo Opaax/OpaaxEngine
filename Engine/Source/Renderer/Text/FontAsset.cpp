@@ -21,7 +21,7 @@ namespace Opaax
     // =============================================================================
     namespace
     {
-        // OD-2 lock: (2,2) oversample default. Sharper anti-alias at ~4x atlas footprint.
+        //(2,2) oversample default. Sharper anti-alias at ~4x atlas footprint.
         constexpr Uint32 sOversampleH = 2u;
         constexpr Uint32 sOversampleV = 2u;
 
@@ -62,7 +62,7 @@ namespace Opaax
         , m_SourcePath(InSourcePath)
         , m_State(EAssetState::Loading)
     {
-        const std::vector<unsigned char> lFontBytes = ReadFileBytes(m_SourcePath);
+        const TDynArray<unsigned char> lFontBytes = ReadFileBytes(m_SourcePath);
         if (lFontBytes.empty())
         {
             OPAAX_CORE_ERROR("FontAsset: failed to read TTF bytes from '{}'", m_SourcePath.CStr());
@@ -70,7 +70,7 @@ namespace Opaax
             return;
         }
 
-        // stbtt_fontinfo is ctor-scoped per amended plan (Step 3 note). The TTF byte
+        // The TTF byte
         // buffer must remain alive across stbtt_PackFontRange + future kern queries;
         // lFontBytes is a local std::vector so it dies at ctor end.
         stbtt_fontinfo lFontInfo = {};

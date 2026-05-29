@@ -174,7 +174,7 @@ namespace Opaax
         Uint32                   m_AtlasSize  = 0u;
         GlyphMetrics             m_Glyphs[CodepointCount] = {};
         FontVMetrics             m_VMetrics   = {};
-        std::vector<KerningPair> m_Kerning;
+        TDynArray<KerningPair> m_Kerning;
     };
 
 } // namespace Opaax

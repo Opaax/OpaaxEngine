@@ -5,20 +5,13 @@
 
 namespace Opaax
 {
-    // =============================================================================
-    // OpenGLTexture2D
-    //
-    // Loads an image via stb_image and uploads it to the GPU.
-    // Supports R8 (single-channel coverage), RGB and RGBA source images.
-    // R8 path swizzles coverage into alpha so the existing RGBA sprite shader
-    // reads it as (1,1,1,coverage) without a shader fork.
-    // =============================================================================
-
     /**
      * @class OpenGLTexture2D
      *
      * Loads an image via stb_image and uploads it to the GPU.
      * Supports R8 (single-channel coverage), RGB and RGBA source images.
+     * R8 path swizzles coverage into alpha so the existing RGBA sprite shader
+     * reads it as (1,1,1,coverage) without a shader fork.
      */
     class OPAAX_API OpenGLTexture2D
     {
