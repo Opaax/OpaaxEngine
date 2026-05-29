@@ -8,6 +8,14 @@
 
 namespace Opaax
 {
+    // =============================================================================
+    // IShader factory
+    // =============================================================================
+    UniquePtr<IShader> IShader::Create(const char* InVertexSrc, const char* InFragmentSrc)
+    {
+        return MakeUnique<OpenGLShader>(InVertexSrc, InFragmentSrc);
+    }
+
     OpenGLShader::OpenGLShader(const char* InVertexSrc, const char* InFragmentSrc)
     {
         CompileAndLink(InVertexSrc, InFragmentSrc);

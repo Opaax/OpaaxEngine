@@ -1,6 +1,6 @@
 #include "Texture2D.h"
 
-#include "RHI/OpenGL/OpenGLTexture2D.h"
+#include "RHI/Texture.h"
 
 namespace Opaax
 {
@@ -11,26 +11,25 @@ namespace Opaax
         : m_AssetID(InAssetID)
         , m_SourcePath(InSourcePath)
         , m_State(EAssetState::Loading)
-        , m_Gpu(MakeUnique<OpenGLTexture2D>(InSourcePath.CStr()))
+        , m_Gpu(ITexture2D::Create(InSourcePath.CStr()))
     {
         m_State = (m_Gpu && m_Gpu->IsLoaded()) ? EAssetState::Loaded : EAssetState::Failed;
     }
 
     Texture2D::Texture2D(Uint32 InWidth, Uint32 InHeight)
         : m_State(EAssetState::Loading)
-        , m_Gpu(MakeUnique<OpenGLTexture2D>(InWidth, InHeight))
+        , m_Gpu(ITexture2D::Create(InWidth, InHeight))
     {
         m_State = (m_Gpu && m_Gpu->IsLoaded()) ? EAssetState::Loaded : EAssetState::Failed;
     }
 
     Texture2D::Texture2D(const unsigned char* InData, Uint32 InWidth, Uint32 InHeight, Int32 InChannels)
         : m_State(EAssetState::Loading)
-        , m_Gpu(MakeUnique<OpenGLTexture2D>(InData, InWidth, InHeight, InChannels))
+        , m_Gpu(ITexture2D::Create(InData, InWidth, InHeight, InChannels))
     {
         m_State = (m_Gpu && m_Gpu->IsLoaded()) ? EAssetState::Loaded : EAssetState::Failed;
     }
 
-    // Defined here so UniquePtr<OpenGLTexture2D>'s deleter sees the complete type.
     Texture2D::~Texture2D() = default;
 
     // =============================================================================

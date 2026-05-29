@@ -1,7 +1,6 @@
 #include "Renderer2D.h"
 #include "RHI/RenderCommand.h"
-#include "RHI/OpenGL/OpenGLBuffer.h"
-#include "RHI/OpenGL/OpenGLVertexArray.h"
+#include "RHI/Buffer.h"
 #include "Renderer/ShaderAsset.h"
 #include "Renderer/Texture2D.h"
 #include "Renderer/Camera/ICamera.h"

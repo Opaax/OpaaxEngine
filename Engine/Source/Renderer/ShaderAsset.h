@@ -9,7 +9,7 @@
 
 namespace Opaax
 {
-    class OpenGLShader;
+    class IShader;
 
     // =============================================================================
     // ShaderAsset
@@ -17,9 +17,9 @@ namespace Opaax
     /**
      * @class ShaderAsset
      *
-     * Logical shader asset. Composes a UniquePtr<OpenGLShader> as the GPU
-     * resource — the IAsset surface lives here, the GL program object stays
-     * inside OpenGLShader.
+     * Logical shader asset. Composes a UniquePtr<IShader> as the GPU resource —
+     * the IAsset surface lives here, the backend program object stays inside the
+     * concrete IShader impl (OpenGLShader today). Never names a backend type.
      *
      * Shaders today are built from inline string literals at engine init
      * (Renderer2D); no on-disk shader files exist yet, so there is no
@@ -89,7 +89,7 @@ namespace Opaax
         OpaaxStringID            m_AssetID    = {};
         OpaaxString              m_SourcePath;
         EAssetState              m_State      = EAssetState::Unloaded;
-        UniquePtr<OpenGLShader>  m_Gpu;
+        UniquePtr<IShader>       m_Gpu;
     };
 
 } // namespace Opaax

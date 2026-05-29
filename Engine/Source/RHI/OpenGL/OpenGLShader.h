@@ -8,16 +8,17 @@
 #include <glm/glm.hpp>
 
 #include "Core/OpaaxMathTypes.h"
+#include "RHI/Shader.h"
 
 namespace Opaax
 {
     /**
      *@class OpenGLShader
      *
-     * Compiles and links a vertex + fragment GLSL shader pair.
+     * OpenGL IShader implementation. Compiles and links a vertex + fragment GLSL shader pair.
      * Uniform locations are cached on first lookup — glGetUniformLocation is never called twice for the same name.
      */
-    class OPAAX_API OpenGLShader
+    class OPAAX_API OpenGLShader final : public IShader
     {
         // =============================================================================
         // CTOR - DTOR
@@ -45,21 +46,25 @@ namespace Opaax
         Int32 GetUniformLocation(const char* InName);
         void  CompileAndLink(const char* InVertexSrc, const char* InFragmentSrc);
         
+        // =============================================================================
+        // Override
+        // =============================================================================
+        //~Begin IShader interface
     public:
-        void Bind()   const;
-        void Unbind() const;
+        void Bind()   const override;
+        void Unbind() const override;
 
         //------------------------------------------------------------------------------
-        //  Get - Set
-        // Uniform setters
-        
-        void SetInt         (const char* InName, Int32              InValue                 );
-        void SetIntArray    (const char* InName, const Int32*       InValues, Uint32 InCount);
-        void SetFloat       (const char* InName, float              InValue                 );
-        void SetFloat2      (const char* InName, const Vector2F&    InValue                 );
-        void SetFloat3      (const char* InName, const Vector3F&    InValue                 );
-        void SetFloat4      (const char* InName, const Vector4F&    InValue                 );
-        void SetMat4        (const char* InName, const Matrix44F&   InValue                 );
+        //  Uniform setters
+
+        void SetInt         (const char* InName, Int32              InValue                 ) override;
+        void SetIntArray    (const char* InName, const Int32*       InValues, Uint32 InCount) override;
+        void SetFloat       (const char* InName, float              InValue                 ) override;
+        void SetFloat2      (const char* InName, const Vector2F&    InValue                 ) override;
+        void SetFloat3      (const char* InName, const Vector3F&    InValue                 ) override;
+        void SetFloat4      (const char* InName, const Vector4F&    InValue                 ) override;
+        void SetMat4        (const char* InName, const Matrix44F&   InValue                 ) override;
+        //~End IShader interface
 
         // =============================================================================
         // Members

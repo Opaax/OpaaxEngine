@@ -2,18 +2,19 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
+#include "RHI/Texture.h"
 
 namespace Opaax
 {
     /**
      * @class OpenGLTexture2D
      *
-     * Loads an image via stb_image and uploads it to the GPU.
+     * OpenGL ITexture2D implementation. Loads an image via stb_image and uploads it to the GPU.
      * Supports R8 (single-channel coverage), RGB and RGBA source images.
      * R8 path swizzles coverage into alpha so the existing RGBA sprite shader
      * reads it as (1,1,1,coverage) without a shader fork.
      */
-    class OPAAX_API OpenGLTexture2D
+    class OPAAX_API OpenGLTexture2D final : public ITexture2D
     {
         // =============================================================================
         // CTOR - DTOR
@@ -64,17 +65,22 @@ namespace Opaax
     private:
         void Upload(const unsigned char* InData, Uint32 InWidth, Uint32 InHeight, Int32 InChannels);
         
+        // =============================================================================
+        // Override
+        // =============================================================================
+        //~Begin ITexture2D interface
     public:
-        void Bind(Uint32 InSlot = 0) const;
-        void Unbind()                const;
+        void Bind(Uint32 InSlot = 0) const override;
+        void Unbind()                const override;
 
         //------------------------------------------------------------------------------
-        //Get - Set
-        
-        FORCEINLINE Uint32 GetWidth()      const noexcept { return m_Width;      }
-        FORCEINLINE Uint32 GetHeight()     const noexcept { return m_Height;     }
-        FORCEINLINE Uint32 GetRendererID() const noexcept { return m_RendererID; }
-        FORCEINLINE bool   IsLoaded()      const noexcept { return m_bLoaded;    }
+        //Get
+
+        FORCEINLINE Uint32 GetWidth()      const noexcept override { return m_Width;      }
+        FORCEINLINE Uint32 GetHeight()     const noexcept override { return m_Height;     }
+        FORCEINLINE Uint32 GetRendererID() const noexcept override { return m_RendererID; }
+        FORCEINLINE bool   IsLoaded()      const noexcept override { return m_bLoaded;    }
+        //~End ITexture2D interface
 
         // =============================================================================
         // Operators

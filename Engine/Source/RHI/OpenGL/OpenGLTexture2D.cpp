@@ -10,6 +10,24 @@
 
 namespace Opaax
 {
+    // =============================================================================
+    // ITexture2D factory
+    // =============================================================================
+    UniquePtr<ITexture2D> ITexture2D::Create(const char* InPath)
+    {
+        return MakeUnique<OpenGLTexture2D>(InPath);
+    }
+
+    UniquePtr<ITexture2D> ITexture2D::Create(Uint32 InWidth, Uint32 InHeight)
+    {
+        return MakeUnique<OpenGLTexture2D>(InWidth, InHeight);
+    }
+
+    UniquePtr<ITexture2D> ITexture2D::Create(const unsigned char* InData, Uint32 InWidth, Uint32 InHeight, Int32 InChannels)
+    {
+        return MakeUnique<OpenGLTexture2D>(InData, InWidth, InHeight, InChannels);
+    }
+
     OpenGLTexture2D::OpenGLTexture2D(const char* InPath)
     {
         // Flip vertically — stb loads top-left origin, OpenGL expects bottom-left

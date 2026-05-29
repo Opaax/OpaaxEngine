@@ -8,7 +8,7 @@
 
 namespace Opaax
 {
-    class OpenGLTexture2D;
+    class ITexture2D;
 
     // =============================================================================
     // Texture2D
@@ -16,12 +16,10 @@ namespace Opaax
     /**
      * @class Texture2D
      *
-     * Logical 2D texture asset. Composes a UniquePtr<OpenGLTexture2D> as the
-     * GPU resource — the asset surface (ID, type, state, source path) lives
-     * here, the raw GL handle stays inside OpenGLTexture2D.
-     *
-     * No RHI base interface yet: when a second backend appears, lift the GPU
-     * member to UniquePtr<RHITexture> and have OpenGLTexture2D implement it.
+     * Logical 2D texture asset. Composes a UniquePtr<ITexture2D> as the GPU
+     * resource — the asset surface (ID, type, state, source path) lives here,
+     * the raw backend handle stays inside the concrete ITexture2D impl
+     * (OpenGLTexture2D today). Never names a backend type.
      *
      * Lifetime: heap-allocated by TextureLoader, owned by AssetRegistry's
      * type-erased entry. Never moved or copied — deleted special members
@@ -99,7 +97,7 @@ namespace Opaax
         OpaaxStringID              m_AssetID    = {};
         OpaaxString                m_SourcePath;
         EAssetState                m_State      = EAssetState::Unloaded;
-        UniquePtr<OpenGLTexture2D> m_Gpu;
+        UniquePtr<ITexture2D>      m_Gpu;
     };
 
 } // namespace Opaax

@@ -1,6 +1,6 @@
 #include "ShaderAsset.h"
 
-#include "RHI/OpenGL/OpenGLShader.h"
+#include "RHI/Shader.h"
 
 namespace Opaax
 {
@@ -9,12 +9,11 @@ namespace Opaax
     // =============================================================================
     ShaderAsset::ShaderAsset(const char* InVertexSrc, const char* InFragmentSrc)
         : m_State(EAssetState::Loading)
-        , m_Gpu(MakeUnique<OpenGLShader>(InVertexSrc, InFragmentSrc))
+        , m_Gpu(IShader::Create(InVertexSrc, InFragmentSrc))
     {
         m_State = m_Gpu ? EAssetState::Loaded : EAssetState::Failed;
     }
 
-    // Defined here so UniquePtr<OpenGLShader>'s deleter sees the complete type.
     ShaderAsset::~ShaderAsset() = default;
 
     // =============================================================================
