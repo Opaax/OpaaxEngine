@@ -2,11 +2,6 @@
 
 #include "Core/Log/OpaaxLog.h"
 
-// Step-4 verify scaffold. Removed at M6 close (Step 5).
-#ifndef OPAAX_M6_VERIFY_JOBS
-    #define OPAAX_M6_VERIFY_JOBS 1
-#endif
-
 namespace Opaax
 {
     // =============================================================================
@@ -35,122 +30,6 @@ namespace Opaax
     void JobSubsystem::Update(double /*DeltaTime*/)
     {
         DrainCompleted();
-
-#if OPAAX_M6_VERIFY_JOBS
-        static bool s_VerifyKicked = false;
-        if (!s_VerifyKicked)
-        {
-            s_VerifyKicked = true;
-
-            // Update() always runs on the main thread — capture its id as the baseline
-            // the completion callback below checks against.
-            const Thread::id lMainId = std::this_thread::get_id();
-
-            OPAAX_CORE_INFO("M6 VERIFY — workers={}", GetWorkerCount());
-
-            // (a) ParallelFor correctness — square every index, compare against a
-            //     single-threaded reference sum.
-            constexpr Uint32 lN = 1u << 20; // 1,048,576
-            TDynArray<Uint64> lOut(lN, 0);
-            ParallelFor(lN, [&lOut](Uint32 InIndex)
-            {
-                lOut[InIndex] = static_cast<Uint64>(InIndex) * InIndex;
-            }, /*grain*/ 4096);
-
-            Uint64 lParallelSum = 0;
-            Uint64 lReferenceSum = 0;
-            for (Uint32 i = 0; i < lN; ++i)
-            {
-                lParallelSum  += lOut[i];
-                lReferenceSum += static_cast<Uint64>(i) * i;
-            }
-            OPAAX_CORE_INFO("M6 VERIFY — ParallelFor {} (sum={}, ref={})",
-                            (lParallelSum == lReferenceSum) ? "PASS" : "FAIL",
-                            lParallelSum, lReferenceSum);
-
-            // (b) Completion callback must run on the MAIN thread (next-frame drain).
-            Submit(
-                [] { /* off-thread work — nothing observable, just exercises the path */ },
-                [lMainId]
-                {
-                    const bool lOnMain = (std::this_thread::get_id() == lMainId);
-                    OPAAX_CORE_INFO("M6 VERIFY — OnComplete ran on {} thread",
-                                    lOnMain ? "MAIN" : "WORKER(!)");
-                });
-
-            // (c) Submit + Wait — compute a value off-thread and block for it on the
-            //     calling (main) thread. The shared result is captured by value so it
-            //     outlives the job regardless of when the worker runs it.
-            {
-                SharedPtr<Uint64> lResult = MakeShared<Uint64>(0);
-                JobHandle lHandle = Submit([lResult]
-                {
-                    Uint64 lAcc = 0;
-                    for (Uint32 i = 0; i < 1'000'000; ++i) { lAcc += i; }
-                    *lResult = lAcc;
-                });
-                Wait(lHandle);
-                OPAAX_CORE_INFO("M6 VERIFY — Submit+Wait result={} (expected 499999500000)", *lResult);
-            }
-
-            // (d) The async-asset shape: heavy "decode" off-thread fills a CPU buffer,
-            //     then the MAIN-thread completion "finalizes" it (where a real loader
-            //     would do the GL upload). This is the exact pattern the future
-            //     AssetRegistry::LoadAsync will ride on.
-            {
-                SharedPtr<TDynArray<Uint8>> lPayload = MakeShared<TDynArray<Uint8>>();
-                Submit(
-                    [lPayload]
-                    {
-                        lPayload->resize(256);
-                        for (Uint32 i = 0; i < lPayload->size(); ++i)
-                        {
-                            (*lPayload)[i] = static_cast<Uint8>(i);
-                        }
-                    },
-                    [lPayload, lMainId]
-                    {
-                        const bool lOnMain = (std::this_thread::get_id() == lMainId);
-                        OPAAX_CORE_INFO("M6 VERIFY — async finalize: {} bytes ready, last={}, on {} thread",
-                                        lPayload->size(),
-                                        lPayload->empty() ? 0 : lPayload->back(),
-                                        lOnMain ? "MAIN" : "WORKER(!)");
-                    });
-            }
-
-            // (e) Fan-out — several independent jobs, each posting its own completion.
-            //     All callbacks drain on the main thread in completion order.
-            for (Uint32 lJobIndex = 0; lJobIndex < 4; ++lJobIndex)
-            {
-                Submit(
-                    [lJobIndex]
-                    {
-                        // Uneven work so completion order isn't simply submission order.
-                        volatile Uint64 lSpin = 0;
-                        for (Uint32 i = 0; i < (lJobIndex + 1) * 200'000; ++i) { lSpin += i; }
-                    },
-                    [lJobIndex] { OPAAX_CORE_INFO("M6 VERIFY — fan-out job {} completed", lJobIndex); });
-            }
-
-            // (f) Chained submit — a completion callback queues a follow-up job. Proves
-            //     DrainCompleted invokes callbacks OUTSIDE the completion lock, so a
-            //     callback can safely Submit without re-entrant deadlock.
-            Submit(
-                [] {},
-                [this, lMainId]
-                {
-                    OPAAX_CORE_INFO("M6 VERIFY — completion re-submitting a follow-up job");
-                    Submit(
-                        [] {},
-                        [lMainId]
-                        {
-                            const bool lOnMain = (std::this_thread::get_id() == lMainId);
-                            OPAAX_CORE_INFO("M6 VERIFY — chained follow-up completed on {} thread",
-                                            lOnMain ? "MAIN" : "WORKER(!)");
-                        });
-                });
-        }
-#endif
     }
 
     void JobSubsystem::Shutdown()
