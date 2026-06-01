@@ -10,6 +10,7 @@
 #include "Panels/InspectorPanel.h"
 #include "Panels/ViewportPanel.h"
 #include "Toolbar/MainMenuBar.h"
+#include "Editor/UI/IEditorUIBackend.h"
 #include "Core/Event/OpaaxEventTypes.hpp"
 #include "Core/OpaaxMathTypes.h"
 #include "Core/OpaaxString.hpp"
@@ -119,6 +120,9 @@ namespace Opaax
         // ctor) — EditorEventBus itself is non-movable because SubscriptionTokens hold
         // a raw EditorEventBus* and a relocation would silently dangle them.
         UniquePtr<Editor::EditorEventBus> m_EventBus = MakeUnique<Editor::EditorEventBus>();
+
+        // Renderer side of ImGui (ImplOpenGL3 today) behind a backend-selected seam.
+        UniquePtr<IEditorUIBackend> m_UIBackend;
 
         // Editor camera lives across PIE cycles so pan/zoom state persists. Installed as
         // the non-owning active camera on CameraSubsystem in Editing; swapped out for a

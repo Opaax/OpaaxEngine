@@ -1,13 +1,10 @@
 #include "EditorSubsystem.h"
-#include "GLFW/glfw3.h"
 
 #if OPAAX_WITH_EDITOR
 
 #include <filesystem>
 
 #include <imgui.h>
-#include <imgui_impl_glfw.h>
-#include <imgui_impl_opengl3.h>
 
 #include "Core/CoreEngineApp.h"
 #include "Core/OpaaxPath.h"
@@ -19,6 +16,9 @@
 #include "Renderer/Camera/CameraSubsystem.h"
 #include "Renderer/Camera/OrthographicCamera.h"
 #include "RHI/RenderCommand.h"
+#include "RHI/RenderAPI.h"
+#include "Core/Config/EngineConfig.h"
+#include "Editor/UI/IEditorUIBackend.h"
 
 #include "Editor/Assets/AssetTypeRegistry.h"
 #include "Editor/Assets/Types/FontTypeActions.h"
@@ -64,11 +64,13 @@ namespace Opaax
             lStyle.Colors[ImGuiCol_WindowBg].w = 1.f;
         }
 
-        GLFWwindow* lNativeWindow = static_cast<GLFWwindow*>(
-            GetEngineApp()->GetWindow().GetNativeWindow());
+        void* lNativeWindow = GetEngineApp()->GetWindow().GetNativeWindow();
 
-        ImGui_ImplGlfw_InitForOpenGL(lNativeWindow, true);
-        ImGui_ImplOpenGL3_Init("#version 450");
+        // ImGui renderer backend selected from engine config — same backend as the renderer.
+        const EBackend lBackend = RenderAPI::BackendFromString(EngineConfig::RenderBackend());
+        m_UIBackend = IEditorUIBackend::Create(lBackend, lNativeWindow);
+        OPAAX_CORE_ASSERT(m_UIBackend)
+        m_UIBackend->Init();
 
         m_ViewportPanel.Startup();
         RegisterViewportCallbacks();
@@ -165,8 +167,8 @@ namespace Opaax
 
         m_ViewportPanel.Shutdown();
 
-        ImGui_ImplOpenGL3_Shutdown();
-        ImGui_ImplGlfw_Shutdown();
+        m_UIBackend->Shutdown();
+        m_UIBackend.reset();
         ImGui::DestroyContext();
     }
 
@@ -268,8 +270,7 @@ namespace Opaax
         RenderCommand::SetClearColor(0.1f, 0.1f, 0.1f, 1.f);
         RenderCommand::Clear();
 
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
+        m_UIBackend->NewFrame();
         ImGui::NewFrame();
 
         ImGuiViewport* lViewport = ImGui::GetMainViewport();
@@ -434,15 +435,12 @@ namespace Opaax
     void EditorSubsystem::EndFrame()
     {
         ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        m_UIBackend->RenderDrawData();
 
         const ImGuiIO& lIO = ImGui::GetIO();
         if (lIO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         {
-            GLFWwindow* lCurrentContext = glfwGetCurrentContext();
-            ImGui::UpdatePlatformWindows();
-            ImGui::RenderPlatformWindowsDefault();
-            glfwMakeContextCurrent(lCurrentContext);
+            m_UIBackend->RenderPlatformWindows();
         }
     }
 

@@ -8,13 +8,6 @@
 #include "Core/Config/EngineConfig.h"
 #include "Core/Log/OpaaxLog.h"
 
-// glad/GLFW are the OpenGL context bootstrap. They live here (the one sanctioned
-// platform/GL touch-point) and are only invoked when the selected backend is OpenGL —
-// a future backend brings its own context-init path. WindowsWindow::Init() has already
-// called glfwMakeContextCurrent before this runs.
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
-
 #include "Core/CoreEngineApp.h"
 #include "Core/Window.h"
 #include "Core/ApplicationEvents.hpp"
@@ -27,20 +20,10 @@ namespace Opaax
         OPAAX_CORE_INFO("RenderSubsystem::Startup()");
 
         // Backend comes from engine config (string -> EBackend), not hardcoded.
+        // Context bootstrap (make-current + glad load) already happened in WindowsWindow::Init
+        // via the backend's IGraphicsContext — glad is confined there, not loaded here.
         const EBackend lBackend = RenderAPI::BackendFromString(EngineConfig::RenderBackend());
         OPAAX_CORE_INFO("RenderSubsystem: render backend = {}", RenderAPI::BackendToString(lBackend));
-
-        // OpenGL-only context bootstrap — load GL function pointers via glad.
-        // Other backends never touch glad. glfwMakeContextCurrent must run first
-        // (done in WindowsWindow::Init).
-        if (lBackend == EBackend::OpenGL)
-        {
-            if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress)))
-            {
-                OPAAX_CORE_ERROR("RenderSubsystem: glad failed to load OpenGL functions.");
-                return false;
-            }
-        }
 
         // RenderCommand takes ownership of the raw ptr (documented on RenderCommand);
         // .release() hands the UniquePtr's payload over to that ownership contract.

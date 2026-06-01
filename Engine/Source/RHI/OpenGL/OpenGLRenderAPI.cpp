@@ -50,6 +50,18 @@ namespace Opaax
         OPAAX_CORE_INFO("OpenGL Version:  {}", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
     }
  
+    void OpenGLRenderAPI::BeginFrame()
+    {
+        // OpenGL submits immediately to the current context — nothing to begin.
+        // NOTE: Vulkan acquires the swapchain image + begins the command buffer here.
+    }
+
+    void OpenGLRenderAPI::EndFrame()
+    {
+        // OpenGL has nothing to flush before the context swap.
+        // NOTE: Vulkan ends + submits the command buffer here (present stays in the context).
+    }
+
     void OpenGLRenderAPI::SetViewport(Uint32 X, Uint32 Y, Uint32 Width, Uint32 Height)
     {
         glViewport(static_cast<GLint>(X), static_cast<GLint>(Y),

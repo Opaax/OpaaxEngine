@@ -1,6 +1,7 @@
 #include "ShaderAsset.h"
 
 #include "RHI/Shader.h"
+#include "RHI/ShaderCompiler.h"
 #include "Core/Log/OpaaxLog.h"
 
 #include <fstream>
@@ -72,13 +73,24 @@ namespace Opaax
         const OpaaxString lSource(lRaw.str().c_str());
 
         const OpaaxString lName = InAssetID.ToString();
-        const ShaderDesc  lDesc = ParseShaderStages(lSource, lName);
+        ShaderDesc        lDesc = ParseShaderStages(lSource, lName);
 
         if (lDesc.VertexSrc.IsEmpty() || lDesc.FragmentSrc.IsEmpty())
         {
             OPAAX_CORE_ERROR("ShaderAsset: '{}' missing a vertex or fragment '#type' section.", lPath);
             m_State = EAssetState::Failed;
             return;
+        }
+
+        // Compile both stages to SPIR-V when glslang is available — the portable IR backends
+        // consume (GL via GL_ARB_gl_spirv, Vulkan natively). When glslang is absent (no Vulkan
+        // SDK at build time) the blobs stay empty and the OpenGL backend falls back to the GLSL
+        // source path — the engine still runs on OpenGL, only the Vulkan backend is unavailable.
+        lDesc.VertexSpirv   = ShaderCompiler::CompileGLSLToSPIRV(EShaderStage::Vertex,   lDesc.VertexSrc,   lName);
+        lDesc.FragmentSpirv = ShaderCompiler::CompileGLSLToSPIRV(EShaderStage::Fragment, lDesc.FragmentSrc, lName);
+        if (lDesc.VertexSpirv.empty() || lDesc.FragmentSpirv.empty())
+        {
+            OPAAX_CORE_TRACE("ShaderAsset: '{}' — no SPIR-V (glslang absent or failed); using GLSL source path.", lPath);
         }
 
         m_Gpu   = IShader::Create(lDesc);

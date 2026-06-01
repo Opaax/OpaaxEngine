@@ -5,6 +5,8 @@
 
 namespace Opaax
 {
+    class IGraphicsContext;
+
     /**
      * @class WindowsWindow
      */
@@ -48,7 +50,10 @@ namespace Opaax
         // =============================================================================
     private:
         GLFWwindow* m_Window;
-        
+
+        // Backend graphics context — owns make-current, glad load, vsync, present.
+        UniquePtr<IGraphicsContext> m_Context;
+
         struct WindowData
         {
             String Title;

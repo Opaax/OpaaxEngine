@@ -39,6 +39,8 @@ namespace Opaax
          */
         static void Init(IRenderAPI* InAPI);
         static void Shutdown();
+        static void BeginFrame();
+        static void EndFrame();
         static void SetViewport(Uint32 X, Uint32 Y, Uint32 Width, Uint32 Height);
         static void SetClearColor(float Red, float Green, float Blue, float Alpha);
         static void Clear();

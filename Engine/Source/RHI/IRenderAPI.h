@@ -22,6 +22,17 @@ namespace Opaax
         virtual ~IRenderAPI() = default;
 
         virtual void Init()                                                         = 0;
+
+        /**
+         * Per-frame begin/end bracket around all draw submission for the frame.
+         * OpenGL: near-empty (immediate-mode submission). An explicit backend (Vulkan)
+         * uses these to acquire the swapchain image + begin recording (BeginFrame) and
+         * end + submit the command buffer (EndFrame). Present itself is the graphics
+         * context's job (IGraphicsContext::SwapBuffers), not the render API's.
+         */
+        virtual void BeginFrame()                                                   = 0;
+        virtual void EndFrame()                                                     = 0;
+
         virtual void SetViewport(Uint32 X, Uint32 Y, Uint32 Width, Uint32 Height)   = 0;
         virtual void SetClearColor(float Red, float Green, float Blue, float Alpha) = 0;
         virtual void Clear()                                                        = 0;

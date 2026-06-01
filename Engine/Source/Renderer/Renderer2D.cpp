@@ -1,14 +1,16 @@
 #include "Renderer2D.h"
 #include "RHI/RenderCommand.h"
 #include "RHI/Buffer.h"
+#include "RHI/UniformBuffer.h"
 #include "Renderer/ShaderAsset.h"
 #include "Renderer/Texture2D.h"
 #include "Renderer/Camera/ICamera.h"
 #include "Core/Config/EngineConfig.h"
 #include "Core/Log/OpaaxLog.h"
 #include "Core/EngineAPI.h"
- 
+
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <algorithm>
 #include <cmath>
 
@@ -42,6 +44,7 @@ namespace Opaax
         IVertexBuffer*           QuadVBO      = nullptr;  // non-owning, owned by VAO
         UniquePtr<ShaderAsset>   QuadShader;
         UniquePtr<Texture2D>     WhiteTexture;
+        UniquePtr<IUniformBuffer> CameraUBO;  // binding 0: u_ViewProjection (std140)
  
         // CPU-side vertex buffer — filled each frame, uploaded on flush
         TFixedArray<QuadVertex, MAX_VERTICES> VertexBuffer;
@@ -112,11 +115,12 @@ namespace Opaax
         const OpaaxString lShaderPath = EngineConfig::EngineAssetsRoot() + "/Shaders/Sprite.glsl";
         s_Data.QuadShader = MakeUnique<ShaderAsset>(lShaderPath, OPAAX_ID("Shaders/Sprite"));
         s_Data.QuadShader->Bind();
- 
-        // Bind sampler uniforms once — slots don't change
-        Int32 lSamplers[MAX_TEXTURE_SLOTS];
-        for (Int32 i = 0; i < static_cast<Int32>(MAX_TEXTURE_SLOTS); ++i) { lSamplers[i] = i; }
-        s_Data.QuadShader->SetIntArray("u_Textures", lSamplers, MAX_TEXTURE_SLOTS);
+
+        // Sampler array texture units come from the shader's `layout(binding = 0)` (units
+        // 0..15) — no SetIntArray needed (and impossible on a SPIR-V-specialized program).
+
+        // --- Camera UBO (binding 0) — sole source of u_ViewProjection, written each Begin.
+        s_Data.CameraUBO = IUniformBuffer::Create(static_cast<Uint32>(sizeof(glm::mat4)), 0);
     }
  
     void Renderer2D::Shutdown()
@@ -125,6 +129,7 @@ namespace Opaax
         s_Data.QuadVAO.reset();
         s_Data.QuadShader.reset();
         s_Data.WhiteTexture.reset();
+        s_Data.CameraUBO.reset();
     }
  
     // =============================================================================
@@ -134,10 +139,13 @@ namespace Opaax
     void Renderer2D::Begin(ICamera& InCamera)
     {
         s_Data.ViewProjection = InCamera.GetViewProjection();
- 
+
         s_Data.QuadShader->Bind();
-        s_Data.QuadShader->SetMat4("u_ViewProjection", s_Data.ViewProjection);
- 
+
+        // u_ViewProjection rides the camera UBO (binding 0) — SPIR-V has no default-block path.
+        s_Data.CameraUBO->SetData(glm::value_ptr(s_Data.ViewProjection),
+                                  static_cast<Uint32>(sizeof(glm::mat4)));
+
         StartBatch();
     }
  

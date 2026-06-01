@@ -15,8 +15,12 @@ namespace Opaax
     /**
      *@class OpenGLShader
      *
-     * OpenGL IShader implementation. Compiles and links a vertex + fragment GLSL shader pair.
-     * Uniform locations are cached on first lookup — glGetUniformLocation is never called twice for the same name.
+     * OpenGL IShader implementation. Prefers per-stage SPIR-V (the same artifact a Vulkan
+     * backend uses) via GL_ARB_gl_spirv: glShaderBinary + glSpecializeShader, then links.
+     * If the ShaderDesc carries no SPIR-V (glslang absent at build time) it falls back to
+     * compiling the GLSL source via glShaderSource — so OpenGL works without the Vulkan SDK.
+     * The name-based uniform setters remain for the interface but a SPIR-V program exposes
+     * no default-block uniforms — they degrade to a warn-noop (glGetUniformLocation == -1).
      */
     class OPAAX_API OpenGLShader final : public IShader
     {
@@ -44,7 +48,8 @@ namespace Opaax
         // =============================================================================
     private:
         Int32 GetUniformLocation(const char* InName);
-        void  CompileAndLink(const char* InVertexSrc, const char* InFragmentSrc);
+        void  CreateFromSpirv(const TDynArray<Uint32>& InVertexSpirv, const TDynArray<Uint32>& InFragmentSpirv);
+        void  CompileAndLink(const char* InVertexSrc, const char* InFragmentSrc);  // GLSL fallback
         
         // =============================================================================
         // Override

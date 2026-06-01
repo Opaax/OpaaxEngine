@@ -14,15 +14,17 @@ namespace Opaax
      * @struct ShaderDesc
      *
      * Backend-neutral description of a shader program — the input to IShader::Create.
-     * Today it carries per-stage GLSL source; the language is implicitly GLSL. A future
-     * backend (Step 8) extends this with a language/bytecode field (e.g. SPIR-V blob)
-     * WITHOUT changing the consumer call site.
+     * Carries per-stage GLSL source (the compile input + debug label) AND the compiled
+     * SPIR-V blobs. SPIR-V is the portable IR every backend consumes: OpenGL via
+     * GL_ARB_gl_spirv, Vulkan natively. ShaderAsset fills the blobs via ShaderCompiler.
      */
     struct ShaderDesc
     {
-        OpaaxString DebugName;     // identification / log label
-        OpaaxString VertexSrc;     // vertex stage source
-        OpaaxString FragmentSrc;   // fragment stage source
+        OpaaxString        DebugName;       // identification / log label
+        OpaaxString        VertexSrc;       // vertex stage GLSL (compile input)
+        OpaaxString        FragmentSrc;     // fragment stage GLSL (compile input)
+        TDynArray<Uint32>  VertexSpirv;     // compiled vertex SPIR-V words
+        TDynArray<Uint32>  FragmentSpirv;   // compiled fragment SPIR-V words
     };
 
     /**

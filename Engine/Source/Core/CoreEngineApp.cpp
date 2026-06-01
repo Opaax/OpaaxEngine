@@ -379,11 +379,14 @@ void CoreEngineApp::Run()
         // ----------------------------------------------------------------
         const double lAlpha = lAccumulator / FIXED_DELTA_TIME;
 
+        // Frame bracket — backend-neutral. OpenGL: near-empty. Vulkan: acquire+record / submit.
+        RenderCommand::BeginFrame();
         OnRender(lAlpha);
         m_EngineSubsystemManager.RenderAll(lAlpha);
-        
+        RenderCommand::EndFrame();
+
         // ----------------------------------------------------------------
-        // 3. Swap AFTER render, always last
+        // 3. Present AFTER render, always last (graphics context owns the swap).
         // ----------------------------------------------------------------
         m_Window->SwapBuffers();
     }

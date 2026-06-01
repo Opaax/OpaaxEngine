@@ -236,6 +236,9 @@ if(OPAAX_EDITOR_SUPPORT)
         )
     endif()
 
+    # imgui_impl_vulkan.cpp is intentionally NOT compiled — no Vulkan editor backend exists
+    # yet (keystone-first milestone). Add it back alongside a VulkanEditorUIBackend, gated on
+    # the Vulkan SDK being present.
     add_library(imgui STATIC
         Vendors/imgui/imgui.cpp
         Vendors/imgui/imgui_draw.cpp
@@ -294,11 +297,101 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInf
 endif()
 
 # ==================================
+# glslang (GLSL -> SPIR-V) — OPTIONAL, from the Vulkan SDK.
+#   Present : shaders compile to SPIR-V at load (RHI/ShaderCompiler); OpenGL consumes it
+#             via GL_ARB_gl_spirv, and the SPIR-V is Vulkan-ready (-> OPAAX_HAS_GLSLANG=1).
+#   Absent  : the engine still builds + runs on OpenGL using the GLSL fallback in
+#             OpenGLShader; a Vulkan backend simply cannot be used (-> OPAAX_HAS_GLSLANG=0).
+# Detection is robust (no hardcoded path): find_package(Vulkan) locates the SDK via its
+# standard mechanisms; the SDK root + Lib dir are derived from the found include dir.
+# NOTE: the SDK's glslang-config.cmake chains to a SPIRV-Tools package config the SDK does
+# not ship, so we link the static libs by path (Debug -> d-suffixed /MDd libs).
+# ==================================
+set(OPAAX_HAS_GLSLANG OFF)
+set(OPAAX_GLSLANG_INCLUDE "")
+set(OPAAX_GLSLANG_LINK "")
+
+find_package(Vulkan QUIET)
+if(Vulkan_FOUND)
+    # SDK root = parent of the Vulkan include dir (e.g. <root>/Include -> <root>).
+    get_filename_component(OPAAX_VULKAN_ROOT "${Vulkan_INCLUDE_DIRS}" DIRECTORY)
+    set(_glslang_inc "${OPAAX_VULKAN_ROOT}/Include")
+    set(_glslang_lib "${OPAAX_VULKAN_ROOT}/Lib")
+
+    # Only enable if the glslang static libs + headers actually shipped with this SDK.
+    if(EXISTS "${_glslang_lib}/glslang.lib" AND EXISTS "${_glslang_inc}/glslang/Public/ShaderLang.h")
+        set(OPAAX_HAS_GLSLANG ON)
+        set(OPAAX_GLSLANG_INCLUDE "${_glslang_inc}")
+
+        # Dependents before dependencies. glslang-default-resource-limits -> glslang ->
+        # {MachineIndependent, SPIRV, GenericCodeGen, OSDependent}; SPIRV -> SPIRV-Tools-opt
+        # -> SPIRV-Tools.
+        set(OPAAX_GLSLANG_LIB_NAMES
+            glslang-default-resource-limits
+            glslang
+            MachineIndependent
+            SPIRV
+            SPIRV-Tools-opt
+            SPIRV-Tools
+            GenericCodeGen
+            OSDependent
+        )
+        foreach(_l ${OPAAX_GLSLANG_LIB_NAMES})
+            list(APPEND OPAAX_GLSLANG_LINK
+                "$<$<CONFIG:Debug>:${_glslang_lib}/${_l}d.lib>"
+                "$<$<NOT:$<CONFIG:Debug>>:${_glslang_lib}/${_l}.lib>")
+        endforeach()
+    endif()
+endif()
+
+if(OPAAX_HAS_GLSLANG)
+    message(STATUS "[Opaax] glslang found — SPIR-V shader path ENABLED (Vulkan-ready).")
+else()
+    message(STATUS "[Opaax] glslang/Vulkan SDK not found — OpenGL-only build using the GLSL "
+                   "shader fallback. The Vulkan backend will be unavailable.")
+endif()
+
+# ==================================
+# Vulkan backend — OPTIONAL, from the Vulkan SDK.
+#   Present : the Vulkan RHI backend (Source/RHI/Vulkan/) compiles and EBackend::Vulkan is
+#             selectable. vk-bootstrap (vendored) handles instance/device/swapchain; VMA (shipped
+#             in the SDK include dir) handles device memory; vulkan-1 is the loader. -> OPAAX_HAS_VULKAN=1
+#   Absent  : every Source/RHI/Vulkan TU compiles to nothing (#if OPAAX_HAS_VULKAN), the engine is
+#             OpenGL-only, and selecting "Vulkan" in config falls back to OpenGL. -> OPAAX_HAS_VULKAN=0
+# Reuses find_package(Vulkan) + OPAAX_VULKAN_ROOT from the glslang block above (no duplicate find).
+# ==================================
+set(OPAAX_HAS_VULKAN OFF)
+set(OPAAX_VULKAN_INCLUDE "")
+set(OPAAX_VULKAN_LINK "")
+
+if(Vulkan_FOUND AND EXISTS "${OPAAX_VULKAN_ROOT}/Include/vulkan/vulkan.h"
+                AND EXISTS "${OPAAX_VULKAN_ROOT}/Include/vma/vk_mem_alloc.h")
+    set(OPAAX_HAS_VULKAN ON)
+    set(OPAAX_VULKAN_INCLUDE "${OPAAX_VULKAN_ROOT}/Include")   # vulkan/ and vma/ both live here
+
+    # vk-bootstrap (vendored source) as a static lib. Needs the SDK Vulkan headers; loads the
+    # loader (vulkan-1) dynamically via vkGetInstanceProcAddr.
+    add_library(vk-bootstrap STATIC
+        Vendors/vk-bootstrap/src/VkBootstrap.cpp
+    )
+    target_include_directories(vk-bootstrap PUBLIC
+        Vendors/vk-bootstrap/src
+        "${OPAAX_VULKAN_INCLUDE}"
+    )
+    target_link_libraries(vk-bootstrap PUBLIC ${Vulkan_LIBRARIES})
+
+    set(OPAAX_VULKAN_LINK vk-bootstrap ${Vulkan_LIBRARIES})
+    message(STATUS "[Opaax] Vulkan SDK found — Vulkan backend ENABLED (vk-bootstrap + VMA).")
+else()
+    message(STATUS "[Opaax] Vulkan SDK not found — Vulkan backend DISABLED (OpenGL-only).")
+endif()
+
+# ==================================
 # Link
 # ==================================
 
-target_link_libraries(OpaaxEngine 
-    PUBLIC 
+target_link_libraries(OpaaxEngine
+    PUBLIC
         glfw
         spdlog::spdlog_header_only
         glm
@@ -307,6 +400,18 @@ target_link_libraries(OpaaxEngine
         entt
         nlohmann_json
 )
+
+target_link_libraries(OpaaxEngine
+    PRIVATE
+        ${OPAAX_GLSLANG_LINK}
+        ${OPAAX_VULKAN_LINK}
+)
+
+# 1 when glslang is linked (SPIR-V shader path), 0 otherwise (GLSL fallback).
+target_compile_definitions(OpaaxEngine PRIVATE OPAAX_HAS_GLSLANG=$<BOOL:${OPAAX_HAS_GLSLANG}>)
+
+# 1 when the Vulkan SDK is present (Vulkan backend compiled), 0 otherwise (OpenGL-only).
+target_compile_definitions(OpaaxEngine PRIVATE OPAAX_HAS_VULKAN=$<BOOL:${OPAAX_HAS_VULKAN}>)
 
 if(OPAAX_EDITOR_SUPPORT)
     target_link_libraries(OpaaxEngine PRIVATE imgui tinyfiledialogs)
@@ -328,6 +433,9 @@ target_include_directories(OpaaxEngine
         ${CMAKE_CURRENT_SOURCE_DIR}/Vendors
         ${CMAKE_CURRENT_SOURCE_DIR}/Vendors/Entt/entt/single_include
         ${CMAKE_CURRENT_SOURCE_DIR}/Vendors/nlohmann
+        ${OPAAX_GLSLANG_INCLUDE}
+        ${OPAAX_VULKAN_INCLUDE}                                  # vulkan/ + vma/ (empty if no SDK)
+        ${CMAKE_CURRENT_SOURCE_DIR}/Vendors/vk-bootstrap/src     # VkBootstrap.h (guarded by OPAAX_HAS_VULKAN)
 )
 
 if(WIN32)

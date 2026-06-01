@@ -24,6 +24,16 @@ namespace Opaax
         }
     }
 
+    void RenderCommand::BeginFrame()
+    {
+        s_API->BeginFrame();
+    }
+
+    void RenderCommand::EndFrame()
+    {
+        s_API->EndFrame();
+    }
+
     void RenderCommand::SetViewport(Uint32 X, Uint32 Y, Uint32 Width, Uint32 Height)
     {
         s_API->SetViewport(X, Y, Width, Height);

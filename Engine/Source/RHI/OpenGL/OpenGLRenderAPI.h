@@ -18,6 +18,8 @@ namespace Opaax
         //~Begin IRenderAPI interface
     public:
         void Init()                                                         override;
+        void BeginFrame()                                                   override;
+        void EndFrame()                                                     override;
         void SetViewport(Uint32 X, Uint32 Y, Uint32 Width, Uint32 Height)   override;
         void SetClearColor(float Red, float Green, float Blue, float Alpha) override;
         void Clear()                                                        override;
