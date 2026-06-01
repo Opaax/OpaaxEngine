@@ -7,13 +7,7 @@
 
 namespace Opaax
 {
-    // =============================================================================
-    // IPipeline factory
-    // =============================================================================
-    UniquePtr<IPipeline> IPipeline::Create(const PipelineDesc& InDesc)
-    {
-        return MakeUnique<OpenGLPipeline>(InDesc);
-    }
+    // NOTE: the IPipeline::Create factory dispatch lives in RHI/BackendFactory.cpp.
 
     OpenGLPipeline::OpenGLPipeline(const PipelineDesc& InDesc)
         : m_Shader(InDesc.Shader), m_Blend(InDesc.Blend)

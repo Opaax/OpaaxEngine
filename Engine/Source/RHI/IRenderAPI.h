@@ -6,6 +6,7 @@
 namespace Opaax
 {
     class ICommandBuffer;
+    class IGraphicsContext;
 
     /**
      * @interface IRenderAPI
@@ -26,7 +27,13 @@ namespace Opaax
     public:
         virtual ~IRenderAPI() = default;
 
-        virtual void Init() = 0;
+        /**
+         * Bring the device up against the already-initialized graphics context.
+         * OpenGL ignores the context (GL state is global). Vulkan borrows the shared
+         * VulkanDevice + swapchain the context owns (it acquires images + submits; the
+         * context presents) — see VulkanRenderAPI.
+         */
+        virtual void Init(IGraphicsContext& InContext) = 0;
 
         /**
          * Per-frame begin/end bracket around all draw submission for the frame.

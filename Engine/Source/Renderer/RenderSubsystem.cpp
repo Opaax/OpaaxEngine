@@ -3,6 +3,7 @@
 #include "Renderer2D.h"
 #include "RHI/RenderCommand.h"
 #include "RHI/RenderAPI.h"
+#include "RHI/IGraphicsContext.h"
 #include "Renderer/Pass/WorldRenderPass.h"
 #include "Renderer/Pass/OverlayRenderPass.h"
 #include "Core/Config/EngineConfig.h"
@@ -34,7 +35,17 @@ namespace Opaax
                 EngineConfig::RenderBackend());
             return false;
         }
-        RenderCommand::Init(lAPI.release());
+
+        // The render API binds against the window's graphics context (Vulkan borrows its
+        // device/swapchain; OpenGL ignores it). The window created + Init'd the context already.
+        IGraphicsContext* lContext = GetEngineApp() ? GetEngineApp()->GetWindow().GetGraphicsContext()
+                                                    : nullptr;
+        if (!lContext)
+        {
+            OPAAX_CORE_ERROR("RenderSubsystem: no graphics context available for the render API.");
+            return false;
+        }
+        RenderCommand::Init(lAPI.release(), *lContext);
 
         Renderer2D::Init();
 

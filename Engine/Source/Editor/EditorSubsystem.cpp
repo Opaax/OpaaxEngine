@@ -71,7 +71,14 @@ namespace Opaax
         // ImGui renderer backend selected from engine config — same backend as the renderer.
         const EBackend lBackend = RenderAPI::BackendFromString(EngineConfig::RenderBackend());
         m_UIBackend = IEditorUIBackend::Create(lBackend, lNativeWindow);
-        OPAAX_CORE_ASSERT(m_UIBackend)
+        if (!m_UIBackend)
+        {
+            // No editor UI backend for the selected graphics backend (e.g. Vulkan before Phase 4).
+            // Fail the editor startup cleanly instead of dereferencing null.
+            OPAAX_CORE_ERROR("EditorSubsystem: no editor UI backend for backend '{}' — editor cannot start.",
+                             RenderAPI::BackendToString(lBackend));
+            return false;
+        }
         m_UIBackend->Init();
 
         m_ViewportPanel.Startup();

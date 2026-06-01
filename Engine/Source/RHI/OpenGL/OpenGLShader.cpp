@@ -8,13 +8,7 @@
 
 namespace Opaax
 {
-    // =============================================================================
-    // IShader factory
-    // =============================================================================
-    UniquePtr<IShader> IShader::Create(const ShaderDesc& InDesc)
-    {
-        return MakeUnique<OpenGLShader>(InDesc);
-    }
+    // NOTE: the IShader::Create factory dispatch lives in RHI/BackendFactory.cpp.
 
     OpenGLShader::OpenGLShader(const ShaderDesc& InDesc)
     {

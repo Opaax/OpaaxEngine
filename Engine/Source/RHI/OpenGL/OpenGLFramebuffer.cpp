@@ -7,13 +7,7 @@
 
 namespace Opaax
 {
-    // =============================================================================
-    // IFramebuffer factory
-    // =============================================================================
-    UniquePtr<IFramebuffer> IFramebuffer::Create(const FramebufferSpec& InSpec)
-    {
-        return MakeUnique<OpenGLFramebuffer>(InSpec);
-    }
+    // NOTE: the IFramebuffer::Create factory dispatch lives in RHI/BackendFactory.cpp.
 
     // =============================================================================
     // CTOR - DTOR

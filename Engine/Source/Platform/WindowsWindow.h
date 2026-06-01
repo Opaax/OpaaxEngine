@@ -42,6 +42,8 @@ namespace Opaax
 
         void* GetNativeWindow() const override { return m_Window; }
 
+        IGraphicsContext* GetGraphicsContext() const override { return m_Context.get(); }
+
         void SetEventCallback(const EventCallbackFunc& Callback) override { m_Data.EventCallback = Callback; }
         //~End Window interface
 

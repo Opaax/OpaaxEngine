@@ -7,6 +7,8 @@
 
 namespace Opaax
 {
+    class IGraphicsContext;
+
     using EventCallbackFunc = TFunction<void(OpaaxEvent&)>;
     
     /**
@@ -74,5 +76,9 @@ namespace Opaax
         virtual void* GetNativeWindow() const = 0;
         virtual Uint32 GetWidth()       const = 0;
         virtual Uint32 GetHeight()      const = 0;
+
+        // The backend graphics context the window owns. A command-buffer backend (Vulkan)
+        // borrows the shared device/swapchain from it; the OpenGL render API ignores it.
+        virtual IGraphicsContext* GetGraphicsContext() const = 0;
     };
 }

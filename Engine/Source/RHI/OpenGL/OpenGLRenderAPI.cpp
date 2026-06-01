@@ -1,46 +1,18 @@
 #include "OpenGLRenderAPI.h"
 
 #include "Core/Log/OpaaxLog.h"
-#include "RHI/RenderAPI.h"
 
 #define GLAD_APIENTRY
 #include <glad/glad.h>
 
 namespace Opaax
 {
-    // =============================================================================
-    // RenderAPI factory
-    // =============================================================================
-    UniquePtr<IRenderAPI> RenderAPI::Create(EBackend InBackend)
+    // NOTE: the RenderAPI / resource Create factory dispatch lives in RHI/BackendFactory.cpp
+    //   (the one neutral TU that knows every backend). This file holds only the GL impl.
+
+    void OpenGLRenderAPI::Init(IGraphicsContext& /*InContext*/)
     {
-        switch (InBackend)
-        {
-            case EBackend::OpenGL: return MakeUnique<OpenGLRenderAPI>();
-        }
-
-        OPAAX_CORE_ERROR("RenderAPI::Create — unknown backend; no IRenderAPI created.");
-        return nullptr;
-    }
-
-    EBackend RenderAPI::BackendFromString(const OpaaxString& InName)
-    {
-        if (InName == "OpenGL") { return EBackend::OpenGL; }
-
-        OPAAX_CORE_WARN("RenderAPI: unknown render backend '{}' — falling back to OpenGL.", InName);
-        return EBackend::OpenGL;
-    }
-
-    const char* RenderAPI::BackendToString(EBackend InBackend) noexcept
-    {
-        switch (InBackend)
-        {
-            case EBackend::OpenGL: return "OpenGL";
-        }
-        return "Unknown";
-    }
-
-    void OpenGLRenderAPI::Init()
-    {
+        // OpenGL state is global — the context (already make-current'd) is not needed here.
         // Blend is pipeline state now (set on BindPipeline) — not a global default here.
 
         // Log GL info once at startup

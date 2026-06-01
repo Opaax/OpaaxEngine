@@ -5,13 +5,7 @@
 
 namespace Opaax
 {
-    // =============================================================================
-    // IUniformBuffer factory
-    // =============================================================================
-    UniquePtr<IUniformBuffer> IUniformBuffer::Create(Uint32 InSize, Uint32 InBinding)
-    {
-        return MakeUnique<OpenGLUniformBuffer>(InSize, InBinding);
-    }
+    // NOTE: the IUniformBuffer::Create factory dispatch lives in RHI/BackendFactory.cpp.
 
     OpenGLUniformBuffer::OpenGLUniformBuffer(Uint32 InSize, Uint32 InBinding)
     {

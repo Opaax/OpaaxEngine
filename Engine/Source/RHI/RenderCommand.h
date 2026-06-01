@@ -5,6 +5,7 @@
 namespace Opaax
 {
     class ICommandBuffer;
+    class IGraphicsContext;
 
     /**
      * @class RenderCommand
@@ -36,10 +37,11 @@ namespace Opaax
         // =============================================================================
     public:
         /**
-         * Take the ownership of the API to encapsulate it in UniquePtr
-         * @param InAPI The API
+         * Take ownership of the API (UniquePtr) and bring it up against the graphics context.
+         * @param InAPI     The API (ownership transferred)
+         * @param InContext The already-initialized graphics context (Vulkan borrows its device)
          */
-        static void Init(IRenderAPI* InAPI);
+        static void Init(IRenderAPI* InAPI, IGraphicsContext& InContext);
         static void Shutdown();
         static void BeginFrame();
         static void EndFrame();

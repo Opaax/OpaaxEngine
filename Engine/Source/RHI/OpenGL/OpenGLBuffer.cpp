@@ -5,21 +5,10 @@
 
 namespace Opaax
 {
+    // NOTE: the I*::Create factory dispatch lives in RHI/BackendFactory.cpp.
+
     //------------------------------------------------------------------------------
     // OpenGLVertexBuffer
-
-    // =============================================================================
-    // IVertexBuffer factory
-    // =============================================================================
-    UniquePtr<IVertexBuffer> IVertexBuffer::Create(Uint32 InSize)
-    {
-        return MakeUnique<OpenGLVertexBuffer>(InSize);
-    }
- 
-    UniquePtr<IVertexBuffer> IVertexBuffer::Create(const float* InVertices, Uint32 InSize)
-    {
-        return MakeUnique<OpenGLVertexBuffer>(InVertices, InSize);
-    }
 
     OpenGLVertexBuffer::OpenGLVertexBuffer(Uint32 InSize)
     {
@@ -61,14 +50,6 @@ namespace Opaax
     //------------------------------------------------------------------------------
     // OpenGLIndexBuffer
 
-    // =============================================================================
-    // IIndexBuffer factory
-    // =============================================================================
-    UniquePtr<IIndexBuffer> IIndexBuffer::Create(const Uint32* InIndices, Uint32 InCount)
-    {
-        return MakeUnique<OpenGLIndexBuffer>(InIndices, InCount);
-    }
-    
     OpenGLIndexBuffer::OpenGLIndexBuffer(const Uint32* InIndices, Uint32 InCount)
     {
         // NOTE: GL_ELEMENT_ARRAY_BUFFER must be bound to a VAO to be remembered.

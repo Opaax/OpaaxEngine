@@ -7,12 +7,12 @@ namespace Opaax
 {
     UniquePtr<IRenderAPI> RenderCommand::s_API = nullptr;
     
-    void RenderCommand::Init(IRenderAPI* InAPI)
+    void RenderCommand::Init(IRenderAPI* InAPI, IGraphicsContext& InContext)
     {
         OPAAX_CORE_ASSERT(InAPI != nullptr)
-        
+
         s_API = UniquePtr<IRenderAPI>(InAPI);
-        s_API->Init();
+        s_API->Init(InContext);
     }
 
     void RenderCommand::Shutdown()

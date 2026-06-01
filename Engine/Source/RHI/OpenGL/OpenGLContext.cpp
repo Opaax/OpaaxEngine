@@ -7,30 +7,8 @@
 
 namespace Opaax
 {
-    // =============================================================================
-    // IGraphicsContext factory + window hints
-    // =============================================================================
-    UniquePtr<IGraphicsContext> IGraphicsContext::Create(EBackend InBackend, void* InNativeWindow)
-    {
-        switch (InBackend)
-        {
-            case EBackend::OpenGL:
-                return MakeUnique<OpenGLContext>(static_cast<GLFWwindow*>(InNativeWindow));
-        }
-
-        OPAAX_CORE_ERROR("IGraphicsContext::Create — unknown backend; no context created.");
-        return nullptr;
-    }
-
-    void IGraphicsContext::ApplyWindowHints(EBackend InBackend)
-    {
-        switch (InBackend)
-        {
-            // OpenGL: leave GLFW at its defaults (a GL context). No hints — this preserves
-            // today's behavior. A Vulkan backend would set GLFW_CLIENT_API = GLFW_NO_API here.
-            case EBackend::OpenGL: break;
-        }
-    }
+    // NOTE: IGraphicsContext::Create + ApplyWindowHints (backend dispatch) live in
+    //   RHI/BackendFactory.cpp. This file holds only the OpenGL context impl.
 
     // =============================================================================
     // OpenGLContext

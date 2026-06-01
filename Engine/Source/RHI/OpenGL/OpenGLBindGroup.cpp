@@ -5,13 +5,7 @@
 
 namespace Opaax
 {
-    // =============================================================================
-    // IBindGroup factory
-    // =============================================================================
-    UniquePtr<IBindGroup> IBindGroup::Create(const BindGroupLayout& InLayout)
-    {
-        return MakeUnique<OpenGLBindGroup>(InLayout);
-    }
+    // NOTE: the IBindGroup::Create factory dispatch lives in RHI/BackendFactory.cpp.
 
     OpenGLBindGroup::OpenGLBindGroup(const BindGroupLayout& InLayout)
         : m_Textures(InLayout.TextureSlotCount, nullptr)

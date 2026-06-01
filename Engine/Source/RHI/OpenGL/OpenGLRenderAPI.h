@@ -19,7 +19,7 @@ namespace Opaax
 
         //~Begin IRenderAPI interface
     public:
-        void            Init()                                                       override;
+        void            Init(IGraphicsContext& InContext)                            override;
         void            BeginFrame()                                                 override;
         void            EndFrame()                                                   override;
         ICommandBuffer& GetCommandBuffer()                                           override;
