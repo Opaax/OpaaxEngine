@@ -1,6 +1,7 @@
 #include "RenderPipeline.h"
 
 #include "World/RenderContext.h"
+#include "RHI/RenderCommand.h"
 
 #include <utility>
 
@@ -16,7 +17,9 @@ namespace Opaax
 
     void RenderPipeline::Execute(IRenderTarget& InTarget, double InAlpha)
     {
-        const RenderContext lContext{ InTarget, InAlpha };
+        // The frame's command buffer (opened by RenderCommand::BeginFrame in the run loop)
+        // is threaded to every pass through the context.
+        const RenderContext lContext{ InTarget, RenderCommand::GetCommandBuffer(), InAlpha };
         for (const auto& lPass : m_Passes)
         {
             lPass->Execute(lContext);

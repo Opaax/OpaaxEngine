@@ -73,6 +73,9 @@ namespace Opaax
     public:
         bool IsLoaded() const noexcept { return m_State == EAssetState::Loaded; }
 
+        // The composed backend shader — for pipeline creation (PipelineDesc::Shader). Not owned by the caller.
+        IShader* GetRHIShader() const noexcept { return m_Gpu.get(); }
+
         void Bind()   const;
         void Unbind() const;
 

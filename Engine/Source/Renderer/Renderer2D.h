@@ -13,6 +13,7 @@ namespace Opaax
 {
     class Texture2D;
     class ICamera;
+    class ICommandBuffer;
 
     /**
      * @class Renderer2D
@@ -48,10 +49,12 @@ namespace Opaax
         static void Shutdown();
      
         /**
-         * Call once per frame before any draw calls
-         * @param InCamera 
+         * Call once per frame (per pass) before any draw calls. Records into InCmd — binds the
+         * sprite pipeline and writes the camera UBO; draws issued until End() record into InCmd too.
+         * @param InCamera camera supplying the view-projection
+         * @param InCmd    the frame's command buffer (from RenderContext)
          */
-        static void Begin(ICamera& InCamera);
+        static void Begin(ICamera& InCamera, ICommandBuffer& InCmd);
 
         /**
          * Call once per frame after all draw calls — flushes remaining batch

@@ -2,6 +2,9 @@
 #include "RHI/RenderCommand.h"
 #include "RHI/Buffer.h"
 #include "RHI/UniformBuffer.h"
+#include "RHI/Pipeline.h"
+#include "RHI/BindGroup.h"
+#include "RHI/ICommandBuffer.h"
 #include "Renderer/ShaderAsset.h"
 #include "Renderer/Texture2D.h"
 #include "Renderer/Camera/ICamera.h"
@@ -45,6 +48,9 @@ namespace Opaax
         UniquePtr<ShaderAsset>   QuadShader;
         UniquePtr<Texture2D>     WhiteTexture;
         UniquePtr<IUniformBuffer> CameraUBO;  // binding 0: u_ViewProjection (std140)
+        UniquePtr<IPipeline>     QuadPipeline;     // sprite pipeline (shader + layout + alpha blend)
+        UniquePtr<IBindGroup>    QuadBindGroup;    // camera UBO + 16-sampler array
+        ICommandBuffer*          Cmd          = nullptr;  // active recorder, set in Begin (non-owning)
  
         // CPU-side vertex buffer — filled each frame, uploaded on flush
         TFixedArray<QuadVertex, MAX_VERTICES> VertexBuffer;
@@ -114,18 +120,36 @@ namespace Opaax
         // Init runs at RenderSubsystem::Startup, before the loader/manifest are guaranteed ready.
         const OpaaxString lShaderPath = EngineConfig::EngineAssetsRoot() + "/Shaders/Sprite.glsl";
         s_Data.QuadShader = MakeUnique<ShaderAsset>(lShaderPath, OPAAX_ID("Shaders/Sprite"));
-        s_Data.QuadShader->Bind();
-
-        // Sampler array texture units come from the shader's `layout(binding = 0)` (units
-        // 0..15) — no SetIntArray needed (and impossible on a SPIR-V-specialized program).
 
         // --- Camera UBO (binding 0) — sole source of u_ViewProjection, written each Begin.
         s_Data.CameraUBO = IUniformBuffer::Create(static_cast<Uint32>(sizeof(glm::mat4)), 0);
+
+        // --- Sprite pipeline: shader + vertex layout + alpha blend. VertexLayout is consumed by
+        //     command-buffer backends (Vulkan); the GL VAO already encodes the layout.
+        PipelineDesc lPipelineDesc;
+        lPipelineDesc.Shader       = s_Data.QuadShader->GetRHIShader();
+        lPipelineDesc.VertexLayout = BufferLayout{
+            { EShaderDataType::Float3 },  // Position
+            { EShaderDataType::Float4 },  // Color
+            { EShaderDataType::Float2 },  // TexCoord
+            { EShaderDataType::Float  },  // TexIndex
+        };
+        lPipelineDesc.Blend     = EBlendMode::Alpha;
+        lPipelineDesc.Topology  = EPrimitiveTopology::Triangles;
+        lPipelineDesc.DebugName = "Renderer2D::Sprite";
+        s_Data.QuadPipeline = IPipeline::Create(lPipelineDesc);
+
+        // --- Bind group: camera UBO (binding 0) + the 16-sampler array. The UBO is set once;
+        //     textures are (re)set each flush.
+        s_Data.QuadBindGroup = IBindGroup::Create(BindGroupLayout{ 0u, MAX_TEXTURE_SLOTS });
+        s_Data.QuadBindGroup->SetUniformBuffer(*s_Data.CameraUBO);
     }
  
     void Renderer2D::Shutdown()
     {
         OPAAX_CORE_INFO("Renderer2D::Shutdown()");
+        s_Data.QuadBindGroup.reset();
+        s_Data.QuadPipeline.reset();   // before the shader it references
         s_Data.QuadVAO.reset();
         s_Data.QuadShader.reset();
         s_Data.WhiteTexture.reset();
@@ -136,11 +160,13 @@ namespace Opaax
     // Begin / End
     // =============================================================================
  
-    void Renderer2D::Begin(ICamera& InCamera)
+    void Renderer2D::Begin(ICamera& InCamera, ICommandBuffer& InCmd)
     {
+        s_Data.Cmd            = &InCmd;
         s_Data.ViewProjection = InCamera.GetViewProjection();
 
-        s_Data.QuadShader->Bind();
+        // Bind the sprite pipeline (shader + blend) on the command buffer.
+        s_Data.Cmd->BindPipeline(*s_Data.QuadPipeline);
 
         // u_ViewProjection rides the camera UBO (binding 0) — SPIR-V has no default-block path.
         s_Data.CameraUBO->SetData(glm::value_ptr(s_Data.ViewProjection),
@@ -148,10 +174,11 @@ namespace Opaax
 
         StartBatch();
     }
- 
+
     void Renderer2D::End()
     {
         Flush();
+        s_Data.Cmd = nullptr;
     }
  
     void Renderer2D::StartBatch()
@@ -194,14 +221,18 @@ namespace Opaax
         const Uint32 lDataSize = s_Data.QuadCount * 4u * static_cast<Uint32>(sizeof(QuadVertex));
         s_Data.QuadVBO->SetData(s_Data.SortedBuffer.data(), lDataSize);
 
-        // Bind all active texture slots
-        for (Uint32 i = 0; i < s_Data.TextureSlotIndex; ++i)
+        // Populate the bind group's sampler array. Active slots get their texture; inactive slots
+        // get the white texture so every unit references a live texture (no dangling across flushes).
+        for (Uint32 i = 0; i < MAX_TEXTURE_SLOTS; ++i)
         {
-            s_Data.TextureSlots[i]->Bind(i);
+            Texture2D* lTex = (i < s_Data.TextureSlotIndex) ? s_Data.TextureSlots[i]
+                                                            : s_Data.WhiteTexture.get();
+            s_Data.QuadBindGroup->SetTexture(i, *lTex->GetRHITexture());
         }
 
-        s_Data.QuadVAO->Bind();
-        RenderCommand::DrawIndexed(s_Data.QuadCount * 6);
+        s_Data.Cmd->BindBindGroup(*s_Data.QuadBindGroup);
+        s_Data.Cmd->BindVertexArray(*s_Data.QuadVAO);
+        s_Data.Cmd->DrawIndexed(s_Data.QuadCount * 6);
     }
  
     // =============================================================================

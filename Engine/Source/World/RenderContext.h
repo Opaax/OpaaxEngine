@@ -3,6 +3,7 @@
 namespace Opaax
 {
     class IRenderTarget;
+    class ICommandBuffer;
 
     // Render-side context handed to every IRenderPass::Execute and forwarded to each
     // IWorldSystem::OnRender. Kept minimal on purpose — add fields only when a concrete
@@ -13,7 +14,8 @@ namespace Opaax
     //   and the vestigial RenderContext::Camera (M7 Step 3).
     struct RenderContext
     {
-        IRenderTarget& Target;   // the render target this pass draws into (bound by the pass)
-        double         Alpha;    // physics-step interpolation alpha [0,1]
+        IRenderTarget&  Target;   // the render target this pass draws into (via Cmd.BeginRenderPass)
+        ICommandBuffer& Cmd;      // the frame's recorder — passes record their draws here
+        double          Alpha;    // physics-step interpolation alpha [0,1]
     };
 }

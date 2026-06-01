@@ -17,6 +17,8 @@
 #include "Renderer/Camera/OrthographicCamera.h"
 #include "RHI/RenderCommand.h"
 #include "RHI/RenderAPI.h"
+#include "RHI/ICommandBuffer.h"
+#include "Renderer/RenderTarget.hpp"
 #include "Core/Config/EngineConfig.h"
 #include "Editor/UI/IEditorUIBackend.h"
 
@@ -266,9 +268,14 @@ namespace Opaax
     {
         // Engine's OnRender clears the ViewportPanel FBO; ImGui draws to the default framebuffer,
         // which would otherwise accumulate stale pixels behind any moving panel (PassthruCentralNode
-        // + NoBackground dockspace leak last frame's content through every gap).
-        RenderCommand::SetClearColor(0.1f, 0.1f, 0.1f, 1.f);
-        RenderCommand::Clear();
+        // + NoBackground dockspace leak last frame's content through every gap). Clear the window
+        // backbuffer through the command buffer — the world/overlay passes already restored the
+        // default framebuffer (their EndRenderPass), so DefaultRenderTarget is the right target.
+        const Window& lWindow = GetEngineApp()->GetWindow();
+        DefaultRenderTarget lBackbuffer(lWindow.GetWidth(), lWindow.GetHeight());
+        ICommandBuffer& lCmd = RenderCommand::GetCommandBuffer();
+        lCmd.BeginRenderPass(lBackbuffer, ELoadOp::Clear, Vector4F(0.1f, 0.1f, 0.1f, 1.f));
+        lCmd.EndRenderPass();
 
         m_UIBackend->NewFrame();
         ImGui::NewFrame();

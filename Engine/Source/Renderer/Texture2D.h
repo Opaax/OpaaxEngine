@@ -82,6 +82,9 @@ namespace Opaax
         void Bind(Uint32 InSlot = 0) const;
         void Unbind()                const;
 
+        // The composed backend texture — for bind-group population (IBindGroup::SetTexture). Not owned by the caller.
+        ITexture2D* GetRHITexture() const noexcept { return m_Gpu.get(); }
+
         //------------------------------------------------------------------------------
         //  Get - Set
 
