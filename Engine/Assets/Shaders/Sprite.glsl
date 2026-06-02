@@ -6,8 +6,10 @@ layout(location = 1) in vec4  a_Color;
 layout(location = 2) in vec2  a_TexCoord;
 layout(location = 3) in float a_TexIndex;
 
-// SPIR-V forbids default-block uniforms — view-projection rides a UBO at binding 0.
-layout(std140, binding = 0) uniform CameraUBO
+// SPIR-V forbids default-block uniforms — view-projection rides a UBO. Binding 1 so it shares
+// one Vulkan descriptor set with the sampler array (binding 0) without colliding; on OpenGL the
+// UBO and sampler binding namespaces are separate, so the slot move is invisible there.
+layout(std140, binding = 1) uniform CameraUBO
 {
     mat4 u_ViewProjection;
 };

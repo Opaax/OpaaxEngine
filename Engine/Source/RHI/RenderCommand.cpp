@@ -43,4 +43,9 @@ namespace Opaax
     {
         s_API->SetViewport(X, Y, Width, Height);
     }
+
+    void RenderCommand::WaitIdle()
+    {
+        if (s_API) { s_API->WaitIdle(); }
+    }
 }

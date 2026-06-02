@@ -53,6 +53,9 @@ namespace Opaax
         // Global viewport set (window-resize path).
         static void SetViewport(Uint32 X, Uint32 Y, Uint32 Width, Uint32 Height);
 
+        // Block until the GPU finishes all submitted work (teardown before destroying resources).
+        static void WaitIdle();
+
         // =============================================================================
         // Members
         // =============================================================================

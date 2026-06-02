@@ -68,6 +68,8 @@ namespace Opaax
     void RenderSubsystem::Shutdown()
     {
         OPAAX_CORE_INFO("RenderSubsystem::Shutdown()");
+        // NOTE: the GPU-idle barrier is CoreEngineApp::Shutdown's single authoritative WaitIdle
+        //   (runs before ANY GPU teardown, incl. assets). No per-subsystem wait needed here.
         m_Pipeline.Clear();          // drop passes before the render API/Renderer2D go away
         Renderer2D::Shutdown();
         RenderCommand::Shutdown();

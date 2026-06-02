@@ -99,6 +99,46 @@ namespace Opaax
         OPAAX_CORE_INFO("VulkanDevice: ready (graphics queue family {}).", m_GraphicsQueueFamily);
     }
 
+    void VulkanDevice::ImmediateSubmit(const TFunction<void(VkCommandBuffer)>& InRecord) const
+    {
+        // Transient pool + buffer for a single synchronous submission. Cheap relative to the
+        // texture decode it wraps; textures only load at startup / asset import, not per frame.
+        VkCommandPoolCreateInfo lPoolInfo{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
+        lPoolInfo.flags            = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+        lPoolInfo.queueFamilyIndex = m_GraphicsQueueFamily;
+
+        VkCommandPool lPool = VK_NULL_HANDLE;
+        if (vkCreateCommandPool(m_Device, &lPoolInfo, nullptr, &lPool) != VK_SUCCESS)
+        {
+            OPAAX_CORE_ERROR("VulkanDevice::ImmediateSubmit — command pool creation failed.");
+            return;
+        }
+
+        VkCommandBufferAllocateInfo lAllocInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+        lAllocInfo.commandPool        = lPool;
+        lAllocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        lAllocInfo.commandBufferCount = 1;
+
+        VkCommandBuffer lCmd = VK_NULL_HANDLE;
+        vkAllocateCommandBuffers(m_Device, &lAllocInfo, &lCmd);
+
+        VkCommandBufferBeginInfo lBegin{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+        lBegin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        vkBeginCommandBuffer(lCmd, &lBegin);
+
+        InRecord(lCmd);
+
+        vkEndCommandBuffer(lCmd);
+
+        VkSubmitInfo lSubmit{ VK_STRUCTURE_TYPE_SUBMIT_INFO };
+        lSubmit.commandBufferCount = 1;
+        lSubmit.pCommandBuffers    = &lCmd;
+        vkQueueSubmit(m_GraphicsQueue, 1, &lSubmit, VK_NULL_HANDLE);
+        vkQueueWaitIdle(m_GraphicsQueue);
+
+        vkDestroyCommandPool(m_Device, lPool, nullptr);
+    }
+
     VulkanDevice::~VulkanDevice()
     {
         // Reverse order of creation.

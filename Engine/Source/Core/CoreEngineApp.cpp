@@ -17,6 +17,7 @@
 #include "Assets/Loader/ShaderLoader.h"
 #include "Assets/Loader/TextureLoader.h"
 #include "Renderer/Text/FontAsset.h"
+#include "RHI/RenderCommand.h"
 #include "Scene/SceneAsset.h"
 #include "Config/EngineConfig.h"
 #include "Config/ProjectConfig.h"
@@ -186,11 +187,9 @@ void CoreEngineApp::OnShutdown()
     // NOTE: Scene persistence at shutdown is a game/editor concern, not engine-mandatory.
     //   In editor builds the user drives saves explicitly (Ctrl+S / Save As).
     //   Shipping games can override OnShutdown or persist via Scene::OnUnload as needed.
-
-    // NOTE: Assets must be destroyed before subsystems — textures and GPU resources
-    //   must be freed while the GL context (owned by RenderSubsystem) is still alive.
-    //OnShutdown is called before subsystem shutdown
-    AssetRegistry::Shutdown();
+    //
+    // Asset teardown is NOT here — it moved to CoreEngineApp::Shutdown() so it runs even when a
+    // game override does not call the base. This hook is now purely a game-overridable notification.
 }
 
 void CoreEngineApp::Initialize()
@@ -401,8 +400,20 @@ void CoreEngineApp::Shutdown()
     OPAAX_CORE_TRACE("CoreEngineApp::Shutdown()");
     
     bIsRunning = false;
-    
+
+    // The render loop has stopped, but the last submitted frame may still be executing on the GPU.
+    // Block until the device is idle BEFORE any GPU resource is destroyed below (assets, Renderer2D,
+    // the device itself) — destroying a resource still referenced by an in-flight frame is illegal
+    // on an explicit backend (Vulkan VUIDs). Single authoritative barrier for all GPU teardown.
+    RenderCommand::WaitIdle();
+
     OnShutdown();
+
+    // Engine-guaranteed: free all GPU-backed assets (textures, etc.) here, NOT in the virtual
+    // OnShutdown — a game override may not call the base, and these must be released while the
+    // graphics device/context (owned by the window, alive for all of Shutdown()) still exists.
+    // A texture outliving its device makes Vulkan/VMA assert; on OpenGL it leaked silently.
+    AssetRegistry::Shutdown();
 
     // Game subsystems shut down first — they may still call into engine services
     // (Renderer, World, AssetRegistry) during their Shutdown.

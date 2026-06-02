@@ -50,6 +50,15 @@ namespace Opaax
         VmaAllocator     GetAllocator()          const noexcept { return m_Allocator; }
 
         // =============================================================================
+        // Functions
+        // =============================================================================
+    public:
+        // Record + submit a one-shot transient command buffer on the graphics queue and wait
+        // idle. Used for outside-the-frame-loop GPU work (texture staging copies). Synchronous —
+        // not for per-frame draw work.
+        void ImmediateSubmit(const TFunction<void(VkCommandBuffer)>& InRecord) const;
+
+        // =============================================================================
         // Members
         // =============================================================================
     private:

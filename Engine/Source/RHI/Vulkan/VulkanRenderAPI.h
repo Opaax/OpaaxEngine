@@ -47,6 +47,7 @@ namespace Opaax
         void            EndFrame()                                                   override;
         ICommandBuffer& GetCommandBuffer()                                           override;
         void            SetViewport(Uint32 X, Uint32 Y, Uint32 Width, Uint32 Height) override;
+        void            WaitIdle()                                                   override;
         //~End IRenderAPI interface
 
         // =============================================================================

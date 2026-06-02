@@ -50,6 +50,13 @@ namespace Opaax
 
         // Global viewport set (window-resize path; per-pass viewport rides BeginRenderPass).
         virtual void SetViewport(Uint32 X, Uint32 Y, Uint32 Width, Uint32 Height) = 0;
+
+        /**
+         * Block until the GPU has finished all submitted work. Required before destroying GPU
+         * resources still referenced by in-flight frames (teardown / device-lost). OpenGL flushes
+         * (glFinish); an explicit backend (Vulkan) waits the device idle.
+         */
+        virtual void WaitIdle() = 0;
     };
 
 } // namespace Opaax

@@ -43,4 +43,10 @@ namespace Opaax
                    static_cast<GLsizei>(Width), static_cast<GLsizei>(Height));
     }
 
+    void OpenGLRenderAPI::WaitIdle()
+    {
+        // GL executes immediately; glFinish blocks until all prior commands complete.
+        glFinish();
+    }
+
 } // namespace Opaax

@@ -4,12 +4,15 @@
 
 #include "VulkanContext.h"
 #include "VulkanDevice.h"
+#include "VulkanFrameContext.h"
 #include "Core/Log/OpaaxLog.h"
 
 namespace Opaax
 {
     VulkanRenderAPI::~VulkanRenderAPI()
     {
+        VulkanFrameContext::Clear();
+
         if (m_Device && m_Device->GetDevice())
         {
             vkDeviceWaitIdle(m_Device->GetDevice());
@@ -29,6 +32,11 @@ namespace Opaax
         m_Swapchain = &lContext.GetSwapchain();
 
         m_CmdBuffer.Setup(m_Device, m_Swapchain);
+
+        // Resources (built by the factory, written from neutral Renderer2D) reach the device +
+        // current frame slot through this static — there is one device + swapchain.
+        VulkanFrameContext::SetDevice(m_Device);
+        VulkanFrameContext::SetColorFormat(m_Swapchain->GetImageFormat());   // pipeline color attachment
 
         // ---- Command pool + per-frame primary command buffers ----
         VkCommandPoolCreateInfo lPoolInfo{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
@@ -65,6 +73,11 @@ namespace Opaax
         }
 
         m_FrameSlot = m_Swapchain->GetCurrentFrameIndex();
+
+        // New frame: publish the slot + bump the generation so per-frame ring cursors reset.
+        // Only on a real acquire — a skipped frame records nothing, so cursors must stay put.
+        VulkanFrameContext::BeginFrame(m_FrameSlot);
+
         VkCommandBuffer lCmd = m_CommandBuffers[m_FrameSlot];
 
         vkResetCommandBuffer(lCmd, 0);
@@ -116,6 +129,13 @@ namespace Opaax
     {
         // No live command buffer outside a frame — a window resize means recreate the swapchain.
         if (m_Swapchain) { m_Swapchain->MarkForRecreate(Width, Height); }
+    }
+
+    void VulkanRenderAPI::WaitIdle()
+    {
+        // Block until the GPU drains — callers destroy GPU resources (Renderer2D pipeline/buffers)
+        // right after, which is illegal while a frame referencing them is still in flight.
+        if (m_Device && m_Device->GetDevice()) { vkDeviceWaitIdle(m_Device->GetDevice()); }
     }
 
 } // namespace Opaax
