@@ -7,6 +7,9 @@
 
 namespace Opaax
 {
+    class IGraphicsContext;
+    class IFramebuffer;
+
     // =============================================================================
     // IEditorUIBackend
     // =============================================================================
@@ -38,9 +41,11 @@ namespace Opaax
         /**
          * @param InBackend    selected graphics backend
          * @param InGlfwWindow native GLFW window handle (for ImGui_ImplGlfw_InitForX)
+         * @param InContext    the live graphics context (the Vulkan backend borrows its device +
+         *                     swapchain; OpenGL ignores it). May be null in degenerate setups.
          * @return owning backend, or nullptr on unknown backend (logged)
          */
-        static UniquePtr<IEditorUIBackend> Create(EBackend InBackend, void* InGlfwWindow);
+        static UniquePtr<IEditorUIBackend> Create(EBackend InBackend, void* InGlfwWindow, IGraphicsContext* InContext);
 
         // =============================================================================
         // Functions
@@ -61,6 +66,12 @@ namespace Opaax
         // Multi-viewport update + default render, wrapped in any backend-specific
         // current-context save/restore. Caller gates on ImGuiConfigFlags_ViewportsEnable.
         virtual void RenderPlatformWindows() = 0;
+
+        // The ImGui texture handle (ImTextureID width) for sampling an offscreen framebuffer's color
+        // attachment — the editor ViewportPanel passes the result to ImGui::Image. OpenGL returns the
+        // raw GL texture name; Vulkan mints/caches a VkDescriptorSet via ImGui_ImplVulkan_AddTexture.
+        // Returned as Uint64 so this header stays ImGui-free (the caller casts to ImTextureID).
+        virtual Uint64 GetViewportTextureID(IFramebuffer& InFB) = 0;
     };
 
 } // namespace Opaax

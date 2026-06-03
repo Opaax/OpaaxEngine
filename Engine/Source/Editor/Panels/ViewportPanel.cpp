@@ -5,6 +5,8 @@
 #include <imgui.h>
 
 #include "Core/Log/OpaaxLog.h"
+#include "Editor/UI/IEditorUIBackend.h"
+#include "RHI/RenderAPI.h"
 
 namespace Opaax::Editor
 {
@@ -51,7 +53,7 @@ namespace Opaax::Editor
         }
     }
 
-    bool ViewportPanel::Draw(EEditorState State)
+    bool ViewportPanel::Draw(EEditorState State, IEditorUIBackend& InUIBackend)
     {
         const ImVec4 lBorderColor = GetEditorStateBorderColor(State);
 
@@ -94,12 +96,20 @@ namespace Opaax::Editor
             }
         }
 
-        ImGui::Image(
-            m_Framebuffer ? m_Framebuffer->GetColorAttachmentID() : 0u,
-            lPanelSize,
-            ImVec2(0.f, 1.f),
-            ImVec2(1.f, 0.f)
-        );
+        // Resolve the backend-specific ImGui texture handle for the offscreen color image (GL tex
+        // name, or a Vulkan descriptor set).
+        const ImTextureID lViewportTex = m_Framebuffer
+            ? static_cast<ImTextureID>(InUIBackend.GetViewportTextureID(*m_Framebuffer))
+            : static_cast<ImTextureID>(0);
+
+        // Sample the image upright for each backend's storage convention: the GL FBO is bottom-up
+        // (V flipped), while the Vulkan offscreen image is top-down with the negative-viewport
+        // render (sampled straight). Without the per-backend UVs the viewport renders inverted.
+        const bool   lVulkan = (RenderAPI::GetBackend() == EBackend::Vulkan);
+        const ImVec2 lUV0    = lVulkan ? ImVec2(0.f, 0.f) : ImVec2(0.f, 1.f);
+        const ImVec2 lUV1    = lVulkan ? ImVec2(1.f, 1.f) : ImVec2(1.f, 0.f);
+
+        ImGui::Image(lViewportTex, lPanelSize, lUV0, lUV1);
 
         ImGui::End();
         return bResized;

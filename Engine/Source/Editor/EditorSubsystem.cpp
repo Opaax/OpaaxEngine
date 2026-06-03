@@ -53,9 +53,17 @@ namespace Opaax
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
 
+        // The editor's ImGui renderer backend matches the graphics backend (resolved from config).
+        const EBackend lBackend = RenderAPI::BackendFromString(EngineConfig::RenderBackend());
+
         ImGuiIO& lIO = ImGui::GetIO();
         lIO.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-        lIO.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+        // Multi-viewport (panel tear-out) is OpenGL-only for now — the Vulkan ImGui backend lands
+        // single-window in M8 Phase 4 and gains secondary-swapchain multi-viewport in Phase 4e.
+        if (lBackend != EBackend::Vulkan)
+        {
+            lIO.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+        }
 
         ImGui::StyleColorsDark();
 
@@ -66,11 +74,12 @@ namespace Opaax
             lStyle.Colors[ImGuiCol_WindowBg].w = 1.f;
         }
 
-        void* lNativeWindow = GetEngineApp()->GetWindow().GetNativeWindow();
+        Window& lWindow       = GetEngineApp()->GetWindow();
+        void*   lNativeWindow = lWindow.GetNativeWindow();
 
-        // ImGui renderer backend selected from engine config — same backend as the renderer.
-        const EBackend lBackend = RenderAPI::BackendFromString(EngineConfig::RenderBackend());
-        m_UIBackend = IEditorUIBackend::Create(lBackend, lNativeWindow);
+        // ImGui renderer backend selected from engine config — same backend as the renderer. The
+        // Vulkan UI backend borrows the live device + swapchain from the graphics context.
+        m_UIBackend = IEditorUIBackend::Create(lBackend, lNativeWindow, lWindow.GetGraphicsContext());
         if (!m_UIBackend)
         {
             // No editor UI backend for the selected graphics backend (e.g. Vulkan before Phase 4).
@@ -332,7 +341,7 @@ namespace Opaax
 
         if (m_bShowHierarchy)    m_HierarchyPanel.Draw(*lSceneMgr, lWorld);
         if (m_bShowInspector)    m_InspectorPanel.Draw(lWorld);
-        if (m_bShowViewport)     m_ViewportPanel.Draw(m_EditorState);
+        if (m_bShowViewport)     m_ViewportPanel.Draw(m_EditorState, *m_UIBackend);
         if (m_bShowAssetBrowser) m_AssetBrowserPanel.Draw(*lSceneMgr);
     }
 

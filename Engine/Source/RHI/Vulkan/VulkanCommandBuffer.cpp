@@ -4,10 +4,12 @@
 
 #include "VulkanSwapchain.h"
 #include "VulkanFrameContext.h"
+#include "VulkanFramebuffer.h"
 #include "VulkanPipeline.h"
 #include "VulkanBindGroup.h"
 #include "VulkanBuffer.h"
 #include "RHI/Buffer.h"   // IVertexArray
+#include "Renderer/RenderTarget.hpp"
 
 namespace Opaax
 {
@@ -33,13 +35,60 @@ namespace Opaax
         }
     }
 
-    void VulkanCommandBuffer::BeginRenderPass(IRenderTarget& /*InTarget*/, ELoadOp InLoadOp,
+    void VulkanCommandBuffer::BeginRenderPass(IRenderTarget& InTarget, ELoadOp InLoadOp,
                                               const Vector4F& InClearColor)
     {
         if (m_Cmd == VK_NULL_HANDLE) { return; }   // frame skipped — record nothing
 
-        // NOTE: Phase 2 always renders to the current swapchain image; the offscreen target
-        //   (editor ViewportPanel) is dispatched here in Phase 4.
+        // Offscreen target (editor ViewportPanel) — render into its image, then EndRenderPass hands
+        // it to the sampler. Swapchain target (null framebuffer) falls through to the present path.
+        if (IFramebuffer* lFBBase = InTarget.GetFramebuffer())
+        {
+            auto& lFB = static_cast<VulkanFramebuffer&>(*lFBBase);
+            m_CurrentFramebuffer = &lFB;
+
+            // Frame-safe point to apply a pending resize: the prior frame's draws into the old image
+            // have drained and nothing has recorded into the (possibly new) image yet this frame.
+            lFB.ApplyPendingResize();
+
+            // Transition to COLOR. A pipeline barrier's first scope covers earlier submissions on
+            // this queue, so a fresh image (UNDEFINED) needs no wait, while a reused one waits the
+            // prior frame's ImGui sampling (FRAGMENT_SHADER / SHADER_READ) — correct cross-frame.
+            const VkImageLayout        lOld       = lFB.GetCurrentLayout();
+            const bool                 lFresh     = (lOld == VK_IMAGE_LAYOUT_UNDEFINED);
+            const VkPipelineStageFlags lSrcStage  = lFresh ? VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT
+                                                           : VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            const VkAccessFlags        lSrcAccess = lFresh ? 0 : VK_ACCESS_SHADER_READ_BIT;
+
+            TransitionImage(m_Cmd, lFB.GetImage(),
+                            lOld, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                            lSrcStage, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                            lSrcAccess, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
+            lFB.SetCurrentLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+            const VkExtent2D lFbExtent = lFB.GetExtent();
+
+            VkRenderingAttachmentInfo lFbColor{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
+            lFbColor.imageView   = lFB.GetColorImageView();
+            lFbColor.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            lFbColor.loadOp      = (InLoadOp == ELoadOp::Clear) ? VK_ATTACHMENT_LOAD_OP_CLEAR
+                                                               : VK_ATTACHMENT_LOAD_OP_LOAD;
+            lFbColor.storeOp     = VK_ATTACHMENT_STORE_OP_STORE;
+            lFbColor.clearValue.color = { { InClearColor.x, InClearColor.y, InClearColor.z, InClearColor.w } };
+
+            VkRenderingInfo lFbInfo{ VK_STRUCTURE_TYPE_RENDERING_INFO };
+            lFbInfo.renderArea           = { { 0, 0 }, lFbExtent };
+            lFbInfo.layerCount           = 1;
+            lFbInfo.colorAttachmentCount = 1;
+            lFbInfo.pColorAttachments    = &lFbColor;
+
+            vkCmdBeginRendering(m_Cmd, &lFbInfo);
+            SetViewport(0, 0, lFbExtent.width, lFbExtent.height);
+            return;
+        }
+
+        m_CurrentFramebuffer = nullptr;
+
         const VkImage     lImage = m_Swapchain->GetCurrentImage();
         const VkImageView lView  = m_Swapchain->GetCurrentImageView();
         const VkExtent2D  lExtent = m_Swapchain->GetExtent();
@@ -78,6 +127,18 @@ namespace Opaax
     {
         if (m_Cmd == VK_NULL_HANDLE) { return; }
         vkCmdEndRendering(m_Cmd);
+
+        if (m_CurrentFramebuffer)
+        {
+            // Offscreen: hand the image to the fragment shader so ImGui can sample it this frame
+            // (and so the next frame's begin-of-pass barrier has a defined source layout).
+            TransitionImage(m_Cmd, m_CurrentFramebuffer->GetImage(),
+                            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
+            m_CurrentFramebuffer->SetCurrentLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+            m_CurrentFramebuffer = nullptr;
+        }
     }
 
     void VulkanCommandBuffer::SetViewport(Uint32 X, Uint32 Y, Uint32 Width, Uint32 Height)
@@ -85,10 +146,10 @@ namespace Opaax
         if (m_Cmd == VK_NULL_HANDLE) { return; }
 
         // Negative-height viewport flips clip-space Y so the OpenGL-style (Y-up) projection renders
-        // upright on Vulkan (Y-down NDC) — keeps the neutral camera/projection code backend-agnostic.
-        // origin moves to the bottom (Y + Height), height goes negative. Core since Vulkan 1.1 (we
-        // target 1.3); cull is NONE so the implied front-face winding flip is harmless. Scissor stays
-        // in positive framebuffer coordinates (unaffected by the viewport flip).
+        // upright on Vulkan (Y-down NDC) — applied to ALL passes so winding stays consistent (cull
+        // is NONE, but a positive-height offscreen pass was observed to drop the sprite entirely).
+        // For the editor's offscreen image the resulting orientation is corrected by the ImGui
+        // sampling UVs in ViewportPanel (Vulkan samples top-down, see ViewportPanel::Draw).
         VkViewport lViewport{};
         lViewport.x        = static_cast<float>(X);
         lViewport.y        = static_cast<float>(Y + Height);

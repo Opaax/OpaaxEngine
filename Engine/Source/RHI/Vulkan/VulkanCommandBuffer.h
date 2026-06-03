@@ -10,6 +10,7 @@ namespace Opaax
 {
     class VulkanDevice;
     class VulkanSwapchain;
+    class VulkanFramebuffer;
 
     // =============================================================================
     // VulkanCommandBuffer
@@ -50,6 +51,10 @@ namespace Opaax
         // Transition the image to PRESENT_SRC if any pass ran. Called before vkEndCommandBuffer.
         void FinishFrame();
 
+        // The live VkCommandBuffer of the current frame (VK_NULL_HANDLE on a skipped frame).
+        // The Vulkan editor UI backend records ImGui draws into it during RenderDrawData.
+        VkCommandBuffer GetVkCommandBuffer() const noexcept { return m_Cmd; }
+
         // =============================================================================
         // Overrides
         // =============================================================================
@@ -74,7 +79,11 @@ namespace Opaax
         VulkanDevice*    m_Device    = nullptr;
         VulkanSwapchain* m_Swapchain = nullptr;
         VkCommandBuffer  m_Cmd       = VK_NULL_HANDLE;
-        bool             m_ColorAcquired = false;   // image transitioned to COLOR this frame
+        bool             m_ColorAcquired = false;   // SWAPCHAIN image transitioned to COLOR this frame
+
+        // The offscreen framebuffer of the currently-open pass (editor viewport), or null when the
+        // open pass targets the swapchain. EndRenderPass uses it to hand the image to the sampler.
+        VulkanFramebuffer* m_CurrentFramebuffer = nullptr;
 
         VkPipelineLayout m_CurrentPipelineLayout = VK_NULL_HANDLE;   // last bound, for descriptor binding
     };

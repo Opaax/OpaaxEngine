@@ -236,9 +236,8 @@ if(OPAAX_EDITOR_SUPPORT)
         )
     endif()
 
-    # imgui_impl_vulkan.cpp is intentionally NOT compiled — no Vulkan editor backend exists
-    # yet (keystone-first milestone). Add it back alongside a VulkanEditorUIBackend, gated on
-    # the Vulkan SDK being present.
+    # Base ImGui + platform/OpenGL renderer backends. imgui_impl_vulkan.cpp is attached later,
+    # gated on the Vulkan SDK being present (see the Vulkan detection block below).
     add_library(imgui STATIC
         Vendors/imgui/imgui.cpp
         Vendors/imgui/imgui_draw.cpp
@@ -382,6 +381,15 @@ if(Vulkan_FOUND AND EXISTS "${OPAAX_VULKAN_ROOT}/Include/vulkan/vulkan.h"
 
     set(OPAAX_VULKAN_LINK vk-bootstrap ${Vulkan_LIBRARIES})
     message(STATUS "[Opaax] Vulkan SDK found — Vulkan backend ENABLED (vk-bootstrap + VMA).")
+
+    # Editor: compile the ImGui Vulkan renderer backend (consumed by VulkanEditorUIBackend). The
+    # imgui static lib is created earlier, only under OPAAX_EDITOR_SUPPORT — attach the TU here so
+    # it stays gated on the SDK being present (mirrors the OpenGL-only default).
+    if(OPAAX_EDITOR_SUPPORT)
+        target_sources(imgui PRIVATE Vendors/imgui/backends/imgui_impl_vulkan.cpp)
+        target_include_directories(imgui PRIVATE "${OPAAX_VULKAN_INCLUDE}")
+        message(STATUS "[Opaax] ImGui: Vulkan renderer backend ENABLED (imgui_impl_vulkan).")
+    endif()
 else()
     message(STATUS "[Opaax] Vulkan SDK not found — Vulkan backend DISABLED (OpenGL-only).")
 endif()

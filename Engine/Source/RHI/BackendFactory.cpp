@@ -47,6 +47,7 @@
     #include "RHI/Vulkan/VulkanUniformBuffer.h"
     #include "RHI/Vulkan/VulkanPipeline.h"
     #include "RHI/Vulkan/VulkanBindGroup.h"
+    #include "RHI/Vulkan/VulkanFramebuffer.h"
 #endif
 
 #include "Core/Log/OpaaxLog.h"
@@ -87,20 +88,12 @@ namespace Opaax
 
         if (InName == "Vulkan")
         {
-#if !OPAAX_HAS_VULKAN
+#if OPAAX_HAS_VULKAN
+            return EBackend::Vulkan;
+#else
             OPAAX_CORE_WARN("RenderAPI: 'Vulkan' requested but the engine was built without the "
                             "Vulkan SDK — falling back to OpenGL.");
             return EBackend::OpenGL;
-#elif OPAAX_WITH_EDITOR
-            // The editor's ImGui renderer is OpenGL-only until the Vulkan editor backend lands
-            // (M8 Phase 4). Force the whole stack to OpenGL in editor builds so a Vulkan config
-            // doesn't crash on the missing Vulkan editor UI backend. Run the standalone (release)
-            // game to exercise Vulkan.
-            OPAAX_CORE_WARN("RenderAPI: 'Vulkan' requested but this is an editor build — the editor "
-                            "UI backend is OpenGL-only until M8 Phase 4. Forcing OpenGL.");
-            return EBackend::OpenGL;
-#else
-            return EBackend::Vulkan;
 #endif
         }
 
@@ -305,7 +298,9 @@ namespace Opaax
         switch (RenderAPI::GetBackend())
         {
             case EBackend::OpenGL: return MakeUnique<OpenGLFramebuffer>(InSpec);
-            // Vulkan offscreen framebuffer is Phase 4 (editor viewport) — OpenGL only for now.
+#if OPAAX_HAS_VULKAN
+            case EBackend::Vulkan: return MakeUnique<VulkanFramebuffer>(InSpec);
+#endif
             default: break;
         }
         OPAAX_CORE_ERROR("IFramebuffer::Create — backend not available."); return nullptr;

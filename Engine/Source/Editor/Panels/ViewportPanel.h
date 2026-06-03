@@ -9,6 +9,8 @@
 #include "Editor/EditorState.h"
 #include "RHI/Framebuffer.h"
 
+namespace Opaax { class IEditorUIBackend; }
+
 namespace Opaax::Editor
 {
     /**
@@ -46,7 +48,7 @@ namespace Opaax::Editor
         bool Startup();
         void Shutdown();
 
-        bool Draw(EEditorState State);
+        bool Draw(EEditorState State, IEditorUIBackend& InUIBackend);
 
         //------------------------------------------------------------------------------
         // Get
@@ -71,6 +73,9 @@ namespace Opaax::Editor
 
         Uint32 GetWidth()  const noexcept override { return m_Width;  }
         Uint32 GetHeight() const noexcept override { return m_Height; }
+
+        // The scene renders into this offscreen target; a command-buffer backend dispatches on it.
+        IFramebuffer* GetFramebuffer() const noexcept override { return m_Framebuffer.get(); }
         //~End IRenderTarget Interferce
 
         // =============================================================================
