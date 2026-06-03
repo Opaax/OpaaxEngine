@@ -27,17 +27,12 @@ void GameScene::OnLoad(Opaax::World& InWorld)
     BuildDefaultScene(InWorld);
 }
 
-void GameScene::OnUnload(Opaax::World& InWorld)
+void GameScene::OnUnload(Opaax::World& /*InWorld*/)
 {
-#if OPAAX_WITH_EDITOR
-    // Editor builds: the user owns scene persistence via the File menu / Ctrl+S.
-    // Auto-saving here would overwrite the hardcoded GameScene.scene.json regardless of
-    // what the user did with New/Open/Save As, which silently nukes their work.
-    OPAAX_TRACE("[GameScene] OnUnload — editor build, skipping implicit save.");
-#else
-    OPAAX_TRACE("[GameScene] OnUnload — saving scene.");
-    SaveScene(InWorld);
-#endif
+    // Unloading never persists the scene implicitly. A shipped game must not overwrite its
+    // own scene asset on quit, and in the editor persistence is user-driven (Ctrl+S, or a
+    // save-or-discard prompt). Explicit saves go through SaveScene().
+    OPAAX_TRACE("[GameScene] OnUnload");
 
     m_PlayerTexture.Reset();
     m_AtlasTexture.Reset();
