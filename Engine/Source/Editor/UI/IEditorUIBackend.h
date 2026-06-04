@@ -2,6 +2,7 @@
 #if OPAAX_WITH_EDITOR
 
 #include "Core/EngineAPI.h"
+#include "Core/OpaaxMathTypes.h"
 #include "Core/OpaaxTypes.h"
 #include "RHI/RenderAPI.h"
 
@@ -9,6 +10,18 @@ namespace Opaax
 {
     class IGraphicsContext;
     class IFramebuffer;
+
+    // =============================================================================
+    // EditorViewportImage
+    // =============================================================================
+    // A displayable offscreen color attachment: the ImGui texture handle plus the
+    // sampling UVs that present it upright for the backend's storage convention.
+    struct EditorViewportImage
+    {
+        Uint64   Handle = 0;            // ImTextureID-width handle; caller casts
+        Vector2F UV0    = { 0.f, 0.f };
+        Vector2F UV1    = { 1.f, 1.f };
+    };
 
     // =============================================================================
     // IEditorUIBackend
@@ -67,11 +80,12 @@ namespace Opaax
         // current-context save/restore. Caller gates on ImGuiConfigFlags_ViewportsEnable.
         virtual void RenderPlatformWindows() = 0;
 
-        // The ImGui texture handle (ImTextureID width) for sampling an offscreen framebuffer's color
-        // attachment — the editor ViewportPanel passes the result to ImGui::Image. OpenGL returns the
-        // raw GL texture name; Vulkan mints/caches a VkDescriptorSet via ImGui_ImplVulkan_AddTexture.
-        // Returned as Uint64 so this header stays ImGui-free (the caller casts to ImTextureID).
-        virtual Uint64 GetViewportTextureID(IFramebuffer& InFB) = 0;
+        // The displayable handle + upright sampling UVs for an offscreen framebuffer's color
+        // attachment — the editor ViewportPanel feeds both to ImGui::Image. OpenGL returns the raw
+        // GL texture name with V-flipped UVs (bottom-up FBO); Vulkan mints/caches a VkDescriptorSet
+        // via ImGui_ImplVulkan_AddTexture with straight UVs. Handle is Uint64 so this header stays
+        // ImGui-free (the caller casts to ImTextureID).
+        virtual EditorViewportImage GetViewportImage(IFramebuffer& InFB) = 0;
     };
 
 } // namespace Opaax

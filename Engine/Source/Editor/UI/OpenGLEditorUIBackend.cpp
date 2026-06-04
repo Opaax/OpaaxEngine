@@ -68,10 +68,12 @@ namespace Opaax
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }
 
-    Uint64 OpenGLEditorUIBackend::GetViewportTextureID(IFramebuffer& InFB)
+    EditorViewportImage OpenGLEditorUIBackend::GetViewportImage(IFramebuffer& InFB)
     {
         // The GL color attachment name IS the ImGui texture handle (imgui_impl_opengl3 binds it).
-        return static_cast<Uint64>(InFB.GetColorAttachmentID());
+        // The FBO is stored bottom-up, so sample with V flipped to present it upright.
+        return { static_cast<Uint64>(InFB.GetColorAttachmentID()),
+                 Vector2F(0.f, 1.f), Vector2F(1.f, 0.f) };
     }
 
     void OpenGLEditorUIBackend::RenderPlatformWindows()

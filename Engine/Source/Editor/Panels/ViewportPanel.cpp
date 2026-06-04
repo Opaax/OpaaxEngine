@@ -6,7 +6,6 @@
 
 #include "Core/Log/OpaaxLog.h"
 #include "Editor/UI/IEditorUIBackend.h"
-#include "RHI/RenderAPI.h"
 
 namespace Opaax::Editor
 {
@@ -96,20 +95,14 @@ namespace Opaax::Editor
             }
         }
 
-        // Resolve the backend-specific ImGui texture handle for the offscreen color image (GL tex
-        // name, or a Vulkan descriptor set).
-        const ImTextureID lViewportTex = m_Framebuffer
-            ? static_cast<ImTextureID>(InUIBackend.GetViewportTextureID(*m_Framebuffer))
-            : static_cast<ImTextureID>(0);
+        // The backend yields both the ImGui texture handle and the sampling UVs that present the
+        // offscreen color image upright for its storage convention — no backend query here.
+        const EditorViewportImage lImg = m_Framebuffer
+            ? InUIBackend.GetViewportImage(*m_Framebuffer)
+            : EditorViewportImage{};
 
-        // Sample the image upright for each backend's storage convention: the GL FBO is bottom-up
-        // (V flipped), while the Vulkan offscreen image is top-down with the negative-viewport
-        // render (sampled straight). Without the per-backend UVs the viewport renders inverted.
-        const bool   lVulkan = (RenderAPI::GetBackend() == EBackend::Vulkan);
-        const ImVec2 lUV0    = lVulkan ? ImVec2(0.f, 0.f) : ImVec2(0.f, 1.f);
-        const ImVec2 lUV1    = lVulkan ? ImVec2(1.f, 1.f) : ImVec2(1.f, 0.f);
-
-        ImGui::Image(lViewportTex, lPanelSize, lUV0, lUV1);
+        ImGui::Image(static_cast<ImTextureID>(lImg.Handle), lPanelSize,
+                     ImVec2(lImg.UV0.x, lImg.UV0.y), ImVec2(lImg.UV1.x, lImg.UV1.y));
 
         ImGui::End();
         return bResized;

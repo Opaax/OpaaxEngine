@@ -135,7 +135,7 @@ namespace Opaax
         lCmdBuf.EndRenderPass();
     }
 
-    Uint64 VulkanEditorUIBackend::GetViewportTextureID(IFramebuffer& InFB)
+    EditorViewportImage VulkanEditorUIBackend::GetViewportImage(IFramebuffer& InFB)
     {
         auto&        lFB  = static_cast<VulkanFramebuffer&>(InFB);
         const Uint64 lGen = lFB.GetGeneration();
@@ -159,7 +159,9 @@ namespace Opaax
             }
         }
 
-        return reinterpret_cast<Uint64>(m_ViewportTexture);
+        // The offscreen image is top-down and rendered with a negative viewport, so sample straight.
+        return { reinterpret_cast<Uint64>(m_ViewportTexture),
+                 Vector2F(0.f, 0.f), Vector2F(1.f, 1.f) };
     }
 
     void VulkanEditorUIBackend::RenderPlatformWindows()

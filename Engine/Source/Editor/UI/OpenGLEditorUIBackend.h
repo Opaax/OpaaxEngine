@@ -37,7 +37,7 @@ namespace Opaax
         void RenderDrawData()        override;
         void RenderPlatformWindows() override;
 
-        Uint64 GetViewportTextureID(IFramebuffer& InFB) override;
+        EditorViewportImage GetViewportImage(IFramebuffer& InFB) override;
         //~End IEditorUIBackend interface
 
         // =============================================================================

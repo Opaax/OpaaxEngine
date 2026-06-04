@@ -46,7 +46,13 @@ namespace Opaax
                                         m_Device.GetGraphicsQueueFamily(),
                                         m_Device.GetGraphicsQueueFamily() };
 
-        auto lRet = lBuilder.set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)   // vsync (always available)
+        // UNORM (not the vk-bootstrap default SRGB) so the GPU does no linear->sRGB encode on write —
+        // the engine has no linear-lighting pipeline, so an sRGB target would brighten already-sRGB
+        // content (midtones washed out) versus OpenGL's linear-store default framebuffer. SRGB stays
+        // as a fallback. A proper linear pipeline is a future milestone.
+        auto lRet = lBuilder.set_desired_format({ VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR })
+                            .add_fallback_format({ VK_FORMAT_B8G8R8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR })
+                            .set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)   // vsync (always available)
                             .set_desired_extent(InWidth, InHeight)
                             .build();
         if (!lRet)
