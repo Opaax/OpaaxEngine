@@ -7,7 +7,7 @@
         "level": "trace"
     },
     "render": {
-        "backend": "OpanGL"
+        "backend": "Vulkan"
     },
     "version": 1,
     "window": {

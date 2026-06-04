@@ -2,7 +2,6 @@
 
 #include <cstring>
 #include <filesystem>
-#include <iostream>
 
 #include "Window.h"
 #include <GLFW/glfw3.h>
@@ -117,10 +116,8 @@ CoreEngineApp::CoreEngineApp(int InArgc, char** InArgv)
     m_RenderTarget          = m_DefaultRenderTarget.get();
 }
 
-CoreEngineApp::~CoreEngineApp()
-{
-    std::cout << "CoreEngineApp -- DESTROYED!" << std::endl;
-}
+// Out-of-line (defaulted) so the UniquePtr members' deleters see complete types here.
+CoreEngineApp::~CoreEngineApp() = default;
 
 void CoreEngineApp::DispatchEvent(OpaaxEvent& Event)
 {

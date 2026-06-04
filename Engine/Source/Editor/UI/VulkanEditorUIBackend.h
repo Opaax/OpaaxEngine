@@ -69,6 +69,9 @@ namespace Opaax
         // framebuffer's generation changes (resize recreated its image/view).
         VkDescriptorSet  m_ViewportTexture    = VK_NULL_HANDLE;
         Uint64           m_ViewportTextureGen = 0;
+
+        // One-shot guard so an unresolved viewport image logs once, not every frame.
+        bool             m_LoggedNullViewport = false;
     };
 
 } // namespace Opaax

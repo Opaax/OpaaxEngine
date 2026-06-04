@@ -12,6 +12,34 @@
 
 namespace Opaax
 {
+    namespace
+    {
+        const char* DeviceTypeName(VkPhysicalDeviceType InType)
+        {
+            switch (InType)
+            {
+                case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU: return "Integrated";
+                case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:   return "Discrete";
+                case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:    return "Virtual";
+                case VK_PHYSICAL_DEVICE_TYPE_CPU:            return "CPU";
+                default:                                     return "Other";
+            }
+        }
+
+        const char* VendorName(Uint32 InVendorID)
+        {
+            switch (InVendorID)
+            {
+                case 0x10DE: return "NVIDIA";
+                case 0x1002: return "AMD";
+                case 0x8086: return "Intel";
+                case 0x13B5: return "ARM";
+                case 0x5143: return "Qualcomm";
+                default:     return "Unknown";
+            }
+        }
+    }
+
     VulkanDevice::VulkanDevice(GLFWwindow* InWindow)
     {
         // ---- Instance --------------------------------------------------------
@@ -96,7 +124,21 @@ namespace Opaax
             m_Allocator = nullptr;
         }
 
-        OPAAX_CORE_INFO("VulkanDevice: ready (graphics queue family {}).", m_GraphicsQueueFamily);
+        VkPhysicalDeviceProperties lProps{};
+        vkGetPhysicalDeviceProperties(m_PhysicalDevice, &lProps);
+
+        OPAAX_CORE_INFO("====================  Render Backend  ====================");
+        OPAAX_CORE_INFO("  API .............. Vulkan {}.{}.{}",
+                        VK_API_VERSION_MAJOR(lProps.apiVersion),
+                        VK_API_VERSION_MINOR(lProps.apiVersion),
+                        VK_API_VERSION_PATCH(lProps.apiVersion));
+        OPAAX_CORE_INFO("  GPU .............. {} ({})", lProps.deviceName, DeviceTypeName(lProps.deviceType));
+        OPAAX_CORE_INFO("  Vendor ........... {} (0x{:04X})", VendorName(lProps.vendorID), lProps.vendorID);
+        OPAAX_CORE_INFO("  Driver ........... 0x{:08X}", lProps.driverVersion);
+        OPAAX_CORE_INFO("  Queues ........... graphics family {} ({})", m_GraphicsQueueFamily,
+                        (m_PresentQueue == m_GraphicsQueue) ? "present shared" : "present separate");
+        OPAAX_CORE_INFO("  VMA .............. {}", m_Allocator ? "ready" : "FAILED");
+        OPAAX_CORE_INFO("==========================================================");
     }
 
     void VulkanDevice::ImmediateSubmit(const TFunction<void(VkCommandBuffer)>& InRecord) const

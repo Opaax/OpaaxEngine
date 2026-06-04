@@ -101,8 +101,18 @@ namespace Opaax::Editor
             ? InUIBackend.GetViewportImage(*m_Framebuffer)
             : EditorViewportImage{};
 
-        ImGui::Image(static_cast<ImTextureID>(lImg.Handle), lPanelSize,
-                     ImVec2(lImg.UV0.x, lImg.UV0.y), ImVec2(lImg.UV1.x, lImg.UV1.y));
+        // A null handle means the backend could not resolve the offscreen image this frame. Drawing
+        // ImGui::Image with it records a draw against a null descriptor set (Vulkan validation error);
+        // reserve the space with a Dummy instead so the layout is unchanged.
+        if (lImg.Handle != 0)
+        {
+            ImGui::Image(static_cast<ImTextureID>(lImg.Handle), lPanelSize,
+                         ImVec2(lImg.UV0.x, lImg.UV0.y), ImVec2(lImg.UV1.x, lImg.UV1.y));
+        }
+        else
+        {
+            ImGui::Dummy(lPanelSize);
+        }
 
         ImGui::End();
         return bResized;

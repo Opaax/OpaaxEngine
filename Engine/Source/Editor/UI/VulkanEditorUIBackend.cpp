@@ -155,8 +155,25 @@ namespace Opaax
             {
                 m_ViewportTexture = ImGui_ImplVulkan_AddTexture(
                     lFB.GetSampler(), lFB.GetColorImageView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-                m_ViewportTextureGen = lGen;
+
+                // Only stamp the generation on a successful mint — a null result keeps the rebuild
+                // condition true so the next frame retries instead of caching a dead handle.
+                if (m_ViewportTexture != VK_NULL_HANDLE) { m_ViewportTextureGen = lGen; }
             }
+        }
+
+        // A null handle here would make ImGui bind a null descriptor set (VUID-...-06563/08600). The
+        // ViewportPanel guards against drawing it; log once so the cause (null view/sampler vs failed
+        // AddTexture) is visible without a debugger.
+        if (m_ViewportTexture == VK_NULL_HANDLE && !m_LoggedNullViewport)
+        {
+            m_LoggedNullViewport = true;
+            const VkExtent2D lExt = lFB.GetExtent();
+            OPAAX_CORE_WARN("VulkanEditorUIBackend: viewport image unresolved — view={} sampler={} "
+                            "extent={}x{} (ImGui descriptor not minted).",
+                            static_cast<const void*>(lFB.GetColorImageView()),
+                            static_cast<const void*>(lFB.GetSampler()),
+                            lExt.width, lExt.height);
         }
 
         // The offscreen image is top-down and rendered with a negative viewport, so sample straight.

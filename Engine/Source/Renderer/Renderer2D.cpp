@@ -167,19 +167,6 @@ namespace Opaax
         s_Data.Cmd            = &InCmd;
         s_Data.ViewProjection = InCamera.GetViewProjection();
 
-#if 1 // OPAAX_DIAG_RENDER2D
-        {
-            static int s_DiagFrames = 0;
-            if (s_DiagFrames < 4)
-            {
-                const glm::mat4& m = s_Data.ViewProjection;
-                OPAAX_CORE_INFO("DIAG Begin: VP diag=({:.4f},{:.4f},{:.4f},{:.4f}) trans=({:.2f},{:.2f},{:.2f})",
-                                m[0][0], m[1][1], m[2][2], m[3][3], m[3][0], m[3][1], m[3][2]);
-                ++s_DiagFrames;
-            }
-        }
-#endif
-
         // Bind the sprite pipeline (shader + blend) on the command buffer.
         s_Data.Cmd->BindPipeline(*s_Data.QuadPipeline);
 
@@ -206,21 +193,6 @@ namespace Opaax
     void Renderer2D::Flush()
     {
         if (s_Data.QuadCount == 0) { return; }
-
-#if 1 // OPAAX_DIAG_RENDER2D
-        {
-            static int s_DiagFlush = 0;
-            if (s_DiagFlush < 6)
-            {
-                const QuadVertex& v0 = s_Data.VertexBuffer[0];
-                const glm::vec4 lClip = s_Data.ViewProjection * glm::vec4(v0.Position, 1.f);
-                OPAAX_CORE_INFO("DIAG Flush: quads={} tex0Slots={} v0.world=({:.1f},{:.1f}) v0.clip=({:.3f},{:.3f},{:.3f},{:.3f}) texIdx={:.0f}",
-                                s_Data.QuadCount, s_Data.TextureSlotIndex,
-                                v0.Position.x, v0.Position.y, lClip.x, lClip.y, lClip.z, lClip.w, v0.TexIndex);
-                ++s_DiagFlush;
-            }
-        }
-#endif
 
         // Sort the quad draw order by (Layer, OrderInLayer, textureSlot). Stable so equal
         // keys keep submission order. Painter's algorithm — ascending key draws back-to-front;

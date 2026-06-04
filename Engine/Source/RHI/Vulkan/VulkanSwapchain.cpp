@@ -10,6 +10,21 @@
 
 namespace Opaax
 {
+    namespace
+    {
+        const char* FormatName(VkFormat InFormat)
+        {
+            switch (InFormat)
+            {
+                case VK_FORMAT_B8G8R8A8_UNORM: return "B8G8R8A8_UNORM";
+                case VK_FORMAT_B8G8R8A8_SRGB:  return "B8G8R8A8_SRGB";
+                case VK_FORMAT_R8G8B8A8_UNORM: return "R8G8B8A8_UNORM";
+                case VK_FORMAT_R8G8B8A8_SRGB:  return "R8G8B8A8_SRGB";
+                default:                       return "other";
+            }
+        }
+    }
+
     VulkanSwapchain::VulkanSwapchain(VulkanDevice& InDevice, GLFWwindow* InWindow)
         : m_Device(InDevice), m_Window(InWindow)
     {
@@ -17,7 +32,7 @@ namespace Opaax
         glfwGetFramebufferSize(m_Window, &lW, &lH);
 
         CreatePerFrameSync();
-        Build(static_cast<Uint32>(lW), static_cast<Uint32>(lH));
+        Build(static_cast<Uint32>(lW), static_cast<Uint32>(lH), /*InLogInfo*/ true);
     }
 
     VulkanSwapchain::~VulkanSwapchain()
@@ -30,7 +45,7 @@ namespace Opaax
     // =============================================================================
     // Build / recreate
     // =============================================================================
-    bool VulkanSwapchain::Build(Uint32 InWidth, Uint32 InHeight)
+    bool VulkanSwapchain::Build(Uint32 InWidth, Uint32 InHeight, bool InLogInfo)
     {
         if (InWidth == 0 || InHeight == 0)
         {
@@ -84,7 +99,17 @@ namespace Opaax
             vkCreateSemaphore(m_Device.GetDevice(), &lSemInfo, nullptr, &lSem);
         }
 
-        OPAAX_CORE_INFO("VulkanSwapchain: {}x{}, {} images.", m_Extent.width, m_Extent.height, m_Images.size());
+        // Recreate fires every frame during a live resize — log it at TRACE so it never spams.
+        if (InLogInfo)
+        {
+            OPAAX_CORE_INFO("VulkanSwapchain: {} / SRGB_NONLINEAR, FIFO (vsync), {} images, {}x{}.",
+                            FormatName(m_ImageFormat), m_Images.size(), m_Extent.width, m_Extent.height);
+        }
+        else
+        {
+            OPAAX_CORE_TRACE("VulkanSwapchain: recreated {} {}x{} ({} images).",
+                             FormatName(m_ImageFormat), m_Extent.width, m_Extent.height, m_Images.size());
+        }
         return true;
     }
 
@@ -103,7 +128,7 @@ namespace Opaax
 
         vkDeviceWaitIdle(m_Device.GetDevice());
         Cleanup();
-        m_NeedsRecreate = !Build(lW, lH);
+        m_NeedsRecreate = !Build(lW, lH, /*InLogInfo*/ false);
     }
 
     // =============================================================================

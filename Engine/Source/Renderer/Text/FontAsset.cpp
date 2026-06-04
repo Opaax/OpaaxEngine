@@ -1,7 +1,6 @@
 #include "FontAsset.h"
 
 #include "Core/Log/OpaaxLog.h"
-#include "Renderer/Renderer2D.h"
 #include "Renderer/Texture2D.h"
 
 #include <algorithm>
@@ -257,21 +256,6 @@ namespace Opaax
             return 0.f;
         }
         return (PackKerningKey(lIt->First, lIt->Second) == lKey) ? lIt->Advance : 0.f;
-    }
-
-    void FontAsset::DebugDrawAtlas(const Vector2F& InPosition, const Vector2F& InSize) const
-    {
-        if (!m_Atlas || !m_Atlas->IsLoaded())
-        {
-            return;
-        }
-        // R8 atlas swizzles coverage into alpha — white tint reveals the raw bake.
-        // V is inverted (UVMin=(0,1), UVMax=(1,0)) to mirror the stb_truetype top-down
-        // → renderer bottom-up convention; matches the per-glyph V swap in the bake.
-        Texture2D& lAtlasRef = const_cast<Texture2D&>(*m_Atlas);
-        Renderer2D::DrawSprite(InPosition, InSize, lAtlasRef,
-                               Vector2F(0.f, 1.f), Vector2F(1.f, 0.f),
-                               Vector4F(1.f));
     }
 
 } // namespace Opaax

@@ -32,7 +32,32 @@ namespace Opaax
 
         // VSync on by default (matches prior WindowsWindow behavior).
         SetVSync(true);
+
+        LogAdapterInfo();
         return true;
+    }
+
+    void OpenGLContext::LogAdapterInfo() const
+    {
+        auto lStr = [](GLenum InName) -> const char*
+        {
+            const GLubyte* lValue = glGetString(InName);
+            return lValue ? reinterpret_cast<const char*>(lValue) : "<unknown>";
+        };
+
+        GLint lMaxTexUnits = 0, lMaxTexSize = 0;
+        glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &lMaxTexUnits);
+        glGetIntegerv(GL_MAX_TEXTURE_SIZE,        &lMaxTexSize);
+
+        OPAAX_CORE_INFO("====================  Render Backend  ====================");
+        OPAAX_CORE_INFO("  API .............. OpenGL {}", lStr(GL_VERSION));
+        OPAAX_CORE_INFO("  GPU .............. {}",         lStr(GL_RENDERER));
+        OPAAX_CORE_INFO("  Vendor ........... {}",         lStr(GL_VENDOR));
+        OPAAX_CORE_INFO("  GLSL ............. {}",         lStr(GL_SHADING_LANGUAGE_VERSION));
+        OPAAX_CORE_INFO("  Texture units .... {}",         lMaxTexUnits);
+        OPAAX_CORE_INFO("  Max texture size . {}",         lMaxTexSize);
+        OPAAX_CORE_INFO("  VSync ............ on");
+        OPAAX_CORE_INFO("==========================================================");
     }
 
     void OpenGLContext::SwapBuffers()

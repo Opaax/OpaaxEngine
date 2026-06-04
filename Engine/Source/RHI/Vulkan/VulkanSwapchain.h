@@ -86,7 +86,9 @@ namespace Opaax
         // Functions
         // =============================================================================
     private:
-        bool Build(Uint32 InWidth, Uint32 InHeight);  // build swapchain + views + per-image semaphores
+        // InLogInfo: log the result at INFO (initial build, part of the backend banner) vs TRACE
+        // (recreate — fires every frame during a resize, so it must not spam at INFO).
+        bool Build(Uint32 InWidth, Uint32 InHeight, bool InLogInfo);  // build swapchain + views + per-image semaphores
         void Recreate();
         void CreatePerFrameSync();                     // image-available semaphores + fences (once)
         void DestroyPerFrameSync();
