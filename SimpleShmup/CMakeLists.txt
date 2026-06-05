@@ -6,6 +6,11 @@ file(GLOB_RECURSE SIMPLESHMUP_SOURCES
 # Exe
 add_executable(SimpleShmup ${SIMPLESHMUP_SOURCES})
 
+# Launch from the exe's own dir so the CWD matches where assets are post-build-copied.
+# See Game/CMakeLists.txt for the rationale (relative asset paths miss otherwise from the .sln).
+set_target_properties(SimpleShmup PROPERTIES
+    VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>")
+
 # Link Engine
 target_link_libraries(SimpleShmup PRIVATE OpaaxEngine)
 

@@ -5,6 +5,8 @@
 
 namespace Opaax
 {
+    class IFramebuffer;
+
     /**
      * @class IRenderTarget
      *
@@ -41,9 +43,14 @@ namespace Opaax
         
         //------------------------------------------------------------------------------
         // Get
-        
+
         virtual Uint32 GetWidth()  const noexcept = 0;
         virtual Uint32 GetHeight() const noexcept = 0;
+
+        // The offscreen framebuffer this target draws into, or nullptr for the swapchain /
+        // backbuffer. A command-buffer backend dispatches on this: null -> present surface,
+        // non-null -> render into the framebuffer's image. GL ignores it (binds via Bind()).
+        virtual IFramebuffer* GetFramebuffer() const noexcept { return nullptr; }
     };
 
     /**

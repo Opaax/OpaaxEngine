@@ -6,6 +6,12 @@ file(GLOB_RECURSE GAME_SOURCES
 # Exe
 add_executable(Game ${GAME_SOURCES})
 
+# Launch from the exe's own dir so the CWD matches where assets are post-build-copied
+# (bin/<config>/{Engine,Game}/Assets). Without this, F5/Ctrl+F5 from the .sln runs with
+# CWD = the project build dir and the relative asset paths (Sprite.glsl, etc.) miss.
+set_target_properties(Game PROPERTIES
+    VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>")
+
 # Link Engine
 target_link_libraries(Game PRIVATE OpaaxEngine)
 

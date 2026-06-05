@@ -1,0 +1,4 @@
+vk-bootstrap v1.4.352
+Upstream: https://github.com/charles-lunarg/vk-bootstrap
+Vendored: src/ only (VkBootstrap.h/.cpp + VkBootstrapDispatch.h + VkBootstrapFeatureChain.h/.inl).
+Built as a static lib by Engine/CMakeLists.txt. Vulkan headers/loader come from the installed SDK.

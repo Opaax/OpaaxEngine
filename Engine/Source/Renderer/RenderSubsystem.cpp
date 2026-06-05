@@ -2,14 +2,12 @@
 
 #include "Renderer2D.h"
 #include "RHI/RenderCommand.h"
-#include "RHI/OpenGL/OpenGLRenderAPI.h"
+#include "RHI/RenderAPI.h"
+#include "RHI/IGraphicsContext.h"
+#include "Renderer/Pass/WorldRenderPass.h"
+#include "Renderer/Pass/OverlayRenderPass.h"
+#include "Core/Config/EngineConfig.h"
 #include "Core/Log/OpaaxLog.h"
- 
-// glad must be initialised before any GL calls.
-// WindowsWindow::Init() calls glfwMakeContextCurrent which sets up the context,
-// but glad itself is loaded here — after the context exists.
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
 
 #include "Core/CoreEngineApp.h"
 #include "Core/Window.h"
@@ -21,34 +19,58 @@ namespace Opaax
     bool RenderSubsystem::Startup()
     {
         OPAAX_CORE_INFO("RenderSubsystem::Startup()");
- 
-        // Load OpenGL function pointers via glad.
-        // glfwMakeContextCurrent must have been called first (done in WindowsWindow::Init).
-        if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress)))
+
+        // Backend comes from engine config (string -> EBackend), not hardcoded.
+        // Context bootstrap (make-current + glad load) already happened in WindowsWindow::Init
+        // via the backend's IGraphicsContext — glad is confined there, not loaded here.
+        const EBackend lBackend = RenderAPI::BackendFromString(EngineConfig::RenderBackend());
+        OPAAX_CORE_INFO("RenderSubsystem: render backend = {}", RenderAPI::BackendToString(lBackend));
+
+        // RenderCommand takes ownership of the raw ptr (documented on RenderCommand);
+        // .release() hands the UniquePtr's payload over to that ownership contract.
+        UniquePtr<IRenderAPI> lAPI = RenderAPI::Create(lBackend);
+        if (!lAPI)
         {
-            OPAAX_CORE_ERROR("RenderSubsystem: glad failed to load OpenGL functions.");
+            OPAAX_CORE_ERROR("RenderSubsystem: backend '{}' produced no IRenderAPI.",
+                EngineConfig::RenderBackend());
             return false;
         }
- 
-        // NOTE: new OpenGLRenderAPI() — RenderCommand takes ownership via raw ptr.
-        //   This is documented on RenderCommand. Acceptable for a singleton API object.
-        RenderCommand::Init(new OpenGLRenderAPI());
- 
+
+        // The render API binds against the window's graphics context (Vulkan borrows its
+        // device/swapchain; OpenGL ignores it). The window created + Init'd the context already.
+        IGraphicsContext* lContext = GetEngineApp() ? GetEngineApp()->GetWindow().GetGraphicsContext()
+                                                    : nullptr;
+        if (!lContext)
+        {
+            OPAAX_CORE_ERROR("RenderSubsystem: no graphics context available for the render API.");
+            return false;
+        }
+        RenderCommand::Init(lAPI.release(), *lContext);
+
         Renderer2D::Init();
- 
+
+        // Register the built-in passes (registration order = execution order).
+        // Passes hold the engine app by pointer (IoC) and re-fetch volatile state at Execute.
+        // World first (clears + draws the scene), then Overlay (screen-space, composites on top).
+        m_Pipeline.AddPass(MakeUnique<WorldRenderPass>(GetEngineApp()));
+        m_Pipeline.AddPass(MakeUnique<OverlayRenderPass>(GetEngineApp()));
+
         // Set initial viewport
         if (GetEngineApp())
         {
             const auto& lWindow = GetEngineApp()->GetWindow();
             RenderCommand::SetViewport(0, 0, lWindow.GetWidth(), lWindow.GetHeight());
         }
- 
+
         return true;
     }
  
     void RenderSubsystem::Shutdown()
     {
         OPAAX_CORE_INFO("RenderSubsystem::Shutdown()");
+        // NOTE: the GPU-idle barrier is CoreEngineApp::Shutdown's single authoritative WaitIdle
+        //   (runs before ANY GPU teardown, incl. assets). No per-subsystem wait needed here.
+        m_Pipeline.Clear();          // drop passes before the render API/Renderer2D go away
         Renderer2D::Shutdown();
         RenderCommand::Shutdown();
     }

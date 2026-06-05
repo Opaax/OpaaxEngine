@@ -1,20 +1,102 @@
 #include "ShaderAsset.h"
 
-#include "RHI/OpenGL/OpenGLShader.h"
+#include "RHI/Shader.h"
+#include "RHI/ShaderCompiler.h"
+#include "Core/Log/OpaaxLog.h"
+
+#include <fstream>
+#include <sstream>
+#include <string>
 
 namespace Opaax
 {
+    namespace
+    {
+        // Split a single-file shader into a ShaderDesc. Sections are delimited by a line whose
+        // first token is `#type`, followed by `vertex` or `fragment` (`pixel` accepted as an
+        // alias). Content before the first `#type` is ignored.
+        ShaderDesc ParseShaderStages(const OpaaxString& InSource, const OpaaxString& InDebugName)
+        {
+            ShaderDesc lDesc;
+            lDesc.DebugName = InDebugName;
+
+            std::istringstream lStream(InSource.CStr());
+            std::string        lLine;
+            std::string        lVert;
+            std::string        lFrag;
+            int                lStage = -1; // 0 = vertex, 1 = fragment, -1 = none/unknown
+
+            while (std::getline(lStream, lLine))
+            {
+                if (!lLine.empty() && lLine.back() == '\r') { lLine.pop_back(); } // CRLF tolerance
+
+                const size_t lFirst = lLine.find_first_not_of(" \t");
+                if (lFirst != std::string::npos && lLine.compare(lFirst, 5, "#type") == 0)
+                {
+                    const std::string lRest = lLine.substr(lFirst + 5);
+                    if      (lRest.find("vertex")   != std::string::npos) { lStage = 0; }
+                    else if (lRest.find("fragment") != std::string::npos ||
+                             lRest.find("pixel")    != std::string::npos) { lStage = 1; }
+                    else                                                  { lStage = -1; }
+                    continue;
+                }
+
+                if      (lStage == 0) { lVert += lLine; lVert += '\n'; }
+                else if (lStage == 1) { lFrag += lLine; lFrag += '\n'; }
+            }
+
+            lDesc.VertexSrc   = OpaaxString(lVert.c_str());
+            lDesc.FragmentSrc = OpaaxString(lFrag.c_str());
+            return lDesc;
+        }
+    }
+
     // =============================================================================
     // CTORS - DTOR
     // =============================================================================
-    ShaderAsset::ShaderAsset(const char* InVertexSrc, const char* InFragmentSrc)
-        : m_State(EAssetState::Loading)
-        , m_Gpu(MakeUnique<OpenGLShader>(InVertexSrc, InFragmentSrc))
+    ShaderAsset::ShaderAsset(const OpaaxString& InSourcePath, OpaaxStringID InAssetID)
+        : m_AssetID(InAssetID)
+        , m_SourcePath(InSourcePath)
+        , m_State(EAssetState::Loading)
     {
+        const OpaaxString lPath = InSourcePath;
+        std::ifstream lFile(lPath.CStr(), std::ios::binary);
+        if (!lFile.is_open())
+        {
+            OPAAX_CORE_ERROR("ShaderAsset: cannot open shader file '{}'", lPath);
+            m_State = EAssetState::Failed;
+            return;
+        }
+
+        std::stringstream lRaw;
+        lRaw << lFile.rdbuf();
+        const OpaaxString lSource(lRaw.str().c_str());
+
+        const OpaaxString lName = InAssetID.ToString();
+        ShaderDesc        lDesc = ParseShaderStages(lSource, lName);
+
+        if (lDesc.VertexSrc.IsEmpty() || lDesc.FragmentSrc.IsEmpty())
+        {
+            OPAAX_CORE_ERROR("ShaderAsset: '{}' missing a vertex or fragment '#type' section.", lPath);
+            m_State = EAssetState::Failed;
+            return;
+        }
+
+        // Compile both stages to SPIR-V when glslang is available — the portable IR backends
+        // consume (GL via GL_ARB_gl_spirv, Vulkan natively). When glslang is absent (no Vulkan
+        // SDK at build time) the blobs stay empty and the OpenGL backend falls back to the GLSL
+        // source path — the engine still runs on OpenGL, only the Vulkan backend is unavailable.
+        lDesc.VertexSpirv   = ShaderCompiler::CompileGLSLToSPIRV(EShaderStage::Vertex,   lDesc.VertexSrc,   lName);
+        lDesc.FragmentSpirv = ShaderCompiler::CompileGLSLToSPIRV(EShaderStage::Fragment, lDesc.FragmentSrc, lName);
+        if (lDesc.VertexSpirv.empty() || lDesc.FragmentSpirv.empty())
+        {
+            OPAAX_CORE_TRACE("ShaderAsset: '{}' — no SPIR-V (glslang absent or failed); using GLSL source path.", lPath);
+        }
+
+        m_Gpu   = IShader::Create(lDesc);
         m_State = m_Gpu ? EAssetState::Loaded : EAssetState::Failed;
     }
 
-    // Defined here so UniquePtr<OpenGLShader>'s deleter sees the complete type.
     ShaderAsset::~ShaderAsset() = default;
 
     // =============================================================================

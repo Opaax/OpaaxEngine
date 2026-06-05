@@ -14,7 +14,7 @@ namespace Opaax
      * projection model.
      *
      * Ownership: held by CameraSubsystem as UniquePtr<ICamera>. Consumers (Renderer2D,
-     * RenderContext) take ICamera& by reference at the use site — never cached across
+     * render passes) take ICamera& by reference at the use site — never cached across
      * function calls that could trigger an active-camera swap (Lesson 17).
      */
     class OPAAX_API ICamera

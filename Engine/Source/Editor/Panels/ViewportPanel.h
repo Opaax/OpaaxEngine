@@ -7,6 +7,9 @@
 #include "Core/OpaaxMathTypes.h"
 #include "Core/OpaaxTypes.h"
 #include "Editor/EditorState.h"
+#include "RHI/Framebuffer.h"
+
+namespace Opaax { class IEditorUIBackend; }
 
 namespace Opaax::Editor
 {
@@ -45,7 +48,7 @@ namespace Opaax::Editor
         bool Startup();
         void Shutdown();
 
-        bool Draw(EEditorState State);
+        bool Draw(EEditorState State, IEditorUIBackend& InUIBackend);
 
         //------------------------------------------------------------------------------
         // Get
@@ -70,19 +73,23 @@ namespace Opaax::Editor
 
         Uint32 GetWidth()  const noexcept override { return m_Width;  }
         Uint32 GetHeight() const noexcept override { return m_Height; }
+
+        // The scene renders into this offscreen target; a command-buffer backend dispatches on it.
+        IFramebuffer* GetFramebuffer() const noexcept override { return m_Framebuffer.get(); }
         //~End IRenderTarget Interferce
 
         // =============================================================================
         // Members
         // =============================================================================
     private:
-        Uint32 m_FBO            = 0;
-        Uint32 m_ColorTexture   = 0;
-        Uint32 m_DepthRBO       = 0;
-                                
-        Uint32 m_Width          = 1280;
-        Uint32 m_Height         = 720;
-                                
+        // Offscreen target — owns the GL handles (no raw GL in this panel anymore).
+        UniquePtr<IFramebuffer> m_Framebuffer;
+
+        // Authoritative panel size; the framebuffer is driven from the first Draw's
+        // content-region size (no hardcoded default — M7 Step 2 cleanup).
+        Uint32 m_Width          = 1;
+        Uint32 m_Height         = 1;
+
         bool   m_bHovered       = false;
         bool   m_bFocused       = false;
 

@@ -5,6 +5,9 @@
 #include "Core/Input/OpaaxInputEvents.hpp"
 #include "Core/Input/OpaaxInputTypes.hpp"
 #include "Core/Log/OpaaxLog.h"
+#include "Core/Config/EngineConfig.h"
+#include "RHI/RenderAPI.h"
+#include "RHI/IGraphicsContext.h"
 
 namespace Opaax
 {
@@ -53,6 +56,12 @@ namespace Opaax
 			s_GLFWInitialized = true;
 		}
 
+		// Backend chosen from engine config — drives window hints + context creation.
+		const EBackend lBackend = RenderAPI::BackendFromString(EngineConfig::RenderBackend());
+
+		// MUST run before glfwCreateWindow (e.g. GLFW_NO_API for Vulkan). No-op for OpenGL.
+		IGraphicsContext::ApplyWindowHints(lBackend);
+
 		m_Window = glfwCreateWindow(
 			static_cast<int>(Props.Width),
 			static_cast<int>(Props.Height),
@@ -63,124 +72,19 @@ namespace Opaax
 		// NOTE: Hard crash here is correct — a null window is unrecoverable.
 		OPAAX_CORE_ASSERT(m_Window)
 
-		glfwMakeContextCurrent(m_Window);
-
-		// NOTE: VSync on by default. Must be configurable via WindowProps eventually.
-		glfwSwapInterval(1);
+		// Graphics context owns make-current + glad load + vsync (was inline GLFW here).
+		m_Context = IGraphicsContext::Create(lBackend, m_Window);
+		OPAAX_CORE_ASSERT(m_Context)
+		if (!m_Context->Init())
+		{
+			OPAAX_CORE_ERROR("WindowsWindow: graphics context failed to initialize.");
+		}
 
 		// NOTE: User pointer needed for all GLFW callbacks to reach WindowData safely.
 		glfwSetWindowUserPointer(m_Window, &m_Data);
 
 		RegisterGLFWCallbacks();
 
-		// TODO: Plug GraphicsContext here once the RHI layer is implemented.
-		//       GraphicsContext::Create(m_Window)->Init();
-//
-		//m_Context = UniquePtr<GraphicsContext>(GraphicsContext::Create(m_Window));
-		//m_Context->Init();
-//
-		//// Stocker le pointeur vers WindowData dans GLFW pour les callbacks
-		//glfwSetWindowUserPointer(m_Window, &m_Data);
-//
-		//// VSync par defaut
-		//SetVSync(true);
-//
-		//// =============================================================================
-		//// Setup GLFW Callbacks
-		//// =============================================================================
-//
-		//// Window resize
-		//glfwSetWindowSizeCallback(m_Window, [](GLFWwindow* window, int width, int height)
-		//	{
-		//		WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
-		//		data.Width = width;
-		//		data.Height = height;
-//
-		//		WindowResizeEvent event(width, height);
-		//		data.EventCallback(event);
-		//	});
-//
-		//// Window close
-		//glfwSetWindowCloseCallback(m_Window, [](GLFWwindow* window)
-		//	{
-		//		WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
-		//		WindowCloseEvent event;
-		//		data.EventCallback(event);
-		//	});
-//
-		//// Key events
-		//glfwSetKeyCallback(m_Window, [](GLFWwindow* window, int key, int scancode, int action, int mods)
-		//	{
-		//		WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
-//
-		//		switch (action)
-		//		{
-		//		case GLFW_PRESS:
-		//		{
-		//			KeyPressedEvent event(key, false);
-		//			data.EventCallback(event);
-		//			break;
-		//		}
-		//		case GLFW_RELEASE:
-		//		{
-		//			KeyReleasedEvent event(key);
-		//			data.EventCallback(event);
-		//			break;
-		//		}
-		//		case GLFW_REPEAT:
-		//		{
-		//			KeyPressedEvent event(key, true);
-		//			data.EventCallback(event);
-		//			break;
-		//		}
-		//		}
-		//	});
-//
-		//// Char callback (pour text input)
-		//glfwSetCharCallback(m_Window, [](GLFWwindow* window, unsigned int keycode)
-		//	{
-		//		WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
-		//		KeyTypedEvent event(keycode);
-		//		data.EventCallback(event);
-		//	});
-//
-		//// Mouse button events
-		//glfwSetMouseButtonCallback(m_Window, [](GLFWwindow* window, int button, int action, int mods)
-		//	{
-		//		WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
-//
-		//		switch (action)
-		//		{
-		//		case GLFW_PRESS:
-		//		{
-		//			MouseButtonPressedEvent event(button);
-		//			data.EventCallback(event);
-		//			break;
-		//		}
-		//		case GLFW_RELEASE:
-		//		{
-		//			MouseButtonReleasedEvent event(button);
-		//			data.EventCallback(event);
-		//			break;
-		//		}
-		//		}
-		//	});
-//
-		//// Mouse scroll
-		//glfwSetScrollCallback(m_Window, [](GLFWwindow* window, double xOffset, double yOffset)
-		//	{
-		//		WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
-		//		MouseScrolledEvent event((float)xOffset, (float)yOffset);
-		//		data.EventCallback(event);
-		//	});
-//
-		//// Mouse position
-		//glfwSetCursorPosCallback(m_Window, [](GLFWwindow* window, double xPos, double yPos)
-		//	{
-		//		WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
-		//		MouseMovedEvent event((float)xPos, (float)yPos);
-		//		data.EventCallback(event);
-		//	});
 	}
 
 	void WindowsWindow::Shutdown()
@@ -368,6 +272,6 @@ namespace Opaax
 
 	void WindowsWindow::SwapBuffers()
     {
-	    glfwSwapBuffers(m_Window);
+	    m_Context->SwapBuffers();
     }
 }

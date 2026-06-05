@@ -26,8 +26,8 @@ namespace Opaax::Editor
         void Load  (OpaaxStringID InID) override;
         void Reload(OpaaxStringID InID) override;
 
-        bool CanPreview()                   const override { return true; }
-        void DrawPreview(OpaaxStringID InID)      override;
+        bool CanPreview()                                                 const override { return true; }
+        void DrawPreview(OpaaxStringID InID, IEditorUIBackend& InUIBackend)      override;
     };
 
 } // namespace Opaax::Editor

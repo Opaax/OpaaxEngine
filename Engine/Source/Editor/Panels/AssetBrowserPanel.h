@@ -13,6 +13,7 @@
 namespace Opaax
 {
     class SceneManager;
+    class IEditorUIBackend;
 }
 
 namespace Opaax::Editor
@@ -47,13 +48,14 @@ namespace Opaax::Editor
         void RunScan();
 
         // Primary entry point — called directly by EditorSubsystem (mirrors HierarchyPanel pattern).
-        // The SceneManager is needed to mark the currently loaded scene as such in the list.
-        void Draw(SceneManager& InSceneMgr);
+        // The SceneManager is needed to mark the currently loaded scene as such in the list; the
+        // UI backend resolves per-backend ImGui texture handles for asset thumbnails.
+        void Draw(SceneManager& InSceneMgr, IEditorUIBackend& InUIBackend);
 
     private:
         void DrawToolbar();
-        void DrawAssetList(SceneManager& InSceneMgr);
-        void DrawAssetEntry(const AssetDescriptor& InDesc, SceneManager& InSceneMgr);
+        void DrawAssetList(SceneManager& InSceneMgr, IEditorUIBackend& InUIBackend);
+        void DrawAssetEntry(const AssetDescriptor& InDesc, SceneManager& InSceneMgr, IEditorUIBackend& InUIBackend);
 
         // =============================================================================
         // Override

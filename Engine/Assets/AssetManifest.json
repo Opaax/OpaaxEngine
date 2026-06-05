@@ -279,6 +279,11 @@
             "id": "Fonts/Roboto_SemiCondensed-ThinItalic",
             "path": "Engine/Assets/Fonts/Roboto_SemiCondensed-ThinItalic.ttf",
             "type": "Font"
+        },
+        {
+            "id": "Shaders/Sprite",
+            "path": "Engine/Assets/Shaders/Sprite.glsl",
+            "type": "Shader"
         }
     ]
 }

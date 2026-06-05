@@ -2,6 +2,7 @@
 #include "Assets/AssetHandle.hpp"
 #include "Core/OpaaxMathTypes.h"
 #include "Core/Component/OpaaxComponent.h"
+#include "Renderer/RenderLayer.h"
 
 namespace Opaax::ECS
 {
@@ -56,5 +57,10 @@ namespace Opaax::ECS
         Vector2F      UVMin   = { 0.f, 0.f };
         Vector2F      UVMax   = { 1.f, 1.f };
         bool          Visible = true;
+
+        // Draw order. Coarse band first (Layer), fine tie-break within the band (OrderInLayer,
+        // lower = drawn first/behind). Resolved by Renderer2D's batch sort — see RenderLayer.h.
+        ERenderLayer  Layer        = ERenderLayer::Default;
+        Int16         OrderInLayer = 0;
     };
 }

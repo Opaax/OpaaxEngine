@@ -4,12 +4,15 @@
 
 namespace Opaax
 {
+    class ICommandBuffer;
+    class IGraphicsContext;
+
     /**
      * @class RenderCommand
      *
-    * Static facade over the active IRenderAPI instance.
-    * Renderer2D calls RenderCommand::DrawIndexed — never raw GL/Vulkan/etc...
-    * Swapping backends means changing Init(), nothing else.
+    * Static facade over the active IRenderAPI instance. Owns the device/frame lifecycle;
+    * the per-frame draw work is recorded through the ICommandBuffer returned by
+    * GetCommandBuffer(). Swapping backends means changing Init(), nothing else.
     *
     * s_API is set once during engine startup before any rendering occurs.
     * It is never null after Init(). No null checks on the hot path.
@@ -34,15 +37,24 @@ namespace Opaax
         // =============================================================================
     public:
         /**
-         * Take the ownership of the API to encapsulate it in UniquePtr
-         * @param InAPI The API
+         * Take ownership of the API (UniquePtr) and bring it up against the graphics context.
+         * @param InAPI     The API (ownership transferred)
+         * @param InContext The already-initialized graphics context (Vulkan borrows its device)
          */
-        static void Init(IRenderAPI* InAPI);
+        static void Init(IRenderAPI* InAPI, IGraphicsContext& InContext);
         static void Shutdown();
+        static void BeginFrame();
+        static void EndFrame();
+
+        // The frame's recorder (valid between BeginFrame and EndFrame). All clear/draw/bind
+        // work goes through this — see ICommandBuffer.
+        static ICommandBuffer& GetCommandBuffer();
+
+        // Global viewport set (window-resize path).
         static void SetViewport(Uint32 X, Uint32 Y, Uint32 Width, Uint32 Height);
-        static void SetClearColor(float Red, float Green, float Blue, float Alpha);
-        static void Clear();
-        static void DrawIndexed(Uint32 IndexCount);
+
+        // Block until the GPU finishes all submitted work (teardown before destroying resources).
+        static void WaitIdle();
 
         // =============================================================================
         // Members

@@ -12,7 +12,9 @@
       "Bash(\"/c/Dev/CMake/bin/cmake.exe\" -E cat \"W:/Projet_Perso/Engines/OpaaxEngine/.claude/data/engine-structure.md\")",
       "Bash(\"/c/Dev/CMake/bin/cmake.exe\" -E echo_append)",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(md5sum engine.config.json Engine/Assets/Shaders/Sprite.glsl Engine/Assets/AssetManifest.json Game/Assets/Scenes/GameScene.scene.json)",
+      "Bash(ls -la --time-style=+%H:%M:%S engine.config.json Engine/Assets/Shaders/Sprite.glsl)"
     ]
   }
 }

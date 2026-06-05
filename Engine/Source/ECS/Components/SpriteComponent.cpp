@@ -9,13 +9,17 @@ Opaax::ECS::json Opaax::ECS::SpriteComponent::Serialize() const
                                      ? Texture.GetID().ToString()
                                      : OpaaxString();
 
+    const OpaaxString lLayerName = ToStringID(Layer).ToString();
+
     return {
             { "texture", lSerializedRef.CStr() },
             { "size",    { Size.x, Size.y } },
             { "color",   { Color.r, Color.g, Color.b, Color.a } },
             { "uv_min",  { UVMin.x, UVMin.y } },
             { "uv_max",  { UVMax.x, UVMax.y } },
-            { "visible", Visible }
+            { "visible", Visible },
+            { "layer",   lLayerName.CStr() },
+            { "order",   OrderInLayer }
     };
 }
 
@@ -48,6 +52,17 @@ void Opaax::ECS::SpriteComponent::DeserializeImplementation(const json& Json)
     
     UVMax.x = Json["uv_max"][0].get<float>();
     UVMax.y = Json["uv_max"][1].get<float>();
-    
+
     Visible = Json["visible"].get<bool>();
+
+    // Backward compat: pre-M7 scenes carry no layer/order — keep the defaults so they
+    // render unchanged (Default band, order 0).
+    if (Json.contains("layer"))
+    {
+        Layer = RenderLayerFromStringID(OpaaxStringID(Json["layer"].get<std::string>()));
+    }
+    if (Json.contains("order"))
+    {
+        OrderInLayer = Json["order"].get<Int16>();
+    }
 }

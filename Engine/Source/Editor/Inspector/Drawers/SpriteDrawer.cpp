@@ -6,6 +6,7 @@
 #include "Assets/AssetRegistry.h"
 #include "ECS/Components/SpriteComponent.h"
 #include "Editor/Assets/IAssetTypeActions.h"
+#include "Renderer/RenderLayer.h"
 #include "Renderer/Texture2D.h"
 #include "Core/Log/OpaaxLog.h"
 
@@ -70,6 +71,29 @@ namespace Opaax::Editor
         ImGui::DragFloat2("UV Min",  &lS->UVMin.x, 0.01f, 0.f, 1.f);
         ImGui::DragFloat2("UV Max",  &lS->UVMax.x, 0.01f, 0.f, 1.f);
         ImGui::Checkbox  ("Visible", &lS->Visible);
+
+        // Draw order — coarse band + fine tie-break (see RenderLayer.h).
+        const OpaaxString lCurrentLayer = ToStringID(lS->Layer).ToString();
+        if (ImGui::BeginCombo("Layer", lCurrentLayer.CStr()))
+        {
+            for (Uint8 i = 0; i < static_cast<Uint8>(ERenderLayer::Count); ++i)
+            {
+                const bool        bSelected = (i == static_cast<Uint8>(lS->Layer));
+                const OpaaxString lName     = g_RenderLayerIDs[i].ToString();
+                if (ImGui::Selectable(lName.CStr(), bSelected))
+                {
+                    lS->Layer = static_cast<ERenderLayer>(i);
+                }
+                if (bSelected) { ImGui::SetItemDefaultFocus(); }
+            }
+            ImGui::EndCombo();
+        }
+
+        int lOrder = static_cast<int>(lS->OrderInLayer);
+        if (ImGui::DragInt("Order In Layer", &lOrder, 1.f, -32768, 32767))
+        {
+            lS->OrderInLayer = static_cast<Int16>(lOrder);
+        }
     }
 
     void SpriteDrawer::Add(World& InWorld, EntityID InEntity)

@@ -157,12 +157,6 @@ namespace Opaax
             return static_cast<Uint32>(m_Kerning.size());
         }
 
-        /**
-         * Draws the full atlas as a single quad at world InPosition with InSize.
-         * Verify-gate path for M5 Step 2; removable at Step 6 close per OD-6.
-         */
-        void DebugDrawAtlas(const Vector2F& InPosition, const Vector2F& InSize) const;
-
         // =============================================================================
         // Members
         // =============================================================================

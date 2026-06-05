@@ -10,6 +10,8 @@
 
 namespace Opaax
 {
+    // NOTE: the ITexture2D::Create factory dispatch lives in RHI/BackendFactory.cpp.
+
     OpenGLTexture2D::OpenGLTexture2D(const char* InPath)
     {
         // Flip vertically — stb loads top-left origin, OpenGL expects bottom-left

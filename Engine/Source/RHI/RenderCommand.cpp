@@ -7,12 +7,12 @@ namespace Opaax
 {
     UniquePtr<IRenderAPI> RenderCommand::s_API = nullptr;
     
-    void RenderCommand::Init(IRenderAPI* InAPI)
+    void RenderCommand::Init(IRenderAPI* InAPI, IGraphicsContext& InContext)
     {
         OPAAX_CORE_ASSERT(InAPI != nullptr)
-        
+
         s_API = UniquePtr<IRenderAPI>(InAPI);
-        s_API->Init();
+        s_API->Init(InContext);
     }
 
     void RenderCommand::Shutdown()
@@ -24,23 +24,28 @@ namespace Opaax
         }
     }
 
+    void RenderCommand::BeginFrame()
+    {
+        s_API->BeginFrame();
+    }
+
+    void RenderCommand::EndFrame()
+    {
+        s_API->EndFrame();
+    }
+
+    ICommandBuffer& RenderCommand::GetCommandBuffer()
+    {
+        return s_API->GetCommandBuffer();
+    }
+
     void RenderCommand::SetViewport(Uint32 X, Uint32 Y, Uint32 Width, Uint32 Height)
     {
         s_API->SetViewport(X, Y, Width, Height);
     }
 
-    void RenderCommand::SetClearColor(float Red, float Green, float Blue, float Alpha)
+    void RenderCommand::WaitIdle()
     {
-        s_API->SetClearColor(Red, Green, Blue, Alpha);
-    }
-
-    void RenderCommand::Clear()
-    {
-        s_API->Clear();
-    }
-
-    void RenderCommand::DrawIndexed(Uint32 IndexCount)
-    {
-        s_API->DrawIndexed(IndexCount);
+        if (s_API) { s_API->WaitIdle(); }
     }
 }

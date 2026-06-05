@@ -7,14 +7,8 @@
 namespace Opaax
 {
 
-    // =============================================================================
-    // IVertexArray factory
-    // =============================================================================
-    UniquePtr<IVertexArray> IVertexArray::Create()
-    {
-        return MakeUnique<OpenGLVertexArray>();
-    }
-    
+    // NOTE: the IVertexArray::Create factory dispatch lives in RHI/BackendFactory.cpp.
+
     OpenGLVertexArray::OpenGLVertexArray()
     {
         glCreateVertexArrays(1, &m_RendererID);

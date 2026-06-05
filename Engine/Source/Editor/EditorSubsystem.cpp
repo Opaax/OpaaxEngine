@@ -1,13 +1,10 @@
 #include "EditorSubsystem.h"
-#include "GLFW/glfw3.h"
 
 #if OPAAX_WITH_EDITOR
 
 #include <filesystem>
 
 #include <imgui.h>
-#include <imgui_impl_glfw.h>
-#include <imgui_impl_opengl3.h>
 
 #include "Core/CoreEngineApp.h"
 #include "Core/OpaaxPath.h"
@@ -19,6 +16,11 @@
 #include "Renderer/Camera/CameraSubsystem.h"
 #include "Renderer/Camera/OrthographicCamera.h"
 #include "RHI/RenderCommand.h"
+#include "RHI/RenderAPI.h"
+#include "RHI/ICommandBuffer.h"
+#include "Renderer/RenderTarget.hpp"
+#include "Core/Config/EngineConfig.h"
+#include "Editor/UI/IEditorUIBackend.h"
 
 #include "Editor/Assets/AssetTypeRegistry.h"
 #include "Editor/Assets/Types/FontTypeActions.h"
@@ -51,9 +53,17 @@ namespace Opaax
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
 
+        // The editor's ImGui renderer backend matches the graphics backend (resolved from config).
+        const EBackend lBackend = RenderAPI::BackendFromString(EngineConfig::RenderBackend());
+
         ImGuiIO& lIO = ImGui::GetIO();
         lIO.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-        lIO.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+        // Multi-viewport (panel tear-out) is OpenGL-only for now — the Vulkan ImGui backend lands
+        // single-window in M8 Phase 4 and gains secondary-swapchain multi-viewport in Phase 4e.
+        if (lBackend != EBackend::Vulkan)
+        {
+            lIO.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+        }
 
         ImGui::StyleColorsDark();
 
@@ -64,11 +74,21 @@ namespace Opaax
             lStyle.Colors[ImGuiCol_WindowBg].w = 1.f;
         }
 
-        GLFWwindow* lNativeWindow = static_cast<GLFWwindow*>(
-            GetEngineApp()->GetWindow().GetNativeWindow());
+        Window& lWindow       = GetEngineApp()->GetWindow();
+        void*   lNativeWindow = lWindow.GetNativeWindow();
 
-        ImGui_ImplGlfw_InitForOpenGL(lNativeWindow, true);
-        ImGui_ImplOpenGL3_Init("#version 450");
+        // ImGui renderer backend selected from engine config — same backend as the renderer. The
+        // Vulkan UI backend borrows the live device + swapchain from the graphics context.
+        m_UIBackend = IEditorUIBackend::Create(lBackend, lNativeWindow, lWindow.GetGraphicsContext());
+        if (!m_UIBackend)
+        {
+            // No editor UI backend for the selected graphics backend (e.g. Vulkan before Phase 4).
+            // Fail the editor startup cleanly instead of dereferencing null.
+            OPAAX_CORE_ERROR("EditorSubsystem: no editor UI backend for backend '{}' — editor cannot start.",
+                             RenderAPI::BackendToString(lBackend));
+            return false;
+        }
+        m_UIBackend->Init();
 
         m_ViewportPanel.Startup();
         RegisterViewportCallbacks();
@@ -165,8 +185,8 @@ namespace Opaax
 
         m_ViewportPanel.Shutdown();
 
-        ImGui_ImplOpenGL3_Shutdown();
-        ImGui_ImplGlfw_Shutdown();
+        m_UIBackend->Shutdown();
+        m_UIBackend.reset();
         ImGui::DestroyContext();
     }
 
@@ -264,12 +284,16 @@ namespace Opaax
     {
         // Engine's OnRender clears the ViewportPanel FBO; ImGui draws to the default framebuffer,
         // which would otherwise accumulate stale pixels behind any moving panel (PassthruCentralNode
-        // + NoBackground dockspace leak last frame's content through every gap).
-        RenderCommand::SetClearColor(0.1f, 0.1f, 0.1f, 1.f);
-        RenderCommand::Clear();
+        // + NoBackground dockspace leak last frame's content through every gap). Clear the window
+        // backbuffer through the command buffer — the world/overlay passes already restored the
+        // default framebuffer (their EndRenderPass), so DefaultRenderTarget is the right target.
+        const Window& lWindow = GetEngineApp()->GetWindow();
+        DefaultRenderTarget lBackbuffer(lWindow.GetWidth(), lWindow.GetHeight());
+        ICommandBuffer& lCmd = RenderCommand::GetCommandBuffer();
+        lCmd.BeginRenderPass(lBackbuffer, ELoadOp::Clear, Vector4F(0.1f, 0.1f, 0.1f, 1.f));
+        lCmd.EndRenderPass();
 
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
+        m_UIBackend->NewFrame();
         ImGui::NewFrame();
 
         ImGuiViewport* lViewport = ImGui::GetMainViewport();
@@ -317,8 +341,8 @@ namespace Opaax
 
         if (m_bShowHierarchy)    m_HierarchyPanel.Draw(*lSceneMgr, lWorld);
         if (m_bShowInspector)    m_InspectorPanel.Draw(lWorld);
-        if (m_bShowViewport)     m_ViewportPanel.Draw(m_EditorState);
-        if (m_bShowAssetBrowser) m_AssetBrowserPanel.Draw(*lSceneMgr);
+        if (m_bShowViewport)     m_ViewportPanel.Draw(m_EditorState, *m_UIBackend);
+        if (m_bShowAssetBrowser) m_AssetBrowserPanel.Draw(*lSceneMgr, *m_UIBackend);
     }
 
     // =============================================================================
@@ -434,15 +458,12 @@ namespace Opaax
     void EditorSubsystem::EndFrame()
     {
         ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        m_UIBackend->RenderDrawData();
 
         const ImGuiIO& lIO = ImGui::GetIO();
         if (lIO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         {
-            GLFWwindow* lCurrentContext = glfwGetCurrentContext();
-            ImGui::UpdatePlatformWindows();
-            ImGui::RenderPlatformWindowsDefault();
-            glfwMakeContextCurrent(lCurrentContext);
+            m_UIBackend->RenderPlatformWindows();
         }
     }
 

@@ -5,32 +5,58 @@
  
 namespace Opaax
 {
+    class ICommandBuffer;
+    class IGraphicsContext;
+
     /**
      * @interface IRenderAPI
      *
-     * Thin abstraction over raw graphics API calls (OpenGL, Vulkan, etc.).
-     * Nobody outside RHI/ calls GL functions directly — they go through here.
+     * Thin abstraction over the device + frame lifecycle of a graphics backend
+     * (OpenGL, Vulkan, etc.). Nobody outside RHI/ calls backend functions directly.
      *
-     * This is intentionally minimal. It covers the draw path only.
-     * Resource creation (buffers, shaders, textures) lives in the concrete
-     * Resource classes — they know their own API. IRenderAPI is purely the
-     * State-setting and draw-call interface.
+     * Owns the frame's command buffer: BeginFrame opens it, EndFrame submits it,
+     * GetCommandBuffer hands it to passes + Renderer2D for the duration of the frame.
+     * All clear/draw/bind work is recorded through ICommandBuffer — this interface no
+     * longer carries per-draw state (it moved there with the command-recording reshape).
+     *
+     * Resource creation (buffers, shaders, textures, pipelines) lives in the concrete
+     * resource classes via their own Create factories — they know their own API.
      */
     class OPAAX_API IRenderAPI
     {
     public:
         virtual ~IRenderAPI() = default;
 
-        virtual void Init()                                                         = 0;
-        virtual void SetViewport(Uint32 X, Uint32 Y, Uint32 Width, Uint32 Height)   = 0;
-        virtual void SetClearColor(float Red, float Green, float Blue, float Alpha) = 0;
-        virtual void Clear()                                                        = 0;
+        /**
+         * Bring the device up against the already-initialized graphics context.
+         * OpenGL ignores the context (GL state is global). Vulkan borrows the shared
+         * VulkanDevice + swapchain the context owns (it acquires images + submits; the
+         * context presents) — see VulkanRenderAPI.
+         */
+        virtual void Init(IGraphicsContext& InContext) = 0;
 
         /**
-         * called by Renderer2D after binding VAO and shader
-         * @param IndexCount 
+         * Per-frame begin/end bracket around all draw submission for the frame.
+         * OpenGL: resets the frame's (immediate-executing) command buffer. An explicit
+         * backend (Vulkan) acquires the swapchain image + begins recording (BeginFrame),
+         * then ends + submits (EndFrame). Present itself is the graphics context's job
+         * (IGraphicsContext::SwapBuffers), not the render API's.
          */
-        virtual void DrawIndexed(Uint32 IndexCount) = 0;
+        virtual void BeginFrame() = 0;
+        virtual void EndFrame()   = 0;
+
+        // The frame's recorder, valid between BeginFrame and EndFrame.
+        virtual ICommandBuffer& GetCommandBuffer() = 0;
+
+        // Global viewport set (window-resize path; per-pass viewport rides BeginRenderPass).
+        virtual void SetViewport(Uint32 X, Uint32 Y, Uint32 Width, Uint32 Height) = 0;
+
+        /**
+         * Block until the GPU has finished all submitted work. Required before destroying GPU
+         * resources still referenced by in-flight frames (teardown / device-lost). OpenGL flushes
+         * (glFinish); an explicit backend (Vulkan) waits the device idle.
+         */
+        virtual void WaitIdle() = 0;
     };
- 
+
 } // namespace Opaax

@@ -46,6 +46,11 @@ namespace Opaax
         // ---- Logging --------------------------------------------------------
         static const OpaaxString& LogLevel() noexcept { return s_LogLevel; }
 
+        // ---- Render ---------------------------------------------------------
+        // Graphics backend name ("OpenGL" today). Kept as a string here so Core/Config
+        // carries no dependency on RHI — RHI maps this to its EBackend enum.
+        static const OpaaxString& RenderBackend() noexcept { return s_RenderBackend; }
+
     private:
         static bool GenerateDefault(const OpaaxString& InAbsPath);
 
@@ -55,5 +60,6 @@ namespace Opaax
         static OpaaxString s_EngineAssetsRoot;
         static OpaaxString s_EngineManifestRelPath;
         static OpaaxString s_LogLevel;
+        static OpaaxString s_RenderBackend;
     };
 } // namespace Opaax

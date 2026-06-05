@@ -2,7 +2,6 @@
 
 #include <cstring>
 #include <filesystem>
-#include <iostream>
 
 #include "Window.h"
 #include <GLFW/glfw3.h>
@@ -14,8 +13,10 @@
 #include "Assets/AssetRegistry.h"
 #include "Assets/Loader/FontLoader.h"
 #include "Assets/Loader/SceneLoader.h"
+#include "Assets/Loader/ShaderLoader.h"
 #include "Assets/Loader/TextureLoader.h"
 #include "Renderer/Text/FontAsset.h"
+#include "RHI/RenderCommand.h"
 #include "Scene/SceneAsset.h"
 #include "Config/EngineConfig.h"
 #include "Config/ProjectConfig.h"
@@ -29,6 +30,7 @@
 #include "Renderer/Camera/CameraControllerSystem.h"
 #include "Renderer/Renderer2D.h"
 #include "Renderer/RenderSubsystem.h"
+#include "Renderer/ShaderAsset.h"
 #include "Renderer/Systems/WorldRenderSystem.h"
 #include "RHI/RenderCommand.h"
 #include "Scene/Scene.h"
@@ -114,10 +116,8 @@ CoreEngineApp::CoreEngineApp(int InArgc, char** InArgv)
     m_RenderTarget          = m_DefaultRenderTarget.get();
 }
 
-CoreEngineApp::~CoreEngineApp()
-{
-    std::cout << "CoreEngineApp -- DESTROYED!" << std::endl;
-}
+// Out-of-line (defaulted) so the UniquePtr members' deleters see complete types here.
+CoreEngineApp::~CoreEngineApp() = default;
 
 void CoreEngineApp::DispatchEvent(OpaaxEvent& Event)
 {
@@ -184,11 +184,9 @@ void CoreEngineApp::OnShutdown()
     // NOTE: Scene persistence at shutdown is a game/editor concern, not engine-mandatory.
     //   In editor builds the user drives saves explicitly (Ctrl+S / Save As).
     //   Shipping games can override OnShutdown or persist via Scene::OnUnload as needed.
-
-    // NOTE: Assets must be destroyed before subsystems — textures and GPU resources
-    //   must be freed while the GL context (owned by RenderSubsystem) is still alive.
-    //OnShutdown is called before subsystem shutdown
-    AssetRegistry::Shutdown();
+    //
+    // Asset teardown is NOT here — it moved to CoreEngineApp::Shutdown() so it runs even when a
+    // game override does not call the base. This hook is now purely a game-overridable notification.
 }
 
 void CoreEngineApp::Initialize()
@@ -209,6 +207,7 @@ void CoreEngineApp::Initialize()
     AssetLoaderRegistry::Register<Texture2D>(MakeUnique<TextureLoader>());
     AssetLoaderRegistry::Register<SceneAsset>(MakeUnique<SceneLoader>());
     AssetLoaderRegistry::Register<FontAsset>(MakeUnique<FontLoader>());
+    AssetLoaderRegistry::Register<ShaderAsset>(MakeUnique<ShaderLoader>());
 
     // Engine component types — every game-shared, scene-serializable type lives here.
     // Tag / Uuid are special-cased at the entity-json top level (display name, stable id)
@@ -376,11 +375,14 @@ void CoreEngineApp::Run()
         // ----------------------------------------------------------------
         const double lAlpha = lAccumulator / FIXED_DELTA_TIME;
 
+        // Frame bracket — backend-neutral. OpenGL: near-empty. Vulkan: acquire+record / submit.
+        RenderCommand::BeginFrame();
         OnRender(lAlpha);
         m_EngineSubsystemManager.RenderAll(lAlpha);
-        
+        RenderCommand::EndFrame();
+
         // ----------------------------------------------------------------
-        // 3. Swap AFTER render, always last
+        // 3. Present AFTER render, always last (graphics context owns the swap).
         // ----------------------------------------------------------------
         m_Window->SwapBuffers();
     }
@@ -395,8 +397,20 @@ void CoreEngineApp::Shutdown()
     OPAAX_CORE_TRACE("CoreEngineApp::Shutdown()");
     
     bIsRunning = false;
-    
+
+    // The render loop has stopped, but the last submitted frame may still be executing on the GPU.
+    // Block until the device is idle BEFORE any GPU resource is destroyed below (assets, Renderer2D,
+    // the device itself) — destroying a resource still referenced by an in-flight frame is illegal
+    // on an explicit backend (Vulkan VUIDs). Single authoritative barrier for all GPU teardown.
+    RenderCommand::WaitIdle();
+
     OnShutdown();
+
+    // Engine-guaranteed: free all GPU-backed assets (textures, etc.) here, NOT in the virtual
+    // OnShutdown — a game override may not call the base, and these must be released while the
+    // graphics device/context (owned by the window, alive for all of Shutdown()) still exists.
+    // A texture outliving its device makes Vulkan/VMA assert; on OpenGL it leaked silently.
+    AssetRegistry::Shutdown();
 
     // Game subsystems shut down first — they may still call into engine services
     // (Renderer, World, AssetRegistry) during their Shutdown.
@@ -419,27 +433,10 @@ void CoreEngineApp::Shutdown()
 
 void CoreEngineApp::OnRender(double AlphaPhysicStep)
 {
-    IRenderTarget& lTarget = GetRenderTarget();
-    lTarget.Bind();
-
-    RenderCommand::SetClearColor(0.1f, 0.1f, 0.1f, 1.f);
-    RenderCommand::Clear();
-
-    ICamera& lCamera = GetSubsystem<CameraSubsystem>()->GetActiveCamera();
-    Renderer2D::Begin(lCamera);
-
-    if (GetSceneManager()->GetActiveScene())
-    {
-        World& lWorld = GetWorld();
-        const RenderContext lCtx{ lCamera, AlphaPhysicStep };
-        for (const auto& lSystem : TPolymorphicList<IWorldSystem>::GetAll())
-        {
-            lSystem->OnRender(lWorld, lCtx);
-        }
-    }
-
-    Renderer2D::End();
-    lTarget.Unbind();
+    // The whole frame is the render pipeline now: an ordered IRenderPass list owned by
+    // RenderSubsystem. Each pass picks its own camera/clear and submits draws. The target
+    // (backbuffer in release, ViewportPanel FBO in editor) is selected the same way as before.
+    GetSubsystem<RenderSubsystem>()->GetPipeline().Execute(GetRenderTarget(), AlphaPhysicStep);
 }
 
 World& CoreEngineApp::GetWorld() noexcept

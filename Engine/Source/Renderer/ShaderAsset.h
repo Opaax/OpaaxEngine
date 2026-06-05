@@ -9,7 +9,7 @@
 
 namespace Opaax
 {
-    class OpenGLShader;
+    class IShader;
 
     // =============================================================================
     // ShaderAsset
@@ -17,9 +17,9 @@ namespace Opaax
     /**
      * @class ShaderAsset
      *
-     * Logical shader asset. Composes a UniquePtr<OpenGLShader> as the GPU
-     * resource — the IAsset surface lives here, the GL program object stays
-     * inside OpenGLShader.
+     * Logical shader asset. Composes a UniquePtr<IShader> as the GPU resource —
+     * the IAsset surface lives here, the backend program object stays inside the
+     * concrete IShader impl (OpenGLShader today). Never names a backend type.
      *
      * Shaders today are built from inline string literals at engine init
      * (Renderer2D); no on-disk shader files exist yet, so there is no
@@ -36,11 +36,14 @@ namespace Opaax
         // =============================================================================
     public:
         /**
-         * Compile + link a vertex/fragment shader pair. Asset ID empty (runtime-built),
-         * source path empty. State ends as Loaded; OpenGLShader asserts on
-         * compile/link failure rather than reporting through state.
+         * Load a shader from a single on-disk file containing `#type vertex` / `#type fragment`
+         * sections (GLSL today). The ctor reads + splits the file into a ShaderDesc and builds
+         * the backend IShader via IShader::Create. State ends Loaded on success, Failed if the
+         * file is missing, a stage is empty, or GPU compile/link fails (fail-loud, logged).
+         * @param InSourcePath Path to the .glsl file (project/engine-relative; stored verbatim).
+         * @param InAssetID    Registry-stable logical ID.
          */
-        ShaderAsset(const char* InVertexSrc, const char* InFragmentSrc);
+        ShaderAsset(const OpaaxString& InSourcePath, OpaaxStringID InAssetID);
 
         ~ShaderAsset() override;
 
@@ -68,6 +71,11 @@ namespace Opaax
         //~ End IAsset interface
 
     public:
+        bool IsLoaded() const noexcept { return m_State == EAssetState::Loaded; }
+
+        // The composed backend shader — for pipeline creation (PipelineDesc::Shader). Not owned by the caller.
+        IShader* GetRHIShader() const noexcept { return m_Gpu.get(); }
+
         void Bind()   const;
         void Unbind() const;
 
@@ -89,7 +97,7 @@ namespace Opaax
         OpaaxStringID            m_AssetID    = {};
         OpaaxString              m_SourcePath;
         EAssetState              m_State      = EAssetState::Unloaded;
-        UniquePtr<OpenGLShader>  m_Gpu;
+        UniquePtr<IShader>       m_Gpu;
     };
 
 } // namespace Opaax

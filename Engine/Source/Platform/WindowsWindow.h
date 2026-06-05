@@ -5,6 +5,8 @@
 
 namespace Opaax
 {
+    class IGraphicsContext;
+
     /**
      * @class WindowsWindow
      */
@@ -40,6 +42,8 @@ namespace Opaax
 
         void* GetNativeWindow() const override { return m_Window; }
 
+        IGraphicsContext* GetGraphicsContext() const override { return m_Context.get(); }
+
         void SetEventCallback(const EventCallbackFunc& Callback) override { m_Data.EventCallback = Callback; }
         //~End Window interface
 
@@ -48,7 +52,10 @@ namespace Opaax
         // =============================================================================
     private:
         GLFWwindow* m_Window;
-        
+
+        // Backend graphics context — owns make-current, glad load, vsync, present.
+        UniquePtr<IGraphicsContext> m_Context;
+
         struct WindowData
         {
             String Title;
