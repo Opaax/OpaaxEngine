@@ -26,15 +26,20 @@
 #include "Editor/Assets/Types/FontTypeActions.h"
 #include "Editor/Assets/Types/SceneTypeActions.h"
 #include "Editor/Assets/Types/Texture2DTypeActions.h"
+#include "Editor/Assets/Types/CollisionProfileTypeActions.h"
 #include "Editor/Events/EditorEvents.h"
 #include "Editor/Inspector/Drawers/TagDrawer.h"
 #include "Editor/Inspector/Drawers/TransformDrawer.h"
 #include "Editor/Inspector/Drawers/SpriteDrawer.h"
+#include "Editor/Inspector/Drawers/RigidbodyDrawer.h"
+#include "Editor/Inspector/Drawers/ColliderDrawer.h"
 
 #include "ECS/ComponentRegistry.h"
 #include "ECS/Components/TagComponent.h"
 #include "ECS/Components/TransformComponent.h"
 #include "ECS/Components/SpriteComponent.h"
+#include "ECS/Components/RigidbodyComponent.h"
+#include "ECS/Components/ColliderComponent.h"
 
 namespace Opaax
 {
@@ -130,6 +135,7 @@ namespace Opaax
         Editor::AssetTypeRegistry::Register(MakeUnique<Editor::Texture2DTypeActions>());
         Editor::AssetTypeRegistry::Register(MakeUnique<Editor::SceneTypeActions>(GetEngineApp()));
         Editor::AssetTypeRegistry::Register(MakeUnique<Editor::FontTypeActions>());
+        Editor::AssetTypeRegistry::Register(MakeUnique<Editor::CollisionProfileTypeActions>());
 
         OPAAX_CORE_TRACE("EditorSubsystem: asset type actions registered.");
     }
@@ -139,6 +145,8 @@ namespace Opaax
         ComponentRegistry::RegisterDrawer<ECS::TagComponent>      (MakeUnique<Editor::TagDrawer>());
         ComponentRegistry::RegisterDrawer<ECS::TransformComponent>(MakeUnique<Editor::TransformDrawer>());
         ComponentRegistry::RegisterDrawer<ECS::SpriteComponent>   (MakeUnique<Editor::SpriteDrawer>());
+        ComponentRegistry::RegisterDrawer<ECS::RigidbodyComponent>(MakeUnique<Editor::RigidbodyDrawer>());
+        ComponentRegistry::RegisterDrawer<ECS::ColliderComponent> (MakeUnique<Editor::ColliderDrawer>());
 
         OPAAX_CORE_TRACE("EditorSubsystem: component drawers registered.");
     }

@@ -51,6 +51,11 @@ namespace Opaax
         // carries no dependency on RHI — RHI maps this to its EBackend enum.
         static const OpaaxString& RenderBackend() noexcept { return s_RenderBackend; }
 
+        // ---- Physics --------------------------------------------------------
+        // Physics backend name ("Box2D" today). String here so Core/Config carries no
+        // dependency on Physics — Physics maps this to its EPhysicsBackend enum.
+        static const OpaaxString& PhysicsBackend() noexcept { return s_PhysicsBackend; }
+
     private:
         static bool GenerateDefault(const OpaaxString& InAbsPath);
 
@@ -61,5 +66,6 @@ namespace Opaax
         static OpaaxString s_EngineManifestRelPath;
         static OpaaxString s_LogLevel;
         static OpaaxString s_RenderBackend;
+        static OpaaxString s_PhysicsBackend;
     };
 } // namespace Opaax

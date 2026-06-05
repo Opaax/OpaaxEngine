@@ -29,6 +29,9 @@ file(GLOB_RECURSE ENGINE_CORE_SOURCES
     "Source/World/*.cpp"
     "Source/World/*.h"
     "Source/World/*.hpp"
+    "Source/Physics/*.cpp"
+    "Source/Physics/*.h"
+    "Source/Physics/*.hpp"
 )
 
 set(ENGINE_SOURCES ${ENGINE_CORE_SOURCES})
@@ -216,6 +219,24 @@ target_include_directories(nlohmann_json INTERFACE Vendors/nlohmann)
 message(STATUS "nlohmann/json: header-only interface target created")
 # ==================================
 # END nlohmann/json
+# ==================================
+
+# ==================================
+# Box2D (2D physics)
+# ==================================
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Vendors/box2d/include/box2d/box2d.h")
+    message(FATAL_ERROR
+        "Box2D not found in Engine/Vendors/box2d!\n"
+        "Please run: git clone https://github.com/erincatto/box2d.git Engine/Vendors/box2d"
+    )
+endif()
+
+# Box2D guards its samples/tests/benchmarks behind PROJECT_IS_TOP_LEVEL, so as a
+# sub-directory only the 'box2d' static lib target is built — nothing to turn off.
+add_subdirectory(Vendors/box2d)
+message(STATUS "Box2D: static lib target 'box2d' created")
+# ==================================
+# END Box2D
 # ==================================
 
 # ==================================
@@ -407,6 +428,7 @@ target_link_libraries(OpaaxEngine
         glad
         entt
         nlohmann_json
+        box2d
 )
 
 target_link_libraries(OpaaxEngine
@@ -441,6 +463,7 @@ target_include_directories(OpaaxEngine
         ${CMAKE_CURRENT_SOURCE_DIR}/Vendors
         ${CMAKE_CURRENT_SOURCE_DIR}/Vendors/Entt/entt/single_include
         ${CMAKE_CURRENT_SOURCE_DIR}/Vendors/nlohmann
+        ${CMAKE_CURRENT_SOURCE_DIR}/Vendors/box2d/include
         ${OPAAX_GLSLANG_INCLUDE}
         ${OPAAX_VULKAN_INCLUDE}                                  # vulkan/ + vma/ (empty if no SDK)
         ${CMAKE_CURRENT_SOURCE_DIR}/Vendors/vk-bootstrap/src     # VkBootstrap.h (guarded by OPAAX_HAS_VULKAN)

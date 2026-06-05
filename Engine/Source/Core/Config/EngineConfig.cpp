@@ -17,6 +17,7 @@ namespace Opaax
     OpaaxString EngineConfig::s_EngineManifestRelPath = OpaaxString("Engine/Assets/AssetManifest.json");
     OpaaxString EngineConfig::s_LogLevel              = OpaaxString("trace");
     OpaaxString EngineConfig::s_RenderBackend         = OpaaxString("OpenGL");
+    OpaaxString EngineConfig::s_PhysicsBackend        = OpaaxString("Box2D");
 
     bool EngineConfig::GenerateDefault(const OpaaxString& InAbsPath)
     {
@@ -45,7 +46,8 @@ namespace Opaax
                 { "engineManifest", s_EngineManifestRelPath.CStr() }
             };
             lRoot["log"]    = { { "level",   s_LogLevel.CStr()      } };
-            lRoot["render"] = { { "backend", s_RenderBackend.CStr() } };
+            lRoot["render"]  = { { "backend", s_RenderBackend.CStr()  } };
+            lRoot["physics"] = { { "backend", s_PhysicsBackend.CStr() } };
 
             lFile << lRoot.dump(4);
 
@@ -132,8 +134,17 @@ namespace Opaax
             }
         }
 
-        OPAAX_CORE_INFO("EngineConfig: loaded '{}' (window={}x{}, log={}, backend={})",
-            InAbsPath, s_WindowWidth, s_WindowHeight, s_LogLevel, s_RenderBackend);
+        if (lRoot.contains("physics") && lRoot["physics"].is_object())
+        {
+            const auto& lP = lRoot["physics"];
+            if (lP.contains("backend") && lP["backend"].is_string())
+            {
+                s_PhysicsBackend = OpaaxString(lP["backend"].get<std::string>().c_str());
+            }
+        }
+
+        OPAAX_CORE_INFO("EngineConfig: loaded '{}' (window={}x{}, log={}, render={}, physics={})",
+            InAbsPath, s_WindowWidth, s_WindowHeight, s_LogLevel, s_RenderBackend, s_PhysicsBackend);
 
         return true;
     }
@@ -165,7 +176,8 @@ namespace Opaax
                 { "engineManifest", s_EngineManifestRelPath.CStr() }
             };
             lRoot["log"]    = { { "level",   s_LogLevel.CStr()      } };
-            lRoot["render"] = { { "backend", s_RenderBackend.CStr() } };
+            lRoot["render"]  = { { "backend", s_RenderBackend.CStr()  } };
+            lRoot["physics"] = { { "backend", s_PhysicsBackend.CStr() } };
 
             lFile << lRoot.dump(4);
 

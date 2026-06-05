@@ -15,6 +15,8 @@
 #include "Assets/Loader/SceneLoader.h"
 #include "Assets/Loader/ShaderLoader.h"
 #include "Assets/Loader/TextureLoader.h"
+#include "Assets/Loader/CollisionProfileLoader.h"
+#include "Physics/Collision/CollisionProfile.h"
 #include "Renderer/Text/FontAsset.h"
 #include "RHI/RenderCommand.h"
 #include "Scene/SceneAsset.h"
@@ -37,6 +39,7 @@
 #include "Scene/SceneFactory.h"
 #include "Scene/SceneManager.h"
 #include "Systems/EngineSubsystem.h"
+#include "Systems/PhysicsSubsystem.h"
 #include "World/IWorldSystem.h"
 #include "World/RenderContext.h"
 
@@ -46,6 +49,8 @@
 #include "ECS/Components/TransformComponent.h"
 #include "ECS/Components/SpriteComponent.h"
 #include "ECS/Components/ParentComponent.h"
+#include "ECS/Components/RigidbodyComponent.h"
+#include "ECS/Components/ColliderComponent.h"
 
 #if OPAAX_WITH_EDITOR
 #include "Editor/EditorSubsystem.h"
@@ -192,7 +197,7 @@ void CoreEngineApp::OnShutdown()
 void CoreEngineApp::Initialize()
 {
     OPAAX_CORE_TRACE("CoreEngineApp::Initialize()");
-    
+
 // #if OPAAX_WITH_EDITOR
 //     if (IsDebugMode())
 //     {
@@ -208,6 +213,7 @@ void CoreEngineApp::Initialize()
     AssetLoaderRegistry::Register<SceneAsset>(MakeUnique<SceneLoader>());
     AssetLoaderRegistry::Register<FontAsset>(MakeUnique<FontLoader>());
     AssetLoaderRegistry::Register<ShaderAsset>(MakeUnique<ShaderLoader>());
+    AssetLoaderRegistry::Register<CollisionProfile>(MakeUnique<CollisionProfileLoader>());
 
     // Engine component types — every game-shared, scene-serializable type lives here.
     // Tag / Uuid are special-cased at the entity-json top level (display name, stable id)
@@ -219,6 +225,8 @@ void CoreEngineApp::Initialize()
     ComponentRegistry::Register<ECS::TransformComponent>("TransformComponent");
     ComponentRegistry::Register<ECS::SpriteComponent>   ("SpriteComponent");
     ComponentRegistry::Register<ECS::ParentComponent>   ("ParentComponent",    /*bShowInAddMenu*/ false);
+    ComponentRegistry::Register<ECS::RigidbodyComponent>("RigidbodyComponent");
+    ComponentRegistry::Register<ECS::ColliderComponent> ("ColliderComponent");
 
     // Scene types — engine knows about the base Scene under "Untitled" so the
     // editor's empty-stack fallback (SceneManager::NewScene) survives PIE Stop.
@@ -244,6 +252,9 @@ void CoreEngineApp::Initialize()
     m_EngineSubsystemManager.RegisterSubsystem<InputSubsystem>(this);
 
     m_EngineSubsystemManager.RegisterSubsystem<SceneManager>(this);
+
+    // After SceneManager: a scene must exist before physics builds bodies from it.
+    m_EngineSubsystemManager.RegisterSubsystem<PhysicsSubsystem>(this);
 
 #if OPAAX_WITH_EDITOR
     m_EngineSubsystemManager.RegisterSubsystem<EditorSubsystem>(this);
@@ -346,6 +357,21 @@ void CoreEngineApp::Run()
 #else
         constexpr bool bAllowPlayOnly = true;
 #endif
+
+        // ----------------------------------------------------------------
+        // 2.0.1 Play-session edges — fire OnPlayBegin/OnPlayEnd on the transition
+        //   so subsystems can build/tear down per-play state (e.g. physics bodies)
+        //   exactly once around a session. Release: one rising edge at startup.
+        // ----------------------------------------------------------------
+        if (bAllowPlayOnly && !bWasPlaying)
+        {
+            m_EngineSubsystemManager.OnPlayBeginAll();
+        }
+        else if (!bAllowPlayOnly && bWasPlaying)
+        {
+            m_EngineSubsystemManager.OnPlayEndAll();
+        }
+        bWasPlaying = bAllowPlayOnly;
 
         // ----------------------------------------------------------------
         // 2.1 Variable update — gameplay, animations, AI

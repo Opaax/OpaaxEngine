@@ -79,6 +79,16 @@ namespace Opaax
          */
         virtual bool   IsPlayOnly() const noexcept              { return false; }
 
+        /**
+         * Per-play-session edges, fired by CoreEngineApp on the play-state transition
+         * (editor Play/Stop; once at startup in release). OnPlayBegin runs before the
+         * first gameplay tick of a session, OnPlayEnd after the last — the place to build
+         * and tear down per-play state (e.g. physics bodies) that must not leak across
+         * sessions. Called regardless of IsPlayOnly. Default no-op.
+         */
+        virtual void   OnPlayBegin()                            {}
+        virtual void   OnPlayEnd()                              {}
+
         /*----------------------------- Get - Set -------------------------------*/
     public:
         CoreEngineApp* GetEngineApp() const noexcept { return m_EngineApp; }
@@ -168,6 +178,11 @@ namespace Opaax
         // bAllowPlayOnly is false (editor in Editing or Paused state).
         void UpdateAll(double DeltaTime, bool bAllowPlayOnly);
         void FixedUpdateAll(double FixedDeltaTime, bool bAllowPlayOnly);
+
+        // Broadcast the per-play-session edges to every subsystem (registration order
+        // for Begin, reverse for End — mirrors Startup/Shutdown symmetry).
+        void OnPlayBeginAll();
+        void OnPlayEndAll();
 
         void DispatchEventAll(OpaaxEvent& Event);
     };

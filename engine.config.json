@@ -6,6 +6,9 @@
     "log": {
         "level": "trace"
     },
+    "physics": {
+        "backend": "Box2D"
+    },
     "render": {
         "backend": "OpenGL"
     },
