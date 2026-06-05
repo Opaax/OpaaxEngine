@@ -45,7 +45,7 @@ namespace Opaax
 
         Uint32 GetWidth()      const noexcept override { return m_Width; }
         Uint32 GetHeight()     const noexcept override { return m_Height; }
-        Uint32 GetRendererID() const noexcept override { return 0; }   // editor handle is Phase 4
+        Uint32 GetRendererID() const noexcept override { return 0; }   // editor uses GetTextureID seam (image view + sampler)
         bool   IsLoaded()      const noexcept override { return m_Loaded; }
         //~End ITexture2D interface
 

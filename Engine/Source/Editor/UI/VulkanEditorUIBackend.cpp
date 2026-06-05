@@ -6,6 +6,7 @@
 #include "RHI/Vulkan/VulkanSwapchain.h"
 #include "RHI/Vulkan/VulkanCommandBuffer.h"
 #include "RHI/Vulkan/VulkanFramebuffer.h"
+#include "RHI/Vulkan/VulkanTexture2D.h"
 #include "RHI/RenderCommand.h"
 #include "RHI/ICommandBuffer.h"
 #include "Renderer/RenderTarget.hpp"
@@ -42,13 +43,14 @@ namespace Opaax
             return;
         }
 
-        // Descriptor pool for ImGui (font atlas + the AddTexture viewport image, plus headroom).
-        // FREE_DESCRIPTOR_SET lets RemoveTexture recycle a set on viewport resize.
-        VkDescriptorPoolSize lPoolSize{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 64 };
+        // Descriptor pool for ImGui (font atlas + the AddTexture viewport image + one set per
+        // asset-browser thumbnail, plus headroom). FREE_DESCRIPTOR_SET lets RemoveTexture recycle
+        // a set on viewport resize.
+        VkDescriptorPoolSize lPoolSize{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 256 };
 
         VkDescriptorPoolCreateInfo lPoolInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
         lPoolInfo.flags         = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-        lPoolInfo.maxSets       = 64;
+        lPoolInfo.maxSets       = 256;
         lPoolInfo.poolSizeCount = 1;
         lPoolInfo.pPoolSizes    = &lPoolSize;
         if (vkCreateDescriptorPool(m_Device->GetDevice(), &lPoolInfo, nullptr, &m_DescriptorPool) != VK_SUCCESS)
@@ -96,6 +98,12 @@ namespace Opaax
             ImGui_ImplVulkan_RemoveTexture(m_ViewportTexture);
             m_ViewportTexture = VK_NULL_HANDLE;
         }
+
+        for (auto& [lView, lSet] : m_TextureCache)
+        {
+            ImGui_ImplVulkan_RemoveTexture(lSet);
+        }
+        m_TextureCache.clear();
 
         ImGui_ImplVulkan_Shutdown();
         ImGui_ImplGlfw_Shutdown();
@@ -179,6 +187,28 @@ namespace Opaax
         // The offscreen image is top-down and rendered with a negative viewport, so sample straight.
         return { reinterpret_cast<Uint64>(m_ViewportTexture),
                  Vector2F(0.f, 0.f), Vector2F(1.f, 1.f) };
+    }
+
+    Uint64 VulkanEditorUIBackend::GetTextureID(ITexture2D& InTex)
+    {
+        auto&             lTex     = static_cast<VulkanTexture2D&>(InTex);
+        const VkImageView lView    = lTex.GetImageView();
+        const VkSampler   lSampler = lTex.GetSampler();
+        if (lView == VK_NULL_HANDLE || lSampler == VK_NULL_HANDLE) { return 0; }
+
+        // Mint the ImGui descriptor set once per texture (keyed by its stable image view) and reuse
+        // it every frame — AddTexture allocates from m_DescriptorPool, so repeating it would exhaust
+        // the pool.
+        auto lIt = m_TextureCache.find(lView);
+        if (lIt == m_TextureCache.end())
+        {
+            const VkDescriptorSet lSet = ImGui_ImplVulkan_AddTexture(
+                lSampler, lView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+            if (lSet == VK_NULL_HANDLE) { return 0; }   // caller (TypeActions) guards null
+            lIt = m_TextureCache.emplace(lView, lSet).first;
+        }
+
+        return reinterpret_cast<Uint64>(lIt->second);
     }
 
     void VulkanEditorUIBackend::RenderPlatformWindows()

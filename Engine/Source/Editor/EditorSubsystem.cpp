@@ -342,7 +342,7 @@ namespace Opaax
         if (m_bShowHierarchy)    m_HierarchyPanel.Draw(*lSceneMgr, lWorld);
         if (m_bShowInspector)    m_InspectorPanel.Draw(lWorld);
         if (m_bShowViewport)     m_ViewportPanel.Draw(m_EditorState, *m_UIBackend);
-        if (m_bShowAssetBrowser) m_AssetBrowserPanel.Draw(*lSceneMgr);
+        if (m_bShowAssetBrowser) m_AssetBrowserPanel.Draw(*lSceneMgr, *m_UIBackend);
     }
 
     // =============================================================================

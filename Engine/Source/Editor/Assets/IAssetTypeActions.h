@@ -5,6 +5,11 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxStringID.hpp"
 
+namespace Opaax
+{
+    class IEditorUIBackend;
+}
+
 namespace Opaax::Editor
 {
     /**
@@ -29,8 +34,8 @@ namespace Opaax::Editor
         virtual void Load  (OpaaxStringID InID) = 0;
         virtual void Reload(OpaaxStringID InID) = 0;
 
-        virtual bool CanPreview()                    const { return false; }
-        virtual void DrawPreview(OpaaxStringID InID)       {}
+        virtual bool CanPreview()                                                 const { return false; }
+        virtual void DrawPreview(OpaaxStringID InID, IEditorUIBackend& InUIBackend)      {}
     };
 
 } // namespace Opaax::Editor

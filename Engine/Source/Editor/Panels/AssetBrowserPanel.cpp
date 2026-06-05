@@ -93,12 +93,12 @@ namespace Opaax::Editor
     // =============================================================================
     // Draw
     // =============================================================================
-    void AssetBrowserPanel::Draw(SceneManager& InSceneMgr)
+    void AssetBrowserPanel::Draw(SceneManager& InSceneMgr, IEditorUIBackend& InUIBackend)
     {
         ImGui::Begin("Asset Browser");
         DrawToolbar();
         ImGui::Separator();
-        DrawAssetList(InSceneMgr);
+        DrawAssetList(InSceneMgr, InUIBackend);
         ImGui::End();
 
         // Deferred manifest mutation — safe to mutate s_Descriptors here, after iteration ended.
@@ -200,7 +200,7 @@ namespace Opaax::Editor
     // =============================================================================
     // Asset list
     // =============================================================================
-    void AssetBrowserPanel::DrawAssetList(SceneManager& InSceneMgr)
+    void AssetBrowserPanel::DrawAssetList(SceneManager& InSceneMgr, IEditorUIBackend& InUIBackend)
     {
         const auto& lAll = AssetManifest::GetAll();
 
@@ -215,7 +215,7 @@ namespace Opaax::Editor
         for (const auto& [lKey, lDesc] : lAll)
         {
             if (!m_Filter.Matches(lDesc)) { continue; }
-            DrawAssetEntry(lDesc, InSceneMgr);
+            DrawAssetEntry(lDesc, InSceneMgr, InUIBackend);
             ++lVisible;
         }
 
@@ -228,7 +228,7 @@ namespace Opaax::Editor
     // =============================================================================
     // Single entry — icon, colour, D&D source, tooltip, context menu
     // =============================================================================
-    void AssetBrowserPanel::DrawAssetEntry(const AssetDescriptor& InDesc, SceneManager& InSceneMgr)
+    void AssetBrowserPanel::DrawAssetEntry(const AssetDescriptor& InDesc, SceneManager& InSceneMgr, IEditorUIBackend& InUIBackend)
     {
         // Scenes don't go through AssetRegistry — they're owned by SceneManager.
         // Treat the entry that matches GetCurrentScenePath() as "loaded" for display parity with textures.
@@ -263,7 +263,7 @@ namespace Opaax::Editor
             IAssetTypeActions* lActions = AssetTypeRegistry::Find(InDesc.Type);
             if (lActions && lActions->CanPreview() && bLoaded)
             {
-                lActions->DrawPreview(InDesc.ID);
+                lActions->DrawPreview(InDesc.ID, InUIBackend);
             }
 
             ImGui::EndDragDropSource();
@@ -285,7 +285,7 @@ namespace Opaax::Editor
             if (lActions && lActions->CanPreview() && bLoaded)
             {
                 ImGui::Spacing();
-                lActions->DrawPreview(InDesc.ID);
+                lActions->DrawPreview(InDesc.ID, InUIBackend);
             }
 
             ImGui::EndTooltip();

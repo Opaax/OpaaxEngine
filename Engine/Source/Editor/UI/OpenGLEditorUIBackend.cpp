@@ -3,6 +3,7 @@
 
 #include "Core/Log/OpaaxLog.h"
 #include "RHI/Framebuffer.h"
+#include "RHI/Texture.h"
 
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
@@ -74,6 +75,12 @@ namespace Opaax
         // The FBO is stored bottom-up, so sample with V flipped to present it upright.
         return { static_cast<Uint64>(InFB.GetColorAttachmentID()),
                  Vector2F(0.f, 1.f), Vector2F(1.f, 0.f) };
+    }
+
+    Uint64 OpenGLEditorUIBackend::GetTextureID(ITexture2D& InTex)
+    {
+        // The GL texture name IS the ImGui handle (imgui_impl_opengl3 binds it directly).
+        return static_cast<Uint64>(InTex.GetRendererID());
     }
 
     void OpenGLEditorUIBackend::RenderPlatformWindows()

@@ -4,6 +4,7 @@
 #include "Editor/UI/IEditorUIBackend.h"
 
 #include <vulkan/vulkan.h>
+#include <unordered_map>
 
 struct GLFWwindow;
 
@@ -50,6 +51,7 @@ namespace Opaax
         void RenderPlatformWindows() override;
 
         EditorViewportImage GetViewportImage(IFramebuffer& InFB) override;
+        Uint64              GetTextureID(ITexture2D& InTex)       override;
         //~End IEditorUIBackend interface
 
         // =============================================================================
@@ -72,6 +74,11 @@ namespace Opaax
 
         // One-shot guard so an unresolved viewport image logs once, not every frame.
         bool             m_LoggedNullViewport = false;
+
+        // Asset-browser thumbnails: one ImGui descriptor set per sampled texture, keyed by its
+        // VkImageView (stable for a texture's lifetime). Freed wholesale in Shutdown. A reloaded
+        // texture mints a new view → new entry; the stale one leaks until shutdown (rare in-editor).
+        std::unordered_map<VkImageView, VkDescriptorSet> m_TextureCache;
     };
 
 } // namespace Opaax

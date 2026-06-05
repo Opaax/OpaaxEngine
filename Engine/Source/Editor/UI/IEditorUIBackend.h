@@ -10,6 +10,7 @@ namespace Opaax
 {
     class IGraphicsContext;
     class IFramebuffer;
+    class ITexture2D;
 
     // =============================================================================
     // EditorViewportImage
@@ -86,6 +87,13 @@ namespace Opaax
         // via ImGui_ImplVulkan_AddTexture with straight UVs. Handle is Uint64 so this header stays
         // ImGui-free (the caller casts to ImTextureID).
         virtual EditorViewportImage GetViewportImage(IFramebuffer& InFB) = 0;
+
+        // The ImGui texture handle for a sampled asset texture (Asset Browser thumbnails). OpenGL
+        // returns the raw GL texture name; Vulkan mints + caches a VkDescriptorSet (keyed by image
+        // view) via ImGui_ImplVulkan_AddTexture. Handle is Uint64 so this header stays ImGui-free.
+        // The caller owns the sampling UVs (the V-convention differs by widget, not by backend —
+        // asset textures carry no render-time flip on either backend).
+        virtual Uint64 GetTextureID(ITexture2D& InTex) = 0;
     };
 
 } // namespace Opaax

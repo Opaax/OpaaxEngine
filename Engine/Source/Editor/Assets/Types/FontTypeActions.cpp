@@ -6,6 +6,7 @@
 #include "Assets/AssetRegistry.h"
 #include "Renderer/Text/FontAsset.h"
 #include "Renderer/Texture2D.h"
+#include "Editor/UI/IEditorUIBackend.h"
 
 namespace Opaax::Editor
 {
@@ -19,7 +20,7 @@ namespace Opaax::Editor
         AssetRegistry::Reload<FontAsset>(InID);
     }
 
-    void FontTypeActions::DrawPreview(OpaaxStringID InID)
+    void FontTypeActions::DrawPreview(OpaaxStringID InID, IEditorUIBackend& InUIBackend)
     {
         const auto lHandle = AssetRegistry::Load<FontAsset>(InID);
         if (!lHandle.IsValid()) { return; }
@@ -37,12 +38,20 @@ namespace Opaax::Editor
         // global set_flip_vertically_on_load(1) makes that buffer bottom-up; that
         // convention does NOT apply here.)
         constexpr float lMaxSize = 192.f;
-        ImGui::Image(
-            lAtlas->GetRendererID(),
-            ImVec2(lMaxSize, lMaxSize),
-            ImVec2(0.f, 0.f),
-            ImVec2(1.f, 1.f)
-        );
+        const Uint64 lTexID = InUIBackend.GetTextureID(*lAtlas->GetRHITexture());
+        if (lTexID != 0)
+        {
+            ImGui::Image(
+                static_cast<ImTextureID>(lTexID),
+                ImVec2(lMaxSize, lMaxSize),
+                ImVec2(0.f, 0.f),
+                ImVec2(1.f, 1.f)
+            );
+        }
+        else
+        {
+            ImGui::Dummy(ImVec2(lMaxSize, lMaxSize));
+        }
 
         const FontAsset::FontVMetrics& lV = lFont->GetFontVMetrics();
         ImGui::TextDisabled("Atlas: %ux%u R8", lFont->GetAtlasSize(), lFont->GetAtlasSize());
