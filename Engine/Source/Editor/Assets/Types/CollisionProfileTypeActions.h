@@ -9,9 +9,9 @@ namespace Opaax::Editor
     // =============================================================================
     // CollisionProfileTypeActions
     //
-    // IAssetTypeActions for CollisionProfile. The preview is an interactive editor:
-    // an object-channel combo + a per-channel response matrix + a Save button that
-    // writes the in-memory state back to the asset's source JSON.
+    // IAssetTypeActions for CollisionProfile. DrawPreview is the read-only hover summary
+    // (channel + response matrix as text); DrawEditor is the interactive author surface
+    // (channel combo + per-channel response table + Save) shown in the AssetDetailsPanel.
     // =============================================================================
     class OPAAX_API CollisionProfileTypeActions final : public IAssetTypeActions
     {
@@ -25,6 +25,9 @@ namespace Opaax::Editor
 
         bool CanPreview()                                                 const override { return true; }
         void DrawPreview(OpaaxStringID InID, IEditorUIBackend& InUIBackend)      override;
+
+        bool CanEdit()                                                    const override { return true; }
+        void DrawEditor(OpaaxStringID InID, IEditorUIBackend& InUIBackend)       override;
     };
 
 } // namespace Opaax::Editor

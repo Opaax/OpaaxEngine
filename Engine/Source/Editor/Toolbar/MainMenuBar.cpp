@@ -173,6 +173,7 @@ namespace Opaax::Editor
         ImGui::MenuItem("Hierarchy",     nullptr, &Owner.GetShowHierarchyRef());
         ImGui::MenuItem("Inspector",     nullptr, &Owner.GetShowInspectorRef());
         ImGui::MenuItem("Asset Browser", nullptr, &Owner.GetShowAssetBrowserRef());
+        ImGui::MenuItem("Asset Details", nullptr, &Owner.GetShowAssetDetailsRef());
         ImGui::MenuItem("Viewport",      nullptr, &Owner.GetShowViewportRef());
 
         ImGui::EndMenu();

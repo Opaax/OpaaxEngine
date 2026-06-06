@@ -6,6 +6,7 @@
 #include "Editor/EditorState.h"
 #include "Editor/IEditorPanel.h"
 #include "Panels/AssetBrowserPanel.h"
+#include "Panels/AssetDetailsPanel.h"
 #include "Panels/HierarchyPanel.h"
 #include "Panels/InspectorPanel.h"
 #include "Panels/ViewportPanel.h"
@@ -79,6 +80,7 @@ namespace Opaax
         FORCEINLINE bool& GetShowHierarchyRef()    noexcept { return m_bShowHierarchy; }
         FORCEINLINE bool& GetShowInspectorRef()    noexcept { return m_bShowInspector; }
         FORCEINLINE bool& GetShowAssetBrowserRef() noexcept { return m_bShowAssetBrowser; }
+        FORCEINLINE bool& GetShowAssetDetailsRef() noexcept { return m_bShowAssetDetails; }
         FORCEINLINE bool& GetShowViewportRef()     noexcept { return m_bShowViewport; }
 
         //------------------------------------------------------------------------------
@@ -137,12 +139,14 @@ namespace Opaax
         Editor::InspectorPanel    m_InspectorPanel;
         Editor::ViewportPanel     m_ViewportPanel;
         Editor::AssetBrowserPanel m_AssetBrowserPanel;
+        Editor::AssetDetailsPanel m_AssetDetailsPanel;
 
         Editor::EEditorState m_EditorState = Editor::EEditorState::Editing;
 
         bool m_bShowHierarchy    = true;
         bool m_bShowInspector    = true;
         bool m_bShowAssetBrowser = true;
+        bool m_bShowAssetDetails = true;
         bool m_bShowViewport     = true;
 
         // Middle-mouse drag latch + last cursor position for the editor-camera pan.

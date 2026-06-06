@@ -50,6 +50,8 @@ namespace Opaax::Editor
     // =============================================================================
     void AssetBrowserPanel::OnSubscribe(EditorEventBus& InBus)
     {
+        m_Bus = &InBus;
+
         m_SceneSavedToken = InBus.Subscribe<OnSceneSavedEvent>(
             [this](const OnSceneSavedEvent& InEvent)
             {
@@ -250,8 +252,16 @@ namespace Opaax::Editor
         char lLabel[256];
         snprintf(lLabel, sizeof(lLabel), "%s  %s##%u", lIcon, lIDStr.CStr(), InDesc.ID.GetId());
 
-        ImGui::Selectable(lLabel, m_HoveredID == InDesc.ID);
+        const bool bClicked = ImGui::Selectable(lLabel, m_HoveredID == InDesc.ID);
         ImGui::PopStyleColor();
+
+        // Single-click selects → AssetDetailsPanel renders this asset's editor/preview.
+        if (bClicked && m_Bus)
+        {
+            m_Bus->Publish(OnAssetSelectedEvent{ InDesc.ID, InDesc.Type });
+            OPAAX_CORE_INFO("AssetBrowserPanel - selected '{}' ({})",
+                InDesc.ID.ToString().CStr(), InDesc.Type.ToString().CStr());
+        }
 
         // --- Drag & Drop source ---
         if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))

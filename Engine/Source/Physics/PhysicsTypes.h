@@ -179,26 +179,47 @@ namespace Opaax
 
     // ---------------------------------------------------------------------------
     /**
+     * @struct ShapeGeometry
+     *
+     * Backend-neutral collision geometry — the shape's *form*, separate from its material
+     * and filter (mirrors how Box2D itself splits a polygon/circle/capsule primitive from its
+     * shape-definition struct). Type selects which fields are read; Offset is the local center for all.
+     * Adding a primitive (Capsule, Polygon, ...) means a new EColliderShape value + the fields
+     * it needs here + one case in the backend — no ripple through ShapeDesc or its consumers.
+     */
+    struct ShapeGeometry
+    {
+        EColliderShape Type        = EColliderShape::Box;
+
+        // Local-space center offset from the body origin, in world units (all shapes).
+        Vector2F       Offset      = { 0.f, 0.f };
+
+        // Box: half extents (half width, half height) in world units.
+        Vector2F       HalfExtents = { 50.f, 50.f };
+
+        // Circle (and future Capsule end-cap): radius in world units.
+        float          Radius      = 50.f;
+    };
+
+    // ---------------------------------------------------------------------------
+    /**
      * @struct ShapeDesc
      *
-     * Backend-neutral parameters to attach one collision shape to a body, translated from
-     * an entity's ColliderComponent. Box reads Size (full world-unit extents), Circle reads
-     * Radius; Offset shifts the shape from the body origin. IsSensor maps Mode==Trigger.
-     * CategoryBits/MaskBits are the collision filter — defaulted to "collide with all" here
-     * and refined by the CollisionProfile (P2b).
+     * Backend-neutral parameters to attach one collision shape to a body, translated from an
+     * entity's ColliderComponent: the Geometry (form) plus its material and collision filter.
+     * IsSensor maps Mode==Trigger. CategoryBits/MaskBits default to "collide with all" and are
+     * refined by the CollisionProfile.
      */
     struct ShapeDesc
     {
-        EColliderShape Shape        = EColliderShape::Box;
-        Vector2F       Offset       = { 0.f, 0.f };
-        Vector2F       Size         = { 100.f, 100.f };
-        float          Radius       = 50.f;
-        bool           IsSensor     = false;
-        float          Density      = 1.f;
-        float          Friction     = 0.3f;
-        float          Restitution  = 0.f;
-        Uint64         CategoryBits = ~0ull;
-        Uint64         MaskBits     = ~0ull;
+        ShapeGeometry Geometry;
+
+        bool          IsSensor     = false;
+        float         Density      = 1.f;
+        float         Friction     = 0.3f;
+        float         Restitution  = 0.f;
+        Uint64        CategoryBits = ~0ull;
+        Uint64        MaskBits     = ~0ull;
     };
 
 } // namespace Opaax

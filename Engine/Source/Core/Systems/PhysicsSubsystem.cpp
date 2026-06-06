@@ -100,10 +100,11 @@ namespace Opaax
                 if (!lBody.IsValid()) { return; }
 
                 ShapeDesc lShapeDesc;
-                lShapeDesc.Shape        = InCollider.Shape;
-                lShapeDesc.Offset       = InCollider.Offset;
-                lShapeDesc.Size         = InCollider.Size;
-                lShapeDesc.Radius       = InCollider.Radius;
+                lShapeDesc.Geometry.Type        = InCollider.Shape;
+                lShapeDesc.Geometry.Offset      = InCollider.Offset;
+                // Component authors full extents; geometry stores half-extents.
+                lShapeDesc.Geometry.HalfExtents = { InCollider.Size.x * 0.5f, InCollider.Size.y * 0.5f };
+                lShapeDesc.Geometry.Radius      = InCollider.Radius;
                 lShapeDesc.IsSensor     = (InCollider.Mode == EColliderMode::Trigger);
                 lShapeDesc.Density      = InCollider.Density;
                 lShapeDesc.Friction     = InCollider.Friction;

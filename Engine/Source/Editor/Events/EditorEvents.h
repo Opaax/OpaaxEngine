@@ -90,6 +90,30 @@ namespace Opaax
     // =============================================================================
 
     /**
+     * @class OnAssetSelectedEvent
+     * Fired when the user single-clicks an asset in the AssetBrowserPanel. Carries the
+     * canonical ID + its type StringID so the AssetDetailsPanel can render the matching
+     * IAssetTypeActions editor/preview. An invalid AssetID means "selection cleared".
+     */
+    class OPAAX_API OnAssetSelectedEvent final : public OpaaxEvent
+    {
+    public:
+        OnAssetSelectedEvent(OpaaxStringID InAssetID, OpaaxStringID InType) noexcept
+            : m_AssetID(InAssetID), m_Type(InType)
+        {}
+
+        FORCEINLINE OpaaxStringID GetAssetID() const noexcept { return m_AssetID; }
+        FORCEINLINE OpaaxStringID GetTypeID()  const noexcept { return m_Type; }
+
+        OPAAX_EVENT_CLASS_TYPE(EEventType::AssetSelected)
+        OPAAX_EVENT_CLASS_CATEGORY(EEventCategory_Editor)
+
+    private:
+        OpaaxStringID m_AssetID;
+        OpaaxStringID m_Type;
+    };
+
+    /**
      * @class OnAssetImportedEvent
      * Fired when a new asset enters the registry (import action). AssetID is the
      * canonical logical ID; Path is the on-disk location for browsers/inspectors.

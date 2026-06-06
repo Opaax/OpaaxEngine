@@ -82,6 +82,10 @@ namespace Opaax::Editor
         OpaaxStringID            m_PendingRemoveID;
 
         SubscriptionToken        m_SceneSavedToken;
+
+        // Cached at OnSubscribe so a single-click can publish OnAssetSelectedEvent to the
+        // AssetDetailsPanel. Non-owning — the bus outlives the panel (EditorSubsystem owns both).
+        EditorEventBus*          m_Bus = nullptr;
     };
 
 } // namespace Opaax::Editor

@@ -110,6 +110,7 @@ namespace Opaax
         m_HierarchyPanel.OnSubscribe(*m_EventBus);
         m_InspectorPanel.OnSubscribe(*m_EventBus);
         m_AssetBrowserPanel.OnSubscribe(*m_EventBus);
+        m_AssetDetailsPanel.OnSubscribe(*m_EventBus);
 
         GetEngineApp()->SetRenderTarget(&m_ViewportPanel);
 
@@ -351,6 +352,7 @@ namespace Opaax
         if (m_bShowInspector)    m_InspectorPanel.Draw(lWorld);
         if (m_bShowViewport)     m_ViewportPanel.Draw(m_EditorState, *m_UIBackend);
         if (m_bShowAssetBrowser) m_AssetBrowserPanel.Draw(*lSceneMgr, *m_UIBackend);
+        if (m_bShowAssetDetails) m_AssetDetailsPanel.Draw(*m_UIBackend);
     }
 
     // =============================================================================

@@ -105,17 +105,19 @@ namespace Opaax
         lDef.filter.categoryBits  = InShape.CategoryBits;
         lDef.filter.maskBits      = InShape.MaskBits;
 
+        const ShapeGeometry& lGeo = InShape.Geometry;
+
         b2ShapeId lShape;
-        if (InShape.Shape == EColliderShape::Circle)
+        if (lGeo.Type == EColliderShape::Circle)
         {
-            const b2Circle lCircle{ ToB2(InShape.Offset), InShape.Radius };
+            const b2Circle lCircle{ ToB2(lGeo.Offset), lGeo.Radius };
             lShape = b2CreateCircleShape(lBody, &lDef, &lCircle);
         }
         else
         {
-            // Box authored in full extents; Box2D wants half-extents.
-            const b2Polygon lBox = b2MakeOffsetBox(InShape.Size.x * 0.5f, InShape.Size.y * 0.5f,
-                                                   ToB2(InShape.Offset), b2MakeRot(0.f));
+            // Geometry carries half-extents directly (the component-side full size is halved upstream).
+            const b2Polygon lBox = b2MakeOffsetBox(lGeo.HalfExtents.x, lGeo.HalfExtents.y,
+                                                   ToB2(lGeo.Offset), b2MakeRot(0.f));
             lShape = b2CreatePolygonShape(lBody, &lDef, &lBox);
         }
 

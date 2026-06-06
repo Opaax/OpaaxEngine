@@ -65,6 +65,7 @@ namespace Opaax
         SceneSaved,
         NewScene,
         AssetImported,
+        AssetSelected,
     };
  
     // =============================================================================
