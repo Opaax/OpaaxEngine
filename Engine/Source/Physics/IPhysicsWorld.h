@@ -55,6 +55,11 @@ namespace Opaax
         // Write a body's world transform — used to push static/kinematic ECS Transforms into the sim.
         virtual void        SetBodyTransform(BodyHandle InBody, Vector2F InPosition, float InRotation) = 0;
 
+        // Drive a KINEMATIC body toward a target pose over DeltaTime (sweeps it during the next step so
+        // it generates contacts + pushes dynamics, unlike a teleport). Used by the mover each step.
+        virtual void        SetBodyTargetTransform(BodyHandle InBody, Vector2F InPosition, float InRotation,
+                                                   float InDeltaTime) = 0;
+
         // -------------------------------------------------------------------------
         // Events (drained after Step)
         // -------------------------------------------------------------------------

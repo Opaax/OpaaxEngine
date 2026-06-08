@@ -6,6 +6,12 @@
 
 #include "ECS/Components/MoverComponent.h"
 #include "Core/Systems/Movement/MoverModeRegistry.h"
+#include "Core/Systems/Movement/IMoverModeParams.h"
+
+#include "Assets/AssetRegistry.h"
+#include "Editor/Assets/IAssetTypeActions.h"
+#include "Physics/Collision/CollisionProfile.h"
+#include "Core/Log/OpaaxLog.h"
 
 namespace Opaax::Editor
 {
@@ -44,6 +50,35 @@ namespace Opaax::Editor
         }
         ImGui::DragFloat("Radius",        &lMover->Radius,           1.f, 0.f, 0.f, "%.0f");
         ImGui::DragFloat("Max Slope (deg)", &lMover->MaxSlopeAngleDeg, 1.f, 0.f, 89.f, "%.0f");
+
+        // Collision profile — drives the movement-solid mask (Block) + the body's event reach
+        // (Block+Overlap). Drag a CollisionProfile from the Asset Browser here. Unset = raw CollisionMask.
+        const OpaaxString lProfilePath = lMover->Profile.IsValid()
+                                       ? lMover->Profile.GetID().ToString()
+                                       : OpaaxString("None");
+        ImGui::LabelText("Profile", "%s", lProfilePath.CStr());
+        if (ImGui::BeginDragDropTarget())
+        {
+            if (const ImGuiPayload* lPayload =
+                    ImGui::AcceptDragDropPayload(IAssetTypeActions::DragDropPayloadType))
+            {
+                OPAAX_CORE_ASSERT(lPayload->DataSize == sizeof(Uint32))
+                const OpaaxStringID lAssetID(*static_cast<const Uint32*>(lPayload->Data));
+
+                const auto lHandle = AssetRegistry::Load<CollisionProfile>(lAssetID);
+                if (lHandle.IsValid())
+                {
+                    lMover->Profile = lHandle;
+                    OPAAX_CORE_INFO("MoverDrawer: profile set to '{}'", lAssetID);
+                }
+            }
+            ImGui::EndDragDropTarget();
+        }
+        if (lMover->Profile.IsValid())
+        {
+            ImGui::SameLine();
+            if (ImGui::SmallButton("Clear##MoverProfile")) { lMover->Profile.Reset(); }
+        }
 
         // --- Supported modes: the authored subset this mover may use (add from the global catalog) ---
         ImGui::SeparatorText("Modes");
@@ -109,15 +144,18 @@ namespace Opaax::Editor
             }
         }
 
-        ImGui::SeparatorText("Movement Params");
-        ImGui::DragFloat("Gravity",      &lMover->Params.Gravity,      1.f,   0.f, 0.f, "%.0f");
-        ImGui::DragFloat("Max Speed",    &lMover->Params.MaxSpeed,     1.f,   0.f, 0.f, "%.0f");
-        ImGui::DragFloat("Acceleration", &lMover->Params.Acceleration, 0.1f,  0.f, 0.f, "%.1f");
-        ImGui::DragFloat("Friction",     &lMover->Params.Friction,     0.1f,  0.f, 0.f, "%.1f");
-        ImGui::DragFloat("Stop Speed",   &lMover->Params.StopSpeed,    1.f,   0.f, 0.f, "%.0f");
-        ImGui::DragFloat("Min Speed",    &lMover->Params.MinSpeed,     1.f,   0.f, 0.f, "%.0f");
-        ImGui::DragFloat("Air Steer",    &lMover->Params.AirSteer,     0.01f, 0.f, 1.f, "%.2f");
-        ImGui::DragFloat("Jump Speed",   &lMover->Params.JumpSpeed,    1.f,   0.f, 0.f, "%.0f");
+        // Per-mode params — each supported mode draws only its own knobs (the mode owns its type).
+        lMover->EnsureModeParams();   // mint any missing (e.g. a freshly-added mover)
+        for (const OpaaxStringID& lModeId : lMover->Modes)
+        {
+            if (IMoverModeParams* lParams = lMover->GetModeParams(lModeId))
+            {
+                ImGui::SeparatorText(lModeId.ToString().CStr());
+                ImGui::PushID(static_cast<int>(lModeId.GetId()));
+                lParams->DrawEditor();
+                ImGui::PopID();
+            }
+        }
     }
 
     void MoverDrawer::Add(World& InWorld, EntityID InEntity)

@@ -85,7 +85,8 @@ namespace Opaax
     enum class EColliderShape : Uint8
     {
         Box,
-        Circle
+        Circle,
+        Capsule
     };
 
     // ---------------------------------------------------------------------------
@@ -126,15 +127,17 @@ namespace Opaax
     {
         switch (InShape)
         {
-            case EColliderShape::Box:    return "Box";
-            case EColliderShape::Circle: return "Circle";
+            case EColliderShape::Box:     return "Box";
+            case EColliderShape::Circle:  return "Circle";
+            case EColliderShape::Capsule: return "Capsule";
         }
         return "Box";
     }
 
     inline EColliderShape ColliderShapeFromString(const OpaaxString& InName) noexcept
     {
-        if (InName == "Circle") { return EColliderShape::Circle; }
+        if (InName == "Circle")  { return EColliderShape::Circle; }
+        if (InName == "Capsule") { return EColliderShape::Capsule; }
         return EColliderShape::Box;
     }
 
@@ -228,8 +231,13 @@ namespace Opaax
         // Box: half extents (half width, half height) in world units.
         Vector2F       HalfExtents = { 50.f, 50.f };
 
-        // Circle (and future Capsule end-cap): radius in world units.
+        // Circle / Capsule end-cap: radius in world units.
         float          Radius      = 50.f;
+
+        // Capsule: the two semicircle centers (local, relative to Offset), in world units.
+        // (Circle is the degenerate Center1 == Center2 case; a dedicated Circle uses Radius only.)
+        Vector2F       Center1     = { 0.f, 0.f };
+        Vector2F       Center2     = { 0.f, 0.f };
     };
 
     // ---------------------------------------------------------------------------
@@ -326,6 +334,10 @@ namespace Opaax
         Uint64       ChannelMask   = ~0ull;
         int          MaxIterations = 5;
         float        GroundNormalY = 0.7f;
+
+        // Body user-data to skip during the sweep (the mover's OWN body, now that it's a real
+        // kinematic body in the world). 0 = ignore nothing. Encoded entity-bits+1, as BodyDesc::UserData.
+        Uint64       IgnoreUserData = 0;
     };
 
     // ---------------------------------------------------------------------------

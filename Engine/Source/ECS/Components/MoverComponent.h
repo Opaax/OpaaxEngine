@@ -4,9 +4,16 @@
 #include "Core/OpaaxMathTypes.h"
 #include "Core/OpaaxStringID.hpp"
 
+#include "Assets/AssetHandle.hpp"
 #include "ECS/Components/MoverTypes.h"
 #include "Physics/PhysicsTypes.h"
 #include "Physics/Collision/CollisionChannel.h"
+
+namespace Opaax
+{
+    class CollisionProfile;
+    class IMoverModeParams;
+}
 
 namespace Opaax::ECS
 {
@@ -33,9 +40,17 @@ namespace Opaax::ECS
         // CTOR - DTOR
         // =============================================================================
     public:
-        MoverComponent()          = default;
-        explicit MoverComponent(const json& Json) : OpaaxComponentBase(Json) { Deserialize(Json); }
-        virtual ~MoverComponent() = default;
+        // All out-of-line (the per-mode params UniquePtr map needs the complete IMoverModeParams type).
+        MoverComponent();
+        explicit MoverComponent(const json& Json);
+        ~MoverComponent() override;
+
+        // Move-only: owns its per-mode params by UniquePtr. Copy is deleted; if a copy is ever needed,
+        // add a Clone-based copy ctor (IMoverModeParams::Clone exists for exactly that).
+        MoverComponent(const MoverComponent&)            = delete;
+        MoverComponent& operator=(const MoverComponent&) = delete;
+        MoverComponent(MoverComponent&&) noexcept;
+        MoverComponent& operator=(MoverComponent&&) noexcept;
 
         // =============================================================================
         // Override
@@ -59,6 +74,14 @@ namespace Opaax::ECS
         // Minimum surface-normal Y that counts as ground = cos(MaxSlopeAngleDeg).
         float GroundNormalY() const noexcept;
 
+        // Channels that are SOLID to movement (the geometric sweep slides on them). Profile's Block
+        // channels when a profile is set+loaded, else the raw CollisionMask.
+        Uint64 EffectiveMovementMask() const noexcept;
+
+        // Channels the mover's body interacts with for EVENTS + presence (Block + Overlap). Profile's
+        // ComputeMaskBits when set+loaded, else the raw CollisionMask.
+        Uint64 EffectiveEventMask() const noexcept;
+
         // Mover-2.0-style deferred mode switch: queue InMode to become active on the next fixed
         // step (the MoverSubsystem fires OnModeExit/OnModeEnter then). bReenter forces the mode to
         // restart (re-fire OnModeEnter) even if it's already the current mode. Producer-facing API —
@@ -81,17 +104,21 @@ namespace Opaax::ECS
             return false;
         }
 
-        // Editor-facing: add InMode to the supported set (no duplicates) / remove it.
-        void AddMode(OpaaxStringID InMode)
+        // Editor-facing: add InMode to the supported set (also mints its default params via the mode
+        // registry) / remove it (and drops its params). Defined in the .cpp (needs the mode registry).
+        void AddMode(OpaaxStringID InMode);
+        void RemoveMode(OpaaxStringID InMode);
+
+        // Mint default params for any supported mode that lacks them (covers code-created movers that
+        // never went through AddMode/deserialize). Called by the subsystem on play-begin.
+        void EnsureModeParams();
+
+        // The active-or-given mode's params (downcast by the mode to its concrete type). Null if the
+        // mode has no params yet (the subsystem reconciles defaults on play-begin).
+        IMoverModeParams* GetModeParams(OpaaxStringID InMode) const noexcept
         {
-            if (!SupportsMode(InMode)) { Modes.push_back(InMode); }
-        }
-        void RemoveMode(OpaaxStringID InMode)
-        {
-            for (size_t i = 0; i < Modes.size(); ++i)
-            {
-                if (Modes[i] == InMode) { Modes.erase(Modes.begin() + i); return; }
-            }
+            const auto lIt = ModeParams.find(InMode.GetId());
+            return lIt != ModeParams.end() ? lIt->second.get() : nullptr;
         }
 
         // =============================================================================
@@ -102,10 +129,14 @@ namespace Opaax::ECS
         float       Height = 100.f;   // total capsule height (world units); ignored for Circle
         float       Radius = 25.f;    // capsule/circle radius (world units)
 
-        // Which channels are SOLID to the mover (it slides against them). Default = the world
-        // (WorldStatic | WorldDynamic). The mover is a query, not a shape — it has no own channel.
+        // Raw filter fallback used when Profile is unset. Default = the world (WorldStatic|WorldDynamic).
         Uint64 CollisionMask = CategoryBit(ECollisionChannel::WorldStatic)
                              | CategoryBit(ECollisionChannel::WorldDynamic);
+
+        // Collision behaviour asset. When valid+loaded it drives BOTH the movement mask (Block channels)
+        // and the body's event/presence filter (Block + Overlap) — see EffectiveMovementMask/EventMask.
+        // Mirrors ColliderComponent::Profile.
+        TAssetHandle<CollisionProfile> Profile;
 
         // Steepest walkable slope; surfaces steeper than this don't count as ground.
         float MaxSlopeAngleDeg = 50.f;
@@ -119,8 +150,10 @@ namespace Opaax::ECS
         // The currently-active mode (must be one of Modes). Data-driven; default = the ground mode.
         OpaaxStringID ModeId = OPAAX_ID("GroundMove");
 
-        // ---- Tuning (serialized) ----
-        MoverParams Params;
+        // ---- Per-mode tuning (serialized) ----
+        // One params instance per supported mode, keyed by mode-id. Each mode owns its concrete
+        // IMoverModeParams type; this component only stores/serializes the base (the mode downcasts).
+        UnorderedMap<Uint32, UniquePtr<IMoverModeParams>> ModeParams;
 
         // ---- Sync state (runtime, NOT serialized) ----
         Vector2F Velocity     = { 0.f, 0.f };

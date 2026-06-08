@@ -19,8 +19,9 @@ namespace Opaax
     class FlyMoveMode final : public IMoverMode
     {
     public:
-        void Tick(MoverTickContext& InContext) override;
-        void OnModeEnter(MoverTickContext& InContext) override;
+        UniquePtr<IMoverModeParams> CreateDefaultParams() const override;
+        void                        Tick(MoverTickContext& InContext) override;
+        void                        OnModeEnter(MoverTickContext& InContext) override;
     };
 
 } // namespace Opaax

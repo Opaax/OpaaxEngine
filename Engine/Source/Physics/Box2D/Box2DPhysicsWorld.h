@@ -45,6 +45,8 @@ namespace Opaax
         ShapeHandle AddShape(BodyHandle InBody, const ShapeDesc& InShape) override;
         void        GetBodyTransform(BodyHandle InBody, Vector2F& OutPosition, float& OutRotation) const override;
         void        SetBodyTransform(BodyHandle InBody, Vector2F InPosition, float InRotation) override;
+        void        SetBodyTargetTransform(BodyHandle InBody, Vector2F InPosition, float InRotation,
+                                           float InDeltaTime) override;
 
         void GetSensorEvents(TDynArray<PhysicsContactPair>& OutBegan,
                              TDynArray<PhysicsContactPair>& OutEnded) override;

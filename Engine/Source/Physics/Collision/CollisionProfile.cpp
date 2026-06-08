@@ -80,6 +80,19 @@ namespace Opaax
         return lMask;
     }
 
+    Uint64 CollisionProfile::ComputeBlockMaskBits() const noexcept
+    {
+        Uint64 lMask = 0;
+        for (Uint8 i = 0; i < static_cast<Uint8>(ECollisionChannel::Count); ++i)
+        {
+            if (m_Responses[i] == ECollisionResponse::Block)
+            {
+                lMask |= CategoryBit(static_cast<ECollisionChannel>(i));
+            }
+        }
+        return lMask;
+    }
+
     // =============================================================================
     // Serialization
     // =============================================================================

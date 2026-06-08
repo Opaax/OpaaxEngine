@@ -1,10 +1,12 @@
 #pragma once
 
 #include "Core/EngineAPI.h"
+#include "Core/OpaaxTypes.h"
 
 namespace Opaax
 {
     class IPhysicsWorld;
+    class IMoverModeParams;
 
     namespace ECS
     {
@@ -28,6 +30,14 @@ namespace Opaax
         ECS::MoverComponent&     Mover;
         ECS::TransformComponent& Transform;
         float                    DeltaTime;
+
+        // The mover's OWN body user-data (entity-bits + 1) — passed to MoveCapsule so the geometric
+        // sweep skips the mover's own kinematic body. 0 during transition (enter/exit) ticks.
+        Uint64                   SelfUserData = 0;
+
+        // The active mode's params (the subsystem resolves MoverComponent::GetModeParams(ModeId) and
+        // passes it here). The mode downcasts to its own concrete type. Null only if misconfigured.
+        IMoverModeParams*        Params = nullptr;
     };
 
     // =============================================================================
@@ -48,7 +58,11 @@ namespace Opaax
     public:
         virtual ~IMoverMode() = default;
 
-        // Advance one entity's movement by ctx.DeltaTime.
+        // Factory for THIS mode's params type — the mode is the only thing that knows its concrete
+        // IMoverModeParams. Used to seed defaults on a mover and to mint the right type on load.
+        virtual UniquePtr<IMoverModeParams> CreateDefaultParams() const = 0;
+
+        // Advance one entity's movement by ctx.DeltaTime (reads ctx.Params, downcast to its type).
         virtual void Tick(MoverTickContext& InContext) = 0;
 
         // Transition lifecycle, fired by the MoverSubsystem when an entity switches modes

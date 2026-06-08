@@ -47,15 +47,21 @@ namespace Opaax
         {
             b2CollisionPlane Planes[kMaxMoverPlanes] = {};
             int              Count                   = 0;
+            Uint64           IgnoreUserData          = 0;   // skip the mover's own body
         };
 
         // b2PlaneResultFcn: turn each hit plane into a rigid b2CollisionPlane (FLT_MAX pushLimit =
-        // hard surface, clipVelocity = true) for b2SolvePlanes / b2ClipVector.
-        bool MoverPlaneFcn(b2ShapeId /*InShape*/, const b2PlaneResult* InPlane, void* InContext)
+        // hard surface, clipVelocity = true) for b2SolvePlanes / b2ClipVector. Skips the mover's own
+        // body (now a real kinematic body in the world) via IgnoreUserData.
+        bool MoverPlaneFcn(b2ShapeId InShape, const b2PlaneResult* InPlane, void* InContext)
         {
             if (!InPlane->hit) { return true; }
 
             auto* lCtx = static_cast<MoverPlaneContext*>(InContext);
+            if (lCtx->IgnoreUserData != 0 && EntityBitsFromShape(InShape) == lCtx->IgnoreUserData)
+            {
+                return true;   // self — don't collide with our own capsule body
+            }
             if (lCtx->Count < kMaxMoverPlanes)
             {
                 lCtx->Planes[lCtx->Count] = { InPlane->plane, FLT_MAX, 0.f, true };
@@ -156,7 +162,14 @@ namespace Opaax
         const ShapeGeometry& lGeo = InShape.Geometry;
 
         b2ShapeId lShape;
-        if (lGeo.Type == EColliderShape::Circle)
+        if (lGeo.Type == EColliderShape::Capsule)
+        {
+            const b2Capsule lCapsule{ ToB2(lGeo.Offset + lGeo.Center1),
+                                      ToB2(lGeo.Offset + lGeo.Center2),
+                                      lGeo.Radius };
+            lShape = b2CreateCapsuleShape(lBody, &lDef, &lCapsule);
+        }
+        else if (lGeo.Type == EColliderShape::Circle)
         {
             const b2Circle lCircle{ ToB2(lGeo.Offset), lGeo.Radius };
             lShape = b2CreateCircleShape(lBody, &lDef, &lCircle);
@@ -183,6 +196,15 @@ namespace Opaax
     {
         const b2BodyId lId = b2LoadBodyId(InBody.Id);
         b2Body_SetTransform(lId, ToB2(InPosition), b2MakeRot(InRotation));
+    }
+
+    void Box2DPhysicsWorld::SetBodyTargetTransform(BodyHandle InBody, Vector2F InPosition, float InRotation,
+                                                   float InDeltaTime)
+    {
+        const b2BodyId lId = b2LoadBodyId(InBody.Id);
+        const b2Transform lTarget{ ToB2(InPosition), b2MakeRot(InRotation) };
+        // Moves a kinematic body toward the target over the step (generates contacts); wake = true.
+        b2Body_SetTargetTransform(lId, lTarget, InDeltaTime, true);
     }
 
     // =============================================================================
@@ -290,6 +312,7 @@ namespace Opaax
         const int lMaxIter = InInput.MaxIterations > 0 ? InInput.MaxIterations : 1;
 
         MoverPlaneContext lCtx;
+        lCtx.IgnoreUserData = InInput.IgnoreUserData;
         for (int lIter = 0; lIter < lMaxIter; ++lIter)
         {
             lCtx.Count = 0;

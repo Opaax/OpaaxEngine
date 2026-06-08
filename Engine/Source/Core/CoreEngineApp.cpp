@@ -256,11 +256,11 @@ void CoreEngineApp::Initialize()
 
     m_EngineSubsystemManager.RegisterSubsystem<SceneManager>(this);
 
-    // After SceneManager: a scene must exist before physics builds bodies from it.
-    m_EngineSubsystemManager.RegisterSubsystem<PhysicsSubsystem>(this);
-
-    // After Physics: the mover sweeps capsules against the settled rigid-body world each step.
+    // Both after SceneManager (a scene must exist before bodies are built from it). Movers register
+    // BEFORE physics: each fixed step the mover sets its kinematic body's target, then PhysicsSubsystem
+    // steps the world to apply it (same-frame), draining the resulting contact/sensor events.
     m_EngineSubsystemManager.RegisterSubsystem<MoverSubsystem>(this);
+    m_EngineSubsystemManager.RegisterSubsystem<PhysicsSubsystem>(this);
 
 #if OPAAX_WITH_EDITOR
     m_EngineSubsystemManager.RegisterSubsystem<EditorSubsystem>(this);

@@ -111,8 +111,13 @@ namespace Opaax
         // The single category bit this profile's channel occupies.
         Uint64 ComputeCategoryBits() const noexcept;
 
-        // OR of every channel bit whose response is not Ignore (Overlap/Block both allow).
+        // OR of every channel bit whose response is not Ignore (Overlap/Block both allow). Used as a
+        // body's collision filter / event reach (a sensor or solid both "interact").
         Uint64 ComputeMaskBits() const noexcept;
+
+        // OR of only the channel bits whose response is Block. Used by the geometric mover as its
+        // *movement* mask — what's a solid wall to slide on (Overlap = pass-through but still events).
+        Uint64 ComputeBlockMaskBits() const noexcept;
 
         // =============================================================================
         // Serialization

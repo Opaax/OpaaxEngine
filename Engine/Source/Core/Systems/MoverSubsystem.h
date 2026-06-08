@@ -3,8 +3,13 @@
 #include "Core/Systems/EngineSubsystem.h"
 #include "Core/OpaaxTypes.h"
 
+#include "Physics/PhysicsTypes.h"
+
 namespace Opaax
 {
+    class World;
+    class IPhysicsWorld;
+
     // =============================================================================
     // MoverSubsystem
     // =============================================================================
@@ -48,13 +53,28 @@ namespace Opaax
         void FixedUpdate(double FixedDeltaTime) override;
         void Shutdown()                         override;
 
+        void OnPlayBegin()                      override;
+        void OnPlayEnd()                        override;
+
         bool IsPlayOnly() const noexcept        override { return true; }
         //~End EngineSubsystemBase Interface
+
+        // =============================================================================
+        // Internal
+        // =============================================================================
+    private:
+        // Build one KINEMATIC capsule body per MoverComponent entity (events on), keyed by entity.
+        void BuildBodies(World& InWorld, IPhysicsWorld& InPhysicsWorld);
+        // Destroy every mover body and clear the map.
+        void ClearBodies(IPhysicsWorld* InPhysicsWorld);
 
         // =============================================================================
         // Members
         // =============================================================================
     private:
+        // One kinematic body per mover entity (the mover's physical presence). Keyed by entity bits.
+        UnorderedMap<Uint32, BodyHandle> m_Bodies;
+
         // Mode ids already warned about as unknown — so a misconfigured component warns once,
         // not every entity every step.
         UnorderedSet<Uint32> m_WarnedUnknownModes;
