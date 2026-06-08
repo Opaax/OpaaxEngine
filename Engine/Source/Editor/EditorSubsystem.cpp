@@ -33,6 +33,7 @@
 #include "Editor/Inspector/Drawers/SpriteDrawer.h"
 #include "Editor/Inspector/Drawers/RigidbodyDrawer.h"
 #include "Editor/Inspector/Drawers/ColliderDrawer.h"
+#include "Editor/Inspector/Drawers/MoverDrawer.h"
 
 #include "ECS/ComponentRegistry.h"
 #include "ECS/Components/TagComponent.h"
@@ -40,6 +41,7 @@
 #include "ECS/Components/SpriteComponent.h"
 #include "ECS/Components/RigidbodyComponent.h"
 #include "ECS/Components/ColliderComponent.h"
+#include "ECS/Components/MoverComponent.h"
 
 namespace Opaax
 {
@@ -148,6 +150,7 @@ namespace Opaax
         ComponentRegistry::RegisterDrawer<ECS::SpriteComponent>   (MakeUnique<Editor::SpriteDrawer>());
         ComponentRegistry::RegisterDrawer<ECS::RigidbodyComponent>(MakeUnique<Editor::RigidbodyDrawer>());
         ComponentRegistry::RegisterDrawer<ECS::ColliderComponent> (MakeUnique<Editor::ColliderDrawer>());
+        ComponentRegistry::RegisterDrawer<ECS::MoverComponent>    (MakeUnique<Editor::MoverDrawer>());
 
         OPAAX_CORE_TRACE("EditorSubsystem: component drawers registered.");
     }

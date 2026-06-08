@@ -290,4 +290,58 @@ namespace Opaax
         float    Fraction = 0.f;
     };
 
+    // =============================================================================
+    // Geometric mover (kinematic capsule sweep)
+    // =============================================================================
+    /**
+     * @struct MoverCapsule
+     *
+     * Local-space capsule used by the geometric mover (Box2D's capsule-only character
+     * solver). A circle is a degenerate capsule with Center1 == Center2. Never holds a
+     * backend type. World units.
+     */
+    struct MoverCapsule
+    {
+        Vector2F Center1 = { 0.f, 0.f };
+        Vector2F Center2 = { 0.f, 0.f };
+        float    Radius  = 25.f;
+    };
+
+    // ---------------------------------------------------------------------------
+    /**
+     * @struct MoveCapsuleInput
+     *
+     * One geometric collide-and-slide step: sweep Capsule from Position by Velocity*DeltaTime
+     * against the world's shapes (filtered by ChannelMask = which channels are solid to the
+     * mover), iterating the plane solver up to MaxIterations. GroundNormalY is the minimum
+     * surface-normal Y that counts as "ground" (cos of the max walkable slope). Neutral — no
+     * movement policy here (gravity/accel/jump live in the engine-side mode).
+     */
+    struct MoveCapsuleInput
+    {
+        Vector2F     Position      = { 0.f, 0.f };
+        MoverCapsule Capsule;
+        Vector2F     Velocity      = { 0.f, 0.f };
+        float        DeltaTime     = 0.f;
+        Uint64       ChannelMask   = ~0ull;
+        int          MaxIterations = 5;
+        float        GroundNormalY = 0.7f;
+    };
+
+    // ---------------------------------------------------------------------------
+    /**
+     * @struct MoveCapsuleResult
+     *
+     * Post-sweep state: resolved Position, the velocity clipped against the touched planes
+     * (so the mover stops pushing into walls), and grounded info (Grounded true when a touched
+     * plane's normal.y >= GroundNormalY; GroundNormal is that plane's normal). World-space.
+     */
+    struct MoveCapsuleResult
+    {
+        Vector2F Position     = { 0.f, 0.f };
+        Vector2F Velocity     = { 0.f, 0.f };
+        bool     Grounded     = false;
+        Vector2F GroundNormal = { 0.f, 0.f };
+    };
+
 } // namespace Opaax

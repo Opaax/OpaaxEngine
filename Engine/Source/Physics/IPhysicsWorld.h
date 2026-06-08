@@ -81,6 +81,15 @@ namespace Opaax
         // world-space AABB [Min..Max], filtered by ChannelMask.
         virtual void OverlapAABB(Vector2F Min, Vector2F Max, Uint64 ChannelMask,
                                  TDynArray<Uint64>& OutUserData) = 0;
+
+        // -------------------------------------------------------------------------
+        // Geometric mover
+        // -------------------------------------------------------------------------
+        // One kinematic collide-and-slide step for a capsule (the geometric character-mover
+        // primitive — NOT a simulated body). Sweeps the capsule against the world and returns the
+        // resolved position, clipped velocity, and grounded info. Pure geometry: movement policy
+        // (gravity/acceleration/jump) lives engine-side in the mover mode, never here.
+        virtual MoveCapsuleResult MoveCapsule(const MoveCapsuleInput& InInput) = 0;
     };
 
 } // namespace Opaax

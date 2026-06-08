@@ -1,6 +1,7 @@
 #include "Box2DPhysicsWorld.h"
 
 #include <box2d/box2d.h>
+#include <cfloat>
 
 #include "Core/Log/OpaaxLog.h"
 
@@ -36,6 +37,30 @@ namespace Opaax
         {
             auto* lOut = static_cast<TDynArray<Uint64>*>(InContext);
             lOut->push_back(EntityBitsFromShape(InShape));
+            return true;
+        }
+
+        // Collision-plane sink for b2World_CollideMover. A fixed buffer keeps the per-step
+        // work allocation-free; 8 planes is ample for 2D capsule movement (floor + a couple walls).
+        constexpr int kMaxMoverPlanes = 8;
+        struct MoverPlaneContext
+        {
+            b2CollisionPlane Planes[kMaxMoverPlanes] = {};
+            int              Count                   = 0;
+        };
+
+        // b2PlaneResultFcn: turn each hit plane into a rigid b2CollisionPlane (FLT_MAX pushLimit =
+        // hard surface, clipVelocity = true) for b2SolvePlanes / b2ClipVector.
+        bool MoverPlaneFcn(b2ShapeId /*InShape*/, const b2PlaneResult* InPlane, void* InContext)
+        {
+            if (!InPlane->hit) { return true; }
+
+            auto* lCtx = static_cast<MoverPlaneContext*>(InContext);
+            if (lCtx->Count < kMaxMoverPlanes)
+            {
+                lCtx->Planes[lCtx->Count] = { InPlane->plane, FLT_MAX, 0.f, true };
+                lCtx->Count += 1;
+            }
             return true;
         }
     }
@@ -244,6 +269,70 @@ namespace Opaax
 
         const b2AABB lAABB{ ToB2(Min), ToB2(Max) };
         b2World_OverlapAABB(m_WorldId, lAABB, lFilter, &OverlapCollect, &OutUserData);
+    }
+
+    // =============================================================================
+    // Geometric mover
+    // =============================================================================
+    MoveCapsuleResult Box2DPhysicsWorld::MoveCapsule(const MoveCapsuleInput& InInput)
+    {
+        // Mover is a query, not a shape: category ~0 (always queryable), mask = solid channels.
+        b2QueryFilter lFilter;
+        lFilter.categoryBits = ~0ull;
+        lFilter.maskBits     = InInput.ChannelMask;
+
+        b2Vec2       lPos    = ToB2(InInput.Position);
+        const b2Vec2 lVel    = ToB2(InInput.Velocity);
+        const b2Vec2 lTarget = b2MulAdd(lPos, InInput.DeltaTime, lVel);  // target = pos + dt*velocity
+
+        // Early-out distance — half a world unit; if a solve iteration barely moves, we're settled.
+        constexpr float lToleranceSq = 0.5f * 0.5f;
+        const int lMaxIter = InInput.MaxIterations > 0 ? InInput.MaxIterations : 1;
+
+        MoverPlaneContext lCtx;
+        for (int lIter = 0; lIter < lMaxIter; ++lIter)
+        {
+            lCtx.Count = 0;
+
+            // World-space capsule at the current resolved position.
+            b2Capsule lMover;
+            lMover.center1 = b2Add(lPos, ToB2(InInput.Capsule.Center1));
+            lMover.center2 = b2Add(lPos, ToB2(InInput.Capsule.Center2));
+            lMover.radius  = InInput.Capsule.Radius;
+
+            b2World_CollideMover(m_WorldId, &lMover, lFilter, MoverPlaneFcn, &lCtx);
+            const b2PlaneSolverResult lSolve = b2SolvePlanes(b2Sub(lTarget, lPos), lCtx.Planes, lCtx.Count);
+
+            // Anti-tunnel: never advance further than a shape cast of the solved translation allows.
+            const float  lFraction = b2World_CastMover(m_WorldId, &lMover, lSolve.translation, lFilter);
+            const b2Vec2 lDelta    = b2MulSV(lFraction, lSolve.translation);
+            lPos = b2Add(lPos, lDelta);
+
+            if (b2LengthSquared(lDelta) < lToleranceSq) { break; }
+        }
+
+        // Clip the velocity against the touched planes so the mover stops pushing into walls.
+        const b2Vec2 lClipped = b2ClipVector(lVel, lCtx.Planes, lCtx.Count);
+
+        // Grounded = any touched plane whose normal is "up enough" (normal.y >= GroundNormalY).
+        bool   lGrounded     = false;
+        b2Vec2 lGroundNormal = { 0.f, 0.f };
+        for (int i = 0; i < lCtx.Count; ++i)
+        {
+            if (lCtx.Planes[i].plane.normal.y >= InInput.GroundNormalY)
+            {
+                lGrounded     = true;
+                lGroundNormal = lCtx.Planes[i].plane.normal;
+                break;
+            }
+        }
+
+        MoveCapsuleResult lResult;
+        lResult.Position     = ToVec2(lPos);
+        lResult.Velocity     = ToVec2(lClipped);
+        lResult.Grounded     = lGrounded;
+        lResult.GroundNormal = ToVec2(lGroundNormal);
+        return lResult;
     }
 
 } // namespace Opaax

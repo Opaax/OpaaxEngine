@@ -55,6 +55,8 @@ namespace Opaax
                                      Uint64 ChannelMask) override;
         void OverlapAABB(Vector2F Min, Vector2F Max, Uint64 ChannelMask,
                          TDynArray<Uint64>& OutUserData) override;
+
+        MoveCapsuleResult MoveCapsule(const MoveCapsuleInput& InInput) override;
         //~End IPhysicsWorld Interface
 
         // =============================================================================

@@ -40,6 +40,7 @@
 #include "Scene/SceneManager.h"
 #include "Systems/EngineSubsystem.h"
 #include "Systems/PhysicsSubsystem.h"
+#include "Systems/MoverSubsystem.h"
 #include "World/IWorldSystem.h"
 #include "World/RenderContext.h"
 
@@ -51,6 +52,7 @@
 #include "ECS/Components/ParentComponent.h"
 #include "ECS/Components/RigidbodyComponent.h"
 #include "ECS/Components/ColliderComponent.h"
+#include "ECS/Components/MoverComponent.h"
 
 #if OPAAX_WITH_EDITOR
 #include "Editor/EditorSubsystem.h"
@@ -227,6 +229,7 @@ void CoreEngineApp::Initialize()
     ComponentRegistry::Register<ECS::ParentComponent>   ("ParentComponent",    /*bShowInAddMenu*/ false);
     ComponentRegistry::Register<ECS::RigidbodyComponent>("RigidbodyComponent");
     ComponentRegistry::Register<ECS::ColliderComponent> ("ColliderComponent");
+    ComponentRegistry::Register<ECS::MoverComponent>    ("MoverComponent");
 
     // Scene types — engine knows about the base Scene under "Untitled" so the
     // editor's empty-stack fallback (SceneManager::NewScene) survives PIE Stop.
@@ -255,6 +258,9 @@ void CoreEngineApp::Initialize()
 
     // After SceneManager: a scene must exist before physics builds bodies from it.
     m_EngineSubsystemManager.RegisterSubsystem<PhysicsSubsystem>(this);
+
+    // After Physics: the mover sweeps capsules against the settled rigid-body world each step.
+    m_EngineSubsystemManager.RegisterSubsystem<MoverSubsystem>(this);
 
 #if OPAAX_WITH_EDITOR
     m_EngineSubsystemManager.RegisterSubsystem<EditorSubsystem>(this);
