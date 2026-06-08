@@ -155,6 +155,36 @@ namespace Opaax
         return EColliderMode::Solid;
     }
 
+    // ---------------------------------------------------------------------------
+    /**
+     * @enum EWorldBoundsResponse
+     * What the engine does when a dynamic body leaves the world-bounds kill volume. The
+     * OnExitWorldBounds event ALWAYS fires; this only selects the engine's own follow-up:
+     * EventOnly fires the event and nothing more (the game reacts); EventAndDestroy fires
+     * the event AND reaps the entity + its body. Drives PhysicsSubsystem::EnforceWorldBounds.
+     */
+    enum class EWorldBoundsResponse : Uint8
+    {
+        EventOnly,
+        EventAndDestroy
+    };
+
+    inline const char* ToString(EWorldBoundsResponse InResponse) noexcept
+    {
+        switch (InResponse)
+        {
+            case EWorldBoundsResponse::EventOnly:       return "EventOnly";
+            case EWorldBoundsResponse::EventAndDestroy: return "EventAndDestroy";
+        }
+        return "EventAndDestroy";
+    }
+
+    inline EWorldBoundsResponse WorldBoundsResponseFromString(const OpaaxString& InName) noexcept
+    {
+        if (InName == "EventOnly") { return EWorldBoundsResponse::EventOnly; }
+        return EWorldBoundsResponse::EventAndDestroy;
+    }
+
     // =============================================================================
     // BodyDesc / ShapeDesc — neutral body + shape creation parameters
     // =============================================================================

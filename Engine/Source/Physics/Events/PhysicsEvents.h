@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Event/OpaaxEvent.hpp"
+#include "Core/OpaaxMathTypes.h"
 #include "ECS/OpaaxEntity.hpp"
 
 // =============================================================================
@@ -140,6 +141,35 @@ namespace Opaax
     private:
         EntityID m_EntityA;
         EntityID m_EntityB;
+    };
+
+    // =============================================================================
+    // World bounds (kill volume)
+    // =============================================================================
+
+    /**
+     * @class OnExitWorldBoundsEvent
+     * Fired once when a dynamic body leaves the optional world-bounds AABB (the kill volume).
+     * Entity is the body's owner; LastPosition is its center the step it crossed out. The event
+     * always fires; whether the engine also destroys the entity is the configured
+     * EWorldBoundsResponse (see PhysicsSubsystem).
+     */
+    class OPAAX_API OnExitWorldBoundsEvent final : public OpaaxEvent
+    {
+    public:
+        OnExitWorldBoundsEvent(EntityID InEntity, Vector2F InLastPosition) noexcept
+            : m_Entity(InEntity), m_LastPosition(InLastPosition)
+        {}
+
+        FORCEINLINE EntityID GetEntity()       const noexcept { return m_Entity; }
+        FORCEINLINE Vector2F GetLastPosition() const noexcept { return m_LastPosition; }
+
+        OPAAX_EVENT_CLASS_TYPE(EEventType::ExitWorldBounds)
+        OPAAX_EVENT_CLASS_CATEGORY(EEventCategory_Physics)
+
+    private:
+        EntityID m_Entity;
+        Vector2F m_LastPosition;
     };
 
 } // namespace Opaax

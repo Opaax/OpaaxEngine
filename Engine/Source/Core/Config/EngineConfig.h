@@ -3,6 +3,7 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/OpaaxString.hpp"
+#include "Core/OpaaxMathTypes.h"
 
 namespace Opaax
 {
@@ -56,6 +57,14 @@ namespace Opaax
         // dependency on Physics — Physics maps this to its EPhysicsBackend enum.
         static const OpaaxString& PhysicsBackend() noexcept { return s_PhysicsBackend; }
 
+        // World-bounds kill volume — optional simulation-bounds AABB. Off + generous by
+        // default so endless-scroll games are unconstrained. Response ("EventOnly"|"EventAndDestroy")
+        // stays a string here; PhysicsSubsystem maps it to EWorldBoundsResponse.
+        static bool                PhysicsWorldBoundsEnabled()  noexcept { return s_PhysicsWorldBoundsEnabled; }
+        static Vector2F            PhysicsWorldBoundsMin()      noexcept { return s_PhysicsWorldBoundsMin; }
+        static Vector2F            PhysicsWorldBoundsMax()      noexcept { return s_PhysicsWorldBoundsMax; }
+        static const OpaaxString&  PhysicsWorldBoundsResponse() noexcept { return s_PhysicsWorldBoundsResponse; }
+
     private:
         static bool GenerateDefault(const OpaaxString& InAbsPath);
 
@@ -67,5 +76,9 @@ namespace Opaax
         static OpaaxString s_LogLevel;
         static OpaaxString s_RenderBackend;
         static OpaaxString s_PhysicsBackend;
+        static bool        s_PhysicsWorldBoundsEnabled;
+        static Vector2F    s_PhysicsWorldBoundsMin;
+        static Vector2F    s_PhysicsWorldBoundsMax;
+        static OpaaxString s_PhysicsWorldBoundsResponse;
     };
 } // namespace Opaax

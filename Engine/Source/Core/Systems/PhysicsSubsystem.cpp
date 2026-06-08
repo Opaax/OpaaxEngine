@@ -49,7 +49,17 @@ namespace Opaax
             return false;
         }
 
-        OPAAX_CORE_INFO("PhysicsSubsystem::Startup — backend '{}'.", PhysicsAPI::BackendToString(lBackend));
+        // World-bounds kill volume — config-driven, off + generous by default.
+        m_WorldBoundsEnabled  = EngineConfig::PhysicsWorldBoundsEnabled();
+        m_WorldBoundsMin      = EngineConfig::PhysicsWorldBoundsMin();
+        m_WorldBoundsMax      = EngineConfig::PhysicsWorldBoundsMax();
+        m_WorldBoundsResponse = WorldBoundsResponseFromString(EngineConfig::PhysicsWorldBoundsResponse());
+
+        OPAAX_CORE_INFO("PhysicsSubsystem::Startup — backend '{}', worldBounds {} (min [{}, {}] max [{}, {}] response '{}').",
+                        PhysicsAPI::BackendToString(lBackend),
+                        m_WorldBoundsEnabled ? "enabled" : "disabled",
+                        m_WorldBoundsMin.x, m_WorldBoundsMin.y, m_WorldBoundsMax.x, m_WorldBoundsMax.y,
+                        ToString(m_WorldBoundsResponse));
         return true;
     }
 
@@ -66,6 +76,15 @@ namespace Opaax
 
         // Fan out overlap/collision events after the step + sync (never mid body-iteration).
         DispatchPhysicsEvents();
+
+        // Reap out-of-bounds bodies LAST — this step's contact/overlap events have already fired.
+        if (m_WorldBoundsEnabled)
+        {
+            if (CoreEngineApp* lApp = GetEngineApp())
+            {
+                EnforceWorldBounds(lApp->GetWorld());
+            }
+        }
     }
 
     void PhysicsSubsystem::Shutdown()
@@ -171,8 +190,9 @@ namespace Opaax
         }
         m_Bodies.clear();
 
-        // Drop tracked overlaps so no stale pair survives into the next play session.
+        // Drop tracked overlaps + bounds latch so no stale state survives into the next play session.
         m_LiveOverlaps.clear();
+        m_OutOfBounds.clear();
     }
 
     void PhysicsSubsystem::SyncDynamicTransforms(World& InWorld)
@@ -262,6 +282,94 @@ namespace Opaax
             {
                 OnCollisionExitEvent lEvent(lA, lB);
                 lApp->DispatchEvent(lEvent);
+            }
+        }
+    }
+
+    // =============================================================================
+    // World bounds (kill volume)
+    // =============================================================================
+    void PhysicsSubsystem::EnforceWorldBounds(World& InWorld)
+    {
+        if (m_World == nullptr) { return; }
+
+        CoreEngineApp* lApp = GetEngineApp();
+        if (lApp == nullptr) { return; }
+
+        m_BoundsVictims.clear();
+
+        for (auto& [lBits, lRecord] : m_Bodies)
+        {
+            // Only fully-simulated bodies drift on their own; author-placed static/kinematic are skipped.
+            if (!lRecord.bSyncToTransform) { continue; }
+
+            Vector2F lPos;
+            float    lRot = 0.f;
+            m_World->GetBodyTransform(lRecord.Handle, lPos, lRot);
+
+            // Center-point containment — sufficient for a kill volume (the body has drifted far).
+            const bool bInside = (lPos.x >= m_WorldBoundsMin.x && lPos.x <= m_WorldBoundsMax.x &&
+                                  lPos.y >= m_WorldBoundsMin.y && lPos.y <= m_WorldBoundsMax.y);
+
+            const auto lLatched = m_OutOfBounds.find(lBits);
+
+            if (!bInside && lLatched == m_OutOfBounds.end())
+            {
+                // Inside -> outside transition: fire once, latch, optionally queue for reaping.
+                m_OutOfBounds.insert(lBits);
+
+                const EntityID lEntity = static_cast<EntityID>(lBits);
+                OnExitWorldBoundsEvent lEvent(lEntity, lPos);
+                lApp->DispatchEvent(lEvent);
+                OPAAX_CORE_INFO("PhysicsSubsystem::EnforceWorldBounds — entity {} left world bounds at ({}, {}).",
+                                lBits, lPos.x, lPos.y);
+
+                if (m_WorldBoundsResponse == EWorldBoundsResponse::EventAndDestroy)
+                {
+                    m_BoundsVictims.push_back(lBits);
+                }
+            }
+            else if (bInside && lLatched != m_OutOfBounds.end())
+            {
+                // Re-entered the bounds — clear the latch so a future exit fires again.
+                m_OutOfBounds.erase(lLatched);
+            }
+        }
+
+        // Reap after the walk — RemoveBodyForEntity mutates m_Bodies/m_OutOfBounds.
+        for (const Uint32 lBits : m_BoundsVictims)
+        {
+            const EntityID lEntity = static_cast<EntityID>(lBits);
+            RemoveBodyForEntity(lEntity);
+            InWorld.DestroyEntity(lEntity);
+        }
+    }
+
+    void PhysicsSubsystem::RemoveBodyForEntity(EntityID InEntity)
+    {
+        const Uint32 lBits = static_cast<Uint32>(InEntity);
+
+        const auto lIt = m_Bodies.find(lBits);
+        if (lIt != m_Bodies.end())
+        {
+            if (m_World != nullptr) { m_World->DestroyBody(lIt->second.Handle); }
+            m_Bodies.erase(lIt);
+        }
+
+        m_OutOfBounds.erase(lBits);
+
+        // Body user-data is entity bits + 1 (see BuildBodies); scrub any live overlap that
+        // referenced this entity so no phantom OnOverlapTick fires after the kill.
+        const Uint64 lUserData = static_cast<Uint64>(lBits) + 1;
+        for (auto lOv = m_LiveOverlaps.begin(); lOv != m_LiveOverlaps.end();)
+        {
+            if (lOv->second.EntityA == lUserData || lOv->second.EntityB == lUserData)
+            {
+                lOv = m_LiveOverlaps.erase(lOv);
+            }
+            else
+            {
+                ++lOv;
             }
         }
     }

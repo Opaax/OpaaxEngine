@@ -51,12 +51,14 @@ namespace Opaax
 
         // --- Physics (engine domain; dispatched from PhysicsSubsystem after the step) ---
         // NOTE: Overlap (Mode==Overlap collider) carries a synthesized per-step Tick; solid
-        //   collisions are Enter/Exit only (Box2D's native begin/end touch).
+        //   collisions are Enter/Exit only (Box2D's native begin/end touch). ExitWorldBounds
+        //   fires once when a dynamic body leaves the optional kill-volume AABB.
         OverlapStart,
         OverlapTick,
         OverlapStop,
         CollisionEnter,
         CollisionExit,
+        ExitWorldBounds,
 
         // --- Gameplay (game project adds entries here) ---
         // NOTE: Keep engine types above this line. Gameplay types below.

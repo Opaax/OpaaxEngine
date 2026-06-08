@@ -7,7 +7,13 @@
         "level": "trace"
     },
     "physics": {
-        "backend": "Box2D"
+        "backend": "Box2D",
+        "worldBounds": {
+            "enabled": true,
+            "min": [-100000.0, -100000.0],
+            "max": [100000.0, 100000.0],
+            "response": "EventAndDestroy"
+        }
     },
     "render": {
         "backend": "OpenGL"

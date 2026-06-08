@@ -108,6 +108,17 @@ namespace Opaax
         // collision Enter/Exit. Called once per FixedUpdate after Step.
         void DispatchPhysicsEvents();
 
+        // Kill volume: when enabled, fire OnExitWorldBounds once per dynamic body that leaves
+        // the bounds AABB (center-point test, latched via m_OutOfBounds) and, when the configured
+        // response is Destroy, reap the entity + its body. Called last in FixedUpdate so this
+        // step's contact/overlap events fire before anything is removed.
+        void EnforceWorldBounds(World& InWorld);
+
+        // Destroy one entity's body via the seam and scrub every map that referenced it
+        // (m_Bodies, m_OutOfBounds, and any live overlap so no phantom Tick survives the kill).
+        // The reusable live body-removal primitive the broader destroy-in-handler path will reuse.
+        void RemoveBodyForEntity(EntityID InEntity);
+
         // =============================================================================
         // Members
         // =============================================================================
@@ -136,6 +147,20 @@ namespace Opaax
         // two entity bits) so (A,B) and (B,A) collapse to one entry. Value keeps the ordered
         // (sensor, visitor) pair so Tick re-fires with sensor-first semantics. Drives OnOverlapTick.
         UnorderedMap<Uint64, PhysicsContactPair> m_LiveOverlaps;
+
+        // World-bounds kill volume — config-fed in Startup. Disabled + generous by default.
+        bool                 m_WorldBoundsEnabled  = false;
+        Vector2F             m_WorldBoundsMin      = { -100000.f, -100000.f };
+        Vector2F             m_WorldBoundsMax      = {  100000.f,  100000.f };
+        EWorldBoundsResponse m_WorldBoundsResponse = EWorldBoundsResponse::EventAndDestroy;
+
+        // Entity bits currently outside the bounds, so OnExitWorldBounds fires once on the
+        // inside->outside transition (not every step a body keeps falling).
+        UnorderedSet<Uint32> m_OutOfBounds;
+
+        // Scratch list of entity bits to reap this step (collected during the m_Bodies walk,
+        // destroyed after it — never mutate m_Bodies mid-iteration).
+        TDynArray<Uint32>    m_BoundsVictims;
     };
 
 } // namespace Opaax
