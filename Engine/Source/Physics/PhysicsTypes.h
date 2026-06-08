@@ -240,4 +240,24 @@ namespace Opaax
         Uint64 EntityB = 0;
     };
 
+    // =============================================================================
+    // PhysicsRayHit — neutral closest-ray result
+    // =============================================================================
+    /**
+     * @struct PhysicsRayHit
+     *
+     * Closest hit from a ray cast. UserData is the hit body's raw user-data (0 when bHit is
+     * false or the shape is unresolved); the subsystem decodes it to an EntityID. Point/Normal
+     * are world-space; Fraction is the [0..1] position of the hit along the cast ray. Neutral —
+     * never holds a backend type.
+     */
+    struct PhysicsRayHit
+    {
+        bool     bHit     = false;
+        Uint64   UserData = 0;
+        Vector2F Point    = { 0.f, 0.f };
+        Vector2F Normal   = { 0.f, 0.f };
+        float    Fraction = 0.f;
+    };
+
 } // namespace Opaax

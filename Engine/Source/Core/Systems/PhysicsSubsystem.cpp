@@ -265,4 +265,38 @@ namespace Opaax
             }
         }
     }
+
+    // =============================================================================
+    // Queries
+    // =============================================================================
+    PhysicsSubsystem::RaycastResult PhysicsSubsystem::RayCast(Vector2F Origin, Vector2F Direction,
+                                                             float Distance, Uint64 ChannelMask)
+    {
+        RaycastResult lResult;
+        if (m_World == nullptr) { return lResult; }
+
+        const PhysicsRayHit lHit = m_World->RayCastClosest(Origin, Direction, Distance, ChannelMask);
+        lResult.bHit     = lHit.bHit;
+        lResult.Point    = lHit.Point;
+        lResult.Normal   = lHit.Normal;
+        lResult.Fraction = lHit.Fraction;
+        if (lHit.bHit) { TryDecodeEntity(lHit.UserData, lResult.Entity); }
+        return lResult;
+    }
+
+    void PhysicsSubsystem::OverlapAABB(Vector2F Min, Vector2F Max, TDynArray<EntityID>& Out, Uint64 ChannelMask)
+    {
+        Out.clear();
+        if (m_World == nullptr) { return; }
+
+        TDynArray<Uint64> lBits;
+        m_World->OverlapAABB(Min, Max, ChannelMask, lBits);
+
+        Out.reserve(lBits.size());
+        for (const Uint64 lUserData : lBits)
+        {
+            EntityID lEntity;
+            if (TryDecodeEntity(lUserData, lEntity)) { Out.push_back(lEntity); }
+        }
+    }
 }

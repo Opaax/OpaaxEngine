@@ -46,10 +46,15 @@ namespace Opaax
         void        GetBodyTransform(BodyHandle InBody, Vector2F& OutPosition, float& OutRotation) const override;
         void        SetBodyTransform(BodyHandle InBody, Vector2F InPosition, float InRotation) override;
 
-        void GetSensorEvents(std::vector<PhysicsContactPair>& OutBegan,
-                             std::vector<PhysicsContactPair>& OutEnded) override;
-        void GetContactEvents(std::vector<PhysicsContactPair>& OutBegan,
-                              std::vector<PhysicsContactPair>& OutEnded) override;
+        void GetSensorEvents(TDynArray<PhysicsContactPair>& OutBegan,
+                             TDynArray<PhysicsContactPair>& OutEnded) override;
+        void GetContactEvents(TDynArray<PhysicsContactPair>& OutBegan,
+                              TDynArray<PhysicsContactPair>& OutEnded) override;
+
+        PhysicsRayHit RayCastClosest(Vector2F Origin, Vector2F Direction, float Distance,
+                                     Uint64 ChannelMask) override;
+        void OverlapAABB(Vector2F Min, Vector2F Max, Uint64 ChannelMask,
+                         TDynArray<Uint64>& OutUserData) override;
         //~End IPhysicsWorld Interface
 
         // =============================================================================

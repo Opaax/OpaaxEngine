@@ -30,6 +30,14 @@ namespace Opaax
             const b2BodyId lBody = b2Shape_GetBody(InShape);
             return static_cast<Uint64>(reinterpret_cast<uintptr_t>(b2Body_GetUserData(lBody)));
         }
+
+        // b2OverlapResultFcn for OverlapAABB — context is the out-vector; collect and continue.
+        bool OverlapCollect(b2ShapeId InShape, void* InContext)
+        {
+            auto* lOut = static_cast<TDynArray<Uint64>*>(InContext);
+            lOut->push_back(EntityBitsFromShape(InShape));
+            return true;
+        }
     }
 
     // =============================================================================
@@ -155,8 +163,8 @@ namespace Opaax
     // =============================================================================
     // Events (drained after Step)
     // =============================================================================
-    void Box2DPhysicsWorld::GetSensorEvents(std::vector<PhysicsContactPair>& OutBegan,
-                                            std::vector<PhysicsContactPair>& OutEnded)
+    void Box2DPhysicsWorld::GetSensorEvents(TDynArray<PhysicsContactPair>& OutBegan,
+                                            TDynArray<PhysicsContactPair>& OutEnded)
     {
         OutBegan.clear();
         OutEnded.clear();
@@ -178,8 +186,8 @@ namespace Opaax
         }
     }
 
-    void Box2DPhysicsWorld::GetContactEvents(std::vector<PhysicsContactPair>& OutBegan,
-                                             std::vector<PhysicsContactPair>& OutEnded)
+    void Box2DPhysicsWorld::GetContactEvents(TDynArray<PhysicsContactPair>& OutBegan,
+                                             TDynArray<PhysicsContactPair>& OutEnded)
     {
         OutBegan.clear();
         OutEnded.clear();
@@ -199,6 +207,43 @@ namespace Opaax
             OutEnded.push_back({ EntityBitsFromShape(lEvent.shapeIdA),
                                  EntityBitsFromShape(lEvent.shapeIdB) });
         }
+    }
+
+    // =============================================================================
+    // Queries
+    // =============================================================================
+    PhysicsRayHit Box2DPhysicsWorld::RayCastClosest(Vector2F Origin, Vector2F Direction, float Distance,
+                                                    Uint64 ChannelMask)
+    {
+        // translation = unit(Direction) * Distance; zero direction => zero-length ray (no hit).
+        const b2Vec2 lTranslation = b2MulSV(Distance, b2Normalize(ToB2(Direction)));
+
+        b2QueryFilter lFilter;
+        lFilter.categoryBits = ~0ull;        // the query belongs to all categories...
+        lFilter.maskBits     = ChannelMask;  // ...and accepts the channels the caller asked for.
+
+        const b2RayResult lResult = b2World_CastRayClosest(m_WorldId, ToB2(Origin), lTranslation, lFilter);
+
+        PhysicsRayHit lHit;
+        lHit.bHit     = lResult.hit;
+        lHit.Point    = ToVec2(lResult.point);
+        lHit.Normal   = ToVec2(lResult.normal);
+        lHit.Fraction = lResult.fraction;
+        lHit.UserData = lResult.hit ? EntityBitsFromShape(lResult.shapeId) : 0;
+        return lHit;
+    }
+
+    void Box2DPhysicsWorld::OverlapAABB(Vector2F Min, Vector2F Max, Uint64 ChannelMask,
+                                        TDynArray<Uint64>& OutUserData)
+    {
+        OutUserData.clear();
+
+        b2QueryFilter lFilter;
+        lFilter.categoryBits = ~0ull;
+        lFilter.maskBits     = ChannelMask;
+
+        const b2AABB lAABB{ ToB2(Min), ToB2(Max) };
+        b2World_OverlapAABB(m_WorldId, lAABB, lFilter, &OverlapCollect, &OutUserData);
     }
 
 } // namespace Opaax

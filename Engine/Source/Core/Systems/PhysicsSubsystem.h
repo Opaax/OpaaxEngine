@@ -1,11 +1,10 @@
 #pragma once
 
-#include <unordered_map>
-#include <vector>
-
 #include "Core/Systems/EngineSubsystem.h"
 #include "Core/OpaaxTypes.h"
+#include "Core/OpaaxMathTypes.h"
 
+#include "ECS/OpaaxEntity.hpp"
 #include "Physics/IPhysicsWorld.h"
 #include "Physics/PhysicsTypes.h"
 
@@ -52,6 +51,28 @@ namespace Opaax
         // =============================================================================
     public:
         IPhysicsWorld* GetWorld() noexcept { return m_World.get(); }
+
+        // =============================================================================
+        // Queries (resolve the seam's raw user-data to EntityID)
+        // =============================================================================
+    public:
+        // Closest-hit result of a ray cast. Entity is ENTITY_NONE when bHit is false.
+        struct RaycastResult
+        {
+            bool     bHit     = false;
+            EntityID Entity   = ENTITY_NONE;
+            Vector2F Point    = { 0.f, 0.f };
+            Vector2F Normal   = { 0.f, 0.f };
+            float    Fraction = 0.f;
+        };
+
+        // Cast a ray from Origin along Direction for Distance world units; ChannelMask selects which
+        // channels are hittable (~0 = all). Empty result if no world (not playing).
+        RaycastResult RayCast(Vector2F Origin, Vector2F Direction, float Distance, Uint64 ChannelMask = ~0ull);
+
+        // Collect every entity whose collider overlaps the world-space AABB [Min..Max] into Out
+        // (cleared first), filtered by ChannelMask. No-op if no world (not playing).
+        void OverlapAABB(Vector2F Min, Vector2F Max, TDynArray<EntityID>& Out, Uint64 ChannelMask = ~0ull);
 
         // =============================================================================
         // Override
@@ -103,18 +124,18 @@ namespace Opaax
         PhysicsWorldDesc                        m_WorldDesc;
 
         // Keyed by entity bits (static_cast<Uint32>(EntityID)); reconstructed on sync.
-        std::unordered_map<Uint32, BodyRecord>  m_Bodies;
+        UnorderedMap<Uint32, BodyRecord>  m_Bodies;
 
         // Reusable scratch buffers drained from the world each step (no per-step allocation).
-        std::vector<PhysicsContactPair>         m_SensorBegan;
-        std::vector<PhysicsContactPair>         m_SensorEnded;
-        std::vector<PhysicsContactPair>         m_ContactBegan;
-        std::vector<PhysicsContactPair>         m_ContactEnded;
+        TDynArray<PhysicsContactPair>         m_SensorBegan;
+        TDynArray<PhysicsContactPair>         m_SensorEnded;
+        TDynArray<PhysicsContactPair>         m_ContactBegan;
+        TDynArray<PhysicsContactPair>         m_ContactEnded;
 
         // Currently-overlapping sensor pairs, keyed by the normalized pair (min<<32 | max of the
         // two entity bits) so (A,B) and (B,A) collapse to one entry. Value keeps the ordered
         // (sensor, visitor) pair so Tick re-fires with sensor-first semantics. Drives OnOverlapTick.
-        std::unordered_map<Uint64, PhysicsContactPair> m_LiveOverlaps;
+        UnorderedMap<Uint64, PhysicsContactPair> m_LiveOverlaps;
     };
 
 } // namespace Opaax

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <vector>
-
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxMathTypes.h"
 
@@ -62,13 +60,27 @@ namespace Opaax
         // -------------------------------------------------------------------------
         // Drain sensor (overlap) begin/end pairs accumulated by the last Step into the caller's
         // buffers (cleared then filled). A = sensor owner, B = visitor. Resolved to entity bits.
-        virtual void GetSensorEvents(std::vector<PhysicsContactPair>& OutBegan,
-                                     std::vector<PhysicsContactPair>& OutEnded) = 0;
+        virtual void GetSensorEvents(TDynArray<PhysicsContactPair>& OutBegan,
+                                     TDynArray<PhysicsContactPair>& OutEnded) = 0;
 
         // Drain solid contact begin/end pairs accumulated by the last Step (cleared then filled).
         // A/B follow the backend's shape order. Resolved to entity bits.
-        virtual void GetContactEvents(std::vector<PhysicsContactPair>& OutBegan,
-                                      std::vector<PhysicsContactPair>& OutEnded) = 0;
+        virtual void GetContactEvents(TDynArray<PhysicsContactPair>& OutBegan,
+                                      TDynArray<PhysicsContactPair>& OutEnded) = 0;
+
+        // -------------------------------------------------------------------------
+        // Queries
+        // -------------------------------------------------------------------------
+        // Closest hit along Origin + normalize(Direction) * Distance. ChannelMask selects which
+        // channels are hittable (bit set per CategoryBit); ~0 hits everything. UserData in the
+        // result is the hit body's raw user-data (0 = no hit / unresolved).
+        virtual PhysicsRayHit RayCastClosest(Vector2F Origin, Vector2F Direction, float Distance,
+                                             Uint64 ChannelMask) = 0;
+
+        // Fill OutUserData (cleared first) with every overlapping shape's body user-data within the
+        // world-space AABB [Min..Max], filtered by ChannelMask.
+        virtual void OverlapAABB(Vector2F Min, Vector2F Max, Uint64 ChannelMask,
+                                 TDynArray<Uint64>& OutUserData) = 0;
     };
 
 } // namespace Opaax
