@@ -40,7 +40,6 @@ namespace Opaax
         // Functions
         // =============================================================================
     private:
-        void DispatchEvent(OpaaxEvent& Event);
         bool OnWindowClose(WindowCloseEvent& Event);
         bool OnWindowResize(WindowResizeEvent& Event);
 
@@ -59,6 +58,11 @@ namespace Opaax
         void Run();
         void Shutdown();
         void RequestQuit() noexcept;
+
+        // Broadcast an event through the full pipeline (game-app OnEvent -> engine subsystems ->
+        // game subsystems, category-filtered). Entry point for window input AND for subsystems
+        // injecting synthetic events (e.g. PhysicsSubsystem overlap/collision events).
+        void DispatchEvent(OpaaxEvent& Event);
 
         //------------------------------------------------------------------------------
         //  Get - Set

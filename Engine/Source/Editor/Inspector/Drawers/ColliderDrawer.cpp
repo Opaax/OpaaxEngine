@@ -40,7 +40,7 @@ namespace Opaax::Editor
             lCol->Shape = static_cast<EColliderShape>(lShape);
         }
 
-        static const char* lModeNames[] = { "Solid", "Trigger" };
+        static const char* lModeNames[] = { "Solid", "Overlap" };
         int lMode = static_cast<int>(lCol->Mode);
         if (ImGui::Combo("Mode", &lMode, lModeNames, IM_ARRAYSIZE(lModeNames)))
         {

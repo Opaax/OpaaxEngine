@@ -45,6 +45,11 @@ namespace Opaax
         ShapeHandle AddShape(BodyHandle InBody, const ShapeDesc& InShape) override;
         void        GetBodyTransform(BodyHandle InBody, Vector2F& OutPosition, float& OutRotation) const override;
         void        SetBodyTransform(BodyHandle InBody, Vector2F InPosition, float InRotation) override;
+
+        void GetSensorEvents(std::vector<PhysicsContactPair>& OutBegan,
+                             std::vector<PhysicsContactPair>& OutEnded) override;
+        void GetContactEvents(std::vector<PhysicsContactPair>& OutBegan,
+                              std::vector<PhysicsContactPair>& OutEnded) override;
         //~End IPhysicsWorld Interface
 
         // =============================================================================

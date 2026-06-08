@@ -7,7 +7,7 @@
 // the parallel g_CollisionChannelIDs string array.
 //
 // A channel answers "WHAT is this collider" (its category), NOT "how does it interact"
-// (that is the collider's Mode = Solid|Trigger and the CollisionProfile response matrix).
+// (that is the collider's Mode = Solid|Overlap and the CollisionProfile response matrix).
 // The enum ordinal doubles as the Box2D category-bit index, so order is stable: appending
 // is free, reordering/removing renumbers existing scenes — append, do not reshuffle.
 //

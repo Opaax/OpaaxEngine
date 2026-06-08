@@ -21,6 +21,15 @@ namespace Opaax
             }
             return b2_staticBody;
         }
+
+        // Resolve a shape to its owning entity's packed bits (BodyDesc::UserData). Returns 0 if the
+        // shape is stale — end-touch events may reference shapes destroyed since the step.
+        Uint64 EntityBitsFromShape(b2ShapeId InShape) noexcept
+        {
+            if (!b2Shape_IsValid(InShape)) { return 0; }
+            const b2BodyId lBody = b2Shape_GetBody(InShape);
+            return static_cast<Uint64>(reinterpret_cast<uintptr_t>(b2Body_GetUserData(lBody)));
+        }
     }
 
     // =============================================================================
@@ -105,6 +114,12 @@ namespace Opaax
         lDef.filter.categoryBits  = InShape.CategoryBits;
         lDef.filter.maskBits      = InShape.MaskBits;
 
+        // Enable sensor events on every shape: a sensor needs them to report, and a solid
+        // visitor needs them to be SEEN by a sensor (Box2D 3.2 requires the visitor to opt in).
+        // Solid shapes additionally enable contact events for OnCollisionEnter/Exit.
+        lDef.enableSensorEvents  = true;
+        lDef.enableContactEvents = !InShape.IsSensor;
+
         const ShapeGeometry& lGeo = InShape.Geometry;
 
         b2ShapeId lShape;
@@ -135,6 +150,55 @@ namespace Opaax
     {
         const b2BodyId lId = b2LoadBodyId(InBody.Id);
         b2Body_SetTransform(lId, ToB2(InPosition), b2MakeRot(InRotation));
+    }
+
+    // =============================================================================
+    // Events (drained after Step)
+    // =============================================================================
+    void Box2DPhysicsWorld::GetSensorEvents(std::vector<PhysicsContactPair>& OutBegan,
+                                            std::vector<PhysicsContactPair>& OutEnded)
+    {
+        OutBegan.clear();
+        OutEnded.clear();
+
+        const b2SensorEvents lEvents = b2World_GetSensorEvents(m_WorldId);
+
+        for (int i = 0; i < lEvents.beginCount; ++i)
+        {
+            const b2SensorBeginTouchEvent& lEvent = lEvents.beginEvents[i];
+            OutBegan.push_back({ EntityBitsFromShape(lEvent.sensorShapeId),
+                                 EntityBitsFromShape(lEvent.visitorShapeId) });
+        }
+
+        for (int i = 0; i < lEvents.endCount; ++i)
+        {
+            const b2SensorEndTouchEvent& lEvent = lEvents.endEvents[i];
+            OutEnded.push_back({ EntityBitsFromShape(lEvent.sensorShapeId),
+                                 EntityBitsFromShape(lEvent.visitorShapeId) });
+        }
+    }
+
+    void Box2DPhysicsWorld::GetContactEvents(std::vector<PhysicsContactPair>& OutBegan,
+                                             std::vector<PhysicsContactPair>& OutEnded)
+    {
+        OutBegan.clear();
+        OutEnded.clear();
+
+        const b2ContactEvents lEvents = b2World_GetContactEvents(m_WorldId);
+
+        for (int i = 0; i < lEvents.beginCount; ++i)
+        {
+            const b2ContactBeginTouchEvent& lEvent = lEvents.beginEvents[i];
+            OutBegan.push_back({ EntityBitsFromShape(lEvent.shapeIdA),
+                                 EntityBitsFromShape(lEvent.shapeIdB) });
+        }
+
+        for (int i = 0; i < lEvents.endCount; ++i)
+        {
+            const b2ContactEndTouchEvent& lEvent = lEvents.endEvents[i];
+            OutEnded.push_back({ EntityBitsFromShape(lEvent.shapeIdA),
+                                 EntityBitsFromShape(lEvent.shapeIdB) });
+        }
     }
 
 } // namespace Opaax

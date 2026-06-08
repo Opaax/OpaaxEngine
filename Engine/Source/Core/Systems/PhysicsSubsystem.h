@@ -1,6 +1,7 @@
 #pragma once
 
 #include <unordered_map>
+#include <vector>
 
 #include "Core/Systems/EngineSubsystem.h"
 #include "Core/OpaaxTypes.h"
@@ -81,6 +82,11 @@ namespace Opaax
         // Write each dynamic body's post-step transform back to its ECS TransformComponent.
         void SyncDynamicTransforms(World& InWorld);
 
+        // Drain the world's sensor + contact events after a step and fan them out as engine
+        // events: overlap Start/Tick/Stop (Tick synthesized from the live overlap set) and
+        // collision Enter/Exit. Called once per FixedUpdate after Step.
+        void DispatchPhysicsEvents();
+
         // =============================================================================
         // Members
         // =============================================================================
@@ -98,6 +104,17 @@ namespace Opaax
 
         // Keyed by entity bits (static_cast<Uint32>(EntityID)); reconstructed on sync.
         std::unordered_map<Uint32, BodyRecord>  m_Bodies;
+
+        // Reusable scratch buffers drained from the world each step (no per-step allocation).
+        std::vector<PhysicsContactPair>         m_SensorBegan;
+        std::vector<PhysicsContactPair>         m_SensorEnded;
+        std::vector<PhysicsContactPair>         m_ContactBegan;
+        std::vector<PhysicsContactPair>         m_ContactEnded;
+
+        // Currently-overlapping sensor pairs, keyed by the normalized pair (min<<32 | max of the
+        // two entity bits) so (A,B) and (B,A) collapse to one entry. Value keeps the ordered
+        // (sensor, visitor) pair so Tick re-fires with sensor-first semantics. Drives OnOverlapTick.
+        std::unordered_map<Uint64, PhysicsContactPair> m_LiveOverlaps;
     };
 
 } // namespace Opaax

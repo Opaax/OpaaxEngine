@@ -26,7 +26,7 @@ namespace Opaax::ECS
      * which dimension field is read: Box uses Size (full world-unit extents), Circle uses
      * Radius. Offset shifts the shape from the entity origin in local space.
      *
-     * Mode (Solid | Trigger) decides whether the shape blocks or just senses. Channel is
+     * Mode (Solid | Overlap) decides whether the shape blocks or just senses. Channel is
      * the collider's object-type category; the CollisionProfile that resolves the per-channel
      * filter mask is a later, additive field (P2b) — until then a collider blocks everything
      * on its channel.

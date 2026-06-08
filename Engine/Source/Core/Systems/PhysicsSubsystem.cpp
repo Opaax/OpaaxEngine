@@ -7,6 +7,7 @@
 #include "Physics/PhysicsAPI.h"
 #include "Physics/Collision/CollisionChannel.h"
 #include "Physics/Collision/CollisionProfile.h"
+#include "Physics/Events/PhysicsEvents.h"
 
 #include "World/World.h"
 #include "ECS/Components/TransformComponent.h"
@@ -15,6 +16,27 @@
 
 namespace Opaax
 {
+    namespace
+    {
+        // Order-independent key so an overlapping (A,B) and (B,A) collapse to one live entry.
+        Uint64 OverlapKey(Uint64 InA, Uint64 InB) noexcept
+        {
+            const Uint32 lA  = static_cast<Uint32>(InA);
+            const Uint32 lB  = static_cast<Uint32>(InB);
+            const Uint32 lLo = lA < lB ? lA : lB;
+            const Uint32 lHi = lA < lB ? lB : lA;
+            return (static_cast<Uint64>(lHi) << 32) | lLo;
+        }
+
+        // Body user-data is entity-bits + 1 (see BuildBodies); 0 means no entity / stale shape.
+        bool TryDecodeEntity(Uint64 InUserData, EntityID& OutEntity) noexcept
+        {
+            if (InUserData == 0) { return false; }
+            OutEntity = static_cast<EntityID>(static_cast<Uint32>(InUserData - 1));
+            return true;
+        }
+    }
+
     bool PhysicsSubsystem::Startup()
     {
         const EPhysicsBackend lBackend = PhysicsAPI::BackendFromString(EngineConfig::PhysicsBackend());
@@ -41,6 +63,9 @@ namespace Opaax
         {
             SyncDynamicTransforms(lApp->GetWorld());
         }
+
+        // Fan out overlap/collision events after the step + sync (never mid body-iteration).
+        DispatchPhysicsEvents();
     }
 
     void PhysicsSubsystem::Shutdown()
@@ -94,7 +119,9 @@ namespace Opaax
                 lBodyDesc.FixedRotation  = lRb ? lRb->FixedRotation  : false;
                 lBodyDesc.LinearDamping  = lRb ? lRb->LinearDamping  : 0.f;
                 lBodyDesc.AngularDamping = lRb ? lRb->AngularDamping : 0.f;
-                lBodyDesc.UserData       = static_cast<Uint64>(static_cast<Uint32>(InEntity));
+                // Encode as entity-bits + 1 so 0 stays reserved for "no entity / stale shape"
+                // (entt's first entity has raw value 0, which a sensor event must not alias).
+                lBodyDesc.UserData       = static_cast<Uint64>(static_cast<Uint32>(InEntity)) + 1;
 
                 const BodyHandle lBody = m_World->CreateBody(lBodyDesc);
                 if (!lBody.IsValid()) { return; }
@@ -105,7 +132,7 @@ namespace Opaax
                 // Component authors full extents; geometry stores half-extents.
                 lShapeDesc.Geometry.HalfExtents = { InCollider.Size.x * 0.5f, InCollider.Size.y * 0.5f };
                 lShapeDesc.Geometry.Radius      = InCollider.Radius;
-                lShapeDesc.IsSensor     = (InCollider.Mode == EColliderMode::Trigger);
+                lShapeDesc.IsSensor     = (InCollider.Mode == EColliderMode::Overlap);
                 lShapeDesc.Density      = InCollider.Density;
                 lShapeDesc.Friction     = InCollider.Friction;
                 lShapeDesc.Restitution  = InCollider.Restitution;
@@ -143,6 +170,9 @@ namespace Opaax
             }
         }
         m_Bodies.clear();
+
+        // Drop tracked overlaps so no stale pair survives into the next play session.
+        m_LiveOverlaps.clear();
     }
 
     void PhysicsSubsystem::SyncDynamicTransforms(World& InWorld)
@@ -161,6 +191,78 @@ namespace Opaax
 
             lTransform->Position = lPosition;
             lTransform->Rotation = lRotation;
+        }
+    }
+
+    // =============================================================================
+    // Event dispatch
+    // =============================================================================
+    void PhysicsSubsystem::DispatchPhysicsEvents()
+    {
+        if (m_World == nullptr) { return; }
+
+        CoreEngineApp* lApp = GetEngineApp();
+        if (lApp == nullptr) { return; }
+
+        // --- Overlap (sensor): Start then Stop, then synthesize Tick for the survivors ---
+        m_World->GetSensorEvents(m_SensorBegan, m_SensorEnded);
+
+        for (const PhysicsContactPair& lPair : m_SensorBegan)
+        {
+            m_LiveOverlaps[OverlapKey(lPair.EntityA, lPair.EntityB)] = lPair;
+
+            EntityID lOverlap, lOther;
+            if (TryDecodeEntity(lPair.EntityA, lOverlap) && TryDecodeEntity(lPair.EntityB, lOther))
+            {
+                OnOverlapStartEvent lEvent(lOverlap, lOther);
+                lApp->DispatchEvent(lEvent);
+            }
+        }
+
+        for (const PhysicsContactPair& lPair : m_SensorEnded)
+        {
+            m_LiveOverlaps.erase(OverlapKey(lPair.EntityA, lPair.EntityB));
+
+            EntityID lOverlap, lOther;
+            if (TryDecodeEntity(lPair.EntityA, lOverlap) && TryDecodeEntity(lPair.EntityB, lOther))
+            {
+                OnOverlapStopEvent lEvent(lOverlap, lOther);
+                lApp->DispatchEvent(lEvent);
+            }
+        }
+
+        // A pair that began AND ended this step is already gone from the map -> Start+Stop, no Tick.
+        for (const auto& [lKey, lPair] : m_LiveOverlaps)
+        {
+            EntityID lOverlap, lOther;
+            if (TryDecodeEntity(lPair.EntityA, lOverlap) && TryDecodeEntity(lPair.EntityB, lOther))
+            {
+                OnOverlapTickEvent lEvent(lOverlap, lOther);
+                lApp->DispatchEvent(lEvent);
+            }
+        }
+
+        // --- Collision (solid): Enter / Exit only, no tracking ---
+        m_World->GetContactEvents(m_ContactBegan, m_ContactEnded);
+
+        for (const PhysicsContactPair& lPair : m_ContactBegan)
+        {
+            EntityID lA, lB;
+            if (TryDecodeEntity(lPair.EntityA, lA) && TryDecodeEntity(lPair.EntityB, lB))
+            {
+                OnCollisionEnterEvent lEvent(lA, lB);
+                lApp->DispatchEvent(lEvent);
+            }
+        }
+
+        for (const PhysicsContactPair& lPair : m_ContactEnded)
+        {
+            EntityID lA, lB;
+            if (TryDecodeEntity(lPair.EntityA, lA) && TryDecodeEntity(lPair.EntityB, lB))
+            {
+                OnCollisionExitEvent lEvent(lA, lB);
+                lApp->DispatchEvent(lEvent);
+            }
         }
     }
 }

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxMathTypes.h"
 
@@ -54,6 +56,19 @@ namespace Opaax
 
         // Write a body's world transform — used to push static/kinematic ECS Transforms into the sim.
         virtual void        SetBodyTransform(BodyHandle InBody, Vector2F InPosition, float InRotation) = 0;
+
+        // -------------------------------------------------------------------------
+        // Events (drained after Step)
+        // -------------------------------------------------------------------------
+        // Drain sensor (overlap) begin/end pairs accumulated by the last Step into the caller's
+        // buffers (cleared then filled). A = sensor owner, B = visitor. Resolved to entity bits.
+        virtual void GetSensorEvents(std::vector<PhysicsContactPair>& OutBegan,
+                                     std::vector<PhysicsContactPair>& OutEnded) = 0;
+
+        // Drain solid contact begin/end pairs accumulated by the last Step (cleared then filled).
+        // A/B follow the backend's shape order. Resolved to entity bits.
+        virtual void GetContactEvents(std::vector<PhysicsContactPair>& OutBegan,
+                                      std::vector<PhysicsContactPair>& OutEnded) = 0;
     };
 
 } // namespace Opaax

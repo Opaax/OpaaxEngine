@@ -92,13 +92,13 @@ namespace Opaax
     /**
      * @enum EColliderMode
      * How a collider participates in the solve. Solid blocks (collision response);
-     * Trigger overlaps without response and fires sensor events. Maps to the backend's
+     * Overlap passes through without response and fires overlap events. Maps to the backend's
      * sensor flag — the WHAT (channel) stays orthogonal to this HOW.
      */
     enum class EColliderMode : Uint8
     {
         Solid,
-        Trigger
+        Overlap
     };
 
     // ---------------------------------------------------------------------------
@@ -143,14 +143,15 @@ namespace Opaax
         switch (InMode)
         {
             case EColliderMode::Solid:   return "Solid";
-            case EColliderMode::Trigger: return "Trigger";
+            case EColliderMode::Overlap: return "Overlap";
         }
         return "Solid";
     }
 
     inline EColliderMode ColliderModeFromString(const OpaaxString& InName) noexcept
     {
-        if (InName == "Trigger") { return EColliderMode::Trigger; }
+        // "Trigger" kept as a legacy alias so scenes authored before the Overlap rename still load.
+        if (InName == "Overlap" || InName == "Trigger") { return EColliderMode::Overlap; }
         return EColliderMode::Solid;
     }
 
@@ -207,7 +208,7 @@ namespace Opaax
      *
      * Backend-neutral parameters to attach one collision shape to a body, translated from an
      * entity's ColliderComponent: the Geometry (form) plus its material and collision filter.
-     * IsSensor maps Mode==Trigger. CategoryBits/MaskBits default to "collide with all" and are
+     * IsSensor maps Mode==Overlap. CategoryBits/MaskBits default to "collide with all" and are
      * refined by the CollisionProfile.
      */
     struct ShapeDesc
@@ -220,6 +221,23 @@ namespace Opaax
         float         Restitution  = 0.f;
         Uint64        CategoryBits = ~0ull;
         Uint64        MaskBits     = ~0ull;
+    };
+
+    // =============================================================================
+    // PhysicsContactPair — neutral event pair drained from the backend
+    // =============================================================================
+    /**
+     * @struct PhysicsContactPair
+     *
+     * One begin-or-end touch pair, resolved by the backend from shape -> body -> user-data
+     * to the two participating entities (packed EntityID bits, as set in BodyDesc::UserData).
+     * For sensor (overlap) pairs A is the sensor owner and B the visitor; for solid contact
+     * pairs A/B follow Box2D's shapeIdA/shapeIdB order. Neutral — never holds a backend type.
+     */
+    struct PhysicsContactPair
+    {
+        Uint64 EntityA = 0;
+        Uint64 EntityB = 0;
     };
 
 } // namespace Opaax
