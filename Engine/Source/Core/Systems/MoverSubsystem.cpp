@@ -16,6 +16,7 @@
 #include "World/World.h"
 #include "ECS/Components/MoverComponent.h"
 #include "ECS/Components/TransformComponent.h"
+#include "ECS/Components/TransformInterpolationComponent.h"
 
 namespace Opaax
 {
@@ -82,7 +83,7 @@ namespace Opaax
 
         using namespace ECS;
         InWorld.Each<MoverComponent, TransformComponent>(
-            [this, &InPhysicsWorld](EntityID InEntity, MoverComponent& InMover, TransformComponent& InTransform)
+            [this, &InWorld, &InPhysicsWorld](EntityID InEntity, MoverComponent& InMover, TransformComponent& InTransform)
             {
                 // A mover is a KINEMATIC body — we drive it; the solver never moves it. Fixed rotation.
                 BodyDesc lBodyDesc;
@@ -117,6 +118,10 @@ namespace Opaax
 
                 InPhysicsWorld.AddShape(lBody, lShapeDesc);
                 m_Bodies.emplace(static_cast<Uint32>(InEntity), lBody);
+
+                // Seed render-interpolation prev pose to the start pose (frame 0 must not pop).
+                InWorld.AddOrReplaceComponent<TransformInterpolationComponent>(
+                    InEntity, TransformInterpolationComponent{ InTransform.Position, InTransform.Rotation });
             });
     }
 
@@ -145,10 +150,19 @@ namespace Opaax
         const float lDt = static_cast<float>(FixedDeltaTime);
 
         using namespace ECS;
-        lApp->GetWorld().Each<MoverComponent, TransformComponent>(
-            [this, lWorld, lDt](EntityID InEntity, MoverComponent& InMover, TransformComponent& InTransform)
+        World& lEcsWorld = lApp->GetWorld();
+        lEcsWorld.Each<MoverComponent, TransformComponent>(
+            [this, lWorld, lDt, &lEcsWorld](EntityID InEntity, MoverComponent& InMover, TransformComponent& InTransform)
             {
                 const Uint32 lBits = static_cast<Uint32>(InEntity);
+
+                // Snapshot the pre-tick pose for render interpolation before the mode mutates
+                // the transform — prev/current then bracket exactly one fixed step.
+                if (auto* lInterp = lEcsWorld.GetComponent<TransformInterpolationComponent>(InEntity))
+                {
+                    lInterp->PrevPosition = InTransform.Position;
+                    lInterp->PrevRotation = InTransform.Rotation;
+                }
 
                 MoverTickContext lContext{ *lWorld, InMover, InTransform, lDt };
                 lContext.SelfUserData = static_cast<Uint64>(lBits) + 1;   // skip our own body in the sweep

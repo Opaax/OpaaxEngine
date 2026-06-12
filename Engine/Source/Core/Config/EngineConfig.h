@@ -52,6 +52,11 @@ namespace Opaax
         // carries no dependency on RHI — RHI maps this to its EBackend enum.
         static const OpaaxString& RenderBackend() noexcept { return s_RenderBackend; }
 
+        // Fixed-step transform interpolation (default on): the renderer lerps physics-driven
+        // entities between fixed steps so motion stays smooth above 60 Hz. Off = pixel-locked
+        // rendering at the raw fixed-step pose (visible stepping at high refresh).
+        static bool                RenderInterpolation() noexcept { return s_RenderInterpolation; }
+
         // ---- Physics --------------------------------------------------------
         // Physics backend name ("Box2D" today). String here so Core/Config carries no
         // dependency on Physics — Physics maps this to its EPhysicsBackend enum.
@@ -75,6 +80,7 @@ namespace Opaax
         static OpaaxString s_EngineManifestRelPath;
         static OpaaxString s_LogLevel;
         static OpaaxString s_RenderBackend;
+        static bool        s_RenderInterpolation;
         static OpaaxString s_PhysicsBackend;
         static bool        s_PhysicsWorldBoundsEnabled;
         static Vector2F    s_PhysicsWorldBoundsMin;

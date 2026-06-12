@@ -11,6 +11,7 @@
 
 #include "World/World.h"
 #include "ECS/Components/TransformComponent.h"
+#include "ECS/Components/TransformInterpolationComponent.h"
 #include "ECS/Components/RigidbodyComponent.h"
 #include "ECS/Components/ColliderComponent.h"
 
@@ -176,6 +177,14 @@ namespace Opaax
                 lRecord.Handle           = lBody;
                 lRecord.bSyncToTransform = (lBodyDesc.Type == EBodyType::Dynamic);
                 m_Bodies.emplace(static_cast<Uint32>(InEntity), lRecord);
+
+                // Only dynamic bodies move on their own and stutter at >60 Hz. Seed the
+                // render-interpolation prev pose to the start pose so frame 0 doesn't pop.
+                if (lRecord.bSyncToTransform)
+                {
+                    InWorld.AddOrReplaceComponent<TransformInterpolationComponent>(
+                        InEntity, TransformInterpolationComponent{ InTransform.Position, InTransform.Rotation });
+                }
             });
     }
 
@@ -208,6 +217,14 @@ namespace Opaax
             Vector2F lPosition;
             float    lRotation = 0.f;
             m_World->GetBodyTransform(lRecord.Handle, lPosition, lRotation);
+
+            // Snapshot the pre-step pose for render interpolation BEFORE overwriting with
+            // this step's result — prev/current then bracket exactly one fixed step.
+            if (auto* lInterp = InWorld.GetComponent<ECS::TransformInterpolationComponent>(lEntity))
+            {
+                lInterp->PrevPosition = lTransform->Position;
+                lInterp->PrevRotation = lTransform->Rotation;
+            }
 
             lTransform->Position = lPosition;
             lTransform->Rotation = lRotation;

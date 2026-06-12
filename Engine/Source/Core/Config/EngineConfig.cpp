@@ -17,6 +17,7 @@ namespace Opaax
     OpaaxString EngineConfig::s_EngineManifestRelPath = OpaaxString("Engine/Assets/AssetManifest.json");
     OpaaxString EngineConfig::s_LogLevel              = OpaaxString("trace");
     OpaaxString EngineConfig::s_RenderBackend         = OpaaxString("OpenGL");
+    bool        EngineConfig::s_RenderInterpolation   = true;
     OpaaxString EngineConfig::s_PhysicsBackend        = OpaaxString("Box2D");
     bool        EngineConfig::s_PhysicsWorldBoundsEnabled  = false;
     Vector2F    EngineConfig::s_PhysicsWorldBoundsMin      = { -100000.f, -100000.f };
@@ -50,7 +51,10 @@ namespace Opaax
                 { "engineManifest", s_EngineManifestRelPath.CStr() }
             };
             lRoot["log"]    = { { "level",   s_LogLevel.CStr()      } };
-            lRoot["render"]  = { { "backend", s_RenderBackend.CStr()  } };
+            lRoot["render"]  = {
+                { "backend",       s_RenderBackend.CStr() },
+                { "interpolation", s_RenderInterpolation   }
+            };
             lRoot["physics"] = {
                 { "backend", s_PhysicsBackend.CStr() },
                 { "worldBounds", {
@@ -144,6 +148,10 @@ namespace Opaax
             {
                 s_RenderBackend = OpaaxString(lR["backend"].get<std::string>().c_str());
             }
+            if (lR.contains("interpolation") && lR["interpolation"].is_boolean())
+            {
+                s_RenderInterpolation = lR["interpolation"].get<bool>();
+            }
         }
 
         if (lRoot.contains("physics") && lRoot["physics"].is_object())
@@ -211,7 +219,10 @@ namespace Opaax
                 { "engineManifest", s_EngineManifestRelPath.CStr() }
             };
             lRoot["log"]    = { { "level",   s_LogLevel.CStr()      } };
-            lRoot["render"]  = { { "backend", s_RenderBackend.CStr()  } };
+            lRoot["render"]  = {
+                { "backend",       s_RenderBackend.CStr() },
+                { "interpolation", s_RenderInterpolation   }
+            };
             lRoot["physics"] = {
                 { "backend", s_PhysicsBackend.CStr() },
                 { "worldBounds", {

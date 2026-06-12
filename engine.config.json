@@ -16,7 +16,8 @@
         }
     },
     "render": {
-        "backend": "OpenGL"
+        "backend": "OpenGL",
+        "interpolation": true
     },
     "version": 1,
     "window": {

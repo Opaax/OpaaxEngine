@@ -121,6 +121,16 @@ namespace Opaax
             return m_Registry.emplace<T>(InEntity, std::forward<Args>(InArgs)...);
         }
 
+        // Add the component, or overwrite it in place if the entity already carries one.
+        // Unlike AddComponent (entt asserts on a double-emplace), this is safe to call
+        // whether or not T is already present.
+        template<typename T, typename... Args>
+        T& AddOrReplaceComponent(EntityID InEntity, Args&&... InArgs)
+        {
+            OPAAX_CORE_ASSERT(IsValid(InEntity))
+            return m_Registry.emplace_or_replace<T>(InEntity, std::forward<Args>(InArgs)...);
+        }
+
         template<typename T>
         void RemoveComponent(EntityID InEntity)
         {
