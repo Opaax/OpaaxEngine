@@ -68,6 +68,17 @@ namespace Opaax
     {
         if (m_World == nullptr) { return; }
 
+        // Keep the body set in sync with the live collider-entity set BEFORE stepping: drop bodies
+        // whose entity was destroyed (gameplay handler, script, ...) so a dead body can't emit stale
+        // events, and build bodies for entities spawned / given a collider at runtime so they join
+        // the sim this step.
+        if (CoreEngineApp* lApp = GetEngineApp())
+        {
+            World& lWorld = lApp->GetWorld();
+            ReconcileDeadBodies(lWorld);
+            ReconcileNewBodies(lWorld);
+        }
+
         m_World->Step(static_cast<float>(FixedDeltaTime), m_WorldDesc.SubStepCount);
 
         if (CoreEngineApp* lApp = GetEngineApp())
@@ -126,64 +137,89 @@ namespace Opaax
 
         using namespace ECS;
         InWorld.Each<ColliderComponent, TransformComponent>(
-            [this, &InWorld](EntityID InEntity, ColliderComponent& InCollider, TransformComponent& InTransform)
+            [this, &InWorld](EntityID InEntity, ColliderComponent& /*InCollider*/, TransformComponent& /*InTransform*/)
             {
-                // Rigidbody is optional — a lone collider becomes an implicit static body.
-                const RigidbodyComponent* lRb = InWorld.GetComponent<RigidbodyComponent>(InEntity);
+                BuildBodyForEntity(InWorld, InEntity);
+            });
+    }
 
-                BodyDesc lBodyDesc;
-                lBodyDesc.Type           = lRb ? lRb->Type           : EBodyType::Static;
-                lBodyDesc.Position       = InTransform.Position;
-                lBodyDesc.Rotation       = InTransform.Rotation;
-                lBodyDesc.GravityScale   = lRb ? lRb->GravityScale   : 1.f;
-                lBodyDesc.FixedRotation  = lRb ? lRb->FixedRotation  : false;
-                lBodyDesc.LinearDamping  = lRb ? lRb->LinearDamping  : 0.f;
-                lBodyDesc.AngularDamping = lRb ? lRb->AngularDamping : 0.f;
-                // Encode as entity-bits + 1 so 0 stays reserved for "no entity / stale shape"
-                // (entt's first entity has raw value 0, which a sensor event must not alias).
-                lBodyDesc.UserData       = static_cast<Uint64>(static_cast<Uint32>(InEntity)) + 1;
+    void PhysicsSubsystem::BuildBodyForEntity(World& InWorld, EntityID InEntity)
+    {
+        if (m_World == nullptr) { return; }
 
-                const BodyHandle lBody = m_World->CreateBody(lBodyDesc);
-                if (!lBody.IsValid()) { return; }
+        using namespace ECS;
+        ColliderComponent*  lCollider  = InWorld.GetComponent<ColliderComponent>(InEntity);
+        TransformComponent* lTransform = InWorld.GetComponent<TransformComponent>(InEntity);
+        if (lCollider == nullptr || lTransform == nullptr) { return; }
 
-                ShapeDesc lShapeDesc;
-                lShapeDesc.Geometry.Type        = InCollider.Shape;
-                lShapeDesc.Geometry.Offset      = InCollider.Offset;
-                // Component authors full extents; geometry stores half-extents.
-                lShapeDesc.Geometry.HalfExtents = { InCollider.Size.x * 0.5f, InCollider.Size.y * 0.5f };
-                lShapeDesc.Geometry.Radius      = InCollider.Radius;
-                lShapeDesc.IsSensor     = (InCollider.Mode == EColliderMode::Overlap);
-                lShapeDesc.Density      = InCollider.Density;
-                lShapeDesc.Friction     = InCollider.Friction;
-                lShapeDesc.Restitution  = InCollider.Restitution;
+        // Rigidbody is optional — a lone collider becomes an implicit static body.
+        const RigidbodyComponent* lRb = InWorld.GetComponent<RigidbodyComponent>(InEntity);
 
-                // Profile (when assigned + loaded) drives both the category bit (its channel)
-                // and the mask (its response matrix: Ignore clears, Overlap/Block set). Without
-                // a profile the collider uses its own Channel and collides with everything.
-                if (const CollisionProfile* lProfile = InCollider.Profile.Get())
+        BodyDesc lBodyDesc;
+        lBodyDesc.Type           = lRb ? lRb->Type           : EBodyType::Static;
+        lBodyDesc.Position       = lTransform->Position;
+        lBodyDesc.Rotation       = lTransform->Rotation;
+        lBodyDesc.GravityScale   = lRb ? lRb->GravityScale   : 1.f;
+        lBodyDesc.FixedRotation  = lRb ? lRb->FixedRotation  : false;
+        lBodyDesc.LinearDamping  = lRb ? lRb->LinearDamping  : 0.f;
+        lBodyDesc.AngularDamping = lRb ? lRb->AngularDamping : 0.f;
+        // Encode as entity-bits + 1 so 0 stays reserved for "no entity / stale shape"
+        // (entt's first entity has raw value 0, which a sensor event must not alias).
+        lBodyDesc.UserData       = static_cast<Uint64>(static_cast<Uint32>(InEntity)) + 1;
+
+        const BodyHandle lBody = m_World->CreateBody(lBodyDesc);
+        if (!lBody.IsValid()) { return; }
+
+        ShapeDesc lShapeDesc;
+        lShapeDesc.Geometry.Type        = lCollider->Shape;
+        lShapeDesc.Geometry.Offset      = lCollider->Offset;
+        // Component authors full extents; geometry stores half-extents.
+        lShapeDesc.Geometry.HalfExtents = { lCollider->Size.x * 0.5f, lCollider->Size.y * 0.5f };
+        lShapeDesc.Geometry.Radius      = lCollider->Radius;
+        lShapeDesc.IsSensor     = (lCollider->Mode == EColliderMode::Overlap);
+        lShapeDesc.Density      = lCollider->Density;
+        lShapeDesc.Friction     = lCollider->Friction;
+        lShapeDesc.Restitution  = lCollider->Restitution;
+
+        // Profile (when assigned + loaded) drives both the category bit (its channel)
+        // and the mask (its response matrix: Ignore clears, Overlap/Block set). Without
+        // a profile the collider uses its own Channel and collides with everything.
+        if (const CollisionProfile* lProfile = lCollider->Profile.Get())
+        {
+            lShapeDesc.CategoryBits = lProfile->ComputeCategoryBits();
+            lShapeDesc.MaskBits     = lProfile->ComputeMaskBits();
+        }
+        else
+        {
+            lShapeDesc.CategoryBits = CategoryBit(lCollider->Channel);
+            lShapeDesc.MaskBits     = ~0ull;
+        }
+
+        m_World->AddShape(lBody, lShapeDesc);
+
+        BodyRecord lRecord;
+        lRecord.Handle           = lBody;
+        lRecord.bSyncToTransform = (lBodyDesc.Type == EBodyType::Dynamic);
+        m_Bodies.emplace(static_cast<Uint32>(InEntity), lRecord);
+
+        // Only dynamic bodies move on their own and stutter at >60 Hz. Seed the
+        // render-interpolation prev pose to the start pose so frame 0 doesn't pop.
+        if (lRecord.bSyncToTransform)
+        {
+            InWorld.AddOrReplaceComponent<TransformInterpolationComponent>(
+                InEntity, TransformInterpolationComponent{ lTransform->Position, lTransform->Rotation });
+        }
+    }
+
+    void PhysicsSubsystem::ReconcileNewBodies(World& InWorld)
+    {
+        using namespace ECS;
+        InWorld.Each<ColliderComponent, TransformComponent>(
+            [this, &InWorld](EntityID InEntity, ColliderComponent& /*InCollider*/, TransformComponent& /*InTransform*/)
+            {
+                if (m_Bodies.find(static_cast<Uint32>(InEntity)) == m_Bodies.end())
                 {
-                    lShapeDesc.CategoryBits = lProfile->ComputeCategoryBits();
-                    lShapeDesc.MaskBits     = lProfile->ComputeMaskBits();
-                }
-                else
-                {
-                    lShapeDesc.CategoryBits = CategoryBit(InCollider.Channel);
-                    lShapeDesc.MaskBits     = ~0ull;
-                }
-
-                m_World->AddShape(lBody, lShapeDesc);
-
-                BodyRecord lRecord;
-                lRecord.Handle           = lBody;
-                lRecord.bSyncToTransform = (lBodyDesc.Type == EBodyType::Dynamic);
-                m_Bodies.emplace(static_cast<Uint32>(InEntity), lRecord);
-
-                // Only dynamic bodies move on their own and stutter at >60 Hz. Seed the
-                // render-interpolation prev pose to the start pose so frame 0 doesn't pop.
-                if (lRecord.bSyncToTransform)
-                {
-                    InWorld.AddOrReplaceComponent<TransformInterpolationComponent>(
-                        InEntity, TransformInterpolationComponent{ InTransform.Position, InTransform.Rotation });
+                    BuildBodyForEntity(InWorld, InEntity);
                 }
             });
     }
@@ -388,6 +424,27 @@ namespace Opaax
             {
                 ++lOv;
             }
+        }
+    }
+
+    void PhysicsSubsystem::ReconcileDeadBodies(World& InWorld)
+    {
+        if (m_Bodies.empty()) { return; }
+
+        m_DeadBodyVictims.clear();
+
+        // Collect first — RemoveBodyForEntity mutates m_Bodies, so never erase mid-iteration.
+        for (auto& [lBits, lRecord] : m_Bodies)
+        {
+            if (!InWorld.IsValid(static_cast<EntityID>(lBits)))
+            {
+                m_DeadBodyVictims.push_back(lBits);
+            }
+        }
+
+        for (const Uint32 lBits : m_DeadBodyVictims)
+        {
+            RemoveBodyForEntity(static_cast<EntityID>(lBits));
         }
     }
 

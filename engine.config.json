@@ -16,14 +16,14 @@
             ],
             "min": [
                 -100000.0,
-                -100000.0
+                -1200.0
             ],
             "response": "EventAndDestroy"
         }
     },
     "render": {
         "backend": "OpenGL",
-        "interpolation": false
+        "interpolation": true
     },
     "version": 1,
     "window": {

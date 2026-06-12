@@ -1,0 +1,10 @@
+{
+    "channel": "Trigger",
+    "responses": {
+        "WorldStatic": "Ignore",
+        "WorldDynamic": "Overlap",
+        "Pawn": "Overlap",
+        "Projectile": "Overlap",
+        "Trigger": "Ignore"
+    }
+}

@@ -126,6 +126,19 @@ CoreEngineApp::CoreEngineApp(int InArgc, char** InArgv)
 // Out-of-line (defaulted) so the UniquePtr members' deleters see complete types here.
 CoreEngineApp::~CoreEngineApp() = default;
 
+bool CoreEngineApp::IsPlayActive() const
+{
+#if OPAAX_WITH_EDITOR
+    if (const EditorSubsystem* lEditor = m_EngineSubsystemManager.GetSubsystem<EditorSubsystem>())
+    {
+        return lEditor->GetEditorState() == Editor::EEditorState::Playing;
+    }
+    return false;
+#else
+    return true;
+#endif
+}
+
 void CoreEngineApp::DispatchEvent(OpaaxEvent& Event)
 {
     // NOTE: Dispatch order matters.
@@ -154,7 +167,9 @@ void CoreEngineApp::DispatchEvent(OpaaxEvent& Event)
 
     // Game subsystems receive events after engine subsystems — gameplay reacts
     // to input that engine input/poll state has already latched this frame.
-    m_GameSubsystemMgr.DispatchEventAll(Event);
+    // PIE-gated: play-only game subsystems must not react to input in edit mode
+    // (mirrors UpdateAll), so e.g. gameplay scroll-zoom doesn't fire over the editor.
+    m_GameSubsystemMgr.DispatchEventAll(Event, IsPlayActive());
 }
 
 bool CoreEngineApp::OnWindowClose(WindowCloseEvent& Event)
@@ -355,14 +370,9 @@ void CoreEngineApp::Run()
         // 2.0 PIE gating — play-only subsystems tick only when Playing.
         //   Editor builds: derived from EditorSubsystem state.
         //   Non-editor builds: always true (gameplay always runs).
+        //   Same source of truth as event dispatch (IsPlayActive).
         // ----------------------------------------------------------------
-#if OPAAX_WITH_EDITOR
-        const bool bAllowPlayOnly =
-            (m_EngineSubsystemManager.GetSubsystem<EditorSubsystem>()->GetEditorState()
-                == Editor::EEditorState::Playing);
-#else
-        constexpr bool bAllowPlayOnly = true;
-#endif
+        const bool bAllowPlayOnly = IsPlayActive();
 
         // ----------------------------------------------------------------
         // 2.0.1 Play-session edges — fire OnPlayBegin/OnPlayEnd on the transition

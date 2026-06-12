@@ -43,6 +43,11 @@ namespace Opaax
         bool OnWindowClose(WindowCloseEvent& Event);
         bool OnWindowResize(WindowResizeEvent& Event);
 
+        // True when play-only systems should be active: editor builds = EditorSubsystem is Playing;
+        // non-editor builds = always. Single source of truth for PIE gating across the Run loop AND
+        // event dispatch, so play-only game subsystems never tick OR react to input in edit mode.
+        bool IsPlayActive() const;
+
     protected:
         virtual void OnInitialize();
         virtual void OnStartup() {}

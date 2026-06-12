@@ -1,0 +1,29 @@
+{
+    "assets": [
+        {
+            "id": "AssetManifest",
+            "path": "PhysicsDemo/Assets/AssetManifest.json",
+            "type": "Data"
+        },
+        {
+            "id": "Physics/Ground",
+            "path": "PhysicsDemo/Assets/Physics/Ground.collisionprofile.json",
+            "type": "CollisionProfile"
+        },
+        {
+            "id": "Physics/DynamicBox",
+            "path": "PhysicsDemo/Assets/Physics/DynamicBox.collisionprofile.json",
+            "type": "CollisionProfile"
+        },
+        {
+            "id": "Physics/Pawn",
+            "path": "PhysicsDemo/Assets/Physics/Pawn.collisionprofile.json",
+            "type": "CollisionProfile"
+        },
+        {
+            "id": "Physics/Pickup",
+            "path": "PhysicsDemo/Assets/Physics/Pickup.collisionprofile.json",
+            "type": "CollisionProfile"
+        }
+    ]
+}

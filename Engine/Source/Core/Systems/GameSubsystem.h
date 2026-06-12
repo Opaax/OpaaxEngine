@@ -176,6 +176,8 @@ namespace Opaax
         void UpdateAll(double DeltaTime, bool bAllowPlayOnly);
         void FixedUpdateAll(double FixedDeltaTime, bool bAllowPlayOnly);
 
-        void DispatchEventAll(OpaaxEvent& Event);
+        // PIE-gated like UpdateAll: play-only subsystems are skipped (no OnEvent) when
+        // bAllowPlayOnly is false, so gameplay input handlers don't fire in editor edit mode.
+        void DispatchEventAll(OpaaxEvent& Event, bool bAllowPlayOnly);
     };
 }

@@ -20,12 +20,15 @@ void Opaax::GameSubsystemMgr::FixedUpdateAll(double FixedDeltaTime, bool bAllowP
     }
 }
 
-void Opaax::GameSubsystemMgr::DispatchEventAll(OpaaxEvent& Event)
+void Opaax::GameSubsystemMgr::DispatchEventAll(OpaaxEvent& Event, bool bAllowPlayOnly)
 {
     const Uint32 lEventCategories = Event.GetCategoryFlags();
 
     for (auto& lSystem : GetSystems())
     {
+        // Play-only subsystems don't react to input outside Play (mirrors UpdateAll's gate).
+        if (lSystem->IsPlayOnly() && !bAllowPlayOnly) { continue; }
+
         if (lSystem->GetEventCategoryFilter() & lEventCategories)
         {
             lSystem->OnEvent(Event);

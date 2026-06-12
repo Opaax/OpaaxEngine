@@ -1,0 +1,8 @@
+{
+    "version": 1,
+    "name": "PhysicsDemo",
+    "assetsRoot": "PhysicsDemo/Assets",
+    "assetsManifest": "PhysicsDemo/Assets/AssetManifest.json",
+    "defaultScene": "",
+    "editorDefaultScenePath": "PhysicsDemo/Assets/Scenes"
+}

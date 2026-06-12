@@ -97,6 +97,16 @@ namespace Opaax
         // an optional RigidbodyComponent (absent => implicit static) and the Transform.
         void BuildBodies(World& InWorld);
 
+        // Build the body for a single collider-entity (fetches Collider/Transform; no-op if either
+        // is missing or it already has a body). The shared builder used by BuildBodies and the
+        // runtime reconcile.
+        void BuildBodyForEntity(World& InWorld, EntityID InEntity);
+
+        // Build bodies for collider-entities that don't have one yet — entities spawned at runtime
+        // (or that just gained a Collider) join the sim next step. Twin of ReconcileDeadBodies;
+        // together they keep m_Bodies in sync with the live collider set each FixedUpdate.
+        void ReconcileNewBodies(World& InWorld);
+
         // Destroy every body built for the current play session and clear the map.
         void ClearBodies();
 
@@ -118,6 +128,12 @@ namespace Opaax
         // (m_Bodies, m_OutOfBounds, and any live overlap so no phantom Tick survives the kill).
         // The reusable live body-removal primitive the broader destroy-in-handler path will reuse.
         void RemoveBodyForEntity(EntityID InEntity);
+
+        // Remove bodies whose owning entity no longer exists (destroyed by gameplay in an event
+        // handler, a script, the editor, ...). Generic: covers EVERY destroy path so call sites
+        // never have to tear the body down themselves. Runs first in FixedUpdate so a dead entity's
+        // body cannot emit phantom contacts/overlaps this step.
+        void ReconcileDeadBodies(World& InWorld);
 
         // =============================================================================
         // Members
@@ -161,6 +177,10 @@ namespace Opaax
         // Scratch list of entity bits to reap this step (collected during the m_Bodies walk,
         // destroyed after it — never mutate m_Bodies mid-iteration).
         TDynArray<Uint32>    m_BoundsVictims;
+
+        // Same scratch contract for ReconcileDeadBodies — bits whose entity died since the last
+        // step, collected during the walk and removed after it.
+        TDynArray<Uint32>    m_DeadBodyVictims;
     };
 
 } // namespace Opaax
