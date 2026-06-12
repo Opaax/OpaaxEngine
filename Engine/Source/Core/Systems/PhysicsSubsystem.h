@@ -102,10 +102,12 @@ namespace Opaax
         // runtime reconcile.
         void BuildBodyForEntity(World& InWorld, EntityID InEntity);
 
-        // Build bodies for collider-entities that don't have one yet — entities spawned at runtime
-        // (or that just gained a Collider) join the sim next step. Twin of ReconcileDeadBodies;
-        // together they keep m_Bodies in sync with the live collider set each FixedUpdate.
-        void ReconcileNewBodies(World& InWorld);
+        // Reconcile live collider-entities against m_Bodies each FixedUpdate: build a body for any
+        // that lack one (entities spawned at runtime / that just gained a Collider), AND rebuild any
+        // whose desired body type (from the current optional Rigidbody) no longer matches what was
+        // built — so adding/removing a Rigidbody after a body exists takes effect regardless of the
+        // order components were added. Twin of ReconcileDeadBodies.
+        void ReconcileLiveBodies(World& InWorld);
 
         // Destroy every body built for the current play session and clear the map.
         void ClearBodies();
@@ -145,6 +147,10 @@ namespace Opaax
         {
             BodyHandle Handle;
             bool       bSyncToTransform = false;
+            // The body type this record was built as. If the entity's components later imply a
+            // different type (e.g. a Rigidbody added/removed after the body was built), the reconcile
+            // rebuilds — so runtime component-add order never leaves a stale static/dynamic body.
+            EBodyType  BuiltType        = EBodyType::Static;
         };
 
         UniquePtr<IPhysicsWorld>                m_World;

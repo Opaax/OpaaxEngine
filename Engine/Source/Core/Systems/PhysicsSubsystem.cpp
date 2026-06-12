@@ -76,7 +76,7 @@ namespace Opaax
         {
             World& lWorld = lApp->GetWorld();
             ReconcileDeadBodies(lWorld);
-            ReconcileNewBodies(lWorld);
+            ReconcileLiveBodies(lWorld);
         }
 
         m_World->Step(static_cast<float>(FixedDeltaTime), m_WorldDesc.SubStepCount);
@@ -200,6 +200,7 @@ namespace Opaax
         BodyRecord lRecord;
         lRecord.Handle           = lBody;
         lRecord.bSyncToTransform = (lBodyDesc.Type == EBodyType::Dynamic);
+        lRecord.BuiltType        = lBodyDesc.Type;
         m_Bodies.emplace(static_cast<Uint32>(InEntity), lRecord);
 
         // Only dynamic bodies move on their own and stutter at >60 Hz. Seed the
@@ -211,14 +212,27 @@ namespace Opaax
         }
     }
 
-    void PhysicsSubsystem::ReconcileNewBodies(World& InWorld)
+    void PhysicsSubsystem::ReconcileLiveBodies(World& InWorld)
     {
         using namespace ECS;
         InWorld.Each<ColliderComponent, TransformComponent>(
             [this, &InWorld](EntityID InEntity, ColliderComponent& /*InCollider*/, TransformComponent& /*InTransform*/)
             {
-                if (m_Bodies.find(static_cast<Uint32>(InEntity)) == m_Bodies.end())
+                const auto lIt = m_Bodies.find(static_cast<Uint32>(InEntity));
+                if (lIt == m_Bodies.end())
                 {
+                    // No body yet — spawned at runtime, or just gained a Collider.
+                    BuildBodyForEntity(InWorld, InEntity);
+                    return;
+                }
+
+                // Body exists — rebuild if its type no longer matches the current components
+                // (e.g. a Rigidbody was added/removed/retyped after the body was first built).
+                const RigidbodyComponent* lRb = InWorld.GetComponent<RigidbodyComponent>(InEntity);
+                const EBodyType lDesiredType   = lRb ? lRb->Type : EBodyType::Static;
+                if (lIt->second.BuiltType != lDesiredType)
+                {
+                    RemoveBodyForEntity(InEntity);
                     BuildBodyForEntity(InWorld, InEntity);
                 }
             });
