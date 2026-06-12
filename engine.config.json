@@ -10,14 +10,20 @@
         "backend": "Box2D",
         "worldBounds": {
             "enabled": true,
-            "min": [-100000.0, -100000.0],
-            "max": [100000.0, 100000.0],
+            "max": [
+                100000.0,
+                100000.0
+            ],
+            "min": [
+                -100000.0,
+                -100000.0
+            ],
             "response": "EventAndDestroy"
         }
     },
     "render": {
         "backend": "OpenGL",
-        "interpolation": true
+        "interpolation": false
     },
     "version": 1,
     "window": {

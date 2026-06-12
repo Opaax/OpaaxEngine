@@ -356,6 +356,7 @@ namespace Opaax
         if (m_bShowViewport)     m_ViewportPanel.Draw(m_EditorState, *m_UIBackend);
         if (m_bShowAssetBrowser) m_AssetBrowserPanel.Draw(*lSceneMgr, *m_UIBackend);
         if (m_bShowAssetDetails) m_AssetDetailsPanel.Draw(*m_UIBackend);
+        if (m_bShowConfig)       m_ConfigPanel.Draw();
     }
 
     // =============================================================================

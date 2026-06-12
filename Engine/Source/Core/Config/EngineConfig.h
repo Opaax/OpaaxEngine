@@ -35,6 +35,15 @@ namespace Opaax
          */
         static bool Save(const OpaaxString& InAbsPath);
 
+        /**
+         * Persist back to the path the config was last loaded from (set by Load).
+         * No-op + false if Load was never called. Used by the editor Config panel.
+         */
+        static bool Save();
+
+        // Absolute path the config was loaded from (empty until Load runs).
+        static const OpaaxString& LoadedPath() noexcept { return s_LoadedPath; }
+
         // ---- Window ---------------------------------------------------------
         static const OpaaxString& WindowTitle()  noexcept { return s_WindowTitle; }
         static Uint32             WindowWidth()  noexcept { return s_WindowWidth; }
@@ -55,7 +64,9 @@ namespace Opaax
         // Fixed-step transform interpolation (default on): the renderer lerps physics-driven
         // entities between fixed steps so motion stays smooth above 60 Hz. Off = pixel-locked
         // rendering at the raw fixed-step pose (visible stepping at high refresh).
+        // WorldRenderSystem reads this every frame, so the setter takes effect live.
         static bool                RenderInterpolation() noexcept { return s_RenderInterpolation; }
+        static void                SetRenderInterpolation(bool InEnabled) noexcept { s_RenderInterpolation = InEnabled; }
 
         // ---- Physics --------------------------------------------------------
         // Physics backend name ("Box2D" today). String here so Core/Config carries no
@@ -73,6 +84,7 @@ namespace Opaax
     private:
         static bool GenerateDefault(const OpaaxString& InAbsPath);
 
+        static OpaaxString s_LoadedPath;
         static OpaaxString s_WindowTitle;
         static Uint32      s_WindowWidth;
         static Uint32      s_WindowHeight;

@@ -7,6 +7,7 @@
 #include "Editor/IEditorPanel.h"
 #include "Panels/AssetBrowserPanel.h"
 #include "Panels/AssetDetailsPanel.h"
+#include "Panels/ConfigPanel.h"
 #include "Panels/HierarchyPanel.h"
 #include "Panels/InspectorPanel.h"
 #include "Panels/ViewportPanel.h"
@@ -82,6 +83,7 @@ namespace Opaax
         FORCEINLINE bool& GetShowAssetBrowserRef() noexcept { return m_bShowAssetBrowser; }
         FORCEINLINE bool& GetShowAssetDetailsRef() noexcept { return m_bShowAssetDetails; }
         FORCEINLINE bool& GetShowViewportRef()     noexcept { return m_bShowViewport; }
+        FORCEINLINE bool& GetShowConfigRef()       noexcept { return m_bShowConfig; }
 
         //------------------------------------------------------------------------------
         // PIE transitions
@@ -140,6 +142,7 @@ namespace Opaax
         Editor::ViewportPanel     m_ViewportPanel;
         Editor::AssetBrowserPanel m_AssetBrowserPanel;
         Editor::AssetDetailsPanel m_AssetDetailsPanel;
+        Editor::ConfigPanel       m_ConfigPanel;
 
         Editor::EEditorState m_EditorState = Editor::EEditorState::Editing;
 
@@ -148,6 +151,7 @@ namespace Opaax
         bool m_bShowAssetBrowser = true;
         bool m_bShowAssetDetails = true;
         bool m_bShowViewport     = true;
+        bool m_bShowConfig       = false;   // settings panel — opened on demand from the Config menu
 
         // Middle-mouse drag latch + last cursor position for the editor-camera pan.
         // Snapshot at MMB-press, advanced each Update frame while held.

@@ -10,6 +10,7 @@ namespace Opaax
 {
     // Default values mirror the previous hardcoded constants so a missing
     // engine.config.json keeps the engine bootable with unchanged behavior.
+    OpaaxString EngineConfig::s_LoadedPath            = OpaaxString();
     OpaaxString EngineConfig::s_WindowTitle           = OpaaxString("Opaax Engine");
     Uint32      EngineConfig::s_WindowWidth           = 1280;
     Uint32      EngineConfig::s_WindowHeight          = 720;
@@ -79,6 +80,10 @@ namespace Opaax
 
     bool EngineConfig::Load(const OpaaxString& InAbsPath)
     {
+        // Remember where we loaded from so the no-arg Save() (editor Config panel) can
+        // round-trip back to the same file without the caller re-resolving the path.
+        s_LoadedPath = InAbsPath;
+
         std::ifstream lFile(InAbsPath.CStr());
 
         if (!lFile.is_open())
@@ -190,6 +195,16 @@ namespace Opaax
             InAbsPath, s_WindowWidth, s_WindowHeight, s_LogLevel, s_RenderBackend, s_PhysicsBackend);
 
         return true;
+    }
+
+    bool EngineConfig::Save()
+    {
+        if (s_LoadedPath.IsEmpty())
+        {
+            OPAAX_CORE_ERROR("EngineConfig::Save — no loaded path (Load was never called).");
+            return false;
+        }
+        return Save(s_LoadedPath);
     }
 
     bool EngineConfig::Save(const OpaaxString& InAbsPath)

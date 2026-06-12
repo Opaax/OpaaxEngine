@@ -78,6 +78,7 @@ namespace Opaax::Editor
             DrawFileMenu(Owner);
             DrawEditMenu();
             DrawViewMenu(Owner);
+            DrawConfigMenu(Owner);
             DrawWindowMenu();
             DrawHelpMenu();
 
@@ -175,6 +176,18 @@ namespace Opaax::Editor
         ImGui::MenuItem("Asset Browser", nullptr, &Owner.GetShowAssetBrowserRef());
         ImGui::MenuItem("Asset Details", nullptr, &Owner.GetShowAssetDetailsRef());
         ImGui::MenuItem("Viewport",      nullptr, &Owner.GetShowViewportRef());
+
+        ImGui::EndMenu();
+    }
+
+    // =============================================================================
+    // Config — engine.config.json settings panel
+    // =============================================================================
+    void MainMenuBar::DrawConfigMenu(EditorSubsystem& Owner)
+    {
+        if (!ImGui::BeginMenu("Config")) { return; }
+
+        ImGui::MenuItem("Engine Settings", nullptr, &Owner.GetShowConfigRef());
 
         ImGui::EndMenu();
     }
