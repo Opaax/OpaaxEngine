@@ -40,9 +40,13 @@ namespace Opaax
         // Functions
         // =============================================================================
     private:
-        void DispatchEvent(OpaaxEvent& Event);
         bool OnWindowClose(WindowCloseEvent& Event);
         bool OnWindowResize(WindowResizeEvent& Event);
+
+        // True when play-only systems should be active: editor builds = EditorSubsystem is Playing;
+        // non-editor builds = always. Single source of truth for PIE gating across the Run loop AND
+        // event dispatch, so play-only game subsystems never tick OR react to input in edit mode.
+        bool IsPlayActive() const;
 
     protected:
         virtual void OnInitialize();
@@ -59,6 +63,11 @@ namespace Opaax
         void Run();
         void Shutdown();
         void RequestQuit() noexcept;
+
+        // Broadcast an event through the full pipeline (game-app OnEvent -> engine subsystems ->
+        // game subsystems, category-filtered). Entry point for window input AND for subsystems
+        // injecting synthetic events (e.g. PhysicsSubsystem overlap/collision events).
+        void DispatchEvent(OpaaxEvent& Event);
 
         //------------------------------------------------------------------------------
         //  Get - Set
@@ -139,6 +148,9 @@ namespace Opaax
         // =============================================================================
     private:
         bool bIsRunning = false;
+
+        // Previous frame's play-gate state — drives the OnPlayBegin/OnPlayEnd edges.
+        bool bWasPlaying = false;
         UniquePtr<Window> m_Window;
         EngineSubsystemMgr m_EngineSubsystemManager;
         GameSubsystemMgr   m_GameSubsystemMgr;

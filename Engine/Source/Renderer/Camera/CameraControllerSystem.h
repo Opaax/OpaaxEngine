@@ -81,7 +81,7 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        std::vector<UniquePtr<ICameraController>> m_Controllers;
+        TDynArray<UniquePtr<ICameraController>> m_Controllers;
     };
 
 } // namespace Opaax

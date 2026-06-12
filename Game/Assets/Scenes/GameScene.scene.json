@@ -1,6 +1,200 @@
 {
     "entities": [
         {
+            "Tag": "Falling",
+            "components": {
+                "ColliderComponent": {
+                    "channel": "WorldDynamic",
+                    "density": 1.0,
+                    "friction": 0.30000001192092896,
+                    "mode": "Solid",
+                    "offset": [
+                        0.0,
+                        0.0
+                    ],
+                    "profile": "Physics/Pawn",
+                    "radius": 50.0,
+                    "restitution": 0.0,
+                    "shape": "Box",
+                    "size": [
+                        145.0,
+                        145.0
+                    ]
+                },
+                "RigidbodyComponent": {
+                    "angular_damping": 0.0,
+                    "fixed_rotation": false,
+                    "gravity_scale": 1.0,
+                    "linear_damping": 0.0,
+                    "type": "Dynamic"
+                },
+                "SpriteComponent": {
+                    "color": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "layer": "Default",
+                    "order": 0,
+                    "size": [
+                        145.0,
+                        145.0
+                    ],
+                    "texture": "Textures/Player",
+                    "uv_max": [
+                        1.0,
+                        1.0
+                    ],
+                    "uv_min": [
+                        0.0,
+                        0.0
+                    ],
+                    "visible": true
+                },
+                "TransformComponent": {
+                    "position": [
+                        -177.6838836669922,
+                        185.49099731445313
+                    ],
+                    "rotation": 6.517610273704122e-08,
+                    "scale": [
+                        1.0,
+                        1.0
+                    ],
+                    "z_order": 0.0
+                }
+            },
+            "uuid": "9606997181869270334"
+        },
+        {
+            "Tag": "Floor",
+            "components": {
+                "ColliderComponent": {
+                    "channel": "WorldStatic",
+                    "density": 1.0,
+                    "friction": 0.30000001192092896,
+                    "mode": "Solid",
+                    "offset": [
+                        0.0,
+                        0.0
+                    ],
+                    "profile": "Physics/Solid",
+                    "radius": 50.0,
+                    "restitution": 0.0,
+                    "shape": "Box",
+                    "size": [
+                        1390.0,
+                        100.0
+                    ]
+                },
+                "SpriteComponent": {
+                    "color": [
+                        0.0,
+                        0.0,
+                        0.0,
+                        1.0
+                    ],
+                    "layer": "Default",
+                    "order": 0,
+                    "size": [
+                        502.0,
+                        512.0
+                    ],
+                    "texture": "Textures/PlayerSheet",
+                    "uv_max": [
+                        1.0,
+                        1.0
+                    ],
+                    "uv_min": [
+                        0.0,
+                        0.0
+                    ],
+                    "visible": true
+                },
+                "TransformComponent": {
+                    "position": [
+                        0.0,
+                        -141.0
+                    ],
+                    "rotation": 0.0,
+                    "scale": [
+                        5.5,
+                        0.15000000596046448
+                    ],
+                    "z_order": 0.0
+                }
+            },
+            "uuid": "2576042365966732877"
+        },
+        {
+            "Tag": "Player",
+            "components": {
+                "ColliderComponent": {
+                    "channel": "WorldDynamic",
+                    "density": 1.0,
+                    "friction": 0.30000001192092896,
+                    "mode": "Solid",
+                    "offset": [
+                        0.0,
+                        0.0
+                    ],
+                    "profile": "Physics/Pawn",
+                    "radius": 50.0,
+                    "restitution": 0.0,
+                    "shape": "Box",
+                    "size": [
+                        100.0,
+                        100.0
+                    ]
+                },
+                "RigidbodyComponent": {
+                    "angular_damping": 0.0,
+                    "fixed_rotation": false,
+                    "gravity_scale": 1.0,
+                    "linear_damping": 0.0,
+                    "type": "Dynamic"
+                },
+                "SpriteComponent": {
+                    "color": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "layer": "Default",
+                    "order": 0,
+                    "size": [
+                        1.0,
+                        1.0
+                    ],
+                    "texture": "Textures/Player",
+                    "uv_max": [
+                        1.0,
+                        1.0
+                    ],
+                    "uv_min": [
+                        0.0,
+                        0.0
+                    ],
+                    "visible": true
+                },
+                "TransformComponent": {
+                    "position": [
+                        -14.873838424682617,
+                        163.99099731445313
+                    ],
+                    "rotation": 4.5356873812352205e-10,
+                    "scale": [
+                        64.0,
+                        64.0
+                    ],
+                    "z_order": 0.0
+                }
+            },
+            "uuid": "13095491762482508207"
+        },
+        {
             "Tag": "AtlasSprite",
             "components": {
                 "SpriteComponent": {
@@ -10,6 +204,8 @@
                         1.0,
                         1.0
                     ],
+                    "layer": "Default",
+                    "order": 0,
                     "size": [
                         64.0,
                         64.0
@@ -41,8 +237,33 @@
             "uuid": "7898491281392341776"
         },
         {
-            "Tag": "Player",
+            "Tag": "TryToadd Physic runtime",
             "components": {
+                "ColliderComponent": {
+                    "channel": "WorldDynamic",
+                    "density": 1.0,
+                    "friction": 0.30000001192092896,
+                    "mode": "Solid",
+                    "offset": [
+                        0.0,
+                        0.0
+                    ],
+                    "profile": "Physics/Solid",
+                    "radius": 50.0,
+                    "restitution": 0.0,
+                    "shape": "Box",
+                    "size": [
+                        100.0,
+                        100.0
+                    ]
+                },
+                "RigidbodyComponent": {
+                    "angular_damping": 0.0,
+                    "fixed_rotation": false,
+                    "gravity_scale": 1.0,
+                    "linear_damping": 0.0,
+                    "type": "Static"
+                },
                 "SpriteComponent": {
                     "color": [
                         1.0,
@@ -50,11 +271,13 @@
                         1.0,
                         1.0
                     ],
+                    "layer": "Default",
+                    "order": 0,
                     "size": [
-                        1.0,
-                        1.0
+                        58.0,
+                        57.0
                     ],
-                    "texture": "Textures/Player",
+                    "texture": "Textures/PlayerSheet",
                     "uv_max": [
                         1.0,
                         1.0
@@ -67,18 +290,18 @@
                 },
                 "TransformComponent": {
                     "position": [
-                        0.0,
-                        0.0
+                        -327.0,
+                        -15.0
                     ],
                     "rotation": 0.0,
                     "scale": [
-                        64.0,
-                        64.0
+                        1.0,
+                        1.0
                     ],
                     "z_order": 0.0
                 }
             },
-            "uuid": "13095491762482508207"
+            "uuid": "14803221326377375110"
         }
     ],
     "scene": "GameScene",

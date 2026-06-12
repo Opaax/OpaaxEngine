@@ -49,6 +49,7 @@ namespace Opaax::Editor
         void DrawFileMenu   (EditorSubsystem& Owner);
         void DrawEditMenu   ();
         void DrawViewMenu   (EditorSubsystem& Owner);
+        void DrawConfigMenu (EditorSubsystem& Owner);
         void DrawWindowMenu ();
         void DrawHelpMenu   ();
         void DrawPieControls(EditorSubsystem& Owner);

@@ -118,6 +118,11 @@ namespace Opaax
         {
             if (!lEntry->Has(InWorld, InEntity)) { continue; }
 
+            // Scope every drawer's widget IDs by component type so identical control
+            // labels across components (e.g. Sprite "Size" vs Collider "Size") don't
+            // share an ImGui ID and fight over interaction state.
+            ImGui::PushID(static_cast<int>(lEntry->GetTypeId()));
+
             if (Editor::IComponentDrawer* lDrawer = lEntry->GetCustomDrawer())
             {
                 lDrawer->Draw(InWorld, InEntity);
@@ -126,6 +131,8 @@ namespace Opaax
             {
                 DrawDefault(*lEntry, InWorld, InEntity);
             }
+
+            ImGui::PopID();
         }
     }
 

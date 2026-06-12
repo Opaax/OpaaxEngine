@@ -15,6 +15,8 @@
 #include "Assets/Loader/SceneLoader.h"
 #include "Assets/Loader/ShaderLoader.h"
 #include "Assets/Loader/TextureLoader.h"
+#include "Assets/Loader/CollisionProfileLoader.h"
+#include "Physics/Collision/CollisionProfile.h"
 #include "Renderer/Text/FontAsset.h"
 #include "RHI/RenderCommand.h"
 #include "Scene/SceneAsset.h"
@@ -37,6 +39,8 @@
 #include "Scene/SceneFactory.h"
 #include "Scene/SceneManager.h"
 #include "Systems/EngineSubsystem.h"
+#include "Systems/PhysicsSubsystem.h"
+#include "Systems/MoverSubsystem.h"
 #include "World/IWorldSystem.h"
 #include "World/RenderContext.h"
 
@@ -46,6 +50,9 @@
 #include "ECS/Components/TransformComponent.h"
 #include "ECS/Components/SpriteComponent.h"
 #include "ECS/Components/ParentComponent.h"
+#include "ECS/Components/RigidbodyComponent.h"
+#include "ECS/Components/ColliderComponent.h"
+#include "ECS/Components/MoverComponent.h"
 
 #if OPAAX_WITH_EDITOR
 #include "Editor/EditorSubsystem.h"
@@ -119,6 +126,19 @@ CoreEngineApp::CoreEngineApp(int InArgc, char** InArgv)
 // Out-of-line (defaulted) so the UniquePtr members' deleters see complete types here.
 CoreEngineApp::~CoreEngineApp() = default;
 
+bool CoreEngineApp::IsPlayActive() const
+{
+#if OPAAX_WITH_EDITOR
+    if (const EditorSubsystem* lEditor = m_EngineSubsystemManager.GetSubsystem<EditorSubsystem>())
+    {
+        return lEditor->GetEditorState() == Editor::EEditorState::Playing;
+    }
+    return false;
+#else
+    return true;
+#endif
+}
+
 void CoreEngineApp::DispatchEvent(OpaaxEvent& Event)
 {
     // NOTE: Dispatch order matters.
@@ -147,7 +167,9 @@ void CoreEngineApp::DispatchEvent(OpaaxEvent& Event)
 
     // Game subsystems receive events after engine subsystems — gameplay reacts
     // to input that engine input/poll state has already latched this frame.
-    m_GameSubsystemMgr.DispatchEventAll(Event);
+    // PIE-gated: play-only game subsystems must not react to input in edit mode
+    // (mirrors UpdateAll), so e.g. gameplay scroll-zoom doesn't fire over the editor.
+    m_GameSubsystemMgr.DispatchEventAll(Event, IsPlayActive());
 }
 
 bool CoreEngineApp::OnWindowClose(WindowCloseEvent& Event)
@@ -192,7 +214,7 @@ void CoreEngineApp::OnShutdown()
 void CoreEngineApp::Initialize()
 {
     OPAAX_CORE_TRACE("CoreEngineApp::Initialize()");
-    
+
 // #if OPAAX_WITH_EDITOR
 //     if (IsDebugMode())
 //     {
@@ -208,6 +230,7 @@ void CoreEngineApp::Initialize()
     AssetLoaderRegistry::Register<SceneAsset>(MakeUnique<SceneLoader>());
     AssetLoaderRegistry::Register<FontAsset>(MakeUnique<FontLoader>());
     AssetLoaderRegistry::Register<ShaderAsset>(MakeUnique<ShaderLoader>());
+    AssetLoaderRegistry::Register<CollisionProfile>(MakeUnique<CollisionProfileLoader>());
 
     // Engine component types — every game-shared, scene-serializable type lives here.
     // Tag / Uuid are special-cased at the entity-json top level (display name, stable id)
@@ -219,6 +242,9 @@ void CoreEngineApp::Initialize()
     ComponentRegistry::Register<ECS::TransformComponent>("TransformComponent");
     ComponentRegistry::Register<ECS::SpriteComponent>   ("SpriteComponent");
     ComponentRegistry::Register<ECS::ParentComponent>   ("ParentComponent",    /*bShowInAddMenu*/ false);
+    ComponentRegistry::Register<ECS::RigidbodyComponent>("RigidbodyComponent");
+    ComponentRegistry::Register<ECS::ColliderComponent> ("ColliderComponent");
+    ComponentRegistry::Register<ECS::MoverComponent>    ("MoverComponent");
 
     // Scene types — engine knows about the base Scene under "Untitled" so the
     // editor's empty-stack fallback (SceneManager::NewScene) survives PIE Stop.
@@ -244,6 +270,12 @@ void CoreEngineApp::Initialize()
     m_EngineSubsystemManager.RegisterSubsystem<InputSubsystem>(this);
 
     m_EngineSubsystemManager.RegisterSubsystem<SceneManager>(this);
+
+    // Both after SceneManager (a scene must exist before bodies are built from it). Movers register
+    // BEFORE physics: each fixed step the mover sets its kinematic body's target, then PhysicsSubsystem
+    // steps the world to apply it (same-frame), draining the resulting contact/sensor events.
+    m_EngineSubsystemManager.RegisterSubsystem<MoverSubsystem>(this);
+    m_EngineSubsystemManager.RegisterSubsystem<PhysicsSubsystem>(this);
 
 #if OPAAX_WITH_EDITOR
     m_EngineSubsystemManager.RegisterSubsystem<EditorSubsystem>(this);
@@ -338,14 +370,24 @@ void CoreEngineApp::Run()
         // 2.0 PIE gating — play-only subsystems tick only when Playing.
         //   Editor builds: derived from EditorSubsystem state.
         //   Non-editor builds: always true (gameplay always runs).
+        //   Same source of truth as event dispatch (IsPlayActive).
         // ----------------------------------------------------------------
-#if OPAAX_WITH_EDITOR
-        const bool bAllowPlayOnly =
-            (m_EngineSubsystemManager.GetSubsystem<EditorSubsystem>()->GetEditorState()
-                == Editor::EEditorState::Playing);
-#else
-        constexpr bool bAllowPlayOnly = true;
-#endif
+        const bool bAllowPlayOnly = IsPlayActive();
+
+        // ----------------------------------------------------------------
+        // 2.0.1 Play-session edges — fire OnPlayBegin/OnPlayEnd on the transition
+        //   so subsystems can build/tear down per-play state (e.g. physics bodies)
+        //   exactly once around a session. Release: one rising edge at startup.
+        // ----------------------------------------------------------------
+        if (bAllowPlayOnly && !bWasPlaying)
+        {
+            m_EngineSubsystemManager.OnPlayBeginAll();
+        }
+        else if (!bAllowPlayOnly && bWasPlaying)
+        {
+            m_EngineSubsystemManager.OnPlayEndAll();
+        }
+        bWasPlaying = bAllowPlayOnly;
 
         // ----------------------------------------------------------------
         // 2.1 Variable update — gameplay, animations, AI

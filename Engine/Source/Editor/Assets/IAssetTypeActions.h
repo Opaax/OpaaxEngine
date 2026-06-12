@@ -34,8 +34,17 @@ namespace Opaax::Editor
         virtual void Load  (OpaaxStringID InID) = 0;
         virtual void Reload(OpaaxStringID InID) = 0;
 
+        // Read-only thumbnail/info — rendered in the AssetBrowser hover tooltip + drag source.
+        // Those surfaces are non-interactive overlays, so DrawPreview must NEVER place widgets
+        // that expect input (combos, buttons). For editing, see CanEdit/DrawEditor below.
         virtual bool CanPreview()                                                 const { return false; }
         virtual void DrawPreview(OpaaxStringID InID, IEditorUIBackend& InUIBackend)      {}
+
+        // Interactive editor — rendered in the persistent AssetDetailsPanel (a real window,
+        // so widgets accept input). Override CanEdit()->true and implement DrawEditor to make
+        // an asset author-able in the editor.
+        virtual bool CanEdit()                                                    const { return false; }
+        virtual void DrawEditor(OpaaxStringID InID, IEditorUIBackend& InUIBackend)       {}
     };
 
 } // namespace Opaax::Editor

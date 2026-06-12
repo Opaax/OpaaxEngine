@@ -26,15 +26,22 @@
 #include "Editor/Assets/Types/FontTypeActions.h"
 #include "Editor/Assets/Types/SceneTypeActions.h"
 #include "Editor/Assets/Types/Texture2DTypeActions.h"
+#include "Editor/Assets/Types/CollisionProfileTypeActions.h"
 #include "Editor/Events/EditorEvents.h"
 #include "Editor/Inspector/Drawers/TagDrawer.h"
 #include "Editor/Inspector/Drawers/TransformDrawer.h"
 #include "Editor/Inspector/Drawers/SpriteDrawer.h"
+#include "Editor/Inspector/Drawers/RigidbodyDrawer.h"
+#include "Editor/Inspector/Drawers/ColliderDrawer.h"
+#include "Editor/Inspector/Drawers/MoverDrawer.h"
 
 #include "ECS/ComponentRegistry.h"
 #include "ECS/Components/TagComponent.h"
 #include "ECS/Components/TransformComponent.h"
 #include "ECS/Components/SpriteComponent.h"
+#include "ECS/Components/RigidbodyComponent.h"
+#include "ECS/Components/ColliderComponent.h"
+#include "ECS/Components/MoverComponent.h"
 
 namespace Opaax
 {
@@ -105,6 +112,7 @@ namespace Opaax
         m_HierarchyPanel.OnSubscribe(*m_EventBus);
         m_InspectorPanel.OnSubscribe(*m_EventBus);
         m_AssetBrowserPanel.OnSubscribe(*m_EventBus);
+        m_AssetDetailsPanel.OnSubscribe(*m_EventBus);
 
         GetEngineApp()->SetRenderTarget(&m_ViewportPanel);
 
@@ -130,6 +138,7 @@ namespace Opaax
         Editor::AssetTypeRegistry::Register(MakeUnique<Editor::Texture2DTypeActions>());
         Editor::AssetTypeRegistry::Register(MakeUnique<Editor::SceneTypeActions>(GetEngineApp()));
         Editor::AssetTypeRegistry::Register(MakeUnique<Editor::FontTypeActions>());
+        Editor::AssetTypeRegistry::Register(MakeUnique<Editor::CollisionProfileTypeActions>());
 
         OPAAX_CORE_TRACE("EditorSubsystem: asset type actions registered.");
     }
@@ -139,6 +148,9 @@ namespace Opaax
         ComponentRegistry::RegisterDrawer<ECS::TagComponent>      (MakeUnique<Editor::TagDrawer>());
         ComponentRegistry::RegisterDrawer<ECS::TransformComponent>(MakeUnique<Editor::TransformDrawer>());
         ComponentRegistry::RegisterDrawer<ECS::SpriteComponent>   (MakeUnique<Editor::SpriteDrawer>());
+        ComponentRegistry::RegisterDrawer<ECS::RigidbodyComponent>(MakeUnique<Editor::RigidbodyDrawer>());
+        ComponentRegistry::RegisterDrawer<ECS::ColliderComponent> (MakeUnique<Editor::ColliderDrawer>());
+        ComponentRegistry::RegisterDrawer<ECS::MoverComponent>    (MakeUnique<Editor::MoverDrawer>());
 
         OPAAX_CORE_TRACE("EditorSubsystem: component drawers registered.");
     }
@@ -343,6 +355,8 @@ namespace Opaax
         if (m_bShowInspector)    m_InspectorPanel.Draw(lWorld);
         if (m_bShowViewport)     m_ViewportPanel.Draw(m_EditorState, *m_UIBackend);
         if (m_bShowAssetBrowser) m_AssetBrowserPanel.Draw(*lSceneMgr, *m_UIBackend);
+        if (m_bShowAssetDetails) m_AssetDetailsPanel.Draw(*m_UIBackend);
+        if (m_bShowConfig)       m_ConfigPanel.Draw();
     }
 
     // =============================================================================

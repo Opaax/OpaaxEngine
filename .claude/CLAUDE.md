@@ -9,9 +9,9 @@
 
 ## 2. Sub-Agent Strategy
 
-- Use sub-agents heavily to keep the main context clean
-- Delegate research, exploration, and parallel analysis to sub-agents
-- For complex problems, distribute more compute across sub-agents
+- Sub-agents start cold and re-derive context the main session already has — they are the expensive path, not the default
+- Use them for large read-only research sweeps (audits, codebase-wide searches) where the findings are small relative to the exploration
+- Implementation, debugging, and anything that needs this session's context stays in the main session
 - One task per sub-agent for focused execution
 
 ## 3. Self-Improvement Loop
@@ -28,6 +28,7 @@
 - Ask yourself: "Would a senior engineer approve this?"
 - Run tests, check logs, demonstrate correctness
 - Never claim "build green" without running `./build.bat <preset> </dev/null` and showing the tail of the output. Reading code is not building it. (Lesson 10.)
+- **Pipeline principle (2026-06-11): every proposed plan — milestone or task-level — ends with an explicit FINAL validation task: run the demo + the unit tests (Demo gate + Unit-test gate), debug, and prove the work. A plan without that closing task is incomplete.** Until a test target exists (proposal 01 — Tests & CI), the unit-test half of the gate is recorded as "no test target yet" — stated explicitly, never silently skipped.
 
 ## 5. Demand Elegance (Balanced)
 
@@ -49,7 +50,7 @@
 2. **Validate the plan**: Review it before starting implementation
 3. **Track progress**: Mark items complete as you go
 4. **Explain changes**: Provide a high-level summary at each step
-5. **Document results**: Add a review section in `tasks/todo.md`
+5. **Document results**: Add a review section in `.claude/task/todo.md`
 6. **Capture lessons**: Update `.claude/task/lessons.md` after corrections
 
 # Milestone
@@ -91,6 +92,6 @@ Always prefer guidance from these documents over generic advice when they are re
 
 Personal coding conventions and preferences live here. Read this file at the start of any coding session. If it is missing or empty, ask the user before assuming a style.
 
-## Skills — `.claude/skill/`
+## Skills — `.claude/skills/`
 
 Reusable task-specific instructions are stored here. **Do not load skills proactively.** Only load and apply a skill when the user explicitly requests it by name or asks you to use the skill system.

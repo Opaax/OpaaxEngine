@@ -48,7 +48,18 @@ namespace Opaax
         MouseButtonReleased,
         MouseMoved,
         MouseScrolled,
- 
+
+        // --- Physics (engine domain; dispatched from PhysicsSubsystem after the step) ---
+        // NOTE: Overlap (Mode==Overlap collider) carries a synthesized per-step Tick; solid
+        //   collisions are Enter/Exit only (Box2D's native begin/end touch). ExitWorldBounds
+        //   fires once when a dynamic body leaves the optional kill-volume AABB.
+        OverlapStart,
+        OverlapTick,
+        OverlapStop,
+        CollisionEnter,
+        CollisionExit,
+        ExitWorldBounds,
+
         // --- Gameplay (game project adds entries here) ---
         // NOTE: Keep engine types above this line. Gameplay types below.
         //   This ordering is a convention, not enforced by the compiler.
@@ -65,6 +76,7 @@ namespace Opaax
         SceneSaved,
         NewScene,
         AssetImported,
+        AssetSelected,
     };
  
     // =============================================================================
@@ -89,6 +101,7 @@ namespace Opaax
         EEventCategory_MouseButton = BIT(4),   // mouse button press/release
         EEventCategory_Gameplay    = BIT(5),   // game-layer events (not used by engine subsystems)
         EEventCategory_Editor      = BIT(6),   // editor-only events dispatched via EditorEventBus
-        // BIT(7..31) reserved for future engine domains or game extension
+        EEventCategory_Physics     = BIT(7),   // overlap / collision events from PhysicsSubsystem
+        // BIT(8..31) reserved for future engine domains or game extension
     };
 }

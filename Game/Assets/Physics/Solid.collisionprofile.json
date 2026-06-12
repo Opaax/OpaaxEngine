@@ -1,0 +1,10 @@
+{
+    "channel": "WorldStatic",
+    "responses": {
+        "Pawn": "Block",
+        "Projectile": "Block",
+        "Trigger": "Overlap",
+        "WorldDynamic": "Block",
+        "WorldStatic": "Block"
+    }
+}

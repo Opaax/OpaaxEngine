@@ -3,6 +3,7 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/OpaaxString.hpp"
+#include "Core/OpaaxMathTypes.h"
 
 namespace Opaax
 {
@@ -34,6 +35,15 @@ namespace Opaax
          */
         static bool Save(const OpaaxString& InAbsPath);
 
+        /**
+         * Persist back to the path the config was last loaded from (set by Load).
+         * No-op + false if Load was never called. Used by the editor Config panel.
+         */
+        static bool Save();
+
+        // Absolute path the config was loaded from (empty until Load runs).
+        static const OpaaxString& LoadedPath() noexcept { return s_LoadedPath; }
+
         // ---- Window ---------------------------------------------------------
         static const OpaaxString& WindowTitle()  noexcept { return s_WindowTitle; }
         static Uint32             WindowWidth()  noexcept { return s_WindowWidth; }
@@ -51,9 +61,30 @@ namespace Opaax
         // carries no dependency on RHI — RHI maps this to its EBackend enum.
         static const OpaaxString& RenderBackend() noexcept { return s_RenderBackend; }
 
+        // Fixed-step transform interpolation (default on): the renderer lerps physics-driven
+        // entities between fixed steps so motion stays smooth above 60 Hz. Off = pixel-locked
+        // rendering at the raw fixed-step pose (visible stepping at high refresh).
+        // WorldRenderSystem reads this every frame, so the setter takes effect live.
+        static bool                RenderInterpolation() noexcept { return s_RenderInterpolation; }
+        static void                SetRenderInterpolation(bool InEnabled) noexcept { s_RenderInterpolation = InEnabled; }
+
+        // ---- Physics --------------------------------------------------------
+        // Physics backend name ("Box2D" today). String here so Core/Config carries no
+        // dependency on Physics — Physics maps this to its EPhysicsBackend enum.
+        static const OpaaxString& PhysicsBackend() noexcept { return s_PhysicsBackend; }
+
+        // World-bounds kill volume — optional simulation-bounds AABB. Off + generous by
+        // default so endless-scroll games are unconstrained. Response ("EventOnly"|"EventAndDestroy")
+        // stays a string here; PhysicsSubsystem maps it to EWorldBoundsResponse.
+        static bool                PhysicsWorldBoundsEnabled()  noexcept { return s_PhysicsWorldBoundsEnabled; }
+        static Vector2F            PhysicsWorldBoundsMin()      noexcept { return s_PhysicsWorldBoundsMin; }
+        static Vector2F            PhysicsWorldBoundsMax()      noexcept { return s_PhysicsWorldBoundsMax; }
+        static const OpaaxString&  PhysicsWorldBoundsResponse() noexcept { return s_PhysicsWorldBoundsResponse; }
+
     private:
         static bool GenerateDefault(const OpaaxString& InAbsPath);
 
+        static OpaaxString s_LoadedPath;
         static OpaaxString s_WindowTitle;
         static Uint32      s_WindowWidth;
         static Uint32      s_WindowHeight;
@@ -61,5 +92,11 @@ namespace Opaax
         static OpaaxString s_EngineManifestRelPath;
         static OpaaxString s_LogLevel;
         static OpaaxString s_RenderBackend;
+        static bool        s_RenderInterpolation;
+        static OpaaxString s_PhysicsBackend;
+        static bool        s_PhysicsWorldBoundsEnabled;
+        static Vector2F    s_PhysicsWorldBoundsMin;
+        static Vector2F    s_PhysicsWorldBoundsMax;
+        static OpaaxString s_PhysicsWorldBoundsResponse;
     };
 } // namespace Opaax

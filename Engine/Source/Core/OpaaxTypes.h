@@ -9,6 +9,7 @@
 #include <queue>
 #include <thread>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 // =============================================================================
@@ -19,6 +20,7 @@
 //               TFixedArray<T, N>                    (std::array<T, N>)
 //               TInitArray<T>                        (std::initializer_list<T>)
 //               UnorderedMap<K, V[, Hash, Eq, Alloc]> (std::unordered_map)
+//               UnorderedSet<K[, Hash, Eq, Alloc]>    (std::unordered_set)
 //   Function:   TFunction<Sig>                       (std::function<Sig>)
 //   Pointers:   UniquePtr<T>, MakeUnique<T>(args...)
 //               SharedPtr<T>, MakeShared<T>(args...)
@@ -72,6 +74,14 @@ namespace Opaax
         typename Allocator = std::allocator<std::pair<const TKey, TValue>>
     >
     using UnorderedMap = std::unordered_map<TKey, TValue, Hash, KeyEqual, Allocator>;
+
+    template <
+        typename TKey,
+        typename Hash = std::hash<TKey>,
+        typename KeyEqual = std::equal_to<TKey>,
+        typename Allocator = std::allocator<TKey>
+    >
+    using UnorderedSet = std::unordered_set<TKey, Hash, KeyEqual, Allocator>;
 
     // =============================================================================
     // Function Aliases

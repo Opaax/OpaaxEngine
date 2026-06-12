@@ -1,6 +1,11 @@
 {
     "assets": [
         {
+            "id": "Physics/Solid",
+            "path": "Game/Assets/Physics/Solid.collisionprofile.json",
+            "type": "CollisionProfile"
+        },
+        {
             "id": "Scenes/GameScene",
             "path": "Game/Assets/Scenes/GameScene.scene.json",
             "type": "Scene"
@@ -19,6 +24,11 @@
             "id": "Scenes/untitled",
             "path": "Game/Assets/Scenes/untitled.scene.json",
             "type": "Scene"
+        },
+        {
+            "id": "Physics/Pawn",
+            "path": "Game/Assets/Physics/Pawn.collisionprofile.json",
+            "type": "CollisionProfile"
         }
     ]
 }

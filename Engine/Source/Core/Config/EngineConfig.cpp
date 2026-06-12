@@ -10,6 +10,7 @@ namespace Opaax
 {
     // Default values mirror the previous hardcoded constants so a missing
     // engine.config.json keeps the engine bootable with unchanged behavior.
+    OpaaxString EngineConfig::s_LoadedPath            = OpaaxString();
     OpaaxString EngineConfig::s_WindowTitle           = OpaaxString("Opaax Engine");
     Uint32      EngineConfig::s_WindowWidth           = 1280;
     Uint32      EngineConfig::s_WindowHeight          = 720;
@@ -17,6 +18,12 @@ namespace Opaax
     OpaaxString EngineConfig::s_EngineManifestRelPath = OpaaxString("Engine/Assets/AssetManifest.json");
     OpaaxString EngineConfig::s_LogLevel              = OpaaxString("trace");
     OpaaxString EngineConfig::s_RenderBackend         = OpaaxString("OpenGL");
+    bool        EngineConfig::s_RenderInterpolation   = true;
+    OpaaxString EngineConfig::s_PhysicsBackend        = OpaaxString("Box2D");
+    bool        EngineConfig::s_PhysicsWorldBoundsEnabled  = false;
+    Vector2F    EngineConfig::s_PhysicsWorldBoundsMin      = { -100000.f, -100000.f };
+    Vector2F    EngineConfig::s_PhysicsWorldBoundsMax      = {  100000.f,  100000.f };
+    OpaaxString EngineConfig::s_PhysicsWorldBoundsResponse = OpaaxString("EventAndDestroy");
 
     bool EngineConfig::GenerateDefault(const OpaaxString& InAbsPath)
     {
@@ -45,7 +52,19 @@ namespace Opaax
                 { "engineManifest", s_EngineManifestRelPath.CStr() }
             };
             lRoot["log"]    = { { "level",   s_LogLevel.CStr()      } };
-            lRoot["render"] = { { "backend", s_RenderBackend.CStr() } };
+            lRoot["render"]  = {
+                { "backend",       s_RenderBackend.CStr() },
+                { "interpolation", s_RenderInterpolation   }
+            };
+            lRoot["physics"] = {
+                { "backend", s_PhysicsBackend.CStr() },
+                { "worldBounds", {
+                    { "enabled",  s_PhysicsWorldBoundsEnabled },
+                    { "min",      { s_PhysicsWorldBoundsMin.x, s_PhysicsWorldBoundsMin.y } },
+                    { "max",      { s_PhysicsWorldBoundsMax.x, s_PhysicsWorldBoundsMax.y } },
+                    { "response", s_PhysicsWorldBoundsResponse.CStr() }
+                }}
+            };
 
             lFile << lRoot.dump(4);
 
@@ -61,6 +80,10 @@ namespace Opaax
 
     bool EngineConfig::Load(const OpaaxString& InAbsPath)
     {
+        // Remember where we loaded from so the no-arg Save() (editor Config panel) can
+        // round-trip back to the same file without the caller re-resolving the path.
+        s_LoadedPath = InAbsPath;
+
         std::ifstream lFile(InAbsPath.CStr());
 
         if (!lFile.is_open())
@@ -130,12 +153,58 @@ namespace Opaax
             {
                 s_RenderBackend = OpaaxString(lR["backend"].get<std::string>().c_str());
             }
+            if (lR.contains("interpolation") && lR["interpolation"].is_boolean())
+            {
+                s_RenderInterpolation = lR["interpolation"].get<bool>();
+            }
         }
 
-        OPAAX_CORE_INFO("EngineConfig: loaded '{}' (window={}x{}, log={}, backend={})",
-            InAbsPath, s_WindowWidth, s_WindowHeight, s_LogLevel, s_RenderBackend);
+        if (lRoot.contains("physics") && lRoot["physics"].is_object())
+        {
+            const auto& lP = lRoot["physics"];
+            if (lP.contains("backend") && lP["backend"].is_string())
+            {
+                s_PhysicsBackend = OpaaxString(lP["backend"].get<std::string>().c_str());
+            }
+
+            if (lP.contains("worldBounds") && lP["worldBounds"].is_object())
+            {
+                const auto& lWB = lP["worldBounds"];
+                if (lWB.contains("enabled") && lWB["enabled"].is_boolean())
+                {
+                    s_PhysicsWorldBoundsEnabled = lWB["enabled"].get<bool>();
+                }
+                if (lWB.contains("min") && lWB["min"].is_array() && lWB["min"].size() == 2
+                    && lWB["min"][0].is_number() && lWB["min"][1].is_number())
+                {
+                    s_PhysicsWorldBoundsMin = { lWB["min"][0].get<float>(), lWB["min"][1].get<float>() };
+                }
+                if (lWB.contains("max") && lWB["max"].is_array() && lWB["max"].size() == 2
+                    && lWB["max"][0].is_number() && lWB["max"][1].is_number())
+                {
+                    s_PhysicsWorldBoundsMax = { lWB["max"][0].get<float>(), lWB["max"][1].get<float>() };
+                }
+                if (lWB.contains("response") && lWB["response"].is_string())
+                {
+                    s_PhysicsWorldBoundsResponse = OpaaxString(lWB["response"].get<std::string>().c_str());
+                }
+            }
+        }
+
+        OPAAX_CORE_INFO("EngineConfig: loaded '{}' (window={}x{}, log={}, render={}, physics={})",
+            InAbsPath, s_WindowWidth, s_WindowHeight, s_LogLevel, s_RenderBackend, s_PhysicsBackend);
 
         return true;
+    }
+
+    bool EngineConfig::Save()
+    {
+        if (s_LoadedPath.IsEmpty())
+        {
+            OPAAX_CORE_ERROR("EngineConfig::Save — no loaded path (Load was never called).");
+            return false;
+        }
+        return Save(s_LoadedPath);
     }
 
     bool EngineConfig::Save(const OpaaxString& InAbsPath)
@@ -165,7 +234,19 @@ namespace Opaax
                 { "engineManifest", s_EngineManifestRelPath.CStr() }
             };
             lRoot["log"]    = { { "level",   s_LogLevel.CStr()      } };
-            lRoot["render"] = { { "backend", s_RenderBackend.CStr() } };
+            lRoot["render"]  = {
+                { "backend",       s_RenderBackend.CStr() },
+                { "interpolation", s_RenderInterpolation   }
+            };
+            lRoot["physics"] = {
+                { "backend", s_PhysicsBackend.CStr() },
+                { "worldBounds", {
+                    { "enabled",  s_PhysicsWorldBoundsEnabled },
+                    { "min",      { s_PhysicsWorldBoundsMin.x, s_PhysicsWorldBoundsMin.y } },
+                    { "max",      { s_PhysicsWorldBoundsMax.x, s_PhysicsWorldBoundsMax.y } },
+                    { "response", s_PhysicsWorldBoundsResponse.CStr() }
+                }}
+            };
 
             lFile << lRoot.dump(4);
 

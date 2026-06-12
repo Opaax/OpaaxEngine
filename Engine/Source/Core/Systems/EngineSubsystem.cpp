@@ -20,6 +20,23 @@ void Opaax::EngineSubsystemMgr::FixedUpdateAll(double FixedDeltaTime, bool bAllo
     }
 }
 
+void Opaax::EngineSubsystemMgr::OnPlayBeginAll()
+{
+    for (auto& lSystem : GetSystems())
+    {
+        lSystem->OnPlayBegin();
+    }
+}
+
+void Opaax::EngineSubsystemMgr::OnPlayEndAll()
+{
+    const auto& lSystems = GetSystems();
+    for (auto it = lSystems.rbegin(); it != lSystems.rend(); ++it)
+    {
+        (*it)->OnPlayEnd();
+    }
+}
+
 void Opaax::EngineSubsystemMgr::DispatchEventAll(OpaaxEvent& Event)
 {
     const Uint32 lEventCategories = Event.GetCategoryFlags();

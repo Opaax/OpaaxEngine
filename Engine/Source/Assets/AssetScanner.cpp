@@ -44,9 +44,10 @@ namespace Opaax
         if (lExt == ".json")
         {
             const std::string lInner = InPath.stem().extension().string();
-            if (lInner == ".scene") { return OpaaxStringID("Scene");     }
-            if (lInner == ".anim")  { return OpaaxStringID("Animation"); }
-            if (lInner == ".input") { return OpaaxStringID("InputMap");  }
+            if (lInner == ".scene")            { return OpaaxStringID("Scene");            }
+            if (lInner == ".anim")             { return OpaaxStringID("Animation");        }
+            if (lInner == ".input")            { return OpaaxStringID("InputMap");         }
+            if (lInner == ".collisionprofile") { return OpaaxStringID("CollisionProfile"); }
             return OpaaxStringID("Data");
         }
 
