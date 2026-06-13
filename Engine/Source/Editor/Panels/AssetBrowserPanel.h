@@ -18,6 +18,25 @@ namespace Opaax
 
 namespace Opaax::Editor
 {
+    // =============================================================================
+    // AssetTreeNode
+    // =============================================================================
+    /**
+     * @struct AssetTreeNode
+     * One node in the Asset Browser folder tree. A node is a folder (its segment
+     * Name) that may hold sub-folders (Children) and/or assets directly (Leaves).
+     * The two top-level roots are the virtual "Engine" and project-name folders;
+     * everything beneath comes from the on-disk folder structure + each asset's
+     * logical ID path. Rebuilt from the manifest + cached folders every frame —
+     * Leaves are non-owning views into the manifest.
+     */
+    struct AssetTreeNode
+    {
+        OpaaxString                       Name;     // folder segment label ("Textures")
+        TDynArray<AssetTreeNode>          Children; // sub-folders, sorted by Name at draw time
+        TDynArray<const AssetDescriptor*> Leaves;   // assets directly in this folder (non-owning)
+    };
+
     /**
      * @class AssetBrowserPanel
      * Displays all assets from the manifest — loaded, unloaded, and missing.
@@ -54,8 +73,13 @@ namespace Opaax::Editor
 
     private:
         void DrawToolbar();
+        // NOTE: DrawAssetList is the legacy flat view — retained until DrawAssetTree clears the gates, then deleted.
         void DrawAssetList(SceneManager& InSceneMgr, IEditorUIBackend& InUIBackend);
-        void DrawAssetEntry(const AssetDescriptor& InDesc, SceneManager& InSceneMgr, IEditorUIBackend& InUIBackend);
+        void DrawAssetTree(SceneManager& InSceneMgr, IEditorUIBackend& InUIBackend);
+        void DrawFolderNode(AssetTreeNode& InNode, bool bIsRoot, bool bFiltering,
+                            SceneManager& InSceneMgr, IEditorUIBackend& InUIBackend);
+        void DrawAssetEntry(const AssetDescriptor& InDesc, const char* InDisplayName,
+                            SceneManager& InSceneMgr, IEditorUIBackend& InUIBackend);
 
         // =============================================================================
         // Override
@@ -74,6 +98,11 @@ namespace Opaax::Editor
         AssetBrowserFilter       m_Filter;
         AssetScanner::ScanResult m_LastScanResult;
         bool                     m_bScanned = false;
+
+        // On-disk folder structure (root-relative, e.g. "Textures", "Scenes/Sub"), refreshed every
+        // RunScan. Seeds the tree skeleton so empty folders show even without any asset inside them.
+        TDynArray<OpaaxString>   m_EngineFolders;
+        TDynArray<OpaaxString>   m_ProjectFolders;
         OpaaxStringID            m_HoveredID;
         OpaaxString              m_ManifestAbsPath;
 
