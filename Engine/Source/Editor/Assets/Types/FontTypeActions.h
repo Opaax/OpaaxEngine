@@ -28,6 +28,8 @@ namespace Opaax::Editor
 
         bool CanPreview()                                                 const override { return true; }
         void DrawPreview(OpaaxStringID InID, IEditorUIBackend& InUIBackend)      override;
+
+        bool GetThumbnail(OpaaxStringID InID, IEditorUIBackend& InUIBackend, AssetThumbnail& OutThumb) const override;
     };
 
 } // namespace Opaax::Editor

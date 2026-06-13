@@ -4,6 +4,7 @@
 
 #include <imgui.h>
 
+#include "Assets/AssetRegistry.h"
 #include "Editor/Assets/AssetTypeRegistry.h"
 #include "Editor/Assets/IAssetTypeActions.h"
 #include "Editor/Events/EditorEvents.h"
@@ -47,20 +48,35 @@ namespace Opaax::Editor
             return;
         }
 
-        if (lActions->CanEdit())
-        {
-            lActions->DrawEditor(m_SelectedID, InUIBackend);
-        }
-        else if (lActions->CanPreview())
-        {
-            lActions->DrawPreview(m_SelectedID, InUIBackend);
-        }
-        else
+        const bool bCanEdit    = lActions->CanEdit();
+        const bool bCanPreview = lActions->CanPreview();
+
+        if (!bCanEdit && !bCanPreview)
         {
             const OpaaxString lIDStr = m_SelectedID.ToString();
             ImGui::Text("%s", lIDStr.CStr());
             ImGui::TextDisabled("No preview or editor for this asset type.");
+            ImGui::End();
+            return;
         }
+
+        // GLOBAL load gate (fixes the Unload-fights-preview bug for EVERY type). Both DrawEditor and
+        // DrawPreview need the asset loaded, and several type-actions call AssetRegistry::Load inside
+        // them — so drawing the selection every frame would force-reload it and silently defeat an
+        // explicit Unload from the browser. Gate the dispatch on load state here (one place, all
+        // types) and never auto-load; offer an explicit Load instead (this is a real, interactive window).
+        if (!AssetRegistry::IsLoaded(m_SelectedID))
+        {
+            const OpaaxString lIDStr = m_SelectedID.ToString();
+            ImGui::Text("%s", lIDStr.CStr());
+            ImGui::TextDisabled("Not loaded.");
+            if (ImGui::Button("Load")) { lActions->Load(m_SelectedID); }
+            ImGui::End();
+            return;
+        }
+
+        if (bCanEdit) { lActions->DrawEditor(m_SelectedID, InUIBackend); }
+        else          { lActions->DrawPreview(m_SelectedID, InUIBackend); }
 
         ImGui::End();
     }

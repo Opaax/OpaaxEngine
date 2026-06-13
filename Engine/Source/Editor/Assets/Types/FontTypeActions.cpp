@@ -22,6 +22,8 @@ namespace Opaax::Editor
 
     void FontTypeActions::DrawPreview(OpaaxStringID InID, IEditorUIBackend& InUIBackend)
     {
+        // Callers only invoke this for a loaded asset (see AssetDetailsPanel's load gate), so this
+        // Load is a cache hit.
         const auto lHandle = AssetRegistry::Load<FontAsset>(InID);
         if (!lHandle.IsValid()) { return; }
 
@@ -59,6 +61,24 @@ namespace Opaax::Editor
         ImGui::TextDisabled("Kern pairs: %u", lFont->GetKerningPairCount());
         ImGui::TextDisabled("VMetrics: A %.1f / D %.1f / Gap %.1f / Line %.1f",
                             lV.Ascent, lV.Descent, lV.LineGap, lV.LineAdvance);
+    }
+
+    bool FontTypeActions::GetThumbnail(OpaaxStringID InID, IEditorUIBackend& InUIBackend, AssetThumbnail& OutThumb) const
+    {
+        // Only thumbnail an already-loaded font — never force-load.
+        if (!AssetRegistry::IsLoaded(InID)) { return false; }
+
+        const auto lHandle = AssetRegistry::Load<FontAsset>(InID);
+        if (!lHandle.IsValid()) { return false; }
+
+        const Texture2D* lAtlas = lHandle.Get()->GetAtlasTexture();
+        if (!lAtlas || !lAtlas->GetRHITexture()) { return false; }
+
+        OutThumb.Handle = InUIBackend.GetTextureID(*lAtlas->GetRHITexture());
+        // Straight (0,0)-(1,1): the atlas buffer is top-down (see DrawPreview).
+        OutThumb.UV0 = { 0.f, 0.f };
+        OutThumb.UV1 = { 1.f, 1.f };
+        return OutThumb.Handle != 0;
     }
 
 } // namespace Opaax::Editor
