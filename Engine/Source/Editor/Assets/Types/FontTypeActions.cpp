@@ -22,6 +22,8 @@ namespace Opaax::Editor
 
     void FontTypeActions::DrawPreview(OpaaxStringID InID, IEditorUIBackend& InUIBackend)
     {
+        // Callers only invoke this for a loaded asset (see AssetDetailsPanel's load gate), so this
+        // Load is a cache hit.
         const auto lHandle = AssetRegistry::Load<FontAsset>(InID);
         if (!lHandle.IsValid()) { return; }
 

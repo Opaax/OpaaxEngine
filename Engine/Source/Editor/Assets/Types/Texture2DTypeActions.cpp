@@ -21,6 +21,8 @@ namespace Opaax::Editor
 
     void Texture2DTypeActions::DrawPreview(OpaaxStringID InID, IEditorUIBackend& InUIBackend)
     {
+        // Callers only invoke this for a loaded asset (AssetDetailsPanel gates on IsLoaded; the
+        // browser tooltip/drag gate on bLoaded), so this Load is a cache hit — see AssetDetailsPanel.
         const auto lHandle = AssetRegistry::Load<Texture2D>(InID);
         if (!lHandle.IsValid()) { return; }
 

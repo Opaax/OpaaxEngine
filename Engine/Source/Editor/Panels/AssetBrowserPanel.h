@@ -97,6 +97,10 @@ namespace Opaax::Editor
         void DrawAssetTile(const AssetDescriptor& InDesc, SceneManager& InSceneMgr, IEditorUIBackend& InUIBackend);
         bool ResolveFolderIcon();
 
+        // Right-click color picker for a folder — keyed to the last-submitted item, so it works on both
+        // a grid folder tile and a tree folder node.
+        void DrawFolderColorContextMenu(const OpaaxString& InFullPath);
+
         // Folder colors (persisted in EditorFolderColors.json). GetFolderColor returns 0 when unset.
         Uint32 GetFolderColor(const OpaaxString& InPath) const;
         void   SetFolderColor(const OpaaxString& InPath, Uint32 InColor);

@@ -600,6 +600,9 @@ namespace Opaax::Editor
         const bool bOpen = ImGui::TreeNodeEx(InNode.Name.CStr(), lFlags);
         if (lColor) { ImGui::PopStyleColor(); }
 
+        // Right-click a tree folder to set/clear its color too (same store + popup as the grid).
+        DrawFolderColorContextMenu(lFullPath);
+
         if (bOpen)
         {
             for (auto& lChild : InNode.Children)
@@ -850,22 +853,7 @@ namespace Opaax::Editor
         const bool bDouble  = bHovered && ImGui::IsMouseDoubleClicked(0);
 
         // Right-click → folder color (Unreal-style); persisted on change.
-        if (ImGui::BeginPopupContextItem("##foldercolor"))
-        {
-            const Uint32 lCur = GetFolderColor(InFullPath);
-            ImVec4 lEdit = ImGui::ColorConvertU32ToFloat4(lCur ? lCur : k_DefaultFolderColor);
-            if (ImGui::ColorEdit4("Folder Color", &lEdit.x, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_AlphaBar))
-            {
-                SetFolderColor(InFullPath, ImGui::ColorConvertFloat4ToU32(lEdit));
-                SaveFolderColors();
-            }
-            if (ImGui::MenuItem("Clear Color"))
-            {
-                ClearFolderColor(InFullPath);
-                SaveFolderColors();
-            }
-            ImGui::EndPopup();
-        }
+        DrawFolderColorContextMenu(InFullPath);
 
         Uint64 lIconTex = 0;
         if (ResolveFolderIcon() && m_FolderIcon.Get()->GetRHITexture())
@@ -926,10 +914,42 @@ namespace Opaax::Editor
                 InDesc.bMissing, bLoaded, bHovered);
         }
 
+        // Label colored by load status — green loaded / red missing / white otherwise (parity with the tree).
+        ImVec4 lLabelColor;
+        if (InDesc.bMissing) { lLabelColor = ImVec4(1.f,  0.3f, 0.3f, 1.f); }
+        else if (bLoaded)    { lLabelColor = ImVec4(0.4f, 1.f,  0.4f, 1.f); }
+        else                 { lLabelColor = ImVec4(1.f,  1.f,  1.f,  1.f); }
+        ImGui::PushStyleColor(ImGuiCol_Text, lLabelColor);
         DrawTileLabel(LeafName(InDesc.ID.ToString()).CStr(), k_TileSize);
+        ImGui::PopStyleColor();
 
         ImGui::EndGroup();
         ImGui::PopID();
+    }
+
+    // =============================================================================
+    // Folder color picker — right-click popup, shared by grid tile + tree node
+    // =============================================================================
+    void AssetBrowserPanel::DrawFolderColorContextMenu(const OpaaxString& InFullPath)
+    {
+        // NULL str_id → the popup is keyed to the last-submitted item (the folder tile button or
+        // the tree node), so it's unique per folder with no manual id juggling.
+        if (ImGui::BeginPopupContextItem())
+        {
+            const Uint32 lCur  = GetFolderColor(InFullPath);
+            ImVec4       lEdit = ImGui::ColorConvertU32ToFloat4(lCur ? lCur : k_DefaultFolderColor);
+            if (ImGui::ColorEdit4("Folder Color", &lEdit.x, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_AlphaBar))
+            {
+                SetFolderColor(InFullPath, ImGui::ColorConvertFloat4ToU32(lEdit));
+                SaveFolderColors();
+            }
+            if (ImGui::MenuItem("Clear Color"))
+            {
+                ClearFolderColor(InFullPath);
+                SaveFolderColors();
+            }
+            ImGui::EndPopup();
+        }
     }
 
     // =============================================================================
