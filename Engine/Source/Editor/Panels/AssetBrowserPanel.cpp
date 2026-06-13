@@ -16,6 +16,8 @@
 #include "Editor/Assets/AssetTypeRegistry.h"
 #include "Editor/Assets/IAssetTypeActions.h"
 #include "Editor/Events/EditorEvents.h"
+#include "Editor/UI/IEditorUIBackend.h"
+#include "Renderer/Texture2D.h"
 #include "Scene/SceneManager.h"
 
 namespace Opaax::Editor
@@ -163,6 +165,107 @@ namespace Opaax::Editor
         return bFound ? InID.SubString(lLast + 1) : InID;
     }
 
+    // Direct child folder by name, or nullptr.
+    static AssetTreeNode* FindChildByName(AssetTreeNode& InParent, const OpaaxString& InName)
+    {
+        for (auto& lChild : InParent.Children)
+        {
+            if (lChild.Name == InName) { return &lChild; }
+        }
+        return nullptr;
+    }
+
+    // =============================================================================
+    // Grid-tile drawing helpers (window draw list)
+    // =============================================================================
+    static constexpr float k_TileSize = 84.f;
+
+    // Folder glyph filling [InMin,InMax]: the PNG override when InIconTex != 0, else a vector folder.
+    static void DrawFolderGlyph(ImDrawList* InDL, ImVec2 InMin, ImVec2 InMax, bool bHovered, Uint64 InIconTex)
+    {
+        if (bHovered)
+        {
+            InDL->AddRectFilled(InMin, InMax, ImGui::GetColorU32(ImGuiCol_HeaderHovered), 4.f);
+        }
+
+        if (InIconTex != 0)
+        {
+            const float  lInset = (InMax.x - InMin.x) * 0.10f;
+            const ImVec2 lA(InMin.x + lInset, InMin.y + lInset);
+            const ImVec2 lB(InMax.x - lInset, InMax.y - lInset);
+            // Texture buffers are bottom-up (stb flip) → V-swap, same as the asset thumbnails.
+            InDL->AddImage(static_cast<ImTextureID>(InIconTex), lA, lB, ImVec2(0.f, 1.f), ImVec2(1.f, 0.f));
+            return;
+        }
+
+        const float  lW = InMax.x - InMin.x, lH = InMax.y - InMin.y;
+        const float  lMx = lW * 0.16f, lMy = lH * 0.22f;
+        const ImVec2 lA(InMin.x + lMx, InMin.y + lMy);
+        const ImVec2 lB(InMax.x - lMx, InMax.y - lMy);
+        const float  lBodyW = lB.x - lA.x, lBodyH = lB.y - lA.y;
+        const ImU32  lTab  = IM_COL32(196, 161, 78, 255);
+        const ImU32  lBody = IM_COL32(232, 196, 104, 255);
+        const float  lR = 3.f;
+        const float  lTabH = lBodyH * 0.26f;
+        const float  lTabW = lBodyW * 0.46f;
+        InDL->AddRectFilled(ImVec2(lA.x, lA.y), ImVec2(lA.x + lTabW, lA.y + lTabH + lR), lTab, lR, ImDrawFlags_RoundCornersTop);
+        InDL->AddRectFilled(ImVec2(lA.x, lA.y + lTabH), ImVec2(lB.x, lB.y), lBody, lR);
+    }
+
+    // Generic asset card filling [InMin,InMax] with the type-icon text centered + status tint.
+    static void DrawAssetGlyph(ImDrawList* InDL, ImVec2 InMin, ImVec2 InMax,
+                               const char* InTypeIcon, bool bMissing, bool bLoaded, bool bHovered)
+    {
+        if (bHovered)
+        {
+            InDL->AddRectFilled(InMin, InMax, ImGui::GetColorU32(ImGuiCol_HeaderHovered), 4.f);
+        }
+
+        const float  lW = InMax.x - InMin.x, lH = InMax.y - InMin.y;
+        const float  lMx = lW * 0.16f, lMy = lH * 0.16f;
+        const ImVec2 lA(InMin.x + lMx, InMin.y + lMy);
+        const ImVec2 lB(InMax.x - lMx, InMax.y - lMy);
+        const ImU32  lCard = bMissing ? IM_COL32(120, 60, 60, 255)
+                           : bLoaded  ? IM_COL32(70, 90, 70, 255)
+                                      : IM_COL32(80, 80, 92, 255);
+        InDL->AddRectFilled(lA, lB, lCard, 4.f);
+        InDL->AddRect(lA, lB, IM_COL32(0, 0, 0, 120), 4.f);
+
+        const ImVec2 lTs = ImGui::CalcTextSize(InTypeIcon);
+        const ImVec2 lAt((lA.x + lB.x) * 0.5f - lTs.x * 0.5f, (lA.y + lB.y) * 0.5f - lTs.y * 0.5f);
+        InDL->AddText(lAt, IM_COL32(232, 232, 232, 255), InTypeIcon);
+    }
+
+    // One-line label centered under a tile; truncated with an ellipsis when it overflows InWidth.
+    static void DrawTileLabel(const char* InText, float InWidth)
+    {
+        const ImVec2 lFull = ImGui::CalcTextSize(InText);
+        if (lFull.x <= InWidth)
+        {
+            const float lOff = (InWidth - lFull.x) * 0.5f;
+            if (lOff > 0.f) { ImGui::SetCursorPosX(ImGui::GetCursorPosX() + lOff); }
+            ImGui::TextUnformatted(InText);
+            return;
+        }
+
+        char         lBuf[160];
+        const float  lDotsW = ImGui::CalcTextSize("..").x;
+        const size_t lMax   = strlen(InText);
+        size_t       lLen   = 0;
+        float        lW     = 0.f;
+        for (; lLen < lMax && lLen < sizeof(lBuf) - 3; ++lLen)
+        {
+            const char lC[2] = { InText[lLen], '\0' };
+            lW += ImGui::CalcTextSize(lC).x;
+            if (lW + lDotsW > InWidth) { break; }
+        }
+        memcpy(lBuf, InText, lLen);
+        lBuf[lLen]     = '.';
+        lBuf[lLen + 1] = '.';
+        lBuf[lLen + 2] = '\0';
+        ImGui::TextUnformatted(lBuf);
+    }
+
     // =============================================================================
     // Startup
     // =============================================================================
@@ -223,6 +326,9 @@ namespace Opaax::Editor
         CollectFolders(EngineConfig::EngineAssetsRoot(), m_EngineFolders);
         CollectFolders(ProjectConfig::AssetsRoot(),      m_ProjectFolders);
 
+        // Re-attempt the optional PNG folder icon (a freshly-dropped Textures/Editor/Folder.png appears on Refresh).
+        m_FolderIconTried = false;
+
         m_bScanned = true;
     }
 
@@ -232,9 +338,18 @@ namespace Opaax::Editor
     void AssetBrowserPanel::Draw(SceneManager& InSceneMgr, IEditorUIBackend& InUIBackend)
     {
         ImGui::Begin("Asset Browser");
+
+        // Frozen header: the toolbar (+ breadcrumb in grid mode) stay pinned; only the asset
+        // area below scrolls, via its own child region (Excel "freeze panes").
         DrawToolbar();
+        if (m_View == EBrowserView::Grid) { DrawBreadcrumb(); }
         ImGui::Separator();
-        DrawAssetTree(InSceneMgr, InUIBackend);
+
+        ImGui::BeginChild("##AssetScroll", ImVec2(0.f, 0.f), false);
+        if (m_View == EBrowserView::Grid) { DrawAssetGrid(InSceneMgr, InUIBackend); }
+        else                              { DrawAssetTree(InSceneMgr, InUIBackend); }
+        ImGui::EndChild();
+
         ImGui::End();
 
         // Deferred manifest mutation — safe to mutate s_Descriptors here, after iteration ended.
@@ -273,6 +388,20 @@ namespace Opaax::Editor
                 ImGui::Text("%u missing", m_LastScanResult.Missing);
                 ImGui::PopStyleColor();
             }
+        }
+
+        // View toggle: Grid (explorer) | Tree (dropdown). Active one is tinted, mirroring the type-filter buttons.
+        ImGui::SameLine();
+        {
+            const bool bGrid = (m_View == EBrowserView::Grid);
+            if (bGrid) { ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.26f, 0.59f, 0.98f, 1.f)); }
+            if (ImGui::SmallButton("Grid")) { m_View = EBrowserView::Grid; }
+            if (bGrid) { ImGui::PopStyleColor(); }
+
+            ImGui::SameLine();
+            if (!bGrid) { ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.26f, 0.59f, 0.98f, 1.f)); }
+            if (ImGui::SmallButton("Tree")) { m_View = EBrowserView::Tree; }
+            if (!bGrid) { ImGui::PopStyleColor(); }
         }
 
         ImGui::Spacing();
@@ -363,33 +492,48 @@ namespace Opaax::Editor
     }
 
     // =============================================================================
+    // BuildRoots — fill the Engine / <Project> roots from cached folders + manifest
+    // =============================================================================
+    void AssetBrowserPanel::BuildRoots(AssetTreeNode& OutEngine, AssetTreeNode& OutProject,
+                                       bool bSeedSkeleton, bool bFilterLeaves)
+    {
+        // "Engine" is fixed; the project root uses the active project's name (e.g. "Game").
+        OutEngine.Name  = OpaaxString("Engine");
+        OutProject.Name = ProjectConfig::Name();
+
+        // Seed the full on-disk folder skeleton so empty folders show too.
+        if (bSeedSkeleton)
+        {
+            for (const auto& lFolder : m_EngineFolders)  { EnsureFolder(OutEngine,  lFolder); }
+            for (const auto& lFolder : m_ProjectFolders) { EnsureFolder(OutProject, lFolder); }
+        }
+
+        for (const auto& [lKey, lDesc] : AssetManifest::GetAll())
+        {
+            if (bFilterLeaves && !m_Filter.Matches(lDesc)) { continue; }
+            InsertLeaf(IsUnderEngineRoot(lDesc) ? OutEngine : OutProject, lDesc);
+        }
+
+        SortNode(OutEngine);
+        SortNode(OutProject);
+    }
+
+    // =============================================================================
     // Asset tree — Engine / <Project> roots, on-disk folders, logical-ID leaves
     // =============================================================================
     void AssetBrowserPanel::DrawAssetTree(SceneManager& InSceneMgr, IEditorUIBackend& InUIBackend)
     {
-        const auto& lAll = AssetManifest::GetAll();
+        if (AssetManifest::GetAll().empty() && m_EngineFolders.empty() && m_ProjectFolders.empty())
+        {
+            ImGui::TextDisabled("No assets in manifest. Click Refresh to scan.");
+            return;
+        }
 
-        // Roots: "Engine" is fixed; the project root uses the active project's name (e.g. "Game").
-        AssetTreeNode lEngineRoot;  lEngineRoot.Name  = OpaaxString("Engine");
-        AssetTreeNode lProjectRoot; lProjectRoot.Name = ProjectConfig::Name();
-
+        // Filtered: skip the skeleton so only folders containing a match appear (and auto-expand).
         const bool bFiltering = !m_Filter.Text.IsEmpty() || m_Filter.TypeID.IsValid();
 
-        // Unfiltered: seed the full on-disk folder skeleton so empty folders show too.
-        // Filtered: skip it, so only folders containing a match appear (and auto-expand).
-        if (!bFiltering)
-        {
-            for (const auto& lFolder : m_EngineFolders)  { EnsureFolder(lEngineRoot,  lFolder); }
-            for (const auto& lFolder : m_ProjectFolders) { EnsureFolder(lProjectRoot, lFolder); }
-        }
-
-        Int32 lVisible = 0;
-        for (const auto& [lKey, lDesc] : lAll)
-        {
-            if (!m_Filter.Matches(lDesc)) { continue; }
-            InsertLeaf(IsUnderEngineRoot(lDesc) ? lEngineRoot : lProjectRoot, lDesc);
-            ++lVisible;
-        }
+        AssetTreeNode lEngineRoot, lProjectRoot;
+        BuildRoots(lEngineRoot, lProjectRoot, /*bSeedSkeleton*/!bFiltering, /*bFilterLeaves*/true);
 
         const bool bEmpty = lEngineRoot.Children.empty()  && lEngineRoot.Leaves.empty()
                          && lProjectRoot.Children.empty() && lProjectRoot.Leaves.empty();
@@ -400,9 +544,6 @@ namespace Opaax::Editor
                 : "No assets in manifest. Click Refresh to scan.");
             return;
         }
-
-        SortNode(lEngineRoot);
-        SortNode(lProjectRoot);
 
         DrawFolderNode(lEngineRoot,  /*bIsRoot*/true, bFiltering, InSceneMgr, InUIBackend);
         DrawFolderNode(lProjectRoot, /*bIsRoot*/true, bFiltering, InSceneMgr, InUIBackend);
@@ -460,8 +601,7 @@ namespace Opaax::Editor
 
         ImGui::PushStyleColor(ImGuiCol_Text, lColor);
 
-        const char*       lIcon  = AssetTypeRegistry::GetIcon(InDesc.Type);
-        const OpaaxString lIDStr = InDesc.ID.ToString();
+        const char* lIcon = AssetTypeRegistry::GetIcon(InDesc.Type);
 
         // Label shows the short display name; the ##id keeps it globally unique across folders.
         char lLabel[256];
@@ -469,6 +609,22 @@ namespace Opaax::Editor
 
         const bool bClicked = ImGui::Selectable(lLabel, m_HoveredID == InDesc.ID);
         ImGui::PopStyleColor();
+
+        ApplyAssetItemBehavior(InDesc, bClicked, InSceneMgr, InUIBackend);
+    }
+
+    // =============================================================================
+    // Shared per-asset interactions — attached to the last-submitted item (tree
+    // Selectable or grid tile button): select, drag-drop, tooltip, context, double-click
+    // =============================================================================
+    void AssetBrowserPanel::ApplyAssetItemBehavior(const AssetDescriptor& InDesc, bool bClicked,
+                                                   SceneManager& InSceneMgr, IEditorUIBackend& InUIBackend)
+    {
+        // Scenes don't go through AssetRegistry — treat the entry matching GetCurrentScenePath() as loaded.
+        const bool        bLoaded  = AssetRegistry::IsLoaded(InDesc.ID) || IsLoadedScene(InSceneMgr, InDesc);
+        const bool        bMissing = InDesc.bMissing;
+        const char*       lIcon    = AssetTypeRegistry::GetIcon(InDesc.Type);
+        const OpaaxString lIDStr   = InDesc.ID.ToString();
 
         // Single-click selects → AssetDetailsPanel renders this asset's editor/preview.
         if (bClicked && m_Bus)
@@ -559,6 +715,186 @@ namespace Opaax::Editor
                 lActions->Load(InDesc.ID);
             }
         }
+    }
+
+    // =============================================================================
+    // Breadcrumb (grid view) — Home > seg > seg ; clicking a crumb truncates the path
+    // =============================================================================
+    void AssetBrowserPanel::DrawBreadcrumb()
+    {
+        const bool bHome = ImGui::SmallButton("Home");
+
+        Int32        lNavTo = -1;
+        const Uint32 lCount = static_cast<Uint32>(m_GridPath.size());
+        for (Uint32 i = 0; i < lCount; ++i)
+        {
+            ImGui::SameLine();
+            ImGui::TextDisabled(">");
+            ImGui::SameLine();
+            ImGui::PushID(static_cast<int>(i));
+            if (ImGui::SmallButton(m_GridPath[i].CStr())) { lNavTo = static_cast<Int32>(i); }
+            ImGui::PopID();
+        }
+
+        // Apply navigation AFTER the loop — never resize m_GridPath mid-iteration.
+        if (bHome)            { m_GridPath.clear(); }
+        else if (lNavTo >= 0) { m_GridPath.resize(static_cast<size_t>(lNavTo) + 1); }
+    }
+
+    // =============================================================================
+    // Asset grid (explorer view) — folders as tiles you double-click to enter
+    // =============================================================================
+    void AssetBrowserPanel::DrawAssetGrid(SceneManager& InSceneMgr, IEditorUIBackend& InUIBackend)
+    {
+        AssetTreeNode lEngineRoot, lProjectRoot;
+        BuildRoots(lEngineRoot, lProjectRoot, /*bSeedSkeleton*/true, /*bFilterLeaves*/false);
+
+        // Wrapped-grid column count from the available width.
+        const ImGuiStyle& lStyle = ImGui::GetStyle();
+        const float       lAvail = ImGui::GetContentRegionAvail().x;
+        Int32             lCols  = static_cast<Int32>((lAvail + lStyle.ItemSpacing.x) / (k_TileSize + lStyle.ItemSpacing.x));
+        if (lCols < 1) { lCols = 1; }
+
+        Int32 lIndex = 0;
+        auto  lAfterTile = [&]()
+        {
+            ++lIndex;
+            if (lIndex % lCols != 0) { ImGui::SameLine(); }
+        };
+
+        // Roots level: the two roots as folder tiles.
+        if (m_GridPath.empty())
+        {
+            DrawFolderTile(lEngineRoot.Name,  InUIBackend); lAfterTile();
+            DrawFolderTile(lProjectRoot.Name, InUIBackend); lAfterTile();
+            return;
+        }
+
+        // Walk to the current node; self-heal a stale path (folder deleted since the last scan).
+        AssetTreeNode* lNode = (m_GridPath[0] == lEngineRoot.Name)  ? &lEngineRoot
+                             : (m_GridPath[0] == lProjectRoot.Name) ? &lProjectRoot
+                                                                    : nullptr;
+        Uint32 lValid = lNode ? 1u : 0u;
+        for (Uint32 i = 1; lNode && i < m_GridPath.size(); ++i)
+        {
+            AssetTreeNode* lChild = FindChildByName(*lNode, m_GridPath[i]);
+            if (!lChild) { break; }
+            lNode  = lChild;
+            lValid = i + 1;
+        }
+        if (lValid < m_GridPath.size()) { m_GridPath.resize(lValid); }
+        if (!lNode) { m_GridPath.clear(); return; }
+
+        // Sub-folders first, then the (filtered) assets in this folder.
+        for (auto& lChild : lNode->Children)
+        {
+            DrawFolderTile(lChild.Name, InUIBackend);
+            lAfterTile();
+        }
+        for (const AssetDescriptor* lLeaf : lNode->Leaves)
+        {
+            if (!m_Filter.Matches(*lLeaf)) { continue; }
+            DrawAssetTile(*lLeaf, InSceneMgr, InUIBackend);
+            lAfterTile();
+        }
+
+        if (lIndex == 0) { ImGui::TextDisabled("Empty folder."); }
+    }
+
+    // =============================================================================
+    // Folder tile — vector/PNG folder glyph; double-click enters the folder
+    // =============================================================================
+    void AssetBrowserPanel::DrawFolderTile(const OpaaxString& InName, IEditorUIBackend& InUIBackend)
+    {
+        ImGui::PushID(InName.CStr());
+        ImGui::BeginGroup();
+
+        const ImVec2 lPos = ImGui::GetCursorScreenPos();
+        ImGui::InvisibleButton("##folder", ImVec2(k_TileSize, k_TileSize));
+        const bool bHovered = ImGui::IsItemHovered();
+        const bool bDouble  = bHovered && ImGui::IsMouseDoubleClicked(0);
+
+        Uint64 lIconTex = 0;
+        if (ResolveFolderIcon() && m_FolderIcon.Get()->GetRHITexture())
+        {
+            lIconTex = InUIBackend.GetTextureID(*m_FolderIcon.Get()->GetRHITexture());
+        }
+        DrawFolderGlyph(ImGui::GetWindowDrawList(), lPos,
+            ImVec2(lPos.x + k_TileSize, lPos.y + k_TileSize), bHovered, lIconTex);
+
+        DrawTileLabel(InName.CStr(), k_TileSize);
+
+        ImGui::EndGroup();
+        ImGui::PopID();
+
+        if (bDouble) { m_GridPath.push_back(InName); }
+    }
+
+    // =============================================================================
+    // Asset tile — already-loaded texture thumbnail or a generic glyph; shared behavior
+    // =============================================================================
+    void AssetBrowserPanel::DrawAssetTile(const AssetDescriptor& InDesc, SceneManager& InSceneMgr, IEditorUIBackend& InUIBackend)
+    {
+        ImGui::PushID(static_cast<int>(InDesc.ID.GetId()));
+        ImGui::BeginGroup();
+
+        const ImVec2 lPos     = ImGui::GetCursorScreenPos();
+        const bool   bClicked = ImGui::InvisibleButton("##tile", ImVec2(k_TileSize, k_TileSize));
+        const bool   bHovered = ImGui::IsItemHovered();
+
+        // Behavior attaches to the button (the last-submitted item) — the draw-list calls below submit nothing.
+        ApplyAssetItemBehavior(InDesc, bClicked, InSceneMgr, InUIBackend);
+
+        ImDrawList*  lDL = ImGui::GetWindowDrawList();
+        const ImVec2 lMax(lPos.x + k_TileSize, lPos.y + k_TileSize);
+        const bool   bLoaded = AssetRegistry::IsLoaded(InDesc.ID) || IsLoadedScene(InSceneMgr, InDesc);
+
+        // Thumbnail only for an already-loaded texture (never force-load a whole folder); else a generic card.
+        Uint64 lThumb = 0;
+        if (!InDesc.bMissing && bLoaded && InDesc.Type == OpaaxStringID("Texture2D"))
+        {
+            const auto lHandle = AssetRegistry::Load<Texture2D>(InDesc.ID);
+            if (lHandle.IsValid() && lHandle.Get()->GetRHITexture())
+            {
+                lThumb = InUIBackend.GetTextureID(*lHandle.Get()->GetRHITexture());
+            }
+        }
+
+        if (lThumb != 0)
+        {
+            if (bHovered) { lDL->AddRectFilled(lPos, lMax, ImGui::GetColorU32(ImGuiCol_HeaderHovered), 4.f); }
+            const float lInset = k_TileSize * 0.08f;
+            lDL->AddImage(static_cast<ImTextureID>(lThumb),
+                ImVec2(lPos.x + lInset, lPos.y + lInset), ImVec2(lMax.x - lInset, lMax.y - lInset),
+                ImVec2(0.f, 1.f), ImVec2(1.f, 0.f));
+        }
+        else
+        {
+            DrawAssetGlyph(lDL, lPos, lMax, AssetTypeRegistry::GetIcon(InDesc.Type),
+                InDesc.bMissing, bLoaded, bHovered);
+        }
+
+        DrawTileLabel(LeafName(InDesc.ID.ToString()).CStr(), k_TileSize);
+
+        ImGui::EndGroup();
+        ImGui::PopID();
+    }
+
+    // =============================================================================
+    // ResolveFolderIcon — lazy-load the optional PNG folder icon, once per scan
+    // =============================================================================
+    bool AssetBrowserPanel::ResolveFolderIcon()
+    {
+        if (m_FolderIcon.IsValid()) { return true; }
+        if (m_FolderIconTried)      { return false; }
+
+        m_FolderIconTried = true;
+        const OpaaxStringID lIconID("Textures/Editor/Folder");
+        if (AssetManifest::Contains(lIconID))
+        {
+            m_FolderIcon = AssetRegistry::Load<Texture2D>(lIconID);
+        }
+        return m_FolderIcon.IsValid();
     }
 
 } // namespace Opaax::Editor

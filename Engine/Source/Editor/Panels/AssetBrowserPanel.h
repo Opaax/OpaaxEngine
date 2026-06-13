@@ -5,6 +5,7 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxString.hpp"
 #include "Core/OpaaxStringID.hpp"
+#include "Assets/AssetHandle.hpp"
 #include "Assets/AssetScanner.h"
 #include "Editor/EditorEventBus.h"
 #include "Editor/IEditorPanel.h"
@@ -73,11 +74,26 @@ namespace Opaax::Editor
 
     private:
         void DrawToolbar();
-        // NOTE: DrawAssetList is the legacy flat view — retained until DrawAssetTree clears the gates, then deleted.
+
+        // Tree (dropdown) view.
+        // NOTE: DrawAssetList is the legacy flat view — retained until both view iterations clear their gates, then deleted.
         void DrawAssetList(SceneManager& InSceneMgr, IEditorUIBackend& InUIBackend);
         void DrawAssetTree(SceneManager& InSceneMgr, IEditorUIBackend& InUIBackend);
         void DrawFolderNode(AssetTreeNode& InNode, bool bIsRoot, bool bFiltering,
                             SceneManager& InSceneMgr, IEditorUIBackend& InUIBackend);
+
+        // Grid (explorer) view — double-click a folder tile to enter it.
+        void DrawBreadcrumb();
+        void DrawAssetGrid(SceneManager& InSceneMgr, IEditorUIBackend& InUIBackend);
+        void DrawFolderTile(const OpaaxString& InName, IEditorUIBackend& InUIBackend);
+        void DrawAssetTile(const AssetDescriptor& InDesc, SceneManager& InSceneMgr, IEditorUIBackend& InUIBackend);
+        bool ResolveFolderIcon();
+
+        // Shared by both views: build the two roots; apply per-asset interactions on the last-submitted item.
+        void BuildRoots(AssetTreeNode& OutEngine, AssetTreeNode& OutProject, bool bSeedSkeleton, bool bFilterLeaves);
+        void ApplyAssetItemBehavior(const AssetDescriptor& InDesc, bool bClicked,
+                                    SceneManager& InSceneMgr, IEditorUIBackend& InUIBackend);
+
         void DrawAssetEntry(const AssetDescriptor& InDesc, const char* InDisplayName,
                             SceneManager& InSceneMgr, IEditorUIBackend& InUIBackend);
 
@@ -103,6 +119,16 @@ namespace Opaax::Editor
         // RunScan. Seeds the tree skeleton so empty folders show even without any asset inside them.
         TDynArray<OpaaxString>   m_EngineFolders;
         TDynArray<OpaaxString>   m_ProjectFolders;
+
+        // View mode + grid navigation.
+        enum class EBrowserView { Grid, Tree };
+        EBrowserView             m_View = EBrowserView::Grid;
+        TDynArray<OpaaxString>   m_GridPath;          // [] = roots level; ["Engine"]; ["Engine","Textures"]
+
+        // Optional PNG folder icon (logical ID "Textures/Editor/Folder"); falls back to a vector glyph.
+        // Loaded lazily once per scan; m_FolderIconTried gates the one attempt and resets in RunScan.
+        TAssetHandle<Texture2D>  m_FolderIcon;
+        bool                     m_FolderIconTried = false;
         OpaaxStringID            m_HoveredID;
         OpaaxString              m_ManifestAbsPath;
 
