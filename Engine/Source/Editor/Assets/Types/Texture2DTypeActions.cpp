@@ -56,6 +56,21 @@ namespace Opaax::Editor
         ImGui::TextDisabled("%ux%u", lTex->GetWidth(), lTex->GetHeight());
     }
 
+    bool Texture2DTypeActions::GetThumbnail(OpaaxStringID InID, IEditorUIBackend& InUIBackend, AssetThumbnail& OutThumb) const
+    {
+        // Only thumbnail an already-loaded texture — never force-load a whole folder.
+        if (!AssetRegistry::IsLoaded(InID)) { return false; }
+
+        const auto lHandle = AssetRegistry::Load<Texture2D>(InID);
+        if (!lHandle.IsValid() || !lHandle.Get()->GetRHITexture()) { return false; }
+
+        OutThumb.Handle = InUIBackend.GetTextureID(*lHandle.Get()->GetRHITexture());
+        // V-swap (0,1)-(1,0): stb_image's global flip makes the buffer bottom-up (see DrawPreview).
+        OutThumb.UV0 = { 0.f, 1.f };
+        OutThumb.UV1 = { 1.f, 0.f };
+        return OutThumb.Handle != 0;
+    }
+
 } // namespace Opaax::Editor
 
 #endif // OPAAX_WITH_EDITOR

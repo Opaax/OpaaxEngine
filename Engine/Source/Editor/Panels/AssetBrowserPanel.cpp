@@ -4,8 +4,10 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <fstream>
 #include <string_view>
 #include <imgui.h>
+#include <nlohmann/json.hpp>
 #include "Assets/AssetRegistry.h"
 #include "Assets/AssetManifest.h"
 #include "Assets/AssetScanner.h"
@@ -178,10 +180,22 @@ namespace Opaax::Editor
     // =============================================================================
     // Grid-tile drawing helpers (window draw list)
     // =============================================================================
-    static constexpr float k_TileSize = 84.f;
+    static constexpr float k_TileSize           = 84.f;
+    static constexpr ImU32 k_DefaultFolderColor  = IM_COL32(232, 196, 104, 255); // gold, when no color set
 
-    // Folder glyph filling [InMin,InMax]: the PNG override when InIconTex != 0, else a vector folder.
-    static void DrawFolderGlyph(ImDrawList* InDL, ImVec2 InMin, ImVec2 InMax, bool bHovered, Uint64 InIconTex)
+    // Scale a packed color's RGB by InFactor (alpha preserved) — used for the folder's darker tab.
+    static ImU32 DarkenColor(ImU32 InColor, float InFactor)
+    {
+        const int lR = static_cast<int>(((InColor >> IM_COL32_R_SHIFT) & 0xFF) * InFactor);
+        const int lG = static_cast<int>(((InColor >> IM_COL32_G_SHIFT) & 0xFF) * InFactor);
+        const int lB = static_cast<int>(((InColor >> IM_COL32_B_SHIFT) & 0xFF) * InFactor);
+        const int lA =  (InColor >> IM_COL32_A_SHIFT) & 0xFF;
+        return IM_COL32(lR, lG, lB, lA);
+    }
+
+    // Folder glyph filling [InMin,InMax], tinted by InTint: the PNG override when InIconTex != 0
+    // (white art × tint), else a vector folder (body = tint, tab = darker shade).
+    static void DrawFolderGlyph(ImDrawList* InDL, ImVec2 InMin, ImVec2 InMax, bool bHovered, Uint64 InIconTex, ImU32 InTint)
     {
         if (bHovered)
         {
@@ -193,8 +207,8 @@ namespace Opaax::Editor
             const float  lInset = (InMax.x - InMin.x) * 0.10f;
             const ImVec2 lA(InMin.x + lInset, InMin.y + lInset);
             const ImVec2 lB(InMax.x - lInset, InMax.y - lInset);
-            // Texture buffers are bottom-up (stb flip) → V-swap, same as the asset thumbnails.
-            InDL->AddImage(static_cast<ImTextureID>(InIconTex), lA, lB, ImVec2(0.f, 1.f), ImVec2(1.f, 0.f));
+            // Texture buffers are bottom-up (stb flip) → V-swap; InTint multiplies the (white) art.
+            InDL->AddImage(static_cast<ImTextureID>(InIconTex), lA, lB, ImVec2(0.f, 1.f), ImVec2(1.f, 0.f), InTint);
             return;
         }
 
@@ -203,13 +217,25 @@ namespace Opaax::Editor
         const ImVec2 lA(InMin.x + lMx, InMin.y + lMy);
         const ImVec2 lB(InMax.x - lMx, InMax.y - lMy);
         const float  lBodyW = lB.x - lA.x, lBodyH = lB.y - lA.y;
-        const ImU32  lTab  = IM_COL32(196, 161, 78, 255);
-        const ImU32  lBody = IM_COL32(232, 196, 104, 255);
+        const ImU32  lBody = InTint;
+        const ImU32  lTab  = DarkenColor(InTint, 0.84f);
         const float  lR = 3.f;
         const float  lTabH = lBodyH * 0.26f;
         const float  lTabW = lBodyW * 0.46f;
         InDL->AddRectFilled(ImVec2(lA.x, lA.y), ImVec2(lA.x + lTabW, lA.y + lTabH + lR), lTab, lR, ImDrawFlags_RoundCornersTop);
         InDL->AddRectFilled(ImVec2(lA.x, lA.y + lTabH), ImVec2(lB.x, lB.y), lBody, lR);
+    }
+
+    // Join path segments with '/' ("Engine", "Textures" → "Engine/Textures").
+    static OpaaxString JoinPath(const TDynArray<OpaaxString>& InSegments)
+    {
+        OpaaxString lResult;
+        for (Uint32 i = 0; i < static_cast<Uint32>(InSegments.size()); ++i)
+        {
+            if (i > 0) { lResult += "/"; }
+            lResult += InSegments[i];
+        }
+        return lResult;
     }
 
     // Generic asset card filling [InMin,InMax] with the type-icon text centered + status tint.
@@ -273,6 +299,7 @@ namespace Opaax::Editor
     {
         m_ManifestAbsPath = OpaaxPath::ToAbsolute(ProjectConfig::AssetsManifestRelPath());
         RunScan();
+        LoadFolderColors();
     }
 
     // =============================================================================
@@ -545,19 +572,21 @@ namespace Opaax::Editor
             return;
         }
 
-        DrawFolderNode(lEngineRoot,  /*bIsRoot*/true, bFiltering, InSceneMgr, InUIBackend);
-        DrawFolderNode(lProjectRoot, /*bIsRoot*/true, bFiltering, InSceneMgr, InUIBackend);
+        DrawFolderNode(lEngineRoot,  OpaaxString(), /*bIsRoot*/true, bFiltering, InSceneMgr, InUIBackend);
+        DrawFolderNode(lProjectRoot, OpaaxString(), /*bIsRoot*/true, bFiltering, InSceneMgr, InUIBackend);
     }
 
     // =============================================================================
     // Folder node — one tree level; recurses into sub-folders then draws leaves
     // =============================================================================
-    void AssetBrowserPanel::DrawFolderNode(AssetTreeNode& InNode, bool bIsRoot, bool bFiltering,
-                                           SceneManager& InSceneMgr, IEditorUIBackend& InUIBackend)
+    void AssetBrowserPanel::DrawFolderNode(AssetTreeNode& InNode, const OpaaxString& InParentPath, bool bIsRoot,
+                                           bool bFiltering, SceneManager& InSceneMgr, IEditorUIBackend& InUIBackend)
     {
         // A root with nothing under it (e.g. project has no folders/assets yet) is skipped;
         // empty *sub*-folders are kept on purpose so the on-disk structure is visible.
         if (bIsRoot && InNode.Children.empty() && InNode.Leaves.empty()) { return; }
+
+        const OpaaxString lFullPath = InParentPath.IsEmpty() ? InNode.Name : (InParentPath + "/" + InNode.Name);
 
         ImGuiTreeNodeFlags lFlags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
         if (bIsRoot) { lFlags |= ImGuiTreeNodeFlags_DefaultOpen; }
@@ -565,12 +594,17 @@ namespace Opaax::Editor
         // Active filter → force-open so matches are visible without manual expansion.
         if (bFiltering) { ImGui::SetNextItemOpen(true, ImGuiCond_Always); }
 
+        // Tint the folder label with its assigned color (shared store with the grid view).
+        const Uint32 lColor = GetFolderColor(lFullPath);
+        if (lColor) { ImGui::PushStyleColor(ImGuiCol_Text, lColor); }
         const bool bOpen = ImGui::TreeNodeEx(InNode.Name.CStr(), lFlags);
+        if (lColor) { ImGui::PopStyleColor(); }
+
         if (bOpen)
         {
             for (auto& lChild : InNode.Children)
             {
-                DrawFolderNode(lChild, /*bIsRoot*/false, bFiltering, InSceneMgr, InUIBackend);
+                DrawFolderNode(lChild, lFullPath, /*bIsRoot*/false, bFiltering, InSceneMgr, InUIBackend);
             }
             for (const AssetDescriptor* lLeaf : InNode.Leaves)
             {
@@ -707,12 +741,12 @@ namespace Opaax::Editor
             ImGui::EndPopup();
         }
 
-        // --- Double-click: invoke the type's primary action via IAssetTypeActions ---
+        // --- Double-click: invoke the type's activation action (default = Load) ---
         if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0))
         {
             if (IAssetTypeActions* lActions = AssetTypeRegistry::Find(InDesc.Type))
             {
-                lActions->Load(InDesc.ID);
+                lActions->OnActivate(InDesc.ID);
             }
         }
     }
@@ -762,11 +796,11 @@ namespace Opaax::Editor
             if (lIndex % lCols != 0) { ImGui::SameLine(); }
         };
 
-        // Roots level: the two roots as folder tiles.
+        // Roots level: the two roots as folder tiles (full path == the root name).
         if (m_GridPath.empty())
         {
-            DrawFolderTile(lEngineRoot.Name,  InUIBackend); lAfterTile();
-            DrawFolderTile(lProjectRoot.Name, InUIBackend); lAfterTile();
+            DrawFolderTile(lEngineRoot.Name,  lEngineRoot.Name,  InUIBackend); lAfterTile();
+            DrawFolderTile(lProjectRoot.Name, lProjectRoot.Name, InUIBackend); lAfterTile();
             return;
         }
 
@@ -786,9 +820,10 @@ namespace Opaax::Editor
         if (!lNode) { m_GridPath.clear(); return; }
 
         // Sub-folders first, then the (filtered) assets in this folder.
+        const OpaaxString lDir = JoinPath(m_GridPath);   // current dir (e.g. "Engine/Textures")
         for (auto& lChild : lNode->Children)
         {
-            DrawFolderTile(lChild.Name, InUIBackend);
+            DrawFolderTile(lChild.Name, lDir + "/" + lChild.Name, InUIBackend);
             lAfterTile();
         }
         for (const AssetDescriptor* lLeaf : lNode->Leaves)
@@ -804,9 +839,9 @@ namespace Opaax::Editor
     // =============================================================================
     // Folder tile — vector/PNG folder glyph; double-click enters the folder
     // =============================================================================
-    void AssetBrowserPanel::DrawFolderTile(const OpaaxString& InName, IEditorUIBackend& InUIBackend)
+    void AssetBrowserPanel::DrawFolderTile(const OpaaxString& InSegment, const OpaaxString& InFullPath, IEditorUIBackend& InUIBackend)
     {
-        ImGui::PushID(InName.CStr());
+        ImGui::PushID(InSegment.CStr());
         ImGui::BeginGroup();
 
         const ImVec2 lPos = ImGui::GetCursorScreenPos();
@@ -814,20 +849,41 @@ namespace Opaax::Editor
         const bool bHovered = ImGui::IsItemHovered();
         const bool bDouble  = bHovered && ImGui::IsMouseDoubleClicked(0);
 
+        // Right-click → folder color (Unreal-style); persisted on change.
+        if (ImGui::BeginPopupContextItem("##foldercolor"))
+        {
+            const Uint32 lCur = GetFolderColor(InFullPath);
+            ImVec4 lEdit = ImGui::ColorConvertU32ToFloat4(lCur ? lCur : k_DefaultFolderColor);
+            if (ImGui::ColorEdit4("Folder Color", &lEdit.x, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_AlphaBar))
+            {
+                SetFolderColor(InFullPath, ImGui::ColorConvertFloat4ToU32(lEdit));
+                SaveFolderColors();
+            }
+            if (ImGui::MenuItem("Clear Color"))
+            {
+                ClearFolderColor(InFullPath);
+                SaveFolderColors();
+            }
+            ImGui::EndPopup();
+        }
+
         Uint64 lIconTex = 0;
         if (ResolveFolderIcon() && m_FolderIcon.Get()->GetRHITexture())
         {
             lIconTex = InUIBackend.GetTextureID(*m_FolderIcon.Get()->GetRHITexture());
         }
-        DrawFolderGlyph(ImGui::GetWindowDrawList(), lPos,
-            ImVec2(lPos.x + k_TileSize, lPos.y + k_TileSize), bHovered, lIconTex);
 
-        DrawTileLabel(InName.CStr(), k_TileSize);
+        const Uint32 lColor = GetFolderColor(InFullPath);
+        const ImU32  lTint  = lColor ? lColor : k_DefaultFolderColor;
+        DrawFolderGlyph(ImGui::GetWindowDrawList(), lPos,
+            ImVec2(lPos.x + k_TileSize, lPos.y + k_TileSize), bHovered, lIconTex, lTint);
+
+        DrawTileLabel(InSegment.CStr(), k_TileSize);
 
         ImGui::EndGroup();
         ImGui::PopID();
 
-        if (bDouble) { m_GridPath.push_back(InName); }
+        if (bDouble) { m_GridPath.push_back(InSegment); }
     }
 
     // =============================================================================
@@ -849,24 +905,20 @@ namespace Opaax::Editor
         const ImVec2 lMax(lPos.x + k_TileSize, lPos.y + k_TileSize);
         const bool   bLoaded = AssetRegistry::IsLoaded(InDesc.ID) || IsLoadedScene(InSceneMgr, InDesc);
 
-        // Thumbnail only for an already-loaded texture (never force-load a whole folder); else a generic card.
-        Uint64 lThumb = 0;
-        if (!InDesc.bMissing && bLoaded && InDesc.Type == OpaaxStringID("Texture2D"))
-        {
-            const auto lHandle = AssetRegistry::Load<Texture2D>(InDesc.ID);
-            if (lHandle.IsValid() && lHandle.Get()->GetRHITexture())
-            {
-                lThumb = InUIBackend.GetTextureID(*lHandle.Get()->GetRHITexture());
-            }
-        }
+        // Thumbnail via the type's hook (texture image / font atlas / …); else a generic card glyph.
+        // The type owns the look — the panel no longer special-cases any asset type.
+        AssetThumbnail     lThumb;
+        IAssetTypeActions* lActions  = AssetTypeRegistry::Find(InDesc.Type);
+        const bool         bHasThumb = !InDesc.bMissing && lActions
+                                    && lActions->GetThumbnail(InDesc.ID, InUIBackend, lThumb) && lThumb.Handle != 0;
 
-        if (lThumb != 0)
+        if (bHasThumb)
         {
             if (bHovered) { lDL->AddRectFilled(lPos, lMax, ImGui::GetColorU32(ImGuiCol_HeaderHovered), 4.f); }
             const float lInset = k_TileSize * 0.08f;
-            lDL->AddImage(static_cast<ImTextureID>(lThumb),
+            lDL->AddImage(static_cast<ImTextureID>(lThumb.Handle),
                 ImVec2(lPos.x + lInset, lPos.y + lInset), ImVec2(lMax.x - lInset, lMax.y - lInset),
-                ImVec2(0.f, 1.f), ImVec2(1.f, 0.f));
+                ImVec2(lThumb.UV0.x, lThumb.UV0.y), ImVec2(lThumb.UV1.x, lThumb.UV1.y));
         }
         else
         {
@@ -895,6 +947,87 @@ namespace Opaax::Editor
             m_FolderIcon = AssetRegistry::Load<Texture2D>(lIconID);
         }
         return m_FolderIcon.IsValid();
+    }
+
+    // =============================================================================
+    // Folder colors — linear store (few folders), persisted to EditorFolderColors.json
+    // =============================================================================
+    Uint32 AssetBrowserPanel::GetFolderColor(const OpaaxString& InPath) const
+    {
+        for (const auto& lEntry : m_FolderColors)
+        {
+            if (lEntry.Path == InPath) { return lEntry.Color; }
+        }
+        return 0;
+    }
+
+    void AssetBrowserPanel::SetFolderColor(const OpaaxString& InPath, Uint32 InColor)
+    {
+        for (auto& lEntry : m_FolderColors)
+        {
+            if (lEntry.Path == InPath) { lEntry.Color = InColor; return; }
+        }
+        m_FolderColors.push_back(FolderColorEntry{ InPath, InColor });
+    }
+
+    void AssetBrowserPanel::ClearFolderColor(const OpaaxString& InPath)
+    {
+        for (auto lIt = m_FolderColors.begin(); lIt != m_FolderColors.end(); ++lIt)
+        {
+            if (lIt->Path == InPath) { m_FolderColors.erase(lIt); return; }
+        }
+    }
+
+    void AssetBrowserPanel::LoadFolderColors()
+    {
+        m_FolderColors.clear();
+
+        const OpaaxString lPath = OpaaxPath::ToAbsolute("EditorFolderColors.json");
+        std::ifstream     lFile(lPath.CStr());
+        if (!lFile.is_open()) { return; }
+
+        nlohmann::json lRoot;
+        try { lFile >> lRoot; }
+        catch (...)
+        {
+            OPAAX_CORE_WARN("AssetBrowserPanel - failed to parse '{}', ignoring folder colors.", lPath);
+            return;
+        }
+
+        if (!lRoot.contains("folders") || !lRoot["folders"].is_array()) { return; }
+
+        for (const auto& lEntry : lRoot["folders"])
+        {
+            if (!lEntry.contains("path") || !lEntry.contains("color")) { continue; }
+            const auto& lC = lEntry["color"];
+            if (!lC.is_array() || lC.size() < 4) { continue; }
+
+            const int lR = lC[0].get<int>(), lG = lC[1].get<int>(), lB = lC[2].get<int>(), lA = lC[3].get<int>();
+            m_FolderColors.push_back(FolderColorEntry{
+                OpaaxString(lEntry["path"].get<std::string>().c_str()),
+                static_cast<Uint32>(IM_COL32(lR, lG, lB, lA)) });
+        }
+    }
+
+    void AssetBrowserPanel::SaveFolderColors() const
+    {
+        nlohmann::json lRoot;
+        lRoot["folders"] = nlohmann::json::array();
+
+        for (const auto& lEntry : m_FolderColors)
+        {
+            const Uint32 lC = lEntry.Color;
+            nlohmann::json lJson;
+            lJson["path"]  = lEntry.Path.CStr();
+            lJson["color"] = { (lC >> IM_COL32_R_SHIFT) & 0xFF, (lC >> IM_COL32_G_SHIFT) & 0xFF,
+                               (lC >> IM_COL32_B_SHIFT) & 0xFF, (lC >> IM_COL32_A_SHIFT) & 0xFF };
+            lRoot["folders"].push_back(lJson);
+        }
+
+        const OpaaxString lPath = OpaaxPath::ToAbsolute("EditorFolderColors.json");
+        std::ofstream     lFile(lPath.CStr());
+        if (lFile.is_open()) { lFile << lRoot.dump(4); }
+        else { OPAAX_CORE_ERROR("AssetBrowserPanel - cannot write folder colors to '{}'", lPath); }
     }
 
 } // namespace Opaax::Editor

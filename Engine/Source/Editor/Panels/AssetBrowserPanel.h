@@ -38,6 +38,14 @@ namespace Opaax::Editor
         TDynArray<const AssetDescriptor*> Leaves;   // assets directly in this folder (non-owning)
     };
 
+    // A persisted per-folder color (Unreal-style). Path = full grid path ("Engine/Textures").
+    // Color is a packed ImU32 (IM_COL32). Stored in EditorFolderColors.json.
+    struct FolderColorEntry
+    {
+        OpaaxString Path;
+        Uint32      Color = 0;
+    };
+
     /**
      * @class AssetBrowserPanel
      * Displays all assets from the manifest — loaded, unloaded, and missing.
@@ -79,15 +87,22 @@ namespace Opaax::Editor
         // NOTE: DrawAssetList is the legacy flat view — retained until both view iterations clear their gates, then deleted.
         void DrawAssetList(SceneManager& InSceneMgr, IEditorUIBackend& InUIBackend);
         void DrawAssetTree(SceneManager& InSceneMgr, IEditorUIBackend& InUIBackend);
-        void DrawFolderNode(AssetTreeNode& InNode, bool bIsRoot, bool bFiltering,
+        void DrawFolderNode(AssetTreeNode& InNode, const OpaaxString& InParentPath, bool bIsRoot, bool bFiltering,
                             SceneManager& InSceneMgr, IEditorUIBackend& InUIBackend);
 
         // Grid (explorer) view — double-click a folder tile to enter it.
         void DrawBreadcrumb();
         void DrawAssetGrid(SceneManager& InSceneMgr, IEditorUIBackend& InUIBackend);
-        void DrawFolderTile(const OpaaxString& InName, IEditorUIBackend& InUIBackend);
+        void DrawFolderTile(const OpaaxString& InSegment, const OpaaxString& InFullPath, IEditorUIBackend& InUIBackend);
         void DrawAssetTile(const AssetDescriptor& InDesc, SceneManager& InSceneMgr, IEditorUIBackend& InUIBackend);
         bool ResolveFolderIcon();
+
+        // Folder colors (persisted in EditorFolderColors.json). GetFolderColor returns 0 when unset.
+        Uint32 GetFolderColor(const OpaaxString& InPath) const;
+        void   SetFolderColor(const OpaaxString& InPath, Uint32 InColor);
+        void   ClearFolderColor(const OpaaxString& InPath);
+        void   LoadFolderColors();
+        void   SaveFolderColors() const;
 
         // Shared by both views: build the two roots; apply per-asset interactions on the last-submitted item.
         void BuildRoots(AssetTreeNode& OutEngine, AssetTreeNode& OutProject, bool bSeedSkeleton, bool bFilterLeaves);
@@ -129,6 +144,9 @@ namespace Opaax::Editor
         // Loaded lazily once per scan; m_FolderIconTried gates the one attempt and resets in RunScan.
         TAssetHandle<Texture2D>  m_FolderIcon;
         bool                     m_FolderIconTried = false;
+
+        // Per-folder colors (Unreal-style), persisted in EditorFolderColors.json. Linear lookup — folders are few.
+        TDynArray<FolderColorEntry> m_FolderColors;
         OpaaxStringID            m_HoveredID;
         OpaaxString              m_ManifestAbsPath;
 

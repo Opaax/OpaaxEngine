@@ -41,11 +41,6 @@
             "type": "Font"
         },
         {
-            "id": "Textures/Editor/Folder",
-            "path": "Engine/Assets/Textures/Editor/Folder.png",
-            "type": "Texture2D"
-        },
-        {
             "id": "Fonts/Roboto-ExtraLight",
             "path": "Engine/Assets/Fonts/Roboto-ExtraLight.ttf",
             "type": "Font"
