@@ -83,8 +83,7 @@ namespace Opaax::Editor
     private:
         void DrawToolbar();
 
-        // Tree (dropdown) view.
-        // NOTE: DrawAssetList is the legacy flat view — retained until both view iterations clear their gates, then deleted.
+        // List view = the original flat list (kept as a selectable view mode for accessibility).
         void DrawAssetList(SceneManager& InSceneMgr, IEditorUIBackend& InUIBackend);
         void DrawAssetTree(SceneManager& InSceneMgr, IEditorUIBackend& InUIBackend);
         void DrawFolderNode(AssetTreeNode& InNode, const OpaaxString& InParentPath, bool bIsRoot, bool bFiltering,
@@ -140,7 +139,7 @@ namespace Opaax::Editor
         TDynArray<OpaaxString>   m_ProjectFolders;
 
         // View mode + grid navigation.
-        enum class EBrowserView { Grid, Tree };
+        enum class EBrowserView { Grid, Tree, List };
         EBrowserView             m_View = EBrowserView::Grid;
         TDynArray<OpaaxString>   m_GridPath;          // [] = roots level; ["Engine"]; ["Engine","Textures"]
 

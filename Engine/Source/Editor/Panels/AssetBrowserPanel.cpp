@@ -373,8 +373,12 @@ namespace Opaax::Editor
         ImGui::Separator();
 
         ImGui::BeginChild("##AssetScroll", ImVec2(0.f, 0.f), false);
-        if (m_View == EBrowserView::Grid) { DrawAssetGrid(InSceneMgr, InUIBackend); }
-        else                              { DrawAssetTree(InSceneMgr, InUIBackend); }
+        switch (m_View)
+        {
+            case EBrowserView::Grid: DrawAssetGrid(InSceneMgr, InUIBackend); break;
+            case EBrowserView::Tree: DrawAssetTree(InSceneMgr, InUIBackend); break;
+            case EBrowserView::List: DrawAssetList(InSceneMgr, InUIBackend); break;
+        }
         ImGui::EndChild();
 
         ImGui::End();
@@ -417,18 +421,20 @@ namespace Opaax::Editor
             }
         }
 
-        // View toggle: Grid (explorer) | Tree (dropdown). Active one is tinted, mirroring the type-filter buttons.
+        // View toggle: Grid (explorer) | Tree (dropdown) | List (flat). Active one is tinted, mirroring the type-filter buttons.
         ImGui::SameLine();
         {
-            const bool bGrid = (m_View == EBrowserView::Grid);
-            if (bGrid) { ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.26f, 0.59f, 0.98f, 1.f)); }
-            if (ImGui::SmallButton("Grid")) { m_View = EBrowserView::Grid; }
-            if (bGrid) { ImGui::PopStyleColor(); }
+            const auto lViewButton = [this](const char* InLabel, EBrowserView InView)
+            {
+                const bool bActive = (m_View == InView);
+                if (bActive) { ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.26f, 0.59f, 0.98f, 1.f)); }
+                if (ImGui::SmallButton(InLabel)) { m_View = InView; }
+                if (bActive) { ImGui::PopStyleColor(); }
+            };
 
-            ImGui::SameLine();
-            if (!bGrid) { ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.26f, 0.59f, 0.98f, 1.f)); }
-            if (ImGui::SmallButton("Tree")) { m_View = EBrowserView::Tree; }
-            if (!bGrid) { ImGui::PopStyleColor(); }
+            lViewButton("Grid", EBrowserView::Grid); ImGui::SameLine();
+            lViewButton("Tree", EBrowserView::Tree); ImGui::SameLine();
+            lViewButton("List", EBrowserView::List);
         }
 
         ImGui::Spacing();
