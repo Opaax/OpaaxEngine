@@ -531,6 +531,13 @@ add_custom_command(TARGET OpaaxEngine POST_BUILD
     COMMENT "Copying engine meshes..."
 )
 
+# ==================================
+# Unit tests (OpaaxTests) — links the engine DLL like any other consumer.
+# ==================================
+if(OPAAX_BUILD_TESTS)
+    add_subdirectory(Tests)
+endif()
+
 # Font
 add_custom_command(TARGET OpaaxEngine POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
