@@ -15,8 +15,13 @@ set(OPAAX_TEST_SOURCES
     Main.cpp
     SmokeTest.cpp
     Renderer/SortKeyTests.cpp
+    Renderer/FontKerningTests.cpp
     Core/StringTests.cpp
     Physics/CollisionProfileTests.cpp
+    Assets/AssetIdResolveTests.cpp
+    ECS/MoverComponentTests.cpp
+    ECS/HierarchyTests.cpp
+    ECS/ComponentRegistryTests.cpp
 )
 
 add_executable(OpaaxTests ${OPAAX_TEST_SOURCES})

@@ -79,3 +79,24 @@ TEST_CASE("CollisionProfile: Block is present in both masks")
     CHECK((lProfile.ComputeMaskBits()      & lBit) != 0u);
     CHECK((lProfile.ComputeBlockMaskBits() & lBit) != 0u);
 }
+
+TEST_CASE("CollisionProfile: ToJson -> FromJson round-trips channel + responses")
+{
+    CollisionProfile lA(OpaaxString(k_NoFile), OPAAX_ID("A"));
+    lA.SetChannel(ECollisionChannel::Pawn);
+    lA.SetResponse(ECollisionChannel::WorldStatic,  ECollisionResponse::Block);
+    lA.SetResponse(ECollisionChannel::WorldDynamic, ECollisionResponse::Overlap);
+    lA.SetResponse(ECollisionChannel::Pawn,         ECollisionResponse::Ignore);
+
+    const nlohmann::json lJson = lA.ToJson();
+
+    CollisionProfile lB(OpaaxString(k_NoFile), OPAAX_ID("B"));
+    lB.FromJson(lJson);
+
+    CHECK(lB.GetChannel() == ECollisionChannel::Pawn);
+    CHECK(lB.GetResponse(ECollisionChannel::WorldStatic)  == ECollisionResponse::Block);
+    CHECK(lB.GetResponse(ECollisionChannel::WorldDynamic) == ECollisionResponse::Overlap);
+    CHECK(lB.GetResponse(ECollisionChannel::Pawn)         == ECollisionResponse::Ignore);
+    // a channel not written stays at the constructor default (Block)
+    CHECK(lB.GetResponse(ECollisionChannel::Projectile)   == ECollisionResponse::Block);
+}
