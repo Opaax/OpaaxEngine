@@ -212,6 +212,7 @@ namespace Opaax::Editor
             return;
         }
 
+        //Tab draw
         const float  lW = InMax.x - InMin.x, lH = InMax.y - InMin.y;
         const float  lMx = lW * 0.16f, lMy = lH * 0.22f;
         const ImVec2 lA(InMin.x + lMx, InMin.y + lMy);
@@ -221,7 +222,7 @@ namespace Opaax::Editor
         const ImU32  lTab  = DarkenColor(InTint, 0.84f);
         const float  lR = 3.f;
         const float  lTabH = lBodyH * 0.26f;
-        const float  lTabW = lBodyW * 0.46f;
+        const float  lTabW = lBodyW * 0.30f;
         InDL->AddRectFilled(ImVec2(lA.x, lA.y), ImVec2(lA.x + lTabW, lA.y + lTabH + lR), lTab, lR, ImDrawFlags_RoundCornersTop);
         InDL->AddRectFilled(ImVec2(lA.x, lA.y + lTabH), ImVec2(lB.x, lB.y), lBody, lR);
     }
