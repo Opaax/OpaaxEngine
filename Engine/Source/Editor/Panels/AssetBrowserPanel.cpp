@@ -245,7 +245,7 @@ namespace Opaax::Editor
     {
         if (bHovered)
         {
-            InDL->AddRectFilled(InMin, InMax, ImGui::GetColorU32(ImGuiCol_HeaderHovered), 4.f);
+            InDL->AddRectFilled(InMin, InMax, ImGui::GetColorU32(ImGuiCol_HeaderHovered), 10.f);
         }
 
         const float  lW = InMax.x - InMin.x, lH = InMax.y - InMin.y;
