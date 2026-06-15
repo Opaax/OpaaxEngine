@@ -32,6 +32,12 @@ target_include_directories(OpaaxTests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../Vendors/doctest
 )
 
+# By default doctest forward-declares std::tuple / std::string / std::ostream to keep
+# compile times down. Modern MSVC forbids re-declaring standard templates (warning
+# C5285, N5014), so it fires on every test TU. This flag makes doctest #include the
+# real standard headers instead — fixes the warning at its source, no suppression.
+target_compile_definitions(OpaaxTests PRIVATE DOCTEST_CONFIG_USE_STD_HEADERS)
+
 # OpaaxEngine.dll already lands in the shared CMAKE_RUNTIME_OUTPUT_DIRECTORY bin
 # dir alongside this exe (same as Game.exe), so no DLL copy step is needed.
 
