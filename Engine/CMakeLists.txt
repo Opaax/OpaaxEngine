@@ -507,29 +507,38 @@ add_custom_command(TARGET OpaaxEngine POST_BUILD
     COMMENT "Copying engine asset manifest..."
 )
 
+# Asset dirs are copied only when they exist on disk. An empty asset folder is not
+# tracked by git, so a fresh clone (e.g. CI) legitimately lacks it — an unconditional
+# copy_directory would then fail with "cannot find the path specified".
 # Shader
-add_custom_command(TARGET OpaaxEngine POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${ENGINE_ASSETS_SOURCE}/Shaders
-        ${ENGINE_ASSETS_DEST}/Shaders
-    COMMENT "Copying engine shaders..."
-)
+if(EXISTS ${ENGINE_ASSETS_SOURCE}/Shaders)
+    add_custom_command(TARGET OpaaxEngine POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${ENGINE_ASSETS_SOURCE}/Shaders
+            ${ENGINE_ASSETS_DEST}/Shaders
+        COMMENT "Copying engine shaders..."
+    )
+endif()
 
 # Texture
-add_custom_command(TARGET OpaaxEngine POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${ENGINE_ASSETS_SOURCE}/Textures
-        ${ENGINE_ASSETS_DEST}/Textures
-    COMMENT "Copying engine textures..."
-)
+if(EXISTS ${ENGINE_ASSETS_SOURCE}/Textures)
+    add_custom_command(TARGET OpaaxEngine POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${ENGINE_ASSETS_SOURCE}/Textures
+            ${ENGINE_ASSETS_DEST}/Textures
+        COMMENT "Copying engine textures..."
+    )
+endif()
 
 # Mesh
-add_custom_command(TARGET OpaaxEngine POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${ENGINE_ASSETS_SOURCE}/Meshes
-        ${ENGINE_ASSETS_DEST}/Meshes
-    COMMENT "Copying engine meshes..."
-)
+if(EXISTS ${ENGINE_ASSETS_SOURCE}/Meshes)
+    add_custom_command(TARGET OpaaxEngine POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${ENGINE_ASSETS_SOURCE}/Meshes
+            ${ENGINE_ASSETS_DEST}/Meshes
+        COMMENT "Copying engine meshes..."
+    )
+endif()
 
 # ==================================
 # Unit tests (OpaaxTests) — links the engine DLL like any other consumer.
@@ -539,12 +548,14 @@ if(OPAAX_BUILD_TESTS)
 endif()
 
 # Font
-add_custom_command(TARGET OpaaxEngine POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${ENGINE_ASSETS_SOURCE}/Fonts
-        ${ENGINE_ASSETS_DEST}/Fonts
-    COMMENT "Copying engine fonts..."
-)
+if(EXISTS ${ENGINE_ASSETS_SOURCE}/Fonts)
+    add_custom_command(TARGET OpaaxEngine POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${ENGINE_ASSETS_SOURCE}/Fonts
+            ${ENGINE_ASSETS_DEST}/Fonts
+        COMMENT "Copying engine fonts..."
+    )
+endif()
 
 # ==================================
 # Shader compile

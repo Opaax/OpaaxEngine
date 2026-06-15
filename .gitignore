@@ -53,16 +53,7 @@ build/*
 EditorTemp/
 
 #Claude AI
-.claude/CLAUDE.local.md
-.claude/task/*
-.claude/milestone/*
-.claude/worktrees/*
-.claude/code/*
-.claude/CLAUDE.Dev.md
-.claude/data/*
-.claude/settings.local.json
-.claude/skills/*
-tasks/*
+/.claude/*
 
 
 #Shmup
