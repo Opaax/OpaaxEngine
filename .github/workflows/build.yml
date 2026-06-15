@@ -1,0 +1,48 @@
+name: build
+
+on:
+  push:
+    branches: [main, test_ci]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Cancel an in-flight run when a newer commit lands on the same ref.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      # Mirrors build.bat's preset -> config map. The VS 2022 generator is
+      # MULTI-CONFIG, so CMAKE_BUILD_TYPE in the preset is ignored and the
+      # compiled config MUST come from --config / -C (else everything builds Debug).
+      # No Vulkan SDK on the runner -> find_package(Vulkan QUIET) misses ->
+      # OPAAX_HAS_VULKAN=0, exercising the OpenGL-only fallback continuously.
+      matrix:
+        include:
+          - preset: debug-editor
+            config: Debug
+          - preset: release
+            config: Release
+    name: ${{ matrix.preset }}
+    steps:
+      - name: Checkout (recursive submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Configure
+        run: cmake --preset ${{ matrix.preset }}
+
+      - name: Build
+        run: cmake --build build/${{ matrix.preset }} --config ${{ matrix.config }}
+
+      - name: Test (CTest)
+        run: ctest --test-dir build/${{ matrix.preset }} -C ${{ matrix.config }} --output-on-failure
