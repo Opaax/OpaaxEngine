@@ -30,6 +30,10 @@ ctest --test-dir build/release -C Release --output-on-failure
 > The Visual Studio generator is multi-config, so CTest needs `-C <Config>` (Debug for `debug-editor`,
 > Release for `release`). `build.bat test` handles this for you.
 
+**CI:** every push runs this whole battery on a clean windows-latest runner across both presets
+(`.github/workflows/build.yml`). The runner has no Vulkan SDK, so CI also continuously proves the
+OpenGL-only (`OPAAX_HAS_VULKAN=0`) fallback build.
+
 ---
 
 ## How tests reach engine code (the one thing to understand)

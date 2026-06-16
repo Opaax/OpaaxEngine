@@ -22,12 +22,3 @@ TEST_CASE("smoke: harness runs and the engine DLL links")
     CHECK(Opaax::OpaaxPath::IsAbsolutePath(Opaax::OpaaxString("C:/x")) == true);
     CHECK(Opaax::OpaaxPath::IsAbsolutePath(Opaax::OpaaxString("Game/Assets")) == false);
 }
-
-// =============================================================================
-// TEMP — T2.3 CI gate demo. Proves the matrix goes RED when a test fails.
-// DELETE this whole TEST_CASE once CI has shown red (then push the revert → green).
-// =============================================================================
-TEST_CASE("T2.3: intentional failure to prove the CI gate catches it")
-{
-    CHECK(1 == 2); // deliberately false — expected to fail on CI
-}
