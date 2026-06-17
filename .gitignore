@@ -52,22 +52,14 @@ build/*
 # Editor PIE temp snapshots (project-root-relative under EditorTemp/)
 EditorTemp/
 
-#shmup
-SimpleShmup/Assets/*
-
 #Claude AI
-.claude/CLAUDE.local.md
-.claude/task/*
-.claude/milestone/*
-.claude/worktrees/*
-.claude/code/*
-.claude/CLAUDE.Dev.md
-.claude/data/*
-.claude/settings.local.json
-.claude/skills/*
-tasks/*
+/.claude/*
 
 
 #Shmup
 SimpleShmup/Assets/Textures/Explosion Pack/*
 SimpleShmup/Assets/Textures/Enemy_Sheet.png
+SimpleShmup/Assets/*
+
+#OpaaxLog
+OpaaxEngine.log

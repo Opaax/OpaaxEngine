@@ -10,6 +10,7 @@
 #include <typeindex>
 
 #include "AssetManifest.h"
+#include "AssetIdResolve.h"
 #include "Core/OpaaxPath.h"
 #include "Loader/AssetLoaderRegistry.h"
 
@@ -191,13 +192,9 @@ namespace Opaax
             const OpaaxString lIDStr = InID.ToString();
             if (lIDStr.IsEmpty()) { return lOut; }
 
-            // Case 1 — ID is already a manifest logical key.
-            if (const AssetDescriptor* lDesc = AssetManifest::Find(InID))
-            {
-                lOut.CanonicalID = InID;
-                lOut.AbsPath     = OpaaxPath::ToAbsolute(lDesc->RelPath);
-                return lOut;
-            }
+            // Manifest lookups (global): by original ID first; the project-relative path
+            // feeds the by-path fallback lookup and is the last-resort canonical ID.
+            const AssetDescriptor* lIdHit = AssetManifest::Find(InID);
 
             // Reduce abs → project-relative so manifest path lookup can match.
             const OpaaxString lRelPath = OpaaxPath::IsAbsolutePath(lIDStr)
@@ -207,17 +204,20 @@ namespace Opaax
             // NOTE: If two manifest entries share the same path, FindByPath returns
             // whichever the unordered_map iteration hits first — that's a manifest
             // validation issue, not a registry concern.
-            if (const AssetDescriptor* lDesc = AssetManifest::FindByPath(lRelPath))
-            {
-                lOut.CanonicalID = lDesc->ID;
-                lOut.AbsPath     = OpaaxPath::ToAbsolute(lDesc->RelPath);
-                return lOut;
-            }
+            const AssetDescriptor* lPathHit = (lIdHit == nullptr)
+                                            ? AssetManifest::FindByPath(lRelPath)
+                                            : nullptr;
 
-            // Direct-path fallback — no manifest entry. The project-relative path
-            // becomes the canonical ID so subsequent Loads collide on the cache.
-            lOut.CanonicalID = OpaaxStringID(lRelPath);
-            lOut.AbsPath     = OpaaxPath::ToAbsolute(lRelPath);
+            // Pure precedence policy decides the canonical ID from the lookup outcomes.
+            lOut.CanonicalID = ResolveCanonicalAssetId(
+                InID, lIdHit != nullptr, lPathHit ? &lPathHit->ID : nullptr, lRelPath);
+
+            // AbsPath resolves from the matched entry's RelPath, or the relative path on
+            // the direct-path fallback (so subsequent Loads collide on the cache).
+            const OpaaxString& lAbsSource = (lIdHit   != nullptr) ? lIdHit->RelPath
+                                          : (lPathHit != nullptr) ? lPathHit->RelPath
+                                                                  : lRelPath;
+            lOut.AbsPath = OpaaxPath::ToAbsolute(lAbsSource);
             return lOut;
         }
 

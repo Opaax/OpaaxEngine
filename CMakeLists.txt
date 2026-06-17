@@ -7,11 +7,18 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Options
 option(OPAAX_EDITOR_SUPPORT "Include editor support in engine" OFF)
 option(OPAAX_BUILD_EXAMPLES "Build example games" ON)
+option(OPAAX_BUILD_TESTS    "Build the OpaaxTests unit-test target" ON)
 
 # Output directories
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+
+# CTest must be enabled at the top level so `ctest` finds tests registered deeper
+# in the tree (Engine/Tests). Gated so a tests-off build stays clean.
+if(OPAAX_BUILD_TESTS)
+    enable_testing()
+endif()
 
 # Subdirectories
 add_subdirectory(Engine)

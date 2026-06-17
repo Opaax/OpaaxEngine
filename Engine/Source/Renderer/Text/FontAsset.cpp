@@ -2,6 +2,7 @@
 
 #include "Core/Log/OpaaxLog.h"
 #include "Renderer/Texture2D.h"
+#include "Renderer/Text/FontKerning.h"
 
 #include <algorithm>
 #include <fstream>
@@ -24,10 +25,8 @@ namespace Opaax
         constexpr Uint32 sOversampleH = 2u;
         constexpr Uint32 sOversampleV = 2u;
 
-        FORCEINLINE Uint32 PackKerningKey(Uint8 InFirst, Uint8 InSecond) noexcept
-        {
-            return (static_cast<Uint32>(InFirst) << 8) | static_cast<Uint32>(InSecond);
-        }
+        // PackKerningKey hoisted to Renderer/Text/FontKerning.h (shared with the
+        // testable KerningLookup; the bake-sort comparator below uses it from there).
 
         std::vector<unsigned char> ReadFileBytes(const OpaaxString& InPath)
         {
@@ -233,29 +232,11 @@ namespace Opaax
 
     float FontAsset::GetKerning(char InFirst, char InSecond) const noexcept
     {
-        if (m_Kerning.empty())
-        {
-            return 0.f;
-        }
         const Uint32 lFirstCp  = static_cast<Uint32>(static_cast<unsigned char>(InFirst));
         const Uint32 lSecondCp = static_cast<Uint32>(static_cast<unsigned char>(InSecond));
-        if (lFirstCp  < FirstCodepoint || lFirstCp  > LastCodepoint) { return 0.f; }
-        if (lSecondCp < FirstCodepoint || lSecondCp > LastCodepoint) { return 0.f; }
 
-        const Uint32 lKey = PackKerningKey(static_cast<Uint8>(lFirstCp),
-                                           static_cast<Uint8>(lSecondCp));
-
-        const auto lIt = std::lower_bound(m_Kerning.begin(), m_Kerning.end(), lKey,
-            [](const KerningPair& InP, Uint32 InTarget) noexcept
-            {
-                return PackKerningKey(InP.First, InP.Second) < InTarget;
-            });
-
-        if (lIt == m_Kerning.end())
-        {
-            return 0.f;
-        }
-        return (PackKerningKey(lIt->First, lIt->Second) == lKey) ? lIt->Advance : 0.f;
+        return KerningLookup(m_Kerning.data(), static_cast<Uint32>(m_Kerning.size()),
+                             lFirstCp, lSecondCp, FirstCodepoint, LastCodepoint);
     }
 
 } // namespace Opaax

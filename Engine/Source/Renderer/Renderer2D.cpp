@@ -7,6 +7,7 @@
 #include "RHI/ICommandBuffer.h"
 #include "Renderer/ShaderAsset.h"
 #include "Renderer/Texture2D.h"
+#include "Renderer/Renderer2DSortKey.h"
 #include "Renderer/Camera/ICamera.h"
 #include "Core/Config/EngineConfig.h"
 #include "Core/Log/OpaaxLog.h"
@@ -281,15 +282,7 @@ namespace Opaax
                      InCenter.y + (InSin * InOx + InCos * InOy) };
         }
 
-        // Pack draw order into one sortable key: [Layer:hi][OrderInLayer:mid][texSlot:lo].
-        // OrderInLayer (Int16) is biased to unsigned so negative orders sort before positive.
-        FORCEINLINE Uint64 MakeSortKey(ERenderLayer InLayer, Int16 InOrderInLayer, Uint32 InTexSlot)
-        {
-            const Uint64 lLayer = static_cast<Uint64>(static_cast<Uint8>(InLayer));
-            const Uint64 lOrder = static_cast<Uint64>(static_cast<Int32>(InOrderInLayer) + 32768); // [0, 65535]
-            const Uint64 lSlot  = static_cast<Uint64>(InTexSlot & 0xFFu);
-            return (lLayer << 32) | (lOrder << 8) | lSlot;
-        }
+        // MakeSortKey hoisted to Renderer/Renderer2DSortKey.h (unit-tested in isolation).
     }
 
     void Renderer2D::DrawQuad(const Vector2F& InPosition,
