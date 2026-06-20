@@ -15,6 +15,7 @@ set(OPAAX_TEST_SOURCES
     Main.cpp
     SmokeTest.cpp
     Renderer/SortKeyTests.cpp
+    Renderer/FrameBatcherTests.cpp
     Renderer/FontKerningTests.cpp
     Core/StringTests.cpp
     Physics/CollisionProfileTests.cpp

@@ -1,6 +1,6 @@
 #include "CameraControllerSystem.h"
 
-#include "CameraSubsystem.h"
+#include "Renderer/RenderSubsystem.h"
 #include "ICamera.h"
 #include "ICameraController.h"
 #include "ShakeCameraController.h"
@@ -24,7 +24,7 @@ namespace Opaax
 
     void CameraControllerSystem::Update(double DeltaTime)
     {
-        ICamera& lActive = GetEngineApp()->GetSubsystem<CameraSubsystem>()->GetActiveCamera();
+        ICamera& lActive = GetEngineApp()->GetSubsystem<RenderSubsystem>()->GetActiveCamera();
 
         // Always clear transient offsets — even with no controllers attached the camera
         // should not carry stale shake from a previous PIE session into the next frame.
@@ -68,7 +68,7 @@ namespace Opaax
             return;
         }
 
-        ICamera& lActive = GetEngineApp()->GetSubsystem<CameraSubsystem>()->GetActiveCamera();
+        ICamera& lActive = GetEngineApp()->GetSubsystem<RenderSubsystem>()->GetActiveCamera();
         InController->OnAttach(lActive);
         OPAAX_CORE_INFO("CameraControllerSystem - controller attached.");
         m_Controllers.push_back(std::move(InController));
@@ -81,7 +81,7 @@ namespace Opaax
             return;
         }
 
-        ICamera& lActive = GetEngineApp()->GetSubsystem<CameraSubsystem>()->GetActiveCamera();
+        ICamera& lActive = GetEngineApp()->GetSubsystem<RenderSubsystem>()->GetActiveCamera();
         for (auto& lController : m_Controllers)
         {
             lController->OnDetach(lActive);

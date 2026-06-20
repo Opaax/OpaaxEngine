@@ -7,7 +7,7 @@
 #include "Renderer/RenderTarget.hpp"
 #include "RHI/ICommandBuffer.h"
 #include "Core/CoreEngineApp.h"
-#include "Core/Container/TPolymorphicList.hpp"
+#include "Renderer/RenderSubsystem.h"
 
 namespace Opaax
 {
@@ -21,7 +21,7 @@ namespace Opaax
         Renderer2D::Begin(m_Camera, InContext.Cmd);
 
         World& lWorld = m_App->GetWorld();
-        for (const auto& lSystem : TPolymorphicList<IOverlayRenderSystem>::GetAll())
+        for (const auto& lSystem : m_App->GetSubsystem<RenderSubsystem>()->GetOverlaySystems())
         {
             lSystem->OnRenderOverlay(lWorld, InContext);
         }

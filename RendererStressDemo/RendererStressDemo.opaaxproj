@@ -1,0 +1,8 @@
+{
+    "version": 1,
+    "name": "RendererStressDemo",
+    "assetsRoot": "RendererStressDemo/Assets",
+    "assetsManifest": "RendererStressDemo/Assets/AssetManifest.json",
+    "defaultScene": "",
+    "editorDefaultScenePath": "RendererStressDemo/Assets/Scenes"
+}

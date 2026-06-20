@@ -174,7 +174,7 @@ void Opaax::ECS::MoverComponent::DeserializeImplementation(const json& Json)
     }
 
     // Per-mode params: mint each supported mode's default type, then override from "modeParams" if
-    // present. (Modes registered at MoverSubsystem::Startup, before scenes load; the subsystem also
+    // present. (Modes registered at PhysicsSubsystem::Startup, before scenes load; it also
     // reconciles any still-missing params on play-begin.)
     ModeParams.clear();
     const json* lModeParams = (Json.contains("modeParams") && Json["modeParams"].is_object())

@@ -6,6 +6,9 @@
 #include "RHI/IGraphicsContext.h"
 #include "Renderer/Pass/WorldRenderPass.h"
 #include "Renderer/Pass/OverlayRenderPass.h"
+#include "Renderer/Systems/RenderStatsOverlaySystem.h"
+#include "Renderer/Camera/OrthographicCamera.h"
+#include "World/IOverlayRenderSystem.h"
 #include "Core/Config/EngineConfig.h"
 #include "Core/Log/OpaaxLog.h"
 
@@ -55,11 +58,28 @@ namespace Opaax
         m_Pipeline.AddPass(MakeUnique<WorldRenderPass>(GetEngineApp()));
         m_Pipeline.AddPass(MakeUnique<OverlayRenderPass>(GetEngineApp()));
 
-        // Set initial viewport
+        // Engine-owned render-stats overlay — registered only when enabled in config (no runtime key
+        // yet; a live toggle is a future CVar/console milestone). Reports engine state, so the engine
+        // registers it, not game code.
+        if (EngineConfig::RenderStats())
+        {
+            RegisterOverlaySystem(MakeUnique<RenderStatsOverlaySystem>());
+            OPAAX_CORE_INFO("RenderSubsystem: render-stats overlay enabled (render.stats=true).");
+        }
+
+        // Active 2D camera (folded in from CameraSubsystem): default orthographic camera owned here.
+        // CPU-side, independent of the device; the render passes fetch GetActiveCamera() at Execute.
+        if (!m_OwnedCamera) { m_OwnedCamera = MakeUnique<OrthographicCamera>(); }
+        m_ActivePtr = m_OwnedCamera.get();
+
+        // Set initial viewport + seed the camera projection from the window size.
         if (GetEngineApp())
         {
             const auto& lWindow = GetEngineApp()->GetWindow();
             RenderCommand::SetViewport(0, 0, lWindow.GetWidth(), lWindow.GetHeight());
+            m_LastViewportWidth  = lWindow.GetWidth();
+            m_LastViewportHeight = lWindow.GetHeight();
+            m_ActivePtr->SetViewportSize(m_LastViewportWidth, m_LastViewportHeight);
         }
 
         return true;
@@ -70,6 +90,9 @@ namespace Opaax
         OPAAX_CORE_INFO("RenderSubsystem::Shutdown()");
         // NOTE: the GPU-idle barrier is CoreEngineApp::Shutdown's single authoritative WaitIdle
         //   (runs before ANY GPU teardown, incl. assets). No per-subsystem wait needed here.
+        m_ActivePtr = nullptr;       // camera (folded in) — CPU-only; the editor cleared its non-owning
+        m_OwnedCamera.reset();       // pointer in its own (earlier) Shutdown, so this drops only the owned one
+        m_OverlaySystems.clear();    // drop overlay systems (+ any GPU resources they own) before the device
         m_Pipeline.Clear();          // drop passes before the render API/Renderer2D go away
         Renderer2D::Shutdown();
         RenderCommand::Shutdown();
@@ -86,7 +109,75 @@ namespace Opaax
     bool RenderSubsystem::OnWindowResize(WindowResizeEvent& Event)
     {
         RenderCommand::SetViewport(0, 0, Event.GetWidth(), Event.GetHeight());
+#if !OPAAX_WITH_EDITOR
+        // Release: the window IS the render target, so its size drives the camera projection. In editor
+        // builds the ViewportPanel is the target and pushes its own size via SetViewportSize — the window
+        // dims would race the FBO (the editor render target is the FBO, not the window).
+        SetViewportSize(Event.GetWidth(), Event.GetHeight());
+#endif
         return false;
+    }
+
+    void RenderSubsystem::RegisterOverlaySystem(UniquePtr<IOverlayRenderSystem> InSystem)
+    {
+        if (InSystem)
+        {
+            m_OverlaySystems.push_back(Move(InSystem));
+        }
+    }
+
+    // =============================================================================
+    // Active camera (folded in from the former CameraSubsystem) — dual-slot ownership
+    // =============================================================================
+    void RenderSubsystem::SetActiveCamera(UniquePtr<ICamera> InCamera)
+    {
+        if (!InCamera)
+        {
+            OPAAX_CORE_WARN("RenderSubsystem::SetActiveCamera - null camera ignored.");
+            return;
+        }
+
+        // Owning swap always destroys whatever was previously owned, even if a non-owning camera is
+        // currently active — the prior owned camera is structurally inaccessible once the new one moves in.
+        m_OwnedCamera = Move(InCamera);
+        m_ActivePtr   = m_OwnedCamera.get();
+        if (m_LastViewportWidth > 0 && m_LastViewportHeight > 0)
+        {
+            m_ActivePtr->SetViewportSize(m_LastViewportWidth, m_LastViewportHeight);
+        }
+        OPAAX_CORE_INFO("RenderSubsystem - active camera swapped (owning).");
+    }
+
+    void RenderSubsystem::SetActiveCameraNonOwning(ICamera* InCamera)
+    {
+        m_ActivePtr = InCamera;
+        if (InCamera)
+        {
+            if (m_LastViewportWidth > 0 && m_LastViewportHeight > 0)
+            {
+                InCamera->SetViewportSize(m_LastViewportWidth, m_LastViewportHeight);
+            }
+            OPAAX_CORE_INFO("RenderSubsystem - active camera swapped (non-owning).");
+        }
+        else
+        {
+            OPAAX_CORE_INFO("RenderSubsystem - active camera cleared.");
+        }
+    }
+
+    ICamera& RenderSubsystem::GetActiveCamera()
+    {
+        return *m_ActivePtr;
+    }
+
+    void RenderSubsystem::SetViewportSize(Uint32 InWidth, Uint32 InHeight)
+    {
+        m_LastViewportWidth  = InWidth;
+        m_LastViewportHeight = InHeight;
+        if (m_ActivePtr)
+        {
+            m_ActivePtr->SetViewportSize(InWidth, InHeight);
+        }
     }
  
 } // namespace Opaax

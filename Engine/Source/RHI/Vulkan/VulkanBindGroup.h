@@ -45,6 +45,7 @@ namespace Opaax
     public:
         void SetUniformBuffer(IUniformBuffer& InUniformBuffer)    override;
         void SetTexture(Uint32 InSlot, ITexture2D& InTexture)     override;
+        Uint32 GetRingHighWater() const override { return m_RingCursor; }
         //~End IBindGroup interface
 
         // =============================================================================
@@ -70,6 +71,7 @@ namespace Opaax
 
         Uint64 m_FrameGen   = ~0ull;
         Uint32 m_RingCursor = 0;
+        Uint32 m_RingDepth  = 0;   // EngineConfig::VulkanFrameRing() — sizes m_Sets + bounds the cursor
     };
 
 } // namespace Opaax

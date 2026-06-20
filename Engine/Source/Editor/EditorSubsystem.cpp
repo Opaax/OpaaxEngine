@@ -13,7 +13,7 @@
 #include "Scene/SceneSerializer.h"
 #include "Core/Log/OpaaxLog.h"
 #include "Renderer/Camera/CameraControllerSystem.h"
-#include "Renderer/Camera/CameraSubsystem.h"
+#include "Renderer/RenderSubsystem.h"
 #include "Renderer/Camera/OrthographicCamera.h"
 #include "RHI/RenderCommand.h"
 #include "RHI/RenderAPI.h"
@@ -116,11 +116,11 @@ namespace Opaax
 
         GetEngineApp()->SetRenderTarget(&m_ViewportPanel);
 
-        // Editor camera owned here; CameraSubsystem only holds a non-owning observer.
-        // CameraSubsystem::Startup already ran (registration order) and parked a default
+        // Editor camera owned here; RenderSubsystem only holds a non-owning observer.
+        // RenderSubsystem::Startup already ran (registration order) and parked a default
         // OrthographicCamera in its owned slot — we swap the active pointer to ours.
         m_EditorCamera = MakeUnique<Editor::EditorCamera>();
-        if (auto* lCameras = GetEngineApp()->GetSubsystem<CameraSubsystem>())
+        if (auto* lCameras = GetEngineApp()->GetSubsystem<RenderSubsystem>())
         {
             lCameras->SetActiveCameraNonOwning(m_EditorCamera.get());
             OPAAX_CORE_INFO("EditorSubsystem: EditorCamera installed as active (non-owning).");
@@ -166,7 +166,7 @@ namespace Opaax
             OPAAX_CORE_TRACE("EditorSubsystem: viewport resized to {}x{} — syncing camera.",
                 InWidth, InHeight);
 
-            if (auto* lCameras = GetEngineApp()->GetSubsystem<CameraSubsystem>())
+            if (auto* lCameras = GetEngineApp()->GetSubsystem<RenderSubsystem>())
             {
                 lCameras->SetViewportSize(InWidth, InHeight);
             }
@@ -183,10 +183,10 @@ namespace Opaax
         OPAAX_CORE_INFO("EditorSubsystem::Shutdown()");
 
         // Subsystems tear down in reverse-of-registration so this runs BEFORE
-        // CameraSubsystem::Shutdown. The CameraSubsystem still holds a non-owning
+        // RenderSubsystem::Shutdown. RenderSubsystem still holds a non-owning
         // pointer to our EditorCamera — clear it explicitly so nothing inside
         // any intermediate subsystem's Shutdown can dereference a freed camera.
-        if (auto* lCameras = GetEngineApp() ? GetEngineApp()->GetSubsystem<CameraSubsystem>() : nullptr)
+        if (auto* lCameras = GetEngineApp() ? GetEngineApp()->GetSubsystem<RenderSubsystem>() : nullptr)
         {
             lCameras->SetActiveCameraNonOwning(nullptr);
         }
@@ -271,7 +271,7 @@ namespace Opaax
             lCtrls->DetachAll();
         }
 
-        if (auto* lCameras = GetEngineApp()->GetSubsystem<CameraSubsystem>())
+        if (auto* lCameras = GetEngineApp()->GetSubsystem<RenderSubsystem>())
         {
             lCameras->SetActiveCameraNonOwning(m_EditorCamera.get());
             OPAAX_CORE_INFO("EditorSubsystem: editor camera restored after PIE.");
@@ -398,10 +398,10 @@ namespace Opaax
         SetEditorState(Editor::EEditorState::Playing);
 
         // Install a fresh owned runtime camera. The editor camera (non-owning observer
-        // on CameraSubsystem) is structurally evicted; EditorSubsystem still owns the
+        // on RenderSubsystem) is structurally evicted; EditorSubsystem still owns the
         // EditorCamera through its UniquePtr so pan/zoom state survives the cycle.
         // First-frame viewport sizing flows through the existing OnResized callback.
-        if (auto* lCameras = GetEngineApp()->GetSubsystem<CameraSubsystem>())
+        if (auto* lCameras = GetEngineApp()->GetSubsystem<RenderSubsystem>())
         {
             lCameras->SetActiveCamera(MakeUnique<OrthographicCamera>());
             OPAAX_CORE_INFO("EditorSubsystem: runtime camera installed for PIE.");

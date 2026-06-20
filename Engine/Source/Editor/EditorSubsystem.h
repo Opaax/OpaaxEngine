@@ -129,11 +129,11 @@ namespace Opaax
         UniquePtr<IEditorUIBackend> m_UIBackend;
 
         // Editor camera lives across PIE cycles so pan/zoom state persists. Installed as
-        // the non-owning active camera on CameraSubsystem in Editing; swapped out for a
+        // the non-owning active camera on RenderSubsystem in Editing; swapped out for a
         // fresh runtime OrthographicCamera at PIE Start; restored at PIE Stop. Shutdown
-        // MUST clear CameraSubsystem's non-owning pointer before this UniquePtr resets,
+        // MUST clear RenderSubsystem's non-owning pointer before this UniquePtr resets,
         // because subsystem teardown is reverse-of-registration and EditorSubsystem
-        // destroys before CameraSubsystem.
+        // destroys before RenderSubsystem.
         UniquePtr<Editor::EditorCamera> m_EditorCamera;
 
         Editor::MainMenuBar       m_MainMenuBar;

@@ -15,7 +15,7 @@ namespace Opaax
      * @class MoverModeRegistry
      *
      * Process-global catalog of mover modes, keyed by OpaaxStringID — the single source of
-     * truth both the MoverSubsystem (runtime dispatch) and the editor (the inspector's mode
+     * truth both PhysicsSubsystem (runtime mover dispatch) and the editor (the inspector's mode
      * combo) read. Static by design, mirroring ComponentRegistry: mode *definitions* are global
      * behaviour, not per-world state, and the editor has no path to a subsystem instance.
      *
@@ -34,7 +34,7 @@ namespace Opaax
         // Every registered mode id — for the editor mode picker.
         static TDynArray<OpaaxStringID> GetModeIds();
 
-        // Drop all modes (called from MoverSubsystem::Shutdown for deterministic teardown).
+        // Drop all modes (called from PhysicsSubsystem::Shutdown for deterministic teardown).
         static void Clear();
 
     private:

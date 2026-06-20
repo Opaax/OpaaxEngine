@@ -13,7 +13,7 @@ namespace Opaax::Editor
      * Editor-only viewport camera. Inherits OrthographicCamera's matrix machinery and adds
      * a behavior surface for mouse-driven pan + scroll-driven zoom-at-cursor. Lifetime is
      * owned by EditorSubsystem (one instance, survives PIE cycles so pan/zoom state persists
-     * across Play → Stop). Installed as the non-owning active camera on CameraSubsystem in
+     * across Play → Stop). Installed as the non-owning active camera on RenderSubsystem in
      * Editing state; swapped out for a fresh runtime OrthographicCamera at PIE Start; swapped
      * back at PIE Stop with state intact.
      */

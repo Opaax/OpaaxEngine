@@ -68,6 +68,17 @@ namespace Opaax
         static bool                RenderInterpolation() noexcept { return s_RenderInterpolation; }
         static void                SetRenderInterpolation(bool InEnabled) noexcept { s_RenderInterpolation = InEnabled; }
 
+        // Render-stats overlay (default off): screen-space per-frame renderer counters (draw calls,
+        // batches, quad count, ring high-water, sort µs). Read once at RenderSubsystem::Startup to
+        // decide whether to register the overlay system. A live runtime toggle is a future CVar/console
+        // milestone — this flag is the startup default until then.
+        static bool                RenderStats() noexcept { return s_RenderStats; }
+
+        // Vulkan per-frame descriptor/UBO ring depth (default 64). Bounds how many Renderer2D batch
+        // flushes one frame can record before the ring fails loud (it never wraps onto a referenced
+        // descriptor set). OpenGL ignores it.
+        static Uint32              VulkanFrameRing() noexcept { return s_VulkanFrameRing; }
+
         // ---- Physics --------------------------------------------------------
         // Physics backend name ("Box2D" today). String here so Core/Config carries no
         // dependency on Physics — Physics maps this to its EPhysicsBackend enum.
@@ -93,6 +104,8 @@ namespace Opaax
         static OpaaxString s_LogLevel;
         static OpaaxString s_RenderBackend;
         static bool        s_RenderInterpolation;
+        static bool        s_RenderStats;
+        static Uint32      s_VulkanFrameRing;
         static OpaaxString s_PhysicsBackend;
         static bool        s_PhysicsWorldBoundsEnabled;
         static Vector2F    s_PhysicsWorldBoundsMin;

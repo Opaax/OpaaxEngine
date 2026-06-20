@@ -2,6 +2,7 @@
 
 #include "EngineAPI.h"
 #include "OpaaxTypes.h"
+#include "Container/TPolymorphicList.hpp"
 #include "Renderer/RenderTarget.hpp"
 #include "Systems/EngineSubsystem.h"
 #include "Systems/GameSubsystem.h"
@@ -9,6 +10,7 @@
 
 namespace Opaax
 {
+    class IWorldSystem;
     using namespace ECS;
 
     class WindowResizeEvent;
@@ -154,18 +156,11 @@ namespace Opaax
         UniquePtr<Window> m_Window;
         EngineSubsystemMgr m_EngineSubsystemManager;
         GameSubsystemMgr   m_GameSubsystemMgr;
+        
 
-        IRenderTarget*              m_RenderTarget        = nullptr;
-        UniquePtr<DefaultRenderTarget> m_DefaultRenderTarget;
-
-        // Persistent World — owns all entities + (post-M2.5) the scene stack.
-        // GetWorld() returns this directly. Scene::m_World is orphaned and
-        // gets removed in Step 5.
+        IRenderTarget*                  m_RenderTarget        = nullptr;
+        UniquePtr<DefaultRenderTarget>  m_DefaultRenderTarget;
+        
         World                       m_World;
-
-#if OPAAX_WITH_EDITOR
-        void LaunchEditor();
-        bool IsDebugMode() const;
-#endif
     };
 }

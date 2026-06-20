@@ -110,8 +110,9 @@ set(OPAAX_TEST_SOURCES
 
 - **GPU / rendering / window** — no GL or Vulkan context exists in the test process. Renderer *logic* that is
   pure (sort keys, kerning math, UV packing) is fine; anything that touches a device is not.
-- **Subsystem behaviour that needs a live world/loop** — e.g. `MoverSubsystem` self-heal/rejection needs a
-  physics world; the `PhysicsSubsystem` needs PIE. Unit-test the pure component/data surface here; that
+- **Subsystem behaviour that needs a live world/loop** — e.g. mover self-heal/rejection (now in
+  `PhysicsSubsystem`) needs a physics world; the `PhysicsSubsystem` step needs PIE. Unit-test the pure
+  component/data surface here; that
   integration belongs in a future integration-test target, not `OpaaxTests`.
 - **Asset loading from disk, manifest population** — the manifest + path resolution are global singletons.
   Extract and test the pure decision (like `ResolveCanonicalAssetId`); leave the global lookups to integration.
