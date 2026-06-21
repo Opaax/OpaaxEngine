@@ -22,7 +22,7 @@
 #include "Renderer/Camera/CameraControllerSystem.h"
 #include "Renderer/Camera/FollowCameraController.h"
 #include "Renderer/Camera/FollowParams.h"
-#include "Renderer/Camera/CameraSubsystem.h"
+#include "Renderer/RenderSubsystem.h"
 #include "Renderer/Camera/ICamera.h"
 #include "Renderer/Camera/OrthographicCamera.h"
 
@@ -84,7 +84,7 @@ bool SandboxControlSystem::OnEvent(OpaaxEvent& InEvent)
     
     lDispatcher.Dispatch<MouseScrolledEvent>([this](MouseScrolledEvent ScrollEvent)-> bool
     {
-        ICamera& lActive = GetEngineApp()->GetSubsystem<CameraSubsystem>()->GetActiveCamera();
+        ICamera& lActive = GetEngineApp()->GetSubsystem<RenderSubsystem>()->GetActiveCamera();
         if (OrthographicCamera* lOrtho = static_cast<OrthographicCamera*>(&lActive))
         {
             constexpr float LZoomStep = 1.1f;

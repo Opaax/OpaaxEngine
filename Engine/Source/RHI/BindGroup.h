@@ -58,6 +58,11 @@ namespace Opaax
     public:
         virtual void SetUniformBuffer(IUniformBuffer& InUniformBuffer)   = 0;
         virtual void SetTexture(Uint32 InSlot, ITexture2D& InTexture)    = 0;
+
+        // Per-frame descriptor-ring usage so far (peak read by Renderer2D into RenderStats). 0 for
+        // backends with no per-frame ring (OpenGL); Vulkan returns its current ring cursor. Lets the
+        // neutral renderer surface ring pressure without a backend query.
+        virtual Uint32 GetRingHighWater() const { return 0; }
     };
 
 } // namespace Opaax

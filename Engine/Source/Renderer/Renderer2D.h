@@ -8,6 +8,7 @@
 
 #include "Assets/AssetHandle.hpp"
 #include "Renderer/RenderLayer.h"
+#include "Renderer/RenderStats.h"
 
 namespace Opaax
 {
@@ -38,15 +39,24 @@ namespace Opaax
         // Functions
         // =============================================================================
     private:
-        static void Flush();
         static void StartBatch();
-        static float GetTextureSlot(Texture2D& InTexture);
+        static void EmitFrame(); // sort the frame, then emit batches
+        static void EmitBatch(Uint32 InQuadCount, Uint32 InSlotCount);
 
         //------------------------------------------------------------------------------
         
     public:
         static void Init();
         static void Shutdown();
+        
+        /**
+         * Roll the per-frame stats: publish the frame just finished, zero the accumulator. Called once
+         * per frame by the run loop (after RenderCommand::BeginFrame, before any pass draws).
+         */
+        static void NewFrame();
+
+        /** Renderer counters for the previously completed frame (one frame late — see RenderStats). */
+        static const RenderStats& GetStats();
      
         /**
          * Call once per frame (per pass) before any draw calls. Records into InCmd — binds the

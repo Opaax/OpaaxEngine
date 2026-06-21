@@ -16,7 +16,7 @@ namespace Opaax
      *
      * Play-only game subsystem that drives camera controllers. Owns its controllers by
      * UniquePtr, ticks them in registration order each frame on whatever camera
-     * CameraSubsystem::GetActiveCamera() returns. PIE-gated via the GameSubsystem layer —
+     * RenderSubsystem::GetActiveCamera() returns. PIE-gated via the GameSubsystem layer —
      * controllers never tick in edit or paused mode.
      *
      * Update sequence per frame:

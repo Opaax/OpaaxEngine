@@ -3,7 +3,7 @@
 // MoverComponent is OPAAX_API (reached via the import lib). Only the data-level
 // mode-set logic is unit-tested here — SupportsMode / AddMode / RemoveMode (the Modes
 // array) + QueueNextMode (sets the pending fields) + GetCurrentMode. The self-heal and
-// QueueNextMode-rejection rules live in MoverSubsystem (need a physics world) and are
+// QueueNextMode-rejection rules live in PhysicsSubsystem's mover tick (need a physics world) and are
 // deferred to a future integration test. AddMode's param-minting goes through the global
 // MoverModeRegistry, which is empty in a test process — but AddMode still records the
 // mode in Modes regardless, so the mode-set behaviour is testable standalone.

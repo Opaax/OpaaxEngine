@@ -23,7 +23,9 @@
     },
     "render": {
         "backend": "OpenGL",
-        "interpolation": true
+        "interpolation": true,
+        "stats": true,
+        "vulkanFrameRing": 4096
     },
     "version": 1,
     "window": {

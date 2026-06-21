@@ -83,7 +83,7 @@ namespace Opaax::ECS
         Uint64 EffectiveEventMask() const noexcept;
 
         // Mover-2.0-style deferred mode switch: queue InMode to become active on the next fixed
-        // step (the MoverSubsystem fires OnModeExit/OnModeEnter then). bReenter forces the mode to
+        // step (PhysicsSubsystem's mover tick fires OnModeExit/OnModeEnter then). bReenter forces the mode to
         // restart (re-fire OnModeEnter) even if it's already the current mode. Producer-facing API —
         // gameplay code calls this; it never mutates ModeId directly.
         void QueueNextMode(OpaaxStringID InMode, bool bReenter = false) noexcept
@@ -164,7 +164,7 @@ namespace Opaax::ECS
         MoverInput Input;
 
         // ---- Queued mode switch (runtime, NOT serialized) ----
-        // Set by QueueNextMode; consumed + cleared by the MoverSubsystem next step. Invalid
+        // Set by QueueNextMode; consumed + cleared by PhysicsSubsystem's mover tick next step. Invalid
         // (ID_None) means no pending switch.
         OpaaxStringID PendingMode;
         bool          PendingReenter = false;

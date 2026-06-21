@@ -14,6 +14,12 @@
 #include "ECS/Components/TransformInterpolationComponent.h"
 #include "ECS/Components/RigidbodyComponent.h"
 #include "ECS/Components/ColliderComponent.h"
+#include "ECS/Components/MoverComponent.h"
+
+#include "Core/Systems/Movement/MoverModeRegistry.h"
+#include "Core/Systems/Movement/IMoverMode.h"
+#include "Core/Systems/Movement/GroundMoveMode.h"
+#include "Core/Systems/Movement/FlyMoveMode.h"
 
 namespace Opaax
 {
@@ -61,6 +67,12 @@ namespace Opaax
                         m_WorldBoundsEnabled ? "enabled" : "disabled",
                         m_WorldBoundsMin.x, m_WorldBoundsMin.y, m_WorldBoundsMax.x, m_WorldBoundsMax.y,
                         ToString(m_WorldBoundsResponse));
+
+        // Built-in mover modes (folded in from MoverSubsystem). Game/engine code adds more via
+        // MoverModeRegistry::Register; new movement = a new mode, never a change here.
+        MoverModeRegistry::Register(OPAAX_ID("GroundMove"), MakeUnique<GroundMoveMode>());
+        MoverModeRegistry::Register(OPAAX_ID("Fly"),        MakeUnique<FlyMoveMode>());
+
         return true;
     }
 
@@ -77,6 +89,9 @@ namespace Opaax
             World& lWorld = lApp->GetWorld();
             ReconcileDeadBodies(lWorld);
             ReconcileLiveBodies(lWorld);
+            // Movers (folded in): set each mover's kinematic target BEFORE the step so the solver applies
+            // it this same step (was a separate MoverSubsystem registered before PhysicsSubsystem).
+            TickMovers(lWorld, FixedDeltaTime);
         }
 
         m_World->Step(static_cast<float>(FixedDeltaTime), m_WorldDesc.SubStepCount);
@@ -101,7 +116,9 @@ namespace Opaax
 
     void PhysicsSubsystem::Shutdown()
     {
-        ClearBodies();
+        ClearMoverBodies();          // mover kinematic bodies — destroy while m_World is still alive
+        ClearBodies();               // collider bodies
+        MoverModeRegistry::Clear();  // drop the mover-mode catalog (folded in from MoverSubsystem)
         m_World.reset();
         OPAAX_CORE_INFO("PhysicsSubsystem::Shutdown");
     }
@@ -118,13 +135,22 @@ namespace Opaax
 
         BuildBodies(lApp->GetWorld());
         OPAAX_CORE_INFO("PhysicsSubsystem::OnPlayBegin — built {} bodies.", m_Bodies.size());
+
+        // Movers (folded in): reconcile per-mode params (covers code-created movers that skipped
+        // AddMode/load) then build their kinematic bodies.
+        lApp->GetWorld().Each<ECS::MoverComponent>(
+            [](EntityID /*InEntity*/, ECS::MoverComponent& InMover) { InMover.EnsureModeParams(); });
+        BuildMoverBodies(lApp->GetWorld());
+        OPAAX_CORE_INFO("PhysicsSubsystem::OnPlayBegin — built {} mover bodies.", m_MoverBodies.size());
     }
 
     void PhysicsSubsystem::OnPlayEnd()
     {
-        const size_t lCount = m_Bodies.size();
+        const size_t lCount      = m_Bodies.size();
+        const size_t lMoverCount = m_MoverBodies.size();
         ClearBodies();
-        OPAAX_CORE_INFO("PhysicsSubsystem::OnPlayEnd — destroyed {} bodies.", lCount);
+        ClearMoverBodies();
+        OPAAX_CORE_INFO("PhysicsSubsystem::OnPlayEnd — destroyed {} bodies, {} mover bodies.", lCount, lMoverCount);
     }
 
     // =============================================================================
@@ -460,6 +486,183 @@ namespace Opaax
         {
             RemoveBodyForEntity(static_cast<EntityID>(lBits));
         }
+    }
+
+    // =============================================================================
+    // Movers (folded in from the former MoverSubsystem)
+    // =============================================================================
+    void PhysicsSubsystem::BuildMoverBodies(World& InWorld)
+    {
+        if (m_World == nullptr) { return; }
+        ClearMoverBodies();
+
+        using namespace ECS;
+        InWorld.Each<MoverComponent, TransformComponent>(
+            [this, &InWorld](EntityID InEntity, MoverComponent& InMover, TransformComponent& InTransform)
+            {
+                // A mover is a KINEMATIC body — we drive it; the solver never moves it. Fixed rotation.
+                BodyDesc lBodyDesc;
+                lBodyDesc.Type          = EBodyType::Kinematic;
+                lBodyDesc.Position      = InTransform.Position;
+                lBodyDesc.Rotation      = InTransform.Rotation;
+                lBodyDesc.FixedRotation = true;
+                lBodyDesc.UserData      = static_cast<Uint64>(static_cast<Uint32>(InEntity)) + 1;
+
+                const BodyHandle lBody = m_World->CreateBody(lBodyDesc);
+                if (!lBody.IsValid()) { return; }
+
+                const MoverCapsule lCapsule = InMover.BuildCapsule();
+
+                ShapeDesc lShapeDesc;
+                lShapeDesc.Geometry.Type    = EColliderShape::Capsule;
+                lShapeDesc.Geometry.Center1 = lCapsule.Center1;
+                lShapeDesc.Geometry.Center2 = lCapsule.Center2;
+                lShapeDesc.Geometry.Radius  = lCapsule.Radius;
+                lShapeDesc.IsSensor         = false;   // solid presence: contacts + pushes + events
+                // Category = the profile's channel, else default to Pawn (movers are usually pawns).
+                if (const CollisionProfile* lProfile = InMover.Profile.Get())
+                {
+                    lShapeDesc.CategoryBits = lProfile->ComputeCategoryBits();
+                }
+                else
+                {
+                    lShapeDesc.CategoryBits = CategoryBit(ECollisionChannel::Pawn);
+                }
+                // Mask = event reach (Block + Overlap). Movement-solid (Block only) is applied in the mode.
+                lShapeDesc.MaskBits = InMover.EffectiveEventMask();
+
+                m_World->AddShape(lBody, lShapeDesc);
+                m_MoverBodies.emplace(static_cast<Uint32>(InEntity), lBody);
+
+                // Seed render-interpolation prev pose to the start pose (frame 0 must not pop).
+                InWorld.AddOrReplaceComponent<TransformInterpolationComponent>(
+                    InEntity, TransformInterpolationComponent{ InTransform.Position, InTransform.Rotation });
+            });
+    }
+
+    void PhysicsSubsystem::ClearMoverBodies()
+    {
+        if (m_World != nullptr)
+        {
+            for (auto& [lBits, lBody] : m_MoverBodies)
+            {
+                m_World->DestroyBody(lBody);
+            }
+        }
+        m_MoverBodies.clear();
+    }
+
+    void PhysicsSubsystem::TickMovers(World& InWorld, double FixedDeltaTime)
+    {
+        if (m_World == nullptr) { return; }
+
+        const float    lDt    = static_cast<float>(FixedDeltaTime);
+        IPhysicsWorld* lWorld = m_World.get();
+
+        using namespace ECS;
+        InWorld.Each<MoverComponent, TransformComponent>(
+            [this, lWorld, lDt, &InWorld](EntityID InEntity, MoverComponent& InMover, TransformComponent& InTransform)
+            {
+                const Uint32 lBits = static_cast<Uint32>(InEntity);
+
+                // Snapshot the pre-tick pose for render interpolation before the mode mutates the
+                // transform — prev/current then bracket exactly one fixed step.
+                if (auto* lInterp = InWorld.GetComponent<TransformInterpolationComponent>(InEntity))
+                {
+                    lInterp->PrevPosition = InTransform.Position;
+                    lInterp->PrevRotation = InTransform.Rotation;
+                }
+
+                MoverTickContext lContext{ *lWorld, InMover, InTransform, lDt };
+                lContext.SelfUserData = static_cast<Uint64>(lBits) + 1;   // skip our own body in the sweep
+
+                // --- Apply a queued mode switch, constrained to the mover's supported set ---
+                if (InMover.PendingMode.IsValid())
+                {
+                    const OpaaxStringID lNext     = InMover.PendingMode;
+                    const bool          lReenter  = InMover.PendingReenter;
+                    InMover.PendingMode    = OpaaxStringID();   // consume the request
+                    InMover.PendingReenter = false;
+
+                    if (!InMover.SupportsMode(lNext))
+                    {
+                        if (m_WarnedUnknownModes.insert(lNext.GetId()).second)
+                        {
+                            OPAAX_CORE_WARN("PhysicsSubsystem (mover) — mover does not support mode '{}'; switch ignored.", lNext);
+                        }
+                    }
+                    else
+                    {
+                        const bool lChanging = (lNext != InMover.ModeId);
+                        if (lChanging || lReenter)
+                        {
+                            MoverTickContext lTransitionCtx{ *lWorld, InMover, InTransform, 0.f };
+
+                            if (lChanging)
+                            {
+                                if (IMoverMode* lOld = MoverModeRegistry::Find(InMover.ModeId))
+                                {
+                                    lOld->OnModeExit(lTransitionCtx);
+                                }
+                                InMover.ModeId = lNext;
+                            }
+
+                            if (IMoverMode* lNew = MoverModeRegistry::Find(InMover.ModeId))
+                            {
+                                lNew->OnModeEnter(lTransitionCtx);
+                            }
+                        }
+                    }
+                }
+
+                // --- Self-heal: the active mode must be one the mover supports (edited set / old scene) ---
+                if (!InMover.SupportsMode(InMover.ModeId))
+                {
+                    if (InMover.Modes.empty())
+                    {
+                        if (m_WarnedUnknownModes.insert(InMover.ModeId.GetId()).second)
+                        {
+                            OPAAX_CORE_WARN("PhysicsSubsystem (mover) — mover has no supported modes; entity skipped.");
+                        }
+                        return;
+                    }
+                    InMover.ModeId = InMover.Modes[0];
+                }
+
+                // --- Dispatch the active mode ---
+                IMoverMode* lMode = MoverModeRegistry::Find(InMover.ModeId);
+                if (lMode == nullptr)
+                {
+                    if (m_WarnedUnknownModes.insert(InMover.ModeId.GetId()).second)
+                    {
+                        OPAAX_CORE_WARN("PhysicsSubsystem (mover) — no mover mode registered for '{}'; entity skipped.",
+                                        InMover.ModeId);
+                    }
+                    return;
+                }
+
+                // Hand the mode its own params (it downcasts). Reconciled at play-begin, so non-null.
+                lContext.Params = InMover.GetModeParams(InMover.ModeId);
+                if (lContext.Params == nullptr)
+                {
+                    if (m_WarnedUnknownModes.insert(InMover.ModeId.GetId()).second)
+                    {
+                        OPAAX_CORE_WARN("PhysicsSubsystem (mover) — no params for mode '{}'; entity skipped.", InMover.ModeId);
+                    }
+                    return;
+                }
+
+                lMode->Tick(lContext);
+
+                // Drive the kinematic body to the mode's solved pose: it moves there during the Step —
+                // colliding, pushing dynamics, and firing contact/sensor events resolved back by user-data.
+                const auto lBodyIt = m_MoverBodies.find(lBits);
+                if (lBodyIt != m_MoverBodies.end())
+                {
+                    lWorld->SetBodyTargetTransform(lBodyIt->second, InTransform.Position,
+                                                   InTransform.Rotation, lDt);
+                }
+            });
     }
 
     // =============================================================================

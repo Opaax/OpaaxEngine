@@ -8,6 +8,7 @@
 #include "VulkanUniformBuffer.h"
 #include "VulkanTexture2D.h"
 #include "RHI/Vulkan/VulkanSwapchain.h"   // OPAAX_FRAMES_IN_FLIGHT
+#include "Core/Config/EngineConfig.h"
 #include "Core/Log/OpaaxLog.h"
 
 namespace Opaax
@@ -25,7 +26,10 @@ namespace Opaax
 
         m_SetLayout = BuildSpriteDescriptorSetLayout(m_Device);
 
-        const Uint32 lSetCount = OPAAX_VULKAN_FRAME_RING * OPAAX_FRAMES_IN_FLIGHT;
+        // Ring depth is config-tunable (render.vulkanFrameRing, default 64). Read once here — it sizes
+        // the pre-allocated set ring AND bounds the per-frame cursor in BindInto.
+        m_RingDepth = EngineConfig::VulkanFrameRing();
+        const Uint32 lSetCount = m_RingDepth * OPAAX_FRAMES_IN_FLIGHT;
 
         // ---- Pool: enough for every ring set across both frames-in-flight ----
         VkDescriptorPoolSize lSizes[2]{};
@@ -89,15 +93,21 @@ namespace Opaax
             m_FrameGen   = lGen;
             m_RingCursor = 0;
         }
-        if (m_RingCursor >= OPAAX_VULKAN_FRAME_RING)
+        // Ring exhausted: FAIL LOUD, never wrap. Wrapping to slot 0 would rewrite a descriptor set
+        // this frame's command buffer already references (recorded, not yet executed) — a use-while-
+        // updated hazard. Instead skip this bind: the prior (valid) set stays bound, so the draw is
+        // visually wrong under extreme overflow but the GPU never reads a clobbered set. Raise
+        // render.vulkanFrameRing if a real scene legitimately needs more batches/frame.
+        if (m_RingCursor >= m_RingDepth)
         {
-            OPAAX_CORE_ERROR("VulkanBindGroup: exceeded {} flushes this frame — wrapping.",
-                             OPAAX_VULKAN_FRAME_RING);
-            m_RingCursor = 0;
+            OPAAX_CORE_ERROR("VulkanBindGroup: frame exceeded {} descriptor-ring slots — skipping bind "
+                             "(raise render.vulkanFrameRing).", m_RingDepth);
+            OPAAX_CORE_ASSERT(false)
+            return;
         }
 
         const Uint32 lFrameSlot = VulkanFrameContext::FrameSlot();
-        const Uint32 lSetIndex  = lFrameSlot * OPAAX_VULKAN_FRAME_RING + m_RingCursor;
+        const Uint32 lSetIndex  = lFrameSlot * m_RingDepth + m_RingCursor;
         VkDescriptorSet lSet     = m_Sets[lSetIndex];
 
         // ---- Image infos (binding 0). Every slot references a live view (Renderer2D fills

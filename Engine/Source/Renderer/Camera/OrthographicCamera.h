@@ -12,7 +12,7 @@ namespace Opaax
      * recompute on next GetViewProjection() call.
      *
      * No engine-app coupling: this is pure data + matrices. Lifetime is owned by
-     * CameraSubsystem (or EditorSubsystem for the editor camera).
+     * RenderSubsystem (or EditorSubsystem for the editor camera).
      */
     class OPAAX_API OrthographicCamera : public ICamera
     {

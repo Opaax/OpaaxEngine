@@ -28,20 +28,19 @@
 #include "Jobs/JobSubsystem.h"
 #include "Log/OpaaxLog.h"
 #include "Container/TPolymorphicList.hpp"
-#include "Renderer/Camera/CameraSubsystem.h"
 #include "Renderer/Camera/CameraControllerSystem.h"
 #include "Renderer/Renderer2D.h"
 #include "Renderer/RenderSubsystem.h"
 #include "Renderer/ShaderAsset.h"
-#include "Renderer/Systems/WorldRenderSystem.h"
+#include "Renderer/Systems/WorldSubsystem.h"
 #include "RHI/RenderCommand.h"
 #include "Scene/Scene.h"
 #include "Scene/SceneFactory.h"
 #include "Scene/SceneManager.h"
 #include "Systems/EngineSubsystem.h"
 #include "Systems/PhysicsSubsystem.h"
-#include "Systems/MoverSubsystem.h"
 #include "World/IWorldSystem.h"
+#include "World/IOverlayRenderSystem.h"
 #include "World/RenderContext.h"
 
 #include "ECS/ComponentRegistry.h"
@@ -189,6 +188,10 @@ bool CoreEngineApp::OnWindowResize(WindowResizeEvent& Event)
 {
     OPAAX_CORE_TRACE("CoreEngineApp::OnWindowResize() — {0}x{1}", Event.GetWidth(), Event.GetHeight());
 
+    // Idle the GPU before resizing the render target: on an explicit backend (Vulkan) a frame may
+    // still be in flight referencing the swapchain/images this OnResize reallocates. Mirrors the
+    // single authoritative WaitIdle in Shutdown(). OpenGL's WaitIdle is a cheap glFinish.
+    RenderCommand::WaitIdle();
     m_DefaultRenderTarget->OnResize(Event.GetWidth(), Event.GetHeight());
 
     return false;  // not consumed — game code may also want resize events
@@ -215,14 +218,6 @@ void CoreEngineApp::Initialize()
 {
     OPAAX_CORE_TRACE("CoreEngineApp::Initialize()");
 
-// #if OPAAX_WITH_EDITOR
-//     if (IsDebugMode())
-//     {
-//         LaunchEditor();
-//         return;
-//     }
-// #endif
-    
     // Load engine assets
     OPAAX_CORE_TRACE("Loading engine assets...");
 
@@ -265,16 +260,19 @@ void CoreEngineApp::Initialize()
     m_EngineSubsystemManager.RegisterSubsystem<JobSubsystem>(this);
 
     m_EngineSubsystemManager.RegisterSubsystem<RenderSubsystem>(this);
-    m_EngineSubsystemManager.RegisterSubsystem<CameraSubsystem>(this);
+
+    // World subsystem owns the world-render-system list (replaces the DLL-broken static
+    // TPolymorphicList<IWorldSystem>). Registered AFTER RenderSubsystem so its reverse-order Shutdown
+    // frees system-owned GPU resources before the device dies; self-registers WorldRenderSystem.
+    m_EngineSubsystemManager.RegisterSubsystem<WorldSubsystem>(this);
 
     m_EngineSubsystemManager.RegisterSubsystem<InputSubsystem>(this);
 
     m_EngineSubsystemManager.RegisterSubsystem<SceneManager>(this);
 
-    // Both after SceneManager (a scene must exist before bodies are built from it). Movers register
-    // BEFORE physics: each fixed step the mover sets its kinematic body's target, then PhysicsSubsystem
-    // steps the world to apply it (same-frame), draining the resulting contact/sensor events.
-    m_EngineSubsystemManager.RegisterSubsystem<MoverSubsystem>(this);
+    // After SceneManager (a scene must exist before bodies are built from it). PhysicsSubsystem also
+    // drives movers now (folded in): each fixed step it ticks mover modes to set kinematic targets, then
+    // steps the world to apply them (same-frame), draining the resulting contact/sensor events.
     m_EngineSubsystemManager.RegisterSubsystem<PhysicsSubsystem>(this);
 
 #if OPAAX_WITH_EDITOR
@@ -285,11 +283,10 @@ void CoreEngineApp::Initialize()
     // grab it via GetGameSubsystem<CameraControllerSystem>() from their own setup hooks.
     RegisterGameSubsystem<CameraControllerSystem>(this);
 
-    // Default world-render system. Games append more in OnInitialize (called right after);
-    // dispatch order = registration order.
-    TPolymorphicList<IWorldSystem>::Register(MakeUnique<WorldRenderSystem>());
 
-    // Call derived class initialization
+    // WorldRenderSystem is self-registered by WorldSubsystem::Startup; games append their own world
+    // systems from OnStartup (after subsystems exist). Dispatch order = registration order.
+    
     OnInitialize();
 
     bIsRunning = true;
@@ -419,6 +416,7 @@ void CoreEngineApp::Run()
 
         // Frame bracket — backend-neutral. OpenGL: near-empty. Vulkan: acquire+record / submit.
         RenderCommand::BeginFrame();
+        Renderer2D::NewFrame();   // publish last frame's render stats, zero the accumulator
         OnRender(lAlpha);
         m_EngineSubsystemManager.RenderAll(lAlpha);
         RenderCommand::EndFrame();
@@ -453,6 +451,10 @@ void CoreEngineApp::Shutdown()
     // graphics device/context (owned by the window, alive for all of Shutdown()) still exists.
     // A texture outliving its device makes Vulkan/VMA assert; on OpenGL it leaked silently.
     AssetRegistry::Shutdown();
+
+    // World-render systems (WorldSubsystem) and overlay systems (RenderSubsystem) are each cleared by
+    // their owning subsystem's Shutdown during the reverse-order teardown below — while the render device
+    // is still alive — so any GPU resource a system owns is freed before the device dies.
 
     // Game subsystems shut down first — they may still call into engine services
     // (Renderer, World, AssetRegistry) during their Shutdown.
@@ -490,20 +492,3 @@ Opaax::SceneManager* CoreEngineApp::GetSceneManager() noexcept
 {
     return m_EngineSubsystemManager.GetSubsystem<SceneManager>();
 }
-
-#if OPAAX_WITH_EDITOR
-void CoreEngineApp::LaunchEditor()
-{
-    OPAAX_CORE_TRACE("[EDITOR MODE] Launching editor...");
-    
-    // TODO: Initialize editor UI
-}
-
-bool CoreEngineApp::IsDebugMode() const {
-#ifdef _DEBUG
-    return true;
-#else
-    return false;
-#endif
-}
-#endif

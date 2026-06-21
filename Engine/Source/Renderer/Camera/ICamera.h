@@ -13,7 +13,7 @@ namespace Opaax
      * setter — concrete subclasses (OrthographicCamera, future PerspectiveCamera) own their
      * projection model.
      *
-     * Ownership: held by CameraSubsystem as UniquePtr<ICamera>. Consumers (Renderer2D,
+     * Ownership: held by RenderSubsystem as UniquePtr<ICamera>. Consumers (Renderer2D,
      * render passes) take ICamera& by reference at the use site — never cached across
      * function calls that could trigger an active-camera swap (Lesson 17).
      */

@@ -16,8 +16,8 @@ namespace Opaax
      * between Renderer2D::Begin(screenSpaceCamera) and End() — systems never own Begin/End
      * nor the camera, they only submit draws.
      *
-     * Register — typically from a game's CoreEngineApp::OnInitialize override:
-     *   TPolymorphicList<IOverlayRenderSystem>::Register(MakeUnique<MyHudSystem>());
+     * Register — from a game's CoreEngineApp::OnStartup override:
+     *   GetSubsystem<RenderSubsystem>()->RegisterOverlaySystem(MakeUnique<MyHudSystem>());
      *
      * The overlay pass runs AFTER the world pass into the same target and does not clear,
      * so overlay draws composite on top of the world.

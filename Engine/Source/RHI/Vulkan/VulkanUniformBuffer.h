@@ -64,6 +64,7 @@ namespace Opaax
 
         Uint64       m_FrameGen          = ~0ull;
         Uint32       m_RingCursor        = 0;
+        Uint32       m_RingDepth         = 0;   // EngineConfig::VulkanFrameRing() — sizes + bounds the ring
         VkDeviceSize m_CurrentByteOffset = 0;   // byte offset of the slot the last SetData wrote
     };
 

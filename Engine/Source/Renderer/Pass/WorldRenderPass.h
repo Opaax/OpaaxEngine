@@ -12,7 +12,7 @@ namespace Opaax
      * @class WorldRenderPass
      *
      * Default world pass: binds the frame target, clears it, begins the batch with the active
-     * world camera (CameraSubsystem), then runs every registered IWorldSystem so they issue
+     * world camera (RenderSubsystem), then runs every registered IWorldSystem so they issue
      * draw calls. This is the engine's pre-M7 OnRender body, relocated behind the pass interface.
      *
      * Holds the engine app by pointer (IoC — given at construction, never a global) and re-fetches

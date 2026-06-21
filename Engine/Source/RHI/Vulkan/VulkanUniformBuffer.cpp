@@ -4,6 +4,7 @@
 
 #include "VulkanFrameContext.h"
 #include "VulkanDevice.h"
+#include "Core/Config/EngineConfig.h"
 #include "Core/Log/OpaaxLog.h"
 
 #include <cstring>
@@ -35,7 +36,9 @@ namespace Opaax
 
         m_Aligned = AlignUp(m_BlockSize, lAlign);
 
-        const VkDeviceSize lTotal = m_Aligned * OPAAX_VULKAN_FRAME_RING;
+        // Ring depth is config-tunable (render.vulkanFrameRing, default 64); matches VulkanBindGroup.
+        m_RingDepth = EngineConfig::VulkanFrameRing();
+        const VkDeviceSize lTotal = m_Aligned * m_RingDepth;
 
         for (Uint32 i = 0; i < OPAAX_FRAMES_IN_FLIGHT; ++i)
         {
@@ -75,11 +78,15 @@ namespace Opaax
             m_RingCursor = 0;
         }
 
-        if (m_RingCursor >= OPAAX_VULKAN_FRAME_RING)
+        // Ring exhausted: FAIL LOUD, never wrap (same hazard as VulkanBindGroup — wrapping rewrites a
+        // UBO block a recorded draw still references). Skip the write: m_CurrentByteOffset keeps the
+        // last valid slot, so the bound descriptor reads prior (valid) data rather than torn bytes.
+        if (m_RingCursor >= m_RingDepth)
         {
-            OPAAX_CORE_ERROR("VulkanUniformBuffer: exceeded {} UBO writes this frame — wrapping.",
-                             OPAAX_VULKAN_FRAME_RING);
-            m_RingCursor = 0;
+            OPAAX_CORE_ERROR("VulkanUniformBuffer: frame exceeded {} UBO ring writes — skipping "
+                             "(raise render.vulkanFrameRing).", m_RingDepth);
+            OPAAX_CORE_ASSERT(false)
+            return;
         }
 
         m_CurrentByteOffset = m_Aligned * m_RingCursor;

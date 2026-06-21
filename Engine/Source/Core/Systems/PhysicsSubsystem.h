@@ -137,6 +137,17 @@ namespace Opaax
         // body cannot emit phantom contacts/overlaps this step.
         void ReconcileDeadBodies(World& InWorld);
 
+        // --- Movers (folded in from the former MoverSubsystem) --------------------------------------
+        // Build one KINEMATIC capsule body per MoverComponent entity, keyed by entity. Separate from the
+        // collider-body map: movers are driven explicitly (kinematic), never synced-from-physics nor
+        // bounds-killed, so they stay out of m_Bodies and its reconcile/sync/bounds walks.
+        void BuildMoverBodies(World& InWorld);
+        // Destroy every mover body and clear the map.
+        void ClearMoverBodies();
+        // Advance each MoverComponent through its active IMoverMode and drive its kinematic body's target.
+        // Runs in FixedUpdate BEFORE Step so the solver applies the new targets the same step.
+        void TickMovers(World& InWorld, double FixedDeltaTime);
+
         // =============================================================================
         // Members
         // =============================================================================
@@ -187,6 +198,12 @@ namespace Opaax
         // Same scratch contract for ReconcileDeadBodies — bits whose entity died since the last
         // step, collected during the walk and removed after it.
         TDynArray<Uint32>    m_DeadBodyVictims;
+
+        // --- Movers (folded in) --- one kinematic body per MoverComponent entity (the mover's physical
+        // presence), keyed by entity bits; built at play-begin, driven in TickMovers, cleared at play-end.
+        UnorderedMap<Uint32, BodyHandle> m_MoverBodies;
+        // Mode ids already warned about as unknown — warn once, not per entity per step.
+        UnorderedSet<Uint32>             m_WarnedUnknownModes;
     };
 
 } // namespace Opaax

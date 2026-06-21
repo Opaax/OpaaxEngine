@@ -7,6 +7,9 @@
 
 #include "Renderer/Renderer2DSortKey.h"
 
+#include <algorithm>
+#include <vector>
+
 using namespace Opaax;
 
 TEST_CASE("MakeSortKey: texture slot occupies the low 8 bits")
@@ -67,3 +70,30 @@ TEST_CASE("MakeSortKey: matches the documented bit layout exactly")
 static_assert(MakeSortKey(ERenderLayer::Default, 0, 0u)
                   == ((static_cast<Uint64>(1) << 32) | (static_cast<Uint64>(32768) << 8)),
               "MakeSortKey must be a constant expression");
+
+// The frame-global emit (Renderer2D::EmitFrame) std::stable_sorts command indices by sort key. This
+// pins the property that makes the reshape correct: equal keys (same Layer + OrderInLayer, slot field
+// 0) keep SUBMISSION order, so same-band overlapping sprites draw in the order they were issued.
+TEST_CASE("Frame-global stable sort: equal keys keep submission order")
+{
+    struct Cmd { Uint64 Key; int Submission; };
+    const std::vector<Cmd> lCmds = {
+        { MakeSortKey(ERenderLayer::Default,    5, 0u), 0 },
+        { MakeSortKey(ERenderLayer::Background, 0, 0u), 1 },  // lowest layer -> sorts first
+        { MakeSortKey(ERenderLayer::Default,    5, 0u), 2 },  // equal key to submission 0
+        { MakeSortKey(ERenderLayer::Default,    5, 0u), 3 },  // equal key to submission 0
+        { MakeSortKey(ERenderLayer::UI,         0, 0u), 4 },  // highest layer -> sorts last
+    };
+
+    std::vector<Uint32> lIdx(lCmds.size());
+    for (Uint32 i = 0; i < lIdx.size(); ++i) { lIdx[i] = i; }
+
+    std::stable_sort(lIdx.begin(), lIdx.end(),
+        [&](Uint32 InA, Uint32 InB) { return lCmds[InA].Key < lCmds[InB].Key; });
+
+    CHECK(lCmds[lIdx[0]].Submission == 1);  // Background
+    CHECK(lCmds[lIdx[1]].Submission == 0);  // first Default,5 (submission order preserved)
+    CHECK(lCmds[lIdx[2]].Submission == 2);
+    CHECK(lCmds[lIdx[3]].Submission == 3);
+    CHECK(lCmds[lIdx[4]].Submission == 4);  // UI
+}

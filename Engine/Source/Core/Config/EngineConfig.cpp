@@ -19,6 +19,8 @@ namespace Opaax
     OpaaxString EngineConfig::s_LogLevel              = OpaaxString("trace");
     OpaaxString EngineConfig::s_RenderBackend         = OpaaxString("OpenGL");
     bool        EngineConfig::s_RenderInterpolation   = true;
+    bool        EngineConfig::s_RenderStats           = false;
+    Uint32      EngineConfig::s_VulkanFrameRing       = 64;
     OpaaxString EngineConfig::s_PhysicsBackend        = OpaaxString("Box2D");
     bool        EngineConfig::s_PhysicsWorldBoundsEnabled  = false;
     Vector2F    EngineConfig::s_PhysicsWorldBoundsMin      = { -100000.f, -100000.f };
@@ -53,8 +55,10 @@ namespace Opaax
             };
             lRoot["log"]    = { { "level",   s_LogLevel.CStr()      } };
             lRoot["render"]  = {
-                { "backend",       s_RenderBackend.CStr() },
-                { "interpolation", s_RenderInterpolation   }
+                { "backend",        s_RenderBackend.CStr() },
+                { "interpolation",  s_RenderInterpolation  },
+                { "stats",          s_RenderStats          },
+                { "vulkanFrameRing", s_VulkanFrameRing     }
             };
             lRoot["physics"] = {
                 { "backend", s_PhysicsBackend.CStr() },
@@ -157,6 +161,14 @@ namespace Opaax
             {
                 s_RenderInterpolation = lR["interpolation"].get<bool>();
             }
+            if (lR.contains("stats") && lR["stats"].is_boolean())
+            {
+                s_RenderStats = lR["stats"].get<bool>();
+            }
+            if (lR.contains("vulkanFrameRing") && lR["vulkanFrameRing"].is_number_unsigned())
+            {
+                s_VulkanFrameRing = lR["vulkanFrameRing"].get<Uint32>();
+            }
         }
 
         if (lRoot.contains("physics") && lRoot["physics"].is_object())
@@ -235,8 +247,10 @@ namespace Opaax
             };
             lRoot["log"]    = { { "level",   s_LogLevel.CStr()      } };
             lRoot["render"]  = {
-                { "backend",       s_RenderBackend.CStr() },
-                { "interpolation", s_RenderInterpolation   }
+                { "backend",        s_RenderBackend.CStr() },
+                { "interpolation",  s_RenderInterpolation  },
+                { "stats",          s_RenderStats          },
+                { "vulkanFrameRing", s_VulkanFrameRing     }
             };
             lRoot["physics"] = {
                 { "backend", s_PhysicsBackend.CStr() },

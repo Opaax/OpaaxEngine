@@ -22,7 +22,7 @@ namespace Opaax
      *
      * Everything a mover mode needs for one entity's step: the physics world to sweep against,
      * the entity's MoverComponent (intent in, sync-state out), its Transform (position out), and
-     * the fixed delta. The MoverSubsystem builds this per entity and hands it to the active mode.
+     * the fixed delta. PhysicsSubsystem's mover tick builds this per entity and hands it to the active mode.
      */
     struct MoverTickContext
     {
@@ -50,7 +50,7 @@ namespace Opaax
      * (its policy: gravity/acceleration/jump/etc.), reads intent + sync-state from the component,
      * calls World.MoveCapsule for the geometric solve, and writes the result back. Modes are
      * STATELESS (all per-entity state lives on the component), so one instance serves every entity
-     * running that mode. Register modes by id on the MoverSubsystem; new movement = a new mode,
+     * running that mode. Register modes by id in the MoverModeRegistry; new movement = a new mode,
      * never a component subclass.
      */
     class OPAAX_API IMoverMode
@@ -65,7 +65,7 @@ namespace Opaax
         // Advance one entity's movement by ctx.DeltaTime (reads ctx.Params, downcast to its type).
         virtual void Tick(MoverTickContext& InContext) = 0;
 
-        // Transition lifecycle, fired by the MoverSubsystem when an entity switches modes
+        // Transition lifecycle, fired by PhysicsSubsystem's mover tick when an entity switches modes
         // (MoverComponent::QueueNextMode). The context carries DeltaTime = 0. Default no-op —
         // a mode overrides these to (re)initialise or clean up per-entity sync-state on the
         // component (e.g. zero residual velocity on enter). Stateless contract still holds:
