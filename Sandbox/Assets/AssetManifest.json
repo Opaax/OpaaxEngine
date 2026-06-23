@@ -1,0 +1,9 @@
+{
+    "assets": [
+        {
+            "id": "AssetManifest",
+            "path": "Sandbox/Assets/AssetManifest.json",
+            "type": "Data"
+        }
+    ]
+}

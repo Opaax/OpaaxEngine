@@ -35,6 +35,19 @@ namespace Opaax
         // Delete move constructor and move assignment operator
         CoreEngineApp(CoreEngineApp&&) = delete;
         CoreEngineApp& operator=(CoreEngineApp&&) = delete;
+        
+        // =============================================================================
+        // Functions
+        // =============================================================================
+    private:
+        void InitializeApplication();
+        
+        void CreateApplicationWindow();
+        void CreateApplicationRenderer();
+        
+        // =============================================================================
+        // OLD
+        // =============================================================================
 
         // =============================================================================
         // Functions

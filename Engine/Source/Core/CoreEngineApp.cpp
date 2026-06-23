@@ -102,25 +102,40 @@ namespace
 
 CoreEngineApp::CoreEngineApp(int InArgc, char** InArgv)
 {
+    //  Platform Init
+    // ↓
+    //  Path Discovery
+    // ↓
+    //  Logger Init
+    // ↓
+    //  ConfigSystem Init
+    // ↓
+    //  JobSystem Init
+    // ↓
+    //  Project Discovery
+    // ↓
+    //  Load Configs
+    // ↓
+    //  Create Main Window
+    // ↓
+    //  Engine::Initialize()
     //The only system to be created at very first
     OpaaxLog::Init();
     OpaaxPath::Init();
+    
+    
+    OPAAX_CORE_TRACE("CoreEngineApp ========> Construction Start");
+    OpaaxString lProjectPath = ResolveProjectPath(InArgc, InArgv);
+    OPAAX_CORE_TRACE("CoreEngineApp ========> {}", lProjectPath);
 
+    // engine.config.json lives at the workspace root; the project file is per-app and
+    // resolved by ResolveProjectPath.
     EngineConfig::Load(OpaaxPath::ToAbsolute("engine.config.json"));
     ProjectConfig::Load(ResolveProjectPath(InArgc, InArgv));
 
-    OPAAX_CORE_TRACE("CoreEngineApp created");
+    OPAAX_CORE_TRACE("CoreEngineApp ========> Constructed");
 
-    const WindowProps lProps(
-        EngineConfig::WindowTitle(),
-        EngineConfig::WindowWidth(),
-        EngineConfig::WindowHeight());
-
-    m_Window = UniquePtr<Window>(Opaax::Window::Create(lProps));
-    m_Window->SetEventCallback([this](OpaaxEvent& Event) { DispatchEvent(Event); });
-
-    m_DefaultRenderTarget   = MakeUnique<DefaultRenderTarget>(m_Window->GetWidth(), m_Window->GetHeight());
-    m_RenderTarget          = m_DefaultRenderTarget.get();
+    InitializeApplication();
 }
 
 // Out-of-line (defaulted) so the UniquePtr members' deleters see complete types here.
@@ -170,6 +185,35 @@ void CoreEngineApp::DispatchEvent(OpaaxEvent& Event)
     // PIE-gated: play-only game subsystems must not react to input in edit mode
     // (mirrors UpdateAll), so e.g. gameplay scroll-zoom doesn't fire over the editor.
     m_GameSubsystemMgr.DispatchEventAll(Event, IsPlayActive());
+}
+
+void CoreEngineApp::InitializeApplication()
+{
+    OPAAX_CORE_TRACE("CoreEngineApp ========> InitializeApplication");
+    
+    CreateApplicationWindow();
+    CreateApplicationRenderer();
+    //Init app stuff
+    //InitEngine
+}
+
+void CoreEngineApp::CreateApplicationWindow()
+{
+    const WindowProps lProps(
+        EngineConfig::WindowTitle() + "-" + ProjectConfig::Name(),
+        EngineConfig::WindowWidth(),
+        EngineConfig::WindowHeight());
+
+    m_Window = UniquePtr<Window>(Opaax::Window::Create(lProps));
+    m_Window->SetEventCallback([this](OpaaxEvent& Event) { DispatchEvent(Event); });
+}
+
+void CoreEngineApp::CreateApplicationRenderer()
+{
+    OPAAX_ASSERT(m_Window != nullptr);
+    
+    m_DefaultRenderTarget   = MakeUnique<DefaultRenderTarget>(m_Window->GetWidth(), m_Window->GetHeight());
+    m_RenderTarget          = m_DefaultRenderTarget.get();
 }
 
 bool CoreEngineApp::OnWindowClose(WindowCloseEvent& Event)

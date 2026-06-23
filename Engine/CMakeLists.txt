@@ -300,12 +300,13 @@ target_compile_definitions(OpaaxEngine PRIVATE ENGINE_EXPORTS)
 # Editor
 if(OPAAX_EDITOR_SUPPORT)
     target_compile_definitions(OpaaxEngine PUBLIC OPAAX_WITH_EDITOR=1)
-    # Project root — used by the editor so file dialogs default to source-tree paths
-    # instead of the build dir. Editor-only on purpose: release binaries must not bake
-    # in absolute build-host paths.
-    target_compile_definitions(OpaaxEngine PUBLIC OPAAX_PROJECT_ROOT="${CMAKE_SOURCE_DIR}")
+    # Workspace root — the source tree holding Engine/ + every game project. OpaaxPath derives
+    # the engine root (<workspace>/Engine) and the per-app project root (<workspace>/<AppName>)
+    # from it. Editor-only on purpose: release binaries must not bake in absolute build-host
+    # paths (they resolve to the exe dir, whose deploy mirrors the workspace layout).
+    target_compile_definitions(OpaaxEngine PUBLIC OPAAX_WORKSPACE_DIR="${CMAKE_SOURCE_DIR}")
     message(STATUS "[Opaax] Editor support: ON")
-    message(STATUS "[Opaax] Project root: ${CMAKE_SOURCE_DIR}")
+    message(STATUS "[Opaax] Workspace root: ${CMAKE_SOURCE_DIR}")
 else()
     target_compile_definitions(OpaaxEngine PUBLIC OPAAX_WITH_EDITOR=0)
     message(STATUS "[Opaax] Editor support: OFF (Release build)")

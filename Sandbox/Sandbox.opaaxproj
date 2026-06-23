@@ -1,0 +1,8 @@
+{
+    "version": 1,
+    "name": "Sandbox",
+    "assetsRoot": "Sandbox/Assets",
+    "assetsManifest": "Sandbox/Assets/AssetManifest.json",
+    "defaultScene": "",
+    "editorDefaultScenePath": "Sandbox/Assets/Scenes"
+}
