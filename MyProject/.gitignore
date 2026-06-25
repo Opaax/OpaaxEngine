@@ -1,0 +1,9 @@
+build/
+*.o
+*.exe
+*.dll
+*.lib
+.vs/
+.vscode/
+*.user
+

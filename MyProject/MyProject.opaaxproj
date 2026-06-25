@@ -1,0 +1,8 @@
+{
+    "version": "0.0.1",
+    "name": "MyProject",
+    "assetsRoot": "MyProject/Assets",
+    "assetsManifest": "MyProject/Assets/AssetManifest.json",
+    "rootPath": "W:/Projet_Perso/Engines/OpaaxEngine/MyProject",
+    "sourcePath": "MyProject/Source"
+}
