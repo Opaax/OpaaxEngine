@@ -1,5 +1,7 @@
 #include "ILogger.h"
 
+#include <iostream>
+
 #include "Core/Log/OpaaxLog.h"
 
 namespace Opaax

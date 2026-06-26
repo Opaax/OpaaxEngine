@@ -22,8 +22,8 @@ endif()
 
 # Subdirectories
 add_subdirectory(Engine)
-add_subdirectory(Game)
-add_subdirectory(SimpleShmup)
-add_subdirectory(PhysicsDemo)
+#add_subdirectory(Game)
+#add_subdirectory(SimpleShmup)
+#add_subdirectory(PhysicsDemo)
 add_subdirectory(Sandbox)
-add_subdirectory(MyProject)
+#add_subdirectory(MyProject)

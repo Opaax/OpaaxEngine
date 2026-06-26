@@ -4,12 +4,15 @@
 #include "Core/Application/Services/IPlatform.h"
 #include "Core/Application/Services/IPaths.h"
 #include "Core/Application/Services/ILogger.h"
+#include "Core/Application/Services/IProjectManager.h"
 
 #ifdef OPAAX_PLATFORM_WINDOWS
 #include "Core/Application/Services/WindowsPlatform.h"
 #endif
 
 using namespace Opaax;
+
+AppServiceLocator OpaaxApplication::m_Services = AppServiceLocator();
 
 // =============================================================================
 // CTORS - DTORS
@@ -21,8 +24,8 @@ OpaaxApplication::OpaaxApplication(int InArgc, char** InArgv)
 {
     OpaaxLog::Init();
 
-    Bootstrap();
-    InitializeApplication();
+    // Bootstrap();
+    // InitializeApplication();
 }
 
 OpaaxApplication::~OpaaxApplication() {}
@@ -37,17 +40,19 @@ void OpaaxApplication::Bootstrap()
 #ifdef OPAAX_PLATFORM_WINDOWS
     m_Services.Provide<IPlatform, WindowsPlatform>();
 #endif
-    // Opaax:: qualifies the TYPE — the same-named accessors (Logger()/Paths()) shadow it here.
+    
     m_Services.Provide<ILogger, Opaax::Logger>();
-    m_Services.Provide<IPaths, Opaax::Paths>(Platform(), m_Argc, m_Argv);
+    IPaths& lPath = m_Services.Provide<IPaths, Opaax::Paths>(Platform(), m_Argc, m_Argv);
+    m_Services.Provide<IProjectManager, Opaax::ProjectManager>(lPath);
 
     const OpaaxString lProjectRoot = Paths().ProjectRoot();
     OPAAX_CORE_INFO("OpaaxApplication ========> Booted. Project root: {0}", lProjectRoot.CStr());
 }
 
-IPlatform& OpaaxApplication::Platform() { return m_Services.Get<IPlatform>(); }
-IPaths&    OpaaxApplication::Paths()    { return m_Services.Get<IPaths>(); }
-ILogger&   OpaaxApplication::Logger()   { return m_Services.Get<ILogger>(); }
+IPlatform&          OpaaxApplication::Platform()        {    return m_Services.Get<IPlatform>();        }
+IPaths&             OpaaxApplication::Paths()           {    return m_Services.Get<IPaths>();           }
+ILogger&            OpaaxApplication::Logger()          {    return m_Services.Get<ILogger>();          }
+IProjectManager&    OpaaxApplication::ProjectManager()  {    return m_Services.Get<IProjectManager>();  }
 
 // =============================================================================
 // Initialization
@@ -56,6 +61,8 @@ ILogger&   OpaaxApplication::Logger()   { return m_Services.Get<ILogger>(); }
 void OpaaxApplication::InitializeApplication()
 {
     OPAAX_CORE_TRACE("Initializing Opaax Application");
+    
+    OnInitializeApplication();
 }
 
 void OpaaxApplication::CreateApplicationWindow()
@@ -66,4 +73,9 @@ void OpaaxApplication::CreateApplicationWindow()
 void OpaaxApplication::CreateApplicationRenderer()
 {
 
+}
+
+void OpaaxApplication::OnInitializeApplication()
+{
+    OPAAX_CORE_TRACE("OnInitializeApplication Not override in child app class");
 }

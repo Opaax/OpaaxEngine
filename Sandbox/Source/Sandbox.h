@@ -6,4 +6,7 @@ class Sandbox : public Opaax::OpaaxApplication
 {
 public:
     Sandbox(int InArgc, char** InArgv);
+    
+protected:
+    void OnInitializeApplication() override;
 };

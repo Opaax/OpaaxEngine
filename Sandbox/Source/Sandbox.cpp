@@ -1,4 +1,6 @@
 ﻿#include <Sandbox.h>
+
+#include "Core/Application/Services/ILogger.h"
 #include "Core/Log/OpaaxLog.h"
 
 Sandbox::Sandbox(int InArgc, char** InArgv) : Opaax::OpaaxApplication(InArgc, InArgv)
@@ -6,4 +8,9 @@ Sandbox::Sandbox(int InArgc, char** InArgv) : Opaax::OpaaxApplication(InArgc, In
     OPAAX_TRACE("-----------------------------------------------------");
     OPAAX_TRACE("Opaax Application - Sandbox");
     OPAAX_TRACE("-----------------------------------------------------");
+}
+
+void Sandbox::OnInitializeApplication()
+{
+    GetAppService<Opaax::ILogger>().Critical(Opaax::OpaaxString("Call from logger service"));
 }

@@ -6,6 +6,7 @@
 
 namespace Opaax
 {
+    class IProjectManager;
     class IPlatform;
     class IPaths;
     class ILogger;
@@ -38,28 +39,37 @@ namespace Opaax
         // Functions
         // =============================================================================
     private:
+        void CreateApplicationWindow();
+        void CreateApplicationRenderer();
+        
+    protected:
+        virtual void OnInitializeApplication();
+        
+    public:
         /**
          * Provide the app-level services into the locator, in dependency order.
          */
         void Bootstrap();
-
+        
         /**
          * Initialize the app
          */
         void InitializeApplication();
-        void CreateApplicationWindow();
-        void CreateApplicationRenderer();
-
+        
         // =============================================================================
         // Get - Set
         // =============================================================================
     public:
-        AppServiceLocator& Services() noexcept { return m_Services; }
+        static AppServiceLocator& Services() noexcept { return m_Services; }
+        
+        template<typename T>
+        static T& GetAppService(){ return Services().Get<T>(); }
 
         // Convenience accessors — never null (the locator returns the null object).
         IPlatform& Platform();
         IPaths&    Paths();
         ILogger&   Logger();
+        IProjectManager& ProjectManager();
 
         // =============================================================================
         // Members
@@ -68,6 +78,6 @@ namespace Opaax
         int    m_Argc = 0;
         char** m_Argv = nullptr;
 
-        AppServiceLocator m_Services;
+        static AppServiceLocator m_Services;
     };
 }

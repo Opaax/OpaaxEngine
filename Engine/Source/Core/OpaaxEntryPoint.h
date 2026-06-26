@@ -9,6 +9,8 @@ extern Opaax::OpaaxApplication* CreateApplication(int InArgc, char** InArgv);
 int main(int argc, char** argv)
 {
     auto lApp = Opaax::UniquePtr<Opaax::OpaaxApplication>(CreateApplication(argc, argv));
+    lApp->Bootstrap();
+    lApp->InitializeApplication();
     //lApp->Run();
     return 0;
 }

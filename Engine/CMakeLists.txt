@@ -1,5 +1,5 @@
 # Src Engine core
-file(GLOB_RECURSE ENGINE_CORE_SOURCES
+file(GLOB_RECURSE ENGINE_CORE_SOURCES CONFIGURE_DEPENDS
     "Source/Core/Application/*.cpp"
     "Source/Core/Application/*.h"
     "Source/Core/Application/*.hpp"
