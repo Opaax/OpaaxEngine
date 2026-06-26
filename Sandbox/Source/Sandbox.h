@@ -1,8 +1,8 @@
 ﻿#pragma once
 
-#include "Core/CoreEngineApp.h"
+#include "Core/Application/OpaaxApplication.h"
 
-class Sandbox : public Opaax::CoreEngineApp
+class Sandbox : public Opaax::OpaaxApplication
 {
 public:
     Sandbox(int InArgc, char** InArgv);

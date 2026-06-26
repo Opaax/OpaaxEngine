@@ -17,6 +17,9 @@ set(OPAAX_TEST_SOURCES
     Renderer/SortKeyTests.cpp
     Renderer/FontKerningTests.cpp
     Core/StringTests.cpp
+    Core/Application/AppServiceLocatorTests.cpp
+    Core/Application/PathsTests.cpp
+    Core/Application/OpaaxApplicationBootTests.cpp
     Physics/CollisionProfileTests.cpp
     Assets/AssetIdResolveTests.cpp
     ECS/MoverComponentTests.cpp

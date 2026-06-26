@@ -1,5 +1,8 @@
 # Src Engine core
 file(GLOB_RECURSE ENGINE_CORE_SOURCES
+    "Source/Core/Application/*.cpp"
+    "Source/Core/Application/*.h"
+    "Source/Core/Application/*.hpp"
     "Source/Core/*.cpp"
     "Source/Core/*.h"
     "Source/Core/*.hpp"

@@ -9,6 +9,10 @@ namespace Opaax {
 
     void OpaaxLog::Init()
     {
+        // Idempotent — a second Init (e.g. the unit-test harness + an app ctor) must
+        // not re-register the loggers; spdlog::register_logger throws on a duplicate name.
+        if (s_CoreLogger != nullptr) { return; }
+
         // Config Pattern
         // [timestamp] [logger_name] [level] message
         // Example : [2024-11-07 15:30:45.123] [OPAAX] [info] Application started

@@ -86,8 +86,15 @@ namespace Opaax
 
     void JobSubsystem::ParallelFor(Uint32 InCount, const TFunction<void(Uint32)>& InBody, Uint32 InGrainSize)
     {
-        if (InCount == 0) { return; }
-        if (InGrainSize == 0) { InGrainSize = 1; }
+        if (InCount == 0)
+        {
+            return;
+        }
+        
+        if (InGrainSize == 0)
+        {
+            InGrainSize = 1;
+        }
 
         TDynArray<JobHandle> lHandles;
         lHandles.reserve(InCount / InGrainSize + 1);
@@ -115,7 +122,10 @@ namespace Opaax
             lStart = lEnd;
         }
 
-        for (const JobHandle& lHandle : lHandles) { Wait(lHandle); }
+        for (const JobHandle& lHandle : lHandles)
+        {
+            Wait(lHandle);
+        }
     }
 
     void JobSubsystem::Wait(const JobHandle& InHandle)
@@ -124,8 +134,7 @@ namespace Opaax
         if (!lState) { return; }
 
         // NOTE: do not call from a worker thread — there is no work-stealing, so a
-        // worker blocking here while all workers are busy would deadlock (OD-2: v1
-        // has no help-execute; revisit if a job ever waits on a sub-job).
+        // worker blocking here while all workers are busy would deadlock 
         UniqueLock<Mutex> lLock(m_DoneMutex);
         m_DoneCV.wait(lLock, [&lState] { return lState->bDone.load(std::memory_order_acquire); });
     }
@@ -147,19 +156,28 @@ namespace Opaax
                 });
 
                 // Drain remaining work even while stopping; only exit once empty.
-                if (m_Queue.empty()) { return; }
+                if (m_Queue.empty())
+                {
+                    return;
+                }
 
                 lJob = Move(m_Queue.front());
                 m_Queue.pop();
             }
 
-            if (lJob.Work) { lJob.Work(); }
+            if (lJob.Work)
+            {
+                lJob.Work();
+            }
 
             // Flip the done-flag under m_DoneMutex so a concurrent Wait can't miss
             // the notify (store-then-notify with the waiter holding the same lock).
             {
                 LockGuard<Mutex> lLock(m_DoneMutex);
-                if (lJob.State) { lJob.State->bDone.store(true, std::memory_order_release); }
+                if (lJob.State)
+                {
+                    lJob.State->bDone.store(true, std::memory_order_release);
+                }
             }
             m_DoneCV.notify_all();
 
@@ -176,14 +194,20 @@ namespace Opaax
         TDynArray<TFunction<void()>> lLocal;
         {
             LockGuard<Mutex> lLock(m_CompletedMutex);
-            if (m_Completed.empty()) { return; }
+            if (m_Completed.empty())
+            {
+                return;
+            }
             lLocal.swap(m_Completed);
         }
 
         // Invoke outside the lock so a callback may safely Submit more work.
         for (TFunction<void()>& lCallback : lLocal)
         {
-            if (lCallback) { lCallback(); }
+            if (lCallback)
+            {
+                lCallback();
+            }
         }
     }
 

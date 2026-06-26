@@ -100,6 +100,10 @@ namespace
     }
 }
 
+// =============================================================================
+// CTORS - DTORS
+// =============================================================================
+
 CoreEngineApp::CoreEngineApp(int InArgc, char** InArgv)
 {
     //  Platform Init
@@ -138,8 +142,44 @@ CoreEngineApp::CoreEngineApp(int InArgc, char** InArgv)
     InitializeApplication();
 }
 
-// Out-of-line (defaulted) so the UniquePtr members' deleters see complete types here.
 CoreEngineApp::~CoreEngineApp() = default;
+
+// =============================================================================
+// Initialization
+// =============================================================================
+
+void CoreEngineApp::InitializeApplication()
+{
+    OPAAX_CORE_TRACE("CoreEngineApp ========> InitializeApplication");
+    
+    CreateApplicationWindow();
+    CreateApplicationRenderer();
+    //Init app stuff
+    //InitEngine
+}
+
+void CoreEngineApp::CreateApplicationWindow()
+{
+    const WindowProps lProps(
+        EngineConfig::WindowTitle() + "-" + ProjectConfig::Name(),
+        EngineConfig::WindowWidth(),
+        EngineConfig::WindowHeight());
+
+    m_Window = UniquePtr<Window>(Opaax::Window::Create(lProps));
+    m_Window->SetEventCallback([this](OpaaxEvent& Event) { DispatchEvent(Event); });
+}
+
+void CoreEngineApp::CreateApplicationRenderer()
+{
+    OPAAX_ASSERT(m_Window != nullptr);
+    
+    m_DefaultRenderTarget   = MakeUnique<DefaultRenderTarget>(m_Window->GetWidth(), m_Window->GetHeight());
+    m_RenderTarget          = m_DefaultRenderTarget.get();
+}
+
+// =============================================================================
+// Old stuff
+// =============================================================================
 
 bool CoreEngineApp::IsPlayActive() const
 {
@@ -185,35 +225,6 @@ void CoreEngineApp::DispatchEvent(OpaaxEvent& Event)
     // PIE-gated: play-only game subsystems must not react to input in edit mode
     // (mirrors UpdateAll), so e.g. gameplay scroll-zoom doesn't fire over the editor.
     m_GameSubsystemMgr.DispatchEventAll(Event, IsPlayActive());
-}
-
-void CoreEngineApp::InitializeApplication()
-{
-    OPAAX_CORE_TRACE("CoreEngineApp ========> InitializeApplication");
-    
-    CreateApplicationWindow();
-    CreateApplicationRenderer();
-    //Init app stuff
-    //InitEngine
-}
-
-void CoreEngineApp::CreateApplicationWindow()
-{
-    const WindowProps lProps(
-        EngineConfig::WindowTitle() + "-" + ProjectConfig::Name(),
-        EngineConfig::WindowWidth(),
-        EngineConfig::WindowHeight());
-
-    m_Window = UniquePtr<Window>(Opaax::Window::Create(lProps));
-    m_Window->SetEventCallback([this](OpaaxEvent& Event) { DispatchEvent(Event); });
-}
-
-void CoreEngineApp::CreateApplicationRenderer()
-{
-    OPAAX_ASSERT(m_Window != nullptr);
-    
-    m_DefaultRenderTarget   = MakeUnique<DefaultRenderTarget>(m_Window->GetWidth(), m_Window->GetHeight());
-    m_RenderTarget          = m_DefaultRenderTarget.get();
 }
 
 bool CoreEngineApp::OnWindowClose(WindowCloseEvent& Event)
