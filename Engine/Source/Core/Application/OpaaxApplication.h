@@ -8,6 +8,7 @@ namespace Opaax
 {
     class IPlatform;
     class IPaths;
+    class ILogger;
 
     // =============================================================================
     // OpaaxApplication — base application host. Owns the AppServiceLocator and boots
@@ -58,6 +59,7 @@ namespace Opaax
         // Convenience accessors — never null (the locator returns the null object).
         IPlatform& Platform();
         IPaths&    Paths();
+        ILogger&   Logger();
 
         // =============================================================================
         // Members

@@ -7,6 +7,7 @@
 #include "Core/Application/OpaaxApplication.h"
 #include "Core/Application/Services/IPlatform.h"
 #include "Core/Application/Services/IPaths.h"
+#include "Core/Application/Services/ILogger.h"
 
 using namespace Opaax;
 
@@ -24,4 +25,6 @@ TEST_CASE("OpaaxApplication: boot provides Platform + Paths through the locator"
     CHECK_FALSE(lApp.Paths().IsNull());
     CHECK_FALSE(lApp.Paths().ProjectRoot().IsEmpty());
     CHECK_FALSE(lApp.Paths().EngineRoot().IsEmpty());
+
+    CHECK_FALSE(lApp.Logger().IsNull());
 }
