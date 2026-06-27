@@ -3,6 +3,8 @@
 #include <iostream>
 
 #include "Core/Log/OpaaxLog.h"
+#include "spdlog/sinks/basic_file_sink.h"
+#include "spdlog/sinks/stdout_color_sinks.h"
 
 namespace Opaax
 {
@@ -29,6 +31,8 @@ namespace Opaax
         public:
             bool IsNull() const noexcept override { return true; }
             void Log(ELogLevel, const OpaaxString&) override {}
+            void Log(ELogLevel, const char* Category, const OpaaxString&) override {}
+            
         };
     }
 
@@ -44,12 +48,46 @@ namespace Opaax
         return s_Null;
     }
 
+    Logger::Logger(Opaax::IPaths& InPaths)
+    {
+        // Config Pattern
+        // [timestamp] [logger_name] [level] message
+        // Example : [2024-11-07 15:30:45.123] [OPAAX] [info] Application started
+        spdlog::set_pattern("%^[%T] [%n] [%l] %v%$");
+        
+        // Colors
+        auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+        console_sink->set_level(spdlog::level::trace);
+
+        // Log to file (op engine)
+        auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("OpaaxEngine.log", true);
+        file_sink->set_level(spdlog::level::trace);
+
+        // OP Logger
+        std::vector<spdlog::sink_ptr> core_sinks{ console_sink, file_sink };
+        AppLogger = std::make_shared<spdlog::logger>("OPAAX_Engine", core_sinks.begin(), core_sinks.end());
+        AppLogger->set_level(spdlog::level::trace);
+        AppLogger->flush_on(spdlog::level::trace);
+        spdlog::register_logger(AppLogger);
+    }
+
     void Logger::Log(ELogLevel InLevel, const OpaaxString& InMessage)
     {
-        // "{}" + the message as an ARG — user text must never be parsed as a fmt string.
-        if (const auto& lCore = OpaaxLog::GetCoreLogger())
+        if (AppLogger != nullptr)
         {
-            lCore->log(ToSpdLevel(InLevel), "{}", InMessage.CStr());
+            AppLogger->log(ToSpdLevel(InLevel), "{}", InMessage.CStr());
+        }
+    }
+
+    void Logger::Log(ELogLevel InLevel, const char* Category, const OpaaxString& InMessage)
+    {
+        if (AppLogger != nullptr)
+        {
+            AppLogger->log(
+            ToSpdLevel(InLevel),
+            "[{}] {}",
+            Category,
+            InMessage.CStr());
         }
     }
 }

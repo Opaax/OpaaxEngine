@@ -6,6 +6,7 @@
 
 namespace Opaax
 {
+    class IConfigSystem;
     class IProjectManager;
     class IPlatform;
     class IPaths;
@@ -66,10 +67,11 @@ namespace Opaax
         static T& GetAppService(){ return Services().Get<T>(); }
 
         // Convenience accessors — never null (the locator returns the null object).
-        IPlatform& Platform();
-        IPaths&    Paths();
-        ILogger&   Logger();
-        IProjectManager& ProjectManager();
+        IPlatform&          Platform();
+        IPaths&             Paths();
+        ILogger&            Logger();
+        IProjectManager&    ProjectManager();
+        IConfigSystem&      ConfigSystem();
 
         // =============================================================================
         // Members

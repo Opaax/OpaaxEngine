@@ -5,9 +5,9 @@
 
 Sandbox::Sandbox(int InArgc, char** InArgv) : Opaax::OpaaxApplication(InArgc, InArgv)
 {
-    OPAAX_TRACE("-----------------------------------------------------");
-    OPAAX_TRACE("Opaax Application - Sandbox");
-    OPAAX_TRACE("-----------------------------------------------------");
+    //OPAAX_TRACE("-----------------------------------------------------");
+    //OPAAX_TRACE("Opaax Application - Sandbox");
+    //OPAAX_TRACE("-----------------------------------------------------");
 }
 
 void Sandbox::OnInitializeApplication()

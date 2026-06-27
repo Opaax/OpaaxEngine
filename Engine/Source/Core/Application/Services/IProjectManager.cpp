@@ -35,6 +35,8 @@ namespace Opaax
         };
     }
 
+    namespace KEProjCFG = Opaax_Project_Identity;
+    
     // =========================================================================
     // Pure parser — tolerant: bad JSON / missing fields => empty values.
     // =========================================================================
@@ -98,6 +100,6 @@ namespace Opaax
         const OpaaxString lFile = InPaths.ProjectFile();
         m_Identity = ParseProjectIdentity(ReadFileText(lFile));
 
-        OPAAX_CORE_INFO("ProjectManager: '{0}' (name='{1}')", lFile.CStr(), m_Identity.Name.CStr());
+        //OPAAX_CORE_INFO("ProjectManager: '{0}' (name='{1}')", lFile.CStr(), m_Identity.Name.CStr());
     }
 }

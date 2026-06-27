@@ -20,16 +20,16 @@ TEST_CASE("ParseProjectIdentity: full schema reads every field")
     CHECK(lId.Name          == "MyGame");
     CHECK(lId.Id            == "a1b2");
     CHECK(lId.EngineVersion == "0.4");
-    CHECK(lId.StartupScene  == "Scenes/Main.opaaxscene");
+    CHECK(lId.StartupLevel  == "Scenes/Main.opaaxscene");
 }
 
-TEST_CASE("ParseProjectIdentity: legacy 'defaultScene' feeds StartupScene")
+TEST_CASE("ParseProjectIdentity: legacy 'defaultScene' feeds StartupLevel")
 {
     const ProjectIdentity lId = ParseProjectIdentity(OpaaxString(
         R"({"name":"Sandbox","defaultScene":"Scenes/Boot.opaaxscene"})"));
 
     CHECK(lId.Name         == "Sandbox");
-    CHECK(lId.StartupScene == "Scenes/Boot.opaaxscene");
+    CHECK(lId.StartupLevel == "Scenes/Boot.opaaxscene");
     CHECK(lId.Id.IsEmpty());
     CHECK(lId.EngineVersion.IsEmpty());
 }
@@ -41,7 +41,7 @@ TEST_CASE("ParseProjectIdentity: missing fields default to empty")
     CHECK(lId.Name == "X");
     CHECK(lId.Id.IsEmpty());
     CHECK(lId.EngineVersion.IsEmpty());
-    CHECK(lId.StartupScene.IsEmpty());
+    CHECK(lId.StartupLevel.IsEmpty());
 }
 
 TEST_CASE("ParseProjectIdentity: malformed JSON yields an empty identity (no throw)")
@@ -49,7 +49,7 @@ TEST_CASE("ParseProjectIdentity: malformed JSON yields an empty identity (no thr
     const ProjectIdentity lId = ParseProjectIdentity(OpaaxString("{ this is not json"));
 
     CHECK(lId.Name.IsEmpty());
-    CHECK(lId.StartupScene.IsEmpty());
+    CHECK(lId.StartupLevel.IsEmpty());
 }
 
 // =============================================================================

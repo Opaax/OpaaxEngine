@@ -1,6 +1,7 @@
 #pragma once
 
 #include "IAppService.h"
+#include "IPaths.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/OpaaxString.hpp"
 
@@ -17,6 +18,16 @@ namespace Opaax
         Error,
         Critical
     };
+    
+    struct LogCategory
+    {
+        constexpr explicit LogCategory(const char* InName)
+            : Name(InName)
+        {
+        }
+
+        const char* Name;
+    };
 
     // =============================================================================
     // ILogger — locator-resolvable logging facade over the engine (core) logger.
@@ -32,9 +43,15 @@ namespace Opaax
         // =============================================================================
     public:
         OPAAX_SERVICE_TYPE(ILogger)
-
+        
+        // =============================================================================
+        // CTOR
+        // =============================================================================
+    public:
+        
         //----- extension point ------------------------------------------------
         virtual void Log(ELogLevel InLevel, const OpaaxString& InMessage) = 0;
+        virtual void Log(ELogLevel InLevel,const char* Category, const OpaaxString& InMessage) = 0;
 
         //----- convenience (inline, non-virtual) ------------------------------
         void Trace(const OpaaxString& InMessage)    { Log(ELogLevel::Trace,    InMessage); }
@@ -45,6 +62,8 @@ namespace Opaax
 
         //----- null object ----------------------------------------------------
         static ILogger& Null();
+        
+        SharedPtr<spdlog::logger> AppLogger;
     };
 
     // =============================================================================
@@ -52,10 +71,15 @@ namespace Opaax
     // =============================================================================
     class OPAAX_API Logger final : public ILogger
     {
+    public:
+        explicit Logger(Opaax::IPaths& InPaths);
         // =============================================================================
         // Functions
         // =============================================================================
     public:
         void Log(ELogLevel InLevel, const OpaaxString& InMessage) override;
+        void Log(ELogLevel InLevel,const char* Category, const OpaaxString& InMessage) override;
     };
 }
+
+#define OPAAX_LOG(Category, Level, Format, ...) ::Opaax::OpaaxApplication::GetAppService<Opaax::ILogger>().Log(Opaax::ELogLevel::Level, Category.Name, Format, __VA_ARGS__);

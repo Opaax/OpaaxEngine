@@ -17,10 +17,12 @@ set(OPAAX_TEST_SOURCES
     Renderer/SortKeyTests.cpp
     Renderer/FontKerningTests.cpp
     Core/StringTests.cpp
+    Core/Config/EngineConfigDataTests.cpp
     Core/Application/AppServiceLocatorTests.cpp
     Core/Application/PathsTests.cpp
     Core/Application/ILoggerTests.cpp
     Core/Application/IProjectManagerTests.cpp
+    Core/Application/IConfigSystemTests.cpp
     Core/Application/OpaaxApplicationBootTests.cpp
     Physics/CollisionProfileTests.cpp
     Assets/AssetIdResolveTests.cpp
