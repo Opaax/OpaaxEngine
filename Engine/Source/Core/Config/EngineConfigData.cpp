@@ -24,64 +24,100 @@ namespace Opaax
         }
         catch (const nlohmann::json::parse_error&)
         {
-            return lData; // tolerant — defaults on malformed JSON
+            return lData;
         }
 
         if (lRoot.contains(KEcfg::WINDOW_KEY) && lRoot[KEcfg::WINDOW_KEY].is_object())
         {
             const auto& lWin = lRoot[KEcfg::WINDOW_KEY];
-            if (lWin.contains(KEcfg::TITLE_KEY)  && lWin[KEcfg::TITLE_KEY].is_string())
+            if (lWin.contains(KEcfg::TITLE_KEY) && lWin[KEcfg::TITLE_KEY].is_string())
+            {
                 lData.WindowTitle = OpaaxString(lWin[KEcfg::TITLE_KEY].get<std::string>().c_str());
-            if (lWin.contains(KEcfg::WIDTH_KEY)  && lWin[KEcfg::WIDTH_KEY].is_number_unsigned())
+            }
+            if (lWin.contains(KEcfg::WIDTH_KEY) && lWin[KEcfg::WIDTH_KEY].is_number_unsigned())
+            {
                 lData.WindowWidth = lWin[KEcfg::WIDTH_KEY].get<Uint32>();
+            }
             if (lWin.contains(KEcfg::HEIGHT_KEY) && lWin[KEcfg::HEIGHT_KEY].is_number_unsigned())
+            {
                 lData.WindowHeight = lWin[KEcfg::HEIGHT_KEY].get<Uint32>();
+            }
         }
 
         if (lRoot.contains(KEcfg::ASSETS_KEY) && lRoot[KEcfg::ASSETS_KEY].is_object())
         {
             const auto& lA = lRoot[KEcfg::ASSETS_KEY];
-            if (lA.contains(KEcfg::ENGINE_ROOT_KEY)     && lA[KEcfg::ENGINE_ROOT_KEY].is_string())
+            if (lA.contains(KEcfg::ENGINE_ROOT_KEY) && lA[KEcfg::ENGINE_ROOT_KEY].is_string())
+            {
                 lData.EngineAssetsRoot = OpaaxString(lA[KEcfg::ENGINE_ROOT_KEY].get<std::string>().c_str());
+            }
+            
             if (lA.contains(KEcfg::ENGINE_MANIFEST_KEY) && lA[KEcfg::ENGINE_MANIFEST_KEY].is_string())
+            {
                 lData.EngineManifestRelPath = OpaaxString(lA[KEcfg::ENGINE_MANIFEST_KEY].get<std::string>().c_str());
+            }
         }
 
         if (lRoot.contains(KEcfg::LOG_KEY) && lRoot[KEcfg::LOG_KEY].is_object())
         {
             const auto& lLog = lRoot[KEcfg::LOG_KEY];
             if (lLog.contains(KEcfg::LEVEL_KEY) && lLog[KEcfg::LEVEL_KEY].is_string())
+            {
                 lData.LogLevel = OpaaxString(lLog[KEcfg::LEVEL_KEY].get<std::string>().c_str());
+            }
         }
 
         if (lRoot.contains(KEcfg::RENDER_KEY) && lRoot[KEcfg::RENDER_KEY].is_object())
         {
             const auto& lR = lRoot[KEcfg::RENDER_KEY];
-            if (lR.contains(KEcfg::BACKEND_KEY)       && lR[KEcfg::BACKEND_KEY].is_string())
+            if (lR.contains(KEcfg::BACKEND_KEY) && lR[KEcfg::BACKEND_KEY].is_string())
+            {
                 lData.RenderBackend = OpaaxString(lR[KEcfg::BACKEND_KEY].get<std::string>().c_str());
+            }
+            
             if (lR.contains(KEcfg::INTERPOLATION_KEY) && lR[KEcfg::INTERPOLATION_KEY].is_boolean())
+            {
                 lData.RenderInterpolation = lR[KEcfg::INTERPOLATION_KEY].get<bool>();
+            }
         }
 
         if (lRoot.contains(KEcfg::PHYSICS_KEY) && lRoot[KEcfg::PHYSICS_KEY].is_object())
         {
             const auto& lP = lRoot[KEcfg::PHYSICS_KEY];
             if (lP.contains(KEcfg::BACKEND_KEY) && lP[KEcfg::BACKEND_KEY].is_string())
+            {
                 lData.PhysicsBackend = OpaaxString(lP[KEcfg::BACKEND_KEY].get<std::string>().c_str());
+            }
 
             if (lP.contains(KEcfg::WORLD_BOUNDS_KEY) && lP[KEcfg::WORLD_BOUNDS_KEY].is_object())
             {
                 const auto& lWB = lP[KEcfg::WORLD_BOUNDS_KEY];
+                
                 if (lWB.contains(KEcfg::ENABLED_KEY) && lWB[KEcfg::ENABLED_KEY].is_boolean())
+                {
                     lData.PhysicsWorldBoundsEnabled = lWB[KEcfg::ENABLED_KEY].get<bool>();
+                }
+                
                 if (lWB.contains(KEcfg::MIN_KEY) && lWB[KEcfg::MIN_KEY].is_array() && lWB[KEcfg::MIN_KEY].size() == 2
                     && lWB[KEcfg::MIN_KEY][0].is_number() && lWB[KEcfg::MIN_KEY][1].is_number())
-                    lData.PhysicsWorldBoundsMin = { lWB[KEcfg::MIN_KEY][0].get<float>(), lWB[KEcfg::MIN_KEY][1].get<float>() };
+                {
+                    lData.PhysicsWorldBoundsMin = {
+                        lWB[KEcfg::MIN_KEY][0].get<float>(), lWB[KEcfg::MIN_KEY][1].get<float>()
+                    };
+                }
+                
                 if (lWB.contains(KEcfg::MAX_KEY) && lWB[KEcfg::MAX_KEY].is_array() && lWB[KEcfg::MAX_KEY].size() == 2
                     && lWB[KEcfg::MAX_KEY][0].is_number() && lWB[KEcfg::MAX_KEY][1].is_number())
-                    lData.PhysicsWorldBoundsMax = { lWB[KEcfg::MAX_KEY][0].get<float>(), lWB[KEcfg::MAX_KEY][1].get<float>() };
+                {
+                    lData.PhysicsWorldBoundsMax = {
+                        lWB[KEcfg::MAX_KEY][0].get<float>(), lWB[KEcfg::MAX_KEY][1].get<float>()
+                    };
+                }
+                    
                 if (lWB.contains(KEcfg::RESPONSE_KEY) && lWB[KEcfg::RESPONSE_KEY].is_string())
+                {
                     lData.PhysicsWorldBoundsResponse = OpaaxString(lWB[KEcfg::RESPONSE_KEY].get<std::string>().c_str());
+                }
             }
         }
 

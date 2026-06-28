@@ -12,8 +12,6 @@ namespace Opaax
     // =============================================================================
     namespace Opaax_Engine_Config
     {
-        inline const char* CONFIG_FILE_NAME = "engine.config.json";
-
         inline const char* VERSION_KEY      = "version";
         inline const char* WINDOW_KEY       = "window";
         inline const char* ASSETS_KEY       = "assets";
@@ -70,4 +68,16 @@ namespace Opaax
     OPAAX_API EngineConfigData ParseEngineConfig(const OpaaxString& InJsonText);
     // Serialize to pretty JSON — the template written when no config file exists.
     OPAAX_API OpaaxString      SerializeEngineConfig(const EngineConfigData& InData);
+
+    // =============================================================================
+    // Codec binding for TConfig<EngineConfigData> — forwards to the pure functions
+    // above, so the data stays POD and this header stays JSON-free. (Primary template
+    // is defined in TConfig.h; forward-declared here to keep this header standalone.)
+    // =============================================================================
+    template<class T> struct TConfigCodec;
+    template<> struct TConfigCodec<EngineConfigData>
+    {
+        static EngineConfigData FromText(const OpaaxString& InText)        { return ParseEngineConfig(InText); }
+        static OpaaxString      ToText(const EngineConfigData& InData)     { return SerializeEngineConfig(InData); }
+    };
 }

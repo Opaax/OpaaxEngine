@@ -62,6 +62,12 @@ namespace Opaax
         // Log to file (op engine)
         auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("OpaaxEngine.log", true);
         file_sink->set_level(spdlog::level::trace);
+        
+        //Already exist with old OpaaxLog::Init()
+        if ((AppLogger = spdlog::get("OPAAX_Engine")) != nullptr)
+        {
+            return;
+        }
 
         // OP Logger
         std::vector<spdlog::sink_ptr> core_sinks{ console_sink, file_sink };

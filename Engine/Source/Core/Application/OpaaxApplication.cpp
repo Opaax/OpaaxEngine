@@ -5,6 +5,8 @@
 #include "Core/Application/Services/IPaths.h"
 #include "Core/Application/Services/ILogger.h"
 #include "Core/Application/Services/IProjectManager.h"
+#include "Core/Config/ConfigTest.h"
+#include "Core/Config/Config_Engine.h"
 #include "Services/IConfigSystem.h"
 
 #ifdef OPAAX_PLATFORM_WINDOWS
@@ -44,8 +46,11 @@ void OpaaxApplication::Bootstrap()
     
     IPaths& lPath = m_Services.Provide<IPaths, Opaax::Paths>(Platform(), m_Argc, m_Argv);
     m_Services.Provide<ILogger, Opaax::Logger>(lPath);
+    IConfigSystem& lConfigSystem = m_Services.Provide<IConfigSystem, Opaax::ConfigSystem>(lPath);
     m_Services.Provide<IProjectManager, Opaax::ProjectManager>(lPath);
-    m_Services.Provide<IConfigSystem, Opaax::ConfigSystem>(lPath);
+    
+    lConfigSystem.Register<Opaax::Config_Engine>();
+    lConfigSystem.Register<Config_MyConfig>();
 
     const OpaaxString lProjectRoot = Paths().ProjectRoot();
     //OPAAX_CORE_INFO("OpaaxApplication ========> Booted. Project root: {0}", lProjectRoot.CStr());

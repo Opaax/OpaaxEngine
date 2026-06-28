@@ -82,4 +82,9 @@ namespace Opaax
 
         static AppServiceLocator m_Services;
     };
+    
+    struct MyCoinfigData
+    {
+    
+    };
 }

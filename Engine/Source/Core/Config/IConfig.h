@@ -37,7 +37,7 @@ namespace Opaax
 
 	public:
 		/**
-		 * File name within the project Configs/ dir (e.g. "engine.config.json").
+		 * File name within the project Configs/ dir (e.g. "Engine.config").
 		 * IConfigSystem resolves the absolute path as <ProjectRoot>/Configs/<FileName>.
 		 */
 		virtual const char* FileName() const = 0;
