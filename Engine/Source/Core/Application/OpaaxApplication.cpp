@@ -50,7 +50,6 @@ void OpaaxApplication::Bootstrap()
     m_Services.Provide<IProjectManager, Opaax::ProjectManager>(lPath);
     
     lConfigSystem.Register<Opaax::Config_Engine>();
-    lConfigSystem.Register<Config_MyConfig>();
 
     const OpaaxString lProjectRoot = Paths().ProjectRoot();
     //OPAAX_CORE_INFO("OpaaxApplication ========> Booted. Project root: {0}", lProjectRoot.CStr());

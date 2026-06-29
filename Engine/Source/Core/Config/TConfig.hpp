@@ -19,13 +19,16 @@
 //    You can either make static Parse / Serialize
 //    static MyConfigData Parse(const OpaaxString& InJsonText) { return MyConfigData(); }
 //    static OpaaxString Serialize(const MyConfigData& InData) { return OpaaxString(); }
+//    or use DECLARE_CONFIG_DATA(DataType) that create both func above
 //};
 // OR either inline global
-//  MyConfigData ParseEngineConfig(const OpaaxString& InJsonText) { return MyConfigData(); }
-//  OpaaxString SerializeEngineConfig(const MyConfigData& InData) { return OpaaxString(); }
+//  inline MyConfigData ParseMyConfigData(const OpaaxString& InJsonText) { return MyConfigData(); }
+//  inline OpaaxString SerializeMyConfigData(const MyConfigData& InData) { return OpaaxString(); }
 //
 // Make the codec struct that IConfig use to load/save
 //DECLARE_OPAAX_T_CONFIG_CODEC(MyConfigData::Parse, MyConfigData::Serialize, MyConfigData)
+//or
+//DECLARE_OPAAX_T_CONFIG_CODEC(ParseMyConfigData, SerializeMyConfigData, MyConfigData)
 //
 // Make the Config type it self
 //DECLARE_OPAAX_T_CONFIG(MyConfig, MyConfigData)
@@ -141,3 +144,7 @@ template<> struct Opaax::TConfigCodec<##DataType>\
 static  DataType       FromText(const OpaaxString& InText)        { return ParseFunc(InText); }\
 static OpaaxString      ToText(const DataType& InData)     { return SerializeFunc(InData); }\
 };
+
+#define DECLARE_CONFIG_DATA(DataType)\
+    static DataType Parse(const Opaax::OpaaxString& InJsonText);\
+    static Opaax::OpaaxString Serialize(const DataType& InData);
