@@ -11,6 +11,7 @@ namespace Opaax
     class IPlatform;
     class IPaths;
     class ILogger;
+    class IJobSystem;
 
     // =============================================================================
     // OpaaxApplication — base application host. Owns the AppServiceLocator and boots
@@ -72,6 +73,7 @@ namespace Opaax
         ILogger&            Logger();
         IProjectManager&    ProjectManager();
         IConfigSystem&      ConfigSystem();
+        IJobSystem&         JobSystem();
 
         // =============================================================================
         // Members

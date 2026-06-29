@@ -1,41 +1,94 @@
-#include "JobSubsystem.h"
-
-#include "Core/Log/OpaaxLog.h"
+#include "IJobSystem.h"
+#include "ILogger.h"
+#include "Core/Application/OpaaxApplication.h"
 
 namespace Opaax
 {
-    // =============================================================================
-    // Lifecycle
-    // =============================================================================
+    namespace
+    {
+        // =====================================================================
+        // NullJobSystem — degrades by running every job INLINE on the calling
+        // thread (no workers, no marshalling). Callers never branch on validity.
+        // =====================================================================
+        class NullJobSystem final : public IJobSystem
+        {
+        public:
+            bool IsNull() const noexcept override { return true; }
 
-    bool JobSubsystem::Startup()
+            JobHandle Submit(TFunction<void()> InWork) override
+            {
+                if (InWork) { InWork(); }
+                return JobHandle{}; // null handle reports complete
+            }
+
+            JobHandle Submit(TFunction<void()> InWork, TFunction<void()> InOnComplete) override
+            {
+                if (InWork)       { InWork(); }
+                if (InOnComplete) { InOnComplete(); } // no main-thread drain — run inline now
+                return JobHandle{};
+            }
+
+            void ParallelFor(Uint32 InCount, const TFunction<void(Uint32)>& InBody, Uint32 /*InGrainSize*/) override
+            {
+                for (Uint32 i = 0; i < InCount; ++i) { if (InBody) { InBody(i); } }
+            }
+
+            void   Wait(const JobHandle&) override {}
+            void   DrainCompletions()     override {}
+            Uint32 GetWorkerCount() const noexcept override { return 0; }
+        };
+    }
+
+    // =========================================================================
+    // Type tag + null object (out-of-line — one instance across the DLL/exe line).
+    // =========================================================================
+    ServiceTypeID IJobSystem::StaticTypeID() noexcept
+    {
+        static const int s_Tag = 0;
+        return reinterpret_cast<ServiceTypeID>(&s_Tag);
+    }
+
+    IJobSystem& IJobSystem::Null()
+    {
+        static NullJobSystem s_Null;
+        return s_Null;
+    }
+
+    // =========================================================================
+    // JobSystem — lifecycle
+    // =========================================================================
+    JobSystem::JobSystem(Uint32 InReservedThreads)
     {
         const Uint32 lHardware = static_cast<Uint32>(Thread::hardware_concurrency());
 
         // hardware_concurrency may report 0 when it can't detect the core count.
         const Uint32 lDetected = (lHardware > 0) ? lHardware : 1;
-        const Uint32 lWorkers  = (lDetected > m_ReservedThreads) ? (lDetected - m_ReservedThreads) : 1;
+        const Uint32 lWorkers  = (lDetected > InReservedThreads) ? (lDetected - InReservedThreads) : 1;
 
         m_Workers.reserve(lWorkers);
         for (Uint32 i = 0; i < lWorkers; ++i)
         {
             m_Workers.emplace_back([this] { WorkerLoop(); });
         }
-
-        OPAAX_CORE_INFO("JobSubsystem::Startup — {} worker(s) (hardware {}, reserved {})",
-                        GetWorkerCount(), lDetected, m_ReservedThreads);
-        return true;
+        
+        OPAAX_LOG(LogJobSystem, Info, "JobSystem — '{}' worker(s) (hardware '{}', reserved '{}')", GetWorkerCount(), lDetected, InReservedThreads);
     }
 
-    void JobSubsystem::Update(double /*DeltaTime*/)
+    JobSystem::~JobSystem()
     {
-        DrainCompleted();
+        StopAndJoin();
     }
 
-    void JobSubsystem::Shutdown()
+    void JobSystem::OnShutdown()
+    {
+        StopAndJoin();
+    }
+
+    void JobSystem::StopAndJoin()
     {
         {
             LockGuard<Mutex> lLock(m_QueueMutex);
+            if (m_Stopping.load(std::memory_order_acquire)) { return; } // already stopped — idempotent
             m_Stopping.store(true, std::memory_order_release);
         }
         m_QueueCV.notify_all();
@@ -49,24 +102,20 @@ namespace Opaax
         LockGuard<Mutex> lLock(m_CompletedMutex);
         if (!m_Completed.empty())
         {
-            OPAAX_CORE_WARN("JobSubsystem::Shutdown — {} completion callback(s) never drained",
-                            m_Completed.size());
+            OPAAX_CORE_WARN("JobSystem — {} completion callback(s) never drained", m_Completed.size());
         }
         m_Completed.clear();
-
-        OPAAX_CORE_INFO("JobSubsystem::Shutdown — workers joined");
     }
 
-    // =============================================================================
+    // =========================================================================
     // Submission
-    // =============================================================================
-
-    JobHandle JobSubsystem::Submit(TFunction<void()> InWork)
+    // =========================================================================
+    JobHandle JobSystem::Submit(TFunction<void()> InWork)
     {
         return Submit(Move(InWork), TFunction<void()>{});
     }
 
-    JobHandle JobSubsystem::Submit(TFunction<void()> InWork, TFunction<void()> InOnComplete)
+    JobHandle JobSystem::Submit(TFunction<void()> InWork, TFunction<void()> InOnComplete)
     {
         SharedPtr<JobState> lState = MakeShared<JobState>();
 
@@ -84,13 +133,13 @@ namespace Opaax
         return JobHandle{ Move(lState) };
     }
 
-    void JobSubsystem::ParallelFor(Uint32 InCount, const TFunction<void(Uint32)>& InBody, Uint32 InGrainSize)
+    void JobSystem::ParallelFor(Uint32 InCount, const TFunction<void(Uint32)>& InBody, Uint32 InGrainSize)
     {
         if (InCount == 0)
         {
             return;
         }
-        
+
         if (InGrainSize == 0)
         {
             InGrainSize = 1;
@@ -128,22 +177,21 @@ namespace Opaax
         }
     }
 
-    void JobSubsystem::Wait(const JobHandle& InHandle)
+    void JobSystem::Wait(const JobHandle& InHandle)
     {
         const SharedPtr<JobState>& lState = InHandle.GetState();
         if (!lState) { return; }
 
         // NOTE: do not call from a worker thread — there is no work-stealing, so a
-        // worker blocking here while all workers are busy would deadlock 
+        // worker blocking here while all workers are busy would deadlock.
         UniqueLock<Mutex> lLock(m_DoneMutex);
         m_DoneCV.wait(lLock, [&lState] { return lState->bDone.load(std::memory_order_acquire); });
     }
 
-    // =============================================================================
+    // =========================================================================
     // Internal
-    // =============================================================================
-
-    void JobSubsystem::WorkerLoop()
+    // =========================================================================
+    void JobSystem::WorkerLoop()
     {
         for (;;)
         {
@@ -170,8 +218,8 @@ namespace Opaax
                 lJob.Work();
             }
 
-            // Flip the done-flag under m_DoneMutex so a concurrent Wait can't miss
-            // the notify (store-then-notify with the waiter holding the same lock).
+            // Flip the done-flag under m_DoneMutex so a concurrent Wait can't miss the
+            // notify (store-then-notify with the waiter holding the same lock).
             {
                 LockGuard<Mutex> lLock(m_DoneMutex);
                 if (lJob.State)
@@ -189,7 +237,7 @@ namespace Opaax
         }
     }
 
-    void JobSubsystem::DrainCompleted()
+    void JobSystem::DrainCompletions()
     {
         TDynArray<TFunction<void()>> lLocal;
         {
@@ -210,5 +258,4 @@ namespace Opaax
             }
         }
     }
-
-} // namespace Opaax
+}

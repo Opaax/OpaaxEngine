@@ -25,7 +25,6 @@
 #include "Editor/EditorSubsystem.h"
 #include "Event/OpaaxEventDispatcher.hpp"
 #include "Input/InputSubsystem.h"
-#include "Jobs/JobSubsystem.h"
 #include "Log/OpaaxLog.h"
 #include "Container/TPolymorphicList.hpp"
 #include "Renderer/Camera/CameraSubsystem.h"
@@ -314,11 +313,6 @@ void CoreEngineApp::Initialize()
     AssetManifest::LoadFile(lEngineManifest);
     AssetManifest::LoadFile(lProjectManifest);
     
-    // JobSubsystem registered FIRST — its per-frame drain (Update) then runs at the
-    // start of every frame, and reverse-order shutdown joins its workers LAST, after
-    // every other subsystem has stopped issuing jobs.
-    m_EngineSubsystemManager.RegisterSubsystem<JobSubsystem>(this);
-
     m_EngineSubsystemManager.RegisterSubsystem<RenderSubsystem>(this);
     m_EngineSubsystemManager.RegisterSubsystem<CameraSubsystem>(this);
 

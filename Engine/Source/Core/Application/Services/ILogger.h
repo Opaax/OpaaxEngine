@@ -4,6 +4,7 @@
 #include "IPaths.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/OpaaxString.hpp"
+#include <spdlog/spdlog.h>
 
 namespace Opaax
 {
@@ -29,6 +30,26 @@ namespace Opaax
         const char* Name;
     };
 
+    namespace 
+    {
+        spdlog::level::level_enum ToSpdLevel(ELogLevel InLevel)
+        {
+            switch (InLevel)
+            {
+            case ELogLevel::Trace:    return spdlog::level::trace;
+            case ELogLevel::Info:     return spdlog::level::info;
+            case ELogLevel::Warn:     return spdlog::level::warn;
+            case ELogLevel::Error:    return spdlog::level::err;
+            case ELogLevel::Critical: return spdlog::level::critical;
+            }
+            return spdlog::level::info;
+        }
+    }
+    
+    //DEFAULT OPAAX
+    inline constexpr LogCategory LogOpaaxApplication{"OpaaxApplication"};
+    inline constexpr LogCategory LogOpaaxEngine     {"OpaaxEngine"};
+
     // =============================================================================
     // ILogger — locator-resolvable logging facade over the engine (core) logger.
     //
@@ -48,7 +69,6 @@ namespace Opaax
         // CTOR
         // =============================================================================
     public:
-        
         //----- extension point ------------------------------------------------
         virtual void Log(ELogLevel InLevel, const OpaaxString& InMessage) = 0;
         virtual void Log(ELogLevel InLevel,const char* Category, const OpaaxString& InMessage) = 0;
@@ -82,4 +102,7 @@ namespace Opaax
     };
 }
 
-#define OPAAX_LOG(Category, Level, Format, ...) ::Opaax::OpaaxApplication::GetAppService<Opaax::ILogger>().Log(Opaax::ELogLevel::Level, Category.Name, Format, __VA_ARGS__);
+#define OPAAX_LOG(Category,Level, Format,...) ::Opaax::OpaaxApplication::GetAppService<::Opaax::ILogger>().AppLogger->log(ToSpdLevel(::Opaax::ELogLevel::##Level), "[{}] " Format, Category.Name, __VA_ARGS__);
+
+#define OPAAX_APP_LOG(Level, ...)       OPAAX_LOG(LogOpaaxApplication, Level,  ##__VA_ARGS__);
+#define OPAAX_ENGINE_LOG(Level, ...)    OPAAX_LOG(LogOpaaxEngine, Level,  ##__VA_ARGS__);

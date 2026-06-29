@@ -10,19 +10,6 @@ namespace Opaax
 {
     namespace
     {
-        spdlog::level::level_enum ToSpdLevel(ELogLevel InLevel)
-        {
-            switch (InLevel)
-            {
-                case ELogLevel::Trace:    return spdlog::level::trace;
-                case ELogLevel::Info:     return spdlog::level::info;
-                case ELogLevel::Warn:     return spdlog::level::warn;
-                case ELogLevel::Error:    return spdlog::level::err;
-                case ELogLevel::Critical: return spdlog::level::critical;
-            }
-            return spdlog::level::info;
-        }
-
         // =====================================================================
         // NullLogger — drops every message.
         // =====================================================================

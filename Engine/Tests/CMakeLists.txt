@@ -23,6 +23,7 @@ set(OPAAX_TEST_SOURCES
     Core/Application/ILoggerTests.cpp
     Core/Application/IProjectManagerTests.cpp
     Core/Application/IConfigSystemTests.cpp
+    Core/Application/IJobSystemTests.cpp
     Core/Application/OpaaxApplicationBootTests.cpp
     Physics/CollisionProfileTests.cpp
     Assets/AssetIdResolveTests.cpp
