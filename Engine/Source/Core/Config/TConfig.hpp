@@ -26,18 +26,18 @@
 //  inline OpaaxString SerializeMyConfigData(const MyConfigData& InData) { return OpaaxString(); }
 //
 // Make the codec struct that IConfig use to load/save
-//DECLARE_OPAAX_T_CONFIG_CODEC(MyConfigData::Parse, MyConfigData::Serialize, MyConfigData)
+//DECLARE_T_CONFIG_CODEC(MyConfigData::Parse, MyConfigData::Serialize, MyConfigData)
 //or
-//DECLARE_OPAAX_T_CONFIG_CODEC(ParseMyConfigData, SerializeMyConfigData, MyConfigData)
+//DECLARE_T_CONFIG_CODEC(ParseMyConfigData, SerializeMyConfigData, MyConfigData)
 //
 // Make the Config type it self
-//DECLARE_OPAAX_T_CONFIG(MyConfig, MyConfigData)
+//DECLARE_T_CONFIG(MyConfig, MyConfigData)
 //
 // In you .cpp file
 //
 //#include "your.h"
 //
-// IMPL_OPAAX_T_CONFIG(MyConfig)
+// IMPL_T_CONFIG(MyConfig)
 //
 // =============================================================================
 // ==== END USAGE ==============================================================
@@ -60,7 +60,7 @@ namespace Opaax
     // serialize/write on Save, default-file generation on a miss). 
     // =============================================================================
     template<class TData>
-    class OPAAX_API TConfig : public IConfig
+    class TConfig : public IConfig
     {
         // =============================================================================
         // Function
@@ -128,23 +128,28 @@ namespace Opaax
 }
     
 #define DECLARE_OPAAX_T_CONFIG(ConfigName, DataType)\
-class OPAAX_API Config_##ConfigName final : public TConfig<##DataType> { public: OPAAX_CONFIG_TYPE(#ConfigName) const char* FileName() const override { return STR_CONCAT(ConfigName,.config); } };
+class OPAAX_API Config_##ConfigName final : public TConfig<DataType> \
+{ public: OPAAX_CONFIG_TYPE(ConfigName) const char* FileName() const override { return STR(ConfigName) ".config"; } };
 
-#define IMPL_OPAAX_T_CONFIG(ConfigName)\
-ConfigTypeID Config_##ConfigName::StaticTypeID() noexcept\
+#define DECLARE_T_CONFIG(ConfigName, DataType)\
+class Config_##ConfigName final : public TConfig<DataType> \
+{ public: OPAAX_CONFIG_TYPE(ConfigName) const char* FileName() const override { return STR(ConfigName) ".config"; } };
+
+#define IMPL_T_CONFIG(ConfigName)\
+::Opaax::ConfigTypeID Config_##ConfigName::StaticTypeID() noexcept\
 {\
     static const int s_Tag = 0;\
-    return reinterpret_cast<ConfigTypeID>(&s_Tag);\
+    return reinterpret_cast<::Opaax::ConfigTypeID>(&s_Tag);\
 }
 
-#define DECLARE_OPAAX_T_CONFIG_CODEC(ParseFunc, SerializeFunc, DataType)\
-template<class T> struct Opaax::TConfigCodec;\
-template<> struct Opaax::TConfigCodec<##DataType>\
+#define DECLARE_T_CONFIG_CODEC(ParseFunc, SerializeFunc, DataType)\
+template<class T> struct ::Opaax::TConfigCodec;\
+template<> struct ::Opaax::TConfigCodec<DataType>\
 {\
-static  DataType       FromText(const OpaaxString& InText)        { return ParseFunc(InText); }\
-static OpaaxString      ToText(const DataType& InData)     { return SerializeFunc(InData); }\
+static  DataType                    FromText(const ::Opaax::OpaaxString& InText)        { return ParseFunc(InText); }\
+static ::Opaax::OpaaxString         ToText(const DataType& InData)                      { return SerializeFunc(InData); }\
 };
 
 #define DECLARE_CONFIG_DATA(DataType)\
-    static DataType Parse(const Opaax::OpaaxString& InJsonText);\
-    static Opaax::OpaaxString Serialize(const DataType& InData);
+    static DataType Parse(const ::Opaax::OpaaxString& InJsonText);\
+    static ::Opaax::OpaaxString Serialize(const DataType& InData);

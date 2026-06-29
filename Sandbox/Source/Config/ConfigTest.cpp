@@ -1,5 +1,4 @@
-﻿#include "ConfigTest.h"
-
+﻿#include "Config/ConfigTest.h"
 
 MyConfigData MyConfigData::Parse(const Opaax::OpaaxString& InJsonText)
 {
@@ -11,4 +10,4 @@ Opaax::OpaaxString MyConfigData::Serialize(const MyConfigData& InData)
     return Opaax::OpaaxString();
 }
 
-IMPL_OPAAX_T_CONFIG(MyConfig)
+IMPL_T_CONFIG(MyConfig)
