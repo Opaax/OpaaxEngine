@@ -60,6 +60,11 @@ namespace Opaax
         void InitializeApplication();
         
         /**
+         * The app loop
+         */
+        void RunApplication();
+        
+        /**
          * Make the application shutdown explicit
          */
         void ShutdownApplication();
@@ -90,6 +95,7 @@ namespace Opaax
         char** m_Argv = nullptr;
         
         bool bHasBeenShuttingDown = false;
+        bool bIsRunning = false;
 
         static AppServiceLocator m_Services;
     };

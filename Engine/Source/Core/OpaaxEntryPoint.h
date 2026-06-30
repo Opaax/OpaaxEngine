@@ -11,7 +11,7 @@ int main(int argc, char** argv)
     auto lApp = Opaax::UniquePtr<Opaax::OpaaxApplication>(CreateApplication(argc, argv));
     lApp->Bootstrap();
     lApp->InitializeApplication();
-    //lApp->Run();
+    lApp->RunApplication();
     lApp->ShutdownApplication();
     return 0;
 }

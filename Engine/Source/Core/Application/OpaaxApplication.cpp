@@ -90,6 +90,41 @@ void OpaaxApplication::InitializeApplication()
 {
     CreateApplicationWindow();
     OnInitializeApplication();
+    
+    bIsRunning = true;
+}
+
+void OpaaxApplication::RunApplication()
+{
+    while (bIsRunning)
+    {
+        Window* lWindow = WindowManager().GetMainWindow();
+        
+        if (lWindow == nullptr)
+        {
+            bIsRunning = false;
+            break;
+        }
+        
+        // ----------------------------------------------------------------
+        // 1. windows events (input, close, etc..)
+        // ----------------------------------------------------------------
+        lWindow->PollEvents();
+
+        // ----------------------------------------------------------------
+        // 1.1 close event called?
+        // ----------------------------------------------------------------
+        bIsRunning = !lWindow->ShouldClose();
+        if (!bIsRunning)
+        {
+            break;
+        }
+        
+        // ----------------------------------------------------------------
+        // 3. Present AFTER render, always last (graphics context owns the swap).
+        // ----------------------------------------------------------------
+        lWindow->SwapBuffers();
+    }
 }
 
 void OpaaxApplication::ShutdownApplication()
