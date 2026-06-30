@@ -12,6 +12,7 @@ int main(int argc, char** argv)
     lApp->Bootstrap();
     lApp->InitializeApplication();
     //lApp->Run();
+    lApp->ShutdownApplication();
     return 0;
 }
 #else

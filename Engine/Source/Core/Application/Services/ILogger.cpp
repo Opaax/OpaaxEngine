@@ -2,9 +2,11 @@
 
 #include <iostream>
 
+#include "Core/Application/OpaaxApplication.h"
 #include "Core/Log/OpaaxLog.h"
 #include "spdlog/sinks/basic_file_sink.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
+#include "spdlog/sinks/null_sink.h"
 
 namespace Opaax
 {
@@ -16,10 +18,18 @@ namespace Opaax
         class NullLogger final : public ILogger
         {
         public:
+            // The OPAAX_LOG macro dereferences AppLogger directly (bypassing the null-guarded
+            // virtual Log()), so even the null object MUST hold a valid logger — a null sink that
+            // silently discards every message. Keeps "degrade, don't crash" when no logger is provided.
+            NullLogger()
+            {
+                AppLogger = std::make_shared<spdlog::logger>(
+                    "OPAAX_Null", std::make_shared<spdlog::sinks::null_sink_mt>());
+            }
+
             bool IsNull() const noexcept override { return true; }
             void Log(ELogLevel, const OpaaxString&) override {}
             void Log(ELogLevel, const char* Category, const OpaaxString&) override {}
-            
         };
     }
 
@@ -33,6 +43,11 @@ namespace Opaax
     {
         static NullLogger s_Null;
         return s_Null;
+    }
+
+    ILogger& GetLogger()
+    {
+        return OpaaxApplication::GetAppService<ILogger>();
     }
 
     Logger::Logger(Opaax::IPaths& InPaths)

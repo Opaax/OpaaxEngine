@@ -105,23 +105,6 @@ namespace
 
 CoreEngineApp::CoreEngineApp(int InArgc, char** InArgv)
 {
-    //  Platform Init
-    // ↓
-    //  Path Discovery
-    // ↓
-    //  Logger Init
-    // ↓
-    //  ConfigSystem Init
-    // ↓
-    //  JobSystem Init
-    // ↓
-    //  Project Discovery
-    // ↓
-    //  Load Configs
-    // ↓
-    //  Create Main Window
-    // ↓
-    //  Engine::Initialize()
     //The only system to be created at very first
     OpaaxLog::Init();
     OpaaxPath::Init();

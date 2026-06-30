@@ -6,6 +6,7 @@
 #include "Core/Application/Services/ILogger.h"
 #include "Core/Application/Services/IProjectManager.h"
 #include "Core/Application/Services/IJobSystem.h"
+#include "Core/Application/Services/IWindowManager.h"
 #include "Core/Config/Config_Engine.h"
 #include "Services/IConfigSystem.h"
 
@@ -25,13 +26,20 @@ OpaaxApplication::OpaaxApplication(int InArgc, char** InArgv)
     : m_Argc(InArgc)
     , m_Argv(InArgv)
 {
+    bHasBeenShuttingDown = false;
     //OpaaxLog::Init();
 
     // Bootstrap();
     // InitializeApplication();
 }
 
-OpaaxApplication::~OpaaxApplication() {}
+OpaaxApplication::~OpaaxApplication()
+{
+    if (!bHasBeenShuttingDown)
+    {
+        ShutdownApplication();
+    }
+}
 
 // =============================================================================
 // Bootstrap
@@ -61,6 +69,9 @@ void OpaaxApplication::Bootstrap()
     
     //Jobsystem
     m_Services.Provide<IJobSystem, Opaax::JobSystem>();
+
+    //Window manager — the window itself is created later, in InitializeApplication (needs a GL/VK context).
+    m_Services.Provide<IWindowManager, Opaax::WindowManager>();
 }
 
 IPlatform&          OpaaxApplication::Platform()        { return m_Services.Get<IPlatform>();        }
@@ -69,6 +80,7 @@ ILogger&            OpaaxApplication::Logger()          { return m_Services.Get<
 IProjectManager&    OpaaxApplication::ProjectManager()  { return m_Services.Get<IProjectManager>();  }
 IConfigSystem&      OpaaxApplication::ConfigSystem()    { return m_Services.Get<IConfigSystem>();    }
 IJobSystem&         OpaaxApplication::JobSystem()       { return m_Services.Get<IJobSystem>();       }
+IWindowManager&     OpaaxApplication::WindowManager()   { return m_Services.Get<IWindowManager>();   }
 
 // =============================================================================
 // Initialization
@@ -76,12 +88,20 @@ IJobSystem&         OpaaxApplication::JobSystem()       { return m_Services.Get<
 
 void OpaaxApplication::InitializeApplication()
 {
+    CreateApplicationWindow();
     OnInitializeApplication();
+}
+
+void OpaaxApplication::ShutdownApplication()
+{
+    m_Services.ShutdownAll();
+    
+    bHasBeenShuttingDown = true;
 }
 
 void OpaaxApplication::CreateApplicationWindow()
 {
-
+    WindowManager().CreateMainWindow();
 }
 
 void OpaaxApplication::CreateApplicationRenderer()

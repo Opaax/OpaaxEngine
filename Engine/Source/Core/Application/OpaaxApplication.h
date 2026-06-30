@@ -12,6 +12,7 @@ namespace Opaax
     class IPaths;
     class ILogger;
     class IJobSystem;
+    class IWindowManager;
 
     // =============================================================================
     // OpaaxApplication — base application host. Owns the AppServiceLocator and boots
@@ -58,6 +59,11 @@ namespace Opaax
          */
         void InitializeApplication();
         
+        /**
+         * Make the application shutdown explicit
+         */
+        void ShutdownApplication();
+        
         // =============================================================================
         // Get - Set
         // =============================================================================
@@ -74,6 +80,7 @@ namespace Opaax
         IProjectManager&    ProjectManager();
         IConfigSystem&      ConfigSystem();
         IJobSystem&         JobSystem();
+        IWindowManager&     WindowManager();
 
         // =============================================================================
         // Members
@@ -81,6 +88,8 @@ namespace Opaax
     private:
         int    m_Argc = 0;
         char** m_Argv = nullptr;
+        
+        bool bHasBeenShuttingDown = false;
 
         static AppServiceLocator m_Services;
     };

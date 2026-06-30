@@ -1,11 +1,14 @@
 ﻿#pragma once
 
 #include "Core/Window.h"
+#include "Core/Application/Services/ILogger.h"
 #include "GLFW/glfw3.h"
 
 namespace Opaax
 {
     class IGraphicsContext;
+    
+    inline constexpr LogCategory LogWindowsWindow{"WindowsWindow"};
 
     /**
      * @class WindowsWindow
@@ -24,7 +27,6 @@ namespace Opaax
         // =============================================================================
     private:
         void Init(const WindowProps& Props);
-        void Shutdown();
         void RegisterGLFWCallbacks();
         
         // =============================================================================
@@ -39,6 +41,7 @@ namespace Opaax
 		virtual void PollEvents() override;
         virtual bool ShouldClose() const override;
         virtual void SwapBuffers() override;
+        virtual void Shutdown() override;
 
         void* GetNativeWindow() const override { return m_Window; }
 

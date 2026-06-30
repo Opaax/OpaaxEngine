@@ -68,6 +68,7 @@ namespace Opaax
         virtual void PollEvents()           = 0;
         virtual void SwapBuffers()          = 0;
         virtual bool ShouldClose() const    = 0;
+        virtual void Shutdown()             = 0;
 
         /*----------------------------- Get - Set -------------------------------*/
 

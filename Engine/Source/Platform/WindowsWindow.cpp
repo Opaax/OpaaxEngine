@@ -1,4 +1,6 @@
 ﻿#include "WindowsWindow.h"
+
+#include <VkBootstrap.h>
 #include <GLFW/glfw3.h>
 
 #include "Core/ApplicationEvents.hpp"
@@ -27,7 +29,7 @@ namespace Opaax
 
 	static void GLFWErrorCallback(int error, const char* description)
 	{
-		OPAAX_CORE_ERROR("GLFW Error ({0}): {1}", error, description);
+		OPAAX_LOG(LogWindowsWindow, Error, "GLFW Error: {}: {}", error, description)
 	}
 	
 	WindowsWindow::WindowsWindow(const WindowProps& Props)
@@ -46,7 +48,7 @@ namespace Opaax
 		m_Data.Width  = Props.Width;
 		m_Data.Height = Props.Height;
 
-		OPAAX_CORE_INFO("Creating window {0} ({1}, {2})", Props.Title, Props.Width, Props.Height);
+		OPAAX_LOG(LogWindowsWindow, Info, "Creating window {} ({}, {})", Props.Title, Props.Width, Props.Height)
 
 		if (!s_GLFWInitialized)
 		{
@@ -77,20 +79,13 @@ namespace Opaax
 		OPAAX_CORE_ASSERT(m_Context)
 		if (!m_Context->Init())
 		{
-			OPAAX_CORE_ERROR("WindowsWindow: graphics context failed to initialize.");
+			OPAAX_LOG(LogWindowsWindow, Error, "WindowsWindow: graphics context failed to initialize.")
 		}
 
 		// NOTE: User pointer needed for all GLFW callbacks to reach WindowData safely.
 		glfwSetWindowUserPointer(m_Window, &m_Data);
 
 		RegisterGLFWCallbacks();
-
-	}
-
-	void WindowsWindow::Shutdown()
-	{
-		glfwDestroyWindow(m_Window);
-		// Note: On ne shutdown pas GLFW ici car il pourrait y avoir d'autres fenetres
 	}
 
 	void WindowsWindow::RegisterGLFWCallbacks()
@@ -274,4 +269,17 @@ namespace Opaax
     {
 	    m_Context->SwapBuffers();
     }
+
+	void WindowsWindow::Shutdown()
+	{
+		if (!m_Window)
+		{
+			return;
+		}
+		
+		glfwMakeContextCurrent(nullptr);
+		m_Context.reset();         // release the graphics context before its window
+		glfwDestroyWindow(m_Window);
+		m_Window = nullptr;        // can't be destroyed twice
+	}
 }
