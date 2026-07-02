@@ -26,6 +26,7 @@ set(OPAAX_TEST_SOURCES
     Core/Application/IJobSystemTests.cpp
     Core/Application/IWindowManagerTests.cpp
     Core/Application/OpaaxApplicationBootTests.cpp
+    Core/Engine/Subsystems/Resources/ResourceSystemTests.cpp
     Physics/CollisionProfileTests.cpp
     Assets/AssetIdResolveTests.cpp
     ECS/MoverComponentTests.cpp

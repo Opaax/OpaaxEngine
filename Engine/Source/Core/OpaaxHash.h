@@ -1,5 +1,7 @@
 ﻿#pragma once
  
+#include <string_view>
+
 #include "EngineAPI.h"
 #include "OpaaxString.hpp"
 #include "OpaaxTypes.h"
@@ -27,6 +29,23 @@ namespace Opaax
             return Hash(String.CStr());
         }
  
+        // FNV-1a 64-bit constants
+        static constexpr Uint64 FNV1a_Prime64       = 1099511628211ull;
+        static constexpr Uint64 FNV1a_OffsetBasis64 = 14695981039346656037ull;
+
+        // Wide, collision-resistant hash for stable identities (e.g. ResourceTypeID
+        // over a compile-time type signature). string_view-based: works on non
+        // null-terminated views and folds string literals via string_view's ctor.
+        static constexpr Uint64 Hash64(std::string_view Str, Uint64 HashValue = FNV1a_OffsetBasis64) noexcept
+        {
+            for (const char lChar : Str)
+            {
+                HashValue ^= static_cast<Uint64>(static_cast<unsigned char>(lChar));
+                HashValue *= FNV1a_Prime64;
+            }
+            return HashValue;
+        }
+
         // operator() overloads required by std::unordered_map / std::unordered_set
         Uint32 operator()(const OpaaxString& String) const noexcept { return Hash(String.CStr()); }
         Uint32 operator()(const char*        Str)    const noexcept { return Hash(Str); }

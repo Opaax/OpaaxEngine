@@ -16,7 +16,7 @@
 #include "Core/Event/OpaaxEventTypes.hpp"
 #include "Core/OpaaxMathTypes.h"
 #include "Core/OpaaxString.hpp"
-#include "Core/Systems/EngineSubsystem.h"
+#include "Core/Engine/Subsystems/EngineSubsystem.h"
 
 
 struct GLFWwindow;

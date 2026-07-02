@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Core/Systems/EngineSubsystem.h"
+#include "Core/Engine/Subsystems/EngineSubsystem.h"
 #include "Core/OpaaxTypes.h"
 
 #include "Physics/PhysicsTypes.h"

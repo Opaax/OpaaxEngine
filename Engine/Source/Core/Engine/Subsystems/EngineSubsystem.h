@@ -1,18 +1,69 @@
 ﻿#pragma once
 
-#include "Subsystem.h"
+#include "Core/Systems/Subsystem.h"
 #include "Core/Event/OpaaxEventTypes.hpp"
 #include "Core/Log/OpaaxLog.h"
 
-namespace Opaax {
+namespace Opaax
+{
     class OpaaxEvent;
     class CoreEngineApp;
 }
 
 namespace Opaax
 {
+    // =============================================================================
+    // IEngineSubsystem — marker interface for engine-owned subsystems.
+    //   Lifetime = engine (up on engine start, down on engine stop). Managed by
+    //   EngineSubsystemMgr. No CoreEngineApp coupling — the service-locator world
+    //   reaches shared facilities through OpaaxApplication::GetAppService<T>().
+    // =============================================================================
+    class OPAAX_API IEngineSubsystem : public Opaax::ISubsystem
+    {
+    };
+
+    // =============================================================================
+    // EngineSubsystemBase — ctor/dtor boilerplate for concrete engine subsystems.
+    //   Leaves Startup()/Shutdown() pure (each concrete implements them) and inherits
+    //   the no-op Update/FixedUpdate/Render from ISubsystem. Stamp the concrete with
+    //   OPAAX_SUBSYSTEM_TYPE(ClassName) for GetTypeID/StaticTypeID.
+    // =============================================================================
+    class OPAAX_API EngineSubsystemBase : public Opaax::IEngineSubsystem
+    {
+        // =============================================================================
+        // CTORS - DTORS
+        // =============================================================================
+    public:
+        EngineSubsystemBase()          = default;
+        ~EngineSubsystemBase() override = default;
+
+        // Heap-owned via UniquePtr in the manager — never copied or moved.
+        EngineSubsystemBase(const EngineSubsystemBase&)            = delete;
+        EngineSubsystemBase& operator=(const EngineSubsystemBase&) = delete;
+        EngineSubsystemBase(EngineSubsystemBase&&)                 = delete;
+        EngineSubsystemBase& operator=(EngineSubsystemBase&&)      = delete;
+    };
+
+    // =============================================================================
+    // EngineSubsystemMgr — owns + drives the engine subsystem list. Inherits
+    //   Register/Startup/Update/FixedUpdate/Render/Shutdown from ISubsystemManager
+    //   (registration order; reverse order for shutdown).
+    // =============================================================================
+    class OPAAX_API EngineSubsystemMgr : public ISubsystemManager<IEngineSubsystem>
+    {
+        // =============================================================================
+        // CTORS - DTORS
+        // =============================================================================
+    public:
+        ~EngineSubsystemMgr() override = default;
+    };
+    
+    // =============================================================================
+    // Old
+    // =============================================================================
+    
     /**
-     * @class IEngineSubsystem
+     * @class IEngineSubsystemOld
      *
      * Meant to be a system handle by the engine
      *
@@ -21,27 +72,27 @@ namespace Opaax
      * So this system can have access to the window using the engine ptr,
      * usefull for Input system, base event system for example...
      */
-    class OPAAX_API IEngineSubsystem : public Opaax::ISubsystem
+    class OPAAX_API IEngineSubsystemOld : public Opaax::ISubsystem
     {
     public:
         // =============================================================================
         // CTORS
         // =============================================================================
-        IEngineSubsystem():m_EngineApp(nullptr){}
-        IEngineSubsystem(CoreEngineApp* InEngineApp):m_EngineApp(InEngineApp){}
+        IEngineSubsystemOld():m_EngineApp(nullptr){}
+        IEngineSubsystemOld(CoreEngineApp* InEngineApp):m_EngineApp(InEngineApp){}
         
-        virtual ~IEngineSubsystem() override                        = default;
+        virtual ~IEngineSubsystemOld() override                        = default;
         
-        IEngineSubsystem(const IEngineSubsystem&)                   = delete;
-        IEngineSubsystem& operator=(const IEngineSubsystem&)        = delete;
+        IEngineSubsystemOld(const IEngineSubsystemOld&)                   = delete;
+        IEngineSubsystemOld& operator=(const IEngineSubsystemOld&)        = delete;
         
-        IEngineSubsystem(IEngineSubsystem&& Other) noexcept
+        IEngineSubsystemOld(IEngineSubsystemOld&& Other) noexcept
             : m_EngineApp(Other.m_EngineApp)
         {
             Other.m_EngineApp = nullptr;
         }
  
-        IEngineSubsystem& operator=(IEngineSubsystem&& Other) noexcept
+        IEngineSubsystemOld& operator=(IEngineSubsystemOld&& Other) noexcept
         {
             if (this != &Other)
             {
@@ -117,20 +168,20 @@ namespace Opaax
      * @EngineSubsystemBase
      * Base Engine subsystem that implement ctor/dtor
      */
-    class OPAAX_API EngineSubsystemBase : public IEngineSubsystem
+    class OPAAX_API EngineSubsystemBaseOld : public IEngineSubsystemOld
     {
         // =============================================================================
         // CTORS - DTORS
         // =============================================================================
     public:
-        EngineSubsystemBase() = default;
-        explicit EngineSubsystemBase(CoreEngineApp* InEngineApp) : IEngineSubsystem(InEngineApp) {}
-        virtual ~EngineSubsystemBase() override = default;
+        EngineSubsystemBaseOld() = default;
+        explicit EngineSubsystemBaseOld(CoreEngineApp* InEngineApp) : IEngineSubsystemOld(InEngineApp) {}
+        virtual ~EngineSubsystemBaseOld() override = default;
 
-        EngineSubsystemBase(const EngineSubsystemBase&)                   = delete;
-        EngineSubsystemBase& operator=(const EngineSubsystemBase&)        = delete;
-        EngineSubsystemBase(EngineSubsystemBase&&) noexcept               = default;
-        EngineSubsystemBase& operator=(EngineSubsystemBase&&) noexcept    = default;
+        EngineSubsystemBaseOld(const EngineSubsystemBaseOld&)                   = delete;
+        EngineSubsystemBaseOld& operator=(const EngineSubsystemBaseOld&)        = delete;
+        EngineSubsystemBaseOld(EngineSubsystemBaseOld&&) noexcept               = default;
+        EngineSubsystemBaseOld& operator=(EngineSubsystemBaseOld&&) noexcept    = default;
 
         // =============================================================================
         // Override
@@ -158,21 +209,21 @@ namespace Opaax
      *
      * Manager that manage Engine Subsystem.
      */
-    class OPAAX_API EngineSubsystemMgr : public ISubsystemManager<IEngineSubsystem>
+    class OPAAX_API EngineSubsystemMgrOld : public ISubsystemManager<IEngineSubsystemOld>
     {
         // =============================================================================
         // CTORS - DTORS
         // =============================================================================
     public:
-        ~EngineSubsystemMgr() override = default;
+        ~EngineSubsystemMgrOld() override = default;
 
         // =============================================================================
         // Functions
         // =============================================================================
     public:
         // Keep base no-arg overloads available alongside the gated versions below.
-        using ISubsystemManager<IEngineSubsystem>::UpdateAll;
-        using ISubsystemManager<IEngineSubsystem>::FixedUpdateAll;
+        using ISubsystemManager<IEngineSubsystemOld>::UpdateAll;
+        using ISubsystemManager<IEngineSubsystemOld>::FixedUpdateAll;
 
         // Gated variants — skip subsystems whose IsPlayOnly() returns true when
         // bAllowPlayOnly is false (editor in Editing or Paused state).

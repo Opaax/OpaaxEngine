@@ -2,7 +2,7 @@
 #include "OpaaxInputEvents.hpp"
 #include "OpaaxInputTypes.hpp"
 #include "Core/OpaaxTypes.h"
-#include "Core/Systems/EngineSubsystem.h"
+#include "Core/Engine/Subsystems/EngineSubsystem.h"
 
 namespace Opaax
 {

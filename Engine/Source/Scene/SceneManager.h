@@ -5,7 +5,7 @@
 #include "Core/OpaaxString.hpp"
 #include "Core/OpaaxTypes.h"
 #include "Core/Log/OpaaxLog.h"
-#include "Core/Systems/EngineSubsystem.h"
+#include "Core/Engine/Subsystems/EngineSubsystem.h"
 #include "Core/Event/OpaaxEventTypes.hpp"
 
 namespace Opaax

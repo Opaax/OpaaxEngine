@@ -2,7 +2,7 @@
 
 #include "Core/Event/OpaaxEvent.hpp"
 
-void Opaax::EngineSubsystemMgr::UpdateAll(double DeltaTime, bool bAllowPlayOnly)
+void Opaax::EngineSubsystemMgrOld::UpdateAll(double DeltaTime, bool bAllowPlayOnly)
 {
     for (auto& lSystem : GetSystems())
     {
@@ -11,7 +11,7 @@ void Opaax::EngineSubsystemMgr::UpdateAll(double DeltaTime, bool bAllowPlayOnly)
     }
 }
 
-void Opaax::EngineSubsystemMgr::FixedUpdateAll(double FixedDeltaTime, bool bAllowPlayOnly)
+void Opaax::EngineSubsystemMgrOld::FixedUpdateAll(double FixedDeltaTime, bool bAllowPlayOnly)
 {
     for (auto& lSystem : GetSystems())
     {
@@ -20,7 +20,7 @@ void Opaax::EngineSubsystemMgr::FixedUpdateAll(double FixedDeltaTime, bool bAllo
     }
 }
 
-void Opaax::EngineSubsystemMgr::OnPlayBeginAll()
+void Opaax::EngineSubsystemMgrOld::OnPlayBeginAll()
 {
     for (auto& lSystem : GetSystems())
     {
@@ -28,7 +28,7 @@ void Opaax::EngineSubsystemMgr::OnPlayBeginAll()
     }
 }
 
-void Opaax::EngineSubsystemMgr::OnPlayEndAll()
+void Opaax::EngineSubsystemMgrOld::OnPlayEndAll()
 {
     const auto& lSystems = GetSystems();
     for (auto it = lSystems.rbegin(); it != lSystems.rend(); ++it)
@@ -37,7 +37,7 @@ void Opaax::EngineSubsystemMgr::OnPlayEndAll()
     }
 }
 
-void Opaax::EngineSubsystemMgr::DispatchEventAll(OpaaxEvent& Event)
+void Opaax::EngineSubsystemMgrOld::DispatchEventAll(OpaaxEvent& Event)
 {
     const Uint32 lEventCategories = Event.GetCategoryFlags();
 

@@ -3,7 +3,7 @@
 #include "EngineAPI.h"
 #include "OpaaxTypes.h"
 #include "Renderer/RenderTarget.hpp"
-#include "Systems/EngineSubsystem.h"
+#include "Core/Engine/Subsystems/EngineSubsystem.h"
 #include "Systems/GameSubsystem.h"
 #include "World/World.h"
 

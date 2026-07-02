@@ -8,7 +8,9 @@
 #include "Core/Application/Services/IJobSystem.h"
 #include "Core/Application/Services/IWindowManager.h"
 #include "Core/Config/Config_Engine.h"
+#include "Core/Engine/Engine.h"
 #include "Services/IConfigSystem.h"
+#include "Services/IEngine.h"
 
 #ifdef OPAAX_PLATFORM_WINDOWS
 #include "Core/Application/Services/WindowsPlatform.h"
@@ -72,6 +74,9 @@ void OpaaxApplication::Bootstrap()
 
     //Window manager — the window itself is created later, in InitializeApplication (needs a GL/VK context).
     m_Services.Provide<IWindowManager, Opaax::WindowManager>();
+    
+    //Engine
+    m_Services.Provide<IEngine, Opaax::Engine>();
 }
 
 IPlatform&          OpaaxApplication::Platform()        { return m_Services.Get<IPlatform>();        }
@@ -119,6 +124,11 @@ void OpaaxApplication::RunApplication()
         {
             break;
         }
+        
+        // ----------------------------------------------------------------
+        // 2. Time
+        // ----------------------------------------------------------------
+        //Engine.Loop()
         
         // ----------------------------------------------------------------
         // 3. Present AFTER render, always last (graphics context owns the swap).
