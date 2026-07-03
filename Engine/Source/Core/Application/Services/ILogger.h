@@ -106,5 +106,5 @@ namespace Opaax
 
 #define OPAAX_LOG(Category,Level, Format,...) ::Opaax::GetLogger().AppLogger->log(ToSpdLevel(::Opaax::ELogLevel::##Level), "[{}] " Format, Category.Name, __VA_ARGS__);
 
-#define OPAAX_APP_LOG(Level, ...)       OPAAX_LOG(LogOpaaxApplication, Level,  ##__VA_ARGS__);
-#define OPAAX_ENGINE_LOG(Level, ...)    OPAAX_LOG(LogOpaaxEngine, Level,  ##__VA_ARGS__);
+#define OPAAX_APP_LOG(Level, Format, ...)       OPAAX_LOG(LogOpaaxApplication, Level, Format, ##__VA_ARGS__);
+#define OPAAX_ENGINE_LOG(Level, Format, ...)    OPAAX_LOG(LogOpaaxEngine, Level, Format,  ##__VA_ARGS__);

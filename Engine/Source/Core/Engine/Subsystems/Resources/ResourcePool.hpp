@@ -219,19 +219,20 @@ namespace Opaax
 
         void AddRef(HandleType InHandle) noexcept
         {
-            if (SlotMeta* lMeta = LiveMeta(InHandle)) { ++lMeta->RefCount; }
+            if (SlotMeta* lMeta = RefMeta(InHandle)) { ++lMeta->RefCount; }
         }
 
         /***/
         void Release(HandleType InHandle) noexcept
         {
-            SlotMeta* lMeta = LiveMeta(InHandle);
+            SlotMeta* lMeta = RefMeta(InHandle);
             if (lMeta == nullptr) { return; }
-            if (--lMeta->RefCount == 0)
+            if (--lMeta->RefCount == 0 && lMeta->State == EResourceState::Loaded)
             {
-                // Deferred unload: the payload stays valid until the next CollectGarbage()
-                // pump, so a Resolve()'d pointer survives the rest of the frame and a dedup
-                // Load before the pump resurrects the slot (its grave entry then no-ops).
+                // Deferred unload (Loaded only): the payload stays valid until the next
+                // CollectGarbage() pump, so a Resolve()'d pointer survives the rest of the
+                // frame and a dedup Load before the pump resurrects it. A LOADING slot
+                // dropped to 0 has no payload to defer — FinalizeSlot abandons it at publish.
                 m_Graveyard.push_back(GraveEntry{ InHandle.Slot, lMeta->Generation });
             }
         }
@@ -243,6 +244,15 @@ namespace Opaax
             const SlotMeta& lMeta = MetaRef(InHandle.Slot);
             if (lMeta.State != EResourceState::Loaded || lMeta.Generation != InHandle.Generation) { return nullptr; }
             return &lMeta.Source;
+        }
+
+        // Current state of a handle's slot; Unloaded if out of range or generation-stale.
+        EResourceState GetState(HandleType InHandle) const noexcept
+        {
+            if (!InHandle.IsValid() || InHandle.Slot >= m_SlotCount) { return EResourceState::Unloaded; }
+            const SlotMeta& lMeta = MetaRef(InHandle.Slot);
+            if (lMeta.Generation != InHandle.Generation) { return EResourceState::Unloaded; }
+            return lMeta.State;
         }
 
         // =============================================================================
@@ -337,7 +347,30 @@ namespace Opaax
             {
                 return nullptr;
             }
-            
+
+            return &lMeta;
+        }
+
+        // Meta for REFCOUNTING — accepts Loaded OR Loading (unlike LiveMeta, which is
+        // Loaded-only for Resolve). A ResourceRef to an async load can be copied/dropped
+        // BEFORE it publishes, so AddRef/Release must track in-flight (Loading) slots.
+        SlotMeta* RefMeta(HandleType InHandle) noexcept
+        {
+            if (!InHandle.IsValid() || InHandle.Slot >= m_SlotCount)
+            {
+                return nullptr;
+            }
+
+            SlotMeta& lMeta = MetaRef(InHandle.Slot);
+            if (lMeta.Generation != InHandle.Generation)
+            {
+                return nullptr;
+            }
+            if (lMeta.State != EResourceState::Loaded && lMeta.State != EResourceState::Loading)
+            {
+                return nullptr;
+            }
+
             return &lMeta;
         }
         /***/

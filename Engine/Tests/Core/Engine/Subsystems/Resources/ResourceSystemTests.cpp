@@ -405,6 +405,132 @@ TEST_CASE("Resources: LoadAsync loads off the main thread and publishes at the p
 }
 
 // =============================================================================
+TEST_CASE("Resources: an async Ref dropped while still Loading is abandoned, not leaked")
+{
+    TempWorkspace   lWs;
+    JobSystem       lJobs(1);
+    ResourceManager lMgr;
+    lMgr.SetJobSystem(lJobs);
+    REQUIRE(lMgr.Startup());
+
+    const std::string lFile = lWs.Write("d.bin", "drop");
+
+    {
+        ResourceRef<BinaryResource> lRef = lMgr.LoadAsync<BinaryResource>(lFile.c_str());
+        CHECK(lMgr.GetLoadingCount<BinaryResource>() == 1);
+    } // ref dropped WHILE the slot is still Loading -> refcount must decrement to 0
+
+    PumpUntilIdle<BinaryResource>(lMgr, lJobs); // worker fills; publish sees refcount 0 -> abandons
+
+    CHECK(lMgr.GetLoadingCount<BinaryResource>() == 0);
+    CHECK(lMgr.GetLoadedCount<BinaryResource>()  == 0); // abandoned, NOT leaked at flush
+    CHECK(lMgr.GetBytes<BinaryResource>()        == 0);
+}
+
+// =============================================================================
+TEST_CASE("Resources: LoadAsync completion callback fires Loaded and can retain the resource")
+{
+    TempWorkspace   lWs;
+    JobSystem       lJobs(1);
+    ResourceManager lMgr;
+    lMgr.SetJobSystem(lJobs);
+    REQUIRE(lMgr.Startup());
+
+    const std::string lFile = lWs.Write("cb.bin", "hello"); // 5 bytes
+
+    int                         lFired  = 0;
+    bool                        lFailed = true;
+    ResourceRef<BinaryResource> lKept;
+
+    // Fire-and-forget: we do NOT keep the returned Ref — the internal claim keeps it alive.
+    lMgr.LoadAsync<BinaryResource>(lFile.c_str(),
+        [&](LoadAsyncResult<BinaryResource> InResult)
+        {
+            ++lFired;
+            lFailed = InResult.bFailed;
+            lKept   = InResult.Ref; // retain it
+        });
+
+    CHECK(lFired == 0); // callbacks fire on a pump, never inside LoadAsync
+
+    for (int i = 0; i < 100000 && lFired == 0; ++i)
+    {
+        lJobs.DrainCompletions();
+        lMgr.Update(0.0);
+        std::this_thread::yield();
+    }
+
+    CHECK(lFired == 1);
+    CHECK_FALSE(lFailed);
+    CHECK(lKept.IsValid());
+    CHECK(lMgr.GetLoadedCount<BinaryResource>() == 1);          // retained -> stays loaded
+    CHECK(lMgr.Resolve(lKept.GetHandle())->Bytes.size() == 5);
+}
+
+// =============================================================================
+TEST_CASE("Resources: LoadAsync completion callback reports failure for a missing file")
+{
+    TempWorkspace   lWs;
+    JobSystem       lJobs(1);
+    ResourceManager lMgr;
+    lMgr.SetJobSystem(lJobs);
+    REQUIRE(lMgr.Startup());
+
+    int  lFired  = 0;
+    bool lFailed = false;
+    bool lRefValid = true;
+
+    lMgr.LoadAsync<BinaryResource>(lWs.PathOf("nope.bin").c_str(),
+        [&](LoadAsyncResult<BinaryResource> InResult)
+        {
+            ++lFired;
+            lFailed   = InResult.bFailed;
+            lRefValid = InResult.Ref.IsValid();
+        });
+
+    for (int i = 0; i < 100000 && lFired == 0; ++i)
+    {
+        lJobs.DrainCompletions();
+        lMgr.Update(0.0);
+        std::this_thread::yield();
+    }
+
+    CHECK(lFired == 1);
+    CHECK(lFailed);
+    CHECK_FALSE(lRefValid);                                     // no Ref delivered on failure
+    CHECK(lMgr.GetLoadingCount<BinaryResource>() == 0);
+    CHECK(lMgr.GetLoadedCount<BinaryResource>()  == 0);
+}
+
+// =============================================================================
+TEST_CASE("Resources: a callback that drops the result lets the resource unload")
+{
+    TempWorkspace   lWs;
+    JobSystem       lJobs(1);
+    ResourceManager lMgr;
+    lMgr.SetJobSystem(lJobs);
+    REQUIRE(lMgr.Startup());
+
+    const std::string lFile = lWs.Write("ff.bin", "bye");
+
+    int lFired = 0;
+    lMgr.LoadAsync<BinaryResource>(lFile.c_str(),
+        [&](LoadAsyncResult<BinaryResource> InResult) { ++lFired; /* drop InResult.Ref */ });
+
+    for (int i = 0; i < 100000 && lFired == 0; ++i)
+    {
+        lJobs.DrainCompletions();
+        lMgr.Update(0.0);
+        std::this_thread::yield();
+    }
+
+    CHECK(lFired == 1);
+    // Internal claim released when the callback fired -> unloads on the next pump.
+    lMgr.Update(0.0);
+    CHECK(lMgr.GetLoadedCount<BinaryResource>() == 0);
+}
+
+// =============================================================================
 TEST_CASE("Resources: LoadAsync loads a composite subtree on the worker")
 {
     TempWorkspace   lWs;

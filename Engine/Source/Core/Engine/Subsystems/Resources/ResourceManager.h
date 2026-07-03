@@ -16,6 +16,27 @@
 #include "LoadContext.hpp"
 
 // =============================================================================
+// ================================== USAGE ====================================
+// =============================================================================
+// Load Resource
+// Sync:
+// ResourceRef<MyResourceType> MyResource = m_Resources->Load<MyResourceType>(ResoucePath);
+// Async 1:
+// ResourceRef<MyResourceType> MyResource = m_Resources->LoadAsync<MyResourceType>(ResoucePath);
+// if(MyResource.IsValid()){ Do thing } 
+//
+// Async 2:
+// m_Resources->LoadAsync<MyResourceType>(ResoucePath, [this](LoadAsyncResult<MyResourceType> LoadedResource)
+// {
+//      if (LoadedResource.bFailed) { fail... }
+//      else{ MyResource (from this) = LoadedResource.Ref;}
+// });
+// if(MyResource.IsValid()){ Do thing } 
+// 
+// ================================ END USAGE ==================================
+// =============================================================================
+
+// =============================================================================
 // ResourceManager — routing. The first engine subsystem, a thin core service.
 //
 //   Owns one ResourcePool<T> per type (lazy-created, indexed by ResourceTypeID),
@@ -32,7 +53,20 @@
 namespace Opaax
 {
     inline constexpr LogCategory LogResourceManager{"ResourceManager"};
-    
+
+    // =============================================================================
+    // LoadAsyncResult<T> — delivered to a LoadAsync completion callback, once, on the
+    // pump. Ref is the loaded claim (keep it to retain the resource); on failure it is
+    // empty, Status is Failed, and bFailed is true.
+    // =============================================================================
+    template<typename T>
+    struct LoadAsyncResult
+    {
+        ResourceRef<T> Ref;
+        EResourceState Status  = EResourceState::Failed;
+        bool           bFailed = true;
+    };
+
     class OPAAX_API ResourceManager final : public EngineSubsystemBase
     {
         // =============================================================================
@@ -80,12 +114,18 @@ namespace Opaax
          * yields the placeholder until it publishes). File IO + decode run on a worker
          * (whole subtree, one job); Initialize + flip Loaded happen on the pump. Falls
          * back to inline load when no real job system is set (the null object).
+         *
+         * InOnComplete (optional) fires ONCE on the pump when the load settles — Loaded
+         * or Failed, and immediately-next-pump for an already-loaded path. While it is
+         * pending the manager holds an internal claim, so the resource survives to the
+         * callback even if you drop the returned Ref: keep result.Ref to retain it.
          * @tparam T
          * @param InPath
+         * @param InOnComplete
          * @return
          */
         template<CResource T>
-        ResourceRef<T> LoadAsync(const char* InPath);
+        ResourceRef<T> LoadAsync(const char* InPath, TFunction<void(LoadAsyncResult<T>)> InOnComplete = {});
         
         /**
          * Frame-stable view. O(1). Never null for Placeholder-policy types
@@ -132,6 +172,9 @@ namespace Opaax
         template<CResource T> Uint32 GetLoadingCount();
         /***/
         template<CResource T> Uint64 GetBytes();
+        // Current load state of a handle (Unloaded if stale/never-loaded). Drives the
+        // async completion callbacks (Loading -> keep polling; else fire).
+        template<CResource T> EResourceState GetState(ResourceHandle<T> InHandle);
 
     public:
         /***/
@@ -163,7 +206,12 @@ namespace Opaax
     private:
         template<CResource T>
         ResourcePool<T>& GetOrCreatePool();
-        
+
+        // Poll every registered completion callback (main thread, on the pump): fire +
+        // drop the ones whose resource has settled, keep the still-loading ones. User
+        // callbacks run OUTSIDE the lock (they may re-enter LoadAsync / do work).
+        void FirePendingCallbacks();
+
         // =============================================================================
         // Override
         // =============================================================================
@@ -189,6 +237,10 @@ namespace Opaax
         ResourceDependencyGraph             m_Deps;
         IJobSystem*                         m_Jobs = &IJobSystem::Null(); // LoadAsync worker pool
         Uint64                              m_PumpEpoch = 0; // ++ each Update (CheckedView staleness)
+
+        // Pending LoadAsync completion callbacks. Each poll closure holds the internal
+        // claim + the user callback; returns true once it has fired (Loaded/Failed).
+        TDynArray<TFunction<bool()>>        m_PendingCallbacks;
     };
 
     // =============================================================================
@@ -281,7 +333,7 @@ namespace Opaax
 
     /***/
     template<CResource T>
-    ResourceRef<T> ResourceManager::LoadAsync(const char* InPath)
+    ResourceRef<T> ResourceManager::LoadAsync(const char* InPath, TFunction<void(LoadAsyncResult<T>)> InOnComplete)
     {
         ResourcePool<T>*  lPool      = nullptr;
         bool              lNeedsFill = false;
@@ -291,43 +343,67 @@ namespace Opaax
             lPool   = &GetOrCreatePool<T>();
             lHandle = lPool->AcquireSlot(InPath, lNeedsFill); // Loading claim, returned NOW
         }
-        
-        if (!lNeedsFill)
+
+        if (lNeedsFill)
         {
-            return ResourceRef<T>{ this, lHandle }; // dedup: already loaded / in flight
+            // Fill the whole subtree on one worker; publish (Initialize + Loaded) at the
+            // pump. With the null job system this runs inline (work + onComplete here).
+            SharedPtr<ResourceAsyncLoad> lJob = MakeShared<ResourceAsyncLoad>();
+            lJob->Path             = InPath; // own the string across the thread boundary
+            ResourceManager* lSelf = this;
+
+            m_Jobs->Submit(
+                [lSelf, lPool, lHandle, lJob]() // WORKER — no lock across T::Load
+                {
+                    lJob->Ctx    = MakeUnique<LoadContext>(*lSelf, lSelf->m_Deps, /*deferred*/ true);
+                    lJob->Filled = lPool->FillSlot(lHandle, lJob->Path.CStr(), *lJob->Ctx);
+                    if (lJob->Filled)
+                    {
+                        lJob->Ctx->AddPendingInit(lPool, lHandle.Slot);
+                    } // root, after its children
+                },
+                [lSelf, lPool, lHandle, lJob]() // MAIN (drain) — publish children-first, else abandon
+                {
+                    LockGuard<RecursiveMutex> lLock(lSelf->m_Mutex);
+                    if (lJob->Ctx)
+                    {
+                        lJob->Ctx->PublishAll();
+                    }
+
+                    if (!lJob->Filled)
+                    {
+                        lPool->AbandonSlot(lHandle.Slot);
+                    }
+                });
         }
 
-        // Fill the whole subtree on one worker; publish (Initialize + Loaded) at the pump.
-        // With the null job system this runs inline (work + onComplete on this thread).
-        SharedPtr<ResourceAsyncLoad> lJob = MakeShared<ResourceAsyncLoad>();
-        lJob->Path             = InPath; // own the string across the thread boundary
-        ResourceManager* lSelf = this;
+        ResourceRef<T> lRef{ this, lHandle }; // adopt the +1 AcquireSlot applied (fresh OR dedup)
 
-        m_Jobs->Submit(
-            [lSelf, lPool, lHandle, lJob]() // WORKER — no lock across T::Load
-            {
-                lJob->Ctx    = MakeUnique<LoadContext>(*lSelf, lSelf->m_Deps, /*deferred*/ true);
-                lJob->Filled = lPool->FillSlot(lHandle, lJob->Path.CStr(), *lJob->Ctx);
-                if (lJob->Filled)
+        // Optional completion: an internal claim (copy) keeps the resource alive until the
+        // callback fires on a pump — so a fire-and-forget caller need not hold the Ref.
+        if (InOnComplete)
+        {
+            ResourceRef<T>   lClaim = lRef;
+            ResourceManager* lSelf  = this;
+            TFunction<bool()> lPoll =
+                [lSelf, lClaim = Move(lClaim), lCb = Move(InOnComplete)]() -> bool
                 {
-                    lJob->Ctx->AddPendingInit(lPool, lHandle.Slot);
-                } // root, after its children
-            },
-            [lSelf, lPool, lHandle, lJob]() // MAIN (drain) — publish children-first, else abandon
-            {
-                LockGuard<RecursiveMutex> lLock(lSelf->m_Mutex);
-                if (lJob->Ctx)
-                {
-                    lJob->Ctx->PublishAll();
-                }
-                
-                if (!lJob->Filled)
-                {
-                    lPool->AbandonSlot(lHandle.Slot);
-                }
-            });
+                    const EResourceState lState = lSelf->GetState<T>(lClaim.GetHandle());
+                    if (lState == EResourceState::Loading) { return false; } // not settled — poll again
 
-        return ResourceRef<T>{ this, lHandle };
+                    LoadAsyncResult<T> lResult;
+                    lResult.Status  = lState;
+                    lResult.bFailed = (lState != EResourceState::Loaded);
+                    if (!lResult.bFailed) { lResult.Ref = lClaim; }
+                    lCb(Move(lResult));
+                    return true; // fired -> drop; the internal claim releases here
+                };
+
+            LockGuard<RecursiveMutex> lLock(m_Mutex);
+            m_PendingCallbacks.push_back(Move(lPoll));
+        }
+
+        return lRef;
     }
 
     /***/
@@ -391,6 +467,14 @@ namespace Opaax
     {
         LockGuard<RecursiveMutex> lLock(m_Mutex);
         return GetOrCreatePool<T>().GetBytes();
+    }
+
+    /***/
+    template<CResource T>
+    EResourceState ResourceManager::GetState(ResourceHandle<T> InHandle)
+    {
+        LockGuard<RecursiveMutex> lLock(m_Mutex);
+        return GetOrCreatePool<T>().GetState(InHandle);
     }
 
     // =============================================================================

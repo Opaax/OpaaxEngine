@@ -62,9 +62,10 @@ namespace Opaax
         OPAAX_ENGINE_LOG(Info, "Engine started ({} subsystem(s))", m_Subsystems.GetSystems().size())
         return true;
     }
-
-    bool GTestLoad = false;
+    
     double lTime = 0;
+    ResourceRef<BinaryResource> m_TestRef;
+    bool                        m_TestKicked = false;
     
     void Engine::Loop()
     {
@@ -76,18 +77,27 @@ namespace Opaax
         double lDeltaTime = lTime - lPrev;
         m_Resources->Update(lDeltaTime);
         
-        ResourceRef<BinaryResource> lEst;
+        ResourceRef<BinaryResource> m_TestRef2 = m_Resources->LoadAsync(path);
         
-        if (!GTestLoad)
+        if (!m_TestKicked)
         {
-            OpaaxString lPath = OpaaxApplication::GetAppService<IPaths>().EngineToAbsolute("/Assets/Test.bin");
-            lEst = m_Resources->LoadAsync<BinaryResource>(lPath.CStr());
-            GTestLoad = true;
+            m_TestKicked = true;
+            OpaaxString path = OpaaxApplication::GetAppService<IPaths>().EngineToAbsolute("Assets/Test.bin");
+            m_Resources->LoadAsync<BinaryResource>(path.CStr(),
+                [this](LoadAsyncResult<BinaryResource> LoadedResource)          // capture 'this', not '&' of stack locals
+                {
+                    if (LoadedResource.bFailed) { OPAAX_ENGINE_LOG(Error, "Test.bin failed") }
+                    else
+                    {
+                        OPAAX_ENGINE_LOG(Info, "Test.bin loaded: {} bytes in {} time", LoadedResource.Ref->Bytes.size(), lTime)
+                        m_TestRef = LoadedResource.Ref;                         // member -> outlives the callback
+                    }
+                });
         }
-        
-        if (lEst.IsValid())
+
+        if (m_TestRef.IsValid())
         {
-            OPAAX_ENGINE_LOG(Info, "Engine loaded after: {}", lTime);
+            OPAAX_ENGINE_LOG(Info, "VALID: {} bytes", m_TestRef->Bytes.size())
         }
     }
 
