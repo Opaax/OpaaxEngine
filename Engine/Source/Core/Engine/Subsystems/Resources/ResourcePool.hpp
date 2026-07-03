@@ -29,7 +29,10 @@ namespace Opaax
     public:
         virtual ~IResourcePool()                        = default;
         virtual void   UnloadAll() noexcept             = 0;
+        virtual void   CollectGarbage() noexcept        = 0; // destroy the previous pump's released slots
+        virtual void   FinalizeSlot(Uint32 InSlot) noexcept = 0; // main-thread publish of a filled async slot
         virtual Uint32 GetLoadedCount() const noexcept  = 0;
+        virtual Uint32 GetLoadingCount() const noexcept = 0;
         virtual Uint64 GetBytes() const noexcept        = 0;
     };
 
@@ -48,13 +51,33 @@ namespace Opaax
         static constexpr Uint32 ChunkSize = 64;
         using Chunk = TFixedArray<std::optional<T>, ChunkSize>;
 
+        /**
+         * Generation : bumped on unload -> stale handles resolve safe
+         * dedup key + GetSourcePath (M-RES-ED)
+         */
         struct SlotMeta
         {
-            Uint32         Generation = 1;               // bumped on unload -> stale handles resolve safe
+            Uint32         Generation = 1;
             Uint32         RefCount   = 0;
             EResourceState State      = EResourceState::Unloaded;
-            OpaaxStringID  Source;                        // dedup key + GetSourcePath (M-RES-ED)
+            OpaaxStringID  Source;
             Uint64         Bytes      = 0;
+        };
+
+        // Metadata is chunked alongside the payloads (same ChunkSize) so a SlotMeta&
+        // stays address-stable across growth — a worker may append slots while the
+        // main thread reads meta in Resolve. The outer pointer vectors are reserved
+        // to MaxChunks so those appends never relocate them (keeps Resolve lock-free).
+        using MetaChunk = TFixedArray<SlotMeta, ChunkSize>;
+        static constexpr Uint32 MaxChunks = 1024; // 65536 slots / resource type
+
+        // A slot whose refcount hit 0 — destroyed at the NEXT CollectGarbage() pump,
+        // not immediately. Generation pins the occupant so a resurrected/reused slot
+        // is recognised and skipped when the grave entry is finally processed.
+        struct GraveEntry
+        {
+            Uint32 Slot;
+            Uint32 Generation;
         };
 
         // =============================================================================
@@ -63,64 +86,132 @@ namespace Opaax
     public:
         using HandleType = ResourceHandle<T>;
 
-        // ------ Load: dedup, then cold-load via the type's static Load ------------
-        HandleType Load(const char* InPath, LoadContext& InCtx)
+        ResourcePool()
+        {
+            // Pre-reserve so worker slot allocation only appends (never relocates)
+            // the outer vectors that Resolve reads lock-free.
+            m_Chunks.reserve(MaxChunks);
+            m_MetaChunks.reserve(MaxChunks);
+        }
+
+        // ---------------------------------------------------------------------
+        // Load split (dedup -> alloc Loading | fill | publish) — orchestrated by the
+        // manager under its lock. Splitting AcquireSlot from FillSlot is what lets an
+        // async root return its handle immediately, then fill on a worker, then publish
+        // on the pump. The synchronous path runs all three back-to-back.
+        // ---------------------------------------------------------------------
+
+        // Dedup or allocate a Loading slot. bOutNeedsFill=false => shared an existing
+        // Loaded/Loading slot (refcount bumped); true => a fresh Loading slot to Fill.
+        HandleType AcquireSlot(const char* InPath, bool& bOutNeedsFill)
         {
             const OpaaxStringID lId(InPath);
             const Uint32        lKey = lId.GetId();
 
-            // Dedup: one copy per unique path. A live slot ⇒ share it, refcount++.
+            // Share one copy per unique path — a Loaded OR still-Loading slot, so two
+            // requests for the same in-flight resource collapse to a single load.
             if (const auto lIt = m_PathToSlot.find(lKey); lIt != m_PathToSlot.end())
             {
-                const Uint32 lSlot = lIt->second;
-                SlotMeta&    lMeta = m_Meta[lSlot];
-                if (lMeta.State == EResourceState::Loaded)
+                SlotMeta& lMeta = MetaRef(lIt->second);
+                if (lMeta.State == EResourceState::Loaded || lMeta.State == EResourceState::Loading)
                 {
                     ++lMeta.RefCount;
-                    return HandleType{ lSlot, lMeta.Generation };
+                    bOutNeedsFill = false;
+                    return HandleType{ lIt->second, lMeta.Generation };
                 }
             }
 
-            // Cold load — Load returns a fully-formed object or nothing (no exceptions).
+            const Uint32 lSlot = AllocSlot();
+            SlotMeta&    lMeta = MetaRef(lSlot);
+            lMeta.State    = EResourceState::Loading;
+            lMeta.RefCount = 1;
+            lMeta.Source   = lId;
+            lMeta.Bytes    = 0;
+            m_PathToSlot[lKey] = lSlot;
+            ++m_LoadingCount;
+            bOutNeedsFill = true;
+            return HandleType{ lSlot, lMeta.Generation };
+        }
+
+        // Produce the payload via the type's Load. The caller runs this OUTSIDE the lock
+        // (a composite's child Acquires recurse through the manager, which re-locks). The
+        // slot is exclusively owned while Loading, so the emplace/Bytes write need no lock.
+        bool FillSlot(HandleType InHandle, const char* InPath, LoadContext& InCtx)
+        {
             std::optional<T> lLoaded = T::Load(InPath, InCtx);
             if (!lLoaded.has_value())
             {
                 OPAAX_LOG(LogResourcePool, Error, "Load failed: '{}'", InPath)
-                return HandleType{}; // invalid — Resolve yields placeholder/null per policy
+                return false; // slot left Loading for the caller to Abandon
             }
-
-            const Uint32 lSlot = AllocSlot();
-            PayloadRef(lSlot).emplace(Move(*lLoaded));
-
-            SlotMeta& lMeta   = m_Meta[lSlot];
-            lMeta.State       = EResourceState::Loaded;
-            lMeta.RefCount    = 1;
-            lMeta.Source      = lId;
-            lMeta.Bytes       = ComputeBytes(PayloadRef(lSlot).value());
-
-            m_PathToSlot[lKey] = lSlot;
-            ++m_LoadedCount;
-            m_TotalBytes += lMeta.Bytes;
-
-            return HandleType{ lSlot, lMeta.Generation };
+            PayloadRef(InHandle.Slot).emplace(Move(*lLoaded));
+            MetaRef(InHandle.Slot).Bytes = ComputeBytes(PayloadRef(InHandle.Slot).value());
+            return true;
         }
 
-        // ------ Resolve: O(1) frame-stable view. Never null for Placeholder types --
+        // Main-thread publish of a filled slot: Initialize (GPU log-in) + flip Loaded if
+        // still referenced, else abandon it (a parent load failed and released it before
+        // this pump). Virtual — LoadContext::PublishAll drives it type-erased.
+        void FinalizeSlot(Uint32 InSlot) noexcept override
+        {
+            if (InSlot >= m_SlotCount) { return; }
+            SlotMeta& lMeta = MetaRef(InSlot);
+            if (lMeta.State != EResourceState::Loading) { return; } // already handled
+
+            if (lMeta.RefCount == 0)
+            {
+                AbandonSlot(InSlot); // orphaned before publish
+                return;
+            }
+            MaybeInitialize(PayloadRef(InSlot).value()); // GPU log-in, main thread
+            lMeta.State = EResourceState::Loaded;
+            --m_LoadingCount;
+            ++m_LoadedCount;
+            m_TotalBytes += lMeta.Bytes;
+        }
+
+        // Discard a Loading slot (fill failed, or orphaned). Frees it + bumps generation
+        // so any handle to it resolves stale-safe.
+        void AbandonSlot(Uint32 InSlot) noexcept
+        {
+            SlotMeta& lMeta = MetaRef(InSlot);
+            if (lMeta.State != EResourceState::Loading) { return; }
+            m_PathToSlot.erase(lMeta.Source.GetId());
+            ++lMeta.Generation;
+            lMeta.State    = EResourceState::Unloaded;
+            lMeta.RefCount = 0;
+            lMeta.Bytes    = 0;
+            lMeta.Source   = OpaaxStringID{};
+            --m_LoadingCount;
+            m_FreeSlots.push_back(InSlot);
+            PayloadRef(InSlot).reset(); // orphan composite -> child releases (manager re-locks)
+        }
+
+
+        /**
+         * O(1) frame-stable view. Never null for Placeholder types
+         * @param InHandle 
+         * @return 
+         */
         T* Get(HandleType InHandle) noexcept
         {
-            if (!InHandle.IsValid() || InHandle.Slot >= m_Meta.size())
+            if (!InHandle.IsValid() || InHandle.Slot >= m_SlotCount)
             {
                 return PlaceholderOrNull();
             }
-            SlotMeta& lMeta = m_Meta[InHandle.Slot];
+            SlotMeta& lMeta = MetaRef(InHandle.Slot);
             if (lMeta.State != EResourceState::Loaded || lMeta.Generation != InHandle.Generation)
             {
                 return PlaceholderOrNull();
             }
             return &PayloadRef(InHandle.Slot).value();
         }
-
-        // True if the handle points at the current, loaded occupant of its slot.
+        
+        /**
+         * 
+         * @param InHandle 
+         * @return True if the handle points at the current, loaded occupant of its slot.
+         */
         bool IsLive(HandleType InHandle) noexcept { return LiveMeta(InHandle) != nullptr; }
 
         void AddRef(HandleType InHandle) noexcept
@@ -128,33 +219,40 @@ namespace Opaax
             if (SlotMeta* lMeta = LiveMeta(InHandle)) { ++lMeta->RefCount; }
         }
 
+        /***/
         void Release(HandleType InHandle) noexcept
         {
             SlotMeta* lMeta = LiveMeta(InHandle);
             if (lMeta == nullptr) { return; }
             if (--lMeta->RefCount == 0)
             {
-                Unload(InHandle.Slot);
+                // Deferred unload: the payload stays valid until the next CollectGarbage()
+                // pump, so a Resolve()'d pointer survives the rest of the frame and a dedup
+                // Load before the pump resurrects the slot (its grave entry then no-ops).
+                m_Graveyard.push_back(GraveEntry{ InHandle.Slot, lMeta->Generation });
             }
         }
 
+        /***/
         const OpaaxStringID* GetSource(HandleType InHandle) const noexcept
         {
-            if (!InHandle.IsValid() || InHandle.Slot >= m_Meta.size()) { return nullptr; }
-            const SlotMeta& lMeta = m_Meta[InHandle.Slot];
+            if (!InHandle.IsValid() || InHandle.Slot >= m_SlotCount) { return nullptr; }
+            const SlotMeta& lMeta = MetaRef(InHandle.Slot);
             if (lMeta.State != EResourceState::Loaded || lMeta.Generation != InHandle.Generation) { return nullptr; }
             return &lMeta.Source;
         }
 
         // =============================================================================
-        // Override — IResourcePool
+        // Override
         // =============================================================================
+        //~Begin IResourcePool interface
     public:
+        /***/
         void UnloadAll() noexcept override
         {
-            for (Uint32 lSlot = 0; lSlot < m_Meta.size(); ++lSlot)
+            for (Uint32 lSlot = 0; lSlot < m_SlotCount; ++lSlot)
             {
-                SlotMeta& lMeta = m_Meta[lSlot];
+                SlotMeta& lMeta = MetaRef(lSlot);
                 if (lMeta.State != EResourceState::Loaded) { continue; }
                 if (lMeta.RefCount > 0)
                 {
@@ -167,32 +265,71 @@ namespace Opaax
                 lMeta.Bytes    = 0;
             }
             m_PathToSlot.clear();
-            m_LoadedCount = 0;
-            m_TotalBytes  = 0;
+            m_Graveyard.clear();
+            m_LoadedCount  = 0;
+            m_LoadingCount = 0;
+            m_TotalBytes   = 0;
         }
 
-        Uint32 GetLoadedCount() const noexcept override { return m_LoadedCount; }
-        Uint64 GetBytes()       const noexcept override { return m_TotalBytes;  }
+        /**
+         * Destroy every slot released before this pump. Processes a SNAPSHOT: unloading
+         * a composite cascade-releases its children, which enqueue fresh grave entries
+         * for the NEXT pump — bounding per-pump work and giving those children the same
+         * one-frame grace. A resurrected/reused slot (refcount>0 or generation moved) is
+         * skipped, so the entry harmlessly no-ops.
+         */
+        void CollectGarbage() noexcept override
+        {
+            if (m_Graveyard.empty()) { return; }
+
+            TDynArray<GraveEntry> lPending;
+            lPending.swap(m_Graveyard);
+            for (const GraveEntry& lEntry : lPending)
+            {
+                if (lEntry.Slot >= m_SlotCount) { continue; }
+                SlotMeta& lMeta = MetaRef(lEntry.Slot);
+                if (lMeta.State != EResourceState::Loaded)   { continue; } // already gone
+                if (lMeta.Generation != lEntry.Generation)   { continue; } // reused since
+                if (lMeta.RefCount != 0)                     { continue; } // resurrected
+                Unload(lEntry.Slot);
+            }
+        }
+        /***/
+        Uint32 GetLoadedCount()  const noexcept override { return m_LoadedCount;  }
+        /***/
+        Uint32 GetLoadingCount() const noexcept override { return m_LoadingCount; }
+        /***/
+        Uint64 GetBytes()        const noexcept override { return m_TotalBytes;   }
+        //~End IResourcePool interface
 
         // =============================================================================
         // Internal
         // =============================================================================
     private:
+        /***/
         std::optional<T>& PayloadRef(Uint32 InSlot) noexcept
         {
             return (*m_Chunks[InSlot / ChunkSize])[InSlot % ChunkSize];
         }
 
-        // Resolve a handle to its slot meta iff it is live (valid, in range, current
-        // generation, Loaded) — the shared guard for AddRef/Release.
+        // Address-stable metadata access — the heap chunk never moves, so a returned
+        // SlotMeta& survives concurrent slot allocation on another thread.
+        SlotMeta&       MetaRef(Uint32 InSlot)       noexcept { return (*m_MetaChunks[InSlot / ChunkSize])[InSlot % ChunkSize]; }
+        const SlotMeta& MetaRef(Uint32 InSlot) const noexcept { return (*m_MetaChunks[InSlot / ChunkSize])[InSlot % ChunkSize]; }
+
+        /**
+         * Resolve a handle to its slot meta iff it is live (valid, in range, current generation, Loaded) — the shared guard for AddRef/Release.
+         * @param InHandle 
+         * @return 
+         */
         SlotMeta* LiveMeta(HandleType InHandle) noexcept
         {
-            if (!InHandle.IsValid() || InHandle.Slot >= m_Meta.size())
+            if (!InHandle.IsValid() || InHandle.Slot >= m_SlotCount)
             {
                 return nullptr;
             }
-            
-            SlotMeta& lMeta = m_Meta[InHandle.Slot];
+
+            SlotMeta& lMeta = MetaRef(InHandle.Slot);
             if (lMeta.State != EResourceState::Loaded || lMeta.Generation != InHandle.Generation)
             {
                 return nullptr;
@@ -200,7 +337,7 @@ namespace Opaax
             
             return &lMeta;
         }
-
+        /***/
         Uint32 AllocSlot()
         {
             if (!m_FreeSlots.empty())
@@ -209,18 +346,23 @@ namespace Opaax
                 m_FreeSlots.pop_back();
                 return lSlot; // keeps its bumped Generation from the prior unload
             }
-            const Uint32 lSlot = static_cast<Uint32>(m_Meta.size());
-            m_Meta.push_back(SlotMeta{});
+            const Uint32 lSlot = m_SlotCount++;
             if (lSlot / ChunkSize >= m_Chunks.size())
             {
+                // New chunk: payload + meta grow together. A fresh MetaChunk default-
+                // constructs 64 SlotMeta{} (Generation 1, Unloaded). Appends must stay
+                // within the reserved MaxChunks or the outer vectors relocate and break
+                // lock-free Resolve.
+                OPAAX_ASSERT(m_Chunks.size() < MaxChunks) // exceeded MaxChunks -> Resolve no longer lock-free
                 m_Chunks.push_back(MakeUnique<Chunk>());
+                m_MetaChunks.push_back(MakeUnique<MetaChunk>());
             }
             return lSlot;
         }
-
+        /***/
         void Unload(Uint32 InSlot) noexcept
         {
-            SlotMeta&    lMeta      = m_Meta[InSlot];
+            SlotMeta&    lMeta      = MetaRef(InSlot);
             const Uint32 lSourceKey = lMeta.Source.GetId();
 
             // Bookkeeping BEFORE destroying the payload: bump generation first so a
@@ -236,11 +378,11 @@ namespace Opaax
             lMeta.Source   = OpaaxStringID{};
             m_FreeSlots.push_back(InSlot);
 
-            // Destroy LAST — a composite payload holds child Refs whose dtors call
-            // Release on their pools (M-RES-1: immediate; M-RES-2 defers this to the pump).
+            // Destroy LAST — a composite payload holds child Refs whose dtors Release on
+            // their pools, enqueuing those children into their own next-pump graveyard.
             PayloadRef(InSlot).reset();
         }
-
+        /***/
         T* PlaceholderOrNull() noexcept
         {
             if constexpr (T::FailPolicy == EFailPolicy::Placeholder)
@@ -251,6 +393,16 @@ namespace Opaax
             else
             {
                 return nullptr; // FailFast: stale/invalid resolves to null, never lies
+            }
+        }
+        /***/
+        static void MaybeInitialize(T& InValue) noexcept
+        {
+            // Main-thread "log-in" (GPU upload, handle registration) if the type
+            // provides Initialize(); leaf/CPU types without it are a compile-time no-op.
+            if constexpr (requires(T& v) { v.Initialize(); })
+            {
+                InValue.Initialize();
             }
         }
 
@@ -272,12 +424,15 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        TDynArray<UniquePtr<Chunk>>  m_Chunks;      // address-stable payload storage
-        TDynArray<SlotMeta>          m_Meta;        // parallel to slots (may relocate; payloads may not)
-        TDynArray<Uint32>            m_FreeSlots;   // reusable slot indices
-        UnorderedMap<Uint32, Uint32> m_PathToSlot;  // interned path id -> slot (dedup)
-        std::optional<T>             m_Placeholder; // built once, on first fallback
-        Uint32                       m_LoadedCount = 0;
-        Uint64                       m_TotalBytes  = 0;
+        TDynArray<UniquePtr<Chunk>>     m_Chunks;      // address-stable payload storage
+        TDynArray<UniquePtr<MetaChunk>> m_MetaChunks;  // address-stable slot metadata (parallel to payload chunks)
+        Uint32                          m_SlotCount = 0; // high-water slot index (monotonic); range-checks Resolve lock-free
+        TDynArray<Uint32>               m_FreeSlots;   // reusable slot indices
+        TDynArray<GraveEntry>           m_Graveyard;   // refcount-0 slots awaiting the next pump
+        UnorderedMap<Uint32, Uint32>    m_PathToSlot;  // interned path id -> slot (dedup)
+        std::optional<T>                m_Placeholder; // built once, on first fallback
+        Uint32                          m_LoadedCount  = 0;
+        Uint32                          m_LoadingCount = 0; // in-flight async slots (wired in the async step)
+        Uint64                          m_TotalBytes   = 0;
     };
 }

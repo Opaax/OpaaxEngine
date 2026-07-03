@@ -25,22 +25,32 @@ namespace Opaax
     }
 
     // =========================================================================
-    // The pump — the single point where pool mutation is allowed to happen.
-    // M-RES-1: loads/unloads are immediate (main-thread, synchronous), so this is
-    // a near no-op that DOCUMENTS the frame-stable boundary: a pointer returned by
-    // Resolve() is valid until the next Update(). It will host M-RES-2 async
-    // finalize + deferred unload + graveyard, and M-RES-3 hot-reload swaps.
+    // The pump — the single point where pool mutation is finalised. Async payloads
+    // published this frame land via the job system's completion drain (the engine
+    // loop's job, not ours); here we sweep the graveyard, destroying every slot
+    // released since the previous pump. That deferral is the frame-stable guarantee:
+    // a pointer returned by Resolve() stays valid until the next Update().
     // =========================================================================
     void ResourceManager::Update(double /*InDeltaTime*/)
     {
+        LockGuard<RecursiveMutex> lLock(m_Mutex);
+        ++m_PumpEpoch; // advance BEFORE collecting: a view from last frame is now stale
+        for (UniquePtr<IResourcePool>& lPool : m_Pools)
+        {
+            if (lPool)
+            {
+                lPool->CollectGarbage(); // may cascade-release composites -> Release re-locks (recursive)
+            }
+        }
     }
 
     void ResourceManager::FlushAll()
     {
         // NOTE: composite payloads release their child refs as they unload, so a
         // pool holding composites should ideally flush before the pools it depends
-        // on. M-RES-1 flushes in creation order and relies on the leak warning to
-        // surface anything still referenced — good enough pre-async.
+        // on. Flushing in creation order relies on the leak warning to surface
+        // anything still referenced — good enough for the current type set.
+        LockGuard<RecursiveMutex> lLock(m_Mutex);
         for (UniquePtr<IResourcePool>& lPool : m_Pools)
         {
             if (lPool)
@@ -49,5 +59,11 @@ namespace Opaax
             }
         }
         m_Deps.Clear();
+    }
+
+    void ResourceManager::AddDependencyEdge(Uint32 InParentId, Uint32 InChildId)
+    {
+        LockGuard<RecursiveMutex> lLock(m_Mutex);
+        m_Deps.AddEdge(InParentId, InChildId);
     }
 }

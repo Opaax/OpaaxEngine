@@ -1,6 +1,8 @@
 #include "Engine.h"
 
+#include "Core/Application/OpaaxApplication.h"
 #include "Core/Application/Services/ILogger.h"
+#include "Core/Application/Services/IJobSystem.h"
 #include "Core/Engine/Subsystems/Resources/ResourceManager.h"
 
 namespace Opaax
@@ -39,6 +41,14 @@ namespace Opaax
 
         m_Subsystems.StartupAll();
         m_Resources = m_Subsystems.GetSubsystem<ResourceManager>();
+
+        // Wire the async worker pool from the app service locator (null object if none),
+        // so ResourceManager::LoadAsync can run file IO/decode off the main thread.
+        if (m_Resources != nullptr)
+        {
+            m_Resources->SetJobSystem(OpaaxApplication::GetAppService<IJobSystem>());
+        }
+
         m_bStarted  = true;
 
         OPAAX_ENGINE_LOG(Info, "Engine started ({} subsystem(s))", m_Subsystems.GetSystems().size())

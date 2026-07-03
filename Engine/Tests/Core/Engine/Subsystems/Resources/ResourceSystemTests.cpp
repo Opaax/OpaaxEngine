@@ -11,9 +11,12 @@
 #include <fstream>
 #include <optional>
 #include <string>
+#include <thread>
 
 #include "Core/OpaaxTypes.h"
+#include "Core/Application/Services/IJobSystem.h"
 #include "Core/Engine/Subsystems/Resources/ResourceManager.h"
+#include "Core/Engine/Subsystems/Resources/ResourceView.hpp"
 #include "Core/Engine/Subsystems/Resources/Types/BinaryResource.hpp"
 
 using namespace Opaax;
@@ -96,6 +99,44 @@ namespace
 
         static ManifestResource Placeholder() { return ManifestResource{}; }
     };
+
+    // -------------------------------------------------------------------------
+    // GpuLikeResource — a leaf that records the thread its Load ran on and whose
+    // optional Initialize() (main-thread GPU "log-in") bumps a counter: lets the async
+    // tests prove Load runs on a worker and Initialize runs once, on the pump.
+    // -------------------------------------------------------------------------
+    struct GpuLikeResource
+    {
+        std::thread::id LoadThread{};
+        int             InitCount = 0;
+
+        static constexpr EFailPolicy FailPolicy = EFailPolicy::Placeholder;
+
+        static std::optional<GpuLikeResource> Load(const char* InPath, LoadContext& /*InCtx*/)
+        {
+            std::ifstream lFile(InPath, std::ios::binary);
+            if (!lFile.is_open()) { return std::nullopt; }
+            GpuLikeResource lRes;
+            lRes.LoadThread = std::this_thread::get_id();
+            return lRes;
+        }
+
+        void Initialize() { ++InitCount; } // main-thread log-in (detected via if-constexpr)
+        static GpuLikeResource Placeholder() { return GpuLikeResource{}; }
+    };
+
+    // Pump the drain + GC until no resource of T is in flight (bounded so a stuck load
+    // can't hang the suite). Stands in for the engine loop's per-frame DrainCompletions.
+    template<CResource T>
+    void PumpUntilIdle(ResourceManager& InMgr, JobSystem& InJobs)
+    {
+        for (int i = 0; i < 100000 && InMgr.template GetLoadingCount<T>() != 0; ++i)
+        {
+            InJobs.DrainCompletions();
+            InMgr.Update(0.0);
+            std::this_thread::yield();
+        }
+    }
 }
 
 // =============================================================================
@@ -131,8 +172,14 @@ TEST_CASE("Resources: releasing the last ref unloads; stale handle resolves safe
         ResourceRef<BinaryResource> lRef = lMgr.Load<BinaryResource>(lFile.c_str());
         lStale = lRef.GetHandle();
         CHECK(lMgr.GetLoadedCount<BinaryResource>() == 1);
-    } // last ref dropped -> unload
+    } // last ref dropped -> deferred unload (graveyard)
 
+    // One-frame grace: still loaded + resolvable to real bytes until the next pump.
+    CHECK(lMgr.GetLoadedCount<BinaryResource>() == 1);
+    CHECK(lMgr.Resolve(lStale) != nullptr);
+    CHECK(lMgr.Resolve(lStale)->Bytes.size() == 5);
+
+    lMgr.Update(0.0); // pump -> collect the graveyard
     CHECK(lMgr.GetLoadedCount<BinaryResource>() == 0);
 
     // Placeholder policy: a stale handle never dangles — it resolves to the (empty)
@@ -150,6 +197,33 @@ TEST_CASE("Resources: releasing the last ref unloads; stale handle resolves safe
 }
 
 // =============================================================================
+TEST_CASE("Resources: a dedup Load during the grace window resurrects the slot")
+{
+    TempWorkspace   lWs;
+    ResourceManager lMgr;
+    REQUIRE(lMgr.Startup());
+
+    const std::string              lFile = lWs.Write("g.bin", "grace");
+    ResourceHandle<BinaryResource> lHandle;
+
+    {
+        ResourceRef<BinaryResource> lRef = lMgr.Load<BinaryResource>(lFile.c_str());
+        lHandle = lRef.GetHandle();
+    } // released -> graveyard, still Loaded until the next pump
+
+    // Load before the pump dedups onto the still-live slot: same slot AND generation
+    // (no reload, no generation bump) — the pending grave entry will simply no-op.
+    ResourceRef<BinaryResource> lRevived = lMgr.Load<BinaryResource>(lFile.c_str());
+    CHECK(lRevived.GetHandle() == lHandle);
+    CHECK(lMgr.GetLoadedCount<BinaryResource>() == 1);
+
+    lMgr.Update(0.0);                                    // grave entry sees refcount>0 -> skipped
+    CHECK(lMgr.GetLoadedCount<BinaryResource>() == 1);   // survived — still referenced by lRevived
+    CHECK(lMgr.Resolve(lHandle) != nullptr);
+    CHECK(lMgr.Resolve(lHandle)->Bytes.size() == 5);
+}
+
+// =============================================================================
 TEST_CASE("Resources: a composite loads its dependencies; release cascades")
 {
     TempWorkspace   lWs;
@@ -164,9 +238,15 @@ TEST_CASE("Resources: a composite loads its dependencies; release cascades")
         ResourceRef<ManifestResource> lRoot = lMgr.Load<ManifestResource>(lParent.c_str());
         CHECK(lRoot.IsValid());
         CHECK(lMgr.GetLoadedCount<ManifestResource>() == 3); // parent + 2 children
-    } // dropping the root releases its hard child refs -> all unload
+    } // dropping the root enqueues it for deferred unload
 
-    CHECK(lMgr.GetLoadedCount<ManifestResource>() == 0);
+    // Cascade unwinds one level per pump: the root's grave entry destroys the parent,
+    // whose child refs then release into the NEXT pump's graveyard.
+    CHECK(lMgr.GetLoadedCount<ManifestResource>() == 3); // grace (pre-pump)
+    lMgr.Update(0.0);
+    CHECK(lMgr.GetLoadedCount<ManifestResource>() == 2); // parent gone; children released, one-frame grace
+    lMgr.Update(0.0);
+    CHECK(lMgr.GetLoadedCount<ManifestResource>() == 0); // children collected
 }
 
 // =============================================================================
@@ -252,6 +332,8 @@ TEST_CASE("Resources: bytes accounting reflects loaded payloads")
         ResourceRef<BinaryResource> lRef = lMgr.Load<BinaryResource>(lFile.c_str());
         CHECK(lMgr.GetBytes<BinaryResource>() == 1234);
     }
+    CHECK(lMgr.GetBytes<BinaryResource>() == 1234); // grace: accounted until the pump
+    lMgr.Update(0.0);
     CHECK(lMgr.GetBytes<BinaryResource>() == 0);
 }
 
@@ -280,6 +362,7 @@ TEST_CASE("Resources: Pin bridges a data handle to a lifetime claim")
         ResourceRef<BinaryResource> lTmp = lMgr.Load<BinaryResource>(lWs.Write("t.bin", "z").c_str());
         lDead = lTmp.GetHandle();
     }
+    lMgr.Update(0.0); // pump past the grace so the slot is actually destroyed
     ResourceRef<BinaryResource> lPinnedDead = lMgr.Pin(lDead);
     CHECK_FALSE(lPinnedDead.IsValid());
 }
@@ -290,4 +373,82 @@ TEST_CASE("Resources: ResourceTypeID is unique per type and stable within a run"
     CHECK(ResourceTypeID::Get<BinaryResource>()   == ResourceTypeID::Get<BinaryResource>());
     CHECK(ResourceTypeID::Get<ManifestResource>() == ResourceTypeID::Get<ManifestResource>());
     CHECK(ResourceTypeID::Get<BinaryResource>()   != ResourceTypeID::Get<ManifestResource>());
+}
+
+// =============================================================================
+TEST_CASE("Resources: LoadAsync loads off the main thread and publishes at the pump")
+{
+    TempWorkspace   lWs;
+    JobSystem       lJobs(1);   // >=1 real worker so onComplete defers to a drain (not inline)
+    ResourceManager lMgr;
+    lMgr.SetJobSystem(lJobs);
+    REQUIRE(lMgr.Startup());
+
+    const std::string lFile = lWs.Write("g.bin", "x");
+
+    ResourceRef<GpuLikeResource> lRef = lMgr.LoadAsync<GpuLikeResource>(lFile.c_str());
+    CHECK(lRef.IsValid());                                       // a Loading claim, returned immediately
+    CHECK(lMgr.GetLoadingCount<GpuLikeResource>() == 1);
+    CHECK(lMgr.GetLoadedCount<GpuLikeResource>() == 0);
+    CHECK(lMgr.Resolve(lRef.GetHandle()) != nullptr);            // resolves to the placeholder while Loading
+    CHECK(lMgr.Resolve(lRef.GetHandle())->InitCount == 0);
+
+    PumpUntilIdle<GpuLikeResource>(lMgr, lJobs);
+
+    CHECK(lMgr.GetLoadingCount<GpuLikeResource>() == 0);
+    CHECK(lMgr.GetLoadedCount<GpuLikeResource>() == 1);
+
+    GpuLikeResource* lLoaded = lMgr.Resolve(lRef.GetHandle());
+    REQUIRE(lLoaded != nullptr);
+    CHECK(lLoaded->InitCount == 1);                              // Initialize ran exactly once...
+    CHECK(lLoaded->LoadThread != std::this_thread::get_id());    // ...and Load ran on a worker thread
+}
+
+// =============================================================================
+TEST_CASE("Resources: LoadAsync loads a composite subtree on the worker")
+{
+    TempWorkspace   lWs;
+    JobSystem       lJobs(1);
+    ResourceManager lMgr;
+    lMgr.SetJobSystem(lJobs);
+    REQUIRE(lMgr.Startup());
+
+    const std::string lChild1 = lWs.Write("c1.man", "");
+    const std::string lChild2 = lWs.Write("c2.man", "");
+    const std::string lParent = lWs.Write("p.man", lChild1 + "\n" + lChild2 + "\n");
+
+    ResourceRef<ManifestResource> lRoot = lMgr.LoadAsync<ManifestResource>(lParent.c_str());
+    CHECK(lRoot.IsValid());
+
+    PumpUntilIdle<ManifestResource>(lMgr, lJobs);
+
+    CHECK(lMgr.GetLoadingCount<ManifestResource>() == 0);
+    CHECK(lMgr.GetLoadedCount<ManifestResource>() == 3);         // parent + 2 children, all off-thread
+    REQUIRE(lRoot.Get() != nullptr);
+    CHECK(lRoot.Get()->Children.size() == 2);
+
+    // Deferred unload cascades for async-loaded composites too.
+    lRoot = ResourceRef<ManifestResource>{};
+    lMgr.Update(0.0);                                            // parent unloads -> releases children
+    lMgr.Update(0.0);                                            // children unload
+    CHECK(lMgr.GetLoadedCount<ManifestResource>() == 0);
+}
+
+// =============================================================================
+TEST_CASE("Resources: CheckedView flags a Resolve pointer held across a pump")
+{
+    TempWorkspace   lWs;
+    ResourceManager lMgr;
+    REQUIRE(lMgr.Startup());
+
+    const std::string lFile = lWs.Write("v.bin", "view");
+    ResourceRef<BinaryResource> lRef = lMgr.Load<BinaryResource>(lFile.c_str());
+
+    CheckedView<BinaryResource> lView = CheckedResolve(lMgr, lRef.GetHandle());
+    CHECK_FALSE(lView.IsStale());
+    CHECK(lView.Get() != nullptr);         // safe within the frame it was taken
+    CHECK(lView->Bytes.size() == 4);
+
+    lMgr.Update(0.0);                      // pump -> epoch advances
+    CHECK(lView.IsStale());                // a cached view is now flagged (Get() would assert in debug)
 }

@@ -31,13 +31,14 @@ namespace Opaax
     };
 
     // -------------------------------------------------------------------------
-    // Load state. Loading is reserved for the M-RES-2 async split (declared from
-    // day one so the state machine never changes shape).
+    // Load state. A slot is Loading between an async request and its main-thread
+    // publish; Resolve gates on Loaded, so a Loading handle resolves to the fail
+    // policy (placeholder/null) until the payload lands — the streaming behavior.
     // -------------------------------------------------------------------------
     enum class EResourceState : Uint8
     {
         Unloaded,
-        Loading, // M-RES-2
+        Loading, // async request placed, payload not yet published
         Loaded,
         Failed
     };
@@ -47,6 +48,12 @@ namespace Opaax
 
     // =============================================================================
     // CResource — the contract every resource type must satisfy.
+    //
+    //   Two-phase loading. Load is the ANY-THREAD producer: pure file IO + CPU
+    //   decode (+ composite ctx.Acquire<Child>, which runs inline on the same
+    //   worker). It must be self-contained — no GPU, no shared mutable state.
+    //   The optional Initialize() below is the MAIN-THREAD "log-in" (GPU upload,
+    //   handle registration) run once during the pump, after Load's payload lands.
     // =============================================================================
     template<typename T>
     concept CResource = requires(const char* InPath, LoadContext& InCtx)
@@ -58,9 +65,8 @@ namespace Opaax
         // Placeholder vs FailFast.
         { T::FailPolicy }          -> std::convertible_to<EFailPolicy>;
 
-        // NOTE M-RES-2: split Load -> LoadAnyThread + InitializeMainThread (GPU upload).
-        // NOTE tools : static bool Save(const T&, const char* Path) joins at M-RES-ED.
-        // Optional Uint64 ByteSize() const is detected at the pool with if-constexpr
-        // (falls back to sizeof(T)) — not required by the contract.
+        // Optional, detected at the pool with if-constexpr (not required here):
+        //   void   Initialize()      — main-thread GPU log-in, run once in the pump.
+        //   Uint64 ByteSize() const  — real payload bytes (else sizeof(T)).
     };
 }

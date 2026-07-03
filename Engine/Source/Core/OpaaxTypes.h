@@ -119,6 +119,7 @@ namespace Opaax
     // =============================================================================
     using Thread            = std::thread;
     using Mutex             = std::mutex;
+    using RecursiveMutex    = std::recursive_mutex;
     using ConditionVariable = std::condition_variable;
 
     template<typename T>

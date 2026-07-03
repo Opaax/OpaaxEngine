@@ -25,19 +25,43 @@ namespace Opaax
         // CTORS - DTORS
         // =============================================================================
     public:
-        ResourceRef() noexcept = default; // empty claim (null manager)
-
-        // Adopt the +1 that Load/Pin already applied — no extra add-ref. Manager-only
-        // in spirit; game code receives Refs from Load()/Pin(), never builds them.
+        /**  empty claim (null manager) */
+        ResourceRef() noexcept = default;
+        
+        /**
+         * Adopt the +1 that Load/Pin already applied — no extra add-ref.
+         * Manager-only in spirit; game code receives Refs from Load()/Pin(), never builds them.
+         * @param InManager 
+         * @param InHandle 
+         */
         ResourceRef(ResourceManager* InManager, ResourceHandle<T> InHandle) noexcept
             : m_Manager(InManager)
             , m_Handle(InHandle)
         {
         }
 
-        ResourceRef(const ResourceRef& InOther);              // add-ref  — defined in ResourceManager.h
-        ResourceRef& operator=(const ResourceRef& InOther);   // release old + add-ref — defined in ResourceManager.h
+        // =============================================================================
+        // Copy
+        // =============================================================================
+        
+        /**
+         * add-ref  — defined in ResourceManager.h
+         * @param InOther 
+         */
+        ResourceRef(const ResourceRef& InOther);
 
+        /**
+         * release old + add-ref — defined in ResourceManager.h
+         * @param InOther 
+         * @return 
+         */
+        ResourceRef& operator=(const ResourceRef& InOther);
+
+        // =============================================================================
+        // Move
+        // =============================================================================
+        
+        /***/
         ResourceRef(ResourceRef&& InOther) noexcept
             : m_Manager(InOther.m_Manager)
             , m_Handle(InOther.m_Handle)
@@ -46,25 +70,36 @@ namespace Opaax
             InOther.m_Handle  = ResourceHandle<T>{};
         }
 
-        ResourceRef& operator=(ResourceRef&& InOther) noexcept; // release old + steal — defined in ResourceManager.h
+        /** release old + steal — defined in ResourceManager.h */
+        ResourceRef& operator=(ResourceRef&& InOther) noexcept;
 
-        ~ResourceRef();                                         // release — defined in ResourceManager.h
+        /** release — defined in ResourceManager.h */
+        ~ResourceRef();
 
         // =============================================================================
         // Functions
         // =============================================================================
     public:
-        T* Get() const noexcept;                                // manager->Resolve<T> — defined in ResourceManager.h
+        /**
+         * manager->Resolve<T> — defined in ResourceManager.h
+         * @return 
+         */
+        T* Get() const noexcept;
         T* operator->() const noexcept { return Get(); }
         T& operator*()  const noexcept { return *Get(); }
 
         // =============================================================================
         // Get - Set
-        // =============================================================================
     public:
+        /***/
         ResourceHandle<T> GetHandle() const noexcept { return m_Handle; }
+        /***/
         bool              IsValid()   const noexcept { return m_Manager != nullptr && m_Handle.IsValid(); }
+        /***/
         explicit operator bool()      const noexcept { return IsValid(); }
+        
+        // End Get - Set
+        // =============================================================================
 
         // =============================================================================
         // Members
