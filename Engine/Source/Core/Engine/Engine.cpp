@@ -3,7 +3,12 @@
 #include "Core/Application/OpaaxApplication.h"
 #include "Core/Application/Services/ILogger.h"
 #include "Core/Application/Services/IJobSystem.h"
+
+//Subsystems
 #include "Core/Engine/Subsystems/Resources/ResourceManager.h"
+#include "Subsystems/Resources/Types/BinaryResource.hpp"
+
+#include "Subsystems/Renderer/RendererManager.h"
 
 namespace Opaax
 {
@@ -17,6 +22,7 @@ namespace Opaax
         // Resources is the FIRST engine subsystem (design §9). Register more here in
         // startup order as they land (Render, Input, World, Physics...).
         m_Subsystems.RegisterSubsystem<ResourceManager>();
+        m_Subsystems.RegisterSubsystem<RendererManager>();
     }
 
     Engine::~Engine()
@@ -40,8 +46,10 @@ namespace Opaax
         }
 
         m_Subsystems.StartupAll();
-        m_Resources = m_Subsystems.GetSubsystem<ResourceManager>();
-
+        
+        m_Resources         = m_Subsystems.GetSubsystem<ResourceManager>();
+        m_RendererManager   = m_Subsystems.GetSubsystem<RendererManager>();
+        
         // Wire the async worker pool from the app service locator (null object if none),
         // so ResourceManager::LoadAsync can run file IO/decode off the main thread.
         if (m_Resources != nullptr)
@@ -55,9 +63,32 @@ namespace Opaax
         return true;
     }
 
+    bool GTestLoad = false;
+    double lTime = 0;
+    
     void Engine::Loop()
     {
+        OpaaxApplication::GetAppService<IJobSystem>().DrainCompletions();
         
+        double lPrev = lTime;
+        lTime += 0.016;
+        
+        double lDeltaTime = lTime - lPrev;
+        m_Resources->Update(lDeltaTime);
+        
+        ResourceRef<BinaryResource> lEst;
+        
+        if (!GTestLoad)
+        {
+            OpaaxString lPath = OpaaxApplication::GetAppService<IPaths>().EngineToAbsolute("/Assets/Test.bin");
+            lEst = m_Resources->LoadAsync<BinaryResource>(lPath.CStr());
+            GTestLoad = true;
+        }
+        
+        if (lEst.IsValid())
+        {
+            OPAAX_ENGINE_LOG(Info, "Engine loaded after: {}", lTime);
+        }
     }
 
     void Engine::Shutdown()

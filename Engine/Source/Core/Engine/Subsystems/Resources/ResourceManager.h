@@ -291,6 +291,7 @@ namespace Opaax
             lPool   = &GetOrCreatePool<T>();
             lHandle = lPool->AcquireSlot(InPath, lNeedsFill); // Loading claim, returned NOW
         }
+        
         if (!lNeedsFill)
         {
             return ResourceRef<T>{ this, lHandle }; // dedup: already loaded / in flight

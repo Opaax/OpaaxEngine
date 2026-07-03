@@ -95,6 +95,7 @@ IEngine&            OpaaxApplication::Engine()          { return m_Services.Get<
 void OpaaxApplication::InitializeApplication()
 {
     CreateApplicationWindow();
+    
     OnInitializeApplication();
     
     bIsRunning = true;
@@ -102,7 +103,7 @@ void OpaaxApplication::InitializeApplication()
 
 void OpaaxApplication::RunApplication()
 {
-    Engine().Startup();
+    EngineStartup();
     
     while (bIsRunning)
     {
@@ -138,6 +139,13 @@ void OpaaxApplication::RunApplication()
         // ----------------------------------------------------------------
         lWindow->SwapBuffers();
     }
+}
+
+void OpaaxApplication::EngineStartup()
+{
+    PreEngineStartup();
+    Engine().Startup();
+    PostEngineStartup();
 }
 
 void OpaaxApplication::ShutdownApplication()

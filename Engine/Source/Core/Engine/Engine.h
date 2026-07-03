@@ -3,6 +3,8 @@
 #include <Core/Application/Services/IEngine.h>
 #include <Core/Engine/Subsystems/EngineSubsystem.h>
 
+#include "Subsystems/Renderer/RendererManager.h"
+
 namespace Opaax
 {
     class ResourceManager;
@@ -78,6 +80,8 @@ namespace Opaax
          * Convenient ptr, lifetime not managed by engine itself but through subsystem
          */
         ResourceManager*   m_Resources = nullptr;
+        /***/
+        RendererManager*   m_RendererManager = nullptr;
         bool               m_bStarted  = false;
     };
 }

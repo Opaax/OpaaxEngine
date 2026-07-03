@@ -156,7 +156,10 @@ namespace Opaax
         {
             if (InSlot >= m_SlotCount) { return; }
             SlotMeta& lMeta = MetaRef(InSlot);
-            if (lMeta.State != EResourceState::Loading) { return; } // already handled
+            if (lMeta.State != EResourceState::Loading)
+            {
+                return;
+            } // already handled
 
             if (lMeta.RefCount == 0)
             {
@@ -256,7 +259,7 @@ namespace Opaax
                 if (lMeta.State != EResourceState::Loaded) { continue; }
                 if (lMeta.RefCount > 0)
                 {
-                    OPAAX_CORE_WARN("[Resources] Leak at flush: '{}' (refcount {})", lMeta.Source, lMeta.RefCount);
+                    OPAAX_LOG(LogResourcePool, Warn, "Leak at flush: '{}' (refcount {})", lMeta.Source, lMeta.RefCount)
                 }
                 PayloadRef(lSlot).reset(); // may cascade-release composite children on OTHER pools
                 ++lMeta.Generation;

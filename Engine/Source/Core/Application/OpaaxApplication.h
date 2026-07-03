@@ -71,6 +71,24 @@ namespace Opaax
         void ShutdownApplication();
         
         // =============================================================================
+        // Engine
+        /**
+        * Before engine start
+        * Engine subsystem not start yet
+        */
+        virtual void PreEngineStartup() {}
+        
+        void EngineStartup();
+        
+        /**
+         * After engine start
+         * Engine subsystem has start
+         */
+        virtual void PostEngineStartup(){}
+        // Engine
+        // =============================================================================
+        
+        // =============================================================================
         // Get - Set
         // =============================================================================
     public:
