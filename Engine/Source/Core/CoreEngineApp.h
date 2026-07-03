@@ -165,7 +165,7 @@ namespace Opaax
         // Previous frame's play-gate state — drives the OnPlayBegin/OnPlayEnd edges.
         bool bWasPlaying = false;
         UniquePtr<Window> m_Window;
-        EngineSubsystemMgr m_EngineSubsystemManager;
+        EngineSubsystemMgrOld m_EngineSubsystemManager;
         GameSubsystemMgr   m_GameSubsystemMgr;
 
         IRenderTarget*              m_RenderTarget        = nullptr;

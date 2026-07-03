@@ -39,7 +39,7 @@ namespace Opaax
      * NOTE: Mouse buttons query through the same IsKey* API using
      *   EOpaaxKeyCode::Mouse_Left etc. No separate mouse button functions needed.
      */
-    class OPAAX_API InputSubsystem final : public EngineSubsystemBase
+    class OPAAX_API InputSubsystem final : public EngineSubsystemBaseOld
     {
     public:
         OPAAX_SUBSYSTEM_TYPE(InputSubsystem)
@@ -50,7 +50,7 @@ namespace Opaax
     public:
         InputSubsystem() = default;
         ~InputSubsystem() override = default;
-        explicit InputSubsystem(CoreEngineApp* InEngineApp) : EngineSubsystemBase(InEngineApp) {}
+        explicit InputSubsystem(CoreEngineApp* InEngineApp) : EngineSubsystemBaseOld(InEngineApp) {}
         
         // =============================================================================
         // Function

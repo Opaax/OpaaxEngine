@@ -28,7 +28,7 @@ namespace Opaax
      * dynamic bodies back to their Transforms, OnPlayEnd destroys them — so no Box2D
      * state leaks across PIE Start/Stop (ECS Transforms roll back via the snapshot system).
      */
-    class OPAAX_API PhysicsSubsystem final : public EngineSubsystemBase
+    class OPAAX_API PhysicsSubsystem final : public EngineSubsystemBaseOld
     {
     public:
         OPAAX_SUBSYSTEM_TYPE(PhysicsSubsystem)
@@ -38,7 +38,7 @@ namespace Opaax
         // =============================================================================
     public:
         PhysicsSubsystem() = default;
-        explicit PhysicsSubsystem(CoreEngineApp* InEngineApp) : EngineSubsystemBase(InEngineApp) {}
+        explicit PhysicsSubsystem(CoreEngineApp* InEngineApp) : EngineSubsystemBaseOld(InEngineApp) {}
         ~PhysicsSubsystem() override = default;
 
         PhysicsSubsystem(const PhysicsSubsystem&)            = delete;

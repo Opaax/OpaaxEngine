@@ -6,6 +6,7 @@
 
 namespace Opaax
 {
+    class IEngine;
     class IConfigSystem;
     class IProjectManager;
     class IPlatform;
@@ -86,6 +87,7 @@ namespace Opaax
         IConfigSystem&      ConfigSystem();
         IJobSystem&         JobSystem();
         IWindowManager&     WindowManager();
+        IEngine&            Engine();
 
         // =============================================================================
         // Members

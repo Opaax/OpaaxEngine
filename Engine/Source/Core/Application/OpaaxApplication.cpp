@@ -79,13 +79,14 @@ void OpaaxApplication::Bootstrap()
     m_Services.Provide<IEngine, Opaax::Engine>();
 }
 
-IPlatform&          OpaaxApplication::Platform()        { return m_Services.Get<IPlatform>();        }
-IPaths&             OpaaxApplication::Paths()           { return m_Services.Get<IPaths>();           }
-ILogger&            OpaaxApplication::Logger()          { return m_Services.Get<ILogger>();          }
-IProjectManager&    OpaaxApplication::ProjectManager()  { return m_Services.Get<IProjectManager>();  }
-IConfigSystem&      OpaaxApplication::ConfigSystem()    { return m_Services.Get<IConfigSystem>();    }
-IJobSystem&         OpaaxApplication::JobSystem()       { return m_Services.Get<IJobSystem>();       }
-IWindowManager&     OpaaxApplication::WindowManager()   { return m_Services.Get<IWindowManager>();   }
+IPlatform&          OpaaxApplication::Platform()        { return m_Services.Get<IPlatform>();       }
+IPaths&             OpaaxApplication::Paths()           { return m_Services.Get<IPaths>();          }
+ILogger&            OpaaxApplication::Logger()          { return m_Services.Get<ILogger>();         }
+IProjectManager&    OpaaxApplication::ProjectManager()  { return m_Services.Get<IProjectManager>(); }
+IConfigSystem&      OpaaxApplication::ConfigSystem()    { return m_Services.Get<IConfigSystem>();   }
+IJobSystem&         OpaaxApplication::JobSystem()       { return m_Services.Get<IJobSystem>();      }
+IWindowManager&     OpaaxApplication::WindowManager()   { return m_Services.Get<IWindowManager>();  }
+IEngine&            OpaaxApplication::Engine()          { return m_Services.Get<IEngine>();         }
 
 // =============================================================================
 // Initialization
@@ -101,6 +102,8 @@ void OpaaxApplication::InitializeApplication()
 
 void OpaaxApplication::RunApplication()
 {
+    Engine().Startup();
+    
     while (bIsRunning)
     {
         Window* lWindow = WindowManager().GetMainWindow();
@@ -128,7 +131,7 @@ void OpaaxApplication::RunApplication()
         // ----------------------------------------------------------------
         // 2. Time
         // ----------------------------------------------------------------
-        //Engine.Loop()
+        Engine().Loop();
         
         // ----------------------------------------------------------------
         // 3. Present AFTER render, always last (graphics context owns the swap).
@@ -139,6 +142,8 @@ void OpaaxApplication::RunApplication()
 
 void OpaaxApplication::ShutdownApplication()
 {
+    Engine().Shutdown();
+    
     m_Services.ShutdownAll();
     
     bHasBeenShuttingDown = true;

@@ -14,7 +14,7 @@ namespace Opaax
      * init/shutdown. Registered as an engine subsystem so it participates in the standard
      * Startup / Shutdown / Render lifecycle. Registers the built-in passes at Startup.
      */
-    class OPAAX_API RenderSubsystem final : public EngineSubsystemBase
+    class OPAAX_API RenderSubsystem final : public EngineSubsystemBaseOld
     {
     public:
         OPAAX_SUBSYSTEM_TYPE(RenderSubsystem)
@@ -24,7 +24,7 @@ namespace Opaax
         // =============================================================================
     public:
         RenderSubsystem() = default;
-        explicit RenderSubsystem(CoreEngineApp* InEngineApp) : EngineSubsystemBase(InEngineApp) {}
+        explicit RenderSubsystem(CoreEngineApp* InEngineApp) : EngineSubsystemBaseOld(InEngineApp) {}
         ~RenderSubsystem() override = default;
 
         // =============================================================================

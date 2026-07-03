@@ -1,17 +1,33 @@
 #include "IEngine.h"
 
+#include "Core/Engine/Subsystems/Resources/ResourceManager.h"
+
 namespace Opaax
 {
     namespace
     {
         // =====================================================================
         // NullEngine — the locator's fallback when no engine is provided. Inert:
-        // it owns nothing and drives nothing; IsNull() lets callers detect it.
+        // it starts/pumps nothing. GetResources() hands back a static, never-started
+        // ResourceManager so callers never dereference a dangling reference.
         // =====================================================================
         class NullEngine final : public IEngine
         {
         public:
             bool IsNull() const noexcept override { return true; }
+
+            bool Startup()                override { return true; }
+            void Loop()                   override {}
+            void Update(double)           override {}
+            void FixedUpdate(double)      override {}
+            void Render(double)           override {}
+            void Shutdown()               override {}
+
+            ResourceManager& GetResources() override
+            {
+                static ResourceManager s_NullResources; // inert — never Startup()'d
+                return s_NullResources;
+            }
         };
     }
 

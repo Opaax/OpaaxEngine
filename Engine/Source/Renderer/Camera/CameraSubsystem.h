@@ -25,7 +25,7 @@ namespace Opaax
      * at the use site and never cache ICamera* across a function call that could
      * trigger a swap (Lesson 17).
      */
-    class OPAAX_API CameraSubsystem final : public EngineSubsystemBase
+    class OPAAX_API CameraSubsystem final : public EngineSubsystemBaseOld
     {
     public:
         OPAAX_SUBSYSTEM_TYPE(CameraSubsystem)
@@ -35,7 +35,7 @@ namespace Opaax
         // =============================================================================
     public:
         CameraSubsystem() = default;
-        explicit CameraSubsystem(CoreEngineApp* InEngineApp) : EngineSubsystemBase(InEngineApp) {}
+        explicit CameraSubsystem(CoreEngineApp* InEngineApp) : EngineSubsystemBaseOld(InEngineApp) {}
         ~CameraSubsystem() override = default;
 
         CameraSubsystem(const CameraSubsystem&)            = delete;

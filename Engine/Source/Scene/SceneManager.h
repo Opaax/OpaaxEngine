@@ -21,7 +21,7 @@ namespace Opaax
      * USAGE:
      * GetSubsystem<SceneManager>()->Push(MakeUnique<GameplayScene>());
      */
-    class OPAAX_API SceneManager final : public EngineSubsystemBase
+    class OPAAX_API SceneManager final : public EngineSubsystemBaseOld
     {
     public:
         OPAAX_SUBSYSTEM_TYPE(SceneManager)
@@ -32,7 +32,7 @@ namespace Opaax
     public:
         SceneManager() = default;
         explicit SceneManager(CoreEngineApp* InEngineApp)
-            : EngineSubsystemBase(InEngineApp)
+            : EngineSubsystemBaseOld(InEngineApp)
         {}
         ~SceneManager() override = default;
 

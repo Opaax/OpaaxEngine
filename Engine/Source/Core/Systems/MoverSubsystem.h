@@ -26,7 +26,7 @@ namespace Opaax
      * Shutdown; game/engine code adds more via MoverModeRegistry::Register — new movement never
      * touches MoverComponent or this subsystem (the anti-monolith seam).
      */
-    class OPAAX_API MoverSubsystem final : public EngineSubsystemBase
+    class OPAAX_API MoverSubsystem final : public EngineSubsystemBaseOld
     {
     public:
         OPAAX_SUBSYSTEM_TYPE(MoverSubsystem)
@@ -36,7 +36,7 @@ namespace Opaax
         // =============================================================================
     public:
         MoverSubsystem() = default;
-        explicit MoverSubsystem(CoreEngineApp* InEngineApp) : EngineSubsystemBase(InEngineApp) {}
+        explicit MoverSubsystem(CoreEngineApp* InEngineApp) : EngineSubsystemBaseOld(InEngineApp) {}
         ~MoverSubsystem() override = default;
 
         MoverSubsystem(const MoverSubsystem&)            = delete;

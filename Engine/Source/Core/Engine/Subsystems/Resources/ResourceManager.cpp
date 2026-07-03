@@ -14,7 +14,7 @@ namespace Opaax
 
     bool ResourceManager::Startup()
     {
-        OPAAX_CORE_INFO("[Resources] ResourceManager startup — pools created on first Load<T>");
+        OPAAX_LOG(LogResourceManager, Info, "ResourceManager startup — pools created on first Load<T>")
         return true;
     }
 

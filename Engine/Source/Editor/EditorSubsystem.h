@@ -29,7 +29,7 @@ namespace Opaax
      * Owns the ImGui context lifetime and drives the per-frame Begin/End cycle.
      * Registers all IAssetTypeActions and IComponentDrawers at Startup.
      */
-    class OPAAX_API EditorSubsystem final : public EngineSubsystemBase
+    class OPAAX_API EditorSubsystem final : public EngineSubsystemBaseOld
     {
     public:
         OPAAX_SUBSYSTEM_TYPE(EditorSubsystem)
@@ -40,7 +40,7 @@ namespace Opaax
     public:
         EditorSubsystem() = default;
         explicit EditorSubsystem(CoreEngineApp* InEngineApp)
-            : EngineSubsystemBase(InEngineApp)
+            : EngineSubsystemBaseOld(InEngineApp)
         {}
         ~EditorSubsystem() override = default;
 
