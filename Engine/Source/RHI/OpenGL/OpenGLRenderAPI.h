@@ -1,10 +1,13 @@
 #pragma once
 
+#include "Core/Application/Services/ILogger.h"
 #include "RHI/IRenderAPI.h"
 #include "RHI/OpenGL/OpenGLCommandBuffer.h"
 
 namespace Opaax
 {
+    inline constexpr LogCategory LogOpenGLRenderAPI{"OpenGLRenderAPI"};
+
     /**
      * @class OpenGLRenderAPI
      *

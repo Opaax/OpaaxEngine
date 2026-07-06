@@ -83,5 +83,10 @@ namespace Opaax
         /***/
         RendererManager*   m_RendererManager = nullptr;
         bool               m_bStarted  = false;
+
+        // Per-frame delta-time source (steady clock). Stored as nanoseconds so the header
+        // stays <chrono>-free; the clock read + conversion live in Engine::Loop.
+        Uint64             m_LastTickNs = 0;
+        bool               m_bHasTick   = false;
     };
 }

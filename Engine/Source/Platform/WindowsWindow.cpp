@@ -44,11 +44,14 @@ namespace Opaax
 
 	void WindowsWindow::Init(const WindowProps& Props)
 	{
-		m_Data.Title  = Props.Title;
-		m_Data.Width  = Props.Width;
-		m_Data.Height = Props.Height;
+		m_Data.Title  		= Props.Title;
+		m_Data.Width  		= Props.Width;
+		m_Data.Height 		= Props.Height;
+		m_Data.WindowMode	= Props.WindowMode;
+		
+		//TODO Get window mode from string
 
-		OPAAX_LOG(LogWindowsWindow, Info, "Creating window {} ({}, {})", Props.Title, Props.Width, Props.Height)
+		OPAAX_LOG(LogWindowsWindow, Info, "Creating window {} ({}, {}) ", Props.Title, Props.Width, Props.Height)
 
 		if (!s_GLFWInitialized)
 		{
@@ -70,6 +73,8 @@ namespace Opaax
 			m_Data.Title.CStr(),
 			nullptr, nullptr
 		);
+		
+		SetWindowMode(m_Data.WindowMode);
 
 		// NOTE: Hard crash here is correct — a null window is unrecoverable.
 		OPAAX_CORE_ASSERT(m_Window)
@@ -281,5 +286,129 @@ namespace Opaax
 		m_Context.reset();         // release the graphics context before its window
 		glfwDestroyWindow(m_Window);
 		m_Window = nullptr;        // can't be destroyed twice
+	}
+
+	void WindowsWindow::SetWindowMode(WindowMode mode)
+	{
+		SaveWindowedState();
+		
+		switch(mode)
+		{
+		case WindowMode::Windowed:
+			SetWindowed();
+			break;
+
+		case WindowMode::Borderless:
+			SetBorderless();
+			break;
+
+		case WindowMode::Fullscreen:
+			SetFullscreen();
+			break;
+		}
+	}
+
+	void WindowsWindow::SetWindowed()
+	{
+		glfwSetWindowAttrib(
+		m_Window,
+		GLFW_DECORATED,
+		GLFW_TRUE);
+
+		glfwSetWindowMonitor(
+			m_Window,
+			nullptr,
+			m_Data.PosX,
+			m_Data.PosX,
+			m_Data.Width,
+			m_Data.Height,
+			m_Data.RefreshRate);
+		
+		m_Data.WindowMode = WindowMode::Windowed;
+	}
+	void WindowsWindow::SetBorderless()
+	{
+		GLFWmonitor* lMonitor = glfwGetPrimaryMonitor();
+
+		if (!lMonitor)
+		{
+			return;
+		}
+
+		const GLFWvidmode* lVMode = glfwGetVideoMode(lMonitor);
+		
+		m_Data.PosX = m_Data.PosY = 0;
+		m_Data.Width = lVMode->width;
+		m_Data.Height = lVMode->height;
+		m_Data.RefreshRate = lVMode->refreshRate;
+
+		glfwSetWindowMonitor(
+			m_Window,
+			lMonitor,
+			m_Data.PosX,
+			m_Data.PosY,
+			m_Data.Width,
+			m_Data.Height,
+			m_Data.RefreshRate);
+
+		glfwSetWindowAttrib(
+			m_Window,
+			GLFW_DECORATED,
+			GLFW_FALSE);
+
+		glfwSetWindowPos(
+			m_Window,
+			m_Data.PosX,
+			m_Data.PosY);
+		
+		m_Data.WindowMode = WindowMode::Borderless;
+	}
+	void WindowsWindow::SetFullscreen()
+	{
+		GLFWmonitor* lMonitor = glfwGetPrimaryMonitor();
+
+		if (!lMonitor)
+		{
+			return;
+		}
+
+		const GLFWvidmode* lVMode = glfwGetVideoMode(lMonitor);
+		
+		m_Data.PosX = m_Data.PosY = 0;
+		m_Data.Width = lVMode->width;
+		m_Data.Height = lVMode->height;
+		m_Data.RefreshRate = lVMode->refreshRate;
+
+		glfwSetWindowMonitor(
+			m_Window,
+			lMonitor,
+			m_Data.PosX,
+			m_Data.PosY,
+			m_Data.Width,
+			m_Data.Height,
+			m_Data.RefreshRate);
+		
+		m_Data.WindowMode = WindowMode::Fullscreen;
+	}
+
+	void WindowsWindow::SaveWindowedState()
+	{
+		GLFWmonitor* monitor = glfwGetWindowMonitor(m_Window);
+		
+		if (monitor != nullptr)
+		{
+			return;
+		}
+		
+		int lPosX = 0;
+		int lPosY = 0;
+
+		glfwGetWindowPos(
+			m_Window,
+			&lPosX,
+			&lPosY);
+		
+		m_Data.PosX = lPosX;
+		m_Data.PosY = lPosY;
 	}
 }

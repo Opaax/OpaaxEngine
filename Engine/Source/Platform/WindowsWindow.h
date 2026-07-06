@@ -48,6 +48,21 @@ namespace Opaax
         IGraphicsContext* GetGraphicsContext() const override { return m_Context.get(); }
 
         void SetEventCallback(const EventCallbackFunc& Callback) override { m_Data.EventCallback = Callback; }
+        
+        /*-------------------------------------------------------------------------*/
+        // Window Mode
+        
+        void        SetWindowMode(WindowMode NewWindowMode) override;
+        WindowMode  GetWindowMode() const override { return m_Data.WindowMode; }
+        
+        void SetWindowed()      override;
+        void SetBorderless()    override;
+        void SetFullscreen()    override;
+        
+        void SaveWindowedState() override;
+        
+        // Window Mode 
+        /*-------------------------------------------------------------------------*/
         //~End Window interface
 
         // =============================================================================
@@ -62,12 +77,14 @@ namespace Opaax
         struct WindowData
         {
             String Title;
-            Uint32 Width, Height;
+            Uint32 PosX, PosY, Width, Height;
+            Uint32 RefreshRate = GLFW_DONT_CARE;
+            WindowMode WindowMode;
 
             EventCallbackFunc EventCallback;
         };
 
-        WindowData m_Data;
+        WindowData  m_Data;
     };
 }
 

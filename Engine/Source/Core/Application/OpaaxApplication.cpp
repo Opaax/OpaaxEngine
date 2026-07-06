@@ -1,6 +1,5 @@
 #include "OpaaxApplication.h"
 
-#include "Core/Log/OpaaxLog.h"
 #include "Core/Application/Services/IPlatform.h"
 #include "Core/Application/Services/IPaths.h"
 #include "Core/Application/Services/ILogger.h"
@@ -151,9 +150,9 @@ void OpaaxApplication::EngineStartup()
 void OpaaxApplication::ShutdownApplication()
 {
     Engine().Shutdown();
-    
+
     m_Services.ShutdownAll();
-    
+
     bHasBeenShuttingDown = true;
 }
 
@@ -169,5 +168,5 @@ void OpaaxApplication::CreateApplicationRenderer()
 
 void OpaaxApplication::OnInitializeApplication()
 {
-    OPAAX_CORE_TRACE("OnInitializeApplication Not override in child app class");
+    OPAAX_APP_LOG(Trace, "OnInitializeApplication Not override in child app class");
 }

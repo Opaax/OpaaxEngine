@@ -11,6 +11,14 @@ namespace Opaax
 
     using EventCallbackFunc = TFunction<void(OpaaxEvent&)>;
     
+    enum class WindowMode
+    {
+        Windowed,
+        Borderless,
+        Fullscreen
+    };
+
+    
     /**
      * @struct WindowProps
      * 
@@ -24,7 +32,7 @@ namespace Opaax
         WindowProps(const String& Title = "Opaax Engine",
             Uint32 Width = 1280,
             Uint32 Height = 720)
-            : Title(Title), Width(Width), Height(Height)
+            : Title(Title), Width(Width), Height(Height), WindowMode(WindowMode::Windowed)
         {
         }
 
@@ -35,8 +43,10 @@ namespace Opaax
         String Title;
         Uint32 Width;
         Uint32 Height;
+        WindowMode WindowMode;
     };
-
+    
+    
     /**
      * 
      */
@@ -70,16 +80,37 @@ namespace Opaax
         virtual bool ShouldClose() const    = 0;
         virtual void Shutdown()             = 0;
 
-        /*----------------------------- Get - Set -------------------------------*/
-
-        virtual void SetEventCallback(const EventCallbackFunc& Callback) = 0;
+        // =============================================================================
+        // Get - Set
+    public:
+        virtual void SetEventCallback(const EventCallbackFunc& Callback)    = 0;
         
-        virtual void* GetNativeWindow() const = 0;
-        virtual Uint32 GetWidth()       const = 0;
-        virtual Uint32 GetHeight()      const = 0;
+        virtual void*   GetNativeWindow()   const = 0;
+        virtual Uint32  GetWidth()          const = 0;
+        virtual Uint32  GetHeight()         const = 0;
+        
+        /*-------------------------------------------------------------------------*/
+        // Window Mode
+        
+        virtual WindowMode  GetWindowMode() const           = 0;
+        virtual void        SetWindowMode(WindowMode mode)  = 0;
+        
+        virtual void SetWindowed()          = 0;
+        virtual void SetBorderless()        = 0;
+        virtual void SetFullscreen()        = 0;
+        
+        virtual void SaveWindowedState()    = 0;
+        
+        // Window Mode 
+        /*-------------------------------------------------------------------------*/
 
-        // The backend graphics context the window owns. A command-buffer backend (Vulkan)
-        // borrows the shared device/swapchain from it; the OpenGL render API ignores it.
+        /**
+         * @return The backend graphics context the window owns.
+         * A command-buffer backend (Vulkan) borrows the shared device/swapchain from it; the OpenGL render API ignores it.
+         */
         virtual IGraphicsContext* GetGraphicsContext() const = 0;
+        
+        // Get - Set
+        // =============================================================================
     };
 }

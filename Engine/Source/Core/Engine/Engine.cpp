@@ -1,12 +1,13 @@
 #include "Engine.h"
 
+#include <chrono>
+
 #include "Core/Application/OpaaxApplication.h"
 #include "Core/Application/Services/ILogger.h"
 #include "Core/Application/Services/IJobSystem.h"
 
 //Subsystems
 #include "Core/Engine/Subsystems/Resources/ResourceManager.h"
-#include "Subsystems/Resources/Types/BinaryResource.hpp"
 
 #include "Subsystems/Renderer/RendererManager.h"
 
@@ -63,42 +64,28 @@ namespace Opaax
         return true;
     }
     
-    double lTime = 0;
-    ResourceRef<BinaryResource> m_TestRef;
-    bool                        m_TestKicked = false;
-    
+    // =========================================================================
+    // Loop — one frame, driven by the application host (OpaaxApplication::RunApplication,
+    // which presents via Window::SwapBuffers right after). Computes a real delta from a
+    // steady clock, then pumps Update (Resources + subsystems) and Render (RenderAll ->
+    // RendererManager clears the backbuffer).
+    // =========================================================================
     void Engine::Loop()
     {
+        // Publish finished async jobs back to their main-thread completions first.
         OpaaxApplication::GetAppService<IJobSystem>().DrainCompletions();
-        
-        double lPrev = lTime;
-        lTime += 0.016;
-        
-        double lDeltaTime = lTime - lPrev;
-        m_Resources->Update(lDeltaTime);
-        
-        ResourceRef<BinaryResource> m_TestRef2 = m_Resources->LoadAsync(path);
-        
-        if (!m_TestKicked)
-        {
-            m_TestKicked = true;
-            OpaaxString path = OpaaxApplication::GetAppService<IPaths>().EngineToAbsolute("Assets/Test.bin");
-            m_Resources->LoadAsync<BinaryResource>(path.CStr(),
-                [this](LoadAsyncResult<BinaryResource> LoadedResource)          // capture 'this', not '&' of stack locals
-                {
-                    if (LoadedResource.bFailed) { OPAAX_ENGINE_LOG(Error, "Test.bin failed") }
-                    else
-                    {
-                        OPAAX_ENGINE_LOG(Info, "Test.bin loaded: {} bytes in {} time", LoadedResource.Ref->Bytes.size(), lTime)
-                        m_TestRef = LoadedResource.Ref;                         // member -> outlives the callback
-                    }
-                });
-        }
 
-        if (m_TestRef.IsValid())
-        {
-            OPAAX_ENGINE_LOG(Info, "VALID: {} bytes", m_TestRef->Bytes.size())
-        }
+        // Delta-time from the steady clock (first frame is 0 — no last tick yet).
+        const Uint64 lNowNs = static_cast<Uint64>(
+            std::chrono::duration_cast<std::chrono::nanoseconds>(
+                std::chrono::steady_clock::now().time_since_epoch()).count());
+        const double lDeltaTime = m_bHasTick ? static_cast<double>(lNowNs - m_LastTickNs) * 1e-9 : 0.0;
+        m_LastTickNs = lNowNs;
+        m_bHasTick   = true;
+
+        Update(lDeltaTime);
+        // FixedUpdate stepping lands with physics; render-interpolation alpha is 1.0 for now.
+        Render(1.0);
     }
 
     void Engine::Shutdown()
