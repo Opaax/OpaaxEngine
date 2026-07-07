@@ -2,7 +2,6 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
-#include "Core/OpaaxMathTypes.h"
 #include "Core/Application/Services/ILogger.h"
 #include "Core/Engine/Subsystems/EngineSubsystem.h"
 
@@ -12,19 +11,16 @@
 // =============================================================================
 namespace Opaax
 {
-    class IRenderAPI;
-    class ICommandBuffer;
-    class IRenderTarget;
+    class RenderSystem;
 
     inline constexpr LogCategory LogRendererManager{"RendererManager"};
 
     // =============================================================================
-    // RendererManager — the render department subsystem. Owns the RHI render API
-    //   (device + frame lifecycle) instead of the old static RenderCommand facade,
-    //   and the backbuffer render target. Selects the backend from engine config and
-    //   binds against the window's graphics context (both reached through the app
-    //   service locator). This pass: clears the backbuffer every frame. Drawing
-    //   (Renderer2D, passes) consumes GetCommandBuffer()/GetBackbufferTarget() later.
+    // RendererManager — the ENGINE ADAPTER for the portable RenderSystem. This is the
+    //   only render-side code allowed to reach host globals (services/config/paths): it
+    //   resolves them, builds a RenderSystemDesc, owns one RenderSystem, and drives its
+    //   frame each tick. All actual rendering lives in the RenderSystem module, which knows
+    //   nothing of this engine — so the same core runs unchanged in any other host.
     // =============================================================================
     class OPAAX_API RendererManager final : public EngineSubsystemBase
     {
@@ -38,8 +34,7 @@ namespace Opaax
         // CTORS - DTORS
         // =============================================================================
     public:
-        // Both defined in the .cpp — the owned UniquePtr members hold forward-declared types,
-        // so their construction/destruction must be instantiated where those types are complete.
+        // Out-of-line — the owned UniquePtr<RenderSystem> holds a forward-declared type.
         RendererManager();
         ~RendererManager() override;
 
@@ -55,20 +50,11 @@ namespace Opaax
         // Getters
         // =============================================================================
     public:
-        // The live render API (device + frame lifecycle), or nullptr before Startup.
-        IRenderAPI*    GetRenderAPI() const noexcept { return m_RenderAPI.get(); }
-
-        // The frame's recorder — valid between BeginFrame and EndFrame. Render peers
-        // (passes, Renderer2D) record their draws here once they land.
-        ICommandBuffer& GetCommandBuffer() const;
-
-        // The backbuffer target (the window surface), or nullptr before Startup.
-        IRenderTarget* GetBackbufferTarget() const noexcept { return m_Backbuffer.get(); }
-
-        //------------------------------------------------------------------------------
-        // Set
-
-        void SetClearColor(const Vector4F& InColor) noexcept { m_ClearColor = InColor; }
+        /**
+         * 
+         * @return The portable render core, or nullptr before Startup. For future render peers.
+         */
+        RenderSystem* GetRenderSystem() const noexcept { return m_RenderSystem.get(); }
 
         // =============================================================================
         // Override
@@ -84,11 +70,6 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        // Owns the device + frame lifecycle (replaces the static RenderCommand::s_API).
-        UniquePtr<IRenderAPI>    m_RenderAPI;
-        // The window backbuffer (DefaultRenderTarget). Concrete type stays in the .cpp.
-        UniquePtr<IRenderTarget> m_Backbuffer;
-        // Backbuffer clear color — a named default (dark slate), tweakable via SetClearColor.
-        Vector4F                 m_ClearColor{1.f, 0.10f, 0.12f, 1.0f};
+        UniquePtr<RenderSystem> m_RenderSystem;
     };
 }

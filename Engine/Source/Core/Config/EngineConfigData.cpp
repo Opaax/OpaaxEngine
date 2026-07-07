@@ -4,7 +4,7 @@
 
 namespace Opaax
 {
-    namespace KEcfg = Opaax_Engine_Config;
+    namespace KEcfg = Opaax_Renderer_Config;
 
     // =========================================================================
     // Pure parse — start from defaults, override each field defensively.

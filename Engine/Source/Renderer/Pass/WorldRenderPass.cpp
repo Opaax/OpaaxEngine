@@ -20,7 +20,7 @@ namespace Opaax
 
         // Re-fetch the active camera every frame — never cache across a PIE swap (Lesson 17).
         ICamera& lCamera = m_App->GetSubsystem<CameraSubsystem>()->GetActiveCamera();
-        Renderer2D::Begin(lCamera, InContext.Cmd);
+        InContext.Renderer.Begin(lCamera, InContext.Cmd);
 
         if (m_App->GetSceneManager()->GetActiveScene())
         {
@@ -31,7 +31,7 @@ namespace Opaax
             }
         }
 
-        Renderer2D::End();
+        InContext.Renderer.End();
 
         InContext.Cmd.EndRenderPass();
     }

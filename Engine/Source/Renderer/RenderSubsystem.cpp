@@ -47,7 +47,10 @@ namespace Opaax
         }
         RenderCommand::Init(lAPI.release(), *lContext);
 
-        Renderer2D::Init();
+        // The batch renderer is now an owned instance (was static Renderer2D). Build its GPU
+        // resources from the engine shader on disk, then thread it into the pass pipeline.
+        m_Renderer2D.Init(EngineConfig::EngineAssetsRoot() + "/Shaders/Sprite.glsl");
+        m_Pipeline.SetRenderer(m_Renderer2D);
 
         // Register the built-in passes (registration order = execution order).
         // Passes hold the engine app by pointer (IoC) and re-fetch volatile state at Execute.
@@ -71,7 +74,7 @@ namespace Opaax
         // NOTE: the GPU-idle barrier is CoreEngineApp::Shutdown's single authoritative WaitIdle
         //   (runs before ANY GPU teardown, incl. assets). No per-subsystem wait needed here.
         m_Pipeline.Clear();          // drop passes before the render API/Renderer2D go away
-        Renderer2D::Shutdown();
+        m_Renderer2D.Shutdown();     // release GPU objects while the API/context are still alive
         RenderCommand::Shutdown();
     }
  

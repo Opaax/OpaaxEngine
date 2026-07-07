@@ -2,6 +2,7 @@
 
 #include "Core/Engine/Subsystems/EngineSubsystem.h"
 #include "Renderer/Pass/RenderPipeline.h"
+#include "Renderer/Renderer2D.h"
 
 namespace Opaax
 {
@@ -65,5 +66,6 @@ namespace Opaax
         // =============================================================================
     private:
         RenderPipeline m_Pipeline;
+        Renderer2D     m_Renderer2D; // the batch renderer, threaded into the pipeline's passes
     };
 } // namespace Opaax

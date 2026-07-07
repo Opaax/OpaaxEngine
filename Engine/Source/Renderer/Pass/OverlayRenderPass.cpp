@@ -18,7 +18,7 @@ namespace Opaax
 
         // Pixel-space, sized to the target every frame (immune to world camera).
         m_Camera.SetViewportSize(InContext.Target.GetWidth(), InContext.Target.GetHeight());
-        Renderer2D::Begin(m_Camera, InContext.Cmd);
+        InContext.Renderer.Begin(m_Camera, InContext.Cmd);
 
         World& lWorld = m_App->GetWorld();
         for (const auto& lSystem : TPolymorphicList<IOverlayRenderSystem>::GetAll())
@@ -26,7 +26,7 @@ namespace Opaax
             lSystem->OnRenderOverlay(lWorld, InContext);
         }
 
-        Renderer2D::End();
+        InContext.Renderer.End();
 
         InContext.Cmd.EndRenderPass();
     }

@@ -10,7 +10,7 @@ namespace Opaax
     // =============================================================================
     // JSON keys — mirror EngineConfig's nested schema (window/assets/log/render/physics).
     // =============================================================================
-    namespace Opaax_Engine_Config
+    namespace Opaax_Renderer_Config
     {
         inline const char* VERSION_KEY      = "version";
         inline const char* WINDOW_KEY       = "window";

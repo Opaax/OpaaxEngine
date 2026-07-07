@@ -129,14 +129,10 @@ void OpaaxApplication::RunApplication()
         }
         
         // ----------------------------------------------------------------
-        // 2. Time
+        // 2. Tick + render. Present now lives inside the frame (RenderSystem::EndFrame),
+        //    so the app loop no longer swaps the window.
         // ----------------------------------------------------------------
         Engine().Loop();
-        
-        // ----------------------------------------------------------------
-        // 3. Present AFTER render, always last (graphics context owns the swap).
-        // ----------------------------------------------------------------
-        lWindow->SwapBuffers();
     }
 }
 

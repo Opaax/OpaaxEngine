@@ -7,6 +7,7 @@
 namespace Opaax
 {
     class IRenderTarget;
+    class Renderer2D;
 
     /**
      * @class RenderPipeline
@@ -43,6 +44,10 @@ namespace Opaax
         // Append a pass to the end of the execution order.
         void AddPass(UniquePtr<IRenderPass> InPass);
 
+        // The batch renderer threaded into every pass's RenderContext. Set once by the owner
+        // (RenderSubsystem) before Execute — non-owning.
+        void SetRenderer(Renderer2D& InRenderer) noexcept { m_Renderer = &InRenderer; }
+
         // Run every pass in order. InTarget is the frame's final render target.
         void Execute(IRenderTarget& InTarget, double InAlpha);
 
@@ -54,5 +59,6 @@ namespace Opaax
         // =============================================================================
     private:
         TDynArray<UniquePtr<IRenderPass>> m_Passes;
+        Renderer2D*                       m_Renderer = nullptr;
     };
 }

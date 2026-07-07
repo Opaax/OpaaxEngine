@@ -7,6 +7,7 @@
 namespace Opaax
 {
     class FontAsset;
+    class Renderer2D;
 }
 
 namespace Opaax::Text2D
@@ -30,12 +31,14 @@ namespace Opaax::Text2D
     // =============================================================================
 
     /**
-     * Draw a single line or multi-line string at world InWorldPos using InFont.
-     * '\n' triggers a line break (LineHeightScale * LineAdvance * Scale downward).
-     * '\t' renders as 4 spaces. Codepoints outside [0x20..0x7E] render '?' as
-     * fallback per OD-3 lock. No-op if InText is null/empty or InFont isn't loaded.
+     * Draw a single line or multi-line string at world InWorldPos using InFont, batched into
+     * InRenderer (call between InRenderer.Begin/End). '\n' triggers a line break
+     * (LineHeightScale * LineAdvance * Scale downward). '\t' renders as 4 spaces. Codepoints
+     * outside [0x20..0x7E] render '?' as fallback per OD-3 lock. No-op if InText is null/empty
+     * or InFont isn't loaded.
      */
-    OPAAX_API void DrawString(const char*       InText,
+    OPAAX_API void DrawString(Renderer2D&       InRenderer,
+                              const char*       InText,
                               const Vector2F&   InWorldPos,
                               const FontAsset&  InFont,
                               const DrawParams& InParams = {});

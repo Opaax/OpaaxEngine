@@ -64,6 +64,10 @@ namespace Opaax
     public:
         WindowManager()           = default;
         ~WindowManager() override = default;
+        
+        // =============================================================================
+        // Copy - Move Delete
+        // =============================================================================
 
         WindowManager(const WindowManager&)            = delete;
         WindowManager& operator=(const WindowManager&) = delete;

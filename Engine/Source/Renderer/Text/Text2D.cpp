@@ -32,7 +32,8 @@ namespace Opaax::Text2D
     // =============================================================================
     // DrawString
     // =============================================================================
-    void DrawString(const char*       InText,
+    void DrawString(Renderer2D&       InRenderer,
+                    const char*       InText,
                     const Vector2F&   InWorldPos,
                     const FontAsset&  InFont,
                     const DrawParams& InParams)
@@ -119,8 +120,8 @@ namespace Opaax::Text2D
 
             // UVMin/UVMax are V-swapped at bake (Step 2) — they map cleanly to
             // Renderer2D's bottom-up vertex layout. No per-draw UV correction.
-            Renderer2D::DrawSprite({ lCenterX, lCenterY }, { lQuadW, lQuadH }, lAtlas,
-                                   lG.UVMin, lG.UVMax, InParams.Color, 0.f);
+            InRenderer.DrawSprite({ lCenterX, lCenterY }, { lQuadW, lQuadH }, lAtlas,
+                                  lG.UVMin, lG.UVMax, InParams.Color, 0.f);
 
             lCursorX += lG.XAdvance * lScale;
             lPrev = lC;

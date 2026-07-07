@@ -99,7 +99,7 @@ namespace Opaax
         m_Resources = nullptr;
         m_bStarted  = false;
 
-        OPAAX_ENGINE_LOG(Info, "Engine shut down")
+        OPAAX_ENGINE_LOG(Info, "Engine shutdown")
     }
 
     // =========================================================================

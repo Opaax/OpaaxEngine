@@ -39,11 +39,12 @@ namespace Opaax
         // lerp prev->current by the frame's alpha — DISPLAY ONLY, the ECS Transform stays raw.
         const bool  bInterpolate = EngineConfig::RenderInterpolation();
         const float lAlpha       = static_cast<float>(InContext.Alpha);
+        Renderer2D& lRenderer    = InContext.Renderer; // draw through the frame's batch renderer
 
         // PERF: Each<A,B> picks the smaller storage — avoids scanning all transforms
         // when sprite count is low (common during early scenes).
         InWorld.Each<ECS::TransformComponent, ECS::SpriteComponent>(
-            [&InWorld, bInterpolate, lAlpha](EntityID InEntity, ECS::TransformComponent& /*InTransform*/, ECS::SpriteComponent& InSprite)
+            [&InWorld, &lRenderer, bInterpolate, lAlpha](EntityID InEntity, ECS::TransformComponent& /*InTransform*/, ECS::SpriteComponent& InSprite)
             {
                 if (!InSprite.Visible || !InSprite.Texture.IsValid())
                 {
@@ -68,7 +69,7 @@ namespace Opaax
 
                 const Vector2F lDrawSize = lWT.Scale * InSprite.Size;
 
-                Renderer2D::DrawSprite(
+                lRenderer.DrawSprite(
                     lWT.Position,
                     lDrawSize,
                     InSprite.Texture,
