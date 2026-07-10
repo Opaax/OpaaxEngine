@@ -19,7 +19,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <algorithm>
-#include <cmath>
+#include "Maths/Maths.h"
 
 namespace Opaax
 {
@@ -351,8 +351,8 @@ namespace Opaax
         }
         else
         {
-            const float lCos = std::cos(InRotationRad);
-            const float lSin = std::sin(InRotationRad);
+            const float lCos = Maths::Cos(InRotationRad);
+            const float lSin = Maths::Sin(InRotationRad);
             lBL = RotateOffset(InPosition, lCos, lSin, -lHalfW, -lHalfH);
             lBR = RotateOffset(InPosition, lCos, lSin, +lHalfW, -lHalfH);
             lTR = RotateOffset(InPosition, lCos, lSin, +lHalfW, +lHalfH);
@@ -449,8 +449,8 @@ namespace Opaax
         }
         else
         {
-            const float lCos = std::cos(InRotationRad);
-            const float lSin = std::sin(InRotationRad);
+            const float lCos = Maths::Cos(InRotationRad);
+            const float lSin = Maths::Sin(InRotationRad);
             lBL = RotateOffset(InPosition, lCos, lSin, -lHalfW, -lHalfH);
             lBR = RotateOffset(InPosition, lCos, lSin, +lHalfW, -lHalfH);
             lTR = RotateOffset(InPosition, lCos, lSin, +lHalfW, +lHalfH);

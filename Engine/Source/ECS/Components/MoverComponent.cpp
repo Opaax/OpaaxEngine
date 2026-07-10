@@ -1,7 +1,6 @@
 #include "MoverComponent.h"
 
 #include <algorithm>
-#include <cmath>
 
 #include "Assets/AssetRegistry.h"
 #include "Physics/Collision/CollisionProfile.h"
@@ -9,6 +8,7 @@
 #include "Core/Systems/Movement/MoverModeRegistry.h"
 #include "Core/Systems/Movement/IMoverMode.h"
 #include "Core/Systems/Movement/IMoverModeParams.h"
+#include "Maths/Maths.h"
 
 namespace Opaax::ECS
 {
@@ -69,34 +69,39 @@ Opaax::MoverCapsule Opaax::ECS::MoverComponent::BuildCapsule() const noexcept
     if (Shape == EMoverShape::Circle)
     {
         // Degenerate capsule — both semicircle centers coincide at the origin.
-        lCapsule.Center1 = { 0.f, 0.f };
-        lCapsule.Center2 = { 0.f, 0.f };
+        lCapsule.Center1 = { FZERO, FZERO };
+        lCapsule.Center2 = { FZERO, FZERO };
         return lCapsule;
     }
 
     // Vertical capsule: semicircle centers at +/-(Height/2 - Radius). Clamp to >= 0 so a
     // too-short capsule collapses to a circle rather than inverting.
-    const float lHalfSegment = std::max(0.f, Height * 0.5f - Radius);
-    lCapsule.Center1 = { 0.f, -lHalfSegment };
-    lCapsule.Center2 = { 0.f,  lHalfSegment };
+    const float lHalfSegment = Maths::Max(0.f, Height * FONE_HALF - Radius);
+    lCapsule.Center1 = { FZERO, -lHalfSegment };
+    lCapsule.Center2 = { FZERO,  lHalfSegment };
     return lCapsule;
 }
 
 float Opaax::ECS::MoverComponent::GroundNormalY() const noexcept
 {
-    constexpr float lDegToRad = 3.14159265358979323846f / 180.f;
-    return std::cos(MaxSlopeAngleDeg * lDegToRad);
+    return Maths::Cos(Maths::DegreesToRadians(MaxSlopeAngleDeg));
 }
 
 Opaax::Uint64 Opaax::ECS::MoverComponent::EffectiveMovementMask() const noexcept
 {
-    if (const CollisionProfile* lProfile = Profile.Get()) { return lProfile->ComputeBlockMaskBits(); }
+    if (const CollisionProfile* lProfile = Profile.Get())
+    {
+        return lProfile->ComputeBlockMaskBits();
+    }
     return CollisionMask;
 }
 
 Opaax::Uint64 Opaax::ECS::MoverComponent::EffectiveEventMask() const noexcept
 {
-    if (const CollisionProfile* lProfile = Profile.Get()) { return lProfile->ComputeMaskBits(); }
+    if (const CollisionProfile* lProfile = Profile.Get())
+    {
+        return lProfile->ComputeMaskBits();
+    }
     return CollisionMask;
 }
 

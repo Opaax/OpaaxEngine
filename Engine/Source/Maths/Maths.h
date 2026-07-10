@@ -756,6 +756,122 @@ namespace Opaax
             using ABType = decltype(A * B);
             return Lerp(ABType(A), ABType(B), Alpha);
         }
+
+        /**
+         * 
+         * @param Value 
+         * @return e^Value
+         */
+        [[nodiscard]] static FORCEINLINE float  Exp( float Value )  { return expf(Value);   }
+
+        /**
+         * 
+         * @param Value 
+         * @return 
+         */
+        [[nodiscard]] static FORCEINLINE double Exp(double Value)   { return exp(Value);    }
+
+        /**
+         * 
+         * @param Value 
+         * @return 
+         */
+        [[nodiscard]] static FORCEINLINE float  Exp2( float Value ) { return powf(2.f, Value); /*exp2f(Value);*/ }
+        [[nodiscard]] static FORCEINLINE double Exp2(double Value)  { return pow(2.0, Value); /*exp2(Value);*/ }
+
+        /**
+         * 
+         * @param Value 
+         * @return 
+         */
+        [[nodiscard]] static FORCEINLINE float Logarithm( float Value ) { return logf(Value); }
+
+        /**
+         * 
+         * @param Value 
+         * @return 
+         */
+        [[nodiscard]] static FORCEINLINE double Logarithm(double Value) { return log(Value); }
+
+        /**
+         * 
+         * @param Base 
+         * @param Value 
+         * @return 
+         */
+        [[nodiscard]] static FORCEINLINE float LogX( float Base, float Value ) { return Logarithm(Value) / Logarithm(Base); }
+
+        /**
+         * 
+         * @param Base 
+         * @param Value 
+         * @return 
+         */
+        [[nodiscard]] static FORCEINLINE double LogX(double Base, double Value) { return Logarithm(Value) / Logarithm(Base); }
+        
+        /**
+         * 1.0 / Logarithm(2) = 1.442695040888963387
+         * @param Value 
+         * @return 
+         */
+        [[nodiscard]] static FORCEINLINE float Log2( float Value ) { return Logarithm(Value) * 1.4426950f; }	
+        
+        /**
+         * 1.0 / Logarithm(2) = 1.442695040888963387
+         * @param Value 
+         * @return 
+         */
+        [[nodiscard]] static FORCEINLINE double Log2(double Value) { return Logarithm(Value) * 1.442695040888963387; }
+        
+        
+        /**
+        * Breaks the given value into an integral and a fractional part.
+        * @param InValue	Floating point value to convert
+        * @param OutIntPart Floating point value that receives the integral part of the number.
+        * @return			The fractional part of the number.
+        */
+        [[nodiscard]] static FORCEINLINE float Modf(const float InValue, float* OutIntPart)
+        {
+            return modff(InValue, OutIntPart);
+        }
+
+        /**
+        * Breaks the given value into an integral and a fractional part.
+        * @param InValue	Floating point value to convert
+        * @param OutIntPart Floating point value that receives the integral part of the number.
+        * @return			The fractional part of the number.
+        */
+        [[nodiscard]] static FORCEINLINE double Modf(const double InValue, double* OutIntPart)
+        {
+            return modf(InValue, OutIntPart);
+        }
+        
+        /**
+ * Returns the floating-point remainder of X / Y
+ * Warning: Always returns remainder toward 0, not toward the smaller multiple of Y.
+ *			So for example Fmod(2.8f, 2) gives .8f as you would expect, however, Fmod(-2.8f, 2) gives -.8f, NOT 1.2f
+ * Use Floor instead when snapping positions that can be negative to a grid
+ *
+ * This is forced to *NOT* inline so that divisions by constant Y does not get optimized in to an inverse scalar multiply,
+ * which is not consistent with the intent nor with the vectorized version.
+ */
+
+        /**
+        * Warning: Always returns remainder toward 0, not toward the smaller multiple of Y.
+        * So for example Fmod(2.8f, 2) gives .8f as you would expect, however, Fmod(-2.8f, 2) gives -.8f, NOT 1.2f
+        * @return the floating-point remainder of X / Y
+        */
+        [[nodiscard]] static float  FMod(float X, float Y);
+
+        /**
+         * Warning: Always returns remainder toward 0, not toward the smaller multiple of Y.
+         * So for example Fmod(2.8f, 2) gives .8f as you would expect, however, Fmod(-2.8f, 2) gives -.8f, NOT 1.2f
+         * @param X 
+         * @param Y 
+         * @return the floating-point remainder of X / Y
+         */
+        [[nodiscard]] static double FMod(double X, double Y);
+        
         // End Compute
         // =============================================================================
         

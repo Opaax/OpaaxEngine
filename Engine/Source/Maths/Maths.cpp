@@ -76,3 +76,25 @@ float Maths::QuakeInvSqrt(float InValue)
     
     return y;
 }
+
+float Maths::FMod(float X, float Y)
+{
+    const float lAbsY = Abs(Y);
+    if (lAbsY <= FSMALL_NUMBER)
+    {
+        return 0.0;
+    }
+
+    return fmodf(X, Y);
+}
+
+double Maths::FMod(double X, double Y)
+{
+    const double lAbsY = Abs(Y);
+    if (lAbsY <= DSMALL_NUMBER)
+    {
+        return 0.0;
+    }
+
+    return fmod(X, Y);
+}

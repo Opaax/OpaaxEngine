@@ -3,7 +3,8 @@
 #if OPAAX_WITH_EDITOR
 
 #include <algorithm>
-#include <cmath>
+
+#include "Maths/Maths.h"
 
 namespace Opaax::Editor
 {
@@ -43,7 +44,7 @@ namespace Opaax::Editor
         const Vector2F lWorldBefore = ScreenToWorld(InCursorLocalPx, InViewportPx);
 
         const float lOldZoom = GetZoom();
-        const float lNewZoom = std::clamp(lOldZoom * std::pow(k_ZoomStep, InScrollDelta), k_ZoomMin, k_ZoomMax);
+        const float lNewZoom = Maths::Clamp(lOldZoom * Maths::Pow(k_ZoomStep, InScrollDelta), k_ZoomMin, k_ZoomMax);
         if (lNewZoom == lOldZoom)
         {
             return;

@@ -1,7 +1,6 @@
 #include "GroundMoveMode.h"
 
 #include <algorithm>
-#include <cmath>
 
 #include "Core/Log/OpaaxLog.h"
 #include "Core/Systems/Movement/GroundMoveParams.h"
@@ -9,6 +8,7 @@
 #include "Physics/IPhysicsWorld.h"
 #include "ECS/Components/MoverComponent.h"
 #include "ECS/Components/TransformComponent.h"
+#include "Maths/Maths.h"
 
 namespace Opaax
 {
@@ -22,7 +22,7 @@ namespace Opaax
             Vector2F lVel = InVelocity;
 
             // --- Friction (ground deceleration rate, 1/s) ---
-            const float lSpeed = std::sqrt(lVel.x * lVel.x + lVel.y * lVel.y);
+            const float lSpeed = Maths::Sqrt(lVel.x * lVel.x + lVel.y * lVel.y);
             if (lSpeed < InParams.MinSpeed)
             {
                 lVel = { 0.f, 0.f };
@@ -31,15 +31,15 @@ namespace Opaax
             {
                 const float lControl  = lSpeed < InParams.StopSpeed ? InParams.StopSpeed : lSpeed;
                 const float lDrop      = lControl * InParams.GroundDeceleration * InDt;
-                const float lNewSpeed  = std::max(0.f, lSpeed - lDrop);
+                const float lNewSpeed  = Maths::Max(0.f, lSpeed - lDrop);
                 lVel *= lNewSpeed / lSpeed;
             }
 
             // --- Desired horizontal velocity from intent (MoveDir.x = throttle [-1..1]) ---
-            const float lThrottle = std::clamp(InMoveDir.x, -1.f, 1.f);
-            float lDesiredSpeed   = std::fabs(lThrottle) * InParams.MaxSpeed;
+            const float lThrottle = Maths::Clamp(InMoveDir.x, -1.f, 1.f);
+            float lDesiredSpeed   = Maths::Abs(lThrottle) * InParams.MaxSpeed;
             const Vector2F lDir   = lThrottle >= 0.f ? Vector2F{ 1.f, 0.f } : Vector2F{ -1.f, 0.f };
-            lDesiredSpeed         = std::min(lDesiredSpeed, InParams.MaxSpeed);
+            lDesiredSpeed         = Maths::Min(lDesiredSpeed, InParams.MaxSpeed);
 
             if (InGrounded) { lVel.y = 0.f; }
 
@@ -50,7 +50,7 @@ namespace Opaax
             {
                 const float lSteer      = InGrounded ? 1.f : InParams.AirSteer;
                 float       lAccelSpeed = lSteer * InParams.Acceleration * InParams.MaxSpeed * InDt;
-                lAccelSpeed             = std::min(lAccelSpeed, lAddSpeed);
+                lAccelSpeed             = Maths::Min(lAccelSpeed, lAddSpeed);
                 lVel += lAccelSpeed * lDir;
             }
 

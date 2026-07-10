@@ -1,11 +1,10 @@
 #include "Hierarchy.h"
 
-#include <cmath>
-
 #include "Core/Log/OpaaxLog.h"
 #include "World/World.h"
 #include "ECS/Components/ParentComponent.h"
 #include "ECS/Components/TransformComponent.h"
+#include "Maths/Maths.h"
 
 namespace Opaax::ECS::Hierarchy
 {
@@ -113,11 +112,14 @@ namespace Opaax::ECS::Hierarchy
         for (int i = lCount - 1; i >= 0; --i)
         {
             const auto* lLocal = InWorld.GetComponent<TransformComponent>(lChain[i]);
-            if (!lLocal) { continue; }
+            if (!lLocal)
+            {
+                continue;
+            }
 
             // Apply parent rotation + scale to the local position before translating.
-            const float lCos = std::cos(lOut.Rotation);
-            const float lSin = std::sin(lOut.Rotation);
+            const float lCos = Maths::Cos(lOut.Rotation);
+            const float lSin = Maths::Sin(lOut.Rotation);
             const float lLx  = lLocal->Position.x * lOut.Scale.x;
             const float lLy  = lLocal->Position.y * lOut.Scale.y;
 

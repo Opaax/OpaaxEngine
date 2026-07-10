@@ -10,7 +10,7 @@
 #include "Renderer/Texture2D.h"
 #include "World/RenderContext.h"
 
-#include <cmath>
+#include "Maths/Maths.h"
 
 namespace Opaax
 {
@@ -21,12 +21,9 @@ namespace Opaax
         // through a full turn.
         float LerpAngleShortest(float InFrom, float InTo, float InAlpha)
         {
-            constexpr float kPi    = 3.14159265359f;
-            constexpr float kTwoPi = 6.28318530718f;
-
-            float lDelta = std::fmod(InTo - InFrom + kPi, kTwoPi);
-            if (lDelta < 0.f) { lDelta += kTwoPi; }
-            lDelta -= kPi;
+            float lDelta = Maths::FMod(InTo - InFrom + FPI, FTWO_PI);
+            if (lDelta < 0.f) { lDelta += FTWO_PI; }
+            lDelta -= FPI;
             return InFrom + lDelta * InAlpha;
         }
     }
