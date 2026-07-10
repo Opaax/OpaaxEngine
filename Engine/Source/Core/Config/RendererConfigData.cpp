@@ -6,7 +6,7 @@ namespace Opaax
 {
     namespace KEcfg = Opaax_Renderer_Config;
 
-    RendererConfigData ParseRendererConfig(const OpaaxString& InJsonText)
+    RendererConfigData RendererConfigData::Parse(const OpaaxString& InJsonText)
     {
         RendererConfigData lData;
         
@@ -40,7 +40,7 @@ namespace Opaax
         return lData;
     }
 
-    OpaaxString SerializeRendererConfig(const RendererConfigData& InData)
+    OpaaxString RendererConfigData::Serialize(const RendererConfigData& InData)
     {
         nlohmann::json lRoot;
         lRoot[KEcfg::CLEAR_COLOR_KEY] = { InData.ClearColor.x, InData.ClearColor.y, InData.ClearColor.z, InData.ClearColor.w } ;

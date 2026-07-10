@@ -3,11 +3,14 @@
 #include <Core/Application/Services/IEngine.h>
 #include <Core/Engine/Subsystems/EngineSubsystem.h>
 
+#include "Core/Application/Services/IJobSystem.h"
 #include "Subsystems/Renderer/RendererManager.h"
 
 namespace Opaax
 {
     class ResourceManager;
+    
+    inline constexpr double MAX_FRAME_DELTA = 0.25;
 
     // =============================================================================
     // Engine — the concrete IEngine. Owns the EngineSubsystemMgr and the engine's
@@ -35,6 +38,23 @@ namespace Opaax
         // =============================================================================
         // Function
         // =============================================================================
+        
+    private:
+        // =============================================================================
+        // Gather App services
+    private:
+        void CacheAppServices();
+        
+        // End Gather App services 
+        // =============================================================================
+        
+        // =============================================================================
+        // Delta Time
+    private:
+        double GetDeltaTime();
+        // End Delta Time
+        // =============================================================================
+        
         
         // =============================================================================
         // Getters 
@@ -71,6 +91,21 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
+        // =============================================================================
+        // App system
+        IJobSystem* m_JobSystem = nullptr;
+        IPlatform*  m_Platform  = nullptr;
+        // End App system
+        // =============================================================================
+        
+        // =============================================================================
+        // Delta Time
+    private:
+        double LastTime = 0.0f;
+
+        // End Delta Time
+        // =============================================================================
+        
         /**
          * Handle Subsystem lifetime
          */
@@ -80,13 +115,19 @@ namespace Opaax
          * Convenient ptr, lifetime not managed by engine itself but through subsystem
          */
         ResourceManager*   m_Resources = nullptr;
-        /***/
+        
+        /**
+         * Convenient ptr, lifetime not managed by engine itself but through subsystem
+         */
         RendererManager*   m_RendererManager = nullptr;
-        bool               m_bStarted  = false;
+        
+        
+        
 
         // Per-frame delta-time source (steady clock). Stored as nanoseconds so the header
         // stays <chrono>-free; the clock read + conversion live in Engine::Loop.
         Uint64             m_LastTickNs = 0;
         bool               m_bHasTick   = false;
+        bool               m_bStarted  = false;
     };
 }

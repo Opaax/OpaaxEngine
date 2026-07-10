@@ -17,9 +17,10 @@ namespace Opaax
         // =============================================================================
         //~Begin IPlatform interface
     public:
-        Uint32      GetLogicalCoreCount() const override;
-        double      GetTimeSeconds()      const override;
-        OpaaxString GetExecutablePath()   const override;
+        Uint32      GetLogicalCoreCount()   const override;
+        double      GetTimeSeconds()        const override;
+        OpaaxString GetExecutablePath()     const override;
+        OpaaxString GetPlatformName()       const override { return OpaaxString("Windows"); }
         //~End IPlatform interface
     };
 }

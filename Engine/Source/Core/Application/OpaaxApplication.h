@@ -42,6 +42,38 @@ namespace Opaax
         // =============================================================================
         // Functions
         // =============================================================================
+        
+        // =============================================================================
+        // Bootstrap
+    private:
+        IPlatform&          BootPlatform();
+        IPaths&             BootPaths();
+        ILogger&            BootLogger(IPaths& Paths);
+        IConfigSystem&      BootConfigSystem(const IPaths& Paths);
+        IProjectManager&    BootProjectManager(const IPaths& Paths);
+        IJobSystem&         BootJobSystem();
+        IWindowManager&     BootWindowManager();
+        IEngine&            BootEngine();
+        
+    protected:
+        /**
+         * IConfigSystem::Get also register
+         * But here you can Pre register config at application boot
+         * @param ConfigSystem 
+         */
+        virtual void PreRegisterConfig(IConfigSystem& ConfigSystem);
+        
+    public:
+        /**
+         * Provide the app-level services into the locator, in dependency order.
+         */
+        void Bootstrap();
+        
+        // End Bootstrap
+        // =============================================================================
+        
+        // =============================================================================
+        // Initialization
     private:
         void CreateApplicationWindow();
         void CreateApplicationRenderer();
@@ -51,15 +83,15 @@ namespace Opaax
         
     public:
         /**
-         * Provide the app-level services into the locator, in dependency order.
-         */
-        void Bootstrap();
-        
-        /**
          * Initialize the app
          */
         void InitializeApplication();
         
+        // End Initialization
+        // =============================================================================
+        
+        // =============================================================================
+        // Flow
         /**
          * The app loop
          */
@@ -70,6 +102,9 @@ namespace Opaax
          */
         void ShutdownApplication();
         
+        // End Flow
+        // =============================================================================
+        
         // =============================================================================
         // Engine
         /**
@@ -78,6 +113,7 @@ namespace Opaax
         */
         virtual void PreEngineStartup() {}
         
+        /***/
         void EngineStartup();
         
         /**
@@ -85,6 +121,7 @@ namespace Opaax
          * Engine subsystem has start
          */
         virtual void PostEngineStartup(){}
+        
         // Engine
         // =============================================================================
         
@@ -114,8 +151,10 @@ namespace Opaax
         int    m_Argc = 0;
         char** m_Argv = nullptr;
         
-        bool bHasBeenShuttingDown = false;
-        bool bIsRunning = false;
+        bool bHasBootstrap      = false;
+        bool bHasInitialized    = false;
+        bool bIsRunning         = false;
+        bool bHasShutdown       = false;
 
         static AppServiceLocator m_Services;
     };

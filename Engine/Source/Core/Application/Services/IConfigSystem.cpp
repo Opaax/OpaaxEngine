@@ -5,6 +5,8 @@
 
 #include <filesystem>
 
+#include "ILogger.h"
+
 namespace Opaax
 {
     namespace
@@ -87,8 +89,10 @@ namespace Opaax
 
         // IConfig::Load loads the file, or generates the default file if it is missing.
         lRef.Load(JoinConfigPath(lRef.FileName()));
+        OPAAX_LOG(LogConfigSystem, Info, "Config [{}] Created", lRef.FileName())
 
         m_Configs[InId] = std::move(lConfig);
+        
         return lRef;
     }
 

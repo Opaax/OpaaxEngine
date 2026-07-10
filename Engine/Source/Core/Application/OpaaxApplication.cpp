@@ -27,16 +27,11 @@ OpaaxApplication::OpaaxApplication(int InArgc, char** InArgv)
     : m_Argc(InArgc)
     , m_Argv(InArgv)
 {
-    bHasBeenShuttingDown = false;
-    //OpaaxLog::Init();
-
-    // Bootstrap();
-    // InitializeApplication();
 }
 
 OpaaxApplication::~OpaaxApplication()
 {
-    if (!bHasBeenShuttingDown)
+    if (!bHasShutdown)
     {
         ShutdownApplication();
     }
@@ -49,43 +44,104 @@ OpaaxApplication::~OpaaxApplication()
 void OpaaxApplication::Bootstrap()
 {
     // Platform
-#ifdef OPAAX_PLATFORM_WINDOWS
-    //Windows
-    m_Services.Provide<IPlatform, WindowsPlatform>();
-#endif
+    IPlatform& lPlatform = BootPlatform();
     
     //Path
-    IPaths& lPath = m_Services.Provide<IPaths, Opaax::Paths>(Platform(), m_Argc, m_Argv);
+    IPaths& lPath = BootPaths();
     
     //Log
-    m_Services.Provide<ILogger, Opaax::Logger>(lPath);
+    ILogger& lLogger = BootLogger(lPath);
     OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Logger just initialized");
     
+    OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Platform: {}", lPlatform.GetPlatformName().CStr());
+    
+    OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Workspace Path:      {}", lPath.WorkspaceRoot().CStr());
+    OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Engine Path:         {}", lPath.EngineRoot().CStr());
+    OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Project Root Path:   {}", lPath.ProjectRoot().CStr());
+    OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Project File Path:   {}", lPath.ProjectFile().CStr());
+    OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Assets Directory:    {}", lPath.AssetsDir().CStr());
+    OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Configs Directory:   {}", lPath.ConfigsDir().CStr());
+    OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Sources Directory:   {}", lPath.SourceDir().CStr());
+    OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Save Directory:      {}", lPath.SaveDir().CStr());
+    OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Temp Directory:      {}", lPath.TempDir().CStr());
+    
     //Config
-    IConfigSystem& lConfigSystem = m_Services.Provide<IConfigSystem, Opaax::ConfigSystem>(lPath);
-    lConfigSystem.Register<Opaax::Config_Engine>();
+    OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Config System");
+    IConfigSystem& lConfigSystem = BootConfigSystem(lPath);
+    PreRegisterConfig(lConfigSystem);
     
     //Project Manager
-    m_Services.Provide<IProjectManager, Opaax::ProjectManager>(lPath);
+    OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Project Manager");
+    IProjectManager& lProjMgr = BootProjectManager(lPath);
     
     //Jobsystem
-    m_Services.Provide<IJobSystem, Opaax::JobSystem>();
+    OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Job System");
+    IJobSystem& lJobSystem = BootJobSystem();
 
     //Window manager — the window itself is created later, in InitializeApplication (needs a GL/VK context).
-    m_Services.Provide<IWindowManager, Opaax::WindowManager>();
+    OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Window Manager");
+    IWindowManager& lWindowMgr = BootWindowManager();
     
     //Engine
-    m_Services.Provide<IEngine, Opaax::Engine>();
+    OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Engine");
+    IEngine& lEngine = BootEngine();
+    
+    bHasBootstrap = true;
 }
 
-IPlatform&          OpaaxApplication::Platform()        { return m_Services.Get<IPlatform>();       }
-IPaths&             OpaaxApplication::Paths()           { return m_Services.Get<IPaths>();          }
-ILogger&            OpaaxApplication::Logger()          { return m_Services.Get<ILogger>();         }
-IProjectManager&    OpaaxApplication::ProjectManager()  { return m_Services.Get<IProjectManager>(); }
-IConfigSystem&      OpaaxApplication::ConfigSystem()    { return m_Services.Get<IConfigSystem>();   }
-IJobSystem&         OpaaxApplication::JobSystem()       { return m_Services.Get<IJobSystem>();      }
-IWindowManager&     OpaaxApplication::WindowManager()   { return m_Services.Get<IWindowManager>();  }
-IEngine&            OpaaxApplication::Engine()          { return m_Services.Get<IEngine>();         }
+IPlatform& OpaaxApplication::BootPlatform()
+{
+#ifdef OPAAX_PLATFORM_WINDOWS
+    //Windows
+    return m_Services.Provide<IPlatform, WindowsPlatform>();
+#endif
+}
+
+IPaths& OpaaxApplication::BootPaths()
+{
+    return m_Services.Provide<IPaths, Opaax::Paths>(Platform(), m_Argc, m_Argv);
+}
+
+ILogger& OpaaxApplication::BootLogger(IPaths& Paths)
+{
+    return m_Services.Provide<ILogger, Opaax::Logger>(Paths);
+}
+
+IConfigSystem& OpaaxApplication::BootConfigSystem(const IPaths& Paths)
+{
+    return m_Services.Provide<IConfigSystem, Opaax::ConfigSystem>(Paths);
+}
+
+IProjectManager& OpaaxApplication::BootProjectManager(const IPaths& Paths)
+{
+    return m_Services.Provide<IProjectManager, Opaax::ProjectManager>(Paths);
+}
+
+IJobSystem& OpaaxApplication::BootJobSystem()
+{
+    return m_Services.Provide<IJobSystem, Opaax::JobSystem>();
+}
+
+IWindowManager& OpaaxApplication::BootWindowManager()
+{
+    return m_Services.Provide<IWindowManager, Opaax::WindowManager>();
+}
+
+IEngine& OpaaxApplication::BootEngine()
+{
+    return m_Services.Provide<IEngine, Opaax::Engine>();
+}
+
+void OpaaxApplication::PreRegisterConfig(IConfigSystem& ConfigSystem)
+{
+    if (ConfigSystem.IsNull())
+    {
+        OPAAX_APP_LOG(Error, "Pre register config with a null config system")
+        return;
+    }
+    
+    ConfigSystem.Register<Opaax::Config_Engine>();
+}
 
 // =============================================================================
 // Initialization
@@ -97,8 +153,28 @@ void OpaaxApplication::InitializeApplication()
     
     OnInitializeApplication();
     
-    bIsRunning = true;
+    bHasInitialized = true;
+    bIsRunning      = true;
 }
+
+void OpaaxApplication::CreateApplicationWindow()
+{
+    WindowManager().CreateMainWindow();
+}
+
+void OpaaxApplication::CreateApplicationRenderer()
+{
+
+}
+
+void OpaaxApplication::OnInitializeApplication()
+{
+    OPAAX_APP_LOG(Trace, "OnInitializeApplication Not override in child app class");
+}
+
+// =============================================================================
+// Flow
+// =============================================================================
 
 void OpaaxApplication::RunApplication()
 {
@@ -136,6 +212,20 @@ void OpaaxApplication::RunApplication()
     }
 }
 
+void OpaaxApplication::ShutdownApplication()
+{
+    m_Services.ShutdownAll();
+
+    bHasShutdown    = true;
+    bHasBootstrap   = false;
+    bHasInitialized = false;
+    bIsRunning      = false;
+}
+
+// =============================================================================
+// Engine
+// =============================================================================
+
 void OpaaxApplication::EngineStartup()
 {
     PreEngineStartup();
@@ -143,26 +233,15 @@ void OpaaxApplication::EngineStartup()
     PostEngineStartup();
 }
 
-void OpaaxApplication::ShutdownApplication()
-{
-    Engine().Shutdown();
+// =============================================================================
+// Getter
+// =============================================================================
 
-    m_Services.ShutdownAll();
-
-    bHasBeenShuttingDown = true;
-}
-
-void OpaaxApplication::CreateApplicationWindow()
-{
-    WindowManager().CreateMainWindow();
-}
-
-void OpaaxApplication::CreateApplicationRenderer()
-{
-
-}
-
-void OpaaxApplication::OnInitializeApplication()
-{
-    OPAAX_APP_LOG(Trace, "OnInitializeApplication Not override in child app class");
-}
+IPlatform&          OpaaxApplication::Platform()        { return m_Services.Get<IPlatform>();       }
+IPaths&             OpaaxApplication::Paths()           { return m_Services.Get<IPaths>();          }
+ILogger&            OpaaxApplication::Logger()          { return m_Services.Get<ILogger>();         }
+IProjectManager&    OpaaxApplication::ProjectManager()  { return m_Services.Get<IProjectManager>(); }
+IConfigSystem&      OpaaxApplication::ConfigSystem()    { return m_Services.Get<IConfigSystem>();   }
+IJobSystem&         OpaaxApplication::JobSystem()       { return m_Services.Get<IJobSystem>();      }
+IWindowManager&     OpaaxApplication::WindowManager()   { return m_Services.Get<IWindowManager>();  }
+IEngine&            OpaaxApplication::Engine()          { return m_Services.Get<IEngine>();         }

@@ -5,6 +5,7 @@
 #include "Core/Application/OpaaxApplication.h"
 #include "Core/Application/Services/ILogger.h"
 #include "Core/Application/Services/IJobSystem.h"
+#include "Core/Application/Services/IPlatform.h"
 
 //Subsystems
 #include "Core/Engine/Subsystems/Resources/ResourceManager.h"
@@ -20,8 +21,6 @@ namespace Opaax
     // =========================================================================
     Engine::Engine()
     {
-        // Resources is the FIRST engine subsystem (design §9). Register more here in
-        // startup order as they land (Render, Input, World, Physics...).
         m_Subsystems.RegisterSubsystem<ResourceManager>();
         m_Subsystems.RegisterSubsystem<RendererManager>();
     }
@@ -29,6 +28,45 @@ namespace Opaax
     Engine::~Engine()
     {
         Shutdown();
+    }
+
+    // =============================================================================
+    // Gather App services
+    // =============================================================================
+    
+    void Engine::CacheAppServices()
+    {
+        AppServiceLocator& lServices = OpaaxApplication::Services();
+        
+        m_Platform = &lServices.Get<IPlatform>();
+        if (m_Platform->IsNull())
+        {
+            OPAAX_ENGINE_LOG(Warn, "Platform service is a Null service");
+        }
+        
+        m_JobSystem = &lServices.Get<IJobSystem>();
+        if (m_JobSystem->IsNull())
+        {
+            OPAAX_ENGINE_LOG(Warn, "JobSystem service is a Null service");
+        }
+    }
+
+    // =============================================================================
+    // Delta Time
+    // =============================================================================
+    
+    double Engine::GetDeltaTime()
+    {
+        const double lTimeNow   = m_Platform->GetTimeSeconds();
+        double lDelta = lTimeNow - LastTime;
+        LastTime = lTimeNow;
+        
+        if (lDelta > MAX_FRAME_DELTA)
+        {
+            lDelta = MAX_FRAME_DELTA;
+        }
+        
+        return lDelta;
     }
 
     void Engine::OnShutdown()
@@ -45,6 +83,8 @@ namespace Opaax
         {
             return true;
         }
+        
+        CacheAppServices();
 
         m_Subsystems.StartupAll();
         
@@ -73,16 +113,13 @@ namespace Opaax
     void Engine::Loop()
     {
         // Publish finished async jobs back to their main-thread completions first.
-        OpaaxApplication::GetAppService<IJobSystem>().DrainCompletions();
-
-        // Delta-time from the steady clock (first frame is 0 — no last tick yet).
-        const Uint64 lNowNs = static_cast<Uint64>(
-            std::chrono::duration_cast<std::chrono::nanoseconds>(
-                std::chrono::steady_clock::now().time_since_epoch()).count());
-        const double lDeltaTime = m_bHasTick ? static_cast<double>(lNowNs - m_LastTickNs) * 1e-9 : 0.0;
-        m_LastTickNs = lNowNs;
-        m_bHasTick   = true;
-
+        m_JobSystem->DrainCompletions();
+        
+        // ----------------------------------------------------------------
+        // 2. Time
+        // ----------------------------------------------------------------
+        
+        double lDeltaTime = GetDeltaTime();
         Update(lDeltaTime);
         // FixedUpdate stepping lands with physics; render-interpolation alpha is 1.0 for now.
         Render(1.0);

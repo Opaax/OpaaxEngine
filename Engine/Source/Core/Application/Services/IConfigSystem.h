@@ -3,6 +3,7 @@
 #include <type_traits>
 
 #include "IAppService.h"
+#include "ILogger.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/OpaaxString.hpp"
 #include "Core/Config/IConfig.h"
@@ -10,6 +11,8 @@
 namespace Opaax
 {
     class IPaths;
+    
+    inline constexpr LogCategory LogConfigSystem{"ConfigSystem"};
 
     // =============================================================================
     // IConfigSystem — type-keyed registry of IConfig blocks, one file each under

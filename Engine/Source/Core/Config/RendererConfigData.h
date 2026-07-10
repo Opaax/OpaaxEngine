@@ -14,14 +14,10 @@ namespace Opaax
     
     struct RendererConfigData
     {
+        DECLARE_CONFIG_DATA(RendererConfigData);
     public:
         Vector4F ClearColor{0, 0, 0, 1.0f};
     };
     
-    // Pure, tolerant parser — bad JSON / missing fields keep the defaults, never throws.
-    OPAAX_API RendererConfigData ParseRendererConfig(const OpaaxString& InJsonText);
-    // Serialize to pretty JSON — the template written when no config file exists.
-    OPAAX_API OpaaxString       SerializeRendererConfig(const RendererConfigData& InData);
-    
-    DECLARE_T_CONFIG_CODEC(ParseRendererConfig, SerializeRendererConfig, RendererConfigData)
+    DECLARE_T_CONFIG_CODEC(RendererConfigData::Parse, RendererConfigData::Serialize, RendererConfigData)
 }

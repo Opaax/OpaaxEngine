@@ -68,13 +68,13 @@ namespace Opaax
         virtual OpaaxString EngineRoot()    const = 0; // <WorkspaceRoot>/Engine
 
         //----- project layout -------------------------------------------------
-        virtual OpaaxString ProjectRoot() const = 0;   // dir holding the .opaaxproj
-        virtual OpaaxString ProjectFile() const = 0;   // the .opaaxproj itself
-        virtual OpaaxString AssetsDir()   const = 0; 
-        virtual OpaaxString ConfigsDir()  const = 0;
-        virtual OpaaxString SourceDir()   const = 0;
-        virtual OpaaxString SaveDir()     const = 0;
-        virtual OpaaxString TempDir()      const = 0;
+        virtual OpaaxString ProjectRoot()   const = 0;   // dir holding the .opaaxproj
+        virtual OpaaxString ProjectFile()   const = 0;   // the .opaaxproj itself
+        virtual OpaaxString AssetsDir()     const = 0; 
+        virtual OpaaxString ConfigsDir()    const = 0;
+        virtual OpaaxString SourceDir()     const = 0;
+        virtual OpaaxString SaveDir()       const = 0;
+        virtual OpaaxString TempDir()       const = 0;
 
         //----- resolvers ------------------------------------------------------
         virtual OpaaxString EngineToAbsolute(const OpaaxString& InEngineRel)   const = 0; // under EngineRoot

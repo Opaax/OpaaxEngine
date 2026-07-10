@@ -24,6 +24,12 @@ namespace Opaax
          */
         virtual OpaaxString GetExecutablePath() const = 0;
 
+        /**
+         * 
+         * @return Windows Linux Max
+         */
+        virtual OpaaxString GetPlatformName() const = 0;
+
         //----- null object ----------------------------------------------------
         static IPlatform& Null();
     };

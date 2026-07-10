@@ -4,6 +4,8 @@
 #include <cstring>
 #include <filesystem>
 
+#include "ILogger.h"
+
 namespace Opaax
 {
     namespace
