@@ -2,9 +2,9 @@
 
 #include <Core/Application/Services/IEngine.h>
 #include <Core/Engine/Subsystems/EngineSubsystem.h>
-
 #include "Core/Application/Services/IJobSystem.h"
 #include "Subsystems/Renderer/RendererManager.h"
+#include "FrameInfo.hpp"
 
 namespace Opaax
 {
@@ -52,6 +52,7 @@ namespace Opaax
         // Delta Time
     private:
         double GetDeltaTime();
+        double GetFixedDeltaTime();
         // End Delta Time
         // =============================================================================
         
@@ -102,6 +103,8 @@ namespace Opaax
         // Delta Time
     private:
         double LastTime = 0.0f;
+        
+        FrameInfo m_FrameInfo;
 
         // End Delta Time
         // =============================================================================

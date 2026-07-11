@@ -9,7 +9,7 @@
 
 //Subsystems
 #include "Core/Engine/Subsystems/Resources/ResourceManager.h"
-
+#include "Maths/MathsStatics.h"
 #include "Subsystems/Renderer/RendererManager.h"
 
 namespace Opaax
@@ -58,8 +58,8 @@ namespace Opaax
     double Engine::GetDeltaTime()
     {
         const double lTimeNow   = m_Platform->GetTimeSeconds();
-        double lDelta = lTimeNow - LastTime;
-        LastTime = lTimeNow;
+        double lDelta = lTimeNow - m_FrameInfo.m_LastTime;
+        m_FrameInfo.m_LastTime = lTimeNow;
         
         if (lDelta > MAX_FRAME_DELTA)
         {
@@ -67,6 +67,12 @@ namespace Opaax
         }
         
         return lDelta;
+    }
+
+    double Engine::GetFixedDeltaTime()
+    {
+        constexpr double lFixedDelta = D60_HZ;
+        return lFixedDelta;
     }
 
     void Engine::OnShutdown()
@@ -119,10 +125,20 @@ namespace Opaax
         // 2. Time
         // ----------------------------------------------------------------
         
-        double lDeltaTime = GetDeltaTime();
-        Update(lDeltaTime);
-        // FixedUpdate stepping lands with physics; render-interpolation alpha is 1.0 for now.
-        Render(1.0);
+        m_FrameInfo.m_DeltaTime = GetDeltaTime();
+        Update(m_FrameInfo.m_DeltaTime);
+        
+        m_FrameInfo.m_AccumulatedDeltaTime += m_FrameInfo.m_DeltaTime;
+        m_FrameInfo.m_FixedDeltaTime = GetFixedDeltaTime();
+        
+        while (m_FrameInfo.m_AccumulatedDeltaTime >= m_FrameInfo.m_FixedDeltaTime)
+        {
+            FixedUpdate(m_FrameInfo.m_FixedDeltaTime);
+            m_FrameInfo.m_AccumulatedDeltaTime -= m_FrameInfo.m_FixedDeltaTime;
+        }
+        
+        m_FrameInfo.m_AlphaPhysic = m_FrameInfo.m_AccumulatedDeltaTime / m_FrameInfo.m_FixedDeltaTime;
+        Render(m_FrameInfo.m_AlphaPhysic);
     }
 
     void Engine::Shutdown()
@@ -143,9 +159,19 @@ namespace Opaax
     // Per-frame tick — pumps every engine subsystem. Harmless before Startup()
     // (the subsystem list is empty, so these are no-ops).
     // =========================================================================
-    void Engine::Update(double InDeltaTime)            { m_Subsystems.UpdateAll(InDeltaTime); }
-    void Engine::FixedUpdate(double InFixedDeltaTime)  { m_Subsystems.FixedUpdateAll(InFixedDeltaTime); }
-    void Engine::Render(double InAlphaPhysicStep)      { m_Subsystems.RenderAll(InAlphaPhysicStep); }
+    void Engine::Update(double InDeltaTime)
+    {
+        m_Subsystems.UpdateAll(InDeltaTime);
+    }
+    
+    void Engine::FixedUpdate(double InFixedDeltaTime)
+    {
+        m_Subsystems.FixedUpdateAll(InFixedDeltaTime);
+    }
+    void Engine::Render(double InAlphaPhysicStep)
+    {
+        m_Subsystems.RenderAll(InAlphaPhysicStep);
+    }
 
     // =========================================================================
     // GetResources — always valid. Lazily starts the engine if the host hasn't yet

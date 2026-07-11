@@ -15,7 +15,7 @@ namespace Opaax
 {
     Uint32 WindowsPlatform::GetLogicalCoreCount() const
     {
-        const unsigned int lCount = std::thread::hardware_concurrency();
+        const unsigned int lCount = Thread::hardware_concurrency();
         return lCount == 0u ? 1u : static_cast<Uint32>(lCount);
     }
 

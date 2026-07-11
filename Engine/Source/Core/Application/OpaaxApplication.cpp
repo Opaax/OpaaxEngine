@@ -196,7 +196,7 @@ void OpaaxApplication::RunApplication()
         lWindow->PollEvents();
 
         // ----------------------------------------------------------------
-        // 1.1 close event called?
+        // 1.1 close event?
         // ----------------------------------------------------------------
         bIsRunning = !lWindow->ShouldClose();
         if (!bIsRunning)
@@ -205,8 +205,7 @@ void OpaaxApplication::RunApplication()
         }
         
         // ----------------------------------------------------------------
-        // 2. Tick + render. Present now lives inside the frame (RenderSystem::EndFrame),
-        //    so the app loop no longer swaps the window.
+        // 2. Tick
         // ----------------------------------------------------------------
         Engine().Loop();
     }
