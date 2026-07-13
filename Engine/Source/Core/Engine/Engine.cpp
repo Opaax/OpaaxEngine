@@ -5,7 +5,7 @@
 #include "Core/Application/OpaaxApplication.h"
 #include "Core/Application/Services/ILogger.h"
 #include "Core/Application/Services/IJobSystem.h"
-#include "Core/Application/Services/IPlatform.h"
+#include "Core/Application/Services/Platforms/IPlatform.h"
 
 //Subsystems
 #include "Core/Engine/Subsystems/Resources/ResourceManager.h"

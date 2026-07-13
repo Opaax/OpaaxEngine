@@ -3,7 +3,7 @@
 #include <cstring>
 #include <filesystem>
 
-#include "Window.h"
+#include "Window/Window.h"
 #include <GLFW/glfw3.h>
 
 #include "ApplicationEvents.hpp"
@@ -24,7 +24,7 @@
 #include "Config/ProjectConfig.h"
 #include "Editor/EditorSubsystem.h"
 #include "EventOld/OpaaxEventDispatcher.hpp"
-#include "Input/InputSubsystem.h"
+#include "InputOld/InputSubsystemOld.h"
 #include "Log/OpaaxLog.h"
 #include "Container/TPolymorphicList.hpp"
 #include "Renderer/Camera/CameraSubsystem.h"
@@ -299,7 +299,7 @@ void CoreEngineApp::Initialize()
     m_EngineSubsystemManager.RegisterSubsystem<RenderSubsystem>(this);
     m_EngineSubsystemManager.RegisterSubsystem<CameraSubsystem>(this);
 
-    m_EngineSubsystemManager.RegisterSubsystem<InputSubsystem>(this);
+    m_EngineSubsystemManager.RegisterSubsystem<InputSubsystemOld>(this);
 
     m_EngineSubsystemManager.RegisterSubsystem<SceneManager>(this);
 
