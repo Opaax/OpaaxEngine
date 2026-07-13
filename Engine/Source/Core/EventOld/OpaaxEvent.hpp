@@ -33,7 +33,7 @@ namespace Opaax
         virtual const char* GetName()           const noexcept = 0;
         virtual Uint32      GetCategoryFlags()  const noexcept = 0;
 
-        FORCEINLINE bool IsInCategory(EEventCategory Category) const noexcept
+        FORCEINLINE bool IsInCategory(EEventCategoryOld Category) const noexcept
         {
             return (GetCategoryFlags() & static_cast<Uint32>(Category)) != 0;
         }

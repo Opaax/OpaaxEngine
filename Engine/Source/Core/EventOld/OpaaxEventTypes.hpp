@@ -91,7 +91,7 @@ namespace Opaax
     //   If you need more, change the underlying type to Uint64 here and in
     //   OpaaxEvent::GetCategoryFlags() / IsInCategory().
     // =============================================================================
-    enum EEventCategory : Uint16
+    enum EEventCategoryOld : Uint16
     {
         EEventCategory_None        = 0,
         EEventCategory_Application = BIT(0),   // window events
