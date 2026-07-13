@@ -1,18 +1,20 @@
 #include "OpaaxApplication.h"
 
-#include "Core/Application/Services/IPlatform.h"
+#include "Core/Application/Services/Platforms/IPlatform.h"
 #include "Core/Application/Services/IPaths.h"
 #include "Core/Application/Services/ILogger.h"
 #include "Core/Application/Services/IProjectManager.h"
 #include "Core/Application/Services/IJobSystem.h"
-#include "Core/Application/Services/IWindowManager.h"
 #include "Core/Config/Config_Engine.h"
 #include "Core/Engine/Engine.h"
 #include "Services/IConfigSystem.h"
 #include "Services/IEngine.h"
 
+#include "Services/Window/IWindowManager.h"
+#include "Services/Window/WindowManager.h"
+
 #ifdef OPAAX_PLATFORM_WINDOWS
-#include "Core/Application/Services/WindowsPlatform.h"
+#include "Core/Application/Services/Platforms/Windows/WindowsPlatform.h"
 #endif
 
 using namespace Opaax;

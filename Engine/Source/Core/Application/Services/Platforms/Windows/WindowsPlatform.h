@@ -1,7 +1,7 @@
 #pragma once
 
-#include "IPlatform.h"
 #include "Core/EngineAPI.h"
+#include "Core/Application/Services/Platforms/IPlatform.h"
 
 #ifdef OPAAX_PLATFORM_WINDOWS
 

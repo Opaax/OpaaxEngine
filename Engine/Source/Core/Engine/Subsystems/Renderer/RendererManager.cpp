@@ -1,8 +1,7 @@
 #include "RendererManager.h"
 
-#include "Core/Window.h"
 #include "Core/Application/OpaaxApplication.h"
-#include "Core/Application/Services/IWindowManager.h"
+#include "Core/Application/Services/Window/IWindowManager.h"
 #include "Core/Application/Services/IConfigSystem.h"
 #include "Core/Application/Services/IPaths.h"
 #include "Core/Config/Config_Engine.h"

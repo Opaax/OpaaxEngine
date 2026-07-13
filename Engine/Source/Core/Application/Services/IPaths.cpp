@@ -1,10 +1,9 @@
 #include "IPaths.h"
-#include "IPlatform.h"
+#include "ILogger.h"
+#include "Core/Application/Services/Platforms/IPlatform.h"
 
 #include <cstring>
 #include <filesystem>
-
-#include "ILogger.h"
 
 namespace Opaax
 {
