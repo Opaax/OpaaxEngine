@@ -4,8 +4,8 @@
 #include <GLFW/glfw3.h>
 
 #include "Core/ApplicationEvents.hpp"
-#include "Core/Input/OpaaxInputEvents.hpp"
-#include "Core/Input/OpaaxInputTypes.hpp"
+#include "Core/InputOld/OpaaxInputEvents.hpp"
+#include "Core/InputOld/OpaaxInputTypes.hpp"
 #include "Core/Log/OpaaxLog.h"
 #include "Core/Config/EngineConfig.h"
 #include "RHI/RenderAPI.h"

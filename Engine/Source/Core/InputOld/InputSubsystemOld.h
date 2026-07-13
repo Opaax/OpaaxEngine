@@ -23,7 +23,7 @@ namespace Opaax
     inline constexpr Uint8  INPUT_STATE_PRESSED  = 1;
  
     /**
-     * @class InputSubsystem
+     * @class InputSubsystemOld
      *
      * Tracks all input state across frames using double-buffering.
      * One unified state array covers keyboard, mouse buttons, and future gamepad —
@@ -39,18 +39,18 @@ namespace Opaax
      * NOTE: Mouse buttons query through the same IsKey* API using
      *   EOpaaxKeyCode::Mouse_Left etc. No separate mouse button functions needed.
      */
-    class OPAAX_API InputSubsystem final : public EngineSubsystemBaseOld
+    class OPAAX_API InputSubsystemOld final : public EngineSubsystemBaseOld
     {
     public:
-        OPAAX_SUBSYSTEM_TYPE(InputSubsystem)
+        OPAAX_SUBSYSTEM_TYPE(InputSubsystemOld)
         
         // =============================================================================
         // CTORs
         // =============================================================================
     public:
-        InputSubsystem() = default;
-        ~InputSubsystem() override = default;
-        explicit InputSubsystem(CoreEngineApp* InEngineApp) : EngineSubsystemBaseOld(InEngineApp) {}
+        InputSubsystemOld() = default;
+        ~InputSubsystemOld() override = default;
+        explicit InputSubsystemOld(CoreEngineApp* InEngineApp) : EngineSubsystemBaseOld(InEngineApp) {}
         
         // =============================================================================
         // Function

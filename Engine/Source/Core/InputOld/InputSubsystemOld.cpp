@@ -1,34 +1,34 @@
-#include "InputSubsystem.h"
+#include "InputSubsystemOld.h"
 
 #include "Core/EventOld/OpaaxEventDispatcher.hpp"
 
 namespace Opaax
 {
-    bool InputSubsystem::HandleKeyPressed(const KeyPressedEvent& Event)
+    bool InputSubsystemOld::HandleKeyPressed(const KeyPressedEvent& Event)
     {
         SetState(Event.GetKeyCode(), INPUT_STATE_PRESSED);
         return false;
     }
  
-    bool InputSubsystem::HandleKeyReleased(const KeyReleasedEvent& Event)
+    bool InputSubsystemOld::HandleKeyReleased(const KeyReleasedEvent& Event)
     {
         SetState(Event.GetKeyCode(), INPUT_STATE_RELEASED);
         return false;
     }
  
-    bool InputSubsystem::HandleMouseButtonPressed(const MouseButtonPressedEvent& Event)
+    bool InputSubsystemOld::HandleMouseButtonPressed(const MouseButtonPressedEvent& Event)
     {
         SetState(Event.GetMouseButton(), INPUT_STATE_PRESSED);
         return false;
     }
  
-    bool InputSubsystem::HandleMouseButtonReleased(const MouseButtonReleasedEvent& Event)
+    bool InputSubsystemOld::HandleMouseButtonReleased(const MouseButtonReleasedEvent& Event)
     {
         SetState(Event.GetMouseButton(), INPUT_STATE_RELEASED);
         return false;
     }
  
-    bool InputSubsystem::HandleMouseMoved(MouseMovedEvent& Event)
+    bool InputSubsystemOld::HandleMouseMoved(MouseMovedEvent& Event)
     {
         const float lNewX = Event.GetX();
         const float lNewY = Event.GetY();
@@ -42,7 +42,7 @@ namespace Opaax
         return false;
     }
 
-    bool InputSubsystem::Startup()
+    bool InputSubsystemOld::Startup()
     {
         OPAAX_CORE_INFO("InputSubsystem::Startup()");
  
@@ -55,12 +55,12 @@ namespace Opaax
         return true;
     }
 
-    void InputSubsystem::Shutdown()
+    void InputSubsystemOld::Shutdown()
     {
         OPAAX_CORE_INFO("InputSubsystem::Shutdown()");
     }
 
-    void InputSubsystem::Update(double DeltaTime)
+    void InputSubsystemOld::Update(double DeltaTime)
     {
         // Snapshot current → previous.
         // Order in the game loop:
@@ -77,7 +77,7 @@ namespace Opaax
         m_bMouseMoved = false;
     }
 
-    bool InputSubsystem::OnEvent(OpaaxEvent& Event)
+    bool InputSubsystemOld::OnEvent(OpaaxEvent& Event)
     {
         OpaaxEventDispatcher lDispatcher(Event);
  
@@ -91,7 +91,7 @@ namespace Opaax
         return false;
     }
 
-    Uint32 InputSubsystem::GetEventCategoryFilter() const noexcept
+    Uint32 InputSubsystemOld::GetEventCategoryFilter() const noexcept
     {
         return EEventCategory_Input
             | EEventCategory_Keyboard
