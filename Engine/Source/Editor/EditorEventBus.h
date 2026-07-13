@@ -40,7 +40,7 @@ namespace Opaax::Editor
         // =============================================================================
     public:
         SubscriptionToken() noexcept = default;
-        SubscriptionToken(EditorEventBus* InBus, EEventType InType, Uint64 InID) noexcept
+        SubscriptionToken(EditorEventBus* InBus, EEventTypeOld InType, Uint64 InID) noexcept
             : m_Bus(InBus), m_Type(InType), m_ID(InID)
         {}
         ~SubscriptionToken();
@@ -71,7 +71,7 @@ namespace Opaax::Editor
         // =============================================================================
     private:
         EditorEventBus* m_Bus  = nullptr;
-        EEventType      m_Type = EEventType::None;
+        EEventTypeOld      m_Type = EEventTypeOld::None;
         Uint64          m_ID   = 0;
     };
 
@@ -125,7 +125,7 @@ namespace Opaax::Editor
             static_assert(std::is_base_of_v<OpaaxEvent, TEvent>,
                 "EditorEventBus::Subscribe: TEvent must derive from OpaaxEvent");
 
-            const EEventType lType = TEvent::GetStaticType();
+            const EEventTypeOld lType = TEvent::GetStaticType();
             const Uint64     lID   = ++m_NextID;
 
             auto lShim = [Cb = std::move(Callback)](const OpaaxEvent& InEvent)
@@ -145,7 +145,7 @@ namespace Opaax::Editor
         // =============================================================================
     private:
         friend class SubscriptionToken;
-        void Unsubscribe(EEventType InType, Uint64 InID);
+        void Unsubscribe(EEventTypeOld InType, Uint64 InID);
 
         struct HandlerEntry
         {
@@ -153,7 +153,7 @@ namespace Opaax::Editor
             std::function<void(const OpaaxEvent&)> Handler;
         };
 
-        std::unordered_map<EEventType, std::vector<HandlerEntry>> m_Handlers;
+        std::unordered_map<EEventTypeOld, std::vector<HandlerEntry>> m_Handlers;
         Uint64                                                    m_NextID = 0;
     };
 

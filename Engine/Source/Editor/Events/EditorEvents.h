@@ -38,7 +38,7 @@ namespace Opaax
 
         FORCEINLINE EntityID GetEntity() const noexcept { return m_Entity; }
 
-        OPAAX_EVENT_CLASS_TYPE(EEventType::EntitySelected)
+        OPAAX_EVENT_CLASS_TYPE(EEventTypeOld::EntitySelected)
         OPAAX_EVENT_CLASS_CATEGORY(EEventCategory_Editor)
 
     private:
@@ -63,7 +63,7 @@ namespace Opaax
 
         FORCEINLINE const OpaaxString& GetPath() const noexcept { return m_Path; }
 
-        OPAAX_EVENT_CLASS_TYPE(EEventType::SceneSaved)
+        OPAAX_EVENT_CLASS_TYPE(EEventTypeOld::SceneSaved)
         OPAAX_EVENT_CLASS_CATEGORY(EEventCategory_Editor)
 
     private:
@@ -81,7 +81,7 @@ namespace Opaax
     public:
         OnNewSceneEvent() noexcept = default;
 
-        OPAAX_EVENT_CLASS_TYPE(EEventType::NewScene)
+        OPAAX_EVENT_CLASS_TYPE(EEventTypeOld::NewScene)
         OPAAX_EVENT_CLASS_CATEGORY(EEventCategory_Editor)
     };
 
@@ -105,7 +105,7 @@ namespace Opaax
         FORCEINLINE OpaaxStringID GetAssetID() const noexcept { return m_AssetID; }
         FORCEINLINE OpaaxStringID GetTypeID()  const noexcept { return m_Type; }
 
-        OPAAX_EVENT_CLASS_TYPE(EEventType::AssetSelected)
+        OPAAX_EVENT_CLASS_TYPE(EEventTypeOld::AssetSelected)
         OPAAX_EVENT_CLASS_CATEGORY(EEventCategory_Editor)
 
     private:
@@ -128,7 +128,7 @@ namespace Opaax
         FORCEINLINE OpaaxStringID         GetAssetID() const noexcept { return m_AssetID; }
         FORCEINLINE const OpaaxString&    GetPath()    const noexcept { return m_Path; }
 
-        OPAAX_EVENT_CLASS_TYPE(EEventType::AssetImported)
+        OPAAX_EVENT_CLASS_TYPE(EEventTypeOld::AssetImported)
         OPAAX_EVENT_CLASS_CATEGORY(EEventCategory_Editor)
 
     private:

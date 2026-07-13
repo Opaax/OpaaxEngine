@@ -64,7 +64,7 @@ namespace Opaax
         // Implementation 
         // =============================================================================
 
-        OPAAX_EVENT_CLASS_TYPE(EEventType::KeyPressed)
+        OPAAX_EVENT_CLASS_TYPE(EEventTypeOld::KeyPressed)
 
         // =============================================================================
         // Members 
@@ -89,7 +89,7 @@ namespace Opaax
         // Implementation 
         // =============================================================================
 
-        OPAAX_EVENT_CLASS_TYPE(EEventType::KeyReleased)
+        OPAAX_EVENT_CLASS_TYPE(EEventTypeOld::KeyReleased)
     };
 
     /**
@@ -119,7 +119,7 @@ namespace Opaax
         // Implementation 
         // =============================================================================
 
-        OPAAX_EVENT_CLASS_TYPE(EEventType::KeyTyped)
+        OPAAX_EVENT_CLASS_TYPE(EEventTypeOld::KeyTyped)
         OPAAX_EVENT_CLASS_CATEGORY(EEventCategory_Input | EEventCategory_Keyboard)
 
     private:
@@ -186,7 +186,7 @@ namespace Opaax
         // Implementation 
         // =============================================================================
 
-        OPAAX_EVENT_CLASS_TYPE(EEventType::MouseButtonPressed)
+        OPAAX_EVENT_CLASS_TYPE(EEventTypeOld::MouseButtonPressed)
     };
 
     /**
@@ -205,7 +205,7 @@ namespace Opaax
         // Implementation 
         // =============================================================================
 
-        OPAAX_EVENT_CLASS_TYPE(EEventType::MouseButtonReleased)
+        OPAAX_EVENT_CLASS_TYPE(EEventTypeOld::MouseButtonReleased)
     };
 
     /**
@@ -234,7 +234,7 @@ namespace Opaax
         // Implementation 
         // =============================================================================
         
-        OPAAX_EVENT_CLASS_TYPE(EEventType::MouseMoved)
+        OPAAX_EVENT_CLASS_TYPE(EEventTypeOld::MouseMoved)
         OPAAX_EVENT_CLASS_CATEGORY(EEventCategory_Input | EEventCategory_Mouse)
 
         // =============================================================================
@@ -270,7 +270,7 @@ namespace Opaax
         // =============================================================================
         // Implementation 
         // =============================================================================
-        OPAAX_EVENT_CLASS_TYPE(EEventType::MouseScrolled)
+        OPAAX_EVENT_CLASS_TYPE(EEventTypeOld::MouseScrolled)
         OPAAX_EVENT_CLASS_CATEGORY(EEventCategory_Input | EEventCategory_Mouse)
 
         // =============================================================================

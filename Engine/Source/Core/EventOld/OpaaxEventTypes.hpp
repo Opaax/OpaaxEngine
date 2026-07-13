@@ -27,7 +27,7 @@ namespace Opaax
     //           OPAAX_EVENT_CLASS_CATEGORY(Opaax::EEventCategory_Gameplay)
     //       };
     // =============================================================================
-    enum class EEventType : Uint16
+    enum class EEventTypeOld : Uint16
     {
         None = 0,
  

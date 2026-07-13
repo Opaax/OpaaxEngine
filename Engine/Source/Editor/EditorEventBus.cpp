@@ -21,7 +21,7 @@ namespace Opaax::Editor
         : m_Bus(Other.m_Bus), m_Type(Other.m_Type), m_ID(Other.m_ID)
     {
         Other.m_Bus  = nullptr;
-        Other.m_Type = EEventType::None;
+        Other.m_Type = EEventTypeOld::None;
         Other.m_ID   = 0;
     }
 
@@ -34,7 +34,7 @@ namespace Opaax::Editor
             m_Type       = Other.m_Type;
             m_ID         = Other.m_ID;
             Other.m_Bus  = nullptr;
-            Other.m_Type = EEventType::None;
+            Other.m_Type = EEventTypeOld::None;
             Other.m_ID   = 0;
         }
         return *this;
@@ -46,7 +46,7 @@ namespace Opaax::Editor
         {
             m_Bus->Unsubscribe(m_Type, m_ID);
             m_Bus  = nullptr;
-            m_Type = EEventType::None;
+            m_Type = EEventTypeOld::None;
             m_ID   = 0;
         }
     }
@@ -84,7 +84,7 @@ namespace Opaax::Editor
         }
     }
 
-    void EditorEventBus::Unsubscribe(EEventType InType, Uint64 InID)
+    void EditorEventBus::Unsubscribe(EEventTypeOld InType, Uint64 InID)
     {
         const auto lIt = m_Handlers.find(InType);
         if (lIt == m_Handlers.end()) { return; }

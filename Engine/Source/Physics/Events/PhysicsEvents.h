@@ -38,7 +38,7 @@ namespace Opaax
         FORCEINLINE EntityID GetOverlapEntity() const noexcept { return m_OverlapEntity; }
         FORCEINLINE EntityID GetOtherEntity()   const noexcept { return m_OtherEntity; }
 
-        OPAAX_EVENT_CLASS_TYPE(EEventType::OverlapStart)
+        OPAAX_EVENT_CLASS_TYPE(EEventTypeOld::OverlapStart)
         OPAAX_EVENT_CLASS_CATEGORY(EEventCategory_Physics)
 
     private:
@@ -62,7 +62,7 @@ namespace Opaax
         FORCEINLINE EntityID GetOverlapEntity() const noexcept { return m_OverlapEntity; }
         FORCEINLINE EntityID GetOtherEntity()   const noexcept { return m_OtherEntity; }
 
-        OPAAX_EVENT_CLASS_TYPE(EEventType::OverlapTick)
+        OPAAX_EVENT_CLASS_TYPE(EEventTypeOld::OverlapTick)
         OPAAX_EVENT_CLASS_CATEGORY(EEventCategory_Physics)
 
     private:
@@ -85,7 +85,7 @@ namespace Opaax
         FORCEINLINE EntityID GetOverlapEntity() const noexcept { return m_OverlapEntity; }
         FORCEINLINE EntityID GetOtherEntity()   const noexcept { return m_OtherEntity; }
 
-        OPAAX_EVENT_CLASS_TYPE(EEventType::OverlapStop)
+        OPAAX_EVENT_CLASS_TYPE(EEventTypeOld::OverlapStop)
         OPAAX_EVENT_CLASS_CATEGORY(EEventCategory_Physics)
 
     private:
@@ -112,7 +112,7 @@ namespace Opaax
         FORCEINLINE EntityID GetEntityA() const noexcept { return m_EntityA; }
         FORCEINLINE EntityID GetEntityB() const noexcept { return m_EntityB; }
 
-        OPAAX_EVENT_CLASS_TYPE(EEventType::CollisionEnter)
+        OPAAX_EVENT_CLASS_TYPE(EEventTypeOld::CollisionEnter)
         OPAAX_EVENT_CLASS_CATEGORY(EEventCategory_Physics)
 
     private:
@@ -135,7 +135,7 @@ namespace Opaax
         FORCEINLINE EntityID GetEntityA() const noexcept { return m_EntityA; }
         FORCEINLINE EntityID GetEntityB() const noexcept { return m_EntityB; }
 
-        OPAAX_EVENT_CLASS_TYPE(EEventType::CollisionExit)
+        OPAAX_EVENT_CLASS_TYPE(EEventTypeOld::CollisionExit)
         OPAAX_EVENT_CLASS_CATEGORY(EEventCategory_Physics)
 
     private:
@@ -164,7 +164,7 @@ namespace Opaax
         FORCEINLINE EntityID GetEntity()       const noexcept { return m_Entity; }
         FORCEINLINE Vector2F GetLastPosition() const noexcept { return m_LastPosition; }
 
-        OPAAX_EVENT_CLASS_TYPE(EEventType::ExitWorldBounds)
+        OPAAX_EVENT_CLASS_TYPE(EEventTypeOld::ExitWorldBounds)
         OPAAX_EVENT_CLASS_CATEGORY(EEventCategory_Physics)
 
     private:

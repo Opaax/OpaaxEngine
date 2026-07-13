@@ -11,7 +11,7 @@ namespace Opaax
     public:
         WindowCloseEvent() noexcept = default;
  
-        OPAAX_EVENT_CLASS_TYPE(EEventType::WindowClose)
+        OPAAX_EVENT_CLASS_TYPE(EEventTypeOld::WindowClose)
         OPAAX_EVENT_CLASS_CATEGORY(EEventCategory_Application)
     };
 
@@ -28,7 +28,7 @@ namespace Opaax
         FORCEINLINE Uint32 GetWidth()  const noexcept { return m_Width; }
         FORCEINLINE Uint32 GetHeight() const noexcept { return m_Height; }
  
-        OPAAX_EVENT_CLASS_TYPE(EEventType::WindowResize)
+        OPAAX_EVENT_CLASS_TYPE(EEventTypeOld::WindowResize)
         OPAAX_EVENT_CLASS_CATEGORY(EEventCategory_Application)
  
     private:
@@ -44,7 +44,7 @@ namespace Opaax
     public:
         WindowFocusEvent() noexcept = default;
  
-        OPAAX_EVENT_CLASS_TYPE(EEventType::WindowFocus)
+        OPAAX_EVENT_CLASS_TYPE(EEventTypeOld::WindowFocus)
         OPAAX_EVENT_CLASS_CATEGORY(EEventCategory_Application)
     };
 
@@ -56,7 +56,7 @@ namespace Opaax
     public:
         WindowLostFocusEvent() noexcept = default;
  
-        OPAAX_EVENT_CLASS_TYPE(EEventType::WindowLostFocus)
+        OPAAX_EVENT_CLASS_TYPE(EEventTypeOld::WindowLostFocus)
         OPAAX_EVENT_CLASS_CATEGORY(EEventCategory_Application)
     };
 
@@ -73,7 +73,7 @@ namespace Opaax
         FORCEINLINE Int32 GetX() const noexcept { return m_X; }
         FORCEINLINE Int32 GetY() const noexcept { return m_Y; }
  
-        OPAAX_EVENT_CLASS_TYPE(EEventType::WindowMoved)
+        OPAAX_EVENT_CLASS_TYPE(EEventTypeOld::WindowMoved)
         OPAAX_EVENT_CLASS_CATEGORY(EEventCategory_Application)
  
     private:

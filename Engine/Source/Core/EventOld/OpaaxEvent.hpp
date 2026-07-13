@@ -29,7 +29,7 @@ namespace Opaax
         // -----------------------------------------------------------------------------
         // Getters
     public:
-        virtual EEventType  GetEventType()      const noexcept = 0;
+        virtual EEventTypeOld  GetEventType()      const noexcept = 0;
         virtual const char* GetName()           const noexcept = 0;
         virtual Uint32      GetCategoryFlags()  const noexcept = 0;
 
@@ -60,8 +60,8 @@ namespace Opaax
     //   };
     // =============================================================================
 #define OPAAX_EVENT_CLASS_TYPE(Type)\
-    static  EEventType  GetStaticType() noexcept                { return Type; }\
-    virtual EEventType  GetEventType()  const noexcept override { return GetStaticType(); } \
+    static  EEventTypeOld  GetStaticType() noexcept                { return Type; }\
+    virtual EEventTypeOld  GetEventType()  const noexcept override { return GetStaticType(); } \
     virtual const char* GetName()       const noexcept override { return #Type; }
  
 #define OPAAX_EVENT_CLASS_CATEGORY(Category)\
