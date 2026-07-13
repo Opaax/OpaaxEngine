@@ -42,8 +42,8 @@ namespace Opaax
     bool CameraSubsystem::OnEvent(OpaaxEvent& Event)
     {
         OpaaxEventDispatcher lDispatcher(Event);
-        lDispatcher.Dispatch<WindowResizeEvent>(
-            [this](WindowResizeEvent& InEvent) { return OnWindowResize(InEvent); }
+        lDispatcher.Dispatch<WindowResizeEventOld>(
+            [this](WindowResizeEventOld& InEvent) { return OnWindowResize(InEvent); }
         );
         return false;
     }
@@ -100,7 +100,7 @@ namespace Opaax
         }
     }
 
-    bool CameraSubsystem::OnWindowResize(WindowResizeEvent& Event)
+    bool CameraSubsystem::OnWindowResize(WindowResizeEventOld& Event)
     {
         SetViewportSize(Event.GetWidth(), Event.GetHeight());
         return false;

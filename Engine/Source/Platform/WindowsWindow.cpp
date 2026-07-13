@@ -3,7 +3,7 @@
 #include <VkBootstrap.h>
 #include <GLFW/glfw3.h>
 
-#include "Core/ApplicationEvents.hpp"
+#include "Core/EventOld/ApplicationEventsOld.hpp"
 #include "Core/InputOld/OpaaxInputEvents.hpp"
 #include "Core/InputOld/OpaaxInputTypes.hpp"
 #include "Core/Log/OpaaxLog.h"
@@ -102,7 +102,7 @@ namespace Opaax
             lData.Width  = static_cast<Uint32>(InWidth);
             lData.Height = static_cast<Uint32>(InHeight);
  
-            WindowResizeEvent lEvent(lData.Width, lData.Height);
+            WindowResizeEventOld lEvent(lData.Width, lData.Height);
             if (lData.EventCallback) { lData.EventCallback(lEvent); }
         });
  
@@ -110,7 +110,7 @@ namespace Opaax
         glfwSetWindowCloseCallback(m_Window, [](GLFWwindow* InWindow)
         {
             WindowData& lData = *static_cast<WindowData*>(glfwGetWindowUserPointer(InWindow));
-            WindowCloseEvent lEvent;
+            WindowCloseEventOld lEvent;
             if (lData.EventCallback) { lData.EventCallback(lEvent); }
         });
  
@@ -120,12 +120,12 @@ namespace Opaax
             WindowData& lData = *static_cast<WindowData*>(glfwGetWindowUserPointer(InWindow));
             if (InFocused)
             {
-                WindowFocusEvent lEvent;
+                WindowFocusEventOld lEvent;
                 if (lData.EventCallback) { lData.EventCallback(lEvent); }
             }
             else
             {
-                WindowLostFocusEvent lEvent;
+                WindowLostFocusEventOld lEvent;
                 if (lData.EventCallback) { lData.EventCallback(lEvent); }
             }
         });
@@ -134,7 +134,7 @@ namespace Opaax
         glfwSetWindowPosCallback(m_Window, [](GLFWwindow* InWindow, int InX, int InY)
         {
             WindowData& lData = *static_cast<WindowData*>(glfwGetWindowUserPointer(InWindow));
-            WindowMovedEvent lEvent(InX, InY);
+            WindowMovedEventOld lEvent(InX, InY);
             if (lData.EventCallback) { lData.EventCallback(lEvent); }
         });
  

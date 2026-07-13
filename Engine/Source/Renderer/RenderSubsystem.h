@@ -6,7 +6,7 @@
 
 namespace Opaax
 {
-    class WindowResizeEvent;
+    class WindowResizeEventOld;
 
     /**
      * @class RenderSubsystem
@@ -44,7 +44,7 @@ namespace Opaax
         // Function
         // =============================================================================
     private:
-        bool OnWindowResize(WindowResizeEvent& Event);
+        bool OnWindowResize(WindowResizeEventOld& Event);
 
     public:
         // The frame's ordered pass list. CoreEngineApp::OnRender drives Execute on it.

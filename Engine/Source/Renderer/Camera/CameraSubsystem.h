@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Core/Engine/Subsystems/EngineSubsystem.h"
-#include "Core/ApplicationEvents.hpp"
+#include "Core/EventOld/ApplicationEventsOld.hpp"
 #include "Core/OpaaxTypes.h"
 
 #include "ICamera.h"
@@ -47,7 +47,7 @@ namespace Opaax
         // Functions
         // =============================================================================
     private:
-        bool OnWindowResize(WindowResizeEvent& Event);
+        bool OnWindowResize(WindowResizeEventOld& Event);
 
         //------------------------------------------------------------------------------
         //  Get - Set

@@ -1,81 +1,81 @@
 #pragma once
-#include "EventOld/OpaaxEvent.hpp"
+#include "OpaaxEvent.hpp"
 
 namespace Opaax
 {
     /**
-     * @class WindowCloseEvent
+     * @class WindowCloseEventOld
      */
-    class OPAAX_API WindowCloseEvent final : public OpaaxEvent
+    class OPAAX_API WindowCloseEventOld final : public OpaaxEvent
     {
     public:
-        WindowCloseEvent() noexcept = default;
- 
+        WindowCloseEventOld() noexcept = default;
+
         OPAAX_EVENT_CLASS_TYPE(EEventTypeOld::WindowClose)
         OPAAX_EVENT_CLASS_CATEGORY(EEventCategory_Application)
     };
 
     /**
-     * @class WindowResizeEvent
+     * @class WindowResizeEventOld
      */
-    class OPAAX_API WindowResizeEvent final : public OpaaxEvent
+    class OPAAX_API WindowResizeEventOld final : public OpaaxEvent
     {
     public:
-        WindowResizeEvent(Uint32 InWidth, Uint32 InHeight) noexcept
+        WindowResizeEventOld(Uint32 InWidth, Uint32 InHeight) noexcept
             : m_Width(InWidth), m_Height(InHeight)
         {}
- 
+
         FORCEINLINE Uint32 GetWidth()  const noexcept { return m_Width; }
         FORCEINLINE Uint32 GetHeight() const noexcept { return m_Height; }
- 
+
         OPAAX_EVENT_CLASS_TYPE(EEventTypeOld::WindowResize)
         OPAAX_EVENT_CLASS_CATEGORY(EEventCategory_Application)
- 
+
     private:
         Uint32 m_Width;
         Uint32 m_Height;
     };
 
     /**
-     * @class WindowFocusEvent
+     * @class WindowFocusEventOld
      */
-    class OPAAX_API WindowFocusEvent final : public OpaaxEvent
+    class OPAAX_API WindowFocusEventOld final : public OpaaxEvent
     {
     public:
-        WindowFocusEvent() noexcept = default;
- 
+        WindowFocusEventOld() noexcept = default;
+
         OPAAX_EVENT_CLASS_TYPE(EEventTypeOld::WindowFocus)
         OPAAX_EVENT_CLASS_CATEGORY(EEventCategory_Application)
     };
 
     /**
-     * @class WindowLostFocusEvent
+     * @class WindowLostFocusEventOld
      */
-    class OPAAX_API WindowLostFocusEvent final : public OpaaxEvent
+    class OPAAX_API WindowLostFocusEventOld final : public OpaaxEvent
     {
     public:
-        WindowLostFocusEvent() noexcept = default;
- 
+        WindowLostFocusEventOld() noexcept = default;
+
         OPAAX_EVENT_CLASS_TYPE(EEventTypeOld::WindowLostFocus)
         OPAAX_EVENT_CLASS_CATEGORY(EEventCategory_Application)
     };
 
     /**
-     * @class WindowMovedEvent
+     * @class WindowMovedEventOld
      */
-    class OPAAX_API WindowMovedEvent final : public OpaaxEvent
+    class OPAAX_API WindowMovedEventOld final : public OpaaxEvent
     {
     public:
-        WindowMovedEvent(Int32 InX, Int32 InY) noexcept
+        WindowMovedEventOld(Int32 InX, Int32 InY) noexcept
             : m_X(InX), m_Y(InY)
         {}
- 
+
         FORCEINLINE Int32 GetX() const noexcept { return m_X; }
         FORCEINLINE Int32 GetY() const noexcept { return m_Y; }
- 
+
         OPAAX_EVENT_CLASS_TYPE(EEventTypeOld::WindowMoved)
         OPAAX_EVENT_CLASS_CATEGORY(EEventCategory_Application)
- 
+
     private:
         Int32 m_X;
         Int32 m_Y;

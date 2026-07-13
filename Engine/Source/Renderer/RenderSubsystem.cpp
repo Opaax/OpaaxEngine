@@ -11,7 +11,7 @@
 
 #include "Core/CoreEngineApp.h"
 #include "Core/Window/Window.h"
-#include "Core/ApplicationEvents.hpp"
+#include "Core/EventOld/ApplicationEventsOld.hpp"
 #include "Core/EventOld/OpaaxEventDispatcher.hpp"
 
 namespace Opaax
@@ -81,12 +81,12 @@ namespace Opaax
     bool RenderSubsystem::OnEvent(OpaaxEvent& Event)
     {
         OpaaxEventDispatcher lDispatcher(Event);
-        lDispatcher.Dispatch<WindowResizeEvent>(
-            [this](WindowResizeEvent& E) { return OnWindowResize(E); });
+        lDispatcher.Dispatch<WindowResizeEventOld>(
+            [this](WindowResizeEventOld& E) { return OnWindowResize(E); });
         return false;
     }
  
-    bool RenderSubsystem::OnWindowResize(WindowResizeEvent& Event)
+    bool RenderSubsystem::OnWindowResize(WindowResizeEventOld& Event)
     {
         RenderCommand::SetViewport(0, 0, Event.GetWidth(), Event.GetHeight());
         return false;

@@ -6,7 +6,7 @@
 #include "Window/Window.h"
 #include <GLFW/glfw3.h>
 
-#include "ApplicationEvents.hpp"
+#include "EventOld/ApplicationEventsOld.hpp"
 #include "OpaaxPath.h"
 #include "OpaaxString.hpp"
 #include "OpaaxStringID.hpp"
@@ -189,8 +189,8 @@ void CoreEngineApp::DispatchEvent(OpaaxEvent& Event)
     OpaaxEventDispatcher lDispatcher(Event);
  
     // Engine-owned handlers — always run, not blockable by game code
-    lDispatcher.Dispatch<WindowCloseEvent> ([this](WindowCloseEvent&  Event) { return OnWindowClose(Event);  });
-    lDispatcher.Dispatch<WindowResizeEvent>([this](WindowResizeEvent& Event) { return OnWindowResize(Event); });
+    lDispatcher.Dispatch<WindowCloseEventOld> ([this](WindowCloseEventOld&  Event) { return OnWindowClose(Event);  });
+    lDispatcher.Dispatch<WindowResizeEventOld>([this](WindowResizeEventOld& Event) { return OnWindowResize(Event); });
  
     // Game layer
     if (!Event.IsHandled())
@@ -209,7 +209,7 @@ void CoreEngineApp::DispatchEvent(OpaaxEvent& Event)
     m_GameSubsystemMgr.DispatchEventAll(Event, IsPlayActive());
 }
 
-bool CoreEngineApp::OnWindowClose(WindowCloseEvent& Event)
+bool CoreEngineApp::OnWindowClose(WindowCloseEventOld& Event)
 {
     OPAAX_CORE_TRACE("CoreEngineApp::OnWindowClose()");
     bIsRunning = false;
@@ -222,7 +222,7 @@ void CoreEngineApp::RequestQuit() noexcept
     bIsRunning = false;
 }
 
-bool CoreEngineApp::OnWindowResize(WindowResizeEvent& Event)
+bool CoreEngineApp::OnWindowResize(WindowResizeEventOld& Event)
 {
     OPAAX_CORE_TRACE("CoreEngineApp::OnWindowResize() — {0}x{1}", Event.GetWidth(), Event.GetHeight());
 

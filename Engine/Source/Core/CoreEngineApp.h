@@ -11,8 +11,8 @@ namespace Opaax
 {
     using namespace ECS;
 
-    class WindowResizeEvent;
-    class WindowCloseEvent;
+    class WindowResizeEventOld;
+    class WindowCloseEventOld;
     class OpaaxEvent;
     class Window;
     class SceneManager;
@@ -53,8 +53,8 @@ namespace Opaax
         // Functions
         // =============================================================================
     private:
-        bool OnWindowClose(WindowCloseEvent& Event);
-        bool OnWindowResize(WindowResizeEvent& Event);
+        bool OnWindowClose(WindowCloseEventOld& Event);
+        bool OnWindowResize(WindowResizeEventOld& Event);
 
         // True when play-only systems should be active: editor builds = EditorSubsystem is Playing;
         // non-editor builds = always. Single source of truth for PIE gating across the Run loop AND
