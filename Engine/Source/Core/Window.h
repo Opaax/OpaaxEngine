@@ -3,7 +3,7 @@
 #include "EngineAPI.h"
 #include "OpaaxTypes.h"
 #include "OpaaxForward.h"
-#include "Event/OpaaxEvent.hpp"
+#include "EventOld/OpaaxEvent.hpp"
 
 namespace Opaax
 {

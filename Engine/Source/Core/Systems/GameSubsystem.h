@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Subsystem.h"
-#include "Core/Event/OpaaxEventTypes.hpp"
+#include "Core/EventOld/OpaaxEventTypes.hpp"
 #include "Core/Log/OpaaxLog.h"
 
 namespace Opaax {

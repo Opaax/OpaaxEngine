@@ -1,6 +1,6 @@
 #include "GameSubsystem.h"
 
-#include "Core/Event/OpaaxEvent.hpp"
+#include "Core/EventOld/OpaaxEvent.hpp"
 
 void Opaax::GameSubsystemMgr::UpdateAll(double DeltaTime, bool bAllowPlayOnly)
 {

@@ -23,7 +23,7 @@
 #include "Config/EngineConfig.h"
 #include "Config/ProjectConfig.h"
 #include "Editor/EditorSubsystem.h"
-#include "Event/OpaaxEventDispatcher.hpp"
+#include "EventOld/OpaaxEventDispatcher.hpp"
 #include "Input/InputSubsystem.h"
 #include "Log/OpaaxLog.h"
 #include "Container/TPolymorphicList.hpp"

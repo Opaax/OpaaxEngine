@@ -13,7 +13,7 @@
 #include "Panels/ViewportPanel.h"
 #include "Toolbar/MainMenuBar.h"
 #include "Editor/UI/IEditorUIBackend.h"
-#include "Core/Event/OpaaxEventTypes.hpp"
+#include "Core/EventOld/OpaaxEventTypes.hpp"
 #include "Core/OpaaxMathTypes.h"
 #include "Core/OpaaxString.hpp"
 #include "Core/Engine/Subsystems/EngineSubsystem.h"

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Core/Event/OpaaxEvent.hpp"
+#include "Core/EventOld/OpaaxEvent.hpp"
 #include "Core/OpaaxMathTypes.h"
 #include "ECS/OpaaxEntity.hpp"
 

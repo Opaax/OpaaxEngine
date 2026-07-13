@@ -213,6 +213,8 @@ void OpaaxApplication::RunApplication()
 
 void OpaaxApplication::ShutdownApplication()
 {
+    OPAAX_APP_LOG(Trace, "Shutdown Application")
+    
     m_Services.ShutdownAll();
 
     bHasShutdown    = true;

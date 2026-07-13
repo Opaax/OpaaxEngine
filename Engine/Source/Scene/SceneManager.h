@@ -6,7 +6,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/Log/OpaaxLog.h"
 #include "Core/Engine/Subsystems/EngineSubsystem.h"
-#include "Core/Event/OpaaxEventTypes.hpp"
+#include "Core/EventOld/OpaaxEventTypes.hpp"
 
 namespace Opaax
 {

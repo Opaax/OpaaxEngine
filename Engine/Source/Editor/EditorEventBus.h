@@ -9,8 +9,8 @@
 #include <vector>
 
 #include "Core/EngineAPI.h"
-#include "Core/Event/OpaaxEvent.hpp"
-#include "Core/Event/OpaaxEventTypes.hpp"
+#include "Core/EventOld/OpaaxEvent.hpp"
+#include "Core/EventOld/OpaaxEventTypes.hpp"
 #include "Core/OpaaxTypes.h"
 
 namespace Opaax::Editor

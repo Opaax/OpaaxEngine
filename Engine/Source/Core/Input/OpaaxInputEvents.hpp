@@ -1,6 +1,6 @@
 #pragma once
 #include "OpaaxInputTypes.hpp"
-#include "Core/Event/OpaaxEvent.hpp"
+#include "Core/EventOld/OpaaxEvent.hpp"
 
 namespace Opaax
 {
