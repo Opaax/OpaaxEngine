@@ -1,9 +1,9 @@
 ﻿#pragma once
 
-#include "EngineAPI.h"
-#include "OpaaxTypes.h"
-#include "OpaaxForward.h"
-#include "EventOld/OpaaxEvent.hpp"
+#include "Core/EngineAPI.h"
+#include "Core/OpaaxTypes.h"
+#include "Core/OpaaxForward.h"
+#include "Core/EventOld/OpaaxEvent.hpp"
 
 namespace Opaax
 {

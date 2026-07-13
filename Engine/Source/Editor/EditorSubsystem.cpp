@@ -8,7 +8,7 @@
 
 #include "Core/CoreEngineApp.h"
 #include "Core/OpaaxPath.h"
-#include "Core/Window.h"
+#include "Core/Window/Window.h"
 #include "Scene/SceneManager.h"
 #include "Scene/SceneSerializer.h"
 #include "Core/Log/OpaaxLog.h"

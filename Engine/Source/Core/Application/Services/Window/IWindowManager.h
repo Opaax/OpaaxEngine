@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Core/OpaaxTypes.h"
-#include "Core/Window.h"
+#include "Core/Window/Window.h"
 
 #include "Core/Application/Services/ILogger.h"
 #include "Core/Application/Services/IAppService.h"

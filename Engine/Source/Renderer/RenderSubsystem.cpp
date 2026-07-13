@@ -10,7 +10,7 @@
 #include "Core/Log/OpaaxLog.h"
 
 #include "Core/CoreEngineApp.h"
-#include "Core/Window.h"
+#include "Core/Window/Window.h"
 #include "Core/ApplicationEvents.hpp"
 #include "Core/EventOld/OpaaxEventDispatcher.hpp"
 

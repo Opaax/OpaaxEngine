@@ -3,7 +3,7 @@
 #include "OrthographicCamera.h"
 
 #include "Core/CoreEngineApp.h"
-#include "Core/Window.h"
+#include "Core/Window/Window.h"
 #include "Core/Log/OpaaxLog.h"
 #include "Core/EventOld/OpaaxEventDispatcher.hpp"
 
