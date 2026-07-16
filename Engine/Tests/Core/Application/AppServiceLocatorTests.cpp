@@ -10,12 +10,12 @@
 
 #include "Core/Application/Services/AppServiceLocator.h"
 #include "Core/Application/Services/IAppService.h"
-#include "Core/Application/Services/IPlatform.h"
+#include "Core/Application/Services/Platforms/IPlatform.h"
 #include "Core/OpaaxTypes.h"
 
 #ifdef OPAAX_PLATFORM_WINDOWS
 #include <string>
-#include "Core/Application/Services/WindowsPlatform.h"
+#include "Core/Application/Services/Platforms/Windows/WindowsPlatform.h"
 #endif
 
 using namespace Opaax;
@@ -140,7 +140,11 @@ TEST_CASE("IPlatform: the null object is safe and self-identifying")
     CHECK(lNull.IsNull());
     CHECK(lNull.GetLogicalCoreCount() == 1u);
     CHECK(lNull.GetTimeSeconds() == doctest::Approx(0.0));
-    CHECK(lNull.GetExecutablePath().IsEmpty());
+    // NOTE: the null platform reports descriptive sentinels rather than empty strings —
+    // same convention as NullEngine/NullWindowManager. Callers must not treat these as
+    // real paths; they exist so a null service is identifiable in a log.
+    CHECK(lNull.GetExecutablePath() == "Null Exec Path");
+    CHECK(lNull.GetPlatformName()   == "Null Platform");
 
     // An unprovided IPlatform resolves to that same shared null — no crash.
     AppServiceLocator lLocator;

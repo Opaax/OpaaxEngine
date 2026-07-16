@@ -12,7 +12,8 @@ namespace Opaax
     class ResourceManager;
     class EngineEventBus;
     class WorldManager;
-    
+    class World;
+
     inline constexpr double MAX_FRAME_DELTA = 0.25;
 
     // =============================================================================
@@ -57,6 +58,17 @@ namespace Opaax
         double GetDeltaTime();
         double GetFixedDeltaTime();
         // End Delta Time
+        // =============================================================================
+
+        // =============================================================================
+        // World event bridge
+    private:
+        void BindToWorldMgrEvents();
+        void UnbindFromWorldMgrEvents();
+        void HandleWorldCreated(World* InWorld);
+        void HandleWorldDestroyed(World* InWorld);
+        void HandleActiveWorldChanged(World* InOldWorld, World* InNewWorld);
+        // End World event bridge
         // =============================================================================
         
         

@@ -6,6 +6,7 @@
 #include "Core/Application/Services/ILogger.h"
 #include "Core/Engine/Subsystems/EngineSubsystem.h"
 #include "Core/World/World.h"
+#include "Core/World/WorldEvents.h"
 
 namespace Opaax
 {
@@ -33,9 +34,25 @@ namespace Opaax
         ~WorldManager() override = default;
         
         // =========================================================================
+        // Events (Tier-2)
+        //
+        // Bind to react to world lifetime; WorldManager itself knows no listeners. Every
+        // Add/AddMember returns a DelegateHandle the listener MUST Remove (or RemoveAll
+        // by owner) before it dies. Engine binds these and bridges them onto the
+        // EngineEventBus for decoupled consumers — see WorldEvents.h.
+        //
+        // NOTE: a listener binding after Startup has missed the default "Main" world's
+        // events; call GetActiveWorld() at bind time instead of assuming you saw it.
+        // =========================================================================
+    public:
+        FOnWorldCreated       OnWorldCreated;
+        FOnWorldDestroyed     OnWorldDestroyed;
+        FOnActiveWorldChanged OnActiveWorldChanged;
+
+        // =========================================================================
         // Function
         // =========================================================================
-        
+
         // =========================================================================
         // World Lifetime
     public:

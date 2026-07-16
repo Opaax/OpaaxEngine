@@ -13,6 +13,7 @@
 #include "Subsystems/EventBus/EngineEventBus.h"
 #include "Subsystems/Renderer/RendererManager.h"
 #include "Core/World/WorldManager.h"
+#include "Core/World/WorldEvents.h"
 
 namespace Opaax
 {
@@ -79,6 +80,26 @@ namespace Opaax
         return lFixedDelta;
     }
 
+    void Engine::BindToWorldMgrEvents()
+    {
+        if (m_WorldManager != nullptr && m_EngineEventBus != nullptr)
+        {
+            m_WorldManager->OnWorldCreated.AddMember(this, &Engine::HandleWorldCreated);
+            m_WorldManager->OnWorldDestroyed.AddMember(this, &Engine::HandleWorldDestroyed);
+            m_WorldManager->OnActiveWorldChanged.AddMember(this, &Engine::HandleActiveWorldChanged);
+        }
+    }
+
+    void Engine::UnbindFromWorldMgrEvents()
+    {
+        if (m_WorldManager != nullptr)
+        {
+            m_WorldManager->OnWorldCreated.RemoveAll(this);
+            m_WorldManager->OnWorldDestroyed.RemoveAll(this);
+            m_WorldManager->OnActiveWorldChanged.RemoveAll(this);
+        }
+    }
+
     void Engine::OnShutdown()
     {
         Shutdown();
@@ -109,6 +130,8 @@ namespace Opaax
         {
             m_Resources->SetJobSystem(OpaaxApplication::GetAppService<IJobSystem>());
         }
+        
+        BindToWorldMgrEvents();
 
         m_bStarted  = true;
         
@@ -165,6 +188,8 @@ namespace Opaax
         //m_EngineEventBus->Publish(EngineShuttingDown)
         // Wait for event bus flush?
 
+        UnbindFromWorldMgrEvents();
+
         m_Subsystems.ShutdownAll();
         
         m_Resources         = nullptr;
@@ -175,6 +200,31 @@ namespace Opaax
         m_bStarted  = false;
 
         OPAAX_ENGINE_LOG(Info, "Engine shutdown")
+    }
+
+    // =========================================================================
+    // World event bridge — Tier-2 (WorldManager delegates) -> Tier-3 (EngineEventBus).
+    //
+    // NOTE: Publish (immediate), never Enqueue — deliberately against the bus's documented
+    // default. That default is sized for high-frequency input payloads carrying pure data
+    // (which is why a WindowResize can be enqueued). These payloads carry a raw World*: an
+    // enqueued WorldDestroyed would be delivered at the next Flush, long after WorldManager
+    // erased the world, and the pointer would dangle. Immediate keeps one rule for all
+    // three and lets a subscriber still touch the World while it is being destroyed.
+    // =========================================================================
+    void Engine::HandleWorldCreated(World* InWorld)
+    {
+        m_EngineEventBus->GetEventBus().Publish(WorldCreated{InWorld});
+    }
+
+    void Engine::HandleWorldDestroyed(World* InWorld)
+    {
+        m_EngineEventBus->GetEventBus().Publish(WorldDestroyed{InWorld});
+    }
+
+    void Engine::HandleActiveWorldChanged(World* InOldWorld, World* InNewWorld)
+    {
+        m_EngineEventBus->GetEventBus().Publish(ActiveWorldChanged{InOldWorld, InNewWorld});
     }
 
     // =========================================================================

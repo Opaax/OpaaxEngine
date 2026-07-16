@@ -9,7 +9,7 @@
 #include <utility>
 
 #include "Core/Application/Services/IPaths.h"
-#include "Core/Application/Services/IPlatform.h"
+#include "Core/Application/Services/Platforms/IPlatform.h"
 #include "Core/Application/Services/AppServiceLocator.h"
 
 using namespace Opaax;
@@ -23,6 +23,7 @@ namespace
         Uint32      GetLogicalCoreCount() const override { return 4; }
         double      GetTimeSeconds()      const override { return 0.0; }
         OpaaxString GetExecutablePath()   const override { return m_Exe; }
+        OpaaxString GetPlatformName()     const override { return OpaaxString("Stub"); }
     private:
         OpaaxString m_Exe;
     };
