@@ -11,6 +11,7 @@ namespace Opaax
 {
     class ResourceManager;
     class EngineEventBus;
+    class WorldManager;
     
     inline constexpr double MAX_FRAME_DELTA = 0.25;
 
@@ -89,6 +90,7 @@ namespace Opaax
 
         ResourceManager& GetResources() override;
         EngineEventBus&  GetEngineEventBus() override;
+        WorldManager&    GetWorldManager() override;
         //~End IEngine interface
 
         // =============================================================================
@@ -131,6 +133,11 @@ namespace Opaax
          * Convenient ptr, lifetime not managed by engine itself but through subsystem
          */
         RendererManager*   m_RendererManager = nullptr;
+
+        /**
+         * Convenient ptr, lifetime not managed by engine itself but through subsystem
+         */
+        WorldManager*      m_WorldManager = nullptr;
 
         // Per-frame delta-time source (steady clock). Stored as nanoseconds so the header
         // stays <chrono>-free; the clock read + conversion live in Engine::Loop.

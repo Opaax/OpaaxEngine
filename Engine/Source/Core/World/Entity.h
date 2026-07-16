@@ -1,0 +1,75 @@
+#pragma once
+
+#include "Core/EngineAPI.h"
+#include "Core/World/EntityTypes.h"
+#include "Core/World/Guid.h"
+#include "Core/World/EntityMeta.h"
+#include "Core/World/World.h"
+
+namespace Opaax
+{
+    // =============================================================================
+    // Entity — a lightweight handle to one entity in a World: an (EntityID, World*)
+    //   pair, copyable and cheap. Every operation routes through the owning World's
+    //   registry, so raw entt never escapes the World layer. A default / null-handle
+    //   Entity is "invalid".
+    // =============================================================================
+    class Entity
+    {
+        // =========================================================================
+        // CTORS
+        // =========================================================================
+    public:
+        Entity() = default;
+        Entity(EntityID InHandle, World* InWorld) : m_Handle(InHandle), m_World(InWorld) {}
+
+        // =========================================================================
+        // Components
+        // =========================================================================
+    public:
+        template<typename T, typename... Args>
+        T& Add(Args&&... InArgs)
+        {
+            return m_World->GetRegistry().emplace<T>(m_Handle, std::forward<Args>(InArgs)...);
+        }
+
+        template<typename T, typename... Args>
+        T& AddOrReplace(Args&&... InArgs)
+        {
+            return m_World->GetRegistry().emplace_or_replace<T>(m_Handle, std::forward<Args>(InArgs)...);
+        }
+
+        template<typename T> T&   Get()       { return m_World->GetRegistry().get<T>(m_Handle); }
+        template<typename T> T*   TryGet()     { return m_World->GetRegistry().try_get<T>(m_Handle); }
+        template<typename T> bool Has() const  { return m_World->GetRegistry().all_of<T>(m_Handle); }
+        template<typename T> void Remove()     { m_World->GetRegistry().remove<T>(m_Handle); }
+
+        // =========================================================================
+        // Identity / lifecycle
+        // =========================================================================
+    public:
+        Guid GetGuid() const
+        {
+            if (const EntityMeta* lMeta = m_World->GetRegistry().try_get<EntityMeta>(m_Handle))
+            {
+                return lMeta->Id;
+            }
+            return Guid{};
+        }
+
+        bool     IsValid() const noexcept { return m_World != nullptr && m_World->IsValid(m_Handle); }
+        explicit operator bool() const noexcept { return IsValid(); }
+
+        void     Destroy() { if (m_World != nullptr) { m_World->DestroyEntity(m_Handle); } }
+
+        EntityID GetHandle() const noexcept { return m_Handle; }
+        World*   GetWorld()  const noexcept { return m_World; }
+
+        // =========================================================================
+        // Members
+        // =========================================================================
+    private:
+        EntityID m_Handle = ENTITY_NONE;
+        World*   m_World   = nullptr;
+    };
+}

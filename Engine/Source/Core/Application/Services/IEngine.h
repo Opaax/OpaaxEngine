@@ -6,6 +6,7 @@ namespace Opaax
 {
     class EngineEventBus;
     class ResourceManager;
+    class WorldManager;
 
     // =============================================================================
     // IEngine — the engine, exposed as an application service. Owns the engine
@@ -76,6 +77,7 @@ namespace Opaax
     public:
         virtual ResourceManager& GetResources() = 0;
         virtual EngineEventBus& GetEngineEventBus() = 0;
+        virtual WorldManager& GetWorldManager() = 0;
 
         // End Foundation subsystems
         // =============================================================================

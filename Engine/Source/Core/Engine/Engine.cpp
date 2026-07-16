@@ -12,6 +12,7 @@
 #include "Maths/MathsStatics.h"
 #include "Subsystems/EventBus/EngineEventBus.h"
 #include "Subsystems/Renderer/RendererManager.h"
+#include "Core/World/WorldManager.h"
 
 namespace Opaax
 {
@@ -24,6 +25,7 @@ namespace Opaax
     {
         m_Subsystems.RegisterSubsystem<EngineEventBus>();
         m_Subsystems.RegisterSubsystem<ResourceManager>();
+        m_Subsystems.RegisterSubsystem<WorldManager>();
         m_Subsystems.RegisterSubsystem<RendererManager>();
     }
 
@@ -99,6 +101,7 @@ namespace Opaax
         m_Resources         = m_Subsystems.GetSubsystem<ResourceManager>();
         m_RendererManager   = m_Subsystems.GetSubsystem<RendererManager>();
         m_EngineEventBus    = m_Subsystems.GetSubsystem<EngineEventBus>();
+        m_WorldManager      = m_Subsystems.GetSubsystem<WorldManager>();
         
         // Wire the async worker pool from the app service locator (null object if none),
         // so ResourceManager::LoadAsync can run file IO/decode off the main thread.
@@ -230,5 +233,23 @@ namespace Opaax
 
         OPAAX_ASSERT(m_EngineEventBus != nullptr);
         return *m_EngineEventBus;
+    }
+
+    WorldManager& Engine::GetWorldManager()
+    {
+        // Resolve-from-manager first (see GetResources): never re-enter Startup.
+        if (m_WorldManager == nullptr)
+        {
+            m_WorldManager = m_Subsystems.GetSubsystem<WorldManager>();
+        }
+
+        if (m_WorldManager == nullptr && !m_bStarted)
+        {
+            Startup();
+            m_WorldManager = m_Subsystems.GetSubsystem<WorldManager>();
+        }
+
+        OPAAX_ASSERT(m_WorldManager != nullptr);
+        return *m_WorldManager;
     }
 }

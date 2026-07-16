@@ -9,4 +9,5 @@ public:
     
 protected:
     void OnInitializeApplication() override;
+    void PostEngineStartup() override;
 };

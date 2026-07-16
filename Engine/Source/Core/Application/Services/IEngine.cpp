@@ -2,6 +2,7 @@
 
 #include "Core/Engine/Subsystems/EventBus/EngineEventBus.h"
 #include "Core/Engine/Subsystems/Resources/ResourceManager.h"
+#include "Core/World/WorldManager.h"
 
 namespace Opaax
 {
@@ -34,6 +35,12 @@ namespace Opaax
             {
                 static EngineEventBus s_NullBus; // inert — publishes reach no one
                 return s_NullBus;
+            }
+
+            WorldManager& GetWorldManager() override
+            {
+                static WorldManager s_NullWorlds; // inert — owns no worlds
+                return s_NullWorlds;
             }
         };
     }

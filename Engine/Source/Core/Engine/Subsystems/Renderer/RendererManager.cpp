@@ -20,6 +20,10 @@
 #include "Renderer/Renderer2D.h"
 #include "Renderer/ShaderSource.h"
 
+#include "Core/World/WorldManager.h"
+#include "Core/World/World.h"
+#include "Core/Components/DummyComponent.h"
+
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "Core/Engine/Subsystems/EventBus/EngineEventBus.h"
@@ -96,6 +100,9 @@ namespace Opaax
         OpaaxApplication::GetAppService<IEngine>().GetEngineEventBus().GetEventBus()
             .Subscribe<WindowResize>(this, &RendererManager::OnWindowResized);
 
+        // Cache the world owner — Render draws whatever it reports as the active world.
+        m_WorldManager = &OpaaxApplication::GetAppService<IEngine>().GetWorldManager();
+
         OPAAX_LOG(LogRendererManager, Info, "RendererManager started ({}x{})", lDesc.Width, lDesc.Height)
         return true;
     }
@@ -136,8 +143,20 @@ namespace Opaax
 
         m_RenderSystem->BeginFrame();
         m_RenderSystem->BeginScene(lView);
-        // NOTE: placeholder test draw until world/scene rendering lands — a yellow 200px square.
-        m_RenderSystem->GetRenderer2D().DrawQuad(Vector2F(0.f, 0.f), Vector2F(200.f, 200.f), Vector4F(1.f, 1.f, 0.f, 1.f));
+
+        // Draw the active world: one quad per DummyComponent (position / size / color).
+        if (m_WorldManager != nullptr)
+        {
+            if (World* lWorld = m_WorldManager->GetActiveWorld())
+            {
+                Renderer2D& lRenderer = m_RenderSystem->GetRenderer2D();
+                lWorld->Each<DummyComponent>([&lRenderer](EntityID, DummyComponent& InComp)
+                {
+                    lRenderer.DrawQuad(InComp.Position, InComp.Size, InComp.Color);
+                });
+            }
+        }
+
         m_RenderSystem->EndScene();
         m_RenderSystem->EndFrame();
     }

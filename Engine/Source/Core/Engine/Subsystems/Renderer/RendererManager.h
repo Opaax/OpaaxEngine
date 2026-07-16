@@ -12,6 +12,7 @@
 namespace Opaax
 {
     class RenderSystem;
+    class WorldManager;
     struct WindowResize;
 
     inline constexpr LogCategory LogRendererManager{"RendererManager"};
@@ -79,6 +80,7 @@ namespace Opaax
         // =============================================================================
     private:
         UniquePtr<RenderSystem> m_RenderSystem;
+        WorldManager*           m_WorldManager = nullptr; // non-owning; active world = draw source
         Uint32                  m_ViewWidth  = 0;
         Uint32                  m_ViewHeight = 0;
     };
