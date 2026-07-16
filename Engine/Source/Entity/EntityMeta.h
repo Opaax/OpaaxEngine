@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Core/OpaaxString.hpp"
-#include "Core/World/Guid.h"
+#include "GUID/Guid.h"
 
 namespace Opaax
 {

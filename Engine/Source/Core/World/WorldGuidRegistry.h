@@ -2,8 +2,8 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
-#include "Core/World/Guid.h"
-#include "Core/World/EntityTypes.h"
+#include "GUID/Guid.h"
+#include "Entity/EntityTypes.h"
 
 namespace Opaax
 {
@@ -13,30 +13,58 @@ namespace Opaax
     //   inside their own registry, so a Guid is resolved through its world and never
     //   crosses worlds. Missing lookups resolve to ENTITY_NONE (null-safe).
     // =============================================================================
-    class OPAAX_API GuidRegistry
+    class OPAAX_API WorldGuidRegistry
     {
         // =========================================================================
-        // Registration
+        // Functions
         // =========================================================================
+        
+        // =========================================================================
+        // Registration
     public:
-        // Map InGuid -> InEntity (replaces any existing mapping for InGuid).
+        /**
+         * Map InGuid -> InEntity (replaces any existing mapping for InGuid).
+         * @param InGuid 
+         * @param InEntity 
+         */
         void Register(const Guid& InGuid, EntityID InEntity);
-
-        // Drop the mapping for InGuid, if present.
+        
+        /**
+         * Drop the mapping for InGuid, if present.
+         * @param InGuid 
+         */
         void Unregister(const Guid& InGuid);
 
-        // Runtime entity for InGuid, or ENTITY_NONE when unknown.
+        /**
+         * Runtime entity for InGuid, or ENTITY_NONE when unknown.
+         * @param InGuid 
+         * @return 
+         */
         EntityID Resolve(const Guid& InGuid) const noexcept;
 
-        // Drop every mapping.
+        /**
+         * Drop every mapping.
+         */
         void Clear() noexcept;
+        
+        // End Registration
+        // =========================================================================
 
         // =========================================================================
         // Query
-        // =========================================================================
     public:
+        /**
+         * @param InGuid the GUID to check
+         * @return true if the GUID is mapped
+         */
         bool   Contains(const Guid& InGuid) const noexcept { return m_Map.find(InGuid) != m_Map.end(); }
+
+        /**
+         * @return The count of mapped GUID
+         */
         Uint64 Count() const noexcept                      { return static_cast<Uint64>(m_Map.size()); }
+        // End Query
+        // =========================================================================
 
         // =========================================================================
         // Members

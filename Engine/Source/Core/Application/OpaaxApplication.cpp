@@ -175,11 +175,6 @@ void OpaaxApplication::CreateApplicationWindow()
     }
 }
 
-void OpaaxApplication::CreateApplicationRenderer()
-{
-
-}
-
 void OpaaxApplication::OnInitializeApplication()
 {
     OPAAX_APP_LOG(Trace, "OnInitializeApplication Not override in child app class");

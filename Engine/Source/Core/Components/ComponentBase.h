@@ -8,7 +8,12 @@ namespace Opaax
     //   them by value, no vtable). Exists only as a common hook for future component
     //   traits shared across every component type.
     // =============================================================================
-    struct ComponentBase
+    struct IComponent
     {
+    };
+    
+    struct OPAAX_API ComponentBase : IComponent
+    {
+        
     };
 }

@@ -1,9 +1,9 @@
 #pragma once
 
 #include "Core/EngineAPI.h"
-#include "Core/World/EntityTypes.h"
-#include "Core/World/Guid.h"
-#include "Core/World/EntityMeta.h"
+#include "Entity/EntityTypes.h"
+#include "Entity/EntityMeta.h"
+#include "GUID/Guid.h"
 #include "Core/World/World.h"
 
 namespace Opaax

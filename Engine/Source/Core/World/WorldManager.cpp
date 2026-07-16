@@ -28,7 +28,7 @@ namespace Opaax
     // =========================================================================
     World* WorldManager::CreateWorld(OpaaxString InName)
     {
-        m_Worlds.push_back(MakeUnique<World>(std::move(InName)));
+        m_Worlds.push_back(MakeUnique<World>(Move(InName)));
         return m_Worlds.back().get();
     }
 
@@ -36,11 +36,13 @@ namespace Opaax
     {
         if (InWorld == nullptr)
         {
+            OPAAX_LOG(LogWorldManager, Error, "Trying to destroy a null world!")
             return;
         }
 
         if (m_ActiveWorld == InWorld)
         {
+            m_ActiveWorld->OnDesactive();
             m_ActiveWorld = nullptr;
         }
 
@@ -53,13 +55,26 @@ namespace Opaax
             }
         }
     }
-
-    // =========================================================================
-    // Active (render) world
-    // =========================================================================
-    void WorldManager::SetActiveWorld(World* InWorld) noexcept
+    
+    bool WorldManager::SetActiveWorld(World* InWorld) noexcept
     {
+        if (InWorld == nullptr)
+        {
+            OPAAX_LOG(LogWorldManager, Error, "Trying to set active a null world!")
+            
+            return false;
+        }
+        
+        if (m_ActiveWorld != nullptr)
+        {
+            m_ActiveWorld->OnDesactive();
+        }
+        
         m_ActiveWorld = InWorld;
-        OPAAX_LOG(LogWorldManager, Info, "Active world -> '{}'", InWorld ? InWorld->GetName().CStr() : "none")
+        m_ActiveWorld->OnActive();
+        
+        OPAAX_LOG(LogWorldManager, Info, "New Active world -> '{}'", m_ActiveWorld->GetName().CStr())
+        
+        return true;
     }
 }

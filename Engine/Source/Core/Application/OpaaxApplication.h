@@ -77,7 +77,6 @@ namespace Opaax
         // Initialization
     private:
         void CreateApplicationWindow();
-        void CreateApplicationRenderer();
         
     protected:
         virtual void OnInitializeApplication();

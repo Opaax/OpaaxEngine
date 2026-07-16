@@ -11,4 +11,6 @@ namespace Opaax
     // =============================================================================
     using EntityID = entt::entity;
     inline constexpr EntityID ENTITY_NONE = entt::null;
+    
+    using EntityRegistry = entt::registry;
 }

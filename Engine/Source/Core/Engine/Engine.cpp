@@ -159,14 +159,19 @@ namespace Opaax
         if (!m_bStarted)
         {
             return;
-        } // idempotent (dtor + OnShutdown both call this)
+        }
         
         //TODO
         //m_EngineEventBus->Publish(EngineShuttingDown)
         // Wait for event bus flush?
 
         m_Subsystems.ShutdownAll();
-        m_Resources = nullptr;
+        
+        m_Resources         = nullptr;
+        m_EngineEventBus    = nullptr;
+        m_RendererManager   = nullptr;
+        m_WorldManager      = nullptr;
+        
         m_bStarted  = false;
 
         OPAAX_ENGINE_LOG(Info, "Engine shutdown")

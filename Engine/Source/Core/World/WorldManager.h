@@ -31,30 +31,39 @@ namespace Opaax
     public:
         WorldManager()           = default;
         ~WorldManager() override = default;
-
+        
         // =========================================================================
-        // Override — EngineSubsystemBase
+        // Function
         // =========================================================================
-    public:
-        bool Startup()  override;
-        void Shutdown() override;
-
+        
         // =========================================================================
-        // World lifetime
-        // =========================================================================
+        // World Lifetime
     public:
         World* CreateWorld(OpaaxString InName = "World");
         void   DestroyWorld(World* InWorld);
+        // End World Lifetime
+        // =========================================================================
 
         // =========================================================================
-        // Active (render) world
-        // =========================================================================
+        // Getters
     public:
         World* GetActiveWorld() const noexcept { return m_ActiveWorld; }
-        void   SetActiveWorld(World* InWorld) noexcept;
+        bool   SetActiveWorld(World* InWorld) noexcept;
 
         Uint64 GetWorldCount() const noexcept { return static_cast<Uint64>(m_Worlds.size()); }
+        
+        // End Getters
+        // =========================================================================
 
+        // =========================================================================
+        // Override
+        // =========================================================================
+        //~Begin EngineSubsystemBase interface
+    public:
+        bool Startup()  override;
+        void Shutdown() override;
+        //~End EngineSubsystemBase interface
+        
         // =========================================================================
         // Members
         // =========================================================================

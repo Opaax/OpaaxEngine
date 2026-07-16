@@ -41,6 +41,12 @@ file(GLOB_RECURSE ENGINE_CORE_SOURCES CONFIGURE_DEPENDS
     "Source/Maths/*.cpp"
     "Source/Maths/*.h"
     "Source/Maths/*.hpp"
+    "Source/GUID/*.cpp"
+    "Source/GUID/*.h"
+    "Source/GUID/*.hpp"
+    "Source/Entity/*.cpp"
+    "Source/Entity/*.h"
+    "Source/Entity/*.hpp"
 )
 
 set(ENGINE_SOURCES ${ENGINE_CORE_SOURCES})

@@ -6,7 +6,7 @@
 #include "Core/Log/OpaaxLog.h"
 #include "Core/World/WorldManager.h"
 #include "Core/World/World.h"
-#include "Core/World/Entity.h"
+#include "Entity/Entity.h"
 #include "Core/Components/DummyComponent.h"
 #include "Config/ConfigTest.h"
 
