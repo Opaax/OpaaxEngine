@@ -65,7 +65,20 @@ namespace Opaax
         virtual void Render(double InAlphaPhysicStep)   = 0;
         
         /**
-         * Stop + tear down the engine subsystems (reverse of startup). Idempotent.
+         * Phase 1 of stopping: the frame loop has ended, but NOTHING is destroyed yet —
+         * subsystems, services, window and GPU context are all still alive.
+         *
+         * Subsystems release anything that needs a live sibling here, because Shutdown()
+         * cannot offer that guarantee. Called by the host at the end of RunApplication,
+         * before ShutdownApplication.
+         */
+        virtual void TearDown()                         = 0;
+
+        /**
+         * Phase 2: stop + destroy the engine subsystems (reverse of startup). Idempotent.
+         *
+         * Runs during locator teardown, AFTER TearDown(). Siblings may already be gone by
+         * the time a given subsystem's Shutdown runs — do not reach out of yourself here.
          */
         virtual void Shutdown()                         = 0;
         

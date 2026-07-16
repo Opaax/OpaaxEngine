@@ -217,6 +217,11 @@ void OpaaxApplication::RunApplication()
         // ----------------------------------------------------------------
         Engine().Loop();
     }
+
+    // The loop has stopped but nothing is destroyed yet — every service, the window and the
+    // GPU context are still alive. Subsystems get their one chance here to release anything
+    // that needs a live sibling; ShutdownApplication() below is too late for that.
+    EngineTeardown();
 }
 
 void OpaaxApplication::OnEvent(Event& InEvent)
@@ -260,6 +265,11 @@ void OpaaxApplication::EngineStartup()
     PreEngineStartup();
     Engine().Startup();
     PostEngineStartup();
+}
+
+void OpaaxApplication::EngineTeardown()
+{
+    Engine().TearDown();
 }
 
 // =============================================================================

@@ -98,6 +98,7 @@ namespace Opaax
         void Update(double InDeltaTime) override;
         void FixedUpdate(double InFixedDeltaTime) override;
         void Render(double InAlphaPhysicStep) override;
+        void TearDown() override;
         void Shutdown() override;
 
         ResourceManager& GetResources() override;

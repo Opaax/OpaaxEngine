@@ -78,6 +78,14 @@ namespace Opaax
         //~Begin EngineSubsystemBase interface
     public:
         bool Startup()  override;
+
+        /**
+         * Destroys every remaining world THROUGH DestroyWorld, so each one announces itself
+         * while the bus and its subscribers are all still alive. Shutdown() is too late for
+         * that, which is exactly why this phase exists.
+         */
+        void TearDown() override;
+
         void Shutdown() override;
         //~End EngineSubsystemBase interface
         

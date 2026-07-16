@@ -128,6 +128,9 @@ namespace Opaax
          */
         virtual void PostEngineStartup(){}
         
+        /***/
+        void EngineTeardown();
+        
         // Engine
         // =============================================================================
         

@@ -23,6 +23,7 @@ namespace Opaax
             void Update(double)           override {}
             void FixedUpdate(double)      override {}
             void Render(double)           override {}
+            void TearDown()               override {}
             void Shutdown()               override {}
 
             ResourceManager& GetResources() override

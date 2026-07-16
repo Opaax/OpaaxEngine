@@ -15,8 +15,29 @@ namespace Opaax
         return true;
     }
 
+    void WorldManager::TearDown()
+    {
+        // Destroy through DestroyWorld instead of dropping m_Worlds, so every world still
+        // announces OnActiveWorldChanged + OnWorldDestroyed on the way out. This is the LAST
+        // moment those reach anyone: the loop has stopped but Engine is still bound and the
+        // EventBus (registered first, so torn down last) is still alive to deliver them.
+        // Shutdown() cannot do this — Engine unbinds before ShutdownAll.
+        //
+        // Back-to-front: DestroyWorld's erase then finds its target immediately.
+        while (!m_Worlds.empty())
+        {
+            DestroyWorld(m_Worlds.back().get());
+        }
+
+        OPAAX_LOG(LogWorldManager, Info, "WorldManager torn down")
+    }
+
     void WorldManager::Shutdown()
     {
+        // Normally a no-op: TearDown already destroyed and announced every world. This stays
+        // as a safety net for paths that Shutdown WITHOUT a TearDown (e.g. ~Engine()), where
+        // worlds necessarily die silently — Engine has unbound by now, so a broadcast here
+        // would reach nobody anyway.
         m_ActiveWorld = nullptr; // clear the non-owning slot BEFORE releasing the owners
         m_Worlds.clear();
 

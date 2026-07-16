@@ -206,6 +206,77 @@ TEST_CASE("WorldManager: destroying a null world is rejected and broadcasts noth
 }
 
 // =============================================================================
+// TearDown — phase 1 of the two-phase stop
+//
+// The whole reason TearDown exists: at Shutdown, Engine has already unbound and the bus is
+// on its way out, so a world dying there announces itself to nobody. TearDown runs while
+// everything is still alive, so it MUST be the phase that reports dying worlds.
+// =============================================================================
+TEST_CASE("WorldManager: TearDown announces every remaining world instead of dropping them")
+{
+    WorldManager lManager;
+
+    World* lA = lManager.CreateWorld("A");
+    World* lB = lManager.CreateWorld("B");
+    REQUIRE(lManager.SetActiveWorld(lA));
+
+    TDynArray<World*> lDestroyed;
+    int               lDeactivations = 0;
+
+    lManager.OnWorldDestroyed.Add([&](World* InWorld) { lDestroyed.push_back(InWorld); });
+    lManager.OnActiveWorldChanged.Add([&](World*, World* InNew)
+    {
+        if (InNew == nullptr) { ++lDeactivations; }
+    });
+
+    lManager.TearDown();
+
+    // Both worlds announced — the regression this whole phase exists to prevent.
+    REQUIRE(lDestroyed.size() == 2u);
+    CHECK(lDeactivations == 1); // only the active one reports a deactivation
+
+    const bool lSawA = (lDestroyed[0] == lA) || (lDestroyed[1] == lA);
+    const bool lSawB = (lDestroyed[0] == lB) || (lDestroyed[1] == lB);
+    CHECK(lSawA);
+    CHECK(lSawB);
+
+    CHECK(lManager.GetWorldCount() == 0u);
+    CHECK(lManager.GetActiveWorld() == nullptr);
+}
+
+TEST_CASE("WorldManager: Shutdown after TearDown is a safe no-op")
+{
+    WorldManager lManager;
+
+    lManager.CreateWorld("A");
+    lManager.TearDown();
+
+    int lCount = 0;
+    lManager.OnWorldDestroyed.Add([&](World*) { ++lCount; });
+
+    lManager.Shutdown(); // must not double-announce, must not crash
+
+    CHECK(lCount == 0);
+    CHECK(lManager.GetWorldCount() == 0u);
+}
+
+TEST_CASE("WorldManager: TearDown is idempotent")
+{
+    WorldManager lManager;
+
+    lManager.CreateWorld("A");
+
+    int lCount = 0;
+    lManager.OnWorldDestroyed.Add([&](World*) { ++lCount; });
+
+    lManager.TearDown();
+    lManager.TearDown(); // nothing left — must not re-announce
+
+    CHECK(lCount == 1);
+    CHECK(lManager.GetWorldCount() == 0u);
+}
+
+// =============================================================================
 // Binding lifetime — the Engine::Shutdown path
 // =============================================================================
 TEST_CASE("WorldManager: RemoveAll(owner) stops delivery to a member-bound listener")

@@ -246,6 +246,30 @@ namespace Opaax
     }
 
     // =========================================================================
+    // TearDown — phase 1 of the two-phase stop, driven by the host right after the frame
+    // loop exits (OpaaxApplication::RunApplication -> EngineTeardown).
+    //
+    // Everything is still alive here: every subsystem, every app service, the window, the
+    // GPU context, and this Engine's own delegate bindings. That is the entire point — a
+    // subsystem can still reach a sibling. Shutdown() is too late: it unbinds and destroys.
+    //
+    // Reverse registration order (see TearDownAll), so EngineEventBus — registered first —
+    // tears down LAST. That is precisely what lets WorldManager announce its dying worlds
+    // here and still have them delivered to subscribers.
+    // =========================================================================
+    void Engine::TearDown()
+    {
+        if (!m_bStarted)
+        {
+            return;
+        }
+
+        m_Subsystems.TearDownAll();
+
+        OPAAX_ENGINE_LOG(Info, "Engine torn down")
+    }
+
+    // =========================================================================
     // GetResources — always valid. Lazily starts the engine if the host hasn't yet
     // (a safety net; the host SHOULD call Startup() during init). Safe today because
     // Resources is IO/GPU-free; revisit when a GPU subsystem joins the startup batch.

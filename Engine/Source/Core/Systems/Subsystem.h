@@ -26,6 +26,20 @@ namespace Opaax
         // Functions
         // =============================================================================
         virtual bool            Startup()                           = 0;
+
+        /**
+         * Phase 1 of the two-phase stop: the frame loop has stopped, but NOTHING is
+         * destroyed yet — every sibling subsystem, every app service, the window and the
+         * GPU context are all still alive.
+         *
+         * This is the only phase in which a subsystem may safely reach a sibling to release
+         * something. By Shutdown() the teardown is already under way and a sibling may
+         * already be gone, so anything that needs a live neighbour MUST happen here.
+         *
+         * Not pure: a subsystem with nothing to release at this phase simply ignores it.
+         */
+        virtual void            TearDown()                          {}
+
         virtual void            Shutdown()                          = 0;
         virtual void            Update(double DeltaTime)            {}
         virtual void            FixedUpdate(double FixedDeltaTime)  {}
@@ -148,6 +162,24 @@ return StaticTypeID();                                                   \
             for (auto& lSystem : m_Systems)
             {
                 lSystem->Render(Alpha);
+            }
+        }
+
+        /**
+         * Tear down all subsystems, reverse registration order (mirrors ShutdownAll).
+         *
+         * Reverse order is what makes this useful: the subsystems registered EARLIEST are
+         * the foundational ones (event bus, resources), so they tear down LAST and are still
+         * alive while the later ones release through them.
+         */
+        void TearDownAll()
+        {
+            for (auto it = m_Systems.rbegin(); it != m_Systems.rend(); ++it)
+            {
+                if (*it != nullptr)
+                {
+                    (*it)->TearDown();
+                }
             }
         }
 
