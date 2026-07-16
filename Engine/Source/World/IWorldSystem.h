@@ -4,13 +4,13 @@
 
 namespace Opaax
 {
-    class World;
+    class WorldOld;
     struct RenderContext;
 
     /**
      * @class IWorldSystem
      *
-     * Render-side system that iterates a World and issues draw calls.
+     * Render-side system that iterates a WorldOld and issues draw calls.
      * CoreEngineApp::OnRender dispatches every registered system between
      * Renderer2D::Begin() and End().
      *
@@ -18,7 +18,7 @@ namespace Opaax
      *   class MyOverlaySystem final : public IWorldSystem
      *   {
      *   public:
-     *       void OnRender(World& InWorld, const RenderContext& InContext) override;
+     *       void OnRender(WorldOld& InWorld, const RenderContext& InContext) override;
      *   };
      *
      * Register — typically from a game's CoreEngineApp::OnInitialize override:
@@ -45,6 +45,6 @@ namespace Opaax
         // Function
         // =============================================================================
 
-        virtual void OnRender(World& InWorld, const RenderContext& InContext) = 0;
+        virtual void OnRender(WorldOld& InWorld, const RenderContext& InContext) = 0;
     };
 }

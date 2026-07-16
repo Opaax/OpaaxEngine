@@ -488,7 +488,7 @@ void CoreEngineApp::Shutdown()
     AssetRegistry::Shutdown();
 
     // Game subsystems shut down first — they may still call into engine services
-    // (Renderer, World, AssetRegistry) during their Shutdown.
+    // (Renderer, WorldOld, AssetRegistry) during their Shutdown.
     m_GameSubsystemMgr.ShutdownAll();
 
     // Component registry holds editor drawer pointers — clear before the editor
@@ -514,7 +514,7 @@ void CoreEngineApp::OnRender(double AlphaPhysicStep)
     GetSubsystem<RenderSubsystem>()->GetPipeline().Execute(GetRenderTarget(), AlphaPhysicStep);
 }
 
-World& CoreEngineApp::GetWorld() noexcept
+WorldOld& CoreEngineApp::GetWorld() noexcept
 {
     return m_World;
 }

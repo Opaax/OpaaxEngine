@@ -63,6 +63,10 @@ SimpleShmup/Assets/*
 
 #OpaaxLog
 OpaaxEngine.log
+build_e2g.log
 
-#Shmup
+#Archi files
+Architectures/*
+
+#Builder
 OpaaxCreator/build/*

@@ -4,19 +4,19 @@
 // We instantiate ComponentEntry<T> LOCALLY rather than going through the process-global
 // ComponentRegistry static: a static data member of a template can be duplicated across
 // the DLL boundary, and the engine populates that registry at startup (not run here). The
-// local entry exercises the exact Has/Add/Save/Load contract on a headless World.
+// local entry exercises the exact Has/Add/Save/Load contract on a headless WorldOld.
 #include <doctest.h>
 
 #include "ECS/ComponentRegistry.h"
 #include "ECS/Components/TransformComponent.h"
-#include "World/World.h"
+#include "World/WorldOld.h"
 
 using namespace Opaax;
 using Opaax::ECS::TransformComponent;
 
 TEST_CASE("ComponentEntry: Save -> Load round-trips a TransformComponent across entities")
 {
-    World lWorld;
+    WorldOld lWorld;
     const EntityID lSrc = lWorld.CreateEntity("Src");
     auto& lTr   = lWorld.AddComponent<TransformComponent>(lSrc);
     lTr.Position = { 1.5f, 2.5f };
@@ -47,7 +47,7 @@ TEST_CASE("ComponentEntry: Save -> Load round-trips a TransformComponent across 
 
 TEST_CASE("ComponentEntry: name/type-id reflect T, and Add is present-safe")
 {
-    World lWorld;
+    WorldOld lWorld;
     const EntityID lE = lWorld.CreateEntity("E");
 
     const ComponentEntry<TransformComponent> lEntry("TransformComponent", true);

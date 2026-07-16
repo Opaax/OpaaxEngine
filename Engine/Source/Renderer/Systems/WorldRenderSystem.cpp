@@ -1,7 +1,7 @@
 #include "WorldRenderSystem.h"
 
 #include "Core/Config/EngineConfig.h"
-#include "World/World.h"
+#include "World/WorldOld.h"
 #include "ECS/Components/SpriteComponent.h"
 #include "ECS/Components/TransformComponent.h"
 #include "ECS/Components/TransformInterpolationComponent.h"
@@ -28,7 +28,7 @@ namespace Opaax
         }
     }
 
-    void WorldRenderSystem::OnRender(World& InWorld, const RenderContext& InContext)
+    void WorldRenderSystem::OnRender(WorldOld& InWorld, const RenderContext& InContext)
     {
         // Fixed-step interpolation: physics/mover write the Transform at a stable 60 Hz, so
         // at higher render rates the raw pose repeats across frames (visible stepping). For

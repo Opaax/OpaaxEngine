@@ -120,7 +120,7 @@ namespace Opaax
         /**
          * Convenient ptr, lifetime not managed by engine itself but through subsystem
          */
-        EngineEventBus* m_EngineEventBus;
+        EngineEventBus* m_EngineEventBus = nullptr;
 
         /**
          * Convenient ptr, lifetime not managed by engine itself but through subsystem

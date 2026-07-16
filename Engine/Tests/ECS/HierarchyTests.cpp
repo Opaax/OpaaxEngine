@@ -1,13 +1,13 @@
 // Suite: Hierarchy world-transform composition + parent guards.
 //
-// Uses a real headless World (entt-backed, OPAAX_API). Hierarchy::SetParent /
+// Uses a real headless WorldOld (entt-backed, OPAAX_API). Hierarchy::SetParent /
 // GetWorldTransform / IsDescendantOf are out-of-line OPAAX_API symbols reached via the
 // import lib. Composition is root->leaf: the child's local position is scaled by the
 // accumulated parent scale and rotated by the accumulated parent rotation before being
 // translated; scale multiplies, rotation + ZOrder sum.
 #include <doctest.h>
 
-#include "World/World.h"
+#include "World/WorldOld.h"
 #include "ECS/Hierarchy.h"
 #include "ECS/Components/TransformComponent.h"
 
@@ -19,7 +19,7 @@ namespace
 {
     constexpr float k_HalfPi = 1.57079632679489661923f;
 
-    TransformComponent& AddTransform(World& InWorld, EntityID InEntity,
+    TransformComponent& AddTransform(WorldOld& InWorld, EntityID InEntity,
                                      Vector2F InPos, Vector2F InScale, float InRot, float InZ)
     {
         auto& lTr   = InWorld.AddComponent<TransformComponent>(InEntity);
@@ -33,7 +33,7 @@ namespace
 
 TEST_CASE("Hierarchy: a root entity's world transform equals its local transform")
 {
-    World lWorld;
+    WorldOld lWorld;
     const EntityID lE = lWorld.CreateEntity("Root");
     AddTransform(lWorld, lE, { 3.f, 4.f }, { 2.f, 2.f }, 0.5f, 7.f);
 
@@ -48,7 +48,7 @@ TEST_CASE("Hierarchy: a root entity's world transform equals its local transform
 
 TEST_CASE("Hierarchy: parent-child composes scale/position, sums rotation/ZOrder (no rotation)")
 {
-    World lWorld;
+    WorldOld lWorld;
     const EntityID lParent = lWorld.CreateEntity("Parent");
     const EntityID lChild  = lWorld.CreateEntity("Child");
     AddTransform(lWorld, lParent, { 10.f, 20.f }, { 2.f, 3.f }, 0.f, 1.f);
@@ -68,7 +68,7 @@ TEST_CASE("Hierarchy: parent-child composes scale/position, sums rotation/ZOrder
 
 TEST_CASE("Hierarchy: parent rotation rotates the child offset")
 {
-    World lWorld;
+    WorldOld lWorld;
     const EntityID lParent = lWorld.CreateEntity("Parent");
     const EntityID lChild  = lWorld.CreateEntity("Child");
     AddTransform(lWorld, lParent, { 0.f, 0.f }, { 1.f, 1.f }, k_HalfPi, 0.f); // +90 deg CCW
@@ -85,7 +85,7 @@ TEST_CASE("Hierarchy: parent rotation rotates the child offset")
 
 TEST_CASE("Hierarchy: an ancestor without a TransformComponent contributes identity")
 {
-    World lWorld;
+    WorldOld lWorld;
     const EntityID lParent = lWorld.CreateEntity("ParentNoTransform"); // no TransformComponent
     const EntityID lChild  = lWorld.CreateEntity("Child");
     AddTransform(lWorld, lChild, { 5.f, 6.f }, { 1.f, 1.f }, 0.f, 0.f);
@@ -99,7 +99,7 @@ TEST_CASE("Hierarchy: an ancestor without a TransformComponent contributes ident
 
 TEST_CASE("Hierarchy: SetParent guards self-parent and cycles; IsDescendantOf tracks the chain")
 {
-    World lWorld;
+    WorldOld lWorld;
     const EntityID lParent = lWorld.CreateEntity("Parent");
     const EntityID lChild  = lWorld.CreateEntity("Child");
 
@@ -115,7 +115,7 @@ TEST_CASE("Hierarchy: SetParent guards self-parent and cycles; IsDescendantOf tr
 
 TEST_CASE("Hierarchy: detaching with ENTITY_NONE removes the parent contribution")
 {
-    World lWorld;
+    WorldOld lWorld;
     const EntityID lParent = lWorld.CreateEntity("Parent");
     const EntityID lChild  = lWorld.CreateEntity("Child");
     AddTransform(lWorld, lParent, { 100.f, 0.f }, { 1.f, 1.f }, 0.f, 0.f);

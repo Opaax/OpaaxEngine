@@ -12,12 +12,12 @@
 
 namespace Opaax::Editor
 {
-    bool SpriteDrawer::HasComponent(World& InWorld, EntityID InEntity) const
+    bool SpriteDrawer::HasComponent(WorldOld& InWorld, EntityID InEntity) const
     {
         return InWorld.GetComponent<ECS::SpriteComponent>(InEntity) != nullptr;
     }
 
-    void SpriteDrawer::Draw(World& InWorld, EntityID InEntity)
+    void SpriteDrawer::Draw(WorldOld& InWorld, EntityID InEntity)
     {
         auto* lS = InWorld.GetComponent<ECS::SpriteComponent>(InEntity);
         if (!lS) { return; }
@@ -96,7 +96,7 @@ namespace Opaax::Editor
         }
     }
 
-    void SpriteDrawer::Add(World& InWorld, EntityID InEntity)
+    void SpriteDrawer::Add(WorldOld& InWorld, EntityID InEntity)
     {
         InWorld.AddComponent<ECS::SpriteComponent>(InEntity);
     }

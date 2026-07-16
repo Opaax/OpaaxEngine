@@ -4,7 +4,7 @@
 
 namespace Opaax
 {
-    class World;
+    class WorldOld;
     struct RenderContext;
 
     /**
@@ -34,6 +34,6 @@ namespace Opaax
         // Function
         // =============================================================================
     public:
-        virtual void OnRenderOverlay(World& InWorld, const RenderContext& InContext) = 0;
+        virtual void OnRenderOverlay(WorldOld& InWorld, const RenderContext& InContext) = 0;
     };
 }

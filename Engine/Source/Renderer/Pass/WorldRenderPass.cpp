@@ -2,7 +2,7 @@
 
 #include "World/RenderContext.h"
 #include "World/IWorldSystem.h"
-#include "World/World.h"
+#include "World/WorldOld.h"
 #include "Renderer/Renderer2D.h"
 #include "Renderer/Camera/CameraSubsystem.h"
 #include "Renderer/Camera/ICamera.h"
@@ -24,7 +24,7 @@ namespace Opaax
 
         if (m_App->GetSceneManager()->GetActiveScene())
         {
-            World& lWorld = m_App->GetWorld();
+            WorldOld& lWorld = m_App->GetWorld();
             for (const auto& lSystem : TPolymorphicList<IWorldSystem>::GetAll())
             {
                 lSystem->OnRender(lWorld, InContext);

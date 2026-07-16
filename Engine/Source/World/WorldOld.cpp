@@ -1,4 +1,4 @@
-#include "World.h"
+#include "WorldOld.h"
 
 #include "Scene/Scene.h"
 #include "ECS/Components/SceneIDComponent.h"
@@ -8,30 +8,30 @@ namespace Opaax
     // =============================================================================
     // CTOR - DTOR (out-of-line: m_Scenes holds UniquePtr<Scene> forward-decl in header)
     // =============================================================================
-    World::World()  = default;
-    World::~World() = default;
+    WorldOld::WorldOld()  = default;
+    WorldOld::~WorldOld() = default;
 
     // =============================================================================
     // Entity API
     // =============================================================================
-    void World::Clear() noexcept
+    void WorldOld::Clear() noexcept
     {
         m_Registry.clear();
         m_EntityCount.store(0, std::memory_order_relaxed);
 
-        OPAAX_CORE_TRACE("World::Clear() — all entities destroyed.");
+        OPAAX_CORE_TRACE("WorldOld::Clear() — all entities destroyed.");
     }
 
-    Uint32 World::GetEntityCount() const noexcept
+    Uint32 WorldOld::GetEntityCount() const noexcept
     {
         return m_EntityCount;
     }
 
-    void World::DestroyEntity(EntityID InEntity, bool bDestroyChildren)
+    void WorldOld::DestroyEntity(EntityID InEntity, bool bDestroyChildren)
     {
         if (!IsValid(InEntity))
         {
-            OPAAX_CORE_WARN("World::DestroyEntity — invalid entity, ignored.");
+            OPAAX_CORE_WARN("WorldOld::DestroyEntity — invalid entity, ignored.");
             return;
         }
 
@@ -71,7 +71,7 @@ namespace Opaax
         m_EntityCount.fetch_sub(1, std::memory_order_relaxed);
     }
 
-    EntityID World::FindByUuid(Uint64 InUuid) const noexcept
+    EntityID WorldOld::FindByUuid(Uint64 InUuid) const noexcept
     {
         if (InUuid == 0) { return ENTITY_NONE; }
 
@@ -89,32 +89,32 @@ namespace Opaax
     // =============================================================================
     // Scene stack
     // =============================================================================
-    Uint32 World::AllocateSceneID() noexcept
+    Uint32 WorldOld::AllocateSceneID() noexcept
     {
         // Monotonic, skip 0 (reserved for PersistentSceneID). Overflow at 2^32
         // pushes is implausible; if reached, wraps back through 0 — accept and log.
         const Uint32 lID = m_NextSceneID++;
         if (m_NextSceneID == PersistentSceneID)
         {
-            OPAAX_CORE_WARN("World::AllocateSceneID — counter wrapped, skipping sentinel.");
+            OPAAX_CORE_WARN("WorldOld::AllocateSceneID — counter wrapped, skipping sentinel.");
             m_NextSceneID = 1;
         }
         return lID;
     }
 
-    Scene* World::PushScene(UniquePtr<Scene> InScene)
+    Scene* WorldOld::PushScene(UniquePtr<Scene> InScene)
     {
         OPAAX_CORE_ASSERT(InScene != nullptr)
 
         if (!m_Scenes.empty())
         {
             m_Scenes.back()->OnExit();
-            OPAAX_CORE_TRACE("World::PushScene — '{}' exited.", m_Scenes.back()->GetName());
+            OPAAX_CORE_TRACE("WorldOld::PushScene — '{}' exited.", m_Scenes.back()->GetName());
         }
 
         InScene->SetSceneID(AllocateSceneID());
         SetActiveSceneID(InScene->GetSceneID());
-        OPAAX_CORE_TRACE("World::PushScene — loading '{}' (SceneID={}).",
+        OPAAX_CORE_TRACE("WorldOld::PushScene — loading '{}' (SceneID={}).",
             InScene->GetName(), InScene->GetSceneID());
 
         InScene->OnLoad(*this);
@@ -124,15 +124,15 @@ namespace Opaax
         return m_Scenes.back().get();
     }
 
-    void World::PopScene()
+    void WorldOld::PopScene()
     {
         if (m_Scenes.empty())
         {
-            OPAAX_CORE_WARN("World::PopScene — scene stack is empty, ignored.");
+            OPAAX_CORE_WARN("WorldOld::PopScene — scene stack is empty, ignored.");
             return;
         }
 
-        OPAAX_CORE_TRACE("World::PopScene — unloading '{}' (SceneID={}).",
+        OPAAX_CORE_TRACE("WorldOld::PopScene — unloading '{}' (SceneID={}).",
             m_Scenes.back()->GetName(), m_Scenes.back()->GetSceneID());
         m_Scenes.back()->OnExit();
         m_Scenes.back()->OnUnload(*this);
@@ -142,7 +142,7 @@ namespace Opaax
         if (!m_Scenes.empty())
         {
             SetActiveSceneID(m_Scenes.back()->GetSceneID());
-            OPAAX_CORE_TRACE("World::PopScene — '{}' entered.", m_Scenes.back()->GetName());
+            OPAAX_CORE_TRACE("WorldOld::PopScene — '{}' entered.", m_Scenes.back()->GetName());
             m_Scenes.back()->OnEnter();
         }
         else
@@ -151,13 +151,13 @@ namespace Opaax
         }
     }
 
-    Scene* World::ReplaceScene(UniquePtr<Scene> InScene)
+    Scene* WorldOld::ReplaceScene(UniquePtr<Scene> InScene)
     {
         OPAAX_CORE_ASSERT(InScene != nullptr)
 
         if (!m_Scenes.empty())
         {
-            OPAAX_CORE_TRACE("World::ReplaceScene — unloading '{}'.", m_Scenes.back()->GetName());
+            OPAAX_CORE_TRACE("WorldOld::ReplaceScene — unloading '{}'.", m_Scenes.back()->GetName());
             m_Scenes.back()->OnExit();
             m_Scenes.back()->OnUnload(*this);
             DestroyEntitiesWithSceneID(m_Scenes.back()->GetSceneID());
@@ -166,7 +166,7 @@ namespace Opaax
 
         InScene->SetSceneID(AllocateSceneID());
         SetActiveSceneID(InScene->GetSceneID());
-        OPAAX_CORE_TRACE("World::ReplaceScene — loading '{}' (SceneID={}).",
+        OPAAX_CORE_TRACE("WorldOld::ReplaceScene — loading '{}' (SceneID={}).",
             InScene->GetName(), InScene->GetSceneID());
 
         InScene->OnLoad(*this);
@@ -176,22 +176,22 @@ namespace Opaax
         return m_Scenes.back().get();
     }
 
-    Scene* World::GetActiveScene() noexcept
+    Scene* WorldOld::GetActiveScene() noexcept
     {
         return m_Scenes.empty() ? nullptr : m_Scenes.back().get();
     }
 
-    const Scene* World::GetActiveScene() const noexcept
+    const Scene* WorldOld::GetActiveScene() const noexcept
     {
         return m_Scenes.empty() ? nullptr : m_Scenes.back().get();
     }
 
-    Uint32 World::GetSceneCount() const noexcept
+    Uint32 WorldOld::GetSceneCount() const noexcept
     {
         return static_cast<Uint32>(m_Scenes.size());
     }
 
-    void World::DestroyEntitiesWithSceneID(Uint32 InSceneID)
+    void WorldOld::DestroyEntitiesWithSceneID(Uint32 InSceneID)
     {
         // Snapshot before destroying — mutating during a view iteration is UB.
         TDynArray<EntityID> lDoomed;
@@ -209,7 +209,7 @@ namespace Opaax
             DestroyEntity(lEnt, true);
         }
 
-        OPAAX_CORE_TRACE("World::DestroyEntitiesWithSceneID — destroyed {} entity(ies) for SceneID={}.",
+        OPAAX_CORE_TRACE("WorldOld::DestroyEntitiesWithSceneID — destroyed {} entity(ies) for SceneID={}.",
             lDoomed.size(), InSceneID);
     }
 } // namespace Opaax

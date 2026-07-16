@@ -14,8 +14,8 @@ namespace Opaax::Editor
     class TagDrawer final : public IComponentDrawer
     {
     public:
-        bool HasComponent(World& InWorld, EntityID InEntity) const override;
-        void Draw        (World& InWorld, EntityID InEntity)       override;
+        bool HasComponent(WorldOld& InWorld, EntityID InEntity) const override;
+        void Draw        (WorldOld& InWorld, EntityID InEntity)       override;
 
         const char* GetComponentName() const override { return "Tag"; }
         bool        CanAdd()           const override { return false; }

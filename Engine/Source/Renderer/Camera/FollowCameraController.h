@@ -7,7 +7,7 @@
 
 namespace Opaax
 {
-    class World;
+    class WorldOld;
     class ICamera;
 
     /**
@@ -15,7 +15,7 @@ namespace Opaax
      *
      * Tracks a target entity's TransformComponent position with optional offset, deadzone,
      * and frame-rate-independent exponential smoothing. Resolves the target through the
-     * World passed at construction — never caches the TransformComponent pointer across
+     * WorldOld passed at construction — never caches the TransformComponent pointer across
      * frames (entt can relocate components on insertion/destruction).
      *
      * Params can be hot-mutated via GetParams() — swap Target for a new entity, retune
@@ -27,7 +27,7 @@ namespace Opaax
         // CTORs - DTOR
         // =============================================================================
     public:
-        FollowCameraController(const FollowParams& InParams, World& InWorld);
+        FollowCameraController(const FollowParams& InParams, WorldOld& InWorld);
         ~FollowCameraController() override = default;
 
         // =============================================================================
@@ -50,7 +50,7 @@ namespace Opaax
         // =============================================================================
     private:
         FollowParams m_Params;
-        World&       m_World;
+        WorldOld&       m_World;
     };
 
 } // namespace Opaax

@@ -11,7 +11,7 @@
 #include "ECS/Components/TagComponent.h"
 #include "ECS/Components/UuidComponent.h"
 #include "ECS/Hierarchy.h"
-#include "World/World.h"
+#include "World/WorldOld.h"
 
 using json = nlohmann::json;
 
@@ -28,10 +28,10 @@ namespace Opaax
     // =============================================================================
     // Shared serialize helper
     //
-    // Filters World entities by SceneID and writes a {version, scene, entities}
+    // Filters WorldOld entities by SceneID and writes a {version, scene, entities}
     // dump to InPath. Used by both Serialize(Scene&) and SerializePersistents.
     // =============================================================================
-    static bool SerializeEntitiesBySceneID(const World&   InWorld,
+    static bool SerializeEntitiesBySceneID(const WorldOld&   InWorld,
                                            const char*    InPath,
                                            Uint32         InSceneID,
                                            const char*    InSceneLabel)
@@ -121,7 +121,7 @@ namespace Opaax
     //   - Per-scene Push() sets it to the scene's runtime SceneID.
     //   - DeserializePersistents() swaps it to PersistentSceneID for the call.
     // =============================================================================
-    static bool DeserializeIntoActiveSceneID(World& InWorld, const char* InPath)
+    static bool DeserializeIntoActiveSceneID(WorldOld& InWorld, const char* InPath)
     {
         std::ifstream lFile(InPath);
         if (!lFile.is_open())
@@ -150,7 +150,7 @@ namespace Opaax
         for (const auto& lEntityJson : lRoot["entities"])
         {
             const std::string lTag = lEntityJson[Opaax::ECS::TagComponent::TagComponentName.CStr()].get<std::string>();
-            // CreateEntity auto-tags with World::m_ActiveSceneID — caller must set
+            // CreateEntity auto-tags with WorldOld::m_ActiveSceneID — caller must set
             // it to the target scene's SceneID before invoking Deserialize.
             const EntityID lEntity = InWorld.CreateEntity(lTag.c_str());
 
@@ -243,15 +243,15 @@ namespace Opaax
     // =============================================================================
     // Public — scene-based
     // =============================================================================
-    bool SceneSerializer::Serialize(const Scene& InScene, const char* InPath, const World& InWorld)
+    bool SceneSerializer::Serialize(const Scene& InScene, const char* InPath, const WorldOld& InWorld)
     {
         return SerializeEntitiesBySceneID(InWorld, InPath, InScene.GetSceneID(), InScene.GetName().CStr());
     }
 
-    bool SceneSerializer::Deserialize(Scene& /*InScene*/, const char* InPath, World& InWorld)
+    bool SceneSerializer::Deserialize(Scene& /*InScene*/, const char* InPath, WorldOld& InWorld)
     {
         // The caller (SceneManager::Push, EditorSubsystem::ExitPlayMode) must have
-        // already set World::m_ActiveSceneID to the destination scene's runtime ID
+        // already set WorldOld::m_ActiveSceneID to the destination scene's runtime ID
         // before invoking us — see the helper's comment for the contract.
         return DeserializeIntoActiveSceneID(InWorld, InPath);
     }
@@ -259,17 +259,17 @@ namespace Opaax
     // =============================================================================
     // Public — persistent bucket (PIE snapshot/restore)
     // =============================================================================
-    bool SceneSerializer::SerializePersistents(const World& InWorld, const char* InPath)
+    bool SceneSerializer::SerializePersistents(const WorldOld& InWorld, const char* InPath)
     {
-        return SerializeEntitiesBySceneID(InWorld, InPath, World::PersistentSceneID, kPersistentSceneLabel);
+        return SerializeEntitiesBySceneID(InWorld, InPath, WorldOld::PersistentSceneID, kPersistentSceneLabel);
     }
 
-    bool SceneSerializer::DeserializePersistents(World& InWorld, const char* InPath)
+    bool SceneSerializer::DeserializePersistents(WorldOld& InWorld, const char* InPath)
     {
         // Swap the active SceneID for the duration of the load so CreateEntity
         // tags every restored entity as persistent (SceneID == 0), then restore.
         const Uint32 lSavedActive = InWorld.GetActiveSceneID();
-        InWorld.SetActiveSceneID(World::PersistentSceneID);
+        InWorld.SetActiveSceneID(WorldOld::PersistentSceneID);
 
         const bool bOk = DeserializeIntoActiveSceneID(InWorld, InPath);
 

@@ -2,13 +2,13 @@
 
 #include "ICamera.h"
 
-#include "World/World.h"
+#include "World/WorldOld.h"
 #include "ECS/Components/TransformComponent.h"
 #include "Maths/Maths.h"
 
 namespace Opaax
 {
-    FollowCameraController::FollowCameraController(const FollowParams& InParams, World& InWorld)
+    FollowCameraController::FollowCameraController(const FollowParams& InParams, WorldOld& InWorld)
         : m_Params(InParams)
         , m_World(InWorld)
     {}

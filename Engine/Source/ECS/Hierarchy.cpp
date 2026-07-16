@@ -1,7 +1,7 @@
 #include "Hierarchy.h"
 
 #include "Core/Log/OpaaxLog.h"
-#include "World/World.h"
+#include "World/WorldOld.h"
 #include "ECS/Components/ParentComponent.h"
 #include "ECS/Components/TransformComponent.h"
 #include "Maths/Maths.h"
@@ -14,7 +14,7 @@ namespace Opaax::ECS::Hierarchy
         // a corrupted hierarchy. SetParent prevents cycles for normal mutations.
         constexpr int MAX_HIERARCHY_DEPTH = 256;
 
-        EntityID GetParent(const World& InWorld, EntityID InEntity)
+        EntityID GetParent(const WorldOld& InWorld, EntityID InEntity)
         {
             if (!InWorld.IsValid(InEntity)) { return ENTITY_NONE; }
             if (const auto* lP = InWorld.GetComponent<ParentComponent>(InEntity))
@@ -25,7 +25,7 @@ namespace Opaax::ECS::Hierarchy
         }
     }
 
-    bool IsDescendantOf(const World& InWorld, EntityID InEntity, EntityID InAncestor)
+    bool IsDescendantOf(const WorldOld& InWorld, EntityID InEntity, EntityID InAncestor)
     {
         if (InEntity == ENTITY_NONE || InAncestor == ENTITY_NONE) { return false; }
 
@@ -38,7 +38,7 @@ namespace Opaax::ECS::Hierarchy
         return false;
     }
 
-    bool SetParent(World& InWorld, EntityID InChild, EntityID InNewParent)
+    bool SetParent(WorldOld& InWorld, EntityID InChild, EntityID InNewParent)
     {
         if (!InWorld.IsValid(InChild))
         {
@@ -82,7 +82,7 @@ namespace Opaax::ECS::Hierarchy
         return true;
     }
 
-    void ClearParent(World& InWorld, EntityID InChild)
+    void ClearParent(WorldOld& InWorld, EntityID InChild)
     {
         if (!InWorld.IsValid(InChild)) { return; }
         if (InWorld.HasComponent<ParentComponent>(InChild))
@@ -91,7 +91,7 @@ namespace Opaax::ECS::Hierarchy
         }
     }
 
-    WorldTransform GetWorldTransform(const World& InWorld, EntityID InEntity)
+    WorldTransform GetWorldTransform(const WorldOld& InWorld, EntityID InEntity)
     {
         WorldTransform lOut;
 

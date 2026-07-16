@@ -22,6 +22,8 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "Core/Engine/Subsystems/EventBus/EngineEventBus.h"
+
 namespace Opaax
 {
     namespace
@@ -91,7 +93,7 @@ namespace Opaax
         m_ViewHeight = lDesc.Height;
 
         // React to window resize via the Tier-3 bus — replaces the per-frame size poll.
-        OpaaxApplication::GetAppService<IEngine>().GetEventBus()
+        OpaaxApplication::GetAppService<IEngine>().GetEngineEventBus().GetEventBus()
             .Subscribe<WindowResize>(this, &RendererManager::OnWindowResized);
 
         OPAAX_LOG(LogRendererManager, Info, "RendererManager started ({}x{})", lDesc.Width, lDesc.Height)
@@ -102,7 +104,7 @@ namespace Opaax
     {
         // Unsubscribe BEFORE teardown — a late resize event must not reach a handler that
         // would touch a destroyed m_RenderSystem.
-        OpaaxApplication::GetAppService<IEngine>().GetEventBus().UnsubscribeAll(this);
+        OpaaxApplication::GetAppService<IEngine>().GetEngineEventBus().GetEventBus().UnsubscribeAll(this);
 
         m_RenderSystem.reset(); // ~RenderSystem = WaitIdle + teardown while the window/context is alive
         OPAAX_LOG(LogRendererManager, Info, "RendererManager shutdown")

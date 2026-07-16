@@ -345,11 +345,11 @@ namespace Opaax
 
         m_MainMenuBar.Draw(*this);
 
-        // World is owned by CoreEngineApp — stable across MainMenuBar mutations
-        // (scene transitions only swap entities, not the World container). Each
+        // WorldOld is owned by CoreEngineApp — stable across MainMenuBar mutations
+        // (scene transitions only swap entities, not the WorldOld container). Each
         // panel that needs the active Scene fetches it just-in-time from SceneMgr
         // (HierarchyPanel, AssetBrowserPanel) — no broker-level Scene* cache.
-        World& lWorld = GetEngineApp()->GetWorld();
+        WorldOld& lWorld = GetEngineApp()->GetWorld();
 
         if (m_bShowHierarchy)    m_HierarchyPanel.Draw(*lSceneMgr, lWorld);
         if (m_bShowInspector)    m_InspectorPanel.Draw(lWorld);
@@ -452,9 +452,9 @@ namespace Opaax
         }
 
         Scene* lScene = lSceneMgr->GetActiveScene();
-        World& lWorld = GetEngineApp()->GetWorld();
+        WorldOld& lWorld = GetEngineApp()->GetWorld();
         // Scene stayed on the stack through PIE — its SceneID is unchanged, and
-        // World::m_ActiveSceneID already matches. Wipe only this scene's entities
+        // WorldOld::m_ActiveSceneID already matches. Wipe only this scene's entities
         // so any persistents survive the round-trip.
         lWorld.DestroyEntitiesWithSceneID(lScene->GetSceneID());
         SceneSerializer::Deserialize(*lScene, lTempPath.CStr(), lWorld);

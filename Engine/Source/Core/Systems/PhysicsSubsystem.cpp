@@ -9,7 +9,7 @@
 #include "Physics/Collision/CollisionProfile.h"
 #include "Physics/Events/PhysicsEvents.h"
 
-#include "World/World.h"
+#include "World/WorldOld.h"
 #include "ECS/Components/TransformComponent.h"
 #include "ECS/Components/TransformInterpolationComponent.h"
 #include "ECS/Components/RigidbodyComponent.h"
@@ -50,7 +50,7 @@ namespace Opaax
             return false;
         }
 
-        // World-bounds kill volume — config-driven, off + generous by default.
+        // WorldOld-bounds kill volume — config-driven, off + generous by default.
         m_WorldBoundsEnabled  = EngineConfig::PhysicsWorldBoundsEnabled();
         m_WorldBoundsMin      = EngineConfig::PhysicsWorldBoundsMin();
         m_WorldBoundsMax      = EngineConfig::PhysicsWorldBoundsMax();
@@ -74,7 +74,7 @@ namespace Opaax
         // the sim this step.
         if (CoreEngineApp* lApp = GetEngineApp())
         {
-            World& lWorld = lApp->GetWorld();
+            WorldOld& lWorld = lApp->GetWorld();
             ReconcileDeadBodies(lWorld);
             ReconcileLiveBodies(lWorld);
         }
@@ -130,7 +130,7 @@ namespace Opaax
     // =============================================================================
     // Body build / teardown / sync
     // =============================================================================
-    void PhysicsSubsystem::BuildBodies(World& InWorld)
+    void PhysicsSubsystem::BuildBodies(WorldOld& InWorld)
     {
         // Belt-and-braces — never double-build into a populated map.
         ClearBodies();
@@ -143,7 +143,7 @@ namespace Opaax
             });
     }
 
-    void PhysicsSubsystem::BuildBodyForEntity(World& InWorld, EntityID InEntity)
+    void PhysicsSubsystem::BuildBodyForEntity(WorldOld& InWorld, EntityID InEntity)
     {
         if (m_World == nullptr) { return; }
 
@@ -212,7 +212,7 @@ namespace Opaax
         }
     }
 
-    void PhysicsSubsystem::ReconcileLiveBodies(World& InWorld)
+    void PhysicsSubsystem::ReconcileLiveBodies(WorldOld& InWorld)
     {
         using namespace ECS;
         InWorld.Each<ColliderComponent, TransformComponent>(
@@ -254,7 +254,7 @@ namespace Opaax
         m_OutOfBounds.clear();
     }
 
-    void PhysicsSubsystem::SyncDynamicTransforms(World& InWorld)
+    void PhysicsSubsystem::SyncDynamicTransforms(WorldOld& InWorld)
     {
         for (auto& [lBits, lRecord] : m_Bodies)
         {
@@ -354,9 +354,9 @@ namespace Opaax
     }
 
     // =============================================================================
-    // World bounds (kill volume)
+    // WorldOld bounds (kill volume)
     // =============================================================================
-    void PhysicsSubsystem::EnforceWorldBounds(World& InWorld)
+    void PhysicsSubsystem::EnforceWorldBounds(WorldOld& InWorld)
     {
         if (m_World == nullptr) { return; }
 
@@ -441,7 +441,7 @@ namespace Opaax
         }
     }
 
-    void PhysicsSubsystem::ReconcileDeadBodies(World& InWorld)
+    void PhysicsSubsystem::ReconcileDeadBodies(WorldOld& InWorld)
     {
         if (m_Bodies.empty()) { return; }
 

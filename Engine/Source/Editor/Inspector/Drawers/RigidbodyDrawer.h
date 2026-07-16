@@ -13,9 +13,9 @@ namespace Opaax::Editor
     class RigidbodyDrawer final : public IComponentDrawer
     {
     public:
-        bool HasComponent(World& InWorld, EntityID InEntity) const override;
-        void Draw        (World& InWorld, EntityID InEntity)       override;
-        void Add         (World& InWorld, EntityID InEntity)       override;
+        bool HasComponent(WorldOld& InWorld, EntityID InEntity) const override;
+        void Draw        (WorldOld& InWorld, EntityID InEntity)       override;
+        void Add         (WorldOld& InWorld, EntityID InEntity)       override;
 
         const char* GetComponentName() const override { return "Rigidbody"; }
         bool        CanAdd()           const override { return true; }

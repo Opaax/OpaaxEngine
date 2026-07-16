@@ -6,7 +6,7 @@
 
 namespace Opaax
 {
-    class World;
+    class WorldOld;
 }
 
 namespace Opaax::ECS::Hierarchy
@@ -31,13 +31,13 @@ namespace Opaax::ECS::Hierarchy
      *  - InNewParent is reachable from InChild via parent chain (would create a cycle).
      * Pass ENTITY_NONE as InNewParent to detach (equivalent to ClearParent).
      */
-    OPAAX_API bool SetParent(World& InWorld, EntityID InChild, EntityID InNewParent);
+    OPAAX_API bool SetParent(WorldOld& InWorld, EntityID InChild, EntityID InNewParent);
 
     /** Detach InChild from any parent. No-op if it had none. */
-    OPAAX_API void ClearParent(World& InWorld, EntityID InChild);
+    OPAAX_API void ClearParent(WorldOld& InWorld, EntityID InChild);
 
     /** True if InAncestor appears anywhere on InEntity's parent chain (excluding InEntity itself). */
-    OPAAX_API bool IsDescendantOf(const World& InWorld, EntityID InEntity, EntityID InAncestor);
+    OPAAX_API bool IsDescendantOf(const WorldOld& InWorld, EntityID InEntity, EntityID InAncestor);
 
     /**
      * Walks the parent chain and compounds local transforms.
@@ -47,5 +47,5 @@ namespace Opaax::ECS::Hierarchy
      * - ZOrder:   simple sum.
      * Entities without a TransformComponent contribute identity. Cycles are guarded by a depth limit.
      */
-    OPAAX_API WorldTransform GetWorldTransform(const World& InWorld, EntityID InEntity);
+    OPAAX_API WorldTransform GetWorldTransform(const WorldOld& InWorld, EntityID InEntity);
 }

@@ -13,12 +13,12 @@
 
 namespace Opaax::Editor
 {
-    bool TransformDrawer::HasComponent(World& InWorld, EntityID InEntity) const
+    bool TransformDrawer::HasComponent(WorldOld& InWorld, EntityID InEntity) const
     {
         return InWorld.GetComponent<ECS::TransformComponent>(InEntity) != nullptr;
     }
 
-    void TransformDrawer::Draw(World& InWorld, EntityID InEntity)
+    void TransformDrawer::Draw(WorldOld& InWorld, EntityID InEntity)
     {
         if (!HasComponent(InWorld, InEntity))
         {
@@ -61,12 +61,12 @@ namespace Opaax::Editor
         }
     }
 
-    void TransformDrawer::Add(World& InWorld, EntityID InEntity)
+    void TransformDrawer::Add(WorldOld& InWorld, EntityID InEntity)
     {
         InWorld.AddComponent<ECS::TransformComponent>(InEntity);
     }
 
-    void TransformDrawer::DrawParentPicker(World& InWorld, EntityID InEntity)
+    void TransformDrawer::DrawParentPicker(WorldOld& InWorld, EntityID InEntity)
     {
         const auto* lParentComp = InWorld.GetComponent<ECS::ParentComponent>(InEntity);
         const EntityID lCurrentParent = lParentComp ? lParentComp->Parent : ENTITY_NONE;

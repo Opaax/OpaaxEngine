@@ -2,7 +2,7 @@
 
 #include "World/RenderContext.h"
 #include "World/IOverlayRenderSystem.h"
-#include "World/World.h"
+#include "World/WorldOld.h"
 #include "Renderer/Renderer2D.h"
 #include "Renderer/RenderTarget.hpp"
 #include "RHI/ICommandBuffer.h"
@@ -20,7 +20,7 @@ namespace Opaax
         m_Camera.SetViewportSize(InContext.Target.GetWidth(), InContext.Target.GetHeight());
         InContext.Renderer.Begin(m_Camera, InContext.Cmd);
 
-        World& lWorld = m_App->GetWorld();
+        WorldOld& lWorld = m_App->GetWorld();
         for (const auto& lSystem : TPolymorphicList<IOverlayRenderSystem>::GetAll())
         {
             lSystem->OnRenderOverlay(lWorld, InContext);

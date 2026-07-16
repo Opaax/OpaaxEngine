@@ -13,7 +13,7 @@
 #include "Physics/Collision/CollisionProfile.h"
 #include "Physics/Collision/CollisionChannel.h"
 
-#include "World/World.h"
+#include "World/WorldOld.h"
 #include "ECS/Components/MoverComponent.h"
 #include "ECS/Components/TransformComponent.h"
 #include "ECS/Components/TransformInterpolationComponent.h"
@@ -33,7 +33,7 @@ namespace Opaax
 
     void MoverSubsystem::Shutdown()
     {
-        // World may already be gone at engine shutdown — ClearBodies null-guards.
+        // WorldOld may already be gone at engine shutdown — ClearBodies null-guards.
         if (CoreEngineApp* lApp = GetEngineApp())
         {
             PhysicsSubsystem* lPhysics = lApp->GetSubsystem<PhysicsSubsystem>();
@@ -77,7 +77,7 @@ namespace Opaax
     // =============================================================================
     // Body build / teardown
     // =============================================================================
-    void MoverSubsystem::BuildBodies(World& InWorld, IPhysicsWorld& InPhysicsWorld)
+    void MoverSubsystem::BuildBodies(WorldOld& InWorld, IPhysicsWorld& InPhysicsWorld)
     {
         ClearBodies(&InPhysicsWorld);
 
@@ -150,7 +150,7 @@ namespace Opaax
         const float lDt = static_cast<float>(FixedDeltaTime);
 
         using namespace ECS;
-        World& lEcsWorld = lApp->GetWorld();
+        WorldOld& lEcsWorld = lApp->GetWorld();
         lEcsWorld.Each<MoverComponent, TransformComponent>(
             [this, lWorld, lDt, &lEcsWorld](EntityID InEntity, MoverComponent& InMover, TransformComponent& InTransform)
             {

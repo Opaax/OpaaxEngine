@@ -25,7 +25,7 @@ namespace Opaax::Editor
             });
     }
 
-    void InspectorPanel::Draw(World& InWorld)
+    void InspectorPanel::Draw(WorldOld& InWorld)
     {
         ImGui::Begin("Inspector");
 

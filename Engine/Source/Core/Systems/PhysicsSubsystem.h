@@ -10,7 +10,7 @@
 
 namespace Opaax
 {
-    class World;
+    class WorldOld;
 
     // =============================================================================
     // PhysicsSubsystem
@@ -95,25 +95,25 @@ namespace Opaax
     private:
         // Build one body (+ its shape) per entity carrying a ColliderComponent, reading
         // an optional RigidbodyComponent (absent => implicit static) and the Transform.
-        void BuildBodies(World& InWorld);
+        void BuildBodies(WorldOld& InWorld);
 
         // Build the body for a single collider-entity (fetches Collider/Transform; no-op if either
         // is missing or it already has a body). The shared builder used by BuildBodies and the
         // runtime reconcile.
-        void BuildBodyForEntity(World& InWorld, EntityID InEntity);
+        void BuildBodyForEntity(WorldOld& InWorld, EntityID InEntity);
 
         // Reconcile live collider-entities against m_Bodies each FixedUpdate: build a body for any
         // that lack one (entities spawned at runtime / that just gained a Collider), AND rebuild any
         // whose desired body type (from the current optional Rigidbody) no longer matches what was
         // built — so adding/removing a Rigidbody after a body exists takes effect regardless of the
         // order components were added. Twin of ReconcileDeadBodies.
-        void ReconcileLiveBodies(World& InWorld);
+        void ReconcileLiveBodies(WorldOld& InWorld);
 
         // Destroy every body built for the current play session and clear the map.
         void ClearBodies();
 
         // Write each dynamic body's post-step transform back to its ECS TransformComponent.
-        void SyncDynamicTransforms(World& InWorld);
+        void SyncDynamicTransforms(WorldOld& InWorld);
 
         // Drain the world's sensor + contact events after a step and fan them out as engine
         // events: overlap Start/Tick/Stop (Tick synthesized from the live overlap set) and
@@ -124,7 +124,7 @@ namespace Opaax
         // the bounds AABB (center-point test, latched via m_OutOfBounds) and, when the configured
         // response is Destroy, reap the entity + its body. Called last in FixedUpdate so this
         // step's contact/overlap events fire before anything is removed.
-        void EnforceWorldBounds(World& InWorld);
+        void EnforceWorldBounds(WorldOld& InWorld);
 
         // Destroy one entity's body via the seam and scrub every map that referenced it
         // (m_Bodies, m_OutOfBounds, and any live overlap so no phantom Tick survives the kill).
@@ -135,7 +135,7 @@ namespace Opaax
         // handler, a script, the editor, ...). Generic: covers EVERY destroy path so call sites
         // never have to tear the body down themselves. Runs first in FixedUpdate so a dead entity's
         // body cannot emit phantom contacts/overlaps this step.
-        void ReconcileDeadBodies(World& InWorld);
+        void ReconcileDeadBodies(WorldOld& InWorld);
 
         // =============================================================================
         // Members
@@ -170,7 +170,7 @@ namespace Opaax
         // (sensor, visitor) pair so Tick re-fires with sensor-first semantics. Drives OnOverlapTick.
         UnorderedMap<Uint64, PhysicsContactPair> m_LiveOverlaps;
 
-        // World-bounds kill volume — config-fed in Startup. Disabled + generous by default.
+        // WorldOld-bounds kill volume — config-fed in Startup. Disabled + generous by default.
         bool                 m_WorldBoundsEnabled  = false;
         Vector2F             m_WorldBoundsMin      = { -100000.f, -100000.f };
         Vector2F             m_WorldBoundsMax      = {  100000.f,  100000.f };

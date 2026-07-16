@@ -6,7 +6,7 @@
 #include "Assets/AssetRegistry.h"
 #include "Core/CoreEngineApp.h"
 #include "Core/OpaaxPath.h"
-#include "World/World.h"
+#include "World/WorldOld.h"
 
 #if OPAAX_WITH_EDITOR
 #include "Editor/EditorEventBus.h"
@@ -17,13 +17,13 @@
 namespace Opaax
 {
     // =============================================================================
-    // Lifecycle drive (out-of-line so we can reach the engine's shared World
+    // Lifecycle drive (out-of-line so we can reach the engine's shared WorldOld
     // via GetEngineApp() without dragging CoreEngineApp.h into SceneManager.h).
     // =============================================================================
     void SceneManager::Push(UniquePtr<Scene> InScene)
     {
         OPAAX_CORE_ASSERT(InScene != nullptr)
-        World& lWorld = GetEngineApp()->GetWorld();
+        WorldOld& lWorld = GetEngineApp()->GetWorld();
 
         if (!m_Stack.empty())
         {
@@ -51,7 +51,7 @@ namespace Opaax
             return;
         }
 
-        World& lWorld = GetEngineApp()->GetWorld();
+        WorldOld& lWorld = GetEngineApp()->GetWorld();
 
         OPAAX_CORE_TRACE("SceneManager::Pop — unloading '{}' (SceneID={}).",
             m_Stack.back()->GetName(), m_Stack.back()->GetSceneID());
@@ -68,14 +68,14 @@ namespace Opaax
         }
         else
         {
-            lWorld.SetActiveSceneID(World::PersistentSceneID);
+            lWorld.SetActiveSceneID(WorldOld::PersistentSceneID);
         }
     }
 
     void SceneManager::Replace(UniquePtr<Scene> InScene)
     {
         OPAAX_CORE_ASSERT(InScene != nullptr)
-        World& lWorld = GetEngineApp()->GetWorld();
+        WorldOld& lWorld = GetEngineApp()->GetWorld();
 
         if (!m_Stack.empty())
         {
@@ -113,7 +113,7 @@ namespace Opaax
     {
         OPAAX_CORE_INFO("SceneManager::Shutdown() — clearing {} scene(s).", m_Stack.size());
 
-        World& lWorld = GetEngineApp()->GetWorld();
+        WorldOld& lWorld = GetEngineApp()->GetWorld();
 
         // Unload in reverse order — top scene first.
         while (!m_Stack.empty())
@@ -124,7 +124,7 @@ namespace Opaax
             m_Stack.pop_back();
         }
 
-        lWorld.SetActiveSceneID(World::PersistentSceneID);
+        lWorld.SetActiveSceneID(WorldOld::PersistentSceneID);
     }
 
     // =============================================================================
@@ -180,7 +180,7 @@ namespace Opaax
         // Wipe entities owned by the active scene only; SceneSerializer::Deserialize
         // creates new ones and does not clear the target world. Persistent entities
         // (SceneID == 0) survive the swap.
-        World& lWorld = GetEngineApp()->GetWorld();
+        WorldOld& lWorld = GetEngineApp()->GetWorld();
         lWorld.DestroyEntitiesWithSceneID(lScene->GetSceneID());
 
         if (!SceneSerializer::Deserialize(*lScene, InPath, lWorld))

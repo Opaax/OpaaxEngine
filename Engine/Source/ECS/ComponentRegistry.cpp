@@ -88,7 +88,7 @@ namespace Opaax
             }
         }
 
-        void DrawDefault(const IComponentEntry& InEntry, World& InWorld, EntityID InEntity)
+        void DrawDefault(const IComponentEntry& InEntry, WorldOld& InWorld, EntityID InEntity)
         {
             // Bind ToString()'s temporary to a named local so .CStr() points into
             // live storage across the ImGui call (Lesson 11).
@@ -112,7 +112,7 @@ namespace Opaax
         }
     }
 
-    void ComponentRegistry::DrawAll(World& InWorld, EntityID InEntity)
+    void ComponentRegistry::DrawAll(WorldOld& InWorld, EntityID InEntity)
     {
         for (const auto& lEntry : GetAll())
         {
@@ -136,7 +136,7 @@ namespace Opaax
         }
     }
 
-    void ComponentRegistry::DrawAddComponentMenu(World& InWorld, EntityID InEntity)
+    void ComponentRegistry::DrawAddComponentMenu(WorldOld& InWorld, EntityID InEntity)
     {
         for (const auto& lEntry : GetAll())
         {

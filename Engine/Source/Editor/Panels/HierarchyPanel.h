@@ -4,7 +4,7 @@
 #if OPAAX_WITH_EDITOR
 
 #include "Core/EngineAPI.h"
-#include "World/World.h"
+#include "World/WorldOld.h"
 #include "Editor/EditorEventBus.h"
 #include "Editor/IEditorPanel.h"
 
@@ -16,7 +16,7 @@ namespace Opaax::Editor
      * Owns the "selected entity" state — publishes OnEntitySelectedEvent on every
      * change. Other panels subscribe via EditorEventBus (see Inspector).
      *
-     * NOTE: Draw(SceneManager&, World&) is the primary entry point; it is called
+     * NOTE: Draw(SceneManager&, WorldOld&) is the primary entry point; it is called
      * directly by EditorSubsystem rather than through the IEditorPanel::Draw()
      * interface. The panel self-fetches the active scene from the SceneManager at
      * the top of every Draw — no Scene* cached across frames or upstream calls
@@ -38,9 +38,9 @@ namespace Opaax::Editor
         /**
          * API call by EditorSubsystem.
          * @param InSceneMgr active scene source (panel self-fetches GetActiveScene each frame).
-         * @param InWorld    engine-shared World (entity source).
+         * @param InWorld    engine-shared WorldOld (entity source).
          */
-        void Draw(SceneManager& InSceneMgr, World& InWorld);
+        void Draw(SceneManager& InSceneMgr, WorldOld& InWorld);
 
         //------------------------------------------------------------------------------
         // Set — publish OnEntitySelectedEvent via the bus captured in OnSubscribe.

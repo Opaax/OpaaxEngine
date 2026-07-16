@@ -7,7 +7,7 @@
 
 namespace Opaax
 {
-    class World;
+    class WorldOld;
     class IPhysicsWorld;
 
     // =============================================================================
@@ -64,7 +64,7 @@ namespace Opaax
         // =============================================================================
     private:
         // Build one KINEMATIC capsule body per MoverComponent entity (events on), keyed by entity.
-        void BuildBodies(World& InWorld, IPhysicsWorld& InPhysicsWorld);
+        void BuildBodies(WorldOld& InWorld, IPhysicsWorld& InPhysicsWorld);
         // Destroy every mover body and clear the map.
         void ClearBodies(IPhysicsWorld* InPhysicsWorld);
 

@@ -4,21 +4,21 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/OpaaxStringID.hpp"
 #include "Core/Log/OpaaxLog.h"
-#include "World/World.h"
+#include "World/WorldOld.h"
 
 namespace Opaax
 {
     /**
      * @class Scene
      *
-     * Serializable contributor of entities into the shared World owned by
+     * Serializable contributor of entities into the shared WorldOld owned by
      * CoreEngineApp. Represents one game scene (level, menu, cutscene, etc.).
      * Entities created during OnLoad are auto-tagged with this scene's runtime
      * SceneID so they can be wiped together on OnUnload — see SceneIDComponent.
      *
      * Lifecycle:
-     *      OnLoad(World&)   — called once when the scene is pushed onto the stack.
-     *      OnUnload(World&) — called once when the scene is popped.
+     *      OnLoad(WorldOld&)   — called once when the scene is pushed onto the stack.
+     *      OnUnload(WorldOld&) — called once when the scene is popped.
      *      OnEnter()        — called every time the scene becomes the active scene.
      *      OnExit()         — called every time another scene is pushed on top.
      *
@@ -63,14 +63,14 @@ namespace Opaax
          * Called once when the scene is first loaded onto the stack.
          * Load assets, create entities into InWorld here.
          */
-        virtual void OnLoad(World& InWorld)   {}
+        virtual void OnLoad(WorldOld& InWorld)   {}
 
         /**
          * Called once when the scene is popped from the stack.
-         * Release assets, cleanup here. InWorld is the shared engine World
+         * Release assets, cleanup here. InWorld is the shared engine WorldOld
          * the scene's entities live in.
          */
-        virtual void OnUnload(World& InWorld) {}
+        virtual void OnUnload(WorldOld& InWorld) {}
 
         /**
          * Called every time this scene becomes the active (top) scene.
@@ -85,10 +85,10 @@ namespace Opaax
         virtual void OnExit()   {}
 
         /**
-         * Persist the scene to disk. InWorld is the shared engine World the
+         * Persist the scene to disk. InWorld is the shared engine WorldOld the
          * serializer reads entities from.
          */
-        virtual void SaveScene(World& InWorld) {}
+        virtual void SaveScene(WorldOld& InWorld) {}
         
         //------------------------------------------------------------------------------
         // Per-frame
@@ -102,9 +102,9 @@ namespace Opaax
     public:
         FORCEINLINE const OpaaxString&  GetName()       const noexcept { return m_Name; }
 
-        // Runtime SceneID — stamped by World::PushScene on push. 0 = unassigned /
+        // Runtime SceneID — stamped by WorldOld::PushScene on push. 0 = unassigned /
         // persistent. Used to filter entities contributed by this scene in the
-        // shared World (see SceneIDComponent).
+        // shared WorldOld (see SceneIDComponent).
         FORCEINLINE Uint32 GetSceneID() const noexcept              { return m_SceneID; }
         FORCEINLINE void   SetSceneID(Uint32 InSceneID) noexcept    { m_SceneID = InSceneID; }
 

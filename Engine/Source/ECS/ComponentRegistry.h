@@ -8,7 +8,7 @@
 #include "Core/Component/OpaaxComponent.h"
 #include "Core/Container/TPolymorphicList.hpp"
 #include "Core/Log/OpaaxLog.h"
-#include "World/World.h"
+#include "World/WorldOld.h"
 
 #if OPAAX_WITH_EDITOR
 #include "Editor/Inspector/IComponentDrawer.h"
@@ -33,10 +33,10 @@ namespace Opaax
         virtual entt::id_type GetTypeId()    const = 0;
         virtual bool          ShouldShowInAddMenu() const = 0;
 
-        virtual bool Has (const World& InWorld, EntityID InEntity) const                = 0;
-        virtual void Add (World& InWorld, EntityID InEntity)       const                = 0;
-        virtual json Save(const World& InWorld, EntityID InEntity) const                = 0;
-        virtual void Load(World& InWorld, EntityID InEntity, const json& InJson) const  = 0;
+        virtual bool Has (const WorldOld& InWorld, EntityID InEntity) const                = 0;
+        virtual void Add (WorldOld& InWorld, EntityID InEntity)       const                = 0;
+        virtual json Save(const WorldOld& InWorld, EntityID InEntity) const                = 0;
+        virtual void Load(WorldOld& InWorld, EntityID InEntity, const json& InJson) const  = 0;
 
 #if OPAAX_WITH_EDITOR
         // Optional per-type custom drawer. When null, ComponentRegistry::DrawAll
@@ -68,12 +68,12 @@ namespace Opaax
         entt::id_type GetTypeId()           const override { return entt::type_hash<T>::value(); }
         bool          ShouldShowInAddMenu() const override { return m_bShowInAddMenu; }
 
-        bool Has(const World& InWorld, EntityID InEntity) const override
+        bool Has(const WorldOld& InWorld, EntityID InEntity) const override
         {
             return InWorld.HasComponent<T>(InEntity);
         }
 
-        void Add(World& InWorld, EntityID InEntity) const override
+        void Add(WorldOld& InWorld, EntityID InEntity) const override
         {
             if (!InWorld.HasComponent<T>(InEntity))
             {
@@ -81,13 +81,13 @@ namespace Opaax
             }
         }
 
-        json Save(const World& InWorld, EntityID InEntity) const override
+        json Save(const WorldOld& InWorld, EntityID InEntity) const override
         {
             const T* lComp = InWorld.GetComponent<T>(InEntity);
             return lComp ? lComp->Serialize() : json{};
         }
 
-        void Load(World& InWorld, EntityID InEntity, const json& InJson) const override
+        void Load(WorldOld& InWorld, EntityID InEntity, const json& InJson) const override
         {
             T& lComp = InWorld.HasComponent<T>(InEntity)
                 ? *InWorld.GetComponent<T>(InEntity)
@@ -203,11 +203,11 @@ namespace Opaax
     public:
         // Iterates registered components; for each present on InEntity, dispatches
         // to its CustomDrawer if set, else renders a default read-only json view.
-        static void DrawAll(World& InWorld, EntityID InEntity);
+        static void DrawAll(WorldOld& InWorld, EntityID InEntity);
 
         // Iterates registered components; renders a MenuItem for each that allows
         // Add (ShouldShowInAddMenu == true) and isn't already on InEntity.
-        static void DrawAddComponentMenu(World& InWorld, EntityID InEntity);
+        static void DrawAddComponentMenu(WorldOld& InWorld, EntityID InEntity);
 #endif
 
         // Clear() / GetAll() / Register() inherited from TPolymorphicList.

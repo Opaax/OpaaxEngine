@@ -12,12 +12,12 @@
 
 namespace Opaax::Editor
 {
-    bool ColliderDrawer::HasComponent(World& InWorld, EntityID InEntity) const
+    bool ColliderDrawer::HasComponent(WorldOld& InWorld, EntityID InEntity) const
     {
         return InWorld.GetComponent<ECS::ColliderComponent>(InEntity) != nullptr;
     }
 
-    void ColliderDrawer::Draw(World& InWorld, EntityID InEntity)
+    void ColliderDrawer::Draw(WorldOld& InWorld, EntityID InEntity)
     {
         auto* lCol = InWorld.GetComponent<ECS::ColliderComponent>(InEntity);
         if (!lCol) { return; }
@@ -113,7 +113,7 @@ namespace Opaax::Editor
         ImGui::DragFloat("Restitution", &lCol->Restitution, 0.01f, 0.f, 1.f, "%.2f");
     }
 
-    void ColliderDrawer::Add(World& InWorld, EntityID InEntity)
+    void ColliderDrawer::Add(WorldOld& InWorld, EntityID InEntity)
     {
         InWorld.AddComponent<ECS::ColliderComponent>(InEntity);
     }

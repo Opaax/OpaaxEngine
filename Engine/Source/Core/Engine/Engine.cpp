@@ -194,22 +194,40 @@ namespace Opaax
     // =========================================================================
     ResourceManager& Engine::GetResources()
     {
-        if (!m_bStarted)
+        // Resolve from the owned subsystem manager. It is populated by StartupAll's
+        // create pass, so a sibling subsystem can reach this during its own Startup
+        // WITHOUT re-entering Engine::Startup (the source of the boot re-entrancy).
+        if (m_Resources == nullptr)
+        {
+            m_Resources = m_Subsystems.GetSubsystem<ResourceManager>();
+        }
+
+        // Safety net — still nothing means the host has not started the engine yet.
+        if (m_Resources == nullptr && !m_bStarted)
         {
             Startup();
+            m_Resources = m_Subsystems.GetSubsystem<ResourceManager>();
         }
-        
+
         OPAAX_ASSERT(m_Resources != nullptr);
         return *m_Resources;
     }
 
     EngineEventBus& Engine::GetEngineEventBus()
     {
-        if (!m_bStarted)
+        // Resolve-from-manager first (see GetResources): a sibling subsystem may reach
+        // the bus during its own Startup, so this must never re-enter Engine::Startup.
+        if (m_EngineEventBus == nullptr)
+        {
+            m_EngineEventBus = m_Subsystems.GetSubsystem<EngineEventBus>();
+        }
+
+        if (m_EngineEventBus == nullptr && !m_bStarted)
         {
             Startup();
+            m_EngineEventBus = m_Subsystems.GetSubsystem<EngineEventBus>();
         }
-        
+
         OPAAX_ASSERT(m_EngineEventBus != nullptr);
         return *m_EngineEventBus;
     }

@@ -7,6 +7,7 @@
 #include "Core/Application/Services/IJobSystem.h"
 #include "Core/Config/Config_Engine.h"
 #include "Core/Engine/Engine.h"
+#include "Core/Engine/Subsystems/EventBus/EngineEventBus.h"
 #include "Services/IConfigSystem.h"
 #include "Services/IEngine.h"
 
@@ -238,7 +239,7 @@ void OpaaxApplication::OnEvent(Event& InEvent)
     // react without the window ever knowing them. Queued — delivered at the frame's Flush.
     lDispatcher.Dispatch<WindowResizeEvent>([this](WindowResizeEvent& InResize)
     {
-        Engine().GetEventBus().Enqueue(InResize.GetPayload());
+        Engine().GetEngineEventBus().GetEventBus().Enqueue(InResize.GetPayload());
         return false;
     });
 }

@@ -14,7 +14,7 @@
 #include "ECS/Hierarchy.h"
 #include "Editor/EditorEventBus.h"
 #include "Editor/Events/EditorEvents.h"
-#include "World/World.h"
+#include "World/WorldOld.h"
 
 namespace Opaax::Editor
 {
@@ -24,7 +24,7 @@ namespace Opaax::Editor
 
         // Render one entity row + recurse into its children. Returns the entity to delete
         // when the user picks "Delete Entity" from the context menu (ENTITY_NONE = none).
-        EntityID DrawNode(World& InWorld,
+        EntityID DrawNode(WorldOld& InWorld,
                           EntityID InEntity,
                           const UnorderedMap<EntityID, TDynArray<EntityID>>& InChildren,
                           EntityID& InOutSelected)
@@ -152,7 +152,7 @@ namespace Opaax::Editor
         }
     }
 
-    void HierarchyPanel::Draw(SceneManager& InSceneMgr, World& InWorld)
+    void HierarchyPanel::Draw(SceneManager& InSceneMgr, WorldOld& InWorld)
     {
         ImGui::Begin("Hierarchy");
 
@@ -167,7 +167,7 @@ namespace Opaax::Editor
             return;
         }
 
-        World& lWorld    = InWorld;
+        WorldOld& lWorld    = InWorld;
         auto&  lRegistry = lWorld.GetRegistry();
 
         // Scene name as header
@@ -189,7 +189,7 @@ namespace Opaax::Editor
             for (auto lEnt : lView)
             {
                 const Uint32 lSID = lView.get<const ECS::SceneIDComponent>(lEnt).SceneID;
-                if (lSID != lActiveSceneID && lSID != World::PersistentSceneID) { continue; }
+                if (lSID != lActiveSceneID && lSID != WorldOld::PersistentSceneID) { continue; }
 
                 const auto* lP = lWorld.GetComponent<ECS::ParentComponent>(lEnt);
                 if (lP && lP->Parent != ENTITY_NONE && lRegistry.valid(lP->Parent))

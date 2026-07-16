@@ -19,7 +19,7 @@ namespace Opaax
         // =============================================================================
     public:
         //~Begin IWorldSystem Interface
-        void OnRender(World& InWorld, const RenderContext& InContext) override;
+        void OnRender(WorldOld& InWorld, const RenderContext& InContext) override;
         //~End IWorldSystem Interface
     };
 }

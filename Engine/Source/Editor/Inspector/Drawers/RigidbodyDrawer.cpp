@@ -8,12 +8,12 @@
 
 namespace Opaax::Editor
 {
-    bool RigidbodyDrawer::HasComponent(World& InWorld, EntityID InEntity) const
+    bool RigidbodyDrawer::HasComponent(WorldOld& InWorld, EntityID InEntity) const
     {
         return InWorld.GetComponent<ECS::RigidbodyComponent>(InEntity) != nullptr;
     }
 
-    void RigidbodyDrawer::Draw(World& InWorld, EntityID InEntity)
+    void RigidbodyDrawer::Draw(WorldOld& InWorld, EntityID InEntity)
     {
         auto* lRb = InWorld.GetComponent<ECS::RigidbodyComponent>(InEntity);
         if (!lRb) { return; }
@@ -42,7 +42,7 @@ namespace Opaax::Editor
         ImGui::DragFloat ("Angular Damping", &lRb->AngularDamping, 0.01f, 0.f, 0.f, "%.2f");
     }
 
-    void RigidbodyDrawer::Add(World& InWorld, EntityID InEntity)
+    void RigidbodyDrawer::Add(WorldOld& InWorld, EntityID InEntity)
     {
         InWorld.AddComponent<ECS::RigidbodyComponent>(InEntity);
     }

@@ -15,12 +15,12 @@
 
 namespace Opaax::Editor
 {
-    bool MoverDrawer::HasComponent(World& InWorld, EntityID InEntity) const
+    bool MoverDrawer::HasComponent(WorldOld& InWorld, EntityID InEntity) const
     {
         return InWorld.GetComponent<ECS::MoverComponent>(InEntity) != nullptr;
     }
 
-    void MoverDrawer::Draw(World& InWorld, EntityID InEntity)
+    void MoverDrawer::Draw(WorldOld& InWorld, EntityID InEntity)
     {
         auto* lMover = InWorld.GetComponent<ECS::MoverComponent>(InEntity);
         if (!lMover) { return; }
@@ -158,7 +158,7 @@ namespace Opaax::Editor
         }
     }
 
-    void MoverDrawer::Add(World& InWorld, EntityID InEntity)
+    void MoverDrawer::Add(WorldOld& InWorld, EntityID InEntity)
     {
         InWorld.AddComponent<ECS::MoverComponent>(InEntity);
     }

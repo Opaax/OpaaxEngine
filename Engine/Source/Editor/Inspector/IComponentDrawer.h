@@ -3,7 +3,7 @@
 #if OPAAX_WITH_EDITOR
 
 #include "Core/EngineAPI.h"
-#include "World/World.h"
+#include "World/WorldOld.h"
 
 namespace Opaax::Editor
 {
@@ -28,12 +28,12 @@ namespace Opaax::Editor
         // Function
         // =============================================================================
 
-        virtual bool HasComponent(World& InWorld, EntityID InEntity) const = 0;
-        virtual void Draw        (World& InWorld, EntityID InEntity)       = 0;
+        virtual bool HasComponent(WorldOld& InWorld, EntityID InEntity) const = 0;
+        virtual void Draw        (WorldOld& InWorld, EntityID InEntity)       = 0;
 
         virtual const char* GetComponentName()                       const = 0;
         virtual bool        CanAdd()                                 const { return false; }
-        virtual void        Add(World& InWorld, EntityID InEntity)         {}
+        virtual void        Add(WorldOld& InWorld, EntityID InEntity)         {}
     };
 
 } // namespace Opaax::Editor

@@ -3,7 +3,7 @@
 #if OPAAX_WITH_EDITOR
 
 #include "Core/EngineAPI.h"
-#include "World/World.h"
+#include "World/WorldOld.h"
 #include "Editor/EditorEventBus.h"
 #include "Editor/IEditorPanel.h"
 
@@ -15,7 +15,7 @@ namespace Opaax::Editor
      *
      * Selection arrives via OnEntitySelectedEvent on the EditorEventBus (subscribed
      * in OnSubscribe). The panel caches the selection in m_SelectedEntity and reads
-     * from the cache each frame — Draw takes only the World.
+     * from the cache each frame — Draw takes only the WorldOld.
      *
      * Extension: register an IComponentDrawer for a component type via
      * ComponentRegistry::RegisterDrawer<T>() to customise its Inspector view.
@@ -36,9 +36,9 @@ namespace Opaax::Editor
     public:
         /**
          * API — parameterised draw called directly by EditorSubsystem.
-         * @param InWorld engine-shared World (entity source).
+         * @param InWorld engine-shared WorldOld (entity source).
          */
-        void Draw(World& InWorld);
+        void Draw(WorldOld& InWorld);
 
         // =============================================================================
         // Override

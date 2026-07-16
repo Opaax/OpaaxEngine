@@ -1,7 +1,7 @@
 #include "IEngine.h"
 
+#include "Core/Engine/Subsystems/EventBus/EngineEventBus.h"
 #include "Core/Engine/Subsystems/Resources/ResourceManager.h"
-#include "Core/Events/EventBus.h"
 
 namespace Opaax
 {
@@ -30,9 +30,9 @@ namespace Opaax
                 return s_NullResources;
             }
 
-            EventBus& GetEventBus() override
+            EngineEventBus& GetEngineEventBus() override
             {
-                static EventBus s_NullBus; // inert — publishes reach no one
+                static EngineEventBus s_NullBus; // inert — publishes reach no one
                 return s_NullBus;
             }
         };

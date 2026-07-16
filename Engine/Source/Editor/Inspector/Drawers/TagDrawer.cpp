@@ -7,12 +7,12 @@
 
 namespace Opaax::Editor
 {
-    bool TagDrawer::HasComponent(World& InWorld, EntityID InEntity) const
+    bool TagDrawer::HasComponent(WorldOld& InWorld, EntityID InEntity) const
     {
         return InWorld.GetComponent<ECS::TagComponent>(InEntity) != nullptr;
     }
 
-    void TagDrawer::Draw(World& InWorld, EntityID InEntity)
+    void TagDrawer::Draw(WorldOld& InWorld, EntityID InEntity)
     {
         auto* lTag = InWorld.GetComponent<ECS::TagComponent>(InEntity);
         if (!lTag) { return; }

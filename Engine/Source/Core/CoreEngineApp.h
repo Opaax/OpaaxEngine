@@ -5,7 +5,7 @@
 #include "Renderer/RenderTarget.hpp"
 #include "Core/Engine/Subsystems/EngineSubsystem.h"
 #include "Systems/GameSubsystem.h"
-#include "World/World.h"
+#include "World/WorldOld.h"
 
 namespace Opaax
 {
@@ -86,7 +86,7 @@ namespace Opaax
         //  Get - Set
         
         Window&         GetWindow() const { return *m_Window; }
-        World&          GetWorld() noexcept;
+        WorldOld&          GetWorld() noexcept;
         SceneManager*   GetSceneManager() noexcept;
         
         /**
@@ -171,10 +171,10 @@ namespace Opaax
         IRenderTarget*              m_RenderTarget        = nullptr;
         UniquePtr<DefaultRenderTarget> m_DefaultRenderTarget;
 
-        // Persistent World — owns all entities + (post-M2.5) the scene stack.
+        // Persistent WorldOld — owns all entities + (post-M2.5) the scene stack.
         // GetWorld() returns this directly. Scene::m_World is orphaned and
         // gets removed in Step 5.
-        World                       m_World;
+        WorldOld                       m_World;
 
 #if OPAAX_WITH_EDITOR
         void LaunchEditor();

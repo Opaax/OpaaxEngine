@@ -7,13 +7,13 @@
 
 namespace Opaax
 {
-    class World;
+    class WorldOld;
 
     /**
      * @class SceneSerializer
      *
-     * Serializes a Scene's entity subset of a World to JSON on disk.
-     * Deserializes JSON back into a World, tagging entities with the destination Scene.
+     * Serializes a Scene's entity subset of a WorldOld to JSON on disk.
+     * Deserializes JSON back into a WorldOld, tagging entities with the destination Scene.
      *
      * Asset references are stored as the canonical asset ID — the manifest's
      * logical name when one exists for the file ("Textures/Player"), otherwise
@@ -33,20 +33,20 @@ namespace Opaax
          * Serialize the active scene's entity subset of InWorld to JSON at InPath.
          * @param InScene scene whose name + SceneID context drives the dump.
          * @param InPath  on-disk JSON destination.
-         * @param InWorld engine-shared World to read entities from.
+         * @param InWorld engine-shared WorldOld to read entities from.
          * @return true on success.
          */
-        static bool Serialize(const Scene& InScene, const char* InPath, const World& InWorld);
+        static bool Serialize(const Scene& InScene, const char* InPath, const WorldOld& InWorld);
 
         /**
          * Deserialize JSON at InPath into InWorld, contributing entities tagged
          * with InScene's SceneID.
          * @param InScene destination scene context (provides SceneID at Step 3+).
          * @param InPath  on-disk JSON source.
-         * @param InWorld engine-shared World to create entities in.
+         * @param InWorld engine-shared WorldOld to create entities in.
          * @return true on success.
          */
-        static bool Deserialize(Scene& InScene, const char* InPath, World& InWorld);
+        static bool Deserialize(Scene& InScene, const char* InPath, WorldOld& InWorld);
 
         /**
          * Serialize the persistent-entity bucket (SceneID == PersistentSceneID)
@@ -54,15 +54,15 @@ namespace Opaax
          * runtime state before play and restore it on stop.
          * @return true on success.
          */
-        static bool SerializePersistents(const World& InWorld, const char* InPath);
+        static bool SerializePersistents(const WorldOld& InWorld, const char* InPath);
 
         /**
          * Deserialize a persistent-bucket dump back into InWorld. Saves and
-         * restores the World's active-SceneID around the load so the deserialized
+         * restores the WorldOld's active-SceneID around the load so the deserialized
          * entities land in the persistent bucket regardless of the current scene.
          * @return true on success; false if the file is missing or malformed.
          */
-        static bool DeserializePersistents(World& InWorld, const char* InPath);
+        static bool DeserializePersistents(WorldOld& InWorld, const char* InPath);
     };
 
 } // namespace Opaax

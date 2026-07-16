@@ -15,24 +15,24 @@ namespace Opaax
 
     // =============================================================================
     // Usage:
-    //   EntityID lEnt = World.CreateEntity("Player");                  // dies with the active scene
-    //   EntityID lHud = World.CreatePersistentEntity("HUD");           // survives scene transitions
-    //   World.AddComponent<TransformComponent>(lEnt, {.Position = {100, 200}});
-    //   auto* lTr = World.GetComponent<TransformComponent>(lEnt);
-    //   World.DestroyEntity(lEnt);
+    //   EntityID lEnt = WorldOld.CreateEntity("Player");                  // dies with the active scene
+    //   EntityID lHud = WorldOld.CreatePersistentEntity("HUD");           // survives scene transitions
+    //   WorldOld.AddComponent<TransformComponent>(lEnt, {.Position = {100, 200}});
+    //   auto* lTr = WorldOld.GetComponent<TransformComponent>(lEnt);
+    //   WorldOld.DestroyEntity(lEnt);
     // =============================================================================
 
     /**
-     * @class World
+     * @class WorldOld
      *
      * Owner of all entities and components, and (post-M2.5) the scene stack.
      * Models Unreal's UWorld owning ULevels.
      *
-     * World does not tick systems — that is the responsibility of the caller
-     * (CoreEngineApp / SceneManager subsystem facade). World is pure data + scene
+     * WorldOld does not tick systems — that is the responsibility of the caller
+     * (CoreEngineApp / SceneManager subsystem facade). WorldOld is pure data + scene
      * lifecycle orchestration.
      */
-    class OPAAX_API World
+    class OPAAX_API WorldOld
     {
         // =============================================================================
         // Constants
@@ -45,20 +45,20 @@ namespace Opaax
         // CTORs - DTOR
         // =============================================================================
     public:
-        World();
-        ~World();
+        WorldOld();
+        ~WorldOld();
 
         // =============================================================================
         // Copy - Delete
         // =============================================================================
-        World(const World&)            = delete;
-        World& operator=(const World&) = delete;
+        WorldOld(const WorldOld&)            = delete;
+        WorldOld& operator=(const WorldOld&) = delete;
 
         // =============================================================================
         // Move
         // =============================================================================
-        World(World&&)                 = default;
-        World& operator=(World&&)      = default;
+        WorldOld(WorldOld&&)                 = default;
+        WorldOld& operator=(WorldOld&&)      = default;
 
         // =============================================================================
         // Function 
@@ -75,7 +75,7 @@ namespace Opaax
             m_Registry.emplace<ECS::TagComponent>(lID, InTag);
             m_Registry.emplace<ECS::UuidComponent>(lID, ECS::GenerateUuid());
             m_Registry.emplace<ECS::SceneIDComponent>(lID, m_ActiveSceneID);
-            OPAAX_CORE_TRACE("World::CreateEntity '{}' — id={} sceneId={}",
+            OPAAX_CORE_TRACE("WorldOld::CreateEntity '{}' — id={} sceneId={}",
                 InTag, static_cast<Uint32>(lID), m_ActiveSceneID);
             m_EntityCount.fetch_add(1, std::memory_order_relaxed);
             return lID;
@@ -90,7 +90,7 @@ namespace Opaax
             m_Registry.emplace<ECS::TagComponent>(lID, InTag);
             m_Registry.emplace<ECS::UuidComponent>(lID, ECS::GenerateUuid());
             m_Registry.emplace<ECS::SceneIDComponent>(lID, PersistentSceneID);
-            OPAAX_CORE_TRACE("World::CreatePersistentEntity '{}' — id={}",
+            OPAAX_CORE_TRACE("WorldOld::CreatePersistentEntity '{}' — id={}",
                 InTag, static_cast<Uint32>(lID));
             m_EntityCount.fetch_add(1, std::memory_order_relaxed);
             return lID;
@@ -213,7 +213,7 @@ namespace Opaax
         void DestroyEntitiesWithSceneID(Uint32 InSceneID);
 
         // Active SceneID — every CreateEntity stamps freshly-created entities with
-        // this value. Set by SceneManager (today) and World::PushScene (when the
+        // this value. Set by SceneManager (today) and WorldOld::PushScene (when the
         // ownership flip lands) before invoking scene OnLoad / scene Deserialize.
         FORCEINLINE Uint32 GetActiveSceneID() const noexcept              { return m_ActiveSceneID; }
         FORCEINLINE void   SetActiveSceneID(Uint32 InSceneID) noexcept    { m_ActiveSceneID = InSceneID; }
