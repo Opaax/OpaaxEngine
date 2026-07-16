@@ -1,6 +1,7 @@
 #include "IEngine.h"
 
 #include "Core/Engine/Subsystems/Resources/ResourceManager.h"
+#include "Core/Events/EventBus.h"
 
 namespace Opaax
 {
@@ -27,6 +28,12 @@ namespace Opaax
             {
                 static ResourceManager s_NullResources; // inert — never Startup()'d
                 return s_NullResources;
+            }
+
+            EventBus& GetEventBus() override
+            {
+                static EventBus s_NullBus; // inert — publishes reach no one
+                return s_NullBus;
             }
         };
     }

@@ -14,6 +14,7 @@ namespace Opaax
     class ILogger;
     class IJobSystem;
     class IWindowManager;
+    class Event;
 
     // =============================================================================
     // OpaaxApplication — base application host. Owns the AppServiceLocator and boots
@@ -96,6 +97,12 @@ namespace Opaax
          * The app loop
          */
         void RunApplication();
+        
+        /**
+         * Mainly Window event to dispatch to other services
+         * @param InEvent 
+         */
+        void OnEvent(Event& InEvent);
         
         /**
          * Make the application shutdown explicit

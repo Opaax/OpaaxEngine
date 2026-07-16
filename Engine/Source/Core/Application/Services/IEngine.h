@@ -4,6 +4,7 @@
 
 namespace Opaax
 {
+    class EngineEventBus;
     class ResourceManager;
 
     // =============================================================================
@@ -74,7 +75,8 @@ namespace Opaax
         // Foundation subsystems — exposed directly
     public:
         virtual ResourceManager& GetResources() = 0;
-        
+        virtual EngineEventBus& GetEngineEventBus() = 0;
+
         // End Foundation subsystems
         // =============================================================================
         

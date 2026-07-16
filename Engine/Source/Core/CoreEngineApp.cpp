@@ -148,7 +148,8 @@ void CoreEngineApp::CreateApplicationWindow()
         EngineConfig::WindowHeight());
 
     m_Window = UniquePtr<Window>(Opaax::Window::Create(lProps));
-    m_Window->SetEventCallback([this](OpaaxEvent& Event) { DispatchEvent(Event); });
+    // Dead path — engine events now flow through OpaaxApplication. Bound empty to satisfy the new signature.
+    m_Window->SetEventCallback([](Event&) {});
 }
 
 void CoreEngineApp::CreateApplicationRenderer()

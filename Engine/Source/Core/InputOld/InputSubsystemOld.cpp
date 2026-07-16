@@ -4,31 +4,31 @@
 
 namespace Opaax
 {
-    bool InputSubsystemOld::HandleKeyPressed(const KeyPressedEvent& Event)
+    bool InputSubsystemOld::HandleKeyPressed(const KeyPressedEventOld& Event)
     {
         SetState(Event.GetKeyCode(), INPUT_STATE_PRESSED);
         return false;
     }
  
-    bool InputSubsystemOld::HandleKeyReleased(const KeyReleasedEvent& Event)
+    bool InputSubsystemOld::HandleKeyReleased(const KeyReleasedEventOld& Event)
     {
         SetState(Event.GetKeyCode(), INPUT_STATE_RELEASED);
         return false;
     }
  
-    bool InputSubsystemOld::HandleMouseButtonPressed(const MouseButtonPressedEvent& Event)
+    bool InputSubsystemOld::HandleMouseButtonPressed(const MouseButtonPressedEventOld& Event)
     {
         SetState(Event.GetMouseButton(), INPUT_STATE_PRESSED);
         return false;
     }
  
-    bool InputSubsystemOld::HandleMouseButtonReleased(const MouseButtonReleasedEvent& Event)
+    bool InputSubsystemOld::HandleMouseButtonReleased(const MouseButtonReleasedEventOld& Event)
     {
         SetState(Event.GetMouseButton(), INPUT_STATE_RELEASED);
         return false;
     }
  
-    bool InputSubsystemOld::HandleMouseMoved(MouseMovedEvent& Event)
+    bool InputSubsystemOld::HandleMouseMoved(MouseMovedEventOld& Event)
     {
         const float lNewX = Event.GetX();
         const float lNewY = Event.GetY();
@@ -81,11 +81,11 @@ namespace Opaax
     {
         OpaaxEventDispatcher lDispatcher(Event);
  
-        lDispatcher.Dispatch<KeyPressedEvent>         ([this](KeyPressedEvent& Event)          { return HandleKeyPressed(Event);          });
-        lDispatcher.Dispatch<KeyReleasedEvent>        ([this](KeyReleasedEvent& Event)         { return HandleKeyReleased(Event);         });
-        lDispatcher.Dispatch<MouseButtonPressedEvent> ([this](MouseButtonPressedEvent& Event)  { return HandleMouseButtonPressed(Event);  });
-        lDispatcher.Dispatch<MouseButtonReleasedEvent>([this](MouseButtonReleasedEvent& Event) { return HandleMouseButtonReleased(Event); });
-        lDispatcher.Dispatch<MouseMovedEvent>         ([this](MouseMovedEvent& Event)          { return HandleMouseMoved(Event);          });
+        lDispatcher.Dispatch<KeyPressedEventOld>         ([this](KeyPressedEventOld& Event)          { return HandleKeyPressed(Event);          });
+        lDispatcher.Dispatch<KeyReleasedEventOld>        ([this](KeyReleasedEventOld& Event)         { return HandleKeyReleased(Event);         });
+        lDispatcher.Dispatch<MouseButtonPressedEventOld> ([this](MouseButtonPressedEventOld& Event)  { return HandleMouseButtonPressed(Event);  });
+        lDispatcher.Dispatch<MouseButtonReleasedEventOld>([this](MouseButtonReleasedEventOld& Event) { return HandleMouseButtonReleased(Event); });
+        lDispatcher.Dispatch<MouseMovedEventOld>         ([this](MouseMovedEventOld& Event)          { return HandleMouseMoved(Event);          });
  
         //Never consume — game code still receives all events via OnEvent.
         return false;

@@ -3,9 +3,9 @@
 #include <VkBootstrap.h>
 #include <GLFW/glfw3.h>
 
-#include "Core/EventOld/ApplicationEventsOld.hpp"
-#include "Core/InputOld/OpaaxInputEvents.hpp"
-#include "Core/InputOld/OpaaxInputTypes.hpp"
+#include "Core/Window/WindowEvents.h"
+#include "Core/Engine/Subsystems/Input/InputEvents.h"
+#include "Core/Engine/Subsystems/Input/InputCodes.h"
 #include "Core/Log/OpaaxLog.h"
 #include "Core/Config/EngineConfig.h"
 #include "RHI/RenderAPI.h"
@@ -102,7 +102,7 @@ namespace Opaax
             lData.Width  = static_cast<Uint32>(InWidth);
             lData.Height = static_cast<Uint32>(InHeight);
  
-            WindowResizeEventOld lEvent(lData.Width, lData.Height);
+            WindowResizeEvent lEvent(lData.Width, lData.Height);
             if (lData.EventCallback) { lData.EventCallback(lEvent); }
         });
  
@@ -110,7 +110,7 @@ namespace Opaax
         glfwSetWindowCloseCallback(m_Window, [](GLFWwindow* InWindow)
         {
             WindowData& lData = *static_cast<WindowData*>(glfwGetWindowUserPointer(InWindow));
-            WindowCloseEventOld lEvent;
+            WindowCloseEvent lEvent;
             if (lData.EventCallback) { lData.EventCallback(lEvent); }
         });
  
@@ -120,12 +120,12 @@ namespace Opaax
             WindowData& lData = *static_cast<WindowData*>(glfwGetWindowUserPointer(InWindow));
             if (InFocused)
             {
-                WindowFocusEventOld lEvent;
+                WindowFocusEvent lEvent;
                 if (lData.EventCallback) { lData.EventCallback(lEvent); }
             }
             else
             {
-                WindowLostFocusEventOld lEvent;
+                WindowLostFocusEvent lEvent;
                 if (lData.EventCallback) { lData.EventCallback(lEvent); }
             }
         });
@@ -134,7 +134,7 @@ namespace Opaax
         glfwSetWindowPosCallback(m_Window, [](GLFWwindow* InWindow, int InX, int InY)
         {
             WindowData& lData = *static_cast<WindowData*>(glfwGetWindowUserPointer(InWindow));
-            WindowMovedEventOld lEvent(InX, InY);
+            WindowMovedEvent lEvent(InX, InY);
             if (lData.EventCallback) { lData.EventCallback(lEvent); }
         });
  
@@ -144,7 +144,7 @@ namespace Opaax
             WindowData& lData = *static_cast<WindowData*>(glfwGetWindowUserPointer(InWindow));
             if (!lData.EventCallback) { return; }
  
-            const auto lKeyCode = static_cast<EOpaaxKeyCode>(InKey);
+            const auto lKeyCode = static_cast<EKeyCode>(InKey);
  
             switch (InAction)
             {
@@ -188,38 +188,38 @@ namespace Opaax
 	            return;
             }
 
-        	EOpaaxKeyCode lButton = EOpaaxKeyCode::None;
+        	EKeyCode lButton = EKeyCode::None;
 
             switch (InButton)
             {
             case GLFW_MOUSE_BUTTON_LEFT:
-            	lButton = EOpaaxKeyCode::Mouse_Left;
+            	lButton = EKeyCode::Mouse_Left;
 	            break;
             case GLFW_MOUSE_BUTTON_RIGHT:
-            	lButton = EOpaaxKeyCode::Mouse_Right;
+            	lButton = EKeyCode::Mouse_Right;
 	            break;
             case GLFW_MOUSE_BUTTON_MIDDLE:
-            	lButton = EOpaaxKeyCode::Mouse_Middle;
+            	lButton = EKeyCode::Mouse_Middle;
 	            break;
             case GLFW_MOUSE_BUTTON_4:
-            	lButton = EOpaaxKeyCode::Mouse_Button4;
+            	lButton = EKeyCode::Mouse_Button4;
 	            break;
             case GLFW_MOUSE_BUTTON_5:
-            	lButton = EOpaaxKeyCode::Mouse_Button5;
+            	lButton = EKeyCode::Mouse_Button5;
 	            break;
             case GLFW_MOUSE_BUTTON_6:
-            	lButton = EOpaaxKeyCode::Mouse_Button6;
+            	lButton = EKeyCode::Mouse_Button6;
 	            break;
             case GLFW_MOUSE_BUTTON_7:
-            	lButton = EOpaaxKeyCode::Mouse_Button7;
+            	lButton = EKeyCode::Mouse_Button7;
 	            break;
             case GLFW_MOUSE_BUTTON_8:
-            	lButton = EOpaaxKeyCode::Mouse_Button8;
+            	lButton = EKeyCode::Mouse_Button8;
 	            break;
             default: ;
             }
 
-        	if (lButton == EOpaaxKeyCode::None)
+        	if (lButton == EKeyCode::None)
         	{
         		OPAAX_CORE_ERROR("Receive Mouse button pressed, but no conversion to Opaax Type is found");
         		return;

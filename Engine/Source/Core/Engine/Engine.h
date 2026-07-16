@@ -5,10 +5,12 @@
 #include "Core/Application/Services/IJobSystem.h"
 #include "Subsystems/Renderer/RendererManager.h"
 #include "FrameInfo.hpp"
+#include "Core/Events/EventBus.h"
 
 namespace Opaax
 {
     class ResourceManager;
+    class EngineEventBus;
     
     inline constexpr double MAX_FRAME_DELTA = 0.25;
 
@@ -86,6 +88,7 @@ namespace Opaax
         void Shutdown() override;
 
         ResourceManager& GetResources() override;
+        EngineEventBus&  GetEngineEventBus() override;
         //~End IEngine interface
 
         // =============================================================================
@@ -108,11 +111,16 @@ namespace Opaax
 
         // End Delta Time
         // =============================================================================
-        
+
         /**
          * Handle Subsystem lifetime
          */
         EngineSubsystemMgr m_Subsystems;
+        
+        /**
+         * Convenient ptr, lifetime not managed by engine itself but through subsystem
+         */
+        EngineEventBus* m_EngineEventBus;
 
         /**
          * Convenient ptr, lifetime not managed by engine itself but through subsystem
@@ -123,9 +131,6 @@ namespace Opaax
          * Convenient ptr, lifetime not managed by engine itself but through subsystem
          */
         RendererManager*   m_RendererManager = nullptr;
-        
-        
-        
 
         // Per-frame delta-time source (steady clock). Stored as nanoseconds so the header
         // stays <chrono>-free; the clock read + conversion live in Engine::Loop.

@@ -70,11 +70,11 @@ namespace Opaax
             if (lIdx < INPUT_STATE_COUNT) { m_Current[lIdx] = bDown; }
         }
  
-        bool HandleKeyPressed(const KeyPressedEvent& Event);
-        bool HandleKeyReleased(const KeyReleasedEvent& Event);
-        bool HandleMouseButtonPressed(const MouseButtonPressedEvent& Event);
-        bool HandleMouseButtonReleased(const MouseButtonReleasedEvent& Event);
-        bool HandleMouseMoved(MouseMovedEvent& Event);
+        bool HandleKeyPressed(const KeyPressedEventOld& Event);
+        bool HandleKeyReleased(const KeyReleasedEventOld& Event);
+        bool HandleMouseButtonPressed(const MouseButtonPressedEventOld& Event);
+        bool HandleMouseButtonReleased(const MouseButtonReleasedEventOld& Event);
+        bool HandleMouseMoved(MouseMovedEventOld& Event);
 
         //-------------------------------------------------------------------------------
         

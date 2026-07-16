@@ -3,13 +3,15 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/OpaaxForward.h"
-#include "Core/EventOld/OpaaxEvent.hpp"
 
 namespace Opaax
 {
     class IGraphicsContext;
+    // Forward-declared (used only by reference in the callback signature) so Window.h
+    // does not drag the event-types header into every consumer.
+    class Event;
 
-    using EventCallbackFunc = TFunction<void(OpaaxEvent&)>;
+    using EventCallbackFunc = TFunction<void(Event&)>;
     
     enum class WindowMode
     {

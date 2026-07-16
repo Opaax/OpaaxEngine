@@ -6,6 +6,9 @@
 #include "Core/Application/Services/IPaths.h"
 #include "Core/Config/Config_Engine.h"
 #include "Core/Config/Config_Renderer.h"
+#include "Core/Application/Services/IEngine.h"
+#include "Core/Events/EventBus.h"
+#include "Core/Window/WindowEvents.h"
 
 #include "RHI/RenderAPI.h"        // BackendFromString
 #include "RHI/RenderLog.h"        // ERenderLogLevel
@@ -83,12 +86,24 @@ namespace Opaax
             return false;
         }
 
+        // Seed the cached viewport with the initial size; the bus keeps it current.
+        m_ViewWidth  = lDesc.Width;
+        m_ViewHeight = lDesc.Height;
+
+        // React to window resize via the Tier-3 bus — replaces the per-frame size poll.
+        OpaaxApplication::GetAppService<IEngine>().GetEventBus()
+            .Subscribe<WindowResize>(this, &RendererManager::OnWindowResized);
+
         OPAAX_LOG(LogRendererManager, Info, "RendererManager started ({}x{})", lDesc.Width, lDesc.Height)
         return true;
     }
 
     void RendererManager::Shutdown()
     {
+        // Unsubscribe BEFORE teardown — a late resize event must not reach a handler that
+        // would touch a destroyed m_RenderSystem.
+        OpaaxApplication::GetAppService<IEngine>().GetEventBus().UnsubscribeAll(this);
+
         m_RenderSystem.reset(); // ~RenderSystem = WaitIdle + teardown while the window/context is alive
         OPAAX_LOG(LogRendererManager, Info, "RendererManager shutdown")
     }
@@ -104,14 +119,9 @@ namespace Opaax
             return;
         }
 
-        // No resize event system yet — poll the window size each frame (the documented bridge).
-        Uint32 lWidth = 0, lHeight = 0;
-        if (Window* lWindow = OpaaxApplication::GetAppService<IWindowManager>().GetMainWindow())
-        {
-            lWidth  = lWindow->GetWidth();
-            lHeight = lWindow->GetHeight();
-            m_RenderSystem->Resize(lWidth, lHeight);
-        }
+        // Viewport size is bus-driven (OnWindowResized) — no per-frame polling.
+        const Uint32 lWidth  = m_ViewWidth;
+        const Uint32 lHeight = m_ViewHeight;
         if (lWidth == 0 || lHeight == 0) { return; }
 
         // Centered Y-up ortho: world (0,0) at screen centre, 1 unit = 1px. A camera-view system
@@ -128,5 +138,22 @@ namespace Opaax
         m_RenderSystem->GetRenderer2D().DrawQuad(Vector2F(0.f, 0.f), Vector2F(200.f, 200.f), Vector4F(1.f, 1.f, 0.f, 1.f));
         m_RenderSystem->EndScene();
         m_RenderSystem->EndFrame();
+    }
+
+    // =========================================================================
+    // Bus handler — window resize (Tier-3). Updates the cached viewport + resizes
+    // the render core. Runs at the frame's Flush, before Render.
+    // =========================================================================
+    void RendererManager::OnWindowResized(const WindowResize& InResize)
+    {
+        m_ViewWidth  = InResize.Width;
+        m_ViewHeight = InResize.Height;
+
+        if (m_RenderSystem)
+        {
+            m_RenderSystem->Resize(m_ViewWidth, m_ViewHeight);
+        }
+
+        OPAAX_LOG(LogRendererManager, Trace, "Viewport resized to {}x{} (via event bus)", m_ViewWidth, m_ViewHeight)
     }
 }

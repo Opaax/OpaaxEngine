@@ -12,6 +12,10 @@
 
 #include "Services/Window/IWindowManager.h"
 #include "Services/Window/WindowManager.h"
+#include "Core/Events/Event.h"
+#include "Core/Window/WindowEvents.h"
+#include "Core/Engine/Subsystems/Input/InputEvents.h"
+#include "Core/Events/EventBus.h"
 
 #ifdef OPAAX_PLATFORM_WINDOWS
 #include "Core/Application/Services/Platforms/Windows/WindowsPlatform.h"
@@ -162,6 +166,12 @@ void OpaaxApplication::InitializeApplication()
 void OpaaxApplication::CreateApplicationWindow()
 {
     WindowManager().CreateMainWindow();
+
+    // Route the main window's Tier-1 events into OnEvent (the app-level sink).
+    if (Window* lWindow = WindowManager().GetMainWindow())
+    {
+        lWindow->SetEventCallback([this](Event& InEvent) { OnEvent(InEvent); });
+    }
 }
 
 void OpaaxApplication::CreateApplicationRenderer()
@@ -213,6 +223,26 @@ void OpaaxApplication::RunApplication()
     }
 }
 
+void OpaaxApplication::OnEvent(Event& InEvent)
+{
+    EventDispatcher lDispatcher(InEvent);
+
+    lDispatcher.Dispatch<WindowCloseEvent>([this](WindowCloseEvent&)
+    {
+        OPAAX_APP_LOG(Info, "WindowCloseEvent - requesting shutdown")
+        bIsRunning = false;
+        return true;
+    });
+
+    // Republish the resize as a Tier-3 POD so decoupled systems (renderer, camera, ...)
+    // react without the window ever knowing them. Queued — delivered at the frame's Flush.
+    lDispatcher.Dispatch<WindowResizeEvent>([this](WindowResizeEvent& InResize)
+    {
+        Engine().GetEventBus().Enqueue(InResize.GetPayload());
+        return false;
+    });
+}
+
 void OpaaxApplication::ShutdownApplication()
 {
     OPAAX_APP_LOG(Trace, "Shutdown Application")
@@ -237,7 +267,7 @@ void OpaaxApplication::EngineStartup()
 }
 
 // =============================================================================
-// Getter
+// Getters
 // =============================================================================
 
 IPlatform&          OpaaxApplication::Platform()        { return m_Services.Get<IPlatform>();       }

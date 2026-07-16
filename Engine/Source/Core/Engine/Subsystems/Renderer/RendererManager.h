@@ -12,6 +12,7 @@
 namespace Opaax
 {
     class RenderSystem;
+    struct WindowResize;
 
     inline constexpr LogCategory LogRendererManager{"RendererManager"};
 
@@ -67,9 +68,18 @@ namespace Opaax
         //~End EngineSubsystemBase Interface
 
         // =============================================================================
+        // Functions
+        // =============================================================================
+    private:
+        // Bus handler — updates the cached viewport size and resizes the render core.
+        void OnWindowResized(const WindowResize& InResize);
+
+        // =============================================================================
         // Members
         // =============================================================================
     private:
         UniquePtr<RenderSystem> m_RenderSystem;
+        Uint32                  m_ViewWidth  = 0;
+        Uint32                  m_ViewHeight = 0;
     };
 }

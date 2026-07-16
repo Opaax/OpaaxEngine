@@ -10,6 +10,7 @@
 //Subsystems
 #include "Core/Engine/Subsystems/Resources/ResourceManager.h"
 #include "Maths/MathsStatics.h"
+#include "Subsystems/EventBus/EngineEventBus.h"
 #include "Subsystems/Renderer/RendererManager.h"
 
 namespace Opaax
@@ -21,6 +22,7 @@ namespace Opaax
     // =========================================================================
     Engine::Engine()
     {
+        m_Subsystems.RegisterSubsystem<EngineEventBus>();
         m_Subsystems.RegisterSubsystem<ResourceManager>();
         m_Subsystems.RegisterSubsystem<RendererManager>();
     }
@@ -96,6 +98,7 @@ namespace Opaax
         
         m_Resources         = m_Subsystems.GetSubsystem<ResourceManager>();
         m_RendererManager   = m_Subsystems.GetSubsystem<RendererManager>();
+        m_EngineEventBus    = m_Subsystems.GetSubsystem<EngineEventBus>();
         
         // Wire the async worker pool from the app service locator (null object if none),
         // so ResourceManager::LoadAsync can run file IO/decode off the main thread.
@@ -105,6 +108,9 @@ namespace Opaax
         }
 
         m_bStarted  = true;
+        
+        //TODO
+        //m_EngineEventBus->Publish(EngineStart)
 
         OPAAX_ENGINE_LOG(Info, "Engine started ({} subsystem(s))", m_Subsystems.GetSystems().size())
         return true;
@@ -120,7 +126,11 @@ namespace Opaax
     {
         // Publish finished async jobs back to their main-thread completions first.
         m_JobSystem->DrainCompletions();
-        
+
+        // Single flush point — deliver this frame's queued events (window/input enqueued
+        // in OnEvent before Loop, plus any from the job completions above) before update.
+        m_EngineEventBus->GetEventBus().Flush();
+
         // ----------------------------------------------------------------
         // 2. Time
         // ----------------------------------------------------------------
@@ -147,6 +157,10 @@ namespace Opaax
         {
             return;
         } // idempotent (dtor + OnShutdown both call this)
+        
+        //TODO
+        //m_EngineEventBus->Publish(EngineShuttingDown)
+        // Wait for event bus flush?
 
         m_Subsystems.ShutdownAll();
         m_Resources = nullptr;
@@ -185,6 +199,18 @@ namespace Opaax
             Startup();
         }
         
+        OPAAX_ASSERT(m_Resources != nullptr);
         return *m_Resources;
+    }
+
+    EngineEventBus& Engine::GetEngineEventBus()
+    {
+        if (!m_bStarted)
+        {
+            Startup();
+        }
+        
+        OPAAX_ASSERT(m_EngineEventBus != nullptr);
+        return *m_EngineEventBus;
     }
 }

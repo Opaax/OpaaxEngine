@@ -5,21 +5,21 @@
 namespace Opaax
 {
     /**
-     * @class KeyEvent
+     * @class KeyEventOld
      *
      * Base, not dispatched directly
      */
-    class OPAAX_API KeyEvent : public OpaaxEvent
+    class OPAAX_API KeyEventOld : public OpaaxEvent
     {
         // =============================================================================
-        // CTOR 
+        // CTOR
         // =============================================================================
     protected:
-        explicit KeyEvent(EOpaaxKeyCode InKeyCode) noexcept
+        explicit KeyEventOld(EOpaaxKeyCode InKeyCode) noexcept
             : m_KeyCode(InKeyCode) {}
 
         // =============================================================================
-        // Functions 
+        // Functions
         // =============================================================================
     public:
         // -----------------------------------------------------------------------------
@@ -27,33 +27,33 @@ namespace Opaax
         FORCEINLINE EOpaaxKeyCode GetKeyCode() const noexcept { return m_KeyCode; }
 
         // =============================================================================
-        // Implementation 
+        // Implementation
         // =============================================================================
         OPAAX_EVENT_CLASS_CATEGORY(EEventCategory_Input | EEventCategory_Keyboard)
 
         // =============================================================================
-        // Members 
+        // Members
         // =============================================================================
     private:
         EOpaaxKeyCode m_KeyCode;
     };
 
     /**
-     * @class KeyPressedEvent
+     * @class KeyPressedEventOld
      *
      * bIsRepeat distinguishes initial press from OS key-repeat.
      */
-    class OPAAX_API KeyPressedEvent final : public KeyEvent
+    class OPAAX_API KeyPressedEventOld final : public KeyEventOld
     {
         // =============================================================================
-        // CTOR 
+        // CTOR
         // =============================================================================
     public:
-        KeyPressedEvent(EOpaaxKeyCode InKeyCode, bool InIsRepeat) noexcept
-            : KeyEvent(InKeyCode), m_bIsRepeat(InIsRepeat) {}
+        KeyPressedEventOld(EOpaaxKeyCode InKeyCode, bool InIsRepeat) noexcept
+            : KeyEventOld(InKeyCode), m_bIsRepeat(InIsRepeat) {}
 
         // =============================================================================
-        // Functions 
+        // Functions
         // =============================================================================
     public:
         // -----------------------------------------------------------------------------
@@ -61,54 +61,54 @@ namespace Opaax
         FORCEINLINE bool IsRepeat() const noexcept { return m_bIsRepeat; }
 
         // =============================================================================
-        // Implementation 
+        // Implementation
         // =============================================================================
 
         OPAAX_EVENT_CLASS_TYPE(EEventTypeOld::KeyPressed)
 
         // =============================================================================
-        // Members 
+        // Members
         // =============================================================================
     private:
         bool m_bIsRepeat;
     };
 
     /**
-     * @class KeyReleasedEvent
+     * @class KeyReleasedEventOld
      */
-    class OPAAX_API KeyReleasedEvent final : public KeyEvent
+    class OPAAX_API KeyReleasedEventOld final : public KeyEventOld
     {
         // =============================================================================
-        // CTOR 
+        // CTOR
         // =============================================================================
     public:
-        explicit KeyReleasedEvent(EOpaaxKeyCode InKeyCode) noexcept
-            : KeyEvent(InKeyCode) {}
+        explicit KeyReleasedEventOld(EOpaaxKeyCode InKeyCode) noexcept
+            : KeyEventOld(InKeyCode) {}
 
         // =============================================================================
-        // Implementation 
+        // Implementation
         // =============================================================================
 
         OPAAX_EVENT_CLASS_TYPE(EEventTypeOld::KeyReleased)
     };
 
     /**
-     * @class KeyTypedEvent
+     * @class KeyTypedEventOld
      *
      * Carries a Unicode codepoint, not a keycode.
      * Use this for text input (chat, debug console, name entry). Do NOT use for gameplay key detection.
      */
-    class OPAAX_API KeyTypedEvent final : public OpaaxEvent
+    class OPAAX_API KeyTypedEventOld final : public OpaaxEvent
     {
         // =============================================================================
-        // CTOR 
+        // CTOR
         // =============================================================================
     public:
-        explicit KeyTypedEvent(Uint32 InCodepoint) noexcept
+        explicit KeyTypedEventOld(Uint32 InCodepoint) noexcept
             : m_Codepoint(InCodepoint) {}
 
         // =============================================================================
-        // Functions 
+        // Functions
         // =============================================================================
     public:
         // -----------------------------------------------------------------------------
@@ -116,7 +116,7 @@ namespace Opaax
         FORCEINLINE Uint32 GetCodepoint() const noexcept { return m_Codepoint; }
 
         // =============================================================================
-        // Implementation 
+        // Implementation
         // =============================================================================
 
         OPAAX_EVENT_CLASS_TYPE(EEventTypeOld::KeyTyped)
@@ -132,25 +132,25 @@ namespace Opaax
     // Is kind of duplicated of KeyEvent since the enum keycode is the same for mouse input/Key input.
     // But I think its worth in this case.
     // Use variant in the future ? std::variant<EKeycode, EMouseCode, EGamepadCode>?
-    //    
+    //
     // ==========================================================================================================
 
     /**
-     * @class MouseButtonEvent
+     * @class MouseButtonEventOld
      *
      * Base, not dispatched directly
      */
-    class OPAAX_API MouseButtonEvent : public OpaaxEvent
+    class OPAAX_API MouseButtonEventOld : public OpaaxEvent
     {
         // =============================================================================
-        // CTOR 
+        // CTOR
         // =============================================================================
     protected:
-        explicit MouseButtonEvent(EOpaaxKeyCode InButton) noexcept
+        explicit MouseButtonEventOld(EOpaaxKeyCode InButton) noexcept
             : m_Button(InButton) {}
 
         // =============================================================================
-        // Functions 
+        // Functions
         // =============================================================================
     public:
         // -----------------------------------------------------------------------------
@@ -158,71 +158,71 @@ namespace Opaax
         FORCEINLINE EOpaaxKeyCode GetMouseButton() const noexcept { return m_Button; }
 
         // =============================================================================
-        // Implementation 
+        // Implementation
         // =============================================================================
 
         OPAAX_EVENT_CLASS_CATEGORY(EEventCategory_Input | EEventCategory_Mouse | EEventCategory_MouseButton)
 
         // =============================================================================
-        // Members 
+        // Members
         // =============================================================================
     private:
         EOpaaxKeyCode m_Button;
     };
 
     /**
-     * @class MouseButtonPressedEvent
+     * @class MouseButtonPressedEventOld
      */
-    class OPAAX_API MouseButtonPressedEvent final : public MouseButtonEvent
+    class OPAAX_API MouseButtonPressedEventOld final : public MouseButtonEventOld
     {
         // =============================================================================
-        // CTOR  
+        // CTOR
         // =============================================================================
     public:
-        explicit MouseButtonPressedEvent(EOpaaxKeyCode InButton) noexcept
-            : MouseButtonEvent(InButton) {}
+        explicit MouseButtonPressedEventOld(EOpaaxKeyCode InButton) noexcept
+            : MouseButtonEventOld(InButton) {}
 
         // =============================================================================
-        // Implementation 
+        // Implementation
         // =============================================================================
 
         OPAAX_EVENT_CLASS_TYPE(EEventTypeOld::MouseButtonPressed)
     };
 
     /**
-     * @class MouseButtonReleasedEvent
+     * @class MouseButtonReleasedEventOld
      */
-    class OPAAX_API MouseButtonReleasedEvent final : public MouseButtonEvent
+    class OPAAX_API MouseButtonReleasedEventOld final : public MouseButtonEventOld
     {
         // =============================================================================
-        // CTOR  
+        // CTOR
         // =============================================================================
     public:
-        explicit MouseButtonReleasedEvent(EOpaaxKeyCode InButton) noexcept
-            : MouseButtonEvent(InButton) {}
+        explicit MouseButtonReleasedEventOld(EOpaaxKeyCode InButton) noexcept
+            : MouseButtonEventOld(InButton) {}
 
         // =============================================================================
-        // Implementation 
+        // Implementation
         // =============================================================================
 
         OPAAX_EVENT_CLASS_TYPE(EEventTypeOld::MouseButtonReleased)
     };
 
     /**
-     * @class MouseMovedEvent
+     * @class MouseMovedEventOld
      */
-    class OPAAX_API MouseMovedEvent final : public OpaaxEvent
+    class OPAAX_API MouseMovedEventOld final : public OpaaxEvent
     {
         // =============================================================================
-        // CTOR  
+        // CTOR
         // =============================================================================
     public:
-        MouseMovedEvent(float InX, float InY) noexcept
+        MouseMovedEventOld(float InX, float InY) noexcept
             : m_X(InX), m_Y(InY)
         {}
 
         // =============================================================================
-        // Functions 
+        // Functions
         // =============================================================================
     public:
         // -----------------------------------------------------------------------------
@@ -231,35 +231,35 @@ namespace Opaax
         FORCEINLINE float GetY() const noexcept { return m_Y; }
 
         // =============================================================================
-        // Implementation 
+        // Implementation
         // =============================================================================
-        
+
         OPAAX_EVENT_CLASS_TYPE(EEventTypeOld::MouseMoved)
         OPAAX_EVENT_CLASS_CATEGORY(EEventCategory_Input | EEventCategory_Mouse)
 
         // =============================================================================
-        // Members 
+        // Members
         // =============================================================================
     private:
         float m_X;
         float m_Y;
     };
- 
+
     /**
-     * @class MouseScrolledEvent
+     * @class MouseScrolledEventOld
      */
-    class OPAAX_API MouseScrolledEvent final : public OpaaxEvent
+    class OPAAX_API MouseScrolledEventOld final : public OpaaxEvent
     {
         // =============================================================================
-        // CTOR 
+        // CTOR
         // =============================================================================
     public:
-        MouseScrolledEvent(float InXOffset, float InYOffset) noexcept
+        MouseScrolledEventOld(float InXOffset, float InYOffset) noexcept
             : m_XOffset(InXOffset), m_YOffset(InYOffset)
         {}
 
         // =============================================================================
-        // Functions 
+        // Functions
         // =============================================================================
     public:
         // -----------------------------------------------------------------------------
@@ -268,13 +268,13 @@ namespace Opaax
         FORCEINLINE float GetYOffset() const noexcept { return m_YOffset; }
 
         // =============================================================================
-        // Implementation 
+        // Implementation
         // =============================================================================
         OPAAX_EVENT_CLASS_TYPE(EEventTypeOld::MouseScrolled)
         OPAAX_EVENT_CLASS_CATEGORY(EEventCategory_Input | EEventCategory_Mouse)
 
         // =============================================================================
-        // Members 
+        // Members
         // =============================================================================
     private:
         float m_XOffset;
