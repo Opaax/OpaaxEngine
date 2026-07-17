@@ -5,7 +5,7 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/OpaaxStringID.hpp"
-#include "Core/Component/OpaaxComponent.h"
+#include "Core/ComponentOld/OpaaxComponent.h"
 #include "Core/Container/TPolymorphicList.hpp"
 #include "Core/Log/OpaaxLog.h"
 #include "World/WorldOld.h"

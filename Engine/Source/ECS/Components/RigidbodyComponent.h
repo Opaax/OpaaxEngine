@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Core/Component/OpaaxComponent.h"
+#include "Core/ComponentOld/OpaaxComponent.h"
 #include "Physics/PhysicsTypes.h"
 
 namespace Opaax::ECS

@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "Assets/AssetHandle.hpp"
 #include "Core/OpaaxMathTypes.h"
-#include "Core/Component/OpaaxComponent.h"
+#include "Core/ComponentOld/OpaaxComponent.h"
 #include "Renderer/RenderLayer.h"
 
 namespace Opaax::ECS

@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "Core/OpaaxStringID.hpp"
-#include "Core/Component/OpaaxComponent.h"
+#include "Core/ComponentOld/OpaaxComponent.h"
 
 namespace Opaax::ECS
 {

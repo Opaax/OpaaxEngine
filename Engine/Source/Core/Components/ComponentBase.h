@@ -14,6 +14,5 @@ namespace Opaax
     
     struct OPAAX_API ComponentBase : IComponent
     {
-        
     };
 }

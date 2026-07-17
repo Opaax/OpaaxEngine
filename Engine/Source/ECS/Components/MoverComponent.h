@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Core/Component/OpaaxComponent.h"
+#include "Core/ComponentOld/OpaaxComponent.h"
 #include "Core/OpaaxMathTypes.h"
 #include "Core/OpaaxStringID.hpp"
 

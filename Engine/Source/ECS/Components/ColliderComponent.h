@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Assets/AssetHandle.hpp"
-#include "Core/Component/OpaaxComponent.h"
+#include "Core/ComponentOld/OpaaxComponent.h"
 #include "Core/OpaaxMathTypes.h"
 #include "Physics/PhysicsTypes.h"
 #include "Physics/Collision/CollisionChannel.h"

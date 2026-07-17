@@ -1,5 +1,5 @@
 #pragma once
-#include "Core/Component/OpaaxComponent.h"
+#include "Core/ComponentOld/OpaaxComponent.h"
 #include "ECS/OpaaxEntity.hpp"
 
 namespace Opaax::ECS

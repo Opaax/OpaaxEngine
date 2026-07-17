@@ -1,6 +1,6 @@
 #pragma once
 #include "Core/OpaaxTypes.h"
-#include "Core/Component/OpaaxComponent.h"
+#include "Core/ComponentOld/OpaaxComponent.h"
 
 namespace Opaax::ECS
 {
