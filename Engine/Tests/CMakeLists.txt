@@ -33,6 +33,10 @@ set(OPAAX_TEST_SOURCES
     ECS/MoverComponentTests.cpp
     ECS/HierarchyTests.cpp
     ECS/ComponentRegistryTests.cpp
+
+    # Perf micro-benchmarks — doctest suite "perf", SKIPPED by default so `build.bat test` + CI
+    # stay fast. Run in RELEASE via `build.bat bench`. See Perf/PerfBench.h.
+    Perf/EcsPerf.cpp
 )
 
 add_executable(OpaaxTests ${OPAAX_TEST_SOURCES})

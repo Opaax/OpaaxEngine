@@ -188,8 +188,12 @@ clash. Two unscoped enums sharing enumerator names collide the moment one TU nee
   decide once, then build the decided version. Most back-and-forth in `lessons.md` is a fork found mid-build.
 - **Gates:** every milestone step has a demo gate + unit-test gate. A red build right after your change is
   not proof your change broke it — `git status` shows your true blast radius (**L5**).
-- **Perf is a gate, not a vibe:** systems on the hot path (bullets, sprites, bodies) carry a perf budget
-  checked by a micro-bench (see `OpaaxTests` bench target).
+- **Perf is a gate, not a vibe:** hot-path systems (bullets, sprites, bodies) carry a *loose* perf budget.
+  Bench cases live in `Engine/Tests/Perf/` as a doctest suite `"perf"` marked `skip()` — they never run in
+  `build.bat test`/CI (unit baseline stays 106/426). Run RELEASE via **`./build.bat bench`**. Soft gate:
+  budgets catch algorithmic/allocation regressions (O(n²), per-op alloc), NOT micro-noise; watch the printed
+  ns/op yourself for ~2× drift. Helper: `Engine/Tests/Perf/PerfBench.h` (median-of-epochs, homegrown — a
+  loose gate doesn't need nanobench). Add a case → add its path to `Engine/Tests/CMakeLists.txt` (explicit list).
 
 ---
 
