@@ -149,3 +149,24 @@ unresolved externals. **Rule:** before an edit framed as "just remove X," grep w
 same flag/condition*; the fix is usually to flip the CONDITION (here: engine DLL always
 `OPAAX_WITH_EDITOR=0`, which `release` already proved), not to hunt every consumer. When you flip a
 load-bearing flag, check what ELSE it gated (here `IPaths`' workspace-dir branch) and decouple it.
+
+## L9 — `git commit` takes the whole INDEX; a pre-populated index sweeps in the user's staged WIP (2026-07-18)
+
+**What happened:** asked to commit only the `.claude/` durable-knowledge docs, I ran `git add .claude/ &&
+git commit`. The index was NOT empty — the session-start `git status` first column already showed the
+user's staged WIP (`AD` Engine `IAppService` moves, `R`/`RM` Sandbox renames). `git commit` committed
+*everything staged*, producing a mixed commit (my docs + their in-flight refactor under a docs-only
+message) that ALSO missed my unstaged `.gitignore` change. Recovered with `git reset --soft HEAD~1` then a
+**pathspec commit** (`git commit .claude/ .gitignore -m …`), which commits only the named paths and leaves
+all other staged entries exactly as they were.
+
+**Rule for next time:**
+- Before ANY commit, read the index. `git status --short`: the **first column** is what's staged. If it
+  shows anything you didn't put there, a bare `git commit` will include it. This is doubly true here — the
+  session-start snapshot already listed staged `AD`/`R`/`RM` entries; I had that info and still missed it.
+- To commit a specific slice regardless of index state, use a **pathspec commit** (`git commit <paths>`).
+  It ignores other staged paths and leaves them staged — the surgical tool when the user has WIP staged.
+- Committing the user's staged WIP is touching their work (see [[L5]]): if it happens, STOP, say so
+  explicitly, and offer the `reset --soft` + re-scope fix rather than leaving misleading history.
+- Don't forget your OWN related unstaged changes (the `.gitignore` narrowing belonged in the same commit) —
+  the "what belongs together" set spans staged and unstaged.
