@@ -52,8 +52,17 @@ build/*
 # Editor PIE temp snapshots (project-root-relative under EditorTemp/)
 EditorTemp/
 
-#Claude AI
+#Claude AI — ignore local/volatile by default; TRACK durable knowledge so it survives clean/clone.
+# (The plan-mode mirror was lost because this whole tree was ignored — never again.)
 /.claude/*
+!/.claude/CLAUDE.md
+!/.claude/lessons.md
+!/.claude/ARCHITECTURE.md
+!/.claude/plans/
+!/.claude/plans/**
+!/.claude/skills/
+!/.claude/skills/**
+# Stays local on purpose: CLAUDE.local.md (personal/machine), data/ (large PDFs), task/ (disposable working state), Old/ (archive).
 
 
 #Shmup
