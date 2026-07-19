@@ -28,11 +28,11 @@ set(OPAAX_TEST_SOURCES
     Core/Application/OpaaxApplicationBootTests.cpp
     Core/Engine/Subsystems/Resources/ResourceSystemTests.cpp
     Core/World/WorldEventsTests.cpp
-    Physics/CollisionProfileTests.cpp
     Assets/AssetIdResolveTests.cpp
-    ECS/MoverComponentTests.cpp
-    ECS/HierarchyTests.cpp
-    ECS/ComponentRegistryTests.cpp
+
+    # NOTE: old-world tests (ECS/ComponentRegistry, ECS/Hierarchy, ECS/MoverComponent,
+    # Physics/CollisionProfile) were quarantined to Tests/Legacy/ with the old world they
+    # exercise (ARCHITECTURE.md X1). Re-add live equivalents when the new world grows them.
 
     # Perf micro-benchmarks — doctest suite "perf", SKIPPED by default so `build.bat test` + CI
     # stay fast. Run in RELEASE via `build.bat bench`. See Perf/PerfBench.h.

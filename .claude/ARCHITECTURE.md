@@ -156,9 +156,15 @@ editor module slots in before the seal.
 
 ## X — Old/new coexistence
 
-**X1 — The old world is dead but still compiled.** `CoreEngineApp`, every `*Old` type, `EventOld/`,
-`Core/Systems/Subsystem.h`'s old managers, the static `RenderCommand` path — all retired. **Do not add new
-dependencies on any of it.** It will be deleted; anything you hang off it dies with it.
+**X1 — The old world is quarantined in `Engine/Source/Legacy/` and dropped from the build (2026-07-19).**
+`CoreEngineApp`, every `*Old` type, `EventOld/`, the old `Scene/`/`World/`/`ECS/`/`Physics/` trees, the old
+editor (`Engine/Source/Editor/`), the old subsystems (`Core/Systems/{GameSubsystem,MoverSubsystem,
+PhysicsSubsystem,Movement}`), the old renderer (`Camera/` controllers, `Pass/`, `Systems/WorldRenderSystem`,
+`RenderSubsystem`), and the static `RenderCommand` path — all live under `Engine/Source/Legacy/`, **NOT globbed
+by the engine DLL** (compiled = zero). Their old-world tests live in `Engine/Tests/Legacy/`. **Do not add new
+dependencies on any of it, and do not re-glob `Legacy/`.** It will be deleted; anything you hang off it dies with
+it. *(Exception: `Core/Systems/Subsystem.h` — `ISubsystem`/`ISubsystemManager` — stayed LIVE; it is the base of
+the new `EngineSubsystemBase`.)* Next: Gregory-layer the live remainder (plan `inherited-orbiting-clover.md`).
 **X2 — New systems get collision-proof identities up front.** When old and new coexist, the *new* type gets
 a scoped `enum class` / distinct name — never rely on include order or forward-decl tricks to avoid a
 clash. Two unscoped enums sharing enumerator names collide the moment one TU needs both (**L4**).
