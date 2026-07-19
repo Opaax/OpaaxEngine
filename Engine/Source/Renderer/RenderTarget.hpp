@@ -12,12 +12,12 @@ namespace Opaax
      *
      * Abstraction over "where does the renderer draw to".
      *
-     * In game mode    : DefaultRenderTarget — draws to the backbuffer (no-op bind).
-     * In editor mode  : EditorRenderTarget  — draws to the ViewportPanel FBO.
+     * Runtime : DefaultRenderTarget — draws to the backbuffer (no-op bind).
+     * Editor  : the M1 output contract (D2) will draw to an offscreen FBO the ViewportPanel
+     *           samples. NOTE: no EditorRenderTarget type exists yet — that lands in M1.
      *
-     * CoreEngineApp holds a raw ptr to the active IRenderTarget.
-     *
-     * The game layer calls RenderCommand through this interface without knowing whether it is rendering to screen or to an offscreen FBO.
+     * The game layer calls RenderCommand through this interface without knowing whether it is
+     * rendering to screen or to an offscreen FBO.
      */
     class OPAAX_API IRenderTarget
     {

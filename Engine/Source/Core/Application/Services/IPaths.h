@@ -89,14 +89,20 @@ namespace Opaax
     // Paths — wires IPlatform + argv + the build-time workspace into ResolveProjectLayout.
     //   Base anchor : IPlatform::GetExecutablePath() (NOT argv[0]).
     //   Workspace   : OPAAX_WORKSPACE_DIR in editor builds; the exe dir in release.
+    //   Not final — EditorPaths (OpaaxEditorLib) subclasses it to target the EDITED project rather
+    //   than the editor exe's own name (D8: SandboxEditor.exe edits the Sandbox project).
     // =============================================================================
-    class OPAAX_API Paths final : public IPaths
+    class OPAAX_API Paths : public IPaths
     {
         // =============================================================================
         // CTOR
         // =============================================================================
     public:
-        Paths(const IPlatform& InPlatform, int InArgc, char** InArgv);
+        // InProjectOverride: a project path used when the command line carries no --project. It lets a
+        // host declare the project it targets (the editor host names the game project). Precedence:
+        // --project (argv) > InProjectOverride > default <workspace>/<exeStem>/<exeStem>.opaaxproj.
+        Paths(const IPlatform& InPlatform, int InArgc, char** InArgv,
+              const OpaaxString& InProjectOverride = OpaaxString());
 
         // =============================================================================
         // Functions

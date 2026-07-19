@@ -143,10 +143,11 @@ namespace Opaax
     }
     
     // =========================================================================
-    // Loop — one frame, driven by the application host (OpaaxApplication::RunApplication,
-    // which presents via Window::SwapBuffers right after). Computes a real delta from a
-    // steady clock, then pumps Update (Resources + subsystems) and Render (RenderAll ->
-    // RendererManager clears the backbuffer).
+    // Loop — one frame, driven by the application host (OpaaxApplication::RunApplication).
+    // Computes a real delta from a steady clock, then pumps Update (Resources + subsystems)
+    // and Render (RenderAll -> RendererManager). NOTE: present currently lives inside
+    // RenderSystem::EndFrame (m_Device->Present); S7 moves it host-side. The host does NOT
+    // call Window::SwapBuffers today.
     // =========================================================================
     void Engine::Loop()
     {
@@ -175,6 +176,19 @@ namespace Opaax
         
         m_FrameInfo.m_AlphaPhysic = m_FrameInfo.m_AccumulatedDeltaTime / m_FrameInfo.m_FixedDeltaTime;
         Render(m_FrameInfo.m_AlphaPhysic);
+    }
+
+    // =========================================================================
+    // Present — the swapchain show, driven by the host AFTER TickFrame (S7 / D2). Kept OUT of
+    // Render so the editor can draw its UI to the backbuffer between the world render and the
+    // present. Delegates to the renderer adapter, which owns the device.
+    // =========================================================================
+    void Engine::Present()
+    {
+        if (m_RendererManager != nullptr)
+        {
+            m_RendererManager->Present();
+        }
     }
 
     void Engine::Shutdown()

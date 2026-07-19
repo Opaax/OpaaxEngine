@@ -3,6 +3,7 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Application/Services/AppServiceLocator.h"
+#include "Core/Application/ModuleRegistrar.h"
 
 namespace Opaax
 {
@@ -50,6 +51,16 @@ namespace Opaax
         IPlatform&          BootPlatform();
         IPaths&             BootPaths();
         ILogger&            BootLogger(IPaths& Paths);
+
+    protected:
+        /**
+         * Factory seam for the Paths service. Base builds runtime Paths (exe-dir resolution). The
+         * editor overrides it to build EditorPaths (source-tree resolution) — the composition root
+         * chooses the concrete IPaths, so the engine keeps zero source-tree knowledge (D4). Called by
+         * BootPaths in Bootstrap, before OnProvideServices (Logger/Config depend on Paths).
+         */
+        virtual UniquePtr<IPaths> CreatePaths(const IPlatform& InPlatform, int InArgc, char** InArgv);
+    private:
         IConfigSystem&      BootConfigSystem(const IPaths& Paths);
         IProjectManager&    BootProjectManager(const IPaths& Paths);
         IJobSystem&         BootJobSystem();
@@ -60,10 +71,26 @@ namespace Opaax
         /**
          * IConfigSystem::Get also register
          * But here you can Pre register config at application boot
-         * @param ConfigSystem 
+         * @param ConfigSystem
          */
         virtual void PreRegisterConfig(IConfigSystem& ConfigSystem);
-        
+
+        /**
+         * Seam (Editor.md D1): last step of Bootstrap(). A derived host adds its OWN app services
+         * into the locator here (the editor provides IEditorService). Base is a no-op, so runtime
+         * behaviour is byte-for-byte unchanged when not overridden. Only composition roots (this
+         * subclass) touch the locator — never a service or a panel (D3).
+         */
+        virtual void OnProvideServices(AppServiceLocator& InServices) {}
+
+        /**
+         * Seam (Editor.md D1/D9): runs in EngineStartup() BETWEEN Bootstrap and Engine().Startup().
+         * The engine registries exist (post-BootEngine); no world exists yet (pre-Startup). A derived
+         * host routes its game module's RegisterModule() through here — components -> Components(),
+         * world subsystems -> WorldSubsystems(). Base is a no-op (byte-identical runtime).
+         */
+        virtual void OnRegisterModules(ModuleRegistrar& InRegistrar) {}
+
     public:
         /**
          * Provide the app-level services into the locator, in dependency order.
@@ -92,6 +119,16 @@ namespace Opaax
         
         // =============================================================================
         // Flow
+    protected:
+        /**
+         * Seam (Editor.md D1): the per-frame body, called once per RunApplication iteration.
+         * Base = the engine frame (Engine().Loop()), so runtime is byte-for-byte unchanged. The
+         * editor overrides it as: UI begin -> Engine().Loop() -> UI end (S10). Present stays out
+         * of here — the host presents after TickFrame() (S7).
+         */
+        virtual void TickFrame();
+
+    public:
         /**
          * The app loop
          */
@@ -164,6 +201,11 @@ namespace Opaax
         bool bHasInitialized    = false;
         bool bIsRunning         = false;
         bool bHasShutdown       = false;
+
+        // Populated at OnRegisterModules (D9). At M0 it only records registration counts; from M3/M4
+        // its routes forward to the real engine registries. Owned by the app so the record survives
+        // boot for inspection/tests.
+        ModuleRegistrar m_ModuleRegistrar;
 
         static AppServiceLocator m_Services;
     };

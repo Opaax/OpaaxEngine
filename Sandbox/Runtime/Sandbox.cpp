@@ -8,7 +8,9 @@
 #include "Core/World/World.h"
 #include "Entity/Entity.h"
 #include "Core/Components/DummyComponent.h"
+#include "Core/Application/ModuleRegistrar.h"
 #include "Config/ConfigTest.h"
+#include "SandboxModule.h"
 
 Sandbox::Sandbox(int InArgc, char** InArgv) : Opaax::OpaaxApplication(InArgc, InArgv)
 {
@@ -23,26 +25,18 @@ void Sandbox::OnInitializeApplication()
     GetAppService<Opaax::IConfigSystem>().Register<Config_MyConfig>();
 }
 
+void Sandbox::OnRegisterModules(Opaax::ModuleRegistrar& InRegistrar)
+{
+    // D9 — the app routes its game module through the single RegisterModule() entry point. The
+    // editor host (S8) will call the exact same function through its own OnRegisterModules.
+    SandboxModule::RegisterModule(InRegistrar);
+}
+
 void Sandbox::PostEngineStartup()
 {
-    // Populate the active world with a few dummy quads so the World -> Renderer path
-    // is visible end-to-end (centered ortho: origin = screen centre, 1 unit = 1px).
-    Opaax::World* lWorld = GetAppService<Opaax::IEngine>().GetWorldManager().GetActiveWorld();
-    if (lWorld == nullptr)
+    // Populate the active world via the shared module content (same scene as the editor host).
+    if (Opaax::World* lWorld = GetAppService<Opaax::IEngine>().GetWorldManager().GetActiveWorld())
     {
-        return;
+        SandboxModule::SpawnDemoWorld(*lWorld);
     }
-
-    const auto lSpawn = [lWorld](const char* InName, Opaax::Vector2F InPos, Opaax::Vector4F InColor)
-    {
-        Opaax::Entity          lEntity = lWorld->CreateEntity(InName);
-        Opaax::DummyComponent& lComp   = lEntity.Add<Opaax::DummyComponent>();
-        lComp.Position = InPos;
-        lComp.Size     = { 120.f, 120.f };
-        lComp.Color    = InColor;
-    };
-
-    lSpawn("QuadRed",   { -200.f, 0.f }, { 1.f,  0.2f, 0.2f, 1.f });
-    lSpawn("QuadGreen", {    0.f, 0.f }, { 0.2f, 1.f,  0.2f, 1.f });
-    lSpawn("QuadBlue",  {  200.f, 0.f }, { 0.2f, 0.4f, 1.f,  1.f });
 }

@@ -78,7 +78,14 @@ namespace Opaax
         if (!m_Device) { return; }
         m_Device->GetCommandBuffer().EndRenderPass();
         m_Device->EndFrame();
-        m_Device->Present();
+        // NOTE: present moved OUT of here (S7). The frame is submitted; the host shows it via
+        // Present() after TickFrame, so the editor can draw UI to the backbuffer in between.
+    }
+
+    void RenderSystem::Present()
+    {
+        if (!m_Device) { return; }
+        m_Device->Present();   // device owns HOW; the host decides WHEN (Editor.md D2)
     }
 
     void RenderSystem::BeginScene(const RenderView& InView)

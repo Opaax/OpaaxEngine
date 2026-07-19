@@ -115,14 +115,26 @@ namespace Opaax
     // =========================================================================
     // Paths
     // =========================================================================
-    Paths::Paths(const IPlatform& InPlatform, int InArgc, char** InArgv)
+    Paths::Paths(const IPlatform& InPlatform, int InArgc, char** InArgv,
+                 const OpaaxString& InProjectOverride)
     {
         OpaaxString lWorkspace;
-#if OPAAX_WITH_EDITOR
+        // A from-source dev build bakes OPAAX_WORKSPACE_DIR so we resolve against the source tree.
+        // Keyed on the define itself, NOT on editor support (D4: the engine is editor-agnostic).
+        // Absent (ship build) -> empty -> ResolveProjectLayout falls back to exe-dir resolution.
+#if defined(OPAAX_WORKSPACE_DIR)
         lWorkspace = OpaaxString(OPAAX_WORKSPACE_DIR);
 #endif
-        const OpaaxString lExe     = InPlatform.GetExecutablePath();
-        const OpaaxString lProjArg = FindProjectArg(InArgc, InArgv);
+        const OpaaxString lExe = InPlatform.GetExecutablePath();
+
+        // --project on the command line wins; else the host's declared project (editor host names the
+        // game project); else empty -> ResolveProjectLayout uses the exe-stem default.
+        OpaaxString lProjArg = FindProjectArg(InArgc, InArgv);
+        if (lProjArg.IsEmpty())
+        {
+            lProjArg = InProjectOverride;
+        }
+
         m_Layout = ResolveProjectLayout(lExe, lWorkspace, lProjArg);
     }
 

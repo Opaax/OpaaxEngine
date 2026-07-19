@@ -37,6 +37,16 @@ namespace Opaax
          * Engine Loop
          */
         virtual void Loop()                             = 0;
+
+        /**
+         * Show the frame — the swapchain present, SEPARATE from rendering (S7 / Editor.md D2).
+         *
+         * The host calls this AFTER TickFrame(), never inside the engine's Render. That gap is
+         * the whole point: in the editor the world is rendered into an offscreen target and the
+         * UI is drawn to the backbuffer between Render and Present. Only the backbuffer is ever
+         * presented; offscreen render targets never are. The device owns HOW; the host owns WHEN.
+         */
+        virtual void Present()                          = 0;
         
         /**
          * Called once per rendered frame.

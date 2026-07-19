@@ -20,6 +20,7 @@ namespace Opaax
 
             bool Startup()                override { return true; }
             void Loop()                   override {}
+            void Present()                override {}
             void Update(double)           override {}
             void FixedUpdate(double)      override {}
             void Render(double)           override {}

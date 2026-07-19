@@ -55,8 +55,28 @@ namespace Opaax
         }
 
         /**
+         * provide an ALREADY-CONSTRUCTED impl (ownership transferred). Same registration + shutdown
+         * ordering as Provide, but the caller chose the concrete type — used when a composition root
+         * overrides a service's implementation polymorphically (e.g. EditorApplication supplies
+         * EditorPaths for IPaths via a virtual factory). Registers under TInterface's key.
+         * @tparam TInterface
+         * @param InImpl the owning pointer to adopt
+         * @return A reference to the adopted service
+         */
+        template<class TInterface>
+        requires std::is_base_of_v<IAppService, TInterface>
+        TInterface& ProvideInstance(UniquePtr<TInterface> InImpl)
+        {
+            TInterface&         lRef = *InImpl;
+            const ServiceTypeID lId  = TInterface::StaticTypeID();
+            m_Services[lId] = std::move(InImpl);
+            m_Order.push_back(lId);
+            return lRef;
+        }
+
+        /**
          * resolve: never null
-         * @tparam T 
+         * @tparam T
          * @return A reference of the service or its null version
          */
         template<class T>

@@ -56,7 +56,8 @@ namespace Opaax
         // =============================================================================
     public:
         void BeginFrame();                       // device frame open + clear the backbuffer
-        void EndFrame();                         // close the pass + present (surface swap)
+        void EndFrame();                         // close the pass + submit (NO present — see Present)
+        void Present();                          // show the backbuffer (surface swap) — separate (S7)
 
         void BeginScene(const RenderView& InView); // opens a scene into the frame's command buffer
         void EndScene();                          // flushes the scene's final batch

@@ -95,6 +95,7 @@ namespace Opaax
     public:
         bool Startup() override;
         void Loop() override;
+        void Present() override;
         void Update(double InDeltaTime) override;
         void FixedUpdate(double InFixedDeltaTime) override;
         void Render(double InAlphaPhysicStep) override;

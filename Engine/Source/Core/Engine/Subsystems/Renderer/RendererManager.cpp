@@ -118,8 +118,9 @@ namespace Opaax
     }
 
     // =========================================================================
-    // Frame — drive the module: resize (polled), then a single scene with the test quad.
-    // The BeginFrame/EndFrame(+Present) bracket owns the frame; the app loop no longer swaps.
+    // Frame — drive the module: build the view, render the active world into the frame.
+    // BeginFrame/EndFrame bracket the SUBMIT; the present is separate (Present(), below), called
+    // by the host after TickFrame so the editor can draw UI to the backbuffer in between (S7).
     // =========================================================================
     void RendererManager::Render(double /*Alpha*/)
     {
@@ -159,6 +160,18 @@ namespace Opaax
 
         m_RenderSystem->EndScene();
         m_RenderSystem->EndFrame();
+    }
+
+    // =========================================================================
+    // Present — the swapchain show, decoupled from Render (S7). EndFrame submitted the frame;
+    // this shows it. In the editor the UI pass lands between the two.
+    // =========================================================================
+    void RendererManager::Present()
+    {
+        if (m_RenderSystem)
+        {
+            m_RenderSystem->Present();
+        }
     }
 
     // =========================================================================

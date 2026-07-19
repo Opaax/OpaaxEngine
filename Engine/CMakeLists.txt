@@ -51,15 +51,8 @@ file(GLOB_RECURSE ENGINE_CORE_SOURCES CONFIGURE_DEPENDS
 
 set(ENGINE_SOURCES ${ENGINE_CORE_SOURCES})
 
-if(OPAAX_EDITOR_SUPPORT)
-    file(GLOB_RECURSE ENGINE_EDITOR_SOURCES
-        "Source/Editor/*.cpp"
-        "Source/Editor/*.h"
-    )
-    list(APPEND ENGINE_SOURCES ${ENGINE_EDITOR_SOURCES})
-    
-    message(STATUS "Editor support enabled in engine")
-endif()
+# D4: the engine DLL has ZERO editor knowledge. Source/Editor/** is NEVER globbed here —
+# it belongs to OpaaxEditorLib. (This empty marker exists so the old glob is not reintroduced.)
 
 # ==================================
 # GLFW Configuration
@@ -312,19 +305,20 @@ add_library(OpaaxEngine SHARED ${ENGINE_SOURCES})
 # ENGINE_EXPORTS
 target_compile_definitions(OpaaxEngine PRIVATE ENGINE_EXPORTS)
 
-# Editor
+# D4: the engine never knows about the editor. OPAAX_WITH_EDITOR is ALWAYS 0 on the engine DLL —
+# the editor lives entirely in OpaaxEditorLib. (EngineAPI.h defaults it to 0; we assert it here.)
+target_compile_definitions(OpaaxEngine PUBLIC OPAAX_WITH_EDITOR=0)
+
+# Workspace root — a FROM-SOURCE dev build bakes the source-tree root so Paths can resolve source
+# assets/configs; a ship build must NOT bake a build-host path (it resolves from the exe dir, whose
+# deploy mirrors the workspace layout). Decoupled from editor CODE: IPaths keys on
+# defined(OPAAX_WORKSPACE_DIR), NOT on OPAAX_WITH_EDITOR. Gated on the editor option for now only
+# because that set == today's "dev build" set; a later pass renames it to an explicit dev flag.
 if(OPAAX_EDITOR_SUPPORT)
-    target_compile_definitions(OpaaxEngine PUBLIC OPAAX_WITH_EDITOR=1)
-    # Workspace root — the source tree holding Engine/ + every game project. OpaaxPath derives
-    # the engine root (<workspace>/Engine) and the per-app project root (<workspace>/<AppName>)
-    # from it. Editor-only on purpose: release binaries must not bake in absolute build-host
-    # paths (they resolve to the exe dir, whose deploy mirrors the workspace layout).
     target_compile_definitions(OpaaxEngine PUBLIC OPAAX_WORKSPACE_DIR="${CMAKE_SOURCE_DIR}")
-    message(STATUS "[Opaax] Editor support: ON")
-    message(STATUS "[Opaax] Workspace root: ${CMAKE_SOURCE_DIR}")
+    message(STATUS "[Opaax] Workspace root baked (dev build): ${CMAKE_SOURCE_DIR}")
 else()
-    target_compile_definitions(OpaaxEngine PUBLIC OPAAX_WITH_EDITOR=0)
-    message(STATUS "[Opaax] Editor support: OFF (Release build)")
+    message(STATUS "[Opaax] Ship build: no workspace path baked (exe-dir resolution)")
 endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
@@ -459,9 +453,9 @@ target_compile_definitions(OpaaxEngine PRIVATE OPAAX_HAS_GLSLANG=$<BOOL:${OPAAX_
 # 1 when the Vulkan SDK is present (Vulkan backend compiled), 0 otherwise (OpenGL-only).
 target_compile_definitions(OpaaxEngine PRIVATE OPAAX_HAS_VULKAN=$<BOOL:${OPAAX_HAS_VULKAN}>)
 
-if(OPAAX_EDITOR_SUPPORT)
-    target_link_libraries(OpaaxEngine PRIVATE imgui tinyfiledialogs)
-endif()
+# D4: imgui + tinyfiledialogs are NEVER linked into the engine DLL. Their vendor targets are still
+# created above (under OPAAX_EDITOR_SUPPORT) so OpaaxEditorLib can link them (S1). The `dumpbin`
+# gate on Sandbox.exe enforces that no ImGui symbol reaches a runtime target.
 
 # Include directories
 target_include_directories(OpaaxEngine
@@ -470,8 +464,7 @@ target_include_directories(OpaaxEngine
         $<INSTALL_INTERFACE:include>
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/Source/Private
-        ${CMAKE_CURRENT_SOURCE_DIR}/Vendors/imgui
-        ${CMAKE_CURRENT_SOURCE_DIR}/Vendors/imgui/backends
+        # D4: no imgui include paths on the engine — ImGui belongs to OpaaxEditorLib (S1).
         ${CMAKE_CURRENT_SOURCE_DIR}/Vendors/GLFW/include
         ${CMAKE_CURRENT_SOURCE_DIR}/Vendors/spdlog/include
         ${CMAKE_CURRENT_SOURCE_DIR}/Vendors/glad/include

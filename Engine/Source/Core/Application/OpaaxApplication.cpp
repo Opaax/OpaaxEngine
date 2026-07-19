@@ -92,7 +92,11 @@ void OpaaxApplication::Bootstrap()
     //Engine
     OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Engine");
     IEngine& lEngine = BootEngine();
-    
+
+    // D1 seam — derived hosts (the editor) add their own services last, once every engine service
+    // exists. Base no-op: runtime is unchanged.
+    OnProvideServices(m_Services);
+
     bHasBootstrap = true;
 }
 
@@ -106,7 +110,13 @@ IPlatform& OpaaxApplication::BootPlatform()
 
 IPaths& OpaaxApplication::BootPaths()
 {
-    return m_Services.Provide<IPaths, Opaax::Paths>(Platform(), m_Argc, m_Argv);
+    // Adopt whatever CreatePaths built — runtime Paths by default, EditorPaths under the editor host.
+    return m_Services.ProvideInstance<IPaths>(CreatePaths(Platform(), m_Argc, m_Argv));
+}
+
+UniquePtr<IPaths> OpaaxApplication::CreatePaths(const IPlatform& InPlatform, int InArgc, char** InArgv)
+{
+    return MakeUnique<Opaax::Paths>(InPlatform, InArgc, InArgv);
 }
 
 ILogger& OpaaxApplication::BootLogger(IPaths& Paths)
@@ -213,15 +223,28 @@ void OpaaxApplication::RunApplication()
         }
         
         // ----------------------------------------------------------------
-        // 2. Tick
+        // 2. Tick — via the TickFrame seam (base = Engine().Loop(); editor wraps it with UI).
         // ----------------------------------------------------------------
-        Engine().Loop();
+        TickFrame();
+
+        // ----------------------------------------------------------------
+        // 3. Present — the swap, SEPARATE from the frame render (S7 / D2). The host owns WHEN:
+        //    after TickFrame, so the editor's UI (drawn inside TickFrame) is on the backbuffer
+        //    before the swap. Runtime: the world was rendered straight to the backbuffer above.
+        // ----------------------------------------------------------------
+        Engine().Present();
     }
 
     // The loop has stopped but nothing is destroyed yet — every service, the window and the
     // GPU context are still alive. Subsystems get their one chance here to release anything
     // that needs a live sibling; ShutdownApplication() below is too late for that.
     EngineTeardown();
+}
+
+void OpaaxApplication::TickFrame()
+{
+    // Base per-frame body: one engine frame. The editor overrides to wrap this in UI begin/end (S10).
+    Engine().Loop();
 }
 
 void OpaaxApplication::OnEvent(Event& InEvent)
@@ -263,6 +286,11 @@ void OpaaxApplication::ShutdownApplication()
 void OpaaxApplication::EngineStartup()
 {
     PreEngineStartup();
+
+    // D1/D9 seam — registries exist (post-BootEngine), no world yet (pre-Startup). A derived host
+    // routes its game module here. Base no-op: runtime unchanged.
+    OnRegisterModules(m_ModuleRegistrar);
+
     Engine().Startup();
     PostEngineStartup();
 }

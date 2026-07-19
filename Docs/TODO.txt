@@ -5,3 +5,7 @@ Resource:
 
 Render:
 - handle/pool DOD RHI, device owning context CREATION, RenderStats overlay, multi-view, camera-view system, full RHI-only DrawSprite, Vulkan device.
+- use nvrhi?
+
+Misc:
+- Skill Code Style.
