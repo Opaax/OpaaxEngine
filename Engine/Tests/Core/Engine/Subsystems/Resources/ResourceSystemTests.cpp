@@ -14,10 +14,10 @@
 #include <thread>
 
 #include "Core/OpaaxTypes.h"
-#include "Core/Application/Services/IJobSystem.h"
-#include "Core/Engine/Subsystems/Resources/ResourceManager.h"
-#include "Core/Engine/Subsystems/Resources/ResourceView.hpp"
-#include "Core/Engine/Subsystems/Resources/Types/BinaryResource.hpp"
+#include "Application/Services/IJobSystem.h"
+#include "Engine/Subsystems/Resources/ResourceManager.h"
+#include "Engine/Subsystems/Resources/ResourceView.hpp"
+#include "Engine/Subsystems/Resources/Types/BinaryResource.hpp"
 
 using namespace Opaax;
 

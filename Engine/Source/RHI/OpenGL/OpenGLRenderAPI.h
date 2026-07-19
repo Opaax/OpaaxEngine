@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Core/Application/Services/ILogger.h"
+#include "Application/Services/ILogger.h"
 #include "RHI/IRenderAPI.h"
 #include "RHI/OpenGL/OpenGLCommandBuffer.h"
 

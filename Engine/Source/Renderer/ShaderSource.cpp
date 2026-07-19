@@ -1,7 +1,7 @@
 #include "ShaderSource.h"
 
 #include "RHI/ShaderCompiler.h"
-#include "Core/Application/Services/ILogger.h"
+#include "Application/Services/ILogger.h"
 
 #include <fstream>
 #include <sstream>

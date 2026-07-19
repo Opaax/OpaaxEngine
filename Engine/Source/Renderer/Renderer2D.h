@@ -4,7 +4,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/OpaaxMathTypes.h"
 #include "Core/OpaaxString.hpp"
-#include "Core/Application/Services/ILogger.h"
+#include "Application/Services/ILogger.h"
 
 #include <glm/glm.hpp>
 

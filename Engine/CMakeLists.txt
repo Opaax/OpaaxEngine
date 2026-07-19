@@ -1,17 +1,20 @@
 # Src Engine core
 file(GLOB_RECURSE ENGINE_CORE_SOURCES CONFIGURE_DEPENDS
-    "Source/Core/Application/*.cpp"
-    "Source/Core/Application/*.h"
-    "Source/Core/Application/*.hpp"
-    "Source/Core/Engine/*.cpp"
-    "Source/Core/Engine/*.h"
-    "Source/Core/Engine/*.hpp"
+    # Gregory runtime layers (Phase B). Core/ = foundations (Config, Log, Container, Jobs, Time,
+    # Serialize, Events, Systems/Subsystem.h + Core/*.h). Application/ Engine/ World/ were promoted
+    # out of the old Core/ junk-drawer into top-level layer dirs.
     "Source/Core/*.cpp"
     "Source/Core/*.h"
     "Source/Core/*.hpp"
-    "Source/Systems/*.cpp"
-    "Source/Systems/*.h"
-    "Source/Systems/*.hpp"
+    "Source/Application/*.cpp"
+    "Source/Application/*.h"
+    "Source/Application/*.hpp"
+    "Source/Engine/*.cpp"
+    "Source/Engine/*.h"
+    "Source/Engine/*.hpp"
+    "Source/World/*.cpp"
+    "Source/World/*.h"
+    "Source/World/*.hpp"
     "Source/RHI/*.cpp"
     "Source/RHI/*.h"
     "Source/RHI/*.hpp"
@@ -34,9 +37,7 @@ file(GLOB_RECURSE ENGINE_CORE_SOURCES CONFIGURE_DEPENDS
     "Source/GUID/*.cpp"
     "Source/GUID/*.h"
     "Source/GUID/*.hpp"
-    "Source/Entity/*.cpp"
-    "Source/Entity/*.h"
-    "Source/Entity/*.hpp"
+    # Entity/ folded into World/ (World layer) — caught by the Source/World/* recurse above.
 )
 
 set(ENGINE_SOURCES ${ENGINE_CORE_SOURCES})

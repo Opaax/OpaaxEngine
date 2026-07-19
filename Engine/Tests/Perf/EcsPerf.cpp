@@ -9,8 +9,8 @@
 // not micro-noise. Watch the printed ns/op for smaller drift.
 #include <doctest.h>
 
-#include "Core/World/World.h"
-#include "Entity/Entity.h"
+#include "World/World.h"
+#include "World/Entity/Entity.h"
 
 #include "PerfBench.h"
 

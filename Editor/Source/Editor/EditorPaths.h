@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Core/Application/Services/IPaths.h"
+#include "Application/Services/IPaths.h"
 
 namespace Opaax::Editor
 {

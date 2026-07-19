@@ -4,8 +4,8 @@
 #include <GLFW/glfw3.h>
 
 #include "Core/Window/WindowEvents.h"
-#include "Core/Engine/Subsystems/Input/InputEvents.h"
-#include "Core/Engine/Subsystems/Input/InputCodes.h"
+#include "Engine/Subsystems/Input/InputEvents.h"
+#include "Engine/Subsystems/Input/InputCodes.h"
 #include "Core/Log/OpaaxLog.h"
 #include "Core/Config/EngineConfig.h"
 #include "RHI/RenderAPI.h"

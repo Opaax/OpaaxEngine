@@ -3,7 +3,7 @@
 #include "Editor/IEditorService.h"
 #include "Editor/EditorService.h"
 #include "Editor/EditorPaths.h"
-#include "Core/Application/Services/ILogger.h"   // OPAAX_LOG + LogCategory
+#include "Application/Services/ILogger.h"   // OPAAX_LOG + LogCategory
 
 #include <string>
 

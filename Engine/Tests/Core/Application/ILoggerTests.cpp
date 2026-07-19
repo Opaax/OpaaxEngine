@@ -3,8 +3,8 @@
 // logger's level) — this verifies wiring + null safety, since the facade is thin forwarding.
 #include <doctest.h>
 
-#include "Core/Application/Services/ILogger.h"
-#include "Core/Application/Services/AppServiceLocator.h"
+#include "Application/Services/ILogger.h"
+#include "Application/Services/AppServiceLocator.h"
 
 using namespace Opaax;
 

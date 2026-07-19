@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Core/Application/Services/IAppService.h"
+#include "Application/Services/IAppService.h"
 
 namespace Opaax::Editor
 {

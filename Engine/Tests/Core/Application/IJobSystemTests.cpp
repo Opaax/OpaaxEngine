@@ -5,8 +5,8 @@
 
 #include <thread>
 
-#include "Core/Application/Services/IJobSystem.h"
-#include "Core/Application/Services/AppServiceLocator.h"
+#include "Application/Services/IJobSystem.h"
+#include "Application/Services/AppServiceLocator.h"
 #include "Core/OpaaxTypes.h"
 
 using namespace Opaax;

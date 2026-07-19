@@ -8,14 +8,14 @@
 // interface defines it (and its Null()) locally in this TU.
 #include <doctest.h>
 
-#include "Core/Application/Services/AppServiceLocator.h"
-#include "Core/Application/Services/IAppService.h"
-#include "Core/Application/Services/Platforms/IPlatform.h"
+#include "Application/Services/AppServiceLocator.h"
+#include "Application/Services/IAppService.h"
+#include "Application/Services/Platforms/IPlatform.h"
 #include "Core/OpaaxTypes.h"
 
 #ifdef OPAAX_PLATFORM_WINDOWS
 #include <string>
-#include "Core/Application/Services/Platforms/Windows/WindowsPlatform.h"
+#include "Application/Services/Platforms/Windows/WindowsPlatform.h"
 #endif
 
 using namespace Opaax;

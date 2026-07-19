@@ -3,9 +3,9 @@
 // file read is thin glue. NullPaths gives an empty identity (no file) through the locator.
 #include <doctest.h>
 
-#include "Core/Application/Services/IProjectManager.h"
-#include "Core/Application/Services/IPaths.h"
-#include "Core/Application/Services/AppServiceLocator.h"
+#include "Application/Services/IProjectManager.h"
+#include "Application/Services/IPaths.h"
+#include "Application/Services/AppServiceLocator.h"
 
 using namespace Opaax;
 

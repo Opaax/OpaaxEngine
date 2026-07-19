@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Core/Application/OpaaxApplication.h"
+#include "Application/OpaaxApplication.h"
 #include "Core/OpaaxString.hpp"
 
 namespace Opaax::Editor

@@ -1,8 +1,8 @@
 #include "Editor/EditorService.h"
 
-#include "Core/Application/OpaaxApplication.h"
-#include "Core/Application/Services/IEngine.h"
-#include "Core/Application/Services/ILogger.h"   // OPAAX_LOG + LogCategory
+#include "Application/OpaaxApplication.h"
+#include "Application/Services/IEngine.h"
+#include "Application/Services/ILogger.h"   // OPAAX_LOG + LogCategory
 
 using namespace Opaax;   // OPAAX_LOG expands to an unqualified ToSpdLevel(...)
 

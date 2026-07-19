@@ -10,9 +10,9 @@
 // activates a default "Main" world whose events would otherwise pollute the counts.
 #include <doctest.h>
 
-#include "Core/World/World.h"
-#include "Core/World/WorldEvents.h"
-#include "Core/World/WorldManager.h"
+#include "World/World.h"
+#include "World/WorldEvents.h"
+#include "World/WorldManager.h"
 
 using namespace Opaax;
 

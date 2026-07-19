@@ -5,7 +5,7 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-#include "Core/Application/Services/ILogger.h"
+#include "Application/Services/ILogger.h"
 
 namespace Opaax
 {

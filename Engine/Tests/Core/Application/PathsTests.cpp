@@ -8,9 +8,9 @@
 #include <string>
 #include <utility>
 
-#include "Core/Application/Services/IPaths.h"
-#include "Core/Application/Services/Platforms/IPlatform.h"
-#include "Core/Application/Services/AppServiceLocator.h"
+#include "Application/Services/IPaths.h"
+#include "Application/Services/Platforms/IPlatform.h"
+#include "Application/Services/AppServiceLocator.h"
 
 using namespace Opaax;
 

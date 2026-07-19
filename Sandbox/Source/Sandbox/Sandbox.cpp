@@ -1,10 +1,10 @@
 #include "Sandbox.h"
 
-#include "Core/Application/ModuleRegistrar.h"
-#include "Core/Components/DummyComponent.h"
-#include "Core/Application/Services/ILogger.h"  // OPAAX_LOG + LogCategory
-#include "Core/World/World.h"
-#include "Entity/Entity.h"
+#include "Application/ModuleRegistrar.h"
+#include "World/Components/DummyComponent.h"
+#include "Application/Services/ILogger.h"  // OPAAX_LOG + LogCategory
+#include "World/World.h"
+#include "World/Entity/Entity.h"
 
 // OPAAX_LOG expands to an unqualified ToSpdLevel(...) — bring Opaax into scope, as engine TUs do.
 using namespace Opaax;

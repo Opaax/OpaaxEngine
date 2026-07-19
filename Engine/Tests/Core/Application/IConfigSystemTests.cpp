@@ -6,9 +6,9 @@
 
 #include <utility>
 
-#include "Core/Application/Services/IConfigSystem.h"
-#include "Core/Application/Services/IPaths.h"
-#include "Core/Application/Services/AppServiceLocator.h"
+#include "Application/Services/IConfigSystem.h"
+#include "Application/Services/IPaths.h"
+#include "Application/Services/AppServiceLocator.h"
 #include "Core/Config/IConfig.h"
 
 using namespace Opaax;

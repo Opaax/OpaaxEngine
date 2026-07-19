@@ -1,6 +1,6 @@
 #include "OpenGLRenderAPI.h"
 
-#include "Core/Application/Services/ILogger.h"
+#include "Application/Services/ILogger.h"
 
 #define GLAD_APIENTRY
 #include <glad/glad.h>
