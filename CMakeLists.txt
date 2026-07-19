@@ -26,7 +26,7 @@ add_subdirectory(Engine)
 # OpaaxEditorLib — the editor library (D4/D8). Built only when editor support is on; added
 # AFTER Engine so its imgui/tinyfiledialogs vendor targets already exist to be linked.
 if(OPAAX_EDITOR_SUPPORT)
-    add_subdirectory(OpaaxEditorLib)
+    add_subdirectory(Editor)
 endif()
 
 #add_subdirectory(Game)

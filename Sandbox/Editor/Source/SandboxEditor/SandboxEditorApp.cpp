@@ -1,6 +1,6 @@
 #include "SandboxEditorApp.h"
 
-#include "SandboxModule.h"
+#include "Sandbox.h"
 #include "Core/Application/ModuleRegistrar.h"
 #include "Core/Application/Services/IEngine.h"
 #include "Core/World/WorldManager.h"
@@ -13,7 +13,6 @@ SandboxEditorApp::SandboxEditorApp(int InArgc, char** InArgv)
 
 void SandboxEditorApp::OnRegisterModules(Opaax::ModuleRegistrar& InRegistrar)
 {
-    // D9 — the SAME entry point Sandbox.exe uses. The editor host adds nothing the runtime lacks.
     SandboxModule::RegisterModule(InRegistrar);
 }
 

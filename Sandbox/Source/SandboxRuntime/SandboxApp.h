@@ -2,10 +2,10 @@
 
 #include "Core/Application/OpaaxApplication.h"
 
-class Sandbox : public Opaax::OpaaxApplication
+class SandboxApp : public Opaax::OpaaxApplication
 {
 public:
-    Sandbox(int InArgc, char** InArgv);
+    SandboxApp(int InArgc, char** InArgv);
     
 protected:
     void OnInitializeApplication() override;

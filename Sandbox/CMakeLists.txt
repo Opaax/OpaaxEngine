@@ -1,27 +1,27 @@
 # =============================================================================
-# SandboxModule (D9) — the game content unit, a STATIC lib linked by BOTH Sandbox.exe and
-# (from S8) SandboxEditor.exe. Links Engine only, never an editor header. Empty at S1;
-# content moves in at S2, RegisterModule at S6. Globbed from Module/ (kept OUT of the exe's
-# own Source/ glob below).
+# SandboxModule (D9) — the game content unit: a STATIC lib linked by BOTH Sandbox.exe and
+# SandboxEditor.exe. Links Engine only, never an editor header (D4). This is the PRIMARY game
+# module — it takes the project's name (Source/Sandbox/, entry Sandbox.h/.cpp). Real game content
+# grows here; it is reached transitively through the link, never globbed into an exe.
 # =============================================================================
 file(GLOB_RECURSE SANDBOX_MODULE_SOURCES CONFIGURE_DEPENDS
-    "Module/*.cpp"
-    "Module/*.h"
-    "Module/*.hpp"
+    "Source/Sandbox/*.cpp"
+    "Source/Sandbox/*.h"
+    "Source/Sandbox/*.hpp"
 )
 
 add_library(SandboxModule STATIC ${SANDBOX_MODULE_SOURCES})
 target_link_libraries(SandboxModule PUBLIC OpaaxEngine)
-target_include_directories(SandboxModule PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/Module)
+target_include_directories(SandboxModule PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/Source/Sandbox)
 
 # =============================================================================
-# Sandbox.exe (runtime) — Engine + SandboxModule. Runtime/ holds the runtime app
-# (SandboxApp : OpaaxApplication) + main. Game content lives in Module/ (SandboxModule),
+# Sandbox.exe (runtime host) — Engine + SandboxModule. Source/SandboxRuntime/ holds the thin
+# composition (SandboxApp : OpaaxApplication + main). Game content lives in the module (Source/Sandbox),
 # reached transitively through the link — never globbed into the exe.
 # =============================================================================
 file(GLOB_RECURSE SANDBOX_SOURCES CONFIGURE_DEPENDS
-    "Runtime/*.cpp"
-    "Runtime/*.h"
+    "Source/SandboxRuntime/*.cpp"
+    "Source/SandboxRuntime/*.h"
 )
 
 # Exe
@@ -36,10 +36,11 @@ set_target_properties(Sandbox PROPERTIES
 # for clarity — the exe uses engine types directly too).
 target_link_libraries(Sandbox PRIVATE OpaaxEngine SandboxModule)
 
-# Include dirs — Runtime/ for the app headers. Engine Source is PUBLIC via OpaaxEngine;
-# Module/ (Config, future components) is PUBLIC via SandboxModule — both propagate through the link.
+# Include dirs — SandboxRuntime/ for the app headers. Engine Source is PUBLIC via OpaaxEngine;
+# the module dir (Source/Sandbox: Config, future components) is PUBLIC via SandboxModule — both
+# propagate through the link.
 target_include_directories(Sandbox PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/Runtime
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/SandboxRuntime
 )
 
 # Copy the engine DLL next to the exe so it runs standalone.
@@ -52,13 +53,14 @@ add_custom_command(TARGET Sandbox POST_BUILD
 
 # =============================================================================
 # SandboxEditor.exe (editor host) — Engine + OpaaxEditorLib + SandboxModule (Editor.md D8). Built only
-# under OPAAX_EDITOR_SUPPORT (OpaaxEditorLib exists only then). EditorMain/ holds the ~thin composition
+# under OPAAX_EDITOR_SUPPORT (OpaaxEditorLib exists only then, and this whole Editor/ tree is
+# editor-only — NOT shipped in release). Editor/Source/SandboxEditor/ holds the ~thin composition
 # (SandboxEditorApp + main). Shares SandboxModule with Sandbox.exe; adds the editor via the lib.
 # =============================================================================
 if(OPAAX_EDITOR_SUPPORT)
     file(GLOB_RECURSE SANDBOX_EDITOR_SOURCES CONFIGURE_DEPENDS
-        "EditorMain/*.cpp"
-        "EditorMain/*.h"
+        "Editor/Source/SandboxEditor/*.cpp"
+        "Editor/Source/SandboxEditor/*.h"
     )
 
     add_executable(SandboxEditor ${SANDBOX_EDITOR_SOURCES})
@@ -69,7 +71,7 @@ if(OPAAX_EDITOR_SUPPORT)
     target_link_libraries(SandboxEditor PRIVATE OpaaxEngine OpaaxEditorLib SandboxModule)
 
     target_include_directories(SandboxEditor PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/EditorMain
+        ${CMAKE_CURRENT_SOURCE_DIR}/Editor/Source/SandboxEditor
     )
 
     add_custom_command(TARGET SandboxEditor POST_BUILD

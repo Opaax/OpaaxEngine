@@ -1,4 +1,4 @@
-#include "SandboxModule.h"
+#include "Sandbox.h"
 
 #include "Core/Application/ModuleRegistrar.h"
 #include "Core/Components/DummyComponent.h"

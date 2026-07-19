@@ -60,9 +60,12 @@ namespace Opaax
         // Colors
         auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
         console_sink->set_level(spdlog::level::trace);
+        
+        OpaaxString lSaveDir = InPaths.SaveDir();
+        lSaveDir += "/Log/OpaaxEngine.log";
 
         // Log to file (op engine)
-        auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("OpaaxEngine.log", true);
+        auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(lSaveDir.CStr(), true);
         file_sink->set_level(spdlog::level::trace);
         
         //Already exist with old OpaaxLog::Init()
