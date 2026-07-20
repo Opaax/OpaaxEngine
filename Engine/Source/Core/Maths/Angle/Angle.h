@@ -4,7 +4,6 @@
 
 #include <Core/Maths/Angle/Degree.hpp>
 #include <Core/Maths/Angle/Radian.hpp>
-#include <glm/detail/qualifier.hpp>
 
 namespace Opaax
 {
