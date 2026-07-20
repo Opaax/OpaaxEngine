@@ -7,6 +7,7 @@
 #include "World/WorldGuidRegistry.h"
 
 #include "Core/GUID/Guid.h"
+#include "Systems/WorldSubsystem.h"
 
 #include "World/Entity/EntityTypes.h"
 
@@ -130,6 +131,11 @@ namespace Opaax
         // Members
         // =========================================================================
     private:
+        /**
+         * Handle Subsystem lifetime
+         */
+        WorldSubsystemMgr m_Subsystems;
+        
         EntityRegistry m_Registry;
         WorldGuidRegistry   m_Guids;
         Guid           m_Id;

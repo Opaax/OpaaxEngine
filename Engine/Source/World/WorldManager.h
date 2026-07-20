@@ -32,22 +32,6 @@ namespace Opaax
     public:
         WorldManager()           = default;
         ~WorldManager() override = default;
-        
-        // =========================================================================
-        // Events (Tier-2)
-        //
-        // Bind to react to world lifetime; WorldManager itself knows no listeners. Every
-        // Add/AddMember returns a DelegateHandle the listener MUST Remove (or RemoveAll
-        // by owner) before it dies. Engine binds these and bridges them onto the
-        // EngineEventBus for decoupled consumers — see WorldEvents.h.
-        //
-        // NOTE: a listener binding after Startup has missed the default "Main" world's
-        // events; call GetActiveWorld() at bind time instead of assuming you saw it.
-        // =========================================================================
-    public:
-        FOnWorldCreated       OnWorldCreated;
-        FOnWorldDestroyed     OnWorldDestroyed;
-        FOnActiveWorldChanged OnActiveWorldChanged;
 
         // =========================================================================
         // Function
@@ -80,9 +64,9 @@ namespace Opaax
         bool Startup()  override;
 
         /**
-         * Destroys every remaining world THROUGH DestroyWorld, so each one announces itself
-         * while the bus and its subscribers are all still alive. Shutdown() is too late for
-         * that, which is exactly why this phase exists.
+         * Destroys every remaining world THROUGH DestroyWorld,
+         * So each one announces itself while the bus and its subscribers are all still alive.
+         * Shutdown() is too late for that, which is exactly why this phase exists.
          */
         void TearDown() override;
 
@@ -95,5 +79,13 @@ namespace Opaax
     private:
         TDynArray<UniquePtr<World>> m_Worlds;
         World*                      m_ActiveWorld = nullptr; // non-owning; points into m_Worlds
+        
+        // =========================================================================
+        // Events
+        // =========================================================================
+    public:
+        FOnWorldCreated       OnWorldCreated;
+        FOnWorldDestroyed     OnWorldDestroyed;
+        FOnActiveWorldChanged OnActiveWorldChanged;
     };
 }

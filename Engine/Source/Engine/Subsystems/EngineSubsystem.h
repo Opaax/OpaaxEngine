@@ -49,9 +49,4 @@ namespace Opaax
     public:
         ~EngineSubsystemMgr() override = default;
     };
-
-    // NOTE: the OLD engine-subsystem hierarchy (IEngineSubsystemOld / EngineSubsystemBaseOld /
-    // EngineSubsystemMgrOld, CoreEngineApp-coupled) was quarantined to
-    // Legacy/Core/Engine/Subsystems/EngineSubsystemOld.h (+ EngineSubsystem.cpp) during the
-    // old-world split. It is not compiled. See ARCHITECTURE.md X1.
 }
