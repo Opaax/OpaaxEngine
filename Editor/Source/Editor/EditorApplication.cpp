@@ -52,7 +52,10 @@ namespace Opaax::Editor
         // The editor sees window/input events FIRST — before the base app enqueues anything to the engine
         // bus (Editor.md "Event ordering", M0/S11). If the editor consumed it (S11: ImGui WantCapture*),
         // the engine never sees it. Everything else falls through to the base sink (close, resize, ...).
-        if (GetAppService<IEditorService>().RouteInput(InEvent)) { return; }
+        if (GetAppService<IEditorService>().RouteInput(InEvent))
+        {
+            return;
+        }
 
         OpaaxApplication::OnEvent(InEvent);
     }

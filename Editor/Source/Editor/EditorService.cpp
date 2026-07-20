@@ -88,15 +88,28 @@ namespace Opaax::Editor
         if (m_UIBackend == nullptr) { return false; }   // UI not up (pre-Initialize / no window) — pass through
 
         const ImGuiIO& lIO = ImGui::GetIO();
+
+        bool lConsumed = false;
         if (InEvent.IsInCategory(EEventCategory::Mouse) || InEvent.IsInCategory(EEventCategory::MouseButton))
         {
-            return lIO.WantCaptureMouse;
+            lConsumed = lIO.WantCaptureMouse;
         }
-        if (InEvent.IsInCategory(EEventCategory::Keyboard))
+        else if (InEvent.IsInCategory(EEventCategory::Keyboard))
         {
-            return lIO.WantCaptureKeyboard;
+            lConsumed = lIO.WantCaptureKeyboard;
         }
-        return false;   // window/application events always fall through to the base app
+        // else: window/application events (close, resize, ...) always fall through to the base app.
+
+        // Observability for the seam (Trace only, discrete events — never per mouse-move, so no spam).
+        // Over the ImGui UI -> WantCapture true -> CONSUMED; over the passthru viewport -> passed to engine.
+        if (InEvent.IsInCategory(EEventCategory::MouseButton) || InEvent.IsInCategory(EEventCategory::Keyboard))
+        {
+            OPAAX_LOG(LogEditorService, Trace, "RouteInput: {} -> {} (WantMouse={}, WantKeyboard={})",
+                InEvent.GetName(), lConsumed ? "CONSUMED by editor" : "passed to engine",
+                lIO.WantCaptureMouse, lIO.WantCaptureKeyboard);
+        }
+
+        return lConsumed;
     }
 
     void EditorService::DrawDockspace()
