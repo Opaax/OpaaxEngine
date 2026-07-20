@@ -6,6 +6,7 @@
 
 namespace Opaax
 {
+    class IFileSystem;
     // =============================================================================
     // IPlatform — OS abstraction (cores, time, env...).
     // =============================================================================
@@ -30,6 +31,12 @@ namespace Opaax
          * @return Windows Linux Max
          */
         virtual OpaaxString GetPlatformName() const = 0;
+
+        /**
+         * 
+         * @return The platform file system
+         */
+        virtual const IFileSystem& GetFileSystem() const = 0;
 
         //----- null object ----------------------------------------------------
         static IPlatform& Null();

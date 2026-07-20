@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Application/Services/Platforms/IFileSystem.h"
 #include "Core/EngineAPI.h"
 #include "Application/Services/Platforms/IPlatform.h"
 
@@ -17,11 +18,18 @@ namespace Opaax
         // =============================================================================
         //~Begin IPlatform interface
     public:
-        Uint32      GetLogicalCoreCount()   const override;
-        double      GetTimeSeconds()        const override;
-        OpaaxString GetExecutablePath()     const override;
-        OpaaxString GetPlatformName()       const override { return OpaaxString("Windows"); }
+        Uint32                              GetLogicalCoreCount()   const override;
+        double                              GetTimeSeconds()        const override;
+        OpaaxString                         GetExecutablePath()     const override;
+        OpaaxString                         GetPlatformName()       const override { return OpaaxString("Windows"); }
+        [[nodiscard]] const IFileSystem&    GetFileSystem()         const override { return m_FileSystem; }
         //~End IPlatform interface
+        
+        // =============================================================================
+        // Members
+        // =============================================================================
+    private:
+        IFileSystem m_FileSystem;
     };
 }
 
