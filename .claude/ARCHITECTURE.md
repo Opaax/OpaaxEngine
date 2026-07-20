@@ -59,6 +59,22 @@ bottom-up: `static locator → app services → IEngine → engine subsystems`. 
 sibling; it *borrows* one by resolving from the manager (**F3**). Convenience pointers to siblings are
 non-owning, initialised `= nullptr`, and re-resolved, never `delete`d.
 
+**I6 — Never dll-export a class *template*; stateless value types are header-only.**
+`__declspec(dllexport/dllimport)` (`OPAAX_API`) on a class *template* exports nothing — a template is not
+code until instantiated, so marking it `dllimport` makes every consumer expect the instantiation *from the
+DLL*, which never exports it → **LNK2019** (proven 2026-07-20: the `Angle` module linked from the editor exe
+against the engine DLL). Two correct shapes:
+- **Header-only value template** — `TFloatValue`, `TDegree`/`TRadian`/`TAngle`, math vectors: **no
+  `OPAAX_API`.** Instantiated per-TU; DLL-safe *by construction* — no shared state, no vtable, no identity
+  tag to unify (the opposite end of the axis from **I2**: identity/export matter only for types with shared
+  state or a cross-module tag; a stateless value has neither). Out-of-line member defs go in a `.inl` that
+  is **`#include`d where the type is declared**, or they're unresolved too.
+- **Explicit instantiation** (only to hide a body / cut bloat): `template class OPAAX_API TFoo<float>;` in a
+  DLL `.cpp` + `extern template class OPAAX_API TFoo<float>;` in the header. Overkill for a solo 2D engine's
+  small value types (project value **Simple**) — prefer header-only.
+`OPAAX_API` belongs on **non-template** classes with real compiled members (services, the `Maths` static
+struct, `Engine`), never on the template itself.
+
 ---
 
 ## LC — Lifecycle: three states, not two
@@ -142,8 +158,10 @@ not overriding them leaves runtime byte-identical.
 | `OnProvideServices(locator)` | end of Bootstrap | add host-owned app services (editor adds `IEditorService`) |
 | `PreEngineStartup()` | start of `EngineStartup` | before subsystems start |
 | `OnRegisterModules(registrar)` | in `EngineStartup`, registries exist, **no world yet** | route the game module (**MR**) |
+| `OnModulesRegistered()` | in `EngineStartup`, **after** `OnRegisterModules`, **before** `Engine().Startup()` (still no world) | editor registers its D10 extensions and **seals before the first world** (§2). `EditorApplication` overrides → `EditorService::RegisterExtensions`, which drives each `IEditorModule::OnRegister(EditorExtensionRegistrar&)`. Generic engine-side name (no editor types) — the engine stays editor-ignorant (**D4**). |
 | `PostEngineStartup()` | end of `EngineStartup` | after subsystems start (editor inits `EditorService`) |
 | `TickFrame()` | per loop iter | base = `Engine().Loop()`; editor wraps it UI-begin → Loop → UI-end |
+| `OnEvent(event)` | window callback, per event | base = app sink (close/resize→bus); `EditorApplication` overrides → `EditorService::RouteInput` first (S11), so the editor sees events before the bus |
 
 ---
 
