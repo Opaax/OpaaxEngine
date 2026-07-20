@@ -196,3 +196,50 @@ whack-a-mole moving live deps back one build at a time.
 - Include-path rewrites for folder moves must handle BOTH `"…"` and `<…>` delimiters, and remember that
   `#include "X/…"` also resolves file-relative (same-dir) — so an absolute-prefix rewrite can leave a
   relative include silently resolving to the new location (usually fine, occasionally surprising).
+
+## L11 — A vendor library's GLOBAL STATE duplicates across the DLL/exe line, exactly like our own statics (2026-07-20)
+
+**What happened (S10):** the ImGui overlay linked fine but crashed at `ImGui_ImplGlfw_InitForOpenGL`
+(`PrevWndProc != nullptr`). Root cause: the engine DLL linked glfw **PUBLIC + static**, so the editor exe
+relinked a **second glfw copy** with its own global state. `glfwInit` + the window ran in the DLL's glfw;
+ImGui (in the exe) called the **exe's** glfw copy, never initialised → `glfwGetWin32Window` null → null
+HWND → assert.
+
+**The insight:** I1/I2 ("one static instance across the DLL line") apply to a **vendor lib's global state**
+(glfw's init flag / window list / current-context) just as to our own types. A static third-party lib linked
+PUBLIC into a DLL gets a second, uninitialised copy in every consumer exe; the vendor's `REQUIRE_INIT`
+guards then fire in the consumer even though the DLL "initialised it."
+
+**Rules:**
+- Before wiring a vendor with GLOBAL STATE (glfw, an allocator, a logger registry, a GL loader) across a DLL
+  boundary, decide WHERE its single instance lives and make every module share it — never PUBLIC-static into
+  a DLL. It's the I1/I2 hazard wearing a vendor's hat.
+- Prefer the vendor's OWN dllexport/dllimport switch over reshaping the library: glfw ships `_GLFW_BUILD_DLL`
+  (export) / `GLFW_DLL` (import). Export the one instance from the DLL that owns it (glfw PRIVATE + exported;
+  consumers import). No vendor files touched, no extra DLL shipped, runtime deploy unchanged. (User steer:
+  fix at THIS PROJECT's link/ABI layer — don't rebuild the lib as shared or ship a new DLL.)
+- Check each vendor's actual proc-loading path before assuming: `imgui_impl_opengl3` uses its OWN GL loader,
+  not glad, so only glfw needed unifying.
+- Sibling of [[L4]] (our own cross-module type identity). See ARCHITECTURE.md **I6** for the related
+  "never dll-export a class template; stateless value types are header-only" rule (proven by the Angle module).
+
+## L12 — Don't hand off a "human eyeball" verification gate with nothing observable to look at (2026-07-20)
+
+**What happened (S11):** I closed the input-seam step reporting automated gates green and left "interactive
+hover/click" as a REMAINING human-eyeball check. The user tried and came back: **"no log appeared to check
+that correctly!"** The seam (`RouteInput` → ImGui `WantCapture*`) had **zero logging**, so clicking produced
+no observable signal — the "needs your eyes" handoff was a dead end.
+
+**The fix:** add a Trace-level `RouteInput` log (discrete mouse-button/key only — never per mouse-move, no
+spam) printing the consume decision + `WantMouse`/`WantKeyboard`, to console AND the file sink. The gate flip
+became visible (menu bar → CONSUMED; passthru viewport → passed) and the user confirmed at once.
+
+**Rules:**
+- When a verification step depends on the USER observing behavior, the observability must EXIST before the
+  handoff. A gate phrased "eyeball that X happens" is worthless if nothing prints/renders X — add the
+  instrument as part of the SAME step, don't defer and assume they'll see something.
+- Before writing "needs your eyes," ask: *what exactly will they look at, and does it exist yet?* (I even had
+  the file-sink path available and still handed off a blind gate.)
+- Match the instrument to event frequency: discrete events (button/key) log cleanly; high-frequency ones
+  (mouse-move) need gating or they flood. A per-event seam's verification log can legitimately STAY as
+  permanent Trace observability (invaluable for the follow-on milestone — here M-Input), not a throwaway probe.
