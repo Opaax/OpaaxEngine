@@ -2,11 +2,9 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
-#include "Core/OpaaxMathTypes.h"
+#include "Core/Maths/MathTypes.h"
 #include "Core/OpaaxString.hpp"
 #include "Application/Services/ILogger.h"
-
-#include <glm/glm.hpp>
 
 #include "Assets/AssetHandle.hpp"
 #include "Renderer/RenderLayer.h"

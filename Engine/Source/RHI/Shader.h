@@ -2,7 +2,7 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
-#include "Core/OpaaxMathTypes.h"
+#include "Core/Maths/MathTypes.h"
 #include "Core/OpaaxString.hpp"
 
 namespace Opaax

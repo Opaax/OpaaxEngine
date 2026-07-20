@@ -2,7 +2,7 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
-#include "Core/OpaaxMathTypes.h"
+#include "Core/Maths/MathTypes.h"
 #include "RHI/RenderLog.h"
 #include "RHI/RenderAPI.h"   // EBackend
 #include "RHI/Shader.h"      // ShaderDesc

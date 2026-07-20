@@ -12,7 +12,7 @@ SandboxEditorApp::SandboxEditorApp(int InArgc, char** InArgv)
 {
 }
 
-void SandboxEditorApp::OnRegisterModules(Opaax::ModuleRegistrar& InRegistrar)
+void SandboxEditorApp::RegisterModule(Opaax::ModuleRegistrar& InRegistrar)
 {
     SandboxModule::RegisterModule(InRegistrar);
 }

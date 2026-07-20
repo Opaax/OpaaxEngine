@@ -54,10 +54,7 @@ namespace Opaax
 
     protected:
         /**
-         * Factory seam for the Paths service. Base builds runtime Paths (exe-dir resolution). The
-         * editor overrides it to build EditorPaths (source-tree resolution) — the composition root
-         * chooses the concrete IPaths, so the engine keeps zero source-tree knowledge (D4). Called by
-         * BootPaths in Bootstrap, before OnProvideServices (Logger/Config depend on Paths).
+         * Factory seam for the Paths service. Editor vs Standalone do not need the same paths
          */
         virtual UniquePtr<IPaths> CreatePaths(const IPlatform& InPlatform, int InArgc, char** InArgv);
     private:
@@ -69,27 +66,16 @@ namespace Opaax
         
     protected:
         /**
-         * IConfigSystem::Get also register
+         * IConfigSystem::Get also register is not registered yet
          * But here you can Pre register config at application boot
          * @param ConfigSystem
          */
         virtual void PreRegisterConfig(IConfigSystem& ConfigSystem);
 
         /**
-         * Seam (Editor.md D1): last step of Bootstrap(). A derived host adds its OWN app services
-         * into the locator here (the editor provides IEditorService). Base is a no-op, so runtime
-         * behaviour is byte-for-byte unchanged when not overridden. Only composition roots (this
-         * subclass) touch the locator — never a service or a panel (D3).
+         * Child app can add their services here
          */
         virtual void OnProvideServices(AppServiceLocator& InServices) {}
-
-        /**
-         * Seam (Editor.md D1/D9): runs in EngineStartup() BETWEEN Bootstrap and Engine().Startup().
-         * The engine registries exist (post-BootEngine); no world exists yet (pre-Startup). A derived
-         * host routes its game module's RegisterModule() through here — components -> Components(),
-         * world subsystems -> WorldSubsystems(). Base is a no-op (byte-identical runtime).
-         */
-        virtual void OnRegisterModules(ModuleRegistrar& InRegistrar) {}
 
     public:
         /**
@@ -162,14 +148,6 @@ namespace Opaax
         void EngineStartup();
 
         /**
-         * Fires in EngineStartup AFTER OnRegisterModules (game module registered) and BEFORE
-         * Engine().Startup() (which seals the registries and creates the first world). A generic
-         * post-registration / pre-startup hook — base no-op, so runtime is unchanged; the editor overrides
-         * it to register its D10 extensions and seal them before the first world exists (Editor.md §2).
-         */
-        virtual void OnModulesRegistered() {}
-
-        /**
          * After engine start
          * Engine subsystem has start
          */
@@ -179,6 +157,22 @@ namespace Opaax
         void EngineTeardown();
         
         // Engine
+        // =============================================================================
+        
+        // =============================================================================
+        // Modules
+    protected:
+        /**
+         * 
+         */
+        virtual void RegisterModules(ModuleRegistrar& InRegistrar) {}
+        
+        /**
+         * Fires in EngineStartup AFTER RegisterModules (game module registered) and BEFORE Engine().Startup()
+         */
+        virtual void OnModulesRegistered() {}
+        
+        // End Modules
         // =============================================================================
         
         // =============================================================================

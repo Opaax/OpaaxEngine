@@ -13,10 +13,9 @@ public:
     SandboxEditorApp(int InArgc, char** InArgv);
 
 protected:
-    void OnRegisterModules(Opaax::ModuleRegistrar& InRegistrar) override;
-    void OnRegisterEditorModules(Opaax::Editor::EditorExtensionRegistrar& InRegistrar) override;   // D10
+    void RegisterModule(Opaax::ModuleRegistrar& InRegistrar) override;
+    void OnRegisterEditorModules(Opaax::Editor::EditorExtensionRegistrar& InRegistrar) override; 
     void PostEngineStartup() override;
-
-    // This editor edits the Sandbox project — resolves to <workspace>/Sandbox, not <workspace>/SandboxEditor.
+    
     Opaax::OpaaxString GetEditedProjectName() const override { return Opaax::OpaaxString("Sandbox"); }
 };

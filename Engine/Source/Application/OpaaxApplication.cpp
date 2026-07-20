@@ -92,9 +92,7 @@ void OpaaxApplication::Bootstrap()
     //Engine
     OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Engine");
     IEngine& lEngine = BootEngine();
-
-    // D1 seam — derived hosts (the editor) add their own services last, once every engine service
-    // exists. Base no-op: runtime is unchanged.
+    
     OnProvideServices(m_Services);
 
     bHasBootstrap = true;
@@ -286,16 +284,12 @@ void OpaaxApplication::ShutdownApplication()
 void OpaaxApplication::EngineStartup()
 {
     PreEngineStartup();
-
-    // D1/D9 seam — registries exist (post-BootEngine), no world yet (pre-Startup). A derived host
-    // routes its game module here. Base no-op: runtime unchanged.
-    OnRegisterModules(m_ModuleRegistrar);
-
-    // D10/§2 seam — after the game module, still before the first world. The editor registers its
-    // extensions and seals them here (base no-op: runtime unchanged).
+    
+    RegisterModules(m_ModuleRegistrar);
     OnModulesRegistered();
-
-    Engine().Startup();   // WorldManager seals the registries and creates the first world ('Main')
+    
+    Engine().Startup();
+    
     PostEngineStartup();
 }
 

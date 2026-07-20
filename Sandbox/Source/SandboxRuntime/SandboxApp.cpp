@@ -24,7 +24,7 @@ void SandboxApp::OnInitializeApplication()
     GetAppService<Opaax::IConfigSystem>().Register<Config_MyConfig>();
 }
 
-void SandboxApp::OnRegisterModules(Opaax::ModuleRegistrar& InRegistrar)
+void SandboxApp::RegisterModules(Opaax::ModuleRegistrar& InRegistrar)
 {
     SandboxModule::RegisterModule(InRegistrar);
 }

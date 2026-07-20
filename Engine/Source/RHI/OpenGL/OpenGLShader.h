@@ -5,9 +5,7 @@
 #include "Core/OpaaxString.hpp"
 #include "Core/OpaaxTypes.h"
 
-#include <glm/glm.hpp>
-
-#include "Core/OpaaxMathTypes.h"
+#include "Core/Maths/MathTypes.h"
 #include "RHI/Shader.h"
 
 namespace Opaax

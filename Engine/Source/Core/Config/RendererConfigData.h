@@ -3,7 +3,7 @@
 #include <Core/OpaaxString.hpp>
 
 #include "TConfig.hpp"
-#include "Core/OpaaxMathTypes.h"
+#include "Core/Maths/MathTypes.h"
 
 namespace Opaax
 {

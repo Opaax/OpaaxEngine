@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Core/EngineAPI.h"
-#include "Core/OpaaxMathTypes.h"
+#include "Core/Maths/MathTypes.h"
 #include "Renderer/Text/DrawParams.h"
 
 namespace Opaax

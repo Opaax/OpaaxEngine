@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Core/OpaaxMathTypes.h"
+#include "Core/Maths/MathTypes.h"
 #include "World/Components/ComponentBase.h"
 
 namespace Opaax

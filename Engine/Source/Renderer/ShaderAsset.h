@@ -2,7 +2,7 @@
 
 #include "Assets/IAsset.hpp"
 #include "Core/EngineAPI.h"
-#include "Core/OpaaxMathTypes.h"
+#include "Core/Maths/MathTypes.h"
 #include "Core/OpaaxString.hpp"
 #include "Core/OpaaxStringID.hpp"
 #include "Core/OpaaxTypes.h"
