@@ -62,6 +62,15 @@ namespace Opaax::Editor
         OpaaxApplication::OnEvent(InEvent);
     }
 
+    void EditorApplication::OnModulesRegistered()
+    {
+        // D10/§2: after the game module, before the first world. Hand the game's editor module(s) to the
+        // service, which runs their OnRegister into the extension registrar and seals it (before EngineStartup
+        // creates World 'Main'). Base OnRegisterEditorModules is a no-op — a bare editor host registers nothing.
+        GetAppService<IEditorService>().RegisterExtensions(
+            [this](EditorExtensionRegistrar& InRegistrar) { OnRegisterEditorModules(InRegistrar); });
+    }
+
     UniquePtr<IPaths> EditorApplication::CreatePaths(const IPlatform& InPlatform, int InArgc, char** InArgv)
     {
         const OpaaxString lName = GetEditedProjectName();

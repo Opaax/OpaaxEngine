@@ -1,5 +1,6 @@
 #include "SandboxEditorApp.h"
 
+#include "SandboxEditorModule.h"
 #include "Sandbox.h"
 #include "Application/ModuleRegistrar.h"
 #include "Application/Services/IEngine.h"
@@ -14,6 +15,12 @@ SandboxEditorApp::SandboxEditorApp(int InArgc, char** InArgv)
 void SandboxEditorApp::OnRegisterModules(Opaax::ModuleRegistrar& InRegistrar)
 {
     SandboxModule::RegisterModule(InRegistrar);
+}
+
+void SandboxEditorApp::OnRegisterEditorModules(Opaax::Editor::EditorExtensionRegistrar& InRegistrar)
+{
+    // D10: Sandbox's editor extensions plug in here — after the game module, before the first world.
+    SandboxEditorModule().OnRegister(InRegistrar);
 }
 
 void SandboxEditorApp::PostEngineStartup()

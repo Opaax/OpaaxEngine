@@ -3,6 +3,7 @@
 #include "Editor/IEditorService.h"
 #include "Editor/EditorContext.h"
 #include "Editor/UI/IEditorUIBackend.h"
+#include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Core/OpaaxTypes.h"   // UniquePtr
 
 namespace Opaax::Editor
@@ -28,6 +29,7 @@ namespace Opaax::Editor
         void BeginFrame() override;   // backend NewFrame -> ImGui::NewFrame
         void EndFrame()   override;   // dockspace -> ImGui::Render -> backend RenderDrawData
         bool RouteInput(Event& InEvent) override;   // S11 seam: ImGui WantCapture* gate (full route = M-Input)
+        void RegisterExtensions(const TFunction<void(EditorExtensionRegistrar&)>& InCollect) override;   // S12 seam (D10)
         //~End IEditorService
 
         //~Begin IAppService
@@ -44,5 +46,6 @@ namespace Opaax::Editor
 
         UniquePtr<EditorContext>    m_Context;    // built at Initialize (refs valid post engine startup)
         UniquePtr<IEditorUIBackend> m_UIBackend;  // owns the ImGui renderer/platform hooks (OpenGL today)
+        EditorExtensionRegistrar    m_Extensions; // filled + sealed at RegisterExtensions, before first world (D10)
     };
 }

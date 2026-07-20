@@ -1,11 +1,14 @@
 #pragma once
 
 #include "Application/Services/IAppService.h"
+#include "Core/OpaaxTypes.h"   // TFunction
 
 namespace Opaax { class Event; }   // RouteInput takes it by reference only
 
 namespace Opaax::Editor
 {
+    class EditorExtensionRegistrar;   // RegisterExtensions hands it out by reference (D10)
+
     // =============================================================================
     // IEditorService — the editor, exposed as an application service (Editor.md D1). Provided ONLY by
     //   EditorApplication::OnProvideServices, so it exists only in editor executables; the engine never
@@ -35,6 +38,12 @@ namespace Opaax::Editor
         // ImGui WantCapture* gate ONLY — the full route (viewport focus, reserved keys, world-mode
         // dispatch, InputManager feed + ResetState) is the separate M-Input milestone.
         virtual bool RouteInput(Event& InEvent) = 0;
+
+        // Extension registration SEAM (Editor.md D10, §2). Driven by EditorApplication::OnModulesRegistered
+        // — AFTER the game module, BEFORE the first world. InCollect runs each editor module's
+        // OnRegister(EditorExtensionRegistrar&); the service then seals. M0 records counts only; real
+        // drawers/panels/asset-types/menus/edit-world-systems land M2/M4/M5.
+        virtual void RegisterExtensions(const TFunction<void(EditorExtensionRegistrar&)>& InCollect) = 0;
 
         //----- null object ----------------------------------------------------
         static IEditorService& Null();

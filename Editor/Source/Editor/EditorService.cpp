@@ -112,6 +112,23 @@ namespace Opaax::Editor
         return lConsumed;
     }
 
+    void EditorService::RegisterExtensions(const TFunction<void(EditorExtensionRegistrar&)>& InCollect)
+    {
+        // D10/§2: fired AFTER the game module, BEFORE the first world. (Native editor modules would register
+        // FIRST here — M2+ dogfooding.) The game's editor module(s) plug into the routes, then we seal —
+        // no more registration once the first world exists. M0 records counts only.
+        if (InCollect)
+        {
+            InCollect(m_Extensions);
+        }
+        m_Extensions.Seal();
+
+        OPAAX_LOG(LogEditorService, Info,
+            "Editor extensions sealed (before first world): drawers={}, panels={}, assetTypes={}, menus={}, editWorldSystems={}",
+            m_Extensions.Drawers().Count(),  m_Extensions.Panels().Count(), m_Extensions.AssetTypes().Count(),
+            m_Extensions.Menus().Count(),    m_Extensions.EditWorldSystems().Count());
+    }
+
     void EditorService::DrawDockspace()
     {
         // Full-viewport dockspace; the central node is passthrough, so the world rendered by

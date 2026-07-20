@@ -291,7 +291,11 @@ void OpaaxApplication::EngineStartup()
     // routes its game module here. Base no-op: runtime unchanged.
     OnRegisterModules(m_ModuleRegistrar);
 
-    Engine().Startup();
+    // D10/§2 seam — after the game module, still before the first world. The editor registers its
+    // extensions and seals them here (base no-op: runtime unchanged).
+    OnModulesRegistered();
+
+    Engine().Startup();   // WorldManager seals the registries and creates the first world ('Main')
     PostEngineStartup();
 }
 

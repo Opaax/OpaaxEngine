@@ -160,7 +160,15 @@ namespace Opaax
         
         /***/
         void EngineStartup();
-        
+
+        /**
+         * Fires in EngineStartup AFTER OnRegisterModules (game module registered) and BEFORE
+         * Engine().Startup() (which seals the registries and creates the first world). A generic
+         * post-registration / pre-startup hook — base no-op, so runtime is unchanged; the editor overrides
+         * it to register its D10 extensions and seal them before the first world exists (Editor.md §2).
+         */
+        virtual void OnModulesRegistered() {}
+
         /**
          * After engine start
          * Engine subsystem has start

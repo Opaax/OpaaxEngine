@@ -14,6 +14,7 @@ public:
 
 protected:
     void OnRegisterModules(Opaax::ModuleRegistrar& InRegistrar) override;
+    void OnRegisterEditorModules(Opaax::Editor::EditorExtensionRegistrar& InRegistrar) override;   // D10
     void PostEngineStartup() override;
 
     // This editor edits the Sandbox project — resolves to <workspace>/Sandbox, not <workspace>/SandboxEditor.

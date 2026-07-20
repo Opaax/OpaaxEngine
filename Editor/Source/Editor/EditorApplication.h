@@ -5,6 +5,8 @@
 
 namespace Opaax::Editor
 {
+    class EditorExtensionRegistrar;   // OnRegisterEditorModules fills it (D10)
+
     // =============================================================================
     // EditorApplication — the editor host (Editor.md D1/D8). Composes the editor onto OpaaxApplication:
     //   provides IEditorService, initializes it once the engine is up, and (S10) wraps TickFrame with
@@ -22,8 +24,16 @@ namespace Opaax::Editor
         void PostEngineStartup() override;                              // EditorService.Initialize()
         void TickFrame() override;                                      // UI begin -> Engine().Loop() -> UI end (S10)
         void OnEvent(Event& InEvent) override;                          // editor sees events first -> EditorService::RouteInput (S11)
+        void OnModulesRegistered() override;                            // editor extension registration + seal, before first world (S12/D10)
         UniquePtr<IPaths> CreatePaths(const IPlatform& InPlatform, int InArgc, char** InArgv) override;
         //~End OpaaxApplication seams
+
+        /**
+         * Route the game's editor module(s) into the extension registrar (Editor.md D10). Base no-op; a
+         * game's editor exe overrides it — the analogue of OnRegisterModules for editor extensions. Called
+         * by OnModulesRegistered (after the game module, before the first world). See IEditorModule.
+         */
+        virtual void OnRegisterEditorModules(EditorExtensionRegistrar& InRegistrar) {}
 
         /**
          * The game project this editor edits, e.g. "Sandbox" — resolves to <workspace>/<name>/
