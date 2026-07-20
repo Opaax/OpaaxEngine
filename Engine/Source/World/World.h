@@ -6,7 +6,7 @@
 #include "Application/Services/ILogger.h"
 #include "World/WorldGuidRegistry.h"
 
-#include "GUID/Guid.h"
+#include "Core/GUID/Guid.h"
 
 #include "World/Entity/EntityTypes.h"
 

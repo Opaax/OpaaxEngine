@@ -9,7 +9,7 @@
 
 //Subsystems
 #include "Engine/Subsystems/Resources/ResourceManager.h"
-#include "Maths/MathsStatics.h"
+#include "Core/Maths/MathsStatics.h"
 #include "Subsystems/EventBus/EngineEventBus.h"
 #include "Subsystems/Renderer/RendererManager.h"
 #include "World/WorldManager.h"

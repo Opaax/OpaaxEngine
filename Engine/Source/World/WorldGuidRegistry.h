@@ -2,7 +2,7 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
-#include "GUID/Guid.h"
+#include "Core/GUID/Guid.h"
 #include "World/Entity/EntityTypes.h"
 
 namespace Opaax

@@ -31,12 +31,7 @@ file(GLOB_RECURSE ENGINE_CORE_SOURCES CONFIGURE_DEPENDS
     "Source/Assets/*.hpp"
     # NOTE: ECS/ Scene/ World/ Physics/ moved to Source/Legacy/ (old-world quarantine) and are
     # intentionally NOT globbed here — the old world is dropped from the engine DLL build.
-    "Source/Maths/*.cpp"
-    "Source/Maths/*.h"
-    "Source/Maths/*.hpp"
-    "Source/GUID/*.cpp"
-    "Source/GUID/*.h"
-    "Source/GUID/*.hpp"
+    # Maths/ and GUID/ folded into Core/ (foundations) — caught by the Source/Core/* recurse above.
     # Entity/ folded into World/ (World layer) — caught by the Source/World/* recurse above.
 )
 

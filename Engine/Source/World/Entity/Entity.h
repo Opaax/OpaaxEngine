@@ -3,7 +3,7 @@
 #include "Core/EngineAPI.h"
 #include "World/Entity/EntityTypes.h"
 #include "World/Entity/EntityMeta.h"
-#include "GUID/Guid.h"
+#include "Core/GUID/Guid.h"
 #include "World/World.h"
 
 namespace Opaax

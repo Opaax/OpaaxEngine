@@ -1,7 +1,7 @@
 #include "ShakeCameraController.h"
 
 #include "ICamera.h"
-#include "Maths/Maths.h"
+#include "Core/Maths/Maths.h"
 
 namespace Opaax
 {
