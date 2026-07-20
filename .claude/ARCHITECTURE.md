@@ -23,12 +23,19 @@ subsystems. No `s_Data`, no function-local `static`, no singletons past the loca
 the whole design optimizes (see **L2**); a proposal that adds a static is wrong by default, even a "clean" one.
 *The old static `RenderCommand`/`IRenderAPI` facade is OLD-world and dies with it — do not extend it.*
 
-**I2 — DLL-safe type identity.** Types resolve across the DLL/exe boundary by a tag that is **defined
-out-of-line in a `.cpp`**, never by a header-inline function-local static (which duplicates per module).
-- Services: `OPAAX_SERVICE_TYPE(IFoo)` in the header *declares* `StaticTypeID()`; the interface's `.cpp`
-  *defines* it. One tag, shared. `ServiceTypeID = uintptr_t`.
-- Subsystems: same shape via `OPAAX_SUBSYSTEM_TYPE`. If `GetSubsystem<T>()` across the boundary ever
-  returns null, this is the first suspect (see todo **S9**, lesson **L4**).
+**I2 — DLL-safe type identity.** A type's tag must be a *single instance across the DLL/exe boundary*.
+Two proven ways to get that — the deciding factor is **whether the tag is dll-exported**, not inline-vs-`.cpp`:
+- **Out-of-line (services):** `OPAAX_SERVICE_TYPE(IFoo)` *declares* `StaticTypeID()` in the header; the
+  interface's `.cpp` *defines* it. One tag, shared. `ServiceTypeID = uintptr_t`.
+- **Exported-inline (subsystems):** `OPAAX_SUBSYSTEM_TYPE` keeps `StaticTypeID()` inline (a function-local
+  static). It is still single-instance *because the subsystem class is `OPAAX_API`* — dllimport imports the
+  one exported inline definition into the exe rather than re-emitting it. **Proven by S9 (2026-07-20):**
+  `GetSubsystem<WorldManager>()` is non-null across the exe/DLL line (DLL-side instance tag == exe-side
+  `StaticTypeID()`, same address). So I2 is *not* "out-of-line only" — it is "one exported tag."
+- The "duplicates per module" hazard (**L4**) bites only a tag that is **not** dll-exported: a header-only
+  template static, or a subsystem living in a **static lib / game module** (M4). Such a type must go
+  out-of-line (service shape) or be exported. If `GetSubsystem<T>()` across the boundary ever returns null,
+  this is the first suspect.
 - New cross-module identity must hash a compiler-stable per-type string (`__FUNCSIG__`), never a
   template-static counter.
 

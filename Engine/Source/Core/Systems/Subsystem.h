@@ -47,9 +47,15 @@ namespace Opaax
         virtual SubsystemTypeID GetTypeID() const noexcept          = 0;
     };
 
-    // Stamp onto any concrete subsystem class.
-    // StaticTypeID() returns the address of a function-local static — unique per type,
-    // determined at link time, zero runtime cost.
+    // Stamp onto any concrete subsystem class. StaticTypeID() returns the address of a
+    // function-local static — one tag per type, zero runtime cost. This inline form is
+    // DLL-safe *because every engine subsystem is OPAAX_API*: dllexport in the engine,
+    // dllimport in consumers, so MSVC imports the single exported inline definition into the
+    // exe instead of re-emitting it — the DLL and exe share ONE s_TypeTag. Proven by the S9
+    // probe (2026-07-20): GetSubsystem<WorldManager>() is non-null across the exe/DLL line
+    // (instance tag == exe-side static tag). CAVEAT: a subsystem that is NOT dll-exported
+    // (defined in a static lib / game module) would get a per-module copy — resolve it
+    // out-of-line like OPAAX_SERVICE_TYPE, or export it. See ARCHITECTURE.md I2.
 #define OPAAX_SUBSYSTEM_TYPE(ClassName)                                         \
 static ::Opaax::SubsystemTypeID StaticTypeID() noexcept                     \
 {                                                                            \
