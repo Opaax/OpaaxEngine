@@ -135,10 +135,12 @@ namespace Opaax
         void RunApplication();
         
         /**
-         * Mainly Window event to dispatch to other services
-         * @param InEvent 
+         * Mainly Window event to dispatch to other services. Virtual so a composition root (the editor)
+         * can intercept events at the window-callback site BEFORE the base enqueues them to the engine
+         * bus (Editor.md "Event ordering", S11). Base is unchanged; runtime has no override.
+         * @param InEvent
          */
-        void OnEvent(Event& InEvent);
+        virtual void OnEvent(Event& InEvent);
         
         /**
          * Make the application shutdown explicit

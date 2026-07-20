@@ -27,6 +27,7 @@ namespace Opaax::Editor
         void Initialize() override;   // create the ImGui context + UI backend, build the EditorContext
         void BeginFrame() override;   // backend NewFrame -> ImGui::NewFrame
         void EndFrame()   override;   // dockspace -> ImGui::Render -> backend RenderDrawData
+        bool RouteInput(Event& InEvent) override;   // S11 seam: ImGui WantCapture* gate (full route = M-Input)
         //~End IEditorService
 
         //~Begin IAppService

@@ -2,6 +2,8 @@
 
 #include "Application/Services/IAppService.h"
 
+namespace Opaax { class Event; }   // RouteInput takes it by reference only
+
 namespace Opaax::Editor
 {
     // =============================================================================
@@ -26,6 +28,13 @@ namespace Opaax::Editor
         //   ImGui frame; EndFrame draws the dockspace and submits ImGui's draw data to the backbuffer.
         virtual void BeginFrame() = 0;
         virtual void EndFrame()   = 0;
+
+        // Input SEAM (Editor.md D5, S11). The host calls this from EditorApplication::OnEvent, so the
+        // editor sees every window/input event BEFORE the base app enqueues it to the engine bus.
+        // Returns true when the editor CONSUMED the event (it must not reach the engine). S11 body is the
+        // ImGui WantCapture* gate ONLY — the full route (viewport focus, reserved keys, world-mode
+        // dispatch, InputManager feed + ResetState) is the separate M-Input milestone.
+        virtual bool RouteInput(Event& InEvent) = 0;
 
         //----- null object ----------------------------------------------------
         static IEditorService& Null();

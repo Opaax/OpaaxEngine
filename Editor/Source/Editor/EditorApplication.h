@@ -21,6 +21,7 @@ namespace Opaax::Editor
         void OnProvideServices(AppServiceLocator& InServices) override;  // provide IEditorService (D1)
         void PostEngineStartup() override;                              // EditorService.Initialize()
         void TickFrame() override;                                      // UI begin -> Engine().Loop() -> UI end (S10)
+        void OnEvent(Event& InEvent) override;                          // editor sees events first -> EditorService::RouteInput (S11)
         UniquePtr<IPaths> CreatePaths(const IPlatform& InPlatform, int InArgc, char** InArgv) override;
         //~End OpaaxApplication seams
 

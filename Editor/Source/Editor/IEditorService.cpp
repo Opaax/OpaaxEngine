@@ -13,6 +13,7 @@ namespace Opaax::Editor
             void Initialize()        override {}
             void BeginFrame()        override {}
             void EndFrame()          override {}
+            bool RouteInput(Event&)  override { return false; }   // inert: consumes nothing
         };
     }
 

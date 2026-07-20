@@ -6,6 +6,7 @@
 #include "Application/Services/IEngine.h"
 #include "Application/Services/ILogger.h"                 // OPAAX_LOG + LogCategory
 #include "Application/Services/Window/IWindowManager.h"   // window + native GLFW handle
+#include "Core/Events/Event.h"                             // Event::IsInCategory + EEventCategory (S11)
 
 #include <imgui.h>
 
@@ -77,6 +78,25 @@ namespace Opaax::Editor
         {
             m_UIBackend->RenderPlatformWindows();
         }
+    }
+
+    bool EditorService::RouteInput(Event& InEvent)
+    {
+        // S11 SEAM ONLY. The full routing policy (viewport hover/focus, reserved keys, world-mode
+        // dispatch, InputManager feed + ResetState) is M-Input (Editor.md D5) — NOT here. Today the
+        // route reaches exactly ImGui's capture flags: if the UI wants the pointer/keys, it eats the event.
+        if (m_UIBackend == nullptr) { return false; }   // UI not up (pre-Initialize / no window) — pass through
+
+        const ImGuiIO& lIO = ImGui::GetIO();
+        if (InEvent.IsInCategory(EEventCategory::Mouse) || InEvent.IsInCategory(EEventCategory::MouseButton))
+        {
+            return lIO.WantCaptureMouse;
+        }
+        if (InEvent.IsInCategory(EEventCategory::Keyboard))
+        {
+            return lIO.WantCaptureKeyboard;
+        }
+        return false;   // window/application events always fall through to the base app
     }
 
     void EditorService::DrawDockspace()

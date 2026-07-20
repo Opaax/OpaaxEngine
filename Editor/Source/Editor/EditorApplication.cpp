@@ -47,6 +47,16 @@ namespace Opaax::Editor
         lEditor.EndFrame();
     }
 
+    void EditorApplication::OnEvent(Event& InEvent)
+    {
+        // The editor sees window/input events FIRST — before the base app enqueues anything to the engine
+        // bus (Editor.md "Event ordering", M0/S11). If the editor consumed it (S11: ImGui WantCapture*),
+        // the engine never sees it. Everything else falls through to the base sink (close, resize, ...).
+        if (GetAppService<IEditorService>().RouteInput(InEvent)) { return; }
+
+        OpaaxApplication::OnEvent(InEvent);
+    }
+
     UniquePtr<IPaths> EditorApplication::CreatePaths(const IPlatform& InPlatform, int InArgc, char** InArgv)
     {
         const OpaaxString lName = GetEditedProjectName();
