@@ -11,6 +11,8 @@ namespace Opaax::Editor
         public:
             bool IsNull() const noexcept override { return true; }
             void Initialize()        override {}
+            void BeginFrame()        override {}
+            void EndFrame()          override {}
         };
     }
 

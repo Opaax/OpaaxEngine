@@ -2,6 +2,7 @@
 
 #include "Editor/IEditorService.h"
 #include "Editor/EditorContext.h"
+#include "Editor/UI/IEditorUIBackend.h"
 #include "Core/OpaaxTypes.h"   // UniquePtr
 
 namespace Opaax::Editor
@@ -23,7 +24,9 @@ namespace Opaax::Editor
         EditorService& operator=(const EditorService&) = delete;
 
         //~Begin IEditorService
-        void Initialize() override;
+        void Initialize() override;   // create the ImGui context + UI backend, build the EditorContext
+        void BeginFrame() override;   // backend NewFrame -> ImGui::NewFrame
+        void EndFrame()   override;   // dockspace -> ImGui::Render -> backend RenderDrawData
         //~End IEditorService
 
         //~Begin IAppService
@@ -34,6 +37,11 @@ namespace Opaax::Editor
         EditorContext& GetContext() noexcept { return *m_Context; }
 
     private:
-        UniquePtr<EditorContext> m_Context;   // built at Initialize (refs valid post engine startup)
+        // The full-viewport dockspace host + main menu bar. Central node is passthrough, so the world
+        // rendered by Engine().Loop() shows through it (M0 has no viewport panel yet — that is M1).
+        void DrawDockspace();
+
+        UniquePtr<EditorContext>    m_Context;    // built at Initialize (refs valid post engine startup)
+        UniquePtr<IEditorUIBackend> m_UIBackend;  // owns the ImGui renderer/platform hooks (OpenGL today)
     };
 }

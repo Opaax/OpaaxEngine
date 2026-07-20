@@ -62,6 +62,16 @@ if(NOT TARGET glfw)
     message(FATAL_ERROR "GLFW target 'glfw' was not created!")
 endif()
 
+# GLFW has ONE global state (glfwInit, the window list, the current context). OpaaxEngine is a DLL
+# and OWNS that state — it calls glfwInit and creates the window. The editor's ImGui GLFW backend
+# lives in the exe and MUST see the SAME glfw, or it hits an uninitialised second copy (glfwGetWin32Window
+# returns null -> ImGui_ImplGlfw assert). So the engine DLL EXPORTS glfw as part of its ABI, using glfw's
+# OWN dllexport switch (no glfw sources changed): _GLFW_BUILD_DLL makes GLFWAPI __declspec(dllexport), so
+# the glfw symbols compiled into OpaaxEngine.dll are exported. Consumers set GLFW_DLL (dllimport) instead of
+# relinking a second static glfw (see the imgui target + the PRIVATE link below). One instance, no glfw.dll
+# shipped, runtime deployment unchanged. Same "one instance across the DLL line" rule as ARCHITECTURE.md I1/I2.
+target_compile_definitions(glfw PUBLIC _GLFW_BUILD_DLL)
+
 # ==================================
 # END GLFW Configuration
 # ==================================
@@ -273,6 +283,11 @@ if(OPAAX_EDITOR_SUPPORT)
     target_compile_definitions(imgui
         PRIVATE
             IMGUI_IMPL_OPENGL_LOADER_GLAD
+        PUBLIC
+            # imgui_impl_glfw calls glfw. The one glfw instance is EXPORTED from OpaaxEngine.dll (see the
+            # _GLFW_BUILD_DLL note above), so imgui + everything linking it (OpaaxEditorLib, the editor exe)
+            # imports glfw via GLFW_DLL rather than statically relinking a second, uninitialised copy.
+            GLFW_DLL
     )
 
     message(STATUS "[Opaax] ImGui: static lib created (editor mode)")
@@ -417,7 +432,6 @@ endif()
 
 target_link_libraries(OpaaxEngine
     PUBLIC
-        glfw
         spdlog::spdlog_header_only
         glm
         stb
@@ -427,8 +441,13 @@ target_link_libraries(OpaaxEngine
         box2d
 )
 
+# glfw is PRIVATE (not PUBLIC): it is embedded in + EXPORTED from OpaaxEngine.dll (_GLFW_BUILD_DLL above).
+# PUBLIC would make every consumer statically relink a SECOND glfw copy with its own uninitialised global
+# state — the exact bug this fixes. No public engine header includes <GLFW/glfw3.h> (only .cpp + the private
+# WindowsWindow.h), so nothing downstream needs glfw's headers transitively.
 target_link_libraries(OpaaxEngine
     PRIVATE
+        glfw
         ${OPAAX_GLSLANG_LINK}
         ${OPAAX_VULKAN_LINK}
 )

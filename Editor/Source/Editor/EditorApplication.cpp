@@ -3,6 +3,7 @@
 #include "Editor/IEditorService.h"
 #include "Editor/EditorService.h"
 #include "Editor/EditorPaths.h"
+#include "Application/Services/IEngine.h"   // Engine().Loop() — full type, not just the fwd decl
 #include "Application/Services/ILogger.h"   // OPAAX_LOG + LogCategory
 
 #include <string>
@@ -32,6 +33,18 @@ namespace Opaax::Editor
     {
         // Engine + subsystems are up — safe to build the EditorContext now.
         GetAppService<IEditorService>().Initialize();
+    }
+
+    void EditorApplication::TickFrame()
+    {
+        // The editor frame wraps the engine frame in UI (S10 / D1). BeginFrame opens the ImGui frame;
+        // Engine().Loop() renders the world into the backbuffer; EndFrame draws the dockspace over it and
+        // submits ImGui's draw data. The host then calls Engine().Present() (S7) — the UI is on the
+        // backbuffer before the swap.
+        IEditorService& lEditor = GetAppService<IEditorService>();
+        lEditor.BeginFrame();
+        Engine().Loop();
+        lEditor.EndFrame();
     }
 
     UniquePtr<IPaths> EditorApplication::CreatePaths(const IPlatform& InPlatform, int InArgc, char** InArgv)

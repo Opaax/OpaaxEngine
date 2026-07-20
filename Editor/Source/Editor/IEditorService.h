@@ -21,6 +21,12 @@ namespace Opaax::Editor
         // service is provided during Bootstrap, before the engine runs.
         virtual void Initialize() = 0;
 
+        // Per-frame UI, driven by EditorApplication::TickFrame around Engine().Loop() (Editor.md D1, S10):
+        //   BeginFrame() -> Engine().Loop() -> EndFrame(), then the host presents. BeginFrame opens the
+        //   ImGui frame; EndFrame draws the dockspace and submits ImGui's draw data to the backbuffer.
+        virtual void BeginFrame() = 0;
+        virtual void EndFrame()   = 0;
+
         //----- null object ----------------------------------------------------
         static IEditorService& Null();
     };
