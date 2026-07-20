@@ -26,7 +26,7 @@ void SandboxApp::OnInitializeApplication()
 
 void SandboxApp::RegisterModules(Opaax::ModuleRegistrar& InRegistrar)
 {
-    SandboxModule::RegisterModule(InRegistrar);
+    SandboxModule().OnRegister(InRegistrar);
 }
 
 void SandboxApp::PostEngineStartup()
@@ -34,6 +34,6 @@ void SandboxApp::PostEngineStartup()
     // Populate the active world via the shared module content (same scene as the editor host).
     if (Opaax::World* lWorld = GetAppService<Opaax::IEngine>().GetWorldManager().GetActiveWorld())
     {
-        SandboxModule::SpawnDemoWorld(*lWorld);
+        SandboxModule().SpawnDemoWorld(*lWorld);
     }
 }

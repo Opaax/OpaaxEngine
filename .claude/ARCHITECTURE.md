@@ -157,7 +157,7 @@ not overriding them leaves runtime byte-identical.
 | `PreRegisterConfig()` | in Bootstrap | register config types before load |
 | `OnProvideServices(locator)` | end of Bootstrap | add host-owned app services (editor adds `IEditorService`) |
 | `PreEngineStartup()` | start of `EngineStartup` | before subsystems start |
-| `OnRegisterModules(registrar)` | in `EngineStartup`, registries exist, **no world yet** | route the game module (**MR**) |
+| `RegisterModules(registrar)` | in `EngineStartup`, registries exist, **no world yet** | route the game module — drives `IRuntimeModule::OnRegister` (**MR**) |
 | `OnModulesRegistered()` | in `EngineStartup`, **after** `OnRegisterModules`, **before** `Engine().Startup()` (still no world) | editor registers its D10 extensions and **seals before the first world** (§2). `EditorApplication` overrides → `EditorService::RegisterExtensions`, which drives each `IEditorModule::OnRegister(EditorExtensionRegistrar&)`. Generic engine-side name (no editor types) — the engine stays editor-ignorant (**D4**). |
 | `PostEngineStartup()` | end of `EngineStartup` | after subsystems start (editor inits `EditorService`) |
 | `TickFrame()` | per loop iter | base = `Engine().Loop()`; editor wraps it UI-begin → Loop → UI-end |
@@ -167,7 +167,8 @@ not overriding them leaves runtime byte-identical.
 
 ## MR — Module registration (D9)
 
-A game module registers **into** a `ModuleRegistrar` from `OnRegisterModules`, before any world exists:
+A game module is an **`IRuntimeModule`** (`Application/IRuntimeModule.h`); its `OnRegister` registers
+**into** a `ModuleRegistrar`, invoked by the host's `RegisterModules` seam before any world exists:
 ```cpp
 InRegistrar.Components().Register<TransformComponent>();      // → ComponentRegistry v2 (M3)
 InRegistrar.WorldSubsystems().Register<WaveSpawnSubsystem>(); // → WorldSubsystemRegistry (M4)
@@ -176,6 +177,13 @@ InRegistrar.WorldSubsystems().Register<WaveSpawnSubsystem>(); // → WorldSubsys
 real registries). Do not change how modules call in.
 **MR2** — Order is engine natives → game module → editor module → **seal** (before the first world). The
 editor module slots in before the seal.
+**MR3 — One module shape.** Runtime and editor modules share a marker base **`IModule`**
+(`Application/IModule.h`): `IRuntimeModule : IModule` (`OnRegister(ModuleRegistrar&)`) and
+`IEditorModule : IModule` (`OnRegister(EditorExtensionRegistrar&)`). `OnRegister` stays on each derived
+interface — the two register into *different* registrars, so it can't sit on the base. All three are
+header-only pure interfaces, **no `OPAAX_API`** (no exported symbols / shared state / identity tag — the
+opposite end of the axis from **I2**). A host invokes a module as a throwaway instance
+(`SandboxModule().OnRegister(reg)`), symmetric across runtime and editor.
 
 ---
 

@@ -14,7 +14,7 @@ namespace
     constexpr LogCategory LogSandboxModule{"SandboxModule"};
 }
 
-void SandboxModule::RegisterModule(Opaax::ModuleRegistrar& InRegistrar)
+void SandboxModule::OnRegister(Opaax::ModuleRegistrar& InRegistrar)
 {
     // NOTE: M0 demonstrative — DummyComponent is the one component the game currently uses (an engine
     // bring-up type). Registering it here proves the Components() route + the boot flow end to end.

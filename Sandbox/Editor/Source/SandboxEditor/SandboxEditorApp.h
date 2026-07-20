@@ -13,7 +13,7 @@ public:
     SandboxEditorApp(int InArgc, char** InArgv);
 
 protected:
-    void RegisterModule(Opaax::ModuleRegistrar& InRegistrar) override;
+    void RegisterModules(Opaax::ModuleRegistrar& InRegistrar) override;
     void OnRegisterEditorModules(Opaax::Editor::EditorExtensionRegistrar& InRegistrar) override; 
     void PostEngineStartup() override;
     

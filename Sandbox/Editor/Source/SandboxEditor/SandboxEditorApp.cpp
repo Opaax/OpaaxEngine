@@ -12,9 +12,9 @@ SandboxEditorApp::SandboxEditorApp(int InArgc, char** InArgv)
 {
 }
 
-void SandboxEditorApp::RegisterModule(Opaax::ModuleRegistrar& InRegistrar)
+void SandboxEditorApp::RegisterModules(Opaax::ModuleRegistrar& InRegistrar)
 {
-    SandboxModule::RegisterModule(InRegistrar);
+    SandboxModule().OnRegister(InRegistrar);
 }
 
 void SandboxEditorApp::OnRegisterEditorModules(Opaax::Editor::EditorExtensionRegistrar& InRegistrar)
@@ -30,6 +30,6 @@ void SandboxEditorApp::PostEngineStartup()
 
     if (Opaax::World* lWorld = GetAppService<Opaax::IEngine>().GetWorldManager().GetActiveWorld())
     {
-        SandboxModule::SpawnDemoWorld(*lWorld);
+        SandboxModule().SpawnDemoWorld(*lWorld);
     }
 }
