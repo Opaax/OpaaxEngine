@@ -170,3 +170,29 @@ all other staged entries exactly as they were.
   explicitly, and offer the `reset --soft` + re-scope fix rather than leaving misleading history.
 - Don't forget your OWN related unstaged changes (the `.gitignore` narrowing belonged in the same commit) —
   the "what belongs together" set spans staged and unstaged.
+
+## L10 — Dead-code quarantine: the compiler+linker is the authoritative classifier, NOT grep (2026-07-19)
+
+**What happened:** reorganizing `Engine/Source`, I quarantined the old world to `Legacy/` and dropped it
+from the build. For the ambiguous `Assets/` dir I classified files "dead" via a grep of `#include
+"Assets/…"` referencers and moved the "unreferenced" ones. The build failed three ways grep couldn't see:
+(1) `AssetHandle.hpp` includes `"AssetRefBlock.hpp"` and `IAsset.hpp` includes `"AssetTypeList.h"` —
+**file-relative, same-dir** includes my `Assets/`-prefixed grep never matched; (2) `TAssetHandle::Get()`
+**links** against `AssetRegistry_TryResolveTyped` (a symbol dep, invisible to any include scan) → LNK2019.
+Assets was substantially LIVE (renderer + config wired through it). The user had asserted "Assets is
+legacy," but the linker disagreed. Per [[L3]] I stopped and reverted the whole Assets move rather than
+whack-a-mole moving live deps back one build at a time.
+
+**Rule for next time:**
+- To prove a file dead before quarantine, the authoritative test is **"drop it from the build and converge
+  to green"** ([[L8]]), NOT a grep of include referencers. Grep misses (a) file-relative/same-dir includes
+  (`"Sibling.h"`, not `"Dir/Sibling.h"`), and (b) **link-time symbol deps** (a live TU calling a free
+  function defined in the candidate `.cpp`). Grep is a fast SEED for the converge loop, never the verdict.
+- When the user asserts "X is legacy" but the compiler/linker says otherwise, **the code wins** — surface
+  the contradiction with the exact dependency evidence (the LNK2019 symbol, the includer) and recommend;
+  don't force the move.
+- Move the whole reachability cluster together and let build errors *extend* it. If a "dead" set keeps
+  pulling live deps back (premise balloons — [[L3]]), STOP and revert rather than fragment the tree.
+- Include-path rewrites for folder moves must handle BOTH `"…"` and `<…>` delimiters, and remember that
+  `#include "X/…"` also resolves file-relative (same-dir) — so an absolute-prefix rewrite can leave a
+  relative include silently resolving to the new location (usually fine, occasionally surprising).
