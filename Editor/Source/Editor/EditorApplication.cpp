@@ -8,6 +8,8 @@
 
 #include <string>
 
+#include "Core/Maths/Angle/AngleTypes.hpp"
+
 using namespace Opaax;   // OPAAX_LOG expands to an unqualified ToSpdLevel(...)
 
 namespace

@@ -29,6 +29,7 @@ set(OPAAX_TEST_SOURCES
     Core/Engine/Subsystems/Resources/ResourceSystemTests.cpp
     Core/World/WorldEventsTests.cpp
     Assets/AssetIdResolveTests.cpp
+    Core/Maths/AngleTests.cpp
 
     # NOTE: old-world tests (ECS/ComponentRegistry, ECS/Hierarchy, ECS/MoverComponent,
     # Physics/CollisionProfile) were quarantined to Tests/Legacy/ with the old world they
