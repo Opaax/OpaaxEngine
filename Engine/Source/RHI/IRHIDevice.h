@@ -3,7 +3,6 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 
-#include "RHI/RenderLog.h"
 #include "RHI/Buffer.h"
 #include "RHI/Texture.h"
 #include "RHI/Shader.h"
@@ -17,7 +16,7 @@ namespace Opaax
     class ICommandBuffer;
 
     // =============================================================================
-    // IRHIDevice — the graphics device the portable renderer owns (one instance, created
+    // IRHIDevice — the graphics device the renderer owns (one instance, created
     //   by RHIDevice::Create for the selected backend). It knows its own backend, so it
     //   creates resources directly. One object carries both resource creation and the frame
     //   lifecycle; present lives HERE (Present -> the surface swap), never in a window class.
@@ -38,12 +37,10 @@ namespace Opaax
         // =============================================================================
     public:
         /**
-         * ring the device up against the already-created surface (context).
-         * InLog is the injected sink — the device never calls the engine's OPAAX_LOG.
-         * @param InSurface 
-         * @param InLog 
+         * bring the device up against the already-created surface (context).
+         * @param InSurface
          */
-        virtual void Init(IGraphicsContext& InSurface, RenderLogFn InLog) = 0;
+        virtual void Init(IGraphicsContext& InSurface) = 0;
 
         // =============================================================================
         // Resource creation — plain desc in, owning resource out.

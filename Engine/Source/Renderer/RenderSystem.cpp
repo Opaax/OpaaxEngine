@@ -1,5 +1,7 @@
 #include "RenderSystem.h"
 
+#include "Application/Services/ILogger.h"
+
 #include "Renderer/RenderSystemDesc.h"
 #include "Renderer/RenderView.h"
 #include "Renderer/RenderTarget.hpp"
@@ -11,6 +13,8 @@
 
 namespace Opaax
 {
+    OPAAX_LOG_CATEGORY(RenderSystem)
+
     // =========================================================================
     // CTORS - DTORS (out-of-line — owned UniquePtr members are forward-declared)
     // =========================================================================
@@ -22,18 +26,16 @@ namespace Opaax
     // =========================================================================
     bool RenderSystem::Init(const RenderSystemDesc& InDesc)
     {
-        const RenderLogFn lLog = InDesc.Log ? InDesc.Log : &DefaultRenderLog;
-
         if (InDesc.Surface == nullptr)
         {
-            lLog(ERenderLogLevel::Error, "RenderSystem::Init — no surface in the desc.");
+            OPAAX_LOG(LogRenderSystem, Error, "RenderSystem::Init — no surface in the desc.")
             return false;
         }
 
-        m_Device = RHIDevice::Create(InDesc.Backend, *InDesc.Surface, lLog);
+        m_Device = RHIDevice::Create(InDesc.Backend, *InDesc.Surface);
         if (!m_Device)
         {
-            lLog(ERenderLogLevel::Error, "RenderSystem::Init — backend produced no device.");
+            OPAAX_LOG(LogRenderSystem, Error, "RenderSystem::Init — backend produced no device.")
             return false;
         }
 
@@ -44,7 +46,7 @@ namespace Opaax
         m_Renderer2D = MakeUnique<Renderer2D>();
         m_Renderer2D->Init(*m_Device, InDesc.Limits, InDesc.SpriteShader);
 
-        lLog(ERenderLogLevel::Info, "RenderSystem started.");
+        OPAAX_LOG(LogRenderSystem, Info, "RenderSystem started.")
         return true;
     }
 

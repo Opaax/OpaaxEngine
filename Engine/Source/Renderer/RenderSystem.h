@@ -13,12 +13,12 @@ namespace Opaax
     struct RenderView;
 
     // =============================================================================
-    // RenderSystem — the portable renderer orchestrator. A host owns one instance per
-    //   surface. It owns the IRHIDevice, the Renderer2D batcher, and the backbuffer, and
-    //   drives the frame: BeginFrame (clear) -> N x [ BeginScene(view) -> draw -> EndScene ]
-    //   -> EndFrame (present). It knows NOTHING of the host — no OpaaxApplication, config,
-    //   IPaths, ECS, or OPAAX_LOG. Everything crosses the boundary as plain data
-    //   (RenderSystemDesc in, RenderView per frame) or the injected RenderLogFn.
+    // RenderSystem — the renderer orchestrator. A host owns one instance per surface. It
+    //   owns the IRHIDevice, the Renderer2D batcher, and the backbuffer, and drives the
+    //   frame: BeginFrame (clear) -> N x [ BeginScene(view) -> draw -> EndScene ] ->
+    //   EndFrame (present). Host state crosses the boundary as plain data (RenderSystemDesc
+    //   in, RenderView per frame) — no OpaaxApplication / config / IPaths / ECS reach-back.
+    //   It logs through the engine logger (OPAAX_LOG), same as the rest of the RHI.
     // =============================================================================
     class OPAAX_API RenderSystem
     {
@@ -43,7 +43,7 @@ namespace Opaax
         // =============================================================================
     public:
         // Bring up the device against the desc's surface + build the batcher. False if the
-        // backend produced no device (logged through the injected sink).
+        // backend produced no device (logged via OPAAX_LOG).
         bool Init(const RenderSystemDesc& InDesc);
         void Shutdown();
 

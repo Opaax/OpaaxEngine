@@ -4,7 +4,6 @@
 #include "Core/OpaaxTypes.h"
 
 #include "RHI/RenderAPI.h"   // EBackend
-#include "RHI/RenderLog.h"   // RenderLogFn
 
 namespace Opaax
 {
@@ -19,6 +18,6 @@ namespace Opaax
     class OPAAX_API RHIDevice
     {
     public:
-        static UniquePtr<IRHIDevice> Create(EBackend InBackend, IGraphicsContext& InSurface, RenderLogFn InLog);
+        static UniquePtr<IRHIDevice> Create(EBackend InBackend, IGraphicsContext& InSurface);
     };
 }

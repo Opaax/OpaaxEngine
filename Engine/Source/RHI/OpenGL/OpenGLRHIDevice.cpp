@@ -1,5 +1,7 @@
 #include "OpenGLRHIDevice.h"
 
+#include "Application/Services/ILogger.h"
+
 #include "RHI/RHIDevice.h"
 #include "RHI/IGraphicsContext.h"
 
@@ -16,15 +18,16 @@
 
 namespace Opaax
 {
+    OPAAX_LOG_CATEGORY(OpenGLRHIDevice)
+
     // =========================================================================
     // Lifecycle
     // =========================================================================
-    void OpenGLRHIDevice::Init(IGraphicsContext& InSurface, RenderLogFn InLog)
+    void OpenGLRHIDevice::Init(IGraphicsContext& InSurface)
     {
         m_Surface = &InSurface;
-        m_Log     = InLog ? InLog : &DefaultRenderLog;
         // OpenGL state is global — the surface's context is already current (window created it).
-        m_Log(ERenderLogLevel::Info, "OpenGL RHI device initialized");
+        OPAAX_LOG(LogOpenGLRHIDevice, Info, "OpenGL RHI device initialized")
     }
 
     // =========================================================================
@@ -68,21 +71,20 @@ namespace Opaax
     // Factory — OpenGL only for now. When the Vulkan device lands, this moves to a
     // neutral TU (like BackendFactory) that knows every backend.
     // =========================================================================
-    UniquePtr<IRHIDevice> RHIDevice::Create(EBackend InBackend, IGraphicsContext& InSurface, RenderLogFn InLog)
+    UniquePtr<IRHIDevice> RHIDevice::Create(EBackend InBackend, IGraphicsContext& InSurface)
     {
-        RenderLogFn lLog = InLog ? InLog : &DefaultRenderLog;
         switch (InBackend)
         {
             case EBackend::OpenGL:
             {
                 UniquePtr<IRHIDevice> lDevice = MakeUnique<OpenGLRHIDevice>();
-                lDevice->Init(InSurface, lLog);
+                lDevice->Init(InSurface);
                 return lDevice;
             }
             default: break;
         }
 
-        lLog(ERenderLogLevel::Error, "RHIDevice::Create — backend not available (only OpenGL for now).");
+        OPAAX_LOG(LogOpenGLRHIDevice, Error, "RHIDevice::Create — backend not available (only OpenGL for now).")
         return nullptr;
     }
 }

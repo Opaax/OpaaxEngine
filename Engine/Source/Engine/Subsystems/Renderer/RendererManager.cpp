@@ -12,7 +12,6 @@
 #include "Core/Window/WindowEvents.h"
 
 #include "RHI/RenderAPI.h"        // BackendFromString
-#include "RHI/RenderLog.h"        // ERenderLogLevel
 #include "RHI/IGraphicsContext.h"
 
 #include "Renderer/RenderSystem.h"
@@ -33,23 +32,6 @@
 
 namespace Opaax
 {
-    namespace
-    {
-        // Bridge the module's injected log onto the engine logger — the ONLY place render-module
-        // output crosses back into the host's logging. The RenderSystem itself never calls OPAAX_LOG.
-        void RenderLogShim(ERenderLogLevel InLevel, const char* InMsg)
-        {
-            const char* lMsg = InMsg ? InMsg : "";
-            switch (InLevel)
-            {
-                case ERenderLogLevel::Trace: OPAAX_LOG(LogRendererManager, Trace, "{}", lMsg) break;
-                case ERenderLogLevel::Info:  OPAAX_LOG(LogRendererManager, Info,  "{}", lMsg) break;
-                case ERenderLogLevel::Warn:  OPAAX_LOG(LogRendererManager, Warn,  "{}", lMsg) break;
-                case ERenderLogLevel::Error: OPAAX_LOG(LogRendererManager, Error, "{}", lMsg) break;
-            }
-        }
-    }
-
     // =========================================================================
     // CTORS - DTORS
     // =========================================================================
@@ -83,7 +65,6 @@ namespace Opaax
         lDesc.Surface      = lSurface;
         lDesc.Width        = lWindow->GetWidth();
         lDesc.Height       = lWindow->GetHeight();
-        lDesc.Log          = &RenderLogShim;
         lDesc.SpriteShader = ShaderSource::LoadShaderDescFromFile(lShaderPath);
         lDesc.ClearColor   = lRenderCfg.ClearColor;
 

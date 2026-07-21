@@ -27,7 +27,7 @@ namespace Opaax
         UniquePtr<IPipeline>      CreatePipeline(const PipelineDesc& InDesc)                    override;
         UniquePtr<IBindGroup>     CreateBindGroup(const BindGroupLayout& InLayout)              override;
 
-        void            Init(IGraphicsContext& InSurface, RenderLogFn InLog)            override;
+        void            Init(IGraphicsContext& InSurface)                               override;
         void            BeginFrame()                                                    override;
         ICommandBuffer& GetCommandBuffer()                                              override;
         void            EndFrame()                                                      override;
@@ -42,7 +42,6 @@ namespace Opaax
         // =============================================================================
     private:
         IGraphicsContext*   m_Surface = nullptr;
-        RenderLogFn         m_Log     = &DefaultRenderLog;
         OpenGLCommandBuffer m_CommandBuffer;
     };
 }
