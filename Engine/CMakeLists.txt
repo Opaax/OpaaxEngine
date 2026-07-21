@@ -96,32 +96,13 @@ target_include_directories(glad PUBLIC
 # ==================================
 
 # ==================================
-# tinyfiledialogs (editor only)
+# ImGui + tinyfiledialogs — EDITOR-OWNED (D4)
 # ==================================
-if(OPAAX_EDITOR_SUPPORT)
-    if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Vendors/tinyfiledialogs/tinyfiledialogs.h")
-        message(FATAL_ERROR
-            "tinyfiledialogs not found in Engine/Vendors/tinyfiledialogs!\n"
-            "Drop tinyfiledialogs.h + tinyfiledialogs.c into that folder."
-        )
-    endif()
-
-    add_library(tinyfiledialogs STATIC
-        Vendors/tinyfiledialogs/tinyfiledialogs.c
-    )
-
-    target_include_directories(tinyfiledialogs PUBLIC
-        Vendors/tinyfiledialogs
-    )
-
-    if(WIN32)
-        target_link_libraries(tinyfiledialogs PUBLIC comdlg32 ole32 user32 shell32)
-    endif()
-
-    message(STATUS "[Opaax] tinyfiledialogs: static lib created (editor mode)")
-endif()
-# ==================================
-# END tinyfiledialogs
+# The engine build no longer knows about ImGui or tinyfiledialogs. Both are editor UI vendors,
+# built in Editor/CMakeLists.txt from Editor/Vendors/* and linked into OpaaxEditorLib. This makes
+# "runtime carries zero imgui" STRUCTURAL (the engine can't link what it never builds), not just a
+# dumpbin convention. glfw stays engine-owned (shared window infra, exported from OpaaxEngine.dll —
+# see _GLFW_BUILD_DLL above); the editor's imgui imports it via GLFW_DLL.
 # ==================================
 
 # ==================================
@@ -240,60 +221,7 @@ message(STATUS "Box2D: static lib target 'box2d' created")
 # END Box2D
 # ==================================
 
-# ==================================
-# ImGui
-# ==================================
-if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Vendors/imgui/imgui.h")
-    message(FATAL_ERROR
-        "ImGui not found in Engine/Vendors/imgui!\n"
-        "Please run: git clone https://github.com/ocornut/imgui.git Engine/Vendors/imgui"
-    )
-endif()
-
-if(OPAAX_EDITOR_SUPPORT)
-    if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Vendors/imgui/imgui.h")
-        message(FATAL_ERROR
-            "ImGui not found in Engine/Vendors/imgui!\n"
-            "Please run: git clone https://github.com/ocornut/imgui.git Engine/Vendors/imgui"
-        )
-    endif()
-
-    # Base ImGui + platform/OpenGL renderer backends. imgui_impl_vulkan.cpp is attached later,
-    # gated on the Vulkan SDK being present (see the Vulkan detection block below).
-    add_library(imgui STATIC
-        Vendors/imgui/imgui.cpp
-        Vendors/imgui/imgui_draw.cpp
-        Vendors/imgui/imgui_tables.cpp
-        Vendors/imgui/imgui_widgets.cpp
-        Vendors/imgui/imgui_demo.cpp
-        Vendors/imgui/backends/imgui_impl_glfw.cpp
-        Vendors/imgui/backends/imgui_impl_opengl3.cpp
-    )
-
-    target_include_directories(imgui
-        PUBLIC
-            Vendors/imgui
-            Vendors/imgui/backends
-            Vendors/GLFW/include
-    )
-
-    target_compile_definitions(imgui
-        PRIVATE
-            IMGUI_IMPL_OPENGL_LOADER_GLAD
-        PUBLIC
-            # imgui_impl_glfw calls glfw. The one glfw instance is EXPORTED from OpaaxEngine.dll (see the
-            # _GLFW_BUILD_DLL note above), so imgui + everything linking it (OpaaxEditorLib, the editor exe)
-            # imports glfw via GLFW_DLL rather than statically relinking a second, uninitialised copy.
-            GLFW_DLL
-    )
-
-    message(STATUS "[Opaax] ImGui: static lib created (editor mode)")
-else()
-    message(STATUS "[Opaax] ImGui: skipped (release mode)")
-endif()
-# ==================================
-# END ImGui
-# ==================================
+# NOTE: ImGui target moved to Editor/CMakeLists.txt (editor-owned — see the D4 note above).
 
 # ==================================
 # Dll Engine
@@ -411,14 +339,9 @@ if(Vulkan_FOUND AND EXISTS "${OPAAX_VULKAN_ROOT}/Include/vulkan/vulkan.h"
     set(OPAAX_VULKAN_LINK vk-bootstrap ${Vulkan_LIBRARIES})
     message(STATUS "[Opaax] Vulkan SDK found — Vulkan backend ENABLED (vk-bootstrap + VMA).")
 
-    # Editor: compile the ImGui Vulkan renderer backend (consumed by VulkanEditorUIBackend). The
-    # imgui static lib is created earlier, only under OPAAX_EDITOR_SUPPORT — attach the TU here so
-    # it stays gated on the SDK being present (mirrors the OpenGL-only default).
-    if(OPAAX_EDITOR_SUPPORT)
-        target_sources(imgui PRIVATE Vendors/imgui/backends/imgui_impl_vulkan.cpp)
-        target_include_directories(imgui PRIVATE "${OPAAX_VULKAN_INCLUDE}")
-        message(STATUS "[Opaax] ImGui: Vulkan renderer backend ENABLED (imgui_impl_vulkan).")
-    endif()
+    # NOTE: the ImGui Vulkan renderer backend (imgui_impl_vulkan) is NOT built — imgui is editor-owned
+    # now (Editor/CMakeLists.txt) and the live editor UI is OpenGL-only (the VK UI backend is in Legacy).
+    # Re-add it editor-side, with Vulkan detection, when the VK editor UI is revived.
 else()
     message(STATUS "[Opaax] Vulkan SDK not found — Vulkan backend DISABLED (OpenGL-only).")
 endif()
@@ -455,9 +378,9 @@ target_compile_definitions(OpaaxEngine PRIVATE OPAAX_HAS_GLSLANG=$<BOOL:${OPAAX_
 # 1 when the Vulkan SDK is present (Vulkan backend compiled), 0 otherwise (OpenGL-only).
 target_compile_definitions(OpaaxEngine PRIVATE OPAAX_HAS_VULKAN=$<BOOL:${OPAAX_HAS_VULKAN}>)
 
-# D4: imgui + tinyfiledialogs are NEVER linked into the engine DLL. Their vendor targets are still
-# created above (under OPAAX_EDITOR_SUPPORT) so OpaaxEditorLib can link them (S1). The `dumpbin`
-# gate on Sandbox.exe enforces that no ImGui symbol reaches a runtime target.
+# D4: imgui + tinyfiledialogs are neither built nor linked by the engine — they are editor-owned
+# (Editor/CMakeLists.txt, from Editor/Vendors/*). The engine can't leak a symbol it never compiles;
+# the `dumpbin` gate on Sandbox.exe still guards it.
 
 # Include directories
 target_include_directories(OpaaxEngine
