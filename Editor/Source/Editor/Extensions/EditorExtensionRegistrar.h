@@ -51,8 +51,7 @@ namespace Opaax::Editor
         const EditorRoute& AssetTypes()       const noexcept { return m_AssetTypes; }
         const EditorRoute& Menus()            const noexcept { return m_Menus; }
         const EditorRoute& EditWorldSystems() const noexcept { return m_EditWorldSystems; }
-
-        // Close the registry — no more registration once the first world exists (§2). Idempotent.
+        
         void Seal()          noexcept { m_Sealed = true; }
         bool IsSealed() const noexcept { return m_Sealed; }
 
