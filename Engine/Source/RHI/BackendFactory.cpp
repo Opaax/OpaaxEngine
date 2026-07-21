@@ -50,7 +50,7 @@
     #include "RHI/Vulkan/VulkanFramebuffer.h"
 #endif
 
-#include "Core/Log/OpaaxLog.h"
+#include "Application/Services/ILogger.h"
 
 #include <GLFW/glfw3.h>
 
@@ -77,7 +77,7 @@ namespace Opaax
             default: break;
         }
 
-        OPAAX_CORE_ERROR("RenderAPI::Create — backend '{}' not available; no IRenderAPI created.",
+        OPAAX_ENGINE_LOG(Error, "RenderAPI::Create — backend '{}' not available; no IRenderAPI created.",
                          BackendToString(InBackend));
         return nullptr;
     }
@@ -91,13 +91,13 @@ namespace Opaax
 #if OPAAX_HAS_VULKAN
             return EBackend::Vulkan;
 #else
-            OPAAX_CORE_WARN("RenderAPI: 'Vulkan' requested but the engine was built without the "
+            OPAAX_ENGINE_LOG(Warn, "RenderAPI: 'Vulkan' requested but the engine was built without the "
                             "Vulkan SDK — falling back to OpenGL.");
             return EBackend::OpenGL;
 #endif
         }
 
-        OPAAX_CORE_WARN("RenderAPI: unknown render backend '{}' — falling back to OpenGL.", InName);
+        OPAAX_ENGINE_LOG(Warn, "RenderAPI: unknown render backend '{}' — falling back to OpenGL.", InName);
         return EBackend::OpenGL;
     }
 
@@ -127,7 +127,7 @@ namespace Opaax
             default: break;
         }
 
-        OPAAX_CORE_ERROR("IGraphicsContext::Create — backend not available; no context created.");
+        OPAAX_ENGINE_LOG(Error, "IGraphicsContext::Create — backend not available; no context created.");
         return nullptr;
     }
 
@@ -160,7 +160,7 @@ namespace Opaax
 #endif
             default: break;
         }
-        OPAAX_CORE_ERROR("IVertexArray::Create — backend not available."); return nullptr;
+        OPAAX_ENGINE_LOG(Error, "IVertexArray::Create — backend not available."); return nullptr;
     }
 
     UniquePtr<IVertexBuffer> IVertexBuffer::Create(Uint32 InSize)
@@ -173,7 +173,7 @@ namespace Opaax
 #endif
             default: break;
         }
-        OPAAX_CORE_ERROR("IVertexBuffer::Create — backend not available."); return nullptr;
+        OPAAX_ENGINE_LOG(Error, "IVertexBuffer::Create — backend not available."); return nullptr;
     }
 
     UniquePtr<IVertexBuffer> IVertexBuffer::Create(const float* InVertices, Uint32 InSize)
@@ -186,7 +186,7 @@ namespace Opaax
 #endif
             default: break;
         }
-        OPAAX_CORE_ERROR("IVertexBuffer::Create — backend not available."); return nullptr;
+        OPAAX_ENGINE_LOG(Error, "IVertexBuffer::Create — backend not available."); return nullptr;
     }
 
     UniquePtr<IIndexBuffer> IIndexBuffer::Create(const Uint32* InIndices, Uint32 InCount)
@@ -199,7 +199,7 @@ namespace Opaax
 #endif
             default: break;
         }
-        OPAAX_CORE_ERROR("IIndexBuffer::Create — backend not available."); return nullptr;
+        OPAAX_ENGINE_LOG(Error, "IIndexBuffer::Create — backend not available."); return nullptr;
     }
 
     UniquePtr<ITexture2D> ITexture2D::Create(const char* InPath)
@@ -212,7 +212,7 @@ namespace Opaax
 #endif
             default: break;
         }
-        OPAAX_CORE_ERROR("ITexture2D::Create — backend not available."); return nullptr;
+        OPAAX_ENGINE_LOG(Error, "ITexture2D::Create — backend not available."); return nullptr;
     }
 
     UniquePtr<ITexture2D> ITexture2D::Create(Uint32 InWidth, Uint32 InHeight)
@@ -225,7 +225,7 @@ namespace Opaax
 #endif
             default: break;
         }
-        OPAAX_CORE_ERROR("ITexture2D::Create — backend not available."); return nullptr;
+        OPAAX_ENGINE_LOG(Error, "ITexture2D::Create — backend not available."); return nullptr;
     }
 
     UniquePtr<ITexture2D> ITexture2D::Create(const unsigned char* InData, Uint32 InWidth, Uint32 InHeight, Int32 InChannels)
@@ -238,7 +238,7 @@ namespace Opaax
 #endif
             default: break;
         }
-        OPAAX_CORE_ERROR("ITexture2D::Create — backend not available."); return nullptr;
+        OPAAX_ENGINE_LOG(Error, "ITexture2D::Create — backend not available."); return nullptr;
     }
 
     UniquePtr<IShader> IShader::Create(const ShaderDesc& InDesc)
@@ -251,7 +251,7 @@ namespace Opaax
 #endif
             default: break;
         }
-        OPAAX_CORE_ERROR("IShader::Create — backend not available."); return nullptr;
+        OPAAX_ENGINE_LOG(Error, "IShader::Create — backend not available."); return nullptr;
     }
 
     UniquePtr<IUniformBuffer> IUniformBuffer::Create(Uint32 InSize, Uint32 InBinding)
@@ -264,7 +264,7 @@ namespace Opaax
 #endif
             default: break;
         }
-        OPAAX_CORE_ERROR("IUniformBuffer::Create — backend not available."); return nullptr;
+        OPAAX_ENGINE_LOG(Error, "IUniformBuffer::Create — backend not available."); return nullptr;
     }
 
     UniquePtr<IPipeline> IPipeline::Create(const PipelineDesc& InDesc)
@@ -277,7 +277,7 @@ namespace Opaax
 #endif
             default: break;
         }
-        OPAAX_CORE_ERROR("IPipeline::Create — backend not available."); return nullptr;
+        OPAAX_ENGINE_LOG(Error, "IPipeline::Create — backend not available."); return nullptr;
     }
 
     UniquePtr<IBindGroup> IBindGroup::Create(const BindGroupLayout& InLayout)
@@ -290,7 +290,7 @@ namespace Opaax
 #endif
             default: break;
         }
-        OPAAX_CORE_ERROR("IBindGroup::Create — backend not available."); return nullptr;
+        OPAAX_ENGINE_LOG(Error, "IBindGroup::Create — backend not available."); return nullptr;
     }
 
     UniquePtr<IFramebuffer> IFramebuffer::Create(const FramebufferSpec& InSpec)
@@ -303,7 +303,7 @@ namespace Opaax
 #endif
             default: break;
         }
-        OPAAX_CORE_ERROR("IFramebuffer::Create — backend not available."); return nullptr;
+        OPAAX_ENGINE_LOG(Error, "IFramebuffer::Create — backend not available."); return nullptr;
     }
 
 } // namespace Opaax

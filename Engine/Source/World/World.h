@@ -2,7 +2,7 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
-#include "Core/OpaaxString.hpp"
+#include "Core/String/OpaaxString.hpp"
 #include "Application/Services/ILogger.h"
 #include "World/WorldGuidRegistry.h"
 
@@ -29,11 +29,12 @@ namespace Opaax
         // CTORS - DTORS
         // =========================================================================
     public:
+        //Todo: World should have OpaaxStringID to get ID and Name in one place
         explicit World(OpaaxString InName = "World");
         ~World();
 
         // =========================================================================
-        // Copy - Move Delete  (owned via UniquePtr in WorldManager; never copied/moved)
+        // Copy - Move Delete
         // =========================================================================
         World(const World&)            = delete;
         World& operator=(const World&) = delete;

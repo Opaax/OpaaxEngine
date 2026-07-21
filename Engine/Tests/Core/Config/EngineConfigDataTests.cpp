@@ -2,7 +2,7 @@
 // Independent of the IConfigSystem registry (driven with JSON strings).
 #include <doctest.h>
 
-#include "Core/Config/EngineConfigData.h"
+#include "Engine/Config/EngineConfigData.h"
 
 using namespace Opaax;
 

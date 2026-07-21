@@ -1,9 +1,9 @@
 ﻿#pragma once
 
-#include "OpaaxTypes.h"
-#include "EngineAPI.h"
-#include "OpaaxGlobal.h"
-#include "OpaaxHash.h"
+#include "Core/OpaaxTypes.h"
+#include "Core/EngineAPI.h"
+#include "Core/OpaaxGlobal.h"
+#include "Core/Hash/OpaaxHash.h"
 #include "OpaaxString.hpp"
 
 #include <unordered_map>

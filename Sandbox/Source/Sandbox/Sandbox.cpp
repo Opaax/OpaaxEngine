@@ -1,6 +1,6 @@
 #include "Sandbox.h"
 
-#include "Application/ModuleRegistrar.h"
+#include "Application/Modules/ModuleRegistrar.h"
 #include "World/Components/DummyComponent.h"
 #include "Application/Services/ILogger.h"  // OPAAX_LOG + LogCategory
 #include "World/World.h"

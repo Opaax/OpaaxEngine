@@ -1,5 +1,5 @@
 
 #include "SandboxApp.h"
-#include "Core/OpaaxEntryPoint.h"
+#include "Application/OpaaxEntryPoint.h"
 
 OPAAX_IMPLEMENT_APP(SandboxApp)

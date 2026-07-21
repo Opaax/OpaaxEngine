@@ -1,5 +1,5 @@
 #include "OpenGLVertexArray.h"
-#include "Core/Log/OpaaxLog.h"
+#include "Application/Services/ILogger.h"
 
 #define GLAD_APIENTRY
 #include <glad/glad.h>

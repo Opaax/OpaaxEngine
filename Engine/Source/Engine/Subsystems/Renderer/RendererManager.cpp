@@ -4,8 +4,10 @@
 #include "Application/Services/Window/IWindowManager.h"
 #include "Application/Services/IConfigSystem.h"
 #include "Application/Services/IPaths.h"
-#include "Core/Config/Config_Renderer.h"
 #include "Application/Services/IEngine.h"
+
+#include "Renderer/Config/Config_Renderer.h"
+
 #include "Core/Events/EventBus.h"
 #include "Core/Window/WindowEvents.h"
 
@@ -17,6 +19,7 @@
 #include "Renderer/RenderSystemDesc.h"
 #include "Renderer/RenderView.h"
 #include "Renderer/Renderer2D.h"
+
 #include "Renderer/ShaderSource.h"
 
 #include "World/WorldManager.h"

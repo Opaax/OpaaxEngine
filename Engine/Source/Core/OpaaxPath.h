@@ -1,8 +1,8 @@
 #pragma once
 
 #include "Core/EngineAPI.h"
-#include "Core/OpaaxString.hpp"
-#include "Legacy/Log/OpaaxLog.h"
+#include "Core/String/OpaaxString.hpp"
+#include "Application/Services/ILogger.h"
 
 #include <filesystem>
 

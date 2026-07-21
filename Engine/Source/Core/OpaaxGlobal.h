@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "OpaaxString.hpp"
+#include "String/OpaaxString.hpp"
 #include "OpaaxTypes.h"
 
 namespace Opaax

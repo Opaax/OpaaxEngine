@@ -102,7 +102,7 @@ namespace Opaax
         LockGuard<Mutex> lLock(m_CompletedMutex);
         if (!m_Completed.empty())
         {
-            OPAAX_CORE_WARN("JobSystem — {} completion callback(s) never drained", m_Completed.size());
+            OPAAX_LOG(LogJobSystem, Warn, "{} completion callback(s) never drained", m_Completed.size())
         }
         m_Completed.clear();
     }

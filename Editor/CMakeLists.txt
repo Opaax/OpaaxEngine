@@ -16,6 +16,7 @@ add_library(OpaaxEditorLib STATIC ${OPAAX_EDITOR_LIB_SOURCES})
 # Engine (PUBLIC — editor headers expose engine types to editor exes).
 # imgui + tinyfiledialogs (PUBLIC — the editor's UI backend is built on them; created in
 # Engine/CMakeLists.txt under OPAAX_EDITOR_SUPPORT, so they exist by the time we link here).
+#TODO: Lets connect imgui and tiny dialogs from Editor/Vendors/*..
 target_link_libraries(OpaaxEditorLib
     PUBLIC
         OpaaxEngine

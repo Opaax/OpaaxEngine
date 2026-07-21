@@ -1,8 +1,8 @@
 #pragma once
 
 #include "Core/EngineAPI.h"
-#include "Core/OpaaxHash.h"
-#include "Core/OpaaxString.hpp"
+#include "Core/Hash/OpaaxHash.h"
+#include "Core/String/OpaaxString.hpp"
 #include "Core/OpaaxTypes.h"
 
 #include "Core/Maths/MathTypes.h"

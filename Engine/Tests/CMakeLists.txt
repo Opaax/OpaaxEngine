@@ -15,7 +15,7 @@ set(OPAAX_TEST_SOURCES
     Main.cpp
     SmokeTest.cpp
     Renderer/SortKeyTests.cpp
-    Renderer/FontKerningTests.cpp
+    # Renderer/FontKerningTests.cpp  # quarantined: Renderer/Text moved to Legacy (not linked) — M0.5
     Core/StringTests.cpp
     Core/Config/EngineConfigDataTests.cpp
     Core/Application/AppServiceLocatorTests.cpp
@@ -28,7 +28,7 @@ set(OPAAX_TEST_SOURCES
     Core/Application/OpaaxApplicationBootTests.cpp
     Core/Engine/Subsystems/Resources/ResourceSystemTests.cpp
     Core/World/WorldEventsTests.cpp
-    Assets/AssetIdResolveTests.cpp
+    # Assets/AssetIdResolveTests.cpp  # quarantined: Assets moved to Legacy (not linked) — M0.5
     Core/Maths/AngleTests.cpp
 
     # NOTE: old-world tests (ECS/ComponentRegistry, ECS/Hierarchy, ECS/MoverComponent,

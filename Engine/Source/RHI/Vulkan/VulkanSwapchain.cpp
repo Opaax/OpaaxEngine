@@ -3,7 +3,7 @@
 #if OPAAX_HAS_VULKAN
 
 #include "VulkanDevice.h"
-#include "Core/Log/OpaaxLog.h"
+#include "Application/Services/ILogger.h"
 
 #include <VkBootstrap.h>
 #include <GLFW/glfw3.h>
@@ -72,7 +72,7 @@ namespace Opaax
                             .build();
         if (!lRet)
         {
-            OPAAX_CORE_ERROR("VulkanSwapchain: build failed: {}", lRet.error().message());
+            OPAAX_ENGINE_LOG(Error, "VulkanSwapchain: build failed: {}", lRet.error().message());
             return false;
         }
 
@@ -85,7 +85,7 @@ namespace Opaax
         auto lViews  = lVkb.get_image_views();
         if (!lImages || !lViews)
         {
-            OPAAX_CORE_ERROR("VulkanSwapchain: failed to retrieve swapchain images/views.");
+            OPAAX_ENGINE_LOG(Error, "VulkanSwapchain: failed to retrieve swapchain images/views.");
             return false;
         }
         m_Images     = lImages.value();
@@ -102,12 +102,12 @@ namespace Opaax
         // Recreate fires every frame during a live resize — log it at TRACE so it never spams.
         if (InLogInfo)
         {
-            OPAAX_CORE_INFO("VulkanSwapchain: {} / SRGB_NONLINEAR, FIFO (vsync), {} images, {}x{}.",
+            OPAAX_ENGINE_LOG(Info, "VulkanSwapchain: {} / SRGB_NONLINEAR, FIFO (vsync), {} images, {}x{}.",
                             FormatName(m_ImageFormat), m_Images.size(), m_Extent.width, m_Extent.height);
         }
         else
         {
-            OPAAX_CORE_TRACE("VulkanSwapchain: recreated {} {}x{} ({} images).",
+            OPAAX_ENGINE_LOG(Trace, "VulkanSwapchain: recreated {} {}x{} ({} images).",
                              FormatName(m_ImageFormat), m_Extent.width, m_Extent.height, m_Images.size());
         }
         return true;
@@ -158,7 +158,7 @@ namespace Opaax
         }
         if (lRes != VK_SUCCESS && lRes != VK_SUBOPTIMAL_KHR)
         {
-            OPAAX_CORE_ERROR("VulkanSwapchain: vkAcquireNextImageKHR failed ({}).", static_cast<int>(lRes));
+            OPAAX_ENGINE_LOG(Error, "VulkanSwapchain: vkAcquireNextImageKHR failed ({}).", static_cast<int>(lRes));
             return false;
         }
 
@@ -188,7 +188,7 @@ namespace Opaax
         }
         else if (lRes != VK_SUCCESS)
         {
-            OPAAX_CORE_ERROR("VulkanSwapchain: vkQueuePresentKHR failed ({}).", static_cast<int>(lRes));
+            OPAAX_ENGINE_LOG(Error, "VulkanSwapchain: vkQueuePresentKHR failed ({}).", static_cast<int>(lRes));
         }
 
         m_CurrentFrame  = (m_CurrentFrame + 1) % OPAAX_FRAMES_IN_FLIGHT;

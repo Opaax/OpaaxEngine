@@ -4,7 +4,7 @@
 
 #include "VulkanFrameContext.h"
 #include "VulkanDevice.h"
-#include "Core/Log/OpaaxLog.h"
+#include "Application/Services/ILogger.h"
 
 // stb_image — STB_IMAGE_IMPLEMENTATION is defined once in OpenGLTexture2D.cpp (always compiled);
 // here we only call into it.
@@ -26,7 +26,7 @@ namespace Opaax
         unsigned char* lData = stbi_load(InPath, &lWidth, &lHeight, &lChannels, 0);
         if (!lData)
         {
-            OPAAX_CORE_ERROR("VulkanTexture2D: failed to load '{}' — {}", InPath, stbi_failure_reason());
+            OPAAX_ENGINE_LOG(Error, "VulkanTexture2D: failed to load '{}' — {}", InPath, stbi_failure_reason());
             return;
         }
 
@@ -48,7 +48,7 @@ namespace Opaax
     {
         if (!InData)
         {
-            OPAAX_CORE_ERROR("VulkanTexture2D: raw upload received null data");
+            OPAAX_ENGINE_LOG(Error, "VulkanTexture2D: raw upload received null data");
             return;
         }
         Upload(InData, InWidth, InHeight, InChannels);
@@ -130,7 +130,7 @@ namespace Opaax
             VmaAllocationInfo lOut{};
             if (vmaCreateBuffer(m_Allocator, &lBufInfo, &lAllocCI, &lStaging, &lStagingAlloc, &lOut) != VK_SUCCESS)
             {
-                OPAAX_CORE_ERROR("VulkanTexture2D: staging buffer creation failed.");
+                OPAAX_ENGINE_LOG(Error, "VulkanTexture2D: staging buffer creation failed.");
                 return;
             }
             std::memcpy(lOut.pMappedData, lSrc, lImageSize);
@@ -154,7 +154,7 @@ namespace Opaax
 
             if (vmaCreateImage(m_Allocator, &lImgInfo, &lAllocCI, &m_Image, &m_Alloc, nullptr) != VK_SUCCESS)
             {
-                OPAAX_CORE_ERROR("VulkanTexture2D: vmaCreateImage failed.");
+                OPAAX_ENGINE_LOG(Error, "VulkanTexture2D: vmaCreateImage failed.");
                 vmaDestroyBuffer(m_Allocator, lStaging, lStagingAlloc);
                 return;
             }

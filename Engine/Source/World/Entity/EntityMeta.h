@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Core/OpaaxString.hpp"
+#include "Core/String/OpaaxString.hpp"
 #include "Core/GUID/Guid.h"
 
 namespace Opaax

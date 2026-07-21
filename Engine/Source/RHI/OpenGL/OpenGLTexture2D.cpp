@@ -1,7 +1,7 @@
 #include "OpenGLTexture2D.h"
 
 #include <glad/glad.h>
-#include "Core/Log/OpaaxLog.h"
+#include "Application/Services/ILogger.h"
 #include "Core/EngineAPI.h"
 
 // stb_image — implementation defined once here
@@ -22,7 +22,7 @@ namespace Opaax
  
         if (!lData)
         {
-            OPAAX_CORE_ERROR("OpenGLTexture2D: failed to load '{}'  — {}", InPath, stbi_failure_reason());
+            OPAAX_ENGINE_LOG(Error, "OpenGLTexture2D: failed to load '{}'  — {}", InPath, stbi_failure_reason());
             return;
         }
  
@@ -53,7 +53,7 @@ namespace Opaax
     {
         if (!InData)
         {
-            OPAAX_CORE_ERROR("OpenGLTexture2D: raw upload received null data");
+            OPAAX_ENGINE_LOG(Error, "OpenGLTexture2D: raw upload received null data");
             return;
         }
         Upload(InData, InWidth, InHeight, InChannels);

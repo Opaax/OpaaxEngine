@@ -3,7 +3,7 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Application/Services/AppServiceLocator.h"
-#include "Application/ModuleRegistrar.h"
+#include "Application/Modules/ModuleRegistrar.h"
 
 namespace Opaax
 {

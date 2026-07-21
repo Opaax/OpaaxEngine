@@ -4,7 +4,7 @@
 
 #include "VulkanDevice.h"
 #include "VulkanSwapchain.h"
-#include "Core/Log/OpaaxLog.h"
+#include "Application/Services/ILogger.h"
 
 namespace Opaax
 {
@@ -25,18 +25,18 @@ namespace Opaax
         m_Device = MakeUnique<VulkanDevice>(m_Window);
         if (!m_Device->IsValid())
         {
-            OPAAX_CORE_ERROR("VulkanContext: device bring-up failed.");
+            OPAAX_ENGINE_LOG(Error, "VulkanContext: device bring-up failed.");
             return false;
         }
 
         m_Swapchain = MakeUnique<VulkanSwapchain>(*m_Device, m_Window);
         if (!m_Swapchain->IsValid())
         {
-            OPAAX_CORE_ERROR("VulkanContext: swapchain bring-up failed.");
+            OPAAX_ENGINE_LOG(Error, "VulkanContext: swapchain bring-up failed.");
             return false;
         }
 
-        OPAAX_CORE_INFO("VulkanContext: initialized.");
+        OPAAX_ENGINE_LOG(Info, "VulkanContext: initialized.");
         return true;
     }
 

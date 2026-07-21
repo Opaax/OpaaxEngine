@@ -4,7 +4,7 @@
 
 #include "VulkanFrameContext.h"
 #include "VulkanDevice.h"
-#include "Core/Log/OpaaxLog.h"
+#include "Application/Services/ILogger.h"
 
 #include <cstring>
 
@@ -51,7 +51,7 @@ namespace Opaax
             VmaAllocationInfo lOut{};
             if (vmaCreateBuffer(m_Allocator, &lInfo, &lAllocCI, &m_Buffers[i], &m_Allocs[i], &lOut) != VK_SUCCESS)
             {
-                OPAAX_CORE_ERROR("VulkanUniformBuffer: vmaCreateBuffer failed.");
+                OPAAX_ENGINE_LOG(Error, "VulkanUniformBuffer: vmaCreateBuffer failed.");
                 continue;
             }
             m_Mapped[i] = lOut.pMappedData;
@@ -77,7 +77,7 @@ namespace Opaax
 
         if (m_RingCursor >= OPAAX_VULKAN_FRAME_RING)
         {
-            OPAAX_CORE_ERROR("VulkanUniformBuffer: exceeded {} UBO writes this frame — wrapping.",
+            OPAAX_ENGINE_LOG(Error, "VulkanUniformBuffer: exceeded {} UBO writes this frame — wrapping.",
                              OPAAX_VULKAN_FRAME_RING);
             m_RingCursor = 0;
         }

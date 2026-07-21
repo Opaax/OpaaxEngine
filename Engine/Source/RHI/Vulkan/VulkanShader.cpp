@@ -4,7 +4,7 @@
 
 #include "VulkanFrameContext.h"
 #include "VulkanDevice.h"
-#include "Core/Log/OpaaxLog.h"
+#include "Application/Services/ILogger.h"
 
 namespace Opaax
 {
@@ -16,7 +16,7 @@ namespace Opaax
         {
             if (InSpirv.empty())
             {
-                OPAAX_CORE_ERROR("VulkanShader: empty {} SPIR-V — the Vulkan backend requires glslang "
+                OPAAX_ENGINE_LOG(Error, "VulkanShader: empty {} SPIR-V — the Vulkan backend requires glslang "
                                  "(no GLSL fallback). Build with the Vulkan SDK present.", InStage);
                 return VK_NULL_HANDLE;
             }
@@ -28,7 +28,7 @@ namespace Opaax
             VkShaderModule lModule = VK_NULL_HANDLE;
             if (vkCreateShaderModule(InDevice, &lInfo, nullptr, &lModule) != VK_SUCCESS)
             {
-                OPAAX_CORE_ERROR("VulkanShader: vkCreateShaderModule failed for {} stage.", InStage);
+                OPAAX_ENGINE_LOG(Error, "VulkanShader: vkCreateShaderModule failed for {} stage.", InStage);
                 return VK_NULL_HANDLE;
             }
             return lModule;
@@ -46,7 +46,7 @@ namespace Opaax
 
         if (IsValid())
         {
-            OPAAX_CORE_INFO("VulkanShader: '{}' modules created.", InDesc.DebugName.CStr());
+            OPAAX_ENGINE_LOG(Info, "VulkanShader: '{}' modules created.", InDesc.DebugName.CStr());
         }
     }
 

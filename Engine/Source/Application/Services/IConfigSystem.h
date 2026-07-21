@@ -4,8 +4,9 @@
 
 #include "IAppService.h"
 #include "ILogger.h"
+
 #include "Core/OpaaxTypes.h"
-#include "Core/OpaaxString.hpp"
+#include "Core/String/OpaaxString.hpp"
 #include "Core/Config/IConfig.h"
 
 namespace Opaax

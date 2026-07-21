@@ -5,7 +5,7 @@
 #include "VulkanDevice.h"
 #include "VulkanFrameContext.h"
 #include "RHI/RenderCommand.h"
-#include "Core/Log/OpaaxLog.h"
+#include "Application/Services/ILogger.h"
 
 namespace Opaax
 {
@@ -25,7 +25,7 @@ namespace Opaax
         m_Format = VulkanFrameContext::ColorFormat();
         if (m_Format == VK_FORMAT_UNDEFINED)
         {
-            OPAAX_CORE_ERROR("VulkanFramebuffer: swapchain color format unset — render API not initialized?");
+            OPAAX_ENGINE_LOG(Error, "VulkanFramebuffer: swapchain color format unset — render API not initialized?");
             m_Format = VK_FORMAT_B8G8R8A8_UNORM;   // best-effort fallback
         }
 
@@ -64,7 +64,7 @@ namespace Opaax
 
             if (vmaCreateImage(m_Allocator, &lImgInfo, &lAllocCI, &m_Image, &m_Alloc, nullptr) != VK_SUCCESS)
             {
-                OPAAX_CORE_ERROR("VulkanFramebuffer: vmaCreateImage failed ({}x{}).", m_Width, m_Height);
+                OPAAX_ENGINE_LOG(Error, "VulkanFramebuffer: vmaCreateImage failed ({}x{}).", m_Width, m_Height);
                 return;
             }
         }

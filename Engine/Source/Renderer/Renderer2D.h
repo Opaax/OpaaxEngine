@@ -3,17 +3,17 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Maths/MathTypes.h"
-#include "Core/OpaaxString.hpp"
+#include "Core/String/OpaaxString.hpp"
 #include "Application/Services/ILogger.h"
 
-#include "Assets/AssetHandle.hpp"
 #include "Renderer/RenderLayer.h"
 
 namespace Opaax
 {
-    class Texture2D;
+    // NOTE (M0.5): the textured-sprite path (DrawSprite/Texture2D/TextureHandle) is severed while the
+    // asset system is rebuilt — it coupled to the old IAsset. Restored when the Texture CResource lands.
+    // The colored-quad path (DrawQuad + the procedural 1x1 white RHI texture) is asset-free and stays.
     class ITexture2D;
-    class ICamera;
     class ICommandBuffer;
     class IRHIDevice;
     struct Renderer2DData;
@@ -32,9 +32,8 @@ namespace Opaax
      * occupied. One draw call per flush. All GPU state lives in the pImpl (Renderer2DData).
      *
      * Usage:
-     *          renderer.Begin(camera, cmd);
+     *          renderer.BeginScene(view, cmd);
      *          renderer.DrawQuad({0,0}, {100,100}, {1,0,0,1});     // red quad
-     *          renderer.DrawSprite({200,0}, {64,64}, myTexture);   // textured sprite
      *          renderer.End();
      *
      * Init()/Shutdown() build/release the GPU resources — call from the owner's Startup/Shutdown
@@ -83,9 +82,6 @@ namespace Opaax
          */
         void BeginScene(const RenderView& InView, ICommandBuffer& InCmd);
 
-        // Transitional camera-object entry — kept for the dead old passes. Prefer BeginScene.
-        void Begin(ICamera& InCamera, ICommandBuffer& InCmd);
-
         // Call once per frame after all draw calls — flushes the remaining batch.
         void End();
 
@@ -109,45 +105,8 @@ namespace Opaax
                       ERenderLayer    InLayer        = ERenderLayer::Default,
                       Int16           InOrderInLayer = 0);
 
-        // Textured sprite — via AssetHandle (preferred, safe)
-        void DrawSprite(const Vector2F&      InPosition,
-                        const Vector2F&      InSize,
-                        const TextureHandle& InTexture,
-                        const Vector4F&      InColor        = Vector4F(1.f),
-                        float                InRotationRad  = 0.f,
-                        ERenderLayer         InLayer        = ERenderLayer::Default,
-                        Int16                InOrderInLayer = 0);
-
-        // Sprite sheet / atlas sub-region — via AssetHandle. UV in normalised [0,1] space.
-        void DrawSprite(const Vector2F&      InPosition,
-                        const Vector2F&      InSize,
-                        const TextureHandle& InTexture,
-                        const Vector2F&      InUVMin,
-                        const Vector2F&      InUVMax,
-                        const Vector4F&      InColor        = Vector4F(1.f),
-                        float                InRotationRad  = 0.f,
-                        ERenderLayer         InLayer        = ERenderLayer::Default,
-                        Int16                InOrderInLayer = 0);
-
-        // Draw a textured sprite, tinted by InColor (default white = no tint).
-        void DrawSprite(const Vector2F& InPosition,
-                        const Vector2F& InSize,
-                        Texture2D&      InTexture,
-                        const Vector4F& InColor        = Vector4F(1.f),
-                        float           InRotationRad  = 0.f,
-                        ERenderLayer    InLayer        = ERenderLayer::Default,
-                        Int16           InOrderInLayer = 0);
-
-        // Draw a textured sprite with UV sub-region (sprite sheet / atlas).
-        void DrawSprite(const Vector2F& InPosition,
-                        const Vector2F& InSize,
-                        Texture2D&      InTexture,
-                        const Vector2F& InUVMin,
-                        const Vector2F& InUVMax,
-                        const Vector4F& InColor        = Vector4F(1.f),
-                        float           InRotationRad  = 0.f,
-                        ERenderLayer    InLayer        = ERenderLayer::Default,
-                        Int16           InOrderInLayer = 0);
+        // NOTE (M0.5): DrawSprite(TextureHandle/Texture2D) overloads removed with the sprite path
+        // (old-IAsset coupling). They return when the Texture CResource lands.
 
         // =============================================================================
         // Internal
@@ -156,7 +115,6 @@ namespace Opaax
         void  BeginInternal(const Matrix44F& InViewProjection, ICommandBuffer& InCmd);
         void  Flush();
         void  StartBatch();
-        float GetTextureSlot(ITexture2D& InTexture);
 
         // =============================================================================
         // Members

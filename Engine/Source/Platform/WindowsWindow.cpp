@@ -3,8 +3,10 @@
 #include <VkBootstrap.h>
 #include <GLFW/glfw3.h>
 
+#include "Application/OpaaxApplication.h"
+#include "Application/Services/IConfigSystem.h"
 #include "Core/Window/WindowEvents.h"
-#include "Core/Config/EngineConfig.h"
+#include "Engine/Config/Config_Engine.h"
 
 #include "Engine/Subsystems/Input/InputTypesFwd.hpp"
 
@@ -60,9 +62,11 @@ namespace Opaax
 			glfwSetErrorCallback(GLFWErrorCallback);
 			s_GLFWInitialized = true;
 		}
+		
+		const EngineConfigData& lData = OpaaxApplication::GetAppService<IConfigSystem>().Get<Config_Engine>().Data();
 
 		// Backend chosen from engine config — drives window hints + context creation.
-		const EBackend lBackend = RenderAPI::BackendFromString(EngineConfig::RenderBackend());
+		const EBackend lBackend = RenderAPI::BackendFromString(lData.RenderBackend);
 
 		// MUST run before glfwCreateWindow (e.g. GLFW_NO_API for Vulkan). No-op for OpenGL.
 		IGraphicsContext::ApplyWindowHints(lBackend);

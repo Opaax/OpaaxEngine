@@ -2,7 +2,7 @@
 
 #if OPAAX_HAS_VULKAN
 
-#include "Core/Log/OpaaxLog.h"
+#include "Application/Services/ILogger.h"
 
 namespace Opaax
 {
@@ -29,7 +29,7 @@ namespace Opaax
         VkDescriptorSetLayout lLayout = VK_NULL_HANDLE;
         if (vkCreateDescriptorSetLayout(InDevice, &lInfo, nullptr, &lLayout) != VK_SUCCESS)
         {
-            OPAAX_CORE_ERROR("Vulkan: sprite descriptor-set layout creation failed.");
+            OPAAX_ENGINE_LOG(Error, "Vulkan: sprite descriptor-set layout creation failed.");
         }
         return lLayout;
     }

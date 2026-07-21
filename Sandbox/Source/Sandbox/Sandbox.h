@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Application/IRuntimeModule.h"
+#include "Application/Modules/IRuntimeModule.h"
 
 namespace Opaax { class World; }
 

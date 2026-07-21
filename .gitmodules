@@ -1,15 +1,39 @@
 [submodule "Engine/Vendors/spdlog"]
 	path = Engine/Vendors/spdlog
 	url = https://github.com/gabime/spdlog.git
+	
 [submodule "Engine/Vendors/Entt/entt"]
 	path = Engine/Vendors/Entt/entt
 	url = https://github.com/skypjack/entt.git
+	
 [submodule "Engine/Vendors/box2d"]
 	path = Engine/Vendors/box2d
 	url = https://github.com/erincatto/box2d.git
+	
 [submodule "Engine/Vendors/glm"]
 	path = Engine/Vendors/glm
 	url = https://github.com/g-truc/glm.git
+	
+[submodule "Engine/Vendors/doctest"]
+	path = Engine/Vendors/doctest
+	url = https://github.com/doctest/doctest.git
+	
+[submodule "Engine/Vendors/nlohmann"]
+	path = Engine/Vendors/nlohmann
+	url = https://github.com/nlohmann/json.git
 [submodule "Engine/Vendors/imgui"]
-	path = Engine/Vendors/imgui
+   	path = Engine/Vendors/imgui
+   	url = https://github.com/ocornut/imgui.git
+[submodule "Engine/Vendors/tinyfiledialogs"]
+    path = Engine/Vendors/tinyfiledialogs
+    url = https://github.com/native-toolkit/libtinyfiledialogs.git
+    	
+    	
+	
+[submodule "Editor/Vendors/imgui"]
+	path = Editor/Vendors/imgui
 	url = https://github.com/ocornut/imgui.git
+	
+[submodule "Editor/Vendors/tinyfiledialogs"]
+	path = Editor/Vendors/tinyfiledialogs
+	url = https://github.com/native-toolkit/libtinyfiledialogs.git

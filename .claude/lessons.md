@@ -243,3 +243,33 @@ became visible (menu bar → CONSUMED; passthru viewport → passed) and the use
 - Match the instrument to event frequency: discrete events (button/key) log cleanly; high-frequency ones
   (mouse-move) need gating or they flood. A per-event seam's verification log can legitimately STAY as
   permanent Trace observability (invaluable for the follow-on milestone — here M-Input), not a throwaway probe.
+
+## L13 — A "green baseline" is a PREMISE to verify, not assume; converging a mid-reorg branch is a linker-driven, whole-tree job (2026-07-21)
+
+**What happened (M0.5):** I planned M1 "Viewport" on the recorded baseline (89/354, runtime draws 3 quads).
+The user then revealed the branch was mid-reorganization and **did not build** — a prior "move all legacy into
+legacy" commit had swept the *good* new-path RHI (`IRHIDevice`/`ICommandBuffer`/`IFramebuffer` + GL/VK backends
++ `BackendFactory`) into `Legacy/` (unlinked) alongside the genuinely-old facade (`IRenderAPI`/`RenderCommand`),
+and relocated `OpaaxLog.h`/`Core` headers, leaving live code dangling. The whole M1 premise was false. The task
+became a prerequisite **re-baseline**: extract the keepers back out of Legacy and converge to green.
+
+**Rules for next time:**
+- **Verify the branch builds before planning on top of it.** Session-start git status + a recorded baseline in
+  a doc are NOT proof the tree compiles — a refresh/WIP branch can be committed-but-broken ([[L5]], [[L8]]).
+  When about to "build feature X," a fast `build.bat fast` (or a status sanity pass) up front catches a false
+  green-baseline premise before it wastes a plan.
+- **Classify keepers by the LINKER, not grep** ([[L10]]). The keeper set for "pull the good code out of Legacy"
+  extended itself twice via build errors I couldn't have grepped: the Vulkan backend (SDK present → the
+  `#if OPAAX_HAS_VULKAN` branch compiled) and `RenderCommand` (an entangled `WaitIdle()` call). Seed from the
+  include closure, then drop-and-build until green; let unresolved externals *extend* the set.
+- **A file-move reorg's blast radius spans the whole tree, not the moved dir.** Moved headers + a retired macro
+  family (`OPAAX_CORE_*`→`OPAAX_ENGINE_LOG`) broke Sandbox, the editor, and the test harness — not just the
+  render tree. Scope it with one comprehensive grep of the known old→new paths before whack-a-mole; expect
+  test-double drift ([[L5]]'s StubPlatform, here StubPaths) and tests of now-Legacy code that must be
+  *quarantined* (they can't be repointed — Legacy isn't linked), matching **X1**.
+- **Keep entangled old bits transitionally to reach green, with a `// FIXME`, rather than decoupling mid-converge**
+  ([[L3]]): the old `IRenderAPI`/`RenderCommand` facade rode back in as a keeper because the new factories +
+  VulkanFramebuffer still lean on it. Decoupling is a dedicated follow-up, not a converge-loop detour.
+- **Surface premise/scope forks up front and let the user steer** — before touching a broad refactor, confirm
+  ownership ("I execute vs you execute"), and answer floated alternatives honestly (NVRHI: declined — no GL
+  backend, AAA/RT tier, fights the project's #1 *Simple* value; a 2D engine's thin GL RHI is the right altitude).

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Engine/Config/EngineConfigData.h"
-#include "TConfig.hpp"
 #include "Core/EngineAPI.h"
+#include "Core/Config/TConfig.hpp"
 
+#include "Engine/Config/EngineConfigData.h"
 
 namespace Opaax
 {

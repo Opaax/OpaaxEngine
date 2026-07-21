@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Core/EngineAPI.h"
-#include "Core/OpaaxStringID.hpp"
+#include "Core/String/OpaaxStringID.hpp"
 #include "Core/OpaaxTypes.h"
 
 namespace Opaax

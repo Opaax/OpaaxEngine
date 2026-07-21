@@ -4,7 +4,7 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
-#include "Core/OpaaxHash.h"
+#include "Core/Hash/OpaaxHash.h"
 #include "Application/Services/ILogger.h"
 
 // =============================================================================

@@ -2,7 +2,7 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
-#include "Core/OpaaxString.hpp"
+#include "Core/String/OpaaxString.hpp"
 #include "RHI/IRenderAPI.h"
 
 namespace Opaax

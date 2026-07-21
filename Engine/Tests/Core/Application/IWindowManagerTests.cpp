@@ -6,8 +6,8 @@
 #include "Application/Services/Window/IWindowManager.h"
 #include "Application/Services/Window/WindowManager.h"
 #include "Application/Services/AppServiceLocator.h"
-#include "Core/Config/EngineConfigData.h"
-#include "Core/OpaaxString.hpp"
+#include "Engine/Config/EngineConfigData.h"
+#include "Core/String/OpaaxString.hpp"
 
 using namespace Opaax;
 

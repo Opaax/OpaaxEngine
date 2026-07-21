@@ -2,7 +2,7 @@
 // OpaaxString is fully header-inline, so this suite compiles it directly.
 #include <doctest.h>
 
-#include "Core/OpaaxString.hpp"
+#include "Core/String/OpaaxString.hpp"
 
 #include <cstring>
 #include <utility>

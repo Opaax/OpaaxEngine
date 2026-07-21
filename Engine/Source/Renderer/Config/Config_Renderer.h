@@ -1,7 +1,7 @@
 ﻿#pragma once
 
-#include <Core/Config/RendererConfigData.h>
 #include <Core/Config/TConfig.hpp>
+#include <Renderer/Config/RendererConfigData.h>
 
 #include "Core/EngineAPI.h"
 

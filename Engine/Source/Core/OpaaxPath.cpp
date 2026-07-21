@@ -80,11 +80,11 @@ namespace Opaax
         s_ProjectRoot += "/";
         s_ProjectRoot += s_AppName;
 
-        OPAAX_CORE_INFO("OpaaxPath::Init() — base path:      {}", s_BasePath);
-        OPAAX_CORE_INFO("OpaaxPath::Init() — app:            {}", s_AppName);
-        OPAAX_CORE_INFO("OpaaxPath::Init() — workspace root: {}", s_WorkspaceRoot);
-        OPAAX_CORE_INFO("OpaaxPath::Init() — engine root:    {}", s_EngineRoot);
-        OPAAX_CORE_INFO("OpaaxPath::Init() — project root:   {}", s_ProjectRoot);
+        OPAAX_ENGINE_LOG(Info, "OpaaxPath::Init() — base path:      {}", s_BasePath);
+        OPAAX_ENGINE_LOG(Info, "OpaaxPath::Init() — app:            {}", s_AppName);
+        OPAAX_ENGINE_LOG(Info, "OpaaxPath::Init() — workspace root: {}", s_WorkspaceRoot);
+        OPAAX_ENGINE_LOG(Info, "OpaaxPath::Init() — engine root:    {}", s_EngineRoot);
+        OPAAX_ENGINE_LOG(Info, "OpaaxPath::Init() — project root:   {}", s_ProjectRoot);
     }
 
     OpaaxString OpaaxPath::ToAbsolute(const char* InRelativePath)        { return ResolveAgainst(s_WorkspaceRoot, InRelativePath); }
@@ -118,7 +118,7 @@ namespace Opaax
         }
 
         // Outside every known root — return unchanged. Handles system / external paths.
-        OPAAX_CORE_WARN("OpaaxPath::ToProjectRelative — '{}' is not under the workspace root", InAbsPath);
+        OPAAX_ENGINE_LOG(Warn, "OpaaxPath::ToProjectRelative — '{}' is not under the workspace root", InAbsPath);
         return lAbs;
     }
 

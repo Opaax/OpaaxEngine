@@ -3,7 +3,7 @@
 #if OPAAX_HAS_VULKAN
 
 #include "VulkanFrameContext.h"
-#include "Core/Log/OpaaxLog.h"
+#include "Application/Services/ILogger.h"
 
 #include <cstring>
 
@@ -29,7 +29,7 @@ namespace Opaax
             VmaAllocationInfo lOutInfo{};
             if (vmaCreateBuffer(InAllocator, &lInfo, &lAllocCI, &OutBuffer, &OutAlloc, &lOutInfo) != VK_SUCCESS)
             {
-                OPAAX_CORE_ERROR("VulkanBuffer: vmaCreateBuffer failed ({} bytes).", static_cast<Uint64>(InSize));
+                OPAAX_ENGINE_LOG(Error, "VulkanBuffer: vmaCreateBuffer failed ({} bytes).", static_cast<Uint64>(InSize));
                 return false;
             }
             OutMapped = lOutInfo.pMappedData;
@@ -86,7 +86,7 @@ namespace Opaax
 
         if (m_WriteOffset + InSize > m_Capacity)
         {
-            OPAAX_CORE_ERROR("VulkanVertexBuffer: frame vertex data ({} + {}) exceeds capacity {} — "
+            OPAAX_ENGINE_LOG(Error, "VulkanVertexBuffer: frame vertex data ({} + {}) exceeds capacity {} — "
                              "wrapping (frame will render incorrectly). Raise MAX_QUADS or the ring.",
                              static_cast<Uint64>(m_WriteOffset), InSize, m_Capacity);
             m_WriteOffset = 0;

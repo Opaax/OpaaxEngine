@@ -1,7 +1,7 @@
 #include "OpenGLShader.h"
 #include <glm/gtc/type_ptr.hpp>
 
-#include "Core/Log/OpaaxLog.h"
+#include "Application/Services/ILogger.h"
 
 #define GLAD_APIENTRY
 #include <glad/glad.h>
@@ -40,7 +40,7 @@ namespace Opaax
         const Int32 lLocation = glGetUniformLocation(m_RendererID, InName);
         if (lLocation == -1)
         {
-            OPAAX_CORE_WARN("OpenGLShader: uniform '{}' not found in shader.", InName);
+            OPAAX_ENGINE_LOG(Warn, "OpenGLShader: uniform '{}' not found in shader.", InName);
         }
  
         m_UniformLocationCache[InName] = lLocation;
@@ -84,7 +84,7 @@ namespace Opaax
             {
                 char lLog[512];
                 glGetShaderInfoLog(lShader, 512, nullptr, lLog);
-                OPAAX_CORE_ERROR("OpenGLShader: SPIR-V specialization failed:\n{}", lLog);
+                OPAAX_ENGINE_LOG(Error, "OpenGLShader: SPIR-V specialization failed:\n{}", lLog);
                 glDeleteShader(lShader);
                 return 0;
             }
@@ -97,7 +97,7 @@ namespace Opaax
     {
         if (!SpirvBinaryFormatSupported())
         {
-            OPAAX_CORE_ERROR("OpenGLShader: GL_SHADER_BINARY_FORMAT_SPIR_V not supported by this driver.");
+            OPAAX_ENGINE_LOG(Error, "OpenGLShader: GL_SHADER_BINARY_FORMAT_SPIR_V not supported by this driver.");
             OPAAX_CORE_ASSERT(false)
             return;
         }
@@ -125,7 +125,7 @@ namespace Opaax
         {
             char lLog[512];
             glGetProgramInfoLog(m_RendererID, 512, nullptr, lLog);
-            OPAAX_CORE_ERROR("OpenGLShader: program link failed:\n{}", lLog);
+            OPAAX_ENGINE_LOG(Error, "OpenGLShader: program link failed:\n{}", lLog);
             glDeleteProgram(m_RendererID);
             m_RendererID = 0;
             OPAAX_CORE_ASSERT(false)
@@ -149,7 +149,7 @@ namespace Opaax
         {
             char lLog[512];
             glGetShaderInfoLog(lVertexShader, 512, nullptr, lLog);
-            OPAAX_CORE_ERROR("OpenGLShader: vertex shader compilation failed:\n{}", lLog);
+            OPAAX_ENGINE_LOG(Error, "OpenGLShader: vertex shader compilation failed:\n{}", lLog);
             glDeleteShader(lVertexShader);
             OPAAX_CORE_ASSERT(false)
             return;
@@ -164,7 +164,7 @@ namespace Opaax
         {
             char lLog[512];
             glGetShaderInfoLog(lFragmentShader, 512, nullptr, lLog);
-            OPAAX_CORE_ERROR("OpenGLShader: fragment shader compilation failed:\n{}", lLog);
+            OPAAX_ENGINE_LOG(Error, "OpenGLShader: fragment shader compilation failed:\n{}", lLog);
             glDeleteShader(lVertexShader);
             glDeleteShader(lFragmentShader);
             OPAAX_CORE_ASSERT(false)
@@ -181,7 +181,7 @@ namespace Opaax
         {
             char lLog[512];
             glGetProgramInfoLog(m_RendererID, 512, nullptr, lLog);
-            OPAAX_CORE_ERROR("OpenGLShader: program link failed:\n{}", lLog);
+            OPAAX_ENGINE_LOG(Error, "OpenGLShader: program link failed:\n{}", lLog);
             glDeleteProgram(m_RendererID);
             m_RendererID = 0;
             OPAAX_CORE_ASSERT(false)

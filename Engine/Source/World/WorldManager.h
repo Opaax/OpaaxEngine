@@ -2,7 +2,7 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
-#include "Core/OpaaxString.hpp"
+#include "Core/String/OpaaxString.hpp"
 #include "Application/Services/ILogger.h"
 #include "Engine/Subsystems/EngineSubsystem.h"
 #include "World/World.h"
@@ -40,6 +40,7 @@ namespace Opaax
         // =========================================================================
         // World Lifetime
     public:
+        //Todo: OpaaxStringID
         World* CreateWorld(OpaaxString InName = "World");
         void   DestroyWorld(World* InWorld);
         // End World Lifetime

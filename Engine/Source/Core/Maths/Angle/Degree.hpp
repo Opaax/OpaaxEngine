@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "Core/Maths/TFloatValue.hpp"
-#include "Core/OpaaxString.hpp"
+#include "Core/String/OpaaxString.hpp"
 #include "Core/EngineAPI.h"
 
 namespace Opaax

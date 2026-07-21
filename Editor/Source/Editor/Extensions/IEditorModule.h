@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Application/IModule.h"
+#include "Application/Modules/IModule.h"
 
 namespace Opaax::Editor
 {

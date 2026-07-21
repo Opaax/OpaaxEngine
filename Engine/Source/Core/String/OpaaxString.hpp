@@ -1,10 +1,8 @@
 ﻿#pragma once
 
-#include <cstring>
 #include <string_view>
-#include "OpaaxTypes.h"
-#include "EngineAPI.h"
-#include "Log/OpaaxLog.h"
+#include "Core/OpaaxTypes.h"
+#include "Core/EngineAPI.h"
 
 namespace Opaax
 {
@@ -328,7 +326,6 @@ namespace Opaax
         {
             if (Index >= Length)
             {
-                OPAAX_CORE_ERROR("OpaaxString::IsValidIndex — Index {} out of bounds (Length={})", Index, Length);
                 return false;
             }
             return true;

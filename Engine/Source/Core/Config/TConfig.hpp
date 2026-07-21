@@ -2,7 +2,7 @@
 
 #include "IConfig.h"
 #include "ConfigIO.h"
-#include "Core/OpaaxString.hpp"
+#include "Core/String/OpaaxString.hpp"
 #include "Core/OpaaxMacro.hpp"
 #include "Core/EngineAPI.h"
 

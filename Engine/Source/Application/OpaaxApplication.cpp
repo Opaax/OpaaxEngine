@@ -5,7 +5,7 @@
 #include "Application/Services/ILogger.h"
 #include "Application/Services/IProjectManager.h"
 #include "Application/Services/IJobSystem.h"
-#include "Core/Config/Config_Engine.h"
+#include "Engine/Config/Config_Engine.h"
 #include "Engine/Engine.h"
 #include "Engine/Subsystems/EventBus/EngineEventBus.h"
 #include "Services/IConfigSystem.h"

@@ -7,7 +7,7 @@
 #include "VulkanShader.h"
 #include "VulkanDescriptorLayout.h"
 #include "RHI/Shader.h"
-#include "Core/Log/OpaaxLog.h"
+#include "Application/Services/ILogger.h"
 
 namespace Opaax
 {
@@ -41,7 +41,7 @@ namespace Opaax
         auto* lShader = static_cast<VulkanShader*>(InDesc.Shader);
         if (!lShader || !lShader->IsValid())
         {
-            OPAAX_CORE_ERROR("VulkanPipeline: invalid shader — cannot bake pipeline '{}'.", InDesc.DebugName);
+            OPAAX_ENGINE_LOG(Error, "VulkanPipeline: invalid shader — cannot bake pipeline '{}'.", InDesc.DebugName);
             return;
         }
 
@@ -131,7 +131,7 @@ namespace Opaax
         lLayoutInfo.pSetLayouts    = &m_SetLayout;
         if (vkCreatePipelineLayout(m_Device, &lLayoutInfo, nullptr, &m_PipelineLayout) != VK_SUCCESS)
         {
-            OPAAX_CORE_ERROR("VulkanPipeline: pipeline layout creation failed.");
+            OPAAX_ENGINE_LOG(Error, "VulkanPipeline: pipeline layout creation failed.");
             return;
         }
 
@@ -157,11 +157,11 @@ namespace Opaax
 
         if (vkCreateGraphicsPipelines(m_Device, VK_NULL_HANDLE, 1, &lInfo, nullptr, &m_Pipeline) != VK_SUCCESS)
         {
-            OPAAX_CORE_ERROR("VulkanPipeline: vkCreateGraphicsPipelines failed for '{}'.", InDesc.DebugName);
+            OPAAX_ENGINE_LOG(Error, "VulkanPipeline: vkCreateGraphicsPipelines failed for '{}'.", InDesc.DebugName);
             return;
         }
 
-        OPAAX_CORE_INFO("VulkanPipeline: '{}' baked.", InDesc.DebugName);
+        OPAAX_ENGINE_LOG(Info, "VulkanPipeline: '{}' baked.", InDesc.DebugName);
     }
 
     VulkanPipeline::~VulkanPipeline()

@@ -8,7 +8,7 @@
 #include "VulkanUniformBuffer.h"
 #include "VulkanTexture2D.h"
 #include "RHI/Vulkan/VulkanSwapchain.h"   // OPAAX_FRAMES_IN_FLIGHT
-#include "Core/Log/OpaaxLog.h"
+#include "Application/Services/ILogger.h"
 
 namespace Opaax
 {
@@ -40,7 +40,7 @@ namespace Opaax
         lPoolInfo.pPoolSizes    = lSizes;
         if (vkCreateDescriptorPool(m_Device, &lPoolInfo, nullptr, &m_Pool) != VK_SUCCESS)
         {
-            OPAAX_CORE_ERROR("VulkanBindGroup: descriptor pool creation failed.");
+            OPAAX_ENGINE_LOG(Error, "VulkanBindGroup: descriptor pool creation failed.");
             return;
         }
 
@@ -54,7 +54,7 @@ namespace Opaax
         m_Sets.resize(lSetCount);
         if (vkAllocateDescriptorSets(m_Device, &lAlloc, m_Sets.data()) != VK_SUCCESS)
         {
-            OPAAX_CORE_ERROR("VulkanBindGroup: descriptor set allocation failed.");
+            OPAAX_ENGINE_LOG(Error, "VulkanBindGroup: descriptor set allocation failed.");
             m_Sets.clear();
         }
     }
@@ -91,7 +91,7 @@ namespace Opaax
         }
         if (m_RingCursor >= OPAAX_VULKAN_FRAME_RING)
         {
-            OPAAX_CORE_ERROR("VulkanBindGroup: exceeded {} flushes this frame — wrapping.",
+            OPAAX_ENGINE_LOG(Error, "VulkanBindGroup: exceeded {} flushes this frame — wrapping.",
                              OPAAX_VULKAN_FRAME_RING);
             m_RingCursor = 0;
         }

@@ -5,7 +5,7 @@
 // NOTE: VMA_IMPLEMENTATION lives in its own TU (VulkanVMA.cpp) — defining it here would be
 //   swallowed by vk_mem_alloc.h's include guard (VulkanDevice.h already pulled the header).
 
-#include "Core/Log/OpaaxLog.h"
+#include "Application/Services/ILogger.h"
 
 #include <VkBootstrap.h>
 #include <GLFW/glfw3.h>
@@ -53,7 +53,7 @@ namespace Opaax
         auto lInstRet = lInstanceBuilder.build();
         if (!lInstRet)
         {
-            OPAAX_CORE_ERROR("VulkanDevice: instance build failed: {}", lInstRet.error().message());
+            OPAAX_ENGINE_LOG(Error, "VulkanDevice: instance build failed: {}", lInstRet.error().message());
             return;
         }
         vkb::Instance lVkbInstance = lInstRet.value();
@@ -64,7 +64,7 @@ namespace Opaax
         const VkResult lSurfRes = glfwCreateWindowSurface(m_Instance, InWindow, nullptr, &m_Surface);
         if (lSurfRes != VK_SUCCESS)
         {
-            OPAAX_CORE_ERROR("VulkanDevice: glfwCreateWindowSurface failed ({}).", static_cast<int>(lSurfRes));
+            OPAAX_ENGINE_LOG(Error, "VulkanDevice: glfwCreateWindowSurface failed ({}).", static_cast<int>(lSurfRes));
             return;
         }
 
@@ -82,7 +82,7 @@ namespace Opaax
                                  .select();
         if (!lPhysRet)
         {
-            OPAAX_CORE_ERROR("VulkanDevice: no suitable GPU (VK 1.3 + dynamic rendering): {}",
+            OPAAX_ENGINE_LOG(Error, "VulkanDevice: no suitable GPU (VK 1.3 + dynamic rendering): {}",
                              lPhysRet.error().message());
             return;
         }
@@ -94,7 +94,7 @@ namespace Opaax
         auto lDevRet = lDeviceBuilder.build();
         if (!lDevRet)
         {
-            OPAAX_CORE_ERROR("VulkanDevice: device build failed: {}", lDevRet.error().message());
+            OPAAX_ENGINE_LOG(Error, "VulkanDevice: device build failed: {}", lDevRet.error().message());
             return;
         }
         vkb::Device lVkbDevice = lDevRet.value();
@@ -105,7 +105,7 @@ namespace Opaax
         auto lPresQueue  = lVkbDevice.get_queue(vkb::QueueType::present);
         if (!lGfxQueue || !lGfxFamily || !lPresQueue)
         {
-            OPAAX_CORE_ERROR("VulkanDevice: failed to retrieve graphics/present queues.");
+            OPAAX_ENGINE_LOG(Error, "VulkanDevice: failed to retrieve graphics/present queues.");
             return;
         }
         m_GraphicsQueue       = lGfxQueue.value();
@@ -120,25 +120,25 @@ namespace Opaax
         lAllocInfo.vulkanApiVersion = VK_API_VERSION_1_3;
         if (vmaCreateAllocator(&lAllocInfo, &m_Allocator) != VK_SUCCESS)
         {
-            OPAAX_CORE_ERROR("VulkanDevice: VMA allocator creation failed.");
+            OPAAX_ENGINE_LOG(Error, "VulkanDevice: VMA allocator creation failed.");
             m_Allocator = nullptr;
         }
 
         VkPhysicalDeviceProperties lProps{};
         vkGetPhysicalDeviceProperties(m_PhysicalDevice, &lProps);
 
-        OPAAX_CORE_INFO("====================  Render Backend  ====================");
-        OPAAX_CORE_INFO("  API .............. Vulkan {}.{}.{}",
+        OPAAX_ENGINE_LOG(Info, "====================  Render Backend  ====================");
+        OPAAX_ENGINE_LOG(Info, "  API .............. Vulkan {}.{}.{}",
                         VK_API_VERSION_MAJOR(lProps.apiVersion),
                         VK_API_VERSION_MINOR(lProps.apiVersion),
                         VK_API_VERSION_PATCH(lProps.apiVersion));
-        OPAAX_CORE_INFO("  GPU .............. {} ({})", lProps.deviceName, DeviceTypeName(lProps.deviceType));
-        OPAAX_CORE_INFO("  Vendor ........... {} (0x{:04X})", VendorName(lProps.vendorID), lProps.vendorID);
-        OPAAX_CORE_INFO("  Driver ........... 0x{:08X}", lProps.driverVersion);
-        OPAAX_CORE_INFO("  Queues ........... graphics family {} ({})", m_GraphicsQueueFamily,
+        OPAAX_ENGINE_LOG(Info, "  GPU .............. {} ({})", lProps.deviceName, DeviceTypeName(lProps.deviceType));
+        OPAAX_ENGINE_LOG(Info, "  Vendor ........... {} (0x{:04X})", VendorName(lProps.vendorID), lProps.vendorID);
+        OPAAX_ENGINE_LOG(Info, "  Driver ........... 0x{:08X}", lProps.driverVersion);
+        OPAAX_ENGINE_LOG(Info, "  Queues ........... graphics family {} ({})", m_GraphicsQueueFamily,
                         (m_PresentQueue == m_GraphicsQueue) ? "present shared" : "present separate");
-        OPAAX_CORE_INFO("  VMA .............. {}", m_Allocator ? "ready" : "FAILED");
-        OPAAX_CORE_INFO("==========================================================");
+        OPAAX_ENGINE_LOG(Info, "  VMA .............. {}", m_Allocator ? "ready" : "FAILED");
+        OPAAX_ENGINE_LOG(Info, "==========================================================");
     }
 
     void VulkanDevice::ImmediateSubmit(const TFunction<void(VkCommandBuffer)>& InRecord) const
@@ -152,7 +152,7 @@ namespace Opaax
         VkCommandPool lPool = VK_NULL_HANDLE;
         if (vkCreateCommandPool(m_Device, &lPoolInfo, nullptr, &lPool) != VK_SUCCESS)
         {
-            OPAAX_CORE_ERROR("VulkanDevice::ImmediateSubmit — command pool creation failed.");
+            OPAAX_ENGINE_LOG(Error, "VulkanDevice::ImmediateSubmit — command pool creation failed.");
             return;
         }
 

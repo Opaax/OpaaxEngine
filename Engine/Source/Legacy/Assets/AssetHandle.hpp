@@ -3,7 +3,7 @@
 #include "AssetRefBlock.hpp"
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
-#include "Core/OpaaxStringID.hpp"
+#include "Core/String/OpaaxStringID.hpp"
 
 #include <typeindex>
 #include <typeinfo>

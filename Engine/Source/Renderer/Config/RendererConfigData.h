@@ -1,8 +1,8 @@
 ﻿#pragma once
 #include "Core/EngineAPI.h"
-#include <Core/OpaaxString.hpp>
+#include <Core/String/OpaaxString.hpp>
 
-#include "TConfig.hpp"
+#include "Core/Config/TConfig.hpp"
 #include "Core/Maths/MathTypes.h"
 
 namespace Opaax

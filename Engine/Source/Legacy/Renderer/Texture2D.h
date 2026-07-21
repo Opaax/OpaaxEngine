@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Assets/IAsset.hpp"
+#include "Legacy/Assets/IAsset.hpp"
+#include "Core/String/OpaaxString.hpp"
+#include "Core/String/OpaaxStringID.hpp"
 #include "Core/EngineAPI.h"
-#include "Core/OpaaxString.hpp"
-#include "Core/OpaaxStringID.hpp"
 #include "Core/OpaaxTypes.h"
 
 namespace Opaax

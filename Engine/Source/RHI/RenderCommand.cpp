@@ -1,6 +1,6 @@
 #include "RenderCommand.h"
 
-#include "Core/Log/OpaaxLog.h"
+#include "Application/Services/ILogger.h"
 #include "RHI/IRenderAPI.h"
 
 namespace Opaax
@@ -20,7 +20,7 @@ namespace Opaax
         if (s_API)
         {
             s_API.reset();
-            OPAAX_CORE_TRACE("RenderCommand::Shutdown() — API released.");
+            OPAAX_ENGINE_LOG(Trace, "RenderCommand::Shutdown() — API released.");
         }
     }
 

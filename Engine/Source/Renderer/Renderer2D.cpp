@@ -8,12 +8,10 @@
 #include "RHI/Pipeline.h"
 #include "RHI/BindGroup.h"
 #include "RHI/ICommandBuffer.h"
-#include "Renderer/Texture2D.h"
 #include "Renderer/Renderer2DSortKey.h"
 #include "Renderer/RenderView.h"
 #include "Renderer/RenderSystemDesc.h"
 #include "Renderer/ShaderSource.h"
-#include "Renderer/Camera/ICamera.h"
 #include "Core/EngineAPI.h"
 
 #include <glm/gtc/matrix_transform.hpp>
@@ -226,11 +224,6 @@ namespace Opaax
         BeginInternal(InView.ViewProjection, InCmd);
     }
 
-    void Renderer2D::Begin(ICamera& InCamera, ICommandBuffer& InCmd)
-    {
-        BeginInternal(InCamera.GetViewProjection(), InCmd);
-    }
-
     void Renderer2D::End()
     {
         Flush();
@@ -282,32 +275,6 @@ namespace Opaax
         m_Data->Cmd->BindBindGroup(*m_Data->QuadBindGroup);
         m_Data->Cmd->BindVertexArray(*m_Data->QuadVAO);
         m_Data->Cmd->DrawIndexed(m_Data->QuadCount * 6);
-    }
-
-    // =============================================================================
-    // Texture slot resolution — slot index for a texture; assigns the next free one,
-    // flushing first if all slots are full.
-    // =============================================================================
-    float Renderer2D::GetTextureSlot(ITexture2D& InTexture)
-    {
-        for (Uint32 i = 1; i < m_Data->TextureSlotIndex; ++i)
-        {
-            if (m_Data->TextureSlots[i] == &InTexture)
-            {
-                return static_cast<float>(i);
-            }
-        }
-
-        if (m_Data->TextureSlotIndex >= MAX_TEXTURE_SLOTS)
-        {
-            Flush();
-            StartBatch();
-        }
-
-        const float lSlot = static_cast<float>(m_Data->TextureSlotIndex);
-        m_Data->TextureSlots[m_Data->TextureSlotIndex] = &InTexture;
-        ++m_Data->TextureSlotIndex;
-        return lSlot;
     }
 
     // =============================================================================
@@ -388,104 +355,6 @@ namespace Opaax
         ++m_Data->VertexBufferPtr;
 
         m_Data->SortKeys[m_Data->QuadCount] = MakeSortKey(InLayer, InOrderInLayer, 0u);
-        ++m_Data->QuadCount;
-    }
-
-    void Renderer2D::DrawSprite(const Vector2F& InPosition, const Vector2F& InSize, const TextureHandle& InTexture,
-        const Vector4F& InColor, float InRotationRad, ERenderLayer InLayer, Int16 InOrderInLayer)
-    {
-        OPAAX_CORE_ASSERT(InTexture.IsValid())
-        DrawSprite(InPosition, InSize, *InTexture.Get(), InColor, InRotationRad, InLayer, InOrderInLayer);
-    }
-
-    void Renderer2D::DrawSprite(const Vector2F& InPosition, const Vector2F& InSize, const TextureHandle& InTexture,
-        const Vector2F& InUVMin, const Vector2F& InUVMax, const Vector4F& InColor, float InRotationRad,
-        ERenderLayer InLayer, Int16 InOrderInLayer)
-    {
-        OPAAX_CORE_ASSERT(InTexture.IsValid())
-        DrawSprite(InPosition, InSize, *InTexture.Get(), InUVMin, InUVMax, InColor, InRotationRad, InLayer, InOrderInLayer);
-    }
-
-    void Renderer2D::DrawSprite(const Vector2F& InPosition,
-                                const Vector2F& InSize,
-                                Texture2D&      InTexture,
-                                const Vector4F& InColor,
-                                float           InRotationRad,
-                                ERenderLayer    InLayer,
-                                Int16           InOrderInLayer)
-    {
-        DrawSprite(InPosition, InSize, InTexture,
-                   { 0.f, 0.f }, { 1.f, 1.f }, InColor, InRotationRad, InLayer, InOrderInLayer);
-    }
-
-    void Renderer2D::DrawSprite(const Vector2F& InPosition,
-                                const Vector2F& InSize,
-                                Texture2D&      InTexture,
-                                const Vector2F& InUVMin,
-                                const Vector2F& InUVMax,
-                                const Vector4F& InColor,
-                                float           InRotationRad,
-                                ERenderLayer    InLayer,
-                                Int16           InOrderInLayer)
-    {
-        if (m_Data->QuadCount >= MAX_QUADS)
-        {
-            Flush();
-            StartBatch();
-        }
-
-        // Transitional: the engine Texture2D wrapper hands us its RHI texture for the slot array.
-        const float lTexIndex = GetTextureSlot(*InTexture.GetRHITexture());
-        const float lHalfW    = InSize.x * 0.5f;
-        const float lHalfH    = InSize.y * 0.5f;
-
-        Vector2F lBL, lBR, lTR, lTL;
-        if (InRotationRad == 0.f)
-        {
-            lBL = { InPosition.x - lHalfW, InPosition.y - lHalfH };
-            lBR = { InPosition.x + lHalfW, InPosition.y - lHalfH };
-            lTR = { InPosition.x + lHalfW, InPosition.y + lHalfH };
-            lTL = { InPosition.x - lHalfW, InPosition.y + lHalfH };
-        }
-        else
-        {
-            const float lCos = Maths::Cos(InRotationRad);
-            const float lSin = Maths::Sin(InRotationRad);
-            lBL = RotateOffset(InPosition, lCos, lSin, -lHalfW, -lHalfH);
-            lBR = RotateOffset(InPosition, lCos, lSin, +lHalfW, -lHalfH);
-            lTR = RotateOffset(InPosition, lCos, lSin, +lHalfW, +lHalfH);
-            lTL = RotateOffset(InPosition, lCos, lSin, -lHalfW, +lHalfH);
-        }
-
-        // Bottom-left
-        m_Data->VertexBufferPtr->Position = { lBL.x, lBL.y, 0.f };
-        m_Data->VertexBufferPtr->Color    = InColor;
-        m_Data->VertexBufferPtr->TexCoord = { InUVMin.x, InUVMin.y };
-        m_Data->VertexBufferPtr->TexIndex = lTexIndex;
-        ++m_Data->VertexBufferPtr;
-
-        // Bottom-right
-        m_Data->VertexBufferPtr->Position = { lBR.x, lBR.y, 0.f };
-        m_Data->VertexBufferPtr->Color    = InColor;
-        m_Data->VertexBufferPtr->TexCoord = { InUVMax.x, InUVMin.y };
-        m_Data->VertexBufferPtr->TexIndex = lTexIndex;
-        ++m_Data->VertexBufferPtr;
-
-        // Top-right
-        m_Data->VertexBufferPtr->Position = { lTR.x, lTR.y, 0.f };
-        m_Data->VertexBufferPtr->Color    = InColor;
-        m_Data->VertexBufferPtr->TexCoord = { InUVMax.x, InUVMax.y };
-        m_Data->VertexBufferPtr->TexIndex = lTexIndex;
-        ++m_Data->VertexBufferPtr;
-
-        // Top-left
-        m_Data->VertexBufferPtr->Position = { lTL.x, lTL.y, 0.f };
-        m_Data->VertexBufferPtr->Color    = InColor;
-        m_Data->VertexBufferPtr->TexCoord = { InUVMin.x, InUVMax.y };
-        m_Data->VertexBufferPtr->TexIndex = lTexIndex;
-        ++m_Data->VertexBufferPtr;
-
-        m_Data->SortKeys[m_Data->QuadCount] = MakeSortKey(InLayer, InOrderInLayer, static_cast<Uint32>(lTexIndex));
         ++m_Data->QuadCount;
     }
 

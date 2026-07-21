@@ -5,7 +5,7 @@
 #include "VulkanContext.h"
 #include "VulkanDevice.h"
 #include "VulkanFrameContext.h"
-#include "Core/Log/OpaaxLog.h"
+#include "Application/Services/ILogger.h"
 
 namespace Opaax
 {
@@ -44,7 +44,7 @@ namespace Opaax
         lPoolInfo.queueFamilyIndex = m_Device->GetGraphicsQueueFamily();
         if (vkCreateCommandPool(m_Device->GetDevice(), &lPoolInfo, nullptr, &m_CommandPool) != VK_SUCCESS)
         {
-            OPAAX_CORE_ERROR("VulkanRenderAPI: failed to create command pool.");
+            OPAAX_ENGINE_LOG(Error, "VulkanRenderAPI: failed to create command pool.");
             return;
         }
 
@@ -54,11 +54,11 @@ namespace Opaax
         lAllocInfo.commandBufferCount = OPAAX_FRAMES_IN_FLIGHT;
         if (vkAllocateCommandBuffers(m_Device->GetDevice(), &lAllocInfo, m_CommandBuffers) != VK_SUCCESS)
         {
-            OPAAX_CORE_ERROR("VulkanRenderAPI: failed to allocate command buffers.");
+            OPAAX_ENGINE_LOG(Error, "VulkanRenderAPI: failed to allocate command buffers.");
             return;
         }
 
-        OPAAX_CORE_INFO("VulkanRenderAPI: initialized ({} frames in flight).", OPAAX_FRAMES_IN_FLIGHT);
+        OPAAX_ENGINE_LOG(Info, "VulkanRenderAPI: initialized ({} frames in flight).", OPAAX_FRAMES_IN_FLIGHT);
     }
 
     void VulkanRenderAPI::BeginFrame()
@@ -114,7 +114,7 @@ namespace Opaax
 
         if (vkQueueSubmit(m_Device->GetGraphicsQueue(), 1, &lSubmit, m_Swapchain->GetInFlightFence()) != VK_SUCCESS)
         {
-            OPAAX_CORE_ERROR("VulkanRenderAPI: vkQueueSubmit failed.");
+            OPAAX_ENGINE_LOG(Error, "VulkanRenderAPI: vkQueueSubmit failed.");
         }
 
         m_FrameActive = false;

@@ -12,7 +12,7 @@
 #include <doctest.h>
 
 #include "Core/OpaaxPath.h"
-#include "Core/OpaaxString.hpp"
+#include "Core/String/OpaaxString.hpp"
 
 TEST_CASE("smoke: harness runs and the engine DLL links")
 {
