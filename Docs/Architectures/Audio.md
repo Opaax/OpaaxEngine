@@ -84,10 +84,10 @@ blocs de 256–512 samples).
 
 ## 4. Les trois concepts de données
 
-### 4.1 AudioAsset — la donnée brute
+### 4.1 AudioResource — la donnée brute
 
 ```
-AudioAsset:
+AudioResource:
     Format        : sampleRate, channels, frameCount
     Residency     : Decoded (PCM en mémoire)  | Streamed (fichier + décodeur)
     Data          : buffer PCM  OU  stream state
@@ -347,7 +347,7 @@ les queues et le ring buffer.
 
 ## 14. Risques identifiés
 
-- **FIXME (design)** : le drop silencieux d'un `Play()` sur asset non résident
+- **FIXME (design)** : le drop silencieux d'un `Play()` sur resource non résident
   (§8, étape 2) est acceptable en v1 mais frustrant en prod — envisager un
   replay différé (M-Audio-4+).
 - **Pitch ≠ 1.0** implique du resampling par voix → c'est le coût CPU dominant.
@@ -356,4 +356,4 @@ les queues et le ring buffer.
 - **Capacité des queues** : dimensionner par le pire cas mesuré (spam de
   footsteps + burst de particules sonores), pas au doigt mouillé.
 - Le miroir d'état game-thread (`IsPlaying`) a **une frame de latence** par
-  construction. C'est documenté, c'est voulu, le gameplay doit vivre avec.
+  construction. C'est documenté, c'est voulu, le gameplay doit vivre avec. (better solution?)
