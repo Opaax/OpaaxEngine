@@ -1,10 +1,12 @@
 #include "EngineConfig.h"
 
-#include "Core/Log/OpaaxLog.h"
-
 #include <filesystem>
 #include <fstream>
 #include <nlohmann/json.hpp>
+
+#include "Application/OpaaxApplication.h"
+#include "Application/Services/ILogger.h"
+#include "Application/Services/Platforms/IPlatform.h"
 
 namespace Opaax
 {
@@ -29,6 +31,14 @@ namespace Opaax
     {
         try
         {
+            IPlatform& lPlatform = OpaaxApplication::GetAppService<IPlatform>();
+            
+            if (lPlatform.IsNull())
+            {
+                OPAAX_LOG(Log)
+                return false;
+            }
+            
             const std::filesystem::path lPath(InAbsPath.CStr());
             std::filesystem::create_directories(lPath.parent_path());
 

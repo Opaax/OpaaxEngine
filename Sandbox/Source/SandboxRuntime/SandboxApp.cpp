@@ -3,12 +3,11 @@
 #include "Application/Services/IConfigSystem.h"
 #include "Application/Services/ILogger.h"
 #include "Application/Services/IEngine.h"
-#include "Core/Log/OpaaxLog.h"
 #include "World/WorldManager.h"
 #include "World/World.h"
 #include "World/Entity/Entity.h"
 #include "World/Components/DummyComponent.h"
-#include "Application/ModuleRegistrar.h"
+#include "Application/Modules/ModuleRegistrar.h"
 #include "Config/ConfigTest.h"
 #include "Sandbox.h"
 

@@ -1,6 +1,6 @@
 #include "ProjectConfig.h"
 
-#include "Core/Log/OpaaxLog.h"
+#include "Legacy/Log/OpaaxLog.h"
 
 #include <filesystem>
 #include <fstream>

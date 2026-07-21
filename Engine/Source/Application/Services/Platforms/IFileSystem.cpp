@@ -4,7 +4,7 @@
 
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/ILogger.h"
-#include "Core/OpaaxForward.h"
+#include "Core/OpaaxForward.hpp"
 
 namespace Opaax
 {

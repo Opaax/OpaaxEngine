@@ -1,11 +1,14 @@
 #pragma once
 
+#include "Application/Services/ILogger.h"
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "RHI/Framebuffer.h"
 
 namespace Opaax
 {
+    OPAAX_LOG_CATEGORY(OpenGLFramebuffer)
+    
     /**
      * @class OpenGLFramebuffer
      *

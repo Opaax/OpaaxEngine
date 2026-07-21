@@ -1,7 +1,7 @@
 #pragma once
 
 #include "IAppService.h"
-#include "Core/OpaaxString.hpp"
+#include "Core/String/OpaaxString.hpp"
 
 namespace Opaax
 {

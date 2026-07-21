@@ -2,7 +2,7 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
-#include "Core/OpaaxForward.h"
+#include "Core/OpaaxForward.hpp"
 
 namespace Opaax
 {

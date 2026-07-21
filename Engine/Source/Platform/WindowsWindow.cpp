@@ -4,10 +4,10 @@
 #include <GLFW/glfw3.h>
 
 #include "Core/Window/WindowEvents.h"
-#include "Engine/Subsystems/Input/InputEvents.h"
-#include "Engine/Subsystems/Input/InputCodes.h"
-#include "Core/Log/OpaaxLog.h"
 #include "Core/Config/EngineConfig.h"
+
+#include "Engine/Subsystems/Input/InputTypesFwd.hpp"
+
 #include "RHI/RenderAPI.h"
 #include "RHI/IGraphicsContext.h"
 
@@ -221,7 +221,7 @@ namespace Opaax
 
         	if (lButton == EKeyCode::None)
         	{
-        		OPAAX_CORE_ERROR("Receive Mouse button pressed, but no conversion to Opaax Type is found");
+        		OPAAX_LOG(LogWindowsWindow, Error, "Receive Mouse button pressed, but no conversion to Opaax Type is found")
         		return;
         	}
         	

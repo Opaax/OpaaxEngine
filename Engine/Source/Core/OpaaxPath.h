@@ -2,7 +2,7 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxString.hpp"
-#include "Core/Log/OpaaxLog.h"
+#include "Legacy/Log/OpaaxLog.h"
 
 #include <filesystem>
 

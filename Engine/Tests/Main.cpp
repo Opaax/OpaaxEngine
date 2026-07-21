@@ -9,7 +9,7 @@
 #define DOCTEST_CONFIG_IMPLEMENT
 #include <doctest.h>
 
-#include "Core/Log/OpaaxLog.h"
+#include "Legacy/Log/OpaaxLog.h"
 
 int main(int argc, char** argv)
 {

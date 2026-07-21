@@ -3,8 +3,9 @@
 #include "IAppService.h"
 #include "IPaths.h"
 #include "Core/OpaaxTypes.h"
-#include "Core/OpaaxString.hpp"
 #include <spdlog/spdlog.h>
+
+#include "Core/String/OpaaxString.hpp"
 
 namespace Opaax
 {
@@ -74,11 +75,11 @@ namespace Opaax
         virtual void Log(ELogLevel InLevel,const char* Category, const OpaaxString& InMessage) = 0;
 
         //----- convenience (inline, non-virtual) ------------------------------
-        void Trace(const OpaaxString& InMessage)    { Log(ELogLevel::Trace,    InMessage); }
-        void Info(const OpaaxString& InMessage)     { Log(ELogLevel::Info,     InMessage); }
-        void Warn(const OpaaxString& InMessage)     { Log(ELogLevel::Warn,     InMessage); }
-        void Error(const OpaaxString& InMessage)    { Log(ELogLevel::Error,    InMessage); }
-        void Critical(const OpaaxString& InMessage) { Log(ELogLevel::Critical, InMessage); }
+        void Trace      (const OpaaxString& InMessage)      { Log(ELogLevel::Trace,    InMessage); }
+        void Info       (const OpaaxString& InMessage)      { Log(ELogLevel::Info,     InMessage); }
+        void Warn       (const OpaaxString& InMessage)      { Log(ELogLevel::Warn,     InMessage); }
+        void Error      (const OpaaxString& InMessage)      { Log(ELogLevel::Error,    InMessage); }
+        void Critical   (const OpaaxString& InMessage)      { Log(ELogLevel::Critical, InMessage); }
 
         //----- null object ----------------------------------------------------
         static ILogger& Null();
@@ -108,3 +109,5 @@ namespace Opaax
 
 #define OPAAX_APP_LOG(Level, Format, ...)       OPAAX_LOG(LogOpaaxApplication, Level, Format, ##__VA_ARGS__);
 #define OPAAX_ENGINE_LOG(Level, Format, ...)    OPAAX_LOG(LogOpaaxEngine, Level, Format,  ##__VA_ARGS__);
+
+#define OPAAX_LOG_CATEGORY(Category) inline constexpr LogCategory Log##Category{ #Category };

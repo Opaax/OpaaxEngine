@@ -1,11 +1,10 @@
 #include "IProjectManager.h"
 #include "IPaths.h"
 
-#include "Core/Log/OpaaxLog.h"
-
 #include <fstream>
 #include <sstream>
 #include <nlohmann/json.hpp>
+
 
 namespace Opaax
 {
@@ -99,7 +98,5 @@ namespace Opaax
     {
         const OpaaxString lFile = InPaths.ProjectFile();
         m_Identity = ParseProjectIdentity(ReadFileText(lFile));
-
-        //OPAAX_CORE_INFO("ProjectManager: '{0}' (name='{1}')", lFile.CStr(), m_Identity.Name.CStr());
     }
 }

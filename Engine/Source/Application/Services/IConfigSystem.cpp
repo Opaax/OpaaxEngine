@@ -1,8 +1,6 @@
 #include "IConfigSystem.h"
 #include "IPaths.h"
 
-#include "Core/Log/OpaaxLog.h"
-
 #include <filesystem>
 
 #include "ILogger.h"

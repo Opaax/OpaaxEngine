@@ -2,9 +2,11 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
-#include "Core/OpaaxStringID.hpp"
-#include "Core/Log/OpaaxLog.h"
+#include "Core/String/OpaaxStringID.hpp"
+#include "Core/OpaaxGlobal.h"
+
 #include "Engine/Subsystems/EngineSubsystem.h"
+
 #include "Application/Services/IJobSystem.h"
 
 #include "ResourceTypeID.hpp"

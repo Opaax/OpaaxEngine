@@ -4,7 +4,6 @@
 #include "Application/Services/Window/IWindowManager.h"
 #include "Application/Services/IConfigSystem.h"
 #include "Application/Services/IPaths.h"
-#include "Core/Config/Config_Engine.h"
 #include "Core/Config/Config_Renderer.h"
 #include "Application/Services/IEngine.h"
 #include "Core/Events/EventBus.h"
@@ -26,6 +25,7 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "Engine/Config/Config_Engine.h"
 #include "Engine/Subsystems/EventBus/EngineEventBus.h"
 
 namespace Opaax

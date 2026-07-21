@@ -15,10 +15,20 @@ namespace Opaax::Editor
     class EditorPaths final : public Paths
     {
     public:
-        // InProjectRel: the edited project's path relative to the workspace, e.g. "Sandbox/Sandbox.opaaxproj".
+        // =============================================================================
+        // CTOR
+        // =============================================================================
+        /***/
         EditorPaths(const IPlatform& InPlatform, int InArgc, char** InArgv, const OpaaxString& InProjectRel)
             : Paths(InPlatform, InArgc, InArgv, InProjectRel)
         {
         }
+        
+        // =============================================================================
+        // Override
+        // =============================================================================
+        //~Begin Paths interface
+        void LogPaths() const override;
+        //~End Paths interface
     };
 }

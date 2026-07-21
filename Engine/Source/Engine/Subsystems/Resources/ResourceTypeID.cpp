@@ -4,13 +4,13 @@
 #include <string>
 
 #include "Core/EngineAPI.h"
-#include "Core/Log/OpaaxLog.h"
+#include "Core/Hash/OpaaxHash.h"
 
 namespace Opaax
 {
     // Compile-time sanity for the 64-bit hash that backs ResourceTypeID.
     static_assert(OpaaxHash::Hash64("")   == OpaaxHash::FNV1a_OffsetBasis64, "FNV-1a64: empty == offset basis");
-    static_assert(OpaaxHash::Hash64("ab") != OpaaxHash::Hash64("ba"),        "FNV-1a64: order-sensitive");
+    static_assert(OpaaxHash::Hash64("ab") != OpaaxHash::Hash64("ba"),    "FNV-1a64: order-sensitive");
     static_assert(OpaaxHash::Hash64("x")  != OpaaxHash::FNV1a_OffsetBasis64, "FNV-1a64: non-empty mixes");
 
     namespace

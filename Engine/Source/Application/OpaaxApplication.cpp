@@ -59,18 +59,8 @@ void OpaaxApplication::Bootstrap()
     //Log
     ILogger& lLogger = BootLogger(lPath);
     OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Logger just initialized");
-    
     OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Platform: {}", lPlatform.GetPlatformName().CStr());
-    
-    OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Workspace Path:      {}", lPath.WorkspaceRoot().CStr());
-    OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Engine Path:         {}", lPath.EngineRoot().CStr());
-    OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Project Root Path:   {}", lPath.ProjectRoot().CStr());
-    OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Project File Path:   {}", lPath.ProjectFile().CStr());
-    OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Assets Directory:    {}", lPath.AssetsDir().CStr());
-    OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Configs Directory:   {}", lPath.ConfigsDir().CStr());
-    OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Sources Directory:   {}", lPath.SourceDir().CStr());
-    OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Save Directory:      {}", lPath.SaveDir().CStr());
-    OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Temp Directory:      {}", lPath.TempDir().CStr());
+    lPath.LogPaths();
     
     //Config
     OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Config System");

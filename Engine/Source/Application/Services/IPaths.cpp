@@ -49,6 +49,7 @@ namespace Opaax
             OpaaxString EngineToAbsolute(const OpaaxString&)  const override { return OpaaxString(); }
             OpaaxString ProjectToAbsolute(const OpaaxString&) const override { return OpaaxString(); }
             OpaaxString AssetToAbsolute(const OpaaxString&)   const override { return OpaaxString(); }
+            void        LogPaths()                            const override { OPAAX_APP_LOG(Warn, "Null Path Service") }
         };
     }
 
@@ -119,9 +120,7 @@ namespace Opaax
                  const OpaaxString& InProjectOverride)
     {
         OpaaxString lWorkspace;
-        // A from-source dev build bakes OPAAX_WORKSPACE_DIR so we resolve against the source tree.
-        // Keyed on the define itself, NOT on editor support (D4: the engine is editor-agnostic).
-        // Absent (ship build) -> empty -> ResolveProjectLayout falls back to exe-dir resolution.
+        
 #if defined(OPAAX_WORKSPACE_DIR)
         lWorkspace = OpaaxString(OPAAX_WORKSPACE_DIR);
 #endif
@@ -136,6 +135,19 @@ namespace Opaax
         }
 
         m_Layout = ResolveProjectLayout(lExe, lWorkspace, lProjArg);
+    }
+
+    void Paths::LogPaths() const
+    {
+        OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Workspace Path:      {}", WorkspaceRoot().CStr());
+        OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Engine Path:         {}", EngineRoot().CStr());
+        OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Project Root Path:   {}", ProjectRoot().CStr());
+        OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Project File Path:   {}", ProjectFile().CStr());
+        OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Assets Directory:    {}", AssetsDir().CStr());
+        OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Configs Directory:   {}", ConfigsDir().CStr());
+        OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Sources Directory:   {}", SourceDir().CStr());
+        OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Save Directory:      {}", SaveDir().CStr());
+        OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Temp Directory:      {}", TempDir().CStr());
     }
 
     OpaaxString Paths::EngineToAbsolute(const OpaaxString& InEngineRel) const

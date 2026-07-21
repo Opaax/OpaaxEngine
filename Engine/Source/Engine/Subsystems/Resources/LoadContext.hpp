@@ -1,12 +1,12 @@
 #pragma once
 
 #include "Core/OpaaxTypes.h"
-#include "Core/OpaaxStringID.hpp"
 
 #include "ResourceConcept.hpp"
 #include "ResourceRef.hpp"
 #include "ResourceDependencyGraph.hpp"
-#include "ResourcePool.hpp" // IResourcePool — deferred publish targets
+#include "ResourceManager.h"
+#include "ResourcePool.hpp"
 
 // =============================================================================
 // LoadContext — composite loading (Level -> Textures), refcounts chain.

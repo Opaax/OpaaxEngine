@@ -62,6 +62,12 @@ namespace Opaax
         // =============================================================================
     public:
         OPAAX_SERVICE_TYPE(IPaths)
+        
+        // =============================================================================
+        // Functions
+        // =============================================================================
+    public:
+        virtual void LogPaths() const = 0; 
 
         //----- roots ----------------------------------------------------------
         virtual OpaaxString WorkspaceRoot() const = 0; // editor: source tree; release: exe dir
@@ -98,16 +104,16 @@ namespace Opaax
         // CTOR
         // =============================================================================
     public:
-        // InProjectOverride: a project path used when the command line carries no --project. It lets a
-        // host declare the project it targets (the editor host names the game project). Precedence:
-        // --project (argv) > InProjectOverride > default <workspace>/<exeStem>/<exeStem>.opaaxproj.
         Paths(const IPlatform& InPlatform, int InArgc, char** InArgv,
               const OpaaxString& InProjectOverride = OpaaxString());
 
         // =============================================================================
-        // Functions
+        // Override
         // =============================================================================
+        //~ Begin IPaths interface
     public:
+        virtual void LogPaths() const override;
+        
         OpaaxString WorkspaceRoot() const override { return m_Layout.WorkspaceRoot; }
         OpaaxString EngineRoot()    const override { return m_Layout.EngineRoot; }
         OpaaxString ProjectRoot()   const override { return m_Layout.ProjectRoot; }
@@ -121,6 +127,7 @@ namespace Opaax
         OpaaxString EngineToAbsolute(const OpaaxString& InEngineRel)   const override;
         OpaaxString ProjectToAbsolute(const OpaaxString& InProjectRel) const override;
         OpaaxString AssetToAbsolute(const OpaaxString& InAssetRel)     const override;
+        //~ End IPaths interface
 
         // =============================================================================
         // Members

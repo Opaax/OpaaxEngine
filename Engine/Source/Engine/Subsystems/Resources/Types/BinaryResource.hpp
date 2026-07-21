@@ -5,7 +5,6 @@
 
 #include "Core/OpaaxTypes.h"
 #include "Application/Services/ILogger.h"
-#include "Core/Log/OpaaxLog.h"
 #include "Engine/Subsystems/Resources/ResourceConcept.hpp"
 
 // =============================================================================

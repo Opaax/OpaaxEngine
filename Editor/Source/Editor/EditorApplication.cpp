@@ -81,7 +81,7 @@ namespace Opaax::Editor
         // Layout convention: <name>/<name>.opaaxproj under the source workspace.
         const std::string lN      = lName.CStr();
         const OpaaxString  lProjRel((lN + "/" + lN + ".opaaxproj").c_str());
-        OPAAX_LOG(LogEditorApp, Info, "Editing project '{}' -> {}", lN, lProjRel.CStr());
+        OPAAX_LOG(LogEditorApp, Info, "Editing project '{}' -> {}", lN, lProjRel.CStr())
 
         return MakeUnique<EditorPaths>(InPlatform, InArgc, InArgv, lProjRel);
     }

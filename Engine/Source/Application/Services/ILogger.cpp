@@ -3,7 +3,6 @@
 #include <iostream>
 
 #include "Application/OpaaxApplication.h"
-#include "Core/Log/OpaaxLog.h"
 #include "spdlog/sinks/basic_file_sink.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
 #include "spdlog/sinks/null_sink.h"

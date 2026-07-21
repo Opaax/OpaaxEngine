@@ -1,7 +1,5 @@
 #include "OpenGLContext.h"
 
-#include "Core/Log/OpaaxLog.h"
-
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -28,7 +26,7 @@ namespace Opaax
 
         if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress)))
         {
-            OPAAX_CORE_ERROR("OpenGLContext: glad failed to load OpenGL functions.");
+            OPAAX_LOG(LogOpenGLContext, Error, "Failed to initialize GLAD");
             return false;
         }
 

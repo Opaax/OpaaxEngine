@@ -2,9 +2,9 @@
  
 #include <string_view>
 
-#include "EngineAPI.h"
-#include "OpaaxString.hpp"
-#include "OpaaxTypes.h"
+#include "Core/EngineAPI.h"
+#include "Core/String/OpaaxString.hpp"
+#include "Core/OpaaxTypes.h"
  
 namespace Opaax
 {

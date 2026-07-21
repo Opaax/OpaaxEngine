@@ -5,8 +5,7 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
-#include "Core/OpaaxStringID.hpp"
-#include "Core/Log/OpaaxLog.h"
+#include "Core/String/OpaaxStringID.hpp"
 
 #include "ResourceConcept.hpp"
 #include "ResourceHandle.hpp"

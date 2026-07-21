@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "OpaaxString.hpp"
+#include "String/OpaaxString.hpp"
 
     // =============================================================================
     // Opaax forward avoid #include circle
