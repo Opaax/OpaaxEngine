@@ -18,7 +18,8 @@ Le moteur n'a aucun système audio. Objectifs de la première itération complè
 - Séparation stricte donnée brute / définition de lecture / instance jouée.
 - Play/Stop via **handles opaques** (style FMOD/Wwise), jamais de pointeurs exposés.
 - Fade in/out par voix et par bus, sans clic.
-- Variations par ClipDef (liste d'assets + random, pour footsteps etc.).
+- Variations par ClipDef (liste d'Resource
+s + random, pour footsteps etc.).
 - Préchargement par **AudioBank**, cycle de vie lié au world ou à l'engine.
 - Sons 2D et 3D (spatialisation simplifiée platformer : atténuation + pan X).
 
@@ -30,16 +31,16 @@ on n'implémente pas.
 
 ## 2. Décisions d'architecture (ADR condensé)
 
-| # | Décision | Alternative rejetée | Raison |
-|---|----------|--------------------|--------|
-| D1 | Thread audio dédié + ring buffer vers le device | Mixing dans le callback device / single-thread | Min-spec PC multi-core acquis. Un seul chemin d'exécution. Débuggable. |
-| D2 | Communication game→audio par **command queue SPSC lock-free** | Mutex sur l'état partagé | Zéro contention, zéro allocation, latence bornée. |
-| D3 | Handles = index + génération (u64) | Pointeurs / shared_ptr sur les voix | Détection des handles périmés en O(1), no-op silencieux, pas d'ownership partagé. |
-| D4 | Sélection de variation résolue **au Play(), game thread** | Résolution sur le thread audio | Thread audio bête et déterministe. RNG côté gameplay, seedable, testable. |
-| D5 | Variations = liste plate + mode de sélection | Graphe de nodes à la Unreal | Un graphe = éditeur + runtime + sérialisation. Hors budget équipe. La liste couvre le besoin. |
-| D6 | Préchargement = refcount de l'asset manager + AudioBank | Cache LRU dédié audio | Réutilise l'existant. Une bank = une ref forte par asset, rien de plus. |
-| D7 | Deux propriétaires de banks : World subsystem + Engine (bank globale) | Tout au world | Les sons UI/menu/player survivent aux transitions de niveau. |
-| D8 | Backend abstrait, miniaudio en première implémentation | WASAPI à la main / FMOD direct | miniaudio = device + décodage WAV/OGG/MP3, header-only. Migration FMOD possible sans toucher l'API publique. |
+| # | Décision                                                              | Alternative rejetée | Raison                                                                                                       |
+|---|-----------------------------------------------------------------------|--------------------|--------------------------------------------------------------------------------------------------------------|
+| D1 | Thread audio dédié + ring buffer vers le device                       | Mixing dans le callback device / single-thread | Min-spec PC multi-core acquis. Un seul chemin d'exécution. Débuggable.                                       |
+| D2 | Communication game→audio par **command queue SPSC lock-free**         | Mutex sur l'état partagé | Zéro contention, zéro allocation, latence bornée.                                                            |
+| D3 | Handles = index + génération (u64)                                    | Pointeurs / shared_ptr sur les voix | Détection des handles périmés en O(1), no-op silencieux, pas d'ownership partagé.                            |
+| D4 | Sélection de variation résolue **au Play(), game thread**             | Résolution sur le thread audio | Thread audio bête et déterministe. RNG côté gameplay, seedable, testable.                                    |
+| D5 | Variations = liste plate + mode de sélection                          | Graphe de nodes à la Unreal | Un graphe = éditeur + runtime + sérialisation. Hors budget équipe. La liste couvre le besoin.                |
+| D6 | Préchargement = refcount de l'Resource<br/ manager + AudioBank            | Cache LRU dédié audio | Réutilise l'existant. Une bank = une ref forte par Resource<br/, rien de plus.                                   |
+| D7 | Deux propriétaires de banks : World subsystem + Engine (bank globale) | Tout au world | Les sons UI/menu/player survivent aux transitions de niveau.                                                 |
+| D8 | Backend abstrait, miniaudio en première implémentation                | WASAPI à la main / FMOD direct | miniaudio = device + décodage WAV/OGG/MP3, header-only. Migration FMOD possible sans toucher l'API publique. |
 
 ---
 
@@ -91,7 +92,8 @@ AudioResource:
     Format        : sampleRate, channels, frameCount
     Residency     : Decoded (PCM en mémoire)  | Streamed (fichier + décodeur)
     Data          : buffer PCM  OU  stream state
-    // Immutable. Partagé. Possédé par l'AssetManager (handle + refcount).
+    // Immutable. Partagé. Possédé par l'Resource
+   Manager (handle + refcount).
     // Ne connaît NI volume, NI bus, NI gameplay.
 ```
 
@@ -112,7 +114,10 @@ AudioClipDef:                                  // sérialisable, édité par le 
     // --- Variations (style Sound Cue plat) ---
     SelectionMode  : Single | Random | RandomNoRepeat | Sequential | Shuffle
     Entries        : list of {
-                        assetRef   : AssetHandle<AudioAsset>
+                        Resource
+                       Ref   : Resource
+                       Handle<AudioResource
+                       >
                         weight     : float
                         volumeMul  : float          // override optionnel
                         pitchMul   : float
@@ -129,7 +134,9 @@ AudioClipDef:                                  // sérialisable, édité par le 
 Voice:
     Generation     : u32          // pour la validation de handle
     State          : Free | Playing | Paused | Stopping
-    Asset          : AudioAsset*  // résolu, jamais null si non-Free
+    Resource
+             : AudioResource
+             *  // résolu, jamais null si non-Free
     Cursor         : frame index (ou stream state)
     Gain, Pitch    : valeurs effectives (base × overrides × random)
     BusId          : hash
@@ -213,15 +220,21 @@ Fader.Tick(blockFrames):
 ```
 GAME THREAD — AudioEngine.Play(clipDef, params):
     1. entry  = SelectEntry(clipDef)            // D4 : Random/NoRepeat/etc., RNG gameplay
-    2. asset  = ResolveAsset(entry.assetRef)
+    2. Resource
+     = ResolveResource
+     (entry.Resource
+     Ref)
          if not resident:
-             LOG_WARN("Audio asset not preloaded: {}")   // règle : tout passe par une bank
-             RequestAsyncLoad(entry.assetRef)            // le son partira en retard, rien ne bloque
+             LOG_WARN("Audio Resource
+             not preloaded: {}")   // règle : tout passe par une bank
+             RequestAsyncLoad(entry.Resource
+            Ref)            // le son partira en retard, rien ne bloque
              return INVALID_HANDLE                        // v1 : on droppe, pas de replay différé
     3. gain   = clip.BaseVolume × entry.volumeMul × Rand(±clip.VolumeRange)
        pitch  = clip.BasePitch  × entry.pitchMul  × Rand(±clip.PitchRange)
     4. handle = m_HandleAllocator.Reserve()      // réserve index+gen côté game thread
-    5. push Command::Play{ handle, asset, gain, pitch, busId, loop,
+    5. push Command::Play{ handle, Resource
+   , gain, pitch, busId, loop,
                            spatial, fadeInMs, priority }
     6. return handle                              // utilisable immédiatement (async)
 
@@ -246,16 +259,18 @@ AUDIO THREAD — boucle:
 ## 9. Banks et préchargement
 
 ```
-AudioBank:                        // data asset : juste une liste
-    Clips : list of ClipDefRef    // précharger une bank = résoudre tous les
-                                  // assets de tous les entries de tous les clips
+AudioBank:                        // data Resource
+: juste une liste
+    Clips : list of ClipDefRef    // précharger une bank = résoudre toutes les
+                                  // resources de toutes les entries de tous les clips
 
 AudioBankSubsystem (WORLD subsystem — pattern ISubsystemManager existant):
     OnWorldLoad(worldDesc):
         for bankRef in worldDesc.audioBanks:
             m_Held += AcquireStrongRefs(bank)     // decode PCM upfront (async, budgeté)
     OnWorldUnload():
-        m_Held.clear()                            // refcount → les assets meurent
+        m_Held.clear()                            // refcount → les Resource
+       s meurent
                                                   // sauf s'ils sont tenus ailleurs
 
 AudioSubsystem (ENGINE — IEngineSubsystem):
@@ -264,10 +279,10 @@ AudioSubsystem (ENGINE — IEngineSubsystem):
 ```
 
 **Point d'attention** : ne jamais relâcher une ref pendant qu'une voix lit
-l'asset. Le thread audio tient sa propre ref sur l'asset tant que la voix
+la Resource . Le thread audio tient sa propre ref sur l'Resource tant que la voix
 vit (prise à la commande Play, relâchée via la queue retour au Release).
 L'unload d'un world ne peut donc jamais tirer le tapis sous une voix active
-— au pire l'asset survit quelques centaines de ms le temps du fade-out.
+— au pire l'Resource survit quelques centaines de ms le temps du fade-out.
 
 ---
 
@@ -310,8 +325,10 @@ IAudioBackend:
     //   read ringBuffer → output ; si underrun → silence + compteur (jamais de blocage)
 
 MiniaudioBackend : IAudioBackend    // première et seule implémentation v1
-    // miniaudio fournit aussi le décodage WAV/OGG/MP3 → utilisé par l'AssetManager
-    // pour AudioAsset (pas seulement le device).
+    // miniaudio fournit aussi le décodage WAV/OGG/MP3 → utilisé par l'Resource
+   Manager
+    // pour AudioResource
+    (pas seulement le device).
 ```
 
 L'abstraction existe pour une éventuelle migration FMOD sans toucher
@@ -321,12 +338,12 @@ L'abstraction existe pour une éventuelle migration FMOD sans toucher
 
 ## 12. Threading — contrats
 
-| Frontière | Mécanisme | Contrat |
-|---|---|---|
-| Game → Audio | CommandQueue SPSC lock-free, capacité fixe (ex. 1024) | Jamais d'allocation. Si pleine : drop + `LOG_ERROR` (ne doit jamais arriver — dimensionner large). |
-| Audio → Game | EventQueue SPSC (VoiceFinished, AssetReleased, Underrun) | Drainée par `AudioEngine.Update()` chaque frame → met à jour le miroir d'état + relâche les refs d'assets. |
-| Audio → Device | Ring buffer PCM | Le callback ne bloque jamais. Underrun = silence + métrique. |
-| Handles | Réservation côté game thread (allocateur d'index/gen dédié) | Le thread audio ne crée jamais de handle ; il occupe l'index réservé. |
+| Frontière | Mécanisme                                                   | Contrat                                                                                                       |
+|---|-------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------|
+| Game → Audio | CommandQueue SPSC lock-free, capacité fixe (ex. 1024)       | Jamais d'allocation. Si pleine : drop + `LOG_ERROR` (ne doit jamais arriver — dimensionner large).            |
+| Audio → Game | EventQueue SPSC (VoiceFinished, Resource<br/Released, Underrun) | Drainée par `AudioEngine.Update()` chaque frame → met à jour le miroir d'état + relâche les refs d'Resource<br/s. |
+| Audio → Device | Ring buffer PCM                                             | Le callback ne bloque jamais. Underrun = silence + métrique.                                                  |
+| Handles | Réservation côté game thread (allocateur d'index/gen dédié) | Le thread audio ne crée jamais de handle ; il occupe l'index réservé.                                         |
 
 Aucun mutex nulle part sur le chemin chaud. Le seul état partagé est dans
 les queues et le ring buffer.
@@ -335,13 +352,13 @@ les queues et le ring buffer.
 
 ## 13. Découpage en milestones
 
-| Milestone | Contenu | Done quand… |
-|---|---|---|
+| Milestone | Contenu                                                                                                                                             | Done quand…                                                                                                                  |
+|---|-----------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------|
 | **M-Audio-1** | Vendor miniaudio, `IAudioBackend`, thread audio, ring buffer, CommandQueue/EventQueue, VoicePool, handles, Play/Stop (WAV decoded), bus Master seul | Un WAV joue et s'arrête proprement via handle ; kill de 64 voix sans clic ni crash ; handle périmé = no-op vérifié par test. |
-| **M-Audio-2** | Bus tree (Music/SFX/Dialogue + data-driven), Faders voix + bus, `Stop(fade)`, `FadeTo` | Fade-out de bus Music pendant que SFX continue ; zéro clic à l'oscillo. |
-| **M-Audio-3** | `AudioClipDef` sérialisé, variations + modes de sélection, randomisation vol/pitch, intégration AssetManager | 5 footsteps en RandomNoRepeat, jamais deux identiques consécutifs (test seedé). |
-| **M-Audio-4** | `AudioBank`, `AudioBankSubsystem` (world), bank globale engine, warning asset non résident, refs tenues par le thread audio | Load/unload de world en boucle : zéro reload d'assets de la bank globale, zéro use-after-free (ASan). |
-| **M-Audio-5** | Composants entt + `AudioSpatialSystem`, atténuation + pan X, streaming OGG pour la musique | Musique streamée 3 min + 30 SFX 3D simultanés, thread audio < 1 ms/bloc en Release. |
+| **M-Audio-2** | Bus tree (Music/SFX/Dialogue + data-driven), Faders voix + bus, `Stop(fade)`, `FadeTo`                                                              | Fade-out de bus Music pendant que SFX continue ; zéro clic à l'oscillo.                                                      |
+| **M-Audio-3** | `AudioClipDef` sérialisé, variations + modes de sélection, randomisation vol/pitch, intégration Resource<br/Manager                                    | 5 footsteps en RandomNoRepeat, jamais deux identiques consécutifs (test seedé).                                              |
+| **M-Audio-4** | `AudioBank`, `AudioBankSubsystem` (world), bank globale engine, warning Resource<br/ non résident, refs tenues par le thread audio                     | Load/unload de world en boucle : zéro reload d'Resource<br/s de la bank globale, zéro use-after-free (ASan).                     |
+| **M-Audio-5** | Composants entt + `AudioSpatialSystem`, atténuation + pan X, streaming OGG pour la musique                                                          | Musique streamée 3 min + 30 SFX 3D simultanés, thread audio < 1 ms/bloc en Release.                                          |
 
 ---
 
