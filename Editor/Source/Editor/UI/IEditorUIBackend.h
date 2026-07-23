@@ -19,23 +19,43 @@ namespace Opaax::Editor
     // =============================================================================
     class IEditorUIBackend
     {
+        // =============================================================================
+        // Dtor
+        // =============================================================================
     public:
         virtual ~IEditorUIBackend() = default;
-
-        // ImGui_ImplGlfw_InitForX + the renderer impl Init. The ImGui context must exist first.
+        
+        // =============================================================================
+        // Functions
+        // =============================================================================
+    public:
+        /**
+         *  ImGui_ImplGlfw_InitForX + the renderer impl Init.
+         *  The ImGui context must exist first.
+         */
         virtual void Init() = 0;
 
-        // Renderer impl Shutdown + ImGui_ImplGlfw_Shutdown. Before ImGui::DestroyContext.
+        /** Renderer impl Shutdown + ImGui_ImplGlfw_Shutdown. 
+         * Before ImGui::DestroyContext. 
+         */
         virtual void Shutdown() = 0;
 
-        // Renderer impl NewFrame + ImGui_ImplGlfw_NewFrame. Before ImGui::NewFrame.
+        /**
+         * Renderer impl NewFrame + ImGui_ImplGlfw_NewFrame.
+         * Before ImGui::NewFrame.
+         */
         virtual void NewFrame() = 0;
 
-        // Renderer impl RenderDrawData(ImGui::GetDrawData()). After ImGui::Render.
+        /**
+         * Renderer impl RenderDrawData(ImGui::GetDrawData()).
+         * After ImGui::Render.
+         */
         virtual void RenderDrawData() = 0;
-
-        // Multi-viewport update + default render, wrapped in any backend-specific current-context
-        // save/restore. The caller gates on ImGuiConfigFlags_ViewportsEnable.
+        
+        /**
+         * Multi-viewport update + default render, wrapped in any backend-specific current-context save/restore.
+         * The caller gates on ImGuiConfigFlags_ViewportsEnable.
+         */
         virtual void RenderPlatformWindows() = 0;
     };
 }
