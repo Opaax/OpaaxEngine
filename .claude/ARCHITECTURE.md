@@ -21,7 +21,8 @@ mutable static in the engine. Everything else is instance-owned beneath it: the 
 (`UniquePtr<IAppService>`), the `IEngine` service owns the `EngineSubsystemMgr`, the manager owns the
 subsystems. No `s_Data`, no function-local `static`, no singletons past the locator. This is the invariant
 the whole design optimizes (see **L2**); a proposal that adds a static is wrong by default, even a "clean" one.
-*The old static `RenderCommand`/`IRenderAPI` facade is OLD-world and dies with it — do not extend it.*
+*The old static `RenderCommand`/`IRenderAPI` facade was **retired to `Legacy/RHI`** (2026-07-22, [[L14]]) —
+the render path is now instance-owned via `IRHIDevice` (`RenderSystem::m_Device`), zero facade statics; do not resurrect it.*
 
 **I2 — DLL-safe type identity.** A type's tag must be a *single instance across the DLL/exe boundary*.
 Two proven ways to get that — the deciding factor is **whether the tag is dll-exported**, not inline-vs-`.cpp`:
@@ -136,7 +137,7 @@ HOW**. Only the backbuffer is ever presented; offscreen render targets never are
 editor draw world→FBO, UI→backbuffer, then present once. Present is instance-based (no statics — **I1**).
 - **M1 target shape:** `BeginFrame / BeginPass(target,view) / EndPass / EndFrame / Present`. "scene" is
   retired vocabulary — a render *pass into a target with a view*. New render path is **OpenGL-only** today;
-  VK lives only on the old path.
+  the VK backend is **parked in `Legacy/RHI/Vulkan`** (2026-07-22) pending a new-path `VulkanRHIDevice`.
 
 **F3 — A subsystem needing a sibling mid-boot resolves from the manager.** During its own `Startup`, a
 subsystem reaches a sibling via `m_Subsystems.GetSubsystem<T>()` (the manager's create-pass populates the

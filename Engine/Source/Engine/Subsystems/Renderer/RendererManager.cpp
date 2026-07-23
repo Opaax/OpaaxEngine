@@ -11,7 +11,7 @@
 #include "Core/Events/EventBus.h"
 #include "Core/Window/WindowEvents.h"
 
-#include "RHI/RenderAPI.h"        // BackendFromString
+#include "RHI/RHIBackend.h"       // BackendFromString
 #include "RHI/IGraphicsContext.h"
 
 #include "Renderer/RenderSystem.h"
@@ -61,7 +61,7 @@ namespace Opaax
             OpaaxApplication::GetAppService<IPaths>().EngineToAbsolute("Assets/Shaders/Sprite.glsl");
 
         RenderSystemDesc lDesc;
-        lDesc.Backend      = RenderAPI::BackendFromString(lEngineCfg.RenderBackend);
+        lDesc.Backend      = BackendFromString(lEngineCfg.RenderBackend);
         lDesc.Surface      = lSurface;
         lDesc.Width        = lWindow->GetWidth();
         lDesc.Height       = lWindow->GetHeight();

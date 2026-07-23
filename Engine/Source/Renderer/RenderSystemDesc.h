@@ -3,7 +3,7 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Maths/MathTypes.h"
-#include "RHI/RenderAPI.h"   // EBackend
+#include "RHI/RHIBackend.h"   // EBackend
 #include "RHI/Shader.h"      // ShaderDesc
 
 namespace Opaax

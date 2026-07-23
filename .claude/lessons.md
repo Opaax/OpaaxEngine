@@ -273,3 +273,35 @@ became a prerequisite **re-baseline**: extract the keepers back out of Legacy an
 - **Surface premise/scope forks up front and let the user steer** — before touching a broad refactor, confirm
   ownership ("I execute vs you execute"), and answer floated alternatives honestly (NVRHI: declined — no GL
   backend, AAA/RT tier, fights the project's #1 *Simple* value; a 2D engine's thin GL RHI is the right altitude).
+
+## L14 — A STALE object file masks a committed-broken branch; a prior "green" doesn't survive a recompile trigger (2026-07-22)
+
+**What happened (facade decouple):** I retired the `IRenderAPI`/`RenderCommand` facade + VK backend to `Legacy/`
+cleanly — all my RHI/Renderer TUs compiled. But the build then failed in `OpaaxApplication.cpp`, a file I never
+touched: `switch (InEvent.GetCategoryFlags())` with `case EEventCategory::X:` labels. Root cause was **not mine** —
+`GetCategoryFlags()` returns `Uint16` and `EEventCategory` had migrated to a scoped **bitmask** `enum class`
+(an input event is `Input|Keyboard`), so single-value cases can't match *and* won't convert. The branch HEAD
+(`a829d87`) did **not** compile; a **stale `.o`** from a prior session's green `build.bat fast` had masked it, and
+my header change forced the recompile that surfaced it. Proven pre-existing with `git diff HEAD -- <file>` = empty.
+The harness flagged the file "modified on disk" mid-task — the **user was editing it concurrently**. I applied a
+consumer-side patch (`OnEvent` → `IsInCategory` bit-tests) to unblock, but the user fixed it their own way and
+committed it ("Fix app switch state") **while I worked**; my edit was superseded (working tree re-matched HEAD). My
+actual task (the RHI decouple) verified green on the shifted base (3 presets, test 80/339, Sandbox 3 quads clean).
+
+**Rules for next time:**
+- **A prior session's green is not this session's truth** ([[L13]] sharpened). `build.bat fast` only recompiles
+  *dirty* TUs — a committed-broken file with an up-to-date `.o` reports green until something dirties it. Before
+  building on a baseline, trigger a real recompile of the blast area (or a clean build) — don't trust a stale green.
+- **When the red is in a file you never edited, prove ownership fast**: `git diff HEAD -- <file>` empty ⇒ the broken
+  *source* is HEAD's, not your diff ([[L5]]). Say so explicitly; don't absorb blame or thrash your clean diff.
+- **When the harness says a file was "modified on disk," the USER is likely editing it live — defer, don't race.**
+  My consumer-side `OnEvent` patch was wasted effort: the user was actively fixing that exact WIP file and committed
+  their own version. If pre-existing breakage sits in a file the user is touching, surface it and let them own the
+  fix ([[L5]]); only patch it yourself if you must unblock AND they're not in it. HEAD can move under you mid-task
+  (they committed 3× while I worked) — re-verify on the shifted base and re-read the index before committing ([[L9]]).
+- **A `switch` is the wrong tool for a bitmask enum** — combined flags (`A|B`) match no single-value `case` and fall
+  through to `default`. Dispatch bitmask categories by bit-test (`IsInCategory`/`&`), not `switch`.
+- **Retiring a vestigial facade is clean when you trace live-vs-dead by the linker+grep** ([[L10]]): the two statics
+  (`RenderCommand::s_API`, `RenderAPI::s_Backend`) were consumed only by dead code; extract the still-live bits
+  (`EBackend`+string map → static-free `RHIBackend.h`), route everything through the instance (`IRHIDevice`), move
+  the cluster to `Legacy/` (unlinked — dangling includes there are fine, **X1**), grep-clean outside `Legacy/`.

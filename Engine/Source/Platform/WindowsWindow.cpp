@@ -10,7 +10,7 @@
 
 #include "Engine/Subsystems/Input/InputTypesFwd.hpp"
 
-#include "RHI/RenderAPI.h"
+#include "RHI/RHIBackend.h"
 #include "RHI/IGraphicsContext.h"
 
 namespace Opaax
@@ -66,7 +66,7 @@ namespace Opaax
 		const EngineConfigData& lData = OpaaxApplication::GetAppService<IConfigSystem>().Get<Config_Engine>().Data();
 
 		// Backend chosen from engine config — drives window hints + context creation.
-		const EBackend lBackend = RenderAPI::BackendFromString(lData.RenderBackend);
+		const EBackend lBackend = BackendFromString(lData.RenderBackend);
 
 		// MUST run before glfwCreateWindow (e.g. GLFW_NO_API for Vulkan). No-op for OpenGL.
 		IGraphicsContext::ApplyWindowHints(lBackend);

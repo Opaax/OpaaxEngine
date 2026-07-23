@@ -77,15 +77,8 @@ namespace Opaax
         // =============================================================================
         // Functions
         // =============================================================================
-        
-        //------------------------------------------------------------------------------
-        //Static
+        // Created via IRHIDevice::CreateVertexBuffer.
     public:
-        static UniquePtr<IVertexBuffer> Create(Uint32 InSize); // dynamic
-        static UniquePtr<IVertexBuffer> Create(const float* InVertices, Uint32 InSize); // static
-        
-        //------------------------------------------------------------------------------
-        
         virtual void Bind()     const = 0;
         virtual void Unbind()   const = 0;
 
@@ -117,14 +110,8 @@ namespace Opaax
         // =============================================================================
         // Functions
         // =============================================================================
-
+        // Created via IRHIDevice::CreateIndexBuffer.
     public:
-        //------------------------------------------------------------------------------
-        //Static
-        static UniquePtr<IIndexBuffer> Create(const Uint32* InIndices, Uint32 InCount);
-        
-        //------------------------------------------------------------------------------
-        
         virtual void Bind()     const = 0;
         virtual void Unbind()   const = 0;
 
@@ -148,13 +135,8 @@ namespace Opaax
         // =============================================================================
         // Functions
         // =============================================================================
-
-        //------------------------------------------------------------------------------
-        //Static
+        // Created via IRHIDevice::CreateVertexArray.
     public:
-        static UniquePtr<IVertexArray> Create();
-        
-    public: 
         virtual void Bind()   const = 0;
         virtual void Unbind() const = 0;
  

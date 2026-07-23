@@ -11,7 +11,6 @@
 #include "Renderer/Renderer2DSortKey.h"
 #include "Renderer/RenderView.h"
 #include "Renderer/RenderSystemDesc.h"
-#include "Renderer/ShaderSource.h"
 #include "Core/EngineAPI.h"
 
 #include <glm/gtc/matrix_transform.hpp>
@@ -158,35 +157,6 @@ namespace Opaax
         m_Data->QuadPipeline = InDevice.CreatePipeline(MakeSpritePipelineDesc(m_Data->QuadShader.get()));
 
         m_Data->QuadBindGroup = InDevice.CreateBindGroup(BindGroupLayout{ 1u, MAX_TEXTURE_SLOTS });
-        m_Data->QuadBindGroup->SetUniformBuffer(*m_Data->CameraUBO);
-    }
-
-    // =============================================================================
-    // Init (transitional) — global I*::Create factories + on-disk shader. Dead old path only.
-    // =============================================================================
-    void Renderer2D::Init(const OpaaxString& InShaderSourcePath)
-    {
-        OPAAX_LOG(LogRenderer2D, Info, "Renderer2D::Init(path)")
-
-        m_Data->QuadVAO = IVertexArray::Create();
-
-        UniquePtr<IVertexBuffer> lVBO = IVertexBuffer::Create(MAX_VERTICES * sizeof(QuadVertex));
-        lVBO->SetLayout(MakeQuadLayout());
-        m_Data->QuadVBO = lVBO.get();
-        m_Data->QuadVAO->AddVertexBuffer(Move(lVBO));
-
-        TFixedArray<Uint32, MAX_INDICES> lIndices;
-        FillQuadIndices(lIndices);
-        m_Data->QuadVAO->SetIndexBuffer(IIndexBuffer::Create(lIndices.data(), MAX_INDICES));
-
-        m_Data->WhiteTexture    = ITexture2D::Create(1u, 1u);
-        m_Data->TextureSlots[0] = m_Data->WhiteTexture.get();
-
-        m_Data->QuadShader   = IShader::Create(ShaderSource::LoadShaderDescFromFile(InShaderSourcePath));
-        m_Data->CameraUBO    = IUniformBuffer::Create(static_cast<Uint32>(sizeof(glm::mat4)), 1);
-        m_Data->QuadPipeline = IPipeline::Create(MakeSpritePipelineDesc(m_Data->QuadShader.get()));
-
-        m_Data->QuadBindGroup = IBindGroup::Create(BindGroupLayout{ 1u, MAX_TEXTURE_SLOTS });
         m_Data->QuadBindGroup->SetUniformBuffer(*m_Data->CameraUBO);
     }
 

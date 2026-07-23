@@ -62,12 +62,8 @@ namespace Opaax
         // =============================================================================
     public:
         // Build the batch GPU resources through the device (the live path). All resources are
-        // created via InDevice, so nothing routes through the global backend factory.
+        // created via InDevice, so nothing routes through a global backend factory.
         void Init(IRHIDevice& InDevice, const RenderLimits& InLimits, const ShaderDesc& InShader);
-
-        // Transitional: build via the global I*::Create factories, reading Sprite.glsl off disk.
-        // Kept only for the dead old RenderSubsystem path; removed when that path is dismantled.
-        void Init(const OpaaxString& InShaderSourcePath);
 
         void Shutdown();
 

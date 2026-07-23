@@ -10,8 +10,7 @@ namespace Opaax
      *
      * Backend-agnostic 2D GPU texture. Consumers (Texture2D asset, FontAsset, Renderer2D)
      * hold a UniquePtr<ITexture2D> and never name a concrete backend type. The concrete
-     * impl is selected by ITexture2D::Create, defined in the active backend's TU
-     * (OpenGLTexture2D.cpp today) — mirrors the IVertexArray/IVertexBuffer factory pattern.
+     * impl is created via IRHIDevice::CreateTexture (OpenGLTexture2D today).
      *
      * GetRendererID exposes the raw backend handle (GL texture name) for the one consumer
      * that still needs it — the editor ViewportPanel feeding ImGui::Image. That is an
@@ -26,21 +25,10 @@ namespace Opaax
         virtual ~ITexture2D() = default;
 
         // =============================================================================
-        // Factory
-        // =============================================================================
-    public:
-        // Load from file path (decoder lives in the backend impl).
-        static UniquePtr<ITexture2D> Create(const char* InPath);
-
-        // 1x1 solid white texture (tinted quads).
-        static UniquePtr<ITexture2D> Create(Uint32 InWidth, Uint32 InHeight);
-
-        // Raw pixel bytes. Channels: 4 = RGBA8, 3 = RGB8, 1 = R8 coverage (alpha-swizzled).
-        static UniquePtr<ITexture2D> Create(const unsigned char* InData, Uint32 InWidth, Uint32 InHeight, Int32 InChannels);
-
-        // =============================================================================
         // Functions
         // =============================================================================
+        // Created via IRHIDevice::CreateTexture. (From-file / from-bytes creation returns
+        // with the Texture CResource — the severed sprite path, M0.5.)
     public:
         virtual void Bind(Uint32 InSlot = 0) const = 0;
         virtual void Unbind()                const = 0;

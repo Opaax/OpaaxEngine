@@ -32,8 +32,7 @@ namespace Opaax
      *
      * Backend-agnostic shader program. Consumers (ShaderAsset, Renderer2D) hold a
      * UniquePtr<IShader> and never name a concrete backend type. The concrete impl
-     * is selected by IShader::Create, defined in the active backend's TU
-     * (OpenGLShader.cpp today) — mirrors the IVertexArray/IVertexBuffer factory pattern.
+     * is created via IRHIDevice::CreateShader (OpenGLShader today).
      *
      * Shader SOURCE portability (GLSL vs SPIR-V vs HLSL) is a separate concern and is
      * NOT solved here — Create still takes GLSL strings. A future backend-neutral shader
@@ -48,14 +47,9 @@ namespace Opaax
         virtual ~IShader() = default;
 
         // =============================================================================
-        // Factory
-        // =============================================================================
-    public:
-        static UniquePtr<IShader> Create(const ShaderDesc& InDesc);
-
-        // =============================================================================
         // Functions
         // =============================================================================
+        // Created via IRHIDevice::CreateShader.
     public:
         virtual void Bind()   const = 0;
         virtual void Unbind() const = 0;

@@ -52,9 +52,8 @@ namespace Opaax
      * @interface IPipeline
      *
      * Backend-agnostic graphics pipeline state object. Consumers (Renderer2D) hold a
-     * UniquePtr<IPipeline> and bind it on the command buffer. The concrete impl is selected
-     * by IPipeline::Create, defined in the active backend's TU (OpenGLPipeline.cpp today) —
-     * mirrors the IShader/IVertexArray factory pattern.
+     * UniquePtr<IPipeline> and bind it on the command buffer. The concrete impl is created
+     * via IRHIDevice::CreatePipeline (OpenGLPipeline today).
      */
     class OPAAX_API IPipeline
     {
@@ -64,11 +63,7 @@ namespace Opaax
     public:
         virtual ~IPipeline() = default;
 
-        // =============================================================================
-        // Factory
-        // =============================================================================
-    public:
-        static UniquePtr<IPipeline> Create(const PipelineDesc& InDesc);
+        // Created via IRHIDevice::CreatePipeline.
     };
 
 } // namespace Opaax

@@ -8,7 +8,7 @@ namespace Opaax
     // =============================================================================
     // OpenGLRHIDevice — IRHIDevice for OpenGL. A thin wrapper that reuses every existing
     //   OpenGL* resource impl + OpenGLCommandBuffer; it just knows it's OpenGL, so no
-    //   RenderAPI::GetBackend() query. Owns the frame's immediate-executing command buffer;
+    //   backend-dispatch query is needed. Owns the frame's immediate-executing command buffer;
     //   Present forwards to the surface (IGraphicsContext::SwapBuffers).
     // =============================================================================
     class OPAAX_API OpenGLRHIDevice final : public IRHIDevice

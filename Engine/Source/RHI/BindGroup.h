@@ -33,7 +33,7 @@ namespace Opaax
      * Backend-agnostic bundle of shader-visible resources (a descriptor set). Consumers fill
      * it (SetUniformBuffer / SetTexture) then bind it on the command buffer before drawing.
      * On OpenGL this binds the UBO base + texture units; on Vulkan it maps to a VkDescriptorSet.
-     * The concrete impl is selected by IBindGroup::Create, defined in the active backend's TU.
+     * The concrete impl is created via IRHIDevice::CreateBindGroup (OpenGLBindGroup today).
      *
      * The texture slots are mutable between draws (Renderer2D rebinds its batch's textures each
      * flush) — backends that need immutable descriptors update per flush internally.
@@ -47,14 +47,9 @@ namespace Opaax
         virtual ~IBindGroup() = default;
 
         // =============================================================================
-        // Factory
-        // =============================================================================
-    public:
-        static UniquePtr<IBindGroup> Create(const BindGroupLayout& InLayout);
-
-        // =============================================================================
         // Functions
         // =============================================================================
+        // Created via IRHIDevice::CreateBindGroup.
     public:
         virtual void SetUniformBuffer(IUniformBuffer& InUniformBuffer)   = 0;
         virtual void SetTexture(Uint32 InSlot, ITexture2D& InTexture)    = 0;

@@ -3,7 +3,7 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 
-#include "RHI/RenderAPI.h"   // EBackend
+#include "RHI/RHIBackend.h"   // EBackend
 
 namespace Opaax
 {
@@ -11,9 +11,9 @@ namespace Opaax
     class IGraphicsContext;
 
     // =============================================================================
-    // RHIDevice — the device factory (mirrors RenderAPI::Create). The single place that
-    //   maps EBackend -> a concrete IRHIDevice, creates it, and Init's it against the
-    //   surface. Adding a backend = one case here + that backend's device impl.
+    // RHIDevice — the device factory. The single place that maps EBackend -> a concrete
+    //   IRHIDevice, creates it, and Init's it against the surface. Adding a backend =
+    //   one case here + that backend's device impl.
     // =============================================================================
     class OPAAX_API RHIDevice
     {

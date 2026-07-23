@@ -16,8 +16,8 @@ namespace Opaax
      * Editor  : the M1 output contract (D2) will draw to an offscreen FBO the ViewportPanel
      *           samples. NOTE: no EditorRenderTarget type exists yet — that lands in M1.
      *
-     * The game layer calls RenderCommand through this interface without knowing whether it is
-     * rendering to screen or to an offscreen FBO.
+     * The renderer draws through this interface without knowing whether it is rendering to
+     * screen or to an offscreen FBO.
      */
     class OPAAX_API IRenderTarget
     {
