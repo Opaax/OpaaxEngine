@@ -11,7 +11,7 @@ namespace Opaax
 
     /**
      * @class Event
-     * Base for all Tier-1 dispatched events. Events are stack-allocated value types —
+     * Events are stack-allocated value types
      * never heap-allocated, never stored past the callback that produced them. A
      * receiver stops propagation by returning true from its EventDispatcher handler
      * (the dispatcher ORs that into bHandled). Concrete events stamp their identity

@@ -17,35 +17,62 @@ namespace Opaax::Editor
     // =============================================================================
     class EditorService final : public IEditorService
     {
+        // =============================================================================
+        // Ctor - Dtor
+        // =============================================================================
     public:
         EditorService()           = default;
         ~EditorService() override = default;
+        
+        // =============================================================================
+        // Copy Delete
+        // =============================================================================
 
         EditorService(const EditorService&)            = delete;
         EditorService& operator=(const EditorService&) = delete;
-
-        //~Begin IEditorService
-        void Initialize() override;   // create the ImGui context + UI backend, build the EditorContext
-        void BeginFrame() override;   // backend NewFrame -> ImGui::NewFrame
-        void EndFrame()   override;   // dockspace -> ImGui::Render -> backend RenderDrawData
-        bool RouteInput(Event& InEvent) override;   // S11 seam: ImGui WantCapture* gate (full route = M-Input)
-        void RegisterExtensions(const TFunction<void(EditorExtensionRegistrar&)>& InCollect) override;   // S12 seam (D10)
-        //~End IEditorService
-
-        //~Begin IAppService
-        void OnShutdown() override;   // release the context while the engine it references is still alive
-        //~End IAppService
-
-        // The injected context (valid after Initialize). Panels are constructed with this (S10+).
-        EditorContext& GetContext() noexcept { return *m_Context; }
-
+        
+        // =============================================================================
+        // Functions
+        // =============================================================================
+        
     private:
-        // The full-viewport dockspace host + main menu bar. Central node is passthrough, so the world
-        // rendered by Engine().Loop() shows through it (M0 has no viewport panel yet — that is M1).
+        /**
+         * 
+         */
         void DrawDockspace();
+        
+        // =============================================================================
+        // Get - Set
+    public:
+        /**
+         * @return The injected context (valid after Initialize)
+         */
+        EditorContext& GetContext() noexcept { return *m_Context; }
+        // End Get - Set
+        // =============================================================================
+        
+        // =============================================================================
+        // Override
+        // =============================================================================
+    public:
+        //~Begin IEditorService interface
+        void Initialize() override;
+        void BeginFrame() override;
+        void EndFrame()   override;
+        bool RouteInput(Event& InEvent) override;
+        void RegisterExtensions(const TFunction<void(EditorExtensionRegistrar&)>& InCollect) override;
+        //~End IEditorService interface
 
-        UniquePtr<EditorContext>    m_Context;    // built at Initialize (refs valid post engine startup)
-        UniquePtr<IEditorUIBackend> m_UIBackend;  // owns the ImGui renderer/platform hooks (OpenGL today)
-        EditorExtensionRegistrar    m_Extensions; // filled + sealed at RegisterExtensions, before first world (D10)
+        //~Begin IAppService interface
+        void OnShutdown() override;   // release the context while the engine it references is still alive
+        //~End IAppService interface
+
+        // =============================================================================
+        // Members
+        // =============================================================================
+    private:
+        UniquePtr<EditorContext>    m_Context;
+        UniquePtr<IEditorUIBackend> m_UIBackend;
+        EditorExtensionRegistrar    m_Extensions;
     };
 }

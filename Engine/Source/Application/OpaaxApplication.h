@@ -4,6 +4,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Application/Services/AppServiceLocator.h"
 #include "Application/Modules/ModuleRegistrar.h"
+#include "Core/Events/Event.h"
 
 namespace Opaax
 {
@@ -107,10 +108,8 @@ namespace Opaax
         // Flow
     protected:
         /**
-         * Seam (Editor.md D1): the per-frame body, called once per RunApplication iteration.
-         * Base = the engine frame (Engine().Loop()), so runtime is byte-for-byte unchanged. The
-         * editor overrides it as: UI begin -> Engine().Loop() -> UI end (S10). Present stays out
-         * of here — the host presents after TickFrame() (S7).
+         * Called once per RunApplication iteration.
+         * Give a change to child app to override the order of the frame (i.e) The editor need to know about layout/ui to render into the Viewport panel
          */
         virtual void TickFrame();
 
@@ -122,8 +121,8 @@ namespace Opaax
         
         /**
          * Mainly Window event to dispatch to other services. Virtual so a composition root (the editor)
-         * can intercept events at the window-callback site BEFORE the base enqueues them to the engine
-         * bus (Editor.md "Event ordering", S11). Base is unchanged; runtime has no override.
+         * can intercept events at the window-callback site BEFORE the base enqueues them to the engine bus.
+         * Base is unchanged; runtime has no override.
          * @param InEvent
          */
         virtual void OnEvent(Event& InEvent);
@@ -173,6 +172,15 @@ namespace Opaax
         virtual void OnModulesRegistered() {}
         
         // End Modules
+        // =============================================================================
+        
+        // =============================================================================
+        // Events Handles
+    protected:
+        virtual void HandleApplicationEvent(EventDispatcher& Dispatcher, Event& InEvent);
+        virtual void HandleAllInputEvent(EventDispatcher& Dispatcher, Event& InEvent);
+        virtual void UnknownEvent(EventDispatcher& Dispatcher, Event& InEvent);
+        // End Events Handles
         // =============================================================================
         
         // =============================================================================

@@ -26,23 +26,17 @@ namespace Opaax::Editor
 
     void EditorApplication::OnProvideServices(AppServiceLocator& InServices)
     {
-        // D1: the editor service exists ONLY in editor executables, provided at this seam.
         InServices.Provide<IEditorService, EditorService>();
         OPAAX_LOG(LogEditorApp, Info, "IEditorService provided");
     }
 
     void EditorApplication::PostEngineStartup()
     {
-        // Engine + subsystems are up — safe to build the EditorContext now.
         GetAppService<IEditorService>().Initialize();
     }
 
     void EditorApplication::TickFrame()
     {
-        // The editor frame wraps the engine frame in UI (S10 / D1). BeginFrame opens the ImGui frame;
-        // Engine().Loop() renders the world into the backbuffer; EndFrame draws the dockspace over it and
-        // submits ImGui's draw data. The host then calls Engine().Present() (S7) — the UI is on the
-        // backbuffer before the swap.
         IEditorService& lEditor = GetAppService<IEditorService>();
         lEditor.BeginFrame();
         Engine().Loop();
@@ -51,9 +45,6 @@ namespace Opaax::Editor
 
     void EditorApplication::OnEvent(Event& InEvent)
     {
-        // The editor sees window/input events FIRST — before the base app enqueues anything to the engine
-        // bus (Editor.md "Event ordering", M0/S11). If the editor consumed it (S11: ImGui WantCapture*),
-        // the engine never sees it. Everything else falls through to the base sink (close, resize, ...).
         if (GetAppService<IEditorService>().RouteInput(InEvent))
         {
             return;

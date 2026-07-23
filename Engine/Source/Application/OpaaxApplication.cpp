@@ -165,11 +165,13 @@ void OpaaxApplication::InitializeApplication()
 void OpaaxApplication::CreateApplicationWindow()
 {
     WindowManager().CreateMainWindow();
-
-    // Route the main window's Tier-1 events into OnEvent (the app-level sink).
+    
     if (Window* lWindow = WindowManager().GetMainWindow())
     {
-        lWindow->SetEventCallback([this](Event& InEvent) { OnEvent(InEvent); });
+        lWindow->SetEventCallback([this](Event& InEvent)
+        {
+            OnEvent(InEvent);
+        });
     }
 }
 
@@ -231,7 +233,6 @@ void OpaaxApplication::RunApplication()
 
 void OpaaxApplication::TickFrame()
 {
-    // Base per-frame body: one engine frame. The editor overrides to wrap this in UI begin/end (S10).
     Engine().Loop();
 }
 
@@ -239,20 +240,21 @@ void OpaaxApplication::OnEvent(Event& InEvent)
 {
     EventDispatcher lDispatcher(InEvent);
 
-    lDispatcher.Dispatch<WindowCloseEvent>([this](WindowCloseEvent&)
+    switch (InEvent.GetCategoryFlags())
     {
-        OPAAX_APP_LOG(Info, "WindowCloseEvent - requesting shutdown")
-        bIsRunning = false;
-        return true;
-    });
-
-    // Republish the resize as a Tier-3 POD so decoupled systems (renderer, camera, ...)
-    // react without the window ever knowing them. Queued — delivered at the frame's Flush.
-    lDispatcher.Dispatch<WindowResizeEvent>([this](WindowResizeEvent& InResize)
-    {
-        Engine().GetEngineEventBus().GetEventBus().Enqueue(InResize.GetPayload());
-        return false;
-    });
+    case EEventCategory::Application:
+        HandleApplicationEvent(lDispatcher, InEvent);
+        break;
+    case EEventCategory::Input:
+    case EEventCategory::Keyboard:
+    case EEventCategory::Mouse:
+    case EEventCategory::MouseButton:
+        HandleAllInputEvent(lDispatcher, InEvent);
+        break;
+    case EEventCategory::None:
+    default: 
+        UnknownEvent(lDispatcher, InEvent);
+    }
 }
 
 void OpaaxApplication::ShutdownApplication()
@@ -286,6 +288,32 @@ void OpaaxApplication::EngineStartup()
 void OpaaxApplication::EngineTeardown()
 {
     Engine().TearDown();
+}
+
+void OpaaxApplication::HandleApplicationEvent(EventDispatcher& Dispatcher, Event& InEvent)
+{
+    Dispatcher.Dispatch<WindowCloseEvent>([this](WindowCloseEvent&)
+    {
+        OPAAX_APP_LOG(Info, "WindowCloseEvent - requesting shutdown")
+        bIsRunning = false;
+        return true;
+    });
+    
+    Dispatcher.Dispatch<WindowResizeEvent>([this](WindowResizeEvent& InResize)
+    {
+        Engine().GetEngineEventBus().GetEventBus().Enqueue(InResize.GetPayload());
+        return false;
+    });
+}
+
+void OpaaxApplication::HandleAllInputEvent(EventDispatcher& Dispatcher, Event& InEvent)
+{
+    
+}
+
+void OpaaxApplication::UnknownEvent(EventDispatcher& Dispatcher, Event& InEvent)
+{
+    
 }
 
 // =============================================================================
