@@ -3,12 +3,11 @@
 #include "Editor/IEditorService.h"
 #include "Editor/EditorService.h"
 #include "Editor/EditorPaths.h"
+
 #include "Application/Services/IEngine.h"   // Engine().Loop() — full type, not just the fwd decl
 #include "Application/Services/ILogger.h"   // OPAAX_LOG + LogCategory
 
 #include <string>
-
-#include "Core/Maths/Angle/AngleTypes.hpp"
 
 using namespace Opaax;   // OPAAX_LOG expands to an unqualified ToSpdLevel(...)
 

@@ -5,18 +5,22 @@
 #include "Application/Services/ILogger.h"
 #include "Application/Services/IProjectManager.h"
 #include "Application/Services/IJobSystem.h"
+
 #include "Engine/Config/Config_Engine.h"
 #include "Engine/Engine.h"
 #include "Engine/Subsystems/EventBus/EngineEventBus.h"
+#include "Engine/Subsystems/Input/InputEvents.h"
+
 #include "Services/IConfigSystem.h"
 #include "Services/IEngine.h"
-
 #include "Services/Window/IWindowManager.h"
 #include "Services/Window/WindowManager.h"
-#include "Core/Events/Event.h"
+
 #include "Core/Window/WindowEvents.h"
-#include "Engine/Subsystems/Input/InputEvents.h"
+
+#include "Core/Events/Event.h"
 #include "Core/Events/EventBus.h"
+#include "Core/Events/EventTypes.hpp"
 
 #ifdef OPAAX_PLATFORM_WINDOWS
 #include "Application/Services/Platforms/Windows/WindowsPlatform.h"
