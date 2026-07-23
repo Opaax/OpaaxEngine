@@ -10,7 +10,7 @@ namespace Opaax
      * @class OpenGLCommandBuffer
      *
      * OpenGL ICommandBuffer. GL is immediate-mode, so every method executes its GL calls right
-     * away (there is no record/submit step — OpenGLRenderAPI reuses one instance per frame).
+     * away (there is no record/submit step — OpenGLRHIDevice reuses one instance per frame).
      * BeginRenderPass binds the target's framebuffer + sets the viewport + optionally clears;
      * the bind + DrawIndexed calls translate straight to GL state-set + glDrawElements.
      */

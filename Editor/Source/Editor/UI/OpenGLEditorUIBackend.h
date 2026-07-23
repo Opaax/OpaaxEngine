@@ -17,13 +17,13 @@ namespace Opaax::Editor
     public:
         explicit OpenGLEditorUIBackend(GLFWwindow* InWindow);
 
-        //~Begin IEditorUIBackend
+        //~Begin IEditorUIBackend interface
         void Init()                  override;
         void Shutdown()              override;
         void NewFrame()              override;
         void RenderDrawData()        override;
         void RenderPlatformWindows() override;
-        //~End IEditorUIBackend
+        //~End IEditorUIBackend interface
 
     private:
         GLFWwindow* m_Window = nullptr;

@@ -244,19 +244,19 @@ void OpaaxApplication::OnEvent(Event& InEvent)
 {
     EventDispatcher lDispatcher(InEvent);
 
-    switch (InEvent.GetCategoryFlags())
+    // NOTE: category flags are a BITMASK (an input event is Input|Keyboard, Input|Mouse, ...),
+    // so a single-value switch can never match a combined value — dispatch by bit-test via
+    // IsInCategory. All input events carry the Input bit; window events carry Application.
+    if (InEvent.IsInCategory(EEventCategory::Application))
     {
-    case EEventCategory::Application:
         HandleApplicationEvent(lDispatcher, InEvent);
-        break;
-    case EEventCategory::Input:
-    case EEventCategory::Keyboard:
-    case EEventCategory::Mouse:
-    case EEventCategory::MouseButton:
+    }
+    else if (InEvent.IsInCategory(EEventCategory::Input))
+    {
         HandleAllInputEvent(lDispatcher, InEvent);
-        break;
-    case EEventCategory::None:
-    default: 
+    }
+    else
+    {
         UnknownEvent(lDispatcher, InEvent);
     }
 }
