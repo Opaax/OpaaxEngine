@@ -34,3 +34,19 @@ endif()
 #add_subdirectory(PhysicsDemo)
 add_subdirectory(Sandbox)
 #add_subdirectory(MyProject)
+
+# =============================================================================
+# Visual Studio startup project — make F5 launch the app the preset is FOR.
+# Each preset generates its own .sln (build/<preset>/), so this is per-preset:
+#   editor presets (OPAAX_EDITOR_SUPPORT=ON) -> SandboxEditor.exe (the editor)
+#   runtime preset (OFF)                      -> Sandbox.exe       (the game)
+# Without this, VS defaults to ALL_BUILD / the first target, so "Debug + Editor"
+# would run the runtime Sandbox.exe despite its name — the mismatch this fixes.
+# Set on the root directory (the .sln's top level). SandboxEditor exists only when
+# editor support is on (it's gated in Sandbox/CMakeLists.txt), so the guard matches.
+# =============================================================================
+if(OPAAX_EDITOR_SUPPORT)
+    set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT SandboxEditor)
+else()
+    set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Sandbox)
+endif()

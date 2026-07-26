@@ -4,10 +4,10 @@ setlocal enabledelayedexpansion
 REM =============================================================================
 REM Opaax Engine — Build Script
 REM
-REM Usage:
-REM   build.bat                   -> Debug + Editor  (default)
-REM   build.bat release           -> Release, no editor, no imgui
-REM   build.bat release-editor    -> RelWithDebInfo + Editor
+REM Usage:                                              (F5 / startup app in VS)
+REM   build.bat                   -> Debug + Editor  (default)  -> SandboxEditor.exe
+REM   build.bat release           -> Release, no editor, no imgui -> Sandbox.exe
+REM   build.bat release-editor    -> RelWithDebInfo + Editor      -> SandboxEditor.exe
 REM   build.bat fast [target]     -> incremental build of ONE target in the
 REM                                  already-configured debug-editor tree
 REM                                  (no reconfigure). Default target: Sandbox.
@@ -92,8 +92,13 @@ if errorlevel 1 (
     goto fail
 )
 
+REM --- name the app this preset is FOR (VS startup project / what to launch) ----
+set "PRIMARY=SandboxEditor.exe  (editor)"
+if "%PRESET%"=="release" set "PRIMARY=Sandbox.exe  (runtime)"
+
 echo.
-echo [Opaax] Output: build\%PRESET%\bin\%CONFIG%\  (Sandbox.exe / SandboxEditor.exe)
+echo [Opaax] Output: build\%PRESET%\bin\%CONFIG%\
+echo [Opaax] Run:    %PRIMARY%   ^<- VS startup project for this preset
 goto ok
 
 REM --- fast: incremental single target, no reconfigure -------------------------
