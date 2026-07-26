@@ -14,9 +14,9 @@ namespace Opaax
     
     struct RendererConfigData
     {
-        DECLARE_CONFIG_DATA(RendererConfigData);
+        DECLARE_CONFIG_DATA(RendererConfigData)
     public:
-        Vector4F ClearColor{0, 0, 0, 1.0f};
+        Vector4F ClearColor{0.0f, 0.0f, 0.0f, 1.0f};
     };
     
     DECLARE_T_CONFIG_CODEC(RendererConfigData::Parse, RendererConfigData::Serialize, RendererConfigData)
