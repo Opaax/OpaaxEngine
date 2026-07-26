@@ -23,6 +23,8 @@ namespace Opaax::Editor
         void NewFrame()              override;
         void RenderDrawData()        override;
         void RenderPlatformWindows() override;
+
+        EditorViewportImage GetViewportImage(IFramebuffer& InFB) override;
         //~End IEditorUIBackend interface
 
     private:

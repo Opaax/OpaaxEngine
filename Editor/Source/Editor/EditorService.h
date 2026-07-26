@@ -3,6 +3,7 @@
 #include "Editor/IEditorService.h"
 #include "Editor/EditorContext.h"
 #include "Editor/UI/IEditorUIBackend.h"
+#include "Editor/Panels/ViewportPanel.h"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Core/OpaaxTypes.h"   // UniquePtr
 
@@ -73,6 +74,7 @@ namespace Opaax::Editor
     private:
         UniquePtr<EditorContext>    m_Context;
         UniquePtr<IEditorUIBackend> m_UIBackend;
+        UniquePtr<ViewportPanel>    m_ViewportPanel;   // M1: world-to-texture panel; owns the offscreen FBO
         EditorExtensionRegistrar    m_Extensions;
     };
 }

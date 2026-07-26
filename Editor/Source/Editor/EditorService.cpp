@@ -25,12 +25,6 @@ namespace Opaax::Editor
         // exist now (called post Engine::Startup), so their references are valid and lifetime-stable.
         IEngine& lEngine = OpaaxApplication::GetAppService<IEngine>();
 
-        m_Context = MakeUnique<EditorContext>(EditorContext{
-            lEngine,
-            lEngine.GetWorldManager(),
-            lEngine.GetResources()
-        });
-
         // --- ImGui context (docking; multi-viewport deferred past M0) -----------------------------
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
@@ -40,7 +34,9 @@ namespace Opaax::Editor
         ImGui::StyleColorsDark();
 
         // --- UI backend (OpenGL today, S7). The window was created in InitializeApplication and its GL
-        //     context is current on this thread, so ImGui_ImplOpenGL3_Init is safe here. --------------
+        //     context is current on this thread, so ImGui_ImplOpenGL3_Init is safe here. Built BEFORE the
+        //     EditorContext so the context can carry a reference to it (the ViewportPanel samples its FBO
+        //     through it — GetViewportImage). --------------------------------------------------------
         IWindowManager& lWindows = OpaaxApplication::GetAppService<IWindowManager>();
         Window*         lWindow  = lWindows.GetMainWindow();
         if (lWindow == nullptr)
@@ -52,6 +48,20 @@ namespace Opaax::Editor
         m_UIBackend = MakeUnique<OpenGLEditorUIBackend>(static_cast<GLFWwindow*>(lWindow->GetNativeWindow()));
         m_UIBackend->Init();
 
+        // --- EditorContext: the flat ref bundle every panel/drawer receives by ctor (D3). Built after
+        //     the UIBackend so it can hold a reference to it. ---------------------------------------
+        m_Context = MakeUnique<EditorContext>(EditorContext{
+            lEngine,
+            lEngine.GetWorldManager(),
+            lEngine.GetResources(),
+            *m_UIBackend
+        });
+
+        // --- Viewport panel (M1): owns the offscreen FBO and registers it as the engine's primary
+        //     render target — the world now renders into the panel's texture, not the backbuffer. ----
+        m_ViewportPanel = MakeUnique<ViewportPanel>(*m_Context);
+        m_ViewportPanel->Startup();
+
         OPAAX_LOG(LogEditorService, Info, "EditorService initialized (EditorContext bound, ImGui docking UI up)");
     }
 
@@ -61,6 +71,10 @@ namespace Opaax::Editor
 
         m_UIBackend->NewFrame();
         ImGui::NewFrame();
+
+        // Apply any pending viewport resize (measured last Draw) BEFORE Engine().Loop() renders the
+        // world, so Render() reads the new FBO size this frame (deferred-resize handshake, §5).
+        if (m_ViewportPanel != nullptr) { m_ViewportPanel->OnPreRender(); }
     }
 
     void EditorService::EndFrame()
@@ -69,8 +83,12 @@ namespace Opaax::Editor
 
         DrawDockspace();
 
-        // Submit to the backbuffer AFTER Engine().Loop() has drawn the world into it (see
-        // EditorApplication::TickFrame). The host presents the backbuffer once, after this.
+        // The Viewport panel samples the FBO the world was just rendered into (Engine().Loop() above)
+        // and shows it as an ImGui image — the world lives INSIDE a panel now, not the raw backbuffer.
+        if (m_ViewportPanel != nullptr) { m_ViewportPanel->Draw(); }
+
+        // Submit the UI to the backbuffer AFTER Engine().Loop() has rendered the world into the FBO
+        // (see EditorApplication::TickFrame). The host presents the backbuffer once, after this.
         ImGui::Render();
         m_UIBackend->RenderDrawData();
 
@@ -131,10 +149,10 @@ namespace Opaax::Editor
 
     void EditorService::DrawDockspace()
     {
-        // Full-viewport dockspace; the central node is passthrough, so the world rendered by
-        // Engine().Loop() shows through it. M0 has no panels yet (that is M1) — this is bare chrome
-        // plus a menu bar, enough to prove the overlay draws over the 3 quads (gate 10d).
-        ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
+        // Full-viewport dockspace. M0 used PassthruCentralNode so the raw world showed through a
+        // transparent hole; M1 drops that — the world now lives in the Viewport panel (drawn in
+        // EndFrame), so the central node is a normal opaque dock target the panel can dock into.
+        ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
 
         if (ImGui::BeginMainMenuBar())
         {
@@ -149,9 +167,19 @@ namespace Opaax::Editor
 
     void EditorService::OnShutdown()
     {
-        // Reverse-order teardown: EditorService is provided last, so this runs FIRST — the window and its
-        // GL context are still alive (LC), which ImGui_ImplOpenGL3_Shutdown requires. Tear the UI down
-        // before releasing the context refs.
+        // Reverse-order teardown: EditorService is provided last, so this runs FIRST — the engine, the
+        // window and its GL context are all still alive (LC). Order within:
+
+        // 1. Panel FIRST — its Shutdown clears the engine's primary render target (while the engine is
+        //    alive, so no live frame reads a dangling target) then frees the FBO (GL context current).
+        //    Must precede m_Context.reset() — the panel holds a reference into the context.
+        if (m_ViewportPanel != nullptr)
+        {
+            m_ViewportPanel->Shutdown();
+            m_ViewportPanel.reset();
+        }
+
+        // 2. UI backend — ImGui_ImplOpenGL3_Shutdown requires the GL context, still alive here.
         if (m_UIBackend != nullptr)
         {
             m_UIBackend->Shutdown();
@@ -159,6 +187,7 @@ namespace Opaax::Editor
             m_UIBackend.reset();
         }
 
+        // 3. The context refs last (nothing points into them anymore).
         m_Context.reset();
         OPAAX_LOG(LogEditorService, Info, "EditorService shutdown");
     }

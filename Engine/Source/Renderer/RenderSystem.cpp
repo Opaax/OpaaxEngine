@@ -1,7 +1,5 @@
 #include "RenderSystem.h"
 
-#include "Application/Services/ILogger.h"
-
 #include "Renderer/RenderSystemDesc.h"
 #include "Renderer/RenderView.h"
 #include "Renderer/RenderTarget.hpp"
@@ -13,8 +11,6 @@
 
 namespace Opaax
 {
-    OPAAX_LOG_CATEGORY(RenderSystem)
-
     // =========================================================================
     // CTORS - DTORS (out-of-line — owned UniquePtr members are forward-declared)
     // =========================================================================
@@ -33,7 +29,7 @@ namespace Opaax
         }
 
         m_Device = RHIDevice::Create(InDesc.Backend, *InDesc.Surface);
-        if (!m_Device)
+        if (!IsValidDevice())
         {
             OPAAX_LOG(LogRenderSystem, Error, "RenderSystem::Init — backend produced no device.")
             return false;
@@ -52,52 +48,78 @@ namespace Opaax
 
     void RenderSystem::Shutdown()
     {
-        if (m_Device) { m_Device->WaitIdle(); } // GPU-idle before dropping GPU resources
-        m_Renderer2D.reset();                   // release the batcher before the device/surface
+        if (IsValidDevice())
+        {
+            // GPU-idle before dropping GPU resources
+            m_Device->WaitIdle();
+        } 
+        
+        m_Renderer2D.reset();
         m_Backbuffer.reset();
         m_Device.reset();
     }
-
-    void RenderSystem::Resize(Uint32 InWidth, Uint32 InHeight)
-    {
-        if (!m_Device || !m_Backbuffer) { return; }
-        static_cast<DefaultRenderTarget*>(m_Backbuffer.get())->OnResize(InWidth, InHeight);
-        m_Device->Resize(InWidth, InHeight);
-    }
-
-    // =========================================================================
-    // Frame
-    // =========================================================================
+    
     void RenderSystem::BeginFrame()
     {
-        if (!m_Device || !m_Backbuffer) { return; }
+        if (!IsValidDevice())
+        {
+            return;
+        }
+        
         m_Device->BeginFrame();
-        m_Device->GetCommandBuffer().BeginRenderPass(*m_Backbuffer, ELoadOp::Clear, m_ClearColor);
     }
 
     void RenderSystem::EndFrame()
     {
-        if (!m_Device) { return; }
-        m_Device->GetCommandBuffer().EndRenderPass();
+        if (!IsValidDevice())
+        {
+            return;
+        }
+        
         m_Device->EndFrame();
-        // NOTE: present moved OUT of here (S7). The frame is submitted; the host shows it via
-        // Present() after TickFrame, so the editor can draw UI to the backbuffer in between.
     }
 
     void RenderSystem::Present()
     {
-        if (!m_Device) { return; }
-        m_Device->Present();   // device owns HOW; the host decides WHEN (Editor.md D2)
+        if (!IsValidDevice())
+        {
+            return;
+        }
+        
+        m_Device->Present();
     }
 
-    void RenderSystem::BeginScene(const RenderView& InView)
+    void RenderSystem::BeginPass(IRenderTarget& InTarget, const RenderView& InView)
     {
-        if (!m_Device || !m_Renderer2D) { return; }
+        if (!IsValidDevice() || !IsValidRenderer2D())
+        {
+            return;
+        }
+        
+        m_Device->GetCommandBuffer().BeginRenderPass(InTarget, ELoadOp::Clear, m_ClearColor);
         m_Renderer2D->BeginScene(InView, m_Device->GetCommandBuffer());
     }
 
-    void RenderSystem::EndScene()
+    void RenderSystem::EndPass()
     {
-        if (m_Renderer2D) { m_Renderer2D->End(); }
+        if (!IsValidDevice() || !IsValidRenderer2D())
+        {
+            return;
+        }
+        
+        m_Renderer2D->End();
+        m_Device->GetCommandBuffer().EndRenderPass();
+    }
+    
+    void RenderSystem::Resize(Uint32 InWidth, Uint32 InHeight)
+    {
+        if (!m_Device || !m_Backbuffer)
+        {
+            return;
+        }
+        
+        static_cast<DefaultRenderTarget*>(m_Backbuffer.get())->OnResize(InWidth, InHeight);
+        
+        m_Device->Resize(InWidth, InHeight);
     }
 }

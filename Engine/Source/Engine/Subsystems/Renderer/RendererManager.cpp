@@ -17,6 +17,7 @@
 #include "Renderer/RenderSystem.h"
 #include "Renderer/RenderSystemDesc.h"
 #include "Renderer/RenderView.h"
+#include "Renderer/RenderTarget.hpp"
 #include "Renderer/Renderer2D.h"
 
 #include "Renderer/ShaderSource.h"
@@ -32,15 +33,9 @@
 
 namespace Opaax
 {
-    // =========================================================================
-    // CTORS - DTORS
-    // =========================================================================
     RendererManager::RendererManager()  = default;
     RendererManager::~RendererManager() = default;
-
-    // =========================================================================
-    // Lifecycle
-    // =========================================================================
+    
     bool RendererManager::Startup()
     {
         // Resolve host state (the adapter's job) and pack it into a plain desc for the module.
@@ -50,6 +45,7 @@ namespace Opaax
 
         Window*           lWindow  = OpaaxApplication::GetAppService<IWindowManager>().GetMainWindow();
         IGraphicsContext* lSurface = lWindow ? lWindow->GetGraphicsContext() : nullptr;
+        
         if (lSurface == nullptr)
         {
             OPAAX_LOG(LogRendererManager, Error, "No graphics context/surface for the render system")
@@ -59,7 +55,7 @@ namespace Opaax
         // Host reads the shader off disk (module never touches IPaths / file IO).
         const OpaaxString lShaderPath =
             OpaaxApplication::GetAppService<IPaths>().EngineToAbsolute("Assets/Shaders/Sprite.glsl");
-
+        
         RenderSystemDesc lDesc;
         lDesc.Backend      = BackendFromString(lEngineCfg.RenderBackend);
         lDesc.Surface      = lSurface;
@@ -76,13 +72,9 @@ namespace Opaax
             return false;
         }
 
-        // Seed the cached viewport with the initial size; the bus keeps it current.
-        m_ViewWidth  = lDesc.Width;
-        m_ViewHeight = lDesc.Height;
-
         // React to window resize via the Tier-3 bus — replaces the per-frame size poll.
         OpaaxApplication::GetAppService<IEngine>().GetEngineEventBus().GetEventBus()
-            .Subscribe<WindowResize>(this, &RendererManager::OnWindowResized);
+            .Subscribe<WindowResize>(this, &RendererManager::HandleWindowResize);
 
         // Cache the world owner — Render draws whatever it reports as the active world.
         m_WorldManager = &OpaaxApplication::GetAppService<IEngine>().GetWorldManager();
@@ -100,12 +92,7 @@ namespace Opaax
         m_RenderSystem.reset(); // ~RenderSystem = WaitIdle + teardown while the window/context is alive
         OPAAX_LOG(LogRendererManager, Info, "RendererManager shutdown")
     }
-
-    // =========================================================================
-    // Frame — drive the module: build the view, render the active world into the frame.
-    // BeginFrame/EndFrame bracket the SUBMIT; the present is separate (Present(), below), called
-    // by the host after TickFrame so the editor can draw UI to the backbuffer in between (S7).
-    // =========================================================================
+    
     void RendererManager::Render(double /*Alpha*/)
     {
         if (!m_RenderSystem)
@@ -113,12 +100,16 @@ namespace Opaax
             return;
         }
 
-        // Viewport size is bus-driven (OnWindowResized) — no per-frame polling.
-        const Uint32 lWidth  = m_ViewWidth;
-        const Uint32 lHeight = m_ViewHeight;
+        // The primary target decides where the world lands: the editor's offscreen FBO when set,
+        // else the backbuffer (runtime default). Its size — not a cached window size — drives the
+        // view, so an undocked/resized viewport rescales the render (D2: resize is inverted).
+        IRenderTarget& lTarget = m_PrimaryTarget ? *m_PrimaryTarget : m_RenderSystem->GetBackbuffer();
+
+        const Uint32 lWidth  = lTarget.GetWidth();
+        const Uint32 lHeight = lTarget.GetHeight();
         if (lWidth == 0 || lHeight == 0) { return; }
 
-        // Centered Y-up ortho: world (0,0) at screen centre, 1 unit = 1px. A camera-view system
+        // Centered Y-up ortho: world (0,0) at target centre, 1 unit = 1px. A camera-view system
         // will produce this RenderView later; for now the adapter builds it.
         const float lHalfW = static_cast<float>(lWidth)  * 0.5f;
         const float lHalfH = static_cast<float>(lHeight) * 0.5f;
@@ -127,7 +118,7 @@ namespace Opaax
         lView.Viewport       = Viewport{ 0, 0, lWidth, lHeight };
 
         m_RenderSystem->BeginFrame();
-        m_RenderSystem->BeginScene(lView);
+        m_RenderSystem->BeginPass(lTarget, lView);
 
         // Draw the active world: one quad per DummyComponent (position / size / color).
         if (m_WorldManager != nullptr)
@@ -142,14 +133,16 @@ namespace Opaax
             }
         }
 
-        m_RenderSystem->EndScene();
+        m_RenderSystem->EndPass();
         m_RenderSystem->EndFrame();
     }
-
-    // =========================================================================
-    // Present — the swapchain show, decoupled from Render (S7). EndFrame submitted the frame;
-    // this shows it. In the editor the UI pass lands between the two.
-    // =========================================================================
+    
+    void RendererManager::SetPrimaryRenderTarget(IRenderTarget* InTarget)
+    {
+        m_PrimaryTarget = InTarget;
+        OPAAX_LOG(LogRendererManager, Info, "Primary render target set to {}", InTarget ? "offscreen" : "backbuffer")
+    }
+    
     void RendererManager::Present()
     {
         if (m_RenderSystem)
@@ -159,19 +152,18 @@ namespace Opaax
     }
 
     // =========================================================================
-    // Bus handler — window resize (Tier-3). Updates the cached viewport + resizes
-    // the render core. Runs at the frame's Flush, before Render.
+    // Bus handler — window resize (Tier-3). Forwards to the render core, which resizes the
+    // backbuffer. Runs at the frame's Flush, before Render. When an offscreen primary target is
+    // active its size is owned by its owner (the panel), independent of the window — this only
+    // keeps the backbuffer current for the runtime / undocked path.
     // =========================================================================
-    void RendererManager::OnWindowResized(const WindowResize& InResize)
+    void RendererManager::HandleWindowResize(const WindowResize& InResize)
     {
-        m_ViewWidth  = InResize.Width;
-        m_ViewHeight = InResize.Height;
-
         if (m_RenderSystem)
         {
-            m_RenderSystem->Resize(m_ViewWidth, m_ViewHeight);
+            m_RenderSystem->Resize(InResize.Width, InResize.Height);
         }
 
-        OPAAX_LOG(LogRendererManager, Trace, "Viewport resized to {}x{} (via event bus)", m_ViewWidth, m_ViewHeight)
+        OPAAX_LOG(LogRendererManager, Trace, "Backbuffer resized to {}x{} (via event bus)", InResize.Width, InResize.Height)
     }
 }

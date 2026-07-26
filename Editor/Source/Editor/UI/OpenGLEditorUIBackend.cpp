@@ -1,5 +1,7 @@
 #include "Editor/UI/OpenGLEditorUIBackend.h"
 
+#include "RHI/Framebuffer.h"   // IFramebuffer::GetColorAttachmentID for GetViewportImage
+
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
@@ -45,5 +47,13 @@ namespace Opaax::Editor
         ImGui::UpdatePlatformWindows();
         ImGui::RenderPlatformWindowsDefault();
         glfwMakeContextCurrent(lCurrentContext);
+    }
+
+    EditorViewportImage OpenGLEditorUIBackend::GetViewportImage(IFramebuffer& InFB)
+    {
+        // The GL color attachment name IS the ImGui texture handle (imgui_impl_opengl3 binds it).
+        // The FBO is stored bottom-up, so sample with V flipped to present the world upright.
+        return { static_cast<Uint64>(InFB.GetColorAttachmentID()),
+                 Vector2F(0.f, 1.f), Vector2F(1.f, 0.f) };
     }
 }

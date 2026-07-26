@@ -13,6 +13,7 @@ namespace Opaax
 {
     class RenderSystem;
     class WorldManager;
+    class IRenderTarget;
     struct WindowResize;
 
     inline constexpr LogCategory LogRendererManager{"RendererManager"};
@@ -47,23 +48,43 @@ namespace Opaax
         RendererManager& operator=(const RendererManager&) = delete;
         RendererManager(RendererManager&&)                 = delete;
         RendererManager& operator=(RendererManager&&)      = delete;
+        
+        // =============================================================================
+        // Functions
+        // =============================================================================
+    private:
+        /**
+         * Bus handler
+         * forwards a window resize to the render core (which resizes the backbuffer).
+         * @param InResize The Event
+         */
+        void HandleWindowResize(const WindowResize& InResize);
 
         // =============================================================================
-        // Getters
-        // =============================================================================
+        // Getters - Setter
     public:
         /**
-         *
          * @return The portable render core, or nullptr before Startup. For future render peers.
          */
         RenderSystem* GetRenderSystem() const noexcept { return m_RenderSystem.get(); }
 
         /**
-         * Present the backbuffer — called by Engine::Present (host-driven, after TickFrame). Separate
-         * from Render so the editor can draw UI to the backbuffer before the swap (S7). No-op if the
-         * render core failed to start.
+         * Present the backbuffer — called by Engine::PresentBackbuffer (host-driven, after TickFrame).
+         * Separate from Render so the editor can draw UI to the backbuffer before the swap (S7). No-op
+         * if the render core failed to start.
          */
         void Present();
+
+        /**
+         * Redirect the world render into InTarget instead of the backbuffer; nullptr restores the
+         * backbuffer. Non-owning — the caller (editor's ViewportPanel) owns the target. Stored, then
+         * read by Render() each frame to pick the target and its size (D2: the target's size drives
+         * the view, replacing the old window-size cache).
+         */
+        void SetPrimaryRenderTarget(IRenderTarget* InTarget);
+        
+        // End Getters - Setter
+        // =============================================================================
 
         // =============================================================================
         // Override
@@ -76,19 +97,11 @@ namespace Opaax
         //~End EngineSubsystemBase Interface
 
         // =============================================================================
-        // Functions
-        // =============================================================================
-    private:
-        // Bus handler — updates the cached viewport size and resizes the render core.
-        void OnWindowResized(const WindowResize& InResize);
-
-        // =============================================================================
         // Members
         // =============================================================================
     private:
         UniquePtr<RenderSystem> m_RenderSystem;
-        WorldManager*           m_WorldManager = nullptr; // non-owning; active world = draw source
-        Uint32                  m_ViewWidth  = 0;
-        Uint32                  m_ViewHeight = 0;
+        WorldManager*           m_WorldManager  = nullptr; // non-owning; active world = draw source
+        IRenderTarget*          m_PrimaryTarget = nullptr; // non-owning; nullptr = backbuffer (I5)
     };
 }

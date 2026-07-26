@@ -7,6 +7,7 @@ namespace Opaax
     class EngineEventBus;
     class ResourceManager;
     class WorldManager;
+    class IRenderTarget;
 
     // =============================================================================
     // IEngine — the engine, exposed as an application service. Owns the engine
@@ -39,10 +40,20 @@ namespace Opaax
         virtual void Loop()                             = 0;
 
         /**
-         * 
+         * Show the rendered frame on screen — swap the OS window's backbuffer. Host-driven, called
+         * once after the frame's render (F2 present-split). Named for what it presents: ONLY the
+         * backbuffer is ever shown; an offscreen primary target (editor viewport) is never presented.
          */
-        virtual void Present()                          = 0;
-        
+        virtual void PresentBackbuffer()                = 0;
+
+        /**
+         * Redirect the world render into InTarget instead of the window backbuffer; nullptr restores
+         * the backbuffer (the runtime default — Sandbox never calls this). Non-owning: the caller owns
+         * the target's lifetime and must clear it (pass nullptr) before the target dies. The editor
+         * points this at its ViewportPanel's offscreen FBO so the world lands in a texture (D2).
+         */
+        virtual void SetPrimaryRenderTarget(IRenderTarget* InTarget) = 0;
+
         /**
          * Called once per rendered frame.
          * 

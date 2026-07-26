@@ -179,15 +179,29 @@ namespace Opaax
     }
 
     // =========================================================================
-    // Present — the swapchain show, driven by the host AFTER TickFrame (S7 / D2). Kept OUT of
-    // Render so the editor can draw its UI to the backbuffer between the world render and the
-    // present. Delegates to the renderer adapter, which owns the device.
+    // PresentBackbuffer — the swapchain show, driven by the host AFTER TickFrame (S7 / D2). Kept
+    // OUT of Render so the editor can draw its UI to the backbuffer between the world render and
+    // the present. Only the backbuffer is ever presented — an offscreen primary target is not.
+    // Delegates to the renderer adapter, which owns the device.
     // =========================================================================
-    void Engine::Present()
+    void Engine::PresentBackbuffer()
     {
         if (m_RendererManager != nullptr)
         {
             m_RendererManager->Present();
+        }
+    }
+
+    // =========================================================================
+    // SetPrimaryRenderTarget — redirect the world render into a caller-owned target (nullptr =
+    // backbuffer, the runtime default). Forwards to the renderer adapter; the engine stores
+    // nothing itself (I5). No-op before Startup (the adapter isn't resolved yet).
+    // =========================================================================
+    void Engine::SetPrimaryRenderTarget(IRenderTarget* InTarget)
+    {
+        if (m_RendererManager != nullptr)
+        {
+            m_RendererManager->SetPrimaryRenderTarget(InTarget);
         }
     }
 

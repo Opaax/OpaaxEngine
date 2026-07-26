@@ -8,8 +8,15 @@
 
 namespace Opaax
 {
+    using Vector2u32  = glm::u32vec2;
+    
     using Vector2F  = glm::vec2;
     using Vector3F  = glm::vec3;
     using Vector4F  = glm::vec4;
     using Matrix44F = glm::mat4;
+    
+    using Vector2D  = glm::dvec2;
+    using Vector3D  = glm::dvec3;
+    using Vector4D  = glm::dvec4;
+    using Matrix44D = glm::dmat4;
 }

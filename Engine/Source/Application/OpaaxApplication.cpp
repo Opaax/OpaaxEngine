@@ -226,7 +226,7 @@ void OpaaxApplication::RunApplication()
         //    after TickFrame, so the editor's UI (drawn inside TickFrame) is on the backbuffer
         //    before the swap. Runtime: the world was rendered straight to the backbuffer above.
         // ----------------------------------------------------------------
-        Engine().Present();
+        Engine().PresentBackbuffer();
     }
 
     // The loop has stopped but nothing is destroyed yet — every service, the window and the

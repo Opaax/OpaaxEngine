@@ -128,16 +128,23 @@ Platform → Paths → Logger(Paths) → Config(Paths)+PreRegisterConfig
 ## F — Frame contract
 
 **F1 — Tick order** (`IEngine`, driven by the host): `Update(dt)` → `FixedUpdate(fixedDt)` *[may run 0..N
-times]* → `Render(alpha)`. Then the **host** calls `Present()` — outside the engine. Delta is clamped to
-`MAX_FRAME_DELTA = 0.25`.
+times]* → `Render(alpha)`. Then the **host** calls `PresentBackbuffer()` — outside the engine. Delta is clamped
+to `MAX_FRAME_DELTA = 0.25`.
 
-**F2 — Present is split from Render (render north star, S7/D2).** `Render` draws; `Present` swaps. The
-**host owns WHEN** (`RunApplication` calls `Engine().Present()` after `TickFrame()`); the **device owns
-HOW**. Only the backbuffer is ever presented; offscreen render targets never are. This gap is what lets the
-editor draw world→FBO, UI→backbuffer, then present once. Present is instance-based (no statics — **I1**).
-- **M1 target shape:** `BeginFrame / BeginPass(target,view) / EndPass / EndFrame / Present`. "scene" is
-  retired vocabulary — a render *pass into a target with a view*. New render path is **OpenGL-only** today;
-  the VK backend is **parked in `Legacy/RHI/Vulkan`** (2026-07-22) pending a new-path `VulkanRHIDevice`.
+**F2 — Present is split from Render (render north star, S7/D2).** `Render` draws; present swaps. The
+**host owns WHEN** (`RunApplication` calls `Engine().PresentBackbuffer()` after `TickFrame()`); the **device
+owns HOW**. Only the backbuffer is ever presented; offscreen render targets never are — the facade method is
+named `PresentBackbuffer()` (not `Present`) so the call site states that invariant (M1, 2026-07-26). The
+`RenderSystem`/`RendererManager`/`IRHIDevice` layer keeps the plain name `Present()` (one unambiguous
+swapchain there). This gap is what lets the editor draw world→FBO, UI→backbuffer, then present once. Present
+is instance-based (no statics — **I1**).
+- **Render-pass shape (landed M1, 2026-07-26):** `BeginFrame / BeginPass(target,view) / EndPass / EndFrame /
+  PresentBackbuffer`. `BeginFrame`/`EndFrame` bracket the device frame; the pass bracket
+  (`BeginRenderPass`/`EndRenderPass`) lives in `BeginPass`/`EndPass`, so a frame renders into any
+  `IRenderTarget` (backbuffer or offscreen FBO — `RendererManager` picks via `m_PrimaryTarget`, size read
+  from the target). "scene" is retired vocabulary — a render *pass into a target with a view*. New render
+  path is **OpenGL-only** today; the VK backend is **parked in `Legacy/RHI/Vulkan`** (2026-07-22) pending a
+  new-path `VulkanRHIDevice`.
 
 **F3 — A subsystem needing a sibling mid-boot resolves from the manager.** During its own `Startup`, a
 subsystem reaches a sibling via `m_Subsystems.GetSubsystem<T>()` (the manager's create-pass populates the
