@@ -3,6 +3,7 @@
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Editor/EditorContext.h"   // the Panels factory receives EditorContext& (D10)
 #include "Panels/SandboxPanel.h"
+#include "Drawers/DummyComponentDrawer.h"
 
 void SandboxEditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& InRegistrar)
 {
@@ -15,8 +16,10 @@ void SandboxEditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& In
     InRegistrar.Menus().Register("Tools/Validate Sandbox",
         [] {});                                            // path + command
 
-    // Drawers() is REAL now (M2b) — the `<int, int>` placeholder cannot instantiate against it
-    // (`int::TryGet`, `int::Draw`). S2 registers the real DummyComponentDrawer here.
+    // REAL extension (M2b): the game's own component drawer. The editor never learns what a
+    // DummyComponent is — it just invokes this closure, which self-checks whether the selected entity
+    // carries one. Duck-typed, no base class (D7).
+    InRegistrar.Drawers().Register<Opaax::DummyComponent, DummyComponentDrawer>();
 
     // REAL extension (M2a): the game's own panel, registered through the same route the editor's native
     // Hierarchy uses. Constructed later by EditorService, once an EditorContext exists to hand it.
