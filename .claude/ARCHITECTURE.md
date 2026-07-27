@@ -37,6 +37,17 @@ Two proven ways to get that — the deciding factor is **whether the tag is dll-
   template static, or a subsystem living in a **static lib / game module** (M4). Such a type must go
   out-of-line (service shape) or be exported. If `GetSubsystem<T>()` across the boundary ever returns null,
   this is the first suspect.
+- **Exported-inline is for *tags*, NOT for shared mutable STATE.** S9 proved MSVC imports an exported
+  inline function's local static for an identity tag — where the only requirement is address identity, and a
+  wrong answer fails *loudly* (a null `GetSubsystem<T>()`). A function-local static holding a **mutable
+  table** is a different risk class: if a module emits its own copy nothing crashes, the two tables simply
+  disagree, silently and forever. State-bearing accessors therefore go **out-of-line in the DLL**, where one
+  definition is a *link-time guarantee* rather than a compiler courtesy. Applied 2026-07-27 to
+  `OpaaxStringID::GetPool()` (the intern table): pool + its entry points (interning ctor, `ToString`) moved
+  into `OpaaxStringID.cpp`, and `OpaaxStringIDPool` reduced to a forward declaration so a consumer cannot
+  even see its layout. Pool-free members (comparison, `GetId`, `IsValid`) stay inline. Had this drifted, the
+  *same string* would intern to different `Uint32`s across the DLL line — and since every `OpaaxStringID`
+  compare is an integer compare, it would have failed **silently**. Guarded by `Core/StringIDTests.cpp`.
 - New cross-module identity must hash a compiler-stable per-type string (`__FUNCSIG__`), never a
   template-static counter.
 
@@ -150,6 +161,40 @@ is instance-based (no statics — **I1**).
 subsystem reaches a sibling via `m_Subsystems.GetSubsystem<T>()` (the manager's create-pass populates the
 list before any `Startup` runs) — **never** via a lazy accessor that can re-enter the owner's boot. Doing
 the latter causes the per-frame re-init loop of **L6**.
+
+**F4 — DebugDraw is immediate-mode BY CONTRACT** (landed M2c, 2026-07-27). The queue
+(`Renderer/DebugDraw.h`, owned **by value** by `RendererManager` — the thing that drains it, I5) is drained
+and cleared **every frame, unconditionally** — including on frames that fail to render, which is why
+`Render()` clears *outside* `RenderFrame()`'s early-outs. A producer that wants a line visible re-submits it
+every frame; nothing is retained. Lines render as thin rotated quads through the existing
+`Renderer2D::DrawQuad` on the `ERenderLayer::Debug` band — **zero new RHI/shader/vertex-layout surface**;
+keep it that way. Engine-owned, not editor-owned (D10: it serves dev builds of `Game.exe`, which never
+links `OpaaxEditorLib`); reached via `IEngine::GetDebugDraw()`.
+
+This is not an implementation detail — it is the invariant that makes a whole bug class impossible.
+Unreal's `FlushPersistentDebugLines(World)` is destructive-to-everyone *because* a shared retained pool
+exists to destroy: one system clearing its debug geometry wipes every other system's. With no retained
+pool, "flush my draws" is "stop calling `Draw`", which cannot touch a sibling. **Selective flush is free
+here precisely because there is nothing to flush.**
+
+Three forward constraints, decided before a second producer existed:
+- **F4a — If retention is ever added it is DURATION-LIMITED. Never infinite persistence.** A timed entry
+  expires on its own, so state stays bounded and "flush that specific thing" stays rare rather than routine.
+  Infinite-persist *plus* a global-only flush **is** Unreal's bug; do not rebuild the first half.
+- **F4b — Any retained store is keyed by a channel tag from day one** (`using DebugChannel = OpaaxStringID`
+  — reuses an already-`OPAAX_API`, already-interned type; adds no static, I1-clean). Then "flush a channel"
+  is an erase on one bucket, never a sweep. Retrofitting selectivity onto a flat retained array is how the
+  Unreal shape gets rebuilt by accident.
+- **F4c — No per-draw handles.** Every case that reaches for one (a marker on the selected waypoint, the
+  last N impacts) is already covered by re-submission or a lifetime, and handles cost real bookkeeping in
+  every producer. Revisit only for a concrete *same-frame* retraction need.
+
+A **channel tag for central toggling** ("hide all physics debug" from one editor checkbox) is the one thing
+"stop calling" cannot give you, since the toggle must live outside the producer. Deliberately **not built**
+while there is one producer (`m2-panels.md` §F3 — never an API with no caller). **Trigger:** the second real
+producer (physics/collision debug), which also earns the editor toggle panel. The cross-module identity
+question this raised is already **closed** — `OpaaxStringID`'s intern pool was moved out-of-line into the
+DLL the same day (see **I2**), so channel ids agree across the DLL line by construction.
 
 ---
 
