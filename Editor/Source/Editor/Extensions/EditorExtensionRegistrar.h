@@ -1,7 +1,8 @@
 #pragma once
 
-#include "Core/OpaaxTypes.h"                  // Uint64
-#include "Editor/Extensions/PanelRegistry.h"  // Panels() graduated from EditorRoute to real storage (M2a)
+#include "Core/OpaaxTypes.h"                   // Uint64
+#include "Editor/Extensions/PanelRegistry.h"   // Panels() graduated from EditorRoute to real storage (M2a)
+#include "Editor/Extensions/DrawerRegistry.h"  // Drawers() likewise (M2b)
 
 namespace Opaax::Editor
 {
@@ -11,14 +12,14 @@ namespace Opaax::Editor
     // M0 SKELETON: Register(...) only records that an extension was offered (a count), so the boot
     // ordering (engine natives -> game module -> editor module -> seal) is observable and testable before
     // the real drawer/panel/asset machinery exists. The call-site API is the FINAL shape now; only the
-    // bodies change later (M2b drawers, M2d assets, M4 edit-world-systems, M5 menus). Mirrors ModuleRoute
-    // (Application/ModuleRegistrar.h). The three Register overloads cover D10's call-site shapes:
-    //   Drawers().Register<TComponent, TDrawer>();      AssetTypes().Register<TAsset, TActions>();
-    //   EditWorldSystems().Register<TSystem>();
+    // bodies change later (M2d assets, M4 edit-world-systems, M5 menus). Mirrors ModuleRoute
+    // (Application/ModuleRegistrar.h). The remaining Register overloads cover D10's call-site shapes:
+    //   AssetTypes().Register<TAsset, TActions>();      EditWorldSystems().Register<TSystem>();
     //   Menus().Register("Tools/Validate", command);
     //
-    // Panels() has GRADUATED off this type (M2a) — see PanelRegistry. Each remaining route leaves the same
-    // way, in the slice that gives it a real consumer; when the last one goes, EditorRoute goes with it.
+    // Panels() (M2a) and Drawers() (M2b) have GRADUATED off this type — see PanelRegistry/DrawerRegistry.
+    // Each remaining route leaves the same way, in the slice that gives it a real consumer; when the last
+    // one goes, EditorRoute goes with it.
     // =============================================================================
     class EditorRoute
     {
@@ -44,13 +45,13 @@ namespace Opaax::Editor
     class EditorExtensionRegistrar
     {
     public:
-        EditorRoute&         Drawers()                noexcept { return m_Drawers; }
+        DrawerRegistry&      Drawers()                noexcept { return m_Drawers; }
         PanelRegistry&       Panels()                 noexcept { return m_Panels; }
         EditorRoute&         AssetTypes()             noexcept { return m_AssetTypes; }
         EditorRoute&         Menus()                  noexcept { return m_Menus; }
         EditorRoute&         EditWorldSystems()       noexcept { return m_EditWorldSystems; }
 
-        const EditorRoute&   Drawers()          const noexcept { return m_Drawers; }
+        const DrawerRegistry& Drawers()         const noexcept { return m_Drawers; }
         const PanelRegistry& Panels()           const noexcept { return m_Panels; }
         const EditorRoute&   AssetTypes()       const noexcept { return m_AssetTypes; }
         const EditorRoute&   Menus()            const noexcept { return m_Menus; }
@@ -60,7 +61,7 @@ namespace Opaax::Editor
         bool IsSealed() const noexcept { return m_Sealed; }
 
     private:
-        EditorRoute   m_Drawers;
+        DrawerRegistry m_Drawers;
         PanelRegistry m_Panels;
         EditorRoute   m_AssetTypes;
         EditorRoute   m_Menus;

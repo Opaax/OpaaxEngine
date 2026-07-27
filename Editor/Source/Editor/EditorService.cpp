@@ -2,6 +2,7 @@
 
 #include "Editor/UI/OpenGLEditorUIBackend.h"
 #include "Editor/Panels/HierarchyPanel.h"
+#include "Editor/Panels/InspectorPanel.h"
 #include "Editor/EditorPaths.h"                            // EditorSaveDir — the dock layout's home (D4)
 
 #include "Application/OpaaxApplication.h"
@@ -76,7 +77,8 @@ namespace Opaax::Editor
             lEngine.GetWorldManager(),
             lEngine.GetResources(),
             *m_UIBackend,
-            *m_Selection
+            *m_Selection,
+            m_Extensions
         });
 
         // --- Viewport panel (M1): owns the offscreen FBO and registers it as the engine's primary
@@ -232,6 +234,9 @@ namespace Opaax::Editor
     {
         m_Extensions.Panels().Register("Hierarchy",
             [](EditorContext& InContext) -> UniquePtr<IEditorPanel> { return MakeUnique<HierarchyPanel>(InContext); });
+
+        m_Extensions.Panels().Register("Inspector",
+            [](EditorContext& InContext) -> UniquePtr<IEditorPanel> { return MakeUnique<InspectorPanel>(InContext); });
     }
 
     void EditorService::DrawDockspace()

@@ -8,8 +8,9 @@ namespace Opaax
 
     namespace Editor
     {
-        class IEditorUIBackend;   // editor-owned; the context carries it so panels reach it by ctor
-        class EditorSelection;    // editor-owned; the single selected entity (Hierarchy writes, Inspector reads)
+        class IEditorUIBackend;         // editor-owned; the context carries it so panels reach it by ctor
+        class EditorSelection;          // editor-owned; the single selected entity (Hierarchy writes, Inspector reads)
+        class EditorExtensionRegistrar; // editor-owned; the sealed D10 routes (Inspector reads Drawers())
 
         // =============================================================================
         // EditorContext — a flat struct of engine-side references (Editor.md D3). Resolved ONCE by
@@ -30,7 +31,13 @@ namespace Opaax
             WorldManager&     Worlds;
             ResourceManager&  Resources;
             IEditorUIBackend& UIBackend;
-            EditorSelection&  Selection;   // NEW (M2a) — Hierarchy writes, Inspector (M2b) reads
+            EditorSelection&  Selection;   // M2a — Hierarchy writes, Inspector reads
+
+            // M2b — the sealed extension routes, so a panel can consume what modules registered (the
+            // Inspector walks Drawers()). CONST by construction: Seal() happens at OnModulesRegistered,
+            // this context is built at PostEngineStartup, so nothing can register through it. One member
+            // serves every route — M2d's AssetTypes() needs no further growth here.
+            const EditorExtensionRegistrar& Extensions;
         };
     }
 }
