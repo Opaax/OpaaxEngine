@@ -346,3 +346,28 @@ invalidated the plan's step split and forced a per-slice milestone decomposition
   `Each<EntityMeta>` is the all-entities view — true, and it removed a whole "new World API" premise).
 - When one deliverable in a milestone can't compile without another, they are one step. Discovering that early is
   what turns an over-large milestone into a correct decomposition ([[L3]]) instead of a mid-build stall.
+
+## L17 — Commit at each step boundary, or the step's SCOPE GATE becomes unprovable (2026-07-27)
+
+**What happened (Editor M2a/M2b):** both slices end in a dogfood step whose gate is *literally a diff shape* —
+"a game module adds an editor extension with **zero changes to `OpaaxEditorLib`**", checked as "changed +
+untracked paths, filtered for anything outside `Sandbox/Editor/`, must be empty." In **M2a** I committed S1+S2
+before building S3, so that check ran against a clean tree and the gate was provable — and it stayed provable in
+history (`git show --stat`). In **M2b** I built S1 and S2 back-to-back without committing between. Both were
+green, but the working tree now mixed editor-side infra with the game-side dogfood, so the gate held only *by
+construction* ("I know which files I touched"), which is exactly the kind of claim this project doesn't accept.
+Recovering it was real work: revert the one file both steps touched (`SandboxEditorModule.cpp`) to its S1 state,
+**rebuild to confirm that intermediate state actually compiles** (never commit a state you haven't built),
+commit S1, re-apply S2, rebuild, commit.
+
+**Rules for next time:**
+- **If a step's gate is a property of the DIFF (scope, blast radius, "touches only X"), that step must start
+  from a clean tree.** Commit the previous step first. A gate you can only assert from memory is not a gate —
+  same standard as [[L15]] (the log must *discriminate*), applied to git instead of logging.
+- Plan the commit boundaries when planning the steps, not after. If step N's verification section says
+  `git diff --stat` / `--name-only`, that sentence *is* a commit instruction for step N-1.
+- When splitting after the fact, the shared file is the whole cost — reconstruct its intermediate state, and
+  **build before committing it**. A committed-but-unbuilt intermediate is the [[L14]] stale-green trap with
+  extra steps: it looks fine until someone bisects onto it.
+- Don't sweep the user's own files into a feature commit while doing this (`Docs/TODO.txt` here) — pathspec
+  commits only ([[L9]]); they may be mid-thought in them.
