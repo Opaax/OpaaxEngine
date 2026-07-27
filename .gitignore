@@ -74,6 +74,10 @@ SimpleShmup/Assets/*
 OpaaxEngine.log
 build_e2g.log
 
+# Editor dock layout — per-user working state written to <ProjectRoot>/Editor/Save/ at runtime.
+# (A SHIPPED default layout, if we ever want one, would be a separate template file, not this.)
+imgui.ini
+
 #Archi files
 Architectures/*
 

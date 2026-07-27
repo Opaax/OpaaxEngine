@@ -9,6 +9,7 @@ namespace Opaax
     namespace Editor
     {
         class IEditorUIBackend;   // editor-owned; the context carries it so panels reach it by ctor
+        class EditorSelection;    // editor-owned; the single selected entity (Hierarchy writes, Inspector reads)
 
         // =============================================================================
         // EditorContext — a flat struct of engine-side references (Editor.md D3). Resolved ONCE by
@@ -29,6 +30,7 @@ namespace Opaax
             WorldManager&     Worlds;
             ResourceManager&  Resources;
             IEditorUIBackend& UIBackend;
+            EditorSelection&  Selection;   // NEW (M2a) — Hierarchy writes, Inspector (M2b) reads
         };
     }
 }

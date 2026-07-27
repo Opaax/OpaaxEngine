@@ -1,6 +1,8 @@
 #include "Editor/EditorService.h"
 
 #include "Editor/UI/OpenGLEditorUIBackend.h"
+#include "Editor/Panels/HierarchyPanel.h"
+#include "Editor/EditorPaths.h"                            // EditorSaveDir — the dock layout's home (D4)
 
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IEngine.h"
@@ -10,11 +12,16 @@
 
 #include <imgui.h>
 
+#include <filesystem>
+#include <system_error>
+
 using namespace Opaax;   // OPAAX_LOG expands to an unqualified ToSpdLevel(...)
 
 namespace
 {
     constexpr LogCategory LogEditorService{"EditorService"};
+
+    namespace fs = std::filesystem;
 }
 
 namespace Opaax::Editor
@@ -30,8 +37,18 @@ namespace Opaax::Editor
         ImGui::CreateContext();
         ImGuiIO& lIO = ImGui::GetIO();
         lIO.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-        lIO.IniFilename  = nullptr;   // no imgui.ini written into the project dir (M0)
         ImGui::StyleColorsDark();
+
+        // --- Dock layout persistence. Set BEFORE the first NewFrame: that is where ImGui loads the ini
+        //     (it only ever loads once, on the frame it first sees a filename). Empty => keep M0's
+        //     null/no-persistence behaviour rather than writing a stray file next to the exe. ----------
+        m_LayoutIniPath = ResolveLayoutIniPath();
+        lIO.IniFilename = m_LayoutIniPath.IsEmpty() ? nullptr : m_LayoutIniPath.CStr();
+
+        if (!m_LayoutIniPath.IsEmpty())
+        {
+            OPAAX_LOG(LogEditorService, Info, "Dock layout: {}", m_LayoutIniPath.CStr());
+        }
 
         // --- UI backend (OpenGL today, S7). The window was created in InitializeApplication and its GL
         //     context is current on this thread, so ImGui_ImplOpenGL3_Init is safe here. Built BEFORE the
@@ -48,19 +65,43 @@ namespace Opaax::Editor
         m_UIBackend = MakeUnique<OpenGLEditorUIBackend>(static_cast<GLFWwindow*>(lWindow->GetNativeWindow()));
         m_UIBackend->Init();
 
+        // --- Selection (M2a): the single selected entity, owned here so the context can hold a
+        //     reference to it. Nothing reads it yet — S2's Hierarchy panel is the first writer. -------
+        m_Selection = MakeUnique<EditorSelection>();
+
         // --- EditorContext: the flat ref bundle every panel/drawer receives by ctor (D3). Built after
         //     the UIBackend so it can hold a reference to it. ---------------------------------------
         m_Context = MakeUnique<EditorContext>(EditorContext{
             lEngine,
             lEngine.GetWorldManager(),
             lEngine.GetResources(),
-            *m_UIBackend
+            *m_UIBackend,
+            *m_Selection
         });
 
         // --- Viewport panel (M1): owns the offscreen FBO and registers it as the engine's primary
         //     render target — the world now renders into the panel's texture, not the backbuffer. ----
         m_ViewportPanel = MakeUnique<ViewportPanel>(*m_Context);
         m_ViewportPanel->Startup();
+
+        // --- Registered panels (M2a): native and game panels alike are built HERE, from the one registry,
+        //     in registration order. The factories were stored back at RegisterExtensions (pre-Engine
+        //     startup, no context yet) — this is the point where they finally have one to receive. -------
+        for (const PanelEntry& lEntry : m_Extensions.Panels().Entries())
+        {
+            UniquePtr<IEditorPanel> lPanel = lEntry.Factory ? lEntry.Factory(*m_Context) : nullptr;
+            if (lPanel == nullptr)
+            {
+                OPAAX_LOG(LogEditorService, Warn, "Panel '{}' produced no instance — skipped.", lEntry.Id);
+                continue;
+            }
+
+            lPanel->Startup();
+            m_Panels.push_back(Move(lPanel));
+        }
+
+        OPAAX_LOG(LogEditorService, Info, "Editor panels registered: {}, constructed: {}",
+            m_Extensions.Panels().Count(), m_Panels.size());
 
         OPAAX_LOG(LogEditorService, Info, "EditorService initialized (EditorContext bound, ImGui docking UI up)");
     }
@@ -75,6 +116,8 @@ namespace Opaax::Editor
         // Apply any pending viewport resize (measured last Draw) BEFORE Engine().Loop() renders the
         // world, so Render() reads the new FBO size this frame (deferred-resize handshake, §5).
         if (m_ViewportPanel != nullptr) { m_ViewportPanel->OnPreRender(); }
+
+        for (const UniquePtr<IEditorPanel>& lPanel : m_Panels) { lPanel->OnPreRender(); }
     }
 
     void EditorService::EndFrame()
@@ -86,6 +129,8 @@ namespace Opaax::Editor
         // The Viewport panel samples the FBO the world was just rendered into (Engine().Loop() above)
         // and shows it as an ImGui image — the world lives INSIDE a panel now, not the raw backbuffer.
         if (m_ViewportPanel != nullptr) { m_ViewportPanel->Draw(); }
+
+        for (const UniquePtr<IEditorPanel>& lPanel : m_Panels) { lPanel->Draw(); }
 
         // Submit the UI to the backbuffer AFTER Engine().Loop() has rendered the world into the FBO
         // (see EditorApplication::TickFrame). The host presents the backbuffer once, after this.
@@ -132,9 +177,10 @@ namespace Opaax::Editor
 
     void EditorService::RegisterExtensions(const TFunction<void(EditorExtensionRegistrar&)>& InCollect)
     {
-        // D10/§2: fired AFTER the game module, BEFORE the first world. (Native editor modules would register
-        // FIRST here — M2+ dogfooding.) The game's editor module(s) plug into the routes, then we seal —
-        // no more registration once the first world exists. M0 records counts only.
+        // D10/§2: fired BEFORE the first world. Native editor panels register FIRST, then the game's editor
+        // module(s) plug into the routes, then we seal — no more registration once the first world exists.
+        RegisterNativePanels();
+
         if (InCollect)
         {
             InCollect(m_Extensions);
@@ -145,6 +191,47 @@ namespace Opaax::Editor
             "Editor extensions sealed (before first world): drawers={}, panels={}, assetTypes={}, menus={}, editWorldSystems={}",
             m_Extensions.Drawers().Count(),  m_Extensions.Panels().Count(), m_Extensions.AssetTypes().Count(),
             m_Extensions.Menus().Count(),    m_Extensions.EditWorldSystems().Count());
+    }
+
+    OpaaxString EditorService::ResolveLayoutIniPath() const
+    {
+        // EditorSaveDir/EditorToAbsolute live only on EditorPaths, deliberately: the engine's IPaths knows
+        // nothing about an editor (D4). EditorApplication::CreatePaths normally installs EditorPaths, but it
+        // falls back to a plain Paths when no edited project is declared — so this cast genuinely can fail.
+        //TODO: Save editor path since we may need quite often with editor
+        const IPaths&      lPaths       = OpaaxApplication::GetAppService<IPaths>();
+        const EditorPaths* lEditorPaths = dynamic_cast<const EditorPaths*>(&lPaths);
+        if (lEditorPaths == nullptr)
+        {
+            OPAAX_LOG(LogEditorService, Warn, "No EditorPaths (no edited project?) — dock layout will not persist.")
+            return {};
+        }
+
+        // ImGui does not create directories, and its save fails SILENTLY when one is missing — so the dir
+        // has to exist before the first write, not on first save.
+        // FIXME: IFileSystem::GetPathIfNCreate is exactly this, but its methods are private with zero
+        // callers (and IPlatform::GetFileSystem() hands back a const&, while they are non-const) — the
+        // facility is unusable as written. Calling fs:: directly, as Core/Config/ConfigIO.cpp already does.
+        const OpaaxString lSaveDir = lEditorPaths->EditorSaveDir();
+
+        //Todo use FileSystem (need FIXME on IFileSystem)
+        std::error_code lError;
+        fs::create_directories(fs::path(lSaveDir.CStr()), lError);
+        if (lError)
+        {
+            OPAAX_LOG(LogEditorService, Warn, "Could not create '{}' ({}) — dock layout will not persist.",
+                lSaveDir.CStr(), lError.message())
+            return {};
+        }
+
+        //TODO: Make a Imgui wrapper to init imgui stuff
+        return lEditorPaths->EditorToAbsolute(OpaaxString("Save/imgui.ini"));
+    }
+
+    void EditorService::RegisterNativePanels()
+    {
+        m_Extensions.Panels().Register("Hierarchy",
+            [](EditorContext& InContext) -> UniquePtr<IEditorPanel> { return MakeUnique<HierarchyPanel>(InContext); });
     }
 
     void EditorService::DrawDockspace()
@@ -179,7 +266,17 @@ namespace Opaax::Editor
             m_ViewportPanel.reset();
         }
 
-        // 2. UI backend — ImGui_ImplOpenGL3_Shutdown requires the GL context, still alive here.
+        // 2. Registered panels — reverse construction order (LC3). None owns a GPU resource, so the only
+        //    ordering constraint is that they die before the context they hold a reference into.
+        while (!m_Panels.empty())
+        {
+            m_Panels.back()->Shutdown();
+            m_Panels.pop_back();
+        }
+
+        // 3. UI backend — ImGui_ImplOpenGL3_Shutdown requires the GL context, still alive here.
+        //    DestroyContext also FLUSHES the dock layout, through the io.IniFilename pointer that still
+        //    aims at m_LayoutIniPath — so that member must not be cleared before this line.
         if (m_UIBackend != nullptr)
         {
             m_UIBackend->Shutdown();
@@ -187,7 +284,10 @@ namespace Opaax::Editor
             m_UIBackend.reset();
         }
 
-        // 3. The context refs last (nothing points into them anymore).
+        // 4. Selection — after the panels that read/write it, before the context it points into.
+        m_Selection.reset();
+
+        // 5. The context refs last (nothing points into them anymore).
         m_Context.reset();
         OPAAX_LOG(LogEditorService, Info, "EditorService shutdown");
     }
