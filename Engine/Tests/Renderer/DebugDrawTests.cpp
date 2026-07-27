@@ -1,0 +1,158 @@
+// Suite: DebugDraw (Renderer/DebugDraw.h) — the engine's per-frame debug line queue (Editor.md D10).
+//
+// Two halves, both GPU-free by design and therefore fully testable here: the QUEUE (DrawLine /
+// DrawBox / Clear — plain data, no GL) and the GEOMETRY (ToQuad — the line -> thin-rotated-quad
+// conversion that lets DebugDraw render through the existing Renderer2D::DrawQuad without a new RHI
+// primitive). Same "the interesting part needs no context" approach as Renderer/RenderTargetTests.cpp.
+#include <doctest.h>
+
+#include "Renderer/DebugDraw.h"
+
+#include <cmath>
+
+using namespace Opaax;
+
+namespace
+{
+    constexpr float kEps = 1e-4f;
+    constexpr float kPi  = 3.14159265358979323846f;
+}
+
+// =============================================================================
+// Queue
+// =============================================================================
+
+TEST_CASE("DebugDraw: a fresh queue is empty")
+{
+    const DebugDraw lDebug;
+
+    CHECK(lDebug.IsEmpty());
+    CHECK(lDebug.Lines().empty());
+}
+
+TEST_CASE("DebugDraw: DrawLine appends one entry carrying exactly what was submitted")
+{
+    DebugDraw lDebug;
+    lDebug.DrawLine({ 1.f, 2.f }, { 3.f, 4.f }, { 0.2f, 0.4f, 0.6f, 0.8f }, 2.5f);
+
+    REQUIRE(lDebug.Lines().size() == 1u);
+    CHECK_FALSE(lDebug.IsEmpty());
+
+    const DebugLine& lLine = lDebug.Lines()[0];
+    CHECK(lLine.Start.x     == doctest::Approx(1.f));
+    CHECK(lLine.Start.y     == doctest::Approx(2.f));
+    CHECK(lLine.End.x       == doctest::Approx(3.f));
+    CHECK(lLine.End.y       == doctest::Approx(4.f));
+    CHECK(lLine.Color.b     == doctest::Approx(0.6f));
+    CHECK(lLine.Thickness   == doctest::Approx(2.5f));
+}
+
+TEST_CASE("DebugDraw: submission order is preserved (the renderer draws them in order)")
+{
+    DebugDraw lDebug;
+    lDebug.DrawLine({ 0.f, 0.f }, { 1.f, 0.f }, { 1.f, 0.f, 0.f, 1.f });
+    lDebug.DrawLine({ 0.f, 0.f }, { 2.f, 0.f }, { 0.f, 1.f, 0.f, 1.f });
+
+    REQUIRE(lDebug.Lines().size() == 2u);
+    CHECK(lDebug.Lines()[0].End.x == doctest::Approx(1.f));
+    CHECK(lDebug.Lines()[1].End.x == doctest::Approx(2.f));
+}
+
+TEST_CASE("DebugDraw: DrawBox emits exactly 4 segments forming a CLOSED rectangle")
+{
+    DebugDraw lDebug;
+    lDebug.DrawBox({ 10.f, 20.f }, { 4.f, 6.f }, { 1.f, 1.f, 1.f, 1.f }, 1.f);
+
+    REQUIRE(lDebug.Lines().size() == 4u);
+
+    // Centre (10,20), half-extent (2,3) -> corners x in [8,12], y in [17,23].
+    for (const DebugLine& lLine : lDebug.Lines())
+    {
+        CHECK(std::fabs(std::fabs(lLine.Start.x - 10.f) - 2.f) < kEps);
+        CHECK(std::fabs(std::fabs(lLine.Start.y - 20.f) - 3.f) < kEps);
+    }
+
+    // Closed loop: every segment starts where the previous one ended, and the last closes onto
+    // the first. This is what makes the outline a rectangle rather than four stray sticks.
+    const TDynArray<DebugLine>& lLines = lDebug.Lines();
+    for (size_t i = 0; i < lLines.size(); ++i)
+    {
+        const DebugLine& lNext = lLines[(i + 1) % lLines.size()];
+        CHECK(lLines[i].End.x == doctest::Approx(lNext.Start.x));
+        CHECK(lLines[i].End.y == doctest::Approx(lNext.Start.y));
+    }
+}
+
+TEST_CASE("DebugDraw: Clear drops the queue (per-frame contract — nothing survives a frame)")
+{
+    DebugDraw lDebug;
+    lDebug.DrawBox({ 0.f, 0.f }, { 1.f, 1.f }, { 1.f, 1.f, 1.f, 1.f });
+    REQUIRE(lDebug.Lines().size() == 4u);
+
+    lDebug.Clear();
+
+    CHECK(lDebug.IsEmpty());
+    CHECK(lDebug.Lines().empty());
+
+    // Reusable after a drain — the renderer clears every frame and producers refill it.
+    lDebug.DrawLine({ 0.f, 0.f }, { 1.f, 1.f }, { 1.f, 1.f, 1.f, 1.f });
+    CHECK(lDebug.Lines().size() == 1u);
+}
+
+// =============================================================================
+// Geometry — ToQuad
+// =============================================================================
+
+TEST_CASE("ToQuad: a horizontal segment becomes an unrotated quad of {length, thickness}")
+{
+    const DebugQuad lQuad = ToQuad(DebugLine{ { 0.f, 5.f }, { 10.f, 5.f }, { 1.f, 1.f, 1.f, 1.f }, 2.f });
+
+    CHECK(lQuad.Center.x      == doctest::Approx(5.f));   // midpoint
+    CHECK(lQuad.Center.y      == doctest::Approx(5.f));
+    CHECK(lQuad.Size.x        == doctest::Approx(10.f));  // length
+    CHECK(lQuad.Size.y        == doctest::Approx(2.f));   // thickness
+    CHECK(lQuad.RotationRad   == doctest::Approx(0.f));
+}
+
+TEST_CASE("ToQuad: a vertical segment is the same quad rotated a quarter turn")
+{
+    const DebugQuad lQuad = ToQuad(DebugLine{ { 3.f, 0.f }, { 3.f, 8.f }, { 1.f, 1.f, 1.f, 1.f }, 1.5f });
+
+    CHECK(lQuad.Center.x    == doctest::Approx(3.f));
+    CHECK(lQuad.Center.y    == doctest::Approx(4.f));
+    CHECK(lQuad.Size.x      == doctest::Approx(8.f));
+    CHECK(lQuad.Size.y      == doctest::Approx(1.5f));
+    CHECK(lQuad.RotationRad == doctest::Approx(kPi * 0.5f));
+}
+
+TEST_CASE("ToQuad: direction is signed — reversing the endpoints flips the rotation by pi")
+{
+    const DebugQuad lForward = ToQuad(DebugLine{ { 0.f, 0.f }, { 4.f, 0.f }, {}, 1.f });
+    const DebugQuad lReverse = ToQuad(DebugLine{ { 4.f, 0.f }, { 0.f, 0.f }, {}, 1.f });
+
+    // Same covered pixels either way (a quad is symmetric), but the maths must stay consistent.
+    CHECK(lForward.Center.x == doctest::Approx(lReverse.Center.x));
+    CHECK(lForward.Size.x   == doctest::Approx(lReverse.Size.x));
+    CHECK(std::fabs(lReverse.RotationRad) == doctest::Approx(kPi));
+}
+
+TEST_CASE("ToQuad: a diagonal segment gets its true length, not its bounding box")
+{
+    const DebugQuad lQuad = ToQuad(DebugLine{ { 0.f, 0.f }, { 3.f, 4.f }, {}, 1.f });
+
+    CHECK(lQuad.Size.x      == doctest::Approx(5.f));            // 3-4-5, not 3 or 4
+    CHECK(lQuad.RotationRad == doctest::Approx(std::atan2(4.f, 3.f)));
+}
+
+TEST_CASE("ToQuad: a degenerate zero-length segment is invisible, never NaN")
+{
+    // atan2(0,0) is defined as 0, so this must not poison the render batch with a NaN transform —
+    // it collapses to a zero-width quad that draws nothing.
+    const DebugQuad lQuad = ToQuad(DebugLine{ { 7.f, 7.f }, { 7.f, 7.f }, {}, 3.f });
+
+    CHECK(lQuad.Center.x == doctest::Approx(7.f));
+    CHECK(lQuad.Size.x   == doctest::Approx(0.f));
+    CHECK(lQuad.Size.y   == doctest::Approx(3.f));
+    CHECK(lQuad.RotationRad == doctest::Approx(0.f));
+    CHECK_FALSE(std::isnan(lQuad.RotationRad));
+}

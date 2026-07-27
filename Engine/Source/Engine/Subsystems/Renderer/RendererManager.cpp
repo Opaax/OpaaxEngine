@@ -93,7 +93,21 @@ namespace Opaax
         OPAAX_LOG(LogRendererManager, Info, "RendererManager shutdown")
     }
     
+    // =========================================================================
+    // Render — the frame, then the drain.
+    //
+    // The debug queue is strictly per-frame and its producers refill it every frame (the editor's
+    // ViewportPanel enqueues in OnPreRender, before this runs). Clearing OUTSIDE RenderFrame is what
+    // keeps a frame we could NOT render — no render core, zero-size target — from letting the queue
+    // grow without bound: those early-outs skip the draw, never the drain.
+    // =========================================================================
     void RendererManager::Render(double /*Alpha*/)
+    {
+        RenderFrame();
+        m_DebugDraw.Clear();
+    }
+
+    void RendererManager::RenderFrame()
     {
         if (!m_RenderSystem)
         {
@@ -120,17 +134,27 @@ namespace Opaax
         m_RenderSystem->BeginFrame();
         m_RenderSystem->BeginPass(lTarget, lView);
 
+        Renderer2D& lRenderer = m_RenderSystem->GetRenderer2D();
+
         // Draw the active world: one quad per DummyComponent (position / size / color).
         if (m_WorldManager != nullptr)
         {
             if (World* lWorld = m_WorldManager->GetActiveWorld())
             {
-                Renderer2D& lRenderer = m_RenderSystem->GetRenderer2D();
                 lWorld->Each<DummyComponent>([&lRenderer](EntityID, DummyComponent& InComp)
                 {
                     lRenderer.DrawQuad(InComp.Position, InComp.Size, InComp.Color);
                 });
             }
+        }
+
+        // Debug overlay — each queued line as a thin rotated quad, so this reuses the world's batch
+        // and adds no RHI/shader/vertex-layout surface. The Debug band sorts above world geometry
+        // regardless of submission order, so no manual ordering is needed here.
+        for (const DebugLine& lLine : m_DebugDraw.Lines())
+        {
+            const DebugQuad lQuad = ToQuad(lLine);
+            lRenderer.DrawQuad(lQuad.Center, lQuad.Size, lLine.Color, lQuad.RotationRad, ERenderLayer::Debug);
         }
 
         m_RenderSystem->EndPass();

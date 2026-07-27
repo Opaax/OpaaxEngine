@@ -4,6 +4,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Application/Services/ILogger.h"
 #include "Engine/Subsystems/EngineSubsystem.h"
+#include "Renderer/DebugDraw.h"   // owned BY VALUE — full type, not a forward decl
 
 
 // =============================================================================
@@ -60,6 +61,13 @@ namespace Opaax
          */
         void HandleWindowResize(const WindowResize& InResize);
 
+        /**
+         * The frame's actual rendering. Separated from Render() so the debug-queue drain there is
+         * unconditional — this body early-outs (no render core, zero-size target) and those exits
+         * must not leave the queue to accumulate.
+         */
+        void RenderFrame();
+
         // =============================================================================
         // Getters - Setter
     public:
@@ -82,7 +90,13 @@ namespace Opaax
          * the view, replacing the old window-size cache).
          */
         void SetPrimaryRenderTarget(IRenderTarget* InTarget);
-        
+
+        /**
+         * @return The per-frame debug line queue, drained and cleared by Render(). Reached by game
+         *   and editor code through IEngine::GetDebugDraw(); always valid (owned by value).
+         */
+        DebugDraw& GetDebugDraw() noexcept { return m_DebugDraw; }
+
         // End Getters - Setter
         // =============================================================================
 
@@ -103,5 +117,9 @@ namespace Opaax
         UniquePtr<RenderSystem> m_RenderSystem;
         WorldManager*           m_WorldManager  = nullptr; // non-owning; active world = draw source
         IRenderTarget*          m_PrimaryTarget = nullptr; // non-owning; nullptr = backbuffer (I5)
+
+        // Per-frame debug lines. Owned here because this is what DRAINS it (I5): the queue's
+        // lifetime is the renderer's, and it cannot outlive its only consumer.
+        DebugDraw               m_DebugDraw;
     };
 }

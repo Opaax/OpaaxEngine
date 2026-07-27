@@ -359,4 +359,26 @@ namespace Opaax
         OPAAX_ASSERT(m_WorldManager != nullptr);
         return *m_WorldManager;
     }
+
+    // =========================================================================
+    // GetDebugDraw — the D10 seam. The queue itself lives in RendererManager (it is what drains it);
+    // the engine only routes. Same resolve-from-manager shape as the three accessors above.
+    // =========================================================================
+    DebugDraw& Engine::GetDebugDraw()
+    {
+        // Resolve-from-manager first (see GetResources): never re-enter Startup.
+        if (m_RendererManager == nullptr)
+        {
+            m_RendererManager = m_Subsystems.GetSubsystem<RendererManager>();
+        }
+
+        if (m_RendererManager == nullptr && !m_bStarted)
+        {
+            Startup();
+            m_RendererManager = m_Subsystems.GetSubsystem<RendererManager>();
+        }
+
+        OPAAX_ASSERT(m_RendererManager != nullptr);
+        return m_RendererManager->GetDebugDraw();
+    }
 }

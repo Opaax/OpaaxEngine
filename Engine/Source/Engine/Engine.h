@@ -107,6 +107,7 @@ namespace Opaax
         ResourceManager& GetResources() override;
         EngineEventBus&  GetEngineEventBus() override;
         WorldManager&    GetWorldManager() override;
+        DebugDraw&       GetDebugDraw() override;
         //~End IEngine interface
 
         // =============================================================================

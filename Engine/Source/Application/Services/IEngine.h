@@ -8,6 +8,7 @@ namespace Opaax
     class ResourceManager;
     class WorldManager;
     class IRenderTarget;
+    class DebugDraw;
 
     // =============================================================================
     // IEngine — the engine, exposed as an application service. Owns the engine
@@ -107,6 +108,14 @@ namespace Opaax
         virtual ResourceManager& GetResources() = 0;
         virtual EngineEventBus& GetEngineEventBus() = 0;
         virtual WorldManager& GetWorldManager() = 0;
+
+        /**
+         * The per-frame debug line queue (D10). Enqueue from anywhere in the frame BEFORE the render
+         * that should show it — the renderer drains and clears it every frame, so a line must be
+         * re-submitted each frame it stays visible. Serves editor overlays and dev builds of the
+         * game alike; the engine has no idea which one is calling.
+         */
+        virtual DebugDraw& GetDebugDraw() = 0;
 
         // End Foundation subsystems
         // =============================================================================

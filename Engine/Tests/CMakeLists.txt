@@ -16,6 +16,7 @@ set(OPAAX_TEST_SOURCES
     SmokeTest.cpp
     Renderer/SortKeyTests.cpp
     Renderer/RenderTargetTests.cpp
+    Renderer/DebugDrawTests.cpp
     # Renderer/FontKerningTests.cpp  # quarantined: Renderer/Text moved to Legacy (not linked) — M0.5
     Core/StringTests.cpp
     Core/Config/EngineConfigDataTests.cpp

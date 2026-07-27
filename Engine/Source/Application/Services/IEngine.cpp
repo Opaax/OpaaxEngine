@@ -2,6 +2,7 @@
 
 #include "Engine/Subsystems/EventBus/EngineEventBus.h"
 #include "Engine/Subsystems/Resources/ResourceManager.h"
+#include "Renderer/DebugDraw.h"
 #include "World/WorldManager.h"
 
 namespace Opaax
@@ -44,6 +45,15 @@ namespace Opaax
             {
                 static WorldManager s_NullWorlds; // inert — owns no worlds
                 return s_NullWorlds;
+            }
+
+            DebugDraw& GetDebugDraw() override
+            {
+                // Inert — no renderer exists to drain it, so anything enqueued here is simply never
+                // drawn. Only reachable when NO engine was provided to the locator (a misconfigured
+                // host or a test double), which is also why nothing loops on it in practice.
+                static DebugDraw s_NullDebugDraw;
+                return s_NullDebugDraw;
             }
         };
     }
