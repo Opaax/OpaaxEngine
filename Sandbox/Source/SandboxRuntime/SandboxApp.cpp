@@ -1,6 +1,5 @@
 ﻿#include "SandboxApp.h"
 
-#include "Application/Services/IConfigSystem.h"
 #include "Application/Services/ILogger.h"
 #include "Application/Services/IEngine.h"
 #include "World/WorldManager.h"
@@ -8,7 +7,6 @@
 #include "World/Entity/Entity.h"
 #include "World/Components/DummyComponent.h"
 #include "Application/Modules/ModuleRegistrar.h"
-#include "Config/ConfigTest.h"
 #include "Sandbox.h"
 
 SandboxApp::SandboxApp(int InArgc, char** InArgv) : Opaax::OpaaxApplication(InArgc, InArgv)
@@ -20,7 +18,8 @@ SandboxApp::SandboxApp(int InArgc, char** InArgv) : Opaax::OpaaxApplication(InAr
 
 void SandboxApp::OnInitializeApplication()
 {
-    GetAppService<Opaax::IConfigSystem>().Register<Config_MyConfig>();
+    // Intentionally empty: Sandbox registers no app-level config today (the MyConfig demo type is gone).
+    // Kept as an override so the base's "not overridden" trace does not fire.
 }
 
 void SandboxApp::RegisterModules(Opaax::ModuleRegistrar& InRegistrar)

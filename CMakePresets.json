@@ -41,15 +41,18 @@
   "buildPresets": [
     {
       "name": "debug-editor",
-      "configurePreset": "debug-editor"
+      "configurePreset": "debug-editor",
+      "configuration": "Debug"
     },
     {
       "name": "release",
-      "configurePreset": "release"
+      "configurePreset": "release",
+      "configuration": "Release"
     },
     {
       "name": "release-editor",
-      "configurePreset": "release-editor"
+      "configurePreset": "release-editor",
+      "configuration": "RelWithDebInfo"
     }
   ]
 }

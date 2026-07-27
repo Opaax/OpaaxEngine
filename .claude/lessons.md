@@ -305,3 +305,44 @@ actual task (the RHI decouple) verified green on the shifted base (3 presets, te
   (`RenderCommand::s_API`, `RenderAPI::s_Backend`) were consumed only by dead code; extract the still-live bits
   (`EBackend`+string map → static-free `RHIBackend.h`), route everything through the instance (`IRHIDevice`), move
   the cluster to `Legacy/` (unlinked — dangling includes there are fine, **X1**), grep-clean outside `Legacy/`.
+
+## L15 — Absence-of-error is not presence-of-result: log the SUCCESS branch, not just the failures (2026-07-26)
+
+**What happened (Editor M1):** after wiring the ViewportPanel, the run log looked conclusive — "Primary render
+target set to offscreen", a resize line, 0 err/warn. But `Draw()` has two branches: a non-zero FBO handle draws
+`ImGui::Image` (the world), a zero handle falls back to `ImGui::Dummy` (a blank rectangle) — and the Dummy path
+logs **nothing wrong**. A clean log was fully consistent with a blank panel. Fixed with a one-shot Info log on the
+*success* branch: `Viewport displaying world FBO (handle=2, WxH)`.
+
+**Rules for next time:**
+- [[L12]] said "the observability must exist." This sharpens it: it must **discriminate**. When a gate is
+  "no errors + a state-change log," ask *does any log positively assert the thing happened, or only that nothing
+  failed?* If a silent-fallback branch exists (Dummy / default / early-return no-op), log the success branch.
+  One-shot (`if (!m_bLogged)`) keeps a per-frame path from flooding.
+- **A render-to-texture panel has a self-referential sizing loop** (window sizes to content, content sizes to
+  window): it collapsed to **32x13 px** — correct pipeline, useless demo. Seed `SetNextWindowSize(..., FirstUseEver)`.
+- **Operational:** a still-running GUI exe locks the DLL → `LNK1104: cannot open OpaaxEngine.dll` on the next
+  build. Not a code error ([[L5]]/[[L8]] — suspect the environment when the red is in something you didn't
+  change). A GLFW window can outlive a bash `kill $PID`; kill by image name (`taskkill //F //IM Sandbox.exe`).
+  Smoke pattern that behaves: `./app.exe > log 2>&1 & sleep N; taskkill //F //IM app.exe;` then grep the log.
+
+## L16 — Type-check a plan's compile-level claims before building on them (2026-07-26)
+
+**What happened (Editor M2 planning):** a plan authored by another model (Fable, Plan agent) sequenced a step that
+landed real `DrawerRegistry`/`PanelRegistry` storage while leaving the M0 `int` placeholders in
+`SandboxEditorModule.cpp`, gated on "the placeholders still compile against the new signatures (they do)." They
+don't: `Drawers().Register<int,int>()` instantiates the stored lambda with `TDrawer = int` → `int d; d.Draw(*c);`
+→ ill-formed; and a factory lambda returning `int` is not convertible to
+`TFunction<UniquePtr<IEditorPanel>(EditorContext&)>`. Caught by reading the proposed template body, before writing
+any code. The consequence was structural, not cosmetic: registry + consumer + dogfood are **atomic**, which
+invalidated the plan's step split and forced a per-slice milestone decomposition.
+
+**Rules for next time:**
+- A plan's prose claims ("this still compiles", "runtime is unchanged") are **assertions to verify**, not
+  findings. Template-instantiation claims especially: a template body is only checked when instantiated, so
+  "nothing else changed" is not evidence a placeholder call site survives.
+- Research done by a sub-agent is worth its cost; its *conclusions* still need this session's review. Verify the
+  load-bearing factual claims yourself (here: `World::CreateEntity` always emplacing `EntityMeta`, so
+  `Each<EntityMeta>` is the all-entities view — true, and it removed a whole "new World API" premise).
+- When one deliverable in a milestone can't compile without another, they are one step. Discovering that early is
+  what turns an over-large milestone into a correct decomposition ([[L3]]) instead of a mid-build stall.
