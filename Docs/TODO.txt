@@ -11,3 +11,4 @@ Misc:
 - Skill Code Style.
 - Fix IFilesPath
 - OpaaxString: Make ctor with num version or static convert to OpaaxString
+- continue json format for custom type
