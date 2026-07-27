@@ -1,6 +1,8 @@
 #include "SandboxEditorModule.h"
 
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
+#include "Editor/EditorContext.h"   // the Panels factory receives EditorContext& (D10)
+#include "Panels/SandboxPanel.h"
 
 void SandboxEditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& InRegistrar)
 {
@@ -14,6 +16,11 @@ void SandboxEditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& In
     InRegistrar.Menus().Register("Tools/Validate Sandbox",
         [] {});                                            // path + command
 
-    // Panels() is REAL now (M2a) — the `return 0` placeholder cannot convert to UniquePtr<IEditorPanel>.
-    // S3 registers a real SandboxPanel here, which is the milestone's dogfood proof.
+    // REAL extension (M2a): the game's own panel, registered through the same route the editor's native
+    // Hierarchy uses. Constructed later by EditorService, once an EditorContext exists to hand it.
+    InRegistrar.Panels().Register("Sandbox Panel",
+        [](Opaax::Editor::EditorContext& InContext) -> Opaax::UniquePtr<Opaax::Editor::IEditorPanel>
+        {
+            return Opaax::MakeUnique<SandboxPanel>(InContext);
+        });
 }
