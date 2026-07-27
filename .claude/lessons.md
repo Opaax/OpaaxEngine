@@ -196,6 +196,12 @@ whack-a-mole moving live deps back one build at a time.
 - Include-path rewrites for folder moves must handle BOTH `"…"` and `<…>` delimiters, and remember that
   `#include "X/…"` also resolves file-relative (same-dir) — so an absolute-prefix rewrite can leave a
   relative include silently resolving to the new location (usually fine, occasionally surprising).
+- **Confirmed again 2026-07-27 (M2c):** before inserting `ERenderLayer::Debug` mid-list I grepped every
+  consumer to prove no value was persisted — but scoped the grep to `Engine/Source Editor/Source Sandbox`
+  and **omitted `Engine/Tests`**. `SortKeyTests` hardcoded `LayerField(UI) == 3` and went red. Same moral:
+  grep is a SEED, the build is the verdict. When shifting a value, sweep the *whole* tree — tests hardcode
+  ordinals that source never does. (Fixed at the root: assert the field against the enum's own value, so
+  growing the list cannot break a test about bit *positions*.)
 
 ## L11 — A vendor library's GLOBAL STATE duplicates across the DLL/exe line, exactly like our own statics (2026-07-20)
 
@@ -371,3 +377,35 @@ commit S1, re-apply S2, rebuild, commit.
   extra steps: it looks fine until someone bisects onto it.
 - Don't sweep the user's own files into a feature commit while doing this (`Docs/TODO.txt` here) — pathspec
   commits only ([[L9]]); they may be mid-thought in them.
+
+## L18 — A documented caveat is a bug with a comment on it: if you can FIX it, fixing is the deliverable (2026-07-27)
+
+**What happened (M2c / debug-draw channel design):** reviewing a sub-agent's design I caught a genuine
+overclaim — it asserted cross-DLL `OpaaxStringID` identity was "already proven in production," when in fact
+*every* current interning call site runs on one side of the boundary, so nothing had ever exercised it. Good
+catch. But I then proposed to **record it in ARCHITECTURE.md as a caveat to verify later** ("an I2 assertion
+to test, not an established fact") and moved on. The user cut straight through it: *"So fix the cross-dll
+problem instead of record."* The fix was ~30 minutes — move `OpaaxStringIDPool` and its entry points
+out-of-line into the DLL — and it converted a compiler-courtesy into a **link-time guarantee**.
+
+**Why I got it wrong:** I was optimising for slice scope (M2c was about debug draw, not strings) and treated
+"write it down so it isn't lost" as the responsible move. But the defect was *latent and silent* — a
+duplicated intern pool makes the same string compare unequal across the DLL line, with no crash and no null,
+which is the worst failure mode in the codebase's own taxonomy. Documenting a silent, latent, cheap-to-fix
+defect is the one case where "record it" is close to worthless: the note only helps someone who reads it
+*before* being bitten, which is exactly nobody.
+
+**Rules for next time:**
+- When a review turns up a real defect, the default is **fix it now**, not file it. Escalate to "record and
+  defer" only when the fix is genuinely expensive, genuinely risky, or genuinely blocked — and say which.
+  "It's out of this slice's scope" is not one of those three.
+- Weight the decision by **failure mode, not by size**. A silent/latent defect (wrong answer, no signal)
+  outranks scope discipline; a loud one (crash, null, red build) can wait, because it will announce itself.
+  Same axis as [[L15]]: what matters is whether anything *discriminates* when it goes wrong.
+- Fix it so the wrong thing is **impossible, not merely unlikely**. Out-of-line in the DLL beats
+  exported-inline-and-hope; a forward-declared type beats a visible one a consumer could duplicate. Prefer
+  the shape where the compiler/linker enforces the invariant over the shape where a comment asks nicely.
+- **Don't let a sub-agent's verdict close a question you haven't checked** ([[L16]] sharpened): Fable's
+  design was good and its recommendation held up, but its one load-bearing "already proven" claim was false.
+  Verify the claims the decision *rests on*, and when one collapses, that is a finding to act on — not a
+  footnote.
