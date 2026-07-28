@@ -1,48 +1,32 @@
-﻿#include "IFileSystem.h"
+#include "IFileSystem.h"
 
-#include <filesystem>
 #include <iostream>
-#include <system_error>
 
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/ILogger.h"
 
 namespace Opaax
 {
-    namespace  STDFileSyt = std::filesystem;
-
-    bool IFileSystem::CreateDirectories(const OpaaxString& InPath) const
+    namespace
     {
-        if (InPath.IsEmpty())
+        // =====================================================================
+        // NullFileSystem — every primitive fails, nothing reaches a disk. Silent by design: "there is
+        // no filesystem" is the answer, not an error, and callers already branch on false.
+        // =====================================================================
+        class NullFileSystem final : public IFileSystem
         {
-            return false;
-        }
+        public:
+            bool CreateDirectories(const OpaaxString&) const override { return false; }
+            bool IsPathExist(const OpaaxString&)       const override { return false; }
 
-        std::error_code       lError;
-        const STDFileSyt::path lPath(InPath.CStr());
-
-        STDFileSyt::create_directories(lPath, lError);
-        if (lError)
-        {
-            return false;
-        }
-
-        // create_directories reports false when the directory ALREADY existed — a success under this
-        // contract — so ask the filesystem what is true now instead of trusting that return.
-        const bool bIsDirectory = STDFileSyt::is_directory(lPath, lError);
-        return bIsDirectory && !lError;
+            bool ListDirectory(const OpaaxString&, TDynArray<Entry>&) const override { return false; }
+        };
     }
 
-    bool IFileSystem::IsPathExist(const OpaaxString& InPath) const
+    const IFileSystem& IFileSystem::Null()
     {
-        if (InPath.IsEmpty())
-        {
-            return false;
-        }
-
-        std::error_code lError;
-        const bool      bExists = STDFileSyt::exists(STDFileSyt::path(InPath.CStr()), lError);
-        return bExists && !lError;
+        static NullFileSystem s_Null;
+        return s_Null;
     }
 
     OpaaxString IFileSystem::GetPathIfNCreate(const OpaaxString& InPath) const
@@ -70,49 +54,5 @@ namespace Opaax
         }
 
         return {};
-    }
-
-    bool IFileSystem::ListDirectory(const OpaaxString& InDirAbs, TDynArray<Entry>& OutEntries) const
-    {
-        if (InDirAbs.IsEmpty())
-        {
-            return false;
-        }
-
-        std::error_code        lError;
-        const STDFileSyt::path lDir(InDirAbs.CStr());
-
-        if (!STDFileSyt::is_directory(lDir, lError) || lError)
-        {
-            return false;
-        }
-
-        // Manual increment with an error_code: the range-for form throws on a mid-walk failure, and a
-        // directory CAN change under us between the check above and the walk below.
-        STDFileSyt::directory_iterator lIt(lDir, lError);
-        if (lError)
-        {
-            return false;
-        }
-
-        const STDFileSyt::directory_iterator lEnd;
-        for (; lIt != lEnd && !lError; lIt.increment(lError))
-        {
-            std::error_code lEntryError;
-            const bool      bIsDirectory = lIt->is_directory(lEntryError);
-
-            // One unreadable child does not invalidate the rest of the listing.
-            if (lEntryError)
-            {
-                continue;
-            }
-
-            OutEntries.push_back(Entry{
-                OpaaxString(lIt->path().filename().generic_string().c_str()),
-                OpaaxString(lIt->path().generic_string().c_str()),
-                bIsDirectory });
-        }
-
-        return !lError;
     }
 }

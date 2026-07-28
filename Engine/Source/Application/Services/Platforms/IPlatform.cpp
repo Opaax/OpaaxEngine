@@ -14,10 +14,8 @@ namespace Opaax
             double              GetTimeSeconds()        const override { return 0.0; }
             OpaaxString         GetExecutablePath()     const override { return OpaaxString("Null Exec Path"); }
             OpaaxString         GetPlatformName()       const override { return OpaaxString("Null Platform"); }
-            const IFileSystem&  GetFileSystem()         const override { return m_FileSystem; }
-            
-        private:
-            IFileSystem m_FileSystem;
+            // Inert, like the rest of this object — a null platform has no business touching a disk.
+            const IFileSystem&  GetFileSystem()         const override { return IFileSystem::Null(); }
         };
     }
 

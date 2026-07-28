@@ -10,7 +10,7 @@
 
 #include "Application/Services/IPaths.h"
 #include "Application/Services/Platforms/IPlatform.h"
-#include "Application/Services/Platforms/IFileSystem.h"   // StubPlatform owns one (IPlatform::GetFileSystem)
+#include "Application/Services/Platforms/IFileSystem.h"   // StubPlatform hands out the null one
 #include "Application/Services/AppServiceLocator.h"
 
 using namespace Opaax;
@@ -25,10 +25,9 @@ namespace
         double      GetTimeSeconds()      const override { return 0.0; }
         OpaaxString GetExecutablePath()   const override { return m_Exe; }
         OpaaxString GetPlatformName()     const override { return OpaaxString("Stub"); }
-        const IFileSystem& GetFileSystem() const override { return m_FileSystem; }   // mirrors WindowsPlatform
+        const IFileSystem& GetFileSystem() const override { return IFileSystem::Null(); }  // unused here
     private:
         OpaaxString m_Exe;
-        IFileSystem m_FileSystem;
     };
 }
 

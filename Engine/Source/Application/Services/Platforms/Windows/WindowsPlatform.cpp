@@ -2,14 +2,11 @@
 
 #ifdef OPAAX_PLATFORM_WINDOWS
 
+#include "WindowsUtf8.h"   // the one UTF-8 <-> UTF-16 idiom, shared with WindowsFileSystem
+
 #include <thread>
 #include <chrono>
 #include <string>
-
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <Windows.h>
 
 namespace Opaax
 {
@@ -37,16 +34,10 @@ namespace Opaax
             lWide.resize(lWide.size() * 2);                                // truncated -> grow
         }
 
-        // UTF-16 -> UTF-8.
-        const int lSize = WideCharToMultiByte(CP_UTF8, 0, lWide.data(), static_cast<int>(lWide.size()),
-                                              nullptr, 0, nullptr, nullptr);
-        std::string lUtf8(static_cast<size_t>(lSize), '\0');
-        WideCharToMultiByte(CP_UTF8, 0, lWide.data(), static_cast<int>(lWide.size()),
-                            lUtf8.data(), lSize, nullptr, nullptr);
+        // Normalise to '/' (engine path convention) while still wide — one conversion, at the boundary.
+        for (wchar_t& lCh : lWide) { if (lCh == L'\\') { lCh = L'/'; } }
 
-        // Normalise to '/' (engine path convention).
-        for (char& lCh : lUtf8) { if (lCh == '\\') { lCh = '/'; } }
-        return OpaaxString(lUtf8.c_str());
+        return Windows::WideToUtf8(lWide);
     }
 }
 

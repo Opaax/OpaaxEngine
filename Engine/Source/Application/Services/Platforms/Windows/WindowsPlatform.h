@@ -6,6 +6,8 @@
 
 #ifdef OPAAX_PLATFORM_WINDOWS
 
+#include "Application/Services/Platforms/Windows/WindowsFileSystem.h"
+
 namespace Opaax
 {
     // =============================================================================
@@ -29,7 +31,9 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        IFileSystem m_FileSystem;
+        // The platform's OWN concrete type, by value — the accessor narrows it to const IFileSystem&,
+        // so no call site knows or cares which one it got.
+        WindowsFileSystem m_FileSystem;
     };
 }
 
