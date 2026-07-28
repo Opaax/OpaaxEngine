@@ -291,8 +291,9 @@ opposite end of the axis from **I2**). A host invokes a module as a throwaway in
 `CoreEngineApp`, every `*Old` type, `EventOld/`, the old `Scene/`/`World/`/`ECS/`/`Physics/` trees, the old
 editor (`Engine/Source/Editor/`), the old subsystems (`Core/Systems/{GameSubsystem,MoverSubsystem,
 PhysicsSubsystem,Movement}`), the old renderer (`Camera/` controllers, `Pass/`, `Systems/WorldRenderSystem`,
-`RenderSubsystem`), and the static `RenderCommand` path — all live under `Engine/Source/Legacy/`, **NOT globbed
-by the engine DLL** (compiled = zero). Their old-world tests live in `Engine/Tests/Legacy/`. **Do not add new
+`RenderSubsystem`), the static `RenderCommand` path, and **`Core/OpaaxPath`** (the old static path system —
+five mutable statics, i.e. an **I1** violation; superseded by `IPaths`/`ResolveProjectLayout`, quarantined
+2026-07-28) — all live under `Engine/Source/Legacy/`, **NOT globbed by the engine DLL** (compiled = zero). Their old-world tests live in `Engine/Tests/Legacy/`. **Do not add new
 dependencies on any of it, and do not re-glob `Legacy/`.** It will be deleted; anything you hang off it dies with
 it. *(Exception: `Core/Systems/Subsystem.h` — `ISubsystem`/`ISubsystemManager` — stayed LIVE; it is the base of
 the new `EngineSubsystemBase`.)* Next: Gregory-layer the live remainder (plan `inherited-orbiting-clover.md`).
