@@ -110,22 +110,38 @@ namespace Opaax
     // =========================================================================
     // Lifecycle
     // =========================================================================
+    void Engine::BootSubsystems()
+    {
+        // Construct only. Nothing has started, so no world exists and no registry is sealed —
+        // this is the window a game module registers into (MR2).
+        m_Subsystems.CreateAll();
+        CacheSubsystems();
+    }
+
+    void Engine::CacheSubsystems()
+    {
+        // Resolve-from-manager, never a lazy self-Startup (F3 / L6). Safe to run before or
+        // after StartupAll: the create pass is what populates the list.
+        m_Resources       = m_Subsystems.GetSubsystem<ResourceManager>();
+        m_RendererManager = m_Subsystems.GetSubsystem<RendererManager>();
+        m_EngineEventBus  = m_Subsystems.GetSubsystem<EngineEventBus>();
+        m_WorldManager    = m_Subsystems.GetSubsystem<WorldManager>();
+    }
+
     bool Engine::Startup()
     {
         if (m_bStarted)
         {
             return true;
         }
-        
+
         CacheAppServices();
 
+        // Creates anything BootSubsystems didn't (a host may never call it), then starts.
         m_Subsystems.StartupAll();
-        
-        m_Resources         = m_Subsystems.GetSubsystem<ResourceManager>();
-        m_RendererManager   = m_Subsystems.GetSubsystem<RendererManager>();
-        m_EngineEventBus    = m_Subsystems.GetSubsystem<EngineEventBus>();
-        m_WorldManager      = m_Subsystems.GetSubsystem<WorldManager>();
-        
+
+        CacheSubsystems();
+
         // Wire the async worker pool from the app service locator (null object if none),
         // so ResourceManager::LoadAsync can run file IO/decode off the main thread.
         if (m_Resources != nullptr)

@@ -2,7 +2,7 @@
 
 #include "SandboxEditorModule.h"
 #include "Sandbox.h"
-#include "Application/Modules/ModuleRegistrar.h"
+#include "Engine/Modules/ModuleRegistrar.h"
 #include "Application/Services/IEngine.h"
 #include "World/WorldManager.h"
 #include "World/World.h"

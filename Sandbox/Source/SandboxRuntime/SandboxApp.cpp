@@ -6,7 +6,7 @@
 #include "World/World.h"
 #include "World/Entity/Entity.h"
 #include "World/Components/DummyComponent.h"
-#include "Application/Modules/ModuleRegistrar.h"
+#include "Engine/Modules/ModuleRegistrar.h"
 #include "Sandbox.h"
 
 SandboxApp::SandboxApp(int InArgc, char** InArgv) : Opaax::OpaaxApplication(InArgc, InArgv)

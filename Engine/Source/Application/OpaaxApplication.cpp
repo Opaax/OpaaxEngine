@@ -8,6 +8,8 @@
 
 #include "Engine/Config/Config_Engine.h"
 #include "Engine/Engine.h"
+#include "Engine/Modules/ModuleRegistrar.h"
+#include "World/WorldManager.h" // GetWorldManager() is forward-declared on IEngine
 #include "Engine/Subsystems/EventBus/EngineEventBus.h"
 #include "Engine/Subsystems/Input/InputEvents.h"
 
@@ -37,6 +39,7 @@ AppServiceLocator OpaaxApplication::m_Services = AppServiceLocator();
 OpaaxApplication::OpaaxApplication(int InArgc, char** InArgv)
     : m_Argc(InArgc)
     , m_Argv(InArgv)
+    , m_ModuleRegistrar(MakeUnique<ModuleRegistrar>())
 {
 }
 
@@ -280,10 +283,18 @@ void OpaaxApplication::ShutdownApplication()
 void OpaaxApplication::EngineStartup()
 {
     PreEngineStartup();
-    
-    RegisterModules(m_ModuleRegistrar);
+
+    // Construct the subsystems WITHOUT starting them. This is the only point at which the
+    // engine registries exist and no world does — WorldManager::Startup creates the first
+    // world, which seals ComponentRegistry, so registering after Startup is always too late.
+    Engine().BootSubsystems();
+
+    m_ModuleRegistrar->BindEngineRegistries(Engine().GetWorldManager().GetComponentRegistry());
+
+    RegisterModules(*m_ModuleRegistrar);
     OnModulesRegistered();
-    
+
+    // Seals the ComponentRegistry on its way to the first world (Editor.md §3 L1).
     Engine().Startup();
     
     PostEngineStartup();

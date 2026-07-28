@@ -1,6 +1,7 @@
 #include "Sandbox.h"
 
-#include "Application/Modules/ModuleRegistrar.h"
+#include "Engine/Modules/ModuleRegistrar.h"
+#include "Components/HealthComponent.h"
 #include "World/Components/DummyComponent.h"
 #include "Application/Services/ILogger.h"  // OPAAX_LOG + LogCategory
 #include "World/World.h"
@@ -16,10 +17,14 @@ namespace
 
 void SandboxModule::OnRegister(Opaax::ModuleRegistrar& InRegistrar)
 {
-    // NOTE: M0 demonstrative — DummyComponent is the one component the game currently uses (an engine
-    // bring-up type). Registering it here proves the Components() route + the boot flow end to end.
-    // Real Sandbox components replace it once they exist; the call site stays identical.
-    InRegistrar.Components().Register<Opaax::DummyComponent>();
+    // A component the GAME owns — the engine has never heard of HealthComponent, yet it
+    // round-trips through capture/instantiate like any native type. That is the whole point
+    // of the route: satisfying CComponent is the entire contract.
+    //
+    // NOTE: DummyComponent is deliberately NOT registered here any more. It is an engine
+    // type, and the engine registers its own natives first (MR2) — asking again would be
+    // refused as a duplicate.
+    InRegistrar.Components().Register<Sandbox::HealthComponent>();
 
     OPAAX_LOG(LogSandboxModule, Info,
         "RegisterModule: components={}, worldSubsystems={}",
@@ -36,6 +41,10 @@ void SandboxModule::SpawnDemoWorld(Opaax::World& InWorld)
         lComp.Position = InPos;
         lComp.Size     = { 120.f, 120.f };
         lComp.Color    = InColor;
+
+        // Carried by the demo quads so the registered game component has a real user, not
+        // just a registration.
+        lEntity.Add<Sandbox::HealthComponent>();
     };
 
     lSpawn("QuadRed",   { -200.f, 0.f }, { 1.f,  0.2f, 0.2f, 1.f });

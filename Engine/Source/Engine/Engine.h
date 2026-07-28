@@ -97,6 +97,7 @@ namespace Opaax
         //~Begin IEngine interface
     public:
         bool Startup() override;
+        void BootSubsystems() override;
         void Loop() override;
         void PresentBackbuffer() override;
         void SetPrimaryRenderTarget(IRenderTarget* InTarget) override;
@@ -164,5 +165,12 @@ namespace Opaax
         Uint64             m_LastTickNs = 0;
         bool               m_bHasTick   = false;
         bool               m_bStarted  = false;
+
+        // =============================================================================
+        // Functions
+        // =============================================================================
+    private:
+        /** Resolve the sibling convenience pointers from the manager (F3, never lazy-Startup). */
+        void CacheSubsystems();
     };
 }

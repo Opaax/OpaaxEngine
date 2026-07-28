@@ -21,6 +21,7 @@ namespace Opaax
             bool IsNull() const noexcept override { return true; }
 
             bool Startup()                override { return true; }
+            void BootSubsystems()         override {} // no subsystems to construct
             void Loop()                   override {}
             void PresentBackbuffer()      override {}
             void SetPrimaryRenderTarget(IRenderTarget*) override {}

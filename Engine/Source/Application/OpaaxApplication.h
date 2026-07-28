@@ -3,11 +3,16 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Application/Services/AppServiceLocator.h"
-#include "Application/Modules/ModuleRegistrar.h"
 #include "Core/Events/Event.h"
 
 namespace Opaax
 {
+    // NOTE: ModuleRegistrar is an ENGINE-layer type (it fronts the engine registries) and is
+    // held by pointer on purpose — including its header here would pull World/ and entt into
+    // every consumer of this Application header. Composition roots that actually register
+    // something include Engine/Modules/ModuleRegistrar.h themselves.
+    class ModuleRegistrar;
+
     class IEngine;
     class IConfigSystem;
     class IProjectManager;
@@ -214,10 +219,11 @@ namespace Opaax
         bool bIsRunning         = false;
         bool bHasShutdown       = false;
 
-        // Populated at OnRegisterModules (D9). At M0 it only records registration counts; from M3/M4
-        // its routes forward to the real engine registries. Owned by the app so the record survives
-        // boot for inspection/tests.
-        ModuleRegistrar m_ModuleRegistrar;
+        // Populated at RegisterModules (D9). Components() forwards to the real ComponentRegistry
+        // since M3; WorldSubsystems() still counts until M4. Owned by the app so the record
+        // survives boot for inspection/tests — by UniquePtr because the type is only
+        // forward-declared here (see the NOTE at the top).
+        UniquePtr<ModuleRegistrar> m_ModuleRegistrar;
 
         static AppServiceLocator m_Services;
     };
