@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include <json.hpp>
 #include <string_view>
 #include "Core/OpaaxTypes.h"
 #include "Core/EngineAPI.h"

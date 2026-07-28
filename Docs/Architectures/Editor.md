@@ -26,7 +26,7 @@ Opaax/
 │                           UI backends, extension registries. Links Engine.
 │
 └── <Game>/                       (Sandbox is the first instantiation, M0)
-    ├── Module/           → static lib: components, scenes, world subsystems,
+    ├── Module/           → static lib: components, maps, world subsystems,
     │                       RegisterModule()          → linked by BOTH exes
     ├── Editor/           → the game's editor extensions: custom drawers,
     │                       panels, asset actions, IEditorModule
@@ -64,14 +64,18 @@ The order **is** the design. The host guarantees it; nothing else may.
 
 ```
 Bootstrap
- └─ BootEngine             → Engine builds the WorldSubsystemRegistry
-                             and registers its native candidates
-OnRegisterModules (seam)   → game module: components → ComponentRegistry,
-                             world subsystems → WorldSubsystemRegistry
-EditorService registration → editor module adds its Edit-world candidates
-                             through the SAME registry
+ └─ BootEngine             → provides the IEngine service.
+                             The subsystems do NOT exist yet.
 EngineStartup
- └─ WorldManager receives the registry, SEALS it, creates the first world
+ ├─ BootSubsystems         → subsystems CONSTRUCTED, none started. Engine natives
+ │                           register here (ComponentRegistry). THE ONLY WINDOW in
+ │                           which the registries exist and no world does.
+ ├─ RegisterModules (seam) → game module: components → ComponentRegistry,
+ │                           world subsystems → WorldSubsystemRegistry
+ ├─ OnModulesRegistered    → editor module adds its Edit-world candidates through
+ │                           the SAME registry, then seals its own registries
+ └─ Engine().Startup()     → subsystems START. WorldManager SEALS ComponentRegistry
+                             and creates the first world.
 
 CreateWorld(name, mode)                        DestroyWorld(world)
  └─ per candidate:                              └─ broadcast WorldDestroying
@@ -83,6 +87,13 @@ CreateWorld(name, mode)                        DestroyWorld(world)
 ```
 
 Three sources — engine natives, game module, editor module — one registry, one mechanism.
+
+**Why construction is split from startup (M3).** `StartupAll` used to construct *and* start in one call, so
+no registry existed until the engine had already started — and starting is what creates the first world,
+which seals. Registration had nowhere legal to stand. `BootSubsystems` opens that window; `StartupAll`
+still constructs first, so a host that never splits behaves identically. This diagram described the
+intended order for three milestones before the code could actually honour it — planning artifacts age
+(`.claude/lessons.md` L19, L22).
 
 ---
 
@@ -108,7 +119,7 @@ InRegistrar.WorldSubsystems().Register<WaveSpawnSubsystem>();
 ```
 
 ### The registry
-- Built by `Engine` at `BootEngine`. Fed by three sources (§2). **No reflection, no static-init discovery** — candidates are handed to the manager as an explicit list; template capture at registration replaces UClass.
+- Built at `BootSubsystems`, not `BootEngine` (§2 — `BootEngine` only provides the service). Fed by three sources. **No reflection, no static-init discovery** — candidates are handed to the manager as an explicit list; template capture at registration replaces UClass.
 - `WorldManager` is the only consumer: it is where worlds are created and destroyed, so it is where subsystem lifetimes are decided.
 
 ### The three locks
@@ -185,11 +196,12 @@ Gameplay input contexts (action maps) are a *game-layer* concept — routing dec
 
 **PIE = capture + re-instantiate. Not a registry memcpy.**
 
-- **Play:** `SceneSerializer` captures the edit world → in-memory description → `SceneFactory` instantiates into a fresh world created with mode `Play` → its `Play` subsystems initialize and rebuild runtime state → `SetActiveWorld(PIE)`. The edit world stays alive, dormant, untouched.
+- **Play:** `MapSerializer::Capture` takes the edit world → `MapData` → `MapFactory::Instantiate` builds it into a fresh world created with mode `Play` → its `Play` subsystems initialize and rebuild runtime state → `SetActiveWorld(PIE)`. The edit world stays alive, dormant, untouched.
 - **Stop:** `SetActiveWorld(Edit)` → `DestroyWorld(PIE)` (subsystems deinit in reverse, runtime state dies with the world). Restore is free — the entire point of clone-on-play.
-- Same code path as runtime scene loading: **PIE = save-to-memory + normal load.** Only the origin of the description differs.
+- Same code path as runtime map loading: **PIE = save-to-memory + normal load.** Only the origin of the `MapData` differs.
+- Capture with **no `MapId` filter** — the clone must include runtime-spawned entities, or it diverges from the world it copied. The filtered form is for "save this map" (M5), not for cloning.
 
-`// PERF:` if profiling ever shows PIE start too slow on large scenes, a binary snapshot fast-path of authoring storages can live behind the same `CloneWorld` API. The contract does not change; do not build it before the profile asks.
+`// PERF:` if profiling ever shows PIE start too slow on large maps, a binary snapshot fast-path of authoring storages can live behind the same `CloneWorld` API. The contract does not change; do not build it before the profile asks.
 
 ### D7 — Component rule: authoring vs runtime
 Every component classifies **on arrival** in the new world:
@@ -211,7 +223,7 @@ Every component classifies **on arrival** in the new world:
 There is no "editor for the game". `OpaaxEditorLib` is generic; a game's editor executable is a ~10-line composition that registers the game's runtime module (D9) and its editor module (D10). The editor is generic; the game registers *into* it — never the reverse. `SandboxEditor.exe` is the M0–M2 dev host; `GameEditor.exe` is just one more instantiation — the proof that D8 holds.
 
 ### D9 — The GameModule is the unit of reuse
-Game content (components, scenes, world subsystems) lives in `Game/Module`, a static lib linked by **both** exes — not in the application subclass.
+Game content (components, maps, world subsystems) lives in `Game/Module`, a static lib linked by **both** exes — not in the application subclass.
 
 One entry point, `RegisterModule(ModuleRegistrar&)`, invoked through the `OnRegisterModules` seam. The registrar exposes the **engine** registries:
 
@@ -256,7 +268,7 @@ class ShmupEditorModule final : public IEditorModule
 
 Native editor features go through the same registries wherever possible — dogfooding keeps the surface honest.
 
-`ResourceTypes()` is the one route that takes a **descriptor instead of type parameters** (M2d): `Drawers()` needs a template because `TComponent` is a type the editor cannot name, but a file type is a string key plus two labels and a closure — there is nothing to erase. The extension is normalized (lower-cased, leading dot) and interned at registration, so the browser's per-file lookup is an integer compare. The GUID-backed catalog (`.meta` sidecars, rename-safe references) is an M3 upgrade behind this same route, not a different one.
+`ResourceTypes()` is the one route that takes a **descriptor instead of type parameters** (M2d): `Drawers()` needs a template because `TComponent` is a type the editor cannot name, but a file type is a string key plus two labels and a closure — there is nothing to erase. The extension is normalized (lower-cased, leading dot) and interned at registration, so the browser's per-file lookup is an integer compare. The GUID-backed catalog (`.meta` sidecars, rename-safe references) is an M5 upgrade behind this same route, not a different one — map files reference entities by Guid, so stable resource ids matter once maps hit disk.
 
 Supporting decision — **`DebugDraw` belongs to the engine, not the editor**: immediate-mode world-space primitives (lines, boxes, circles). Serves editor overlays *and* dev builds of `Game.exe`. Small renderer addition, lands in M2.
 
@@ -271,12 +283,12 @@ Future direction, deliberately not now: per-type field meta-description generati
 | **M0** | Shell | App seams (`OnProvideServices`, `OnRegisterModules`, `TickFrame`); **Sandbox split into `Module/` + `Runtime/`**; `ModuleRegistrar` skeleton (`Components()` / `WorldSubsystems()` routes accept & store); `OpaaxEditorLib` built as a lib + `SandboxEditor.exe` dev host; `EditorApplication` + `EditorService`; ImGui as **overlay** on the current engine render; input filter + `ResetState` contract; `IEditorModule` + extension registrar skeleton | Dockspace + input capture work; `Sandbox.exe` behavior identical after the split; runtime targets carry zero editor code |
 | **M1** | Viewport | D2 output contract, present moves host-side, `ViewportPanel` rewritten with `EditorContext` injection | The game lives only inside the panel; panel size drives engine resolution |
 | **M2** | Panels & extensions | Hierarchy, Inspector, ResourceBrowser; **`Drawers()` / `Panels()` / `ResourceTypes()` consumed** — native panels register through the same path as game panels; **engine `DebugDraw` API** | Click-select + live transform edit; a Sandbox-module custom drawer *and* custom panel appear with zero changes to `OpaaxEditorLib` |
-| **M3** | Snapshot core | `SceneSerializer`/`SceneFactory` on the new `World`: registry ↔ in-memory description; **`ComponentRegistry` v2** live, fed by `RegisterModule()` | Capture → instantiate round-trip yields an equivalent world (GUIDs preserved), **including module components** |
+| **M3** | Snapshot core | `MapSerializer`/`MapFactory` on the new `World`: registry ↔ `MapData`; **`ComponentRegistry` v2** live, fed by `RegisterModules()`; `MapId` + `EntityMeta::OwnerMap` | Capture → instantiate round-trip yields an equivalent world (GUIDs preserved), **including module components** |
 | **M4** | World subsystems + PIE | **`WorldSubsystemMgr` + sealed `WorldSubsystemRegistry` (§3, all three locks)**; `EWorldMode` as immutable `CreateWorld` parameter; `CloneWorld` (capture + instantiate); Play/Pause/Step toolbar; input route switching; `ResetState` on stop; `EditWorldSystems()` route live | Play runs the game in the viewport with module subsystems live, runtime state rebuilt in `Initialize`; Stop restores the exact edit state; overlays visible in Edit worlds only |
-| **M5** | Scene IO | File save/load, dirty state, **`Menus()`**, recent files | Full author loop: edit → save → close → reopen → play |
+| **M5** | Map/Level IO | `.opaaxmap` / `.opaaxlevel` save/load as resources, dirty state, **`Menus()`**, recent files | Full author loop: edit → save → close → reopen → play |
 
 - M0 renders ImGui *over* the existing engine output on purpose — it validates ImGui, the CMake targets and the event chain in isolation. The renderer is only touched in M1.
-- The snapshot core (M3) sits deliberately **before** PIE (M4): PIE consumes the serializer.
+- The snapshot core (M3) sits deliberately **before** PIE (M4): PIE consumes it. **M3 is in-memory only** — no file IO, no `MapResource`/`LevelResource`, no `LevelManager`, no streaming; that layer is M5.
 - The registration seams and registrar exist from M0 (empty and accepting); the machinery that consumes `WorldSubsystemRegistry` lands in M4.
 
 ---

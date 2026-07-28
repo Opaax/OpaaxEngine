@@ -5,10 +5,9 @@ Resource:
 
 Render:
 - handle/pool DOD RHI, device owning context CREATION, RenderStats overlay, multi-view, camera-view system, full RHI-only DrawSprite, Vulkan device.
-- use nvrhi?
 
 Misc:
 - Skill Code Style.
-- Fix IFilesPath
 - OpaaxString: Make ctor with num version or static convert to OpaaxString
 - continue json format for custom type
+- FileSystem for window
