@@ -35,6 +35,7 @@ set(OPAAX_TEST_SOURCES
     Core/World/WorldEventsTests.cpp
     Core/World/ComponentIdentityTests.cpp
     Core/World/ComponentRegistryTests.cpp
+    Core/World/WorldEntityTests.cpp
     # Assets/AssetIdResolveTests.cpp  # quarantined: Assets moved to Legacy (not linked) — M0.5
     Core/Maths/AngleTests.cpp
 

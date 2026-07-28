@@ -45,15 +45,35 @@ namespace Opaax
     // =========================================================================
     // Entity lifecycle
     // =========================================================================
-    Entity World::CreateEntity(OpaaxString InName)
+    Entity World::CreateEntity(OpaaxString InName, MapId InOwnerMap)
     {
+        return CreateEntityWithGuid(Guid::New(), Move(InName), InOwnerMap);
+    }
+
+    Entity World::CreateEntityWithGuid(const Guid& InGuid, OpaaxString InName, MapId InOwnerMap)
+    {
+        if (!InGuid.IsValid())
+        {
+            OPAAX_LOG(LogWorld, Error, "CreateEntityWithGuid — refused an invalid Guid for '{}'", InName.CStr())
+            return Entity{};
+        }
+
+        // Two entities under one Guid would make FindByGuid answer arbitrarily, and the
+        // second Register would silently evict the first mapping.
+        if (m_Guids.Contains(InGuid))
+        {
+            OPAAX_LOG(LogWorld, Error, "CreateEntityWithGuid — '{}' refused: that Guid is already live in world '{}'",
+                      InName.CStr(), m_Name.CStr())
+            return Entity{};
+        }
+
         const EntityID lEnt  = m_Registry.create();
-        EntityMeta&    lMeta = m_Registry.emplace<EntityMeta>(lEnt, EntityMeta{ Guid::New(), Move(InName) });
+        EntityMeta&    lMeta = m_Registry.emplace<EntityMeta>(lEnt, EntityMeta{ InGuid, Move(InName), InOwnerMap });
         m_Guids.Register(lMeta.Id, lEnt);
         OPAAX_LOG(LogWorld, Trace, "CreateEntity '{}' in world '{}'", lMeta.Name.CStr(), m_Name.CStr())
-        
+
         AddEntityCount();
-        
+
         return Entity{ lEnt, this };
     }
 

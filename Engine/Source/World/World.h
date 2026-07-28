@@ -56,12 +56,29 @@ namespace Opaax
         /**
          * Create an entity stamped with a fresh Guid + EntityMeta.
          * Registered in this GuidRegistry.
-         * 
-         * @param InName 
+         *
+         * @param InName
+         * @param InOwnerMap The Map authoring this entity. Left invalid (the default) the
+         *                   entity is RUNTIME-SPAWNED and filtered capture will skip it.
          * @return The created entity
          */
-        Entity CreateEntity(OpaaxString InName = "Entity");
-        
+        Entity CreateEntity(OpaaxString InName = "Entity", MapId InOwnerMap = {});
+
+        /**
+         * Create an entity carrying a Guid that ALREADY EXISTS — the instantiate half of the
+         * snapshot core. CreateEntity cannot serve this: it mints a fresh Guid, which would
+         * break every inter-entity reference in the map being loaded.
+         *
+         * Refused (invalid Entity returned) when InGuid is invalid or already live in this
+         * World — a duplicate identity would make FindByGuid answer arbitrarily.
+         *
+         * @param InGuid The stable identity to restore.
+         * @param InName
+         * @param InOwnerMap
+         * @return The created entity, or an invalid Entity on refusal.
+         */
+        Entity CreateEntityWithGuid(const Guid& InGuid, OpaaxString InName = "Entity", MapId InOwnerMap = {});
+
         /**
          * @param InEntity The ID of the Entity to destroy
          */
