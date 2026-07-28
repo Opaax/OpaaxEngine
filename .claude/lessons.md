@@ -409,3 +409,62 @@ defect is the one case where "record it" is close to worthless: the note only he
   design was good and its recommendation held up, but its one load-bearing "already proven" claim was false.
   Verify the claims the decision *rests on*, and when one collapses, that is a finding to act on — not a
   footnote.
+
+## L19 — Plan artifacts age; an inherited FIXME and a stale name are both defects you now own (2026-07-27)
+
+**What happened (M2d planning):** two premises of my plan came from *artifacts about* the code rather than
+the code, and the user corrected both in one message.
+(1) The M2 overview called the slice "AssetTypes + AssetBrowser", so I named everything `Asset*` — but
+`Asset` is the **retired** vocabulary (`Legacy/Assets`, unlinked), and the live system is
+`CResource`/`ResourceManager`. The overview predated that rename; I inherited its words without grepping
+them. *"Maybe lets match the terme 'Resource' since the engine use that."*
+(2) The browser needed directory enumeration. `IFileSystem` is the facility for that and was unusable —
+every method private, non-const behind a `const&` accessor — so `EditorService` already called
+`std::filesystem` directly under a FIXME. I planned to add a **second** direct caller plus a NOTE
+explaining why. *"Maybe its time to fix IFileSystem."* Repairing it took ~40 minutes, made the browser's
+scan go through the seam, deleted the FIXME, and added the first tests the facility has ever had — and it
+turned up a real bug nobody had hit: `GetPathIfNCreate` wrapped `CreateDirectories` in try/catch but
+called `IsPathExist` **outside** it, and `fs::exists` throws.
+
+**Why I got it wrong:** I wrote [[L18]] one slice earlier and still repeated its shape. L18 was about a
+defect *I* found, and I read it as "don't file your own findings". But a FIXME someone already wrote is
+not terrain — it is a defect with a note attached, and routing around it is exactly the deferral L18
+names. The tell is unmistakable in hindsight: *I was about to write a comment explaining why I was not
+using the obvious facility.*
+
+**Rules for next time:**
+- **When a comment explains why you are bypassing the right abstraction, that comment is the work item.**
+  An existing FIXME/TODO in your path is inherited scope, not scenery. Repairing a facility you are about
+  to lean on is cheaper than it looks, and it is the only way the seam ever gets exercised ([[L18]] —
+  which applies to defects you inherit, not only to ones you discover).
+- **Re-derive names and constraints from the CODE, not from the plan doc that named the slice.** Planning
+  artifacts freeze the vocabulary of the day they were written; a rename since then makes them actively
+  misleading. Grep the term before adopting it — if `Legacy/` owns it, the name is taken
+  (ARCHITECTURE.md **X4**).
+- **A skeleton call site is a guess when it names a type nothing defines.** `AssetTypes().Register<TAsset,
+  TActions>()` presumed an asset type that never existed; it could not survive contact. Amend the contract
+  (**MR1a**) rather than bend a design to fit a placeholder's shape.
+- When repairing a facility, make the *contract* honest too, not just the access specifier: `error_code`
+  overloads so nothing throws, and `CreateDirectories` answering "the directory exists" rather than
+  forwarding `std::filesystem`'s "I created nothing" `false` for an already-present dir.
+
+## L20 — Never spend unrecoverable user state on a test; and check that the test hits the branch (2026-07-27)
+
+**What happened (M2d S1):** to prove `GetPathIfNCreate` had correctly replaced a direct
+`fs::create_directories`, I ran `rm -f Sandbox/Editor/Save/imgui.ini` and relaunched the editor. It came
+back, so the swap looked verified. But that file is **gitignored and untracked** — unrecoverable — and it
+held the user's saved dock layout, which was regenerated at the default arrangement. Worse, the deletion
+did not even exercise the branch I was testing: removing the *file* leaves the *directory*, so
+`GetPathIfNCreate` took its "already exists" path. I destroyed real state and learned nothing from it.
+
+**Rules for next time:**
+- **Before deleting anything to test with, ask whether it is recoverable.** `git check-ignore <path>` /
+  `git ls-files --error-unmatch <path>` answers it in one command. Gitignored + untracked = gone. Local
+  user state (layouts, saves, configs, logs they are reading) is the user's data even when it is
+  regenerable in principle — the regenerated file is not the one they had.
+- **Exercise destructive branches against a scratch path.** I had *just written* a temp-dir test suite
+  that does exactly this; the right instrument existed and I reached past it for the live file.
+- **Name the branch you intend to hit, then confirm the setup reaches it.** "Delete the file" and "delete
+  the directory" are different preconditions; only one of them tested the code I had changed.
+- If it happens anyway, say so **first**, at the top of the next message — not buried under the green
+  gates that followed.

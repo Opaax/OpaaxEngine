@@ -228,6 +228,13 @@ InRegistrar.WorldSubsystems().Register<WaveSpawnSubsystem>(); // → WorldSubsys
 ```
 **MR1** — The call-site API is **final now**; only the route *bodies* change (M0 counts; M3/M4 forward to
 real registries). Do not change how modules call in.
+**MR1a — …except where the M0 skeleton guessed a payload that did not exist yet** (M2d, 2026-07-27).
+`AssetTypes().Register<TAsset, TActions>()` presumed an asset *type* to bind; the engine has no such type
+(the `CResource` system is load-by-path, and `Legacy/Assets` is unlinked), so the route graduated to
+`ResourceTypes().Register(ResourceTypeDesc{...})` — keyed by file extension, no template. **The test:** a
+skeleton call site is binding when its payload already exists in some form (`Drawers<TComponent,TDrawer>`
+— both real); it is a *guess* when it names a type nothing defines. Amend the contract rather than bend
+the design to a placeholder's shape, and amend `Docs/Architectures/Editor.md` in the same change.
 **MR2** — Order is engine natives → game module → editor module → **seal** (before the first world). The
 editor module slots in before the seal.
 **MR3 — One module shape.** Runtime and editor modules share a marker base **`IModule`**
@@ -255,6 +262,13 @@ the new `EngineSubsystemBase`.)* Next: Gregory-layer the live remainder (plan `i
 a scoped `enum class` / distinct name — never rely on include order or forward-decl tricks to avoid a
 clash. Two unscoped enums sharing enumerator names collide the moment one TU needs both (**L4**).
 **X3 — A rename to `*Old` carries through to enumerators and consumers**, not just the type name.
+**X4 — New code takes the LIVE vocabulary, never the quarantined one** (M2d, 2026-07-27). `Asset` belongs
+to the retired `Legacy/Assets` world (`IAsset`, `AssetRegistry`, `AssetManifest`); the live system is
+`CResource` / `ResourceManager`. So the editor's file browser is `ResourceBrowserPanel` on a
+`ResourceTypes()` route, not `AssetBrowser`/`AssetTypes`. Before naming anything, grep the term: if
+`Legacy/` owns it, the name is taken — reusing it makes every future search ambiguous and quietly
+suggests a lineage the new code does not have. Older planning docs predate such renames; the CODE is the
+vocabulary of record.
 
 ---
 
