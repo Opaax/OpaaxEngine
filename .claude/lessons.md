@@ -468,3 +468,37 @@ did not even exercise the branch I was testing: removing the *file* leaves the *
   the directory" are different preconditions; only one of them tested the code I had changed.
 - If it happens anyway, say so **first**, at the top of the next message — not buried under the green
   gates that followed.
+
+## L21 — Prove the premise with a failing test BEFORE designing on it; and don't let the instrument depend on the thing under test (2026-07-28)
+
+**What happened (`WindowsFileSystem`):** the ask was structural — make `IFileSystem` virtual so each
+platform holds its own type. Written that way, `WindowsFileSystem` would have been a byte-for-byte copy
+of the base, the kind of class that invites "why does this exist?". Before designing, I noticed
+`WindowsPlatform::GetExecutablePath` converts to **CP_UTF8** while `IFileSystem` fed those bytes to
+`std::filesystem::path(const char*)`, and I *believed* MSVC decodes that as ANSI — but "I recall MSVC
+does X" is not a finding. So I wrote the test first and ran it against the unmodified code: `IsPathExist`
+returned **false** for a directory that plainly existed, and `ListDirectory` returned CP-1252 bytes. A
+guessed-at concern became a proven, silent, latent defect — and gave the new class its actual reason to
+exist ([[L18]]: the default is fix it now).
+
+**The near-miss:** my first version of that test wrote the Unicode name as **literal characters**
+(`L"Éclair"`). The build sets no `/utf-8` and the sources have no BOM, so MSVC would decode those source
+bytes *using the ANSI code page* — the exact mechanism under test. The test could have gone red because
+the literal was mangled, or green because both sides were mangled identically. I caught it before
+trusting the result and switched to `\uXXXX` escapes, which mean the same thing regardless of file
+encoding.
+
+**Rules for next time:**
+- **When a design rests on "X behaves badly", make X fail a test before you build the fix.** It costs one
+  build, converts a recollection into evidence, and the failing test becomes the regression gate for
+  free. It also tells you honestly when the concern was imaginary and the smaller change was right.
+- **An instrument must not share a failure mode with the thing it measures** ([[L15]] sharpened: there,
+  the log had to *discriminate*; here, the test must not be decoded by the mechanism under test). Ask
+  what the instrument itself depends on. Encoding tests use escapes, not literals; timing tests don't use
+  the clock under test; a serialisation round-trip that only checks itself proves nothing.
+- **Prefer an assertion that cannot pass by accident.** A CP-1252-representable character (`É`) can
+  round-trip through a wrong-but-consistent encoding; a CJK one (`U+65E5`) cannot survive ANSI at all. Pick
+  the input whose failure is structural, and verify against a *different* API (the OS's wide call) than
+  the one you are testing.
+- A "just make it virtual" refactor is worth a look at what the seam has been quietly getting wrong —
+  splitting an interface is when you finally read the implementation as a contract.

@@ -87,6 +87,23 @@ against the engine DLL). Two correct shapes:
 `OPAAX_API` belongs on **non-template** classes with real compiled members (services, the `Maths` static
 struct, `Engine`), never on the template itself.
 
+**I7 — Every string the engine carries is UTF-8; conversion happens at the PLATFORM boundary** (landed
+2026-07-28). `OpaaxString` is a byte container with no encoding of its own, so the encoding is a
+*convention* — and the platform layer already fixed it by converting `GetExecutablePath` through
+`CP_UTF8`. Therefore any code that hands an engine string to an OS or CRT entry point must convert
+explicitly, because the narrow entry points do **not** assume UTF-8:
+- On MSVC, `std::filesystem::path(const char*)` and every `*A` Win32 function decode using the **ANSI
+  code page**. Feeding them UTF-8 resolves a *different file than the caller named*, with no error
+  anywhere — `IsPathExist` answering false for a directory that exists (proven, `WindowsFileSystem`).
+- The conversion belongs in the platform's own implementation (`Windows/WindowsUtf8.h` —
+  `Utf8ToWide`/`WideToUtf8`), never sprinkled at call sites. Interfaces above the platform state UTF-8
+  in their contract and never see a `wchar_t`.
+- **This fails silently and symmetrically, which is why it needs an invariant rather than care.** A
+  mis-encoded write followed by a mis-encoded read agrees with itself; only checking against the OS's
+  *wide* API reveals the truth. Tests that pin encoding must use `\uXXXX` escapes, not literal
+  characters — the build sets no `/utf-8` and the sources carry no BOM, so a literal would be decoded
+  by the very mechanism under test.
+
 ---
 
 ## LC — Lifecycle: three states, not two
