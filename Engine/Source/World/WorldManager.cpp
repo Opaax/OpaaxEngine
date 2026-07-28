@@ -25,27 +25,12 @@ namespace Opaax
     // =========================================================================
     bool WorldManager::Startup()
     {
-        // NO WORLD IS CREATED HERE, on purpose. Starting a subsystem brings up infrastructure;
-        // creating a world is CONTENT, and it is the host that decides which one (from the
-        // project's startup level). Doing it here also made the boot order unfixable: the first
-        // CreateWorld seals ComponentRegistry, so a world born during subsystem startup sealed
-        // the registry before any game module had a chance to register into it.
-        //
-        // Nothing needs a world to exist this early — every consumer already null-checks
-        // (RendererManager::Render guards; HierarchyPanel renders "No active world.").
         OPAAX_LOG(LogWorldManager, Info, "WorldManager started (no world yet — the host creates it)")
         return true;
     }
 
     void WorldManager::TearDown()
     {
-        // Destroy through DestroyWorld instead of dropping m_Worlds, so every world still
-        // announces OnActiveWorldChanged + OnWorldDestroyed on the way out. This is the LAST
-        // moment those reach anyone: the loop has stopped but Engine is still bound and the
-        // EventBus (registered first, so torn down last) is still alive to deliver them.
-        // Shutdown() cannot do this — Engine unbinds before ShutdownAll.
-        //
-        // Back-to-front: DestroyWorld's erase then finds its target immediately.
         while (!m_Worlds.empty())
         {
             DestroyWorld(m_Worlds.back().get());
@@ -71,10 +56,6 @@ namespace Opaax
     // =========================================================================
     World* WorldManager::CreateWorld(OpaaxString InName)
     {
-        // Seal here rather than in Startup: this is the moment the invariant actually needs to
-        // hold ("no component type may arrive once a world exists" — Editor.md §3 L1), and
-        // enforcing it at the single place worlds are born means no caller has to remember a
-        // separate seal step. Idempotent.
         m_Components.Seal();
 
         m_Worlds.push_back(MakeUnique<World>(Move(InName)));
