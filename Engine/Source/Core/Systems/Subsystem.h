@@ -119,42 +119,26 @@ return StaticTypeID();                                                   \
         }
 
         /**
-         * Construct every registered subsystem WITHOUT starting any of them.
-         *
-         * Its own phase (LC1) because there is a real window between "the subsystems and the
-         * registries they own exist" and "they have started and begun creating state". Module
-         * registration lives in that window: a component type must reach ComponentRegistry
-         * after WorldManager is constructed but before WorldManager::Startup creates the first
-         * world and seals it. Folded into StartupAll, that window is closed and unreachable.
-         *
-         * Idempotent — consumes the factory list, so a second call creates nothing.
+         * Start up all systems: construct every registered subsystem, then start them in
+         * registration order. The create pass completes before ANY Startup runs, which is what
+         * lets a subsystem resolve a sibling during its own Startup (F3).
          */
-        void CreateAll()
+        void StartupAll()
         {
             for (auto& lFactoryFunc : m_Factories)
             {
                 m_Systems.push_back(lFactoryFunc());
             }
 
-            //consumes it
-            m_Factories.clear();
-            m_Factories.shrink_to_fit();
-        }
-
-        /**
-         * Start up all systems. Creates any not yet created, so calling this alone stays
-         * correct for hosts that never split the phases (F3 still holds either way: the
-         * create pass always completes before ANY Startup runs).
-         */
-        void StartupAll()
-        {
-            CreateAll();
-
             // startup in order
             for (auto& lSystem : m_Systems)
             {
                 lSystem->Startup();
             }
+
+            //consumes it
+            m_Factories.clear();
+            m_Factories.shrink_to_fit();
         }
 
         /**

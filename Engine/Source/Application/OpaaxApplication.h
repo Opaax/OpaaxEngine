@@ -172,9 +172,29 @@ namespace Opaax
         virtual void RegisterModules(ModuleRegistrar& InRegistrar) {}
         
         /**
-         * Fires in EngineStartup AFTER RegisterModules (game module registered) and BEFORE Engine().Startup()
+         * Fires in EngineStartup AFTER RegisterModules (game module registered) and BEFORE the
+         * startup world exists.
          */
         virtual void OnModulesRegistered() {}
+
+        /**
+         * Create the world the application starts in — the LAST step of engine boot, once every
+         * subsystem is up and every module has registered.
+         *
+         * Deliberately not done by `WorldManager::Startup`: starting a subsystem brings up
+         * infrastructure, whereas choosing a world is content, and the choice belongs to the host.
+         * It also has to happen here for a mechanical reason — the first `CreateWorld` SEALS
+         * `ComponentRegistry`, so a world created any earlier would lock out the game module.
+         *
+         * Base implementation creates and activates one world named after the project's
+         * `StartupLevel` (falling back to "Main"). Override to open something else — the editor
+         * will want the last-opened map rather than the game's startup level. Overriding with an
+         * empty body is legal: every world consumer already handles "no active world".
+         *
+         * NOTE (M5): this only NAMES the world today. Loading that level's maps into it needs the
+         * `.opaaxlevel` / `.opaaxmap` file layer, which does not exist yet.
+         */
+        virtual void CreateStartupWorld();
         
         // End Modules
         // =============================================================================

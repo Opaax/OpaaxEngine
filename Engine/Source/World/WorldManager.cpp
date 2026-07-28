@@ -25,11 +25,15 @@ namespace Opaax
     // =========================================================================
     bool WorldManager::Startup()
     {
-        // Always have a render target: spin up a default world and make it active.
-        World* lDefault = CreateWorld("Main");
-        SetActiveWorld(lDefault);
-
-        OPAAX_LOG(LogWorldManager, Info, "WorldManager started ({} world(s))", GetWorldCount())
+        // NO WORLD IS CREATED HERE, on purpose. Starting a subsystem brings up infrastructure;
+        // creating a world is CONTENT, and it is the host that decides which one (from the
+        // project's startup level). Doing it here also made the boot order unfixable: the first
+        // CreateWorld seals ComponentRegistry, so a world born during subsystem startup sealed
+        // the registry before any game module had a chance to register into it.
+        //
+        // Nothing needs a world to exist this early — every consumer already null-checks
+        // (RendererManager::Render guards; HierarchyPanel renders "No active world.").
+        OPAAX_LOG(LogWorldManager, Info, "WorldManager started (no world yet — the host creates it)")
         return true;
     }
 
@@ -67,9 +71,10 @@ namespace Opaax
     // =========================================================================
     World* WorldManager::CreateWorld(OpaaxString InName)
     {
-        // Editor.md §3 L1 — the registry seals at the FIRST world. A component type accepted
-        // after this point would be silently absent from every entity in a world that already
-        // exists, so Register refuses (loudly) from here on. Idempotent.
+        // Seal here rather than in Startup: this is the moment the invariant actually needs to
+        // hold ("no component type may arrive once a world exists" — Editor.md §3 L1), and
+        // enforcing it at the single place worlds are born means no caller has to remember a
+        // separate seal step. Idempotent.
         m_Components.Seal();
 
         m_Worlds.push_back(MakeUnique<World>(Move(InName)));

@@ -97,7 +97,6 @@ namespace Opaax
         //~Begin IEngine interface
     public:
         bool Startup() override;
-        void BootSubsystems() override;
         void Loop() override;
         void PresentBackbuffer() override;
         void SetPrimaryRenderTarget(IRenderTarget* InTarget) override;

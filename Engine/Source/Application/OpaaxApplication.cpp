@@ -284,20 +284,39 @@ void OpaaxApplication::EngineStartup()
 {
     PreEngineStartup();
 
-    // Construct the subsystems WITHOUT starting them. This is the only point at which the
-    // engine registries exist and no world does — WorldManager::Startup creates the first
-    // world, which seals ComponentRegistry, so registering after Startup is always too late.
-    Engine().BootSubsystems();
+    // 1. Infrastructure. Every subsystem is constructed and started — and NO world exists,
+    //    which is what leaves ComponentRegistry unsealed for the steps below.
+    Engine().Startup();
 
+    // 2. Content types. The registries are live; nothing has locked them yet (MR2).
     m_ModuleRegistrar->BindEngineRegistries(Engine().GetWorldManager().GetComponentRegistry());
-
     RegisterModules(*m_ModuleRegistrar);
     OnModulesRegistered();
 
-    // Seals the ComponentRegistry on its way to the first world (Editor.md §3 L1).
-    Engine().Startup();
-    
+    // 3. Content. The first CreateWorld seals the registries on its way through, so this must
+    //    come last — and being last is exactly why the registration above had room to happen.
+    CreateStartupWorld();
+
     PostEngineStartup();
+}
+
+void OpaaxApplication::CreateStartupWorld()
+{
+    // The project decides, not the engine: <Name>.opaaxproj carries the startup level. Empty
+    // (or no project file) falls back to "Main" so a bare host still boots into something.
+    OpaaxString lWorldName = ProjectManager().StartupLevel();
+
+    if (lWorldName.IsEmpty())
+    {
+        lWorldName = OpaaxString("Main");
+    }
+
+    WorldManager& lWorlds = Engine().GetWorldManager();
+
+    World* lWorld = lWorlds.CreateWorld(lWorldName);
+    lWorlds.SetActiveWorld(lWorld);
+
+    OPAAX_APP_LOG(Info, "Startup world '{}' created and activated", lWorldName.CStr())
 }
 
 void OpaaxApplication::EngineTeardown()

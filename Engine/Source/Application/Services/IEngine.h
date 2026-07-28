@@ -39,21 +39,6 @@ namespace Opaax
         virtual bool Startup()                          = 0;
 
         /**
-         * Construct the engine subsystems WITHOUT starting them, opening the window in which
-         * a game module registers (MR2: engine natives -> game module -> editor module ->
-         * seal -> first world).
-         *
-         * Startup() creates anything still missing, so this is an optional early call rather
-         * than a new mandatory step — but it is the ONLY way to reach a registry before the
-         * subsystem that owns it starts creating state. WorldManager::Startup makes the first
-         * world, which seals ComponentRegistry; without this phase, module registration is
-         * necessarily too late.
-         *
-         * Idempotent.
-         */
-        virtual void BootSubsystems()                   = 0;
-
-        /**
          * Engine Loop
          */
         virtual void Loop()                             = 0;

@@ -25,7 +25,11 @@ namespace Opaax
         inline const char* PROJECT_NAME_KEY                     = "name";
         inline const char* PROJECT_ID_KEY                       = "id";
         inline const char* PROJECT_ENGINE_VERSION_KEY           = "engineVersion";
-        inline const char* PROJECT_STARTUP_LEVEL_KEY            = "startupScene";
+        // Read in order, first non-empty wins. "startupLevel" is the LIVE vocabulary (X4 —
+        // World > Level > Map); the two below it are Scene-era keys kept so existing
+        // .opaaxproj files keep opening. New projects should only ever write the first.
+        inline const char* PROJECT_STARTUP_LEVEL_KEY            = "startupLevel";
+        inline const char* PROJECT_STARTUP_LEVEL_KEY_LEGACY     = "startupScene";
         inline const char* PROJECT_STARTUP_LEVEL_KEY_DEFAULT    = "defaultScene";
     }
 

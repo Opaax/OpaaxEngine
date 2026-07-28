@@ -110,14 +110,6 @@ namespace Opaax
     // =========================================================================
     // Lifecycle
     // =========================================================================
-    void Engine::BootSubsystems()
-    {
-        // Construct only. Nothing has started, so no world exists and no registry is sealed —
-        // this is the window a game module registers into (MR2).
-        m_Subsystems.CreateAll();
-        CacheSubsystems();
-    }
-
     void Engine::CacheSubsystems()
     {
         // Resolve-from-manager, never a lazy self-Startup (F3 / L6). Safe to run before or
@@ -137,7 +129,9 @@ namespace Opaax
 
         CacheAppServices();
 
-        // Creates anything BootSubsystems didn't (a host may never call it), then starts.
+        // Constructs then starts. No world exists when this returns — the host creates it
+        // (OpaaxApplication::CreateStartupWorld), which is also what keeps ComponentRegistry
+        // unsealed long enough for a game module to register into it.
         m_Subsystems.StartupAll();
 
         CacheSubsystems();

@@ -58,7 +58,12 @@ namespace Opaax
         lOut.EngineVersion = lReadString(Opaax_Project_Identity::PROJECT_ENGINE_VERSION_KEY);
         lOut.StartupLevel  = lReadString(Opaax_Project_Identity::PROJECT_STARTUP_LEVEL_KEY);
 
-        // Legacy fallback — older .opaaxproj files store the scene as "defaultScene".
+        // Scene-era fallbacks, newest first — older .opaaxproj files predate the World > Level >
+        // Map vocabulary (X4) and store this as "startupScene" or, older still, "defaultScene".
+        if (lOut.StartupLevel.IsEmpty())
+        {
+            lOut.StartupLevel = lReadString(Opaax_Project_Identity::PROJECT_STARTUP_LEVEL_KEY_LEGACY);
+        }
         if (lOut.StartupLevel.IsEmpty())
         {
             lOut.StartupLevel = lReadString(Opaax_Project_Identity::PROJECT_STARTUP_LEVEL_KEY_DEFAULT);

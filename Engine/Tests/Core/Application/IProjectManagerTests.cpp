@@ -23,6 +23,26 @@ TEST_CASE("ParseProjectIdentity: full schema reads every field")
     CHECK(lId.StartupLevel  == "Scenes/Main.opaaxscene");
 }
 
+TEST_CASE("ParseProjectIdentity: 'startupLevel' is the live key and wins over both Scene-era ones")
+{
+    // X4 — the World > Level > Map vocabulary. A project carrying all three (mid-migration)
+    // must resolve to the new one, or migrating a project would silently change nothing.
+    const ProjectIdentity lId = ParseProjectIdentity(OpaaxString(
+        R"({"name":"MyGame","startupLevel":"Levels/Main.opaaxlevel",)"
+        R"("startupScene":"Scenes/Old.opaaxscene","defaultScene":"Scenes/Older.opaaxscene"})"));
+
+    CHECK(lId.StartupLevel == "Levels/Main.opaaxlevel");
+}
+
+TEST_CASE("ParseProjectIdentity: 'startupScene' still feeds StartupLevel when the live key is absent")
+{
+    const ProjectIdentity lId = ParseProjectIdentity(OpaaxString(
+        R"({"name":"MyGame","startupScene":"Scenes/Main.opaaxscene","defaultScene":"Scenes/Older.opaaxscene"})"));
+
+    // Two fallbacks deep: an existing project keeps opening without being rewritten.
+    CHECK(lId.StartupLevel == "Scenes/Main.opaaxscene");
+}
+
 TEST_CASE("ParseProjectIdentity: legacy 'defaultScene' feeds StartupLevel")
 {
     const ProjectIdentity lId = ParseProjectIdentity(OpaaxString(
