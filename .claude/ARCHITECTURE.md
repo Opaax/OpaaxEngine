@@ -86,6 +86,19 @@ against the engine DLL). Two correct shapes:
   small value types (project value **Simple**) — prefer header-only.
 `OPAAX_API` belongs on **non-template** classes with real compiled members (services, the `Maths` static
 struct, `Engine`), never on the template itself.
+- **Corollary (M3): `OPAAX_API` instantiates every IMPLICITLY-declared member**, so an exported class
+  holding a move-only member (`TDynArray<UniquePtr<T>>`) fails to compile on its implicit *copy*-assign
+  (C2280) even though nothing ever copies one. Declaring copy/move `= delete` is therefore **required**,
+  not hygiene — the shape `World` already uses, now also `ComponentRegistry`.
+
+**I8 — A component is defined by a CONCEPT, not a base class** (landed M3, 2026-07-28). `CComponent`
+(`World/Components/ComponentConcept.hpp`) requires nlohmann `to_json`/`from_json` by ADL — the same
+concept-over-base-class shape as `CResource`, and the only shape available: **entt stores components by
+value**, which is why `ComponentBase` is empty and non-virtual, so `Save`/`Load` cannot be member virtuals
+the way the retired `Legacy/ECS/ComponentRegistry` did it. A game component costs one
+`NLOHMANN_DEFINE_TYPE_INTRUSIVE` and one `Components().Register<T>()`; the engine names it nowhere.
+`EntityMeta` deliberately does **not** satisfy it — identity is not user data, and the snapshot core writes
+those fields by hand rather than nesting an entity's identity inside its own payload.
 
 **I7 — Every string the engine carries is UTF-8; conversion happens at the PLATFORM boundary** (landed
 2026-07-28). `OpaaxString` is a byte container with no encoding of its own, so the encoding is a
@@ -154,6 +167,20 @@ Platform → Paths → Logger(Paths) → Config(Paths)+PreRegisterConfig
 *(This supersedes L1's note that IEngine is created post-window — it is created in Bootstrap, started post-window.)*
 **BO3** — The **window** is created in `InitializeApplication()`, not Bootstrap — it needs a live GL/VK context.
 `WindowManager` (the service) is booted in Bootstrap; the window object comes later.
+
+**BO4 — Subsystems are CONSTRUCTED before they are STARTED; module registration lives in that gap**
+(landed M3, 2026-07-28). `ISubsystemManager::CreateAll()` runs the factory pass alone; `StartupAll()` calls
+it first and then starts, so a host that never splits the phases is byte-identical and **F3 still holds**
+(the create pass always completes before *any* `Startup`). `IEngine::BootSubsystems()` exposes the split,
+and `EngineStartup` calls it **before** `RegisterModules`.
+
+This is the **only** window in which the engine registries exist and no world does — `WorldManager::Startup`
+creates the first world, which **seals** `ComponentRegistry`, so registering after `Engine().Startup()` is
+always too late. **Before M3 that window did not exist**: `StartupAll` did both passes, and reaching a
+subsystem early via `Engine::GetWorldManager()` tripped its lazy-Startup safety net and booted the whole
+engine — **L6's failure from the caller's side**, and the reason the SE table's "registries exist
+(post-BootEngine)" was aspiration rather than fact until now. This is **LC1 one scope over**: the missing
+thing was a phase, not a workaround.
 
 **Full frame of the run:**
 `Bootstrap() → InitializeApplication() [window] → RunApplication{ EngineStartup → loop → EngineTeardown } → ShutdownApplication()`
@@ -248,7 +275,7 @@ not overriding them leaves runtime byte-identical.
 | `PreRegisterConfig()` | in Bootstrap | register config types before load |
 | `OnProvideServices(locator)` | end of Bootstrap | add host-owned app services (editor adds `IEditorService`) |
 | `PreEngineStartup()` | start of `EngineStartup` | before subsystems start |
-| `RegisterModules(registrar)` | in `EngineStartup`, registries exist, **no world yet** | route the game module — drives `IRuntimeModule::OnRegister` (**MR**) |
+| `RegisterModules(registrar)` | in `EngineStartup`, **after `Engine().BootSubsystems()`** (BO4) so registries exist, **no world yet** | route the game module — drives `IRuntimeModule::OnRegister` (**MR**) |
 | `OnModulesRegistered()` | in `EngineStartup`, **after** `OnRegisterModules`, **before** `Engine().Startup()` (still no world) | editor registers its D10 extensions and **seals before the first world** (§2). `EditorApplication` overrides → `EditorService::RegisterExtensions`, which registers the editor's own **native** panels first, then drives each `IEditorModule::OnRegister(EditorExtensionRegistrar&)`, then seals — **MR2's order one level down** (natives → game module → seal), so a native panel travels the same route as a game panel with no privileged path. Generic engine-side name (no editor types) — the engine stays editor-ignorant (**D4**). |
 | `PostEngineStartup()` | end of `EngineStartup` | after subsystems start (editor inits `EditorService`) |
 | `TickFrame()` | per loop iter | base = `Engine().Loop()`; editor wraps it UI-begin → Loop → UI-end |
@@ -265,7 +292,15 @@ InRegistrar.Components().Register<TransformComponent>();      // → ComponentRe
 InRegistrar.WorldSubsystems().Register<WaveSpawnSubsystem>(); // → WorldSubsystemRegistry (M4)
 ```
 **MR1** — The call-site API is **final now**; only the route *bodies* change (M0 counts; M3/M4 forward to
-real registries). Do not change how modules call in.
+real registries). Do not change how modules call in. **`Components()` went real in M3** and the call site
+did survive verbatim, because the authoring name is *optional*: omitted, `ComponentRoute` derives the C++
+type's leaf name (`Opaax::DummyComponent` → `"DummyComponent"`). That derived name is the key written into
+map files, so renaming the C++ type orphans components already saved — pass an explicit name to pin it.
+Not silent when it happens: `MapFactory` warns per unknown component as it skips them.
+**`ModuleRegistrar` moved to the ENGINE layer in M3** (`Engine/Modules/`): it exists to front the engine
+registries, and by **I4** a registrar that knows about component types knows about worlds. It could live in
+Application only while it knew nothing but a count. `OpaaxApplication` holds it behind a forward declaration
+so **no Application header includes from `World/` or `Engine/`** — a discipline the tree has never broken.
 **MR1a — …except where the M0 skeleton guessed a payload that did not exist yet** (M2d, 2026-07-27).
 `AssetTypes().Register<TAsset, TActions>()` presumed an asset *type* to bind; the engine has no such type
 (the `CResource` system is load-by-path, and `Legacy/Assets` is unlinked), so the route graduated to
@@ -282,6 +317,45 @@ interface — the two register into *different* registrars, so it can't sit on t
 header-only pure interfaces, **no `OPAAX_API`** (no exported symbols / shared state / identity tag — the
 opposite end of the axis from **I2**). A host invokes a module as a throwaway instance
 (`SandboxModule().OnRegister(reg)`), symmetric across runtime and editor.
+
+---
+
+## WM — World model (World > Level > Map)
+
+Settled with the user 2026-07-28, superseding the retired `Scene` vocabulary (**X4**). Source of concepts:
+`Docs/Architectures/EngineArchi.md` — stale in places, see WM5.
+
+**WM1 — Three nouns, one registry.** `World` is the runtime simulation container and **the ECS boundary**:
+it owns the single `entt::registry` and the `WorldGuidRegistry`. A `Level` composes Maps and handles
+streaming. A `Map` is **pure entity data** — no systems, no runtime ownership — and is therefore **the
+serialization unit**. `World { RootLevel (1 map, always mounted, world-scope defaults) + ActiveLevel (N
+maps, streamed) }`. Both levels are real Levels holding real Maps; they differ only by a streaming policy,
+which is why `Level` does not mean two things.
+
+**WM2 — A Map is a PARTITION of the World's registry, not a container.** One World owns one registry, so
+"the entities of map X" is a filter, not a separate store. `EntityMeta::OwnerMap` (`MapId` =
+`OpaaxStringID`, interned) is what makes the partition addressable. **Default-invalid means
+runtime-spawned** — a bullet no map authored — so filtered capture excludes it *by the rule* rather than by
+a special case. Unfiltered capture takes the whole world (the PIE-clone case).
+
+**WM3 — Guid is the only persistent reference.** entt handles are per-registry and never assumed stable
+across worlds, so capture→instantiate must preserve GUIDs or every inter-entity reference silently retargets.
+`World::CreateEntity` mints a fresh Guid and therefore **cannot** serve instantiate;
+`CreateEntityWithGuid` is the restoring entry point, and it refuses an already-live Guid because
+`WorldGuidRegistry::Register` *replaces* — a duplicate would evict the original and `FindByGuid` would
+start answering the impostor.
+
+**WM4 — A Level's maps are NOT `LoadContext::Acquire`d.** Both are resources (`.opaaxlevel` = a manifest of
+map refs + stream rules; `.opaaxmap` = entity data; lowercase, matching the shipped `.opaaxproj`). `Acquire`
+is for *hard* dependencies: it loads them inline and chains their refcounts to the parent, so acquiring a
+level's maps would load every one of them at once and make unloading a single map impossible — the exact
+opposite of streaming. The manifest stays **data**; `LevelManager` loads maps per stream request and holds
+those refs itself. A Map's *textures* are `Acquire`; a Level's *maps* are not.
+
+**WM5 — `EngineArchi.md` is behind the code in two places** (code wins, X4): it puts `MapId ownerMap` in
+`EntityMeta` as though it were already there (M3 S2 actually added it), and it makes `GuidRegistry` global
+(`Guid → World*, entt::entity`) where the code made it **per-World** — entt handles are only valid inside
+their own registry, so a Guid resolves through its world and never crosses worlds.
 
 ---
 

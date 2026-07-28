@@ -502,3 +502,39 @@ encoding.
   the one you are testing.
 - A "just make it virtual" refactor is worth a look at what the seam has been quietly getting wrong —
   splitting an interface is when you finally read the implementation as a contract.
+
+## L22 — A plan's claim about BOOT ORDER is a premise to prove; and a test that constructs its subject directly can never catch a wiring bug (2026-07-28)
+
+**What happened (M3 S4):** my approved plan asserted "the subsystem create-pass has already run
+(BootEngine), so WorldManager — and the ComponentRegistry it owns — exist". It hadn't.
+`ISubsystemManager::StartupAll` did the create pass *and* the startup pass in one call, so no
+subsystem instance existed until `Engine::Startup()`. My bind call therefore reached
+`Engine().GetWorldManager()`, hit that accessor's lazy-Startup safety net, and **booted the whole
+engine 0.7s early** — world created, `ComponentRegistry` sealed, and the game module's component
+refused when `RegisterModules` finally ran. I had taken the claim from **ARCHITECTURE.md's own SE
+table** ("registries exist (post-BootEngine)"), which turned out to be aspiration, not code.
+
+**Why the tests were green the whole time.** All 162 of them passed, including a dedicated
+`ModuleRegistrar` suite that registers a component and round-trips it. They construct a
+`ComponentRegistry` and a `ModuleRegistrar` **directly** — so they verify the route's *logic* while
+saying nothing about *when the real thing is wired during boot*. The only instrument that could
+catch it was the `Sealed with N component type(s)` log line, read in ORDER against the registration
+lines. It was there because [[L15]] says to log the success branch; that is the entire reason this
+was caught before shipping rather than by a user's component silently not saving.
+
+**Rules for next time:**
+- **A lifecycle/ordering claim is a premise, not a finding — even when the CONTRACT states it**
+  ([[L21]] applied to boot order instead of behavior). ARCHITECTURE.md is the record of intent and
+  can drift ahead of the code exactly like a planning doc does ([[L19]]). Verify ordering claims by
+  reading the call chain (`StartupAll` -> factories -> `Startup`) or by a log, before designing on them.
+- **Unit tests that construct the subject directly cannot verify wiring.** When a feature's
+  correctness depends on *where in boot* something is called, the gate must be a run of the real
+  host with an ordered log — not a test that hands the collaborator in. Ask: "could this test pass
+  in a build where the wiring is absent?" Here the answer was yes, for all of them.
+- **A lazy "safety net" accessor turns a too-early call into a silent reorder, not an error**
+  ([[L6]] from the caller's side). `if (!m_bStarted) Startup()` inside a getter means any premature
+  reach *succeeds* while quietly moving the whole boot. When adding a call at a new point in boot,
+  check whether the accessor you use can self-start.
+- **When ordering has no legal window, the missing thing is a PHASE** ([[L7]]/LC1, one scope over).
+  Splitting `CreateAll()` out of `StartupAll()` created the window instead of working around its
+  absence, and left hosts that don't split byte-identical. Recorded as **BO4**.
