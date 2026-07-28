@@ -1,7 +1,25 @@
 #include "WorldManager.h"
 
+#include "World/Components/DummyComponent.h"
+
 namespace Opaax
 {
+    // =========================================================================
+    // CTOR
+    // =========================================================================
+    WorldManager::WorldManager()
+    {
+        RegisterNativeComponents();
+    }
+
+    void WorldManager::RegisterNativeComponents()
+    {
+        // NOTE: DummyComponent is the whole native set today — it is the only live component
+        // type the engine owns. Not a placeholder for the registry: a real type registered
+        // DLL-side is what proves the cross-boundary lookup in ComponentIdentityTests.
+        m_Components.Register<DummyComponent>("Dummy");
+    }
+
     // =========================================================================
     // Lifecycle
     // =========================================================================
@@ -49,6 +67,11 @@ namespace Opaax
     // =========================================================================
     World* WorldManager::CreateWorld(OpaaxString InName)
     {
+        // Editor.md §3 L1 — the registry seals at the FIRST world. A component type accepted
+        // after this point would be silently absent from every entity in a world that already
+        // exists, so Register refuses (loudly) from here on. Idempotent.
+        m_Components.Seal();
+
         m_Worlds.push_back(MakeUnique<World>(Move(InName)));
         World* lWorld = m_Worlds.back().get();
 

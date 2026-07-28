@@ -6,8 +6,28 @@
 namespace glm
 {
     // =============================================================================
+    // Vector 2F
+
+    inline void to_json(nlohmann::json& Json, const vec2& Vector2)
+    {
+        Json = {
+            {"x", Vector2.x},
+            {"y", Vector2.y}
+        };
+    }
+
+    inline void from_json(const nlohmann::json& Json, vec2& Vector2)
+    {
+        Json.at("x").get_to(Vector2.x);
+        Json.at("y").get_to(Vector2.y);
+    }
+
+    // End Vector 2F
+    // =============================================================================
+
+    // =============================================================================
     // Vector 3F
-    
+
     inline void to_json(nlohmann::json& Json, const vec3& Vector3)
     {
         Json = {

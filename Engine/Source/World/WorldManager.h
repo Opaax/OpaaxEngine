@@ -5,6 +5,7 @@
 #include "Core/String/OpaaxString.hpp"
 #include "Application/Services/ILogger.h"
 #include "Engine/Subsystems/EngineSubsystem.h"
+#include "World/ComponentRegistry.h"
 #include "World/World.h"
 #include "World/WorldEvents.h"
 
@@ -30,7 +31,8 @@ namespace Opaax
         // CTORS - DTORS
         // =========================================================================
     public:
-        WorldManager()           = default;
+        /** Registers the engine's native component types — see RegisterNativeComponents. */
+        WorldManager();
         ~WorldManager() override = default;
 
         // =========================================================================
@@ -53,7 +55,15 @@ namespace Opaax
         bool   SetActiveWorld(World* InWorld) noexcept;
 
         Uint64 GetWorldCount() const noexcept { return static_cast<Uint64>(m_Worlds.size()); }
-        
+
+        /**
+         * Every component type the engine and the loaded game module know about. Populated
+         * before the first world exists (engine natives in the ctor, module types through
+         * ModuleRegistrar) and SEALED by the first CreateWorld.
+         */
+        ComponentRegistry&       GetComponentRegistry() noexcept       { return m_Components; }
+        const ComponentRegistry& GetComponentRegistry() const noexcept { return m_Components; }
+
         // End Getters
         // =========================================================================
 
@@ -73,11 +83,24 @@ namespace Opaax
 
         void Shutdown() override;
         //~End EngineSubsystemBase interface
-        
+
+        // =========================================================================
+        // Functions
+        // =========================================================================
+    private:
+        /**
+         * The engine's own component types, registered FIRST so a game module can never
+         * shadow one (MR2: engine natives -> game module -> editor module -> seal). Runs in
+         * the ctor because the subsystem create-pass is the only point that is guaranteed to
+         * precede RegisterModules.
+         */
+        void RegisterNativeComponents();
+
         // =========================================================================
         // Members
         // =========================================================================
     private:
+        ComponentRegistry           m_Components;
         TDynArray<UniquePtr<World>> m_Worlds;
         World*                      m_ActiveWorld = nullptr; // non-owning; points into m_Worlds
         
