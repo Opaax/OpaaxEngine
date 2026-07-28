@@ -95,9 +95,16 @@ explicitly, because the narrow entry points do **not** assume UTF-8:
 - On MSVC, `std::filesystem::path(const char*)` and every `*A` Win32 function decode using the **ANSI
   code page**. Feeding them UTF-8 resolves a *different file than the caller named*, with no error
   anywhere — `IsPathExist` answering false for a directory that exists (proven, `WindowsFileSystem`).
-- The conversion belongs in the platform's own implementation (`Windows/WindowsUtf8.h` —
-  `Utf8ToWide`/`WideToUtf8`), never sprinkled at call sites. Interfaces above the platform state UTF-8
-  in their contract and never see a `wchar_t`.
+- **The conversion is `Core/String/OpaaxUtf8.h`** (`Opaax::Utf8::ToFsPath` / `FromFsPath`, plus
+  Windows-only `ToWide`/`FromWide`). It lives in **Core**, not in the platform folder, because the layers
+  that need it — Core's config IO, the portable `Renderer`'s shader loading — sit *below* Application and
+  cannot reach `IPlatform`. **Never build an `fs::path` or open an `fstream` from `OpaaxString::CStr()`;**
+  `std::fstream` takes an `fs::path` (C++17), so obeying this is a one-line call. Interfaces above the
+  platform state UTF-8 in their contract and never see a `wchar_t`.
+- **`IFileSystem` is one CONSUMER of this rule, not the only legal way to touch a file.** It is reachable
+  only through the service locator, which Core and Renderer must not use; forcing them through it would
+  mean injecting a filesystem into `TConfig` and the `CResource` contract. The encoding is the invariant;
+  the facility is not.
 - **This fails silently and symmetrically, which is why it needs an invariant rather than care.** A
   mis-encoded write followed by a mis-encoded read agrees with itself; only checking against the OS's
   *wide* API reveals the truth. Tests that pin encoding must use `\uXXXX` escapes, not literal
