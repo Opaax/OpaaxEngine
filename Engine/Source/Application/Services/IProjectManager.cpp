@@ -1,6 +1,8 @@
 #include "IProjectManager.h"
 #include "IPaths.h"
 
+#include "Core/String/OpaaxUtf8.h"   // I7 — never open a stream from CStr()
+
 #include <fstream>
 #include <sstream>
 #include <nlohmann/json.hpp>
@@ -12,7 +14,7 @@ namespace Opaax
     {
         OpaaxString ReadFileText(const OpaaxString& InPath)
         {
-            std::ifstream lFile(InPath.CStr());
+            std::ifstream lFile(Utf8::ToFsPath(InPath));
             if (!lFile.is_open()) { return OpaaxString(); }
 
             std::stringstream lBuffer;

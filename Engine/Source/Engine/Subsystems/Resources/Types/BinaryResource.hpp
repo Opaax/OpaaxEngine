@@ -4,6 +4,7 @@
 #include <optional>
 
 #include "Core/OpaaxTypes.h"
+#include "Core/String/OpaaxUtf8.h"   // I7 — never open a stream from a narrow path
 #include "Application/Services/ILogger.h"
 #include "Engine/Subsystems/Resources/ResourceConcept.hpp"
 
@@ -25,7 +26,7 @@ namespace Opaax
 
         static std::optional<BinaryResource> Load(const char* InPath, LoadContext& /*InCtx*/)
         {
-            std::ifstream lFile(InPath, std::ios::binary | std::ios::ate);
+            std::ifstream lFile(Utf8::ToFsPath(OpaaxString(InPath)), std::ios::binary | std::ios::ate);
             if (!lFile.is_open())
             {
                 OPAAX_ENGINE_LOG(Error, "BinaryResource: cannot open '{}'", InPath)

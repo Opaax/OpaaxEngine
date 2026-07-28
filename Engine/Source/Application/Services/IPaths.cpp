@@ -2,6 +2,8 @@
 #include "ILogger.h"
 #include "Application/Services/Platforms/IPlatform.h"
 
+#include "Core/String/OpaaxUtf8.h"   // I7 — the one OpaaxString <-> fs::path conversion
+
 #include <cstring>
 #include <filesystem>
 
@@ -10,13 +12,6 @@ namespace Opaax
     namespace
     {
         namespace fs = std::filesystem;
-
-        // std::filesystem yields '/' via generic_string() on every OS — matches the
-        // engine's normalised path convention.
-        OpaaxString ToOpaax(const fs::path& InPath)
-        {
-            return OpaaxString(InPath.generic_string().c_str());
-        }
 
         OpaaxString FindProjectArg(int InArgc, char** InArgv)
         {
@@ -60,41 +55,47 @@ namespace Opaax
                                        const OpaaxString& InWorkspaceDir,
                                        const OpaaxString& InProjectArg)
     {
-        const fs::path    lExe(InExePath.CStr());
-        const fs::path    lExeDir  = lExe.parent_path();
-        const std::string lAppName = lExe.stem().string();
+        const fs::path lExe     = Utf8::ToFsPath(InExePath);
+        const fs::path lExeDir  = lExe.parent_path();
+
+        // Stays an fs::path, never a narrow std::string: .string() would encode it through the ANSI
+        // code page, and this name comes straight from the exe path (I7).
+        const fs::path lAppName = lExe.stem();
 
         // Editor bakes the source workspace; release leaves it empty -> the exe dir.
         const fs::path lWorkspace = InWorkspaceDir.IsEmpty()
                                         ? lExeDir
-                                        : fs::path(InWorkspaceDir.CStr());
+                                        : Utf8::ToFsPath(InWorkspaceDir);
 
         // Project file: explicit --project (absolute kept, relative under the workspace),
         // else the default <workspace>/<AppName>/<AppName>.opaaxproj.
         fs::path lProjFile;
         if (!InProjectArg.IsEmpty())
         {
-            const fs::path lArg(InProjectArg.CStr());
+            const fs::path lArg = Utf8::ToFsPath(InProjectArg);
             lProjFile = lArg.is_absolute() ? lArg : (lWorkspace / lArg);
         }
         else
         {
-            lProjFile = lWorkspace / lAppName / (lAppName + ".opaaxproj");
+            // Appending an ASCII literal is encoding-invariant, so it needs no conversion.
+            fs::path lLeaf = lAppName;
+            lLeaf += ".opaaxproj";
+            lProjFile = lWorkspace / lAppName / lLeaf;
         }
         lProjFile = lProjFile.lexically_normal();
 
         const fs::path lProjRoot = lProjFile.parent_path();
 
         ProjectLayout lOut;
-        lOut.WorkspaceRoot = ToOpaax(lWorkspace);
-        lOut.EngineRoot    = ToOpaax(lWorkspace / "Engine");
-        lOut.ProjectRoot   = ToOpaax(lProjRoot);
-        lOut.ProjectFile   = ToOpaax(lProjFile);
-        lOut.AssetsDir     = ToOpaax(lProjRoot / "Assets");
-        lOut.ConfigsDir    = ToOpaax(lProjRoot / "Configs");
-        lOut.SourceDir     = ToOpaax(lProjRoot / "Source");
-        lOut.SaveDir       = ToOpaax(lProjRoot / "Save");
-        lOut.TempDir       = ToOpaax(lProjRoot / "Temp");
+        lOut.WorkspaceRoot = Utf8::FromFsPath(lWorkspace);
+        lOut.EngineRoot    = Utf8::FromFsPath(lWorkspace / "Engine");
+        lOut.ProjectRoot   = Utf8::FromFsPath(lProjRoot);
+        lOut.ProjectFile   = Utf8::FromFsPath(lProjFile);
+        lOut.AssetsDir     = Utf8::FromFsPath(lProjRoot / "Assets");
+        lOut.ConfigsDir    = Utf8::FromFsPath(lProjRoot / "Configs");
+        lOut.SourceDir     = Utf8::FromFsPath(lProjRoot / "Source");
+        lOut.SaveDir       = Utf8::FromFsPath(lProjRoot / "Save");
+        lOut.TempDir       = Utf8::FromFsPath(lProjRoot / "Temp");
         return lOut;
     }
 
@@ -152,19 +153,16 @@ namespace Opaax
 
     OpaaxString Paths::EngineToAbsolute(const OpaaxString& InEngineRel) const
     {
-        const fs::path lRoot(m_Layout.EngineRoot.CStr());
-        return ToOpaax(lRoot / InEngineRel.CStr());
+        return Utf8::FromFsPath(Utf8::ToFsPath(m_Layout.EngineRoot) / Utf8::ToFsPath(InEngineRel));
     }
 
     OpaaxString Paths::ProjectToAbsolute(const OpaaxString& InProjectRel) const
     {
-        const fs::path lRoot(m_Layout.ProjectRoot.CStr());
-        return ToOpaax(lRoot / InProjectRel.CStr());
+        return Utf8::FromFsPath(Utf8::ToFsPath(m_Layout.ProjectRoot) / Utf8::ToFsPath(InProjectRel));
     }
 
     OpaaxString Paths::AssetToAbsolute(const OpaaxString& InAssetRel) const
     {
-        const fs::path lRoot(m_Layout.AssetsDir.CStr());
-        return ToOpaax(lRoot / InAssetRel.CStr());
+        return Utf8::FromFsPath(Utf8::ToFsPath(m_Layout.AssetsDir) / Utf8::ToFsPath(InAssetRel));
     }
 }

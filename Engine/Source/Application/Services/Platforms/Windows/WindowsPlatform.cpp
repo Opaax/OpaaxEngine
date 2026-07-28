@@ -2,11 +2,16 @@
 
 #ifdef OPAAX_PLATFORM_WINDOWS
 
-#include "WindowsUtf8.h"   // the one UTF-8 <-> UTF-16 idiom, shared with WindowsFileSystem
+#include "Core/String/OpaaxUtf8.h"   // I7 — the one UTF-8 <-> UTF-16 idiom
 
 #include <thread>
 #include <chrono>
 #include <string>
+
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <Windows.h>
 
 namespace Opaax
 {
@@ -37,7 +42,7 @@ namespace Opaax
         // Normalise to '/' (engine path convention) while still wide — one conversion, at the boundary.
         for (wchar_t& lCh : lWide) { if (lCh == L'\\') { lCh = L'/'; } }
 
-        return Windows::WideToUtf8(lWide);
+        return Utf8::FromWide(lWide);
     }
 }
 

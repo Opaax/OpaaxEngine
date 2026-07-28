@@ -2,7 +2,7 @@
 
 #ifdef OPAAX_PLATFORM_WINDOWS
 
-#include "WindowsUtf8.h"
+#include "Core/String/OpaaxUtf8.h"   // I7 — the one UTF-8 <-> path conversion
 
 #include <filesystem>
 #include <system_error>
@@ -10,16 +10,6 @@
 namespace Opaax
 {
     namespace STDFileSyt = std::filesystem;
-
-    namespace
-    {
-        // Every path enters std::filesystem as UTF-16. Building the path from a wchar_t sequence is
-        // the whole fix: the char overload would decode these bytes as ANSI instead.
-        STDFileSyt::path ToPath(const OpaaxString& InUtf8)
-        {
-            return STDFileSyt::path(Windows::Utf8ToWide(InUtf8));
-        }
-    }
 
     bool WindowsFileSystem::CreateDirectories(const OpaaxString& InPath) const
     {
@@ -29,7 +19,7 @@ namespace Opaax
         }
 
         std::error_code        lError;
-        const STDFileSyt::path lPath = ToPath(InPath);
+        const STDFileSyt::path lPath = Utf8::ToFsPath(InPath);
 
         STDFileSyt::create_directories(lPath, lError);
         if (lError)
@@ -51,7 +41,7 @@ namespace Opaax
         }
 
         std::error_code lError;
-        const bool      bExists = STDFileSyt::exists(ToPath(InPath), lError);
+        const bool      bExists = STDFileSyt::exists(Utf8::ToFsPath(InPath), lError);
         return bExists && !lError;
     }
 
@@ -63,7 +53,7 @@ namespace Opaax
         }
 
         std::error_code        lError;
-        const STDFileSyt::path lDir = ToPath(InDirAbs);
+        const STDFileSyt::path lDir = Utf8::ToFsPath(InDirAbs);
 
         if (!STDFileSyt::is_directory(lDir, lError) || lError)
         {
@@ -93,8 +83,8 @@ namespace Opaax
             // generic_WSTRING, then one explicit conversion: the narrow generic_string() would encode
             // back through the ANSI code page and hand the caller mojibake it would store as UTF-8.
             OutEntries.push_back(Entry{
-                Windows::WideToUtf8(lIt->path().filename().generic_wstring()),
-                Windows::WideToUtf8(lIt->path().generic_wstring()),
+                Utf8::FromWide(lIt->path().filename().generic_wstring()),
+                Utf8::FromWide(lIt->path().generic_wstring()),
                 bIsDirectory });
         }
 

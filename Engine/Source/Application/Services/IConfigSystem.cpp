@@ -1,6 +1,8 @@
 #include "IConfigSystem.h"
 #include "IPaths.h"
 
+#include "Core/String/OpaaxUtf8.h"   // I7
+
 #include <filesystem>
 
 #include "ILogger.h"
@@ -71,8 +73,8 @@ namespace Opaax
             return OpaaxString(InFileName);
         }
         
-        const fs::path lPath = fs::path(m_ConfigsDir.CStr()) / InFileName;
-        return OpaaxString(lPath.generic_string().c_str());
+        // InFileName is an ASCII config name; the DIRECTORY is the part that can carry non-ASCII (I7).
+        return Utf8::FromFsPath(Utf8::ToFsPath(m_ConfigsDir) / InFileName);
     }
 
     IConfig& ConfigSystem::FindOrCreate(ConfigTypeID InId, const TFunction<UniquePtr<IConfig>()>& InFactory)

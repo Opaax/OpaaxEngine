@@ -2,6 +2,7 @@
 
 #include "RHI/ShaderCompiler.h"
 #include "Application/Services/ILogger.h"
+#include "Core/String/OpaaxUtf8.h"   // I7 — never open a stream from CStr()
 
 #include <fstream>
 #include <sstream>
@@ -48,7 +49,7 @@ namespace Opaax
 
     ShaderDesc ShaderSource::LoadShaderDescFromFile(const OpaaxString& InPath)
     {
-        std::ifstream lFile(InPath.CStr(), std::ios::binary);
+        std::ifstream lFile(Utf8::ToFsPath(InPath), std::ios::binary);
         if (!lFile.is_open())
         {
             OPAAX_LOG(LogShaderSource, Error, "cannot open shader file '{}'", InPath.CStr())

@@ -1,5 +1,7 @@
 #include "ConfigIO.h"
 
+#include "Core/String/OpaaxUtf8.h"   // I7 — never open a stream from CStr()
+
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -10,7 +12,7 @@ namespace Opaax::ConfigIO
 
     OpaaxString ReadText(const OpaaxString& InAbsPath)
     {
-        std::ifstream lFile(InAbsPath.CStr());
+        std::ifstream lFile(Utf8::ToFsPath(InAbsPath));
         if (!lFile.is_open()) { return OpaaxString(); }
 
         std::stringstream lBuffer;
@@ -22,10 +24,10 @@ namespace Opaax::ConfigIO
     {
         try
         {
-            const fs::path lPath(InAbsPath.CStr());
+            const fs::path lPath = Utf8::ToFsPath(InAbsPath);
             if (lPath.has_parent_path()) { fs::create_directories(lPath.parent_path()); }
 
-            std::ofstream lFile(InAbsPath.CStr());
+            std::ofstream lFile(lPath);
             if (!lFile.is_open()) { return false; }
             lFile << InText.CStr();
             return true;

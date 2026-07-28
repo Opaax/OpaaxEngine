@@ -1,6 +1,7 @@
 #include "Editor/EditorPaths.h"
 
 #include "Application/Services/ILogger.h"   // OPAAX_APP_LOG (as the base IPaths.cpp does)
+#include "Core/String/OpaaxUtf8.h"         // I7 — shared with IPaths.cpp, no local copy
 
 #include <filesystem>
 
@@ -11,13 +12,6 @@ namespace Opaax::Editor
     namespace
     {
         namespace fs = std::filesystem;
-
-        // Same convention as Engine/Source/Application/Services/IPaths.cpp: generic_string() yields '/'
-        // on every OS, matching the engine's normalised path separator.
-        OpaaxString ToOpaax(const fs::path& InPath)
-        {
-            return OpaaxString(InPath.generic_string().c_str());
-        }
     }
 
     // =========================================================================
@@ -35,14 +29,12 @@ namespace Opaax::Editor
 
     OpaaxString EditorPaths::EditorToAbsolute(const OpaaxString& InEditorRel) const
     {
-        const fs::path lRoot(EditorDir().CStr());
-        return ToOpaax(lRoot / InEditorRel.CStr());
+        return Utf8::FromFsPath(Utf8::ToFsPath(EditorDir()) / Utf8::ToFsPath(InEditorRel));
     }
 
     OpaaxString EditorPaths::EditorAssetToAbsolute(const OpaaxString& InAssetRel) const
     {
-        const fs::path lRoot(EditorAssetsDir().CStr());
-        return ToOpaax(lRoot / InAssetRel.CStr());
+        return Utf8::FromFsPath(Utf8::ToFsPath(EditorAssetsDir()) / Utf8::ToFsPath(InAssetRel));
     }
 
     void EditorPaths::LogPaths() const
