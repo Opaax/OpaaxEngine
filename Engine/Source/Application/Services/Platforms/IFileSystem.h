@@ -7,8 +7,13 @@
 namespace Opaax
 {
     // =============================================================================
-    // IFileSystem — the engine's std::filesystem facade, owned BY VALUE by every IPlatform
+    // IFileSystem — the engine's file-system facility, owned BY VALUE by every IPlatform
     //   implementation and handed out through IPlatform::GetFileSystem().
+    //
+    //   The bodies are std::filesystem today and the methods are NOT virtual, because there is exactly
+    //   one implementation. A platform-specific one (WindowsFileSystem) is planned (user, 2026-07-27):
+    //   when it lands these become virtual and each platform holds its OWN concrete type by value —
+    //   the accessor's `const IFileSystem&` return already supports that with no call-site change.
     //
     //   STATELESS, so every operation is const: a caller holding the platform's `const IFileSystem&`
     //   reaches the whole surface, and no accessor has to be widened to make the facility usable.

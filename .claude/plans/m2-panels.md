@@ -12,10 +12,16 @@
 >
 > | Slice | Detailed plan | Status |
 > |---|---|---|
-> | M2a — panel infra + Hierarchy | `.claude/plans/m2a-hierarchy.md` | next |
-> | M2b — Drawers + Inspector | *(written when started)* | pending |
-> | M2c — DebugDraw + selection outline | *(written when started)* | pending |
-> | M2d — AssetTypes + AssetBrowser | *(written when started)* | pending |
+> | M2a — panel infra + Hierarchy | `.claude/plans/m2a-hierarchy.md` | ✅ `e76a60e`, `875bc85` |
+> | M2b — Drawers + Inspector | `.claude/plans/m2b-inspector.md` | ✅ `add4959`, `3b03d08` |
+> | M2c — DebugDraw + selection outline | `.claude/plans/m2c-debugdraw.md` | ✅ `c613bdf`, `a473c12` |
+> | M2d — **ResourceTypes + ResourceBrowser** | `.claude/plans/m2d-resourcebrowser.md` | ✅ `fcc7c1a`, `0593fa0`, `083504b` |
+>
+> **M2d renamed the route Asset→Resource** (user, 2026-07-27): `Asset` is the retired `Legacy/Assets`
+> vocabulary, the live engine says `CResource`/`ResourceManager`. `Docs/Architectures/Editor.md` D10 was
+> amended in the same change (route name, descriptor call site, M2 milestone row). Wherever this file
+> still says `AssetTypes()` / AssetBrowser below, read `ResourceTypes()` / ResourceBrowser — the
+> reasoning (F1 atomicity, F3 content-row, §3.5 file-browser-not-catalog) is unaffected.
 
 ---
 

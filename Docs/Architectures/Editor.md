@@ -231,7 +231,7 @@ The extension surface is **defined by the editor, consumed by the game**. Symmet
 |---|---|---|
 | `Drawers()` | custom Inspector UI per game component | M2 |
 | `Panels()` | tool panels (wave designer, dialogue editor, …) — factory receives `EditorContext&`; the editor owns lifecycle, docking, layout persistence | M2 |
-| `AssetTypes()` | game-defined assets: browser icon, double-click, "Create New" (old `IAssetTypeActions` concept, rewritten injected) | M2 |
+| `ResourceTypes()` | game-defined file types, keyed by **extension**: browser icon, label, double-click (old `IAssetTypeActions` concept, rewritten injected). Named for the live vocabulary — `CResource`/`ResourceManager` — since `Asset` now means the retired `Legacy/Assets` world. | M2 |
 | `Menus()` | menu entries / toolbar commands ("Tools → Validate Level") | M5 |
 | `EditWorldSystems()` | **a route into the single `WorldSubsystemRegistry`** — editor-supplied candidates whose `ShouldCreate` gates on `Edit`. Read-only visualization (trigger zones, patrol paths, spawn points) via `DebugDraw`. Not a separate mechanism. | M4 |
 
@@ -244,13 +244,19 @@ class ShmupEditorModule final : public IEditorModule
         InR.Drawers().Register<WaveSpawnerComponent, WaveSpawnerDrawer>();
         InR.Panels().Register("Wave Designer",
             [](EditorContext& InCtx) { return MakeUnique<WavePanel>(InCtx); });
-        InR.AssetTypes().Register<WaveDefAsset, WaveDefTypeActions>();
+        InR.ResourceTypes().Register(ResourceTypeDesc{
+            .Extension  = OPAAX_ID(".wave"),
+            .Label      = OPAAX_ID("Wave Definition"),
+            .Icon       = OpaaxString("[W]"),
+            .OnActivate = [](EditorContext& InCtx, const ResourceFile& InFile) { /* open the Wave Designer */ } });
         InR.EditWorldSystems().Register<TriggerZoneOverlaySystem>();
     }
 };
 ```
 
 Native editor features go through the same registries wherever possible — dogfooding keeps the surface honest.
+
+`ResourceTypes()` is the one route that takes a **descriptor instead of type parameters** (M2d): `Drawers()` needs a template because `TComponent` is a type the editor cannot name, but a file type is a string key plus two labels and a closure — there is nothing to erase. The extension is normalized (lower-cased, leading dot) and interned at registration, so the browser's per-file lookup is an integer compare. The GUID-backed catalog (`.meta` sidecars, rename-safe references) is an M3 upgrade behind this same route, not a different one.
 
 Supporting decision — **`DebugDraw` belongs to the engine, not the editor**: immediate-mode world-space primitives (lines, boxes, circles). Serves editor overlays *and* dev builds of `Game.exe`. Small renderer addition, lands in M2.
 
@@ -264,7 +270,7 @@ Future direction, deliberately not now: per-type field meta-description generati
 |---|---|---|---|
 | **M0** | Shell | App seams (`OnProvideServices`, `OnRegisterModules`, `TickFrame`); **Sandbox split into `Module/` + `Runtime/`**; `ModuleRegistrar` skeleton (`Components()` / `WorldSubsystems()` routes accept & store); `OpaaxEditorLib` built as a lib + `SandboxEditor.exe` dev host; `EditorApplication` + `EditorService`; ImGui as **overlay** on the current engine render; input filter + `ResetState` contract; `IEditorModule` + extension registrar skeleton | Dockspace + input capture work; `Sandbox.exe` behavior identical after the split; runtime targets carry zero editor code |
 | **M1** | Viewport | D2 output contract, present moves host-side, `ViewportPanel` rewritten with `EditorContext` injection | The game lives only inside the panel; panel size drives engine resolution |
-| **M2** | Panels & extensions | Hierarchy, Inspector, AssetBrowser; **`Drawers()` / `Panels()` / `AssetTypes()` consumed** — native panels register through the same path as game panels; **engine `DebugDraw` API** | Click-select + live transform edit; a Sandbox-module custom drawer *and* custom panel appear with zero changes to `OpaaxEditorLib` |
+| **M2** | Panels & extensions | Hierarchy, Inspector, ResourceBrowser; **`Drawers()` / `Panels()` / `ResourceTypes()` consumed** — native panels register through the same path as game panels; **engine `DebugDraw` API** | Click-select + live transform edit; a Sandbox-module custom drawer *and* custom panel appear with zero changes to `OpaaxEditorLib` |
 | **M3** | Snapshot core | `SceneSerializer`/`SceneFactory` on the new `World`: registry ↔ in-memory description; **`ComponentRegistry` v2** live, fed by `RegisterModule()` | Capture → instantiate round-trip yields an equivalent world (GUIDs preserved), **including module components** |
 | **M4** | World subsystems + PIE | **`WorldSubsystemMgr` + sealed `WorldSubsystemRegistry` (§3, all three locks)**; `EWorldMode` as immutable `CreateWorld` parameter; `CloneWorld` (capture + instantiate); Play/Pause/Step toolbar; input route switching; `ResetState` on stop; `EditWorldSystems()` route live | Play runs the game in the viewport with module subsystems live, runtime state rebuilt in `Initialize`; Stop restores the exact edit state; overlays visible in Edit worlds only |
 | **M5** | Scene IO | File save/load, dirty state, **`Menus()`**, recent files | Full author loop: edit → save → close → reopen → play |
@@ -283,7 +289,7 @@ Future direction, deliberately not now: per-type field meta-description generati
 |---|---|
 | Panels (Hierarchy, Inspector, AssetBrowser, Viewport) — layout & behavior | Every static (registries, singletons) |
 | Component drawers — per-type UI logic | `EditorSubsystem` (wired to `EngineSubsystemBaseOld` / `CoreEngineApp*`) |
-| `IAssetTypeActions` — concept kept, rewritten injected behind `AssetTypes()` | `IOpaaxComponent` (OOP component) |
+| `IAssetTypeActions` — concept kept, rewritten injected behind `ResourceTypes()` | `IOpaaxComponent` (OOP component) |
 | `ComponentRegistry` — type-erased entry concept only | its `WorldOld`/OOP/json/drawer coupling |
 | `IEditorUIBackend` GL/VK — the RHI/ImGui bridge is sound | `OPAAX_WITH_EDITOR` scattering |
 | `GetViewportImage` pattern | |
