@@ -23,6 +23,7 @@ set(OPAAX_TEST_SOURCES
     Core/Config/EngineConfigDataTests.cpp
     Core/Application/AppServiceLocatorTests.cpp
     Core/Application/PathsTests.cpp
+    Core/Application/FileSystemTests.cpp
     Core/Application/ILoggerTests.cpp
     Core/Application/IProjectManagerTests.cpp
     Core/Application/IConfigSystemTests.cpp

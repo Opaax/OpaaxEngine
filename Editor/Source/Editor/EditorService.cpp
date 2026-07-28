@@ -7,22 +7,19 @@
 
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IEngine.h"
-#include "Application/Services/ILogger.h"                 // OPAAX_LOG + LogCategory
-#include "Application/Services/Window/IWindowManager.h"   // window + native GLFW handle
-#include "Core/Events/Event.h"                             // Event::IsInCategory + EEventCategory (S11)
+#include "Application/Services/ILogger.h"                    // OPAAX_LOG + LogCategory
+#include "Application/Services/Platforms/IPlatform.h"        // GetFileSystem — the dock-layout dir
+#include "Application/Services/Platforms/IFileSystem.h"
+#include "Application/Services/Window/IWindowManager.h"      // window + native GLFW handle
+#include "Core/Events/Event.h"                               // Event::IsInCategory + EEventCategory (S11)
 
 #include <imgui.h>
-
-#include <filesystem>
-#include <system_error>
 
 using namespace Opaax;   // OPAAX_LOG expands to an unqualified ToSpdLevel(...)
 
 namespace
 {
     constexpr LogCategory LogEditorService{"EditorService"};
-
-    namespace fs = std::filesystem;
 }
 
 namespace Opaax::Editor
@@ -210,19 +207,15 @@ namespace Opaax::Editor
         }
 
         // ImGui does not create directories, and its save fails SILENTLY when one is missing — so the dir
-        // has to exist before the first write, not on first save.
-        // FIXME: IFileSystem::GetPathIfNCreate is exactly this, but its methods are private with zero
-        // callers (and IPlatform::GetFileSystem() hands back a const&, while they are non-const) — the
-        // facility is unusable as written. Calling fs:: directly, as Core/Config/ConfigIO.cpp already does.
-        const OpaaxString lSaveDir = lEditorPaths->EditorSaveDir();
+        // has to exist before the first write, not on first save. GetPathIfNCreate is exactly that, and
+        // logs its own failure detail.
+        const OpaaxString  lSaveDir    = lEditorPaths->EditorSaveDir();
+        const IFileSystem& lFileSystem = OpaaxApplication::GetAppService<IPlatform>().GetFileSystem();
 
-        //Todo use FileSystem (need FIXME on IFileSystem)
-        std::error_code lError;
-        fs::create_directories(fs::path(lSaveDir.CStr()), lError);
-        if (lError)
+        if (lFileSystem.GetPathIfNCreate(lSaveDir).IsEmpty())
         {
-            OPAAX_LOG(LogEditorService, Warn, "Could not create '{}' ({}) — dock layout will not persist.",
-                lSaveDir.CStr(), lError.message())
+            OPAAX_LOG(LogEditorService, Warn, "Could not create '{}' — dock layout will not persist.",
+                lSaveDir.CStr())
             return {};
         }
 
