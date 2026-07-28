@@ -157,6 +157,20 @@ is instance-based (no statics — **I1**).
   path is **OpenGL-only** today; the VK backend is **parked in `Legacy/RHI/Vulkan`** (2026-07-22) pending a
   new-path `VulkanRHIDevice`.
 
+**F2a — Every GPU resource is created BY THE DEVICE** (landed 2026-07-28). `IRHIDevice::CreateXxx` —
+buffers, textures, shaders, pipelines, bind groups, **and framebuffers**. The device already knows its
+own backend, so nothing else has to dispatch on one; a free `X::Create` puts a `MakeUnique<OpenGL…>`
+inside a backend-*neutral* TU, which is the shape a second backend has to unpick. The one surviving
+free factory is **`IGraphicsContext::Create`**, and only because the context must exist *before* the
+device that `Init`s against it — there is no device to ask yet. That exception does not generalize:
+if a device could have created it, the device creates it.
+- The editor reaches this through **`IEngine::CreateFramebuffer`**, one intent-named method — *not*
+  a `GetRenderDevice()` accessor. Exposing the device to reach one factory would also hand out
+  `BeginFrame`/`Present`/`CreatePipeline`; the device stays engine-internal (this is M1 fork 1's
+  objection honored, not reversed — the punt it justified is what ended).
+- Resources are **caller-owned** (I5) and must be released while the device and its GPU context are
+  still alive — for a panel-owned FBO that means `Shutdown`, never a destructor racing LC teardown.
+
 **F3 — A subsystem needing a sibling mid-boot resolves from the manager.** During its own `Startup`, a
 subsystem reaches a sibling via `m_Subsystems.GetSubsystem<T>()` (the manager's create-pass populates the
 list before any `Startup` runs) — **never** via a lazy accessor that can re-enter the owner's boot. Doing

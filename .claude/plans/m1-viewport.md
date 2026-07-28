@@ -139,7 +139,11 @@ once. This is the one easy-to-get-wrong subtlety.
 
 ## 7. Forks (decide up front — CH)
 
-1. **`IFramebuffer::Create` free factory vs `IRHIDevice::CreateFramebuffer`?** → **Keep the free factory.** Routing
+1. **`IFramebuffer::Create` free factory vs `IRHIDevice::CreateFramebuffer`?** → **SUPERSEDED 2026-07-28** —
+   creation moved to `IRHIDevice::CreateFramebuffer`; the editor reaches it via `IEngine::CreateFramebuffer`,
+   one narrow method, so the "would force a `GetRenderDevice()` exposure" objection below is honored rather
+   than reversed. See ARCHITECTURE.md **F2a**. *(Decision as taken at M1, kept for the record:)*
+   **Keep the free factory.** Routing
    through the device would force a new `IEngine::GetRenderDevice()` exposure purely so the editor can reach the device
    (device is engine-internal). Free factory already works standalone; punt is reversible + naturally forced when a
    `VulkanRHIDevice` needs device-owned FBOs. `// FIXME` in `Framebuffer.h`.
