@@ -1,7 +1,7 @@
 #pragma once
 
 #include "IConfig.h"
-#include "ConfigIO.h"
+#include "Core/IO/FileIO.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/OpaaxMacro.hpp"
 #include "Core/EngineAPI.h"
@@ -84,7 +84,7 @@ namespace Opaax
         {
             m_LoadedPath = InAbsPath;
 
-            const OpaaxString lText = ConfigIO::ReadText(InAbsPath);
+            const OpaaxString lText = FileIO::ReadAllText(InAbsPath);
             if (lText.IsEmpty())
             {
                 // Missing (or empty) — write the default file, keep the in-memory defaults.
@@ -98,7 +98,7 @@ namespace Opaax
         bool Save(const OpaaxString& InAbsPath) override
         {
             m_LoadedPath = InAbsPath;
-            return ConfigIO::WriteText(InAbsPath, TConfigCodec<TData>::ToText(m_Data));
+            return FileIO::WriteAllText(InAbsPath, TConfigCodec<TData>::ToText(m_Data));
         }
 
         bool Save() override
@@ -114,7 +114,7 @@ namespace Opaax
         bool GenerateDefaultConfig(const OpaaxString& InAbsPath) override
         {
             // The default template is the serialized in-memory defaults.
-            return ConfigIO::WriteText(InAbsPath, TConfigCodec<TData>::ToText(m_Data));
+            return FileIO::WriteAllText(InAbsPath, TConfigCodec<TData>::ToText(m_Data));
         }
         //~End Opaax::IConfig interface
 

@@ -22,6 +22,7 @@
 #include "Renderer/Renderer2D.h"
 
 #include "Renderer/ShaderSource.h"
+#include "Core/IO/FileIO.h"       // the host owns the read (see the shader load below)
 
 #include "World/WorldManager.h"
 #include "World/World.h"
@@ -53,16 +54,23 @@ namespace Opaax
             return false;
         }
 
-        // Host reads the shader off disk (module never touches IPaths / file IO).
+        // Host reads the shader off disk (module never touches IPaths / file IO) — literally, now:
+        // ShaderSource takes the TEXT and only parses/compiles it.
         const OpaaxString lShaderPath =
             OpaaxApplication::GetAppService<IPaths>().EngineToAbsolute("Assets/Shaders/Sprite.glsl");
-        
+
+        const OpaaxString lShaderSrc = FileIO::ReadAllText(lShaderPath);
+        if (lShaderSrc.IsEmpty())
+        {
+            OPAAX_LOG(LogRendererManager, Error, "cannot read shader file '{}'", lShaderPath.CStr())
+        }
+
         RenderSystemDesc lDesc;
         lDesc.Backend      = BackendFromString(lEngineCfg.RenderBackend);
         lDesc.Surface      = lSurface;
         lDesc.Width        = lWindow->GetWidth();
         lDesc.Height       = lWindow->GetHeight();
-        lDesc.SpriteShader = ShaderSource::LoadShaderDescFromFile(lShaderPath);
+        lDesc.SpriteShader = ShaderSource::FromSource(lShaderSrc, lShaderPath);
         lDesc.ClearColor   = lRenderCfg.ClearColor;
 
         m_RenderSystem = MakeUnique<RenderSystem>();

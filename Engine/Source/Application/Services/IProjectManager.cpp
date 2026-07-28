@@ -1,10 +1,8 @@
 #include "IProjectManager.h"
 #include "IPaths.h"
 
-#include "Core/String/OpaaxUtf8.h"   // I7 — never open a stream from CStr()
+#include "Core/IO/FileIO.h"
 
-#include <fstream>
-#include <sstream>
 #include <nlohmann/json.hpp>
 
 
@@ -12,16 +10,6 @@ namespace Opaax
 {
     namespace
     {
-        OpaaxString ReadFileText(const OpaaxString& InPath)
-        {
-            std::ifstream lFile(Utf8::ToFsPath(InPath));
-            if (!lFile.is_open()) { return OpaaxString(); }
-
-            std::stringstream lBuffer;
-            lBuffer << lFile.rdbuf();
-            return OpaaxString(lBuffer.str().c_str());
-        }
-
         // =====================================================================
         // NullProjectManager — empty identity.
         // =====================================================================
@@ -99,6 +87,6 @@ namespace Opaax
     ProjectManager::ProjectManager(const IPaths& InPaths)
     {
         const OpaaxString lFile = InPaths.ProjectFile();
-        m_Identity = ParseProjectIdentity(ReadFileText(lFile));
+        m_Identity = ParseProjectIdentity(FileIO::ReadAllText(lFile));
     }
 }

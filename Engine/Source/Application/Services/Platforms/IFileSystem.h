@@ -26,7 +26,7 @@ namespace Opaax
     //   reaches the whole surface, and no accessor has to be widened to make the facility usable.
     //
     //   NOTHING HERE THROWS. Every call reports failure by return value (the idiom
-    //   Core/Config/ConfigIO.cpp already follows) — a missing directory or an unreadable entry is an
+    //   Core/IO/FileIO.cpp already follows) — a missing directory or an unreadable entry is an
     //   ordinary answer, not an exception a caller must remember to catch.
     // =============================================================================
     class OPAAX_API IFileSystem

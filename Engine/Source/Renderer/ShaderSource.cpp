@@ -2,9 +2,7 @@
 
 #include "RHI/ShaderCompiler.h"
 #include "Application/Services/ILogger.h"
-#include "Core/String/OpaaxUtf8.h"   // I7 — never open a stream from CStr()
 
-#include <fstream>
 #include <sstream>
 #include <string>
 
@@ -47,23 +45,12 @@ namespace Opaax
         return lDesc;
     }
 
-    ShaderDesc ShaderSource::LoadShaderDescFromFile(const OpaaxString& InPath)
+    ShaderDesc ShaderSource::FromSource(const OpaaxString& InSource, const OpaaxString& InDebugName)
     {
-        std::ifstream lFile(Utf8::ToFsPath(InPath), std::ios::binary);
-        if (!lFile.is_open())
-        {
-            OPAAX_LOG(LogShaderSource, Error, "cannot open shader file '{}'", InPath.CStr())
-            return ShaderDesc{}; // empty stages -> caller fails loud
-        }
-
-        std::stringstream lRaw;
-        lRaw << lFile.rdbuf();
-        const OpaaxString lSource(lRaw.str().c_str());
-
-        ShaderDesc lDesc = ParseShaderStages(lSource, InPath);
+        ShaderDesc lDesc = ParseShaderStages(InSource, InDebugName);
         if (lDesc.VertexSrc.IsEmpty() || lDesc.FragmentSrc.IsEmpty())
         {
-            OPAAX_LOG(LogShaderSource, Error, "'{}' missing a vertex or fragment '#type' section", InPath.CStr())
+            OPAAX_LOG(LogShaderSource, Error, "'{}' missing a vertex or fragment '#type' section", InDebugName.CStr())
             return ShaderDesc{};
         }
 

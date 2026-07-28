@@ -14,11 +14,10 @@
 #include <string>
 
 #include "Core/String/OpaaxUtf8.h"
-#include "Core/Config/ConfigIO.h"
+#include "Core/IO/FileIO.h"
 #include "Application/Services/IPaths.h"
 #include "Engine/Subsystems/Resources/ResourceManager.h"   // before BinaryResource — completes LoadContext
 #include "Engine/Subsystems/Resources/Types/BinaryResource.hpp"
-#include "Renderer/ShaderSource.h"
 
 using namespace Opaax;
 
@@ -103,26 +102,56 @@ TEST_CASE("Utf8: empty in, empty out — every entry point, no crash")
 // =============================================================================
 // The call sites that open files
 // =============================================================================
-TEST_CASE("ConfigIO: text round-trips through a non-ASCII directory")
+TEST_CASE("FileIO: text round-trips through a non-ASCII directory")
 {
-    const ScopedUnicodeDir lDir("config");
+    const ScopedUnicodeDir lDir("fileio_text");
     const OpaaxString      lFile = lDir.Utf8File("Settings.json");
 
-    REQUIRE(ConfigIO::WriteText(lFile, OpaaxString("{\"volume\":11}")));
+    REQUIRE(FileIO::WriteAllText(lFile, OpaaxString("{\"volume\":11}")));
 
     // The file landed where the engine SAID it would — asked through the wide API.
     CHECK(fs::exists(lDir.Wide() / L"Settings.json"));
 
-    CHECK(ConfigIO::ReadText(lFile) == "{\"volume\":11}");
+    CHECK(FileIO::ReadAllText(lFile) == "{\"volume\":11}");
 }
 
-TEST_CASE("ConfigIO: WriteText creates missing parents under a non-ASCII root")
+TEST_CASE("FileIO: WriteAllText creates missing parents under a non-ASCII root")
 {
-    const ScopedUnicodeDir lDir("config_parents");
+    const ScopedUnicodeDir lDir("fileio_parents");
     const OpaaxString      lFile = lDir.Utf8() + OpaaxString("/Nested/Deep/Settings.json");
 
-    REQUIRE(ConfigIO::WriteText(lFile, OpaaxString("x")));
+    REQUIRE(FileIO::WriteAllText(lFile, OpaaxString("x")));
     CHECK(fs::is_directory(lDir.Wide() / L"Nested" / L"Deep"));
+}
+
+TEST_CASE("FileIO: ReadAllBytes reads a non-ASCII path and leaves the output alone on failure")
+{
+    const ScopedUnicodeDir lDir("fileio_bytes");
+
+    {
+        std::ofstream lOut(lDir.Wide() / L"blob.bin", std::ios::binary);   // written WIDE
+        lOut << "opaax";
+    }
+
+    TDynArray<Uint8> lBytes;
+    REQUIRE(FileIO::ReadAllBytes(lDir.Utf8File("blob.bin"), lBytes));
+    CHECK(lBytes.size() == 5);
+
+    // A rejected read must not disturb what the caller already held.
+    CHECK_FALSE(FileIO::ReadAllBytes(lDir.Utf8File("missing.bin"), lBytes));
+    CHECK(lBytes.size() == 5);
+}
+
+TEST_CASE("FileIO: a missing file and an empty path are ordinary answers, never throws")
+{
+    const ScopedUnicodeDir lDir("fileio_missing");
+
+    CHECK(FileIO::ReadAllText(lDir.Utf8File("nope.txt")).IsEmpty());
+    CHECK(FileIO::ReadAllText(OpaaxString()).IsEmpty());
+    CHECK_FALSE(FileIO::WriteAllText(OpaaxString(), OpaaxString("x")));
+
+    TDynArray<Uint8> lBytes;
+    CHECK_FALSE(FileIO::ReadAllBytes(OpaaxString(), lBytes));
 }
 
 TEST_CASE("BinaryResource: loads a file from a non-ASCII directory")
@@ -146,20 +175,9 @@ TEST_CASE("BinaryResource: loads a file from a non-ASCII directory")
     CHECK(lRes->Bytes.size() == 5);
 }
 
-TEST_CASE("ShaderSource: reads a shader from a non-ASCII directory")
-{
-    const ScopedUnicodeDir lDir("shader");
-
-    {
-        std::ofstream lOut(lDir.Wide() / L"Sprite.glsl", std::ios::binary);   // written WIDE
-        lOut << "#type vertex\nvoid main(){}\n#type fragment\nvoid main(){}\n";
-    }
-
-    const ShaderDesc lDesc = ShaderSource::LoadShaderDescFromFile(lDir.Utf8File("Sprite.glsl"));
-
-    CHECK_FALSE(lDesc.VertexSrc.IsEmpty());
-    CHECK_FALSE(lDesc.FragmentSrc.IsEmpty());
-}
+// NOTE: the shader path's encoding coverage now lives in the FileIO cases above — ShaderSource no
+// longer opens files at all (the host reads the text and passes it in), so there is nothing
+// encoding-sensitive left in it to test here.
 
 // =============================================================================
 // Path composition

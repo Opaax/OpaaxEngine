@@ -1,10 +1,9 @@
 #pragma once
 
-#include <fstream>
 #include <optional>
 
 #include "Core/OpaaxTypes.h"
-#include "Core/String/OpaaxUtf8.h"   // I7 — never open a stream from a narrow path
+#include "Core/IO/FileIO.h"
 #include "Application/Services/ILogger.h"
 #include "Engine/Subsystems/Resources/ResourceConcept.hpp"
 
@@ -26,28 +25,10 @@ namespace Opaax
 
         static std::optional<BinaryResource> Load(const char* InPath, LoadContext& /*InCtx*/)
         {
-            std::ifstream lFile(Utf8::ToFsPath(OpaaxString(InPath)), std::ios::binary | std::ios::ate);
-            if (!lFile.is_open())
-            {
-                OPAAX_ENGINE_LOG(Error, "BinaryResource: cannot open '{}'", InPath)
-                return std::nullopt;
-            }
-
-            const std::streamsize lSize = lFile.tellg();
-            if (lSize < 0)
-            {
-                OPAAX_ENGINE_LOG(Error, "BinaryResource: cannot size '{}'", InPath)
-                return std::nullopt;
-            }
-
             BinaryResource lResource;
-            lResource.Bytes.resize(static_cast<size_t>(lSize));
-
-            lFile.seekg(0, std::ios::beg);
-            if (lSize > 0 &&
-                !lFile.read(reinterpret_cast<char*>(lResource.Bytes.data()), lSize))
+            if (!FileIO::ReadAllBytes(OpaaxString(InPath), lResource.Bytes))
             {
-                OPAAX_ENGINE_LOG(Error, "BinaryResource: cannot size '{}'", InPath)
+                OPAAX_ENGINE_LOG(Error, "BinaryResource: cannot read '{}'", InPath)
                 return std::nullopt;
             }
 
