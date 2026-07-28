@@ -64,18 +64,18 @@ The order **is** the design. The host guarantees it; nothing else may.
 
 ```
 Bootstrap
- └─ BootEngine             → provides the IEngine service.
-                             The subsystems do NOT exist yet.
-EngineStartup
- ├─ BootSubsystems         → subsystems CONSTRUCTED, none started. Engine natives
- │                           register here (ComponentRegistry). THE ONLY WINDOW in
- │                           which the registries exist and no world does.
+ └─ BootEngine             → provides the IEngine service (app services incl. the
+                             project's StartupLevel are loaded here)
+EngineStartup                                     — infrastructure, then content
+ ├─ Engine().Startup()     → every subsystem constructed and started.
+ │                           NO WORLD EXISTS. Engine natives are registered.
  ├─ RegisterModules (seam) → game module: components → ComponentRegistry,
  │                           world subsystems → WorldSubsystemRegistry
  ├─ OnModulesRegistered    → editor module adds its Edit-world candidates through
  │                           the SAME registry, then seals its own registries
- └─ Engine().Startup()     → subsystems START. WorldManager SEALS ComponentRegistry
-                             and creates the first world.
+ └─ CreateStartupWorld()   → the first CreateWorld SEALS the registries, then
+                             creates + activates the world named by the project's
+                             startupLevel. Host seam: override to open another.
 
 CreateWorld(name, mode)                        DestroyWorld(world)
  └─ per candidate:                              └─ broadcast WorldDestroying
@@ -88,12 +88,14 @@ CreateWorld(name, mode)                        DestroyWorld(world)
 
 Three sources — engine natives, game module, editor module — one registry, one mechanism.
 
-**Why construction is split from startup (M3).** `StartupAll` used to construct *and* start in one call, so
-no registry existed until the engine had already started — and starting is what creates the first world,
-which seals. Registration had nowhere legal to stand. `BootSubsystems` opens that window; `StartupAll`
-still constructs first, so a host that never splits behaves identically. This diagram described the
-intended order for three milestones before the code could actually honour it — planning artifacts age
-(`.claude/lessons.md` L19, L22).
+**Why the world comes last (M3).** `WorldManager::Startup` used to create a default "Main" world, so the
+first `CreateWorld` — and therefore the seal — happened *inside* subsystem startup, before any module could
+register. That is a subsystem doing **content** work during **infrastructure** boot. Creating the world is
+now the host's last step, driven by config, and the ordering problem disappears rather than being worked
+around. Nothing needed the early world: every consumer already handles "no active world".
+
+This diagram described the intended order for three milestones before the code could honour it — planning
+artifacts age (`.claude/lessons.md` L19, L22).
 
 ---
 
@@ -119,7 +121,7 @@ InRegistrar.WorldSubsystems().Register<WaveSpawnSubsystem>();
 ```
 
 ### The registry
-- Built at `BootSubsystems`, not `BootEngine` (§2 — `BootEngine` only provides the service). Fed by three sources. **No reflection, no static-init discovery** — candidates are handed to the manager as an explicit list; template capture at registration replaces UClass.
+- Built by `Engine` during `Engine().Startup()`, and fed by three sources BEFORE the first world exists (§2). **No reflection, no static-init discovery** — candidates are handed to the manager as an explicit list; template capture at registration replaces UClass.
 - `WorldManager` is the only consumer: it is where worlds are created and destroyed, so it is where subsystem lifetimes are decided.
 
 ### The three locks

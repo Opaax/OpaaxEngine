@@ -168,19 +168,34 @@ Platform → Paths → Logger(Paths) → Config(Paths)+PreRegisterConfig
 **BO3** — The **window** is created in `InitializeApplication()`, not Bootstrap — it needs a live GL/VK context.
 `WindowManager` (the service) is booted in Bootstrap; the window object comes later.
 
-**BO4 — Subsystems are CONSTRUCTED before they are STARTED; module registration lives in that gap**
-(landed M3, 2026-07-28). `ISubsystemManager::CreateAll()` runs the factory pass alone; `StartupAll()` calls
-it first and then starts, so a host that never splits the phases is byte-identical and **F3 still holds**
-(the create pass always completes before *any* `Startup`). `IEngine::BootSubsystems()` exposes the split,
-and `EngineStartup` calls it **before** `RegisterModules`.
+**BO4 — Starting a subsystem is INFRASTRUCTURE; creating a world is CONTENT, and the host does it last**
+(landed M3, 2026-07-28 — user correction). `EngineStartup` reads as three plain stages:
 
-This is the **only** window in which the engine registries exist and no world does — `WorldManager::Startup`
-creates the first world, which **seals** `ComponentRegistry`, so registering after `Engine().Startup()` is
-always too late. **Before M3 that window did not exist**: `StartupAll` did both passes, and reaching a
-subsystem early via `Engine::GetWorldManager()` tripped its lazy-Startup safety net and booted the whole
-engine — **L6's failure from the caller's side**, and the reason the SE table's "registries exist
-(post-BootEngine)" was aspiration rather than fact until now. This is **LC1 one scope over**: the missing
-thing was a phase, not a workaround.
+```
+Engine().Startup()      → every subsystem constructed and started. NO WORLD EXISTS.
+RegisterModules(...)    → components -> ComponentRegistry, world subsystems -> its registry
+OnModulesRegistered()   → editor extensions; editor seals its own registries
+CreateStartupWorld()    → the first CreateWorld SEALS ComponentRegistry, then makes the world
+```
+
+`WorldManager::Startup` **must not create a world.** It used to spin up a default "Main" so there was
+"always a render target" — dead weight, because every consumer already handles no-active-world
+(`RendererManager::Render` guards; `HierarchyPanel` renders "No active world."). What it *did* do was make
+the boot order unfixable: the first `CreateWorld` seals `ComponentRegistry`, so a world born inside
+subsystem startup locked the registry before any game module could reach it.
+
+**The world comes from config, not from code**: `OpaaxApplication::CreateStartupWorld()` (an SE seam) reads
+`IProjectManager::StartupLevel()` — the project's `.opaaxproj`, key `startupLevel`, with `startupScene` /
+`defaultScene` as Scene-era fallbacks (**X4**). Falls back to "Main". *M3 only NAMES the world; loading that
+level's maps needs the M5 file layer.* Hosts override to open something else — the editor will want the
+last-opened map, not the game's startup level.
+
+**The rejected fix is worth remembering.** The first attempt kept the world in `WorldManager::Startup` and
+split `StartupAll` into `CreateAll` + start, adding an `IEngine::BootSubsystems()` phase to squeeze
+registration into the gap. It worked and it was wrong: it added machinery to preserve a layering mistake
+instead of removing it. Deleting the world from subsystem startup deleted the phase too. **When ordering has
+no legal window, check whether something is happening in the wrong phase before inventing a new one**
+([[L22]]).
 
 **Full frame of the run:**
 `Bootstrap() → InitializeApplication() [window] → RunApplication{ EngineStartup → loop → EngineTeardown } → ShutdownApplication()`
@@ -275,9 +290,10 @@ not overriding them leaves runtime byte-identical.
 | `PreRegisterConfig()` | in Bootstrap | register config types before load |
 | `OnProvideServices(locator)` | end of Bootstrap | add host-owned app services (editor adds `IEditorService`) |
 | `PreEngineStartup()` | start of `EngineStartup` | before subsystems start |
-| `RegisterModules(registrar)` | in `EngineStartup`, **after `Engine().BootSubsystems()`** (BO4) so registries exist, **no world yet** | route the game module — drives `IRuntimeModule::OnRegister` (**MR**) |
+| `RegisterModules(registrar)` | in `EngineStartup`, **after `Engine().Startup()`** — subsystems up, registries live, **no world yet** (BO4) | route the game module — drives `IRuntimeModule::OnRegister` (**MR**) |
 | `OnModulesRegistered()` | in `EngineStartup`, **after** `OnRegisterModules`, **before** `Engine().Startup()` (still no world) | editor registers its D10 extensions and **seals before the first world** (§2). `EditorApplication` overrides → `EditorService::RegisterExtensions`, which registers the editor's own **native** panels first, then drives each `IEditorModule::OnRegister(EditorExtensionRegistrar&)`, then seals — **MR2's order one level down** (natives → game module → seal), so a native panel travels the same route as a game panel with no privileged path. Generic engine-side name (no editor types) — the engine stays editor-ignorant (**D4**). |
-| `PostEngineStartup()` | end of `EngineStartup` | after subsystems start (editor inits `EditorService`) |
+| `CreateStartupWorld()` | in `EngineStartup`, **after `OnModulesRegistered`** — the last step of boot (BO4) | create + activate the world the app starts in, named from `IProjectManager::StartupLevel()`. Base impl is real, not a no-op; override to open something else. This is the **first `CreateWorld`**, so it seals the registries |
+| `PostEngineStartup()` | end of `EngineStartup` | after subsystems start **and the startup world exists** (editor inits `EditorService`; Sandbox populates the world) |
 | `TickFrame()` | per loop iter | base = `Engine().Loop()`; editor wraps it UI-begin → Loop → UI-end |
 | `OnEvent(event)` | window callback, per event | base = app sink (close/resize→bus); `EditorApplication` overrides → `EditorService::RouteInput` first (S11), so the editor sees events before the bus |
 

@@ -503,38 +503,49 @@ encoding.
 - A "just make it virtual" refactor is worth a look at what the seam has been quietly getting wrong —
   splitting an interface is when you finally read the implementation as a contract.
 
-## L22 — A plan's claim about BOOT ORDER is a premise to prove; and a test that constructs its subject directly can never catch a wiring bug (2026-07-28)
+## L22 — Before inventing a phase to fit an ordering constraint, ask whether something is running in the WRONG phase (2026-07-28)
 
-**What happened (M3 S4):** my approved plan asserted "the subsystem create-pass has already run
-(BootEngine), so WorldManager — and the ComponentRegistry it owns — exist". It hadn't.
-`ISubsystemManager::StartupAll` did the create pass *and* the startup pass in one call, so no
-subsystem instance existed until `Engine::Startup()`. My bind call therefore reached
-`Engine().GetWorldManager()`, hit that accessor's lazy-Startup safety net, and **booted the whole
-engine 0.7s early** — world created, `ComponentRegistry` sealed, and the game module's component
-refused when `RegisterModules` finally ran. I had taken the claim from **ARCHITECTURE.md's own SE
-table** ("registries exist (post-BootEngine)"), which turned out to be aspiration, not code.
+**What happened (M3 S4).** My approved plan asserted "the subsystem create-pass has already run
+(BootEngine), so WorldManager — and the ComponentRegistry it owns — exist". It hadn't:
+`ISubsystemManager::StartupAll` constructed *and* started in one call, so no subsystem existed until
+`Engine::Startup()`. My bind call therefore reached `Engine().GetWorldManager()`, hit that accessor's
+lazy-Startup safety net, and **booted the whole engine 0.7s early** — world created,
+`ComponentRegistry` sealed, and the game module's component refused when `RegisterModules` finally
+ran. I had taken the claim from **ARCHITECTURE.md's own SE table**, which turned out to be aspiration.
 
-**Why the tests were green the whole time.** All 162 of them passed, including a dedicated
-`ModuleRegistrar` suite that registers a component and round-trips it. They construct a
-`ComponentRegistry` and a `ModuleRegistrar` **directly** — so they verify the route's *logic* while
-saying nothing about *when the real thing is wired during boot*. The only instrument that could
-catch it was the `Sealed with N component type(s)` log line, read in ORDER against the registration
-lines. It was there because [[L15]] says to log the success branch; that is the entire reason this
-was caught before shipping rather than by a user's component silently not saving.
+**My fix was machinery. The user's fix was deletion.** I split the create pass out of `StartupAll`
+and added an `IEngine::BootSubsystems()` phase to squeeze registration into the new gap. It worked,
+it was defensible, I cited LC1 for it — and it was wrong. The user pushed back: *"instead of create
+world at start up of the subsystem, lets create a real flow where all the engine boot then at the end
+create the world."* The actual defect was that **`WorldManager::Startup` created a world at all** —
+a subsystem doing CONTENT work during INFRASTRUCTURE boot. Remove that, and the ordering problem
+evaporates: nothing seals during startup, registration has all the room it needs, and `CreateAll` /
+`BootSubsystems` get deleted. The "always have a render target" justification for the default world
+was already dead — every consumer null-checks.
+
+**Why the tests were green throughout.** All 162 passed, including a `ModuleRegistrar` suite that
+registers a component and round-trips it. They construct a `ComponentRegistry` and `ModuleRegistrar`
+**directly**, so they verify the route's *logic* while saying nothing about *when the real thing is
+wired during boot*. Only the ordered `Sealed with N component type(s)` log line could discriminate —
+it exists because [[L15]] says to log the success branch.
 
 **Rules for next time:**
+- **When ordering has no legal window, suspect a MISPLACED step before inventing a new phase.**
+  [[L7]]/LC1 ("the missing thing is a phase") is real but it is not the first question — it is the
+  answer when every step is in its right place and the phases genuinely don't cover the transition.
+  Ask first: *is something running in a phase it doesn't belong to?* A new phase that preserves a
+  layering mistake is machinery protecting a bug. Adding code to make a wrong thing work should feel
+  worse than deleting the wrong thing.
+- **Sort a lifecycle step by INFRASTRUCTURE vs CONTENT.** Starting a subsystem brings up capability;
+  choosing which world/level/asset to open is content, and content is the host's call, driven by
+  config. A subsystem's `Startup` that creates game objects is the smell.
 - **A lifecycle/ordering claim is a premise, not a finding — even when the CONTRACT states it**
-  ([[L21]] applied to boot order instead of behavior). ARCHITECTURE.md is the record of intent and
-  can drift ahead of the code exactly like a planning doc does ([[L19]]). Verify ordering claims by
-  reading the call chain (`StartupAll` -> factories -> `Startup`) or by a log, before designing on them.
-- **Unit tests that construct the subject directly cannot verify wiring.** When a feature's
-  correctness depends on *where in boot* something is called, the gate must be a run of the real
-  host with an ordered log — not a test that hands the collaborator in. Ask: "could this test pass
-  in a build where the wiring is absent?" Here the answer was yes, for all of them.
+  ([[L21]] applied to boot order). ARCHITECTURE.md records intent and can drift ahead of the code
+  exactly like a planning doc ([[L19]]). Verify by reading the call chain or a log before designing
+  on it.
+- **Unit tests that construct the subject directly cannot verify wiring.** When correctness depends
+  on *where in boot* something is called, the gate is a run of the real host with an ordered log. Ask:
+  "could this test pass in a build where the wiring is absent?" Here the answer was yes, for all 162.
 - **A lazy "safety net" accessor turns a too-early call into a silent reorder, not an error**
-  ([[L6]] from the caller's side). `if (!m_bStarted) Startup()` inside a getter means any premature
-  reach *succeeds* while quietly moving the whole boot. When adding a call at a new point in boot,
-  check whether the accessor you use can self-start.
-- **When ordering has no legal window, the missing thing is a PHASE** ([[L7]]/LC1, one scope over).
-  Splitting `CreateAll()` out of `StartupAll()` created the window instead of working around its
-  absence, and left hosts that don't split byte-identical. Recorded as **BO4**.
+  ([[L6]] from the caller's side). `if (!m_bStarted) Startup()` inside a getter means a premature
+  reach *succeeds* while quietly moving the whole boot.
