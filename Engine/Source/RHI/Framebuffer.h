@@ -30,8 +30,12 @@ namespace Opaax
      *
      * Backend-agnostic offscreen render target. The editor ViewportPanel composes
      * one instead of touching GL directly; future post-process passes render into
-     * one. Concrete impl selected by IFramebuffer::Create, defined in the active
-     * backend's TU (OpenGLFramebuffer.cpp today).
+     * one.
+     *
+     * Created by the DEVICE — IRHIDevice::CreateFramebuffer, which picks the concrete
+     * impl because it already knows its own backend (F2a). There is deliberately no
+     * static IFramebuffer::Create: a free factory would hardcode the backend in a
+     * backend-neutral TU. Editor-side callers reach it via IEngine::CreateFramebuffer.
      */
     class OPAAX_API IFramebuffer
     {
@@ -40,12 +44,6 @@ namespace Opaax
         // =============================================================================
     public:
         virtual ~IFramebuffer() = default;
-
-        // =============================================================================
-        // Factory
-        // =============================================================================
-    public:
-        static UniquePtr<IFramebuffer> Create(const FramebufferSpec& InSpec);
 
         // =============================================================================
         // Functions

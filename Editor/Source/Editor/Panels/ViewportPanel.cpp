@@ -9,7 +9,7 @@
 
 #include "Renderer/DebugDraw.h"             // selection outline (M2c)
 #include "Renderer/RenderTarget.hpp"        // OffscreenRenderTarget
-#include "RHI/Framebuffer.h"                // IFramebuffer::Create + FramebufferSpec
+#include "RHI/Framebuffer.h"                // IFramebuffer + FramebufferSpec (created by the device)
 
 #include "World/Components/DummyComponent.h"
 #include "World/Entity/Entity.h"
@@ -29,7 +29,19 @@ namespace Opaax::Editor
 
     void ViewportPanel::Startup()
     {
-        m_Framebuffer  = IFramebuffer::Create(FramebufferSpec{ m_viewportSize.x, m_viewportSize.y, /*DepthStencil*/ true });
+        // The engine's device builds the FBO (F2a) — the panel owns it, but never picks the backend.
+        m_Framebuffer = m_Context.Engine.CreateFramebuffer(
+            FramebufferSpec{ m_viewportSize.x, m_viewportSize.y, /*DepthStencil*/ true });
+
+        if (m_Framebuffer == nullptr)
+        {
+            // Loud, not silent: without this the only symptom is Draw()'s Dummy fallback — a blank
+            // panel and a clean log, which is exactly the failure L15 is about.
+            OPAAX_LOG(LogViewportPanel, Error, "ViewportPanel startup — the engine created no framebuffer; "
+                                               "the viewport will stay blank.")
+            return;
+        }
+
         m_RenderTarget = MakeUnique<OffscreenRenderTarget>(m_Framebuffer.get());
 
         m_Context.Engine.SetPrimaryRenderTarget(m_RenderTarget.get());

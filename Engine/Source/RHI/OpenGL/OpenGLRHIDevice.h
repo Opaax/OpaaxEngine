@@ -26,6 +26,7 @@ namespace Opaax
         UniquePtr<IShader>        CreateShader(const ShaderDesc& InDesc)                        override;
         UniquePtr<IPipeline>      CreatePipeline(const PipelineDesc& InDesc)                    override;
         UniquePtr<IBindGroup>     CreateBindGroup(const BindGroupLayout& InLayout)              override;
+        UniquePtr<IFramebuffer>   CreateFramebuffer(const FramebufferSpec& InSpec)              override;
 
         void            Init(IGraphicsContext& InSurface)                               override;
         void            BeginFrame()                                                    override;

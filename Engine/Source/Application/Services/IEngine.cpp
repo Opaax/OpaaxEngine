@@ -3,6 +3,7 @@
 #include "Engine/Subsystems/EventBus/EngineEventBus.h"
 #include "Engine/Subsystems/Resources/ResourceManager.h"
 #include "Renderer/DebugDraw.h"
+#include "RHI/Framebuffer.h"
 #include "World/WorldManager.h"
 
 namespace Opaax
@@ -23,6 +24,10 @@ namespace Opaax
             void Loop()                   override {}
             void PresentBackbuffer()      override {}
             void SetPrimaryRenderTarget(IRenderTarget*) override {}
+
+            // No device to create on — a caller gets nullptr and its own null-handling runs.
+            UniquePtr<IFramebuffer> CreateFramebuffer(const FramebufferSpec&) override { return nullptr; }
+
             void Update(double)           override {}
             void FixedUpdate(double)      override {}
             void Render(double)           override {}

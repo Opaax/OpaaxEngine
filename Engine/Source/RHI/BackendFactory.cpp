@@ -5,22 +5,21 @@
 // backend-selecting factories in one place so no other TU has to:
 //   - BackendFromString / BackendToString (config string <-> EBackend)
 //   - IGraphicsContext::Create / ApplyWindowHints
-//   - IFramebuffer::Create
 //
 // New-path status: OpenGL-only. The old IRenderAPI/RenderCommand facade and the whole
 // Vulkan backend were retired to Legacy/RHI (the new path runs through IRHIDevice —
 // RHIDevice::Create in OpenGLRHIDevice.cpp). When a new-path VulkanRHIDevice lands, the
 // backend switch returns here.
 //
-// Resource creation is NOT here anymore — it lives on the device (IRHIDevice::CreateXxx).
+// Resource creation is NOT here — it lives on the device (IRHIDevice::CreateXxx), framebuffers
+// included (F2a). IGraphicsContext::Create is the ONE free factory that survives, and only because
+// the context must exist BEFORE the device that inits against it — there is no device to ask yet.
 // =============================================================================
 
 #include "RHI/RHIBackend.h"
 #include "RHI/IGraphicsContext.h"
-#include "RHI/Framebuffer.h"
 
 #include "RHI/OpenGL/OpenGLContext.h"
-#include "RHI/OpenGL/OpenGLFramebuffer.h"
 
 #include "Application/Services/ILogger.h"
 
@@ -82,14 +81,6 @@ namespace Opaax
             default:
                 break;
         }
-    }
-
-    // =============================================================================
-    // IFramebuffer factory (OpenGL only)
-    // =============================================================================
-    UniquePtr<IFramebuffer> IFramebuffer::Create(const FramebufferSpec& InSpec)
-    {
-        return MakeUnique<OpenGLFramebuffer>(InSpec);
     }
 
 } // namespace Opaax

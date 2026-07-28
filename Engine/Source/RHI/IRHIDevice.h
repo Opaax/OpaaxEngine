@@ -9,6 +9,7 @@
 #include "RHI/UniformBuffer.h"
 #include "RHI/Pipeline.h"
 #include "RHI/BindGroup.h"
+#include "RHI/Framebuffer.h"
 
 namespace Opaax
 {
@@ -54,6 +55,13 @@ namespace Opaax
         virtual UniquePtr<IShader>        CreateShader(const ShaderDesc& InDesc)                        = 0;
         virtual UniquePtr<IPipeline>      CreatePipeline(const PipelineDesc& InDesc)                    = 0;
         virtual UniquePtr<IBindGroup>     CreateBindGroup(const BindGroupLayout& InLayout)              = 0;
+
+        /**
+         * An offscreen render target's backing store. Device-owned like every other GPU resource
+         * (F2a) — there is no free IFramebuffer::Create. The caller owns the returned framebuffer
+         * and must release it while the GPU context is still alive.
+         */
+        virtual UniquePtr<IFramebuffer>   CreateFramebuffer(const FramebufferSpec& InSpec)             = 0;
 
         // =============================================================================
         // Frame

@@ -15,6 +15,8 @@
 #include "World/WorldManager.h"
 #include "World/WorldEvents.h"
 
+#include "RHI/Framebuffer.h"   // FramebufferSpec + the UniquePtr<IFramebuffer> deleter
+
 namespace Opaax
 {
     // =========================================================================
@@ -203,6 +205,21 @@ namespace Opaax
         {
             m_RendererManager->SetPrimaryRenderTarget(InTarget);
         }
+    }
+
+    // =========================================================================
+    // CreateFramebuffer — the only render-resource factory the engine exposes. Forwards to the
+    // renderer adapter, which owns the device; the engine stores nothing itself (I5).
+    // =========================================================================
+    UniquePtr<IFramebuffer> Engine::CreateFramebuffer(const FramebufferSpec& InSpec)
+    {
+        if (m_RendererManager == nullptr)
+        {
+            OPAAX_ENGINE_LOG(Error, "Engine::CreateFramebuffer before Startup — no renderer; none created.");
+            return nullptr;
+        }
+
+        return m_RendererManager->CreateFramebuffer(InSpec);
     }
 
     void Engine::Shutdown()

@@ -7,7 +7,8 @@
 
 namespace Opaax
 {
-    // NOTE: the IFramebuffer::Create factory dispatch lives in RHI/BackendFactory.cpp.
+    // NOTE: this impl is selected by OpenGLRHIDevice::CreateFramebuffer — the device knows its own
+    // backend, so no free factory has to dispatch on one (F2a).
 
     // =============================================================================
     // CTOR - DTOR

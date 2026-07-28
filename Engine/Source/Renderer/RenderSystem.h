@@ -10,8 +10,10 @@ namespace Opaax
     OPAAX_LOG_CATEGORY(RenderSystem)
     
     class IRHIDevice;
+    class IFramebuffer;
     class IRenderTarget;
     class Renderer2D;
+    struct FramebufferSpec;
     struct RenderSystemDesc;
     struct RenderView;
 
@@ -99,6 +101,20 @@ namespace Opaax
         void Resize(Uint32 InWidth, Uint32 InHeight);
         
         // End Frame
+        // =============================================================================
+
+        // =============================================================================
+        // Resources
+    public:
+        /**
+         * Build an offscreen framebuffer on the device (F2a — GPU resources are device-created).
+         * The CALLER owns it and must release it before the device dies.
+         * @param InSpec Size + whether a depth/stencil attachment is wanted.
+         * @return nullptr if the render core has no device (Init failed or never ran).
+         */
+        UniquePtr<IFramebuffer> CreateFramebuffer(const FramebufferSpec& InSpec);
+
+        // End Resources
         // =============================================================================
 
         // =============================================================================

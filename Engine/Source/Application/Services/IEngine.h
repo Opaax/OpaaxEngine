@@ -1,14 +1,17 @@
 #pragma once
 
 #include "IAppService.h"
+#include "Core/OpaaxTypes.h"   // UniquePtr (CreateFramebuffer's return)
 
 namespace Opaax
 {
     class EngineEventBus;
     class ResourceManager;
     class WorldManager;
+    class IFramebuffer;
     class IRenderTarget;
     class DebugDraw;
+    struct FramebufferSpec;
 
     // =============================================================================
     // IEngine — the engine, exposed as an application service. Owns the engine
@@ -54,6 +57,17 @@ namespace Opaax
          * points this at its ViewportPanel's offscreen FBO so the world lands in a texture (D2).
          */
         virtual void SetPrimaryRenderTarget(IRenderTarget* InTarget) = 0;
+
+        /**
+         * Build an offscreen framebuffer on the render device — the backing store a caller wraps in an
+         * OffscreenRenderTarget before handing it to SetPrimaryRenderTarget. Deliberately narrow: the
+         * device itself stays engine-internal (exposing it would hand out BeginFrame/Present/pipelines
+         * to reach one factory), and GPU resources are device-created, never by a free factory (F2a).
+         *
+         * The CALLER owns the result and must release it while the engine — and its GPU context — is
+         * still alive. Valid only after Startup; returns nullptr before it, or if the device is gone.
+         */
+        virtual UniquePtr<IFramebuffer> CreateFramebuffer(const FramebufferSpec& InSpec) = 0;
 
         /**
          * Called once per rendered frame.

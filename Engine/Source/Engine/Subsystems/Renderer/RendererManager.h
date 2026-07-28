@@ -14,7 +14,9 @@ namespace Opaax
 {
     class RenderSystem;
     class WorldManager;
+    class IFramebuffer;
     class IRenderTarget;
+    struct FramebufferSpec;
     struct WindowResize;
 
     inline constexpr LogCategory LogRendererManager{"RendererManager"};
@@ -90,6 +92,14 @@ namespace Opaax
          * the view, replacing the old window-size cache).
          */
         void SetPrimaryRenderTarget(IRenderTarget* InTarget);
+
+        /**
+         * Create an offscreen framebuffer on the render core's device (F2a). The natural companion to
+         * SetPrimaryRenderTarget: a caller that wants the world in a texture needs both — the backing
+         * store, then the target wrapping it. CALLER-OWNED, and it must be released before the render
+         * core shuts down. nullptr before Startup (no core yet) or if the device is gone.
+         */
+        UniquePtr<IFramebuffer> CreateFramebuffer(const FramebufferSpec& InSpec);
 
         /**
          * @return The per-frame debug line queue, drained and cleared by Render(). Reached by game

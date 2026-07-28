@@ -13,6 +13,7 @@
 
 #include "RHI/RHIBackend.h"       // BackendFromString
 #include "RHI/IGraphicsContext.h"
+#include "RHI/Framebuffer.h"      // FramebufferSpec + the UniquePtr<IFramebuffer> deleter
 
 #include "Renderer/RenderSystem.h"
 #include "Renderer/RenderSystemDesc.h"
@@ -167,6 +168,17 @@ namespace Opaax
         OPAAX_LOG(LogRendererManager, Info, "Primary render target set to {}", InTarget ? "offscreen" : "backbuffer")
     }
     
+    UniquePtr<IFramebuffer> RendererManager::CreateFramebuffer(const FramebufferSpec& InSpec)
+    {
+        if (!m_RenderSystem)
+        {
+            OPAAX_LOG(LogRendererManager, Error, "CreateFramebuffer before the render core started — none created.")
+            return nullptr;
+        }
+
+        return m_RenderSystem->CreateFramebuffer(InSpec);
+    }
+
     void RendererManager::Present()
     {
         if (m_RenderSystem)

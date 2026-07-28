@@ -13,7 +13,9 @@ namespace Opaax
     class EngineEventBus;
     class WorldManager;
     class World;
+    class IFramebuffer;
     class IRenderTarget;
+    struct FramebufferSpec;
 
     inline constexpr double MAX_FRAME_DELTA = 0.25;
 
@@ -98,6 +100,7 @@ namespace Opaax
         void Loop() override;
         void PresentBackbuffer() override;
         void SetPrimaryRenderTarget(IRenderTarget* InTarget) override;
+        UniquePtr<IFramebuffer> CreateFramebuffer(const FramebufferSpec& InSpec) override;
         void Update(double InDeltaTime) override;
         void FixedUpdate(double InFixedDeltaTime) override;
         void Render(double InAlphaPhysicStep) override;

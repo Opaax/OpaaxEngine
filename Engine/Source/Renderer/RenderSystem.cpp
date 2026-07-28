@@ -59,6 +59,17 @@ namespace Opaax
         m_Device.reset();
     }
     
+    UniquePtr<IFramebuffer> RenderSystem::CreateFramebuffer(const FramebufferSpec& InSpec)
+    {
+        if (!IsValidDevice())
+        {
+            OPAAX_LOG(LogRenderSystem, Error, "RenderSystem::CreateFramebuffer — no device; no framebuffer created.")
+            return nullptr;
+        }
+
+        return m_Device->CreateFramebuffer(InSpec);
+    }
+
     void RenderSystem::BeginFrame()
     {
         if (!IsValidDevice())

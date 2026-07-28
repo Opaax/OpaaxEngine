@@ -12,6 +12,7 @@
 #include "RHI/OpenGL/OpenGLShader.h"
 #include "RHI/OpenGL/OpenGLPipeline.h"
 #include "RHI/OpenGL/OpenGLBindGroup.h"
+#include "RHI/OpenGL/OpenGLFramebuffer.h"
 
 #define GLAD_APIENTRY
 #include <glad/glad.h>
@@ -41,6 +42,7 @@ namespace Opaax
     UniquePtr<IShader>        OpenGLRHIDevice::CreateShader(const ShaderDesc& InDesc)      { return MakeUnique<OpenGLShader>(InDesc); }
     UniquePtr<IPipeline>      OpenGLRHIDevice::CreatePipeline(const PipelineDesc& InDesc)  { return MakeUnique<OpenGLPipeline>(InDesc); }
     UniquePtr<IBindGroup>     OpenGLRHIDevice::CreateBindGroup(const BindGroupLayout& InLayout) { return MakeUnique<OpenGLBindGroup>(InLayout); }
+    UniquePtr<IFramebuffer>   OpenGLRHIDevice::CreateFramebuffer(const FramebufferSpec& InSpec) { return MakeUnique<OpenGLFramebuffer>(InSpec); }
 
     // =========================================================================
     // Frame
