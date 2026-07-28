@@ -3,6 +3,7 @@
 #include "Editor/UI/OpenGLEditorUIBackend.h"
 #include "Editor/Panels/HierarchyPanel.h"
 #include "Editor/Panels/InspectorPanel.h"
+#include "Editor/Panels/ResourceBrowserPanel.h"
 #include "Editor/EditorPaths.h"                            // EditorSaveDir — the dock layout's home (D4)
 
 #include "Application/OpaaxApplication.h"
@@ -29,6 +30,9 @@ namespace Opaax::Editor
         // The one place editor code resolves from the locator (composition root, D3). Engine subsystems
         // exist now (called post Engine::Startup), so their references are valid and lifetime-stable.
         IEngine& lEngine = OpaaxApplication::GetAppService<IEngine>();
+
+        // Resolved before anything reads it: ResolveLayoutIniPath below, then the EditorContext.
+        CacheEditorPaths();
 
         // --- ImGui context (docking; multi-viewport deferred past M0) -----------------------------
         IMGUI_CHECKVERSION();
@@ -75,7 +79,10 @@ namespace Opaax::Editor
             lEngine.GetResources(),
             *m_UIBackend,
             *m_Selection,
-            m_Extensions
+            m_Extensions,
+            OpaaxApplication::GetAppService<IPaths>(),
+            OpaaxApplication::GetAppService<IPlatform>().GetFileSystem(),
+            m_EditorPaths
         });
 
         // --- Viewport panel (M1): owns the offscreen FBO and registers it as the engine's primary
@@ -187,22 +194,32 @@ namespace Opaax::Editor
         m_Extensions.Seal();
 
         OPAAX_LOG(LogEditorService, Info,
-            "Editor extensions sealed (before first world): drawers={}, panels={}, assetTypes={}, menus={}, editWorldSystems={}",
-            m_Extensions.Drawers().Count(),  m_Extensions.Panels().Count(), m_Extensions.AssetTypes().Count(),
+            "Editor extensions sealed (before first world): drawers={}, panels={}, resourceTypes={}, menus={}, editWorldSystems={}",
+            m_Extensions.Drawers().Count(),  m_Extensions.Panels().Count(), m_Extensions.ResourceTypes().Count(),
             m_Extensions.Menus().Count(),    m_Extensions.EditWorldSystems().Count());
+    }
+
+    void EditorService::CacheEditorPaths()
+    {
+        // EditorSaveDir/EditorAssetsDir live only on EditorPaths, deliberately: the engine's IPaths knows
+        // nothing about an editor (D4). EditorApplication::CreatePaths normally installs EditorPaths, but it
+        // falls back to a plain Paths when no edited project is declared — so this cast genuinely can fail.
+        // Done ONCE here: the dock layout and the Resource Browser both need it.
+        const IPaths& lPaths = OpaaxApplication::GetAppService<IPaths>();
+        m_EditorPaths = dynamic_cast<const EditorPaths*>(&lPaths);
+
+        if (m_EditorPaths == nullptr)
+        {
+            OPAAX_LOG(LogEditorService, Warn, "No EditorPaths (no edited project?) — editor space unavailable.")
+        }
     }
 
     OpaaxString EditorService::ResolveLayoutIniPath() const
     {
-        // EditorSaveDir/EditorToAbsolute live only on EditorPaths, deliberately: the engine's IPaths knows
-        // nothing about an editor (D4). EditorApplication::CreatePaths normally installs EditorPaths, but it
-        // falls back to a plain Paths when no edited project is declared — so this cast genuinely can fail.
-        //TODO: Save editor path since we may need quite often with editor
-        const IPaths&      lPaths       = OpaaxApplication::GetAppService<IPaths>();
-        const EditorPaths* lEditorPaths = dynamic_cast<const EditorPaths*>(&lPaths);
+        const EditorPaths* lEditorPaths = m_EditorPaths;
         if (lEditorPaths == nullptr)
         {
-            OPAAX_LOG(LogEditorService, Warn, "No EditorPaths (no edited project?) — dock layout will not persist.")
+            OPAAX_LOG(LogEditorService, Warn, "No EditorPaths — dock layout will not persist.")
             return {};
         }
 
@@ -230,6 +247,9 @@ namespace Opaax::Editor
 
         m_Extensions.Panels().Register("Inspector",
             [](EditorContext& InContext) -> UniquePtr<IEditorPanel> { return MakeUnique<InspectorPanel>(InContext); });
+
+        m_Extensions.Panels().Register("Resource Browser",
+            [](EditorContext& InContext) -> UniquePtr<IEditorPanel> { return MakeUnique<ResourceBrowserPanel>(InContext); });
     }
 
     void EditorService::DrawDockspace()

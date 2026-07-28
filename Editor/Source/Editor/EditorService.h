@@ -2,6 +2,7 @@
 
 #include "Editor/IEditorService.h"
 #include "Editor/EditorContext.h"
+#include "Editor/EditorPaths.h"
 #include "Editor/EditorSelection.h"
 #include "Editor/UI/IEditorUIBackend.h"
 #include "Editor/Panels/ViewportPanel.h"
@@ -59,6 +60,13 @@ namespace Opaax::Editor
          *   which case the caller must leave IniFilename null (ImGui's own "don't persist" contract).
          */
         OpaaxString ResolveLayoutIniPath() const;
+
+        /**
+         * Resolves the app's IPaths to EditorPaths ONCE, into m_EditorPaths. EditorApplication::CreatePaths
+         * falls back to a plain Paths when no edited project is declared, so this genuinely can end up null —
+         * every consumer treats that as "no editor space", never as an error.
+         */
+        void CacheEditorPaths();
         
         // =============================================================================
         // Get - Set
@@ -94,6 +102,10 @@ namespace Opaax::Editor
         // string — so this must stay alive, and unmodified, until ImGui::DestroyContext() (which saves
         // through that very pointer). Assigned once in Initialize(); never cleared in OnShutdown().
         OpaaxString                 m_LayoutIniPath;
+
+        // M2d: the app's IPaths downcast once (CacheEditorPaths). NON-OWNING — IPaths is an app service
+        // that outlives this one. Null when no edited project was declared.
+        const EditorPaths*          m_EditorPaths = nullptr;
 
         UniquePtr<EditorSelection>  m_Selection;       // M2a: the single selection; EditorContext.Selection refs it
         UniquePtr<EditorContext>    m_Context;

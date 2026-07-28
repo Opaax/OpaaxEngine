@@ -1,0 +1,4 @@
+{
+  "wave": "Wave01",
+  "enemies": [ { "type": "Grunt", "count": 8, "pattern": "SineSweep" } ]
+}

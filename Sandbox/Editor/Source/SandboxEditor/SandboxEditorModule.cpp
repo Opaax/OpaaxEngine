@@ -8,10 +8,9 @@
 void SandboxEditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& InRegistrar)
 {
     // M0 demonstrative — proves each remaining counts-only route accepts & counts. `int` placeholders stand
-    // in for the real asset-types / edit-world-systems the game defines from M2d on (the editor analogue of
+    // in for the real edit-world-systems / menus the game defines from M4 on (the editor analogue of
     // SandboxModule::RegisterModule's DummyComponent). Each placeholder dies in the slice that makes its
     // route real (overview F1) — it cannot survive its registry going real.
-    InRegistrar.AssetTypes().Register<int, int>();         // <TAsset, TActions>
     InRegistrar.EditWorldSystems().Register<int>();        // <TSystem>
     InRegistrar.Menus().Register("Tools/Validate Sandbox",
         [] {});                                            // path + command

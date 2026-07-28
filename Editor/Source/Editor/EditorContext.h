@@ -5,12 +5,15 @@ namespace Opaax
     class IEngine;
     class WorldManager;
     class ResourceManager;
+    class IPaths;
+    class IFileSystem;
 
     namespace Editor
     {
         class IEditorUIBackend;         // editor-owned; the context carries it so panels reach it by ctor
         class EditorSelection;          // editor-owned; the single selected entity (Hierarchy writes, Inspector reads)
         class EditorExtensionRegistrar; // editor-owned; the sealed D10 routes (Inspector reads Drawers())
+        class EditorPaths;              // editor-owned IPaths subclass; the editor-space directories
 
         // =============================================================================
         // EditorContext — a flat struct of engine-side references (Editor.md D3). Resolved ONCE by
@@ -34,10 +37,20 @@ namespace Opaax
             EditorSelection&  Selection;   // M2a — Hierarchy writes, Inspector reads
 
             // M2b — the sealed extension routes, so a panel can consume what modules registered (the
-            // Inspector walks Drawers()). CONST by construction: Seal() happens at OnModulesRegistered,
-            // this context is built at PostEngineStartup, so nothing can register through it. One member
-            // serves every route — M2d's AssetTypes() needs no further growth here.
+            // Inspector walks Drawers(), the Resource Browser ResourceTypes()). CONST by construction:
+            // Seal() happens at OnModulesRegistered, this context is built at PostEngineStartup, so
+            // nothing can register through it. One member serves every route.
             const EditorExtensionRegistrar& Extensions;
+
+            // M2d — the browser resolves its roots from paths and walks them through the file system.
+            // Both are resolved ONCE by EditorService: a panel never touches the locator (D3).
+            const IPaths&      Paths;
+            const IFileSystem& FileSystem;
+
+            // The editor's own per-project space (<ProjectRoot>/Editor/Assets). NULL is a real state,
+            // not an error: EditorApplication installs a plain Paths when no edited project is declared,
+            // and then there simply is no editor space to browse.
+            const EditorPaths* EditorPathsOrNull;
         };
     }
 }
