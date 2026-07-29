@@ -2,8 +2,6 @@
 
 #include <nlohmann/json.hpp>
 
-#include "World/Components/ComponentBase.h"
-
 namespace Sandbox
 {
     // =============================================================================
@@ -13,10 +11,10 @@ namespace Sandbox
     //   the ComponentRegistry that serializes it both live in the engine DLL.
     //
     //   Note what registering it costs: the NLOHMANN macro, and one line in OnRegister.
-    //   No base class is required (ComponentBase is inherited only for the existing marker),
-    //   no engine header lists it, nothing in the engine names it.
+    //   There is NO base class to derive from — satisfying CComponent is the whole contract.
+    //   No engine header lists it; nothing in the engine names it.
     // =============================================================================
-    struct HealthComponent : Opaax::ComponentBase
+    struct HealthComponent
     {
         int Current = 100;
         int Max     = 100;

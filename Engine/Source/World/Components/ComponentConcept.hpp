@@ -8,10 +8,14 @@
 // CComponent — THE compile-time contract for a serializable component.
 //
 //   Same shape as CResource (Engine/Subsystems/Resources/ResourceConcept.hpp): a concept
-//   instead of a base class, because entt stores components BY VALUE. `ComponentBase` is
-//   deliberately empty and non-virtual for that reason, so Save/Load cannot be member
-//   virtuals the way the retired Legacy ComponentRegistry did it — the contract has to be
-//   external to the type.
+//   instead of a base class, because entt stores components BY VALUE — so Save/Load cannot
+//   be member virtuals the way the retired Legacy ComponentRegistry did it. The contract has
+//   to be external to the type.
+//
+//   THERE IS NO COMPONENT BASE CLASS, on purpose. An empty marker base used to exist; it was
+//   deleted once this concept took over its stated job, because an empty non-virtual base is
+//   an attractive nuisance — the first person to add a virtual to it silently breaks entt's
+//   by-value storage, and nothing would complain. No base, no vtable to add.
 //
 //   The contract is nlohmann's free-function pair, found by ADL:
 //       void to_json  (nlohmann::json&, const T&);

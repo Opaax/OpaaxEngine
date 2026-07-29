@@ -91,12 +91,16 @@ struct, `Engine`), never on the template itself.
   (C2280) even though nothing ever copies one. Declaring copy/move `= delete` is therefore **required**,
   not hygiene — the shape `World` already uses, now also `ComponentRegistry`.
 
-**I8 — A component is defined by a CONCEPT, not a base class** (landed M3, 2026-07-28). `CComponent`
-(`World/Components/ComponentConcept.hpp`) requires nlohmann `to_json`/`from_json` by ADL — the same
-concept-over-base-class shape as `CResource`, and the only shape available: **entt stores components by
-value**, which is why `ComponentBase` is empty and non-virtual, so `Save`/`Load` cannot be member virtuals
-the way the retired `Legacy/ECS/ComponentRegistry` did it. A game component costs one
+**I8 — A component is defined by a CONCEPT, and there is NO component base class** (landed M3,
+2026-07-28). `CComponent` (`World/Components/ComponentConcept.hpp`) requires nlohmann
+`to_json`/`from_json` by ADL — the same concept-over-base-class shape as `CResource`, and the only shape
+available: **entt stores components by value**, so `Save`/`Load` cannot be member virtuals the way the
+retired `Legacy/ECS/ComponentRegistry` did it. A game component costs one
 `NLOHMANN_DEFINE_TYPE_INTRUSIVE` and one `Components().Register<T>()`; the engine names it nowhere.
+The empty `ComponentBase`/`IComponent` markers were **deleted** once the concept took over their stated
+job (user call): an empty non-virtual base is an attractive nuisance — the first person to add a virtual
+to it silently breaks by-value storage and nothing complains. **Do not reintroduce one.** Per-entity
+behavior is authoring data + a world subsystem (D7), never a polymorphic component.
 `EntityMeta` deliberately does **not** satisfy it — identity is not user data, and the snapshot core writes
 those fields by hand rather than nesting an entity's identity inside its own payload.
 

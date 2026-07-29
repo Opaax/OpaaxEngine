@@ -4,7 +4,6 @@
 
 #include "Core/Maths/MathTypes.h"
 #include "Core/Maths/MathsJson.hpp"
-#include "World/Components/ComponentBase.h"
 
 namespace Opaax
 {
@@ -13,7 +12,7 @@ namespace Opaax
     //   end-to-end before the real component set exists. Carries just enough to render
     //   a solid quad (position, size, color). Not meant to survive past bring-up.
     // =============================================================================
-    struct DummyComponent : ComponentBase
+    struct DummyComponent
     {
         Vector2F Position = { 0.f, 0.f };
         Vector2F Size     = { 50.f, 50.f };
