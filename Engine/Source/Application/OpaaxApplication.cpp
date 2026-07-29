@@ -289,7 +289,7 @@ void OpaaxApplication::EngineStartup()
     Engine().Startup();
 
     // 2. Content types. The registries are live; nothing has locked them yet (MR2).
-    m_ModuleRegistrar->BindEngineRegistries(Engine().GetWorldManager().GetComponentRegistry());
+    m_ModuleRegistrar->BindEngineRegistries(Engine().GetRegistries());
     RegisterModules(*m_ModuleRegistrar);
     OnModulesRegistered();
 

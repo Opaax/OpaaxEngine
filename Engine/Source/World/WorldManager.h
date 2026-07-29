@@ -5,12 +5,13 @@
 #include "Core/String/OpaaxString.hpp"
 #include "Application/Services/ILogger.h"
 #include "Engine/Subsystems/EngineSubsystem.h"
-#include "World/ComponentRegistry.h"
 #include "World/World.h"
 #include "World/WorldEvents.h"
 
 namespace Opaax
 {
+    class EngineRegistries;
+
     inline constexpr LogCategory LogWorldManager{"WorldManager"};
 
     // =============================================================================
@@ -31,8 +32,12 @@ namespace Opaax
         // CTORS - DTORS
         // =========================================================================
     public:
-        /** Registers the engine's native component types — see RegisterNativeComponents. */
-        WorldManager();
+        /**
+         * @param InRegistries The engine's type registries, BORROWED (Engine owns them). Sealed
+         *                     here on the way to the first world. Null is legal — a bare manager
+         *                     in a test simply has nothing to seal.
+         */
+        explicit WorldManager(EngineRegistries* InRegistries = nullptr);
         ~WorldManager() override = default;
 
         // =========================================================================
@@ -56,13 +61,8 @@ namespace Opaax
 
         Uint64 GetWorldCount() const noexcept { return static_cast<Uint64>(m_Worlds.size()); }
 
-        /**
-         * Every component type the engine and the loaded game module know about. Populated
-         * before the first world exists (engine natives in the ctor, module types through
-         * ModuleRegistrar) and SEALED by the first CreateWorld.
-         */
-        ComponentRegistry&       GetComponentRegistry() noexcept       { return m_Components; }
-        const ComponentRegistry& GetComponentRegistry() const noexcept { return m_Components; }
+        /** The engine's registries, borrowed. Null only for a bare manager in a test. */
+        EngineRegistries* GetRegistries() const noexcept { return m_Registries; }
 
         // End Getters
         // =========================================================================
@@ -85,22 +85,10 @@ namespace Opaax
         //~End EngineSubsystemBase interface
 
         // =========================================================================
-        // Functions
-        // =========================================================================
-    private:
-        /**
-         * The engine's own component types, registered FIRST so a game module can never
-         * shadow one (MR2: engine natives -> game module -> editor module -> seal). Runs in
-         * the ctor because the subsystem create-pass is the only point that is guaranteed to
-         * precede RegisterModules.
-         */
-        void RegisterNativeComponents();
-
-        // =========================================================================
         // Members
         // =========================================================================
     private:
-        ComponentRegistry           m_Components;
+        EngineRegistries*           m_Registries = nullptr; // non-owning; Engine owns them (I5)
         TDynArray<UniquePtr<World>> m_Worlds;
         World*                      m_ActiveWorld = nullptr; // non-owning; points into m_Worlds
         

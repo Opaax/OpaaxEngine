@@ -6,6 +6,7 @@
 #include "Subsystems/Renderer/RendererManager.h"
 #include "FrameInfo.hpp"
 #include "Core/Events/EventBus.h"
+#include "Engine/Registries/EngineRegistries.h"
 
 namespace Opaax
 {
@@ -107,6 +108,7 @@ namespace Opaax
         void TearDown() override;
         void Shutdown() override;
 
+        EngineRegistries& GetRegistries() override;
         ResourceManager& GetResources() override;
         EngineEventBus&  GetEngineEventBus() override;
         WorldManager&    GetWorldManager() override;
@@ -138,6 +140,13 @@ namespace Opaax
          * Handle Subsystem lifetime
          */
         EngineSubsystemMgr m_Subsystems;
+
+        /**
+         * The engine's type registries. Owned here because they are boot-order state, not the
+         * state of any one subsystem (see EngineRegistries.h). Constructed with the Engine, so
+         * they exist before any subsystem does.
+         */
+        EngineRegistries m_Registries;
         
         /**
          * Convenient ptr, lifetime not managed by engine itself but through subsystem
@@ -171,5 +180,8 @@ namespace Opaax
     private:
         /** Resolve the sibling convenience pointers from the manager (F3, never lazy-Startup). */
         void CacheSubsystems();
+
+        /** The engine's OWN component types — registered first, so a module cannot shadow one (MR2). */
+        void RegisterNativeTypes();
     };
 }

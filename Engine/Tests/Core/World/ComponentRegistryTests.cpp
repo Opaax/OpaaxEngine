@@ -13,6 +13,8 @@
 #include "World/Entity/Entity.h"
 #include "World/World.h"
 #include "World/WorldManager.h"
+#include "Engine/Registries/EngineRegistries.h"
+#include "Engine/Engine.h"
 
 using namespace Opaax;
 
@@ -159,30 +161,50 @@ TEST_CASE("ComponentRegistry: Seal is idempotent and refuses every later registr
     CHECK(lRegistry.Count() == 1u);
 }
 
-TEST_CASE("WorldManager: the registry seals at the FIRST CreateWorld, not before")
+TEST_CASE("WorldManager: the registries seal at the FIRST CreateWorld, not before")
 {
-    WorldManager lManager;
+    // The registries are the ENGINE's; WorldManager only borrows them to seal on its way to
+    // the first world. A bare manager takes them by pointer, which is what makes that testable
+    // without standing up an Engine.
+    EngineRegistries lRegistries;
+    WorldManager     lManager(&lRegistries);
 
-    // Natives are registered in the ctor, before any module gets a turn (MR2).
-    CHECK_FALSE(lManager.GetComponentRegistry().IsSealed());
-    CHECK(lManager.GetComponentRegistry().Count() >= 1u);
+    REQUIRE(lRegistries.Components().Register<ProbeComponent>("Probe"));
+    CHECK_FALSE(lRegistries.Components().IsSealed());
 
     lManager.CreateWorld("First");
-    CHECK(lManager.GetComponentRegistry().IsSealed());
+    CHECK(lRegistries.Components().IsSealed());
 
-    lManager.CreateWorld("Second"); // still fine — Seal is idempotent
-    CHECK(lManager.GetComponentRegistry().IsSealed());
+    lManager.CreateWorld("Second"); // still fine — SealAll is idempotent
+    CHECK(lRegistries.Components().IsSealed());
+
+    // And the seal means what it says.
+    CHECK_FALSE(lRegistries.Components().Register<DummyComponent>("TooLate"));
 }
 
-TEST_CASE("WorldManager: DummyComponent is registered natively, DLL-side, and found exe-side")
+TEST_CASE("WorldManager: a manager with no registries still creates worlds")
 {
+    // Null registries is the bare-test case. It must not crash on the seal path — the whole
+    // point of making the borrow explicit rather than assumed.
     WorldManager lManager;
 
-    // The cross-boundary statement: RegisterNativeComponents runs inside the DLL
-    // (WorldManager.cpp), the type id below is computed HERE in the exe. A mismatch returns
-    // null — see ComponentIdentityTests.cpp for why this can be trusted (I2).
+    CHECK(lManager.GetRegistries() == nullptr);
+    CHECK(lManager.CreateWorld("Orphan") != nullptr);
+    CHECK(lManager.GetWorldCount() == 1u);
+}
+
+TEST_CASE("Engine: DummyComponent is registered natively, DLL-side, and found exe-side")
+{
+    // Natives are the ENGINE's job now, done in its ctor before any subsystem exists (MR2).
+    // Constructing an Engine only queues subsystem factories + registers natives — nothing
+    // starts, no service is touched.
+    Engine lEngine;
+
+    // The cross-boundary statement: RegisterNativeTypes runs inside the DLL (Engine.cpp), the
+    // type id below is computed HERE in the exe. A mismatch returns null — see
+    // ComponentIdentityTests.cpp for why this can be trusted (I2).
     const IComponentEntry* lEntry =
-        lManager.GetComponentRegistry().FindByTypeId(entt::type_hash<DummyComponent>::value());
+        lEngine.GetRegistries().Components().FindByTypeId(entt::type_hash<DummyComponent>::value());
 
     REQUIRE(lEntry != nullptr);
     CHECK(lEntry->GetName() == OpaaxStringID("Dummy"));

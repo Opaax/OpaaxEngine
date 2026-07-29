@@ -6,6 +6,7 @@
 #include <doctest.h>
 
 #include "Engine/Modules/ModuleRegistrar.h"
+#include "Engine/Registries/EngineRegistries.h"
 #include "World/ComponentRegistry.h"
 #include "World/Entity/Entity.h"
 #include "World/Serialization/MapFactory.h"
@@ -69,9 +70,11 @@ TEST_CASE("ComponentRoute: an UNBOUND route refuses rather than silently droppin
 
 TEST_CASE("ComponentRoute: a bound route forwards into the registry")
 {
-    ComponentRegistry lRegistry;
-    ModuleRegistrar   lRegistrar;
-    lRegistrar.BindEngineRegistries(lRegistry);
+    EngineRegistries lRegistries;
+    ModuleRegistrar  lRegistrar;
+    lRegistrar.BindEngineRegistries(lRegistries);
+
+    ComponentRegistry& lRegistry = lRegistries.Components();
 
     REQUIRE(lRegistrar.Components().Register<TestGame::AmmoComponent>());
 
@@ -84,9 +87,11 @@ TEST_CASE("ComponentRoute: a bound route forwards into the registry")
 // =============================================================================
 TEST_CASE("ComponentRoute: an omitted name derives the type's LEAF name")
 {
-    ComponentRegistry lRegistry;
-    ModuleRegistrar   lRegistrar;
-    lRegistrar.BindEngineRegistries(lRegistry);
+    EngineRegistries lRegistries;
+    ModuleRegistrar  lRegistrar;
+    lRegistrar.BindEngineRegistries(lRegistries);
+
+    ComponentRegistry& lRegistry = lRegistries.Components();
 
     REQUIRE(lRegistrar.Components().Register<TestGame::AmmoComponent>());
 
@@ -97,9 +102,11 @@ TEST_CASE("ComponentRoute: an omitted name derives the type's LEAF name")
 
 TEST_CASE("ComponentRoute: an explicit name overrides the derived one")
 {
-    ComponentRegistry lRegistry;
-    ModuleRegistrar   lRegistrar;
-    lRegistrar.BindEngineRegistries(lRegistry);
+    EngineRegistries lRegistries;
+    ModuleRegistrar  lRegistrar;
+    lRegistrar.BindEngineRegistries(lRegistries);
+
+    ComponentRegistry& lRegistry = lRegistries.Components();
 
     // Pinning the name is how a game keeps saved maps loadable across a C++ rename.
     REQUIRE(lRegistrar.Components().Register<TestGame::AmmoComponent>(OpaaxStringID("Ammo")));
@@ -110,9 +117,11 @@ TEST_CASE("ComponentRoute: an explicit name overrides the derived one")
 
 TEST_CASE("ComponentRoute: Count records refusals too")
 {
-    ComponentRegistry lRegistry;
-    ModuleRegistrar   lRegistrar;
-    lRegistrar.BindEngineRegistries(lRegistry);
+    EngineRegistries lRegistries;
+    ModuleRegistrar  lRegistrar;
+    lRegistrar.BindEngineRegistries(lRegistries);
+
+    ComponentRegistry& lRegistry = lRegistries.Components();
 
     REQUIRE(lRegistrar.Components().Register<TestGame::AmmoComponent>());
     CHECK_FALSE(lRegistrar.Components().Register<TestGame::AmmoComponent>()); // duplicate type
@@ -134,9 +143,11 @@ TEST_CASE("ComponentRoute: WorldSubsystems is still counts-only (its registry la
 // =============================================================================
 TEST_CASE("Module components round-trip through capture -> instantiate, GUIDs preserved")
 {
-    ComponentRegistry lRegistry;
-    ModuleRegistrar   lRegistrar;
-    lRegistrar.BindEngineRegistries(lRegistry);
+    EngineRegistries lRegistries;
+    ModuleRegistrar  lRegistrar;
+    lRegistrar.BindEngineRegistries(lRegistries);
+
+    ComponentRegistry& lRegistry = lRegistries.Components();
 
     // Exactly what SandboxModule::OnRegister does — two types the engine has never heard of.
     REQUIRE(lRegistrar.Components().Register<TestGame::AmmoComponent>());

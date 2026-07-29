@@ -11,6 +11,7 @@ namespace Opaax
     class IFramebuffer;
     class IRenderTarget;
     class DebugDraw;
+    class EngineRegistries;
     struct FramebufferSpec;
 
     // =============================================================================
@@ -119,6 +120,13 @@ namespace Opaax
         // =============================================================================
         // Foundation subsystems — exposed directly
     public:
+        /**
+         * The engine's type registries (components today, world subsystems in M4). Populated
+         * between Engine().Startup() and the first world, then SEALED — see BO4. Everything
+         * outside ModuleRegistrar should treat these as read-only.
+         */
+        virtual EngineRegistries& GetRegistries() = 0;
+
         virtual ResourceManager& GetResources() = 0;
         virtual EngineEventBus& GetEngineEventBus() = 0;
         virtual WorldManager& GetWorldManager() = 0;

@@ -311,6 +311,17 @@ A game module is an **`IRuntimeModule`** (`Application/IRuntimeModule.h`); its `
 InRegistrar.Components().Register<TransformComponent>();      // → ComponentRegistry v2 (M3)
 InRegistrar.WorldSubsystems().Register<WaveSpawnSubsystem>(); // → WorldSubsystemRegistry (M4)
 ```
+**MR0 — Registries live on `Engine`, in one `EngineRegistries` aggregate** (`Engine/Registries/`, user call
+2026-07-28). Editor.md §2 has said "Engine builds the registry" since v3; M3 briefly hung `ComponentRegistry`
+off `WorldManager` and that was wrong for three reasons: a registry is **type metadata**, not one
+subsystem's state (the Inspector reads it too, and it is not "the world manager"); **there is more than
+one** — `WorldSubsystemRegistry` lands in M4, and hanging each off whichever subsystem happens to read it
+turns that subsystem into a bag; and **registration is a boot-order concern** (MR2), which is the Engine's
+business. Consequences: the engine registers its **own** native types in `Engine::RegisterNativeTypes()`
+before any subsystem exists; `WorldManager` **borrows** a non-owning `EngineRegistries*` (injected through
+its subsystem factory, so it never reaches for the Engine) and seals it on the way to the first world; and
+`BindEngineRegistries(EngineRegistries&)` is one call that does not grow an argument per registry.
+
 **MR1** — The call-site API is **final now**; only the route *bodies* change (M0 counts; M3/M4 forward to
 real registries). Do not change how modules call in. **`Components()` went real in M3** and the call site
 did survive verbatim, because the authoring name is *optional*: omitted, `ComponentRoute` derives the C++

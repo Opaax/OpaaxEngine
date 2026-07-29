@@ -7,7 +7,7 @@
 #include "Core/String/OpaaxStringID.hpp"
 #include "Application/Services/ILogger.h"
 
-#include "World/ComponentRegistry.h"
+#include "Engine/Registries/EngineRegistries.h"
 
 namespace Opaax
 {
@@ -142,9 +142,10 @@ namespace Opaax
          * Point every live route at the engine's registries. Must run BEFORE the first
          * module registers, or registrations are dropped (loudly).
          */
-        void BindEngineRegistries(ComponentRegistry& InComponents) noexcept
+        void BindEngineRegistries(EngineRegistries& InRegistries) noexcept
         {
-            m_Components.Bind(&InComponents);
+            m_Components.Bind(&InRegistries.Components());
+            // M4: m_WorldSubsystems.Bind(&InRegistries.WorldSubsystems());
         }
 
     private:

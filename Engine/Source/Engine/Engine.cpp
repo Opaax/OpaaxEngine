@@ -1,5 +1,7 @@
 #include "Engine.h"
 
+#include "World/Components/DummyComponent.h"
+
 #include <chrono>
 
 #include "Application/OpaaxApplication.h"
@@ -26,10 +28,30 @@ namespace Opaax
     // =========================================================================
     Engine::Engine()
     {
+        // Engine natives FIRST, before any subsystem exists and long before a module gets a
+        // turn (MR2) — a module can then never shadow an engine type.
+        RegisterNativeTypes();
+
+        // WorldManager borrows the registries: it seals them on its way to the first world,
+        // and (M4) reads world-subsystem candidates out of them. Injected through the factory
+        // rather than reached for, so it never has to know about Engine.
         m_Subsystems.RegisterSubsystem<EngineEventBus>();
         m_Subsystems.RegisterSubsystem<ResourceManager>();
-        m_Subsystems.RegisterSubsystem<WorldManager>();
+        m_Subsystems.RegisterSubsystem<WorldManager>(&m_Registries);
         m_Subsystems.RegisterSubsystem<RendererManager>();
+    }
+
+    void Engine::RegisterNativeTypes()
+    {
+        // NOTE: DummyComponent is the whole native set today — the only live component type
+        // the engine owns. A real type registered DLL-side is also what proves the
+        // cross-boundary lookup in ComponentIdentityTests.
+        m_Registries.Components().Register<DummyComponent>("Dummy");
+    }
+
+    EngineRegistries& Engine::GetRegistries()
+    {
+        return m_Registries;
     }
 
     Engine::~Engine()

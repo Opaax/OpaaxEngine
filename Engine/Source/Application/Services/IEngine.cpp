@@ -5,6 +5,7 @@
 #include "Renderer/DebugDraw.h"
 #include "RHI/Framebuffer.h"
 #include "World/WorldManager.h"
+#include "Engine/Registries/EngineRegistries.h"
 
 namespace Opaax
 {
@@ -33,6 +34,12 @@ namespace Opaax
             void Render(double)           override {}
             void TearDown()               override {}
             void Shutdown()               override {}
+
+            EngineRegistries& GetRegistries() override
+            {
+                static EngineRegistries s_NullRegistries; // inert — nothing registers into it
+                return s_NullRegistries;
+            }
 
             ResourceManager& GetResources() override
             {
