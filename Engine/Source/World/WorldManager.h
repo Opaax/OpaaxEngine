@@ -17,8 +17,12 @@ namespace Opaax
     // =============================================================================
     // WorldManager — the engine subsystem that OWNS every World (UniquePtr). Multiple
     //   worlds may coexist (editor + PIE later); one is the "active" world the renderer
-    //   draws. Creates a default world on Startup so there is always a render target.
-    //   Ownership lives here; drivers hold non-owning World* handles.
+    //   draws. Ownership lives here; drivers hold non-owning World* handles.
+    //
+    //   It creates NO world of its own (BO4). Starting a subsystem is infrastructure;
+    //   choosing which world to open is content, and the host does that last, from project
+    //   config — see OpaaxApplication::CreateStartupWorld. There is legitimately no active
+    //   world between Startup and that call, and every consumer handles it.
     // =============================================================================
     class OPAAX_API WorldManager final : public EngineSubsystemBase
     {
