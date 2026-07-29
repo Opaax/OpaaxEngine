@@ -33,10 +33,24 @@ Two proven ways to get that — the deciding factor is **whether the tag is dll-
   one exported inline definition into the exe rather than re-emitting it. **Proven by S9 (2026-07-20):**
   `GetSubsystem<WorldManager>()` is non-null across the exe/DLL line (DLL-side instance tag == exe-side
   `StaticTypeID()`, same address). So I2 is *not* "out-of-line only" — it is "one exported tag."
-- The "duplicates per module" hazard (**L4**) bites only a tag that is **not** dll-exported: a header-only
-  template static, or a subsystem living in a **static lib / game module** (M4). Such a type must go
-  out-of-line (service shape) or be exported. If `GetSubsystem<T>()` across the boundary ever returns null,
-  this is the first suspect.
+- The "duplicates per module" hazard (**L4**) bites a tag that **two modules both instantiate** — a
+  header-only template static, or a type compiled into the DLL *and* the exe. The axis is **how many
+  modules emit the tag**, not whether it is exported. If `GetSubsystem<T>()` across the boundary ever
+  returns null, this is still the first suspect.
+- **A NON-exported subsystem is fine when it lives in exactly one module — proven by the M4 S1 probe**
+  (2026-07-29, `Engine/Tests/Core/World/WorldSubsystemIdentityTests.cpp`). This corrects an earlier,
+  broader caveat here which claimed a subsystem in a **static lib / game module** "would get a per-module
+  copy" and must go out-of-line or be exported. It does not: a game type is compiled into the **exe
+  only**, so there is no second copy to disagree with, and the exe linker folds the per-TU COMDATs of the
+  inline `StaticTypeID()` into one address. The probe pins it the way M4 needs — probes defined in a
+  header used from **two** TUs (a single TU cannot tell "one tag per type" from "one tag per TU"), with
+  external linkage (an anonymous namespace would have guaranteed the wrong answer, [[L21]]), registered
+  in one TU and resolved in the other through a DLL-owned `WorldSubsystemMgr`. Structurally identical
+  probe types get distinct tags, and an exe-side tag does not collide with `WorldManager`'s DLL-exported
+  one. **So a game module needs no ceremony: derive, stamp `OPAAX_SUBSYSTEM_TYPE`, done.** Until this
+  probe, every live user of that macro was an `OPAAX_API` engine subsystem, so the non-exported case had
+  never once been exercised — the "S9 proof" above covers only the exported case ([[L21]]/[[L22]]: the
+  contract's own claim was a premise, not a finding).
 - **Exported-inline is for *tags*, NOT for shared mutable STATE.** S9 proved MSVC imports an exported
   inline function's local static for an identity tag — where the only requirement is address identity, and a
   wrong answer fails *loudly* (a null `GetSubsystem<T>()`). A function-local static holding a **mutable
@@ -86,6 +100,19 @@ against the engine DLL). Two correct shapes:
   small value types (project value **Simple**) — prefer header-only.
 `OPAAX_API` belongs on **non-template** classes with real compiled members (services, the `Maths` static
 struct, `Engine`), never on the template itself.
+- **Second proof, and a latent violation fixed (M4 S1, 2026-07-29): `ISubsystemManager<T>` was exported.**
+  Its *member templates* (`RegisterSubsystem<T>`, `GetSubsystem<T>`) linked fine — MSVC always instantiates
+  those locally — but its **non-template** members (`StartupAll`, `ShutdownAll`, …) were `dllimport`, so a
+  consumer expected them from the DLL, which never exported that instantiation → **LNK2019**. This hid for
+  as long as only `Engine.cpp` (*inside* the DLL) drove a manager; the first outside caller surfaced it.
+  Fix per this invariant: drop `OPAAX_API` from the template (every member is inline in the header, no
+  static, no identity tag — the header-only shape) and keep it on the **derived** `EngineSubsystemMgr` /
+  `WorldSubsystemMgr`, which are non-template classes. No C4275, no explicit instantiation needed.
+- **The tell for this class of bug: a template whose exported-ness is only tested from inside the DLL.**
+  An `OPAAX_API` template compiles and links indefinitely while every caller is DLL-internal, because
+  dllexport-side instantiation is what the DLL does anyway. It fails the day something outside calls a
+  non-template member. When exporting reaches a template, ask *who will call this from the exe* — the
+  answer "nobody yet" is how the defect stays latent.
 - **Corollary (M3): `OPAAX_API` instantiates every IMPLICITLY-declared member**, so an exported class
   holding a move-only member (`TDynArray<UniquePtr<T>>`) fails to compile on its implicit *copy*-assign
   (C2280) even though nothing ever copies one. Declaring copy/move `= delete` is therefore **required**,
@@ -401,7 +428,8 @@ five mutable statics, i.e. an **I1** violation; superseded by `IPaths`/`ResolveP
 2026-07-28) — all live under `Engine/Source/Legacy/`, **NOT globbed by the engine DLL** (compiled = zero). Their old-world tests live in `Engine/Tests/Legacy/`. **Do not add new
 dependencies on any of it, and do not re-glob `Legacy/`.** It will be deleted; anything you hang off it dies with
 it. *(Exception: `Core/Systems/Subsystem.h` — `ISubsystem`/`ISubsystemManager` — stayed LIVE; it is the base of
-the new `EngineSubsystemBase`.)* Next: Gregory-layer the live remainder (plan `inherited-orbiting-clover.md`).
+the new `EngineSubsystemBase`.)* Next: Gregory-layer the live remainder (plan `~/.claude/plans/inherited-orbiting-clover.md` — the
+auto-named plans live in the USER-level `.claude/plans/`, not the repo's).
 **X2 — New systems get collision-proof identities up front.** When old and new coexist, the *new* type gets
 a scoped `enum class` / distinct name — never rely on include order or forward-decl tricks to avoid a
 clash. Two unscoped enums sharing enumerator names collide the moment one TU needs both (**L4**).

@@ -71,12 +71,26 @@ return StaticTypeID();                                                   \
      * @class ISubsystemManager
      *
      * The idea is similar to Unreal Subsystem, Engine Subsystem, World System etc....
-     * 
+     *
+     * NOT OPAAX_API — never dll-export a class TEMPLATE (ARCHITECTURE.md I6). Every member
+     * below is defined inline here, so each module instantiates its own copy of the code; the
+     * manager holds no static and no identity tag, so per-module code operating on one shared
+     * object is harmless (the I6 "header-only template" shape).
+     *
+     * Marking it dllimport is what breaks: MSVC then expects the non-template members
+     * (StartupAll, ShutdownAll, ...) to come FROM the DLL, which never exports this
+     * instantiation -> LNK2019 in any consumer that calls one. That stayed invisible for as
+     * long as only Engine.cpp (inside the DLL) drove a manager; M4 puts a WorldSubsystemMgr in
+     * reach of module and test code, which is where it surfaced.
+     *
+     * The DERIVED managers (EngineSubsystemMgr, WorldSubsystemMgr) keep OPAAX_API — they are
+     * non-template classes, exactly where I6 says the macro belongs.
+     *
      * @tparam TSubsystem Which subsystem that managers manage
      */
     template <class TSubsystem>
     requires std::is_base_of_v<ISubsystem, TSubsystem>
-    class OPAAX_API ISubsystemManager
+    class ISubsystemManager
     {
         using SubsystemType = TSubsystem;
 

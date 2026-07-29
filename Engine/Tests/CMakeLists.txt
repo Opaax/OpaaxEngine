@@ -38,6 +38,10 @@ set(OPAAX_TEST_SOURCES
     Core/World/ComponentRegistryTests.cpp
     Core/World/WorldEntityTests.cpp
     Core/World/MapSnapshotTests.cpp
+    # Two TUs on purpose: the identity question is "one tag per type or per TU?", which a
+    # single translation unit cannot answer. Probes in WorldSubsystemProbes.h.
+    Core/World/WorldSubsystemIdentityTests.cpp
+    Core/World/WorldSubsystemIdentityTU2.cpp
     # Assets/AssetIdResolveTests.cpp  # quarantined: Assets moved to Legacy (not linked) — M0.5
     Core/Maths/AngleTests.cpp
 
