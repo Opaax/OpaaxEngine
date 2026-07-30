@@ -4,6 +4,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Application/Services/ILogger.h"
+#include "Application/WorldSpec.h"   // EWorldMode
 #include "World/WorldGuidRegistry.h"
 
 #include "Core/GUID/Guid.h"
@@ -30,7 +31,13 @@ namespace Opaax
         // =========================================================================
     public:
         //Todo: World should have OpaaxStringID to get ID and Name in one place
-        explicit World(OpaaxString InName = "World");
+        /**
+         * @param InName
+         * @param InMode What this world is FOR. Defaults to Play so a bare world (a test, a
+         *               game host) is runnable; the editor passes Edit explicitly. Fixed for
+         *               the world's whole life — there is deliberately no setter, see EWorldMode.
+         */
+        explicit World(OpaaxString InName = "World", EWorldMode InMode = EWorldMode::Play);
         ~World();
 
         // =========================================================================
@@ -139,6 +146,9 @@ namespace Opaax
         const OpaaxString& GetName() const noexcept        { return m_Name; }
         Uint64             GetEntityCount() const noexcept { return m_EntityCount; }
 
+        /** What this world is for. Read-only BY DESIGN — see EWorldMode for why there is no setter. */
+        EWorldMode         GetMode() const noexcept        { return m_Mode; }
+
         // Raw registry — for the Entity wrapper + advanced World-layer use only.
         EntityRegistry&       GetRegistry() noexcept       { return m_Registry; }
         const EntityRegistry& GetRegistry() const noexcept { return m_Registry; }
@@ -158,6 +168,7 @@ namespace Opaax
         WorldGuidRegistry   m_Guids;
         Guid           m_Id;
         OpaaxString    m_Name;
+        EWorldMode     m_Mode = EWorldMode::Play; // const-by-convention: set in the ctor, never after
         Uint64         m_EntityCount = 0;
     };
 }

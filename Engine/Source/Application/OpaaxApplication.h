@@ -3,6 +3,7 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Application/Services/AppServiceLocator.h"
+#include "Application/WorldSpec.h"   // GetStartupWorldSpec returns one by value
 #include "Core/Events/Event.h"
 
 namespace Opaax
@@ -152,19 +153,23 @@ namespace Opaax
         void EngineStartup();
         
         /**
-         * Create the world the application starts in — the LAST step of engine boot, once every
-         * subsystem is up and every module has registered.
+         * WHICH world the application starts in — answered, not created. The engine creates it
+         * (`IEngine::FinishStartup`) as the last step of boot, once every subsystem is up and
+         * every module has registered.
          *
+         * A PURE QUERY: no side effects, so calling it twice changes nothing and a test can ask
+         * a host its policy without booting an engine. That is the whole point of the split —
+         * the host states policy, the engine owns mechanism, and a host never drives WorldManager.
          *
-         * Base implementation creates and activates one world named after the project's
-         * `StartupLevel` (falling back to "Main"). Override to open something else — the editor
-         * will want the last-opened map rather than the game's startup level. Overriding with an
-         * empty body is legal: every world consumer already handles "no active world".
+         * Base implementation names the world after the project's `StartupLevel` (falling back to
+         * "Main") in Play mode. `EditorApplication` overrides it for Edit mode; a host that wants
+         * a different world overrides it too — the editor will eventually want the last-opened map
+         * rather than the game's startup level.
          *
-         * NOTE (M5): this only NAMES the world today. Loading that level's maps into it needs the
+         * NOTE (M5): this only NAMES the world. Loading that level's maps into it needs the
          * `.opaaxlevel` / `.opaaxmap` file layer, which does not exist yet.
          */
-        virtual void CreateStartupWorld();
+        virtual WorldSpec GetStartupWorldSpec() const;
 
         /**
          * After engine start

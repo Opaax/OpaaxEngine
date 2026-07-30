@@ -20,9 +20,9 @@ namespace Opaax
     //   draws. Ownership lives here; drivers hold non-owning World* handles.
     //
     //   It creates NO world of its own (BO4). Starting a subsystem is infrastructure;
-    //   choosing which world to open is content, and the host does that last, from project
-    //   config — see OpaaxApplication::CreateStartupWorld. There is legitimately no active
-    //   world between Startup and that call, and every consumer handles it.
+    //   choosing which world to open is content, and that happens last: the host NAMES it
+    //   (OpaaxApplication::GetStartupWorldSpec) and Engine::FinishStartup creates it. There is
+    //   legitimately no active world between Startup and that call, and every consumer handles it.
     // =============================================================================
     class OPAAX_API WorldManager final : public EngineSubsystemBase
     {
@@ -52,7 +52,18 @@ namespace Opaax
         // World Lifetime
     public:
         //Todo: OpaaxStringID
-        World* CreateWorld(OpaaxString InName = "World");
+        /**
+         * Create a world and take ownership of it. Does NOT activate it — the caller decides
+         * (SetActiveWorld), because a PIE clone is created before it becomes active and the
+         * source world stays alive throughout.
+         *
+         * The FIRST call seals the engine registries: nothing may register a component or world
+         * subsystem type once a world exists to have been built without it (BO4).
+         *
+         * @param InName
+         * @param InMode What the world is for. Fixed at construction (see EWorldMode).
+         */
+        World* CreateWorld(OpaaxString InName = "World", EWorldMode InMode = EWorldMode::Play);
         void   DestroyWorld(World* InWorld);
         // End World Lifetime
         // =========================================================================

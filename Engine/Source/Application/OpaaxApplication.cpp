@@ -295,28 +295,29 @@ void OpaaxApplication::EngineStartup()
 
     // 3. Content. The first CreateWorld seals the registries on its way through, so this must
     //    come last — and being last is exactly why the registration above had room to happen.
-    CreateStartupWorld();
+    //    The host only says WHICH; the engine creates it (BO4).
+    Engine().FinishStartup(GetStartupWorldSpec());
 
     PostEngineStartup();
 }
 
-void OpaaxApplication::CreateStartupWorld()
+WorldSpec OpaaxApplication::GetStartupWorldSpec() const
 {
+    WorldSpec lSpec;
+
     // The project decides, not the engine: <Name>.opaaxproj carries the startup level. Empty
     // (or no project file) falls back to "Main" so a bare host still boots into something.
-    OpaaxString lWorldName = ProjectManager().StartupLevel();
+    lSpec.Name = GetAppService<IProjectManager>().StartupLevel();
 
-    if (lWorldName.IsEmpty())
+    if (lSpec.Name.IsEmpty())
     {
-        lWorldName = OpaaxString("Main");
+        lSpec.Name = OpaaxString("Main");
     }
 
-    WorldManager& lWorlds = Engine().GetWorldManager();
+    // A runtime host plays. The editor overrides this to Edit.
+    lSpec.Mode = EWorldMode::Play;
 
-    World* lWorld = lWorlds.CreateWorld(lWorldName);
-    lWorlds.SetActiveWorld(lWorld);
-
-    OPAAX_APP_LOG(Info, "Startup world '{}' created and activated", lWorldName.CStr())
+    return lSpec;
 }
 
 void OpaaxApplication::EngineTeardown()

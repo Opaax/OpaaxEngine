@@ -2,12 +2,14 @@
 
 #include "IAppService.h"
 #include "Core/OpaaxTypes.h"   // UniquePtr (CreateFramebuffer's return)
+#include "Application/WorldSpec.h"   // WorldSpec (by value across the seam)
 
 namespace Opaax
 {
     class EngineEventBus;
     class ResourceManager;
     class WorldManager;
+    class World;
     class IFramebuffer;
     class IRenderTarget;
     class DebugDraw;
@@ -38,6 +40,23 @@ namespace Opaax
          * @return 
          */
         virtual bool Startup()                          = 0;
+
+        /**
+         * Close the boot: create the world the application starts in, and activate it.
+         *
+         * `Startup` and `FinishStartup` deliberately BRACKET the registration window (BO4).
+         * Between them every subsystem is up and no world exists yet, which is the only moment
+         * a game module can register component / world-subsystem types — the first world seals
+         * the registries. Stating that in the API is the point of the name; it used to live only
+         * in a comment on a host method that reached back through the engine to do the work.
+         *
+         * The host supplies POLICY (which world, which mode — GetStartupWorldSpec) and the engine
+         * performs the MECHANISM. Hosts do not drive WorldManager themselves.
+         *
+         * @param InSpec Which world to open, in which mode.
+         * @return The created world, already active. Null only if the engine is not started.
+         */
+        virtual World* FinishStartup(const WorldSpec& InSpec) = 0;
 
         /**
          * Engine Loop

@@ -46,14 +46,18 @@ namespace Opaax
     // =========================================================================
     // World lifetime
     // =========================================================================
-    World* WorldManager::CreateWorld(OpaaxString InName)
+    World* WorldManager::CreateWorld(OpaaxString InName, EWorldMode InMode)
     {
+        // Sealing belongs here, not at the engine level: the rule is "no registration once a
+        // world exists", and THIS is the line that makes one exist. Hoisting it into
+        // Engine::FinishStartup would only cover the startup world and silently leave every
+        // later CreateWorld (PIE clones, S4) unsealed.
         if (m_Registries != nullptr)
         {
             m_Registries->SealAll();
         }
 
-        m_Worlds.push_back(MakeUnique<World>(Move(InName)));
+        m_Worlds.push_back(MakeUnique<World>(Move(InName), InMode));
         World* lWorld = m_Worlds.back().get();
 
         OnWorldCreated.Broadcast(lWorld);

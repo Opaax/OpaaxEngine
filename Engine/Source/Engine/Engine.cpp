@@ -151,9 +151,9 @@ namespace Opaax
 
         CacheAppServices();
 
-        // Constructs then starts. No world exists when this returns — the host creates it
-        // (OpaaxApplication::CreateStartupWorld), which is also what keeps ComponentRegistry
-        // unsealed long enough for a game module to register into it.
+        // Constructs then starts. No world exists when this returns — FinishStartup makes it,
+        // which is what keeps ComponentRegistry unsealed long enough for a game module to
+        // register into it. Startup/FinishStartup bracket that window on purpose (BO4).
         m_Subsystems.StartupAll();
 
         CacheSubsystems();
@@ -175,7 +175,34 @@ namespace Opaax
         OPAAX_ENGINE_LOG(Info, "Engine started ({} subsystem(s))", m_Subsystems.GetSystems().size())
         return true;
     }
-    
+
+    World* Engine::FinishStartup(const WorldSpec& InSpec)
+    {
+        // Loud, not lenient. A host reaching here before Startup used to get the world anyway
+        // via a lazy accessor, which silently moved the whole boot 0.7s early and sealed the
+        // registries before any module could register (L22). Refusing is the fix; there is no
+        // safety net to re-add.
+        if (!m_bStarted)
+        {
+            OPAAX_ENGINE_LOG(Error, "FinishStartup called before Startup — no world created")
+            return nullptr;
+        }
+
+        if (m_WorldManager == nullptr)
+        {
+            OPAAX_ENGINE_LOG(Error, "FinishStartup: no WorldManager subsystem — no world created")
+            return nullptr;
+        }
+
+        World* lWorld = m_WorldManager->CreateWorld(InSpec.Name, InSpec.Mode);
+        m_WorldManager->SetActiveWorld(lWorld);
+
+        OPAAX_ENGINE_LOG(Info, "Startup world '{}' ({}) created and activated",
+                         InSpec.Name.CStr(), ToString(InSpec.Mode))
+
+        return lWorld;
+    }
+
     // =========================================================================
     // Loop — one frame, driven by the application host (OpaaxApplication::RunApplication).
     // Computes a real delta from a steady clock, then pumps Update (Resources + subsystems)

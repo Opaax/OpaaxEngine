@@ -203,11 +203,17 @@ Platform → Paths → Logger(Paths) → Config(Paths)+PreRegisterConfig
 (landed M3, 2026-07-28 — user correction). `EngineStartup` reads as three plain stages:
 
 ```
-Engine().Startup()      → every subsystem constructed and started. NO WORLD EXISTS.
-RegisterModules(...)    → components -> ComponentRegistry, world subsystems -> its registry
-OnModulesRegistered()   → editor extensions; editor seals its own registries
-CreateStartupWorld()    → the first CreateWorld SEALS ComponentRegistry, then makes the world
+Engine().Startup()                     → every subsystem constructed and started. NO WORLD EXISTS.
+RegisterModules(...)                   → components -> ComponentRegistry, world subsystems -> its registry
+OnModulesRegistered()                  → editor extensions; editor seals its own registries
+Engine().FinishStartup(GetStartupWorldSpec())
+                                       → host says WHICH; engine creates it. The first CreateWorld
+                                         SEALS the registries, then makes the world.
 ```
+
+**`Startup` and `FinishStartup` BRACKET the registration window** (M4 S2, 2026-07-29). Between them every
+subsystem is up and no world exists — the only moment a module may register a type. That used to be stated
+only in a comment; now the API says it, which is the whole point of the second name.
 
 `WorldManager::Startup` **must not create a world.** It used to spin up a default "Main" so there was
 "always a render target" — dead weight, because every consumer already handles no-active-world
@@ -215,11 +221,30 @@ CreateStartupWorld()    → the first CreateWorld SEALS ComponentRegistry, then 
 the boot order unfixable: the first `CreateWorld` seals `ComponentRegistry`, so a world born inside
 subsystem startup locked the registry before any game module could reach it.
 
-**The world comes from config, not from code**: `OpaaxApplication::CreateStartupWorld()` (an SE seam) reads
+**The host states POLICY, the engine performs MECHANISM** (M4 S2 — two user TODOs in the tree). The seam is
+a **pure query**: `virtual WorldSpec OpaaxApplication::GetStartupWorldSpec() const` returns
+`{ Name, EWorldMode }` and *does nothing*; `IEngine::FinishStartup(spec)` does the `CreateWorld` +
+`SetActiveWorld`. The old `CreateStartupWorld()` seam is **deleted** — it reached through the engine to drive
+a subsystem (`Engine().GetWorldManager().CreateWorld(...)`), the same smell **MR0** removed for registries.
+A side-effect-free query is also testable without booting an engine, and a host can no longer half-create a
+world. `FinishStartup` **refuses loudly** (Error + null) if called before `Startup` — no lazy safety net,
+because that is precisely what silently reordered the boot in [[L22]].
+
+**The world comes from config, not from code**: the base `GetStartupWorldSpec` reads
 `IProjectManager::StartupLevel()` — the project's `.opaaxproj`, key `startupLevel`, with `startupScene` /
-`defaultScene` as Scene-era fallbacks (**X4**). Falls back to "Main". *M3 only NAMES the world; loading that
-level's maps needs the M5 file layer.* Hosts override to open something else — the editor will want the
+`defaultScene` as Scene-era fallbacks (**X4**). Falls back to "Main". *This only NAMES the world; loading
+that level's maps needs the M5 file layer.* Hosts override to open something else — the editor will want the
 last-opened map, not the game's startup level.
+
+**BO4a — `EWorldMode` is fixed at construction, and that is load-bearing** (M4 S2). A `World` takes its mode
+in the ctor and exposes `GetMode()` with **no setter**; changing mode means creating another world. That is
+what makes PIE-by-clone coherent: Play runs a *clone*, so Stop restores the edit world by discarding the
+clone rather than undoing anything. A settable mode would quietly re-introduce the "put the world back after
+playing" problem cloning exists to avoid. Runtime hosts answer `Play`; `EditorApplication` overrides the
+query to `Edit` and lets the base keep owning where the *name* comes from. `EWorldMode`/`WorldSpec` live in
+`Application/WorldSpec.h` — **Application, not World**: no Application header may include from `World/` or
+`Engine/` (**MR1**) and a by-value return needs the complete type, but the better reason is that Edit-vs-Play
+is a *host* mode. The World merely records the label it was born with.
 
 **The rejected fix is worth remembering.** The first attempt kept the world in `WorldManager::Startup` and
 split `StartupAll` into `CreateAll` + start, adding an `IEngine::BootSubsystems()` phase to squeeze
@@ -323,7 +348,7 @@ not overriding them leaves runtime byte-identical.
 | `PreEngineStartup()` | start of `EngineStartup` | before subsystems start |
 | `RegisterModules(registrar)` | in `EngineStartup`, **after `Engine().Startup()`** — subsystems up, registries live, **no world yet** (BO4) | route the game module — drives `IRuntimeModule::OnRegister` (**MR**) |
 | `OnModulesRegistered()` | in `EngineStartup`, **after** `OnRegisterModules`, **before** `Engine().Startup()` (still no world) | editor registers its D10 extensions and **seals before the first world** (§2). `EditorApplication` overrides → `EditorService::RegisterExtensions`, which registers the editor's own **native** panels first, then drives each `IEditorModule::OnRegister(EditorExtensionRegistrar&)`, then seals — **MR2's order one level down** (natives → game module → seal), so a native panel travels the same route as a game panel with no privileged path. Generic engine-side name (no editor types) — the engine stays editor-ignorant (**D4**). |
-| `CreateStartupWorld()` | in `EngineStartup`, **after `OnModulesRegistered`** — the last step of boot (BO4) | create + activate the world the app starts in, named from `IProjectManager::StartupLevel()`. Base impl is real, not a no-op; override to open something else. This is the **first `CreateWorld`**, so it seals the registries |
+| `GetStartupWorldSpec() const` | in `EngineStartup`, **after `OnModulesRegistered`** — the last step of boot (BO4) | **a pure query, not an action**: answer *which* world and *which* `EWorldMode` the app starts in. Base impl is real, not a no-op — `IProjectManager::StartupLevel()` (→ "Main") + `Play`; `EditorApplication` overrides → `Edit`. The engine then does the work in `IEngine::FinishStartup`, whose `CreateWorld` is the **first** one and so seals the registries. Replaced `CreateStartupWorld()`, which reached through the engine to drive `WorldManager` itself |
 | `PostEngineStartup()` | end of `EngineStartup` | after subsystems start **and the startup world exists** (editor inits `EditorService`; Sandbox populates the world) |
 | `TickFrame()` | per loop iter | base = `Engine().Loop()`; editor wraps it UI-begin → Loop → UI-end |
 | `OnEvent(event)` | window callback, per event | base = app sink (close/resize→bus); `EditorApplication` overrides → `EditorService::RouteInput` first (S11), so the editor sees events before the bus |

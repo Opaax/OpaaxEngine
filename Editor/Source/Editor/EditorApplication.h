@@ -42,6 +42,16 @@ namespace Opaax::Editor
     protected:
         //~Begin OpaaxApplication Interface
         void OnProvideServices(AppServiceLocator& InServices) override;
+
+        /**
+         * The editor boots into an EDIT world: authoring, not simulating. Play gets its own
+         * world by cloning this one (M4 S4/S5), which is why the mode is fixed at creation and
+         * the edit world is never touched by playing.
+         *
+         * TODO (M5): open the last-opened map rather than the project's startup level.
+         */
+        WorldSpec GetStartupWorldSpec() const override;
+
         void PostEngineStartup() override;
         void TickFrame() override;
         void OnEvent(Event& InEvent) override;

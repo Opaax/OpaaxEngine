@@ -98,6 +98,7 @@ namespace Opaax
         //~Begin IEngine interface
     public:
         bool Startup() override;
+        World* FinishStartup(const WorldSpec& InSpec) override;
         void Loop() override;
         void PresentBackbuffer() override;
         void SetPrimaryRenderTarget(IRenderTarget* InTarget) override;

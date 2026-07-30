@@ -8,11 +8,15 @@ namespace Opaax
     // =========================================================================
     // CTOR - DTOR
     // =========================================================================
-    World::World(OpaaxString InName)
+    World::World(OpaaxString InName, EWorldMode InMode)
         : m_Id(Guid::New())
         , m_Name(std::move(InName))
+        , m_Mode(InMode)
     {
-        OPAAX_LOG(LogWorld, Info, "World '{}' created", m_Name.CStr())
+        // The mode is in the log because it is otherwise invisible: an Edit and a Play world
+        // differ only by which subsystems they get (S3), so an ordered boot log is the only
+        // place the distinction shows up before PIE exists.
+        OPAAX_LOG(LogWorld, Info, "World '{}' created ({})", m_Name.CStr(), ToString(m_Mode))
     }
 
     World::~World()

@@ -29,6 +29,16 @@ namespace Opaax::Editor
         OPAAX_LOG(LogEditorApp, Info, "IEditorService provided");
     }
 
+    WorldSpec EditorApplication::GetStartupWorldSpec() const
+    {
+        // Same world the runtime would open, but for authoring. Only the mode differs, so the
+        // base keeps owning where the name comes from.
+        WorldSpec lSpec = OpaaxApplication::GetStartupWorldSpec();
+        lSpec.Mode      = EWorldMode::Edit;
+
+        return lSpec;
+    }
+
     void EditorApplication::PostEngineStartup()
     {
         GetAppService<IEditorService>().Initialize();

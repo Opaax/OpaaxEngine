@@ -22,6 +22,12 @@ namespace Opaax
             bool IsNull() const noexcept override { return true; }
 
             bool Startup()                override { return true; }
+
+            // No WorldManager to create into. Null is the honest answer and I3 covers the
+            // caller: a host that ignores the return simply boots with no world, which every
+            // world consumer already handles (BO4).
+            World* FinishStartup(const WorldSpec&) override { return nullptr; }
+
             void Loop()                   override {}
             void PresentBackbuffer()      override {}
             void SetPrimaryRenderTarget(IRenderTarget*) override {}
