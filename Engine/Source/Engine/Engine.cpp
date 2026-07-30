@@ -134,8 +134,7 @@ namespace Opaax
     // =========================================================================
     void Engine::CacheSubsystems()
     {
-        // Resolve-from-manager, never a lazy self-Startup (F3 / L6). Safe to run before or
-        // after StartupAll: the create pass is what populates the list.
+        //Safe to run before or after StartupAll: the create pass is what populates the list.
         m_Resources       = m_Subsystems.GetSubsystem<ResourceManager>();
         m_RendererManager = m_Subsystems.GetSubsystem<RendererManager>();
         m_EngineEventBus  = m_Subsystems.GetSubsystem<EngineEventBus>();

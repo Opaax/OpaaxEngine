@@ -47,7 +47,7 @@ void SandboxModule::SpawnDemoWorld(Opaax::World& InWorld)
         lEntity.Add<Sandbox::HealthComponent>();
     };
 
-    lSpawn("QuadRed",   { -200.f, 0.f }, { 1.f,  0.2f, 0.2f, 1.f });
-    lSpawn("QuadGreen", {    0.f, 0.f }, { 0.2f, 1.f,  0.2f, 1.f });
     lSpawn("QuadBlue",  {  200.f, 0.f }, { 0.2f, 0.4f, 1.f,  1.f });
+    lSpawn("QuadWhite", {    0.f, 0.f }, { 1.f, 1.f,  1.f, 1.f });
+    lSpawn("QuadRed",   { -200.f, 0.f }, { 1.f,  0.2f, 0.2f, 1.f });
 }
