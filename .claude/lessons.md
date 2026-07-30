@@ -549,3 +549,91 @@ it exists because [[L15]] says to log the success branch.
 - **A lazy "safety net" accessor turns a too-early call into a silent reorder, not an error**
   ([[L6]] from the caller's side). `if (!m_bStarted) Startup()` inside a getter means a premature
   reach *succeeds* while quietly moving the whole boot.
+
+## L23 — "Known gap, stated not hidden" is still a deferral. If the missing gate is cheap, BUILD it (2026-07-29)
+
+**What happened (M4 S3).** I shipped the whole world-subsystem mechanism — registry, `WorldContext`,
+per-world creation, tick path — with every unit test green and both hosts booting clean. Then I wrote
+into my own review: *"Known gap, stated not hidden: end-to-end filtering in a real world is proven only
+link-by-link… the composed gate is S5's dogfood."* I even justified not closing it, with a rule I like:
+*"registering a throwaway candidate now would be an API with a disposable caller."* And I moved on to
+propose S4. The user asked one question — **"So do we have an concrete example subsystem?"** — and the
+answer was no: all six world subsystems in the tree were test doubles, nothing registered one, and both
+hosts logged `0 of 0 subsystem candidate(s) created`. The headline feature of the milestone had never
+run in an actual game.
+
+Closing it took about thirty minutes and needed **no** S5 machinery, because `ShouldCreate` reads the
+world's mode — so a Play-only and an Edit-only subsystem both go through the route that already existed.
+The payoff was not cosmetic: the two `Update`-only log lines (`Captured 3 quad baseline(s)` /
+`drawing 3 outline(s) per frame`) **proved the tick path**, which no run with zero candidates could, and
+the mirrored `1 of 2` in each host turned a link-by-link argument into one observable fact.
+
+**Why I got it wrong, and why this one stings.** This is [[L18]]'s shape (*a documented caveat is a bug
+with a comment on it*) and [[L19]]'s (*when a comment explains why you are bypassing the right thing,
+that comment is the work item*) — and I wrote the caveat **in the very review section where I had just
+quoted both lessons back to myself**. Writing the gap down felt like rigor: it was labelled, scoped, and
+assigned to a future slice. That is exactly what makes this failure mode durable — honest disclosure is
+indistinguishable from diligence right up until someone asks the obvious question. My "no API without a
+caller" rule was also misapplied: the example subsystems are not scaffolding to delete, they are the
+module's first real content and they stay.
+
+**Rules for next time:**
+- **A plan that defers the only COMPOSED gate has no gate.** When the milestone's headline claim
+  ("a world runs a filtered set of subsystems") is proven only as a conjunction of separately-tested
+  links, the deliverable is not done. Ask directly: *has the feature ever run in the real app?* If the
+  answer is no, that is the next step — not the next slice.
+- **Sequencing from the plan is not a reason.** S5 owned the dogfood only because the plan bundled it
+  with a toolbar; the *subsystem* half needed nothing from S5. Before deferring to a later step, check
+  which part of it you actually depend on — often it is none of it.
+- **Judge a first example by whether it SURVIVES, not by whether it is minimal.** "An API with no
+  caller" forbids speculative surface; it does not forbid the first real caller. If the example is
+  something the project keeps, writing it is delivery, not scaffolding.
+- **When you catch yourself labelling a gap instead of closing it, price the close first.** Thirty
+  minutes vs a whole slice of unverified machinery is not a trade-off, it is an answer. Escalate to
+  "record and defer" only when the fix is expensive, risky, or blocked — and say which ([[L18]]).
+
+## L24 — Confirm the binary you smoke-tested is the one you just built (2026-07-29)
+
+**What happened (M4 S3).** After building `test` + `release` + `release-editor`, I smoke-tested
+`Sandbox.exe` from `build/debug-editor/` and got a log that was **completely empty** — which my grep
+reported as `err/warn: 0`, i.e. indistinguishable from a clean boot. `build.bat test` builds only
+`OpaaxTests`, so that exe was still the **S2 build from an hour earlier**, now paired with an S3 DLL
+whose `World` layout and `WorldManager` vtable had both changed. It almost certainly died on load. One
+`ls -la` told the whole story: DLL 21:06, exe 20:06.
+
+**Rules for next time:**
+- **Before smoke-testing a host, compare the exe's mtime to the DLL's.** One `ls -la` on both. This is
+  the [[L14]] stale-object trap wearing different clothes: there, an up-to-date `.o` hid broken source;
+  here, a stale exe hid an ABI break. Same root — *a build artifact you did not just produce is not
+  evidence about the code you just wrote.*
+- **`build.bat test` builds ONLY `OpaaxTests`; `fast` skips editor targets.** Green tests say nothing
+  about whether the hosts still link. Run the full preset before touching a host.
+- **An empty log is not a passing log.** Grepping only for errors makes "produced no output" look
+  identical to "ran cleanly" — the [[L15]] discriminate rule applied to the *absence* of output. Check
+  line count (or assert on a known-good startup line) before reading a smoke result as success.
+
+## L25 — A defect caught by an INCIDENTAL compile error is a near-miss: ask what happens when it compiles (2026-07-29)
+
+**What happened (M4 S3).** Injecting `WorldContext&` into world subsystems failed to build with a
+confusing C2665 inside `<memory>`. Cause: `ISubsystemManager::RegisterSubsystem` captures its ctor args
+**by value** into the factory lambda, and `StartupAll` **clears `m_Factories`** once consumed — so the
+context was being copied into a lambda that is then destroyed, and every subsystem's stored
+`WorldContext&` would have pointed at freed memory. It only failed to compile because an rvalue will not
+bind to a non-const lvalue reference. Fixed with `std::ref`, so what gets copied is a pointer to the
+World-owned context.
+
+**The near-miss is the lesson.** Nothing about my design caught this. Had `WorldContext` been taken by
+value in the ctor, or been copy-assignable in the wrong way, it would have compiled and shipped as a
+silent use-after-free — the codebase's worst failure class ([[L18]]).
+
+**Rules for next time:**
+- **When a compile error stops a bug rather than a review doing so, treat it as luck and re-derive the
+  invariant.** Ask: *what would have happened if this had compiled?* If the answer is memory corruption
+  or a silent wrong answer, the mechanism needs a comment saying why, plus a test that fails when it
+  regresses — the compiler will not be there next time.
+- **Read the lifetime of anything captured into a stored callable.** "Forwards its arguments" usually
+  means *copies* them, and a factory list that is cleared after use makes those copies short-lived. A
+  reference handed to such an API is a dangling reference waiting for a caller.
+- **Pin it with an assertion on IDENTITY, not on contents.** The gate compares a started subsystem's
+  context address against `World::GetContext()`; comparing a *field* would pass anyway, since freed
+  memory usually still holds the old value ([[L15]]).
