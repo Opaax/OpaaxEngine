@@ -1,0 +1,11 @@
+# Runtime-generated project state (paths derived by convention from the .opaaxproj — IPaths)
+Save/
+Temp/
+imgui.ini
+
+# Build outputs
+build/
+*.user
+.vs/
+.vscode/
+.idea/
