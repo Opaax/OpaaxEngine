@@ -3,6 +3,7 @@
 #include "Core/EngineAPI.h"
 
 #include "World/ComponentRegistry.h"
+#include "World/Systems/WorldSubsystemRegistry.h"
 
 namespace Opaax
 {
@@ -50,7 +51,10 @@ namespace Opaax
         ComponentRegistry&       Components()       noexcept { return m_Components; }
         const ComponentRegistry& Components() const noexcept { return m_Components; }
 
-        // M4: WorldSubsystemRegistry& WorldSubsystems() — the reason this aggregate exists.
+        // The reason this aggregate exists — a second registry, added in M4 without giving
+        // anything a new owner or widening BindEngineRegistries' signature.
+        WorldSubsystemRegistry&       WorldSubsystems()       noexcept { return m_WorldSubsystems; }
+        const WorldSubsystemRegistry& WorldSubsystems() const noexcept { return m_WorldSubsystems; }
 
         // =========================================================================
         // Functions
@@ -61,12 +65,17 @@ namespace Opaax
          * (Editor.md §3 L1) — after that, a late-registered type would be silently missing
          * from a world that already exists. Idempotent.
          */
-        void SealAll() noexcept { m_Components.Seal(); }
+        void SealAll() noexcept
+        {
+            m_Components.Seal();
+            m_WorldSubsystems.Seal();
+        }
 
         // =========================================================================
         // Members
         // =========================================================================
     private:
-        ComponentRegistry m_Components;
+        ComponentRegistry      m_Components;
+        WorldSubsystemRegistry m_WorldSubsystems;
     };
 }

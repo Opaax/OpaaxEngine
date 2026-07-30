@@ -293,10 +293,24 @@ if a device could have created it, the device creates it.
 - Resources are **caller-owned** (I5) and must be released while the device and its GPU context are
   still alive — for a panel-owned FBO that means `Shutdown`, never a destructor racing LC teardown.
 
-**F3 — A subsystem needing a sibling mid-boot resolves from the manager.** During its own `Startup`, a
-subsystem reaches a sibling via `m_Subsystems.GetSubsystem<T>()` (the manager's create-pass populates the
-list before any `Startup` runs) — **never** via a lazy accessor that can re-enter the owner's boot. Doing
-the latter causes the per-frame re-init loop of **L6**.
+**F3 — A subsystem needing a sibling mid-boot resolves from the manager.** The guarantee that makes this
+work is the manager's **create pass**: `StartupAll` constructs every subsystem before running any
+`Startup`, so during its own `Startup` a subsystem may reach a sibling that exists but has not started.
+**Never** via a lazy accessor that can re-enter the owner's boot — that is the per-frame re-init loop of
+**L6**.
+
+*Corrected M4 S3, 2026-07-29: the "`m_Subsystems.GetSubsystem<T>()`" phrasing described what **`Engine`**
+does — a subsystem has no manager pointer.* A subsystem reaches a sibling through
+`OpaaxApplication::GetAppService<IEngine>()` and the engine's accessors (`GetResources()`,
+`GetEngineEventBus()`, `GetDebugDraw()`), which are **safe mid-boot precisely because they
+resolve-from-manager first** and only fall back to a lazy `Startup()` when nothing is there at all.
+`RendererManager::Startup` and `WorldManager::Startup` both do this. Resolve **once, in `Startup`**, and
+cache non-owning pointers (**I5**) — not per use, and not per world.
+
+**F3a — One scope down: a WORLD's subsystems get the same create-then-start guarantee.**
+`WorldManager::CreateSubsystemsFor` creates every qualifying candidate and *then* calls one `StartupAll`,
+so a world subsystem may reach a sibling world subsystem during its own `Startup`. Do not start
+candidates as you create them.
 
 **F4 — DebugDraw is immediate-mode BY CONTRACT** (landed M2c, 2026-07-27). The queue
 (`Renderer/DebugDraw.h`, owned **by value** by `RendererManager` — the thing that drains it, I5) is drained
@@ -361,7 +375,7 @@ A game module is an **`IRuntimeModule`** (`Application/IRuntimeModule.h`); its `
 **into** a `ModuleRegistrar`, invoked by the host's `RegisterModules` seam before any world exists:
 ```cpp
 InRegistrar.Components().Register<TransformComponent>();      // → ComponentRegistry v2 (M3)
-InRegistrar.WorldSubsystems().Register<WaveSpawnSubsystem>(); // → WorldSubsystemRegistry (M4)
+InRegistrar.WorldSubsystems().Register<WaveSpawnSubsystem>(); // → WorldSubsystemRegistry (LIVE, M4 — see WS)
 ```
 **MR0 — Registries live on `Engine`, in one `EngineRegistries` aggregate** (`Engine/Registries/`, user call
 2026-07-28). Editor.md §2 has said "Engine builds the registry" since v3; M3 briefly hung `ComponentRegistry`
@@ -400,6 +414,60 @@ interface — the two register into *different* registrars, so it can't sit on t
 header-only pure interfaces, **no `OPAAX_API`** (no exported symbols / shared state / identity tag — the
 opposite end of the axis from **I2**). A host invokes a module as a throwaway instance
 (`SandboxModule().OnRegister(reg)`), symmetric across runtime and editor.
+
+---
+
+## WS — World subsystems (landed M4 S3, 2026-07-29)
+
+**WS1 — REGISTRY holds candidates; the MANAGER holds instances.** `WorldSubsystemRegistry` (the second
+member of `EngineRegistries` — **MR0**) is engine-owned *type metadata*: a flat list of candidate types in
+registration order. `WorldSubsystemMgr` — the plain `ISubsystemManager<IWorldSubsystem>` subclass a `World`
+already owned — holds the live instances **per world**. One registry, N worlds. This is why
+`ISubsystemManager` needed no change: it already separates factories from instances, which is exactly what
+a world needs.
+
+**WS2 — `ShouldCreate` is STATIC and OPTIONAL, and that is what makes filtering meaningful.** A candidate
+may declare `static bool ShouldCreate(const World&)`; `TWorldSubsystemEntry` detects it with
+`if constexpr (requires ...)` and defaults to *always create*. Static because deciding needs no instance —
+so a rejected candidate is **never constructed**, which is what makes "an Edit-only overlay does not
+*exist* in a Play world" true rather than merely inactive. Optional because most subsystems want "always",
+and forcing every one of them to write `return true` is boilerplate. It runs at **every** world creation,
+including every PIE start, so it must stay pure and cheap.
+
+**WS3 — `WorldContext` exists because the registration site has nowhere to capture a dependency.**
+Editor.md §3 says a subsystem "receives its world and nothing else" and that the *registration site*
+captures any app service into the factory. **That is not implementable**: the site is
+`WorldSubsystems().Register<T>()`, which takes no arguments and is frozen by **MR1**. Without a context a
+subsystem needing `ResourceManager` would reach the locator, which **D3** forbids. So the dependency
+arrives by **constructor**, `EditorContext`'s shape one layer down: `{ World& OwningWorld;
+ResourceManager& Resources; EngineEventBus& Events; DebugDraw& Debug; }`. Per-world (that is the point —
+`OwningWorld` differs, and PIE means two are live), **owned by the `World`** so a subsystem may store
+`WorldContext&` for the world's whole life. `EngineRegistries` is deliberately **not** a member: a
+registry is type metadata, not a running subsystem's business, and nothing needs it — add a member when
+something does.
+
+**WS4 — `std::ref` at the injection point is LOAD-BEARING.** `ISubsystemManager::RegisterSubsystem`
+captures ctor args **by value** into the factory lambda, and `StartupAll` **clears `m_Factories`** once
+consumed. Passing `WorldContext&` straight through therefore copies the context into a lambda that is then
+destroyed, leaving every subsystem's stored reference dangling — a silent use-after-free. `CreateInto`
+passes `std::ref(InContext)`, so what gets copied is a *pointer* to the World-owned context. Caught only
+because the by-value form also fails to compile (an rvalue will not bind to `WorldContext&`); do not
+"simplify" it back. The regression gate is the assertion that a started subsystem's context address
+**equals `World::GetContext()`** — comparing `OwningWorld` instead would not discriminate, since freed
+memory usually still holds the old value (**L15**).
+
+**WS5 — There is NO `Render` hook for world subsystems.** `WorldManager` overrides `Update`/`FixedUpdate`
+and forwards to the **active** world only (a PIE clone and the edit world coexist; exactly one simulates).
+`RenderAll` is left unwired even though the base offers it: a subsystem draws by submitting to `DebugDraw`
+from its `Update` — immediate mode, drained every frame (**F4**). A second draw path into a frame
+`RendererManager` already owns is the thing being avoided.
+
+**WS6 — A world's subsystems shut down through `DestroyWorld`, not through `~World`.**
+`World::ShutdownSubsystems()` is **idempotent** (**LC3**) because it is reached two ways:
+`WorldManager::DestroyWorld` calls it while every engine sibling a context points at is **still alive**
+(the LC-correct moment), and `~World` repeats it as the safety net for `WorldManager::Shutdown`, whose
+`m_Worlds.clear()` never goes through `DestroyWorld`. Same **LC1** reasoning as the engine-level phases,
+one scope down.
 
 ---
 

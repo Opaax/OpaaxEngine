@@ -104,15 +104,22 @@ artifacts age (`.claude/lessons.md` L19, L22).
 A `World` owns a `WorldSubsystemMgr`, mirroring `EngineSubsystemMgr` at world scope. The Unreal-style contract, without the Unreal-style discovery:
 
 ```cpp
-// Candidate contract — no reflection, everything explicit.
-struct WaveSpawnSubsystem final : WorldSubsystemBase
+// Candidate contract as BUILT in M4 S3 — no reflection, everything explicit.
+class WaveSpawnSubsystem final : public WorldSubsystemBase
 {
-    static bool ShouldCreate(const World& InWorld) noexcept
+public:
+    OPAAX_SUBSYSTEM_TYPE(WaveSpawnSubsystem)
+
+    // OPTIONAL. Omit it and the subsystem is created in every world (the common case pays
+    // no boilerplate). Static, so no instance is needed to decide.
+    static bool ShouldCreate(const World& InWorld)
     { return InWorld.GetMode() == EWorldMode::Play; }
 
-    bool Initialize(World& InWorld) override;  // rebuild runtime state (D7)
-    void Update(double InDt) override;         // opted-in at Init, resolved once
-    void Deinitialize() override;              // reverse order
+    explicit WaveSpawnSubsystem(WorldContext& InContext);  // <- the injection point
+
+    bool Startup() override;    // ISubsystem's own names, not Initialize/Deinitialize
+    void Update(double InDt) override;
+    void Shutdown() override;   // reverse order
 };
 
 InRegistrar.WorldSubsystems().Register<WaveSpawnSubsystem>();
@@ -120,9 +127,15 @@ InRegistrar.WorldSubsystems().Register<WaveSpawnSubsystem>();
 // no virtual for the predicate, no instance needed to decide, no static-init.
 ```
 
+**Corrected in M4 S3:** the sketch above said `Initialize(World&)` / `Deinitialize()`. The real thing
+reuses `ISubsystem`'s existing `Startup`/`Shutdown` — a world subsystem IS an `ISubsystem`, and inventing a
+parallel pair of lifecycle names would have meant a second vocabulary for the same two moments. The world
+arrives through the constructor instead, as `WorldContext::OwningWorld`.
+
 ### The registry
-- Built by `Engine` during `Engine().Startup()`, and fed by three sources BEFORE the first world exists (§2). **No reflection, no static-init discovery** — candidates are handed to the manager as an explicit list; template capture at registration replaces UClass.
-- `WorldManager` is the only consumer: it is where worlds are created and destroyed, so it is where subsystem lifetimes are decided.
+- Owned by `Engine` as one member of `EngineRegistries` (**MR0**), and fed by three sources BEFORE the first world exists (§2). **No reflection, no static-init discovery** — candidates are handed over as an explicit list; template capture at registration replaces UClass.
+- `WorldManager` is the only consumer: it is where worlds are created and destroyed, so it is where subsystem lifetimes are decided. It **borrows** the registries; it does not own them.
+- **The registry holds CANDIDATES, the per-world `WorldSubsystemMgr` holds INSTANCES.** One registry serves N worlds. `WorldSubsystemMgr` needed no code of its own — `ISubsystemManager` already separates factories from instances, which is exactly a world's requirement.
 
 ### The three locks
 - **L1 — Sealed at first `CreateWorld`.** Late registration = loud assert. A subsystem registered after a world exists would silently never run in it — the classic three-weeks-later bug. Forbidden, not handled.
@@ -133,7 +146,7 @@ InRegistrar.WorldSubsystems().Register<WaveSpawnSubsystem>();
 - **`ShouldCreate` absorbs all mode filtering.** Play-only gameplay (`Mode == Play`), Edit-only overlays (`Mode == Edit`), always-on infrastructure like transform/hierarchy propagation (`return true`). One question, asked once, at world creation. `ShouldCreate` must be pure and cheap — no side effects.
 - **Tick is opt-in, resolved at Init.** The manager builds its tick-list once at world creation — never a per-frame virtual "do you want to tick?". Two hooks, matching the engine's fixed-timestep loop: `Update(dt)` and `FixedUpdate(fdt)`. **No `Render` hook** — a subsystem that wants to draw uses the engine `DebugDraw` API during its update; the renderer flushes.
 - **Ordering convention.** Registration order = init order = tick order; reverse for deinit. Same rule as the locator and `EngineSubsystemMgr`. No dependency graph at this scale.
-- **Injection rule.** `Initialize(World&)` receives *its world* and nothing else — never the locator (D3). If a subsystem needs an app service (JobSystem, …), the registration site — a composition root — captures it into the factory. Game subsystems should live almost exclusively off their world's ECS data.
+- **Injection rule — REWRITTEN in M4 S3; the original was not implementable.** It said a subsystem "receives *its world* and nothing else", and that the *registration site* captures any needed app service into the factory. But the registration site is `WorldSubsystems().Register<T>()`, which **takes no arguments** and is frozen by MR1 — there is nowhere to capture anything, so a subsystem needing `ResourceManager` would have had to reach the locator, which D3 forbids. The dependency therefore arrives **by constructor**, in a `WorldContext` — `EditorContext`'s own shape one layer down: `{ World& OwningWorld; ResourceManager& Resources; EngineEventBus& Events; DebugDraw& Debug; }`. Resolved once by `WorldManager::Startup`, composed per world by `CreateWorld`, owned by the `World` so the reference stays valid for its whole life. Nothing downstream sees the locator. Game subsystems should still live almost exclusively off their world's ECS data — the context is for the cases that genuinely cannot.
 
 ### Consequence: PIE becomes mechanical
 Creating the PIE world walks the candidate list → `Play` subsystems are born → their `Initialize` rebuilds runtime state from authoring data. D7's *"rebuilt by system startup"* now has an exact address. Stop → `Deinitialize` in reverse; runtime state dies with the world. Zero special cases.

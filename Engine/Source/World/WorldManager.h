@@ -11,6 +11,9 @@
 namespace Opaax
 {
     class EngineRegistries;
+    class ResourceManager;
+    class EngineEventBus;
+    class DebugDraw;
 
     inline constexpr LogCategory LogWorldManager{"WorldManager"};
 
@@ -90,6 +93,18 @@ namespace Opaax
         bool Startup()  override;
 
         /**
+         * Tick the ACTIVE world's subsystems. Only the active one runs: a PIE clone and the edit
+         * world coexist, and exactly one of them is simulating.
+         */
+        void Update(double InDeltaTime) override;
+        void FixedUpdate(double InFixedDeltaTime) override;
+
+        // NOTE: no Render override, deliberately (Editor.md §3). A world subsystem draws by
+        // submitting to DebugDraw from its Update — immediate mode, drained every frame by the
+        // renderer (F4). Giving subsystems a Render hook would create a second, competing draw
+        // path into a frame the RendererManager already owns.
+
+        /**
          * Destroys every remaining world THROUGH DestroyWorld,
          * So each one announces itself while the bus and its subscribers are all still alive.
          * Shutdown() is too late for that, which is exactly why this phase exists.
@@ -100,12 +115,29 @@ namespace Opaax
         //~End EngineSubsystemBase interface
 
         // =========================================================================
+        // Functions
+        // =========================================================================
+    private:
+        /**
+         * Build InWorld's context, create the subsystem candidates it qualifies for, and start
+         * them. Called by CreateWorld, so it runs for a PIE clone exactly as for the first world.
+         */
+        void CreateSubsystemsFor(World& InWorld);
+
+        // =========================================================================
         // Members
         // =========================================================================
     private:
         EngineRegistries*           m_Registries = nullptr; // non-owning; Engine owns them (I5)
         TDynArray<UniquePtr<World>> m_Worlds;
         World*                      m_ActiveWorld = nullptr; // non-owning; points into m_Worlds
+
+        // The engine-side half of every WorldContext this manager builds. Resolved ONCE in
+        // Startup (F3: from the engine, whose accessors resolve-from-manager, so this is safe
+        // mid-boot) rather than per CreateWorld, which runs on every PIE start. All non-owning.
+        ResourceManager* m_Resources = nullptr;
+        EngineEventBus*  m_Events    = nullptr;
+        DebugDraw*       m_Debug     = nullptr;
         
         // =========================================================================
         // Events

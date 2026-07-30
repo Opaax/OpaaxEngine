@@ -11,6 +11,7 @@
 #include "Systems/WorldSubsystem.h"
 
 #include "World/Entity/EntityTypes.h"
+#include "World/Systems/WorldContext.h"
 
 namespace Opaax
 {
@@ -128,6 +129,39 @@ namespace Opaax
         // =========================================================================
 
         // =========================================================================
+        // Subsystems
+    public:
+        /**
+         * Install this world's context — the references its subsystems are constructed from.
+         *
+         * Called ONCE by WorldManager::CreateWorld, before any subsystem is created. It is not a
+         * ctor argument on purpose: World would then need engine references at every construction
+         * site, including the many tests that only want a bare world.
+         */
+        void SetContext(const WorldContext& InContext);
+
+        /** This world's context, or null if none was installed (a bare world in a test). */
+        WorldContext* GetContext() const noexcept { return m_Context.get(); }
+
+        /**
+         * This world's subsystem list. WorldManager drives its lifecycle and tick; game code uses
+         * it to look one up (`GetSubsystems().GetSubsystem<WaveSpawnSubsystem>()`).
+         */
+        WorldSubsystemMgr&       GetSubsystems()       noexcept { return m_Subsystems; }
+        const WorldSubsystemMgr& GetSubsystems() const noexcept { return m_Subsystems; }
+
+        /**
+         * Shut every subsystem down, in reverse registration order. IDEMPOTENT (LC3), because it
+         * is reached two ways: WorldManager::DestroyWorld calls it while every engine sibling is
+         * still alive (the LC-correct moment), and ~World repeats it as the safety net for
+         * WorldManager::Shutdown, which clears its worlds without going through DestroyWorld.
+         */
+        void ShutdownSubsystems();
+
+        // End Subsystems
+        // =========================================================================
+
+        // =========================================================================
         // Iteration
     public:
         template<typename T, typename TFunc>
@@ -163,7 +197,13 @@ namespace Opaax
          * Handle Subsystem lifetime
          */
         WorldSubsystemMgr m_Subsystems;
-        
+
+        // Heap-held so it has a STABLE address: a subsystem stores WorldContext& and must keep
+        // working for the world's whole life. Holds a reference back to this World, which is safe
+        // precisely because the World owns it.
+        UniquePtr<WorldContext> m_Context;
+        bool                    m_bSubsystemsShutdown = false;
+
         EntityRegistry m_Registry;
         WorldGuidRegistry   m_Guids;
         Guid           m_Id;

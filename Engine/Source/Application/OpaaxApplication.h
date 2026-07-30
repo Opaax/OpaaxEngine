@@ -240,8 +240,8 @@ namespace Opaax
         bool bIsRunning         = false;
         bool bHasShutdown       = false;
 
-        // Populated at RegisterModules (D9). Components() forwards to the real ComponentRegistry
-        // since M3; WorldSubsystems() still counts until M4. Owned by the app so the record
+        // Populated at RegisterModules (D9). Both routes are live: Components() forwards to the
+        // real ComponentRegistry (M3), WorldSubsystems() to WorldSubsystemRegistry (M4). Owned by the app so the record
         // survives boot for inspection/tests — by UniquePtr because the type is only
         // forward-declared here (see the NOTE at the top).
         UniquePtr<ModuleRegistrar> m_ModuleRegistrar;

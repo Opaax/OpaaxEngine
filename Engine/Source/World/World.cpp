@@ -21,7 +21,30 @@ namespace Opaax
 
     World::~World()
     {
+        // Safety net only — DestroyWorld normally got here first, while the engine siblings a
+        // subsystem might reach were all still alive. Idempotent, so the normal path costs nothing.
+        ShutdownSubsystems();
+
         OPAAX_LOG(LogWorld, Info, "World '{}' destroyed ({} entity(ies))", m_Name.CStr(), m_EntityCount)
+    }
+
+    // =========================================================================
+    // Subsystems
+    // =========================================================================
+    void World::SetContext(const WorldContext& InContext)
+    {
+        m_Context = MakeUnique<WorldContext>(InContext);
+    }
+
+    void World::ShutdownSubsystems()
+    {
+        if (m_bSubsystemsShutdown)
+        {
+            return;
+        }
+
+        m_bSubsystemsShutdown = true;
+        m_Subsystems.ShutdownAll();
     }
 
     void World::AddEntityCount()

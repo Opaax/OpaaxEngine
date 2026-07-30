@@ -11,6 +11,8 @@
 #include "World/Entity/Entity.h"
 #include "World/Serialization/MapFactory.h"
 #include "World/Serialization/MapSerializer.h"
+#include "World/Systems/WorldContext.h"
+#include "World/Systems/WorldSubsystem.h"
 #include "World/World.h"
 
 using namespace Opaax;
@@ -50,6 +52,19 @@ namespace TestGame
     {
         InJson.at("Strength").get_to(InValue.Strength);
     }
+
+    // A module's world subsystem (M4): defined out here like a game type, constructed from the
+    // WorldContext, and never OPAAX_API — the S1 probe proved that resolves fine.
+    class PatrolSubsystem : public Opaax::WorldSubsystemBase
+    {
+    public:
+        OPAAX_SUBSYSTEM_TYPE(PatrolSubsystem)
+
+        explicit PatrolSubsystem(Opaax::WorldContext&) {}
+
+        bool Startup() override  { return true; }
+        void Shutdown() override {}
+    };
 }
 
 // =============================================================================
@@ -130,12 +145,30 @@ TEST_CASE("ComponentRoute: Count records refusals too")
     CHECK(lRegistry.Count() == 1u);               // accepted once
 }
 
-TEST_CASE("ComponentRoute: WorldSubsystems is still counts-only (its registry lands in M4)")
+TEST_CASE("WorldSubsystemRoute: an unbound route refuses rather than dropping silently")
 {
-    ModuleRegistrar lRegistrar;
+    // The M0 skeleton counted `Register<int>()`; the real route cannot accept an int at all, so
+    // this call site had to change with the registry (L16 — registry and consumer are one step).
+    ModuleRegistrar lRegistrar; // deliberately NOT bound
 
-    lRegistrar.WorldSubsystems().Register<int>();
+    CHECK_FALSE(lRegistrar.WorldSubsystems().Register<TestGame::PatrolSubsystem>());
+
+    // Asked once, accepted never — the count is what makes a dropped registration visible.
     CHECK(lRegistrar.WorldSubsystems().Count() == 1u);
+}
+
+TEST_CASE("WorldSubsystemRoute: a bound route forwards into the engine registry")
+{
+    EngineRegistries lRegistries;
+    ModuleRegistrar  lRegistrar;
+    lRegistrar.BindEngineRegistries(lRegistries);
+
+    REQUIRE(lRegistrar.WorldSubsystems().Register<TestGame::PatrolSubsystem>());
+
+    CHECK(lRegistries.WorldSubsystems().Count() == 1u);
+
+    // The name is derived from the type when omitted, exactly like Components() (MR1).
+    CHECK(lRegistries.WorldSubsystems().FindByName(OpaaxStringID(OpaaxString("PatrolSubsystem"))) != nullptr);
 }
 
 // =============================================================================
