@@ -2,6 +2,8 @@
 
 #include "Engine/Modules/ModuleRegistrar.h"
 #include "Components/HealthComponent.h"
+#include "Systems/QuadBoundsSubsystem.h"
+#include "Systems/QuadOscillatorSubsystem.h"
 #include "World/Components/DummyComponent.h"
 #include "Application/Services/ILogger.h"  // OPAAX_LOG + LogCategory
 #include "World/World.h"
@@ -25,6 +27,14 @@ void SandboxModule::OnRegister(Opaax::ModuleRegistrar& InRegistrar)
     // type, and the engine registers its own natives first (MR2) — asking again would be
     // refused as a duplicate.
     InRegistrar.Components().Register<Sandbox::HealthComponent>();
+
+    // Two world subsystems the ENGINE has never heard of, and one registry serving both worlds.
+    // Each world takes the subset its mode qualifies for (WS1/WS2), so this pair is the whole
+    // model in miniature: the oscillator exists only in a Play world, the bounds overlay only in
+    // an Edit world, and neither is constructed in the other. Registering costs one line each —
+    // no base-class ceremony, no reflection, no static-init.
+    InRegistrar.WorldSubsystems().Register<Sandbox::QuadOscillatorSubsystem>();
+    InRegistrar.WorldSubsystems().Register<Sandbox::QuadBoundsSubsystem>();
 
     OPAAX_LOG(LogSandboxModule, Info,
         "RegisterModule: components={}, worldSubsystems={}",
