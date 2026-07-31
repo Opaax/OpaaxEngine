@@ -13,6 +13,7 @@ namespace Opaax
         class IEditorUIBackend;         // editor-owned; the context carries it so panels reach it by ctor
         class EditorSelection;          // editor-owned; the single selected entity (Hierarchy writes, Inspector reads)
         class PlayInEditor;             // editor-owned; the PIE state machine (toolbar + reserved keys drive it)
+        class InputRoute;               // editor-owned; whether the engine is being fed (D5 steps 2 + 4)
         class EditorExtensionRegistrar; // editor-owned; the sealed D10 routes (Inspector reads Drawers())
         class EditorPaths;              // editor-owned IPaths subclass; the editor-space directories
 
@@ -41,6 +42,11 @@ namespace Opaax
             // reserved keys (EditorService::RouteInput) drive the very same object, so the buttons
             // and the shortcuts cannot disagree about what is playing.
             PlayInEditor&     PIE;
+
+            // M-Input S2 — the one place that answers "is the engine being fed?". RouteInput gates
+            // on it and the Input panel displays it, so the behaviour and the readout cannot drift.
+            // Named Route, not InputRoute: a member sharing its type's name shadows it in-struct.
+            InputRoute&       Route;
 
             // M2b — the sealed extension routes, so a panel can consume what modules registered (the
             // Inspector walks Drawers(), the Resource Browser ResourceTypes()). CONST by construction:

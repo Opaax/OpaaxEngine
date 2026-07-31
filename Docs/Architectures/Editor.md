@@ -195,13 +195,17 @@ ImGui and the `IEditorUIBackend` implementations (GL/VK) belong to `OpaaxEditorL
 The engine stays dumb: `InputManager` is *fed or not fed*. All routing policy lives in `EditorService`. Per-event decision order:
 
 1. ImGui `WantCaptureMouse/Keyboard` → the UI eats it.
-2. Viewport neither hovered nor focused → nothing passes beyond the editor.
+2. Viewport neither hovered nor focused → nothing passes beyond the editor. **LIVE since M-Input S2.** Hovered *or* focused, so dragging out of the panel mid-gesture does not cut the input off. ImGui can only answer during `Draw()`, so the flags are one frame old — the same lag the viewport's deferred resize already lives with.
 3. Reserved editor keys (Esc, play/pause shortcuts) → the editor eats them. **LIVE since M4 S5:** `F5` Play · `F6` Pause/Resume · `F7` Step · `F8` Stop, non-repeat presses only, checked *after* step 1 so a shortcut can never fire while a text field owns the keyboard. Bare function keys rather than chords because the `KeyPressed` payload carries **no modifier state** — `Ctrl+P` is not expressible today, and giving it one belongs to M-Input, not to a PIE slice. Esc is still unassigned (it will want to mean "deselect" too).
-4. Remainder, by active world mode: `Edit` → editor tools (camera, selection — editor systems, never `InputManager`); `Play` → engine event bus → `InputManager` → game.
+4. Remainder, by active world mode: `Edit` → editor tools (camera, selection — editor systems, never `InputManager`); `Play` → `InputManager` → game. **LIVE since M-Input S2**, plus a fourth condition the original list did not anticipate: a **paused** PIE session is closed too, or a frozen world would bank keystrokes to replay on resume.
+
+Steps 2 and 4 live in one object, **`InputRoute`** — `RouteInput` gates on it and the Input panel displays it, so the behaviour and the readout cannot drift. It is evaluated **once per frame** in `BeginFrame`, not inside `RouteInput`: a rule evaluated only when an event arrives cannot notice that input *stopped*, and that is exactly the case that must trigger the reset below. *(Corrected from the original sketch: the game is fed **directly**, not "via the engine event bus". The bus is queued and flushed at the top of `Loop`, which would answer a mid-route question with last frame's state — see ARCHITECTURE.md **IN4**.)*
 
 Runtime: the chain does not exist. Window → bus, zero cost.
 
-**Engine-side contract:** `InputManager::ResetState()` — release-all, called whenever the route closes (focus lost, pause, PIE stop). Designed in from day one; the class is an empty shell today. Without it: held key = stuck key.
+**Engine-side contract:** `InputManager::ResetState()` — release-all, called whenever the route closes (focus lost, pause, PIE stop). **LIVE since M-Input.** Without it: held key = stuck key. Two details the original line did not have: it fires on the open→closed *transition*, so PIE pause and stop get it without either calling input code; and it **clears** the edge latches rather than filling them, because a reset is not an event — reporting a release for a press the game never saw is its own bug (ARCHITECTURE.md **IN5**).
+
+**Still not built, and named rather than implied:** action maps (a game-layer concept, D5's own words), gamepad (GLFW polls pads — a second feed), world-space mouse (needs the viewport rect *and* the camera), and the editor camera that would give D5's `Edit` branch something to do. Today that branch consumes input and drops it, which is correct while no editor tool exists.
 
 Gameplay input contexts (action maps) are a *game-layer* concept — routing decides *who is fed*, game contexts decide *how the game interprets*. Not conflated.
 

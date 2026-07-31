@@ -509,6 +509,48 @@ The editor sets a flag and never reaches into the loop.
 
 ---
 
+## IN — Input (landed M-Input, 2026-07-31)
+
+**IN1 — One chain, and the ROUTE is the only gate.** `Window → Application → route → InputManager`
+(Editor.md D5). The application feeds the engine in `HandleAllInputEvent`; a host that wants to withhold
+input **consumes the event before that** (`EditorApplication::OnEvent` returns early when `RouteInput`
+says true). So "the editor ate it" and "the engine never saw it" are the same statement, and there is no
+second gate downstream to keep in sync. The runtime has no route at all: no editor, no gating, zero cost.
+
+**IN2 — The frame boundary is `EndFrame()`, called by `Engine::Loop` after `Render` — NOT a tick hook.**
+The application polls OS events **before** it calls `Loop`, so a subsystem `Update()` would run *after*
+the very events it is meant to precede and every edge query would be a frame late. `InputManager`
+therefore overrides no tick hook at all. Same reasoning as the bus `Flush()` that opens the loop, one
+scope down.
+
+**IN3 — Edges are LATCHED by the feed, never derived from a previous-frame snapshot.** A key pressed and
+released inside one frame leaves both snapshots reading "up", so a comparison **drops the input** — and a
+frame is easily long enough for a real keypress once the framerate dips. `OnKeyPressed`/`OnKeyReleased`
+set latches that `EndFrame` clears. This is smaller as well as more correct: there is no previous-state
+array. Found by a test, not by review.
+
+**IN4 — The feed is IMMEDIATE, not queued through the event bus.** It runs inside `PollEvents`, before
+the frame ticks, so a reader mid-route — the editor asking whether Shift is held while handling a key —
+gets this frame's truth instead of last frame's copy.
+
+**IN5 — Closing the route RESETS the engine's input, and a reset is not an event.** The OS delivers
+releases to whoever has focus, and once the route closes that is someone else; anything held would stay
+held forever. `ResetState` **clears** the edge latches rather than filling them, so nothing reports a
+release for a press the reader may never have seen. Closings: `WindowLostFocus` (the runtime's only one)
+and, in the editor, every open→closed transition of `InputRoute` — which covers PIE pause and stop
+without either of them calling input code.
+
+**IN6 — Modifiers are keys.** `IsShiftDown()` reads `LeftShift || RightShift`. There is no modifier
+state and no modifier field on the event payload — which is why nothing needs the GLFW `mods` parameter
+the window callback discards, and why the editor's reserved shortcuts are bare function keys today.
+
+**IN7 — Gamepad codes are REFUSED, not half-supported.** `EKeyCode` reserves the range, but GLFW exposes
+pads by *polling* — a second feed that does not exist. Accepting the code would make `IsKeyDown` answer
+"false" forever while looking supported. Same for `KeyTyped`: a Unicode codepoint is text entry and has
+no "down" to hold.
+
+---
+
 ## WM — World model (World > Level > Map)
 
 Settled with the user 2026-07-28, superseding the retired `Scene` vocabulary (**X4**). Source of concepts:

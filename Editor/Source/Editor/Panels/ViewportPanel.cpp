@@ -140,6 +140,12 @@ namespace Opaax::Editor
         m_viewportPendingSize.x     = static_cast<Uint32>(lAvail.x);
         m_viewportPendingSize.y     = static_cast<Uint32>(lAvail.y);
         
+        // D5 step 2's inputs. ImGui can only answer these while the window is current, so they are
+        // measured HERE and read next frame by InputRoute — the same one-frame lag the deferred
+        // resize above already lives with, and for the same reason.
+        m_bHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows);
+        m_bFocused = ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows);
+
         const EditorViewportImage lImg = GetViewportImage();
 
         if (lImg.Handle != 0)

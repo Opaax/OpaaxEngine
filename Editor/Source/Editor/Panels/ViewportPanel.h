@@ -82,6 +82,20 @@ namespace Opaax::Editor
         //~End IEditorPanel interface
 
         // =============================================================================
+        // Get
+        // =============================================================================
+    public:
+        /**
+         * Whether the pointer / the keyboard are on the viewport — D5 step 2's gate (M-Input).
+         *
+         * Measured in Draw(), which runs at the END of a frame, so a reader during the next
+         * frame's input poll is one frame behind. Normal for ImGui state and harmless here: the
+         * gate changes when the user moves between panels, not within a frame.
+         */
+        bool IsHovered() const noexcept { return m_bHovered; }
+        bool IsFocused() const noexcept { return m_bFocused; }
+
+        // =============================================================================
         // Members
         // =============================================================================
     private:
@@ -110,5 +124,10 @@ namespace Opaax::Editor
 
         bool   m_bImageLogged    = false;
         bool   m_bOutlineLogged  = false;
+
+        // D5 step 2, refreshed every Draw. False until the first one — before the panel has been
+        // drawn there is nothing for the pointer to be over.
+        bool   m_bHovered        = false;
+        bool   m_bFocused        = false;
     };
 }

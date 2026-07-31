@@ -2,6 +2,7 @@
 
 #include "Editor/UI/OpenGLEditorUIBackend.h"
 #include "Editor/Panels/HierarchyPanel.h"
+#include "Editor/Panels/InputPanel.h"
 #include "Editor/Panels/InspectorPanel.h"
 #include "Editor/Panels/PlayToolbarPanel.h"
 #include "Editor/Panels/ResourceBrowserPanel.h"
@@ -81,6 +82,11 @@ namespace Opaax::Editor
         //     the toolbar panel and RouteInput's reserved keys — drive one object. -----------------
         m_PIE = MakeUnique<PlayInEditor>(lEngine.GetWorldManager());
 
+        // --- The input route (M-Input S2): D5's steps 2 and 4 in one place, so RouteInput's
+        //     behaviour and the Input panel's readout can never disagree. Built after PIE — it
+        //     reads the play state, since a paused session must not be fed. -------------------
+        m_InputRoute = MakeUnique<InputRoute>(lEngine.GetWorldManager(), lEngine.GetInput(), *m_PIE);
+
         // --- World-switch reactions (M4 S5). PIE swaps the active world twice per session, so a
         //     cached selection or per-world panel state has to be told. Subscribed BEFORE the panels
         //     exist: the first switch cannot happen until a frame runs, and unsubscribing is
@@ -98,6 +104,7 @@ namespace Opaax::Editor
             *m_UIBackend,
             *m_Selection,
             *m_PIE,
+            *m_InputRoute,
             m_Extensions,
             OpaaxApplication::GetAppService<IPaths>(),
             OpaaxApplication::GetAppService<IPlatform>().GetFileSystem(),
@@ -134,6 +141,17 @@ namespace Opaax::Editor
     void EditorService::BeginFrame()
     {
         if (m_UIBackend == nullptr) { return; }
+
+        // Re-decide the input route ONCE per frame, here rather than inside RouteInput: a rule
+        // evaluated only when an event arrives cannot notice that input STOPPED — and "the route
+        // just closed" is precisely the case that has to reset the engine's held keys.
+        if (m_InputRoute != nullptr)
+        {
+            const bool lHovered = m_ViewportPanel != nullptr && m_ViewportPanel->IsHovered();
+            const bool lFocused = m_ViewportPanel != nullptr && m_ViewportPanel->IsFocused();
+
+            m_InputRoute->Evaluate(lHovered, lFocused);
+        }
 
         m_UIBackend->NewFrame();
         ImGui::NewFrame();
@@ -192,6 +210,17 @@ namespace Opaax::Editor
         if (!lConsumed && HandleReservedKeys(InEvent))
         {
             return true;
+        }
+
+        // Steps 2 + 4 — the route. Consuming here is what withholds the event from the engine:
+        // EditorApplication::OnEvent returns early on true, so "the editor ate it" and "the engine
+        // never saw it" are the same statement, and there is no second gate downstream to keep in
+        // sync. Window events are exempt — close and resize are the application's business no
+        // matter where the pointer is.
+        if (!lConsumed && InEvent.IsInCategory(EEventCategory::Input)
+            && m_InputRoute != nullptr && !m_InputRoute->IsOpen())
+        {
+            lConsumed = true;
         }
 
         // Observability for the seam (Trace only, discrete events — never per mouse-move, so no spam).
@@ -367,6 +396,9 @@ namespace Opaax::Editor
 
         m_Extensions.Panels().Register("Resource Browser",
             [](EditorContext& InContext) -> UniquePtr<IEditorPanel> { return MakeUnique<ResourceBrowserPanel>(InContext); });
+
+        m_Extensions.Panels().Register("Input",
+            [](EditorContext& InContext) -> UniquePtr<IEditorPanel> { return MakeUnique<InputPanel>(InContext); });
     }
 
     void EditorService::DrawDockspace()
@@ -440,9 +472,11 @@ namespace Opaax::Editor
             m_UIBackend.reset();
         }
 
-        // 4. Selection and PIE — after the panels that read/write them, before the context they are
-        //    referenced from. PIE holds only non-owning world pointers, so it has nothing to undo.
+        // 4. Selection, PIE and the input route — after the panels that read them, before the
+        //    context they are referenced from. All three hold only non-owning references, so there
+        //    is nothing to undo; the route is dropped before the engine it would reset.
         m_Selection.reset();
+        m_InputRoute.reset();
         m_PIE.reset();
 
         // 5. The context refs last (nothing points into them anymore).

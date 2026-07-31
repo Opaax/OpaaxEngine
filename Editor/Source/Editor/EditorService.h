@@ -4,6 +4,7 @@
 #include "Editor/EditorContext.h"
 #include "Editor/EditorPaths.h"
 #include "Editor/EditorSelection.h"
+#include "Editor/InputRoute.h"
 #include "Editor/PlayInEditor.h"
 #include "Editor/UI/IEditorUIBackend.h"
 #include "Editor/Panels/ViewportPanel.h"
@@ -132,6 +133,7 @@ namespace Opaax::Editor
 
         UniquePtr<EditorSelection>  m_Selection;       // M2a: the single selection; EditorContext.Selection refs it
         UniquePtr<PlayInEditor>     m_PIE;             // M4 S5: the PIE state machine; EditorContext.PIE refs it
+        UniquePtr<InputRoute>       m_InputRoute;      // M-Input S2: is the engine being fed; EditorContext.InputRoute refs it
         UniquePtr<EditorContext>    m_Context;
         UniquePtr<IEditorUIBackend> m_UIBackend;
         UniquePtr<ViewportPanel>    m_ViewportPanel;   // M1: world-to-texture panel; owns the offscreen FBO
