@@ -22,6 +22,9 @@ namespace Opaax
     //   worlds may coexist (editor + PIE later); one is the "active" world the renderer
     //   draws. Ownership lives here; drivers hold non-owning World* handles.
     //
+    //   CloneWorld is PIE: it snapshots one world into another running in a different mode,
+    //   leaving the source alive and untouched so Stop is just "activate the source again".
+    //
     //   It creates NO world of its own (BO4). Starting a subsystem is infrastructure;
     //   choosing which world to open is content, and that happens last: the host NAMES it
     //   (OpaaxApplication::GetStartupWorldSpec) and Engine::FinishStartup creates it. There is
@@ -67,6 +70,31 @@ namespace Opaax
          * @param InMode What the world is for. Fixed at construction (see EWorldMode).
          */
         World* CreateWorld(OpaaxString InName = "World", EWorldMode InMode = EWorldMode::Play);
+
+        /**
+         * Snapshot InSource and rebuild it as a NEW world running in InMode — the PIE entry point.
+         *
+         * Capture + Instantiate, not a registry copy: the clone holds the same entities under the
+         * same Guids (WM3), and the capture is UNFILTERED, so runtime-spawned entities come along.
+         * A clone that dropped them would diverge from the world it copied (WM2).
+         *
+         * Goes through CreateWorld, which is what makes the clone's subsystem set follow its OWN
+         * mode rather than the source's — cloning an Edit world into Play drops the edit overlays
+         * and gains the play systems (WS2).
+         *
+         * The source is untouched, and stays alive: that is what makes Stop free — activate the
+         * source again and destroy the clone.
+         *
+         * Registry-complete only: a component type the ComponentRegistry does not know is not
+         * captured and does not survive (WM6).
+         *
+         * @param InSource The world to copy. Read-only; it need not be active.
+         * @param InMode   What the CLONE is for. Never inherited from the source.
+         * @return The clone, NOT activated (the caller decides), or null with no registries to
+         *         capture through — an empty "clone" would silently diverge.
+         */
+        World* CloneWorld(const World& InSource, EWorldMode InMode);
+
         void   DestroyWorld(World* InWorld);
         // End World Lifetime
         // =========================================================================

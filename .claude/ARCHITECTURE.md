@@ -417,7 +417,7 @@ opposite end of the axis from **I2**). A host invokes a module as a throwaway in
 
 ---
 
-## WS — World subsystems (landed M4 S3, 2026-07-29)
+## WS — World subsystems (landed M4 S3 2026-07-29; WS7 added M4 S4)
 
 **WS1 — REGISTRY holds candidates; the MANAGER holds instances.** `WorldSubsystemRegistry` (the second
 member of `EngineRegistries` — **MR0**) is engine-owned *type metadata*: a flat list of candidate types in
@@ -469,6 +469,18 @@ from its `Update` — immediate mode, drained every frame (**F4**). A second dra
 `m_Worlds.clear()` never goes through `DestroyWorld`. Same **LC1** reasoning as the engine-level phases,
 one scope down.
 
+**WS7 — A world subsystem NEVER assumes entities exist at `Startup`; it reads world content from its
+first `Update`** (landed M4 S4). True on both creation paths, which is the point of stating it: the
+*startup* world's entities are spawned by the host in `PostEngineStartup`, i.e. after `FinishStartup`
+(**BO4**), and a *cloned* world is `Capture` → `CreateWorld` → `Instantiate`, so `CreateWorld` starts its
+subsystems before the entities land. Instantiating before starting would "fix" the clone at the cost of
+making it the only populated-at-`Startup` world in the engine — and "can I read the world in `Startup`?"
+would answer *"depends how your world was made"*, which is a far worse contract than a uniform **no**.
+`QuadOscillatorSubsystem` is the worked example (baselines on first tick). If something ever genuinely
+needs a populated-world moment — physics rebuilding bodies from authoring components — the answer is an
+explicit post-instantiate hook (Unreal's `OnWorldBeginPlay` beside `Initialize`), **named here and
+deliberately not built**: it has no caller yet.
+
 ---
 
 ## WM — World model (World > Level > Map)
@@ -507,6 +519,17 @@ those refs itself. A Map's *textures* are `Acquire`; a Level's *maps* are not.
 `EntityMeta` as though it were already there (M3 S2 actually added it), and it makes `GuidRegistry` global
 (`Guid → World*, entt::entity`) where the code made it **per-World** — entt handles are only valid inside
 their own registry, so a Guid resolves through its world and never crosses worlds.
+
+**WM6 — A world CLONE is a snapshot round trip, so it copies exactly what the ComponentRegistry knows**
+(landed M4 S4). `WorldManager::CloneWorld(source, mode)` = `Capture` (**unfiltered** — a clone that
+dropped runtime-spawned entities would start out already diverged, **WM2**) → `CreateWorld(name, mode)` →
+`Instantiate`. Three properties come from that shape rather than from clone-specific code:
+the clone keeps the source's **Guids** (**WM3**) but gets its **own** world Guid; its **mode is the
+caller's argument, never inherited** — going through the ordinary `CreateWorld` is what makes its
+subsystem set follow that mode (**WS2**); and a component type the registry does not know is **not
+carried** (it has no stable name to be written under — a registry gap, not a clone bug). The source is
+read-only throughout and stays alive, which is the whole restore mechanism: Stop re-activates it and
+destroys the clone, undoing nothing. No `MapId` filter here — the filtered form is "save this map" (M5).
 
 ---
 

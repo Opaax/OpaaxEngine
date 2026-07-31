@@ -3,6 +3,8 @@
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IEngine.h"
 #include "Engine/Registries/EngineRegistries.h"
+#include "World/Serialization/MapFactory.h"
+#include "World/Serialization/MapSerializer.h"
 #include "World/Systems/WorldContext.h"
 
 namespace Opaax
@@ -103,6 +105,48 @@ namespace Opaax
         OnWorldCreated.Broadcast(lWorld);
 
         return lWorld;
+    }
+
+    World* WorldManager::CloneWorld(const World& InSource, EWorldMode InMode)
+    {
+        if (m_Registries == nullptr)
+        {
+            // Refuse rather than hand back an empty world that LOOKS like a clone: with no
+            // ComponentRegistry the capture below is empty by construction, so every entity would
+            // be silently missing (L22 — no lazy safety net).
+            OPAAX_LOG(LogWorldManager, Error,
+                      "CloneWorld '{}' refused — no registries, so there is nothing to capture through.",
+                      InSource.GetName().CStr())
+            return nullptr;
+        }
+
+        // UNFILTERED on purpose: no MapId means "the whole world, runtime spawns included" (WM2).
+        // Captured BEFORE the clone exists, so nothing the creation path does can perturb it.
+        const MapData lSnapshot = MapSerializer::Capture(InSource, m_Registries->Components());
+
+        // The ordinary creation path — that is the point. The clone seals, gets its own context,
+        // and takes the subsystems ITS mode qualifies for, exactly as any other world does.
+        World* lClone = CreateWorld(InSource.GetName(), InMode);
+
+        // NOTE: the clone's subsystems have already started, on a world that is still EMPTY — the
+        // entities land below. Same shape as the startup world, whose entities the host spawns after
+        // FinishStartup (BO4), so the rule holds uniformly: a subsystem reads world content from its
+        // first Update, never from Startup (WS7).
+        const Uint64 lInstantiated = MapFactory::Instantiate(lSnapshot, *lClone, m_Registries->Components());
+
+        if (lInstantiated < lSnapshot.EntityCount())
+        {
+            OPAAX_LOG(LogWorldManager, Warn,
+                      "Clone of '{}' is INCOMPLETE — {} of {} entities; the map factory logged which were refused.",
+                      InSource.GetName().CStr(), lInstantiated, lSnapshot.EntityCount())
+        }
+
+        OPAAX_LOG(LogWorldManager, Info, "Cloned world '{}' ({}) -> '{}' ({}) — {} of {} entities",
+                  InSource.GetName().CStr(), ToString(InSource.GetMode()),
+                  lClone->GetName().CStr(), ToString(lClone->GetMode()),
+                  lInstantiated, lSnapshot.EntityCount())
+
+        return lClone;
     }
 
     void WorldManager::CreateSubsystemsFor(World& InWorld)
