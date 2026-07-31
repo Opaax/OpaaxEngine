@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/Maths/MathTypes.h"   // Vector2F — the held scroll value
 #include "Core/String/OpaaxString.hpp"
 #include "Editor/Panels/IEditorPanel.h"
 
@@ -8,13 +9,13 @@ namespace Opaax::Editor
     struct EditorContext;
 
     // =============================================================================
-    // InputPanel — what the engine currently believes about input, and whether it is being told
-    //   anything at all (Editor.md D5, M-Input).
+    // InputPanel — five lines: who has the input, what is held, where the mouse is, how far it
+    //   moved, and the last wheel notch (Editor.md D5, M-Input).
     //
-    //   READ-ONLY, and that is the point: input is otherwise entirely silent, so "nothing happens
-    //   when I press W" has at least four different causes — the route is closed for one of three
-    //   reasons, or the key genuinely is not arriving. This panel distinguishes them, which is the
-    //   difference between an instrument and a decoration (L15).
+    //   READ-ONLY, and deliberately small. Input is otherwise entirely silent, so "nothing happens
+    //   when I press W" has several causes — and the FIRST line answers it, because "the editor
+    //   has the input" versus "the key is not arriving" are different problems. Everything beyond
+    //   those five lines was noise that made the panel harder to read, not easier.
     //
     //   Reads InputManager through EditorContext::Engine and the route through
     //   EditorContext::Route — the same objects RouteInput gates on, never a second copy of the
@@ -64,10 +65,12 @@ namespace Opaax::Editor
         const OpaaxStringID m_PanelID{ OPAAX_ID("Input") };
         const OpaaxString   m_Title = m_PanelID.ToString();
 
-        // "Last pressed / released" have to be REMEMBERED: an edge is true for exactly one frame,
-        // and a human cannot read a value that exists for 16 ms. Panel-local because they are a
-        // display convenience, not engine state.
-        OpaaxString m_LastPressed  = "—";
-        OpaaxString m_LastReleased = "—";
+        // A wheel notch is one frame of non-zero — about 16 ms, which the eye cannot catch. The
+        // last value is held on screen for a moment. DISPLAY ONLY: the engine's scroll is
+        // per-frame and untouched, so nothing downstream inherits this smoothing.
+        static constexpr float SCROLL_HOLD_SECONDS = 0.6f;
+
+        Vector2F m_HeldScroll{0.f, 0.f};
+        float    m_ScrollHoldLeft = 0.f;
     };
 }

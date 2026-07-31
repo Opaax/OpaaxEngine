@@ -75,17 +75,23 @@ namespace Opaax::Editor
 
         const InputManager& lInput = m_Context.Engine.GetInput();
 
-        // ---- The route, first: it explains everything below it. A closed route means the lists
-        //      are stale by design, not broken, and that distinction is the panel's main job. ----
-        const bool lOpen = m_Context.Route.IsOpen();
+        // ---- Who is getting the input. First, because it explains every line below it: when the
+        //      editor owns it, the engine is not being told anything and the rest is frozen at its
+        //      last value — stale by design, not broken. -----------------------------------------
+        const bool lGameHasIt = m_Context.Route.IsOpen();
 
-        ImGui::TextColored(lOpen ? ImVec4(0.4f, 1.f, 0.4f, 1.f) : ImVec4(1.f, 0.6f, 0.2f, 1.f),
-                           "Route: %s", ToString(m_Context.Route.GetState()));
+        ImGui::Text("Focus:");
+        ImGui::SameLine();
 
-        if (!lOpen)
+        if (lGameHasIt)
         {
-            // Frozen, not broken — and saying so is most of this panel's value.
-            ImGui::TextDisabled("Not fed: everything below is frozen at the last value.");
+            ImGui::TextColored(ImVec4(0.4f, 1.f, 0.4f, 1.f), "GAME");
+        }
+        else
+        {
+            ImGui::TextColored(ImVec4(1.f, 0.6f, 0.2f, 1.f), "EDITOR");
+            ImGui::SameLine();
+            ImGui::TextDisabled("— %s", ToString(m_Context.Route.GetState()));
         }
 
         ImGui::Separator();
@@ -95,7 +101,7 @@ namespace Opaax::Editor
 
         if (lDown.empty())
         {
-            ImGui::TextDisabled("Down: (none)");
+            ImGui::TextDisabled("Down:   (none)");
         }
         else
         {
@@ -106,43 +112,39 @@ namespace Opaax::Editor
                 lLine += KeyName(lKey);
             }
 
-            ImGui::Text("Down: %s", lLine.CStr());
+            ImGui::Text("Down:   %s", lLine.CStr());
         }
-
-        // ---- Edges. Latched into the panel because each is true for a single frame, which is
-        //      about 16 ms — far too short to read.
-        //
-        //      The whole feedable range is swept rather than just the held set: a release is by
-        //      definition no longer held, and neither is a tap that started and ended inside one
-        //      frame. Debug-panel work, once a frame, over 512 entries. ------------------------
-        for (Uint16 lCode = 1; lCode < InputManager::KEY_STATE_COUNT; ++lCode)
-        {
-            const EKeyCode lKey = static_cast<EKeyCode>(lCode);
-
-            if (lInput.WasPressedThisFrame(lKey))  { m_LastPressed  = KeyName(lKey); }
-            if (lInput.WasReleasedThisFrame(lKey)) { m_LastReleased = KeyName(lKey); }
-        }
-
-        ImGui::Text("Last: v %s    ^ %s", m_LastPressed.CStr(), m_LastReleased.CStr());
-
-        ImGui::Separator();
 
         // ---- Mouse. Window pixels — world space needs the viewport rect and the camera. -------
-        const Vector2F lPos    = lInput.GetMousePosition();
-        const Vector2F lDelta  = lInput.GetMouseDelta();
+        const Vector2F lPos   = lInput.GetMousePosition();
+        const Vector2F lDelta = lInput.GetMouseDelta();
+
+        ImGui::Text("Mouse:  %.0f, %.0f", lPos.x, lPos.y);
+        ImGui::Text("Delta:  %+.0f, %+.0f", lDelta.x, lDelta.y);
+
+        // ---- Scroll, HELD. A wheel notch is one frame of non-zero and then gone — about 16 ms,
+        //      which is unreadable. The last non-zero value stays up briefly so the eye can catch
+        //      it; the engine's own value is untouched, this is display only. --------------------
         const Vector2F lScroll = lInput.GetScrollDelta();
 
-        ImGui::Text("Mouse: %.0f, %.0f", lPos.x, lPos.y);
-        ImGui::SameLine();
-        ImGui::TextDisabled("(window px)");
+        if (lScroll.x != 0.f || lScroll.y != 0.f)
+        {
+            m_HeldScroll     = lScroll;
+            m_ScrollHoldLeft = SCROLL_HOLD_SECONDS;
+        }
+        else if (m_ScrollHoldLeft > 0.f)
+        {
+            m_ScrollHoldLeft -= ImGui::GetIO().DeltaTime;
+        }
 
-        ImGui::Text("Delta: %+.0f, %+.0f     Scroll: %+.1f, %+.1f", lDelta.x, lDelta.y, lScroll.x, lScroll.y);
-
-        ImGui::Separator();
-        ImGui::Text("Modifiers: %s %s %s",
-                    lInput.IsShiftDown() ? "SHIFT" : "-",
-                    lInput.IsCtrlDown()  ? "CTRL"  : "-",
-                    lInput.IsAltDown()   ? "ALT"   : "-");
+        if (m_ScrollHoldLeft > 0.f)
+        {
+            ImGui::TextColored(ImVec4(0.4f, 1.f, 0.4f, 1.f), "Scroll: %+.1f, %+.1f", m_HeldScroll.x, m_HeldScroll.y);
+        }
+        else
+        {
+            ImGui::TextDisabled("Scroll: 0, 0");
+        }
 
         ImGui::End();
     }
