@@ -5,6 +5,7 @@
 #include "Editor/EditorContext.h"   // the Panels factory receives EditorContext& (D10)
 #include "Panels/SandboxPanel.h"
 #include "Drawers/DummyComponentDrawer.h"
+#include "Systems/QuadBoundsSubsystem.h"
 
 // OPAAX_LOG expands to an unqualified ToSpdLevel(...) — bring Opaax into scope, as SandboxPanel does.
 using namespace Opaax;
@@ -16,11 +17,14 @@ namespace
 
 void SandboxEditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& InRegistrar)
 {
-    // M0 demonstrative — proves each remaining counts-only route accepts & counts. `int` placeholders stand
-    // in for the real edit-world-systems / menus the game defines from M4 on (the editor analogue of
-    // SandboxModule::RegisterModule's DummyComponent). Each placeholder dies in the slice that makes its
-    // route real (overview F1) — it cannot survive its registry going real.
-    InRegistrar.EditWorldSystems().Register<int>();        // <TSystem>
+    // REAL extension (M4 S5): an Edit-only world subsystem, registered through a route that now
+    // forwards into the ENGINE's WorldSubsystemRegistry — the same registry SandboxModule's
+    // Play-only QuadOscillatorSubsystem lands in. Two modules, two routes, one candidate list, and
+    // each World takes the subset its mode qualifies for. The M0 `Register<int>()` placeholder that
+    // used to sit here could not survive the route going real, which is exactly why it was left.
+    InRegistrar.EditWorldSystems().Register<QuadBoundsSubsystem>();
+
+    // M0 demonstrative, still — Menus() is the LAST counts-only route, and it goes real in M5.
     InRegistrar.Menus().Register("Tools/Validate Sandbox",
         [] {});                                            // path + command
 

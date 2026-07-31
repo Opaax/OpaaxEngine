@@ -20,6 +20,11 @@ namespace Opaax::Editor
 
     HierarchyPanel::~HierarchyPanel() = default;
 
+    void HierarchyPanel::OnActiveWorldChanged(World* /*InOld*/, World* /*InNew*/)
+    {
+        m_bListLogged = false;
+    }
+
     void HierarchyPanel::Draw()
     {
         ImGui::SetNextWindowSize(ImVec2(260.f, 400.f), ImGuiCond_FirstUseEver);

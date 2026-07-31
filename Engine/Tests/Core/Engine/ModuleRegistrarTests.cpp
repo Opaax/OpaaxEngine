@@ -67,6 +67,35 @@ namespace TestGame
     };
 }
 
+// GLOBAL NAMESPACE on purpose — the shape an editor module uses (M4 S5), and the one that exposed
+// the elaborated-name bug: with no "::" to strip, MSVC's "class"/"struct" keyword used to survive
+// into the registry key. Outside the anonymous namespace so the derived name is the real one.
+struct GlobalScopeComponent
+{
+    int Value = 0;
+};
+
+inline void to_json(nlohmann::json& InJson, const GlobalScopeComponent& InValue)
+{
+    InJson = nlohmann::json{{"Value", InValue.Value}};
+}
+
+inline void from_json(const nlohmann::json& InJson, GlobalScopeComponent& InValue)
+{
+    InJson.at("Value").get_to(InValue.Value);
+}
+
+class GlobalScopeSubsystem : public Opaax::WorldSubsystemBase
+{
+public:
+    OPAAX_SUBSYSTEM_TYPE(GlobalScopeSubsystem)
+
+    explicit GlobalScopeSubsystem(Opaax::WorldContext&) {}
+
+    bool Startup() override  { return true; }
+    void Shutdown() override {}
+};
+
 // =============================================================================
 // Binding
 // =============================================================================
@@ -113,6 +142,36 @@ TEST_CASE("ComponentRoute: an omitted name derives the type's LEAF name")
     // Namespace-stripped: the key written into a map file must not carry C++ scoping.
     CHECK(lRegistry.FindByName(OpaaxStringID("AmmoComponent")) != nullptr);
     CHECK(lRegistry.FindByName(OpaaxStringID("TestGame::AmmoComponent")) == nullptr);
+}
+
+TEST_CASE("ComponentRoute: a GLOBAL-namespace type derives a bare name, with no 'class' keyword")
+{
+    EngineRegistries lRegistries;
+    ModuleRegistrar  lRegistrar;
+    lRegistrar.BindEngineRegistries(lRegistries);
+
+    // The case that was broken until M4 S5. MSVC's type_name is elaborated ("class Foo"), and for a
+    // NAMESPACED type the "::" strip removed that keyword by accident — so nothing noticed until an
+    // editor-module subsystem, which lives in the global namespace, registered as
+    // "class QuadBoundsSubsystem". A component would have written that straight into a map file.
+    REQUIRE(lRegistrar.Components().Register<GlobalScopeComponent>());
+
+    CHECK(lRegistries.Components().FindByName(OpaaxStringID("GlobalScopeComponent")) != nullptr);
+    CHECK(lRegistries.Components().FindByName(OpaaxStringID("class GlobalScopeComponent")) == nullptr);
+    CHECK(lRegistries.Components().FindByName(OpaaxStringID("struct GlobalScopeComponent")) == nullptr);
+}
+
+TEST_CASE("WorldSubsystemRoute: a GLOBAL-namespace subsystem derives a bare name too")
+{
+    EngineRegistries lRegistries;
+    ModuleRegistrar  lRegistrar;
+    lRegistrar.BindEngineRegistries(lRegistries);
+
+    // The exact shape the editor module registers: a class, at global scope, through a route.
+    REQUIRE(lRegistrar.WorldSubsystems().Register<GlobalScopeSubsystem>());
+
+    CHECK(lRegistries.WorldSubsystems().FindByName(OpaaxStringID("GlobalScopeSubsystem")) != nullptr);
+    CHECK(lRegistries.WorldSubsystems().FindByName(OpaaxStringID("class GlobalScopeSubsystem")) == nullptr);
 }
 
 TEST_CASE("ComponentRoute: an explicit name overrides the derived one")

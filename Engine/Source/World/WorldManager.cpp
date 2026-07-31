@@ -41,7 +41,12 @@ namespace Opaax
     // =========================================================================
     void WorldManager::Update(double InDeltaTime)
     {
-        if (m_ActiveWorld == nullptr)
+        // Taken HERE and nowhere else: Update is the once-per-frame hook, so FixedUpdate — which
+        // runs 0..N times after it — inherits the same answer and a stepped frame stays coherent.
+        m_bTickThisFrame = !m_bPaused || m_bStepRequested;
+        m_bStepRequested = false;
+
+        if (!m_bTickThisFrame || m_ActiveWorld == nullptr)
         {
             return;
         }
@@ -51,7 +56,7 @@ namespace Opaax
 
     void WorldManager::FixedUpdate(double InFixedDeltaTime)
     {
-        if (m_ActiveWorld == nullptr)
+        if (!m_bTickThisFrame || m_ActiveWorld == nullptr)
         {
             return;
         }

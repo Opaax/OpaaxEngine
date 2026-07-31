@@ -3,6 +3,7 @@
 #include "Editor/UI/OpenGLEditorUIBackend.h"
 #include "Editor/Panels/HierarchyPanel.h"
 #include "Editor/Panels/InspectorPanel.h"
+#include "Editor/Panels/PlayToolbarPanel.h"
 #include "Editor/Panels/ResourceBrowserPanel.h"
 #include "Editor/EditorPaths.h"                            // EditorSaveDir — the dock layout's home (D4)
 
@@ -13,6 +14,11 @@
 #include "Application/Services/Platforms/IFileSystem.h"
 #include "Application/Services/Window/IWindowManager.h"      // window + native GLFW handle
 #include "Core/Events/Event.h"                               // Event::IsInCategory + EEventCategory (S11)
+#include "Engine/Registries/EngineRegistries.h"              // EditWorldSystems() binds to WorldSubsystems()
+#include "Engine/Subsystems/Input/InputEvents.h"             // KeyPressedEvent — the reserved keys (D5 step 3)
+#include "World/Entity/Entity.h"                             // selection retarget by Guid across a world switch
+#include "World/World.h"
+#include "World/WorldManager.h"
 
 #include <imgui.h>
 
@@ -71,6 +77,18 @@ namespace Opaax::Editor
         //     reference to it. Nothing reads it yet — S2's Hierarchy panel is the first writer. -------
         m_Selection = MakeUnique<EditorSelection>();
 
+        // --- PIE (M4 S5): the Play/Pause/Step/Stop state machine, owned here so BOTH front-ends —
+        //     the toolbar panel and RouteInput's reserved keys — drive one object. -----------------
+        m_PIE = MakeUnique<PlayInEditor>(lEngine.GetWorldManager());
+
+        // --- World-switch reactions (M4 S5). PIE swaps the active world twice per session, so a
+        //     cached selection or per-world panel state has to be told. Subscribed BEFORE the panels
+        //     exist: the first switch cannot happen until a frame runs, and unsubscribing is
+        //     OnShutdown's job (which runs while the engine is still alive). --------------------
+        m_SubscribedWorlds = &lEngine.GetWorldManager();
+        m_SubscribedWorlds->OnActiveWorldChanged.AddMember(this, &EditorService::HandleActiveWorldChanged);
+        m_SubscribedWorlds->OnWorldDestroyed.AddMember(this, &EditorService::HandleWorldDestroyed);
+
         // --- EditorContext: the flat ref bundle every panel/drawer receives by ctor (D3). Built after
         //     the UIBackend so it can hold a reference to it. ---------------------------------------
         m_Context = MakeUnique<EditorContext>(EditorContext{
@@ -79,6 +97,7 @@ namespace Opaax::Editor
             lEngine.GetResources(),
             *m_UIBackend,
             *m_Selection,
+            *m_PIE,
             m_Extensions,
             OpaaxApplication::GetAppService<IPaths>(),
             OpaaxApplication::GetAppService<IPlatform>().GetFileSystem(),
@@ -151,9 +170,8 @@ namespace Opaax::Editor
 
     bool EditorService::RouteInput(Event& InEvent)
     {
-        // S11 SEAM ONLY. The full routing policy (viewport hover/focus, reserved keys, world-mode
-        // dispatch, InputManager feed + ResetState) is M-Input (Editor.md D5) — NOT here. Today the
-        // route reaches exactly ImGui's capture flags: if the UI wants the pointer/keys, it eats the event.
+        // D5's decision order, steps 1 and 3. Step 2 (viewport hover/focus) and step 4 (dispatch by
+        // world mode, InputManager feed + ResetState) are M-Input — NOT here.
         if (m_UIBackend == nullptr) { return false; }   // UI not up (pre-Initialize / no window) — pass through
 
         const ImGuiIO& lIO = ImGui::GetIO();
@@ -168,6 +186,13 @@ namespace Opaax::Editor
             lConsumed = lIO.WantCaptureKeyboard;
         }
         // else: window/application events (close, resize, ...) always fall through to the base app.
+
+        // Step 3 — the reserved editor keys, AFTER the capture check on purpose: a shortcut must not
+        // fire while a text field owns the keyboard, and D5 orders it exactly this way.
+        if (!lConsumed && HandleReservedKeys(InEvent))
+        {
+            return true;
+        }
 
         // Observability for the seam (Trace only, discrete events — never per mouse-move, so no spam).
         // Over the ImGui UI -> WantCapture true -> CONSUMED; over the passthru viewport -> passed to engine.
@@ -187,6 +212,13 @@ namespace Opaax::Editor
         // module(s) plug into the routes, then we seal — no more registration once the first world exists.
         RegisterNativePanels();
 
+        // EditWorldSystems() -> the ENGINE's WorldSubsystemRegistry, the same one the game module
+        // registers into (M4 S5). Bound here because this runs at OnModulesRegistered: the engine has
+        // started, the registries are live, and nothing has sealed them yet. An editor Edit-world
+        // candidate and a game Play-world candidate end up in one list, and each World takes the subset
+        // its mode qualifies for — the editor gets no privileged path.
+        m_Extensions.EditWorldSystems().Bind(&OpaaxApplication::GetAppService<IEngine>().GetRegistries().WorldSubsystems());
+
         if (InCollect)
         {
             InCollect(m_Extensions);
@@ -197,6 +229,86 @@ namespace Opaax::Editor
             "Editor extensions sealed (before first world): drawers={}, panels={}, resourceTypes={}, menus={}, editWorldSystems={}",
             m_Extensions.Drawers().Count(),  m_Extensions.Panels().Count(), m_Extensions.ResourceTypes().Count(),
             m_Extensions.Menus().Count(),    m_Extensions.EditWorldSystems().Count());
+    }
+
+    bool EditorService::HandleReservedKeys(Event& InEvent)
+    {
+        if (m_PIE == nullptr || InEvent.GetEventType() != KeyPressedEvent::GetStaticType())
+        {
+            return false;
+        }
+
+        const KeyPressedEvent& lKey = static_cast<const KeyPressedEvent&>(InEvent);
+        if (lKey.IsRepeat())
+        {
+            // Holding F7 must not stream steps; every PIE verb is a discrete command.
+            return false;
+        }
+
+        // Bare function keys, not chords: the KeyPressed payload carries no modifier state, so
+        // Ctrl+P-style shortcuts are not expressible today. M-Input owns that.
+        switch (lKey.GetKeyCode())
+        {
+        case EKeyCode::F5: m_PIE->Play();        return true;
+        case EKeyCode::F6: m_PIE->TogglePause(); return true;
+        case EKeyCode::F7: m_PIE->Step();        return true;
+        case EKeyCode::F8: m_PIE->Stop();        return true;
+        default:                                 return false;
+        }
+    }
+
+    void EditorService::HandleActiveWorldChanged(World* InOld, World* InNew)
+    {
+        // Selection FIRST, so no panel notified below can read one pointing into the old world.
+        //
+        // Retarget rather than clear: a clone preserves entity GUIDs (WM3), so the entity selected in
+        // Edit has a counterpart in the Play world and the selection survives Play AND Stop. Clearing
+        // would be safe too, but it would throw away the exact guarantee the snapshot core exists for.
+        if (m_Selection != nullptr && m_Selection->HasSelection())
+        {
+            const Entity lPrevious = m_Selection->Get();
+            const Guid   lGuid     = lPrevious.GetGuid();
+
+            Entity lRetargeted = InNew != nullptr ? InNew->FindByGuid(lGuid) : Entity{};
+
+            if (lRetargeted.IsValid())
+            {
+                m_Selection->Select(lRetargeted);
+            }
+            else
+            {
+                // No counterpart — destroyed during play, or there is no world at all. Clearing is the
+                // only correct answer: Entity holds a raw World*, so keeping it would dangle the moment
+                // the old world dies (EditorSelection's M4 FIXME).
+                m_Selection->Clear();
+            }
+        }
+
+        for (const UniquePtr<IEditorPanel>& lPanel : m_Panels)
+        {
+            lPanel->OnActiveWorldChanged(InOld, InNew);
+        }
+
+        if (m_ViewportPanel != nullptr)
+        {
+            m_ViewportPanel->OnActiveWorldChanged(InOld, InNew);
+        }
+    }
+
+    void EditorService::HandleWorldDestroyed(World* InWorld)
+    {
+        // The active world's death already came through HandleActiveWorldChanged (DestroyWorld clears
+        // the active slot first). This covers the other case — a NON-active world dying while holding
+        // the selection, which nothing else would notice.
+        if (m_Selection == nullptr || !m_Selection->HasSelection() || InWorld == nullptr)
+        {
+            return;
+        }
+
+        if (m_Selection->Get().GetWorld() == InWorld)
+        {
+            m_Selection->Clear();
+        }
     }
 
     void EditorService::CacheEditorPaths()
@@ -242,6 +354,11 @@ namespace Opaax::Editor
 
     void EditorService::RegisterNativePanels()
     {
+        // The PIE controls are a PANEL like any other — registered through the same route a game
+        // panel travels, not drawn by EditorService as a privileged widget (D10).
+        m_Extensions.Panels().Register("Play Controls",
+            [](EditorContext& InContext) -> UniquePtr<IEditorPanel> { return MakeUnique<PlayToolbarPanel>(InContext); });
+
         m_Extensions.Panels().Register("Hierarchy",
             [](EditorContext& InContext) -> UniquePtr<IEditorPanel> { return MakeUnique<HierarchyPanel>(InContext); });
 
@@ -266,6 +383,17 @@ namespace Opaax::Editor
                 ImGui::MenuItem("Exit");   // wired at S11/M-Input; a visible affordance for now
                 ImGui::EndMenu();
             }
+            
+            if (ImGui::BeginMenu("Editor"))
+            {
+                if (ImGui::BeginMenu("Panels"))
+                {
+                    ImGui::EndMenu();
+                }
+                //ImGui::MenuItem("Exit");   // wired at S11/M-Input; a visible affordance for now
+                ImGui::EndMenu();
+            }
+            
             ImGui::EndMainMenuBar();
         }
     }
@@ -274,6 +402,16 @@ namespace Opaax::Editor
     {
         // Reverse-order teardown: EditorService is provided last, so this runs FIRST — the engine, the
         // window and its GL context are all still alive (LC). Order within:
+
+        // 0. Unsubscribe while the WorldManager is still alive, and BEFORE the panels/selection those
+        //    handlers touch are destroyed — WorldManager::TearDown destroys every world and would
+        //    otherwise call back into a half-torn-down editor.
+        if (m_SubscribedWorlds != nullptr)
+        {
+            m_SubscribedWorlds->OnActiveWorldChanged.RemoveAll(this);
+            m_SubscribedWorlds->OnWorldDestroyed.RemoveAll(this);
+            m_SubscribedWorlds = nullptr;
+        }
 
         // 1. Panel FIRST — its Shutdown clears the engine's primary render target (while the engine is
         //    alive, so no live frame reads a dangling target) then frees the FBO (GL context current).
@@ -302,8 +440,10 @@ namespace Opaax::Editor
             m_UIBackend.reset();
         }
 
-        // 4. Selection — after the panels that read/write it, before the context it points into.
+        // 4. Selection and PIE — after the panels that read/write them, before the context they are
+        //    referenced from. PIE holds only non-owning world pointers, so it has nothing to undo.
         m_Selection.reset();
+        m_PIE.reset();
 
         // 5. The context refs last (nothing points into them anymore).
         m_Context.reset();

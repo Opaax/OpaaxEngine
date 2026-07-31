@@ -415,9 +415,25 @@ header-only pure interfaces, **no `OPAAX_API`** (no exported symbols / shared st
 opposite end of the axis from **I2**). A host invokes a module as a throwaway instance
 (`SandboxModule().OnRegister(reg)`), symmetric across runtime and editor.
 
+**MR4 — The EDITOR registers world subsystems through the game-side route, into the SAME registry**
+(M4 S5). `EditorExtensionRegistrar::EditWorldSystems()` is an `Opaax::WorldSubsystemRoute` — the very type
+`ModuleRegistrar::WorldSubsystems()` uses, not an editor parallel — bound by `EditorService` at
+`OnModulesRegistered`, which **MR2**'s order puts after the engine has started and before the seal. One
+candidate list ends up holding a game module's Play systems and an editor module's Edit overlays, and
+`World` cannot tell them apart: filtering is by `ShouldCreate`, never by who registered. The editor gets
+no privileged path, which is the property that keeps an editor overlay writable by a game.
+
+**MR4a — a derived type name must strip the elaborated-type keyword, not just the namespace.** MSVC's
+`entt::type_name` yields `"class Opaax::Foo"`, and `DeriveTypeLeafName`'s `rfind("::")` removed `class `
+**by accident**. The bug surfaced only when a **global-namespace** type first registered (M4 S5's editor
+subsystem → `"class QuadBoundsSubsystem"`), because there was no `::` left to strip. Components make this
+serious rather than cosmetic: a derived name is the key written into map files, so the first
+global-namespace component would have written an unreadable one. Stripped explicitly now, with both
+routes covered by a test.
+
 ---
 
-## WS — World subsystems (landed M4 S3 2026-07-29; WS7 added M4 S4)
+## WS — World subsystems (landed M4 S3 2026-07-29; WS7 S4, WS8 S5)
 
 **WS1 — REGISTRY holds candidates; the MANAGER holds instances.** `WorldSubsystemRegistry` (the second
 member of `EngineRegistries` — **MR0**) is engine-owned *type metadata*: a flat list of candidate types in
@@ -480,6 +496,16 @@ would answer *"depends how your world was made"*, which is a far worse contract 
 needs a populated-world moment — physics rebuilding bodies from authoring components — the answer is an
 explicit post-instantiate hook (Unreal's `OnWorldBeginPlay` beside `Initialize`), **named here and
 deliberately not built**: it has no caller yet.
+
+**WS8 — The PIE tick gate lives in `WorldManager`, and the decision is taken ONCE PER FRAME** (landed
+M4 S5). `SetPaused` / `RequestStep` are flags; `Update` — the once-per-frame hook — resolves them into
+`m_bTickThisFrame`, and `FixedUpdate` only *reads* that. The ordering is the design, not an
+implementation detail: `Engine::Loop` runs `Update` once and `FixedUpdate` 0..N times, so a step that
+advanced only `Update` would starve the fixed step and desync a physics world from what the viewport
+shows. **A step is a FRAME.** Two consequences worth keeping: a pause arriving between the two hooks
+takes effect *next* frame (the current one stays coherent), and the gate is **mode-blind** — an Edit
+world pauses exactly like a Play one, because the rule is about the tick, not about what a world is for.
+The editor sets a flag and never reaches into the loop.
 
 ---
 

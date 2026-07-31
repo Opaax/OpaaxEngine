@@ -4,6 +4,7 @@
 #include "Editor/EditorContext.h"
 #include "Editor/EditorPaths.h"
 #include "Editor/EditorSelection.h"
+#include "Editor/PlayInEditor.h"
 #include "Editor/UI/IEditorUIBackend.h"
 #include "Editor/Panels/ViewportPanel.h"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
@@ -67,7 +68,29 @@ namespace Opaax::Editor
          * every consumer treats that as "no editor space", never as an error.
          */
         void CacheEditorPaths();
-        
+
+        /**
+         * The reserved editor keys — D5's step 3, and only that step. Runs AFTER ImGui's capture
+         * check, so a shortcut can never fire while a text field has the keyboard.
+         *
+         * @return true when the key was a reserved one and the editor consumed it.
+         */
+        bool HandleReservedKeys(Event& InEvent);
+
+        /**
+         * The active world was replaced (PIE Play/Stop, or the active world being destroyed).
+         * Retargets the selection FIRST, then notifies every panel — so no panel can observe a
+         * selection pointing into the world that was just left.
+         */
+        void HandleActiveWorldChanged(World* InOld, World* InNew);
+
+        /**
+         * A world is going away. Clears the selection when it belonged to that world — the safety
+         * net HandleActiveWorldChanged cannot provide, since a NON-active world can die too
+         * (EditorSelection's M4 FIXME: Entity holds a raw World*, so a stale one dangles).
+         */
+        void HandleWorldDestroyed(World* InWorld);
+
         // =============================================================================
         // Get - Set
     public:
@@ -108,6 +131,7 @@ namespace Opaax::Editor
         const EditorPaths*          m_EditorPaths = nullptr;
 
         UniquePtr<EditorSelection>  m_Selection;       // M2a: the single selection; EditorContext.Selection refs it
+        UniquePtr<PlayInEditor>     m_PIE;             // M4 S5: the PIE state machine; EditorContext.PIE refs it
         UniquePtr<EditorContext>    m_Context;
         UniquePtr<IEditorUIBackend> m_UIBackend;
         UniquePtr<ViewportPanel>    m_ViewportPanel;   // M1: world-to-texture panel; owns the offscreen FBO
@@ -119,5 +143,9 @@ namespace Opaax::Editor
         TDynArray<UniquePtr<IEditorPanel>> m_Panels;
 
         EditorExtensionRegistrar    m_Extensions;
+
+        // M4 S5: the WorldManager we subscribed to, so OnShutdown can unsubscribe. Non-owning, and
+        // held separately from m_Context because the unsubscribe must happen BEFORE the context dies.
+        WorldManager*               m_SubscribedWorlds = nullptr;
     };
 }

@@ -19,16 +19,32 @@ namespace Opaax
     // Shared by every route that accepts an optional authoring name. Lives here because this is
     // the header that already includes entt; the registries themselves take a REQUIRED name so
     // they need no entt of their own.
+    //
+    // MSVC's type_name is ELABORATED ("class Opaax::DummyComponent"). For a namespaced type the
+    // "::" strip removes that keyword as a side effect, which is why it went unnoticed until a
+    // GLOBAL-namespace type registered (M4 S5) and produced the key "class QuadBoundsSubsystem".
+    // The keyword is therefore stripped explicitly, FIRST — a component's derived name is what
+    // gets written into map files, so a stray prefix there is an on-disk key nobody can read back.
     // =============================================================================
     template<typename T>
     OpaaxStringID DeriveTypeLeafName()
     {
         constexpr std::string_view lFullName = entt::type_name<T>::value();
 
-        const std::size_t      lSeparator = lFullName.rfind("::");
+        std::string_view lName = lFullName;
+        for (const std::string_view lKeyword : {"class ", "struct ", "enum ", "union "})
+        {
+            if (lName.starts_with(lKeyword))
+            {
+                lName.remove_prefix(lKeyword.size());
+                break;
+            }
+        }
+
+        const std::size_t      lSeparator = lName.rfind("::");
         const std::string_view lLeaf      = (lSeparator == std::string_view::npos)
-                                                ? lFullName
-                                                : lFullName.substr(lSeparator + 2);
+                                                ? lName
+                                                : lName.substr(lSeparator + 2);
 
         return OpaaxStringID(OpaaxString(std::string(lLeaf).c_str()));
     }

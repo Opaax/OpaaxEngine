@@ -196,7 +196,7 @@ The engine stays dumb: `InputManager` is *fed or not fed*. All routing policy li
 
 1. ImGui `WantCaptureMouse/Keyboard` → the UI eats it.
 2. Viewport neither hovered nor focused → nothing passes beyond the editor.
-3. Reserved editor keys (Esc, play/pause shortcuts) → the editor eats them.
+3. Reserved editor keys (Esc, play/pause shortcuts) → the editor eats them. **LIVE since M4 S5:** `F5` Play · `F6` Pause/Resume · `F7` Step · `F8` Stop, non-repeat presses only, checked *after* step 1 so a shortcut can never fire while a text field owns the keyboard. Bare function keys rather than chords because the `KeyPressed` payload carries **no modifier state** — `Ctrl+P` is not expressible today, and giving it one belongs to M-Input, not to a PIE slice. Esc is still unassigned (it will want to mean "deselect" too).
 4. Remainder, by active world mode: `Edit` → editor tools (camera, selection — editor systems, never `InputManager`); `Play` → engine event bus → `InputManager` → game.
 
 Runtime: the chain does not exist. Window → bus, zero cost.
@@ -213,8 +213,15 @@ Gameplay input contexts (action maps) are a *game-layer* concept — routing dec
 
 **PIE = capture + re-instantiate. Not a registry memcpy.**
 
-- **Play:** `MapSerializer::Capture` takes the edit world → `MapData` → `MapFactory::Instantiate` builds it into a fresh world created with mode `Play` → its `Play` subsystems initialize and rebuild runtime state → `SetActiveWorld(PIE)`. The edit world stays alive, dormant, untouched.
-- **Stop:** `SetActiveWorld(Edit)` → `DestroyWorld(PIE)` (subsystems deinit in reverse, runtime state dies with the world). Restore is free — the entire point of clone-on-play.
+- **Play:** `MapSerializer::Capture` takes the edit world → `MapData` → `MapFactory::Instantiate` builds it into a fresh world created with mode `Play` → its `Play` subsystems rebuild runtime state → `SetActiveWorld(PIE)`. The edit world stays alive, dormant, untouched.
+- **Stop:** `SetActiveWorld(Edit)` → `DestroyWorld(PIE)` (subsystems shut down in reverse, runtime state dies with the world). Restore is free — the entire point of clone-on-play.
+
+**LIVE since M4 S4/S5.** The whole sequence is `WorldManager::CloneWorld(source, mode)` — one call, so the editor composes nothing — driven by **`PlayInEditor`**, the state machine `EditorService` owns and `EditorContext` carries. It exists as its own type because *two* front-ends drive it: the `Play Controls` panel's buttons and D5's reserved keys. Two details that are load-bearing rather than stylistic:
+
+- **`SetActiveWorld(edit)` strictly BEFORE `DestroyWorld(clone)`** on Stop — `DestroyWorld` clears the active slot when it is destroying the active world, so the other order leaves the editor with no world for the rest of the frame.
+- **Pause/Step are a `WorldManager` tick gate** (ARCHITECTURE.md **WS8**), not something the editor does to the frame loop: the editor sets a flag, `Update` resolves it once per frame, and `FixedUpdate` inherits that decision so a step advances a whole frame rather than desyncing the fixed step.
+
+**A world switch is an EVENT, not something panels poll.** PIE swaps the active world twice per session, and every panel already re-reads `GetActiveWorld()` each frame — what they cannot do is *notice* the swap and drop what they cached. So `IEditorPanel::OnActiveWorldChanged(old, new)` (default no-op) is fanned out by `EditorService` from its `WorldManager` subscription, **after** the selection has been retargeted so no panel observes a stale one. The selection itself **follows the entity by `Guid`** into the clone and back — a clone preserves GUIDs (**WM3**), so the M3 snapshot guarantee is what makes "your selection survives Play" a five-line consequence instead of a feature. It clears when the Guid has no counterpart, which is also what kills the old dangling-`Entity` hazard.
 - Same code path as runtime map loading: **PIE = save-to-memory + normal load.** Only the origin of the `MapData` differs.
 - Capture with **no `MapId` filter** — the clone must include runtime-spawned entities, or it diverges from the world it copied. The filtered form is for "save this map" (M5), not for cloning.
 
@@ -262,7 +269,7 @@ The extension surface is **defined by the editor, consumed by the game**. Symmet
 | `Panels()` | tool panels (wave designer, dialogue editor, …) — factory receives `EditorContext&`; the editor owns lifecycle, docking, layout persistence | M2 |
 | `ResourceTypes()` | game-defined file types, keyed by **extension**: browser icon, label, double-click (old `IAssetTypeActions` concept, rewritten injected). Named for the live vocabulary — `CResource`/`ResourceManager` — since `Asset` now means the retired `Legacy/Assets` world. | M2 |
 | `Menus()` | menu entries / toolbar commands ("Tools → Validate Level") | M5 |
-| `EditWorldSystems()` | **a route into the single `WorldSubsystemRegistry`** — editor-supplied candidates whose `ShouldCreate` gates on `Edit`. Read-only visualization (trigger zones, patrol paths, spawn points) via `DebugDraw`. Not a separate mechanism. | M4 |
+| `EditWorldSystems()` | **a route into the single `WorldSubsystemRegistry`** — editor-supplied candidates whose `ShouldCreate` gates on `Edit`. Read-only visualization (trigger zones, patrol paths, spawn points) via `DebugDraw`. Not a separate mechanism. **LIVE M4 S5**, and literally the game-side `WorldSubsystemRoute` reused, not an editor copy of it (ARCHITECTURE.md **MR4**) — `Menus()` is now the last counts-only `EditorRoute`, and it leaves with M5. | M4 |
 
 ```cpp
 // Game/Editor/ — compiled ONLY into GameEditor.exe
@@ -301,7 +308,7 @@ Future direction, deliberately not now: per-type field meta-description generati
 | **M1** | Viewport | D2 output contract, present moves host-side, `ViewportPanel` rewritten with `EditorContext` injection | The game lives only inside the panel; panel size drives engine resolution |
 | **M2** | Panels & extensions | Hierarchy, Inspector, ResourceBrowser; **`Drawers()` / `Panels()` / `ResourceTypes()` consumed** — native panels register through the same path as game panels; **engine `DebugDraw` API** | Click-select + live transform edit; a Sandbox-module custom drawer *and* custom panel appear with zero changes to `OpaaxEditorLib` |
 | **M3** | Snapshot core | `MapSerializer`/`MapFactory` on the new `World`: registry ↔ `MapData`; **`ComponentRegistry` v2** live, fed by `RegisterModules()`; `MapId` + `EntityMeta::OwnerMap` | Capture → instantiate round-trip yields an equivalent world (GUIDs preserved), **including module components** |
-| **M4** | World subsystems + PIE | **`WorldSubsystemMgr` + sealed `WorldSubsystemRegistry` (§3, all three locks)**; `EWorldMode` as immutable `CreateWorld` parameter; `CloneWorld` (capture + instantiate); Play/Pause/Step toolbar; input route switching; `ResetState` on stop; `EditWorldSystems()` route live | Play runs the game in the viewport with module subsystems live, runtime state rebuilt on the first `Update`; Stop restores the exact edit state; overlays visible in Edit worlds only |
+| **M4** | World subsystems + PIE | **`WorldSubsystemMgr` + sealed `WorldSubsystemRegistry` (§3, all three locks)**; `EWorldMode` as immutable `CreateWorld` parameter; `CloneWorld` (capture + instantiate); Play/Pause/Step/Stop toolbar panel + reserved keys; `EditWorldSystems()` route live. *(Input route switching by world mode and `ResetState` on stop deferred to **M-Input** — `InputManager` is still an empty shell, so calling `ResetState()` would have no caller and nothing to reset.)* | Play runs the game in the viewport with module subsystems live, runtime state rebuilt on the first `Update`; Stop restores the exact edit state; overlays visible in Edit worlds only |
 | **M5** | Map/Level IO | `.opaaxmap` / `.opaaxlevel` save/load as resources, dirty state, **`Menus()`**, recent files | Full author loop: edit → save → close → reopen → play |
 
 - M0 renders ImGui *over* the existing engine output on purpose — it validates ImGui, the CMake targets and the event chain in isolation. The renderer is only touched in M1.

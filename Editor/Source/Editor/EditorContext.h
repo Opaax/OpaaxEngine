@@ -12,6 +12,7 @@ namespace Opaax
     {
         class IEditorUIBackend;         // editor-owned; the context carries it so panels reach it by ctor
         class EditorSelection;          // editor-owned; the single selected entity (Hierarchy writes, Inspector reads)
+        class PlayInEditor;             // editor-owned; the PIE state machine (toolbar + reserved keys drive it)
         class EditorExtensionRegistrar; // editor-owned; the sealed D10 routes (Inspector reads Drawers())
         class EditorPaths;              // editor-owned IPaths subclass; the editor-space directories
 
@@ -35,6 +36,11 @@ namespace Opaax
             ResourceManager&  Resources;
             IEditorUIBackend& UIBackend;
             EditorSelection&  Selection;   // M2a — Hierarchy writes, Inspector reads
+
+            // M4 S5 — the PIE state machine. Here rather than inside the toolbar panel because the
+            // reserved keys (EditorService::RouteInput) drive the very same object, so the buttons
+            // and the shortcuts cannot disagree about what is playing.
+            PlayInEditor&     PIE;
 
             // M2b — the sealed extension routes, so a panel can consume what modules registered (the
             // Inspector walks Drawers(), the Resource Browser ResourceTypes()). CONST by construction:

@@ -2,7 +2,6 @@
 
 #include "Engine/Modules/ModuleRegistrar.h"
 #include "Components/HealthComponent.h"
-#include "Systems/QuadBoundsSubsystem.h"
 #include "Systems/QuadOscillatorSubsystem.h"
 #include "World/Components/DummyComponent.h"
 #include "Application/Services/ILogger.h"  // OPAAX_LOG + LogCategory
@@ -28,13 +27,15 @@ void SandboxModule::OnRegister(Opaax::ModuleRegistrar& InRegistrar)
     // refused as a duplicate.
     InRegistrar.Components().Register<Sandbox::HealthComponent>();
 
-    // Two world subsystems the ENGINE has never heard of, and one registry serving both worlds.
-    // Each world takes the subset its mode qualifies for (WS1/WS2), so this pair is the whole
-    // model in miniature: the oscillator exists only in a Play world, the bounds overlay only in
-    // an Edit world, and neither is constructed in the other. Registering costs one line each —
-    // no base-class ceremony, no reflection, no static-init.
+    // A world subsystem the ENGINE has never heard of. Play-only: it exists in a Play world and is
+    // never constructed in an Edit one (WS1/WS2). Registering costs one line — no base-class
+    // ceremony, no reflection, no static-init.
+    //
+    // NOTE: the Edit-only QuadBoundsSubsystem is NOT here any more (M4 S5). An authoring overlay is
+    // EDITOR content, so it moved to the SandboxEditor module and registers through
+    // EditWorldSystems() — a different route into the SAME registry. Sandbox.exe therefore has one
+    // candidate and SandboxEditor.exe has two, which is the model's point stated as a build fact.
     InRegistrar.WorldSubsystems().Register<Sandbox::QuadOscillatorSubsystem>();
-    InRegistrar.WorldSubsystems().Register<Sandbox::QuadBoundsSubsystem>();
 
     OPAAX_LOG(LogSandboxModule, Info,
         "RegisterModule: components={}, worldSubsystems={}",

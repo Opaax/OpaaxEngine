@@ -2,6 +2,11 @@
 
 #include "Core/String/OpaaxStringID.hpp"   // OpaaxStringID — stable interned panel identity
 
+namespace Opaax
+{
+    class World;
+}
+
 namespace Opaax::Editor
 {
     // =============================================================================
@@ -31,6 +36,22 @@ namespace Opaax::Editor
         virtual void OnPreRender() = 0;
         virtual void Draw()        = 0;
         virtual void Shutdown()    = 0;
+
+        /**
+         * The active world was replaced — drop anything cached from the old one (M4 S5).
+         *
+         * PUSH, not poll: every panel already re-reads GetActiveWorld() each frame, so reading the
+         * new world is not the problem; NOTICING the swap is. PIE makes it routine (Play activates
+         * a clone, Stop activates the original back), and a panel that cached per-world state has
+         * no other moment to invalidate it.
+         *
+         * Default no-op, so a panel that caches nothing — most of them — says nothing. Fired by
+         * EditorService AFTER the selection has been retargeted, so a panel never reads a stale one.
+         *
+         * @param InOld The world being left. May be null.
+         * @param InNew The world now active. May be null (its world was destroyed).
+         */
+        virtual void OnActiveWorldChanged(World* /*InOld*/, World* /*InNew*/) {}
 
         // =============================================================================
         // Getter

@@ -60,6 +60,13 @@ namespace Opaax::Editor
         /** No resource to release. */
         void            Shutdown()              override {}
 
+        /**
+         * Re-arm the one-shot listing log: the flag means "logged for the world I am showing", and
+         * after a PIE Play/Stop that is a different world. Without this the panel would silently keep
+         * claiming the first world's listing.
+         */
+        void            OnActiveWorldChanged(World* InOld, World* InNew) override;
+
         OpaaxStringID   GetPanelID()    const   override { return m_PanelID; }
         //~End IEditorPanel interface
 

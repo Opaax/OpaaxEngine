@@ -114,6 +114,34 @@ namespace Opaax
         // =========================================================================
 
         // =========================================================================
+        // Tick gate — PIE pause / step
+    public:
+        /**
+         * Suspend the active world's tick. The editor's Pause; nothing else sets it.
+         *
+         * Deliberately mode-agnostic: an Edit world can be paused too. The rule is about the
+         * TICK, not about what a world is for, and a gate that inspected the mode would need a
+         * reason no caller has.
+         */
+        void SetPaused(bool InPaused) noexcept { m_bPaused = InPaused; }
+        bool IsPaused() const noexcept         { return m_bPaused; }
+
+        /**
+         * Tick exactly ONE more frame, then stay paused — the editor's Step.
+         *
+         * A frame, not an Update: Engine::Loop runs Update once and FixedUpdate 0..N times, so
+         * stepping only the Update would advance the world while starving the fixed step. The
+         * request is consumed in Update and both hooks read the same per-frame decision.
+         */
+        void RequestStep() noexcept { m_bStepRequested = true; }
+
+        /** Whether the current frame is ticking the world — the decision Update took. */
+        bool IsTickingThisFrame() const noexcept { return m_bTickThisFrame; }
+
+        // End Tick gate
+        // =========================================================================
+
+        // =========================================================================
         // Override
         // =========================================================================
         //~Begin EngineSubsystemBase interface
@@ -166,6 +194,12 @@ namespace Opaax
         ResourceManager* m_Resources = nullptr;
         EngineEventBus*  m_Events    = nullptr;
         DebugDraw*       m_Debug     = nullptr;
+
+        // PIE tick gate. m_bTickThisFrame is decided ONCE per frame in Update (the once-per-frame
+        // hook) and only read by FixedUpdate, so a stepped frame runs its fixed steps too.
+        bool m_bPaused        = false;
+        bool m_bStepRequested = false;
+        bool m_bTickThisFrame = true;
         
         // =========================================================================
         // Events
