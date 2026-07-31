@@ -240,16 +240,9 @@ namespace Opaax
         m_FrameInfo.m_AlphaPhysic = m_FrameInfo.m_AccumulatedDeltaTime / m_FrameInfo.m_FixedDeltaTime;
         Render(m_FrameInfo.m_AlphaPhysic);
 
-        // ----------------------------------------------------------------
-        // 5. Close the input frame — HERE, and not in a subsystem tick.
-        //    The application polls OS events BEFORE calling Loop, so this is the only point
-        //    between one frame's input and the next frame's. An Update() hook would run after
-        //    the events it is supposed to precede, and every edge query would be a frame late.
-        // ----------------------------------------------------------------
-        if (m_InputManager != nullptr)
-        {
-            m_InputManager->EndFrame();
-        }
+        // NOTE: the input frame is NOT closed here. Loop is not the end of the host's frame — the
+        // editor draws its UI after this returns, and anything cleared here would be invisible to
+        // it. OpaaxApplication::RunApplication closes it, just before the next PollEvents (IN2).
     }
 
     // =========================================================================

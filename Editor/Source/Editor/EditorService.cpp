@@ -194,10 +194,20 @@ namespace Opaax::Editor
 
         const ImGuiIO& lIO = ImGui::GetIO();
 
+        // The viewport is an ImGui window like any other — an image with the world drawn into it —
+        // so ImGui reports WantCaptureMouse the whole time the pointer is over it. Taken at face
+        // value that means a game running inside the editor can NEVER receive a click, a drag or
+        // the wheel, which is not what step 1 is for: ImGui owns the pointer over the UI, and the
+        // game owns it over the surface it is being played on.
+        //
+        // Keyboard is NOT exempted. WantCaptureKeyboard only goes true for a text field, and a
+        // field that has the keyboard must always win, viewport or not.
+        const bool lViewportHovered = m_ViewportPanel != nullptr && m_ViewportPanel->IsHovered();
+
         bool lConsumed = false;
         if (InEvent.IsInCategory(EEventCategory::Mouse) || InEvent.IsInCategory(EEventCategory::MouseButton))
         {
-            lConsumed = lIO.WantCaptureMouse;
+            lConsumed = lIO.WantCaptureMouse && !lViewportHovered;
         }
         else if (InEvent.IsInCategory(EEventCategory::Keyboard))
         {

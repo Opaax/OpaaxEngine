@@ -84,7 +84,8 @@ namespace Opaax::Editor
 
         if (!lOpen)
         {
-            ImGui::TextDisabled("The engine is not being fed — keys below will not change.");
+            // Frozen, not broken — and saying so is most of this panel's value.
+            ImGui::TextDisabled("Not fed: everything below is frozen at the last value.");
         }
 
         ImGui::Separator();
@@ -109,17 +110,16 @@ namespace Opaax::Editor
         }
 
         // ---- Edges. Latched into the panel because each is true for a single frame, which is
-        //      about 16 ms — far too short to read. ---------------------------------------------
-        for (const EKeyCode lKey : lDown)
-        {
-            if (lInput.WasPressedThisFrame(lKey)) { m_LastPressed = KeyName(lKey); }
-        }
-
-        // A release cannot be found by walking the held set — the key is no longer in it — so the
-        // whole feedable range is swept. Debug-panel work, once a frame, on 512 entries.
+        //      about 16 ms — far too short to read.
+        //
+        //      The whole feedable range is swept rather than just the held set: a release is by
+        //      definition no longer held, and neither is a tap that started and ended inside one
+        //      frame. Debug-panel work, once a frame, over 512 entries. ------------------------
         for (Uint16 lCode = 1; lCode < InputManager::KEY_STATE_COUNT; ++lCode)
         {
             const EKeyCode lKey = static_cast<EKeyCode>(lCode);
+
+            if (lInput.WasPressedThisFrame(lKey))  { m_LastPressed  = KeyName(lKey); }
             if (lInput.WasReleasedThisFrame(lKey)) { m_LastReleased = KeyName(lKey); }
         }
 

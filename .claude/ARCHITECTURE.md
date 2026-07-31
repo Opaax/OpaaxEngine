@@ -517,11 +517,15 @@ input **consumes the event before that** (`EditorApplication::OnEvent` returns e
 says true). So "the editor ate it" and "the engine never saw it" are the same statement, and there is no
 second gate downstream to keep in sync. The runtime has no route at all: no editor, no gating, zero cost.
 
-**IN2 — The frame boundary is `EndFrame()`, called by `Engine::Loop` after `Render` — NOT a tick hook.**
-The application polls OS events **before** it calls `Loop`, so a subsystem `Update()` would run *after*
-the very events it is meant to precede and every edge query would be a frame late. `InputManager`
-therefore overrides no tick hook at all. Same reasoning as the bus `Flush()` that opens the loop, one
-scope down.
+**IN2 — The frame boundary is the HOST LOOP's: `EndFrame()` runs in `RunApplication`, immediately before
+`PollEvents` — not in a tick hook, and not inside `Engine::Loop`.** A subsystem `Update()` is too late by
+construction: the application polls OS events *before* it calls `Loop`, so the hook would run after the
+very events it is meant to precede. But `Loop` is wrong too, and that one shipped before it was caught:
+**`Loop` is not the end of the host's frame.** The editor draws its entire UI *after* `Loop` returns, so
+clearing there wiped the frame's edges and deltas before any panel could read them — held keys still
+worked, which is exactly why it looked fine. Every reader must see the same frame: a game system in
+`Update`, an editor panel in the UI pass. The host loop's boundary is the only point that is true for
+both.
 
 **IN3 — Edges are LATCHED by the feed, never derived from a previous-frame snapshot.** A key pressed and
 released inside one frame leaves both snapshots reading "up", so a comparison **drops the input** — and a

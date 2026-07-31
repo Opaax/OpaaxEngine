@@ -207,6 +207,17 @@ void OpaaxApplication::RunApplication()
         }
         
         // ----------------------------------------------------------------
+        // 0. Close the PREVIOUS frame's input, immediately before the new events arrive.
+        //
+        //    This is the host loop's frame boundary, and input's boundary has to be the same one:
+        //    everything that reads input — a game system in Update, an editor panel in its UI pass
+        //    AFTER Engine().Loop() returns — must see the same frame's presses. Closing it inside
+        //    Loop looked equivalent and was not: it wiped this frame's edges and deltas before the
+        //    editor ever drew them (IN2).
+        // ----------------------------------------------------------------
+        Engine().GetInput().EndFrame();
+
+        // ----------------------------------------------------------------
         // 1. windows events (input, close, etc..)
         // ----------------------------------------------------------------
         lWindow->PollEvents();
