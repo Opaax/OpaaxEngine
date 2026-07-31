@@ -685,3 +685,49 @@ global-namespace component would have written a map nothing could read back.
 - **Read the whole smoke log, not the lines you went looking for.** This was found in a `Registered ...`
   trace line during a run whose purpose was checking something else — the [[L15]] discriminate rule
   applied to output nobody asked for.
+
+## L28 — "Per-frame" is meaningless until you name WHOSE frame, and which readers are outside it (2026-07-31)
+
+**What happened (M-Input).** `InputManager::EndFrame()` — the call that closes the input frame — went at
+the end of `Engine::Loop`. The reasoning was sound as far as it went: the host polls OS events *before*
+`Loop`, so a subsystem `Update()` hook would run after the very events it must precede. What I missed is
+that **`Loop` is not the end of the host's frame either.** The editor draws its whole UI *after* `Loop`
+returns, so every panel read edges, mouse delta and scroll that had already been cleared. The user found
+it in one glance: the Input panel showed held keys and nothing else.
+
+**Why it survived my own verification.** `EndFrame` clears the *transient* state and leaves the *held*
+state alone — and held state is the only part a log line or a boot smoke test can show. The tests passed
+because they call `EndFrame` themselves, in the order the design assumed. Every instrument I had was
+blind to it by construction.
+
+**Rules for next time:**
+- **Before placing a per-frame boundary, list the READERS and where each one runs.** Here they were a
+  game system in `Update` (inside `Loop`) and an editor panel in the UI pass (outside it). A boundary is
+  only correct if it sits outside *every* reader — which made the host loop the one honest place.
+- **`Engine::Loop` is the engine's tick, not the frame.** The frame belongs to `RunApplication`, which
+  also owns `PollEvents` and `Present`. Anything that must bracket the whole frame belongs there.
+- **When a feature "half works", the working half is a clue, not a comfort.** Ask what distinguishes the
+  part that works from the part that does not — here, "cleared by EndFrame" versus "not cleared", which
+  named the bug immediately once asked.
+
+## L29 — A third-party flag answers ITS question, not yours (2026-07-31)
+
+**What happened (M-Input).** D5's step 1 is "ImGui `WantCaptureMouse` → the UI eats it", and that is what
+was implemented. But `WantCaptureMouse` means *"the pointer is over some ImGui window"* — and in this
+editor one of those windows **is the game**, an ImGui image with the world rendered into it. So a game
+running inside the editor could never receive a click, a drag or the wheel. The mouse position in the
+Input panel appeared to update only when the cursor crossed a gap between windows.
+
+**The general shape.** The flag was not wrong; the *question* it answers stopped matching mine the moment
+the UI framework started hosting the thing the UI is supposed to keep its hands off. Keyboard was fine
+under the identical rule, because `WantCaptureKeyboard` only goes true for a text field — a genuinely
+narrower question that still matched.
+
+**Rules for next time:**
+- **Translate a borrowed predicate into your own words before gating on it.** "Is the pointer over an
+  ImGui window" is not "should the UI own this input" once one of those windows is the viewport.
+- **Ask which of your surfaces the library considers its own, and whether that is still true.** The
+  moment the world renders *into* the UI (M1's render-to-texture), every "is the UI busy" flag needed
+  re-reading — two milestones later.
+- **Check the exemption asymmetry.** Mouse needed the carve-out and keyboard did not; blanket-applying
+  either answer would have been wrong in one direction or the other.
