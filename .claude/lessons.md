@@ -637,3 +637,51 @@ silent use-after-free — the codebase's worst failure class ([[L18]]).
 - **Pin it with an assertion on IDENTITY, not on contents.** The gate compares a started subsystem's
   context address against `World::GetContext()`; comparing a *field* would pass anyway, since freed
   memory usually still holds the old value ([[L15]]).
+
+## L26 — A design doc's ORDERING claims are the ones to distrust: they read as obvious and only execution falsifies them (2026-07-31)
+
+**What happened (M4 S4/S5).** `Editor.md` had said for months that PIE's runtime state is *"rebuilt in
+`WorldSubsystem::Initialize`"*. Building `CloneWorld` proved it cannot be: the clone is `Capture` →
+`CreateWorld` → `Instantiate`, and `CreateWorld` starts the subsystems, so at `Startup` the cloned world
+is still **empty**. This is the second time the same document was wrong in the same way — S3 found that
+its subsystem *injection* rule ("the registration site captures the dependency into the factory") was not
+implementable against a no-argument call site. Both sentences were plausible, both survived several
+readings, and both were only falsifiable by writing the caller.
+
+**Why ordering specifically.** A doc's claims about *structure* (what exists, what owns what) get checked
+constantly, because every reader compares them against the file tree. Claims about *sequence* — what has
+run by the time X runs — are checked by nothing until something actually runs in that order.
+
+**Rules for next time:**
+- **Before trusting a doc sentence of the form "by the time X happens, Y has already happened", find the
+  two call sites and read the order.** If the caller does not exist yet, mark the claim as unverified
+  rather than as contract.
+- **When execution contradicts the doc, fix the doc in the same change** (CLAUDE.md §0), and fix the
+  *substance*, not the vocabulary. Renaming `Initialize` to `Startup` in that sentence would have left it
+  just as false.
+- **Prefer the uniform contract over the locally convenient one.** Instantiating before starting would
+  have made the doc's claim true for clones — and made a cloned world the only populated-at-`Startup`
+  world in the engine. "Depends how your world was made" is a worse answer than a flat no (**WS7**).
+
+## L27 — When a transformation works, know WHY: it may be working by accident (2026-07-31)
+
+**What happened (M4 S5).** `DeriveTypeLeafName` turns a C++ type into a registry name by stripping
+everything up to the last `::`. It had been correct for two milestones. Moving one subsystem into the
+editor module — whose types live in the **global namespace** — produced the registry entry
+`'class QuadBoundsSubsystem'`. MSVC's `entt::type_name` is *elaborated* (`"class Opaax::Foo"`), and the
+`::` strip had been removing that keyword **as a side effect**. No `::`, no strip. For a subsystem the
+name is only logs and editor UI; for a **component** it is the key written into map files, so the first
+global-namespace component would have written a map nothing could read back.
+
+**Rules for next time:**
+- **A helper that handles every input you have tried is not the same as a correct helper.** Ask what
+  *class* of input has never been tried — here, "no namespace at all" had literally never occurred,
+  because every prior type was in `Opaax::` or a test namespace.
+- **When two transformations happen in one step, verify each independently.** "Strip the namespace" and
+  "strip the elaborated-type keyword" were one line pretending to be one operation.
+- **Moving code to a new context is a cheap fuzzer.** The relocation cost nothing and exposed a latent
+  defect no test would have found, because every test type was namespaced too. When a placement change is
+  otherwise neutral, the fact that it exercises a new shape is a reason to do it, not a risk.
+- **Read the whole smoke log, not the lines you went looking for.** This was found in a `Registered ...`
+  trace line during a run whose purpose was checking something else — the [[L15]] discriminate rule
+  applied to output nobody asked for.
