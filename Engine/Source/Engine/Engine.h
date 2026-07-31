@@ -114,6 +114,7 @@ namespace Opaax
         EngineEventBus&  GetEngineEventBus() override;
         WorldManager&    GetWorldManager() override;
         DebugDraw&       GetDebugDraw() override;
+        InputManager&    GetInput() override;
         //~End IEngine interface
 
         // =============================================================================
@@ -168,6 +169,12 @@ namespace Opaax
          * Convenient ptr, lifetime not managed by engine itself but through subsystem
          */
         WorldManager*      m_WorldManager = nullptr;
+
+        /**
+         * Convenient ptr, lifetime not managed by engine itself but through subsystem.
+         * Read every frame by Loop (EndFrame), so it is cached in CacheSubsystems like the rest.
+         */
+        InputManager*      m_InputManager = nullptr;
 
         // Per-frame delta-time source (steady clock). Stored as nanoseconds so the header
         // stays <chrono>-free; the clock read + conversion live in Engine::Loop.

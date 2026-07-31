@@ -13,6 +13,7 @@
 #include "Engine/Subsystems/Resources/ResourceManager.h"
 #include "Core/Maths/MathsStatics.h"
 #include "Subsystems/EventBus/EngineEventBus.h"
+#include "Subsystems/Input/InputManager.h"
 #include "Subsystems/Renderer/RendererManager.h"
 #include "World/WorldManager.h"
 #include "World/WorldEvents.h"
@@ -37,6 +38,7 @@ namespace Opaax
         // rather than reached for, so it never has to know about Engine.
         m_Subsystems.RegisterSubsystem<EngineEventBus>();
         m_Subsystems.RegisterSubsystem<ResourceManager>();
+        m_Subsystems.RegisterSubsystem<InputManager>();
         m_Subsystems.RegisterSubsystem<WorldManager>(&m_Registries);
         m_Subsystems.RegisterSubsystem<RendererManager>();
     }
@@ -139,6 +141,7 @@ namespace Opaax
         m_RendererManager = m_Subsystems.GetSubsystem<RendererManager>();
         m_EngineEventBus  = m_Subsystems.GetSubsystem<EngineEventBus>();
         m_WorldManager    = m_Subsystems.GetSubsystem<WorldManager>();
+        m_InputManager    = m_Subsystems.GetSubsystem<InputManager>();
     }
 
     bool Engine::Startup()
@@ -236,6 +239,17 @@ namespace Opaax
         
         m_FrameInfo.m_AlphaPhysic = m_FrameInfo.m_AccumulatedDeltaTime / m_FrameInfo.m_FixedDeltaTime;
         Render(m_FrameInfo.m_AlphaPhysic);
+
+        // ----------------------------------------------------------------
+        // 5. Close the input frame — HERE, and not in a subsystem tick.
+        //    The application polls OS events BEFORE calling Loop, so this is the only point
+        //    between one frame's input and the next frame's. An Update() hook would run after
+        //    the events it is supposed to precede, and every edge query would be a frame late.
+        // ----------------------------------------------------------------
+        if (m_InputManager != nullptr)
+        {
+            m_InputManager->EndFrame();
+        }
     }
 
     // =========================================================================
@@ -433,6 +447,24 @@ namespace Opaax
 
         OPAAX_ASSERT(m_WorldManager != nullptr);
         return *m_WorldManager;
+    }
+
+    InputManager& Engine::GetInput()
+    {
+        // Resolve-from-manager first (see GetResources): never re-enter Startup.
+        if (m_InputManager == nullptr)
+        {
+            m_InputManager = m_Subsystems.GetSubsystem<InputManager>();
+        }
+
+        if (m_InputManager == nullptr && !m_bStarted)
+        {
+            Startup();
+            m_InputManager = m_Subsystems.GetSubsystem<InputManager>();
+        }
+
+        OPAAX_ASSERT(m_InputManager != nullptr);
+        return *m_InputManager;
     }
 
     // =========================================================================

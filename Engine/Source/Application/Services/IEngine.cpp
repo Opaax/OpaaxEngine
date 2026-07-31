@@ -1,6 +1,7 @@
 #include "IEngine.h"
 
 #include "Engine/Subsystems/EventBus/EngineEventBus.h"
+#include "Engine/Subsystems/Input/InputManager.h"
 #include "Engine/Subsystems/Resources/ResourceManager.h"
 #include "Renderer/DebugDraw.h"
 #include "RHI/Framebuffer.h"
@@ -63,6 +64,14 @@ namespace Opaax
             {
                 static WorldManager s_NullWorlds; // inert — owns no worlds
                 return s_NullWorlds;
+            }
+
+            InputManager& GetInput() override
+            {
+                // Inert — nothing feeds it, so every key reads as up. That is the right answer for
+                // a host with no engine: "nothing is held" rather than a dangling reference.
+                static InputManager s_NullInput;
+                return s_NullInput;
             }
 
             DebugDraw& GetDebugDraw() override

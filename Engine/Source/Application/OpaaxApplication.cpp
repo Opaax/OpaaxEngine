@@ -12,6 +12,7 @@
 #include "World/WorldManager.h" // GetWorldManager() is forward-declared on IEngine
 #include "Engine/Subsystems/EventBus/EngineEventBus.h"
 #include "Engine/Subsystems/Input/InputEvents.h"
+#include "Engine/Subsystems/Input/InputManager.h"
 
 #include "Services/IConfigSystem.h"
 #include "Services/IEngine.h"
@@ -339,11 +340,71 @@ void OpaaxApplication::HandleApplicationEvent(EventDispatcher& Dispatcher, Event
         Engine().GetEngineEventBus().GetEventBus().Enqueue(InResize.GetPayload());
         return false;
     });
+
+    Dispatcher.Dispatch<WindowLostFocusEvent>([this](WindowLostFocusEvent&)
+    {
+        // The OS delivers the RELEASE to whoever has focus, and that is no longer us — so a key
+        // held right now would stay held forever. This is the runtime's only route-closing event
+        // (the editor has three more); without it, alt-tabbing mid-move leaves the player walking
+        // into a wall (D5's stuck-key contract).
+        Engine().GetInput().ResetState();
+        return false;
+    });
 }
 
 void OpaaxApplication::HandleAllInputEvent(EventDispatcher& Dispatcher, Event& InEvent)
 {
-    
+    // The engine end of D5's route. Reaching here at all IS the routing decision: a host that
+    // wants to withhold input (the editor, when the world is in Edit mode or the viewport has no
+    // focus) consumes the event in OnEvent and never calls up. So there is no gate to re-check.
+    //
+    // Fed IMMEDIATELY rather than through the event bus: this runs inside PollEvents, before the
+    // frame ticks, so anything asking mid-route ("is Shift held?") gets this frame's truth. A
+    // queued feed would answer with last frame's state.
+    //
+    // Every handler returns false — feeding is observation, not consumption, and a later
+    // subscriber must still see the event.
+    InputManager& lInput = Engine().GetInput();
+
+    Dispatcher.Dispatch<KeyPressedEvent>([&lInput](KeyPressedEvent& InKey)
+    {
+        lInput.OnKeyPressed(InKey.GetKeyCode(), InKey.IsRepeat());
+        return false;
+    });
+
+    Dispatcher.Dispatch<KeyReleasedEvent>([&lInput](KeyReleasedEvent& InKey)
+    {
+        lInput.OnKeyReleased(InKey.GetKeyCode());
+        return false;
+    });
+
+    Dispatcher.Dispatch<MouseButtonPressedEvent>([&lInput](MouseButtonPressedEvent& InButton)
+    {
+        lInput.OnMouseButtonPressed(InButton.GetMouseButton());
+        return false;
+    });
+
+    Dispatcher.Dispatch<MouseButtonReleasedEvent>([&lInput](MouseButtonReleasedEvent& InButton)
+    {
+        lInput.OnMouseButtonReleased(InButton.GetMouseButton());
+        return false;
+    });
+
+    Dispatcher.Dispatch<MouseMovedEvent>([&lInput](MouseMovedEvent& InMove)
+    {
+        lInput.OnMouseMoved(InMove.GetX(), InMove.GetY());
+        return false;
+    });
+
+    Dispatcher.Dispatch<MouseScrolledEvent>([&lInput](MouseScrolledEvent& InScroll)
+    {
+        lInput.OnMouseScrolled(InScroll.GetXOffset(), InScroll.GetYOffset());
+        return false;
+    });
+
+    // NOTE: KeyTypedEvent is deliberately NOT fed. A Unicode codepoint is text entry, not a key
+    // state — it has no "down" to hold. It belongs to whatever owns a text field (ImGui today).
+    (void)InEvent;
 }
 
 void OpaaxApplication::UnknownEvent(EventDispatcher& Dispatcher, Event& InEvent)

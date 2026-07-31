@@ -9,6 +9,7 @@ namespace Opaax
     class EngineEventBus;
     class ResourceManager;
     class WorldManager;
+    class InputManager;
     class World;
     class IFramebuffer;
     class IRenderTarget;
@@ -157,6 +158,15 @@ namespace Opaax
          * game alike; the engine has no idea which one is calling.
          */
         virtual DebugDraw& GetDebugDraw() = 0;
+
+        /**
+         * What is currently held, and what changed this frame (Editor.md D5, M-Input).
+         *
+         * The engine end of the input chain — the application FEEDS this as OS events arrive, and
+         * everything else reads it. Physical keys only: action maps are a game-layer concept built
+         * on top. Read-only for every caller except the application that owns the feed.
+         */
+        virtual InputManager& GetInput() = 0;
 
         // End Foundation subsystems
         // =============================================================================
