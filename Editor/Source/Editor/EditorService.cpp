@@ -296,6 +296,7 @@ namespace Opaax::Editor
         // module(s) plug into the routes, then we seal — no more registration once the first world exists.
         RegisterNativePanels();
         RegisterNativeMenus();
+        RegisterNativeResourceTypes();
 
         // EditWorldSystems() -> the ENGINE's WorldSubsystemRegistry, the same one the game module
         // registers into (M4 S5). Bound here because this runs at OnModulesRegistered: the engine has
@@ -614,7 +615,10 @@ namespace Opaax::Editor
         // a second one to keep correct.
         Window* const lWindow = OpaaxApplication::GetAppService<IWindowManager>().GetMainWindow();
 
-        // --- M5 S5: the author loop, through the same route a game's Tools entry uses ---------
+        // --- M5 S5/S6: the author loop, through the same route a game's Tools entry uses ------
+        m_Extensions.Menus().Register("File/Open Map...",
+            [](EditorContext& InContext) { OpenMapCommand(InContext); });
+
         m_Extensions.Menus().Register("File/Save Map",
             [](EditorContext& InContext) { SaveMapCommand(InContext); });
 
@@ -627,6 +631,33 @@ namespace Opaax::Editor
                 OPAAX_LOG(LogEditorService, Info, "Exit requested from the File menu")
                 if (lWindow != nullptr) { lWindow->RequestClose(); }
             });
+    }
+
+    void EditorService::RegisterNativeResourceTypes()
+    {
+        // `.opaaxmap` registered through the SAME ResourceTypes() route a game's `.wave` uses
+        // (M2d), so a map is a file type like any other: it gets an icon, a label, and a
+        // double-click that opens it. The editor's own core format gets no privileged path into
+        // the browser — which is the property that keeps the route honest.
+        m_Extensions.ResourceTypes().Register(ResourceTypeDesc{
+            .Extension  = OPAAX_ID(".opaaxmap"),
+            .Label      = OPAAX_ID("Opaax Map"),
+            .Icon       = OpaaxString("[M]"),
+            .OnActivate = [](EditorContext& InContext, const ResourceFile& InFile)
+            {
+                OpenMapAt(InContext, InFile.AbsPath);
+            }
+        });
+
+        m_Extensions.ResourceTypes().Register(ResourceTypeDesc{
+            .Extension  = OPAAX_ID(".opaaxlevel"),
+            .Label      = OPAAX_ID("Opaax Level"),
+            .Icon       = OpaaxString("[L]"),
+            // No action: a level is a MANIFEST, and M5 has no level editor to open it in. An
+            // icon and a label are a perfectly good registration (ResourceTypeDesc says so), and
+            // it stops a .opaaxlevel showing up as an unknown file next to the map it composes.
+            .OnActivate = {}
+        });
     }
 
     // =============================================================================
@@ -687,6 +718,65 @@ namespace Opaax::Editor
 
         InContext.MapDocument.SaveAs(OpaaxString(lPicked), *InContext.Worlds.GetActiveWorld(),
                                      InContext.Engine.GetRegistries().Components());
+    }
+
+    void EditorService::OpenMapCommand(EditorContext& InContext)
+    {
+        if (!CanEditMap(InContext))
+        {
+            OPAAX_LOG(LogEditorService, Warn, "Open Map ignored — stop the PIE session first")
+            return;
+        }
+
+        const char* const lFilters[] = { "*.opaaxmap" };
+
+        const char* const lPicked = tinyfd_openFileDialog(
+            "Open Map",
+            InContext.Paths.AssetToAbsolute(OpaaxString("Maps/")).CStr(),
+            1, lFilters, "Opaax Map", /*allowMultiple*/0);
+
+        if (lPicked == nullptr)
+        {
+            return;   // cancelled
+        }
+
+        OpenMapAt(InContext, OpaaxString(lPicked));
+    }
+
+    void EditorService::OpenMapAt(EditorContext& InContext, const OpaaxString& InAbsPath)
+    {
+        if (!CanEditMap(InContext))
+        {
+            OPAAX_LOG(LogEditorService, Warn, "Open ignored — stop the PIE session first")
+            return;
+        }
+
+        World* const lWorld = InContext.Worlds.GetActiveWorld();
+
+        // UNSAVED WORK IS CONFIRMED, NOT DISCARDED. A modal is the right tool here precisely
+        // because the action is irreversible — Open clears the world, and there is no undo to
+        // fall back on. tinyfiledialogs is already the editor's file-dialog vendor, so this costs
+        // no new dependency.
+        if (InContext.MapDocument.IsDirty(*lWorld, InContext.Engine.GetRegistries().Components()))
+        {
+            const int lAnswer = tinyfd_messageBox(
+                "Unsaved changes",
+                "The current map has unsaved changes.\nOpen another map and lose them?",
+                "yesno", "warning", /*defaultButton*/0);   // default NO — the safe answer
+
+            if (lAnswer != 1)
+            {
+                OPAAX_LOG(LogEditorService, Info, "Open cancelled — unsaved changes kept")
+                return;
+            }
+        }
+
+        // The SELECTION is cleared before the world is: it holds an Entity, and every entity in
+        // the world is about to stop existing. HandleActiveWorldChanged cannot cover this — the
+        // active world is not changing, only its contents.
+        InContext.Selection.Clear();
+
+        InContext.MapDocument.Open(InAbsPath, *lWorld, InContext.Engine.GetRegistries().Components());
     }
 
     void EditorService::OnShutdown()

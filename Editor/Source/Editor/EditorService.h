@@ -103,6 +103,22 @@ namespace Opaax::Editor
         static bool CanEditMap(const EditorContext& InContext);
         static void SaveMapCommand(EditorContext& InContext);
         static void SaveMapAsCommand(EditorContext& InContext);
+        static void OpenMapCommand(EditorContext& InContext);
+
+        /**
+         * Open InAbsPath into the ACTIVE world — the shared body behind both the File menu's
+         * "Open Map..." and a double-click in the Resource Browser, so the two cannot diverge on
+         * the parts that matter (the PIE guard, the unsaved-changes prompt, clearing the
+         * selection before the entities it points at stop existing).
+         */
+        static void OpenMapAt(EditorContext& InContext, const OpaaxString& InAbsPath);
+
+        /**
+         * `.opaaxmap` / `.opaaxlevel` into m_Extensions.ResourceTypes() — the editor's own core
+         * formats registered through the route a game's file type uses (M2d), with no privileged
+         * path into the browser.
+         */
+        void RegisterNativeResourceTypes();
 
         /**
          * Resolves <ProjectRoot>/Editor/Save/imgui.ini — the dock layout ImGui loads on the first frame and
