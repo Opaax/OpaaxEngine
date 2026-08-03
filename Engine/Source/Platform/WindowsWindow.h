@@ -40,6 +40,7 @@ namespace Opaax
 
 		virtual void PollEvents() override;
         virtual bool ShouldClose() const override;
+        virtual void RequestClose() override;
         virtual void SwapBuffers() override;
         virtual void Shutdown() override;
 

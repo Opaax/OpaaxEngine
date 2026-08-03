@@ -274,6 +274,16 @@ namespace Opaax
 		return m_Window && glfwWindowShouldClose(m_Window);
 	}
 
+	void WindowsWindow::RequestClose()
+	{
+		// Sets the very flag ShouldClose reads, so the loop stops and WindowCloseEvent fires
+		// exactly as it does for a real click on the X — one close path, not two.
+		if (m_Window)
+		{
+			glfwSetWindowShouldClose(m_Window, GLFW_TRUE);
+		}
+	}
+
 	void WindowsWindow::SwapBuffers()
     {
 	    m_Context->SwapBuffers();

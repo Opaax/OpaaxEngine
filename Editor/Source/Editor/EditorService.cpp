@@ -250,6 +250,7 @@ namespace Opaax::Editor
         // D10/§2: fired BEFORE the first world. Native editor panels register FIRST, then the game's editor
         // module(s) plug into the routes, then we seal — no more registration once the first world exists.
         RegisterNativePanels();
+        RegisterNativeMenus();
 
         // EditWorldSystems() -> the ENGINE's WorldSubsystemRegistry, the same one the game module
         // registers into (M4 S5). Bound here because this runs at OnModulesRegistered: the engine has
@@ -420,24 +421,105 @@ namespace Opaax::Editor
 
         if (ImGui::BeginMainMenuBar())
         {
-            if (ImGui::BeginMenu("File"))
-            {
-                ImGui::MenuItem("Exit");   // wired at S11/M-Input; a visible affordance for now
-                ImGui::EndMenu();
-            }
-            
-            if (ImGui::BeginMenu("Editor"))
-            {
-                if (ImGui::BeginMenu("Panels"))
-                {
-                    ImGui::EndMenu();
-                }
-                //ImGui::MenuItem("Exit");   // wired at S11/M-Input; a visible affordance for now
-                ImGui::EndMenu();
-            }
-            
+            // THE WHOLE BAR comes from the registry — there is no hardcoded menu left (M5 S4).
+            // The editor's own File/Exit is registered in RegisterNativeMenus exactly as a game's
+            // Tools entry is, which is what makes "native features go through the same route"
+            // (D10) true here rather than aspirational. It also removes the merge problem: a game
+            // adding "File/Validate" lands in the same File menu, because there is only one.
+            DrawMenuLevel(BuildAllIndices(), /*InDepth*/0);
+
             ImGui::EndMainMenuBar();
         }
+    }
+
+    TDynArray<Uint32> EditorService::BuildAllIndices() const
+    {
+        const TDynArray<MenuEntry>& lEntries = m_Extensions.Menus().Entries();
+
+        TDynArray<Uint32> lIndices;
+        lIndices.reserve(lEntries.size());
+        for (Uint32 lIndex = 0; lIndex < static_cast<Uint32>(lEntries.size()); ++lIndex)
+        {
+            lIndices.push_back(lIndex);
+        }
+
+        return lIndices;
+    }
+
+    void EditorService::DrawMenuLevel(const TDynArray<Uint32>& InIndices, Uint32 InDepth)
+    {
+        const TDynArray<MenuEntry>& lEntries = m_Extensions.Menus().Entries();
+
+        // Names already emitted at THIS level, so two entries sharing a submenu produce one
+        // submenu rather than two with the same label. Registration order decides which comes
+        // first; everything sharing that prefix follows it in.
+        TDynArray<OpaaxString> lEmitted;
+        const auto lAlreadyEmitted = [&lEmitted](const OpaaxString& InName)
+        {
+            for (const OpaaxString& lName : lEmitted)
+            {
+                if (lName == InName) { return true; }
+            }
+            return false;
+        };
+
+        for (const Uint32 lIndex : InIndices)
+        {
+            const OpaaxString lSegment = MenuPathSegment(lEntries[lIndex].Path, InDepth);
+            if (lSegment.IsEmpty() || lAlreadyEmitted(lSegment)) { continue; }
+
+            // A LEAF is an entry with nothing after this segment — the label of the command.
+            if (IsMenuPathLeaf(lEntries[lIndex].Path, InDepth))
+            {
+                if (ImGui::MenuItem(lSegment.CStr()) && m_Context != nullptr)
+                {
+                    lEntries[lIndex].Command(*m_Context);
+                }
+
+                lEmitted.push_back(lSegment);
+                continue;
+            }
+
+            // A SUBMENU: gather everything sharing this segment at this depth and recurse. The
+            // gather is what lets a flat registration list render as a tree without one being
+            // stored anywhere.
+            TDynArray<Uint32> lChildren;
+            for (const Uint32 lOther : InIndices)
+            {
+                if (MenuPathSegment(lEntries[lOther].Path, InDepth) == lSegment)
+                {
+                    lChildren.push_back(lOther);
+                }
+            }
+
+            if (ImGui::BeginMenu(lSegment.CStr()))
+            {
+                DrawMenuLevel(lChildren, InDepth + 1);
+                ImGui::EndMenu();
+            }
+
+            lEmitted.push_back(lSegment);
+        }
+    }
+
+    void EditorService::RegisterNativeMenus()
+    {
+        // The editor's own entries go through the SAME route a game module uses — registered
+        // first, for the same reason native panels are (MR2's order, one level down).
+        //
+        // Exit finally does something. It was a bare MenuItem with a comment promising it would
+        // be wired "at S11/M-Input" — a milestone that has since come and gone, which is what
+        // makes a note like that a work item rather than a plan. It closes through
+        // Window::RequestClose, so it takes the same path as clicking the X: one close path, not
+        // a second one to keep correct.
+        Window* const lWindow = OpaaxApplication::GetAppService<IWindowManager>().GetMainWindow();
+
+        m_Extensions.Menus().Register("File/Exit",
+            [lWindow](EditorContext&)
+            {
+                OPAAX_LOG(LogEditorService, Info, "Exit requested from the File menu")
+                if (lWindow != nullptr) { lWindow->RequestClose(); }
+            });
     }
 
     void EditorService::OnShutdown()

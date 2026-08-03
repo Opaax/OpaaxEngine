@@ -80,6 +80,17 @@ namespace Opaax
         virtual void PollEvents()           = 0;
         virtual void SwapBuffers()          = 0;
         virtual bool ShouldClose() const    = 0;
+
+        /**
+         * Ask the window to close — the programmatic equivalent of clicking its X (M5).
+         *
+         * Deliberately routed through the window rather than through an "application, stop"
+         * call: the close flag is what RunApplication already polls (bIsRunning =
+         * !ShouldClose()) and what raises WindowCloseEvent, so an editor menu's Exit takes the
+         * SAME path a user's click takes. A second way to stop the loop would be a second thing
+         * to keep correct.
+         */
+        virtual void RequestClose()         = 0;
         virtual void Shutdown()             = 0;
 
         // =============================================================================

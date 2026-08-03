@@ -11,6 +11,7 @@ void __NAME__EditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& I
     //       [](Opaax::Editor::EditorContext& InContext) -> Opaax::UniquePtr<Opaax::Editor::IEditorPanel>
     //       { return Opaax::MakeUnique<MyPanel>(InContext); });
     //   InRegistrar.ResourceTypes().Register(Opaax::Editor::ResourceTypeDesc{ ... });
-    //   InRegistrar.Menus().Register("Tools/My Tool", [] {});
+    //   InRegistrar.Menus().Register("Tools/My Tool",
+    //       [](Opaax::Editor::EditorContext& InContext) { /* act on InContext.Worlds, .Selection, ... */ });
     (void)InRegistrar;
 }

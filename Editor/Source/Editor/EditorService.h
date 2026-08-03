@@ -54,6 +54,27 @@ namespace Opaax::Editor
         void RegisterNativePanels();
 
         /**
+         * The editor's own menu commands, into m_Extensions.Menus() — same route, same ordering rule
+         * and same lack of privilege as RegisterNativePanels (M5 S4).
+         */
+        void RegisterNativeMenus();
+
+        /**
+         * Render one level of the menu bar from the registry's flat entry list.
+         *
+         * Recursive: at InDepth, an entry whose path ends there is a MenuItem, and anything deeper
+         * opens a submenu gathering every entry that shares the segment. Computing the tree here
+         * rather than storing one is what keeps registration a single push_back.
+         *
+         * @param InIndices Indices into MenuRegistry::Entries() that belong at this level.
+         * @param InDepth   Which path segment this level names.
+         */
+        void DrawMenuLevel(const TDynArray<Uint32>& InIndices, Uint32 InDepth);
+
+        /** Every registered entry's index — the root call's argument for DrawMenuLevel. */
+        TDynArray<Uint32> BuildAllIndices() const;
+
+        /**
          * Resolves <ProjectRoot>/Editor/Save/imgui.ini — the dock layout ImGui loads on the first frame and
          * rewrites as it changes — CREATING the directory if absent (ImGui will not, and its save fails
          * silently on a missing dir).
