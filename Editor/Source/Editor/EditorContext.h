@@ -14,6 +14,7 @@ namespace Opaax
         class EditorSelection;          // editor-owned; the single selected entity (Hierarchy writes, Inspector reads)
         class PlayInEditor;             // editor-owned; the PIE state machine (toolbar + reserved keys drive it)
         class InputRoute;               // editor-owned; whether the engine is being fed (D5 steps 2 + 4)
+        class EditorMapDocument;        // editor-owned; WHICH map is open and whether it changed (M5)
         class EditorExtensionRegistrar; // editor-owned; the sealed D10 routes (Inspector reads Drawers())
         class EditorPaths;              // editor-owned IPaths subclass; the editor-space directories
 
@@ -47,6 +48,11 @@ namespace Opaax
             // on it and the Input panel displays it, so the behaviour and the readout cannot drift.
             // Named Route, not InputRoute: a member sharing its type's name shadows it in-struct.
             InputRoute&       Route;
+
+            // M5 — the open `.opaaxmap`: its path, its MapId, and whether the world still matches
+            // what was last written. Here rather than inside a Save command so the menu, the title
+            // bar and any future panel all read ONE answer — the same reason PIE and Route are here.
+            EditorMapDocument& MapDocument;
 
             // M2b — the sealed extension routes, so a panel can consume what modules registered (the
             // Inspector walks Drawers(), the Resource Browser ResourceTypes()). CONST by construction:

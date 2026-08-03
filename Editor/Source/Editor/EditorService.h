@@ -5,6 +5,7 @@
 #include "Editor/EditorPaths.h"
 #include "Editor/EditorSelection.h"
 #include "Editor/InputRoute.h"
+#include "Editor/EditorMapDocument.h"
 #include "Editor/PlayInEditor.h"
 #include "Editor/UI/IEditorUIBackend.h"
 #include "Editor/Panels/ViewportPanel.h"
@@ -73,6 +74,35 @@ namespace Opaax::Editor
 
         /** Every registered entry's index — the root call's argument for DrawMenuLevel. */
         TDynArray<Uint32> BuildAllIndices() const;
+
+        /**
+         * Point the document at the map the ENGINE already opened (M5 S5).
+         *
+         * Re-reads the project's startup level to find out which file that was, rather than the
+         * engine growing a "what did I load" accessor for a single consumer. The LEVEL'S FIRST MAP
+         * is the one edited — the editor opens one at a time, which is a real limitation of M5
+         * rather than an oversight.
+         */
+        void AdoptStartupMap();
+
+        /** The open map's name plus a `*` when the world no longer matches it. Once a frame, on the bar. */
+        void DrawDocumentStatus();
+
+        /**
+         * Ctrl+S, in the UI pass.
+         *
+         * NOT in HandleReservedKeys, and not by choice of style: with an Edit world open the input
+         * route is ClosedEditMode, so the engine's InputManager never receives Ctrl and could not
+         * answer IsCtrlDown(). See the body for why the split (route-level F-keys vs UI-pass
+         * chords) is the right shape rather than a workaround.
+         */
+        void HandleAuthoringShortcuts();
+
+        // ---- menu commands (D3: a command's whole input is the context) ----------------------
+        /** False while PIE runs — the active world is then a Play clone, not the authored map. */
+        static bool CanEditMap(const EditorContext& InContext);
+        static void SaveMapCommand(EditorContext& InContext);
+        static void SaveMapAsCommand(EditorContext& InContext);
 
         /**
          * Resolves <ProjectRoot>/Editor/Save/imgui.ini — the dock layout ImGui loads on the first frame and
@@ -155,6 +185,13 @@ namespace Opaax::Editor
         UniquePtr<EditorSelection>  m_Selection;       // M2a: the single selection; EditorContext.Selection refs it
         UniquePtr<PlayInEditor>     m_PIE;             // M4 S5: the PIE state machine; EditorContext.PIE refs it
         UniquePtr<InputRoute>       m_InputRoute;      // M-Input S2: is the engine being fed; EditorContext.InputRoute refs it
+        UniquePtr<EditorMapDocument> m_MapDocument;    // M5 S5: the open .opaaxmap; EditorContext.MapDocument refs it
+
+        // M5 S5: the derived dirty answer, cached. EditorMapDocument::IsDirty is a full capture +
+        // serialize and stays pure (so it is testable and cannot go stale on its own); the
+        // THROTTLING lives here, where there is a frame clock to throttle against.
+        double m_LastDirtyCheck = -1.0;
+        bool   m_CachedDirty    = false;
         UniquePtr<EditorContext>    m_Context;
         UniquePtr<IEditorUIBackend> m_UIBackend;
         UniquePtr<ViewportPanel>    m_ViewportPanel;   // M1: world-to-texture panel; owns the offscreen FBO

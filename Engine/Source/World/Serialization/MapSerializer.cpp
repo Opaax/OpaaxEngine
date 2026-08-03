@@ -42,7 +42,12 @@ namespace Opaax
             lData.Entities.push_back(Move(lEntityData));
         }
 
-        OPAAX_LOG(LogMapSerializer, Info, "Captured {} entity(ies) from world '{}'{}",
+        // TRACE, not Info. Capture is a pure transformation with several callers, and one of them
+        // — the editor's derived dirty check — runs on a timer while the editor is simply open.
+        // An Info line here put ~1700 identical entries in a 10-second run. The events worth an
+        // Info are the ones that actually happen TO something: MapFile's Save/Load and
+        // MapFactory's Instantiate, which all still log at Info.
+        OPAAX_LOG(LogMapSerializer, Trace, "Captured {} entity(ies) from world '{}'{}",
                   lData.EntityCount(), InWorld.GetName().CStr(),
                   InFilter.IsValid() ? " (filtered)" : "")
 

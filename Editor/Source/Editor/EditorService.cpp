@@ -14,14 +14,18 @@
 #include "Application/Services/Platforms/IPlatform.h"        // GetFileSystem — the dock-layout dir
 #include "Application/Services/Platforms/IFileSystem.h"
 #include "Application/Services/Window/IWindowManager.h"      // window + native GLFW handle
+#include "Application/Services/IProjectManager.h"            // startupLevel — which map the editor adopts (M5)
 #include "Core/Events/Event.h"                               // Event::IsInCategory + EEventCategory (S11)
 #include "Engine/Registries/EngineRegistries.h"              // EditWorldSystems() binds to WorldSubsystems()
 #include "Engine/Subsystems/Input/InputEvents.h"             // KeyPressedEvent — the reserved keys (D5 step 3)
 #include "World/Entity/Entity.h"                             // selection retarget by Guid across a world switch
 #include "World/World.h"
 #include "World/WorldManager.h"
+#include "World/ComponentRegistry.h"                         // the document captures through it (M5)
+#include "World/Serialization/LevelFile.h"                   // which map the startup level names (M5)
 
 #include <imgui.h>
+#include <tinyfiledialogs.h>                                 // Save As — the editor already vendors it
 
 using namespace Opaax;   // OPAAX_LOG expands to an unqualified ToSpdLevel(...)
 
@@ -87,6 +91,10 @@ namespace Opaax::Editor
         //     reads the play state, since a paused session must not be fed. -------------------
         m_InputRoute = MakeUnique<InputRoute>(lEngine.GetWorldManager(), lEngine.GetInput(), *m_PIE);
 
+        // --- The open map (M5 S5). Created empty; it ADOPTS the world the engine has already built
+        //     from the project's startup level a few lines below, once the context exists. -------
+        m_MapDocument = MakeUnique<EditorMapDocument>();
+
         // --- World-switch reactions (M4 S5). PIE swaps the active world twice per session, so a
         //     cached selection or per-world panel state has to be told. Subscribed BEFORE the panels
         //     exist: the first switch cannot happen until a frame runs, and unsubscribing is
@@ -105,6 +113,7 @@ namespace Opaax::Editor
             *m_Selection,
             *m_PIE,
             *m_InputRoute,
+            *m_MapDocument,
             m_Extensions,
             OpaaxApplication::GetAppService<IPaths>(),
             OpaaxApplication::GetAppService<IPlatform>().GetFileSystem(),
@@ -135,7 +144,43 @@ namespace Opaax::Editor
         OPAAX_LOG(LogEditorService, Info, "Editor panels registered: {}, constructed: {}",
             m_Extensions.Panels().Count(), m_Panels.size());
 
+        AdoptStartupMap();
+
         OPAAX_LOG(LogEditorService, Info, "EditorService initialized (EditorContext bound, ImGui docking UI up)");
+    }
+
+    void EditorService::AdoptStartupMap()
+    {
+        // The engine already built this world from the project's startup level (FinishStartup).
+        // The editor asks the SAME question to find out which file that was, rather than the
+        // engine growing a "what did I load" accessor for one consumer — the manifest is data and
+        // reading it twice is cheaper than a new piece of engine state to keep true.
+        //
+        // THE FIRST MAP IS THE ONE EDITED. The editor opens one map at a time (a Level composes
+        // several; editing several at once is not a thing M5 offers), so "the level's first map"
+        // is the rule — stated here because it is a real limitation, not an accident.
+        if (m_Context == nullptr || m_MapDocument == nullptr) { return; }
+
+        World* const lWorld = m_Context->Worlds.GetActiveWorld();
+        if (lWorld == nullptr) { return; }
+
+        const OpaaxString lLevelRel = OpaaxApplication::GetAppService<IProjectManager>().StartupLevel();
+        if (lLevelRel.IsEmpty())
+        {
+            OPAAX_LOG(LogEditorService, Info, "No startup level configured — no map is open for editing");
+            return;
+        }
+
+        LevelData lLevel;
+        if (!LevelFile::Load(m_Context->Paths.AssetToAbsolute(lLevelRel), lLevel) || lLevel.IsEmpty())
+        {
+            OPAAX_LOG(LogEditorService, Warn, "Startup level '{}' names no map — nothing to edit",
+                lLevelRel.CStr());
+            return;
+        }
+
+        m_MapDocument->AdoptExisting(m_Context->Paths.AssetToAbsolute(lLevel.Maps[0]),
+            *lWorld, m_Context->Engine.GetRegistries().Components());
     }
 
     void EditorService::BeginFrame()
@@ -428,7 +473,62 @@ namespace Opaax::Editor
             // adding "File/Validate" lands in the same File menu, because there is only one.
             DrawMenuLevel(BuildAllIndices(), /*InDepth*/0);
 
+            DrawDocumentStatus();
+
             ImGui::EndMainMenuBar();
+        }
+
+        HandleAuthoringShortcuts();
+    }
+
+    void EditorService::DrawDocumentStatus()
+    {
+        if (m_Context == nullptr || m_MapDocument == nullptr || !m_MapDocument->HasMap())
+        {
+            return;
+        }
+
+        const World* const lWorld = m_Context->Worlds.GetActiveWorld();
+        if (lWorld == nullptr) { return; }
+
+        // THROTTLED, not per frame. The dirty check is a capture + serialize of the whole map —
+        // fine for three quads, not fine for a real one — and running it every frame is exactly
+        // what it must not do. Four times a second is far below what an eye can tell from
+        // instant, and it bounds the cost at something that does not grow with framerate.
+        //
+        // The staleness this admits is up to 250ms of a `*` lingering after a save, which is not
+        // a correctness problem: the FILE is already right, only the marker lags.
+        constexpr double k_DirtyCheckInterval = 0.25;
+
+        const double lNow = ImGui::GetTime();
+        if (lNow - m_LastDirtyCheck >= k_DirtyCheckInterval)
+        {
+            m_LastDirtyCheck = lNow;
+            m_CachedDirty    = m_MapDocument->IsDirty(*lWorld,
+                                                      m_Context->Engine.GetRegistries().Components());
+        }
+
+        ImGui::Separator();
+        ImGui::TextDisabled("%s%s", m_MapDocument->FileName().CStr(), m_CachedDirty ? " *" : "");
+    }
+
+    void EditorService::HandleAuthoringShortcuts()
+    {
+        // Ctrl+S goes through IMGUI, not through HandleReservedKeys — and the reason is worth
+        // keeping. D5's step 3 runs inside the event route, where the editor decides whether the
+        // ENGINE gets fed. With an Edit world open the route is ClosedEditMode, so every input
+        // event is consumed there and InputManager never sees Ctrl at all: IsCtrlDown() would be
+        // false forever, precisely where Ctrl+S is wanted.
+        //
+        // The split is principled rather than a workaround. F5-F8 are PIE control and must fire
+        // while the GAME owns the keyboard, so they belong in the route ahead of the feed. Ctrl+S
+        // is an authoring command that only means anything while the EDITOR owns the keyboard —
+        // which is exactly when ImGui's view of the keyboard is the authoritative one.
+        if (m_Context == nullptr) { return; }
+
+        if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_S, ImGuiInputFlags_RouteGlobal))
+        {
+            SaveMapCommand(*m_Context);
         }
     }
 
@@ -514,12 +614,79 @@ namespace Opaax::Editor
         // a second one to keep correct.
         Window* const lWindow = OpaaxApplication::GetAppService<IWindowManager>().GetMainWindow();
 
+        // --- M5 S5: the author loop, through the same route a game's Tools entry uses ---------
+        m_Extensions.Menus().Register("File/Save Map",
+            [](EditorContext& InContext) { SaveMapCommand(InContext); });
+
+        m_Extensions.Menus().Register("File/Save Map As...",
+            [](EditorContext& InContext) { SaveMapAsCommand(InContext); });
+
         m_Extensions.Menus().Register("File/Exit",
             [lWindow](EditorContext&)
             {
                 OPAAX_LOG(LogEditorService, Info, "Exit requested from the File menu")
                 if (lWindow != nullptr) { lWindow->RequestClose(); }
             });
+    }
+
+    // =============================================================================
+    // The author loop's commands
+    //
+    // Free-standing statics rather than members: a menu command's whole input is the
+    // EditorContext it is handed (D3), so nothing here needs EditorService — and keeping them
+    // context-only is what lets the identical function serve the menu item AND the keyboard
+    // shortcut without one of them becoming the "real" path.
+    // =============================================================================
+    bool EditorService::CanEditMap(const EditorContext& InContext)
+    {
+        // Only in EDIT state. While a PIE session runs (playing OR paused) the ACTIVE world is a
+        // Play clone, and writing it back would persist simulation state — quads caught
+        // mid-oscillation — over the authored map. The rule is about WHICH WORLD is on screen,
+        // not about being cautious, which is why it reads the PIE state rather than a flag.
+        return InContext.PIE.IsEdit() && InContext.Worlds.GetActiveWorld() != nullptr;
+    }
+
+    void EditorService::SaveMapCommand(EditorContext& InContext)
+    {
+        if (!CanEditMap(InContext))
+        {
+            OPAAX_LOG(LogEditorService, Warn, "Save Map ignored — stop the PIE session first")
+            return;
+        }
+
+        if (!InContext.MapDocument.HasMap())
+        {
+            SaveMapAsCommand(InContext);   // nothing to overwrite — ask where
+            return;
+        }
+
+        InContext.MapDocument.Save(*InContext.Worlds.GetActiveWorld(),
+                                   InContext.Engine.GetRegistries().Components());
+    }
+
+    void EditorService::SaveMapAsCommand(EditorContext& InContext)
+    {
+        if (!CanEditMap(InContext))
+        {
+            OPAAX_LOG(LogEditorService, Warn, "Save Map As ignored — stop the PIE session first")
+            return;
+        }
+
+        const char* const lFilters[] = { "*.opaaxmap" };
+
+        const char* const lPicked = tinyfd_saveFileDialog(
+            "Save Map As",
+            InContext.MapDocument.HasMap() ? InContext.MapDocument.AbsPath().CStr()
+                                           : InContext.Paths.AssetToAbsolute(OpaaxString("Maps/Untitled.opaaxmap")).CStr(),
+            1, lFilters, "Opaax Map");
+
+        if (lPicked == nullptr)
+        {
+            return;   // cancelled — not a failure, and not worth a log line
+        }
+
+        InContext.MapDocument.SaveAs(OpaaxString(lPicked), *InContext.Worlds.GetActiveWorld(),
+                                     InContext.Engine.GetRegistries().Components());
     }
 
     void EditorService::OnShutdown()
