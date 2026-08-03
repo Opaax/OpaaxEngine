@@ -52,6 +52,55 @@ add_custom_command(TARGET Sandbox POST_BUILD
 )
 
 # =============================================================================
+# Project deploy — SHIP BUILDS ONLY.
+#
+# Engine/CMakeLists.txt has stated the contract for a while: a dev build bakes OPAAX_WORKSPACE_DIR
+# and resolves against the source tree, while a ship build "resolves from the exe dir, WHOSE DEPLOY
+# MIRRORS THE WORKSPACE LAYOUT". That deploy was never actually written, which cost nothing until
+# M5 — the world used to be spawned in C++, so a ship build with no project files still came up
+# looking right. Now the content IS the files: without this, Sandbox.exe finds no .opaaxproj, reads
+# an empty startupLevel, and boots into an EMPTY WORLD.
+#
+# Gated on the ship build rather than copied always, deliberately. In a dev build nothing reads the
+# exe dir, so an unconditional copy would leave a <exeDir>/Sandbox/ that looks authoritative, is
+# read by nobody, and goes stale — exactly the decoy that costs an hour the next time someone
+# debugs a path.
+#
+# Save/ and Temp/ are NOT deployed: they are runtime output, created on demand.
+# =============================================================================
+if(NOT OPAAX_EDITOR_SUPPORT)
+    set(SANDBOX_DEPLOY_DIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>/Sandbox)
+
+    add_custom_command(TARGET Sandbox POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${CMAKE_CURRENT_SOURCE_DIR}/Sandbox.opaaxproj
+            ${SANDBOX_DEPLOY_DIR}/Sandbox.opaaxproj
+        COMMENT "Deploying Sandbox.opaaxproj..."
+    )
+
+    # Guarded on EXISTS for the same reason the engine's asset copies are: an empty directory is
+    # not tracked by git, so a fresh clone can legitimately lack one and an unconditional
+    # copy_directory would fail the build with "cannot find the path specified".
+    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/Assets)
+        add_custom_command(TARGET Sandbox POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+                ${CMAKE_CURRENT_SOURCE_DIR}/Assets
+                ${SANDBOX_DEPLOY_DIR}/Assets
+            COMMENT "Deploying Sandbox assets (levels, maps, ...)..."
+        )
+    endif()
+
+    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/Configs)
+        add_custom_command(TARGET Sandbox POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+                ${CMAKE_CURRENT_SOURCE_DIR}/Configs
+                ${SANDBOX_DEPLOY_DIR}/Configs
+            COMMENT "Deploying Sandbox configs..."
+        )
+    endif()
+endif()
+
+# =============================================================================
 # SandboxEditor.exe (editor host) — Engine + OpaaxEditorLib + SandboxModule (Editor.md D8). Built only
 # under OPAAX_EDITOR_SUPPORT (OpaaxEditorLib exists only then, and this whole Editor/ tree is
 # editor-only — NOT shipped in release). Editor/Source/SandboxEditor/ holds the ~thin composition

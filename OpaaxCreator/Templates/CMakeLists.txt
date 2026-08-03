@@ -47,6 +47,50 @@ add_custom_command(TARGET __NAME__ POST_BUILD
 )
 
 # =============================================================================
+# Project deploy — SHIP BUILDS ONLY.
+#
+# A dev build bakes OPAAX_WORKSPACE_DIR and resolves against the source tree; a ship build resolves
+# from the exe dir, whose deploy must mirror the workspace layout. Since the world's content is
+# DATA (Assets/Levels/*.opaaxlevel -> Assets/Maps/*.opaaxmap), a ship build without this finds no
+# .opaaxproj, reads an empty startupLevel, and boots into an EMPTY WORLD.
+#
+# Not copied in dev builds on purpose: nothing reads the exe dir there, and a <exeDir>/__NAME__/
+# that looks authoritative but is read by nobody is a decoy that goes stale.
+#
+# Save/ and Temp/ are NOT deployed: they are runtime output, created on demand.
+# =============================================================================
+if(NOT OPAAX_EDITOR_SUPPORT)
+    set(__NAME___DEPLOY_DIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>/__NAME__)
+
+    add_custom_command(TARGET __NAME__ POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${CMAKE_CURRENT_SOURCE_DIR}/__NAME__.opaaxproj
+            ${__NAME___DEPLOY_DIR}/__NAME__.opaaxproj
+        COMMENT "Deploying __NAME__.opaaxproj..."
+    )
+
+    # Guarded on EXISTS: an empty directory is not tracked by git, so a fresh clone can legitimately
+    # lack one and an unconditional copy_directory would fail the build.
+    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/Assets)
+        add_custom_command(TARGET __NAME__ POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+                ${CMAKE_CURRENT_SOURCE_DIR}/Assets
+                ${__NAME___DEPLOY_DIR}/Assets
+            COMMENT "Deploying __NAME__ assets (levels, maps, ...)..."
+        )
+    endif()
+
+    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/Configs)
+        add_custom_command(TARGET __NAME__ POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+                ${CMAKE_CURRENT_SOURCE_DIR}/Configs
+                ${__NAME___DEPLOY_DIR}/Configs
+            COMMENT "Deploying __NAME__ configs..."
+        )
+    endif()
+endif()
+
+# =============================================================================
 # __NAME__Editor.exe (editor host) — Engine + OpaaxEditorLib + __NAME__Module (Editor.md D8).
 # Built only under OPAAX_EDITOR_SUPPORT (OpaaxEditorLib exists only then — NOT shipped in release).
 # Editor/Source/__NAME__Editor/ holds the thin composition (__NAME__EditorApp + main). Shares
