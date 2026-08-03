@@ -1,11 +1,5 @@
 ﻿#include "SandboxApp.h"
 
-#include "Application/Services/ILogger.h"
-#include "Application/Services/IEngine.h"
-#include "World/WorldManager.h"
-#include "World/World.h"
-#include "World/Entity/Entity.h"
-#include "World/Components/DummyComponent.h"
 #include "Engine/Modules/ModuleRegistrar.h"
 #include "Sandbox.h"
 
@@ -29,9 +23,10 @@ void SandboxApp::RegisterModules(Opaax::ModuleRegistrar& InRegistrar)
 
 void SandboxApp::PostEngineStartup()
 {
-    // Populate the active world via the shared module content (same scene as the editor host).
-    if (Opaax::World* lWorld = GetAppService<Opaax::IEngine>().GetWorldManager().GetActiveWorld())
-    {
-        SandboxModule().SpawnDemoWorld(*lWorld);
-    }
+    // Intentionally empty since M5. The world's content is DATA now: the project's startupLevel
+    // names Levels/Main.opaaxlevel, and IEngine::FinishStartup opened it before this ran. The
+    // three quads that used to be spawned here by C++ are Sandbox/Assets/Maps/Main.opaaxmap, and
+    // both hosts read the same file — which is the whole point of the milestone.
+    //
+    // Kept as an override so the base's "not overridden" trace does not fire.
 }

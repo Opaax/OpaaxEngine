@@ -65,6 +65,23 @@ namespace Opaax
         // =============================================================================
 
         // =============================================================================
+        // Startup content
+    private:
+        /**
+         * Open InSpec.LevelPath into the freshly-created startup world (M5).
+         *
+         * Split out of FinishStartup so that method keeps reading as the three things it does —
+         * create, activate, open — rather than growing a body. An EMPTY LevelPath returns
+         * silently: booting into an empty world is a supported answer, not a failure.
+         *
+         * Runs AFTER the world's subsystems have started, which is the same order a PIE clone
+         * gets. That uniformity is deliberate — see WS7.
+         */
+        void OpenStartupLevel(const WorldSpec& InSpec, World* InWorld);
+        // End Startup content
+        // =============================================================================
+
+        // =============================================================================
         // World event bridge
     private:
         void BindToWorldMgrEvents();

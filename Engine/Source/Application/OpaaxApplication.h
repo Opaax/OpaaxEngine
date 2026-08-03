@@ -161,15 +161,25 @@ namespace Opaax
          * a host its policy without booting an engine. That is the whole point of the split —
          * the host states policy, the engine owns mechanism, and a host never drives WorldManager.
          *
-         * Base implementation names the world after the project's `StartupLevel` (falling back to
-         * "Main") in Play mode. `EditorApplication` overrides it for Edit mode; a host that wants
-         * a different world overrides it too — the editor will eventually want the last-opened map
-         * rather than the game's startup level.
+         * Base implementation takes the project's `StartupLevel` as the LevelPath and derives the
+         * world's Name from it, in Play mode. `EditorApplication` overrides it for Edit mode; a
+         * host that wants a different world overrides it too — the editor will eventually want the
+         * last-opened map rather than the game's startup level.
          *
-         * NOTE (M5): this only NAMES the world. Loading that level's maps into it needs the
-         * `.opaaxlevel` / `.opaaxmap` file layer, which does not exist yet.
+         * M5: the spec now carries `LevelPath` as well as `Name`, and `IEngine::FinishStartup`
+         * OPENS it after creating the world. Answering this still does nothing — which is what
+         * keeps it a query.
          */
         virtual WorldSpec GetStartupWorldSpec() const;
+
+        /**
+         * "Levels/Main.opaaxlevel" -> "Main"; empty or stem-less -> "Main".
+         *
+         * Static and pure so the naming rule is testable without a host: it is the one place the
+         * path-vs-name distinction is decided, and a host overriding GetStartupWorldSpec can
+         * reuse it rather than re-deriving the convention.
+         */
+        static OpaaxString DeriveWorldName(const OpaaxString& InLevelPath);
 
         /**
          * After engine start

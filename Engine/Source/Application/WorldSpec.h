@@ -51,8 +51,29 @@ namespace Opaax
     // =============================================================================
     struct WorldSpec
     {
-        /** The world's name. Runtime hosts take it from `IProjectManager::StartupLevel()`. */
+        /**
+         * The world's name. Derived from LevelPath's file stem ("Levels/Main.opaaxlevel" ->
+         * "Main"), falling back to "Main" when no level is configured.
+         *
+         * SEPARATE FROM LevelPath since M5, and it had to become so. The base seam used to put
+         * `IProjectManager::StartupLevel()` straight in here, which was harmless only while that
+         * value was empty — the moment a project actually names its level, a world called
+         * "Levels/Main.opaaxlevel" is what you get. A name is for logs and the editor's title;
+         * a path is for opening a file. They were one field because nothing had ever exercised
+         * the difference.
+         */
         OpaaxString Name;
+
+        /**
+         * WHICH level to open, ASSET-RELATIVE ("Levels/Main.opaaxlevel"), or EMPTY for none.
+         *
+         * Empty is a real, supported answer and not a misconfiguration: a test host, or a game
+         * that populates its world in code, boots into an empty world exactly as before M5.
+         * `IEngine::FinishStartup` loads this after creating and activating the world — the host
+         * still only NAMES things (BO4: this struct is a pure query's return value, and answering
+         * it does nothing), the engine performs the mechanism.
+         */
+        OpaaxString LevelPath;
 
         /** Play unless a host says otherwise — a bare host boots into something runnable. */
         EWorldMode Mode = EWorldMode::Play;

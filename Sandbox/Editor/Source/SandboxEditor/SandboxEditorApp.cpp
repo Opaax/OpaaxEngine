@@ -3,9 +3,6 @@
 #include "SandboxEditorModule.h"
 #include "Sandbox.h"
 #include "Engine/Modules/ModuleRegistrar.h"
-#include "Application/Services/IEngine.h"
-#include "World/WorldManager.h"
-#include "World/World.h"
 
 SandboxEditorApp::SandboxEditorApp(int InArgc, char** InArgv)
     : Opaax::Editor::EditorApplication(InArgc, InArgv)
@@ -25,11 +22,10 @@ void SandboxEditorApp::OnRegisterEditorModules(Opaax::Editor::EditorExtensionReg
 
 void SandboxEditorApp::PostEngineStartup()
 {
-    // Editor first — build the EditorContext (base), then populate the shared demo world.
+    // Just the base (which builds the EditorContext). Since M5 there is nothing to populate: the
+    // world's content came from Assets/Levels/Main.opaaxlevel during FinishStartup, the same file
+    // Sandbox.exe opens. The editor host used to call SpawnDemoWorld here so the two hosts would
+    // show the same scene — they now do so by reading the same map, which is a much stronger
+    // version of the same claim.
     Opaax::Editor::EditorApplication::PostEngineStartup();
-
-    if (Opaax::World* lWorld = GetAppService<Opaax::IEngine>().GetWorldManager().GetActiveWorld())
-    {
-        SandboxModule().SpawnDemoWorld(*lWorld);
-    }
 }

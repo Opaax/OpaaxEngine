@@ -7,6 +7,7 @@
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/ILogger.h"
 #include "Application/Services/IJobSystem.h"
+#include "Application/Services/IPaths.h"        // the startup level's path is asset-relative
 #include "Application/Services/Platforms/IPlatform.h"
 
 //Subsystems
@@ -17,6 +18,7 @@
 #include "Subsystems/Renderer/RendererManager.h"
 #include "World/WorldManager.h"
 #include "World/WorldEvents.h"
+#include "World/Serialization/LevelLoader.h"   // M5: FinishStartup opens the startup level
 
 #include "RHI/Framebuffer.h"   // FramebufferSpec + the UniquePtr<IFramebuffer> deleter
 
@@ -202,7 +204,43 @@ namespace Opaax
         OPAAX_ENGINE_LOG(Info, "Startup world '{}' ({}) created and activated",
                          InSpec.Name.CStr(), ToString(InSpec.Mode))
 
+        OpenStartupLevel(InSpec, lWorld);
+
         return lWorld;
+    }
+
+    void Engine::OpenStartupLevel(const WorldSpec& InSpec, World* InWorld)
+    {
+        // No level is a SUPPORTED answer, not a misconfiguration: a test host, or a game that
+        // populates its world in code, boots into an empty world exactly as it did before M5.
+        if (InSpec.LevelPath.IsEmpty() || InWorld == nullptr)
+        {
+            return;
+        }
+
+        if (m_Resources == nullptr)
+        {
+            OPAAX_ENGINE_LOG(Error, "No ResourceManager — cannot open startup level '{}'",
+                             InSpec.LevelPath.CStr())
+            return;
+        }
+
+        // NOTE: this runs AFTER CreateWorld, so the world's subsystems have already started and
+        // the entities land underneath them. That is the same order a PIE clone gets (Capture ->
+        // CreateWorld -> Instantiate), which is exactly the point: "are entities there at
+        // Startup?" stays a uniform NO rather than "depends how your world was made" (WS7).
+        const LevelLoader::Result lResult = LevelLoader::LoadLevelInto(
+            InSpec.LevelPath, *InWorld, GetRegistries().Components(),
+            OpaaxApplication::GetAppService<IPaths>(), *m_Resources);
+
+        if (!lResult.IsOk())
+        {
+            // Loud. A level that half-opened leaves a world that LOOKS fine and is missing
+            // content, which is the failure mode MapResource is FailFast to avoid — so the
+            // engine must not pass over it quietly either.
+            OPAAX_ENGINE_LOG(Error, "Startup level '{}' did not open cleanly ({} map(s) loaded, {} failed)",
+                             InSpec.LevelPath.CStr(), lResult.MapsLoaded, lResult.MapsFailed)
+        }
     }
 
     // =========================================================================

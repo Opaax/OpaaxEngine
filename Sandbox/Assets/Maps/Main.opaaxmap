@@ -1,0 +1,86 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Dummy": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Size": {
+                        "x": 120.0,
+                        "y": 120.0
+                    }
+                },
+                "HealthComponent": {
+                    "Current": 100,
+                    "Max": 100
+                }
+            },
+            "guid": "7c3755c2004ff4e6277a989244aabfe0",
+            "name": "QuadWhite",
+            "ownerMap": "Main"
+        },
+        {
+            "components": {
+                "Dummy": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.20000000298023224,
+                        "y": 0.4000000059604645,
+                        "z": 1.0
+                    },
+                    "Position": {
+                        "x": 200.0,
+                        "y": 0.0
+                    },
+                    "Size": {
+                        "x": 120.0,
+                        "y": 120.0
+                    }
+                },
+                "HealthComponent": {
+                    "Current": 100,
+                    "Max": 100
+                }
+            },
+            "guid": "aa1f0be1e444adfb2e0e59fb517be045",
+            "name": "QuadBlue",
+            "ownerMap": "Main"
+        },
+        {
+            "components": {
+                "Dummy": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 0.20000000298023224,
+                        "z": 0.20000000298023224
+                    },
+                    "Position": {
+                        "x": -200.0,
+                        "y": 0.0
+                    },
+                    "Size": {
+                        "x": 120.0,
+                        "y": 120.0
+                    }
+                },
+                "HealthComponent": {
+                    "Current": 100,
+                    "Max": 100
+                }
+            },
+            "guid": "c79d7e04cbbcbd26c617b8ad427fc4a7",
+            "name": "QuadRed",
+            "ownerMap": "Main"
+        }
+    ],
+    "version": 1
+}
