@@ -232,9 +232,21 @@ because that is precisely what silently reordered the boot in [[L22]].
 
 **The world comes from config, not from code**: the base `GetStartupWorldSpec` reads
 `IProjectManager::StartupLevel()` — the project's `.opaaxproj`, key `startupLevel`, with `startupScene` /
-`defaultScene` as Scene-era fallbacks (**X4**). Falls back to "Main". *This only NAMES the world; loading
-that level's maps needs the M5 file layer.* Hosts override to open something else — the editor will want the
-last-opened map, not the game's startup level.
+`defaultScene` as Scene-era fallbacks (**X4**). Hosts override to open something else.
+
+**BO4b — `WorldSpec` carries a `LevelPath` as well as a `Name`, and separating them was forced** (M5,
+2026-08-03). The base seam used to put `StartupLevel()` *straight into* `Name`, which was harmless only
+because that value was always empty; the moment a project actually names its level, you get a world called
+`"Levels/Main.opaaxlevel"`. `Name` is now **derived from the path's stem** by `OpaaxApplication::
+DeriveWorldName` — static and pure, so the naming rule is testable without booting a host — with the
+pre-M5 `"Main"` fallback preserved for every degenerate input. An **empty `LevelPath` stays a supported
+answer**: a test host, or a game that fills its world in code, boots into an empty world exactly as before.
+`IEngine::FinishStartup` then *opens* the level (`Engine::OpenStartupLevel`) after creating and activating
+the world — the host still only NAMES things, so the query stays a query. **WS7 is unaffected and now
+visible in the boot log**: the world's subsystems start *before* the entities land, the same order a PIE
+clone gets, so "are entities there at `Startup`?" stays a uniform **no**.
+*The general lesson is [[L26]]'s: a field that two things were sharing only because one of them was always
+empty is a latent bug, not a simplification.*
 
 **BO4a — `EWorldMode` is fixed at construction, and that is load-bearing** (M4 S2). A `World` takes its mode
 in the ctor and exposes `GetMode()` with **no setter**; changing mode means creating another world. That is
@@ -407,6 +419,19 @@ skeleton call site is binding when its payload already exists in some form (`Dra
 the design to a placeholder's shape, and amend `Docs/Architectures/Editor.md` in the same change.
 **MR2** — Order is engine natives → game module → editor module → **seal** (before the first world). The
 editor module slots in before the seal.
+**MR2a — every D10 route is REAL as of M5, and `EditorRoute` is DELETED.** The M0 counts-only skeleton
+existed to make boot *ordering* observable before any machinery did; `Panels()` (M2a), `Drawers()` (M2b),
+`ResourceTypes()` (M2d), `EditWorldSystems()` (M4 S5) and finally `Menus()` (M5 S4) each graduated off it,
+and the type left with its last user. `MenuRegistry` stores a **flat array of `{Path, FMenuCommand}` in
+registration order** and the nesting is computed at *draw* time by splitting each path on `/` — a tree
+built at registration would be a second structure to keep consistent with the paths it came from. The
+editor's whole menu bar is registry-driven, its own `File/*` entries registered through the very route a
+game's `Tools/*` uses (D10), which also dissolves the merge problem: there is only one `File` menu because
+it is assembled from paths. **The M0 placeholder could not survive this** — a command needs
+`EditorContext&` to do anything (D3) and `[] {}` does not convert — which is exactly why registry,
+consumer and dogfood were one atomic step ([[L16]] predicted this in M2 and it held).
+**Note on the M2a-style diff gate** ("a game extension costs zero `OpaaxEditorLib` changes"): it does not
+apply to the slice where the route itself goes real, and cannot. It applies again from the next entry.
 **MR3 — One module shape.** Runtime and editor modules share a marker base **`IModule`**
 (`Application/IModule.h`): `IRuntimeModule : IModule` (`OnRegister(ModuleRegistrar&)`) and
 `IEditorModule : IModule` (`OnRegister(EditorExtensionRegistrar&)`). `OnRegister` stays on each derived
@@ -548,6 +573,21 @@ without either of them calling input code.
 state and no modifier field on the event payload — which is why nothing needs the GLFW `mods` parameter
 the window callback discards, and why the editor's reserved shortcuts are bare function keys today.
 
+**IN8 — An EDITOR shortcut cannot read `InputManager`, because the route it lives behind is closed**
+(landed M5, 2026-08-03). The engine's input is fed only when `InputRoute` is open; with an Edit world on
+screen the route is `ClosedEditMode`, so `RouteInput` consumes every Input-category event and
+`InputManager` never sees the keys at all — `IsCtrlDown()` answers false *forever*, precisely where a
+`Ctrl+S` wants it. So the editor has **two shortcut mechanisms, and the split is principled**:
+- **PIE control (F5–F8) lives in the event route** (`HandleReservedKeys`, D5 step 3). It must fire while
+  the *game* owns the keyboard, so it has to sit ahead of the feed.
+- **Authoring chords (Ctrl+S, Ctrl+O) live in the UI pass**, via `ImGui::Shortcut`. They only mean
+  anything while the *editor* owns the keyboard — which is exactly when ImGui's view of it is the
+  authoritative one. ImGui is fed regardless of our route (`ImGui_ImplGlfw_InitForOpenGL(window, true)`
+  chains the GLFW callbacks), so this is not a workaround, it is the correct source.
+This is **IN6**'s consequence, not a contradiction of it: modifiers are keys, and a mechanism that never
+receives keys cannot report modifiers. *(Caught while planning, by asking what `IsCtrlDown` would actually
+answer, rather than after building on it — the [[L29]] shape.)*
+
 **IN7 — Gamepad codes are REFUSED, not half-supported.** `EKeyCode` reserves the range, but GLFW exposes
 pads by *polling* — a second feed that does not exist. Accepting the code would make `IsKeyDown` answer
 "false" forever while looking supported. Same for `KeyTyped`: a Unicode codepoint is text entry and has
@@ -580,12 +620,24 @@ across worlds, so capture→instantiate must preserve GUIDs or every inter-entit
 `WorldGuidRegistry::Register` *replaces* — a duplicate would evict the original and `FindByGuid` would
 start answering the impostor.
 
-**WM4 — A Level's maps are NOT `LoadContext::Acquire`d.** Both are resources (`.opaaxlevel` = a manifest of
-map refs + stream rules; `.opaaxmap` = entity data; lowercase, matching the shipped `.opaaxproj`). `Acquire`
-is for *hard* dependencies: it loads them inline and chains their refcounts to the parent, so acquiring a
-level's maps would load every one of them at once and make unloading a single map impossible — the exact
-opposite of streaming. The manifest stays **data**; `LevelManager` loads maps per stream request and holds
-those refs itself. A Map's *textures* are `Acquire`; a Level's *maps* are not.
+**WM4 — A Level's maps are NOT `LoadContext::Acquire`d** (landed M5, 2026-08-03). Both are resources
+(`MapResource` / `LevelResource`, both **FailFast**; `.opaaxlevel` = a manifest of map refs, `.opaaxmap` =
+entity data; lowercase, matching the shipped `.opaaxproj`). `Acquire` is for *hard* dependencies: it loads
+them inline and chains their refcounts to the parent, so acquiring a level's maps would load every one of
+them at once and make unloading a single map impossible — the exact opposite of streaming. The manifest
+stays **data**. A Map's *textures* will be `Acquire`d; a Level's *maps* never are, and **the asymmetry is
+the rule** — `LevelResource::Load` carries that note precisely so the next reader does not "fix" it.
+
+**What M5 actually built, and what it deliberately did not.** The user's scope call: the level layer is a
+manifest parsed to a plain `LevelData` plus `LevelLoader`, and there is **no `LevelManager`, no streaming,
+and no `Level` object inside `World`**. What landed is the level→map *indirection* that streaming will be
+built on top of rather than instead of. `LevelLoader::LoadInto` resolves each map through
+`IPaths::AssetToAbsolute`, loads it as a `MapResource` **through the `ResourceManager`** (which is what
+gives that type a real caller on every boot rather than only in its own test, [[L23]] — and buys dedup when
+two worlds open one map), instantiates it, and drops the ref: nothing needs the parsed data afterwards.
+A failed map is counted and skipped — one missing file should cost that map, not the level.
+**Trigger for `LevelManager`:** the first thing that genuinely needs to load or unload a map *while the
+world is running*.
 
 **WM5 — `EngineArchi.md` is behind the code in two places** (code wins, X4): it puts `MapId ownerMap` in
 `EntityMeta` as though it were already there (M3 S2 actually added it), and it makes `GuidRegistry` global
@@ -602,6 +654,65 @@ subsystem set follow that mode (**WS2**); and a component type the registry does
 carried** (it has no stable name to be written under — a registry gap, not a clone bug). The source is
 read-only throughout and stays alive, which is the whole restore mechanism: Stop re-activates it and
 destroys the clone, undoing nothing. No `MapId` filter here — the filtered form is "save this map" (M5).
+
+---
+
+## MP — Map/Level file layer (landed M5, 2026-08-03)
+
+Four layers, each knowing only its neighbours — which is why the M3 snapshot core needed **no change at
+all** to gain persistence:
+`World` ⇄ `MapSerializer`/`MapFactory` ⇄ `MapData` ⇄ `MapJson` ⇄ `MapFile` ⇄ a file.
+
+**MP1 — Everything interned is written as its STRING, and that is why this layer exists.** An
+`OpaaxStringID` is an intern-table *index*, so a map that wrote one as a number would mean something
+different on the next run (**WM2**). `MapJson` is the only place that conversion happens.
+- The **invalid** id is written as `""`, not as the `"None"` its `ToString()` answers. The round trip
+  would in fact survive `"None"` — `OpaaxStringIDPool` reserves index 0 for it, so re-interning that text
+  yields the invalid id back — but the file would claim a runtime-spawned bullet belongs to a map called
+  None. A map file is read by humans; `""` is the encoding that does not lie. *(The original plan
+  overstated this as data loss; the test that asserted the round trip broke is what corrected it.)*
+- A `Guid` is 32 lowercase hex chars, High then Low, no dashes (`Guid::ToString`/`FromString`, out-of-line
+  in the DLL). Big-endian nibbles, so lexicographic order over the text matches numeric order over the
+  value. `FromString` parses into **locals** and only then writes its output: a half-written Guid is a
+  *different identity*, not a rejected one, and the caller could not tell.
+
+**MP2 — Entities are SORTED BY GUID on write, and two consumers depend on it.** entt's view order is
+storage order, so an unsorted write would reshuffle the whole file every time an entity was destroyed
+(a map file lives in git), **and** the editor's derived dirty check — which compares serialized text —
+would report a world nobody edited. Components are a json **object** keyed by authoring name, so a
+duplicate type on one entity is unrepresentable rather than merely unlikely. Nothing reads a map in order.
+
+**MP3 — Reading a map file is TOLERANT AND TOTAL; refusing leaves the caller's data untouched.** nlohmann
+throws on a type mismatch, so every read is guarded — a hand-edited file is an ordinary input. A missing
+field defaults, an unknown field is ignored, and an entity with **no usable guid is SKIPPED** rather than
+given a fresh one (minting an identity silently retargets every reference that pointed at it, **WM3**). A
+`version` NEWER than this build is refused rather than half-read. Every failure path down the stack leaves
+`OutData` alone, so a map that fails to read cannot half-replace one already held and then be written back
+over the original.
+
+**MP4 — Saving is NOT a `ResourceManager` capability.** That API is frozen at
+Load/Resolve/Pin/FlushAll/Update, and its own header says every future capability is a separate system
+*consuming* it. `MapFile::Save` is that system, and it sits beside `MapFile::Load` in one unit because the
+two are halves of one format contract — splitting them across files is how a writer and a reader drift.
+
+**MP5 — The editor's dirty flag is DERIVED, never tracked.** Capture the world filtered by the document's
+`MapId`, serialize, compare against the text last written or read.
+- **There is nothing to hook.** Every edit goes through a registered drawer whose contract is
+  `bool(Entity&)` meaning *was it drawn*, not *was it changed*. Tracking would mean changing that contract
+  and every drawer with it, a game's included.
+- It gets the interesting case right: drag a quad away and back and a **flag** says dirty while the file is
+  already correct; the comparison says clean, which is true.
+- It cannot drift — a derived answer has no second copy of the state to fall out of sync with.
+- **It must be throttled, not per-frame** (4×/s, cached in `EditorService` where the frame clock is, so
+  `IsDirty` stays pure). Built per-frame first, which also put ~1700 identical lines in a 10-second log —
+  hence `MapSerializer::Capture` logging at **Trace**: it is a pure transformation with several callers,
+  and an Info belongs to things that happen *to* something (`MapFile` Save/Load, `MapFactory` Instantiate).
+
+**MP6 — Adopting a map checks ROUND-TRIP STABILITY and logs it either way.** The milestone rests on
+world→file→world→file being a fixed point; when it is not, every Save rewrites the map with churn around
+the one value that changed — and that is silent otherwise, because the map still loads and the world still
+looks right. `EditorMapDocument::AdoptExisting` compares its fresh baseline against the bytes on disk and
+says *"Round trip is stable"* or warns. It is the one gate on the whole layer that needs no human.
 
 ---
 
@@ -665,7 +776,7 @@ vocabulary of record.
 
 ## Pointers
 
-- **Post-mortems / rules:** `.claude/lessons.md` (L1–L8).
+- **Post-mortems / rules:** `.claude/lessons.md` (L1–**L31**).
 - **Live session state:** `.claude/CLAUDE.local.md` (current milestone, standing decisions).
 - **Working checklist:** `.claude/task/todo.md`.
 - **Ground truth for engine design:** `.claude/data/` — *Game Engine Architecture* (Gregory). Prefer it over

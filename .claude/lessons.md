@@ -731,3 +731,61 @@ narrower question that still matched.
   re-reading — two milestones later.
 - **Check the exemption asymmetry.** Mouse needed the carve-out and keyboard did not; blanket-applying
   either answer would have been wrong in one direction or the other.
+
+## L30 — A field two things share only because one of them is always empty is a latent bug (2026-08-03)
+
+**What happened (M5 S3).** `OpaaxApplication::GetStartupWorldSpec` put
+`IProjectManager::StartupLevel()` straight into `WorldSpec::Name`. That had been correct for three
+milestones — because `startupLevel` was `""` in every project file, so the fallback `"Main"` was
+what actually ran, every time. The moment M5 made the key real
+(`"Levels/Main.opaaxlevel"`), the same line would have produced a **world named
+`Levels/Main.opaaxlevel`**. The fix was to split the field: `LevelPath` for the path, `Name`
+derived from its stem.
+
+**Why it survived so long.** Nothing was wrong with the code *as executed*. Every test passed,
+both hosts booted, and the log printed `world 'Main'` exactly as intended. The defect lived
+entirely in the branch that had never been taken — and the only reason it had never been taken was
+that the FEATURE the field existed for had not been built yet.
+
+**Rules for next time:**
+- **When a config key finally gets a real value, re-read every consumer of it.** A key that has
+  been empty for the whole life of the codebase has consumers that were only ever exercised on
+  their fallback path. Grep the key, not just the feature you are adding.
+- **Two meanings in one field is the smell, and "it's always empty" is what hides it.** A *name*
+  and a *path* are different things; they were one field because nothing had ever made them
+  differ. Ask what the field would hold if the feature it serves actually worked.
+- Sibling of [[L27]] ("know WHY a transformation works — it may be working by accident"), one level
+  up: there the helper was right for every input tried, here the *caller* was right for every value
+  tried. Same question in both cases — **what class of input has never occurred?**
+
+## L31 — A derived answer is cheap to get right and expensive to get frequent (2026-08-03)
+
+**What happened (M5 S5).** The editor's "unsaved changes" marker is DERIVED — capture the world,
+serialize, compare against the text last written. That design is right, and I defended it in the
+plan against a tracked flag for good reasons (nothing to hook, no drift, and it correctly reports
+*clean* when an edit is undone back to the original). Then I implemented it **in the per-frame draw
+call** — which my own approved plan had explicitly said not to do ("evaluated on menu-open / Play /
+quit, never per frame"). A ten-second smoke run produced **1694 identical log lines**, and the
+readout I had reached for as evidence was the thing that exposed it.
+
+**Two distinct defects from one mistake.** The cost (a full capture + serialize per frame, fine for
+three quads and not for a real map) and the noise (an Info-level log on a path that now ran at
+framerate). Fixing only the log would have left a per-frame O(map) walk nobody would notice until
+a map got big.
+
+**Rules for next time:**
+- **When a design's whole premise is "compute it instead of storing it", the frequency is part of
+  the design, not an implementation detail.** Decide *when it runs* in the same breath as *what it
+  computes*, and write both down. I did write it down — and then did not read my own plan when it
+  came time to place the call.
+- **Put the throttle where the clock is, and keep the computation pure.** `IsDirty` stays a plain
+  function of (world, registry) — testable, unable to go stale — and the caching lives in the
+  frame-owning caller. A cache inside the pure thing would have made it neither.
+- **A log level is a claim about frequency.** `Info` says "this happens when something happens."
+  A pure transformation with several callers cannot promise that, so `MapSerializer::Capture`
+  belongs at `Trace`; the Info lines belong to `MapFile::Save`/`Load` and `MapFactory::Instantiate`,
+  which are things that happen *to* something. [[L12]]'s "match the instrument to the event
+  frequency" applies to the code being measured, not only to the probe.
+- **Read the log's line COUNT, not just its errors.** 145 lines vs 1796 was the entire signal, and
+  a grep for `error|warn` reported 0 in both. Same shape as [[L24]]'s empty log: the absence of
+  complaints is not evidence of correctness.
