@@ -74,7 +74,7 @@ namespace Opaax::Editor
         {
             // No project declared — fall back to the exe-stem default (usually wrong for an editor exe).
             OPAAX_LOG(LogEditorApp, Warn,
-                "No edited project declared (override GetEditedProjectName); using the exe-stem default.");
+                "No edited project declared (override GetEditedProjectName); using the exe-stem default.")
             return OpaaxApplication::CreatePaths(InPlatform, InArgc, InArgv);
         }
 
