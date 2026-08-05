@@ -177,8 +177,19 @@ the same hat: broadcast `XCreated` *after* init, `XDestroying` *before* deinit.
 has already stopped by TearDown; an *enqueued* teardown event is never delivered. Bridge it with `Publish`.
 
 **LC3 — Idempotent + reverse order.** Startup is registration order; Shutdown/TearDown are reverse.
-`Shutdown` is idempotent. The `IEngine` service is provided **last** in Bootstrap, so it tears down
-**first** — before the window/GPU context dies.
+`Shutdown` is idempotent. Destruction is **reverse order of PROVISION** — and the last service provided
+is *not* always `IEngine`. The base `Bootstrap` ends with it, but the `OnProvideServices` seam runs
+**after** that, so a host service registered there tears down **before** the engine: the runtime order
+is `IEngine → WindowManager` (no host overrides the seam), the editor's is
+`IEditorService → IEngine → WindowManager`.
+*Corrected 2026-08-05: this rule read "`IEngine` is provided last, so it tears down first", which is
+false in the editor and misdescribes the mechanism the editor relies on.* That gap is where
+`ViewportPanel::Shutdown` frees a panel-owned FBO while the engine, its device and the GL context are
+all still alive — the device is freed later still, in `RendererManager::Shutdown`. Verified in the
+editor's shutdown log: `Engine torn down` → `ViewportPanel shutdown` → `RendererManager shutdown`.
+**`RendererManager` deliberately has NO `TearDown`**, because the LC table above promises every
+subsystem that the GPU is alive for the whole of TearDown; releasing the device there would break that
+promise for each of them. The two phases exist so the device outlives everything holding GPU resources.
 
 ---
 
