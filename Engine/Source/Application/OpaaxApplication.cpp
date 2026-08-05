@@ -315,6 +315,14 @@ void OpaaxApplication::EngineStartup()
     PostEngineStartup();
 }
 
+void OpaaxApplication::PopulateEngineRegistries()
+{
+    EngineRegistries& lEngineRegistries = Engine().GetRegistries();
+    
+    m_ModuleRegistrar->Components().Bind(&lEngineRegistries.Components());
+    m_ModuleRegistrar->WorldSubsystems().Bind(&lEngineRegistries.WorldSubsystems());
+}
+
 WorldSpec OpaaxApplication::GetStartupWorldSpec() const
 {
     WorldSpec lSpec;
@@ -330,13 +338,7 @@ void OpaaxApplication::EngineTeardown()
     Engine().TearDown();
 }
 
-void OpaaxApplication::PopulateEngineRegistries()
-{
-    EngineRegistries& lEngineRegistries = Engine().GetRegistries();
-    
-    m_ModuleRegistrar->Components().Bind(&lEngineRegistries.Components());
-    m_ModuleRegistrar->WorldSubsystems().Bind(&lEngineRegistries.WorldSubsystems());
-}
+
 
 void OpaaxApplication::HandleApplicationEvent(EventDispatcher& Dispatcher, Event& InEvent)
 {
@@ -355,10 +357,7 @@ void OpaaxApplication::HandleApplicationEvent(EventDispatcher& Dispatcher, Event
 
     Dispatcher.Dispatch<WindowLostFocusEvent>([this](WindowLostFocusEvent&)
     {
-        // The OS delivers the RELEASE to whoever has focus, and that is no longer us — so a key
-        // held right now would stay held forever. This is the runtime's only route-closing event
-        // (the editor has three more); without it, alt-tabbing mid-move leaves the player walking
-        // into a wall (D5's stuck-key contract).
+        //Todo why Engine do not handle it self?
         Engine().GetInput().ResetState();
         return false;
     });
@@ -366,16 +365,7 @@ void OpaaxApplication::HandleApplicationEvent(EventDispatcher& Dispatcher, Event
 
 void OpaaxApplication::HandleAllInputEvent(EventDispatcher& Dispatcher, Event& InEvent)
 {
-    // The engine end of D5's route. Reaching here at all IS the routing decision: a host that
-    // wants to withhold input (the editor, when the world is in Edit mode or the viewport has no
-    // focus) consumes the event in OnEvent and never calls up. So there is no gate to re-check.
-    //
-    // Fed IMMEDIATELY rather than through the event bus: this runs inside PollEvents, before the
-    // frame ticks, so anything asking mid-route ("is Shift held?") gets this frame's truth. A
-    // queued feed would answer with last frame's state.
-    //
-    // Every handler returns false — feeding is observation, not consumption, and a later
-    // subscriber must still see the event.
+    //TODO why Engine do not resolve itself
     InputManager& lInput = Engine().GetInput();
 
     Dispatcher.Dispatch<KeyPressedEvent>([&lInput](KeyPressedEvent& InKey)

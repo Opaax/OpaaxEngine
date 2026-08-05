@@ -31,10 +31,8 @@ namespace Opaax::Editor
 
     WorldSpec EditorApplication::GetStartupWorldSpec() const
     {
-        // Same world the runtime would open, but for authoring. Only the mode differs, so the
-        // base keeps owning where the name comes from.
         WorldSpec lSpec = OpaaxApplication::GetStartupWorldSpec();
-        lSpec.Mode      = EWorldMode::Edit;
+        lSpec.Mode      = EWorldMode::Edit; //TODO maybe some kind of 'GetStartupWorldMode()' in app since only that change here: GetStartupWorldSpec
 
         return lSpec;
     }
