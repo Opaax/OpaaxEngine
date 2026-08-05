@@ -18,15 +18,15 @@ namespace Opaax
         // =============================================================================
         //~Begin IRHIDevice interface
     public:
-        UniquePtr<IVertexArray>   CreateVertexArray()                                           override;
-        UniquePtr<IVertexBuffer>  CreateVertexBuffer(Uint32 InSizeBytes)                        override;
-        UniquePtr<IIndexBuffer>   CreateIndexBuffer(const Uint32* InIndices, Uint32 InCount)    override;
-        UniquePtr<IUniformBuffer> CreateUniformBuffer(Uint32 InSizeBytes, Uint32 InBinding)     override;
-        UniquePtr<ITexture2D>     CreateTexture(Uint32 InWidth, Uint32 InHeight)                override;
-        UniquePtr<IShader>        CreateShader(const ShaderDesc& InDesc)                        override;
-        UniquePtr<IPipeline>      CreatePipeline(const PipelineDesc& InDesc)                    override;
-        UniquePtr<IBindGroup>     CreateBindGroup(const BindGroupLayout& InLayout)              override;
-        UniquePtr<IFramebuffer>   CreateFramebuffer(const FramebufferSpec& InSpec)              override;
+        TUniquePtr<IVertexArray>   CreateVertexArray()                                           override;
+        TUniquePtr<IVertexBuffer>  CreateVertexBuffer(Uint32 InSizeBytes)                        override;
+        TUniquePtr<IIndexBuffer>   CreateIndexBuffer(const Uint32* InIndices, Uint32 InCount)    override;
+        TUniquePtr<IUniformBuffer> CreateUniformBuffer(Uint32 InSizeBytes, Uint32 InBinding)     override;
+        TUniquePtr<ITexture2D>     CreateTexture(Uint32 InWidth, Uint32 InHeight)                override;
+        TUniquePtr<IShader>        CreateShader(const ShaderDesc& InDesc)                        override;
+        TUniquePtr<IPipeline>      CreatePipeline(const PipelineDesc& InDesc)                    override;
+        TUniquePtr<IBindGroup>     CreateBindGroup(const BindGroupLayout& InLayout)              override;
+        TUniquePtr<IFramebuffer>   CreateFramebuffer(const FramebufferSpec& InSpec)              override;
 
         void            Init(IGraphicsContext& InSurface)                               override;
         void            BeginFrame()                                                    override;

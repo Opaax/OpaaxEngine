@@ -18,7 +18,7 @@ namespace Opaax
     inline constexpr LogCategory LogWorldManager{"WorldManager"};
 
     // =============================================================================
-    // WorldManager — the engine subsystem that OWNS every World (UniquePtr). Multiple
+    // WorldManager — the engine subsystem that OWNS every World (TUniquePtr). Multiple
     //   worlds may coexist (editor + PIE later); one is the "active" world the renderer
     //   draws. Ownership lives here; drivers hold non-owning World* handles.
     //
@@ -169,7 +169,7 @@ namespace Opaax
         // =========================================================================
     private:
         EngineRegistries*           m_Registries = nullptr; // non-owning; Engine owns them (I5)
-        TDynArray<UniquePtr<World>> m_Worlds;
+        TDynArray<TUniquePtr<World>> m_Worlds;
         World*                      m_ActiveWorld = nullptr; // non-owning; points into m_Worlds
 
         // The engine-side half of every WorldContext this manager builds. Resolved ONCE in

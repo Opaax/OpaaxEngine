@@ -22,7 +22,7 @@
 #include "World/Serialization/LevelLoader.h"     // M5: FinishStartup opens the startup level
 #include "World/Serialization/LevelResource.hpp" // the startup level is resolved as a resource
 
-#include "RHI/Framebuffer.h"   // FramebufferSpec + the UniquePtr<IFramebuffer> deleter
+#include "RHI/Framebuffer.h"   // FramebufferSpec + the TUniquePtr<IFramebuffer> deleter
 
 namespace Opaax
 {
@@ -43,13 +43,13 @@ namespace Opaax
         
         if (!m_bStarted)
         {
-            OPAAX_ENGINE_LOG(Error, "FinishStartup called before Startup — no world created")
+            OPAAX_ENGINE_LOG(Error, "FinishStartup called before Startup — no world created");
             lReturnState = false;
         }
 
         if (m_WorldManager == nullptr)
         {
-            OPAAX_ENGINE_LOG(Error, "FinishStartup: no WorldManager subsystem — no world created")
+            OPAAX_ENGINE_LOG(Error, "FinishStartup: no WorldManager subsystem — no world created");
             lReturnState = false;
         }
         
@@ -81,7 +81,7 @@ namespace Opaax
     
     void Engine::CacheAppServices()
     {        
-        AppServiceLocator& lServices = OpaaxApplication::Services();
+        AppServiceLocator& lServices = OpaaxApplication::GetServices();
         
         m_Platform = &lServices.Get<IPlatform>();
         if (m_Platform->IsNull())
@@ -156,24 +156,24 @@ namespace Opaax
             return true;
         }
         
-        OPAAX_ENGINE_LOG(Info, "Engine::Startup ----> Begin start up")
+        OPAAX_ENGINE_LOG(Info, "Engine::Startup ----> Begin start up");
 
-        OPAAX_ENGINE_LOG(Info, "Engine::Startup ----> Cache Application services....")
+        OPAAX_ENGINE_LOG(Info, "Engine::Startup ----> Cache Application services....");
         CacheAppServices();
 
-        OPAAX_ENGINE_LOG(Info, "Engine::Startup ----> Startup Engine Subsystems....")
+        OPAAX_ENGINE_LOG(Info, "Engine::Startup ----> Startup Engine Subsystems....");
         m_Subsystems.StartupAll();
 
-        OPAAX_ENGINE_LOG(Info, "Engine::Startup ----> Cache Engine Subsystems....")
+        OPAAX_ENGINE_LOG(Info, "Engine::Startup ----> Cache Engine Subsystems....");
         CacheSubsystems();
         
         if (m_Resources != nullptr)
         {
-            OPAAX_ENGINE_LOG(Info, "Engine::Startup ----> Push job system to Resources Manager")
+            OPAAX_ENGINE_LOG(Info, "Engine::Startup ----> Push job system to Resources Manager");
             m_Resources->SetJobSystem(OpaaxApplication::GetAppService<IJobSystem>());
         }
         
-        OPAAX_ENGINE_LOG(Info, "Engine::Startup ----> Bind to world manager events")
+        OPAAX_ENGINE_LOG(Info, "Engine::Startup ----> Bind to world manager events");
         BindToWorldMgrEvents();
 
         m_bStarted  = true;
@@ -183,7 +183,7 @@ namespace Opaax
             m_EngineEventBus->GetEventBus().Publish(EngineStarted{});
         }
 
-        OPAAX_ENGINE_LOG(Info, "Engine::Startup ----> Finishing startup: ({} subsystem(s))", m_Subsystems.GetSystems().size())
+        OPAAX_ENGINE_LOG(Info, "Engine::Startup ----> Finishing startup: ({} subsystem(s))", m_Subsystems.GetSystems().size());
         return true;
     }
 
@@ -204,7 +204,7 @@ namespace Opaax
         World* lWorld = m_WorldManager->CreateWorld(lName, InSpec.Mode);
         m_WorldManager->SetActiveWorld(lWorld);
 
-        OPAAX_ENGINE_LOG(Info, "Startup world '{}' ({}) created and activated", lName.CStr(), ToString(InSpec.Mode))
+        OPAAX_ENGINE_LOG(Info, "Startup world '{}' ({}) created and activated", lName.CStr(), ToString(InSpec.Mode));
 
         if (lLevel != nullptr && lWorld != nullptr)
         {
@@ -218,14 +218,14 @@ namespace Opaax
     {
         if (InAssetRelPath.IsEmpty())
         {
-            OPAAX_ENGINE_LOG(Info, "No startup level configured — booting '{}'", NULL_LEVEL_WORLD_NAME)
+            OPAAX_ENGINE_LOG(Info, "No startup level configured — booting '{}'", NULL_LEVEL_WORLD_NAME);
             return {};
         }
 
         if (m_Resources == nullptr)
         {
             OPAAX_ENGINE_LOG(Error, "No ResourceManager — cannot open startup level '{}'",
-                             InAssetRelPath.CStr())
+                             InAssetRelPath.CStr());
             return {};
         }
 
@@ -241,7 +241,7 @@ namespace Opaax
             // A project that NAMES a level it cannot open is a real misconfiguration — loud,
             // unlike the empty case above. Booting NullLevel anyway beats refusing to start.
             OPAAX_ENGINE_LOG(Warn, "Startup level '{}' could not be opened — falling back to '{}'",
-                             InAssetRelPath.CStr(), NULL_LEVEL_WORLD_NAME)
+                             InAssetRelPath.CStr(), NULL_LEVEL_WORLD_NAME);
         }
 
         return lRef;
@@ -259,7 +259,7 @@ namespace Opaax
             // content, which is the failure mode MapResource is FailFast to avoid — so the
             // engine must not pass over it quietly either.
             OPAAX_ENGINE_LOG(Error, "Startup level '{}' did not open cleanly ({} map(s) loaded, {} failed)",
-                             InLevel.Name.CStr(), lResult.MapsLoaded, lResult.MapsFailed)
+                             InLevel.Name.CStr(), lResult.MapsLoaded, lResult.MapsFailed);
         }
     }
     
@@ -308,7 +308,7 @@ namespace Opaax
         }
     }
     
-    UniquePtr<IFramebuffer> Engine::CreateFramebuffer(const FramebufferSpec& InSpec)
+    TUniquePtr<IFramebuffer> Engine::CreateFramebuffer(const FramebufferSpec& InSpec)
     {
         if (m_RendererManager == nullptr)
         {
@@ -337,7 +337,7 @@ namespace Opaax
         
         m_bStarted  = false;
 
-        OPAAX_ENGINE_LOG(Info, "Engine shutdown")
+        OPAAX_ENGINE_LOG(Info, "Engine shutdown");
     }
     
     void Engine::Update(double InDeltaTime)
@@ -368,7 +368,7 @@ namespace Opaax
 
         m_Subsystems.TearDownAll();
 
-        OPAAX_ENGINE_LOG(Info, "Engine torn down")
+        OPAAX_ENGINE_LOG(Info, "Engine torn down");
     }
     
     void Engine::HandleWorldCreated(World* InWorld)

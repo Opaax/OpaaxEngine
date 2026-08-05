@@ -30,7 +30,7 @@ namespace Opaax
                 // FailFast: a missing map resolves to null rather than to an empty placeholder,
                 // which is the whole reason the policy is what it is. Count it and carry on —
                 // one bad file should cost that map, not the level.
-                OPAAX_LOG(LogLevelLoader, Error, "Map '{}' failed to load — skipped", lMapRelPath.CStr())
+                OPAAX_LOG(LogLevelLoader, Error, "Map '{}' failed to load — skipped", lMapRelPath.CStr());
                 ++lResult.MapsFailed;
                 continue;
             }
@@ -44,7 +44,7 @@ namespace Opaax
         OPAAX_LOG(LogLevelLoader, Info, "Level '{}' -> world '{}': {} map(s), {} entity(ies){}",
                   InLevel.Name.CStr(), InWorld.GetName().CStr(),
                   lResult.MapsLoaded, lResult.EntitiesCreated,
-                  lResult.MapsFailed > 0 ? " (some maps FAILED — see above)" : "")
+                  lResult.MapsFailed > 0 ? " (some maps FAILED — see above)" : "");
 
         return lResult;
     }

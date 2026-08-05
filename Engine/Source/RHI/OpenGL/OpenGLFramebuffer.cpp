@@ -70,7 +70,7 @@ namespace Opaax
 
         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         {
-            OPAAX_LOG(LogOpenGLFramebuffer, Error, "FBO incomplete at {}x{}!", m_Width, m_Height)
+            OPAAX_LOG(LogOpenGLFramebuffer, Error, "FBO incomplete at {}x{}!", m_Width, m_Height);
         }
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);

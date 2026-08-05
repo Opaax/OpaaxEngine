@@ -120,7 +120,7 @@ namespace Opaax
         {
             TFunction<void()>   Work;
             TFunction<void()>   OnComplete;
-            SharedPtr<JobState> State;
+            TSharedPtr<JobState> State;
         };
 
         /***/
@@ -151,6 +151,6 @@ namespace Opaax
         Mutex             m_DoneMutex;
         ConditionVariable m_DoneCV;
 
-        Atomic<bool> m_Stopping{false};
+        TAtomic<bool> m_Stopping{false};
     };
 }

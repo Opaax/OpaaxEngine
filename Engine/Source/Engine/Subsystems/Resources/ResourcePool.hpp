@@ -140,7 +140,7 @@ namespace Opaax
             std::optional<T> lLoaded = T::Load(InPath, InCtx);
             if (!lLoaded.has_value())
             {
-                OPAAX_LOG(LogResourcePool, Error, "Load failed: '{}'", InPath)
+                OPAAX_LOG(LogResourcePool, Error, "Load failed: '{}'", InPath);
                 return false; // slot left Loading for the caller to Abandon
             }
             PayloadRef(InHandle.Slot).emplace(Move(*lLoaded));
@@ -268,7 +268,7 @@ namespace Opaax
                 if (lMeta.State != EResourceState::Loaded) { continue; }
                 if (lMeta.RefCount > 0)
                 {
-                    OPAAX_LOG(LogResourcePool, Warn, "Leak at flush: '{}' (refcount {})", lMeta.Source, lMeta.RefCount)
+                    OPAAX_LOG(LogResourcePool, Warn, "Leak at flush: '{}' (refcount {})", lMeta.Source, lMeta.RefCount);
                 }
                 PayloadRef(lSlot).reset(); // may cascade-release composite children on OTHER pools
                 ++lMeta.Generation;
@@ -459,12 +459,12 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        TDynArray<UniquePtr<Chunk>>     m_Chunks;      // address-stable payload storage
-        TDynArray<UniquePtr<MetaChunk>> m_MetaChunks;  // address-stable slot metadata (parallel to payload chunks)
+        TDynArray<TUniquePtr<Chunk>>     m_Chunks;      // address-stable payload storage
+        TDynArray<TUniquePtr<MetaChunk>> m_MetaChunks;  // address-stable slot metadata (parallel to payload chunks)
         Uint32                          m_SlotCount = 0; // high-water slot index (monotonic); range-checks Resolve lock-free
         TDynArray<Uint32>               m_FreeSlots;   // reusable slot indices
         TDynArray<GraveEntry>           m_Graveyard;   // refcount-0 slots awaiting the next pump
-        UnorderedMap<Uint32, Uint32>    m_PathToSlot;  // interned path id -> slot (dedup)
+        TUnorderedMap<Uint32, Uint32>    m_PathToSlot;  // interned path id -> slot (dedup)
         std::optional<T>                m_Placeholder; // built once, on first fallback
         Uint32                          m_LoadedCount  = 0;
         Uint32                          m_LoadingCount = 0; // in-flight async slots (wired in the async step)

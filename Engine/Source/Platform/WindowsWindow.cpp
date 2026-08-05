@@ -32,7 +32,7 @@ namespace Opaax
 
 	static void GLFWErrorCallback(int error, const char* description)
 	{
-		OPAAX_LOG(LogWindowsWindow, Error, "GLFW Error: {}: {}", error, description)
+		OPAAX_LOG(LogWindowsWindow, Error, "GLFW Error: {}: {}", error, description);
 	}
 	
 	WindowsWindow::WindowsWindow(const WindowProps& Props)
@@ -53,7 +53,7 @@ namespace Opaax
 		m_Data.Mode	= Props.Mode;
 
 		OPAAX_LOG(LogWindowsWindow, Info, "Creating window {} ({}, {}) [{}]", Props.Title, Props.Width, Props.Height,
-			WindowModeToString(Props.Mode))
+			WindowModeToString(Props.Mode));
 
 		if (!s_GLFWInitialized)
 		{
@@ -63,7 +63,7 @@ namespace Opaax
 			s_GLFWInitialized = true;
 		}
 		
-		const EngineConfigData& lData = OpaaxApplication::GetAppService<IConfigSystem>().Get<Config_Engine>().Data();
+		const EngineConfigData& lData = OpaaxApplication::GetAppService<IConfigSystem>().Get<Config_Engine>().GetData();
 
 		// Backend chosen from engine config — drives window hints + context creation.
 		const EBackend lBackend = BackendFromString(lData.RenderBackend);
@@ -88,7 +88,7 @@ namespace Opaax
 		OPAAX_CORE_ASSERT(m_Context)
 		if (!m_Context->Init())
 		{
-			OPAAX_LOG(LogWindowsWindow, Error, "WindowsWindow: graphics context failed to initialize.")
+			OPAAX_LOG(LogWindowsWindow, Error, "WindowsWindow: graphics context failed to initialize.");
 		}
 
 		// NOTE: User pointer needed for all GLFW callbacks to reach WindowData safely.
@@ -225,7 +225,7 @@ namespace Opaax
 
         	if (lButton == EKeyCode::None)
         	{
-        		OPAAX_LOG(LogWindowsWindow, Error, "Receive Mouse button pressed, but no conversion to Opaax Type is found")
+        		OPAAX_LOG(LogWindowsWindow, Error, "Receive Mouse button pressed, but no conversion to Opaax Type is found");
         		return;
         	}
         	

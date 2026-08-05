@@ -84,7 +84,7 @@ namespace Opaax
         //----- null object ----------------------------------------------------
         static ILogger& Null();
         
-        SharedPtr<spdlog::logger> AppLogger;
+        TSharedPtr<spdlog::logger> AppLogger;
     };
     
     OPAAX_API ILogger& GetLogger();
@@ -105,9 +105,11 @@ namespace Opaax
     };
 }
 
-#define OPAAX_LOG(Category,Level, Format,...) ::Opaax::GetLogger().AppLogger->log(ToSpdLevel(::Opaax::ELogLevel::##Level), "[{}] " Format, Category.Name, __VA_ARGS__);
+// These do NOT swallow the semicolon — the call site supplies it, so a log statement
+// behaves like any other and `if (x) OPAAX_LOG(...); else` compiles.
+#define OPAAX_LOG(Category,Level, Format,...) ::Opaax::GetLogger().AppLogger->log(ToSpdLevel(::Opaax::ELogLevel::##Level), "[{}] " Format, Category.Name, __VA_ARGS__)
 
-#define OPAAX_APP_LOG(Level, Format, ...)       OPAAX_LOG(LogOpaaxApplication, Level, Format, ##__VA_ARGS__);
-#define OPAAX_ENGINE_LOG(Level, Format, ...)    OPAAX_LOG(LogOpaaxEngine, Level, Format,  ##__VA_ARGS__);
+#define OPAAX_APP_LOG(Level, Format, ...)       OPAAX_LOG(LogOpaaxApplication, Level, Format, ##__VA_ARGS__)
+#define OPAAX_ENGINE_LOG(Level, Format, ...)    OPAAX_LOG(LogOpaaxEngine, Level, Format,  ##__VA_ARGS__)
 
-#define OPAAX_LOG_CATEGORY(Category) inline constexpr LogCategory Log##Category{ #Category };
+#define OPAAX_LOG_CATEGORY(Category) inline constexpr LogCategory Log##Category{ #Category }

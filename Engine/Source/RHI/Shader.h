@@ -31,7 +31,7 @@ namespace Opaax
      * @interface IShader
      *
      * Backend-agnostic shader program. Consumers (ShaderAsset, Renderer2D) hold a
-     * UniquePtr<IShader> and never name a concrete backend type. The concrete impl
+     * TUniquePtr<IShader> and never name a concrete backend type. The concrete impl
      * is created via IRHIDevice::CreateShader (OpenGLShader today).
      *
      * Shader SOURCE portability (GLSL vs SPIR-V vs HLSL) is a separate concern and is

@@ -130,7 +130,7 @@ namespace Opaax::Editor
         //     startup, no context yet) — this is the point where they finally have one to receive. -------
         for (const PanelEntry& lEntry : m_Extensions.Panels().Entries())
         {
-            UniquePtr<IEditorPanel> lPanel = lEntry.Factory ? lEntry.Factory(*m_Context) : nullptr;
+            TUniquePtr<IEditorPanel> lPanel = lEntry.Factory ? lEntry.Factory(*m_Context) : nullptr;
             if (lPanel == nullptr)
             {
                 OPAAX_LOG(LogEditorService, Warn, "Panel '{}' produced no instance — skipped.", lEntry.Id);
@@ -205,7 +205,7 @@ namespace Opaax::Editor
         // world, so Render() reads the new FBO size this frame (deferred-resize handshake, §5).
         if (m_ViewportPanel != nullptr) { m_ViewportPanel->OnPreRender(); }
 
-        for (const UniquePtr<IEditorPanel>& lPanel : m_Panels) { lPanel->OnPreRender(); }
+        for (const TUniquePtr<IEditorPanel>& lPanel : m_Panels) { lPanel->OnPreRender(); }
     }
 
     void EditorService::EndFrame()
@@ -218,7 +218,7 @@ namespace Opaax::Editor
         // and shows it as an ImGui image — the world lives INSIDE a panel now, not the raw backbuffer.
         if (m_ViewportPanel != nullptr) { m_ViewportPanel->Draw(); }
 
-        for (const UniquePtr<IEditorPanel>& lPanel : m_Panels) { lPanel->Draw(); }
+        for (const TUniquePtr<IEditorPanel>& lPanel : m_Panels) { lPanel->Draw(); }
 
         // Submit the UI to the backbuffer AFTER Engine().Loop() has rendered the world into the FBO
         // (see EditorApplication::TickFrame). The host presents the backbuffer once, after this.
@@ -370,7 +370,7 @@ namespace Opaax::Editor
             }
         }
 
-        for (const UniquePtr<IEditorPanel>& lPanel : m_Panels)
+        for (const TUniquePtr<IEditorPanel>& lPanel : m_Panels)
         {
             lPanel->OnActiveWorldChanged(InOld, InNew);
         }
@@ -408,7 +408,7 @@ namespace Opaax::Editor
 
         if (m_EditorPaths == nullptr)
         {
-            OPAAX_LOG(LogEditorService, Warn, "No EditorPaths (no edited project?) — editor space unavailable.")
+            OPAAX_LOG(LogEditorService, Warn, "No EditorPaths (no edited project?) — editor space unavailable.");
         }
     }
 
@@ -417,7 +417,7 @@ namespace Opaax::Editor
         const EditorPaths* lEditorPaths = m_EditorPaths;
         if (lEditorPaths == nullptr)
         {
-            OPAAX_LOG(LogEditorService, Warn, "No EditorPaths — dock layout will not persist.")
+            OPAAX_LOG(LogEditorService, Warn, "No EditorPaths — dock layout will not persist.");
             return {};
         }
 
@@ -430,7 +430,7 @@ namespace Opaax::Editor
         if (lFileSystem.GetPathIfNCreate(lSaveDir).IsEmpty())
         {
             OPAAX_LOG(LogEditorService, Warn, "Could not create '{}' — dock layout will not persist.",
-                lSaveDir.CStr())
+                lSaveDir.CStr());
             return {};
         }
 
@@ -442,19 +442,19 @@ namespace Opaax::Editor
         // The PIE controls are a PANEL like any other — registered through the same route a game
         // panel travels, not drawn by EditorService as a privileged widget (D10).
         m_Extensions.Panels().Register("Play Controls",
-            [](EditorContext& InContext) -> UniquePtr<IEditorPanel> { return MakeUnique<PlayToolbarPanel>(InContext); });
+            [](EditorContext& InContext) -> TUniquePtr<IEditorPanel> { return MakeUnique<PlayToolbarPanel>(InContext); });
 
         m_Extensions.Panels().Register("Hierarchy",
-            [](EditorContext& InContext) -> UniquePtr<IEditorPanel> { return MakeUnique<HierarchyPanel>(InContext); });
+            [](EditorContext& InContext) -> TUniquePtr<IEditorPanel> { return MakeUnique<HierarchyPanel>(InContext); });
 
         m_Extensions.Panels().Register("Inspector",
-            [](EditorContext& InContext) -> UniquePtr<IEditorPanel> { return MakeUnique<InspectorPanel>(InContext); });
+            [](EditorContext& InContext) -> TUniquePtr<IEditorPanel> { return MakeUnique<InspectorPanel>(InContext); });
 
         m_Extensions.Panels().Register("Resource Browser",
-            [](EditorContext& InContext) -> UniquePtr<IEditorPanel> { return MakeUnique<ResourceBrowserPanel>(InContext); });
+            [](EditorContext& InContext) -> TUniquePtr<IEditorPanel> { return MakeUnique<ResourceBrowserPanel>(InContext); });
 
         m_Extensions.Panels().Register("Input",
-            [](EditorContext& InContext) -> UniquePtr<IEditorPanel> { return MakeUnique<InputPanel>(InContext); });
+            [](EditorContext& InContext) -> TUniquePtr<IEditorPanel> { return MakeUnique<InputPanel>(InContext); });
     }
 
     void EditorService::DrawDockspace()
@@ -627,7 +627,7 @@ namespace Opaax::Editor
         m_Extensions.Menus().Register("File/Exit",
             [lWindow](EditorContext&)
             {
-                OPAAX_LOG(LogEditorService, Info, "Exit requested from the File menu")
+                OPAAX_LOG(LogEditorService, Info, "Exit requested from the File menu");
                 if (lWindow != nullptr) { lWindow->RequestClose(); }
             });
     }
@@ -680,7 +680,7 @@ namespace Opaax::Editor
     {
         if (!CanEditMap(InContext))
         {
-            OPAAX_LOG(LogEditorService, Warn, "Save Map ignored — stop the PIE session first")
+            OPAAX_LOG(LogEditorService, Warn, "Save Map ignored — stop the PIE session first");
             return;
         }
 
@@ -698,7 +698,7 @@ namespace Opaax::Editor
     {
         if (!CanEditMap(InContext))
         {
-            OPAAX_LOG(LogEditorService, Warn, "Save Map As ignored — stop the PIE session first")
+            OPAAX_LOG(LogEditorService, Warn, "Save Map As ignored — stop the PIE session first");
             return;
         }
 
@@ -723,7 +723,7 @@ namespace Opaax::Editor
     {
         if (!CanEditMap(InContext))
         {
-            OPAAX_LOG(LogEditorService, Warn, "Open Map ignored — stop the PIE session first")
+            OPAAX_LOG(LogEditorService, Warn, "Open Map ignored — stop the PIE session first");
             return;
         }
 
@@ -746,7 +746,7 @@ namespace Opaax::Editor
     {
         if (!CanEditMap(InContext))
         {
-            OPAAX_LOG(LogEditorService, Warn, "Open ignored — stop the PIE session first")
+            OPAAX_LOG(LogEditorService, Warn, "Open ignored — stop the PIE session first");
             return;
         }
 
@@ -765,7 +765,7 @@ namespace Opaax::Editor
 
             if (lAnswer != 1)
             {
-                OPAAX_LOG(LogEditorService, Info, "Open cancelled — unsaved changes kept")
+                OPAAX_LOG(LogEditorService, Info, "Open cancelled — unsaved changes kept");
                 return;
             }
         }

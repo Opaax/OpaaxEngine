@@ -38,7 +38,7 @@ namespace Opaax::Editor
             // Loud, not silent: without this the only symptom is Draw()'s Dummy fallback — a blank
             // panel and a clean log, which is exactly the failure L15 is about.
             OPAAX_LOG(LogViewportPanel, Error, "ViewportPanel startup — the engine created no framebuffer; "
-                                               "the viewport will stay blank.")
+                                               "the viewport will stay blank.");
             return;
         }
 
@@ -46,7 +46,7 @@ namespace Opaax::Editor
 
         m_Context.Engine.SetPrimaryRenderTarget(m_RenderTarget.get());
 
-        OPAAX_LOG(LogViewportPanel, Info, "ViewportPanel startup — offscreen FBO {}x{}", m_viewportSize.x, m_viewportSize.y)
+        OPAAX_LOG(LogViewportPanel, Info, "ViewportPanel startup — offscreen FBO {}x{}", m_viewportSize.x, m_viewportSize.y);
     }
 
     // =========================================================================
@@ -81,7 +81,7 @@ namespace Opaax::Editor
             m_Framebuffer->Resize(m_viewportSize.x, m_viewportSize.y);
         }
 
-        OPAAX_LOG(LogViewportPanel, Trace, "ViewportPanel resized to {}x{}", m_viewportSize.x, m_viewportSize.y)
+        OPAAX_LOG(LogViewportPanel, Trace, "ViewportPanel resized to {}x{}", m_viewportSize.x, m_viewportSize.y);
     }
 
     // =========================================================================
@@ -117,7 +117,7 @@ namespace Opaax::Editor
         if (!m_bOutlineLogged)
         {
             OPAAX_LOG(LogViewportPanel, Info, "Selection outline enqueued (4 debug lines around {},{})",
-                      lComp->Position.x, lComp->Position.y)
+                      lComp->Position.x, lComp->Position.y);
             m_bOutlineLogged = true;
         }
     }
@@ -155,7 +155,7 @@ namespace Opaax::Editor
             
             if (!m_bImageLogged)
             {
-                OPAAX_LOG(LogViewportPanel, Info, "Viewport displaying world FBO (handle={}, {}x{})", lImg.Handle, m_viewportSize.x, m_viewportSize.y)
+                OPAAX_LOG(LogViewportPanel, Info, "Viewport displaying world FBO (handle={}, {}x{})", lImg.Handle, m_viewportSize.x, m_viewportSize.y);
                 m_bImageLogged = true;
             }
         }
@@ -175,6 +175,6 @@ namespace Opaax::Editor
         m_RenderTarget.reset();
         m_Framebuffer.reset();
 
-        OPAAX_LOG(LogViewportPanel, Info, "ViewportPanel shutdown")
+        OPAAX_LOG(LogViewportPanel, Info, "ViewportPanel shutdown");
     }
 }

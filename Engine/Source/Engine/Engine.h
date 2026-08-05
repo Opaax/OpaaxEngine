@@ -137,7 +137,7 @@ namespace Opaax
         void Loop() override;
         void PresentBackbuffer() override;
         void SetPrimaryRenderTarget(IRenderTarget* InTarget) override;
-        UniquePtr<IFramebuffer> CreateFramebuffer(const FramebufferSpec& InSpec) override;
+        TUniquePtr<IFramebuffer> CreateFramebuffer(const FramebufferSpec& InSpec) override;
         void Update(double InDeltaTime) override;
         void FixedUpdate(double InFixedDeltaTime) override;
         void Render(double InAlphaPhysicStep) override;
@@ -166,8 +166,6 @@ namespace Opaax
         // =============================================================================
         // Delta Time
     private:
-        double LastTime = 0.0f;
-        
         FrameInfo m_FrameInfo;
 
         // End Delta Time
@@ -211,10 +209,6 @@ namespace Opaax
          */
         InputManager*      m_InputManager = nullptr;
 
-        // Per-frame delta-time source (steady clock). Stored as nanoseconds so the header
-        // stays <chrono>-free; the clock read + conversion live in Engine::Loop.
-        Uint64             m_LastTickNs = 0;
-        bool               m_bHasTick   = false;
-        bool               m_bStarted  = false;
+        bool               m_bStarted = false;
     };
 }

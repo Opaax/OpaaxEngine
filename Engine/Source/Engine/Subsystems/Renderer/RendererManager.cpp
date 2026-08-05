@@ -13,7 +13,7 @@
 
 #include "RHI/RHIBackend.h"       // BackendFromString
 #include "RHI/IGraphicsContext.h"
-#include "RHI/Framebuffer.h"      // FramebufferSpec + the UniquePtr<IFramebuffer> deleter
+#include "RHI/Framebuffer.h"      // FramebufferSpec + the TUniquePtr<IFramebuffer> deleter
 
 #include "Renderer/RenderSystem.h"
 #include "Renderer/RenderSystemDesc.h"
@@ -42,15 +42,15 @@ namespace Opaax
     {
         // Resolve host state (the adapter's job) and pack it into a plain desc for the module.
         IConfigSystem&            lConfigSys = OpaaxApplication::GetAppService<IConfigSystem>();
-        const EngineConfigData&   lEngineCfg = lConfigSys.Get<Config_Engine>().Data();
-        const RendererConfigData& lRenderCfg = lConfigSys.Get<Config_Renderer>().Data();
+        const EngineConfigData&   lEngineCfg = lConfigSys.Get<Config_Engine>().GetData();
+        const RendererConfigData& lRenderCfg = lConfigSys.Get<Config_Renderer>().GetData();
 
         Window*           lWindow  = OpaaxApplication::GetAppService<IWindowManager>().GetMainWindow();
         IGraphicsContext* lSurface = lWindow ? lWindow->GetGraphicsContext() : nullptr;
         
         if (lSurface == nullptr)
         {
-            OPAAX_LOG(LogRendererManager, Error, "No graphics context/surface for the render system")
+            OPAAX_LOG(LogRendererManager, Error, "No graphics context/surface for the render system");
             return false;
         }
 
@@ -62,7 +62,7 @@ namespace Opaax
         const OpaaxString lShaderSrc = FileIO::ReadAllText(lShaderPath);
         if (lShaderSrc.IsEmpty())
         {
-            OPAAX_LOG(LogRendererManager, Error, "cannot read shader file '{}'", lShaderPath.CStr())
+            OPAAX_LOG(LogRendererManager, Error, "cannot read shader file '{}'", lShaderPath.CStr());
         }
 
         RenderSystemDesc lDesc;
@@ -76,7 +76,7 @@ namespace Opaax
         m_RenderSystem = MakeUnique<RenderSystem>();
         if (!m_RenderSystem->Init(lDesc))
         {
-            OPAAX_LOG(LogRendererManager, Error, "RenderSystem failed to initialize")
+            OPAAX_LOG(LogRendererManager, Error, "RenderSystem failed to initialize");
             m_RenderSystem.reset();
             return false;
         }
@@ -88,7 +88,7 @@ namespace Opaax
         // Cache the world owner — Render draws whatever it reports as the active world.
         m_WorldManager = &OpaaxApplication::GetAppService<IEngine>().GetWorldManager();
 
-        OPAAX_LOG(LogRendererManager, Info, "RendererManager started ({}x{})", lDesc.Width, lDesc.Height)
+        OPAAX_LOG(LogRendererManager, Info, "RendererManager started ({}x{})", lDesc.Width, lDesc.Height);
         return true;
     }
 
@@ -99,7 +99,7 @@ namespace Opaax
         OpaaxApplication::GetAppService<IEngine>().GetEngineEventBus().GetEventBus().UnsubscribeAll(this);
 
         m_RenderSystem.reset(); // ~RenderSystem = WaitIdle + teardown while the window/context is alive
-        OPAAX_LOG(LogRendererManager, Info, "RendererManager shutdown")
+        OPAAX_LOG(LogRendererManager, Info, "RendererManager shutdown");
     }
     
     // =========================================================================
@@ -160,7 +160,7 @@ namespace Opaax
         // Debug overlay — each queued line as a thin rotated quad, so this reuses the world's batch
         // and adds no RHI/shader/vertex-layout surface. The Debug band sorts above world geometry
         // regardless of submission order, so no manual ordering is needed here.
-        for (const DebugLine& lLine : m_DebugDraw.Lines())
+        for (const DebugLine& lLine : m_DebugDraw.GetLines())
         {
             const DebugQuad lQuad = ToQuad(lLine);
             lRenderer.DrawQuad(lQuad.Center, lQuad.Size, lLine.Color, lQuad.RotationRad, ERenderLayer::Debug);
@@ -173,14 +173,14 @@ namespace Opaax
     void RendererManager::SetPrimaryRenderTarget(IRenderTarget* InTarget)
     {
         m_PrimaryTarget = InTarget;
-        OPAAX_LOG(LogRendererManager, Info, "Primary render target set to {}", InTarget ? "offscreen" : "backbuffer")
+        OPAAX_LOG(LogRendererManager, Info, "Primary render target set to {}", InTarget ? "offscreen" : "backbuffer");
     }
     
-    UniquePtr<IFramebuffer> RendererManager::CreateFramebuffer(const FramebufferSpec& InSpec)
+    TUniquePtr<IFramebuffer> RendererManager::CreateFramebuffer(const FramebufferSpec& InSpec)
     {
         if (!m_RenderSystem)
         {
-            OPAAX_LOG(LogRendererManager, Error, "CreateFramebuffer before the render core started — none created.")
+            OPAAX_LOG(LogRendererManager, Error, "CreateFramebuffer before the render core started — none created.");
             return nullptr;
         }
 
@@ -208,6 +208,6 @@ namespace Opaax
             m_RenderSystem->Resize(InResize.Width, InResize.Height);
         }
 
-        OPAAX_LOG(LogRendererManager, Trace, "Backbuffer resized to {}x{} (via event bus)", InResize.Width, InResize.Height)
+        OPAAX_LOG(LogRendererManager, Trace, "Backbuffer resized to {}x{} (via event bus)", InResize.Width, InResize.Height);
     }
 }

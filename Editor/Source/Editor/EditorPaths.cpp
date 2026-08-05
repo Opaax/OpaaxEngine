@@ -41,11 +41,11 @@ namespace Opaax::Editor
     {
         Paths::LogPaths();
 
-        OPAAX_APP_LOG(Info, "OpaaxEditorApplication::Bootstrap ----> Editor Dir:          {}", EditorDir().CStr())
-        OPAAX_APP_LOG(Info, "OpaaxEditorApplication::Bootstrap ----> Editor Assets Dir:   {}", EditorAssetsDir().CStr())
-        OPAAX_APP_LOG(Info, "OpaaxEditorApplication::Bootstrap ----> Editor Configs Dir:  {}", EditorConfigsDir().CStr())
-        OPAAX_APP_LOG(Info, "OpaaxEditorApplication::Bootstrap ----> Editor Source Dir:   {}", EditorSourceDir().CStr())
-        OPAAX_APP_LOG(Info, "OpaaxEditorApplication::Bootstrap ----> Editor Save Dir:     {}", EditorSaveDir().CStr())
-        OPAAX_APP_LOG(Info, "OpaaxEditorApplication::Bootstrap ----> Editor Temp Dir:     {}", EditorTempDir().CStr())
+        OPAAX_APP_LOG(Info, "OpaaxEditorApplication::Bootstrap ----> Editor Dir:          {}", EditorDir().CStr());
+        OPAAX_APP_LOG(Info, "OpaaxEditorApplication::Bootstrap ----> Editor Assets Dir:   {}", EditorAssetsDir().CStr());
+        OPAAX_APP_LOG(Info, "OpaaxEditorApplication::Bootstrap ----> Editor Configs Dir:  {}", EditorConfigsDir().CStr());
+        OPAAX_APP_LOG(Info, "OpaaxEditorApplication::Bootstrap ----> Editor Source Dir:   {}", EditorSourceDir().CStr());
+        OPAAX_APP_LOG(Info, "OpaaxEditorApplication::Bootstrap ----> Editor Save Dir:     {}", EditorSaveDir().CStr());
+        OPAAX_APP_LOG(Info, "OpaaxEditorApplication::Bootstrap ----> Editor Temp Dir:     {}", EditorTempDir().CStr());
     }
 }

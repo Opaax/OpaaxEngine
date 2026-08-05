@@ -39,7 +39,7 @@ namespace Opaax
          * @param InNativeWindow opaque native window handle (GLFWwindow* today)
          * @return owning context, or nullptr on unknown backend (logged)
          */
-        static UniquePtr<IGraphicsContext> Create(EBackend InBackend, void* InNativeWindow);
+        static TUniquePtr<IGraphicsContext> Create(EBackend InBackend, void* InNativeWindow);
 
         /**
          * Apply backend-specific GLFW window hints. MUST run before glfwCreateWindow.

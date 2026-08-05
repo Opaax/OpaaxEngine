@@ -63,7 +63,7 @@ namespace Opaax::Editor
         m_Baseline = Serialize(InWorld, InRegistry);
 
         OPAAX_LOG(LogEditorMapDocument, Info, "Editing map '{}' (map id '{}')",
-                  m_AbsPath.CStr(), m_MapId.IsValid() ? m_MapId.ToString().CStr() : "(none)")
+                  m_AbsPath.CStr(), m_MapId.IsValid() ? m_MapId.ToString().CStr() : "(none)");
 
         // ROUND-TRIP STABILITY CHECK, and it earns its file read.
         //
@@ -85,13 +85,13 @@ namespace Opaax::Editor
         if (lOnDisk == m_Baseline)
         {
             OPAAX_LOG(LogEditorMapDocument, Info,
-                      "Round trip is stable — the world re-serializes to exactly the file it came from")
+                      "Round trip is stable — the world re-serializes to exactly the file it came from");
         }
         else
         {
             OPAAX_LOG(LogEditorMapDocument, Warn,
                       "The world re-serializes DIFFERENTLY from '{}' — the next Save will rewrite it "
-                      "(formatting churn, or a component the registry no longer knows)", m_AbsPath.CStr())
+                      "(formatting churn, or a component the registry no longer knows)", m_AbsPath.CStr());
         }
     }
 
@@ -99,7 +99,7 @@ namespace Opaax::Editor
     {
         if (!HasMap())
         {
-            OPAAX_LOG(LogEditorMapDocument, Warn, "Save: no map is open — use Save As")
+            OPAAX_LOG(LogEditorMapDocument, Warn, "Save: no map is open — use Save As");
             return false;
         }
 
@@ -113,7 +113,7 @@ namespace Opaax::Editor
             // Baseline deliberately UNTOUCHED: the document must keep reporting unsaved work
             // rather than claim to be clean against a file that was never written.
             OPAAX_LOG(LogEditorMapDocument, Error, "Save FAILED for '{}' — document still has unsaved changes",
-                      m_AbsPath.CStr())
+                      m_AbsPath.CStr());
             return false;
         }
 
@@ -121,7 +121,7 @@ namespace Opaax::Editor
         // capturing a second time.
         m_Baseline = lText;
 
-        OPAAX_LOG(LogEditorMapDocument, Info, "Saved '{}'", m_AbsPath.CStr())
+        OPAAX_LOG(LogEditorMapDocument, Info, "Saved '{}'", m_AbsPath.CStr());
         return true;
     }
 
@@ -156,7 +156,7 @@ namespace Opaax::Editor
         if (!MapFile::Load(InAbsPath, lData))
         {
             OPAAX_LOG(LogEditorMapDocument, Error, "Open FAILED for '{}' — the current map is unchanged",
-                      InAbsPath.CStr())
+                      InAbsPath.CStr());
             return false;
         }
 

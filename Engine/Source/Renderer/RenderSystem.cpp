@@ -12,7 +12,7 @@
 namespace Opaax
 {
     // =========================================================================
-    // CTORS - DTORS (out-of-line — owned UniquePtr members are forward-declared)
+    // CTORS - DTORS (out-of-line — owned TUniquePtr members are forward-declared)
     // =========================================================================
     RenderSystem::RenderSystem()  = default;
     RenderSystem::~RenderSystem() { Shutdown(); }
@@ -24,14 +24,14 @@ namespace Opaax
     {
         if (InDesc.Surface == nullptr)
         {
-            OPAAX_LOG(LogRenderSystem, Error, "RenderSystem::Init — no surface in the desc.")
+            OPAAX_LOG(LogRenderSystem, Error, "RenderSystem::Init — no surface in the desc.");
             return false;
         }
 
         m_Device = RHIDevice::Create(InDesc.Backend, *InDesc.Surface);
         if (!IsValidDevice())
         {
-            OPAAX_LOG(LogRenderSystem, Error, "RenderSystem::Init — backend produced no device.")
+            OPAAX_LOG(LogRenderSystem, Error, "RenderSystem::Init — backend produced no device.");
             return false;
         }
 
@@ -42,7 +42,7 @@ namespace Opaax
         m_Renderer2D = MakeUnique<Renderer2D>();
         m_Renderer2D->Init(*m_Device, InDesc.Limits, InDesc.SpriteShader);
 
-        OPAAX_LOG(LogRenderSystem, Info, "RenderSystem started.")
+        OPAAX_LOG(LogRenderSystem, Info, "RenderSystem started.");
         return true;
     }
 
@@ -59,11 +59,11 @@ namespace Opaax
         m_Device.reset();
     }
     
-    UniquePtr<IFramebuffer> RenderSystem::CreateFramebuffer(const FramebufferSpec& InSpec)
+    TUniquePtr<IFramebuffer> RenderSystem::CreateFramebuffer(const FramebufferSpec& InSpec)
     {
         if (!IsValidDevice())
         {
-            OPAAX_LOG(LogRenderSystem, Error, "RenderSystem::CreateFramebuffer — no device; no framebuffer created.")
+            OPAAX_LOG(LogRenderSystem, Error, "RenderSystem::CreateFramebuffer — no device; no framebuffer created.");
             return nullptr;
         }
 

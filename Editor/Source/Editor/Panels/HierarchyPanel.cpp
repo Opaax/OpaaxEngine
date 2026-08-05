@@ -55,7 +55,7 @@ namespace Opaax::Editor
 
                 // Discrete (a click), so no spam — and it is the only observable signal that selection
                 // actually moved, until the Inspector (M2b) renders it.
-                OPAAX_LOG(LogHierarchyPanel, Info, "Hierarchy selected '{}'", InMeta.Name.CStr())
+                OPAAX_LOG(LogHierarchyPanel, Info, "Hierarchy selected '{}'", InMeta.Name.CStr());
             }
             ImGui::PopID();
         });
@@ -66,7 +66,7 @@ namespace Opaax::Editor
         }
         else if (!m_bListLogged)
         {
-            OPAAX_LOG(LogHierarchyPanel, Info, "Hierarchy listing {} entities from world '{}'", lCount, lWorld->GetName().CStr())
+            OPAAX_LOG(LogHierarchyPanel, Info, "Hierarchy listing {} entities from world '{}'", lCount, lWorld->GetName().CStr());
             m_bListLogged = true;
         }
 

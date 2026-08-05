@@ -28,7 +28,7 @@ namespace Sandbox
     {
         // No entities yet — see CaptureBaselines. Saying so out loud makes the ordering visible
         // in the boot log rather than something to rediscover.
-        OPAAX_LOG(LogQuadOscillator, Info, "QuadOscillator started (Play world) — baselines captured on first tick")
+        OPAAX_LOG(LogQuadOscillator, Info, "QuadOscillator started (Play world) — baselines captured on first tick");
         return true;
     }
 
@@ -42,7 +42,7 @@ namespace Sandbox
         });
 
         OPAAX_LOG(LogQuadOscillator, Info, "Captured {} quad baseline(s)",
-                  static_cast<Uint64>(m_Baselines.size()))
+                  static_cast<Uint64>(m_Baselines.size()));
     }
 
     void QuadOscillatorSubsystem::Update(double InDeltaTime)
@@ -108,6 +108,6 @@ namespace Sandbox
         m_Baselines.clear();
         m_bCaptured = false;
 
-        OPAAX_LOG(LogQuadOscillator, Info, "QuadOscillator shutdown")
+        OPAAX_LOG(LogQuadOscillator, Info, "QuadOscillator shutdown");
     }
 }

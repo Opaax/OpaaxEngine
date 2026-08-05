@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Core/OpaaxTypes.h"                // UniquePtr, TDynArray, TFunction, Uint64, Move
+#include "Core/OpaaxTypes.h"                // TUniquePtr, TDynArray, TFunction, Uint64, Move
 #include "Core/String/OpaaxStringID.hpp"    // OpaaxStringID — interned panel identity
 #include "Editor/Panels/IEditorPanel.h"     // the factory's return type must be complete
 
@@ -13,7 +13,7 @@ namespace Opaax::Editor
      * locator). Deferred on purpose: registration happens at OnModulesRegistered, before Engine::Startup,
      * so no EditorContext exists yet — the factory is what carries the intent across that gap.
      */
-    using FPanelFactory = TFunction<UniquePtr<IEditorPanel>(EditorContext&)>;
+    using FPanelFactory = TFunction<TUniquePtr<IEditorPanel>(EditorContext&)>;
 
     // =============================================================================
     // PanelEntry — one registered panel: its interned identity + the factory that builds it. The Id is

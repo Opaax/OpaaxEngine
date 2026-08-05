@@ -235,7 +235,7 @@ namespace Opaax
          * NEVER held across T::Load (the off-thread heavy work) so a worker's decode can't stall the main thread's Resolve — uncontended in steady state.
          */
         mutable RecursiveMutex              m_Mutex;
-        TDynArray<UniquePtr<IResourcePool>> m_Pools; // indexed by ResourceTypeID::Get<T>()
+        TDynArray<TUniquePtr<IResourcePool>> m_Pools; // indexed by ResourceTypeID::Get<T>()
         ResourceDependencyGraph             m_Deps;
         IJobSystem*                         m_Jobs = &IJobSystem::Null(); // LoadAsync worker pool
         Uint64                              m_PumpEpoch = 0; // ++ each Update (CheckedView staleness)
@@ -247,13 +247,13 @@ namespace Opaax
 
     // =============================================================================
     // ResourceAsyncLoad — per-request state shared between the worker (fill) and the
-    // main-thread drain (publish). Heap-owned via SharedPtr captured by both lambdas;
+    // main-thread drain (publish). Heap-owned via TSharedPtr captured by both lambdas;
     // owns the path string + the LoadContext across the thread boundary.
     // =============================================================================
     struct ResourceAsyncLoad
     {
         OpaaxString            Path;
-        UniquePtr<LoadContext> Ctx;
+        TUniquePtr<LoadContext> Ctx;
         bool                   Filled = false;
     };
 
@@ -285,7 +285,7 @@ namespace Opaax
         const OpaaxStringID lId(InPath);
         if (!InCtx.PushLoading(lId.GetId())) // cycle guard — context-local, no lock needed
         {
-            OPAAX_LOG(LogResourceManager, Error, "Hard dependency cycle on '{}'", InPath)
+            OPAAX_LOG(LogResourceManager, Error, "Hard dependency cycle on '{}'", InPath);
             return ResourceRef<T>{ this, ResourceHandle<T>{} };
         }
 
@@ -293,7 +293,7 @@ namespace Opaax
         ResourcePool<T>*  lPool      = nullptr;
         ResourceHandle<T> lHandle{};
         {
-            LockGuard<RecursiveMutex> lLock(m_Mutex);
+            TLockGuard<RecursiveMutex> lLock(m_Mutex);
             lPool   = &GetOrCreatePool<T>();
             lHandle = lPool->AcquireSlot(InPath, lNeedsFill);
         }
@@ -302,7 +302,7 @@ namespace Opaax
         {
             const bool lOk = lPool->FillSlot(lHandle, InPath, InCtx); // T::Load — UNLOCKED
 
-            LockGuard<RecursiveMutex> lLock(m_Mutex);
+            TLockGuard<RecursiveMutex> lLock(m_Mutex);
             if (!lOk)
             {
                 lPool->AbandonSlot(lHandle.Slot);
@@ -341,7 +341,7 @@ namespace Opaax
         bool              lNeedsFill = false;
         ResourceHandle<T> lHandle{};
         {
-            LockGuard<RecursiveMutex> lLock(m_Mutex);
+            TLockGuard<RecursiveMutex> lLock(m_Mutex);
             lPool   = &GetOrCreatePool<T>();
             lHandle = lPool->AcquireSlot(InPath, lNeedsFill); // Loading claim, returned NOW
         }
@@ -350,7 +350,7 @@ namespace Opaax
         {
             // Fill the whole subtree on one worker; publish (Initialize + Loaded) at the
             // pump. With the null job system this runs inline (work + onComplete here).
-            SharedPtr<ResourceAsyncLoad> lJob = MakeShared<ResourceAsyncLoad>();
+            TSharedPtr<ResourceAsyncLoad> lJob = MakeShared<ResourceAsyncLoad>();
             lJob->Path             = InPath; // own the string across the thread boundary
             ResourceManager* lSelf = this;
 
@@ -366,7 +366,7 @@ namespace Opaax
                 },
                 [lSelf, lPool, lHandle, lJob]() // MAIN (drain) — publish children-first, else abandon
                 {
-                    LockGuard<RecursiveMutex> lLock(lSelf->m_Mutex);
+                    TLockGuard<RecursiveMutex> lLock(lSelf->m_Mutex);
                     if (lJob->Ctx)
                     {
                         lJob->Ctx->PublishAll();
@@ -401,7 +401,7 @@ namespace Opaax
                     return true; // fired -> drop; the internal claim releases here
                 };
 
-            LockGuard<RecursiveMutex> lLock(m_Mutex);
+            TLockGuard<RecursiveMutex> lLock(m_Mutex);
             m_PendingCallbacks.push_back(Move(lPoll));
         }
 
@@ -412,7 +412,7 @@ namespace Opaax
     template<CResource T>
     T* ResourceManager::Resolve(ResourceHandle<T> InHandle) noexcept
     {
-        LockGuard<RecursiveMutex> lLock(m_Mutex);
+        TLockGuard<RecursiveMutex> lLock(m_Mutex);
         return GetOrCreatePool<T>().Get(InHandle);
     }
 
@@ -420,7 +420,7 @@ namespace Opaax
     template<CResource T>
     ResourceRef<T> ResourceManager::Pin(ResourceHandle<T> InHandle)
     {
-        LockGuard<RecursiveMutex> lLock(m_Mutex);
+        TLockGuard<RecursiveMutex> lLock(m_Mutex);
         ResourcePool<T>& lPool = GetOrCreatePool<T>();
         if (!lPool.IsLive(InHandle))
         {
@@ -435,7 +435,7 @@ namespace Opaax
     template<CResource T>
     void ResourceManager::AddRef(ResourceHandle<T> InHandle) noexcept
     {
-        LockGuard<RecursiveMutex> lLock(m_Mutex);
+        TLockGuard<RecursiveMutex> lLock(m_Mutex);
         GetOrCreatePool<T>().AddRef(InHandle);
     }
 
@@ -443,7 +443,7 @@ namespace Opaax
     template<CResource T>
     void ResourceManager::Release(ResourceHandle<T> InHandle) noexcept
     {
-        LockGuard<RecursiveMutex> lLock(m_Mutex);
+        TLockGuard<RecursiveMutex> lLock(m_Mutex);
         GetOrCreatePool<T>().Release(InHandle);
     }
 
@@ -451,7 +451,7 @@ namespace Opaax
     template<CResource T>
     Uint32 ResourceManager::GetLoadedCount()
     {
-        LockGuard<RecursiveMutex> lLock(m_Mutex);
+        TLockGuard<RecursiveMutex> lLock(m_Mutex);
         return GetOrCreatePool<T>().GetLoadedCount();
     }
 
@@ -459,7 +459,7 @@ namespace Opaax
     template<CResource T>
     Uint32 ResourceManager::GetLoadingCount()
     {
-        LockGuard<RecursiveMutex> lLock(m_Mutex);
+        TLockGuard<RecursiveMutex> lLock(m_Mutex);
         return GetOrCreatePool<T>().GetLoadingCount();
     }
 
@@ -467,7 +467,7 @@ namespace Opaax
     template<CResource T>
     Uint64 ResourceManager::GetBytes()
     {
-        LockGuard<RecursiveMutex> lLock(m_Mutex);
+        TLockGuard<RecursiveMutex> lLock(m_Mutex);
         return GetOrCreatePool<T>().GetBytes();
     }
 
@@ -475,7 +475,7 @@ namespace Opaax
     template<CResource T>
     EResourceState ResourceManager::GetState(ResourceHandle<T> InHandle)
     {
-        LockGuard<RecursiveMutex> lLock(m_Mutex);
+        TLockGuard<RecursiveMutex> lLock(m_Mutex);
         return GetOrCreatePool<T>().GetState(InHandle);
     }
 
@@ -569,7 +569,7 @@ namespace Opaax
         // record an edge (keeps the hard-reference graph a DAG).
         if (IsLoading(lChild.GetId()))
         {
-            OPAAX_LOG(LogResourceManager, Error, "Hard dependency cycle on '{}'", InPath)
+            OPAAX_LOG(LogResourceManager, Error, "Hard dependency cycle on '{}'", InPath);
             return ResourceRef<TSub>{ &m_Manager, ResourceHandle<TSub>{} };
         }
 

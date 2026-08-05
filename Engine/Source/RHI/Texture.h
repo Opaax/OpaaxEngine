@@ -9,7 +9,7 @@ namespace Opaax
      * @interface ITexture2D
      *
      * Backend-agnostic 2D GPU texture. Consumers (Texture2D asset, FontAsset, Renderer2D)
-     * hold a UniquePtr<ITexture2D> and never name a concrete backend type. The concrete
+     * hold a TUniquePtr<ITexture2D> and never name a concrete backend type. The concrete
      * impl is created via IRHIDevice::CreateTexture (OpenGLTexture2D today).
      *
      * GetRendererID exposes the raw backend handle (GL texture name) for the one consumer

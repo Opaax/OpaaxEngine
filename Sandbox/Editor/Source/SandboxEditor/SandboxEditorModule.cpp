@@ -38,7 +38,7 @@ void SandboxEditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& In
             Opaax::World* lWorld = InContext.Worlds.GetActiveWorld();
             if (lWorld == nullptr)
             {
-                OPAAX_LOG(LogSandboxEditorModule, Warn, "Validate Sandbox: no active world")
+                OPAAX_LOG(LogSandboxEditorModule, Warn, "Validate Sandbox: no active world");
                 return;
             }
 
@@ -59,7 +59,7 @@ void SandboxEditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& In
 
             OPAAX_LOG(LogSandboxEditorModule, Info,
                 "Validate Sandbox: world '{}' — {} entity(ies), {} without a HealthComponent",
-                lWorld->GetName().CStr(), lTotal, lMissing)
+                lWorld->GetName().CStr(), lTotal, lMissing);
         });
 
     // REAL extension (M2b): the game's own component drawer. The editor never learns what a
@@ -77,14 +77,14 @@ void SandboxEditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& In
         .OnActivate = [](Opaax::Editor::EditorContext&, const Opaax::Editor::ResourceFile& InFile)
         {
             // A wave editor is a later milestone; today activation proves the route end-to-end.
-            OPAAX_LOG(LogSandboxEditorModule, Info, "Wave definition activated: {}", InFile.RelPath.CStr())
+            OPAAX_LOG(LogSandboxEditorModule, Info, "Wave definition activated: {}", InFile.RelPath.CStr());
         }
     });
 
     // REAL extension (M2a): the game's own panel, registered through the same route the editor's native
     // Hierarchy uses. Constructed later by EditorService, once an EditorContext exists to hand it.
     InRegistrar.Panels().Register("Sandbox Panel",
-        [](Opaax::Editor::EditorContext& InContext) -> Opaax::UniquePtr<Opaax::Editor::IEditorPanel>
+        [](Opaax::Editor::EditorContext& InContext) -> Opaax::TUniquePtr<Opaax::Editor::IEditorPanel>
         {
             return Opaax::MakeUnique<SandboxPanel>(InContext);
         });

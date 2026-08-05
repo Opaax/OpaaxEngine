@@ -223,7 +223,7 @@ return StaticTypeID();                                                   \
 
         /*----------------------------- Get - Set -------------------------------*/
 
-        const TDynArray<UniquePtr<SubsystemType>>& GetSystems() const { return m_Systems; }
+        const TDynArray<TUniquePtr<SubsystemType>>& GetSystems() const { return m_Systems; }
         
         template<typename T>
         requires std::is_base_of_v<SubsystemType, T>
@@ -233,7 +233,7 @@ return StaticTypeID();                                                   \
             {
                 if (lSystem->GetTypeID() == T::StaticTypeID())
                 {
-                    // NOTE: static_cast est safe ici — on a vérifié le type via StaticTypeID().
+                    // static_cast is safe here — the type was checked via StaticTypeID().
                     return static_cast<T*>(lSystem.get());
                 }
             }
@@ -258,7 +258,7 @@ return StaticTypeID();                                                   \
         // MEMBERS
         // =============================================================================
     private:
-        TDynArray<TFunction<UniquePtr<SubsystemType>()>> m_Factories;
-        TDynArray<UniquePtr<SubsystemType>> m_Systems;
+        TDynArray<TFunction<TUniquePtr<SubsystemType>()>> m_Factories;
+        TDynArray<TUniquePtr<SubsystemType>> m_Systems;
     };
 }

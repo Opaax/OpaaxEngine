@@ -78,6 +78,6 @@ namespace Opaax
         // OpaaxString keys + OpaaxHash — uniform lookup is not on the per-vertex
         //   hot path, only per draw call (batch flush). Per-call temporary
         //   OpaaxString construction from const char* is acceptable.
-        UnorderedMap<OpaaxString, Int32, OpaaxHash> m_UniformLocationCache;
+        TUnorderedMap<OpaaxString, Int32, OpaaxHash> m_UniformLocationCache;
     };
 }

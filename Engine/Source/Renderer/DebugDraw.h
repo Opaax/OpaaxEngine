@@ -81,7 +81,7 @@ namespace Opaax
         // =============================================================================
     public:
         /*** Everything queued since the last Clear(), in submission order. */
-        const TDynArray<DebugLine>& Lines() const noexcept { return m_Lines; }
+        const TDynArray<DebugLine>& GetLines() const noexcept { return m_Lines; }
 
         /*** Drop the queue. Called once per frame by the owner, drawn or not. */
         void Clear() noexcept;

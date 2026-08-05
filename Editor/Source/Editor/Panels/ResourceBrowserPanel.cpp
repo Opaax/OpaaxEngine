@@ -147,12 +147,12 @@ namespace Opaax::Editor
             if (ScanRoot(m_Context.FileSystem, lRoot))
             {
                 OPAAX_LOG(LogResourceBrowserPanel, Info, "Resource browser scanned '{}' ({}): {} files in {} folders",
-                    lRoot.Label.ToString().CStr(), lRoot.AbsPath.CStr(), lRoot.FileCount, lRoot.FolderCount)
+                    lRoot.Label.ToString().CStr(), lRoot.AbsPath.CStr(), lRoot.FileCount, lRoot.FolderCount);
             }
             else
             {
                 OPAAX_LOG(LogResourceBrowserPanel, Warn, "Resource browser root '{}' not found: {}",
-                    lRoot.Label.ToString().CStr(), lRoot.AbsPath.CStr())
+                    lRoot.Label.ToString().CStr(), lRoot.AbsPath.CStr());
             }
         }
     }
@@ -472,7 +472,7 @@ namespace Opaax::Editor
             m_SelectedPath = lFullPath;
 
             // Discrete (a click), so no spam — and the only signal that a selection moved at all.
-            OPAAX_LOG(LogResourceBrowserPanel, Info, "Resource browser selected '{}'", lFullPath.CStr())
+            OPAAX_LOG(LogResourceBrowserPanel, Info, "Resource browser selected '{}'", lFullPath.CStr());
         }
 
         if (ImGui::IsItemHovered())
@@ -489,12 +489,12 @@ namespace Opaax::Editor
                 {
                     OPAAX_LOG(LogResourceBrowserPanel, Info, "'{}' activated — no resource type registered for '{}'",
                         InFile.Name.CStr(),
-                        InFile.Extension.IsValid() ? InFile.Extension.ToString().CStr() : "(no extension)")
+                        InFile.Extension.IsValid() ? InFile.Extension.ToString().CStr() : "(no extension)");
                 }
                 else if (!lType->OnActivate)
                 {
                     OPAAX_LOG(LogResourceBrowserPanel, Info, "'{}' activated — type '{}' registers no action",
-                        InFile.Name.CStr(), lType->Label.ToString().CStr())
+                        InFile.Name.CStr(), lType->Label.ToString().CStr());
                 }
                 else
                 {

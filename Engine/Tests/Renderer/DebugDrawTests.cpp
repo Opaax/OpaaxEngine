@@ -27,7 +27,7 @@ TEST_CASE("DebugDraw: a fresh queue is empty")
     const DebugDraw lDebug;
 
     CHECK(lDebug.IsEmpty());
-    CHECK(lDebug.Lines().empty());
+    CHECK(lDebug.GetLines().empty());
 }
 
 TEST_CASE("DebugDraw: DrawLine appends one entry carrying exactly what was submitted")
@@ -35,10 +35,10 @@ TEST_CASE("DebugDraw: DrawLine appends one entry carrying exactly what was submi
     DebugDraw lDebug;
     lDebug.DrawLine({ 1.f, 2.f }, { 3.f, 4.f }, { 0.2f, 0.4f, 0.6f, 0.8f }, 2.5f);
 
-    REQUIRE(lDebug.Lines().size() == 1u);
+    REQUIRE(lDebug.GetLines().size() == 1u);
     CHECK_FALSE(lDebug.IsEmpty());
 
-    const DebugLine& lLine = lDebug.Lines()[0];
+    const DebugLine& lLine = lDebug.GetLines()[0];
     CHECK(lLine.Start.x     == doctest::Approx(1.f));
     CHECK(lLine.Start.y     == doctest::Approx(2.f));
     CHECK(lLine.End.x       == doctest::Approx(3.f));
@@ -53,9 +53,9 @@ TEST_CASE("DebugDraw: submission order is preserved (the renderer draws them in 
     lDebug.DrawLine({ 0.f, 0.f }, { 1.f, 0.f }, { 1.f, 0.f, 0.f, 1.f });
     lDebug.DrawLine({ 0.f, 0.f }, { 2.f, 0.f }, { 0.f, 1.f, 0.f, 1.f });
 
-    REQUIRE(lDebug.Lines().size() == 2u);
-    CHECK(lDebug.Lines()[0].End.x == doctest::Approx(1.f));
-    CHECK(lDebug.Lines()[1].End.x == doctest::Approx(2.f));
+    REQUIRE(lDebug.GetLines().size() == 2u);
+    CHECK(lDebug.GetLines()[0].End.x == doctest::Approx(1.f));
+    CHECK(lDebug.GetLines()[1].End.x == doctest::Approx(2.f));
 }
 
 TEST_CASE("DebugDraw: DrawBox emits exactly 4 segments forming a CLOSED rectangle")
@@ -63,10 +63,10 @@ TEST_CASE("DebugDraw: DrawBox emits exactly 4 segments forming a CLOSED rectangl
     DebugDraw lDebug;
     lDebug.DrawBox({ 10.f, 20.f }, { 4.f, 6.f }, { 1.f, 1.f, 1.f, 1.f }, 1.f);
 
-    REQUIRE(lDebug.Lines().size() == 4u);
+    REQUIRE(lDebug.GetLines().size() == 4u);
 
     // Centre (10,20), half-extent (2,3) -> corners x in [8,12], y in [17,23].
-    for (const DebugLine& lLine : lDebug.Lines())
+    for (const DebugLine& lLine : lDebug.GetLines())
     {
         CHECK(std::fabs(std::fabs(lLine.Start.x - 10.f) - 2.f) < kEps);
         CHECK(std::fabs(std::fabs(lLine.Start.y - 20.f) - 3.f) < kEps);
@@ -74,7 +74,7 @@ TEST_CASE("DebugDraw: DrawBox emits exactly 4 segments forming a CLOSED rectangl
 
     // Closed loop: every segment starts where the previous one ended, and the last closes onto
     // the first. This is what makes the outline a rectangle rather than four stray sticks.
-    const TDynArray<DebugLine>& lLines = lDebug.Lines();
+    const TDynArray<DebugLine>& lLines = lDebug.GetLines();
     for (size_t i = 0; i < lLines.size(); ++i)
     {
         const DebugLine& lNext = lLines[(i + 1) % lLines.size()];
@@ -87,16 +87,16 @@ TEST_CASE("DebugDraw: Clear drops the queue (per-frame contract — nothing surv
 {
     DebugDraw lDebug;
     lDebug.DrawBox({ 0.f, 0.f }, { 1.f, 1.f }, { 1.f, 1.f, 1.f, 1.f });
-    REQUIRE(lDebug.Lines().size() == 4u);
+    REQUIRE(lDebug.GetLines().size() == 4u);
 
     lDebug.Clear();
 
     CHECK(lDebug.IsEmpty());
-    CHECK(lDebug.Lines().empty());
+    CHECK(lDebug.GetLines().empty());
 
     // Reusable after a drain — the renderer clears every frame and producers refill it.
     lDebug.DrawLine({ 0.f, 0.f }, { 1.f, 1.f }, { 1.f, 1.f, 1.f, 1.f });
-    CHECK(lDebug.Lines().size() == 1u);
+    CHECK(lDebug.GetLines().size() == 1u);
 }
 
 // =============================================================================

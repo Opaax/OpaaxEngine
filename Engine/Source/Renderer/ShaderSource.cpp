@@ -50,7 +50,7 @@ namespace Opaax
         ShaderDesc lDesc = ParseShaderStages(InSource, InDebugName);
         if (lDesc.VertexSrc.IsEmpty() || lDesc.FragmentSrc.IsEmpty())
         {
-            OPAAX_LOG(LogShaderSource, Error, "'{}' missing a vertex or fragment '#type' section", InDebugName.CStr())
+            OPAAX_LOG(LogShaderSource, Error, "'{}' missing a vertex or fragment '#type' section", InDebugName.CStr());
             return ShaderDesc{};
         }
 

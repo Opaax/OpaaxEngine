@@ -7,7 +7,7 @@
 
 namespace Opaax
 {
-    OPAAX_LOG_CATEGORY(OpenGLFramebuffer)
+    OPAAX_LOG_CATEGORY(OpenGLFramebuffer);
     
     /**
      * @class OpenGLFramebuffer

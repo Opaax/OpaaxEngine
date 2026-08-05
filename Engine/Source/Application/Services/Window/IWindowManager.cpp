@@ -30,7 +30,7 @@ namespace Opaax
         if (InName == "Borderless") { return EWindowMode::Borderless; }
         if (InName == "Fullscreen") { return EWindowMode::Fullscreen; }
 
-        OPAAX_LOG(LogWindowManager, Warn, "Unknown window mode '{}' — falling back to Windowed.", InName.CStr())
+        OPAAX_LOG(LogWindowManager, Warn, "Unknown window mode '{}' — falling back to Windowed.", InName.CStr());
         return EWindowMode::Windowed;
     }
 
@@ -80,7 +80,7 @@ namespace Opaax
     //         return m_Window.get();
     //     }
     //
-    //     const EngineConfigData& lData = OpaaxApplication::GetAppService<IConfigSystem>().Get<Config_Engine>().Data();
+    //     const EngineConfigData& lData = OpaaxApplication::GetAppService<IConfigSystem>().Get<Config_Engine>().GetData();
     //
     //     m_Window.reset(Window::Create(MakeWindowProps(lData)));
     //

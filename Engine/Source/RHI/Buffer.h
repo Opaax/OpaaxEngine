@@ -142,13 +142,13 @@ namespace Opaax
  
         //------------------------------------------------------------------------------
         
-        virtual void AddVertexBuffer(UniquePtr<IVertexBuffer> InVBO) = 0;
-        virtual void SetIndexBuffer(UniquePtr<IIndexBuffer>   InIBO) = 0;
+        virtual void AddVertexBuffer(TUniquePtr<IVertexBuffer> InVBO) = 0;
+        virtual void SetIndexBuffer(TUniquePtr<IIndexBuffer>   InIBO) = 0;
 
         //------------------------------------------------------------------------------
         //Get - Set
         
-        virtual const TDynArray<UniquePtr<IVertexBuffer>>& GetVertexBuffers() const = 0;
+        virtual const TDynArray<TUniquePtr<IVertexBuffer>>& GetVertexBuffers() const = 0;
         virtual const IIndexBuffer*                        GetIndexBuffer()   const = 0;
  
     };

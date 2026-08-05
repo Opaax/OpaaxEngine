@@ -98,7 +98,7 @@ set(OPAAX_TEST_SOURCES
   so engine code under test can log (e.g. a missing-file asset ctor) without a null-logger crash and without
   cluttering CTest output. Just write `TEST_CASE`s.
 - **Naming matches the engine:** `l`-prefixed locals, `In`-prefixed params, mirror the surrounding style.
-- Use the **engine aliases** (`TDynArray`, `UnorderedMap`, ...) not raw `std::`; use **`OPAAX_ID("Name")`** for
+- Use the **engine aliases** (`TDynArray`, `TUnorderedMap`, ...) not raw `std::`; use **`OPAAX_ID("Name")`** for
   string IDs.
 - **Floats:** always `doctest::Approx(expected)` (optionally `.epsilon(0.001)`), never `==`.
 - **ECS tests** build a headless `World` on the stack — `World lWorld; auto e = lWorld.CreateEntity("x");

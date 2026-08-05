@@ -10,7 +10,7 @@
 #include "Editor/UI/IEditorUIBackend.h"
 #include "Editor/Panels/ViewportPanel.h"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
-#include "Core/OpaaxTypes.h"   // UniquePtr
+#include "Core/OpaaxTypes.h"   // TUniquePtr
 
 namespace Opaax::Editor
 {
@@ -198,25 +198,25 @@ namespace Opaax::Editor
         // that outlives this one. Null when no edited project was declared.
         const EditorPaths*          m_EditorPaths = nullptr;
 
-        UniquePtr<EditorSelection>  m_Selection;       // M2a: the single selection; EditorContext.Selection refs it
-        UniquePtr<PlayInEditor>     m_PIE;             // M4 S5: the PIE state machine; EditorContext.PIE refs it
-        UniquePtr<InputRoute>       m_InputRoute;      // M-Input S2: is the engine being fed; EditorContext.InputRoute refs it
-        UniquePtr<EditorMapDocument> m_MapDocument;    // M5 S5: the open .opaaxmap; EditorContext.MapDocument refs it
+        TUniquePtr<EditorSelection>  m_Selection;       // M2a: the single selection; EditorContext.Selection refs it
+        TUniquePtr<PlayInEditor>     m_PIE;             // M4 S5: the PIE state machine; EditorContext.PIE refs it
+        TUniquePtr<InputRoute>       m_InputRoute;      // M-Input S2: is the engine being fed; EditorContext.InputRoute refs it
+        TUniquePtr<EditorMapDocument> m_MapDocument;    // M5 S5: the open .opaaxmap; EditorContext.MapDocument refs it
 
         // M5 S5: the derived dirty answer, cached. EditorMapDocument::IsDirty is a full capture +
         // serialize and stays pure (so it is testable and cannot go stale on its own); the
         // THROTTLING lives here, where there is a frame clock to throttle against.
         double m_LastDirtyCheck = -1.0;
         bool   m_CachedDirty    = false;
-        UniquePtr<EditorContext>    m_Context;
-        UniquePtr<IEditorUIBackend> m_UIBackend;
-        UniquePtr<ViewportPanel>    m_ViewportPanel;   // M1: world-to-texture panel; owns the offscreen FBO
+        TUniquePtr<EditorContext>    m_Context;
+        TUniquePtr<IEditorUIBackend> m_UIBackend;
+        TUniquePtr<ViewportPanel>    m_ViewportPanel;   // M1: world-to-texture panel; owns the offscreen FBO
 
         // M2a: every registered panel (native + game), built from m_Extensions.Panels() in registration
         // order. The Viewport stays a NAMED member above, deliberately outside this collection — it drives
         // IEngine::SetPrimaryRenderTarget, so its construction/teardown order must not depend on what a
         // game module registers (overview §3.3).
-        TDynArray<UniquePtr<IEditorPanel>> m_Panels;
+        TDynArray<TUniquePtr<IEditorPanel>> m_Panels;
 
         EditorExtensionRegistrar    m_Extensions;
 

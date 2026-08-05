@@ -35,13 +35,13 @@ namespace Opaax
         void Bind() const override;
         void Unbind() const override;
 
-        void AddVertexBuffer(UniquePtr<IVertexBuffer> InVBO)    override;
-        void SetIndexBuffer(UniquePtr<IIndexBuffer> InIBO)      override;
+        void AddVertexBuffer(TUniquePtr<IVertexBuffer> InVBO)    override;
+        void SetIndexBuffer(TUniquePtr<IIndexBuffer> InIBO)      override;
 
         //------------------------------------------------------------------------------
         //Get - Set
         
-        const TDynArray<UniquePtr<IVertexBuffer>>&  GetVertexBuffers()      const override { return m_VertexBuffers; }
+        const TDynArray<TUniquePtr<IVertexBuffer>>&  GetVertexBuffers()      const override { return m_VertexBuffers; }
         const IIndexBuffer*                         GetIndexBuffer()        const override { return m_IndexBuffer.get(); }
         //~Begin IVertexArray interface
 
@@ -52,7 +52,7 @@ namespace Opaax
         Uint32 m_RendererID = 0;
         Uint32 m_VBOIndex   = 0; // tracks attribute index across multiple VBOs
 
-        TDynArray<UniquePtr<IVertexBuffer>> m_VertexBuffers;
-        UniquePtr<IIndexBuffer>             m_IndexBuffer;
+        TDynArray<TUniquePtr<IVertexBuffer>> m_VertexBuffers;
+        TUniquePtr<IIndexBuffer>             m_IndexBuffer;
     };
 }

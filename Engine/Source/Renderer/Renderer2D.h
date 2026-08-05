@@ -45,7 +45,7 @@ namespace Opaax
         // CTORS - DTORS
         // =============================================================================
     public:
-        // Out-of-line — the owned UniquePtr<Renderer2DData> holds a forward-declared type.
+        // Out-of-line — the owned TUniquePtr<Renderer2DData> holds a forward-declared type.
         Renderer2D();
         ~Renderer2D();
 
@@ -116,7 +116,7 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        UniquePtr<Renderer2DData> m_Data; // pImpl — GPU + batch state (defined in the .cpp)
+        TUniquePtr<Renderer2DData> m_Data; // pImpl — GPU + batch state (defined in the .cpp)
     };
 
 } // namespace Opaax

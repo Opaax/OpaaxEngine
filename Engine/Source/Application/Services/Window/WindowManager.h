@@ -42,6 +42,6 @@ namespace Opaax{
         // Members
         // =============================================================================
     private:
-        UniquePtr<Window> m_Window;
+        TUniquePtr<Window> m_Window;
     };
 }

@@ -89,7 +89,7 @@ namespace Opaax
             InList.push_back(InValue);
         }
 
-        static void RemoveFrom(UnorderedMap<Uint32, TDynArray<Uint32>>& InMap, Uint32 InKey, Uint32 InValue)
+        static void RemoveFrom(TUnorderedMap<Uint32, TDynArray<Uint32>>& InMap, Uint32 InKey, Uint32 InValue)
         {
             const auto lIt = InMap.find(InKey);
             if (lIt == InMap.end())
@@ -109,7 +109,7 @@ namespace Opaax
             }
         }
 
-        static const TDynArray<Uint32>* Find(const UnorderedMap<Uint32, TDynArray<Uint32>>& InMap, Uint32 InKey)
+        static const TDynArray<Uint32>* Find(const TUnorderedMap<Uint32, TDynArray<Uint32>>& InMap, Uint32 InKey)
         {
             const auto lIt = InMap.find(InKey);
             return (lIt != InMap.end()) ? &lIt->second : nullptr;
@@ -119,7 +119,7 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        UnorderedMap<Uint32, TDynArray<Uint32>> m_Forward; // parent -> children
-        UnorderedMap<Uint32, TDynArray<Uint32>> m_Reverse; // child  -> parents
+        TUnorderedMap<Uint32, TDynArray<Uint32>> m_Forward; // parent -> children
+        TUnorderedMap<Uint32, TDynArray<Uint32>> m_Reverse; // child  -> parents
     };
 }

@@ -23,14 +23,14 @@ namespace Opaax
             void SaveAll() override {}
 
         protected:
-            IConfig& FindOrCreate(ConfigTypeID InId, const TFunction<UniquePtr<IConfig>()>& InFactory) override
+            IConfig& FindOrCreate(ConfigTypeID InId, const TFunction<TUniquePtr<IConfig>()>& InFactory) override
             {
                 if (const auto lIt = m_Configs.find(InId); lIt != m_Configs.end())
                 {
                     return *lIt->second;
                 }
 
-                UniquePtr<IConfig> lConfig = InFactory(); // defaults, no Load (no project layout)
+                TUniquePtr<IConfig> lConfig = InFactory(); // defaults, no Load (no project layout)
                 IConfig&           lRef    = *lConfig;
                 m_Configs[InId] = std::move(lConfig);
                 return lRef;
@@ -39,7 +39,7 @@ namespace Opaax
             bool SaveConfig(ConfigTypeID) override { return false; }
 
         private:
-            UnorderedMap<ConfigTypeID, UniquePtr<IConfig>> m_Configs;
+            TUnorderedMap<ConfigTypeID, TUniquePtr<IConfig>> m_Configs;
         };
     }
 
@@ -77,19 +77,19 @@ namespace Opaax
         return Utf8::FromFsPath(Utf8::ToFsPath(m_ConfigsDir) / InFileName);
     }
 
-    IConfig& ConfigSystem::FindOrCreate(ConfigTypeID InId, const TFunction<UniquePtr<IConfig>()>& InFactory)
+    IConfig& ConfigSystem::FindOrCreate(ConfigTypeID InId, const TFunction<TUniquePtr<IConfig>()>& InFactory)
     {
         if (const auto lIt = m_Configs.find(InId); lIt != m_Configs.end())
         {
             return *lIt->second;
         }
 
-        UniquePtr<IConfig> lConfig = InFactory();
+        TUniquePtr<IConfig> lConfig = InFactory();
         IConfig&           lRef    = *lConfig;
 
         // IConfig::Load loads the file, or generates the default file if it is missing.
         lRef.Load(JoinConfigPath(lRef.FileName()));
-        OPAAX_LOG(LogConfigSystem, Info, "Config [{}] Created", lRef.FileName())
+        OPAAX_LOG(LogConfigSystem, Info, "Config [{}] Created", lRef.FileName());
 
         m_Configs[InId] = std::move(lConfig);
         

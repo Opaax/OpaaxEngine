@@ -73,7 +73,7 @@ namespace Opaax
         GLFWwindow* m_Window;
 
         // Backend graphics context — owns make-current, glad load, vsync, present.
-        UniquePtr<IGraphicsContext> m_Context;
+        TUniquePtr<IGraphicsContext> m_Context;
 
         struct WindowData
         {

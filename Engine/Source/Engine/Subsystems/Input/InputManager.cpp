@@ -9,13 +9,13 @@ namespace Opaax
     {
         ResetState();
 
-        OPAAX_LOG(LogInputManager, Info, "InputManager started (keyboard + mouse; fed by the application)")
+        OPAAX_LOG(LogInputManager, Info, "InputManager started (keyboard + mouse; fed by the application)");
         return true;
     }
 
     void InputManager::Shutdown()
     {
-        OPAAX_LOG(LogInputManager, Info, "InputManager shutdown")
+        OPAAX_LOG(LogInputManager, Info, "InputManager shutdown");
     }
 
     // =========================================================================
@@ -32,7 +32,7 @@ namespace Opaax
                 m_bWarnedOutOfRange = true;
                 OPAAX_LOG(LogInputManager, Warn,
                           "Key code {} is outside the keyboard/mouse range — ignored (gamepad has no feed yet). Warned once.",
-                          lRaw)
+                          lRaw);
             }
 
             return KEY_STATE_COUNT;
@@ -119,7 +119,7 @@ namespace Opaax
             if (!m_bLoggedFirstKey)
             {
                 m_bLoggedFirstKey = true;
-                OPAAX_LOG(LogInputManager, Info, "First key reached the engine (code {}) — the input chain is live", lIndex)
+                OPAAX_LOG(LogInputManager, Info, "First key reached the engine (code {}) — the input chain is live", lIndex);
             }
         }
     }

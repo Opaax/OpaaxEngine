@@ -165,7 +165,7 @@ namespace Opaax
         void           PublishImpl(Uint64 InTypeKey, const void* InPayload);
         void           EnqueueImpl(TFunction<void()> InDispatch);
 
-        UnorderedMap<Uint64, TDynArray<HandlerEntry>> m_Handlers;
+        TUnorderedMap<Uint64, TDynArray<HandlerEntry>> m_Handlers;
         TDynArray<TFunction<void()>>                  m_Queue;
     };
 }

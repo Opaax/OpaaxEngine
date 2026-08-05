@@ -1,7 +1,7 @@
 #pragma once
 
 #include "IAppService.h"
-#include "Core/OpaaxTypes.h"   // UniquePtr (CreateFramebuffer's return)
+#include "Core/OpaaxTypes.h"   // TUniquePtr (CreateFramebuffer's return)
 #include "Application/WorldSpec.h"   // WorldSpec (by value across the seam)
 
 namespace Opaax
@@ -72,7 +72,7 @@ namespace Opaax
          * @param InSpec 
          * @return Valid only after Startup; returns nullptr before it, or if the device is gone.
          */
-        virtual UniquePtr<IFramebuffer> CreateFramebuffer(const FramebufferSpec& InSpec) = 0;
+        virtual TUniquePtr<IFramebuffer> CreateFramebuffer(const FramebufferSpec& InSpec) = 0;
 
         /**
          * Called once per rendered frame.

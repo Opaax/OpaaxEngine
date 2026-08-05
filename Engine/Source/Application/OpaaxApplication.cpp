@@ -110,7 +110,7 @@ IPaths& OpaaxApplication::BootPaths()
     return m_Services.ProvideInstance<IPaths>(CreatePaths(Platform(), m_Argc, m_Argv));
 }
 
-UniquePtr<IPaths> OpaaxApplication::CreatePaths(const IPlatform& InPlatform, int InArgc, char** InArgv)
+TUniquePtr<IPaths> OpaaxApplication::CreatePaths(const IPlatform& InPlatform, int InArgc, char** InArgv)
 {
     return MakeUnique<Opaax::Paths>(InPlatform, InArgc, InArgv);
 }
@@ -149,7 +149,7 @@ void OpaaxApplication::PreRegisterConfig(IConfigSystem& ConfigSystem)
 {
     if (ConfigSystem.IsNull())
     {
-        OPAAX_APP_LOG(Error, "Pre register config with a null config system")
+        OPAAX_APP_LOG(Error, "Pre register config with a null config system");
         return;
     }
     
@@ -278,7 +278,7 @@ void OpaaxApplication::OnEvent(Event& InEvent)
 
 void OpaaxApplication::ShutdownApplication()
 {
-    OPAAX_APP_LOG(Trace, "Shutdown Application")
+    OPAAX_APP_LOG(Trace, "Shutdown Application");
     
     m_Services.ShutdownAll();
 
@@ -344,7 +344,7 @@ void OpaaxApplication::HandleApplicationEvent(EventDispatcher& Dispatcher, Event
 {
     Dispatcher.Dispatch<WindowCloseEvent>([this](WindowCloseEvent&)
     {
-        OPAAX_APP_LOG(Info, "WindowCloseEvent - requesting shutdown")
+        OPAAX_APP_LOG(Info, "WindowCloseEvent - requesting shutdown");
         bIsRunning = false;
         return true;
     });

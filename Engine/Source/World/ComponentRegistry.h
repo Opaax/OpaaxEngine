@@ -124,7 +124,7 @@ namespace Opaax
         //
         // NOTE: these are not merely good hygiene here, they are REQUIRED by OPAAX_API.
         // dllexport instantiates every implicitly-declared member of the class, including the
-        // copy-assignment operator — which then tries to copy a TDynArray<UniquePtr<...>> and
+        // copy-assignment operator — which then tries to copy a TDynArray<TUniquePtr<...>> and
         // fails to compile (C2280) even though nothing ever copies a registry. Declaring them
         // deleted stops the implicit generation. Same shape as World.
         ComponentRegistry(const ComponentRegistry&)            = delete;
@@ -170,7 +170,7 @@ namespace Opaax
         template<typename TFunc>
         void ForEach(TFunc&& InFunc) const
         {
-            for (const UniquePtr<IComponentEntry>& lEntry : m_Entries)
+            for (const TUniquePtr<IComponentEntry>& lEntry : m_Entries)
             {
                 InFunc(static_cast<const IComponentEntry&>(*lEntry));
             }
@@ -188,13 +188,13 @@ namespace Opaax
         // =========================================================================
     private:
         /** Out-of-line sink for Register<T> — see the NOTE there. Takes ownership. */
-        bool AddEntry(UniquePtr<IComponentEntry> InEntry, entt::id_type InTypeId);
+        bool AddEntry(TUniquePtr<IComponentEntry> InEntry, entt::id_type InTypeId);
 
         // =========================================================================
         // Members
         // =========================================================================
     private:
-        TDynArray<UniquePtr<IComponentEntry>> m_Entries;
+        TDynArray<TUniquePtr<IComponentEntry>> m_Entries;
         bool                                  m_bSealed = false;
     };
 }

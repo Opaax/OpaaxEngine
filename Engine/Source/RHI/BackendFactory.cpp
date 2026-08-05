@@ -58,7 +58,7 @@ namespace Opaax
     // =============================================================================
     // IGraphicsContext factory + window hints (OpenGL only)
     // =============================================================================
-    UniquePtr<IGraphicsContext> IGraphicsContext::Create(EBackend InBackend, void* InNativeWindow)
+    TUniquePtr<IGraphicsContext> IGraphicsContext::Create(EBackend InBackend, void* InNativeWindow)
     {
         switch (InBackend)
         {

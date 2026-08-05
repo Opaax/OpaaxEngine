@@ -29,7 +29,7 @@ namespace Opaax
         EngineSubsystemBase()          = default;
         ~EngineSubsystemBase() override = default;
 
-        // Heap-owned via UniquePtr in the manager — never copied or moved.
+        // Heap-owned via TUniquePtr in the manager — never copied or moved.
         EngineSubsystemBase(const EngineSubsystemBase&)            = delete;
         EngineSubsystemBase& operator=(const EngineSubsystemBase&) = delete;
         EngineSubsystemBase(EngineSubsystemBase&&)                 = delete;

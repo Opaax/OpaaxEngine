@@ -70,6 +70,6 @@ namespace Opaax
         // Members
         // =========================================================================
     private:
-        UnorderedMap<Guid, EntityID> m_Map;
+        TUnorderedMap<Guid, EntityID> m_Map;
     };
 }

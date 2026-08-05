@@ -70,9 +70,9 @@ namespace Opaax
 
         // ==== Getter =========================================================================
         /***/
-        const TData& Data() const { return m_Data; }
+        const TData& GetData() const { return m_Data; }
         /***/
-        TData&       Data()       { return m_Data; }
+        TData&       GetData()       { return m_Data; }
 
         // =============================================================================
         // Override

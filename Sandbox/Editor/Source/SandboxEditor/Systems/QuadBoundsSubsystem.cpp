@@ -23,7 +23,7 @@ bool QuadBoundsSubsystem::ShouldCreate(const World& InWorld)
 
 bool QuadBoundsSubsystem::Startup()
 {
-    OPAAX_LOG(LogQuadBounds, Info, "QuadBounds started (Edit world) — drawing quad outlines")
+    OPAAX_LOG(LogQuadBounds, Info, "QuadBounds started (Edit world) — drawing quad outlines");
     return true;
 }
 
@@ -47,7 +47,7 @@ void QuadBoundsSubsystem::Update(double /*InDeltaTime*/)
     if (!m_bLoggedFirstDraw && lDrawn > 0)
     {
         m_bLoggedFirstDraw = true;
-        OPAAX_LOG(LogQuadBounds, Info, "QuadBounds drawing {} outline(s) per frame", lDrawn)
+        OPAAX_LOG(LogQuadBounds, Info, "QuadBounds drawing {} outline(s) per frame", lDrawn);
     }
 }
 
@@ -56,5 +56,5 @@ void QuadBoundsSubsystem::Shutdown()
     // Nothing to release: immediate mode means there is no retained geometry to flush. That
     // is F4's payoff — "stop drawing" is just "stop calling", which cannot disturb another
     // producer's lines (the Unreal FlushPersistentDebugLines problem, absent by construction).
-    OPAAX_LOG(LogQuadBounds, Info, "QuadBounds shutdown")
+    OPAAX_LOG(LogQuadBounds, Info, "QuadBounds shutdown");
 }

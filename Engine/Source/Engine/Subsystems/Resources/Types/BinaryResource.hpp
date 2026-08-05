@@ -28,7 +28,7 @@ namespace Opaax
             BinaryResource lResource;
             if (!FileIO::ReadAllBytes(OpaaxString(InPath), lResource.Bytes))
             {
-                OPAAX_ENGINE_LOG(Error, "BinaryResource: cannot read '{}'", InPath)
+                OPAAX_ENGINE_LOG(Error, "BinaryResource: cannot read '{}'", InPath);
                 return std::nullopt;
             }
 

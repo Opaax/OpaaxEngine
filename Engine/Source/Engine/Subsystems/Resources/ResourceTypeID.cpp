@@ -29,7 +29,7 @@ namespace Opaax
         struct TypeRegistry
         {
             TDynArray<TypeEntry>         Entries;      // index == dense ResourceTypeID
-            UnorderedMap<Uint64, Uint32> HashToIndex;
+            TUnorderedMap<Uint64, Uint32> HashToIndex;
             Mutex                        Lock;         // lazy registration may come off worker threads (M2)
         };
 
@@ -43,7 +43,7 @@ namespace Opaax
     Uint32 InternResourceType(Uint64 InHash, std::string_view InName)
     {
         TypeRegistry&    lReg = GetRegistry();
-        LockGuard<Mutex> lGuard(lReg.Lock);
+        TLockGuard<Mutex> lGuard(lReg.Lock);
 
         if (const auto lIt = lReg.HashToIndex.find(InHash); lIt != lReg.HashToIndex.end())
         {
@@ -53,7 +53,7 @@ namespace Opaax
                 // Two distinct type signatures collided on one 64-bit hash — they would
                 // share a pool index, i.e. one pool reinterpreting the other's payload.
                 // Fatal in ALL builds by design (review ruling C2): fail loud, never corrupt.
-                OPAAX_LOG(LogResourceType, Critical, "ResourceTypeID hash collision (hash {}): '{}' vs '{}' — aborting", InHash, lExisting.Name, std::string(InName))
+                OPAAX_LOG(LogResourceType, Critical, "ResourceTypeID hash collision (hash {}): '{}' vs '{}' — aborting", InHash, lExisting.Name, std::string(InName));
                 OPAAX_DEBUGBREAK();
                 std::abort();
             }
@@ -69,7 +69,7 @@ namespace Opaax
     Uint32 GetResourceTypeCount()
     {
         TypeRegistry&    lReg = GetRegistry();
-        LockGuard<Mutex> lGuard(lReg.Lock);
+        TLockGuard<Mutex> lGuard(lReg.Lock);
         return static_cast<Uint32>(lReg.Entries.size());
     }
 }

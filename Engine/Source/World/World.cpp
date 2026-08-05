@@ -16,7 +16,7 @@ namespace Opaax
         // The mode is in the log because it is otherwise invisible: an Edit and a Play world
         // differ only by which subsystems they get (S3), so an ordered boot log is the only
         // place the distinction shows up before PIE exists.
-        OPAAX_LOG(LogWorld, Info, "World '{}' created ({})", m_Name.CStr(), ToString(m_Mode))
+        OPAAX_LOG(LogWorld, Info, "World '{}' created ({})", m_Name.CStr(), ToString(m_Mode));
     }
 
     World::~World()
@@ -25,7 +25,7 @@ namespace Opaax
         // subsystem might reach were all still alive. Idempotent, so the normal path costs nothing.
         ShutdownSubsystems();
 
-        OPAAX_LOG(LogWorld, Info, "World '{}' destroyed ({} entity(ies))", m_Name.CStr(), m_EntityCount)
+        OPAAX_LOG(LogWorld, Info, "World '{}' destroyed ({} entity(ies))", m_Name.CStr(), m_EntityCount);
     }
 
     // =========================================================================
@@ -66,7 +66,7 @@ namespace Opaax
 
     void World::LogEntityCount()
     {
-        OPAAX_LOG(LogWorld, Info, "Entity count in world '{}' = {}", m_Name.CStr(), m_EntityCount)
+        OPAAX_LOG(LogWorld, Info, "Entity count in world '{}' = {}", m_Name.CStr(), m_EntityCount);
     }
 
     // =========================================================================
@@ -81,7 +81,7 @@ namespace Opaax
     {
         if (!InGuid.IsValid())
         {
-            OPAAX_LOG(LogWorld, Error, "CreateEntityWithGuid — refused an invalid Guid for '{}'", InName.CStr())
+            OPAAX_LOG(LogWorld, Error, "CreateEntityWithGuid — refused an invalid Guid for '{}'", InName.CStr());
             return Entity{};
         }
 
@@ -90,14 +90,14 @@ namespace Opaax
         if (m_Guids.Contains(InGuid))
         {
             OPAAX_LOG(LogWorld, Error, "CreateEntityWithGuid — '{}' refused: that Guid is already live in world '{}'",
-                      InName.CStr(), m_Name.CStr())
+                      InName.CStr(), m_Name.CStr());
             return Entity{};
         }
 
         const EntityID lEnt  = m_Registry.create();
         EntityMeta&    lMeta = m_Registry.emplace<EntityMeta>(lEnt, EntityMeta{ InGuid, Move(InName), InOwnerMap });
         m_Guids.Register(lMeta.Id, lEnt);
-        OPAAX_LOG(LogWorld, Trace, "CreateEntity '{}' in world '{}'", lMeta.Name.CStr(), m_Name.CStr())
+        OPAAX_LOG(LogWorld, Trace, "CreateEntity '{}' in world '{}'", lMeta.Name.CStr(), m_Name.CStr());
 
         AddEntityCount();
 
@@ -116,7 +116,7 @@ namespace Opaax
     {
         if (!m_Registry.valid(InEntity))
         {
-            OPAAX_LOG(LogWorld, Warn, "DestroyEntity — invalid entity ignored")
+            OPAAX_LOG(LogWorld, Warn, "DestroyEntity — invalid entity ignored");
             return;
         }
         
@@ -124,11 +124,11 @@ namespace Opaax
 
         if (lMeta != nullptr)
         {
-            OPAAX_LOG(LogWorld, Trace, "DestroyEntity — {}", lMeta->Name.CStr())
+            OPAAX_LOG(LogWorld, Trace, "DestroyEntity — {}", lMeta->Name.CStr());
             m_Guids.Unregister(lMeta->Id);
         }else
         {
-            OPAAX_LOG(LogWorld, Trace, "DestroyEntity — Unknown Entity destroy")
+            OPAAX_LOG(LogWorld, Trace, "DestroyEntity — Unknown Entity destroy");
         }
 
         m_Registry.destroy(InEntity);
@@ -143,7 +143,7 @@ namespace Opaax
 
     void World::OnActive()
     {
-        OPAAX_LOG(LogWorld, Info, "World '{}' activated", m_Name.CStr())
+        OPAAX_LOG(LogWorld, Info, "World '{}' activated", m_Name.CStr());
     }
     
     void World::OnDesactive()
@@ -157,6 +157,6 @@ namespace Opaax
         m_Guids.Clear();
         m_EntityCount = 0;
 
-        OPAAX_LOG(LogWorld, Info, "World '{}' cleared", m_Name.CStr())
+        OPAAX_LOG(LogWorld, Info, "World '{}' cleared", m_Name.CStr());
     }
 }

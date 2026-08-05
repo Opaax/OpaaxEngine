@@ -22,7 +22,7 @@ namespace Opaax
     //   creates resources directly. One object carries both resource creation and the frame
     //   lifecycle; present lives HERE (Present -> the surface swap), never in a window class.
     //
-    //   Resources are our existing UniquePtr<I*> objects (the handle/pool DOD model is a
+    //   Resources are our existing TUniquePtr<I*> objects (the handle/pool DOD model is a
     //   later addition). Frame recording still goes through ICommandBuffer.
     // =============================================================================
     class OPAAX_API IRHIDevice
@@ -47,21 +47,21 @@ namespace Opaax
         // Resource creation — plain desc in, owning resource out.
         // =============================================================================
     public:
-        virtual UniquePtr<IVertexArray>   CreateVertexArray()                                           = 0;
-        virtual UniquePtr<IVertexBuffer>  CreateVertexBuffer(Uint32 InSizeBytes)                        = 0;
-        virtual UniquePtr<IIndexBuffer>   CreateIndexBuffer(const Uint32* InIndices, Uint32 InCount)    = 0;
-        virtual UniquePtr<IUniformBuffer> CreateUniformBuffer(Uint32 InSizeBytes, Uint32 InBinding)     = 0;
-        virtual UniquePtr<ITexture2D>     CreateTexture(Uint32 InWidth, Uint32 InHeight)                = 0;
-        virtual UniquePtr<IShader>        CreateShader(const ShaderDesc& InDesc)                        = 0;
-        virtual UniquePtr<IPipeline>      CreatePipeline(const PipelineDesc& InDesc)                    = 0;
-        virtual UniquePtr<IBindGroup>     CreateBindGroup(const BindGroupLayout& InLayout)              = 0;
+        virtual TUniquePtr<IVertexArray>   CreateVertexArray()                                           = 0;
+        virtual TUniquePtr<IVertexBuffer>  CreateVertexBuffer(Uint32 InSizeBytes)                        = 0;
+        virtual TUniquePtr<IIndexBuffer>   CreateIndexBuffer(const Uint32* InIndices, Uint32 InCount)    = 0;
+        virtual TUniquePtr<IUniformBuffer> CreateUniformBuffer(Uint32 InSizeBytes, Uint32 InBinding)     = 0;
+        virtual TUniquePtr<ITexture2D>     CreateTexture(Uint32 InWidth, Uint32 InHeight)                = 0;
+        virtual TUniquePtr<IShader>        CreateShader(const ShaderDesc& InDesc)                        = 0;
+        virtual TUniquePtr<IPipeline>      CreatePipeline(const PipelineDesc& InDesc)                    = 0;
+        virtual TUniquePtr<IBindGroup>     CreateBindGroup(const BindGroupLayout& InLayout)              = 0;
 
         /**
          * An offscreen render target's backing store. Device-owned like every other GPU resource
          * (F2a) — there is no free IFramebuffer::Create. The caller owns the returned framebuffer
          * and must release it while the GPU context is still alive.
          */
-        virtual UniquePtr<IFramebuffer>   CreateFramebuffer(const FramebufferSpec& InSpec)             = 0;
+        virtual TUniquePtr<IFramebuffer>   CreateFramebuffer(const FramebufferSpec& InSpec)             = 0;
 
         // =============================================================================
         // Frame

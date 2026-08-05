@@ -29,7 +29,7 @@ namespace Opaax
         const OpaaxString lText = FileIO::ReadAllText(InAbsPath);
         if (lText.IsEmpty())
         {
-            OPAAX_LOG(LogLevelFile, Error, "Level '{}' is missing, empty or unreadable", InAbsPath.CStr())
+            OPAAX_LOG(LogLevelFile, Error, "Level '{}' is missing, empty or unreadable", InAbsPath.CStr());
             return false;
         }
 
@@ -37,7 +37,7 @@ namespace Opaax
         const nlohmann::json lJson = nlohmann::json::parse(lText.CStr(), nullptr, false);
         if (lJson.is_discarded() || !lJson.is_object())
         {
-            OPAAX_LOG(LogLevelFile, Error, "Level '{}' is not a json object", InAbsPath.CStr())
+            OPAAX_LOG(LogLevelFile, Error, "Level '{}' is not a json object", InAbsPath.CStr());
             return false;
         }
 
@@ -50,7 +50,7 @@ namespace Opaax
         {
             OPAAX_LOG(LogLevelFile, Error,
                       "Level '{}' is format version {}, newer than this build reads ({}) — refusing",
-                      InAbsPath.CStr(), lVersion, LEVEL_FORMAT_VERSION)
+                      InAbsPath.CStr(), lVersion, LEVEL_FORMAT_VERSION);
             return false;
         }
 
@@ -88,7 +88,7 @@ namespace Opaax
         }
 
         OPAAX_LOG(LogLevelFile, Info, "Loaded level '{}' as '{}': {} map(s)",
-                  InAbsPath.CStr(), lParsed.Name.CStr(), lParsed.MapCount())
+                  InAbsPath.CStr(), lParsed.Name.CStr(), lParsed.MapCount());
 
         OutData = Move(lParsed);
         return true;

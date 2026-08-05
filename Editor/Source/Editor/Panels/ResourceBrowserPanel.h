@@ -7,7 +7,7 @@
 
 namespace Opaax
 {
-    OPAAX_LOG_CATEGORY(ResourceBrowserPanel)
+    OPAAX_LOG_CATEGORY(ResourceBrowserPanel);
 }
 
 namespace Opaax::Editor

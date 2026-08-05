@@ -18,7 +18,7 @@
 
 **I1 — One static root.** `OpaaxApplication::m_Services` (a `static AppServiceLocator`) is the *only*
 mutable static in the engine. Everything else is instance-owned beneath it: the locator owns the services
-(`UniquePtr<IAppService>`), the `IEngine` service owns the `EngineSubsystemMgr`, the manager owns the
+(`TUniquePtr<IAppService>`), the `IEngine` service owns the `EngineSubsystemMgr`, the manager owns the
 subsystems. No `s_Data`, no function-local `static`, no singletons past the locator. This is the invariant
 the whole design optimizes (see **L2**); a proposal that adds a static is wrong by default, even a "clean" one.
 *The old static `RenderCommand`/`IRenderAPI` facade was **retired to `Legacy/RHI`** (2026-07-22, [[L14]]) —
@@ -114,7 +114,7 @@ struct, `Engine`), never on the template itself.
   non-template member. When exporting reaches a template, ask *who will call this from the exe* — the
   answer "nobody yet" is how the defect stays latent.
 - **Corollary (M3): `OPAAX_API` instantiates every IMPLICITLY-declared member**, so an exported class
-  holding a move-only member (`TDynArray<UniquePtr<T>>`) fails to compile on its implicit *copy*-assign
+  holding a move-only member (`TDynArray<TUniquePtr<T>>`) fails to compile on its implicit *copy*-assign
   (C2280) even though nothing ever copies one. Declaring copy/move `= delete` is therefore **required**,
   not hygiene — the shape `World` already uses, now also `ComponentRegistry`.
 
@@ -152,8 +152,20 @@ explicitly, because the narrow entry points do **not** assume UTF-8:
 - **This fails silently and symmetrically, which is why it needs an invariant rather than care.** A
   mis-encoded write followed by a mis-encoded read agrees with itself; only checking against the OS's
   *wide* API reveals the truth. Tests that pin encoding must use `\uXXXX` escapes, not literal
-  characters — the build sets no `/utf-8` and the sources carry no BOM, so a literal would be decoded
-  by the very mechanism under test.
+  characters — an instrument must not share a failure mode with the thing it measures ([[L21]]).
+- **The build sets `/utf-8`, so the SOURCE side of this is settled by the compiler** (root
+  `CMakeLists.txt`, 2026-08-05). *This corrects an earlier claim here that "the build sets no `/utf-8`
+  and the sources carry no BOM" — the second half was simply false: 48 compiled files carried a BOM
+  and ~150 did not, so MSVC was decoding the BOM'd ones as UTF-8 and the rest as the ANSI code page.
+  Two encodings in one target is exactly what this invariant exists to forbid, and the flag was the
+  one-line fix.* `/utf-8` sets **both** charsets, so a literal now means the same thing in every file
+  and reaches the binary as UTF-8 regardless of BOM.
+  - It was **byte-neutral** to apply, which is why it was safe: all 103 non-ASCII literals in the tree
+    are U+2014 in *non-BOM* files, where the UTF-8 bytes were already passing through un-decoded
+    (mojibake in, mojibake out). Verified across all three presets — zero C4819, tests 262/1257/2, both
+    hosts clean, and the em dash confirmed as `E2 80 94` in the smoke log.
+  - **The flag does not retire the rule.** It fixes what the *compiler* reads; the `*A`/`fs::path`
+    hazard above is about what the **OS** reads and is untouched. `OpaaxUtf8.h` stays mandatory.
 
 **I9 — A constant lives with the CONTRACT that owns it; a shared file is only for constants NOBODY
 owns** (settled 2026-08-05, rejecting a proposed central `OpaaxStatics.h`). Two shapes, both already in
@@ -181,7 +193,7 @@ wanted them in one file.
 
 **I10 — An engine type keeps its `Opaax` prefix; do not alias it away** (settled 2026-08-05, deleting
 `Core/OpaaxForward.hpp`). Note which direction the aliases in `OpaaxTypes.h` run: `TDynArray`,
-`UniquePtr`, `Mutex` take a **std** type and *add* engine identity. `using String = OpaaxString` ran the
+`TUniquePtr`, `Mutex` take a **std** type and *add* engine identity. `using String = OpaaxString` ran the
 other way — it *stripped* identity from a type that already had it, so a reader seeing `String` had to
 know the alias existed, which is the exact clarity the prefix buys. `OpaaxTypes.h`'s own header comment
 already named `OpaaxString` canonical, and `OpaaxHash.h` has a parameter literally named `String` inside

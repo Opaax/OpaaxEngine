@@ -45,7 +45,7 @@ namespace Opaax
         T& Register()
         {
             return static_cast<T&>(FindOrCreate(T::StaticTypeID(),
-                [] { return UniquePtr<IConfig>(MakeUnique<T>()); }));
+                [] { return TUniquePtr<IConfig>(MakeUnique<T>()); }));
         }
         
         /**
@@ -76,7 +76,7 @@ namespace Opaax
         // Registry primitives — type-erased, implemented by the concrete systems.
         // =============================================================================
     protected:
-        virtual IConfig& FindOrCreate(ConfigTypeID InId, const TFunction<UniquePtr<IConfig>()>& InFactory) = 0;
+        virtual IConfig& FindOrCreate(ConfigTypeID InId, const TFunction<TUniquePtr<IConfig>()>& InFactory) = 0;
         virtual bool     SaveConfig(ConfigTypeID InId) = 0;
     };
 
@@ -107,7 +107,7 @@ namespace Opaax
         void SaveAll() override;
 
     protected:
-        IConfig& FindOrCreate(ConfigTypeID InId, const TFunction<UniquePtr<IConfig>()>& InFactory) override;
+        IConfig& FindOrCreate(ConfigTypeID InId, const TFunction<TUniquePtr<IConfig>()>& InFactory) override;
         bool     SaveConfig(ConfigTypeID InId) override;
 
         // =============================================================================
@@ -117,6 +117,6 @@ namespace Opaax
         OpaaxString JoinConfigPath(const char* InFileName) const;
 
         OpaaxString                                    m_ConfigsDir;
-        UnorderedMap<ConfigTypeID, UniquePtr<IConfig>> m_Configs;
+        TUnorderedMap<ConfigTypeID, TUniquePtr<IConfig>> m_Configs;
     };
 }

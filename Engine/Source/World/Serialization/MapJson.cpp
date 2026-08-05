@@ -86,7 +86,7 @@ namespace Opaax
     {
         if (!InJson.is_object())
         {
-            OPAAX_LOG(LogMapJson, Error, "Map is not a json object — refusing")
+            OPAAX_LOG(LogMapJson, Error, "Map is not a json object — refusing");
             return false;
         }
 
@@ -99,7 +99,7 @@ namespace Opaax
         {
             OPAAX_LOG(LogMapJson, Error,
                       "Map format version {} is newer than this build reads ({}) — refusing rather than "
-                      "half-reading it", lVersion, MAP_FORMAT_VERSION)
+                      "half-reading it", lVersion, MAP_FORMAT_VERSION);
             return false;
         }
 
@@ -150,7 +150,7 @@ namespace Opaax
 
         if (lSkipped > 0)
         {
-            OPAAX_LOG(LogMapJson, Warn, "Skipped {} entity(ies) with a missing or malformed guid", lSkipped)
+            OPAAX_LOG(LogMapJson, Warn, "Skipped {} entity(ies) with a missing or malformed guid", lSkipped);
         }
 
         OutData = Move(lParsed);
@@ -171,7 +171,7 @@ namespace Opaax
 
         if (lJson.is_discarded())
         {
-            OPAAX_LOG(LogMapJson, Error, "Map text is not valid json — refusing")
+            OPAAX_LOG(LogMapJson, Error, "Map text is not valid json — refusing");
             return false;
         }
 

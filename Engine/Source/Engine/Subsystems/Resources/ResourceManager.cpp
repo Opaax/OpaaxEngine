@@ -14,14 +14,14 @@ namespace Opaax
 
     bool ResourceManager::Startup()
     {
-        OPAAX_LOG(LogResourceManager, Info, "ResourceManager startup — pools created on first Load<T>")
+        OPAAX_LOG(LogResourceManager, Info, "ResourceManager startup — pools created on first Load<T>");
         return true;
     }
 
     void ResourceManager::Shutdown()
     {
         FlushAll();
-        OPAAX_LOG(LogResourceManager, Info, "ResourceManager shutdown")
+        OPAAX_LOG(LogResourceManager, Info, "ResourceManager shutdown");
     }
 
     // =========================================================================
@@ -34,9 +34,9 @@ namespace Opaax
     void ResourceManager::Update(double /*InDeltaTime*/)
     {
         {
-            LockGuard<RecursiveMutex> lLock(m_Mutex);
+            TLockGuard<RecursiveMutex> lLock(m_Mutex);
             ++m_PumpEpoch; // advance BEFORE collecting: a view from last frame is now stale
-            for (UniquePtr<IResourcePool>& lPool : m_Pools)
+            for (TUniquePtr<IResourcePool>& lPool : m_Pools)
             {
                 if (lPool)
                 {
@@ -54,7 +54,7 @@ namespace Opaax
     {
         TDynArray<TFunction<bool()>> lBatch;
         {
-            LockGuard<RecursiveMutex> lLock(m_Mutex);
+            TLockGuard<RecursiveMutex> lLock(m_Mutex);
             if (m_PendingCallbacks.empty()) { return; }
             lBatch.swap(m_PendingCallbacks);
         }
@@ -65,7 +65,7 @@ namespace Opaax
             if (!lPoll()) { lStillPending.push_back(Move(lPoll)); } // still Loading -> keep
         }
 
-        LockGuard<RecursiveMutex> lLock(m_Mutex);
+        TLockGuard<RecursiveMutex> lLock(m_Mutex);
         for (TFunction<bool()>& lNew : m_PendingCallbacks) { lStillPending.push_back(Move(lNew)); }
         m_PendingCallbacks.swap(lStillPending);
     }
@@ -76,11 +76,11 @@ namespace Opaax
         // pool holding composites should ideally flush before the pools it depends
         // on. Flushing in creation order relies on the leak warning to surface
         // anything still referenced — good enough for the current type set.
-        LockGuard<RecursiveMutex> lLock(m_Mutex);
+        TLockGuard<RecursiveMutex> lLock(m_Mutex);
         // Drop pending completions FIRST — each holds an internal claim; releasing them
         // before UnloadAll keeps in-flight async loads from tripping the leak warning.
         m_PendingCallbacks.clear();
-        for (UniquePtr<IResourcePool>& lPool : m_Pools)
+        for (TUniquePtr<IResourcePool>& lPool : m_Pools)
         {
             if (lPool)
             {
@@ -92,7 +92,7 @@ namespace Opaax
 
     void ResourceManager::AddDependencyEdge(Uint32 InParentId, Uint32 InChildId)
     {
-        LockGuard<RecursiveMutex> lLock(m_Mutex);
+        TLockGuard<RecursiveMutex> lLock(m_Mutex);
         m_Deps.AddEdge(InParentId, InChildId);
     }
 }

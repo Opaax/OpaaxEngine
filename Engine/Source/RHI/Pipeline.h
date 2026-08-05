@@ -52,7 +52,7 @@ namespace Opaax
      * @interface IPipeline
      *
      * Backend-agnostic graphics pipeline state object. Consumers (Renderer2D) hold a
-     * UniquePtr<IPipeline> and bind it on the command buffer. The concrete impl is created
+     * TUniquePtr<IPipeline> and bind it on the command buffer. The concrete impl is created
      * via IRHIDevice::CreatePipeline (OpenGLPipeline today).
      */
     class OPAAX_API IPipeline

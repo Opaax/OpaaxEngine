@@ -87,7 +87,7 @@ namespace Opaax
     void JobSystem::StopAndJoin()
     {
         {
-            LockGuard<Mutex> lLock(m_QueueMutex);
+            TLockGuard<Mutex> lLock(m_QueueMutex);
             if (m_Stopping.load(std::memory_order_acquire)) { return; } // already stopped — idempotent
             m_Stopping.store(true, std::memory_order_release);
         }
@@ -99,10 +99,10 @@ namespace Opaax
         }
         m_Workers.clear();
 
-        LockGuard<Mutex> lLock(m_CompletedMutex);
+        TLockGuard<Mutex> lLock(m_CompletedMutex);
         if (!m_Completed.empty())
         {
-            OPAAX_LOG(LogJobSystem, Warn, "{} completion callback(s) never drained", m_Completed.size())
+            OPAAX_LOG(LogJobSystem, Warn, "{} completion callback(s) never drained", m_Completed.size());
         }
         m_Completed.clear();
     }
@@ -117,7 +117,7 @@ namespace Opaax
 
     JobHandle JobSystem::Submit(TFunction<void()> InWork, TFunction<void()> InOnComplete)
     {
-        SharedPtr<JobState> lState = MakeShared<JobState>();
+        TSharedPtr<JobState> lState = MakeShared<JobState>();
 
         Job lJob;
         lJob.Work       = Move(InWork);
@@ -125,7 +125,7 @@ namespace Opaax
         lJob.State      = lState;
 
         {
-            LockGuard<Mutex> lLock(m_QueueMutex);
+            TLockGuard<Mutex> lLock(m_QueueMutex);
             m_Queue.push(Move(lJob));
         }
         m_QueueCV.notify_one();
@@ -179,12 +179,12 @@ namespace Opaax
 
     void JobSystem::Wait(const JobHandle& InHandle)
     {
-        const SharedPtr<JobState>& lState = InHandle.GetState();
+        const TSharedPtr<JobState>& lState = InHandle.GetState();
         if (!lState) { return; }
 
         // NOTE: do not call from a worker thread — there is no work-stealing, so a
         // worker blocking here while all workers are busy would deadlock.
-        UniqueLock<Mutex> lLock(m_DoneMutex);
+        TUniqueLock<Mutex> lLock(m_DoneMutex);
         m_DoneCV.wait(lLock, [&lState] { return lState->bDone.load(std::memory_order_acquire); });
     }
 
@@ -197,7 +197,7 @@ namespace Opaax
         {
             Job lJob;
             {
-                UniqueLock<Mutex> lLock(m_QueueMutex);
+                TUniqueLock<Mutex> lLock(m_QueueMutex);
                 m_QueueCV.wait(lLock, [this]
                 {
                     return m_Stopping.load(std::memory_order_acquire) || !m_Queue.empty();
@@ -221,7 +221,7 @@ namespace Opaax
             // Flip the done-flag under m_DoneMutex so a concurrent Wait can't miss the
             // notify (store-then-notify with the waiter holding the same lock).
             {
-                LockGuard<Mutex> lLock(m_DoneMutex);
+                TLockGuard<Mutex> lLock(m_DoneMutex);
                 if (lJob.State)
                 {
                     lJob.State->bDone.store(true, std::memory_order_release);
@@ -231,7 +231,7 @@ namespace Opaax
 
             if (lJob.OnComplete)
             {
-                LockGuard<Mutex> lLock(m_CompletedMutex);
+                TLockGuard<Mutex> lLock(m_CompletedMutex);
                 m_Completed.push_back(Move(lJob.OnComplete));
             }
         }
@@ -241,7 +241,7 @@ namespace Opaax
     {
         TDynArray<TFunction<void()>> lLocal;
         {
-            LockGuard<Mutex> lLock(m_CompletedMutex);
+            TLockGuard<Mutex> lLock(m_CompletedMutex);
             if (m_Completed.empty())
             {
                 return;

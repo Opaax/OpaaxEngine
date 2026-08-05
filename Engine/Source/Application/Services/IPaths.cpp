@@ -44,7 +44,7 @@ namespace Opaax
             OpaaxString EngineToAbsolute(const OpaaxString&)  const override { return OpaaxString(); }
             OpaaxString ProjectToAbsolute(const OpaaxString&) const override { return OpaaxString(); }
             OpaaxString AssetToAbsolute(const OpaaxString&)   const override { return OpaaxString(); }
-            void        LogPaths()                            const override { OPAAX_APP_LOG(Warn, "Null Path Service") }
+            void        LogPaths()                            const override { OPAAX_APP_LOG(Warn, "Null Path Service"); }
         };
     }
 

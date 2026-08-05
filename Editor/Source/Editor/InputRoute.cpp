@@ -70,7 +70,7 @@ namespace Opaax::Editor
         }
 
         // A transition, so this logs once per change rather than every frame.
-        OPAAX_LOG(LogInputRoute, Info, "Input route {}", ToString(m_State))
+        OPAAX_LOG(LogInputRoute, Info, "Input route {}", ToString(m_State));
 
         if (lPrevious == EInputRouteState::Open)
         {

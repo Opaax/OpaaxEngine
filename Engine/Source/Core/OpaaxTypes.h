@@ -20,18 +20,22 @@
 //   Container:  TDynArray<T>                         (std::vector<T>)
 //               TFixedArray<T, N>                    (std::array<T, N>)
 //               TInitArray<T>                        (std::initializer_list<T>)
-//               UnorderedMap<K, V[, Hash, Eq, Alloc]> (std::unordered_map)
-//               UnorderedSet<K[, Hash, Eq, Alloc]>    (std::unordered_set)
+//               TUnorderedMap<K, V[, Hash, Eq, Alloc]> (std::unordered_map)
+//               TUnorderedSet<K[, Hash, Eq, Alloc]>  (std::unordered_set)
 //   Function:   TFunction<Sig>                       (std::function<Sig>)
-//   Pointers:   UniquePtr<T>, MakeUnique<T>(args...)
-//               SharedPtr<T>, MakeShared<T>(args...)
-//               Atomic<T>                            (std::atomic<T>)
+//   Pointers:   TUniquePtr<T>, MakeUnique<T>(args...)
+//               TSharedPtr<T>, MakeShared<T>(args...)
+//               TAtomic<T>                           (std::atomic<T>)
 //   Threading:  Thread                               (std::thread)
 //               Mutex                                (std::mutex)
 //               ConditionVariable                    (std::condition_variable)
-//               LockGuard<T>                          (std::lock_guard<T>)
-//               UniqueLock<T>                         (std::unique_lock<T>)
+//               TLockGuard<T>                        (std::lock_guard<T>)
+//               TUniqueLock<T>                       (std::unique_lock<T>)
 //               TQueue<T>                            (std::queue<T>)
+//
+// The T prefix marks a TEMPLATE alias. Non-template aliases (Thread, Mutex,
+// RecursiveMutex, ConditionVariable) stay bare, as do the MakeUnique/MakeShared
+// helpers — they are functions, not types.
 //   Misc:       Move(arg)                            (std::move)
 //
 // Strings: see Core/OpaaxString.hpp (OpaaxString) and Core/OpaaxStringID.hpp.
@@ -74,7 +78,7 @@ namespace Opaax
         typename KeyEqual = std::equal_to<TKey>,
         typename Allocator = std::allocator<std::pair<const TKey, TValue>>
     >
-    using UnorderedMap = std::unordered_map<TKey, TValue, Hash, KeyEqual, Allocator>;
+    using TUnorderedMap = std::unordered_map<TKey, TValue, Hash, KeyEqual, Allocator>;
 
     template <
         typename TKey,
@@ -82,7 +86,7 @@ namespace Opaax
         typename KeyEqual = std::equal_to<TKey>,
         typename Allocator = std::allocator<TKey>
     >
-    using UnorderedSet = std::unordered_set<TKey, Hash, KeyEqual, Allocator>;
+    using TUnorderedSet = std::unordered_set<TKey, Hash, KeyEqual, Allocator>;
 
     // =============================================================================
     // Function Aliases
@@ -94,25 +98,25 @@ namespace Opaax
     // Smart Pointers Aliases
     // =============================================================================
     template<typename T>
-    using UniquePtr = std::unique_ptr<T>;
+    using TUniquePtr = std::unique_ptr<T>;
 
     template<typename T, typename ... Args>
-    constexpr UniquePtr<T> MakeUnique(Args&& ... InArgs)
+    constexpr TUniquePtr<T> MakeUnique(Args&& ... InArgs)
     {
         return std::make_unique<T>(std::forward<Args>(InArgs)...);
     }
 
     template<typename T>
-    using SharedPtr = std::shared_ptr<T>;
+    using TSharedPtr = std::shared_ptr<T>;
 
     template<typename T, typename ... Args>
-    constexpr SharedPtr<T> MakeShared(Args&& ... InArgs)
+    constexpr TSharedPtr<T> MakeShared(Args&& ... InArgs)
     {
         return std::make_shared<T>(std::forward<Args>(InArgs)...);
     }
 
     template<typename T>
-    using Atomic = std::atomic<T>;
+    using TAtomic = std::atomic<T>;
 
     // =============================================================================
     // Threading Aliases
@@ -123,10 +127,10 @@ namespace Opaax
     using ConditionVariable = std::condition_variable;
 
     template<typename T>
-    using LockGuard = std::lock_guard<T>;
+    using TLockGuard = std::lock_guard<T>;
 
     template<typename T>
-    using UniqueLock = std::unique_lock<T>;
+    using TUniqueLock = std::unique_lock<T>;
 
     template<typename T>
     using TQueue = std::queue<T>;

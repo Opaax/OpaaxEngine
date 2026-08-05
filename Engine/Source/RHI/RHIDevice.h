@@ -18,6 +18,6 @@ namespace Opaax
     class OPAAX_API RHIDevice
     {
     public:
-        static UniquePtr<IRHIDevice> Create(EBackend InBackend, IGraphicsContext& InSurface);
+        static TUniquePtr<IRHIDevice> Create(EBackend InBackend, IGraphicsContext& InSurface);
     };
 }

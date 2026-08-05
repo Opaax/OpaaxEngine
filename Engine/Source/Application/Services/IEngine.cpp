@@ -34,7 +34,7 @@ namespace Opaax
             void SetPrimaryRenderTarget(IRenderTarget*) override {}
 
             // No device to create on — a caller gets nullptr and its own null-handling runs.
-            UniquePtr<IFramebuffer> CreateFramebuffer(const FramebufferSpec&) override { return nullptr; }
+            TUniquePtr<IFramebuffer> CreateFramebuffer(const FramebufferSpec&) override { return nullptr; }
 
             void Update(double)           override {}
             void FixedUpdate(double)      override {}

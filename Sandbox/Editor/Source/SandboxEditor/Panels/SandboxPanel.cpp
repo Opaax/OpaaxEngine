@@ -53,7 +53,7 @@ void SandboxPanel::SpawnQuad()
 
     ++m_SpawnCount;
 
-    OPAAX_LOG(LogSandboxPanel, Info, "SandboxPanel: spawned quad #{} ('{}')", m_SpawnCount, lName.CStr())
+    OPAAX_LOG(LogSandboxPanel, Info, "SandboxPanel: spawned quad #{} ('{}')", m_SpawnCount, lName.CStr());
 }
 
 void SandboxPanel::Draw()

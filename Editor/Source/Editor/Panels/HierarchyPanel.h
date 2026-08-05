@@ -6,7 +6,7 @@
 
 namespace Opaax
 {
-    OPAAX_LOG_CATEGORY(HierarchyPanel)
+    OPAAX_LOG_CATEGORY(HierarchyPanel);
 }
 
 namespace Opaax::Editor

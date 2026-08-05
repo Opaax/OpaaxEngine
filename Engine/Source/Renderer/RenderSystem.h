@@ -7,7 +7,7 @@
 
 namespace Opaax
 {
-    OPAAX_LOG_CATEGORY(RenderSystem)
+    OPAAX_LOG_CATEGORY(RenderSystem);
     
     class IRHIDevice;
     class IFramebuffer;
@@ -112,7 +112,7 @@ namespace Opaax
          * @param InSpec Size + whether a depth/stencil attachment is wanted.
          * @return nullptr if the render core has no device (Init failed or never ran).
          */
-        UniquePtr<IFramebuffer> CreateFramebuffer(const FramebufferSpec& InSpec);
+        TUniquePtr<IFramebuffer> CreateFramebuffer(const FramebufferSpec& InSpec);
 
         // End Resources
         // =============================================================================
@@ -138,9 +138,9 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        UniquePtr<IRHIDevice>    m_Device;
-        UniquePtr<Renderer2D>    m_Renderer2D;
-        UniquePtr<IRenderTarget> m_Backbuffer;   // DefaultRenderTarget (window surface)
+        TUniquePtr<IRHIDevice>    m_Device;
+        TUniquePtr<Renderer2D>    m_Renderer2D;
+        TUniquePtr<IRenderTarget> m_Backbuffer;   // DefaultRenderTarget (window surface)
         Vector4F                 m_ClearColor{0.f, 0.f, 0.f, 1.f};
     };
 }

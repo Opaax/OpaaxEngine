@@ -29,14 +29,14 @@ namespace Opaax::Editor
     {
         if (m_State != EPlayState::Edit)
         {
-            OPAAX_LOG(LogPlayInEditor, Warn, "Play refused — already {}.", ToString(m_State))
+            OPAAX_LOG(LogPlayInEditor, Warn, "Play refused — already {}.", ToString(m_State));
             return false;
         }
 
         World* lEditWorld = m_Worlds.GetActiveWorld();
         if (lEditWorld == nullptr)
         {
-            OPAAX_LOG(LogPlayInEditor, Error, "Play refused — there is no active world to clone.")
+            OPAAX_LOG(LogPlayInEditor, Error, "Play refused — there is no active world to clone.");
             return false;
         }
 
@@ -59,7 +59,7 @@ namespace Opaax::Editor
         m_State = EPlayState::Playing;
 
         OPAAX_LOG(LogPlayInEditor, Info, "PLAY — edit world '{}' cloned into a Play world ({} entities)",
-                  m_EditWorld->GetName().CStr(), lPlayWorld->GetEntityCount())
+                  m_EditWorld->GetName().CStr(), lPlayWorld->GetEntityCount());
         return true;
     }
 
@@ -67,14 +67,14 @@ namespace Opaax::Editor
     {
         if (m_State != EPlayState::Playing)
         {
-            OPAAX_LOG(LogPlayInEditor, Warn, "Pause refused — state is {}.", ToString(m_State))
+            OPAAX_LOG(LogPlayInEditor, Warn, "Pause refused — state is {}.", ToString(m_State));
             return false;
         }
 
         m_Worlds.SetPaused(true);
         m_State = EPlayState::Paused;
 
-        OPAAX_LOG(LogPlayInEditor, Info, "PAUSE")
+        OPAAX_LOG(LogPlayInEditor, Info, "PAUSE");
         return true;
     }
 
@@ -82,14 +82,14 @@ namespace Opaax::Editor
     {
         if (m_State != EPlayState::Paused)
         {
-            OPAAX_LOG(LogPlayInEditor, Warn, "Resume refused — state is {}.", ToString(m_State))
+            OPAAX_LOG(LogPlayInEditor, Warn, "Resume refused — state is {}.", ToString(m_State));
             return false;
         }
 
         m_Worlds.SetPaused(false);
         m_State = EPlayState::Playing;
 
-        OPAAX_LOG(LogPlayInEditor, Info, "RESUME")
+        OPAAX_LOG(LogPlayInEditor, Info, "RESUME");
         return true;
     }
 
@@ -103,13 +103,13 @@ namespace Opaax::Editor
         if (m_State != EPlayState::Paused)
         {
             OPAAX_LOG(LogPlayInEditor, Warn, "Step refused — only a PAUSED session can step (state is {}).",
-                      ToString(m_State))
+                      ToString(m_State));
             return false;
         }
 
         m_Worlds.RequestStep();
 
-        OPAAX_LOG(LogPlayInEditor, Info, "STEP — one frame")
+        OPAAX_LOG(LogPlayInEditor, Info, "STEP — one frame");
         return true;
     }
 
@@ -117,7 +117,7 @@ namespace Opaax::Editor
     {
         if (m_State == EPlayState::Edit)
         {
-            OPAAX_LOG(LogPlayInEditor, Warn, "Stop refused — no play session is running.")
+            OPAAX_LOG(LogPlayInEditor, Warn, "Stop refused — no play session is running.");
             return false;
         }
 
@@ -141,7 +141,7 @@ namespace Opaax::Editor
         m_Worlds.SetPaused(false);   // a Stop while paused must not leave the edit world frozen
         m_State = EPlayState::Edit;
 
-        OPAAX_LOG(LogPlayInEditor, Info, "STOP — edit world '{}' restored, play clone destroyed", lRestored.CStr())
+        OPAAX_LOG(LogPlayInEditor, Info, "STOP — edit world '{}' restored, play clone destroyed", lRestored.CStr());
         return true;
     }
 }

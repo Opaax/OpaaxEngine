@@ -16,11 +16,11 @@ namespace Opaax{
             return m_Window.get();
         }
 
-        const EngineConfigData& lData = OpaaxApplication::GetAppService<IConfigSystem>().Get<Config_Engine>().Data();
+        const EngineConfigData& lData = OpaaxApplication::GetAppService<IConfigSystem>().Get<Config_Engine>().GetData();
 
         m_Window.reset(Window::Create(MakeWindowProps(lData)));
 
-        OPAAX_LOG(LogWindowManager, Info, "Main window created ({}x{})", m_Window->GetWidth(), m_Window->GetHeight())
+        OPAAX_LOG(LogWindowManager, Info, "Main window created ({}x{})", m_Window->GetWidth(), m_Window->GetHeight());
 
         return m_Window.get();
     }

@@ -32,7 +32,7 @@ namespace Opaax
         m_Events    = &lEngine.GetEngineEventBus();
         m_Debug     = &lEngine.GetDebugDraw();
 
-        OPAAX_LOG(LogWorldManager, Info, "WorldManager started (no world yet — the host creates it)")
+        OPAAX_LOG(LogWorldManager, Info, "WorldManager started (no world yet — the host creates it)");
         return true;
     }
 
@@ -71,7 +71,7 @@ namespace Opaax
             DestroyWorld(m_Worlds.back().get());
         }
 
-        OPAAX_LOG(LogWorldManager, Info, "WorldManager torn down")
+        OPAAX_LOG(LogWorldManager, Info, "WorldManager torn down");
     }
 
     void WorldManager::Shutdown()
@@ -83,7 +83,7 @@ namespace Opaax
         m_ActiveWorld = nullptr; // clear the non-owning slot BEFORE releasing the owners
         m_Worlds.clear();
 
-        OPAAX_LOG(LogWorldManager, Info, "WorldManager shutdown")
+        OPAAX_LOG(LogWorldManager, Info, "WorldManager shutdown");
     }
 
     // =========================================================================
@@ -121,7 +121,7 @@ namespace Opaax
             // be silently missing (L22 — no lazy safety net).
             OPAAX_LOG(LogWorldManager, Error,
                       "CloneWorld '{}' refused — no registries, so there is nothing to capture through.",
-                      InSource.GetName().CStr())
+                      InSource.GetName().CStr());
             return nullptr;
         }
 
@@ -143,13 +143,13 @@ namespace Opaax
         {
             OPAAX_LOG(LogWorldManager, Warn,
                       "Clone of '{}' is INCOMPLETE — {} of {} entities; the map factory logged which were refused.",
-                      InSource.GetName().CStr(), lInstantiated, lSnapshot.EntityCount())
+                      InSource.GetName().CStr(), lInstantiated, lSnapshot.EntityCount());
         }
 
         OPAAX_LOG(LogWorldManager, Info, "Cloned world '{}' ({}) -> '{}' ({}) — {} of {} entities",
                   InSource.GetName().CStr(), ToString(InSource.GetMode()),
                   lClone->GetName().CStr(), ToString(lClone->GetMode()),
-                  lInstantiated, lSnapshot.EntityCount())
+                  lInstantiated, lSnapshot.EntityCount());
 
         return lClone;
     }
@@ -170,7 +170,7 @@ namespace Opaax
         {
             OPAAX_LOG(LogWorldManager, Error,
                       "CreateWorld '{}' — WorldManager was never started, so there is no engine context. World created with NO subsystems.",
-                      InWorld.GetName().CStr())
+                      InWorld.GetName().CStr());
             return;
         }
 
@@ -201,14 +201,14 @@ namespace Opaax
 
         OPAAX_LOG(LogWorldManager, Info, "World '{}' ({}) — {} of {} subsystem candidate(s) created",
                   InWorld.GetName().CStr(), ToString(InWorld.GetMode()),
-                  lCreated, m_Registries->WorldSubsystems().Count())
+                  lCreated, m_Registries->WorldSubsystems().Count());
     }
 
     void WorldManager::DestroyWorld(World* InWorld)
     {
         if (InWorld == nullptr)
         {
-            OPAAX_LOG(LogWorldManager, Error, "Trying to destroy a null world!")
+            OPAAX_LOG(LogWorldManager, Error, "Trying to destroy a null world!");
             return;
         }
 
@@ -224,7 +224,7 @@ namespace Opaax
 
         // HERE, not in ~World: this is the LC-correct moment — every engine sibling a subsystem
         // might reach through its context (Resources, the bus, DebugDraw) is still alive. By the
-        // time the UniquePtr below releases, we are inside destruction. ~World repeats the call
+        // time the TUniquePtr below releases, we are inside destruction. ~World repeats the call
         // as an idempotent safety net for the Shutdown path, which never comes through here.
         InWorld->ShutdownSubsystems();
 
@@ -242,7 +242,7 @@ namespace Opaax
     {
         if (InWorld == nullptr)
         {
-            OPAAX_LOG(LogWorldManager, Error, "Trying to set active a null world!")
+            OPAAX_LOG(LogWorldManager, Error, "Trying to set active a null world!");
 
             return false;
         }
@@ -262,7 +262,7 @@ namespace Opaax
         m_ActiveWorld = InWorld;
         m_ActiveWorld->OnActive();
 
-        OPAAX_LOG(LogWorldManager, Info, "New Active world -> '{}'", m_ActiveWorld->GetName().CStr())
+        OPAAX_LOG(LogWorldManager, Info, "New Active world -> '{}'", m_ActiveWorld->GetName().CStr());
 
         OnActiveWorldChanged.Broadcast(lOldWorld, m_ActiveWorld);
 

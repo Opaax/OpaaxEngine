@@ -201,7 +201,7 @@ namespace Opaax
         // Heap-held so it has a STABLE address: a subsystem stores WorldContext& and must keep
         // working for the world's whole life. Holds a reference back to this World, which is safe
         // precisely because the World owns it.
-        UniquePtr<WorldContext> m_Context;
+        TUniquePtr<WorldContext> m_Context;
         bool                    m_bSubsystemsShutdown = false;
 
         EntityRegistry m_Registry;

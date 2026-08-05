@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Application/Services/ILogger.h"
-#include "Core/OpaaxTypes.h"             // UniquePtr, Uint32
+#include "Core/OpaaxTypes.h"             // TUniquePtr, Uint32
 #include "Core/Maths/MathTypes.h"
 #include "Editor/Panels/IEditorPanel.h"
 #include "Editor/UI/IEditorUIBackend.h"
@@ -11,7 +11,7 @@ namespace Opaax
     class IFramebuffer;
     class OffscreenRenderTarget;
     
-    OPAAX_LOG_CATEGORY(ViewportPanel)
+    OPAAX_LOG_CATEGORY(ViewportPanel);
 }
 
 namespace Opaax::Editor
@@ -104,8 +104,8 @@ namespace Opaax::Editor
         const OpaaxStringID m_PanelID{ OPAAX_ID("Viewport") };
         const OpaaxString   m_Title = m_PanelID.ToString();
 
-        UniquePtr<IFramebuffer>          m_Framebuffer;
-        UniquePtr<OffscreenRenderTarget> m_RenderTarget;
+        TUniquePtr<IFramebuffer>          m_Framebuffer;
+        TUniquePtr<OffscreenRenderTarget> m_RenderTarget;
         
         Vector2F   m_viewportSizeDefault  = {960.f, 600.f};
         Vector2u32 m_viewportSize         = {1,1};

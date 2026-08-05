@@ -46,13 +46,13 @@ namespace Opaax
     // =============================================================================
     struct Renderer2DData
     {
-        UniquePtr<IVertexArray>   QuadVAO;
+        TUniquePtr<IVertexArray>   QuadVAO;
         IVertexBuffer*            QuadVBO      = nullptr;  // non-owning, owned by VAO
-        UniquePtr<IShader>        QuadShader;
-        UniquePtr<ITexture2D>     WhiteTexture;
-        UniquePtr<IUniformBuffer> CameraUBO;  // binding 1: u_ViewProjection (std140)
-        UniquePtr<IPipeline>      QuadPipeline;     // sprite pipeline (shader + layout + alpha blend)
-        UniquePtr<IBindGroup>     QuadBindGroup;    // camera UBO + 16-sampler array
+        TUniquePtr<IShader>        QuadShader;
+        TUniquePtr<ITexture2D>     WhiteTexture;
+        TUniquePtr<IUniformBuffer> CameraUBO;  // binding 1: u_ViewProjection (std140)
+        TUniquePtr<IPipeline>      QuadPipeline;     // sprite pipeline (shader + layout + alpha blend)
+        TUniquePtr<IBindGroup>     QuadBindGroup;    // camera UBO + 16-sampler array
         ICommandBuffer*           Cmd          = nullptr;  // active recorder, set in Begin (non-owning)
 
         // CPU-side vertex buffer — filled each frame, uploaded on flush
@@ -136,11 +136,11 @@ namespace Opaax
     // =============================================================================
     void Renderer2D::Init(IRHIDevice& InDevice, const RenderLimits& /*InLimits*/, const ShaderDesc& InShader)
     {
-        OPAAX_LOG(LogRenderer2D, Info, "Renderer2D::Init(device)")
+        OPAAX_LOG(LogRenderer2D, Info, "Renderer2D::Init(device)");
 
         m_Data->QuadVAO = InDevice.CreateVertexArray();
 
-        UniquePtr<IVertexBuffer> lVBO = InDevice.CreateVertexBuffer(MAX_VERTICES * sizeof(QuadVertex));
+        TUniquePtr<IVertexBuffer> lVBO = InDevice.CreateVertexBuffer(MAX_VERTICES * sizeof(QuadVertex));
         lVBO->SetLayout(MakeQuadLayout());
         m_Data->QuadVBO = lVBO.get();
         m_Data->QuadVAO->AddVertexBuffer(Move(lVBO));
@@ -164,7 +164,7 @@ namespace Opaax
     {
         if (!m_Data) { return; }
 
-        OPAAX_LOG(LogRenderer2D, Info, "Renderer2D::Shutdown()")
+        OPAAX_LOG(LogRenderer2D, Info, "Renderer2D::Shutdown()");
         m_Data->QuadBindGroup.reset();
         m_Data->QuadPipeline.reset();   // before the shader it references
         m_Data->QuadVAO.reset();

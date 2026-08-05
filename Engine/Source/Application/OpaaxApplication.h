@@ -63,7 +63,7 @@ namespace Opaax
         /**
          * Factory seam for the Paths service. Editor vs Standalone do not need the same paths
          */
-        virtual UniquePtr<IPaths> CreatePaths(const IPlatform& InPlatform, int InArgc, char** InArgv);
+        virtual TUniquePtr<IPaths> CreatePaths(const IPlatform& InPlatform, int InArgc, char** InArgv);
     private:
         IConfigSystem&      BootConfigSystem(const IPaths& Paths);
         IProjectManager&    BootProjectManager(const IPaths& Paths);
@@ -209,10 +209,10 @@ namespace Opaax
         // Get - Set
         // =============================================================================
     public:
-        static AppServiceLocator& Services() noexcept { return m_Services; }
+        static AppServiceLocator& GetServices() noexcept { return m_Services; }
         
         template<typename T>
-        static T& GetAppService(){ return Services().Get<T>(); }
+        static T& GetAppService(){ return GetServices().Get<T>(); }
 
         // Convenience accessors — never null (the locator returns the null object).
         IPlatform&          Platform();
@@ -236,7 +236,7 @@ namespace Opaax
         bool bIsRunning         = false;
         bool bHasShutdown       = false;
         
-        UniquePtr<ModuleRegistrar> m_ModuleRegistrar;
+        TUniquePtr<ModuleRegistrar> m_ModuleRegistrar;
 
         static AppServiceLocator m_Services;
     };

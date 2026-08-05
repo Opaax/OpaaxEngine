@@ -68,7 +68,7 @@ namespace Opaax
 }
 
 // =============================================================================
-// std::hash<Guid> — lets Guid be an UnorderedMap / unordered_set key.
+// std::hash<Guid> — lets Guid be an TUnorderedMap / unordered_set key.
 // =============================================================================
 template<>
 struct std::hash<Opaax::Guid>

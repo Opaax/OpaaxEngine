@@ -4,6 +4,12 @@ project(OpaaxEngine VERSION 1.0.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# One source encoding for the whole build (ARCHITECTURE.md I7). Without this MSVC decodes
+# BOM'd files as UTF-8 and every other file as the ANSI code page — two encodings in one
+# target. /utf-8 sets BOTH the source and the execution charset, so a literal means the same
+# thing in every file and reaches the binary as UTF-8.
+add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
+
 # Options
 option(OPAAX_EDITOR_SUPPORT "Include editor support in engine" OFF)
 option(OPAAX_BUILD_EXAMPLES "Build example games" ON)

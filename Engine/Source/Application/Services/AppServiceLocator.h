@@ -46,7 +46,7 @@ namespace Opaax
         requires std::is_base_of_v<TInterface, TImpl> && std::is_base_of_v<IAppService, TInterface>
         TInterface& Provide(Args&&... InArgs)
         {
-            UniquePtr<TImpl> lImpl = MakeUnique<TImpl>(std::forward<Args>(InArgs)...);
+            TUniquePtr<TImpl> lImpl = MakeUnique<TImpl>(std::forward<Args>(InArgs)...);
             TInterface&      lRef  = *lImpl;
             const ServiceTypeID lId = TInterface::StaticTypeID();
             m_Services[lId] = std::move(lImpl);
@@ -65,7 +65,7 @@ namespace Opaax
          */
         template<class TInterface>
         requires std::is_base_of_v<IAppService, TInterface>
-        TInterface& ProvideInstance(UniquePtr<TInterface> InImpl)
+        TInterface& ProvideInstance(TUniquePtr<TInterface> InImpl)
         {
             TInterface&         lRef = *InImpl;
             const ServiceTypeID lId  = TInterface::StaticTypeID();
@@ -126,7 +126,7 @@ namespace Opaax
         }
 
     private:
-        UnorderedMap<ServiceTypeID, UniquePtr<IAppService>> m_Services;
+        TUnorderedMap<ServiceTypeID, TUniquePtr<IAppService>> m_Services;
         TDynArray<ServiceTypeID>                            m_Order;
     };
 }

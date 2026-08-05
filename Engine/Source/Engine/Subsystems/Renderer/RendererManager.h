@@ -40,7 +40,7 @@ namespace Opaax
         // CTORS - DTORS
         // =============================================================================
     public:
-        // Out-of-line — the owned UniquePtr<RenderSystem> holds a forward-declared type.
+        // Out-of-line — the owned TUniquePtr<RenderSystem> holds a forward-declared type.
         RendererManager();
         ~RendererManager() override;
 
@@ -99,7 +99,7 @@ namespace Opaax
          * store, then the target wrapping it. CALLER-OWNED, and it must be released before the render
          * core shuts down. nullptr before Startup (no core yet) or if the device is gone.
          */
-        UniquePtr<IFramebuffer> CreateFramebuffer(const FramebufferSpec& InSpec);
+        TUniquePtr<IFramebuffer> CreateFramebuffer(const FramebufferSpec& InSpec);
 
         /**
          * @return The per-frame debug line queue, drained and cleared by Render(). Reached by game
@@ -124,7 +124,7 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        UniquePtr<RenderSystem> m_RenderSystem;
+        TUniquePtr<RenderSystem> m_RenderSystem;
         WorldManager*           m_WorldManager  = nullptr; // non-owning; active world = draw source
         IRenderTarget*          m_PrimaryTarget = nullptr; // non-owning; nullptr = backbuffer (I5)
 

@@ -85,7 +85,7 @@ namespace Opaax
                 // Unbound means EngineStartup never called BindEngineRegistries — a wiring
                 // bug that would otherwise drop every module component without a word.
                 OPAAX_LOG(LogModuleRegistrar, Error,
-                          "Components().Register — route is not bound to a ComponentRegistry; registration dropped.")
+                          "Components().Register — route is not bound to a ComponentRegistry; registration dropped.");
                 return false;
             }
 
@@ -144,7 +144,7 @@ namespace Opaax
                 // Unbound means EngineStartup never called BindEngineRegistries — a wiring bug
                 // that would otherwise drop every module subsystem without a word.
                 OPAAX_LOG(LogModuleRegistrar, Error,
-                          "WorldSubsystems().Register — route is not bound to a WorldSubsystemRegistry; registration dropped.")
+                          "WorldSubsystems().Register — route is not bound to a WorldSubsystemRegistry; registration dropped.");
                 return false;
             }
 

@@ -7,7 +7,7 @@ namespace Opaax
     // makes these paths untestable, and it compiles to NOTHING in Release, which is exactly the
     // build where a game module registering late needs to be reported. An Error log is loud in
     // both, and the false return lets the caller decide.
-    bool ComponentRegistry::AddEntry(UniquePtr<IComponentEntry> InEntry, entt::id_type InTypeId)
+    bool ComponentRegistry::AddEntry(TUniquePtr<IComponentEntry> InEntry, entt::id_type InTypeId)
     {
         if (InEntry == nullptr)
         {
@@ -20,7 +20,7 @@ namespace Opaax
         {
             OPAAX_LOG(LogComponentRegistry, Error,
                       "Register '{}' — registry is SEALED (a world already exists). Component types must be registered before the first CreateWorld.",
-                      InEntry->GetName().ToString().CStr())
+                      InEntry->GetName().ToString().CStr());
             return false;
         }
 
@@ -28,7 +28,7 @@ namespace Opaax
 
         if (!lName.IsValid())
         {
-            OPAAX_LOG(LogComponentRegistry, Error, "Register — refused a component with an empty name.")
+            OPAAX_LOG(LogComponentRegistry, Error, "Register — refused a component with an empty name.");
             return false;
         }
 
@@ -36,7 +36,7 @@ namespace Opaax
         if (FindByName(lName) != nullptr)
         {
             OPAAX_LOG(LogComponentRegistry, Error, "Register '{}' — that name is already taken.",
-                      lName.ToString().CStr())
+                      lName.ToString().CStr());
             return false;
         }
 
@@ -45,14 +45,14 @@ namespace Opaax
         if (FindByTypeId(InTypeId) != nullptr)
         {
             OPAAX_LOG(LogComponentRegistry, Error, "Register '{}' — that type is already registered.",
-                      lName.ToString().CStr())
+                      lName.ToString().CStr());
             return false;
         }
 
         m_Entries.push_back(Move(InEntry));
 
         OPAAX_LOG(LogComponentRegistry, Trace, "Registered component '{}' ({} total)",
-                  lName.ToString().CStr(), static_cast<Uint64>(m_Entries.size()))
+                  lName.ToString().CStr(), static_cast<Uint64>(m_Entries.size()));
 
         return true;
     }
@@ -67,12 +67,12 @@ namespace Opaax
         m_bSealed = true;
 
         OPAAX_LOG(LogComponentRegistry, Info, "Sealed with {} component type(s).",
-                  static_cast<Uint64>(m_Entries.size()))
+                  static_cast<Uint64>(m_Entries.size()));
     }
 
     const IComponentEntry* ComponentRegistry::FindByName(OpaaxStringID InName) const noexcept
     {
-        for (const UniquePtr<IComponentEntry>& lEntry : m_Entries)
+        for (const TUniquePtr<IComponentEntry>& lEntry : m_Entries)
         {
             if (lEntry->GetName() == InName)
             {
@@ -85,7 +85,7 @@ namespace Opaax
 
     const IComponentEntry* ComponentRegistry::FindByTypeId(entt::id_type InTypeId) const noexcept
     {
-        for (const UniquePtr<IComponentEntry>& lEntry : m_Entries)
+        for (const TUniquePtr<IComponentEntry>& lEntry : m_Entries)
         {
             if (lEntry->GetTypeId() == InTypeId)
             {

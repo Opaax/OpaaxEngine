@@ -9,13 +9,13 @@ namespace Opaax
     {
         if (!FileIO::WriteAllText(InAbsPath, MapJson::Serialize(InData)))
         {
-            OPAAX_LOG(LogMapFile, Error, "Cannot write map '{}'", InAbsPath.CStr())
+            OPAAX_LOG(LogMapFile, Error, "Cannot write map '{}'", InAbsPath.CStr());
             return false;
         }
 
         // The SUCCESS branch is logged, not just the failures: "no error" and "it happened" are
         // different statements, and only this one discriminates ([[L15]]).
-        OPAAX_LOG(LogMapFile, Info, "Saved {} entity(ies) to '{}'", InData.EntityCount(), InAbsPath.CStr())
+        OPAAX_LOG(LogMapFile, Info, "Saved {} entity(ies) to '{}'", InData.EntityCount(), InAbsPath.CStr());
         return true;
     }
 
@@ -29,7 +29,7 @@ namespace Opaax
         // nothing here, because an empty file is not a map either way.
         if (lText.IsEmpty())
         {
-            OPAAX_LOG(LogMapFile, Error, "Map '{}' is missing, empty or unreadable", InAbsPath.CStr())
+            OPAAX_LOG(LogMapFile, Error, "Map '{}' is missing, empty or unreadable", InAbsPath.CStr());
             return false;
         }
 
@@ -38,11 +38,11 @@ namespace Opaax
         if (!MapJson::Deserialize(lText, OutData))
         {
             OPAAX_LOG(LogMapFile, Error, "Map '{}' could not be read (see the MapJson error above)",
-                      InAbsPath.CStr())
+                      InAbsPath.CStr());
             return false;
         }
 
-        OPAAX_LOG(LogMapFile, Info, "Loaded {} entity(ies) from '{}'", OutData.EntityCount(), InAbsPath.CStr())
+        OPAAX_LOG(LogMapFile, Info, "Loaded {} entity(ies) from '{}'", OutData.EntityCount(), InAbsPath.CStr());
         return true;
     }
 }

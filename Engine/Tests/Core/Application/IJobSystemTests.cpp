@@ -16,7 +16,7 @@ TEST_CASE("JobSystem: Submit runs the work; Wait blocks until it has run")
     JobSystem lJobs;
     CHECK(lJobs.GetWorkerCount() >= 1);
 
-    Atomic<bool> lRan{false};
+    TAtomic<bool> lRan{false};
     JobHandle lHandle = lJobs.Submit([&lRan] { lRan.store(true, std::memory_order_release); });
 
     lJobs.Wait(lHandle);
@@ -28,8 +28,8 @@ TEST_CASE("JobSystem: OnComplete is deferred until DrainCompletions (main-thread
 {
     JobSystem lJobs;
 
-    Atomic<bool> lWorkRan{false};
-    Atomic<bool> lCompleteRan{false};
+    TAtomic<bool> lWorkRan{false};
+    TAtomic<bool> lCompleteRan{false};
 
     JobHandle lHandle = lJobs.Submit(
         [&lWorkRan]     { lWorkRan.store(true, std::memory_order_release); },
@@ -73,8 +73,8 @@ TEST_CASE("IJobSystem: the null system runs jobs inline and is never null")
     CHECK(lSys.GetWorkerCount() == 0);
 
     // Inline: work + OnComplete both run on the calling thread, no Wait / DrainCompletions.
-    Atomic<bool> lWorkRan{false};
-    Atomic<bool> lCompleteRan{false};
+    TAtomic<bool> lWorkRan{false};
+    TAtomic<bool> lCompleteRan{false};
     lSys.Submit(
         [&lWorkRan]     { lWorkRan.store(true, std::memory_order_release); },
         [&lCompleteRan] { lCompleteRan.store(true, std::memory_order_release); });

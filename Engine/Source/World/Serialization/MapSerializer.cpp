@@ -49,7 +49,7 @@ namespace Opaax
         // MapFactory's Instantiate, which all still log at Info.
         OPAAX_LOG(LogMapSerializer, Trace, "Captured {} entity(ies) from world '{}'{}",
                   lData.EntityCount(), InWorld.GetName().CStr(),
-                  InFilter.IsValid() ? " (filtered)" : "")
+                  InFilter.IsValid() ? " (filtered)" : "");
 
         return lData;
     }

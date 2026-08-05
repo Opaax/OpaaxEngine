@@ -58,7 +58,7 @@ namespace Opaax::Editor
         void TickFrame() override;
         void OnEvent(Event& InEvent) override;
         void OnModulesRegistered() override;
-        UniquePtr<IPaths> CreatePaths(const IPlatform& InPlatform, int InArgc, char** InArgv) override;
+        TUniquePtr<IPaths> CreatePaths(const IPlatform& InPlatform, int InArgc, char** InArgv) override;
         //~End OpaaxApplication Interface
     };
 }

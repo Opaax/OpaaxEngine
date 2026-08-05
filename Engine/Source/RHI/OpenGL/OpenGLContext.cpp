@@ -49,8 +49,8 @@ namespace Opaax
         glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &lMaxTexUnits);
         glGetIntegerv(GL_MAX_TEXTURE_SIZE,        &lMaxTexSize);
         
-        OPAAX_LOG(LogOpenGLContext, Info, "====================  Render Backend  ====================")
-        OPAAX_LOG(LogOpenGLContext, Info, "  API .............. OpenGL {}", lStr(GL_VERSION))
+        OPAAX_LOG(LogOpenGLContext, Info, "====================  Render Backend  ====================");
+        OPAAX_LOG(LogOpenGLContext, Info, "  API .............. OpenGL {}", lStr(GL_VERSION));
         OPAAX_LOG(LogOpenGLContext, Info, "  GPU .............. {}",         lStr(GL_RENDERER));
         OPAAX_LOG(LogOpenGLContext, Info, "  Vendor ........... {}",         lStr(GL_VENDOR));
         OPAAX_LOG(LogOpenGLContext, Info, "  GLSL ............. {}",         lStr(GL_SHADING_LANGUAGE_VERSION));

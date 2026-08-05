@@ -127,7 +127,7 @@ namespace Opaax
         // =========================================================================
         //
         // REQUIRED by OPAAX_API, not hygiene: dllexport instantiates every implicitly-declared
-        // member, and copy-assigning a TDynArray<UniquePtr<...>> fails to compile (C2280) even
+        // member, and copy-assigning a TDynArray<TUniquePtr<...>> fails to compile (C2280) even
         // though nothing ever copies a registry. Same shape as ComponentRegistry and World.
         WorldSubsystemRegistry(const WorldSubsystemRegistry&)            = delete;
         WorldSubsystemRegistry& operator=(const WorldSubsystemRegistry&) = delete;
@@ -173,7 +173,7 @@ namespace Opaax
         template<typename TFunc>
         void ForEach(TFunc&& InFunc) const
         {
-            for (const UniquePtr<IWorldSubsystemEntry>& lEntry : m_Entries)
+            for (const TUniquePtr<IWorldSubsystemEntry>& lEntry : m_Entries)
             {
                 InFunc(static_cast<const IWorldSubsystemEntry&>(*lEntry));
             }
@@ -191,13 +191,13 @@ namespace Opaax
         // =========================================================================
     private:
         /** Out-of-line sink for Register<T> — see the NOTE there. Takes ownership. */
-        bool AddEntry(UniquePtr<IWorldSubsystemEntry> InEntry, OpaaxStringID InName);
+        bool AddEntry(TUniquePtr<IWorldSubsystemEntry> InEntry, OpaaxStringID InName);
 
         // =========================================================================
         // Members
         // =========================================================================
     private:
-        TDynArray<UniquePtr<IWorldSubsystemEntry>> m_Entries;
+        TDynArray<TUniquePtr<IWorldSubsystemEntry>> m_Entries;
         bool                                       m_bSealed = false;
     };
 }
