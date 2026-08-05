@@ -234,18 +234,28 @@ because that is precisely what silently reordered the boot in [[L22]].
 `IProjectManager::StartupLevel()` — the project's `.opaaxproj`, key `startupLevel`, with `startupScene` /
 `defaultScene` as Scene-era fallbacks (**X4**). Hosts override to open something else.
 
-**BO4b — `WorldSpec` carries a `LevelPath` as well as a `Name`, and separating them was forced** (M5,
-2026-08-03). The base seam used to put `StartupLevel()` *straight into* `Name`, which was harmless only
-because that value was always empty; the moment a project actually names its level, you get a world called
-`"Levels/Main.opaaxlevel"`. `Name` is now **derived from the path's stem** by `OpaaxApplication::
-DeriveWorldName` — static and pure, so the naming rule is testable without booting a host — with the
-pre-M5 `"Main"` fallback preserved for every degenerate input. An **empty `LevelPath` stays a supported
-answer**: a test host, or a game that fills its world in code, boots into an empty world exactly as before.
-`IEngine::FinishStartup` then *opens* the level (`Engine::OpenStartupLevel`) after creating and activating
-the world — the host still only NAMES things, so the query stays a query. **WS7 is unaffected and now
-visible in the boot log**: the world's subsystems start *before* the entities land, the same order a PIE
-clone gets, so "are entities there at `Startup`?" stays a uniform **no**.
-*The general lesson is [[L26]]'s: a field that two things were sharing only because one of them was always
+**BO4b — `WorldSpec` carries a `LevelPath` and a `Mode`, and NO `Name`: a world is named by the LEVEL it
+opens** (M5 2026-08-03; naming reworked 2026-08-04). The seam briefly carried both, with `Name` **derived
+from the path's stem** — and mining a name out of a file path is the wrong source, because it makes the
+world's identity a property of where the file happens to sit rather than of what the author called it.
+`LevelData::Name` is now that source: `LevelFile::Load` fills it from the `name` key, falling back to the
+file's stem so an unnamed level still names its world. A host that cannot supply a level therefore cannot
+invent a name for one either, which is why the field left the seam entirely along with
+`OpaaxApplication::DeriveWorldName`.
+
+**The consequence is an ORDERING one: `FinishStartup` reads the level BEFORE it creates the world**
+(`Engine::ResolveStartupLevel` → `CreateWorld` → `OpenStartupLevel`). Only the *read* moved forward;
+**instantiation still happens after `CreateWorld`, so WS7 is unaffected** — the boot log shows the world's
+subsystems starting before the entities land, the same order a PIE clone gets.
+
+**BO4c — A startup level that does not resolve is a FALLBACK, never a refusal to boot.** Absent, empty or
+unreadable, the engine creates a world named **`NullLevel`** (`NULL_LEVEL_WORLD_NAME`, beside `WorldSpec`)
+and opens nothing. The two cases are deliberately different volumes: an **empty `LevelPath` logs Info**
+(a test host, or a game that fills its world in code — a supported answer, unchanged), while a path the
+project **names but cannot open logs Warn** (a real misconfiguration). Resolution goes through
+`ResourceManager::Load<LevelResource>`, whose FailFast null **is** the existence check — and it covers a
+corrupt file too, which a bare path-exists test would wave through.
+*The general lesson is [[L30]]'s: a field two things were sharing only because one of them was always
 empty is a latent bug, not a simplification.*
 
 **BO4a — `EWorldMode` is fixed at construction, and that is load-bearing** (M4 S2). A `World` takes its mode
@@ -374,7 +384,7 @@ not overriding them leaves runtime byte-identical.
 | `PreEngineStartup()` | start of `EngineStartup` | before subsystems start |
 | `RegisterModules(registrar)` | in `EngineStartup`, **after `Engine().Startup()`** — subsystems up, registries live, **no world yet** (BO4) | route the game module — drives `IRuntimeModule::OnRegister` (**MR**) |
 | `OnModulesRegistered()` | in `EngineStartup`, **after** `OnRegisterModules`, **before** `Engine().Startup()` (still no world) | editor registers its D10 extensions and **seals before the first world** (§2). `EditorApplication` overrides → `EditorService::RegisterExtensions`, which registers the editor's own **native** panels first, then drives each `IEditorModule::OnRegister(EditorExtensionRegistrar&)`, then seals — **MR2's order one level down** (natives → game module → seal), so a native panel travels the same route as a game panel with no privileged path. Generic engine-side name (no editor types) — the engine stays editor-ignorant (**D4**). |
-| `GetStartupWorldSpec() const` | in `EngineStartup`, **after `OnModulesRegistered`** — the last step of boot (BO4) | **a pure query, not an action**: answer *which* world and *which* `EWorldMode` the app starts in. Base impl is real, not a no-op — `IProjectManager::StartupLevel()` (→ "Main") + `Play`; `EditorApplication` overrides → `Edit`. The engine then does the work in `IEngine::FinishStartup`, whose `CreateWorld` is the **first** one and so seals the registries. Replaced `CreateStartupWorld()`, which reached through the engine to drive `WorldManager` itself |
+| `GetStartupWorldSpec() const` | in `EngineStartup`, **after `OnModulesRegistered`** — the last step of boot (BO4) | **a pure query, not an action**: answer *which level* and *which* `EWorldMode` the app starts in — **not** what the world is called (BO4b). Base impl is real, not a no-op — `IProjectManager::StartupLevel()` + `Play`; `EditorApplication` overrides → `Edit`. The engine then does the work in `IEngine::FinishStartup`, whose `CreateWorld` is the **first** one and so seals the registries. Replaced `CreateStartupWorld()`, which reached through the engine to drive `WorldManager` itself |
 | `PostEngineStartup()` | end of `EngineStartup` | after subsystems start **and the startup world exists** (editor inits `EditorService`; Sandbox populates the world) |
 | `TickFrame()` | per loop iter | base = `Engine().Loop()`; editor wraps it UI-begin → Loop → UI-end |
 | `OnEvent(event)` | window callback, per event | base = app sink (close/resize→bus); `EditorApplication` overrides → `EditorService::RouteInput` first (S11), so the editor sees events before the bus |
@@ -776,7 +786,7 @@ vocabulary of record.
 
 ## Pointers
 
-- **Post-mortems / rules:** `.claude/lessons.md` (L1–**L31**).
+- **Post-mortems / rules:** `.claude/lessons.md` (L1–**L32**).
 - **Live session state:** `.claude/CLAUDE.local.md` (current milestone, standing decisions).
 - **Working checklist:** `.claude/task/todo.md`.
 - **Ground truth for engine design:** `.claude/data/` — *Game Engine Architecture* (Gregory). Prefer it over

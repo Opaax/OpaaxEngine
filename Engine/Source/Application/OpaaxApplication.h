@@ -193,15 +193,6 @@ namespace Opaax
          */
         virtual WorldSpec GetStartupWorldSpec() const;
 
-        /**
-         * "Levels/Main.opaaxlevel" -> "Main"; empty or stem-less -> "Main".
-         *
-         * Static and pure so the naming rule is testable without a host: it is the one place the
-         * path-vs-name distinction is decided, and a host overriding GetStartupWorldSpec can
-         * reuse it rather than re-deriving the convention.
-         */
-        static OpaaxString DeriveWorldName(const OpaaxString& InLevelPath);
-        
         // End Startup world
         // =============================================================================
         

@@ -65,19 +65,5 @@ namespace Opaax
         OPAAX_API Result LoadInto(const LevelData& InLevel, World& InWorld,
                                   const ComponentRegistry& InRegistry,
                                   const IPaths& InPaths, ResourceManager& InResources);
-
-        /**
-         * Read the level at InAssetRelPath, then LoadInto.
-         *
-         * The entry point a host uses, so that "open this level" is one call rather than a
-         * sequence a caller could get wrong.
-         *
-         * @param InAssetRelPath Asset-relative, e.g. "Levels/Main.opaaxlevel" — the form
-         *                       `startupLevel` takes in the .opaaxproj.
-         * @return A Result whose counts are all zero when the level file itself could not be read.
-         */
-        OPAAX_API Result LoadLevelInto(const OpaaxString& InAssetRelPath, World& InWorld,
-                                       const ComponentRegistry& InRegistry,
-                                       const IPaths& InPaths, ResourceManager& InResources);
     }
 }

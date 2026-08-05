@@ -7,6 +7,7 @@
 #include "FrameInfo.hpp"
 #include "Core/Events/EventBus.h"
 #include "Engine/Registries/EngineRegistries.h"
+#include "Engine/Subsystems/Resources/ResourceRef.hpp"   // ResolveStartupLevel returns one by value
 
 namespace Opaax
 {
@@ -17,6 +18,8 @@ namespace Opaax
     class IFramebuffer;
     class IRenderTarget;
     struct FramebufferSpec;
+    struct LevelData;
+    struct LevelResource;
 
     inline constexpr double MAX_FRAME_DELTA = 0.25;
 
@@ -47,6 +50,9 @@ namespace Opaax
         // Function
         // =============================================================================
         
+    private:
+        bool CanFinishStartup();
+        
         // =============================================================================
         // Native Engine
     private:
@@ -75,16 +81,21 @@ namespace Opaax
         // Startup content
     private:
         /**
-         * Open InSpec.LevelPath into the freshly-created startup world (M5).
+         * Load the level InSpec names, BEFORE the world exists — the world takes its name from
+         * the level's own data, so the level has to be read first.
          *
-         * Split out of FinishStartup so that method keeps reading as the three things it does —
-         * create, activate, open — rather than growing a body. An EMPTY LevelPath returns
-         * silently: booting into an empty world is a supported answer, not a failure.
+         * @return A null ref for an empty path (silent — a supported answer) and for one that
+         *   does not resolve (a warning). Either way the caller boots the NullLevel world.
+         */
+        ResourceRef<LevelResource> ResolveStartupLevel(const OpaaxString& InAssetRelPath) const;
+
+        /**
+         * Instantiate InLevel's maps into the freshly-created startup world.
          *
          * Runs AFTER the world's subsystems have started, which is the same order a PIE clone
          * gets. That uniformity is deliberate — see WS7.
          */
-        void OpenStartupLevel(const WorldSpec& InSpec, World* InWorld);
+        void OpenStartupLevel(const LevelData& InLevel, World& InWorld);
         // End Startup content
         // =============================================================================
 

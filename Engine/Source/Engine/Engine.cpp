@@ -18,7 +18,8 @@
 #include "Subsystems/Renderer/RendererManager.h"
 #include "World/WorldManager.h"
 #include "World/WorldEvents.h"
-#include "World/Serialization/LevelLoader.h"   // M5: FinishStartup opens the startup level
+#include "World/Serialization/LevelLoader.h"     // M5: FinishStartup opens the startup level
+#include "World/Serialization/LevelResource.hpp" // the startup level is resolved as a resource
 
 #include "RHI/Framebuffer.h"   // FramebufferSpec + the UniquePtr<IFramebuffer> deleter
 
@@ -34,7 +35,26 @@ namespace Opaax
     {
         Shutdown();
     }
-    
+
+    bool Engine::CanFinishStartup()
+    {
+        bool lReturnState = true;
+        
+        if (!m_bStarted)
+        {
+            OPAAX_ENGINE_LOG(Error, "FinishStartup called before Startup — no world created")
+            lReturnState = false;
+        }
+
+        if (m_WorldManager == nullptr)
+        {
+            OPAAX_ENGINE_LOG(Error, "FinishStartup: no WorldManager subsystem — no world created")
+            lReturnState = false;
+        }
+        
+        return lReturnState;
+    }
+
     void Engine::RegisterNativeComponents()
     {
         m_Registries.Components().Register<DummyComponent>("Dummy");
@@ -166,55 +186,68 @@ namespace Opaax
 
     World* Engine::FinishStartup(const WorldSpec& InSpec)
     {
-        // Loud, not lenient. A host reaching here before Startup used to get the world anyway
-        // via a lazy accessor, which silently moved the whole boot 0.7s early and sealed the
-        // registries before any module could register (L22). Refusing is the fix; there is no
-        // safety net to re-add.
-        if (!m_bStarted)
+        if (!CanFinishStartup)
         {
-            OPAAX_ENGINE_LOG(Error, "FinishStartup called before Startup — no world created")
             return nullptr;
         }
 
-        if (m_WorldManager == nullptr)
-        {
-            OPAAX_ENGINE_LOG(Error, "FinishStartup: no WorldManager subsystem — no world created")
-            return nullptr;
-        }
+        // The level is read BEFORE the world exists, because the world takes its name from the
+        // level's data. Instantiation still happens after CreateWorld — WS7 is unchanged.
+        const ResourceRef<LevelResource> lLevelRef = ResolveStartupLevel(InSpec.LevelPath);
+        const LevelResource* const       lLevel    = lLevelRef.Get();
 
-        World* lWorld = m_WorldManager->CreateWorld(InSpec.Name, InSpec.Mode);
+        const OpaaxString lName = (lLevel != nullptr) ? lLevel->Data.Name : OpaaxString(NULL_LEVEL_WORLD_NAME);
+
+        World* lWorld = m_WorldManager->CreateWorld(lName, InSpec.Mode);
         m_WorldManager->SetActiveWorld(lWorld);
 
-        OPAAX_ENGINE_LOG(Info, "Startup world '{}' ({}) created and activated",
-                         InSpec.Name.CStr(), ToString(InSpec.Mode))
+        OPAAX_ENGINE_LOG(Info, "Startup world '{}' ({}) created and activated", lName.CStr(), ToString(InSpec.Mode))
 
-        OpenStartupLevel(InSpec, lWorld);
+        if (lLevel != nullptr && lWorld != nullptr)
+        {
+            OpenStartupLevel(lLevel->Data, *lWorld);
+        }
 
         return lWorld;
     }
 
-    void Engine::OpenStartupLevel(const WorldSpec& InSpec, World* InWorld)
+    ResourceRef<LevelResource> Engine::ResolveStartupLevel(const OpaaxString& InAssetRelPath) const
     {
-        // No level is a SUPPORTED answer, not a misconfiguration: a test host, or a game that
-        // populates its world in code, boots into an empty world exactly as it did before M5.
-        if (InSpec.LevelPath.IsEmpty() || InWorld == nullptr)
+        if (InAssetRelPath.IsEmpty())
         {
-            return;
+            OPAAX_ENGINE_LOG(Info, "No startup level configured — booting '{}'", NULL_LEVEL_WORLD_NAME)
+            return {};
         }
 
         if (m_Resources == nullptr)
         {
             OPAAX_ENGINE_LOG(Error, "No ResourceManager — cannot open startup level '{}'",
-                             InSpec.LevelPath.CStr())
-            return;
+                             InAssetRelPath.CStr())
+            return {};
         }
 
-        // NOTE: this runs AFTER CreateWorld, so the world's subsystems have already started and
-        // the entities land underneath them. That is the same order a PIE clone gets (Capture ->
-        // CreateWorld -> Instantiate), which is exactly the point: "are entities there at
-        // Startup?" stays a uniform NO rather than "depends how your world was made" (WS7).
-        const LevelLoader::Result lResult = LevelLoader::LoadLevelInto(
-            InSpec.LevelPath, *InWorld, GetRegistries().Components(),
+        const OpaaxString lAbsPath = OpaaxApplication::GetAppService<IPaths>()
+                                     .AssetToAbsolute(InAssetRelPath);
+
+        // FailFast: a missing or unreadable level resolves to null rather than to a placeholder,
+        // so this IS the existence check — and it covers a corrupt file too, which a stat would not.
+        ResourceRef<LevelResource> lRef = m_Resources->Load<LevelResource>(lAbsPath.CStr());
+
+        if (lRef.Get() == nullptr)
+        {
+            // A project that NAMES a level it cannot open is a real misconfiguration — loud,
+            // unlike the empty case above. Booting NullLevel anyway beats refusing to start.
+            OPAAX_ENGINE_LOG(Warn, "Startup level '{}' could not be opened — falling back to '{}'",
+                             InAssetRelPath.CStr(), NULL_LEVEL_WORLD_NAME)
+        }
+
+        return lRef;
+    }
+
+    void Engine::OpenStartupLevel(const LevelData& InLevel, World& InWorld)
+    {
+        const LevelLoader::Result lResult = LevelLoader::LoadInto(
+            InLevel, InWorld, GetRegistries().Components(),
             OpaaxApplication::GetAppService<IPaths>(), *m_Resources);
 
         if (!lResult.IsOk())
@@ -223,7 +256,7 @@ namespace Opaax
             // content, which is the failure mode MapResource is FailFast to avoid — so the
             // engine must not pass over it quietly either.
             OPAAX_ENGINE_LOG(Error, "Startup level '{}' did not open cleanly ({} map(s) loaded, {} failed)",
-                             InSpec.LevelPath.CStr(), lResult.MapsLoaded, lResult.MapsFailed)
+                             InLevel.Name.CStr(), lResult.MapsLoaded, lResult.MapsFailed)
         }
     }
 

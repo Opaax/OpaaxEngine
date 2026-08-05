@@ -789,3 +789,36 @@ a map got big.
 - **Read the log's line COUNT, not just its errors.** 145 lines vs 1796 was the entire signal, and
   a grep for `error|warn` reported 0 in both. Same shape as [[L24]]'s empty log: the absence of
   complaints is not evidence of correctness.
+
+## L32 — Deriving an identity from a FILE PATH is mining, not sourcing: ask where the authored value lives (2026-08-04)
+
+**What happened (code review).** M5 split `WorldSpec` into `{Name, LevelPath}` after [[L30]] caught the
+two-meanings-in-one-field bug, and I derived the `Name` from the path's stem —
+`Name = DeriveWorldName(LevelPath)`. I was pleased with it: static, pure, unit-tested against six path
+shapes, documented as "the one place the path-vs-name distinction is decided." The user read one line and
+said **"This is bad."** They were right. The fix to [[L30]] had corrected the *symptom* (one field holding
+two things) while keeping the actual mistake: **the world's identity was still a function of where its
+file happened to sit.** Move or rename the file and the world silently renames; two levels in different
+folders with the same filename become indistinguishable. The authored value — what the designer *calls*
+that level — had no home in the format at all.
+
+**The fix was to add the source, not to relocate the derivation.** `LevelData::Name` from a `name` key,
+stem as fallback. And once the level names the world, `WorldSpec::Name` has no source, so it **left the
+seam entirely** along with `DeriveWorldName` — a host that cannot supply a level cannot invent a name for
+one either. My instinct had been to move `DeriveWorldName` down into the engine, which would have kept the
+string surgery and just hidden it one layer lower.
+
+**Rules for next time:**
+- **When code computes an identity (name, id, key, title) from a path, stop and ask where the AUTHORED
+  value is supposed to live.** If the answer is "nowhere yet", the deliverable is a field in the format,
+  not a cleverer parser. A path is a *location*; a name is *data*. Deriving one from the other couples
+  identity to the filesystem, and the coupling is silent — nothing fails, things just quietly rename.
+- **A stem fallback is fine; a stem SOURCE is not.** Keep the derivation as the answer for files that
+  do not state a name, and put it next to the parser that has the path — not in the caller, and not in a
+  seam three layers up.
+- **Deleting the derived field is usually the real simplification** ([[prefers-deletion-over-machinery]]).
+  Once the value has a genuine source, ask which callers were only passing it along; here the whole
+  `Name` field and its host-side helper and its six tests all went, and the seam got smaller.
+- **A test suite over a bad rule proves the rule, not the design.** Six passing `DeriveWorldName` cases
+  made the stem convention look settled. Coverage measures whether code does what you said; it never asks
+  whether what you said was the right thing to say ([[L27]]'s "know WHY it works", one level up).

@@ -6,6 +6,24 @@
 
 namespace Opaax
 {
+    namespace
+    {
+        // Byte-wise on purpose: '/', '\\' and '.' are ASCII, so this is UTF-8 safe without
+        // building an fs::path out of an engine string (I7).
+        OpaaxString FileStem(const OpaaxString& InPath)
+        {
+            const std::string lPath(InPath.CStr());
+
+            const size_t lSlash = lPath.find_last_of("/\\");
+            const size_t lStart = (lSlash == std::string::npos) ? 0 : lSlash + 1;
+
+            const size_t lDot = lPath.find_last_of('.');
+            const size_t lEnd = (lDot == std::string::npos || lDot < lStart) ? lPath.size() : lDot;
+
+            return OpaaxString(lPath.substr(lStart, lEnd - lStart).c_str());
+        }
+    }
+
     bool LevelFile::Load(const OpaaxString& InAbsPath, LevelData& OutData)
     {
         const OpaaxString lText = FileIO::ReadAllText(InAbsPath);
@@ -40,6 +58,19 @@ namespace Opaax
         // caller's level exactly as it was (MapFile::Load holds the same contract).
         LevelData lParsed;
 
+        const auto lNameIt = lJson.find(KEY_NAME);
+        if (lNameIt != lJson.end() && lNameIt->is_string())
+        {
+            lParsed.Name = OpaaxString(lNameIt->get<std::string>().c_str());
+        }
+
+        // The stem is the fallback, never the source: a level that names itself keeps its name
+        // wherever the file is moved to.
+        if (lParsed.Name.IsEmpty())
+        {
+            lParsed.Name = FileStem(InAbsPath);
+        }
+
         const auto lMapsIt = lJson.find(KEY_MAPS);
         if (lMapsIt != lJson.end() && lMapsIt->is_array())
         {
@@ -56,7 +87,8 @@ namespace Opaax
             }
         }
 
-        OPAAX_LOG(LogLevelFile, Info, "Loaded level '{}': {} map(s)", InAbsPath.CStr(), lParsed.MapCount())
+        OPAAX_LOG(LogLevelFile, Info, "Loaded level '{}' as '{}': {} map(s)",
+                  InAbsPath.CStr(), lParsed.Name.CStr(), lParsed.MapCount())
 
         OutData = Move(lParsed);
         return true;

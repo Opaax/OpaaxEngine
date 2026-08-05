@@ -84,27 +84,27 @@ TEST_CASE("world mode: a mode set at creation survives being made active")
 // =============================================================================
 // WorldSpec — the seam type itself
 // =============================================================================
-TEST_CASE("world spec: defaults to Play with no name")
+TEST_CASE("world spec: defaults to Play with no level")
 {
     WorldSpec lSpec;
 
-    CHECK(lSpec.Name.IsEmpty());
+    CHECK(lSpec.LevelPath.IsEmpty());
     CHECK(lSpec.Mode == EWorldMode::Play);
 }
 
-TEST_CASE("world spec: a spec creates the world it describes")
+TEST_CASE("world spec: the spec's mode is the mode the world is created in")
 {
-    // What Engine::FinishStartup does with the host's answer, minus the engine: this is the
-    // whole contract of the seam, so it should hold without a booted engine to observe it.
+    // What Engine::FinishStartup does with the host's answer, minus the engine. The NAME is not
+    // the host's to give — it comes from the level (LevelData::Name), or NullLevel when there
+    // is none — so the spec carries only the mode and the path.
     WorldSpec lSpec;
-    lSpec.Name = OpaaxString("FromSpec");
     lSpec.Mode = EWorldMode::Edit;
 
     WorldManager lWorlds;
-    World*       lWorld = lWorlds.CreateWorld(lSpec.Name, lSpec.Mode);
+    World*       lWorld = lWorlds.CreateWorld(OpaaxString(NULL_LEVEL_WORLD_NAME), lSpec.Mode);
 
     REQUIRE(lWorld != nullptr);
-    CHECK(lWorld->GetName() == OpaaxString("FromSpec"));
+    CHECK(lWorld->GetName() == OpaaxString("NullLevel"));
     CHECK(lWorld->GetMode() == EWorldMode::Edit);
 }
 

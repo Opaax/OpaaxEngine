@@ -319,43 +319,10 @@ WorldSpec OpaaxApplication::GetStartupWorldSpec() const
 {
     WorldSpec lSpec;
 
-    // The project decides, not the engine: <Name>.opaaxproj carries the startup level, as an
-    // ASSET-RELATIVE path ("Levels/Main.opaaxlevel"). Empty (or no project file) means no level
-    // to open — a bare host still boots, into an empty world.
     lSpec.LevelPath = GetAppService<IProjectManager>().StartupLevel();
-
-    // The NAME is derived from the path, not the path itself. Until M5 the raw value went
-    // straight into Name, which only ever worked because it was empty — a project that names its
-    // level would otherwise have produced a world called "Levels/Main.opaaxlevel".
-    lSpec.Name = DeriveWorldName(lSpec.LevelPath);
-
-    // A runtime host plays. The editor overrides this to Edit.
-    lSpec.Mode = EWorldMode::Play;
+    lSpec.Mode      = EWorldMode::Play;
 
     return lSpec;
-}
-
-OpaaxString OpaaxApplication::DeriveWorldName(const OpaaxString& InLevelPath)
-{
-    // "Levels/Main.opaaxlevel" -> "Main". Both separators are handled: the engine writes forward
-    // slashes everywhere, but a hand-edited .opaaxproj on Windows may well carry backslashes.
-    if (InLevelPath.IsEmpty())
-    {
-        return OpaaxString("Main");   // the pre-M5 fallback, unchanged
-    }
-
-    const std::string lPath(InLevelPath.CStr());
-
-    const size_t lSlash = lPath.find_last_of("/\\");
-    const size_t lStart = (lSlash == std::string::npos) ? 0 : lSlash + 1;
-
-    const size_t lDot = lPath.find_last_of('.');
-    const size_t lEnd = (lDot == std::string::npos || lDot < lStart) ? lPath.size() : lDot;
-
-    const std::string lStem = lPath.substr(lStart, lEnd - lStart);
-
-    // A path that is nothing but a directory or an extension leaves no stem to use.
-    return lStem.empty() ? OpaaxString("Main") : OpaaxString(lStem.c_str());
 }
 
 void OpaaxApplication::EngineTeardown()
