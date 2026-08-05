@@ -6,8 +6,8 @@
 // the design: Engine binds these same delegates to bridge them onto the EngineEventBus
 // (see Engine::HandleWorldCreated), but nothing here needs the Engine to exist.
 //
-// Every case builds the manager WITHOUT calling Startup(), because Startup() creates and
-// activates a default "Main" world whose events would otherwise pollute the counts.
+// Every case builds the manager WITHOUT calling Startup(): it needs none of it to broadcast,
+// and a bare manager keeps the counts below to exactly the worlds each case makes itself.
 #include <doctest.h>
 
 #include "World/World.h"

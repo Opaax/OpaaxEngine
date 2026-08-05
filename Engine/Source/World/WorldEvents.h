@@ -23,10 +23,9 @@ namespace Opaax
     // Engine is the only bridge between the two (same shape as OpaaxApplication turning a
     // Tier-1 WindowResize into a bus payload — the host bridges, never the producer).
     //
-    // NOTE: WorldManager::Startup creates + activates the default "Main" world before
-    // Engine has bound, so Main's events reach nobody. That is intentional: a listener
-    // that needs the already-live world calls WorldManager::GetActiveWorld() when it
-    // binds, rather than relying on having witnessed its creation.
+    // NOTE: the startup world is created in FinishStartup, AFTER Engine::Startup has bound
+    // these (BO4), so it does reach subscribers. A listener binding later still calls
+    // WorldManager::GetActiveWorld() rather than relying on having witnessed the creation.
     // =============================================================================
 
     // =============================================================================

@@ -34,6 +34,7 @@ set(OPAAX_TEST_SOURCES
     Core/Engine/Subsystems/Resources/ResourceSystemTests.cpp
     Core/Engine/ModuleRegistrarTests.cpp
     Core/Engine/InputManagerTests.cpp
+    Core/Engine/EngineEventsTests.cpp
     Core/World/WorldEventsTests.cpp
     Core/World/ComponentIdentityTests.cpp
     Core/World/ComponentRegistryTests.cpp

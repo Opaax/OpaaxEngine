@@ -11,6 +11,7 @@
 #include "Application/Services/Platforms/IPlatform.h"
 
 //Subsystems
+#include "Engine/EngineEvents.h"
 #include "Engine/Subsystems/Resources/ResourceManager.h"
 #include "Core/Maths/MathsStatics.h"
 #include "Subsystems/EventBus/EngineEventBus.h"
@@ -176,9 +177,11 @@ namespace Opaax
         BindToWorldMgrEvents();
 
         m_bStarted  = true;
-        
-        //TODO
-        //m_EngineEventBus->Publish(EngineStart)
+
+        if (m_EngineEventBus != nullptr)
+        {
+            m_EngineEventBus->GetEventBus().Publish(EngineStarted{});
+        }
 
         OPAAX_ENGINE_LOG(Info, "Engine::Startup ----> Finishing startup: ({} subsystem(s))", m_Subsystems.GetSystems().size())
         return true;
@@ -186,7 +189,7 @@ namespace Opaax
 
     World* Engine::FinishStartup(const WorldSpec& InSpec)
     {
-        if (!CanFinishStartup)
+        if (!CanFinishStartup())
         {
             return nullptr;
         }
@@ -349,10 +352,6 @@ namespace Opaax
             return;
         }
         
-        //TODO
-        //m_EngineEventBus->Publish(EngineShuttingDown)
-        // Wait for event bus flush?
-
         UnbindFromWorldMgrEvents();
 
         m_Subsystems.ShutdownAll();
@@ -427,6 +426,13 @@ namespace Opaax
         if (!m_bStarted)
         {
             return;
+        }
+
+        // Announced BEFORE TearDownAll, while every sibling is still reachable — that window
+        // is the whole reason this event lives here and not in Shutdown.
+        if (m_EngineEventBus != nullptr)
+        {
+            m_EngineEventBus->GetEventBus().Publish(EngineTearingDown{});
         }
 
         m_Subsystems.TearDownAll();
