@@ -53,8 +53,8 @@ namespace Opaax
         /*-------------------------------------------------------------------------*/
         // Window Mode
         
-        void        SetWindowMode(WindowMode NewWindowMode) override;
-        WindowMode  GetWindowMode() const override { return m_Data.WindowMode; }
+        void        SetWindowMode(EWindowMode NewWindowMode) override;
+        EWindowMode GetWindowMode() const override { return m_Data.Mode; }
         
         void SetWindowed()      override;
         void SetBorderless()    override;
@@ -80,7 +80,7 @@ namespace Opaax
             String Title;
             Uint32 PosX, PosY, Width, Height;
             Uint32 RefreshRate = GLFW_DONT_CARE;
-            WindowMode WindowMode;
+            EWindowMode Mode;
 
             EventCallbackFunc EventCallback;
         };

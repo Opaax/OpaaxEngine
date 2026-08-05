@@ -24,23 +24,23 @@ namespace Opaax
     // =========================================================================
     // Window mode string mapping — the BackendFromString shape: unknown falls back, loudly.
     // =========================================================================
-    WindowMode WindowModeFromString(const OpaaxString& InName)
+    EWindowMode WindowModeFromString(const OpaaxString& InName)
     {
-        if (InName == "Windowed")   { return WindowMode::Windowed;   }
-        if (InName == "Borderless") { return WindowMode::Borderless; }
-        if (InName == "Fullscreen") { return WindowMode::Fullscreen; }
+        if (InName == "Windowed")   { return EWindowMode::Windowed;   }
+        if (InName == "Borderless") { return EWindowMode::Borderless; }
+        if (InName == "Fullscreen") { return EWindowMode::Fullscreen; }
 
         OPAAX_LOG(LogWindowManager, Warn, "Unknown window mode '{}' — falling back to Windowed.", InName.CStr())
-        return WindowMode::Windowed;
+        return EWindowMode::Windowed;
     }
 
-    const char* WindowModeToString(WindowMode InMode) noexcept
+    const char* WindowModeToString(EWindowMode InMode) noexcept
     {
         switch (InMode)
         {
-            case WindowMode::Windowed:   return "Windowed";
-            case WindowMode::Borderless: return "Borderless";
-            case WindowMode::Fullscreen: return "Fullscreen";
+            case EWindowMode::Windowed:   return "Windowed";
+            case EWindowMode::Borderless: return "Borderless";
+            case EWindowMode::Fullscreen: return "Fullscreen";
         }
         return "Windowed";
     }

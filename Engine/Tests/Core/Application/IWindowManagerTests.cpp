@@ -23,21 +23,21 @@ TEST_CASE("MakeWindowProps: maps the engine config window fields 1:1")
     CHECK(lProps.Title == "Test Title");
     CHECK(lProps.Width == 1024);
     CHECK(lProps.Height == 768);
-    CHECK(lProps.Mode == WindowMode::Borderless);
+    CHECK(lProps.Mode == EWindowMode::Borderless);
 }
 
 TEST_CASE("WindowModeFromString: every mode round-trips, unknown falls back to Windowed")
 {
-    CHECK(WindowModeFromString(OpaaxString("Windowed"))   == WindowMode::Windowed);
-    CHECK(WindowModeFromString(OpaaxString("Borderless")) == WindowMode::Borderless);
-    CHECK(WindowModeFromString(OpaaxString("Fullscreen")) == WindowMode::Fullscreen);
+    CHECK(WindowModeFromString(OpaaxString("Windowed"))   == EWindowMode::Windowed);
+    CHECK(WindowModeFromString(OpaaxString("Borderless")) == EWindowMode::Borderless);
+    CHECK(WindowModeFromString(OpaaxString("Fullscreen")) == EWindowMode::Fullscreen);
 
     // Unknown and empty both fall back rather than refusing to open a window.
-    CHECK(WindowModeFromString(OpaaxString("Maximized")) == WindowMode::Windowed);
-    CHECK(WindowModeFromString(OpaaxString(""))          == WindowMode::Windowed);
+    CHECK(WindowModeFromString(OpaaxString("Maximized")) == EWindowMode::Windowed);
+    CHECK(WindowModeFromString(OpaaxString(""))          == EWindowMode::Windowed);
 
     // The pair is what keeps a serialized config readable by the next boot.
-    for (const WindowMode lMode : { WindowMode::Windowed, WindowMode::Borderless, WindowMode::Fullscreen })
+    for (const EWindowMode lMode : { EWindowMode::Windowed, EWindowMode::Borderless, EWindowMode::Fullscreen })
     {
         CHECK(WindowModeFromString(OpaaxString(WindowModeToString(lMode))) == lMode);
     }
@@ -48,7 +48,7 @@ TEST_CASE("MakeWindowProps: an unknown config mode still yields a usable window"
     EngineConfigData lData;
     lData.WindowMode = OpaaxString("Borderles");   // typo — the realistic failure
 
-    CHECK(MakeWindowProps(lData).Mode == WindowMode::Windowed);
+    CHECK(MakeWindowProps(lData).Mode == EWindowMode::Windowed);
 }
 
 TEST_CASE("IWindowManager: the null manager owns no window and is never null")

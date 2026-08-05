@@ -13,7 +13,7 @@ namespace Opaax
 
     using EventCallbackFunc = TFunction<void(Event&)>;
     
-    enum class WindowMode
+    enum class EWindowMode
     {
         Windowed,
         Borderless,
@@ -33,7 +33,7 @@ namespace Opaax
         WindowProps(const String& Title = "Opaax Engine",
             Uint32 Width = 1280,
             Uint32 Height = 720,
-            WindowMode Mode = WindowMode::Windowed)
+            EWindowMode Mode = EWindowMode::Windowed)
             : Title(Title), Width(Width), Height(Height), Mode(Mode)
         {
         }
@@ -45,7 +45,7 @@ namespace Opaax
         String Title;
         Uint32 Width;
         Uint32 Height;
-        WindowMode Mode;
+        EWindowMode Mode;
     };
     
     
@@ -105,8 +105,8 @@ namespace Opaax
         /*-------------------------------------------------------------------------*/
         // Window Mode
         
-        virtual WindowMode  GetWindowMode() const           = 0;
-        virtual void        SetWindowMode(WindowMode mode)  = 0;
+        virtual EWindowMode GetWindowMode() const           = 0;
+        virtual void        SetWindowMode(EWindowMode mode) = 0;
         
         virtual void SetWindowed()          = 0;
         virtual void SetBorderless()        = 0;

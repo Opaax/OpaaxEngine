@@ -50,7 +50,7 @@ namespace Opaax
 		m_Data.Title  		= Props.Title;
 		m_Data.Width  		= Props.Width;
 		m_Data.Height 		= Props.Height;
-		m_Data.WindowMode	= Props.Mode;
+		m_Data.Mode	= Props.Mode;
 
 		OPAAX_LOG(LogWindowsWindow, Info, "Creating window {} ({}, {}) [{}]", Props.Title, Props.Width, Props.Height,
 			WindowModeToString(Props.Mode))
@@ -78,7 +78,7 @@ namespace Opaax
 			nullptr, nullptr
 		);
 		
-		SetWindowMode(m_Data.WindowMode);
+		SetWindowMode(m_Data.Mode);
 
 		// NOTE: Hard crash here is correct — a null window is unrecoverable.
 		OPAAX_CORE_ASSERT(m_Window)
@@ -302,21 +302,21 @@ namespace Opaax
 		m_Window = nullptr;        // can't be destroyed twice
 	}
 
-	void WindowsWindow::SetWindowMode(WindowMode mode)
+	void WindowsWindow::SetWindowMode(EWindowMode mode)
 	{
 		SaveWindowedState();
 		
 		switch(mode)
 		{
-		case WindowMode::Windowed:
+		case EWindowMode::Windowed:
 			SetWindowed();
 			break;
 
-		case WindowMode::Borderless:
+		case EWindowMode::Borderless:
 			SetBorderless();
 			break;
 
-		case WindowMode::Fullscreen:
+		case EWindowMode::Fullscreen:
 			SetFullscreen();
 			break;
 		}
@@ -338,7 +338,7 @@ namespace Opaax
 			m_Data.Height,
 			m_Data.RefreshRate);
 		
-		m_Data.WindowMode = WindowMode::Windowed;
+		m_Data.Mode = EWindowMode::Windowed;
 	}
 	void WindowsWindow::SetBorderless()
 	{
@@ -375,7 +375,7 @@ namespace Opaax
 			m_Data.PosX,
 			m_Data.PosY);
 		
-		m_Data.WindowMode = WindowMode::Borderless;
+		m_Data.Mode = EWindowMode::Borderless;
 	}
 	void WindowsWindow::SetFullscreen()
 	{
@@ -402,7 +402,7 @@ namespace Opaax
 			m_Data.Height,
 			m_Data.RefreshRate);
 		
-		m_Data.WindowMode = WindowMode::Fullscreen;
+		m_Data.Mode = EWindowMode::Fullscreen;
 	}
 
 	void WindowsWindow::SaveWindowedState()
