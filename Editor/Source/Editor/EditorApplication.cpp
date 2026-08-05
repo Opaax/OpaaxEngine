@@ -32,8 +32,7 @@ namespace Opaax::Editor
     WorldSpec EditorApplication::GetStartupWorldSpec() const
     {
         WorldSpec lSpec = OpaaxApplication::GetStartupWorldSpec();
-        // Only the mode differs today, but the seam stays ONE query: splitting it would let a host
-        // answer half a spec, and the level path becomes an override here too (see the header TODO).
+       
         lSpec.Mode = EWorldMode::Edit;
 
         return lSpec;

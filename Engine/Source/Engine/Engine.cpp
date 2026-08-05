@@ -262,14 +262,7 @@ namespace Opaax
                              InLevel.Name.CStr(), lResult.MapsLoaded, lResult.MapsFailed)
         }
     }
-
-    // =========================================================================
-    // Loop — one frame, driven by the application host (OpaaxApplication::RunApplication).
-    // Computes a real delta from a steady clock, then pumps Update (Resources + subsystems)
-    // and Render (RenderAll -> RendererManager). NOTE: present currently lives inside
-    // RenderSystem::EndFrame (m_Device->Present); S7 moves it host-side. The host does NOT
-    // call Window::SwapBuffers today.
-    // =========================================================================
+    
     void Engine::Loop()
     {
         // Publish finished async jobs back to their main-thread completions first.
@@ -297,18 +290,8 @@ namespace Opaax
         
         m_FrameInfo.m_AlphaPhysic = m_FrameInfo.m_AccumulatedDeltaTime / m_FrameInfo.m_FixedDeltaTime;
         Render(m_FrameInfo.m_AlphaPhysic);
-
-        // NOTE: the input frame is NOT closed here. Loop is not the end of the host's frame — the
-        // editor draws its UI after this returns, and anything cleared here would be invisible to
-        // it. OpaaxApplication::RunApplication closes it, just before the next PollEvents (IN2).
     }
-
-    // =========================================================================
-    // PresentBackbuffer — the swapchain show, driven by the host AFTER TickFrame (S7 / D2). Kept
-    // OUT of Render so the editor can draw its UI to the backbuffer between the world render and
-    // the present. Only the backbuffer is ever presented — an offscreen primary target is not.
-    // Delegates to the renderer adapter, which owns the device.
-    // =========================================================================
+    
     void Engine::PresentBackbuffer()
     {
         if (m_RendererManager != nullptr)
@@ -316,12 +299,7 @@ namespace Opaax
             m_RendererManager->Present();
         }
     }
-
-    // =========================================================================
-    // SetPrimaryRenderTarget — redirect the world render into a caller-owned target (nullptr =
-    // backbuffer, the runtime default). Forwards to the renderer adapter; the engine stores
-    // nothing itself (I5). No-op before Startup (the adapter isn't resolved yet).
-    // =========================================================================
+    
     void Engine::SetPrimaryRenderTarget(IRenderTarget* InTarget)
     {
         if (m_RendererManager != nullptr)
@@ -329,11 +307,7 @@ namespace Opaax
             m_RendererManager->SetPrimaryRenderTarget(InTarget);
         }
     }
-
-    // =========================================================================
-    // CreateFramebuffer — the only render-resource factory the engine exposes. Forwards to the
-    // renderer adapter, which owns the device; the engine stores nothing itself (I5).
-    // =========================================================================
+    
     UniquePtr<IFramebuffer> Engine::CreateFramebuffer(const FramebufferSpec& InSpec)
     {
         if (m_RendererManager == nullptr)
@@ -365,17 +339,38 @@ namespace Opaax
 
         OPAAX_ENGINE_LOG(Info, "Engine shutdown")
     }
+    
+    void Engine::Update(double InDeltaTime)
+    {
+        m_Subsystems.UpdateAll(InDeltaTime);
+    }
+    
+    void Engine::FixedUpdate(double InFixedDeltaTime)
+    {
+        m_Subsystems.FixedUpdateAll(InFixedDeltaTime);
+    }
+    void Engine::Render(double InAlphaPhysicStep)
+    {
+        m_Subsystems.RenderAll(InAlphaPhysicStep);
+    }
+    
+    void Engine::TearDown()
+    {
+        if (!m_bStarted)
+        {
+            return;
+        }
+        
+        if (m_EngineEventBus != nullptr)
+        {
+            m_EngineEventBus->GetEventBus().Publish(EngineTearingDown{});
+        }
 
-    // =========================================================================
-    // World event bridge — Tier-2 (WorldManager delegates) -> Tier-3 (EngineEventBus).
-    //
-    // NOTE: Publish (immediate), never Enqueue — deliberately against the bus's documented
-    // default. That default is sized for high-frequency input payloads carrying pure data
-    // (which is why a WindowResize can be enqueued). These payloads carry a raw World*: an
-    // enqueued WorldDestroyed would be delivered at the next Flush, long after WorldManager
-    // erased the world, and the pointer would dangle. Immediate keeps one rule for all
-    // three and lets a subscriber still touch the World while it is being destroyed.
-    // =========================================================================
+        m_Subsystems.TearDownAll();
+
+        OPAAX_ENGINE_LOG(Info, "Engine torn down")
+    }
+    
     void Engine::HandleWorldCreated(World* InWorld)
     {
         m_EngineEventBus->GetEventBus().Publish(WorldCreated{InWorld});
@@ -390,66 +385,9 @@ namespace Opaax
     {
         m_EngineEventBus->GetEventBus().Publish(ActiveWorldChanged{InOldWorld, InNewWorld});
     }
-
-    // =========================================================================
-    // Per-frame tick — pumps every engine subsystem. Harmless before Startup()
-    // (the subsystem list is empty, so these are no-ops).
-    // =========================================================================
-    void Engine::Update(double InDeltaTime)
-    {
-        m_Subsystems.UpdateAll(InDeltaTime);
-    }
     
-    void Engine::FixedUpdate(double InFixedDeltaTime)
-    {
-        m_Subsystems.FixedUpdateAll(InFixedDeltaTime);
-    }
-    void Engine::Render(double InAlphaPhysicStep)
-    {
-        m_Subsystems.RenderAll(InAlphaPhysicStep);
-    }
-
-    // =========================================================================
-    // TearDown — phase 1 of the two-phase stop, driven by the host right after the frame
-    // loop exits (OpaaxApplication::RunApplication -> EngineTeardown).
-    //
-    // Everything is still alive here: every subsystem, every app service, the window, the
-    // GPU context, and this Engine's own delegate bindings. That is the entire point — a
-    // subsystem can still reach a sibling. Shutdown() is too late: it unbinds and destroys.
-    //
-    // Reverse registration order (see TearDownAll), so EngineEventBus — registered first —
-    // tears down LAST. That is precisely what lets WorldManager announce its dying worlds
-    // here and still have them delivered to subscribers.
-    // =========================================================================
-    void Engine::TearDown()
-    {
-        if (!m_bStarted)
-        {
-            return;
-        }
-
-        // Announced BEFORE TearDownAll, while every sibling is still reachable — that window
-        // is the whole reason this event lives here and not in Shutdown.
-        if (m_EngineEventBus != nullptr)
-        {
-            m_EngineEventBus->GetEventBus().Publish(EngineTearingDown{});
-        }
-
-        m_Subsystems.TearDownAll();
-
-        OPAAX_ENGINE_LOG(Info, "Engine torn down")
-    }
-
-    // =========================================================================
-    // GetResources — always valid. Lazily starts the engine if the host hasn't yet
-    // (a safety net; the host SHOULD call Startup() during init). Safe today because
-    // Resources is IO/GPU-free; revisit when a GPU subsystem joins the startup batch.
-    // =========================================================================
     ResourceManager& Engine::GetResources()
     {
-        // Resolve from the owned subsystem manager. It is populated by StartupAll's
-        // create pass, so a sibling subsystem can reach this during its own Startup
-        // WITHOUT re-entering Engine::Startup (the source of the boot re-entrancy).
         if (m_Resources == nullptr)
         {
             m_Resources = m_Subsystems.GetSubsystem<ResourceManager>();
@@ -520,11 +458,7 @@ namespace Opaax
         OPAAX_ASSERT(m_InputManager != nullptr);
         return *m_InputManager;
     }
-
-    // =========================================================================
-    // GetDebugDraw — the D10 seam. The queue itself lives in RendererManager (it is what drains it);
-    // the engine only routes. Same resolve-from-manager shape as the three accessors above.
-    // =========================================================================
+    
     DebugDraw& Engine::GetDebugDraw()
     {
         // Resolve-from-manager first (see GetResources): never re-enter Startup.

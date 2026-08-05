@@ -676,6 +676,19 @@ carried** (it has no stable name to be written under — a registry gap, not a c
 read-only throughout and stays alive, which is the whole restore mechanism: Stop re-activates it and
 destroys the clone, undoing nothing. No `MapId` filter here — the filtered form is "save this map" (M5).
 
+**WM7 — A world's NAME is display text, so it stays an `OpaaxString`; interning is for KEYS**
+(settled 2026-08-05, closing a `//Todo: OpaaxStringID` on `CreateWorld`). `OpaaxStringID` buys one thing:
+O(1) integer compare on a key. Nothing compares or looks up a world by name — every `World::GetName()` in
+the tree is a log arg, the toolbar's display string, or the copy `CloneWorld` hands the clone — and no
+`LevelFile::Save` exists, so it is never persisted either. Converting would make the *only* live path
+slower (`ToString()` = `shared_lock` + an `OpaaxString` copy out of the pool, where `.CStr()` is a
+pointer) and would intern unbounded author content — the pool never evicts, and a world's name is the
+level's `name` key or a file stem (**BO4b**). The tree already draws this line correctly: the two
+registries intern *because* they do `GetName() == InName`, `MapId` interns *because* `EntityMeta::OwnerMap`
+is compared per entity (**WM2**), and `EntityMeta::Name` — display, like this one — does not.
+**Trigger to revisit:** the first thing that resolves a world BY name (a `FindWorld(name)`, or persisted
+editor session state naming one).
+
 ---
 
 ## MP — Map/Level file layer (landed M5, 2026-08-03)

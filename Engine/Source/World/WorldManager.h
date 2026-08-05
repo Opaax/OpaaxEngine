@@ -57,7 +57,6 @@ namespace Opaax
         // =========================================================================
         // World Lifetime
     public:
-        //Todo: OpaaxStringID
         /**
          * Create a world and take ownership of it. Does NOT activate it — the caller decides
          * (SetActiveWorld), because a PIE clone is created before it becomes active and the
@@ -72,21 +71,6 @@ namespace Opaax
         World* CreateWorld(OpaaxString InName = "World", EWorldMode InMode = EWorldMode::Play);
 
         /**
-         * Snapshot InSource and rebuild it as a NEW world running in InMode — the PIE entry point.
-         *
-         * Capture + Instantiate, not a registry copy: the clone holds the same entities under the
-         * same Guids (WM3), and the capture is UNFILTERED, so runtime-spawned entities come along.
-         * A clone that dropped them would diverge from the world it copied (WM2).
-         *
-         * Goes through CreateWorld, which is what makes the clone's subsystem set follow its OWN
-         * mode rather than the source's — cloning an Edit world into Play drops the edit overlays
-         * and gains the play systems (WS2).
-         *
-         * The source is untouched, and stays alive: that is what makes Stop free — activate the
-         * source again and destroy the clone.
-         *
-         * Registry-complete only: a component type the ComponentRegistry does not know is not
-         * captured and does not survive (WM6).
          *
          * @param InSource The world to copy. Read-only; it need not be active.
          * @param InMode   What the CLONE is for. Never inherited from the source.
