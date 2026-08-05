@@ -47,13 +47,20 @@ namespace Opaax
         // Function
         // =============================================================================
         
-    private:
         // =============================================================================
-        // Gather App services
+        // Native Engine
     private:
-        void CacheAppServices();
+        /**  */
+        void RegisterNativeComponents();
         
-        // End Gather App services 
+        /** Register Default engine subsystems*/
+        void RegisterNativeSubsystems();
+        
+        /** Cache convenient subsystems */
+        void CacheSubsystems();
+        /** Cache convenient app services*/
+        void CacheAppServices();
+        // End Native Engine
         // =============================================================================
         
         // =============================================================================
@@ -126,12 +133,12 @@ namespace Opaax
         void TearDown() override;
         void Shutdown() override;
 
-        EngineRegistries& GetRegistries() override;
-        ResourceManager& GetResources() override;
-        EngineEventBus&  GetEngineEventBus() override;
-        WorldManager&    GetWorldManager() override;
-        DebugDraw&       GetDebugDraw() override;
-        InputManager&    GetInput() override;
+        EngineRegistries&   GetRegistries() override { return m_Registries; }
+        ResourceManager&    GetResources() override;
+        EngineEventBus&     GetEngineEventBus() override;
+        WorldManager&       GetWorldManager() override;
+        DebugDraw&          GetDebugDraw() override;
+        InputManager&       GetInput() override;
         //~End IEngine interface
 
         // =============================================================================
@@ -198,15 +205,5 @@ namespace Opaax
         Uint64             m_LastTickNs = 0;
         bool               m_bHasTick   = false;
         bool               m_bStarted  = false;
-
-        // =============================================================================
-        // Functions
-        // =============================================================================
-    private:
-        /** Resolve the sibling convenience pointers from the manager (F3, never lazy-Startup). */
-        void CacheSubsystems();
-
-        /** The engine's OWN component types — registered first, so a module cannot shadow one (MR2). */
-        void RegisterNativeTypes();
     };
 }

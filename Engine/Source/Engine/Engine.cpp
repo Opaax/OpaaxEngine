@@ -24,51 +24,42 @@
 
 namespace Opaax
 {
-    // =========================================================================
-    // Construction only DECLARES the engine subsystems (registration queues a
-    // factory). Nothing is constructed or started until Startup() — so the Engine
-    // can be Provide()d during Bootstrap, before the window/renderer exist.
-    // =========================================================================
     Engine::Engine()
     {
-        // Engine natives FIRST, before any subsystem exists and long before a module gets a
-        // turn (MR2) — a module can then never shadow an engine type.
-        RegisterNativeTypes();
-
-        // WorldManager borrows the registries: it seals them on its way to the first world,
-        // and (M4) reads world-subsystem candidates out of them. Injected through the factory
-        // rather than reached for, so it never has to know about Engine.
-        m_Subsystems.RegisterSubsystem<EngineEventBus>();
-        m_Subsystems.RegisterSubsystem<ResourceManager>();
-        m_Subsystems.RegisterSubsystem<InputManager>();
-        m_Subsystems.RegisterSubsystem<WorldManager>(&m_Registries);
-        m_Subsystems.RegisterSubsystem<RendererManager>();
-    }
-
-    void Engine::RegisterNativeTypes()
-    {
-        // NOTE: DummyComponent is the whole native set today — the only live component type
-        // the engine owns. A real type registered DLL-side is also what proves the
-        // cross-boundary lookup in ComponentIdentityTests.
-        m_Registries.Components().Register<DummyComponent>("Dummy");
-    }
-
-    EngineRegistries& Engine::GetRegistries()
-    {
-        return m_Registries;
+        RegisterNativeComponents();
+        RegisterNativeSubsystems();
     }
 
     Engine::~Engine()
     {
         Shutdown();
     }
-
-    // =============================================================================
-    // Gather App services
-    // =============================================================================
+    
+    void Engine::RegisterNativeComponents()
+    {
+        m_Registries.Components().Register<DummyComponent>("Dummy");
+    }
+    
+    void Engine::RegisterNativeSubsystems()
+    {
+        m_Subsystems.RegisterSubsystem<EngineEventBus>();
+        m_Subsystems.RegisterSubsystem<ResourceManager>();
+        m_Subsystems.RegisterSubsystem<InputManager>();
+        m_Subsystems.RegisterSubsystem<WorldManager>(&m_Registries);
+        m_Subsystems.RegisterSubsystem<RendererManager>();
+    }
+    
+    void Engine::CacheSubsystems()
+    {
+        m_Resources       = m_Subsystems.GetSubsystem<ResourceManager>();
+        m_RendererManager = m_Subsystems.GetSubsystem<RendererManager>();
+        m_EngineEventBus  = m_Subsystems.GetSubsystem<EngineEventBus>();
+        m_WorldManager    = m_Subsystems.GetSubsystem<WorldManager>();
+        m_InputManager    = m_Subsystems.GetSubsystem<InputManager>();
+    }
     
     void Engine::CacheAppServices()
-    {
+    {        
         AppServiceLocator& lServices = OpaaxApplication::Services();
         
         m_Platform = &lServices.Get<IPlatform>();
@@ -136,15 +127,6 @@ namespace Opaax
     // =========================================================================
     // Lifecycle
     // =========================================================================
-    void Engine::CacheSubsystems()
-    {
-        //Safe to run before or after StartupAll: the create pass is what populates the list.
-        m_Resources       = m_Subsystems.GetSubsystem<ResourceManager>();
-        m_RendererManager = m_Subsystems.GetSubsystem<RendererManager>();
-        m_EngineEventBus  = m_Subsystems.GetSubsystem<EngineEventBus>();
-        m_WorldManager    = m_Subsystems.GetSubsystem<WorldManager>();
-        m_InputManager    = m_Subsystems.GetSubsystem<InputManager>();
-    }
 
     bool Engine::Startup()
     {
@@ -152,23 +134,25 @@ namespace Opaax
         {
             return true;
         }
+        
+        OPAAX_ENGINE_LOG(Info, "Engine::Startup ----> Begin start up")
 
+        OPAAX_ENGINE_LOG(Info, "Engine::Startup ----> Cache Application services....")
         CacheAppServices();
 
-        // Constructs then starts. No world exists when this returns — FinishStartup makes it,
-        // which is what keeps ComponentRegistry unsealed long enough for a game module to
-        // register into it. Startup/FinishStartup bracket that window on purpose (BO4).
+        OPAAX_ENGINE_LOG(Info, "Engine::Startup ----> Startup Engine Subsystems....")
         m_Subsystems.StartupAll();
 
+        OPAAX_ENGINE_LOG(Info, "Engine::Startup ----> Cache Engine Subsystems....")
         CacheSubsystems();
-
-        // Wire the async worker pool from the app service locator (null object if none),
-        // so ResourceManager::LoadAsync can run file IO/decode off the main thread.
+        
         if (m_Resources != nullptr)
         {
+            OPAAX_ENGINE_LOG(Info, "Engine::Startup ----> Push job system to Resources Manager")
             m_Resources->SetJobSystem(OpaaxApplication::GetAppService<IJobSystem>());
         }
         
+        OPAAX_ENGINE_LOG(Info, "Engine::Startup ----> Bind to world manager events")
         BindToWorldMgrEvents();
 
         m_bStarted  = true;
@@ -176,7 +160,7 @@ namespace Opaax
         //TODO
         //m_EngineEventBus->Publish(EngineStart)
 
-        OPAAX_ENGINE_LOG(Info, "Engine started ({} subsystem(s))", m_Subsystems.GetSystems().size())
+        OPAAX_ENGINE_LOG(Info, "Engine::Startup ----> Finishing startup: ({} subsystem(s))", m_Subsystems.GetSystems().size())
         return true;
     }
 

@@ -151,35 +151,6 @@ namespace Opaax
         
         /***/
         void EngineStartup();
-        
-        /**
-         * WHICH world the application starts in — answered, not created. The engine creates it
-         * (`IEngine::FinishStartup`) as the last step of boot, once every subsystem is up and
-         * every module has registered.
-         *
-         * A PURE QUERY: no side effects, so calling it twice changes nothing and a test can ask
-         * a host its policy without booting an engine. That is the whole point of the split —
-         * the host states policy, the engine owns mechanism, and a host never drives WorldManager.
-         *
-         * Base implementation takes the project's `StartupLevel` as the LevelPath and derives the
-         * world's Name from it, in Play mode. `EditorApplication` overrides it for Edit mode; a
-         * host that wants a different world overrides it too — the editor will eventually want the
-         * last-opened map rather than the game's startup level.
-         *
-         * M5: the spec now carries `LevelPath` as well as `Name`, and `IEngine::FinishStartup`
-         * OPENS it after creating the world. Answering this still does nothing — which is what
-         * keeps it a query.
-         */
-        virtual WorldSpec GetStartupWorldSpec() const;
-
-        /**
-         * "Levels/Main.opaaxlevel" -> "Main"; empty or stem-less -> "Main".
-         *
-         * Static and pure so the naming rule is testable without a host: it is the one place the
-         * path-vs-name distinction is decided, and a host overriding GetStartupWorldSpec can
-         * reuse it rather than re-deriving the convention.
-         */
-        static OpaaxString DeriveWorldName(const OpaaxString& InLevelPath);
 
         /**
          * After engine start
@@ -202,12 +173,36 @@ namespace Opaax
         virtual void RegisterModules(ModuleRegistrar& InRegistrar) {}
         
         /**
+         * 
+         */
+        void PopulateEngineRegistries();
+        
+        /**
          * Fires in EngineStartup AFTER RegisterModules (game module registered) and BEFORE the
          * startup world exists.
          */
         virtual void OnModulesRegistered() {}
         
         // End Modules
+        // =============================================================================
+        
+        // =============================================================================
+        // Startup world
+        /**
+         * @return The Startup world spec base on project configs
+         */
+        virtual WorldSpec GetStartupWorldSpec() const;
+
+        /**
+         * "Levels/Main.opaaxlevel" -> "Main"; empty or stem-less -> "Main".
+         *
+         * Static and pure so the naming rule is testable without a host: it is the one place the
+         * path-vs-name distinction is decided, and a host overriding GetStartupWorldSpec can
+         * reuse it rather than re-deriving the convention.
+         */
+        static OpaaxString DeriveWorldName(const OpaaxString& InLevelPath);
+        
+        // End Startup world
         // =============================================================================
         
         // =============================================================================
@@ -249,11 +244,7 @@ namespace Opaax
         bool bHasInitialized    = false;
         bool bIsRunning         = false;
         bool bHasShutdown       = false;
-
-        // Populated at RegisterModules (D9). Both routes are live: Components() forwards to the
-        // real ComponentRegistry (M3), WorldSubsystems() to WorldSubsystemRegistry (M4). Owned by the app so the record
-        // survives boot for inspection/tests — by UniquePtr because the type is only
-        // forward-declared here (see the NOTE at the top).
+        
         UniquePtr<ModuleRegistrar> m_ModuleRegistrar;
 
         static AppServiceLocator m_Services;

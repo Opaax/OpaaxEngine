@@ -294,20 +294,22 @@ void OpaaxApplication::ShutdownApplication()
 
 void OpaaxApplication::EngineStartup()
 {
+    OPAAX_APP_LOG(Info, "OpaaxApplication::EngineStartup ----> Pre Engine Startup.....");
     PreEngineStartup();
 
     // 1. Infrastructure. Every subsystem is constructed and started — and NO world exists,
     //    which is what leaves ComponentRegistry unsealed for the steps below.
     Engine().Startup();
 
-    // 2. Content types. The registries are live; nothing has locked them yet (MR2).
-    m_ModuleRegistrar->BindEngineRegistries(Engine().GetRegistries());
+    // 2. Content types.
+        // 2.1 Engine First
+    PopulateEngineRegistries();
+        //2.2 
     RegisterModules(*m_ModuleRegistrar);
+        //2.3 
     OnModulesRegistered();
 
-    // 3. Content. The first CreateWorld seals the registries on its way through, so this must
-    //    come last — and being last is exactly why the registration above had room to happen.
-    //    The host only says WHICH; the engine creates it (BO4).
+    // 3. Content.
     Engine().FinishStartup(GetStartupWorldSpec());
 
     PostEngineStartup();
@@ -359,6 +361,14 @@ OpaaxString OpaaxApplication::DeriveWorldName(const OpaaxString& InLevelPath)
 void OpaaxApplication::EngineTeardown()
 {
     Engine().TearDown();
+}
+
+void OpaaxApplication::PopulateEngineRegistries()
+{
+    EngineRegistries& lEngineRegistries = Engine().GetRegistries();
+    
+    m_ModuleRegistrar->Components().Bind(&lEngineRegistries.Components());
+    m_ModuleRegistrar->WorldSubsystems().Bind(&lEngineRegistries.WorldSubsystems());
 }
 
 void OpaaxApplication::HandleApplicationEvent(EventDispatcher& Dispatcher, Event& InEvent)

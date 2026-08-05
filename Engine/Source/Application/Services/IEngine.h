@@ -40,20 +40,9 @@ namespace Opaax
          * Safe to call once
          * @return 
          */
-        virtual bool Startup()                          = 0;
+        virtual bool Startup() = 0;
 
         /**
-         * Close the boot: create the world the application starts in, and activate it.
-         *
-         * `Startup` and `FinishStartup` deliberately BRACKET the registration window (BO4).
-         * Between them every subsystem is up and no world exists yet, which is the only moment
-         * a game module can register component / world-subsystem types — the first world seals
-         * the registries. Stating that in the API is the point of the name; it used to live only
-         * in a comment on a host method that reached back through the engine to do the work.
-         *
-         * The host supplies POLICY (which world, which mode — GetStartupWorldSpec) and the engine
-         * performs the MECHANISM. Hosts do not drive WorldManager themselves.
-         *
          * @param InSpec Which world to open, in which mode.
          * @return The created world, already active. Null only if the engine is not started.
          */
@@ -73,20 +62,15 @@ namespace Opaax
 
         /**
          * Redirect the world render into InTarget instead of the window backbuffer; nullptr restores
-         * the backbuffer (the runtime default — Sandbox never calls this). Non-owning: the caller owns
-         * the target's lifetime and must clear it (pass nullptr) before the target dies. The editor
-         * points this at its ViewportPanel's offscreen FBO so the world lands in a texture (D2).
+         * the backbuffer. Non-owning: the caller owns the target's lifetime and must clear it (pass nullptr) before the target dies. 
+         * The editor points this at its ViewportPanel's offscreen FBO so the world lands in a texture.
          */
         virtual void SetPrimaryRenderTarget(IRenderTarget* InTarget) = 0;
-
+        
         /**
-         * Build an offscreen framebuffer on the render device — the backing store a caller wraps in an
-         * OffscreenRenderTarget before handing it to SetPrimaryRenderTarget. Deliberately narrow: the
-         * device itself stays engine-internal (exposing it would hand out BeginFrame/Present/pipelines
-         * to reach one factory), and GPU resources are device-created, never by a free factory (F2a).
-         *
-         * The CALLER owns the result and must release it while the engine — and its GPU context — is
-         * still alive. Valid only after Startup; returns nullptr before it, or if the device is gone.
+         * The CALLER owns the result and must release it while the engine — and its GPU context — is still alive. 
+         * @param InSpec 
+         * @return Valid only after Startup; returns nullptr before it, or if the device is gone.
          */
         virtual UniquePtr<IFramebuffer> CreateFramebuffer(const FramebufferSpec& InSpec) = 0;
 
@@ -140,31 +124,22 @@ namespace Opaax
         // =============================================================================
         // Foundation subsystems — exposed directly
     public:
-        /**
-         * The engine's type registries (components today, world subsystems in M4). Populated
-         * between Engine().Startup() and the first world, then SEALED — see BO4. Everything
-         * outside ModuleRegistrar should treat these as read-only.
-         */
-        virtual EngineRegistries& GetRegistries() = 0;
+        virtual EngineRegistries&   GetRegistries() = 0;
 
-        virtual ResourceManager& GetResources() = 0;
-        virtual EngineEventBus& GetEngineEventBus() = 0;
-        virtual WorldManager& GetWorldManager() = 0;
+        virtual ResourceManager&    GetResources() = 0;
+        virtual EngineEventBus&     GetEngineEventBus() = 0;
+        virtual WorldManager&       GetWorldManager() = 0;
 
         /**
-         * The per-frame debug line queue (D10). Enqueue from anywhere in the frame BEFORE the render
-         * that should show it — the renderer drains and clears it every frame, so a line must be
-         * re-submitted each frame it stays visible. Serves editor overlays and dev builds of the
-         * game alike; the engine has no idea which one is calling.
+         * Enqueue from anywhere in the frame BEFORE the render that should show it — the renderer drains and clears it every frame, so a line must be
+         * re-submitted each frame it stays visible. Serves editor overlays and dev builds of the game alike; the engine has no idea which one is calling.
          */
         virtual DebugDraw& GetDebugDraw() = 0;
 
         /**
-         * What is currently held, and what changed this frame (Editor.md D5, M-Input).
-         *
-         * The engine end of the input chain — the application FEEDS this as OS events arrive, and
-         * everything else reads it. Physical keys only: action maps are a game-layer concept built
-         * on top. Read-only for every caller except the application that owns the feed.
+         * The engine end of the input chain — the application FEEDS this as OS events arrive, and everything else reads it. 
+         * Physical keys only: action maps are a game-layer concept built on top. 
+         * Read-only for every caller except the application that owns the feed.
          */
         virtual InputManager& GetInput() = 0;
 
