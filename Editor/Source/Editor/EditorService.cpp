@@ -365,7 +365,7 @@ namespace Opaax::Editor
             {
                 // No counterpart — destroyed during play, or there is no world at all. Clearing is the
                 // only correct answer: Entity holds a raw World*, so keeping it would dangle the moment
-                // the old world dies (EditorSelection's M4 FIXME).
+                // the old world dies.
                 m_Selection->Clear();
             }
         }
@@ -434,7 +434,6 @@ namespace Opaax::Editor
             return {};
         }
 
-        //TODO: Make a Imgui wrapper to init imgui stuff
         return lEditorPaths->EditorToAbsolute(OpaaxString("Save/imgui.ini"));
     }
 

@@ -27,10 +27,8 @@ namespace Opaax::Editor
         // Members
         // =============================================================================
     private:
-        // FIXME (M4): clear selection on WorldDestroying. Entity holds a raw World*, so a selection
-        // outliving its world dangles. Unreachable today — one world, created at startup and alive for
-        // the engine's lifetime. WorldManager already broadcasts the event; wire a subscription in M4,
-        // where PIE actually creates/destroys worlds.
+        // Entity holds a raw World*, so this is invalidated from outside: EditorService subscribes to
+        // WorldManager and retargets (by GUID) or clears on every world change.
         Entity m_Selected;
     };
 }

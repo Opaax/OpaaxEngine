@@ -32,7 +32,9 @@ namespace Opaax::Editor
     
     public:
         /**
-         * TODO: Get it from .OpaaxProj or somewhere strategic
+         * Which project this editor edits. CreatePaths builds <name>/<name>.opaaxproj from it, so this
+         * CANNOT be read from the .opaaxproj — finding that file is what the name is for.
+         * TODO: source it from a CLI arg (InArgv) or a workspace scan for a single *.opaaxproj.
          */
         virtual OpaaxString GetEditedProjectName() const { return OpaaxString(); }
         
@@ -48,7 +50,8 @@ namespace Opaax::Editor
          * world by cloning this one (M4 S4/S5), which is why the mode is fixed at creation and
          * the edit world is never touched by playing.
          *
-         * TODO (M5): open the last-opened map rather than the project's startup level.
+         * TODO: open the last-opened map rather than the project's startup level. Not map IO (M5
+         * shipped that) — it needs persisted editor session state, which does not exist yet.
          */
         WorldSpec GetStartupWorldSpec() const override;
 

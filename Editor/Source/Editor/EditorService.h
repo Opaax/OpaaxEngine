@@ -155,7 +155,7 @@ namespace Opaax::Editor
         /**
          * A world is going away. Clears the selection when it belonged to that world — the safety
          * net HandleActiveWorldChanged cannot provide, since a NON-active world can die too
-         * (EditorSelection's M4 FIXME: Entity holds a raw World*, so a stale one dangles).
+         * (Entity holds a raw World*, so a stale one dangles).
          */
         void HandleWorldDestroyed(World* InWorld);
 

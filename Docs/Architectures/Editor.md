@@ -334,7 +334,7 @@ Future direction, deliberately not now: per-type field meta-description generati
 | `IEditorUIBackend` GL/VK — the RHI/ImGui bridge is sound | `OPAAX_WITH_EDITOR` scattering |
 | `GetViewportImage` pattern | |
 
-The ~10 `OPAAX_WITH_EDITOR` ifdefs inside engine files get a **dedicated cleanup session after M2** — most die naturally once editor metadata moves editor-side through D10 (the `ComponentRegistry` drawer coupling is the canonical example). Tracked as `// FIXME`, not done mid-migration.
+**DONE — and no cleanup session was needed.** The ~10 `OPAAX_WITH_EDITOR` ifdefs died exactly the way this note predicted: editor metadata moved editor-side through D10, so the engine files carrying them were rewritten or quarantined to `Legacy/` rather than de-ifdef'd in place (`ComponentRegistry` is the worked example — the drawer members never came across). **Zero `#if OPAAX_WITH_EDITOR` remain in live engine code.** The macro itself stays, as a build-level statement of D4: `OPAAX_WITH_EDITOR=0` on the engine DLL, `=1` on `OpaaxEditorLib`.
 
 ---
 

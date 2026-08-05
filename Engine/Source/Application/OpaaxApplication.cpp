@@ -357,7 +357,8 @@ void OpaaxApplication::HandleApplicationEvent(EventDispatcher& Dispatcher, Event
 
     Dispatcher.Dispatch<WindowLostFocusEvent>([this](WindowLostFocusEvent&)
     {
-        //Todo why Engine do not handle it self?
+        // The engine cannot do this itself: window events reach it only through this feed, and going
+        // via the bus would defer the reset to the next Flush — inside Loop, a frame late (IN4/IN5).
         Engine().GetInput().ResetState();
         return false;
     });
@@ -365,7 +366,8 @@ void OpaaxApplication::HandleApplicationEvent(EventDispatcher& Dispatcher, Event
 
 void OpaaxApplication::HandleAllInputEvent(EventDispatcher& Dispatcher, Event& InEvent)
 {
-    //TODO why Engine do not resolve itself
+    // The host feeds the engine because the host owns the only gate (IN1), and the feed must be
+    // immediate: the bus flushes inside Loop, i.e. AFTER PollEvents, so a subscription is too late (IN4).
     InputManager& lInput = Engine().GetInput();
 
     Dispatcher.Dispatch<KeyPressedEvent>([&lInput](KeyPressedEvent& InKey)
