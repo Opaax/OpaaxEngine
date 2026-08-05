@@ -1,7 +1,6 @@
-
 #include "OpaaxGlobal.h"
 
-using namespace Opaax;
-
-const Uint32 OpaaxGlobal::ID_None{0};
-const OpaaxString OpaaxGlobal::String_None{"None"};
+namespace Opaax::OpaaxGlobal
+{
+    OPAAX_API extern const OpaaxString String_None = OpaaxString("None");
+}

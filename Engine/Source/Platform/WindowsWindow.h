@@ -77,7 +77,7 @@ namespace Opaax
 
         struct WindowData
         {
-            String Title;
+            OpaaxString Title;
             Uint32 PosX, PosY, Width, Height;
             Uint32 RefreshRate = GLFW_DONT_CARE;
             EWindowMode Mode;

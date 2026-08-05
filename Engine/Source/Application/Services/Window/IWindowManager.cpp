@@ -50,7 +50,7 @@ namespace Opaax
     // =========================================================================
     WindowProps MakeWindowProps(const EngineConfigData& InData)
     {
-        return WindowProps(String(InData.WindowTitle.CStr()), InData.WindowWidth, InData.WindowHeight,
+        return WindowProps(InData.WindowTitle, InData.WindowWidth, InData.WindowHeight,
                            WindowModeFromString(InData.WindowMode));
     }
 

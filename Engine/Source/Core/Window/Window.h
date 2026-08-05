@@ -2,7 +2,7 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
-#include "Core/OpaaxForward.hpp"
+#include "Core/String/OpaaxString.hpp"
 
 namespace Opaax
 {
@@ -30,7 +30,7 @@ namespace Opaax
         // CTOR
         // =============================================================================
 
-        WindowProps(const String& Title = "Opaax Engine",
+        WindowProps(const OpaaxString& Title = "Opaax Engine",
             Uint32 Width = 1280,
             Uint32 Height = 720,
             EWindowMode Mode = EWindowMode::Windowed)
@@ -42,7 +42,7 @@ namespace Opaax
         // Members
         // =============================================================================
 
-        String Title;
+        OpaaxString Title;
         Uint32 Width;
         Uint32 Height;
         EWindowMode Mode;

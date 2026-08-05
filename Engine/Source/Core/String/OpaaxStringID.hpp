@@ -40,12 +40,12 @@ namespace Opaax
         // CTOR - DTOR
         // =============================================================================
     public:
-        OpaaxStringID() noexcept : m_ID(OpaaxGlobal::ID_None) {}
+        constexpr OpaaxStringID() noexcept : m_ID(OpaaxGlobal::ID_None) {}
 
         /*** Interns InString — out-of-line, so the interning always runs in the DLL (see class note). */
         explicit OpaaxStringID(const OpaaxString& InString);
 
-        explicit OpaaxStringID(Uint32 InID) noexcept : m_ID(InID) {}
+        constexpr explicit OpaaxStringID(Uint32 InID) noexcept : m_ID(InID) {}
 
         OpaaxStringID(const char*        InString) : OpaaxStringID(OpaaxString(InString)) {}
         OpaaxStringID(const std::string& InString) : OpaaxStringID(OpaaxString(InString.c_str())) {}
@@ -73,8 +73,8 @@ namespace Opaax
         // ----------------------------------------------------------------------------
         // Get - Set
     public:
-        FORCEINLINE Uint32 GetId()   const noexcept { return m_ID; }
-        FORCEINLINE bool   IsValid() const noexcept { return m_ID != OpaaxGlobal::ID_None; }
+        FORCEINLINE constexpr Uint32 GetId()   const noexcept { return m_ID; }
+        FORCEINLINE constexpr bool   IsValid() const noexcept { return m_ID != OpaaxGlobal::ID_None; }
 
 
         // =============================================================================

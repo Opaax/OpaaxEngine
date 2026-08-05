@@ -155,6 +155,43 @@ explicitly, because the narrow entry points do **not** assume UTF-8:
   characters — the build sets no `/utf-8` and the sources carry no BOM, so a literal would be decoded
   by the very mechanism under test.
 
+**I9 — A constant lives with the CONTRACT that owns it; a shared file is only for constants NOBODY
+owns** (settled 2026-08-05, rejecting a proposed central `OpaaxStatics.h`). Two shapes, both already in
+the tree and both correct:
+- **Owned by one contract → its header.** `MAX_FRAME_DELTA` in `Engine.h` (**F1**'s clamp),
+  `NULL_LEVEL_WORLD_NAME` beside `WorldSpec` (**BO4c**), `ENTITY_NONE` in `EntityTypes.h`,
+  `LEVEL_EXTENSION`/`KEY_*` in `LevelFile.h`. Anyone who needs the constant already includes the header.
+- **Shared domain, owned by nobody → a statics file.** `Core/Maths/MathsStatics.h`. Everyone needs PI,
+  no module owns it, and it never changes — so the "one header rebuilds the tree" cost is nil.
+
+`Engine::Loop`'s fixed step shows the split working on one line: the timestep is `D60_HZ` from
+`MathsStatics` (a generic *ratio*), the clamp is `MAX_FRAME_DELTA` from `Engine.h` (a *policy*).
+**Graduation trigger:** two unrelated modules need it and neither owns it — until then, one home.
+Centralizing instead would **invert layering** (Core would hold a world-naming policy — **I4**) and
+**group by storage kind rather than meaning** (the [[L30]] shape: `NULL_LEVEL_WORLD_NAME` next to
+`MAX_FRAME_DELTA` tells a reader nothing). That decentralized form already scales here: `LogCategory` is
+a constant, there are ~10 of them declared per-header via `OPAAX_LOG_CATEGORY`, and nobody has ever
+wanted them in one file.
+- **`OpaaxGlobal` is a NAMESPACE of constants, not a struct of statics** (2026-08-05). It held two
+  out-of-line `static const` members, so `ID_None`'s *value* was invisible to consumers and
+  `OpaaxStringID`'s default ctor could not be `constexpr` while its `operator==` was. `ID_None` is now
+  `inline constexpr` (header-only, no export, no `.cpp`) and the ctors / `GetId` / `IsValid` are
+  `constexpr`. `String_None` stays out-of-line — an `OpaaxString` is not a constant expression, and it
+  is read only inside the DLL.
+
+**I10 — An engine type keeps its `Opaax` prefix; do not alias it away** (settled 2026-08-05, deleting
+`Core/OpaaxForward.hpp`). Note which direction the aliases in `OpaaxTypes.h` run: `TDynArray`,
+`UniquePtr`, `Mutex` take a **std** type and *add* engine identity. `using String = OpaaxString` ran the
+other way — it *stripped* identity from a type that already had it, so a reader seeing `String` had to
+know the alias existed, which is the exact clarity the prefix buys. `OpaaxTypes.h`'s own header comment
+already named `OpaaxString` canonical, and `OpaaxHash.h` has a parameter literally named `String` inside
+`namespace Opaax` — a shadow that stayed harmless only because one file included the alias.
+- That file was also **not a forward header**: it `#include`d the full definition, so it forward-declared
+  nothing and broke no cycle, despite saying so. **A real forward header is `class Foo;` with NO
+  includes.** The tree's ~175 *local* forward-decl lines (e.g. `WorldManager.h`'s four siblings) are the
+  better pattern — precise, self-documenting, nothing to keep in sync. Reach for a per-module `…Fwd.h`
+  only when a specific header's include cost shows up in build times, never preemptively.
+
 ---
 
 ## LC — Lifecycle: three states, not two
