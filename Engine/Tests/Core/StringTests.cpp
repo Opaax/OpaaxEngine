@@ -1,9 +1,11 @@
-// Suite: OpaaxString SSO/heap behaviour, copy/move, CStr stability.
+// Suite: OpaaxString SSO/heap behaviour, copy/move, CStr stability, counted Append,
+// SubString clamping and the numeric factories.
 // OpaaxString is fully header-inline, so this suite compiles it directly.
 #include <doctest.h>
 
 #include "Core/String/OpaaxString.hpp"
 
+#include <cstdint>
 #include <cstring>
 #include <utility>
 
@@ -82,4 +84,96 @@ TEST_CASE("OpaaxString: CStr stays valid + null-terminated across copy assignmen
     lB = lA;
     CHECK(std::strlen(lB.CStr()) == lB.GetLength());
     CHECK(lB == lA);
+}
+
+// =============================================================================
+// Counted Append — the primitive the other overloads forward to
+// =============================================================================
+TEST_CASE("OpaaxString: counted Append copies exactly Count bytes and stops there")
+{
+    // Not null-terminated at the cut: anything past Count must never be read.
+    const char* lSource = "abcdefghij";
+
+    OpaaxString lStr;
+    lStr.Append(lSource, 3);
+    CHECK(lStr == "abc");
+    CHECK(lStr.GetLength() == 3u);
+    CHECK(std::strlen(lStr.CStr()) == 3u);   // terminator written at Count
+
+    lStr.Append(lSource + 3, 2);
+    CHECK(lStr == "abcde");
+}
+
+TEST_CASE("OpaaxString: counted Append crosses the SSO boundary correctly")
+{
+    const char* lLong = "0123456789abcdefghijklmnopqrstuvwxyz";   // 36 chars
+
+    OpaaxString lStr("short");
+    REQUIRE_FALSE(lStr.IsUsingHeap());
+
+    lStr.Append(lLong, 30);
+    CHECK(lStr.IsUsingHeap());
+    CHECK(lStr.GetLength() == 35u);
+    CHECK(std::strlen(lStr.CStr()) == 35u);
+}
+
+TEST_CASE("OpaaxString: Append(nullptr) and zero-count are no-ops")
+{
+    OpaaxString lStr("keep");
+    lStr.Append(nullptr, 4);
+    lStr.Append("ignored", 0);
+    lStr.Append(nullptr);
+    CHECK(lStr == "keep");
+}
+
+// =============================================================================
+// SubString
+// =============================================================================
+TEST_CASE("OpaaxString: SubString takes a middle slice without over-copying")
+{
+    const OpaaxString lStr("hello brave new world");
+
+    CHECK(lStr.SubString(6, 5)  == "brave");
+    CHECK(lStr.SubString(0, 5)  == "hello");
+    CHECK(lStr.SubString(16)    == "world");   // default length = to the end
+    CHECK(lStr.SubString(6, 5).GetLength() == 5u);
+}
+
+TEST_CASE("OpaaxString: SubString clamps a too-long length instead of overflowing")
+{
+    const OpaaxString lStr("hello brave new world");   // 21 chars
+
+    // Start + InLength overflows Uint32 here. The old clamp compared that wrapped sum and
+    // produced a copy far past the end; clamping against the remainder cannot wrap.
+    CHECK(lStr.SubString(6, UINT32_MAX - 2) == "brave new world");
+    CHECK(lStr.SubString(6, 999)            == "brave new world");
+    CHECK(lStr.SubString(21)   .IsEmpty());   // start == length
+    CHECK(lStr.SubString(1000) .IsEmpty());   // start past the end
+}
+
+// =============================================================================
+// Numeric conversion
+// =============================================================================
+TEST_CASE("OpaaxString: FromInt / FromUInt cover the range ends")
+{
+    CHECK(OpaaxString::FromInt(0)     == "0");
+    CHECK(OpaaxString::FromInt(42)    == "42");
+    CHECK(OpaaxString::FromInt(-42)   == "-42");
+    CHECK(OpaaxString::FromUInt(0u)   == "0");
+    CHECK(OpaaxString::FromUInt(4242) == "4242");
+
+    // The widest values are what size the stack buffer — 20 digits, plus a sign.
+    CHECK(OpaaxString::FromInt(INT64_MIN)   == "-9223372036854775808");
+    CHECK(OpaaxString::FromInt(INT64_MAX)   == "9223372036854775807");
+    CHECK(OpaaxString::FromUInt(UINT64_MAX) == "18446744073709551615");
+
+    // Past SSO (15), so these must be correct on the heap path too.
+    CHECK(OpaaxString::FromUInt(UINT64_MAX).GetLength() == 20u);
+    CHECK(OpaaxString::FromUInt(UINT64_MAX).IsUsingHeap());
+}
+
+TEST_CASE("OpaaxString: FromUInt composes with operator+ the way call sites use it")
+{
+    const OpaaxString lName = OpaaxString("SpawnedQuad_") + OpaaxString::FromUInt(7);
+    CHECK(lName == "SpawnedQuad_7");
 }

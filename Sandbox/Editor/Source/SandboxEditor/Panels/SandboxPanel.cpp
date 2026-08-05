@@ -9,8 +9,6 @@
 
 #include <imgui.h>
 
-#include <string>
-
 // OPAAX_LOG expands to an unqualified ToSpdLevel(...) — bring Opaax into scope, as the game module does.
 using namespace Opaax;
 
@@ -42,11 +40,10 @@ void SandboxPanel::SpawnQuad()
         return;
     }
 
-    //TODO: Make OpaaxString Convertion with numeric value or Static convertor OpaaxString::FromInt etc...
     // Unique names so each spawn is its own distinguishable Hierarchy row.
-    const std::string lName = "SpawnedQuad_" + std::to_string(m_SpawnCount);
+    const OpaaxString lName = OpaaxString("SpawnedQuad_") + OpaaxString::FromUInt(m_SpawnCount);
 
-    Entity          lEntity = lWorld->CreateEntity(OpaaxString(lName.c_str()));
+    Entity          lEntity = lWorld->CreateEntity(lName);
     DummyComponent& lComp   = lEntity.Add<DummyComponent>();
 
     lComp.Position = { SPAWN_ORIGIN_X + SPAWN_STEP_X * static_cast<float>(m_SpawnCount % SPAWN_PER_ROW),
@@ -56,7 +53,7 @@ void SandboxPanel::SpawnQuad()
 
     ++m_SpawnCount;
 
-    OPAAX_LOG(LogSandboxPanel, Info, "SandboxPanel: spawned quad #{} ('{}')", m_SpawnCount, lName.c_str())
+    OPAAX_LOG(LogSandboxPanel, Info, "SandboxPanel: spawned quad #{} ('{}')", m_SpawnCount, lName.CStr())
 }
 
 void SandboxPanel::Draw()

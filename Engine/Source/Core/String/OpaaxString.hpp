@@ -2,6 +2,7 @@
 
 #include <json.hpp>
 #include <string_view>
+#include <cstdio>   // snprintf — FromInt / FromUInt
 #include "Core/OpaaxTypes.h"
 #include "Core/EngineAPI.h"
 
@@ -41,18 +42,35 @@ namespace Opaax
         {
             if (Start >= InStr.Length) { return OpaaxString(); }
 
-            const Uint32 lActual = (InLength == UINT32_MAX || Start + InLength > InStr.Length)
-                                       ? (InStr.Length - Start)
-                                       : InLength;
+            // Clamp against the REMAINDER, never against Start + InLength: that sum overflows for a
+            // large InLength and wrapped into a copy far past the end. UINT32_MAX needs no case here.
+            const Uint32 lRemaining = InStr.Length - Start;
+            const Uint32 lActual    = (InLength > lRemaining) ? lRemaining : InLength;
 
             // PERF: Avoid double alloc — construct directly from pointer range.
             OpaaxString lResult;
             lResult.Reserve(lActual);
-            lResult.Append(InStr.CStr() + Start); // TODO: add Append(const char*, Uint32 count) to avoid over-copy
-            lResult.Length = lActual;
-            if (lResult.bUsingHeap) { lResult.HeapData[lActual] = '\0'; }
-            else { lResult.SSOBuffer[lActual] = '\0'; }
+            lResult.Append(InStr.CStr() + Start, lActual);
             return lResult;
+        }
+
+    public:
+        /**
+         * Decimal text for an integer. Kept as named statics rather than one overload set so a
+         * call site states the signedness it means, the way the enum-to-string helpers do.
+         */
+        static OpaaxString FromInt(Int64 InValue)
+        {
+            char lBuffer[24];   // Int64 min is 20 chars + sign + null
+            const int lWritten = std::snprintf(lBuffer, sizeof(lBuffer), "%lld", static_cast<long long>(InValue));
+            return (lWritten > 0) ? OpaaxString(lBuffer) : OpaaxString();
+        }
+
+        static OpaaxString FromUInt(Uint64 InValue)
+        {
+            char lBuffer[24];
+            const int lWritten = std::snprintf(lBuffer, sizeof(lBuffer), "%llu", static_cast<unsigned long long>(InValue));
+            return (lWritten > 0) ? OpaaxString(lBuffer) : OpaaxString();
         }
 
         // =============================================================================
@@ -227,17 +245,20 @@ namespace Opaax
             SSOBuffer[0] = OpaaxString_InvalidCharacter;
         }
 
-        void Append(const char* Str)
+        /**
+         * Append exactly Count bytes — the primitive the other two forward to.
+         * Str need not be null-terminated, and anything past Count is never read.
+         */
+        void Append(const char* Str, Uint32 Count)
         {
-            if (!Str || Str[0] == '\0') { return; }
+            if (!Str || Count == 0) { return; }
 
-            const Uint32 lStrLen = static_cast<Uint32>(std::strlen(Str));
-            const Uint32 lNewLength = Length + lStrLen;
+            const Uint32 lNewLength = Length + Count;
 
             if (!bUsingHeap && lNewLength <= SSOCapacity)
             {
                 // Fast path: still fits in SSO
-                std::memcpy(SSOBuffer + Length, Str, lStrLen);
+                std::memcpy(SSOBuffer + Length, Str, Count);
                 Length = lNewLength;
                 SSOBuffer[Length] = OpaaxString_InvalidCharacter;
                 return;
@@ -249,12 +270,19 @@ namespace Opaax
                 GrowHeap(lNewLength);
             }
 
-            std::memcpy(HeapData + Length, Str, lStrLen);
+            std::memcpy(HeapData + Length, Str, Count);
             Length = lNewLength;
             HeapData[Length] = OpaaxString_InvalidCharacter;
         }
 
-        void Append(const OpaaxString& Other) { Append(Other.CStr()); }
+        void Append(const char* Str)
+        {
+            if (!Str) { return; }
+            Append(Str, static_cast<Uint32>(std::strlen(Str)));
+        }
+
+        // Length is already known — no strlen over a string that just told us how long it is.
+        void Append(const OpaaxString& Other) { Append(Other.CStr(), Other.Length); }
 
         /**
          * Reserve capacity without changing length.

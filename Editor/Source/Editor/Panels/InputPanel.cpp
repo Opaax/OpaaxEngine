@@ -45,7 +45,7 @@ namespace
         // Function keys are contiguous from F1 = 290.
         if (lCode >= static_cast<Uint16>(EKeyCode::F1) && lCode <= static_cast<Uint16>(EKeyCode::F12))
         {
-            return OpaaxString(("F" + std::to_string(lCode - static_cast<Uint16>(EKeyCode::F1) + 1)).c_str());
+            return OpaaxString("F") + OpaaxString::FromInt(lCode - static_cast<Uint16>(EKeyCode::F1) + 1);
         }
 
         // Printable ASCII: the code IS the character (the enum follows GLFW numbering).
@@ -55,7 +55,7 @@ namespace
             return OpaaxString(lText);
         }
 
-        return OpaaxString(("#" + std::to_string(lCode)).c_str());
+        return OpaaxString("#") + OpaaxString::FromUInt(lCode);
     }
 }
 
