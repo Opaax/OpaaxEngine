@@ -17,11 +17,38 @@ TEST_CASE("MakeWindowProps: maps the engine config window fields 1:1")
     lData.WindowTitle  = OpaaxString("Test Title");
     lData.WindowWidth  = 1024;
     lData.WindowHeight = 768;
+    lData.WindowMode   = OpaaxString("Borderless");
 
     const WindowProps lProps = MakeWindowProps(lData);
     CHECK(lProps.Title == "Test Title");
     CHECK(lProps.Width == 1024);
     CHECK(lProps.Height == 768);
+    CHECK(lProps.Mode == WindowMode::Borderless);
+}
+
+TEST_CASE("WindowModeFromString: every mode round-trips, unknown falls back to Windowed")
+{
+    CHECK(WindowModeFromString(OpaaxString("Windowed"))   == WindowMode::Windowed);
+    CHECK(WindowModeFromString(OpaaxString("Borderless")) == WindowMode::Borderless);
+    CHECK(WindowModeFromString(OpaaxString("Fullscreen")) == WindowMode::Fullscreen);
+
+    // Unknown and empty both fall back rather than refusing to open a window.
+    CHECK(WindowModeFromString(OpaaxString("Maximized")) == WindowMode::Windowed);
+    CHECK(WindowModeFromString(OpaaxString(""))          == WindowMode::Windowed);
+
+    // The pair is what keeps a serialized config readable by the next boot.
+    for (const WindowMode lMode : { WindowMode::Windowed, WindowMode::Borderless, WindowMode::Fullscreen })
+    {
+        CHECK(WindowModeFromString(OpaaxString(WindowModeToString(lMode))) == lMode);
+    }
+}
+
+TEST_CASE("MakeWindowProps: an unknown config mode still yields a usable window")
+{
+    EngineConfigData lData;
+    lData.WindowMode = OpaaxString("Borderles");   // typo — the realistic failure
+
+    CHECK(MakeWindowProps(lData).Mode == WindowMode::Windowed);
 }
 
 TEST_CASE("IWindowManager: the null manager owns no window and is never null")

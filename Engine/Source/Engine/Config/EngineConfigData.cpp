@@ -42,6 +42,10 @@ namespace Opaax
             {
                 lData.WindowHeight = lWin[KEcfg::HEIGHT_KEY].get<Uint32>();
             }
+            if (lWin.contains(KEcfg::MODE_KEY) && lWin[KEcfg::MODE_KEY].is_string())
+            {
+                lData.WindowMode = OpaaxString(lWin[KEcfg::MODE_KEY].get<std::string>().c_str());
+            }
         }
 
         if (lRoot.contains(KEcfg::ASSETS_KEY) && lRoot[KEcfg::ASSETS_KEY].is_object())
@@ -134,7 +138,8 @@ namespace Opaax
         lRoot[KEcfg::WINDOW_KEY]  = {
             { KEcfg::TITLE_KEY,  InData.WindowTitle.CStr() },
             { KEcfg::WIDTH_KEY,  InData.WindowWidth        },
-            { KEcfg::HEIGHT_KEY, InData.WindowHeight       }
+            { KEcfg::HEIGHT_KEY, InData.WindowHeight       },
+            { KEcfg::MODE_KEY,   InData.WindowMode.CStr()  }
         };
         lRoot[KEcfg::ASSETS_KEY]  = {
             { KEcfg::ENGINE_ROOT_KEY,     InData.EngineAssetsRoot.CStr()      },

@@ -22,11 +22,36 @@ namespace Opaax
     }
 
     // =========================================================================
+    // Window mode string mapping — the BackendFromString shape: unknown falls back, loudly.
+    // =========================================================================
+    WindowMode WindowModeFromString(const OpaaxString& InName)
+    {
+        if (InName == "Windowed")   { return WindowMode::Windowed;   }
+        if (InName == "Borderless") { return WindowMode::Borderless; }
+        if (InName == "Fullscreen") { return WindowMode::Fullscreen; }
+
+        OPAAX_LOG(LogWindowManager, Warn, "Unknown window mode '{}' — falling back to Windowed.", InName.CStr())
+        return WindowMode::Windowed;
+    }
+
+    const char* WindowModeToString(WindowMode InMode) noexcept
+    {
+        switch (InMode)
+        {
+            case WindowMode::Windowed:   return "Windowed";
+            case WindowMode::Borderless: return "Borderless";
+            case WindowMode::Fullscreen: return "Fullscreen";
+        }
+        return "Windowed";
+    }
+
+    // =========================================================================
     // Pure config -> props mapping.
     // =========================================================================
     WindowProps MakeWindowProps(const EngineConfigData& InData)
     {
-        return WindowProps(String(InData.WindowTitle.CStr()), InData.WindowWidth, InData.WindowHeight);
+        return WindowProps(String(InData.WindowTitle.CStr()), InData.WindowWidth, InData.WindowHeight,
+                           WindowModeFromString(InData.WindowMode));
     }
 
     // =========================================================================

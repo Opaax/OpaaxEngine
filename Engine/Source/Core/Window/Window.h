@@ -20,32 +20,32 @@ namespace Opaax
         Fullscreen
     };
 
-    
     /**
      * @struct WindowProps
-     * 
+     *
      */
     struct WindowProps
     {
         // =============================================================================
         // CTOR
         // =============================================================================
-        
+
         WindowProps(const String& Title = "Opaax Engine",
             Uint32 Width = 1280,
-            Uint32 Height = 720)
-            : Title(Title), Width(Width), Height(Height), WindowMode(WindowMode::Windowed)
+            Uint32 Height = 720,
+            WindowMode Mode = WindowMode::Windowed)
+            : Title(Title), Width(Width), Height(Height), Mode(Mode)
         {
         }
 
         // =============================================================================
         // Members
         // =============================================================================
-        
+
         String Title;
         Uint32 Width;
         Uint32 Height;
-        WindowMode WindowMode;
+        WindowMode Mode;
     };
     
     

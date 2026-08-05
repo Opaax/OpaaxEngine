@@ -9,7 +9,7 @@ using namespace Opaax;
 TEST_CASE("ParseEngineConfig: full schema reads every block")
 {
     const EngineConfigData lData = ParseEngineConfig(OpaaxString(R"({
-        "window":  {"title":"My","width":1920,"height":1080},
+        "window":  {"title":"My","width":1920,"height":1080,"mode":"Borderless"},
         "assets":  {"engineRoot":"E/A","engineManifest":"E/A/m.json"},
         "log":     {"level":"warn"},
         "render":  {"backend":"Vulkan","interpolation":false},
@@ -19,6 +19,7 @@ TEST_CASE("ParseEngineConfig: full schema reads every block")
     CHECK(lData.WindowTitle  == "My");
     CHECK(lData.WindowWidth  == 1920u);
     CHECK(lData.WindowHeight == 1080u);
+    CHECK(lData.WindowMode   == "Borderless");
     CHECK(lData.EngineAssetsRoot      == "E/A");
     CHECK(lData.EngineManifestRelPath == "E/A/m.json");
     CHECK(lData.LogLevel      == "warn");
@@ -34,10 +35,11 @@ TEST_CASE("ParseEngineConfig: missing fields keep their defaults")
 {
     const EngineConfigData lData = ParseEngineConfig(OpaaxString(R"({"window":{"width":800}})"));
 
-    CHECK(lData.WindowWidth   == 800u);     // overridden
-    CHECK(lData.WindowHeight  == 720u);     // default kept
-    CHECK(lData.RenderBackend == "OpenGL"); // default kept
-    CHECK(lData.LogLevel      == "trace");  // default kept
+    CHECK(lData.WindowWidth   == 800u);       // overridden
+    CHECK(lData.WindowHeight  == 720u);       // default kept
+    CHECK(lData.WindowMode    == "Windowed"); // default kept
+    CHECK(lData.RenderBackend == "OpenGL");   // default kept
+    CHECK(lData.LogLevel      == "trace");    // default kept
 }
 
 TEST_CASE("ParseEngineConfig: malformed JSON yields the defaults (no throw)")
@@ -52,6 +54,7 @@ TEST_CASE("SerializeEngineConfig -> ParseEngineConfig round-trips")
 {
     EngineConfigData lIn;
     lIn.WindowWidth               = 1600;
+    lIn.WindowMode                = OpaaxString("Fullscreen");
     lIn.RenderBackend             = OpaaxString("Vulkan");
     lIn.RenderInterpolation       = false;
     lIn.PhysicsWorldBoundsEnabled = true;
@@ -60,6 +63,7 @@ TEST_CASE("SerializeEngineConfig -> ParseEngineConfig round-trips")
     const EngineConfigData lOut = ParseEngineConfig(SerializeEngineConfig(lIn));
 
     CHECK(lOut.WindowWidth == 1600u);
+    CHECK(lOut.WindowMode  == "Fullscreen");
     CHECK(lOut.RenderBackend == "Vulkan");
     CHECK_FALSE(lOut.RenderInterpolation);
     CHECK(lOut.PhysicsWorldBoundsEnabled);

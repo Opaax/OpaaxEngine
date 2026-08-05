@@ -23,6 +23,7 @@ namespace Opaax
         inline const char* TITLE_KEY           = "title";
         inline const char* WIDTH_KEY           = "width";
         inline const char* HEIGHT_KEY          = "height";
+        inline const char* MODE_KEY            = "mode";
         inline const char* ENGINE_ROOT_KEY     = "engineRoot";
         inline const char* ENGINE_MANIFEST_KEY = "engineManifest";
         inline const char* LEVEL_KEY           = "level";
@@ -44,6 +45,9 @@ namespace Opaax
         OpaaxString WindowTitle  = OpaaxString("Opaax Engine");
         Uint32      WindowWidth  = 1280;
         Uint32      WindowHeight = 720;
+        // Stringly-typed like RenderBackend: this header stays free of Window.h, and the enum
+        // conversion happens at the point of use (MakeWindowProps).
+        OpaaxString WindowMode   = OpaaxString("Windowed");
 
         //----- assets ---------------------------------------------------------
         OpaaxString EngineAssetsRoot      = OpaaxString("Engine/Assets");
