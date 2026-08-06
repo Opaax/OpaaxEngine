@@ -29,6 +29,8 @@ jobs:
         include:
           - preset: debug-editor
             config: Debug
+          - preset: debug
+            config: Debug
           - preset: release
             config: Release
     name: ${{ matrix.preset }}

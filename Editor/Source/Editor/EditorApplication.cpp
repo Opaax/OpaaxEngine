@@ -23,6 +23,11 @@ namespace Opaax::Editor
     {
     }
 
+    IEditorService& EditorApplication::Editor()
+    {
+        return GetAppService<IEditorService>();
+    }
+
     void EditorApplication::OnProvideServices(AppServiceLocator& InServices)
     {
         InServices.Provide<IEditorService, EditorService>();
@@ -40,12 +45,16 @@ namespace Opaax::Editor
 
     void EditorApplication::PostEngineStartup()
     {
-        GetAppService<IEditorService>().Initialize();
+        if (!Editor().IsNull())
+        {
+            Editor().Initialize();
+        }
     }
 
     void EditorApplication::TickFrame()
     {
-        IEditorService& lEditor = GetAppService<IEditorService>();
+        IEditorService& lEditor = Editor();
+        
         lEditor.BeginFrame();
         Engine().Loop();
         lEditor.EndFrame();
@@ -53,7 +62,7 @@ namespace Opaax::Editor
 
     void EditorApplication::OnEvent(Event& InEvent)
     {
-        if (GetAppService<IEditorService>().RouteInput(InEvent))
+        if (Editor().RouteInput(InEvent))
         {
             return;
         }
@@ -63,7 +72,7 @@ namespace Opaax::Editor
 
     void EditorApplication::OnModulesRegistered()
     {
-        GetAppService<IEditorService>().RegisterExtensions([this](EditorExtensionRegistrar& InRegistrar) { OnRegisterEditorModules(InRegistrar); });
+        Editor().RegisterExtensions([this](EditorExtensionRegistrar& InRegistrar) { OnRegisterEditorModules(InRegistrar); });
     }
 
     TUniquePtr<IPaths> EditorApplication::CreatePaths(const IPlatform& InPlatform, int InArgc, char** InArgv)
@@ -78,7 +87,7 @@ namespace Opaax::Editor
         }
 
         // Layout convention: <name>/<name>.opaaxproj under the source workspace.
-        const std::string lN      = lName.CStr();
+        const std::string lN = lName.CStr();
         const OpaaxString  lProjRel((lN + "/" + lN + ".opaaxproj").c_str());
         OPAAX_LOG(LogEditorApp, Info, "Editing project '{}' -> {}", lN, lProjRel.CStr());
 

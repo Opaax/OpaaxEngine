@@ -235,22 +235,20 @@ target_compile_definitions(OpaaxEngine PRIVATE ENGINE_EXPORTS)
 # the editor lives entirely in OpaaxEditorLib. (EngineAPI.h defaults it to 0; we assert it here.)
 target_compile_definitions(OpaaxEngine PUBLIC OPAAX_WITH_EDITOR=0)
 
-# Workspace root — a FROM-SOURCE dev build bakes the source-tree root so Paths can resolve source
-# assets/configs; a ship build must NOT bake a build-host path (it resolves from the exe dir, whose
-# deploy mirrors the workspace layout). Decoupled from editor CODE: IPaths keys on
-# defined(OPAAX_WORKSPACE_DIR), NOT on OPAAX_WITH_EDITOR. Gated on the editor option for now only
-# because that set == today's "dev build" set; a later pass renames it to an explicit dev flag.
-if(OPAAX_EDITOR_SUPPORT)
+# Workspace root — a dev build bakes the source-tree root so Paths can resolve source assets/configs;
+# a ship build must NOT bake a build-host path (it resolves from the exe dir, whose deploy mirrors the
+# workspace layout). Keyed on OPAAX_DEV_BUILD, never on the editor (I12): a debug GAME build is a dev
+# build with no editor. IPaths keys on defined(OPAAX_WORKSPACE_DIR), not on OPAAX_WITH_EDITOR.
+if(OPAAX_DEV_BUILD)
     target_compile_definitions(OpaaxEngine PUBLIC OPAAX_WORKSPACE_DIR="${CMAKE_SOURCE_DIR}")
     message(STATUS "[Opaax] Workspace root baked (dev build): ${CMAKE_SOURCE_DIR}")
 else()
     message(STATUS "[Opaax] Ship build: no workspace path baked (exe-dir resolution)")
 endif()
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
-    target_compile_definitions(OpaaxEngine PUBLIC OPAAX_DEBUG)
-    message(STATUS "[Opaax] Debug mode: ON")
-endif()
+# Per-CONFIG, not CMAKE_BUILD_TYPE: the VS generator is multi-config, where CMAKE_BUILD_TYPE means
+# nothing at build time and the compiled config comes from --config.
+target_compile_definitions(OpaaxEngine PUBLIC $<$<CONFIG:Debug>:OPAAX_DEBUG>)
 
 # ==================================
 # glslang (GLSL -> SPIR-V) — OPTIONAL, from the Vulkan SDK.

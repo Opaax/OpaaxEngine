@@ -4,23 +4,29 @@ setlocal enabledelayedexpansion
 REM =============================================================================
 REM Opaax Engine — Build Script
 REM
-REM Usage:                                              (F5 / startup app in VS)
-REM   build.bat                   -> Debug + Editor  (default)  -> SandboxEditor.exe
+REM ONE PRESET, ONE APP. Each preset builds — and starts — exactly one executable:
+REM
+REM   build.bat                   -> Debug + Editor (default)     -> SandboxEditor.exe
+REM   build.bat debug             -> Debug, no editor             -> Sandbox.exe
 REM   build.bat release           -> Release, no editor, no imgui -> Sandbox.exe
-REM   build.bat release-editor    -> RelWithDebInfo + Editor      -> SandboxEditor.exe
+REM
+REM   build.bat run [preset]      -> build the preset, then LAUNCH its app (default
+REM                                  preset: debug-editor). Same app VS's F5 starts.
 REM   build.bat fast [target]     -> incremental build of ONE target in the
 REM                                  already-configured debug-editor tree
 REM                                  (no reconfigure). Default target: Sandbox.
 REM   build.bat test              -> build OpaaxTests (debug-editor) + run CTest
 REM   build.bat bench             -> build OpaaxTests (RELEASE) + run the perf suite
 REM                                  (doctest suite "perf", skipped everywhere else). Soft gate.
-REM   build.bat clean             -> delete all build/ directories
+REM   build.bat clean             -> delete all build directories
 REM
 REM EXIT CODE / OUTPUT CONTRACT (read this — it is load-bearing):
 REM   * The script ALWAYS ends with exactly one marker line:
 REM         OPAAX_BUILD_OK    on success
 REM         OPAAX_BUILD_FAIL  on any failure
 REM     Grep for those. Do NOT parse localized "[ERROR]" text.
+REM   * Those markers are about the BUILD. A launched app's exit code is reported
+REM     separately as OPAAX_RUN_EXIT=<n> so a crash is visible without redefining them.
 REM   * The process exit code is the REAL result (0 ok / 1 fail). The old
 REM     'goto end' path swallowed failures to exit 0 — that is fixed here.
 REM   * 'pause' is skipped automatically for non-interactive runs: define
@@ -28,6 +34,7 @@ REM     OPAAX_NO_PAUSE (or CI) and it will not block. Agents/CI: set OPAAX_NO_PA
 REM =============================================================================
 
 set "BUILD_RC=0"
+set "RUNAPP="
 
 set "PRESET=%1"
 if "%PRESET%"=="" set "PRESET=debug-editor"
@@ -45,17 +52,27 @@ if "%PRESET%"=="test"  goto runtests
 if "%PRESET%"=="fast"  goto fastbuild
 if "%PRESET%"=="bench" goto benchmark
 
+REM --- run: same build path, then launch the preset's app ----------------------
+if not "%PRESET%"=="run" goto validate
+set "RUNAPP=1"
+set "PRESET=%2"
+if "%PRESET%"=="" set "PRESET=debug-editor"
+
 REM --- validate preset ---------------------------------------------------------
-if "%PRESET%"=="debug-editor"    goto valid
-if "%PRESET%"=="release"         goto valid
-if "%PRESET%"=="release-editor"  goto valid
+:validate
+if "%PRESET%"=="debug-editor" goto valid
+if "%PRESET%"=="debug"        goto valid
+if "%PRESET%"=="release"      goto valid
 
 echo [ERROR] Unknown preset: "%PRESET%"
 echo.
 echo Valid presets:
-echo   debug-editor      Debug + Editor (default)
-echo   release           Release, no editor
-echo   release-editor    RelWithDebInfo + Editor
+echo   debug-editor      Debug + Editor (default)   -^> SandboxEditor.exe
+echo   debug             Debug, no editor           -^> Sandbox.exe
+echo   release           Release, no editor         -^> Sandbox.exe
+echo.
+echo Other modes:
+echo   run [preset]      Build the preset, then launch its app
 echo   fast [target]     Incremental single-target build (debug-editor, no reconfigure)
 echo   test              Build OpaaxTests (debug-editor) + run CTest
 echo   bench             Build OpaaxTests (release) + run the perf suite (soft gate)
@@ -63,16 +80,10 @@ echo   clean             Delete all build directories
 goto fail
 
 :valid
-REM --- map preset -> multi-config build config ---------------------------------
-REM The Visual Studio generator is MULTI-CONFIG, so CMAKE_BUILD_TYPE in the preset
-REM is ignored — the compiled config comes from --config here. Without it, every
-REM preset would silently build Debug.
-set "CONFIG=Debug"
-if "%PRESET%"=="release"        set "CONFIG=Release"
-if "%PRESET%"=="release-editor" set "CONFIG=RelWithDebInfo"
+call :map_preset
 
 echo.
-echo [Opaax] Preset : %PRESET%  (config: %CONFIG%)
+echo [Opaax] Preset : %PRESET%  (config: %CONFIG%, app: %PRIMARY%.exe)
 echo.
 
 REM --- configure ---------------------------------------------------------------
@@ -92,14 +103,44 @@ if errorlevel 1 (
     goto fail
 )
 
-REM --- name the app this preset is FOR (VS startup project / what to launch) ----
-set "PRIMARY=SandboxEditor.exe  (editor)"
-if "%PRESET%"=="release" set "PRIMARY=Sandbox.exe  (runtime)"
+set "BIN_DIR=build\%PRESET%\bin\%CONFIG%"
 
 echo.
-echo [Opaax] Output: build\%PRESET%\bin\%CONFIG%\
-echo [Opaax] Run:    %PRIMARY%   ^<- VS startup project for this preset
+echo [Opaax] Output: %BIN_DIR%\
+echo [Opaax] App:    %PRIMARY%.exe   ^<- VS startup project for this preset
+
+if not defined RUNAPP goto ok
+
+REM --- launch the preset's app -------------------------------------------------
+REM CWD is the exe's own dir, matching VS_DEBUGGER_WORKING_DIRECTORY — relative
+REM asset paths miss otherwise.
+if not exist "%BIN_DIR%\%PRIMARY%.exe" (
+    echo [ERROR] Not found: %BIN_DIR%\%PRIMARY%.exe
+    goto fail
+)
+
+echo.
+echo [Opaax] Launching %PRIMARY%.exe ...
+pushd "%BIN_DIR%"
+REM ".\" is required, not cosmetic: a bare name is a PATH lookup, and the CWD is not
+REM searched when NoDefaultCurrentDirectoryInExePath is set (-^> 9009, not a crash).
+".\%PRIMARY%.exe"
+set "RUN_RC=%ERRORLEVEL%"
+popd
+echo.
+echo OPAAX_RUN_EXIT=%RUN_RC%
 goto ok
+
+REM --- preset -> build config + primary app ------------------------------------
+REM The Visual Studio generator is MULTI-CONFIG, so CMAKE_BUILD_TYPE in the preset
+REM is ignored — the compiled config comes from --config here. Without it, every
+REM preset would silently build Debug.
+:map_preset
+set "CONFIG=Debug"
+set "PRIMARY=Sandbox"
+if "%PRESET%"=="debug-editor" set "PRIMARY=SandboxEditor"
+if "%PRESET%"=="release"      set "CONFIG=Release"
+goto :eof
 
 REM --- fast: incremental single target, no reconfigure -------------------------
 :fastbuild

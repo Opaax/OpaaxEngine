@@ -68,7 +68,7 @@ add_custom_command(TARGET Sandbox POST_BUILD
 #
 # Save/ and Temp/ are NOT deployed: they are runtime output, created on demand.
 # =============================================================================
-if(NOT OPAAX_EDITOR_SUPPORT)
+if(NOT OPAAX_DEV_BUILD)
     set(SANDBOX_DEPLOY_DIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>/Sandbox)
 
     add_custom_command(TARGET Sandbox POST_BUILD

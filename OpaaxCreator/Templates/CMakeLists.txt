@@ -59,7 +59,7 @@ add_custom_command(TARGET __NAME__ POST_BUILD
 #
 # Save/ and Temp/ are NOT deployed: they are runtime output, created on demand.
 # =============================================================================
-if(NOT OPAAX_EDITOR_SUPPORT)
+if(NOT OPAAX_DEV_BUILD)
     set(__NAME___DEPLOY_DIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>/__NAME__)
 
     add_custom_command(TARGET __NAME__ POST_BUILD

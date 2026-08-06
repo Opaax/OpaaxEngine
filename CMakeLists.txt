@@ -10,10 +10,18 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # thing in every file and reaches the binary as UTF-8.
 add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 
-# Options
-option(OPAAX_EDITOR_SUPPORT "Include editor support in engine" OFF)
-option(OPAAX_BUILD_EXAMPLES "Build example games" ON)
+# Options — editor and dev are TWO axes (ARCHITECTURE.md I12), one flag each.
+#   OPAAX_EDITOR_SUPPORT : does OpaaxEditorLib + the editor exe exist?
+#   OPAAX_DEV_BUILD      : where do assets resolve from — the source tree, or the exe dir?
+option(OPAAX_EDITOR_SUPPORT "Build the editor library and editor executables" OFF)
+option(OPAAX_DEV_BUILD      "Development build: resolve assets from the source tree, not the exe dir" OFF)
 option(OPAAX_BUILD_TESTS    "Build the OpaaxTests unit-test target" ON)
+
+# Editor implies dev; the reverse does not (that combination IS the `debug` preset). An editor built
+# without the workspace bake would edit the deploy copy under bin/ instead of the source tree.
+if(OPAAX_EDITOR_SUPPORT AND NOT OPAAX_DEV_BUILD)
+    message(FATAL_ERROR "OPAAX_EDITOR_SUPPORT requires OPAAX_DEV_BUILD — the editor edits the SOURCE tree.")
+endif()
 
 # Output directories
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -42,14 +50,11 @@ add_subdirectory(Sandbox)
 #add_subdirectory(MyProject)
 
 # =============================================================================
-# Visual Studio startup project — make F5 launch the app the preset is FOR.
-# Each preset generates its own .sln (build/<preset>/), so this is per-preset:
-#   editor presets (OPAAX_EDITOR_SUPPORT=ON) -> SandboxEditor.exe (the editor)
-#   runtime preset (OFF)                      -> Sandbox.exe       (the game)
-# Without this, VS defaults to ALL_BUILD / the first target, so "Debug + Editor"
-# would run the runtime Sandbox.exe despite its name — the mismatch this fixes.
-# Set on the root directory (the .sln's top level). SandboxEditor exists only when
-# editor support is on (it's gated in Sandbox/CMakeLists.txt), so the guard matches.
+# Visual Studio startup project — F5 launches the app the preset is FOR. One preset,
+# one .sln (build/<preset>/), one answer:
+#   debug-editor -> SandboxEditor.exe   debug / release -> Sandbox.exe
+# Without this, VS defaults to ALL_BUILD / the first target. SandboxEditor exists only
+# when editor support is on (gated in Sandbox/CMakeLists.txt), so the guard matches.
 # =============================================================================
 if(OPAAX_EDITOR_SUPPORT)
     set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT SandboxEditor)

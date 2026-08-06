@@ -232,6 +232,25 @@ member `ToString()`** (settled 2026-08-06). The tree had three spellings for one
   constrains on it yet, and this is the `CComponent`/`CResource` shape (**I8**), so it costs nothing to
   add later. Trigger: the second place that wants to format an engine enum generically.
 
+**I12 — Dev-vs-ship and editor-vs-game are TWO axes, one CMake flag each** (settled 2026-08-06).
+- `OPAAX_DEV_BUILD` answers *where do assets resolve from*. ON bakes `OPAAX_WORKSPACE_DIR`, so
+  `Paths` (`IPaths.cpp`, `#if defined(OPAAX_WORKSPACE_DIR)`) resolves against the **source tree** and no
+  deploy runs. OFF bakes nothing, so resolution falls back to the **exe dir** — which is why the ship
+  deploy (`Sandbox/CMakeLists.txt`) is gated on exactly the same flag. Never bake a build-host path into
+  a shipped binary.
+- `OPAAX_EDITOR_SUPPORT` answers *does the editor exist* — `OpaaxEditorLib` + `<Name>Editor.exe`, and
+  nothing else (**D4**: the engine DLL is always `OPAAX_WITH_EDITOR=0`).
+- **Editor implies dev; dev does not imply editor.** The root `CMakeLists.txt` `FATAL_ERROR`s on
+  `EDITOR AND NOT DEV` (an editor resolving to its own bin dir would edit the deploy copy). The other
+  three-quarters of the matrix is the point: `{dev, no editor}` is a debuggable `Game.exe`, the build
+  **F4** already assumes exists when it calls DebugDraw engine-owned.
+- One preset per useful combination, one app each — `debug-editor` → `SandboxEditor.exe`,
+  `debug` → `Sandbox.exe`, `release` → `Sandbox.exe`. `VS_STARTUP_PROJECT` (root) and
+  `build.bat run [preset]` both derive that app from the same flag, so F5 and the script agree.
+- These flags gate **build composition only**. Behaviour that differs per *configuration* keys off
+  `$<CONFIG>` (as `OPAAX_DEBUG` does) — never off `CMAKE_BUILD_TYPE`, which is meaningless under the
+  multi-config VS generator.
+
 ---
 
 ## LC — Lifecycle: three states, not two
