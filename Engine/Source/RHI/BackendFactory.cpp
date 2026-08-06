@@ -3,7 +3,7 @@
 // =============================================================================
 // The neutral translation unit that knows the graphics backend(s). It keeps the
 // backend-selecting factories in one place so no other TU has to:
-//   - BackendFromString / BackendToString (config string <-> EBackend)
+//   - BackendFromString / ToString (config string <-> EBackend)
 //   - IGraphicsContext::Create / ApplyWindowHints
 //
 // New-path status: OpenGL-only. The old IRenderAPI/RenderCommand facade and the whole
@@ -45,7 +45,7 @@ namespace Opaax
         return EBackend::OpenGL;
     }
 
-    const char* BackendToString(EBackend InBackend) noexcept
+    const char* ToString(EBackend InBackend) noexcept
     {
         switch (InBackend)
         {
@@ -68,7 +68,7 @@ namespace Opaax
         }
 
         OPAAX_ENGINE_LOG(Error, "IGraphicsContext::Create — backend '{}' not available on the new path; "
-                         "no context created.", BackendToString(InBackend));
+                         "no context created.", ToString(InBackend));
         return nullptr;
     }
 

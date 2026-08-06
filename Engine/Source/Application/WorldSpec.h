@@ -5,6 +5,15 @@
 
 namespace Opaax
 {
+    /** The world a host boots into when its startup level is absent, empty or unreadable. */
+    inline constexpr const char* NULL_LEVEL_WORLD_NAME = "NullLevel";
+    
+    /***/
+    inline constexpr const char* WORLD_MODE_EDIT_AS_CHARS = "Edit";
+    
+    /***/
+    inline constexpr const char* WORLD_MODE_PLAY_AS_CHARS = "Play";
+    
     // =============================================================================
     // EWorldMode — what a World was created FOR.
     //
@@ -28,7 +37,7 @@ namespace Opaax
     /** Log/UI label. Not for serialization — a map file should write its own stable token. */
     constexpr const char* ToString(EWorldMode InMode) noexcept
     {
-        return InMode == EWorldMode::Edit ? "Edit" : "Play";
+        return InMode == EWorldMode::Edit ? WORLD_MODE_EDIT_AS_CHARS : WORLD_MODE_PLAY_AS_CHARS;
     }
 
     // =============================================================================
@@ -55,7 +64,4 @@ namespace Opaax
         /** Play unless a host says otherwise — a bare host boots into something runnable. */
         EWorldMode Mode = EWorldMode::Play;
     };
-
-    /** The world a host boots into when its startup level is absent, empty or unreadable. */
-    inline constexpr const char* NULL_LEVEL_WORLD_NAME = "NullLevel";
 }

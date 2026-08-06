@@ -36,6 +36,10 @@ namespace Opaax
     {
         Shutdown();
     }
+    
+    // =============================================================================
+    // Native Engine
+    // =============================================================================
 
     bool Engine::CanFinishStartup()
     {
@@ -94,6 +98,12 @@ namespace Opaax
         {
             OPAAX_ENGINE_LOG(Warn, "JobSystem service is a Null service");
         }
+        
+        m_Paths = &lServices.Get<IPaths>();
+        if (m_Paths->IsNull())
+        {
+            OPAAX_ENGINE_LOG(Warn, "Paths service is a Null service");
+        }
     }
 
     // =============================================================================
@@ -119,7 +129,62 @@ namespace Opaax
         constexpr double lFixedDelta = D60_HZ;
         return lFixedDelta;
     }
+    
+    // =========================================================================
+    // Startup
+    // =========================================================================
 
+    ResourceRef<LevelResource> Engine::ResolveStartupLevel(const OpaaxString& InAssetRelPath) const
+    {
+        //The user may want to create a new world each time.
+        if (InAssetRelPath.IsEmpty())
+        {
+            OPAAX_ENGINE_LOG(Info, "No startup level configured — booting '{}'", NULL_LEVEL_WORLD_NAME);
+            return {};
+        }
+
+        if (m_Resources == nullptr)
+        {
+            OPAAX_ENGINE_LOG(Error, "No ResourceManager — cannot open startup level '{}'", InAssetRelPath.CStr());
+            return {};
+        }
+
+        const OpaaxString lAbsPath = m_Paths->AssetToAbsolute(InAssetRelPath);
+
+        // FailFast: a missing or unreadable level resolves to null rather than to a placeholder,
+        // so this IS the existence check — and it covers a corrupt file too, which a stat would not.
+        ResourceRef<LevelResource> lRef = m_Resources->Load<LevelResource>(lAbsPath.CStr());
+        if (!lRef.IsValid())
+        {
+            // A project that NAMES a level it cannot open is a real misconfiguration — loud,
+            // unlike the empty case above. Booting NullLevel anyway beats refusing to start.
+            OPAAX_ENGINE_LOG(Warn, "Startup level '{}' could not be opened — falling back to '{}'",
+                             InAssetRelPath.CStr(), NULL_LEVEL_WORLD_NAME);
+        }
+
+        return lRef;
+    }
+
+    void Engine::OpenStartupLevel(const LevelData& InLevel, World& InWorld)
+    {
+        const LevelLoader::Result lResult = LevelLoader::LoadInto(
+            InLevel, InWorld, GetRegistries().Components(),
+            OpaaxApplication::GetAppService<IPaths>(), *m_Resources);
+
+        if (!lResult.IsValid())
+        {
+            // Loud. A level that half-opened leaves a world that LOOKS fine and is missing
+            // content, which is the failure mode MapResource is FailFast to avoid — so the
+            // engine must not pass over it quietly either.
+            OPAAX_ENGINE_LOG(Error, "Startup level '{}' did not open cleanly ({} map(s) loaded, {} failed)",
+                             InLevel.Name.CStr(), lResult.MapsLoaded, lResult.MapsFailed);
+        }
+    }
+    
+    // =========================================================================
+    // World
+    // =========================================================================
+    
     void Engine::BindToWorldMgrEvents()
     {
         if (m_WorldManager != nullptr && m_EngineEventBus != nullptr)
@@ -139,12 +204,36 @@ namespace Opaax
             m_WorldManager->OnActiveWorldChanged.RemoveAll(this);
         }
     }
+    
+    void Engine::HandleWorldCreated(World* InWorld)
+    {
+        m_EngineEventBus->GetEventBus().Publish(WorldCreated{InWorld});
+    }
 
+    void Engine::HandleWorldDestroyed(World* InWorld)
+    {
+        m_EngineEventBus->GetEventBus().Publish(WorldDestroyed{InWorld});
+    }
+
+    void Engine::HandleActiveWorldChanged(World* InOldWorld, World* InNewWorld)
+    {
+        m_EngineEventBus->GetEventBus().Publish(ActiveWorldChanged{InOldWorld, InNewWorld});
+    }
+    
+    // =========================================================================
+    // Overrides
+    // =========================================================================
+    // =========================================================================
+    // IAppService
+    // =========================================================================
     void Engine::OnShutdown()
     {
         Shutdown();
     }
-
+    
+    // =========================================================================
+    // IEngine
+    // =========================================================================
     // =========================================================================
     // Lifecycle
     // =========================================================================
@@ -213,55 +302,6 @@ namespace Opaax
 
         return lWorld;
     }
-
-    ResourceRef<LevelResource> Engine::ResolveStartupLevel(const OpaaxString& InAssetRelPath) const
-    {
-        if (InAssetRelPath.IsEmpty())
-        {
-            OPAAX_ENGINE_LOG(Info, "No startup level configured — booting '{}'", NULL_LEVEL_WORLD_NAME);
-            return {};
-        }
-
-        if (m_Resources == nullptr)
-        {
-            OPAAX_ENGINE_LOG(Error, "No ResourceManager — cannot open startup level '{}'",
-                             InAssetRelPath.CStr());
-            return {};
-        }
-
-        const OpaaxString lAbsPath = OpaaxApplication::GetAppService<IPaths>()
-                                     .AssetToAbsolute(InAssetRelPath);
-
-        // FailFast: a missing or unreadable level resolves to null rather than to a placeholder,
-        // so this IS the existence check — and it covers a corrupt file too, which a stat would not.
-        ResourceRef<LevelResource> lRef = m_Resources->Load<LevelResource>(lAbsPath.CStr());
-
-        if (lRef.Get() == nullptr)
-        {
-            // A project that NAMES a level it cannot open is a real misconfiguration — loud,
-            // unlike the empty case above. Booting NullLevel anyway beats refusing to start.
-            OPAAX_ENGINE_LOG(Warn, "Startup level '{}' could not be opened — falling back to '{}'",
-                             InAssetRelPath.CStr(), NULL_LEVEL_WORLD_NAME);
-        }
-
-        return lRef;
-    }
-
-    void Engine::OpenStartupLevel(const LevelData& InLevel, World& InWorld)
-    {
-        const LevelLoader::Result lResult = LevelLoader::LoadInto(
-            InLevel, InWorld, GetRegistries().Components(),
-            OpaaxApplication::GetAppService<IPaths>(), *m_Resources);
-
-        if (!lResult.IsOk())
-        {
-            // Loud. A level that half-opened leaves a world that LOOKS fine and is missing
-            // content, which is the failure mode MapResource is FailFast to avoid — so the
-            // engine must not pass over it quietly either.
-            OPAAX_ENGINE_LOG(Error, "Startup level '{}' did not open cleanly ({} map(s) loaded, {} failed)",
-                             InLevel.Name.CStr(), lResult.MapsLoaded, lResult.MapsFailed);
-        }
-    }
     
     void Engine::Loop()
     {
@@ -292,6 +332,67 @@ namespace Opaax
         Render(m_FrameInfo.m_AlphaPhysic);
     }
     
+    void Engine::TearDown()
+    {
+        if (!m_bStarted)
+        {
+            return;
+        }
+        
+        if (m_EngineEventBus != nullptr)
+        {
+            m_EngineEventBus->GetEventBus().Publish(EngineTearingDown{});
+        }
+
+        m_Subsystems.TearDownAll();
+
+        OPAAX_ENGINE_LOG(Info, "Engine torn down");
+    }
+
+    void Engine::Shutdown()
+    {
+        if (!m_bStarted)
+        {
+            return;
+        }
+        
+        UnbindFromWorldMgrEvents();
+
+        m_Subsystems.ShutdownAll();
+        
+        m_Resources         = nullptr;
+        m_EngineEventBus    = nullptr;
+        m_RendererManager   = nullptr;
+        m_WorldManager      = nullptr;
+        m_InputManager      = nullptr;
+        
+        m_bStarted  = false;
+
+        OPAAX_ENGINE_LOG(Info, "Engine shutdown");
+    }
+    
+    // =========================================================================
+    // Tick
+    // =========================================================================
+    
+    void Engine::Update(double InDeltaTime)
+    {
+        m_Subsystems.UpdateAll(InDeltaTime);
+    }
+    
+    void Engine::FixedUpdate(double InFixedDeltaTime)
+    {
+        m_Subsystems.FixedUpdateAll(InFixedDeltaTime);
+    }
+    void Engine::Render(double InAlphaPhysicStep)
+    {
+        m_Subsystems.RenderAll(InAlphaPhysicStep);
+    }
+    
+    // =========================================================================
+    // Render
+    // =========================================================================
+    
     void Engine::PresentBackbuffer()
     {
         if (m_RendererManager != nullptr)
@@ -318,73 +419,10 @@ namespace Opaax
 
         return m_RendererManager->CreateFramebuffer(InSpec);
     }
-
-    void Engine::Shutdown()
-    {
-        if (!m_bStarted)
-        {
-            return;
-        }
-        
-        UnbindFromWorldMgrEvents();
-
-        m_Subsystems.ShutdownAll();
-        
-        m_Resources         = nullptr;
-        m_EngineEventBus    = nullptr;
-        m_RendererManager   = nullptr;
-        m_WorldManager      = nullptr;
-        
-        m_bStarted  = false;
-
-        OPAAX_ENGINE_LOG(Info, "Engine shutdown");
-    }
     
-    void Engine::Update(double InDeltaTime)
-    {
-        m_Subsystems.UpdateAll(InDeltaTime);
-    }
-    
-    void Engine::FixedUpdate(double InFixedDeltaTime)
-    {
-        m_Subsystems.FixedUpdateAll(InFixedDeltaTime);
-    }
-    void Engine::Render(double InAlphaPhysicStep)
-    {
-        m_Subsystems.RenderAll(InAlphaPhysicStep);
-    }
-    
-    void Engine::TearDown()
-    {
-        if (!m_bStarted)
-        {
-            return;
-        }
-        
-        if (m_EngineEventBus != nullptr)
-        {
-            m_EngineEventBus->GetEventBus().Publish(EngineTearingDown{});
-        }
-
-        m_Subsystems.TearDownAll();
-
-        OPAAX_ENGINE_LOG(Info, "Engine torn down");
-    }
-    
-    void Engine::HandleWorldCreated(World* InWorld)
-    {
-        m_EngineEventBus->GetEventBus().Publish(WorldCreated{InWorld});
-    }
-
-    void Engine::HandleWorldDestroyed(World* InWorld)
-    {
-        m_EngineEventBus->GetEventBus().Publish(WorldDestroyed{InWorld});
-    }
-
-    void Engine::HandleActiveWorldChanged(World* InOldWorld, World* InNewWorld)
-    {
-        m_EngineEventBus->GetEventBus().Publish(ActiveWorldChanged{InOldWorld, InNewWorld});
-    }
+    // =========================================================================
+    // Getters
+    // =========================================================================
     
     ResourceManager& Engine::GetResources()
     {

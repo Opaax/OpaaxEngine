@@ -5,7 +5,7 @@
 
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IConfigSystem.h"
-#include "Application/Services/Window/IWindowManager.h"   // WindowModeToString
+#include "Application/Services/Window/IWindowManager.h"   // ToString(EWindowMode)
 #include "Core/Window/WindowEvents.h"
 #include "Engine/Config/Config_Engine.h"
 
@@ -53,7 +53,7 @@ namespace Opaax
 		m_Data.Mode	= Props.Mode;
 
 		OPAAX_LOG(LogWindowsWindow, Info, "Creating window {} ({}, {}) [{}]", Props.Title, Props.Width, Props.Height,
-			WindowModeToString(Props.Mode));
+			ToString(Props.Mode));
 
 		if (!s_GLFWInitialized)
 		{

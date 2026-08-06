@@ -34,7 +34,7 @@ namespace Opaax
         return EWindowMode::Windowed;
     }
 
-    const char* WindowModeToString(EWindowMode InMode) noexcept
+    const char* ToString(EWindowMode InMode) noexcept
     {
         switch (InMode)
         {

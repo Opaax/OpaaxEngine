@@ -168,19 +168,14 @@ namespace Opaax
         // Members
         // =========================================================================
     private:
-        EngineRegistries*           m_Registries = nullptr; // non-owning; Engine owns them (I5)
-        TDynArray<TUniquePtr<World>> m_Worlds;
-        World*                      m_ActiveWorld = nullptr; // non-owning; points into m_Worlds
-
-        // The engine-side half of every WorldContext this manager builds. Resolved ONCE in
-        // Startup (F3: from the engine, whose accessors resolve-from-manager, so this is safe
-        // mid-boot) rather than per CreateWorld, which runs on every PIE start. All non-owning.
+        EngineRegistries*               m_Registries = nullptr; // Engine owns
+        TDynArray<TUniquePtr<World>>    m_Worlds;
+        World*                          m_ActiveWorld = nullptr; // non-owning;
+        
         ResourceManager* m_Resources = nullptr;
         EngineEventBus*  m_Events    = nullptr;
         DebugDraw*       m_Debug     = nullptr;
-
-        // PIE tick gate. m_bTickThisFrame is decided ONCE per frame in Update (the once-per-frame
-        // hook) and only read by FixedUpdate, so a stepped frame runs its fixed steps too.
+        
         bool m_bPaused        = false;
         bool m_bStepRequested = false;
         bool m_bTickThisFrame = true;

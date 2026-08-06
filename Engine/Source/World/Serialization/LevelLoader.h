@@ -16,7 +16,7 @@ namespace Opaax
     inline constexpr LogCategory LogLevelLoader{"LevelLoader"};
 
     // =============================================================================
-    // LevelLoader — open a Level's Maps INTO a World.
+    // LevelLoader
     //
     //   The one place the three M5 layers meet: LevelFile says which maps, MapResource reads
     //   each one, MapFactory turns it into entities. Nothing above this has to know that order.
@@ -32,11 +32,13 @@ namespace Opaax
     //   A caller that wants a replace calls World::Clear itself, which is what the editor's
     //   Open Map does and what streaming a second level in must NOT do.
     //
-    //   Free functions, not a class: no state, nothing to derive from, and the two entry points
-    //   are one calling the other.
+    //   Stateless (every member static, no instance), the MapFactory / MapSerializer shape: this
+    //   is a transformation. A namespace is for the units that carry format constants —
+    //   LevelFile, MapFile, MapJson.
     // =============================================================================
-    namespace LevelLoader
+    class OPAAX_API LevelLoader
     {
+    public:
         // What a load actually did. Returned rather than logged-and-forgotten so a caller can
         // tell "the level was empty" from "every map in it failed" — an empty world looks
         // identical either way, which is precisely the confusion FailFast exists to prevent.
@@ -47,7 +49,7 @@ namespace Opaax
             Uint64 EntitiesCreated = 0;
 
             /** Nothing went wrong AND something arrived. An empty level is not a success. */
-            bool IsOk() const noexcept { return MapsFailed == 0 && MapsLoaded > 0; }
+            bool IsValid() const noexcept { return MapsFailed == 0 && MapsLoaded > 0; }
         };
 
         /**
@@ -62,8 +64,8 @@ namespace Opaax
          * @param InRegistry  Decides which components can be rebuilt; an unknown one is skipped
          *                    with a warning by MapFactory, exactly as for a PIE clone.
          */
-        OPAAX_API Result LoadInto(const LevelData& InLevel, World& InWorld,
-                                  const ComponentRegistry& InRegistry,
-                                  const IPaths& InPaths, ResourceManager& InResources);
-    }
+        static Result LoadInto(const LevelData& InLevel, World& InWorld,
+                               const ComponentRegistry& InRegistry,
+                               const IPaths& InPaths, ResourceManager& InResources);
+    };
 }

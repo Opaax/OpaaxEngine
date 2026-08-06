@@ -39,7 +39,7 @@ TEST_CASE("WindowModeFromString: every mode round-trips, unknown falls back to W
     // The pair is what keeps a serialized config readable by the next boot.
     for (const EWindowMode lMode : { EWindowMode::Windowed, EWindowMode::Borderless, EWindowMode::Fullscreen })
     {
-        CHECK(WindowModeFromString(OpaaxString(WindowModeToString(lMode))) == lMode);
+        CHECK(WindowModeFromString(OpaaxString(ToString(lMode))) == lMode);
     }
 }
 

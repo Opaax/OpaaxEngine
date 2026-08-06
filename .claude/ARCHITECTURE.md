@@ -204,6 +204,34 @@ already named `OpaaxString` canonical, and `OpaaxHash.h` has a parameter literal
   better pattern — precise, self-documenting, nothing to keep in sync. Reach for a per-module `…Fwd.h`
   only when a specific header's include cost shows up in build times, never preemptively.
 
+**I11 — One spelling for text: an ENUM gets a free `ToString(E)` found by ADL, a VALUE TYPE gets a
+member `ToString()`** (settled 2026-08-06). The tree had three spellings for one idea — `ToString`,
+`BackendToString`, `WindowModeToString` — so a user could not *guess* the name, which is the whole cost.
+- **Enum → free `const char* ToString(E)`, declared in the enum's own header.** No allocation, no prefix,
+  found by ADL from any layer that can see the enum. `EWorldMode`, `EPlayState`, `EInputRouteState`
+  already had it; `EBackend` and `EWindowMode` were renamed into it.
+- **Value type → member `OpaaxString ToString()`** — `OpaaxStringID`, `Guid`. Returns by value, so it is
+  a member; the free form is for the zero-cost enum label.
+- `ToStringID(ERenderLayer)` keeps its own name: it answers the canonical `OpaaxStringID` used for
+  *lookup*, not a log label.
+- **A central `ToString` header is not merely unwise — it cannot exist.** One file covering `EWorldMode`
+  (Application), `EBackend` (RHI) and `EPlayState` (Editor) must include all three, and Core cannot see
+  Application, nor the engine the editor (**MR1**). Same shape as **I9**'s rejected `OpaaxStatics.h`:
+  grouping by *storage kind* rather than by meaning. Discovery comes from the uniform overload set, which
+  is also **layer-correct** — it offers a TU exactly what that TU may legally reach.
+- **The PARSE direction is deliberately NOT unified.** `ToString` is total and pure (every enumerator has
+  a label), so one overload set works. `FromString` carries a per-enum fallback **policy**
+  (`BackendFromString` → OpenGL + Warn, `WindowModeFromString` → Windowed + Warn) and cannot overload on
+  return type — the prefixed name marks an asymmetric operation honestly rather than pushing that policy
+  out to every call site.
+- The mapping lives with the enum **unless the enum's layer cannot express it**: `ToString(EWindowMode)`
+  sits in `IWindowManager.h`, not `Core/Window/Window.h`, because an unknown mode must be loud and Core
+  does not log.
+- **A `CStringable` concept + a constrained fmt formatter** — so `OPAAX_LOG(Cat, Info, "{}", lMode)` needs
+  no explicit call — is the natural next step and is **named here, deliberately not built**: nothing
+  constrains on it yet, and this is the `CComponent`/`CResource` shape (**I8**), so it costs nothing to
+  add later. Trigger: the second place that wants to format an engine enum generically.
+
 ---
 
 ## LC — Lifecycle: three states, not two

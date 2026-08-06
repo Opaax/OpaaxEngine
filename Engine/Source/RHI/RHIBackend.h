@@ -33,6 +33,6 @@ namespace Opaax
     // (VK backend is in Legacy), unknown -> OpenGL. Both cases logged.
     EBackend    BackendFromString(const OpaaxString& InName);
 
-    // Human-readable name for logs.
-    const char* BackendToString(EBackend InBackend) noexcept;
+    // Human-readable name for logs. Found by ADL — every engine enum spells this ToString.
+    const char* ToString(EBackend InBackend) noexcept;
 }

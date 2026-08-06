@@ -49,13 +49,12 @@ namespace Opaax
         // =============================================================================
         // Function
         // =============================================================================
-        
-    private:
-        bool CanFinishStartup();
-        
         // =============================================================================
         // Native Engine
     private:
+        /** @return true if not started yet and world is not null */
+        bool CanFinishStartup();
+    
         /**  */
         void RegisterNativeComponents();
         
@@ -78,11 +77,11 @@ namespace Opaax
         // =============================================================================
 
         // =============================================================================
-        // Startup content
+        // Startup
     private:
         /**
-         * Load the level InSpec names, BEFORE the world exists — the world takes its name from
-         * the level's own data, so the level has to be read first.
+         * Load the level InSpec names, BEFORE the world exists.
+         * The world takes its name from the level's own data, so the level has to be read first.
          *
          * @return A null ref for an empty path (silent — a supported answer) and for one that
          *   does not resolve (a warning). Either way the caller boots the NullLevel world.
@@ -92,11 +91,10 @@ namespace Opaax
         /**
          * Instantiate InLevel's maps into the freshly-created startup world.
          *
-         * Runs AFTER the world's subsystems have started, which is the same order a PIE clone
-         * gets. That uniformity is deliberate — see WS7.
+         * Runs AFTER the world's subsystems have started, which is the same order a PIE clone gets.
          */
         void OpenStartupLevel(const LevelData& InLevel, World& InWorld);
-        // End Startup content
+        // End Startup
         // =============================================================================
 
         // =============================================================================
@@ -128,87 +126,61 @@ namespace Opaax
     public:
         void OnShutdown() override; // reverse-order locator teardown -> Shutdown()
         //~End IAppService interface
-
         
         //~Begin IEngine interface
     public:
-        bool Startup() override;
-        World* FinishStartup(const WorldSpec& InSpec) override;
-        void Loop() override;
-        void PresentBackbuffer() override;
-        void SetPrimaryRenderTarget(IRenderTarget* InTarget) override;
-        TUniquePtr<IFramebuffer> CreateFramebuffer(const FramebufferSpec& InSpec) override;
+        //Life cycle
+        bool    Startup() override;
+        World*  FinishStartup(const WorldSpec& InSpec) override;
+        void    Loop() override;
+        void    TearDown() override;
+        void    Shutdown() override;
+        
+        //Tick
         void Update(double InDeltaTime) override;
         void FixedUpdate(double InFixedDeltaTime) override;
         void Render(double InAlphaPhysicStep) override;
-        void TearDown() override;
-        void Shutdown() override;
+        
+        //Render
+        void                        PresentBackbuffer() override;
+        void                        SetPrimaryRenderTarget(IRenderTarget* InTarget) override;
+        TUniquePtr<IFramebuffer>    CreateFramebuffer(const FramebufferSpec& InSpec) override;
 
-        EngineRegistries&   GetRegistries() override { return m_Registries; }
-        ResourceManager&    GetResources() override;
+        //Getters
+        EngineRegistries&   GetRegistries()     override { return m_Registries; }
+        ResourceManager&    GetResources()      override;
         EngineEventBus&     GetEngineEventBus() override;
-        WorldManager&       GetWorldManager() override;
-        DebugDraw&          GetDebugDraw() override;
-        InputManager&       GetInput() override;
+        WorldManager&       GetWorldManager()   override;
+        DebugDraw&          GetDebugDraw()      override;
+        InputManager&       GetInput()          override;
         //~End IEngine interface
 
         // =============================================================================
         // Members
         // =============================================================================
     private:
-        // =============================================================================
         // App system
         IJobSystem* m_JobSystem = nullptr;
         IPlatform*  m_Platform  = nullptr;
-        // End App system
-        // =============================================================================
+        IPaths*     m_Paths     = nullptr;
         
-        // =============================================================================
-        // Delta Time
-    private:
+        // End Delta Time
         FrameInfo m_FrameInfo;
 
-        // End Delta Time
-        // =============================================================================
-
-        /**
-         * Handle Subsystem lifetime
-         */
+        //Handle Subsystem lifetime
         EngineSubsystemMgr m_Subsystems;
 
-        /**
-         * The engine's type registries. Owned here because they are boot-order state, not the
-         * state of any one subsystem (see EngineRegistries.h). Constructed with the Engine, so
-         * they exist before any subsystem does.
-         */
+        //Owned here because they are boot-order state, not the state of any one subsystem (see EngineRegistries.h)
         EngineRegistries m_Registries;
         
-        /**
-         * Convenient ptr, lifetime not managed by engine itself but through subsystem
-         */
-        EngineEventBus* m_EngineEventBus = nullptr;
+        // Convenient ptrs
+        EngineEventBus*     m_EngineEventBus = nullptr;
+        ResourceManager*    m_Resources = nullptr;
+        RendererManager*    m_RendererManager = nullptr;
+        WorldManager*       m_WorldManager = nullptr;
+        InputManager*       m_InputManager = nullptr;
 
-        /**
-         * Convenient ptr, lifetime not managed by engine itself but through subsystem
-         */
-        ResourceManager*   m_Resources = nullptr;
-        
-        /**
-         * Convenient ptr, lifetime not managed by engine itself but through subsystem
-         */
-        RendererManager*   m_RendererManager = nullptr;
-
-        /**
-         * Convenient ptr, lifetime not managed by engine itself but through subsystem
-         */
-        WorldManager*      m_WorldManager = nullptr;
-
-        /**
-         * Convenient ptr, lifetime not managed by engine itself but through subsystem.
-         * Read every frame by Loop (EndFrame), so it is cached in CacheSubsystems like the rest.
-         */
-        InputManager*      m_InputManager = nullptr;
-
-        bool               m_bStarted = false;
+        //Internal
+        bool m_bStarted = false;
     };
 }
