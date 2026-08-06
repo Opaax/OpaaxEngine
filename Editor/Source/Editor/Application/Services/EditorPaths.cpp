@@ -1,4 +1,4 @@
-#include "Editor/EditorPaths.h"
+#include "Editor/Application/Services/EditorPaths.h"
 
 #include "Application/Services/ILogger.h"   // OPAAX_APP_LOG (as the base IPaths.cpp does)
 #include "Core/String/OpaaxUtf8.h"         // I7 — shared with IPaths.cpp, no local copy

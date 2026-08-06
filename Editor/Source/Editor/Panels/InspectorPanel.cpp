@@ -1,7 +1,7 @@
 #include "Editor/Panels/InspectorPanel.h"
 
 #include "Editor/EditorContext.h"
-#include "Editor/EditorSelection.h"
+#include "Editor/Operation/EditorSelection.hpp"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 
 #include "World/Entity/Entity.h"

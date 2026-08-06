@@ -1,6 +1,6 @@
-#include "Editor/InputRoute.h"
+#include "Editor/Input/InputRoute.h"
 
-#include "Editor/PlayInEditor.h"
+#include "Editor/PIE/PlayInEditor.h"
 
 #include "Application/Services/ILogger.h"   // OPAAX_LOG + LogCategory
 #include "Engine/Subsystems/Input/InputManager.h"

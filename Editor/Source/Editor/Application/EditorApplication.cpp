@@ -1,8 +1,9 @@
-#include "Editor/EditorApplication.h"
 
-#include "Editor/IEditorService.h"
-#include "Editor/EditorService.h"
-#include "Editor/EditorPaths.h"
+
+#include "EditorApplication.h"
+
+#include "Editor/Application/Services/EditorService.h"
+#include "Editor/Application/Services/EditorPaths.h"
 
 #include "Application/Services/IEngine.h"   // Engine().Loop() — full type, not just the fwd decl
 #include "Application/Services/ILogger.h"   // OPAAX_LOG + LogCategory

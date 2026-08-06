@@ -1,7 +1,7 @@
 #include "Editor/Panels/HierarchyPanel.h"
 
 #include "Editor/EditorContext.h"
-#include "Editor/EditorSelection.h"
+#include "Editor/Operation/EditorSelection.hpp"
 
 #include "World/WorldManager.h"
 #include "World/Entity/Entity.h"

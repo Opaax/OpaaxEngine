@@ -1,7 +1,7 @@
 #include "Editor/Panels/PlayToolbarPanel.h"
 
 #include "Editor/EditorContext.h"
-#include "Editor/PlayInEditor.h"
+#include "Editor/PIE/PlayInEditor.h"
 
 #include "World/World.h"
 #include "World/WorldManager.h"

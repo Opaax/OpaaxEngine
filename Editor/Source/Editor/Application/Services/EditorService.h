@@ -1,12 +1,12 @@
 #pragma once
 
-#include "Editor/IEditorService.h"
+#include "Editor/Application/Services/IEditorService.h"
 #include "Editor/EditorContext.h"
-#include "Editor/EditorPaths.h"
-#include "Editor/EditorSelection.h"
-#include "Editor/InputRoute.h"
+#include "Editor/Application/Services/EditorPaths.h"
+#include "Editor/Operation/EditorSelection.hpp"
+#include "Editor/Input/InputRoute.h"
 #include "Editor/EditorMapDocument.h"
-#include "Editor/PlayInEditor.h"
+#include "Editor/PIE/PlayInEditor.h"
 #include "Editor/UI/IEditorUIBackend.h"
 #include "Editor/Panels/ViewportPanel.h"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"

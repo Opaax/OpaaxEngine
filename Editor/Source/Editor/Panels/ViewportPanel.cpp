@@ -1,7 +1,7 @@
 #include "Editor/Panels/ViewportPanel.h"
 
 #include "Editor/EditorContext.h"
-#include "Editor/EditorSelection.h"
+#include "Editor/Operation/EditorSelection.hpp"
 #include "Editor/UI/IEditorUIBackend.h"
 
 #include "Application/Services/IEngine.h"

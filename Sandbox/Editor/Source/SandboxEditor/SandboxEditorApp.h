@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Editor/EditorApplication.h"
+#include "Editor/Application/EditorApplication.h"
 
 // =============================================================================
 // SandboxEditorApp — the game's editor executable (Editor.md D8): a thin composition of the generic

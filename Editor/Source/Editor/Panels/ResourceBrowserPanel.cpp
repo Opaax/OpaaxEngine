@@ -1,7 +1,7 @@
 #include "Editor/Panels/ResourceBrowserPanel.h"
 
 #include "Editor/EditorContext.h"
-#include "Editor/EditorPaths.h"
+#include "Editor/Application/Services/EditorPaths.h"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Editor/Extensions/ResourceTypeRegistry.h"
 

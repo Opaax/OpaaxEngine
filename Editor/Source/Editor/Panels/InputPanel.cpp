@@ -1,7 +1,7 @@
 #include "Editor/Panels/InputPanel.h"
 
 #include "Editor/EditorContext.h"
-#include "Editor/InputRoute.h"
+#include "Editor/Input/InputRoute.h"
 
 #include "Application/Services/IEngine.h"
 #include "Engine/Subsystems/Input/InputManager.h"

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "IEditorService.h"
 #include "Application/OpaaxApplication.h"
 #include "Core/String/OpaaxString.hpp"
+#include "Editor/Application/Services/IEditorService.h"
 
 namespace Opaax::Editor
 {

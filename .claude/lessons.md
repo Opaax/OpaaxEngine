@@ -822,3 +822,33 @@ string surgery and just hidden it one layer lower.
 - **A test suite over a bad rule proves the rule, not the design.** Six passing `DeriveWorldName` cases
   made the stem convention look settled. Coverage measures whether code does what you said; it never asks
   whether what you said was the right thing to say ([[L27]]'s "know WHY it works", one level up).
+
+## L33 — A plan that ADDS is not a plan that DELETES: enumerate the removals before you start (2026-08-06)
+
+**What happened (preset cleanup).** My plan described the destination — three presets, a new
+`OPAAX_DEV_BUILD` flag — and disposed of the thing being removed in a subordinate clause: "Drop
+`release-editor`." The user, on that exact section: **"make sure to delete previous correctly."** The
+`git grep` I then ran found `release-editor` in **8 live places across 2 files** and the dead
+`OPAAX_BUILD_EXAMPLES` option in **4 more**, plus a `RelWithDebInfo` branch in `Engine/CMakeLists.txt`
+that existed only to serve the deleted preset. Any one left behind is a half-existing preset: a
+`build.bat` dispatch line pointing at something CMake no longer defines.
+
+**Why the framing caused it.** Adding is self-verifying — the new thing either builds or it does not.
+Removing is not: every leftover reference still compiles, still looks intentional, and only fails for
+whoever types the dead name months later. So a deletion gets *no* feedback from the thing that gives
+implementation its confidence, which is exactly why it needs the enumeration up front instead of a verb.
+
+**Rules for next time:**
+- **Run the exhaustive `git grep` while PLANNING, not while implementing, and paste the hit list into
+  the plan as its own first step.** "Drop X" is a verb, not a step. The enumerated list is the step, and
+  a zero-hit re-grep is what proves it finished ([[L8]]'s "grep the marker" applied to source).
+- **Split live references from historical records, explicitly.** Plans, lessons and archives naming the
+  deleted thing must SURVIVE — they describe what was true then, and rewriting them is falsifying a log.
+  Say which files are exempt and why, or the sweep silently eats the project's memory of itself.
+- **Name what grep cannot reach.** A deleted `option()` lingers in every existing `CMakeCache.txt`
+  forever; the orphaned `build/<preset>/` tree, cached IDE profiles and generated `.sln`s are all state
+  no source-tree search will show you. Only a fresh tree drops them — list them for the user rather than
+  reporting the sweep as complete ([[state-blast-radius-of-fixes]]).
+- **This is the deletion-shaped case of [[prefers-deletion-over-machinery]].** The user reaches for
+  removal often, so "remove X and add Y" is a recurring plan shape here — treat the removal half as
+  first-class work with its own verification, never as the preamble to the interesting part.

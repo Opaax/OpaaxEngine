@@ -1,4 +1,4 @@
-#include "Editor/EditorService.h"
+#include "Editor/Application/Services/EditorService.h"
 
 #include "Editor/UI/OpenGLEditorUIBackend.h"
 #include "Editor/Panels/HierarchyPanel.h"
@@ -6,7 +6,7 @@
 #include "Editor/Panels/InspectorPanel.h"
 #include "Editor/Panels/PlayToolbarPanel.h"
 #include "Editor/Panels/ResourceBrowserPanel.h"
-#include "Editor/EditorPaths.h"                            // EditorSaveDir — the dock layout's home (D4)
+#include "Editor//Application/Services/EditorPaths.h"                            // EditorSaveDir — the dock layout's home (D4)
 
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IEngine.h"
