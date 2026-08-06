@@ -2,7 +2,7 @@
 
 #include "Core/EngineAPI.h"
 
-#include "World/ComponentRegistry.h"
+#include "World/Components/ComponentRegistry.h"
 #include "World/Systems/WorldSubsystemRegistry.h"
 
 namespace Opaax

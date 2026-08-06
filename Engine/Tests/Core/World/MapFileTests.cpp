@@ -16,7 +16,7 @@
 #include "Core/IO/FileIO.h"
 #include "Core/String/OpaaxUtf8.h"
 #include "Engine/Subsystems/Resources/ResourceManager.h"   // before MapResource — completes LoadContext
-#include "World/ComponentRegistry.h"
+#include "World/Components/ComponentRegistry.h"
 #include "World/Components/DummyComponent.h"
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityMeta.h"

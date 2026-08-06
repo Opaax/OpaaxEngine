@@ -7,7 +7,7 @@
 
 #include "Engine/Modules/ModuleRegistrar.h"
 #include "Engine/Registries/EngineRegistries.h"
-#include "World/ComponentRegistry.h"
+#include "World/Components/ComponentRegistry.h"
 #include "World/Entity/Entity.h"
 #include "World/Serialization/MapFactory.h"
 #include "World/Serialization/MapSerializer.h"

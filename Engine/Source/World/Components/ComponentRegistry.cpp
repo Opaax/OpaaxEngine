@@ -1,4 +1,4 @@
-#include "World/ComponentRegistry.h"
+#include "World/Components/ComponentRegistry.h"
 
 namespace Opaax
 {

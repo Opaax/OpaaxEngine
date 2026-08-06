@@ -6,7 +6,7 @@
 // re-mints identities, every such reference in a map silently points at the wrong entity.
 #include <doctest.h>
 
-#include "World/ComponentRegistry.h"
+#include "World/Components/ComponentRegistry.h"
 #include "World/Components/DummyComponent.h"
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityMeta.h"

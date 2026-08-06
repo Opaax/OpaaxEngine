@@ -3,7 +3,7 @@
 #include <string>
 
 #include "Core/IO/FileIO.h"          // the adopt-time round-trip stability check
-#include "World/ComponentRegistry.h"
+#include "World/Components/ComponentRegistry.h"
 #include "World/Entity/EntityMeta.h"
 #include "World/Serialization/MapFactory.h"
 #include "World/Serialization/MapFile.h"

@@ -21,7 +21,7 @@
 #include "World/Entity/Entity.h"                             // selection retarget by Guid across a world switch
 #include "World/World.h"
 #include "World/WorldManager.h"
-#include "World/ComponentRegistry.h"                         // the document captures through it (M5)
+#include "World/Components/ComponentRegistry.h"                        // the document captures through it (M5)
 #include "World/Serialization/LevelFile.h"                   // which map the startup level names (M5)
 
 #include <imgui.h>

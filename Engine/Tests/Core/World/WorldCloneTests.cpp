@@ -21,7 +21,7 @@
 #include <doctest.h>
 
 #include "Engine/Registries/EngineRegistries.h"
-#include "World/ComponentRegistry.h"
+#include "World/Components/ComponentRegistry.h"
 #include "World/Components/DummyComponent.h"
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityMeta.h"

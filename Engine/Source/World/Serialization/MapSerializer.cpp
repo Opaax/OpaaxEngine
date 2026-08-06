@@ -1,6 +1,6 @@
 #include "World/Serialization/MapSerializer.h"
 
-#include "World/ComponentRegistry.h"
+#include "World/Components/ComponentRegistry.h"
 #include "World/Entity/EntityMeta.h"
 #include "World/World.h"
 

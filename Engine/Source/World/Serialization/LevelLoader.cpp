@@ -2,7 +2,7 @@
 
 #include "Application/Services/IPaths.h"
 #include "Engine/Subsystems/Resources/ResourceManager.h"   // before the resources — completes LoadContext
-#include "World/ComponentRegistry.h"
+#include "World/Components/ComponentRegistry.h"
 #include "World/Serialization/LevelFile.h"
 #include "World/Serialization/MapFactory.h"
 #include "World/Serialization/MapResource.hpp"
