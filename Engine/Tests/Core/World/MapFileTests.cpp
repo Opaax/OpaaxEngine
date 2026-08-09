@@ -22,6 +22,7 @@
 #include "World/Entity/EntityMeta.h"
 #include "World/Serialization/MapFactory.h"
 #include "World/Serialization/MapFile.h"
+#include "World/Serialization/MapJson.h"
 #include "World/Serialization/MapResource.hpp"
 #include "World/Serialization/MapSerializer.h"
 #include "World/World.h"
@@ -284,6 +285,44 @@ TEST_CASE("MapFile: an anonymous EMPTY file falls back to the file STEM, so noth
     REQUIRE(MapFile::Load(lPath, lLoaded));
     CHECK(lLoaded.IsEmpty());
     CHECK(lLoaded.Id == MapId("Rooftops"));
+}
+
+TEST_CASE("MapFile: StemId names a map from its path — the same rule when loading and when creating")
+{
+    // Public because BOTH sides need it: Load's last fallback, and New Map's first answer for a map
+    // that has no entities to claim one yet. Two copies of a naming rule is two answers.
+    CHECK(MapFile::StemId(OpaaxString("C:/Proj/Assets/Maps/Decor.opaaxmap")) == MapId("Decor"));
+    CHECK(MapFile::StemId(OpaaxString("C:\\Proj\\Assets\\Maps\\Decor.opaaxmap")) == MapId("Decor"));
+    CHECK(MapFile::StemId(OpaaxString("Decor.opaaxmap")) == MapId("Decor"));
+    CHECK(MapFile::StemId(OpaaxString("Maps/No.Dots.Here.opaaxmap")) == MapId("No.Dots.Here"));
+
+    // A directory in the path may carry a dot without the stem borrowing it.
+    CHECK(MapFile::StemId(OpaaxString("C:/a.b/Maps/Decor.opaaxmap")) == MapId("Decor"));
+
+    CHECK_FALSE(MapFile::StemId(OpaaxString("")).IsValid());
+}
+
+TEST_CASE("MapFile: what New Map writes is ALREADY canonical — a fresh map is clean, not dirty")
+{
+    // The file New Map creates is an empty MapData carrying only its id. If that did not re-serialize
+    // byte-identically, every brand-new map would open reporting unsaved changes it does not have,
+    // and the editor's adopt-time round-trip check (MP6) would warn on it.
+    const ScopedTempDir lTemp("new_map");
+    const OpaaxString   lPath = lTemp.Sub("Rooftops.opaaxmap");
+
+    MapData lFresh;
+    lFresh.Id = MapFile::StemId(lPath);
+
+    REQUIRE(MapFile::Save(lPath, lFresh));
+
+    MapData lLoaded;
+    REQUIRE(MapFile::Load(lPath, lLoaded));
+
+    CHECK(lLoaded.Id == MapId("Rooftops"));
+    CHECK(lLoaded.IsEmpty());
+
+    // The fixed point: what is on disk is what this build would write for that same data.
+    CHECK(MapJson::Serialize(lLoaded) == FileIO::ReadAllText(lPath));
 }
 
 TEST_CASE("MapSerializer: CaptureMap with an INVALID id captures NOTHING, never the world (MP10)")

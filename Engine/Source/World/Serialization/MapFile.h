@@ -34,6 +34,17 @@ namespace Opaax
         inline constexpr const char* MAP_EXTENSION = ".opaaxmap";
 
         /**
+         * "…/Maps/Decor.opaaxmap" -> `MapId("Decor")` — what a file at this path would be called.
+         *
+         * The LAST resort for identity when loading (**MP10**), and the FIRST answer when creating:
+         * a map being authored has no entities to claim it, so its own name is all there is. Public
+         * because both sides need it and a second copy of a naming rule is how two of them drift.
+         *
+         * @return An invalid id when the path has no stem at all.
+         */
+        OPAAX_API MapId StemId(const OpaaxString& InAbsPath);
+
+        /**
          * Write InData to InAbsPath, replacing whatever was there.
          *
          * Missing parent directories are CREATED (FileIO::WriteAllText's contract) — "Save As"

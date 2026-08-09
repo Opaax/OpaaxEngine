@@ -973,10 +973,25 @@ the path and the baseline: **the manifest lives in the world's `Level`**, one ow
     The throttle stays with the frame clock, the answers stay with the baselines. A **transition** log
     (`Map 'Decor' has unsaved changes` / `matches its file again`) makes a marker that is otherwise one
     pixel verifiable at all ([[L12]]), and fires twice per edit session rather than per check.
-  - **Still unrepresented: a manifest-only change** (Add Map, Set as Persistent, before any map is
-    edited). `IsDirtyCached` computes it and the transition is logged, but nothing draws it now that the
-    status text is gone. Named here rather than fixed, because inventing UI nobody asked for is how the
-    bar filled up in the first place.
+  - **`File/New Map...` is the workflow that was missing in front of Save As** (landed 2026-08-09).
+    Registered FIRST, since registration order is draw order. It writes the file **immediately** —
+    empty, carrying its own `mapId` (**MP10**) — then `Level::AddMap`s it and focuses it. Written
+    rather than held as an unsaved cursor because every layer below assumes a map has a file, and a
+    "not on disk yet" state would be the only one of its kind in the editor. It **refuses a path that
+    already exists**: the OS dialog's overwrite prompt is one an author is used to clicking through,
+    and New Map truncating a populated map is not a thing to leave to that. `Open Map` and
+    `Level/Add Map...` are the verbs for a file that exists.
+    - **What it writes is already canonical**, which is why a fresh map opens CLEAN: `MapJson`
+      re-serializes it byte-identically, so **MP6**'s adopt-time round-trip check passes and the map
+      does not report unsaved changes it does not have. Pinned by a test.
+    - `MapFile::StemId` went **public** for it — the same rule `Load` uses as its last fallback is
+      `New Map`'s first answer, and a naming rule with two copies is a naming rule with two answers.
+      `EditorMapDocument::DeriveMapId` now calls it too, deleting a third.
+  - **Still unrepresented: a manifest-only change** (New Map, Add Map, Set as Persistent, before any
+    map is edited). `IsDirtyCached` computes it and the transition is logged, and `New Map` says
+    *"Save Level to keep it in the level"* at the moment it creates one — but nothing DRAWS that state
+    now that the status text is gone. Named here rather than fixed, because inventing UI nobody asked
+    for is how the bar filled up in the first place.
 - **The editor boots on the first NON-PERSISTENT mounted map**, falling back to the persistent one when
   that is all there is. The persistent map is the shared backdrop, authored once precisely so that it is
   not the thing being worked on. Asked of the MOUNTED maps, not the manifest — a map that failed to load

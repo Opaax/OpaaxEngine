@@ -647,6 +647,12 @@ namespace Opaax::Editor
         Window* const lWindow = OpaaxApplication::GetAppService<IWindowManager>().GetMainWindow();
 
         // --- M5 S5/S6: the author loop, through the same route a game's Tools entry uses ------
+        // NEW FIRST, and not only by convention: "Save Map As..." was flagged as weird precisely
+        // because nothing led INTO it — there was no way to make a map, so Save As had no workflow
+        // in front of it. This is that missing half, and registration order is draw order.
+        m_Extensions.Menus().Register("File/New Map...",
+            [](EditorContext& InContext) { NewMapCommand(InContext); });
+
         m_Extensions.Menus().Register("File/Open Map...",
             [](EditorContext& InContext) { OpenMapCommand(InContext); });
 
@@ -756,6 +762,77 @@ namespace Opaax::Editor
             // The cursor follows the file it just wrote; the record already moved with it.
             InContext.MapDocument.Focus(OpaaxString(lPicked));
         }
+    }
+
+    void EditorService::NewMapCommand(EditorContext& InContext)
+    {
+        if (!MapOps::CanEdit(InContext, "New Map")) { return; }
+
+        Level* const lLevel = MapOps::ActiveLevel(InContext);
+        if (lLevel == nullptr) { return; }
+
+        const char* const lFilters[] = { "*.opaaxmap" };
+
+        const char* const lPicked = tinyfd_saveFileDialog(
+            "New Map",
+            InContext.Paths.AssetToAbsolute(OpaaxString("Maps/NewMap.opaaxmap")).CStr(),
+            1, lFilters, "Opaax Map");
+
+        if (lPicked == nullptr) { return; }   // cancelled
+
+        const OpaaxString lAbsPath  = OpaaxString(lPicked);
+        const OpaaxString lAssetRel = InContext.Paths.AbsoluteToAsset(lAbsPath);
+
+        if (lAssetRel.IsEmpty())
+        {
+            OPAAX_LOG(LogEditorService, Warn,
+                "'{}' is outside the project's Assets — a level can only name assets of this project",
+                lPicked);
+            return;
+        }
+
+        // NEW MEANS NEW. The OS save dialog warns about overwriting, but "New Map" truncating a map
+        // that already has entities in it is not a thing to leave to a dialog the author is used to
+        // clicking through. Open Map and Add Map are the verbs for a file that exists.
+        if (InContext.FileSystem.IsPathExist(lAbsPath))
+        {
+            OPAAX_LOG(LogEditorService, Warn,
+                "'{}' already exists — use Open Map or Level/Add Map... instead of overwriting it",
+                lAssetRel.CStr());
+            return;
+        }
+
+        // WRITTEN BEFORE IT IS MOUNTED, because AddMap loads it through the ResourceManager and
+        // there has to be a file to load. Stamped with its own id (**MP10**) rather than left
+        // anonymous: that is what makes a map with nothing in it an ORDINARY map from its first
+        // frame — saveable, removable, and settable as persistent like any other.
+        MapData lData;
+        lData.Id = MapFile::StemId(lAbsPath);
+
+        if (!MapFile::Save(lAbsPath, lData))
+        {
+            return;   // MapFile logged which of the reasons it was
+        }
+
+        if (!lLevel->AddMap(lAssetRel))
+        {
+            return;   // Level logged it — already in this level, or it would not mount
+        }
+
+        // RECONCILE, never re-adopt (**MP5**): the new map gets a record, every other map keeps the
+        // baseline it had.
+        InContext.LevelDocument.TrackMounted(*lLevel, *InContext.Worlds.GetActiveWorld(),
+                                             InContext.Engine.GetRegistries().Components(),
+                                             InContext.Paths);
+
+        // Focused, because the only reason to make a map is to start putting things in it.
+        MapOps::Focus(InContext, lAssetRel);
+
+        // The FILE is on disk; the level's MEMBERSHIP is not. Said here because the manifest is the
+        // one unsaved thing this command leaves behind and nothing draws that state today.
+        OPAAX_LOG(LogEditorService, Info,
+            "Created '{}' and added it to level '{}' — Save Level to keep it in the level",
+            lAssetRel.CStr(), lLevel->GetData().Name.CStr());
     }
 
     void EditorService::OpenMapCommand(EditorContext& InContext)

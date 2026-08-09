@@ -113,6 +113,18 @@ namespace Opaax::Editor
         void HandleAuthoringShortcuts();
 
         // ---- menu commands (D3: a command's whole input is the context) ----------------------
+        /**
+         * Create an EMPTY `.opaaxmap`, add it to the open level, and focus it.
+         *
+         * The file is written IMMEDIATELY rather than held as an unsaved cursor: everything below
+         * assumes a map has a file, and a "not on disk yet" state would be the only one of its kind
+         * in the editor. It carries its own `mapId` from the first byte (**MP10**), which is what
+         * makes a map with no entities an ordinary map instead of an anonymous one.
+         *
+         * Refuses a path that already exists — Open Map and Add Map are the verbs for those.
+         */
+        static void NewMapCommand(EditorContext& InContext);
+
         static void SaveMapCommand(EditorContext& InContext);
         static void SaveMapAsCommand(EditorContext& InContext);
         static void OpenMapCommand(EditorContext& InContext);

@@ -7,21 +7,17 @@
 
 namespace Opaax
 {
-    namespace
+    // The only layer that can answer this — MapJson has the text, MapFile has the path.
+    MapId MapFile::StemId(const OpaaxString& InAbsPath)
     {
-        // "…/Maps/Decor.opaaxmap" -> "Decor". The LAST resort for a map's identity, and this is
-        // the only layer that can offer it — MapJson has the text, MapFile has the path.
-        MapId StemId(const OpaaxString& InAbsPath)
-        {
-            const std::string lPath  = std::string(InAbsPath.CStr());
-            const size_t      lSlash = lPath.find_last_of("/\\");
-            const size_t      lStart = (lSlash == std::string::npos) ? 0 : lSlash + 1;
-            const size_t      lDot   = lPath.find_last_of('.');
-            const size_t      lEnd   = (lDot == std::string::npos || lDot < lStart) ? lPath.size() : lDot;
-            const std::string lStem  = lPath.substr(lStart, lEnd - lStart);
+        const std::string lPath  = std::string(InAbsPath.CStr());
+        const size_t      lSlash = lPath.find_last_of("/\\");
+        const size_t      lStart = (lSlash == std::string::npos) ? 0 : lSlash + 1;
+        const size_t      lDot   = lPath.find_last_of('.');
+        const size_t      lEnd   = (lDot == std::string::npos || lDot < lStart) ? lPath.size() : lDot;
+        const std::string lStem  = lPath.substr(lStart, lEnd - lStart);
 
-            return lStem.empty() ? MapId() : MapId(lStem);
-        }
+        return lStem.empty() ? MapId() : MapId(lStem);
     }
 
     bool MapFile::Save(const OpaaxString& InAbsPath, const MapData& InData)
@@ -67,7 +63,7 @@ namespace Opaax
         // anonymous, and an invalid MapId is read as "the whole world" one layer up.
         if (!OutData.Id.IsValid())
         {
-            OutData.Id = StemId(InAbsPath);
+            OutData.Id = MapFile::StemId(InAbsPath);
         }
 
         OPAAX_LOG(LogMapFile, Info, "Loaded {} entity(ies) from '{}' (map '{}')",

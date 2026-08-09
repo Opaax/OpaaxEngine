@@ -4,6 +4,7 @@
 
 #include "Core/IO/FileIO.h"
 #include "World/Serialization/MapData.h"
+#include "World/Serialization/MapFile.h"   // StemId — one naming rule, shared with Load
 #include "World/Serialization/MapJson.h"
 
 namespace Opaax::Editor
@@ -15,16 +16,10 @@ namespace Opaax::Editor
             return InData.Id;   // the map's own name — declared, or what its entities claim (MP10)
         }
 
-        // The file does not exist yet (a Save As target), so there was nothing to declare it. The
-        // stem is the fallback here for the same reason MapFile::Load uses it for a file that does.
-        const std::string lPath  = std::string(InAbsPath.CStr());
-        const size_t      lSlash = lPath.find_last_of("/\\");
-        const size_t      lStart = (lSlash == std::string::npos) ? 0 : lSlash + 1;
-        const size_t      lDot   = lPath.find_last_of('.');
-        const size_t      lEnd   = (lDot == std::string::npos || lDot < lStart) ? lPath.size() : lDot;
-        const std::string lStem  = lPath.substr(lStart, lEnd - lStart);
-
-        return lStem.empty() ? MapId() : MapId(lStem);
+        // The file does not exist yet (a Save As target), so there was nothing to declare it. Same
+        // rule MapFile::Load applies to a file that does, from the same function — a naming rule
+        // with two copies is a naming rule with two answers.
+        return MapFile::StemId(InAbsPath);
     }
 
     void EditorMapDocument::Focus(const OpaaxString& InAbsPath)
