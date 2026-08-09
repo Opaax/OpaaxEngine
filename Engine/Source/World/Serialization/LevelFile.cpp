@@ -87,10 +87,74 @@ namespace Opaax
             }
         }
 
-        OPAAX_LOG(LogLevelFile, Info, "Loaded level '{}' as '{}': {} map(s)",
-                  InAbsPath.CStr(), lParsed.Name.CStr(), lParsed.MapCount());
+        // Named by PATH in the file, held as an INDEX in memory — so "the persistent map is one of
+        // this level's maps" (WM1a) is resolved once, here, and never re-checked downstream.
+        const auto lPersistIt = lJson.find(KEY_PERSISTENT_MAP);
+        if (lPersistIt != lJson.end() && lPersistIt->is_string())
+        {
+            const OpaaxString lWanted(lPersistIt->get<std::string>().c_str());
+
+            for (Uint64 lIndex = 0; lIndex < lParsed.MapCount(); ++lIndex)
+            {
+                if (lParsed.Maps[lIndex] == lWanted) { lParsed.PersistentMapIndex = lIndex; break; }
+            }
+
+            // Loud when the name matched nothing. The level still loads with its first map
+            // persistent (MP3) — and a silent default is exactly what makes that unspottable.
+            if (!lWanted.IsEmpty() && lParsed.PersistentMap() != lWanted)
+            {
+                OPAAX_LOG(LogLevelFile, Warn,
+                          "Level '{}' names persistent map '{}', which is not one of its 'maps' — "
+                          "the first map is persistent instead", InAbsPath.CStr(), lWanted.CStr());
+            }
+        }
+
+        OPAAX_LOG(LogLevelFile, Info, "Loaded level '{}' as '{}': {} map(s), persistent '{}'",
+                  InAbsPath.CStr(), lParsed.Name.CStr(), lParsed.MapCount(),
+                  lParsed.IsEmpty() ? "(none)" : lParsed.PersistentMap().CStr());
 
         OutData = Move(lParsed);
+        return true;
+    }
+
+    OpaaxString LevelFile::Serialize(const LevelData& InData)
+    {
+        nlohmann::json lJson;
+
+        lJson[KEY_VERSION] = LEVEL_FORMAT_VERSION;
+        lJson[KEY_NAME]    = std::string(InData.Name.CStr());
+
+        nlohmann::json lMaps = nlohmann::json::array();
+        for (const OpaaxString& lMap : InData.Maps)
+        {
+            lMaps.push_back(std::string(lMap.CStr()));
+        }
+        lJson[KEY_MAPS] = Move(lMaps);
+
+        // Written even when it IS the first entry. "Absent means the first" is a READER's default
+        // (MP3); a file that states its persistent map keeps it when someone reorders the list.
+        if (!InData.IsEmpty())
+        {
+            lJson[KEY_PERSISTENT_MAP] = std::string(InData.PersistentMap().CStr());
+        }
+
+        return OpaaxString(lJson.dump(4).c_str());
+    }
+
+    bool LevelFile::Save(const OpaaxString& InAbsPath, const LevelData& InData)
+    {
+        if (!FileIO::WriteAllText(InAbsPath, Serialize(InData)))
+        {
+            OPAAX_LOG(LogLevelFile, Error, "Cannot write level '{}'", InAbsPath.CStr());
+            return false;
+        }
+
+        // The SUCCESS branch is logged, not just the failures: "no error" and "it happened" are
+        // different statements, and only this one discriminates ([[L15]]).
+        OPAAX_LOG(LogLevelFile, Info, "Saved level '{}' — {} map(s), persistent '{}'",
+                  InAbsPath.CStr(), InData.MapCount(),
+                  InData.IsEmpty() ? "(none)" : InData.PersistentMap().CStr());
+
         return true;
     }
 }

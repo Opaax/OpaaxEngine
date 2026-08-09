@@ -72,7 +72,7 @@ TEST_CASE("Snapshot: capture -> clear -> instantiate rebuilds an equivalent worl
     const Guid lHeroGuid  = lHero.GetGuid();
     const Guid lCrateGuid = lCrate.GetGuid();
 
-    const MapData lCaptured = MapSerializer::Capture(lWorld, lRegistry);
+    const MapData lCaptured = MapSerializer::CaptureWorld(lWorld, lRegistry);
     REQUIRE(lCaptured.EntityCount() == 2u);
 
     // Wipe the world completely — the entt handles from before are now meaningless, which is
@@ -115,7 +115,7 @@ TEST_CASE("Snapshot: a round trip into a DIFFERENT world preserves identity too"
 
     // This is the PIE clone shape (M4): capture one world, instantiate into another.
     World lTarget("Target");
-    CHECK(MapFactory::Instantiate(MapSerializer::Capture(lSource, lRegistry), lTarget, lRegistry) == 1u);
+    CHECK(MapFactory::Instantiate(MapSerializer::CaptureWorld(lSource, lRegistry), lTarget, lRegistry) == 1u);
 
     Entity lClone = lTarget.FindByGuid(lGuid);
     REQUIRE(lClone.IsValid());
@@ -143,7 +143,7 @@ TEST_CASE("Snapshot: a filtered capture returns only the entities that map autho
     lWorld.CreateEntity("A2", lMapA);
     lWorld.CreateEntity("B1", lMapB);
 
-    const MapData lOnlyA = MapSerializer::Capture(lWorld, lRegistry, lMapA);
+    const MapData lOnlyA = MapSerializer::CaptureMap(lWorld, lRegistry, lMapA);
 
     REQUIRE(lOnlyA.EntityCount() == 2u);
     for (const EntityData& lEntityData : lOnlyA.Entities)
@@ -168,7 +168,7 @@ TEST_CASE("Snapshot: a filtered capture excludes runtime-spawned entities")
     lWorld.CreateEntity("Bullet");
     lWorld.CreateEntity("Explosion");
 
-    const MapData lSaved = MapSerializer::Capture(lWorld, lRegistry, lMap);
+    const MapData lSaved = MapSerializer::CaptureMap(lWorld, lRegistry, lMap);
 
     REQUIRE(lSaved.EntityCount() == 1u);
     CHECK(lSaved.Entities[0].Name == "AuthoredCrate");
@@ -185,7 +185,7 @@ TEST_CASE("Snapshot: an UNfiltered capture takes the whole world, runtime spawns
 
     // No filter means "snapshot everything" — the PIE clone case, where dropping live runtime
     // state would make the clone diverge from the world it copied.
-    CHECK(MapSerializer::Capture(lWorld, lRegistry).EntityCount() == 2u);
+    CHECK(MapSerializer::CaptureWorld(lWorld, lRegistry).EntityCount() == 2u);
 }
 
 TEST_CASE("Snapshot: capturing an empty world yields empty data, not a crash")
@@ -195,7 +195,7 @@ TEST_CASE("Snapshot: capturing an empty world yields empty data, not a crash")
 
     World lWorld("Empty");
 
-    const MapData lData = MapSerializer::Capture(lWorld, lRegistry);
+    const MapData lData = MapSerializer::CaptureWorld(lWorld, lRegistry);
     CHECK(lData.IsEmpty());
     CHECK(lData.EntityCount() == 0u);
 }
@@ -213,7 +213,7 @@ TEST_CASE("Snapshot: an UNREGISTERED component type is not captured")
     lEntity.Add<DummyComponent>();
     lEntity.Add<StatsComponent>(StatsComponent{50, 2.f});
 
-    const MapData lData = MapSerializer::Capture(lWorld, lRegistry);
+    const MapData lData = MapSerializer::CaptureWorld(lWorld, lRegistry);
 
     REQUIRE(lData.EntityCount() == 1u);
     REQUIRE(lData.Entities[0].Components.size() == 1u);
@@ -255,7 +255,7 @@ TEST_CASE("Snapshot: Instantiate is ADDITIVE — it does not clear the world fir
 
     World lWorldA("MapA");
     lWorldA.CreateEntity("A1", MapId("Level01"));
-    const MapData lMapA = MapSerializer::Capture(lWorldA, lRegistry);
+    const MapData lMapA = MapSerializer::CaptureWorld(lWorldA, lRegistry);
 
     World lTarget("Streaming");
     lTarget.CreateEntity("AlreadyHere", MapId("Root"));
@@ -274,7 +274,7 @@ TEST_CASE("Snapshot: instantiating the same data twice refuses the duplicates")
     World lWorld("Source");
     lWorld.CreateEntity("Unique", MapId("Level01"));
 
-    const MapData lData = MapSerializer::Capture(lWorld, lRegistry);
+    const MapData lData = MapSerializer::CaptureWorld(lWorld, lRegistry);
 
     World lTarget("Target");
     CHECK(MapFactory::Instantiate(lData, lTarget, lRegistry) == 1u);

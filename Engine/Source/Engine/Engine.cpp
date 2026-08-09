@@ -19,8 +19,8 @@
 #include "Subsystems/Renderer/RendererManager.h"
 #include "World/WorldManager.h"
 #include "World/WorldEvents.h"
-#include "World/Serialization/LevelLoader.h"     // M5: FinishStartup opens the startup level
-#include "World/Serialization/LevelResource.hpp" // the startup level is resolved as a resource
+#include "World/Level.h"                         // OpenLevel mounts through the world's Level
+#include "World/Serialization/LevelResource.hpp" // a level is resolved as a resource
 
 #include "RHI/Framebuffer.h"   // FramebufferSpec + the TUniquePtr<IFramebuffer> deleter
 
@@ -134,7 +134,7 @@ namespace Opaax
     // Startup
     // =========================================================================
 
-    ResourceRef<LevelResource> Engine::ResolveStartupLevel(const OpaaxString& InAssetRelPath) const
+    ResourceRef<LevelResource> Engine::ResolveLevel(const OpaaxString& InAssetRelPath) const
     {
         //The user may want to create a new world each time.
         if (InAssetRelPath.IsEmpty())
@@ -165,20 +165,61 @@ namespace Opaax
         return lRef;
     }
 
-    void Engine::OpenStartupLevel(const LevelData& InLevel, World& InWorld)
+    World* Engine::OpenLevel(const WorldSpec& InSpec)
     {
-        const LevelLoader::Result lResult = LevelLoader::LoadInto(
-            InLevel, InWorld, GetRegistries().Components(),
-            OpaaxApplication::GetAppService<IPaths>(), *m_Resources);
-
-        if (!lResult.IsValid())
+        if (m_WorldManager == nullptr)
         {
-            // Loud. A level that half-opened leaves a world that LOOKS fine and is missing
-            // content, which is the failure mode MapResource is FailFast to avoid — so the
-            // engine must not pass over it quietly either.
-            OPAAX_ENGINE_LOG(Error, "Startup level '{}' did not open cleanly ({} map(s) loaded, {} failed)",
-                             InLevel.Name.CStr(), lResult.MapsLoaded, lResult.MapsFailed);
+            OPAAX_ENGINE_LOG(Error, "OpenLevel: no WorldManager subsystem — no world created");
+            return nullptr;
         }
+
+        // Held before anything else exists: whatever is active now is what this call replaces,
+        // and it must not be destroyed until the new world is up.
+        World* const lPrevious = m_WorldManager->GetActiveWorld();
+
+        // The level is read BEFORE the world exists, because the world takes its name from the
+        // level's data.
+        const ResourceRef<LevelResource> lLevelRef = ResolveLevel(InSpec.LevelPath);
+        const LevelResource* const       lLevel    = lLevelRef.Get();
+
+        const OpaaxString lName = (lLevel != nullptr) ? lLevel->Data.Name : OpaaxString(NULL_LEVEL_WORLD_NAME);
+
+        World* lWorld = m_WorldManager->CreateWorld(lName, InSpec.Mode);
+        if (lWorld == nullptr)
+        {
+            return nullptr;
+        }
+
+        // Mounted BEFORE activation, so every OnActiveWorldChanged subscriber sees a world with
+        // its content already in it rather than one that fills in afterwards.
+        if (lLevel != nullptr && lWorld->GetLevel() != nullptr)
+        {
+            lWorld->GetLevel()->SetData(lLevel->Data);
+
+            const Level::MountResult lResult = lWorld->GetLevel()->MountAll();
+            if (!lResult.IsValid())
+            {
+                // Loud. A level that half-opened leaves a world that LOOKS fine and is missing
+                // content, which is the failure mode MapResource is FailFast to avoid — so the
+                // engine must not pass over it quietly either.
+                OPAAX_ENGINE_LOG(Error, "Level '{}' did not open cleanly ({} map(s) mounted, {} failed)",
+                                 lLevel->Data.Name.CStr(), lResult.MapsMounted, lResult.MapsFailed);
+            }
+        }
+
+        m_WorldManager->SetActiveWorld(lWorld);
+
+        OPAAX_ENGINE_LOG(Info, "World '{}' ({}) opened and activated", lName.CStr(), ToString(InSpec.Mode));
+
+        // THEN the old one goes. That order is the whole point: destroying first would leave a
+        // frame with no active world, which is the same reason PIE::Stop re-activates before it
+        // destroys the clone.
+        if (lPrevious != nullptr && lPrevious != lWorld)
+        {
+            m_WorldManager->DestroyWorld(lPrevious);
+        }
+
+        return lWorld;
     }
     
     // =========================================================================
@@ -283,24 +324,10 @@ namespace Opaax
             return nullptr;
         }
 
-        // The level is read BEFORE the world exists, because the world takes its name from the
-        // level's data. Instantiation still happens after CreateWorld — WS7 is unchanged.
-        const ResourceRef<LevelResource> lLevelRef = ResolveStartupLevel(InSpec.LevelPath);
-        const LevelResource* const       lLevel    = lLevelRef.Get();
-
-        const OpaaxString lName = (lLevel != nullptr) ? lLevel->Data.Name : OpaaxString(NULL_LEVEL_WORLD_NAME);
-
-        World* lWorld = m_WorldManager->CreateWorld(lName, InSpec.Mode);
-        m_WorldManager->SetActiveWorld(lWorld);
-
-        OPAAX_ENGINE_LOG(Info, "Startup world '{}' ({}) created and activated", lName.CStr(), ToString(InSpec.Mode));
-
-        if (lLevel != nullptr && lWorld != nullptr)
-        {
-            OpenStartupLevel(lLevel->Data, *lWorld);
-        }
-
-        return lWorld;
+        // Boot IS OpenLevel, the first time — there is nothing active for it to replace, which is
+        // the only way this call differs. A separate startup path would be a second thing to keep
+        // in step with the one the editor uses all session.
+        return OpenLevel(InSpec);
     }
     
     void Engine::Loop()

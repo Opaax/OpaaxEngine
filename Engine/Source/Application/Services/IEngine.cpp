@@ -28,6 +28,7 @@ namespace Opaax
             // caller: a host that ignores the return simply boots with no world, which every
             // world consumer already handles (BO4).
             World* FinishStartup(const WorldSpec&) override { return nullptr; }
+            World* OpenLevel(const WorldSpec&)     override { return nullptr; }
 
             void Loop()                   override {}
             void PresentBackbuffer()      override {}

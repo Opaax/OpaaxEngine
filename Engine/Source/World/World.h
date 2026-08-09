@@ -16,6 +16,7 @@
 namespace Opaax
 {
     class Entity;
+    class Level;
 
     inline constexpr LogCategory LogWorld{"World"};
 
@@ -129,6 +130,25 @@ namespace Opaax
         // =========================================================================
 
         // =========================================================================
+        // Level
+    public:
+        /**
+         * Install this world's Level — WHICH maps are in it, and the only thing that mounts or
+         * unmounts one (**WM1**: this World owns the registry, its Level composes the Maps).
+         *
+         * Set once by WorldManager::CreateWorld, and NULL for a bare world in a test, exactly as
+         * the context is: a Level needs the ComponentRegistry and IPaths that only a real engine
+         * has, and a test that just wants entities should not have to supply them.
+         */
+        void SetLevel(TUniquePtr<Level> InLevel);
+
+        /** This world's Level, or null if none was installed (a bare world in a test). */
+        Level* GetLevel() const noexcept { return m_Level.get(); }
+
+        // End Level
+        // =========================================================================
+
+        // =========================================================================
         // Subsystems
     public:
         /**
@@ -202,6 +222,11 @@ namespace Opaax
         // working for the world's whole life. Holds a reference back to this World, which is safe
         // precisely because the World owns it.
         TUniquePtr<WorldContext> m_Context;
+
+        // WHICH maps are in this world. Heap-held because a Level holds a World& back to this one
+        // and cannot exist before it does. Null for a bare world (see SetLevel).
+        TUniquePtr<Level>        m_Level;
+
         bool                    m_bSubsystemsShutdown = false;
 
         EntityRegistry m_Registry;

@@ -64,6 +64,7 @@ namespace
         OpaaxString EngineToAbsolute(const OpaaxString&)  const override { return OpaaxString(); }
         OpaaxString ProjectToAbsolute(const OpaaxString&) const override { return OpaaxString(); }
         OpaaxString AssetToAbsolute(const OpaaxString&)   const override { return OpaaxString(); }
+        OpaaxString AbsoluteToAsset(const OpaaxString&)   const override { return OpaaxString(); }
     private:
         OpaaxString m_ConfigsDir;
     };

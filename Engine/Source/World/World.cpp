@@ -2,6 +2,7 @@
 
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityMeta.h"
+#include "World/Level.h"   // complete type for the TUniquePtr<Level> member's destructor
 
 namespace Opaax
 {
@@ -26,6 +27,14 @@ namespace Opaax
         ShutdownSubsystems();
 
         OPAAX_LOG(LogWorld, Info, "World '{}' destroyed ({} entity(ies))", m_Name.CStr(), m_EntityCount);
+    }
+
+    // =========================================================================
+    // Level
+    // =========================================================================
+    void World::SetLevel(TUniquePtr<Level> InLevel)
+    {
+        m_Level = Move(InLevel);
     }
 
     // =========================================================================
@@ -156,6 +165,11 @@ namespace Opaax
         m_Registry.clear();
         m_Guids.Clear();
         m_EntityCount = 0;
+
+        // The Level's mount records describe entities that no longer exist. Cleared, not
+        // unmounted: there is nothing left to destroy, and a Level still claiming a map would
+        // refuse to mount it again.
+        if (m_Level != nullptr) { m_Level->OnWorldCleared(); }
 
         OPAAX_LOG(LogWorld, Info, "World '{}' cleared", m_Name.CStr());
     }

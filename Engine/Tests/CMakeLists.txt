@@ -43,6 +43,7 @@ set(OPAAX_TEST_SOURCES
     Core/World/MapJsonTests.cpp
     Core/World/MapFileTests.cpp
     Core/World/LevelFileTests.cpp
+    Core/World/LevelTests.cpp
     # Two TUs on purpose: the identity question is "one tag per type or per TU?", which a
     # single translation unit cannot answer. Probes in WorldSubsystemProbes.h.
     Core/World/WorldSubsystemIdentityTests.cpp

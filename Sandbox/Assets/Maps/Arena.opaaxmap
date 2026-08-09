@@ -1,0 +1,52 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Dummy": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.25,
+                        "y": 0.25,
+                        "z": 0.75
+                    },
+                    "Position": {
+                        "x": 0.0,
+                        "y": -160.0
+                    },
+                    "Size": {
+                        "x": 640.0,
+                        "y": 40.0
+                    }
+                }
+            },
+            "guid": "3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a",
+            "name": "ArenaFloor",
+            "ownerMap": "Arena"
+        },
+        {
+            "components": {
+                "Dummy": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.75,
+                        "y": 0.25,
+                        "z": 0.5
+                    },
+                    "Position": {
+                        "x": 303.0,
+                        "y": 40.0
+                    },
+                    "Size": {
+                        "x": 40.0,
+                        "y": 360.0
+                    }
+                }
+            },
+            "guid": "9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f",
+            "name": "ArenaPillar",
+            "ownerMap": "Arena"
+        }
+    ],
+    "mapId": "Arena",
+    "version": 1
+}

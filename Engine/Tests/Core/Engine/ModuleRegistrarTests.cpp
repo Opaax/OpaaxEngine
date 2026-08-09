@@ -254,7 +254,7 @@ TEST_CASE("Module components round-trip through capture -> instantiate, GUIDs pr
 
     const Guid lGuid = lShip.GetGuid();
 
-    const MapData lCaptured = MapSerializer::Capture(lWorld, lRegistry, lMap);
+    const MapData lCaptured = MapSerializer::CaptureMap(lWorld, lRegistry, lMap);
     REQUIRE(lCaptured.EntityCount() == 1u);
     CHECK(lCaptured.Entities[0].Components.size() == 2u);
 

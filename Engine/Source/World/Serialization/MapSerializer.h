@@ -17,25 +17,43 @@ namespace Opaax
     //
     //   Stateless (every member static, no instance): it is a transformation, and holding
     //   state here would be a second place for the truth to live.
+    //
+    //   TWO NAMED CAPTURES, NOT ONE WITH A DEFAULTED FILTER (**MP10**). It used to be a single
+    //   `Capture(world, registry, filter = {})` where an INVALID filter meant "the whole world" —
+    //   and a map's id is invalid exactly when nothing in it claims one, so a caller asking for
+    //   an empty map got every entity in the world and no diagnostic. The two operations are
+    //   genuinely different questions; giving each a name is what makes the dangerous one
+    //   unwritable rather than merely discouraged.
     // =============================================================================
     class OPAAX_API MapSerializer
     {
     public:
         /**
-         * Walk InWorld's entities and serialize every component the registry knows about.
+         * EVERY entity in InWorld, whatever authored it — the PIE clone (**WM6**). A clone that
+         * dropped runtime-spawned entities would start out already diverged from its source.
+         *
+         * The result's `Id` is left INVALID: a whole-world snapshot is not a map and never
+         * reaches a file.
          *
          * @param InWorld    Read-only — capture never mutates the world it reads.
          * @param InRegistry Decides what is serializable. A component type absent from it is
          *                   simply not written: an unregistered type has no stable name to
          *                   write under, and inventing one would produce a map nothing can load.
-         * @param InFilter   Invalid (the default) captures the WHOLE world — which is what
-         *                   PIE's world clone needs. A valid MapId narrows to the entities
-         *                   that map authored, which is what "save this map" needs. Because a
-         *                   runtime-spawned entity carries an invalid OwnerMap, it can never
-         *                   match a valid filter — excluding bullets and VFX from a saved map
-         *                   falls out of the rule rather than needing a special case.
+         */
+        static MapData CaptureWorld(const World& InWorld, const ComponentRegistry& InRegistry);
+
+        /**
+         * Only what InMapId authored — "save this map". Stamps the result's `Id`, so the data
+         * carries its own name to the file rather than leaving the reader to infer one.
+         *
+         * A runtime-spawned entity carries an invalid `OwnerMap` (**WM2**), so it can never match
+         * a valid id — keeping bullets and VFX out of a saved map falls out of the rule instead
+         * of needing a special case.
+         *
+         * @param InMapId An INVALID id captures NOTHING and warns. It names no map, and the one
+         *   thing it must never mean here is "everything".
          * @return The captured data. Empty when nothing matched.
          */
-        static MapData Capture(const World& InWorld, const ComponentRegistry& InRegistry, MapId InFilter = {});
+        static MapData CaptureMap(const World& InWorld, const ComponentRegistry& InRegistry, MapId InMapId);
     };
 }

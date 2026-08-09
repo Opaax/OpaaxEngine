@@ -1,0 +1,8 @@
+{
+    "maps": [
+        "Maps/Arena.opaaxmap"
+    ],
+    "name": "Arena",
+    "persistentMap": "Maps/Arena.opaaxmap",
+    "version": 1
+}

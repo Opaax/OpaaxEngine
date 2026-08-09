@@ -77,8 +77,9 @@ namespace Opaax
         }
 
         return nlohmann::json{
-            { KEY_VERSION,  MAP_FORMAT_VERSION },
-            { KEY_ENTITIES, Move(lEntities)    }
+            { KEY_VERSION,  MAP_FORMAT_VERSION      },
+            { KEY_MAP_ID,   IdToText(InData.Id).CStr() },
+            { KEY_ENTITIES, Move(lEntities)         }
         };
     }
 
@@ -103,12 +104,18 @@ namespace Opaax
             return false;
         }
 
+        // The map's own name, before its contents (**MP10**). A file written before the key
+        // existed has none, and the entities are asked instead once they are parsed.
+        const MapId lDeclaredId = IdFromText(ReadString(InJson, KEY_MAP_ID));
+
         const auto lEntitiesIt = InJson.find(KEY_ENTITIES);
         if (lEntitiesIt == InJson.end() || !lEntitiesIt->is_array())
         {
             // A map with no entities array is EMPTY, not broken: an author who saves a cleared
-            // world must get a file that opens back to a cleared world.
+            // world must get a file that opens back to a cleared world — and it still knows which
+            // map it is, which is the whole point of the key.
             OutData.Entities.clear();
+            OutData.Id = lDeclaredId;
             return true;
         }
 
@@ -152,6 +159,12 @@ namespace Opaax
         {
             OPAAX_LOG(LogMapJson, Warn, "Skipped {} entity(ies) with a missing or malformed guid", lSkipped);
         }
+
+        // DECLARED WINS, entities are the fallback. A map written by this build always says its
+        // name; one written before the key did not, and its entities are the authority there
+        // (**WM2**) — which is exactly the migration path that costs no format version bump, since
+        // a v1 reader ignoring `mapId` derives the same answer for any map that has entities.
+        lParsed.Id = lDeclaredId.IsValid() ? lDeclaredId : lParsed.OwnerId();
 
         OutData = Move(lParsed);
         return true;

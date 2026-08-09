@@ -14,6 +14,7 @@ namespace Opaax
     class ResourceManager;
     class EngineEventBus;
     class DebugDraw;
+    class IPaths;
 
     inline constexpr LogCategory LogWorldManager{"WorldManager"};
 
@@ -175,6 +176,10 @@ namespace Opaax
         ResourceManager* m_Resources = nullptr;
         EngineEventBus*  m_Events    = nullptr;
         DebugDraw*       m_Debug     = nullptr;
+
+        // Resolves a level manifest's asset-relative map paths. Cached with the others in Startup;
+        // it is an APP service rather than an engine subsystem, which is the only difference.
+        const IPaths*    m_Paths     = nullptr;
         
         bool m_bPaused        = false;
         bool m_bStepRequested = false;

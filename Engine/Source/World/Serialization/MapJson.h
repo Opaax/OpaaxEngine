@@ -41,6 +41,7 @@ namespace Opaax
         // Named constants rather than literals: the reader and the writer must agree, and a
         // typo in one of them is a silently-empty field rather than a compile error.
         inline constexpr const char* KEY_VERSION     = "version";
+        inline constexpr const char* KEY_MAP_ID      = "mapId";
         inline constexpr const char* KEY_ENTITIES    = "entities";
         inline constexpr const char* KEY_GUID        = "guid";
         inline constexpr const char* KEY_NAME        = "name";
@@ -62,6 +63,10 @@ namespace Opaax
          * Components are written as an OBJECT keyed by authoring name: a duplicate type on one
          * entity becomes unrepresentable instead of merely unlikely, and nlohmann's ordering
          * keeps the keys stable for the same diff reason.
+         *
+         * `mapId` IS ALWAYS WRITTEN, including as "" for a capture that named no map (a PIE
+         * clone, which never reaches a file). A map that only sometimes says what it is would put
+         * the reader back to guessing exactly where guessing was the bug (**MP10**).
          */
         OPAAX_API nlohmann::json ToJson(const MapData& InData);
 

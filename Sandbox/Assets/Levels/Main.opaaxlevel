@@ -1,7 +1,8 @@
 {
-    "version": 1,
-    "name": "Main",
     "maps": [
         "Maps/Main.opaaxmap"
-    ]
+    ],
+    "name": "Main",
+    "persistentMap": "Maps/Main.opaaxmap",
+    "version": 1
 }

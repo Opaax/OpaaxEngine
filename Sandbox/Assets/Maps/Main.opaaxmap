@@ -37,7 +37,7 @@
                         "z": 1.0
                     },
                     "Position": {
-                        "x": 200.0,
+                        "x": 358.0,
                         "y": 0.0
                     },
                     "Size": {
@@ -82,5 +82,6 @@
             "ownerMap": "Main"
         }
     ],
+    "mapId": "Main",
     "version": 1
 }

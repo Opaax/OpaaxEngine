@@ -1,10 +1,29 @@
 #include "World/Serialization/MapFile.h"
 
+#include <string>
+
 #include "Core/IO/FileIO.h"
 #include "World/Serialization/MapJson.h"
 
 namespace Opaax
 {
+    namespace
+    {
+        // "…/Maps/Decor.opaaxmap" -> "Decor". The LAST resort for a map's identity, and this is
+        // the only layer that can offer it — MapJson has the text, MapFile has the path.
+        MapId StemId(const OpaaxString& InAbsPath)
+        {
+            const std::string lPath  = std::string(InAbsPath.CStr());
+            const size_t      lSlash = lPath.find_last_of("/\\");
+            const size_t      lStart = (lSlash == std::string::npos) ? 0 : lSlash + 1;
+            const size_t      lDot   = lPath.find_last_of('.');
+            const size_t      lEnd   = (lDot == std::string::npos || lDot < lStart) ? lPath.size() : lDot;
+            const std::string lStem  = lPath.substr(lStart, lEnd - lStart);
+
+            return lStem.empty() ? MapId() : MapId(lStem);
+        }
+    }
+
     bool MapFile::Save(const OpaaxString& InAbsPath, const MapData& InData)
     {
         if (!FileIO::WriteAllText(InAbsPath, MapJson::Serialize(InData)))
@@ -42,7 +61,18 @@ namespace Opaax
             return false;
         }
 
-        OPAAX_LOG(LogMapFile, Info, "Loaded {} entity(ies) from '{}'", OutData.EntityCount(), InAbsPath.CStr());
+        // LAST FALLBACK, and it is what makes "every map that loads has an identity" TOTAL
+        // (**MP10**). MapJson already tried the `mapId` key and then the entities; a file with
+        // neither — an empty map written before the key existed — would otherwise mount as
+        // anonymous, and an invalid MapId is read as "the whole world" one layer up.
+        if (!OutData.Id.IsValid())
+        {
+            OutData.Id = StemId(InAbsPath);
+        }
+
+        OPAAX_LOG(LogMapFile, Info, "Loaded {} entity(ies) from '{}' (map '{}')",
+                  OutData.EntityCount(), InAbsPath.CStr(),
+                  OutData.Id.IsValid() ? OutData.Id.ToString().CStr() : "(none)");
         return true;
     }
 }

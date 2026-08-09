@@ -159,3 +159,108 @@ TEST_CASE("LevelFile: a failed load leaves the caller's data untouched")
     CHECK(lData.Name == OpaaxString("Held"));
     CHECK(lData.MapCount() == 1);
 }
+
+TEST_CASE("LevelFile: 'persistentMap' resolves to an index into the level's own maps")
+{
+    // WM1a: the always-mounted map is named by PATH in the file and held as an INDEX in memory,
+    // so "it is one of this level's maps" is decided once, here, and never re-checked.
+    const ScopedTempDir lDir("persistent");
+
+    SUBCASE("a named map wins, wherever it sits in the list")
+    {
+        const OpaaxString lPath = lDir.Write("Main.opaaxlevel", R"({
+            "version": 1,
+            "maps": [ "Maps/A.opaaxmap", "Maps/B.opaaxmap", "Maps/C.opaaxmap" ],
+            "persistentMap": "Maps/B.opaaxmap" })");
+
+        LevelData lData;
+        REQUIRE(LevelFile::Load(lPath, lData));
+
+        CHECK(lData.PersistentMapIndex == 1);
+        CHECK(lData.PersistentMap() == OpaaxString("Maps/B.opaaxmap"));
+    }
+
+    SUBCASE("absent defaults to the first entry — no existing manifest becomes invalid")
+    {
+        const OpaaxString lPath = lDir.Write("NoKey.opaaxlevel",
+            R"({ "version": 1, "maps": [ "Maps/A.opaaxmap", "Maps/B.opaaxmap" ] })");
+
+        LevelData lData;
+        REQUIRE(LevelFile::Load(lPath, lData));
+
+        CHECK(lData.PersistentMapIndex == 0);
+        CHECK(lData.PersistentMap() == OpaaxString("Maps/A.opaaxmap"));
+    }
+
+    SUBCASE("a name matching no entry defaults, and the level still LOADS")
+    {
+        // Tolerant and total (MP3): the author is warned, not refused. A level that stopped
+        // opening over a mistyped optional field would cost far more than the field is worth.
+        const OpaaxString lPath = lDir.Write("Ghost.opaaxlevel", R"({
+            "version": 1,
+            "maps": [ "Maps/A.opaaxmap", "Maps/B.opaaxmap" ],
+            "persistentMap": "Maps/Nowhere.opaaxmap" })");
+
+        LevelData lData;
+        REQUIRE(LevelFile::Load(lPath, lData));
+
+        CHECK(lData.PersistentMapIndex == 0);
+        CHECK(lData.MapCount() == 2);
+    }
+
+    SUBCASE("a non-string is ignored, like every other mistyped field")
+    {
+        const OpaaxString lPath = lDir.Write("Typed.opaaxlevel", R"({
+            "version": 1,
+            "maps": [ "Maps/A.opaaxmap", "Maps/B.opaaxmap" ],
+            "persistentMap": 7 })");
+
+        LevelData lData;
+        REQUIRE(LevelFile::Load(lPath, lData));
+        CHECK(lData.PersistentMapIndex == 0);
+    }
+}
+
+TEST_CASE("LevelFile: an empty level has no persistent map to hand out")
+{
+    // PersistentMap() is TOTAL rather than merely documented: it is reached from the editor and
+    // from Level::MountAll, and an empty level is a state both of them can be in.
+    const ScopedTempDir lDir("empty-persistent");
+    const OpaaxString   lPath = lDir.Write("Empty.opaaxlevel",
+        R"({ "version": 1, "maps": [], "persistentMap": "Maps/A.opaaxmap" })");
+
+    LevelData lData;
+    REQUIRE(LevelFile::Load(lPath, lData));
+
+    CHECK(lData.IsEmpty());
+    CHECK(lData.PersistentMap().IsEmpty());
+}
+
+TEST_CASE("LevelFile: Save -> Load is a fixed point")
+{
+    // The writer half (MP4). A manifest the editor can author is only useful if reading back what
+    // it wrote gives the same level — including the persistent map, which is the one field that
+    // could quietly degrade to "the first entry" without anyone noticing.
+    const ScopedTempDir lDir("save");
+    const OpaaxString   lPath = lDir.Write("Written.opaaxlevel", "");
+
+    LevelData lWritten;
+    lWritten.Name = OpaaxString("Arena");
+    lWritten.Maps.push_back(OpaaxString("Maps/A.opaaxmap"));
+    lWritten.Maps.push_back(OpaaxString("Maps/B.opaaxmap"));
+    lWritten.PersistentMapIndex = 1;
+
+    REQUIRE(LevelFile::Save(lPath, lWritten));
+
+    LevelData lRead;
+    REQUIRE(LevelFile::Load(lPath, lRead));
+
+    CHECK(lRead.Name == lWritten.Name);
+    CHECK(lRead.MapCount() == 2);
+    CHECK(lRead.PersistentMapIndex == 1);
+    CHECK(lRead.PersistentMap() == OpaaxString("Maps/B.opaaxmap"));
+
+    // And the text is STABLE, which is what the editor's dirty check rests on (MP5): a second
+    // Save of what was just read must not report the level as changed.
+    CHECK(LevelFile::Serialize(lRead) == LevelFile::Serialize(lWritten));
+}

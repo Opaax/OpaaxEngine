@@ -18,7 +18,6 @@ namespace Opaax
     class IFramebuffer;
     class IRenderTarget;
     struct FramebufferSpec;
-    struct LevelData;
     struct LevelResource;
 
     inline constexpr double MAX_FRAME_DELTA = 0.25;
@@ -86,14 +85,7 @@ namespace Opaax
          * @return A null ref for an empty path (silent — a supported answer) and for one that
          *   does not resolve (a warning). Either way the caller boots the NullLevel world.
          */
-        ResourceRef<LevelResource> ResolveStartupLevel(const OpaaxString& InAssetRelPath) const;
-
-        /**
-         * Instantiate InLevel's maps into the freshly-created startup world.
-         *
-         * Runs AFTER the world's subsystems have started, which is the same order a PIE clone gets.
-         */
-        void OpenStartupLevel(const LevelData& InLevel, World& InWorld);
+        ResourceRef<LevelResource> ResolveLevel(const OpaaxString& InAssetRelPath) const;
         // End Startup
         // =============================================================================
 
@@ -132,6 +124,7 @@ namespace Opaax
         //Life cycle
         bool    Startup() override;
         World*  FinishStartup(const WorldSpec& InSpec) override;
+        World*  OpenLevel(const WorldSpec& InSpec) override;
         void    Loop() override;
         void    TearDown() override;
         void    Shutdown() override;

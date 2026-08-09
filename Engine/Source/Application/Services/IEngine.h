@@ -49,6 +49,21 @@ namespace Opaax
         virtual World* FinishStartup(const WorldSpec& InSpec) = 0;
 
         /**
+         * Open InSpec's level into a NEW world, activate it, and destroy the one it replaces.
+         *
+         * The single path a level is opened by — `FinishStartup` is this call the first time, not
+         * a second route that has to be kept in step with it. An EMPTY `LevelPath` is a supported
+         * answer, not a misconfiguration (see WorldSpec): it gives a NullLevel world with an empty
+         * Level, which is what editing a map that belongs to no level needs.
+         *
+         * The new world is activated BEFORE the old one is destroyed, so no frame ever runs
+         * without an active world.
+         *
+         * @return The new world, already active, or null if the engine is not started.
+         */
+        virtual World* OpenLevel(const WorldSpec& InSpec) = 0;
+
+        /**
          * Engine Loop
          */
         virtual void Loop()                             = 0;

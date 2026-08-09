@@ -714,15 +714,42 @@ no "down" to hold.
 
 ## WM — World model (World > Level > Map)
 
-Settled with the user 2026-07-28, superseding the retired `Scene` vocabulary (**X4**). Source of concepts:
+Settled with the user 2026-07-28, superseding the retired `Scene` vocabulary (**X4**); the World/Level
+composition **amended 2026-08-06** (WM1/WM1a — `RootLevel` dropped). Source of concepts:
 `Docs/Architectures/EngineArchi.md` — stale in places, see WM5.
 
 **WM1 — Three nouns, one registry.** `World` is the runtime simulation container and **the ECS boundary**:
 it owns the single `entt::registry` and the `WorldGuidRegistry`. A `Level` composes Maps and handles
 streaming. A `Map` is **pure entity data** — no systems, no runtime ownership — and is therefore **the
-serialization unit**. `World { RootLevel (1 map, always mounted, world-scope defaults) + ActiveLevel (N
-maps, streamed) }`. Both levels are real Levels holding real Maps; they differ only by a streaming policy,
-which is why `Level` does not mean two things.
+serialization unit**. `World { Level { PersistentMap (always mounted) + N maps (streamed) } }` — **ONE
+Level per World**, and the always-mounted/streamed split lives on the **Map**, not on a second Level.
+
+**WM1a — The PersistentMap exists for AUTHORING COST, not for state survival** (settled 2026-08-06,
+replacing the `RootLevel` / `ActiveLevel` pair). The question that decided it was not *"what entities must
+outlive a level change"* — nothing has to — but *"what do I refuse to drag into every map again"*: the
+player, the lights, the managers. They are authored ONCE, in one map, and every other map in the level
+composes on top of it. Open a decor map, hit Play, and the player is there because the Level mounted its
+persistent map first — not because that map did anything special. **That is why `RootLevel` is gone:** a
+second `Level` object above the first was solving state survival, and one field in the manifest solves
+authoring cost.
+- **Declared in the LEVEL manifest, not the project**, so a shmup's persistent map (ship, HUD) and a
+  menu's can differ. `LevelData` carries a `persistentMap` key naming one of its own `Maps`; **absent
+  defaults to the first entry** (**MP3** — a missing field defaults). No existing `.opaaxlevel` became
+  invalid and `LEVEL_FORMAT_VERSION` did **not** move (it bumps only for what a v1 reader would MISREAD).
+- It is an ORDINARY map in every other respect — same `.opaaxmap`, same `EntityMeta::OwnerMap` partition
+  (**WM2**), same Save path, same dirty check. *"Persistent" is a mount policy the Level applies, never a
+  property of the file* — so nothing in `MapFile`/`MapJson`/`MapSerializer` learns a new concept.
+- **Consequence for the editor, and it is the load-bearing one:** what a session has open is a **Level**,
+  not a Map. That is what makes *"try this decor map"* well defined — it is one of the open level's maps.
+  The editor's one-map-at-a-time state (**MP5**) is a placeholder for a per-map record under one open
+  level, not the shape it keeps.
+- **The manifest names a PATH; memory holds an INDEX** (`LevelData::PersistentMapIndex`), so "it is one of
+  this level's maps" is resolved once in `LevelFile::Load` and never re-checked downstream. A name matching
+  no entry warns and defaults to the first (**MP3**) — a level that stopped opening over a mistyped
+  optional field would cost more than the field is worth.
+- **The runtime `Level` object landed 2026-08-08** (**WM8**), so *"the Level mounted its persistent map
+  first"* is now literally what happens rather than a description of a rule the loader followed.
+  `RootLevel` staying dead is the part of this entry that never moved.
 
 **WM2 — A Map is a PARTITION of the World's registry, not a container.** One World owns one registry, so
 "the entities of map X" is a filter, not a separate store. `EntityMeta::OwnerMap` (`MapId` =
@@ -745,21 +772,27 @@ them at once and make unloading a single map impossible — the exact opposite o
 stays **data**. A Map's *textures* will be `Acquire`d; a Level's *maps* never are, and **the asymmetry is
 the rule** — `LevelResource::Load` carries that note precisely so the next reader does not "fix" it.
 
-**What M5 actually built, and what it deliberately did not.** The user's scope call: the level layer is a
-manifest parsed to a plain `LevelData` plus `LevelLoader`, and there is **no `LevelManager`, no streaming,
-and no `Level` object inside `World`**. What landed is the level→map *indirection* that streaming will be
-built on top of rather than instead of. `LevelLoader::LoadInto` resolves each map through
-`IPaths::AssetToAbsolute`, loads it as a `MapResource` **through the `ResourceManager`** (which is what
-gives that type a real caller on every boot rather than only in its own test, [[L23]] — and buys dedup when
-two worlds open one map), instantiates it, and drops the ref: nothing needs the parsed data afterwards.
-A failed map is counted and skipped — one missing file should cost that map, not the level.
-**Trigger for `LevelManager`:** the first thing that genuinely needs to load or unload a map *while the
-world is running*.
+**WM4's trigger FIRED on 2026-08-08, and there is still no `LevelManager`.** The trigger it named was *"the
+first thing that genuinely needs to load or unload a map while the world is running"* — the editor opening
+levels and standalone maps. What that produced is **WM8**: a `Level` object owned by the World. It did not
+produce a manager, and now deliberately rather than by deferral — **a World owns its Level, and nothing
+manages levels across worlds.** Switching level means a new World (**WM8**), which `WorldManager` already
+owns; a `LevelManager` would be a second owner of the same lifetime.
 
-**WM5 — `EngineArchi.md` is behind the code in two places** (code wins, X4): it puts `MapId ownerMap` in
-`EntityMeta` as though it were already there (M3 S2 actually added it), and it makes `GuidRegistry` global
+M5's stateless `LevelLoader` is **deleted**, absorbed into `Level::Mount`/`MountAll` — a stateless loader
+beside a stateful Level doing the same job is two homes for one rule. What it established survives
+unchanged inside them: each map resolved through `IPaths::AssetToAbsolute`, loaded as a `MapResource`
+**through the `ResourceManager`** (a real caller on every boot rather than only in its own test, [[L23]],
+plus dedup when two worlds open one map), instantiated, ref dropped. A failed map is counted and skipped.
+
+**WM5 — `EngineArchi.md` is behind this contract in three places** (code wins, X4): it puts `MapId ownerMap`
+in `EntityMeta` as though it were already there (M3 S2 actually added it); it makes `GuidRegistry` global
 (`Guid → World*, entt::entity`) where the code made it **per-World** — entt handles are only valid inside
-their own registry, so a Guid resolves through its world and never crosses worlds.
+their own registry, so a Guid resolves through its world and never crosses worlds; and its **§8 Level
+Hierarchy is superseded by WM1/WM1a** — it nests `World → PersistentLevel + ActiveLevel` and *then* puts a
+`PersistentMap` inside `ActiveLevel`, which is self-contradictory (if a PersistentLevel holds the
+always-loaded content, the persistent map has nothing left to be). One Level, persistence on the Map.
+Its **§7 `LevelManager`** is not stale — it is simply **unbuilt** (WM4 holds the trigger).
 
 **WM6 — A world CLONE is a snapshot round trip, so it copies exactly what the ComponentRegistry knows**
 (landed M4 S4). `WorldManager::CloneWorld(source, mode)` = `Capture` (**unfiltered** — a clone that
@@ -775,8 +808,10 @@ destroys the clone, undoing nothing. No `MapId` filter here — the filtered for
 **WM7 — A world's NAME is display text, so it stays an `OpaaxString`; interning is for KEYS**
 (settled 2026-08-05, closing a `//Todo: OpaaxStringID` on `CreateWorld`). `OpaaxStringID` buys one thing:
 O(1) integer compare on a key. Nothing compares or looks up a world by name — every `World::GetName()` in
-the tree is a log arg, the toolbar's display string, or the copy `CloneWorld` hands the clone — and no
-`LevelFile::Save` exists, so it is never persisted either. Converting would make the *only* live path
+the tree is a log arg, the toolbar's display string, or the copy `CloneWorld` hands the clone. It IS
+persisted now (`LevelFile::Save` writes the level's `name`, 2026-08-08) — which changes nothing here: it
+is written as the text it already is, and a value written to a file is the last thing that wants an
+intern-table index behind it (**MP1**). Converting would make the *only* live path
 slower (`ToString()` = `shared_lock` + an `OpaaxString` copy out of the pool, where `.CStr()` is a
 pointer) and would intern unbounded author content — the pool never evicts, and a world's name is the
 level's `name` key or a file stem (**BO4b**). The tree already draws this line correctly: the two
@@ -784,6 +819,36 @@ registries intern *because* they do `GetName() == InName`, `MapId` interns *beca
 is compared per entity (**WM2**), and `EntityMeta::Name` — display, like this one — does not.
 **Trigger to revisit:** the first thing that resolves a world BY name (a `FindWorld(name)`, or persisted
 editor session state naming one).
+
+**WM8 — `Level` is the ONLY thing that puts a map in a world or takes it out** (landed 2026-08-08, WM4's
+trigger). One per World, owned by it (`World::SetLevel`), so *"which level is loaded"* is a question the
+world answers and nothing above has to track. Null for a bare world in a test, exactly as `WorldContext`
+is — a Level needs the `ComponentRegistry` and `IPaths` that only a real engine has.
+- **Its four references are the parameter list `LevelLoader` used to thread through every call**, held
+  once. That is what lets `Mount(path)` take nothing else, and it is the whole point: the level knows
+  which maps.
+- **UNMOUNTING IS A FILTER, NOT A TEARDOWN** — WM2 paying off. "Destroy the entities whose `OwnerMap` is
+  this": no store to drop, no refcount to release, because the `MapResource` ref was already dropped once
+  the entities existed. Collect-then-destroy, since destroying while iterating an entt view is not safe.
+- **Mounting is checked by PATH *and* by `MapId`.** Path catches the same file twice; id catches two
+  files claiming one map. *Amended 2026-08-09: this used to add "the id can legitimately be invalid — a
+  map with no entities has nobody to claim it — and the file-stem fallback is the EDITOR's rule, not the
+  engine's." **MP10** ended both halves: a map names itself, `MapFile::Load` owns the stem fallback, and
+  a mounted map's id is always valid.* Both checks stay — two paths can still name one map.
+- **A CLONE COPIES MOUNT STATE AND MOUNTS NOTHING** (`AdoptMountedFrom`, called by `CloneWorld`). The
+  clone's entities arrive in the unfiltered snapshot (**WM6**), so mounting again would re-read every map
+  and `CreateEntityWithGuid` would refuse the lot as live duplicates (**WM3**). This is the line a later
+  reader is most likely to "fix".
+- **Switching level means a NEW WORLD**, never editing the current one into shape: `IEngine::OpenLevel`
+  creates, mounts, activates, and only *then* destroys what it replaced — the same order as `PIE::Stop`,
+  so no frame runs without an active world. **`FinishStartup` is that call the first time**, not a second
+  boot path to keep in step. An empty `LevelPath` gives a NullLevel world with an empty Level, which is
+  what editing a map belonging to no level needs.
+- **The manifest is authored THROUGH the Level** (`AddMap`/`RemoveMap`/`SetPersistentMap`), because the
+  Level is what mounts — a second copy of the manifest anywhere else is drift waiting to happen.
+  `RemoveMap` refuses the persistent map rather than silently re-pointing persistence at whatever ended
+  up first, and carries `PersistentMapIndex` back when something ahead of it is removed (it is a
+  POSITION, so a removal before it would silently rename what it means).
 
 ---
 
@@ -824,15 +889,30 @@ over the original.
 Load/Resolve/Pin/FlushAll/Update, and its own header says every future capability is a separate system
 *consuming* it. `MapFile::Save` is that system, and it sits beside `MapFile::Load` in one unit because the
 two are halves of one format contract — splitting them across files is how a writer and a reader drift.
+**`LevelFile::Save` followed the same rule** (2026-08-08), and deliberately without a `LevelJson` beside
+it: `MapJson` exists because a `MapData` carries interned ids that must be written as strings (**MP1**),
+and a `LevelData` is a name and some paths. `Serialize` is public separately from `Save` because the
+editor's dirty check compares against the text without writing anything.
 
-**MP5 — The editor's dirty flag is DERIVED, never tracked.** Capture the world filtered by the document's
-`MapId`, serialize, compare against the text last written or read.
+**MP5 — The editor's dirty flag is DERIVED, never tracked.** Capture the world filtered by a map's
+`MapId`, serialize, compare against the text last written or read — **one baseline per MOUNTED MAP, all
+of them in `EditorLevelDocument`** (2026-08-08). `EditorMapDocument` owns none and is a CURSOR: a second
+baseline for the same map would rebase on Save Map while the other did not, and the marker would start
+lying ([[L30]]). Records are **reconciled, never rebuilt** (`TrackMounted`) — re-taking every baseline
+after mounting one map would silently adopt every other map's unsaved edits as the clean state.
 - **There is nothing to hook.** Every edit goes through a registered drawer whose contract is
   `bool(Entity&)` meaning *was it drawn*, not *was it changed*. Tracking would mean changing that contract
   and every drawer with it, a game's included.
 - It gets the interesting case right: drag a quad away and back and a **flag** says dirty while the file is
   already correct; the comparison says clean, which is true.
 - It cannot drift — a derived answer has no second copy of the state to fall out of sync with.
+- **A world holding several maps does not disturb it**: each capture is filtered by ITS map's `MapId`
+  (**WM2**), so the maps mounted beside it are simply not in that comparison (**MP7**). The level's own
+  marker is the OR of all of them plus the manifest (**MP9**), which is why it can be lit while the
+  focused map's is not.
+- **Changing which map is focused risks nothing and confirms nothing.** Every map keeps its baseline, so
+  the map being left stays exactly as dirty as it was. Only a world-DESTROYING action (Open Level, or
+  opening a map that belongs to no open level) prompts, and it prompts on the whole level.
 - **It must be throttled, not per-frame** (4×/s, cached in `EditorService` where the frame clock is, so
   `IsDirty` stays pure). Built per-frame first, which also put ~1700 identical lines in a 10-second log —
   hence `MapSerializer::Capture` logging at **Trace**: it is a pure transformation with several callers,
@@ -843,6 +923,129 @@ world→file→world→file being a fixed point; when it is not, every Save rewr
 the one value that changed — and that is silent otherwise, because the map still loads and the world still
 looks right. `EditorMapDocument::AdoptExisting` compares its fresh baseline against the bytes on disk and
 says *"Round trip is stable"* or warns. It is the one gate on the whole layer that needs no human.
+
+**MP7 — "Open Map" LOADS NOTHING, because every map of the open level is already mounted** (landed
+2026-08-08 with **WM8**). It re-targets the document onto a map that is in the world, and the selection
+survives untouched because none of the entities it points at go anywhere. The editor holds an
+`EditorLevelDocument` beside its map one — a session has a **Level** open — and that document holds only
+the path and the baseline: **the manifest lives in the world's `Level`**, one owner (**WM8**).
+- **Which map a file IS gets asked of its ENTITIES, never of its path** (`MapData::OwnerId`, **WM2**). A
+  path arrives from tinyfd as `C:\...\Main.opaaxmap` and from `AssetToAbsolute` with forward slashes, so
+  a string compare could not answer "is this one already in the world?" at all.
+- **A map belonging to no open level gets its OWN world with an empty Level**, rather than being merged
+  into a level it is not part of — which is also what keeps "which maps are in this world?" to one answer.
+  *(An earlier pass mounted the level's persistent map alongside any picked map and deduped by `MapId`;
+  that was the missing `Level` object leaking into the document, and it is gone.)*
+- **`EditorMapDocument::DeriveMapId` takes a `MapData`, not a `World`.** The first valid `OwnerMap` in the
+  registry was correct only while a world held ONE map; it holds several now, so it would answer with the
+  *persistent* map's id and every Save would write the wrong map under the right name. The entities are
+  still the authority — they are asked of the file. `AdoptExisting` already read that file for **MP6**, so
+  it costs no extra IO: one read, deserialized for the id and compared as text.
+- **Re-targeting still CONFIRMS unsaved work**, even though nothing is destroyed: `AdoptExisting` re-bases
+  the baseline off the world, so edits to the map being left would quietly stop being reported.
+- **A VERB THAT ACTS ON ONE MAP NAMES ITS MAP** (2026-08-09, user's call). The menu bar carried
+  `Level → Remove Open Map` and `Level → Set Open Map Persistent`, which acted on whatever map happened to
+  be FOCUSED. A level holds several maps (**WM1a**), so an implicit focus is not how an author picks one
+  of them — and choosing the persistent map especially needs somewhere to **see** the current answer, not
+  only a verb aimed at the cursor. Both left the bar for the Hierarchy's map headers, where the map you
+  right-click IS the argument and the persistent one is labelled. `Level → Add Map...` is the one entry
+  that stays, because it is the one that does not need a map named first — it goes and picks one.
+  - The bodies live in **`Editor/Operation/MapOperations.h`** (`MapOps`), not on `EditorService`: two call
+    sites now choose the target differently (the File menu from the cursor, the Hierarchy from the header)
+    and a verb duplicated per call site is a verb that drifts. `File → Save Map` is the same `MapOps::Save`
+    the header's entry calls, passed the focused id.
+  - Entries are **DISABLED rather than left to be refused**. `Level::RemoveMap` turns down the persistent
+    map and `SetPersistentMap` on it is a no-op; both would otherwise answer a click with a log line the
+    author never reads. The menu states the rule instead of discovering it.
+  - **A PANEL'S DRAW PASS READS THE WORLD; ANYTHING THAT WRITES IT RUNS AFTER THE PASS** (2026-08-09,
+    fixing a crash). The context menu **records** the verb and `HierarchyPanel::RunPendingAction` runs it
+    once the walk is over. Called inline, `Remove from Level` destroyed the entities whose handles the
+    rows *under that same header* had been collected from at the top of `Draw`, and entt asserted on the
+    first `Get<EntityMeta>` — *"Set does not contain entity"*. The queue is also cleared on
+    `OnActiveWorldChanged`: a verb naming a map of the world that just left must not run against the one
+    that replaced it. **This generalises to every panel** — an ImGui click arrives mid-iteration by
+    construction, so a command that mutates the world cannot be invoked from inside a loop over it.
+  - **`*` LIVES ON THE MAP, in the Hierarchy** (2026-08-09, user's call), and the menu bar's
+    `Level.opaaxlevel > Map.opaaxmap` status text is **deleted**. One marker per map beside the map it
+    belongs to says which map changed; a single `*` beside a focused-map name could not. The answers come
+    from `EditorLevelDocument::RefreshDirty` — cached per record, **throttled by `EditorService` at 4×/s**
+    (**MP5**), because the Hierarchy asks once per map per frame and the check is a capture + serialize.
+    The throttle stays with the frame clock, the answers stay with the baselines. A **transition** log
+    (`Map 'Decor' has unsaved changes` / `matches its file again`) makes a marker that is otherwise one
+    pixel verifiable at all ([[L12]]), and fires twice per edit session rather than per check.
+  - **Still unrepresented: a manifest-only change** (Add Map, Set as Persistent, before any map is
+    edited). `IsDirtyCached` computes it and the transition is logged, but nothing draws it now that the
+    status text is gone. Named here rather than fixed, because inventing UI nobody asked for is how the
+    bar filled up in the first place.
+- **The editor boots on the first NON-PERSISTENT mounted map**, falling back to the persistent one when
+  that is all there is. The persistent map is the shared backdrop, authored once precisely so that it is
+  not the thing being worked on. Asked of the MOUNTED maps, not the manifest — a map that failed to load
+  is not editable.
+- **The Hierarchy groups rows by `OwnerMap` and privileges NONE of them.** An earlier pass greyed every
+  map but the focused one, justified by "a filtered Save will not write the others" — **MP9** made that
+  justification false, so the greying went with it. The focused map's group merely starts open. The one
+  real difference that survives is `(runtime - not saved)`: no map authored those entities, so no Save
+  can ever write them (**WM2**), and a bare "(runtime)" label was not enough to convey it.
+- **The headers come from the LEVEL, not from the entities** (2026-08-09). Groups are seeded from
+  `Level::GetMountedMaps()` in mount order and the entities are bucketed into them, so a map that is in
+  the world with **nothing in it** still has a header. Derived from entities alone it had none — an empty
+  map was invisible in the one panel that lists a level's maps. Bucketing stays a plain `OwnerMap`
+  compare: **MP10** made every mounted map's id valid, so the runtime bucket (the invalid id) is the only
+  thing an unclaimed entity can land in.
+
+**MP8 — `IPaths::AbsoluteToAsset` exists because the editor AUTHORS asset references.** A level manifest
+names its maps asset-relative and a file dialog hands back an absolute native path, so the inverse of
+`AssetToAbsolute` stopped being optional the moment `Add Map...` existed. It canonicalises **both** sides
+before comparing (`weakly_canonical`, since a Save As target need not exist yet) — a string compare would
+call a file plainly inside `Assets/` "outside" it. **Empty is a real answer, not a failure:** a file from
+outside `AssetsDir` cannot be named by a manifest at all, and every caller refuses with that reason.
+
+**MP10 — A MAP NAMES ITSELF (`MapData::Id`, the `mapId` key), and "capture one map" / "capture the whole
+world" are TWO NAMED FUNCTIONS** (landed 2026-08-09).
+
+**The defect this closed.** A map's identity used to be derived from its entities alone
+(`MapData::OwnerId` — the first valid `OwnerMap`, **WM2**), so a map with **no entities was anonymous**.
+Meanwhile `MapSerializer::Capture(world, registry, filter = {})` read an **invalid** filter as *no
+filter, take everything* — correct for the PIE clone (**WM6**), catastrophic for "save this map". The two
+met in `EditorLevelDocument`, which keys its records by `MapId`: a mounted empty map would have been given
+a baseline holding **every entity in the world**, and the next Save would have written them all into that
+one file. Silent, and indistinguishable from a working save.
+
+- **Identity is settled at the boundary that has the information, in three steps, each in its own layer:**
+  `MapJson` reads the **`mapId` key**, falling back to what the **entities** claim; `MapFile::Load` falls
+  back once more to the **file's stem**, because it is the only layer holding the path. Everything above
+  reads `MapData::Id` and may assume it is valid. *This supersedes **WM8**'s "the file-stem fallback is
+  the EDITOR's rule, not the engine's" — that was right while identity could only come from entities, and
+  the editor still keeps its own copy for a Save As target, which is a file that does not exist yet.*
+- **`mapId` is ALWAYS written**, as `""` for a capture that named no map (**MP1**'s convention). A map
+  that only sometimes says what it is puts the reader back to guessing exactly where guessing was the bug.
+- **NO FORMAT VERSION BUMP**, and the rule is why: `MAP_FORMAT_VERSION` moves only for what a v1 reader
+  would MISREAD. A v1 reader ignores `mapId` and derives from the entities — the same answer for every map
+  that has any, and for one that has none it lands where it already was. Same reasoning that added
+  `persistentMap` to the level format.
+- **`Capture` SPLIT INTO `CaptureWorld` / `CaptureMap`, and that is the load-bearing half.** One shared
+  private walk, two public names: `CaptureWorld` takes everything and leaves `Id` invalid (a snapshot is
+  not a map and never reaches a file); `CaptureMap` filters, **stamps `Id`**, and an invalid id captures
+  **nothing** with a Warn. The dangerous reading is now unwritable rather than merely discouraged — the
+  [[L18]] shape: make the wrong thing impossible, not unlikely.
+- **What it deleted.** The `TrackMounted` guard that skipped anonymous maps, the Hierarchy's stem-label
+  branch and its disabled "no map id" entries, and `EditorMapDocument::DeriveMapId`'s entity walk. Every
+  mounted map now has a record, a header, and working verbs — an empty map is an ordinary map.
+- The general shape is [[L30]]'s: a field two things share only because one of them is always empty.
+  `MapId` was serving as both *"which map"* and *"unfiltered"*, and the empty map is where the two
+  meanings collided.
+
+**MP9 — "Save Level" writes the manifest AND EVERY MAP IN IT** (settled with the user 2026-08-08:
+*"all maps has to be saved if we say 'save level', its mean save the level so all the maps in it"*).
+A Level IS its maps, so writing the list of maps while leaving the maps themselves unwritten is the
+shape of a save that loses work.
+- **Maps first, then the manifest** — a list that names content must never be written ahead of it.
+- **A map whose text matches its baseline is SKIPPED**, not rewritten with identical bytes: a Save
+  should not touch the mtime of a file it had nothing to say about.
+- `Save Map` still exists and still writes exactly one — the focused map. The two commands differ in
+  scope, not in mechanism; both go through the same per-map record (**MP5**).
+- **The earlier behaviour was the bug, not the UI that exposed it.** Filtering a Save to the focused map
+  made the Hierarchy grey the others to warn that their edits would be lost — a warning is not a design.
 
 ---
 

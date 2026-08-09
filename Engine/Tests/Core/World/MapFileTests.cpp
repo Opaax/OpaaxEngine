@@ -134,7 +134,7 @@ TEST_CASE("MapFile: World -> Capture -> Save -> MapResource -> Instantiate rebui
     const Guid lCrateId = lCrate.GetGuid();
 
     // ---- save ----------------------------------------------------------------
-    REQUIRE(MapFile::Save(lPath, MapSerializer::Capture(lSource, lRegistry, lMap)));
+    REQUIRE(MapFile::Save(lPath, MapSerializer::CaptureMap(lSource, lRegistry, lMap)));
 
     // ---- load, through the ResourceManager, into a DIFFERENT world ------------
     ResourceManager lResources;
@@ -179,7 +179,7 @@ TEST_CASE("MapFile: a filtered save writes the MAP's entities and leaves runtime
     lWorld.CreateEntity("Authored", lMap);
     lWorld.CreateEntity("Bullet");          // no map — runtime-spawned
 
-    REQUIRE(MapFile::Save(lPath, MapSerializer::Capture(lWorld, lRegistry, lMap)));
+    REQUIRE(MapFile::Save(lPath, MapSerializer::CaptureMap(lWorld, lRegistry, lMap)));
 
     MapData lLoaded;
     REQUIRE(MapFile::Load(lPath, lLoaded));
@@ -219,6 +219,110 @@ TEST_CASE("MapFile: an EMPTY map saves and loads — clearing a world is a thing
 
     REQUIRE(MapFile::Load(lPath, lLoaded));
     CHECK(lLoaded.IsEmpty());
+}
+
+// =============================================================================
+// MP10 — a map NAMES ITSELF, so an empty one is still a map
+// =============================================================================
+TEST_CASE("MapFile: an EMPTY map keeps its identity through the round trip (MP10)")
+{
+    // The case the whole MP10 fix exists for. Before it, a map with no entities had no MapId at
+    // all — and an invalid MapId was read one layer up as "no filter, the whole world", so the
+    // next save of this map would have written every entity in the world into it.
+    const ScopedTempDir lTemp("empty_identity");
+    const OpaaxString   lPath = lTemp.Sub("Backdrop.opaaxmap");
+
+    MapData lData;
+    lData.Id = MapId("Backdrop");
+
+    REQUIRE(MapFile::Save(lPath, lData));
+
+    MapData lLoaded;
+    REQUIRE(MapFile::Load(lPath, lLoaded));
+    CHECK(lLoaded.IsEmpty());
+    CHECK(lLoaded.Id == MapId("Backdrop"));
+}
+
+TEST_CASE("MapFile: a map written BEFORE the mapId key still identifies itself from its entities")
+{
+    // The migration path, and why the format version did NOT move: a v1 file has no `mapId`, and
+    // the entities are the authority (WM2) exactly as they always were.
+    const ScopedTempDir lTemp("legacy_id");
+    const OpaaxString   lPath = lTemp.Sub("Legacy.opaaxmap");
+
+    const std::string lLegacy =
+        "{\n"
+        "    \"entities\": [\n"
+        "        {\n"
+        "            \"components\": {},\n"
+        "            \"guid\": \"1a2b3c4d5e6f70819293a4b5c6d7e8f9\",\n"
+        "            \"name\": \"Quad\",\n"
+        "            \"ownerMap\": \"Decor\"\n"
+        "        }\n"
+        "    ],\n"
+        "    \"version\": 1\n"
+        "}";
+
+    REQUIRE(FileIO::WriteAllText(lPath, OpaaxString(lLegacy.c_str())));
+
+    MapData lLoaded;
+    REQUIRE(MapFile::Load(lPath, lLoaded));
+    CHECK(lLoaded.EntityCount() == 1);
+    CHECK(lLoaded.Id == MapId("Decor"));
+}
+
+TEST_CASE("MapFile: an anonymous EMPTY file falls back to the file STEM, so nothing loads nameless")
+{
+    // The last fallback, and the one that makes "every map that loads has an identity" total.
+    // MapFile is the only layer that can offer it — MapJson has the text, this has the path.
+    const ScopedTempDir lTemp("stem_id");
+    const OpaaxString   lPath = lTemp.Sub("Rooftops.opaaxmap");
+
+    REQUIRE(FileIO::WriteAllText(lPath, OpaaxString("{\n    \"entities\": [],\n    \"version\": 1\n}")));
+
+    MapData lLoaded;
+    REQUIRE(MapFile::Load(lPath, lLoaded));
+    CHECK(lLoaded.IsEmpty());
+    CHECK(lLoaded.Id == MapId("Rooftops"));
+}
+
+TEST_CASE("MapSerializer: CaptureMap with an INVALID id captures NOTHING, never the world (MP10)")
+{
+    // The mechanism half of MP10. `Capture(world, registry, filter = {})` used to read an invalid
+    // filter as "the whole world" — correct for a PIE clone, catastrophic for "save this map".
+    // Splitting it into two names is what makes the dangerous reading unwritable; this pins that
+    // the surviving filtered entry point refuses rather than falls back.
+    ComponentRegistry lRegistry;
+    FillRegistry(lRegistry);
+
+    World lWorld("Capture");
+
+    const MapId lMap = MapId("Decor");
+    lWorld.CreateEntity("QuadA", lMap);
+    lWorld.CreateEntity("QuadB", lMap);
+    lWorld.CreateEntity("QuadC", lMap);
+
+    REQUIRE(MapSerializer::CaptureWorld(lWorld, lRegistry).EntityCount() == 3);
+    REQUIRE(MapSerializer::CaptureMap(lWorld, lRegistry, lMap).EntityCount() == 3);
+
+    CHECK(MapSerializer::CaptureMap(lWorld, lRegistry, MapId()).EntityCount() == 0);
+}
+
+TEST_CASE("MapSerializer: CaptureMap stamps the map's own id onto the data it captures")
+{
+    ComponentRegistry lRegistry;
+    FillRegistry(lRegistry);
+
+    World lWorld("Stamp");
+
+    // No entities at all: the id can only come from the caller, which is the point.
+    const MapData lData = MapSerializer::CaptureMap(lWorld, lRegistry, MapId("Backdrop"));
+
+    CHECK(lData.IsEmpty());
+    CHECK(lData.Id == MapId("Backdrop"));
+
+    // A whole-world snapshot is not a map, so it names none.
+    CHECK_FALSE(MapSerializer::CaptureWorld(lWorld, lRegistry).Id.IsValid());
 }
 
 // =============================================================================

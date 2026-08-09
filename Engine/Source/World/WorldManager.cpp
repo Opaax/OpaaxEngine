@@ -2,7 +2,9 @@
 
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IEngine.h"
+#include "Application/Services/IPaths.h"
 #include "Engine/Registries/EngineRegistries.h"
+#include "World/Level.h"
 #include "World/Serialization/MapFactory.h"
 #include "World/Serialization/MapSerializer.h"
 #include "World/Systems/WorldContext.h"
@@ -31,6 +33,7 @@ namespace Opaax
         m_Resources = &lEngine.GetResources();
         m_Events    = &lEngine.GetEngineEventBus();
         m_Debug     = &lEngine.GetDebugDraw();
+        m_Paths     = &OpaaxApplication::GetAppService<IPaths>();
 
         OPAAX_LOG(LogWorldManager, Info, "WorldManager started (no world yet — the host creates it)");
         return true;
@@ -103,6 +106,16 @@ namespace Opaax
         m_Worlds.push_back(MakeUnique<World>(Move(InName), InMode));
         World* lWorld = m_Worlds.back().get();
 
+        // The Level comes BEFORE the subsystems: a subsystem's ctor receives the world, and a
+        // world whose Level slot is still empty is a state nothing should have to handle.
+        // Null registries or paths mean a bare manager in a test — no Level, exactly as no
+        // subsystems, rather than one holding dangling references.
+        if (m_Registries != nullptr && m_Paths != nullptr && m_Resources != nullptr)
+        {
+            lWorld->SetLevel(MakeUnique<Level>(*lWorld, m_Registries->Components(),
+                                               *m_Paths, *m_Resources));
+        }
+
         CreateSubsystemsFor(*lWorld);
 
         // AFTER the subsystems exist and started: a WorldCreated subscriber may reasonably ask
@@ -127,7 +140,7 @@ namespace Opaax
 
         // UNFILTERED on purpose: no MapId means "the whole world, runtime spawns included" (WM2).
         // Captured BEFORE the clone exists, so nothing the creation path does can perturb it.
-        const MapData lSnapshot = MapSerializer::Capture(InSource, m_Registries->Components());
+        const MapData lSnapshot = MapSerializer::CaptureWorld(InSource, m_Registries->Components());
 
         // The ordinary creation path — that is the point. The clone seals, gets its own context,
         // and takes the subsystems ITS mode qualifies for, exactly as any other world does.
@@ -138,6 +151,15 @@ namespace Opaax
         // FinishStartup (BO4), so the rule holds uniformly: a subsystem reads world content from its
         // first Update, never from Startup (WS7).
         const Uint64 lInstantiated = MapFactory::Instantiate(lSnapshot, *lClone, m_Registries->Components());
+
+        // The clone's Level COPIES the source's mount state and mounts NOTHING. Every entity the
+        // source's maps put in the world is already in the line above — the capture was unfiltered
+        // (WM6) — so a MountAll here would re-read every map and CreateEntityWithGuid would refuse
+        // the lot as live duplicates (WM3). This is the line a later reader will want to "fix".
+        if (lClone->GetLevel() != nullptr && InSource.GetLevel() != nullptr)
+        {
+            lClone->GetLevel()->AdoptMountedFrom(*InSource.GetLevel());
+        }
 
         if (lInstantiated < lSnapshot.EntityCount())
         {

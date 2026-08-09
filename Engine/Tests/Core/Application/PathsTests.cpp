@@ -5,6 +5,8 @@
 // regardless of the suite's own OPAAX_WORKSPACE_DIR).
 #include <doctest.h>
 
+#include <algorithm>
+#include <filesystem>
 #include <string>
 #include <utility>
 
@@ -122,6 +124,58 @@ TEST_CASE("Paths: ctor + resolvers (absolute --project is workspace-independent)
     // EngineRoot depends on the suite's own workspace (editor define) — assert shape only.
     const std::string lEngineRel = lPaths.EngineToAbsolute(OpaaxString("Assets/Shaders")).CStr();
     CHECK(lEngineRel.find("/Engine/Assets/Shaders") != std::string::npos);
+}
+
+TEST_CASE("Paths: AbsoluteToAsset is the inverse of AssetToAbsolute")
+{
+    // Against a REAL directory: AbsoluteToAsset canonicalises BOTH sides, so a fabricated path
+    // would be testing what std::filesystem does with something that does not exist rather than
+    // the rule itself.
+    namespace fs = std::filesystem;
+
+    const fs::path lRoot = fs::temp_directory_path() / "OpaaxPathsTests_asset";
+
+    std::error_code lError;
+    fs::remove_all(lRoot, lError);
+    fs::create_directories(lRoot / "Assets" / "Maps", lError);
+
+    StubPlatform lPlatform(OpaaxString("W:/deploy/bin/Game.exe"));
+    std::string  lProject = (lRoot / "MyGame.opaaxproj").string();
+
+    char  lArg0[] = "Game.exe";
+    char  lArg1[] = "--project";
+    char* lArgv[] = { lArg0, lArg1, lProject.data() };
+
+    const Paths lPaths(lPlatform, 3, lArgv);
+
+    const OpaaxString lAbs = lPaths.AssetToAbsolute(OpaaxString("Maps/Main.opaaxmap"));
+    CHECK(lPaths.AbsoluteToAsset(lAbs) == OpaaxString("Maps/Main.opaaxmap"));
+
+#ifdef OPAAX_PLATFORM_WINDOWS
+    SUBCASE("a NATIVE path with backslashes lands on the same answer")
+    {
+        // The case the function exists for: a file dialog answers `C:\...\Maps\Main.opaaxmap`
+        // while AssetsDir was built with forward slashes.
+        std::string lNative(lAbs.CStr());
+        std::replace(lNative.begin(), lNative.end(), '/', '\\');
+
+        CHECK(lPaths.AbsoluteToAsset(OpaaxString(lNative.c_str())) == OpaaxString("Maps/Main.opaaxmap"));
+    }
+#endif
+
+    SUBCASE("a file outside the assets dir has NO asset name")
+    {
+        // Empty is the real answer, not a failure: such a file cannot be named by a manifest.
+        const OpaaxString lOutside((lRoot / "Elsewhere.opaaxmap").generic_string().c_str());
+        CHECK(lPaths.AbsoluteToAsset(lOutside).IsEmpty());
+    }
+
+    SUBCASE("an empty path is refused rather than resolving to the assets dir itself")
+    {
+        CHECK(lPaths.AbsoluteToAsset(OpaaxString()).IsEmpty());
+    }
+
+    fs::remove_all(lRoot, lError);
 }
 
 // =============================================================================

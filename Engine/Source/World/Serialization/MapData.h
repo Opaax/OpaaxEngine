@@ -52,9 +52,43 @@ namespace Opaax
 
     struct MapData
     {
+        /**
+         * WHICH MAP THIS IS — the map naming ITSELF (**MP10**).
+         *
+         * It used to be derived from the entities alone (`OwnerId()` below), which left a map
+         * with none of them anonymous — and an invalid `MapId` is the value the whole layer
+         * reads as "no filter, the whole world". So a map identified only by its contents could
+         * not be an EMPTY map without becoming a hole every other map fell into.
+         *
+         * Settled at the boundary that has the information: `MapJson` reads the `mapId` key and
+         * falls back to what the entities claim (files written before the key existed), and
+         * `MapFile::Load` falls back once more to the file's stem, since it is the only layer
+         * holding the path. Everything above simply reads this and can assume it is valid.
+         */
+        MapId Id;
+
         TDynArray<EntityData> Entities;
 
         bool   IsEmpty()      const noexcept { return Entities.empty(); }
         Uint64 EntityCount()  const noexcept { return static_cast<Uint64>(Entities.size()); }
+
+        /**
+         * WHICH MAP these entities claim to belong to — the first valid `OwnerMap` among them,
+         * invalid when none does. The entities are the authority (**WM2**), which is why this
+         * outranks the file's stem; `Id` outranks it in turn only by being the map's own word.
+         *
+         * MIGRATION PATH, not the answer: read `Id`. This exists so a map written before the
+         * `mapId` key keeps identifying itself, and so a hand-edited file whose entities disagree
+         * with its header can still be diagnosed.
+         */
+        MapId OwnerId() const noexcept
+        {
+            for (const EntityData& lEntity : Entities)
+            {
+                if (lEntity.OwnerMap.IsValid()) { return lEntity.OwnerMap; }
+            }
+
+            return MapId();
+        }
     };
 }

@@ -20,7 +20,7 @@ namespace Opaax
     //   Acquiring a level's maps would therefore load EVERY map in the level the moment the
     //   level loads, and make unloading a single one impossible — the exact opposite of what a
     //   level is for. So the manifest is carried as DATA and whoever wants a map asks for that
-    //   map (LevelLoader today, a LevelManager once streaming has a caller).
+    //   map (the world's `Level`, which mounts and unmounts them one at a time).
     //
     //   A Map's TEXTURES will be Acquire'd when a component can name one. A Level's MAPS never
     //   are. The asymmetry is the whole rule.

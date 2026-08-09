@@ -44,6 +44,7 @@ namespace Opaax
             OpaaxString EngineToAbsolute(const OpaaxString&)  const override { return OpaaxString(); }
             OpaaxString ProjectToAbsolute(const OpaaxString&) const override { return OpaaxString(); }
             OpaaxString AssetToAbsolute(const OpaaxString&)   const override { return OpaaxString(); }
+            OpaaxString AbsoluteToAsset(const OpaaxString&)   const override { return OpaaxString(); }
             void        LogPaths()                            const override { OPAAX_APP_LOG(Warn, "Null Path Service"); }
         };
     }
@@ -164,5 +165,37 @@ namespace Opaax
     OpaaxString Paths::AssetToAbsolute(const OpaaxString& InAssetRel) const
     {
         return Utf8::FromFsPath(Utf8::ToFsPath(m_Layout.AssetsDir) / Utf8::ToFsPath(InAssetRel));
+    }
+
+    OpaaxString Paths::AbsoluteToAsset(const OpaaxString& InAbsPath) const
+    {
+        if (InAbsPath.IsEmpty() || m_Layout.AssetsDir.IsEmpty())
+        {
+            return OpaaxString();
+        }
+
+        // weakly_canonical on BOTH sides, because the two arrive in different shapes: a file
+        // dialog answers `C:\...\Maps\Main.opaaxmap` while AssetsDir was built with forward
+        // slashes. Comparing the strings would say "outside the assets dir" for a file plainly
+        // inside it. `weakly_` because the target need not exist yet (a Save As target).
+        std::error_code lError;
+        const fs::path lAbs  = fs::weakly_canonical(Utf8::ToFsPath(InAbsPath), lError);
+        const fs::path lRoot = fs::weakly_canonical(Utf8::ToFsPath(m_Layout.AssetsDir), lError);
+
+        if (lError)
+        {
+            return OpaaxString();
+        }
+
+        const fs::path lRelative = lAbs.lexically_relative(lRoot);
+
+        // Empty means unrelated paths; a leading ".." means it climbed OUT of the assets dir. Both
+        // are "this file cannot be named by a manifest", which is a real answer (see the header).
+        if (lRelative.empty() || *lRelative.begin() == "..")
+        {
+            return OpaaxString();
+        }
+
+        return Utf8::FromFsPath(lRelative);
     }
 }

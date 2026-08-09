@@ -87,6 +87,18 @@ namespace Opaax
         virtual OpaaxString ProjectToAbsolute(const OpaaxString& InProjectRel) const = 0; // under ProjectRoot
         virtual OpaaxString AssetToAbsolute(const OpaaxString& InAssetRel)     const = 0; // under AssetsDir
 
+        /**
+         * The inverse of AssetToAbsolute: an absolute path back to the form an asset is REFERENCED
+         * by ("Maps/Main.opaaxmap"), with forward slashes whatever the input used.
+         *
+         * Exists because the editor authors asset references — a level manifest names its maps
+         * asset-relative, and a file dialog hands back an absolute native path.
+         *
+         * @return EMPTY when InAbsPath is outside AssetsDir. That is a real answer, not a failure:
+         *   a file from elsewhere cannot be named by a manifest at all.
+         */
+        virtual OpaaxString AbsoluteToAsset(const OpaaxString& InAbsPath)      const = 0;
+
         //----- null object ----------------------------------------------------
         static IPaths& Null();
     };
@@ -127,6 +139,7 @@ namespace Opaax
         OpaaxString EngineToAbsolute(const OpaaxString& InEngineRel)   const override;
         OpaaxString ProjectToAbsolute(const OpaaxString& InProjectRel) const override;
         OpaaxString AssetToAbsolute(const OpaaxString& InAssetRel)     const override;
+        OpaaxString AbsoluteToAsset(const OpaaxString& InAbsPath)      const override;
         //~ End IPaths interface
 
         // =============================================================================

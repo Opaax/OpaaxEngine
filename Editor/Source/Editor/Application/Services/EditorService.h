@@ -6,6 +6,7 @@
 #include "Editor/Operation/EditorSelection.hpp"
 #include "Editor/Input/InputRoute.h"
 #include "Editor/EditorMapDocument.h"
+#include "Editor/EditorLevelDocument.h"
 #include "Editor/PIE/PlayInEditor.h"
 #include "Editor/UI/IEditorUIBackend.h"
 #include "Editor/Panels/ViewportPanel.h"
@@ -75,18 +76,31 @@ namespace Opaax::Editor
         /** Every registered entry's index — the root call's argument for DrawMenuLevel. */
         TDynArray<Uint32> BuildAllIndices() const;
 
-        /**
-         * Point the document at the map the ENGINE already opened (M5 S5).
-         *
-         * Re-reads the project's startup level to find out which file that was, rather than the
-         * engine growing a "what did I load" accessor for a single consumer. The LEVEL'S FIRST MAP
-         * is the one edited — the editor opens one at a time, which is a real limitation of M5
-         * rather than an oversight.
-         */
-        void AdoptStartupMap();
+        /** Adopt the level the engine opened at boot, and one of its maps for editing. */
+        void AdoptStartupLevel();
 
-        /** The open map's name plus a `*` when the world no longer matches it. Once a frame, on the bar. */
-        void DrawDocumentStatus();
+        /**
+         * Adopt the ACTIVE world's Level as the open document, and one of its mounted maps for
+         * editing. The shared tail of both boot and Open Level, so the two cannot disagree.
+         *
+         * THE FIRST NON-PERSISTENT MAP is the one edited, falling back to the persistent map when
+         * that is the only one mounted: the persistent map is the shared backdrop authored once,
+         * so the session opens on the content composed over it instead. Asked of the MOUNTED maps
+         * rather than the manifest — a map that failed to load is not editable.
+         *
+         * @param InLevelAbsPath The `.opaaxlevel` behind it, or EMPTY for a world whose maps
+         *   belong to no manifest (a standalone map).
+         */
+        static void AdoptOpenLevel(EditorContext& InContext, const OpaaxString& InLevelAbsPath);
+
+        /**
+         * Re-derive the per-map dirty answers, at most 4×/s (**MP5**).
+         *
+         * The throttle is here because the frame clock is; the answers live in EditorLevelDocument
+         * beside the baselines they come from, so the Hierarchy can mark every map without a
+         * capture per row. Runs at the top of EndFrame, before anything that reads it.
+         */
+        void RefreshDirtyCache();
 
         /**
          * Ctrl+S, in the UI pass.
@@ -99,19 +113,51 @@ namespace Opaax::Editor
         void HandleAuthoringShortcuts();
 
         // ---- menu commands (D3: a command's whole input is the context) ----------------------
-        /** False while PIE runs — the active world is then a Play clone, not the authored map. */
-        static bool CanEditMap(const EditorContext& InContext);
         static void SaveMapCommand(EditorContext& InContext);
         static void SaveMapAsCommand(EditorContext& InContext);
         static void OpenMapCommand(EditorContext& InContext);
 
         /**
-         * Open InAbsPath into the ACTIVE world — the shared body behind both the File menu's
-         * "Open Map..." and a double-click in the Resource Browser, so the two cannot diverge on
-         * the parts that matter (the PIE guard, the unsaved-changes prompt, clearing the
-         * selection before the entities it points at stop existing).
+         * Edit the map at InAbsPath — the shared body behind both the File menu's "Open Map..."
+         * and a double-click in the Resource Browser, so the two cannot diverge on the parts that
+         * matter (the PIE guard, the unsaved-changes prompt).
+         *
+         * TWO OUTCOMES, decided by whether that map is already in the world. Every map of the open
+         * level is mounted, so one of them LOADS NOTHING: it re-targets the document, and the
+         * selection survives because its entities do. A map belonging to no open level gets its
+         * OWN world with an empty Level instead of being merged into someone else's.
          */
         static void OpenMapAt(EditorContext& InContext, const OpaaxString& InAbsPath);
+
+        /** A map that is in no open level: a fresh world with an empty Level holding only it. */
+        static void OpenStandaloneMap(EditorContext& InContext, const OpaaxString& InAbsPath);
+
+        /** Open a `.opaaxlevel` into a NEW world — the browser's double-click and File/Open Level. */
+        static void OpenLevelAt(EditorContext& InContext, const OpaaxString& InAbsPath);
+
+        static void OpenLevelCommand(EditorContext& InContext);
+        static void SaveLevelCommand(EditorContext& InContext);
+
+        // ---- level authoring (WM1a): the manifest is edited THROUGH the world's Level ---------
+        /**
+         * The only Level entry left on the menu bar, because it is the only one that does not need
+         * to name a map first — it goes and picks one. Removing a map and choosing the persistent
+         * one moved to the Hierarchy's map headers (MapOps), where the target is what was clicked
+         * instead of whatever happened to be focused.
+         */
+        static void AddMapToLevelCommand(EditorContext& InContext);
+
+        /**
+         * Confirm before an action that DESTROYS the world — the whole level's unsaved work, not
+         * just the focused map's, since Save Level writes all of it (**MP9**). Modal because the
+         * action is not undoable.
+         *
+         * Not needed for merely changing which map is focused: the baselines are per map and
+         * survive a focus change (**MP5**), so nothing is at risk there.
+         *
+         * @return true to go ahead.
+         */
+        static bool ConfirmDiscardingLevelEdits(EditorContext& InContext);
 
         /**
          * `.opaaxmap` / `.opaaxlevel` into m_Extensions.ResourceTypes() — the editor's own core
@@ -203,11 +249,13 @@ namespace Opaax::Editor
         TUniquePtr<InputRoute>       m_InputRoute;      // M-Input S2: is the engine being fed; EditorContext.InputRoute refs it
         TUniquePtr<EditorMapDocument> m_MapDocument;    // M5 S5: the open .opaaxmap; EditorContext.MapDocument refs it
 
-        // M5 S5: the derived dirty answer, cached. EditorMapDocument::IsDirty is a full capture +
-        // serialize and stays pure (so it is testable and cannot go stale on its own); the
-        // THROTTLING lives here, where there is a frame clock to throttle against.
+        // WM1a: the open `.opaaxlevel` — a session holds a LEVEL, and the map above is one of its
+        // maps. The manifest itself is the world Level's, not this one's.
+        TUniquePtr<EditorLevelDocument> m_LevelDocument;
+
+        // M5 S5: when the derived dirty answers were last re-taken. Only the CLOCK is here — the
+        // answers themselves live in EditorLevelDocument, beside the baselines they come from.
         double m_LastDirtyCheck = -1.0;
-        bool   m_CachedDirty    = false;
         TUniquePtr<EditorContext>    m_Context;
         TUniquePtr<IEditorUIBackend> m_UIBackend;
         TUniquePtr<ViewportPanel>    m_ViewportPanel;   // M1: world-to-texture panel; owns the offscreen FBO

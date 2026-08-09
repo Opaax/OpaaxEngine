@@ -3,6 +3,7 @@
 #include "Application/Services/ILogger.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Editor/Panels/IEditorPanel.h"
+#include "World/Entity/EntityTypes.h"   // MapId — the context menu's target
 
 namespace Opaax
 {
@@ -13,12 +14,46 @@ namespace Opaax::Editor
 {
     struct EditorContext;
 
+    /**
+     * Which per-map verb a header's context menu asked for.
+     *
+     * The menu RECORDS one of these instead of calling straight through: Remove from Level destroys
+     * entities, and the click arrives in the middle of the loop that is about to draw them.
+     */
+    enum class EMapAction
+    {
+        None,
+        Save,
+        SetPersistent,
+        Remove
+    };
+
+    /** **I11** — an enum gets a free ToString, found by ADL, declared with the enum. */
+    const char* ToString(EMapAction InAction) noexcept;
+
     // =============================================================================
     // HierarchyPanel — the dockable "Hierarchy" panel: one selectable row per entity in the active
-    //   world, and the editor's single WRITER of EditorSelection (the Inspector, M2b, is the reader).
+    //   world, GROUPED BY THE MAP THAT AUTHORED IT, and the editor's single WRITER of
+    //   EditorSelection (the Inspector, M2b, is the reader).
     //
     //   Enumerates through World::Each<EntityMeta>, which is the all-entities view by construction —
     //   World::CreateEntity always emplaces EntityMeta — so listing entities needs no World/ECS API.
+    //   The groups are a filter over EntityMeta::OwnerMap (WM2), which is also why the invalid id
+    //   gets its own "(runtime - not saved)" header rather than being hidden: it means "no map
+    //   authored this", and therefore that no Save will ever write it.
+    //
+    //   THE HEADERS COME FROM THE LEVEL, NOT FROM THE ENTITIES. Groups are seeded from
+    //   Level::GetMountedMaps() in mount order and the entities are bucketed into them, so a map
+    //   that is in the world with NOTHING IN IT still has a header. Derived purely from entities it
+    //   had none — an empty map was invisible in the one panel that lists maps.
+    //
+    //   IT IS ALSO WHERE A MAP IS PICKED, AND WHERE ITS `*` LIVES. Per-map verbs (save, set
+    //   persistent, remove) hang off the header's context menu, and the unsaved marker sits on the
+    //   map it belongs to — this is the only place every mounted map is listed, so it is the only
+    //   place either can name which map they mean. The menu bar's "Remove Open Map" / "Set Open Map
+    //   Persistent" acted on whatever was focused, which is not a way to choose one map out of
+    //   several (WM1a). Bodies are MapOps', shared with the File menu so the two cannot drift; the
+    //   `*` is read from EditorLevelDocument's THROTTLED cache, never re-derived per row (MP5).
     //
     //   It is a NATIVE editor panel with no privileges: EditorService registers it into the same
     //   PanelRegistry a game module registers into, and it is constructed by the same loop. That
@@ -41,6 +76,34 @@ namespace Opaax::Editor
         HierarchyPanel& operator=(const HierarchyPanel&) = delete;
 
         // =============================================================================
+        // Functions
+        // =============================================================================
+    private:
+        /**
+         * The right-clicked map's verbs, from the ONE place a level's maps are listed. The bodies
+         * are MapOps', shared with the File menu, so the two call sites cannot drift.
+         *
+         * Entries are DISABLED rather than left to be refused: Level::RemoveMap turns down the
+         * persistent map and SetPersistentMap on it is a no-op, and both would answer a click with
+         * a log line nobody reads.
+         *
+         * @param InMapId       Always valid when InMounted: a map names itself (**MP10**).
+         * @param InMounted     False for the runtime bucket, which is not a map and gets no menu.
+         * @param InPersistent  The level's backdrop map (**WM1a**).
+         */
+        void DrawMapContextMenu(MapId InMapId, const OpaaxString& InAssetRelPath,
+                                bool InMounted, bool InPersistent);
+
+        /**
+         * Run whatever the context menu queued, AFTER the draw pass — the panel's draw is a READ of
+         * the world, and these write it.
+         *
+         * Not caution: calling Remove from Level inline destroyed the entities whose handles the
+         * rows under that same header were collected from, and entt asserted on the first one.
+         */
+        void RunPendingAction();
+
+        // =============================================================================
         // Override
         // =============================================================================
     public:
@@ -52,8 +115,12 @@ namespace Opaax::Editor
         void            OnPreRender()           override {}
 
         /**
-         * One ImGui::Selectable per entity, highlighted when it matches the current selection; a click
-         * writes the selection. Empty states are explicit text, never a blank panel (L12).
+         * One collapsible header per MOUNTED MAP, one ImGui::Selectable per entity under it,
+         * highlighted when it matches the current selection; a click writes the selection, a
+         * right-click on the header opens that map's verbs. Every map draws the same: Save Level
+         * writes all of them (**MP9**), so none is privileged — the FOCUSED map's header merely
+         * starts open and the PERSISTENT one is labelled, because a value you can set is one you
+         * must be able to read. Empty states are explicit text, never a blank panel (L12).
          */
         void            Draw()                  override;
 
@@ -74,7 +141,17 @@ namespace Opaax::Editor
         // Members
         // =============================================================================
     private:
+        /** What the context menu asked for, waiting for the draw pass to end. */
+        struct PendingMapAction
+        {
+            EMapAction  Action = EMapAction::None;
+            MapId       Map;
+            OpaaxString AssetRelPath;
+        };
+
         EditorContext& m_Context;
+
+        PendingMapAction m_Pending;
 
         const OpaaxStringID m_PanelID{ OPAAX_ID("Hierarchy") };
         const OpaaxString   m_Title = m_PanelID.ToString();

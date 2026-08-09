@@ -852,3 +852,37 @@ implementation its confidence, which is exactly why it needs the enumeration up 
 - **This is the deletion-shaped case of [[prefers-deletion-over-machinery]].** The user reaches for
   removal often, so "remove X and add Y" is a recurring plan shape here — treat the removal half as
   first-class work with its own verification, never as the preamble to the interesting part.
+
+---
+
+## L34 — An authoring feature is justified by what the author stops REDOING, not by what the runtime preserves (2026-08-06)
+
+**What happened (the PersistentMap / `RootLevel` call).** To decide whether WM1's `RootLevel` was
+needed, I asked what I thought was the deciding question: *"is there entity state that must outlive a
+Level change?"* — and offered to drop `RootLevel` if the answer was no. The user answered a **different
+question**: the persistent map exists so the player, the lights and the managers are authored **once**
+and never dragged into another map again; open a decor map, hit Play, the player is there. That
+reframing deleted an entire runtime object. State survival needs a second `Level` above the first;
+authoring cost needs **one key in a manifest** (`persistentMap`, absent ⇒ first entry, no version bump).
+
+**Why the framing caused it.** I reasoned from the runtime data model — who owns what, what outlives
+what — because that is the vocabulary `ARCHITECTURE.md` §WM is written in, and the question sounded
+rigorous. But a persistent map is an **editor affordance**, and its value is measured in actions the
+author does *not* take. A runtime question about an authoring feature gets a runtime-shaped answer, and
+runtime-shaped answers are always bigger: they add objects and lifetimes where the authoring answer
+added a field.
+
+**Rules for next time:**
+- **For anything the author touches, ask "what does this stop them from redoing?" BEFORE "what does this
+  preserve?"** The second question builds objects; the first builds data. Both can be right, but only one
+  of them was the motivation, and the motivation is what sizes the solution.
+- **Test every proposed new noun against the workflow that motivated it.** When the workflow is *"I don't
+  want to do X twice"*, the answer is almost always DATA — a key, a flag, a mount order — not a new
+  runtime owner ([[prefers-deletion-over-machinery]]).
+- **When I ask a design question and the user answers a different one, theirs is usually the load-bearing
+  question.** They reason from their own authoring loop, which is the loop the engine exists to serve.
+  Re-derive from their framing rather than restating mine and asking them to pick.
+- Corollary for the contract: a settled invariant can be settled *for the wrong reason*. `RootLevel` was
+  in WM1 since 2026-07-28 and nothing had contradicted it — it survived because it was never asked the
+  authoring question, not because it had answered one ([[L32]]'s "ask where the authored value lives",
+  applied to a design instead of an identity).
