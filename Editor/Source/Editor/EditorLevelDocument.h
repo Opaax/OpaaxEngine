@@ -24,6 +24,11 @@ namespace Opaax::Editor
     //   SAVE LEVEL MEANS SAVE THE LEVEL — the manifest AND every map in it (**MP9**). A Level IS its
     //   maps, so writing the list while leaving the maps unwritten is a save that loses work.
     //
+    //   CONTENT IS BATCHED; STRUCTURE IS NOT. Entity edits accumulate and wait for Save Level —
+    //   that is what batching is for. Changing WHICH maps a level has (New/Add/Remove Map, Set as
+    //   Persistent) is a deliberate one-off act, so SaveManifest writes it as it happens. Save Level
+    //   still writes the manifest, and normally finds nothing to say.
+    //
     //   THE BASELINES LIVE HERE AND NOWHERE ELSE. `EditorMapDocument` is a cursor — which map is
     //   focused — precisely because a second baseline for the same map would rebase on Save Map
     //   while this one did not, and the dirty marker would start lying ([[L30]]).
@@ -108,6 +113,21 @@ namespace Opaax::Editor
 
         /** Write ONE map and rebase its record. @return false when unknown, or the write failed. */
         bool SaveMap(MapId InMapId, const World& InWorld, const ComponentRegistry& InRegistry);
+
+        /**
+         * Write the MANIFEST now and rebase its baseline.
+         *
+         * The structural verbs — New Map, Add Map, Remove from Level, Set as Persistent — call this
+         * as they run, so a level's membership is on disk the moment it changes. They are deliberate
+         * one-off acts, unlike entity edits, which accumulate and are what batching into Save Level
+         * is FOR; and New Map already half-committed by writing the map file, so leaving the other
+         * half pending is the worst of both. Closing the editor after adding a map used to drop the
+         * membership silently while the file stayed behind.
+         *
+         * A no-op when there is no `.opaaxlevel` (a standalone map's world has no manifest) or when
+         * the text has not changed.
+         */
+        void SaveManifest(const Level& InLevel);
 
         /**
          * Write one map to a NEW path and re-point its record there (Save As). The MapId is

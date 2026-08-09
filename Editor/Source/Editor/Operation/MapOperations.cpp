@@ -63,7 +63,12 @@ namespace Opaax::Editor
         Level* const lLevel = ActiveLevel(InContext);
         if (lLevel == nullptr) { return; }
 
-        lLevel->SetPersistentMap(InMapId);
+        if (lLevel->SetPersistentMap(InMapId))
+        {
+            // STRUCTURE GOES TO DISK AS IT CHANGES — see EditorLevelDocument::SaveManifest. Which
+            // map is the backdrop is a deliberate one-off choice, not an edit that wants batching.
+            InContext.LevelDocument.SaveManifest(*lLevel);
+        }
     }
 
     void MapOps::RemoveFromLevel(EditorContext& InContext, MapId InMapId)
@@ -85,6 +90,9 @@ namespace Opaax::Editor
         InContext.LevelDocument.TrackMounted(*lLevel, *InContext.Worlds.GetActiveWorld(),
                                              InContext.Engine.GetRegistries().Components(),
                                              InContext.Paths);
+
+        // The map is out of the level; the FILE is untouched, so Add Map puts it back.
+        InContext.LevelDocument.SaveManifest(*lLevel);
 
         if (!lWasFocused) { return; }
 

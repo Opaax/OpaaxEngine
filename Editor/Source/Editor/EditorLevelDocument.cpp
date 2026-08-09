@@ -158,6 +158,27 @@ namespace Opaax::Editor
         return true;
     }
 
+    void EditorLevelDocument::SaveManifest(const Level& InLevel)
+    {
+        if (!HasLevel()) { return; }   // a standalone map's world has no manifest to write
+
+        const OpaaxString lText = LevelFile::Serialize(InLevel.GetData());
+
+        if (lText == m_ManifestBaseline) { return; }
+
+        if (!LevelFile::Save(m_AbsPath, InLevel.GetData()))
+        {
+            // Baseline deliberately UNTOUCHED, exactly as SaveMap does: the document keeps
+            // reporting unsaved structure rather than claiming a file that was never written.
+            OPAAX_LOG(LogEditorLevelDocument, Error, "Manifest save FAILED for '{}' — still unsaved",
+                      m_AbsPath.CStr());
+            return;
+        }
+
+        m_ManifestBaseline = lText;
+        m_bManifestDirty   = false;
+    }
+
     bool EditorLevelDocument::SaveMapAs(MapId InMapId, const OpaaxString& InAbsPath,
                                         const World& InWorld, const ComponentRegistry& InRegistry)
     {

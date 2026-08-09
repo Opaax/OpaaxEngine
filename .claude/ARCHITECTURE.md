@@ -987,11 +987,24 @@ the path and the baseline: **the manifest lives in the world's `Level`**, one ow
     - `MapFile::StemId` went **public** for it — the same rule `Load` uses as its last fallback is
       `New Map`'s first answer, and a naming rule with two copies is a naming rule with two answers.
       `EditorMapDocument::DeriveMapId` now calls it too, deleting a third.
-  - **Still unrepresented: a manifest-only change** (New Map, Add Map, Set as Persistent, before any
-    map is edited). `IsDirtyCached` computes it and the transition is logged, and `New Map` says
-    *"Save Level to keep it in the level"* at the moment it creates one — but nothing DRAWS that state
-    now that the status text is gone. Named here rather than fixed, because inventing UI nobody asked
-    for is how the bar filled up in the first place.
+  - **CONTENT IS BATCHED; STRUCTURE IS NOT** (settled with the user 2026-08-09, after they lost a
+    membership to the old behaviour). Entity edits accumulate and wait for `Save Level` — that is what
+    batching is *for*. Changing **which maps a level has** — New Map, Add Map, Remove from Level, Set
+    as Persistent — is a deliberate one-off act, so `EditorLevelDocument::SaveManifest` writes the
+    `.opaaxlevel` **as it happens** and rebases its baseline.
+    - **The failure this fixes was observed, not theorised.** `New Map` wrote the map file and left
+      the membership pending; the editor closed, the file stayed, and the level had forgotten it. A
+      command that half-commits to disk is the worst of both — and once the menu bar's status text
+      was gone, nothing drew the pending half either.
+    - **The chosen fix removes the need for a marker rather than adding one**, which is why it was
+      preferred to putting a level name back on screen. A manifest is now never dirty for long enough
+      to need drawing.
+    - `Save Level` still writes the manifest and normally finds nothing to say (**MP9** unchanged).
+      Adopting a level does **not** write it — verified: the file's bytes and mtime survive a boot.
+    - A failed manifest write leaves the baseline **untouched**, exactly as `SaveMap` does, so the
+      document keeps reporting unsaved structure rather than claiming a file it never wrote.
+    - Cost, accepted: an accidental `Remove from Level` is on disk at once. The map FILE is untouched,
+      so `Level/Add Map...` puts it straight back.
 - **The editor boots on the first NON-PERSISTENT mounted map**, falling back to the persistent one when
   that is all there is. The persistent map is the shared backdrop, authored once precisely so that it is
   not the thing being worked on. Asked of the MOUNTED maps, not the manifest — a map that failed to load

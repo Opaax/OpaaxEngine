@@ -825,13 +825,14 @@ namespace Opaax::Editor
                                              InContext.Engine.GetRegistries().Components(),
                                              InContext.Paths);
 
+        // BOTH HALVES LAND TOGETHER. Writing the map file and leaving the membership pending was
+        // the worst of both: close the editor and the file stayed while the level forgot it.
+        InContext.LevelDocument.SaveManifest(*lLevel);
+
         // Focused, because the only reason to make a map is to start putting things in it.
         MapOps::Focus(InContext, lAssetRel);
 
-        // The FILE is on disk; the level's MEMBERSHIP is not. Said here because the manifest is the
-        // one unsaved thing this command leaves behind and nothing draws that state today.
-        OPAAX_LOG(LogEditorService, Info,
-            "Created '{}' and added it to level '{}' — Save Level to keep it in the level",
+        OPAAX_LOG(LogEditorService, Info, "Created '{}' in level '{}'",
             lAssetRel.CStr(), lLevel->GetData().Name.CStr());
     }
 
@@ -1040,6 +1041,9 @@ namespace Opaax::Editor
             InContext.LevelDocument.TrackMounted(*lLevel, *InContext.Worlds.GetActiveWorld(),
                                                  InContext.Engine.GetRegistries().Components(),
                                                  InContext.Paths);
+
+            // Structure goes to disk as it changes (EditorLevelDocument::SaveManifest).
+            InContext.LevelDocument.SaveManifest(*lLevel);
         }
     }
 
