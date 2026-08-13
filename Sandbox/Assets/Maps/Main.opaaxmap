@@ -37,7 +37,7 @@
                         "z": 1.0
                     },
                     "Position": {
-                        "x": 358.0,
+                        "x": 200.0,
                         "y": 0.0
                     },
                     "Size": {
@@ -75,6 +75,11 @@
                 "HealthComponent": {
                     "Current": 100,
                     "Max": 100
+                },
+                "TagsComponent": {
+                    "Tags": [
+                        "Sandbox.Quad.Red"
+                    ]
                 }
             },
             "guid": "c79d7e04cbbcbd26c617b8ad427fc4a7",

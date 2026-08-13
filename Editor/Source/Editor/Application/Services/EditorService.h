@@ -12,6 +12,7 @@
 #include "Editor/Panels/ViewportPanel.h"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Core/OpaaxTypes.h"   // TUniquePtr
+#include "Editor/Menus/EditorMenu.h"
 
 namespace Opaax::Editor
 {
@@ -279,6 +280,8 @@ namespace Opaax::Editor
         TDynArray<TUniquePtr<IEditorPanel>> m_Panels;
 
         EditorExtensionRegistrar    m_Extensions;
+        
+        EditorMenu m_EditorMenu;
 
         // M4 S5: the WorldManager we subscribed to, so OnShutdown can unsubscribe. Non-owning, and
         // held separately from m_Context because the unsubscribe must happen BEFORE the context dies.

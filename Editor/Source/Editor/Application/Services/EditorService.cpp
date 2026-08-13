@@ -9,6 +9,7 @@
 #include "Editor/Operation/MapOperations.h"                   // the per-map verbs, shared with the Hierarchy
 #include "Editor//Application/Services/EditorPaths.h"                            // EditorSaveDir — the dock layout's home (D4)
 
+
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IEngine.h"
 #include "Application/Services/ILogger.h"                    // OPAAX_LOG + LogCategory
@@ -30,7 +31,7 @@
 #include <imgui.h>
 #include <tinyfiledialogs.h>                                 // Save As — the editor already vendors it
 
-using namespace Opaax;   // OPAAX_LOG expands to an unqualified ToSpdLevel(...)
+using namespace Opaax; // OPAAX_LOG expands to an unqualified ToSpdLevel(...)
 
 namespace
 {
@@ -71,7 +72,7 @@ namespace Opaax::Editor
         //     EditorContext so the context can carry a reference to it (the ViewportPanel samples its FBO
         //     through it — GetViewportImage). --------------------------------------------------------
         IWindowManager& lWindows = OpaaxApplication::GetAppService<IWindowManager>();
-        Window*         lWindow  = lWindows.GetMainWindow();
+        Window* lWindow = lWindows.GetMainWindow();
         if (lWindow == nullptr)
         {
             OPAAX_LOG(LogEditorService, Error, "No main window at editor init — ImGui UI backend not created.");
@@ -96,7 +97,7 @@ namespace Opaax::Editor
 
         // --- The open map (M5 S5). Created empty; it ADOPTS the world the engine has already built
         //     from the project's startup level a few lines below, once the context exists. -------
-        m_MapDocument   = MakeUnique<EditorMapDocument>();
+        m_MapDocument = MakeUnique<EditorMapDocument>();
         m_LevelDocument = MakeUnique<EditorLevelDocument>();
 
         // --- World-switch reactions (M4 S5). PIE swaps the active world twice per session, so a
@@ -147,7 +148,7 @@ namespace Opaax::Editor
         }
 
         OPAAX_LOG(LogEditorService, Info, "Editor panels registered: {}, constructed: {}",
-            m_Extensions.Panels().Count(), m_Panels.size());
+                  m_Extensions.Panels().Count(), m_Panels.size());
 
         AdoptStartupLevel();
 
@@ -164,8 +165,9 @@ namespace Opaax::Editor
         // PATH still comes from the project, because a Save needs somewhere to write.
         const OpaaxString lLevelRel = OpaaxApplication::GetAppService<IProjectManager>().StartupLevel();
 
-        AdoptOpenLevel(*m_Context, lLevelRel.IsEmpty() ? OpaaxString()
-                                                       : m_Context->Paths.AssetToAbsolute(lLevelRel));
+        AdoptOpenLevel(*m_Context, lLevelRel.IsEmpty()
+                                       ? OpaaxString()
+                                       : m_Context->Paths.AssetToAbsolute(lLevelRel));
     }
 
     void EditorService::AdoptOpenLevel(EditorContext& InContext, const OpaaxString& InLevelAbsPath)
@@ -186,7 +188,7 @@ namespace Opaax::Editor
         {
             InContext.MapDocument.Clear();
             OPAAX_LOG(LogEditorService, Info, "World '{}' has no map mounted — nothing to edit",
-                lWorld->GetName().CStr());
+                      lWorld->GetName().CStr());
             return;
         }
 
@@ -194,16 +196,20 @@ namespace Opaax::Editor
         // backdrop — the player, the lights — authored once precisely so it is not the thing being
         // worked on; the session opens on the content composed over it. Only the persistent one
         // mounted falls back to it, because there is nothing else to open.
-        const MapId              lPersistent = lLevel->GetPersistentMapId();
-        const Level::MountedMap* lEdited     = &lMounted[0];
+        const MapId lPersistent = lLevel->GetPersistentMapId();
+        const Level::MountedMap* lEdited = &lMounted[0];
 
         for (const Level::MountedMap& lCandidate : lMounted)
         {
-            if (lCandidate.Id != lPersistent) { lEdited = &lCandidate; break; }
+            if (lCandidate.Id != lPersistent)
+            {
+                lEdited = &lCandidate;
+                break;
+            }
         }
 
         OPAAX_LOG(LogEditorService, Info, "Level '{}': {} map(s) mounted, focused on '{}'",
-            lLevel->GetData().Name.CStr(), lMounted.size(), lEdited->AssetRelPath.CStr());
+                  lLevel->GetData().Name.CStr(), lMounted.size(), lEdited->AssetRelPath.CStr());
 
         InContext.MapDocument.Focus(InContext.Paths.AssetToAbsolute(lEdited->AssetRelPath));
     }
@@ -263,7 +269,7 @@ namespace Opaax::Editor
     {
         // D5's decision order, steps 1 and 3. Step 2 (viewport hover/focus) and step 4 (dispatch by
         // world mode, InputManager feed + ResetState) are M-Input — NOT here.
-        if (m_UIBackend == nullptr) { return false; }   // UI not up (pre-Initialize / no window) — pass through
+        if (m_UIBackend == nullptr) { return false; } // UI not up (pre-Initialize / no window) — pass through
 
         const ImGuiIO& lIO = ImGui::GetIO();
 
@@ -311,8 +317,8 @@ namespace Opaax::Editor
         if (InEvent.IsInCategory(EEventCategory::MouseButton) || InEvent.IsInCategory(EEventCategory::Keyboard))
         {
             OPAAX_LOG(LogEditorService, Trace, "RouteInput: {} -> {} (WantMouse={}, WantKeyboard={})",
-                InEvent.GetName(), lConsumed ? "CONSUMED by editor" : "passed to engine",
-                lIO.WantCaptureMouse, lIO.WantCaptureKeyboard);
+                      InEvent.GetName(), lConsumed ? "CONSUMED by editor" : "passed to engine",
+                      lIO.WantCaptureMouse, lIO.WantCaptureKeyboard);
         }
 
         return lConsumed;
@@ -320,18 +326,12 @@ namespace Opaax::Editor
 
     void EditorService::RegisterExtensions(const TFunction<void(EditorExtensionRegistrar&)>& InCollect)
     {
-        // D10/§2: fired BEFORE the first world. Native editor panels register FIRST, then the game's editor
-        // module(s) plug into the routes, then we seal — no more registration once the first world exists.
         RegisterNativePanels();
         RegisterNativeMenus();
         RegisterNativeResourceTypes();
 
-        // EditWorldSystems() -> the ENGINE's WorldSubsystemRegistry, the same one the game module
-        // registers into (M4 S5). Bound here because this runs at OnModulesRegistered: the engine has
-        // started, the registries are live, and nothing has sealed them yet. An editor Edit-world
-        // candidate and a game Play-world candidate end up in one list, and each World takes the subset
-        // its mode qualifies for — the editor gets no privileged path.
-        m_Extensions.EditWorldSystems().Bind(&OpaaxApplication::GetAppService<IEngine>().GetRegistries().WorldSubsystems());
+        m_Extensions.EditWorldSystems().Bind(
+            &OpaaxApplication::GetAppService<IEngine>().GetRegistries().WorldSubsystems());
 
         if (InCollect)
         {
@@ -340,9 +340,9 @@ namespace Opaax::Editor
         m_Extensions.Seal();
 
         OPAAX_LOG(LogEditorService, Info,
-            "Editor extensions sealed (before first world): drawers={}, panels={}, resourceTypes={}, menus={}, editWorldSystems={}",
-            m_Extensions.Drawers().Count(),  m_Extensions.Panels().Count(), m_Extensions.ResourceTypes().Count(),
-            m_Extensions.Menus().Count(),    m_Extensions.EditWorldSystems().Count());
+                  "Editor extensions sealed (before first world): drawers={}, panels={}, resourceTypes={}, menus={}, editWorldSystems={}",
+                  m_Extensions.Drawers().Count(), m_Extensions.Panels().Count(), m_Extensions.ResourceTypes().Count(),
+                  m_Extensions.Menus().Count(), m_Extensions.EditWorldSystems().Count());
     }
 
     bool EditorService::HandleReservedKeys(Event& InEvent)
@@ -352,7 +352,7 @@ namespace Opaax::Editor
             return false;
         }
 
-        const KeyPressedEvent& lKey = static_cast<const KeyPressedEvent&>(InEvent);
+        const auto& lKey = static_cast<const KeyPressedEvent&>(InEvent);
         if (lKey.IsRepeat())
         {
             // Holding F7 must not stream steps; every PIE verb is a discrete command.
@@ -363,11 +363,15 @@ namespace Opaax::Editor
         // Ctrl+P-style shortcuts are not expressible today. M-Input owns that.
         switch (lKey.GetKeyCode())
         {
-        case EKeyCode::F5: m_PIE->Play();        return true;
-        case EKeyCode::F6: m_PIE->TogglePause(); return true;
-        case EKeyCode::F7: m_PIE->Step();        return true;
-        case EKeyCode::F8: m_PIE->Stop();        return true;
-        default:                                 return false;
+        case EKeyCode::F5: m_PIE->Play();
+            return true;
+        case EKeyCode::F6: m_PIE->TogglePause();
+            return true;
+        case EKeyCode::F7: m_PIE->Step();
+            return true;
+        case EKeyCode::F8: m_PIE->Stop();
+            return true;
+        default: return false;
         }
     }
 
@@ -381,7 +385,7 @@ namespace Opaax::Editor
         if (m_Selection != nullptr && m_Selection->HasSelection())
         {
             const Entity lPrevious = m_Selection->Get();
-            const Guid   lGuid     = lPrevious.GetGuid();
+            const Guid lGuid = lPrevious.GetGuid();
 
             Entity lRetargeted = InNew != nullptr ? InNew->FindByGuid(lGuid) : Entity{};
 
@@ -452,13 +456,13 @@ namespace Opaax::Editor
         // ImGui does not create directories, and its save fails SILENTLY when one is missing — so the dir
         // has to exist before the first write, not on first save. GetPathIfNCreate is exactly that, and
         // logs its own failure detail.
-        const OpaaxString  lSaveDir    = lEditorPaths->EditorSaveDir();
+        const OpaaxString lSaveDir = lEditorPaths->EditorSaveDir();
         const IFileSystem& lFileSystem = OpaaxApplication::GetAppService<IPlatform>().GetFileSystem();
 
         if (lFileSystem.GetPathIfNCreate(lSaveDir).IsEmpty())
         {
             OPAAX_LOG(LogEditorService, Warn, "Could not create '{}' — dock layout will not persist.",
-                lSaveDir.CStr());
+                      lSaveDir.CStr());
             return {};
         }
 
@@ -470,27 +474,44 @@ namespace Opaax::Editor
         // The PIE controls are a PANEL like any other — registered through the same route a game
         // panel travels, not drawn by EditorService as a privileged widget (D10).
         m_Extensions.Panels().Register("Play Controls",
-            [](EditorContext& InContext) -> TUniquePtr<IEditorPanel> { return MakeUnique<PlayToolbarPanel>(InContext); });
+                                       [](EditorContext& InContext) -> TUniquePtr<IEditorPanel>
+                                       {
+                                           return MakeUnique<PlayToolbarPanel>(InContext);
+                                       });
 
         m_Extensions.Panels().Register("Hierarchy",
-            [](EditorContext& InContext) -> TUniquePtr<IEditorPanel> { return MakeUnique<HierarchyPanel>(InContext); });
+                                       [](EditorContext& InContext) -> TUniquePtr<IEditorPanel>
+                                       {
+                                           return MakeUnique<HierarchyPanel>(InContext);
+                                       });
 
         m_Extensions.Panels().Register("Inspector",
-            [](EditorContext& InContext) -> TUniquePtr<IEditorPanel> { return MakeUnique<InspectorPanel>(InContext); });
+                                       [](EditorContext& InContext) -> TUniquePtr<IEditorPanel>
+                                       {
+                                           return MakeUnique<InspectorPanel>(InContext);
+                                       });
 
         m_Extensions.Panels().Register("Resource Browser",
-            [](EditorContext& InContext) -> TUniquePtr<IEditorPanel> { return MakeUnique<ResourceBrowserPanel>(InContext); });
+                                       [](EditorContext& InContext) -> TUniquePtr<IEditorPanel>
+                                       {
+                                           return MakeUnique<ResourceBrowserPanel>(InContext);
+                                       });
 
         m_Extensions.Panels().Register("Input",
-            [](EditorContext& InContext) -> TUniquePtr<IEditorPanel> { return MakeUnique<InputPanel>(InContext); });
+                                       [](EditorContext& InContext) -> TUniquePtr<IEditorPanel>
+                                       {
+                                           return MakeUnique<InputPanel>(InContext);
+                                       });
     }
 
     void EditorService::DrawDockspace()
     {
-        // Full-viewport dockspace. M0 used PassthruCentralNode so the raw world showed through a
-        // transparent hole; M1 drops that — the world now lives in the Viewport panel (drawn in
-        // EndFrame), so the central node is a normal opaque dock target the panel can dock into.
         ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
+        
+        //if (!m_EditorMenu.DrawEditorMenu())
+        //{
+        //    //TODO: Assert or log, this is an important menu better to break.
+        //}
 
         if (ImGui::BeginMainMenuBar())
         {
@@ -500,7 +521,7 @@ namespace Opaax::Editor
             // (D10) true here rather than aspirational. It also removes the merge problem: a game
             // adding "File/Validate" lands in the same File menu, because there is only one.
             DrawMenuLevel(BuildAllIndices(), /*InDepth*/0);
-
+        
             ImGui::EndMainMenuBar();
         }
 
@@ -578,6 +599,7 @@ namespace Opaax::Editor
 
     void EditorService::DrawMenuLevel(const TDynArray<Uint32>& InIndices, Uint32 InDepth)
     {
+        
         const TDynArray<MenuEntry>& lEntries = m_Extensions.Menus().Entries();
 
         // Names already emitted at THIS level, so two entries sharing a submenu produce one
@@ -656,23 +678,23 @@ namespace Opaax::Editor
         // because nothing led INTO it — there was no way to make a map, so Save As had no workflow
         // in front of it. This is that missing half, and registration order is draw order.
         m_Extensions.Menus().Register("File/New Map...",
-            [](EditorContext& InContext) { NewMapCommand(InContext); });
+                                      [](EditorContext& InContext) { NewMapCommand(InContext); });
 
         m_Extensions.Menus().Register("File/Open Map...",
-            [](EditorContext& InContext) { OpenMapCommand(InContext); });
+                                      [](EditorContext& InContext) { OpenMapCommand(InContext); });
 
         m_Extensions.Menus().Register("File/Save Map",
-            [](EditorContext& InContext) { SaveMapCommand(InContext); });
+                                      [](EditorContext& InContext) { SaveMapCommand(InContext); });
 
         m_Extensions.Menus().Register("File/Save Map As...",
-            [](EditorContext& InContext) { SaveMapAsCommand(InContext); });
+                                      [](EditorContext& InContext) { SaveMapAsCommand(InContext); });
 
         // --- the LEVEL half (WM1a): what a session actually has open --------------------------
         m_Extensions.Menus().Register("File/Open Level...",
-            [](EditorContext& InContext) { OpenLevelCommand(InContext); });
+                                      [](EditorContext& InContext) { OpenLevelCommand(InContext); });
 
         m_Extensions.Menus().Register("File/Save Level",
-            [](EditorContext& InContext) { SaveLevelCommand(InContext); });
+                                      [](EditorContext& InContext) { SaveLevelCommand(InContext); });
 
         // The ONLY Level entry, and the only one that ever earned a place on the bar: it does not
         // need a map named first, it goes and picks one.
@@ -683,14 +705,14 @@ namespace Opaax::Editor
         // needs somewhere to SEE the current answer, not just a verb aimed at the cursor. They live
         // on the Hierarchy's map headers now, where the map you click is the argument (MapOps).
         m_Extensions.Menus().Register("Level/Add Map...",
-            [](EditorContext& InContext) { AddMapToLevelCommand(InContext); });
+                                      [](EditorContext& InContext) { AddMapToLevelCommand(InContext); });
 
         m_Extensions.Menus().Register("File/Exit",
-            [lWindow](EditorContext&)
-            {
-                OPAAX_LOG(LogEditorService, Info, "Exit requested from the File menu");
-                if (lWindow != nullptr) { lWindow->RequestClose(); }
-            });
+                                      [lWindow](EditorContext&)
+                                      {
+                                          OPAAX_LOG(LogEditorService, Info, "Exit requested from the File menu");
+                                          if (lWindow != nullptr) { lWindow->RequestClose(); }
+                                      });
     }
 
     void EditorService::RegisterNativeResourceTypes()
@@ -700,9 +722,9 @@ namespace Opaax::Editor
         // double-click that opens it. The editor's own core format gets no privileged path into
         // the browser — which is the property that keeps the route honest.
         m_Extensions.ResourceTypes().Register(ResourceTypeDesc{
-            .Extension  = OPAAX_ID(".opaaxmap"),
-            .Label      = OPAAX_ID("Opaax Map"),
-            .Icon       = OpaaxString("[M]"),
+            .Extension = OPAAX_ID(".opaaxmap"),
+            .Label = OPAAX_ID("Opaax Map"),
+            .Icon = OpaaxString("[M]"),
             .OnActivate = [](EditorContext& InContext, const ResourceFile& InFile)
             {
                 OpenMapAt(InContext, InFile.AbsPath);
@@ -710,9 +732,9 @@ namespace Opaax::Editor
         });
 
         m_Extensions.ResourceTypes().Register(ResourceTypeDesc{
-            .Extension  = OPAAX_ID(".opaaxlevel"),
-            .Label      = OPAAX_ID("Opaax Level"),
-            .Icon       = OpaaxString("[L]"),
+            .Extension = OPAAX_ID(".opaaxlevel"),
+            .Label = OPAAX_ID("Opaax Level"),
+            .Icon = OpaaxString("[L]"),
             .OnActivate = [](EditorContext& InContext, const ResourceFile& InFile)
             {
                 OpenLevelAt(InContext, InFile.AbsPath);
@@ -734,7 +756,7 @@ namespace Opaax::Editor
 
         if (!InContext.MapDocument.HasMap())
         {
-            SaveMapAsCommand(InContext);   // nothing to overwrite — ask where
+            SaveMapAsCommand(InContext); // nothing to overwrite — ask where
             return;
         }
 
@@ -747,17 +769,18 @@ namespace Opaax::Editor
     {
         if (!MapOps::CanEdit(InContext, "Save Map As")) { return; }
 
-        const char* const lFilters[] = { "*.opaaxmap" };
+        const char* const lFilters[] = {"*.opaaxmap"};
 
         const char* const lPicked = tinyfd_saveFileDialog(
             "Save Map As",
-            InContext.MapDocument.HasMap() ? InContext.MapDocument.AbsPath().CStr()
-                                           : InContext.Paths.AssetToAbsolute(OpaaxString("Maps/Untitled.opaaxmap")).CStr(),
+            InContext.MapDocument.HasMap()
+                ? InContext.MapDocument.AbsPath().CStr()
+                : InContext.Paths.AssetToAbsolute(OpaaxString("Maps/Untitled.opaaxmap")).CStr(),
             1, lFilters, "Opaax Map");
 
         if (lPicked == nullptr)
         {
-            return;   // cancelled — not a failure, and not worth a log line
+            return; // cancelled — not a failure, and not worth a log line
         }
 
         if (InContext.LevelDocument.SaveMapAs(InContext.MapDocument.GetMapId(), OpaaxString(lPicked),
@@ -776,23 +799,23 @@ namespace Opaax::Editor
         Level* const lLevel = MapOps::ActiveLevel(InContext);
         if (lLevel == nullptr) { return; }
 
-        const char* const lFilters[] = { "*.opaaxmap" };
+        const char* const lFilters[] = {"*.opaaxmap"};
 
         const char* const lPicked = tinyfd_saveFileDialog(
             "New Map",
             InContext.Paths.AssetToAbsolute(OpaaxString("Maps/NewMap.opaaxmap")).CStr(),
             1, lFilters, "Opaax Map");
 
-        if (lPicked == nullptr) { return; }   // cancelled
+        if (lPicked == nullptr) { return; } // cancelled
 
-        const OpaaxString lAbsPath  = OpaaxString(lPicked);
+        const auto lAbsPath = OpaaxString(lPicked);
         const OpaaxString lAssetRel = InContext.Paths.AbsoluteToAsset(lAbsPath);
 
         if (lAssetRel.IsEmpty())
         {
             OPAAX_LOG(LogEditorService, Warn,
-                "'{}' is outside the project's Assets — a level can only name assets of this project",
-                lPicked);
+                      "'{}' is outside the project's Assets — a level can only name assets of this project",
+                      lPicked);
             return;
         }
 
@@ -802,8 +825,8 @@ namespace Opaax::Editor
         if (InContext.FileSystem.IsPathExist(lAbsPath))
         {
             OPAAX_LOG(LogEditorService, Warn,
-                "'{}' already exists — use Open Map or Level/Add Map... instead of overwriting it",
-                lAssetRel.CStr());
+                      "'{}' already exists — use Open Map or Level/Add Map... instead of overwriting it",
+                      lAssetRel.CStr());
             return;
         }
 
@@ -816,12 +839,12 @@ namespace Opaax::Editor
 
         if (!MapFile::Save(lAbsPath, lData))
         {
-            return;   // MapFile logged which of the reasons it was
+            return; // MapFile logged which of the reasons it was
         }
 
         if (!lLevel->AddMap(lAssetRel))
         {
-            return;   // Level logged it — already in this level, or it would not mount
+            return; // Level logged it — already in this level, or it would not mount
         }
 
         // RECONCILE, never re-adopt (**MP5**): the new map gets a record, every other map keeps the
@@ -838,14 +861,14 @@ namespace Opaax::Editor
         MapOps::Focus(InContext, lAssetRel);
 
         OPAAX_LOG(LogEditorService, Info, "Created '{}' in level '{}'",
-            lAssetRel.CStr(), lLevel->GetData().Name.CStr());
+                  lAssetRel.CStr(), lLevel->GetData().Name.CStr());
     }
 
     void EditorService::OpenMapCommand(EditorContext& InContext)
     {
         if (!MapOps::CanEdit(InContext, "Open Map")) { return; }
 
-        const char* const lFilters[] = { "*.opaaxmap" };
+        const char* const lFilters[] = {"*.opaaxmap"};
 
         const char* const lPicked = tinyfd_openFileDialog(
             "Open Map",
@@ -854,7 +877,7 @@ namespace Opaax::Editor
 
         if (lPicked == nullptr)
         {
-            return;   // cancelled
+            return; // cancelled
         }
 
         OpenMapAt(InContext, OpaaxString(lPicked));
@@ -880,7 +903,7 @@ namespace Opaax::Editor
         const int lAnswer = tinyfd_messageBox(
             "Unsaved changes",
             "This level has unsaved changes.\nContinue and lose them?",
-            "yesno", "warning", /*defaultButton*/0);   // default NO — the safe answer
+            "yesno", "warning", /*defaultButton*/0); // default NO — the safe answer
 
         if (lAnswer != 1)
         {
@@ -931,8 +954,8 @@ namespace Opaax::Editor
         if (lAssetRel.IsEmpty())
         {
             OPAAX_LOG(LogEditorService, Warn,
-                "'{}' is outside the project's Assets — a map has to be an asset of this project to be opened",
-                InAbsPath.CStr());
+                      "'{}' is outside the project's Assets — a map has to be an asset of this project to be opened",
+                      InAbsPath.CStr());
             return;
         }
 
@@ -959,8 +982,8 @@ namespace Opaax::Editor
         if (lAssetRel.IsEmpty())
         {
             OPAAX_LOG(LogEditorService, Warn,
-                "'{}' is outside the project's Assets — a level has to be an asset of this project",
-                InAbsPath.CStr());
+                      "'{}' is outside the project's Assets — a level has to be an asset of this project",
+                      InAbsPath.CStr());
             return;
         }
 
@@ -979,7 +1002,7 @@ namespace Opaax::Editor
 
     void EditorService::OpenLevelCommand(EditorContext& InContext)
     {
-        const char* const lFilters[] = { "*.opaaxlevel" };
+        const char* const lFilters[] = {"*.opaaxlevel"};
 
         const char* const lPicked = tinyfd_openFileDialog(
             "Open Level",
@@ -988,7 +1011,7 @@ namespace Opaax::Editor
 
         if (lPicked == nullptr)
         {
-            return;   // cancelled
+            return; // cancelled
         }
 
         OpenLevelAt(InContext, OpaaxString(lPicked));
@@ -1019,7 +1042,7 @@ namespace Opaax::Editor
         Level* const lLevel = MapOps::ActiveLevel(InContext);
         if (lLevel == nullptr) { return; }
 
-        const char* const lFilters[] = { "*.opaaxmap" };
+        const char* const lFilters[] = {"*.opaaxmap"};
 
         const char* const lPicked = tinyfd_openFileDialog(
             "Add Map to Level",
@@ -1032,8 +1055,8 @@ namespace Opaax::Editor
         if (lAssetRel.IsEmpty())
         {
             OPAAX_LOG(LogEditorService, Warn,
-                "'{}' is outside the project's Assets — a manifest can only name assets of this project",
-                lPicked);
+                      "'{}' is outside the project's Assets — a manifest can only name assets of this project",
+                      lPicked);
             return;
         }
 
