@@ -147,12 +147,12 @@ namespace Opaax::Editor
             if (ScanRoot(m_Context.FileSystem, lRoot))
             {
                 OPAAX_LOG(LogResourceBrowserPanel, Info, "Resource browser scanned '{}' ({}): {} files in {} folders",
-                    lRoot.Label.ToString().CStr(), lRoot.AbsPath.CStr(), lRoot.FileCount, lRoot.FolderCount);
+                    lRoot.Label, lRoot.AbsPath.CStr(), lRoot.FileCount, lRoot.FolderCount);
             }
             else
             {
                 OPAAX_LOG(LogResourceBrowserPanel, Warn, "Resource browser root '{}' not found: {}",
-                    lRoot.Label.ToString().CStr(), lRoot.AbsPath.CStr());
+                    lRoot.Label, lRoot.AbsPath.CStr());
             }
         }
     }
@@ -355,7 +355,7 @@ namespace Opaax::Editor
             if (!lRoot.bExists)
             {
                 ImGui::TextDisabled("%s — folder not found: %s",
-                    lRoot.Label.ToString().CStr(), lRoot.AbsPath.CStr());
+                    lRoot.Label.CStr(), lRoot.AbsPath.CStr());
                 continue;
             }
 
@@ -480,7 +480,7 @@ namespace Opaax::Editor
             ImGui::BeginTooltip();
             ImGui::TextDisabled("Name : %s", InFile.Name.CStr());
             ImGui::TextDisabled("Path : %s", lFullPath.CStr());
-            ImGui::TextDisabled("Type : %s", lType != nullptr ? lType->Label.ToString().CStr() : "Unknown type");
+            ImGui::TextDisabled("Type : %s", lType != nullptr ? lType->Label.CStr() : "Unknown type");
             ImGui::EndTooltip();
 
             if (ImGui::IsMouseDoubleClicked(0))
@@ -489,12 +489,12 @@ namespace Opaax::Editor
                 {
                     OPAAX_LOG(LogResourceBrowserPanel, Info, "'{}' activated — no resource type registered for '{}'",
                         InFile.Name.CStr(),
-                        InFile.Extension.IsValid() ? InFile.Extension.ToString().CStr() : "(no extension)");
+                        InFile.Extension.IsValid() ? InFile.Extension.CStr() : "(no extension)");
                 }
                 else if (!lType->OnActivate)
                 {
                     OPAAX_LOG(LogResourceBrowserPanel, Info, "'{}' activated — type '{}' registers no action",
-                        InFile.Name.CStr(), lType->Label.ToString().CStr());
+                        InFile.Name.CStr(), lType->Label);
                 }
                 else
                 {

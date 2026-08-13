@@ -19,7 +19,9 @@ set(OPAAX_TEST_SOURCES
     Renderer/DebugDrawTests.cpp
     # Renderer/FontKerningTests.cpp  # quarantined: Renderer/Text moved to Legacy (not linked) — M0.5
     Core/StringTests.cpp
+    Core/StringViewTests.cpp
     Core/StringIDTests.cpp
+    Core/PathStringTests.cpp
     Core/Config/EngineConfigDataTests.cpp
     Core/Application/AppServiceLocatorTests.cpp
     Core/Application/PathsTests.cpp

@@ -886,3 +886,70 @@ added a field.
   in WM1 since 2026-07-28 and nothing had contradicted it — it survived because it was never asked the
   authoring question, not because it had answered one ([[L32]]'s "ask where the authored value lives",
   applied to a design instead of an identity).
+
+## L35 — A race is a symptom; find the INVARIANT under it and test that deterministically (2026-08-12)
+
+**What happened (the `OpaaxStringIDPool` dangling reference).** `Get()` returned a `const OpaaxString&`
+into a `std::vector` and released its `shared_lock` *on return*, before the caller copied — so a
+concurrent `GetOrAdd` reallocation left the reference naming freed memory. I fixed it (the lookup map
+owns the text, the id→text array holds pointers, entries never move) and wrote the obvious guard: four
+writer threads interning while four readers resolve names. It passed. Then, to check the guard was real,
+I reverted the storage to the broken shape and ran it again — **it passed there too, five runs out of
+five.** The window between dropping the lock and copying is a few instructions wide and a vector
+reallocates only log2(n) times, so millions of reader iterations sampled it zero times.
+
+The invariant the fix actually establishes is not concurrent at all: **an entry's address is stable
+across growth.** Take a `CStr()`, intern 4096 names, check the pointer still names the same text —
+single-threaded, deterministic, and it failed the broken storage on the first assertion, with the
+pointer resolving to *different bytes*. The threaded case was kept, but demoted to what it really pins:
+the interning contract under contention (same text from two threads ⇒ one id).
+
+**Why I reached for the wrong instrument.** The bug was *described* as a data race, so I wrote a race.
+But concurrency was only what made the defect **observable**; what made it a defect was a single-threaded
+property of the container. Threaded tests are probabilistic by construction — passing one is evidence of
+nothing, and I would have shipped a green suite claiming a guard it did not provide.
+
+**Rules for next time:**
+- **After fixing a race, state the invariant the fix establishes as a sentence with no threads in it.**
+  If that sentence exists — "entries never move", "this pointer stays valid", "this counter only grows" —
+  test *that*, deterministically. If it genuinely cannot be stated without threads, say so explicitly.
+- **A concurrency test that passes proves nothing until it has been run against the BROKEN code.** Revert
+  the fix, run it; if it still passes, it is documentation, not a guard. This is the cheap check and it
+  cost one build cycle here ([[L21]]: the instrument must be able to fail).
+- **Pick fixture data that can actually fail.** The long interned names survived even broken storage — a
+  moved `OpaaxString` steals its heap pointer, so `CStr()` kept answering the same address *by accident*
+  ([[L27]]). Only a short, SSO-stored name, whose bytes live inside the entry, discriminates. Ask which
+  input distinguishes the hypotheses before writing the assertion.
+- Corollary for reviews: "the pool is in the DLL, so it is DLL-safe" answered **where the table lives**
+  and was read, for the two weeks since, as if it had answered **what the table does**. A settled invariant covers the
+  question it was asked ([[L34]]'s corollary) — I2 had never once looked inside the pool it placed.
+
+## L36 — Read what the convenience layer COSTS before recommending the terser call (2026-08-12)
+
+**What happened.** Having made `OpaaxStringID::CStr()` zero-copy, I told the user their log sites could
+go further and drop the accessor entirely — `"{}", lName` instead of `"{}", lName.CStr()` — because a
+fmt formatter for the type already existed. They said do it. Opening the formatter to run the pass, it
+read `fmt::formatter<std::string>::format(std::string(StringID.CStr()), CTX)`: **it copies into a
+`std::string` on every call.** So the terser form I had just recommended *added* a heap allocation per
+argument, while `.CStr()` — the thing I was proposing to remove — passed a `const char*` that fmt
+formats in place with none. My advice was backwards, on the exact axis (cheapness) that motivated the
+whole change. The same copy sat in `OpaaxString`'s formatter, taxing ~100 existing log sites.
+
+The fix made the advice true rather than retracting it: both formatters now inherit
+`fmt::formatter<fmt::string_view>` and format a view over bytes already held (`OpaaxString` passes its
+length, so not even a `strlen`). Same format spec, zero allocation — *then* the conversion pass ran.
+
+**Rules for next time:**
+- **Before recommending "you can just pass X directly", open the adapter that makes it work.** A
+  formatter, a converting constructor, an `operator T()` — each is a small function nobody reads, and a
+  copy hidden in one silently inverts the cost argument you are making. One `tail -12` would have
+  caught this before I said it.
+- **When the point of a change is CHEAPNESS, the terser spelling is not automatically the cheaper one.**
+  Terseness and cost are independent axes; I merged them because the change so far had improved both.
+- **A defect in a convenience layer is multiplied by its call sites, so it is worth finding even when
+  you arrived by accident.** This one was taxing every logged string in the tree, not just the sites
+  under discussion — fixing it was a bigger win than the pass that uncovered it ([[L25]]: a defect found
+  incidentally is a near-miss; ask what it costs where nobody is looking).
+- Corollary: **when a conversion pass makes an existing call site look wrong, suspect the pass.** Mixed
+  `Label` / `AbsPath.CStr()` arguments on one line was the tell that I had a rule covering one type and
+  not the other, and the reason was that neither should have needed the accessor.

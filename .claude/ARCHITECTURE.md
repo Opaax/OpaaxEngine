@@ -62,6 +62,31 @@ Two proven ways to get that — the deciding factor is **whether the tag is dll-
   even see its layout. Pool-free members (comparison, `GetId`, `IsValid`) stay inline. Had this drifted, the
   *same string* would intern to different `Uint32`s across the DLL line — and since every `OpaaxStringID`
   compare is an integer compare, it would have failed **silently**. Guarded by `Core/StringIDTests.cpp`.
+- **Owning the pool was only half of it — what the pool DOES was never audited until 2026-08-12.**
+  Three defects lived inside the correctly-placed table, and the DLL-safety argument above says nothing
+  about any of them. **(a)** `Get` returned a `const OpaaxString&` into a `std::vector` and released its
+  `shared_lock` *on return*, before the caller copied — so a concurrent `GetOrAdd` reallocation left the
+  reference naming freed memory. Live, not theoretical: the resource loader interns paths on a worker
+  (`ResourceManager.h`, *"may run on a worker"*) while the main thread logs the same names. **(b)** The
+  pool ctor read `OpaaxGlobal::String_None`, then a *dynamically* initialised global — and the pool is
+  built lazily on the first `OPAAX_ID(...)`, which `Renderer/RenderLayer.h`'s `g_RenderLayerIDs` already
+  reaches during static init, inside the same DLL, where TU order is unspecified. **(c)** The pool was a
+  function-local *object*, destroyed at exit, so any `ToString()` ordered after that read a dead table.
+- **The fix is a STORAGE property, and it is what now licenses handing raw text across the DLL line.**
+  The lookup map owns every string and the id→text array holds only pointers into it: `unordered_map`
+  keeps element addresses across rehash, nothing is ever erased, and the pool itself is deliberately
+  leaked, so **an entry's address is valid for the life of the process**. That is what makes
+  `OpaaxStringID::CStr()` (a `const char*` into the pool) legal at all, and it also halves the table —
+  the old shape stored every string twice, once as a vector element and once as a map key.
+  `String_None` became `inline constexpr const char*` (see **I9**), which removes (b) outright.
+- **The guard for this is `StringIDTests.cpp`'s ADDRESS-stability case, deliberately single-threaded.**
+  A threaded test is the wrong instrument here and was *tried first*: the window between dropping the
+  shared lock and copying is a few instructions, a vector reallocates only log2(n) times, and the
+  concurrent case **passed against the broken storage** on every run. The deterministic case — take a
+  `CStr()`, intern 4096 names, check the pointer still names the same text — fails it immediately. It
+  uses a **short** name on purpose: a long one survives even broken storage, because a moved
+  `OpaaxString` steals the heap pointer and `CStr()` keeps answering the same address by accident.
+  Same lesson as [[L21]] — an instrument must not share a failure mode with the thing it measures.
 - New cross-module identity must hash a compiler-stable per-type string (`__FUNCSIG__`), never a
   template-static counter.
 
@@ -188,8 +213,15 @@ wanted them in one file.
   out-of-line `static const` members, so `ID_None`'s *value* was invisible to consumers and
   `OpaaxStringID`'s default ctor could not be `constexpr` while its `operator==` was. `ID_None` is now
   `inline constexpr` (header-only, no export, no `.cpp`) and the ctors / `GetId` / `IsValid` are
-  `constexpr`. `String_None` stays out-of-line — an `OpaaxString` is not a constant expression, and it
-  is read only inside the DLL.
+  `constexpr`.
+- **`String_None` followed it on 2026-08-12, and the reason it had not is worth keeping.** This bullet
+  used to say it "stays out-of-line — an `OpaaxString` is not a constant expression". True of the
+  *OpaaxString*, and irrelevant: the constant is a **name**, and `inline constexpr const char*` states
+  it perfectly. The out-of-line form was not merely heavier, it was **unsafe** — a dynamically
+  initialised global read from the intern pool's constructor, which the tree already reaches during
+  static init (**I2**). `OpaaxGlobal.cpp` is deleted; the file existed only to hold that one line.
+  **The general shape: "X is not a constant expression" is a claim about the TYPE you reached for, not
+  about the constant.** Ask what the constant *is* before concluding it needs a `.cpp`.
 
 **I10 — An engine type keeps its `Opaax` prefix; do not alias it away** (settled 2026-08-05, deleting
 `Core/OpaaxForward.hpp`). Note which direction the aliases in `OpaaxTypes.h` run: `TDynArray`,
@@ -250,6 +282,35 @@ member `ToString()`** (settled 2026-08-06). The tree had three spellings for one
 - These flags gate **build composition only**. Behaviour that differs per *configuration* keys off
   `$<CONFIG>` (as `OPAAX_DEBUG` does) — never off `CMAKE_BUILD_TYPE`, which is meaningless under the
   multi-config VS generator.
+
+**I13 — Text has THREE forms and one currency: `OpaaxString` owns, `OpaaxStringView` borrows,
+`OpaaxStringID` identifies** (landed 2026-08-13). The view is a `{const char*, Uint32}` value —
+header-only and stateless, so **no `OPAAX_API`** (**I6**'s first bullet, the call `Opaax::Utf8` already
+makes). It speaks the engine's vocabulary (`Uint32` lengths, `Int32`/`-1` from `Find`, the same member
+names `OpaaxString` uses), which is the point: `std::string_view` survives only as a **boundary**
+conversion for the vendors that demand it (fmt, nlohmann, entt's `type_name`).
+- **It is not null-terminated, so it deliberately has no `CStr()`.** A view is usually a SLICE, so the
+  byte past its end belongs to somebody else — no member calls `strlen`/`strcmp`/`strstr`, and anything
+  needing a terminator goes through `ToString()`. This is the whole reason the type is hand-rolled
+  rather than aliased: `CStr()` on a view is the one mistake that would compile, and it cannot be made
+  here. `StringViewTests.cpp` pins it with a slice whose buffer continues (`"hello world"` cut to
+  `"hello"` must answer `Find("world") == -1`) and a `char[3]` with no terminator anywhere — a
+  `strstr`-based implementation passes the easy assertions and fails exactly those two ([[L21]]).
+- **The bridge is one implicit conversion, in one direction.** `OpaaxString::operator OpaaxStringView()`
+  is implicit, so a view-taking function accepts a string, a literal or a `const char*` with no
+  call-site noise; the reverse (`OpaaxString(OpaaxStringView)`) is **explicit**, for the reason the
+  `std::string_view` ctor beside it already gives. `OpaaxStringView::ToString()` is declared in the
+  view's header and *defined* in `OpaaxString.hpp` — it returns by value so it needs the complete type,
+  the same reason `std::hash<OpaaxString>` lives in `OpaaxHash.h`. `std::hash<OpaaxStringView>` joins it
+  there and agrees with the owning string's hash byte-for-byte, so a view can look up a string's key.
+- **`OpaaxStringID` interning still takes an `OpaaxString`** — a view ctor would have to be out-of-line
+  in the DLL (**I2**) and no caller needs one yet. One line when one appears.
+- **`PathString::Stem` (`Core/String/OpaaxPathString.h`) is now the ONE path-stem rule.** It had been
+  copied into `MapFile::StemId` and `LevelFile`'s `FileStem`, each first copying the path into a
+  `std::string` — while `MapFile.h`'s own doc claimed `StemId` was public *"because a second copy of a
+  naming rule is how two of them drift."* That claim is true now. Byte-wise on `/`, `\` and `.` because
+  they are ASCII and an `fs::path` would decode them as ANSI (**I7**); it returns a view INTO its
+  argument and allocates nothing. Path *composition* stays `IPaths`' job — this header is text.
 
 ---
 

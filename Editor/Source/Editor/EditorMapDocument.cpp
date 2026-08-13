@@ -36,7 +36,7 @@ namespace Opaax::Editor
         m_MapId = DeriveMapId(m_AbsPath, lData);
 
         OPAAX_LOG(LogEditorMapDocument, Info, "Focused map '{}' (map id '{}')",
-                  m_AbsPath.CStr(), m_MapId.IsValid() ? m_MapId.ToString().CStr() : "(none)");
+                  m_AbsPath.CStr(), m_MapId.IsValid() ? m_MapId.CStr() : "(none)");
     }
 
     void EditorMapDocument::Clear()

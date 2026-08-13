@@ -20,7 +20,7 @@ namespace Opaax
         {
             OPAAX_LOG(LogComponentRegistry, Error,
                       "Register '{}' — registry is SEALED (a world already exists). Component types must be registered before the first CreateWorld.",
-                      InEntry->GetName().ToString().CStr());
+                      InEntry->GetName());
             return false;
         }
 
@@ -36,7 +36,7 @@ namespace Opaax
         if (FindByName(lName) != nullptr)
         {
             OPAAX_LOG(LogComponentRegistry, Error, "Register '{}' — that name is already taken.",
-                      lName.ToString().CStr());
+                      lName);
             return false;
         }
 
@@ -45,14 +45,14 @@ namespace Opaax
         if (FindByTypeId(InTypeId) != nullptr)
         {
             OPAAX_LOG(LogComponentRegistry, Error, "Register '{}' — that type is already registered.",
-                      lName.ToString().CStr());
+                      lName);
             return false;
         }
 
         m_Entries.push_back(Move(InEntry));
 
         OPAAX_LOG(LogComponentRegistry, Trace, "Registered component '{}' ({} total)",
-                  lName.ToString().CStr(), static_cast<Uint64>(m_Entries.size()));
+                  lName, static_cast<Uint64>(m_Entries.size()));
 
         return true;
     }

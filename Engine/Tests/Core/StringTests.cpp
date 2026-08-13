@@ -4,9 +4,11 @@
 #include <doctest.h>
 
 #include "Core/String/OpaaxString.hpp"
+#include "Core/Hash/OpaaxHash.h"   // std::hash<OpaaxString> lives here — see the note in that header
 
 #include <cstdint>
 #include <cstring>
+#include <string_view>
 #include <utility>
 
 using namespace Opaax;
@@ -124,6 +126,110 @@ TEST_CASE("OpaaxString: Append(nullptr) and zero-count are no-ops")
     lStr.Append("ignored", 0);
     lStr.Append(nullptr);
     CHECK(lStr == "keep");
+}
+
+TEST_CASE("OpaaxString: appending a string TO ITSELF does not read freed memory")
+{
+    // GrowHeap deletes the buffer the source pointer names, so the old code memcpy'd from freed
+    // memory. Both boundary crossings matter: SSO -> heap frees nothing but MOVES the bytes, and
+    // heap -> heap frees the block outright.
+
+    SUBCASE("SSO source, growth into the heap")
+    {
+        OpaaxString lStr("0123456789");         // 10 -> SSO; 20 does not fit
+        REQUIRE_FALSE(lStr.IsUsingHeap());
+
+        lStr += lStr;
+
+        CHECK(lStr.IsUsingHeap());
+        CHECK(lStr == "01234567890123456789");
+        CHECK(lStr.GetLength() == 20u);
+    }
+
+    SUBCASE("heap source, reallocation frees the source block")
+    {
+        OpaaxString lStr("a heap string comfortably past the SSO boundary");
+        REQUIRE(lStr.IsUsingHeap());
+        const Uint32 lLen = lStr.GetLength();
+
+        lStr.Append(lStr);
+
+        CHECK(lStr.GetLength() == lLen * 2u);
+        CHECK(std::strlen(lStr.CStr()) == lLen * 2u);
+        CHECK(lStr.SubString(0, lLen) == lStr.SubString(lLen, lLen));
+    }
+
+    SUBCASE("a SLICE of our own buffer is just as aliased")
+    {
+        OpaaxString lStr("0123456789abcdef");   // 16 -> heap
+        REQUIRE(lStr.IsUsingHeap());
+
+        lStr.Append(lStr.CStr() + 4, 6);        // "456789", pointing into lStr
+
+        CHECK(lStr == "0123456789abcdef456789");
+    }
+}
+
+// =============================================================================
+// Find bounds
+// =============================================================================
+TEST_CASE("OpaaxString: Find past the end returns -1 instead of reading on")
+{
+    const OpaaxString lStr("hello");
+
+    CHECK(lStr.Find("llo")    == 2);
+    CHECK(lStr.Find("l", 3)   == 3);
+    CHECK(lStr.Find("", 5)    == 5);    // StartPos == Length is legal: the empty tail
+    CHECK(lStr.Find("x", 6)   == -1);   // past the terminator — strstr would have walked on
+    CHECK(lStr.Find("x", 999) == -1);
+    CHECK(lStr.Find(nullptr)  == -1);
+}
+
+// =============================================================================
+// Counted / view construction
+// =============================================================================
+TEST_CASE("OpaaxString: the counted ctor stops at Count and never needs a terminator")
+{
+    const char* lSource = "abcdefghij";
+
+    CHECK(OpaaxString(lSource, 3) == "abc");
+    CHECK(OpaaxString(lSource, 3).GetLength() == 3u);
+    CHECK(std::strlen(OpaaxString(lSource, 3).CStr()) == 3u);
+    CHECK(OpaaxString(lSource, 0).IsEmpty());
+    CHECK(OpaaxString(nullptr, 4).IsEmpty());
+
+    // Past SSO, so the heap path is covered too.
+    const OpaaxString lLong("0123456789abcdefghijklmnop", 26);
+    CHECK(lLong.IsUsingHeap());
+    CHECK(lLong.GetLength() == 26u);
+}
+
+TEST_CASE("OpaaxString: the string_view ctor copies exactly the view")
+{
+    const std::string_view lView("hello brave new world");
+
+    CHECK(OpaaxString(lView) == "hello brave new world");
+    CHECK(OpaaxString(lView.substr(6, 5)) == "brave");   // substr view is NOT null-terminated
+    CHECK(OpaaxString(std::string_view{}).IsEmpty());
+}
+
+// =============================================================================
+// Hashing — TUnorderedMap<OpaaxString, T> with the DEFAULT hasher
+// =============================================================================
+TEST_CASE("OpaaxString: std::hash makes it a key without naming OpaaxHash at the call site")
+{
+    TUnorderedMap<OpaaxString, int> lMap;
+    lMap[OpaaxString("alpha")] = 1;
+    lMap[OpaaxString("a key long enough to live on the heap")] = 2;
+
+    CHECK(lMap.at(OpaaxString("alpha")) == 1);
+    CHECK(lMap.at(OpaaxString("a key long enough to live on the heap")) == 2);
+    CHECK(lMap.size() == 2u);
+
+    // Equal values hash equally whichever storage they use — the map would lose entries otherwise.
+    lMap[OpaaxString("alpha")] = 3;
+    CHECK(lMap.size() == 2u);
+    CHECK(std::hash<OpaaxString>{}(OpaaxString("alpha")) == std::hash<OpaaxString>{}(OpaaxString("alpha")));
 }
 
 // =============================================================================

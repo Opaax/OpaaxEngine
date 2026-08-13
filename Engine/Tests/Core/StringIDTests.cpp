@@ -17,6 +17,8 @@
 #include "Core/String/OpaaxStringID.hpp"
 #include "Renderer/RenderLayer.h"
 
+#include <cstring>
+
 using namespace Opaax;
 
 TEST_CASE("OpaaxStringID: default-constructed is the invalid 'None' id")
@@ -82,6 +84,188 @@ TEST_CASE("OpaaxStringID: one pool across the DLL boundary — a REPEAT does not
 
     CHECK(lAgain == lFirst);
     CHECK(lAfter == lBefore);
+}
+
+// =============================================================================
+// CStr — the zero-copy text
+// =============================================================================
+TEST_CASE("OpaaxStringID: CStr answers the same bytes as ToString, without the copy")
+{
+    const OpaaxStringID lId = OPAAX_ID("OpaaxStringIDTests_CStr");
+
+    CHECK(std::strcmp(lId.CStr(), "OpaaxStringIDTests_CStr") == 0);
+    CHECK(std::strcmp(lId.CStr(), lId.ToString().CStr()) == 0);
+    CHECK(std::strcmp(OpaaxStringID().CStr(), "None") == 0);
+
+    // The pointer is INTO the pool, so it stays valid — and stays the same — across calls.
+    CHECK(lId.CStr() == lId.CStr());
+    CHECK(lId.CStr() == OPAAX_ID("OpaaxStringIDTests_CStr").CStr());
+}
+
+// =============================================================================
+// Find — lookup that must not intern
+// =============================================================================
+TEST_CASE("OpaaxStringID: Find resolves an existing name and does NOT add a missing one")
+{
+    const OpaaxStringID lInterned = OPAAX_ID("OpaaxStringIDTests_FindHit");
+
+    CHECK(OpaaxStringID::Find(OpaaxString("OpaaxStringIDTests_FindHit")) == lInterned);
+
+    // The whole point: a miss costs nothing permanent. The table is never reclaimed, so a Find that
+    // quietly interned would let untrusted text (an editor field, a file scan) grow it without bound.
+    const Uint32 lBefore = OpaaxStringID::PoolSize();
+    const OpaaxStringID lMiss = OpaaxStringID::Find(OpaaxString("OpaaxStringIDTests_FindMiss_NeverInterned"));
+
+    CHECK_FALSE(lMiss.IsValid());
+    CHECK(lMiss.GetId() == 0u);
+    CHECK(OpaaxStringID::PoolSize() == lBefore);
+
+    CHECK_FALSE(OpaaxStringID::Find(OpaaxString("")).IsValid());
+}
+
+// =============================================================================
+// Hashing
+// =============================================================================
+TEST_CASE("OpaaxStringID: std::hash makes the handle itself a map key")
+{
+    TUnorderedMap<OpaaxStringID, int> lMap;
+    lMap[OPAAX_ID("OpaaxStringIDTests_Key_A")] = 1;
+    lMap[OPAAX_ID("OpaaxStringIDTests_Key_B")] = 2;
+
+    CHECK(lMap.at(OPAAX_ID("OpaaxStringIDTests_Key_A")) == 1);
+    CHECK(lMap.at(OPAAX_ID("OpaaxStringIDTests_Key_B")) == 2);
+    CHECK(lMap.size() == 2u);
+}
+
+// =============================================================================
+// Storage stability — the guard for the pool's dangling-reference bug
+// =============================================================================
+TEST_CASE("OpaaxStringID: interned text keeps its ADDRESS while the pool grows")
+{
+    // THE property, pinned deterministically. The pool hands a reader a pointer into an entry and
+    // then drops its lock, so an entry must never move. The old storage kept the strings BY VALUE in
+    // a vector: growth relocated every one of them, and a pointer already handed out — or a reference
+    // a reader was about to copy from — named freed memory. They now live in the lookup map, whose
+    // elements keep their addresses across rehash, with the id->text array holding only pointers.
+    //
+    // Deterministic on purpose. The threaded case below cannot serve as this guard: the window
+    // between dropping the shared lock and copying is a few instructions wide and a vector reallocates
+    // only log2(n) times, so it samples that window by luck and passed against the broken code.
+    const OpaaxStringID lShort = OPAAX_ID("zAddr");
+    const OpaaxStringID lLong  = OPAAX_ID("zAddr_well_past_the_sso_boundary");
+
+    const char* lShortText = lShort.CStr();
+    const char* lLongText  = lLong.CStr();
+
+    // Enough fresh names to drive the id->text array through several reallocations.
+    for (int i = 0; i < 4096; ++i)
+    {
+        const OpaaxStringID lGrow(OpaaxString("zAddr_Growth_") + OpaaxString::FromInt(i));
+        REQUIRE(lGrow.IsValid());
+    }
+
+    // The SHORT name is the discriminating one: its bytes live inside the entry, so moving the entry
+    // moves them. A long name would survive even broken storage — a moved OpaaxString steals the heap
+    // pointer, so CStr() keeps answering the same address by accident.
+    CHECK(lShort.CStr() == lShortText);
+    CHECK(lLong.CStr()  == lLongText);
+    CHECK(std::strcmp(lShortText, "zAddr") == 0);
+    CHECK(std::strcmp(lLongText,  "zAddr_well_past_the_sso_boundary") == 0);
+}
+
+// =============================================================================
+// Thread safety
+// =============================================================================
+TEST_CASE("OpaaxStringID: concurrent interning and reading stay consistent")
+{
+    // What this pins is the INTERNING CONTRACT under contention — the same text raced from two
+    // threads yields one id, and readers resolving names while the table grows never see the wrong
+    // text. The address-stability case above is what guards the storage itself.
+    constexpr int lWriterCount = 4;
+    constexpr int lReaderCount = 4;
+    constexpr int lPerWriter   = 250;
+
+    const auto lMakeText = [](int InBucket, int InIndex)
+    {
+        return OpaaxString("OpaaxStringIDTests_MT_") + OpaaxString::FromInt(InBucket)
+             + OpaaxString("_") + OpaaxString::FromInt(InIndex);
+    };
+
+    // Seeded up front so the readers have something to resolve while the table grows underneath them.
+    // BOTH storage kinds, deliberately: a long name keeps its bytes on the heap (a move would carry
+    // the pointer along and hide the defect), a short one keeps them INSIDE the entry, where a move
+    // is exactly what invalidates them.
+    TDynArray<OpaaxString>   lSeedText;
+    TDynArray<OpaaxStringID> lSeedIds;
+    for (int i = 0; i < 64; ++i)
+    {
+        lSeedText.push_back(lMakeText(-1, i));                                    // heap
+        lSeedText.push_back(OpaaxString("zMT_") + OpaaxString::FromInt(i));       // SSO
+    }
+    for (const OpaaxString& lText : lSeedText)
+    {
+        lSeedIds.emplace_back(lText);
+    }
+
+    TAtomic<bool> lStop{false};
+    TAtomic<int>  lMismatches{0};
+
+    TDynArray<Thread> lThreads;
+    lThreads.reserve(lWriterCount + lReaderCount);
+
+    for (int lW = 0; lW < lWriterCount; ++lW)
+    {
+        lThreads.emplace_back([&, lW]
+        {
+            // Writers 0 and 1 share a bucket ON PURPOSE: the same text raced from two threads must
+            // still come back as ONE id, which is what the exclusive lock around insertion buys.
+            const int lBucket = (lW < 2) ? 0 : lW;
+
+            for (int i = 0; i < lPerWriter; ++i)
+            {
+                const OpaaxString   lText = lMakeText(lBucket, i);
+                const OpaaxStringID lId(lText);
+
+                if (lId.ToString() != lText) { ++lMismatches; }
+            }
+        });
+    }
+
+    for (int lR = 0; lR < lReaderCount; ++lR)
+    {
+        lThreads.emplace_back([&]
+        {
+            while (!lStop.load(std::memory_order_relaxed))
+            {
+                for (size_t i = 0; i < lSeedIds.size(); ++i)
+                {
+                    // Both read paths, because they fail differently. CStr hands back a pointer INTO
+                    // the entry; ToString COPY-CONSTRUCTS from it after the shared lock has dropped,
+                    // which is where the old vector-of-values storage read a moved-from entry.
+                    if (std::strcmp(lSeedIds[i].CStr(), lSeedText[i].CStr()) != 0) { ++lMismatches; }
+                    if (lSeedIds[i].ToString() != lSeedText[i])                    { ++lMismatches; }
+                }
+            }
+        });
+    }
+
+    for (int i = 0; i < lWriterCount; ++i) { lThreads[i].join(); }
+    lStop.store(true);
+    for (size_t i = lWriterCount; i < lThreads.size(); ++i) { lThreads[i].join(); }
+
+    CHECK(lMismatches.load() == 0);
+
+    // Two writers on bucket 0 must have produced ONE set of ids, not two — so re-interning every
+    // distinct text now adds nothing. A lost race would show up here as growth.
+    const Uint32 lBefore = OpaaxStringID::PoolSize();
+    for (const int lBucket : {0, 2, 3})
+    {
+        for (int i = 0; i < lPerWriter; ++i)
+        {
+            CHECK(OpaaxStringID(lMakeText(lBucket, i)) == OpaaxStringID::Find(lMakeText(lBucket, i)));
+        }
+    }
+    CHECK(OpaaxStringID::PoolSize() == lBefore);
 }
 
 TEST_CASE("OpaaxStringID: ids interned by engine headers agree with ids interned here")

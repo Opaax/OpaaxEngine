@@ -28,6 +28,18 @@ namespace Opaax
         {
             return Hash(String.CStr());
         }
+
+        // Counted, so it works on the non-terminated bytes a view usually holds. Same bytes give the
+        // same answer as the const char* form — that is what makes the two hashes interchangeable.
+        static constexpr Uint32 Hash(OpaaxStringView View, Uint32 HashValue = FNV1a_OffsetBasis) noexcept
+        {
+            for (const char lChar : View)
+            {
+                HashValue ^= static_cast<Uint32>(static_cast<unsigned char>(lChar));
+                HashValue *= FNV1a_Prime;
+            }
+            return HashValue;
+        }
  
         // FNV-1a 64-bit constants
         static constexpr Uint64 FNV1a_Prime64       = 1099511628211ull;
@@ -50,5 +62,28 @@ namespace Opaax
         Uint32 operator()(const OpaaxString& String) const noexcept { return Hash(String.CStr()); }
         Uint32 operator()(const char*        Str)    const noexcept { return Hash(Str); }
     };
- 
+
 } // namespace Opaax
+
+// std::hash<OpaaxString> — so TUnorderedMap<OpaaxString, T> works with the DEFAULT hasher instead of
+// every call site naming OpaaxHash by hand. It lives here rather than in OpaaxString.hpp because that
+// header cannot include this one: OpaaxHash needs the full OpaaxString definition, so the include runs
+// one way only. Include Core/Hash/OpaaxHash.h to hash a string.
+template<>
+struct std::hash<Opaax::OpaaxString>
+{
+    size_t operator()(const Opaax::OpaaxString& String) const noexcept
+    {
+        return static_cast<size_t>(Opaax::OpaaxHash::Hash(String.CStr()));
+    }
+};
+
+// Same bytes, same hash as the OpaaxString above — so a view can look up a key an owning string stored.
+template<>
+struct std::hash<Opaax::OpaaxStringView>
+{
+    size_t operator()(Opaax::OpaaxStringView View) const noexcept
+    {
+        return static_cast<size_t>(Opaax::OpaaxHash::Hash(View));
+    }
+};

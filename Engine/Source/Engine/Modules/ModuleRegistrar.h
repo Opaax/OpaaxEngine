@@ -29,24 +29,23 @@ namespace Opaax
     template<typename T>
     OpaaxStringID DeriveTypeLeafName()
     {
-        constexpr std::string_view lFullName = entt::type_name<T>::value();
+        OpaaxStringView lName = entt::type_name<T>::value();
 
-        std::string_view lName = lFullName;
-        for (const std::string_view lKeyword : {"class ", "struct ", "enum ", "union "})
+        for (const OpaaxStringView lKeyword : {"class ", "struct ", "enum ", "union "})
         {
-            if (lName.starts_with(lKeyword))
+            if (lName.StartsWith(lKeyword))
             {
-                lName.remove_prefix(lKeyword.size());
+                lName.RemovePrefix(lKeyword.GetLength());
                 break;
             }
         }
 
-        const std::size_t      lSeparator = lName.rfind("::");
-        const std::string_view lLeaf      = (lSeparator == std::string_view::npos)
-                                                ? lName
-                                                : lName.substr(lSeparator + 2);
+        const Int32 lSeparator = lName.FindLast("::");
+        const OpaaxStringView lLeaf = (lSeparator < 0)
+                                          ? lName
+                                          : lName.SubString(static_cast<Uint32>(lSeparator) + 2);
 
-        return OpaaxStringID(OpaaxString(std::string(lLeaf).c_str()));
+        return OpaaxStringID(lLeaf.ToString());
     }
 
     // =============================================================================

@@ -136,7 +136,7 @@ namespace Opaax::Editor
         if (lRecord == nullptr)
         {
             OPAAX_LOG(LogEditorLevelDocument, Warn, "Save: '{}' is not a tracked map",
-                      InMapId.IsValid() ? InMapId.ToString().CStr() : "(none)");
+                      InMapId.IsValid() ? InMapId.CStr() : "(none)");
             return false;
         }
 
@@ -300,7 +300,7 @@ namespace Opaax::Editor
             // register?" deserves an answer that survives into the log ([[L12]]).
             if (lDirty != lRecord.bDirty)
             {
-                OPAAX_LOG(LogEditorLevelDocument, Info, "Map '{}' {}", lRecord.Id.ToString().CStr(),
+                OPAAX_LOG(LogEditorLevelDocument, Info, "Map '{}' {}", lRecord.Id,
                           lDirty ? "has unsaved changes" : "matches its file again");
             }
 

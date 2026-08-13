@@ -27,7 +27,7 @@ namespace Opaax::Editor
     struct ResourceTypeDesc
     {
         OpaaxStringID     Extension;    // ".wave" — normalized by Register, so registrants can be sloppy
-        OpaaxStringID     Label;        // "Wave Definition" — shown via ToString()
+        OpaaxStringID     Label;        // "Wave Definition" — shown via CStr()
         OpaaxString       Icon;         // short text glyph, "[W]" — presentation only, never compared
         FResourceActivate OnActivate;
     };

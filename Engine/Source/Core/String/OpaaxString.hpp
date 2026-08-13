@@ -1,10 +1,13 @@
 ﻿#pragma once
 
-#include <json.hpp>
-#include <string_view>
 #include <cstdio>   // snprintf — FromInt / FromUInt
+#include <cstring>  // strlen / memcpy / strstr / strcmp
+#include <ostream>  // operator<<
+#include <string>   // ToStdString
+#include <string_view>
 #include "Core/OpaaxTypes.h"
 #include "Core/EngineAPI.h"
+#include "Core/String/OpaaxStringView.hpp"
 
 namespace Opaax
 {
@@ -24,6 +27,17 @@ namespace Opaax
      *  [3 bytes padding — unavoidable with bool, acceptable]
      *
      * NOTE: SSOCapacity is 15 to keep null terminator within the 16-byte SSO slot.
+     *
+     * THREAD SAFETY — thread-COMPATIBLE, which is the whole guarantee a value type should make.
+     * Every instance owns its buffer outright: no static state, no copy-on-write, no refcount, so
+     * distinct instances on distinct threads share nothing and need no synchronisation. One instance
+     * concurrently mutated is a race, exactly as with std::string; a per-string mutex would cost
+     * every call site to serialise something that is never actually shared. Code that DOES need one
+     * string visible to several threads holds it behind its own lock — see OpaaxStringID for the
+     * shared, interned case.
+     *
+     * @see OpaaxStringID for the interned O(1)-compare handle.
+     * @see Core/Hash/OpaaxHash.h for std::hash<OpaaxString> (it lives there to avoid an include cycle).
      */
     class OPAAX_API OpaaxString final
     {
@@ -37,6 +51,10 @@ namespace Opaax
         static constexpr Uint32 GROWTH_FACTOR = 2;
         static constexpr Uint32 MIN_HEAP_CAPACITY = 32;
 
+        // One below UINT32_MAX so `Capacity + 1` (the terminator slot) can never wrap to 0 and hand
+        // back an undersized buffer for the memcpy that follows.
+        static constexpr Uint32 MAX_CAPACITY = UINT32_MAX - 1;
+
         // Static substring — allocates a new OpaaxString
         static OpaaxString SubString(const OpaaxString& InStr, Uint32 Start, Uint32 InLength = UINT32_MAX)
         {
@@ -47,11 +65,7 @@ namespace Opaax
             const Uint32 lRemaining = InStr.Length - Start;
             const Uint32 lActual    = (InLength > lRemaining) ? lRemaining : InLength;
 
-            // PERF: Avoid double alloc — construct directly from pointer range.
-            OpaaxString lResult;
-            lResult.Reserve(lActual);
-            lResult.Append(InStr.CStr() + Start, lActual);
-            return lResult;
+            return OpaaxString(InStr.CStr() + Start, lActual);
         }
 
     public:
@@ -98,6 +112,16 @@ namespace Opaax
                 AllocateAndCopyHeap(Str, lLength, lLength);
             }
         }
+
+        /** Counted — Str need not be null-terminated, and nothing past Count is read. */
+        OpaaxString(const char* Str, Uint32 Count) { Append(Str, Count); }
+
+        /** Explicit so a view never silently wins an overload the const char* form should take. */
+        explicit OpaaxString(std::string_view InView)
+            : OpaaxString(InView.data(), static_cast<Uint32>(InView.size())) {}
+
+        explicit OpaaxString(OpaaxStringView InView)
+            : OpaaxString(InView.Data(), InView.GetLength()) {}
 
         OpaaxString(const OpaaxString& Other)
             : Length(Other.Length), Capacity(0), bUsingHeap(false)
@@ -200,14 +224,21 @@ namespace Opaax
         }
 
         /**
-         *growth strategy: new capacity = max(current*2, needed, MIN_HEAP_CAPACITY).
+         *growth strategy: new capacity = max(current*2, needed, MIN_HEAP_CAPACITY), clamped.
          */
         void GrowHeap(Uint32 NewLength)
         {
+            OPAAX_ASSERT(NewLength <= MAX_CAPACITY);
+
             const Uint32 lNewCapacity = [&]() -> Uint32
             {
-                Uint32 lCap = bUsingHeap ? Capacity * GROWTH_FACTOR : MIN_HEAP_CAPACITY;
+                // Double only while doubling still fits — `Capacity * 2` wraps past MAX_CAPACITY/2 and
+                // the old code then allocated a buffer SMALLER than the memcpy below writes.
+                Uint32 lCap = bUsingHeap
+                                  ? ((Capacity <= MAX_CAPACITY / GROWTH_FACTOR) ? Capacity * GROWTH_FACTOR : MAX_CAPACITY)
+                                  : MIN_HEAP_CAPACITY;
                 if (lCap < NewLength) { lCap = NewLength; }
+                if (lCap > MAX_CAPACITY) { lCap = MAX_CAPACITY; }
                 return lCap;
             }();
 
@@ -253,6 +284,13 @@ namespace Opaax
         {
             if (!Str || Count == 0) { return; }
 
+            // Refusing an impossible append beats wrapping into a short buffer and overrunning it.
+            if (Count > MAX_CAPACITY - Length)
+            {
+                OPAAX_ASSERT(false);
+                return;
+            }
+
             const Uint32 lNewLength = Length + Count;
 
             if (!bUsingHeap && lNewLength <= SSOCapacity)
@@ -267,7 +305,16 @@ namespace Opaax
             // Heap path: grow only if needed
             if (!bUsingHeap || lNewLength > Capacity)
             {
+                // Self-append (`Str += Str`, or any slice of our own buffer): GrowHeap frees the very
+                // buffer Str points into, so the memcpy below would read freed memory. The offset
+                // survives the move; the pointer does not.
+                const char*  lSelf    = CStr();
+                const bool   lAliases = (Str >= lSelf) && (Str <= lSelf + Length);
+                const Uint32 lOffset  = lAliases ? static_cast<Uint32>(Str - lSelf) : 0;
+
                 GrowHeap(lNewLength);
+
+                if (lAliases) { Str = HeapData + lOffset; }
             }
 
             std::memcpy(HeapData + Length, Str, Count);
@@ -296,7 +343,11 @@ namespace Opaax
                 return;
             }
 
-            GrowHeap(InCapacity);
+            OPAAX_ASSERT(InCapacity <= MAX_CAPACITY);
+
+            // Clamp rather than wrap. The allocation then fails loudly with bad_alloc instead of
+            // quietly handing back a zero-sized buffer.
+            GrowHeap(InCapacity > MAX_CAPACITY ? MAX_CAPACITY : InCapacity);
         }
 
         std::string ToStdString() const                                         { return std::string(CStr()); }
@@ -304,16 +355,20 @@ namespace Opaax
 
         Int32 Find(const char* Str, Uint32 StartPos = 0) const
         {
+            // StartPos == Length is legal (searches the empty tail); past it, `CStr() + StartPos`
+            // would hand strstr a pointer beyond the terminator and it would read on.
+            if (!Str || StartPos > Length) { return -1; }
+
             const char* lResult = std::strstr(CStr() + StartPos, Str);
             return lResult ? static_cast<Int32>(lResult - CStr()) : -1;
         }
 
-        char ToUpperChar(char Char) const noexcept
+        static constexpr char ToUpperChar(char Char) noexcept
         {
             return (Char >= 'a' && Char <= 'z') ? static_cast<char>(Char - 'a' + 'A') : Char;
         }
 
-        char ToLowerChar(char Char) const noexcept
+        static constexpr char ToLowerChar(char Char) noexcept
         {
             return (Char >= 'A' && Char <= 'Z') ? static_cast<char>(Char - 'A' + 'a') : Char;
         }
@@ -369,6 +424,10 @@ namespace Opaax
         // Operators
         // =============================================================================
     public:
+        // Implicit: this is what lets a function take an OpaaxStringView and still be called with a
+        // string, a literal or a const char*. The view borrows OUR bytes and dies with them.
+        operator OpaaxStringView() const noexcept { return OpaaxStringView(CStr(), Length); }
+
         char operator[](Uint32 Index) const
         {
             return IsValidIndex(Index) ? CStr()[Index] : OpaaxString_InvalidCharacter;
@@ -428,17 +487,27 @@ namespace Opaax
         Uint32 Capacity = 0; // 0 when using SSO; heap allocated capacity when on heap
         bool bUsingHeap = false;
     };
+
+    // Declared in OpaaxStringView.hpp, defined here: it returns an OpaaxString BY VALUE, so it needs
+    // the complete type. Same reason std::hash<OpaaxString> lives in OpaaxHash.h.
+    inline OpaaxString OpaaxStringView::ToString() const { return OpaaxString(m_Data, m_Length); }
 } // namespace Opaax
 
-// Formatter for spdlog / fmtlib
+// Formatter for spdlog / fmtlib.
+//
+// Formats a VIEW over the bytes we already hold — it must not build a std::string. Inheriting
+// fmt::formatter<std::string> and copying into one, which this did, put a heap allocation on every
+// logged string past SSO, and made `"{}", Str` quietly more expensive than `"{}", Str.CStr()`. A
+// string_view costs nothing and keeps the same format spec ({:>10} and friends) via the base parse().
+// Length is passed explicitly, so there is no strlen either.
 #include <spdlog/fmt/fmt.h>
 
 template <typename T>
 struct fmt::formatter<T, std::enable_if_t<std::is_base_of<Opaax::OpaaxString, T>::value, char>>
-    : fmt::formatter<std::string>
+    : fmt::formatter<fmt::string_view>
 {
     auto format(const T& String, format_context& CTX) const
     {
-        return fmt::formatter<std::string>::format(std::string(String.CStr()), CTX);
+        return fmt::formatter<fmt::string_view>::format(fmt::string_view(String.CStr(), String.GetLength()), CTX);
     }
 };

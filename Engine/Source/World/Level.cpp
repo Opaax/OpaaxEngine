@@ -97,7 +97,7 @@ namespace Opaax
         if (IsMounted(lMapId))
         {
             OPAAX_LOG(LogLevel, Warn, "Map '{}' claims map id '{}', which is already mounted — skipped",
-                      InAssetRelPath.CStr(), lMapId.ToString().CStr());
+                      InAssetRelPath.CStr(), lMapId);
             ++OutResult.MapsFailed;
             return false;
         }
@@ -148,7 +148,7 @@ namespace Opaax
         const MapId lMapId = m_Mounted.back().Id;
 
         OPAAX_LOG(LogLevel, Info, "Mounted '{}' (map id '{}') into world '{}' — {} entity(ies)",
-                  InAssetRelPath.CStr(), lMapId.IsValid() ? lMapId.ToString().CStr() : "(none)",
+                  InAssetRelPath.CStr(), lMapId.IsValid() ? lMapId.CStr() : "(none)",
                   m_World.GetName().CStr(), lResult.EntitiesCreated);
 
         return true;
@@ -165,7 +165,7 @@ namespace Opaax
         if (lFound == m_Mounted.size())
         {
             OPAAX_LOG(LogLevel, Warn, "Unmount '{}' ignored — that map is not mounted",
-                      InMapId.IsValid() ? InMapId.ToString().CStr() : "(none)");
+                      InMapId.IsValid() ? InMapId.CStr() : "(none)");
             return false;
         }
 
@@ -220,7 +220,7 @@ namespace Opaax
         {
             OPAAX_LOG(LogLevel, Warn,
                       "'{}' is level '{}'s persistent map — set another one persistent before removing it",
-                      InMapId.ToString().CStr(), m_Data.Name.CStr());
+                      InMapId, m_Data.Name.CStr());
             return false;
         }
 
@@ -273,7 +273,7 @@ namespace Opaax
         }
 
         OPAAX_LOG(LogLevel, Warn, "SetPersistentMap '{}' ignored — that map is not mounted",
-                  InMapId.IsValid() ? InMapId.ToString().CStr() : "(none)");
+                  InMapId.IsValid() ? InMapId.CStr() : "(none)");
         return false;
     }
 

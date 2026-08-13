@@ -34,7 +34,7 @@ namespace Opaax
                     // IS data loss on the next save — but do not fail the load.
                     OPAAX_LOG(LogMapFactory, Warn,
                               "Unknown component '{}' on entity '{}' — skipped (not registered in this build).",
-                              lComponent.TypeName.ToString().CStr(), lEntityData.Name.CStr());
+                              lComponent.TypeName, lEntityData.Name.CStr());
                     continue;
                 }
 

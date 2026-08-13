@@ -18,7 +18,7 @@ namespace Opaax
         {
             OPAAX_LOG(LogWorldSubsystemRegistry, Error,
                       "Register '{}' — registry is SEALED (a world already exists). World subsystem types must be registered before the first CreateWorld.",
-                      InName.ToString().CStr());
+                      InName);
             return false;
         }
 
@@ -36,14 +36,14 @@ namespace Opaax
         if (FindByName(InName) != nullptr)
         {
             OPAAX_LOG(LogWorldSubsystemRegistry, Error, "Register '{}' — that name is already taken.",
-                      InName.ToString().CStr());
+                      InName);
             return false;
         }
 
         m_Entries.push_back(Move(InEntry));
 
         OPAAX_LOG(LogWorldSubsystemRegistry, Trace, "Registered world subsystem '{}' ({} total)",
-                  InName.ToString().CStr(), static_cast<Uint64>(m_Entries.size()));
+                  InName, static_cast<Uint64>(m_Entries.size()));
 
         return true;
     }

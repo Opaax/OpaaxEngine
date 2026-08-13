@@ -1,6 +1,9 @@
 ﻿#pragma once
 
 #include "Application/OpaaxApplication.h"
+#include "Application/Services/ILogger.h"
+
+OPAAX_LOG_CATEGORY(SandBox);
 
 class SandboxApp : public Opaax::OpaaxApplication
 {

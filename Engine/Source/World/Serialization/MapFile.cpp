@@ -1,8 +1,7 @@
 #include "World/Serialization/MapFile.h"
 
-#include <string>
-
 #include "Core/IO/FileIO.h"
+#include "Core/String/OpaaxPathString.h"
 #include "World/Serialization/MapJson.h"
 
 namespace Opaax
@@ -10,14 +9,9 @@ namespace Opaax
     // The only layer that can answer this — MapJson has the text, MapFile has the path.
     MapId MapFile::StemId(const OpaaxString& InAbsPath)
     {
-        const std::string lPath  = std::string(InAbsPath.CStr());
-        const size_t      lSlash = lPath.find_last_of("/\\");
-        const size_t      lStart = (lSlash == std::string::npos) ? 0 : lSlash + 1;
-        const size_t      lDot   = lPath.find_last_of('.');
-        const size_t      lEnd   = (lDot == std::string::npos || lDot < lStart) ? lPath.size() : lDot;
-        const std::string lStem  = lPath.substr(lStart, lEnd - lStart);
+        const OpaaxStringView lStem = PathString::Stem(InAbsPath);
 
-        return lStem.empty() ? MapId() : MapId(lStem);
+        return lStem.IsEmpty() ? MapId() : MapId(lStem.ToString());
     }
 
     bool MapFile::Save(const OpaaxString& InAbsPath, const MapData& InData)
@@ -68,7 +62,7 @@ namespace Opaax
 
         OPAAX_LOG(LogMapFile, Info, "Loaded {} entity(ies) from '{}' (map '{}')",
                   OutData.EntityCount(), InAbsPath.CStr(),
-                  OutData.Id.IsValid() ? OutData.Id.ToString().CStr() : "(none)");
+                  OutData.Id.IsValid() ? OutData.Id.CStr() : "(none)");
         return true;
     }
 }
