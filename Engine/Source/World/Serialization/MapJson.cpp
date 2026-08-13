@@ -1,6 +1,7 @@
 #include "World/Serialization/MapJson.h"
 
 #include <algorithm>
+#include <type_traits>
 
 namespace Opaax
 {
@@ -14,9 +15,13 @@ namespace Opaax
         // invalid id right back. What it would NOT survive is a human reading it: an entity no
         // map authored would claim to belong to a map called "None", and "" is simply the
         // truthful encoding of "runtime-spawned".
-        OpaaxString IdToText(OpaaxStringID InId)
+        //
+        // CStr(), not ToString(): the pool's bytes outlive the call and every caller here hands
+        // them straight to json, so the OpaaxString this used to return was a heap round trip
+        // per id per entity for text nobody kept.
+        const char* IdToText(OpaaxStringID InId)
         {
-            return InId.IsValid() ? InId.ToString() : OpaaxString();
+            return InId.IsValid() ? InId.CStr() : "";
         }
 
         // Empty text means INVALID, which for a MapId means runtime-spawned (WM2) — the exact
@@ -35,52 +40,91 @@ namespace Opaax
             const auto lIt = InJson.find(InKey);
             return (lIt != InJson.end() && lIt->is_string()) ? lIt->get<std::string>() : std::string();
         }
+
+        // ToJson's body, shared by the copying and the CONSUMING entry points.
+        //
+        // TData is a forwarding reference: an lvalue MapData deduces MapData&, a temporary deduces
+        // MapData. Only the second may move, and moving is the point — a component payload is a
+        // whole json tree, and every caller on the hot paths hands over a capture it then drops.
+        //
+        // OBJECTS ARE BUILT BY SUBSCRIPT, not by initializer list. `json{ {k,v}, ... }` cannot know
+        // it is an object until the list is complete, so it first builds a json ARRAY of two-element
+        // json ARRAYS and then rebuilds that as an object — roughly three times the cost of the
+        // assignments below, for identical bytes. The keys still land sorted: json's object_t is a
+        // std::map, so insertion order is not what the file records.
+        template<typename TData>
+        nlohmann::json BuildJson(TData&& InData)
+        {
+            constexpr bool k_Consume = !std::is_lvalue_reference_v<TData>;
+            using TEntity = std::conditional_t<k_Consume, EntityData, const EntityData>;
+
+            // Sorted by Guid — see the header for why this is load-bearing rather than tidy.
+            // Sorting a COPY of the pointers leaves the entity ORDER in InData untouched: a
+            // serializer that reordered its input would be a surprise to the next caller.
+            TDynArray<TEntity*> lOrdered;
+            lOrdered.reserve(InData.Entities.size());
+            for (TEntity& lEntity : InData.Entities)
+            {
+                lOrdered.push_back(&lEntity);
+            }
+
+            std::sort(lOrdered.begin(), lOrdered.end(),
+                [](const EntityData* InLeft, const EntityData* InRight)
+                {
+                    // High then Low — the same big-endian order Guid::ToString writes, so the file
+                    // reads as sorted by its own guid column.
+                    return InLeft->Id.High != InRight->Id.High
+                        ? InLeft->Id.High < InRight->Id.High
+                        : InLeft->Id.Low  < InRight->Id.Low;
+                });
+
+            nlohmann::json lEntities = nlohmann::json::array();
+            for (TEntity* lEntity : lOrdered)
+            {
+                nlohmann::json lComponents = nlohmann::json::object();
+                for (auto& lComponent : lEntity->Components)
+                {
+                    if constexpr (k_Consume)
+                    {
+                        lComponents[IdToText(lComponent.TypeName)] = Move(lComponent.Payload);
+                    }
+                    else
+                    {
+                        lComponents[IdToText(lComponent.TypeName)] = lComponent.Payload;
+                    }
+                }
+
+                nlohmann::json lEntityJson  = nlohmann::json::object();
+                lEntityJson[MapJson::KEY_GUID]       = lEntity->Id.ToString().CStr();
+                lEntityJson[MapJson::KEY_NAME]       = lEntity->Name.CStr();
+                lEntityJson[MapJson::KEY_OWNER_MAP]  = IdToText(lEntity->OwnerMap);
+                lEntityJson[MapJson::KEY_COMPONENTS] = Move(lComponents);
+
+                lEntities.push_back(Move(lEntityJson));
+            }
+
+            nlohmann::json lRoot = nlohmann::json::object();
+            lRoot[MapJson::KEY_VERSION]  = MapJson::MAP_FORMAT_VERSION;
+            lRoot[MapJson::KEY_MAP_ID]   = IdToText(InData.Id);
+            lRoot[MapJson::KEY_ENTITIES] = Move(lEntities);
+
+            return lRoot;
+        }
+
+        // dump() straight into an OpaaxString, with the LENGTH carried across. OpaaxString(const
+        // char*) would strlen a buffer whose size we are holding — half a megabyte of it for a
+        // 1k-entity map.
+        OpaaxString DumpToString(const nlohmann::json& InJson, int InIndent)
+        {
+            const std::string lText = InJson.dump(InIndent);
+
+            return OpaaxString(lText.c_str(), static_cast<Uint32>(lText.size()));
+        }
     }
 
     nlohmann::json MapJson::ToJson(const MapData& InData)
     {
-        // Sorted by Guid — see the header for why this is load-bearing rather than tidy. Sorting
-        // a COPY of the pointers leaves InData untouched: capture is read-only everywhere else,
-        // and a serializer that reorders its input would be a surprise to the next caller.
-        TDynArray<const EntityData*> lOrdered;
-        lOrdered.reserve(InData.Entities.size());
-        for (const EntityData& lEntity : InData.Entities)
-        {
-            lOrdered.push_back(&lEntity);
-        }
-
-        std::sort(lOrdered.begin(), lOrdered.end(),
-            [](const EntityData* InLeft, const EntityData* InRight)
-            {
-                // High then Low — the same big-endian order Guid::ToString writes, so the file
-                // reads as sorted by its own guid column.
-                return InLeft->Id.High != InRight->Id.High
-                    ? InLeft->Id.High < InRight->Id.High
-                    : InLeft->Id.Low  < InRight->Id.Low;
-            });
-
-        nlohmann::json lEntities = nlohmann::json::array();
-        for (const EntityData* lEntity : lOrdered)
-        {
-            nlohmann::json lComponents = nlohmann::json::object();
-            for (const ComponentData& lComponent : lEntity->Components)
-            {
-                lComponents[IdToText(lComponent.TypeName).CStr()] = lComponent.Payload;
-            }
-
-            lEntities.push_back(nlohmann::json{
-                { KEY_GUID,       lEntity->Id.ToString().CStr() },
-                { KEY_NAME,       lEntity->Name.CStr()          },
-                { KEY_OWNER_MAP,  IdToText(lEntity->OwnerMap).CStr() },
-                { KEY_COMPONENTS, Move(lComponents)             }
-            });
-        }
-
-        return nlohmann::json{
-            { KEY_VERSION,  MAP_FORMAT_VERSION      },
-            { KEY_MAP_ID,   IdToText(InData.Id).CStr() },
-            { KEY_ENTITIES, Move(lEntities)         }
-        };
+        return BuildJson(InData);
     }
 
     bool MapJson::FromJson(const nlohmann::json& InJson, MapData& OutData)
@@ -172,7 +216,22 @@ namespace Opaax
 
     OpaaxString MapJson::Serialize(const MapData& InData)
     {
-        return OpaaxString(ToJson(InData).dump(4).c_str());
+        return DumpToString(BuildJson(InData), k_FileIndent);
+    }
+
+    OpaaxString MapJson::Serialize(MapData&& InData)
+    {
+        return DumpToString(BuildJson(Move(InData)), k_FileIndent);
+    }
+
+    OpaaxString MapJson::SerializeCompact(const MapData& InData)
+    {
+        return DumpToString(BuildJson(InData), k_CompactIndent);
+    }
+
+    OpaaxString MapJson::SerializeCompact(MapData&& InData)
+    {
+        return DumpToString(BuildJson(Move(InData)), k_CompactIndent);
     }
 
     bool MapJson::Deserialize(const OpaaxString& InText, MapData& OutData)

@@ -58,6 +58,18 @@ namespace Opaax
         OPAAX_API bool Save(const OpaaxString& InAbsPath, const MapData& InData);
 
         /**
+         * Save ALREADY-SERIALIZED text — same file, same log, no second serialization.
+         *
+         * For the caller that needed the text anyway. The editor's Save is one: it holds the map's
+         * text to rebase its dirty baseline with, and calling Save(path, data) alongside that made
+         * every save build the whole file TWICE.
+         *
+         * @param InEntityCount Only for the log line — this layer cannot count entities in text.
+         */
+        OPAAX_API bool SaveText(const OpaaxString& InAbsPath, const OpaaxString& InText,
+                                Uint64 InEntityCount);
+
+        /**
          * Read InAbsPath into OutData.
          *
          * OutData IS LEFT UNTOUCHED ON FAILURE, all the way down — MapJson::FromJson holds the

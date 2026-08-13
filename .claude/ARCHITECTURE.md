@@ -1039,6 +1039,39 @@ after mounting one map would silently adopt every other map's unsaved edits as t
   - Still **O(maps × entities)**: each `CaptureMap` walks the whole world and filters, so N mounted maps
     is N full walks. Not fixed — there is one mounted map today and the gate removed the cost that
     actually bites. The measurement above is the trigger to revisit.
+- **THEN THE PASS ITSELF WAS PROFILED AND CUT** (2026-08-13, after the gate). Splitting one pass into its
+  stages said the cost was not where the suspects list assumed. At 1k entities, Release, per entity:
+  **capture 1.26 µs · ToJson 2.13 µs · dump(4) 1.46 µs · OpaaxString wrap 0.06 µs.** Inside capture, the
+  entt walk is *1.3 ns* and the `Has()` probes ~10 ns — **all of it is building json**. Four changes, no
+  format change and no touch to the `CComponent` contract (**I8**):
+  - **`json{ {k,v}, … }` → `obj[k] = v`.** The initializer-list form cannot know it is an object until the
+    list closes, so it builds an array of two-element arrays and rebuilds that as an object: **1269 → 632
+    ns per entity**, the single biggest win. Bytes are identical because `object_t` is a `std::map` — the
+    file records sorted keys, not insertion order.
+  - **`Serialize`/`SerializeCompact` gained a `MapData&&` overload** that MOVES component payloads into
+    the json instead of deep-copying each tree. Every hot caller passes a temporary.
+  - **`IdToText` returns `const char*`** (`OpaaxStringID::CStr()`, the interned bytes) instead of an
+    `OpaaxString` copy — a guid is 32 chars and `OpaaxString`'s SSO is 15, so that was a heap round trip
+    per id per entity for text nobody kept.
+  - **`CaptureEntities` reserves `Entities`** from the view's `size()`, and `DumpToString` carries the
+    dump's LENGTH into `OpaaxString` instead of re-`strlen`ing half a megabyte.
+- **THE COMPARISON FORM IS NOT THE FILE FORM** (`MapJson::SerializeCompact`, and
+  `EditorLevelDocument::SerializeMap` renamed to **`CompareText`** to say so). The dirty check only ever
+  asks *same or not*; indentation is 542 KB vs 231 KB at 1k entities. Worth ~8%, less than it looks — the
+  per-value work dominates, not the whitespace. **A baseline built compact may only be compared against
+  compact**, so the one place that genuinely needs the file's bytes — MP6's round-trip check — now
+  serializes indented explicitly, once per mount.
+  - `MapFile::SaveText` was added for the same reason: `SaveMap` held the file text *and* called
+    `MapFile::Save(path, data)`, which serialized the whole map a **second** time.
+- **NET (Release, medians of 5 interleaved A/B runs, `MapCapturePerf.cpp`):** the editor's check at 1k
+  entities **5.98 → 4.08 ms** (1.5×), at 100 entities **0.61 → 0.38 ms**, at 10k **84.9 → 66.6 ms**. The
+  same *indented* work — what a Save pays — is **5.98 → 4.35 ms** (1.37×).
+- **THE PIE-FREEZE WORRY WAS MISDIAGNOSED, and the bench now says so.** `WorldManager::CloneWorld`
+  captures but **never serializes** — MapData goes straight to `MapFactory::Instantiate`. It pays stage 1
+  alone: **1.14 ms per 1000 entities**, not the full pass. The remaining ceiling is `nlohmann::json`'s
+  `std::map<std::string, json>` object: ~390 ns to build a five-float component. Cutting that means
+  `ordered_json`, which `NLOHMANN_DEFINE_TYPE_INTRUSIVE` hard-codes against — it would break every game
+  component, so it stays a last resort (**I8**).
 - **THE CHECK DOES NOT RUN OUTSIDE EDIT MODE** (2026-08-13). It used to, and it was answering a question
   about the wrong world: during PIE the active world is the Play **clone**, whose entities carry the
   source's `OwnerMap` (`MapFactory` restores it) and whose Level adopted the source's mounts (**WM6**).

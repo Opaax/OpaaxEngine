@@ -14,15 +14,18 @@
 
 namespace Opaax::Editor
 {
-    OpaaxString EditorLevelDocument::SerializeMap(const World& InWorld, const ComponentRegistry& InRegistry,
-                                                  MapId InMapId)
+    OpaaxString EditorLevelDocument::CompareText(const World& InWorld, const ComponentRegistry& InRegistry,
+                                                 MapId InMapId)
     {
         // CaptureMap, never CaptureWorld — "this map", not "the world". A runtime-spawned entity
         // carries an invalid OwnerMap and so can never match (WM2), which is what keeps bullets
         // out of an authored map without a special case, and what makes them unsaveable by
         // anything. The two are separate names precisely so this line cannot mean the other one
         // when InMapId happens to be invalid (**MP10**).
-        return MapJson::Serialize(MapSerializer::CaptureMap(InWorld, InRegistry, InMapId));
+        //
+        // The capture is a temporary, so SerializeCompact MOVES its payloads out rather than
+        // deep-copying every component tree into the json.
+        return MapJson::SerializeCompact(MapSerializer::CaptureMap(InWorld, InRegistry, InMapId));
     }
 
     EditorLevelDocument::MapRecord* EditorLevelDocument::Find(MapId InMapId) noexcept
@@ -95,19 +98,23 @@ namespace Opaax::Editor
             MapRecord lRecord;
             lRecord.Id       = lMap.Id;
             lRecord.AbsPath  = InPaths.AssetToAbsolute(lMap.AssetRelPath);
-            lRecord.Baseline = SerializeMap(InWorld, InRegistry, lMap.Id);
+            lRecord.Baseline = CompareText(InWorld, InRegistry, lMap.Id);
 
             // ROUND-TRIP STABILITY CHECK (MP6), now once per mounted map rather than once per
             // session. The milestone rests on world -> file -> world -> file being a fixed point:
             // when it is not, every Save rewrites the map with churn nobody asked for, and that is
             // completely silent otherwise — the map still loads and the world still looks right.
+            //
+            // The FILE form, not the baseline: this one question is about the bytes on disk, so it
+            // is the only place that pays for a second, indented dump. Once per mount, not per check.
             const OpaaxString lOnDisk = FileIO::ReadAllText(lRecord.AbsPath);
+            const OpaaxString lAsFile = MapJson::Serialize(MapSerializer::CaptureMap(InWorld, InRegistry, lMap.Id));
 
             if (lOnDisk.IsEmpty())
             {
                 // No file yet (a brand-new map) — nothing to compare against.
             }
-            else if (lOnDisk == lRecord.Baseline)
+            else if (lOnDisk == lAsFile)
             {
                 OPAAX_LOG(LogEditorLevelDocument, Info, "'{}' round trip is stable",
                           lMap.AssetRelPath.CStr());
@@ -148,10 +155,15 @@ namespace Opaax::Editor
 
         // ONE capture, used for both the file and the new baseline — walking the world twice for a
         // single Save would be the obvious version of this and pointlessly so.
+        //
+        // The two forms differ only in whitespace but each needs its own dump, so the capture is
+        // turned into json twice and no more: SaveText takes the file text this already holds,
+        // where Save(path, data) would have serialized the whole map a SECOND time.
         const MapData     lData = MapSerializer::CaptureMap(InWorld, InRegistry, InMapId);
-        const OpaaxString lText = MapJson::Serialize(lData);
+        const OpaaxString lFileText = MapJson::Serialize(lData);
+        const OpaaxString lText     = MapJson::SerializeCompact(lData);
 
-        if (!MapFile::Save(lRecord->AbsPath, lData))
+        if (!MapFile::SaveText(lRecord->AbsPath, lFileText, lData.EntityCount()))
         {
             // Baseline deliberately UNTOUCHED: the document must keep reporting unsaved work
             // rather than claim to be clean against a file that was never written.
@@ -225,7 +237,7 @@ namespace Opaax::Editor
 
         for (MapRecord& lRecord : m_Maps)
         {
-            if (SerializeMap(InWorld, InRegistry, lRecord.Id) == lRecord.Baseline)
+            if (CompareText(InWorld, InRegistry, lRecord.Id) == lRecord.Baseline)
             {
                 ++lSkipped;   // unchanged — do not touch a file this Save has nothing to say about
                 continue;
@@ -281,7 +293,7 @@ namespace Opaax::Editor
             return false;   // nothing to be dirty against
         }
 
-        return SerializeMap(InWorld, InRegistry, InMapId) != lRecord->Baseline;
+        return CompareText(InWorld, InRegistry, InMapId) != lRecord->Baseline;
     }
 
     bool EditorLevelDocument::IsDirty(const World& InWorld, const ComponentRegistry& InRegistry,
@@ -294,7 +306,7 @@ namespace Opaax::Editor
 
         for (const MapRecord& lRecord : m_Maps)
         {
-            if (SerializeMap(InWorld, InRegistry, lRecord.Id) != lRecord.Baseline) { return true; }
+            if (CompareText(InWorld, InRegistry, lRecord.Id) != lRecord.Baseline) { return true; }
         }
 
         return false;
@@ -315,7 +327,7 @@ namespace Opaax::Editor
 
             for (MapRecord& lRecord : m_Maps)
             {
-                const bool lDirty = SerializeMap(InWorld, InRegistry, lRecord.Id) != lRecord.Baseline;
+                const bool lDirty = CompareText(InWorld, InRegistry, lRecord.Id) != lRecord.Baseline;
 
                 // ON THE TRANSITION ONLY — twice per edit session, not per check. It is what makes
                 // the `*` in the Hierarchy verifiable at all: the marker is a pixel, and "did my

@@ -44,11 +44,13 @@ namespace Opaax::Editor
         // Types
         // =============================================================================
     public:
-        /** One mounted map's file and the text it was last written or read as. */
+        /** One mounted map's file and the CompareText it was last written or read as. */
         struct MapRecord
         {
             MapId       Id;
             OpaaxString AbsPath;
+
+            /** CompareText form, never the file's — only ever compared against CompareText. */
             OpaaxString Baseline;
 
             /** Last answer from RefreshDirty. Cached because the UI asks per map, per frame. */
@@ -185,8 +187,14 @@ namespace Opaax::Editor
         // Members
         // =============================================================================
     private:
-        /** The world's content for ONE map, exactly as MapFile would write it. */
-        static OpaaxString SerializeMap(const World& InWorld, const ComponentRegistry& InRegistry, MapId InMapId);
+        /**
+         * The world's content for ONE map as a COMPARISON TOKEN — the same json a save would write,
+         * dumped without whitespace (MapJson::SerializeCompact).
+         *
+         * NOT the file's bytes, and it must not be written as them. The dirty check only ever asks
+         * "same or not", and indentation is a third of the pass it pays per edit.
+         */
+        static OpaaxString CompareText(const World& InWorld, const ComponentRegistry& InRegistry, MapId InMapId);
 
         MapRecord*       Find(MapId InMapId) noexcept;
         const MapRecord* Find(MapId InMapId) const noexcept;

@@ -16,7 +16,12 @@ namespace Opaax
 
     bool MapFile::Save(const OpaaxString& InAbsPath, const MapData& InData)
     {
-        if (!FileIO::WriteAllText(InAbsPath, MapJson::Serialize(InData)))
+        return SaveText(InAbsPath, MapJson::Serialize(InData), InData.EntityCount());
+    }
+
+    bool MapFile::SaveText(const OpaaxString& InAbsPath, const OpaaxString& InText, Uint64 InEntityCount)
+    {
+        if (!FileIO::WriteAllText(InAbsPath, InText))
         {
             OPAAX_LOG(LogMapFile, Error, "Cannot write map '{}'", InAbsPath.CStr());
             return false;
@@ -24,7 +29,7 @@ namespace Opaax
 
         // The SUCCESS branch is logged, not just the failures: "no error" and "it happened" are
         // different statements, and only this one discriminates ([[L15]]).
-        OPAAX_LOG(LogMapFile, Info, "Saved {} entity(ies) to '{}'", InData.EntityCount(), InAbsPath.CStr());
+        OPAAX_LOG(LogMapFile, Info, "Saved {} entity(ies) to '{}'", InEntityCount, InAbsPath.CStr());
         return true;
     }
 

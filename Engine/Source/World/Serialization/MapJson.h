@@ -48,6 +48,12 @@ namespace Opaax
         inline constexpr const char* KEY_OWNER_MAP   = "ownerMap";
         inline constexpr const char* KEY_COMPONENTS  = "components";
 
+        // ---- dump forms ---------------------------------------------------------
+        // The file is indented because a map lives in git and a human reads the diff. The
+        // comparison form is not a file and has no reader — see SerializeCompact.
+        inline constexpr int k_FileIndent    =  4;
+        inline constexpr int k_CompactIndent = -1;   // nlohmann: negative => no whitespace
+
         /**
          * Serialize InData.
          *
@@ -90,6 +96,28 @@ namespace Opaax
 
         /** ToJson + dump, indented — a map file is meant to be readable and diffable. */
         OPAAX_API OpaaxString Serialize(const MapData& InData);
+
+        /**
+         * Serialize InData by CONSUMING it — identical bytes, but the component payloads move into
+         * the json instead of being deep-copied. Each payload is a whole json tree, so on a capture
+         * the caller is about to drop that copy is most of what serializing costs.
+         *
+         * Prefer this wherever the MapData is a temporary; the const& overload stays for the callers
+         * that still need theirs afterwards (MapFile::Save logs its entity count).
+         */
+        OPAAX_API OpaaxString Serialize(MapData&& InData);
+
+        /**
+         * The COMPARISON form: the same json, dumped with no whitespace.
+         *
+         * NOT A FILE FORMAT — nothing writes this and nothing parses it. It exists for the editor's
+         * dirty check, which only ever asks "same or not" and pays for every space it does not read:
+         * indenting a 1k-entity map takes it from 231 KB to 542 KB, and the dump with it.
+         *
+         * A baseline built with this may only ever be compared against text built with this.
+         */
+        OPAAX_API OpaaxString SerializeCompact(const MapData& InData);
+        OPAAX_API OpaaxString SerializeCompact(MapData&& InData);
 
         /** Parse text (never throws) then FromJson. @return false on malformed json. */
         OPAAX_API bool Deserialize(const OpaaxString& InText, MapData& OutData);

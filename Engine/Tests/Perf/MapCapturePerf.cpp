@@ -1,12 +1,16 @@
-// Suite: the cost of the EDITOR'S DIRTY CHECK — MapSerializer::CaptureMap + MapJson::Serialize.
+// Suite: the cost of the SNAPSHOT CORE, measured on the three paths that actually pay it.
 //
-// This is the pass EditorLevelDocument::RefreshDirty runs per mounted map. Capture ALONE would
-// understate it by roughly half: the dump(4) that turns MapData into comparable text is part of the
-// check, not part of saving.
+//   DIRTY CHECK  CaptureMap + SerializeCompact — EditorLevelDocument::RefreshDirty, per mounted map.
+//   MAP SAVE     CaptureMap + Serialize        — MapFile::Save, indented because a file is read.
+//   PIE CLONE    CaptureWorld alone            — WorldManager::CloneWorld, which never makes text.
+//
+// Capture ALONE would understate the first two by most of their cost: turning MapData into text is
+// two thirds of a check, and it is not optional there — the check IS a text comparison.
 //
 // WHY IT IS MEASURED: the check is gated on World::GetRevision() (MP5), so an idle editor pays
-// nothing — but every pass that DOES run costs this, and it grows with the level. The numbers here
-// say at what entity count one pass stops fitting beside a frame.
+// nothing — but every pass that DOES run costs this, and it grows with the level. The clone is not
+// gated by anything and cannot be: pressing Play captures the whole world. The numbers here say at
+// what entity count each stops fitting beside a frame.
 //
 // The whole suite is SKIPPED by default. Run in RELEASE via:  build.bat bench
 #include <cstdio>
@@ -94,7 +98,17 @@ namespace
         Perf::ReportAndGate(InLabel, InResult, InBudgetNsPerEntity);
     }
 
-    void RunCase(const char* InLabel, std::uint64_t InCount, int InEpochs, double InBudgetNsPerEntity)
+    // Which of the three paths a case measures. The world and the registry are built the same way
+    // for all of them, so the only difference is the one line inside the timed body.
+    enum class EPath
+    {
+        DirtyCheck,   // CaptureMap + SerializeCompact  (RefreshDirty)
+        MapSave,      // CaptureMap + Serialize         (MapFile::Save)
+        CloneCapture  // CaptureWorld, no text          (WorldManager::CloneWorld)
+    };
+
+    void RunCase(const char* InLabel, EPath InPath, std::uint64_t InCount, int InEpochs,
+                 double InBudgetNsPerEntity)
     {
         const MapId lMapId("BenchMap");
 
@@ -108,15 +122,31 @@ namespace
         // byte keeps the optimizer from eliding the work without adding any of its own.
         Uint64 lSink = 0;
 
-        // EXACTLY what RefreshDirty does per mounted map: capture filtered by the map's id, serialize
-        // to the text form, and (the caller's part) compare against a baseline string.
         const Perf::Result lResult = Perf::Measure(InCount, InEpochs, [&]
         {
-            const OpaaxString lText = MapJson::Serialize(MapSerializer::CaptureMap(lWorld, lRegistry, lMapId));
-            lSink += lText.GetLength();
+            switch (InPath)
+            {
+            case EPath::DirtyCheck:
+                // The capture is a TEMPORARY on purpose — that is how RefreshDirty calls it, and it
+                // is what lets the payloads move into the json instead of being copied.
+                lSink += MapJson::SerializeCompact(
+                    MapSerializer::CaptureMap(lWorld, lRegistry, lMapId)).GetLength();
+                break;
+
+            case EPath::MapSave:
+                lSink += MapJson::Serialize(
+                    MapSerializer::CaptureMap(lWorld, lRegistry, lMapId)).GetLength();
+                break;
+
+            case EPath::CloneCapture:
+                // UNFILTERED, exactly as CloneWorld captures it. No text at any point: the clone
+                // feeds MapData straight back to MapFactory::Instantiate.
+                lSink += MapSerializer::CaptureWorld(lWorld, lRegistry).EntityCount();
+                break;
+            }
         });
 
-        REQUIRE(lSink > 0);   // the capture really produced text — checked OUTSIDE the timed body
+        REQUIRE(lSink > 0);   // the pass really did the work — checked OUTSIDE the timed body
 
         ReportPass(InLabel, lResult, InCount, InBudgetNsPerEntity);
     }
@@ -124,18 +154,31 @@ namespace
 
 TEST_SUITE("perf" * doctest::skip())
 {
-    TEST_CASE("perf: dirty check (capture+serialize) — 100 entities")
+    // --- the dirty check: what an edit costs, per mounted map ------------------------------------
+    TEST_CASE("perf: dirty check (capture+compact) — 100 entities")
     {
-        RunCase("dirty check 100", 100, 15, /*ns per entity*/ 20'000.0);
+        RunCase("dirty check 100", EPath::DirtyCheck, 100, 15, /*ns per entity*/ 20'000.0);
     }
 
-    TEST_CASE("perf: dirty check (capture+serialize) — 1k entities")
+    TEST_CASE("perf: dirty check (capture+compact) — 1k entities")
     {
-        RunCase("dirty check 1k", 1'000, 15, /*ns per entity*/ 20'000.0);
+        RunCase("dirty check 1k", EPath::DirtyCheck, 1'000, 15, /*ns per entity*/ 20'000.0);
     }
 
-    TEST_CASE("perf: dirty check (capture+serialize) — 10k entities")
+    TEST_CASE("perf: dirty check (capture+compact) — 10k entities")
     {
-        RunCase("dirty check 10k", 10'000, 9, /*ns per entity*/ 20'000.0);
+        RunCase("dirty check 10k", EPath::DirtyCheck, 10'000, 9, /*ns per entity*/ 20'000.0);
+    }
+
+    // --- the save: user-initiated, and the only path that pays for indentation -------------------
+    TEST_CASE("perf: map save (capture+serialize) — 1k entities")
+    {
+        RunCase("map save 1k", EPath::MapSave, 1'000, 15, /*ns per entity*/ 20'000.0);
+    }
+
+    // --- the clone: what pressing Play costs before a single entity is instantiated --------------
+    TEST_CASE("perf: PIE clone capture (CaptureWorld) — 1k entities")
+    {
+        RunCase("clone capture 1k", EPath::CloneCapture, 1'000, 15, /*ns per entity*/ 20'000.0);
     }
 }

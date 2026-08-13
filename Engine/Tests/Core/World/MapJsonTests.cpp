@@ -396,3 +396,69 @@ TEST_CASE("MapJson: an empty map round-trips")
     REQUIRE(MapJson::Deserialize(MapJson::Serialize(lEmpty), lParsed));
     CHECK(lParsed.IsEmpty());
 }
+
+// =============================================================================
+// The four writers agree — what the fast paths are allowed to assume
+// =============================================================================
+
+namespace
+{
+    // Two entities, several component shapes, one runtime-spawned — enough that a writer which
+    // dropped a payload, reordered keys or mishandled the invalid OwnerMap would show it.
+    MapData MakeSampleMap()
+    {
+        MapData lData;
+        lData.Id = MapId("Level01");
+
+        EntityData lHero = MakeEntity(Guid::New(), "Hero", MapId("Level01"));
+        lHero.Components.push_back(MakeComponent("Stats", nlohmann::json{{"Health", 100}, {"Speed", 4.5}}));
+        lHero.Components.push_back(MakeComponent("Dummy", nlohmann::json{{"Position", {12.0, -3.0}}}));
+        lData.Entities.push_back(Move(lHero));
+
+        EntityData lBullet = MakeEntity(Guid::New(), "Bullet", MapId());   // runtime-spawned
+        lBullet.Components.push_back(MakeComponent("Tag", nlohmann::json{{"Name", "bullet"}}));
+        lData.Entities.push_back(Move(lBullet));
+
+        return lData;
+    }
+}
+
+TEST_CASE("MapJson: the CONSUMING Serialize writes exactly what the copying one writes")
+{
+    // The rvalue overload moves the component payloads into the json instead of copying them.
+    // That is only legal because the BYTES are identical — the map file must not depend on which
+    // overload a caller happened to reach.
+    const MapData lSource = MakeSampleMap();
+
+    MapData lToConsume = MakeSampleMap();
+    lToConsume.Entities = lSource.Entities;   // same guids, so the sort order is the same
+    lToConsume.Id       = lSource.Id;
+
+    CHECK(MapJson::Serialize(Move(lToConsume)) == MapJson::Serialize(lSource));
+}
+
+TEST_CASE("MapJson: SerializeCompact differs from Serialize ONLY in whitespace")
+{
+    const MapData lSource = MakeSampleMap();
+
+    const OpaaxString lFile    = MapJson::Serialize(lSource);
+    const OpaaxString lCompact = MapJson::SerializeCompact(lSource);
+
+    // Smaller, because that is the entire point of it.
+    CHECK(lCompact.GetLength() < lFile.GetLength());
+
+    // ...and the same map: reparsing the compact form and writing it as a file reproduces the file.
+    MapData lFromCompact;
+    REQUIRE(MapJson::Deserialize(lCompact, lFromCompact));
+    CHECK(MapJson::Serialize(lFromCompact) == lFile);
+}
+
+TEST_CASE("MapJson: a capture serialized twice is byte-stable (the dirty check rests on this)")
+{
+    // RefreshDirty compares text against text. If two writes of the SAME MapData could differ by
+    // one byte, the editor would report an edit nobody made, on a timer.
+    const MapData lSource = MakeSampleMap();
+
+    CHECK(MapJson::Serialize(lSource)        == MapJson::Serialize(lSource));
+    CHECK(MapJson::SerializeCompact(lSource) == MapJson::SerializeCompact(lSource));
+}

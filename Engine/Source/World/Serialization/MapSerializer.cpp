@@ -17,9 +17,16 @@ namespace Opaax
 
             const EntityRegistry& lRegistry = InWorld.GetRegistry();
 
+            const auto lView = lRegistry.view<EntityMeta>();
+
+            // ONE allocation for the whole walk. This is the WORLD's entity count, so a filtered
+            // capture over-reserves — deliberately: an EntityData owns a string and a vector, and
+            // regrowing this move-constructs every one of them log2(n) times.
+            lData.Entities.reserve(lView.size());
+
             // EntityMeta is emplaced by World::CreateEntityWithGuid, through which EVERY entity is
             // created — so this view is the complete all-entities view, not a subset.
-            for (const auto [lEntity, lMeta] : lRegistry.view<EntityMeta>().each())
+            for (const auto [lEntity, lMeta] : lView.each())
             {
                 if (InMapId.IsValid() && lMeta.OwnerMap != InMapId)
                 {
