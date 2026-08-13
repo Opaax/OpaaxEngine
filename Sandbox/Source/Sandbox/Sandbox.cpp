@@ -2,6 +2,7 @@
 
 #include "Engine/Modules/ModuleRegistrar.h"
 #include "Components/HealthComponent.h"
+#include "Components/TagsComponent.h"
 #include "Systems/QuadOscillatorSubsystem.h"
 #include "Application/Services/ILogger.h"  // OPAAX_LOG + LogCategory
 
@@ -23,6 +24,10 @@ void SandboxModule::OnRegister(Opaax::ModuleRegistrar& InRegistrar)
     // type, and the engine registers its own natives first (MR2) — asking again would be
     // refused as a duplicate.
     InRegistrar.Components().Register<Sandbox::HealthComponent>();
+
+    // The first caller of OpaaxTag (I14). Nothing new is needed to make it serializable: an
+    // OpaaxTagContainer writes as an array of strings, so a tag is readable in the .opaaxmap.
+    InRegistrar.Components().Register<Sandbox::TagsComponent>();
 
     // A world subsystem the ENGINE has never heard of. Play-only: it exists in a Play world and is
     // never constructed in an Edit one (WS1/WS2). Registering costs one line — no base-class

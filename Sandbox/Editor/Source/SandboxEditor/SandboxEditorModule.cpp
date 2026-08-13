@@ -7,8 +7,10 @@
 #include "World/World.h"
 #include "World/Entity/EntityMeta.h"
 #include "Components/HealthComponent.h"
+#include "Components/TagsComponent.h"
 #include "Panels/SandboxPanel.h"
 #include "Drawers/DummyComponentDrawer.h"
+#include "Drawers/TagsComponentDrawer.h"
 #include "Systems/QuadBoundsSubsystem.h"
 
 // OPAAX_LOG expands to an unqualified ToSpdLevel(...) — bring Opaax into scope, as SandboxPanel does.
@@ -45,8 +47,15 @@ void SandboxEditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& In
             // A real (if small) check the GAME defines and the editor knows nothing about: every
             // authored entity should carry the game's own HealthComponent. Counting the ones that
             // do not is the sort of thing a validate command exists for.
+            //
+            // The tag count beside it is HIERARCHICAL (I14): an entity tagged "Sandbox.Quad.White"
+            // answers to "Sandbox", which nothing ever stored. This line is the only place the
+            // MATCH — as opposed to tag storage — is exercised in the running app.
+            static const Opaax::OpaaxTag lSandboxTag("Sandbox");
+
             Uint64 lTotal   = 0;
             Uint64 lMissing = 0;
+            Uint64 lTagged  = 0;
             lWorld->Each<Opaax::EntityMeta>(
                 [&](auto InEntity, const Opaax::EntityMeta&)
                 {
@@ -55,17 +64,30 @@ void SandboxEditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& In
                     {
                         ++lMissing;
                     }
+
+                    const Sandbox::TagsComponent* lTags =
+                        lWorld->GetRegistry().try_get<Sandbox::TagsComponent>(InEntity);
+
+                    if (lTags != nullptr && lTags->Tags.HasTag(lSandboxTag))
+                    {
+                        ++lTagged;
+                    }
                 });
 
             OPAAX_LOG(LogSandboxEditorModule, Info,
-                "Validate Sandbox: world '{}' — {} entity(ies), {} without a HealthComponent",
-                lWorld->GetName().CStr(), lTotal, lMissing);
+                "Validate Sandbox: world '{}' — {} entity(ies), {} without a HealthComponent, "
+                "{} matching tag '{}'",
+                lWorld->GetName().CStr(), lTotal, lMissing, lTagged, lSandboxTag);
         });
 
     // REAL extension (M2b): the game's own component drawer. The editor never learns what a
     // DummyComponent is — it just invokes this closure, which self-checks whether the selected entity
     // carries one. Duck-typed, no base class (D7).
     InRegistrar.Drawers().Register<Opaax::DummyComponent, DummyComponentDrawer>();
+
+    // The authoring half of the tag dogfood: the Inspector can add and remove tags on the selected
+    // entity, so a tag reaches a .opaaxmap without anyone editing json by hand.
+    InRegistrar.Drawers().Register<Sandbox::TagsComponent, TagsComponentDrawer>();
 
     // REAL extension (M2d): the game's own file type. The editor never learns what a wave definition is —
     // it matches the extension, shows this icon/label, and hands the file back to this closure on a

@@ -312,6 +312,39 @@ conversion for the vendors that demand it (fmt, nlohmann, entt's `type_name`).
   they are ASCII and an `fs::path` would decode them as ANSI (**I7**); it returns a view INTO its
   argument and allocates nothing. Path *composition* stays `IPaths`' job — this header is text.
 
+**I14 — A TAG's hierarchy is DERIVED from its text; there is no tag registry** (landed 2026-08-13).
+`OpaaxTag` (`Core/Tag/OpaaxTag.h`) is Unreal's `FGameplayTag` minus the one part that needs shared
+mutable state: a 4-byte value holding one interned `OpaaxStringID`, where `A.MatchesTag(B)` is
+`A == B` **or** *`A`'s text starts with `B`'s and the next byte is `'.'`*. That single prefix test
+**is** the hierarchy — no declaration table, no ini file, no boot ordering, and **no second mutable
+static** (**I1**). Exact compare stays one integer compare; a hierarchical compare is one `memcmp`
+over pool bytes that are immortal and address-stable (**I2**), which is also what licenses
+`OpaaxStringID::GetView()` — added here, in the id→**view** direction, so a match does not put a
+`strlen` in front of every prefix compare (**I13**'s "one line when a caller appears"; the
+view→id ctor still has no caller).
+- **The price is named, not hidden: a MISSPELLED tag is a valid tag that matches nothing**, and
+  there is no editor dropdown. *Structural* typos are caught — `IsValidTagText` is `constexpr` and
+  refuses empty text, a leading/trailing `'.'`, an empty segment (`"A..B"`) and any byte `<= ' '` —
+  and those rules are load-bearing rather than tidy: an empty segment yields a parent that is not a
+  prefix of its own child. Malformed text asserts (Core cannot log, **I11**), which is the right
+  trade for a hand-written literal and the wrong one for a file or a text field — so **untrusted
+  input gates on `IsValidTagText` first**, which `from_json` and the Inspector drawer both do.
+- **The invalid tag is inert in BOTH directions, and that needs an explicit guard.** `ID_None`
+  resolves to the pool *text* `"None"`, so without it `OpaaxTag("None.Thing").MatchesTag(OpaaxTag())`
+  answers true. For the same reason `GetView()` returns an **empty** view for an invalid tag while
+  `ToString()` still prints `"None"`: text surgery must not see the placeholder, a log line must.
+- **`OpaaxTagContainer` stores exactly what was added** — parents are implied by the match rule,
+  never expanded into storage the way Unreal does it. A linear scan over a handful of tags beats the
+  bookkeeping at this engine's scale, and it keeps "what I read back is what I put in" true, so
+  `Add`/`Remove` cannot drift. `HasAny` on an empty query is false, `HasAll` is true.
+- **Trigger for adding a registry later: an editor tag-picker, or the first typo that costs real
+  time.** Its home is already decided — an `EngineRegistries` member (**MR0**), sealed at the first
+  world like `ComponentRegistry`, **never a static**. It would *validate* tags, not define them, so
+  `OpaaxTag` itself would not change. Both headers are header-only value types with **no
+  `OPAAX_API`** (**I6**), and the nlohmann bridge is split into `OpaaxTagJson.h` the way
+  `MathsJson.hpp` is split from `MathTypes.h`, so matching costs no json.
+
+
 ---
 
 ## LC — Lifecycle: three states, not two

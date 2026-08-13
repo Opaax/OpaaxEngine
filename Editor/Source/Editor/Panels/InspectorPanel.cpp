@@ -4,12 +4,22 @@
 #include "Editor/Operation/EditorSelection.hpp"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 
+#include "Application/Services/IEngine.h"
+#include "Application/Services/ILogger.h"
+#include "Engine/Registries/EngineRegistries.h"
+#include "World/Components/ComponentRegistry.h"
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityMeta.h"
+#include "World/World.h"
 
 #include <imgui.h>
 
 using namespace Opaax;
+
+namespace
+{
+    constexpr LogCategory LogInspector{"InspectorPanel"};
+}
 
 namespace Opaax::Editor
 {
@@ -57,6 +67,52 @@ namespace Opaax::Editor
             ImGui::TextDisabled("No drawable components.");
         }
 
+        DrawAddComponent(lSelected);
+
         ImGui::End();
+    }
+
+    void InspectorPanel::DrawAddComponent(Entity& InEntity)
+    {
+        const ComponentRegistry& lTypes    = m_Context.Engine.GetRegistries().Components();
+        EntityRegistry&          lEntities = InEntity.GetWorld()->GetRegistry();
+        const EntityID           lHandle   = InEntity.GetHandle();
+
+        ImGui::Separator();
+
+        if (ImGui::Button("Add Component"))
+        {
+            ImGui::OpenPopup("AddComponentPopup");
+        }
+
+        // The verb is QUEUED and applied after the popup closes: emplacing mid-draw would mutate the
+        // registry this very pass is reading — the shape the Hierarchy's context menu already needed.
+        const IComponentEntry* lChosen = nullptr;
+
+        if (ImGui::BeginPopup("AddComponentPopup"))
+        {
+            Uint64 lOffered = 0;
+
+            lTypes.ForEach([&](const IComponentEntry& InEntry)
+            {
+                if (InEntry.Has(lEntities, lHandle)) { return; }
+
+                ++lOffered;
+                if (ImGui::MenuItem(InEntry.GetName().CStr())) { lChosen = &InEntry; }
+            });
+
+            // Distinct from "no entry matched": every type is already on this entity.
+            if (lOffered == 0) { ImGui::TextDisabled("Nothing left to add."); }
+
+            ImGui::EndPopup();
+        }
+
+        if (lChosen != nullptr)
+        {
+            lChosen->Add(lEntities, lHandle);
+
+            OPAAX_LOG(LogInspector, Info, "Added component '{}' to entity '{}'",
+                lChosen->GetName().CStr(), InEntity.Get<EntityMeta>().Name.CStr());
+        }
     }
 }

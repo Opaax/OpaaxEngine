@@ -6,6 +6,8 @@
 // re-mints identities, every such reference in a map silently points at the wrong entity.
 #include <doctest.h>
 
+#include "Core/Tag/OpaaxTagContainer.h"
+#include "Core/Tag/OpaaxTagJson.h"
 #include "World/Components/ComponentRegistry.h"
 #include "World/Components/DummyComponent.h"
 #include "World/Entity/Entity.h"
@@ -40,6 +42,15 @@ namespace
         InJson.at("Health").get_to(InValue.Health);
         InJson.at("Speed").get_to(InValue.Speed);
     }
+
+    // A tag-carrying component, shaped exactly like Sandbox's TagsComponent (I14): a container
+    // member plus the NLOHMANN macro, which reaches the tag bridge through OpaaxTagJson.h.
+    struct TaggedComponent
+    {
+        OpaaxTagContainer Tags;
+
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE(TaggedComponent, Tags)
+    };
 
     // A registry carrying both an engine-side and a test-side component type.
     void FillRegistry(ComponentRegistry& InRegistry)
@@ -283,4 +294,48 @@ TEST_CASE("Snapshot: instantiating the same data twice refuses the duplicates")
     // a silent second copy would give FindByGuid two candidates.
     CHECK(MapFactory::Instantiate(lData, lTarget, lRegistry) == 0u);
     CHECK(lTarget.GetEntityCount() == 1u);
+}
+
+// =============================================================================
+// Tags through the real snapshot core (I14)
+//
+// TagTests proves the json bridge in isolation; this proves the thing a game actually depends on —
+// that a tag survives ComponentRegistry -> Capture -> Instantiate and still matches its ancestors on
+// the far side. The Sandbox's TagsComponent is this shape, one namespace over.
+// =============================================================================
+TEST_CASE("Snapshot: a tag container round-trips, and the hierarchy still answers afterwards")
+{
+    ComponentRegistry lRegistry;
+    REQUIRE(lRegistry.Register<TaggedComponent>("Tagged"));
+
+    World lWorld("Tagged");
+
+    Entity lQuad = lWorld.CreateEntity("Quad", MapId("Level01"));
+    lQuad.Add<TaggedComponent>();
+    lQuad.Get<TaggedComponent>().Tags = OpaaxTagContainer{"Sandbox.Quad.White", "Faction.Player"};
+
+    const Guid    lGuid     = lQuad.GetGuid();
+    const MapData lCaptured = MapSerializer::CaptureWorld(lWorld, lRegistry);
+
+    // The bytes a human would read in the .opaaxmap: an array of plain strings.
+    REQUIRE(lCaptured.Entities[0].Components.size() == 1u);
+    const nlohmann::json& lPayload = lCaptured.Entities[0].Components[0].Payload;
+    CHECK(lPayload.at("Tags").is_array());
+    CHECK(lPayload.at("Tags")[0].get<std::string>() == "Sandbox.Quad.White");
+
+    World lTarget("Rebuilt");
+    REQUIRE(MapFactory::Instantiate(lCaptured, lTarget, lRegistry) == 1u);
+
+    Entity lRebuilt = lTarget.FindByGuid(lGuid);
+    REQUIRE(lRebuilt.IsValid());
+
+    const OpaaxTagContainer& lTags = lRebuilt.Get<TaggedComponent>().Tags;
+    CHECK(lTags.Num() == 2u);
+    CHECK(lTags.HasTagExact(OpaaxTag("Sandbox.Quad.White")));
+
+    // The point of the whole design: an ancestor nobody stored still answers, on a container that
+    // came back from disk rather than one built in memory.
+    CHECK(lTags.HasTag(OpaaxTag("Sandbox")));
+    CHECK(lTags.HasTag(OpaaxTag("Sandbox.Quad")));
+    CHECK_FALSE(lTags.HasTag(OpaaxTag("Sandbox.Quad.Blue")));
 }

@@ -22,6 +22,8 @@ set(OPAAX_TEST_SOURCES
     Core/StringViewTests.cpp
     Core/StringIDTests.cpp
     Core/PathStringTests.cpp
+    Core/TagTests.cpp
+    Core/TagContainerTests.cpp
     Core/Config/EngineConfigDataTests.cpp
     Core/Application/AppServiceLocatorTests.cpp
     Core/Application/PathsTests.cpp

@@ -3,9 +3,18 @@
 #include "Core/String/OpaaxString.hpp"
 #include "Editor/Panels/IEditorPanel.h"
 
+namespace Opaax
+{
+    class Entity;
+
+    namespace Editor
+    {
+        struct EditorContext;
+    }
+}
+
 namespace Opaax::Editor
 {
-    struct EditorContext;
 
     // =============================================================================
     // InspectorPanel — the dockable "Inspector": the editor's READER of EditorSelection (Hierarchy is
@@ -15,6 +24,10 @@ namespace Opaax::Editor
     //   invokes each entry, and each entry self-checks whether it applies to this entity — so a game
     //   module's component becomes inspectable purely by registering a drawer, with no editor change.
     //   That inversion is what makes component reflection unnecessary (see DrawerRegistry).
+    //
+    //   Two registries, two questions: Drawers() answers "how is this shown?", ComponentRegistry
+    //   answers "what types exist?" — which is what "Add Component" needs, since a type with no
+    //   drawer is still a type you can attach.
     //
     //   No change notification: ImGui is immediate-mode, so Draw() simply renders whatever the selection
     //   is right now. An event would be stored and then read here anyway (user decision, 2026-07-27).
@@ -58,6 +71,19 @@ namespace Opaax::Editor
 
         OpaaxStringID   GetPanelID()    const   override { return m_PanelID; }
         //~End IEditorPanel interface
+
+        // =============================================================================
+        // Functions
+        // =============================================================================
+    private:
+        /**
+         * The "Add Component" popup — every registered type the entity does NOT already carry.
+         *
+         * This is the second consumer ComponentRegistry was built for (its own header names it), and
+         * it stays type-blind for the same reason Draw() does: the registry answers in terms of
+         * IComponentEntry, so a game module's component appears here by being registered, full stop.
+         */
+        void DrawAddComponent(Entity& InEntity);
 
         // =============================================================================
         // Members

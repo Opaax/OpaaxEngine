@@ -117,6 +117,12 @@ namespace Opaax
         return GetPool().Get(m_ID).CStr();
     }
 
+    OpaaxStringView OpaaxStringID::GetView() const
+    {
+        const OpaaxString& lText = GetPool().Get(m_ID);
+        return OpaaxStringView(lText.CStr(), lText.GetLength());
+    }
+
     OpaaxString OpaaxStringID::ToString() const
     {
         return GetPool().Get(m_ID);

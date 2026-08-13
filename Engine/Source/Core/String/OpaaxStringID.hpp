@@ -83,6 +83,15 @@ namespace Opaax
         const char* CStr() const;
 
         /**
+         * The interned bytes AND their length, without copying or scanning for a terminator.
+         * Valid for the life of the process, for the same reason CStr() is.
+         *
+         * This is what a caller doing text surgery on a name wants — OpaaxTag's hierarchy match
+         * compares prefixes on every call, and CStr() alone would put a strlen in front of each one.
+         */
+        OpaaxStringView GetView() const;
+
+        /**
          * The id of an ALREADY-interned string, or the invalid None id — it never adds an entry.
          * Unreal's FNAME_Find. Use it wherever the text is untrusted or unbounded (an editor text
          * field, a file scan): the table is never reclaimed, so interning a miss costs a permanent
