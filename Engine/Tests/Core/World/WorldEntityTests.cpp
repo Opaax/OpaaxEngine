@@ -150,3 +150,95 @@ TEST_CASE("World: Clear releases every Guid")
     // Instantiate-into-a-cleared-world is exactly what the round-trip gate does.
     CHECK(lWorld.CreateEntityWithGuid(lGuid, "Restored").IsValid());
 }
+
+// =============================================================================
+// Revision — the editor's dirty-check gate
+// =============================================================================
+//
+// The editor skips a whole capture + serialize per mounted map when this has not moved
+// (EditorLevelDocument::RefreshDirty, MP5). A mutation that fails to bump it therefore reads as
+// "no unsaved changes" — silently, and until something unrelated bumps it. These pin the
+// chokepoints the gate is allowed to trust.
+TEST_CASE("World: the revision moves on every entity create and destroy")
+{
+    World lWorld("RevisionTest");
+
+    const Uint64 lStart = lWorld.GetRevision();
+
+    Entity lEntity = lWorld.CreateEntity("Hero");
+    const Uint64 lAfterCreate = lWorld.GetRevision();
+    CHECK(lAfterCreate != lStart);
+
+    lEntity.Destroy();
+    CHECK(lWorld.GetRevision() != lAfterCreate);
+}
+
+TEST_CASE("World: the revision moves on CreateEntityWithGuid — the instantiate path")
+{
+    World lWorld("RevisionTest");
+
+    // Mounting a map goes through here, not through CreateEntity. A gate that missed it would
+    // leave a freshly mounted map reading clean against a baseline it never took.
+    const Uint64 lBefore = lWorld.GetRevision();
+
+    REQUIRE(lWorld.CreateEntityWithGuid(Guid::New(), "Restored").IsValid());
+    CHECK(lWorld.GetRevision() != lBefore);
+}
+
+TEST_CASE("World: a REFUSED create does not move the revision")
+{
+    World lWorld("RevisionTest");
+
+    const Guid lGuid = lWorld.CreateEntity("Original").GetGuid();
+    const Uint64 lBefore = lWorld.GetRevision();
+
+    // A duplicate Guid is refused (WM3) — nothing was added, so nothing changed.
+    CHECK_FALSE(lWorld.CreateEntityWithGuid(lGuid, "Duplicate").IsValid());
+    CHECK(lWorld.GetRevision() == lBefore);
+}
+
+TEST_CASE("World: Clear moves the revision")
+{
+    World lWorld("RevisionTest");
+    lWorld.CreateEntity("Doomed");
+
+    const Uint64 lBefore = lWorld.GetRevision();
+
+    lWorld.Clear();
+    CHECK(lWorld.GetRevision() != lBefore);
+}
+
+TEST_CASE("World: MarkChanged moves the revision — the in-place component edit")
+{
+    World lWorld("RevisionTest");
+
+    // The Inspector's drawers write straight through a TComponent&, so no World method and no
+    // entt signal sees a field edit. This is the only way that mutation reaches the gate.
+    const Uint64 lBefore = lWorld.GetRevision();
+
+    lWorld.MarkChanged();
+    CHECK(lWorld.GetRevision() != lBefore);
+}
+
+TEST_CASE("World: the revision is MONOTONIC — it never returns to an earlier value")
+{
+    World lWorld("RevisionTest");
+
+    // The gate stores the last value it checked at and compares. A revision that could go
+    // BACKWARDS could land on that stored value and make a changed world read as unchanged.
+    Uint64 lPrevious = lWorld.GetRevision();
+
+    for (int lStep = 0; lStep < 8; ++lStep)
+    {
+        Entity lEntity = lWorld.CreateEntity("Churn");
+        CHECK(lWorld.GetRevision() > lPrevious);
+        lPrevious = lWorld.GetRevision();
+
+        lEntity.Destroy();
+        CHECK(lWorld.GetRevision() > lPrevious);
+        lPrevious = lWorld.GetRevision();
+    }
+
+    lWorld.Clear();
+    CHECK(lWorld.GetRevision() > lPrevious);
+}

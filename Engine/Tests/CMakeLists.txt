@@ -66,6 +66,7 @@ set(OPAAX_TEST_SOURCES
     # Perf micro-benchmarks — doctest suite "perf", SKIPPED by default so `build.bat test` + CI
     # stay fast. Run in RELEASE via `build.bat bench`. See Perf/PerfBench.h.
     Perf/EcsPerf.cpp
+    Perf/MapCapturePerf.cpp
 )
 
 add_executable(OpaaxTests ${OPAAX_TEST_SOURCES})

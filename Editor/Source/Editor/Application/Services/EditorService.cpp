@@ -511,19 +511,24 @@ namespace Opaax::Editor
     {
         if (m_Context == nullptr || m_LevelDocument == nullptr) { return; }
 
+        // NOT WHILE PIE RUNS — the same rule MapOps::CanEdit applies, for the same reason. The
+        // active world is then the Play CLONE, whose entities carry the source's OwnerMap
+        // (MapFactory restores it) and whose Level adopted the source's mounts. Checking it would
+        // compare a world being SIMULATED against the authored baseline: every map goes dirty the
+        // moment the game moves anything, and the capture is paid on the frames that can least
+        // afford it. The edit world is untouched throughout, so there is nothing to re-derive.
+        if (!m_Context->PIE.IsEdit()) { return; }
+
         const World* const lWorld = m_Context->Worlds.GetActiveWorld();
         if (lWorld == nullptr) { return; }
 
         const Level* const lLevel = lWorld->GetLevel();
         if (lLevel == nullptr) { return; }
 
-        // THROTTLED, not per frame. The dirty check is a capture + serialize PER MOUNTED MAP —
-        // fine for three quads, not fine for a real level — and running it every frame is exactly
-        // what it must not do. Four times a second is far below what an eye can tell from instant,
-        // and it bounds the cost at something that does not grow with framerate.
-        //
-        // The staleness this admits is up to 250ms of a `*` lingering after a save, which is not a
-        // correctness problem: the FILE is already right, only the marker lags.
+        // THROTTLED, and it now COALESCES rather than bounds. The document skips the whole capture
+        // when the world's revision has not moved (MP5), so an idle editor is already free; what is
+        // left to bound is a DRAG, which bumps the revision every frame it is held. Four times a
+        // second is far below what an eye can tell from instant.
         constexpr double k_DirtyCheckInterval = 0.25;
 
         const double lNow = ImGui::GetTime();

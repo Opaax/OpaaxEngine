@@ -1011,6 +1011,41 @@ after mounting one map would silently adopt every other map's unsaved edits as t
   `IsDirty` stays pure). Built per-frame first, which also put ~1700 identical lines in a 10-second log —
   hence `MapSerializer::Capture` logging at **Trace**: it is a pure transformation with several callers,
   and an Info belongs to things that happen *to* something (`MapFile` Save/Load, `MapFactory` Instantiate).
+- **The throttle was never enough, and MEASURING said by how much** (2026-08-13,
+  `Engine/Tests/Perf/MapCapturePerf.cpp`). One capture+serialize pass costs **~12 µs per entity in
+  Release, ~110 µs in Debug** — the config the editor is actually run in. That is **11 ms/pass at 100
+  entities in Debug**, two thirds of a 60 Hz frame, four times a second, *for a world nobody touched*.
+  A throttle bounds the RATE; it does nothing about a cost that scales with the level, so the ceiling
+  was ~150 entities (Debug) before one pass ate a whole frame.
+- **So the poll is now GATED on `World::GetRevision()`** — a monotonic `Uint64` bumped in
+  `AddEntityCount`/`RemoveEntityCount`/`Clear`, plus a public `MarkChanged()`. `RefreshDirty` skips the
+  per-map captures outright when it has not moved. Idle went from ~4 captures/s to **zero** (verified:
+  2 lines in an 18-second editor run, both at boot).
+  - **The revision is NOT the dirty flag, and this bullet is why MP5's title still says "never
+    tracked".** It gates *when* the answer is derived, never *what* it is. It is a conservative
+    over-approximation: a spurious bump costs one wasted capture, and a missed bump is the only real
+    failure — so it is bumped from chokepoints that cannot be bypassed, and pinned by six cases in
+    `WorldEntityTests.cpp` including **monotonicity** (a revision that could go backwards could land on
+    the stored value and make a changed world read unchanged).
+  - **The one mutation no chokepoint sees is a component edited IN PLACE**: entt stores by value and a
+    drawer receives a raw `TComponent&`, exactly as the "nothing to hook" bullet above says. So
+    `InspectorPanel::Draw` bumps on `ImGui::IsAnyItemActive()` — asked of **ImGui, not of the drawer**,
+    because a `bool Draw()` contract would let one forgetful drawer report *clean while dirty*, which
+    fails silently and permanently. It also bumps on the frame *after* activity: a Checkbox commits on
+    release, by which time ImGui has cleared `ActiveId`.
+  - **`SaveMap` now rebases `bDirty` alongside `Baseline`** — two halves of one fact. The old code left
+    the flag for the next refresh (a ≤250 ms lie); under the gate a save does not change the WORLD, so
+    that lie would have lasted until the next unrelated edit.
+  - Still **O(maps × entities)**: each `CaptureMap` walks the whole world and filters, so N mounted maps
+    is N full walks. Not fixed — there is one mounted map today and the gate removed the cost that
+    actually bites. The measurement above is the trigger to revisit.
+- **THE CHECK DOES NOT RUN OUTSIDE EDIT MODE** (2026-08-13). It used to, and it was answering a question
+  about the wrong world: during PIE the active world is the Play **clone**, whose entities carry the
+  source's `OwnerMap` (`MapFactory` restores it) and whose Level adopted the source's mounts (**WM6**).
+  So the check compared a world being *simulated* against the *authored* baseline — every map lit `*` the
+  moment the game moved anything, and the full capture was paid on the frames least able to afford it.
+  `RefreshDirtyCache` now gates on `PIE.IsEdit()`, the same predicate `MapOps::CanEdit` already used. The
+  general shape: **a derived answer is only meaningful against the world its baselines were taken from.**
 
 **MP6 — Adopting a map checks ROUND-TRIP STABILITY and logs it either way.** The milestone rests on
 world→file→world→file being a fixed point; when it is not, every Save rewrites the map with churn around

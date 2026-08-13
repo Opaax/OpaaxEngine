@@ -91,6 +91,13 @@ namespace Opaax::Editor
     private:
         EditorContext& m_Context;
 
+        /**
+         * Was an ImGui widget active on the PREVIOUS Draw. A widget commits its value as it goes
+         * inactive — ImGui has cleared ActiveId by the time this panel asks — so the frame after
+         * counts as an edit too. See Draw() for why this is asked of ImGui rather than of the drawer.
+         */
+        bool m_bWasItemActive = false;
+
         const OpaaxStringID m_PanelID{ OPAAX_ID("Inspector") };
         const OpaaxString   m_Title = m_PanelID.ToString();
     };

@@ -69,6 +69,25 @@ namespace Opaax::Editor
 
         DrawAddComponent(lSelected);
 
+        // THE ONE MUTATION THE WORLD CANNOT SEE. A drawer receives a raw TComponent& (DrawerRegistry)
+        // and writes straight through it, so no World method and no entt signal observes a field
+        // edit — and the dirty check is now gated on World::GetRevision().
+        //
+        // Asked of IMGUI rather than of the drawer: a `bool Draw()` contract would let one forgetful
+        // drawer report CLEAN WHILE DIRTY, which fails silently and permanently. This over-reports
+        // instead (any active widget anywhere costs one extra capture) and can never under-report.
+        //
+        // The trailing frame matters: a Checkbox commits on RELEASE, and ImGui has already cleared
+        // ActiveId by the time this line runs on that frame.
+        const bool lItemActive = ImGui::IsAnyItemActive();
+
+        if (lItemActive || m_bWasItemActive)
+        {
+            if (World* lWorld = lSelected.GetWorld()) { lWorld->MarkChanged(); }
+        }
+
+        m_bWasItemActive = lItemActive;
+
         ImGui::End();
     }
 
@@ -110,6 +129,10 @@ namespace Opaax::Editor
         if (lChosen != nullptr)
         {
             lChosen->Add(lEntities, lHandle);
+
+            // Explicit rather than left to the ImGui check in Draw: emplacing a component IS a
+            // content change, and it should not depend on a popup item still counting as active.
+            if (World* lWorld = InEntity.GetWorld()) { lWorld->MarkChanged(); }
 
             OPAAX_LOG(LogInspector, Info, "Added component '{}' to entity '{}'",
                 lChosen->GetName().CStr(), InEntity.Get<EntityMeta>().Name.CStr());

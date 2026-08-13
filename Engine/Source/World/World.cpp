@@ -59,23 +59,27 @@ namespace Opaax
     void World::AddEntityCount()
     {
         ++m_EntityCount;
+        ++m_Revision;
         LogEntityCount();
     }
-    
+
     void World::RemoveEntityCount()
     {
         if (m_EntityCount <= 0 )
         {
             return;
         }
-        
+
         --m_EntityCount;
+        ++m_Revision;
         LogEntityCount();
     }
 
     void World::LogEntityCount()
     {
-        OPAAX_LOG(LogWorld, Info, "Entity count in world '{}' = {}", m_Name.CStr(), m_EntityCount);
+        // TRACE, not Info: this fires on EVERY create and EVERY destroy, so the shmup hot path
+        // would put one line in the log per bullet spawned and another per bullet despawned.
+        OPAAX_LOG(LogWorld, Trace, "Entity count in world '{}' = {}", m_Name.CStr(), m_EntityCount);
     }
 
     // =========================================================================
@@ -165,6 +169,7 @@ namespace Opaax
         m_Registry.clear();
         m_Guids.Clear();
         m_EntityCount = 0;
+        ++m_Revision;   // wiping every entity is the largest content change there is
 
         // The Level's mount records describe entities that no longer exist. Cleared, not
         // unmounted: there is nothing left to destroy, and a Level still claiming a map would

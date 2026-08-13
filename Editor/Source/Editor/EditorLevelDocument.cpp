@@ -6,6 +6,7 @@
 #include "Application/Services/IPaths.h"
 #include "Core/IO/FileIO.h"                      // the adopt-time round-trip stability check (MP6)
 #include "World/Level.h"
+#include "World/World.h"                         // GetRevision — the gate in RefreshDirty
 #include "World/Serialization/LevelFile.h"
 #include "World/Serialization/MapFile.h"
 #include "World/Serialization/MapJson.h"
@@ -53,7 +54,11 @@ namespace Opaax::Editor
                                             const IPaths& InPaths)
     {
         m_AbsPath = InLevelAbsPath;
-        m_Maps.clear();   // a new world — nothing from the last one survives
+        m_Maps.clear();        // a new world — nothing from the last one survives
+
+        // ...and so does the gate. Revisions are per-World and start at zero, so a fresh world can
+        // sit BELOW the value the last one reached and look unchanged forever.
+        m_LastRevision = k_RevisionNever;
 
         // The manifest baseline comes from the LEVEL, not from re-reading the file: the engine
         // just built the world from it, so a freshly-opened editor is clean rather than dirty
@@ -123,6 +128,7 @@ namespace Opaax::Editor
     {
         m_AbsPath          = OpaaxString();
         m_ManifestBaseline = OpaaxString();
+        m_LastRevision     = k_RevisionNever;
         m_Maps.clear();
     }
 
@@ -154,7 +160,13 @@ namespace Opaax::Editor
             return false;
         }
 
+        // THE CACHED ANSWER REBASES WITH THE BASELINE — they are two halves of one fact. Leaving
+        // bDirty for the next refresh used to mean a `*` lingering up to 250ms after a save; now
+        // that the refresh is gated on the world's revision, and a save does not change the WORLD,
+        // it would linger until the next unrelated edit.
         lRecord->Baseline = lText;
+        lRecord->bDirty   = false;
+
         return true;
     }
 
@@ -291,22 +303,36 @@ namespace Opaax::Editor
     void EditorLevelDocument::RefreshDirty(const World& InWorld, const ComponentRegistry& InRegistry,
                                            const Level& InLevel)
     {
-        for (MapRecord& lRecord : m_Maps)
+        // THE GATE. Every capture below is O(entities x component types) of json allocation plus a
+        // full dump, and on the overwhelming majority of calls it re-derives an answer that cannot
+        // have changed. The revision is a conservative over-approximation — it may move when nothing
+        // really changed, which costs one wasted pass; it cannot fail to move when something did.
+        const Uint64 lRevision = InWorld.GetRevision();
+
+        if (lRevision != m_LastRevision)
         {
-            const bool lDirty = SerializeMap(InWorld, InRegistry, lRecord.Id) != lRecord.Baseline;
+            m_LastRevision = lRevision;
 
-            // ON THE TRANSITION ONLY — twice per edit session, not per check. It is what makes the
-            // `*` in the Hierarchy verifiable at all: the marker is a pixel, and "did my edit
-            // register?" deserves an answer that survives into the log ([[L12]]).
-            if (lDirty != lRecord.bDirty)
+            for (MapRecord& lRecord : m_Maps)
             {
-                OPAAX_LOG(LogEditorLevelDocument, Info, "Map '{}' {}", lRecord.Id,
-                          lDirty ? "has unsaved changes" : "matches its file again");
-            }
+                const bool lDirty = SerializeMap(InWorld, InRegistry, lRecord.Id) != lRecord.Baseline;
 
-            lRecord.bDirty = lDirty;
+                // ON THE TRANSITION ONLY — twice per edit session, not per check. It is what makes
+                // the `*` in the Hierarchy verifiable at all: the marker is a pixel, and "did my
+                // edit register?" deserves an answer that survives into the log ([[L12]]).
+                if (lDirty != lRecord.bDirty)
+                {
+                    OPAAX_LOG(LogEditorLevelDocument, Info, "Map '{}' {}", lRecord.Id,
+                              lDirty ? "has unsaved changes" : "matches its file again");
+                }
+
+                lRecord.bDirty = lDirty;
+            }
         }
 
+        // UNGATED, and deliberately so: Set as Persistent rewrites LevelData without touching a
+        // single entity, so the world's revision would not move for a change the manifest cares
+        // about. It is a name and a few paths — the cost the gate exists for is not here.
         const bool lManifestDirty = HasLevel() && LevelFile::Serialize(InLevel.GetData()) != m_ManifestBaseline;
 
         if (lManifestDirty != m_bManifestDirty)

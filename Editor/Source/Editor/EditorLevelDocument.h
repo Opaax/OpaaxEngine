@@ -155,6 +155,12 @@ namespace Opaax::Editor
          * The caller owns the THROTTLE (**MP5**): this is the expensive form, and the Hierarchy
          * asks per map on every frame. Running it there would be N captures a frame, which is the
          * cost the derived check has always had to avoid.
+         *
+         * GATED on World::GetRevision(): the per-map captures are skipped entirely when the world
+         * has not changed since the last call, so an idle editor costs one integer compare instead
+         * of a full walk every 250ms. The gate lives here rather than with the throttle because it
+         * guards the BASELINES — same split as the answers themselves. The manifest half is not
+         * gated: `Set as Persistent` changes LevelData without touching an entity.
          */
         void RefreshDirty(const World& InWorld, const ComponentRegistry& InRegistry, const Level& InLevel);
 
@@ -185,9 +191,15 @@ namespace Opaax::Editor
         MapRecord*       Find(MapId InMapId) noexcept;
         const MapRecord* Find(MapId InMapId) const noexcept;
 
+        /** No capture has run yet — a real revision can never equal it, so the first check always runs. */
+        static constexpr Uint64 k_RevisionNever = ~0ull;
+
         OpaaxString          m_AbsPath;
         OpaaxString          m_ManifestBaseline;
         TDynArray<MapRecord> m_Maps;
         bool                 m_bManifestDirty = false;   // cached, see RefreshDirty
+
+        /** World revision the map records were last derived at. See RefreshDirty for the gate. */
+        Uint64               m_LastRevision = k_RevisionNever;
     };
 }

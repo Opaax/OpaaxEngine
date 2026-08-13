@@ -130,6 +130,31 @@ namespace Opaax
         // =========================================================================
 
         // =========================================================================
+        // Revision
+    public:
+        /**
+         * Bumped whenever this world's content MIGHT have changed. Monotonic, never reset.
+         *
+         * A GATE, not a dirty flag: it says when an expensive derived answer is worth
+         * recomputing, never what that answer is (**MP5**). The editor's dirty check compares it
+         * against the value it last checked at, and skips a whole capture + serialize when it has
+         * not moved. Over-reporting is harmless — it costs one extra check.
+         */
+        Uint64 GetRevision() const noexcept { return m_Revision; }
+
+        /**
+         * Say that content changed through a path the world cannot see.
+         *
+         * Entity create/destroy bumps on its own. This is for a component MUTATED in place: entt
+         * stores components by value and the Inspector's drawers write straight through a
+         * TComponent&, so no chokepoint here observes the write.
+         */
+        void MarkChanged() noexcept { ++m_Revision; }
+
+        // End Revision
+        // =========================================================================
+
+        // =========================================================================
         // Level
     public:
         /**
@@ -235,5 +260,6 @@ namespace Opaax
         OpaaxString    m_Name;
         EWorldMode     m_Mode = EWorldMode::Play; // const-by-convention: set in the ctor, never after
         Uint64         m_EntityCount = 0;
+        Uint64         m_Revision    = 0;   // see GetRevision — a gate, not a dirty flag
     };
 }
