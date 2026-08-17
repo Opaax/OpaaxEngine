@@ -21,6 +21,11 @@
                 "HealthComponent": {
                     "Current": 100,
                     "Max": 100
+                },
+                "TagsComponent": {
+                    "Tags": [
+                        "Sandbox.Quad.White"
+                    ]
                 }
             },
             "guid": "7c3755c2004ff4e6277a989244aabfe0",
@@ -48,6 +53,11 @@
                 "HealthComponent": {
                     "Current": 100,
                     "Max": 100
+                },
+                "TagsComponent": {
+                    "Tags": [
+                        "Sandbox.Quad.Blue"
+                    ]
                 }
             },
             "guid": "aa1f0be1e444adfb2e0e59fb517be045",
