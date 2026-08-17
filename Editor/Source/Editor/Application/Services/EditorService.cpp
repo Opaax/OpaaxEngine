@@ -10,6 +10,7 @@
 #include "Editor//Application/Services/EditorPaths.h"                            // EditorSaveDir — the dock layout's home (D4)
 
 
+
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IEngine.h"
 #include "Application/Services/ILogger.h"                    // OPAAX_LOG + LogCategory
@@ -31,6 +32,8 @@
 #include <imgui.h>
 #include <tinyfiledialogs.h>                                 // Save As — the editor already vendors it
 
+#include "Editor/Commands/EditorNativeCommandsTags.hpp"
+
 using namespace Opaax; // OPAAX_LOG expands to an unqualified ToSpdLevel(...)
 
 namespace
@@ -40,6 +43,92 @@ namespace
 
 namespace Opaax::Editor
 {
+    void EditorService::RegisterNativeMenus()
+    {
+        // The editor's own entries go through the SAME route a game module uses — registered
+        // first, for the same reason native panels are (MR2's order, one level down).
+        //
+        // Exit finally does something. It was a bare MenuItem with a comment promising it would
+        // be wired "at S11/M-Input" — a milestone that has since come and gone, which is what
+        // makes a note like that a work item rather than a plan. It closes through
+        // Window::RequestClose, so it takes the same path as clicking the X: one close path, not
+        // a second one to keep correct.
+        Window* const lWindow = OpaaxApplication::GetAppService<IWindowManager>().GetMainWindow();
+
+        // --- M5 S5/S6: the author loop, through the same route a game's Tools entry uses ------
+        // NEW FIRST, and not only by convention: "Save Map As..." was flagged as weird precisely
+        // because nothing led INTO it — there was no way to make a map, so Save As had no workflow
+        // in front of it. This is that missing half, and registration order is draw order.
+        m_Extensions.Menus().Register("File/New Map...",
+                                      [](EditorContext& InContext) { NewMapCommand(InContext); });
+
+        m_Extensions.Menus().Register("File/Open Map...",
+                                      [](EditorContext& InContext) { OpenMapCommand(InContext); });
+
+        m_Extensions.Menus().Register("File/Save Map",
+                                      [](EditorContext& InContext) { SaveMapCommand(InContext); });
+
+        m_Extensions.Menus().Register("File/Save Map As...",
+                                      [](EditorContext& InContext) { SaveMapAsCommand(InContext); });
+
+        // --- the LEVEL half (WM1a): what a session actually has open --------------------------
+        m_Extensions.Menus().Register("File/Open Level...",
+                                      [](EditorContext& InContext) { OpenLevelCommand(InContext); });
+
+        m_Extensions.Menus().Register("File/Save Level",
+                                      [](EditorContext& InContext) { SaveLevelCommand(InContext); });
+
+        // The ONLY Level entry, and the only one that ever earned a place on the bar: it does not
+        // need a map named first, it goes and picks one.
+        //
+        // "Remove Open Map" and "Set Open Map Persistent" were registered here too and are GONE.
+        // Both acted on whatever map happened to be FOCUSED, which is not how an author picks one
+        // map out of the several a level holds (WM1a) — and choosing the persistent map especially
+        // needs somewhere to SEE the current answer, not just a verb aimed at the cursor. They live
+        // on the Hierarchy's map headers now, where the map you click is the argument (MapOps).
+        m_Extensions.Menus().Register("Level/Add Map...",
+                                      [](EditorContext& InContext) { AddMapToLevelCommand(InContext); });
+
+        m_Extensions.Menus().Register("File/Exit",
+                                      [lWindow](EditorContext&)
+                                      {
+                                          OPAAX_LOG(LogEditorService, Info, "Exit requested from the File menu");
+                                          if (lWindow != nullptr) { lWindow->RequestClose(); }
+                                      });
+    }
+
+    void EditorService::RegisterNativeEditorCommand()
+    {
+        m_Extensions.GetEditorCommandRegistry().Register<FNewMapCommand>(Tags::EDITOR_COMMAND_NEW_MAP);
+    }
+
+    void EditorService::RegisterNativeResourceTypes()
+    {
+        // `.opaaxmap` registered through the SAME ResourceTypes() route a game's `.wave` uses
+        // (M2d), so a map is a file type like any other: it gets an icon, a label, and a
+        // double-click that opens it. The editor's own core format gets no privileged path into
+        // the browser — which is the property that keeps the route honest.
+        m_Extensions.ResourceTypes().Register(ResourceTypeDesc{
+            .Extension = OPAAX_ID(".opaaxmap"),
+            .Label = OPAAX_ID("Opaax Map"),
+            .Icon = OpaaxString("[M]"),
+            .OnActivate = [](EditorContext& InContext, const ResourceFile& InFile)
+            {
+                OpenMapAt(InContext, InFile.AbsPath);
+            }
+        });
+
+        m_Extensions.ResourceTypes().Register(ResourceTypeDesc{
+            .Extension = OPAAX_ID(".opaaxlevel"),
+            .Label = OPAAX_ID("Opaax Level"),
+            .Icon = OpaaxString("[L]"),
+            .OnActivate = [](EditorContext& InContext, const ResourceFile& InFile)
+            {
+                OpenLevelAt(InContext, InFile.AbsPath);
+            }
+        });
+    }
+
     void EditorService::Initialize()
     {
         // The one place editor code resolves from the locator (composition root, D3). Engine subsystems
@@ -49,12 +138,15 @@ namespace Opaax::Editor
         // Resolved before anything reads it: ResolveLayoutIniPath below, then the EditorContext.
         CacheEditorPaths();
 
-        // --- ImGui context (docking; multi-viewport deferred past M0) -----------------------------
+        // --- ImGui context -----------------------------
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
         ImGuiIO& lIO = ImGui::GetIO();
         lIO.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-        ImGui::StyleColorsDark();
+        //ImGui::StyleColorsDark();
+        ImGui::StyleColorsClassic();
+        //ImGui::StyleColorsLight();
+
 
         // --- Dock layout persistence. Set BEFORE the first NewFrame: that is where ImGui loads the ini
         //     (it only ever loads once, on the frame it first sees a filename). Empty => keep M0's
@@ -329,6 +421,7 @@ namespace Opaax::Editor
         RegisterNativePanels();
         RegisterNativeMenus();
         RegisterNativeResourceTypes();
+        RegisterNativeEditorCommand();
 
         m_Extensions.EditWorldSystems().Bind(
             &OpaaxApplication::GetAppService<IEngine>().GetRegistries().WorldSubsystems());
@@ -507,7 +600,7 @@ namespace Opaax::Editor
     void EditorService::DrawDockspace()
     {
         ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
-        
+
         //if (!m_EditorMenu.DrawEditorMenu())
         //{
         //    //TODO: Assert or log, this is an important menu better to break.
@@ -599,7 +692,6 @@ namespace Opaax::Editor
 
     void EditorService::DrawMenuLevel(const TDynArray<Uint32>& InIndices, Uint32 InDepth)
     {
-        
         const TDynArray<MenuEntry>& lEntries = m_Extensions.Menus().Entries();
 
         // Names already emitted at THIS level, so two entries sharing a submenu produce one
@@ -661,86 +753,6 @@ namespace Opaax::Editor
         }
     }
 
-    void EditorService::RegisterNativeMenus()
-    {
-        // The editor's own entries go through the SAME route a game module uses — registered
-        // first, for the same reason native panels are (MR2's order, one level down).
-        //
-        // Exit finally does something. It was a bare MenuItem with a comment promising it would
-        // be wired "at S11/M-Input" — a milestone that has since come and gone, which is what
-        // makes a note like that a work item rather than a plan. It closes through
-        // Window::RequestClose, so it takes the same path as clicking the X: one close path, not
-        // a second one to keep correct.
-        Window* const lWindow = OpaaxApplication::GetAppService<IWindowManager>().GetMainWindow();
-
-        // --- M5 S5/S6: the author loop, through the same route a game's Tools entry uses ------
-        // NEW FIRST, and not only by convention: "Save Map As..." was flagged as weird precisely
-        // because nothing led INTO it — there was no way to make a map, so Save As had no workflow
-        // in front of it. This is that missing half, and registration order is draw order.
-        m_Extensions.Menus().Register("File/New Map...",
-                                      [](EditorContext& InContext) { NewMapCommand(InContext); });
-
-        m_Extensions.Menus().Register("File/Open Map...",
-                                      [](EditorContext& InContext) { OpenMapCommand(InContext); });
-
-        m_Extensions.Menus().Register("File/Save Map",
-                                      [](EditorContext& InContext) { SaveMapCommand(InContext); });
-
-        m_Extensions.Menus().Register("File/Save Map As...",
-                                      [](EditorContext& InContext) { SaveMapAsCommand(InContext); });
-
-        // --- the LEVEL half (WM1a): what a session actually has open --------------------------
-        m_Extensions.Menus().Register("File/Open Level...",
-                                      [](EditorContext& InContext) { OpenLevelCommand(InContext); });
-
-        m_Extensions.Menus().Register("File/Save Level",
-                                      [](EditorContext& InContext) { SaveLevelCommand(InContext); });
-
-        // The ONLY Level entry, and the only one that ever earned a place on the bar: it does not
-        // need a map named first, it goes and picks one.
-        //
-        // "Remove Open Map" and "Set Open Map Persistent" were registered here too and are GONE.
-        // Both acted on whatever map happened to be FOCUSED, which is not how an author picks one
-        // map out of the several a level holds (WM1a) — and choosing the persistent map especially
-        // needs somewhere to SEE the current answer, not just a verb aimed at the cursor. They live
-        // on the Hierarchy's map headers now, where the map you click is the argument (MapOps).
-        m_Extensions.Menus().Register("Level/Add Map...",
-                                      [](EditorContext& InContext) { AddMapToLevelCommand(InContext); });
-
-        m_Extensions.Menus().Register("File/Exit",
-                                      [lWindow](EditorContext&)
-                                      {
-                                          OPAAX_LOG(LogEditorService, Info, "Exit requested from the File menu");
-                                          if (lWindow != nullptr) { lWindow->RequestClose(); }
-                                      });
-    }
-
-    void EditorService::RegisterNativeResourceTypes()
-    {
-        // `.opaaxmap` registered through the SAME ResourceTypes() route a game's `.wave` uses
-        // (M2d), so a map is a file type like any other: it gets an icon, a label, and a
-        // double-click that opens it. The editor's own core format gets no privileged path into
-        // the browser — which is the property that keeps the route honest.
-        m_Extensions.ResourceTypes().Register(ResourceTypeDesc{
-            .Extension = OPAAX_ID(".opaaxmap"),
-            .Label = OPAAX_ID("Opaax Map"),
-            .Icon = OpaaxString("[M]"),
-            .OnActivate = [](EditorContext& InContext, const ResourceFile& InFile)
-            {
-                OpenMapAt(InContext, InFile.AbsPath);
-            }
-        });
-
-        m_Extensions.ResourceTypes().Register(ResourceTypeDesc{
-            .Extension = OPAAX_ID(".opaaxlevel"),
-            .Label = OPAAX_ID("Opaax Level"),
-            .Icon = OpaaxString("[L]"),
-            .OnActivate = [](EditorContext& InContext, const ResourceFile& InFile)
-            {
-                OpenLevelAt(InContext, InFile.AbsPath);
-            }
-        });
-    }
 
     // =============================================================================
     // The author loop's commands
@@ -795,6 +807,9 @@ namespace Opaax::Editor
     void EditorService::NewMapCommand(EditorContext& InContext)
     {
         if (!MapOps::CanEdit(InContext, "New Map")) { return; }
+        
+        EditorExtensionRegistrar* lExt = const_cast<EditorExtensionRegistrar*>(&InContext.Extensions);
+        lExt->GetEditorCommandRegistry().ExecuteCommand(Tags::EDITOR_COMMAND_NEW_MAP,InContext, FNewMapParams{ OpaaxStringView()});
 
         Level* const lLevel = MapOps::ActiveLevel(InContext);
         if (lLevel == nullptr) { return; }

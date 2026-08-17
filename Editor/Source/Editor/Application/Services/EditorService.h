@@ -43,11 +43,9 @@ namespace Opaax::Editor
         // Functions
         // =============================================================================
         
+        // =============================================================================
+        // Native Editor
     private:
-        /**
-         *
-         */
-        void DrawDockspace();
 
         /**
          * Registers the editor's OWN panels into m_Extensions.Panels(), first — before the game module and
@@ -61,6 +59,20 @@ namespace Opaax::Editor
          * and same lack of privilege as RegisterNativePanels (M5 S4).
          */
         void RegisterNativeMenus();
+        
+        /**
+         * Register The Editor command natively to this 
+         */
+        void RegisterNativeEditorCommand();
+        
+        // End Native Editor
+        // =============================================================================
+        
+        /**
+ *
+ */
+        void DrawDockspace();
+
 
         /**
          * Render one level of the menu bar from the registry's flat entry list.
@@ -125,7 +137,6 @@ namespace Opaax::Editor
          * Refuses a path that already exists — Open Map and Add Map are the verbs for those.
          */
         static void NewMapCommand(EditorContext& InContext);
-
         static void SaveMapCommand(EditorContext& InContext);
         static void SaveMapAsCommand(EditorContext& InContext);
         static void OpenMapCommand(EditorContext& InContext);
@@ -233,11 +244,11 @@ namespace Opaax::Editor
         // =============================================================================
     public:
         //~Begin IEditorService interface
+        void RegisterExtensions(const TFunction<void(EditorExtensionRegistrar&)>& InCollect) override;
         void Initialize() override;
         void BeginFrame() override;
         void EndFrame()   override;
         bool RouteInput(Event& InEvent) override;
-        void RegisterExtensions(const TFunction<void(EditorExtensionRegistrar&)>& InCollect) override;
         //~End IEditorService interface
 
         //~Begin IAppService interface

@@ -1,11 +1,12 @@
 #pragma once
 
-#include "Core/OpaaxTypes.h"                         // Uint64
-#include "Engine/Modules/ModuleRegistrar.h"          // WorldSubsystemRoute — EditWorldSystems() reuses it (M4 S5)
-#include "Editor/Extensions/PanelRegistry.h"         // Panels() graduated from EditorRoute to real storage (M2a)
-#include "Editor/Extensions/DrawerRegistry.h"        // Drawers() likewise (M2b)
-#include "Editor/Extensions/ResourceTypeRegistry.h"  // ResourceTypes() likewise (M2d)
-#include "Editor/Extensions/MenuRegistry.h"          // Menus() — the LAST to graduate (M5 S4)
+#include "Core/OpaaxTypes.h"                       
+#include "Engine/Modules/ModuleRegistrar.h"        
+#include "Editor/Extensions/PanelRegistry.h"       
+#include "Editor/Extensions/DrawerRegistry.h"      
+#include "Editor/Extensions/ResourceTypeRegistry.h"
+#include "Editor/Extensions/MenuRegistry.h"
+#include "Editor/Commands/EditorCommandRegistry.h"
 
 namespace Opaax::Editor
 {
@@ -33,12 +34,14 @@ namespace Opaax::Editor
         ResourceTypeRegistry&      ResourceTypes()    noexcept { return m_ResourceTypes; }
         MenuRegistry&              Menus()            noexcept { return m_Menus; }
         WorldSubsystemRoute&       EditWorldSystems() noexcept { return m_EditWorldSystems; }
+        EditorCommandRegistry&     GetEditorCommandRegistry() noexcept { return m_EditorCommands; }
 
         const DrawerRegistry&       Drawers()          const noexcept { return m_Drawers; }
         const PanelRegistry&        Panels()           const noexcept { return m_Panels; }
         const ResourceTypeRegistry& ResourceTypes()    const noexcept { return m_ResourceTypes; }
         const MenuRegistry&         Menus()            const noexcept { return m_Menus; }
         const WorldSubsystemRoute&  EditWorldSystems() const noexcept { return m_EditWorldSystems; }
+        const EditorCommandRegistry& GetEditorCommandRegistry() const noexcept { return m_EditorCommands; }
 
         void Seal()          noexcept { m_Sealed = true; }
         bool IsSealed() const noexcept { return m_Sealed; }
@@ -49,6 +52,7 @@ namespace Opaax::Editor
         ResourceTypeRegistry m_ResourceTypes;
         MenuRegistry         m_Menus;
         WorldSubsystemRoute  m_EditWorldSystems;
+        EditorCommandRegistry m_EditorCommands;
         bool                 m_Sealed = false;
     };
 }

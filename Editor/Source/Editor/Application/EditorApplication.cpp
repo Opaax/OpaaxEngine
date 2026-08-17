@@ -19,39 +19,38 @@ namespace
 
 namespace Opaax::Editor
 {
+    // =============================================================================
+    // Ctor
+    // =============================================================================
+    
     EditorApplication::EditorApplication(int InArgc, char** InArgv)
         : OpaaxApplication(InArgc, InArgv)
     {
     }
+    
+    // =============================================================================
+    // Native Editor App
+    // =============================================================================
 
+    // =============================================================================
+    // Getters
+    // =============================================================================
+    
     IEditorService& EditorApplication::Editor()
     {
         return GetAppService<IEditorService>();
     }
 
+    // =============================================================================
+    // Overrides
+    // =============================================================================
+    
     void EditorApplication::OnProvideServices(AppServiceLocator& InServices)
     {
         InServices.Provide<IEditorService, EditorService>();
         OPAAX_LOG(LogEditorApp, Info, "IEditorService provided");
     }
-
-    WorldSpec EditorApplication::GetStartupWorldSpec() const
-    {
-        WorldSpec lSpec = OpaaxApplication::GetStartupWorldSpec();
-       
-        lSpec.Mode = EWorldMode::Edit;
-
-        return lSpec;
-    }
-
-    void EditorApplication::PostEngineStartup()
-    {
-        if (!Editor().IsNull())
-        {
-            Editor().Initialize();
-        }
-    }
-
+    
     void EditorApplication::TickFrame()
     {
         IEditorService& lEditor = Editor();
@@ -60,22 +59,15 @@ namespace Opaax::Editor
         Engine().Loop();
         lEditor.EndFrame();
     }
-
-    void EditorApplication::OnEvent(Event& InEvent)
-    {
-        if (Editor().RouteInput(InEvent))
-        {
-            return;
-        }
-
-        OpaaxApplication::OnEvent(InEvent);
-    }
-
+    
     void EditorApplication::OnModulesRegistered()
     {
-        Editor().RegisterExtensions([this](EditorExtensionRegistrar& InRegistrar) { OnRegisterEditorModules(InRegistrar); });
+        Editor().RegisterExtensions([this](EditorExtensionRegistrar& InRegistrar)
+        {
+            OnRegisterEditorModules(InRegistrar);
+        });
     }
-
+    
     TUniquePtr<IPaths> EditorApplication::CreatePaths(const IPlatform& InPlatform, int InArgc, char** InArgv)
     {
         const OpaaxString lName = GetEditedProjectName();
@@ -93,5 +85,32 @@ namespace Opaax::Editor
         OPAAX_LOG(LogEditorApp, Info, "Editing project '{}' -> {}", lN, lProjRel.CStr());
 
         return MakeUnique<EditorPaths>(InPlatform, InArgc, InArgv, lProjRel);
+    }
+    
+    WorldSpec EditorApplication::GetStartupWorldSpec() const
+    {
+        WorldSpec lSpec = OpaaxApplication::GetStartupWorldSpec();
+       
+        lSpec.Mode = EWorldMode::Edit;
+
+        return lSpec;
+    }
+
+    void EditorApplication::PostEngineStartup()
+    {
+        if (!Editor().IsNull())
+        {
+            Editor().Initialize();
+        }
+    }
+    
+    void EditorApplication::OnEvent(Event& InEvent)
+    {
+        if (Editor().RouteInput(InEvent))
+        {
+            return;
+        }
+
+        OpaaxApplication::OnEvent(InEvent);
     }
 }
