@@ -47,10 +47,9 @@ namespace Opaax::Editor
         template<CEditorPanel T>
         void Register(PanelDesc InDesc)
         {
-            m_Entries.push_back(PanelEntry{
+            m_Entries.emplace_back(
                 Move(InDesc),
-                [](EditorContext& InContext) -> TUniquePtr<IEditorPanel> { return MakeUnique<T>(InContext); }
-            });
+                [](EditorContext& InContext) -> TUniquePtr<IEditorPanel> { return MakeUnique<T>(InContext); });
         }
 
         // =============================================================================
