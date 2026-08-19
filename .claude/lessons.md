@@ -1044,3 +1044,33 @@ be bypassed.
   watched the tick update, which is exactly what a correct-but-uninstrumented second writer looks like
   ([[L15]]: the instrument has to discriminate). When one of two front-ends is unreachable from a test,
   say so rather than letting the reachable one stand for both.
+
+## L40 — A mechanical rename that preserves semantics exactly has delivered NOTHING; check the change you made is the change that was wanted (2026-08-19)
+
+**What happened (the emplace_back sweep).** Asked to *"use emplace_back when you can"* and then to
+convert the remaining ~60 sites, the obvious execution was one `sed` over the tree. I nearly ran it and
+stopped on the arithmetic: **`push_back(T{a,b})` and `emplace_back(T{a,b})` are the same thing.** Both
+materialise a temporary and move it in. The entire benefit — constructing the element in place — only
+exists once the type name is *gone*: `emplace_back(a, b)`. A pure rename would have touched 34 files,
+looked like the requested change, passed every gate, and improved nothing at exactly the ~15 sites the
+request was about.
+
+So it became two passes: the rename for one idiom in one tree, then dropping the redundant type name
+where it actually earned something. The second pass is also where the real constraints surfaced — a
+braced-init-list cannot be deduced (`push_back({a,b,c})` needs positional args), and a bare `{}` cannot
+bind to a forwarded parameter, so one aggregate legitimately keeps its braces. A sed would have found
+the first as a compile error and silently kept the second as a non-improvement.
+
+**Rules for next time:**
+- **Before running the bulk edit, hand-evaluate ONE site and state what changed.** If the honest answer
+  is "nothing, but it reads consistently", that is a fine goal — say so, and then go find where the
+  substantive version of the change actually lives. Do not let a consistency pass wear a performance
+  pass's justification.
+- **A style instruction usually names a mechanism but means its EFFECT.** "Use emplace_back" means
+  *construct in place*; the token is the shorthand. Ask what the rule is FOR, then check the diff
+  delivers that, not just the token.
+- **Green gates cannot distinguish a real refactor from a no-op one** — both compile and both pass.
+  When a change is semantics-preserving by design, the build says nothing about whether it was worth
+  making, so the reasoning has to happen before the edit ([[L15]]: the instrument must discriminate).
+- Mechanical sweeps still need the per-site read: the two constructs that broke here were invisible in
+  a `grep` listing and obvious in the source.
