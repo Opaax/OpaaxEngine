@@ -70,7 +70,11 @@ namespace Opaax::Editor
         /** @return false for an unknown id — a menu tick for a panel nobody registered reads "off". */
         bool IsVisible(OpaaxStringID InID) const noexcept;
 
-        /** Unknown id logs a Warn and does nothing. */
+        /**
+         * THE one place a panel's visibility moves — the Window menu, the window's own close button
+         * and anything later all arrive here, which is why the transition is logged here and nowhere
+         * else. A no-op when already in that state; unknown id logs a Warn and does nothing.
+         */
         void SetVisible(OpaaxStringID InID, bool bInVisible);
 
         Uint64 Count() const noexcept { return static_cast<Uint64>(m_Panels.size()); }

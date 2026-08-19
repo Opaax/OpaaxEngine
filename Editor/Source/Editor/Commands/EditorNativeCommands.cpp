@@ -77,11 +77,9 @@ namespace Opaax::Editor
 
     void TogglePanelCommand::Execute(EditorContext& InContext, const Params& InParams)
     {
-        const bool bShow = !InContext.Panels.IsVisible(InParams.PanelId);
-
-        OPAAX_LOG(LogEditorCommands, Info, "Panel '{}' -> {}", InParams.PanelId, bShow ? "shown" : "hidden");
-
-        InContext.Panels.SetVisible(InParams.PanelId, bShow);
+        // No log here on purpose: EditorPanels::SetVisible is the single mutation point and announces
+        // it, so the close button — which cannot reach a command — is heard on the same line.
+        InContext.Panels.SetVisible(InParams.PanelId, !InContext.Panels.IsVisible(InParams.PanelId));
     }
 
     // =============================================================================

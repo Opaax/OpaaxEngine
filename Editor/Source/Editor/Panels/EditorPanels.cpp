@@ -54,8 +54,12 @@ namespace Opaax::Editor
 
             if (lStyle.bNoPadding) { ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.f, 0.f)); }
 
-            // &bVisible is the close button, writing the SAME bool the Window menu ticks.
-            const bool lOpen = ImGui::Begin(lLive.Desc.Id.CStr(), &lLive.bVisible);
+            // ImGui writes the close button straight into whatever it is handed, so it gets a LOCAL:
+            // routing the result back through SetVisible below keeps that one method the only thing
+            // that ever moves a panel's visibility, and therefore the only thing that has to log it.
+            bool lWantVisible = true;
+
+            const bool lOpen = ImGui::Begin(lLive.Desc.Id.CStr(), &lWantVisible);
 
             if (lStyle.bNoPadding) { ImGui::PopStyleVar(); }
 
@@ -64,6 +68,8 @@ namespace Opaax::Editor
             if (lOpen) { lLive.Panel->DrawContents(); }
 
             ImGui::End();
+
+            if (!lWantVisible) { SetVisible(lLive.Desc.Id, false); }
         }
     }
 
@@ -100,7 +106,14 @@ namespace Opaax::Editor
             return;
         }
 
+        if (lLive->bVisible == bInVisible) { return; }
+
         lLive->bVisible = bInVisible;
+
+        // THE one place a panel changes visibility, so this line cannot be bypassed — the menu, the
+        // close button and any later caller all arrive here. A menu click is preceded by the node's
+        // own "Menu: ..." line; a bare one of these is the close button.
+        OPAAX_LOG(LogEditorPanels, Info, "Panel '{}' -> {}", InID, bInVisible ? "shown" : "hidden");
     }
 
     EditorPanels::LivePanel* EditorPanels::Find(const OpaaxStringID InID) noexcept
