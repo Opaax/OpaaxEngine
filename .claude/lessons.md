@@ -953,3 +953,53 @@ length, so not even a `strlen`). Same format spec, zero allocation — *then* th
 - Corollary: **when a conversion pass makes an existing call site look wrong, suspect the pass.** Mixed
   `Label` / `AbsPath.CStr()` arguments on one line was the tell that I had a rule covering one type and
   not the other, and the reason was that neither should have needed the accessor.
+
+## L37 — A display-only MIRROR of another system's state is coupling wearing a convenience hat (2026-08-19)
+
+**What happened (editor menu refactor).** My plan gave the menu node a `SetShortcut("Ctrl+S")` — text
+only, no binding, just the hint ImGui right-aligns. It felt free: one string, and Ctrl+S was genuinely
+undiscoverable. The user cut it in one line: *"Shortcut shouldnt be here too. Short cut should
+independent things that user can edit etc... Shortcut only trigger commands too."*
+
+**Why they were right.** A rebindable shortcut means the truth lives in a key→tag table. A hint string
+on the node is a **second copy of that truth**, hand-written at registration, which goes stale the first
+time anything is rebound — and *silently*, since nothing compares the label to the binding. The correct
+shape is the menu ASKING the binding system what key carries this tag: costs the menu nothing, cannot
+drift. That system did not exist yet, so the right amount of shortcut in this change was **zero**, not
+"the cheap half".
+
+**The tell I walked past:** I justified the field by the SYMPTOM ("Ctrl+S is undiscoverable") instead of
+asking who OWNS the fact. A field that must be kept in agreement with another subsystem's state is not a
+display detail, it is a denormalisation, and the only question is who the source is.
+
+**Rules for next time:**
+- **Before adding a field that merely SHOWS what another system decides, name that system and ask
+  whether the node can query it instead.** If the system does not exist yet, do not build the mirror as
+  a placeholder — build the *precondition* (here: make every verb a command, so a binding has something
+  to point at) and leave the display for when there is a source to read.
+- Same family as [[L30]] (a field two things share only because one is always empty) and [[L32]]
+  (deriving identity from a file path is mining, not sourcing): all three are "the value is written
+  where it is convenient rather than where it is owned."
+
+## L38 — Two ways in is one too many: if a route exists for behaviour, close the side door (2026-08-19)
+
+**What happened (same refactor).** The plan kept `AddItem(label, lambda)` beside `AddItem(label, tag)` —
+the tag form for the editor's own entries, a closure "escape hatch" for game modules and for
+`File > Exit`, which needed a `Window*` only the composition root could resolve. The user:
+**"Use Command !"**
+
+**What the escape hatch actually cost.** With a closure form available, a game module's verb lives inside
+the menu entry that shows it — invocable from exactly one place and never by tag: not by a key binding,
+not by another panel, not by a second entry. `File > Exit` was the same defect in different clothes: a
+command whose payload only the composition root can supply is a command **nothing but a menu can
+invoke**, because a binding carries a tag and nothing else. Deleting both forms forced the real fix —
+`EditorContext` carries the window, `QuitParams` is gone — and the API got *smaller*.
+
+**Rules for next time:**
+- **When a mechanism exists for a kind of thing, an alternate path that bypasses it is not flexibility —
+  it is a second class of that thing with fewer capabilities.** Before adding the convenience overload,
+  ask what the bypassing caller LOSES. If the answer is "everything the mechanism was built to give",
+  the overload is the bug.
+- **The one awkward call site an escape hatch exists for is usually pointing at a real gap.** `QuitParams`
+  had carried a `// because a command cannot ask for one` comment for a milestone — [[L19]]'s shape
+  exactly: the comment explaining the bypass IS the work item.
