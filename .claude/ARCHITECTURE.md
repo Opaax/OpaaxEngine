@@ -584,7 +584,7 @@ not overriding them leaves runtime byte-identical.
 | `OnProvideServices(locator)` | end of Bootstrap | add host-owned app services (editor adds `IEditorService`) |
 | `PreEngineStartup()` | start of `EngineStartup` | before subsystems start |
 | `RegisterModules(registrar)` | in `EngineStartup`, **after `Engine().Startup()`** — subsystems up, registries live, **no world yet** (BO4) | route the game module — drives `IRuntimeModule::OnRegister` (**MR**) |
-| `OnModulesRegistered()` | in `EngineStartup`, **after** `OnRegisterModules`, **before** `Engine().Startup()` (still no world) | editor registers its D10 extensions and **seals before the first world** (§2). `EditorApplication` overrides → `EditorService::RegisterExtensions`, which registers the editor's own **native** panels first, then drives each `IEditorModule::OnRegister(EditorExtensionRegistrar&)`, then seals — **MR2's order one level down** (natives → game module → seal), so a native panel travels the same route as a game panel with no privileged path. Generic engine-side name (no editor types) — the engine stays editor-ignorant (**D4**). |
+| `OnModulesRegistered()` | in `EngineStartup`, **after** `OnRegisterModules`, **before** `Engine().Startup()` (still no world) | editor registers its D10 extensions and **seals before the first world** (§2). `EditorApplication` overrides → `EditorService::RegisterExtensions`, which registers the editor's own **native** panels first, then drives each `IEditorModule::OnRegister(EditorExtensionRegistrar&)`, then `BindPanelToggles()` (one Window-menu entry per registered panel, native or game — **MR2c**), then seals — **MR2's order one level down** (natives → game module → toggles → seal), so a native panel travels the same route as a game panel with no privileged path. Generic engine-side name (no editor types) — the engine stays editor-ignorant (**D4**). |
 | `GetStartupWorldSpec() const` | in `EngineStartup`, **after `OnModulesRegistered`** — the last step of boot (BO4) | **a pure query, not an action**: answer *which level* and *which* `EWorldMode` the app starts in — **not** what the world is called (BO4b). Base impl is real, not a no-op — `IProjectManager::StartupLevel()` + `Play`; `EditorApplication` overrides → `Edit`. The engine then does the work in `IEngine::FinishStartup`, whose `CreateWorld` is the **first** one and so seals the registries. Replaced `CreateStartupWorld()`, which reached through the engine to drive `WorldManager` itself |
 | `PostEngineStartup()` | end of `EngineStartup` | after subsystems start **and the startup world exists** (editor inits `EditorService`; Sandbox populates the world) |
 | `TickFrame()` | per loop iter | base = `Engine().Loop()`; editor wraps it UI-begin → Loop → UI-end |
@@ -657,11 +657,22 @@ about never existed, because the tree **is** the storage now rather than a cache
 game-side `ModuleRegistrar`; it was never a promise about `Menus()`, and the break was deliberate.
 - **A node is a TAG, never a closure.** `AddCommand(label, tag)` is the whole entry API; clicking is
   `Commands().Execute(tag, context)`, the identical call a key binding makes. That is what makes "the
-  menu and the shortcut trigger one verb" true by construction rather than by discipline, and it is why
-  a **params-carrying** overload was rejected: a payload only the composition root can supply is a
-  payload a key binding cannot carry, so such a command would be menu-only by accident. The one case
-  (`QuitCommand`'s `Window*`) was fixed at the root — `EditorContext` carries `MainWindow`, `QuitParams`
-  is deleted — which is the general answer whenever this recurs.
+  menu and the shortcut trigger one verb" true by construction rather than by discipline.
+- **Params are allowed, and the test is the CLASS OF PAYLOAD** (amended 2026-08-19, **MR2c**). This
+  bullet used to reject a params-carrying entry outright, reasoning from `QuitCommand`'s `Window*`:
+  *a payload only the composition root can supply is a payload a key binding cannot carry, so such a
+  command would be menu-only by accident.* That argument is sound and it is **about the payload, not
+  about params** — it was over-generalized into a blanket ban. `PanelIdParams{OpaaxStringID}` is the
+  opposite kind of thing: plain interned data, expressible verbatim in a key→tag table, so an entry
+  carrying it stays bindable. **A composition-root-only payload is still forbidden** and
+  `EditorContext::MainWindow` remains the answer (`QuitParams` stays deleted).
+  The payload rides as a **third optional facet** — `SetParams(T)` beside `SetEnabled`/`SetChecked` —
+  not an `AddCommand` overload, so `AddCommand` keeps one signature and what an entry *is* still
+  follows from which facets were set. It is held in an `EditorCommandParamsBox<T>`
+  (`Editor/Commands/EditorCommandParams.h`, **not** `Menus/`): `EditorCommandRegistry::Execute` is a
+  template whose `typeid` gate is what turns a wrong payload into a logged refusal rather than a
+  `reinterpret_cast`, so a holder must keep the static type — and the key→tag table will need the same
+  box.
 - **Identity is an `OpaaxStringID` and it doubles as the label**, so `Category()`/`SubCategory()` are
   get-or-create on an integer compare and a menu cannot be looked up by one name and drawn under
   another. Two modules naming `"Tools"` mean the one `Tools`.
@@ -680,6 +691,39 @@ game-side `ModuleRegistrar`; it was never a promise about `Menus()`, and the bre
   calling `PlayInEditor` three times. Nothing about a shortcut belongs on a menu node, so there is no
   `SetShortcut`: a **key→tag table is its own system**, and this is its precondition (a verb that is not
   a command cannot be bound).
+**MR2c — A panel is a DESCRIPTION plus contents; the host owns the window** (landed 2026-08-19).
+`Panels()` takes `Register<TPanel>(PanelDesc{...})` — id, which root menu category holds its toggle
+(`Window` default, `Tools` for a tool-shaped panel), and `EPanelVisibility` at startup. `EditorPanels`
+(`Editor/Panels/EditorPanels.{h,cpp}`) owns every instance **and** its visibility, and is the only place
+in the editor that calls `ImGui::Begin`.
+- **The id is stated ONCE.** It was interned twice — in the `Register("Hierarchy", …)` call and again as
+  a `m_PanelID` member — with nothing making the two agree ([[L37]]'s shape). `GetPanelID()` had 7
+  overrides and **0 consumers**, so the panel-side copy bought nothing; it is deleted. The desc's `Id`
+  is the registry key, the ImGui window label and the dock key in `imgui.ini` at once.
+- **`IEditorPanel::Draw()` became `DrawContents()`** — widgets only. The `Begin`/`End` pair, the label,
+  the first-use size and the close button are the host's, which deletes 7 copies of that boilerplate and
+  the two mid-function `End(); return;` early-outs that were one added `return` from leaking a window.
+  What genuinely varies is a `PanelWindowStyle` (first-use size + the Viewport's zero padding).
+- **The ViewportPanel is an ordinary panel**, registered first (natives before modules, **MR2**), so its
+  `SetPrimaryRenderTarget` handshake still cannot be reordered by a game module — and reverse-order
+  teardown (**LC3**) now frees the FBO **last**, while the device and GL context are alive (**F2a**).
+  What kept it out was `EditorService` reaching in for `IsHovered()`/`IsFocused()`; the panel now
+  **pushes** those into `InputRoute`, which `EditorContext` already calls the one answer to "is the
+  engine being fed". Sourcing, not mirroring — and it fixes a bug visibility would otherwise have
+  introduced: a hidden panel never draws, so a cached hover would stay `true` forever and hold the route
+  open with no viewport on screen ([[L28]]). `OnPreRender` runs visible-or-not and clears it.
+- **The toggle is ONE command for every panel** (`Editor.Command.TogglePanel`), with the panel as the
+  *payload* — see **MR2b**. Not a tag per panel: `OpaaxTag` refuses any byte `<= ' '` (**I14**) and
+  `"Play Controls"` is a panel id. `ImGui::Begin(label, &bVisible)` means the window's close button and
+  the menu tick write the **same bool**, so they cannot drift.
+- **`BindPanelToggles` runs after the game module and before `Seal()`**, so a game panel's toggle costs
+  zero `OpaaxEditorLib` changes — the M2a diff gate, still holding (S4 touched one file).
+- **Not built, deliberately:** visibility does not persist across sessions (ImGui's `.ini` keeps dock
+  position and collapse; open-state is the application's). Trigger: the first hidden panel that has to
+  be reopened every launch. Also no `Closable=false` — closing the Viewport leaves the render target
+  bound and the world drawing into an FBO nobody samples, which is wasteful and never wrong, and the
+  menu is the way back.
+
 **MR3 — One module shape.** Runtime and editor modules share a marker base **`IModule`**
 (`Application/IModule.h`): `IRuntimeModule : IModule` (`OnRegister(ModuleRegistrar&)`) and
 `IEditorModule : IModule` (`OnRegister(EditorExtensionRegistrar&)`). `OnRegister` stays on each derived

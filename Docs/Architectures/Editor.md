@@ -270,7 +270,7 @@ The extension surface is **defined by the editor, consumed by the game**. Symmet
 | Registry | What the game plugs in | Lands in |
 |---|---|---|
 | `Drawers()` | custom Inspector UI per game component | M2 |
-| `Panels()` | tool panels (wave designer, dialogue editor, …) — factory receives `EditorContext&`; the editor owns lifecycle, docking, layout persistence | M2 |
+| `Panels()` | tool panels (wave designer, dialogue editor, …) — `Register<TPanel>(PanelDesc{...})`, the panel built from `EditorContext&` alone. **Reworked 2026-08-19 (ARCHITECTURE.md MR2c):** the desc carries the panel's id, which **root menu category holds its toggle** (`Window` by default, `Tools` for a tool), and whether it opens with the editor. `EditorPanels` owns the instances *and* their visibility and is the only place that speaks ImGui window, so a panel implements `DrawContents()` and nothing else — the label, the first-use size, the close button and the docking are the host's. A registered panel gets its Window-menu toggle for free. | M2 |
 | `ResourceTypes()` | game-defined file types, keyed by **extension**: browser icon, label, double-click (old `IAssetTypeActions` concept, rewritten injected). Named for the live vocabulary — `CResource`/`ResourceManager` — since `Asset` now means the retired `Legacy/Assets` world. | M2 |
 | `Menus()` | the menu bar ("Tools → Debug → Validate Sandbox"). **LIVE M5 S4**; reworked 2026-08-19 into **`EditorMenu`** (`Editor/Menus/`), a TREE the caller builds — `Category("File")` / `SubCategory("Debug")` get-or-create by interned id, `AddCommand(label, tag)` / `AddSeparator()` fill one ordered child list, so nesting is arbitrary and separators are positional. *Replaces the flat `{Path, FMenuCommand}` list whose nesting was re-derived at draw time: a path string can carry a bar order, an enabled predicate or a checked state for nothing (**MR2b**).* **A node is a command TAG, never a closure**, so a click and a key binding are the same `Commands().Execute(tag, ctx)`. Optional `SetEnabled` / `SetChecked` predicates are asked every frame. The editor's own `File/*` entries register through this same route, so there is only one `File` menu. `EditorRoute` — the counts-only skeleton every route started as — is **deleted** with it. | M5 |
 | `EditWorldSystems()` | **a route into the single `WorldSubsystemRegistry`** — editor-supplied candidates whose `ShouldCreate` gates on `Edit`. Read-only visualization (trigger zones, patrol paths, spawn points) via `DebugDraw`. Not a separate mechanism. **LIVE M4 S5**, and literally the game-side `WorldSubsystemRoute` reused, not an editor copy of it (ARCHITECTURE.md **MR4**) — `Menus()` is now the last counts-only `EditorRoute`, and it leaves with M5. | M4 |
@@ -282,8 +282,10 @@ class ShmupEditorModule final : public IEditorModule
     void OnRegister(EditorExtensionRegistrar& InR) override
     {
         InR.Drawers().Register<WaveSpawnerComponent, WaveSpawnerDrawer>();
-        InR.Panels().Register("Wave Designer",
-            [](EditorContext& InCtx) { return MakeUnique<WavePanel>(InCtx); });
+        InR.Panels().Register<WavePanel>(PanelDesc{
+            .Id                = OPAAX_ID("Wave Designer"),
+            .Menu              = OPAAX_ID("Tools"),                  // omit for "Window"
+            .DefaultVisibility = EPanelVisibility::Hidden });
         InR.ResourceTypes().Register(ResourceTypeDesc{
             .Extension  = OPAAX_ID(".wave"),
             .Label      = OPAAX_ID("Wave Definition"),
