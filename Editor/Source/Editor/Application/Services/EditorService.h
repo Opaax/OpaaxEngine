@@ -66,7 +66,17 @@ namespace Opaax::Editor
          * reach them BY TAG, exactly as a game module's command would be reached.
          */
         void RegisterNativeEditorCommand();
-        
+
+        /**
+         * One Window-menu entry per registered panel, from its PanelDesc.
+         *
+         * Runs AFTER the game module has registered (so its panels get a toggle too) and BEFORE the
+         * seal. Not a privileged path: it is the same AddCommand a module calls, carrying the same
+         * tag, and the entry's tick reads EditorPanels so it cannot drift from the window's own
+         * close button.
+         */
+        void BindPanelToggles();
+
         // End Native Editor
         // =============================================================================
         

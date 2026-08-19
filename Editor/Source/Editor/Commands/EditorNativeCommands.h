@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/String/OpaaxString.hpp"
+#include "Core/String/OpaaxStringID.hpp"
 #include "Editor/Commands/EditorCommandConcept.h"   // NoParams
 
 namespace Opaax::Editor
@@ -39,6 +40,12 @@ namespace Opaax::Editor
         OpaaxString AbsPath;
     };
 
+    /** Which panel a panel verb acts on — the id from its PanelDesc. */
+    struct PanelIdParams
+    {
+        OpaaxStringID PanelId;
+    };
+
     // =============================================================================
     // App
     // =============================================================================
@@ -56,6 +63,22 @@ namespace Opaax::Editor
         using Params = NoParams;
 
         void Execute(EditorContext& InContext, const Params&);
+    };
+
+    /**
+     * Show or hide one panel — the verb behind every entry in the Window menu, and behind the
+     * window's own close button by way of the same bool.
+     *
+     * ONE command for every panel, because the panel is the PAYLOAD rather than the identity: an
+     * interned id is plain data, so the entry that carries it is the entry a key binding could
+     * carry too. A tag per panel would have needed a registration-time tag, and panel ids have
+     * spaces, which OpaaxTag refuses (I14).
+     */
+    struct TogglePanelCommand
+    {
+        using Params = PanelIdParams;
+
+        void Execute(EditorContext& InContext, const Params& InParams);
     };
 
     // =============================================================================

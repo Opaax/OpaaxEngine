@@ -10,6 +10,9 @@ namespace Opaax::Editor::Tags
     //Miscs
     inline const OpaaxTag EDITOR_COMMAND_QUIT = OpaaxTag("Editor.Command.Quit");
 
+    //Panels — ONE tag for every panel; which one is the PanelIdParams payload.
+    inline const OpaaxTag EDITOR_COMMAND_TOGGLE_PANEL = OpaaxTag("Editor.Command.TogglePanel");
+
     //Play in editor
     inline const OpaaxTag EDITOR_COMMAND_PLAY         = OpaaxTag("Editor.Command.Play");
     inline const OpaaxTag EDITOR_COMMAND_TOGGLE_PAUSE = OpaaxTag("Editor.Command.TogglePause");

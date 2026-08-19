@@ -114,6 +114,7 @@ namespace Opaax::Editor
         EditorCommandRegistry& lCommands = m_Extensions.Commands();
 
         lCommands.Register<QuitCommand>(Tags::EDITOR_COMMAND_QUIT);
+        lCommands.Register<TogglePanelCommand>(Tags::EDITOR_COMMAND_TOGGLE_PANEL);
 
         lCommands.Register<PlayCommand>(Tags::EDITOR_COMMAND_PLAY);
         lCommands.Register<TogglePauseCommand>(Tags::EDITOR_COMMAND_TOGGLE_PAUSE);
@@ -403,6 +404,10 @@ namespace Opaax::Editor
         {
             InCollect(m_Extensions);
         }
+
+        // AFTER the game module, so its panels get a toggle too, and before the seal.
+        BindPanelToggles();
+
         m_Extensions.Seal();
 
         OPAAX_LOG(LogEditorService, Info,
@@ -552,7 +557,31 @@ namespace Opaax::Editor
         lPanels.Register<HierarchyPanel>(PanelDesc{ .Id = OPAAX_ID("Hierarchy") });
         lPanels.Register<InspectorPanel>(PanelDesc{ .Id = OPAAX_ID("Inspector") });
         lPanels.Register<ResourceBrowserPanel>(PanelDesc{ .Id = OPAAX_ID("Resource Browser") });
-        lPanels.Register<InputPanel>(PanelDesc{ .Id = OPAAX_ID("Input") });
+        // A debug readout, not part of the author loop — off until asked for, from the Window menu.
+        lPanels.Register<InputPanel>(PanelDesc{
+            .Id = OPAAX_ID("Input"), .DefaultVisibility = EPanelVisibility::Hidden
+        });
+    }
+
+    void EditorService::BindPanelToggles()
+    {
+        // One menu entry per registered panel, in the category its PanelDesc named — so a game
+        // module's panel gets its toggle for free, and a tool-shaped panel lands under "Tools"
+        // beside whatever else is there (Category() is get-or-create, so they merge by identity).
+        //
+        // The tick READS EditorPanels rather than caching a bool, which is what makes the menu and
+        // the window's own close button incapable of disagreeing: there is one bool, and both of
+        // them touch it.
+        for (const PanelEntry& lEntry : m_Extensions.Panels().Entries())
+        {
+            const PanelDesc& lDesc = lEntry.Desc;
+
+            m_Extensions.Menus().Category(lDesc.Menu)
+                        .AddCommand(lDesc.Id, Tags::EDITOR_COMMAND_TOGGLE_PANEL)
+                        .SetParams(PanelIdParams{ lDesc.Id })
+                        .SetChecked([lId = lDesc.Id](const EditorContext& InContext)
+                                    { return InContext.Panels.IsVisible(lId); });
+        }
     }
 
     void EditorService::DrawDockspace()

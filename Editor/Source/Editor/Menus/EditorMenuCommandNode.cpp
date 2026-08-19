@@ -36,6 +36,9 @@ namespace Opaax::Editor
         // was asked for, so a miss says which of the two was wrong.
         OPAAX_LOG(LogEditorMenu, Info, "Menu: '{}' -> {}", GetPath().CStr(), m_Command);
 
-        InContext.Extensions.Commands().Execute(m_Command, InContext);
+        const EditorCommandRegistry& lCommands = InContext.Extensions.Commands();
+
+        if (m_Params != nullptr) { m_Params->Dispatch(lCommands, m_Command, InContext); }
+        else                     { lCommands.Execute(m_Command, InContext); }
     }
 }

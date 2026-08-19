@@ -6,6 +6,7 @@
 #include "Editor/Operation/LevelOperations.h"
 #include "Editor/Operation/MapOperations.h"
 #include "Editor/PIE/PlayInEditor.h"
+#include "Editor/Panels/EditorPanels.h"
 
 #include "Application/Services/IEngine.h"
 #include "Application/Services/ILogger.h"
@@ -72,6 +73,15 @@ namespace Opaax::Editor
         OPAAX_LOG(LogEditorCommands, Info, "Exit requested");
 
         InContext.MainWindow.RequestClose();
+    }
+
+    void TogglePanelCommand::Execute(EditorContext& InContext, const Params& InParams)
+    {
+        const bool bShow = !InContext.Panels.IsVisible(InParams.PanelId);
+
+        OPAAX_LOG(LogEditorCommands, Info, "Panel '{}' -> {}", InParams.PanelId, bShow ? "shown" : "hidden");
+
+        InContext.Panels.SetVisible(InParams.PanelId, bShow);
     }
 
     // =============================================================================

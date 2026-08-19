@@ -54,7 +54,8 @@ namespace Opaax::Editor
 
             if (lStyle.bNoPadding) { ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.f, 0.f)); }
 
-            const bool lOpen = ImGui::Begin(lLive.Desc.Id.CStr());
+            // &bVisible is the close button, writing the SAME bool the Window menu ticks.
+            const bool lOpen = ImGui::Begin(lLive.Desc.Id.CStr(), &lLive.bVisible);
 
             if (lStyle.bNoPadding) { ImGui::PopStyleVar(); }
 
