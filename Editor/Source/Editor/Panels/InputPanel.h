@@ -48,12 +48,12 @@ namespace Opaax::Editor
         void OnPreRender() override {}
 
         /** Route state, held keys, last press/release, mouse position + delta, scroll. */
-        void Draw()        override;
+        void DrawContents() override;
 
         /** Nothing to release. */
         void Shutdown()    override {}
 
-        OpaaxStringID GetPanelID() const override { return m_PanelID; }
+        PanelWindowStyle GetWindowStyle() const override { return { { 360.f, 220.f } }; }
         //~End IEditorPanel interface
 
         // =============================================================================
@@ -61,9 +61,6 @@ namespace Opaax::Editor
         // =============================================================================
     private:
         EditorContext& m_Context;
-
-        const OpaaxStringID m_PanelID{ OPAAX_ID("Input") };
-        const OpaaxString   m_Title = m_PanelID.ToString();
 
         // A wheel notch is one frame of non-zero — about 16 ms, which the eye cannot catch. The
         // last value is held on screen for a moment. DISPLAY ONLY: the engine's scroll is

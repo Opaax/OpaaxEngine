@@ -56,16 +56,12 @@ void SandboxPanel::SpawnQuad()
     OPAAX_LOG(LogSandboxPanel, Info, "SandboxPanel: spawned quad #{} ('{}')", m_SpawnCount, lName.CStr());
 }
 
-void SandboxPanel::Draw()
+void SandboxPanel::DrawContents()
 {
-    ImGui::SetNextWindowSize(ImVec2(260.f, 150.f), ImGuiCond_FirstUseEver);
-    ImGui::Begin(m_Title.CStr());
-
     World* lWorld = m_Context.Worlds.GetActiveWorld();
     if (lWorld == nullptr)
     {
         ImGui::TextDisabled("No active world.");
-        ImGui::End();
         return;
     }
 
@@ -77,6 +73,4 @@ void SandboxPanel::Draw()
     {
         SpawnQuad();
     }
-
-    ImGui::End();
 }

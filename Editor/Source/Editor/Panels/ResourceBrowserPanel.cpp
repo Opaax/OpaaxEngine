@@ -157,11 +157,8 @@ namespace Opaax::Editor
         }
     }
 
-    void ResourceBrowserPanel::Draw()
+    void ResourceBrowserPanel::DrawContents()
     {
-        ImGui::SetNextWindowSize(ImVec2(520.f, 320.f), ImGuiCond_FirstUseEver);
-        ImGui::Begin(m_Title.CStr());
-
         // Frozen header: the toolbar (and the breadcrumb in Tiles) stay pinned while only the content
         // area below scrolls — Excel's "freeze panes", salvaged from the old browser.
         DrawToolbar();
@@ -176,8 +173,6 @@ namespace Opaax::Editor
             case EBrowserView::List:  DrawList();  break;
         }
         ImGui::EndChild();
-
-        ImGui::End();
     }
 
     // =============================================================================

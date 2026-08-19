@@ -223,6 +223,10 @@ namespace Opaax::Editor
         m_MapDocument = MakeUnique<EditorMapDocument>();
         m_LevelDocument = MakeUnique<EditorLevelDocument>();
 
+        // --- The live panels. Created EMPTY here so the context below can hold a reference to it;
+        //     Build() runs the factories once the context exists. ------------------------------
+        m_PanelHost = MakeUnique<EditorPanels>();
+
         // --- World-switch reactions (M4 S5). PIE swaps the active world twice per session, so a
         //     cached selection or per-world panel state has to be told. Subscribed BEFORE the panels
         //     exist: the first switch cannot happen until a frame runs, and unsubscribing is
@@ -244,6 +248,7 @@ namespace Opaax::Editor
             *m_LevelDocument,
             *m_MapDocument,
             m_Extensions,
+            *m_PanelHost,
             OpaaxApplication::GetAppService<IPaths>(),
             OpaaxApplication::GetAppService<IPlatform>().GetFileSystem(),
             *lWindow,
@@ -258,21 +263,10 @@ namespace Opaax::Editor
         // --- Registered panels (M2a): native and game panels alike are built HERE, from the one registry,
         //     in registration order. The factories were stored back at RegisterExtensions (pre-Engine
         //     startup, no context yet) — this is the point where they finally have one to receive. -------
-        for (const PanelEntry& lEntry : m_Extensions.Panels().Entries())
-        {
-            TUniquePtr<IEditorPanel> lPanel = lEntry.Factory ? lEntry.Factory(*m_Context) : nullptr;
-            if (lPanel == nullptr)
-            {
-                OPAAX_LOG(LogEditorService, Warn, "Panel '{}' produced no instance — skipped.", lEntry.Id);
-                continue;
-            }
-
-            lPanel->Startup();
-            m_Panels.push_back(Move(lPanel));
-        }
+        m_PanelHost->Build(m_Extensions.Panels(), *m_Context);
 
         OPAAX_LOG(LogEditorService, Info, "Editor panels registered: {}, constructed: {}",
-                  m_Extensions.Panels().Count(), m_Panels.size());
+                  m_Extensions.Panels().Count(), m_PanelHost->Count());
 
         AdoptStartupLevel();
 
@@ -316,7 +310,7 @@ namespace Opaax::Editor
         // world, so Render() reads the new FBO size this frame (deferred-resize handshake, §5).
         if (m_ViewportPanel != nullptr) { m_ViewportPanel->OnPreRender(); }
 
-        for (const TUniquePtr<IEditorPanel>& lPanel : m_Panels) { lPanel->OnPreRender(); }
+        if (m_PanelHost != nullptr) { m_PanelHost->OnPreRender(); }
     }
 
     void EditorService::EndFrame()
@@ -330,9 +324,9 @@ namespace Opaax::Editor
 
         // The Viewport panel samples the FBO the world was just rendered into (Engine().Loop() above)
         // and shows it as an ImGui image — the world lives INSIDE a panel now, not the raw backbuffer.
-        if (m_ViewportPanel != nullptr) { m_ViewportPanel->Draw(); }
+        if (m_ViewportPanel != nullptr) { m_ViewportPanel->DrawContents(); }
 
-        for (const TUniquePtr<IEditorPanel>& lPanel : m_Panels) { lPanel->Draw(); }
+        if (m_PanelHost != nullptr) { m_PanelHost->Draw(); }
 
         // Submit the UI to the backbuffer AFTER Engine().Loop() has rendered the world into the FBO
         // (see EditorApplication::TickFrame). The host presents the backbuffer once, after this.
@@ -490,9 +484,9 @@ namespace Opaax::Editor
             }
         }
 
-        for (const TUniquePtr<IEditorPanel>& lPanel : m_Panels)
+        if (m_PanelHost != nullptr)
         {
-            lPanel->OnActiveWorldChanged(InOld, InNew);
+            m_PanelHost->OnActiveWorldChanged(InOld, InNew);
         }
 
         if (m_ViewportPanel != nullptr)
@@ -561,35 +555,13 @@ namespace Opaax::Editor
     {
         // The PIE controls are a PANEL like any other — registered through the same route a game
         // panel travels, not drawn by EditorService as a privileged widget (D10).
-        m_Extensions.Panels().Register("Play Controls",
-                                       [](EditorContext& InContext) -> TUniquePtr<IEditorPanel>
-                                       {
-                                           return MakeUnique<PlayToolbarPanel>(InContext);
-                                       });
+        PanelRegistry& lPanels = m_Extensions.Panels();
 
-        m_Extensions.Panels().Register("Hierarchy",
-                                       [](EditorContext& InContext) -> TUniquePtr<IEditorPanel>
-                                       {
-                                           return MakeUnique<HierarchyPanel>(InContext);
-                                       });
-
-        m_Extensions.Panels().Register("Inspector",
-                                       [](EditorContext& InContext) -> TUniquePtr<IEditorPanel>
-                                       {
-                                           return MakeUnique<InspectorPanel>(InContext);
-                                       });
-
-        m_Extensions.Panels().Register("Resource Browser",
-                                       [](EditorContext& InContext) -> TUniquePtr<IEditorPanel>
-                                       {
-                                           return MakeUnique<ResourceBrowserPanel>(InContext);
-                                       });
-
-        m_Extensions.Panels().Register("Input",
-                                       [](EditorContext& InContext) -> TUniquePtr<IEditorPanel>
-                                       {
-                                           return MakeUnique<InputPanel>(InContext);
-                                       });
+        lPanels.Register<PlayToolbarPanel>(PanelDesc{ .Id = OPAAX_ID("Play Controls") });
+        lPanels.Register<HierarchyPanel>(PanelDesc{ .Id = OPAAX_ID("Hierarchy") });
+        lPanels.Register<InspectorPanel>(PanelDesc{ .Id = OPAAX_ID("Inspector") });
+        lPanels.Register<ResourceBrowserPanel>(PanelDesc{ .Id = OPAAX_ID("Resource Browser") });
+        lPanels.Register<InputPanel>(PanelDesc{ .Id = OPAAX_ID("Input") });
     }
 
     void EditorService::DrawDockspace()
@@ -686,10 +658,9 @@ namespace Opaax::Editor
 
         // 2. Registered panels — reverse construction order (LC3). None owns a GPU resource, so the only
         //    ordering constraint is that they die before the context they hold a reference into.
-        while (!m_Panels.empty())
+        if (m_PanelHost != nullptr)
         {
-            m_Panels.back()->Shutdown();
-            m_Panels.pop_back();
+            m_PanelHost->Shutdown();
         }
 
         // 3. UI backend — ImGui_ImplOpenGL3_Shutdown requires the GL context, still alive here.
@@ -708,6 +679,7 @@ namespace Opaax::Editor
         m_Selection.reset();
         m_InputRoute.reset();
         m_PIE.reset();
+        m_PanelHost.reset();
 
         // 5. The context refs last (nothing points into them anymore).
         m_Context.reset();

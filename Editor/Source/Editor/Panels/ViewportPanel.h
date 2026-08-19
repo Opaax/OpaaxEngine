@@ -3,6 +3,8 @@
 #include "Application/Services/ILogger.h"
 #include "Core/OpaaxTypes.h"             // TUniquePtr, Uint32
 #include "Core/Maths/MathTypes.h"
+#include "Core/String/OpaaxString.hpp"
+#include "Core/String/OpaaxStringID.hpp"
 #include "Editor/Panels/IEditorPanel.h"
 #include "Editor/UI/IEditorUIBackend.h"
 
@@ -76,9 +78,8 @@ namespace Opaax::Editor
         //~Begin IEditorPanel interface
         void            Startup()               override;
         void            OnPreRender()           override;
-        void            Draw()                  override;
+        void            DrawContents()          override;
         void            Shutdown()              override;
-        OpaaxStringID   GetPanelID()    const   override { return m_PanelID; }
         //~End IEditorPanel interface
 
         // =============================================================================

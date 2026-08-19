@@ -110,12 +110,12 @@ namespace Opaax::Editor
         void            OnPreRender()           override {}
 
         /** Toolbar + breadcrumb pinned, the content area scrolling beneath them. */
-        void            Draw()                  override;
+        void            DrawContents()          override;
 
         /** No resource to release — the scanned tree is plain owned data. */
         void            Shutdown()              override {}
 
-        OpaaxStringID   GetPanelID()    const   override { return m_PanelID; }
+        PanelWindowStyle GetWindowStyle() const override { return { { 520.f, 320.f } }; }
         //~End IEditorPanel interface
 
         // =============================================================================
@@ -123,9 +123,6 @@ namespace Opaax::Editor
         // =============================================================================
     private:
         EditorContext& m_Context;
-
-        const OpaaxStringID m_PanelID{ OPAAX_ID("Resource Browser") };
-        const OpaaxString   m_Title = m_PanelID.ToString();
 
         // Project + Editor today. Data-driven on purpose: another root is one push_back in Startup.
         TDynArray<ResourceRoot> m_Roots;

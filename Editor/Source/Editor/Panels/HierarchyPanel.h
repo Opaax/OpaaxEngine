@@ -122,7 +122,7 @@ namespace Opaax::Editor
          * starts open and the PERSISTENT one is labelled, because a value you can set is one you
          * must be able to read. Empty states are explicit text, never a blank panel (L12).
          */
-        void            Draw()                  override;
+        void            DrawContents()          override;
 
         /** No resource to release. */
         void            Shutdown()              override {}
@@ -134,7 +134,7 @@ namespace Opaax::Editor
          */
         void            OnActiveWorldChanged(World* InOld, World* InNew) override;
 
-        OpaaxStringID   GetPanelID()    const   override { return m_PanelID; }
+        PanelWindowStyle GetWindowStyle() const override { return { { 260.f, 400.f } }; }
         //~End IEditorPanel interface
 
         // =============================================================================
@@ -152,9 +152,6 @@ namespace Opaax::Editor
         EditorContext& m_Context;
 
         PendingMapAction m_Pending;
-
-        const OpaaxStringID m_PanelID{ OPAAX_ID("Hierarchy") };
-        const OpaaxString   m_Title = m_PanelID.ToString();
 
         // One-shot: Draw() is per-frame, and BOTH empty states are silent — a clean log would otherwise be
         // indistinguishable from an empty panel (L15). Logs the SUCCESS branch once, then never again.

@@ -21,11 +21,8 @@ namespace Opaax::Editor
 
     PlayToolbarPanel::~PlayToolbarPanel() = default;
 
-    void PlayToolbarPanel::Draw()
+    void PlayToolbarPanel::DrawContents()
     {
-        ImGui::SetNextWindowSize(ImVec2(360.f, 90.f), ImGuiCond_FirstUseEver);
-        ImGui::Begin(m_Title.CStr());
-
         PlayInEditor& lPIE = m_Context.PIE;
 
         // The buttons DISPATCH BY TAG, exactly as the Play menu and the reserved F-keys do. They
@@ -79,7 +76,5 @@ namespace Opaax::Editor
         {
             ImGui::TextDisabled("— no active world");
         }
-
-        ImGui::End();
     }
 }

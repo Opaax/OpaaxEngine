@@ -10,6 +10,7 @@
 #include "Editor/PIE/PlayInEditor.h"
 #include "Editor/UI/IEditorUIBackend.h"
 #include "Editor/Panels/ViewportPanel.h"
+#include "Editor/Panels/EditorPanels.h"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Core/OpaaxTypes.h"   // TUniquePtr
 
@@ -196,11 +197,11 @@ namespace Opaax::Editor
         TUniquePtr<IEditorUIBackend> m_UIBackend;
         TUniquePtr<ViewportPanel>    m_ViewportPanel;   // M1: world-to-texture panel; owns the offscreen FBO
 
-        // M2a: every registered panel (native + game), built from m_Extensions.Panels() in registration
-        // order. The Viewport stays a NAMED member above, deliberately outside this collection — it drives
-        // IEngine::SetPrimaryRenderTarget, so its construction/teardown order must not depend on what a
-        // game module registers (overview §3.3).
-        TDynArray<TUniquePtr<IEditorPanel>> m_Panels;
+        // Every registered panel (native + game), built from m_Extensions.Panels() in registration order,
+        // and their visibility. The Viewport stays a NAMED member above, deliberately outside this
+        // collection — it drives IEngine::SetPrimaryRenderTarget, so its construction/teardown order must
+        // not depend on what a game module registers (overview §3.3).
+        TUniquePtr<EditorPanels> m_PanelHost;
 
         // Every D10 route, including the menu bar itself — one owner, so what a module registers
         // into is the object that draws.

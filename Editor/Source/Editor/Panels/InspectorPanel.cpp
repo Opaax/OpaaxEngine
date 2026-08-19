@@ -30,18 +30,14 @@ namespace Opaax::Editor
 
     InspectorPanel::~InspectorPanel() = default;
 
-    void InspectorPanel::Draw()
+    void InspectorPanel::DrawContents()
     {
-        ImGui::SetNextWindowSize(ImVec2(320.f, 400.f), ImGuiCond_FirstUseEver);
-        ImGui::Begin(m_Title.CStr());
-
         // A local COPY of the handle: Entity is a value type, and copying it once keeps the whole draw
         // reading one consistent selection even if a drawer were to change it.
         Entity lSelected = m_Context.Selection.Get();
         if (!lSelected.IsValid())
         {
             ImGui::TextDisabled("Nothing selected.");
-            ImGui::End();
             return;
         }
 
@@ -87,8 +83,6 @@ namespace Opaax::Editor
         }
 
         m_bWasItemActive = lItemActive;
-
-        ImGui::End();
     }
 
     void InspectorPanel::DrawAddComponent(Entity& InEntity)

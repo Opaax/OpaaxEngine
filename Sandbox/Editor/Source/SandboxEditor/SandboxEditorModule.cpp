@@ -68,9 +68,7 @@ void SandboxEditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& In
 
     // REAL extension (M2a): the game's own panel, registered through the same route the editor's native
     // Hierarchy uses. Constructed later by EditorService, once an EditorContext exists to hand it.
-    InRegistrar.Panels().Register("Sandbox Panel",
-        [](Opaax::Editor::EditorContext& InContext) -> Opaax::TUniquePtr<Opaax::Editor::IEditorPanel>
-        {
-            return Opaax::MakeUnique<SandboxPanel>(InContext);
-        });
+    InRegistrar.Panels().Register<SandboxPanel>(Opaax::Editor::PanelDesc{
+        .Id = OPAAX_ID("Sandbox Panel")
+    });
 }

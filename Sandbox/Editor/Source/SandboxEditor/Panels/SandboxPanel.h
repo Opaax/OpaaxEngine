@@ -58,12 +58,12 @@ public:
     void                    OnPreRender()           override {}
 
     /** Entity count + the Spawn Quad button; explicit text when there is no world (never a blank panel). */
-    void                    Draw()                  override;
+    void                    DrawContents()          override;
 
     /** No resource to release. */
     void                    Shutdown()              override {}
 
-    Opaax::OpaaxStringID    GetPanelID()    const   override { return m_PanelID; }
+    Opaax::Editor::PanelWindowStyle GetWindowStyle() const override { return { { 260.f, 150.f } }; }
     //~End IEditorPanel interface
 
     // =============================================================================
@@ -71,9 +71,6 @@ public:
     // =============================================================================
 private:
     Opaax::Editor::EditorContext& m_Context;
-
-    const Opaax::OpaaxStringID m_PanelID{ OPAAX_ID("Sandbox Panel") };
-    const Opaax::OpaaxString   m_Title = m_PanelID.ToString();
 
     Opaax::Uint64 m_SpawnCount = 0;   // drives both the spawn layout and the log's "#N"
 };

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Core/String/OpaaxStringID.hpp"   // OpaaxStringID — stable interned panel identity
+#include "Core/Maths/MathTypes.h"   // Vector2F — the window's first-use size
 
 namespace Opaax
 {
@@ -9,16 +9,26 @@ namespace Opaax
 
 namespace Opaax::Editor
 {
+    /**
+     * How EditorPanels opens this panel's window. Defaults suit an ordinary docked list; the
+     * Viewport is the only panel that needs the padding off.
+     */
+    struct PanelWindowStyle
+    {
+        Vector2F DefaultSize = { 320.f, 400.f };
+        bool     bNoPadding  = false;
+    };
+
     // =============================================================================
-    // IEditorPanel — the common base for a dockable editor panel. (M2 grows the registry that
-    //   owns a set of these; M1 has exactly one — the Viewport.) Four lifecycle hooks the editor
-    //   host drives, in this per-frame order:
+    // IEditorPanel — the CONTENTS of a dockable editor panel. The window itself — its label, its
+    //   size, its visibility and the Begin/End pair — belongs to EditorPanels, so a panel emits
+    //   widgets and nothing else. Four lifecycle hooks, in this per-frame order:
     //
-    //     Startup()     once, after the editor UI is up  — acquire GPU/host resources.
-    //     OnPreRender() every frame, BEFORE the world renders — apply state the world's render
-    //                   depends on (e.g. a pending viewport-size change) so Render() reads it.
-    //     Draw()        every frame, inside the ImGui pass — emit the panel's widgets.
-    //     Shutdown()    once, before the engine/UI tears down — release resources (LC).
+    //     Startup()      once, after the editor UI is up  — acquire GPU/host resources.
+    //     OnPreRender()  every frame, BEFORE the world renders, VISIBLE OR NOT — apply state the
+    //                    world's render depends on, and clear anything DrawContents measures.
+    //     DrawContents() every frame while visible, inside the panel's window.
+    //     Shutdown()     once, before the engine/UI tears down — release resources (LC).
     // =============================================================================
     class IEditorPanel
     {
@@ -32,10 +42,10 @@ namespace Opaax::Editor
         // Functions
         // =============================================================================
     public:
-        virtual void Startup()     = 0;
-        virtual void OnPreRender() = 0;
-        virtual void Draw()        = 0;
-        virtual void Shutdown()    = 0;
+        virtual void Startup()      = 0;
+        virtual void OnPreRender()  = 0;
+        virtual void DrawContents() = 0;
+        virtual void Shutdown()     = 0;
 
         /**
          * The active world was replaced — drop anything cached from the old one (M4 S5).
@@ -57,11 +67,7 @@ namespace Opaax::Editor
         // Getter
         // =============================================================================
 
-        /**
-         * @return The panel's stable interned identity — the registry key, dock/layout id, and
-         *   menu→panel routing handle (M2). O(1) integer compare; ToString() yields the display
-         *   name, so id and name live in one place (matches the World/WorldManager convention).
-         */
-        virtual OpaaxStringID GetPanelID() const = 0;
+        /** @return How the host should open this panel's window. Override only to differ. */
+        virtual PanelWindowStyle GetWindowStyle() const { return {}; }
     };
 }

@@ -68,11 +68,8 @@ namespace Opaax::Editor
 
     InputPanel::~InputPanel() = default;
 
-    void InputPanel::Draw()
+    void InputPanel::DrawContents()
     {
-        ImGui::SetNextWindowSize(ImVec2(360.f, 220.f), ImGuiCond_FirstUseEver);
-        ImGui::Begin(m_Title.CStr());
-
         const InputManager& lInput = m_Context.Engine.GetInput();
 
         // ---- Who is getting the input. First, because it explains every line below it: when the
@@ -145,7 +142,5 @@ namespace Opaax::Editor
         {
             ImGui::TextDisabled("Scroll: 0, 0");
         }
-
-        ImGui::End();
     }
 }

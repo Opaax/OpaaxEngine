@@ -64,12 +64,10 @@ namespace Opaax::Editor
          * "Nothing selected." (no entity) vs "No drawable components." (an entity, but no registered
          * drawer applied to it) — the second is why FDrawerInvoke reports whether it drew.
          */
-        void            Draw()                  override;
+        void            DrawContents()          override;
 
         /** No resource to release. */
         void            Shutdown()              override {}
-
-        OpaaxStringID   GetPanelID()    const   override { return m_PanelID; }
         //~End IEditorPanel interface
 
         // =============================================================================
@@ -97,8 +95,5 @@ namespace Opaax::Editor
          * counts as an edit too. See Draw() for why this is asked of ImGui rather than of the drawer.
          */
         bool m_bWasItemActive = false;
-
-        const OpaaxStringID m_PanelID{ OPAAX_ID("Inspector") };
-        const OpaaxString   m_Title = m_PanelID.ToString();
     };
 }

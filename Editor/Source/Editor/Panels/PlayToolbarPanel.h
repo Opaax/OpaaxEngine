@@ -43,12 +43,12 @@ namespace Opaax::Editor
         void OnPreRender() override {}
 
         /** The four buttons; each is disabled in the states where its verb would be refused. */
-        void Draw()        override;
+        void DrawContents() override;
 
         /** Nothing to release. */
         void Shutdown()    override {}
 
-        OpaaxStringID GetPanelID() const override { return m_PanelID; }
+        PanelWindowStyle GetWindowStyle() const override { return { { 360.f, 90.f } }; }
         //~End IEditorPanel interface
 
         // =============================================================================
@@ -56,8 +56,5 @@ namespace Opaax::Editor
         // =============================================================================
     private:
         EditorContext& m_Context;
-
-        const OpaaxStringID m_PanelID{ OPAAX_ID("Play Controls") };
-        const OpaaxString   m_Title = m_PanelID.ToString();
     };
 }

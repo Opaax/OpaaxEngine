@@ -127,7 +127,7 @@ namespace Opaax::Editor
         return m_Framebuffer != nullptr ? m_Context.UIBackend.GetViewportImage(*m_Framebuffer) : EditorViewportImage{};
     }
 
-    void ViewportPanel::Draw()
+    void ViewportPanel::DrawContents()
     {
         ImGui::SetNextWindowSize(ImVec2(m_viewportSizeDefault.x, m_viewportSizeDefault.y), ImGuiCond_FirstUseEver);
         
