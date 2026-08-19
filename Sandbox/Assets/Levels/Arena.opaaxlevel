@@ -1,6 +1,7 @@
 {
     "maps": [
-        "Maps/Arena.opaaxmap"
+        "Maps/Arena.opaaxmap",
+        "Maps/Decor.opaaxmap"
     ],
     "name": "Arena",
     "persistentMap": "Maps/Arena.opaaxmap",

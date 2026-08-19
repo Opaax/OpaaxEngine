@@ -6,7 +6,7 @@
 #include "Editor/Panels/InspectorPanel.h"
 #include "Editor/Panels/PlayToolbarPanel.h"
 #include "Editor/Panels/ResourceBrowserPanel.h"
-#include "Editor/Operation/MapOperations.h"                   // the per-map verbs, shared with the Hierarchy
+#include "Editor/Operation/LevelOperations.h"                 // AdoptOpen — the boot/Open Level shared tail
 #include "Editor//Application/Services/EditorPaths.h"                            // EditorSaveDir — the dock layout's home (D4)
 
 
@@ -26,12 +26,10 @@
 #include "World/World.h"
 #include "World/WorldManager.h"
 #include "World/Components/ComponentRegistry.h"                        // the document captures through it (M5)
-#include "World/Serialization/MapData.h"                     // MapData::OwnerId — is this map already in?
-#include "World/Serialization/MapFile.h"                     // reading the picked map to ask which one it is
 
 #include <imgui.h>
-#include <tinyfiledialogs.h>                                 // Save As — the editor already vendors it
 
+#include "Editor/Commands/EditorNativeCommands.h"
 #include "Editor/Commands/EditorNativeCommandsTags.hpp"
 
 using namespace Opaax; // OPAAX_LOG expands to an unqualified ToSpdLevel(...)
@@ -39,6 +37,17 @@ using namespace Opaax; // OPAAX_LOG expands to an unqualified ToSpdLevel(...)
 namespace
 {
     constexpr LogCategory LogEditorService{"EditorService"};
+
+    using namespace Opaax::Editor;
+
+    /** A menu entry that dispatches InTag through the command registry, with no params. */
+    FMenuCommand MenuDispatch(const OpaaxTag& InTag)
+    {
+        return [InTag](EditorContext& InContext)
+        {
+            InContext.Extensions.Commands().Execute(InTag, InContext);
+        };
+    }
 }
 
 namespace Opaax::Editor
@@ -48,35 +57,26 @@ namespace Opaax::Editor
         // The editor's own entries go through the SAME route a game module uses — registered
         // first, for the same reason native panels are (MR2's order, one level down).
         //
-        // Exit finally does something. It was a bare MenuItem with a comment promising it would
-        // be wired "at S11/M-Input" — a milestone that has since come and gone, which is what
-        // makes a note like that a work item rather than a plan. It closes through
-        // Window::RequestClose, so it takes the same path as clicking the X: one close path, not
-        // a second one to keep correct.
+        // Resolved HERE because this is the composition root, the only editor code that may touch
+        // the locator (D3). QuitCommand receives it as a param.
         Window* const lWindow = OpaaxApplication::GetAppService<IWindowManager>().GetMainWindow();
 
         // --- M5 S5/S6: the author loop, through the same route a game's Tools entry uses ------
         // NEW FIRST, and not only by convention: "Save Map As..." was flagged as weird precisely
         // because nothing led INTO it — there was no way to make a map, so Save As had no workflow
         // in front of it. This is that missing half, and registration order is draw order.
-        m_Extensions.Menus().Register("File/New Map...",
-                                      [](EditorContext& InContext) { NewMapCommand(InContext); });
-
-        m_Extensions.Menus().Register("File/Open Map...",
-                                      [](EditorContext& InContext) { OpenMapCommand(InContext); });
-
-        m_Extensions.Menus().Register("File/Save Map",
-                                      [](EditorContext& InContext) { SaveMapCommand(InContext); });
-
-        m_Extensions.Menus().Register("File/Save Map As...",
-                                      [](EditorContext& InContext) { SaveMapAsCommand(InContext); });
+        //
+        // AN ENTRY IS A TAG, not a function: the bodies live in EditorNativeCommands and are
+        // reached through m_Extensions.Commands(), so the menu holds no privileged pointer into
+        // the editor that a game module's entry could not also hold.
+        m_Extensions.Menus().Register("File/New Map...",     MenuDispatch(Tags::EDITOR_COMMAND_NEW_MAP));
+        m_Extensions.Menus().Register("File/Open Map...",    MenuDispatch(Tags::EDITOR_COMMAND_OPEN_MAP));
+        m_Extensions.Menus().Register("File/Save Map",       MenuDispatch(Tags::EDITOR_COMMAND_SAVE_MAP));
+        m_Extensions.Menus().Register("File/Save Map As...", MenuDispatch(Tags::EDITOR_COMMAND_SAVE_MAP_AS));
 
         // --- the LEVEL half (WM1a): what a session actually has open --------------------------
-        m_Extensions.Menus().Register("File/Open Level...",
-                                      [](EditorContext& InContext) { OpenLevelCommand(InContext); });
-
-        m_Extensions.Menus().Register("File/Save Level",
-                                      [](EditorContext& InContext) { SaveLevelCommand(InContext); });
+        m_Extensions.Menus().Register("File/Open Level...",  MenuDispatch(Tags::EDITOR_COMMAND_OPEN_LEVEL));
+        m_Extensions.Menus().Register("File/Save Level",     MenuDispatch(Tags::EDITOR_COMMAND_SAVE_LEVEL));
 
         // The ONLY Level entry, and the only one that ever earned a place on the bar: it does not
         // need a map named first, it goes and picks one.
@@ -86,20 +86,35 @@ namespace Opaax::Editor
         // map out of the several a level holds (WM1a) — and choosing the persistent map especially
         // needs somewhere to SEE the current answer, not just a verb aimed at the cursor. They live
         // on the Hierarchy's map headers now, where the map you click is the argument (MapOps).
-        m_Extensions.Menus().Register("Level/Add Map...",
-                                      [](EditorContext& InContext) { AddMapToLevelCommand(InContext); });
+        m_Extensions.Menus().Register("Level/Add Map...", MenuDispatch(Tags::EDITOR_COMMAND_ADD_MAP_TO_LEVEL));
 
+        // The one entry that carries a payload: a command reaches the world through its context
+        // (D3) and there is no window in there, so the composition root — which may resolve from
+        // the locator — hands the window in as a param.
         m_Extensions.Menus().Register("File/Exit",
-                                      [lWindow](EditorContext&)
+                                      [lWindow](EditorContext& InContext)
                                       {
-                                          OPAAX_LOG(LogEditorService, Info, "Exit requested from the File menu");
-                                          if (lWindow != nullptr) { lWindow->RequestClose(); }
+                                          InContext.Extensions.Commands().Execute(
+                                              Tags::EDITOR_COMMAND_QUIT, InContext, QuitParams{lWindow});
                                       });
     }
 
     void EditorService::RegisterNativeEditorCommand()
     {
-        m_Extensions.GetEditorCommandRegistry().Register<FNewMapCommand>(Tags::EDITOR_COMMAND_NEW_MAP);
+        EditorCommandRegistry& lCommands = m_Extensions.Commands();
+
+        lCommands.Register<QuitCommand>(Tags::EDITOR_COMMAND_QUIT);
+
+        lCommands.Register<NewMapCommand>(Tags::EDITOR_COMMAND_NEW_MAP);
+        lCommands.Register<OpenMapCommand>(Tags::EDITOR_COMMAND_OPEN_MAP);
+        lCommands.Register<OpenMapAtCommand>(Tags::EDITOR_COMMAND_OPEN_MAP_AT);
+        lCommands.Register<SaveMapCommand>(Tags::EDITOR_COMMAND_SAVE_MAP);
+        lCommands.Register<SaveMapAsCommand>(Tags::EDITOR_COMMAND_SAVE_MAP_AS);
+
+        lCommands.Register<OpenLevelCommand>(Tags::EDITOR_COMMAND_OPEN_LEVEL);
+        lCommands.Register<OpenLevelAtCommand>(Tags::EDITOR_COMMAND_OPEN_LEVEL_AT);
+        lCommands.Register<SaveLevelCommand>(Tags::EDITOR_COMMAND_SAVE_LEVEL);
+        lCommands.Register<AddMapToLevelCommand>(Tags::EDITOR_COMMAND_ADD_MAP_TO_LEVEL);
     }
 
     void EditorService::RegisterNativeResourceTypes()
@@ -114,7 +129,8 @@ namespace Opaax::Editor
             .Icon = OpaaxString("[M]"),
             .OnActivate = [](EditorContext& InContext, const ResourceFile& InFile)
             {
-                OpenMapAt(InContext, InFile.AbsPath);
+                InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_MAP_AT, InContext,
+                                                        MapPathParams{InFile.AbsPath});
             }
         });
 
@@ -124,7 +140,8 @@ namespace Opaax::Editor
             .Icon = OpaaxString("[L]"),
             .OnActivate = [](EditorContext& InContext, const ResourceFile& InFile)
             {
-                OpenLevelAt(InContext, InFile.AbsPath);
+                InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_LEVEL_AT, InContext,
+                                                        LevelPathParams{InFile.AbsPath});
             }
         });
     }
@@ -257,53 +274,9 @@ namespace Opaax::Editor
         // PATH still comes from the project, because a Save needs somewhere to write.
         const OpaaxString lLevelRel = OpaaxApplication::GetAppService<IProjectManager>().StartupLevel();
 
-        AdoptOpenLevel(*m_Context, lLevelRel.IsEmpty()
-                                       ? OpaaxString()
-                                       : m_Context->Paths.AssetToAbsolute(lLevelRel));
-    }
-
-    void EditorService::AdoptOpenLevel(EditorContext& InContext, const OpaaxString& InLevelAbsPath)
-    {
-        World* const lWorld = InContext.Worlds.GetActiveWorld();
-        Level* const lLevel = MapOps::ActiveLevel(InContext);
-
-        if (lWorld == nullptr || lLevel == nullptr) { return; }
-
-        // An EMPTY level path is not "no document": a standalone map still gets a record, which is
-        // what keeps Save Map working in a world that has no manifest behind it.
-        InContext.LevelDocument.AdoptExisting(InLevelAbsPath, *lLevel, *lWorld,
-                                              InContext.Engine.GetRegistries().Components(),
-                                              InContext.Paths);
-
-        const TDynArray<Level::MountedMap>& lMounted = lLevel->GetMountedMaps();
-        if (lMounted.empty())
-        {
-            InContext.MapDocument.Clear();
-            OPAAX_LOG(LogEditorService, Info, "World '{}' has no map mounted — nothing to edit",
-                      lWorld->GetName().CStr());
-            return;
-        }
-
-        // THE FIRST NON-PERSISTENT MAP IS THE ONE EDITED (WM1a). The persistent map is the shared
-        // backdrop — the player, the lights — authored once precisely so it is not the thing being
-        // worked on; the session opens on the content composed over it. Only the persistent one
-        // mounted falls back to it, because there is nothing else to open.
-        const MapId lPersistent = lLevel->GetPersistentMapId();
-        const Level::MountedMap* lEdited = &lMounted[0];
-
-        for (const Level::MountedMap& lCandidate : lMounted)
-        {
-            if (lCandidate.Id != lPersistent)
-            {
-                lEdited = &lCandidate;
-                break;
-            }
-        }
-
-        OPAAX_LOG(LogEditorService, Info, "Level '{}': {} map(s) mounted, focused on '{}'",
-                  lLevel->GetData().Name.CStr(), lMounted.size(), lEdited->AssetRelPath.CStr());
-
-        InContext.MapDocument.Focus(InContext.Paths.AssetToAbsolute(lEdited->AssetRelPath));
+        LevelOps::AdoptOpen(*m_Context, lLevelRel.IsEmpty()
+                                            ? OpaaxString()
+                                            : m_Context->Paths.AssetToAbsolute(lLevelRel));
     }
 
     void EditorService::BeginFrame()
@@ -433,9 +406,10 @@ namespace Opaax::Editor
         m_Extensions.Seal();
 
         OPAAX_LOG(LogEditorService, Info,
-                  "Editor extensions sealed (before first world): drawers={}, panels={}, resourceTypes={}, menus={}, editWorldSystems={}",
+                  "Editor extensions sealed (before first world): drawers={}, panels={}, resourceTypes={}, menus={}, editWorldSystems={}, commands={}",
                   m_Extensions.Drawers().Count(), m_Extensions.Panels().Count(), m_Extensions.ResourceTypes().Count(),
-                  m_Extensions.Menus().Count(), m_Extensions.EditWorldSystems().Count());
+                  m_Extensions.Menus().Count(), m_Extensions.EditWorldSystems().Count(),
+                  m_Extensions.Commands().Count());
     }
 
     bool EditorService::HandleReservedKeys(Event& InEvent)
@@ -672,7 +646,7 @@ namespace Opaax::Editor
 
         if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_S, ImGuiInputFlags_RouteGlobal))
         {
-            SaveMapCommand(*m_Context);
+            m_Context->Extensions.Commands().Execute(Tags::EDITOR_COMMAND_SAVE_MAP, *m_Context);
         }
     }
 
@@ -750,343 +724,6 @@ namespace Opaax::Editor
             }
 
             lEmitted.push_back(lSegment);
-        }
-    }
-
-
-    // =============================================================================
-    // The author loop's commands
-    //
-    // Free-standing statics rather than members: a menu command's whole input is the
-    // EditorContext it is handed (D3), so nothing here needs EditorService — and keeping them
-    // context-only is what lets the identical function serve the menu item AND the keyboard
-    // shortcut without one of them becoming the "real" path.
-    // =============================================================================
-    void EditorService::SaveMapCommand(EditorContext& InContext)
-    {
-        if (!MapOps::CanEdit(InContext, "Save Map")) { return; }
-
-        if (!InContext.MapDocument.HasMap())
-        {
-            SaveMapAsCommand(InContext); // nothing to overwrite — ask where
-            return;
-        }
-
-        // ONE map — the FOCUSED one, because this entry is on the File menu and the cursor is what
-        // a File command has. The Hierarchy's per-map Save names its target instead (MapOps).
-        MapOps::Save(InContext, InContext.MapDocument.GetMapId());
-    }
-
-    void EditorService::SaveMapAsCommand(EditorContext& InContext)
-    {
-        if (!MapOps::CanEdit(InContext, "Save Map As")) { return; }
-
-        const char* const lFilters[] = {"*.opaaxmap"};
-
-        const char* const lPicked = tinyfd_saveFileDialog(
-            "Save Map As",
-            InContext.MapDocument.HasMap()
-                ? InContext.MapDocument.AbsPath().CStr()
-                : InContext.Paths.AssetToAbsolute(OpaaxString("Maps/Untitled.opaaxmap")).CStr(),
-            1, lFilters, "Opaax Map");
-
-        if (lPicked == nullptr)
-        {
-            return; // cancelled — not a failure, and not worth a log line
-        }
-
-        if (InContext.LevelDocument.SaveMapAs(InContext.MapDocument.GetMapId(), OpaaxString(lPicked),
-                                              *InContext.Worlds.GetActiveWorld(),
-                                              InContext.Engine.GetRegistries().Components()))
-        {
-            // The cursor follows the file it just wrote; the record already moved with it.
-            InContext.MapDocument.Focus(OpaaxString(lPicked));
-        }
-    }
-
-    void EditorService::NewMapCommand(EditorContext& InContext)
-    {
-        if (!MapOps::CanEdit(InContext, "New Map")) { return; }
-        
-        EditorExtensionRegistrar* lExt = const_cast<EditorExtensionRegistrar*>(&InContext.Extensions);
-        lExt->GetEditorCommandRegistry().ExecuteCommand(Tags::EDITOR_COMMAND_NEW_MAP,InContext, FNewMapParams{ OpaaxStringView()});
-
-        Level* const lLevel = MapOps::ActiveLevel(InContext);
-        if (lLevel == nullptr) { return; }
-
-        const char* const lFilters[] = {"*.opaaxmap"};
-
-        const char* const lPicked = tinyfd_saveFileDialog(
-            "New Map",
-            InContext.Paths.AssetToAbsolute(OpaaxString("Maps/NewMap.opaaxmap")).CStr(),
-            1, lFilters, "Opaax Map");
-
-        if (lPicked == nullptr) { return; } // cancelled
-
-        const auto lAbsPath = OpaaxString(lPicked);
-        const OpaaxString lAssetRel = InContext.Paths.AbsoluteToAsset(lAbsPath);
-
-        if (lAssetRel.IsEmpty())
-        {
-            OPAAX_LOG(LogEditorService, Warn,
-                      "'{}' is outside the project's Assets — a level can only name assets of this project",
-                      lPicked);
-            return;
-        }
-
-        // NEW MEANS NEW. The OS save dialog warns about overwriting, but "New Map" truncating a map
-        // that already has entities in it is not a thing to leave to a dialog the author is used to
-        // clicking through. Open Map and Add Map are the verbs for a file that exists.
-        if (InContext.FileSystem.IsPathExist(lAbsPath))
-        {
-            OPAAX_LOG(LogEditorService, Warn,
-                      "'{}' already exists — use Open Map or Level/Add Map... instead of overwriting it",
-                      lAssetRel.CStr());
-            return;
-        }
-
-        // WRITTEN BEFORE IT IS MOUNTED, because AddMap loads it through the ResourceManager and
-        // there has to be a file to load. Stamped with its own id (**MP10**) rather than left
-        // anonymous: that is what makes a map with nothing in it an ORDINARY map from its first
-        // frame — saveable, removable, and settable as persistent like any other.
-        MapData lData;
-        lData.Id = MapFile::StemId(lAbsPath);
-
-        if (!MapFile::Save(lAbsPath, lData))
-        {
-            return; // MapFile logged which of the reasons it was
-        }
-
-        if (!lLevel->AddMap(lAssetRel))
-        {
-            return; // Level logged it — already in this level, or it would not mount
-        }
-
-        // RECONCILE, never re-adopt (**MP5**): the new map gets a record, every other map keeps the
-        // baseline it had.
-        InContext.LevelDocument.TrackMounted(*lLevel, *InContext.Worlds.GetActiveWorld(),
-                                             InContext.Engine.GetRegistries().Components(),
-                                             InContext.Paths);
-
-        // BOTH HALVES LAND TOGETHER. Writing the map file and leaving the membership pending was
-        // the worst of both: close the editor and the file stayed while the level forgot it.
-        InContext.LevelDocument.SaveManifest(*lLevel);
-
-        // Focused, because the only reason to make a map is to start putting things in it.
-        MapOps::Focus(InContext, lAssetRel);
-
-        OPAAX_LOG(LogEditorService, Info, "Created '{}' in level '{}'",
-                  lAssetRel.CStr(), lLevel->GetData().Name.CStr());
-    }
-
-    void EditorService::OpenMapCommand(EditorContext& InContext)
-    {
-        if (!MapOps::CanEdit(InContext, "Open Map")) { return; }
-
-        const char* const lFilters[] = {"*.opaaxmap"};
-
-        const char* const lPicked = tinyfd_openFileDialog(
-            "Open Map",
-            InContext.Paths.AssetToAbsolute(OpaaxString("Maps/")).CStr(),
-            1, lFilters, "Opaax Map", /*allowMultiple*/0);
-
-        if (lPicked == nullptr)
-        {
-            return; // cancelled
-        }
-
-        OpenMapAt(InContext, OpaaxString(lPicked));
-    }
-
-    bool EditorService::ConfirmDiscardingLevelEdits(EditorContext& InContext)
-    {
-        World* const lWorld = InContext.Worlds.GetActiveWorld();
-        Level* const lLevel = MapOps::ActiveLevel(InContext);
-
-        if (lWorld == nullptr || lLevel == nullptr) { return true; }
-
-        // The WHOLE level, not the focused map: Save Level writes every map (MP9), so every map is
-        // what a world-destroying action would cost.
-        if (!InContext.LevelDocument.IsDirty(*lWorld, InContext.Engine.GetRegistries().Components(), *lLevel))
-        {
-            return true;
-        }
-
-        // UNSAVED WORK IS CONFIRMED, NOT DISCARDED. A modal is the right tool precisely because
-        // the action is not undoable. tinyfiledialogs is already the editor's file-dialog vendor,
-        // so this costs no new dependency.
-        const int lAnswer = tinyfd_messageBox(
-            "Unsaved changes",
-            "This level has unsaved changes.\nContinue and lose them?",
-            "yesno", "warning", /*defaultButton*/0); // default NO — the safe answer
-
-        if (lAnswer != 1)
-        {
-            OPAAX_LOG(LogEditorService, Info, "Cancelled — unsaved changes kept");
-            return false;
-        }
-
-        return true;
-    }
-
-    void EditorService::OpenMapAt(EditorContext& InContext, const OpaaxString& InAbsPath)
-    {
-        if (!MapOps::CanEdit(InContext, "Open Map")) { return; }
-
-        // WHICH map is this? Asked of the FILE's entities (WM2). The identity decides whether it
-        // is already in the world; the path could not, arriving in one shape from a file dialog
-        // and another from AssetToAbsolute.
-        MapData lData;
-        if (!MapFile::Load(InAbsPath, lData))
-        {
-            OPAAX_LOG(LogEditorService, Error, "Open Map FAILED for '{}' — nothing changed", InAbsPath.CStr());
-            return;
-        }
-
-        World* const lWorld = InContext.Worlds.GetActiveWorld();
-        Level* const lLevel = MapOps::ActiveLevel(InContext);
-
-        if (lLevel != nullptr && lLevel->IsMounted(lData.Id))
-        {
-            // ALREADY IN THE WORLD, so this loads nothing: every map of the open level is mounted
-            // (WM1a). It moves the CURSOR — the selection survives untouched because none of the
-            // entities it points at go anywhere, and NOTHING IS CONFIRMED because nothing is at
-            // risk: every map keeps its own baseline (MP5), so the map being left stays as dirty
-            // as it was and Save Level will still write it.
-            InContext.MapDocument.Focus(InAbsPath);
-            return;
-        }
-
-        OpenStandaloneMap(InContext, InAbsPath);
-    }
-
-    void EditorService::OpenStandaloneMap(EditorContext& InContext, const OpaaxString& InAbsPath)
-    {
-        // A map that belongs to no open level gets its OWN world with an empty Level, rather than
-        // being merged into a level it is not part of. That is also what makes the question
-        // "which maps are in this world?" keep one answer.
-        const OpaaxString lAssetRel = InContext.Paths.AbsoluteToAsset(InAbsPath);
-        if (lAssetRel.IsEmpty())
-        {
-            OPAAX_LOG(LogEditorService, Warn,
-                      "'{}' is outside the project's Assets — a map has to be an asset of this project to be opened",
-                      InAbsPath.CStr());
-            return;
-        }
-
-        if (!ConfirmDiscardingLevelEdits(InContext)) { return; }
-
-        World* const lWorld = InContext.Engine.OpenLevel(WorldSpec{OpaaxString(), EWorldMode::Edit});
-        if (lWorld == nullptr || lWorld->GetLevel() == nullptr)
-        {
-            OPAAX_LOG(LogEditorService, Error, "Could not open a world for '{}'", lAssetRel.CStr());
-            return;
-        }
-
-        lWorld->GetLevel()->Mount(lAssetRel);
-
-        // No manifest behind this world — an empty level path is what tells the document so.
-        AdoptOpenLevel(InContext, OpaaxString());
-    }
-
-    void EditorService::OpenLevelAt(EditorContext& InContext, const OpaaxString& InAbsPath)
-    {
-        if (!MapOps::CanEdit(InContext, "Open Level")) { return; }
-
-        const OpaaxString lAssetRel = InContext.Paths.AbsoluteToAsset(InAbsPath);
-        if (lAssetRel.IsEmpty())
-        {
-            OPAAX_LOG(LogEditorService, Warn,
-                      "'{}' is outside the project's Assets — a level has to be an asset of this project",
-                      InAbsPath.CStr());
-            return;
-        }
-
-        if (!ConfirmDiscardingLevelEdits(InContext)) { return; }
-
-        // A whole new world: the level names which maps exist in it, so opening one is not
-        // something the current world can be edited into.
-        if (InContext.Engine.OpenLevel(WorldSpec{lAssetRel, EWorldMode::Edit}) == nullptr)
-        {
-            OPAAX_LOG(LogEditorService, Error, "Could not open level '{}'", lAssetRel.CStr());
-            return;
-        }
-
-        AdoptOpenLevel(InContext, InAbsPath);
-    }
-
-    void EditorService::OpenLevelCommand(EditorContext& InContext)
-    {
-        const char* const lFilters[] = {"*.opaaxlevel"};
-
-        const char* const lPicked = tinyfd_openFileDialog(
-            "Open Level",
-            InContext.Paths.AssetToAbsolute(OpaaxString("Levels/")).CStr(),
-            1, lFilters, "Opaax Level", /*allowMultiple*/0);
-
-        if (lPicked == nullptr)
-        {
-            return; // cancelled
-        }
-
-        OpenLevelAt(InContext, OpaaxString(lPicked));
-    }
-
-    // =============================================================================
-    // Level authoring — the manifest is edited THROUGH the world's Level (WM1a), never through a
-    // second copy here: the Level is what mounts and unmounts, so it is what knows the truth.
-    // =============================================================================
-
-    void EditorService::SaveLevelCommand(EditorContext& InContext)
-    {
-        Level* const lLevel = MapOps::ActiveLevel(InContext);
-        if (lLevel == nullptr || !InContext.LevelDocument.HasLevel())
-        {
-            OPAAX_LOG(LogEditorService, Warn, "Save Level ignored — no level file is open");
-            return;
-        }
-
-        InContext.LevelDocument.SaveAll(*InContext.Worlds.GetActiveWorld(),
-                                        InContext.Engine.GetRegistries().Components(), *lLevel);
-    }
-
-    void EditorService::AddMapToLevelCommand(EditorContext& InContext)
-    {
-        if (!MapOps::CanEdit(InContext, "Add Map")) { return; }
-
-        Level* const lLevel = MapOps::ActiveLevel(InContext);
-        if (lLevel == nullptr) { return; }
-
-        const char* const lFilters[] = {"*.opaaxmap"};
-
-        const char* const lPicked = tinyfd_openFileDialog(
-            "Add Map to Level",
-            InContext.Paths.AssetToAbsolute(OpaaxString("Maps/")).CStr(),
-            1, lFilters, "Opaax Map", /*allowMultiple*/0);
-
-        if (lPicked == nullptr) { return; }
-
-        const OpaaxString lAssetRel = InContext.Paths.AbsoluteToAsset(OpaaxString(lPicked));
-        if (lAssetRel.IsEmpty())
-        {
-            OPAAX_LOG(LogEditorService, Warn,
-                      "'{}' is outside the project's Assets — a manifest can only name assets of this project",
-                      lPicked);
-            return;
-        }
-
-        // Mounts immediately: every map of the level is in the world (WM1a), so one that was just
-        // added is no exception.
-        if (lLevel->AddMap(lAssetRel))
-        {
-            // RECONCILE, never re-adopt: a fresh AdoptExisting would re-take every baseline from
-            // the world and quietly declare every other map's unsaved edits to be the clean state.
-            InContext.LevelDocument.TrackMounted(*lLevel, *InContext.Worlds.GetActiveWorld(),
-                                                 InContext.Engine.GetRegistries().Components(),
-                                                 InContext.Paths);
-
-            // Structure goes to disk as it changes (EditorLevelDocument::SaveManifest).
-            InContext.LevelDocument.SaveManifest(*lLevel);
         }
     }
 

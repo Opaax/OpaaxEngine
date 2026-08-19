@@ -18,7 +18,7 @@ namespace Opaax::Editor
     // =============================================================================
     // EditorExtensionRegistrar — the single object an IEditorModule registers INTO (Editor.md D10).
     //   Owned by EditorService, handed to editor modules BEFORE it seals (§2 ordering), which is before the
-    //   first world. Five routes, one per extension kind, and as of M5 every one of them is REAL.
+    //   first world. Six routes, one per extension kind, and every one of them is REAL.
     //   Symmetric with the game-side ModuleRegistrar (D9).
     //
     //   EditWorldSystems() is the game-side WorldSubsystemRoute REUSED, not a parallel editor type: the
@@ -34,14 +34,14 @@ namespace Opaax::Editor
         ResourceTypeRegistry&      ResourceTypes()    noexcept { return m_ResourceTypes; }
         MenuRegistry&              Menus()            noexcept { return m_Menus; }
         WorldSubsystemRoute&       EditWorldSystems() noexcept { return m_EditWorldSystems; }
-        EditorCommandRegistry&     GetEditorCommandRegistry() noexcept { return m_EditorCommands; }
+        EditorCommandRegistry&     Commands()         noexcept { return m_EditorCommands; }
 
-        const DrawerRegistry&       Drawers()          const noexcept { return m_Drawers; }
-        const PanelRegistry&        Panels()           const noexcept { return m_Panels; }
-        const ResourceTypeRegistry& ResourceTypes()    const noexcept { return m_ResourceTypes; }
-        const MenuRegistry&         Menus()            const noexcept { return m_Menus; }
-        const WorldSubsystemRoute&  EditWorldSystems() const noexcept { return m_EditWorldSystems; }
-        const EditorCommandRegistry& GetEditorCommandRegistry() const noexcept { return m_EditorCommands; }
+        const DrawerRegistry&        Drawers()          const noexcept { return m_Drawers; }
+        const PanelRegistry&         Panels()           const noexcept { return m_Panels; }
+        const ResourceTypeRegistry&  ResourceTypes()    const noexcept { return m_ResourceTypes; }
+        const MenuRegistry&          Menus()            const noexcept { return m_Menus; }
+        const WorldSubsystemRoute&   EditWorldSystems() const noexcept { return m_EditWorldSystems; }
+        const EditorCommandRegistry& Commands()         const noexcept { return m_EditorCommands; }
 
         void Seal()          noexcept { m_Sealed = true; }
         bool IsSealed() const noexcept { return m_Sealed; }

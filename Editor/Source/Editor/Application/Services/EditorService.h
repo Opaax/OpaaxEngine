@@ -61,7 +61,10 @@ namespace Opaax::Editor
         void RegisterNativeMenus();
         
         /**
-         * Register The Editor command natively to this 
+         * The editor's own commands, into m_Extensions.Commands() — the author loop's verbs, keyed
+         * by the tags in EditorNativeCommandsTags.hpp. Same route, same ordering rule and same lack
+         * of privilege as RegisterNativePanels: the menu bar, the Resource Browser and Ctrl+S all
+         * reach them BY TAG, exactly as a game module's command would be reached.
          */
         void RegisterNativeEditorCommand();
         
@@ -93,20 +96,6 @@ namespace Opaax::Editor
         void AdoptStartupLevel();
 
         /**
-         * Adopt the ACTIVE world's Level as the open document, and one of its mounted maps for
-         * editing. The shared tail of both boot and Open Level, so the two cannot disagree.
-         *
-         * THE FIRST NON-PERSISTENT MAP is the one edited, falling back to the persistent map when
-         * that is the only one mounted: the persistent map is the shared backdrop authored once,
-         * so the session opens on the content composed over it instead. Asked of the MOUNTED maps
-         * rather than the manifest — a map that failed to load is not editable.
-         *
-         * @param InLevelAbsPath The `.opaaxlevel` behind it, or EMPTY for a world whose maps
-         *   belong to no manifest (a standalone map).
-         */
-        static void AdoptOpenLevel(EditorContext& InContext, const OpaaxString& InLevelAbsPath);
-
-        /**
          * Re-derive the per-map dirty answers, at most 4×/s (**MP5**).
          *
          * The throttle is here because the frame clock is; the answers live in EditorLevelDocument
@@ -124,64 +113,6 @@ namespace Opaax::Editor
          * chords) is the right shape rather than a workaround.
          */
         void HandleAuthoringShortcuts();
-
-        // ---- menu commands (D3: a command's whole input is the context) ----------------------
-        /**
-         * Create an EMPTY `.opaaxmap`, add it to the open level, and focus it.
-         *
-         * The file is written IMMEDIATELY rather than held as an unsaved cursor: everything below
-         * assumes a map has a file, and a "not on disk yet" state would be the only one of its kind
-         * in the editor. It carries its own `mapId` from the first byte (**MP10**), which is what
-         * makes a map with no entities an ordinary map instead of an anonymous one.
-         *
-         * Refuses a path that already exists — Open Map and Add Map are the verbs for those.
-         */
-        static void NewMapCommand(EditorContext& InContext);
-        static void SaveMapCommand(EditorContext& InContext);
-        static void SaveMapAsCommand(EditorContext& InContext);
-        static void OpenMapCommand(EditorContext& InContext);
-
-        /**
-         * Edit the map at InAbsPath — the shared body behind both the File menu's "Open Map..."
-         * and a double-click in the Resource Browser, so the two cannot diverge on the parts that
-         * matter (the PIE guard, the unsaved-changes prompt).
-         *
-         * TWO OUTCOMES, decided by whether that map is already in the world. Every map of the open
-         * level is mounted, so one of them LOADS NOTHING: it re-targets the document, and the
-         * selection survives because its entities do. A map belonging to no open level gets its
-         * OWN world with an empty Level instead of being merged into someone else's.
-         */
-        static void OpenMapAt(EditorContext& InContext, const OpaaxString& InAbsPath);
-
-        /** A map that is in no open level: a fresh world with an empty Level holding only it. */
-        static void OpenStandaloneMap(EditorContext& InContext, const OpaaxString& InAbsPath);
-
-        /** Open a `.opaaxlevel` into a NEW world — the browser's double-click and File/Open Level. */
-        static void OpenLevelAt(EditorContext& InContext, const OpaaxString& InAbsPath);
-
-        static void OpenLevelCommand(EditorContext& InContext);
-        static void SaveLevelCommand(EditorContext& InContext);
-
-        // ---- level authoring (WM1a): the manifest is edited THROUGH the world's Level ---------
-        /**
-         * The only Level entry left on the menu bar, because it is the only one that does not need
-         * to name a map first — it goes and picks one. Removing a map and choosing the persistent
-         * one moved to the Hierarchy's map headers (MapOps), where the target is what was clicked
-         * instead of whatever happened to be focused.
-         */
-        static void AddMapToLevelCommand(EditorContext& InContext);
-
-        /**
-         * Confirm before an action that DESTROYS the world — the whole level's unsaved work, not
-         * just the focused map's, since Save Level writes all of it (**MP9**). Modal because the
-         * action is not undoable.
-         *
-         * Not needed for merely changing which map is focused: the baselines are per map and
-         * survive a focus change (**MP5**), so nothing is at risk there.
-         *
-         * @return true to go ahead.
-         */
-        static bool ConfirmDiscardingLevelEdits(EditorContext& InContext);
 
         /**
          * `.opaaxmap` / `.opaaxlevel` into m_Extensions.ResourceTypes() — the editor's own core
