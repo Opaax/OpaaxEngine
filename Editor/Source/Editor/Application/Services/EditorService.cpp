@@ -1,6 +1,7 @@
 #include "Editor/Application/Services/EditorService.h"
 
 #include "Editor/UI/OpenGLEditorUIBackend.h"
+#include "Editor/Panels/ConfigPanel.h"
 #include "Editor/Panels/HierarchyPanel.h"
 #include "Editor/Panels/InputPanel.h"
 #include "Editor/Panels/InspectorPanel.h"
@@ -19,6 +20,7 @@
 #include "Application/Services/Platforms/IFileSystem.h"
 #include "Application/Services/Window/IWindowManager.h"      // window + native GLFW handle
 #include "Application/Services/IProjectManager.h"            // startupLevel — which map the editor adopts (M5)
+#include "Application/Services/IConfigSystem.h"              // the registry the Config panel lists
 #include "Core/Events/Event.h"                               // Event::IsInCategory + EEventCategory (S11)
 #include "Engine/Registries/EngineRegistries.h"              // EditWorldSystems() binds to WorldSubsystems()
 #include "Engine/Subsystems/Input/InputEvents.h"             // KeyPressedEvent — the reserved keys (D5 step 3)
@@ -54,25 +56,9 @@ namespace Opaax::Editor
 {
     void EditorService::RegisterNativeMenus()
     {
-        // The editor's own entries go through the SAME route a game module uses — registered
-        // first, for the same reason native panels are (MR2's order, one level down). Registration
-        // order is draw order, and the order Category() is first called is the bar's order.
-        //
-        // AN ENTRY IS A TAG, not a function: the bodies live in EditorNativeCommands and are
-        // reached through m_Extensions.Commands(), so the menu holds no privileged pointer into the
-        // editor that a game module's entry could not also hold — and the same tag is what a key
-        // binding will carry.
         EditorMenu& lMenu = m_Extensions.Menus();
-
-        // --- M5 S5/S6: the author loop -------------------------------------------------------
-        // NEW FIRST, and not only by convention: "Save Map As..." was flagged as weird precisely
-        // because nothing led INTO it — there was no way to make a map, so Save As had no workflow
-        // in front of it.
-        //
-        // The Save verbs are DISABLED while PIE runs rather than clickable-and-refused (**MP7**):
-        // the active world is then a Play clone, so writing it back would persist simulation state
-        // over the file. MapOps::CanEdit still refuses inside the command — the predicate is the
-        // readable half of that rule, not a replacement for it.
+        
+        // --- Native File  --------------------------
         EditorMenuCategory& lFile = lMenu.Category("File");
         lFile.AddCommand("New Map...",     Tags::EDITOR_COMMAND_NEW_MAP).SetEnabled(IsEditing);
         lFile.AddCommand("Open Map...",    Tags::EDITOR_COMMAND_OPEN_MAP);
@@ -80,27 +66,16 @@ namespace Opaax::Editor
         lFile.AddCommand("Save Map",       Tags::EDITOR_COMMAND_SAVE_MAP).SetEnabled(IsEditing);
         lFile.AddCommand("Save Map As...", Tags::EDITOR_COMMAND_SAVE_MAP_AS).SetEnabled(IsEditing);
         lFile.AddSeparator();
-
-        // --- the LEVEL half (WM1a): what a session actually has open --------------------------
         lFile.AddCommand("Open Level...",  Tags::EDITOR_COMMAND_OPEN_LEVEL);
         lFile.AddCommand("Save Level",     Tags::EDITOR_COMMAND_SAVE_LEVEL).SetEnabled(IsEditing);
         lFile.AddSeparator();
         lFile.AddCommand("Exit",           Tags::EDITOR_COMMAND_QUIT);
 
-        // The ONLY Level entry, and the only one that ever earned a place on the bar: it does not
-        // need a map named first, it goes and picks one.
-        //
-        // "Remove Open Map" and "Set Open Map Persistent" were registered here too and are GONE.
-        // Both acted on whatever map happened to be FOCUSED, which is not how an author picks one
-        // map out of the several a level holds (WM1a) — and choosing the persistent map especially
-        // needs somewhere to SEE the current answer, not just a verb aimed at the cursor. They live
-        // on the Hierarchy's map headers now, where the map you click is the argument (MapOps).
-        lMenu.Category("Level")
-             .AddCommand("Add Map...", Tags::EDITOR_COMMAND_ADD_MAP_TO_LEVEL).SetEnabled(IsEditing);
+        // --- Native Level  --------------------------
+        EditorMenuCategory& lLevel = lMenu.Category("Level");
+        lLevel.AddCommand("Add Map...", Tags::EDITOR_COMMAND_ADD_MAP_TO_LEVEL).SetEnabled(IsEditing);
 
-        // --- PIE, the third front-end onto the same four verbs (toolbar, F5-F8, here) ---------
-        // Pause is the checkable entry, and its tick READS PlayInEditor rather than caching a
-        // bool — so the menu, the toolbar and the key can never disagree about what is paused.
+        // --- Native Play  --------------------------
         EditorMenuCategory& lPlay = lMenu.Category("Play");
         lPlay.AddCommand("Play",  Tags::EDITOR_COMMAND_PLAY).SetEnabled(IsEditing);
         lPlay.AddCommand("Pause", Tags::EDITOR_COMMAND_TOGGLE_PAUSE).SetChecked(IsPaused).SetEnabled(IsPlaying);
@@ -253,6 +228,7 @@ namespace Opaax::Editor
             *m_PanelHost,
             OpaaxApplication::GetAppService<IPaths>(),
             OpaaxApplication::GetAppService<IPlatform>().GetFileSystem(),
+            OpaaxApplication::GetAppService<IConfigSystem>(),
             *lWindow,
             m_EditorPaths
         });
@@ -557,6 +533,7 @@ namespace Opaax::Editor
         lPanels.Register<HierarchyPanel>(PanelDesc{ .Id = OPAAX_ID("Hierarchy") });
         lPanels.Register<InspectorPanel>(PanelDesc{ .Id = OPAAX_ID("Inspector") });
         lPanels.Register<ResourceBrowserPanel>(PanelDesc{ .Id = OPAAX_ID("Resource Browser") });
+        lPanels.Register<ConfigPanel>(PanelDesc{ .Id = OPAAX_ID("Config") });
         // A debug readout, not part of the author loop — off until asked for, from the Window menu.
         lPanels.Register<InputPanel>(PanelDesc{
             .Id = OPAAX_ID("Input"), .DefaultVisibility = EPanelVisibility::Hidden

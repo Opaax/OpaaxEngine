@@ -304,6 +304,8 @@ Supporting decision — **`DebugDraw` belongs to the engine, not the editor**: i
 
 Future direction, deliberately not now: per-type field meta-description generating serialize *and* a generic drawer from one declaration. That is a reflection system — a rabbit hole. Handwritten drawers first; the registry makes the upgrade transparent later.
 
+**2026-08-19 — that direction is now the declared next step (user call, CryEngine-shaped), and the `ConfigPanel` is the shell it lands in.** The panel lists every registered config (`IConfigSystem::GetConfigs()`, walked **live** — `Get<T>()` auto-registers, so a config first read on any later frame simply appears) and draws the current one as `IConfig::ToText()`, **read-only**. Text, not widgets, precisely so nothing gets built that reflection would have to delete: `ToText` is the codec `Save` already writes through, so what is shown is the file that would be written. The panel is a native registered through `Panels()` like any other, which is where its Window-menu toggle comes from. Reflection replaces the right pane; the list, the selection and the registry stay.
+
 ---
 
 ## 5. Milestones

@@ -7,6 +7,7 @@ namespace Opaax
     class ResourceManager;
     class IPaths;
     class IFileSystem;
+    class IConfigSystem;
     class Window;
 
     namespace Editor
@@ -76,6 +77,10 @@ namespace Opaax
             // Both are resolved ONCE by EditorService: a panel never touches the locator (D3).
             const IPaths&      Paths;
             const IFileSystem& FileSystem;
+
+            // The engine's config registry — what the Config panel lists. Read LIVE, never snapshotted:
+            // Get<T>() auto-registers, so a system reading its config on a later frame grows it.
+            IConfigSystem& Configs;
 
             // The window the editor is drawn in — resolved once by EditorService, like Paths and
             // FileSystem beside it. Here because a command that needs something the composition

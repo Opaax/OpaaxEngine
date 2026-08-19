@@ -26,6 +26,8 @@ namespace
         bool Save(const OpaaxString& InAbsPath) override { m_LoadedPath = InAbsPath; ++m_SaveCount; return true; }
         bool Save()                              override { ++m_SaveCount; return true; }
 
+        OpaaxString ToText() const override { return OpaaxString("test-text"); }
+
         const OpaaxString& LoadedPath() const { return m_LoadedPath; }
         int LoadCount() const { return m_LoadCount; }
         int SaveCount() const { return m_SaveCount; }
@@ -40,6 +42,31 @@ namespace
     };
 
     ConfigTypeID TestConfig::StaticTypeID() noexcept
+    {
+        static const int s_Tag = 0;
+        return reinterpret_cast<ConfigTypeID>(&s_Tag);
+    }
+
+    // A second type, so the ORDER of the registry is observable at all — one config cannot tell
+    // "registration order" from "whatever the container did".
+    class OtherTestConfig final : public IConfig
+    {
+    public:
+        OPAAX_CONFIG_TYPE(OtherTestConfig)
+
+        const char* FileName() const override { return "Other.config"; }
+
+        bool Load(const OpaaxString&) override { return true; }
+        bool Save(const OpaaxString&) override { return true; }
+        bool Save()                    override { return true; }
+
+        OpaaxString ToText() const override { return OpaaxString("other-text"); }
+
+    protected:
+        bool GenerateDefaultConfig(const OpaaxString&) override { return true; }
+    };
+
+    ConfigTypeID OtherTestConfig::StaticTypeID() noexcept
     {
         static const int s_Tag = 0;
         return reinterpret_cast<ConfigTypeID>(&s_Tag);
@@ -103,6 +130,41 @@ TEST_CASE("ConfigSystem: Save<T> and SaveAll persist the config")
 
     lConfig.SaveAll();
     CHECK(lA.SaveCount() == 2);
+}
+
+TEST_CASE("ConfigSystem: GetConfigs is REGISTRATION order, and FindConfig resolves by id")
+{
+    StubPaths lPaths(OpaaxString("W:/proj/Configs"));
+    ConfigSystem lConfig(lPaths);
+
+    // Registered second on purpose: the editor's Config panel lists this array, so the order has to
+    // be the one the caller registered in and not the one a hash bucket produced.
+    IConfig& lFirst  = lConfig.Register<TestConfig>();
+    IConfig& lSecond = lConfig.Register<OtherTestConfig>();
+
+    REQUIRE(lConfig.GetConfigs().size() == 2);
+    CHECK(lConfig.GetConfigs()[0].get() == &lFirst);
+    CHECK(lConfig.GetConfigs()[1].get() == &lSecond);
+
+    CHECK(lConfig.FindConfig(TestConfig::StaticTypeID())      == &lFirst);
+    CHECK(lConfig.FindConfig(OtherTestConfig::StaticTypeID()) == &lSecond);
+    CHECK(lConfig.FindConfig(0) == nullptr);          // never registered
+
+    // Re-registering is a lookup, not a second entry.
+    lConfig.Get<TestConfig>();
+    CHECK(lConfig.GetConfigs().size() == 2);
+}
+
+TEST_CASE("IConfig: GetName is the file name's stem, ToText comes from the config")
+{
+    StubPaths lPaths(OpaaxString("W:/proj/Configs"));
+    ConfigSystem lConfig(lPaths);
+
+    // Only the LAST extension is stripped — "test.config.json" keeps its inner dot.
+    CHECK(lConfig.Register<TestConfig>().GetName()       == OPAAX_ID("test.config"));
+    CHECK(lConfig.Register<OtherTestConfig>().GetName()  == OPAAX_ID("Other"));
+
+    CHECK(lConfig.Get<OtherTestConfig>().ToText() == "other-text");
 }
 
 TEST_CASE("IConfigSystem: the null system stays in-memory (no disk) and is never null")

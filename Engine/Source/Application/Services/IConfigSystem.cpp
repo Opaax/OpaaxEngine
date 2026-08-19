@@ -23,23 +23,8 @@ namespace Opaax
             void SaveAll() override {}
 
         protected:
-            IConfig& FindOrCreate(ConfigTypeID InId, const TFunction<TUniquePtr<IConfig>()>& InFactory) override
-            {
-                if (const auto lIt = m_Configs.find(InId); lIt != m_Configs.end())
-                {
-                    return *lIt->second;
-                }
-
-                TUniquePtr<IConfig> lConfig = InFactory(); // defaults, no Load (no project layout)
-                IConfig&           lRef    = *lConfig;
-                m_Configs[InId] = std::move(lConfig);
-                return lRef;
-            }
-
+            void OnConfigRegistered(IConfig&) override {}   // defaults only — no project layout to load from
             bool SaveConfig(ConfigTypeID) override { return false; }
-
-        private:
-            TUnorderedMap<ConfigTypeID, TUniquePtr<IConfig>> m_Configs;
         };
     }
 
@@ -56,6 +41,36 @@ namespace Opaax
     {
         static NullConfigSystem s_Null;
         return s_Null;
+    }
+
+    // =========================================================================
+    // Registry — shared by both systems (the storage is the base's).
+    // =========================================================================
+    IConfig* IConfigSystem::FindConfig(const ConfigTypeID InId) const noexcept
+    {
+        for (const TUniquePtr<IConfig>& lConfig : m_Configs)
+        {
+            if (lConfig->GetConfigTypeID() == InId) { return lConfig.get(); }
+        }
+
+        return nullptr;
+    }
+
+    IConfig& IConfigSystem::FindOrCreate(const ConfigTypeID InId, const TFunction<TUniquePtr<IConfig>()>& InFactory)
+    {
+        if (IConfig* lFound = FindConfig(InId))
+        {
+            return *lFound;
+        }
+
+        m_Configs.emplace_back(InFactory());
+        IConfig& lConfig = *m_Configs.back();
+
+        // In the registry BEFORE the hook runs: a config that reads a sibling while loading must
+        // find itself already registered rather than register a second copy.
+        OnConfigRegistered(lConfig);
+
+        return lConfig;
     }
 
     // =========================================================================
@@ -77,36 +92,24 @@ namespace Opaax
         return Utf8::FromFsPath(Utf8::ToFsPath(m_ConfigsDir) / InFileName);
     }
 
-    IConfig& ConfigSystem::FindOrCreate(ConfigTypeID InId, const TFunction<TUniquePtr<IConfig>()>& InFactory)
+    void ConfigSystem::OnConfigRegistered(IConfig& InConfig)
     {
-        if (const auto lIt = m_Configs.find(InId); lIt != m_Configs.end())
-        {
-            return *lIt->second;
-        }
-
-        TUniquePtr<IConfig> lConfig = InFactory();
-        IConfig&           lRef    = *lConfig;
-
         // IConfig::Load loads the file, or generates the default file if it is missing.
-        lRef.Load(JoinConfigPath(lRef.FileName()));
-        OPAAX_LOG(LogConfigSystem, Info, "Config [{}] Created", lRef.FileName());
-
-        m_Configs[InId] = std::move(lConfig);
-        
-        return lRef;
+        InConfig.Load(JoinConfigPath(InConfig.FileName()));
+        OPAAX_LOG(LogConfigSystem, Info, "Config [{}] Created", InConfig.FileName());
     }
 
     bool ConfigSystem::SaveConfig(ConfigTypeID InId)
     {
-        const auto lIt = m_Configs.find(InId);
-        return (lIt != m_Configs.end()) && lIt->second->Save();
+        IConfig* lConfig = FindConfig(InId);
+        return lConfig != nullptr && lConfig->Save();
     }
 
     void ConfigSystem::SaveAll()
     {
-        for (auto& [lId, lConfig] : m_Configs)
+        for (const TUniquePtr<IConfig>& lConfig : GetConfigs())
         {
-            if (lConfig) { lConfig->Save(); }
+            lConfig->Save();
         }
     }
 }

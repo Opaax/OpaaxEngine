@@ -110,6 +110,10 @@ namespace Opaax
             return Save(m_LoadedPath);
         }
 
+        // The codec Save writes through — so what a reader is shown is the file that would be written,
+        // never a second rendering of the same data.
+        OpaaxString ToText() const override { return TConfigCodec<TData>::ToText(m_Data); }
+
     protected:
         bool GenerateDefaultConfig(const OpaaxString& InAbsPath) override
         {

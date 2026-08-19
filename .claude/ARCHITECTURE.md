@@ -394,6 +394,13 @@ Platform → Paths → Logger(Paths) → Config(Paths)+PreRegisterConfig
 
 **BO1** — Config is loaded from disk here, *before* the Engine exists. JobSystem comes *after* Config
 (worker count is config-driven). (See **L1**.)
+**BO1a — the config registry is the one registry that NEVER seals** (2026-08-19). `Get<T>()`
+auto-registers on a miss, so `PreRegisterConfig` is a *convenience*, not the registration window:
+`Config_Renderer` first appears in `RendererManager::Startup`, and a game system reading its config on
+frame 500 appears then. Storage is therefore a `TDynArray` in **registration order**, owned by
+`IConfigSystem` itself (both systems share it; they differ only in `OnConfigRegistered`), and every
+consumer reads it **live** — the editor's `ConfigPanel` walks `GetConfigs()` each frame rather than
+building a list at seal time, which would have missed exactly those late arrivals, silently.
 **BO2** — The Engine service is **constructed** in `Bootstrap` (pre-window) but **started**
 (`Engine().Startup()`) later, in `EngineStartup()`, *after* the window exists.
 *(This supersedes L1's note that IEngine is created post-window — it is created in Bootstrap, started post-window.)*
