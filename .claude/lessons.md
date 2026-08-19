@@ -170,6 +170,13 @@ all other staged entries exactly as they were.
   explicitly, and offer the `reset --soft` + re-scope fix rather than leaving misleading history.
 - Don't forget your OWN related unstaged changes (the `.gitignore` narrowing belonged in the same commit) —
   the "what belongs together" set spans staged and unstaged.
+- **Corollary, the INVERSE trap (2026-08-19).** A pathspec commit only accepts paths git already knows, so
+  a slice containing NEW files needs `git add` first — and after that `git add`, a bare `git commit` takes
+  **only what you staged**, silently dropping every modified file in the slice. That is how the panel-host
+  commit landed as 4 new files with none of the 20 edits they depended on: a committed state that did not
+  compile, i.e. [[L17]]'s "never commit a state you haven't built" reached by the opposite route. Same
+  one-line defence either way — read `git status --short` *after* staging and before committing, and check
+  the file COUNT against the slice, not just for foreign entries.
 
 ## L10 — Dead-code quarantine: the compiler+linker is the authoritative classifier, NOT grep (2026-07-19)
 
@@ -1003,3 +1010,37 @@ invoke**, because a binding carries a tag and nothing else. Deleting both forms 
 - **The one awkward call site an escape hatch exists for is usually pointing at a real gap.** `QuitParams`
   had carried a `// because a command cannot ask for one` comment for a milestone — [[L19]]'s shape
   exactly: the comment explaining the bypass IS the work item.
+
+## L39 — Sharing STATE is not sharing a code path: one bool with two writers is still two writers (2026-08-19)
+
+**What happened (editor panel toggles).** Panel visibility is one `bool` per panel. The Window menu
+ticks it through `TogglePanelCommand`; ImGui's window close button writes it directly, because
+`ImGui::Begin(label, &bVisible)` is handed the bool itself. I wrote — in the plan, in the header
+comment and in the commit message — *"the close button and the menu tick read the same bool, by
+construction, so they cannot disagree."* Every word of that is true, and I read it as covering more
+than it did. The user found the hole in one click: **closing a panel with its X logged nothing**, while
+the menu entry logged twice.
+
+**Why the claim was too small.** "They cannot disagree" is a statement about **correctness** — the two
+front-ends always show the same answer, and they did. It says nothing about **observability**, undo, or
+anything else that lives on the *path* rather than in the *value*. Two writers converging on one
+variable share the variable; they do not share the code that runs on the way in. Anything I attach to
+one path — a log line today, an undo record or a dirty flag tomorrow — silently does not exist for the
+other. The fix was to stop handing ImGui the real bool: `Begin` gets a local, the result is routed back
+through `SetVisible`, and that method becomes the single mutation point where the log lives and cannot
+be bypassed.
+
+**Rules for next time:**
+- **When two paths write one piece of state, ask what runs ON each path, not just what each path
+  writes.** "One source of truth" is about the value; it is not a claim that the paths are equivalent.
+  The test question is: *if I hang a side effect off this write, do both callers get it?*
+- **Prefer one mutation POINT to one mutation TARGET.** A shared variable that two places assign is a
+  latent fork; a setter both are forced through is the shape where a later side effect cannot be
+  forgotten ([[L18]]: make the wrong thing impossible, not merely unlikely). It costs a local variable.
+- **A third-party API handed a reference to your state IS a second writer** — [[L29]]'s shape (a
+  borrowed mechanism answers its own question, not yours). `p_open` is ImGui's convenience; the moment
+  the write matters to anything of mine, it has to come back through my door.
+- **The gap was invisible from the side I tested.** I verified the menu path end to end with a probe and
+  watched the tick update, which is exactly what a correct-but-uninstrumented second writer looks like
+  ([[L15]]: the instrument has to discriminate). When one of two front-ends is unreachable from a test,
+  say so rather than letting the reachable one stand for both.

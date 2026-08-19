@@ -714,8 +714,14 @@ in the editor that calls `ImGui::Begin`.
   open with no viewport on screen ([[L28]]). `OnPreRender` runs visible-or-not and clears it.
 - **The toggle is ONE command for every panel** (`Editor.Command.TogglePanel`), with the panel as the
   *payload* — see **MR2b**. Not a tag per panel: `OpaaxTag` refuses any byte `<= ' '` (**I14**) and
-  `"Play Controls"` is a panel id. `ImGui::Begin(label, &bVisible)` means the window's close button and
-  the menu tick write the **same bool**, so they cannot drift.
+  `"Play Controls"` is a panel id.
+- **`EditorPanels::SetVisible` is the single MUTATION POINT, which is stronger than a shared bool.**
+  `Begin` is given a **local**, and the result is routed back through `SetVisible`; the transition is
+  logged there and nowhere else. The first cut passed `&bVisible` straight to ImGui, reasoning that the
+  close button and the menu tick then write the same variable and cannot disagree — true, and too small
+  a claim: it is about the *value*, while a log line (or a later undo record, or a dirty flag) lives on
+  the *path*. The X reached the state without passing through `TogglePanelCommand` and announced
+  nothing, found by the user in one click ([[L39]]).
 - **`BindPanelToggles` runs after the game module and before `Seal()`**, so a game panel's toggle costs
   zero `OpaaxEditorLib` changes — the M2a diff gate, still holding (S4 touched one file).
 - **Not built, deliberately:** visibility does not persist across sessions (ImGui's `.ini` keeps dock
