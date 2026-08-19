@@ -82,7 +82,7 @@ namespace Opaax
         {
             if (m_Current[lIndex])
             {
-                lKeys.push_back(static_cast<EKeyCode>(lIndex));
+                lKeys.emplace_back(static_cast<EKeyCode>(lIndex));
             }
         }
 

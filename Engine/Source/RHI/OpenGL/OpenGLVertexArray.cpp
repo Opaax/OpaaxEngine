@@ -79,7 +79,7 @@ namespace Opaax
             }
         }
  
-        m_VertexBuffers.push_back(Move(InVBO));
+        m_VertexBuffers.emplace_back(Move(InVBO));
     }
     
     void OpenGLVertexArray::SetIndexBuffer(TUniquePtr<IIndexBuffer> InIBO)

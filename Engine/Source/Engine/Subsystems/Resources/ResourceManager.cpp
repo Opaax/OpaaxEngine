@@ -62,11 +62,11 @@ namespace Opaax
         TDynArray<TFunction<bool()>> lStillPending;
         for (TFunction<bool()>& lPoll : lBatch)
         {
-            if (!lPoll()) { lStillPending.push_back(Move(lPoll)); } // still Loading -> keep
+            if (!lPoll()) { lStillPending.emplace_back(Move(lPoll)); } // still Loading -> keep
         }
 
         TLockGuard<RecursiveMutex> lLock(m_Mutex);
-        for (TFunction<bool()>& lNew : m_PendingCallbacks) { lStillPending.push_back(Move(lNew)); }
+        for (TFunction<bool()>& lNew : m_PendingCallbacks) { lStillPending.emplace_back(Move(lNew)); }
         m_PendingCallbacks.swap(lStillPending);
     }
 

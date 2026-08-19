@@ -65,7 +65,7 @@ namespace Opaax
             lOrdered.reserve(InData.Entities.size());
             for (TEntity& lEntity : InData.Entities)
             {
-                lOrdered.push_back(&lEntity);
+                lOrdered.emplace_back(&lEntity);
             }
 
             std::sort(lOrdered.begin(), lOrdered.end(),
@@ -100,7 +100,7 @@ namespace Opaax
                 lEntityJson[MapJson::KEY_OWNER_MAP]  = IdToText(lEntity->OwnerMap);
                 lEntityJson[MapJson::KEY_COMPONENTS] = Move(lComponents);
 
-                lEntities.push_back(Move(lEntityJson));
+                lEntities.emplace_back(Move(lEntityJson));
             }
 
             nlohmann::json lRoot = nlohmann::json::object();
@@ -191,12 +191,11 @@ namespace Opaax
                 {
                     if (lTypeName.empty()) { continue; }   // no name to look up in the registry
 
-                    lEntity.Components.push_back(
-                        ComponentData{ OpaaxStringID(lTypeName), lPayload });
+                    lEntity.Components.emplace_back(OpaaxStringID(lTypeName), lPayload);
                 }
             }
 
-            lParsed.Entities.push_back(Move(lEntity));
+            lParsed.Entities.emplace_back(Move(lEntity));
         }
 
         if (lSkipped > 0)

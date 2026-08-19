@@ -82,10 +82,10 @@ namespace Opaax
 
             // generic_WSTRING, then one explicit conversion: the narrow generic_string() would encode
             // back through the ANSI code page and hand the caller mojibake it would store as UTF-8.
-            OutEntries.push_back(Entry{
+            OutEntries.emplace_back(
                 Utf8::FromWide(lIt->path().filename().generic_wstring()),
                 Utf8::FromWide(lIt->path().generic_wstring()),
-                bIsDirectory });
+                bIsDirectory);
         }
 
         return !lError;

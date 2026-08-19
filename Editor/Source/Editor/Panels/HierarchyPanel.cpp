@@ -88,7 +88,7 @@ namespace Opaax::Editor
 
             for (const Level::MountedMap& lMounted : lLevel->GetMountedMaps())
             {
-                lGroups.push_back(MapGroup{
+                lGroups.emplace_back(MapGroup{
                     lMounted.Id, lMounted.AssetRelPath, /*bMounted*/true,
                     /*bPersistent*/!lPersistent.IsEmpty() && lMounted.AssetRelPath == lPersistent,
                     /*bDirty*/m_Context.LevelDocument.IsMapDirtyCached(lMounted.Id), {}});
@@ -112,12 +112,12 @@ namespace Opaax::Editor
 
             if (lGroup == nullptr)
             {
-                lGroups.push_back(MapGroup{InMeta.OwnerMap, {}, /*bMounted*/false, /*bPersistent*/false,
+                lGroups.emplace_back(MapGroup{InMeta.OwnerMap, {}, /*bMounted*/false, /*bPersistent*/false,
                                            /*bDirty*/false, {}});
                 lGroup = &lGroups.back();
             }
 
-            lGroup->Entities.push_back(InId);
+            lGroup->Entities.emplace_back(InId);
         });
 
         if (lCount == 0 && lGroups.empty())

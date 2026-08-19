@@ -66,7 +66,7 @@ namespace Opaax::Editor
             }
 
             InDesc.Extension = NormalizeExtension(InDesc.Extension.ToString());
-            m_Entries.push_back(Move(InDesc));
+            m_Entries.emplace_back(Move(InDesc));
         }
 
         /** @return The type registered for InExtension, or nullptr — an O(n) walk over a handful of entries, on an integer compare. */

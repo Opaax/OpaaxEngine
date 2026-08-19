@@ -105,7 +105,7 @@ namespace Opaax
         ++OutResult.MapsMounted;
         OutResult.EntitiesCreated += MapFactory::Instantiate(lMap->Data, m_World, m_Components);
 
-        m_Mounted.push_back(MountedMap{lMapId, InAssetRelPath});
+        m_Mounted.emplace_back(lMapId, InAssetRelPath);
         return true;
     }
 
@@ -175,7 +175,7 @@ namespace Opaax
         TDynArray<EntityID> lDoomed;
         m_World.Each<EntityMeta>([&lDoomed, InMapId](EntityID InId, const EntityMeta& InMeta)
         {
-            if (InMeta.OwnerMap == InMapId) { lDoomed.push_back(InId); }
+            if (InMeta.OwnerMap == InMapId) { lDoomed.emplace_back(InId); }
         });
 
         for (const EntityID lId : lDoomed) { m_World.DestroyEntity(lId); }
@@ -207,7 +207,7 @@ namespace Opaax
             return false;
         }
 
-        m_Data.Maps.push_back(InAssetRelPath);
+        m_Data.Maps.emplace_back(InAssetRelPath);
         return true;
     }
 

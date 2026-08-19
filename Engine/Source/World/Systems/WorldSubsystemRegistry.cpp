@@ -40,7 +40,7 @@ namespace Opaax
             return false;
         }
 
-        m_Entries.push_back(Move(InEntry));
+        m_Entries.emplace_back(Move(InEntry));
 
         OPAAX_LOG(LogWorldSubsystemRegistry, Trace, "Registered world subsystem '{}' ({} total)",
                   InName, static_cast<Uint64>(m_Entries.size()));

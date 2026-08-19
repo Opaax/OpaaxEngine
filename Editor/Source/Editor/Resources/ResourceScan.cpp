@@ -57,15 +57,15 @@ namespace Opaax::Editor
                     ++InOutRoot.FolderCount;
                     ScanFolder(InFileSystem, lEntry.AbsPath, lChildRel, lChild, InOutRoot);
 
-                    OutFolder.Folders.push_back(Move(lChild));
+                    OutFolder.Folders.emplace_back(Move(lChild));
                 }
                 else
                 {
-                    OutFolder.Files.push_back(ResourceFile{
+                    OutFolder.Files.emplace_back(
                         lEntry.Name,
                         lChildRel,
                         lEntry.AbsPath,
-                        NormalizeExtension(ExtensionOf(lEntry.Name)) });
+                        NormalizeExtension(ExtensionOf(lEntry.Name)));
 
                     ++InOutRoot.FileCount;
                 }

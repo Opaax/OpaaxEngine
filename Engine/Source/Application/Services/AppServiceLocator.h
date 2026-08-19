@@ -50,7 +50,7 @@ namespace Opaax
             TInterface&      lRef  = *lImpl;
             const ServiceTypeID lId = TInterface::StaticTypeID();
             m_Services[lId] = std::move(lImpl);
-            m_Order.push_back(lId);
+            m_Order.emplace_back(lId);
             return lRef;
         }
 
@@ -70,7 +70,7 @@ namespace Opaax
             TInterface&         lRef = *InImpl;
             const ServiceTypeID lId  = TInterface::StaticTypeID();
             m_Services[lId] = std::move(InImpl);
-            m_Order.push_back(lId);
+            m_Order.emplace_back(lId);
             return lRef;
         }
 

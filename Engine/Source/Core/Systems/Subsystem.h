@@ -126,7 +126,7 @@ return StaticTypeID();                                                   \
         requires std::is_base_of_v<SubsystemType, T>
         void RegisterSubsystem(Args&&... InArgs)
         {
-            m_Factories.push_back([...Arguments = std::forward<Args>(InArgs)]() mutable
+            m_Factories.emplace_back([...Arguments = std::forward<Args>(InArgs)]() mutable
             {
                 return MakeUnique<T>(std::forward<decltype(Arguments)>(Arguments)...);
             });
@@ -141,7 +141,7 @@ return StaticTypeID();                                                   \
         {
             for (auto& lFactoryFunc : m_Factories)
             {
-                m_Systems.push_back(lFactoryFunc());
+                m_Systems.emplace_back(lFactoryFunc());
             }
 
             // startup in order

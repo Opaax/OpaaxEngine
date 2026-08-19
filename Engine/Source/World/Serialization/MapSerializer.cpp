@@ -45,11 +45,10 @@ namespace Opaax
                         return;
                     }
 
-                    lEntityData.Components.push_back(
-                        ComponentData{ InEntry.GetName(), InEntry.Save(lRegistry, lEntity) });
+                    lEntityData.Components.emplace_back(InEntry.GetName(), InEntry.Save(lRegistry, lEntity));
                 });
 
-                lData.Entities.push_back(Move(lEntityData));
+                lData.Entities.emplace_back(Move(lEntityData));
             }
 
             // TRACE, not Info. Capture is a pure transformation with several callers, and one of

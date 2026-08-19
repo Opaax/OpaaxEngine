@@ -185,7 +185,7 @@ namespace Opaax
             lMeta.Bytes    = 0;
             lMeta.Source   = OpaaxStringID{};
             --m_LoadingCount;
-            m_FreeSlots.push_back(InSlot);
+            m_FreeSlots.emplace_back(InSlot);
             PayloadRef(InSlot).reset(); // orphan composite -> child releases (manager re-locks)
         }
 
@@ -232,7 +232,7 @@ namespace Opaax
                 // CollectGarbage() pump, so a Resolve()'d pointer survives the rest of the
                 // frame and a dedup Load before the pump resurrects it. A LOADING slot
                 // dropped to 0 has no payload to defer — FinalizeSlot abandons it at publish.
-                m_Graveyard.push_back(GraveEntry{ InHandle.Slot, lMeta->Generation });
+                m_Graveyard.emplace_back(InHandle.Slot, lMeta->Generation);
             }
         }
 
@@ -389,8 +389,8 @@ namespace Opaax
                 // within the reserved MaxChunks or the outer vectors relocate and break
                 // lock-free Resolve.
                 OPAAX_ASSERT(m_Chunks.size() < MaxChunks) // exceeded MaxChunks -> Resolve no longer lock-free
-                m_Chunks.push_back(MakeUnique<Chunk>());
-                m_MetaChunks.push_back(MakeUnique<MetaChunk>());
+                m_Chunks.emplace_back(MakeUnique<Chunk>());
+                m_MetaChunks.emplace_back(MakeUnique<MetaChunk>());
             }
             return lSlot;
         }
@@ -411,7 +411,7 @@ namespace Opaax
             lMeta.RefCount = 0;
             lMeta.Bytes    = 0;
             lMeta.Source   = OpaaxStringID{};
-            m_FreeSlots.push_back(InSlot);
+            m_FreeSlots.emplace_back(InSlot);
 
             // Destroy LAST — a composite payload holds child Refs whose dtors Release on
             // their pools, enqueuing those children into their own next-pump graveyard.

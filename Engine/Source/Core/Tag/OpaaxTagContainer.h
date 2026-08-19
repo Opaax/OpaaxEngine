@@ -46,7 +46,7 @@ namespace Opaax
         {
             if (!InTag.IsValid() || HasTagExact(InTag)) { return false; }
 
-            m_Tags.push_back(InTag);
+            m_Tags.emplace_back(InTag);
             return true;
         }
 

@@ -128,13 +128,13 @@ namespace Opaax::Editor
     // =============================================================================
     void ResourceBrowserPanel::Startup()
     {
-        m_Roots.push_back(ResourceRoot{ OPAAX_ID("Project"), m_Context.Paths.AssetsDir() });
+        m_Roots.emplace_back(OPAAX_ID("Project"), m_Context.Paths.AssetsDir());
 
         // The editor's own per-project space. Absent when no edited project was declared — then there
         // is simply one root, which every view already handles.
         if (m_Context.EditorPathsOrNull != nullptr)
         {
-            m_Roots.push_back(ResourceRoot{ OPAAX_ID("Editor"), m_Context.EditorPathsOrNull->EditorAssetsDir() });
+            m_Roots.emplace_back(OPAAX_ID("Editor"), m_Context.EditorPathsOrNull->EditorAssetsDir());
         }
 
         Refresh();
@@ -249,7 +249,7 @@ namespace Opaax::Editor
 
                 bool bEnter = false;
                 DrawFolderTile(lLabel, bEnter);
-                if (bEnter) { m_TilePath.push_back(lLabel); }
+                if (bEnter) { m_TilePath.emplace_back(lLabel); }
 
                 lAfterTile();
             }
@@ -275,7 +275,7 @@ namespace Opaax::Editor
         {
             bool bEnter = false;
             DrawFolderTile(lChild.Name, bEnter);
-            if (bEnter) { m_TilePath.push_back(lChild.Name); }
+            if (bEnter) { m_TilePath.emplace_back(lChild.Name); }
 
             lAfterTile();
         }

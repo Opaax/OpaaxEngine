@@ -11,7 +11,7 @@ namespace Opaax::Editor
             if (lCategory->GetID() == InID) { return *lCategory; }
         }
 
-        m_Categories.push_back(MakeUnique<EditorMenuCategory>(InID));
+        m_Categories.emplace_back(MakeUnique<EditorMenuCategory>(InID));
         return *m_Categories.back();
     }
 

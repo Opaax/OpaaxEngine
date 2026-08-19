@@ -163,7 +163,7 @@ namespace Opaax
             }
             else
             {
-                lHandles.push_back(Submit([&InBody, lStart, lEnd]
+                lHandles.emplace_back(Submit([&InBody, lStart, lEnd]
                 {
                     for (Uint32 k = lStart; k < lEnd; ++k) { InBody(k); }
                 }));
@@ -232,7 +232,7 @@ namespace Opaax
             if (lJob.OnComplete)
             {
                 TLockGuard<Mutex> lLock(m_CompletedMutex);
-                m_Completed.push_back(Move(lJob.OnComplete));
+                m_Completed.emplace_back(Move(lJob.OnComplete));
             }
         }
     }

@@ -61,7 +61,7 @@ namespace Opaax
         }
 
         const Uint32 lIndex = static_cast<Uint32>(lReg.Entries.size());
-        lReg.Entries.push_back(TypeEntry{ InHash, std::string(InName) });
+        lReg.Entries.emplace_back(InHash, std::string(InName));
         lReg.HashToIndex.emplace(InHash, lIndex);
         return lIndex;
     }

@@ -402,7 +402,7 @@ namespace Opaax
                 };
 
             TLockGuard<RecursiveMutex> lLock(m_Mutex);
-            m_PendingCallbacks.push_back(Move(lPoll));
+            m_PendingCallbacks.emplace_back(Move(lPoll));
         }
 
         return lRef;

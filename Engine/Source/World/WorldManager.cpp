@@ -103,7 +103,7 @@ namespace Opaax
             m_Registries->SealAll();
         }
 
-        m_Worlds.push_back(MakeUnique<World>(Move(InName), InMode));
+        m_Worlds.emplace_back(MakeUnique<World>(Move(InName), InMode));
         World* lWorld = m_Worlds.back().get();
 
         // The Level comes BEFORE the subsystems: a subsystem's ctor receives the world, and a

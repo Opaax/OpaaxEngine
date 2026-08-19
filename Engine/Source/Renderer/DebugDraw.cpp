@@ -28,7 +28,7 @@ namespace Opaax
     void DebugDraw::DrawLine(const Vector2F& InStart, const Vector2F& InEnd, const Vector4F& InColor,
                              float InThickness)
     {
-        m_Lines.push_back(DebugLine{ InStart, InEnd, InColor, InThickness });
+        m_Lines.emplace_back(InStart, InEnd, InColor, InThickness);
     }
 
     // =========================================================================

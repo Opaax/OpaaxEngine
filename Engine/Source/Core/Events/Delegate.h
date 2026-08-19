@@ -109,7 +109,7 @@ namespace Opaax
         DelegateHandle Add(TFunction<void(Args...)> InFunc)
         {
             const DelegateHandle lHandle = DelegateHandle::Generate();
-            m_Entries.push_back({lHandle, nullptr, Move(InFunc)});
+            m_Entries.emplace_back(lHandle, nullptr, Move(InFunc));
             return lHandle;
         }
 
@@ -118,7 +118,7 @@ namespace Opaax
         DelegateHandle AddMember(T* InObj, void (T::*InMember)(Args...))
         {
             const DelegateHandle lHandle = DelegateHandle::Generate();
-            m_Entries.push_back({lHandle, InObj, [InObj, InMember](Args... InArgs) { (InObj->*InMember)(InArgs...); }});
+            m_Entries.emplace_back(lHandle, InObj, [InObj, InMember](Args... InArgs) { (InObj->*InMember)(InArgs...); });
             return lHandle;
         }
 

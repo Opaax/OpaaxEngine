@@ -35,7 +35,7 @@ namespace Opaax::Editor
             return *lExisting;
         }
 
-        m_Children.push_back(MakeUnique<EditorMenuCategory>(InID, GetPath()));
+        m_Children.emplace_back(MakeUnique<EditorMenuCategory>(InID, GetPath()));
         return *m_Children.back()->AsCategory();
     }
 
@@ -49,13 +49,13 @@ namespace Opaax::Editor
             return *lExisting;
         }
 
-        m_Children.push_back(MakeUnique<EditorMenuCommandNode>(InLabel, GetPath(), InCommand));
+        m_Children.emplace_back(MakeUnique<EditorMenuCommandNode>(InLabel, GetPath(), InCommand));
         return *m_Children.back()->AsCommand();
     }
 
     void EditorMenuCategory::AddSeparator()
     {
-        m_Children.push_back(MakeUnique<EditorMenuSeparatorNode>(GetPath()));
+        m_Children.emplace_back(MakeUnique<EditorMenuSeparatorNode>(GetPath()));
     }
 
     EditorMenuCategory& EditorMenuCategory::SetEnabled(FMenuPredicate InPredicate)

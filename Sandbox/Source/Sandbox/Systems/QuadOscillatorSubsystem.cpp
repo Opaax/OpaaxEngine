@@ -38,7 +38,7 @@ namespace Sandbox
 
         lWorld.Each<DummyComponent>([this](EntityID InEntity, const DummyComponent& InQuad)
         {
-            m_Baselines.push_back(Baseline{InEntity, InQuad.Position});
+            m_Baselines.emplace_back(InEntity, InQuad.Position);
         });
 
         OPAAX_LOG(LogQuadOscillator, Info, "Captured {} quad baseline(s)",

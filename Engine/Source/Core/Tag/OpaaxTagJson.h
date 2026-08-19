@@ -36,7 +36,7 @@ namespace Opaax
     inline void to_json(nlohmann::json& Json, const OpaaxTagContainer& Container)
     {
         Json = nlohmann::json::array();
-        for (const OpaaxTag lTag : Container) { Json.push_back(lTag); }
+        for (const OpaaxTag lTag : Container) { Json.emplace_back(lTag); }
     }
 
     inline void from_json(const nlohmann::json& Json, OpaaxTagContainer& Container)

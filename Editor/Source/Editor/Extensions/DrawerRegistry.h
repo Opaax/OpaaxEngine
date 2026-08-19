@@ -53,7 +53,7 @@ namespace Opaax::Editor
         template<typename TComponent, typename TDrawer>
         void Register()
         {
-            m_Entries.push_back(DrawerEntry{
+            m_Entries.emplace_back(
                 [](Entity& InEntity) -> bool
                 {
                     TComponent* lComp = InEntity.TryGet<TComponent>();
@@ -65,8 +65,7 @@ namespace Opaax::Editor
                     TDrawer lDrawer;
                     lDrawer.Draw(*lComp);
                     return true;
-                }
-            });
+                });
         }
 
         // =============================================================================

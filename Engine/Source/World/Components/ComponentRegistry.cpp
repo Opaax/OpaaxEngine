@@ -49,7 +49,7 @@ namespace Opaax
             return false;
         }
 
-        m_Entries.push_back(Move(InEntry));
+        m_Entries.emplace_back(Move(InEntry));
 
         OPAAX_LOG(LogComponentRegistry, Trace, "Registered component '{}' ({} total)",
                   lName, static_cast<Uint64>(m_Entries.size()));

@@ -11,7 +11,7 @@ namespace Opaax
     DelegateHandle EventBus::SubscribeImpl(Uint64 InTypeKey, void* InOwner, ErasedHandler InHandler)
     {
         const DelegateHandle lHandle = DelegateHandle::Generate();
-        m_Handlers[InTypeKey].push_back({lHandle, InOwner, Move(InHandler)});
+        m_Handlers[InTypeKey].emplace_back(lHandle, InOwner, Move(InHandler));
         return lHandle;
     }
 
@@ -63,7 +63,7 @@ namespace Opaax
 
     void EventBus::EnqueueImpl(TFunction<void()> InDispatch)
     {
-        m_Queue.push_back(Move(InDispatch));
+        m_Queue.emplace_back(Move(InDispatch));
     }
 
     void EventBus::Flush()

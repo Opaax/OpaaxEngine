@@ -74,7 +74,7 @@ namespace Opaax
 
             if (lInserted)
             {
-                m_Strings.push_back(&lIt->first);
+                m_Strings.emplace_back(&lIt->first);
             }
 
             return lIt->second;

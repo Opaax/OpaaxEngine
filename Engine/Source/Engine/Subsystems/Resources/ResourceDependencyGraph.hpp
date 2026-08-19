@@ -86,7 +86,7 @@ namespace Opaax
                 }
             }
             
-            InList.push_back(InValue);
+            InList.emplace_back(InValue);
         }
 
         static void RemoveFrom(TUnorderedMap<Uint32, TDynArray<Uint32>>& InMap, Uint32 InKey, Uint32 InValue)

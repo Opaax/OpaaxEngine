@@ -127,7 +127,7 @@ namespace Opaax::Editor
                           lMap.AssetRelPath.CStr());
             }
 
-            m_Maps.push_back(Move(lRecord));
+            m_Maps.emplace_back(Move(lRecord));
         }
     }
 

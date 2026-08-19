@@ -69,7 +69,7 @@ namespace Opaax
                 return false;
             }
             
-            m_Chain.push_back(InId);
+            m_Chain.emplace_back(InId);
             return true;
         }
 
@@ -114,7 +114,7 @@ namespace Opaax
         // dependencies first. Runs on the loading thread; the list is context-local.
         void AddPendingInit(IResourcePool* InPool, Uint32 InSlot)
         {
-            m_PendingInit.push_back(PendingInit{ InPool, InSlot });
+            m_PendingInit.emplace_back(InPool, InSlot);
         }
 
         // Main-thread: publish every recorded slot (Initialize + flip Loaded), children

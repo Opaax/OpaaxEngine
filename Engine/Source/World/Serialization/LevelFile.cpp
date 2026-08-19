@@ -66,7 +66,7 @@ namespace Opaax
                 const std::string lPath = lEntry.get<std::string>();
                 if (lPath.empty()) { continue; }
 
-                lParsed.Maps.push_back(OpaaxString(lPath.c_str()));
+                lParsed.Maps.emplace_back(lPath.c_str());
             }
         }
 
@@ -110,7 +110,7 @@ namespace Opaax
         nlohmann::json lMaps = nlohmann::json::array();
         for (const OpaaxString& lMap : InData.Maps)
         {
-            lMaps.push_back(std::string(lMap.CStr()));
+            lMaps.emplace_back(lMap.CStr());
         }
         lJson[KEY_MAPS] = Move(lMaps);
 
