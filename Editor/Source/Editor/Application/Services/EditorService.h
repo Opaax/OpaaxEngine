@@ -12,7 +12,6 @@
 #include "Editor/Panels/ViewportPanel.h"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Core/OpaaxTypes.h"   // TUniquePtr
-#include "Editor/Menus/EditorMenu.h"
 
 namespace Opaax::Editor
 {
@@ -71,26 +70,8 @@ namespace Opaax::Editor
         // End Native Editor
         // =============================================================================
         
-        /**
- *
- */
+        /** The dockspace and the menu bar — everything drawn outside a panel. */
         void DrawDockspace();
-
-
-        /**
-         * Render one level of the menu bar from the registry's flat entry list.
-         *
-         * Recursive: at InDepth, an entry whose path ends there is a MenuItem, and anything deeper
-         * opens a submenu gathering every entry that shares the segment. Computing the tree here
-         * rather than storing one is what keeps registration a single push_back.
-         *
-         * @param InIndices Indices into MenuRegistry::Entries() that belong at this level.
-         * @param InDepth   Which path segment this level names.
-         */
-        void DrawMenuLevel(const TDynArray<Uint32>& InIndices, Uint32 InDepth);
-
-        /** Every registered entry's index — the root call's argument for DrawMenuLevel. */
-        TDynArray<Uint32> BuildAllIndices() const;
 
         /** Adopt the level the engine opened at boot, and one of its maps for editing. */
         void AdoptStartupLevel();
@@ -221,9 +202,9 @@ namespace Opaax::Editor
         // game module registers (overview §3.3).
         TDynArray<TUniquePtr<IEditorPanel>> m_Panels;
 
+        // Every D10 route, including the menu bar itself — one owner, so what a module registers
+        // into is the object that draws.
         EditorExtensionRegistrar    m_Extensions;
-        
-        EditorMenu m_EditorMenu;
 
         // M4 S5: the WorldManager we subscribed to, so OnShutdown can unsubscribe. Non-owning, and
         // held separately from m_Context because the unsubscribe must happen BEFORE the context dies.

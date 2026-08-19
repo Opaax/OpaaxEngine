@@ -40,14 +40,13 @@ namespace
 
     using namespace Opaax::Editor;
 
-    /** A menu entry that dispatches InTag through the command registry, with no params. */
-    FMenuCommand MenuDispatch(const OpaaxTag& InTag)
-    {
-        return [InTag](EditorContext& InContext)
-        {
-            InContext.Extensions.Commands().Execute(InTag, InContext);
-        };
-    }
+    /** True while the EDIT world is the one on screen — MapOps::CanEdit's rule, asked per frame. */
+    bool IsEditing(const EditorContext& InContext) { return InContext.PIE.IsEdit(); }
+
+    /** True while a Play clone is running or paused. */
+    bool IsPlaying(const EditorContext& InContext) { return !InContext.PIE.IsEdit(); }
+
+    bool IsPaused(const EditorContext& InContext) { return InContext.PIE.IsPaused(); }
 }
 
 namespace Opaax::Editor
@@ -55,28 +54,37 @@ namespace Opaax::Editor
     void EditorService::RegisterNativeMenus()
     {
         // The editor's own entries go through the SAME route a game module uses — registered
-        // first, for the same reason native panels are (MR2's order, one level down).
-        //
-        // Resolved HERE because this is the composition root, the only editor code that may touch
-        // the locator (D3). QuitCommand receives it as a param.
-        Window* const lWindow = OpaaxApplication::GetAppService<IWindowManager>().GetMainWindow();
-
-        // --- M5 S5/S6: the author loop, through the same route a game's Tools entry uses ------
-        // NEW FIRST, and not only by convention: "Save Map As..." was flagged as weird precisely
-        // because nothing led INTO it — there was no way to make a map, so Save As had no workflow
-        // in front of it. This is that missing half, and registration order is draw order.
+        // first, for the same reason native panels are (MR2's order, one level down). Registration
+        // order is draw order, and the order Category() is first called is the bar's order.
         //
         // AN ENTRY IS A TAG, not a function: the bodies live in EditorNativeCommands and are
-        // reached through m_Extensions.Commands(), so the menu holds no privileged pointer into
-        // the editor that a game module's entry could not also hold.
-        m_Extensions.Menus().Register("File/New Map...",     MenuDispatch(Tags::EDITOR_COMMAND_NEW_MAP));
-        m_Extensions.Menus().Register("File/Open Map...",    MenuDispatch(Tags::EDITOR_COMMAND_OPEN_MAP));
-        m_Extensions.Menus().Register("File/Save Map",       MenuDispatch(Tags::EDITOR_COMMAND_SAVE_MAP));
-        m_Extensions.Menus().Register("File/Save Map As...", MenuDispatch(Tags::EDITOR_COMMAND_SAVE_MAP_AS));
+        // reached through m_Extensions.Commands(), so the menu holds no privileged pointer into the
+        // editor that a game module's entry could not also hold — and the same tag is what a key
+        // binding will carry.
+        EditorMenu& lMenu = m_Extensions.Menus();
+
+        // --- M5 S5/S6: the author loop -------------------------------------------------------
+        // NEW FIRST, and not only by convention: "Save Map As..." was flagged as weird precisely
+        // because nothing led INTO it — there was no way to make a map, so Save As had no workflow
+        // in front of it.
+        //
+        // The Save verbs are DISABLED while PIE runs rather than clickable-and-refused (**MP7**):
+        // the active world is then a Play clone, so writing it back would persist simulation state
+        // over the file. MapOps::CanEdit still refuses inside the command — the predicate is the
+        // readable half of that rule, not a replacement for it.
+        EditorMenuCategory& lFile = lMenu.Category("File");
+        lFile.AddCommand("New Map...",     Tags::EDITOR_COMMAND_NEW_MAP).SetEnabled(IsEditing);
+        lFile.AddCommand("Open Map...",    Tags::EDITOR_COMMAND_OPEN_MAP);
+        lFile.AddSeparator();
+        lFile.AddCommand("Save Map",       Tags::EDITOR_COMMAND_SAVE_MAP).SetEnabled(IsEditing);
+        lFile.AddCommand("Save Map As...", Tags::EDITOR_COMMAND_SAVE_MAP_AS).SetEnabled(IsEditing);
+        lFile.AddSeparator();
 
         // --- the LEVEL half (WM1a): what a session actually has open --------------------------
-        m_Extensions.Menus().Register("File/Open Level...",  MenuDispatch(Tags::EDITOR_COMMAND_OPEN_LEVEL));
-        m_Extensions.Menus().Register("File/Save Level",     MenuDispatch(Tags::EDITOR_COMMAND_SAVE_LEVEL));
+        lFile.AddCommand("Open Level...",  Tags::EDITOR_COMMAND_OPEN_LEVEL);
+        lFile.AddCommand("Save Level",     Tags::EDITOR_COMMAND_SAVE_LEVEL).SetEnabled(IsEditing);
+        lFile.AddSeparator();
+        lFile.AddCommand("Exit",           Tags::EDITOR_COMMAND_QUIT);
 
         // The ONLY Level entry, and the only one that ever earned a place on the bar: it does not
         // need a map named first, it goes and picks one.
@@ -86,17 +94,18 @@ namespace Opaax::Editor
         // map out of the several a level holds (WM1a) — and choosing the persistent map especially
         // needs somewhere to SEE the current answer, not just a verb aimed at the cursor. They live
         // on the Hierarchy's map headers now, where the map you click is the argument (MapOps).
-        m_Extensions.Menus().Register("Level/Add Map...", MenuDispatch(Tags::EDITOR_COMMAND_ADD_MAP_TO_LEVEL));
+        lMenu.Category("Level")
+             .AddCommand("Add Map...", Tags::EDITOR_COMMAND_ADD_MAP_TO_LEVEL).SetEnabled(IsEditing);
 
-        // The one entry that carries a payload: a command reaches the world through its context
-        // (D3) and there is no window in there, so the composition root — which may resolve from
-        // the locator — hands the window in as a param.
-        m_Extensions.Menus().Register("File/Exit",
-                                      [lWindow](EditorContext& InContext)
-                                      {
-                                          InContext.Extensions.Commands().Execute(
-                                              Tags::EDITOR_COMMAND_QUIT, InContext, QuitParams{lWindow});
-                                      });
+        // --- PIE, the third front-end onto the same four verbs (toolbar, F5-F8, here) ---------
+        // Pause is the checkable entry, and its tick READS PlayInEditor rather than caching a
+        // bool — so the menu, the toolbar and the key can never disagree about what is paused.
+        EditorMenuCategory& lPlay = lMenu.Category("Play");
+        lPlay.AddCommand("Play",  Tags::EDITOR_COMMAND_PLAY).SetEnabled(IsEditing);
+        lPlay.AddCommand("Pause", Tags::EDITOR_COMMAND_TOGGLE_PAUSE).SetChecked(IsPaused).SetEnabled(IsPlaying);
+        lPlay.AddCommand("Step",  Tags::EDITOR_COMMAND_STEP).SetEnabled(IsPaused);
+        lPlay.AddSeparator();
+        lPlay.AddCommand("Stop",  Tags::EDITOR_COMMAND_STOP).SetEnabled(IsPlaying);
     }
 
     void EditorService::RegisterNativeEditorCommand()
@@ -104,6 +113,11 @@ namespace Opaax::Editor
         EditorCommandRegistry& lCommands = m_Extensions.Commands();
 
         lCommands.Register<QuitCommand>(Tags::EDITOR_COMMAND_QUIT);
+
+        lCommands.Register<PlayCommand>(Tags::EDITOR_COMMAND_PLAY);
+        lCommands.Register<TogglePauseCommand>(Tags::EDITOR_COMMAND_TOGGLE_PAUSE);
+        lCommands.Register<StepCommand>(Tags::EDITOR_COMMAND_STEP);
+        lCommands.Register<StopCommand>(Tags::EDITOR_COMMAND_STOP);
 
         lCommands.Register<NewMapCommand>(Tags::EDITOR_COMMAND_NEW_MAP);
         lCommands.Register<OpenMapCommand>(Tags::EDITOR_COMMAND_OPEN_MAP);
@@ -232,6 +246,7 @@ namespace Opaax::Editor
             m_Extensions,
             OpaaxApplication::GetAppService<IPaths>(),
             OpaaxApplication::GetAppService<IPlatform>().GetFileSystem(),
+            *lWindow,
             m_EditorPaths
         });
 
@@ -414,7 +429,7 @@ namespace Opaax::Editor
 
     bool EditorService::HandleReservedKeys(Event& InEvent)
     {
-        if (m_PIE == nullptr || InEvent.GetEventType() != KeyPressedEvent::GetStaticType())
+        if (m_Context == nullptr || InEvent.GetEventType() != KeyPressedEvent::GetStaticType())
         {
             return false;
         }
@@ -426,20 +441,26 @@ namespace Opaax::Editor
             return false;
         }
 
+        // Dispatched BY TAG, exactly as the Play menu does it — a key and a menu entry must reach
+        // one verb, not two copies of it. This is also the table a shortcut system would own: the
+        // key-to-tag mapping is the only part that would move out of here.
+        //
         // Bare function keys, not chords: the KeyPressed payload carries no modifier state, so
         // Ctrl+P-style shortcuts are not expressible today. M-Input owns that.
+        const OpaaxTag* lCommand = nullptr;
         switch (lKey.GetKeyCode())
         {
-        case EKeyCode::F5: m_PIE->Play();
-            return true;
-        case EKeyCode::F6: m_PIE->TogglePause();
-            return true;
-        case EKeyCode::F7: m_PIE->Step();
-            return true;
-        case EKeyCode::F8: m_PIE->Stop();
-            return true;
+        case EKeyCode::F5: lCommand = &Tags::EDITOR_COMMAND_PLAY;         break;
+        case EKeyCode::F6: lCommand = &Tags::EDITOR_COMMAND_TOGGLE_PAUSE; break;
+        case EKeyCode::F7: lCommand = &Tags::EDITOR_COMMAND_STEP;         break;
+        case EKeyCode::F8: lCommand = &Tags::EDITOR_COMMAND_STOP;         break;
         default: return false;
         }
+
+        OPAAX_LOG(LogEditorService, Info, "Reserved key -> {}", *lCommand);
+
+        m_Context->Extensions.Commands().Execute(*lCommand, *m_Context);
+        return true;
     }
 
     void EditorService::HandleActiveWorldChanged(World* InOld, World* InNew)
@@ -575,22 +596,11 @@ namespace Opaax::Editor
     {
         ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
 
-        //if (!m_EditorMenu.DrawEditorMenu())
-        //{
-        //    //TODO: Assert or log, this is an important menu better to break.
-        //}
-
-        if (ImGui::BeginMainMenuBar())
-        {
-            // THE WHOLE BAR comes from the registry — there is no hardcoded menu left (M5 S4).
-            // The editor's own File/Exit is registered in RegisterNativeMenus exactly as a game's
-            // Tools entry is, which is what makes "native features go through the same route"
-            // (D10) true here rather than aspirational. It also removes the merge problem: a game
-            // adding "File/Validate" lands in the same File menu, because there is only one.
-            DrawMenuLevel(BuildAllIndices(), /*InDepth*/0);
-        
-            ImGui::EndMainMenuBar();
-        }
+        // THE WHOLE BAR is the menu's own business now. The editor's File/Exit was registered in
+        // RegisterNativeMenus exactly as a game's Tools entry is, which is what makes "native
+        // features go through the same route" (D10) true here rather than aspirational — and it
+        // removes the merge problem: a game adding to File lands in the one File there is.
+        if (m_Context != nullptr) { m_Extensions.Menus().Draw(*m_Context); }
 
         HandleAuthoringShortcuts();
     }
@@ -647,83 +657,6 @@ namespace Opaax::Editor
         if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_S, ImGuiInputFlags_RouteGlobal))
         {
             m_Context->Extensions.Commands().Execute(Tags::EDITOR_COMMAND_SAVE_MAP, *m_Context);
-        }
-    }
-
-    TDynArray<Uint32> EditorService::BuildAllIndices() const
-    {
-        const TDynArray<MenuEntry>& lEntries = m_Extensions.Menus().Entries();
-
-        TDynArray<Uint32> lIndices;
-        lIndices.reserve(lEntries.size());
-        for (Uint32 lIndex = 0; lIndex < static_cast<Uint32>(lEntries.size()); ++lIndex)
-        {
-            lIndices.push_back(lIndex);
-        }
-
-        return lIndices;
-    }
-
-    void EditorService::DrawMenuLevel(const TDynArray<Uint32>& InIndices, Uint32 InDepth)
-    {
-        const TDynArray<MenuEntry>& lEntries = m_Extensions.Menus().Entries();
-
-        // Names already emitted at THIS level, so two entries sharing a submenu produce one
-        // submenu rather than two with the same label. Registration order decides which comes
-        // first; everything sharing that prefix follows it in.
-        TDynArray<OpaaxString> lEmitted;
-        const auto lAlreadyEmitted = [&lEmitted](const OpaaxString& InName)
-        {
-            for (const OpaaxString& lName : lEmitted)
-            {
-                if (lName == InName) { return true; }
-            }
-            return false;
-        };
-
-        for (const Uint32 lIndex : InIndices)
-        {
-            const OpaaxString lSegment = MenuPathSegment(lEntries[lIndex].Path, InDepth);
-            if (lSegment.IsEmpty() || lAlreadyEmitted(lSegment)) { continue; }
-
-            // A LEAF is an entry with nothing after this segment — the label of the command.
-            if (IsMenuPathLeaf(lEntries[lIndex].Path, InDepth))
-            {
-                if (ImGui::MenuItem(lSegment.CStr()) && m_Context != nullptr)
-                {
-                    // EVERY command announces itself, from the one place they are all invoked —
-                    // native and game alike, and a command added later cannot forget to. A menu
-                    // click is a discrete user action, which is what an Info is for ([[L31]]), and
-                    // it makes "did the click reach it?" a fact rather than an inference from a
-                    // silent log.
-                    OPAAX_LOG(LogEditorService, Info, "Menu: '{}'", lEntries[lIndex].Path.CStr());
-
-                    lEntries[lIndex].Command(*m_Context);
-                }
-
-                lEmitted.push_back(lSegment);
-                continue;
-            }
-
-            // A SUBMENU: gather everything sharing this segment at this depth and recurse. The
-            // gather is what lets a flat registration list render as a tree without one being
-            // stored anywhere.
-            TDynArray<Uint32> lChildren;
-            for (const Uint32 lOther : InIndices)
-            {
-                if (MenuPathSegment(lEntries[lOther].Path, InDepth) == lSegment)
-                {
-                    lChildren.push_back(lOther);
-                }
-            }
-
-            if (ImGui::BeginMenu(lSegment.CStr()))
-            {
-                DrawMenuLevel(lChildren, InDepth + 1);
-                ImGui::EndMenu();
-            }
-
-            lEmitted.push_back(lSegment);
         }
     }
 

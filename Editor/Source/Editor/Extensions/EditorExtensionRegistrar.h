@@ -5,7 +5,7 @@
 #include "Editor/Extensions/PanelRegistry.h"       
 #include "Editor/Extensions/DrawerRegistry.h"      
 #include "Editor/Extensions/ResourceTypeRegistry.h"
-#include "Editor/Extensions/MenuRegistry.h"
+#include "Editor/Menus/EditorMenu.h"
 #include "Editor/Commands/EditorCommandRegistry.h"
 
 namespace Opaax::Editor
@@ -32,14 +32,14 @@ namespace Opaax::Editor
         DrawerRegistry&            Drawers()          noexcept { return m_Drawers; }
         PanelRegistry&             Panels()           noexcept { return m_Panels; }
         ResourceTypeRegistry&      ResourceTypes()    noexcept { return m_ResourceTypes; }
-        MenuRegistry&              Menus()            noexcept { return m_Menus; }
+        EditorMenu&                Menus()            noexcept { return m_Menus; }
         WorldSubsystemRoute&       EditWorldSystems() noexcept { return m_EditWorldSystems; }
         EditorCommandRegistry&     Commands()         noexcept { return m_EditorCommands; }
 
         const DrawerRegistry&        Drawers()          const noexcept { return m_Drawers; }
         const PanelRegistry&         Panels()           const noexcept { return m_Panels; }
         const ResourceTypeRegistry&  ResourceTypes()    const noexcept { return m_ResourceTypes; }
-        const MenuRegistry&          Menus()            const noexcept { return m_Menus; }
+        const EditorMenu&            Menus()            const noexcept { return m_Menus; }
         const WorldSubsystemRoute&   EditWorldSystems() const noexcept { return m_EditWorldSystems; }
         const EditorCommandRegistry& Commands()         const noexcept { return m_EditorCommands; }
 
@@ -50,7 +50,7 @@ namespace Opaax::Editor
         DrawerRegistry       m_Drawers;
         PanelRegistry        m_Panels;
         ResourceTypeRegistry m_ResourceTypes;
-        MenuRegistry         m_Menus;
+        EditorMenu           m_Menus;
         WorldSubsystemRoute  m_EditWorldSystems;
         EditorCommandRegistry m_EditorCommands;
         bool                 m_Sealed = false;

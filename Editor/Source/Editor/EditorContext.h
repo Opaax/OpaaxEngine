@@ -7,6 +7,7 @@ namespace Opaax
     class ResourceManager;
     class IPaths;
     class IFileSystem;
+    class Window;
 
     namespace Editor
     {
@@ -70,6 +71,12 @@ namespace Opaax
             // Both are resolved ONCE by EditorService: a panel never touches the locator (D3).
             const IPaths&      Paths;
             const IFileSystem& FileSystem;
+
+            // The window the editor is drawn in — resolved once by EditorService, like Paths and
+            // FileSystem beside it. Here because a command that needs something the composition
+            // root has to hand IN is a command nothing but a menu can invoke: a key binding carries
+            // a tag and no payload, so QuitCommand could never have been bound to one.
+            Window& MainWindow;
 
             // The editor's own per-project space (<ProjectRoot>/Editor/Assets). NULL is a real state,
             // not an error: EditorApplication installs a plain Paths when no edited project is declared,

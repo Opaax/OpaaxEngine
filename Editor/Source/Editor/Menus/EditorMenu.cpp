@@ -1,71 +1,43 @@
-﻿#include "EditorMenu.h"
+#include "Editor/Menus/EditorMenu.h"
 
 #include <imgui.h>
 
 namespace Opaax::Editor
 {
-    EditorMenu::EditorMenu()
+    EditorMenuCategory& EditorMenu::Category(const OpaaxStringID InID)
     {
-        const OpaaxStringID lMyId = ("test");
-        TSharedPtr<EditorMenuCategory> lMyCategory{new EditorMenuCategory(lMyId)};
-        RegisterMenuCategory(lMyCategory);
+        for (const TUniquePtr<EditorMenuCategory>& lCategory : m_Categories)
+        {
+            if (lCategory->GetID() == InID) { return *lCategory; }
+        }
+
+        m_Categories.push_back(MakeUnique<EditorMenuCategory>(InID));
+        return *m_Categories.back();
     }
 
-    bool EditorMenu::IsCategoryAlreadyRegistered(const OpaaxStringID& InID) const
+    void EditorMenu::Draw(EditorContext& InContext) const
     {
-        for (const auto& lCategory : MenuCategories)
+        if (!ImGui::BeginMainMenuBar())
         {
-            if (lCategory->GetID() == InID)
-            {
-                return true;
-            }
+            return;
         }
-        
-        return false;
-    }
 
-    void EditorMenu::RegisterCategoryInternal(TSharedPtr<EditorMenuCategory> InID)
-    {
-        //Todo: Log 
-        MenuCategories.emplace_back(InID);
-    }
+        for (const TUniquePtr<EditorMenuCategory>& lCategory : m_Categories)
+        {
+            lCategory->Draw(InContext);
+        }
 
-    void EditorMenu::RegisterMenuCategory(TSharedPtr<EditorMenuCategory> InID)
-    {   
-        //empty No check
-        if (!HasMenuCategories())
-        {
-            RegisterCategoryInternal(InID);
-        }
-        //Check already registered
-        else
-        {
-            if (IsCategoryAlreadyRegistered(InID->GetID()))
-            {
-                //Todo: Log
-                return;
-            }
-            
-            RegisterCategoryInternal(InID);
-        }
-    }
-
-    bool EditorMenu::DrawEditorMenu()
-    {
-        if (ImGui::BeginMainMenuBar())
-        {
-            for (const auto& lCategory : MenuCategories)
-            {
-                const char* lCatAsString = lCategory->GetID().CStr();
-                if (ImGui::BeginMenu(lCatAsString))
-                {
-                    //DrawMenuLevel(lChildren, InDepth + 1);
-                    ImGui::EndMenu();
-                }
-            }
-        }
         ImGui::EndMainMenuBar();
-        
-        return false;
+    }
+
+    Uint64 EditorMenu::Count() const noexcept
+    {
+        Uint64 lCount = 0;
+        for (const TUniquePtr<EditorMenuCategory>& lCategory : m_Categories)
+        {
+            lCount += lCategory->CountCommands();
+        }
+
+        return lCount;
     }
 }

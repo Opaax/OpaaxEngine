@@ -5,6 +5,7 @@
 #include "Editor/EditorMapDocument.h"
 #include "Editor/Operation/LevelOperations.h"
 #include "Editor/Operation/MapOperations.h"
+#include "Editor/PIE/PlayInEditor.h"
 
 #include "Application/Services/IEngine.h"
 #include "Application/Services/ILogger.h"
@@ -66,11 +67,35 @@ namespace Opaax::Editor
     // App
     // =============================================================================
 
-    void QuitCommand::Execute(EditorContext&, const Params& InParams)
+    void QuitCommand::Execute(EditorContext& InContext, const Params&)
     {
         OPAAX_LOG(LogEditorCommands, Info, "Exit requested");
 
-        if (InParams.Target != nullptr) { InParams.Target->RequestClose(); }
+        InContext.MainWindow.RequestClose();
+    }
+
+    // =============================================================================
+    // Play in editor
+    // =============================================================================
+
+    void PlayCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        InContext.PIE.Play();
+    }
+
+    void TogglePauseCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        InContext.PIE.TogglePause();
+    }
+
+    void StepCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        InContext.PIE.Step();
+    }
+
+    void StopCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        InContext.PIE.Stop();
     }
 
     // =============================================================================

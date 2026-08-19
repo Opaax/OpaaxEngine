@@ -1,59 +1,26 @@
-﻿#pragma once
-#include "Core/String/OpaaxStringID.hpp"
+#pragma once
+
+#include "Editor/Menus/EditorMenuCategory.h"
 
 namespace Opaax::Editor
 {
-
-    struct EditorMenuCategory
-    {
-        explicit EditorMenuCategory(const OpaaxStringID Id)
-            : m_ID(Id) {}
-
-        EditorMenuCategory(const EditorMenuCategory& Other)
-            : m_ID{Other.m_ID} {}
-
-        EditorMenuCategory(EditorMenuCategory&& Other) noexcept = default;
-
-        EditorMenuCategory& operator=(const EditorMenuCategory& Other)
-        {
-            if (this == &Other)
-            {
-                return *this;
-            }
-            
-            m_ID = Other.m_ID;
-            return *this;
-        }
-
-        EditorMenuCategory& operator=(EditorMenuCategory&& Other) noexcept
-        {
-            
-        }
-        
-        // =============================================================================
-        // Function
-        // =============================================================================
-        
-        // =============================================================================
-        // Getter
-        
-        OpaaxStringID GetID() const { return m_ID; }
-        OpaaxString GetAsString() const { return m_ID.ToString(); }
-        
-        // End Getter 
-        // =============================================================================
-
-        // =============================================================================
-        // Members
-        // =============================================================================
-    private:
-        OpaaxStringID m_ID;
-    };
-    
     /**
      * @class EditorMenu
-     * 
-     * The Top bar menu that is not a panel in the Editor
+     *
+     * The editor's top bar: an ordered set of root categories, and the storage behind
+     * EditorExtensionRegistrar::Menus() (Editor.md D10).
+     *
+     * IT IS A TREE, BUILT BY THE CALLER. It used to be a flat list of slash-separated path strings
+     * whose nesting was re-derived every frame; a path can carry an ORDER, an enabled predicate or
+     * a checked state for nothing, so the moment a category became a thing that holds state,
+     * deriving it from a prefix stopped being free (**MR2a**).
+     *
+     * Bar order is the order Category() was first called, which is authored — the editor's natives
+     * register before any module, so a game module can add to the bar without being able to push
+     * File out of the way.
+     *
+     * A node carries a COMMAND TAG, never a closure: clicking is Commands().Execute(tag, context),
+     * the same call a key binding makes.
      */
     class EditorMenu
     {
@@ -61,26 +28,49 @@ namespace Opaax::Editor
         // Ctor - Dtor
         // =============================================================================
     public:
-        EditorMenu();
-        ~EditorMenu() = default;
-        
+        EditorMenu() = default;
+
+        // =============================================================================
+        // Copy - Move Delete
+        // =============================================================================
+
+        // Owns nodes through TUniquePtr and hands out references into them (I6's corollary: an
+        // owner of a move-only member must say so, or the implicit copy is instantiated anyway).
+        EditorMenu(const EditorMenu&)            = delete;
+        EditorMenu& operator=(const EditorMenu&) = delete;
+
         // =============================================================================
         // Functions
         // =============================================================================
-    private:
-        bool HasMenuCategories() const { return !MenuCategories.empty(); }
-        bool IsCategoryAlreadyRegistered(const OpaaxStringID& InID) const;
-        void RegisterCategoryInternal(TSharedPtr<EditorMenuCategory> InID);
-        
     public:
-        void RegisterMenuCategory(TSharedPtr<EditorMenuCategory> InID);
-        
-        bool DrawEditorMenu();
-        
+        /**
+         * GET-OR-CREATE a root category — "File", "Level", "Tools".
+         *
+         * @return The category, so entries chain off it. Creation order is left-to-right bar order.
+         */
+        EditorMenuCategory& Category(OpaaxStringID InID);
+
+        /**
+         * Emit the whole bar.
+         *
+         * CONST like EditorCommandRegistry::Execute: the tree is built before the extension
+         * registrar seals, and a draw must not be able to add to it.
+         */
+        void Draw(EditorContext& InContext) const;
+
+        // =============================================================================
+        // Getter
+
+        /** @return How many COMMAND entries exist, at any depth — what the seal log reports. */
+        Uint64 Count() const noexcept;
+
+        // End Getter
+        // =============================================================================
+
         // =============================================================================
         // Members
         // =============================================================================
     private:
-        TDynArray<TSharedPtr<EditorMenuCategory>> MenuCategories = {};
+        TDynArray<TUniquePtr<EditorMenuCategory>> m_Categories;
     };
 }

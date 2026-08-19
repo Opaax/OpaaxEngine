@@ -633,16 +633,53 @@ editor module slots in before the seal.
 **MR2a — every D10 route is REAL as of M5, and `EditorRoute` is DELETED.** The M0 counts-only skeleton
 existed to make boot *ordering* observable before any machinery did; `Panels()` (M2a), `Drawers()` (M2b),
 `ResourceTypes()` (M2d), `EditWorldSystems()` (M4 S5) and finally `Menus()` (M5 S4) each graduated off it,
-and the type left with its last user. `MenuRegistry` stores a **flat array of `{Path, FMenuCommand}` in
-registration order** and the nesting is computed at *draw* time by splitting each path on `/` — a tree
-built at registration would be a second structure to keep consistent with the paths it came from. The
-editor's whole menu bar is registry-driven, its own `File/*` entries registered through the very route a
-game's `Tools/*` uses (D10), which also dissolves the merge problem: there is only one `File` menu because
-it is assembled from paths. **The M0 placeholder could not survive this** — a command needs
+and the type left with its last user. The editor's whole menu bar is registry-driven, its own `File/*`
+entries registered through the very route a game's `Tools/*` uses (D10), which also dissolves the merge
+problem: there is only one `File` menu. **The M0 placeholder could not survive this** — a command needs
 `EditorContext&` to do anything (D3) and `[] {}` does not convert — which is exactly why registry,
 consumer and dogfood were one atomic step ([[L16]] predicted this in M2 and it held).
 **Note on the M2a-style diff gate** ("a game extension costs zero `OpaaxEditorLib` changes"): it does not
 apply to the slice where the route itself goes real, and cannot. It applies again from the next entry.
+
+**MR2b — the menu bar is a TREE the caller builds, and a node is a COMMAND TAG** (landed 2026-08-19,
+replacing `MenuRegistry`). `Menus()` now returns an **`EditorMenu`** (`Editor/Menus/`): root categories
+in `Category()`-call order, each holding one ordered list of `TUniquePtr<IEditorMenuNode>` —
+`EditorMenuCategory`, `EditorMenuCommandNode`, `EditorMenuSeparatorNode` — so categories, entries and
+separators interleave and nesting goes as deep as it is written.
+*This supersedes MR2a's "flat array of `{Path, FMenuCommand}` … nesting computed at draw time, because a
+tree built at registration would be a second structure to keep consistent with the paths it came from."*
+That argument was sound **only while a category had no identity of its own**. A path string can carry a
+bar ORDER, an enabled predicate or a checked state for *nothing*, so the moment a category became a thing
+that holds state, deriving it from a prefix stopped being free — and the "second structure" it warned
+about never existed, because the tree **is** the storage now rather than a cache beside one.
+**This is the one D10 route whose CALL SITE changed** (`Menus().Register("Tools/X", lambda)` →
+`Menus().Category("Tools").SubCategory("Debug").AddCommand("X", tag)`). **MR1**'s freeze covers the
+game-side `ModuleRegistrar`; it was never a promise about `Menus()`, and the break was deliberate.
+- **A node is a TAG, never a closure.** `AddCommand(label, tag)` is the whole entry API; clicking is
+  `Commands().Execute(tag, context)`, the identical call a key binding makes. That is what makes "the
+  menu and the shortcut trigger one verb" true by construction rather than by discipline, and it is why
+  a **params-carrying** overload was rejected: a payload only the composition root can supply is a
+  payload a key binding cannot carry, so such a command would be menu-only by accident. The one case
+  (`QuitCommand`'s `Window*`) was fixed at the root — `EditorContext` carries `MainWindow`, `QuitParams`
+  is deleted — which is the general answer whenever this recurs.
+- **Identity is an `OpaaxStringID` and it doubles as the label**, so `Category()`/`SubCategory()` are
+  get-or-create on an integer compare and a menu cannot be looked up by one name and drawn under
+  another. Two modules naming `"Tools"` mean the one `Tools`.
+- **Children are `TUniquePtr` and that is load-bearing, not style.** `Category()`/`SubCategory()` hand
+  back a reference the caller keeps and adds to, so by-value children would dangle it on the next
+  `push_back` — the [[L25]] shape, a lifetime bug that compiles.
+- **Facets are OPTIONAL PREDICATES** (`FMenuPredicate`, asked every frame), so what a node *is* follows
+  from which were set — `WS2`'s `ShouldCreate` shape, not a kind enum that must agree with the fields
+  beside it. `SetEnabled` is **MP7**'s "disabled, never refused" finally reaching the bar; the command's
+  own `MapOps::CanEdit` guard stays, because the predicate is the readable half of the rule and not a
+  replacement for it.
+- **`Draw` is `const`** for the reason `EditorCommandRegistry::Execute` is: the tree is built before the
+  registrar seals, and drawing must not be able to add to it.
+- **Every PIE verb is a command now** (`Play`/`TogglePause`/`Step`/`Stop`), and its **three** front-ends
+  — the toolbar's buttons, the reserved F5–F8, the `Play` menu — all dispatch the same tag instead of
+  calling `PlayInEditor` three times. Nothing about a shortcut belongs on a menu node, so there is no
+  `SetShortcut`: a **key→tag table is its own system**, and this is its precondition (a verb that is not
+  a command cannot be bound).
 **MR3 — One module shape.** Runtime and editor modules share a marker base **`IModule`**
 (`Application/IModule.h`): `IRuntimeModule : IModule` (`OnRegister(ModuleRegistrar&)`) and
 `IEditorModule : IModule` (`OnRegister(EditorExtensionRegistrar&)`). `OnRegister` stays on each derived

@@ -3,11 +3,8 @@
 #include "Application/Services/ILogger.h"   // OPAAX_LOG + LogCategory
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Editor/EditorContext.h"   // the Panels factory receives EditorContext& (D10)
-#include "World/WorldManager.h"     // the Validate command walks the active world
-#include "World/World.h"
-#include "World/Entity/EntityMeta.h"
-#include "Components/HealthComponent.h"
-#include "Components/TagsComponent.h"
+#include "Commands/SandboxEditorCommandTags.h"
+#include "Commands/ValidateSandboxCommand.h"
 #include "Panels/SandboxPanel.h"
 #include "Drawers/DummyComponentDrawer.h"
 #include "Drawers/TagsComponentDrawer.h"
@@ -30,55 +27,21 @@ void SandboxEditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& In
     // used to sit here could not survive the route going real, which is exactly why it was left.
     InRegistrar.EditWorldSystems().Register<QuadBoundsSubsystem>();
 
-    // REAL extension (M5 S4): the last route to graduate, and the M0 placeholder that used to sit
-    // here could not come with it — it was `[] {}`, a zero-argument lambda, and a command that
-    // cannot reach the world could never do anything worth registering. It receives EditorContext&
-    // now (D3), which is exactly what makes this one able to answer a question about the game.
-    InRegistrar.Menus().Register("Tools/Validate Sandbox",
-        [](Opaax::Editor::EditorContext& InContext)
-        {
-            Opaax::World* lWorld = InContext.Worlds.GetActiveWorld();
-            if (lWorld == nullptr)
-            {
-                OPAAX_LOG(LogSandboxEditorModule, Warn, "Validate Sandbox: no active world");
-                return;
-            }
+    // REAL extension (M5 S4): the game's own verb, registered as a COMMAND and then bound in the
+    // menu — the same two routes the editor's native File entries travel, in the same order, with
+    // no privileged path (D10). The menu entry carries a TAG and nothing else, which is what lets
+    // this verb be reached from anywhere later (a key binding, another panel) instead of only from
+    // the one entry that used to hold its body.
+    //
+    // The M0 placeholder that used to sit here was `[] {}` and could not survive the route going
+    // real; nor could the lambda that replaced it survive the bar becoming a tree of commands.
+    InRegistrar.Commands().Register<SandboxEditor::ValidateSandboxCommand>(
+        SandboxEditor::Tags::SANDBOX_COMMAND_VALIDATE);
 
-            // A real (if small) check the GAME defines and the editor knows nothing about: every
-            // authored entity should carry the game's own HealthComponent. Counting the ones that
-            // do not is the sort of thing a validate command exists for.
-            //
-            // The tag count beside it is HIERARCHICAL (I14): an entity tagged "Sandbox.Quad.White"
-            // answers to "Sandbox", which nothing ever stored. This line is the only place the
-            // MATCH — as opposed to tag storage — is exercised in the running app.
-            static const Opaax::OpaaxTag lSandboxTag("Sandbox");
-
-            Uint64 lTotal   = 0;
-            Uint64 lMissing = 0;
-            Uint64 lTagged  = 0;
-            lWorld->Each<Opaax::EntityMeta>(
-                [&](auto InEntity, const Opaax::EntityMeta&)
-                {
-                    ++lTotal;
-                    if (!lWorld->GetRegistry().all_of<Sandbox::HealthComponent>(InEntity))
-                    {
-                        ++lMissing;
-                    }
-
-                    const Sandbox::TagsComponent* lTags =
-                        lWorld->GetRegistry().try_get<Sandbox::TagsComponent>(InEntity);
-
-                    if (lTags != nullptr && lTags->Tags.HasTag(lSandboxTag))
-                    {
-                        ++lTagged;
-                    }
-                });
-
-            OPAAX_LOG(LogSandboxEditorModule, Info,
-                "Validate Sandbox: world '{}' — {} entity(ies), {} without a HealthComponent, "
-                "{} matching tag '{}'",
-                lWorld->GetName().CStr(), lTotal, lMissing, lTagged, lSandboxTag);
-        });
+    // Two levels deep, from a game module, with the editor's own "Tools" — if it had one — merged
+    // in by identity rather than by string prefix.
+    InRegistrar.Menus().Category("Tools").SubCategory("Debug")
+               .AddCommand("Validate Sandbox", SandboxEditor::Tags::SANDBOX_COMMAND_VALIDATE);
 
     // REAL extension (M2b): the game's own component drawer. The editor never learns what a
     // DummyComponent is — it just invokes this closure, which self-checks whether the selected entity

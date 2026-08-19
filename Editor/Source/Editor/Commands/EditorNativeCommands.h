@@ -3,11 +3,6 @@
 #include "Core/String/OpaaxString.hpp"
 #include "Editor/Commands/EditorCommandConcept.h"   // NoParams
 
-namespace Opaax
-{
-    class Window;
-}
-
 namespace Opaax::Editor
 {
     struct EditorContext;
@@ -32,12 +27,6 @@ namespace Opaax::Editor
     // Params
     // =============================================================================
 
-    /** The window to close. Resolved by the composition root, because a command cannot ask for one. */
-    struct QuitParams
-    {
-        Window* Target = nullptr;
-    };
-
     /** An ABSOLUTE path to a `.opaaxmap`. Distinct from LevelPathParams so the dispatch check separates them. */
     struct MapPathParams
     {
@@ -57,12 +46,60 @@ namespace Opaax::Editor
     /**
      * Close the editor, through Window::RequestClose — the same path as clicking the X, so there
      * is one close path rather than a second one to keep correct.
+     *
+     * Takes NO params: the window comes off the context. A command whose payload only the
+     * composition root can supply is a command nothing but a menu can invoke, since a key binding
+     * carries a tag and nothing else.
      */
     struct QuitCommand
     {
-        using Params = QuitParams;
+        using Params = NoParams;
 
-        void Execute(EditorContext& InContext, const Params& InParams);
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
+    // =============================================================================
+    // Play in editor
+    //
+    //   PIE's four verbs as commands, so the THREE front-ends that drive them — the toolbar's
+    //   buttons, the reserved F-keys and now the Play menu — all make the same call instead of
+    //   three copies of it. They add no state: each forwards to the one PlayInEditor the context
+    //   already carries, which is what a toolbar button has always done directly.
+    //
+    //   This is also what makes them bindable. A key binding carries a tag, so a verb that is not
+    //   a command cannot be rebound; PlayInEditor::Play() was reachable only by hard-coding F5.
+    // =============================================================================
+
+    /** Clone the edit world and run it. Refused unless the state is Edit (PlayInEditor logs it). */
+    struct PlayCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
+    /** Pause if playing, resume if paused — the one verb a single key or menu entry can carry. */
+    struct TogglePauseCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
+    /** Tick exactly one frame, then stay paused. Refused unless Paused. */
+    struct StepCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
+    /** Discard the Play clone and put the edit world back. Refused from Edit. */
+    struct StopCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
     };
 
     // =============================================================================
