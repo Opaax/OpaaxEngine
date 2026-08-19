@@ -3,8 +3,6 @@
 #include "Application/Services/ILogger.h"
 #include "Core/OpaaxTypes.h"             // TUniquePtr, Uint32
 #include "Core/Maths/MathTypes.h"
-#include "Core/String/OpaaxString.hpp"
-#include "Core/String/OpaaxStringID.hpp"
 #include "Editor/Panels/IEditorPanel.h"
 #include "Editor/UI/IEditorUIBackend.h"
 
@@ -28,9 +26,12 @@ namespace Opaax::Editor
     //
     //   Resize is deferred by one frame to avoid reallocating the FBO between the world render and
     //   the sample within a single frame:
-    //     Draw()        (end of frame N)   MEASURES the panel's content region -> caches a pending size.
-    //     OnPreRender() (start of frame N+1) APPLIES the pending size BEFORE the world renders.
+    //     DrawContents() (end of frame N)   MEASURES the panel's content region -> caches a pending size.
+    //     OnPreRender()  (start of frame N+1) APPLIES the pending size BEFORE the world renders.
     //   The one-frame lag is normal for ImGui render-to-texture (not a bug).
+    //
+    //   Viewport hover/focus (D5 step 2) is measured here and PUSHED into InputRoute, so nothing
+    //   needs a typed pointer to this panel to route input.
     // =============================================================================
     class ViewportPanel final : public IEditorPanel
     {
@@ -80,30 +81,16 @@ namespace Opaax::Editor
         void            OnPreRender()           override;
         void            DrawContents()          override;
         void            Shutdown()              override;
-        //~End IEditorPanel interface
 
-        // =============================================================================
-        // Get
-        // =============================================================================
-    public:
-        /**
-         * Whether the pointer / the keyboard are on the viewport — D5 step 2's gate (M-Input).
-         *
-         * Measured in Draw(), which runs at the END of a frame, so a reader during the next
-         * frame's input poll is one frame behind. Normal for ImGui state and harmless here: the
-         * gate changes when the user moves between panels, not within a frame.
-         */
-        bool IsHovered() const noexcept { return m_bHovered; }
-        bool IsFocused() const noexcept { return m_bFocused; }
+        /** Zero padding: the world image fills the window edge to edge. */
+        PanelWindowStyle GetWindowStyle() const override { return { m_viewportSizeDefault, true }; }
+        //~End IEditorPanel interface
 
         // =============================================================================
         // Members
         // =============================================================================
     private:
         EditorContext& m_Context;
-        
-        const OpaaxStringID m_PanelID{ OPAAX_ID("Viewport") };
-        const OpaaxString   m_Title = m_PanelID.ToString();
 
         TUniquePtr<IFramebuffer>          m_Framebuffer;
         TUniquePtr<OffscreenRenderTarget> m_RenderTarget;
@@ -125,10 +112,5 @@ namespace Opaax::Editor
 
         bool   m_bImageLogged    = false;
         bool   m_bOutlineLogged  = false;
-
-        // D5 step 2, refreshed every Draw. False until the first one — before the panel has been
-        // drawn there is nothing for the pointer to be over.
-        bool   m_bHovered        = false;
-        bool   m_bFocused        = false;
     };
 }

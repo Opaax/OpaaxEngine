@@ -30,7 +30,13 @@ namespace Opaax::Editor
         return "CLOSED — unknown";
     }
 
-    void InputRoute::Evaluate(bool InViewportHovered, bool InViewportFocused)
+    void InputRoute::SetViewportFocus(const bool bInHovered, const bool bInFocused) noexcept
+    {
+        m_bViewportHovered = bInHovered;
+        m_bViewportFocused = bInFocused;
+    }
+
+    void InputRoute::Evaluate()
     {
         const EInputRouteState lPrevious = m_State;
 
@@ -42,7 +48,7 @@ namespace Opaax::Editor
         {
             m_State = EInputRouteState::ClosedNoWorld;
         }
-        else if (!InViewportHovered && !InViewportFocused)
+        else if (!m_bViewportHovered && !m_bViewportFocused)
         {
             // Step 2. Hovered OR focused: dragging out of the panel mid-gesture must not cut the
             // input off, and a click-to-focus play session must survive the pointer wandering.

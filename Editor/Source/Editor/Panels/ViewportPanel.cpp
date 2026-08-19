@@ -1,6 +1,7 @@
 #include "Editor/Panels/ViewportPanel.h"
 
 #include "Editor/EditorContext.h"
+#include "Editor/Input/InputRoute.h"        // hover/focus is pushed, not read back out (D5 step 2)
 #include "Editor/Operation/EditorSelection.hpp"
 #include "Editor/UI/IEditorUIBackend.h"
 
@@ -59,6 +60,11 @@ namespace Opaax::Editor
     // =========================================================================
     void ViewportPanel::OnPreRender()
     {
+        // Cleared here, set again in DrawContents. OnPreRender runs whether the panel is visible or
+        // not, so a HIDDEN viewport reports "not hovered" instead of holding the last value it
+        // measured — which would otherwise keep the input route open with no viewport on screen.
+        m_Context.Route.SetViewportFocus(false, false);
+
         ApplyPendingResize();
         EnqueueSelectionOutline();
     }
@@ -129,22 +135,16 @@ namespace Opaax::Editor
 
     void ViewportPanel::DrawContents()
     {
-        ImGui::SetNextWindowSize(ImVec2(m_viewportSizeDefault.x, m_viewportSizeDefault.y), ImGuiCond_FirstUseEver);
-        
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.f, 0.f));
-        ImGui::Begin(m_Title.CStr());
-        ImGui::PopStyleVar();
-
         // Measure the content region and cache it — OnPreRender applies it next frame (deferred resize).
         const ImVec2 lAvail = ImGui::GetContentRegionAvail();
         m_viewportPendingSize.x     = static_cast<Uint32>(lAvail.x);
         m_viewportPendingSize.y     = static_cast<Uint32>(lAvail.y);
-        
+
         // D5 step 2's inputs. ImGui can only answer these while the window is current, so they are
-        // measured HERE and read next frame by InputRoute — the same one-frame lag the deferred
-        // resize above already lives with, and for the same reason.
-        m_bHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows);
-        m_bFocused = ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows);
+        // measured HERE and pushed into the route, which reads them next frame — the same one-frame
+        // lag the deferred resize above already lives with, and for the same reason.
+        m_Context.Route.SetViewportFocus(ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows),
+                                         ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows));
 
         const EditorViewportImage lImg = GetViewportImage();
 
@@ -163,8 +163,6 @@ namespace Opaax::Editor
         {
             ImGui::Dummy(lAvail);
         }
-
-        ImGui::End();
     }
 
     void ViewportPanel::Shutdown()

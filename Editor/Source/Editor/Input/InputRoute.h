@@ -71,13 +71,21 @@ namespace Opaax::Editor
          * Called ONCE PER FRAME by EditorService::BeginFrame — not from RouteInput, which only
          * runs when an event happens to arrive. A rule evaluated only on input cannot notice that
          * input stopped, which is exactly the case that has to trigger the reset.
-         *
-         * @param InViewportHovered The viewport has the pointer (measured last frame — ImGui can
-         *                          only answer during Draw; the same one-frame lag the panel's
-         *                          resize handshake already lives with).
-         * @param InViewportFocused The viewport has the keyboard.
          */
-        void Evaluate(bool InViewportHovered, bool InViewportFocused);
+        void Evaluate();
+
+        /**
+         * The viewport reports where the pointer and the keyboard are. ImGui can only answer that
+         * while the panel's window is current, so the panel is the only place that can measure it —
+         * and the values are read one frame later, the same lag its resize handshake already lives
+         * with.
+         *
+         * PUSHED rather than read back out of the panel: this object is the one answer to "is the
+         * engine being fed", so the fact belongs beside the rule that consumes it, and nothing else
+         * needs a typed pointer to a panel. Cleared every frame in ViewportPanel::OnPreRender, so a
+         * HIDDEN viewport reports false instead of holding the last value it measured.
+         */
+        void SetViewportFocus(bool bInHovered, bool bInFocused) noexcept;
 
         // =============================================================================
         // Get
@@ -87,6 +95,9 @@ namespace Opaax::Editor
         bool IsOpen() const noexcept { return m_State == EInputRouteState::Open; }
 
         EInputRouteState GetState() const noexcept { return m_State; }
+
+        /** D5 step 1's exemption: ImGui owns the pointer over the UI, the game owns it over the viewport. */
+        bool IsViewportHovered() const noexcept { return m_bViewportHovered; }
 
         // =============================================================================
         // Members
@@ -99,5 +110,10 @@ namespace Opaax::Editor
         // Starts CLOSED: the editor opens on an Edit world, so "open" would be wrong for the one
         // frame before the first Evaluate — and would log a close that never happened.
         EInputRouteState m_State = EInputRouteState::ClosedNoWorld;
+
+        // Pushed by ViewportPanel. False until it has drawn once — before that there is nothing
+        // for the pointer to be over.
+        bool m_bViewportHovered = false;
+        bool m_bViewportFocused = false;
     };
 }

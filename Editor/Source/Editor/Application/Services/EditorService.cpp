@@ -6,6 +6,7 @@
 #include "Editor/Panels/InspectorPanel.h"
 #include "Editor/Panels/PlayToolbarPanel.h"
 #include "Editor/Panels/ResourceBrowserPanel.h"
+#include "Editor/Panels/ViewportPanel.h"
 #include "Editor/Operation/LevelOperations.h"                 // AdoptOpen — the boot/Open Level shared tail
 #include "Editor//Application/Services/EditorPaths.h"                            // EditorSaveDir — the dock layout's home (D4)
 
@@ -255,14 +256,11 @@ namespace Opaax::Editor
             m_EditorPaths
         });
 
-        // --- Viewport panel (M1): owns the offscreen FBO and registers it as the engine's primary
-        //     render target — the world now renders into the panel's texture, not the backbuffer. ----
-        m_ViewportPanel = MakeUnique<ViewportPanel>(*m_Context);
-        m_ViewportPanel->Startup();
-
         // --- Registered panels (M2a): native and game panels alike are built HERE, from the one registry,
         //     in registration order. The factories were stored back at RegisterExtensions (pre-Engine
-        //     startup, no context yet) — this is the point where they finally have one to receive. -------
+        //     startup, no context yet) — this is the point where they finally have one to receive.
+        //     The Viewport is simply the first of them: its Startup registers the offscreen FBO as the
+        //     engine's primary render target, so the world renders into a panel's texture. ------------
         m_PanelHost->Build(m_Extensions.Panels(), *m_Context);
 
         OPAAX_LOG(LogEditorService, Info, "Editor panels registered: {}, constructed: {}",
@@ -294,22 +292,16 @@ namespace Opaax::Editor
 
         // Re-decide the input route ONCE per frame, here rather than inside RouteInput: a rule
         // evaluated only when an event arrives cannot notice that input STOPPED — and "the route
-        // just closed" is precisely the case that has to reset the engine's held keys.
-        if (m_InputRoute != nullptr)
-        {
-            const bool lHovered = m_ViewportPanel != nullptr && m_ViewportPanel->IsHovered();
-            const bool lFocused = m_ViewportPanel != nullptr && m_ViewportPanel->IsFocused();
-
-            m_InputRoute->Evaluate(lHovered, lFocused);
-        }
+        // just closed" is precisely the case that has to reset the engine's held keys. Reads the
+        // viewport hover/focus the panel pushed last frame, BEFORE OnPreRender clears it.
+        if (m_InputRoute != nullptr) { m_InputRoute->Evaluate(); }
 
         m_UIBackend->NewFrame();
         ImGui::NewFrame();
 
-        // Apply any pending viewport resize (measured last Draw) BEFORE Engine().Loop() renders the
-        // world, so Render() reads the new FBO size this frame (deferred-resize handshake, §5).
-        if (m_ViewportPanel != nullptr) { m_ViewportPanel->OnPreRender(); }
-
+        // Apply any pending viewport resize (measured last DrawContents) BEFORE Engine().Loop()
+        // renders the world, so Render() reads the new FBO size this frame (deferred-resize
+        // handshake, §5).
         if (m_PanelHost != nullptr) { m_PanelHost->OnPreRender(); }
     }
 
@@ -324,8 +316,7 @@ namespace Opaax::Editor
 
         // The Viewport panel samples the FBO the world was just rendered into (Engine().Loop() above)
         // and shows it as an ImGui image — the world lives INSIDE a panel now, not the raw backbuffer.
-        if (m_ViewportPanel != nullptr) { m_ViewportPanel->DrawContents(); }
-
+        // It is the first panel in the host, with no special path of its own.
         if (m_PanelHost != nullptr) { m_PanelHost->Draw(); }
 
         // Submit the UI to the backbuffer AFTER Engine().Loop() has rendered the world into the FBO
@@ -355,7 +346,7 @@ namespace Opaax::Editor
         //
         // Keyboard is NOT exempted. WantCaptureKeyboard only goes true for a text field, and a
         // field that has the keyboard must always win, viewport or not.
-        const bool lViewportHovered = m_ViewportPanel != nullptr && m_ViewportPanel->IsHovered();
+        const bool lViewportHovered = m_InputRoute != nullptr && m_InputRoute->IsViewportHovered();
 
         bool lConsumed = false;
         if (InEvent.IsInCategory(EEventCategory::Mouse) || InEvent.IsInCategory(EEventCategory::MouseButton))
@@ -488,11 +479,6 @@ namespace Opaax::Editor
         {
             m_PanelHost->OnActiveWorldChanged(InOld, InNew);
         }
-
-        if (m_ViewportPanel != nullptr)
-        {
-            m_ViewportPanel->OnActiveWorldChanged(InOld, InNew);
-        }
     }
 
     void EditorService::HandleWorldDestroyed(World* InWorld)
@@ -556,6 +542,11 @@ namespace Opaax::Editor
         // The PIE controls are a PANEL like any other — registered through the same route a game
         // panel travels, not drawn by EditorService as a privileged widget (D10).
         PanelRegistry& lPanels = m_Extensions.Panels();
+
+        // FIRST, and that ordering is load-bearing: its Startup registers the offscreen FBO as the
+        // engine's primary render target, so it must not sit behind anything a game module adds.
+        // Natives register before modules (MR2), which is what makes "first" mean first.
+        lPanels.Register<ViewportPanel>(PanelDesc{ .Id = OPAAX_ID("Viewport") });
 
         lPanels.Register<PlayToolbarPanel>(PanelDesc{ .Id = OPAAX_ID("Play Controls") });
         lPanels.Register<HierarchyPanel>(PanelDesc{ .Id = OPAAX_ID("Hierarchy") });
@@ -647,17 +638,11 @@ namespace Opaax::Editor
             m_SubscribedWorlds = nullptr;
         }
 
-        // 1. Panel FIRST — its Shutdown clears the engine's primary render target (while the engine is
-        //    alive, so no live frame reads a dangling target) then frees the FBO (GL context current).
-        //    Must precede m_Context.reset() — the panel holds a reference into the context.
-        if (m_ViewportPanel != nullptr)
-        {
-            m_ViewportPanel->Shutdown();
-            m_ViewportPanel.reset();
-        }
-
-        // 2. Registered panels — reverse construction order (LC3). None owns a GPU resource, so the only
-        //    ordering constraint is that they die before the context they hold a reference into.
+        // 1. Every panel, reverse construction order (LC3). The Viewport registered first so it dies
+        //    LAST, which is the right end: its Shutdown clears the engine's primary render target
+        //    while the engine is alive (no live frame reads a dangling target) and frees the FBO
+        //    while the GL context is still current — both true here, since the UI backend below has
+        //    not gone yet. All of it must precede m_Context.reset(): panels hold a reference into it.
         if (m_PanelHost != nullptr)
         {
             m_PanelHost->Shutdown();
