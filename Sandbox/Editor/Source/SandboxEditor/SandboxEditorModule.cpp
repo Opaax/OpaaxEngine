@@ -68,7 +68,12 @@ void SandboxEditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& In
 
     // REAL extension (M2a): the game's own panel, registered through the same route the editor's native
     // Hierarchy uses. Constructed later by EditorService, once an EditorContext exists to hand it.
+    // Under TOOLS, not Window, and hidden until asked for: a panel is not always a workspace pane,
+    // and where its toggle lives is the panel's own statement rather than the editor's policy. The
+    // category merges by identity with the "Tools > Debug" above — same Category(), one Tools menu.
     InRegistrar.Panels().Register<SandboxPanel>(Opaax::Editor::PanelDesc{
-        .Id = OPAAX_ID("Sandbox Panel")
+        .Id               = OPAAX_ID("Sandbox Panel"),
+        .Menu             = OPAAX_ID("Tools"),
+        .DefaultVisibility = Opaax::Editor::EPanelVisibility::Hidden
     });
 }
