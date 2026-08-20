@@ -70,6 +70,17 @@ namespace Opaax
         return m_Device->CreateFramebuffer(InSpec);
     }
 
+    TUniquePtr<ITexture2D> RenderSystem::CreateTexture(const void* InPixels, Uint32 InWidth, Uint32 InHeight, Int32 InChannels)
+    {
+        if (!IsValidDevice())
+        {
+            OPAAX_LOG(LogRenderSystem, Error, "RenderSystem::CreateTexture — no device; no texture created.");
+            return nullptr;
+        }
+
+        return m_Device->CreateTexture(InPixels, InWidth, InHeight, InChannels);
+    }
+
     void RenderSystem::BeginFrame()
     {
         if (!IsValidDevice())

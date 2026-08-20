@@ -13,6 +13,7 @@ namespace Opaax
     class World;
     class IFramebuffer;
     class IRenderTarget;
+    class ITexture2D;
     class DebugDraw;
     class EngineRegistries;
     struct FramebufferSpec;
@@ -88,6 +89,20 @@ namespace Opaax
          * @return Valid only after Startup; returns nullptr before it, or if the device is gone.
          */
         virtual TUniquePtr<IFramebuffer> CreateFramebuffer(const FramebufferSpec& InSpec) = 0;
+
+        /**
+         * A GPU texture from pixels the caller already decoded (F2a — only the device creates one).
+         * The route a resource takes to the GPU: TextureResource::Initialize runs on the pump and
+         * has no device of its own, and caching one would outlive it.
+         *
+         * @param InPixels Tightly packed, InWidth * InHeight * InChannels bytes. Borrowed — the
+         *   caller may free it as soon as this returns.
+         * @param InChannels 4 = RGBA8, 3 = RGB8, 1 = R8 coverage.
+         * @return CALLER-OWNED, and released while the engine's GPU context is still alive.
+         *   nullptr before Startup, or with no device — which is also what a headless test gets.
+         */
+        virtual TUniquePtr<ITexture2D> CreateTexture(const void* InPixels, Uint32 InWidth,
+                                                     Uint32 InHeight, Int32 InChannels) = 0;
 
         /**
          * Called once per rendered frame.

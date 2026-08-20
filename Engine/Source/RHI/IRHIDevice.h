@@ -52,6 +52,18 @@ namespace Opaax
         virtual TUniquePtr<IIndexBuffer>   CreateIndexBuffer(const Uint32* InIndices, Uint32 InCount)    = 0;
         virtual TUniquePtr<IUniformBuffer> CreateUniformBuffer(Uint32 InSizeBytes, Uint32 InBinding)     = 0;
         virtual TUniquePtr<ITexture2D>     CreateTexture(Uint32 InWidth, Uint32 InHeight)                = 0;
+
+        /**
+         * A texture from PIXELS the caller already decoded. Raw arguments rather than an image
+         * struct, like CreateIndexBuffer beside it — the device takes bytes, so it never learns
+         * what a file is and a second backend inherits the decode instead of repeating it.
+         *
+         * @param InPixels Tightly packed rows, InWidth * InHeight * InChannels bytes. Borrowed:
+         *   the call copies to the GPU and the caller may free it on return.
+         * @param InChannels 4 = RGBA8, 3 = RGB8, 1 = R8 coverage (swizzled into alpha).
+         */
+        virtual TUniquePtr<ITexture2D>     CreateTexture(const void* InPixels, Uint32 InWidth,
+                                                         Uint32 InHeight, Int32 InChannels)             = 0;
         virtual TUniquePtr<IShader>        CreateShader(const ShaderDesc& InDesc)                        = 0;
         virtual TUniquePtr<IPipeline>      CreatePipeline(const PipelineDesc& InDesc)                    = 0;
         virtual TUniquePtr<IBindGroup>     CreateBindGroup(const BindGroupLayout& InLayout)              = 0;

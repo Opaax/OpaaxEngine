@@ -9,10 +9,14 @@ namespace Opaax
     /**
      * @class OpenGLTexture2D
      *
-     * OpenGL ITexture2D implementation. Loads an image via stb_image and uploads it to the GPU.
+     * OpenGL ITexture2D implementation. Uploads pixels the caller already decoded.
      * Supports R8 (single-channel coverage), RGB and RGBA source images.
      * R8 path swizzles coverage into alpha so the existing RGBA sprite shader
      * reads it as (1,1,1,coverage) without a shader fork.
+     *
+     * It does NOT read files: decoding is CPU work every backend shares, so it lives one layer up
+     * in TextureResource (F2a — the device receives bytes). A path ctor here also meant stb_image
+     * opening the file with a narrow CRT call, which mis-resolves a non-ASCII path (I7).
      */
     class OPAAX_API OpenGLTexture2D final : public ITexture2D
     {
@@ -20,12 +24,6 @@ namespace Opaax
         // CTOR - DTOR
         // =============================================================================
     public:
-        /**
-         * Load from file path (stb_image)
-         * @param InPath
-         */
-        explicit OpenGLTexture2D(const char* InPath);
-
         /**
          * Create a 1x1 solid colour texture — useful for coloured quads without
          * needing a real texture (white pixel * tint colour in the shader)

@@ -40,6 +40,7 @@ set(OPAAX_TEST_SOURCES
     Core/Application/OpaaxApplicationBootTests.cpp
     Core/Engine/Subsystems/Resources/ResourceSystemTests.cpp
     Core/Engine/Subsystems/Resources/ResourceFormatRegistryTests.cpp
+    Core/Engine/Subsystems/Resources/TextureResourceTests.cpp
     Core/Engine/ModuleRegistrarTests.cpp
     Core/Engine/InputManagerTests.cpp
     Core/Engine/EngineEventsTests.cpp

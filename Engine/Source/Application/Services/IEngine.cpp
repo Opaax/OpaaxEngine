@@ -5,6 +5,7 @@
 #include "Engine/Subsystems/Resources/ResourceManager.h"
 #include "Renderer/DebugDraw.h"
 #include "RHI/Framebuffer.h"
+#include "RHI/Texture.h"       // the TUniquePtr<ITexture2D> deleter
 #include "World/WorldManager.h"
 #include "Engine/Registries/EngineRegistries.h"
 
@@ -36,6 +37,10 @@ namespace Opaax
 
             // No device to create on — a caller gets nullptr and its own null-handling runs.
             TUniquePtr<IFramebuffer> CreateFramebuffer(const FramebufferSpec&) override { return nullptr; }
+
+            // Same answer, and it is what lets a headless test decode a texture: the resource loads,
+            // Initialize finds no device, and the payload is a CPU image with no GPU handle.
+            TUniquePtr<ITexture2D> CreateTexture(const void*, Uint32, Uint32, Int32) override { return nullptr; }
 
             void Update(double)           override {}
             void FixedUpdate(double)      override {}

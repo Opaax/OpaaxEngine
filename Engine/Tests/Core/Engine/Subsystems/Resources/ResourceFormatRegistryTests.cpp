@@ -16,8 +16,9 @@ using namespace Opaax;
 
 namespace
 {
-    // A resource type claiming SEVERAL extensions — the shape the whole design exists for, and
-    // the one no live engine type exercises yet (textures land with the sprite slice).
+    // A resource type claiming SEVERAL extensions — the shape the whole design exists for. The
+    // live one is TextureResource (see TextureResourceTests); this probe stays because a registry
+    // suite must be able to break the rules (duplicate claims, post-seal) without touching it.
     struct ProbeTextureResource
     {
         OPAAX_RESOURCE_FORMAT("Probe Texture", ".png", ".jpg", ".TGA")

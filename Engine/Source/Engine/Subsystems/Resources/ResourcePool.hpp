@@ -422,7 +422,16 @@ namespace Opaax
         {
             if constexpr (T::FailPolicy == EFailPolicy::Placeholder)
             {
-                if (!m_Placeholder.has_value()) { m_Placeholder.emplace(T::Placeholder()); }
+                if (!m_Placeholder.has_value())
+                {
+                    // A placeholder is a FULLY-INITIALISED resource, not a half-built one: it goes
+                    // through the same main-thread log-in a loaded payload does, or a GPU-backed
+                    // type's substitute would have no texture and fail silently (as a black quad).
+                    // Built on first fallback, from Resolve — i.e. on the main thread, like the pump.
+                    m_Placeholder.emplace(T::Placeholder());
+                    MaybeInitialize(m_Placeholder.value());
+                }
+
                 return &m_Placeholder.value();
             }
             else

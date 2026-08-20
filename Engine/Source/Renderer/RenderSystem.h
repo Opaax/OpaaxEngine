@@ -12,6 +12,7 @@ namespace Opaax
     class IRHIDevice;
     class IFramebuffer;
     class IRenderTarget;
+    class ITexture2D;
     class Renderer2D;
     struct FramebufferSpec;
     struct RenderSystemDesc;
@@ -113,6 +114,15 @@ namespace Opaax
          * @return nullptr if the render core has no device (Init failed or never ran).
          */
         TUniquePtr<IFramebuffer> CreateFramebuffer(const FramebufferSpec& InSpec);
+
+        /**
+         * Build a texture on the device from pixels the caller decoded (F2a). The CALLER owns it
+         * and must release it before the device dies.
+         * @param InPixels Tightly packed, InWidth * InHeight * InChannels bytes; borrowed.
+         * @param InChannels 4 = RGBA8, 3 = RGB8, 1 = R8 coverage.
+         * @return nullptr if the render core has no device (Init failed or never ran).
+         */
+        TUniquePtr<ITexture2D> CreateTexture(const void* InPixels, Uint32 InWidth, Uint32 InHeight, Int32 InChannels);
 
         // End Resources
         // =============================================================================

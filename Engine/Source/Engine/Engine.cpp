@@ -24,6 +24,8 @@
 #include "World/Serialization/MapResource.hpp"   // registered as a native format; Level does the loading
 
 #include "RHI/Framebuffer.h"   // FramebufferSpec + the TUniquePtr<IFramebuffer> deleter
+#include "RHI/Texture.h"       // the TUniquePtr<ITexture2D> deleter
+#include "Engine/Subsystems/Resources/Types/TextureResource.h" // registered as a native format
 
 namespace Opaax
 {
@@ -71,6 +73,7 @@ namespace Opaax
     {
         m_Registries.Resources().Register<LevelResource>(OPAAX_ID("Level"));
         m_Registries.Resources().Register<MapResource>(OPAAX_ID("Map"));
+        m_Registries.Resources().Register<TextureResource>(OPAAX_ID("Texture"));
     }
 
     void Engine::RegisterNativeSubsystems()
@@ -453,6 +456,17 @@ namespace Opaax
         }
 
         return m_RendererManager->CreateFramebuffer(InSpec);
+    }
+
+    TUniquePtr<ITexture2D> Engine::CreateTexture(const void* InPixels, Uint32 InWidth, Uint32 InHeight, Int32 InChannels)
+    {
+        if (m_RendererManager == nullptr)
+        {
+            OPAAX_ENGINE_LOG(Error, "Engine::CreateTexture before Startup — no renderer; none created.");
+            return nullptr;
+        }
+
+        return m_RendererManager->CreateTexture(InPixels, InWidth, InHeight, InChannels);
     }
     
     // =========================================================================

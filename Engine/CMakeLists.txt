@@ -160,7 +160,7 @@ if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Vendors/stb/stb_image.h")
 endif()
  
 # stb is header-only. We expose the include path as an interface library.
-# STB_IMAGE_IMPLEMENTATION is defined in OpenGLTexture2D.cpp only — do NOT define
+# STB_IMAGE_IMPLEMENTATION is defined in TextureResource.cpp only — do NOT define
 # it globally or you will get multiple definition linker errors.
 add_library(stb INTERFACE)
 target_include_directories(stb INTERFACE Vendors)

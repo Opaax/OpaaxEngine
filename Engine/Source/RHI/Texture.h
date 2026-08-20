@@ -8,9 +8,9 @@ namespace Opaax
     /**
      * @interface ITexture2D
      *
-     * Backend-agnostic 2D GPU texture. Consumers (Texture2D asset, FontAsset, Renderer2D)
-     * hold a TUniquePtr<ITexture2D> and never name a concrete backend type. The concrete
-     * impl is created via IRHIDevice::CreateTexture (OpenGLTexture2D today).
+     * Backend-agnostic 2D GPU texture. Consumers (TextureResource, Renderer2D) hold a
+     * TUniquePtr<ITexture2D> and never name a concrete backend type. The concrete impl is
+     * created via IRHIDevice::CreateTexture (OpenGLTexture2D today).
      *
      * GetRendererID exposes the raw backend handle (GL texture name) for the one consumer
      * that still needs it — the editor ViewportPanel feeding ImGui::Image. That is an
@@ -27,8 +27,8 @@ namespace Opaax
         // =============================================================================
         // Functions
         // =============================================================================
-        // Created via IRHIDevice::CreateTexture. (From-file / from-bytes creation returns
-        // with the Texture CResource — the severed sprite path, M0.5.)
+        // Created via IRHIDevice::CreateTexture — solid (W, H) or from decoded pixels.
+        // Files are TextureResource's business, never a backend's.
     public:
         virtual void Bind(Uint32 InSlot = 0) const = 0;
         virtual void Unbind()                const = 0;

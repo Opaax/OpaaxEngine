@@ -14,6 +14,7 @@
 #include "RHI/RHIBackend.h"       // BackendFromString
 #include "RHI/IGraphicsContext.h"
 #include "RHI/Framebuffer.h"      // FramebufferSpec + the TUniquePtr<IFramebuffer> deleter
+#include "RHI/Texture.h"          // the TUniquePtr<ITexture2D> deleter
 
 #include "Renderer/RenderSystem.h"
 #include "Renderer/RenderSystemDesc.h"
@@ -185,6 +186,17 @@ namespace Opaax
         }
 
         return m_RenderSystem->CreateFramebuffer(InSpec);
+    }
+
+    TUniquePtr<ITexture2D> RendererManager::CreateTexture(const void* InPixels, Uint32 InWidth, Uint32 InHeight, Int32 InChannels)
+    {
+        if (!m_RenderSystem)
+        {
+            OPAAX_LOG(LogRendererManager, Error, "CreateTexture before the render core started — none created.");
+            return nullptr;
+        }
+
+        return m_RenderSystem->CreateTexture(InPixels, InWidth, InHeight, InChannels);
     }
 
     void RendererManager::Present()

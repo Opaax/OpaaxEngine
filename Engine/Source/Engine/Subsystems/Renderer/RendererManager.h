@@ -16,6 +16,7 @@ namespace Opaax
     class WorldManager;
     class IFramebuffer;
     class IRenderTarget;
+    class ITexture2D;
     struct FramebufferSpec;
     struct WindowResize;
 
@@ -100,6 +101,16 @@ namespace Opaax
          * core shuts down. nullptr before Startup (no core yet) or if the device is gone.
          */
         TUniquePtr<IFramebuffer> CreateFramebuffer(const FramebufferSpec& InSpec);
+
+        /**
+         * Upload decoded pixels to a GPU texture on the render core's device (F2a). Reached through
+         * IEngine by TextureResource::Initialize — the same arrangement CreateFramebuffer has with
+         * the editor's ViewportPanel, and for the same reason: the caller needs a GPU resource and
+         * must not hold a device.
+         *
+         * CALLER-OWNED; release it before the render core shuts down. nullptr before Startup.
+         */
+        TUniquePtr<ITexture2D> CreateTexture(const void* InPixels, Uint32 InWidth, Uint32 InHeight, Int32 InChannels);
 
         /**
          * @return The per-frame debug line queue, drained and cleared by Render(). Reached by game

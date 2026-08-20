@@ -390,8 +390,8 @@ TEST_CASE("Resources: LoadAsync loads off the main thread and publishes at the p
     CHECK(lRef.IsValid());                                       // a Loading claim, returned immediately
     CHECK(lMgr.GetLoadingCount<GpuLikeResource>() == 1);
     CHECK(lMgr.GetLoadedCount<GpuLikeResource>() == 0);
-    CHECK(lMgr.Resolve(lRef.GetHandle()) != nullptr);            // resolves to the placeholder while Loading
-    CHECK(lMgr.Resolve(lRef.GetHandle())->InitCount == 0);
+    GpuLikeResource* lWhileLoading = lMgr.Resolve(lRef.GetHandle());
+    REQUIRE(lWhileLoading != nullptr);                           // resolves to the placeholder while Loading
 
     PumpUntilIdle<GpuLikeResource>(lMgr, lJobs);
 
@@ -400,8 +400,31 @@ TEST_CASE("Resources: LoadAsync loads off the main thread and publishes at the p
 
     GpuLikeResource* lLoaded = lMgr.Resolve(lRef.GetHandle());
     REQUIRE(lLoaded != nullptr);
+    // What the mid-load Resolve handed back was the PLACEHOLDER, a different object — asserted on
+    // identity rather than on a field, because both objects carry the same fields ([[L25]]). The
+    // placeholder is initialised too (see the case below), so counting InitCount here could not
+    // tell the two apart.
+    CHECK(lLoaded != lWhileLoading);
     CHECK(lLoaded->InitCount == 1);                              // Initialize ran exactly once...
     CHECK(lLoaded->LoadThread != std::this_thread::get_id());    // ...and Load ran on a worker thread
+}
+
+// =============================================================================
+TEST_CASE("Resources: the placeholder is INITIALISED, like any other payload")
+{
+    // A substitute has to be as USABLE as the thing it substitutes for. For a GPU-backed type that
+    // means uploaded: an un-initialised magenta texture has no GPU handle and draws as nothing,
+    // which is the silent-wrong-answer failure the Placeholder policy exists to prevent.
+    ResourceManager lMgr;
+    REQUIRE(lMgr.Startup());
+
+    GpuLikeResource* lPlaceholder = lMgr.Resolve(ResourceHandle<GpuLikeResource>{});
+    REQUIRE(lPlaceholder != nullptr);
+    CHECK(lPlaceholder->InitCount == 1);
+
+    // Built ONCE per pool, not per resolve.
+    CHECK(lMgr.Resolve(ResourceHandle<GpuLikeResource>{}) == lPlaceholder);
+    CHECK(lPlaceholder->InitCount == 1);
 }
 
 // =============================================================================

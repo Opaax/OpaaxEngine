@@ -23,6 +23,8 @@ namespace Opaax
         TUniquePtr<IIndexBuffer>   CreateIndexBuffer(const Uint32* InIndices, Uint32 InCount)    override;
         TUniquePtr<IUniformBuffer> CreateUniformBuffer(Uint32 InSizeBytes, Uint32 InBinding)     override;
         TUniquePtr<ITexture2D>     CreateTexture(Uint32 InWidth, Uint32 InHeight)                override;
+        TUniquePtr<ITexture2D>     CreateTexture(const void* InPixels, Uint32 InWidth,
+                                                 Uint32 InHeight, Int32 InChannels)             override;
         TUniquePtr<IShader>        CreateShader(const ShaderDesc& InDesc)                        override;
         TUniquePtr<IPipeline>      CreatePipeline(const PipelineDesc& InDesc)                    override;
         TUniquePtr<IBindGroup>     CreateBindGroup(const BindGroupLayout& InLayout)              override;
