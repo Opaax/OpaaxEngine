@@ -2,7 +2,7 @@
 
 #include <optional>
 
-#include "Engine/Subsystems/Resources/ResourceConcept.hpp"
+#include "Engine/Subsystems/Resources/ResourceFormat.h"
 #include "World/Serialization/MapFile.h"
 
 namespace Opaax
@@ -37,6 +37,8 @@ namespace Opaax
         MapData Data;
 
         // ---- CResource contract --------------------------------------------------
+        OPAAX_RESOURCE_FORMAT("Opaax Map", MapFile::MAP_EXTENSION)
+
         static constexpr EFailPolicy FailPolicy = EFailPolicy::FailFast;
 
         static std::optional<MapResource> Load(const char* InPath, LoadContext& /*InCtx*/)

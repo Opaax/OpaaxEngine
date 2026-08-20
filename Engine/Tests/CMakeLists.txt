@@ -39,6 +39,7 @@ set(OPAAX_TEST_SOURCES
     Core/Application/IWindowManagerTests.cpp
     Core/Application/OpaaxApplicationBootTests.cpp
     Core/Engine/Subsystems/Resources/ResourceSystemTests.cpp
+    Core/Engine/Subsystems/Resources/ResourceFormatRegistryTests.cpp
     Core/Engine/ModuleRegistrarTests.cpp
     Core/Engine/InputManagerTests.cpp
     Core/Engine/EngineEventsTests.cpp

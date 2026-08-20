@@ -27,6 +27,8 @@
 #include "Engine/Registries/EngineRegistries.h"
 #include "Renderer/Config/Config_Renderer.h"
 #include "Engine/Subsystems/Input/InputEvents.h"
+#include "World/Serialization/LevelResource.hpp"   // the types whose chrome is registered below
+#include "World/Serialization/MapResource.hpp"
 #include "World/World.h"
 #include "World/WorldManager.h"
 #include "World/Entity/Entity.h"
@@ -116,26 +118,20 @@ namespace Opaax::Editor
 
     void EditorService::RegisterNativeResourceTypes()
     {
-        m_Extensions.ResourceTypes().Register(ResourceTypeDesc{
-            .Extension = OPAAX_ID(".opaaxmap"),
-            .Label = OPAAX_ID("Opaax Map"),
-            .Icon = OpaaxString("[M]"),
-            .OnActivate = [](EditorContext& InContext, const ResourceFile& InFile)
+        m_Extensions.ResourceTypes().Register<MapResource>()
+            .SetIcon(OpaaxString("[M]"))
+            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
             {
                 InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_MAP_AT, InContext,
                                                         MapPathParams{InFile.AbsPath});
-            }
-        });
+            });
 
-        m_Extensions.ResourceTypes().Register(ResourceTypeDesc{
-            .Extension = OPAAX_ID(".opaaxlevel"),
-            .Label = OPAAX_ID("Opaax Level"),
-            .Icon = OpaaxString("[L]"),
-            .OnActivate = [](EditorContext& InContext, const ResourceFile& InFile)
+        m_Extensions.ResourceTypes().Register<LevelResource>()
+            .SetIcon(OpaaxString("[L]"))
+            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
             {
                 InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_LEVEL_AT, InContext, LevelPathParams{InFile.AbsPath});
-            }
-        });
+            });
     }
 
     void EditorService::Initialize()

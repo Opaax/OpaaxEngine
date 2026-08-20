@@ -21,6 +21,7 @@
 #include "World/WorldEvents.h"
 #include "World/Level.h"                         // OpenLevel mounts through the world's Level
 #include "World/Serialization/LevelResource.hpp" // a level is resolved as a resource
+#include "World/Serialization/MapResource.hpp"   // registered as a native format; Level does the loading
 
 #include "RHI/Framebuffer.h"   // FramebufferSpec + the TUniquePtr<IFramebuffer> deleter
 
@@ -29,6 +30,7 @@ namespace Opaax
     Engine::Engine()
     {
         RegisterNativeComponents();
+        RegisterNativeResourceFormats();
         RegisterNativeSubsystems();
     }
 
@@ -65,6 +67,12 @@ namespace Opaax
         m_Registries.Components().Register<DummyComponent>("Dummy");
     }
     
+    void Engine::RegisterNativeResourceFormats()
+    {
+        m_Registries.Resources().Register<LevelResource>(OPAAX_ID("Level"));
+        m_Registries.Resources().Register<MapResource>(OPAAX_ID("Map"));
+    }
+
     void Engine::RegisterNativeSubsystems()
     {
         m_Subsystems.RegisterSubsystem<EngineEventBus>();

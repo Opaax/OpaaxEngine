@@ -729,12 +729,20 @@ InRegistrar.WorldSubsystems().Register<WaveSpawnSubsystem>(); // → WorldSubsys
 2026-07-28). Editor.md §2 has said "Engine builds the registry" since v3; M3 briefly hung `ComponentRegistry`
 off `WorldManager` and that was wrong for three reasons: a registry is **type metadata**, not one
 subsystem's state (the Inspector reads it too, and it is not "the world manager"); **there is more than
-one** — `WorldSubsystemRegistry` lands in M4, and hanging each off whichever subsystem happens to read it
+one** — `WorldSubsystemRegistry` lands in M4, `ResourceFormatRegistry` on 2026-08-20 (**MR1a**) — and
+hanging each off whichever subsystem happens to read it
 turns that subsystem into a bag; and **registration is a boot-order concern** (MR2), which is the Engine's
-business. Consequences: the engine registers its **own** native types in `Engine::RegisterNativeTypes()`
-before any subsystem exists; `WorldManager` **borrows** a non-owning `EngineRegistries*` (injected through
+business. Consequences: the engine registers its **own** native types in the `Engine` **constructor** —
+`RegisterNativeComponents()` + `RegisterNativeResourceFormats()` — before any subsystem exists;
+`WorldManager` **borrows** a non-owning `EngineRegistries*` (injected through
 its subsystem factory, so it never reaches for the Engine) and seals it on the way to the first world; and
 `BindEngineRegistries(EngineRegistries&)` is one call that does not grow an argument per registry.
+*Corrected 2026-08-20: this said `Engine::RegisterNativeTypes()`, a function that has never existed. It
+also implied `BindEngineRegistries` was in use — it had zero callers until MR1a, which is precisely how a
+new route shipped unbound.*
+- **Each registry lives with its DOMAIN; the aggregate only aggregates.** `ComponentRegistry` is in
+  `World/Components/`, `WorldSubsystemRegistry` in `World/Systems/`, `ResourceFormatRegistry` in
+  `Engine/Subsystems/Resources/`. `Engine/Registries/` holds `EngineRegistries.h` and nothing else.
 
 **MR1** — The call-site API is **final now**; only the route *bodies* change (M0 counts; M3/M4 forward to
 real registries). Do not change how modules call in. **`Components()` went real in M3** and the call site
@@ -753,6 +761,29 @@ so **no Application header includes from `World/` or `Engine/`** — a disciplin
 skeleton call site is binding when its payload already exists in some form (`Drawers<TComponent,TDrawer>`
 — both real); it is a *guess* when it names a type nothing defines. Amend the contract rather than bend
 the design to a placeholder's shape, and amend `Docs/Architectures/Editor.md` in the same change.
+- **The premise expired on 2026-08-20, and the test above survived it verbatim.** `LevelResource` and
+  `MapResource` (**WM4**, 2026-08-03) are real `CResource` types, so "the engine has no such type" stopped
+  being true — and the route became `ResourceTypes().Register<T>()` after all. What forced it was not
+  their existence but **arity**: a resource type has MANY extensions (`.png`/`.jpg`/`.tga` are one
+  loader), so an extension-keyed table needs N entries per type, each repeating one icon and one closure.
+  The right owner of a many-to-one table is the engine.
+- **Extension → type is `ResourceFormatRegistry`, the third `EngineRegistries` member** (**MR0**), NOT a
+  `ResourceManager` feature: the manager mints its dense ids *lazily on the first `Load<T>`*, so it cannot
+  enumerate its own types at all, and its header freezes its surface against exactly this ("editor type
+  info … is a separate system CONSUMING this API"). Placement follows the extensibility axis — a game
+  registers through `ModuleRegistrar::Resources()`, which the existing `BindEngineRegistries` already
+  reaches, whereas binding to a *subsystem* would hand the registrar an owner from a different tier.
+  A type declares its formats in-class with `OPAAX_RESOURCE_FORMAT` (**I15**'s idiom); the facet is
+  OPTIONAL because `BinaryResource` is format-agnostic and would have to invent an extension.
+- **A duplicate extension is REFUSED with an Error naming both types, and it claims none of its others.**
+  Two loaders for one extension make "what opens this file?" depend on registration order. Overriding an
+  engine-claimed extension is a deliberate future `Override<T>()`, never a silent last-wins.
+- **The registration seam had a latent hole this exposed, and it is the general lesson.**
+  `OpaaxApplication::PopulateEngineRegistries` bound each route BY HAND while
+  `ModuleRegistrar::BindEngineRegistries` — the one call MR0 built so the binding "does not grow an
+  argument per registry" — sat there with **zero callers**. So the new route shipped unbound and dropped
+  every game registration with one Error. **A convenience seam with no caller is not yet a seam**; the fix
+  was to call it, which is also what makes the *next* registry cost nothing here.
 **MR2** — Order is engine natives → game module → editor module → **seal** (before the first world). The
 editor module slots in before the seal.
 **MR2a — every D10 route is REAL as of M5, and `EditorRoute` is DELETED.** The M0 counts-only skeleton

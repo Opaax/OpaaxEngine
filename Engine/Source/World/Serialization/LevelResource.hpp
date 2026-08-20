@@ -2,7 +2,7 @@
 
 #include <optional>
 
-#include "Engine/Subsystems/Resources/ResourceConcept.hpp"
+#include "Engine/Subsystems/Resources/ResourceFormat.h"
 #include "World/Serialization/LevelFile.h"
 
 namespace Opaax
@@ -30,6 +30,8 @@ namespace Opaax
         LevelData Data;
 
         // ---- CResource contract --------------------------------------------------
+        OPAAX_RESOURCE_FORMAT("Opaax Level", LevelFile::LEVEL_EXTENSION)
+
         static constexpr EFailPolicy FailPolicy = EFailPolicy::FailFast;
 
         static std::optional<LevelResource> Load(const char* InPath, LoadContext& /*InCtx*/)

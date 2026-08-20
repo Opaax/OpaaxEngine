@@ -3,7 +3,9 @@
 #include "Core/OpaaxTypes.h"                    // TFunction, TDynArray, Uint64, Move
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
-#include "Editor/Resources/ResourceScan.h"      // ResourceFile (the callback's argument) + NormalizeExtension
+#include "Engine/Subsystems/Resources/ResourceFormat.h"   // CResourceFormat — what may carry chrome
+#include "Engine/Subsystems/Resources/ResourceTypeID.hpp" // the key: one id per resource type
+#include "Editor/Resources/ResourceScan.h"      // ResourceFile (the callback's argument)
 
 namespace Opaax::Editor
 {
@@ -18,18 +20,67 @@ namespace Opaax::Editor
     using FResourceActivate = TFunction<void(EditorContext&, const ResourceFile&)>;
 
     // =============================================================================
-    // ResourceTypeDesc — one registered file type, keyed by extension.
+    // ResourceTypeDesc — the EDITOR's half of one resource type: how it looks and what a
+    //   double-click does.
     //
-    //   NO type erasure here, deliberately: DrawerRegistry needs a template because TComponent is a
-    //   type the editor cannot name, but a file type is a string key plus two labels and a closure.
-    //   A template would be ceremony with nothing to erase (user decision, M2d plan §1.2).
+    //   Keyed by ResourceTypeID, NOT by extension. The engine's ResourceFormatRegistry owns
+    //   extension -> type (many-to-one), so a texture claiming .png/.jpg/.tga is ONE entry here
+    //   with one icon and one action, and adding .webp never touches the editor.
+    //
+    //   NO type erasure, deliberately: DrawerRegistry needs a template because TComponent is a
+    //   type the editor cannot name, but chrome is two labels and a closure. A template would be
+    //   ceremony with nothing to erase (user decision, M2d plan §1.2).
     // =============================================================================
     struct ResourceTypeDesc
     {
-        OpaaxStringID     Extension;    // ".wave" — normalized by Register, so registrants can be sloppy
-        OpaaxStringID     Label;        // "Wave Definition" — shown via CStr()
-        OpaaxString       Icon;         // short text glyph, "[W]" — presentation only, never compared
+        Uint32            TypeId = 0;    // ResourceTypeID::Get<T>()
+        OpaaxStringID     Label;         // OPTIONAL override; invalid => the format's own Label
+        OpaaxString       Icon;          // short text glyph, "[W]" — presentation only, never compared
         FResourceActivate OnActivate;
+    };
+
+    class ResourceTypeRegistry;
+
+    // =============================================================================
+    // ResourceTypeBuilder — the chained tail of a Register<T>() call.
+    //
+    //   Holds an INDEX, never a ResourceTypeDesc& : m_Entries is a TDynArray, so the next
+    //   Register reallocates and a stored reference would name freed memory the moment two
+    //   registrations were split across statements (the string-pool bug's shape, I2).
+    //
+    //   A refused registration yields an invalid index whose setters are no-ops, so a bogus
+    //   chain cannot write out of bounds and cannot make Count() lie.
+    // =============================================================================
+    class ResourceTypeBuilder
+    {
+        // =============================================================================
+        // Ctor - Dtor
+        // =============================================================================
+    public:
+        static constexpr Uint64 INVALID_INDEX = ~0ull;
+
+        ResourceTypeBuilder(ResourceTypeRegistry* InRegistry, Uint64 InIndex) noexcept
+            : m_Registry(InRegistry), m_Index(InIndex) {}
+
+        // =============================================================================
+        // Functions
+        // =============================================================================
+    public:
+        /** Override the label the engine's format already carries — for a type the editor names differently. */
+        ResourceTypeBuilder& SetLabel(OpaaxStringID InLabel);
+
+        /** The short text glyph shown on a tile, "[L]". Presentation, and the editor's alone. */
+        ResourceTypeBuilder& SetIcon(OpaaxString InIcon);
+
+        /** What a double-click does. Omitted, the browser logs the activation and nothing else. */
+        ResourceTypeBuilder& SetActivate(FResourceActivate InActivate);
+
+        // =============================================================================
+        // Members
+        // =============================================================================
+    private:
+        ResourceTypeRegistry* m_Registry = nullptr;
+        Uint64                m_Index    = INVALID_INDEX;
     };
 
     // =============================================================================
@@ -37,12 +88,13 @@ namespace Opaax::Editor
     //   (Editor.md D10), replacing the M0 counts-only EditorRoute for this channel, as PanelRegistry
     //   (M2a) and DrawerRegistry (M2b) did for theirs.
     //
-    //   The browser asks it exactly one question — "what is this extension?" — so a file type stays a
-    //   property of the FILE, not of the panel: adding a type never touches the panel, which is the
-    //   whole point of the route.
+    //   It answers ONE question — "how does this resource type look, and what opens it?" — while
+    //   the engine answers "which type is this file?". Adding a type touches no editor file beyond
+    //   its own chrome, and adding an EXTENSION touches no editor file at all.
     //
-    //   Registration STORES ONLY. It runs at the OnModulesRegistered seam, before Engine::Startup, so
-    //   there is no context, no world and no scan yet — only the closure carries intent across that gap.
+    //   Registration STORES ONLY. It runs at the OnModulesRegistered seam, before Engine::Startup,
+    //   so there is no context, no world and no scan yet — only the closure carries intent across
+    //   that gap.
     // =============================================================================
     class ResourceTypeRegistry
     {
@@ -51,35 +103,25 @@ namespace Opaax::Editor
         // =============================================================================
     public:
         /**
-         * Store one type, normalizing its extension first so registration and scanning agree on the id
-         * (§ NormalizeExtension). A descriptor with an empty extension is dropped — it could never
-         * match a file, and keeping it would only make Count() lie.
+         * Register chrome for T, whose extensions the ENGINE already owns. Constrained on
+         * CResourceFormat, so chrome for a type that declared no format is a compile error here
+         * rather than an entry nothing can ever match.
+         *
+         * @tparam T A resource type carrying OPAAX_RESOURCE_FORMAT.
+         * @return A builder for the optional icon / label / action. Chained, never stored.
          */
-        void Register(ResourceTypeDesc InDesc)
+        template<CResourceFormat T>
+        ResourceTypeBuilder Register()
         {
-            // Validity is checked BEFORE the round-trip, not after: OpaaxStringID::ToString() answers
-            // "None" for an invalid id, which would normalize into a perfectly valid ".none" type and
-            // silently match nothing forever.
-            if (!InDesc.Extension.IsValid())
-            {
-                return;
-            }
-
-            InDesc.Extension = NormalizeExtension(InDesc.Extension.ToString());
-            m_Entries.emplace_back(Move(InDesc));
+            return AddEntry(ResourceTypeID::Get<T>());
         }
 
-        /** @return The type registered for InExtension, or nullptr — an O(n) walk over a handful of entries, on an integer compare. */
-        const ResourceTypeDesc* Find(OpaaxStringID InExtension) const
+        /** @return The chrome registered for InTypeId, or nullptr — an O(n) walk over a handful of entries, on an integer compare. */
+        const ResourceTypeDesc* Find(Uint32 InTypeId) const
         {
-            if (!InExtension.IsValid())
-            {
-                return nullptr;
-            }
-
             for (const ResourceTypeDesc& lEntry : m_Entries)
             {
-                if (lEntry.Extension == InExtension)
+                if (lEntry.TypeId == InTypeId)
                 {
                     return &lEntry;
                 }
@@ -100,9 +142,65 @@ namespace Opaax::Editor
         // =============================================================================
 
         // =============================================================================
+        // Functions
+        // =============================================================================
+    private:
+        friend class ResourceTypeBuilder;
+
+        /** Store one entry. A second registration for the same type is dropped — the first wins. */
+        ResourceTypeBuilder AddEntry(Uint32 InTypeId)
+        {
+            if (Find(InTypeId) != nullptr)
+            {
+                return ResourceTypeBuilder(this, ResourceTypeBuilder::INVALID_INDEX);
+            }
+
+            m_Entries.emplace_back(ResourceTypeDesc{ .TypeId = InTypeId });
+            return ResourceTypeBuilder(this, static_cast<Uint64>(m_Entries.size()) - 1);
+        }
+
+        ResourceTypeDesc* EntryAt(Uint64 InIndex)
+        {
+            return (InIndex < m_Entries.size()) ? &m_Entries[InIndex] : nullptr;
+        }
+
+        // =============================================================================
         // Members
         // =============================================================================
     private:
         TDynArray<ResourceTypeDesc> m_Entries;
     };
+
+    // =============================================================================
+    // ResourceTypeBuilder — bodies, now that the registry is complete.
+    // =============================================================================
+    inline ResourceTypeBuilder& ResourceTypeBuilder::SetLabel(OpaaxStringID InLabel)
+    {
+        if (ResourceTypeDesc* lEntry = m_Registry != nullptr ? m_Registry->EntryAt(m_Index) : nullptr)
+        {
+            lEntry->Label = InLabel;
+        }
+
+        return *this;
+    }
+
+    inline ResourceTypeBuilder& ResourceTypeBuilder::SetIcon(OpaaxString InIcon)
+    {
+        if (ResourceTypeDesc* lEntry = m_Registry != nullptr ? m_Registry->EntryAt(m_Index) : nullptr)
+        {
+            lEntry->Icon = Move(InIcon);
+        }
+
+        return *this;
+    }
+
+    inline ResourceTypeBuilder& ResourceTypeBuilder::SetActivate(FResourceActivate InActivate)
+    {
+        if (ResourceTypeDesc* lEntry = m_Registry != nullptr ? m_Registry->EntryAt(m_Index) : nullptr)
+        {
+            lEntry->OnActivate = Move(InActivate);
+        }
+
+        return *this;
+    }
 }

@@ -38,4 +38,31 @@ namespace Opaax::PathString
 
         return InPath.SubString(lStart, lEnd - lStart);
     }
+
+    /**
+     * The extension WITH its dot: "…/Maps/Decor.opaaxmap" -> ".opaaxmap". Everything after the last
+     * dot, the same rule std::filesystem::path::extension applies — without building an fs::path.
+     *
+     * `Stem`'s two exclusions apply here too, for the same reasons: a dot in a DIRECTORY is not an
+     * extension ("C:/a.b/Maps/Decor" -> ""), and a leading dot is a dotfile, which is all extension
+     * and no stem, so it reports neither (".gitignore" -> "").
+     *
+     * Raw text, NOT comparable: case is untouched here. Comparing two extensions goes through
+     * NormalizeExtension (Engine/Subsystems/Resources/ResourceFormat.h), which folds case and interns.
+     *
+     * @return An empty view when the path has no extension.
+     */
+    constexpr OpaaxStringView Extension(OpaaxStringView InPath) noexcept
+    {
+        const Int32  lSlash = InPath.FindLastOf("/\\");
+        const Uint32 lStart = (lSlash < 0) ? 0u : static_cast<Uint32>(lSlash) + 1u;
+
+        const Int32 lDot = InPath.FindLast('.');
+        if (lDot < 0 || static_cast<Uint32>(lDot) <= lStart)
+        {
+            return {};
+        }
+
+        return InPath.SubString(static_cast<Uint32>(lDot));
+    }
 } // namespace Opaax::PathString

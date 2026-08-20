@@ -168,11 +168,71 @@ namespace Opaax
     };
 
     // =============================================================================
+    // ResourceFormatRoute — the Resources() channel.
+    //
+    //   Forwards into the engine's ResourceFormatRegistry: which resource type loads which file
+    //   extensions. A game registering its own resource type is the reason this table is engine-wide
+    //   rather than editor-side — the editor then only says what its icon is.
+    //
+    //   Like a world subsystem's and unlike a component's, this name is NOT an on-disk key: a file
+    //   is matched by EXTENSION, so the name appears only in logs and editor UI and the C++ type is
+    //   safe to rename.
+    // =============================================================================
+    class OPAAX_API ResourceFormatRoute
+    {
+        // =========================================================================
+        // Registration
+        // =========================================================================
+    public:
+        /**
+         * Register T as a loadable resource type, claiming every extension its
+         * OPAAX_RESOURCE_FORMAT names.
+         *
+         * @tparam T A resource type carrying OPAAX_RESOURCE_FORMAT (CResourceFormat).
+         * @param InName Optional. Omitted, the type's leaf name is used.
+         * @return true when the registry accepted it.
+         */
+        template<CResourceFormat T>
+        bool Register(OpaaxStringID InName = {})
+        {
+            ++m_Count;
+
+            if (m_Registry == nullptr)
+            {
+                // Unbound means EngineStartup never called BindEngineRegistries — a wiring bug that
+                // would otherwise drop every module resource type without a word.
+                OPAAX_LOG(LogModuleRegistrar, Error,
+                          "Resources().Register — route is not bound to a ResourceFormatRegistry; registration dropped.");
+                return false;
+            }
+
+            return m_Registry->Register<T>(InName.IsValid() ? InName : DeriveTypeLeafName<T>());
+        }
+
+        /** Wire this route to the live registry. Called once, before any module registers. */
+        void Bind(ResourceFormatRegistry* InRegistry) noexcept { m_Registry = InRegistry; }
+
+        /**
+         * How many times a module asked — refusals included, so a mismatch with the registry's
+         * own Count() is visible rather than inferred.
+         */
+        Uint64 Count() const noexcept { return m_Count; }
+
+        // =========================================================================
+        // Members
+        // =========================================================================
+    private:
+        ResourceFormatRegistry* m_Registry = nullptr; // non-owning; the engine owns it (I5)
+        Uint64                  m_Count    = 0;
+    };
+
+    // =============================================================================
     // ModuleRegistrar — the single object a game module registers INTO (Editor.md D9).
     //   Handed to OpaaxApplication::RegisterModules between Bootstrap and EngineStartup:
     //   the engine registries exist (post-BootEngine), no world exists yet (pre-Startup).
     //     Components()      -> ComponentRegistry        (LIVE, M3)
     //     WorldSubsystems() -> WorldSubsystemRegistry   (LIVE, M4)
+    //     Resources()       -> ResourceFormatRegistry   (LIVE)
     //
     //   ENGINE LAYER, not Application (moved M3). It exists to front the engine registries,
     //   and by I4's test a registrar that knows about component types knows about worlds.
@@ -186,9 +246,11 @@ namespace Opaax
     public:
         ComponentRoute&      Components()      noexcept { return m_Components; }
         WorldSubsystemRoute& WorldSubsystems() noexcept { return m_WorldSubsystems; }
+        ResourceFormatRoute& Resources()       noexcept { return m_ResourceFormats; }
 
         const ComponentRoute&      Components()      const noexcept { return m_Components; }
         const WorldSubsystemRoute& WorldSubsystems() const noexcept { return m_WorldSubsystems; }
+        const ResourceFormatRoute& Resources()       const noexcept { return m_ResourceFormats; }
 
         /**
          * Point every live route at the engine's registries. Must run BEFORE the first
@@ -198,10 +260,12 @@ namespace Opaax
         {
             m_Components.Bind(&InRegistries.Components());
             m_WorldSubsystems.Bind(&InRegistries.WorldSubsystems());
+            m_ResourceFormats.Bind(&InRegistries.Resources());
         }
 
     private:
         ComponentRoute      m_Components;
         WorldSubsystemRoute m_WorldSubsystems;
+        ResourceFormatRoute m_ResourceFormats;
     };
 }

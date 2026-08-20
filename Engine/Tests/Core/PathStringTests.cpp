@@ -47,3 +47,53 @@ TEST_CASE("PathString::Stem: the result VIEWS the path it was given, it does not
     CHECK(lStem.Data() == lPath.CStr() + 13);   // points INTO the argument's own bytes
     CHECK(lStem.ToString() == "Decor");         // ...and ToString is how you keep it
 }
+
+// -----------------------------------------------------------------------------
+// PathString::Extension — Stem's other half, and the reason both live here: the editor's scanner
+// had its own copy of this rule while the engine now owns the extension -> resource type table.
+// -----------------------------------------------------------------------------
+static_assert(PathString::Extension("Maps/Decor.opaaxmap") == ".opaaxmap");
+
+TEST_CASE("PathString::Extension: everything after the last dot, dot included")
+{
+    CHECK(PathString::Extension("C:/Proj/Assets/Maps/Decor.opaaxmap") == ".opaaxmap");
+    CHECK(PathString::Extension("C:\Proj\Maps\Decor.opaaxmap") == ".opaaxmap");
+    CHECK(PathString::Extension("Decor.opaaxmap") == ".opaaxmap");
+
+    // The LAST dot wins, so a dotted stem keeps only its real extension.
+    CHECK(PathString::Extension("Maps/No.Dots.Here.opaaxmap") == ".opaaxmap");
+
+    // Case is UNTOUCHED here — comparability is NormalizeExtension's job, not this one's.
+    CHECK(PathString::Extension("Maps/Decor.OPAAXMAP") == ".OPAAXMAP");
+}
+
+TEST_CASE("PathString::Extension: a path with no extension answers empty")
+{
+    CHECK(PathString::Extension("").IsEmpty());
+    CHECK(PathString::Extension("Decor").IsEmpty());
+    CHECK(PathString::Extension("Maps/").IsEmpty());
+
+    // A dot in a DIRECTORY is not an extension — the same two-scan order Stem needs.
+    CHECK(PathString::Extension("C:/a.b/Maps/Decor").IsEmpty());
+
+    // A dotfile is all extension and no stem, so it reports NEITHER (Stem agrees, above).
+    CHECK(PathString::Extension(".gitignore").IsEmpty());
+    CHECK(PathString::Extension("Maps/.gitignore").IsEmpty());
+    CHECK(PathString::Extension(".").IsEmpty());
+}
+
+TEST_CASE("PathString::Extension: a trailing dot IS an extension, an empty one")
+{
+    // Not a curiosity: it is what stops "Decor." from being read as "Decor" + no extension, which
+    // would make a file with a stray dot silently resolve to the wrong resource type.
+    CHECK(PathString::Extension("Decor.") == ".");
+}
+
+TEST_CASE("PathString::Extension: the result VIEWS the path it was given")
+{
+    const OpaaxString     lPath("C:/Proj/Maps/Decor.opaaxmap");
+    const OpaaxStringView lExt = PathString::Extension(lPath);
+
+    CHECK(lExt == ".opaaxmap");
+    CHECK(lExt.Data() == lPath.CStr() + 18);   // points INTO the argument's own bytes
+}

@@ -8,6 +8,8 @@
 namespace Opaax
 {
     OPAAX_LOG_CATEGORY(ResourceBrowserPanel);
+
+    struct ResourceFormatEntry;
 }
 
 namespace Opaax::Editor
@@ -54,6 +56,13 @@ namespace Opaax::Editor
         /** Tiles = explorer grid (default), Tree = folder outline, List = flat. */
         enum class EBrowserView : Uint8 { Tiles, Tree, List };
 
+        /** What the browser knows about one file: what it IS (engine) and how it looks (editor). */
+        struct FileType
+        {
+            const ResourceFormatEntry* Format = nullptr;
+            const ResourceTypeDesc*    Chrome = nullptr;
+        };
+
         // =============================================================================
         // Functions
         // =============================================================================
@@ -82,8 +91,17 @@ namespace Opaax::Editor
         /** @return The full display path of a file, "<Root>/<RelPath>" — its identity for selection + logs. */
         OpaaxString FullPathOf(const ResourceFile& InFile, const ResourceRoot& InRoot) const;
 
-        const ResourceTypeDesc* FindType(const ResourceFile& InFile) const;
-        bool                    MatchesFilter(const ResourceFile& InFile) const;
+        /**
+         * Resolve a file in two steps: the ENGINE says which resource type owns its extension, the
+         * EDITOR says how that type looks. Either half may be absent — an unregistered extension, or
+         * a registered format no editor module gave chrome to.
+         */
+        FileType FindType(const ResourceFile& InFile) const;
+
+        /** @return The chrome's override, else the format's own label, else "Unknown type". */
+        static const char* LabelOf(const FileType& InType);
+
+        bool MatchesFilter(const ResourceFile& InFile) const;
 
         /** @return true if this folder, or anything under it, has a file passing the filter — what lets Tree hide empty branches. */
         bool FolderHasMatch(const ResourceFolder& InFolder) const;

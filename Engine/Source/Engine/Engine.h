@@ -56,7 +56,10 @@ namespace Opaax
     
         /**  */
         void RegisterNativeComponents();
-        
+
+        /** Register the resource types the engine itself loads, and the extensions they claim. */
+        void RegisterNativeResourceFormats();
+
         /** Register Default engine subsystems*/
         void RegisterNativeSubsystems();
         

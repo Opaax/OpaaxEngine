@@ -9,6 +9,7 @@
 #include "Drawers/TagsComponentDrawer.h"
 #include "Systems/QuadBoundsSubsystem.h"
 #include "Components/HealthComponent.h"
+#include "Resources/WaveResource.h"
 #include "World/Components/DummyComponent.h"
 
 // OPAAX_LOG expands to an unqualified ToSpdLevel(...) — bring Opaax into scope, as SandboxPanel does.
@@ -56,19 +57,17 @@ void SandboxEditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& In
     // tag reaches a .opaaxmap without anyone editing json by hand.
     InRegistrar.Drawers().Register<Sandbox::TagsComponent, TagsComponentDrawer>();
 
-    // REAL extension (M2d): the game's own file type. The editor never learns what a wave definition is —
-    // it matches the extension, shows this icon/label, and hands the file back to this closure on a
-    // double-click. Adding a type touches no editor file.
-    InRegistrar.ResourceTypes().Register(Opaax::Editor::ResourceTypeDesc{
-        .Extension  = OPAAX_ID(".wave"),
-        .Label      = OPAAX_ID("Wave Definition"),
-        .Icon       = OpaaxString("[W]"),
-        .OnActivate = [](Opaax::Editor::EditorContext&, const Opaax::Editor::ResourceFile& InFile)
+    // REAL extension (M2d): the game's own file type. The editor never learns what a wave definition
+    // is — the RUNTIME module already told the engine that WaveResource claims `.wave`, so this adds
+    // only the glyph and what a double-click does. Adding a type touches no editor file; adding an
+    // extension to an existing one touches nothing here at all.
+    InRegistrar.ResourceTypes().Register<Sandbox::WaveResource>()
+        .SetIcon(OpaaxString("[W]"))
+        .SetActivate([](Opaax::Editor::EditorContext&, const Opaax::Editor::ResourceFile& InFile)
         {
             // A wave editor is a later milestone; today activation proves the route end-to-end.
             OPAAX_LOG(LogSandboxEditorModule, Info, "Wave definition activated: {}", InFile.RelPath.CStr());
-        }
-    });
+        });
 
     // REAL extension (M2a): the game's own panel, registered through the same route the editor's native
     // Hierarchy uses. Constructed later by EditorService, once an EditorContext exists to hand it.

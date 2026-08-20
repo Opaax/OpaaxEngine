@@ -3,6 +3,7 @@
 #include "Engine/Modules/ModuleRegistrar.h"
 #include "Components/HealthComponent.h"
 #include "Components/TagsComponent.h"
+#include "Resources/WaveResource.h"
 #include "Systems/QuadOscillatorSubsystem.h"
 #include "Application/Services/ILogger.h"  // OPAAX_LOG + LogCategory
 
@@ -39,9 +40,16 @@ void SandboxModule::OnRegister(Opaax::ModuleRegistrar& InRegistrar)
     // candidate and SandboxEditor.exe has two, which is the model's point stated as a build fact.
     InRegistrar.WorldSubsystems().Register<Sandbox::QuadOscillatorSubsystem>();
 
+    // A resource type the ENGINE has never heard of, claiming its own extension. This is what makes
+    // `.wave` a known file everywhere at once — the browser names it, and the editor module adds
+    // only an icon. Registering it here rather than editor-side is deliberate: a wave is game
+    // CONTENT, so Sandbox.exe must know it too.
+    InRegistrar.Resources().Register<Sandbox::WaveResource>();
+
     OPAAX_LOG(LogSandboxModule, Info,
-        "RegisterModule: components={}, worldSubsystems={}",
-        InRegistrar.Components().Count(), InRegistrar.WorldSubsystems().Count());
+        "RegisterModule: components={}, worldSubsystems={}, resourceFormats={}",
+        InRegistrar.Components().Count(), InRegistrar.WorldSubsystems().Count(),
+        InRegistrar.Resources().Count());
 }
 
 // NOTE: SpawnDemoWorld is GONE (M5 S3). The three quads it built in C++ now live in

@@ -2,6 +2,7 @@
 
 #include "Core/EngineAPI.h"
 
+#include "Engine/Subsystems/Resources/ResourceFormatRegistry.h"
 #include "World/Components/ComponentRegistry.h"
 #include "World/Systems/WorldSubsystemRegistry.h"
 
@@ -56,6 +57,12 @@ namespace Opaax
         WorldSubsystemRegistry&       WorldSubsystems()       noexcept { return m_WorldSubsystems; }
         const WorldSubsystemRegistry& WorldSubsystems() const noexcept { return m_WorldSubsystems; }
 
+        // Which resource type loads a given file extension. Read by the editor's browser today and
+        // by the manager when loading by path lands — neither of which is "the ResourceManager's
+        // state", which is why it sits here with its siblings rather than on that subsystem.
+        ResourceFormatRegistry&       Resources()       noexcept { return m_ResourceFormats; }
+        const ResourceFormatRegistry& Resources() const noexcept { return m_ResourceFormats; }
+
         // =========================================================================
         // Functions
         // =========================================================================
@@ -69,6 +76,7 @@ namespace Opaax
         {
             m_Components.Seal();
             m_WorldSubsystems.Seal();
+            m_ResourceFormats.Seal();
         }
 
         // =========================================================================
@@ -77,5 +85,6 @@ namespace Opaax
     private:
         ComponentRegistry      m_Components;
         WorldSubsystemRegistry m_WorldSubsystems;
+        ResourceFormatRegistry m_ResourceFormats;
     };
 }

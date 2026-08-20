@@ -1,6 +1,8 @@
 #include "Editor/Resources/ResourceScan.h"
 
 #include "Application/Services/Platforms/IFileSystem.h"
+#include "Core/String/OpaaxPathString.h"                  // Extension — the ONE extension-of-a-path rule
+#include "Engine/Subsystems/Resources/ResourceFormat.h"   // NormalizeExtension — the ONE comparability rule
 
 #include <algorithm>
 #include <cstring>
@@ -11,23 +13,6 @@ namespace Opaax::Editor
 {
     namespace
     {
-        // Everything after the LAST dot. A leading dot means a dotfile (".gitkeep"), which has no
-        // extension — the same rule std::filesystem::path::extension applies.
-        OpaaxString ExtensionOf(const OpaaxString& InFileName)
-        {
-            const Uint32 lLength = InFileName.GetLength();
-
-            for (Uint32 i = lLength; i > 1; --i)
-            {
-                if (InFileName[i - 1] == '.')
-                {
-                    return InFileName.SubString(i - 1, lLength - (i - 1));
-                }
-            }
-
-            return {};
-        }
-
         bool NameLess(const OpaaxString& InLeft, const OpaaxString& InRight)
         {
             return std::strcmp(InLeft.CStr(), InRight.CStr()) < 0;
@@ -65,7 +50,7 @@ namespace Opaax::Editor
                         lEntry.Name,
                         lChildRel,
                         lEntry.AbsPath,
-                        NormalizeExtension(ExtensionOf(lEntry.Name)));
+                        NormalizeExtension(PathString::Extension(lEntry.Name)));
 
                     ++InOutRoot.FileCount;
                 }
@@ -80,20 +65,6 @@ namespace Opaax::Editor
                 [](const ResourceFile& InLeft, const ResourceFile& InRight)
                 { return NameLess(InLeft.Name, InRight.Name); });
         }
-    }
-
-    OpaaxStringID NormalizeExtension(const OpaaxString& InExtension)
-    {
-        if (InExtension.IsEmpty())
-        {
-            return {};
-        }
-
-        const OpaaxString lLower = InExtension.ToLower();
-
-        // A registrant may write "wave" or ".wave"; the scanner always produces the dotted form, so the
-        // dot is added here rather than trusted from either side.
-        return OpaaxStringID(lLower[0] == '.' ? lLower : (OpaaxString(".") + lLower));
     }
 
     bool ScanRoot(const IFileSystem& InFileSystem, ResourceRoot& InOutRoot)

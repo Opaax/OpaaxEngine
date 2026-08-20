@@ -68,9 +68,9 @@ namespace Opaax::Editor
         void RegisterNativeEditorCommand();
         
         /**
-         * `.opaaxmap` / `.opaaxlevel` into m_Extensions.ResourceTypes() — the editor's own core
-         * formats registered through the route a game's file type uses (M2d), with no privileged
-         * path into the browser.
+         * No extension here, and none anywhere else in the editor: the engine's ResourceFormatRegistry
+         * owns which files a type claims (Engine::RegisterNativeResourceFormats), so this says only
+         * what the browser shows and what a double-click does.
          */
         void RegisterNativeResourceTypes();
 

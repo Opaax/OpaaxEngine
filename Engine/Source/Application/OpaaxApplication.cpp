@@ -317,10 +317,10 @@ void OpaaxApplication::EngineStartup()
 
 void OpaaxApplication::PopulateEngineRegistries()
 {
-    EngineRegistries& lEngineRegistries = Engine().GetRegistries();
-    
-    m_ModuleRegistrar->Components().Bind(&lEngineRegistries.Components());
-    m_ModuleRegistrar->WorldSubsystems().Bind(&lEngineRegistries.WorldSubsystems());
+    // ONE call, deliberately: binding each route by hand here is how a new registry ships with a
+    // route nobody wired — which is what happened to Resources(). BindEngineRegistries is the seam
+    // MR0 built for this, and it grows with the aggregate rather than with this function.
+    m_ModuleRegistrar->BindEngineRegistries(Engine().GetRegistries());
 }
 
 WorldSpec OpaaxApplication::GetStartupWorldSpec() const

@@ -43,8 +43,8 @@ namespace Opaax
      * process, including from a static destructor.
      *
      * CASE — comparison is case-SENSITIVE, unlike Unreal's FName. "Player" and "player" are two ids.
-     * Call sites that want them unified fold case before interning, the way
-     * Editor/Source/Editor/Resources/ResourceScan.cpp does for file extensions.
+     * Call sites that want them unified fold case before interning, the way NormalizeExtension
+     * (Engine/Subsystems/Resources/ResourceFormat.h) does for file extensions.
      */
     struct OPAAX_API OpaaxStringID final
     {

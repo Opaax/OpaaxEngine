@@ -50,15 +50,10 @@ namespace Opaax::Editor
         bool           bExists     = false; // false => the directory is simply not there (a normal state)
     };
 
-    /**
-     * Turn a raw file extension into the id both sides of the lookup agree on: lower-cased (Windows
-     * paths are case-insensitive, so ".PNG" and ".png" are one type) with a guaranteed leading dot.
-     * The ONE place an extension becomes comparable — the registry and the scanner both come here.
-     *
-     * @param InExtension Raw extension, with or without its dot ("wave", ".WAVE").
-     * @return The normalized interned id, or an INVALID id when InExtension is empty.
-     */
-    OpaaxStringID NormalizeExtension(const OpaaxString& InExtension);
+    // NOTE: NormalizeExtension moved to the ENGINE (Engine/Subsystems/Resources/ResourceFormat.h)
+    // when the engine took ownership of extension -> resource type. The scanner and the registry must
+    // agree byte-for-byte, and they only do that by calling the same function — which now has to live
+    // where both can reach it. PathString::Extension is the other half, in Core beside Stem.
 
     /**
      * Rebuild InOutRoot.Tree from disk, in full. Sorted, recursive, and driven entirely through

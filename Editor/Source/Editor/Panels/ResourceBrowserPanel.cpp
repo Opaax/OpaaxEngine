@@ -5,8 +5,10 @@
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Editor/Extensions/ResourceTypeRegistry.h"
 
+#include "Application/Services/IEngine.h"
 #include "Application/Services/IPaths.h"
 #include "Application/Services/Platforms/IFileSystem.h"
+#include "Engine/Registries/EngineRegistries.h"   // extension -> resource type, the engine's half
 
 #include <imgui.h>
 
@@ -325,9 +327,9 @@ namespace Opaax::Editor
         // submit nothing of their own.
         ApplyFileBehavior(InFile, InRoot, bClicked);
 
-        const ResourceTypeDesc* lType = FindType(InFile);
+        const FileType lType = FindType(InFile);
         DrawFileGlyph(ImGui::GetWindowDrawList(), lPos, ImVec2(lPos.x + k_TileSize, lPos.y + k_TileSize),
-            lType != nullptr ? lType->Icon.CStr() : k_UnknownIcon, bHovered);
+            lType.Chrome != nullptr ? lType.Chrome->Icon.CStr() : k_UnknownIcon, bHovered);
 
         const bool bSelected = (m_SelectedPath == FullPathOf(InFile, InRoot));
         if (bSelected) { ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.26f, 0.59f, 0.98f, 1.f)); }
@@ -445,11 +447,11 @@ namespace Opaax::Editor
     // =============================================================================
     void ResourceBrowserPanel::DrawFileRow(const ResourceFile& InFile, const ResourceRoot& InRoot, const char* InDisplayName)
     {
-        const ResourceTypeDesc* lType = FindType(InFile);
+        const FileType lType = FindType(InFile);
 
         char lLabel[512];
         snprintf(lLabel, sizeof(lLabel), "%s  %s",
-            lType != nullptr ? lType->Icon.CStr() : k_UnknownIcon, InDisplayName);
+            lType.Chrome != nullptr ? lType.Chrome->Icon.CStr() : k_UnknownIcon, InDisplayName);
 
         ImGui::PushID(InFile.RelPath.CStr());
         const bool bClicked = ImGui::Selectable(lLabel, m_SelectedPath == FullPathOf(InFile, InRoot));
@@ -459,8 +461,8 @@ namespace Opaax::Editor
 
     void ResourceBrowserPanel::ApplyFileBehavior(const ResourceFile& InFile, const ResourceRoot& InRoot, bool bClicked)
     {
-        const OpaaxString             lFullPath = FullPathOf(InFile, InRoot);
-        const ResourceTypeDesc* const lType     = FindType(InFile);
+        const OpaaxString lFullPath = FullPathOf(InFile, InRoot);
+        const FileType    lType     = FindType(InFile);
 
         if (bClicked)
         {
@@ -475,25 +477,25 @@ namespace Opaax::Editor
             ImGui::BeginTooltip();
             ImGui::TextDisabled("Name : %s", InFile.Name.CStr());
             ImGui::TextDisabled("Path : %s", lFullPath.CStr());
-            ImGui::TextDisabled("Type : %s", lType != nullptr ? lType->Label.CStr() : "Unknown type");
+            ImGui::TextDisabled("Type : %s", LabelOf(lType));
             ImGui::EndTooltip();
 
             if (ImGui::IsMouseDoubleClicked(0))
             {
-                if (lType == nullptr)
+                if (lType.Format == nullptr)
                 {
                     OPAAX_LOG(LogResourceBrowserPanel, Info, "'{}' activated — no resource type registered for '{}'",
                         InFile.Name.CStr(),
                         InFile.Extension.IsValid() ? InFile.Extension.CStr() : "(no extension)");
                 }
-                else if (!lType->OnActivate)
+                else if (lType.Chrome == nullptr || !lType.Chrome->OnActivate)
                 {
                     OPAAX_LOG(LogResourceBrowserPanel, Info, "'{}' activated — type '{}' registers no action",
-                        InFile.Name.CStr(), lType->Label);
+                        InFile.Name.CStr(), LabelOf(lType));
                 }
                 else
                 {
-                    lType->OnActivate(m_Context, InFile);
+                    lType.Chrome->OnActivate(m_Context, InFile);
                 }
             }
         }
@@ -507,9 +509,27 @@ namespace Opaax::Editor
         return InRoot.Label.ToString() + "/" + InFile.RelPath;
     }
 
-    const ResourceTypeDesc* ResourceBrowserPanel::FindType(const ResourceFile& InFile) const
+    ResourceBrowserPanel::FileType ResourceBrowserPanel::FindType(const ResourceFile& InFile) const
     {
-        return m_Context.Extensions.ResourceTypes().Find(InFile.Extension);
+        FileType lType;
+
+        lType.Format = m_Context.Engine.GetRegistries().Resources().FindByExtension(InFile.Extension);
+        if (lType.Format != nullptr)
+        {
+            lType.Chrome = m_Context.Extensions.ResourceTypes().Find(lType.Format->TypeId);
+        }
+
+        return lType;
+    }
+
+    const char* ResourceBrowserPanel::LabelOf(const FileType& InType)
+    {
+        if (InType.Chrome != nullptr && InType.Chrome->Label.IsValid())
+        {
+            return InType.Chrome->Label.CStr();
+        }
+
+        return (InType.Format != nullptr) ? InType.Format->Format->Label : "Unknown type";
     }
 
     bool ResourceBrowserPanel::MatchesFilter(const ResourceFile& InFile) const
