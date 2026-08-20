@@ -1,7 +1,8 @@
 #pragma once
 
 #include "Application/Services/ILogger.h"
-#include "Core/Config/IConfig.h"   // ConfigTypeID — which config is current
+#include "Core/Config/IConfig.h"          // ConfigTypeID — which config is current
+#include "Core/String/OpaaxString.hpp"    // the dirty baseline
 #include "Editor/Panels/IEditorPanel.h"
 
 namespace Opaax
@@ -22,9 +23,12 @@ namespace Opaax::Editor
     //   FinishStartup — or on frame 500 — registers long after the editor sealed its extensions. A
     //   list built once would miss those silently. Walking it costs nothing while the panel is shut.
     //
-    //   READ-ONLY for now. The right pane draws IConfig::ToText(), the same text Save writes, which
-    //   is the one way to render a config whose data type this panel cannot name. Per-field widgets
-    //   wait on the reflection system; this panel is the shell they land in.
+    //   The right pane draws the config's own PROPERTY LIST through a registered drawer
+    //   (ConfigDrawers()), and falls back to IConfig::ToText() — the same text Save writes — for a
+    //   config nobody registered, so an unknown config is readable rather than blank.
+    //
+    //   DIRTY IS DERIVED, never flagged: the text the config serializes to now, against what it
+    //   serialized to when this panel last showed or saved it.
     // =============================================================================
     class ConfigPanel final : public IEditorPanel
     {
@@ -49,7 +53,10 @@ namespace Opaax::Editor
         void DrawList();
 
         /** Name, file and values of InConfig. */
-        void DrawCurrent(const IConfig& InConfig);
+        void DrawCurrent(IConfig& InConfig);
+
+        /** The Save button and what it is enabled by. */
+        void DrawSaveBar(IConfig& InConfig, const OpaaxString& InCurrentText);
 
         /**
          * The config the right pane draws.
@@ -58,7 +65,7 @@ namespace Opaax::Editor
          * anything the registry does, a pointer would not. Falls back to the first registered config,
          * so the pane is never blank while any config exists.
          */
-        const IConfig* ResolveCurrent() const;
+        IConfig* ResolveCurrent() const;
 
         // =============================================================================
         // Override
@@ -94,7 +101,11 @@ namespace Opaax::Editor
 
         // What the right pane last reported. A pane that resolved nothing draws an empty rectangle,
         // which is indistinguishable from a clean run in a log — so the SUCCESS branch says which
-        // config it is showing, once per change (**L15**).
+        // config it is showing, and by which path, once per change (**L15**).
         ConfigTypeID m_Reported = 0;
+
+        // What the shown config serialized to when it was selected, or last saved. Compared against
+        // the live text each frame — that comparison IS the dirty flag.
+        OpaaxString m_Baseline;
     };
 }

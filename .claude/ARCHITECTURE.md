@@ -380,10 +380,32 @@ editor-side `TPropertyDrawer<T>`, never a new `FLOAT_PROP`/`INT_PROP` macro here
   component's key in a `.opaaxmap`, so the Inspector and the file agree by construction, not by care.
 - **`EPropertyHint` exists because a type is not always a widget**: a `Vector4F` is four numbers or an
   RGBA colour and only the author knows. One value today, one caller — a growth point, not a taxonomy.
-- **Properties do NOT drive serialization yet.** `NLOHMANN_DEFINE_TYPE_INTRUSIVE` still owns
-  `to_json`/`from_json` (**I8**), so a component states its fields twice. Deliberate: map files are
+- **Properties do NOT drive serialization yet.** `NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT` still
+  owns `to_json`/`from_json` (**I8**), so a type states its fields twice. Deliberate: map files are
   byte-exact-verified (**MP6**), so collapsing the two lists is its own step with its own gate.
   **Trigger: the first field added to one list and forgotten in the other.**
+- **A field whose type is itself `CReflected` is a GROUP, not a widget** (2026-08-20). `DrawProperty`
+  and `DrawProperties` are mutually recursive, so one declaration produces the nesting in the file,
+  in the C++ and in the UI at once — which is what makes a config like `EngineConfigData` (nested
+  settings structs) drawable at all: `TPropertyDrawer<WindowSettings>` could never sensibly exist.
+- **Facets carry BEHAVIOUR, never presentation** (2026-08-20, user call). The first hint was
+  `EPropertyHint::Color`, i.e. "draw this `Vector4F` as a colour" — a weaker version of a type, and
+  it was **deleted** for `LinearColor` (`Core/Color/`), which dispatches by type like everything
+  else. What a type genuinely cannot state lives in `PropertyMeta`: `SetRange(min, max)` (an unset
+  range is `Min == Max`, which every ImGui drag already reads as unbounded, so the ordinary property
+  needs no flag) and `SetFlags(EPropertyFlags::NeedRestart)`. The restart flag sits on the **group**
+  — one marker on `Window`, not fourteen — and it replaced a blanket "changes apply on restart"
+  sentence on the panel, which would have gone stale the day one value became live.
+- **ONE registry serves every subject: `TDrawerRegistry<TSubject>`** (2026-08-20). Components and
+  configs were the same thing twice — a list of "are you applicable, and if so draw yourself"
+  closures — so the difference collapsed into one customization point, `TDrawerResolver<TSubject,
+  TTarget>`, which answers *what is drawable* (a component **is** the target; a config **holds** its
+  data), *how to resolve it* (entt's `TryGet` vs an integer compare on `ConfigTypeID`) and *whether
+  the entry frames itself* (the Inspector stacks components so each needs a header; the Config panel
+  already names the config above the fields). Both forms — `Register<TTarget, TDrawer>()` and
+  `Register<TTarget>()` — work for both subjects, so a config gets a hand-written override for free
+  and the next subject is a specialization rather than a third registry. The **routes stay
+  explicit**: `Drawers()` is `TDrawerRegistry<Entity>`, `ConfigDrawers()` is `TDrawerRegistry<IConfig>`.
 
 
 ---
@@ -435,6 +457,25 @@ Platform → Paths → Logger(Paths) → Config(Paths)+PreRegisterConfig
 
 **BO1** — Config is loaded from disk here, *before* the Engine exists. JobSystem comes *after* Config
 (worker count is config-driven). (See **L1**.)
+**BO1b — a config serializes EXACTLY as a component does, and tolerance lives in ONE place**
+(2026-08-20, user call: *"if one side is one type of code then in the other place is another type of
+code its very annoying"*). A config data type carries `NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT`
+and nothing else; `TConfigCodec`'s **default** does the rest (`dump(4)` out, `parse` + `get_to` in),
+where it used to be an undefined primary every data type specialized by hand. That deleted ~220
+lines of defensive parsing, two key-constant namespaces, `DECLARE_CONFIG_DATA`,
+`DECLARE_T_CONFIG_CODEC`, and a `version` key that was **written but never read**.
+- **The codec THROWS; `TConfig::Load` catches**, keeps the in-memory defaults and returns **false** —
+  a value `ConfigSystem` used to discard and now logs as a Warn naming the file. The hand-written
+  parsers were tolerant per field (`contains()` + `is_string()`, times fourteen); this is the same
+  guarantee stated once. Core still does no logging (**I11**), so the Application layer says it.
+- **Nested C++ structs mirror the file**, so `Engine.config` keeps its groups while the keys become
+  the C++ names. Both `.config` files were regenerated in the same change; they are tracked, so a
+  format change is a reviewable diff rather than a surprise. `OpaaxString` gained the json bridge it
+  never had (`Core/String/OpaaxStringJson.h`) — every config had been hand-converting with `.CStr()`
+  at each field, which is precisely the per-field labour the macro removes.
+- **`CJsonSerializable` (`Core/Serialization/JsonConcept.h`) is that requirement stated once**, and
+  `CComponent` (**I8**) is defined in terms of it rather than repeating the same `requires` block.
+
 **BO1a — the config registry is the one registry that NEVER seals** (2026-08-19). `Get<T>()`
 auto-registers on a miss, so `PreRegisterConfig` is a *convenience*, not the registration window:
 `Config_Renderer` first appears in `RendererManager::Startup`, and a game system reading its config on

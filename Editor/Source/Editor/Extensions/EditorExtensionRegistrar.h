@@ -29,25 +29,31 @@ namespace Opaax::Editor
     class EditorExtensionRegistrar
     {
     public:
-        DrawerRegistry&            Drawers()          noexcept { return m_Drawers; }
+        ComponentDrawerRegistry&   Drawers()          noexcept { return m_Drawers; }
+        ConfigDrawerRegistry&      ConfigDrawers()    noexcept { return m_ConfigDrawers; }
         PanelRegistry&             Panels()           noexcept { return m_Panels; }
         ResourceTypeRegistry&      ResourceTypes()    noexcept { return m_ResourceTypes; }
         EditorMenu&                Menus()            noexcept { return m_Menus; }
         WorldSubsystemRoute&       EditWorldSystems() noexcept { return m_EditWorldSystems; }
         EditorCommandRegistry&     Commands()         noexcept { return m_EditorCommands; }
 
-        const DrawerRegistry&        Drawers()          const noexcept { return m_Drawers; }
-        const PanelRegistry&         Panels()           const noexcept { return m_Panels; }
-        const ResourceTypeRegistry&  ResourceTypes()    const noexcept { return m_ResourceTypes; }
-        const EditorMenu&            Menus()            const noexcept { return m_Menus; }
+        const ComponentDrawerRegistry& Drawers()       const noexcept { return m_Drawers; }
+        const ConfigDrawerRegistry&  ConfigDrawers()   const noexcept { return m_ConfigDrawers; }
+        const PanelRegistry&         Panels()          const noexcept { return m_Panels; }
+        const ResourceTypeRegistry&  ResourceTypes()   const noexcept { return m_ResourceTypes; }
+        const EditorMenu&            Menus()           const noexcept { return m_Menus; }
         const WorldSubsystemRoute&   EditWorldSystems() const noexcept { return m_EditWorldSystems; }
-        const EditorCommandRegistry& Commands()         const noexcept { return m_EditorCommands; }
+        const EditorCommandRegistry& Commands()        const noexcept { return m_EditorCommands; }
 
         void Seal()          noexcept { m_Sealed = true; }
         bool IsSealed() const noexcept { return m_Sealed; }
 
     private:
-        DrawerRegistry       m_Drawers;
+        // Two instantiations of ONE registry (TDrawerRegistry), not two registries: a component and
+        // a config differ only in how "is this drawer yours?" is answered, which is the resolver's
+        // job. The route names stay separate so a call site still reads plainly.
+        ComponentDrawerRegistry m_Drawers;
+        ConfigDrawerRegistry    m_ConfigDrawers;
         PanelRegistry        m_Panels;
         ResourceTypeRegistry m_ResourceTypes;
         EditorMenu           m_Menus;

@@ -66,7 +66,7 @@ namespace Opaax
         }
 
         RenderSystemDesc lDesc;
-        lDesc.Backend      = BackendFromString(lEngineCfg.RenderBackend);
+        lDesc.Backend      = BackendFromString(lEngineCfg.Render.Backend);
         lDesc.Surface      = lSurface;
         lDesc.Width        = lWindow->GetWidth();
         lDesc.Height       = lWindow->GetHeight();

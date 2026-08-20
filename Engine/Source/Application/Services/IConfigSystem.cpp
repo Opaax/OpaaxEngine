@@ -95,7 +95,19 @@ namespace Opaax
     void ConfigSystem::OnConfigRegistered(IConfig& InConfig)
     {
         // IConfig::Load loads the file, or generates the default file if it is missing.
-        InConfig.Load(JoinConfigPath(InConfig.FileName()));
+        const OpaaxString lPath = JoinConfigPath(InConfig.FileName());
+
+        // The return value used to be DISCARDED. It is the only signal that a file existed and could
+        // not be read — the config then runs on defaults, which looks identical to a clean boot from
+        // here (L15). Core cannot log, so saying it is this layer's job.
+        if (!InConfig.Load(lPath))
+        {
+            OPAAX_LOG(LogConfigSystem, Warn,
+                      "Config [{}] could not be read — running on defaults. Fix or delete '{}'.",
+                      InConfig.FileName(), lPath.CStr());
+            return;
+        }
+
         OPAAX_LOG(LogConfigSystem, Info, "Config [{}] Created", InConfig.FileName());
     }
 

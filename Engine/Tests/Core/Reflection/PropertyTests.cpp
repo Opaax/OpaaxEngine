@@ -21,9 +21,9 @@ namespace
         Vector4F Colour = {1.f, 1.f, 1.f, 1.f};
 
         OPAAX_PROPERTIES(Probe,
-                         OPAAX_PROP(Speed),
+                         OPAAX_PROP(Speed).SetRange(0.f, 10.f),
                          OPAAX_PROP(Count),
-                         OPAAX_PROP(Colour).SetHint(EPropertyHint::Color))
+                         OPAAX_PROP(Colour))
     };
 
     struct NoProperties
@@ -66,13 +66,17 @@ TEST_CASE("OPAAX_PROPERTIES: the member pointer reads AND writes the field it na
     CHECK(lProbe.Colour.r == doctest::Approx(1.f));   // untouched
 }
 
-TEST_CASE("OPAAX_PROPERTIES: SetHint marks one property and leaves its siblings alone")
+TEST_CASE("OPAAX_PROPERTIES: SetRange marks one property and leaves its siblings alone")
 {
     constexpr auto lProperties = Probe::GetProperties();
 
-    CHECK(std::get<0>(lProperties).Hint == EPropertyHint::None);
-    CHECK(std::get<1>(lProperties).Hint == EPropertyHint::None);
-    CHECK(std::get<2>(lProperties).Hint == EPropertyHint::Color);
+    CHECK(std::get<0>(lProperties).Meta.RangeMin == doctest::Approx(0.f));
+    CHECK(std::get<0>(lProperties).Meta.RangeMax == doctest::Approx(10.f));
+
+    // Unset is Min == Max, which every ImGui drag reads as "unbounded" — so an ordinary property
+    // needs no flag saying it has no range.
+    CHECK(std::get<1>(lProperties).Meta.RangeMin == std::get<1>(lProperties).Meta.RangeMax);
+    CHECK(std::get<2>(lProperties).Meta.RangeMin == std::get<2>(lProperties).Meta.RangeMax);
 }
 
 TEST_CASE("OPAAX_PROPERTIES: the value type comes from the member pointer, not from the author")

@@ -66,6 +66,20 @@ namespace Opaax::Editor
          * reach them BY TAG, exactly as a game module's command would be reached.
          */
         void RegisterNativeEditorCommand();
+        
+        /**
+         * `.opaaxmap` / `.opaaxlevel` into m_Extensions.ResourceTypes() — the editor's own core
+         * formats registered through the route a game's file type uses (M2d), with no privileged
+         * path into the browser.
+         */
+        void RegisterNativeResourceTypes();
+
+        /**
+         * The engine's own configs into m_Extensions.ConfigDrawers(), so the Config panel draws
+         * their fields instead of their json. Same registry template, same two forms and the same
+         * ordering rule as the component drawers — only the resolver differs.
+         */
+        void RegisterNativeConfigDrawers();
 
         /**
          * One Window-menu entry per registered panel, from its PanelDesc.
@@ -104,13 +118,6 @@ namespace Opaax::Editor
          * chords) is the right shape rather than a workaround.
          */
         void HandleAuthoringShortcuts();
-
-        /**
-         * `.opaaxmap` / `.opaaxlevel` into m_Extensions.ResourceTypes() — the editor's own core
-         * formats registered through the route a game's file type uses (M2d), with no privileged
-         * path into the browser.
-         */
-        void RegisterNativeResourceTypes();
 
         /**
          * Resolves <ProjectRoot>/Editor/Save/imgui.ini — the dock layout ImGui loads on the first frame and

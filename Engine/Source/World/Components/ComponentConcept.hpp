@@ -4,6 +4,8 @@
 
 #include <nlohmann/json.hpp>
 
+#include "Core/Serialization/JsonConcept.h"
+
 // =============================================================================
 // CComponent — THE compile-time contract for a serializable component.
 //
@@ -39,13 +41,7 @@ namespace Opaax
         std::is_default_constructible_v<T>
         // entt stores by value and relocates on pool growth.
         && std::is_move_constructible_v<T>
-        && requires(nlohmann::json& InJson, const T& InSource, T& InTarget)
-        {
-            // Requires to_json(json&, const T&) — the json ctor is SFINAE'd on it, so a type
-            // without one simply fails to satisfy the concept instead of erroring deep inside
-            // a template body.
-            { InJson = InSource };
-            // Requires from_json(const json&, T&) — get_to is constrained the same way.
-            { InJson.get_to(InTarget) };
-        };
+        // The json half, shared verbatim with a config data type (Core/Serialization/JsonConcept.h)
+        // — one statement of the requirement both contracts make.
+        && CJsonSerializable<T>;
 }

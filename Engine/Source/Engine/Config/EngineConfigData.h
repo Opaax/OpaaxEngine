@@ -1,87 +1,131 @@
 #pragma once
 
+#include <nlohmann/json.hpp>
+
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
-#include "Core/String/OpaaxString.hpp"
 #include "Core/Maths/MathTypes.h"
+#include "Core/Maths/MathsJson.hpp"
+#include "Core/Reflection/OpaaxProperty.h"
+#include "Core/String/OpaaxString.hpp"
+#include "Core/String/OpaaxStringJson.h"
 
 namespace Opaax
 {
     // =============================================================================
-    // JSON keys — mirror EngineConfig's nested schema (window/assets/log/render/physics).
+    // EngineConfigData — the engine runtime block of <ProjectRoot>/Configs/Engine.config.
+    //
+    //   NESTED STRUCTS MIRROR THE FILE. Each group is a type of its own, so the json nests because
+    //   the C++ nests — instead of a flat struct plus a hand-written serializer that knew how to
+    //   fold it. Serialization is the same one macro a component carries; there is no codec, no key
+    //   constants and no parser here, which is the whole point (one idiom, not two).
+    //
+    //   Every field is read ONCE AT BOOT today, which is what NeedRestart says on each group. The
+    //   flag sits on the GROUP rather than on every field, and it becomes per-field the day
+    //   something is read live.
+    //
+    //   Defaults match the historical hardcoded values, so a missing config keeps behaviour
+    //   unchanged — and with _WITH_DEFAULT, so does a config missing any single key.
     // =============================================================================
-    namespace Opaax_Renderer_Config
-    {
-        inline const char* VERSION_KEY      = "version";
-        inline const char* WINDOW_KEY       = "window";
-        inline const char* ASSETS_KEY       = "assets";
-        inline const char* LOG_KEY          = "log";
-        inline const char* RENDER_KEY       = "render";
-        inline const char* PHYSICS_KEY      = "physics";
-        inline const char* WORLD_BOUNDS_KEY = "worldBounds";
 
-        inline const char* TITLE_KEY           = "title";
-        inline const char* WIDTH_KEY           = "width";
-        inline const char* HEIGHT_KEY          = "height";
-        inline const char* MODE_KEY            = "mode";
-        inline const char* ENGINE_ROOT_KEY     = "engineRoot";
-        inline const char* ENGINE_MANIFEST_KEY = "engineManifest";
-        inline const char* LEVEL_KEY           = "level";
-        inline const char* BACKEND_KEY         = "backend";
-        inline const char* INTERPOLATION_KEY   = "interpolation";
-        inline const char* ENABLED_KEY         = "enabled";
-        inline const char* MIN_KEY             = "min";
-        inline const char* MAX_KEY             = "max";
-        inline const char* RESPONSE_KEY        = "response";
-    }
-
-    // =============================================================================
-    // EngineConfigData — POD copied 1:1 from EngineConfig. Defaults match the historical
-    // hardcoded values, so a missing config keeps behavior unchanged.
-    // =============================================================================
-    struct EngineConfigData
+    struct WindowSettings
     {
-        //----- window ---------------------------------------------------------
-        OpaaxString WindowTitle  = OpaaxString("Opaax Engine");
-        Uint32      WindowWidth  = 1280;
-        Uint32      WindowHeight = 720;
-        // Stringly-typed like RenderBackend: this header stays free of Window.h, and the enum
+        OpaaxString Title  = OpaaxString("Opaax Engine");
+        Uint32      Width  = 1280;
+        Uint32      Height = 720;
+
+        // Stringly-typed like Backend below: this header stays free of Window.h, and the enum
         // conversion happens at the point of use (MakeWindowProps).
-        OpaaxString WindowMode   = OpaaxString("Windowed");
+        OpaaxString Mode = OpaaxString("Windowed");
 
-        //----- assets ---------------------------------------------------------
-        OpaaxString EngineAssetsRoot      = OpaaxString("Engine/Assets");
-        OpaaxString EngineManifestRelPath = OpaaxString("Engine/Assets/AssetManifest.json");
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(WindowSettings, Title, Width, Height, Mode)
 
-        //----- log ------------------------------------------------------------
-        OpaaxString LogLevel = OpaaxString("trace");
-
-        //----- render ---------------------------------------------------------
-        OpaaxString RenderBackend       = OpaaxString("OpenGL");
-        bool        RenderInterpolation = true;
-
-        //----- physics --------------------------------------------------------
-        OpaaxString PhysicsBackend             = OpaaxString("Box2D");
-        bool        PhysicsWorldBoundsEnabled  = false;
-        Vector2F    PhysicsWorldBoundsMin      = Vector2F(-100000.f, -100000.f);
-        Vector2F    PhysicsWorldBoundsMax      = Vector2F( 100000.f,  100000.f);
-        OpaaxString PhysicsWorldBoundsResponse = OpaaxString("EventAndDestroy");
+        OPAAX_PROPERTIES(WindowSettings,
+                         OPAAX_PROP(Title),
+                         OPAAX_PROP(Width).SetRange(320.f, 7680.f),
+                         OPAAX_PROP(Height).SetRange(240.f, 4320.f),
+                         OPAAX_PROP(Mode))
     };
 
-    // Pure, tolerant parser — bad JSON / missing fields keep the defaults, never throws.
-    OPAAX_API EngineConfigData ParseEngineConfig(const OpaaxString& InJsonText);
-    // Serialize to pretty JSON — the template written when no config file exists.
-    OPAAX_API OpaaxString      SerializeEngineConfig(const EngineConfigData& InData);
-
-    // =============================================================================
-    // Codec binding for TConfig<EngineConfigData> — forwards to the pure functions
-    // above, so the data stays POD and this header stays JSON-free. (Primary template
-    // is defined in TConfig.h; forward-declared here to keep this header standalone.)
-    // =============================================================================
-    template<class T> struct TConfigCodec;
-    template<> struct TConfigCodec<EngineConfigData>
+    struct AssetSettings
     {
-        static EngineConfigData FromText(const OpaaxString& InText)        { return ParseEngineConfig(InText); }
-        static OpaaxString      ToText(const EngineConfigData& InData)     { return SerializeEngineConfig(InData); }
+        OpaaxString EngineRoot     = OpaaxString("Engine/Assets");
+        OpaaxString EngineManifest = OpaaxString("Engine/Assets/AssetManifest.json");
+
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(AssetSettings, EngineRoot, EngineManifest)
+
+        OPAAX_PROPERTIES(AssetSettings,
+                         OPAAX_PROP(EngineRoot),
+                         OPAAX_PROP(EngineManifest))
+    };
+
+    struct LogSettings
+    {
+        OpaaxString Level = OpaaxString("trace");
+
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(LogSettings, Level)
+
+        OPAAX_PROPERTIES(LogSettings, OPAAX_PROP(Level))
+    };
+
+    struct RenderSettings
+    {
+        OpaaxString Backend       = OpaaxString("OpenGL");
+        bool        Interpolation = true;
+
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(RenderSettings, Backend, Interpolation)
+
+        OPAAX_PROPERTIES(RenderSettings,
+                         OPAAX_PROP(Backend),
+                         OPAAX_PROP(Interpolation))
+    };
+
+    struct WorldBoundsSettings
+    {
+        bool        Enabled  = false;
+        Vector2F    Min      = Vector2F(-100000.f, -100000.f);
+        Vector2F    Max      = Vector2F(100000.f, 100000.f);
+        OpaaxString Response = OpaaxString("EventAndDestroy");
+
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(WorldBoundsSettings, Enabled, Min, Max, Response)
+
+        OPAAX_PROPERTIES(WorldBoundsSettings,
+                         OPAAX_PROP(Enabled),
+                         OPAAX_PROP(Min),
+                         OPAAX_PROP(Max),
+                         OPAAX_PROP(Response))
+    };
+
+    struct PhysicsSettings
+    {
+        OpaaxString         Backend = OpaaxString("Box2D");
+        WorldBoundsSettings WorldBounds;
+
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(PhysicsSettings, Backend, WorldBounds)
+
+        OPAAX_PROPERTIES(PhysicsSettings,
+                         OPAAX_PROP(Backend),
+                         OPAAX_PROP(WorldBounds))
+    };
+
+    struct EngineConfigData
+    {
+        WindowSettings  Window;
+        AssetSettings   Assets;
+        LogSettings     Log;
+        RenderSettings  Render;
+        PhysicsSettings Physics;
+
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(EngineConfigData, Window, Assets, Log, Render, Physics)
+
+        // NeedRestart on every group, because every reader of this file reads it once during boot:
+        // the window is built from Window, RendererManager resolves Render.Backend at Startup, and
+        // Assets / Log / Physics have no reader at all yet.
+        OPAAX_PROPERTIES(EngineConfigData,
+                         OPAAX_PROP(Window).SetFlags(EPropertyFlags::NeedRestart),
+                         OPAAX_PROP(Assets).SetFlags(EPropertyFlags::NeedRestart),
+                         OPAAX_PROP(Log).SetFlags(EPropertyFlags::NeedRestart),
+                         OPAAX_PROP(Render).SetFlags(EPropertyFlags::NeedRestart),
+                         OPAAX_PROP(Physics).SetFlags(EPropertyFlags::NeedRestart))
     };
 }

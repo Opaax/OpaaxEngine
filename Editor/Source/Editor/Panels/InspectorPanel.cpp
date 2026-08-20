@@ -49,10 +49,11 @@ namespace Opaax::Editor
 
         // Ask every registered drawer whether it applies, rather than asking the entity what it has —
         // the inversion that keeps this panel ignorant of every component type (DrawerRegistry).
+        // Every applicable drawer, not just the first — an entity carries several components.
         bool lAnyDrawn = false;
-        for (const DrawerEntry& lEntry : m_Context.Extensions.Drawers().Entries())
+        for (const TFunction<bool(Entity&)>& lEntry : m_Context.Extensions.Drawers().Entries())
         {
-            if (lEntry.Invoke && lEntry.Invoke(lSelected))
+            if (lEntry && lEntry(lSelected))
             {
                 lAnyDrawn = true;
             }

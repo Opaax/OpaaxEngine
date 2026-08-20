@@ -1,7 +1,10 @@
 #pragma once
 
+#include <nlohmann/json.hpp>
+
 #include "IConfig.h"
 #include "Core/IO/FileIO.h"
+#include "Core/Serialization/JsonConcept.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/OpaaxMacro.hpp"
 #include "Core/EngineAPI.h"
@@ -9,36 +12,26 @@
 // =============================================================================
 // ==== USAGE ==================================================================
 // =============================================================================
-// In you .h file
-//#include "Core/Config/TConfig.hpp"
-//using namespace Opaax;
-//struct MyConfigData
-//{
-//  public:
-//        float m_value = 10;
-//    You can either make static Parse / Serialize
-//    static MyConfigData Parse(const OpaaxString& InJsonText) { return MyConfigData(); }
-//    static OpaaxString Serialize(const MyConfigData& InData) { return OpaaxString(); }
-//    or use DECLARE_CONFIG_DATA(DataType) that create both func above
-//};
-// OR either inline global
-//  inline MyConfigData ParseMyConfigData(const OpaaxString& InJsonText) { return MyConfigData(); }
-//  inline OpaaxString SerializeMyConfigData(const MyConfigData& InData) { return OpaaxString(); }
+// A config data type serializes EXACTLY as a component does — one macro, no codec, no key
+// constants, no hand-written parser (that was two idioms for one job).
 //
-// Make the codec struct that IConfig use to load/save
-//DECLARE_T_CONFIG_CODEC(MyConfigData::Parse, MyConfigData::Serialize, MyConfigData)
-//or
-//DECLARE_T_CONFIG_CODEC(ParseMyConfigData, SerializeMyConfigData, MyConfigData)
+// In your .h:
+//   #include "Core/Config/TConfig.hpp"
+//   struct MyConfigData
+//   {
+//       float Value = 10.f;
 //
-// Make the Config type it self
-//DECLARE_T_CONFIG(MyConfig, MyConfigData)
+//       NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(MyConfigData, Value)   // _WITH_DEFAULT: see IConfig.h
+//       OPAAX_PROPERTIES(MyConfigData, OPAAX_PROP(Value))                  // optional — the editor draws it
+//   };
 //
-// In you .cpp file
+//   DECLARE_OPAAX_T_CONFIG(MyConfig, MyConfigData)   // exported; DECLARE_T_CONFIG if DLL-internal
 //
-//#include "your.h"
+// In your .cpp:
+//   IMPL_T_CONFIG(MyConfig)
 //
-// IMPL_T_CONFIG(MyConfig)
-//
+// Nest structs to nest the file: a member whose type is another such struct writes as a json
+// object, and the editor draws it as a group.
 // =============================================================================
 // ==== END USAGE ==============================================================
 // =============================================================================
@@ -46,13 +39,38 @@
 namespace Opaax
 {
     // =============================================================================
-    // TConfigCodec — the (de)serialization contract for a config data type. Each
-    // data type provides a specialization (declared next to the data, forwarding to
-    // its pure parse/serialize functions). The undefined primary makes "you forgot to
-    // specialize" a clear compile error rather than a silent fallback.
+    // TConfigCodec — the (de)serialization contract for a config data type.
+    //
+    //   The default IS the answer now: any data type carrying the nlohmann macro serializes with no
+    //   codec of its own, exactly as a component does. It used to be an undefined primary that every
+    //   data type specialized by hand, which meant a config was ~200 lines of defensive parsing
+    //   while a component was one line — two idioms for one job.
+    //
+    //   "You forgot" is still a compile error, just a better one: the static_assert below names the
+    //   macro instead of the linker naming a missing specialization. A type that genuinely needs a
+    //   bespoke format can still specialize this template.
+    //
+    //   IT THROWS ON BAD INPUT, deliberately — TConfig::Load catches, keeps the in-memory defaults
+    //   and answers false, so tolerance lives in ONE place rather than in every parser.
     // =============================================================================
     template<class TData>
-    struct TConfigCodec;
+    struct TConfigCodec
+    {
+        static_assert(CJsonSerializable<TData>,
+                      "A config data type needs NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT "
+                      "(or its own TConfigCodec specialization).");
+
+        static TData FromText(const OpaaxString& InText)
+        {
+            return nlohmann::json::parse(InText.CStr()).template get<TData>();
+        }
+
+        static OpaaxString ToText(const TData& InData)
+        {
+            // dump(4) with nlohmann's sorted keys — the byte shape every .config already has.
+            return OpaaxString(nlohmann::json(InData).dump(4).c_str());
+        }
+    };
 
     // =============================================================================
     // TConfig — generic config base: a concrete config DECLARES its data type and
@@ -91,7 +109,21 @@ namespace Opaax
                 return GenerateDefaultConfig(InAbsPath);
             }
 
-            m_Data = TConfigCodec<TData>::FromText(lText);
+            // THE ONE TOLERANT READER. Every config used to hand-write this — try/catch around the
+            // parse, contains() + is_string() per field — and the macro does none of it. Absent keys
+            // are already covered (_WITH_DEFAULT), so what lands here is malformed json or a
+            // wrong-typed value: keep the defaults and say so. Core does not log (I11); the caller
+            // (ConfigSystem) turns the false into a Warn naming the file.
+            try
+            {
+                m_Data = TConfigCodec<TData>::FromText(lText);
+            }
+            catch (const nlohmann::json::exception&)
+            {
+                m_Data = TData{};
+                return false;
+            }
+
             return true;
         }
 
@@ -146,14 +178,6 @@ class Config_##ConfigName final : public TConfig<DataType> \
     return reinterpret_cast<::Opaax::ConfigTypeID>(&s_Tag);\
 }
 
-#define DECLARE_T_CONFIG_CODEC(ParseFunc, SerializeFunc, DataType)\
-template<class T> struct ::Opaax::TConfigCodec;\
-template<> struct ::Opaax::TConfigCodec<DataType>\
-{\
-static  DataType                    FromText(const ::Opaax::OpaaxString& InText)        { return ParseFunc(InText); }\
-static ::Opaax::OpaaxString         ToText(const DataType& InData)                      { return SerializeFunc(InData); }\
-};
-
-#define DECLARE_CONFIG_DATA(DataType)\
-    static DataType Parse(const ::Opaax::OpaaxString& InJsonText);\
-    static ::Opaax::OpaaxString Serialize(const DataType& InData);
+// NOTE: DECLARE_T_CONFIG_CODEC and DECLARE_CONFIG_DATA are GONE. They existed to bind a data type
+// to a hand-written Parse/Serialize pair; TConfigCodec's default does that job for every type
+// carrying the nlohmann macro, which is the same one a component carries.

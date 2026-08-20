@@ -1,71 +1,145 @@
-// Suite: EngineConfigData — the pure, tolerant parse/serialize copied from EngineConfig.
-// Independent of the IConfigSystem registry (driven with JSON strings).
+// Suite: EngineConfigData through the GENERIC codec — the one every config now shares with every
+// component (NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT + TConfigCodec's default).
+//
+// The behaviour these cases pin is the behaviour the deleted hand-written parser had, and the
+// reason it could be deleted: missing keys keep defaults, malformed input keeps defaults, and the
+// round trip is exact. What moved is WHERE tolerance lives — the codec throws, TConfig::Load
+// catches, so it is stated once instead of per field.
 #include <doctest.h>
 
+#include <filesystem>
+
+#include "Core/Config/TConfig.hpp"
+#include "Core/IO/FileIO.h"
 #include "Engine/Config/EngineConfigData.h"
 
 using namespace Opaax;
 
-TEST_CASE("ParseEngineConfig: full schema reads every block")
-{
-    const EngineConfigData lData = ParseEngineConfig(OpaaxString(R"({
-        "window":  {"title":"My","width":1920,"height":1080,"mode":"Borderless"},
-        "assets":  {"engineRoot":"E/A","engineManifest":"E/A/m.json"},
-        "log":     {"level":"warn"},
-        "render":  {"backend":"Vulkan","interpolation":false},
-        "physics": {"backend":"Box2D","worldBounds":{"enabled":true,"min":[-5,-6],"max":[7,8],"response":"EventOnly"}}
-    })"));
+namespace fs = std::filesystem;
 
-    CHECK(lData.WindowTitle  == "My");
-    CHECK(lData.WindowWidth  == 1920u);
-    CHECK(lData.WindowHeight == 1080u);
-    CHECK(lData.WindowMode   == "Borderless");
-    CHECK(lData.EngineAssetsRoot      == "E/A");
-    CHECK(lData.EngineManifestRelPath == "E/A/m.json");
-    CHECK(lData.LogLevel      == "warn");
-    CHECK(lData.RenderBackend == "Vulkan");
-    CHECK_FALSE(lData.RenderInterpolation);
-    CHECK(lData.PhysicsWorldBoundsEnabled);
-    CHECK(lData.PhysicsWorldBoundsMin.x == doctest::Approx(-5.f));
-    CHECK(lData.PhysicsWorldBoundsMax.y == doctest::Approx(8.f));
-    CHECK(lData.PhysicsWorldBoundsResponse == "EventOnly");
+namespace
+{
+    using Codec = TConfigCodec<EngineConfigData>;
+
+    EngineConfigData Parse(const char* InText) { return Codec::FromText(OpaaxString(InText)); }
+
+    // A config over the same data, so Load's behaviour can be exercised without the registry.
+    // Its id is fixed rather than stamped with OPAAX_CONFIG_TYPE: nothing registers it.
+    class ProbeConfig final : public TConfig<EngineConfigData>
+    {
+    public:
+        const char*  FileName() const override { return "probe.config"; }
+        ConfigTypeID GetConfigTypeID() const noexcept override { return 0; }
+    };
 }
 
-TEST_CASE("ParseEngineConfig: missing fields keep their defaults")
+TEST_CASE("EngineConfigData: full schema reads every group")
 {
-    const EngineConfigData lData = ParseEngineConfig(OpaaxString(R"({"window":{"width":800}})"));
+    const EngineConfigData lData = Parse(R"({
+        "Window":  {"Title":"My","Width":1920,"Height":1080,"Mode":"Borderless"},
+        "Assets":  {"EngineRoot":"E/A","EngineManifest":"E/A/m.json"},
+        "Log":     {"Level":"warn"},
+        "Render":  {"Backend":"Vulkan","Interpolation":false},
+        "Physics": {"Backend":"Box2D","WorldBounds":{"Enabled":true,
+                    "Min":{"x":-5,"y":-6},"Max":{"x":7,"y":8},"Response":"EventOnly"}}
+    })");
 
-    CHECK(lData.WindowWidth   == 800u);       // overridden
-    CHECK(lData.WindowHeight  == 720u);       // default kept
-    CHECK(lData.WindowMode    == "Windowed"); // default kept
-    CHECK(lData.RenderBackend == "OpenGL");   // default kept
-    CHECK(lData.LogLevel      == "trace");    // default kept
+    CHECK(lData.Window.Title  == "My");
+    CHECK(lData.Window.Width  == 1920u);
+    CHECK(lData.Window.Height == 1080u);
+    CHECK(lData.Window.Mode   == "Borderless");
+    CHECK(lData.Assets.EngineRoot     == "E/A");
+    CHECK(lData.Assets.EngineManifest == "E/A/m.json");
+    CHECK(lData.Log.Level        == "warn");
+    CHECK(lData.Render.Backend   == "Vulkan");
+    CHECK_FALSE(lData.Render.Interpolation);
+    CHECK(lData.Physics.WorldBounds.Enabled);
+    CHECK(lData.Physics.WorldBounds.Min.x == doctest::Approx(-5.f));
+    CHECK(lData.Physics.WorldBounds.Max.y == doctest::Approx(8.f));
+    CHECK(lData.Physics.WorldBounds.Response == "EventOnly");
 }
 
-TEST_CASE("ParseEngineConfig: malformed JSON yields the defaults (no throw)")
+TEST_CASE("EngineConfigData: missing fields keep their defaults, at every depth")
 {
-    const EngineConfigData lData = ParseEngineConfig(OpaaxString("{ not json"));
+    // One key, three levels down, and nothing else — the shape of a config written before the rest
+    // of the schema existed. _WITH_DEFAULT is what makes this a read rather than a throw.
+    const EngineConfigData lData = Parse(R"({"Window":{"Width":800}})");
 
-    CHECK(lData.WindowWidth   == 1280u);
-    CHECK(lData.RenderBackend == "OpenGL");
+    CHECK(lData.Window.Width  == 800u);       // overridden
+    CHECK(lData.Window.Height == 720u);       // sibling default
+    CHECK(lData.Window.Mode   == "Windowed");
+    CHECK(lData.Render.Backend == "OpenGL");  // absent GROUP defaults whole
+    CHECK(lData.Log.Level      == "trace");
+    CHECK(lData.Physics.WorldBounds.Response == "EventAndDestroy");
 }
 
-TEST_CASE("SerializeEngineConfig -> ParseEngineConfig round-trips")
+TEST_CASE("EngineConfigData: round trip through the generic codec is exact")
 {
     EngineConfigData lIn;
-    lIn.WindowWidth               = 1600;
-    lIn.WindowMode                = OpaaxString("Fullscreen");
-    lIn.RenderBackend             = OpaaxString("Vulkan");
-    lIn.RenderInterpolation       = false;
-    lIn.PhysicsWorldBoundsEnabled = true;
-    lIn.PhysicsWorldBoundsMin     = { -3.f, -4.f };
+    lIn.Window.Width               = 1600;
+    lIn.Window.Mode                = OpaaxString("Fullscreen");
+    lIn.Render.Backend             = OpaaxString("Vulkan");
+    lIn.Render.Interpolation       = false;
+    lIn.Physics.WorldBounds.Enabled = true;
+    lIn.Physics.WorldBounds.Min     = Vector2F(-1.f, -2.f);
 
-    const EngineConfigData lOut = ParseEngineConfig(SerializeEngineConfig(lIn));
+    const EngineConfigData lOut = Codec::FromText(Codec::ToText(lIn));
 
-    CHECK(lOut.WindowWidth == 1600u);
-    CHECK(lOut.WindowMode  == "Fullscreen");
-    CHECK(lOut.RenderBackend == "Vulkan");
-    CHECK_FALSE(lOut.RenderInterpolation);
-    CHECK(lOut.PhysicsWorldBoundsEnabled);
-    CHECK(lOut.PhysicsWorldBoundsMin.x == doctest::Approx(-3.f));
+    CHECK(lOut.Window.Width == 1600u);
+    CHECK(lOut.Window.Mode  == "Fullscreen");
+    CHECK(lOut.Render.Backend == "Vulkan");
+    CHECK_FALSE(lOut.Render.Interpolation);
+    CHECK(lOut.Physics.WorldBounds.Enabled);
+    CHECK(lOut.Physics.WorldBounds.Min.x == doctest::Approx(-1.f));
+    CHECK(lOut.Physics.WorldBounds.Min.y == doctest::Approx(-2.f));
+}
+
+TEST_CASE("EngineConfigData: the file NESTS because the C++ nests")
+{
+    const nlohmann::json lJson = nlohmann::json::parse(Codec::ToText(EngineConfigData{}).CStr());
+
+    REQUIRE(lJson.contains("Window"));
+    CHECK(lJson["Window"].is_object());
+    CHECK(lJson["Window"].contains("Title"));
+    CHECK(lJson["Physics"]["WorldBounds"].is_object());
+
+    // A Vector2F writes as the object MathsJson defines, not as the array the hand-written
+    // serializer used to emit for these two fields alone.
+    CHECK(lJson["Physics"]["WorldBounds"]["Min"].contains("x"));
+}
+
+// =============================================================================
+// Tolerance — moved OUT of the parser and into TConfig::Load, once
+// =============================================================================
+TEST_CASE("TConfig::Load: a file it cannot parse keeps the defaults and answers FALSE")
+{
+    // The CODEC is allowed to throw — that is what lets it be one line instead of a hundred.
+    CHECK_THROWS(Parse("{ not json"));
+    CHECK_THROWS(Parse(R"({"Window":{"Width":"not a number"}})"));
+
+    // LOAD is where that becomes policy: a config file nobody can read must not take a boot down
+    // (**BO4c**'s rule, one level lower), and the false is what ConfigSystem turns into a Warn.
+    const fs::path lPath = fs::temp_directory_path() / "OpaaxConfigTolerance.config";
+    FileIO::WriteAllText(OpaaxString(lPath.string().c_str()), OpaaxString("{ not json at all"));
+
+    ProbeConfig lProbe;
+    REQUIRE_FALSE(lProbe.Load(OpaaxString(lPath.string().c_str())));
+
+    // Defaults intact — a half-applied config would be worse than none.
+    CHECK(lProbe.GetData().Window.Width == 1280u);
+    CHECK(lProbe.GetData().Render.Backend == "OpenGL");
+
+    fs::remove(lPath);
+}
+
+TEST_CASE("TConfig::Load: a file it CAN parse answers true")
+{
+    const fs::path lPath = fs::temp_directory_path() / "OpaaxConfigGood.config";
+    FileIO::WriteAllText(OpaaxString(lPath.string().c_str()), OpaaxString(R"({"Window":{"Width":900}})"));
+
+    ProbeConfig lProbe;
+    CHECK(lProbe.Load(OpaaxString(lPath.string().c_str())));
+    CHECK(lProbe.GetData().Window.Width == 900u);
+
+    fs::remove(lPath);
 }

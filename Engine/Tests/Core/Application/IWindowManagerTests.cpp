@@ -14,10 +14,10 @@ using namespace Opaax;
 TEST_CASE("MakeWindowProps: maps the engine config window fields 1:1")
 {
     EngineConfigData lData;
-    lData.WindowTitle  = OpaaxString("Test Title");
-    lData.WindowWidth  = 1024;
-    lData.WindowHeight = 768;
-    lData.WindowMode   = OpaaxString("Borderless");
+    lData.Window.Title  = OpaaxString("Test Title");
+    lData.Window.Width  = 1024;
+    lData.Window.Height = 768;
+    lData.Window.Mode   = OpaaxString("Borderless");
 
     const WindowProps lProps = MakeWindowProps(lData);
     CHECK(lProps.Title == "Test Title");
@@ -46,7 +46,7 @@ TEST_CASE("WindowModeFromString: every mode round-trips, unknown falls back to W
 TEST_CASE("MakeWindowProps: an unknown config mode still yields a usable window")
 {
     EngineConfigData lData;
-    lData.WindowMode = OpaaxString("Borderles");   // typo — the realistic failure
+    lData.Window.Mode = OpaaxString("Borderles");   // typo — the realistic failure
 
     CHECK(MakeWindowProps(lData).Mode == EWindowMode::Windowed);
 }

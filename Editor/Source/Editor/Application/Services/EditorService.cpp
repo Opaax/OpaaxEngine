@@ -23,7 +23,9 @@
 #include "Editor/Panels/ResourceBrowserPanel.h"
 #include "Editor/Panels/ViewportPanel.h"
 #include "Editor/UI/OpenGLEditorUIBackend.h"
+#include "Engine/Config/Config_Engine.h"
 #include "Engine/Registries/EngineRegistries.h"
+#include "Renderer/Config/Config_Renderer.h"
 #include "Engine/Subsystems/Input/InputEvents.h"
 #include "World/World.h"
 #include "World/WorldManager.h"
@@ -100,6 +102,16 @@ namespace Opaax::Editor
         lCommands.Register<OpenLevelAtCommand>(Tags::EDITOR_COMMAND_OPEN_LEVEL_AT);
         lCommands.Register<SaveLevelCommand>(Tags::EDITOR_COMMAND_SAVE_LEVEL);
         lCommands.Register<AddMapToLevelCommand>(Tags::EDITOR_COMMAND_ADD_MAP_TO_LEVEL);
+    }
+
+    void EditorService::RegisterNativeConfigDrawers()
+    {
+        // The engine's own configs, through the SAME route and the same registry template a game's
+        // config would use. Both draw from their data type's OPAAX_PROPERTIES — there is no
+        // config-shaped drawer code anywhere, only the resolver that says which config a drawer is
+        // for.
+        m_Extensions.ConfigDrawers().Register<Config_Engine>();
+        m_Extensions.ConfigDrawers().Register<Config_Renderer>();
     }
 
     void EditorService::RegisterNativeResourceTypes()
@@ -361,6 +373,7 @@ namespace Opaax::Editor
         RegisterNativeMenus();
         RegisterNativeResourceTypes();
         RegisterNativeEditorCommand();
+        RegisterNativeConfigDrawers();
 
         m_Extensions.EditWorldSystems().Bind(
             &OpaaxApplication::GetAppService<IEngine>().GetRegistries().WorldSubsystems());
@@ -376,8 +389,9 @@ namespace Opaax::Editor
         m_Extensions.Seal();
 
         OPAAX_LOG(LogEditorService, Info,
-                  "Editor extensions sealed (before first world): drawers={}, panels={}, resourceTypes={}, menus={}, editWorldSystems={}, commands={}",
-                  m_Extensions.Drawers().Count(), m_Extensions.Panels().Count(), m_Extensions.ResourceTypes().Count(),
+                  "Editor extensions sealed (before first world): drawers={}, configDrawers={}, panels={}, resourceTypes={}, menus={}, editWorldSystems={}, commands={}",
+                  m_Extensions.Drawers().Count(), m_Extensions.ConfigDrawers().Count(),
+                  m_Extensions.Panels().Count(), m_Extensions.ResourceTypes().Count(),
                   m_Extensions.Menus().Count(), m_Extensions.EditWorldSystems().Count(),
                   m_Extensions.Commands().Count());
     }
@@ -513,35 +527,19 @@ namespace Opaax::Editor
 
     void EditorService::RegisterNativePanels()
     {
-        // The PIE controls are a PANEL like any other — registered through the same route a game
-        // panel travels, not drawn by EditorService as a privileged widget (D10).
         PanelRegistry& lPanels = m_Extensions.Panels();
-
-        // FIRST, and that ordering is load-bearing: its Startup registers the offscreen FBO as the
-        // engine's primary render target, so it must not sit behind anything a game module adds.
-        // Natives register before modules (MR2), which is what makes "first" mean first.
+        
         lPanels.Register<ViewportPanel>(PanelDesc{.Id = OPAAX_ID("Viewport")});
-
         lPanels.Register<PlayToolbarPanel>(PanelDesc{.Id = OPAAX_ID("Play Controls")});
         lPanels.Register<HierarchyPanel>(PanelDesc{.Id = OPAAX_ID("Hierarchy")});
         lPanels.Register<InspectorPanel>(PanelDesc{.Id = OPAAX_ID("Inspector")});
         lPanels.Register<ResourceBrowserPanel>(PanelDesc{.Id = OPAAX_ID("Resource Browser")});
-        lPanels.Register<ConfigPanel>(PanelDesc{.Id = OPAAX_ID("Config")});
-        // A debug readout, not part of the author loop — off until asked for, from the Window menu.
-        lPanels.Register<InputPanel>(PanelDesc{
-            .Id = OPAAX_ID("Input"), .DefaultVisibility = EPanelVisibility::Hidden
-        });
+        lPanels.Register<ConfigPanel>(PanelDesc{.Id = OPAAX_ID("Config"), .DefaultVisibility = EPanelVisibility::Hidden});
+        lPanels.Register<InputPanel>(PanelDesc{.Id = OPAAX_ID("Input"), .DefaultVisibility = EPanelVisibility::Hidden });
     }
 
     void EditorService::BindPanelToggles()
     {
-        // One menu entry per registered panel, in the category its PanelDesc named — so a game
-        // module's panel gets its toggle for free, and a tool-shaped panel lands under "Tools"
-        // beside whatever else is there (Category() is get-or-create, so they merge by identity).
-        //
-        // The tick READS EditorPanels rather than caching a bool, which is what makes the menu and
-        // the window's own close button incapable of disagreeing: there is one bool, and both of
-        // them touch it.
         for (const PanelEntry& lEntry : m_Extensions.Panels().Entries())
         {
             const PanelDesc& lDesc = lEntry.Desc;
