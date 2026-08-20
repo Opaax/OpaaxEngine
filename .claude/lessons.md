@@ -1198,3 +1198,42 @@ verify the mechanism *ran*, not that the mechanism *exists*.
 - Generalises past wiring: whenever a doc names a helper as *the* way to do something, confirm the tree
   agrees before relying on it. Same session, same file, `Engine::RegisterNativeTypes()` turned out never
   to have existed either.
+## L45 — A generic UI system composes independent authors into ONE namespace; ask what the key is and who can collide in it (2026-08-20)
+
+**What happened (④ textures, S3 — the USER caught it, not any gate of mine).** `SpriteComponent` was
+written deliberately parallel to `DummyComponent`: same `Position`, same `Size`, same `Color`, because
+they mean the same things. The moment one entity carried both, ImGui reported *"visible items with
+conflicting ID"*. An ImGui widget's identity **is its label**; a label in the generic drawer is a
+*property name*; and `InspectorPanel` stacks every applicable drawer into one window. So two `Color`
+rows were one id, twice — the widgets shared hover and active state, and dragging one could drive the
+other. The user named the general case in the same breath: *"since we have drawer for LinearColor,
+(other will collide too)"*.
+
+**The fix is a SCOPE, and its PLACEMENT is the lesson.** `ImGui::PushID(<drawn type name>)` per registry
+**entry**, in `TDrawerRegistry` — not inside each `TPropertyDrawer`. A drawer sees one field and cannot
+know what else the window holds; an entry is exactly the boundary between two independently-authored
+types. One line covered components, configs, hand-written drawers and every future subject — including
+a latent copy of the same bug in the **Config panel**, which had no scope of its own and would have
+collided for two configs sharing a field name. Nobody had tried, because `EngineConfigData` and
+`RendererConfigData` happen not to overlap.
+
+**Why every automated gate was blind.** Three presets, 383 tests, two smoke runs, all green. The
+conflict needs *an entity carrying two components with overlapping fields*, selected, with the pointer
+over one of the rows — ImGui detects it on **hover** (`ItemHoverable`). No compile error, no log line,
+and a boot smoke test never selects anything.
+
+**Rules for next time:**
+- **When a generic system composes independently-authored pieces into one namespace, name the KEY and
+  ask who can collide in it.** Here the key was the field name. The tree already scopes every other
+  such namespace — map component keys, config keys, command tags, menu ids — which is why this one
+  stood out only in hindsight. The question is cheap and mechanical; ask it when writing the composer,
+  not when a user hovers a row.
+- **A new type modelled on an existing one INHERITS its field names, and the resemblance IS the hazard.**
+  The more faithfully `SpriteComponent` mirrored `DummyComponent`, the more certain the collision. "It
+  looks just like the one that already works" is a reason to check the shared namespace, not to relax.
+- **An interactive gate needs the NEGATIVE question.** [[L12]] says the observability must exist and
+  [[L15]] says it must discriminate; this adds: a handoff that lists what to *look at* still misses what
+  to *look for going wrong*. My S3 handoff had five numbered steps and not one of them was "does
+  anything complain?".
+- **Scope by NAME, not by index**, when the id also keys persisted UI state — an index-based scope
+  silently rebinds every stored header state the day a drawer is registered ahead of it.

@@ -442,6 +442,56 @@ editor-side `TPropertyDrawer<T>`, never a new `FLOAT_PROP`/`INT_PROP` macro here
   `Register<TTarget>()` — work for both subjects, so a config gets a hand-written override for free
   and the next subject is a specialization rather than a third registry. The **routes stay
   explicit**: `Drawers()` is `TDrawerRegistry<Entity>`, `ConfigDrawers()` is `TDrawerRegistry<IConfig>`.
+- **An ENTRY is an ID scope, because a widget's identity is its LABEL** (2026-08-20, user caught it).
+  A label here is a *property name*, and the Inspector stacks every applicable drawer into one
+  window — so two types that share a field name are one ImGui id, twice: the widgets fight over
+  hover and active state, and ImGui 1.92 reports *"visible items with conflicting ID"* on hover.
+  Not an edge case: `DummyComponent` and `SpriteComponent` share `Position`, `Size` and `Color`
+  **by design**, so the collision arrived with the first entity carrying both. `TDrawerRegistry`
+  therefore wraps every entry — generic *and* hand-written — in `ImGui::PushID(<drawn type name>)`.
+  **The placement is the rule**: a `TPropertyDrawer` sees one field and cannot know what else the
+  window holds, while an entry is exactly the boundary between two independently-authored types.
+  Keyed by the type name rather than the registration index, so a stored header open/closed state
+  survives a drawer being registered ahead of it. It also closed the same latent bug in the Config
+  panel, which had no scope of its own and would have collided for two configs sharing a field
+  name — nobody had tried. [[L45]]
+
+**I16 — A resource that needs the GPU splits `Load` (any thread) from `Initialize` (main thread), and
+reaches the device through `IEngine`** (landed 2026-08-20 with `TextureResource`, the first GPU-backed
+`CResource`). `CResource` always had the two-phase shape and this is the type it was designed for:
+`Load` is file IO + CPU decode and runs on a worker, `Initialize` runs once on the pump and uploads.
+- **It holds no device pointer, and that is the invariant, not a convenience.** The pool's
+  `Initialize` hook takes no arguments, and a cached `IRHIDevice*` would outlive the device across a
+  reset. The route is `IEngine::CreateTexture(pixels, w, h, channels)` → `RendererManager` →
+  `RenderSystem` → device, the same chain `CreateFramebuffer` already had for the editor's viewport
+  (**F2a**: only the device creates a GPU resource). `IEngine::Null()` answers `nullptr`, so a
+  headless test decodes normally and simply gets no GPU handle (**I3**) — which is what makes the
+  decode half unit-testable at all.
+- **The BACKEND must not read files.** `OpenGLTexture2D`'s path ctor was deleted with its private
+  copy of `stb_image`: decoding is CPU work every backend shares, and `stbi_load(path)` opens the
+  file through a narrow CRT call that decodes the path with the ANSI code page (**I7**) — a
+  silently-wrong file, the failure class this contract exists to prevent. `Load` reads bytes through
+  `FileIO::ReadAllBytes` and decodes from memory, with the *thread-local* stb flip.
+- **A PLACEHOLDER is a fully-initialised payload.** `ResourcePool::PlaceholderOrNull` now runs
+  `MaybeInitialize` on the substitute it builds. Without it the magenta texture would be the one
+  resource in the pool that never logs in — and it would fail *silently*, as a black quad, which is
+  exactly what the Placeholder policy exists to avoid. Pinned by `ResourceSystemTests`.
+- **A CONSUMER caches the claim, and the consumer is the adapter.** `RendererManager` holds
+  `path id → ResourceRef<TextureResource>` and releases it in `Shutdown` — before the
+  `ResourceManager`'s (reverse registration order), while the GL context is alive. It lives there
+  because that class is *"the only render-side code allowed to reach host globals"*; `Renderer2D`
+  stays portable and is handed an `ITexture2D&`.
+- **A resource REFERENCE is typed: `TResourcePath<T>`** (`Engine/Subsystems/Resources/ResourcePath.h`,
+  header-only, no `OPAAX_API` — **I6**). The path could have been a bare `OpaaxString`; the type
+  parameter is what lets the editor's drop target **refuse** a `.wave` dragged onto a texture field,
+  and what makes the next resource-referencing field one line with no editor code — **I15**'s
+  one-specialization-serves-every-type shape. `T` is only ever *named*, never completed, so a
+  component header needs a forward declaration instead of the RHI. It serializes as a **bare string**.
+- **The editor's drag payload is ONE payload for every resource type** — `[TypeId][path bytes]`,
+  variable length — so the browser drags whatever the format table already says a file is, with no
+  per-type code, and the *drop* side decides. The target **peeks before accepting**, so a wrong type
+  gets no accept highlight and the drag stays live. Asset-relative conversion happens at the SOURCE,
+  which has `IPaths` through `EditorContext` (**MP8**); the drawer contract has no context, by design.
 
 
 ---
