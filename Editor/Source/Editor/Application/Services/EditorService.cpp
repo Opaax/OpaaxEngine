@@ -29,6 +29,7 @@
 #include "Engine/Subsystems/Input/InputEvents.h"
 #include "World/Serialization/LevelResource.hpp"   // the types whose chrome is registered below
 #include "World/Serialization/MapResource.hpp"
+#include "Engine/Subsystems/Resources/Types/TextureResource.h"
 #include "World/World.h"
 #include "World/WorldManager.h"
 #include "World/Entity/Entity.h"
@@ -125,6 +126,12 @@ namespace Opaax::Editor
                 InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_MAP_AT, InContext,
                                                         MapPathParams{InFile.AbsPath});
             });
+
+        // No activation: double-clicking an image has nothing to open until a texture viewer exists.
+        // The icon is the whole registration, and the browser already says "Texture" — that label
+        // comes from the FORMAT, engine-side, so this entry names no extension.
+        m_Extensions.ResourceTypes().Register<TextureResource>()
+            .SetIcon(OpaaxString("[T]"));
 
         m_Extensions.ResourceTypes().Register<LevelResource>()
             .SetIcon(OpaaxString("[L]"))

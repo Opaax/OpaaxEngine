@@ -4,7 +4,10 @@
 #include "Core/Maths/MathTypes.h"
 #include "Core/Reflection/OpaaxEnum.h"   // CEnumWithValues — the one drawer that serves every enum
 #include "Core/String/OpaaxString.hpp"
+#include "Engine/Subsystems/Resources/ResourcePath.h"     // TResourcePath — the one that serves every resource
+#include "Engine/Subsystems/Resources/ResourceTypeID.hpp" // the id the drop target gates on
 #include "Editor/Properties/PropertyDrawer.h"
+#include "Editor/Resources/ResourceDragDrop.h"
 
 namespace Opaax::Editor
 {
@@ -51,6 +54,58 @@ namespace Opaax::Editor
     //   Inline rather than in the .cpp because it is a template — PropertyDrawer.h already carries
     //   <imgui.h> for the same reason.
     // =============================================================================
+    // =============================================================================
+    // EVERY resource reference at once — the same one-specialization-serves-all shape as the enum
+    //   drawer above, and the reason TResourcePath carries its type at all.
+    //
+    //   The field is filled by DRAGGING a file from the Resource Browser onto it. Typing a path was
+    //   the alternative and it is strictly worse authoring: the browser already knows which files
+    //   exist and what type each one is, so the only thing a text box adds is the chance to misspell
+    //   one. There is no picker button for the same reason a tag picker does not exist yet — the
+    //   drawer contract has no EditorContext, deliberately, so the browser is where "what files are
+    //   there?" is answered.
+    //
+    //   A payload of another resource type is REFUSED (no accept highlight, drag stays live), which
+    //   is what the type parameter buys: dropping a .wave on a texture field cannot compile a wrong
+    //   path into a component.
+    // =============================================================================
+    template<typename TResource>
+    struct TPropertyDrawer<TResourcePath<TResource>>
+    {
+        static void Draw(const char* InLabel, TResourcePath<TResource>& InValue, const PropertyMeta&)
+        {
+            ImGui::PushID(InLabel);
+
+            // A button, not a read-only InputText: the button IS the drop target, and it reads as a
+            // slot to put something in rather than a field someone forgot to make editable.
+            const char* lText = InValue.IsEmpty() ? "(drop a resource here)" : InValue.Path.CStr();
+            ImGui::Button(lText, ImVec2(ImGui::CalcItemWidth(), 0.f));
+
+            if (OpaaxString lDropped; AcceptResourceDragPayload(ResourceTypeID::Get<TResource>(), lDropped))
+            {
+                InValue.Path = Move(lDropped);
+            }
+
+            // The full path when it does not fit — the button truncates, and a path that says
+            // "Textures/He..." is worse than no path at all when two of them share a prefix.
+            if (!InValue.IsEmpty() && ImGui::IsItemHovered())
+            {
+                ImGui::SetTooltip("%s", InValue.Path.CStr());
+            }
+
+            if (!InValue.IsEmpty())
+            {
+                ImGui::SameLine();
+                if (ImGui::SmallButton("x")) { InValue.Path = OpaaxString(); }
+            }
+
+            ImGui::SameLine();
+            ImGui::TextUnformatted(InLabel);
+
+            ImGui::PopID();
+        }
+    };
+
     template<CEnumWithValues T>
     struct TPropertyDrawer<T>
     {

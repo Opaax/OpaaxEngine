@@ -4,6 +4,7 @@
 #include "Editor/Application/Services/EditorPaths.h"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Editor/Extensions/ResourceTypeRegistry.h"
+#include "Editor/Resources/ResourceDragDrop.h"
 
 #include "Application/Services/IEngine.h"
 #include "Application/Services/IPaths.h"
@@ -470,6 +471,19 @@ namespace Opaax::Editor
 
             // Discrete (a click), so no spam — and the only signal that a selection moved at all.
             OPAAX_LOG(LogResourceBrowserPanel, Info, "Resource browser selected '{}'", lFullPath.CStr());
+        }
+
+        // Drag it into a field. GENERIC: the type comes from the engine's format table, so every
+        // registered resource is draggable and adding one touches nothing here. A file outside the
+        // project's Assets dir converts to an empty path and simply carries no payload — a real
+        // answer (only project content can be referenced by a component), not a failure.
+        if (lType.Format != nullptr && ImGui::BeginDragDropSource())
+        {
+            SetResourceDragPayload(lType.Format->TypeId, m_Context.Paths.AbsoluteToAsset(InFile.AbsPath));
+
+            ImGui::Text("%s  %s", lType.Chrome != nullptr ? lType.Chrome->Icon.CStr() : k_UnknownIcon,
+                                  InFile.Name.CStr());
+            ImGui::EndDragDropSource();
         }
 
         if (ImGui::IsItemHovered())

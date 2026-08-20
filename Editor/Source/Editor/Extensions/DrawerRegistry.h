@@ -98,8 +98,12 @@ namespace Opaax::Editor
         template<typename TTarget, typename TDrawer>
         void Register()
         {
+            // Needed even here, where the drawer owns its own presentation: the ID SCOPE is not
+            // presentation (see the note on the generic form below).
+            const OpaaxStringID lName = DeriveTypeLeafName<typename TDrawerResolver<TSubject, TTarget>::DrawableType>();
+
             m_Entries.emplace_back(
-                [](TSubject& InSubject) -> bool
+                [lName](TSubject& InSubject) -> bool
                 {
                     using Resolver = TDrawerResolver<TSubject, TTarget>;
 
@@ -109,10 +113,11 @@ namespace Opaax::Editor
                         return false;
                     }
 
-                    // The hand-written drawer owns its own presentation, header included — which is
-                    // why the storage below needs no display name.
+                    ImGui::PushID(lName.CStr());
                     TDrawer lDrawer;
                     lDrawer.Draw(*lDrawable);
+                    ImGui::PopID();
+
                     return true;
                 });
         }
@@ -147,6 +152,21 @@ namespace Opaax::Editor
                         return false;
                     }
 
+                    // EVERY entry draws inside its own ID scope, keyed by the type it draws.
+                    //
+                    // An ImGui widget's identity is its LABEL, and a label here is a field name — so
+                    // two drawables sharing a field name in one window are one id, twice. That is not
+                    // an edge case: Dummy and Sprite both have Position, Size and Color by design,
+                    // and the day an entity carries both, ImGui reports conflicting IDs and the two
+                    // widgets fight over the active-item state.
+                    //
+                    // The scope belongs HERE rather than in each TPropertyDrawer: a drawer sees one
+                    // field and cannot know what else the window holds, while an entry is exactly the
+                    // boundary between two independently-authored types. Keyed by the type NAME, not
+                    // by the registration index, so a stored open/closed header state survives
+                    // someone registering another drawer before it.
+                    ImGui::PushID(lName.CStr());
+
                     if constexpr (Resolver::bDrawsSection)
                     {
                         if (ImGui::CollapsingHeader(lName.CStr(), ImGuiTreeNodeFlags_DefaultOpen))
@@ -158,6 +178,8 @@ namespace Opaax::Editor
                     {
                         DrawProperties(*lDrawable);
                     }
+
+                    ImGui::PopID();
 
                     return true;
                 });
