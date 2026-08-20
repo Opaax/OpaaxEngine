@@ -209,6 +209,11 @@ whack-a-mole moving live deps back one build at a time.
   grep is a SEED, the build is the verdict. When shifting a value, sweep the *whole* tree — tests hardcode
   ordinals that source never does. (Fixed at the root: assert the field against the enum's own value, so
   growing the list cannot break a test about bit *positions*.)
+- **THIRD time, 2026-08-20 (the config restructure):** the "who reads this field" grep covered
+  `Engine/Source`, `Editor/Source` and `Sandbox`, and again **omitted `Engine/Tests`** —
+  `IWindowManagerTests` sets `lData.WindowTitle` and broke. Three occurrences, one directory, so the fix
+  stops being "remember" and becomes mechanical: **a rename sweep greps from the REPO ROOT with
+  `Legacy/`/`Vendors/` excluded, never an allow-list of source directories.** Tests are consumers.
 
 ## L11 — A vendor library's GLOBAL STATE duplicates across the DLL/exe line, exactly like our own statics (2026-07-20)
 
@@ -1074,3 +1079,87 @@ the first as a compile error and silently kept the second as a non-improvement.
   making, so the reasoning has to happen before the edit ([[L15]]: the instrument must discriminate).
 - Mechanical sweeps still need the per-site read: the two constructs that broke here were invisible in
   a `grep` listing and obvious in the source.
+
+## L41 — "Show me all of X" is a CONTAINER question before it is a verb question (2026-08-20)
+
+**What happened (the Config panel).** The ask was *"puts configs on Editor Menu — menu category, all
+registered configs appear, a new config shows up on its own"*. I took *menu* as given, designed a live
+`IEditorMenuNode` that enumerates the registry at draw time — plus `EditorMenuCategory::AddNode`, a
+command tag, a params struct and a stub command — and spent my one clarifying question on the **verb**:
+what happens when you click an entry. The user answered "list only for now", then one turn later named
+the real shape: *"we can make a complete panel. More like unreal. A panel that lists all config, click
+on 'Config Title' to set it current, draw configs?"* That deleted all five new types. A panel registered
+through `Panels()` gets its menu entry free from `BindPanelToggles`, so the entire menu story became one
+`PanelDesc`.
+
+**Why I got it wrong.** Their word was "menu", and a menu is where you *reach* a feature, not where a
+feature lives. The tell was in my own design: the moment a menu node needed live data, a selection and a
+payload, it was a window being spelled as a menu. The evidence was already in the tree — every other
+list in this editor (Hierarchy, Resource Browser) is a panel, and none of them is a menu.
+
+**Rules for next time:**
+- **Ask where that data lives in the tools being copied.** The user names them — Unreal, Unity, Godot —
+  and configs live in a Project Settings *window* in all three. Answer the container question first; the
+  verb usually follows from it.
+- **A menu is a list of VERBS. When the entries are nouns, the container is wrong.** An entry that needs
+  live data + selection state + a payload is a panel.
+- **Count what an alternative DELETES, not only what it adds.** The panel route removed five new types
+  and reused a registration path that already existed — [[L22]]'s shape (the user's fix is deletion,
+  mine is machinery) caught one step earlier, at design time instead of after building.
+
+## L42 — When a slice makes an action CHEAP, price that action on every path it touches (2026-08-20)
+
+**What happened (component properties).** The whole slice existed to make one action trivial: add a
+field to a component and have the editor draw it. The user did exactly that — three floats, added to
+`OPAAX_PROPERTIES` *and* to the NLOHMANN macro — and the app died at boot with
+`[json.exception.out_of_range.403] key 'Size' not found`, thrown out of `from_json` inside
+`Level::MountAll` → `FinishStartup`, where nothing catches.
+`NLOHMANN_DEFINE_TYPE_INTRUSIVE` reads every field with `at()`, which throws on a missing key, so the
+first field added to a component refuses **every map already saved**. One macro name — `_WITH_DEFAULT` —
+was the entire difference.
+
+**Why I missed it.** I read that macro three times while planning: I quoted it, I wrote
+`OPAAX_PROPERTIES` directly beneath it, and I wrote a paragraph about the two field lists being able to
+drift. I was checking whether the *lists* agreed with each other, never what either does against a file
+written before it grew. `MapFactory` even had the answer written above the line that threw — it
+tolerates an unknown component TYPE with a warning, and had no such tolerance for an unknown FIELD.
+
+**Rules for next time:**
+- **A feature that makes an action easy is a claim about every path that action reaches**, not only the
+  one you built. Ask what the newly-cheap action does to data that already exists — before shipping the
+  thing that encourages it.
+- **A generated serializer encodes a MIGRATION POLICY, and the strict one is usually the default.**
+  `at()` versus `value()` is "adding a field is routine" versus "adding a field bricks every save". Read
+  what codegen emits for the ABSENT case, not just the present one — [[L27]] (know *why* it works)
+  applied to inputs the code has never seen.
+- **Symmetry is a checklist.** Where a loader already tolerates one kind of mismatch, ask what it does
+  with the neighbouring kinds (unknown field, wrong type, non-object). The tolerance was already written
+  and reasoned one line above the gap.
+- **Boot-path throws are a severity multiplier** — before a window exists, an escaping exception is a
+  crash, not a broken file. That is why the fix was two-sided: defaults for the ordinary case, a catch
+  plus a Warn for the corrupt one.
+
+## L43 — Regenerating a tracked file is a MIGRATION, not a rebuild (2026-08-20)
+
+**What happened (config format unification).** Moving configs onto the shared nlohmann macro changed
+their key names, so the two `.config` files had to be regenerated: delete, boot a host, commit the
+result. `Engine.config` came back identical in value — every field was at its default. `Renderer.config`
+came back with `ClearColor` at the struct default, **black**, silently discarding the `0.1` dark grey
+the user had set. Caught only because I diffed the regenerated file against `git show HEAD:` before
+moving on, and carried the value across by hand.
+
+**Why it is worth a lesson.** Every gate was green while the data was wrong. The build passed, the tests
+passed, the host booted, the file was well-formed and matched the new schema perfectly — the only thing
+that had changed was a value the user chose, replaced by one the code chose. "Regenerate it" sounds like
+a build step and is actually the narrowest possible data migration, with no tooling and no diff review
+unless someone asks for one.
+
+**Rules for next time:**
+- **Before regenerating any file under version control, diff the new one against what it replaced**, and
+  account for every value that moved. `git show HEAD:<path>` costs one command.
+- **Ask which values in that file a HUMAN chose.** Defaults regenerate perfectly and prove nothing; the
+  customised value is the entire risk, and it is usually one line among thirty.
+- Prefer the order *back up, regenerate, port, verify* over *regenerate and eyeball* — even when the file
+  is tracked, because "it's in git" only helps someone who notices in the first place.
+- Same family as [[L20]] (never spend unrecoverable user state on a test): this one WAS recoverable, and
+  that is the only reason it is a lesson rather than an apology.
