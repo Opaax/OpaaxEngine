@@ -1163,3 +1163,38 @@ unless someone asks for one.
   is tracked, because "it's in git" only helps someone who notices in the first place.
 - Same family as [[L20]] (never spend unrecoverable user state on a test): this one WAS recoverable, and
   that is the only reason it is a lesson rather than an apology.
+
+## L44 — A convenience seam with NO CALLER is not yet a seam; grep who calls it before assuming your extension took effect (2026-08-20)
+
+**What happened (resource formats).** I added a third route to `ModuleRegistrar` and wired it inside
+`BindEngineRegistries` — the one call **MR0** documents as existing so the binding *"does not grow an
+argument per registry."* All three presets built, 374 tests passed. The first `Sandbox.exe` boot then
+said:
+
+```
+[error] [ModuleRegistrar] Resources().Register — route is not bound to a ResourceFormatRegistry; registration dropped.
+```
+
+`OpaaxApplication::PopulateEngineRegistries` had never called it. It bound each route by hand, two lines,
+and the aggregate helper had sat at **zero callers** since the day MR0 introduced it. So the new route
+shipped unbound and dropped every game-module registration — the precise failure MR0's one-call design
+exists to prevent, hiding inside the contract that describes the prevention.
+
+**Why I missed it.** I read the contract, found the seam named there, edited it, and treated "the seam
+now handles my route" as done. I never asked *who calls this*. A contract states intent; the call site
+had drifted from it years of commits ago, and **a contract is not a grep**. This is [[L8]] one level up —
+verify the mechanism *ran*, not that the mechanism *exists*.
+
+**Rules for next time:**
+- **When you extend a shared seam, grep its CALLERS before believing the extension does anything.**
+  Editing the function everyone "uses" is worthless if nobody uses it. One `grep -rn` showed two
+  hand-binds and zero uses.
+- **Two ways to do one wiring means one of them is stale**, and the stale one is usually the documented
+  one. Fix the cause — call the aggregate — rather than adding a third line to the hand-written list,
+  or the next person to add a registry repeats this exactly.
+- **The thing that saved it was the route's own unbound-Error**, written for [[L16]]'s reason. An
+  "impossible" wiring branch that logs earns its lines the first time somebody adds a route; a silent
+  `return false` would have made this a content bug reported days later, with nothing pointing at boot.
+- Generalises past wiring: whenever a doc names a helper as *the* way to do something, confirm the tree
+  agrees before relying on it. Same session, same file, `Engine::RegisterNativeTypes()` turned out never
+  to have existed either.
