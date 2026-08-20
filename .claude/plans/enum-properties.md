@@ -119,7 +119,7 @@ enum field anywhere gets a dropdown from its `OPAAX_ENUM_VALUES` line alone.
 
 ---
 
-## Review — LANDED 2026-08-20 (uncommitted)
+## Review — LANDED 2026-08-20, committed `0ec723e` (19 files), USER-VERIFIED
 
 Built as planned, no design deviations. `using enum` inside the specialization worked on MSVC first try,
 so the call site is the unqualified list the plan promised.
@@ -145,5 +145,13 @@ exercised from one side of the boundary. Both are `OPAAX_API` now, and the gener
 **Deleted:** `WindowModeFromString` (its fallback with it), `BackendFromString`'s parsing half, and the
 I11 exception that kept `ToString(EWindowMode)` away from its enum.
 
-**Still owed (interactive):** Window → Config, confirm `Mode` and `Backend` are combos, pick
-`Borderless`, Save, and check `git diff Sandbox/Configs/Engine.config` shows exactly that one line.
+**Interactive gate: MET, by the user, and their diff is the evidence** — `Engine.config`'s window title
+became `"Sandbox"` and `Renderer.config` holds a colour they picked, while `"Mode": "Windowed"` sat
+untouched through both saves. Between them that exercises the string drawer, the colour picker, the
+derived dirty check and `IConfig::Save` — all through the generic codec — and confirms the enum
+re-serializes to exactly the label it read. Both edits are in `0ec723e`, named in the body as theirs.
+
+**Cosmetic, named not fixed:** a picked colour writes `0.5686274766921997` — the float `145/255`
+promoted to a double on the way into json. It round-trips exactly; it is just verbose beside a
+hand-typed `0.1`. Fixing it means storing 8-bit colour or rounding on write, i.e. trading precision for
+tidiness. Trigger: the files becoming annoying to read.

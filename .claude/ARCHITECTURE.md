@@ -138,6 +138,21 @@ struct, `Engine`), never on the template itself.
   dllexport-side instantiation is what the DLL does anyway. It fails the day something outside calls a
   non-template member. When exporting reaches a template, ask *who will call this from the exe* — the
   answer "nobody yet" is how the defect stays latent.
+- **It is not only templates, and it has now bitten THREE TIMES — treat it as a checklist item, not a
+  hazard to remember** (2026-08-19/20). Each time the symbol was fine for months and broke the moment
+  something outside the DLL named it, and each time the *trigger* was a feature that made an engine type
+  reachable from a new module rather than any change to the symbol itself:
+  1. `ISubsystemManager<T>` — an exported template whose non-template members the first outside caller
+     could not resolve (M4 S1, above).
+  2. `Config_Renderer` — `DECLARE_T_CONFIG` (unexported) while `IMPL_T_CONFIG` defines `StaticTypeID()`
+     in a DLL `.cpp`; the editor registering a drawer for it was the first exe-side mention.
+  3. `ToString(EBackend)` / `ResolveSupportedBackend` — DLL-internal free functions, until
+     `EngineConfigData` held a real `EBackend` and **every TU that serializes a config called them**,
+     tests included.
+  **The mechanical check: a symbol becomes exe-reachable the moment it is named in a header the exe
+  includes — INCLUDING indirectly, through a member's serializer or a template it instantiates.** So
+  when a field changes type, or a type gains a member, ask what that drags across the boundary. The
+  answer arrives as `LNK2019` at the worst moment otherwise, which is cheap but always a surprise.
 - **Corollary (M3): `OPAAX_API` instantiates every IMPLICITLY-declared member**, so an exported class
   holding a move-only member (`TDynArray<TUniquePtr<T>>`) fails to compile on its implicit *copy*-assign
   (C2280) even though nothing ever copies one. Declaring copy/move `= delete` is therefore **required**,
