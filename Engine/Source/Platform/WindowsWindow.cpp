@@ -66,7 +66,7 @@ namespace Opaax
 		const EngineConfigData& lData = OpaaxApplication::GetAppService<IConfigSystem>().Get<Config_Engine>().GetData();
 
 		// Backend chosen from engine config — drives window hints + context creation.
-		const EBackend lBackend = BackendFromString(lData.Render.Backend);
+		const EBackend lBackend = ResolveSupportedBackend(lData.Render.Backend);
 
 		// MUST run before glfwCreateWindow (e.g. GLFW_NO_API for Vulkan). No-op for OpenGL.
 		IGraphicsContext::ApplyWindowHints(lBackend);

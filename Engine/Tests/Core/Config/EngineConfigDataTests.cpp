@@ -47,11 +47,12 @@ TEST_CASE("EngineConfigData: full schema reads every group")
     CHECK(lData.Window.Title  == "My");
     CHECK(lData.Window.Width  == 1920u);
     CHECK(lData.Window.Height == 1080u);
-    CHECK(lData.Window.Mode   == "Borderless");
+    // Same json text as when this was a string field — it parses into the enumerator now.
+    CHECK(lData.Window.Mode   == EWindowMode::Borderless);
     CHECK(lData.Assets.EngineRoot     == "E/A");
     CHECK(lData.Assets.EngineManifest == "E/A/m.json");
     CHECK(lData.Log.Level        == "warn");
-    CHECK(lData.Render.Backend   == "Vulkan");
+    CHECK(lData.Render.Backend   == EBackend::Vulkan);
     CHECK_FALSE(lData.Render.Interpolation);
     CHECK(lData.Physics.WorldBounds.Enabled);
     CHECK(lData.Physics.WorldBounds.Min.x == doctest::Approx(-5.f));
@@ -67,8 +68,8 @@ TEST_CASE("EngineConfigData: missing fields keep their defaults, at every depth"
 
     CHECK(lData.Window.Width  == 800u);       // overridden
     CHECK(lData.Window.Height == 720u);       // sibling default
-    CHECK(lData.Window.Mode   == "Windowed");
-    CHECK(lData.Render.Backend == "OpenGL");  // absent GROUP defaults whole
+    CHECK(lData.Window.Mode   == EWindowMode::Windowed);
+    CHECK(lData.Render.Backend == EBackend::OpenGL);  // absent GROUP defaults whole
     CHECK(lData.Log.Level      == "trace");
     CHECK(lData.Physics.WorldBounds.Response == "EventAndDestroy");
 }
@@ -77,8 +78,8 @@ TEST_CASE("EngineConfigData: round trip through the generic codec is exact")
 {
     EngineConfigData lIn;
     lIn.Window.Width               = 1600;
-    lIn.Window.Mode                = OpaaxString("Fullscreen");
-    lIn.Render.Backend             = OpaaxString("Vulkan");
+    lIn.Window.Mode                = EWindowMode::Fullscreen;
+    lIn.Render.Backend             = EBackend::Vulkan;
     lIn.Render.Interpolation       = false;
     lIn.Physics.WorldBounds.Enabled = true;
     lIn.Physics.WorldBounds.Min     = Vector2F(-1.f, -2.f);
@@ -86,8 +87,8 @@ TEST_CASE("EngineConfigData: round trip through the generic codec is exact")
     const EngineConfigData lOut = Codec::FromText(Codec::ToText(lIn));
 
     CHECK(lOut.Window.Width == 1600u);
-    CHECK(lOut.Window.Mode  == "Fullscreen");
-    CHECK(lOut.Render.Backend == "Vulkan");
+    CHECK(lOut.Window.Mode  == EWindowMode::Fullscreen);
+    CHECK(lOut.Render.Backend == EBackend::Vulkan);
     CHECK_FALSE(lOut.Render.Interpolation);
     CHECK(lOut.Physics.WorldBounds.Enabled);
     CHECK(lOut.Physics.WorldBounds.Min.x == doctest::Approx(-1.f));
@@ -127,7 +128,7 @@ TEST_CASE("TConfig::Load: a file it cannot parse keeps the defaults and answers 
 
     // Defaults intact — a half-applied config would be worse than none.
     CHECK(lProbe.GetData().Window.Width == 1280u);
-    CHECK(lProbe.GetData().Render.Backend == "OpenGL");
+    CHECK(lProbe.GetData().Render.Backend == EBackend::OpenGL);
 
     fs::remove(lPath);
 }
@@ -140,6 +141,25 @@ TEST_CASE("TConfig::Load: a file it CAN parse answers true")
     ProbeConfig lProbe;
     CHECK(lProbe.Load(OpaaxString(lPath.string().c_str())));
     CHECK(lProbe.GetData().Window.Width == 900u);
+
+    fs::remove(lPath);
+}
+
+TEST_CASE("TConfig::Load: a misspelled ENUMERATOR is refused like any other unreadable value")
+{
+    // The composed case: an enum field went from string to type, so a hand-edited typo is no longer
+    // quietly corrected to Windowed by a FromString nobody watches — it is the same event as a
+    // string where a number belongs, and ConfigSystem warns naming the file.
+    const fs::path lPath = fs::temp_directory_path() / "OpaaxConfigBadEnum.config";
+    FileIO::WriteAllText(OpaaxString(lPath.string().c_str()),
+                         OpaaxString(R"({"Window":{"Width":900,"Mode":"Borderles"}})"));
+
+    ProbeConfig lProbe;
+    CHECK_FALSE(lProbe.Load(OpaaxString(lPath.string().c_str())));
+
+    // Nothing half-applied: the good Width beside the bad Mode did not land either.
+    CHECK(lProbe.GetData().Window.Width == 1280u);
+    CHECK(lProbe.GetData().Window.Mode  == EWindowMode::Windowed);
 
     fs::remove(lPath);
 }

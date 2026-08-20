@@ -16,11 +16,6 @@ namespace Opaax
     // Pure config -> props mapping (testable without GLFW).
     OPAAX_API WindowProps MakeWindowProps(const EngineConfigData& InData);
 
-    // Config string <-> EWindowMode. Lives here, not in Core/Window, because Core does not log and
-    // an unknown mode must be loud; the enum itself stays with the Window API.
-    OPAAX_API EWindowMode WindowModeFromString(const OpaaxString& InName);
-    OPAAX_API const char* ToString(EWindowMode InMode) noexcept;
-
     // =============================================================================
     // IWindowManager — owns the application's main window. Window creation spins up a
     // GL/VK context, so it is NOT done at construction: the live host calls

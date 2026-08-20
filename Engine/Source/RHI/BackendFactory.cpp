@@ -3,7 +3,7 @@
 // =============================================================================
 // The neutral translation unit that knows the graphics backend(s). It keeps the
 // backend-selecting factories in one place so no other TU has to:
-//   - BackendFromString / ToString (config string <-> EBackend)
+//   - ToString / ResolveSupportedBackend (naming, and which backends actually exist)
 //   - IGraphicsContext::Create / ApplyWindowHints
 //
 // New-path status: OpenGL-only. The old IRenderAPI/RenderCommand facade and the whole
@@ -30,19 +30,16 @@ namespace Opaax
     // =============================================================================
     // Backend string mapping
     // =============================================================================
-    EBackend BackendFromString(const OpaaxString& InName)
+    EBackend ResolveSupportedBackend(const EBackend InRequested)
     {
-        if (InName == "OpenGL") { return EBackend::OpenGL; }
-
-        if (InName == "Vulkan")
+        if (InRequested == EBackend::Vulkan)
         {
             OPAAX_ENGINE_LOG(Warn, "RHI: 'Vulkan' requested but the Vulkan backend is parked in Legacy "
                              "(new path is OpenGL-only) — falling back to OpenGL.");
             return EBackend::OpenGL;
         }
 
-        OPAAX_ENGINE_LOG(Warn, "RHI: unknown render backend '{}' — falling back to OpenGL.", InName);
-        return EBackend::OpenGL;
+        return InRequested;
     }
 
     const char* ToString(EBackend InBackend) noexcept

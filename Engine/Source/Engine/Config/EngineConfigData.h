@@ -6,9 +6,12 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/Maths/MathTypes.h"
 #include "Core/Maths/MathsJson.hpp"
+#include "Core/Reflection/OpaaxEnumJson.h"   // every enum field below writes its ToString label
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringJson.h"
+#include "Core/Window/Window.h"              // EWindowMode
+#include "RHI/RHIBackend.h"                  // EBackend
 
 namespace Opaax
 {
@@ -34,9 +37,10 @@ namespace Opaax
         Uint32      Width  = 1280;
         Uint32      Height = 720;
 
-        // Stringly-typed like Backend below: this header stays free of Window.h, and the enum
-        // conversion happens at the point of use (MakeWindowProps).
-        OpaaxString Mode = OpaaxString("Windowed");
+        // A REAL enum, so the editor gives it a dropdown and a typo is not expressible. It still
+        // writes "Windowed" — the json bridge stores the ToString label, never the ordinal — so the
+        // file did not change when this stopped being a string.
+        EWindowMode Mode = EWindowMode::Windowed;
 
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(WindowSettings, Title, Width, Height, Mode)
 
@@ -70,8 +74,10 @@ namespace Opaax
 
     struct RenderSettings
     {
-        OpaaxString Backend       = OpaaxString("OpenGL");
-        bool        Interpolation = true;
+        // What the project ASKS for. Whether it can be honoured is ResolveSupportedBackend's answer,
+        // asked at the point of use — Vulkan is a legal thing to write here and is coerced, loudly.
+        EBackend Backend       = EBackend::OpenGL;
+        bool     Interpolation = true;
 
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(RenderSettings, Backend, Interpolation)
 

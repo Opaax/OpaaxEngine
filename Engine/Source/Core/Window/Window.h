@@ -2,6 +2,7 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
+#include "Core/Reflection/OpaaxEnum.h"   // OPAAX_ENUM_VALUES — the mode's own value list
 #include "Core/String/OpaaxString.hpp"
 
 namespace Opaax
@@ -19,6 +20,32 @@ namespace Opaax
         Borderless,
         Fullscreen
     };
+
+    /**
+     * I11's default rule: the mapping lives WITH the enum.
+     *
+     * It used to sit in IWindowManager.h, for a reason that belonged to its neighbour — an unknown
+     * mode had to be loud and Core does not log. That was WindowModeFromString's problem; ToString is
+     * total and silent and was only carried along. The parse is generic now (OpaaxEnum.h), so the
+     * exception is retired and both halves come home.
+     */
+    inline const char* ToString(const EWindowMode InMode) noexcept
+    {
+        switch (InMode)
+        {
+        case EWindowMode::Windowed:   return "Windowed";
+        case EWindowMode::Borderless: return "Borderless";
+        case EWindowMode::Fullscreen: return "Fullscreen";
+        }
+
+        return "Windowed";
+    }
+}
+
+OPAAX_ENUM_VALUES(Opaax::EWindowMode, Windowed, Borderless, Fullscreen)
+
+namespace Opaax
+{
 
     /**
      * @struct WindowProps

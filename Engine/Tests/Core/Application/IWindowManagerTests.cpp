@@ -17,7 +17,7 @@ TEST_CASE("MakeWindowProps: maps the engine config window fields 1:1")
     lData.Window.Title  = OpaaxString("Test Title");
     lData.Window.Width  = 1024;
     lData.Window.Height = 768;
-    lData.Window.Mode   = OpaaxString("Borderless");
+    lData.Window.Mode   = EWindowMode::Borderless;
 
     const WindowProps lProps = MakeWindowProps(lData);
     CHECK(lProps.Title == "Test Title");
@@ -26,30 +26,10 @@ TEST_CASE("MakeWindowProps: maps the engine config window fields 1:1")
     CHECK(lProps.Mode == EWindowMode::Borderless);
 }
 
-TEST_CASE("WindowModeFromString: every mode round-trips, unknown falls back to Windowed")
-{
-    CHECK(WindowModeFromString(OpaaxString("Windowed"))   == EWindowMode::Windowed);
-    CHECK(WindowModeFromString(OpaaxString("Borderless")) == EWindowMode::Borderless);
-    CHECK(WindowModeFromString(OpaaxString("Fullscreen")) == EWindowMode::Fullscreen);
-
-    // Unknown and empty both fall back rather than refusing to open a window.
-    CHECK(WindowModeFromString(OpaaxString("Maximized")) == EWindowMode::Windowed);
-    CHECK(WindowModeFromString(OpaaxString(""))          == EWindowMode::Windowed);
-
-    // The pair is what keeps a serialized config readable by the next boot.
-    for (const EWindowMode lMode : { EWindowMode::Windowed, EWindowMode::Borderless, EWindowMode::Fullscreen })
-    {
-        CHECK(WindowModeFromString(OpaaxString(ToString(lMode))) == lMode);
-    }
-}
-
-TEST_CASE("MakeWindowProps: an unknown config mode still yields a usable window")
-{
-    EngineConfigData lData;
-    lData.Window.Mode = OpaaxString("Borderles");   // typo — the realistic failure
-
-    CHECK(MakeWindowProps(lData).Mode == EWindowMode::Windowed);
-}
+// NOTE: the WindowModeFromString cases are GONE with the function. The config field is an
+// EWindowMode now, so "an unknown mode" is not a state MakeWindowProps can be handed — the parse,
+// and the fallback it needed, moved into the generic enum reader (Core/Reflection/EnumTests.cpp),
+// where an unknown LABEL throws instead of quietly becoming Windowed.
 
 TEST_CASE("IWindowManager: the null manager owns no window and is never null")
 {

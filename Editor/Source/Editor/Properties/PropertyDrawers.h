@@ -2,6 +2,7 @@
 
 #include "Core/Color/LinearColor.h"
 #include "Core/Maths/MathTypes.h"
+#include "Core/Reflection/OpaaxEnum.h"   // CEnumWithValues — the one drawer that serves every enum
 #include "Core/String/OpaaxString.hpp"
 #include "Editor/Properties/PropertyDrawer.h"
 
@@ -37,4 +38,44 @@ namespace Opaax::Editor
     OPAAX_DECLARE_PROPERTY_DRAWER(OpaaxString);
 
 #undef OPAAX_DECLARE_PROPERTY_DRAWER
+
+    // =============================================================================
+    // EVERY enum at once — one constrained partial specialization, not one per type.
+    //
+    //   An enum that stamped OPAAX_ENUM_VALUES gets a dropdown from that line alone; the labels are
+    //   I11's ToString, so the widget and the log and the file all read the same word. This is the
+    //   payoff for making the field a real type: a mode that is not one of the three is no longer
+    //   expressible, so nothing downstream needs a fallback for one.
+    //
+    //   Inline rather than in the .cpp because it is a template — PropertyDrawer.h already carries
+    //   <imgui.h> for the same reason.
+    // =============================================================================
+    template<CEnumWithValues T>
+    struct TPropertyDrawer<T>
+    {
+        static void Draw(const char* InLabel, T& InValue, const PropertyMeta&)
+        {
+            if (!ImGui::BeginCombo(InLabel, ToString(InValue)))
+            {
+                return;
+            }
+
+            for (const T lCandidate : TEnumValues<T>::Values)
+            {
+                const bool bSelected = lCandidate == InValue;
+
+                if (ImGui::Selectable(ToString(lCandidate), bSelected))
+                {
+                    InValue = lCandidate;
+                }
+
+                if (bSelected)
+                {
+                    ImGui::SetItemDefaultFocus();
+                }
+            }
+
+            ImGui::EndCombo();
+        }
+    };
 }

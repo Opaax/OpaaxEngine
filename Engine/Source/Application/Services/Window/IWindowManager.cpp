@@ -21,37 +21,20 @@ namespace Opaax
         };
     }
 
-    // =========================================================================
-    // Window mode string mapping — the BackendFromString shape: unknown falls back, loudly.
-    // =========================================================================
-    EWindowMode WindowModeFromString(const OpaaxString& InName)
-    {
-        if (InName == "Windowed")   { return EWindowMode::Windowed;   }
-        if (InName == "Borderless") { return EWindowMode::Borderless; }
-        if (InName == "Fullscreen") { return EWindowMode::Fullscreen; }
-
-        OPAAX_LOG(LogWindowManager, Warn, "Unknown window mode '{}' — falling back to Windowed.", InName.CStr());
-        return EWindowMode::Windowed;
-    }
-
-    const char* ToString(EWindowMode InMode) noexcept
-    {
-        switch (InMode)
-        {
-            case EWindowMode::Windowed:   return "Windowed";
-            case EWindowMode::Borderless: return "Borderless";
-            case EWindowMode::Fullscreen: return "Fullscreen";
-        }
-        return "Windowed";
-    }
+    // NOTE: WindowModeFromString and ToString(EWindowMode) are GONE from here. ToString moved beside
+    // its enum in Core/Window/Window.h (I11's default rule — the exception that kept it here was
+    // really about the parser's logging), and the parser itself died with the string config field:
+    // an EWindowMode cannot hold an unknown mode, so there is nothing to fall back from.
 
     // =========================================================================
     // Pure config -> props mapping.
     // =========================================================================
     WindowProps MakeWindowProps(const EngineConfigData& InData)
     {
+        // No parse: the config carries an EWindowMode, so a mode that is not one of the three is not
+        // representable rather than silently corrected.
         return WindowProps(InData.Window.Title, InData.Window.Width, InData.Window.Height,
-                           WindowModeFromString(InData.Window.Mode));
+                           InData.Window.Mode);
     }
 
     // =========================================================================

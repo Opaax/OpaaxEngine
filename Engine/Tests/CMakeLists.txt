@@ -26,6 +26,7 @@ set(OPAAX_TEST_SOURCES
     Core/TagContainerTests.cpp
     Core/ColorTests.cpp
     Core/Reflection/PropertyTests.cpp
+    Core/Reflection/EnumTests.cpp
     Core/Config/EngineConfigDataTests.cpp
     Core/Application/AppServiceLocatorTests.cpp
     Core/Application/PathsTests.cpp

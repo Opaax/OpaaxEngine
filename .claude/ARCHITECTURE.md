@@ -264,14 +264,29 @@ member `ToString()`** (settled 2026-08-06). The tree had three spellings for one
   Application, nor the engine the editor (**MR1**). Same shape as **I9**'s rejected `OpaaxStatics.h`:
   grouping by *storage kind* rather than by meaning. Discovery comes from the uniform overload set, which
   is also **layer-correct** — it offers a TU exactly what that TU may legally reach.
-- **The PARSE direction is deliberately NOT unified.** `ToString` is total and pure (every enumerator has
-  a label), so one overload set works. `FromString` carries a per-enum fallback **policy**
-  (`BackendFromString` → OpenGL + Warn, `WindowModeFromString` → Windowed + Warn) and cannot overload on
-  return type — the prefixed name marks an asymmetric operation honestly rather than pushing that policy
-  out to every call site.
-- The mapping lives with the enum **unless the enum's layer cannot express it**: `ToString(EWindowMode)`
-  sits in `IWindowManager.h`, not `Core/Window/Window.h`, because an unknown mode must be loud and Core
-  does not log.
+- **The PARSE direction IS unified now, and the reason it was not is worth keeping** (corrected
+  2026-08-20). This said `FromString` carries a per-enum fallback **policy** — `BackendFromString` →
+  OpenGL + Warn, `WindowModeFromString` → Windowed + Warn — and therefore could not be one overload set.
+  What that missed is that **the two halves were different things sharing a function**: `BackendFromString`
+  parsed a string *and* decided Vulkan is unavailable. Only the parse was per-enum boilerplate.
+  - `OPAAX_ENUM_VALUES(E, …)` (`Core/Reflection/OpaaxEnum.h`) declares the enumerators as data, which
+    C++20 cannot derive, and **the list is the parser**: matching a label against `ToString` of each
+    value. So `WindowModeFromString` is deleted, and the availability policy survives under its own
+    honest name, `ResolveSupportedBackend(EBackend)`, keeping its Warn.
+  - The *fallback* is gone with it, deliberately. An unknown label **throws**, which `TConfig::Load`
+    turns into "defaults kept, `false` returned" and `ConfigSystem` into a Warn naming the file
+    (**BO1b**) — the same event as any other unreadable value, instead of a silent correction. What
+    made that affordable is that the field became a real enum, so the editor's dropdown cannot author
+    a bad one.
+  - **Making a field a real enum EXPORTS its `ToString`.** `ToString(EBackend)` had been called only
+    from inside the DLL; the moment `EngineConfigData` held an `EBackend`, every TU that serializes a
+    config called it, and the tests failed to link. That is **I6**'s tell again — exported-ness only
+    ever exercised from one side. Both it and `ResolveSupportedBackend` are `OPAAX_API` now.
+- The mapping lives with the enum, **full stop** (the exception is retired, 2026-08-20).
+  `ToString(EWindowMode)` sat in `IWindowManager.h` because "an unknown mode must be loud and Core does
+  not log" — true of `WindowModeFromString`, which logged, and never of `ToString`, which is total and
+  silent and was only carried along. With the parse generic it moved home to `Core/Window/Window.h`,
+  beside its enum and its value list.
 - **A `CStringable` concept + a constrained fmt formatter** — so `OPAAX_LOG(Cat, Info, "{}", lMode)` needs
   no explicit call — is the natural next step and is **named here, deliberately not built**: nothing
   constrains on it yet, and this is the `CComponent`/`CResource` shape (**I8**), so it costs nothing to
@@ -396,6 +411,12 @@ editor-side `TPropertyDrawer<T>`, never a new `FLOAT_PROP`/`INT_PROP` macro here
   needs no flag) and `SetFlags(EPropertyFlags::NeedRestart)`. The restart flag sits on the **group**
   — one marker on `Window`, not fourteen — and it replaced a blanket "changes apply on restart"
   sentence on the panel, which would have gone stale the day one value became live.
+- **An enum gets a dropdown from ONE constrained partial specialization** (2026-08-20).
+  `TPropertyDrawer<CEnumWithValues T>` walks `TEnumValues<T>::Values` in a combo, labelling each with
+  **I11**'s `ToString` — so a new enum field is a dropdown the moment its enum stamps
+  `OPAAX_ENUM_VALUES`, with nothing per-type on the editor side. It is also what retired the last
+  stringly-typed config fields: `Window.Mode` and `Render.Backend` are `EWindowMode`/`EBackend`, a typo
+  is no longer representable, and the file did not move because an enum is written as its label.
 - **ONE registry serves every subject: `TDrawerRegistry<TSubject>`** (2026-08-20). Components and
   configs were the same thing twice — a list of "are you applicable, and if so draw yourself"
   closures — so the difference collapsed into one customization point, `TDrawerResolver<TSubject,
