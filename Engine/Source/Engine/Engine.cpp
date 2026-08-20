@@ -1,6 +1,7 @@
 #include "Engine.h"
 
 #include "World/Components/DummyComponent.h"
+#include "World/Components/SpriteComponent.h"
 
 #include <chrono>
 
@@ -67,6 +68,7 @@ namespace Opaax
     void Engine::RegisterNativeComponents()
     {
         m_Registries.Components().Register<DummyComponent>("Dummy");
+        m_Registries.Components().Register<SpriteComponent>("Sprite");
     }
     
     void Engine::RegisterNativeResourceFormats()

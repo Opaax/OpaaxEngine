@@ -28,6 +28,7 @@ namespace Opaax::Editor
     { static void Draw(const char* InLabel, Type& InValue, const PropertyMeta& InMeta); }
 
     OPAAX_DECLARE_PROPERTY_DRAWER(bool);
+    OPAAX_DECLARE_PROPERTY_DRAWER(Int16);
     OPAAX_DECLARE_PROPERTY_DRAWER(Int32);
     OPAAX_DECLARE_PROPERTY_DRAWER(Uint32);
     OPAAX_DECLARE_PROPERTY_DRAWER(float);

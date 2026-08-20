@@ -10,9 +10,6 @@
 
 namespace Opaax
 {
-    // NOTE (M0.5): the textured-sprite path (DrawSprite/Texture2D/TextureHandle) is severed while the
-    // asset system is rebuilt — it coupled to the old IAsset. Restored when the Texture CResource lands.
-    // The colored-quad path (DrawQuad + the procedural 1x1 white RHI texture) is asset-free and stays.
     class ITexture2D;
     class ICommandBuffer;
     class IRHIDevice;
@@ -34,6 +31,7 @@ namespace Opaax
      * Usage:
      *          renderer.BeginScene(view, cmd);
      *          renderer.DrawQuad({0,0}, {100,100}, {1,0,0,1});     // red quad
+     *          renderer.DrawSprite({0,0}, {100,100}, texture);     // textured quad
      *          renderer.End();
      *
      * Init()/Shutdown() build/release the GPU resources — call from the owner's Startup/Shutdown
@@ -101,8 +99,30 @@ namespace Opaax
                       ERenderLayer    InLayer        = ERenderLayer::Default,
                       Int16           InOrderInLayer = 0);
 
-        // NOTE (M0.5): DrawSprite(TextureHandle/Texture2D) overloads removed with the sprite path
-        // (old-IAsset coupling). They return when the Texture CResource lands.
+        /**
+         * Draw a textured quad. The texture is bound to one of the batch's sampler slots; a batch
+         * that runs out of slots flushes and starts a new one, so a caller never manages binding.
+         *
+         * @param InPosition centre of the quad (Y-up world space)
+         * @param InSize full width and height
+         * @param InTexture sampled texture. BORROWED for the batch — it must outlive the flush,
+         *   which the owning ResourceRef guarantees for the frame it draws in.
+         * @param InTint multiplied into the sample; white draws the texture unchanged
+         * @param InRotationRad rotation around the quad centre, radians, CCW
+         * @param InLayer coarse draw-order band
+         * @param InOrderInLayer fine tie-break within the band, lower = behind
+         * @param InUVMin / @param InUVMax sub-rectangle to sample. Defaulted to the whole texture,
+         *   and present so an atlas — a sprite sheet, a glyph — needs no second entry point.
+         */
+        void DrawSprite(const Vector2F& InPosition,
+                        const Vector2F& InSize,
+                        ITexture2D&     InTexture,
+                        const Vector4F& InTint         = { 1.f, 1.f, 1.f, 1.f },
+                        float           InRotationRad  = 0.f,
+                        ERenderLayer    InLayer        = ERenderLayer::Default,
+                        Int16           InOrderInLayer = 0,
+                        const Vector2F& InUVMin        = { 0.f, 0.f },
+                        const Vector2F& InUVMax        = { 1.f, 1.f });
 
         // =============================================================================
         // Internal
@@ -111,6 +131,31 @@ namespace Opaax
         void  BeginInternal(const Matrix44F& InViewProjection, ICommandBuffer& InCmd);
         void  Flush();
         void  StartBatch();
+
+        /** Flush + restart the batch if the vertex buffer is full. Called before anything that
+         *  derives state FROM the batch (a texture slot), because a flush resets it. */
+        void  EnsureBatchRoom();
+
+        /**
+         * The ONE body that writes a quad's four vertices and its sort key. A coloured quad is a
+         * sprite on slot 0 sampling the whole white texture, so both entry points come here — one
+         * place for the winding, the rotation and the key to be right or wrong.
+         */
+        void  SubmitQuad(const Vector2F& InPosition,
+                         const Vector2F& InSize,
+                         const Vector4F& InColor,
+                         float           InRotationRad,
+                         ERenderLayer    InLayer,
+                         Int16           InOrderInLayer,
+                         float           InTexIndex,
+                         const Vector2F& InUVMin,
+                         const Vector2F& InUVMax);
+
+        /**
+         * The slot InTexture is bound to for this batch: an existing one if it is already bound,
+         * else a fresh one — flushing first when all slots are taken.
+         */
+        float GetTextureSlot(ITexture2D& InTexture);
 
         // =============================================================================
         // Members

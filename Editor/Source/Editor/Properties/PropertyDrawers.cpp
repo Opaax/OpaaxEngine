@@ -19,6 +19,16 @@ namespace Opaax::Editor
         ImGui::Checkbox(InLabel, &InValue);
     }
 
+    void TPropertyDrawer<Int16>::Draw(const char* InLabel, Int16& InValue, const PropertyMeta& InMeta)
+    {
+        // DragScalar on the REAL type, not a round trip through Int32: the narrower type has to
+        // clamp at its own bounds, or a drag past 32767 wraps to a large negative draw order.
+        const Int16 lMin = InMeta.RangeMax > InMeta.RangeMin ? static_cast<Int16>(InMeta.RangeMin) : Int16{-32768};
+        const Int16 lMax = InMeta.RangeMax > InMeta.RangeMin ? static_cast<Int16>(InMeta.RangeMax) : Int16{32767};
+
+        ImGui::DragScalar(InLabel, ImGuiDataType_S16, &InValue, DRAG_SPEED, &lMin, &lMax);
+    }
+
     void TPropertyDrawer<Int32>::Draw(const char* InLabel, Int32& InValue, const PropertyMeta& InMeta)
     {
         ImGui::DragInt(InLabel, &InValue, DRAG_SPEED,

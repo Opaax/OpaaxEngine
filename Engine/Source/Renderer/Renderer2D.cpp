@@ -267,13 +267,81 @@ namespace Opaax
                               ERenderLayer    InLayer,
                               Int16           InOrderInLayer)
     {
+        // A coloured quad IS a sprite: slot 0 holds the white texture, so the sample is (1,1,1,1)
+        // and the shader's multiply leaves the tint exactly as given.
+        SubmitQuad(InPosition, InSize, InColor, InRotationRad, InLayer, InOrderInLayer,
+                   0.f, { 0.f, 0.f }, { 1.f, 1.f });
+    }
+
+    void Renderer2D::DrawSprite(const Vector2F& InPosition,
+                                const Vector2F& InSize,
+                                ITexture2D&     InTexture,
+                                const Vector4F& InTint,
+                                float           InRotationRad,
+                                ERenderLayer    InLayer,
+                                Int16           InOrderInLayer,
+                                const Vector2F& InUVMin,
+                                const Vector2F& InUVMax)
+    {
+        // ORDER MATTERS: a flush resets the batch, and the slot index is a property OF the batch.
+        // Make room for the quad FIRST, then claim the slot — claim it earlier and a full-buffer
+        // flush inside SubmitQuad would leave the index naming a slot that no longer holds this
+        // texture, which draws the wrong image with nothing reporting it.
+        EnsureBatchRoom();
+
+        const float lTexIndex = GetTextureSlot(InTexture);
+
+        SubmitQuad(InPosition, InSize, InTint, InRotationRad, InLayer, InOrderInLayer,
+                   lTexIndex, InUVMin, InUVMax);
+    }
+
+    void Renderer2D::EnsureBatchRoom()
+    {
         if (m_Data->QuadCount >= MAX_QUADS)
         {
             Flush();
             StartBatch();
         }
+    }
 
-        constexpr float lTexIndex = 0.f;  // white texture (slot 0)
+    float Renderer2D::GetTextureSlot(ITexture2D& InTexture)
+    {
+        // Slot 0 is the white texture and is never handed out — a batch of N distinct sprites uses
+        // slots 1..N, which is why the scan starts at 1.
+        for (Uint32 i = 1; i < m_Data->TextureSlotIndex; ++i)
+        {
+            if (m_Data->TextureSlots[i] == &InTexture)
+            {
+                return static_cast<float>(i);
+            }
+        }
+
+        if (m_Data->TextureSlotIndex >= MAX_TEXTURE_SLOTS)
+        {
+            Flush();
+            StartBatch();   // resets TextureSlotIndex to 1, so the claim below lands in a fresh batch
+        }
+
+        const float lSlot = static_cast<float>(m_Data->TextureSlotIndex);
+        m_Data->TextureSlots[m_Data->TextureSlotIndex] = &InTexture;
+        ++m_Data->TextureSlotIndex;
+
+        return lSlot;
+    }
+
+    void Renderer2D::SubmitQuad(const Vector2F& InPosition,
+                                const Vector2F& InSize,
+                                const Vector4F& InColor,
+                                float           InRotationRad,
+                                ERenderLayer    InLayer,
+                                Int16           InOrderInLayer,
+                                float           InTexIndex,
+                                const Vector2F& InUVMin,
+                                const Vector2F& InUVMax)
+    {
+        EnsureBatchRoom();   // no-op for DrawSprite, which already made room before claiming its slot
+
+        const float lTexIndex = InTexIndex;
 
         const float lHalfW = InSize.x * 0.5f;
         const float lHalfH = InSize.y * 0.5f;
@@ -299,32 +367,34 @@ namespace Opaax
         // Bottom-left
         m_Data->VertexBufferPtr->Position = { lBL.x, lBL.y, 0.f };
         m_Data->VertexBufferPtr->Color    = InColor;
-        m_Data->VertexBufferPtr->TexCoord = { 0.f, 0.f };
+        m_Data->VertexBufferPtr->TexCoord = { InUVMin.x, InUVMin.y };
         m_Data->VertexBufferPtr->TexIndex = lTexIndex;
         ++m_Data->VertexBufferPtr;
 
         // Bottom-right
         m_Data->VertexBufferPtr->Position = { lBR.x, lBR.y, 0.f };
         m_Data->VertexBufferPtr->Color    = InColor;
-        m_Data->VertexBufferPtr->TexCoord = { 1.f, 0.f };
+        m_Data->VertexBufferPtr->TexCoord = { InUVMax.x, InUVMin.y };
         m_Data->VertexBufferPtr->TexIndex = lTexIndex;
         ++m_Data->VertexBufferPtr;
 
         // Top-right
         m_Data->VertexBufferPtr->Position = { lTR.x, lTR.y, 0.f };
         m_Data->VertexBufferPtr->Color    = InColor;
-        m_Data->VertexBufferPtr->TexCoord = { 1.f, 1.f };
+        m_Data->VertexBufferPtr->TexCoord = { InUVMax.x, InUVMax.y };
         m_Data->VertexBufferPtr->TexIndex = lTexIndex;
         ++m_Data->VertexBufferPtr;
 
         // Top-left
         m_Data->VertexBufferPtr->Position = { lTL.x, lTL.y, 0.f };
         m_Data->VertexBufferPtr->Color    = InColor;
-        m_Data->VertexBufferPtr->TexCoord = { 0.f, 1.f };
+        m_Data->VertexBufferPtr->TexCoord = { InUVMin.x, InUVMax.y };
         m_Data->VertexBufferPtr->TexIndex = lTexIndex;
         ++m_Data->VertexBufferPtr;
 
-        m_Data->SortKeys[m_Data->QuadCount] = MakeSortKey(InLayer, InOrderInLayer, 0u);
+        // The slot rides in the key so equal-order quads group by texture, which is what keeps a
+        // batch's draw call count down when many sprites share one atlas.
+        m_Data->SortKeys[m_Data->QuadCount] = MakeSortKey(InLayer, InOrderInLayer, static_cast<Uint32>(lTexIndex));
         ++m_Data->QuadCount;
     }
 

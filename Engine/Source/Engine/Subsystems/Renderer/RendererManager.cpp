@@ -28,6 +28,10 @@
 #include "World/WorldManager.h"
 #include "World/World.h"
 #include "World/Components/DummyComponent.h"
+#include "World/Components/SpriteComponent.h"
+
+#include "Engine/Subsystems/Resources/ResourceManager.h"          // Load<TextureResource> — the cache
+#include "Engine/Subsystems/Resources/Types/TextureResource.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -99,6 +103,11 @@ namespace Opaax
         // would touch a destroyed m_RenderSystem.
         OpaaxApplication::GetAppService<IEngine>().GetEngineEventBus().GetEventBus().UnsubscribeAll(this);
 
+        // Drop the texture claims FIRST. Shutdown order is the reverse of registration, so the
+        // ResourceManager is still alive here to take the releases — and its own FlushAll, which
+        // destroys the GPU handles, runs after this while the window's GL context is still up.
+        m_TextureCache.clear();
+
         m_RenderSystem.reset(); // ~RenderSystem = WaitIdle + teardown while the window/context is alive
         OPAAX_LOG(LogRendererManager, Info, "RendererManager shutdown");
     }
@@ -146,7 +155,7 @@ namespace Opaax
 
         Renderer2D& lRenderer = m_RenderSystem->GetRenderer2D();
 
-        // Draw the active world: one quad per DummyComponent (position / size / color).
+        // Draw the active world: a solid quad per DummyComponent, a textured one per Sprite.
         if (m_WorldManager != nullptr)
         {
             if (World* lWorld = m_WorldManager->GetActiveWorld())
@@ -155,6 +164,8 @@ namespace Opaax
                 {
                     lRenderer.DrawQuad(InComp.Position, InComp.Size, InComp.Color);
                 });
+
+                DrawWorldSprites(*lWorld, lRenderer);
             }
         }
 
@@ -171,6 +182,73 @@ namespace Opaax
         m_RenderSystem->EndFrame();
     }
     
+    void RendererManager::DrawWorldSprites(World& InWorld, Renderer2D& InRenderer)
+    {
+        InWorld.Each<SpriteComponent>([this, &InRenderer](EntityID, SpriteComponent& InSprite)
+        {
+            if (!InSprite.bVisible)
+            {
+                return;
+            }
+
+            // No texture named yet is a normal authoring state — a component just added, or one
+            // whose image was cleared. Drawing a white quad for it would look like a bug in the
+            // sprite; drawing nothing looks like what it is.
+            ITexture2D* lTexture = ResolveTexture(InSprite.Texture);
+            if (lTexture == nullptr)
+            {
+                return;
+            }
+
+            InRenderer.DrawSprite(InSprite.Position, InSprite.Size, *lTexture,
+                                  InSprite.Color, 0.f, InSprite.Layer, InSprite.OrderInLayer);
+        });
+    }
+
+    ITexture2D* RendererManager::ResolveTexture(const TResourcePath<TextureResource>& InPath)
+    {
+        if (InPath.IsEmpty())
+        {
+            return nullptr;
+        }
+
+        const OpaaxStringID lKey(InPath.Path);
+
+        auto lIt = m_TextureCache.find(lKey.GetId());
+        if (lIt == m_TextureCache.end())
+        {
+            const OpaaxString lAbsolute = OpaaxApplication::GetAppService<IPaths>().AssetToAbsolute(InPath.Path);
+
+            ResourceRef<TextureResource> lRef =
+                OpaaxApplication::GetAppService<IEngine>().GetResources().Load<TextureResource>(lAbsolute.CStr());
+
+            // Cached even when the load FAILED: the empty ref resolves to the magenta placeholder,
+            // and keeping it stops a missing file from being retried once per sprite per frame.
+            lIt = m_TextureCache.emplace(lKey.GetId(), Move(lRef)).first;
+
+            // Logged ONCE per texture, on the branch that succeeded as well as the one that did
+            // not — a cache that only reports failures is indistinguishable from one that never
+            // ran. The two must not share a line: a failed ref resolves to the 2x2 placeholder, so
+            // an unconditional "-> WxH" would cheerfully report a missing file as a 2x2 texture.
+            if (const TextureResource* lLoaded = lIt->second.IsValid() ? lIt->second.Get() : nullptr)
+            {
+                OPAAX_LOG(LogRendererManager, Info, "Texture '{}' -> {}x{}",
+                          InPath.Path.CStr(), lLoaded->Width, lLoaded->Height);
+            }
+            else
+            {
+                OPAAX_LOG(LogRendererManager, Warn, "Texture '{}' did not load — drawing the placeholder",
+                          InPath.Path.CStr());
+            }
+        }
+
+        TextureResource* lResource = lIt->second.Get();
+
+        // Null while an async load is still in flight, or with no device at all — both mean "not
+        // drawable this frame", and neither is worth a per-frame log line.
+        return (lResource != nullptr) ? lResource->GetTexture() : nullptr;
+    }
+
     void RendererManager::SetPrimaryRenderTarget(IRenderTarget* InTarget)
     {
         m_PrimaryTarget = InTarget;

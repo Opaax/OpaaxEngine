@@ -4,6 +4,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Application/Services/ILogger.h"
 #include "Engine/Subsystems/EngineSubsystem.h"
+#include "Engine/Subsystems/Resources/ResourceRef.hpp"   // the texture cache holds Refs BY VALUE
 #include "Renderer/DebugDraw.h"   // owned BY VALUE — full type, not a forward decl
 
 
@@ -13,12 +14,18 @@
 namespace Opaax
 {
     class RenderSystem;
+    class Renderer2D;
+    class World;
     class WorldManager;
     class IFramebuffer;
     class IRenderTarget;
     class ITexture2D;
     struct FramebufferSpec;
+    struct TextureResource;
     struct WindowResize;
+
+    template<typename TResource>
+    struct TResourcePath;
 
     inline constexpr LogCategory LogRendererManager{"RendererManager"};
 
@@ -70,6 +77,20 @@ namespace Opaax
          * must not leave the queue to accumulate.
          */
         void RenderFrame();
+
+        /** Every SpriteComponent in InWorld, in one pass. Split from RenderFrame so the world's
+         *  two draw sources read as two lines, not as one long body. */
+        void DrawWorldSprites(World& InWorld, Renderer2D& InRenderer);
+
+        /**
+         * The GPU texture behind an asset-relative path, loading it once and keeping the claim.
+         *
+         * Cached by INTERNED PATH, so a hundred sprites sharing one image resolve to one integer
+         * lookup per draw and one load per session. Null when the path is empty (nothing to draw)
+         * or the texture has not finished uploading; a path that fails to load answers the magenta
+         * placeholder instead, which is visible rather than absent.
+         */
+        ITexture2D* ResolveTexture(const TResourcePath<TextureResource>& InPath);
 
         // =============================================================================
         // Getters - Setter
@@ -142,5 +163,11 @@ namespace Opaax
         // Per-frame debug lines. Owned here because this is what DRAINS it (I5): the queue's
         // lifetime is the renderer's, and it cannot outlive its only consumer.
         DebugDraw               m_DebugDraw;
+
+        // Interned asset path -> the claim keeping that texture loaded. Owned HERE because this is
+        // the one render-side class allowed to reach the ResourceManager (Renderer2D stays
+        // portable), and released in Shutdown — which runs BEFORE the ResourceManager's, i.e. while
+        // the GL context is still alive to delete the GPU handles.
+        TUnorderedMap<Uint32, ResourceRef<TextureResource>> m_TextureCache;
     };
 }

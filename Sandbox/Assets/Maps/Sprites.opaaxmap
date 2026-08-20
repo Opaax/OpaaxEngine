@@ -1,0 +1,33 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Layer": "Default",
+                    "OrderInLayer": 0,
+                    "Position": {
+                        "x": 0.0,
+                        "y": -180.0
+                    },
+                    "Size": {
+                        "x": 128.0,
+                        "y": 128.0
+                    },
+                    "Texture": "Textures/Checker.png",
+                    "bVisible": true
+                }
+            },
+            "guid": "5c1f7a2b6d3e40819c5a7b3d1e6f8a20",
+            "name": "SpriteChecker",
+            "ownerMap": "Sprites"
+        }
+    ],
+    "mapId": "Sprites",
+    "version": 1
+}
