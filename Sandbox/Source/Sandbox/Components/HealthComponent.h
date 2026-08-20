@@ -2,6 +2,8 @@
 
 #include <nlohmann/json.hpp>
 
+#include "Core/Reflection/OpaaxProperty.h"
+
 namespace Sandbox
 {
     // =============================================================================
@@ -19,6 +21,14 @@ namespace Sandbox
         int Current = 100;
         int Max     = 100;
 
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE(HealthComponent, Current, Max)
+        // _WITH_DEFAULT so a field added later does not refuse every map already saved — the
+        // plain macro reads with at(), which throws on a missing key.
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(HealthComponent, Current, Max)
+
+        // Two lines, and this component is editable — it had no drawer at all before, so nothing
+        // in the Inspector could see it.
+        OPAAX_PROPERTIES(HealthComponent,
+                         OPAAX_PROP(Current),
+                         OPAAX_PROP(Max))
     };
 }

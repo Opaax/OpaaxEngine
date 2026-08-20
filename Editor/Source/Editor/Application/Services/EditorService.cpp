@@ -1,6 +1,20 @@
 #include "Editor/Application/Services/EditorService.h"
 
-#include "Editor/UI/OpenGLEditorUIBackend.h"
+#include <imgui.h>
+
+#include "Application/OpaaxApplication.h"
+#include "Application/Services/IConfigSystem.h"
+#include "Application/Services/IEngine.h"
+#include "Application/Services/ILogger.h"
+#include "Application/Services/IProjectManager.h"
+#include "Application/Services/Platforms/IFileSystem.h"
+#include "Application/Services/Platforms/IPlatform.h"
+#include "Application/Services/Window/IWindowManager.h"
+#include "Core/Events/Event.h"
+#include "Editor//Application/Services/EditorPaths.h"
+#include "Editor/Commands/EditorNativeCommands.h"
+#include "Editor/Commands/EditorNativeCommandsTags.hpp"
+#include "Editor/Operation/LevelOperations.h"
 #include "Editor/Panels/ConfigPanel.h"
 #include "Editor/Panels/HierarchyPanel.h"
 #include "Editor/Panels/InputPanel.h"
@@ -8,32 +22,12 @@
 #include "Editor/Panels/PlayToolbarPanel.h"
 #include "Editor/Panels/ResourceBrowserPanel.h"
 #include "Editor/Panels/ViewportPanel.h"
-#include "Editor/Operation/LevelOperations.h"                 // AdoptOpen — the boot/Open Level shared tail
-#include "Editor//Application/Services/EditorPaths.h"                            // EditorSaveDir — the dock layout's home (D4)
-
-
-
-#include "Application/OpaaxApplication.h"
-#include "Application/Services/IEngine.h"
-#include "Application/Services/ILogger.h"                    // OPAAX_LOG + LogCategory
-#include "Application/Services/Platforms/IPlatform.h"        // GetFileSystem — the dock-layout dir
-#include "Application/Services/Platforms/IFileSystem.h"
-#include "Application/Services/Window/IWindowManager.h"      // window + native GLFW handle
-#include "Application/Services/IProjectManager.h"            // startupLevel — which map the editor adopts (M5)
-#include "Application/Services/IConfigSystem.h"              // the registry the Config panel lists
-#include "Core/Events/Event.h"                               // Event::IsInCategory + EEventCategory (S11)
-#include "Engine/Registries/EngineRegistries.h"              // EditWorldSystems() binds to WorldSubsystems()
-#include "Engine/Subsystems/Input/InputEvents.h"             // KeyPressedEvent — the reserved keys (D5 step 3)
-#include "World/Entity/Entity.h"                             // selection retarget by Guid across a world switch
-#include "World/Level.h"                                     // the open level: which maps are mounted (WM1a)
+#include "Editor/UI/OpenGLEditorUIBackend.h"
+#include "Engine/Registries/EngineRegistries.h"
+#include "Engine/Subsystems/Input/InputEvents.h"
 #include "World/World.h"
 #include "World/WorldManager.h"
-#include "World/Components/ComponentRegistry.h"                        // the document captures through it (M5)
-
-#include <imgui.h>
-
-#include "Editor/Commands/EditorNativeCommands.h"
-#include "Editor/Commands/EditorNativeCommandsTags.hpp"
+#include "World/Entity/Entity.h"
 
 using namespace Opaax; // OPAAX_LOG expands to an unqualified ToSpdLevel(...)
 
@@ -57,19 +51,19 @@ namespace Opaax::Editor
     void EditorService::RegisterNativeMenus()
     {
         EditorMenu& lMenu = m_Extensions.Menus();
-        
+
         // --- Native File  --------------------------
         EditorMenuCategory& lFile = lMenu.Category("File");
-        lFile.AddCommand("New Map...",     Tags::EDITOR_COMMAND_NEW_MAP).SetEnabled(IsEditing);
-        lFile.AddCommand("Open Map...",    Tags::EDITOR_COMMAND_OPEN_MAP);
+        lFile.AddCommand("New Map...", Tags::EDITOR_COMMAND_NEW_MAP).SetEnabled(IsEditing);
+        lFile.AddCommand("Open Map...", Tags::EDITOR_COMMAND_OPEN_MAP);
         lFile.AddSeparator();
-        lFile.AddCommand("Save Map",       Tags::EDITOR_COMMAND_SAVE_MAP).SetEnabled(IsEditing);
+        lFile.AddCommand("Save Map", Tags::EDITOR_COMMAND_SAVE_MAP).SetEnabled(IsEditing);
         lFile.AddCommand("Save Map As...", Tags::EDITOR_COMMAND_SAVE_MAP_AS).SetEnabled(IsEditing);
         lFile.AddSeparator();
-        lFile.AddCommand("Open Level...",  Tags::EDITOR_COMMAND_OPEN_LEVEL);
-        lFile.AddCommand("Save Level",     Tags::EDITOR_COMMAND_SAVE_LEVEL).SetEnabled(IsEditing);
+        lFile.AddCommand("Open Level...", Tags::EDITOR_COMMAND_OPEN_LEVEL);
+        lFile.AddCommand("Save Level", Tags::EDITOR_COMMAND_SAVE_LEVEL).SetEnabled(IsEditing);
         lFile.AddSeparator();
-        lFile.AddCommand("Exit",           Tags::EDITOR_COMMAND_QUIT);
+        lFile.AddCommand("Exit", Tags::EDITOR_COMMAND_QUIT);
 
         // --- Native Level  --------------------------
         EditorMenuCategory& lLevel = lMenu.Category("Level");
@@ -77,11 +71,11 @@ namespace Opaax::Editor
 
         // --- Native Play  --------------------------
         EditorMenuCategory& lPlay = lMenu.Category("Play");
-        lPlay.AddCommand("Play",  Tags::EDITOR_COMMAND_PLAY).SetEnabled(IsEditing);
+        lPlay.AddCommand("Play", Tags::EDITOR_COMMAND_PLAY).SetEnabled(IsEditing);
         lPlay.AddCommand("Pause", Tags::EDITOR_COMMAND_TOGGLE_PAUSE).SetChecked(IsPaused).SetEnabled(IsPlaying);
-        lPlay.AddCommand("Step",  Tags::EDITOR_COMMAND_STEP).SetEnabled(IsPaused);
+        lPlay.AddCommand("Step", Tags::EDITOR_COMMAND_STEP).SetEnabled(IsPaused);
         lPlay.AddSeparator();
-        lPlay.AddCommand("Stop",  Tags::EDITOR_COMMAND_STOP).SetEnabled(IsPlaying);
+        lPlay.AddCommand("Stop", Tags::EDITOR_COMMAND_STOP).SetEnabled(IsPlaying);
     }
 
     void EditorService::RegisterNativeEditorCommand()
@@ -110,10 +104,6 @@ namespace Opaax::Editor
 
     void EditorService::RegisterNativeResourceTypes()
     {
-        // `.opaaxmap` registered through the SAME ResourceTypes() route a game's `.wave` uses
-        // (M2d), so a map is a file type like any other: it gets an icon, a label, and a
-        // double-click that opens it. The editor's own core format gets no privileged path into
-        // the browser — which is the property that keeps the route honest.
         m_Extensions.ResourceTypes().Register(ResourceTypeDesc{
             .Extension = OPAAX_ID(".opaaxmap"),
             .Label = OPAAX_ID("Opaax Map"),
@@ -131,8 +121,7 @@ namespace Opaax::Editor
             .Icon = OpaaxString("[L]"),
             .OnActivate = [](EditorContext& InContext, const ResourceFile& InFile)
             {
-                InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_LEVEL_AT, InContext,
-                                                        LevelPathParams{InFile.AbsPath});
+                InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_LEVEL_AT, InContext, LevelPathParams{InFile.AbsPath});
             }
         });
     }
@@ -416,10 +405,14 @@ namespace Opaax::Editor
         const OpaaxTag* lCommand = nullptr;
         switch (lKey.GetKeyCode())
         {
-        case EKeyCode::F5: lCommand = &Tags::EDITOR_COMMAND_PLAY;         break;
-        case EKeyCode::F6: lCommand = &Tags::EDITOR_COMMAND_TOGGLE_PAUSE; break;
-        case EKeyCode::F7: lCommand = &Tags::EDITOR_COMMAND_STEP;         break;
-        case EKeyCode::F8: lCommand = &Tags::EDITOR_COMMAND_STOP;         break;
+        case EKeyCode::F5: lCommand = &Tags::EDITOR_COMMAND_PLAY;
+            break;
+        case EKeyCode::F6: lCommand = &Tags::EDITOR_COMMAND_TOGGLE_PAUSE;
+            break;
+        case EKeyCode::F7: lCommand = &Tags::EDITOR_COMMAND_STEP;
+            break;
+        case EKeyCode::F8: lCommand = &Tags::EDITOR_COMMAND_STOP;
+            break;
         default: return false;
         }
 
@@ -527,13 +520,13 @@ namespace Opaax::Editor
         // FIRST, and that ordering is load-bearing: its Startup registers the offscreen FBO as the
         // engine's primary render target, so it must not sit behind anything a game module adds.
         // Natives register before modules (MR2), which is what makes "first" mean first.
-        lPanels.Register<ViewportPanel>(PanelDesc{ .Id = OPAAX_ID("Viewport") });
+        lPanels.Register<ViewportPanel>(PanelDesc{.Id = OPAAX_ID("Viewport")});
 
-        lPanels.Register<PlayToolbarPanel>(PanelDesc{ .Id = OPAAX_ID("Play Controls") });
-        lPanels.Register<HierarchyPanel>(PanelDesc{ .Id = OPAAX_ID("Hierarchy") });
-        lPanels.Register<InspectorPanel>(PanelDesc{ .Id = OPAAX_ID("Inspector") });
-        lPanels.Register<ResourceBrowserPanel>(PanelDesc{ .Id = OPAAX_ID("Resource Browser") });
-        lPanels.Register<ConfigPanel>(PanelDesc{ .Id = OPAAX_ID("Config") });
+        lPanels.Register<PlayToolbarPanel>(PanelDesc{.Id = OPAAX_ID("Play Controls")});
+        lPanels.Register<HierarchyPanel>(PanelDesc{.Id = OPAAX_ID("Hierarchy")});
+        lPanels.Register<InspectorPanel>(PanelDesc{.Id = OPAAX_ID("Inspector")});
+        lPanels.Register<ResourceBrowserPanel>(PanelDesc{.Id = OPAAX_ID("Resource Browser")});
+        lPanels.Register<ConfigPanel>(PanelDesc{.Id = OPAAX_ID("Config")});
         // A debug readout, not part of the author loop — off until asked for, from the Window menu.
         lPanels.Register<InputPanel>(PanelDesc{
             .Id = OPAAX_ID("Input"), .DefaultVisibility = EPanelVisibility::Hidden
@@ -555,9 +548,11 @@ namespace Opaax::Editor
 
             m_Extensions.Menus().Category(lDesc.Menu)
                         .AddCommand(lDesc.Id, Tags::EDITOR_COMMAND_TOGGLE_PANEL)
-                        .SetParams(PanelIdParams{ lDesc.Id })
+                        .SetParams(PanelIdParams{lDesc.Id})
                         .SetChecked([lId = lDesc.Id](const EditorContext& InContext)
-                                    { return InContext.Panels.IsVisible(lId); });
+                        {
+                            return InContext.Panels.IsVisible(lId);
+                        });
         }
     }
 
@@ -565,18 +560,20 @@ namespace Opaax::Editor
     {
         ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
 
-        // THE WHOLE BAR is the menu's own business now. The editor's File/Exit was registered in
-        // RegisterNativeMenus exactly as a game's Tools entry is, which is what makes "native
-        // features go through the same route" (D10) true here rather than aspirational — and it
-        // removes the merge problem: a game adding to File lands in the one File there is.
-        if (m_Context != nullptr) { m_Extensions.Menus().Draw(*m_Context); }
+        if (m_Context != nullptr)
+        {
+            m_Extensions.Menus().Draw(*m_Context);
+        }
 
         HandleAuthoringShortcuts();
     }
 
     void EditorService::RefreshDirtyCache()
     {
-        if (m_Context == nullptr || m_LevelDocument == nullptr) { return; }
+        if (m_Context == nullptr || m_LevelDocument == nullptr)
+        {
+            return;
+        }
 
         // NOT WHILE PIE RUNS — the same rule MapOps::CanEdit applies, for the same reason. The
         // active world is then the Play CLONE, whose entities carry the source's OwnerMap

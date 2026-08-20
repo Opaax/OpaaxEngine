@@ -6,9 +6,10 @@
 #include "Commands/SandboxEditorCommandTags.h"
 #include "Commands/ValidateSandboxCommand.h"
 #include "Panels/SandboxPanel.h"
-#include "Drawers/DummyComponentDrawer.h"
 #include "Drawers/TagsComponentDrawer.h"
 #include "Systems/QuadBoundsSubsystem.h"
+#include "Components/HealthComponent.h"
+#include "World/Components/DummyComponent.h"
 
 // OPAAX_LOG expands to an unqualified ToSpdLevel(...) — bring Opaax into scope, as SandboxPanel does.
 using namespace Opaax;
@@ -43,13 +44,16 @@ void SandboxEditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& In
     InRegistrar.Menus().Category("Tools").SubCategory("Debug")
                .AddCommand("Validate Sandbox", SandboxEditor::Tags::SANDBOX_COMMAND_VALIDATE);
 
-    // REAL extension (M2b): the game's own component drawer. The editor never learns what a
-    // DummyComponent is — it just invokes this closure, which self-checks whether the selected entity
-    // carries one. Duck-typed, no base class (D7).
-    InRegistrar.Drawers().Register<Opaax::DummyComponent, DummyComponentDrawer>();
+    // The DEFAULT drawer, folded from what each component declares with OPAAX_PROPERTIES. It
+    // replaced a hand-written DummyComponentDrawer that was three ImGui calls in a file of its own —
+    // and HealthComponent, which never had a drawer and was therefore invisible, becomes editable
+    // for the price of this line.
+    InRegistrar.Drawers().Register<Opaax::DummyComponent>();
+    InRegistrar.Drawers().Register<Sandbox::HealthComponent>();
 
-    // The authoring half of the tag dogfood: the Inspector can add and remove tags on the selected
-    // entity, so a tag reaches a .opaaxmap without anyone editing json by hand.
+    // Still HAND-WRITTEN, and the reason the override exists: a tag is not a field you type into, it
+    // is add/remove against a validated vocabulary (I14). The authoring half of the tag dogfood — a
+    // tag reaches a .opaaxmap without anyone editing json by hand.
     InRegistrar.Drawers().Register<Sandbox::TagsComponent, TagsComponentDrawer>();
 
     // REAL extension (M2d): the game's own file type. The editor never learns what a wave definition is —

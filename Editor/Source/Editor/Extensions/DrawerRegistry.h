@@ -1,7 +1,16 @@
 #pragma once
 
-#include "Core/OpaaxTypes.h"        // TFunction, TDynArray, Uint64
-#include "World/Entity/Entity.h"    // Entity::TryGet — the closure's self-check
+#include "Core/OpaaxTypes.h"                    // TFunction, TDynArray, Uint64
+#include "World/Entity/Entity.h"                // Entity::TryGet — the closure's self-check
+#include "Engine/Modules/ModuleRegistrar.h"     // DeriveTypeLeafName — the generic header's label
+#include "Editor/Properties/PropertyDrawers.h"  // the built-in widgets, so every call site has them
+
+#include <imgui.h>
+
+namespace Opaax
+{
+    OPAAX_LOG_CATEGORY(DrawerRegistry);
+}
 
 namespace Opaax::Editor
 {
@@ -14,9 +23,10 @@ namespace Opaax::Editor
 
     // =============================================================================
     // DrawerEntry — one registered component drawer, fully type-erased. Deliberately just the closure:
-    //   the drawer owns its own presentation (its own CollapsingHeader/label), so nothing here needs a
-    //   display name — which is what keeps the M0 call-site shape Register<TComponent, TDrawer>()
-    //   unchanged (MR1: the call-site API was final, only the body becomes real).
+    //   whatever presentation the entry needs — a hand-written drawer's own CollapsingHeader, or the
+    //   generic form's derived one — is closed over at registration, so the STORAGE never grows a
+    //   display name and the M0 call-site shape Register<TComponent, TDrawer>() stays unchanged
+    //   (MR1: the call-site API was final, only the body becomes real).
     // =============================================================================
     struct DrawerEntry
     {
@@ -30,10 +40,17 @@ namespace Opaax::Editor
     //   THE DESIGN, in one line: registration erases <TComponent, TDrawer> into a uniform
     //   bool(Entity&) closure that self-checks with TryGet<TComponent>().
     //
-    //   That inversion is why the Inspector needs NO component reflection and no entt introspection. It
-    //   never asks "what components does this entity have?" — an answer entt cannot give in typed form
-    //   without a type registry. It asks every registered drawer "are you applicable?", and each one
-    //   answers for itself. Registration order is display order.
+    //   That inversion is why the Inspector needs no entt introspection. It never asks "what components
+    //   does this entity have?" — an answer entt cannot give in typed form without a type registry. It
+    //   asks every registered drawer "are you applicable?", and each one answers for itself.
+    //   Registration order is display order. The property list (I15) does not change that: a component
+    //   describes ITS OWN fields, and nothing ever asks an entity what it holds.
+    //
+    //   TWO FORMS, one call. Register<TComponent, TDrawer>() is the hand-written UI;
+    //   Register<TComponent>() is the DEFAULT drawer folded from the component's own property list
+    //   (OPAAX_PROPERTIES). The generic form exists because a component that is two floats should not
+    //   need a file of its own; the custom form stays for fields that need judgment — a tag picker,
+    //   a curve. Same storage, same self-check, same display order.
     //
     //   DUCK-TYPED contract, checked at instantiation, with NO base class (D7 declines OOP/virtual
     //   component drawers). A TDrawer must be:
@@ -64,6 +81,44 @@ namespace Opaax::Editor
 
                     TDrawer lDrawer;
                     lDrawer.Draw(*lComp);
+                    return true;
+                });
+        }
+
+        /**
+         * The DEFAULT drawer, built from what the component says its fields are (CReflected).
+         *
+         * The one-argument form of the call above, so choosing between "generic" and "my own UI" is
+         * one template argument rather than a second route. A field type nobody wrote a
+         * TPropertyDrawer for fails to compile HERE, naming the type.
+         */
+        template<CReflected TComponent>
+        void Register()
+        {
+            // Derived once, at registration: DeriveTypeLeafName is the same function that produced
+            // this component's key in a .opaaxmap, so the Inspector header and the on-disk name are
+            // one naming rule rather than two that can drift.
+            const OpaaxStringID lName = DeriveTypeLeafName<TComponent>();
+
+            OPAAX_LOG(LogDrawerRegistry, Info, "Generic drawer: {} ({} properties)",
+                      lName, PropertyCount<TComponent>());
+
+            m_Entries.emplace_back(
+                [lName](Entity& InEntity) -> bool
+                {
+                    TComponent* lComp = InEntity.TryGet<TComponent>();
+                    if (lComp == nullptr)
+                    {
+                        return false;
+                    }
+
+                    // The header is the generic drawer's job because a hand-written one owns its
+                    // own (that is why the registry needs no display name for those).
+                    if (ImGui::CollapsingHeader(lName.CStr(), ImGuiTreeNodeFlags_DefaultOpen))
+                    {
+                        DrawProperties(*lComp);
+                    }
+
                     return true;
                 });
         }

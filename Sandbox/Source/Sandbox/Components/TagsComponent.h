@@ -20,6 +20,8 @@ namespace Sandbox
     {
         Opaax::OpaaxTagContainer Tags;
 
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE(TagsComponent, Tags)
+        // _WITH_DEFAULT: a missing key keeps the default-constructed container (no tags) instead
+        // of throwing, so a map saved before this component grew a field still opens.
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(TagsComponent, Tags)
     };
 }

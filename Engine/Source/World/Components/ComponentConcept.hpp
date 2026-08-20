@@ -21,8 +21,15 @@
 //       void to_json  (nlohmann::json&, const T&);
 //       void from_json(const nlohmann::json&, T&);
 //   which is the idiom already used for glm vectors (Core/Maths/MathsJson.hpp) and the
-//   config data types. `NLOHMANN_DEFINE_TYPE_INTRUSIVE(T, fields...)` generates both in one
-//   line, so a game component costs one macro and ZERO engine registration beyond naming it.
+//   config data types. `NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(T, fields...)` generates both
+//   in one line, so a game component costs one macro and ZERO engine registration beyond naming it.
+//
+//   USE THE _WITH_DEFAULT VARIANT. The plain macro reads every field with `at()`, which THROWS on a
+//   missing key — so the day you add a field, every map already saved refuses to load, and it does
+//   it at BOOT inside Level::MountAll where nothing is there to catch it. _WITH_DEFAULT keeps the
+//   default-constructed value for an absent key, which makes "add a field" the backward-compatible
+//   change it looks like. MapFactory catches what defaults cannot cover (a wrong-typed value, a
+//   payload that is not an object) and warns per component.
 // =============================================================================
 namespace Opaax
 {

@@ -38,7 +38,25 @@ namespace Opaax
                     continue;
                 }
 
-                lEntry->Load(InWorld.GetRegistry(), lEntity.GetHandle(), lComponent.Payload);
+                try
+                {
+                    lEntry->Load(InWorld.GetRegistry(), lEntity.GetHandle(), lComponent.Payload);
+                }
+                catch (const nlohmann::json::exception& lError)
+                {
+                    // The symmetric half of the unknown-type case above, and it reaches further than
+                    // it looks: Instantiate runs at BOOT (Level::MountAll), so an escaping exception
+                    // takes the whole app down before a window exists. A missing key is already
+                    // handled — components use the _WITH_DEFAULT macro — so what lands here is a
+                    // wrong-typed value or a payload that is not an object at all: a hand-edited or
+                    // truncated file. BO4c's rule, one level down: warn, keep going.
+                    //
+                    // The component stays, at its defaults: Load emplaces before it reads, and the
+                    // map did say this entity carried one.
+                    OPAAX_LOG(LogMapFactory, Warn,
+                              "Component '{}' on entity '{}' could not be read ({}) — left at its defaults.",
+                              lComponent.TypeName, lEntityData.Name.CStr(), lError.what());
+                }
             }
         }
 

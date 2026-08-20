@@ -148,7 +148,20 @@ struct, `Engine`), never on the template itself.
 `to_json`/`from_json` by ADL — the same concept-over-base-class shape as `CResource`, and the only shape
 available: **entt stores components by value**, so `Save`/`Load` cannot be member virtuals the way the
 retired `Legacy/ECS/ComponentRegistry` did it. A game component costs one
-`NLOHMANN_DEFINE_TYPE_INTRUSIVE` and one `Components().Register<T>()`; the engine names it nowhere.
+`NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT` and one `Components().Register<T>()`; the engine names it
+nowhere.
+- **`_WITH_DEFAULT` is REQUIRED, not a preference** (2026-08-19, from a live crash). The plain macro
+  reads every field with `at()`, which **throws** on a missing key — so the first field added to an
+  existing component refuses every map already saved, and it does it inside `Level::MountAll` during
+  `FinishStartup`, i.e. **at boot, with nothing above it catching**. `_WITH_DEFAULT` keeps the
+  default-constructed value for an absent key, which makes "add a field" the backward-compatible
+  change it appears to be. Adding a field is the single most ordinary edit a component gets; a format
+  where it is a hard failure is the wrong default, and the macro name was the whole difference.
+- **What defaults cannot cover, `MapFactory::Instantiate` catches**: a wrong-TYPED value or a payload
+  that is not an object (hand-edited, truncated). It warns per component and leaves it at its defaults,
+  the same "skip and keep going" the unknown-component-name branch beside it already did — **BO4c**'s
+  rule one level down. Pinned by two cases in `MapSnapshotTests.cpp`, both of which fail against the
+  plain macro with the exact exceptions the crash produced (`out_of_range.403`, `type_error.304`).
 The empty `ComponentBase`/`IComponent` markers were **deleted** once the concept took over their stated
 job (user call): an empty non-virtual base is an attractive nuisance — the first person to add a virtual
 to it silently breaks by-value storage and nothing complains. **Do not reintroduce one.** Per-entity
@@ -343,6 +356,34 @@ view→id ctor still has no caller).
   `OpaaxTag` itself would not change. Both headers are header-only value types with **no
   `OPAAX_API`** (**I6**), and the nlohmann bridge is split into `OpaaxTagJson.h` the way
   `MathsJson.hpp` is split from `MathTypes.h`, so matching costs no json.
+
+**I15 — A type DESCRIBES its fields as data; the editor draws them; per-type dispatch is a
+SPECIALIZATION, never a registry** (landed 2026-08-19). `OPAAX_PROPERTIES`
+(`Core/Reflection/OpaaxProperty.h`) declares a `static constexpr` tuple of
+`{name, member pointer, hint}`. The **member pointer carries the type**, so a field states its name
+once and never its type — which is what keeps new field types out of the engine: supporting one is an
+editor-side `TPropertyDrawer<T>`, never a new `FLOAT_PROP`/`INT_PROP` macro here.
+- **It is NOT editor-gated, and that is not a preference.** A component header compiles into the
+  engine DLL (`OPAAX_WITH_EDITOR=0`) *and* into the editor exe (`=1`, **I12**/D4), so an `#if` around
+  the block is one type with two definitions in one program. It also costs a shipped binary nothing —
+  an unreferenced `constexpr` table is never emitted — so there is nothing an `#if` would buy. The
+  real constraint is the other one: Core cannot see ImGui, so the macro emits **data, never widgets**.
+- **The primary `TPropertyDrawer<T>` is DECLARED AND NEVER DEFINED** — `TConfigCodec`'s trade
+  (**I9**'s neighbour in `TConfig.hpp`), and here it is load-bearing rather than tidy. A missing
+  drawer is a compile error at the `Register<T>()` line; a specialization visible to one TU and not
+  another therefore **cannot** instantiate the fold two different ways, which is what a silent ODR
+  break would look like. A runtime registry would buy only "a drawer for a type you cannot include",
+  and would cost a lookup per field per frame plus something to seal (**I1**).
+- **`Drawers().Register<T>()` is the generic form of the call that already existed**, not a second
+  route: `Register<T, TDrawer>()` stays as the override for fields that need judgment (a tag picker).
+  The generic header's label is `DeriveTypeLeafName<T>()` — the same function that produced the
+  component's key in a `.opaaxmap`, so the Inspector and the file agree by construction, not by care.
+- **`EPropertyHint` exists because a type is not always a widget**: a `Vector4F` is four numbers or an
+  RGBA colour and only the author knows. One value today, one caller — a growth point, not a taxonomy.
+- **Properties do NOT drive serialization yet.** `NLOHMANN_DEFINE_TYPE_INTRUSIVE` still owns
+  `to_json`/`from_json` (**I8**), so a component states its fields twice. Deliberate: map files are
+  byte-exact-verified (**MP6**), so collapsing the two lists is its own step with its own gate.
+  **Trigger: the first field added to one list and forgotten in the other.**
 
 
 ---

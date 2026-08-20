@@ -256,6 +256,77 @@ TEST_CASE("Snapshot: an unknown component name is skipped, and the entity still 
     CHECK(lEntity.Has<DummyComponent>());
 }
 
+TEST_CASE("Snapshot: a payload written BEFORE a field existed loads that field's default")
+{
+    ComponentRegistry lRegistry;
+    REQUIRE(lRegistry.Register<DummyComponent>("Dummy"));
+
+    // The shape of an already-saved .opaaxmap after someone adds a field to the component: the
+    // keys that existed when it was written, and nothing for the ones that came later. This is
+    // the ordinary way a component evolves, so it must not be able to refuse the load — and it
+    // reaches Instantiate at BOOT (Level::MountAll), where a throw takes the whole app down.
+    MapData    lData;
+    EntityData lEntityData;
+    lEntityData.Id       = Guid::New();
+    lEntityData.Name     = "WrittenLastWeek";
+    lEntityData.OwnerMap = MapId("Level01");
+    lEntityData.Components.emplace_back(OpaaxStringID("Dummy"),
+                                        nlohmann::json{{"Position", Vector2F{5.f, 6.f}}});
+    lData.Entities.emplace_back(Move(lEntityData));
+
+    World lWorld("OldSave");
+
+    REQUIRE_NOTHROW(MapFactory::Instantiate(lData, lWorld, lRegistry));
+
+    Entity lEntity = lWorld.FindByGuid(lData.Entities[0].Id);
+    REQUIRE(lEntity.IsValid());
+    REQUIRE(lEntity.Has<DummyComponent>());
+
+    const DummyComponent& lLoaded = lEntity.Get<DummyComponent>();
+    CHECK(lLoaded.Position.x == doctest::Approx(5.f));   // what the file had
+    CHECK(lLoaded.Position.y == doctest::Approx(6.f));
+    CHECK(lLoaded.Size.x == doctest::Approx(DummyComponent{}.Size.x));   // what it did not
+    CHECK(lLoaded.Color.a == doctest::Approx(DummyComponent{}.Color.a));
+}
+
+TEST_CASE("Snapshot: a MALFORMED payload is skipped, and the rest of the map still loads")
+{
+    ComponentRegistry lRegistry;
+    REQUIRE(lRegistry.Register<DummyComponent>("Dummy"));
+
+    // Defaults cover a MISSING key; they cannot cover a key whose value is the wrong type, or a
+    // payload that is not an object at all — a hand-edited or truncated file. BO4c's rule applies
+    // the same way it does one level up: a map that cannot be read is a warning, not a refusal
+    // to boot.
+    MapData    lData;
+    EntityData lBroken;
+    lBroken.Id       = Guid::New();
+    lBroken.Name     = "HandEdited";
+    lBroken.OwnerMap = MapId("Level01");
+    lBroken.Components.emplace_back(OpaaxStringID("Dummy"), nlohmann::json("not an object"));
+    lData.Entities.emplace_back(Move(lBroken));
+
+    EntityData lFine;
+    lFine.Id       = Guid::New();
+    lFine.Name     = "Intact";
+    lFine.OwnerMap = MapId("Level01");
+    lFine.Components.emplace_back(OpaaxStringID("Dummy"), nlohmann::json(DummyComponent{}));
+    lData.Entities.emplace_back(Move(lFine));
+
+    World lWorld("Corrupt");
+
+    REQUIRE_NOTHROW(MapFactory::Instantiate(lData, lWorld, lRegistry));
+
+    // The entity survives with the component at its defaults — the map said it had one, and
+    // that much was readable.
+    CHECK(lWorld.FindByGuid(lData.Entities[0].Id).IsValid());
+
+    // What the case is really about: the ENTITY AFTER the broken one still loaded.
+    Entity lIntact = lWorld.FindByGuid(lData.Entities[1].Id);
+    REQUIRE(lIntact.IsValid());
+    CHECK(lIntact.Has<DummyComponent>());
+}
+
 // =============================================================================
 // Instantiate's contract
 // =============================================================================
