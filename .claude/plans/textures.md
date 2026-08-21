@@ -63,9 +63,9 @@ new case pinning "the placeholder is initialised, once per pool".
 
 **Content note.** The dogfood map I authored (`Maps/Sprites.opaaxmap`) was superseded by the user
 building the real thing in their own `Main.opaaxmap` — Sprite component, dragged texture, `UI` layer,
-order 155, tint, saved. They removed it from the level manifest and it has since been **deleted**
-(`e4a4a58`): scaffolding that the real dogfood replaced, judged by [[L23]]'s test — a first example
-earns its place by SURVIVING, and this one did not.
+order 155, tint, saved. They removed it from the level manifest and it was **deleted at session close**:
+scaffolding the real dogfood replaced, judged by [[L23]]'s test — a first example earns its place by
+SURVIVING, and this one did not. `Sandbox.exe` still draws the sprite, from their map.
 
 ## Not done, deliberately
 
