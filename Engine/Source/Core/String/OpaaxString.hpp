@@ -3,7 +3,6 @@
 #include <cstdio>   // snprintf — FromInt / FromUInt
 #include <cstring>  // strlen / memcpy / strstr / strcmp
 #include <ostream>  // operator<<
-#include <string>   // ToStdString
 #include <string_view>
 #include "Core/OpaaxTypes.h"
 #include "Core/EngineAPI.h"
@@ -350,7 +349,6 @@ namespace Opaax
             GrowHeap(InCapacity > MAX_CAPACITY ? MAX_CAPACITY : InCapacity);
         }
 
-        std::string ToStdString() const                                         { return std::string(CStr()); }
         OpaaxString SubString(Uint32 Start, Uint32 InLength = UINT32_MAX) const { return SubString(*this, Start, InLength); }
 
         Int32 Find(const char* Str, Uint32 StartPos = 0) const
@@ -402,7 +400,6 @@ namespace Opaax
         char*       Data() noexcept         { return bUsingHeap ? HeapData : SSOBuffer; }
 
         Uint32  GetLength()     const noexcept { return Length; }
-        Uint32  GetCapacity()   const noexcept { return bUsingHeap ? Capacity : SSOCapacity; }
         bool    IsUsingHeap()   const noexcept { return bUsingHeap; }
         bool    IsEmpty()       const noexcept { return Length == 0; }
 

@@ -4,8 +4,6 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
-#include "Core/Maths/MathTypes.h"
-#include "Core/Maths/MathsJson.hpp"
 #include "Core/Reflection/OpaaxEnumJson.h"   // every enum field below writes its ToString label
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Core/String/OpaaxString.hpp"
@@ -26,6 +24,10 @@ namespace Opaax
     //   Every field is read ONCE AT BOOT today, which is what NeedRestart says on each group. The
     //   flag sits on the GROUP rather than on every field, and it becomes per-field the day
     //   something is read live.
+    //
+    //   EVERY FIELD HERE HAS A READER. The Assets / Log / Physics groups and Render.Interpolation
+    //   were deleted on 2026-08-21 — they had none, and a settings screen offering values that do
+    //   nothing is worse than a short one. Each comes back with the system that reads it.
     //
     //   Defaults match the historical hardcoded values, so a missing config keeps behaviour
     //   unchanged — and with _WITH_DEFAULT, so does a config missing any single key.
@@ -51,87 +53,28 @@ namespace Opaax
                          OPAAX_PROP(Mode))
     };
 
-    struct AssetSettings
-    {
-        OpaaxString EngineRoot     = OpaaxString("Engine/Assets");
-        OpaaxString EngineManifest = OpaaxString("Engine/Assets/AssetManifest.json");
-
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(AssetSettings, EngineRoot, EngineManifest)
-
-        OPAAX_PROPERTIES(AssetSettings,
-                         OPAAX_PROP(EngineRoot),
-                         OPAAX_PROP(EngineManifest))
-    };
-
-    struct LogSettings
-    {
-        OpaaxString Level = OpaaxString("trace");
-
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(LogSettings, Level)
-
-        OPAAX_PROPERTIES(LogSettings, OPAAX_PROP(Level))
-    };
-
     struct RenderSettings
     {
         // What the project ASKS for. Whether it can be honoured is ResolveSupportedBackend's answer,
         // asked at the point of use — Vulkan is a legal thing to write here and is coerced, loudly.
-        EBackend Backend       = EBackend::OpenGL;
-        bool     Interpolation = true;
+        EBackend Backend = EBackend::OpenGL;
 
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(RenderSettings, Backend, Interpolation)
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(RenderSettings, Backend)
 
-        OPAAX_PROPERTIES(RenderSettings,
-                         OPAAX_PROP(Backend),
-                         OPAAX_PROP(Interpolation))
-    };
-
-    struct WorldBoundsSettings
-    {
-        bool        Enabled  = false;
-        Vector2F    Min      = Vector2F(-100000.f, -100000.f);
-        Vector2F    Max      = Vector2F(100000.f, 100000.f);
-        OpaaxString Response = OpaaxString("EventAndDestroy");
-
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(WorldBoundsSettings, Enabled, Min, Max, Response)
-
-        OPAAX_PROPERTIES(WorldBoundsSettings,
-                         OPAAX_PROP(Enabled),
-                         OPAAX_PROP(Min),
-                         OPAAX_PROP(Max),
-                         OPAAX_PROP(Response))
-    };
-
-    struct PhysicsSettings
-    {
-        OpaaxString         Backend = OpaaxString("Box2D");
-        WorldBoundsSettings WorldBounds;
-
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(PhysicsSettings, Backend, WorldBounds)
-
-        OPAAX_PROPERTIES(PhysicsSettings,
-                         OPAAX_PROP(Backend),
-                         OPAAX_PROP(WorldBounds))
+        OPAAX_PROPERTIES(RenderSettings, OPAAX_PROP(Backend))
     };
 
     struct EngineConfigData
     {
-        WindowSettings  Window;
-        AssetSettings   Assets;
-        LogSettings     Log;
-        RenderSettings  Render;
-        PhysicsSettings Physics;
+        WindowSettings Window;
+        RenderSettings Render;
 
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(EngineConfigData, Window, Assets, Log, Render, Physics)
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(EngineConfigData, Window, Render)
 
         // NeedRestart on every group, because every reader of this file reads it once during boot:
-        // the window is built from Window, RendererManager resolves Render.Backend at Startup, and
-        // Assets / Log / Physics have no reader at all yet.
+        // the window is built from Window, RendererManager resolves Render.Backend at Startup.
         OPAAX_PROPERTIES(EngineConfigData,
                          OPAAX_PROP(Window).SetFlags(EPropertyFlags::NeedRestart),
-                         OPAAX_PROP(Assets).SetFlags(EPropertyFlags::NeedRestart),
-                         OPAAX_PROP(Log).SetFlags(EPropertyFlags::NeedRestart),
-                         OPAAX_PROP(Render).SetFlags(EPropertyFlags::NeedRestart),
-                         OPAAX_PROP(Physics).SetFlags(EPropertyFlags::NeedRestart))
+                         OPAAX_PROP(Render).SetFlags(EPropertyFlags::NeedRestart))
     };
 }

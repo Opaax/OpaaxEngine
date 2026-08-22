@@ -96,11 +96,6 @@ namespace Opaax
         // Getters - Setter
     public:
         /**
-         * @return The portable render core, or nullptr before Startup. For future render peers.
-         */
-        RenderSystem* GetRenderSystem() const noexcept { return m_RenderSystem.get(); }
-
-        /**
          * Present the backbuffer — called by Engine::PresentBackbuffer (host-driven, after TickFrame).
          * Separate from Render so the editor can draw UI to the backbuffer before the swap (S7). No-op
          * if the render core failed to start.

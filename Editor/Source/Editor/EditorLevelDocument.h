@@ -178,8 +178,6 @@ namespace Opaax::Editor
         /** Just the file name, for the menu bar — "Main.opaaxlevel". Empty when none is open. */
         OpaaxString FileName() const;
 
-        const TDynArray<MapRecord>& GetRecords() const noexcept { return m_Maps; }
-
         // End Get
         // =============================================================================
 

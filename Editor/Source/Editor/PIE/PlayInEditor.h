@@ -95,12 +95,6 @@ namespace Opaax::Editor
         bool IsPlaying() const noexcept { return m_State == EPlayState::Playing; }
         bool IsPaused()  const noexcept { return m_State == EPlayState::Paused; }
 
-        /** The world being authored — non-null only while a PIE session is live. */
-        World* GetEditWorld() const noexcept { return m_EditWorld; }
-
-        /** The Play clone — non-null only while a PIE session is live. */
-        World* GetPlayWorld() const noexcept { return m_PlayWorld; }
-
         // =============================================================================
         // Members
         // =============================================================================

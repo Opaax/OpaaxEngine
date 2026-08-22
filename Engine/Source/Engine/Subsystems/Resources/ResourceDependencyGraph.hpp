@@ -54,25 +54,6 @@ namespace Opaax
 
         
         // =============================================================================
-        // Getter
-        /**
-         * Dependencies of InNodeId (what it hard-references).
-         * @param InNodeId 
-         * @return 
-         */
-        const TDynArray<Uint32>* GetDependencies(Uint32 InNodeId) const { return Find(m_Forward, InNodeId); }
-
-        /**
-         * Dependents of InNodeId (who hard-references it) — the M3 dirty set.
-         * @param InNodeId 
-         * @return 
-         */
-        const TDynArray<Uint32>* GetDependents(Uint32 InNodeId)   const { return Find(m_Reverse, InNodeId); }
-        
-        // End Getter
-        // =============================================================================
-
-        // =============================================================================
         // Internal
         // =============================================================================
     private:

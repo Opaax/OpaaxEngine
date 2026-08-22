@@ -25,11 +25,6 @@ file(GLOB_RECURSE ENGINE_CORE_SOURCES CONFIGURE_DEPENDS
     "Source/Renderer/*.cpp"
     "Source/Renderer/*.h"
     "Source/Renderer/*.hpp"
-    "Source/Assets/*.cpp"
-    "Source/Assets/*.h"
-    "Source/Assets/*.hpp"
-    "Source/Assets/*.cpp"
-    "Source/Assets/*.hpp"
 )
 
 set(ENGINE_SOURCES ${ENGINE_CORE_SOURCES})
@@ -422,27 +417,11 @@ add_custom_command(TARGET OpaaxEngine POST_BUILD
     COMMENT "Creating Engine/Assets directory..."
 )
 
-set(ENGINE_MANIFEST_SOURCE ${ENGINE_ASSETS_SOURCE}/AssetManifest.json)
-
-if(NOT EXISTS ${ENGINE_MANIFEST_SOURCE})
-    message(STATUS "[Opaax] Engine manifest not found — generating empty manifest.")
-    file(WRITE ${ENGINE_MANIFEST_SOURCE}
-"{\n    \"assets\": []\n}\n"
-    )
-    message(STATUS "[Opaax] Generated: ${ENGINE_MANIFEST_SOURCE}")
-endif()
-
-add_custom_command(TARGET OpaaxEngine POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        ${ENGINE_ASSETS_SOURCE}/AssetManifest.json
-        ${ENGINE_ASSETS_DEST}/AssetManifest.json
-    COMMENT "Copying engine asset manifest..."
-)
-
-# Asset dirs are copied only when they exist on disk. An empty asset folder is not
-# tracked by git, so a fresh clone (e.g. CI) legitimately lacks it — an unconditional
-# copy_directory would then fail with "cannot find the path specified".
-# Shader
+# Shaders are the only engine-owned content the runtime reads. Fonts / Textures / Meshes /
+# AssetManifest.json were copied here for the retired Legacy/Assets manifest world; nothing
+# has loaded one since, so the content and these copy steps went together (2026-08-21).
+# Guarded on EXISTS because an empty asset folder is not tracked by git, so a fresh clone
+# (e.g. CI) legitimately lacks it and an unconditional copy_directory would fail.
 if(EXISTS ${ENGINE_ASSETS_SOURCE}/Shaders)
     add_custom_command(TARGET OpaaxEngine POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
@@ -452,41 +431,11 @@ if(EXISTS ${ENGINE_ASSETS_SOURCE}/Shaders)
     )
 endif()
 
-# Texture
-if(EXISTS ${ENGINE_ASSETS_SOURCE}/Textures)
-    add_custom_command(TARGET OpaaxEngine POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-            ${ENGINE_ASSETS_SOURCE}/Textures
-            ${ENGINE_ASSETS_DEST}/Textures
-        COMMENT "Copying engine textures..."
-    )
-endif()
-
-# Mesh
-if(EXISTS ${ENGINE_ASSETS_SOURCE}/Meshes)
-    add_custom_command(TARGET OpaaxEngine POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-            ${ENGINE_ASSETS_SOURCE}/Meshes
-            ${ENGINE_ASSETS_DEST}/Meshes
-        COMMENT "Copying engine meshes..."
-    )
-endif()
-
 # ==================================
 # Unit tests (OpaaxTests) — links the engine DLL like any other consumer.
 # ==================================
 if(OPAAX_BUILD_TESTS)
     add_subdirectory(Tests)
-endif()
-
-# Font
-if(EXISTS ${ENGINE_ASSETS_SOURCE}/Fonts)
-    add_custom_command(TARGET OpaaxEngine POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-            ${ENGINE_ASSETS_SOURCE}/Fonts
-            ${ENGINE_ASSETS_DEST}/Fonts
-        COMMENT "Copying engine fonts..."
-    )
 endif()
 
 # ==================================

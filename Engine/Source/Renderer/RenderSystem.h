@@ -51,7 +51,6 @@ namespace Opaax
     private:
         bool IsValidDevice()        const noexcept { return m_Device.get()      != nullptr; }
         bool IsValidRenderer2D()    const noexcept { return m_Renderer2D.get()  != nullptr; }
-        bool IsValidBackbuffer()    const noexcept { return m_Backbuffer.get()  != nullptr; }
 
         // =============================================================================
         // Lifecycle
@@ -133,10 +132,7 @@ namespace Opaax
     public:
         /***/
         Renderer2D& GetRenderer2D() const noexcept { return *m_Renderer2D; }
-        
-        /***/
-        void        SetClearColor(const Vector4F& InColor) noexcept { m_ClearColor = InColor; }
-        
+
         /**
          * @return The window-surface target. The default primary target when no offscreen target is set.
          */

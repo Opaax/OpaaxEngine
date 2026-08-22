@@ -1,9 +1,0 @@
-{
-    "assets": [
-        {
-            "id": "AssetManifest",
-            "path": "MyProject/Assets/AssetManifest.json",
-            "type": "Data"
-        }
-    ]
-}

@@ -17,7 +17,6 @@ set(OPAAX_TEST_SOURCES
     Renderer/SortKeyTests.cpp
     Renderer/RenderTargetTests.cpp
     Renderer/DebugDrawTests.cpp
-    # Renderer/FontKerningTests.cpp  # quarantined: Renderer/Text moved to Legacy (not linked) — M0.5
     Core/StringTests.cpp
     Core/StringViewTests.cpp
     Core/StringIDTests.cpp
@@ -61,12 +60,12 @@ set(OPAAX_TEST_SOURCES
     Core/World/WorldSubsystemRegistryTests.cpp
     Core/World/WorldCloneTests.cpp
     Core/World/WorldTickGateTests.cpp
-    # Assets/AssetIdResolveTests.cpp  # quarantined: Assets moved to Legacy (not linked) — M0.5
     Core/Maths/AngleTests.cpp
 
-    # NOTE: old-world tests (ECS/ComponentRegistry, ECS/Hierarchy, ECS/MoverComponent,
-    # Physics/CollisionProfile) were quarantined to Tests/Legacy/ with the old world they
-    # exercise (ARCHITECTURE.md X1). Re-add live equivalents when the new world grows them.
+    # NOTE: every quarantined suite now lives under Tests/Legacy/ with the code it exercises
+    # (ARCHITECTURE.md X1) — ECS/*, Physics/CollisionProfile, Assets/AssetIdResolve and
+    # Renderer/FontKerning. None are listed here; re-add live equivalents when the new world
+    # grows them. Nothing under Tests/Legacy/ is compiled.
 
     # Perf micro-benchmarks — doctest suite "perf", SKIPPED by default so `build.bat test` + CI
     # stay fast. Run in RELEASE via `build.bat bench`. See Perf/PerfBench.h.

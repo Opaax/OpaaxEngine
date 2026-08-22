@@ -1,9 +1,4 @@
 {
-    "version": 1,
     "name": "Sandbox",
-    "startupLevel": "Levels/Main.opaaxlevel",
-    "assetsRoot": "Sandbox/Assets",
-    "assetsManifest": "Sandbox/Assets/AssetManifest.json",
-    "defaultScene": "",
-    "editorDefaultScenePath": "Sandbox/Assets/Scenes"
+    "startupLevel": "Levels/Main.opaaxlevel"
 }

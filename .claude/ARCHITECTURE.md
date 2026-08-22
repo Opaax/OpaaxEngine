@@ -1556,6 +1556,29 @@ to the retired `Legacy/Assets` world (`IAsset`, `AssetRegistry`, `AssetManifest`
 `Legacy/` owns it, the name is taken — reusing it makes every future search ambiguous and quietly
 suggests a lineage the new code does not have. Older planning docs predate such renames; the CODE is the
 vocabulary of record.
+- **The manifest's last traces are gone (2026-08-21).** `AssetManifest.json` outlived its reader by
+  months in three places that were not code and so never showed up as dead: the two shipped `.json`
+  files, a CMake block that **regenerated one if you deleted it**, and the `Assets.EngineManifest`
+  config field. A retired system's *data* and *build steps* are part of the quarantine — grep the
+  term in `CMakeLists.txt` and `*.config` too, or the tree keeps re-creating the corpse.
+
+**X5 — A SETTING with no reader is deleted, not kept as a spec** (2026-08-21, user's call). The
+config had five groups; `Assets`, `Log` and `Physics` plus `Render.Interpolation` had **no reader
+anywhere** — kept, deliberately, as the shape the unbuilt systems would want. Two things made that
+wrong once the editor grew a Config panel (**BO1a**): the values became *visible and editable*, so
+the file now promised behaviour it did not have, and the "spec" was never a spec — a physics system
+will decide its own settings, not inherit a guess made before it existed. `EngineConfigData` is now
+`Window` + `Render`, and **every field in it has a reader**. Nothing is lost: the shape is one
+struct and one macro line, re-added with the system that reads it, and a config file still carrying
+the old groups opens fine (nlohmann ignores undeclared keys — pinned by a test).
+- Same rule retired the unread keys in `.opaaxproj`: `ParseProjectIdentity` reads four,
+  `Sandbox.opaaxproj` carried nine. Its `version` key went with them, exactly as **BO1b** retired
+  the config's. `.opaaxlevel`/`.opaaxmap` keep theirs — `LevelFile::Load` genuinely checks it.
+- **The counter-case, and the line between them:** `IProjectManager`'s `startupScene`/`defaultScene`
+  fallbacks have zero users in the tree and **stay**. They are not a spec for something unbuilt, they
+  are *tolerance for input you cannot see* — a project file on a disk this repo does not contain.
+  Three test cases pin them as **X4** migration tolerance. Dead-by-grep and dead-by-contract are
+  different questions; only the second licenses a delete.
 
 ---
 

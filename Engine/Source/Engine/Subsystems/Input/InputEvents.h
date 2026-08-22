@@ -79,7 +79,6 @@ namespace Opaax
         explicit KeyTypedEvent(Uint32 InCodepoint) noexcept : m_Data{InCodepoint} {}
 
         FORCEINLINE const KeyTyped& GetPayload() const noexcept { return m_Data; }
-        FORCEINLINE Uint32 GetCodepoint() const noexcept { return m_Data.Codepoint; }
 
         OPAAX_EVENT_CLASS_TYPE(EEventType::KeyTyped)
         OPAAX_EVENT_CLASS_CATEGORY(EEventCategory::Input | EEventCategory::Keyboard)

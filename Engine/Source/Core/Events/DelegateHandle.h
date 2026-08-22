@@ -41,11 +41,6 @@ namespace Opaax
         FORCEINLINE Uint64 GetID()   const noexcept { return m_ID; }
 
         // -----------------------------------------------------------------------------
-        // Mutators
-    public:
-        FORCEINLINE void Reset() noexcept { m_ID = 0; }
-
-        // -----------------------------------------------------------------------------
         // Comparison
     public:
         FORCEINLINE bool operator==(const DelegateHandle& Other) const noexcept { return m_ID == Other.m_ID; }

@@ -1237,3 +1237,56 @@ and a boot smoke test never selects anything.
   anything complain?".
 - **Scope by NAME, not by index**, when the id also keys persisted UI state — an index-based scope
   silently rebinds every stored header state the day a drawer is registered ahead of it.
+
+## L46 — A dead-code grep whose FILTER matches call syntax proves the opposite of what it reports (2026-08-21)
+
+**What happened (the cleanup sweep).** Asked to find unused code, I ran a whole-tree search for
+`World::Clear` — and I did include `Engine/Tests` in the paths, the omission that had already cost
+three sessions ([[L10]]). The command was:
+
+```
+rg -n "\bClear\s*\(" … Engine/Source Editor/Source Sandbox Engine/Tests | rg -v "\.Clear\(\)|…"
+```
+
+That second `rg -v` was a noise filter, meant to drop `m_Foo.Clear()` housekeeping. But a **call
+site** is spelled `lWorld.Clear()`, which matches `\.Clear\(\)` — so the filter deleted precisely
+the evidence the search existed to find. What survived was declarations and definitions only, which
+reads exactly like "declared, never called." I reported `World::Clear()` as dead, the user approved
+deleting it, and it had **five callers** (`WorldEntityTests` ×3, `MapSnapshotTests`,
+`ModuleRegistrarTests`). The build caught it in one pass, and restoring it pulled back
+`Level::OnWorldCleared` and `WorldGuidRegistry::Clear`, which had only looked dead because they
+serve it.
+
+**Why this is not just [[L10]] again.** L10's rule is *"grep is a SEED, the build is the VERDICT"*
+and its failure mode has always been **too narrow a path list**. This was a correct path list and a
+**self-defeating pattern** — a stricter search that was wrong in the one direction that matters,
+producing a confident false positive rather than a miss. Widening the sweep would not have helped;
+nothing about the output looked incomplete.
+
+**And the grep was the SECOND wrong witness, not the first.** `CLAUDE.local.md`'s STILL OPEN list
+already said *"`World::Clear()` has zero callers outside `World` (③ removed the last one)"* — so I
+went in believing it and read the grep as confirmation. Two independent-looking sources agreed, and
+they were not independent: that note was almost certainly written from the same kind of search. This
+is [[L22]]/[[L26]] wearing a third hat — **a doc's claim is a premise, not a finding, and my OWN
+notes are the easiest one to forget that about**, because I trust them like memory rather than like
+a document that can go stale. When a note and a grep agree, ask whether the grep is the note's
+source before counting it as a second opinion.
+
+**Rules for next time:**
+- **[[L21]] applies to a GREP, not only to a test.** The instrument must not share a failure mode
+  with the thing it measures. A search for "is this called?" whose filter can match **call syntax**
+  cannot answer that question. Before filtering a dead-code search, ask: *could this `-v` pattern
+  match a real caller?* If yes, read the noise instead — it is cheaper than a wrong deletion.
+- **For "is X used", grep for the USE, never for the declaration and then subtract.** `\.X\(` /
+  `->X\(` / `::X\(` as the primary query, with the declaring file excluded by path. Counting all
+  mentions and reasoning about the remainder is where a filter gets invented in the first place.
+- **A deletion the USER approved on my evidence is worse than one I got wrong alone.** They answered
+  "delete all 14" against a list I had verified badly, so my error consumed their decision too. When
+  a proposal's whole value is the verification behind it, the verification is the deliverable —
+  re-run it unfiltered before acting, not after the compiler objects.
+- **Restore the whole reachability cluster, not the symbol.** `Level::OnWorldCleared`'s own doc said
+  *"World::Clear already emptied us"* — a member that exists to serve one caller is dead or alive
+  with it, in both directions ([[L10]]'s cluster rule, run in reverse).
+- **The compiler stayed the honest gate, and it was cheap.** One `OPAAX_BUILD_FAIL` naming five
+  files, ~9 minutes. Never close a delete-only change on grep evidence alone, however careful the
+  grep looked — that is what a build is for ([[L8]]: grep the output, the exit code was 0 here too).
