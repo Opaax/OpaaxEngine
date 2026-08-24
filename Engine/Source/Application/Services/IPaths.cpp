@@ -47,6 +47,39 @@ namespace Opaax
             OpaaxString AbsoluteToAsset(const OpaaxString&)   const override { return OpaaxString(); }
             void        LogPaths()                            const override { OPAAX_APP_LOG(Warn, "Null Path Service"); }
         };
+
+        // InAbsPath expressed relative to InRoot, or EMPTY when it is not under it.
+        //
+        // weakly_canonical on BOTH sides, because the two arrive in different shapes: a file
+        // dialog answers `C:\...\Maps\Main.opaaxmap` while the roots were built with forward
+        // slashes. Comparing the strings would say "outside" for a file plainly inside.
+        // `weakly_` because the target need not exist yet (a Save As target).
+        OpaaxString RelativeUnder(const OpaaxString& InRoot, const OpaaxString& InAbsPath)
+        {
+            if (InRoot.IsEmpty())
+            {
+                return OpaaxString();
+            }
+
+            std::error_code lError;
+            const fs::path lAbs  = fs::weakly_canonical(Utf8::ToFsPath(InAbsPath), lError);
+            const fs::path lRoot = fs::weakly_canonical(Utf8::ToFsPath(InRoot), lError);
+
+            if (lError)
+            {
+                return OpaaxString();
+            }
+
+            const fs::path lRelative = lAbs.lexically_relative(lRoot);
+
+            // Empty means unrelated paths; a leading ".." means it climbed OUT of the root.
+            if (lRelative.empty() || *lRelative.begin() == "..")
+            {
+                return OpaaxString();
+            }
+
+            return Utf8::FromFsPath(lRelative);
+        }
     }
 
     // =========================================================================
@@ -115,6 +148,11 @@ namespace Opaax
         return s_Null;
     }
 
+    OpaaxString IPaths::EngineAssetsDir() const
+    {
+        return EngineToAbsolute(OpaaxString("Assets"));
+    }
+
     // =========================================================================
     // Paths
     // =========================================================================
@@ -164,38 +202,36 @@ namespace Opaax
 
     OpaaxString Paths::AssetToAbsolute(const OpaaxString& InAssetRel) const
     {
+        const OpaaxStringView lRef(InAssetRel);
+        if (lRef.StartsWith(ENGINE_MOUNT))
+        {
+            const OpaaxString lEngineRel = lRef.SubString(OpaaxStringView(ENGINE_MOUNT).GetLength()).ToString();
+            return Utf8::FromFsPath(Utf8::ToFsPath(EngineAssetsDir()) / Utf8::ToFsPath(lEngineRel));
+        }
+
         return Utf8::FromFsPath(Utf8::ToFsPath(m_Layout.AssetsDir) / Utf8::ToFsPath(InAssetRel));
     }
 
     OpaaxString Paths::AbsoluteToAsset(const OpaaxString& InAbsPath) const
     {
-        if (InAbsPath.IsEmpty() || m_Layout.AssetsDir.IsEmpty())
+        if (InAbsPath.IsEmpty())
         {
             return OpaaxString();
         }
 
-        // weakly_canonical on BOTH sides, because the two arrive in different shapes: a file
-        // dialog answers `C:\...\Maps\Main.opaaxmap` while AssetsDir was built with forward
-        // slashes. Comparing the strings would say "outside the assets dir" for a file plainly
-        // inside it. `weakly_` because the target need not exist yet (a Save As target).
-        std::error_code lError;
-        const fs::path lAbs  = fs::weakly_canonical(Utf8::ToFsPath(InAbsPath), lError);
-        const fs::path lRoot = fs::weakly_canonical(Utf8::ToFsPath(m_Layout.AssetsDir), lError);
-
-        if (lError)
+        // The project first, so its own content keeps the unprefixed form every existing map file
+        // is written in — and so a project may shadow an engine path with one of its own.
+        if (const OpaaxString lProjectRel = RelativeUnder(m_Layout.AssetsDir, InAbsPath); !lProjectRel.IsEmpty())
         {
-            return OpaaxString();
+            return lProjectRel;
         }
 
-        const fs::path lRelative = lAbs.lexically_relative(lRoot);
-
-        // Empty means unrelated paths; a leading ".." means it climbed OUT of the assets dir. Both
-        // are "this file cannot be named by a manifest", which is a real answer (see the header).
-        if (lRelative.empty() || *lRelative.begin() == "..")
+        if (const OpaaxString lEngineRel = RelativeUnder(EngineAssetsDir(), InAbsPath); !lEngineRel.IsEmpty())
         {
-            return OpaaxString();
+            return OpaaxString(ENGINE_MOUNT) + lEngineRel;
         }
 
-        return Utf8::FromFsPath(lRelative);
+        // Under no mount: "this file cannot be named by a manifest", a real answer (see the header).
+        return OpaaxString();
     }
 }

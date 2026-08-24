@@ -179,6 +179,84 @@ TEST_CASE("Paths: AbsoluteToAsset is the inverse of AssetToAbsolute")
 }
 
 // =============================================================================
+// The /Engine/ mount — engine-shipped content is referenceable, project content is not rewritten
+// =============================================================================
+TEST_CASE("Paths: ENGINE_MOUNT resolves against the engine's assets, not the project's")
+{
+    StubPlatform lPlatform(OpaaxString("W:/deploy/bin/Game.exe"));
+    char  lArg0[] = "Game.exe";
+    char  lArg1[] = "--project";
+    char  lArg2[] = "W:/proj/MyGame/MyGame.opaaxproj";
+    char* lArgv[] = { lArg0, lArg1, lArg2 };
+
+    const Paths lPaths(lPlatform, 3, lArgv);
+
+    // EngineRoot follows the suite's own workspace (the editor define), so assert the SHAPE — the
+    // claim under test is "which root", not "which machine".
+    const std::string lMounted = lPaths.AssetToAbsolute(OpaaxString("/Engine/Textures/T_Checker_64.png")).CStr();
+    CHECK(lMounted.find("/Engine/Assets/Textures/T_Checker_64.png") != std::string::npos);
+    CHECK(lMounted.find("/MyGame/Assets") == std::string::npos);
+
+    CHECK(lPaths.EngineAssetsDir() == lPaths.EngineToAbsolute(OpaaxString("Assets")));
+
+    SUBCASE("an UNPREFIXED path is untouched — every existing .opaaxmap stays valid")
+    {
+        CHECK(lPaths.AssetToAbsolute(OpaaxString("Textures/Hero.png"))
+              == "W:/proj/MyGame/Assets/Textures/Hero.png");
+    }
+
+    SUBCASE("a path merely CONTAINING the mount word is project content")
+    {
+        // The discriminator is the leading '/', not the word: a project folder may be called Engine.
+        CHECK(lPaths.AssetToAbsolute(OpaaxString("Engine/Notes.png"))
+              == "W:/proj/MyGame/Assets/Engine/Notes.png");
+    }
+}
+
+TEST_CASE("Paths: AbsoluteToAsset names engine content by its mount")
+{
+    // A real project root under temp, as the inverse test above does. The ENGINE root is NOT
+    // fabricated: the ctor bakes it from the suite's own workspace, so the test takes
+    // EngineAssetsDir() as given and asserts the ROUND TRIP, which is the rule under test.
+    namespace fs = std::filesystem;
+
+    const fs::path lRoot = fs::temp_directory_path() / "OpaaxPathsTests_mount";
+
+    std::error_code lError;
+    fs::remove_all(lRoot, lError);
+    fs::create_directories(lRoot / "Assets" / "Textures", lError);
+
+    StubPlatform lPlatform(OpaaxString("W:/deploy/bin/Game.exe"));
+    std::string  lProject = (lRoot / "MyGame.opaaxproj").string();
+
+    char  lArg0[] = "Game.exe";
+    char  lArg1[] = "--project";
+    char* lArgv[] = { lArg0, lArg1, lProject.data() };
+
+    const Paths lPaths(lPlatform, 3, lArgv);
+
+    SUBCASE("an engine file round-trips through its mount")
+    {
+        const OpaaxString lAbs = lPaths.AssetToAbsolute(OpaaxString("/Engine/Textures/T_Checker_64.png"));
+        CHECK(lPaths.AbsoluteToAsset(lAbs) == OpaaxString("/Engine/Textures/T_Checker_64.png"));
+    }
+
+    SUBCASE("a project file still round-trips UNPREFIXED — the project is tried first")
+    {
+        const OpaaxString lAbs = lPaths.AssetToAbsolute(OpaaxString("Textures/Hero.png"));
+        CHECK(lPaths.AbsoluteToAsset(lAbs) == OpaaxString("Textures/Hero.png"));
+    }
+
+    SUBCASE("a file under NEITHER root still has no asset name")
+    {
+        const OpaaxString lOutside((lRoot / "Elsewhere.png").generic_string().c_str());
+        CHECK(lPaths.AbsoluteToAsset(lOutside).IsEmpty());
+    }
+
+    fs::remove_all(lRoot, lError);
+}
+
+// =============================================================================
 // Null object
 // =============================================================================
 TEST_CASE("IPaths: the null object is empty and safe via the locator")

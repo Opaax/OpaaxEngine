@@ -417,19 +417,23 @@ add_custom_command(TARGET OpaaxEngine POST_BUILD
     COMMENT "Creating Engine/Assets directory..."
 )
 
-# Shaders are the only engine-owned content the runtime reads. Fonts / Textures / Meshes /
-# AssetManifest.json were copied here for the retired Legacy/Assets manifest world; nothing
-# has loaded one since, so the content and these copy steps went together (2026-08-21).
+# What the runtime reads out of Engine/Assets: Shaders (Renderer2D::Init) and Textures — the
+# prototyping content a game references through the "/Engine/" mount (IPaths::ENGINE_MOUNT), which
+# a release build resolves from the EXE dir rather than the source tree (I12). Fonts / Meshes /
+# AssetManifest.json belonged to the retired Legacy/Assets manifest world and went in the
+# 2026-08-21 cleanup along with their copy steps.
 # Guarded on EXISTS because an empty asset folder is not tracked by git, so a fresh clone
 # (e.g. CI) legitimately lacks it and an unconditional copy_directory would fail.
-if(EXISTS ${ENGINE_ASSETS_SOURCE}/Shaders)
-    add_custom_command(TARGET OpaaxEngine POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-            ${ENGINE_ASSETS_SOURCE}/Shaders
-            ${ENGINE_ASSETS_DEST}/Shaders
-        COMMENT "Copying engine shaders..."
-    )
-endif()
+foreach(ENGINE_ASSET_DIR Shaders Textures)
+    if(EXISTS ${ENGINE_ASSETS_SOURCE}/${ENGINE_ASSET_DIR})
+        add_custom_command(TARGET OpaaxEngine POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+                ${ENGINE_ASSETS_SOURCE}/${ENGINE_ASSET_DIR}
+                ${ENGINE_ASSETS_DEST}/${ENGINE_ASSET_DIR}
+            COMMENT "Copying engine ${ENGINE_ASSET_DIR}..."
+        )
+    endif()
+endforeach()
 
 # ==================================
 # Unit tests (OpaaxTests) — links the engine DLL like any other consumer.

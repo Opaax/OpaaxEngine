@@ -16,8 +16,10 @@
 //   declaration instead of the whole RHI. Nothing in this header includes the resource system.
 //
 //   ASSET-RELATIVE, always ("Textures/Hero.png"), which is what IPaths::AbsoluteToAsset produces
-//   and AssetToAbsolute consumes (MP8). An absolute path here would bake a build machine's layout
-//   into a map file.
+//   and AssetToAbsolute consumes (MP8) — or a MOUNT ("/Engine/Textures/T_Checker_64.png") for
+//   content the engine ships rather than the project. An absolute path here would bake a build
+//   machine's layout into a map file; the mount is what makes engine content referenceable without
+//   one.
 //
 //   Header-only value template: no OPAAX_API (I6), no state, no registry.
 // =============================================================================

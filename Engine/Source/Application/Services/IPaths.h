@@ -43,6 +43,19 @@ namespace Opaax
                                                  const OpaaxString& InProjectArg);
 
     // =============================================================================
+    // Mounts — what an ASSET REFERENCE ("Textures/Hero.png") is relative to.
+    //
+    // Unprefixed is the project's own Assets dir, which is what every existing .opaaxmap and
+    // .opaaxlevel already writes. A leading '/' names a mount instead — the one discriminator
+    // that cannot collide, since a relative asset name never starts with one.
+    //
+    // There is deliberately no symmetric "/Game/" for project content: introducing one would
+    // rewrite every map file on disk (MP6 verifies them byte-for-byte) to say what the absence
+    // of a prefix already says.
+    // =============================================================================
+    inline constexpr const char* ENGINE_MOUNT = "/Engine/";
+
+    // =============================================================================
     // IPaths — resolved engine + project layout.
     //
     // ProjectRoot is the directory that holds the .opaaxproj; every project directory
@@ -82,19 +95,29 @@ namespace Opaax
         virtual OpaaxString SaveDir()       const = 0;
         virtual OpaaxString TempDir()       const = 0;
 
+        /**
+         * <EngineRoot>/Assets — the content the ENGINE ships, and what ENGINE_MOUNT resolves against.
+         *
+         * Non-virtual: it is EngineToAbsolute("Assets") and nothing else, so stating it once here
+         * spares every IPaths implementation (the null object, three test doubles) an override that
+         * could only repeat the same line.
+         */
+        OpaaxString EngineAssetsDir() const;
+
         //----- resolvers ------------------------------------------------------
         virtual OpaaxString EngineToAbsolute(const OpaaxString& InEngineRel)   const = 0; // under EngineRoot
         virtual OpaaxString ProjectToAbsolute(const OpaaxString& InProjectRel) const = 0; // under ProjectRoot
-        virtual OpaaxString AssetToAbsolute(const OpaaxString& InAssetRel)     const = 0; // under AssetsDir
+        virtual OpaaxString AssetToAbsolute(const OpaaxString& InAssetRel)     const = 0; // under AssetsDir, or a mount
 
         /**
          * The inverse of AssetToAbsolute: an absolute path back to the form an asset is REFERENCED
-         * by ("Maps/Main.opaaxmap"), with forward slashes whatever the input used.
+         * by ("Maps/Main.opaaxmap", "/Engine/Textures/T_Checker_64.png"), with forward slashes
+         * whatever the input used.
          *
          * Exists because the editor authors asset references — a level manifest names its maps
          * asset-relative, and a file dialog hands back an absolute native path.
          *
-         * @return EMPTY when InAbsPath is outside AssetsDir. That is a real answer, not a failure:
+         * @return EMPTY when InAbsPath is under NO mount. That is a real answer, not a failure:
          *   a file from elsewhere cannot be named by a manifest at all.
          */
         virtual OpaaxString AbsoluteToAsset(const OpaaxString& InAbsPath)      const = 0;
