@@ -492,6 +492,73 @@ reaches the device through `IEngine`** (landed 2026-08-20 with `TextureResource`
   per-type code, and the *drop* side decides. The target **peeks before accepting**, so a wrong type
   gets no accept highlight and the drag stays live. Asset-relative conversion happens at the SOURCE,
   which has `IPaths` through `EditorContext` (**MP8**); the drawer contract has no context, by design.
+- **A reference may name a MOUNT, and there is exactly one: `/Engine/`** (④b, 2026-08-24).
+  `Engine/Assets/Textures/` ships prototyping content (checkers, black/white squares) that a game
+  could *see* and never *reference*, because a `TResourcePath` was project-relative and nothing else.
+  `IPaths::ENGINE_MOUNT` fixes that in the ONE place that already answers path questions, so every
+  existing consumer — `RendererManager::ResolveTexture`, the browser's drag, level manifests,
+  `Engine::ResolveStartupLevel` — gained it with no edit of its own.
+  - **Unprefixed stays PROJECT-relative, and there is deliberately no symmetric `/Game/`.** Every
+    `.opaaxmap` and `.opaaxlevel` on disk already names its assets unprefixed, and **MP6** verifies
+    those byte-for-byte: adding `/Game/` would rewrite every one of them to say what the *absence*
+    of a prefix already says. The discriminator is the **leading `/`**, not the word — a project
+    folder may legitimately be called `Engine`, and `lexically_relative` never emits a leading slash.
+  - **`AbsoluteToAsset` tries the project FIRST**, so project content keeps its historical spelling
+    and a project may shadow an engine path with one of its own. Both directions live in `Paths`
+    over one `RelativeUnder` helper, so the inverse cannot drift from the forward.
+  - The release deploy step for `Engine/Assets/Textures` is **not** optional: a shipped build
+    resolves `EngineRoot` from the exe dir (**I12**), so an un-copied mount resolves to nothing.
+    `Engine/CMakeLists.txt`'s comment claiming "nothing has loaded one since" was true until this
+    change and is corrected with it.
+- **A type icon is an IMAGE with the GLYPH as fallback, resolved against TWO roots** (④b). The two
+  are separate facets — `SetIcon(path)` and `SetGlyph(text)` — rather than one replacing the other:
+  a type that ships no image, or whose image is missing, still draws something. **The names had to
+  be exactly these** (user, 2026-08-24): `Icon` first meant the text and then also the picture, so
+  the field, the setter and their own comments disagreed. `Icon` is the picture, `Glyph` is the
+  text, everywhere. The path is editor-assets-relative and
+  searched **project editor space first, then the editor tool's own**
+  (`EditorPaths::ToolAssetsDir()` = `<WorkspaceRoot>/Editor/Assets`, the editor binary's content as
+  `EngineRoot()` is the engine's) — which is what lets a *game* ship an icon for its own resource
+  type under the same relative name, and override an editor one.
+  - **Icons load EAGERLY at the browser's `Startup`, and the registry is what licenses that**:
+    `ResourceTypes()` was sealed at `OnModulesRegistered`, so the icon set is finite and known right
+    there. Lazy loading was written first and was wrong for a reason worth keeping — the browser
+    opens at Home, where no file tile draws, so **nothing exercised the icon path at all** and the
+    smoke log proved nothing. Eager also makes the draw path a plain lookup.
+  - **A FAILED icon claim is DROPPED, never cached, and this is a trap the whole tree shares:**
+    `ResourceRef::Get()` on a failed claim answers the type's **placeholder**, not `nullptr`. Caching
+    one would have drawn a magenta 2×2 square exactly where the glyph fallback belonged. The general
+    rule: **gate on `IsValid()`, never on `Get() != nullptr`, whenever "absent" and "placeholder" are
+    different answers to you.**
+- **A PREVIEW is what a DOUBLE-CLICK opens — which is why I15 did not have to move** (④b, user's
+  call). The open question was how a preview reaches the UI backend and the ResourceManager when
+  `TPropertyDrawer::Draw(label, value, meta)` deliberately has no `EditorContext`. The answer was not
+  to widen that contract but to notice that `ResourceTypeBuilder::SetActivate` **already is** "what
+  does a double-click do", and Map and Level have opened documents through it since M2d.
+  `ResourcePreviewPanel` is an ordinary registered panel, so it has a context by construction.
+  - `ResourcePreview` (an `EditorContext` member, the `EditorSelection`/`PIE`/`MapDocument` shape) is
+    the meeting point, because the WRITER (a stateless activate closure) and the READER (a live
+    panel) are different objects and `EditorPanels` owns panels as `IEditorPanel` with no typed
+    getter — by design. It stores WHAT was asked for; **the panel owns the claim**, so whoever draws
+    the pixels is whoever keeps them alive.
+  - The panel branches on one `TypeId`. **Growth point, named not built:** the second previewable
+    type promotes that to a `SetPreview` chrome facet beside `SetActivate` — where per-type
+    presentation already lives — never a chain of `if`s.
+- **`ResourceManager::Find<T>(path)` answers "already resident?" and NEVER loads** (④b). The question
+  an asset browser has to be able to ask: `Load` would answer it by pulling every file in the folder
+  into memory, which is precisely what Legacy's *"only thumbnail an already-loaded texture, never
+  force-load a whole folder"* forbids. It is `AcquireSlot`'s dedup half with the allocate half
+  refused; `Loading` counts as **not found**, because the caller wants something it can display now.
+  A miss returns an **empty ref with a null manager**, so `Get()` is honestly `nullptr` rather than
+  the placeholder (`Pin`'s existing choice, and the trap above).
+  - The payoff is emergent: a browser tile thumbnails not only what the *browser* opened but every
+    texture the **game** loaded, because `RendererManager`'s cache put them in the same pool.
+- **`EditorImage` carries its UVs so no call site has to remember the flip** (④b). One struct serves
+  both display seams — `GetViewportImage` (an FBO) and `GetTextureImage` (a loaded texture) — because
+  orientation is the BACKEND's to state: GL stores an FBO bottom-up, and `TextureResource` decodes
+  bottom-up *because* GL samples that way. Legacy is the argument: four separate copies of the
+  literal `(0,1)-(1,0)`, each with its own comment explaining it. Renamed from
+  `EditorViewportImage` when the second caller arrived — the type was never viewport-specific.
 
 
 ---
@@ -1481,7 +1548,12 @@ names its maps asset-relative and a file dialog hands back an absolute native pa
 `AssetToAbsolute` stopped being optional the moment `Add Map...` existed. It canonicalises **both** sides
 before comparing (`weakly_canonical`, since a Save As target need not exist yet) — a string compare would
 call a file plainly inside `Assets/` "outside" it. **Empty is a real answer, not a failure:** a file from
-outside `AssetsDir` cannot be named by a manifest at all, and every caller refuses with that reason.
+under **no mount** cannot be named by a manifest at all, and every caller refuses with that reason.
+*Amended 2026-08-24 (**I16**'s mount bullet): it answers TWO roots now — the project's `AssetsDir`
+first, then `EngineAssetsDir()` as `/Engine/…` — so "empty" means "under neither", not "outside
+`AssetsDir`". Two consequences, both accepted:* a Save-As dialog pointed inside the engine's own assets
+now yields a `/Engine/` path instead of empty (a deliberate navigation, and naming an engine-shipped map
+is legitimate), and the *only* thing that still answers empty is a file genuinely outside both trees.
 
 **MP10 — A MAP NAMES ITSELF (`MapData::Id`, the `mapId` key), and "capture one map" / "capture the whole
 world" are TWO NAMED FUNCTIONS** (landed 2026-08-09).

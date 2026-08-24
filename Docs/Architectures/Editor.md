@@ -288,7 +288,7 @@ class ShmupEditorModule final : public IEditorModule
             .Menu              = OPAAX_ID("Tools"),                  // omit for "Window"
             .DefaultVisibility = EPanelVisibility::Hidden });
         InR.ResourceTypes().Register<WaveResource>()      // extensions come from the TYPE, engine-side
-            .SetIcon(OpaaxString("[W]"))
+            .SetGlyph(OpaaxString("[W]"))
             .SetActivate([](EditorContext& InCtx, const ResourceFile& InFile) { /* open the Wave Designer */ });
         InR.EditWorldSystems().Register<TriggerZoneOverlaySystem>();
     }
