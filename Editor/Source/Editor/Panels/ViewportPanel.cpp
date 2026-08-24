@@ -2,6 +2,7 @@
 
 #include "Editor/EditorContext.h"
 #include "Editor/Input/InputRoute.h"        // hover/focus is pushed, not read back out (D5 step 2)
+#include "Editor/ImguiLibrary/ImguiWidgets.h"
 #include "Editor/Operation/EditorSelection.hpp"
 #include "Editor/UI/IEditorUIBackend.h"
 
@@ -128,9 +129,9 @@ namespace Opaax::Editor
         }
     }
 
-    EditorViewportImage ViewportPanel::GetViewportImage() const
+    EditorImage ViewportPanel::GetViewportImage() const
     {
-        return m_Framebuffer != nullptr ? m_Context.UIBackend.GetViewportImage(*m_Framebuffer) : EditorViewportImage{};
+        return m_Framebuffer != nullptr ? m_Context.UIBackend.GetViewportImage(*m_Framebuffer) : EditorImage{};
     }
 
     void ViewportPanel::DrawContents()
@@ -146,22 +147,16 @@ namespace Opaax::Editor
         m_Context.Route.SetViewportFocus(ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows),
                                          ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows));
 
-        const EditorViewportImage lImg = GetViewportImage();
+        const EditorImage lImg = GetViewportImage();
 
-        if (lImg.Handle != 0)
+        // Draws a Dummy of the same size when the handle is null, which is the reserve-space branch
+        // this used to spell out below.
+        ImguiWidgets::Image(lImg, lAvail);
+
+        if (lImg.IsValid() && !m_bImageLogged)
         {
-            ImGui::Image(static_cast<ImTextureID>(lImg.Handle), lAvail,
-                         ImVec2(lImg.UV0.x, lImg.UV0.y), ImVec2(lImg.UV1.x, lImg.UV1.y));
-            
-            if (!m_bImageLogged)
-            {
-                OPAAX_LOG(LogViewportPanel, Info, "Viewport displaying world FBO (handle={}, {}x{})", lImg.Handle, m_viewportSize.x, m_viewportSize.y);
-                m_bImageLogged = true;
-            }
-        }
-        else
-        {
-            ImGui::Dummy(lAvail);
+            OPAAX_LOG(LogViewportPanel, Info, "Viewport displaying world FBO (handle={}, {}x{})", lImg.Handle, m_viewportSize.x, m_viewportSize.y);
+            m_bImageLogged = true;
         }
     }
 

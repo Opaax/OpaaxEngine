@@ -37,6 +37,26 @@ namespace Opaax::Editor
         return Utf8::FromFsPath(Utf8::ToFsPath(EditorAssetsDir()) / Utf8::ToFsPath(InAssetRel));
     }
 
+    // =========================================================================
+    // Tool space — <WorkspaceRoot>/Editor/*  (the editor binary's own content)
+    //   Anchored on WorkspaceRoot rather than ProjectRoot, so it answers the same thing whichever
+    //   project is open — or none at all.
+    // =========================================================================
+    OpaaxString EditorPaths::ToolDir() const
+    {
+        return Utf8::FromFsPath(Utf8::ToFsPath(WorkspaceRoot()) / "Editor");
+    }
+
+    OpaaxString EditorPaths::ToolAssetsDir() const
+    {
+        return Utf8::FromFsPath(Utf8::ToFsPath(ToolDir()) / "Assets");
+    }
+
+    OpaaxString EditorPaths::ToolAssetToAbsolute(const OpaaxString& InAssetRel) const
+    {
+        return Utf8::FromFsPath(Utf8::ToFsPath(ToolAssetsDir()) / Utf8::ToFsPath(InAssetRel));
+    }
+
     void EditorPaths::LogPaths() const
     {
         Paths::LogPaths();
@@ -47,5 +67,6 @@ namespace Opaax::Editor
         OPAAX_APP_LOG(Info, "OpaaxEditorApplication::Bootstrap ----> Editor Source Dir:   {}", EditorSourceDir().CStr());
         OPAAX_APP_LOG(Info, "OpaaxEditorApplication::Bootstrap ----> Editor Save Dir:     {}", EditorSaveDir().CStr());
         OPAAX_APP_LOG(Info, "OpaaxEditorApplication::Bootstrap ----> Editor Temp Dir:     {}", EditorTempDir().CStr());
+        OPAAX_APP_LOG(Info, "OpaaxEditorApplication::Bootstrap ----> Tool Assets Dir:     {}", ToolAssetsDir().CStr());
     }
 }

@@ -20,6 +20,17 @@ namespace Opaax::Editor
     //   for editor-only assets, settings, dock layouts, scratch saves, etc. Derived from the inherited
     //   ProjectRoot() — it adds NO surface to the engine's IPaths (D4: the engine never learns the editor
     //   exists), so these methods live only on this concrete type in OpaaxEditorLib.
+    //
+    //   Tool space — <WorkspaceRoot>/Editor, the content the editor BINARY ships, exactly as
+    //   IPaths::EngineRoot() is the engine's. Read the two sets as a pair, because they are one word
+    //   apart and mean different things:
+    //
+    //       EditorAssetsDir()  <ProjectRoot>/Editor/Assets    this PROJECT's editor content
+    //       ToolAssetsDir()    <WorkspaceRoot>/Editor/Assets  the EDITOR's own chrome (type icons)
+    //
+    //   Tool space is project-independent, so it stays resolvable even for a host that declared no
+    //   edited project. It needs no deploy step: an editor build implies a dev build (I12), so
+    //   WorkspaceRoot is always the source tree here.
     // =============================================================================
     class EditorPaths final : public Paths
     {
@@ -46,6 +57,11 @@ namespace Opaax::Editor
         
         OpaaxString EditorToAbsolute(const OpaaxString& InEditorRel)     const; // under <ProjectRoot>/Editor
         OpaaxString EditorAssetToAbsolute(const OpaaxString& InAssetRel) const; // under <ProjectRoot>/Editor/Assets
+
+        OpaaxString ToolDir()          const; // <WorkspaceRoot>/Editor
+        OpaaxString ToolAssetsDir()    const; // <WorkspaceRoot>/Editor/Assets
+
+        OpaaxString ToolAssetToAbsolute(const OpaaxString& InAssetRel) const; // under <WorkspaceRoot>/Editor/Assets
 
         // =============================================================================
         // Override

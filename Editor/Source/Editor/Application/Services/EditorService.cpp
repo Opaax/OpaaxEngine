@@ -21,6 +21,7 @@
 #include "Editor/Panels/InspectorPanel.h"
 #include "Editor/Panels/PlayToolbarPanel.h"
 #include "Editor/Panels/ResourceBrowserPanel.h"
+#include "Editor/Panels/ResourcePreviewPanel.h"
 #include "Editor/Panels/ViewportPanel.h"
 #include "Editor/UI/OpenGLEditorUIBackend.h"
 #include "Engine/Config/Config_Engine.h"
@@ -29,6 +30,7 @@
 #include "Engine/Subsystems/Input/InputEvents.h"
 #include "World/Serialization/LevelResource.hpp"   // the types whose chrome is registered below
 #include "World/Serialization/MapResource.hpp"
+#include "Engine/Subsystems/Resources/ResourceTypeID.hpp"   // the id the preview is opened with
 #include "Engine/Subsystems/Resources/Types/TextureResource.h"
 #include "World/World.h"
 #include "World/WorldManager.h"
@@ -119,22 +121,34 @@ namespace Opaax::Editor
 
     void EditorService::RegisterNativeResourceTypes()
     {
+        // The glyph and the image are BOTH set: the image is what shows, the glyph is what shows if
+        // it cannot be found. Neither names an extension — that label comes from the FORMAT,
+        // engine-side.
         m_Extensions.ResourceTypes().Register<MapResource>()
-            .SetIcon(OpaaxString("[M]"))
+            .SetIcon(OpaaxString("Icons/T_Map_Icon.png"))
+            .SetGlyph(OpaaxString("[M]"))
             .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
             {
                 InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_MAP_AT, InContext,
                                                         MapPathParams{InFile.AbsPath});
             });
 
-        // No activation: double-clicking an image has nothing to open until a texture viewer exists.
-        // The icon is the whole registration, and the browser already says "Texture" — that label
-        // comes from the FORMAT, engine-side, so this entry names no extension.
+        // Double-click OPENS THE PREVIEW, through the seam that already answers "what does a
+        // double-click do" — the same one Map and Level use to open a document. That is why the
+        // Inspector's TPropertyDrawer contract did not have to grow an EditorContext to get a
+        // texture preview: the preview lives where a context already is (I15 untouched).
         m_Extensions.ResourceTypes().Register<TextureResource>()
-            .SetIcon(OpaaxString("[T]"));
+            .SetIcon(OpaaxString("Icons/T_Texture_Icon.png"))
+            .SetGlyph(OpaaxString("[T]"))
+            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
+            {
+                InContext.Preview.Open(InFile, ResourceTypeID::Get<TextureResource>());
+                InContext.Panels.SetVisible(PreviewPanelId(), true);
+            });
 
         m_Extensions.ResourceTypes().Register<LevelResource>()
-            .SetIcon(OpaaxString("[L]"))
+            .SetIcon(OpaaxString("Icons/T_Level_Icon.png"))
+            .SetGlyph(OpaaxString("[L]"))
             .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
             {
                 InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_LEVEL_AT, InContext, LevelPathParams{InFile.AbsPath});
@@ -190,6 +204,10 @@ namespace Opaax::Editor
         //     reference to it. Nothing reads it yet — S2's Hierarchy panel is the first writer. -------
         m_Selection = MakeUnique<EditorSelection>();
 
+        // --- ④b: what a double-click asked to preview. Owned here for the same reason the selection
+        //     is — a resource type's activate closure writes it, the Preview panel reads it. --------
+        m_Preview = MakeUnique<ResourcePreview>();
+
         // --- PIE (M4 S5): the Play/Pause/Step/Stop state machine, owned here so BOTH front-ends —
         //     the toolbar panel and RouteInput's reserved keys — drive one object. -----------------
         m_PIE = MakeUnique<PlayInEditor>(lEngine.GetWorldManager());
@@ -230,6 +248,7 @@ namespace Opaax::Editor
             *m_MapDocument,
             m_Extensions,
             *m_PanelHost,
+            *m_Preview,
             OpaaxApplication::GetAppService<IPaths>(),
             OpaaxApplication::GetAppService<IPlatform>().GetFileSystem(),
             OpaaxApplication::GetAppService<IConfigSystem>(),
@@ -537,6 +556,11 @@ namespace Opaax::Editor
         lPanels.Register<HierarchyPanel>(PanelDesc{.Id = OPAAX_ID("Hierarchy")});
         lPanels.Register<InspectorPanel>(PanelDesc{.Id = OPAAX_ID("Inspector")});
         lPanels.Register<ResourceBrowserPanel>(PanelDesc{.Id = OPAAX_ID("Resource Browser")});
+
+        // Hidden until something is double-clicked — an empty preview is not worth a pane on a
+        // fresh layout, and the activate that fills it is also what shows it.
+        lPanels.Register<ResourcePreviewPanel>(PanelDesc{.Id = PreviewPanelId(),
+                                                         .DefaultVisibility = EPanelVisibility::Hidden});
         lPanels.Register<ConfigPanel>(PanelDesc{.Id = OPAAX_ID("Config"), .DefaultVisibility = EPanelVisibility::Hidden});
         lPanels.Register<InputPanel>(PanelDesc{.Id = OPAAX_ID("Input"), .DefaultVisibility = EPanelVisibility::Hidden });
     }
@@ -666,6 +690,7 @@ namespace Opaax::Editor
         //    context they are referenced from. All three hold only non-owning references, so there
         //    is nothing to undo; the route is dropped before the engine it would reset.
         m_Selection.reset();
+        m_Preview.reset();
         m_InputRoute.reset();
         m_PIE.reset();
         m_PanelHost.reset();

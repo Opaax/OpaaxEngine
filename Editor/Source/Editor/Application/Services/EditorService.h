@@ -4,6 +4,7 @@
 #include "Editor/EditorContext.h"
 #include "Editor/Application/Services/EditorPaths.h"
 #include "Editor/Operation/EditorSelection.hpp"
+#include "Editor/Resources/ResourcePreview.h"
 #include "Editor/Input/InputRoute.h"
 #include "Editor/EditorMapDocument.h"
 #include "Editor/EditorLevelDocument.h"
@@ -73,6 +74,15 @@ namespace Opaax::Editor
          * what the browser shows and what a double-click does.
          */
         void RegisterNativeResourceTypes();
+
+        /**
+         * The Preview panel's id, stated ONCE.
+         *
+         * Two calls here need it — the panel's registration and the activate closure that opens it —
+         * and a panel deliberately does NOT carry its own id (PanelDesc.h: it used to be stated
+         * twice, with nothing making the two agree). So it lives with the two callers instead.
+         */
+        static OpaaxStringID PreviewPanelId() { return OPAAX_ID("Preview"); }
 
         /**
          * The engine's own configs into m_Extensions.ConfigDrawers(), so the Config panel draws
@@ -197,6 +207,7 @@ namespace Opaax::Editor
         // that outlives this one. Null when no edited project was declared.
         const EditorPaths*          m_EditorPaths = nullptr;
 
+        TUniquePtr<ResourcePreview>  m_Preview;         // ④b: what a double-click asked to see; EditorContext.Preview refs it
         TUniquePtr<EditorSelection>  m_Selection;       // M2a: the single selection; EditorContext.Selection refs it
         TUniquePtr<PlayInEditor>     m_PIE;             // M4 S5: the PIE state machine; EditorContext.PIE refs it
         TUniquePtr<InputRoute>       m_InputRoute;      // M-Input S2: is the engine being fed; EditorContext.InputRoute refs it

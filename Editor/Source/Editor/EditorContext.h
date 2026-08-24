@@ -21,6 +21,7 @@ namespace Opaax
         class EditorExtensionRegistrar; // editor-owned; the sealed D10 routes (Inspector reads Drawers())
         class EditorPaths;              // editor-owned IPaths subclass; the editor-space directories
         class EditorPanels;             // editor-owned; the LIVE panels and their visibility
+        class ResourcePreview;          // editor-owned; WHICH resource a double-click asked to see
 
         // =============================================================================
         // EditorContext — a flat struct of engine-side references (Editor.md D3). Resolved ONCE by
@@ -72,6 +73,11 @@ namespace Opaax
             // The LIVE panels — instances and visibility. Distinct from Extensions.Panels(), which is
             // the sealed list of DESCRIPTIONS this was built from.
             EditorPanels& Panels;
+
+            // ④b — WHICH resource a double-click asked to look at. A resource type's activate closure
+            // writes it and the Preview panel reads it; here because those are different objects and
+            // a closure gets no other way to reach one (the Selection/PIE/MapDocument shape).
+            ResourcePreview& Preview;
 
             // M2d — the browser resolves its roots from paths and walks them through the file system.
             // Both are resolved ONCE by EditorService: a panel never touches the locator (D3).

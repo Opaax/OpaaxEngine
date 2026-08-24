@@ -24,7 +24,8 @@ namespace Opaax::Editor
         void RenderDrawData()        override;
         void RenderPlatformWindows() override;
 
-        EditorViewportImage GetViewportImage(IFramebuffer& InFB) override;
+        EditorImage GetViewportImage(IFramebuffer& InFB)     override;
+        EditorImage GetTextureImage(ITexture2D& InTexture)   override;
         //~End IEditorUIBackend interface
 
     private:

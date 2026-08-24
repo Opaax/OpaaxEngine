@@ -4,12 +4,17 @@
 #include "Editor/Application/Services/EditorPaths.h"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Editor/Extensions/ResourceTypeRegistry.h"
+#include "Editor/ImguiLibrary/ImguiDraw.h"
+#include "Editor/ImguiLibrary/ImguiWidgets.h"
 #include "Editor/Resources/ResourceDragDrop.h"
 
 #include "Application/Services/IEngine.h"
 #include "Application/Services/IPaths.h"
 #include "Application/Services/Platforms/IFileSystem.h"
 #include "Engine/Registries/EngineRegistries.h"   // extension -> resource type, the engine's half
+#include "Engine/Subsystems/Resources/ResourceManager.h"
+#include "Engine/Subsystems/Resources/ResourceTypeID.hpp"        // which type a thumbnail is for
+#include "Engine/Subsystems/Resources/Types/TextureResource.h"   // icons are textures like any other
 
 #include <imgui.h>
 
@@ -19,102 +24,11 @@ using namespace Opaax;
 
 namespace
 {
-    constexpr float k_TileSize     = 84.f;
-    constexpr ImU32 k_FolderColor  = IM_COL32(232, 196, 104, 255);   // gold, Explorer-ish
-    constexpr char  k_UnknownIcon[] = "[ ? ]";
+    constexpr float k_TileSize      = 84.f;
+    constexpr char  k_UnknownGlyph[] = "[ ? ]";
 
-    // Scale a packed color's RGB (alpha preserved) — the folder glyph's darker tab.
-    ImU32 DarkenColor(ImU32 InColor, float InFactor)
-    {
-        const int lR = static_cast<int>(((InColor >> IM_COL32_R_SHIFT) & 0xFF) * InFactor);
-        const int lG = static_cast<int>(((InColor >> IM_COL32_G_SHIFT) & 0xFF) * InFactor);
-        const int lB = static_cast<int>(((InColor >> IM_COL32_B_SHIFT) & 0xFF) * InFactor);
-        const int lA =  (InColor >> IM_COL32_A_SHIFT) & 0xFF;
-        return IM_COL32(lR, lG, lB, lA);
-    }
-
-    // A folder: body + tab. Drawn on the window draw list, so it submits no item of its own — the
-    // caller's InvisibleButton stays the last-submitted item and keeps every interaction.
-    void DrawFolderGlyph(ImDrawList* InDrawList, ImVec2 InMin, ImVec2 InMax, bool bHovered)
-    {
-        if (bHovered)
-        {
-            InDrawList->AddRectFilled(InMin, InMax, ImGui::GetColorU32(ImGuiCol_HeaderHovered), 4.f);
-        }
-
-        const float  lWidth  = InMax.x - InMin.x;
-        const float  lHeight = InMax.y - InMin.y;
-        const ImVec2 lA(InMin.x + lWidth * 0.16f, InMin.y + lHeight * 0.22f);
-        const ImVec2 lB(InMax.x - lWidth * 0.16f, InMax.y - lHeight * 0.22f);
-        const float  lTabH   = (lB.y - lA.y) * 0.26f;
-        const float  lTabW   = (lB.x - lA.x) * 0.30f;
-
-        InDrawList->AddRectFilled(lA, ImVec2(lA.x + lTabW, lA.y + lTabH + 3.f),
-            DarkenColor(k_FolderColor, 0.84f), 3.f, ImDrawFlags_RoundCornersTop);
-        InDrawList->AddRectFilled(ImVec2(lA.x, lA.y + lTabH), lB, k_FolderColor, 3.f);
-    }
-
-    // A file: a card with the type's icon glyph centered in it.
-    void DrawFileGlyph(ImDrawList* InDrawList, ImVec2 InMin, ImVec2 InMax, const char* InIcon, bool bHovered)
-    {
-        if (bHovered)
-        {
-            InDrawList->AddRectFilled(InMin, InMax, ImGui::GetColorU32(ImGuiCol_HeaderHovered), 4.f);
-        }
-
-        const ImVec2 lA(InMin.x + (InMax.x - InMin.x) * 0.16f, InMin.y + (InMax.y - InMin.y) * 0.16f);
-        const ImVec2 lB(InMax.x - (InMax.x - InMin.x) * 0.16f, InMax.y - (InMax.y - InMin.y) * 0.16f);
-
-        InDrawList->AddRectFilled(lA, lB, IM_COL32(80, 80, 92, 255), 4.f);
-        InDrawList->AddRect(lA, lB, IM_COL32(0, 0, 0, 120), 4.f);
-
-        const ImVec2 lTextSize = ImGui::CalcTextSize(InIcon);
-        InDrawList->AddText(ImVec2((lA.x + lB.x) * 0.5f - lTextSize.x * 0.5f,
-                                   (lA.y + lB.y) * 0.5f - lTextSize.y * 0.5f),
-            IM_COL32(232, 232, 232, 255), InIcon);
-    }
-
-    // One centered line under a tile, ellipsized when it overflows — a tile grid is unreadable if long
-    // names are allowed to set the column width.
-    void DrawTileLabel(const char* InText, float InWidth)
-    {
-        const ImVec2 lFull = ImGui::CalcTextSize(InText);
-        if (lFull.x <= InWidth)
-        {
-            const float lOffset = (InWidth - lFull.x) * 0.5f;
-            if (lOffset > 0.f) { ImGui::SetCursorPosX(ImGui::GetCursorPosX() + lOffset); }
-            ImGui::TextUnformatted(InText);
-            return;
-        }
-
-        char         lBuffer[160];
-        const float  lDotsWidth = ImGui::CalcTextSize("..").x;
-        const size_t lMax       = strlen(InText);
-        size_t       lLength    = 0;
-        float        lWidth     = 0.f;
-
-        for (; lLength < lMax && lLength < sizeof(lBuffer) - 3; ++lLength)
-        {
-            const char lChar[2] = { InText[lLength], '\0' };
-            lWidth += ImGui::CalcTextSize(lChar).x;
-            if (lWidth + lDotsWidth > InWidth) { break; }
-        }
-
-        memcpy(lBuffer, InText, lLength);
-        lBuffer[lLength]     = '.';
-        lBuffer[lLength + 1] = '.';
-        lBuffer[lLength + 2] = '\0';
-        ImGui::TextUnformatted(lBuffer);
-    }
-
-    // A view toggle button, tinted while it is the active view.
-    bool ViewButton(const char* InLabel, bool bActive)
-    {
-        if (bActive) { ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.26f, 0.59f, 0.98f, 1.f)); }
-        const bool bPressed = ImGui::SmallButton(InLabel);
-        if (bActive) { ImGui::PopStyleColor(); }
-        return bPressed;
-    }
+    // The icon column in a Tree/List row: one line tall, so a row keeps its height.
+    float RowIconSize() { return ImGui::GetTextLineHeight(); }
 }
 
 namespace Opaax::Editor
@@ -133,14 +47,26 @@ namespace Opaax::Editor
     {
         m_Roots.emplace_back(OPAAX_ID("Project"), m_Context.Paths.AssetsDir());
 
+        // The engine's shipped content. Browsable AND draggable: AbsoluteToAsset names a file under
+        // it by its "/Engine/" mount, so a component can reference one (IPaths::ENGINE_MOUNT).
+        m_Roots.emplace_back(OPAAX_ID("Engine"), m_Context.Paths.EngineAssetsDir());
+
         // The editor's own per-project space. Absent when no edited project was declared — then there
-        // is simply one root, which every view already handles.
+        // is simply one root fewer, which every view already handles.
         if (m_Context.EditorPathsOrNull != nullptr)
         {
             m_Roots.emplace_back(OPAAX_ID("Editor"), m_Context.EditorPathsOrNull->EditorAssetsDir());
         }
 
+        LoadTypeIcons();
         Refresh();
+    }
+
+    void ResourceBrowserPanel::Shutdown()
+    {
+        // Before the ResourceManager's own flush and while the GL context is alive, so the icon
+        // textures are deleted on a live device (LC3).
+        m_TypeIcons.clear();
     }
 
     void ResourceBrowserPanel::Refresh()
@@ -189,11 +115,11 @@ namespace Opaax::Editor
         }
 
         ImGui::SameLine();
-        if (ViewButton("Tiles", m_View == EBrowserView::Tiles)) { m_View = EBrowserView::Tiles; }
+        if (ImguiWidgets::ToggleButton("Tiles", m_View == EBrowserView::Tiles)) { m_View = EBrowserView::Tiles; }
         ImGui::SameLine();
-        if (ViewButton("Tree",  m_View == EBrowserView::Tree))  { m_View = EBrowserView::Tree; }
+        if (ImguiWidgets::ToggleButton("Tree",  m_View == EBrowserView::Tree))  { m_View = EBrowserView::Tree; }
         ImGui::SameLine();
-        if (ViewButton("List",  m_View == EBrowserView::List))  { m_View = EBrowserView::List; }
+        if (ImguiWidgets::ToggleButton("List",  m_View == EBrowserView::List))  { m_View = EBrowserView::List; }
 
         char lBuffer[128];
         strncpy_s(lBuffer, sizeof(lBuffer), m_Filter.CStr(), _TRUNCATE);
@@ -308,8 +234,12 @@ namespace Opaax::Editor
         const bool bHovered = ImGui::IsItemHovered();
         bOutEnter = bHovered && ImGui::IsMouseDoubleClicked(0);
 
-        DrawFolderGlyph(ImGui::GetWindowDrawList(), lPos, ImVec2(lPos.x + k_TileSize, lPos.y + k_TileSize), bHovered);
-        DrawTileLabel(InName.CStr(), k_TileSize);
+        ImDrawList*  lDrawList = ImGui::GetWindowDrawList();
+        const ImVec2 lMax(lPos.x + k_TileSize, lPos.y + k_TileSize);
+
+        if (bHovered) { ImguiDraw::HoverHighlight(lDrawList, lPos, lMax); }
+        ImguiDraw::FolderGlyph(lDrawList, lPos, lMax);
+        ImguiWidgets::TextEllipsized(InName.CStr(), k_TileSize, /*bInCentered*/true);
 
         ImGui::EndGroup();
         ImGui::PopID();
@@ -328,13 +258,16 @@ namespace Opaax::Editor
         // submit nothing of their own.
         ApplyFileBehavior(InFile, InRoot, bClicked);
 
-        const FileType lType = FindType(InFile);
-        DrawFileGlyph(ImGui::GetWindowDrawList(), lPos, ImVec2(lPos.x + k_TileSize, lPos.y + k_TileSize),
-            lType.Chrome != nullptr ? lType.Chrome->Icon.CStr() : k_UnknownIcon, bHovered);
+        const FileType lType     = FindType(InFile);
+        ImDrawList*    lDrawList = ImGui::GetWindowDrawList();
+        const ImVec2   lMax(lPos.x + k_TileSize, lPos.y + k_TileSize);
+
+        if (bHovered) { ImguiDraw::HoverHighlight(lDrawList, lPos, lMax); }
+        ImguiDraw::IconBox(lDrawList, TileImageOf(InFile, lType), GlyphOf(lType), lPos, lMax);
 
         const bool bSelected = (m_SelectedPath == FullPathOf(InFile, InRoot));
         if (bSelected) { ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.26f, 0.59f, 0.98f, 1.f)); }
-        DrawTileLabel(InFile.Name.CStr(), k_TileSize);
+        ImguiWidgets::TextEllipsized(InFile.Name.CStr(), k_TileSize, /*bInCentered*/true);
         if (bSelected) { ImGui::PopStyleColor(); }
 
         ImGui::EndGroup();
@@ -448,15 +381,26 @@ namespace Opaax::Editor
     // =============================================================================
     void ResourceBrowserPanel::DrawFileRow(const ResourceFile& InFile, const ResourceRoot& InRoot, const char* InDisplayName)
     {
-        const FileType lType = FindType(InFile);
+        const FileType lType     = FindType(InFile);
+        const float    lIconSize = RowIconSize();
 
+        // Indented past the icon column, then the ICON IS PAINTED OVER that indent on the draw list.
+        // Painting rather than laying out is what keeps the Selectable the last-submitted item, so
+        // ApplyFileBehavior's hover, click and drag-drop all still apply to the whole row.
         char lLabel[512];
-        snprintf(lLabel, sizeof(lLabel), "%s  %s",
-            lType.Chrome != nullptr ? lType.Chrome->Icon.CStr() : k_UnknownIcon, InDisplayName);
+        snprintf(lLabel, sizeof(lLabel), "      %s", InDisplayName);
 
         ImGui::PushID(InFile.RelPath.CStr());
-        const bool bClicked = ImGui::Selectable(lLabel, m_SelectedPath == FullPathOf(InFile, InRoot));
+
+        const ImVec2 lPos     = ImGui::GetCursorScreenPos();
+        const bool   bClicked = ImGui::Selectable(lLabel, m_SelectedPath == FullPathOf(InFile, InRoot));
         ApplyFileBehavior(InFile, InRoot, bClicked);
+
+        // No inset for a row: the icon is already only one line tall, so IconBox's tile inset would
+        // shrink it to nothing.
+        ImguiDraw::IconBox(ImGui::GetWindowDrawList(), TileImageOf(InFile, lType), GlyphOf(lType),
+                           lPos, ImVec2(lPos.x + lIconSize, lPos.y + lIconSize), /*InInset*/0.f);
+
         ImGui::PopID();
     }
 
@@ -474,15 +418,17 @@ namespace Opaax::Editor
         }
 
         // Drag it into a field. GENERIC: the type comes from the engine's format table, so every
-        // registered resource is draggable and adding one touches nothing here. A file outside the
-        // project's Assets dir converts to an empty path and simply carries no payload — a real
-        // answer (only project content can be referenced by a component), not a failure.
+        // registered resource is draggable and adding one touches nothing here. A file outside every
+        // mount converts to an empty path and simply carries no payload — a real answer, not a failure.
         if (lType.Format != nullptr && ImGui::BeginDragDropSource())
         {
             SetResourceDragPayload(lType.Format->TypeId, m_Context.Paths.AbsoluteToAsset(InFile.AbsPath));
 
-            ImGui::Text("%s  %s", lType.Chrome != nullptr ? lType.Chrome->Icon.CStr() : k_UnknownIcon,
-                                  InFile.Name.CStr());
+            const float lIconSize = RowIconSize();
+            ImguiWidgets::Image(TileImageOf(InFile, lType), ImVec2(lIconSize, lIconSize));
+            ImGui::SameLine();
+            ImGui::TextUnformatted(InFile.Name.CStr());
+
             ImGui::EndDragDropSource();
         }
 
@@ -544,6 +490,113 @@ namespace Opaax::Editor
         }
 
         return (InType.Format != nullptr) ? InType.Format->Format->Label : "Unknown type";
+    }
+
+    const char* ResourceBrowserPanel::GlyphOf(const FileType& InType)
+    {
+        return (InType.Chrome != nullptr && !InType.Chrome->Glyph.IsEmpty())
+                   ? InType.Chrome->Glyph.CStr()
+                   : k_UnknownGlyph;
+    }
+
+    // =============================================================================
+    // Icons
+    // =============================================================================
+    OpaaxString ResourceBrowserPanel::ResolveIconPath(const OpaaxString& InIconRel) const
+    {
+        if (m_Context.EditorPathsOrNull == nullptr)
+        {
+            return OpaaxString();   // no editor space at all — the glyph is the whole answer
+        }
+
+        const OpaaxString lProjectIcon = m_Context.EditorPathsOrNull->EditorAssetToAbsolute(InIconRel);
+        if (m_Context.FileSystem.IsPathExist(lProjectIcon))
+        {
+            return lProjectIcon;
+        }
+
+        return m_Context.EditorPathsOrNull->ToolAssetToAbsolute(InIconRel);
+    }
+
+    void ResourceBrowserPanel::LoadTypeIcons()
+    {
+        // EAGER, and the registry is what makes that the right call: ResourceTypes() was SEALED at
+        // OnModulesRegistered, so the set of icons is finite and known right here. Loading on first
+        // draw instead would spread a handful of tiny reads over arbitrary frames and report a
+        // missing file at whichever one happened to show it.
+        for (const ResourceTypeDesc& lChrome : m_Context.Extensions.ResourceTypes().Entries())
+        {
+            if (lChrome.Icon.IsEmpty())
+            {
+                continue;   // glyph-only, a perfectly good registration
+            }
+
+            const OpaaxString lAbsolute = ResolveIconPath(lChrome.Icon);
+            ResourceRef<TextureResource> lRef = lAbsolute.IsEmpty()
+                                                    ? ResourceRef<TextureResource>{}
+                                                    : m_Context.Resources.Load<TextureResource>(lAbsolute.CStr());
+
+            // Logged on BOTH branches: a cache that only reports failures cannot be told apart from
+            // one that never ran (the RendererManager texture cache's rule).
+            //
+            // A FAILED ref is DROPPED rather than cached, and that is not tidiness: ResourceRef::Get
+            // on a failed claim answers the PLACEHOLDER, so storing it would draw a magenta square
+            // where the glyph belongs. Nothing is retried either way — this runs once.
+            if (!lRef.IsValid())
+            {
+                OPAAX_LOG(LogResourceBrowserPanel, Warn, "Icon '{}' did not load — that type draws its glyph",
+                    lChrome.Icon.CStr());
+                continue;
+            }
+
+            OPAAX_LOG(LogResourceBrowserPanel, Info, "Icon loaded: {}", lAbsolute.CStr());
+            m_TypeIcons.emplace(lChrome.TypeId, Move(lRef));
+        }
+    }
+
+    EditorImage ResourceBrowserPanel::IconOf(const FileType& InType) const
+    {
+        if (InType.Chrome == nullptr)
+        {
+            return EditorImage{};
+        }
+
+        const auto lIt = m_TypeIcons.find(InType.Chrome->TypeId);
+        if (lIt == m_TypeIcons.end())
+        {
+            return EditorImage{};
+        }
+
+        const TextureResource* lIcon = lIt->second.Get();
+        if (lIcon == nullptr || lIcon->GetTexture() == nullptr)
+        {
+            return EditorImage{};
+        }
+
+        return m_Context.UIBackend.GetTextureImage(*lIcon->GetTexture());
+    }
+
+    EditorImage ResourceBrowserPanel::TileImageOf(const ResourceFile& InFile, const FileType& InType) const
+    {
+        // An image file shows ITSELF once something has loaded it. Find is the whole reason this is
+        // affordable: it answers "already resident?" and never turns into a load, so scrolling a
+        // folder cannot pull it into memory (Legacy's rule, kept).
+        //
+        // The claim is taken and dropped within the frame — held only so the payload cannot be
+        // collected between the question and the draw.
+        if (InType.Format != nullptr && InType.Format->TypeId == ResourceTypeID::Get<TextureResource>())
+        {
+            const ResourceRef<TextureResource> lLoaded =
+                m_Context.Resources.Find<TextureResource>(InFile.AbsPath.CStr());
+
+            if (const TextureResource* lTexture = lLoaded.IsValid() ? lLoaded.Get() : nullptr;
+                lTexture != nullptr && lTexture->GetTexture() != nullptr)
+            {
+                return m_Context.UIBackend.GetTextureImage(*lTexture->GetTexture());
+            }
+        }
+
+        return IconOf(InType);
     }
 
     bool ResourceBrowserPanel::MatchesFilter(const ResourceFile& InFile) const

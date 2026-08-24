@@ -2,14 +2,17 @@
 
 #include "Application/Services/ILogger.h"
 #include "Core/String/OpaaxString.hpp"
+#include "Engine/Subsystems/Resources/ResourceRef.hpp"   // the icon cache holds Refs BY VALUE
 #include "Editor/Panels/IEditorPanel.h"
 #include "Editor/Resources/ResourceScan.h"
+#include "Editor/UI/IEditorUIBackend.h"                  // EditorImage — returned by value
 
 namespace Opaax
 {
     OPAAX_LOG_CATEGORY(ResourceBrowserPanel);
 
     struct ResourceFormatEntry;
+    struct TextureResource;   // only NAMED by the icon cache — the RHI stays out of this header
 }
 
 namespace Opaax::Editor
@@ -101,6 +104,37 @@ namespace Opaax::Editor
         /** @return The chrome's override, else the format's own label, else "Unknown type". */
         static const char* LabelOf(const FileType& InType);
 
+        /** @return The type's fallback text, else the unknown-type glyph. Drawn only when there is no icon image. */
+        static const char* GlyphOf(const FileType& InType);
+
+        /** Load every registered type's icon once, at Startup — the registry is sealed by then. */
+        void LoadTypeIcons();
+
+        /**
+         * The type's icon image, from what LoadTypeIcons resolved.
+         *
+         * @return An INVALID image when the type registered none, when no editor space existed to
+         *   resolve it against, or when the file was missing — all of which draw the glyph instead.
+         */
+        EditorImage IconOf(const FileType& InType) const;
+
+        /**
+         * What a TILE draws: the file's OWN image when it is already loaded, else its type's icon.
+         *
+         * Never loads anything — the thumbnail is a by-product of something else having loaded that
+         * texture (this panel's Preview, or the game's own sprites), which is what keeps browsing a
+         * folder of 500 images free.
+         */
+        EditorImage TileImageOf(const ResourceFile& InFile, const FileType& InType) const;
+
+        /**
+         * An editor-assets-relative icon path made absolute: the PROJECT's editor space first, then
+         * the editor tool's own. Project-first is what lets a game override an editor icon.
+         *
+         * @return EMPTY when there is no editor space at all (no edited project).
+         */
+        OpaaxString ResolveIconPath(const OpaaxString& InIconRel) const;
+
         bool MatchesFilter(const ResourceFile& InFile) const;
 
         /** @return true if this folder, or anything under it, has a file passing the filter — what lets Tree hide empty branches. */
@@ -130,8 +164,9 @@ namespace Opaax::Editor
         /** Toolbar + breadcrumb pinned, the content area scrolling beneath them. */
         void            DrawContents()          override;
 
-        /** No resource to release — the scanned tree is plain owned data. */
-        void            Shutdown()              override {}
+        /** Release the icon claims. Panels shut down while the ResourceManager and the GL context
+         *  are both still alive (LC3), which is what makes this the right place. */
+        void            Shutdown()              override;
 
         PanelWindowStyle GetWindowStyle() const override { return { { 520.f, 320.f } }; }
         //~End IEditorPanel interface
@@ -152,5 +187,10 @@ namespace Opaax::Editor
 
         OpaaxString             m_Filter;
         OpaaxString             m_SelectedPath;   // "<Root>/<RelPath>" — highlight only; NOT EditorSelection
+
+        // ResourceTypeID -> the claim keeping that type's icon loaded. Filled once at Startup from
+        // the SEALED type registry, and an entry is kept even when the load failed, so the draw path
+        // is a plain lookup with no I/O and no retry.
+        TUnorderedMap<Uint32, ResourceRef<TextureResource>> m_TypeIcons;
     };
 }

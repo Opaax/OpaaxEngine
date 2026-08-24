@@ -67,7 +67,7 @@ void SandboxEditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& In
     // only the glyph and what a double-click does. Adding a type touches no editor file; adding an
     // extension to an existing one touches nothing here at all.
     InRegistrar.ResourceTypes().Register<Sandbox::WaveResource>()
-        .SetIcon(OpaaxString("[W]"))
+        .SetGlyph(OpaaxString("[W]"))
         .SetActivate([](Opaax::Editor::EditorContext&, const Opaax::Editor::ResourceFile& InFile)
         {
             // A wave editor is a later milestone; today activation proves the route end-to-end.

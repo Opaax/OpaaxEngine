@@ -10,7 +10,7 @@ void __NAME__EditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& I
     //   InRegistrar.Panels().Register("My Panel",
     //       [](Opaax::Editor::EditorContext& InContext) -> Opaax::UniquePtr<Opaax::Editor::IEditorPanel>
     //       { return Opaax::MakeUnique<MyPanel>(InContext); });
-    //   InRegistrar.ResourceTypes().Register<MyResource>().SetIcon("[R]").SetActivate(...);
+    //   InRegistrar.ResourceTypes().Register<MyResource>().SetGlyph("[R]").SetActivate(...);
     //       (the EXTENSIONS live on MyResource itself, via OPAAX_RESOURCE_FORMAT, and are
     //        registered by the runtime module: InRegistrar.Resources().Register<MyResource>())
     //   InRegistrar.Menus().Register("Tools/My Tool",

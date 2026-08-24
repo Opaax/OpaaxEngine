@@ -57,7 +57,7 @@ namespace Opaax::Editor
          * A null handle -> reserve space with a Dummy so the layout is unchanged (drawing a null texture is a backend validation error).
          * @return Sample the FBO the world rendered into this frame. The backend yields the ImGui handle + the UVs that present it upright (GL FBOs are bottom-up).
          */
-        EditorViewportImage GetViewportImage() const;
+        EditorImage GetViewportImage() const;
 
         /**
          * Resize the FBO to the size Draw() measured last frame, if it changed. Early-outs on the

@@ -35,7 +35,8 @@ namespace Opaax::Editor
     {
         Uint32            TypeId = 0;    // ResourceTypeID::Get<T>()
         OpaaxStringID     Label;         // OPTIONAL override; invalid => the format's own Label
-        OpaaxString       Icon;          // short text glyph, "[W]" — presentation only, never compared
+        OpaaxString       Icon;          // OPTIONAL editor-assets-relative image; empty => the Glyph
+        OpaaxString       Glyph;         // short text, "[W]" — the fallback when Icon is absent or missing
         FResourceActivate OnActivate;
     };
 
@@ -69,8 +70,20 @@ namespace Opaax::Editor
         /** Override the label the engine's format already carries — for a type the editor names differently. */
         ResourceTypeBuilder& SetLabel(OpaaxStringID InLabel);
 
-        /** The short text glyph shown on a tile, "[L]". Presentation, and the editor's alone. */
+        /**
+         * The icon IMAGE, editor-assets-relative ("Icons/T_Map_Icon.png"). Searched in the PROJECT's
+         * editor assets first, then the editor tool's own — so a game ships an icon for its own
+         * resource type under the same relative name, and may override one of the editor's.
+         */
         ResourceTypeBuilder& SetIcon(OpaaxString InIcon);
+
+        /**
+         * The short TEXT drawn when there is no icon image, "[L]".
+         *
+         * The fallback, not a lesser icon: a type that sets no image, or whose image file is
+         * missing, still draws something rather than a blank card.
+         */
+        ResourceTypeBuilder& SetGlyph(OpaaxString InGlyph);
 
         /** What a double-click does. Omitted, the browser logs the activation and nothing else. */
         ResourceTypeBuilder& SetActivate(FResourceActivate InActivate);
@@ -189,6 +202,16 @@ namespace Opaax::Editor
         if (ResourceTypeDesc* lEntry = m_Registry != nullptr ? m_Registry->EntryAt(m_Index) : nullptr)
         {
             lEntry->Icon = Move(InIcon);
+        }
+
+        return *this;
+    }
+
+    inline ResourceTypeBuilder& ResourceTypeBuilder::SetGlyph(OpaaxString InGlyph)
+    {
+        if (ResourceTypeDesc* lEntry = m_Registry != nullptr ? m_Registry->EntryAt(m_Index) : nullptr)
+        {
+            lEntry->Glyph = Move(InGlyph);
         }
 
         return *this;
