@@ -7,7 +7,5 @@ Render:
 - handle/pool DOD RHI, device owning context CREATION, RenderStats overlay, multi-view, camera-view system, full RHI-only DrawSprite, Vulkan device.
 
 Misc:
-- Skill Code Style.
-- OpaaxString: Make ctor with num version or static convert to OpaaxString
-- continue json format for custom type
-- FileSystem for window
+- Add Entity in map hiarchie
+- 
