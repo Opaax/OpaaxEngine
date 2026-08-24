@@ -132,6 +132,33 @@ namespace Opaax
             return HandleType{ lSlot, lMeta.Generation };
         }
 
+        // Dedup WITHOUT allocating: a claim on a path that is ALREADY Loaded, or an invalid handle.
+        // AcquireSlot's first half with the second half refused — the editor's question ("is this
+        // already resident?") must never turn into a load, or browsing a folder would pull every
+        // file in it into memory.
+        //
+        // Loading counts as NOT found on purpose: the caller wants something it can display now,
+        // and an in-flight slot has no payload yet.
+        HandleType FindLoadedSlot(const char* InPath)
+        {
+            const OpaaxStringID lId(InPath);
+
+            const auto lIt = m_PathToSlot.find(lId.GetId());
+            if (lIt == m_PathToSlot.end())
+            {
+                return HandleType{};
+            }
+
+            SlotMeta& lMeta = MetaRef(lIt->second);
+            if (lMeta.State != EResourceState::Loaded)
+            {
+                return HandleType{};
+            }
+
+            ++lMeta.RefCount;   // the caller adopts it, as it does an AcquireSlot dedup hit
+            return HandleType{ lIt->second, lMeta.Generation };
+        }
+
         // Produce the payload via the type's Load. The caller runs this OUTSIDE the lock
         // (a composite's child Acquires recurse through the manager, which re-locks). The
         // slot is exclusively owned while Loading, so the emplace/Bytes write need no lock.

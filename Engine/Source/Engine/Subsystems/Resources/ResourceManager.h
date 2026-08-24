@@ -128,6 +128,19 @@ namespace Opaax
          */
         template<CResource T>
         ResourceRef<T> LoadAsync(const char* InPath, TFunction<void(LoadAsyncResult<T>)> InOnComplete = {});
+
+        /**
+         * A claim on InPath IF it is already loaded — and NEVER a load.
+         *
+         * The question a browser has to ask: "may I show this one?". Load would answer it by
+         * pulling every file in the folder into memory, which is exactly what an asset browser must
+         * not do.
+         *
+         * @return An EMPTY ref (null manager) when the path is unknown or still loading — so Get()
+         *   answers nullptr rather than the type's placeholder, which is what "not resident" means.
+         */
+        template<CResource T>
+        ResourceRef<T> Find(const char* InPath);
         
         /**
          * Frame-stable view. O(1). Never null for Placeholder-policy types
@@ -406,6 +419,21 @@ namespace Opaax
         }
 
         return lRef;
+    }
+
+    /***/
+    template<CResource T>
+    ResourceRef<T> ResourceManager::Find(const char* InPath)
+    {
+        TLockGuard<RecursiveMutex> lLock(m_Mutex);
+
+        const ResourceHandle<T> lHandle = GetOrCreatePool<T>().FindLoadedSlot(InPath);
+        if (!lHandle.IsValid())
+        {
+            return ResourceRef<T>{};   // null manager, so Get() is nullptr and not a placeholder
+        }
+
+        return ResourceRef<T>{ this, lHandle }; // adopt the +1 FindLoadedSlot applied
     }
 
     /***/
