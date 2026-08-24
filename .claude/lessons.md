@@ -1290,3 +1290,82 @@ source before counting it as a second opinion.
 - **The compiler stayed the honest gate, and it was cheap.** One `OPAAX_BUILD_FAIL` naming five
   files, ~9 minutes. Never close a delete-only change on grep evidence alone, however careful the
   grep looked — that is what a build is for ([[L8]]: grep the output, the exit code was 0 here too).
+
+---
+
+## L47 — A blocker I wrote down is a claim about PLACEMENT until proven otherwise; re-derive it before costing an invariant change (2026-08-24)
+
+**What happened (④b, the texture preview).** Both `todo.md` and `CLAUDE.local.md` recorded the
+preview as blocked on a contract question: `TPropertyDrawer::Draw(label, value, meta)` has no
+`EditorContext` by design, so a drawer can reach neither the UI backend nor the ResourceManager, and
+I had written *"Decide that first; it is the whole design question, and **I15** is the invariant it
+touches."* I carried that into the next session and put it to the user as a fork — browser-only, or
+amend **I15**. Their answer was neither: *"The preview is double click action, what do you think?"*
+`ResourceTypeBuilder::SetActivate` has BEEN "what does a double-click do" since M2d, Map and Level
+open documents through it, and a registered panel has an `EditorContext` by construction. **I15
+never had to move.** The registration I was editing even said so: *"No activation: double-clicking
+an image has nothing to open until a texture viewer exists."*
+
+**Why I framed it wrong.** I asked *"how do I get a context into a drawer?"* — a real question with
+only expensive answers — instead of *"where does a preview belong?"*. The blocker was genuine **for
+the location I had already assumed**, and assuming the location is the step that never got examined.
+Writing it down twice, months apart, laundered an assumption into a finding.
+
+**Rules for next time:**
+- **When a plan says "X is blocked on amending an invariant", re-derive WHY X is where it is before
+  costing the amendment.** The invariant is usually load-bearing; the placement usually is not. Ask
+  what already does this job elsewhere in the tree.
+- **My own notes are the easiest premise to mistake for evidence** — [[L46]]'s second-wrong-witness
+  shape, and [[L22]]'s. A carried-forward blocker deserves the same suspicion as a carried-forward
+  test assertion, *especially* when I wrote it and have since restated it.
+- The user reframes by asking **what does the user DO**, not what the code allows
+  ([[justifies-design-from-authoring-cost]]). Twice now that has collapsed a design instead of
+  growing one.
+
+---
+
+## L48 — Before a smoke run, name the log line that will PROVE the feature ran; absence of errors is not evidence (2026-08-24)
+
+**What happened.** Browser type-icons loaded lazily, resolved on the first tile that needed one, with
+a rationale I invented ("a handful of types, most never seen in a session"). Build clean, tests
+green, smoke run clean, 0 err/warn. Then I grepped the log for `Icon loaded` and found **nothing** —
+the browser opens at *Home*, where the tiles are the roots themselves and no **file** tile draws, so
+the icon path had never once executed. Every green signal was real and none was about the feature.
+
+**Why it nearly passed.** I checked the things that fail loudly and read the absence of failure as
+success. A lazy path that is never entered logs exactly like a correct one.
+
+**Rules for next time:**
+- **Name the expected positive log line BEFORE the run, then grep for that line.** If no such line
+  can exist, the run is not a verification of this change — it is a verification that nothing else
+  broke, which is a different claim.
+- **Laziness is a VERIFIABILITY cost, not only a performance choice.** Where the set is finite and
+  known — a sealed registry, a fixed list — eager is simpler *and* self-proving, and it moves the
+  failure to a known moment. Ask "what makes this set finite?" before choosing lazy.
+- Same family as [[L23]]: *has this run in the real app?* is not answered by *did the real app run?*
+
+---
+
+## L49 — "Absent" and "placeholder" are different answers; gate on IsValid(), never on Get() != nullptr (2026-08-24)
+
+**What happened.** The icon cache stored a `ResourceRef` even when the load failed, reasoning that
+caching a failure prevents a per-frame retry — which `RendererManager::ResolveTexture` does, with a
+comment saying exactly that. But `ResourceRef::Get()` is `manager->Resolve(handle)` →
+`pool.Get(handle)` → `PlaceholderOrNull()`, so a **failed** claim answers the type's placeholder: for
+a texture, the magenta 2×2. A missing icon file would have painted a magenta square precisely where
+I had promised the glyph fallback. Found by reading `Resolve` while designing `Find` — not by
+running anything, because every icon file happened to exist.
+
+**Why it hid.** The placeholder is *correct and valuable* for its designed consumer — a sprite
+drawing magenta is louder than a sprite drawing nothing. It is wrong for a consumer that has its own
+fallback. And the comment I copied described the behaviour accurately; what did not transfer was the
+**decision** behind it.
+
+**Rules for next time:**
+- **`Get()` non-null means DRAWABLE, not FOUND.** Wherever those differ to you, gate on `IsValid()`.
+- **Copying a cache's shape copies its POLICY.** Before reusing an idiom that carries a comment, ask
+  whether the sentence in that comment is still true of the new caller. "The empty ref resolves to
+  the magenta placeholder" was the point at one call site and the bug at the other.
+- When adding a query API, make the miss **structurally** honest rather than documented: `Find`
+  returns a null-manager ref, so `Get()` is `nullptr` — the choice `Pin` had already made, which I
+  only found by looking rather than by assuming.
