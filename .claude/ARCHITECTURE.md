@@ -1782,6 +1782,29 @@ first, then `EngineAssetsDir()` as `/Engine/…` — so "empty" means "under nei
 now yields a `/Engine/` path instead of empty (a deliberate navigation, and naming an engine-shipped map
 is legitimate), and the *only* thing that still answers empty is a file genuinely outside both trees.
 
+**MP11 — A MANIFEST ENTRY THAT NEVER MOUNTED IS NAMED BY ITS PATH, AND MUST BE REMOVABLE** (landed
+2026-08-27, user-verified with the one click that fixed the level). A map whose file is missing,
+renamed or moved leaves an entry with **no `MapId`** — an id comes from the file's entities
+(**MP10**) and there is no file — so `RemoveMap(MapId)` cannot name it, and the Hierarchy seeds its
+headers from the MOUNTED maps, so it had no row to hang a menu on.
+- **The entry was therefore UNREACHABLE from the editor**, and the only repair was hand-editing the
+  `.opaaxlevel`. That is not a theoretical hole: `Sandbox`'s `Main` level warned on every boot for
+  weeks and got recorded as "pre-existing, a content call" precisely because nothing could act on it.
+  **A state the app can produce and cannot repair is a missing verb, not a content problem** —
+  [[L19]]'s shape, one layer up: the note explaining why it was not fixed *was* the work item.
+- `Level::RemoveMissingMap(path)` refuses a path that IS mounted (that one has entities and goes
+  through `RemoveMap`) and refuses the persistent map either way, because re-pointing persistence
+  silently is the last surprise an author repairing a broken level needs. Both removal verbs share
+  ONE `EraseFromManifest`, so the `PersistentMapIndex` fix-up cannot drift between them.
+- **The Hierarchy DERIVES the missing set** as the difference between the two lists `Level` already
+  publishes — a getter would allocate one per frame to say the same thing — and lists each with the
+  same reasoning **MP10** gives for an empty map having a header: this is the only place a level's
+  maps are listed, so it is the only place one can be named.
+- **A group with an invalid `MapId` collides with the RUNTIME bucket**, which also has one. Without
+  an explicit skip every runtime-spawned entity files itself under a map that does not exist. The
+  general shape: **when a sentinel gains a second meaning, every existing comparison against it is
+  now ambiguous** — grep them rather than trusting that the new case is disjoint.
+
 **MP10 — A MAP NAMES ITSELF (`MapData::Id`, the `mapId` key), and "capture one map" / "capture the whole
 world" are TWO NAMED FUNCTIONS** (landed 2026-08-09).
 
