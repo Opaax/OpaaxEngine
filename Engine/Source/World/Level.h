@@ -155,6 +155,21 @@ namespace Opaax
          */
         bool RemoveMap(MapId InMapId);
 
+        /**
+         * Drop a manifest entry that is NOT mounted — a map whose file is missing, renamed or moved.
+         *
+         * Its OWN verb because such an entry cannot be named any other way: a MapId comes from the
+         * file's entities (**MP10**) and there is no file, so `RemoveMap` has nothing to look up and
+         * the Hierarchy — which lists MOUNTED maps — has no row to hang a menu on. Without this the
+         * only repair is hand-editing the `.opaaxlevel`, and the level never opens cleanly again.
+         *
+         * REFUSES a path that IS mounted: that one has entities in the world and must go through
+         * `RemoveMap`, which unmounts them.
+         *
+         * @param InAssetRelPath As the manifest spells it ("Maps/Sprites.opaaxmap").
+         */
+        bool RemoveMissingMap(const OpaaxString& InAssetRelPath);
+
         /** @return false when InMapId names no map of this level. */
         bool SetPersistentMap(MapId InMapId);
 
@@ -195,6 +210,12 @@ namespace Opaax
 
         /** Mounted by PATH — the check that still works for a map with no entities to claim it. */
         bool IsMountedPath(const OpaaxString& InAssetRelPath) const noexcept;
+
+        /**
+         * Drop manifest entry InIndex and keep PersistentMapIndex pointing at the same map.
+         * Out-of-range is a no-op. Shared by both removal verbs so the index fix-up cannot drift.
+         */
+        void EraseFromManifest(Uint64 InIndex);
 
         World&                   m_World;
         const ComponentRegistry& m_Components;

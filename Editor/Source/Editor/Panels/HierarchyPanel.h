@@ -28,6 +28,7 @@ namespace Opaax::Editor
         Save,
         SetPersistent,
         Remove,
+        RemoveMissing,  // a manifest entry whose file never mounted — named by PATH, it has no id
         CreateEntity,   // ② — into the map whose header was clicked
         DeleteSelected  // ② — the row's own menu; the row is selected first, so it needs no target
     };
@@ -94,9 +95,12 @@ namespace Opaax::Editor
          * @param InMapId       Always valid when InMounted: a map names itself (**MP10**).
          * @param InMounted     False for the runtime bucket, which is not a map and gets no menu.
          * @param InPersistent  The level's backdrop map (**WM1a**).
+         * @param InMissing     A manifest entry whose file never loaded. Gets ONE verb — remove —
+         *                      because nothing else applies to a map with no file, and because that
+         *                      entry is otherwise unreachable from the editor entirely.
          */
         void DrawMapContextMenu(MapId InMapId, const OpaaxString& InAssetRelPath,
-                                bool InMounted, bool InPersistent);
+                                bool InMounted, bool InPersistent, bool InMissing);
 
         /**
          * The right-clicked ENTITY's verbs. Right-clicking a row SELECTS it first, so Delete needs

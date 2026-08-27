@@ -58,5 +58,14 @@ namespace Opaax::Editor
          * map; the cursor only moves when it was pointing at what just left.
          */
         void RemoveFromLevel(EditorContext& InContext, MapId InMapId);
+
+        /**
+         * Drop a manifest entry whose file never mounted — missing, renamed or moved.
+         *
+         * Takes a PATH because that is all such an entry has: a MapId comes from the file's
+         * entities and there is no file. Until this existed the only repair was hand-editing the
+         * `.opaaxlevel`, and the level warned on every boot for as long as nobody did.
+         */
+        void RemoveMissingFromLevel(EditorContext& InContext, const OpaaxString& InAssetRelPath);
     }
 }

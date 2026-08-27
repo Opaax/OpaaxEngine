@@ -103,4 +103,20 @@ namespace Opaax::Editor
         if (lMounted.empty()) { InContext.MapDocument.Clear(); }
         else                  { Focus(InContext, lMounted[0].AssetRelPath); }
     }
+
+    void MapOps::RemoveMissingFromLevel(EditorContext& InContext, const OpaaxString& InAssetRelPath)
+    {
+        if (!CanEdit(InContext, "Remove Missing Map")) { return; }
+
+        Level* const lLevel = ActiveLevel(InContext);
+        if (lLevel == nullptr) { return; }
+
+        if (!lLevel->RemoveMissingMap(InAssetRelPath)) { return; }
+
+        // NOTHING to reconcile and no cursor to move: the entry never mounted, so no baseline was
+        // taken for it and it can never have been focused. Only the manifest changed — and that
+        // goes to disk as it changes (EditorLevelDocument::SaveManifest), which is the whole point:
+        // the next boot opens cleanly instead of warning again.
+        InContext.LevelDocument.SaveManifest(*lLevel);
+    }
 }

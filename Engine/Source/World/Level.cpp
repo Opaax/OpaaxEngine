@@ -237,17 +237,60 @@ namespace Opaax
             return false;
         }
 
-        const Uint64 lIndex = FindInManifest(lAssetRelPath);
-        if (lIndex < m_Data.MapCount())
-        {
-            m_Data.Maps.erase(m_Data.Maps.begin() + static_cast<std::ptrdiff_t>(lIndex));
-
-            // The persistent INDEX is a position, so anything removed ahead of it shifts it. Left
-            // alone it would silently start naming the next map along.
-            if (m_Data.PersistentMapIndex > lIndex) { --m_Data.PersistentMapIndex; }
-        }
+        EraseFromManifest(FindInManifest(lAssetRelPath));
 
         return true;
+    }
+
+    bool Level::RemoveMissingMap(const OpaaxString& InAssetRelPath)
+    {
+        // A mounted map has entities in the world; dropping only its manifest entry would leave
+        // them behind with nothing naming them. RemoveMap is the verb for that one.
+        if (IsMountedPath(InAssetRelPath))
+        {
+            OPAAX_LOG(LogLevel, Warn, "'{}' IS mounted — remove it by id so its entities go too",
+                      InAssetRelPath.CStr());
+            return false;
+        }
+
+        const Uint64 lIndex = FindInManifest(InAssetRelPath);
+        if (lIndex >= m_Data.MapCount())
+        {
+            OPAAX_LOG(LogLevel, Warn, "'{}' is not in level '{}'s manifest",
+                      InAssetRelPath.CStr(), m_Data.Name.CStr());
+            return false;
+        }
+
+        // Same refusal as RemoveMap, and it matters MORE here: re-pointing persistence silently is
+        // exactly the surprise an author repairing a broken level does not need. Set another map
+        // persistent first — that one is mounted, so it can be named.
+        if (lIndex == m_Data.PersistentMapIndex)
+        {
+            OPAAX_LOG(LogLevel, Warn,
+                      "'{}' is level '{}'s persistent map — set another one persistent before removing it",
+                      InAssetRelPath.CStr(), m_Data.Name.CStr());
+            return false;
+        }
+
+        OPAAX_LOG(LogLevel, Info, "Dropped missing map '{}' from level '{}'",
+                  InAssetRelPath.CStr(), m_Data.Name.CStr());
+
+        EraseFromManifest(lIndex);
+        return true;
+    }
+
+    void Level::EraseFromManifest(Uint64 InIndex)
+    {
+        if (InIndex >= m_Data.MapCount())
+        {
+            return;
+        }
+
+        m_Data.Maps.erase(m_Data.Maps.begin() + static_cast<std::ptrdiff_t>(InIndex));
+
+        // The persistent INDEX is a position, so anything removed ahead of it shifts it. Left
+        // alone it would silently start naming the next map along.
+        if (m_Data.PersistentMapIndex > InIndex) { --m_Data.PersistentMapIndex; }
     }
 
     bool Level::SetPersistentMap(MapId InMapId)

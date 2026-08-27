@@ -208,6 +208,95 @@ TEST_CASE("Level: a missing map costs that map, not the level")
     CHECK_FALSE(lResult.IsValid());   // something arrived, but not everything — not a success
 }
 
+TEST_CASE("Level: a missing manifest entry can be REMOVED, which is the only repair there is")
+{
+    // The entry that never mounted has no MapId — an id comes from the file's entities (MP10) and
+    // there is no file — so RemoveMap cannot name it and the Hierarchy, which lists MOUNTED maps,
+    // had no row to hang a menu on. Before this verb the level warned on every boot forever and the
+    // only fix was hand-editing the .opaaxlevel.
+    Fixture lFix("removemissing");
+    lFix.Dir.Write("Maps/Here.opaaxmap", MapText("11111111111111111111111111111111", "Here", "Here"));
+
+    LevelData lData;
+    lData.Name = OpaaxString("Broken");
+    lData.Maps.push_back(OpaaxString("Maps/Here.opaaxmap"));
+    lData.Maps.push_back(OpaaxString("Maps/Gone.opaaxmap"));
+    lFix.TheLevel.SetData(lData);
+
+    REQUIRE_FALSE(lFix.TheLevel.MountAll().IsValid());
+    REQUIRE(lFix.TheLevel.GetData().MapCount() == 2);
+
+    SUBCASE("the missing entry goes, and the level opens cleanly afterwards")
+    {
+        CHECK(lFix.TheLevel.RemoveMissingMap(OpaaxString("Maps/Gone.opaaxmap")));
+        CHECK(lFix.TheLevel.GetData().MapCount() == 1);
+
+        // THE POINT OF THE WHOLE VERB: what was a permanently-warning level is now a valid one.
+        Fixture lReopened("removemissing2");
+        lReopened.Dir.Write("Maps/Here.opaaxmap", MapText("11111111111111111111111111111111", "Here", "Here"));
+        lReopened.TheLevel.SetData(lFix.TheLevel.GetData());
+
+        CHECK(lReopened.TheLevel.MountAll().IsValid());
+    }
+
+    SUBCASE("a MOUNTED path is refused — its entities must go through RemoveMap")
+    {
+        CHECK_FALSE(lFix.TheLevel.RemoveMissingMap(OpaaxString("Maps/Here.opaaxmap")));
+        CHECK(lFix.TheLevel.GetData().MapCount() == 2);
+        CHECK(lFix.TheLevel.IsMounted(MapId("Here")));
+    }
+
+    SUBCASE("a path that is not in the manifest at all is refused")
+    {
+        CHECK_FALSE(lFix.TheLevel.RemoveMissingMap(OpaaxString("Maps/NeverThere.opaaxmap")));
+        CHECK(lFix.TheLevel.GetData().MapCount() == 2);
+    }
+}
+
+TEST_CASE("Level: removing a missing entry keeps PersistentMapIndex on the same map")
+{
+    // The index is a POSITION, so dropping anything ahead of it silently re-points persistence at
+    // the next map along — the bug this shares with RemoveMap, which is why both go through one
+    // erase helper rather than two copies of the fix-up.
+    Fixture lFix("missingpersist");
+    lFix.Dir.Write("Maps/Real.opaaxmap", MapText("22222222222222222222222222222222", "InReal", "Real"));
+
+    LevelData lData;
+    lData.Name = OpaaxString("Shifted");
+    lData.Maps.push_back(OpaaxString("Maps/Gone.opaaxmap"));   // index 0 — missing, and FIRST
+    lData.Maps.push_back(OpaaxString("Maps/Real.opaaxmap"));   // index 1 — the persistent one
+    lData.PersistentMapIndex = 1;
+    lFix.TheLevel.SetData(lData);
+
+    REQUIRE_FALSE(lFix.TheLevel.MountAll().IsValid());
+
+    CHECK(lFix.TheLevel.RemoveMissingMap(OpaaxString("Maps/Gone.opaaxmap")));
+
+    // Still Real, now at index 0. Left alone the index would name nothing at all.
+    CHECK(lFix.TheLevel.GetData().MapCount() == 1);
+    CHECK(lFix.TheLevel.GetData().PersistentMap() == OpaaxString("Maps/Real.opaaxmap"));
+}
+
+TEST_CASE("Level: the PERSISTENT map is refused even when it is the missing one")
+{
+    // Dropping it would re-point persistence at whatever ended up first — a bigger decision than
+    // "remove this map", and the last thing an author repairing a broken level wants unasked.
+    Fixture lFix("missingpersistrefuse");
+    lFix.Dir.Write("Maps/Real.opaaxmap", MapText("33333333333333333333333333333333", "InReal", "Real"));
+
+    LevelData lData;
+    lData.Name = OpaaxString("PersistGone");
+    lData.Maps.push_back(OpaaxString("Maps/Gone.opaaxmap"));
+    lData.Maps.push_back(OpaaxString("Maps/Real.opaaxmap"));
+    lData.PersistentMapIndex = 0;   // the MISSING one is the backdrop
+    lFix.TheLevel.SetData(lData);
+
+    REQUIRE_FALSE(lFix.TheLevel.MountAll().IsValid());
+
+    CHECK_FALSE(lFix.TheLevel.RemoveMissingMap(OpaaxString("Maps/Gone.opaaxmap")));
+    CHECK(lFix.TheLevel.GetData().MapCount() == 2);
+}
+
 TEST_CASE("Level: an empty level touches nothing and reports itself invalid")
 {
     // The case an empty world cannot be told apart from on its own, which is the whole reason

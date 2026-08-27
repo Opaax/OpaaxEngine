@@ -31,6 +31,7 @@ namespace Opaax::Editor
             bool                bMounted    = false;
             bool                bPersistent = false;
             bool                bDirty      = false;
+            bool                bMissing    = false;   // in the manifest, never mounted — no file
             TDynArray<EntityID> Entities;
         };
     }
@@ -42,6 +43,7 @@ namespace Opaax::Editor
             case EMapAction::Save:           return "Save Map";
             case EMapAction::SetPersistent:  return "Set as Persistent";
             case EMapAction::Remove:         return "Remove from Level";
+            case EMapAction::RemoveMissing:  return "Remove Missing from Level";
             case EMapAction::CreateEntity:   return "Create Entity";
             case EMapAction::DeleteSelected: return "Delete Selected";
             case EMapAction::None:           return "None";
@@ -93,7 +95,30 @@ namespace Opaax::Editor
                 lGroups.emplace_back(MapGroup{
                     lMounted.Id, lMounted.AssetRelPath, /*bMounted*/true,
                     /*bPersistent*/!lPersistent.IsEmpty() && lMounted.AssetRelPath == lPersistent,
-                    /*bDirty*/m_Context.LevelDocument.IsMapDirtyCached(lMounted.Id), {}});
+                    /*bDirty*/m_Context.LevelDocument.IsMapDirtyCached(lMounted.Id),
+                    /*bMissing*/false, {}});
+            }
+
+            // THE MANIFEST ENTRIES THAT NEVER MOUNTED — missing, renamed or moved. Derived here
+            // rather than asked of the Level, because it is the difference between two lists it
+            // already publishes and a getter would allocate one per frame to say the same thing.
+            //
+            // They get a row for the reason every mounted map does (**MP10**): this is the only
+            // place a level's maps are listed, so it is the only place one can be named — and an
+            // entry with no row was unreachable, which is why a broken level stayed broken.
+            for (const OpaaxString& lPath : lLevel->GetData().Maps)
+            {
+                bool lListed = false;
+                for (const MapGroup& lGroup : lGroups)
+                {
+                    if (lGroup.AssetRelPath == lPath) { lListed = true; break; }
+                }
+
+                if (lListed) { continue; }
+
+                lGroups.emplace_back(MapGroup{
+                    MapId{}, lPath, /*bMounted*/false, /*bPersistent*/!lPersistent.IsEmpty() && lPath == lPersistent,
+                    /*bDirty*/false, /*bMissing*/true, {}});
             }
         }
 
@@ -109,13 +134,18 @@ namespace Opaax::Editor
             MapGroup* lGroup = nullptr;
             for (MapGroup& lCandidate : lGroups)
             {
+                // A MISSING group carries an invalid MapId, and so does a runtime-spawned entity —
+                // so without this they match and every runtime entity files itself under a map that
+                // does not exist. Skip: a group with no file can own nothing.
+                if (lCandidate.bMissing) { continue; }
+
                 if (lCandidate.Map == InMeta.OwnerMap) { lGroup = &lCandidate; break; }
             }
 
             if (lGroup == nullptr)
             {
                 lGroups.emplace_back(MapGroup{InMeta.OwnerMap, {}, /*bMounted*/false, /*bPersistent*/false,
-                                           /*bDirty*/false, {}});
+                                           /*bDirty*/false, /*bMissing*/false, {}});
                 lGroup = &lGroups.back();
             }
 
@@ -145,24 +175,30 @@ namespace Opaax::Editor
             // Every mounted map names itself, empty or not (**MP10**). The runtime bucket is the
             // one REAL difference that survives: nothing authored those, so no Save can ever write
             // them, and saying so beats the surprise of losing them.
-            OpaaxString lLabel = lGroup.Map.IsValid() ? lGroup.Map.ToString()
+            // A MISSING entry is named by its PATH: it has no MapId to print, and the path is also
+            // the only handle anything has on it.
+            OpaaxString lLabel = lGroup.bMissing ? lGroup.AssetRelPath
+                               : lGroup.Map.IsValid() ? lGroup.Map.ToString()
                                                       : OpaaxString("(runtime - not saved)");
 
             // `*` PER MAP, on the map — this is the only place every mounted map is listed, so it
             // is the only place the marker can name which one changed. Read from the throttled
             // cache (**MP5**); a live check here would be a capture per row per frame.
             if (lGroup.bDirty)      { lLabel += " *"; }
+            if (lGroup.bMissing)    { lLabel += "  [MISSING - file not found]"; }
             if (lGroup.bPersistent) { lLabel += "  [persistent]"; }
 
-            // The path is the stable ImGui id — a label can repeat, a mounted path cannot.
-            ImGui::PushID(lGroup.bMounted ? lGroup.AssetRelPath.CStr() : "runtime");
+            // The path is the stable ImGui id — a label can repeat, a path cannot. Missing entries
+            // need it as much as mounted ones: several of them would otherwise share "runtime".
+            ImGui::PushID(!lGroup.AssetRelPath.IsEmpty() ? lGroup.AssetRelPath.CStr() : "runtime");
 
             const bool lExpanded = ImGui::TreeNodeEx(
                 "map",
                 lIsFocused ? ImGuiTreeNodeFlags_DefaultOpen : ImGuiTreeNodeFlags_None,
                 "%s", lLabel.CStr());
 
-            DrawMapContextMenu(lGroup.Map, lGroup.AssetRelPath, lGroup.bMounted, lGroup.bPersistent);
+            DrawMapContextMenu(lGroup.Map, lGroup.AssetRelPath, lGroup.bMounted, lGroup.bPersistent,
+                               lGroup.bMissing);
 
             if (!lExpanded)
             {
@@ -204,8 +240,36 @@ namespace Opaax::Editor
     }
 
     void HierarchyPanel::DrawMapContextMenu(MapId InMapId, const OpaaxString& InAssetRelPath,
-                                            bool InMounted, bool InPersistent)
+                                            bool InMounted, bool InPersistent, bool InMissing)
     {
+        // A MISSING entry gets exactly ONE verb. Nothing else applies — there is no file to save, no
+        // entities to focus, and making a file that does not exist the persistent map would be
+        // worse than the state it is in. This single entry is the whole repair path: before it, the
+        // only way out of a broken manifest was hand-editing the .opaaxlevel.
+        if (InMissing)
+        {
+            if (!ImGui::BeginPopupContextItem("missing_map_ops")) { return; }
+
+            ImGui::TextDisabled("%s", InAssetRelPath.CStr());
+            ImGui::TextDisabled("This map's file could not be loaded.");
+            ImGui::Separator();
+
+            // Disabled for the persistent map, matching RemoveMap's own refusal: dropping it would
+            // silently re-point persistence at whatever ended up first.
+            if (ImGui::MenuItem("Remove from Level", nullptr, false, !InPersistent))
+            {
+                m_Pending = PendingMapAction{EMapAction::RemoveMissing, InMapId, InAssetRelPath};
+            }
+
+            if (InPersistent)
+            {
+                ImGui::TextDisabled("It is the persistent map — set\nanother one persistent first.");
+            }
+
+            ImGui::EndPopup();
+            return;
+        }
+
         // The runtime bucket is not a map: there is no file to save, nothing to remove it from, and
         // nothing to make persistent. A menu with four dead entries would be worse than none.
         if (!InMounted) { return; }
@@ -298,6 +362,7 @@ namespace Opaax::Editor
             case EMapAction::Save:           MapOps::Save(m_Context, lAction.Map);            break;
             case EMapAction::SetPersistent:  MapOps::SetPersistent(m_Context, lAction.Map);   break;
             case EMapAction::Remove:         MapOps::RemoveFromLevel(m_Context, lAction.Map); break;
+            case EMapAction::RemoveMissing:  MapOps::RemoveMissingFromLevel(m_Context, lAction.AssetRelPath); break;
             case EMapAction::CreateEntity:   EntityOps::Create(m_Context, lAction.Map, OpaaxString("Entity")); break;
             case EMapAction::DeleteSelected: EntityOps::DestroySelected(m_Context);           break;
             case EMapAction::None:                                                            break;
