@@ -67,10 +67,44 @@ namespace Opaax::Editor
         void ApplyPendingResize();
 
         /**
-         * Queue the selected entity's outline into the engine's DebugDraw for THIS frame's render.
-         * Nothing is retained: the renderer clears the queue every frame, so this re-submits.
+         * Queue an outline around EVERY selected entity into the engine's DebugDraw for THIS
+         * frame's render. Nothing is retained: the renderer clears the queue every frame, so this
+         * re-submits.
          */
         void EnqueueSelectionOutline();
+
+        /**
+         * Queue a small box at each entity that draws NOTHING, so an empty entity is visible and
+         * clickable — Unreal's editor billboard and Godot's origin grab-area in this engine's
+         * terms. Edit worlds only: an editor overlay must not decorate a running game.
+         *
+         * Sized in world units to cover a fixed number of SCREEN pixels, so it neither vanishes
+         * when zoomed out nor swamps the level when zoomed in.
+         */
+        void EnqueueEntityIcons();
+
+        /**
+         * Turn the click or drag MeasureViewportInput banked into a selection.
+         *
+         * Runs FIRST in OnPreRender — ahead of the resize and the camera gesture — so it reads the
+         * exact viewport size and CameraView the clicked frame was RENDERED with. Applying it after
+         * either would hit-test against a frame the author never saw.
+         */
+        void ApplyPendingPick();
+
+        /**
+         * The world size of one screen pixel's worth of icon, from the active world's view and the
+         * current viewport height. ONE value, used by both the hit test and the icon draw — which
+         * is what makes what-you-see-what-you-click true rather than approximately true.
+         */
+        float AnchorHalfExtent() const;
+
+        /**
+         * Viewport-local pixels -> world, through the ACTIVE WORLD's own view (CAM2's ScreenToWorld).
+         * The world's view, not the editor camera's, so picking needs no Edit/Play fork: it asks the
+         * world how it was framed and therefore works inside a PIE session too.
+         */
+        Vector2F ViewportToWorld(const Vector2F& InLocalPx) const;
 
         /**
          * Read this frame's pan drag and wheel from ImGui and bank them. Call while the panel's
@@ -82,6 +116,19 @@ namespace Opaax::Editor
          * io.WantCaptureMouse — the viewport is itself an ImGui window (L29).
          */
         void MeasureCameraGesture(bool bInHovered);
+
+        /**
+         * Read this frame's LEFT button — a click, or a drag that has passed ImGui's own
+         * MouseDragThreshold and become a marquee — and bank it for OnPreRender. Same window and
+         * same reasons as MeasureCameraGesture; call it right after the image.
+         *
+         * The marquee is PAINTED here too, in screen pixels on the foreground draw list, because a
+         * selection rectangle is UI rather than world geometry — drawing it in the pass that
+         * measures it is also what keeps it free of the one-frame lag everything else here has.
+         *
+         * @param InOrigin Top-left of the image, in screen pixels — what makes the cursor local.
+         */
+        void MeasureViewportInput(bool bInHovered, const Vector2F& InOrigin);
 
         /**
          * Spend what MeasureCameraGesture banked and publish the editor camera as the active world's
@@ -136,7 +183,30 @@ namespace Opaax::Editor
         float    m_PendingZoom         = 0.f;          // wheel notches; + is zoom IN
         bool     m_bPanning            = false;        // the middle button went down over the viewport
 
+        // Selection gesture, measured in DrawContents and spent in OnPreRender. ONE gesture with two
+        // outcomes rather than two mechanisms: the press banks a point, and crossing ImGui's drag
+        // threshold promotes it to a box. m_bSelecting is what says a press started HERE — a drag
+        // that began over another panel must not select.
+        enum class EPendingPick : Uint8 { None, Point, Box };
+
+        EPendingPick m_PendingPick    = EPendingPick::None;
+        Vector2F     m_PickStartPx    = {0.f, 0.f};   // viewport-local, where the button went down
+        Vector2F     m_PickEndPx      = {0.f, 0.f};   // viewport-local, where it came up
+        bool         m_bPickAdditive  = false;        // Ctrl was held — add rather than replace
+        bool         m_bSelecting     = false;        // the left button is down and started over the image
+
+        // Selection marquee, screen pixels, painted on the foreground list while the drag is live.
+        Vector4F m_MarqueeColor     = {1.f, 0.6f, 0.1f, 1.f};
+        float    m_MarqueeFillAlpha = 0.12f;
+
+        // The icon for an entity that draws nothing. HALF-size in SCREEN pixels — converted to world
+        // units per frame, so it holds its apparent size at any zoom.
+        float    m_IconHalfPx    = 9.f;
+        Vector4F m_IconColor     = {0.55f, 0.75f, 1.f, 1.f};
+        float    m_IconThickness = 2.f;
+
         bool   m_bImageLogged    = false;
         bool   m_bOutlineLogged  = false;
+        bool   m_bIconsLogged    = false;
     };
 }

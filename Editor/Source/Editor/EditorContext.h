@@ -14,7 +14,8 @@ namespace Opaax
     {
         class IEditorUIBackend;         // editor-owned; the context carries it so panels reach it by ctor
         class EditorCamera;             // editor-owned; how the author is looking at an Edit world
-        class EditorSelection;          // editor-owned; the single selected entity (Hierarchy writes, Inspector reads)
+        class EditorSelection;          // editor-owned; what is selected (Hierarchy + viewport write, Inspector reads)
+        class EditorViewport;           // editor-owned; how big the viewport image is, in pixels
         class PlayInEditor;             // editor-owned; the PIE state machine (toolbar + reserved keys drive it)
         class InputRoute;               // editor-owned; whether the engine is being fed (D5 steps 2 + 4)
         class EditorMapDocument;        // editor-owned; WHICH map is open and whether it changed (M5)
@@ -44,6 +45,11 @@ namespace Opaax
             ResourceManager&  Resources;
             IEditorUIBackend& UIBackend;
             EditorSelection&  Selection;   // M2a — Hierarchy writes, Inspector reads
+
+            // ② — the viewport's pixel size, measured by the panel. Here because the WRITER is a
+            // panel and the READER is a menu command: focus-selected needs the aspect to frame a
+            // wide selection, and there is no typed route to a panel (the ResourcePreview shape).
+            EditorViewport&   Viewport;
 
             // ① — the Edit-side producer of World::CameraView, opposite the engine's CameraManager.
             // Here rather than inside the ViewportPanel because it must OUTLIVE a PIE cycle: the panel

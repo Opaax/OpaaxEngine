@@ -72,9 +72,8 @@ namespace Opaax::Editor
             return;
         }
 
-        // Compare by handle: Entity is a value handle, so the selected one is a COPY of the row's entity,
-        // never the same object. The handle is the identity.
-        const EntityID lSelected = m_Context.Selection.Get().GetHandle();
+        // Rows ask Selection::Contains rather than comparing against one handle — every selected
+        // entity highlights, not just the primary the Inspector happens to be drawing.
 
         // SEEDED FROM THE LEVEL, in mount order. Derived from the entities alone, a map with none
         // of them produced no header at all — so the one panel that lists a level's maps could not
@@ -175,13 +174,18 @@ namespace Opaax::Editor
 
                 // Names are a debug label and may repeat; the handle is what makes each row's ImGui ID unique.
                 ImGui::PushID(static_cast<int>(static_cast<Uint32>(lId)));
-                if (ImGui::Selectable(lMeta.Name.CStr(), lId == lSelected))
+                if (ImGui::Selectable(lMeta.Name.CStr(), m_Context.Selection.Contains(lEntity)))
                 {
-                    m_Context.Selection.Select(lEntity);
+                    // Ctrl toggles, a plain click replaces — the convention every editor shares, and
+                    // asked of ImGui rather than of the engine's InputManager because an Edit world
+                    // leaves the input route closed and Ctrl would read as up forever (IN8).
+                    if (ImGui::GetIO().KeyCtrl) { m_Context.Selection.Toggle(lEntity); }
+                    else                        { m_Context.Selection.Select(lEntity); }
 
-                    // Discrete (a click), so no spam — and it is the only observable signal that selection
-                    // actually moved, until the Inspector (M2b) renders it.
-                    OPAAX_LOG(LogHierarchyPanel, Info, "Hierarchy selected '{}'", lMeta.Name.CStr());
+                    // Discrete (a click), so no spam. The COUNT is what makes a multi-selection
+                    // observable at all — one row highlighting looks the same either way.
+                    OPAAX_LOG(LogHierarchyPanel, Info, "Hierarchy selected '{}' ({} selected)",
+                              lMeta.Name.CStr(), m_Context.Selection.Count());
                 }
                 ImGui::PopID();
             }

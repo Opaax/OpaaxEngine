@@ -204,6 +204,10 @@ namespace Opaax::Editor
         //     reference to it. Nothing reads it yet — S2's Hierarchy panel is the first writer. -------
         m_Selection = MakeUnique<EditorSelection>();
 
+        // --- ②: the viewport's pixel size. Owned here, not by the panel that measures it, so a
+        //     command outside the panel can ask for the aspect (focus-selected). ------------------
+        m_Viewport = MakeUnique<EditorViewport>();
+
         // --- ④b: what a double-click asked to preview. Owned here for the same reason the selection
         //     is — a resource type's activate closure writes it, the Preview panel reads it. --------
         m_Preview = MakeUnique<ResourcePreview>();
@@ -247,6 +251,7 @@ namespace Opaax::Editor
             lEngine.GetResources(),
             *m_UIBackend,
             *m_Selection,
+            *m_Viewport,
             *m_Camera,
             *m_PIE,
             *m_InputRoute,
@@ -473,21 +478,27 @@ namespace Opaax::Editor
         // would be safe too, but it would throw away the exact guarantee the snapshot core exists for.
         if (m_Selection != nullptr && m_Selection->HasSelection())
         {
-            const Entity lPrevious = m_Selection->Get();
-            const Guid lGuid = lPrevious.GetGuid();
+            // EVERY entry, in order, so a multi-selection survives Play and Stop exactly as a single
+            // one does. The Guids are read BEFORE anything is cleared — they are the only thing that
+            // means anything across the two worlds.
+            World* const        lOldWorld = m_Selection->GetWorld();
+            TDynArray<Guid>     lGuids;
 
-            Entity lRetargeted = InNew != nullptr ? InNew->FindByGuid(lGuid) : Entity{};
-
-            if (lRetargeted.IsValid())
+            for (const EntityID lId : m_Selection->Ids())
             {
-                m_Selection->Select(lRetargeted);
+                lGuids.emplace_back(Entity{ lId, lOldWorld }.GetGuid());
             }
-            else
+
+            m_Selection->Clear();
+
+            // Whatever has no counterpart is DROPPED rather than kept: Entity holds a raw World*, so
+            // a survivor of the old world would dangle the moment it dies. An entity destroyed during
+            // play simply leaves the selection, and the rest of it stays.
+            for (const Guid& lGuid : lGuids)
             {
-                // No counterpart — destroyed during play, or there is no world at all. Clearing is the
-                // only correct answer: Entity holds a raw World*, so keeping it would dangle the moment
-                // the old world dies.
-                m_Selection->Clear();
+                if (InNew == nullptr) { break; }
+
+                m_Selection->Add(InNew->FindByGuid(lGuid));   // Add ignores an invalid entity
             }
         }
 
@@ -507,7 +518,8 @@ namespace Opaax::Editor
             return;
         }
 
-        if (m_Selection->Get().GetWorld() == InWorld)
+        // One world per selection by construction, so one compare covers every entry.
+        if (m_Selection->GetWorld() == InWorld)
         {
             m_Selection->Clear();
         }
@@ -696,6 +708,7 @@ namespace Opaax::Editor
         //    context they are referenced from. All three hold only non-owning references, so there
         //    is nothing to undo; the route is dropped before the engine it would reset.
         m_Selection.reset();
+        m_Viewport.reset();
         m_Preview.reset();
         m_Camera.reset();
         m_InputRoute.reset();

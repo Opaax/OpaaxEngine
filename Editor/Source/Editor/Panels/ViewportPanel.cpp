@@ -5,6 +5,7 @@
 #include "Editor/Input/InputRoute.h"        // hover/focus is pushed, not read back out (D5 step 2)
 #include "Editor/ImguiLibrary/ImguiWidgets.h"
 #include "Editor/Operation/EditorSelection.hpp"
+#include "Editor/Operation/EditorViewport.hpp"
 #include "Editor/UI/IEditorUIBackend.h"
 
 #include "Application/Services/IEngine.h"
@@ -14,9 +15,13 @@
 #include "Renderer/RenderTarget.hpp"        // OffscreenRenderTarget
 #include "RHI/Framebuffer.h"                // IFramebuffer + FramebufferSpec (created by the device)
 
-#include "World/Components/DummyComponent.h"
+#include "Core/Maths/Bounds2D.h"
+#include "Renderer/CameraView.h"            // ScreenToWorld — the one pixel->world rule (CAM2)
+
 #include "World/Components/TransformComponent.h"
 #include "World/Entity/Entity.h"
+#include "World/Entity/EntityMeta.h"        // the complete all-entities view, for the icon pass
+#include "World/Entity/EntityQuery.h"       // the ONE entity-AABB rule — outline, pick and marquee
 #include "World/World.h"                    // Apply publishes the camera as the world's view
 #include "World/WorldManager.h"             // the active world is what gets it
 
@@ -70,9 +75,101 @@ namespace Opaax::Editor
         // measured — which would otherwise keep the input route open with no viewport on screen.
         m_Context.Route.SetViewportFocus(false, false);
 
+        // FIRST, deliberately. The click being spent was made against the frame RENDERED last time,
+        // so it has to be hit-tested against that frame's viewport size and camera — both of which
+        // the two calls below are about to change.
+        ApplyPendingPick();
+
         ApplyPendingResize();
         ApplyCameraGesture();
         EnqueueSelectionOutline();
+        EnqueueEntityIcons();
+    }
+
+    // =========================================================================
+    // ViewportToWorld / AnchorHalfExtent — the two conversions everything selection-related needs.
+    //
+    // Both read the ACTIVE WORLD's view rather than the editor camera, which is what keeps picking
+    // free of an Edit/Play fork: a PIE clone is framed by its CameraComponent, and asking the world
+    // how it is framed gets the right answer in either mode with no branch.
+    // =========================================================================
+    Vector2F ViewportPanel::ViewportToWorld(const Vector2F& InLocalPx) const
+    {
+        World* const   lWorld = m_Context.Worlds.GetActiveWorld();
+        const Vector2F lViewportPx{ static_cast<float>(m_viewportSize.x), static_cast<float>(m_viewportSize.y) };
+
+        return ScreenToWorld(lWorld != nullptr ? lWorld->GetCameraView() : CameraView{}, lViewportPx, InLocalPx);
+    }
+
+    float ViewportPanel::AnchorHalfExtent() const
+    {
+        World* const lWorld = m_Context.Worlds.GetActiveWorld();
+        if (lWorld == nullptr || m_viewportSize.y == 0)
+        {
+            return m_IconHalfPx;
+        }
+
+        // OrthoSize is the vertical HALF-extent, so one pixel is (2 * OrthoSize) / height world units.
+        const float lWorldPerPixel = (lWorld->GetCameraView().OrthoSize * 2.f) / static_cast<float>(m_viewportSize.y);
+
+        return m_IconHalfPx * lWorldPerPixel;
+    }
+
+    // =========================================================================
+    // ApplyPendingPick — spend the banked click or marquee. A point asks EntityQuery for the
+    // topmost entity; a box asks for everything it overlaps. Ctrl adds, otherwise it replaces —
+    // and a plain click on empty space clears, which is how an author drops a selection.
+    // =========================================================================
+    void ViewportPanel::ApplyPendingPick()
+    {
+        const EPendingPick lPending = m_PendingPick;
+        m_PendingPick = EPendingPick::None;   // cleared FIRST: a refused pick must not retry next frame
+
+        if (lPending == EPendingPick::None)
+        {
+            return;
+        }
+
+        World* lWorld = m_Context.Worlds.GetActiveWorld();
+        if (lWorld == nullptr)
+        {
+            return;
+        }
+
+        const float lAnchor = AnchorHalfExtent();
+
+        if (lPending == EPendingPick::Point)
+        {
+            Entity lHit = EntityQuery::PickAt(*lWorld, ViewportToWorld(m_PickStartPx), lAnchor);
+
+            if (m_bPickAdditive) { m_Context.Selection.Toggle(lHit); }   // ignores a miss
+            else if (lHit.IsValid()) { m_Context.Selection.Select(lHit); }
+            else { m_Context.Selection.Clear(); }
+
+            OPAAX_LOG(LogViewportPanel, Info, "Viewport click at ({:.1f}, {:.1f}) -> {} ({} selected)",
+                      m_PickStartPx.x, m_PickStartPx.y,
+                      lHit.IsValid() ? lHit.Get<EntityMeta>().Name.CStr() : "nothing",
+                      m_Context.Selection.Count());
+            return;
+        }
+
+        const Bounds2D lRegion = Bounds2D::FromMinMax(ViewportToWorld(m_PickStartPx),
+                                                      ViewportToWorld(m_PickEndPx));
+
+        TDynArray<EntityID> lHits;
+        EntityQuery::QueryOverlapping(*lWorld, lRegion, lHits, lAnchor);
+
+        if (m_bPickAdditive)
+        {
+            for (const EntityID lId : lHits) { m_Context.Selection.Add(Entity{ lId, lWorld }); }
+        }
+        else
+        {
+            m_Context.Selection.Replace(lWorld, lHits);
+        }
+
+        OPAAX_LOG(LogViewportPanel, Info, "Viewport marquee took {} entity(ies) ({} selected)",
+                  static_cast<Uint64>(lHits.size()), m_Context.Selection.Count());
     }
 
     // =========================================================================
@@ -146,32 +243,89 @@ namespace Opaax::Editor
     // =========================================================================
     void ViewportPanel::EnqueueSelectionOutline()
     {
-        // A local COPY of the handle (the InspectorPanel idiom) — Entity is a value type, and TryGet
-        // is non-const.
-        Entity lSelected = m_Context.Selection.Get();
-        if (!lSelected.IsValid())
+        World* const lWorld = m_Context.Selection.GetWorld();
+        if (lWorld == nullptr)
         {
             return;
         }
 
-        const TransformComponent* lXf   = lSelected.TryGet<TransformComponent>();
-        const DummyComponent*     lComp = lSelected.TryGet<DummyComponent>();
-        if (lXf == nullptr || lComp == nullptr)
+        // Through EntityQuery, which is what fixed the bug this used to have: it read DummyComponent
+        // directly, so a SPRITE-only entity outlined nothing at all. Every selected entity now, and
+        // an anchor-only one gets its icon-sized box.
+        const float lAnchor = AnchorHalfExtent();
+        Uint64      lDrawn  = 0;
+
+        for (const EntityID lId : m_Context.Selection.Ids())
         {
-            return;
+            Bounds2D lBounds;
+            if (!EntityQuery::TryGetBounds(Entity{ lId, lWorld }, lBounds, lAnchor))
+            {
+                continue;
+            }
+
+            m_Context.Engine.GetDebugDraw().DrawBox(lBounds.Center, lBounds.Size() + m_OutlinePadding,
+                                                    m_OutlineColor, m_OutlineThickness);
+            ++lDrawn;
         }
 
-        m_Context.Engine.GetDebugDraw().DrawBox(lXf->Position, lComp->Size + m_OutlinePadding,
-                                                m_OutlineColor, m_OutlineThickness);
-
-        // Log the SUCCESS branch (L15): both returns above are silent, so "selected an entity with no
-        // DummyComponent" would otherwise be indistinguishable from a broken DebugDraw pipe. One-shot
-        // — this runs every frame.
-        if (!m_bOutlineLogged)
+        // Log the SUCCESS branch (L15): every return above is silent, so "selected something with no
+        // bounds" would otherwise look exactly like a broken DebugDraw pipe. One-shot — per frame.
+        if (!m_bOutlineLogged && lDrawn > 0)
         {
-            OPAAX_LOG(LogViewportPanel, Info, "Selection outline enqueued (4 debug lines around {},{})",
-                      lXf->Position.x, lXf->Position.y);
+            OPAAX_LOG(LogViewportPanel, Info, "Selection outline enqueued for {} entity(ies)", lDrawn);
             m_bOutlineLogged = true;
+        }
+    }
+
+    // =========================================================================
+    // EnqueueEntityIcons — an entity that draws nothing still has to be findable and clickable.
+    // Every engine solves this the same way (Unreal's editor billboard, Unity's gizmo icon, Godot's
+    // origin grab-area) and all of them hang it off a transform every object is guaranteed to have,
+    // which is exactly what TransformComponent now is.
+    //
+    // The anchor size is the SAME value EntityQuery::PickAt is given, so the box drawn is the box
+    // hit-tested — what you see is what you click, by construction rather than by two constants
+    // being kept in step.
+    // =========================================================================
+    void ViewportPanel::EnqueueEntityIcons()
+    {
+        World* lWorld = m_Context.Worlds.GetActiveWorld();
+
+        // Edit worlds only: an overlay is authoring furniture, and a running game must look like the
+        // game. Same rule EditorCamera::Apply states for the view.
+        if (lWorld == nullptr || lWorld->GetMode() != EWorldMode::Edit)
+        {
+            return;
+        }
+
+        const float lAnchor = AnchorHalfExtent();
+        Uint64      lDrawn  = 0;
+
+        lWorld->Each<EntityMeta>([&](EntityID InId, const EntityMeta&)
+        {
+            // An entity with an EXTENT is already visible — asking without an anchor is what
+            // distinguishes the two, and it is one call rather than a list of component checks.
+            Bounds2D lUnused;
+            if (EntityQuery::TryGetBounds(Entity{ InId, lWorld }, lUnused))
+            {
+                return;
+            }
+
+            Bounds2D lIcon;
+            if (!EntityQuery::TryGetBounds(Entity{ InId, lWorld }, lIcon, lAnchor))
+            {
+                return;   // no transform at all — not reachable through CreateEntity
+            }
+
+            m_Context.Engine.GetDebugDraw().DrawBox(lIcon.Center, lIcon.Size(), m_IconColor, m_IconThickness);
+            ++lDrawn;
+        });
+
+        if (!m_bIconsLogged && lDrawn > 0)
+        {
+            OPAAX_LOG(LogViewportPanel, Info, "Drawing {} entity icon(s) — entities with nothing to render",
+                      lDrawn);
+            m_bIconsLogged = true;
         }
     }
 
@@ -218,6 +372,62 @@ namespace Opaax::Editor
         }
     }
 
+    // =========================================================================
+    // MeasureViewportInput — ONE left-button gesture with two outcomes. The press banks a point;
+    // crossing ImGui's own MouseDragThreshold promotes it to a box. Using ImGui's threshold rather
+    // than a constant of my own is what keeps a click here feeling like a click everywhere else.
+    //
+    // m_bSelecting is the gate that matters: it is set only by a press that landed ON the image, so
+    // a drag begun over the Hierarchy and released here selects nothing. Once it IS ours the drag
+    // survives leaving the panel, exactly as the middle-button pan does — releasing ends a gesture,
+    // wandering off does not.
+    // =========================================================================
+    void ViewportPanel::MeasureViewportInput(bool bInHovered, const Vector2F& InOrigin)
+    {
+        const ImGuiIO& lIO = ImGui::GetIO();
+
+        if (bInHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+        {
+            m_bSelecting    = true;
+            m_bPickAdditive = lIO.KeyCtrl;
+            m_PickStartPx   = { lIO.MousePos.x - InOrigin.x, lIO.MousePos.y - InOrigin.y };
+        }
+
+        if (!m_bSelecting)
+        {
+            return;
+        }
+
+        const bool lIsDrag = ImGui::IsMouseDragging(ImGuiMouseButton_Left, lIO.MouseDragThreshold);
+
+        if (ImGui::IsMouseDown(ImGuiMouseButton_Left))
+        {
+            if (lIsDrag)
+            {
+                // PAINTED HERE, in screen pixels, on the foreground list. A marquee is UI, not world
+                // geometry — DebugDraw would put it a frame behind and make it scale with the zoom.
+                const ImVec2 lFrom{ InOrigin.x + m_PickStartPx.x, InOrigin.y + m_PickStartPx.y };
+                const ImVec2 lTo = lIO.MousePos;
+
+                const ImU32 lLine = ImGui::GetColorU32(ImVec4{m_MarqueeColor.r, m_MarqueeColor.g,
+                                                              m_MarqueeColor.b, m_MarqueeColor.a});
+                const ImU32 lFill = ImGui::GetColorU32(ImVec4{m_MarqueeColor.r, m_MarqueeColor.g,
+                                                              m_MarqueeColor.b, m_MarqueeFillAlpha});
+
+                ImDrawList* lDraw = ImGui::GetForegroundDrawList();
+                lDraw->AddRectFilled(lFrom, lTo, lFill);
+                lDraw->AddRect(lFrom, lTo, lLine);
+            }
+
+            return;   // still held — nothing to spend yet
+        }
+
+        // Released: bank exactly one outcome for OnPreRender.
+        m_PendingPick = lIsDrag ? EPendingPick::Box : EPendingPick::Point;
+        m_PickEndPx   = { lIO.MousePos.x - InOrigin.x, lIO.MousePos.y - InOrigin.y };
+        m_bSelecting  = false;
+    }
+
     EditorImage ViewportPanel::GetViewportImage() const
     {
         return m_Framebuffer != nullptr ? m_Context.UIBackend.GetViewportImage(*m_Framebuffer) : EditorImage{};
@@ -229,6 +439,10 @@ namespace Opaax::Editor
         const ImVec2 lAvail = ImGui::GetContentRegionAvail();
         m_viewportPendingSize.x     = static_cast<Uint32>(lAvail.x);
         m_viewportPendingSize.y     = static_cast<Uint32>(lAvail.y);
+
+        // Pushed for whoever is not this panel — focus-selected needs the aspect and cannot reach a
+        // panel (the InputRoute::SetViewportFocus shape, one line down, for the same reason).
+        m_Context.Viewport.SetSizePx({ lAvail.x, lAvail.y });
 
         // D5 step 2's inputs. ImGui can only answer these while the window is current, so they are
         // measured HERE and pushed into the route, which reads them next frame — the same one-frame
@@ -243,7 +457,12 @@ namespace Opaax::Editor
         // this used to spell out below.
         ImguiWidgets::Image(lImg, lAvail);
 
+        // Both measured against the IMAGE's rect, so they must follow it immediately — GetItemRect*
+        // names the last submitted item.
+        const ImVec2 lOrigin = ImGui::GetItemRectMin();
+
         MeasureCameraGesture(lHovered);
+        MeasureViewportInput(lHovered, { lOrigin.x, lOrigin.y });
 
         if (lImg.IsValid() && !m_bImageLogged)
         {
