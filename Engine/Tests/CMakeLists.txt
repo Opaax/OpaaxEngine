@@ -62,7 +62,9 @@ set(OPAAX_TEST_SOURCES
     Core/World/WorldSubsystemRegistryTests.cpp
     Core/World/WorldCloneTests.cpp
     Core/World/WorldTickGateTests.cpp
+    Core/World/EntityQueryTests.cpp
     Core/Maths/AngleTests.cpp
+    Core/Maths/Bounds2DTests.cpp
 
     # NOTE: every quarantined suite now lives under Tests/Legacy/ with the code it exercises
     # (ARCHITECTURE.md X1) — ECS/*, Physics/CollisionProfile, Assets/AssetIdResolve and
