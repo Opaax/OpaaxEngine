@@ -126,6 +126,44 @@ namespace Opaax::Editor
     };
 
     // =============================================================================
+    // Entity
+    //
+    //   The author loop's own three verbs (②). Bodies live in EntityOps — the ONE named mutation
+    //   choke point ⑤ needs — so the Edit menu, the Hierarchy's context menus and the viewport's
+    //   keys all reach one implementation.
+    // =============================================================================
+
+    /**
+     * Create an empty entity in the FOCUSED map and select it.
+     *
+     * The focused map is the target because a menu entry has nothing else to name; the Hierarchy's
+     * header menu is the route when you want to say which map, and it calls EntityOps directly for
+     * the same reason MapOps' verbs take theirs.
+     */
+    struct CreateEntityCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
+    /** Destroy everything selected. Refused while PIE runs. */
+    struct DeleteSelectedCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
+    /** Frame the selection with the editor camera. Refused outside Edit — see EntityOps. */
+    struct FocusSelectedCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
+    // =============================================================================
     // Map
     // =============================================================================
 

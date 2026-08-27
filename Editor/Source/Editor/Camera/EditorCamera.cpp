@@ -12,6 +12,11 @@ namespace Opaax::Editor
         constexpr float k_OrthoSizeMin = 1.f;      // a single world unit fills half the viewport
         constexpr float k_OrthoSizeMax = 50000.f;
 
+        // Focus leaves the target filling ~80% of the height rather than touching the edges, and
+        // never zooms closer than this — a point-sized entity would otherwise fill the screen.
+        constexpr float k_FocusMargin       = 1.25f;
+        constexpr float k_FocusMinOrthoSize = 100.f;
+
         /** World units covered by one viewport pixel. Square, since width follows the aspect. */
         float WorldPerPixel(float InOrthoSize, float InViewportHeightPx)
         {
@@ -57,6 +62,34 @@ namespace Opaax::Editor
         m_Position += lBefore - lAfter;
 
         LogFirstMove("zoom");
+    }
+
+    void EditorCamera::FocusOn(const Bounds2D& InBounds, const Vector2F& InViewportPx)
+    {
+        if (InViewportPx.x <= 0.f || InViewportPx.y <= 0.f)
+        {
+            return;
+        }
+
+        m_Position = InBounds.Center;
+
+        // Fit BOTH axes. OrthoSize is the vertical half-extent and the width follows the aspect, so
+        // a wide selection is fitted by converting its horizontal need into a vertical one.
+        const float lAspect = InViewportPx.x / InViewportPx.y;
+        const float lNeeded = Maths::Max(InBounds.HalfExtent.y, InBounds.HalfExtent.x / lAspect);
+
+        // The margin keeps the target off the very edge; the floor is what stops a zero-extent
+        // target — an entity with only a transform — from collapsing the projection.
+        m_OrthoSize = Maths::Clamp(Maths::Max(lNeeded * k_FocusMargin, k_FocusMinOrthoSize),
+                                   k_OrthoSizeMin, k_OrthoSizeMax);
+
+        // Focus is a JUMP, and it is the one gesture whose whole point is that the author cannot
+        // see the target — so it says where it went every time, not once.
+        OPAAX_LOG(LogEditorCamera, Info, "Editor camera focused on ({}, {}) — orthoSize {}",
+                  m_Position.x, m_Position.y, m_OrthoSize);
+
+        m_bSeeded      = true;   // an explicit framing must not be overwritten by the one-shot seed
+        m_bMovedLogged = true;
     }
 
     void EditorCamera::Apply(World& InWorld) const

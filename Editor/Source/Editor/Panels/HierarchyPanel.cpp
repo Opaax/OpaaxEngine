@@ -4,6 +4,7 @@
 #include "Editor/EditorLevelDocument.h"   // the throttled per-map dirty answers
 #include "Editor/EditorMapDocument.h"
 #include "Editor/Operation/EditorSelection.hpp"
+#include "Editor/Operation/EntityOps.h"
 #include "Editor/Operation/MapOperations.h"
 
 #include "Core/OpaaxTypes.h"
@@ -38,10 +39,12 @@ namespace Opaax::Editor
     {
         switch (InAction)
         {
-            case EMapAction::Save:          return "Save Map";
-            case EMapAction::SetPersistent: return "Set as Persistent";
-            case EMapAction::Remove:        return "Remove from Level";
-            case EMapAction::None:          return "None";
+            case EMapAction::Save:           return "Save Map";
+            case EMapAction::SetPersistent:  return "Set as Persistent";
+            case EMapAction::Remove:         return "Remove from Level";
+            case EMapAction::CreateEntity:   return "Create Entity";
+            case EMapAction::DeleteSelected: return "Delete Selected";
+            case EMapAction::None:           return "None";
         }
 
         return "None";
@@ -187,6 +190,8 @@ namespace Opaax::Editor
                     OPAAX_LOG(LogHierarchyPanel, Info, "Hierarchy selected '{}' ({} selected)",
                               lMeta.Name.CStr(), m_Context.Selection.Count());
                 }
+
+                DrawEntityContextMenu(lEntity);
                 ImGui::PopID();
             }
 
@@ -208,6 +213,16 @@ namespace Opaax::Editor
         if (!ImGui::BeginPopupContextItem("map_ops")) { return; }
 
         ImGui::TextDisabled("%s", InAssetRelPath.CStr());
+        ImGui::Separator();
+
+        // THE MAP YOU CLICKED IS THE ARGUMENT — the whole reason these verbs live on the header
+        // rather than the menu bar (MapOps' own rationale). The Edit menu's Create Entity has to
+        // fall back to the focused map because a menu entry names nothing.
+        if (ImGui::MenuItem("Create Entity"))
+        {
+            m_Pending = PendingMapAction{EMapAction::CreateEntity, InMapId, InAssetRelPath};
+        }
+
         ImGui::Separator();
 
         // NOTHING IS EXECUTED HERE — every entry only RECORDS what was asked for, and Draw runs it
@@ -244,6 +259,29 @@ namespace Opaax::Editor
         ImGui::EndPopup();
     }
 
+    void HierarchyPanel::DrawEntityContextMenu(Entity InEntity)
+    {
+        if (!ImGui::BeginPopupContextItem("entity_ops")) { return; }
+
+        // Right-clicking a row that is NOT selected selects it, so "Delete Selected" always means
+        // the row under the cursor. Right-clicking one that IS part of a multi-selection leaves the
+        // set alone, so the menu acts on all of it — which is what an author expects either way.
+        if (!m_Context.Selection.Contains(InEntity))
+        {
+            m_Context.Selection.Select(InEntity);
+        }
+
+        ImGui::TextDisabled("%llu selected", static_cast<unsigned long long>(m_Context.Selection.Count()));
+        ImGui::Separator();
+
+        if (ImGui::MenuItem("Delete"))
+        {
+            m_Pending = PendingMapAction{EMapAction::DeleteSelected, MapId{}, {}};
+        }
+
+        ImGui::EndPopup();
+    }
+
     void HierarchyPanel::RunPendingAction()
     {
         const PendingMapAction lAction = m_Pending;
@@ -257,10 +295,12 @@ namespace Opaax::Editor
 
         switch (lAction.Action)
         {
-            case EMapAction::Save:          MapOps::Save(m_Context, lAction.Map);            break;
-            case EMapAction::SetPersistent: MapOps::SetPersistent(m_Context, lAction.Map);   break;
-            case EMapAction::Remove:        MapOps::RemoveFromLevel(m_Context, lAction.Map); break;
-            case EMapAction::None:                                                           break;
+            case EMapAction::Save:           MapOps::Save(m_Context, lAction.Map);            break;
+            case EMapAction::SetPersistent:  MapOps::SetPersistent(m_Context, lAction.Map);   break;
+            case EMapAction::Remove:         MapOps::RemoveFromLevel(m_Context, lAction.Map); break;
+            case EMapAction::CreateEntity:   EntityOps::Create(m_Context, lAction.Map, OpaaxString("Entity")); break;
+            case EMapAction::DeleteSelected: EntityOps::DestroySelected(m_Context);           break;
+            case EMapAction::None:                                                            break;
         }
     }
 }

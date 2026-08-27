@@ -3,6 +3,7 @@
 #include "Editor/EditorContext.h"
 #include "Editor/EditorLevelDocument.h"
 #include "Editor/EditorMapDocument.h"
+#include "Editor/Operation/EntityOps.h"
 #include "Editor/Operation/LevelOperations.h"
 #include "Editor/Operation/MapOperations.h"
 #include "Editor/PIE/PlayInEditor.h"
@@ -14,6 +15,7 @@
 #include "Application/Services/Platforms/IFileSystem.h"
 #include "Core/Window/Window.h"
 #include "Engine/Registries/EngineRegistries.h"
+#include "World/Entity/Entity.h"   // EntityOps::Create returns one by value
 #include "World/Level.h"
 #include "World/World.h"
 #include "World/WorldManager.h"
@@ -230,6 +232,28 @@ namespace Opaax::Editor
         }
 
         OpenStandaloneMap(InContext, InParams.AbsPath);
+    }
+
+    // =========================================================================
+    // Entity — thin by design. Every body is EntityOps', so the Edit menu, the Hierarchy's context
+    // menus and the viewport's keys cannot drift into three behaviours.
+    // =========================================================================
+    void CreateEntityCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        // The FOCUSED map, because a menu entry has no other way to name one — the same choice
+        // SaveMapCommand makes below, and for the same reason. The Hierarchy's header menu is the
+        // route for saying WHICH map.
+        EntityOps::Create(InContext, InContext.MapDocument.GetMapId(), OpaaxString("Entity"));
+    }
+
+    void DeleteSelectedCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        EntityOps::DestroySelected(InContext);
+    }
+
+    void FocusSelectedCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        EntityOps::FocusSelected(InContext);
     }
 
     void SaveMapCommand::Execute(EditorContext& InContext, const Params&)

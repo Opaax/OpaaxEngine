@@ -7,6 +7,8 @@
 
 namespace Opaax
 {
+    class Entity;
+
     OPAAX_LOG_CATEGORY(HierarchyPanel);
 }
 
@@ -25,7 +27,9 @@ namespace Opaax::Editor
         None,
         Save,
         SetPersistent,
-        Remove
+        Remove,
+        CreateEntity,   // ② — into the map whose header was clicked
+        DeleteSelected  // ② — the row's own menu; the row is selected first, so it needs no target
     };
 
     /** **I11** — an enum gets a free ToString, found by ADL, declared with the enum. */
@@ -93,6 +97,16 @@ namespace Opaax::Editor
          */
         void DrawMapContextMenu(MapId InMapId, const OpaaxString& InAssetRelPath,
                                 bool InMounted, bool InPersistent);
+
+        /**
+         * The right-clicked ENTITY's verbs. Right-clicking a row SELECTS it first, so Delete needs
+         * no target of its own — what you right-clicked is what is selected, which is also what
+         * keeps this consistent with the Delete key and the Edit menu.
+         *
+         * Queued like every other verb here: destroying entities mid-walk invalidates the handles
+         * the rows below were collected from.
+         */
+        void DrawEntityContextMenu(Entity InEntity);
 
         /**
          * Run whatever the context menu queued, AFTER the draw pass — the panel's draw is a READ of

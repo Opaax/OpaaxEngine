@@ -72,6 +72,15 @@ namespace Opaax::Editor
         lFile.AddSeparator();
         lFile.AddCommand("Exit", Tags::EDITOR_COMMAND_QUIT);
 
+        // --- Native Edit  --------------------------
+        // Enabled only while editing: all three are refused in a Play world anyway, and a menu that
+        // states the rule beats one that answers a click with a log line nobody reads.
+        EditorMenuCategory& lEdit = lMenu.Category("Edit");
+        lEdit.AddCommand("Create Entity", Tags::EDITOR_COMMAND_CREATE_ENTITY).SetEnabled(IsEditing);
+        lEdit.AddCommand("Delete Selected", Tags::EDITOR_COMMAND_DELETE_ENTITY).SetEnabled(IsEditing);
+        lEdit.AddSeparator();
+        lEdit.AddCommand("Focus Selected", Tags::EDITOR_COMMAND_FOCUS_SELECTED).SetEnabled(IsEditing);
+
         // --- Native Level  --------------------------
         EditorMenuCategory& lLevel = lMenu.Category("Level");
         lLevel.AddCommand("Add Map...", Tags::EDITOR_COMMAND_ADD_MAP_TO_LEVEL).SetEnabled(IsEditing);
@@ -96,6 +105,10 @@ namespace Opaax::Editor
         lCommands.Register<TogglePauseCommand>(Tags::EDITOR_COMMAND_TOGGLE_PAUSE);
         lCommands.Register<StepCommand>(Tags::EDITOR_COMMAND_STEP);
         lCommands.Register<StopCommand>(Tags::EDITOR_COMMAND_STOP);
+
+        lCommands.Register<CreateEntityCommand>(Tags::EDITOR_COMMAND_CREATE_ENTITY);
+        lCommands.Register<DeleteSelectedCommand>(Tags::EDITOR_COMMAND_DELETE_ENTITY);
+        lCommands.Register<FocusSelectedCommand>(Tags::EDITOR_COMMAND_FOCUS_SELECTED);
 
         lCommands.Register<NewMapCommand>(Tags::EDITOR_COMMAND_NEW_MAP);
         lCommands.Register<OpenMapCommand>(Tags::EDITOR_COMMAND_OPEN_MAP);

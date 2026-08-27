@@ -19,6 +19,12 @@ namespace Opaax::Editor::Tags
     inline const OpaaxTag EDITOR_COMMAND_STEP         = OpaaxTag("Editor.Command.Step");
     inline const OpaaxTag EDITOR_COMMAND_STOP         = OpaaxTag("Editor.Command.Stop");
 
+    //Entity — the author loop's own verbs (②). Reached from the Edit menu, the Hierarchy's context
+    //menus and the viewport's keys, so all three make one call rather than three copies of it.
+    inline const OpaaxTag EDITOR_COMMAND_CREATE_ENTITY  = OpaaxTag("Editor.Command.CreateEntity");
+    inline const OpaaxTag EDITOR_COMMAND_DELETE_ENTITY  = OpaaxTag("Editor.Command.DeleteEntity");
+    inline const OpaaxTag EDITOR_COMMAND_FOCUS_SELECTED = OpaaxTag("Editor.Command.FocusSelected");
+
     //Level
     inline const OpaaxTag EDITOR_COMMAND_NEW_LEVEL      = OpaaxTag("Editor.Command.NewLevel");
     inline const OpaaxTag EDITOR_COMMAND_OPEN_LEVEL     = OpaaxTag("Editor.Command.OpenLevel");

@@ -5,7 +5,6 @@
 #include "Editor/EditorContext.h"   // the Panels factory receives EditorContext& (D10)
 #include "Commands/SandboxEditorCommandTags.h"
 #include "Commands/ValidateSandboxCommand.h"
-#include "Panels/SandboxPanel.h"
 #include "Drawers/TagsComponentDrawer.h"
 #include "Systems/QuadBoundsSubsystem.h"
 #include "Components/HealthComponent.h"
@@ -85,14 +84,14 @@ void SandboxEditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& In
             OPAAX_LOG(LogSandboxEditorModule, Info, "Wave definition activated: {}", InFile.RelPath.CStr());
         });
 
-    // REAL extension (M2a): the game's own panel, registered through the same route the editor's native
-    // Hierarchy uses. Constructed later by EditorService, once an EditorContext exists to hand it.
-    // Under TOOLS, not Window, and hidden until asked for: a panel is not always a workspace pane,
-    // and where its toggle lives is the panel's own statement rather than the editor's policy. The
-    // category merges by identity with the "Tools > Debug" above — same Category(), one Tools menu.
-    InRegistrar.Panels().Register<SandboxPanel>(Opaax::Editor::PanelDesc{
-        .Id               = OPAAX_ID("Sandbox Panel"),
-        .Menu             = OPAAX_ID("Tools"),
-        .DefaultVisibility = Opaax::Editor::EPanelVisibility::Hidden
-    });
+    // SandboxPanel was DELETED in ② and this module no longer registers a panel. Its one feature —
+    // Spawn Quad — is now Create Entity plus Add Component, through EntityOps, which also fixes what
+    // it got wrong: it spawned with no OwnerMap, so its quads landed in "(runtime - not saved)" and
+    // no Save could ever write them (**WM2**).
+    //
+    // KNOWN COST, stated rather than discovered later: this was the only GAME-module panel, so M2's
+    // dogfood gate — "a Sandbox-module custom panel appears with zero changes to OpaaxEditorLib" —
+    // is no longer live. The PanelRegistry route is still exercised by the editor's eight native
+    // panels, and this module's other four extensions (a world subsystem, a command, a hand-written
+    // drawer, a resource type) are untouched. Re-adding a game panel is one Register call.
 }

@@ -1,7 +1,10 @@
 #include "Editor/Panels/ViewportPanel.h"
 
 #include "Editor/Camera/EditorCamera.h"     // the Edit viewpoint this panel drives (①)
+#include "Editor/Commands/EditorCommandRegistry.h"
+#include "Editor/Commands/EditorNativeCommandsTags.hpp"
 #include "Editor/EditorContext.h"
+#include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Editor/Input/InputRoute.h"        // hover/focus is pushed, not read back out (D5 step 2)
 #include "Editor/ImguiLibrary/ImguiWidgets.h"
 #include "Editor/Operation/EditorSelection.hpp"
@@ -435,6 +438,44 @@ namespace Opaax::Editor
         m_bWasDrag    = false;
     }
 
+    // =========================================================================
+    // MeasureViewportKeys — F and Delete, dispatched BY TAG so a key and its menu entry reach one
+    // verb rather than two copies of it (the reserved F-keys' rule, one layer up).
+    //
+    // Gated on THIS PANEL having the pointer or focus, and deliberately NOT put in
+    // EditorService::HandleAuthoringShortcuts beside Ctrl+S: that uses ImGuiInputFlags_RouteGlobal,
+    // and an unmodified F on a global route would fire while a text field elsewhere owns the
+    // keyboard. A bare key needs a surface to belong to, and this is it.
+    //
+    // Executed immediately rather than banked: a command mutates the WORLD, not this panel's draw
+    // state, and nothing below in this pass reads the entities it may destroy — the row walk that
+    // made the Hierarchy defer is in another panel.
+    // =========================================================================
+    void ViewportPanel::MeasureViewportKeys(bool bInHovered)
+    {
+        if (!bInHovered && !ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows))
+        {
+            return;
+        }
+
+        // A text field anywhere takes precedence — otherwise renaming an entity to "Fred" would
+        // frame the selection and delete it.
+        if (ImGui::GetIO().WantCaptureKeyboard)
+        {
+            return;
+        }
+
+        if (ImGui::IsKeyPressed(ImGuiKey_F, /*repeat*/false))
+        {
+            m_Context.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_FOCUS_SELECTED, m_Context);
+        }
+
+        if (ImGui::IsKeyPressed(ImGuiKey_Delete, /*repeat*/false))
+        {
+            m_Context.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_DELETE_ENTITY, m_Context);
+        }
+    }
+
     EditorImage ViewportPanel::GetViewportImage() const
     {
         return m_Framebuffer != nullptr ? m_Context.UIBackend.GetViewportImage(*m_Framebuffer) : EditorImage{};
@@ -476,6 +517,7 @@ namespace Opaax::Editor
 
         MeasureCameraGesture(lImageHovered);
         MeasureViewportInput(lImageHovered, { lOrigin.x, lOrigin.y });
+        MeasureViewportKeys(lHovered);
 
         if (lImg.IsValid() && !m_bImageLogged)
         {

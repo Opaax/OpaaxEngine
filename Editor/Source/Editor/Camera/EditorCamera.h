@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Application/Services/ILogger.h"
+#include "Core/Maths/Bounds2D.h"
 #include "Core/Maths/MathTypes.h"
 
 namespace Opaax
@@ -55,6 +56,18 @@ namespace Opaax::Editor
          * salvaged from the legacy editor camera, which is where this was already right.
          */
         void ZoomAtCursor(float InWheel, const Vector2F& InCursorLocalPx, const Vector2F& InViewportPx);
+
+        /**
+         * Frame InBounds: centre on it and zoom so it fits, with a margin.
+         *
+         * Both axes matter, so this needs the viewport's pixel size — OrthoSize is the VERTICAL
+         * half-extent and the width follows the aspect, so a wide selection has to be fitted by
+         * width or it spills off the sides.
+         *
+         * A zero-extent target (an entity with only a transform) keeps a sane framing rather than
+         * collapsing the projection, which is what the minimum is for.
+         */
+        void FocusOn(const Bounds2D& InBounds, const Vector2F& InViewportPx);
 
         /**
          * Publish this camera as InWorld's view — but ONLY for an Edit world. A Play world is

@@ -134,6 +134,17 @@ namespace Opaax::Editor
         void MeasureViewportInput(bool bInHovered, const Vector2F& InOrigin);
 
         /**
+         * F (focus selected) and Delete, dispatched BY TAG so each key and its menu entry reach one
+         * verb. Gated on this PANEL (window hover or focus, not the image) — a key belongs to the
+         * panel, not to a rectangle inside it — and refused whenever ImGui wants the keyboard, so
+         * typing "Fred" into a name field cannot frame and delete the selection.
+         *
+         * Deliberately not in EditorService::HandleAuthoringShortcuts beside Ctrl+S: that routes
+         * globally, and an unmodified key on a global route fires wherever focus happens to be.
+         */
+        void MeasureViewportKeys(bool bInHovered);
+
+        /**
          * Spend what MeasureCameraGesture banked and publish the editor camera as the active world's
          * view. Runs in OnPreRender: after the resize so the pixel sizes are current, and before the
          * engine renders so the result lands in THIS frame.
