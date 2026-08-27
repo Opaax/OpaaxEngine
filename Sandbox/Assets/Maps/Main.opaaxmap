@@ -42,7 +42,7 @@
                         "z": 1.0
                     },
                     "Position": {
-                        "x": 200.0,
+                        "x": 175.0,
                         "y": 0.0
                     },
                     "Size": {
@@ -53,6 +53,26 @@
                 "HealthComponent": {
                     "Current": 100,
                     "Max": 100
+                },
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Layer": "Default",
+                    "OrderInLayer": 19,
+                    "Position": {
+                        "x": 179.0,
+                        "y": -64.0
+                    },
+                    "Size": {
+                        "x": 100.0,
+                        "y": 100.0
+                    },
+                    "Texture": "Textures/Checker.png",
+                    "bVisible": true
                 },
                 "TagsComponent": {
                     "Tags": [
@@ -66,6 +86,13 @@
         },
         {
             "components": {
+                "Camera": {
+                    "OrthoSize": 448.0,
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    }
+                },
                 "Dummy": {
                     "Color": {
                         "w": 1.0,

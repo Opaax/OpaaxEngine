@@ -1,7 +1,8 @@
 {
     "maps": [
         "Maps/Main.opaaxmap",
-        "Maps/Sprites.opaaxmap"
+        "Maps/Sprites.opaaxmap",
+        "Maps/Arena.opaaxmap"
     ],
     "name": "Main",
     "persistentMap": "Maps/Main.opaaxmap",
