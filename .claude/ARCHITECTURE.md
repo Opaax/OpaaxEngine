@@ -153,6 +153,13 @@ struct, `Engine`), never on the template itself.
   includes — INCLUDING indirectly, through a member's serializer or a template it instantiates.** So
   when a field changes type, or a type gains a member, ask what that drags across the boundary. The
   answer arrives as `LNK2019` at the worst moment otherwise, which is cheap but always a surprise.
+  4. **`MakeViewProjection` / `ScreenToWorld` (① 2026-08-26) — the first one paid AHEAD of the break.**
+     Two free functions in `Renderer/CameraView.h`, exported the day they were written because the
+     question above was asked *while* writing them: the editor camera calls `ScreenToWorld` from
+     `SandboxEditor.exe`, so they are exe-reachable by design rather than by accident. The checklist
+     works; the trick is running it at authoring time instead of at link time. *(They are also
+     out-of-line for a second reason — inline bodies would drag
+     `glm/gtc/matrix_transform.hpp` into every TU that includes `World.h`.)*
 - **Corollary (M3): `OPAAX_API` instantiates every IMPLICITLY-declared member**, so an exported class
   holding a move-only member (`TDynArray<TUniquePtr<T>>`) fails to compile on its implicit *copy*-assign
   (C2280) even though nothing ever copies one. Declaring copy/move `= delete` is therefore **required**,
@@ -810,6 +817,120 @@ while there is one producer (`m2-panels.md` §F3 — never an API with no caller
 producer (physics/collision debug), which also earns the editor toggle panel. The cross-module identity
 question this raised is already **closed** — `OpaaxStringID`'s intern pool was moved out-of-line into the
 DLL the same day (see **I2**), so channel ids agree across the DLL line by construction.
+
+---
+
+## CAM — Camera (landed ①, 2026-08-26)
+
+**CAM1 — A world holds ONE resolved view; whoever produces it writes it there.** `CameraView`
+(`Renderer/CameraView.h` — `{Vector2F Position; float OrthoSize;}`) is the authored half of
+**F2**'s `RenderView`, and it lives on the `World` (`GetCameraView`/`SetCameraView`).
+`RendererManager::RenderFrame` reads the active world's and composes the matrices against the render
+target's pixels, which is exactly what `RenderView.h` has always asked for: *the renderer has no camera
+class; the host composes the matrices.*
+- **The slot exists because the engine must not be able to name its second producer.** The Play
+  producer is an engine subsystem; the Edit producer is **editor-owned** (`Editor/Camera/EditorCamera`),
+  and the engine stays editor-ignorant (**D4**). A `GetSubsystem<T>()` is keyed by type, so it could
+  never ask for *"whoever frames this world"*. One POD member answers it with no vtable and no lookup.
+- **It is PER-WORLD because PIE keeps two alive** (**WM6**) and each is framed differently. That is
+  also what makes the editor's pan and zoom survive a Play→Stop cycle without anyone restoring
+  anything: the Edit world is never touched, so its view is still there.
+- **The fallback is the DEFAULT-CONSTRUCTED value, not a branch.** A world nobody produced a view for
+  renders with `CameraView{}` — centred, 600 units tall, byte-identical to the ortho the engine
+  hard-coded before this existed. **BO4c**'s rule one level down: never a black frame, and never a
+  special case to keep in step. Pinned as an equality against `glm::ortho(-480,480,-300,300,-1,1)` in
+  `CameraViewTests`, so it cannot drift silently.
+
+**CAM2 — `OrthoSize` is the VERTICAL half-extent in world units; width follows the target's aspect.**
+Resizing therefore **scales** the view instead of revealing more world — the old `1 unit = 1 pixel`
+convention meant a 4K player saw four times the playfield, which is a real bug for a shmup and merely
+convenient for an editor panel. One convention for both, because an editor that framed differently
+from the game would be lying about what the game will look like.
+- `EditorCamera` **seeds its own size from the first real viewport height** (`height * 0.5`), one shot,
+  ignoring the 1x1 the panel reports before its first measured resize. The pre-camera view was one unit
+  per pixel, so half the panel's height *is* the equivalent `OrthoSize` — which means the editor opens
+  on exactly its historical framing at **any** panel size, and the convention change is only visible
+  once you resize.
+- `MakeViewProjection` and `ScreenToWorld` are the two questions a view answers, defined **out of line
+  and exported**: inline would drag `glm/gtc/matrix_transform.hpp` into every TU that includes
+  `World.h`, and the editor calls `ScreenToWorld` from the exe (**I6**). `ScreenToWorld` is the ONE
+  screen→world rule — zoom-at-cursor needs it now, picking and gizmo placement need the same answer.
+
+**CAM3 — The Play producer is an ENGINE subsystem, and the resolve is a PURE FUNCTION.**
+`CameraManager` (`Engine/Subsystems/Camera/`) reads the active world in `Update`, refuses anything but
+`Play`, and writes the slot. It was planned as a *world* subsystem, and that was wrong: the
+world-subsystem shape was justified by *"it ticks behaviors"*, and with follow deferred there is no
+per-world behavior and **no per-world state** — a camera's position lives on its entity in the world's
+registry. The engine tier costs one line in the existing `RegisterNativeSubsystems()`; the world tier
+would have cost a new `RegisterNativeWorldSubsystems()`, the first engine-native world subsystem, a
+`WorldContext` it barely uses, and an instance per world including every test world. *(User's call,
+and [[L47]]'s shape: a blocker I wrote down was a claim about PLACEMENT.)*
+- **`CameraManager::Resolve(World&)` is `static` and pure, and that is the design being honest.**
+  "The resolve needs the world and nothing else" is the entire argument for the tier, so it is stated
+  as a function rather than asserted in a comment — and it makes the positive branch testable against a
+  bare `World` with no engine to boot, which a smoke log cannot cover.
+- **The view is written UNCONDITIONALLY**, so deleting the last camera mid-play snaps back to the
+  default frame instead of freezing on the dead one's final position.
+- **The Edit/Play fork is stated exactly TWICE, once per producer** — `CameraManager::Update` refuses
+  non-Play, `EditorCamera::Apply` refuses non-Edit — and nowhere else. `Sandbox.exe` **is** the Play
+  path; there is no third branch. Proven by absence in the logs: the editor's `CameraManager` says
+  `started` and then nothing at all.
+- **Several cameras: the FIRST wins and it warns, naming the count.** A `Priority` field nothing reads
+  is a spec, and **X5** deletes those. Priority/blending is the growth point, and it is where this
+  design gets expensive. Reporting is keyed on `World::GetId()` + the count, so it fires on
+  *transition* — once per world, and again for each PIE clone, which is exactly when the answer can
+  differ.
+
+**CAM4 — The editor camera is driven from ImGui, and that is FORCED, not preferred.** With an Edit
+world on screen the input route is `ClosedEditMode`, so `RouteInput` consumes every Input-category
+event and `InputManager` is never fed — an editor camera reading it would report every button up
+forever (**IN8**). The gesture is measured in `ViewportPanel::DrawContents`, where the panel's window
+is current, which is the same source **IN8** already sends `Ctrl+S` to.
+- **The gate is that window's own hover, NEVER `io.WantCaptureMouse`** — the viewport *is* an ImGui
+  window, so that flag is true the whole time the pointer is over it ([[L29]], paid for once in M-Input).
+- **Measured then applied, one frame apart**: `DrawContents` banks the drag and the wheel,
+  `OnPreRender` spends them *after* the deferred resize (so the pixel sizes are current) and *before*
+  `Engine().Loop()` (so the result reaches that frame). A panel's draw pass reads the world; anything
+  that writes it runs outside the pass (**MP7**).
+- **Zoom is applied before pan** — the wheel is cursor-anchored, so it must not read a position the pan
+  has already moved out from under the pointer.
+- **Middle-drag pans, wheel zooms**; left and right stay free for ②'s click-select and context menus.
+  A drag that *starts* on the viewport continues while the button is held even off-panel, because
+  cutting it at the panel edge is worst exactly when you are panning to the edge of a level.
+- Two one-shot Info lines ([[L48]]): the seed, and the first move. Without them "pan does nothing"
+  cannot be told apart from "the gesture never arrived", and only one of those is fixable.
+
+**CAM5 — `CameraComponent::Position` is DEBT ON PURPOSE.** It carries the standing comment
+`SpriteComponent` and `DummyComponent` already carry: it moves the day a transform exists. That makes
+③'s fold **three** components, not two — recorded in `.claude/plans/engine-sequence.md` §③.
+
+**CAM6 — What ① deliberately did NOT build** ([[L23]] — never an API with no caller): follow, shake,
+priority/blending, `ViewportRect` and multi-view (⑥ owns it; `RenderView` already promises it is nearly
+free), perspective, confiner/bounds, a scene view that detaches from the game camera during PIE, and
+screen→world **picking** (`ScreenToWorld` landed here because zoom-at-cursor needs it; turning it into
+click-select is ②).
+
+**CAM7 — `Legacy/Renderer/Camera/` and `Legacy/Editor/Camera/` were DELETED here (19 files), and this
+is the salvage record.** ① supersedes both, and leaving them meant a second **definition** of
+`EditorCamera` and of a `CameraSubsystem`, with no lineage to the new ones — the ambiguity **X4**
+exists to prevent. *Precisely what the delete bought: there is now exactly one definition of each
+name. It did NOT silence every mention* — see the dangling-include bullet below — *but a dead call
+site naming a type that does not exist is unambiguous in a way a second live definition never is.*
+What came forward: `OrthographicCamera::RecalculateViewProjection` → `MakeViewProjection` (minus the dirty-flag
+caching, which a per-frame recompute of two floats does not need); `OrthographicCamera::ScreenToWorld` →
+the free function; `EditorCamera::Pan`/`Zoom` → the same, in `OrthoSize` vocabulary. What did **not**
+come is the `ICamera`/`ICameraController` hierarchy around them — it fights **I8** and **D7**.
+- **Named for later blocks, and living only in git from here** (`git show <this commit>^:<path>`):
+  `Legacy/Renderer/Camera/FollowCameraController.cpp` — deadzone, snap-when-smoothing-is-zero, and
+  frame-rate-independent exponential smoothing (`1 - exp(-dt/tau)`), the right shape for ⑦'s follow.
+  `ShakeParams.h` + `ShakeCameraController.cpp` — amplitude, frequency, duration, a decay envelope, and
+  a decoupled Y frequency ratio + phase so a shake is not a straight line.
+  `ScreenSpaceCamera.h` — a pixel-space **Y-up** HUD view, immune to pan/zoom, for ⑥'s text and HUD.
+- **Six other `Legacy/` files still `#include` those headers** (`Core/CoreEngineApp.cpp`,
+  `Editor/EditorSubsystem.{h,cpp}`, `Renderer/Pass/{OverlayRenderPass.h,WorldRenderPass.h,.cpp}`) and
+  now name files that do not exist. Nothing breaks — `Legacy/` is **not globbed** (**X1**, compiled =
+  zero) and every one of those six is itself dead, referencing a `CoreEngineApp`/`WorldOld` world that
+  is also going. Stated so the next reader does not mistake it for rot that arrived by accident.
 
 ---
 

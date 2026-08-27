@@ -205,7 +205,9 @@ Runtime: the chain does not exist. Window → bus, zero cost.
 
 **Engine-side contract:** `InputManager::ResetState()` — release-all, called whenever the route closes (focus lost, pause, PIE stop). **LIVE since M-Input.** Without it: held key = stuck key. Two details the original line did not have: it fires on the open→closed *transition*, so PIE pause and stop get it without either calling input code; and it **clears** the edge latches rather than filling them, because a reset is not an event — reporting a release for a press the game never saw is its own bug (ARCHITECTURE.md **IN5**).
 
-**Still not built, and named rather than implied:** action maps (a game-layer concept, D5's own words), gamepad (GLFW polls pads — a second feed), world-space mouse (needs the viewport rect *and* the camera), and the editor camera that would give D5's `Edit` branch something to do. Today that branch consumes input and drops it, which is correct while no editor tool exists.
+**Still not built, and named rather than implied:** action maps (a game-layer concept, D5's own words), gamepad (GLFW polls pads — a second feed), and world-space mouse *picking* (ARCHITECTURE.md **CAM2** landed the `ScreenToWorld` half; turning a click into an entity is ②).
+
+**The editor camera LANDED in ① (2026-08-26), and it did not use this branch** — which is the interesting part. *This line used to say the `Edit` branch "consumes input and drops it, which is correct while no editor tool exists", implying the first editor tool would be fed through it.* It cannot be: step 4 closes the route for an Edit world, so `InputManager` is never fed and would report every button up forever. The camera therefore reads **ImGui**, in the UI pass, where the viewport window is current — the same source and the same reasoning as **IN8**'s authoring chords. So the `Edit` branch still consumes and drops, and that is now the permanent answer rather than a placeholder: an Edit-mode tool is an ImGui-pass tool. See ARCHITECTURE.md **CAM4**.
 
 Gameplay input contexts (action maps) are a *game-layer* concept — routing decides *who is fed*, game contexts decide *how the game interprets*. Not conflated.
 
