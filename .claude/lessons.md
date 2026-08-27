@@ -1369,3 +1369,58 @@ fallback. And the comment I copied described the behaviour accurately; what did 
 - When adding a query API, make the miss **structurally** honest rather than documented: `Find`
   returns a null-manager ref, so `Get()` is `nullptr` — the choice `Pin` had already made, which I
   only found by looking rather than by assuming.
+
+---
+
+## L50 — A PLACEMENT argument dies with the feature it rested on; re-derive it after every scope cut (2026-08-26)
+
+**What happened (① camera).** I planned `CameraSubsystem` as a **world** subsystem and defended it at
+length: `ShouldCreate` gives the Edit/Play split for free, camera state is world state, PIE keeps two
+worlds alive. The user then cut follow and shake from the block and asked, in five words,
+*"CameraSystem can be Engine no?"* — and they were right. Every one of my arguments rested on
+**behaviour that ticks**. With follow gone there is no per-world behaviour and no per-world state at
+all: a camera's position lives on its entity in the world's own registry, so the resolve is a pure
+function of the active world. The world tier would have cost a new `RegisterNativeWorldSubsystems()`,
+the first engine-native world subsystem, a `WorldContext` it barely touches, and an instance per world
+including every test world — all to avoid one `if` on `GetMode()`.
+
+**Why I did not catch it myself.** I made the cut and re-read the placement decision in the *same*
+reply, and treated the placement as settled because I had written it down the day before. The plan
+document had become an input rather than a claim to re-check. The tell was sitting in my own text: the
+paragraph justifying the tier used the word *"ticks"*, and "ticks" had just been deleted from scope.
+
+**Rules for next time:**
+- **When scope is cut, grep your own plan for the cut feature's name.** Every hit is a decision whose
+  justification just changed and has to be re-derived, not inherited.
+- **A placement argument is a claim about STATE and LIFETIME, not about vocabulary.** "It is a camera,
+  cameras belong to worlds" is a category feeling. "It holds nothing per world" is the real test, and
+  it answers in seconds once it is actually asked.
+- **Express the surviving argument as CODE.** The reason the engine tier is right is "the resolve needs
+  only the world", so `Resolve` became a `static` pure function. That made the claim checkable instead
+  of asserted — and incidentally made the positive branch unit-testable against a bare `World`, which
+  a smoke log could never have covered.
+- Sibling of [[L47]] from the other direction: L47 is about not trusting a written-down *obstacle*,
+  this is about not trusting a written-down *decision*.
+
+---
+
+## L51 — Guard a "seed from a measured size" against the value BEFORE the first measurement (2026-08-26)
+
+**What happened (① S3).** `EditorCamera::SeedFromViewportHeight` adopts the viewport's height as its
+starting `OrthoSize`, once, so the editor opens on the framing it had before cameras existed. But
+`ViewportPanel` starts at **1×1** and only learns its real size on the second frame — the
+deferred-resize handshake it has had since M1. Seeded on frame one, the editor would have opened
+zoomed into half a world unit: an empty-looking viewport, produced by a feature whose entire job is
+*"nothing should look different"*. The guard is one clause, and the smoke log is what then proved the
+right thing happened — `seeded from a 469px viewport — orthoSize 234.5`, not `from a 1px viewport`.
+
+**Rules for next time:**
+- **Before consuming a measured value, ask what it reads as BEFORE the first measurement.** Deferred
+  handshakes are everywhere in this tree (viewport resize, hover/focus, the input route) and every one
+  of them has a "not yet" value that is a **legal number**, not an obvious null.
+- **A one-shot latch makes the not-yet case PERMANENT.** `if (m_bSeeded) return;` plus a bad first
+  reading is not a one-frame glitch, it is the state for the whole session. One-shot code needs its
+  input validated harder than per-frame code does.
+- **Log the value you seeded FROM, not just that you seeded.** `from a 469px viewport` is what made
+  this verifiable with no eyes on it; `seeded` alone would have been printed just as cheerfully by the
+  broken version ([[L48]]).

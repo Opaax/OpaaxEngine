@@ -1808,7 +1808,7 @@ the old groups opens fine (nlohmann ignores undeclared keys — pinned by a test
 
 ## Pointers
 
-- **Post-mortems / rules:** `.claude/lessons.md` (L1–**L32**).
+- **Post-mortems / rules:** `.claude/lessons.md` (L1–**L51**).
 - **Live session state:** `.claude/CLAUDE.local.md` (current milestone, standing decisions).
 - **Working checklist:** `.claude/task/todo.md`.
 - **Ground truth for engine design:** `.claude/data/` — *Game Engine Architecture* (Gregory). Prefer it over
