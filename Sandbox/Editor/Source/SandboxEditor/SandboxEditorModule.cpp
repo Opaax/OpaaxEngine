@@ -13,6 +13,7 @@
 #include "World/Components/CameraComponent.h"
 #include "World/Components/DummyComponent.h"
 #include "World/Components/SpriteComponent.h"
+#include "World/Components/TransformComponent.h"
 
 // OPAAX_LOG expands to an unqualified ToSpdLevel(...) — bring Opaax into scope, as SandboxPanel does.
 using namespace Opaax;
@@ -51,6 +52,9 @@ void SandboxEditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& In
     // replaced a hand-written DummyComponentDrawer that was three ImGui calls in a file of its own —
     // and HealthComponent, which never had a drawer and was therefore invisible, becomes editable
     // for the price of this line.
+    // Every entity has one, so this is the drawer that always shows.
+    InRegistrar.Drawers().Register<Opaax::TransformComponent>();
+
     InRegistrar.Drawers().Register<Opaax::DummyComponent>();
     InRegistrar.Drawers().Register<Sandbox::HealthComponent>();
 

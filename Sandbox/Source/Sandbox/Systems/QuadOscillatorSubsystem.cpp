@@ -4,6 +4,7 @@
 
 #include "Application/Services/ILogger.h"
 #include "World/Components/DummyComponent.h"
+#include "World/Components/TransformComponent.h"
 #include "World/World.h"
 
 using namespace Opaax;
@@ -36,10 +37,13 @@ namespace Sandbox
     {
         World& lWorld = m_Context->OwningWorld;
 
-        lWorld.Each<DummyComponent>([this](EntityID InEntity, const DummyComponent& InQuad)
-        {
-            m_Baselines.emplace_back(InEntity, InQuad.Position);
-        });
+        // DummyComponent is still the FILTER — this oscillates quads — but the position it banks
+        // and moves is the entity's transform, the one place a position lives.
+        lWorld.Each<TransformComponent, DummyComponent>(
+            [this](EntityID InEntity, const TransformComponent& InXf, const DummyComponent&)
+            {
+                m_Baselines.emplace_back(InEntity, InXf.Position);
+            });
 
         OPAAX_LOG(LogQuadOscillator, Info, "Captured {} quad baseline(s)",
                   static_cast<Uint64>(m_Baselines.size()));
@@ -70,17 +74,17 @@ namespace Sandbox
                 continue; // destroyed since capture — skip, do not resurrect
             }
 
-            DummyComponent* lQuad = lRegistry.try_get<DummyComponent>(lBaseline.Entity);
+            TransformComponent* lXf = lRegistry.try_get<TransformComponent>(lBaseline.Entity);
 
-            if (lQuad == nullptr)
+            if (lXf == nullptr)
             {
                 continue;
             }
 
             const float lPhase = static_cast<float>(lIndex) * PHASE_PER_QUAD;
 
-            lQuad->Position.y = lBaseline.Position.y
-                              + std::sin(static_cast<float>(m_Elapsed) * SPEED + lPhase) * AMPLITUDE;
+            lXf->Position.y = lBaseline.Position.y
+                            + std::sin(static_cast<float>(m_Elapsed) * SPEED + lPhase) * AMPLITUDE;
         }
     }
 
@@ -99,9 +103,9 @@ namespace Sandbox
                 continue;
             }
 
-            if (DummyComponent* lQuad = lRegistry.try_get<DummyComponent>(lBaseline.Entity))
+            if (TransformComponent* lXf = lRegistry.try_get<TransformComponent>(lBaseline.Entity))
             {
-                lQuad->Position = lBaseline.Position;
+                lXf->Position = lBaseline.Position;
             }
         }
 

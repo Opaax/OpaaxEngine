@@ -11,6 +11,7 @@
 #include "World/Components/ComponentRegistry.h"
 #include "World/Components/CameraComponent.h"
 #include "World/Components/DummyComponent.h"
+#include "World/Components/TransformComponent.h"
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityMeta.h"
 #include "World/Serialization/MapFactory.h"
@@ -56,6 +57,7 @@ namespace
     // A registry carrying both an engine-side and a test-side component type.
     void FillRegistry(ComponentRegistry& InRegistry)
     {
+        REQUIRE(InRegistry.Register<TransformComponent>("Transform"));
         REQUIRE(InRegistry.Register<DummyComponent>("Dummy"));
         REQUIRE(InRegistry.Register<StatsComponent>("Stats"));
     }
@@ -76,7 +78,7 @@ TEST_CASE("Snapshot: capture -> clear -> instantiate rebuilds an equivalent worl
     Entity lHero = lWorld.CreateEntity("Hero", lMap);
     lHero.Add<StatsComponent>(StatsComponent{100, 4.5f});
     lHero.Add<DummyComponent>();
-    lHero.Get<DummyComponent>().Position = Vector2F{12.f, -3.f};
+    lHero.Get<TransformComponent>().Position = Vector2F{12.f, -3.f};
 
     Entity lCrate = lWorld.CreateEntity("Crate", lMap);
     lCrate.Add<DummyComponent>();
@@ -105,8 +107,8 @@ TEST_CASE("Snapshot: capture -> clear -> instantiate rebuilds an equivalent worl
     REQUIRE(lNewHero.Has<StatsComponent>());
     CHECK(lNewHero.Get<StatsComponent>() == StatsComponent{100, 4.5f});
     REQUIRE(lNewHero.Has<DummyComponent>());
-    CHECK(lNewHero.Get<DummyComponent>().Position.x == doctest::Approx(12.f));
-    CHECK(lNewHero.Get<DummyComponent>().Position.y == doctest::Approx(-3.f));
+    CHECK(lNewHero.Get<TransformComponent>().Position.x == doctest::Approx(12.f));
+    CHECK(lNewHero.Get<TransformComponent>().Position.y == doctest::Approx(-3.f));
 
     Entity lNewCrate = lWorld.FindByGuid(lCrateGuid);
     REQUIRE(lNewCrate.IsValid());
@@ -272,7 +274,7 @@ TEST_CASE("Snapshot: a payload written BEFORE a field existed loads that field's
     lEntityData.Name     = "WrittenLastWeek";
     lEntityData.OwnerMap = MapId("Level01");
     lEntityData.Components.emplace_back(OpaaxStringID("Dummy"),
-                                        nlohmann::json{{"Position", Vector2F{5.f, 6.f}}});
+                                        nlohmann::json{{"Size", Vector2F{5.f, 6.f}}});
     lData.Entities.emplace_back(Move(lEntityData));
 
     World lWorld("OldSave");
@@ -284,9 +286,9 @@ TEST_CASE("Snapshot: a payload written BEFORE a field existed loads that field's
     REQUIRE(lEntity.Has<DummyComponent>());
 
     const DummyComponent& lLoaded = lEntity.Get<DummyComponent>();
-    CHECK(lLoaded.Position.x == doctest::Approx(5.f));   // what the file had
-    CHECK(lLoaded.Position.y == doctest::Approx(6.f));
-    CHECK(lLoaded.Size.x == doctest::Approx(DummyComponent{}.Size.x));   // what it did not
+    CHECK(lLoaded.Size.x == doctest::Approx(5.f));   // what the file had
+    CHECK(lLoaded.Size.y == doctest::Approx(6.f));
+    CHECK(lLoaded.Color.r == doctest::Approx(DummyComponent{}.Color.r));   // what it did not
     CHECK(lLoaded.Color.a == doctest::Approx(DummyComponent{}.Color.a));
 }
 
@@ -416,17 +418,20 @@ TEST_CASE("Snapshot: a tag container round-trips, and the hierarchy still answer
 // CameraComponent (①) — the first engine-native component whose value decides what the
 //   frame LOOKS like, so a silent round-trip failure would read as "the renderer broke".
 // =============================================================================
-TEST_CASE("Snapshot: CameraComponent survives capture -> instantiate")
+TEST_CASE("Snapshot: a camera's framing survives capture -> instantiate")
 {
     ComponentRegistry lRegistry;
+    REQUIRE(lRegistry.Register<TransformComponent>("Transform"));
     REQUIRE(lRegistry.Register<CameraComponent>("Camera"));
 
     World lWorld("Framed");
 
+    // WHERE it looks from is the transform's, what it frames is the camera's — the two halves
+    // that used to be one component, and both have to survive the round trip for the frame to.
     Entity lCamera = lWorld.CreateEntity("MainCamera", MapId("Level01"));
     lCamera.Add<CameraComponent>();
-    lCamera.Get<CameraComponent>().Position  = Vector2F{-120.f, 45.f};
-    lCamera.Get<CameraComponent>().OrthoSize = 180.f;
+    lCamera.Get<TransformComponent>().Position = Vector2F{-120.f, 45.f};
+    lCamera.Get<CameraComponent>().OrthoSize   = 180.f;
 
     const Guid    lGuid     = lCamera.GetGuid();
     const MapData lCaptured = MapSerializer::CaptureWorld(lWorld, lRegistry);
@@ -438,30 +443,32 @@ TEST_CASE("Snapshot: CameraComponent survives capture -> instantiate")
     REQUIRE(lRebuilt.IsValid());
     REQUIRE(lRebuilt.Has<CameraComponent>());
 
-    const CameraComponent& lBack = lRebuilt.Get<CameraComponent>();
-    CHECK(lBack.Position.x == doctest::Approx(-120.f));
-    CHECK(lBack.Position.y == doctest::Approx(45.f));
-    CHECK(lBack.OrthoSize  == doctest::Approx(180.f));
+    CHECK(lRebuilt.Get<TransformComponent>().Position.x == doctest::Approx(-120.f));
+    CHECK(lRebuilt.Get<TransformComponent>().Position.y == doctest::Approx(45.f));
+    CHECK(lRebuilt.Get<CameraComponent>().OrthoSize     == doctest::Approx(180.f));
 }
 
-TEST_CASE("Snapshot: a CameraComponent payload missing a key keeps that field's DEFAULT")
+TEST_CASE("Snapshot: a TransformComponent payload missing a key keeps that field's DEFAULT")
 {
     // I8's _WITH_DEFAULT rule, exercised on the type rather than asserted about it: a map saved
     // before a field existed must still open. The plain macro throws here, inside Level::MountAll,
     // at boot — which is how this failed once already.
+    //
+    // On the transform because it is the component EVERY entity carries, so it is the one whose
+    // intolerance would refuse an entire map rather than one entity's worth of it.
     ComponentRegistry lRegistry;
-    REQUIRE(lRegistry.Register<CameraComponent>("Camera"));
+    REQUIRE(lRegistry.Register<TransformComponent>("Transform"));
 
     MapData lData;
     lData.Id = MapId("Level01");
 
     EntityData& lEntity = lData.Entities.emplace_back();
     lEntity.Id       = Guid::New();
-    lEntity.Name     = "OldCamera";
+    lEntity.Name     = "OldEntity";
     lEntity.OwnerMap = MapId("Level01");
 
-    // Only Position — as an older map that never knew about OrthoSize would have written it.
-    lEntity.Components.emplace_back(OpaaxStringID("Camera"),
+    // Only Position — as an older map that never knew about Rotation would have written it.
+    lEntity.Components.emplace_back(OpaaxStringID("Transform"),
                                     nlohmann::json{{"Position", {{"x", 10.f}, {"y", 20.f}}}});
 
     World lTarget("Tolerant");
@@ -469,8 +476,8 @@ TEST_CASE("Snapshot: a CameraComponent payload missing a key keeps that field's 
 
     Entity lRebuilt = lTarget.FindByGuid(lEntity.Id);
     REQUIRE(lRebuilt.IsValid());
-    REQUIRE(lRebuilt.Has<CameraComponent>());
+    REQUIRE(lRebuilt.Has<TransformComponent>());
 
-    CHECK(lRebuilt.Get<CameraComponent>().Position.x == doctest::Approx(10.f));
-    CHECK(lRebuilt.Get<CameraComponent>().OrthoSize  == doctest::Approx(300.f)); // the default, not a throw
+    CHECK(lRebuilt.Get<TransformComponent>().Position.x == doctest::Approx(10.f));
+    CHECK(lRebuilt.Get<TransformComponent>().Rotation   == doctest::Approx(0.f)); // the default, not a throw
 }

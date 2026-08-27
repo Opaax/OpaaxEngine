@@ -1,5 +1,6 @@
 #include "World.h"
 
+#include "World/Components/TransformComponent.h"   // emplaced on every entity, beside EntityMeta
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityMeta.h"
 #include "World/Level.h"   // complete type for the TUniquePtr<Level> member's destructor
@@ -109,6 +110,12 @@ namespace Opaax
 
         const EntityID lEnt  = m_Registry.create();
         EntityMeta&    lMeta = m_Registry.emplace<EntityMeta>(lEnt, EntityMeta{ InGuid, Move(InName), InOwnerMap });
+
+        // Every entity has a position, unconditionally — that is what makes Each<TransformComponent>
+        // complete and every entity anchorable. A map's payload fills this one rather than fighting
+        // it: IComponentEntry::Load uses get_or_emplace.
+        m_Registry.emplace<TransformComponent>(lEnt);
+
         m_Guids.Register(lMeta.Id, lEnt);
         OPAAX_LOG(LogWorld, Trace, "CreateEntity '{}' in world '{}'", lMeta.Name.CStr(), m_Name.CStr());
 

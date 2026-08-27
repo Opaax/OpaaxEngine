@@ -23,10 +23,9 @@ namespace Opaax
     // SpriteComponent — an image drawn in the world. The first component that references a
     //   RESOURCE, and what the whole texture path exists to serve.
     //
-    //   Position lives here rather than on a transform because no transform component exists yet;
-    //   it moves the day one does, and so does DummyComponent's. Rotation is deliberately absent
-    //   for the same reason: Renderer2D::DrawSprite takes one, but a rotation that a transform will
-    //   own belongs to the transform, not to two components that would then disagree.
+    //   WHERE it draws is TransformComponent's, and so is its rotation — one position per entity,
+    //   never one per component. A local Offset (Godot's Sprite2D.offset) is the growth point for
+    //   art that sits off its entity's origin; nothing needs it yet.
     //
     //   No UVs either. The renderer's call takes them so a sprite sheet needs no second entry
     //   point, but hand-typed atlas floats are worse authoring than none — a sheet is its own
@@ -37,7 +36,6 @@ namespace Opaax
         /** Asset-relative ("Textures/Hero.png"). EMPTY draws nothing — a real state, not an error. */
         TResourcePath<TextureResource> Texture;
 
-        Vector2F     Position     = { 0.f, 0.f };
         Vector2F     Size         = { 100.f, 100.f };
 
         /** Multiplied into the sample. White draws the texture unchanged. */
@@ -53,14 +51,13 @@ namespace Opaax
         // macro reads every field with at(), which THROWS on a missing key — so adding a field here
         // would refuse every map saved before it existed, at boot, inside Level::MountAll.
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(SpriteComponent,
-                                                    Texture, Position, Size, Color, bVisible, Layer, OrderInLayer)
+                                                    Texture, Size, Color, bVisible, Layer, OrderInLayer)
 
         // What the Inspector draws, with no drawer written for it. Every field type resolves to a
         // built-in specialization: the path gets a drag & drop target, the layer a dropdown, the
         // colour a picker — each from its TYPE alone (I15).
         OPAAX_PROPERTIES(SpriteComponent,
                          OPAAX_PROP(Texture),
-                         OPAAX_PROP(Position),
                          OPAAX_PROP(Size).SetRange(1.f, 4096.f),
                          OPAAX_PROP(Color),
                          OPAAX_PROP(bVisible),

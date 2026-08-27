@@ -18,6 +18,7 @@
 #include "Engine/Subsystems/Resources/ResourceManager.h"   // before MapResource — completes LoadContext
 #include "World/Components/ComponentRegistry.h"
 #include "World/Components/DummyComponent.h"
+#include "World/Components/TransformComponent.h"
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityMeta.h"
 #include "World/Serialization/MapFactory.h"
@@ -90,6 +91,7 @@ namespace
 
     void FillRegistry(ComponentRegistry& InRegistry)
     {
+        REQUIRE(InRegistry.Register<TransformComponent>("Transform"));
         REQUIRE(InRegistry.Register<DummyComponent>("Dummy"));
         REQUIRE(InRegistry.Register<StatsComponent>("Stats"));
     }
@@ -125,7 +127,7 @@ TEST_CASE("MapFile: World -> Capture -> Save -> MapResource -> Instantiate rebui
     Entity lHero = lSource.CreateEntity("Hero", lMap);
     lHero.Add<StatsComponent>(StatsComponent{100, 4.5f});
     lHero.Add<DummyComponent>();
-    lHero.Get<DummyComponent>().Position = Vector2F{12.f, -3.f};
+    lHero.Get<TransformComponent>().Position = Vector2F{12.f, -3.f};
 
     Entity lCrate = lSource.CreateEntity("Crate", lMap);
     lCrate.Add<DummyComponent>();
@@ -152,8 +154,8 @@ TEST_CASE("MapFile: World -> Capture -> Save -> MapResource -> Instantiate rebui
     CHECK(lRestoredHero.Get<EntityMeta>().Name == OpaaxString("Hero"));
     CHECK(lRestoredHero.Get<EntityMeta>().OwnerMap == lMap);
     CHECK(lRestoredHero.Get<StatsComponent>() == StatsComponent{100, 4.5f});
-    CHECK(lRestoredHero.Get<DummyComponent>().Position.x == doctest::Approx(12.f));
-    CHECK(lRestoredHero.Get<DummyComponent>().Position.y == doctest::Approx(-3.f));
+    CHECK(lRestoredHero.Get<TransformComponent>().Position.x == doctest::Approx(12.f));
+    CHECK(lRestoredHero.Get<TransformComponent>().Position.y == doctest::Approx(-3.f));
 
     Entity lRestoredCrate = lRestored.FindByGuid(lCrateId);
     REQUIRE(lRestoredCrate.IsValid());

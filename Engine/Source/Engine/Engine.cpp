@@ -3,6 +3,7 @@
 #include "World/Components/CameraComponent.h"
 #include "World/Components/DummyComponent.h"
 #include "World/Components/SpriteComponent.h"
+#include "World/Components/TransformComponent.h"
 
 #include <chrono>
 
@@ -69,6 +70,7 @@ namespace Opaax
 
     void Engine::RegisterNativeComponents()
     {
+        m_Registries.Components().Register<TransformComponent>("Transform");
         m_Registries.Components().Register<DummyComponent>("Dummy");
         m_Registries.Components().Register<SpriteComponent>("Sprite");
         m_Registries.Components().Register<CameraComponent>("Camera");

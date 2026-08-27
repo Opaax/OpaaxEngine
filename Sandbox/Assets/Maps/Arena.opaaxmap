@@ -9,14 +9,17 @@
                         "y": 0.25,
                         "z": 0.75
                     },
-                    "Position": {
-                        "x": 0.0,
-                        "y": -160.0
-                    },
                     "Size": {
                         "x": 640.0,
                         "y": 40.0
                     }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": -160.0
+                    },
+                    "Rotation": 0.0
                 }
             },
             "guid": "3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a",
@@ -32,10 +35,6 @@
                         "y": 0.25,
                         "z": 0.5
                     },
-                    "Position": {
-                        "x": 303.0,
-                        "y": 40.0
-                    },
                     "Size": {
                         "x": 40.0,
                         "y": 360.0
@@ -50,16 +49,19 @@
                     },
                     "Layer": "Default",
                     "OrderInLayer": 0,
-                    "Position": {
-                        "x": 0.0,
-                        "y": 0.0
-                    },
                     "Size": {
                         "x": 100.0,
                         "y": 100.0
                     },
                     "Texture": "Textures/Checker.png",
                     "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 303.0,
+                        "y": 40.0
+                    },
+                    "Rotation": 0.0
                 }
             },
             "guid": "9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f",

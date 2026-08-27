@@ -3,6 +3,7 @@
 #include "Application/Services/ILogger.h"
 #include "Renderer/DebugDraw.h"
 #include "World/Components/DummyComponent.h"
+#include "World/Components/TransformComponent.h"
 #include "World/World.h"
 
 using namespace Opaax;
@@ -34,13 +35,14 @@ void QuadBoundsSubsystem::Update(double /*InDeltaTime*/)
 
     Uint64 lDrawn = 0;
 
-    lWorld.Each<DummyComponent>([&](const DummyComponent& InQuad)
-    {
-        lDebug.DrawBox(InQuad.Position,
-                       InQuad.Size + Vector2F{PADDING, PADDING},
-                       COLOR, THICKNESS);
-        ++lDrawn;
-    });
+    lWorld.Each<TransformComponent, DummyComponent>(
+        [&](const TransformComponent& InXf, const DummyComponent& InQuad)
+        {
+            lDebug.DrawBox(InXf.Position,
+                           InQuad.Size + Vector2F{PADDING, PADDING},
+                           COLOR, THICKNESS);
+            ++lDrawn;
+        });
 
     // Log the SUCCESS branch once, not just failures: "no errors" is equally consistent with
     // an overlay that drew nothing at all (L15). One line proves boxes were actually queued.

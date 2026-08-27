@@ -6,6 +6,7 @@
 #include "World/WorldManager.h"
 #include "World/Entity/Entity.h"
 #include "World/Components/DummyComponent.h"
+#include "World/Components/TransformComponent.h"
 
 #include <imgui.h>
 
@@ -46,8 +47,9 @@ void SandboxPanel::SpawnQuad()
     Entity          lEntity = lWorld->CreateEntity(lName);
     DummyComponent& lComp   = lEntity.Add<DummyComponent>();
 
-    lComp.Position = { SPAWN_ORIGIN_X + SPAWN_STEP_X * static_cast<float>(m_SpawnCount % SPAWN_PER_ROW),
-                       SPAWN_ORIGIN_Y + SPAWN_STEP_Y * static_cast<float>(m_SpawnCount / SPAWN_PER_ROW) };
+    lEntity.Get<TransformComponent>().Position =
+        { SPAWN_ORIGIN_X + SPAWN_STEP_X * static_cast<float>(m_SpawnCount % SPAWN_PER_ROW),
+          SPAWN_ORIGIN_Y + SPAWN_STEP_Y * static_cast<float>(m_SpawnCount / SPAWN_PER_ROW) };
     lComp.Size     = { 80.f, 80.f };
     lComp.Color    = { 1.f, 0.85f, 0.2f, 1.f };   // distinct from the module's red/green/blue
 

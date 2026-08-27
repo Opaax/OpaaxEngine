@@ -11,6 +11,7 @@
 
 #include "Engine/Subsystems/Camera/CameraManager.h"
 #include "World/Components/CameraComponent.h"
+#include "World/Components/TransformComponent.h"
 #include "World/Entity/Entity.h"
 #include "World/World.h"
 
@@ -39,7 +40,7 @@ TEST_CASE("Resolve: one camera answers ITS values and names its entity")
 
     Entity lCamera = lWorld.CreateEntity("MainCamera");
     lCamera.Add<CameraComponent>();
-    lCamera.Get<CameraComponent>().Position  = Vector2F{ 250.f, -75.f };
+    lCamera.Get<TransformComponent>().Position = Vector2F{ 250.f, -75.f };
     lCamera.Get<CameraComponent>().OrthoSize = 120.f;
 
     const CameraResolution lResolution = CameraManager::Resolve(lWorld);

@@ -9,10 +9,6 @@
                         "y": 1.0,
                         "z": 1.0
                     },
-                    "Position": {
-                        "x": 0.0,
-                        "y": 0.0
-                    },
                     "Size": {
                         "x": 120.0,
                         "y": 120.0
@@ -26,6 +22,13 @@
                     "Tags": [
                         "Sandbox.Quad.White"
                     ]
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0
                 }
             },
             "guid": "7c3755c2004ff4e6277a989244aabfe0",
@@ -40,10 +43,6 @@
                         "x": 0.20000000298023224,
                         "y": 0.4000000059604645,
                         "z": 1.0
-                    },
-                    "Position": {
-                        "x": 175.0,
-                        "y": 0.0
                     },
                     "Size": {
                         "x": 120.0,
@@ -63,10 +62,6 @@
                     },
                     "Layer": "Default",
                     "OrderInLayer": 19,
-                    "Position": {
-                        "x": 179.0,
-                        "y": -64.0
-                    },
                     "Size": {
                         "x": 100.0,
                         "y": 100.0
@@ -78,6 +73,13 @@
                     "Tags": [
                         "Sandbox.Quad.Blue"
                     ]
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 175.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0
                 }
             },
             "guid": "aa1f0be1e444adfb2e0e59fb517be045",
@@ -87,22 +89,28 @@
         {
             "components": {
                 "Camera": {
-                    "OrthoSize": 448.0,
+                    "OrthoSize": 448.0
+                },
+                "Transform": {
                     "Position": {
                         "x": 0.0,
                         "y": 0.0
-                    }
-                },
+                    },
+                    "Rotation": 0.0
+                }
+            },
+            "guid": "bdfd4d9208db444796f5b991fe561151",
+            "name": "MainCamera",
+            "ownerMap": "Main"
+        },
+        {
+            "components": {
                 "Dummy": {
                     "Color": {
                         "w": 1.0,
                         "x": 1.0,
                         "y": 0.20000000298023224,
                         "z": 0.20000000298023224
-                    },
-                    "Position": {
-                        "x": -200.0,
-                        "y": 0.0
                     },
                     "Size": {
                         "x": 120.0,
@@ -117,6 +125,13 @@
                     "Tags": [
                         "Sandbox.Quad.Red"
                     ]
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -200.0,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0
                 }
             },
             "guid": "c79d7e04cbbcbd26c617b8ad427fc4a7",

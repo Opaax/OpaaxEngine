@@ -8,6 +8,7 @@
 #include "World/World.h"
 #include "World/WorldManager.h"
 #include "World/Components/CameraComponent.h"
+#include "World/Components/TransformComponent.h"   // WHERE the camera looks from
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityMeta.h"
 
@@ -35,16 +36,17 @@ namespace Opaax
     {
         CameraResolution lResolution;
 
-        InWorld.Each<CameraComponent>([&lResolution](EntityID InEntity, CameraComponent& InCamera)
-        {
-            ++lResolution.Count;
-
-            if (lResolution.Count == 1)
+        InWorld.Each<TransformComponent, CameraComponent>(
+            [&lResolution](EntityID InEntity, TransformComponent& InXf, CameraComponent& InCamera)
             {
-                lResolution.View   = CameraView{ InCamera.Position, InCamera.OrthoSize };
-                lResolution.Entity = InEntity;
-            }
-        });
+                ++lResolution.Count;
+
+                if (lResolution.Count == 1)
+                {
+                    lResolution.View   = CameraView{ InXf.Position, InCamera.OrthoSize };
+                    lResolution.Entity = InEntity;
+                }
+            });
 
         return lResolution;
     }

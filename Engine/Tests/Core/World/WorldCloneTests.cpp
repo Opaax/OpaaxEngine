@@ -23,6 +23,7 @@
 #include "Engine/Registries/EngineRegistries.h"
 #include "World/Components/ComponentRegistry.h"
 #include "World/Components/DummyComponent.h"
+#include "World/Components/TransformComponent.h"
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityMeta.h"
 #include "World/World.h"
@@ -60,6 +61,7 @@ namespace
     // (BO4), and a type registered after it would be missing from the world that already exists.
     void FillRegistries(EngineRegistries& InRegistries)
     {
+        REQUIRE(InRegistries.Components().Register<TransformComponent>("Transform"));
         REQUIRE(InRegistries.Components().Register<DummyComponent>("Dummy"));
         REQUIRE(InRegistries.Components().Register<LoadoutComponent>("Loadout"));
     }
@@ -83,7 +85,7 @@ TEST_CASE("world clone: entities arrive with the same Guids, names and owner map
     Entity lHero = lSource->CreateEntity("Hero", lMap);
     lHero.Add<LoadoutComponent>(LoadoutComponent{42});
     lHero.Add<DummyComponent>();
-    lHero.Get<DummyComponent>().Position = Vector2F{12.f, -3.f};
+    lHero.Get<TransformComponent>().Position = Vector2F{12.f, -3.f};
 
     Entity lCrate = lSource->CreateEntity("Crate", lMap);
     lCrate.Add<DummyComponent>();
@@ -105,8 +107,8 @@ TEST_CASE("world clone: entities arrive with the same Guids, names and owner map
     REQUIRE(lClonedHero.Has<LoadoutComponent>());
     CHECK(lClonedHero.Get<LoadoutComponent>() == LoadoutComponent{42});
     REQUIRE(lClonedHero.Has<DummyComponent>());
-    CHECK(lClonedHero.Get<DummyComponent>().Position.x == doctest::Approx(12.f));
-    CHECK(lClonedHero.Get<DummyComponent>().Position.y == doctest::Approx(-3.f));
+    CHECK(lClonedHero.Get<TransformComponent>().Position.x == doctest::Approx(12.f));
+    CHECK(lClonedHero.Get<TransformComponent>().Position.y == doctest::Approx(-3.f));
 
     Entity lClonedCrate = lClone->FindByGuid(lCrateGuid);
     REQUIRE(lClonedCrate.IsValid());

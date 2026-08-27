@@ -15,6 +15,7 @@
 #include "RHI/Framebuffer.h"                // IFramebuffer + FramebufferSpec (created by the device)
 
 #include "World/Components/DummyComponent.h"
+#include "World/Components/TransformComponent.h"
 #include "World/Entity/Entity.h"
 #include "World/World.h"                    // Apply publishes the camera as the world's view
 #include "World/WorldManager.h"             // the active world is what gets it
@@ -153,13 +154,14 @@ namespace Opaax::Editor
             return;
         }
 
-        const DummyComponent* lComp = lSelected.TryGet<DummyComponent>();
-        if (lComp == nullptr)
+        const TransformComponent* lXf   = lSelected.TryGet<TransformComponent>();
+        const DummyComponent*     lComp = lSelected.TryGet<DummyComponent>();
+        if (lXf == nullptr || lComp == nullptr)
         {
             return;
         }
 
-        m_Context.Engine.GetDebugDraw().DrawBox(lComp->Position, lComp->Size + m_OutlinePadding,
+        m_Context.Engine.GetDebugDraw().DrawBox(lXf->Position, lComp->Size + m_OutlinePadding,
                                                 m_OutlineColor, m_OutlineThickness);
 
         // Log the SUCCESS branch (L15): both returns above are silent, so "selected an entity with no
@@ -168,7 +170,7 @@ namespace Opaax::Editor
         if (!m_bOutlineLogged)
         {
             OPAAX_LOG(LogViewportPanel, Info, "Selection outline enqueued (4 debug lines around {},{})",
-                      lComp->Position.x, lComp->Position.y);
+                      lXf->Position.x, lXf->Position.y);
             m_bOutlineLogged = true;
         }
     }

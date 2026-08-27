@@ -12,6 +12,34 @@
 #include "World/Serialization/MapJson.h"
 #include "World/Serialization/MapSerializer.h"
 
+namespace
+{
+    using namespace Opaax;
+
+    /** Byte offset of the first difference, or the shorter length when one is a prefix of the other. */
+    Uint32 FirstDifference(const OpaaxString& InA, const OpaaxString& InB) noexcept
+    {
+        const Uint32 lMin = InA.GetLength() < InB.GetLength() ? InA.GetLength() : InB.GetLength();
+
+        for (Uint32 i = 0; i < lMin; ++i)
+        {
+            if (InA.CStr()[i] != InB.CStr()[i]) { return i; }
+        }
+
+        return lMin;
+    }
+
+    /** A readable slice around InAt, clamped to the string — what turns an offset into a field name. */
+    OpaaxString Window(const OpaaxString& InText, Uint32 InAt)
+    {
+        constexpr Uint32 BEFORE = 40;
+        constexpr Uint32 AFTER  = 80;
+
+        const Uint32 lStart = InAt > BEFORE ? InAt - BEFORE : 0;
+        return InText.SubString(lStart, BEFORE + AFTER);
+    }
+}
+
 namespace Opaax::Editor
 {
     OpaaxString EditorLevelDocument::CompareText(const World& InWorld, const ComponentRegistry& InRegistry,
@@ -121,10 +149,19 @@ namespace Opaax::Editor
             }
             else
             {
+                // NAME THE DIVERGENCE, do not just report one. "It differs" sends a reader to diff
+                // two 130-line files by eye; the first differing offset plus a window either side
+                // identifies the field in one glance. Cost is paid only on the failing branch.
+                const Uint32 lAt = FirstDifference(lOnDisk, lAsFile);
+
                 OPAAX_LOG(LogEditorLevelDocument, Warn,
                           "'{}' re-serializes DIFFERENTLY from disk — the next Save will rewrite it "
-                          "(formatting churn, or a component the registry no longer knows)",
-                          lMap.AssetRelPath.CStr());
+                          "(formatting churn, or a component the registry no longer knows).\n"
+                          "  first difference at byte {} of {} (disk) / {} (rewrite)\n"
+                          "  disk    ...{}...\n"
+                          "  rewrite ...{}...",
+                          lMap.AssetRelPath.CStr(), lAt, lOnDisk.GetLength(), lAsFile.GetLength(),
+                          Window(lOnDisk, lAt).CStr(), Window(lAsFile, lAt).CStr());
             }
 
             m_Maps.emplace_back(Move(lRecord));

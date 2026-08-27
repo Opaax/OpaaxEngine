@@ -30,6 +30,9 @@
 #include "World/World.h"
 #include "World/Components/DummyComponent.h"
 #include "World/Components/SpriteComponent.h"
+#include "World/Components/TransformComponent.h"
+
+#include "Core/Maths/Maths.h"     // DegreesToRadians — the transform authors degrees, the renderer takes radians
 
 #include "Engine/Subsystems/Resources/ResourceManager.h"          // Load<TextureResource> — the cache
 #include "Engine/Subsystems/Resources/Types/TextureResource.h"
@@ -158,10 +161,12 @@ namespace Opaax
         // Draw the active world: a solid quad per DummyComponent, a textured one per Sprite.
         if (lWorld != nullptr)
         {
-            lWorld->Each<DummyComponent>([&lRenderer](EntityID, DummyComponent& InComp)
-            {
-                lRenderer.DrawQuad(InComp.Position, InComp.Size, InComp.Color);
-            });
+            lWorld->Each<TransformComponent, DummyComponent>(
+                [&lRenderer](EntityID, TransformComponent& InXf, DummyComponent& InComp)
+                {
+                    lRenderer.DrawQuad(InXf.Position, InComp.Size, InComp.Color,
+                                       Maths::DegreesToRadians(InXf.Rotation));
+                });
 
             DrawWorldSprites(*lWorld, lRenderer);
         }
@@ -181,25 +186,27 @@ namespace Opaax
     
     void RendererManager::DrawWorldSprites(World& InWorld, Renderer2D& InRenderer)
     {
-        InWorld.Each<SpriteComponent>([this, &InRenderer](EntityID, SpriteComponent& InSprite)
-        {
-            if (!InSprite.bVisible)
+        InWorld.Each<TransformComponent, SpriteComponent>(
+            [this, &InRenderer](EntityID, TransformComponent& InXf, SpriteComponent& InSprite)
             {
-                return;
-            }
+                if (!InSprite.bVisible)
+                {
+                    return;
+                }
 
-            // No texture named yet is a normal authoring state — a component just added, or one
-            // whose image was cleared. Drawing a white quad for it would look like a bug in the
-            // sprite; drawing nothing looks like what it is.
-            ITexture2D* lTexture = ResolveTexture(InSprite.Texture);
-            if (lTexture == nullptr)
-            {
-                return;
-            }
+                // No texture named yet is a normal authoring state — a component just added, or one
+                // whose image was cleared. Drawing a white quad for it would look like a bug in the
+                // sprite; drawing nothing looks like what it is.
+                ITexture2D* lTexture = ResolveTexture(InSprite.Texture);
+                if (lTexture == nullptr)
+                {
+                    return;
+                }
 
-            InRenderer.DrawSprite(InSprite.Position, InSprite.Size, *lTexture,
-                                  InSprite.Color, 0.f, InSprite.Layer, InSprite.OrderInLayer);
-        });
+                InRenderer.DrawSprite(InXf.Position, InSprite.Size, *lTexture, InSprite.Color,
+                                      Maths::DegreesToRadians(InXf.Rotation),
+                                      InSprite.Layer, InSprite.OrderInLayer);
+            });
     }
 
     ITexture2D* RendererManager::ResolveTexture(const TResourcePath<TextureResource>& InPath)
