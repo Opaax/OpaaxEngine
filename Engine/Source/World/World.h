@@ -8,6 +8,7 @@
 #include "World/WorldGuidRegistry.h"
 
 #include "Core/GUID/Guid.h"
+#include "Renderer/CameraView.h"   // held BY VALUE — full type, not a forward decl
 #include "Systems/WorldSubsystem.h"
 
 #include "World/Entity/EntityTypes.h"
@@ -174,6 +175,28 @@ namespace Opaax
         // =========================================================================
 
         // =========================================================================
+        // Camera
+    public:
+        /**
+         * How this world is being looked at. RendererManager reads it every frame and turns it
+         * into the pass's RenderView; whoever PRODUCES it writes it here.
+         *
+         * The slot is what keeps the two producers apart without the engine naming either: an
+         * engine subsystem resolves it from a CameraComponent in a Play world, and the editor's
+         * own camera writes it in an Edit world. It is per-world because PIE keeps two alive and
+         * each is framed differently (WM6).
+         *
+         * A world nobody writes to keeps the DEFAULT view — centred, 600 units tall, which is the
+         * frame the engine drew before cameras existed. That is the fallback, and it costs no
+         * branch anywhere (BO4c one level down: never a black frame).
+         */
+        const CameraView& GetCameraView() const noexcept { return m_CameraView; }
+        void              SetCameraView(const CameraView& InView) noexcept { m_CameraView = InView; }
+
+        // End Camera
+        // =========================================================================
+
+        // =========================================================================
         // Subsystems
     public:
         /**
@@ -251,6 +274,10 @@ namespace Opaax
         // WHICH maps are in this world. Heap-held because a Level holds a World& back to this one
         // and cannot exist before it does. Null for a bare world (see SetLevel).
         TUniquePtr<Level>        m_Level;
+
+        // How this world is framed. Default-constructed = the pre-camera centred view, which is
+        // what makes the no-producer case a fallback rather than a special case (see GetCameraView).
+        CameraView               m_CameraView;
 
         bool                    m_bSubsystemsShutdown = false;
 

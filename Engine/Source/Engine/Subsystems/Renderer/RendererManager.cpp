@@ -16,6 +16,7 @@
 #include "RHI/Framebuffer.h"      // FramebufferSpec + the TUniquePtr<IFramebuffer> deleter
 #include "RHI/Texture.h"          // the TUniquePtr<ITexture2D> deleter
 
+#include "Renderer/CameraView.h"
 #include "Renderer/RenderSystem.h"
 #include "Renderer/RenderSystemDesc.h"
 #include "Renderer/RenderView.h"
@@ -32,8 +33,6 @@
 
 #include "Engine/Subsystems/Resources/ResourceManager.h"          // Load<TextureResource> — the cache
 #include "Engine/Subsystems/Resources/Types/TextureResource.h"
-
-#include <glm/gtc/matrix_transform.hpp>
 
 #include "Engine/Config/Config_Engine.h"
 #include "Engine/Subsystems/EventBus/EngineEventBus.h"
@@ -142,12 +141,13 @@ namespace Opaax
         const Uint32 lHeight = lTarget.GetHeight();
         if (lWidth == 0 || lHeight == 0) { return; }
 
-        // Centered Y-up ortho: world (0,0) at target centre, 1 unit = 1px. A camera-view system
-        // will produce this RenderView later; for now the adapter builds it.
-        const float lHalfW = static_cast<float>(lWidth)  * 0.5f;
-        const float lHalfH = static_cast<float>(lHeight) * 0.5f;
+        World* lWorld = (m_WorldManager != nullptr) ? m_WorldManager->GetActiveWorld() : nullptr;
+
+        // The world says WHERE it is looked at from; this adapter is what knows pixels, so it
+        // composes the matrix. No world, or a world nobody produced a view for, falls back to the
+        // default CameraView — the centred frame the engine drew before cameras existed.
         RenderView lView;
-        lView.ViewProjection = glm::ortho(-lHalfW, lHalfW, -lHalfH, lHalfH, -1.f, 1.f);
+        lView.ViewProjection = MakeViewProjection(lWorld ? lWorld->GetCameraView() : CameraView{}, lWidth, lHeight);
         lView.Viewport       = Viewport{ 0, 0, lWidth, lHeight };
 
         m_RenderSystem->BeginFrame();
@@ -156,17 +156,14 @@ namespace Opaax
         Renderer2D& lRenderer = m_RenderSystem->GetRenderer2D();
 
         // Draw the active world: a solid quad per DummyComponent, a textured one per Sprite.
-        if (m_WorldManager != nullptr)
+        if (lWorld != nullptr)
         {
-            if (World* lWorld = m_WorldManager->GetActiveWorld())
+            lWorld->Each<DummyComponent>([&lRenderer](EntityID, DummyComponent& InComp)
             {
-                lWorld->Each<DummyComponent>([&lRenderer](EntityID, DummyComponent& InComp)
-                {
-                    lRenderer.DrawQuad(InComp.Position, InComp.Size, InComp.Color);
-                });
+                lRenderer.DrawQuad(InComp.Position, InComp.Size, InComp.Color);
+            });
 
-                DrawWorldSprites(*lWorld, lRenderer);
-            }
+            DrawWorldSprites(*lWorld, lRenderer);
         }
 
         // Debug overlay — each queued line as a thin rotated quad, so this reuses the world's batch

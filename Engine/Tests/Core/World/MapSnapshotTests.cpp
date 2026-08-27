@@ -9,6 +9,7 @@
 #include "Core/Tag/OpaaxTagContainer.h"
 #include "Core/Tag/OpaaxTagJson.h"
 #include "World/Components/ComponentRegistry.h"
+#include "World/Components/CameraComponent.h"
 #include "World/Components/DummyComponent.h"
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityMeta.h"
@@ -409,4 +410,67 @@ TEST_CASE("Snapshot: a tag container round-trips, and the hierarchy still answer
     CHECK(lTags.HasTag(OpaaxTag("Sandbox")));
     CHECK(lTags.HasTag(OpaaxTag("Sandbox.Quad")));
     CHECK_FALSE(lTags.HasTag(OpaaxTag("Sandbox.Quad.Blue")));
+}
+
+// =============================================================================
+// CameraComponent (①) — the first engine-native component whose value decides what the
+//   frame LOOKS like, so a silent round-trip failure would read as "the renderer broke".
+// =============================================================================
+TEST_CASE("Snapshot: CameraComponent survives capture -> instantiate")
+{
+    ComponentRegistry lRegistry;
+    REQUIRE(lRegistry.Register<CameraComponent>("Camera"));
+
+    World lWorld("Framed");
+
+    Entity lCamera = lWorld.CreateEntity("MainCamera", MapId("Level01"));
+    lCamera.Add<CameraComponent>();
+    lCamera.Get<CameraComponent>().Position  = Vector2F{-120.f, 45.f};
+    lCamera.Get<CameraComponent>().OrthoSize = 180.f;
+
+    const Guid    lGuid     = lCamera.GetGuid();
+    const MapData lCaptured = MapSerializer::CaptureWorld(lWorld, lRegistry);
+
+    World lTarget("Rebuilt");
+    REQUIRE(MapFactory::Instantiate(lCaptured, lTarget, lRegistry) == 1u);
+
+    Entity lRebuilt = lTarget.FindByGuid(lGuid);
+    REQUIRE(lRebuilt.IsValid());
+    REQUIRE(lRebuilt.Has<CameraComponent>());
+
+    const CameraComponent& lBack = lRebuilt.Get<CameraComponent>();
+    CHECK(lBack.Position.x == doctest::Approx(-120.f));
+    CHECK(lBack.Position.y == doctest::Approx(45.f));
+    CHECK(lBack.OrthoSize  == doctest::Approx(180.f));
+}
+
+TEST_CASE("Snapshot: a CameraComponent payload missing a key keeps that field's DEFAULT")
+{
+    // I8's _WITH_DEFAULT rule, exercised on the type rather than asserted about it: a map saved
+    // before a field existed must still open. The plain macro throws here, inside Level::MountAll,
+    // at boot — which is how this failed once already.
+    ComponentRegistry lRegistry;
+    REQUIRE(lRegistry.Register<CameraComponent>("Camera"));
+
+    MapData lData;
+    lData.Id = MapId("Level01");
+
+    EntityData& lEntity = lData.Entities.emplace_back();
+    lEntity.Id       = Guid::New();
+    lEntity.Name     = "OldCamera";
+    lEntity.OwnerMap = MapId("Level01");
+
+    // Only Position — as an older map that never knew about OrthoSize would have written it.
+    lEntity.Components.emplace_back(OpaaxStringID("Camera"),
+                                    nlohmann::json{{"Position", {{"x", 10.f}, {"y", 20.f}}}});
+
+    World lTarget("Tolerant");
+    REQUIRE(MapFactory::Instantiate(lData, lTarget, lRegistry) == 1u);
+
+    Entity lRebuilt = lTarget.FindByGuid(lEntity.Id);
+    REQUIRE(lRebuilt.IsValid());
+    REQUIRE(lRebuilt.Has<CameraComponent>());
+
+    CHECK(lRebuilt.Get<CameraComponent>().Position.x == doctest::Approx(10.f));
+    CHECK(lRebuilt.Get<CameraComponent>().OrthoSize  == doctest::Approx(300.f)); // the default, not a throw
 }

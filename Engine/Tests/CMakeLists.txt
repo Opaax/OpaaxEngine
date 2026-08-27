@@ -14,6 +14,7 @@
 set(OPAAX_TEST_SOURCES
     Main.cpp
     SmokeTest.cpp
+    Renderer/CameraViewTests.cpp
     Renderer/SortKeyTests.cpp
     Renderer/RenderTargetTests.cpp
     Renderer/DebugDrawTests.cpp
@@ -40,6 +41,7 @@ set(OPAAX_TEST_SOURCES
     Core/Engine/Subsystems/Resources/ResourceSystemTests.cpp
     Core/Engine/Subsystems/Resources/ResourceFormatRegistryTests.cpp
     Core/Engine/Subsystems/Resources/TextureResourceTests.cpp
+    Core/Engine/CameraResolveTests.cpp
     Core/Engine/ModuleRegistrarTests.cpp
     Core/Engine/InputManagerTests.cpp
     Core/Engine/EngineEventsTests.cpp

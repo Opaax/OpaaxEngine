@@ -10,6 +10,7 @@
 #include "Systems/QuadBoundsSubsystem.h"
 #include "Components/HealthComponent.h"
 #include "Resources/WaveResource.h"
+#include "World/Components/CameraComponent.h"
 #include "World/Components/DummyComponent.h"
 #include "World/Components/SpriteComponent.h"
 
@@ -56,6 +57,12 @@ void SandboxEditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& In
     // Seven fields, four widget kinds, zero drawer code — including the texture slot, which is a
     // drag target because the field's TYPE says which resource it names (TResourcePath).
     InRegistrar.Drawers().Register<Opaax::SpriteComponent>();
+
+    // ① — two fields, both already covered by a built-in drawer, so the camera costs the editor
+    // this line and nothing else. (Engine-native components getting their drawers from the GAME's
+    // module is a gap: a new project's editor would have to remember this. Its answer is a
+    // RegisterNativeDrawers() in EditorService, and that is not this milestone's job.)
+    InRegistrar.Drawers().Register<Opaax::CameraComponent>();
 
     // Still HAND-WRITTEN, and the reason the override exists: a tag is not a field you type into, it
     // is add/remove against a validated vocabulary (I14). The authoring half of the tag dogfood — a

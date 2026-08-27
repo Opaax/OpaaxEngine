@@ -1,5 +1,6 @@
 #include "Engine.h"
 
+#include "World/Components/CameraComponent.h"
 #include "World/Components/DummyComponent.h"
 #include "World/Components/SpriteComponent.h"
 
@@ -15,6 +16,7 @@
 #include "Engine/EngineEvents.h"
 #include "Engine/Subsystems/Resources/ResourceManager.h"
 #include "Core/Maths/MathsStatics.h"
+#include "Subsystems/Camera/CameraManager.h"
 #include "Subsystems/EventBus/EngineEventBus.h"
 #include "Subsystems/Input/InputManager.h"
 #include "Subsystems/Renderer/RendererManager.h"
@@ -69,6 +71,7 @@ namespace Opaax
     {
         m_Registries.Components().Register<DummyComponent>("Dummy");
         m_Registries.Components().Register<SpriteComponent>("Sprite");
+        m_Registries.Components().Register<CameraComponent>("Camera");
     }
     
     void Engine::RegisterNativeResourceFormats()
@@ -84,6 +87,10 @@ namespace Opaax
         m_Subsystems.RegisterSubsystem<ResourceManager>();
         m_Subsystems.RegisterSubsystem<InputManager>();
         m_Subsystems.RegisterSubsystem<WorldManager>(&m_Registries);
+
+        // Before the renderer for readability only — Loop runs UpdateAll and RenderAll as separate
+        // passes, so the camera resolves this frame's view whatever order these two sit in.
+        m_Subsystems.RegisterSubsystem<CameraManager>();
         m_Subsystems.RegisterSubsystem<RendererManager>();
     }
     
