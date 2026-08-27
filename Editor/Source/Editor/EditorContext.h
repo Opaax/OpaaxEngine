@@ -13,6 +13,7 @@ namespace Opaax
     namespace Editor
     {
         class IEditorUIBackend;         // editor-owned; the context carries it so panels reach it by ctor
+        class EditorCamera;             // editor-owned; how the author is looking at an Edit world
         class EditorSelection;          // editor-owned; the single selected entity (Hierarchy writes, Inspector reads)
         class PlayInEditor;             // editor-owned; the PIE state machine (toolbar + reserved keys drive it)
         class InputRoute;               // editor-owned; whether the engine is being fed (D5 steps 2 + 4)
@@ -43,6 +44,12 @@ namespace Opaax
             ResourceManager&  Resources;
             IEditorUIBackend& UIBackend;
             EditorSelection&  Selection;   // M2a — Hierarchy writes, Inspector reads
+
+            // ① — the Edit-side producer of World::CameraView, opposite the engine's CameraManager.
+            // Here rather than inside the ViewportPanel because it must OUTLIVE a PIE cycle: the panel
+            // is a panel, this is the session's viewpoint. It is also what ② will ask for the camera
+            // when it turns a click into a world position.
+            EditorCamera&     Camera;
 
             // M4 S5 — the PIE state machine. Here rather than inside the toolbar panel because the
             // reserved keys (EditorService::RouteInput) drive the very same object, so the buttons

@@ -1,5 +1,6 @@
 #include "Editor/Panels/ViewportPanel.h"
 
+#include "Editor/Camera/EditorCamera.h"     // the Edit viewpoint this panel drives (①)
 #include "Editor/EditorContext.h"
 #include "Editor/Input/InputRoute.h"        // hover/focus is pushed, not read back out (D5 step 2)
 #include "Editor/ImguiLibrary/ImguiWidgets.h"
@@ -15,6 +16,8 @@
 
 #include "World/Components/DummyComponent.h"
 #include "World/Entity/Entity.h"
+#include "World/World.h"                    // Apply publishes the camera as the world's view
+#include "World/WorldManager.h"             // the active world is what gets it
 
 #include <imgui.h>
 
@@ -67,7 +70,48 @@ namespace Opaax::Editor
         m_Context.Route.SetViewportFocus(false, false);
 
         ApplyPendingResize();
+        ApplyCameraGesture();
         EnqueueSelectionOutline();
+    }
+
+    // =========================================================================
+    // ApplyCameraGesture — spend what DrawContents measured last frame, then publish the camera
+    // as the world's view. AFTER ApplyPendingResize so the pixel sizes below are this frame's,
+    // and BEFORE Engine().Loop() so the result reaches this frame's render.
+    //
+    // Measure-then-apply rather than acting inside DrawContents: a panel's draw pass READS the
+    // world, and anything that writes it runs outside the pass. Costs the one frame of lag the
+    // deferred resize above already lives with.
+    // =========================================================================
+    void ViewportPanel::ApplyCameraGesture()
+    {
+        const Vector2F lViewportPx{ static_cast<float>(m_viewportSize.x), static_cast<float>(m_viewportSize.y) };
+
+        // Open on the framing the editor had before cameras existed — that view was one world unit
+        // per pixel, so half the panel's height is the equivalent OrthoSize. One-shot, and it
+        // ignores the 1x1 reported before the first measured resize.
+        m_Context.Camera.SeedFromViewportHeight(lViewportPx.y);
+
+        // Zoom BEFORE pan: the wheel is anchored at the cursor, so it must not be applied to a
+        // position the pan has already moved out from under the pointer.
+        if (m_PendingZoom != 0.f)
+        {
+            m_Context.Camera.ZoomAtCursor(m_PendingZoom, m_PendingZoomCursorPx, lViewportPx);
+            m_PendingZoom = 0.f;
+        }
+
+        if (m_PendingPanPx.x != 0.f || m_PendingPanPx.y != 0.f)
+        {
+            m_Context.Camera.Pan(m_PendingPanPx, lViewportPx);
+            m_PendingPanPx = { 0.f, 0.f };
+        }
+
+        // Refuses a Play world on its own (the clone is framed by its CameraComponent), so there is
+        // no mode check here — one statement of that rule, and it lives with the camera.
+        if (World* lWorld = m_Context.Worlds.GetActiveWorld())
+        {
+            m_Context.Camera.Apply(*lWorld);
+        }
     }
 
     void ViewportPanel::ApplyPendingResize()
@@ -129,6 +173,49 @@ namespace Opaax::Editor
         }
     }
 
+    // =========================================================================
+    // MeasureCameraGesture — read the pan drag and the wheel while this window is current, and
+    // bank them for OnPreRender. Call it right after the image, so GetItemRect* names the image.
+    //
+    // ImGui IS the source here, not a workaround: an Edit world puts the input route in
+    // ClosedEditMode, so InputManager is never fed and would report every button up forever (IN8).
+    // The gate is this window's own hover — NEVER io.WantCaptureMouse, which is true the whole
+    // time the pointer is over the viewport, because the viewport is an ImGui window (L29).
+    // =========================================================================
+    void ViewportPanel::MeasureCameraGesture(bool bInHovered)
+    {
+        const ImGuiIO& lIO = ImGui::GetIO();
+
+        // The drag STARTS on the viewport and then belongs to the gesture: releasing is what ends
+        // it, not leaving the panel. Dragging out of the window mid-pan is normal at the edges of
+        // a level, and cutting it there would feel broken.
+        if (bInHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Middle))
+        {
+            m_bPanning = true;
+        }
+
+        if (!ImGui::IsMouseDown(ImGuiMouseButton_Middle))
+        {
+            m_bPanning = false;
+        }
+
+        if (m_bPanning)
+        {
+            m_PendingPanPx.x += lIO.MouseDelta.x;
+            m_PendingPanPx.y += lIO.MouseDelta.y;
+        }
+
+        // The wheel, unlike the drag, needs the pointer to be here — it is anchored at the cursor,
+        // and a cursor somewhere else has no world point to anchor to.
+        if (bInHovered && lIO.MouseWheel != 0.f)
+        {
+            const ImVec2 lOrigin = ImGui::GetItemRectMin();
+
+            m_PendingZoom          = lIO.MouseWheel;
+            m_PendingZoomCursorPx  = { lIO.MousePos.x - lOrigin.x, lIO.MousePos.y - lOrigin.y };
+        }
+    }
+
     EditorImage ViewportPanel::GetViewportImage() const
     {
         return m_Framebuffer != nullptr ? m_Context.UIBackend.GetViewportImage(*m_Framebuffer) : EditorImage{};
@@ -144,14 +231,17 @@ namespace Opaax::Editor
         // D5 step 2's inputs. ImGui can only answer these while the window is current, so they are
         // measured HERE and pushed into the route, which reads them next frame — the same one-frame
         // lag the deferred resize above already lives with, and for the same reason.
-        m_Context.Route.SetViewportFocus(ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows),
-                                         ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows));
+        const bool lHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows);
+
+        m_Context.Route.SetViewportFocus(lHovered, ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows));
 
         const EditorImage lImg = GetViewportImage();
 
         // Draws a Dummy of the same size when the handle is null, which is the reserve-space branch
         // this used to spell out below.
         ImguiWidgets::Image(lImg, lAvail);
+
+        MeasureCameraGesture(lHovered);
 
         if (lImg.IsValid() && !m_bImageLogged)
         {

@@ -208,6 +208,11 @@ namespace Opaax::Editor
         //     is — a resource type's activate closure writes it, the Preview panel reads it. --------
         m_Preview = MakeUnique<ResourcePreview>();
 
+        // --- ①: how the author is looking at an Edit world. Owned HERE and not by the ViewportPanel,
+        //     because it has to survive a PIE cycle — Play swaps the active world, this object does
+        //     not move, and Stop finds the pan and zoom exactly where they were left. ---------------
+        m_Camera = MakeUnique<EditorCamera>();
+
         // --- PIE (M4 S5): the Play/Pause/Step/Stop state machine, owned here so BOTH front-ends —
         //     the toolbar panel and RouteInput's reserved keys — drive one object. -----------------
         m_PIE = MakeUnique<PlayInEditor>(lEngine.GetWorldManager());
@@ -242,6 +247,7 @@ namespace Opaax::Editor
             lEngine.GetResources(),
             *m_UIBackend,
             *m_Selection,
+            *m_Camera,
             *m_PIE,
             *m_InputRoute,
             *m_LevelDocument,
@@ -691,6 +697,7 @@ namespace Opaax::Editor
         //    is nothing to undo; the route is dropped before the engine it would reset.
         m_Selection.reset();
         m_Preview.reset();
+        m_Camera.reset();
         m_InputRoute.reset();
         m_PIE.reset();
         m_PanelHost.reset();

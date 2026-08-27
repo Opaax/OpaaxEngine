@@ -72,6 +72,24 @@ namespace Opaax::Editor
          */
         void EnqueueSelectionOutline();
 
+        /**
+         * Read this frame's pan drag and wheel from ImGui and bank them. Call while the panel's
+         * window is current and immediately after the image, since it measures the cursor against
+         * that item's rect.
+         *
+         * ImGui is the SOURCE, not a workaround: an Edit world leaves the input route closed, so
+         * InputManager never sees a button (IN8). The gate is this window's hover, never
+         * io.WantCaptureMouse — the viewport is itself an ImGui window (L29).
+         */
+        void MeasureCameraGesture(bool bInHovered);
+
+        /**
+         * Spend what MeasureCameraGesture banked and publish the editor camera as the active world's
+         * view. Runs in OnPreRender: after the resize so the pixel sizes are current, and before the
+         * engine renders so the result lands in THIS frame.
+         */
+        void ApplyCameraGesture();
+
         // =============================================================================
         // Override
         // =============================================================================
@@ -109,6 +127,14 @@ namespace Opaax::Editor
         Vector4F m_OutlineColor     = {1.f, 0.6f, 0.1f, 1.f};
         Vector2F m_OutlinePadding   = {6.f, 6.f};
         float    m_OutlineThickness = 3.f;
+
+        // Camera gesture, measured in DrawContents and spent in OnPreRender — the same
+        // measure-then-apply the resize above uses, and for the same reason: a panel's draw pass
+        // reads the world, anything that writes it runs outside the pass.
+        Vector2F m_PendingPanPx        = {0.f, 0.f};   // accumulated screen pixels
+        Vector2F m_PendingZoomCursorPx = {0.f, 0.f};   // viewport-local, the zoom's anchor
+        float    m_PendingZoom         = 0.f;          // wheel notches; + is zoom IN
+        bool     m_bPanning            = false;        // the middle button went down over the viewport
 
         bool   m_bImageLogged    = false;
         bool   m_bOutlineLogged  = false;

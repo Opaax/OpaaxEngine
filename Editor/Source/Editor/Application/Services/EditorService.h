@@ -3,6 +3,7 @@
 #include "Editor/Application/Services/IEditorService.h"
 #include "Editor/EditorContext.h"
 #include "Editor/Application/Services/EditorPaths.h"
+#include "Editor/Camera/EditorCamera.h"
 #include "Editor/Operation/EditorSelection.hpp"
 #include "Editor/Resources/ResourcePreview.h"
 #include "Editor/Input/InputRoute.h"
@@ -209,6 +210,7 @@ namespace Opaax::Editor
 
         TUniquePtr<ResourcePreview>  m_Preview;         // ④b: what a double-click asked to see; EditorContext.Preview refs it
         TUniquePtr<EditorSelection>  m_Selection;       // M2a: the single selection; EditorContext.Selection refs it
+        TUniquePtr<EditorCamera>     m_Camera;          // ①: the Edit viewpoint, held here so it outlives a PIE cycle
         TUniquePtr<PlayInEditor>     m_PIE;             // M4 S5: the PIE state machine; EditorContext.PIE refs it
         TUniquePtr<InputRoute>       m_InputRoute;      // M-Input S2: is the engine being fed; EditorContext.InputRoute refs it
         TUniquePtr<EditorMapDocument> m_MapDocument;    // M5 S5: the open .opaaxmap; EditorContext.MapDocument refs it
