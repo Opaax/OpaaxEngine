@@ -65,7 +65,26 @@ it ([[L29]]).
 
 ---
 
-## ② EDITOR ENHANCEMENTS
+## ② EDITOR ENHANCEMENTS — ✅ LANDED 2026-08-27, user-verified
+
+> **Shipped:** `TransformComponent` (pulled forward — see below) · `Bounds2D` + `EntityQuery` (the one
+> entity-AABB rule) · viewport click-select, Ctrl-toggle and a drag marquee · entity icons · rename ·
+> create/delete/focus through `EntityOps` · remove-component · `SandboxPanel` deleted.
+> Contract: ARCHITECTURE.md **I17** + **SEL1–SEL8**, **MP6**'s ordering clause. Lessons **L52**/**L53**.
+> Plan: `.claude/plans/editor-enhancements.md`. Commits `dfcabaf` `b08315f` `45ae230` `3b98b87`
+> `2ad3668` `658fb32` `49d561f` `47ef129`.
+>
+> **THE ONE DECISION THAT CHANGED THE PROGRAM: `TransformComponent` moved from ③ into ②**, and with it
+> ③'s whole "remove old vars" half. The user asked how other engines let you click an entity with no
+> sprite; the answer (Unreal billboards, Unity gizmo icons, Godot's origin grab-area) turned out to
+> **presuppose a transform every object is guaranteed to have**. An icon has nowhere to hang without
+> one, so ② could not ship without it. **③ is now the gizmo, and nothing else.**
+>
+> **Multiselect went further than planned** — the drag marquee was BUILT, not merely shaped for, on
+> the user's call and [[L23]]'s rule that an untested API with no caller is the wrong deliverable.
+> Multi-EDIT in the Inspector stayed out, as the plan demanded (**SEL5**).
+
+## ② EDITOR ENHANCEMENTS — as originally planned
 
 Screen→world mouse · viewport click-select · focus-selected command · create entity · multiselect.
 
@@ -90,30 +109,31 @@ Through one helper, ③ changes one function body.
 
 ---
 
-## ③ TRANSFORM & GIZMO
+## ③ GIZMO — and ONLY the gizmo
 
-Base component · remove old vars · gizmos.
+**Transform and "remove old vars" were DONE IN ②** (**I17**): `TransformComponent` exists, is
+auto-emplaced on every entity, rotation is wired through both render passes, `Position` is gone from
+Sprite/Dummy/Camera, and the three Sandbox maps were migrated byte-exact. Nothing of that remains here.
 
-Transform deliberately arrives **with** the gizmo, not before it: alone it is an invisible refactor,
-together it is a demoable feature. Code cost is near zero — `World::Each<A,B>` already exists
-(`World.h:215`), so the sprite pass becomes a join.
+What is left is the gizmo itself — translate first, then rotate and scale — and it is now cheap:
+- **Picking already routes through one helper.** `EntityQuery::TryGetBounds` (**SEL1**) is what a
+  handle hit-tests against, so the gizmo adds no second answer to "where is this entity".
+- **The mutation choke point already exists.** A drag writes through `EntityOps` (**SEL6**), which is
+  what makes ⑤'s undo a wrapper rather than a retrofit — and a gizmo drag is ⑤'s hard case
+  (continuous, needs coalescing), so this is the shape ⑤ was told to wait for.
+- **Screen→world already exists and is tested** (**CAM2**), and the viewport's measure-then-apply
+  handshake (**SEL3**) is where a drag would be banked.
 
-**"Remove old vars" is ONE map migration, not three — and it is FOUR components now, not three.**
-Fold together:
-- `SpriteComponent.Position` → Transform. Rotation arrives here too (`DrawSprite` already takes one;
-  `SpriteComponent.h:26-29` refuses to own it until a transform exists).
-- `DummyComponent.Position` → Transform.
-- **`CameraComponent.Position` → Transform** (added by ①, **CAM5**). Debt taken deliberately: the
-  alternative was building Transform in ①, which this sequence refused on demoability grounds. It
-  carries the same standing comment the other two do. `Main.opaaxmap` already has one authored.
-- **`DummyComponent` itself** — still iterated BY NAME at `RendererManager.cpp:163`; its own header says
-  it was never meant to survive bring-up.
-
-`Sandbox/Assets/Main.opaaxmap` is rewritten byte-exact (**MP6**). `_WITH_DEFAULT` (**I8**) means old maps
-*load*, but they load at origin — tolerance is not migration.
+Still owed here, carried from ②:
+- **`DummyComponent` is still iterated BY NAME** beside the sprite pass in `RendererManager`; its own
+  header says it was never meant to survive bring-up. Retiring it is another map migration.
+- **`TransformComponent.Scale`** is deliberately absent until something reads it (**X5**) — a scale
+  gizmo is that reader.
+- **A per-sprite local `Offset`** (Godot's `Sprite2D.offset`) was named in ② and not built; ②'s
+  migration snapped two sprites onto their entities rather than preserving an offset.
 
 Gizmos were explicitly out of scope in `Editor.md` §7 *until* picking + input routing exist. ① and ②
-are that gate lifting.
+are that gate lifting, and it is now fully lifted.
 
 ---
 

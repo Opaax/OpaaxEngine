@@ -567,6 +567,27 @@ reaches the device through `IEngine`** (landed 2026-08-20 with `TextureResource`
   literal `(0,1)-(1,0)`, each with its own comment explaining it. Renamed from
   `EditorViewportImage` when the second caller arrived — the type was never viewport-specific.
 
+**I17 — ONE position per entity, and every entity has one: `TransformComponent`** (landed ②,
+2026-08-27). `World::CreateEntityWithGuid` emplaces it beside `EntityMeta`, so it is present
+unconditionally and `Each<TransformComponent>` is a complete view. That guarantee is not tidiness —
+it is what the editor stands on, and it was pulled a whole block forward *because* of that.
+- **The hole it filled:** `Position` used to live separately on `SpriteComponent`, `DummyComponent`
+  and `CameraComponent`, so one entity could carry three of them and they could disagree — and an
+  entity carrying none had **no position at all**, which meant it could not be picked, framed, or
+  drawn an icon. Unreal (`USceneComponent` on every `AActor`), Unity (a `Transform` you cannot
+  remove) and Godot (`Node2D`) all hang their editor billboard/gizmo icon off exactly this
+  guarantee. **Icons presuppose a universal transform**; that is why ② could not ship without one.
+- **`Size` stays on the components.** An extent is what a thing IS, not where it is. `Scale` is
+  deliberately absent until something reads it (**X5**), and `Rotation` is DEGREES — what an author
+  types — converted at the draw call, which takes radians.
+- **A component `CreateEntity` emplaces is ESSENTIAL and cannot be removed.** Stated at the
+  REGISTRATION (`Register<T>(name, bEssential)`), next to the call that guarantees it, and enforced
+  in `IComponentEntry::Remove` rather than by every UI remembering to check.
+- **The migration cost was real and is the honest half of this entry.** Three of seven authored
+  entities carried two positions. The rule applied: the transform takes the quad's, a camera that
+  must sit elsewhere becomes **its own entity** (the model every reference engine has), and a
+  sprite's own offset is dropped. A per-sprite local `Offset` (Godot's `Sprite2D.offset`) is the
+  growth point for art that genuinely sits off its origin — named, not built.
 
 ---
 
@@ -931,6 +952,79 @@ come is the `ICamera`/`ICameraController` hierarchy around them — it fights **
   now name files that do not exist. Nothing breaks — `Legacy/` is **not globbed** (**X1**, compiled =
   zero) and every one of those six is itself dead, referencing a `CoreEngineApp`/`WorldOld` world that
   is also going. Stated so the next reader does not mistake it for rot that arrived by accident.
+
+---
+
+## SEL — Selection, picking and the authoring verbs (landed ②, 2026-08-27)
+
+**SEL1 — ONE entity-AABB rule: `EntityQuery` (`World/Entity/EntityQuery.h`).** Picking, the selection
+outline, focus-selected, the marquee and later the gizmo all ask "where is this entity", and every one
+of them asks HERE — so when a component's extent moves, one function body changes instead of five call
+sites. `Bounds2D` (`Core/Maths/`, header-only, no `OPAAX_API` per **I6**) is the value it speaks in.
+- **Two tiers.** An extent-bearing component (sprite, quad) gives a real box, **rotated by the
+  transform** — an unrotated AABB under-covers a turned sprite, which would go unclickable across most
+  of its length. An entity with none gets a box of `InAnchorHalfExtent` at its transform.
+- **The anchor is OPT-IN: `0.f` means "no fallback".** A game asking what an entity *draws* must get
+  `false`, not a placeholder; only the editor wants the icon-sized answer.
+- `PickAt` is topmost by the renderer's own `(ERenderLayer, OrderInLayer)`, and an anchor-only entity
+  sorts **below everything drawn** so an icon cannot steal a click from the sprite it sits under.
+  `QueryOverlapping` is the same walk with `Intersects` — one file, so the two cannot drift.
+- **Exported at authoring time** (**I6**'s checklist, a 5th strike paid ahead like `ScreenToWorld`).
+  `OpaaxTests` is an exe linking the DLL, so the exe-side link is proven on arrival rather than latent.
+
+**SEL2 — Picking asks the WORLD how it was framed, so there is no Edit/Play fork.** The conversion
+reads `World::GetCameraView()` (through **CAM2**'s `ScreenToWorld`), never `EditorCamera` — so a click
+resolves correctly inside a PIE session with no branch anywhere.
+
+**SEL3 — A click is spent BEFORE the resize and the camera gesture.** `ViewportPanel::OnPreRender`
+runs `ApplyPendingPick` first, deliberately: the click was made against the frame already RENDERED, so
+it must be hit-tested against that frame's viewport size and camera. Applying it after either would
+test against a frame the author never saw.
+
+**SEL4 — The icon size is ONE value, used by the draw and by the hit test.**
+`(OrthoSize * 2 / viewportHeightPx) * ICON_HALF_PIXELS`, computed per frame and handed to both
+`EntityQuery::PickAt` and the `DebugDraw` box. What you see is what you click by construction, not by
+two constants being kept in step. Edit worlds only — an overlay is authoring furniture.
+
+**SEL5 — `EditorSelection` is a SET with a PRIMARY, and `Get()` still answers the primary.** That is
+what lets the Inspector keep drawing exactly one entity while everything else grows a multi-selection
+around it: **multi-select is not multi-edit**, and keeping the old accessor honest is what holds that
+line. The panel SAYS so ("3 selected - editing the last picked") because an unexplained "I selected
+three and one appeared" reads as a bug rather than a boundary. Real multi-edit is its own slice: a
+`TPropertyDrawer` sees one `T&`, not N, and it wants ⑤'s choke point first so one edit is one undo.
+- One `World*` for the whole set, not per entry — every member is in the same world by construction.
+  `EditorService` retargets **every** entry by Guid on a world change, dropping what has no counterpart.
+
+**SEL6 — `EntityOps` is THE ONE NAMED MUTATION CHOKE POINT** (`Editor/Operation/`, beside `MapOps` and
+for its stated reason: a verb duplicated per call site is a verb that drifts). Create · Rename ·
+DestroySelected · FocusSelected. The Edit menu, the Hierarchy's two context menus and the keys all
+reach these, never `World` directly. **This is ⑤'s precondition** — undo becomes "wrap these" instead
+of a twenty-call-site hunt, and `Editor.md` §7's promise about identifiable mutation points becomes
+true rather than aspirational. The Inspector's field edits are the one mutation that cannot come
+through it (a drawer writes straight through a `TComponent&`), which is exactly why
+`World::GetRevision` exists.
+- **`Create` takes its `MapId` as a REQUIRED argument**, which is how **WM2** is closed by
+  construction: an entity made without one lands in `(runtime - not saved)` where no Save can reach
+  it. That was a live bug in the deleted `SandboxPanel`. The Hierarchy's header menu knows the map
+  because it was clicked; the menu command falls back to the focused map because an entry names none.
+- **`Create` uniquifies its name, `Rename` does not.** "3 selected - editing Entity" cannot say which,
+  so the default must be distinguishable on sight; a name the author typed must not be silently altered.
+
+**SEL7 — An editor shortcut belongs to the SELECTION, not to a panel.** `F` and `Delete` live in
+`EditorService::HandleAuthoringShortcuts` beside Ctrl+S, routed globally, so they work from the
+Hierarchy as well as the viewport. *Corrects the first attempt, which measured them on the viewport
+and therefore did nothing from the panel an author is most likely to be deleting in.* What makes a
+bare key safe is not the route but the **`WantCaptureKeyboard` guard**: typing "Fred" into the name
+field cannot frame and delete the selection.
+
+**SEL8 — The ImGui-hosted viewport keeps biting in ONE way: a borrowed predicate answers ImGui's
+question, not yours** ([[L29]]'s family, now five occurrences). All three interactive bugs in ② were
+this. `IsMouseDragging` = "is a drag in progress", **false on the release frame** where the answer was
+wanted (latch it while true, never interrogate after). A floating window moves on a background drag,
+and `ImGui::Image` is not an item. `IsWindowHovered` includes the **title bar**, so both gestures gate
+on `IsItemHovered()` taken right after the image, and `io.ConfigWindowsMoveFromTitleBarOnly` states the
+convention once. **When a panel's body becomes interactive, audit what the host already does with
+drags there** — and note that none of the three was reachable by a smoke run.
 
 ---
 
@@ -1566,6 +1660,18 @@ world→file→world→file being a fixed point; when it is not, every Save rewr
 the one value that changed — and that is silent otherwise, because the map still loads and the world still
 looks right. `EditorMapDocument::AdoptExisting` compares its fresh baseline against the bytes on disk and
 says *"Round trip is stable"* or warns. It is the one gate on the whole layer that needs no human.
+- **BYTE-EXACT INCLUDES THE ENTITY ORDER, and that order is the CAPTURE's, not the file's** (found by
+  ②'s transform migration, 2026-08-27). Formatting parity — nlohmann `dump(4)`, keys sorted, no
+  trailing newline — is the easy half and is not the whole contract: `entities` is a json ARRAY, and
+  `MapSerializer` walks `view<EntityMeta>`, whose order is not the order `MapFactory::Instantiate`
+  created them in. A hand-authored file therefore has to match an order only a RUN can reveal. It
+  bites exactly when a NEW entity is hand-inserted, because every pre-existing one is already in
+  writer order. **Cheapest reliable route: make the change, let the EDITOR save the file, and take
+  its output as the source of truth** rather than hand-producing the writer's format.
+- **The warning NAMES the divergence now**, because "it differs" sent a reader to diff two 130-line
+  files by eye and cost four wrong hypotheses: it prints the first differing byte offset, both
+  lengths, and a window from each side. One run then identified it. A diff-shaped check that yields
+  one bit is [[L15]]'s discriminate rule half-applied.
 
 **MP7 — "Open Map" LOADS NOTHING, because every map of the open level is already mounted** (landed
 2026-08-08 with **WM8**). It re-targets the document onto a map that is in the world, and the selection

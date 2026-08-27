@@ -1424,3 +1424,69 @@ right thing happened — `seeded from a 469px viewport — orthoSize 234.5`, not
 - **Log the value you seeded FROM, not just that you seeded.** `from a 469px viewport` is what made
   this verifiable with no eyes on it; `seeded` alone would have been printed just as cheerfully by the
   broken version ([[L48]]).
+
+## L52 — A check that reports a difference must report WHERE; and byte-exact includes ARRAY ORDER (2026-08-27)
+
+**What happened (② step 1).** The transform migration rewrote three `.opaaxmap` files through Python
+with the writer's exact formatting — verified by diffing my output against the engine-written
+originals, which showed *only* the intended edits and zero drift. Two of the three round-tripped
+stably. `Main.opaaxmap` did not, because I **appended** the split-out `MainCamera` entity at the end
+of the array and the writer puts it third: `MapSerializer` walks `view<EntityMeta>`, whose order is not
+the order `MapFactory::Instantiate` created them in. Formatting parity was the easy half; the array's
+ORDER is part of the format too.
+
+**Why it cost four rounds.** The warning said only *that* the file differed, so I hypothesised in the
+dark — float formatting, key sorting, guid shape, unregistered components, reverse iteration. I had
+also convinced myself order was safe with "Arena is stable, therefore order is preserved", which was
+true of Arena's two entities and said nothing about a set containing an entity I had inserted myself.
+
+**What actually solved it was improving the instrument**, not the next hypothesis: the warning now
+prints the first differing byte offset, both lengths, and a 120-byte window from each side. One run
+named it — disk had `"Dummy"` where the rewrite had `"Camera"` — and the fix was moving one element.
+
+**Rules for next time:**
+- **When a check reports a difference, make it report WHERE.** A diff-shaped assertion that yields one
+  bit is [[L15]]'s discriminate rule half-applied: it says something is wrong and nothing about what.
+  Extending the diagnostic was cheaper than the third hypothesis, let alone the fifth — and it stays
+  useful forever, which no amount of guessing does.
+- **"Two of three pass, so that dimension is fine" generalizes from the wrong sample.** Ask what the
+  FAILING one has that the passing ones do not. Here: the only element I authored by hand.
+- **When you must hand-produce a format a program writes, prefer letting the PROGRAM write it.** Make
+  the change, save through the app, take its bytes as truth. Reproducing a writer's rules offline gets
+  the ones you can see and misses the ones you cannot — ordering, defaults, elision.
+
+## L53 — A state predicate is FALSE on the frame you want the answer; latch it while it is true (2026-08-27)
+
+**What happened (② step 3).** The drag marquee drew perfectly and selected nothing — and *cleared* any
+existing selection. One cause for both: `ImGui::IsMouseDragging()` requires the button to still be
+**down**, and I called it on the frame the button came **up**, which is exactly the frame that decides
+click-versus-box. It answered false every time, so every drag banked as a point pick at the pixel the
+drag *started* from; begun on empty space that picks nothing, and a replace with an empty list clears.
+
+**Why I could not have caught it.** A smoke run never drags. I had written in that step's own report
+that the marquee "has never run" and handed it over — honest, and precisely why the defect reached the
+user. The click path *was* exercised and worked perfectly, which made the whole gesture look healthy.
+
+**The same gesture then failed twice more, both borrowed defaults** ([[L29]]'s family, now five
+occurrences in this tree). An **undocked** viewport moved when dragged, because ImGui moves a floating
+window on a background drag and `ImGui::Image` is not an interactive item — docked worked, and that
+asymmetry named the layer: nothing in the picking code differs between docked and floating, so the
+cause could not be there. Then `IsWindowHovered()` turned out to include the **title bar**, so pressing
+there started a marquee while ImGui moved the panel.
+
+**Rules for next time:**
+- **A state-query predicate names a STATE, not an EVENT.** Before gating a decision on
+  `IsXHappening()`, ask whether X is still true at the moment the decision is made. Release, commit,
+  end-of-drag, end-of-frame are all moments where the thing that just ended reads as absent. The fix
+  shape is always: **latch it while it IS true**, never interrogate afterwards.
+- **Two symptoms with one cause is the common case, not the lucky one.** "Selects nothing" AND
+  "unselects what I had" looked like two bugs and was one line. Find the single explanation that
+  covers both before fixing either.
+- **An asymmetry between two states of the same widget names the LAYER of the bug** before you open a
+  file. Docked worked and floating did not; no picking code differs between them; therefore it is not
+  picking code.
+- **When you make a panel's body interactive, audit what the host already does with drags there.**
+  [[L29]] said a third-party flag answers its own question — the axis here is also TIME and OWNERSHIP.
+- **The path a smoke run cannot reach is where the bug will be**, because it is the only part nothing
+  checked. Naming an untested gate is right; treating the rest of the feature's health as evidence
+  about it is not.
