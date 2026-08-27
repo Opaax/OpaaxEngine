@@ -44,6 +44,16 @@ namespace Opaax::Editor
         if (const EntityMeta* lMeta = lSelected.TryGet<EntityMeta>())
         {
             ImGui::Text("%s", lMeta->Name.CStr());
+
+            // SAY which one is being edited when there are several. This panel draws the PRIMARY
+            // only — multi-edit is its own slice, because a TPropertyDrawer sees one T& and not N —
+            // and an unexplained "I selected three and one appeared" reads as a bug rather than as
+            // a boundary. Naming it costs a line and is the difference (L15, applied to UI).
+            if (const Uint64 lCount = m_Context.Selection.Count(); lCount > 1)
+            {
+                ImGui::TextDisabled("%llu selected - editing '%s' (last picked)",
+                                    static_cast<unsigned long long>(lCount), lMeta->Name.CStr());
+            }
         }
         ImGui::Separator();
 

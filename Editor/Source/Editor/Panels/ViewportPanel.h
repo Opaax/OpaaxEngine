@@ -195,6 +195,11 @@ namespace Opaax::Editor
         bool         m_bPickAdditive  = false;        // Ctrl was held — add rather than replace
         bool         m_bSelecting     = false;        // the left button is down and started over the image
 
+        // Whether this gesture ever crossed the drag threshold. REMEMBERED rather than queried at
+        // release: ImGui::IsMouseDragging needs the button still down, so it is false exactly on the
+        // frame the answer is wanted.
+        bool         m_bWasDrag       = false;
+
         // Selection marquee, screen pixels, painted on the foreground list while the drag is live.
         Vector4F m_MarqueeColor     = {1.f, 0.6f, 0.1f, 1.f};
         float    m_MarqueeFillAlpha = 0.12f;

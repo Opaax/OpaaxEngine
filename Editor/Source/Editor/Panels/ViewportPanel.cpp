@@ -389,6 +389,7 @@ namespace Opaax::Editor
         if (bInHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
         {
             m_bSelecting    = true;
+            m_bWasDrag      = false;
             m_bPickAdditive = lIO.KeyCtrl;
             m_PickStartPx   = { lIO.MousePos.x - InOrigin.x, lIO.MousePos.y - InOrigin.y };
         }
@@ -398,12 +399,17 @@ namespace Opaax::Editor
             return;
         }
 
-        const bool lIsDrag = ImGui::IsMouseDragging(ImGuiMouseButton_Left, lIO.MouseDragThreshold);
+        // REMEMBERED, never asked for after the fact: IsMouseDragging requires the button to still
+        // be DOWN, so on the release frame it is false and every drag would bank as a click at the
+        // pixel the drag STARTED from — which selects whatever is under the drag's origin, or
+        // clears when that is empty space.
+        m_PickEndPx = { lIO.MousePos.x - InOrigin.x, lIO.MousePos.y - InOrigin.y };
 
         if (ImGui::IsMouseDown(ImGuiMouseButton_Left))
         {
-            if (lIsDrag)
+            if (ImGui::IsMouseDragging(ImGuiMouseButton_Left, lIO.MouseDragThreshold))
             {
+                m_bWasDrag = true;
                 // PAINTED HERE, in screen pixels, on the foreground list. A marquee is UI, not world
                 // geometry — DebugDraw would put it a frame behind and make it scale with the zoom.
                 const ImVec2 lFrom{ InOrigin.x + m_PickStartPx.x, InOrigin.y + m_PickStartPx.y };
@@ -423,9 +429,9 @@ namespace Opaax::Editor
         }
 
         // Released: bank exactly one outcome for OnPreRender.
-        m_PendingPick = lIsDrag ? EPendingPick::Box : EPendingPick::Point;
-        m_PickEndPx   = { lIO.MousePos.x - InOrigin.x, lIO.MousePos.y - InOrigin.y };
+        m_PendingPick = m_bWasDrag ? EPendingPick::Box : EPendingPick::Point;
         m_bSelecting  = false;
+        m_bWasDrag    = false;
     }
 
     EditorImage ViewportPanel::GetViewportImage() const
