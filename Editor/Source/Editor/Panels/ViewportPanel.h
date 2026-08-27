@@ -112,15 +112,18 @@ namespace Opaax::Editor
          * that item's rect.
          *
          * ImGui is the SOURCE, not a workaround: an Edit world leaves the input route closed, so
-         * InputManager never sees a button (IN8). The gate is this window's hover, never
-         * io.WantCaptureMouse — the viewport is itself an ImGui window (L29).
+         * InputManager never sees a button (IN8). The gate is the IMAGE's hover — never
+         * io.WantCaptureMouse (the viewport is itself an ImGui window, L29), and never the WINDOW's,
+         * which is true over the title bar and would fight ImGui for the drag.
+         *
+         * @param bInHovered ImGui::IsItemHovered() taken immediately after the image.
          */
         void MeasureCameraGesture(bool bInHovered);
 
         /**
          * Read this frame's LEFT button — a click, or a drag that has passed ImGui's own
-         * MouseDragThreshold and become a marquee — and bank it for OnPreRender. Same window and
-         * same reasons as MeasureCameraGesture; call it right after the image.
+         * MouseDragThreshold and become a marquee — and bank it for OnPreRender. Same gate and same
+         * reasons as MeasureCameraGesture; call it right after the image.
          *
          * The marquee is PAINTED here too, in screen pixels on the foreground draw list, because a
          * selection rectangle is UI rather than world geometry — drawing it in the pass that

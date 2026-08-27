@@ -335,8 +335,9 @@ namespace Opaax::Editor
     //
     // ImGui IS the source here, not a workaround: an Edit world puts the input route in
     // ClosedEditMode, so InputManager is never fed and would report every button up forever (IN8).
-    // The gate is this window's own hover — NEVER io.WantCaptureMouse, which is true the whole
-    // time the pointer is over the viewport, because the viewport is an ImGui window (L29).
+    // The gate is the IMAGE's hover — never io.WantCaptureMouse, which is true the whole time the
+    // pointer is over the viewport because the viewport is an ImGui window (L29), and never the
+    // WINDOW's, which includes the title bar.
     // =========================================================================
     void ViewportPanel::MeasureCameraGesture(bool bInHovered)
     {
@@ -463,12 +464,18 @@ namespace Opaax::Editor
         // this used to spell out below.
         ImguiWidgets::Image(lImg, lAvail);
 
-        // Both measured against the IMAGE's rect, so they must follow it immediately — GetItemRect*
-        // names the last submitted item.
-        const ImVec2 lOrigin = ImGui::GetItemRectMin();
+        // BOTH GESTURES GATE ON THE IMAGE, not on the window. IsWindowHovered() is true over the
+        // TITLE BAR too, so a title-bar press started a marquee that then painted itself while ImGui
+        // moved the panel — the window-move and the selection box running at once. The image is the
+        // only surface either gesture means anything on.
+        //
+        // Immediately after the image because GetItemRect*/IsItemHovered name the LAST submitted
+        // item, and MeasureCameraGesture reads that rect again for the zoom anchor.
+        const bool   lImageHovered = ImGui::IsItemHovered();
+        const ImVec2 lOrigin       = ImGui::GetItemRectMin();
 
-        MeasureCameraGesture(lHovered);
-        MeasureViewportInput(lHovered, { lOrigin.x, lOrigin.y });
+        MeasureCameraGesture(lImageHovered);
+        MeasureViewportInput(lImageHovered, { lOrigin.x, lOrigin.y });
 
         if (lImg.IsValid() && !m_bImageLogged)
         {
