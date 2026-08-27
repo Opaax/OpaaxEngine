@@ -1,5 +1,12 @@
 # ① CAMERA — the core
 
+> **CLOSED AND USER-VERIFIED, 2026-08-26.** Machine gates: three presets, tests **401 / 6807 / 7**,
+> both hosts smoke clean. Interactive gates confirmed by the user, who named **pan, zoom, and PIE
+> start/stop** explicitly and signed off the set as a whole. Commits `f56df60` `4cc3049` `a658ec3`
+> `c97e9f6`, plus `baf988e` (their own Sandbox authoring). Contract: ARCHITECTURE.md **CAM1–CAM7**.
+> Lessons: **L50** (a placement argument dies with the feature it rested on) · **L51** (guard a seed
+> against the pre-measurement value).
+>
 > Block ① of `.claude/plans/engine-sequence.md`. That file holds the ORDER and the premises; this is
 > the design and the steps. **Scope set by the user 2026-08-26: the CORE only** — no follow, no shake,
 > no entity drag-drop, no priority or blending.
