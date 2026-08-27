@@ -690,6 +690,26 @@ namespace Opaax::Editor
         {
             m_Context->Extensions.Commands().Execute(Tags::EDITOR_COMMAND_SAVE_MAP, *m_Context);
         }
+
+        // F and Delete are EDITOR-WIDE, not the viewport's. They were measured on the viewport
+        // first, which meant they did nothing from the Hierarchy — the panel an author is most
+        // likely to be in when deleting something. Their subject is the SELECTION, and the
+        // selection is not owned by any one panel, so neither are its verbs.
+        //
+        // What made a bare key unsafe was never the route, it was a text field: guarding on
+        // WantCaptureKeyboard is what lets these be global, so typing "Fred" into the name field
+        // cannot frame and delete the selection.
+        if (ImGui::GetIO().WantCaptureKeyboard) { return; }
+
+        if (ImGui::Shortcut(ImGuiKey_F, ImGuiInputFlags_RouteGlobal))
+        {
+            m_Context->Extensions.Commands().Execute(Tags::EDITOR_COMMAND_FOCUS_SELECTED, *m_Context);
+        }
+
+        if (ImGui::Shortcut(ImGuiKey_Delete, ImGuiInputFlags_RouteGlobal))
+        {
+            m_Context->Extensions.Commands().Execute(Tags::EDITOR_COMMAND_DELETE_ENTITY, *m_Context);
+        }
     }
 
     void EditorService::OnShutdown()

@@ -83,6 +83,27 @@ namespace Opaax::Editor
          */
         void DrawAddComponent(Entity& InEntity);
 
+        /**
+         * The "Remove Component" popup — every type the entity carries that is not ESSENTIAL.
+         *
+         * A popup beside Add rather than a control on each component's header: a drawer draws its
+         * own header, and TDrawerRegistry is generic over subjects (a config cannot be removed), so
+         * putting it there would push a component-only concern into shared machinery. It also
+         * reaches a component whose drawer is NOT registered — present in the map, invisible in the
+         * panel, and otherwise impossible to get rid of.
+         *
+         * TransformComponent never appears: IComponentEntry::IsEssential, and Remove refuses it
+         * anyway, so the guarantee does not depend on this menu remembering.
+         */
+        void DrawRemoveComponent(Entity& InEntity);
+
+        /**
+         * The entity's name as an editable field. EntityMeta is identity rather than user data (I8)
+         * so it has no drawer and no properties — this panel has always drawn it by hand, and now
+         * writes it back through EntityOps like every other mutation.
+         */
+        void DrawNameField(Entity& InEntity);
+
         // =============================================================================
         // Members
         // =============================================================================
@@ -95,5 +116,9 @@ namespace Opaax::Editor
          * counts as an edit too. See Draw() for why this is asked of ImGui rather than of the drawer.
          */
         bool m_bWasItemActive = false;
+
+        // The name field's edit buffer. Refreshed from the entity whenever the field is NOT being
+        // typed into, so it follows the selection without fighting the keystrokes.
+        char m_NameBuffer[128] = {};
     };
 }

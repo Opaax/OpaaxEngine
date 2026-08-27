@@ -41,6 +41,22 @@ namespace Opaax
         /** Default-construct this component onto InEntity. No-op if already present. */
         virtual void Add(EntityRegistry& InRegistry, EntityID InEntity) const = 0;
 
+        /**
+         * Take this component off InEntity. No-op if absent, and REFUSED for an essential type.
+         *
+         * @return false when the type is essential — the caller may report it, but the guarantee is
+         *   enforced here rather than by every UI remembering to check.
+         */
+        virtual bool Remove(EntityRegistry& InRegistry, EntityID InEntity) const = 0;
+
+        /**
+         * True when EVERY entity is guaranteed to carry this type, because World::CreateEntity
+         * emplaces it. Such a component cannot be removed and is not worth offering in an "add"
+         * menu: TransformComponent is the anchor picking, icons and the render joins all stand on,
+         * so an entity without one would be invisible AND unclickable.
+         */
+        virtual bool IsEssential() const = 0;
+
         /** @return InEntity's component as json, or a null json when absent. */
         virtual nlohmann::json Save(const EntityRegistry& InRegistry, EntityID InEntity) const = 0;
 
@@ -60,10 +76,12 @@ namespace Opaax
     class TComponentEntry final : public IComponentEntry
     {
     public:
-        explicit TComponentEntry(OpaaxStringID InName) : m_Name(InName) {}
+        TComponentEntry(OpaaxStringID InName, bool bInEssential)
+            : m_Name(InName), m_bEssential(bInEssential) {}
 
-        OpaaxStringID GetName()   const override { return m_Name; }
-        entt::id_type GetTypeId() const override { return entt::type_hash<T>::value(); }
+        OpaaxStringID GetName()     const override { return m_Name; }
+        entt::id_type GetTypeId()   const override { return entt::type_hash<T>::value(); }
+        bool          IsEssential() const override { return m_bEssential; }
 
         bool Has(const EntityRegistry& InRegistry, EntityID InEntity) const override
         {
@@ -76,6 +94,17 @@ namespace Opaax
             {
                 InRegistry.emplace<T>(InEntity);
             }
+        }
+
+        bool Remove(EntityRegistry& InRegistry, EntityID InEntity) const override
+        {
+            if (m_bEssential)
+            {
+                return false;
+            }
+
+            InRegistry.remove<T>(InEntity);   // entt's remove is a no-op when absent
+            return true;
         }
 
         nlohmann::json Save(const EntityRegistry& InRegistry, EntityID InEntity) const override
@@ -92,6 +121,7 @@ namespace Opaax
 
     private:
         OpaaxStringID m_Name;
+        bool          m_bEssential = false;
     };
 
     // =============================================================================
@@ -142,15 +172,19 @@ namespace Opaax
          *
          * @tparam T Any type satisfying CComponent — no base class, no engine boilerplate.
          * @param InName The stable authoring name written to map files.
+         * @param bInEssential True only for a type World::CreateEntity emplaces on EVERY entity —
+         *   see IComponentEntry::IsEssential. Such a type cannot be removed. A game component is
+         *   never this: the engine guarantees nothing about it.
          * @return true when the type was accepted.
          */
         template<CComponent T>
-        bool Register(OpaaxStringID InName)
+        bool Register(OpaaxStringID InName, bool bInEssential = false)
         {
             // NOTE: the entry is built here (so T is known) but handed to an out-of-line
             // sink, so the entry LIST is only ever touched DLL-side even when this template
             // is instantiated by a game module.
-            return AddEntry(MakeUnique<TComponentEntry<T>>(InName), entt::type_hash<T>::value());
+            return AddEntry(MakeUnique<TComponentEntry<T>>(InName, bInEssential),
+                            entt::type_hash<T>::value());
         }
 
         /** Idempotent. Called by WorldManager::CreateWorld — after this, Register refuses. */

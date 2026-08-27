@@ -70,7 +70,9 @@ namespace Opaax
 
     void Engine::RegisterNativeComponents()
     {
-        m_Registries.Components().Register<TransformComponent>("Transform");
+        // ESSENTIAL: CreateEntity emplaces it on every entity, so it cannot be removed — picking,
+        // the editor's icons and both render joins all stand on it being there.
+        m_Registries.Components().Register<TransformComponent>("Transform", /*bEssential*/true);
         m_Registries.Components().Register<DummyComponent>("Dummy");
         m_Registries.Components().Register<SpriteComponent>("Sprite");
         m_Registries.Components().Register<CameraComponent>("Camera");

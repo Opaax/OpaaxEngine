@@ -40,9 +40,22 @@ namespace Opaax::Editor
          * It carries no components: the Inspector's Add Component is how one gains any, and the
          * viewport draws it as an icon meanwhile so it is never invisible.
          *
+         * InName is made UNIQUE in the world ("Entity", then "Entity 1", ...). Names are a debug
+         * label and may legally repeat, but a multi-selection reading "3 selected - editing Entity"
+         * cannot say WHICH, so the default has to be distinguishable on sight.
+         *
          * @return The new entity, or an invalid one when refused (no world, PIE running, no map).
          */
         Entity Create(EditorContext& InContext, MapId InOwnerMap, const OpaaxString& InName);
+
+        /**
+         * Rename one entity. Empty input is refused — a nameless row in the Hierarchy is
+         * unclickable in practice and tells an author nothing.
+         *
+         * The name is NOT uniquified here, unlike Create's: this is an explicit choice by the
+         * author, and silently altering what they typed is worse than two rows agreeing.
+         */
+        void Rename(EditorContext& InContext, Entity InEntity, const OpaaxString& InName);
 
         /** Destroy everything selected, and clear the selection. Refused while PIE runs. */
         void DestroySelected(EditorContext& InContext);

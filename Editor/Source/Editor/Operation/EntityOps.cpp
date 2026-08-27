@@ -20,6 +20,37 @@ using namespace Opaax;   // OPAAX_LOG expands to an unqualified ToSpdLevel(...)
 namespace
 {
     constexpr LogCategory LogEntityOps{"EntityOps"};
+
+    using namespace Opaax;
+
+    bool NameTaken(World& InWorld, const OpaaxString& InName)
+    {
+        bool lTaken = false;
+
+        InWorld.Each<EntityMeta>([&](EntityID, const EntityMeta& InMeta)
+        {
+            if (InMeta.Name == InName) { lTaken = true; }
+        });
+
+        return lTaken;
+    }
+
+    /**
+     * InBase, then "InBase 1", "InBase 2"... — Unity's shape, and it only appends when it has to.
+     * Linear per attempt, which is nothing at authoring scale and needs no counter to keep in sync
+     * with entities that have been deleted or renamed.
+     */
+    OpaaxString MakeUniqueName(World& InWorld, const OpaaxString& InBase)
+    {
+        if (!NameTaken(InWorld, InBase)) { return InBase; }
+
+        for (Uint32 lIndex = 1; ; ++lIndex)
+        {
+            OpaaxString lCandidate = InBase + OpaaxString(" ") + OpaaxString::FromUInt(lIndex);
+
+            if (!NameTaken(InWorld, lCandidate)) { return lCandidate; }
+        }
+    }
 }
 
 namespace Opaax::Editor
@@ -39,16 +70,36 @@ namespace Opaax::Editor
             return Entity{};
         }
 
-        Entity lEntity = lWorld->CreateEntity(InName, InOwnerMap);
+        const OpaaxString lName = MakeUniqueName(*lWorld, InName);
+
+        Entity lEntity = lWorld->CreateEntity(lName, InOwnerMap);
         if (!lEntity.IsValid()) { return Entity{}; }
 
         InContext.Selection.Select(lEntity);
         lWorld->MarkChanged();
 
         OPAAX_LOG(LogEntityOps, Info, "Created entity '{}' in map '{}'",
-                  InName.CStr(), InOwnerMap.ToString().CStr());
+                  lName.CStr(), InOwnerMap.ToString().CStr());
 
         return lEntity;
+    }
+
+    void EntityOps::Rename(EditorContext& InContext, Entity InEntity, const OpaaxString& InName)
+    {
+        if (!InEntity.IsValid() || InName.IsEmpty()) { return; }
+
+        if (!MapOps::CanEdit(InContext, "Rename Entity")) { return; }
+
+        EntityMeta& lMeta = InEntity.Get<EntityMeta>();
+        if (lMeta.Name == InName) { return; }   // committing an untouched field is not an edit
+
+        OPAAX_LOG(LogEntityOps, Info, "Renamed '{}' -> '{}'", lMeta.Name.CStr(), InName.CStr());
+
+        lMeta.Name = InName;
+
+        // EntityMeta is written straight through, so nothing else observes it — the same reason
+        // the Inspector's drawers need World::MarkChanged.
+        if (World* lWorld = InEntity.GetWorld()) { lWorld->MarkChanged(); }
     }
 
     void EntityOps::DestroySelected(EditorContext& InContext)
