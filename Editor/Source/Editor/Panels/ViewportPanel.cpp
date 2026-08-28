@@ -6,6 +6,7 @@
 #include "Editor/EditorContext.h"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Editor/Input/InputRoute.h"        // hover/focus is pushed, not read back out (D5 step 2)
+#include "Editor/ImguiLibrary/ImguiCursor.h"     // the infinite drag — wrap the cursor at the edge
 #include "Editor/ImguiLibrary/ImguiWidgets.h"
 #include "Editor/Operation/EditorGizmo.hpp"      // the transform handles' grab state (③)
 #include "Editor/Operation/EditorSelection.hpp"
@@ -416,6 +417,22 @@ namespace Opaax::Editor
         }
     }
 
+    Vector2F ViewportPanel::WrapDragCursor(const Vector2F& InMin, const Vector2F& InMax, const char* InGesture)
+    {
+        const Vector2F lCorrection = ImguiCursor::WrapInRect(ImVec2{ InMin.x, InMin.y },
+                                                             ImVec2{ InMax.x, InMax.y });
+
+        if (!m_bWrapLogged && (lCorrection.x != 0.f || lCorrection.y != 0.f))
+        {
+            OPAAX_LOG(LogViewportPanel, Info,
+                      "Cursor wrapped at the viewport edge during a {} drag — the gesture continues",
+                      InGesture);
+            m_bWrapLogged = true;
+        }
+
+        return lCorrection;
+    }
+
     // =========================================================================
     // MeasureGizmo — ImGuizmo both draws the handles and manipulates the matrix, in one call.
     //
@@ -440,6 +457,22 @@ namespace Opaax::Editor
 
         EditorGizmo& lGizmo = m_Context.Gizmo;
 
+        // INFINITE DRAG. Wrap the cursor back into the image once it leaves, so a drag never runs
+        // out of screen — Blender, Unreal and Unity all do this for exactly this gesture.
+        //
+        // ImGuizmo reads the ABSOLUTE io.MousePos, so the teleport alone would fling the selection
+        // to the far side. The accumulated correction is added back below, which is what makes the
+        // gizmo see a cursor that walked off the edge and kept walking. Reset when idle so the
+        // offset cannot leak into the next drag.
+        if (ImGuizmo::IsUsing())
+        {
+            m_GizmoWrapOffset += WrapDragCursor(InOrigin, InOrigin + InSizePx, "gizmo");
+        }
+        else
+        {
+            m_GizmoWrapOffset = { 0.f, 0.f };
+        }
+
         ImGuizmo::SetOrthographic(true);
         ImGuizmo::SetDrawlist();   // this panel's list, so the gizmo clips to the viewport image
         ImGuizmo::SetRect(InOrigin.x, InOrigin.y, InSizePx.x, InSizePx.y);
@@ -462,6 +495,14 @@ namespace Opaax::Editor
 
         Matrix44F lDelta(1.f);
 
+        // The VIRTUAL cursor, for the length of the Manipulate call only. Everything else in the
+        // frame — ImGui's own hover, the marquee, the pan — wants the real one, so it is restored
+        // immediately rather than left shifted.
+        ImGuiIO&     lIO         = ImGui::GetIO();
+        const ImVec2 lRealMouse  = lIO.MousePos;
+
+        lIO.MousePos = ImVec2{ lRealMouse.x + m_GizmoWrapOffset.x, lRealMouse.y + m_GizmoWrapOffset.y };
+
         // Manipulate returns whether it actually CHANGED the matrix, which is the guard that keeps a
         // click-without-motion from dirtying the map — IsUsing() alone stays true for the whole
         // gesture and would bank an identity delta every frame.
@@ -469,6 +510,8 @@ namespace Opaax::Editor
                                                    ToGizmoOperation(lGizmo.GetMode()), ImGuizmo::LOCAL,
                                                    glm::value_ptr(lGizmo.Matrix()), glm::value_ptr(lDelta),
                                                    lGizmo.IsSnapping() ? lSnap : nullptr);
+
+        lIO.MousePos = lRealMouse;
 
         if (bChanged)
         {
@@ -509,6 +552,17 @@ namespace Opaax::Editor
 
         if (m_bPanning)
         {
+            // WRAPPED TOO, which AMENDS CAM4. That entry lets a pan continue off-panel because
+            // "cutting it at the panel edge is worst exactly when you are panning to the edge of a
+            // level" — and wrapping serves that reason strictly better than wandering off does.
+            //
+            // No correction to accumulate here, unlike the gizmo: a pan reads MouseDelta, and
+            // TeleportMousePos zeroes it on the frame it jumps. One frame of no motion, invisible.
+            const ImVec2 lRectMin = ImGui::GetItemRectMin();
+            const ImVec2 lRectMax = ImGui::GetItemRectMax();
+
+            WrapDragCursor({ lRectMin.x, lRectMin.y }, { lRectMax.x, lRectMax.y }, "pan");
+
             m_PendingPanPx.x += lIO.MouseDelta.x;
             m_PendingPanPx.y += lIO.MouseDelta.y;
         }

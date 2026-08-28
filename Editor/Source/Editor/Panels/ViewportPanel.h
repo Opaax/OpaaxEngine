@@ -182,6 +182,17 @@ namespace Opaax::Editor
          */
         void ApplyGizmoDrag();
 
+        /**
+         * Keep a live drag inside [InMin, InMax] — the infinite drag. One instrument for both
+         * callers (the gizmo and the pan), so the one-shot log below cannot be true for one gesture
+         * and untested for the other.
+         *
+         * @param InGesture Named in that log, because "the wrap never fired" and "it fired and
+         *   misbehaved" look identical otherwise, and only one of them is fixable from a log.
+         * @return The correction an ABSOLUTE-position reader must accumulate; see ImguiCursor.
+         */
+        Vector2F WrapDragCursor(const Vector2F& InMin, const Vector2F& InMax, const char* InGesture);
+
         // =============================================================================
         // Override
         // =============================================================================
@@ -228,6 +239,14 @@ namespace Opaax::Editor
         float    m_PendingZoom         = 0.f;          // wheel notches; + is zoom IN
         bool     m_bPanning            = false;        // the middle button went down over the viewport
 
+        // Infinite drag: how far the cursor has been TELEPORTED back into the image during the
+        // current gizmo drag, accumulated in screen pixels. Added to io.MousePos for the length of
+        // the Manipulate call, because ImGuizmo reads the ABSOLUTE position and would otherwise see
+        // the wrap as a leap across the viewport. Reset whenever no drag is live.
+        //
+        // The camera pan needs no equivalent — it reads MouseDelta, which the teleport zeroes.
+        Vector2F m_GizmoWrapOffset = {0.f, 0.f};
+
         // Selection gesture, measured in DrawContents and spent in OnPreRender. ONE gesture with two
         // outcomes rather than two mechanisms: the press banks a point, and crossing ImGui's drag
         // threshold promotes it to a box. m_bSelecting is what says a press started HERE — a drag
@@ -258,6 +277,7 @@ namespace Opaax::Editor
         bool   m_bImageLogged    = false;
         bool   m_bOutlineLogged  = false;
         bool   m_bIconsLogged    = false;
+        bool   m_bWrapLogged     = false;
 
         // One bit per EGizmoMode, not one flag: "does the gizmo write?" is a separate question per
         // mode, and a single one-shot would leave rotate and scale permanently silent after the
