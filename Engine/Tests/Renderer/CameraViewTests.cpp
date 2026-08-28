@@ -67,6 +67,40 @@ TEST_CASE("CameraView: a zero dimension yields identity rather than a divide")
     CheckMatrixEqual(MakeViewProjection(CameraView{}, 960, 0), Matrix44F(1.f));
 }
 
+TEST_CASE("CameraView: the halves multiply back to the whole")
+{
+    // ③ split MakeView/MakeProjection out for ImGuizmo, which takes them separately. The split is
+    // only safe while the product still IS MakeViewProjection — a camera off the origin at a
+    // non-square aspect is where a swapped multiplication order or a dropped translation shows up.
+    const CameraView lView{ { 137.f, -64.f }, 250.f };
+
+    CheckMatrixEqual(MakeProjection(lView, 1280, 720) * MakeView(lView),
+                     MakeViewProjection(lView, 1280, 720));
+}
+
+TEST_CASE("CameraView: a degenerate target is identity for the WHOLE, not just the projection")
+{
+    // MakeViewProjection cannot defer its zero-guard to MakeProjection: identity * view is the
+    // VIEW, so a camera away from the origin would answer a translation instead of identity.
+    const CameraView lOffOrigin{ { 500.f, 500.f }, 300.f };
+
+    CheckMatrixEqual(MakeViewProjection(lOffOrigin, 0, 600), Matrix44F(1.f));
+    CheckMatrixEqual(MakeProjection(lOffOrigin, 0, 600), Matrix44F(1.f));
+}
+
+TEST_CASE("MakeView: translates by -Position and does not scale")
+{
+    const Matrix44F lView = MakeView(CameraView{ { 30.f, -12.f }, 999.f });
+
+    // OrthoSize is the projection's business — a view that read it would frame twice.
+    const Vector4F lMoved = lView * Vector4F(30.f, -12.f, 0.f, 1.f);
+
+    CHECK(lMoved.x == doctest::Approx(0.f));
+    CHECK(lMoved.y == doctest::Approx(0.f));
+    CHECK(lView[0][0] == doctest::Approx(1.f));
+    CHECK(lView[1][1] == doctest::Approx(1.f));
+}
+
 TEST_CASE("ScreenToWorld: the viewport centre is the camera's position")
 {
     const CameraView lView{ { 12.f, -34.f }, 300.f };

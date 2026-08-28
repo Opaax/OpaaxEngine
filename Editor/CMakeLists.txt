@@ -61,7 +61,24 @@ target_compile_definitions(imgui
     PUBLIC
         GLFW_DLL   # import the single glfw instance exported by OpaaxEngine.dll (L11)
 )
-message(STATUS "[Opaax] Editor UI vendors: imgui + tinyfiledialogs built from Editor/Vendors/")
+# --- ImGuizmo (③, the transform gizmo) ---------------------------------------
+# Built beside imgui and PUBLIC-linked to it: ImGuizmo.cpp includes imgui.h AND imgui_internal.h,
+# and its header pulls imconfig.h through USE_IMGUI_API. Editor-owned like everything here — the
+# engine DLL and a runtime exe compile none of it (D4).
+#
+# Its sources live in src/, not at the repo root, so this glob is spelled out rather than assumed.
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Vendors/ImGuizmo/src/ImGuizmo.h")
+    message(FATAL_ERROR
+        "ImGuizmo not found in Editor/Vendors/ImGuizmo!\n"
+        "Init the submodule: git submodule update --init Editor/Vendors/ImGuizmo"
+    )
+endif()
+add_library(imguizmo STATIC Vendors/ImGuizmo/src/ImGuizmo.cpp)
+target_include_directories(imguizmo PUBLIC Vendors/ImGuizmo/src)
+target_link_libraries(imguizmo PUBLIC imgui)
+target_compile_definitions(imguizmo PUBLIC USE_IMGUI_API)
+
+message(STATUS "[Opaax] Editor UI vendors: imgui + ImGuizmo + tinyfiledialogs built from Editor/Vendors/")
 
 add_library(OpaaxEditorLib STATIC ${OPAAX_EDITOR_LIB_SOURCES})
 
@@ -70,6 +87,7 @@ target_link_libraries(OpaaxEditorLib
     PUBLIC
         OpaaxEngine
         imgui
+        imguizmo
         tinyfiledialogs
 )
 

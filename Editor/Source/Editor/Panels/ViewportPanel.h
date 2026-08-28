@@ -159,30 +159,28 @@ namespace Opaax::Editor
         void ApplyCameraGesture();
 
         /**
-         * Read this frame's LEFT button against the gizmo's handles and bank what the grab moved.
-         * Same gate and same call site as the other two measures; call it right after the image.
+         * Draw the transform gizmo and bank whatever the drag produced.
          *
-         * @return True while the gizmo OWNS the mouse, in which case the caller must not run
+         * ImGuizmo both DRAWS and MANIPULATES in one call, so unlike the other overlays this one
+         * lives in the ImGui pass rather than in OnPreRender. What it must not do is write the world
+         * from there (MP7) — so the drag's delta is banked and ApplyGizmoDrag spends it.
+         *
+         * Call it while the panel's window is current and after the image, since it takes the image
+         * rect as its viewport.
+         *
+         * @param InOrigin Top-left of the image, in SCREEN pixels — ImGuizmo::SetRect's frame.
+         * @param InSizePx The image's size in screen pixels.
+         * @return True while the gizmo owns the mouse, in which case the caller must not run
          *   MeasureViewportInput — one button, two consumers, and the order is stated here once.
          */
-        bool MeasureGizmo(bool bInHovered, const Vector2F& InOrigin);
+        bool MeasureGizmo(const Vector2F& InOrigin, const Vector2F& InSizePx);
 
         /**
-         * Spend the banked gizmo motion through EntityOps (SEL6), so a drag is undoable the day ⑤
+         * Spend the banked gizmo delta through EntityOps (SEL6), so a drag is undoable the day ⑤
          * wraps the choke point. Runs in OnPreRender beside ApplyPendingPick, and for the same
          * reason: the motion was measured against the frame that was RENDERED.
          */
         void ApplyGizmoDrag();
-
-        /**
-         * Queue the translate handles into DebugDraw for THIS frame — two arrows and a free-move
-         * square, every dimension from WorldPerPixel() so the gizmo holds its apparent size at any
-         * zoom (Unity's HandleUtility.GetHandleSize in this engine's terms).
-         *
-         * Runs AFTER ApplyGizmoDrag so the handles are drawn where the entity now is, not where it
-         * was when the grab started.
-         */
-        void EnqueueGizmo();
 
         // =============================================================================
         // Override
@@ -256,16 +254,6 @@ namespace Opaax::Editor
         float    m_IconHalfPx    = 9.f;
         Vector4F m_IconColor     = {0.55f, 0.75f, 1.f, 1.f};
         float    m_IconThickness = 2.f;
-
-        // The transform gizmo. Red X / green Y is the convention every reference editor uses, so an
-        // author already knows which is which; the highlight is what the hovered or grabbed handle
-        // switches to. Sizes are NOT here — they are screen pixels and live with the layout that
-        // converts them (GizmoHandles), so the draw and the hit test cannot read different numbers.
-        Vector4F m_GizmoAxisXColor    = {0.90f, 0.25f, 0.25f, 1.f};
-        Vector4F m_GizmoAxisYColor    = {0.35f, 0.85f, 0.35f, 1.f};
-        Vector4F m_GizmoCenterColor   = {0.85f, 0.85f, 0.30f, 1.f};
-        Vector4F m_GizmoActiveColor   = {1.f,   1.f,   1.f,   1.f};
-        float    m_GizmoThickness     = 2.5f;
 
         bool   m_bImageLogged    = false;
         bool   m_bOutlineLogged  = false;

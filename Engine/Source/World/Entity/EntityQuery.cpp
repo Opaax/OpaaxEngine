@@ -65,9 +65,14 @@ namespace Opaax
         bool     lHasExtent = false;
         Bounds2D lBounds;
 
+        // The SAME multiply RendererManager applies (③) — a scaled entity has to be clickable at the
+        // size it draws, and this is the one body that keeps picking, the outline, focus-selected and
+        // the marquee agreeing about that (SEL1).
+        const Vector2F lScale = lTransform->Scale;
+
         if (const DummyComponent* lQuad = InEntity.TryGet<DummyComponent>())
         {
-            lBounds    = Bounds2D::FromCenterSizeRotated(lTransform->Position, lQuad->Size, lRotation);
+            lBounds    = Bounds2D::FromCenterSizeRotated(lTransform->Position, lQuad->Size * lScale, lRotation);
             lHasExtent = true;
         }
 
@@ -76,7 +81,7 @@ namespace Opaax
             // Hit-testable whether or not it is VISIBLE: an author has to be able to select a
             // sprite they just hid in order to show it again.
             const Bounds2D lSpriteBounds =
-                Bounds2D::FromCenterSizeRotated(lTransform->Position, lSprite->Size, lRotation);
+                Bounds2D::FromCenterSizeRotated(lTransform->Position, lSprite->Size * lScale, lRotation);
 
             if (lHasExtent) { lBounds.Encapsulate(lSpriteBounds); }
             else            { lBounds = lSpriteBounds; lHasExtent = true; }

@@ -7,8 +7,12 @@
 #include "Editor/Operation/MapOperations.h"
 #include "Editor/PIE/PlayInEditor.h"   // IsEdit — the focus rule is about which camera owns the view
 
+#include <cmath>                 // atan2 — the delta's turn, read off its own basis
+#include <glm/geometric.hpp>     // length — and its stretch
+
 #include "Application/Services/ILogger.h"
 #include "Core/Maths/Bounds2D.h"
+#include "Core/Maths/Maths.h"    // RadiansToDegrees — the transform authors degrees
 #include "World/Components/TransformComponent.h"   // I17 — the one position a drag writes
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityMeta.h"
@@ -131,20 +135,28 @@ namespace Opaax::Editor
         OPAAX_LOG(LogEntityOps, Info, "Deleted {} entity(ies)", static_cast<Uint64>(lIds.size()));
     }
 
-    void EntityOps::TranslateSelected(EditorContext& InContext, const Vector2F& InWorldDelta)
+    void EntityOps::TransformSelected(EditorContext& InContext, const Matrix44F& InDelta)
     {
-        if (InWorldDelta.x == 0.f && InWorldDelta.y == 0.f) { return; }
-
         if (!InContext.Selection.HasSelection()) { return; }
 
-        if (!MapOps::CanEdit(InContext, "Move Entity")) { return; }
+        if (!MapOps::CanEdit(InContext, "Transform Entity")) { return; }
 
         World* const lWorld = InContext.Selection.GetWorld();
         if (lWorld == nullptr) { return; }
 
+        // The delta's own basis carries the rotation and the scale: column 0 is where the X axis
+        // ended up, so its ANGLE is the turn and its LENGTH is the stretch. Reading them here keeps
+        // the choke point free of ImGuizmo's decompose — and free of the Euler round trip, since a
+        // 2D delta only ever turns about Z.
+        const Vector2F lBasisX{ InDelta[0][0], InDelta[0][1] };
+        const Vector2F lBasisY{ InDelta[1][0], InDelta[1][1] };
+
+        const float    lDeltaDegrees = Maths::RadiansToDegrees(std::atan2(lBasisX.y, lBasisX.x));
+        const Vector2F lDeltaScale{ glm::length(lBasisX), glm::length(lBasisY) };
+
         // NOT logged per call: a drag lands one of these every frame it is held. The panel says so
         // once, the way it does for the outline and the icons (L15 without the flood).
-        bool lMoved = false;
+        bool lChanged = false;
 
         for (const EntityID lId : InContext.Selection.Ids())
         {
@@ -152,14 +164,22 @@ namespace Opaax::Editor
 
             // Every entity has one (I17), so a miss means the handle went stale between the measure
             // and this call — skip it rather than emplacing a transform nobody asked for.
-            if (TransformComponent* lTransform = lEntity.TryGet<TransformComponent>())
-            {
-                lTransform->Position += InWorldDelta;
-                lMoved = true;
-            }
+            TransformComponent* lTransform = lEntity.TryGet<TransformComponent>();
+            if (lTransform == nullptr) { continue; }
+
+            // The POSITION goes through the matrix rather than being offset by hand, which is what
+            // makes a rotate or a scale orbit the shared pivot instead of spinning each entity where
+            // it stands. For one entity the pivot IS its origin, so this reduces to no movement.
+            const Vector4F lMoved = InDelta * Vector4F(lTransform->Position.x, lTransform->Position.y, 0.f, 1.f);
+
+            lTransform->Position = { lMoved.x, lMoved.y };
+            lTransform->Rotation += lDeltaDegrees;
+            lTransform->Scale    *= lDeltaScale;
+
+            lChanged = true;
         }
 
-        if (lMoved) { lWorld->MarkChanged(); }
+        if (lChanged) { lWorld->MarkChanged(); }
     }
 
     void EntityOps::FocusSelected(EditorContext& InContext)

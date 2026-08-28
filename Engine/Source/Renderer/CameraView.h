@@ -29,9 +29,25 @@ namespace Opaax
     // =============================================================================
 
     /**
+     * The VIEW half alone: a translation by -Position, because the world moves opposite to the
+     * camera. No size argument — framing is the projection's job, not the view's.
+     */
+    OPAAX_API Matrix44F MakeView(const CameraView& InView);
+
+    /**
+     * The PROJECTION half alone: Y-up ortho, OrthoSize tall, width following the target's aspect.
+     * A zero dimension yields identity — there is nothing to frame.
+     */
+    OPAAX_API Matrix44F MakeProjection(const CameraView& InView, Uint32 InWidth, Uint32 InHeight);
+
+    /**
      * Combined Proj * View for InView filling a target of InWidth x InHeight pixels.
-     * Y-up, centred on InView.Position. A zero dimension yields identity — there is
-     * nothing to frame.
+     * Y-up, centred on InView.Position. A zero dimension yields identity.
+     *
+     * DEFINED AS THE PRODUCT of the two above, so the halves and the whole cannot drift. The split
+     * exists because ImGuizmo takes view and projection SEPARATELY (③) — the renderer still wants
+     * only the product, which is why that stayed the named function rather than becoming a call site
+     * that multiplies.
      */
     OPAAX_API Matrix44F MakeViewProjection(const CameraView& InView, Uint32 InWidth, Uint32 InHeight);
 

@@ -164,7 +164,9 @@ namespace Opaax
             lWorld->Each<TransformComponent, DummyComponent>(
                 [&lRenderer](EntityID, TransformComponent& InXf, DummyComponent& InComp)
                 {
-                    lRenderer.DrawQuad(InXf.Position, InComp.Size, InComp.Color,
+                    // Scale MULTIPLIES the component's own Size (③): the extent is what the thing
+                    // is, the scale is what the transform does to it.
+                    lRenderer.DrawQuad(InXf.Position, InComp.Size * InXf.Scale, InComp.Color,
                                        Maths::DegreesToRadians(InXf.Rotation));
                 });
 
@@ -203,7 +205,7 @@ namespace Opaax
                     return;
                 }
 
-                InRenderer.DrawSprite(InXf.Position, InSprite.Size, *lTexture, InSprite.Color,
+                InRenderer.DrawSprite(InXf.Position, InSprite.Size * InXf.Scale, *lTexture, InSprite.Color,
                                       Maths::DegreesToRadians(InXf.Rotation),
                                       InSprite.Layer, InSprite.OrderInLayer);
             });

@@ -1,91 +1,138 @@
 #pragma once
 
 #include "Core/Maths/MathTypes.h"
-#include "Editor/Operation/GizmoHandles.h"
+#include "Core/OpaaxTypes.h"
 
 namespace Opaax::Editor
 {
+    /** What the gizmo manipulates. Unreal, Unity and Godot all bind these to W / E / R. */
+    enum class EGizmoMode : Uint8
+    {
+        Translate,
+        Rotate,
+        Scale
+    };
+
+    /** I11 — an enum gets a free ToString found by ADL. Total and silent; a log label. */
+    inline const char* ToString(const EGizmoMode InMode) noexcept
+    {
+        switch (InMode)
+        {
+        case EGizmoMode::Translate: return "Translate";
+        case EGizmoMode::Rotate:    return "Rotate";
+        case EGizmoMode::Scale:     return "Scale";
+        }
+
+        return "Translate";
+    }
+
     // =============================================================================
-    // EditorGizmo — the viewport transform handles' STATE: what is grabbed, what the cursor is over,
-    //   and how far the grab has moved since the last frame.
+    // EditorGizmo — the transform gizmo's STATE: which mode is active, whether snapping is held,
+    //   the matrix ImGuizmo drives, and the delta that matrix produced.
     //
-    //   Owned by EditorService and reached through EditorContext, the EditorSelection / EditorCamera
-    //   shape — not a ViewportPanel member. Its subject is the SELECTION, which no panel owns
-    //   (**SEL7**), and from ③'s rotate step the MODE is set by an editor-wide shortcut.
+    //   Owned by EditorService and reached through EditorContext, the EditorSelection /
+    //   EditorCamera shape — not a ViewportPanel member. Its subject is the SELECTION, which no
+    //   panel owns (**SEL7**), and the mode is set by an editor-wide shortcut.
     //
-    //   THE GRAB IS LATCHED, never interrogated after the fact. ImGui::IsMouseDragging needs the
-    //   button still down, so it is false exactly on the frame a release wants an answer — the shape
-    //   that cost ② three bugs (**SEL8**). BeginDrag on the press, EndDrag on "not down", and the
-    //   frames between are the drag.
+    //   THE MATRIX IS STATE, AND THAT IS THE WHOLE TRICK. ImGuizmo captures its start pose on the
+    //   frame a drag begins and then drives the SAME matrix it was handed last frame, so the matrix
+    //   has to persist across frames rather than be rebuilt from the selection each time. Re-seating
+    //   it every frame would fight that captured state and the drag would fold back on itself. So it
+    //   follows the selection only while nothing is being dragged (ReseatAt) and is left strictly
+    //   alone in between.
     //
-    //   The delta is BANKED, not applied: the panel measures it in its draw pass and spends it in
-    //   OnPreRender through EntityOps (**SEL3**), because a draw pass reads the world and anything
-    //   that writes it runs outside the pass.
+    //   The delta is BANKED, not applied: the panel measures inside the ImGui pass and spends it in
+    //   OnPreRender through EntityOps (**MP7**/**SEL3**), because a draw pass reads the world and
+    //   anything that writes it runs outside the pass.
     // =============================================================================
     class EditorGizmo
     {
         // =============================================================================
-        // Write
+        // Mode
         // =============================================================================
     public:
-        void BeginDrag(const EGizmoHandle InHandle, const Vector2F& InCursor) noexcept
-        {
-            m_Grabbed    = InHandle;
-            m_LastCursor = InCursor;
-        }
+        void       SetMode(const EGizmoMode InMode) noexcept { m_Mode = InMode; }
+        EGizmoMode GetMode() const noexcept                  { return m_Mode; }
+
+        // =============================================================================
+        // Snapping
+        // =============================================================================
+    public:
+        /** Held per frame from the modifier, not toggled — Ctrl means "snap this drag". */
+        void SetSnapping(const bool bInSnapping) noexcept { m_bSnapping = bInSnapping; }
+        bool IsSnapping() const noexcept                  { return m_bSnapping; }
 
         /**
-         * Accumulate the motion from the last cursor to InCursor, constrained to the grabbed axis.
+         * The step the active mode snaps to: world units, degrees, or a scale fraction.
          *
-         * Measured between two WORLD cursor positions rather than from a pixel delta, so it is exact
-         * at any zoom with no scale bookkeeping — and it stays correct across a frame the panel
-         * skipped.
+         * Per-mode because one number cannot mean all three — 15 units of translation is arbitrary
+         * where 15 degrees is the useful rotation step.
          */
-        void DragTo(const Vector2F& InCursor) noexcept
+        float GetSnapStep() const noexcept
         {
-            if (m_Grabbed == EGizmoHandle::None) { return; }
+            switch (m_Mode)
+            {
+            case EGizmoMode::Translate: return 10.f;
+            case EGizmoMode::Rotate:    return 15.f;
+            case EGizmoMode::Scale:     return 0.1f;
+            }
 
-            const Vector2F lStep = GizmoHandles::Constrain(m_Grabbed,
-                                                           { InCursor.x - m_LastCursor.x,
-                                                             InCursor.y - m_LastCursor.y });
-
-            m_PendingDelta.x += lStep.x;
-            m_PendingDelta.y += lStep.y;
-            m_LastCursor      = InCursor;
-        }
-
-        void EndDrag() noexcept { m_Grabbed = EGizmoHandle::None; }
-
-        void SetHovered(const EGizmoHandle InHandle) noexcept { m_Hovered = InHandle; }
-
-        /** The banked motion, cleared. {0,0} when the grab has not moved. */
-        Vector2F ConsumeDelta() noexcept
-        {
-            const Vector2F lDelta = m_PendingDelta;
-            m_PendingDelta = { 0.f, 0.f };
-
-            return lDelta;
+            return 1.f;
         }
 
         // =============================================================================
-        // Read
+        // The matrix ImGuizmo drives
         // =============================================================================
     public:
-        bool IsDragging() const noexcept { return m_Grabbed != EGizmoHandle::None; }
+        Matrix44F& Matrix() noexcept { return m_Matrix; }
 
-        /** What the draw highlights: the grabbed handle, or the hovered one when nothing is held. */
-        EGizmoHandle GetActiveHandle() const noexcept
+        /**
+         * Put the gizmo back on InPivot — translation only, identity rotation and unit scale.
+         *
+         * Call this ONLY when no drag is live. The pose is deliberately neutral rather than the
+         * selection's own rotation: with N entities there is no single rotation to adopt, and every
+         * delta is world-space anyway, so a neutral frame is the honest one for both cases.
+         */
+        void ReseatAt(const Vector2F& InPivot) noexcept
         {
-            return m_Grabbed != EGizmoHandle::None ? m_Grabbed : m_Hovered;
+            m_Matrix = Matrix44F(1.f);
+            m_Matrix[3][0] = InPivot.x;
+            m_Matrix[3][1] = InPivot.y;
+        }
+
+        // =============================================================================
+        // The banked delta
+        // =============================================================================
+    public:
+        /** Compose InDelta onto whatever is already banked — deltas multiply. */
+        void BankDelta(const Matrix44F& InDelta) noexcept
+        {
+            m_PendingDelta = InDelta * m_PendingDelta;
+            m_bHasPending  = true;
+        }
+
+        bool HasPendingDelta() const noexcept { return m_bHasPending; }
+
+        /** The banked transform, cleared back to identity. */
+        Matrix44F ConsumeDelta() noexcept
+        {
+            const Matrix44F lDelta = m_PendingDelta;
+
+            m_PendingDelta = Matrix44F(1.f);
+            m_bHasPending  = false;
+
+            return lDelta;
         }
 
         // =============================================================================
         // Members
         // =============================================================================
     private:
-        EGizmoHandle m_Grabbed      = EGizmoHandle::None;
-        EGizmoHandle m_Hovered      = EGizmoHandle::None;
-        Vector2F     m_LastCursor   = { 0.f, 0.f };
-        Vector2F     m_PendingDelta = { 0.f, 0.f };
+        EGizmoMode m_Mode      = EGizmoMode::Translate;
+        bool       m_bSnapping = false;
+
+        Matrix44F  m_Matrix       = Matrix44F(1.f);
+        Matrix44F  m_PendingDelta = Matrix44F(1.f);
+        bool       m_bHasPending  = false;
     };
 }

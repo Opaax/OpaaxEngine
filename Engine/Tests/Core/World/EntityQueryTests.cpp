@@ -82,6 +82,41 @@ TEST_CASE("EntityQuery: bounds follow the transform's ROTATION")
     CHECK(lBounds.HalfExtent.y == doctest::Approx(50.f));
 }
 
+TEST_CASE("EntityQuery: bounds follow the transform's SCALE")
+{
+    World lWorld("Scaled");
+
+    Entity lQuad = MakeQuad(lWorld, "Big", { 0.f, 0.f }, { 100.f, 40.f });
+    lQuad.Get<TransformComponent>().Scale = { 2.f, 0.5f };
+
+    Bounds2D lBounds;
+    REQUIRE(EntityQuery::TryGetBounds(lQuad, lBounds));
+
+    // The SAME multiply RendererManager applies. If these two ever disagree a scaled entity is
+    // clickable somewhere other than where it is drawn — the failure SEL1 exists to prevent, and
+    // one this file is the only thing that can catch (the draw path needs a GL context).
+    CHECK(lBounds.HalfExtent.x == doctest::Approx(100.f));
+    CHECK(lBounds.HalfExtent.y == doctest::Approx(10.f));
+}
+
+TEST_CASE("EntityQuery: scale and rotation compose, in that order")
+{
+    World lWorld("ScaledRotated");
+
+    Entity lQuad = MakeQuad(lWorld, "Long", { 0.f, 0.f }, { 100.f, 20.f });
+    lQuad.Get<TransformComponent>().Scale    = { 2.f, 1.f };   // -> 200 x 20
+    lQuad.Get<TransformComponent>().Rotation = 90.f;           // -> swaps the extents
+
+    Bounds2D lBounds;
+    REQUIRE(EntityQuery::TryGetBounds(lQuad, lBounds));
+
+    // Scaling the LOCAL size and then rotating is not the same as rotating and then scaling the
+    // world box — with a non-uniform scale the two differ, and only the first matches what the
+    // renderer draws.
+    CHECK(lBounds.HalfExtent.x == doctest::Approx(10.f));
+    CHECK(lBounds.HalfExtent.y == doctest::Approx(100.f));
+}
+
 // =============================================================================
 // Tier 2 — the anchor fallback, and its opt-in
 // =============================================================================

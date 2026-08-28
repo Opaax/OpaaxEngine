@@ -62,17 +62,22 @@ namespace Opaax::Editor
         void DestroySelected(EditorContext& InContext);
 
         /**
-         * Move everything selected by InWorldDelta — the gizmo's translate drag (③).
+         * Apply a world-space transform delta to everything selected — the gizmo's drag (③).
          *
-         * INCREMENTAL rather than absolute, for two reasons. It is the same delta for every entity of
-         * a multi-selection, so N entities keep their relative layout with no per-entity bookkeeping;
-         * and it is the form ⑤ coalesces — a drag is many of these, and undo merges consecutive ones
-         * into a single command rather than reconstructing a start state.
+         * ONE VERB FOR ALL THREE MODES, and a matrix rather than three scalars, because that is what
+         * the gizmo actually produces: InDelta maps each entity's old placement to its new one, so
+         * translation, rotation ABOUT THE PIVOT and scaling about the pivot all arrive as the same
+         * value. A multi-selection therefore keeps its layout with no special case, and a single
+         * entity — whose pivot is its own origin — falls out of the identical code path.
          *
-         * A zero delta is a no-op and costs no MarkChanged, so a grab that never moved does not
-         * dirty the map.
+         * INCREMENTAL rather than absolute: it is the form ⑤ coalesces, since a drag is many of
+         * these and deltas compose by multiplication.
+         *
+         * Rotation and scale are read off the delta's own basis vectors (angle and length), which is
+         * why this stays free of ImGuizmo — the choke point speaks the engine's vocabulary, not a
+         * vendor's.
          */
-        void TranslateSelected(EditorContext& InContext, const Vector2F& InWorldDelta);
+        void TransformSelected(EditorContext& InContext, const Matrix44F& InDelta);
 
         /**
          * Frame the selection with the editor camera.

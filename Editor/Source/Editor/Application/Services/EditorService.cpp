@@ -1,6 +1,7 @@
 #include "Editor/Application/Services/EditorService.h"
 
 #include <imgui.h>
+#include <ImGuizmo.h>   // BeginFrame — the gizmo's per-frame reset (③)
 
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IConfigSystem.h"
@@ -337,6 +338,11 @@ namespace Opaax::Editor
 
         m_UIBackend->NewFrame();
         ImGui::NewFrame();
+
+        // ③ — right after ImGui's own NewFrame, as ImGuizmo's header asks. Needed even though the
+        // ViewportPanel calls SetDrawlist: this is what clears the per-frame hotspot flags IsOver()
+        // reads, and a stale one would leave the marquee suppressed after the cursor left a handle.
+        ImGuizmo::BeginFrame();
 
         // Apply any pending viewport resize (measured last DrawContents) BEFORE Engine().Loop()
         // renders the world, so Render() reads the new FBO size this frame (deferred-resize

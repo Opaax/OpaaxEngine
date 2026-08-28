@@ -467,7 +467,7 @@ TEST_CASE("Snapshot: a TransformComponent payload missing a key keeps that field
     lEntity.Name     = "OldEntity";
     lEntity.OwnerMap = MapId("Level01");
 
-    // Only Position — as an older map that never knew about Rotation would have written it.
+    // Only Position — as an older map that knew neither Rotation nor ③'s Scale would have written it.
     lEntity.Components.emplace_back(OpaaxStringID("Transform"),
                                     nlohmann::json{{"Position", {{"x", 10.f}, {"y", 20.f}}}});
 
@@ -480,4 +480,31 @@ TEST_CASE("Snapshot: a TransformComponent payload missing a key keeps that field
 
     CHECK(lRebuilt.Get<TransformComponent>().Position.x == doctest::Approx(10.f));
     CHECK(lRebuilt.Get<TransformComponent>().Rotation   == doctest::Approx(0.f)); // the default, not a throw
+
+    // Scale is the field where the default MATTERS rather than merely being tidy: it multiplies the
+    // component's Size, so a zero here would render every entity authored before ③ as nothing at
+    // all — invisible, with no error anywhere. Every `.opaaxmap` on disk hits this path.
+    CHECK(lRebuilt.Get<TransformComponent>().Scale.x == doctest::Approx(1.f));
+    CHECK(lRebuilt.Get<TransformComponent>().Scale.y == doctest::Approx(1.f));
+}
+
+TEST_CASE("Snapshot: Scale survives a capture/restore round trip")
+{
+    ComponentRegistry lRegistry;
+    REQUIRE(lRegistry.Register<TransformComponent>("Transform"));
+
+    World  lWorld("Scaled");
+    Entity lSubject = lWorld.CreateEntity("Stretched", MapId("Level01"));
+    lSubject.Get<TransformComponent>().Scale = Vector2F{ 2.5f, 0.5f };
+
+    const MapData lData = MapSerializer::CaptureWorld(lWorld, lRegistry);
+
+    World lTarget("Restored");
+    REQUIRE(MapFactory::Instantiate(lData, lTarget, lRegistry) == 1u);
+
+    Entity lRebuilt = lTarget.FindByGuid(lSubject.Get<EntityMeta>().Id);
+    REQUIRE(lRebuilt.IsValid());
+
+    CHECK(lRebuilt.Get<TransformComponent>().Scale.x == doctest::Approx(2.5f));
+    CHECK(lRebuilt.Get<TransformComponent>().Scale.y == doctest::Approx(0.5f));
 }
