@@ -82,6 +82,18 @@ namespace Opaax::Editor
         lEdit.AddSeparator();
         lEdit.AddCommand("Focus Selected", Tags::EDITOR_COMMAND_FOCUS_SELECTED).SetEnabled(IsEditing);
 
+        // --- Gizmo mode (③), as radio entries -----------------------------------------------
+        // The tick reads the live mode rather than a remembered one, so the menu and the W/E/R keys
+        // cannot disagree — the same reason BindPanelToggles reads EditorPanels. Discoverability is
+        // the whole point: a mode reachable only by a key nobody documented is folklore.
+        lEdit.AddSeparator();
+        lEdit.AddCommand("Gizmo: Translate (W)", Tags::EDITOR_COMMAND_GIZMO_TRANSLATE)
+             .SetChecked([](const EditorContext& InContext) { return InContext.Gizmo.GetMode() == EGizmoMode::Translate; });
+        lEdit.AddCommand("Gizmo: Rotate (E)", Tags::EDITOR_COMMAND_GIZMO_ROTATE)
+             .SetChecked([](const EditorContext& InContext) { return InContext.Gizmo.GetMode() == EGizmoMode::Rotate; });
+        lEdit.AddCommand("Gizmo: Scale (R)", Tags::EDITOR_COMMAND_GIZMO_SCALE)
+             .SetChecked([](const EditorContext& InContext) { return InContext.Gizmo.GetMode() == EGizmoMode::Scale; });
+
         // --- Native Level  --------------------------
         EditorMenuCategory& lLevel = lMenu.Category("Level");
         lLevel.AddCommand("Add Map...", Tags::EDITOR_COMMAND_ADD_MAP_TO_LEVEL).SetEnabled(IsEditing);
@@ -110,6 +122,10 @@ namespace Opaax::Editor
         lCommands.Register<CreateEntityCommand>(Tags::EDITOR_COMMAND_CREATE_ENTITY);
         lCommands.Register<DeleteSelectedCommand>(Tags::EDITOR_COMMAND_DELETE_ENTITY);
         lCommands.Register<FocusSelectedCommand>(Tags::EDITOR_COMMAND_FOCUS_SELECTED);
+
+        lCommands.Register<GizmoTranslateCommand>(Tags::EDITOR_COMMAND_GIZMO_TRANSLATE);
+        lCommands.Register<GizmoRotateCommand>(Tags::EDITOR_COMMAND_GIZMO_ROTATE);
+        lCommands.Register<GizmoScaleCommand>(Tags::EDITOR_COMMAND_GIZMO_SCALE);
 
         lCommands.Register<NewMapCommand>(Tags::EDITOR_COMMAND_NEW_MAP);
         lCommands.Register<OpenMapCommand>(Tags::EDITOR_COMMAND_OPEN_MAP);
@@ -720,6 +736,31 @@ namespace Opaax::Editor
         if (ImGui::Shortcut(ImGuiKey_Delete, ImGuiInputFlags_RouteGlobal))
         {
             m_Context->Extensions.Commands().Execute(Tags::EDITOR_COMMAND_DELETE_ENTITY, *m_Context);
+        }
+
+        // W / E / R — the binding Unreal, Unity and Godot all share, so an author already knows it.
+        // Editor-wide beside F and Delete for SEL7's reason: the gizmo's subject is the SELECTION,
+        // and the selection belongs to no single panel. The WantCaptureKeyboard guard above is what
+        // keeps a bare letter safe — typing "Water" into a name field must not switch modes.
+        //
+        // EDIT ONLY, unlike F and Delete: W/E/R are also the game's movement keys, and a running
+        // game owns them. The menu entries stay live either way — they are unambiguous, and a mode
+        // set ahead of Stop is a reasonable thing to want.
+        if (!m_Context->PIE.IsEdit()) { return; }
+
+        if (ImGui::Shortcut(ImGuiKey_W, ImGuiInputFlags_RouteGlobal))
+        {
+            m_Context->Extensions.Commands().Execute(Tags::EDITOR_COMMAND_GIZMO_TRANSLATE, *m_Context);
+        }
+
+        if (ImGui::Shortcut(ImGuiKey_E, ImGuiInputFlags_RouteGlobal))
+        {
+            m_Context->Extensions.Commands().Execute(Tags::EDITOR_COMMAND_GIZMO_ROTATE, *m_Context);
+        }
+
+        if (ImGui::Shortcut(ImGuiKey_R, ImGuiInputFlags_RouteGlobal))
+        {
+            m_Context->Extensions.Commands().Execute(Tags::EDITOR_COMMAND_GIZMO_SCALE, *m_Context);
         }
     }
 

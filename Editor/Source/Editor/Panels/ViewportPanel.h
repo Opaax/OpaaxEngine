@@ -258,6 +258,10 @@ namespace Opaax::Editor
         bool   m_bImageLogged    = false;
         bool   m_bOutlineLogged  = false;
         bool   m_bIconsLogged    = false;
-        bool   m_bGizmoLogged    = false;
+
+        // One bit per EGizmoMode, not one flag: "does the gizmo write?" is a separate question per
+        // mode, and a single one-shot would leave rotate and scale permanently silent after the
+        // first translate (L15 — the instrument has to discriminate).
+        Uint8  m_GizmoLoggedModes = 0;
     };
 }

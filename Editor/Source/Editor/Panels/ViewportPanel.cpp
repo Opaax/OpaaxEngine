@@ -245,14 +245,17 @@ namespace Opaax::Editor
 
         EntityOps::TransformSelected(m_Context, lDelta);
 
-        // ONE-SHOT, because a drag lands one of these per frame. Without it a gizmo that draws but
-        // never writes looks exactly like one that writes — the L15 discriminate rule, and the
-        // reason the verb itself stays silent.
-        if (!m_bGizmoLogged)
+        // ONE-SHOT PER MODE, because a drag lands one of these per frame. Without it a gizmo that
+        // draws but never writes looks exactly like one that writes — the L15 discriminate rule, and
+        // the reason the verb itself stays silent.
+        const EGizmoMode lMode = m_Context.Gizmo.GetMode();
+        const Uint8      lBit  = static_cast<Uint8>(1u << static_cast<Uint8>(lMode));
+
+        if ((m_GizmoLoggedModes & lBit) == 0)
         {
             OPAAX_LOG(LogViewportPanel, Info, "Gizmo {} applied to {} entity(ies)",
-                      ToString(m_Context.Gizmo.GetMode()), m_Context.Selection.Count());
-            m_bGizmoLogged = true;
+                      ToString(lMode), m_Context.Selection.Count());
+            m_GizmoLoggedModes |= lBit;
         }
     }
 

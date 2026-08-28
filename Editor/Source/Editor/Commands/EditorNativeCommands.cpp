@@ -3,6 +3,7 @@
 #include "Editor/EditorContext.h"
 #include "Editor/EditorLevelDocument.h"
 #include "Editor/EditorMapDocument.h"
+#include "Editor/Operation/EditorGizmo.hpp"   // SetMode — the three gizmo commands (③)
 #include "Editor/Operation/EntityOps.h"
 #include "Editor/Operation/LevelOperations.h"
 #include "Editor/Operation/MapOperations.h"
@@ -254,6 +255,21 @@ namespace Opaax::Editor
     void FocusSelectedCommand::Execute(EditorContext& InContext, const Params&)
     {
         EntityOps::FocusSelected(InContext);
+    }
+
+    void GizmoTranslateCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        InContext.Gizmo.SetMode(EGizmoMode::Translate);
+    }
+
+    void GizmoRotateCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        InContext.Gizmo.SetMode(EGizmoMode::Rotate);
+    }
+
+    void GizmoScaleCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        InContext.Gizmo.SetMode(EGizmoMode::Scale);
     }
 
     void SaveMapCommand::Execute(EditorContext& InContext, const Params&)

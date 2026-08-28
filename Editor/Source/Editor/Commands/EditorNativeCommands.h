@@ -164,6 +164,41 @@ namespace Opaax::Editor
     };
 
     // =============================================================================
+    // Gizmo (③)
+    //
+    // Three commands rather than one taking a mode, because a KEY BINDING CARRIES A TAG AND NO
+    // PAYLOAD — the same constraint that removed QuitParams. W/E/R is the binding every reference
+    // editor uses, so each mode needs a tag a shortcut can name.
+    //
+    // Setting a mode is not an edit, so none of them gates on CanEdit: the gizmo simply does not
+    // draw in a Play world, and switching modes while it is hidden is harmless.
+    // =============================================================================
+
+    /** Move the selection. The default mode. */
+    struct GizmoTranslateCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
+    /** Turn the selection about the gizmo's pivot. */
+    struct GizmoRotateCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
+    /** Scale the selection about the gizmo's pivot — writes TransformComponent::Scale. */
+    struct GizmoScaleCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
+    // =============================================================================
     // Map
     // =============================================================================
 

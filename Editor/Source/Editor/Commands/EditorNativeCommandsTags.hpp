@@ -25,6 +25,12 @@ namespace Opaax::Editor::Tags
     inline const OpaaxTag EDITOR_COMMAND_DELETE_ENTITY  = OpaaxTag("Editor.Command.DeleteEntity");
     inline const OpaaxTag EDITOR_COMMAND_FOCUS_SELECTED = OpaaxTag("Editor.Command.FocusSelected");
 
+    //Gizmo (③) — THREE tags rather than one with a mode payload, because a key binding carries a
+    //tag and no payload (the reason QuitParams died). W/E/R have to reach these directly.
+    inline const OpaaxTag EDITOR_COMMAND_GIZMO_TRANSLATE = OpaaxTag("Editor.Command.GizmoTranslate");
+    inline const OpaaxTag EDITOR_COMMAND_GIZMO_ROTATE    = OpaaxTag("Editor.Command.GizmoRotate");
+    inline const OpaaxTag EDITOR_COMMAND_GIZMO_SCALE     = OpaaxTag("Editor.Command.GizmoScale");
+
     //Level
     inline const OpaaxTag EDITOR_COMMAND_NEW_LEVEL      = OpaaxTag("Editor.Command.NewLevel");
     inline const OpaaxTag EDITOR_COMMAND_OPEN_LEVEL     = OpaaxTag("Editor.Command.OpenLevel");
