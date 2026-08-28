@@ -16,6 +16,7 @@ namespace Opaax
         class EditorCamera;             // editor-owned; how the author is looking at an Edit world
         class EditorSelection;          // editor-owned; what is selected (Hierarchy + viewport write, Inspector reads)
         class EditorViewport;           // editor-owned; how big the viewport image is, in pixels
+        class EditorGizmo;              // editor-owned; the transform handles' grab state
         class PlayInEditor;             // editor-owned; the PIE state machine (toolbar + reserved keys drive it)
         class InputRoute;               // editor-owned; whether the engine is being fed (D5 steps 2 + 4)
         class EditorMapDocument;        // editor-owned; WHICH map is open and whether it changed (M5)
@@ -56,6 +57,11 @@ namespace Opaax
             // is a panel, this is the session's viewpoint. It is also what ② will ask for the camera
             // when it turns a click into a world position.
             EditorCamera&     Camera;
+
+            // ③ — the transform handles' grab state. Here rather than inside the ViewportPanel for
+            // the reason Selection is: its subject is the SELECTION, which no panel owns (SEL7), and
+            // the gizmo MODE is set by an editor-wide shortcut.
+            EditorGizmo&      Gizmo;
 
             // M4 S5 — the PIE state machine. Here rather than inside the toolbar panel because the
             // reserved keys (EditorService::RouteInput) drive the very same object, so the buttons

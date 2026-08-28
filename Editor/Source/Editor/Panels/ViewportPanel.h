@@ -93,11 +93,29 @@ namespace Opaax::Editor
         void ApplyPendingPick();
 
         /**
-         * The world size of one screen pixel's worth of icon, from the active world's view and the
-         * current viewport height. ONE value, used by both the hit test and the icon draw — which
-         * is what makes what-you-see-what-you-click true rather than approximately true.
+         * How many world units one screen pixel covers, from the active world's view and the current
+         * viewport height. ONE conversion, three readers — the entity icon, the gizmo's draw and the
+         * gizmo's hit test — which is what makes what-you-see-what-you-click true by construction
+         * rather than by keeping constants in step (SEL4).
+         *
+         * Falls back to 1 (one unit per pixel) when there is no world or no measured height, so a
+         * caller never divides by zero or gets a zero-sized handle.
          */
+        float WorldPerPixel() const;
+
+        /** The icon's half-size in world units — m_IconHalfPx through WorldPerPixel(). */
         float AnchorHalfExtent() const;
+
+        /**
+         * Where the gizmo sits: the centre of the selection's combined bounds, through the same
+         * EntityQuery the outline and focus-selected use (SEL1). For ONE entity that is its
+         * transform position, since bounds are centred on it — so there is no discrepancy to explain.
+         *
+         * @return False when there is nothing to draw a gizmo for — no selection, no bounds, or a
+         *   PLAY world, which must look like the game rather than like the editor (the rule
+         *   EnqueueEntityIcons already states).
+         */
+        bool TryGetGizmoPivot(Vector2F& OutPivot) const;
 
         /**
          * Viewport-local pixels -> world, through the ACTIVE WORLD's own view (CAM2's ScreenToWorld).
@@ -139,6 +157,32 @@ namespace Opaax::Editor
          * engine renders so the result lands in THIS frame.
          */
         void ApplyCameraGesture();
+
+        /**
+         * Read this frame's LEFT button against the gizmo's handles and bank what the grab moved.
+         * Same gate and same call site as the other two measures; call it right after the image.
+         *
+         * @return True while the gizmo OWNS the mouse, in which case the caller must not run
+         *   MeasureViewportInput — one button, two consumers, and the order is stated here once.
+         */
+        bool MeasureGizmo(bool bInHovered, const Vector2F& InOrigin);
+
+        /**
+         * Spend the banked gizmo motion through EntityOps (SEL6), so a drag is undoable the day ⑤
+         * wraps the choke point. Runs in OnPreRender beside ApplyPendingPick, and for the same
+         * reason: the motion was measured against the frame that was RENDERED.
+         */
+        void ApplyGizmoDrag();
+
+        /**
+         * Queue the translate handles into DebugDraw for THIS frame — two arrows and a free-move
+         * square, every dimension from WorldPerPixel() so the gizmo holds its apparent size at any
+         * zoom (Unity's HandleUtility.GetHandleSize in this engine's terms).
+         *
+         * Runs AFTER ApplyGizmoDrag so the handles are drawn where the entity now is, not where it
+         * was when the grab started.
+         */
+        void EnqueueGizmo();
 
         // =============================================================================
         // Override
@@ -213,8 +257,19 @@ namespace Opaax::Editor
         Vector4F m_IconColor     = {0.55f, 0.75f, 1.f, 1.f};
         float    m_IconThickness = 2.f;
 
+        // The transform gizmo. Red X / green Y is the convention every reference editor uses, so an
+        // author already knows which is which; the highlight is what the hovered or grabbed handle
+        // switches to. Sizes are NOT here — they are screen pixels and live with the layout that
+        // converts them (GizmoHandles), so the draw and the hit test cannot read different numbers.
+        Vector4F m_GizmoAxisXColor    = {0.90f, 0.25f, 0.25f, 1.f};
+        Vector4F m_GizmoAxisYColor    = {0.35f, 0.85f, 0.35f, 1.f};
+        Vector4F m_GizmoCenterColor   = {0.85f, 0.85f, 0.30f, 1.f};
+        Vector4F m_GizmoActiveColor   = {1.f,   1.f,   1.f,   1.f};
+        float    m_GizmoThickness     = 2.5f;
+
         bool   m_bImageLogged    = false;
         bool   m_bOutlineLogged  = false;
         bool   m_bIconsLogged    = false;
+        bool   m_bGizmoLogged    = false;
     };
 }

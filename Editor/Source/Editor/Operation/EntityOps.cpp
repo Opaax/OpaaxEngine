@@ -9,6 +9,7 @@
 
 #include "Application/Services/ILogger.h"
 #include "Core/Maths/Bounds2D.h"
+#include "World/Components/TransformComponent.h"   // I17 — the one position a drag writes
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityMeta.h"
 #include "World/Entity/EntityQuery.h"
@@ -128,6 +129,37 @@ namespace Opaax::Editor
         lWorld->MarkChanged();
 
         OPAAX_LOG(LogEntityOps, Info, "Deleted {} entity(ies)", static_cast<Uint64>(lIds.size()));
+    }
+
+    void EntityOps::TranslateSelected(EditorContext& InContext, const Vector2F& InWorldDelta)
+    {
+        if (InWorldDelta.x == 0.f && InWorldDelta.y == 0.f) { return; }
+
+        if (!InContext.Selection.HasSelection()) { return; }
+
+        if (!MapOps::CanEdit(InContext, "Move Entity")) { return; }
+
+        World* const lWorld = InContext.Selection.GetWorld();
+        if (lWorld == nullptr) { return; }
+
+        // NOT logged per call: a drag lands one of these every frame it is held. The panel says so
+        // once, the way it does for the outline and the icons (L15 without the flood).
+        bool lMoved = false;
+
+        for (const EntityID lId : InContext.Selection.Ids())
+        {
+            Entity lEntity{ lId, lWorld };
+
+            // Every entity has one (I17), so a miss means the handle went stale between the measure
+            // and this call — skip it rather than emplacing a transform nobody asked for.
+            if (TransformComponent* lTransform = lEntity.TryGet<TransformComponent>())
+            {
+                lTransform->Position += InWorldDelta;
+                lMoved = true;
+            }
+        }
+
+        if (lMoved) { lWorld->MarkChanged(); }
     }
 
     void EntityOps::FocusSelected(EditorContext& InContext)

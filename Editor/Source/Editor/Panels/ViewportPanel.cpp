@@ -7,8 +7,10 @@
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Editor/Input/InputRoute.h"        // hover/focus is pushed, not read back out (D5 step 2)
 #include "Editor/ImguiLibrary/ImguiWidgets.h"
+#include "Editor/Operation/EditorGizmo.hpp"      // the transform handles' grab state (③)
 #include "Editor/Operation/EditorSelection.hpp"
 #include "Editor/Operation/EditorViewport.hpp"
+#include "Editor/Operation/EntityOps.h"          // the choke point a gizmo drag writes through (SEL6)
 #include "Editor/UI/IEditorUIBackend.h"
 
 #include "Application/Services/IEngine.h"
@@ -82,11 +84,16 @@ namespace Opaax::Editor
         // so it has to be hit-tested against that frame's viewport size and camera — both of which
         // the two calls below are about to change.
         ApplyPendingPick();
+        ApplyGizmoDrag();
 
         ApplyPendingResize();
         ApplyCameraGesture();
         EnqueueSelectionOutline();
         EnqueueEntityIcons();
+
+        // LAST of the overlays, so the handles draw over the outline they sit on, and AFTER
+        // ApplyGizmoDrag so they are where the entity now is rather than where the grab began.
+        EnqueueGizmo();
     }
 
     // =========================================================================
@@ -104,18 +111,42 @@ namespace Opaax::Editor
         return ScreenToWorld(lWorld != nullptr ? lWorld->GetCameraView() : CameraView{}, lViewportPx, InLocalPx);
     }
 
-    float ViewportPanel::AnchorHalfExtent() const
+    float ViewportPanel::WorldPerPixel() const
     {
         World* const lWorld = m_Context.Worlds.GetActiveWorld();
         if (lWorld == nullptr || m_viewportSize.y == 0)
         {
-            return m_IconHalfPx;
+            return 1.f;   // the pre-camera convention: one world unit per pixel
         }
 
         // OrthoSize is the vertical HALF-extent, so one pixel is (2 * OrthoSize) / height world units.
-        const float lWorldPerPixel = (lWorld->GetCameraView().OrthoSize * 2.f) / static_cast<float>(m_viewportSize.y);
+        return (lWorld->GetCameraView().OrthoSize * 2.f) / static_cast<float>(m_viewportSize.y);
+    }
 
-        return m_IconHalfPx * lWorldPerPixel;
+    float ViewportPanel::AnchorHalfExtent() const
+    {
+        return m_IconHalfPx * WorldPerPixel();
+    }
+
+    bool ViewportPanel::TryGetGizmoPivot(Vector2F& OutPivot) const
+    {
+        World* const lWorld = m_Context.Selection.GetWorld();
+
+        // Edit worlds only, the same rule EnqueueEntityIcons states: an overlay is authoring
+        // furniture, and a running game must look like the game.
+        if (lWorld == nullptr || lWorld->GetMode() != EWorldMode::Edit || !m_Context.Selection.HasSelection())
+        {
+            return false;
+        }
+
+        Bounds2D lBounds;
+        if (!EntityQuery::TryGetBounds(*lWorld, m_Context.Selection.Ids(), lBounds, AnchorHalfExtent()))
+        {
+            return false;
+        }
+
+        OutPivot = lBounds.Center;
+        return true;
     }
 
     // =========================================================================
@@ -173,6 +204,36 @@ namespace Opaax::Editor
 
         OPAAX_LOG(LogViewportPanel, Info, "Viewport marquee took {} entity(ies) ({} selected)",
                   static_cast<Uint64>(lHits.size()), m_Context.Selection.Count());
+    }
+
+    // =========================================================================
+    // ApplyGizmoDrag — spend what MeasureGizmo banked, through EntityOps (SEL6). That route is the
+    // whole point of the gizmo landing in ③ rather than ⑤: a drag is many small mutations, and
+    // undo becomes "coalesce these" instead of a retrofit across every call site.
+    //
+    // Beside ApplyPendingPick and for the same reason — the motion was measured against the frame
+    // that was already RENDERED, so it is spent before the resize and the camera change that frame.
+    // =========================================================================
+    void ViewportPanel::ApplyGizmoDrag()
+    {
+        const Vector2F lDelta = m_Context.Gizmo.ConsumeDelta();
+
+        if (lDelta.x == 0.f && lDelta.y == 0.f)
+        {
+            return;
+        }
+
+        EntityOps::TranslateSelected(m_Context, lDelta);
+
+        // ONE-SHOT, because a drag lands one of these per frame. Without it a gizmo that draws but
+        // never writes looks exactly like one that writes — the L15 discriminate rule, and the
+        // reason the verb itself stays silent.
+        if (!m_bGizmoLogged)
+        {
+            OPAAX_LOG(LogViewportPanel, Info, "Gizmo drag moved {} entity(ies) by ({:.2f}, {:.2f})",
+                      m_Context.Selection.Count(), lDelta.x, lDelta.y);
+            m_bGizmoLogged = true;
+        }
     }
 
     // =========================================================================
@@ -333,6 +394,105 @@ namespace Opaax::Editor
     }
 
     // =========================================================================
+    // EnqueueGizmo — two arrows and a free-move square, in WORLD units, sized from WorldPerPixel so
+    // they hold their apparent size at any zoom.
+    //
+    // World-space rather than an ImGui overlay because that is the idiom this engine already has:
+    // SEL4's one value feeds both the icon's DebugDraw box and EntityQuery::PickAt, and the gizmo
+    // asks the identical question. Unreal, Unity and Godot's 3D gizmos are world geometry with a
+    // screen-derived scale for the same reason; their screen-space variants exist to solve occlusion,
+    // which a 2D overlay does not have. Drawing and hit-testing therefore share ONE GizmoLayout.
+    // =========================================================================
+    void ViewportPanel::EnqueueGizmo()
+    {
+        Vector2F lPivot;
+        if (!TryGetGizmoPivot(lPivot))
+        {
+            return;
+        }
+
+        const GizmoLayout  lLayout = GizmoHandles::MakeLayout(lPivot, WorldPerPixel());
+        const EGizmoHandle lActive = m_Context.Gizmo.GetActiveHandle();
+        DebugDraw&         lDraw   = m_Context.Engine.GetDebugDraw();
+
+        const Vector4F lXColor = lActive == EGizmoHandle::AxisX ? m_GizmoActiveColor : m_GizmoAxisXColor;
+        const Vector4F lYColor = lActive == EGizmoHandle::AxisY ? m_GizmoActiveColor : m_GizmoAxisYColor;
+        const Vector4F lCColor = lActive == EGizmoHandle::Both  ? m_GizmoActiveColor : m_GizmoCenterColor;
+
+        const Vector2F lTipX = lLayout.TipX();
+        const Vector2F lTipY = lLayout.TipY();
+        const float    lHead = lLayout.HeadLength;
+
+        // Shaft + two strokes back from the tip. Three DrawLines rather than a DebugDraw::DrawArrow:
+        // an arrow is already expressible with what the queue has, and its own header reserves new
+        // primitives for shapes that are not (③'s rotate ring will be one).
+        lDraw.DrawLine(lPivot, lTipX, lXColor, m_GizmoThickness);
+        lDraw.DrawLine(lTipX, { lTipX.x - lHead, lTipX.y + lHead * 0.5f }, lXColor, m_GizmoThickness);
+        lDraw.DrawLine(lTipX, { lTipX.x - lHead, lTipX.y - lHead * 0.5f }, lXColor, m_GizmoThickness);
+
+        lDraw.DrawLine(lPivot, lTipY, lYColor, m_GizmoThickness);
+        lDraw.DrawLine(lTipY, { lTipY.x + lHead * 0.5f, lTipY.y - lHead }, lYColor, m_GizmoThickness);
+        lDraw.DrawLine(lTipY, { lTipY.x - lHead * 0.5f, lTipY.y - lHead }, lYColor, m_GizmoThickness);
+
+        lDraw.DrawBox(lPivot, { lLayout.CenterHalf * 2.f, lLayout.CenterHalf * 2.f }, lCColor,
+                      m_GizmoThickness);
+    }
+
+    // =========================================================================
+    // MeasureGizmo — the LEFT button against the handles, latched.
+    //
+    // The grab is remembered from the press and released on "not down", never asked for after the
+    // fact: ImGui::IsMouseDragging needs the button still held, so it answers false exactly on the
+    // frame a release wants the truth (SEL8, three of ②'s four bugs).
+    //
+    // The hit test runs in WORLD space against the same GizmoLayout EnqueueGizmo draws, with the
+    // cursor converted by the ViewportToWorld picking already uses — so what is drawn is what is
+    // grabbed, in one coordinate space.
+    // =========================================================================
+    bool ViewportPanel::MeasureGizmo(bool bInHovered, const Vector2F& InOrigin)
+    {
+        EditorGizmo& lGizmo = m_Context.Gizmo;
+        const ImGuiIO& lIO  = ImGui::GetIO();
+
+        Vector2F lPivot;
+        if (!TryGetGizmoPivot(lPivot))
+        {
+            // The selection went away (or Play started) mid-grab — drop it rather than keep writing
+            // into whatever is selected next.
+            lGizmo.EndDrag();
+            lGizmo.SetHovered(EGizmoHandle::None);
+            return false;
+        }
+
+        const Vector2F lCursor = ViewportToWorld({ lIO.MousePos.x - InOrigin.x, lIO.MousePos.y - InOrigin.y });
+
+        // RELEASING is what ends a grab, not leaving the panel — the same rule the pan and the
+        // marquee state, and it matters most at the edge of what you are dragging towards.
+        if (!ImGui::IsMouseDown(ImGuiMouseButton_Left))
+        {
+            lGizmo.EndDrag();
+        }
+        else if (lGizmo.IsDragging())
+        {
+            lGizmo.DragTo(lCursor);
+            return true;
+        }
+
+        const EGizmoHandle lUnder = bInHovered ? GizmoHandles::Pick(GizmoHandles::MakeLayout(lPivot, WorldPerPixel()),
+                                                                    lCursor)
+                                               : EGizmoHandle::None;
+        lGizmo.SetHovered(lUnder);
+
+        if (lUnder != EGizmoHandle::None && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+        {
+            lGizmo.BeginDrag(lUnder, lCursor);
+            return true;
+        }
+
+        return false;
+    }
+
+    // =========================================================================
     // MeasureCameraGesture — read the pan drag and the wheel while this window is current, and
     // bank them for OnPreRender. Call it right after the image, so GetItemRect* names the image.
     //
@@ -478,7 +638,14 @@ namespace Opaax::Editor
         const ImVec2 lOrigin       = ImGui::GetItemRectMin();
 
         MeasureCameraGesture(lImageHovered);
-        MeasureViewportInput(lImageHovered, { lOrigin.x, lOrigin.y });
+
+        // ONE left button, TWO consumers, and the order is stated here once: a press that lands on a
+        // handle belongs to the gizmo, so the marquee never sees it. Without this a drag on a handle
+        // would move the entity AND rubber-band a selection over it.
+        if (!MeasureGizmo(lImageHovered, { lOrigin.x, lOrigin.y }))
+        {
+            MeasureViewportInput(lImageHovered, { lOrigin.x, lOrigin.y });
+        }
 
         if (lImg.IsValid() && !m_bImageLogged)
         {

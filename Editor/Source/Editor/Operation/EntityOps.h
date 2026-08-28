@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/Maths/MathTypes.h"       // Vector2F — the gizmo's delta
 #include "Core/String/OpaaxString.hpp"
 #include "World/Entity/EntityTypes.h"   // MapId
 
@@ -59,6 +60,19 @@ namespace Opaax::Editor
 
         /** Destroy everything selected, and clear the selection. Refused while PIE runs. */
         void DestroySelected(EditorContext& InContext);
+
+        /**
+         * Move everything selected by InWorldDelta — the gizmo's translate drag (③).
+         *
+         * INCREMENTAL rather than absolute, for two reasons. It is the same delta for every entity of
+         * a multi-selection, so N entities keep their relative layout with no per-entity bookkeeping;
+         * and it is the form ⑤ coalesces — a drag is many of these, and undo merges consecutive ones
+         * into a single command rather than reconstructing a start state.
+         *
+         * A zero delta is a no-op and costs no MarkChanged, so a grab that never moved does not
+         * dirty the map.
+         */
+        void TranslateSelected(EditorContext& InContext, const Vector2F& InWorldDelta);
 
         /**
          * Frame the selection with the editor camera.

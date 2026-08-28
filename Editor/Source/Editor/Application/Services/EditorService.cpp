@@ -240,6 +240,10 @@ namespace Opaax::Editor
         //     not move, and Stop finds the pan and zoom exactly where they were left. ---------------
         m_Camera = MakeUnique<EditorCamera>();
 
+        // --- ③: the transform handles. Owned here for the reason the selection is — its subject is
+        //     the selection, and no panel owns that (SEL7). ------------------------------------------
+        m_Gizmo = MakeUnique<EditorGizmo>();
+
         // --- PIE (M4 S5): the Play/Pause/Step/Stop state machine, owned here so BOTH front-ends —
         //     the toolbar panel and RouteInput's reserved keys — drive one object. -----------------
         m_PIE = MakeUnique<PlayInEditor>(lEngine.GetWorldManager());
@@ -276,6 +280,7 @@ namespace Opaax::Editor
             *m_Selection,
             *m_Viewport,
             *m_Camera,
+            *m_Gizmo,
             *m_PIE,
             *m_InputRoute,
             *m_LevelDocument,
@@ -754,6 +759,7 @@ namespace Opaax::Editor
         m_Viewport.reset();
         m_Preview.reset();
         m_Camera.reset();
+        m_Gizmo.reset();
         m_InputRoute.reset();
         m_PIE.reset();
         m_PanelHost.reset();
