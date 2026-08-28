@@ -12,7 +12,7 @@
 #include "Editor/EditorMapDocument.h"
 #include "Editor/EditorLevelDocument.h"
 #include "Editor/PIE/PlayInEditor.h"
-#include "Editor/UI/IEditorUIBackend.h"
+#include "Editor/Imgui/EditorGui.h"
 #include "Editor/Panels/EditorPanels.h"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Core/OpaaxTypes.h"   // TUniquePtr
@@ -201,10 +201,10 @@ namespace Opaax::Editor
         // Members
         // =============================================================================
     private:
-        // Dock layout file. ImGui stores io.IniFilename as a BORROWED const char* — it never copies the
-        // string — so this must stay alive, and unmodified, until ImGui::DestroyContext() (which saves
-        // through that very pointer). Assigned once in Initialize(); never cleared in OnShutdown().
-        OpaaxString                 m_LayoutIniPath;
+        // The editor's ImGui boundary — context, impl backends, frame, dockspace. Owned by value,
+        // like m_Extensions below: this class delegates to it exactly as it delegates the menu bar
+        // to EditorMenu, and names no ImGui symbol of its own.
+        EditorGui                   m_Gui;
 
         // M2d: the app's IPaths downcast once (CacheEditorPaths). NON-OWNING — IPaths is an app service
         // that outlives this one. Null when no edited project was declared.
@@ -227,7 +227,6 @@ namespace Opaax::Editor
         // answers themselves live in EditorLevelDocument, beside the baselines they come from.
         double m_LastDirtyCheck = -1.0;
         TUniquePtr<EditorContext>    m_Context;
-        TUniquePtr<IEditorUIBackend> m_UIBackend;
 
         // Every panel (native + game), built from m_Extensions.Panels() in registration order, and their
         // visibility. The Viewport is in here too, registered first — natives register before modules

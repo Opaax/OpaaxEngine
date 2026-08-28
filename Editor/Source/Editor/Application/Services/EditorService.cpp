@@ -1,8 +1,5 @@
 #include "Editor/Application/Services/EditorService.h"
 
-#include <imgui.h>
-#include <ImGuizmo.h>   // BeginFrame — the gizmo's per-frame reset (③)
-
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IConfigSystem.h"
 #include "Application/Services/IEngine.h"
@@ -24,7 +21,6 @@
 #include "Editor/Panels/ResourceBrowserPanel.h"
 #include "Editor/Panels/ResourcePreviewPanel.h"
 #include "Editor/Panels/ViewportPanel.h"
-#include "Editor/UI/OpenGLEditorUIBackend.h"
 #include "Engine/Config/Config_Engine.h"
 #include "Engine/Registries/EngineRegistries.h"
 #include "Renderer/Config/Config_Renderer.h"
@@ -194,51 +190,27 @@ namespace Opaax::Editor
         // Resolved before anything reads it: ResolveLayoutIniPath below, then the EditorContext.
         CacheEditorPaths();
 
-        // --- ImGui context -----------------------------
-        IMGUI_CHECKVERSION();
-        ImGui::CreateContext();
-        ImGuiIO& lIO = ImGui::GetIO();
-        lIO.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-
-        // A panel moves by its TITLE BAR, never by its body. ImGui's default lets a drag on a
-        // FLOATING window's background move the window, and ImGui::Image is not an interactive item
-        // — so a marquee drawn on an undocked Viewport dragged the panel instead of selecting.
-        // Docked panels were unaffected, which is exactly what made it look like a viewport bug.
-        //
-        // Global rather than a per-panel flag: it is the convention every editor already follows,
-        // and dragging inside the Hierarchy's body should not move that panel either. Drag-drop is
-        // untouched — a payload source is an ITEM, and items outrank a window move regardless.
-        lIO.ConfigWindowsMoveFromTitleBarOnly = true;
-        //ImGui::StyleColorsDark();
-        ImGui::StyleColorsClassic();
-        //ImGui::StyleColorsLight();
-
-
-        // --- Dock layout persistence. Set BEFORE the first NewFrame: that is where ImGui loads the ini
-        //     (it only ever loads once, on the frame it first sees a filename). Empty => keep M0's
-        //     null/no-persistence behaviour rather than writing a stray file next to the exe. ----------
-        m_LayoutIniPath = ResolveLayoutIniPath();
-        lIO.IniFilename = m_LayoutIniPath.IsEmpty() ? nullptr : m_LayoutIniPath.CStr();
-
-        if (!m_LayoutIniPath.IsEmpty())
-        {
-            OPAAX_LOG(LogEditorService, Info, "Dock layout: {}", m_LayoutIniPath.CStr());
-        }
-
-        // --- UI backend (OpenGL today, S7). The window was created in InitializeApplication and its GL
-        //     context is current on this thread, so ImGui_ImplOpenGL3_Init is safe here. Built BEFORE the
-        //     EditorContext so the context can carry a reference to it (the ViewportPanel samples its FBO
-        //     through it — GetViewportImage). --------------------------------------------------------
+        // --- The whole UI stack — context, io config, style, dock layout, impl backends — behind
+        //     EditorGui, the only editor class outside a panel that names ImGui. The window was
+        //     created in InitializeApplication and its GL context is current on this thread, so the
+        //     renderer impl's Init is safe here. Built BEFORE the EditorContext so the context can
+        //     carry a reference to its backend (the ViewportPanel samples its FBO through it —
+        //     GetViewportImage). ----------------------------------------------------------------
         IWindowManager& lWindows = OpaaxApplication::GetAppService<IWindowManager>();
         Window* lWindow = lWindows.GetMainWindow();
         if (lWindow == nullptr)
         {
-            OPAAX_LOG(LogEditorService, Error, "No main window at editor init — ImGui UI backend not created.");
+            OPAAX_LOG(LogEditorService, Error, "No main window at editor init — editor UI not created.");
             return;
         }
 
-        m_UIBackend = MakeUnique<OpenGLEditorUIBackend>(static_cast<GLFWwindow*>(lWindow->GetNativeWindow()));
-        m_UIBackend->Init();
+        // The path is resolved HERE (it needs EditorPaths + the file system, which are services)
+        // and STORED there: ImGui borrows io.IniFilename, so the string belongs to whatever owns
+        // the context that reads it.
+        if (!m_Gui.Init(*lWindow, ResolveLayoutIniPath()))
+        {
+            return;
+        }
 
         // --- Selection (M2a): the single selected entity, owned here so the context can hold a
         //     reference to it. Nothing reads it yet — S2's Hierarchy panel is the first writer. -------
@@ -293,7 +265,7 @@ namespace Opaax::Editor
             lEngine,
             lEngine.GetWorldManager(),
             lEngine.GetResources(),
-            *m_UIBackend,
+            m_Gui.Backend(),
             *m_Selection,
             *m_Viewport,
             *m_Camera,
@@ -344,7 +316,7 @@ namespace Opaax::Editor
 
     void EditorService::BeginFrame()
     {
-        if (m_UIBackend == nullptr) { return; }
+        if (!m_Gui.IsReady()) { return; }
 
         // Re-decide the input route ONCE per frame, here rather than inside RouteInput: a rule
         // evaluated only when an event arrives cannot notice that input STOPPED — and "the route
@@ -352,13 +324,7 @@ namespace Opaax::Editor
         // viewport hover/focus the panel pushed last frame, BEFORE OnPreRender clears it.
         if (m_InputRoute != nullptr) { m_InputRoute->Evaluate(); }
 
-        m_UIBackend->NewFrame();
-        ImGui::NewFrame();
-
-        // ③ — right after ImGui's own NewFrame, as ImGuizmo's header asks. Needed even though the
-        // ViewportPanel calls SetDrawlist: this is what clears the per-frame hotspot flags IsOver()
-        // reads, and a stale one would leave the marquee suppressed after the cursor left a handle.
-        ImGuizmo::BeginFrame();
+        m_Gui.BeginFrame();
 
         // Apply any pending viewport resize (measured last DrawContents) BEFORE Engine().Loop()
         // renders the world, so Render() reads the new FBO size this frame (deferred-resize
@@ -368,7 +334,7 @@ namespace Opaax::Editor
 
     void EditorService::EndFrame()
     {
-        if (m_UIBackend == nullptr) { return; }
+        if (!m_Gui.IsReady()) { return; }
 
         // Once per frame, ahead of everything that reads it — the Hierarchy draws a `*` per map.
         RefreshDirtyCache();
@@ -382,41 +348,33 @@ namespace Opaax::Editor
 
         // Submit the UI to the backbuffer AFTER Engine().Loop() has rendered the world into the FBO
         // (see EditorApplication::TickFrame). The host presents the backbuffer once, after this.
-        ImGui::Render();
-        m_UIBackend->RenderDrawData();
-
-        if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-        {
-            m_UIBackend->RenderPlatformWindows();
-        }
+        m_Gui.EndFrame();
     }
 
     bool EditorService::RouteInput(Event& InEvent)
     {
         // D5's decision order, steps 1 and 3. Step 2 (viewport hover/focus) and step 4 (dispatch by
         // world mode, InputManager feed + ResetState) are M-Input — NOT here.
-        if (m_UIBackend == nullptr) { return false; } // UI not up (pre-Initialize / no window) — pass through
-
-        const ImGuiIO& lIO = ImGui::GetIO();
+        if (!m_Gui.IsReady()) { return false; } // UI not up (pre-Initialize / no window) — pass through
 
         // The viewport is an ImGui window like any other — an image with the world drawn into it —
-        // so ImGui reports WantCaptureMouse the whole time the pointer is over it. Taken at face
+        // so the pointer counts as over the UI the whole time it is over the game. Taken at face
         // value that means a game running inside the editor can NEVER receive a click, a drag or
-        // the wheel, which is not what step 1 is for: ImGui owns the pointer over the UI, and the
+        // the wheel, which is not what step 1 is for: the UI owns the pointer over the UI, and the
         // game owns it over the surface it is being played on.
         //
-        // Keyboard is NOT exempted. WantCaptureKeyboard only goes true for a text field, and a
+        // Keyboard is NOT exempted. IsKeyboardOwnedByUI only goes true for a text field, and a
         // field that has the keyboard must always win, viewport or not.
         const bool lViewportHovered = m_InputRoute != nullptr && m_InputRoute->IsViewportHovered();
 
         bool lConsumed = false;
         if (InEvent.IsInCategory(EEventCategory::Mouse) || InEvent.IsInCategory(EEventCategory::MouseButton))
         {
-            lConsumed = lIO.WantCaptureMouse && !lViewportHovered;
+            lConsumed = m_Gui.IsPointerOverUI() && !lViewportHovered;
         }
         else if (InEvent.IsInCategory(EEventCategory::Keyboard))
         {
-            lConsumed = lIO.WantCaptureKeyboard;
+            lConsumed = m_Gui.IsKeyboardOwnedByUI();
         }
         // else: window/application events (close, resize, ...) always fall through to the base app.
 
@@ -439,12 +397,12 @@ namespace Opaax::Editor
         }
 
         // Observability for the seam (Trace only, discrete events — never per mouse-move, so no spam).
-        // Over the ImGui UI -> WantCapture true -> CONSUMED; over the passthru viewport -> passed to engine.
+        // Over the UI -> CONSUMED; over the passthru viewport -> passed to engine.
         if (InEvent.IsInCategory(EEventCategory::MouseButton) || InEvent.IsInCategory(EEventCategory::Keyboard))
         {
-            OPAAX_LOG(LogEditorService, Trace, "RouteInput: {} -> {} (WantMouse={}, WantKeyboard={})",
+            OPAAX_LOG(LogEditorService, Trace, "RouteInput: {} -> {} (PointerOverUI={}, KeyboardOwnedByUI={})",
                       InEvent.GetName(), lConsumed ? "CONSUMED by editor" : "passed to engine",
-                      lIO.WantCaptureMouse, lIO.WantCaptureKeyboard);
+                      m_Gui.IsPointerOverUI(), m_Gui.IsKeyboardOwnedByUI());
         }
 
         return lConsumed;
@@ -629,7 +587,7 @@ namespace Opaax::Editor
         // fresh layout, and the activate that fills it is also what shows it.
         lPanels.Register<ResourcePreviewPanel>(PanelDesc{.Id = PreviewPanelId(),
                                                          .DefaultVisibility = EPanelVisibility::Hidden});
-        lPanels.Register<ConfigPanel>(PanelDesc{.Id = OPAAX_ID("Config"), .DefaultVisibility = EPanelVisibility::Hidden});
+        lPanels.Register<ConfigPanel>(PanelDesc{.Id = ConfigPanel::PanelID(), .DefaultVisibility = EPanelVisibility::Hidden});
         lPanels.Register<InputPanel>(PanelDesc{.Id = OPAAX_ID("Input"), .DefaultVisibility = EPanelVisibility::Hidden });
     }
 
@@ -651,7 +609,7 @@ namespace Opaax::Editor
 
     void EditorService::DrawDockspace()
     {
-        ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
+        m_Gui.DrawDockspace();
 
         if (m_Context != nullptr)
         {
@@ -688,7 +646,7 @@ namespace Opaax::Editor
         // second is far below what an eye can tell from instant.
         constexpr double k_DirtyCheckInterval = 0.25;
 
-        const double lNow = ImGui::GetTime();
+        const double lNow = m_Gui.GetTime();
         if (lNow - m_LastDirtyCheck < k_DirtyCheckInterval) { return; }
 
         m_LastDirtyCheck = lNow;
@@ -713,7 +671,7 @@ namespace Opaax::Editor
         // which is exactly when ImGui's view of the keyboard is the authoritative one.
         if (m_Context == nullptr) { return; }
 
-        if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_S, ImGuiInputFlags_RouteGlobal))
+        if (m_Gui.Shortcut(EKeyCode::LeftControl, EKeyCode::S))
         {
             m_Context->Extensions.Commands().Execute(Tags::EDITOR_COMMAND_SAVE_MAP, *m_Context);
         }
@@ -724,16 +682,16 @@ namespace Opaax::Editor
         // selection is not owned by any one panel, so neither are its verbs.
         //
         // What made a bare key unsafe was never the route, it was a text field: guarding on
-        // WantCaptureKeyboard is what lets these be global, so typing "Fred" into the name field
+        // IsKeyboardOwnedByUI is what lets these be global, so typing "Fred" into the name field
         // cannot frame and delete the selection.
-        if (ImGui::GetIO().WantCaptureKeyboard) { return; }
+        if (m_Gui.IsKeyboardOwnedByUI()) { return; }
 
-        if (ImGui::Shortcut(ImGuiKey_F, ImGuiInputFlags_RouteGlobal))
+        if (m_Gui.Shortcut(EKeyCode::F))
         {
             m_Context->Extensions.Commands().Execute(Tags::EDITOR_COMMAND_FOCUS_SELECTED, *m_Context);
         }
 
-        if (ImGui::Shortcut(ImGuiKey_Delete, ImGuiInputFlags_RouteGlobal))
+        if (m_Gui.Shortcut(EKeyCode::Delete))
         {
             m_Context->Extensions.Commands().Execute(Tags::EDITOR_COMMAND_DELETE_ENTITY, *m_Context);
         }
@@ -748,17 +706,17 @@ namespace Opaax::Editor
         // set ahead of Stop is a reasonable thing to want.
         if (!m_Context->PIE.IsEdit()) { return; }
 
-        if (ImGui::Shortcut(ImGuiKey_W, ImGuiInputFlags_RouteGlobal))
+        if (m_Gui.Shortcut(EKeyCode::W))
         {
             m_Context->Extensions.Commands().Execute(Tags::EDITOR_COMMAND_GIZMO_TRANSLATE, *m_Context);
         }
 
-        if (ImGui::Shortcut(ImGuiKey_E, ImGuiInputFlags_RouteGlobal))
+        if (m_Gui.Shortcut(EKeyCode::E))
         {
             m_Context->Extensions.Commands().Execute(Tags::EDITOR_COMMAND_GIZMO_ROTATE, *m_Context);
         }
 
-        if (ImGui::Shortcut(ImGuiKey_R, ImGuiInputFlags_RouteGlobal))
+        if (m_Gui.Shortcut(EKeyCode::R))
         {
             m_Context->Extensions.Commands().Execute(Tags::EDITOR_COMMAND_GIZMO_SCALE, *m_Context);
         }
@@ -789,15 +747,10 @@ namespace Opaax::Editor
             m_PanelHost->Shutdown();
         }
 
-        // 3. UI backend — ImGui_ImplOpenGL3_Shutdown requires the GL context, still alive here.
-        //    DestroyContext also FLUSHES the dock layout, through the io.IniFilename pointer that still
-        //    aims at m_LayoutIniPath — so that member must not be cleared before this line.
-        if (m_UIBackend != nullptr)
-        {
-            m_UIBackend->Shutdown();
-            ImGui::DestroyContext();
-            m_UIBackend.reset();
-        }
+        // 3. The UI stack — the renderer impl's shutdown requires the GL context, still alive here,
+        //    and destroying the context is what FLUSHES the dock layout. EditorGui owns both halves
+        //    and the ordering between them.
+        m_Gui.Shutdown();
 
         // 4. Selection, PIE and the input route — after the panels that read them, before the
         //    context they are referenced from. All three hold only non-owning references, so there
