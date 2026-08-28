@@ -493,8 +493,6 @@ namespace Opaax::Editor
         const float lStep    = lGizmo.GetSnapStep();
         const float lSnap[3] = { lStep, lStep, lStep };
 
-        Matrix44F lDelta(1.f);
-
         // The VIRTUAL cursor, for the length of the Manipulate call only. Everything else in the
         // frame — ImGui's own hover, the marquee, the pan — wants the real one, so it is restored
         // immediately rather than left shifted.
@@ -503,19 +501,23 @@ namespace Opaax::Editor
 
         lIO.MousePos = ImVec2{ lRealMouse.x + m_GizmoWrapOffset.x, lRealMouse.y + m_GizmoWrapOffset.y };
 
+        // NO deltaMatrix out-parameter, deliberately — see EditorGizmo::BankFrameDelta. ImGuizmo's
+        // is per-frame for translate and rotate but cumulative-and-origin-centred for SCALE, which
+        // is invisible at (0,0) and wrong everywhere else. The delta is taken from our own matrix.
+        //
         // Manipulate returns whether it actually CHANGED the matrix, which is the guard that keeps a
         // click-without-motion from dirtying the map — IsUsing() alone stays true for the whole
         // gesture and would bank an identity delta every frame.
         const bool bChanged = ImGuizmo::Manipulate(glm::value_ptr(lViewMatrix), glm::value_ptr(lProjMatrix),
                                                    ToGizmoOperation(lGizmo.GetMode()), ImGuizmo::LOCAL,
-                                                   glm::value_ptr(lGizmo.Matrix()), glm::value_ptr(lDelta),
+                                                   glm::value_ptr(lGizmo.Matrix()), nullptr,
                                                    lGizmo.IsSnapping() ? lSnap : nullptr);
 
         lIO.MousePos = lRealMouse;
 
         if (bChanged)
         {
-            lGizmo.BankDelta(lDelta);
+            lGizmo.BankFrameDelta();
         }
 
         // IsOver() as well as IsUsing(): hovering a handle must already suppress the marquee, or the

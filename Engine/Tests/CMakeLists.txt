@@ -66,6 +66,10 @@ set(OPAAX_TEST_SOURCES
     Core/Maths/AngleTests.cpp
     Core/Maths/Bounds2DTests.cpp
 
+    # Editor-side, and the FIRST of its kind — header-only editor types only (see the include dir
+    # below). ③'s gizmo delta math, pinned after a scale bug that only showed away from (0,0).
+    Editor/EditorGizmoTests.cpp
+
     # NOTE: every quarantined suite now lives under Tests/Legacy/ with the code it exercises
     # (ARCHITECTURE.md X1) — ECS/*, Physics/CollisionProfile, Assets/AssetIdResolve and
     # Renderer/FontKerning. None are listed here; re-add live equivalents when the new world
@@ -83,6 +87,12 @@ target_link_libraries(OpaaxTests PRIVATE OpaaxEngine)
 
 target_include_directories(OpaaxTests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../Vendors/doctest
+
+    # The editor's source dir, for HEADER-ONLY editor types only — no link against OpaaxEditorLib,
+    # and nothing here may pull in ImGui. Opened for EditorGizmo (③), whose delta math produced a
+    # silently wrong scale away from the world origin that no smoke run could reach; a bug found by
+    # eye that a test can hold is a bug the test should hold.
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Editor/Source
 )
 
 # By default doctest forward-declares std::tuple / std::string / std::ostream to keep

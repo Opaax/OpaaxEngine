@@ -1,5 +1,7 @@
 #pragma once
 
+#include <glm/matrix.hpp>   // inverse — this frame's delta is M * inverse(M last frame)
+
 #include "Core/Maths/MathTypes.h"
 #include "Core/OpaaxTypes.h"
 
@@ -98,16 +100,36 @@ namespace Opaax::Editor
             m_Matrix = Matrix44F(1.f);
             m_Matrix[3][0] = InPivot.x;
             m_Matrix[3][1] = InPivot.y;
+
+            m_PrevMatrix = m_Matrix;
         }
 
         // =============================================================================
         // The banked delta
         // =============================================================================
     public:
-        /** Compose InDelta onto whatever is already banked — deltas multiply. */
-        void BankDelta(const Matrix44F& InDelta) noexcept
+        /**
+         * Bank this frame's motion, derived from the gizmo's OWN matrix rather than from ImGuizmo's
+         * `deltaMatrix` out-parameter.
+         *
+         * THAT PARAMETER CANNOT BE USED, and the reason is worth keeping: it means a different thing
+         * per mode. Translation hands back a per-frame increment; rotation hands back
+         * `modelInverse * rotation * model`, incremental AND conjugated about the pivot; but SCALE
+         * hands back a pure origin-centred `Scale(...)` whose factor is measured **since the drag
+         * started**. Used uniformly, that scales an entity's position about the WORLD ORIGIN and
+         * compounds every frame — invisible at (0,0) and badly wrong anywhere else.
+         *
+         * `M * inverse(M last frame)` has none of that. It is per-frame by construction, and because
+         * this matrix SITS ON THE PIVOT the conjugation falls out for free: the result maps each
+         * entity's old placement to its new one, so translate, rotate-about-pivot and
+         * scale-about-pivot are all just this one expression. One rule, no per-mode knowledge.
+         */
+        void BankFrameDelta() noexcept
         {
-            m_PendingDelta = InDelta * m_PendingDelta;
+            const Matrix44F lDelta = m_Matrix * glm::inverse(m_PrevMatrix);
+
+            m_PrevMatrix   = m_Matrix;
+            m_PendingDelta = lDelta * m_PendingDelta;
             m_bHasPending  = true;
         }
 
@@ -132,6 +154,11 @@ namespace Opaax::Editor
         bool       m_bSnapping = false;
 
         Matrix44F  m_Matrix       = Matrix44F(1.f);
+
+        // What m_Matrix was last frame — the other half of the delta. Kept in step by ReseatAt while
+        // idle, so the first frame of a drag differences against the pre-drag pose.
+        Matrix44F  m_PrevMatrix   = Matrix44F(1.f);
+
         Matrix44F  m_PendingDelta = Matrix44F(1.f);
         bool       m_bHasPending  = false;
     };
