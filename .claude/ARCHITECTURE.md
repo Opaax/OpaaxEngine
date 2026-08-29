@@ -577,9 +577,20 @@ it is what the editor stands on, and it was pulled a whole block forward *becaus
   drawn an icon. Unreal (`USceneComponent` on every `AActor`), Unity (a `Transform` you cannot
   remove) and Godot (`Node2D`) all hang their editor billboard/gizmo icon off exactly this
   guarantee. **Icons presuppose a universal transform**; that is why ② could not ship without one.
-- **`Size` stays on the components.** An extent is what a thing IS, not where it is. `Scale` is
-  deliberately absent until something reads it (**X5**), and `Rotation` is DEGREES — what an author
-  types — converted at the draw call, which takes radians.
+- **`Size` stays on the components.** An extent is what a thing IS, not where it is; `Scale`
+  MULTIPLIES it. `Rotation` is DEGREES — what an author types — converted at the draw call, which
+  takes radians.
+  - **`Scale` arrived in ③ (2026-08-28), and X5 was honoured to the letter:** it landed in the same
+    change as all three of its readers — both `RendererManager` passes and
+    `EntityQuery::TryGetBounds`, so a scaled entity is clickable exactly where it draws (**SEL1**,
+    one body, five call sites). ImGuizmo forced the timing: its decompose always answers a scale, and
+    discarding one the gizmo had authored would have been a silent lie.
+  - **Its default is the field where the default MATTERS.** `1`, not `0` — a zero would render every
+    entity authored before ③ as nothing at all, with no error anywhere. `_WITH_DEFAULT` (**I8**) is
+    what lets every `.opaaxmap` on disk keep loading unchanged; pinned in `MapSnapshotTests`.
+  - **Adding a field to a component ALWAYS costs one MP6 warning per map** until it is next saved,
+    because the writer emits a key the file does not have. First observed here (`first difference at
+    byte 880`), expected, and self-clearing. Not a regression — the check working.
 - **A component `CreateEntity` emplaces is ESSENTIAL and cannot be removed.** Stated at the
   REGISTRATION (`Register<T>(name, bEssential)`), next to the call that guarantees it, and enforced
   in `IComponentEntry::Remove` rather than by every UI remembering to check.
@@ -872,10 +883,14 @@ from the game would be lying about what the game will look like.
   per pixel, so half the panel's height *is* the equivalent `OrthoSize` — which means the editor opens
   on exactly its historical framing at **any** panel size, and the convention change is only visible
   once you resize.
-- `MakeViewProjection` and `ScreenToWorld` are the two questions a view answers, defined **out of line
+- `MakeViewProjection` and `ScreenToWorld` are the questions a view answers, defined **out of line
   and exported**: inline would drag `glm/gtc/matrix_transform.hpp` into every TU that includes
   `World.h`, and the editor calls `ScreenToWorld` from the exe (**I6**). `ScreenToWorld` is the ONE
   screen→world rule — zoom-at-cursor needs it now, picking and gizmo placement need the same answer.
+  - *Corrected 2026-08-28: there are now **three**, not two.* ③ split `MakeView` and `MakeProjection`
+    out because ImGuizmo takes them separately, and `MakeViewProjection` is **defined as their
+    product** so the halves and the whole cannot drift — see **GIZ2**, including why its zero-size
+    guard has to stay duplicated rather than defer to the projection half.
 
 **CAM3 — The Play producer is an ENGINE subsystem, and the resolve is a PURE FUNCTION.**
 `CameraManager` (`Engine/Subsystems/Camera/`) reads the active world in `Update`, refuses anything but
@@ -918,6 +933,10 @@ is current, which is the same source **IN8** already sends `Ctrl+S` to.
 - **Middle-drag pans, wheel zooms**; left and right stay free for ②'s click-select and context menus.
   A drag that *starts* on the viewport continues while the button is held even off-panel, because
   cutting it at the panel edge is worst exactly when you are panning to the edge of a level.
+  - *Amended ③, 2026-08-28: it no longer LEAVES the panel — the cursor **wraps** to the opposite edge
+    (**GIZ6**).* The sentence above is why: wrapping serves that stated reason strictly better than
+    wandering off does. A pan needs no correction for the wrap because it reads `MouseDelta`, which
+    `TeleportMousePos` zeroes on the warp frame — one invisible frame of no motion.
 - Two one-shot Info lines ([[L48]]): the seed, and the first move. Without them "pan does nothing"
   cannot be told apart from "the gesture never arrived", and only one of those is fixable.
 
@@ -1025,6 +1044,101 @@ and `ImGui::Image` is not an item. `IsWindowHovered` includes the **title bar**,
 on `IsItemHovered()` taken right after the image, and `io.ConfigWindowsMoveFromTitleBarOnly` states the
 convention once. **When a panel's body becomes interactive, audit what the host already does with
 drags there** — and note that none of the three was reachable by a smoke run.
+
+---
+
+## GIZ — The transform gizmo (landed ③, 2026-08-28)
+
+**GIZ1 — The gizmo is IMGUIZMO, and the deciding question was not "screen or world"** (user's call).
+Two designs were built. The first was hand-rolled `DebugDraw` handles sized from one
+`WorldPerPixel()` (`d076b48`); the user then asked whether ImGuizmo would do, and after pricing both
+honestly chose it (`3dc2d9b`), so the hand-rolled `GizmoHandles` was deleted.
+- **What the survey actually settled.** Unreal (PDI geometry, screen-constant widget), Unity
+  (`Handles` + `HandleUtility.GetHandleSize`), Godot-3D (`gizmo_scale` from distance), Godot-2D (an
+  editor overlay control) and ImGuizmo (an ImGui draw list) **all size a gizmo from the SCREEN**.
+  They differ only on where the geometry is authored, and that difference tracks 3D-vs-2D —
+  occlusion — not taste. So "screen or world" was never the real axis.
+- **What ImGuizmo bought:** rotate, scale, **snapping** and bounds in one step instead of three.
+  **What it cost:** a vendored submodule, a view/projection split (**GIZ2**), and a matrix bridge for
+  a component with two and a half fields. It is a 3D gizmo masked to `TRANSLATE_X|TRANSLATE_Y`,
+  `ROTATE_Z`, `SCALE_X|SCALE_Y`.
+- **The precedent cuts both ways and that is why it needed a decision, not a rule.** This tree vendors
+  13 libraries, 7 as submodules, and box2d rather than hand-rolled physics — so "we avoid
+  dependencies" is false here. But the depth *inside* ImGuizmo is almost entirely the 3D part; in 2D
+  ortho, translate is point-in-box, rotate is an `atan2` delta and scale is a ratio. Both readings
+  were defensible; the user owns the call.
+
+**GIZ2 — `MakeView` / `MakeProjection` exist because ImGuizmo takes them SEPARATELY**, and
+`MakeViewProjection` is now defined as their product so the halves and the whole cannot drift
+(**CAM2**'s "two questions" is three). **Its zero-size guard stays duplicated on purpose:** identity ×
+view is the *view*, so deferring to `MakeProjection` alone would change what a degenerate target
+answers for any camera not at the origin. Pinned in `CameraViewTests`.
+
+**GIZ3 — ONE VERB AT THE CHOKE POINT, AND IT TAKES A MATRIX:
+`EntityOps::TransformSelected(ctx, Matrix44F)`.** A matrix is what a gizmo *produces*: the delta maps
+each entity's old placement to its new one, so translate, rotate-about-the-pivot and
+scale-about-the-pivot all arrive as the same value. A multi-selection keeps its layout with no special
+case, and a single entity — whose pivot is its own origin — falls out of the identical path.
+- **Incremental, never absolute**, because that is the form ⑤ coalesces: a drag is many of these and
+  deltas compose by multiplication.
+- **Rotation and scale are read off the delta's own basis** — the angle and length of columns 0 and 1
+  — so the choke point stays free of ImGuizmo's Euler decompose and speaks the engine's vocabulary,
+  not a vendor's. A translation-conjugated delta has the same linear part, so this is exact.
+- **This is what ③ owed ⑤**, and it is now true rather than aspirational.
+
+**GIZ4 — IMGUIZMO'S `deltaMatrix` MEANS A DIFFERENT THING PER MODE. DO NOT USE IT.** The single worst
+defect of this block, found by the user's eye and invisible at the origin:
+- `HandleTranslation` (`ImGuizmo.cpp:2394`) → a per-frame increment.
+- `HandleRotation` (`:2674`) → `modelInverse * rotation * model`: incremental **and** already
+  conjugated about the pivot.
+- `HandleScale` (`:2544`) → a **pure origin-centred** `Scale(...)` whose factor is measured **since
+  the drag began**.
+Used uniformly, scale multiplied an entity's POSITION about the world origin — exactly nil at (0,0),
+so it looked right there and only there — and compounded the cumulative factor every frame on top.
+- **The fix is to stop asking: the delta is `M * inverse(M last frame)` off the matrix WE own.**
+  Per-frame by construction, and because that matrix **sits on the pivot** the conjugation is free.
+  One expression for all three modes, no per-mode knowledge anywhere. `deltaMatrix` is passed `nullptr`.
+- **The general shape: a vendor's "delta" is a name, not a contract.** Read what it computes per
+  branch before treating it as uniform.
+
+**GIZ5 — The matrix is STATE, re-seated only while idle.** ImGuizmo captures its start pose when a
+drag begins and then drives the matrix it was handed, so `EditorGizmo::ReseatAt` (translation only,
+identity rotation, unit scale) runs on every frame `IsUsing()` is false and never during a drag —
+re-seating mid-drag would fight that captured state. `ReseatAt` moves **both** `m_Matrix` and
+`m_PrevMatrix`, or the first frame of the next drag differences against a stale pose and jumps.
+- **`Manipulate`'s RETURN VALUE gates banking, not `IsUsing()`.** It answers "did the matrix actually
+  change"; `IsUsing()` stays true for the whole gesture and would bank an identity delta every frame,
+  dirtying the map on a click that never moved.
+- Mode is three tags, not one with a payload — **a key binding carries a tag and no payload**, the
+  same constraint that removed `QuitParams`. W/E/R (Unreal, Unity and Godot all share it), editor-wide
+  behind `WantCaptureKeyboard` (**SEL7**), but **Edit-only unlike F and Delete**, because W/E/R are
+  also the game's movement keys. The Edit-menu entries tick from the LIVE mode, so keys and menu
+  cannot disagree.
+
+**GIZ6 — THE INFINITE DRAG: wrap the cursor, and correct for it where it is read ABSOLUTELY.**
+A drag that dies at the panel edge is worst exactly where it is needed most. `ImguiCursor::WrapInRect`
+teleports the cursor to the opposite edge via `ImGui::TeleportMousePos`, which moves `MousePos` **and**
+`MousePosPrev` — so `MouseDelta` reads zero on the warp frame — and raises `WantSetMousePos` for the
+backend (`imgui_impl_glfw.cpp:943`, honoured whenever the window is focused).
+- **THE TWO CONSUMERS DIFFER, and that is the whole content of this rule.** A **delta** reader (the
+  camera pan) needs nothing more: it accumulates no motion for one frame, invisibly. An **absolute**
+  reader (ImGuizmo) would see the cursor leap across the viewport and **fling the selection** — so the
+  wrap returns a correction, the panel accumulates it for the drag, and `io.MousePos` is offset by it
+  **for the length of the `Manipulate` call only**, restored immediately because every other reader in
+  the frame wants the real cursor.
+- **This amends CAM4**, whose own justification asks for it. The **marquee is deliberately excluded**:
+  a rectangle drawn between two screen points is nonsense wrapped.
+- `ImguiCursor` is a fourth file in `Editor/ImguiLibrary/` because that library splits on
+  *submits-an-item* / *paints-only* / *pure-geometry*, and moving the cursor is none of them. It is the
+  tree's only `imgui_internal.h` consumer.
+
+**GIZ7 — Named, NOT built** ([[L23]] — never an API with no caller). **A viewport tool strip for snap
+settings, pivot-vs-centre, and local-vs-world** — the user's own next step, stated 2026-08-28. Today
+snapping is Ctrl-held with a per-mode step (10 units / 15° / 0.1), the pivot is always the selection's
+bounds centre, and the mode is always `ImGuizmo::LOCAL`. All three are already single expressions with
+one caller, so the strip is UI over values that exist. Also unbuilt: a rotate/scale gizmo for a
+multi-selection with mixed rotations, and `DebugDraw::DrawCircle` — the rotate ring is ImGuizmo's, so
+that header's *"waits for a caller that needs it"* still does.
 
 ---
 

@@ -169,7 +169,7 @@ namespace Opaax::Editor
             .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
             {
                 InContext.Preview.Open(InFile, ResourceTypeID::Get<TextureResource>());
-                InContext.Panels.SetVisible(PreviewPanelId(), true);
+                InContext.Panels.SetVisible(ResourcePreviewPanel::PanelID(), true);
             });
 
         m_Extensions.ResourceTypes().Register<LevelResource>()
@@ -577,18 +577,17 @@ namespace Opaax::Editor
     {
         PanelRegistry& lPanels = m_Extensions.Panels();
         
-        lPanels.Register<ViewportPanel>(PanelDesc{.Id = OPAAX_ID("Viewport")});
-        lPanels.Register<PlayToolbarPanel>(PanelDesc{.Id = OPAAX_ID("Play Controls")});
-        lPanels.Register<HierarchyPanel>(PanelDesc{.Id = OPAAX_ID("Hierarchy")});
-        lPanels.Register<InspectorPanel>(PanelDesc{.Id = OPAAX_ID("Inspector")});
-        lPanels.Register<ResourceBrowserPanel>(PanelDesc{.Id = OPAAX_ID("Resource Browser")});
+        lPanels.Register<ViewportPanel>(PanelDesc{.Id = ViewportPanel::PanelID()});
+        lPanels.Register<PlayToolbarPanel>(PanelDesc{.Id = PlayToolbarPanel::PanelID()});
+        lPanels.Register<HierarchyPanel>(PanelDesc{.Id = HierarchyPanel::PanelID()});
+        lPanels.Register<InspectorPanel>(PanelDesc{.Id = InspectorPanel::PanelID()});
+        lPanels.Register<ResourceBrowserPanel>(PanelDesc{.Id = ResourceBrowserPanel::PanelID()});
 
         // Hidden until something is double-clicked — an empty preview is not worth a pane on a
         // fresh layout, and the activate that fills it is also what shows it.
-        lPanels.Register<ResourcePreviewPanel>(PanelDesc{.Id = PreviewPanelId(),
-                                                         .DefaultVisibility = EPanelVisibility::Hidden});
+        lPanels.Register<ResourcePreviewPanel>(PanelDesc{.Id = ResourcePreviewPanel::PanelID(), .DefaultVisibility = EPanelVisibility::Hidden});
         lPanels.Register<ConfigPanel>(PanelDesc{.Id = ConfigPanel::PanelID(), .DefaultVisibility = EPanelVisibility::Hidden});
-        lPanels.Register<InputPanel>(PanelDesc{.Id = OPAAX_ID("Input"), .DefaultVisibility = EPanelVisibility::Hidden });
+        lPanels.Register<InputPanel>(PanelDesc{.Id = InputPanel::PanelID(), .DefaultVisibility = EPanelVisibility::Hidden });
     }
 
     void EditorService::BindPanelToggles()

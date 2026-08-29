@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Maths/MathTypes.h"   // Vector2F — the window's first-use size
+#include "Core/String/OpaaxStringID.hpp"
 
 namespace Opaax
 {
@@ -70,4 +71,6 @@ namespace Opaax::Editor
         /** @return How the host should open this panel's window. Override only to differ. */
         virtual PanelWindowStyle GetWindowStyle() const { return {}; }
     };
+    
+#define OPAAX_EDITOR_PANEL_NAME(Name) static ::Opaax::OpaaxStringID PanelID() { return ::Opaax::OpaaxStringID(#Name); }
 }

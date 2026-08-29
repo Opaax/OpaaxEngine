@@ -4,6 +4,7 @@
 #include "Core/OpaaxTypes.h"             // TUniquePtr, Uint32
 #include "Core/Maths/MathTypes.h"
 #include "Editor/Panels/IEditorPanel.h"
+#include "Core/String/OpaaxStringID.hpp"
 #include "Editor/UI/IEditorUIBackend.h"
 
 namespace Opaax
@@ -35,6 +36,12 @@ namespace Opaax::Editor
     // =============================================================================
     class ViewportPanel final : public IEditorPanel
     {
+        // =============================================================================
+        // Statics
+        // =============================================================================
+    public:
+        OPAAX_EDITOR_PANEL_NAME(Viewport);
+        
         // =============================================================================
         // Ctor - Dtor
         // =============================================================================

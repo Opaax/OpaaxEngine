@@ -79,15 +79,6 @@ namespace Opaax::Editor
         void RegisterNativeResourceTypes();
 
         /**
-         * The Preview panel's id, stated ONCE.
-         *
-         * Two calls here need it — the panel's registration and the activate closure that opens it —
-         * and a panel deliberately does NOT carry its own id (PanelDesc.h: it used to be stated
-         * twice, with nothing making the two agree). So it lives with the two callers instead.
-         */
-        static OpaaxStringID PreviewPanelId() { return OPAAX_ID("Preview"); }
-
-        /**
          * The engine's own configs into m_Extensions.ConfigDrawers(), so the Config panel draws
          * their fields instead of their json. Same registry template, same two forms and the same
          * ordering rule as the component drawers — only the resolver differs.
