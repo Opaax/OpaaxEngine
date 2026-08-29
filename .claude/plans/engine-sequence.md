@@ -109,7 +109,33 @@ Through one helper, ③ changes one function body.
 
 ---
 
-## ③ GIZMO — and ONLY the gizmo
+## ③ GIZMO — ✅ LANDED 2026-08-28, user-verified
+
+> **Shipped:** translate / rotate / scale through **ImGuizmo** · `EntityOps::TransformSelected` (one
+> matrix verb at the choke point) · `TransformComponent.Scale` with all three readers ·
+> `MakeView`/`MakeProjection` · W/E/R + Edit-menu radio entries · Ctrl snapping · **the infinite
+> drag** (cursor wraps at the viewport edge, and the pan wraps too).
+> Contract: ARCHITECTURE.md **GIZ1–GIZ7**, amending **CAM2**, **CAM4** and **I17**. Lessons
+> **L54**/**L55**. Plan + record: `.claude/plans/gizmo.md`.
+> Commits `d076b48` `3dc2d9b` `9277fc0` `fd064b8` `8744775`. **434 / 7024 / 7.**
+>
+> **TWO USER CALLS SET THE SHAPE.** They rejected a screen-space ImGui gizmo (*"Rely on other
+> engines"*) — and the survey inverted my answer, because Unreal/Unity/Godot/ImGuizmo **all size a
+> gizmo from the SCREEN** and differ only on where geometry lives, which tracks occlusion rather than
+> taste. Then they asked *"Cant we use imguizmo?"*, I priced it and recommended hand-rolled, and
+> **they chose ImGuizmo** — buying rotate, scale, snapping and bounds in one step instead of three.
+>
+> **THE DEFECT WORTH CARRYING FORWARD:** ImGuizmo's `deltaMatrix` means a different thing per mode
+> (incremental for translate, pivot-conjugated for rotate, **cumulative and origin-centred for
+> scale**). Applied uniformly it was **exactly nil at (0,0)** and wrong everywhere else. The fix
+> derives the delta from the matrix we own instead. → **GIZ4**, [[L54]].
+>
+> **`OpaaxTests` NOW REACHES HEADER-ONLY EDITOR CODE** — the M2a gap cost one include line, not the
+> milestone it had been deferred to for four. → [[L55]].
+>
+> **Named, not built (the user's own next step):** a viewport tool strip for snap / pivot / local-world.
+
+## ③ GIZMO — as originally planned
 
 **Transform and "remove old vars" were DONE IN ②** (**I17**): `TransformComponent` exists, is
 auto-emplaced on every entity, rotation is wired through both render passes, `Position` is gone from

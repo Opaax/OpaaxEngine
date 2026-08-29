@@ -1490,3 +1490,69 @@ there started a marquee while ImGui moved the panel.
 - **The path a smoke run cannot reach is where the bug will be**, because it is the only part nothing
   checked. Naming an untested gate is right; treating the rest of the feature's health as evidence
   about it is not.
+
+## L54 — A vendor's "delta" is a NAME, not a contract: read what it computes per branch (2026-08-28)
+
+**What happened (③, the gizmo).** I drove ImGuizmo with `Manipulate(..., &deltaMatrix)` and applied
+that delta uniformly through one choke-point verb — elegant, and wrong. `deltaMatrix` means three
+different things depending on which handle is being dragged: `HandleTranslation` (`ImGuizmo.cpp:2394`)
+writes a **per-frame increment**; `HandleRotation` (`:2674`) writes
+`modelInverse * rotation * model`, incremental **and already conjugated about the pivot**; but
+`HandleScale` (`:2544`) writes a **pure origin-centred** `Scale(...)` whose factor is measured **since
+the drag began**. So the scale path multiplied an entity's *position* about the world origin and
+compounded the cumulative factor every frame.
+
+**Why it survived everything I had.** The wrong term is multiplied by the entity's distance from the
+origin, so at (0,0) it is **exactly zero** — and the map's one authored entity near the origin looked
+fine. Translate and rotate were genuinely correct, so "the gizmo works" was two-thirds true. The user
+found it in one sentence: *"Scale do something weird when not on 0-0"* — a report whose *condition*
+named the bug faster than the symptom did.
+
+**The fix was to stop asking.** The delta now comes from the matrix I already own —
+`M * inverse(M last frame)` — which is per-frame by construction and, because that matrix sits **on
+the pivot**, conjugated for free. One expression for all three modes, no per-mode knowledge anywhere,
+and `deltaMatrix` passed `nullptr`. Shorter than what it replaced.
+
+**Rules for next time:**
+- **When a vendor hands you a value used across several branches, read EACH branch before treating it
+  as uniform.** "Delta" is a word, not a guarantee of frame-relativity or of a coordinate space. The
+  cost of reading three functions was ten minutes; the cost of not reading them was a silent,
+  position-dependent defect. Sibling of [[L29]] — a borrowed predicate answers its own question — now
+  extended from *predicates* to *values*.
+- **Prefer deriving a delta from state YOU control over accepting one you are given.** I already held
+  the matrix; differencing it needed no vendor knowledge at all and could not have had this bug.
+  A quantity you can compute from your own state is one fewer contract to be wrong about.
+- **A bug whose wrong term scales with a coordinate is INVISIBLE at the origin.** Test data sitting
+  near (0,0) is the default in every engine, so this class hides by default. When a transform is
+  involved, assert at a position far from the origin — and treat "works at the origin" as no evidence.
+- **A user's report often carries the diagnosis in its CONDITION.** "Weird when not on 0-0" is not a
+  vague complaint, it is "the wrong term is proportional to position". Read the qualifier first.
+
+## L55 — If a bug found by eye was reachable by a test, the gate was missing, not the tester (2026-08-28)
+
+**What happened (③).** The scale bug above was caught by the user in the running editor. My own note
+had said `EditorGizmo` shipped "test-*able*, untested", because `OpaaxTests` could not see editor
+headers — the M2a gap, carried as a known limitation for four milestones. Closing it turned out to
+cost **one `target_include_directories` line and no link at all**: `EditorGizmo` is header-only and
+touches no ImGui, so the test target needed the include path and nothing else. Seven cases now pin the
+pivot behaviour, the per-frame increments, composition across a skipped frame, and `ReseatAt` moving
+both matrices.
+
+**Why I got it wrong.** I had classified the whole gizmo as "interactive, therefore eyes-only" — true
+of the *drag* (ImGui, a cursor, a viewport) and false of the *math*, which is pure matrix arithmetic
+with no context at all. One honest sentence ("no machine gate here") covered a boundary I had never
+actually located. This is [[L23]]'s shape again: naming a gap read as diligence right up until the
+gap produced the defect.
+
+**Rules for next time:**
+- **Split "interactive" from "the arithmetic behind it" before concluding a feature is eyes-only.**
+  The gesture needs eyes; the transform it computes almost never does. Ask what fraction of the
+  feature is a pure function — that fraction is owed a test regardless of where the code lives.
+- **Re-price a standing limitation when you are about to lean on it.** "Tests cannot reach editor
+  code" was true of code that links the editor library, and simply false of a header-only value type.
+  A limitation inherited from another milestone is a claim about *that* milestone's code ([[L19]]).
+- **The trigger for closing a known gap is the first defect it let through** — and the fix should be
+  priced then, not deferred again. Here it was one line.
+- **Make the assertion structurally different from the wrong answer, not merely numerically.** The
+  cases demand 1200 where an origin-centred scale gives 2200, and 4/3 where a cumulative factor gives
+  2.0 — so they cannot pass by rounding or by accident ([[L21]]).
