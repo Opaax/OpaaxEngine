@@ -133,17 +133,20 @@ namespace Opaax::Editor
 
         /**
          * Read this frame's pan drag and wheel from ImGui and bank them. Call while the panel's
-         * window is current and immediately after the image, since it measures the cursor against
-         * that item's rect.
+         * window is current.
          *
          * ImGui is the SOURCE, not a workaround: an Edit world leaves the input route closed, so
          * InputManager never sees a button (IN8). The gate is the IMAGE's hover — never
          * io.WantCaptureMouse (the viewport is itself an ImGui window, L29), and never the WINDOW's,
          * which is true over the title bar and would fight ImGui for the drag.
          *
-         * @param bInHovered ImGui::IsItemHovered() taken immediately after the image.
+         * @param bInHovered Hover of the IMAGE, with the toolbar's rect already subtracted.
+         * @param InOrigin Top-left of the image in SCREEN pixels — PASSED, not read from
+         *   GetItemRect*, which names whatever was submitted last and began naming the toolbar the
+         *   moment ③b drew one before this call.
+         * @param InSizePx The image's size, for the same reason.
          */
-        void MeasureCameraGesture(bool bInHovered);
+        void MeasureCameraGesture(bool bInHovered, const Vector2F& InOrigin, const Vector2F& InSizePx);
 
         /**
          * Read this frame's LEFT button — a click, or a drag that has passed ImGui's own

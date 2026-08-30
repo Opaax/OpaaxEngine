@@ -578,7 +578,13 @@ namespace Opaax::Editor
 
     // =========================================================================
     // MeasureCameraGesture — read the pan drag and the wheel while this window is current, and
-    // bank them for OnPreRender. Call it right after the image, so GetItemRect* names the image.
+    // bank them for OnPreRender.
+    //
+    // THE IMAGE RECT IS PASSED IN, not read from GetItemRect*. It used to be read, which was correct
+    // only for as long as the image happened to be the last submitted item — ③b's toolbar is a child
+    // window, i.e. an item, drawn before this, so those calls silently began naming the STRIP: the
+    // pan wrapped the cursor inside a 200x30 box in the corner, and the zoom anchored to it. An
+    // argument cannot be retargeted by what someone submits earlier.
     //
     // ImGui IS the source here, not a workaround: an Edit world puts the input route in
     // ClosedEditMode, so InputManager is never fed and would report every button up forever (IN8).
@@ -586,7 +592,7 @@ namespace Opaax::Editor
     // pointer is over the viewport because the viewport is an ImGui window (L29), and never the
     // WINDOW's, which includes the title bar.
     // =========================================================================
-    void ViewportPanel::MeasureCameraGesture(bool bInHovered)
+    void ViewportPanel::MeasureCameraGesture(bool bInHovered, const Vector2F& InOrigin, const Vector2F& InSizePx)
     {
         const ImGuiIO& lIO = ImGui::GetIO();
 
@@ -611,10 +617,7 @@ namespace Opaax::Editor
             //
             // No correction to accumulate here, unlike the gizmo: a pan reads MouseDelta, and
             // TeleportMousePos zeroes it on the frame it jumps. One frame of no motion, invisible.
-            const ImVec2 lRectMin = ImGui::GetItemRectMin();
-            const ImVec2 lRectMax = ImGui::GetItemRectMax();
-
-            WrapDragCursor({ lRectMin.x, lRectMin.y }, { lRectMax.x, lRectMax.y }, "pan");
+            WrapDragCursor(InOrigin, InOrigin + InSizePx, "pan");
 
             m_PendingPanPx.x += lIO.MouseDelta.x;
             m_PendingPanPx.y += lIO.MouseDelta.y;
@@ -624,10 +627,8 @@ namespace Opaax::Editor
         // and a cursor somewhere else has no world point to anchor to.
         if (bInHovered && lIO.MouseWheel != 0.f)
         {
-            const ImVec2 lOrigin = ImGui::GetItemRectMin();
-
             m_PendingZoom          = lIO.MouseWheel;
-            m_PendingZoomCursorPx  = { lIO.MousePos.x - lOrigin.x, lIO.MousePos.y - lOrigin.y };
+            m_PendingZoomCursorPx  = { lIO.MousePos.x - InOrigin.x, lIO.MousePos.y - InOrigin.y };
         }
     }
 
@@ -727,8 +728,11 @@ namespace Opaax::Editor
         // moved the panel — the window-move and the selection box running at once. The image is the
         // only surface either gesture means anything on.
         //
-        // Immediately after the image because GetItemRect*/IsItemHovered name the LAST submitted
-        // item, and MeasureCameraGesture reads that rect again for the zoom anchor.
+        // THE ONLY PLACE THAT READS GetItemRect*, and it is taken here because these calls name the
+        // LAST SUBMITTED ITEM — the image, right now, and nothing else afterwards. All three
+        // measures below take the rect as an ARGUMENT instead of re-reading it. They used to
+        // re-read, which was correct until ③b drew a toolbar (a child window IS an item) before
+        // them, at which point the pan silently began wrapping inside the strip.
         const bool   lImageRawHovered = ImGui::IsItemHovered();
         const ImVec2 lOrigin          = ImGui::GetItemRectMin();
 
@@ -738,7 +742,7 @@ namespace Opaax::Editor
         const bool lToolbarHovered = DrawToolbarOverlay({ lOrigin.x, lOrigin.y });
         const bool lImageHovered   = lImageRawHovered && !lToolbarHovered;
 
-        MeasureCameraGesture(lImageHovered);
+        MeasureCameraGesture(lImageHovered, { lOrigin.x, lOrigin.y }, { lAvail.x, lAvail.y });
 
         // ONE left button, TWO consumers, and the order is stated here once: a press that lands on a
         // handle belongs to the gizmo, so the marquee never sees it. Without this a drag on a handle
