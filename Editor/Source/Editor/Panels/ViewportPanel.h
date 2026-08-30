@@ -81,6 +81,32 @@ namespace Opaax::Editor
         void EnqueueSelectionOutline();
 
         /**
+         * The grid's DRAWN spacing: the translate snap step, raised by whole decades until a cell
+         * is at least m_GridMinCellPx across. Zooming out coarsens the grid instead of turning it
+         * into a solid field of lines.
+         */
+        float GridSpacing() const;
+
+        /**
+         * What a translate drag actually snaps to.
+         *
+         * The GRID's spacing while the grid is visible, so a drag lands on a line the author can
+         * see — zoomed out, the authored step would put the entity between two of them. The
+         * authored step when the grid is hidden, because then there is nothing to match.
+         */
+        float TranslateSnapStep() const;
+
+        /**
+         * Queue the snap grid on the BACKGROUND band, so it sits under everything it measures
+         * rather than over it. Spacing IS the gizmo's translate snap step — a grid that does not
+         * match what a drag lands on is decoration.
+         *
+         * Bounded by the visible world rect AND by a decade step-up once a cell would be finer than
+         * a few pixels, so zooming out coarsens the grid instead of flooding the batch.
+         */
+        void EnqueueGrid();
+
+        /**
          * Queue a small box at each entity that draws NOTHING, so an empty entity is visible and
          * clickable — Unreal's editor billboard and Godot's origin grab-area in this engine's
          * terms. Edit worlds only: an editor overlay must not decorate a running game.
@@ -266,6 +292,21 @@ namespace Opaax::Editor
         float    m_PendingZoom         = 0.f;          // wheel notches; + is zoom IN
         bool     m_bPanning            = false;        // the middle button went down over the viewport
 
+        // The snap grid. Dim enough to read as paper rather than as content; the two AXES are
+        // brighter and coloured like the gizmo's, because a visible origin is worth more than the
+        // grid around it. Thicknesses are SCREEN pixels — converted per frame, so the grid stays a
+        // hairline at any zoom, unlike the selection outline which is deliberately world-sized.
+        Vector4F m_GridColor         = {0.30f, 0.30f, 0.36f, 0.55f};
+        Vector4F m_GridAxisXColor    = {0.65f, 0.25f, 0.25f, 0.9f};   // the horizontal line, y == 0
+        Vector4F m_GridAxisYColor    = {0.25f, 0.60f, 0.30f, 0.9f};   // the vertical line, x == 0
+        float    m_GridThickness     = 1.f;
+        float    m_GridAxisThickness = 1.6f;
+
+        // A cell finer than this many pixels steps the spacing up a decade; the cap behind it is a
+        // guard, not the mechanism.
+        float    m_GridMinCellPx     = 7.f;
+        Uint32   m_GridMaxLines      = 600;
+
         // The tool strip's chrome. Inset from the image corner so it reads as floating ON the
         // viewport rather than welded to it; the SIZE is auto — the strip is exactly as wide as
         // whatever the registry holds, so adding a tool needs no number kept in step here.
@@ -312,6 +353,7 @@ namespace Opaax::Editor
         bool   m_bOutlineLogged  = false;
         bool   m_bIconsLogged    = false;
         bool   m_bWrapLogged     = false;
+        bool   m_bGridLogged     = false;
 
         // One bit per EGizmoMode, not one flag: "does the gizmo write?" is a separate question per
         // mode, and a single one-shot would leave rotate and scale permanently silent after the

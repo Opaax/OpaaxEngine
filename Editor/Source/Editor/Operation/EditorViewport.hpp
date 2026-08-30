@@ -13,8 +13,11 @@ namespace Opaax::Editor
     //   panel and the READER is a menu command — focus-selected needs the ASPECT to frame a wide
     //   selection, and EditorPanels hands out IEditorPanel with no typed getter, by design.
     //
-    //   Only the SIZE. Hover and focus are InputRoute's, because they answer a different question
-    //   ("is the engine being fed") that has its own consumer and its own rule.
+    //   The size, and what is DRAWN OVER it. Hover and focus are still InputRoute's, because they
+    //   answer a different question ("is the engine being fed") with its own consumer and its own
+    //   rule — that separation is unchanged.
+    //   *This read "Only the SIZE" until ③b: the grid toggle is written by a TOOLBAR ITEM and read
+    //   by the panel, so it is the same writer-and-reader-are-different-objects case as the size.*
     // =============================================================================
     class EditorViewport
     {
@@ -31,9 +34,18 @@ namespace Opaax::Editor
         bool IsValid() const noexcept { return m_SizePx.x > 1.f && m_SizePx.y > 1.f; }
 
         // =============================================================================
+        // Overlays
+        // =============================================================================
+    public:
+        /** The snap grid (③b) — off by default, because an empty map reads better without it. */
+        void SetShowGrid(const bool bInShow) noexcept { m_bShowGrid = bInShow; }
+        bool IsGridVisible() const noexcept           { return m_bShowGrid; }
+
+        // =============================================================================
         // Members
         // =============================================================================
     private:
-        Vector2F m_SizePx = { 0.f, 0.f };
+        Vector2F m_SizePx    = { 0.f, 0.f };
+        bool     m_bShowGrid = false;
     };
 }

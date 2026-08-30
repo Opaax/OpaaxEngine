@@ -17,17 +17,23 @@ namespace Opaax::Editor
     };
 
     /**
-     * WHAT the gizmo sits on. Center is the selection's combined bounds centre; Origin is the
-     * PRIMARY entity's own transform position.
+     * WHAT a rotation or a scale turns about.
      *
-     * For one entity the two coincide, because bounds are centred on the transform — the toggle
-     * earns its place on a multi-selection today, and for a single entity the day a per-sprite
-     * Offset lands and an entity's origin stops being its centre.
+     * Center and Origin are ONE shared point for the whole selection — the difference is only which
+     * point, so N entities swing around it and keep their formation. Individual is a different KIND
+     * of answer: every entity turns about itself and nothing orbits anything (Blender calls it
+     * Individual Origins). Three modes rather than two because "rotate them as a group" and "rotate
+     * each of them" are both things an author wants, and neither substitutes for the other.
+     *
+     * For a single entity all three coincide — bounds are centred on the transform — so the choice
+     * only speaks on a multi-selection, and Center/Origin only diverge for a single entity the day
+     * a per-sprite Offset lands.
      */
     enum class EGizmoPivot : Uint8
     {
         Center,
-        Origin
+        Origin,
+        Individual
     };
 
     /** WHICH AXES the handles run along: the world's, or the primary entity's own. */
@@ -52,7 +58,14 @@ namespace Opaax::Editor
 
     inline const char* ToString(const EGizmoPivot InPivot) noexcept
     {
-        return InPivot == EGizmoPivot::Origin ? "Origin" : "Center";
+        switch (InPivot)
+        {
+        case EGizmoPivot::Center:     return "Center";
+        case EGizmoPivot::Origin:     return "Origin";
+        case EGizmoPivot::Individual: return "Individual";
+        }
+
+        return "Center";
     }
 
     inline const char* ToString(const EGizmoSpace InSpace) noexcept
@@ -94,6 +107,18 @@ namespace Opaax::Editor
     public:
         void        SetPivot(const EGizmoPivot InPivot) noexcept { m_Pivot = InPivot; }
         EGizmoPivot GetPivot() const noexcept                    { return m_Pivot; }
+
+        /**
+         * Whether each entity should turn about ITSELF this frame.
+         *
+         * FALSE FOR TRANSLATE whatever the pivot says, and that is not a special case being papered
+         * over — a translation moves everything by the same offset, so "about its own origin" has
+         * no meaning there. Stated once here so the toolbar's label and the mutation agree.
+         */
+        bool UsesIndividualOrigins() const noexcept
+        {
+            return m_Pivot == EGizmoPivot::Individual && m_Mode != EGizmoMode::Translate;
+        }
 
         void        SetSpace(const EGizmoSpace InSpace) noexcept { m_Space = InSpace; }
         EGizmoSpace GetSpace() const noexcept                    { return m_Space; }
@@ -152,6 +177,20 @@ namespace Opaax::Editor
             }
 
             return 1.f;
+        }
+
+        /**
+         * The step for one NAMED mode, regardless of which is active — the grid asks for the
+         * translate step while the author may be rotating.
+         */
+        float GetSnapStep(const EGizmoMode InMode) const noexcept
+        {
+            switch (InMode)
+            {
+            case EGizmoMode::Rotate: return m_SnapRotate;
+            case EGizmoMode::Scale:  return m_SnapScale;
+            default:                 return m_SnapTranslate;
+            }
         }
 
         /** The step for one named mode — what a toolbar field edits. Clamped above zero. */

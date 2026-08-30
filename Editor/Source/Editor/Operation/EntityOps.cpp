@@ -157,7 +157,8 @@ namespace Opaax::Editor
         OPAAX_LOG(LogEntityOps, Info, "Deleted {} entity(ies)", static_cast<Uint64>(lIds.size()));
     }
 
-    void EntityOps::TransformSelected(EditorContext& InContext, const Matrix44F& InDelta)
+    void EntityOps::TransformSelected(EditorContext& InContext, const Matrix44F& InDelta,
+                                      const ETransformOrigin InOrigin)
     {
         if (!InContext.Selection.HasSelection()) { return; }
 
@@ -187,7 +188,13 @@ namespace Opaax::Editor
             // The POSITION goes through the matrix rather than being offset by hand, which is what
             // makes a rotate or a scale orbit the shared pivot instead of spinning each entity where
             // it stands. For one entity the pivot IS its origin, so this reduces to no movement.
-            const Vector4F lMoved = InDelta * Vector4F(lTransform->Position.x, lTransform->Position.y, 0.f, 1.f);
+            //
+            // INDIVIDUAL ORIGINS IS EXACTLY THE ABSENCE OF THIS STEP: an entity that is its own
+            // pivot cannot be moved by turning about itself, so the delta's rotation and scale still
+            // land below while the position is left alone. Nothing else differs between the modes.
+            const Vector4F lMoved = InOrigin == ETransformOrigin::Individual
+                                        ? Vector4F(lTransform->Position.x, lTransform->Position.y, 0.f, 1.f)
+                                        : InDelta * Vector4F(lTransform->Position.x, lTransform->Position.y, 0.f, 1.f);
 
             // ROTATION AND SCALE ARE READ IN THE ENTITY'S OWN FRAME, and for scale that is the whole
             // difference between right and wrong. A Local scale of an entity turned by R arrives here

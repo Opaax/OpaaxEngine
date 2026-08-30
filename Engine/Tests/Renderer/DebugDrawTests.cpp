@@ -156,3 +156,44 @@ TEST_CASE("ToQuad: a degenerate zero-length segment is invisible, never NaN")
     CHECK(lQuad.RotationRad == doctest::Approx(0.f));
     CHECK_FALSE(std::isnan(lQuad.RotationRad));
 }
+
+// =============================================================================
+// The draw BAND (③b)
+// =============================================================================
+TEST_CASE("DebugDraw: a segment defaults to the Debug band, above world geometry")
+{
+    // Every caller written before ③b relies on this default. If it ever changed, selection
+    // outlines and entity icons would slide behind the sprites they annotate.
+    DebugDraw lDraw;
+    lDraw.DrawLine({ 0.f, 0.f }, { 1.f, 0.f }, { 1.f, 1.f, 1.f, 1.f });
+
+    REQUIRE(lDraw.GetLines().size() == 1u);
+    CHECK(lDraw.GetLines()[0].Layer == ERenderLayer::Debug);
+}
+
+TEST_CASE("DebugDraw: a segment can name a band BELOW world geometry")
+{
+    // What the snap grid needs: Background sorts under Default, so the grid is drawn on rather than
+    // over. A grid above every sprite is not a grid, it is a cage.
+    DebugDraw lDraw;
+    lDraw.DrawLine({ 0.f, 0.f }, { 1.f, 0.f }, { 1.f, 1.f, 1.f, 1.f }, 1.f, ERenderLayer::Background);
+
+    REQUIRE(lDraw.GetLines().size() == 1u);
+    CHECK(lDraw.GetLines()[0].Layer == ERenderLayer::Background);
+    CHECK(static_cast<int>(ERenderLayer::Background) < static_cast<int>(ERenderLayer::Default));
+}
+
+TEST_CASE("DebugDraw: DrawBox puts ALL FOUR of its segments in the named band")
+{
+    // The box forwards to DrawLine four times; forgetting the layer on one of them would leave a
+    // single edge floating above the others, which reads as a rendering glitch rather than a bug.
+    DebugDraw lDraw;
+    lDraw.DrawBox({ 0.f, 0.f }, { 10.f, 10.f }, { 1.f, 1.f, 1.f, 1.f }, 1.f, ERenderLayer::Background);
+
+    REQUIRE(lDraw.GetLines().size() == 4u);
+
+    for (const DebugLine& lLine : lDraw.GetLines())
+    {
+        CHECK(lLine.Layer == ERenderLayer::Background);
+    }
+}

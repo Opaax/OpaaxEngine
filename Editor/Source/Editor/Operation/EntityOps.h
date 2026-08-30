@@ -1,6 +1,7 @@
 #pragma once
 
-#include "Core/Maths/MathTypes.h"       // Vector2F — the gizmo's delta
+#include "Core/Maths/MathTypes.h"       // Vector2F / Matrix44F — the gizmo's delta
+#include "Core/OpaaxTypes.h"            // Uint8
 #include "Core/String/OpaaxString.hpp"
 #include "World/Entity/EntityTypes.h"   // MapId
 
@@ -62,6 +63,20 @@ namespace Opaax::Editor
         void DestroySelected(EditorContext& InContext);
 
         /**
+         * WHERE a delta's rotation and scale act on a multi-selection.
+         *
+         * Shared — the delta is a world-space map, so entities ORBIT whatever point it was built
+         * about and the selection keeps its formation. Individual — each entity turns about itself
+         * and none of them move. Only the second needs saying, because the first falls out of
+         * applying one matrix to everything.
+         */
+        enum class ETransformOrigin : Uint8
+        {
+            Shared,
+            Individual
+        };
+
+        /**
          * Apply a world-space transform delta to everything selected — the gizmo's drag (③).
          *
          * ONE VERB FOR ALL THREE MODES, and a matrix rather than three scalars, because that is what
@@ -76,8 +91,14 @@ namespace Opaax::Editor
          * Rotation and scale are read off the delta's own basis vectors (angle and length), which is
          * why this stays free of ImGuizmo — the choke point speaks the engine's vocabulary, not a
          * vendor's.
+         *
+         * @param InOrigin Individual leaves every POSITION untouched and applies only the delta's
+         *   rotation and scale, so N entities turn in place instead of orbiting. Passed rather than
+         *   read from the gizmo so the call is replayable — ⑤ must be able to re-apply a recorded
+         *   delta without the toolbar's current state changing what it means.
          */
-        void TransformSelected(EditorContext& InContext, const Matrix44F& InDelta);
+        void TransformSelected(EditorContext& InContext, const Matrix44F& InDelta,
+                               ETransformOrigin InOrigin = ETransformOrigin::Shared);
 
         /**
          * Frame the selection with the editor camera.

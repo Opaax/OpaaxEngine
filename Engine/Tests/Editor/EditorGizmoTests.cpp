@@ -298,6 +298,55 @@ TEST_CASE("EditorGizmo: an UNROTATED entity is bit-identical to the pre-③b pat
     CHECK(LocalRotationOf(lDelta, 0.f) == doctest::Approx(0.f));
 }
 
+TEST_CASE("EditorGizmo: Individual origins is refused for a TRANSLATE, whatever the pivot says")
+{
+    // "About its own origin" has no meaning for a translation — everything moves by the same
+    // offset. Stated on the gizmo so the toolbar's label and the mutation cannot disagree.
+    EditorGizmo lGizmo;
+
+    lGizmo.SetPivot(EGizmoPivot::Individual);
+
+    lGizmo.SetMode(EGizmoMode::Translate);
+    CHECK_FALSE(lGizmo.UsesIndividualOrigins());
+
+    lGizmo.SetMode(EGizmoMode::Rotate);
+    CHECK(lGizmo.UsesIndividualOrigins());
+
+    lGizmo.SetMode(EGizmoMode::Scale);
+    CHECK(lGizmo.UsesIndividualOrigins());
+
+    // And it is the PIVOT that enables it, not the mode alone.
+    lGizmo.SetPivot(EGizmoPivot::Center);
+    CHECK_FALSE(lGizmo.UsesIndividualOrigins());
+}
+
+TEST_CASE("EditorGizmo: a SHARED-pivot rotation orbits, which is what Individual must not do")
+{
+    // The distinction the user asked for, pinned from the delta's side: a rotation about a shared
+    // pivot MOVES an entity that is not at that pivot. EntityOps' Individual branch is exactly the
+    // choice to discard this displacement and keep only the turn.
+    EditorGizmo    lGizmo;
+    const Vector2F lPivot{ 0.f, 0.f };
+
+    lGizmo.ReseatAt(lPivot, 0.f);
+
+    const float lNew = glm::radians(90.f);
+    lGizmo.Matrix()[0] = Vector4F{ std::cos(lNew), std::sin(lNew), 0.f, 0.f };
+    lGizmo.Matrix()[1] = Vector4F{ -std::sin(lNew), std::cos(lNew), 0.f, 0.f };
+    lGizmo.BankFrameDelta();
+
+    const Matrix44F lDelta = lGizmo.ConsumeDelta();
+
+    // An entity 100 to the right of the pivot swings to 100 ABOVE it — a real displacement, and
+    // the whole reason "rotate them as a group" and "rotate each of them" are different verbs.
+    const Vector2F lOrbited = Apply(lDelta, { 100.f, 0.f });
+    CHECK(lOrbited.x == doctest::Approx(0.f).epsilon(0.001));
+    CHECK(lOrbited.y == doctest::Approx(100.f));
+
+    // The TURN is the same either way — Individual keeps this and drops the displacement above.
+    CHECK(LocalRotationOf(lDelta, 0.f) == doctest::Approx(90.f));
+}
+
 TEST_CASE("EditorGizmo: ReseatAt re-anchors BOTH matrices, so idling banks nothing")
 {
     // The gizmo follows the selection every frame it is not being dragged. If ReseatAt moved only

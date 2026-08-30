@@ -18,7 +18,9 @@
 #include "Application/Services/IEngine.h"
 #include "Application/Services/ILogger.h"   // OPAAX_LOG + LogCategory
 
-#include "Renderer/DebugDraw.h"             // selection outline (M2c)
+#include <cmath>                            // ceil/floor/log10/pow — the grid's decade step-up
+
+#include "Renderer/DebugDraw.h"             // selection outline (M2c) + the grid's Background band
 #include "Renderer/RenderTarget.hpp"        // OffscreenRenderTarget
 #include "RHI/Framebuffer.h"                // IFramebuffer + FramebufferSpec (created by the device)
 
@@ -115,6 +117,11 @@ namespace Opaax::Editor
 
         ApplyPendingResize();
         ApplyCameraGesture();
+
+        // FIRST of the overlays — it reads the camera the two calls above just settled, and it is
+        // the only one on the Background band, so everything else still draws over it.
+        EnqueueGrid();
+
         EnqueueSelectionOutline();
         EnqueueEntityIcons();
     }
@@ -265,7 +272,10 @@ namespace Opaax::Editor
 
         const Matrix44F lDelta = m_Context.Gizmo.ConsumeDelta();
 
-        EntityOps::TransformSelected(m_Context, lDelta);
+        EntityOps::TransformSelected(m_Context, lDelta,
+                                     m_Context.Gizmo.UsesIndividualOrigins()
+                                         ? EntityOps::ETransformOrigin::Individual
+                                         : EntityOps::ETransformOrigin::Shared);
 
         // ONE-SHOT PER MODE, because a drag lands one of these per frame. Without it a gizmo that
         // draws but never writes looks exactly like one that writes — the L15 discriminate rule, and
@@ -340,6 +350,122 @@ namespace Opaax::Editor
         }
 
         OPAAX_LOG(LogViewportPanel, Trace, "ViewportPanel resized to {}x{}", m_viewportSize.x, m_viewportSize.y);
+    }
+
+    // =========================================================================
+    // EnqueueGrid — the snap grid, on the BACKGROUND band so it sits under everything it measures.
+    //
+    // Its spacing IS the translate snap step, which is the whole point: a grid that does not match
+    // what a drag lands on is decoration, and worse than none. Edit worlds only.
+    //
+    // BOUNDED TWICE, because the world is infinite and the batch is not. The visible rect comes from
+    // the same ScreenToWorld picking uses, so only lines actually on screen are emitted; and the
+    // spacing climbs by DECADES once a cell would be finer than a few pixels, so zooming out turns
+    // the grid coarse instead of emitting ten thousand invisible lines. The line cap behind both is
+    // a guard against a step nobody anticipated, not the mechanism.
+    // =========================================================================
+    float ViewportPanel::GridSpacing() const
+    {
+        const float lWorldPerPixel = WorldPerPixel();
+        const float lStep          = m_Context.Gizmo.GetSnapStep(EGizmoMode::Translate);
+
+        if (lStep <= 0.f || lWorldPerPixel <= 0.f)
+        {
+            return lStep;
+        }
+
+        // DECADE STEP-UP, solved rather than looped so a pathological step cannot spin here.
+        const float lMinWorld = m_GridMinCellPx * lWorldPerPixel;
+
+        return lStep < lMinWorld
+                   ? lStep * std::pow(10.f, std::ceil(std::log10(lMinWorld / lStep)))
+                   : lStep;
+    }
+
+    float ViewportPanel::TranslateSnapStep() const
+    {
+        // WHILE THE GRID IS VISIBLE, SNAP TO WHAT IS DRAWN. Zoomed out, the grid coarsens by decades
+        // and a drag snapping to the authored step would land between two visible lines — the author
+        // sees 100-unit cells and gets 10-unit jumps. With the grid hidden there is nothing to
+        // match, so the number they typed is honoured literally.
+        return m_Context.Viewport.IsGridVisible() ? GridSpacing()
+                                                  : m_Context.Gizmo.GetSnapStep(EGizmoMode::Translate);
+    }
+
+    void ViewportPanel::EnqueueGrid()
+    {
+        World* const lWorld = m_Context.Worlds.GetActiveWorld();
+
+        if (!m_Context.Viewport.IsGridVisible() || lWorld == nullptr
+            || lWorld->GetMode() != EWorldMode::Edit || m_viewportSize.y == 0)
+        {
+            return;
+        }
+
+        const float lWorldPerPixel = WorldPerPixel();
+        const float lSpacing       = GridSpacing();
+
+        if (lSpacing <= 0.f || lWorldPerPixel <= 0.f)
+        {
+            return;
+        }
+
+        // The visible rect, from the corners of the image — the same conversion the click uses, so
+        // the grid cannot disagree with what a drag snaps to.
+        const Bounds2D lView = Bounds2D::FromMinMax(
+            ViewportToWorld({ 0.f, 0.f }),
+            ViewportToWorld({ static_cast<float>(m_viewportSize.x), static_cast<float>(m_viewportSize.y) }));
+
+        const Vector2F lMin = lView.Min();
+        const Vector2F lMax = lView.Max();
+
+        const Int32 lFirstX = static_cast<Int32>(std::ceil(lMin.x / lSpacing));
+        const Int32 lLastX  = static_cast<Int32>(std::floor(lMax.x / lSpacing));
+        const Int32 lFirstY = static_cast<Int32>(std::ceil(lMin.y / lSpacing));
+        const Int32 lLastY  = static_cast<Int32>(std::floor(lMax.y / lSpacing));
+
+        const Int64 lCount = static_cast<Int64>(lLastX - lFirstX + 1) + static_cast<Int64>(lLastY - lFirstY + 1);
+        if (lCount <= 0 || lCount > static_cast<Int64>(m_GridMaxLines))
+        {
+            return;
+        }
+
+        DebugDraw& lDraw = m_Context.Engine.GetDebugDraw();
+
+        // Screen-CONSTANT thickness: a grid is a hairline at every zoom, unlike the selection
+        // outline, which is deliberately world-sized so it hugs the entity.
+        const float lThin = m_GridThickness * lWorldPerPixel;
+        const float lAxis = m_GridAxisThickness * lWorldPerPixel;
+
+        for (Int32 lIndex = lFirstX; lIndex <= lLastX; ++lIndex)
+        {
+            const float lX = static_cast<float>(lIndex) * lSpacing;
+
+            // x == 0 is the Y AXIS — the vertical line. Naming it the other way round is the easy
+            // mistake here, and it would put the colours on the wrong lines.
+            const bool bAxis = lIndex == 0;
+
+            lDraw.DrawLine({ lX, lMin.y }, { lX, lMax.y },
+                           bAxis ? m_GridAxisYColor : m_GridColor,
+                           bAxis ? lAxis : lThin, ERenderLayer::Background);
+        }
+
+        for (Int32 lIndex = lFirstY; lIndex <= lLastY; ++lIndex)
+        {
+            const float lY    = static_cast<float>(lIndex) * lSpacing;
+            const bool  bAxis = lIndex == 0;
+
+            lDraw.DrawLine({ lMin.x, lY }, { lMax.x, lY },
+                           bAxis ? m_GridAxisXColor : m_GridColor,
+                           bAxis ? lAxis : lThin, ERenderLayer::Background);
+        }
+
+        if (!m_bGridLogged)
+        {
+            OPAAX_LOG(LogViewportPanel, Info, "Snap grid enqueued — {} line(s) at {:.1f} world units",
+                      lCount, lSpacing);
+            m_bGridLogged = true;
+        }
     }
 
     // =========================================================================
@@ -556,7 +682,10 @@ namespace Opaax::Editor
         // the toggle is left.
         lGizmo.SetSnapInverted(ImGui::GetIO().KeyCtrl);
 
-        const float lStep    = lGizmo.GetSnapStep();
+        // Translate follows the GRID when one is shown (see TranslateSnapStep); rotate and scale
+        // have no grid to match, so they use the authored step.
+        const float lStep    = lGizmo.GetMode() == EGizmoMode::Translate ? TranslateSnapStep()
+                                                                         : lGizmo.GetSnapStep();
         const float lSnap[3] = { lStep, lStep, lStep };
 
         // A handle under the toolbar must not be grabbable through it — but NEVER mid-drag, because

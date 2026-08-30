@@ -26,9 +26,9 @@ namespace Opaax
     }
 
     void DebugDraw::DrawLine(const Vector2F& InStart, const Vector2F& InEnd, const Vector4F& InColor,
-                             float InThickness)
+                             float InThickness, ERenderLayer InLayer)
     {
-        m_Lines.emplace_back(InStart, InEnd, InColor, InThickness);
+        m_Lines.emplace_back(InStart, InEnd, InColor, InThickness, InLayer);
     }
 
     // =========================================================================
@@ -37,7 +37,7 @@ namespace Opaax
     // thicknesses that reads as a clean corner and costs nothing (no mitring maths).
     // =========================================================================
     void DebugDraw::DrawBox(const Vector2F& InCenter, const Vector2F& InSize, const Vector4F& InColor,
-                            float InThickness)
+                            float InThickness, ERenderLayer InLayer)
     {
         const Vector2F lHalf = InSize * 0.5f;
 
@@ -46,10 +46,10 @@ namespace Opaax
         const Vector2F lTopRight    = { InCenter.x + lHalf.x, InCenter.y + lHalf.y };
         const Vector2F lTopLeft     = { InCenter.x - lHalf.x, InCenter.y + lHalf.y };
 
-        DrawLine(lBottomLeft,  lBottomRight, InColor, InThickness);
-        DrawLine(lBottomRight, lTopRight,    InColor, InThickness);
-        DrawLine(lTopRight,    lTopLeft,     InColor, InThickness);
-        DrawLine(lTopLeft,     lBottomLeft,  InColor, InThickness);
+        DrawLine(lBottomLeft,  lBottomRight, InColor, InThickness, InLayer);
+        DrawLine(lBottomRight, lTopRight,    InColor, InThickness, InLayer);
+        DrawLine(lTopRight,    lTopLeft,     InColor, InThickness, InLayer);
+        DrawLine(lTopLeft,     lBottomLeft,  InColor, InThickness, InLayer);
     }
 
     void DebugDraw::Clear() noexcept

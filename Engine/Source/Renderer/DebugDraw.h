@@ -3,6 +3,7 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Maths/MathTypes.h"
+#include "Renderer/RenderLayer.h"   // ERenderLayer — a segment states its own band
 
 namespace Opaax
 {
@@ -15,6 +16,14 @@ namespace Opaax
         Vector2F End       = { 0.f, 0.f };
         Vector4F Color     = { 1.f, 1.f, 1.f, 1.f };
         float    Thickness = 1.f;
+
+        /**
+         * WHICH BAND the segment draws in. Debug — above all world geometry — is right for an
+         * overlay that must not be hidden by what it annotates, and it is the only thing this queue
+         * could express until ③b needed a BACKGROUND grid: a grid drawn over every sprite is not a
+         * grid, it is a cage.
+         */
+        ERenderLayer Layer = ERenderLayer::Debug;
     };
 
     /**
@@ -62,9 +71,10 @@ namespace Opaax
          * @param InEnd segment end, world units
          * @param InColor RGBA normalised [0,1]
          * @param InThickness line width in world units (1 unit = 1px at the render target's native size)
+         * @param InLayer draw band; the default keeps every existing caller above world geometry
          */
         void DrawLine(const Vector2F& InStart, const Vector2F& InEnd, const Vector4F& InColor,
-                      float InThickness = 1.f);
+                      float InThickness = 1.f, ERenderLayer InLayer = ERenderLayer::Debug);
 
         /**
          * Queue an axis-aligned rectangle outline as four segments.
@@ -72,9 +82,10 @@ namespace Opaax
          * @param InSize full width and height
          * @param InColor RGBA normalised [0,1]
          * @param InThickness line width in world units
+         * @param InLayer draw band, applied to all four segments
          */
         void DrawBox(const Vector2F& InCenter, const Vector2F& InSize, const Vector4F& InColor,
-                     float InThickness = 1.f);
+                     float InThickness = 1.f, ERenderLayer InLayer = ERenderLayer::Debug);
 
         // =============================================================================
         // Consumption — the renderer's side

@@ -12,8 +12,11 @@
 #include "Editor//Application/Services/EditorPaths.h"
 #include "Editor/Commands/EditorNativeCommands.h"
 #include "Editor/Commands/EditorNativeCommandsTags.hpp"
+#include <cstdio>                              // snprintf — the pivot button's state-carrying label
+
 #include "Editor/ImguiLibrary/ImguiWidgets.h"   // ToggleButton — the toolbar's mode and snap buttons
 #include "Editor/Operation/EditorGizmo.hpp"
+#include "Editor/Operation/EditorViewport.hpp"   // the grid toggle lives on the viewport (③b)
 #include "Editor/Operation/LevelOperations.h"
 #include "Editor/Panels/ConfigPanel.h"
 #include "Editor/Panels/HierarchyPanel.h"
@@ -211,6 +214,25 @@ namespace Opaax::Editor
             }
         });
 
+        // --- Grid ---------------------------------------------------------------------------
+        // Beside the snap controls WITHOUT a separator, because it is one of them: the grid's
+        // spacing IS the translate step above, so the two belong in the same group.
+        lTools.Add(OPAAX_ID("Grid"), [](EditorContext& InContext)
+        {
+            EditorViewport& lViewport = InContext.Viewport;
+
+            if (ImguiWidgets::ToggleButton("Grid", lViewport.IsGridVisible()))
+            {
+                lViewport.SetShowGrid(!lViewport.IsGridVisible());
+            }
+
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::SetTooltip("Show a grid at the TRANSLATE snap step.\n"
+                                  "It coarsens by decades as you zoom out.");
+            }
+        });
+
         lTools.AddSeparator();
 
         // --- Pivot --------------------------------------------------------------------------
@@ -219,18 +241,28 @@ namespace Opaax::Editor
         lTools.Add(OPAAX_ID("Pivot"), [](EditorContext& InContext)
         {
             EditorGizmo& lGizmo = InContext.Gizmo;
-            const bool   bOrigin = lGizmo.GetPivot() == EGizmoPivot::Origin;
 
-            if (ImGui::SmallButton(bOrigin ? "Pivot: Origin" : "Pivot: Center"))
+            // THREE states, so it cycles rather than toggles. The label is the readout.
+            const EGizmoPivot lPivot = lGizmo.GetPivot();
+
+            // "###pivot" pins the ImGui ID to the part after it, so a label that changes with the
+            // state does not make this a different widget every time it is clicked.
+            char lLabel[48];
+            std::snprintf(lLabel, sizeof(lLabel), "Pivot: %s###pivot", ToString(lPivot));
+
+            if (ImGui::SmallButton(lLabel))
             {
-                lGizmo.SetPivot(bOrigin ? EGizmoPivot::Center : EGizmoPivot::Origin);
+                lGizmo.SetPivot(lPivot == EGizmoPivot::Center     ? EGizmoPivot::Origin
+                              : lPivot == EGizmoPivot::Origin     ? EGizmoPivot::Individual
+                                                                  : EGizmoPivot::Center);
             }
 
             if (ImGui::IsItemHovered())
             {
-                ImGui::SetTooltip("Center — the selection's combined bounds.\n"
-                                  "Origin — the last-picked entity's own position.\n"
-                                  "They coincide for a single entity.");
+                ImGui::SetTooltip("Center — one point, the selection's combined bounds.\n"
+                                  "Origin — one point, the last-picked entity's position.\n"
+                                  "Individual — each entity turns about ITSELF; nothing orbits.\n"
+                                  "All three agree for a single entity.");
             }
         });
 
@@ -246,7 +278,7 @@ namespace Opaax::Editor
 
             ImGui::BeginDisabled(bForced);
 
-            if (ImGui::SmallButton(bLocal ? "Space: Local" : "Space: World"))
+            if (ImGui::SmallButton(bLocal ? "Space: Local###space" : "Space: World###space"))
             {
                 lGizmo.SetSpace(bLocal ? EGizmoSpace::World : EGizmoSpace::Local);
             }

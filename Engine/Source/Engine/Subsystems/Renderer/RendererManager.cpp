@@ -179,7 +179,9 @@ namespace Opaax
         for (const DebugLine& lLine : m_DebugDraw.GetLines())
         {
             const DebugQuad lQuad = ToQuad(lLine);
-            lRenderer.DrawQuad(lQuad.Center, lQuad.Size, lLine.Color, lQuad.RotationRad, ERenderLayer::Debug);
+            // The LINE's band, not a hardcoded Debug: ③b's grid has to sit BEHIND world geometry,
+            // and everything else still defaults to Debug and draws above it.
+            lRenderer.DrawQuad(lQuad.Center, lQuad.Size, lLine.Color, lQuad.RotationRad, lLine.Layer);
         }
 
         m_RenderSystem->EndPass();
