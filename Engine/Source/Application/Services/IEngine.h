@@ -156,9 +156,9 @@ namespace Opaax
     public:
         virtual EngineRegistries&   GetRegistries() = 0;
 
-        virtual ResourceManager&    GetResources() = 0;
-        virtual EngineEventBus&     GetEngineEventBus() = 0;
-        virtual WorldManager&       GetWorldManager() = 0;
+        virtual ResourceManager&            GetResources() = 0;
+        virtual EngineEventBus&             GetEngineEventBus() = 0;
+        virtual WorldManager&               GetWorldManager() = 0;
 
         /**
          * Enqueue from anywhere in the frame BEFORE the render that should show it — the renderer drains and clears it every frame, so a line must be

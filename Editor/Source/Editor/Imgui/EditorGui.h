@@ -12,6 +12,7 @@ namespace Opaax
 
 namespace Opaax::Editor
 {
+    struct EditorContext;
     // =============================================================================
     // EditorGui — the editor's ImGui boundary: the context, the impl backends, the frame and the
     //   dockspace. EditorService owns one and delegates to it exactly as it delegates the menu bar
@@ -92,7 +93,7 @@ namespace Opaax::Editor
         void EndFrame();
 
         /** The dockspace every panel docks into, over the main viewport. */
-        void DrawDockspace();
+        void Draw(const EditorContext& InContext);
 
         // End Frame
         // =============================================================================

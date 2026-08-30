@@ -41,6 +41,7 @@ namespace Opaax::Editor
 
     void EditorPanels::Draw()
     {
+        //Should be draw from GUI
         for (LivePanel& lLive : m_Panels)
         {
             if (!lLive.bVisible) { continue; }

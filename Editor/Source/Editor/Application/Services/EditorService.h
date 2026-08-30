@@ -47,7 +47,46 @@ namespace Opaax::Editor
         // =============================================================================
         
         // =============================================================================
-        // Native Editor
+        // Editor Native
+    private:
+        /**
+         * Resolves the app's IPaths to EditorPaths ONCE, into m_EditorPaths. EditorApplication::CreatePaths
+         * falls back to a plain Paths when no edited project is declared, so this genuinely can end up null —
+         * every consumer treats that as "no editor space", never as an error.
+         */
+        void CacheEditorPaths();
+
+        /**
+         * Create editor systems
+         */
+        void CreateEditorSystems(IEngine& InEngine);
+
+        /**
+         * 
+         */
+        void ClearEditorSystems();
+        
+        /**
+         * Create the editor context
+         */
+        void CreateEditorContext(Window* InWindow, IEngine& InEngine);
+        
+        /***/
+        void ClearEditorContext();
+
+        /**
+         * Called when the init is done
+         */
+        void PostInitialized();
+        
+        /** The dockspace and the menu bar — everything drawn outside a panel. */
+        void DrawGUI();
+        
+        // End Editor Native
+        // =============================================================================
+        
+        // =============================================================================
+        // Editor Registers 
     private:
 
         /**
@@ -94,69 +133,37 @@ namespace Opaax::Editor
          */
         void RegisterNativeViewportTools();
 
-        /**
-         * One Window-menu entry per registered panel, from its PanelDesc.
-         *
-         * Runs AFTER the game module has registered (so its panels get a toggle too) and BEFORE the
-         * seal. Not a privileged path: it is the same AddCommand a module calls, carrying the same
-         * tag, and the entry's tick reads EditorPanels so it cannot drift from the window's own
-         * close button.
-         */
-        void BindPanelToggles();
-
-        // End Native Editor
+        // End Editor Registers 
         // =============================================================================
         
-        /** The dockspace and the menu bar — everything drawn outside a panel. */
-        void DrawDockspace();
-
-        /** Adopt the level the engine opened at boot, and one of its maps for editing. */
-        void AdoptStartupLevel();
+        // =============================================================================
+        // World
+    private:
+        /**
+         * Cache the world mgr from engine
+         * @param InEngine 
+         * @return true if world manager != nullptr
+         */
+        bool SetWorldManagerFromEngine(IEngine& InEngine);
 
         /**
-         * Re-derive the per-map dirty answers, at most 4×/s (**MP5**).
-         *
-         * The throttle is here because the frame clock is; the answers live in EditorLevelDocument
-         * beside the baselines they come from, so the Hierarchy can mark every map without a
-         * capture per row. Runs at the top of EndFrame, before anything that reads it.
+         * Unbind delegate from World manager
+         * Make sure to clear the cache ptr.
          */
-        void RefreshDirtyCache();
+        void ClearWorldManager();
 
         /**
-         * Ctrl+S, in the UI pass.
-         *
-         * NOT in HandleReservedKeys, and not by choice of style: with an Edit world open the input
-         * route is ClosedEditMode, so the engine's InputManager never receives Ctrl and could not
-         * answer IsCtrlDown(). See the body for why the split (route-level F-keys vs UI-pass
-         * chords) is the right shape rather than a workaround.
+         * Bind to World mgr delegates.
+         * Should be call only if world is valid
          */
-        void HandleAuthoringShortcuts();
-
+        void BindToWorldManagerDelegates();
+        
         /**
-         * Resolves <ProjectRoot>/Editor/Save/imgui.ini — the dock layout ImGui loads on the first frame and
-         * rewrites as it changes — CREATING the directory if absent (ImGui will not, and its save fails
-         * silently on a missing dir).
-         *
-         * @return The absolute ini path, or an EMPTY string if the editor's path service is unavailable, in
-         *   which case the caller must leave IniFilename null (ImGui's own "don't persist" contract).
+         * Unbind from World mgr delegates.
+         * Should be call only if world is valid and before clearing the world mgr cache
          */
-        OpaaxString ResolveLayoutIniPath() const;
-
-        /**
-         * Resolves the app's IPaths to EditorPaths ONCE, into m_EditorPaths. EditorApplication::CreatePaths
-         * falls back to a plain Paths when no edited project is declared, so this genuinely can end up null —
-         * every consumer treats that as "no editor space", never as an error.
-         */
-        void CacheEditorPaths();
-
-        /**
-         * The reserved editor keys — D5's step 3, and only that step. Runs AFTER ImGui's capture
-         * check, so a shortcut can never fire while a text field has the keyboard.
-         *
-         * @return true when the key was a reserved one and the editor consumed it.
-         */
-        bool HandleReservedKeys(Event& InEvent);
-
+        void UnbindFromWorldManagerDelegates();
+        
         /**
          * The active world was replaced (PIE Play/Stop, or the active world being destroyed).
          * Retargets the selection FIRST, then notifies every panel — so no panel can observe a
@@ -170,6 +177,84 @@ namespace Opaax::Editor
          * (Entity holds a raw World*, so a stale one dangles).
          */
         void HandleWorldDestroyed(World* InWorld);
+        // End World
+        // =============================================================================
+        
+        // Level
+        // =============================================================================
+        
+        /** Adopt the level the engine opened at boot, and one of its maps for editing. */
+        void AdoptStartupLevel();
+        
+        // End Level
+        // =============================================================================
+        
+        // =============================================================================
+        // GUI
+    private:
+        /**
+         * 
+         * @param InWindow 
+         * @return False if not initialized correctly
+         */
+        bool InitGUI(Window* InWindow);
+        void ClearGUI();
+        
+        /**
+         * Resolves <ProjectRoot>/Editor/Save/imgui.ini — the dock layout ImGui loads on the first frame and
+         * rewrites as it changes — CREATING the directory if absent (ImGui will not, and its save fails
+         * silently on a missing dir).
+         *
+         * @return The absolute ini path, or an EMPTY string if the editor's path service is unavailable, in
+         *   which case the caller must leave IniFilename null (ImGui's own "don't persist" contract).
+         */
+        OpaaxString ResolveLayoutIniPath() const;
+        
+        /**
+         * Ctrl+S, in the UI pass.
+         *
+         * NOT in HandleReservedKeys, and not by choice of style: with an Edit world open the input
+         * route is ClosedEditMode, so the engine's InputManager never receives Ctrl and could not
+         * answer IsCtrlDown(). See the body for why the split (route-level F-keys vs UI-pass
+         * chords) is the right shape rather than a workaround.
+         */
+        void HandleAuthoringShortcuts();
+        
+        /**
+         * The reserved editor keys — D5's step 3, and only that step. Runs AFTER ImGui's capture
+         * check, so a shortcut can never fire while a text field has the keyboard.
+         *
+         * @return true when the key was a reserved one and the editor consumed it.
+         */
+        bool HandleReservedKeys(Event& InEvent);
+        
+        // End GUI
+        // =============================================================================
+        
+        // =============================================================================
+        // Panels
+    private:
+        /**
+         * 
+         */
+        void BuildPanels();
+        void ClearPanels();
+        
+        /**
+         * Runs AFTER the game module has registered (so its panels get a toggle too) and BEFORE the seal.
+         */
+        void BindPanelToggles();
+        // End Panels
+        // =============================================================================
+
+        /**
+         * Re-derive the per-map dirty answers, at most 4×/s (**MP5**).
+         *
+         * The throttle is here because the frame clock is; the answers live in EditorLevelDocument
+         * beside the baselines they come from, so the Hierarchy can mark every map without a
+         * capture per row. Runs at the top of EndFrame, before anything that reads it.
+         */
+        void RefreshDirtyCache();
 
         // =============================================================================
         // Get - Set
@@ -201,44 +286,25 @@ namespace Opaax::Editor
         // Members
         // =============================================================================
     private:
-        // The editor's ImGui boundary — context, impl backends, frame, dockspace. Owned by value,
-        // like m_Extensions below: this class delegates to it exactly as it delegates the menu bar
-        // to EditorMenu, and names no ImGui symbol of its own.
-        EditorGui                   m_Gui;
+        const EditorPaths*              m_EditorPaths = nullptr;
+        WorldManager*                   m_WorldMgr = nullptr;
+        
+        EditorGui                       m_Gui;
+        EditorExtensionRegistrar        m_Extensions;
 
-        // M2d: the app's IPaths downcast once (CacheEditorPaths). NON-OWNING — IPaths is an app service
-        // that outlives this one. Null when no edited project was declared.
-        const EditorPaths*          m_EditorPaths = nullptr;
-
-        TUniquePtr<ResourcePreview>  m_Preview;         // ④b: what a double-click asked to see; EditorContext.Preview refs it
-        TUniquePtr<EditorSelection>  m_Selection;       // M2a: what is selected; EditorContext.Selection refs it
-        TUniquePtr<EditorViewport>   m_Viewport;        // ②: the viewport's pixel size, written by its panel
-        TUniquePtr<EditorCamera>     m_Camera;          // ①: the Edit viewpoint, held here so it outlives a PIE cycle
-        TUniquePtr<EditorGizmo>      m_Gizmo;           // ③: the transform handles' grab state; EditorContext.Gizmo refs it
-        TUniquePtr<PlayInEditor>     m_PIE;             // M4 S5: the PIE state machine; EditorContext.PIE refs it
-        TUniquePtr<InputRoute>       m_InputRoute;      // M-Input S2: is the engine being fed; EditorContext.InputRoute refs it
-        TUniquePtr<EditorMapDocument> m_MapDocument;    // M5 S5: the open .opaaxmap; EditorContext.MapDocument refs it
-
-        // WM1a: the open `.opaaxlevel` — a session holds a LEVEL, and the map above is one of its
-        // maps. The manifest itself is the world Level's, not this one's.
+        TUniquePtr<ResourcePreview>     m_Preview;     
+        TUniquePtr<EditorSelection>     m_Selection;   
+        TUniquePtr<EditorViewport>      m_Viewport;    
+        TUniquePtr<EditorCamera>        m_Camera;      
+        TUniquePtr<EditorGizmo>         m_Gizmo;       
+        TUniquePtr<PlayInEditor>        m_PIE;         
+        TUniquePtr<InputRoute>          m_InputRoute;  
+        TUniquePtr<EditorMapDocument>   m_MapDocument;
         TUniquePtr<EditorLevelDocument> m_LevelDocument;
-
-        // M5 S5: when the derived dirty answers were last re-taken. Only the CLOCK is here — the
-        // answers themselves live in EditorLevelDocument, beside the baselines they come from.
+        TUniquePtr<EditorPanels>        m_EditorPanels;
+        
+        TUniquePtr<EditorContext>       m_Context;
+        
         double m_LastDirtyCheck = -1.0;
-        TUniquePtr<EditorContext>    m_Context;
-
-        // Every panel (native + game), built from m_Extensions.Panels() in registration order, and their
-        // visibility. The Viewport is in here too, registered first — natives register before modules
-        // (MR2), so its render-target handshake still cannot be reordered by what a game module adds.
-        TUniquePtr<EditorPanels> m_PanelHost;
-
-        // Every D10 route, including the menu bar itself — one owner, so what a module registers
-        // into is the object that draws.
-        EditorExtensionRegistrar    m_Extensions;
-
-        // M4 S5: the WorldManager we subscribed to, so OnShutdown can unsubscribe. Non-owning, and
-        // held separately from m_Context because the unsubscribe must happen BEFORE the context dies.
-        WorldManager*               m_SubscribedWorlds = nullptr;
     };
 }

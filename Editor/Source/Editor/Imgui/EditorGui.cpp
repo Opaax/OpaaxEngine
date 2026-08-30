@@ -6,6 +6,8 @@
 #include "Application/Services/ILogger.h"
 #include "Core/EngineAPI.h"   // OPAAX_ASSERT
 #include "Core/Window/Window.h"
+#include "Editor/EditorContext.h"
+#include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Editor/UI/OpenGLEditorUIBackend.h"
 
 using namespace Opaax; // OPAAX_LOG expands to an unqualified ToSpdLevel(...)
@@ -214,9 +216,11 @@ namespace Opaax::Editor
         }
     }
 
-    void EditorGui::DrawDockspace()
+    void EditorGui::Draw(const EditorContext& InContext)
     {
         ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
+        
+        //InContext.Extensions.Menus().Draw(InContext);
     }
 
     double EditorGui::GetTime() const

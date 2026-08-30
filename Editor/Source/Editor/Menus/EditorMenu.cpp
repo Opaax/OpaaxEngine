@@ -15,6 +15,7 @@ namespace Opaax::Editor
         return *m_Categories.back();
     }
 
+    //Should be drawn thanks to Editor GUI
     void EditorMenu::Draw(EditorContext& InContext) const
     {
         if (!ImGui::BeginMainMenuBar())

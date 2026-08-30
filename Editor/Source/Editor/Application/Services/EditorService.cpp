@@ -60,6 +60,117 @@ namespace
 
 namespace Opaax::Editor
 {
+    // =============================================================================
+    // =============================================================================
+    // Editor Native
+    // =============================================================================
+    // =============================================================================
+    
+    void EditorService::CacheEditorPaths()
+    {
+        /* EditorSaveDir/EditorAssetsDir live only on EditorPaths, deliberately: 
+        The engine's IPaths knows nothing about an editor. 
+        EditorApplication::CreatePaths normally installs EditorPaths, 
+        but it falls back to a plain Paths when no edited project is declared — so this cast genuinely can fail. */
+        const IPaths& lPaths = OpaaxApplication::GetAppService<IPaths>();
+        m_EditorPaths = dynamic_cast<const EditorPaths*>(&lPaths);
+
+        if (m_EditorPaths == nullptr)
+        {
+            OPAAX_LOG(LogEditorService, Warn, "No EditorPaths (no edited project?) — editor space unavailable.");
+        }
+    }
+
+    void EditorService::CreateEditorSystems(IEngine& InEngine)
+    {
+        m_Selection         = MakeUnique<EditorSelection>();
+        m_Viewport          = MakeUnique<EditorViewport>();
+        m_Preview           = MakeUnique<ResourcePreview>();
+        m_Camera            = MakeUnique<EditorCamera>();
+        m_Gizmo             = MakeUnique<EditorGizmo>();
+        m_PIE               = MakeUnique<PlayInEditor>(*m_WorldMgr);
+        m_InputRoute        = MakeUnique<InputRoute>(*m_WorldMgr, InEngine.GetInput(), *m_PIE);
+        m_MapDocument       = MakeUnique<EditorMapDocument>();
+        m_LevelDocument     = MakeUnique<EditorLevelDocument>();
+        m_EditorPanels         = MakeUnique<EditorPanels>();
+    }
+
+    void EditorService::ClearEditorSystems()
+    {
+        m_Selection.reset();
+        m_Viewport.reset();
+        m_Preview.reset();
+        m_Camera.reset();
+        m_Gizmo.reset();
+        m_InputRoute.reset();
+        m_PIE.reset();
+        m_EditorPanels.reset();
+    }
+
+    void EditorService::CreateEditorContext(Window* InWindow, IEngine& InEngine)
+    {
+        // --- EditorContext: Built after the UIBackend so it can hold a reference to it. ---------------------------------------
+        m_Context = MakeUnique<EditorContext>(EditorContext{
+            InEngine,
+            InEngine.GetWorldManager(),
+            InEngine.GetResources(),
+            m_Gui.Backend(),
+            *m_Selection,
+            *m_Viewport,
+            *m_Camera,
+            *m_Gizmo,
+            *m_PIE,
+            *m_InputRoute,
+            *m_LevelDocument,
+            *m_MapDocument,
+            m_Extensions,
+            *m_EditorPanels,
+            *m_Preview,
+            OpaaxApplication::GetAppService<IPaths>(),
+            OpaaxApplication::GetAppService<IPlatform>().GetFileSystem(),
+            OpaaxApplication::GetAppService<IConfigSystem>(),
+            *InWindow,
+            m_EditorPaths
+        });
+    }
+
+    void EditorService::ClearEditorContext()
+    {
+        m_Context.reset();
+    }
+
+    void EditorService::PostInitialized()
+    {
+        BuildPanels();
+        AdoptStartupLevel();
+    }
+    
+    void EditorService::DrawGUI()
+    {
+        if (m_Context != nullptr)
+        {
+            m_Gui.Draw(*m_Context);
+            //Should be drawned from GUI
+            m_Extensions.Menus().Draw(*m_Context);
+        }
+
+        HandleAuthoringShortcuts();
+        
+        // The Viewport panel samples the FBO the world was just rendered into (Engine().Loop() above)
+        // and shows it as an ImGui image — the world lives INSIDE a panel now, not the raw backbuffer.
+        // It is the first panel in the host, with no special path of its own.
+        if (m_EditorPanels != nullptr)
+        {
+            m_EditorPanels->Draw();
+        }
+    }
+
+    // =============================================================================
+    // =============================================================================
+    // Editor Registers 
+    // =============================================================================
+    // =============================================================================
+    
     void EditorService::RegisterNativeMenus()
     {
         EditorMenu& lMenu = m_Extensions.Menus();
@@ -109,6 +220,23 @@ namespace Opaax::Editor
         lPlay.AddCommand("Step", Tags::EDITOR_COMMAND_STEP).SetEnabled(IsPaused);
         lPlay.AddSeparator();
         lPlay.AddCommand("Stop", Tags::EDITOR_COMMAND_STOP).SetEnabled(IsPlaying);
+    }
+    
+    void EditorService::RegisterNativePanels()
+    {
+        PanelRegistry& lPanelsRegistry = m_Extensions.Panels();
+        
+        //Visible by default
+        lPanelsRegistry.Register<ViewportPanel>(PanelDesc       {.Id = ViewportPanel::PanelID()});
+        lPanelsRegistry.Register<PlayToolbarPanel>(PanelDesc    {.Id = PlayToolbarPanel::PanelID()});
+        lPanelsRegistry.Register<HierarchyPanel>(PanelDesc      {.Id = HierarchyPanel::PanelID()});
+        lPanelsRegistry.Register<InspectorPanel>(PanelDesc      {.Id = InspectorPanel::PanelID()});
+        lPanelsRegistry.Register<ResourceBrowserPanel>(PanelDesc{.Id = ResourceBrowserPanel::PanelID()});
+        
+        //Hidden by default
+        lPanelsRegistry.Register<ResourcePreviewPanel>(PanelDesc{.Id = ResourcePreviewPanel::PanelID(), .DefaultVisibility = EPanelVisibility::Hidden});
+        lPanelsRegistry.Register<ConfigPanel>(PanelDesc         {.Id = ConfigPanel::PanelID(),          .DefaultVisibility = EPanelVisibility::Hidden});
+        lPanelsRegistry.Register<InputPanel>(PanelDesc          {.Id = InputPanel::PanelID(),           .DefaultVisibility = EPanelVisibility::Hidden });
     }
 
     void EditorService::RegisterNativeEditorCommand()
@@ -343,125 +471,116 @@ namespace Opaax::Editor
                 InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_LEVEL_AT, InContext, LevelPathParams{InFile.AbsPath});
             });
     }
-
-    void EditorService::Initialize()
+    
+    // =============================================================================
+    // =============================================================================
+    // World
+    // =============================================================================
+    // =============================================================================
+    
+    bool EditorService::SetWorldManagerFromEngine(IEngine& InEngine)
     {
-        // The one place editor code resolves from the locator (composition root, D3). Engine subsystems
-        // exist now (called post Engine::Startup), so their references are valid and lifetime-stable.
-        IEngine& lEngine = OpaaxApplication::GetAppService<IEngine>();
-
-        // Resolved before anything reads it: ResolveLayoutIniPath below, then the EditorContext.
-        CacheEditorPaths();
-
-        // --- The whole UI stack — context, io config, style, dock layout, impl backends — behind
-        //     EditorGui, the only editor class outside a panel that names ImGui. The window was
-        //     created in InitializeApplication and its GL context is current on this thread, so the
-        //     renderer impl's Init is safe here. Built BEFORE the EditorContext so the context can
-        //     carry a reference to its backend (the ViewportPanel samples its FBO through it —
-        //     GetViewportImage). ----------------------------------------------------------------
-        IWindowManager& lWindows = OpaaxApplication::GetAppService<IWindowManager>();
-        Window* lWindow = lWindows.GetMainWindow();
-        if (lWindow == nullptr)
+        m_WorldMgr  = &InEngine.GetWorldManager();
+        
+        bool lbIsValidWorldMgr = m_WorldMgr != nullptr;
+        
+        if (lbIsValidWorldMgr)
         {
-            OPAAX_LOG(LogEditorService, Error, "No main window at editor init — editor UI not created.");
-            return;
+            BindToWorldManagerDelegates();
         }
-
-        // The path is resolved HERE (it needs EditorPaths + the file system, which are services)
-        // and STORED there: ImGui borrows io.IniFilename, so the string belongs to whatever owns
-        // the context that reads it.
-        if (!m_Gui.Init(*lWindow, ResolveLayoutIniPath()))
-        {
-            return;
-        }
-
-        // --- Selection (M2a): the single selected entity, owned here so the context can hold a
-        //     reference to it. Nothing reads it yet — S2's Hierarchy panel is the first writer. -------
-        m_Selection = MakeUnique<EditorSelection>();
-
-        // --- ②: the viewport's pixel size. Owned here, not by the panel that measures it, so a
-        //     command outside the panel can ask for the aspect (focus-selected). ------------------
-        m_Viewport = MakeUnique<EditorViewport>();
-
-        // --- ④b: what a double-click asked to preview. Owned here for the same reason the selection
-        //     is — a resource type's activate closure writes it, the Preview panel reads it. --------
-        m_Preview = MakeUnique<ResourcePreview>();
-
-        // --- ①: how the author is looking at an Edit world. Owned HERE and not by the ViewportPanel,
-        //     because it has to survive a PIE cycle — Play swaps the active world, this object does
-        //     not move, and Stop finds the pan and zoom exactly where they were left. ---------------
-        m_Camera = MakeUnique<EditorCamera>();
-
-        // --- ③: the transform handles. Owned here for the reason the selection is — its subject is
-        //     the selection, and no panel owns that (SEL7). ------------------------------------------
-        m_Gizmo = MakeUnique<EditorGizmo>();
-
-        // --- PIE (M4 S5): the Play/Pause/Step/Stop state machine, owned here so BOTH front-ends —
-        //     the toolbar panel and RouteInput's reserved keys — drive one object. -----------------
-        m_PIE = MakeUnique<PlayInEditor>(lEngine.GetWorldManager());
-
-        // --- The input route (M-Input S2): D5's steps 2 and 4 in one place, so RouteInput's
-        //     behaviour and the Input panel's readout can never disagree. Built after PIE — it
-        //     reads the play state, since a paused session must not be fed. -------------------
-        m_InputRoute = MakeUnique<InputRoute>(lEngine.GetWorldManager(), lEngine.GetInput(), *m_PIE);
-
-        // --- The open map (M5 S5). Created empty; it ADOPTS the world the engine has already built
-        //     from the project's startup level a few lines below, once the context exists. -------
-        m_MapDocument = MakeUnique<EditorMapDocument>();
-        m_LevelDocument = MakeUnique<EditorLevelDocument>();
-
-        // --- The live panels. Created EMPTY here so the context below can hold a reference to it;
-        //     Build() runs the factories once the context exists. ------------------------------
-        m_PanelHost = MakeUnique<EditorPanels>();
-
-        // --- World-switch reactions (M4 S5). PIE swaps the active world twice per session, so a
-        //     cached selection or per-world panel state has to be told. Subscribed BEFORE the panels
-        //     exist: the first switch cannot happen until a frame runs, and unsubscribing is
-        //     OnShutdown's job (which runs while the engine is still alive). --------------------
-        m_SubscribedWorlds = &lEngine.GetWorldManager();
-        m_SubscribedWorlds->OnActiveWorldChanged.AddMember(this, &EditorService::HandleActiveWorldChanged);
-        m_SubscribedWorlds->OnWorldDestroyed.AddMember(this, &EditorService::HandleWorldDestroyed);
-
-        // --- EditorContext: the flat ref bundle every panel/drawer receives by ctor (D3). Built after
-        //     the UIBackend so it can hold a reference to it. ---------------------------------------
-        m_Context = MakeUnique<EditorContext>(EditorContext{
-            lEngine,
-            lEngine.GetWorldManager(),
-            lEngine.GetResources(),
-            m_Gui.Backend(),
-            *m_Selection,
-            *m_Viewport,
-            *m_Camera,
-            *m_Gizmo,
-            *m_PIE,
-            *m_InputRoute,
-            *m_LevelDocument,
-            *m_MapDocument,
-            m_Extensions,
-            *m_PanelHost,
-            *m_Preview,
-            OpaaxApplication::GetAppService<IPaths>(),
-            OpaaxApplication::GetAppService<IPlatform>().GetFileSystem(),
-            OpaaxApplication::GetAppService<IConfigSystem>(),
-            *lWindow,
-            m_EditorPaths
-        });
-
-        // --- Registered panels (M2a): native and game panels alike are built HERE, from the one registry,
-        //     in registration order. The factories were stored back at RegisterExtensions (pre-Engine
-        //     startup, no context yet) — this is the point where they finally have one to receive.
-        //     The Viewport is simply the first of them: its Startup registers the offscreen FBO as the
-        //     engine's primary render target, so the world renders into a panel's texture. ------------
-        m_PanelHost->Build(m_Extensions.Panels(), *m_Context);
-
-        OPAAX_LOG(LogEditorService, Info, "Editor panels registered: {}, constructed: {}",
-                  m_Extensions.Panels().Count(), m_PanelHost->Count());
-
-        AdoptStartupLevel();
-
-        OPAAX_LOG(LogEditorService, Info, "EditorService initialized (EditorContext bound, ImGui docking UI up)");
+        
+        return lbIsValidWorldMgr;
     }
 
+    void EditorService::ClearWorldManager()
+    {
+        if (m_WorldMgr != nullptr)
+        {
+            UnbindFromWorldManagerDelegates();
+            
+            m_WorldMgr = nullptr;
+        }else
+        {
+            //TODO logs.
+        }
+    }
+
+    void EditorService::BindToWorldManagerDelegates()
+    {
+        OPAAX_ASSERT(m_WorldMgr != nullptr);
+        
+        m_WorldMgr->OnActiveWorldChanged.AddMember(this, &EditorService::HandleActiveWorldChanged);
+        m_WorldMgr->OnWorldDestroyed.AddMember(this, &EditorService::HandleWorldDestroyed);
+    }
+
+    void EditorService::UnbindFromWorldManagerDelegates()
+    {
+        m_WorldMgr->OnActiveWorldChanged.RemoveAll(this);
+        m_WorldMgr->OnWorldDestroyed.RemoveAll(this);
+    }
+    
+    void EditorService::HandleActiveWorldChanged(World* InOld, World* InNew)
+    {
+        // Selection FIRST, so no panel notified below can read one pointing into the old world.
+        //
+        // Retarget rather than clear: a clone preserves entity GUIDs (WM3), so the entity selected in
+        // Edit has a counterpart in the Play world and the selection survives Play AND Stop. Clearing
+        // would be safe too, but it would throw away the exact guarantee the snapshot core exists for.
+        if (m_Selection != nullptr && m_Selection->HasSelection())
+        {
+            // EVERY entry, in order, so a multi-selection survives Play and Stop exactly as a single
+            // one does. The Guids are read BEFORE anything is cleared — they are the only thing that
+            // means anything across the two worlds.
+            World* const        lOldWorld = m_Selection->GetWorld();
+            TDynArray<Guid>     lGuids;
+
+            for (const EntityID lId : m_Selection->Ids())
+            {
+                lGuids.emplace_back(Entity{ lId, lOldWorld }.GetGuid());
+            }
+
+            m_Selection->Clear();
+
+            // Whatever has no counterpart is DROPPED rather than kept: Entity holds a raw World*, so
+            // a survivor of the old world would dangle the moment it dies. An entity destroyed during
+            // play simply leaves the selection, and the rest of it stays.
+            for (const Guid& lGuid : lGuids)
+            {
+                if (InNew == nullptr) { break; }
+
+                m_Selection->Add(InNew->FindByGuid(lGuid));   // Add ignores an invalid entity
+            }
+        }
+
+        if (m_EditorPanels != nullptr)
+        {
+            m_EditorPanels->OnActiveWorldChanged(InOld, InNew);
+        }
+    }
+
+    void EditorService::HandleWorldDestroyed(World* InWorld)
+    {
+        // The active world's death already came through HandleActiveWorldChanged (DestroyWorld clears
+        // the active slot first). This covers the other case — a NON-active world dying while holding
+        // the selection, which nothing else would notice.
+        if (m_Selection == nullptr || !m_Selection->HasSelection() || InWorld == nullptr)
+        {
+            return;
+        }
+
+        // One world per selection by construction, so one compare covers every entry.
+        if (m_Selection->GetWorld() == InWorld)
+        {
+            m_Selection->Clear();
+        }
+    }
+    
+    // =============================================================================
+    // =============================================================================
+    // Level
+    // =============================================================================
+    // =============================================================================
+    
     void EditorService::AdoptStartupLevel()
     {
         if (m_Context == nullptr || m_MapDocument == nullptr || m_LevelDocument == nullptr) { return; }
@@ -475,6 +594,164 @@ namespace Opaax::Editor
         LevelOps::AdoptOpen(*m_Context, lLevelRel.IsEmpty()
                                             ? OpaaxString()
                                             : m_Context->Paths.AssetToAbsolute(lLevelRel));
+    }
+    
+    // =============================================================================
+    // =============================================================================
+    // GUI
+    // =============================================================================
+    // =============================================================================
+
+    /**
+     * Init the editor GUI
+     * @param InWindow 
+     * @return false if not initialized correctly
+     */
+    bool EditorService::InitGUI(Window* InWindow)
+    {
+        return m_Gui.Init(*InWindow, ResolveLayoutIniPath());
+    }
+
+    void EditorService::ClearGUI()
+    {
+        m_Gui.Shutdown();
+    }
+
+    OpaaxString EditorService::ResolveLayoutIniPath() const
+    {
+        const EditorPaths* lEditorPaths = m_EditorPaths;
+        if (lEditorPaths == nullptr)
+        {
+            OPAAX_LOG(LogEditorService, Warn, "No EditorPaths — dock layout will not persist.");
+            return {};
+        }
+
+        // ImGui does not create directories, and its save fails SILENTLY when one is missing — so the dir
+        // has to exist before the first write, not on first save. GetPathIfNCreate is exactly that, and
+        // logs its own failure detail.
+        const OpaaxString lSaveDir = lEditorPaths->EditorSaveDir();
+        const IFileSystem& lFileSystem = OpaaxApplication::GetAppService<IPlatform>().GetFileSystem();
+
+        if (lFileSystem.GetPathIfNCreate(lSaveDir).IsEmpty())
+        {
+            OPAAX_LOG(LogEditorService, Warn, "Could not create '{}' — dock layout will not persist.",
+                      lSaveDir.CStr());
+            return {};
+        }
+
+        return lEditorPaths->EditorToAbsolute(OpaaxString("Save/imgui.ini"));
+    }
+
+    // =============================================================================
+    // =============================================================================
+    // Panels
+    // =============================================================================
+    // =============================================================================
+    
+    void EditorService::BindPanelToggles()
+    {
+        for (const PanelEntry& lEntry : m_Extensions.Panels().Entries())
+        {
+            const PanelDesc& lDesc = lEntry.Desc;
+
+            m_Extensions.Menus().Category(lDesc.Menu)
+                        .AddCommand(lDesc.Id, Tags::EDITOR_COMMAND_TOGGLE_PANEL)
+                        .SetParams(PanelIdParams{lDesc.Id})
+                        .SetChecked([lId = lDesc.Id](const EditorContext& InContext)
+                        {
+                            return InContext.Panels.IsVisible(lId);
+                        });
+        }
+    }
+
+    void EditorService::BuildPanels()
+    {
+        m_EditorPanels->Build(m_Extensions.Panels(), *m_Context);
+        OPAAX_LOG(LogEditorService, Info, "Editor panels registered: {}, constructed: {}", m_Extensions.Panels().Count(), m_EditorPanels->Count());
+    }
+
+    void EditorService::ClearPanels()
+    {
+        if (m_EditorPanels != nullptr)
+        {
+            m_EditorPanels->Shutdown();
+        }
+    }
+
+    // =============================================================================
+    // =============================================================================
+    // Overrides
+    // =============================================================================
+    // =============================================================================
+    
+    void EditorService::RegisterExtensions(const TFunction<void(EditorExtensionRegistrar&)>& InCollect)
+    {
+        RegisterNativePanels();
+        RegisterNativeMenus();
+        RegisterNativeResourceTypes();
+        RegisterNativeEditorCommand();
+        RegisterNativeConfigDrawers();
+
+        // AFTER the commands, because the mode buttons dispatch by tag and a toolbar registered
+        // ahead of them would name commands that do not exist yet.
+        RegisterNativeViewportTools();
+
+        m_Extensions.EditWorldSystems().Bind(
+            &OpaaxApplication::GetAppService<IEngine>().GetRegistries().WorldSubsystems());
+
+        if (InCollect)
+        {
+            InCollect(m_Extensions);
+        }
+
+        // AFTER the game module, so its panels get a toggle too, and before the seal.
+        BindPanelToggles();
+
+        m_Extensions.Seal();
+
+        OPAAX_LOG(LogEditorService, Info,
+                  "Editor extensions sealed (before first world): drawers={}, configDrawers={}, panels={}, resourceTypes={}, menus={}, editWorldSystems={}, commands={}",
+                  m_Extensions.Drawers().Count(), m_Extensions.ConfigDrawers().Count(),
+                  m_Extensions.Panels().Count(), m_Extensions.ResourceTypes().Count(),
+                  m_Extensions.Menus().Count(), m_Extensions.EditWorldSystems().Count(),
+                  m_Extensions.Commands().Count());
+    }
+
+    void EditorService::Initialize()
+    {
+        IEngine& lEngine = OpaaxApplication::GetAppService<IEngine>();
+
+        // Resolved before anything reads it: ResolveLayoutIniPath below, then the EditorContext.
+        CacheEditorPaths();
+        
+        IWindowManager& lWindows = OpaaxApplication::GetAppService<IWindowManager>();
+        Window* lWindow = lWindows.GetMainWindow();
+        if (lWindow == nullptr)
+        {
+            OPAAX_LOG(LogEditorService, Error, "No main window at editor init — editor UI not created.");
+            return;
+        }
+
+        // No gui means editor without ui so it make no sense init 
+        if (!InitGUI(lWindow))
+        {
+            //TODO Log
+            return;
+        }
+        
+        // Many systems rely on world so do not continue the init
+        if (!SetWorldManagerFromEngine(lEngine))
+        {
+            //TODO Logs
+            return;
+        }
+        
+        CreateEditorSystems(lEngine);
+        CreateEditorContext(lWindow, lEngine);
+        
+        OPAAX_LOG(LogEditorService, Info, "EditorService initialized");
+        
+        PostInitialized();
     }
 
     void EditorService::BeginFrame()
@@ -492,7 +769,7 @@ namespace Opaax::Editor
         // Apply any pending viewport resize (measured last DrawContents) BEFORE Engine().Loop()
         // renders the world, so Render() reads the new FBO size this frame (deferred-resize
         // handshake, §5).
-        if (m_PanelHost != nullptr) { m_PanelHost->OnPreRender(); }
+        if (m_EditorPanels != nullptr) { m_EditorPanels->OnPreRender(); }
     }
 
     void EditorService::EndFrame()
@@ -502,12 +779,7 @@ namespace Opaax::Editor
         // Once per frame, ahead of everything that reads it — the Hierarchy draws a `*` per map.
         RefreshDirtyCache();
 
-        DrawDockspace();
-
-        // The Viewport panel samples the FBO the world was just rendered into (Engine().Loop() above)
-        // and shows it as an ImGui image — the world lives INSIDE a panel now, not the raw backbuffer.
-        // It is the first panel in the host, with no special path of its own.
-        if (m_PanelHost != nullptr) { m_PanelHost->Draw(); }
+        DrawGUI();
 
         // Submit the UI to the backbuffer AFTER Engine().Loop() has rendered the world into the FBO
         // (see EditorApplication::TickFrame). The host presents the backbuffer once, after this.
@@ -516,16 +788,8 @@ namespace Opaax::Editor
 
     bool EditorService::RouteInput(Event& InEvent)
     {
-        // D5's decision order, steps 1 and 3. Step 2 (viewport hover/focus) and step 4 (dispatch by
-        // world mode, InputManager feed + ResetState) are M-Input — NOT here.
         if (!m_Gui.IsReady()) { return false; } // UI not up (pre-Initialize / no window) — pass through
-
-        // The viewport is an ImGui window like any other — an image with the world drawn into it —
-        // so the pointer counts as over the UI the whole time it is over the game. Taken at face
-        // value that means a game running inside the editor can NEVER receive a click, a drag or
-        // the wheel, which is not what step 1 is for: the UI owns the pointer over the UI, and the
-        // game owns it over the surface it is being played on.
-        //
+        
         // Keyboard is NOT exempted. IsKeyboardOwnedByUI only goes true for a text field, and a
         // field that has the keyboard must always win, viewport or not.
         const bool lViewportHovered = m_InputRoute != nullptr && m_InputRoute->IsViewportHovered();
@@ -571,39 +835,6 @@ namespace Opaax::Editor
         return lConsumed;
     }
 
-    void EditorService::RegisterExtensions(const TFunction<void(EditorExtensionRegistrar&)>& InCollect)
-    {
-        RegisterNativePanels();
-        RegisterNativeMenus();
-        RegisterNativeResourceTypes();
-        RegisterNativeEditorCommand();
-        RegisterNativeConfigDrawers();
-
-        // AFTER the commands, because the mode buttons dispatch by tag and a toolbar registered
-        // ahead of them would name commands that do not exist yet.
-        RegisterNativeViewportTools();
-
-        m_Extensions.EditWorldSystems().Bind(
-            &OpaaxApplication::GetAppService<IEngine>().GetRegistries().WorldSubsystems());
-
-        if (InCollect)
-        {
-            InCollect(m_Extensions);
-        }
-
-        // AFTER the game module, so its panels get a toggle too, and before the seal.
-        BindPanelToggles();
-
-        m_Extensions.Seal();
-
-        OPAAX_LOG(LogEditorService, Info,
-                  "Editor extensions sealed (before first world): drawers={}, configDrawers={}, panels={}, resourceTypes={}, menus={}, editWorldSystems={}, commands={}",
-                  m_Extensions.Drawers().Count(), m_Extensions.ConfigDrawers().Count(),
-                  m_Extensions.Panels().Count(), m_Extensions.ResourceTypes().Count(),
-                  m_Extensions.Menus().Count(), m_Extensions.EditWorldSystems().Count(),
-                  m_Extensions.Commands().Count());
-    }
-
     bool EditorService::HandleReservedKeys(Event& InEvent)
     {
         if (m_Context == nullptr || InEvent.GetEventType() != KeyPressedEvent::GetStaticType())
@@ -617,11 +848,7 @@ namespace Opaax::Editor
             // Holding F7 must not stream steps; every PIE verb is a discrete command.
             return false;
         }
-
-        // Dispatched BY TAG, exactly as the Play menu does it — a key and a menu entry must reach
-        // one verb, not two copies of it. This is also the table a shortcut system would own: the
-        // key-to-tag mapping is the only part that would move out of here.
-        //
+        
         // Bare function keys, not chords: the KeyPressed payload carries no modifier state, so
         // Ctrl+P-style shortcuts are not expressible today. M-Input owns that.
         const OpaaxTag* lCommand = nullptr;
@@ -642,147 +869,6 @@ namespace Opaax::Editor
 
         m_Context->Extensions.Commands().Execute(*lCommand, *m_Context);
         return true;
-    }
-
-    void EditorService::HandleActiveWorldChanged(World* InOld, World* InNew)
-    {
-        // Selection FIRST, so no panel notified below can read one pointing into the old world.
-        //
-        // Retarget rather than clear: a clone preserves entity GUIDs (WM3), so the entity selected in
-        // Edit has a counterpart in the Play world and the selection survives Play AND Stop. Clearing
-        // would be safe too, but it would throw away the exact guarantee the snapshot core exists for.
-        if (m_Selection != nullptr && m_Selection->HasSelection())
-        {
-            // EVERY entry, in order, so a multi-selection survives Play and Stop exactly as a single
-            // one does. The Guids are read BEFORE anything is cleared — they are the only thing that
-            // means anything across the two worlds.
-            World* const        lOldWorld = m_Selection->GetWorld();
-            TDynArray<Guid>     lGuids;
-
-            for (const EntityID lId : m_Selection->Ids())
-            {
-                lGuids.emplace_back(Entity{ lId, lOldWorld }.GetGuid());
-            }
-
-            m_Selection->Clear();
-
-            // Whatever has no counterpart is DROPPED rather than kept: Entity holds a raw World*, so
-            // a survivor of the old world would dangle the moment it dies. An entity destroyed during
-            // play simply leaves the selection, and the rest of it stays.
-            for (const Guid& lGuid : lGuids)
-            {
-                if (InNew == nullptr) { break; }
-
-                m_Selection->Add(InNew->FindByGuid(lGuid));   // Add ignores an invalid entity
-            }
-        }
-
-        if (m_PanelHost != nullptr)
-        {
-            m_PanelHost->OnActiveWorldChanged(InOld, InNew);
-        }
-    }
-
-    void EditorService::HandleWorldDestroyed(World* InWorld)
-    {
-        // The active world's death already came through HandleActiveWorldChanged (DestroyWorld clears
-        // the active slot first). This covers the other case — a NON-active world dying while holding
-        // the selection, which nothing else would notice.
-        if (m_Selection == nullptr || !m_Selection->HasSelection() || InWorld == nullptr)
-        {
-            return;
-        }
-
-        // One world per selection by construction, so one compare covers every entry.
-        if (m_Selection->GetWorld() == InWorld)
-        {
-            m_Selection->Clear();
-        }
-    }
-
-    void EditorService::CacheEditorPaths()
-    {
-        // EditorSaveDir/EditorAssetsDir live only on EditorPaths, deliberately: the engine's IPaths knows
-        // nothing about an editor (D4). EditorApplication::CreatePaths normally installs EditorPaths, but it
-        // falls back to a plain Paths when no edited project is declared — so this cast genuinely can fail.
-        // Done ONCE here: the dock layout and the Resource Browser both need it.
-        const IPaths& lPaths = OpaaxApplication::GetAppService<IPaths>();
-        m_EditorPaths = dynamic_cast<const EditorPaths*>(&lPaths);
-
-        if (m_EditorPaths == nullptr)
-        {
-            OPAAX_LOG(LogEditorService, Warn, "No EditorPaths (no edited project?) — editor space unavailable.");
-        }
-    }
-
-    OpaaxString EditorService::ResolveLayoutIniPath() const
-    {
-        const EditorPaths* lEditorPaths = m_EditorPaths;
-        if (lEditorPaths == nullptr)
-        {
-            OPAAX_LOG(LogEditorService, Warn, "No EditorPaths — dock layout will not persist.");
-            return {};
-        }
-
-        // ImGui does not create directories, and its save fails SILENTLY when one is missing — so the dir
-        // has to exist before the first write, not on first save. GetPathIfNCreate is exactly that, and
-        // logs its own failure detail.
-        const OpaaxString lSaveDir = lEditorPaths->EditorSaveDir();
-        const IFileSystem& lFileSystem = OpaaxApplication::GetAppService<IPlatform>().GetFileSystem();
-
-        if (lFileSystem.GetPathIfNCreate(lSaveDir).IsEmpty())
-        {
-            OPAAX_LOG(LogEditorService, Warn, "Could not create '{}' — dock layout will not persist.",
-                      lSaveDir.CStr());
-            return {};
-        }
-
-        return lEditorPaths->EditorToAbsolute(OpaaxString("Save/imgui.ini"));
-    }
-
-    void EditorService::RegisterNativePanels()
-    {
-        PanelRegistry& lPanels = m_Extensions.Panels();
-        
-        lPanels.Register<ViewportPanel>(PanelDesc{.Id = ViewportPanel::PanelID()});
-        lPanels.Register<PlayToolbarPanel>(PanelDesc{.Id = PlayToolbarPanel::PanelID()});
-        lPanels.Register<HierarchyPanel>(PanelDesc{.Id = HierarchyPanel::PanelID()});
-        lPanels.Register<InspectorPanel>(PanelDesc{.Id = InspectorPanel::PanelID()});
-        lPanels.Register<ResourceBrowserPanel>(PanelDesc{.Id = ResourceBrowserPanel::PanelID()});
-
-        // Hidden until something is double-clicked — an empty preview is not worth a pane on a
-        // fresh layout, and the activate that fills it is also what shows it.
-        lPanels.Register<ResourcePreviewPanel>(PanelDesc{.Id = ResourcePreviewPanel::PanelID(), .DefaultVisibility = EPanelVisibility::Hidden});
-        lPanels.Register<ConfigPanel>(PanelDesc{.Id = ConfigPanel::PanelID(), .DefaultVisibility = EPanelVisibility::Hidden});
-        lPanels.Register<InputPanel>(PanelDesc{.Id = InputPanel::PanelID(), .DefaultVisibility = EPanelVisibility::Hidden });
-    }
-
-    void EditorService::BindPanelToggles()
-    {
-        for (const PanelEntry& lEntry : m_Extensions.Panels().Entries())
-        {
-            const PanelDesc& lDesc = lEntry.Desc;
-
-            m_Extensions.Menus().Category(lDesc.Menu)
-                        .AddCommand(lDesc.Id, Tags::EDITOR_COMMAND_TOGGLE_PANEL)
-                        .SetParams(PanelIdParams{lDesc.Id})
-                        .SetChecked([lId = lDesc.Id](const EditorContext& InContext)
-                        {
-                            return InContext.Panels.IsVisible(lId);
-                        });
-        }
-    }
-
-    void EditorService::DrawDockspace()
-    {
-        m_Gui.DrawDockspace();
-
-        if (m_Context != nullptr)
-        {
-            m_Extensions.Menus().Draw(*m_Context);
-        }
-
-        HandleAuthoringShortcuts();
     }
 
     void EditorService::RefreshDirtyCache()
@@ -896,42 +982,28 @@ namespace Opaax::Editor
         // 0. Unsubscribe while the WorldManager is still alive, and BEFORE the panels/selection those
         //    handlers touch are destroyed — WorldManager::TearDown destroys every world and would
         //    otherwise call back into a half-torn-down editor.
-        if (m_SubscribedWorlds != nullptr)
-        {
-            m_SubscribedWorlds->OnActiveWorldChanged.RemoveAll(this);
-            m_SubscribedWorlds->OnWorldDestroyed.RemoveAll(this);
-            m_SubscribedWorlds = nullptr;
-        }
+        ClearWorldManager();
 
         // 1. Every panel, reverse construction order (LC3). The Viewport registered first so it dies
         //    LAST, which is the right end: its Shutdown clears the engine's primary render target
         //    while the engine is alive (no live frame reads a dangling target) and frees the FBO
         //    while the GL context is still current — both true here, since the UI backend below has
         //    not gone yet. All of it must precede m_Context.reset(): panels hold a reference into it.
-        if (m_PanelHost != nullptr)
-        {
-            m_PanelHost->Shutdown();
-        }
+        ClearPanels();
 
         // 3. The UI stack — the renderer impl's shutdown requires the GL context, still alive here,
         //    and destroying the context is what FLUSHES the dock layout. EditorGui owns both halves
         //    and the ordering between them.
-        m_Gui.Shutdown();
+        ClearGUI();
 
         // 4. Selection, PIE and the input route — after the panels that read them, before the
         //    context they are referenced from. All three hold only non-owning references, so there
         //    is nothing to undo; the route is dropped before the engine it would reset.
-        m_Selection.reset();
-        m_Viewport.reset();
-        m_Preview.reset();
-        m_Camera.reset();
-        m_Gizmo.reset();
-        m_InputRoute.reset();
-        m_PIE.reset();
-        m_PanelHost.reset();
+        ClearEditorSystems();
 
         // 5. The context refs last (nothing points into them anymore).
-        m_Context.reset();
+        ClearEditorContext();
+        
         OPAAX_LOG(LogEditorService, Info, "EditorService shutdown");
     }
 }
