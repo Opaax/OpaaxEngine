@@ -9,6 +9,8 @@
 
 #include <cmath>                 // atan2 — the delta's turn, read off its own basis
 #include <glm/geometric.hpp>     // length — and its stretch
+#include <glm/mat2x2.hpp>        // the delta's LINEAR part, conjugated into an entity's own frame
+#include <glm/matrix.hpp>        // transpose — a rotation's inverse
 
 #include "Application/Services/ILogger.h"
 #include "Core/Maths/Bounds2D.h"
@@ -45,6 +47,26 @@ namespace
      * Linear per attempt, which is nothing at authoring scale and needs no counter to keep in sync
      * with entities that have been deleted or renamed.
      */
+    /**
+     * A world-space linear delta expressed in the frame of an entity turned by InDegrees:
+     * `Rot(-θ)·InLinear·Rot(θ)`, using transpose for the inverse since a rotation is orthonormal.
+     *
+     * The unrotated case returns InLinear untouched — not merely as an optimisation, but so the
+     * overwhelmingly common path is bit-identical to what shipped before this existed.
+     */
+    glm::mat2 ToEntityFrame(const glm::mat2& InLinear, const float InDegrees)
+    {
+        if (InDegrees == 0.f) { return InLinear; }
+
+        const float lRad = Maths::DegreesToRadians(InDegrees);
+        const float lCos = std::cos(lRad);
+        const float lSin = std::sin(lRad);
+
+        const glm::mat2 lRotation{ Vector2F{ lCos, lSin }, Vector2F{ -lSin, lCos } };
+
+        return glm::transpose(lRotation) * InLinear * lRotation;
+    }
+
     OpaaxString MakeUniqueName(World& InWorld, const OpaaxString& InBase)
     {
         if (!NameTaken(InWorld, InBase)) { return InBase; }
@@ -144,15 +166,10 @@ namespace Opaax::Editor
         World* const lWorld = InContext.Selection.GetWorld();
         if (lWorld == nullptr) { return; }
 
-        // The delta's own basis carries the rotation and the scale: column 0 is where the X axis
-        // ended up, so its ANGLE is the turn and its LENGTH is the stretch. Reading them here keeps
-        // the choke point free of ImGuizmo's decompose — and free of the Euler round trip, since a
-        // 2D delta only ever turns about Z.
-        const Vector2F lBasisX{ InDelta[0][0], InDelta[0][1] };
-        const Vector2F lBasisY{ InDelta[1][0], InDelta[1][1] };
-
-        const float    lDeltaDegrees = Maths::RadiansToDegrees(std::atan2(lBasisX.y, lBasisX.x));
-        const Vector2F lDeltaScale{ glm::length(lBasisX), glm::length(lBasisY) };
+        // The delta's LINEAR part carries the rotation and the scale; the translation is handled by
+        // running each position through the whole matrix below.
+        const glm::mat2 lLinear{ Vector2F{ InDelta[0][0], InDelta[0][1] },
+                                 Vector2F{ InDelta[1][0], InDelta[1][1] } };
 
         // NOT logged per call: a drag lands one of these every frame it is held. The panel says so
         // once, the way it does for the outline and the icons (L15 without the flood).
@@ -172,9 +189,17 @@ namespace Opaax::Editor
             // it stands. For one entity the pivot IS its origin, so this reduces to no movement.
             const Vector4F lMoved = InDelta * Vector4F(lTransform->Position.x, lTransform->Position.y, 0.f, 1.f);
 
+            // ROTATION AND SCALE ARE READ IN THE ENTITY'S OWN FRAME, and for scale that is the whole
+            // difference between right and wrong. A Local scale of an entity turned by R arrives here
+            // as `R·S·R⁻¹` — reading world-axis lengths off that mixes the axes and reports a
+            // rotation nobody asked for (45° and 2x reads as ~18° and 1.58x). Conjugating back by R
+            // recovers S exactly. Translation and rotation deltas are unaffected: the first has an
+            // identity linear part, and 2D rotations commute.
+            const glm::mat2 lLocal = ToEntityFrame(lLinear, lTransform->Rotation);
+
             lTransform->Position = { lMoved.x, lMoved.y };
-            lTransform->Rotation += lDeltaDegrees;
-            lTransform->Scale    *= lDeltaScale;
+            lTransform->Rotation += Maths::RadiansToDegrees(std::atan2(lLocal[0][1], lLocal[0][0]));
+            lTransform->Scale    *= Vector2F{ glm::length(lLocal[0]), glm::length(lLocal[1]) };
 
             lChanged = true;
         }

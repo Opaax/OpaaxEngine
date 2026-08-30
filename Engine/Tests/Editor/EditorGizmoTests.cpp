@@ -10,6 +10,11 @@
 // with the matrix sitting ON THE PIVOT so the conjugation is free.
 #include <doctest.h>
 
+#include <cmath>
+#include <glm/mat2x2.hpp>
+#include <glm/matrix.hpp>
+#include <glm/trigonometric.hpp>
+
 #include "Editor/Operation/EditorGizmo.hpp"
 
 using namespace Opaax;
@@ -38,6 +43,44 @@ namespace
         InOutMatrix[0] *= InFactor.x;
         InOutMatrix[1] *= InFactor.y;
     }
+
+    /**
+     * What EntityOps::TransformSelected reads for an entity turned by InDegrees — the delta's linear
+     * part conjugated into that entity's own frame. Mirrored here rather than shared because
+     * EntityOps lives in a .cpp that links OpaaxEditorLib, which these tests deliberately do not.
+     */
+    Vector2F LocalScaleOf(const Matrix44F& InDelta, const float InDegrees)
+    {
+        const glm::mat2 lLinear{ Vector2F{ InDelta[0][0], InDelta[0][1] },
+                                 Vector2F{ InDelta[1][0], InDelta[1][1] } };
+
+        if (InDegrees == 0.f) { return { glm::length(lLinear[0]), glm::length(lLinear[1]) }; }
+
+        const float     lRad = glm::radians(InDegrees);
+        const glm::mat2 lRot{ Vector2F{ std::cos(lRad), std::sin(lRad) },
+                              Vector2F{ -std::sin(lRad), std::cos(lRad) } };
+
+        const glm::mat2 lLocal = glm::transpose(lRot) * lLinear * lRot;
+
+        return { glm::length(lLocal[0]), glm::length(lLocal[1]) };
+    }
+
+    /** The spurious turn the same reading reports — must be zero for a pure local scale. */
+    float LocalRotationOf(const Matrix44F& InDelta, const float InDegrees)
+    {
+        const glm::mat2 lLinear{ Vector2F{ InDelta[0][0], InDelta[0][1] },
+                                 Vector2F{ InDelta[1][0], InDelta[1][1] } };
+
+        if (InDegrees == 0.f) { return glm::degrees(std::atan2(lLinear[0][1], lLinear[0][0])); }
+
+        const float     lRad = glm::radians(InDegrees);
+        const glm::mat2 lRot{ Vector2F{ std::cos(lRad), std::sin(lRad) },
+                              Vector2F{ -std::sin(lRad), std::cos(lRad) } };
+
+        const glm::mat2 lLocal = glm::transpose(lRot) * lLinear * lRot;
+
+        return glm::degrees(std::atan2(lLocal[0][1], lLocal[0][0]));
+    }
 }
 
 TEST_CASE("EditorGizmo: a scale delta leaves the pivot itself untouched")
@@ -48,7 +91,7 @@ TEST_CASE("EditorGizmo: a scale delta leaves the pivot itself untouched")
     EditorGizmo    lGizmo;
     const Vector2F lPivot{ 400.f, -250.f };
 
-    lGizmo.ReseatAt(lPivot);
+    lGizmo.ReseatAt(lPivot, 0.f);
     ScaleMatrixInPlace(lGizmo.Matrix(), { 2.f, 2.f });
     lGizmo.BankFrameDelta();
 
@@ -69,7 +112,7 @@ TEST_CASE("EditorGizmo: a scale delta scales OTHER points about the pivot, not t
     EditorGizmo    lGizmo;
     const Vector2F lPivot{ 1000.f, 0.f };
 
-    lGizmo.ReseatAt(lPivot);
+    lGizmo.ReseatAt(lPivot, 0.f);
     ScaleMatrixInPlace(lGizmo.Matrix(), { 2.f, 2.f });
     lGizmo.BankFrameDelta();
 
@@ -86,7 +129,7 @@ TEST_CASE("EditorGizmo: consecutive frames bank INCREMENTS, never the cumulative
     // delta from our own matrix cannot do that, because the previous frame is subtracted out.
     EditorGizmo lGizmo;
 
-    lGizmo.ReseatAt({ 0.f, 0.f });
+    lGizmo.ReseatAt({ 0.f, 0.f }, 0.f);
 
     ScaleMatrixInPlace(lGizmo.Matrix(), { 1.5f, 1.5f });
     lGizmo.BankFrameDelta();
@@ -104,7 +147,7 @@ TEST_CASE("EditorGizmo: banked deltas COMPOSE while unspent")
     // pass and spends in OnPreRender, so a skipped frame must lose no motion.
     EditorGizmo lGizmo;
 
-    lGizmo.ReseatAt({ 0.f, 0.f });
+    lGizmo.ReseatAt({ 0.f, 0.f }, 0.f);
 
     ScaleMatrixInPlace(lGizmo.Matrix(), { 2.f, 2.f });
     lGizmo.BankFrameDelta();
@@ -119,7 +162,7 @@ TEST_CASE("EditorGizmo: a translate delta is a pure translation, wherever the pi
 {
     EditorGizmo lGizmo;
 
-    lGizmo.ReseatAt({ 700.f, 300.f });
+    lGizmo.ReseatAt({ 700.f, 300.f }, 0.f);
 
     lGizmo.Matrix()[3][0] += 25.f;
     lGizmo.Matrix()[3][1] -= 10.f;
@@ -143,7 +186,7 @@ TEST_CASE("EditorGizmo: ConsumeDelta clears, so an unspent frame cannot be appli
 {
     EditorGizmo lGizmo;
 
-    lGizmo.ReseatAt({ 0.f, 0.f });
+    lGizmo.ReseatAt({ 0.f, 0.f }, 0.f);
     ScaleMatrixInPlace(lGizmo.Matrix(), { 4.f, 4.f });
     lGizmo.BankFrameDelta();
 
@@ -154,14 +197,115 @@ TEST_CASE("EditorGizmo: ConsumeDelta clears, so an unspent frame cannot be appli
     CHECK(BasisScale(lGizmo.ConsumeDelta()).x == doctest::Approx(1.f));   // identity, not 4x again
 }
 
+// =============================================================================
+// ③b — pivot and space
+// =============================================================================
+TEST_CASE("EditorGizmo: ReseatAt with a rotation is what makes Local differ from World")
+{
+    // ③ always built this matrix with an identity rotation, so the two spaces would have drawn
+    // identically. The X axis of a gizmo seated at 90 degrees must point along world +Y.
+    EditorGizmo lGizmo;
+
+    lGizmo.ReseatAt({ 0.f, 0.f }, glm::radians(90.f));
+
+    const Matrix44F& lMatrix = lGizmo.Matrix();
+
+    CHECK(lMatrix[0][0] == doctest::Approx(0.f).epsilon(0.001));
+    CHECK(lMatrix[0][1] == doctest::Approx(1.f));
+    CHECK(lMatrix[1][0] == doctest::Approx(-1.f));
+    CHECK(lMatrix[1][1] == doctest::Approx(0.f).epsilon(0.001));
+
+    // Unit scale regardless: the matrix measures a DRAG, not the entity. Seeding it with the
+    // entity's scale would make the first frame's delta report a stretch nobody applied.
+    CHECK(glm::length(Vector2F{ lMatrix[0][0], lMatrix[0][1] }) == doctest::Approx(1.f));
+}
+
+TEST_CASE("EditorGizmo: a LOCAL scale of a rotated entity reads back clean in its own frame")
+{
+    // THE CASE THE CONJUGATION EXISTS FOR. A 45-degree entity scaled 2x along its own X arrives as
+    // R*S*R-inverse; read against WORLD axes that is ~1.58x on both axes plus ~18 degrees of
+    // rotation nobody asked for. Read in the entity's frame it is exactly 2x, 1x, and no turn.
+    EditorGizmo lGizmo;
+    const float lAngle = 45.f;
+
+    lGizmo.ReseatAt({ 300.f, -120.f }, glm::radians(lAngle));
+    ScaleMatrixInPlace(lGizmo.Matrix(), { 2.f, 1.f });
+    lGizmo.BankFrameDelta();
+
+    const Matrix44F lDelta = lGizmo.ConsumeDelta();
+
+    const Vector2F lLocal = LocalScaleOf(lDelta, lAngle);
+    CHECK(lLocal.x == doctest::Approx(2.f));
+    CHECK(lLocal.y == doctest::Approx(1.f));
+    CHECK(LocalRotationOf(lDelta, lAngle) == doctest::Approx(0.f).epsilon(0.001));
+
+    // And the world reading really is the wrong one — if these agreed the conjugation would be
+    // pointless and this test would pass against the broken code.
+    CHECK(LocalScaleOf(lDelta, 0.f).x == doctest::Approx(1.5811f).epsilon(0.01));
+    CHECK(LocalRotationOf(lDelta, 0.f) == doctest::Approx(18.435f).epsilon(0.01));
+}
+
+TEST_CASE("EditorGizmo: the pivot still holds still under a LOCAL scale")
+{
+    EditorGizmo    lGizmo;
+    const Vector2F lPivot{ -800.f, 640.f };
+
+    lGizmo.ReseatAt(lPivot, glm::radians(30.f));
+    ScaleMatrixInPlace(lGizmo.Matrix(), { 3.f, 0.5f });
+    lGizmo.BankFrameDelta();
+
+    const Vector2F lMoved = Apply(lGizmo.ConsumeDelta(), lPivot);
+
+    CHECK(lMoved.x == doctest::Approx(lPivot.x));
+    CHECK(lMoved.y == doctest::Approx(lPivot.y));
+}
+
+TEST_CASE("EditorGizmo: a rotation delta is unaffected by which frame it is read in")
+{
+    // 2D rotations commute, so conjugating one by the entity's own rotation changes nothing. That
+    // is what lets ONE code path serve all three modes instead of branching on the mode.
+    EditorGizmo lGizmo;
+
+    lGizmo.ReseatAt({ 0.f, 0.f }, glm::radians(20.f));
+
+    // Turn the gizmo a further 10 degrees, as a rotate drag would.
+    const float lNew = glm::radians(30.f);
+    lGizmo.Matrix()[0] = Vector4F{ std::cos(lNew), std::sin(lNew), 0.f, 0.f };
+    lGizmo.Matrix()[1] = Vector4F{ -std::sin(lNew), std::cos(lNew), 0.f, 0.f };
+    lGizmo.BankFrameDelta();
+
+    const Matrix44F lDelta = lGizmo.ConsumeDelta();
+
+    CHECK(LocalRotationOf(lDelta, 20.f) == doctest::Approx(10.f));
+    CHECK(LocalRotationOf(lDelta, 0.f)  == doctest::Approx(10.f));   // same answer either way
+    CHECK(LocalScaleOf(lDelta, 20.f).x  == doctest::Approx(1.f));
+}
+
+TEST_CASE("EditorGizmo: an UNROTATED entity is bit-identical to the pre-③b path")
+{
+    // The conjugation early-outs at zero degrees, so the overwhelmingly common case must not have
+    // moved at all.
+    EditorGizmo lGizmo;
+
+    lGizmo.ReseatAt({ 50.f, 50.f }, 0.f);
+    ScaleMatrixInPlace(lGizmo.Matrix(), { 2.5f, 0.5f });
+    lGizmo.BankFrameDelta();
+
+    const Matrix44F lDelta = lGizmo.ConsumeDelta();
+
+    CHECK(LocalScaleOf(lDelta, 0.f).x == doctest::Approx(2.5f));
+    CHECK(LocalScaleOf(lDelta, 0.f).y == doctest::Approx(0.5f));
+    CHECK(LocalRotationOf(lDelta, 0.f) == doctest::Approx(0.f));
+}
+
 TEST_CASE("EditorGizmo: ReseatAt re-anchors BOTH matrices, so idling banks nothing")
 {
     // The gizmo follows the selection every frame it is not being dragged. If ReseatAt moved only
     // the live matrix, the next real drag would difference against a stale pose and jump.
     EditorGizmo lGizmo;
 
-    lGizmo.ReseatAt({ 0.f, 0.f });
-    lGizmo.ReseatAt({ 500.f, 500.f });   // the selection moved, or another entity was picked
+    lGizmo.ReseatAt({ 0.f, 0.f }, 0.f);
+    lGizmo.ReseatAt({ 500.f, 500.f }, 0.f);   // the selection moved, or another entity was picked
     lGizmo.BankFrameDelta();
 
     const Matrix44F lDelta = lGizmo.ConsumeDelta();

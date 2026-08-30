@@ -210,6 +210,60 @@ namespace Opaax::Editor
                 lStep = lStep < k_MinSnapStep ? k_MinSnapStep : lStep;
             }
         });
+
+        lTools.AddSeparator();
+
+        // --- Pivot --------------------------------------------------------------------------
+        // One button that NAMES ITS CURRENT STATE rather than a pair of radio buttons: there are
+        // only two values, so the label is the readout and clicking is the toggle.
+        lTools.Add(OPAAX_ID("Pivot"), [](EditorContext& InContext)
+        {
+            EditorGizmo& lGizmo = InContext.Gizmo;
+            const bool   bOrigin = lGizmo.GetPivot() == EGizmoPivot::Origin;
+
+            if (ImGui::SmallButton(bOrigin ? "Pivot: Origin" : "Pivot: Center"))
+            {
+                lGizmo.SetPivot(bOrigin ? EGizmoPivot::Center : EGizmoPivot::Origin);
+            }
+
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::SetTooltip("Center — the selection's combined bounds.\n"
+                                  "Origin — the last-picked entity's own position.\n"
+                                  "They coincide for a single entity.");
+            }
+        });
+
+        // --- Space --------------------------------------------------------------------------
+        lTools.Add(OPAAX_ID("Space"), [](EditorContext& InContext)
+        {
+            EditorGizmo& lGizmo = InContext.Gizmo;
+
+            // SCALE FORCES LOCAL, so the button says so and refuses rather than lying. A world-axis
+            // non-uniform scale of a rotated entity is a SHEAR, which TransformComponent cannot hold.
+            const bool bForced = lGizmo.GetMode() == EGizmoMode::Scale;
+            const bool bLocal  = lGizmo.GetEffectiveSpace() == EGizmoSpace::Local;
+
+            ImGui::BeginDisabled(bForced);
+
+            if (ImGui::SmallButton(bLocal ? "Space: Local" : "Space: World"))
+            {
+                lGizmo.SetSpace(bLocal ? EGizmoSpace::World : EGizmoSpace::Local);
+            }
+
+            ImGui::EndDisabled();
+
+            // OUTSIDE BeginDisabled: a disabled item does not report hover, and the one moment the
+            // tooltip is most needed is when the button will not move.
+            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+            {
+                ImGui::SetTooltip(bForced
+                    ? "Scale is always Local — scaling a rotated entity along world axes\n"
+                      "is a shear, which a transform cannot represent."
+                    : "Local — handles follow the last-picked entity's rotation.\n"
+                      "World — handles stay axis-aligned.");
+            }
+        });
     }
 
     void EditorService::RegisterNativeConfigDrawers()

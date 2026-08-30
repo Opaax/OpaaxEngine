@@ -114,15 +114,19 @@ namespace Opaax::Editor
         float AnchorHalfExtent() const;
 
         /**
-         * Where the gizmo sits: the centre of the selection's combined bounds, through the same
-         * EntityQuery the outline and focus-selected use (SEL1). For ONE entity that is its
-         * transform position, since bounds are centred on it — so there is no discrepancy to explain.
+         * WHERE the gizmo sits and HOW it is turned — one query, because both answers come from the
+         * PRIMARY entity and handles that pointed one way while turning about another would be a lie.
+         *
+         * The pivot is the selection's combined bounds centre (through the same EntityQuery the
+         * outline and focus-selected use, SEL1) or the primary's own position, per EGizmoPivot. The
+         * rotation is the primary's when the EFFECTIVE space is Local, and zero otherwise — which is
+         * the whole of what makes Local differ from World.
          *
          * @return False when there is nothing to draw a gizmo for — no selection, no bounds, or a
          *   PLAY world, which must look like the game rather than like the editor (the rule
          *   EnqueueEntityIcons already states).
          */
-        bool TryGetGizmoPivot(Vector2F& OutPivot) const;
+        bool TryGetGizmoPose(Vector2F& OutPivot, float& OutRotationRad) const;
 
         /**
          * Viewport-local pixels -> world, through the ACTIVE WORLD's own view (CAM2's ScreenToWorld).

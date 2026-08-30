@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>            // cos/sin — the pose Local adopts from the primary entity
 #include <glm/matrix.hpp>   // inverse — this frame's delta is M * inverse(M last frame)
 
 #include "Core/Maths/MathTypes.h"
@@ -15,6 +16,27 @@ namespace Opaax::Editor
         Scale
     };
 
+    /**
+     * WHAT the gizmo sits on. Center is the selection's combined bounds centre; Origin is the
+     * PRIMARY entity's own transform position.
+     *
+     * For one entity the two coincide, because bounds are centred on the transform — the toggle
+     * earns its place on a multi-selection today, and for a single entity the day a per-sprite
+     * Offset lands and an entity's origin stops being its centre.
+     */
+    enum class EGizmoPivot : Uint8
+    {
+        Center,
+        Origin
+    };
+
+    /** WHICH AXES the handles run along: the world's, or the primary entity's own. */
+    enum class EGizmoSpace : Uint8
+    {
+        World,
+        Local
+    };
+
     /** I11 — an enum gets a free ToString found by ADL. Total and silent; a log label. */
     inline const char* ToString(const EGizmoMode InMode) noexcept
     {
@@ -26,6 +48,16 @@ namespace Opaax::Editor
         }
 
         return "Translate";
+    }
+
+    inline const char* ToString(const EGizmoPivot InPivot) noexcept
+    {
+        return InPivot == EGizmoPivot::Origin ? "Origin" : "Center";
+    }
+
+    inline const char* ToString(const EGizmoSpace InSpace) noexcept
+    {
+        return InSpace == EGizmoSpace::Local ? "Local" : "World";
     }
 
     // =============================================================================
@@ -55,6 +87,33 @@ namespace Opaax::Editor
     public:
         void       SetMode(const EGizmoMode InMode) noexcept { m_Mode = InMode; }
         EGizmoMode GetMode() const noexcept                  { return m_Mode; }
+
+        // =============================================================================
+        // Pivot and space
+        // =============================================================================
+    public:
+        void        SetPivot(const EGizmoPivot InPivot) noexcept { m_Pivot = InPivot; }
+        EGizmoPivot GetPivot() const noexcept                    { return m_Pivot; }
+
+        void        SetSpace(const EGizmoSpace InSpace) noexcept { m_Space = InSpace; }
+        EGizmoSpace GetSpace() const noexcept                    { return m_Space; }
+
+        /**
+         * The space actually used this frame. **SCALE IS ALWAYS LOCAL**, whatever the toggle says.
+         *
+         * Not a simplification — the alternative is unrepresentable. Scaling along WORLD axes an
+         * entity that is rotated by R is a SHEAR, and `{Position, Rotation, Scale}` has nowhere to
+         * put one; the result would either skew visibly or come back as a bogus rotation. Unity
+         * forces local scale for the same reason. The toolbar shows the toggle disabled in Scale
+         * mode rather than letting it lie.
+         *
+         * ONE answer, read by both the toolbar and the panel, so the button and the behaviour
+         * cannot disagree.
+         */
+        EGizmoSpace GetEffectiveSpace() const noexcept
+        {
+            return m_Mode == EGizmoMode::Scale ? EGizmoSpace::Local : m_Space;
+        }
 
         // =============================================================================
         // Snapping
@@ -113,15 +172,27 @@ namespace Opaax::Editor
         Matrix44F& Matrix() noexcept { return m_Matrix; }
 
         /**
-         * Put the gizmo back on InPivot — translation only, identity rotation and unit scale.
+         * Put the gizmo back on InPivot, turned by InRotationRad, with unit scale.
          *
-         * Call this ONLY when no drag is live. The pose is deliberately neutral rather than the
-         * selection's own rotation: with N entities there is no single rotation to adopt, and every
-         * delta is world-space anyway, so a neutral frame is the honest one for both cases.
+         * Call this ONLY when no drag is live.
+         *
+         * THE ROTATION IS WHAT MAKES `Local` MEAN ANYTHING. ③ always built this matrix with an
+         * identity rotation, so Local and World would have drawn identically; ③b feeds it the
+         * primary entity's rotation when the effective space is Local, and zero otherwise. Scale is
+         * always unit here — the matrix measures a DRAG, not the entity, and starting it anywhere
+         * else would make the first frame's delta report a scale nobody applied.
          */
-        void ReseatAt(const Vector2F& InPivot) noexcept
+        void ReseatAt(const Vector2F& InPivot, const float InRotationRad) noexcept
         {
+            const float lCos = std::cos(InRotationRad);
+            const float lSin = std::sin(InRotationRad);
+
             m_Matrix = Matrix44F(1.f);
+
+            // Column-major: column 0 is where X lands, column 1 where Y lands.
+            m_Matrix[0][0] =  lCos; m_Matrix[0][1] = lSin;
+            m_Matrix[1][0] = -lSin; m_Matrix[1][1] = lCos;
+
             m_Matrix[3][0] = InPivot.x;
             m_Matrix[3][1] = InPivot.y;
 
@@ -174,7 +245,9 @@ namespace Opaax::Editor
         // Members
         // =============================================================================
     private:
-        EGizmoMode m_Mode = EGizmoMode::Translate;
+        EGizmoMode  m_Mode  = EGizmoMode::Translate;
+        EGizmoPivot m_Pivot = EGizmoPivot::Center;
+        EGizmoSpace m_Space = EGizmoSpace::World;
 
         // Snapping: a persistent toggle, plus this frame's Ctrl, which inverts it.
         bool  m_bSnapEnabled  = false;

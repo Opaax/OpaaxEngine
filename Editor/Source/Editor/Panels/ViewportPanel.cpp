@@ -23,6 +23,7 @@
 #include "RHI/Framebuffer.h"                // IFramebuffer + FramebufferSpec (created by the device)
 
 #include "Core/Maths/Bounds2D.h"
+#include "Core/Maths/Maths.h"               // DegreesToRadians — the transform authors degrees
 #include "Renderer/CameraView.h"            // ScreenToWorld (CAM2) + the view/projection halves ImGuizmo needs
 
 #include "World/Components/TransformComponent.h"
@@ -150,7 +151,7 @@ namespace Opaax::Editor
         return m_IconHalfPx * WorldPerPixel();
     }
 
-    bool ViewportPanel::TryGetGizmoPivot(Vector2F& OutPivot) const
+    bool ViewportPanel::TryGetGizmoPose(Vector2F& OutPivot, float& OutRotationRad) const
     {
         World* const lWorld = m_Context.Selection.GetWorld();
 
@@ -159,6 +160,25 @@ namespace Opaax::Editor
         if (lWorld == nullptr || lWorld->GetMode() != EWorldMode::Edit || !m_Context.Selection.HasSelection())
         {
             return false;
+        }
+
+        const EditorGizmo& lGizmo   = m_Context.Gizmo;
+        Entity             lPrimary = m_Context.Selection.Get();
+
+        // BOTH answers come from the PRIMARY, which is why they are one query: the entity whose
+        // axes Local follows must be the entity Origin sits on, or the handles would point one way
+        // and turn about another.
+        const TransformComponent* lPrimaryXf = lPrimary.IsValid() ? lPrimary.TryGet<TransformComponent>()
+                                                                  : nullptr;
+
+        OutRotationRad = (lGizmo.GetEffectiveSpace() == EGizmoSpace::Local && lPrimaryXf != nullptr)
+                             ? Maths::DegreesToRadians(lPrimaryXf->Rotation)
+                             : 0.f;
+
+        if (lGizmo.GetPivot() == EGizmoPivot::Origin && lPrimaryXf != nullptr)
+        {
+            OutPivot = lPrimaryXf->Position;
+            return true;
         }
 
         Bounds2D lBounds;
@@ -492,7 +512,9 @@ namespace Opaax::Editor
         World* const lWorld = m_Context.Selection.GetWorld();
 
         Vector2F lPivot;
-        if (lWorld == nullptr || !TryGetGizmoPivot(lPivot) || InSizePx.x <= 0.f || InSizePx.y <= 0.f)
+        float    lRotationRad = 0.f;
+
+        if (lWorld == nullptr || !TryGetGizmoPose(lPivot, lRotationRad) || InSizePx.x <= 0.f || InSizePx.y <= 0.f)
         {
             return false;
         }
@@ -527,7 +549,7 @@ namespace Opaax::Editor
 
         if (!ImGuizmo::IsUsing())
         {
-            lGizmo.ReseatAt(lPivot);
+            lGizmo.ReseatAt(lPivot, lRotationRad);
         }
 
         // Ctrl INVERTS the toolbar's toggle rather than setting it, so the key works whichever way
@@ -559,7 +581,9 @@ namespace Opaax::Editor
         // click-without-motion from dirtying the map — IsUsing() alone stays true for the whole
         // gesture and would bank an identity delta every frame.
         const bool bChanged = ImGuizmo::Manipulate(glm::value_ptr(lViewMatrix), glm::value_ptr(lProjMatrix),
-                                                   ToGizmoOperation(lGizmo.GetMode()), ImGuizmo::LOCAL,
+                                                   ToGizmoOperation(lGizmo.GetMode()),
+                                                   lGizmo.GetEffectiveSpace() == EGizmoSpace::Local
+                                                       ? ImGuizmo::LOCAL : ImGuizmo::WORLD,
                                                    glm::value_ptr(lGizmo.Matrix()), nullptr,
                                                    lGizmo.IsSnappingNow() ? lSnap : nullptr);
 
