@@ -147,7 +147,7 @@ Through one helper, ③ changes one function body.
 > follows the DRAWN spacing.
 > Contract: **GIZ8–GIZ10**, amending **GIZ3**/**GIZ5**/**GIZ7**. Lessons **L56**/**L57**.
 > Record: `.claude/plans/viewport-toolbar.md`. Commits `6fa9c5c` `d69367d` `66ed731` `7449b31`
-> `1cb66cd`. **446 / 7067 / 7.**
+> `1cb66cd` + docs `05239fb`. **446 / 7067 / 7**, all three steps user-verified.
 >
 > **THE REQUIREMENT THAT SHAPED IT WAS ONE SENTENCE:** *"should be easy to add thing in it too!"* —
 > which made it a registry rather than a row of widgets, and made an item a CLOSURE where a menu node
@@ -159,8 +159,8 @@ Through one helper, ③ changes one function body.
 > meaningless without the FRAME it was built in: conjugating by each entity's rotation instead of the
 > gizmo's was exactly right for one entity and drifted for every other ([[L57]]).
 >
-> **Owed:** S3's eye gate was never ticked one-by-one — the grid was seen and its snap mismatch
-> reported and fixed, but the fix is unconfirmed. Do not record it as user-verified.
+> **Owed: nothing.** Cross-session persistence, a game-module dogfood of the route, and mixed-rotation
+> multi-scale are named in the record and in **GIZ9**/**GIZ10**.
 
 ## ③ GIZMO — as originally planned
 

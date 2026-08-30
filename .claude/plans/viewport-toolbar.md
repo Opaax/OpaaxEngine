@@ -3,10 +3,9 @@
 > Contract: ARCHITECTURE.md **GIZ8–GIZ10**, amending **GIZ3** (the choke point takes a
 > `TransformDelta`), **GIZ5** (`ReseatAt` takes and remembers a rotation) and **GIZ7** (the strip
 > stops being a growth point). Lessons **L56**/**L57**.
-> Commits: `6fa9c5c` `d69367d` `66ed731` `7449b31` `1cb66cd`.
+> Commits: `6fa9c5c` `d69367d` `66ed731` `7449b31` `1cb66cd` + docs `05239fb`.
 > Machine gates: 3 presets, **446 / 7067 / 7**, editor boots in 165 lines.
-> Eye gates: S1 *"all working"*, S2 *"all good now"* after two fixes. **S3's grid-matched snapping is
-> NOT separately ticked** — see below.
+> Eye gates, ALL THREE: S1 *"all working"* · S2 *"all good now"* after two fixes · S3 *"is good!"*.
 
 ---
 
@@ -59,9 +58,6 @@ IS the drawn spacing while the grid is shown.
 
 ## Still owed
 
-- **S3's eye gate was never ticked one-by-one.** The user saw the grid and reported the snap mismatch,
-  which is fixed — but the fix, the decade step-up and the axis colours have not been confirmed. **Do
-  not record S3 as user-verified.**
 - Cross-session persistence (needs a `Config_Editor`, the first non-DLL config).
 - A game module actually adding a tool — the route is sealed like the rest, but ② deleted the only
   game-module panel, so nothing dogfoods it. Same open gap M2's panel route has.
