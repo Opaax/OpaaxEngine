@@ -135,6 +135,33 @@ Through one helper, ③ changes one function body.
 >
 > **Named, not built (the user's own next step):** a viewport tool strip for snap / pivot / local-world.
 
+## ③b VIEWPORT TOOLBAR — ✅ LANDED 2026-08-30
+
+> **Not in the original eight.** I filed a tool strip as a growth point at the end of ③ and the user
+> corrected it: *"yes no. I mean i want a really task for viewport toolbar where we can choose snap
+> etc..."*. **A growth point they name twice is a block.**
+>
+> **Shipped:** `ViewportTools()` — the eighth registrar route, an item is a closure · mode buttons ·
+> snap toggle + editable steps, Ctrl inverting · three-state pivot including **Individual Origins** ·
+> space toggle, forced Local for scale · a snap grid on the Background band, with snapping that
+> follows the DRAWN spacing.
+> Contract: **GIZ8–GIZ10**, amending **GIZ3**/**GIZ5**/**GIZ7**. Lessons **L56**/**L57**.
+> Record: `.claude/plans/viewport-toolbar.md`. Commits `6fa9c5c` `d69367d` `66ed731` `7449b31`
+> `1cb66cd`. **446 / 7067 / 7.**
+>
+> **THE REQUIREMENT THAT SHAPED IT WAS ONE SENTENCE:** *"should be easy to add thing in it too!"* —
+> which made it a registry rather than a row of widgets, and made an item a CLOSURE where a menu node
+> is a TAG (a menu node has one behaviour; a toolbar item is a widget).
+>
+> **TWO DEFECTS WORTH CARRYING FORWARD.** A positional ImGui query (`GetItemRect*`) is late-bound to
+> submission order, so inserting the toolbar silently retargeted the pan's wrap rect AND the zoom
+> anchor — one cause, two defects, only the loud one reported ([[L56]]). And a transform delta is
+> meaningless without the FRAME it was built in: conjugating by each entity's rotation instead of the
+> gizmo's was exactly right for one entity and drifted for every other ([[L57]]).
+>
+> **Owed:** S3's eye gate was never ticked one-by-one — the grid was seen and its snap mismatch
+> reported and fixed, but the fix is unconfirmed. Do not record it as user-verified.
+
 ## ③ GIZMO — as originally planned
 
 **Transform and "remove old vars" were DONE IN ②** (**I17**): `TransformComponent` exists, is

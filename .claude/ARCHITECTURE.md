@@ -1074,8 +1074,9 @@ honestly chose it (`3dc2d9b`), so the hand-rolled `GizmoHandles` was deleted.
 view is the *view*, so deferring to `MakeProjection` alone would change what a degenerate target
 answers for any camera not at the origin. Pinned in `CameraViewTests`.
 
-**GIZ3 — ONE VERB AT THE CHOKE POINT, AND IT TAKES A MATRIX:
-`EntityOps::TransformSelected(ctx, Matrix44F)`.** A matrix is what a gizmo *produces*: the delta maps
+**GIZ3 — ONE VERB AT THE CHOKE POINT, AND IT TAKES A DELTA:
+`EntityOps::TransformSelected(ctx, TransformDelta)`.** *(③b widened the argument from a bare
+`Matrix44F` — see **GIZ9**: a matrix alone cannot say which frame its linear part is in.)* A matrix is what a gizmo *produces*: the delta maps
 each entity's old placement to its new one, so translate, rotate-about-the-pivot and
 scale-about-the-pivot all arrive as the same value. A multi-selection keeps its layout with no special
 case, and a single entity — whose pivot is its own origin — falls out of the identical path.
@@ -1102,10 +1103,12 @@ so it looked right there and only there — and compounded the cumulative factor
   branch before treating it as uniform.
 
 **GIZ5 — The matrix is STATE, re-seated only while idle.** ImGuizmo captures its start pose when a
-drag begins and then drives the matrix it was handed, so `EditorGizmo::ReseatAt` (translation only,
-identity rotation, unit scale) runs on every frame `IsUsing()` is false and never during a drag —
-re-seating mid-drag would fight that captured state. `ReseatAt` moves **both** `m_Matrix` and
-`m_PrevMatrix`, or the first frame of the next drag differences against a stale pose and jumps.
+drag begins and then drives the matrix it was handed, so `EditorGizmo::ReseatAt` runs on every frame
+`IsUsing()` is false and never during a drag — re-seating mid-drag would fight that captured state.
+`ReseatAt` moves **both** `m_Matrix` and `m_PrevMatrix`, or the first frame of the next drag
+differences against a stale pose and jumps. *(③b: it takes a ROTATION too, and remembers it — see
+**GIZ9**. Scale is always seeded to unit: the matrix measures a DRAG, not the entity, and seeding it
+otherwise would make the first frame report a stretch nobody applied.)*
 - **`Manipulate`'s RETURN VALUE gates banking, not `IsUsing()`.** It answers "did the matrix actually
   change"; `IsUsing()` stays true for the whole gesture and would bank an identity delta every frame,
   dirtying the map on a click that never moved.
@@ -1132,13 +1135,73 @@ backend (`imgui_impl_glfw.cpp:943`, honoured whenever the window is focused).
   *submits-an-item* / *paints-only* / *pure-geometry*, and moving the cursor is none of them. It is the
   tree's only `imgui_internal.h` consumer.
 
-**GIZ7 — Named, NOT built** ([[L23]] — never an API with no caller). **A viewport tool strip for snap
-settings, pivot-vs-centre, and local-vs-world** — the user's own next step, stated 2026-08-28. Today
-snapping is Ctrl-held with a per-mode step (10 units / 15° / 0.1), the pivot is always the selection's
-bounds centre, and the mode is always `ImGuizmo::LOCAL`. All three are already single expressions with
-one caller, so the strip is UI over values that exist. Also unbuilt: a rotate/scale gizmo for a
-multi-selection with mixed rotations, and `DebugDraw::DrawCircle` — the rotate ring is ImGuizmo's, so
-that header's *"waits for a caller that needs it"* still does.
+**GIZ7 — ~~Named, NOT built: a viewport tool strip~~ BUILT IN ③b** (2026-08-28→30). This entry filed
+the strip as a growth point and the user's answer was *"I mean i want a really task for viewport
+toolbar"* — so it became its own block. See **GIZ8**–**GIZ10**. *Kept as a record of the call, not as
+a live claim.* Still unbuilt: a rotate/scale gizmo for a multi-selection with **mixed** rotations
+(**GIZ9** states what it approximates), and `DebugDraw::DrawCircle` — the rotate ring is ImGuizmo's,
+so that header's *"waits for a caller that needs it"* still does.
+
+**GIZ8 — THE VIEWPORT TOOLBAR IS A REGISTRY, and an item is a CLOSURE where a menu node is a TAG.**
+`ViewportTools()` is the eighth route on `EditorExtensionRegistrar`, natives → modules → `Seal()`
+(**MR2**), so a game module adds a tool with the same call a panel takes. The user's requirement set
+this: *"should be easy to add thing in it too!"*.
+- **The closure is not a relapse into what [[L37]]/[[L38]] deleted.** A menu node has exactly ONE
+  behaviour — invoke a command — so a tag says everything about it. A toolbar item is a WIDGET: a
+  toggle, a drag-float, a combo. There is no uniform behaviour to name, and tags would force a new
+  item TYPE per widget kind, which is the machinery "easy to add things" exists to avoid. An item
+  that *does* invoke still uses a tag: the mode buttons dispatch `EDITOR_COMMAND_GIZMO_*`, making the
+  toolbar a THIRD front-end rather than a fourth source of truth.
+- Each item is wrapped in `PushID(id)` — **I15**'s entry-is-an-ID-scope rule, so two independently
+  authored items sharing a label cannot fight over hover state. A label that carries state pins its
+  own id with `###`, or clicking it would make it a different widget every frame.
+- **It is an OVERLAY, and the ORDER is the whole risk.** The strip sits ON the image, and every
+  viewport gesture gates on the image's hover — so it is drawn BEFORE the measures and its rect
+  SUBTRACTED from that hover, or a click on "Snap" also starts a marquee. The gizmo needs the same
+  guard through `ImGuizmo::Enable(false)` (which still draws, only refuses to manipulate) — but
+  **never mid-drag**, because that call cancels the interaction it is editing.
+
+**GIZ9 — PIVOT AND SPACE, AND THE FRAME A DELTA IS EXPRESSED IN.**
+- **Space** is `World` or `Local`; Local is `ReseatAt` adopting the PRIMARY's rotation. Without that
+  the two are identical, because ③ always built the matrix unrotated.
+- **SCALE FORCES LOCAL** (`GetEffectiveSpace`), and the alternative is unrepresentable rather than
+  merely awkward: scaling along world axes an entity turned by R is a **shear**, and
+  `{Position, Rotation, Scale}` has nowhere to put one. Unity forces it for the same reason; the
+  toolbar disables the button and says why instead of offering a control that cannot work.
+- **Pivot is THREE modes, and the third is a different KIND of answer.** Center and Origin are both
+  ONE shared point, so N entities orbit it and keep formation. `Individual` (Blender's Individual
+  Origins, and the user's own drawing) means each entity turns about ITSELF. It is implemented as an
+  **absence** — skip the position multiply — because an entity that is its own pivot cannot be moved
+  by turning about itself. Refused for translate, where "about its own origin" has no meaning.
+- **A DELTA IS ONLY MEANINGFUL WITH THE FRAME IT WAS BUILT IN, and that frame is the GIZMO'S.** A
+  scale arrives as `R·S·R⁻¹`; conjugating by `R` recovers a clean diagonal `S` for **every** entity.
+  Conjugating by each entity's *own* rotation — the ③b bug the user found — cancels only for the
+  entity that happens to match the gizmo, and hands every other one a non-diagonal matrix whose
+  `atan2` is a rotation nobody asked for. Because the answer is identical for all of them, the
+  conjugation lives OUTSIDE the per-entity loop. `EditorGizmo` REMEMBERS the pose (`GetFrameRad`): a
+  drag never reseats, and `R·S·R⁻¹` cannot be reduced by anyone who does not know `R`.
+- **So the choke point takes a `TransformDelta`, not a matrix** (**GIZ3** amended). `Matrix`,
+  `FrameRad` and `Origin` are one answer to "what did the gizmo just do" — which is also exactly what
+  ⑤ records to replay a drag — and a struct stops the parameter list growing again.
+- **What it approximates, stated:** an entity whose rotation differs from the gizmo's gets `S` applied
+  along its OWN axes. The exact result is a shear, so this is the honest 2D answer, not a defect.
+
+**GIZ10 — THE SNAP GRID IS THE SNAP STEP MADE VISIBLE, and snapping follows what is DRAWN.**
+Spacing IS the translate snap step, Edit worlds only, on the **Background** band.
+- **`DebugDraw` gained a per-segment `ERenderLayer` for this**, defaulting to `Debug` so every prior
+  caller is untouched. A grid on the Debug band would draw over every sprite, which is not a grid but
+  a cage — the first thing that queue could not express.
+- **Bounded TWICE:** the visible world rect from the same `ScreenToWorld` picking uses, and a
+  **decade step-up** once a cell would be finer than a few pixels, solved with `log10` rather than
+  looped so a pathological step cannot spin. The line cap behind both is a guard, not the mechanism.
+- **Snapping follows the drawn spacing while the grid is visible** (user's call): zoomed out the grid
+  coarsens to 100s while the authored step is still 10, so a drag was landing *between* two visible
+  lines. With the grid hidden the authored number is honoured literally, because then there is
+  nothing to match. **What you snap to is what you can see.**
+- **Named, not built:** cross-session persistence of any of this. `EditorCamera`'s pan and zoom do not
+  survive a restart either, and a `Config_Editor` would be the tree's first non-DLL config
+  (`IMPL_T_CONFIG` defines `StaticTypeID()` in a DLL `.cpp`), so it is a real decision rather than a
+  free one.
 
 ---
 

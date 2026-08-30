@@ -1556,3 +1556,67 @@ gap produced the defect.
 - **Make the assertion structurally different from the wrong answer, not merely numerically.** The
   cases demand 1200 where an origin-centred scale gives 2200, and 4/3 where a cumulative factor gives
   2.0 — so they cannot pass by rounding or by accident ([[L21]]).
+
+## L56 — A POSITIONAL query is late-bound: inserting an item before its consumer silently retargets it (2026-08-29)
+
+**What happened (③b S1).** `ViewportPanel::MeasureCameraGesture` found the rect to wrap the cursor
+inside with `ImGui::GetItemRectMin()/Max()`. That was correct for as long as the viewport IMAGE
+happened to be the last submitted item. S1 drew a toolbar before the measures — and a child window
+**is** an item — so those calls silently began naming the strip. Panning captured the mouse in a
+small box in the corner and looped it there, which is what the user reported.
+
+**The second one nobody would have reported.** The same function read `GetItemRectMin` again for the
+ZOOM ANCHOR, so zoom-at-cursor had been anchoring to the toolbar's origin — off by the 8px inset.
+Small enough to feel like drift rather than a bug. One cause, two defects, and only the loud one
+surfaced.
+
+**The fix was not a reordering.** The rect is now PASSED to all three measures, and `DrawContents`
+holds the only `GetItemRect*` call in the file, taken immediately after the image. Reordering would
+have fixed this instance; passing the value closes the class — which mattered immediately, because
+S3 added another overlay two commits later.
+
+**Rules for next time:**
+- **A query that means "the last thing submitted" is late-bound to submission ORDER, so it is a
+  hidden parameter.** `GetItemRect*`, `IsItemHovered`, `SetTooltip`, `SetItemDefaultFocus` all bind
+  this way. When one is read anywhere but immediately after the item it describes, pass the value
+  instead. This is [[L29]]/**SEL8**'s family — a borrowed ImGui call answering about something other
+  than what you meant — now for *positional* queries rather than predicates. Sixth occurrence.
+- **Adding UI to a surface that already measures gestures is a REORDERING, and reordering is a
+  change.** Ask what each existing call reads implicitly before inserting anything ahead of it.
+- **When a defect comes from a shared cause, look for its quiet siblings before fixing the loud
+  one.** The wrap loop announced itself; the zoom anchor never would have.
+
+## L57 — A delta is only meaningful with the FRAME it was built in; conjugate by that, not by the one you are applying it to (2026-08-30)
+
+**What happened (③b S2).** With Local space, a scale drag produces a delta whose linear part is
+`R·S·R⁻¹`, where `R` is the pose the GIZMO was seated with. `TransformSelected` conjugated it by
+**each entity's own rotation** to recover the scale factors. For a single entity that is exactly
+right, because the gizmo adopts the primary's rotation and the two `R`s are the same — which is why
+it passed its tests and its eye gate. On a multi-selection every *other* entity got a non-diagonal
+matrix, and `atan2` of a non-diagonal matrix is a rotation nobody asked for: the user reported
+entities creeping round as they scaled.
+
+**The tell I missed.** My own test asserted the correct reading and the wrong one — 2.0×/0° in the
+entity's frame versus 1.58×/18.4° in the world's — and I read that as "the conjugation works". What
+it actually proved is that *the frame matters*, which should have raised the question **whose frame**
+the moment more than one entity could be selected. I had written the multi-selection case down as a
+named approximation and never asked whether it was even self-consistent.
+
+**The fix removed code.** Conjugating by the gizmo's frame gives the same clean `S` for every entity,
+so the conjugation left the per-entity loop entirely. `EditorGizmo` remembers the pose because a drag
+never reseats and `R·S·R⁻¹` cannot be reduced by anyone who does not know `R` — which also turned the
+choke point's argument into a `TransformDelta` carrying matrix + frame + origin together.
+
+**Rules for next time:**
+- **A transform delta without its frame is ambiguous, and the ambiguity is invisible in the
+  one-object case.** If a value is `R·X·R⁻¹` for some `R`, that `R` is part of the value — carry it,
+  do not re-derive it at the point of use from whatever happens to be nearby.
+- **When N things share one derived value, compute it ONCE outside the loop.** Doing it per element
+  is the shape that invites substituting a per-element quantity for a shared one; here, moving it out
+  and fixing it were the same edit.
+- **"Correct for one, approximate for many" deserves the same scrutiny as "wrong".** I labelled the
+  multi-selection case an accepted approximation without checking it was even coherent — the
+  approximation was fine, the frame was not ([[L23]]'s shape: a labelled gap still hides a defect).
+- **A parameter list that grows twice is telling you the arguments are one value.** Matrix, then
+  origin, then frame — the third addition is where it became a struct, and it should have been the
+  second.
