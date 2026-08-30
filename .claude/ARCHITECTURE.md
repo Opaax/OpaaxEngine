@@ -1155,6 +1155,14 @@ this: *"should be easy to add thing in it too!"*.
 - Each item is wrapped in `PushID(id)` — **I15**'s entry-is-an-ID-scope rule, so two independently
   authored items sharing a label cannot fight over hover state. A label that carries state pins its
   own id with `###`, or clicking it would make it a different widget every frame.
+- **A closure is not an ANONYMOUS closure** (2026-08-30). The five natives were written as lambdas
+  inline in `EditorService::RegisterNativeViewportTools`, which put ~150 lines of widget code — the
+  only `ImGui::` calls in the file — inside the composition root. They are now named functions in
+  `Editor/Toolbar/EditorNativeViewportTools.{h,cpp}`, registered by pointer: the **`EditorNativeCommands`
+  shape**, one route over. The registration site keeps what is genuinely its decision — the ORDER and
+  the separator grouping (Grid sits with Snap deliberately) — and `EditorService.cpp` is now free of
+  widget calls entirely. `DrawFunc` is unchanged; a lambda still registers, so a game module pays
+  nothing for this.
 - **It is an OVERLAY, and the ORDER is the whole risk.** The strip sits ON the image, and every
   viewport gesture gates on the image's hover — so it is drawn BEFORE the measures and its rect
   SUBTRACTED from that hover, or a click on "Snap" also starts a marquee. The gizmo needs the same
@@ -1360,7 +1368,8 @@ game-side `ModuleRegistrar`; it was never a promise about `Menus()`, and the bre
 `Panels()` takes `Register<TPanel>(PanelDesc{...})` — id, which root menu category holds its toggle
 (`Window` default, `Tools` for a tool-shaped panel), and `EPanelVisibility` at startup. `EditorPanels`
 (`Editor/Panels/EditorPanels.{h,cpp}`) owns every instance **and** its visibility, and is the only place
-in the editor that calls `ImGui::Begin`.
+in the editor that OPENS A PANEL WINDOW — *amended 2026-08-30: it used to say "the only place that calls
+`ImGui::Begin`", which **MR2d** made false. It decides the window; `ImGuiEditorGui` emits it.*
 - **The id is stated ONCE.** It was interned twice — in the `Register("Hierarchy", …)` call and again as
   a `m_PanelID` member — with nothing making the two agree ([[L37]]'s shape). `GetPanelID()` had 7
   overrides and **0 consumers**, so the panel-side copy bought nothing; it is deleted. The desc's `Id`
@@ -1394,6 +1403,43 @@ in the editor that calls `ImGui::Begin`.
   be reopened every launch. Also no `Closable=false` — closing the Viewport leaves the render target
   bound and the world drawing into an FBO nobody samples, which is wasteful and never wrong, and the
   menu is the way back.
+
+**MR2d — ONE UI pass, ONE backend seam: `IEditorGui`** (landed 2026-08-30). The editor drew its UI as
+three siblings — `EditorService::DrawGUI` called the dockspace, then `Menus().Draw()`, then
+`Panels->Draw()` — and each reached ImGui itself. Now `IEditorGui::Draw(EditorContext&)` emits the
+whole pass in one place (dockspace → menu bar → panels), and `DrawGUI` is two lines.
+`Editor/UI/IEditorGui.h` is the seam, `Editor/Imgui/ImGuiEditorGui.{h,cpp}` the one implementation —
+the `IEditorUIBackend`/`OpenGLEditorUIBackend` idiom, and `EditorService` picks the concrete type the
+same way `Init` already picks the GL backend.
+- **The line is CHROME vs CONTENTS, and it is the one every reference editor draws.** Unity splits
+  `EditorWindow` (the host owns the window) from `OnGUI()` (the leaf owns its widgets); Godot's
+  `EditorPlugin` adds a dock and paints nothing in it. So the seam carries exactly the structural
+  widgets a HOST emits — `BeginMainMenuBar`, `BeginMenu`, `MenuItem`, `MenuSeparator`,
+  `BeginPanelWindow`/`EndPanelWindow` — and `Editor/Menus/` (4 files) plus `EditorPanels.cpp` name no
+  backend at all. A panel's contents, a `TPropertyDrawer` and a `ViewportToolbarRegistry` item still
+  call ImGui directly, which was always the stated exception (**MR2c**) — but each of those now lives
+  in a file whose job IS drawing. `EditorService.cpp` was the exception to that and is no longer: its
+  five inline toolbar lambdas moved out (**GIZ8**), leaving the composition root with zero `ImGui::`.
+- **The other ~360 call sites were deliberately NOT abstracted, and the reason is not scope.** A
+  widget API designed against exactly one backend encodes that backend's shape — immediate mode, an
+  ID stack, `IsItemHovered` late-bound to submission order (**L56**) — so it would buy the *word*
+  portability and none of the property. What the seam does buy is real and small: the pass has one
+  owner, and the ~20 chrome calls are behind one interface.
+- **`EditorContext` carries `IEditorGui& Gui`**, which is why no `Draw` signature changed: a menu node
+  already took the context, and a panel already gets one by ctor (**D3**). `UIBackend` STAYS beside it
+  rather than collapsing into `Gui.Backend()` — it is the narrower dependency, and a panel that only
+  turns a texture into an image has no business with the menu bar.
+- **`BeginPanelWindow` swallows the push/pop pair.** The zero-padding style var is pushed before
+  `Begin` and popped immediately after it (`Begin` has already consumed the window's padding), so
+  `EndPanelWindow()` takes nothing and a caller cannot mis-pair it — the same reason **MR2c** moved
+  `Begin`/`End` off the panels in the first place, one level further down.
+- **The shortcuts moved AHEAD of the pass.** `HandleAuthoringShortcuts` ran between the menu bar and
+  the panels; a chord there can execute a command that destroys the world mid-submission. ImGui's
+  `RouteGlobal` defers its routing decision, so firing them before anything is submitted is
+  behaviour-neutral and strictly safer.
+- **`EditorService` owns it as a `TUniquePtr<IEditorGui>` built in the CONSTRUCTOR**, not in
+  `InitGUI` — the context holds a reference to it, and a member that is null between construction and
+  `Initialize` would put a null check in front of every `IsReady()`.
 
 **MR3 — One module shape.** Runtime and editor modules share a marker base **`IModule`**
 (`Application/IModule.h`): `IRuntimeModule : IModule` (`OnRegister(ModuleRegistrar&)`) and

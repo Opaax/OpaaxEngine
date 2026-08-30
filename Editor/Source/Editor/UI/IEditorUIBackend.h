@@ -38,7 +38,7 @@ namespace Opaax::Editor
     //
     //   ImGui_ImplGlfw is the platform side (backend-neutral apart from its InitForX
     //   variant); the renderer impl (ImGui_ImplOpenGL3 today, ImGui_ImplVulkan later) is
-    //   backend-specific. EditorService keeps all backend-neutral ImGui calls (context,
+    //   backend-specific. ImGuiEditorGui keeps all backend-neutral ImGui calls (context,
     //   NewFrame, dockspace, Render) and delegates these renderer hooks here, so editor
     //   code never names a concrete renderer impl. Lives editor-side so the engine/RHI
     //   stay ImGui-free (Editor.md D4).

@@ -1,6 +1,7 @@
 #include "Editor/Menus/EditorMenu.h"
 
-#include <imgui.h>
+#include "Editor/EditorContext.h"
+#include "Editor/UI/IEditorGui.h"
 
 namespace Opaax::Editor
 {
@@ -15,10 +16,11 @@ namespace Opaax::Editor
         return *m_Categories.back();
     }
 
-    //Should be drawn thanks to Editor GUI
     void EditorMenu::Draw(EditorContext& InContext) const
     {
-        if (!ImGui::BeginMainMenuBar())
+        IEditorGui& lGui = InContext.Gui;
+
+        if (!lGui.BeginMainMenuBar())
         {
             return;
         }
@@ -28,7 +30,7 @@ namespace Opaax::Editor
             lCategory->Draw(InContext);
         }
 
-        ImGui::EndMainMenuBar();
+        lGui.EndMainMenuBar();
     }
 
     Uint64 EditorMenu::Count() const noexcept

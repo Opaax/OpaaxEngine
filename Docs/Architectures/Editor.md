@@ -191,6 +191,8 @@ The engine renders into a **RenderTarget it owns**. Rule: *whoever owns the fram
 ### D4 — ImGui lives in OpaaxEditorLib
 ImGui and the `IEditorUIBackend` implementations (GL/VK) belong to `OpaaxEditorLib`. `Engine/Source/Editor/**` stops being globbed into `OpaaxEngine` (`Engine/CMakeLists.txt:56`).
 
+And *inside* `OpaaxEditorLib`, host **chrome** goes through `IEditorGui` (`Editor/UI/IEditorGui.h`), whose one implementation is `ImGuiEditorGui` — it owns the whole UI pass (dockspace → menu bar → panels), so `Editor/Menus/` and `EditorPanels` name no backend. Panel **contents**, property drawers and viewport-toolbar items still call ImGui directly, by design. See ARCHITECTURE.md **MR2d**.
+
 ### D5 — Input is a route, not an engine context system
 The engine stays dumb: `InputManager` is *fed or not fed*. All routing policy lives in `EditorService`. Per-event decision order:
 

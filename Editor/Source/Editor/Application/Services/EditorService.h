@@ -12,7 +12,7 @@
 #include "Editor/EditorMapDocument.h"
 #include "Editor/EditorLevelDocument.h"
 #include "Editor/PIE/PlayInEditor.h"
-#include "Editor/Imgui/EditorGui.h"
+#include "Editor/UI/IEditorGui.h"
 #include "Editor/Panels/EditorPanels.h"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Core/OpaaxTypes.h"   // TUniquePtr
@@ -32,7 +32,8 @@ namespace Opaax::Editor
         // Ctor - Dtor
         // =============================================================================
     public:
-        EditorService()           = default;
+        /** Out-of-line: it picks the concrete IEditorGui, which only the .cpp needs to name. */
+        EditorService();
         ~EditorService() override = default;
         
         // =============================================================================
@@ -79,7 +80,7 @@ namespace Opaax::Editor
          */
         void PostInitialized();
         
-        /** The dockspace and the menu bar — everything drawn outside a panel. */
+        /** The authoring shortcuts, then the gui's one UI pass. */
         void DrawGUI();
         
         // End Editor Native
@@ -125,9 +126,12 @@ namespace Opaax::Editor
         void RegisterNativeConfigDrawers();
 
         /**
-         * The editor's own viewport tools, into m_Extensions.ViewportTools() (③b) — gizmo mode and
-         * snapping. Same route and same lack of privilege as the panels: a game module adds a tool
-         * with the identical call.
+         * The editor's own viewport tools, into m_Extensions.ViewportTools() (③b) — gizmo mode,
+         * snapping, grid, pivot and space. Same route and same lack of privilege as the panels: a
+         * game module adds a tool with the identical call.
+         *
+         * States the ORDER and the grouping only; each tool's widgets live in
+         * Editor/Toolbar/EditorNativeViewportTools.h, the EditorNativeCommands shape.
          *
          * Runs AFTER RegisterNativeEditorCommand, because the mode buttons dispatch by tag.
          */
@@ -289,7 +293,9 @@ namespace Opaax::Editor
         const EditorPaths*              m_EditorPaths = nullptr;
         WorldManager*                   m_WorldMgr = nullptr;
         
-        EditorGui                       m_Gui;
+        // Built in the ctor and never reset — the context holds a reference to it until OnShutdown's
+        // last step, well after ClearGUI().
+        TUniquePtr<IEditorGui>          m_Gui;
         EditorExtensionRegistrar        m_Extensions;
 
         TUniquePtr<ResourcePreview>     m_Preview;     

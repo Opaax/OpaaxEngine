@@ -1,8 +1,7 @@
 #include "Editor/Panels/EditorPanels.h"
 
 #include "Editor/Extensions/PanelRegistry.h"
-
-#include <imgui.h>
+#include "Editor/UI/IEditorGui.h"
 
 using namespace Opaax; // OPAAX_LOG expands to an unqualified ToSpdLevel(...)
 
@@ -39,33 +38,25 @@ namespace Opaax::Editor
         }
     }
 
-    void EditorPanels::Draw()
+    void EditorPanels::Draw(IEditorGui& InGui)
     {
-        //Should be draw from GUI
         for (LivePanel& lLive : m_Panels)
         {
             if (!lLive.bVisible) { continue; }
 
-            const PanelWindowStyle lStyle = lLive.Panel->GetWindowStyle();
-
-            ImGui::SetNextWindowSize(ImVec2(lStyle.DefaultSize.x, lStyle.DefaultSize.y), ImGuiCond_FirstUseEver);
-
-            if (lStyle.bNoPadding) { ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.f, 0.f)); }
-
-            // ImGui writes the close button straight into whatever it is handed, so it gets a LOCAL:
+            // The close button is written straight into whatever it is handed, so it gets a LOCAL:
             // routing the result back through SetVisible below keeps that one method the only thing
             // that ever moves a panel's visibility, and therefore the only thing that has to log it.
             bool lWantVisible = true;
 
-            const bool lOpen = ImGui::Begin(lLive.Desc.Id.CStr(), &lWantVisible);
+            const bool lOpen = InGui.BeginPanelWindow(lLive.Desc.Id.CStr(),
+                                                      lLive.Panel->GetWindowStyle(), lWantVisible);
 
-            if (lStyle.bNoPadding) { ImGui::PopStyleVar(); }
-
-            // End() runs whether or not Begin() returned true — ImGui's contract, and the pairing
-            // every panel used to have to get right on its own.
+            // EndPanelWindow runs whether or not the body opened — the pairing every panel used to
+            // have to get right on its own.
             if (lOpen) { lLive.Panel->DrawContents(); }
 
-            ImGui::End();
+            InGui.EndPanelWindow();
 
             if (!lWantVisible) { SetVisible(lLive.Desc.Id, false); }
         }

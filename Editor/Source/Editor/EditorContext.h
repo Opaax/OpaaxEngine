@@ -12,6 +12,7 @@ namespace Opaax
 
     namespace Editor
     {
+        class IEditorGui;               // editor-owned; the UI backend seam and the owner of the UI pass
         class IEditorUIBackend;         // editor-owned; the context carries it so panels reach it by ctor
         class EditorCamera;             // editor-owned; how the author is looking at an Edit world
         class EditorSelection;          // editor-owned; what is selected (Hierarchy + viewport write, Inspector reads)
@@ -35,15 +36,23 @@ namespace Opaax
         //   Engine::Startup and then live for the engine's lifetime, so these refs are stable. Growing
         //   set — AssetRegistry, EditorState, EditorEventBus join as their milestones land.
         //
-        //   UIBackend is the one editor-owned member (not an engine subsystem): the ViewportPanel needs
-        //   it to turn its FBO into an ImGui image (GetViewportImage). EditorService builds it BEFORE the
-        //   context so this reference is valid (see EditorService::Initialize ordering).
+        //   Gui and UIBackend are editor-owned rather than engine subsystems: the ViewportPanel needs the
+        //   second to turn its FBO into an image (GetViewportImage), and menus/panels draw their chrome
+        //   through the first. EditorService brings the UI up BEFORE building the context, so both
+        //   references are valid (see EditorService::Initialize ordering).
         // =============================================================================
         struct EditorContext
         {
             IEngine&          Engine;
             WorldManager&     Worlds;
             ResourceManager&  Resources;
+
+            // The UI backend seam — host chrome (menu bar, panel window) and the capture predicates.
+            // Here so a menu node or a panel draws through it without EditorService threading it down.
+            IEditorGui&       Gui;
+
+            // Gui.Backend(). Kept as its own member because it is the NARROWER dependency: a panel
+            // that only turns a texture into an image has no business with the rest of the UI.
             IEditorUIBackend& UIBackend;
             EditorSelection&  Selection;   // M2a — Hierarchy writes, Inspector reads
 

@@ -29,7 +29,7 @@ namespace Opaax::Editor
      *
      * Identity is an OpaaxStringID and it doubles as the LABEL, so a category cannot be looked up
      * by one name and drawn under another. CStr() into the intern pool is free and valid for the
-     * life of the process (I2), which is what ImGui is handed.
+     * life of the process (I2), which is what the label passed to IEditorGui points into.
      *
      * The full slash path ("File/Save Map") is built ONCE at construction from the parent's, and is
      * what the invocation log names — it is the only place in the editor that still speaks paths,
@@ -63,7 +63,7 @@ namespace Opaax::Editor
         // =============================================================================
     public:
         /**
-         * Emit this node into the current ImGui menu.
+         * Emit this node, through InContext.Gui — a node names no UI backend.
          *
          * CONST for the reason EditorCommandRegistry::Execute is: the tree is built before the
          * extension registrar seals, and drawing must not be able to add to it afterwards.

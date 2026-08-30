@@ -11,8 +11,8 @@ namespace Opaax
 namespace Opaax::Editor
 {
     /**
-     * How EditorPanels opens this panel's window. Defaults suit an ordinary docked list; the
-     * Viewport is the only panel that needs the padding off.
+     * How EditorPanels opens this panel's window, through IEditorGui::BeginPanelWindow. Defaults
+     * suit an ordinary docked list; the Viewport is the only panel that needs the padding off.
      */
     struct PanelWindowStyle
     {

@@ -15,15 +15,17 @@ namespace Opaax
 namespace Opaax::Editor
 {
     struct EditorContext;
+    class IEditorGui;
     class PanelRegistry;
 
     // =============================================================================
     // EditorPanels — the live panels: every instance the registry described, plus whether each one
     //   is on screen. Owned by EditorService, referenced from EditorContext.
     //
-    //   IT IS THE ONLY PLACE THAT SPEAKS ImGui WINDOW. A panel emits widgets; the Begin/End pair,
-    //   the label, the first-use size and the close button all live in Draw() below — so visibility
-    //   is one bool per panel that both the menu tick and the window's X read and write.
+    //   IT IS THE ONLY PLACE THAT OPENS A PANEL WINDOW. A panel emits widgets; the label, the
+    //   first-use size and the close button are decided in Draw() below and emitted through
+    //   IEditorGui — so visibility is one bool per panel that both the menu tick and the X write,
+    //   and this file names no UI backend.
     //
     //   Construction is registration order, teardown is its reverse (LC3). The Viewport registers
     //   first (natives before modules, MR2), which is what keeps its render-target handshake
@@ -56,8 +58,13 @@ namespace Opaax::Editor
         /** Every panel, hidden or not — a hidden panel still has to clear what DrawContents measures. */
         void OnPreRender();
 
-        /** Open each visible panel's window and draw its contents. */
-        void Draw();
+        /**
+         * Open each visible panel's window and draw its contents.
+         *
+         * Called by IEditorGui::Draw, which owns the whole UI pass — not by the composition root.
+         * Takes the gui rather than the whole EditorContext: the window chrome is all this needs.
+         */
+        void Draw(IEditorGui& InGui);
 
         /** Shutdown + destroy in reverse construction order (LC3). Idempotent. */
         void Shutdown();

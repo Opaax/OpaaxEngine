@@ -2,8 +2,7 @@
 
 #include "Editor/EditorContext.h"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
-
-#include <imgui.h>
+#include "Editor/UI/IEditorGui.h"
 
 using namespace Opaax; // OPAAX_LOG expands to an unqualified ToSpdLevel(...)
 
@@ -26,7 +25,7 @@ namespace Opaax::Editor
         const bool bEnabled = !m_IsEnabled || m_IsEnabled(InContext);
         const bool bChecked = m_IsChecked && m_IsChecked(InContext);
 
-        if (!ImGui::MenuItem(GetLabel(), nullptr, bChecked, bEnabled))
+        if (!InContext.Gui.MenuItem(GetLabel(), bChecked, bEnabled))
         {
             return;
         }

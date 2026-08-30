@@ -12,9 +12,9 @@
 #include "Editor//Application/Services/EditorPaths.h"
 #include "Editor/Commands/EditorNativeCommands.h"
 #include "Editor/Commands/EditorNativeCommandsTags.hpp"
-#include <cstdio>                              // snprintf — the pivot button's state-carrying label
+#include "Editor/Imgui/ImGuiEditorGui.h"        // the concrete IEditorGui this service picks
+#include "Editor/Toolbar/EditorNativeViewportTools.h"
 
-#include "Editor/ImguiLibrary/ImguiWidgets.h"   // ToggleButton — the toolbar's mode and snap buttons
 #include "Editor/Operation/EditorGizmo.hpp"
 #include "Editor/Operation/EditorViewport.hpp"   // the grid toggle lives on the viewport (③b)
 #include "Editor/Operation/LevelOperations.h"
@@ -53,19 +53,24 @@ namespace
     bool IsPlaying(const EditorContext& InContext) { return !InContext.PIE.IsEdit(); }
 
     bool IsPaused(const EditorContext& InContext) { return InContext.PIE.IsPaused(); }
-
-    /** Below this a snap step collapses every drag onto one point, so the toolbar clamps to it. */
-    constexpr float k_MinSnapStep = 0.001f;
 }
 
 namespace Opaax::Editor
 {
+    // The one place the editor names a UI backend, the way ImGuiEditorGui::Init already names
+    // OpenGLEditorUIBackend one level down. Built here rather than in InitGUI so m_Gui is never
+    // null — the context holds a reference to it.
+    EditorService::EditorService()
+        : m_Gui(MakeUnique<ImGuiEditorGui>())
+    {
+    }
+
     // =============================================================================
     // =============================================================================
     // Editor Native
     // =============================================================================
     // =============================================================================
-    
+
     void EditorService::CacheEditorPaths()
     {
         /* EditorSaveDir/EditorAssetsDir live only on EditorPaths, deliberately: 
@@ -114,7 +119,8 @@ namespace Opaax::Editor
             InEngine,
             InEngine.GetWorldManager(),
             InEngine.GetResources(),
-            m_Gui.Backend(),
+            *m_Gui,
+            m_Gui->Backend(),
             *m_Selection,
             *m_Viewport,
             *m_Camera,
@@ -147,22 +153,17 @@ namespace Opaax::Editor
     
     void EditorService::DrawGUI()
     {
-        if (m_Context != nullptr)
-        {
-            m_Gui.Draw(*m_Context);
-            //Should be drawned from GUI
-            m_Extensions.Menus().Draw(*m_Context);
-        }
+        if (m_Context == nullptr) { return; }
 
+        // Ahead of the pass, not inside it: a shortcut can execute a command that destroys the
+        // world, and doing that before any widget is submitted is safer than mid-pass. ImGui's
+        // global route defers its decision, so the chords fire either way.
         HandleAuthoringShortcuts();
-        
-        // The Viewport panel samples the FBO the world was just rendered into (Engine().Loop() above)
-        // and shows it as an ImGui image — the world lives INSIDE a panel now, not the raw backbuffer.
-        // It is the first panel in the host, with no special path of its own.
-        if (m_EditorPanels != nullptr)
-        {
-            m_EditorPanels->Draw();
-        }
+
+        // ONE pass, one owner. The dockspace, the menu bar and every panel window — including the
+        // Viewport, which samples the FBO Engine().Loop() just rendered into — are all emitted by
+        // the gui, so nothing here decides what is drawn or in what order.
+        m_Gui->Draw(*m_Context);
     }
 
     // =============================================================================
@@ -275,155 +276,20 @@ namespace Opaax::Editor
     {
         ViewportToolbarRegistry& lTools = m_Extensions.ViewportTools();
 
-        // --- Gizmo mode ---------------------------------------------------------------------
-        // BY TAG, so this is a THIRD front-end onto the same commands the Edit menu and W/E/R use.
-        // Calling EditorGizmo::SetMode directly here would be a fourth place to keep correct.
-        lTools.Add(OPAAX_ID("GizmoMode"), [](EditorContext& InContext)
-        {
-            struct ModeEntry { const char* Label; EGizmoMode Mode; const OpaaxTag& Command; };
-
-            const ModeEntry lModes[] = {
-                { "Move",   EGizmoMode::Translate, Tags::EDITOR_COMMAND_GIZMO_TRANSLATE },
-                { "Rotate", EGizmoMode::Rotate,    Tags::EDITOR_COMMAND_GIZMO_ROTATE },
-                { "Scale",  EGizmoMode::Scale,     Tags::EDITOR_COMMAND_GIZMO_SCALE },
-            };
-
-            bool bFirst = true;
-            for (const ModeEntry& lEntry : lModes)
-            {
-                if (!bFirst) { ImGui::SameLine(); }
-                bFirst = false;
-
-                if (ImguiWidgets::ToggleButton(lEntry.Label, InContext.Gizmo.GetMode() == lEntry.Mode))
-                {
-                    InContext.Extensions.Commands().Execute(lEntry.Command, InContext);
-                }
-            }
-        });
-
+        // ORDER and GROUPING are the composition root's call; what each tool DRAWS lives in
+        // Editor/Toolbar/EditorNativeViewportTools.cpp — the EditorNativeCommands shape, one route
+        // over. A tool is a plain function, so a game module registers one with this same line.
+        lTools.Add(OPAAX_ID("GizmoMode"), NativeViewportTools::DrawGizmoMode);
         lTools.AddSeparator();
 
-        // --- Snapping -----------------------------------------------------------------------
-        // The toggle and the STEP together: a toggle over a number you cannot change is half a
-        // control, and the step is what an author actually tunes per map.
-        lTools.Add(OPAAX_ID("Snap"), [](EditorContext& InContext)
-        {
-            EditorGizmo& lGizmo = InContext.Gizmo;
-
-            if (ImguiWidgets::ToggleButton("Snap", lGizmo.IsSnapEnabled()))
-            {
-                lGizmo.SetSnapEnabled(!lGizmo.IsSnapEnabled());
-            }
-
-            if (ImGui::IsItemHovered())
-            {
-                ImGui::SetTooltip("Snap the gizmo to fixed steps.\nHold Ctrl to invert this while dragging.");
-            }
-
-            // The step for the ACTIVE mode only — three fields at once would be a settings popup,
-            // and the one an author wants is always the one they are about to drag with.
-            ImGui::SameLine();
-            ImGui::SetNextItemWidth(70.f);
-
-            const EGizmoMode lMode = lGizmo.GetMode();
-
-            // Degrees for rotate, a fraction for scale, world units otherwise — the format says
-            // which, so the number is never ambiguous.
-            const char* lFormat = lMode == EGizmoMode::Rotate ? "%.0f deg"
-                                : lMode == EGizmoMode::Scale  ? "%.2f x"
-                                                              : "%.1f u";
-
-            float& lStep = lGizmo.SnapStepRef(lMode);
-            if (ImGui::DragFloat("##step", &lStep, lMode == EGizmoMode::Scale ? 0.01f : 0.5f,
-                                 0.f, 0.f, lFormat))
-            {
-                // A zero or negative step would make ImGuizmo snap everything onto one point.
-                lStep = lStep < k_MinSnapStep ? k_MinSnapStep : lStep;
-            }
-        });
-
-        // --- Grid ---------------------------------------------------------------------------
-        // Beside the snap controls WITHOUT a separator, because it is one of them: the grid's
-        // spacing IS the translate step above, so the two belong in the same group.
-        lTools.Add(OPAAX_ID("Grid"), [](EditorContext& InContext)
-        {
-            EditorViewport& lViewport = InContext.Viewport;
-
-            if (ImguiWidgets::ToggleButton("Grid", lViewport.IsGridVisible()))
-            {
-                lViewport.SetShowGrid(!lViewport.IsGridVisible());
-            }
-
-            if (ImGui::IsItemHovered())
-            {
-                ImGui::SetTooltip("Show a grid at the TRANSLATE snap step.\n"
-                                  "It coarsens by decades as you zoom out.");
-            }
-        });
-
+        // Grid sits beside Snap WITHOUT a separator, because it is one of them: the grid's spacing
+        // IS the translate step, so the two belong in the same group.
+        lTools.Add(OPAAX_ID("Snap"), NativeViewportTools::DrawSnap);
+        lTools.Add(OPAAX_ID("Grid"), NativeViewportTools::DrawGrid);
         lTools.AddSeparator();
 
-        // --- Pivot --------------------------------------------------------------------------
-        // One button that NAMES ITS CURRENT STATE rather than a pair of radio buttons: there are
-        // only two values, so the label is the readout and clicking is the toggle.
-        lTools.Add(OPAAX_ID("Pivot"), [](EditorContext& InContext)
-        {
-            EditorGizmo& lGizmo = InContext.Gizmo;
-
-            // THREE states, so it cycles rather than toggles. The label is the readout.
-            const EGizmoPivot lPivot = lGizmo.GetPivot();
-
-            // "###pivot" pins the ImGui ID to the part after it, so a label that changes with the
-            // state does not make this a different widget every time it is clicked.
-            char lLabel[48];
-            std::snprintf(lLabel, sizeof(lLabel), "Pivot: %s###pivot", ToString(lPivot));
-
-            if (ImGui::SmallButton(lLabel))
-            {
-                lGizmo.SetPivot(lPivot == EGizmoPivot::Center     ? EGizmoPivot::Origin
-                              : lPivot == EGizmoPivot::Origin     ? EGizmoPivot::Individual
-                                                                  : EGizmoPivot::Center);
-            }
-
-            if (ImGui::IsItemHovered())
-            {
-                ImGui::SetTooltip("Center — one point, the selection's combined bounds.\n"
-                                  "Origin — one point, the last-picked entity's position.\n"
-                                  "Individual — each entity turns about ITSELF; nothing orbits.\n"
-                                  "All three agree for a single entity.");
-            }
-        });
-
-        // --- Space --------------------------------------------------------------------------
-        lTools.Add(OPAAX_ID("Space"), [](EditorContext& InContext)
-        {
-            EditorGizmo& lGizmo = InContext.Gizmo;
-
-            // SCALE FORCES LOCAL, so the button says so and refuses rather than lying. A world-axis
-            // non-uniform scale of a rotated entity is a SHEAR, which TransformComponent cannot hold.
-            const bool bForced = lGizmo.GetMode() == EGizmoMode::Scale;
-            const bool bLocal  = lGizmo.GetEffectiveSpace() == EGizmoSpace::Local;
-
-            ImGui::BeginDisabled(bForced);
-
-            if (ImGui::SmallButton(bLocal ? "Space: Local###space" : "Space: World###space"))
-            {
-                lGizmo.SetSpace(bLocal ? EGizmoSpace::World : EGizmoSpace::Local);
-            }
-
-            ImGui::EndDisabled();
-
-            // OUTSIDE BeginDisabled: a disabled item does not report hover, and the one moment the
-            // tooltip is most needed is when the button will not move.
-            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-            {
-                ImGui::SetTooltip(bForced
-                    ? "Scale is always Local — scaling a rotated entity along world axes\n"
-                      "is a shear, which a transform cannot represent."
-                    : "Local — handles follow the last-picked entity's rotation.\n"
-                      "World — handles stay axis-aligned.");
-            }
-        });
+        lTools.Add(OPAAX_ID("Pivot"), NativeViewportTools::DrawPivot);
+        lTools.Add(OPAAX_ID("Space"), NativeViewportTools::DrawSpace);
     }
 
     void EditorService::RegisterNativeConfigDrawers()
@@ -609,12 +475,12 @@ namespace Opaax::Editor
      */
     bool EditorService::InitGUI(Window* InWindow)
     {
-        return m_Gui.Init(*InWindow, ResolveLayoutIniPath());
+        return m_Gui->Init(*InWindow, ResolveLayoutIniPath());
     }
 
     void EditorService::ClearGUI()
     {
-        m_Gui.Shutdown();
+        m_Gui->Shutdown();
     }
 
     OpaaxString EditorService::ResolveLayoutIniPath() const
@@ -756,7 +622,7 @@ namespace Opaax::Editor
 
     void EditorService::BeginFrame()
     {
-        if (!m_Gui.IsReady()) { return; }
+        if (!m_Gui->IsReady()) { return; }
 
         // Re-decide the input route ONCE per frame, here rather than inside RouteInput: a rule
         // evaluated only when an event arrives cannot notice that input STOPPED — and "the route
@@ -764,7 +630,7 @@ namespace Opaax::Editor
         // viewport hover/focus the panel pushed last frame, BEFORE OnPreRender clears it.
         if (m_InputRoute != nullptr) { m_InputRoute->Evaluate(); }
 
-        m_Gui.BeginFrame();
+        m_Gui->BeginFrame();
 
         // Apply any pending viewport resize (measured last DrawContents) BEFORE Engine().Loop()
         // renders the world, so Render() reads the new FBO size this frame (deferred-resize
@@ -774,7 +640,7 @@ namespace Opaax::Editor
 
     void EditorService::EndFrame()
     {
-        if (!m_Gui.IsReady()) { return; }
+        if (!m_Gui->IsReady()) { return; }
 
         // Once per frame, ahead of everything that reads it — the Hierarchy draws a `*` per map.
         RefreshDirtyCache();
@@ -783,12 +649,12 @@ namespace Opaax::Editor
 
         // Submit the UI to the backbuffer AFTER Engine().Loop() has rendered the world into the FBO
         // (see EditorApplication::TickFrame). The host presents the backbuffer once, after this.
-        m_Gui.EndFrame();
+        m_Gui->EndFrame();
     }
 
     bool EditorService::RouteInput(Event& InEvent)
     {
-        if (!m_Gui.IsReady()) { return false; } // UI not up (pre-Initialize / no window) — pass through
+        if (!m_Gui->IsReady()) { return false; } // UI not up (pre-Initialize / no window) — pass through
         
         // Keyboard is NOT exempted. IsKeyboardOwnedByUI only goes true for a text field, and a
         // field that has the keyboard must always win, viewport or not.
@@ -797,11 +663,11 @@ namespace Opaax::Editor
         bool lConsumed = false;
         if (InEvent.IsInCategory(EEventCategory::Mouse) || InEvent.IsInCategory(EEventCategory::MouseButton))
         {
-            lConsumed = m_Gui.IsPointerOverUI() && !lViewportHovered;
+            lConsumed = m_Gui->IsPointerOverUI() && !lViewportHovered;
         }
         else if (InEvent.IsInCategory(EEventCategory::Keyboard))
         {
-            lConsumed = m_Gui.IsKeyboardOwnedByUI();
+            lConsumed = m_Gui->IsKeyboardOwnedByUI();
         }
         // else: window/application events (close, resize, ...) always fall through to the base app.
 
@@ -829,7 +695,7 @@ namespace Opaax::Editor
         {
             OPAAX_LOG(LogEditorService, Trace, "RouteInput: {} -> {} (PointerOverUI={}, KeyboardOwnedByUI={})",
                       InEvent.GetName(), lConsumed ? "CONSUMED by editor" : "passed to engine",
-                      m_Gui.IsPointerOverUI(), m_Gui.IsKeyboardOwnedByUI());
+                      m_Gui->IsPointerOverUI(), m_Gui->IsKeyboardOwnedByUI());
         }
 
         return lConsumed;
@@ -898,7 +764,7 @@ namespace Opaax::Editor
         // second is far below what an eye can tell from instant.
         constexpr double k_DirtyCheckInterval = 0.25;
 
-        const double lNow = m_Gui.GetTime();
+        const double lNow = m_Gui->GetTime();
         if (lNow - m_LastDirtyCheck < k_DirtyCheckInterval) { return; }
 
         m_LastDirtyCheck = lNow;
@@ -923,7 +789,7 @@ namespace Opaax::Editor
         // which is exactly when ImGui's view of the keyboard is the authoritative one.
         if (m_Context == nullptr) { return; }
 
-        if (m_Gui.Shortcut(EKeyCode::LeftControl, EKeyCode::S))
+        if (m_Gui->Shortcut(EKeyCode::LeftControl, EKeyCode::S))
         {
             m_Context->Extensions.Commands().Execute(Tags::EDITOR_COMMAND_SAVE_MAP, *m_Context);
         }
@@ -936,14 +802,14 @@ namespace Opaax::Editor
         // What made a bare key unsafe was never the route, it was a text field: guarding on
         // IsKeyboardOwnedByUI is what lets these be global, so typing "Fred" into the name field
         // cannot frame and delete the selection.
-        if (m_Gui.IsKeyboardOwnedByUI()) { return; }
+        if (m_Gui->IsKeyboardOwnedByUI()) { return; }
 
-        if (m_Gui.Shortcut(EKeyCode::F))
+        if (m_Gui->Shortcut(EKeyCode::F))
         {
             m_Context->Extensions.Commands().Execute(Tags::EDITOR_COMMAND_FOCUS_SELECTED, *m_Context);
         }
 
-        if (m_Gui.Shortcut(EKeyCode::Delete))
+        if (m_Gui->Shortcut(EKeyCode::Delete))
         {
             m_Context->Extensions.Commands().Execute(Tags::EDITOR_COMMAND_DELETE_ENTITY, *m_Context);
         }
@@ -958,17 +824,17 @@ namespace Opaax::Editor
         // set ahead of Stop is a reasonable thing to want.
         if (!m_Context->PIE.IsEdit()) { return; }
 
-        if (m_Gui.Shortcut(EKeyCode::W))
+        if (m_Gui->Shortcut(EKeyCode::W))
         {
             m_Context->Extensions.Commands().Execute(Tags::EDITOR_COMMAND_GIZMO_TRANSLATE, *m_Context);
         }
 
-        if (m_Gui.Shortcut(EKeyCode::E))
+        if (m_Gui->Shortcut(EKeyCode::E))
         {
             m_Context->Extensions.Commands().Execute(Tags::EDITOR_COMMAND_GIZMO_ROTATE, *m_Context);
         }
 
-        if (m_Gui.Shortcut(EKeyCode::R))
+        if (m_Gui->Shortcut(EKeyCode::R))
         {
             m_Context->Extensions.Commands().Execute(Tags::EDITOR_COMMAND_GIZMO_SCALE, *m_Context);
         }

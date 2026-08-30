@@ -1,8 +1,8 @@
 #include "Editor/Menus/EditorMenuCategory.h"
 
+#include "Editor/EditorContext.h"
 #include "Editor/Menus/EditorMenuSeparatorNode.h"
-
-#include <imgui.h>
+#include "Editor/UI/IEditorGui.h"
 
 using namespace Opaax; // OPAAX_LOG expands to an unqualified ToSpdLevel(...)
 
@@ -72,7 +72,9 @@ namespace Opaax::Editor
 
         const bool bEnabled = !m_IsEnabled || m_IsEnabled(InContext);
 
-        if (!ImGui::BeginMenu(GetLabel(), bEnabled))
+        IEditorGui& lGui = InContext.Gui;
+
+        if (!lGui.BeginMenu(GetLabel(), bEnabled))
         {
             return;
         }
@@ -82,7 +84,7 @@ namespace Opaax::Editor
             lChild->Draw(InContext);
         }
 
-        ImGui::EndMenu();
+        lGui.EndMenu();
     }
 
     Uint64 EditorMenuCategory::CountCommands() const noexcept

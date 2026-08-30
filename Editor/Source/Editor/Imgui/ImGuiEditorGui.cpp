@@ -1,4 +1,4 @@
-#include "Editor/Imgui/EditorGui.h"
+#include "Editor/Imgui/ImGuiEditorGui.h"
 
 #include <imgui.h>
 #include <ImGuizmo.h>
@@ -8,6 +8,8 @@
 #include "Core/Window/Window.h"
 #include "Editor/EditorContext.h"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
+#include "Editor/Panels/EditorPanels.h"
+#include "Editor/Panels/IEditorPanel.h"   // PanelWindowStyle — the window chrome's one parameter
 #include "Editor/UI/OpenGLEditorUIBackend.h"
 
 using namespace Opaax; // OPAAX_LOG expands to an unqualified ToSpdLevel(...)
@@ -133,7 +135,7 @@ namespace
 
 namespace Opaax::Editor
 {
-    bool EditorGui::Init(Window& InWindow, OpaaxString InLayoutIniPath)
+    bool ImGuiEditorGui::Init(Window& InWindow, OpaaxString InLayoutIniPath)
     {
         // Checked BEFORE the context exists, so a failure has nothing to unwind.
         auto* lNativeWindow = static_cast<GLFWwindow*>(InWindow.GetNativeWindow());
@@ -182,7 +184,7 @@ namespace Opaax::Editor
         return true;
     }
 
-    void EditorGui::Shutdown()
+    void ImGuiEditorGui::Shutdown()
     {
         if (m_Backend == nullptr) { return; }
 
@@ -194,7 +196,7 @@ namespace Opaax::Editor
         m_Backend.reset();
     }
 
-    void EditorGui::BeginFrame()
+    void ImGuiEditorGui::BeginFrame()
     {
         m_Backend->NewFrame();
         ImGui::NewFrame();
@@ -205,7 +207,7 @@ namespace Opaax::Editor
         ImGuizmo::BeginFrame();
     }
 
-    void EditorGui::EndFrame()
+    void ImGuiEditorGui::EndFrame()
     {
         ImGui::Render();
         m_Backend->RenderDrawData();
@@ -216,29 +218,84 @@ namespace Opaax::Editor
         }
     }
 
-    void EditorGui::Draw(const EditorContext& InContext)
+    void ImGuiEditorGui::Draw(EditorContext& InContext)
     {
+        // The whole UI pass, in submission order. Panels dock into the space opened first, and the
+        // menu bar is submitted before them so a positional query inside a panel is not measured
+        // against a bar that has yet to reserve its height (L56).
         ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
-        
-        //InContext.Extensions.Menus().Draw(InContext);
+
+        InContext.Extensions.Menus().Draw(InContext);
+        InContext.Panels.Draw(*this);
     }
 
-    double EditorGui::GetTime() const
+    bool ImGuiEditorGui::BeginMainMenuBar()
+    {
+        return ImGui::BeginMainMenuBar();
+    }
+
+    void ImGuiEditorGui::EndMainMenuBar()
+    {
+        ImGui::EndMainMenuBar();
+    }
+
+    bool ImGuiEditorGui::BeginMenu(const char* InLabel, const bool bInEnabled)
+    {
+        return ImGui::BeginMenu(InLabel, bInEnabled);
+    }
+
+    void ImGuiEditorGui::EndMenu()
+    {
+        ImGui::EndMenu();
+    }
+
+    bool ImGuiEditorGui::MenuItem(const char* InLabel, const bool bInChecked, const bool bInEnabled)
+    {
+        return ImGui::MenuItem(InLabel, nullptr, bInChecked, bInEnabled);
+    }
+
+    void ImGuiEditorGui::MenuSeparator()
+    {
+        ImGui::Separator();
+    }
+
+    bool ImGuiEditorGui::BeginPanelWindow(const char* InLabel, const PanelWindowStyle& InStyle,
+                                          bool& bOutWantOpen)
+    {
+        ImGui::SetNextWindowSize(ImVec2(InStyle.DefaultSize.x, InStyle.DefaultSize.y), ImGuiCond_FirstUseEver);
+
+        if (InStyle.bNoPadding) { ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.f, 0.f)); }
+
+        const bool lOpen = ImGui::Begin(InLabel, &bOutWantOpen);
+
+        // Popped right after Begin, not at End: the var applies to the window's own padding, which
+        // Begin has already consumed. Swallowing the pair here is why EndPanelWindow takes nothing.
+        if (InStyle.bNoPadding) { ImGui::PopStyleVar(); }
+
+        return lOpen;
+    }
+
+    void ImGuiEditorGui::EndPanelWindow()
+    {
+        ImGui::End();
+    }
+
+    double ImGuiEditorGui::GetTime() const
     {
         return ImGui::GetTime();
     }
 
-    bool EditorGui::IsPointerOverUI() const
+    bool ImGuiEditorGui::IsPointerOverUI() const
     {
         return ImGui::GetIO().WantCaptureMouse;
     }
 
-    bool EditorGui::IsKeyboardOwnedByUI() const
+    bool ImGuiEditorGui::IsKeyboardOwnedByUI() const
     {
         return ImGui::GetIO().WantCaptureKeyboard;
     }
 
-    bool EditorGui::Shortcut(const EKeyCode InModifier, const EKeyCode InKey) const
+    bool ImGuiEditorGui::Shortcut(const EKeyCode InModifier, const EKeyCode InKey) const
     {
         const ImGuiKey lKey = ToImGuiKey(InKey);
 
