@@ -43,30 +43,36 @@ namespace
     }
 
     /**
-     * InBase, then "InBase 1", "InBase 2"... — Unity's shape, and it only appends when it has to.
-     * Linear per attempt, which is nothing at authoring scale and needs no counter to keep in sync
-     * with entities that have been deleted or renamed.
-     */
-    /**
-     * A world-space linear delta expressed in the frame of an entity turned by InDegrees:
-     * `Rot(-θ)·InLinear·Rot(θ)`, using transpose for the inverse since a rotation is orthonormal.
+     * A world-space linear delta re-expressed in the frame it was BUILT in:
+     * `Rot(-θ)·InLinear·Rot(θ)`, transpose standing in for the inverse since a rotation is
+     * orthonormal.
      *
-     * The unrotated case returns InLinear untouched — not merely as an optimisation, but so the
-     * overwhelmingly common path is bit-identical to what shipped before this existed.
+     * THE FRAME IS THE GIZMO'S, NOT THE ENTITY'S, and getting that wrong is what made a
+     * multi-selection scale drift. A scale delta arrives as `R·S·R⁻¹` where R is the pose the
+     * gizmo was seated with; conjugating by R recovers a clean diagonal S for EVERY entity.
+     * Conjugating by each entity's own rotation only cancels for the one entity whose rotation
+     * happens to match the gizmo — every other one gets a non-diagonal matrix, whose `atan2`
+     * reports a turn nobody asked for.
+     *
+     * Zero returns InLinear untouched, so the unrotated case is bit-identical to what shipped.
      */
-    glm::mat2 ToEntityFrame(const glm::mat2& InLinear, const float InDegrees)
+    glm::mat2 ToGizmoFrame(const glm::mat2& InLinear, const float InFrameRad)
     {
-        if (InDegrees == 0.f) { return InLinear; }
+        if (InFrameRad == 0.f) { return InLinear; }
 
-        const float lRad = Maths::DegreesToRadians(InDegrees);
-        const float lCos = std::cos(lRad);
-        const float lSin = std::sin(lRad);
+        const float lCos = std::cos(InFrameRad);
+        const float lSin = std::sin(InFrameRad);
 
         const glm::mat2 lRotation{ Vector2F{ lCos, lSin }, Vector2F{ -lSin, lCos } };
 
         return glm::transpose(lRotation) * InLinear * lRotation;
     }
 
+    /**
+     * InBase, then "InBase 1", "InBase 2"... — Unity's shape, and it only appends when it has to.
+     * Linear per attempt, which is nothing at authoring scale and needs no counter to keep in sync
+     * with entities that have been deleted or renamed.
+     */
     OpaaxString MakeUniqueName(World& InWorld, const OpaaxString& InBase)
     {
         if (!NameTaken(InWorld, InBase)) { return InBase; }
@@ -157,8 +163,7 @@ namespace Opaax::Editor
         OPAAX_LOG(LogEntityOps, Info, "Deleted {} entity(ies)", static_cast<Uint64>(lIds.size()));
     }
 
-    void EntityOps::TransformSelected(EditorContext& InContext, const Matrix44F& InDelta,
-                                      const ETransformOrigin InOrigin)
+    void EntityOps::TransformSelected(EditorContext& InContext, const TransformDelta& InDelta)
     {
         if (!InContext.Selection.HasSelection()) { return; }
 
@@ -169,8 +174,17 @@ namespace Opaax::Editor
 
         // The delta's LINEAR part carries the rotation and the scale; the translation is handled by
         // running each position through the whole matrix below.
-        const glm::mat2 lLinear{ Vector2F{ InDelta[0][0], InDelta[0][1] },
-                                 Vector2F{ InDelta[1][0], InDelta[1][1] } };
+        //
+        // CONJUGATED ONCE, HERE, in the gizmo's own frame — the answer is the same for every entity,
+        // which is both why it is out of the loop and why it is correct. Doing it per entity was the
+        // bug: only the entity matching the gizmo's pose came back clean.
+        const glm::mat2 lWorldLinear{ Vector2F{ InDelta.Matrix[0][0], InDelta.Matrix[0][1] },
+                                      Vector2F{ InDelta.Matrix[1][0], InDelta.Matrix[1][1] } };
+
+        const glm::mat2 lLinear = ToGizmoFrame(lWorldLinear, InDelta.FrameRad);
+
+        const float    lDeltaDegrees = Maths::RadiansToDegrees(std::atan2(lLinear[0][1], lLinear[0][0]));
+        const Vector2F lDeltaScale{ glm::length(lLinear[0]), glm::length(lLinear[1]) };
 
         // NOT logged per call: a drag lands one of these every frame it is held. The panel says so
         // once, the way it does for the outline and the icons (L15 without the flood).
@@ -192,21 +206,14 @@ namespace Opaax::Editor
             // INDIVIDUAL ORIGINS IS EXACTLY THE ABSENCE OF THIS STEP: an entity that is its own
             // pivot cannot be moved by turning about itself, so the delta's rotation and scale still
             // land below while the position is left alone. Nothing else differs between the modes.
-            const Vector4F lMoved = InOrigin == ETransformOrigin::Individual
-                                        ? Vector4F(lTransform->Position.x, lTransform->Position.y, 0.f, 1.f)
-                                        : InDelta * Vector4F(lTransform->Position.x, lTransform->Position.y, 0.f, 1.f);
-
-            // ROTATION AND SCALE ARE READ IN THE ENTITY'S OWN FRAME, and for scale that is the whole
-            // difference between right and wrong. A Local scale of an entity turned by R arrives here
-            // as `R·S·R⁻¹` — reading world-axis lengths off that mixes the axes and reports a
-            // rotation nobody asked for (45° and 2x reads as ~18° and 1.58x). Conjugating back by R
-            // recovers S exactly. Translation and rotation deltas are unaffected: the first has an
-            // identity linear part, and 2D rotations commute.
-            const glm::mat2 lLocal = ToEntityFrame(lLinear, lTransform->Rotation);
+            const Vector4F lMoved =
+                InDelta.Origin == ETransformOrigin::Individual
+                    ? Vector4F(lTransform->Position.x, lTransform->Position.y, 0.f, 1.f)
+                    : InDelta.Matrix * Vector4F(lTransform->Position.x, lTransform->Position.y, 0.f, 1.f);
 
             lTransform->Position = { lMoved.x, lMoved.y };
-            lTransform->Rotation += Maths::RadiansToDegrees(std::atan2(lLocal[0][1], lLocal[0][0]));
-            lTransform->Scale    *= Vector2F{ glm::length(lLocal[0]), glm::length(lLocal[1]) };
+            lTransform->Rotation += lDeltaDegrees;
+            lTransform->Scale    *= lDeltaScale;
 
             lChanged = true;
         }

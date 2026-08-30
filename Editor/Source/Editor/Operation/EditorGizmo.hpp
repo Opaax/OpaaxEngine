@@ -236,7 +236,19 @@ namespace Opaax::Editor
             m_Matrix[3][1] = InPivot.y;
 
             m_PrevMatrix = m_Matrix;
+            m_FrameRad   = InRotationRad;
         }
+
+        /**
+         * The pose the matrix was last seated with — the frame a banked delta's LINEAR part is
+         * expressed in.
+         *
+         * Remembered rather than re-derived at apply time, because a drag does not reseat: the
+         * frame is fixed for the whole gesture, and asking the selection again mid-drag could
+         * answer differently. Without it a scale is unrecoverable — `R·S·R⁻¹` cannot be reduced to
+         * S by anyone who does not know R.
+         */
+        float GetFrameRad() const noexcept { return m_FrameRad; }
 
         // =============================================================================
         // The banked delta
@@ -306,5 +318,8 @@ namespace Opaax::Editor
 
         Matrix44F  m_PendingDelta = Matrix44F(1.f);
         bool       m_bHasPending  = false;
+
+        // The pose ReseatAt last used. Fixed for the length of a drag, because a drag never reseats.
+        float      m_FrameRad     = 0.f;
     };
 }

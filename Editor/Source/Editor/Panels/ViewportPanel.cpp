@@ -270,12 +270,14 @@ namespace Opaax::Editor
             return;
         }
 
-        const Matrix44F lDelta = m_Context.Gizmo.ConsumeDelta();
+        EntityOps::TransformDelta lDelta;
+        lDelta.Matrix   = m_Context.Gizmo.ConsumeDelta();
+        lDelta.FrameRad = m_Context.Gizmo.GetFrameRad();
+        lDelta.Origin   = m_Context.Gizmo.UsesIndividualOrigins()
+                              ? EntityOps::ETransformOrigin::Individual
+                              : EntityOps::ETransformOrigin::Shared;
 
-        EntityOps::TransformSelected(m_Context, lDelta,
-                                     m_Context.Gizmo.UsesIndividualOrigins()
-                                         ? EntityOps::ETransformOrigin::Individual
-                                         : EntityOps::ETransformOrigin::Shared);
+        EntityOps::TransformSelected(m_Context, lDelta);
 
         // ONE-SHOT PER MODE, because a drag lands one of these per frame. Without it a gizmo that
         // draws but never writes looks exactly like one that writes — the L15 discriminate rule, and

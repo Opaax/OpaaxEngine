@@ -298,6 +298,53 @@ TEST_CASE("EditorGizmo: an UNROTATED entity is bit-identical to the pre-③b pat
     CHECK(LocalRotationOf(lDelta, 0.f) == doctest::Approx(0.f));
 }
 
+TEST_CASE("EditorGizmo: a scale reads clean in the GIZMO's frame, for every entity in the selection")
+{
+    // THE MULTI-SELECT BUG, pinned. The delta is R*S*R-inverse where R is the pose the gizmo was
+    // SEATED with. Conjugating by that R recovers S for everyone; conjugating by each entity's own
+    // rotation only cancels for the entity that happens to match, and every other one picks up a
+    // rotation nobody asked for. The gizmo remembers its frame precisely so this cannot be guessed.
+    EditorGizmo lGizmo;
+    const float lGizmoAngle = 40.f;
+
+    lGizmo.ReseatAt({ 0.f, 0.f }, glm::radians(lGizmoAngle));
+    REQUIRE(lGizmo.GetFrameRad() == doctest::Approx(glm::radians(lGizmoAngle)));
+
+    ScaleMatrixInPlace(lGizmo.Matrix(), { 2.f, 1.f });
+    lGizmo.BankFrameDelta();
+
+    const Matrix44F lDelta = lGizmo.ConsumeDelta();
+
+    // Read in the GIZMO's frame — exact, and no turn.
+    CHECK(LocalScaleOf(lDelta, lGizmoAngle).x    == doctest::Approx(2.f));
+    CHECK(LocalScaleOf(lDelta, lGizmoAngle).y    == doctest::Approx(1.f));
+    CHECK(LocalRotationOf(lDelta, lGizmoAngle)   == doctest::Approx(0.f).epsilon(0.001));
+
+    // Read in some OTHER entity's frame — the reading the bug used. Both wrong, and the rotation is
+    // the visible symptom: a selected entity at a different angle crept round as it was scaled.
+    const float lOtherAngle = 0.f;
+    CHECK(LocalRotationOf(lDelta, lOtherAngle) != doctest::Approx(0.f).epsilon(0.001));
+    CHECK(LocalScaleOf(lDelta, lOtherAngle).x  != doctest::Approx(2.f).epsilon(0.001));
+}
+
+TEST_CASE("EditorGizmo: the frame survives a drag, because a drag never reseats")
+{
+    // ApplyGizmoDrag reads GetFrameRad() a frame after MeasureGizmo banked the delta. If the frame
+    // were re-derived from the selection at apply time it could answer differently mid-gesture and
+    // the scale would decode against the wrong R.
+    EditorGizmo lGizmo;
+
+    lGizmo.ReseatAt({ 10.f, 10.f }, glm::radians(25.f));
+
+    ScaleMatrixInPlace(lGizmo.Matrix(), { 1.5f, 1.5f });
+    lGizmo.BankFrameDelta();
+    ScaleMatrixInPlace(lGizmo.Matrix(), { 1.5f, 1.5f });
+    lGizmo.BankFrameDelta();
+
+    CHECK(lGizmo.GetFrameRad() == doctest::Approx(glm::radians(25.f)));
+    CHECK(LocalScaleOf(lGizmo.ConsumeDelta(), 25.f).x == doctest::Approx(2.25f));
+}
+
 TEST_CASE("EditorGizmo: Individual origins is refused for a TRANSLATE, whatever the pivot says")
 {
     // "About its own origin" has no meaning for a translation — everything moves by the same

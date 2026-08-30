@@ -77,6 +77,27 @@ namespace Opaax::Editor
         };
 
         /**
+         * ONE DRAG FRAME, described completely: what moved, in which frame, and about what.
+         *
+         * A struct rather than three arguments because these are not independent knobs — they are
+         * one answer to "what did the gizmo just do", and ⑤ records exactly this to replay a drag.
+         */
+        struct TransformDelta
+        {
+            /** World-space map from each entity's old placement to its new one. */
+            Matrix44F Matrix = Matrix44F(1.f);
+
+            /**
+             * The frame Matrix's LINEAR part is expressed in — the pose the gizmo was seated with,
+             * radians. A scale arrives as `R·S·R⁻¹`; without R there is no way to recover S, and
+             * guessing the entity's own rotation instead is what made a multi-selection drift.
+             */
+            float FrameRad = 0.f;
+
+            ETransformOrigin Origin = ETransformOrigin::Shared;
+        };
+
+        /**
          * Apply a world-space transform delta to everything selected — the gizmo's drag (③).
          *
          * ONE VERB FOR ALL THREE MODES, and a matrix rather than three scalars, because that is what
@@ -92,13 +113,11 @@ namespace Opaax::Editor
          * why this stays free of ImGuizmo — the choke point speaks the engine's vocabulary, not a
          * vendor's.
          *
-         * @param InOrigin Individual leaves every POSITION untouched and applies only the delta's
-         *   rotation and scale, so N entities turn in place instead of orbiting. Passed rather than
-         *   read from the gizmo so the call is replayable — ⑤ must be able to re-apply a recorded
-         *   delta without the toolbar's current state changing what it means.
+         * Everything the mutation needs travels in InDelta, so the call is REPLAYABLE — ⑤ must be
+         * able to re-apply a recorded drag without the toolbar's current state changing what it
+         * means.
          */
-        void TransformSelected(EditorContext& InContext, const Matrix44F& InDelta,
-                               ETransformOrigin InOrigin = ETransformOrigin::Shared);
+        void TransformSelected(EditorContext& InContext, const TransformDelta& InDelta);
 
         /**
          * Frame the selection with the editor camera.
