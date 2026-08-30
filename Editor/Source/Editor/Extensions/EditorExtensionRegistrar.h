@@ -5,6 +5,7 @@
 #include "Editor/Extensions/PanelRegistry.h"       
 #include "Editor/Extensions/DrawerRegistry.h"      
 #include "Editor/Extensions/ResourceTypeRegistry.h"
+#include "Editor/Extensions/ViewportToolbarRegistry.h"
 #include "Editor/Menus/EditorMenu.h"
 #include "Editor/Commands/EditorCommandRegistry.h"
 
@@ -18,7 +19,8 @@ namespace Opaax::Editor
     // =============================================================================
     // EditorExtensionRegistrar — the single object an IEditorModule registers INTO (Editor.md D10).
     //   Owned by EditorService, handed to editor modules BEFORE it seals (§2 ordering), which is before the
-    //   first world. Six routes, one per extension kind, and every one of them is REAL.
+    //   first world. EIGHT routes, one per extension kind, and every one of them is REAL.
+    //   (The count read "six" while there were seven; ③b's ViewportTools makes it eight.)
     //   Symmetric with the game-side ModuleRegistrar (D9).
     //
     //   EditWorldSystems() is the game-side WorldSubsystemRoute REUSED, not a parallel editor type: the
@@ -36,6 +38,7 @@ namespace Opaax::Editor
         EditorMenu&                Menus()            noexcept { return m_Menus; }
         WorldSubsystemRoute&       EditWorldSystems() noexcept { return m_EditWorldSystems; }
         EditorCommandRegistry&     Commands()         noexcept { return m_EditorCommands; }
+        ViewportToolbarRegistry&   ViewportTools()    noexcept { return m_ViewportTools; }
 
         const ComponentDrawerRegistry& Drawers()       const noexcept { return m_Drawers; }
         const ConfigDrawerRegistry&  ConfigDrawers()   const noexcept { return m_ConfigDrawers; }
@@ -44,6 +47,7 @@ namespace Opaax::Editor
         const EditorMenu&            Menus()           const noexcept { return m_Menus; }
         const WorldSubsystemRoute&   EditWorldSystems() const noexcept { return m_EditWorldSystems; }
         const EditorCommandRegistry& Commands()        const noexcept { return m_EditorCommands; }
+        const ViewportToolbarRegistry& ViewportTools() const noexcept { return m_ViewportTools; }
 
         void Seal()          noexcept { m_Sealed = true; }
         bool IsSealed() const noexcept { return m_Sealed; }
@@ -59,6 +63,11 @@ namespace Opaax::Editor
         EditorMenu           m_Menus;
         WorldSubsystemRoute  m_EditWorldSystems;
         EditorCommandRegistry m_EditorCommands;
+
+        // ③b — the strip over the viewport. An ITEM IS A CLOSURE here where a menu node is a tag,
+        // because a toolbar item is a widget rather than an invocation; see the registry's header.
+        ViewportToolbarRegistry m_ViewportTools;
+
         bool                 m_Sealed = false;
     };
 }

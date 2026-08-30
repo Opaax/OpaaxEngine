@@ -86,6 +86,15 @@ namespace Opaax::Editor
         void RegisterNativeConfigDrawers();
 
         /**
+         * The editor's own viewport tools, into m_Extensions.ViewportTools() (③b) — gizmo mode and
+         * snapping. Same route and same lack of privilege as the panels: a game module adds a tool
+         * with the identical call.
+         *
+         * Runs AFTER RegisterNativeEditorCommand, because the mode buttons dispatch by tag.
+         */
+        void RegisterNativeViewportTools();
+
+        /**
          * One Window-menu entry per registered panel, from its PanelDesc.
          *
          * Runs AFTER the game module has registered (so its panels get a toggle too) and BEFORE the

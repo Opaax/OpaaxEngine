@@ -60,26 +60,50 @@ namespace Opaax::Editor
         // Snapping
         // =============================================================================
     public:
-        /** Held per frame from the modifier, not toggled — Ctrl means "snap this drag". */
-        void SetSnapping(const bool bInSnapping) noexcept { m_bSnapping = bInSnapping; }
-        bool IsSnapping() const noexcept                  { return m_bSnapping; }
+        /** The toolbar's persistent toggle — "snap every drag", until turned off. */
+        void SetSnapEnabled(const bool bInEnabled) noexcept { m_bSnapEnabled = bInEnabled; }
+        bool IsSnapEnabled() const noexcept                 { return m_bSnapEnabled; }
+
+        /**
+         * Ctrl, read per frame. It INVERTS the toggle rather than setting it (Unity's behaviour):
+         * holding it snaps while the toggle is off, and suppresses snapping while it is on.
+         *
+         * That asymmetry is the point — the key keeps working for an author who never opens the
+         * toolbar, and stays useful for one who leaves the toggle on.
+         */
+        void SetSnapInverted(const bool bInInverted) noexcept { m_bSnapInverted = bInInverted; }
+
+        /** What the drag should actually do this frame. */
+        bool IsSnappingNow() const noexcept { return m_bSnapEnabled != m_bSnapInverted; }
 
         /**
          * The step the active mode snaps to: world units, degrees, or a scale fraction.
          *
          * Per-mode because one number cannot mean all three — 15 units of translation is arbitrary
-         * where 15 degrees is the useful rotation step.
+         * where 15 degrees is the useful rotation step. Editable from the toolbar (③b); these were
+         * hard-coded constants in ③.
          */
         float GetSnapStep() const noexcept
         {
             switch (m_Mode)
             {
-            case EGizmoMode::Translate: return 10.f;
-            case EGizmoMode::Rotate:    return 15.f;
-            case EGizmoMode::Scale:     return 0.1f;
+            case EGizmoMode::Translate: return m_SnapTranslate;
+            case EGizmoMode::Rotate:    return m_SnapRotate;
+            case EGizmoMode::Scale:     return m_SnapScale;
             }
 
             return 1.f;
+        }
+
+        /** The step for one named mode — what a toolbar field edits. Clamped above zero. */
+        float& SnapStepRef(const EGizmoMode InMode) noexcept
+        {
+            switch (InMode)
+            {
+            case EGizmoMode::Rotate: return m_SnapRotate;
+            case EGizmoMode::Scale:  return m_SnapScale;
+            default:                 return m_SnapTranslate;
+            }
         }
 
         // =============================================================================
@@ -150,8 +174,17 @@ namespace Opaax::Editor
         // Members
         // =============================================================================
     private:
-        EGizmoMode m_Mode      = EGizmoMode::Translate;
-        bool       m_bSnapping = false;
+        EGizmoMode m_Mode = EGizmoMode::Translate;
+
+        // Snapping: a persistent toggle, plus this frame's Ctrl, which inverts it.
+        bool  m_bSnapEnabled  = false;
+        bool  m_bSnapInverted = false;
+
+        // ③'s constants, now editable from the toolbar. Session-only, like EditorCamera's pan and
+        // zoom — viewport state in this editor does not survive a restart.
+        float m_SnapTranslate = 10.f;
+        float m_SnapRotate    = 15.f;
+        float m_SnapScale     = 0.1f;
 
         Matrix44F  m_Matrix       = Matrix44F(1.f);
 

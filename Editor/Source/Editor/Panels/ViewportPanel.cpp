@@ -5,6 +5,7 @@
 #include "Editor/Commands/EditorNativeCommandsTags.hpp"
 #include "Editor/EditorContext.h"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
+#include "Editor/PIE/PlayInEditor.h"             // IsEdit — the toolbar is authoring furniture
 #include "Editor/Input/InputRoute.h"        // hover/focus is pushed, not read back out (D5 step 2)
 #include "Editor/ImguiLibrary/ImguiCursor.h"     // the infinite drag — wrap the cursor at the edge
 #include "Editor/ImguiLibrary/ImguiWidgets.h"
@@ -417,6 +418,47 @@ namespace Opaax::Editor
         }
     }
 
+    // =========================================================================
+    // DrawToolbarOverlay — the strip over the viewport (③b), from whatever the registry holds.
+    //
+    // Drawn BEFORE the gesture measures and its hover returned to them, which is the whole reason
+    // this is a separate step rather than three lines at the end of DrawContents. The measures gate
+    // on the IMAGE's hover (SEL8), and a toolbar sitting ON the image is still "over the image" as
+    // far as that test is concerned — so without subtracting this rect, clicking a toolbar button
+    // would also start a marquee underneath it.
+    // =========================================================================
+    bool ViewportPanel::DrawToolbarOverlay(const Vector2F& InOrigin)
+    {
+        const ViewportToolbarRegistry& lTools = m_Context.Extensions.ViewportTools();
+
+        // Edit worlds only — authoring furniture, the rule the icons and the gizmo already state.
+        if (lTools.IsEmpty() || !m_Context.PIE.IsEdit())
+        {
+            return false;
+        }
+
+        ImGui::SetCursorScreenPos(ImVec2{ InOrigin.x + m_ToolbarInset, InOrigin.y + m_ToolbarInset });
+
+        ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, m_ToolbarRounding);
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4{ m_ToolbarBg.r, m_ToolbarBg.g, m_ToolbarBg.b, m_ToolbarBg.a });
+
+        // Auto-resize on BOTH axes: the strip is exactly as wide as what is registered, so adding a
+        // tool needs no size to be kept in step anywhere.
+        if (ImGui::BeginChild("##ViewportToolbar", ImVec2{ 0.f, 0.f },
+                              ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders))
+        {
+            lTools.Draw(m_Context);
+        }
+        ImGui::EndChild();
+
+        const bool lHovered = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
+
+        ImGui::PopStyleColor();
+        ImGui::PopStyleVar();
+
+        return lHovered;
+    }
+
     Vector2F ViewportPanel::WrapDragCursor(const Vector2F& InMin, const Vector2F& InMax, const char* InGesture)
     {
         const Vector2F lCorrection = ImguiCursor::WrapInRect(ImVec2{ InMin.x, InMin.y },
@@ -445,7 +487,7 @@ namespace Opaax::Editor
     // and then drives the matrix it was handed, so re-seating it mid-drag would fight that state.
     // It follows the selection only while nothing is being dragged.
     // =========================================================================
-    bool ViewportPanel::MeasureGizmo(const Vector2F& InOrigin, const Vector2F& InSizePx)
+    bool ViewportPanel::MeasureGizmo(const Vector2F& InOrigin, const Vector2F& InSizePx, bool bInSuppress)
     {
         World* const lWorld = m_Context.Selection.GetWorld();
 
@@ -488,10 +530,18 @@ namespace Opaax::Editor
             lGizmo.ReseatAt(lPivot);
         }
 
-        lGizmo.SetSnapping(ImGui::GetIO().KeyCtrl);
+        // Ctrl INVERTS the toolbar's toggle rather than setting it, so the key works whichever way
+        // the toggle is left.
+        lGizmo.SetSnapInverted(ImGui::GetIO().KeyCtrl);
 
         const float lStep    = lGizmo.GetSnapStep();
         const float lSnap[3] = { lStep, lStep, lStep };
+
+        // A handle under the toolbar must not be grabbable through it — but NEVER mid-drag, because
+        // Enable(false) CANCELS the interaction it is editing, which would drop a drag the moment
+        // the cursor crossed the strip. Disabled still DRAWS, it only refuses to manipulate.
+        const bool bSuppress = bInSuppress && !ImGuizmo::IsUsing();
+        ImGuizmo::Enable(!bSuppress);
 
         // The VIRTUAL cursor, for the length of the Manipulate call only. Everything else in the
         // frame — ImGui's own hover, the marquee, the pan — wants the real one, so it is restored
@@ -511,9 +561,10 @@ namespace Opaax::Editor
         const bool bChanged = ImGuizmo::Manipulate(glm::value_ptr(lViewMatrix), glm::value_ptr(lProjMatrix),
                                                    ToGizmoOperation(lGizmo.GetMode()), ImGuizmo::LOCAL,
                                                    glm::value_ptr(lGizmo.Matrix()), nullptr,
-                                                   lGizmo.IsSnapping() ? lSnap : nullptr);
+                                                   lGizmo.IsSnappingNow() ? lSnap : nullptr);
 
         lIO.MousePos = lRealMouse;
+        ImGuizmo::Enable(true);   // restored immediately — the flag is global and persists otherwise
 
         if (bChanged)
         {
@@ -678,15 +729,21 @@ namespace Opaax::Editor
         //
         // Immediately after the image because GetItemRect*/IsItemHovered name the LAST submitted
         // item, and MeasureCameraGesture reads that rect again for the zoom anchor.
-        const bool   lImageHovered = ImGui::IsItemHovered();
-        const ImVec2 lOrigin       = ImGui::GetItemRectMin();
+        const bool   lImageRawHovered = ImGui::IsItemHovered();
+        const ImVec2 lOrigin          = ImGui::GetItemRectMin();
+
+        // The toolbar is drawn FIRST and SUBTRACTED from the image's hover. It sits on top of the
+        // image, so every gesture below would otherwise fire underneath its buttons — a click on
+        // "Snap" would start a marquee, and a drag off a button would pan the camera.
+        const bool lToolbarHovered = DrawToolbarOverlay({ lOrigin.x, lOrigin.y });
+        const bool lImageHovered   = lImageRawHovered && !lToolbarHovered;
 
         MeasureCameraGesture(lImageHovered);
 
         // ONE left button, TWO consumers, and the order is stated here once: a press that lands on a
         // handle belongs to the gizmo, so the marquee never sees it. Without this a drag on a handle
         // would move the entity AND rubber-band a selection over it.
-        if (!MeasureGizmo({ lOrigin.x, lOrigin.y }, { lAvail.x, lAvail.y }))
+        if (!MeasureGizmo({ lOrigin.x, lOrigin.y }, { lAvail.x, lAvail.y }, lToolbarHovered))
         {
             MeasureViewportInput(lImageHovered, { lOrigin.x, lOrigin.y });
         }

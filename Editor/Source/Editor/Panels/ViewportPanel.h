@@ -180,7 +180,20 @@ namespace Opaax::Editor
          * @return True while the gizmo owns the mouse, in which case the caller must not run
          *   MeasureViewportInput — one button, two consumers, and the order is stated here once.
          */
-        bool MeasureGizmo(const Vector2F& InOrigin, const Vector2F& InSizePx);
+        bool MeasureGizmo(const Vector2F& InOrigin, const Vector2F& InSizePx, bool bInSuppress);
+
+        /**
+         * Draw the viewport's tool strip (③b) from EditorExtensionRegistrar::ViewportTools().
+         *
+         * Called BEFORE the gesture measures and its result handed to them: the strip sits ON the
+         * image, and every gesture here gates on the image's hover (**SEL8**), so without
+         * subtracting this rect a click on a toolbar button would also start a marquee and a drag
+         * off one would pan the camera.
+         *
+         * @param InOrigin Top-left of the image, in SCREEN pixels.
+         * @return Whether the cursor is over the strip.
+         */
+        bool DrawToolbarOverlay(const Vector2F& InOrigin);
 
         /**
          * Spend the banked gizmo delta through EntityOps (SEL6), so a drag is undoable the day ⑤
@@ -245,6 +258,13 @@ namespace Opaax::Editor
         Vector2F m_PendingZoomCursorPx = {0.f, 0.f};   // viewport-local, the zoom's anchor
         float    m_PendingZoom         = 0.f;          // wheel notches; + is zoom IN
         bool     m_bPanning            = false;        // the middle button went down over the viewport
+
+        // The tool strip's chrome. Inset from the image corner so it reads as floating ON the
+        // viewport rather than welded to it; the SIZE is auto — the strip is exactly as wide as
+        // whatever the registry holds, so adding a tool needs no number kept in step here.
+        float    m_ToolbarInset    = 8.f;
+        float    m_ToolbarRounding = 4.f;
+        Vector4F m_ToolbarBg       = {0.10f, 0.10f, 0.12f, 0.85f};
 
         // Infinite drag: how far the cursor has been TELEPORTED back into the image during the
         // current gizmo drag, accumulated in screen pixels. Added to io.MousePos for the length of

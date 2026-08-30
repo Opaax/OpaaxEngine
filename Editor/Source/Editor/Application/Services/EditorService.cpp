@@ -12,6 +12,8 @@
 #include "Editor//Application/Services/EditorPaths.h"
 #include "Editor/Commands/EditorNativeCommands.h"
 #include "Editor/Commands/EditorNativeCommandsTags.hpp"
+#include "Editor/ImguiLibrary/ImguiWidgets.h"   // ToggleButton — the toolbar's mode and snap buttons
+#include "Editor/Operation/EditorGizmo.hpp"
 #include "Editor/Operation/LevelOperations.h"
 #include "Editor/Panels/ConfigPanel.h"
 #include "Editor/Panels/HierarchyPanel.h"
@@ -48,6 +50,9 @@ namespace
     bool IsPlaying(const EditorContext& InContext) { return !InContext.PIE.IsEdit(); }
 
     bool IsPaused(const EditorContext& InContext) { return InContext.PIE.IsPaused(); }
+
+    /** Below this a snap step collapses every drag onto one point, so the toolbar clamps to it. */
+    constexpr float k_MinSnapStep = 0.001f;
 }
 
 namespace Opaax::Editor
@@ -133,6 +138,78 @@ namespace Opaax::Editor
         lCommands.Register<OpenLevelAtCommand>(Tags::EDITOR_COMMAND_OPEN_LEVEL_AT);
         lCommands.Register<SaveLevelCommand>(Tags::EDITOR_COMMAND_SAVE_LEVEL);
         lCommands.Register<AddMapToLevelCommand>(Tags::EDITOR_COMMAND_ADD_MAP_TO_LEVEL);
+    }
+
+    void EditorService::RegisterNativeViewportTools()
+    {
+        ViewportToolbarRegistry& lTools = m_Extensions.ViewportTools();
+
+        // --- Gizmo mode ---------------------------------------------------------------------
+        // BY TAG, so this is a THIRD front-end onto the same commands the Edit menu and W/E/R use.
+        // Calling EditorGizmo::SetMode directly here would be a fourth place to keep correct.
+        lTools.Add(OPAAX_ID("GizmoMode"), [](EditorContext& InContext)
+        {
+            struct ModeEntry { const char* Label; EGizmoMode Mode; const OpaaxTag& Command; };
+
+            const ModeEntry lModes[] = {
+                { "Move",   EGizmoMode::Translate, Tags::EDITOR_COMMAND_GIZMO_TRANSLATE },
+                { "Rotate", EGizmoMode::Rotate,    Tags::EDITOR_COMMAND_GIZMO_ROTATE },
+                { "Scale",  EGizmoMode::Scale,     Tags::EDITOR_COMMAND_GIZMO_SCALE },
+            };
+
+            bool bFirst = true;
+            for (const ModeEntry& lEntry : lModes)
+            {
+                if (!bFirst) { ImGui::SameLine(); }
+                bFirst = false;
+
+                if (ImguiWidgets::ToggleButton(lEntry.Label, InContext.Gizmo.GetMode() == lEntry.Mode))
+                {
+                    InContext.Extensions.Commands().Execute(lEntry.Command, InContext);
+                }
+            }
+        });
+
+        lTools.AddSeparator();
+
+        // --- Snapping -----------------------------------------------------------------------
+        // The toggle and the STEP together: a toggle over a number you cannot change is half a
+        // control, and the step is what an author actually tunes per map.
+        lTools.Add(OPAAX_ID("Snap"), [](EditorContext& InContext)
+        {
+            EditorGizmo& lGizmo = InContext.Gizmo;
+
+            if (ImguiWidgets::ToggleButton("Snap", lGizmo.IsSnapEnabled()))
+            {
+                lGizmo.SetSnapEnabled(!lGizmo.IsSnapEnabled());
+            }
+
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::SetTooltip("Snap the gizmo to fixed steps.\nHold Ctrl to invert this while dragging.");
+            }
+
+            // The step for the ACTIVE mode only — three fields at once would be a settings popup,
+            // and the one an author wants is always the one they are about to drag with.
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(70.f);
+
+            const EGizmoMode lMode = lGizmo.GetMode();
+
+            // Degrees for rotate, a fraction for scale, world units otherwise — the format says
+            // which, so the number is never ambiguous.
+            const char* lFormat = lMode == EGizmoMode::Rotate ? "%.0f deg"
+                                : lMode == EGizmoMode::Scale  ? "%.2f x"
+                                                              : "%.1f u";
+
+            float& lStep = lGizmo.SnapStepRef(lMode);
+            if (ImGui::DragFloat("##step", &lStep, lMode == EGizmoMode::Scale ? 0.01f : 0.5f,
+                                 0.f, 0.f, lFormat))
+            {
+                // A zero or negative step would make ImGuizmo snap everything onto one point.
+                lStep = lStep < k_MinSnapStep ? k_MinSnapStep : lStep;
+            }
+        });
     }
 
     void EditorService::RegisterNativeConfigDrawers()
@@ -415,6 +492,10 @@ namespace Opaax::Editor
         RegisterNativeResourceTypes();
         RegisterNativeEditorCommand();
         RegisterNativeConfigDrawers();
+
+        // AFTER the commands, because the mode buttons dispatch by tag and a toolbar registered
+        // ahead of them would name commands that do not exist yet.
+        RegisterNativeViewportTools();
 
         m_Extensions.EditWorldSystems().Bind(
             &OpaaxApplication::GetAppService<IEngine>().GetRegistries().WorldSubsystems());
