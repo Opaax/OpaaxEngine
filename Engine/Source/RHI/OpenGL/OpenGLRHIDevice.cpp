@@ -62,11 +62,6 @@ namespace Opaax
         if (m_Surface) { m_Surface->SwapBuffers(); }                   // present lives on the device, not the window
     }
 
-    void OpenGLRHIDevice::SetVSync(bool InEnabled)
-    {
-        if (m_Surface) { m_Surface->SetVSync(InEnabled); }
-    }
-
     void OpenGLRHIDevice::SetViewport(Uint32 X, Uint32 Y, Uint32 Width, Uint32 Height)
     {
         glViewport(static_cast<GLint>(X), static_cast<GLint>(Y),

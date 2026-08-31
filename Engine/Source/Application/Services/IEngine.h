@@ -105,16 +105,6 @@ namespace Opaax
                                                      Uint32 InHeight, Int32 InChannels) = 0;
 
         /**
-         * Present interval: true = PresentBackbuffer waits for vblank (the boot default). Off, the
-         * frame runs unthrottled — which is what makes CPU timings readable, so the Stats panel
-         * carries the toggle (④): under vsync the wait absorbs into the Render/Present rows.
-         */
-        virtual void SetVSync(bool InEnabled) = 0;
-
-        /** @return What SetVSync last asked for; true at boot. False with no renderer at all. */
-        virtual bool IsVSyncEnabled() const = 0;
-
-        /**
          * Called once per rendered frame.
          * 
          * Before Physic

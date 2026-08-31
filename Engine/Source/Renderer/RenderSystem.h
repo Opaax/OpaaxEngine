@@ -80,12 +80,6 @@ namespace Opaax
         void Present();
 
         /**
-         * Present interval: true = Present waits for vblank. Forwards to the device's surface and
-         * remembers the answer — GL has no query, so this cached bool IS the readable state.
-         */
-        void SetVSync(bool InEnabled);
-        
-        /**
          * Open a render pass into InTarget (backbuffer or offscreen FBO): 
          *      binds the target + clears
          *      then opens the batcher on InView.
@@ -143,9 +137,6 @@ namespace Opaax
          * @return The window-surface target. The default primary target when no offscreen target is set.
          */
         IRenderTarget& GetBackbuffer() const noexcept { return *m_Backbuffer; }
-
-        /***/
-        bool IsVSyncEnabled() const noexcept { return m_bVSyncEnabled; }
         // End Getters - Setters
         // =============================================================================
         
@@ -157,6 +148,5 @@ namespace Opaax
         TUniquePtr<Renderer2D>    m_Renderer2D;
         TUniquePtr<IRenderTarget> m_Backbuffer;   // DefaultRenderTarget (window surface)
         Vector4F                 m_ClearColor{0.f, 0.f, 0.f, 1.f};
-        bool                     m_bVSyncEnabled = true;   // the context's Init default (OpenGLContext::Init)
     };
 }

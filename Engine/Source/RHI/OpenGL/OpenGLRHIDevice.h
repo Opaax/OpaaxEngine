@@ -35,7 +35,6 @@ namespace Opaax
         ICommandBuffer& GetCommandBuffer()                                              override;
         void            EndFrame()                                                      override;
         void            Present()                                                       override;
-        void            SetVSync(bool InEnabled)                                        override;
         void            SetViewport(Uint32 X, Uint32 Y, Uint32 Width, Uint32 Height)    override;
         void            Resize(Uint32 InWidth, Uint32 InHeight)                         override;
         void            WaitIdle()                                                      override;

@@ -132,8 +132,6 @@ namespace Opaax
         //Render
         void                        PresentBackbuffer() override;
         void                        SetPrimaryRenderTarget(IRenderTarget* InTarget) override;
-        void                        SetVSync(bool InEnabled) override;
-        bool                        IsVSyncEnabled() const override;
         TUniquePtr<IFramebuffer>    CreateFramebuffer(const FramebufferSpec& InSpec) override;
         TUniquePtr<ITexture2D>      CreateTexture(const void* InPixels, Uint32 InWidth,
                                                   Uint32 InHeight, Int32 InChannels) override;

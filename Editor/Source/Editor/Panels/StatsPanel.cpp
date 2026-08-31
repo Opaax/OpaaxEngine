@@ -3,7 +3,6 @@
 #include "Editor/EditorContext.h"
 #include "Editor/UI/IEditorGui.h"   // GetTime — the throttle's clock
 
-#include "Application/Services/IEngine.h"       // the VSync toggle drives the engine
 #include "Application/Services/IStatsService.h"
 
 #include <imgui.h>
@@ -91,19 +90,6 @@ namespace Opaax::Editor
         ImGui::SameLine();
         ImGui::TextDisabled("(%.2f ms avg)", m_ShownAvgMs);
 
-        // Beside the number it changes: vsync is why an idle frame reads 16 ms, and turning it off
-        // is how a reader separates real work from the vblank wait.
-        ImGui::SameLine();
-        bool lVSync = m_Context.Engine.IsVSyncEnabled();
-        if (ImGui::Checkbox("VSync", &lVSync))
-        {
-            m_Context.Engine.SetVSync(lVSync);
-        }
-        if (ImGui::IsItemHovered())
-        {
-            ImGui::SetTooltip("On: Present waits for the monitor's vblank, and the wait\n"
-                              "lands in the Render/Present rows. Off: unthrottled.");
-        }
 
         ImGui::PlotLines("##frametime",
                          m_FrameHistory.Data(),

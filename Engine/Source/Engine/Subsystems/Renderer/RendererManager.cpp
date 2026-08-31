@@ -301,19 +301,6 @@ namespace Opaax
         }
     }
 
-    void RendererManager::SetVSync(bool InEnabled)
-    {
-        if (m_RenderSystem)
-        {
-            m_RenderSystem->SetVSync(InEnabled);
-        }
-    }
-
-    bool RendererManager::IsVSyncEnabled() const
-    {
-        return m_RenderSystem && m_RenderSystem->IsVSyncEnabled();
-    }
-
     // =========================================================================
     // Bus handler — window resize (Tier-3). Forwards to the render core, which resizes the
     // backbuffer. Runs at the frame's Flush, before Render. When an offscreen primary target is

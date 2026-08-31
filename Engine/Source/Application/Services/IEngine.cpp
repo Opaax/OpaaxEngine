@@ -42,9 +42,6 @@ namespace Opaax
             // Initialize finds no device, and the payload is a CPU image with no GPU handle.
             TUniquePtr<ITexture2D> CreateTexture(const void*, Uint32, Uint32, Int32) override { return nullptr; }
 
-            void SetVSync(bool)           override {}
-            bool IsVSyncEnabled() const   override { return false; }
-
             void Update(double)           override {}
             void FixedUpdate(double)      override {}
             void Render(double)           override {}

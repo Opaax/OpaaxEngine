@@ -482,19 +482,6 @@ namespace Opaax
         }
     }
 
-    void Engine::SetVSync(bool InEnabled)
-    {
-        if (m_RendererManager != nullptr)
-        {
-            m_RendererManager->SetVSync(InEnabled);
-        }
-    }
-
-    bool Engine::IsVSyncEnabled() const
-    {
-        return m_RendererManager != nullptr && m_RendererManager->IsVSyncEnabled();
-    }
-    
     TUniquePtr<IFramebuffer> Engine::CreateFramebuffer(const FramebufferSpec& InSpec)
     {
         if (m_RendererManager == nullptr)

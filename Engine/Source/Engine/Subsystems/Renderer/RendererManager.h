@@ -135,12 +135,6 @@ namespace Opaax
          */
         DebugDraw& GetDebugDraw() noexcept { return m_DebugDraw; }
 
-        /** Present interval, forwarded to the render core. No-op before Startup. */
-        void SetVSync(bool InEnabled);
-
-        /** @return False before Startup — no core, so nothing is throttling a present. */
-        bool IsVSyncEnabled() const;
-
         // End Getters - Setter
         // =============================================================================
 
