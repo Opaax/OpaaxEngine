@@ -107,8 +107,21 @@ namespace Opaax
         {
             return;
         }
-        
+
         m_Device->Present();
+    }
+
+    void RenderSystem::SetVSync(bool InEnabled)
+    {
+        if (!IsValidDevice())
+        {
+            return;
+        }
+
+        m_Device->SetVSync(InEnabled);
+        m_bVSyncEnabled = InEnabled;
+
+        OPAAX_LOG(LogRenderSystem, Info, "VSync {}", InEnabled ? "on" : "off");
     }
 
     void RenderSystem::BeginPass(IRenderTarget& InTarget, const RenderView& InView)

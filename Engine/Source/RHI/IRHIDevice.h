@@ -83,6 +83,9 @@ namespace Opaax
         virtual ICommandBuffer& GetCommandBuffer()                                              = 0;
         virtual void            EndFrame()                                                      = 0;
         virtual void            Present()                                                       = 0;
+
+        /** Present interval on the surface: true = wait for vblank. On by default (the context's Init). */
+        virtual void            SetVSync(bool InEnabled)                                        = 0;
         virtual void            SetViewport(Uint32 X, Uint32 Y, Uint32 Width, Uint32 Height)    = 0;
         virtual void            Resize(Uint32 InWidth, Uint32 InHeight)                         = 0;
         virtual void            WaitIdle()                                                      = 0;
