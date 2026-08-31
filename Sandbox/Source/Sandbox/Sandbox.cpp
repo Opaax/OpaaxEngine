@@ -34,10 +34,9 @@ void SandboxModule::OnRegister(Opaax::ModuleRegistrar& InRegistrar)
     // never constructed in an Edit one (WS1/WS2). Registering costs one line — no base-class
     // ceremony, no reflection, no static-init.
     //
-    // NOTE: the Edit-only QuadBoundsSubsystem is NOT here any more (M4 S5). An authoring overlay is
-    // EDITOR content, so it moved to the SandboxEditor module and registers through
-    // EditWorldSystems() — a different route into the SAME registry. Sandbox.exe therefore has one
-    // candidate and SandboxEditor.exe has two, which is the model's point stated as a build fact.
+    // NOTE: this is the only world-subsystem candidate in either host now. The Edit-only
+    // QuadBoundsSubsystem that used to make SandboxEditor.exe's count two was deleted on
+    // 2026-08-31 — see SandboxEditorModule.cpp for what that costs.
     InRegistrar.WorldSubsystems().Register<Sandbox::QuadOscillatorSubsystem>();
 
     // A resource type the ENGINE has never heard of, claiming its own extension. This is what makes

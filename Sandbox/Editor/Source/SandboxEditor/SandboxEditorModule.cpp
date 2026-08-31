@@ -6,7 +6,6 @@
 #include "Commands/SandboxEditorCommandTags.h"
 #include "Commands/ValidateSandboxCommand.h"
 #include "Drawers/TagsComponentDrawer.h"
-#include "Systems/QuadBoundsSubsystem.h"
 #include "Components/HealthComponent.h"
 #include "Resources/WaveResource.h"
 #include "World/Components/CameraComponent.h"
@@ -24,12 +23,14 @@ namespace
 
 void SandboxEditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& InRegistrar)
 {
-    // REAL extension (M4 S5): an Edit-only world subsystem, registered through a route that now
-    // forwards into the ENGINE's WorldSubsystemRegistry — the same registry SandboxModule's
-    // Play-only QuadOscillatorSubsystem lands in. Two modules, two routes, one candidate list, and
-    // each World takes the subset its mode qualifies for. The M0 `Register<int>()` placeholder that
-    // used to sit here could not survive the route going real, which is exactly why it was left.
-    InRegistrar.EditWorldSystems().Register<QuadBoundsSubsystem>();
+    // QuadBoundsSubsystem was DELETED (2026-08-31, user's call: the green quad outlines are not
+    // wanted any more). It was the M4 S5 dogfood of EditWorldSystems() — a game module registering
+    // an Edit-only world subsystem — so, stated rather than discovered later:
+    //
+    // KNOWN COST: that route now has NO caller, and the seal log reads editWorldSystems=0. The
+    // mechanism is still exercised by Sandbox's Play-only QuadOscillatorSubsystem on the runtime
+    // route into the same registry, so what is unproven is specifically the EDITOR-side entry
+    // point, not world subsystems or mode filtering. Re-adding one is a single Register call.
 
     // REAL extension (M5 S4): the game's own verb, registered as a COMMAND and then bound in the
     // menu — the same two routes the editor's native File entries travel, in the same order, with
