@@ -28,6 +28,19 @@ namespace Opaax
         double FrameMs = 0.0;
 
         /**
+         * What the GPU spent on a recent frame, or NEGATIVE when there is no reading (④ S3).
+         *
+         * A DURATION, like FrameMs beside it — Core learns nothing about GPUs, only that a frame has
+         * a second clock. Deliberately NOT a scope in the tree: GPU work runs alongside the CPU
+         * rather than inside it, so a top-level row would be double-counted against the frame total
+         * and drive the "Other" remainder negative.
+         *
+         * It is 1-2 frames old by construction (see IRHIDevice::GetLastGpuFrameTimeMs), so it does
+         * not line up with this snapshot's scopes as exactly as everything else here does.
+         */
+        double GpuMs = -1.0;
+
+        /**
          * The frame's named scopes, in pre-order. Publishes itself — it holds the two buffers.
          *
          * There is no separate fixed-step count: the "FixedUpdate" scope sits INSIDE the catch-up

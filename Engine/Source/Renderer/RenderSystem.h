@@ -137,6 +137,12 @@ namespace Opaax
          * @return The window-surface target. The default primary target when no offscreen target is set.
          */
         IRenderTarget& GetBackbuffer() const noexcept { return *m_Backbuffer; }
+
+        /**
+         * The device's own GPU timing for a recent frame, in milliseconds (④ S3).
+         * @return Negative with no device, and until the first query result lands.
+         */
+        double GetGpuFrameTimeMs() const;
         // End Getters - Setters
         // =============================================================================
         

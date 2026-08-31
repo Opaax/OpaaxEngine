@@ -1006,6 +1006,34 @@ crossing the frame boundary in the same `Publish()`.
   batch only, so the painter's algorithm does not hold across the split. The panel colours that row
   and says why; `Quads` past `MAX_QUADS` and `Texture Slots` at 16 name which limit split it.
 
+**ST8 — THE DEVICE TIMES ITSELF, AND THE RESULT IS ALWAYS LATE** (landed ④ S3).
+`IRHIDevice::GetLastGpuFrameTimeMs()` is **one** virtual, and the timing happens inside the
+`BeginFrame`/`EndFrame` bracket the device already had — so there are **zero new call sites**. ④'s
+sequence entry named `IRHIDevice`/`ICommandBuffer` as where queries would go; a per-PASS timer on
+`ICommandBuffer` has no caller ([[L23]]) and the frame bracket already existed, so `ICommandBuffer`
+was left alone.
+- **`OpenGLRHIDevice` keeps a 3-deep ring of `GL_TIME_ELAPSED` queries and NEVER waits.** It polls
+  `GL_QUERY_RESULT_AVAILABLE` oldest-first and stops at the first that is not ready (queries complete
+  in submission order), so the answer is **1–2 frames old by construction**. Reading a query in the
+  frame that issued it would block until the GPU caught up — *the very stall this measurement exists
+  to help find*. Three deep because the GPU trails by about a frame: one is always too early, two
+  leaves no slack for a hitch. A slot still pending when its turn comes round loses that sample,
+  which is cheaper than the stall.
+- **Negative means NO READING, and zero would have been a lie** a panel cannot tell from a free
+  frame. It is what a device with no timer support answers forever — `Init` checks the generated
+  names and disables timing rather than erroring every frame.
+- **`FrameStats::GpuMs` is a FIELD, deliberately NOT a scope in the tree.** GPU work runs *alongside*
+  the CPU, not inside it, so a top-level row would be counted against the frame total and drive the
+  "Other" remainder negative. The panel shows it beside the FPS line for the same reason. It is a
+  *duration*, like `FrameMs` — Core learns nothing about GPUs, only that a frame has a second clock.
+- **It reaches the service by SUBMISSION** (`SubmitGpuMs`), like a scope or a counter, because the
+  renderer is the only thing that can ask the device and the service is the only thing that
+  publishes. Held outside the snapshot and folded in at the boundary, so a published frame never
+  mixes one frame's GPU reading with another's scopes.
+- **Its own one-shot log line**, separate from the "frame stats live" one: the first GPU result
+  lands a frame or two later, and *"the queries exist"* is not *"a result came back"*. Without it a
+  harvest that never succeeds reads identically to one that works ([[L15]]).
+
 **ST6 — NOT PROVIDING THE SERVICE *IS* THE OFF SWITCH** (**I3**). `BootStatsService` either provides
 `StatsService` or returns `IStatsService::Null()`, whose `GetProfiler()` is `nullptr`. There is no
 `bEnabled` member anywhere and no disabled state to keep correct — the locator's null object, which

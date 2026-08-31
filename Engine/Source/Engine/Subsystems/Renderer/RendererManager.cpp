@@ -140,7 +140,12 @@ namespace Opaax
 
     void RendererManager::SubmitRenderCounters()
     {
+        // The GPU reading goes in whether or not the profiler is attached... except that with stats
+        // off there is nothing to submit to either, so one guard covers both.
         if (m_Profiler == nullptr) { return; }
+
+        OpaaxApplication::GetAppService<IStatsService>().SubmitGpuMs(
+            m_RenderSystem ? m_RenderSystem->GetGpuFrameTimeMs() : -1.0);
 
         // OUTSIDE RenderFrame's early-outs, so a frame that drew nothing reports zeros rather than
         // leaving the previous frame's numbers on screen — the same reason the DebugDraw clear is

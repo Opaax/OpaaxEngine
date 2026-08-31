@@ -57,6 +57,15 @@ namespace Opaax
          */
         virtual FrameProfiler* GetProfiler() = 0;
 
+        /**
+         * Hand in the GPU's reading for the frame (④ S3). Another SUBMISSION, like a scope or a
+         * counter — the renderer is the only thing that can ask the device, and this service is the
+         * only thing that publishes.
+         *
+         * Negative means "no reading", which is what a device with no timer support answers forever.
+         */
+        virtual void SubmitGpuMs(double InGpuMs) = 0;
+
         /** What the last COMPLETE frame cost. Empty and zeroed while stats are off. */
         virtual const FrameStats& GetFrameStats() const = 0;
 
@@ -92,6 +101,7 @@ namespace Opaax
     public:
         void               BeginFrame() override;
         FrameProfiler*     GetProfiler() override            { return &m_Stats.Profiler; }
+        void               SubmitGpuMs(double InGpuMs) override { m_RecordingGpuMs = InGpuMs; }
         const FrameStats&  GetFrameStats() const override    { return m_Stats; }
         bool               IsEnabled() const noexcept override { return true; }
         //~End IStatsService interface
@@ -103,7 +113,12 @@ namespace Opaax
         // NEVER swapped or moved — consumers cache &m_Stats.Profiler. Filled in place.
         FrameStats m_Stats;
 
-        double m_LastFrameStart = 0.0;
-        bool   m_bLoggedFirst   = false;
+        // Held outside the snapshot and folded in at the boundary, like the profiler's buffers, so
+        // a published frame never mixes one frame's GPU reading with another's scopes.
+        double m_RecordingGpuMs = -1.0;
+
+        double m_LastFrameStart  = 0.0;
+        bool   m_bLoggedFirst    = false;
+        bool   m_bLoggedFirstGpu = false;
     };
 }

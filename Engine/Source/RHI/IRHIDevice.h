@@ -86,5 +86,19 @@ namespace Opaax
         virtual void            SetViewport(Uint32 X, Uint32 Y, Uint32 Width, Uint32 Height)    = 0;
         virtual void            Resize(Uint32 InWidth, Uint32 InHeight)                         = 0;
         virtual void            WaitIdle()                                                      = 0;
+
+        /**
+         * How long the GPU spent on a recent frame, in milliseconds (④ S3).
+         *
+         * The device times ITSELF inside the BeginFrame/EndFrame bracket above, so this adds no
+         * call site anywhere — asking is the only thing a caller does. A per-PASS timer would need
+         * one on ICommandBuffer and has no caller, so it does not exist.
+         *
+         * @return The most recent AVAILABLE result, which is 1-2 frames old: reading a query in the
+         *   frame that issued it would block until the GPU caught up, which is the stall this
+         *   measurement exists to help find rather than cause. -1 until the first result lands, and
+         *   forever on a device with no timer support — a caller shows "no reading", not zero.
+         */
+        virtual double          GetLastGpuFrameTimeMs() const                                   = 0;
     };
 }

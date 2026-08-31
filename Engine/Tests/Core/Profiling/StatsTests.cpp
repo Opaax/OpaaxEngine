@@ -626,3 +626,16 @@ TEST_CASE("StatsDisplay: a counter that stops being submitted holds its row at z
     CHECK(lDisplay.Counters()[1].Name == doctest::String("Quads"));
     CHECK(lDisplay.Counters()[1].Value == 0u);   // held, not dropped
 }
+
+// =============================================================================
+// GPU timing (S3) — the snapshot's second clock
+// =============================================================================
+
+TEST_CASE("FrameStats: GpuMs defaults to NEGATIVE, which means 'no reading'")
+{
+    // Zero would be a lie a panel cannot distinguish from a free frame; negative is unmistakable,
+    // and it is what a device with no timer support answers forever.
+    const FrameStats lStats;
+
+    CHECK(lStats.GpuMs < 0.0);
+}

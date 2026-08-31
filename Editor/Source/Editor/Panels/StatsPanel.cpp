@@ -67,6 +67,7 @@ namespace Opaax::Editor
             m_ShownAvgMs = m_FrameHistory.Average();
             m_ShownMinMs = m_FrameHistory.Min();
             m_ShownMaxMs = m_FrameHistory.Max();
+            m_ShownGpuMs = lStats.GpuMs;
         }
 
         DrawFrameTime();
@@ -98,6 +99,31 @@ namespace Opaax::Editor
         ImGui::Text("%.0f FPS", lFps);
         ImGui::SameLine();
         ImGui::TextDisabled("(%.2f ms avg)", m_ShownAvgMs);
+
+        // GPU sits HERE and not in the breakdown below, because it runs ALONGSIDE the CPU rather
+        // than inside the frame: a row in that table would be counted against the total and drive
+        // the "Other" remainder negative. Negative means the device gave no reading.
+        ImGui::SameLine();
+
+        if (m_ShownGpuMs >= 0.0)
+        {
+            ImGui::TextDisabled("| GPU %.2f ms", m_ShownGpuMs);
+
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::SetTooltip("Device-side time for a recent frame, 1-2 frames behind:\n"
+                                  "reading the query in its own frame would stall the pipeline.");
+            }
+        }
+        else
+        {
+            ImGui::TextDisabled("| GPU --");
+
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::SetTooltip("No reading yet, or this device has no timer support.");
+            }
+        }
 
 
         ImGui::PlotLines("##frametime",

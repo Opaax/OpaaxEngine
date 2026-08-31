@@ -24,6 +24,7 @@ namespace Opaax
 
             void               BeginFrame() override {}
             FrameProfiler*     GetProfiler() override { return nullptr; }
+            void               SubmitGpuMs(double) override {}
             bool               IsEnabled() const noexcept override { return false; }
 
             const FrameStats& GetFrameStats() const override
@@ -69,6 +70,10 @@ namespace Opaax
         // absurd sample at the front of every graph.
         m_Stats.FrameMs = m_LastFrameStart > 0.0 ? (lNow - m_LastFrameStart) * 1000.0 : 0.0;
 
+        // Crosses with the scopes, so the snapshot stays one frame throughout.
+        m_Stats.GpuMs    = m_RecordingGpuMs;
+        m_RecordingGpuMs = -1.0;
+
         m_LastFrameStart = lNow;
 
         // ONE line, once — the success branch (L15). Nothing else in a boot log distinguishes
@@ -81,6 +86,16 @@ namespace Opaax
                       "Frame stats live — {} scope(s), {} counter(s) in the first measured frame ({:.2f} ms)",
                       m_Stats.Profiler.Samples().size(), m_Stats.Profiler.Counters().size(),
                       m_Stats.FrameMs);
+        }
+
+        // A SECOND one-shot, and it needs its own: the GPU's first result lands a frame or two after
+        // the line above, and "the queries exist" is not "a result came back". Without this, a
+        // harvest that never succeeds looks exactly like one that works (L15).
+        if (!m_bLoggedFirstGpu && m_Stats.GpuMs >= 0.0)
+        {
+            m_bLoggedFirstGpu = true;
+
+            OPAAX_LOG(LogStats, Info, "GPU timing first reading — {:.3f} ms", m_Stats.GpuMs);
         }
     }
 }

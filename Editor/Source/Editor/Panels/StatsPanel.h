@@ -114,5 +114,8 @@ namespace Opaax::Editor
         float m_ShownAvgMs = 0.f;
         float m_ShownMinMs = 0.f;
         float m_ShownMaxMs = 0.f;
+
+        // Negative = no reading. Double, not float, to match what the device reports.
+        double m_ShownGpuMs = -1.0;
     };
 }

@@ -28,7 +28,23 @@ namespace Opaax
     {
         m_Surface = &InSurface;
         // OpenGL state is global — the surface's context is already current (window created it).
-        OPAAX_LOG(LogOpenGLRHIDevice, Info, "OpenGL RHI device initialized");
+
+        glGenQueries(static_cast<GLsizei>(GPU_TIMER_COUNT), m_TimerQueries);
+
+        // A driver with no timer support leaves the names at 0; issuing against one would be a GL
+        // error every frame, so timing simply stays off and GetLastGpuFrameTimeMs answers -1.
+        m_bTimersReady = m_TimerQueries[0] != 0;
+
+        OPAAX_LOG(LogOpenGLRHIDevice, Info, "OpenGL RHI device initialized (GPU timing {})",
+                  m_bTimersReady ? "on" : "UNAVAILABLE");
+    }
+
+    OpenGLRHIDevice::~OpenGLRHIDevice()
+    {
+        if (m_bTimersReady)
+        {
+            glDeleteQueries(static_cast<GLsizei>(GPU_TIMER_COUNT), m_TimerQueries);
+        }
     }
 
     // =========================================================================
@@ -53,9 +69,70 @@ namespace Opaax
     // =========================================================================
     // Frame
     // =========================================================================
-    void OpenGLRHIDevice::BeginFrame() {}                              // GL executes immediately — nothing to begin
+    // GL executes immediately, so there is nothing to BEGIN — except the frame's GPU timer, which
+    // is exactly what this bracket is for (④ S3).
+    void OpenGLRHIDevice::BeginFrame()
+    {
+        // Read results BEFORE issuing, so the slot about to be reused has had its last chance.
+        HarvestGpuTimings();
+
+        if (m_bTimersReady)
+        {
+            glBeginQuery(GL_TIME_ELAPSED, m_TimerQueries[m_TimerWrite]);
+            m_bTimerOpen = true;
+        }
+    }
+
     ICommandBuffer& OpenGLRHIDevice::GetCommandBuffer() { return m_CommandBuffer; }
-    void OpenGLRHIDevice::EndFrame()   {}                              // nothing to flush before the swap
+
+    void OpenGLRHIDevice::EndFrame()
+    {
+        // Nothing to flush before the swap; only the timer closes here.
+        if (!m_bTimerOpen)
+        {
+            return;
+        }
+
+        glEndQuery(GL_TIME_ELAPSED);
+
+        m_TimerPending[m_TimerWrite] = true;
+        m_TimerWrite                 = (m_TimerWrite + 1) % GPU_TIMER_COUNT;
+        m_bTimerOpen                 = false;
+    }
+
+    void OpenGLRHIDevice::HarvestGpuTimings()
+    {
+        if (!m_bTimersReady)
+        {
+            return;
+        }
+
+        // Oldest first — m_TimerWrite is both the next slot to issue into and the longest-pending
+        // one. Queries complete in submission order, so the first that is not ready ends the sweep.
+        for (Uint32 i = 0; i < GPU_TIMER_COUNT; ++i)
+        {
+            const Uint32 lSlot = (m_TimerWrite + i) % GPU_TIMER_COUNT;
+
+            if (!m_TimerPending[lSlot])
+            {
+                continue;
+            }
+
+            GLint lAvailable = 0;
+            glGetQueryObjectiv(m_TimerQueries[lSlot], GL_QUERY_RESULT_AVAILABLE, &lAvailable);
+
+            if (lAvailable == GL_FALSE)
+            {
+                break;   // and NOT a wait — blocking here is the stall this tool exists to expose
+            }
+
+            GLuint64 lNanoseconds = 0;
+            glGetQueryObjectui64v(m_TimerQueries[lSlot], GL_QUERY_RESULT, &lNanoseconds);
+
+            m_LastGpuMs           = static_cast<double>(lNanoseconds) / 1.0e6;
+            m_TimerPending[lSlot] = false;
+        }
+    }
 
     void OpenGLRHIDevice::Present()
     {

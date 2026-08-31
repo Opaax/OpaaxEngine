@@ -118,6 +118,11 @@ namespace Opaax
         m_Device->Present();
     }
 
+    double RenderSystem::GetGpuFrameTimeMs() const
+    {
+        return IsValidDevice() ? m_Device->GetLastGpuFrameTimeMs() : -1.0;
+    }
+
     void RenderSystem::BeginPass(IRenderTarget& InTarget, const RenderView& InView)
     {
         if (!IsValidDevice() || !IsValidRenderer2D())
