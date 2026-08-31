@@ -20,6 +20,7 @@ namespace Opaax
     class IFramebuffer;
     class IRenderTarget;
     class ITexture2D;
+    class FrameProfiler;
     struct FramebufferSpec;
     struct TextureResource;
     struct WindowResize;
@@ -134,6 +135,12 @@ namespace Opaax
          */
         DebugDraw& GetDebugDraw() noexcept { return m_DebugDraw; }
 
+        /** Present interval, forwarded to the render core. No-op before Startup. */
+        void SetVSync(bool InEnabled);
+
+        /** @return False before Startup — no core, so nothing is throttling a present. */
+        bool IsVSyncEnabled() const;
+
         // End Getters - Setter
         // =============================================================================
 
@@ -154,6 +161,10 @@ namespace Opaax
         TUniquePtr<RenderSystem> m_RenderSystem;
         WorldManager*           m_WorldManager  = nullptr; // non-owning; active world = draw source
         IRenderTarget*          m_PrimaryTarget = nullptr; // non-owning; nullptr = backbuffer (I5)
+
+        // ④ — resolved in Startup like m_WorldManager. This subsystem opts IN to being measured;
+        // nothing times it on its behalf.
+        FrameProfiler*          m_Profiler      = nullptr;
 
         // Per-frame debug lines. Owned here because this is what DRAINS it (I5): the queue's
         // lifetime is the renderer's, and it cannot outlive its only consumer.

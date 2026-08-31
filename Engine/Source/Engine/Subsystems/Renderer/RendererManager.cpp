@@ -5,6 +5,7 @@
 #include "Application/Services/IConfigSystem.h"
 #include "Application/Services/IPaths.h"
 #include "Application/Services/IEngine.h"
+#include "Application/Services/IStatsService.h"   // OPAAX_STAT_SCOPE — this subsystem opts in
 
 #include "Renderer/Config/Config_Renderer.h"
 
@@ -94,6 +95,7 @@ namespace Opaax
 
         // Cache the world owner — Render draws whatever it reports as the active world.
         m_WorldManager = &OpaaxApplication::GetAppService<IEngine>().GetWorldManager();
+        m_Profiler     = OpaaxApplication::GetAppService<IStatsService>().GetProfiler();
 
         OPAAX_LOG(LogRendererManager, Info, "RendererManager started ({}x{})", lDesc.Width, lDesc.Height);
         return true;
@@ -124,7 +126,13 @@ namespace Opaax
     // =========================================================================
     void RendererManager::Render(double /*Alpha*/)
     {
-        RenderFrame();
+        {
+            // Around RenderFrame only — the DebugDraw clear below is bookkeeping, not frame work,
+            // and F4 requires it to run whether or not anything rendered.
+            OPAAX_STAT_SCOPE(m_Profiler, "Renderer");
+            RenderFrame();
+        }
+
         m_DebugDraw.Clear();
     }
 
@@ -291,6 +299,19 @@ namespace Opaax
         {
             m_RenderSystem->Present();
         }
+    }
+
+    void RendererManager::SetVSync(bool InEnabled)
+    {
+        if (m_RenderSystem)
+        {
+            m_RenderSystem->SetVSync(InEnabled);
+        }
+    }
+
+    bool RendererManager::IsVSyncEnabled() const
+    {
+        return m_RenderSystem && m_RenderSystem->IsVSyncEnabled();
     }
 
     // =========================================================================

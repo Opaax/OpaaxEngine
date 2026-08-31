@@ -64,17 +64,36 @@ namespace Opaax
         OPAAX_PROPERTIES(RenderSettings, OPAAX_PROP(Backend))
     };
 
+    struct StatsSettings
+    {
+        /**
+         * Profile a SHIPPING build. A dev build always profiles — that is what dev means — so this
+         * asks the one question the build cannot answer for itself, and it is a config rather than
+         * a CMake flag precisely so profiling a shipped game needs no recompile.
+         *
+         * Off by default: a shipped binary should not carry live instrumentation unless asked.
+         */
+        bool EnableInShipBuild = false;
+
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(StatsSettings, EnableInShipBuild)
+
+        OPAAX_PROPERTIES(StatsSettings, OPAAX_PROP(EnableInShipBuild))
+    };
+
     struct EngineConfigData
     {
         WindowSettings Window;
         RenderSettings Render;
+        StatsSettings  Stats;
 
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(EngineConfigData, Window, Render)
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(EngineConfigData, Window, Render, Stats)
 
         // NeedRestart on every group, because every reader of this file reads it once during boot:
-        // the window is built from Window, RendererManager resolves Render.Backend at Startup.
+        // the window is built from Window, RendererManager resolves Render.Backend at Startup, and
+        // the stats service is provided-or-not in Bootstrap.
         OPAAX_PROPERTIES(EngineConfigData,
                          OPAAX_PROP(Window).SetFlags(EPropertyFlags::NeedRestart),
-                         OPAAX_PROP(Render).SetFlags(EPropertyFlags::NeedRestart))
+                         OPAAX_PROP(Render).SetFlags(EPropertyFlags::NeedRestart),
+                         OPAAX_PROP(Stats).SetFlags(EPropertyFlags::NeedRestart))
     };
 }

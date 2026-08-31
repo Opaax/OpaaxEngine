@@ -21,6 +21,7 @@
 //   (L22), exactly as it was for S2.
 #include <doctest.h>
 
+#include "Core/Profiling/FrameProfiler.h"
 #include "Core/String/OpaaxStringID.hpp"
 #include "Engine/Registries/EngineRegistries.h"
 #include "Engine/Subsystems/EventBus/EngineEventBus.h"
@@ -202,8 +203,9 @@ TEST_CASE("world subsystem registry: CreateInto constructs from the context and 
     ResourceManager lResources;
     EngineEventBus  lEvents;
     DebugDraw       lDebug;
+    FrameProfiler   lProfiler;
 
-    WorldContext lContext{lWorld, lResources, lEvents, lDebug};
+    WorldContext lContext{lWorld, lResources, lEvents, lDebug, &lProfiler};
 
     const IWorldSubsystemEntry* lEntry = lRegistry.FindByName(Name("Always"));
     REQUIRE(lEntry != nullptr);

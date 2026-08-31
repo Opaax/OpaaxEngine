@@ -3,6 +3,7 @@
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IEngine.h"
 #include "Application/Services/IPaths.h"
+#include "Application/Services/IStatsService.h"   // OPAAX_STAT_SCOPE — this subsystem opts in
 #include "Engine/Registries/EngineRegistries.h"
 #include "World/Level.h"
 #include "World/Serialization/MapFactory.h"
@@ -33,6 +34,7 @@ namespace Opaax
         m_Resources = &lEngine.GetResources();
         m_Events    = &lEngine.GetEngineEventBus();
         m_Debug     = &lEngine.GetDebugDraw();
+        m_Profiler  = OpaaxApplication::GetAppService<IStatsService>().GetProfiler();
         m_Paths     = &OpaaxApplication::GetAppService<IPaths>();
 
         OPAAX_LOG(LogWorldManager, Info, "WorldManager started (no world yet — the host creates it)");
@@ -53,6 +55,10 @@ namespace Opaax
         {
             return;
         }
+
+        // Named HERE, by this manager, because this is the one that knows what the line means:
+        // everything a world's subsystems do. A game's own scopes nest under it.
+        OPAAX_STAT_SCOPE(m_Profiler, "World");
 
         m_ActiveWorld->GetSubsystems().UpdateAll(InDeltaTime);
     }
@@ -188,6 +194,7 @@ namespace Opaax
         // The context must exist BEFORE any subsystem is constructed — it IS the ctor argument.
         // A null sibling here means Startup never ran; the world then gets no subsystems rather
         // than a context full of dangling references.
+        // m_Profiler is deliberately NOT checked — null is its configured off state, not a failure.
         if (m_Resources == nullptr || m_Events == nullptr || m_Debug == nullptr)
         {
             OPAAX_LOG(LogWorldManager, Error,
@@ -196,7 +203,7 @@ namespace Opaax
             return;
         }
 
-        InWorld.SetContext(WorldContext{InWorld, *m_Resources, *m_Events, *m_Debug});
+        InWorld.SetContext(WorldContext{InWorld, *m_Resources, *m_Events, *m_Debug, m_Profiler});
 
         WorldContext* lContext = InWorld.GetContext();
         OPAAX_ASSERT(lContext != nullptr);

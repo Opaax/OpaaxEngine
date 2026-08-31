@@ -6,6 +6,7 @@ namespace Opaax
     class ResourceManager;
     class EngineEventBus;
     class DebugDraw;
+    class FrameProfiler;
 
     // =============================================================================
     // WorldContext — the flat struct of references a world subsystem is constructed with.
@@ -46,5 +47,18 @@ namespace Opaax
          * way a world subsystem draws — there is deliberately no Render hook (see WorldManager).
          */
         DebugDraw& Debug;
+
+        /**
+         * Where OPAAX_STAT_SCOPE records (ST1). Here for the reason this struct exists at all: the
+         * registration site takes no arguments, so a subsystem has nowhere else to be handed one.
+         *
+         * A POINTER, and NULL is normal — it is what a build with stats disabled hands out, and
+         * OPAAX_STAT_SCOPE no-ops on it. The only reference here that may be absent, because it is
+         * the only one whose absence is a supported configuration rather than a boot failure.
+         *
+         * OPT-IN — a subsystem that names no scope simply never appears in the frame tree. Nothing
+         * measures a tick on the author's behalf.
+         */
+        FrameProfiler* Profiler;
     };
 }

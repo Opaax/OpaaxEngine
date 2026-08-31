@@ -156,8 +156,8 @@ return StaticTypeID();                                                   \
         }
 
         /**
-         * 
-         * @param DeltaTime 
+         *
+         * @param DeltaTime
          */
         void UpdateAll(double DeltaTime)
         {
@@ -168,8 +168,8 @@ return StaticTypeID();                                                   \
         }
 
         /**
-         * 
-         * @param FixedDeltaTime 
+         *
+         * @param FixedDeltaTime
          */
         virtual void FixedUpdateAll(double FixedDeltaTime)
         {

@@ -21,6 +21,7 @@ namespace Opaax
     class IPaths;
     class ILogger;
     class IJobSystem;
+    class IStatsService;
     class IWindowManager;
     class Event;
 
@@ -68,6 +69,15 @@ namespace Opaax
         IConfigSystem&      BootConfigSystem(const IPaths& Paths);
         IProjectManager&    BootProjectManager(const IPaths& Paths);
         IJobSystem&         BootJobSystem();
+
+        /**
+         * Provide the stats service — or deliberately DO NOT, which is how stats are turned off:
+         * the locator's null object (I3) is the disabled state, so there is no second flag.
+         *
+         * Config-driven, hence after BootConfigSystem (L1's locked order, the same reason the job
+         * system's worker count is).
+         */
+        IStatsService&      BootStatsService(IConfigSystem& ConfigSystem);
         IWindowManager&     BootWindowManager();
         IEngine&            BootEngine();
         
@@ -221,6 +231,7 @@ namespace Opaax
         IProjectManager&    ProjectManager();
         IConfigSystem&      ConfigSystem();
         IJobSystem&         JobSystem();
+        IStatsService&      Stats();
         IWindowManager&     WindowManager();
         IEngine&            Engine();
 

@@ -105,6 +105,16 @@ namespace Opaax
                                                      Uint32 InHeight, Int32 InChannels) = 0;
 
         /**
+         * Present interval: true = PresentBackbuffer waits for vblank (the boot default). Off, the
+         * frame runs unthrottled — which is what makes CPU timings readable, so the Stats panel
+         * carries the toggle (④): under vsync the wait absorbs into the Render/Present rows.
+         */
+        virtual void SetVSync(bool InEnabled) = 0;
+
+        /** @return What SetVSync last asked for; true at boot. False with no renderer at all. */
+        virtual bool IsVSyncEnabled() const = 0;
+
+        /**
          * Called once per rendered frame.
          * 
          * Before Physic
@@ -172,6 +182,10 @@ namespace Opaax
          * Read-only for every caller except the application that owns the feed.
          */
         virtual InputManager& GetInput() = 0;
+
+        // NOTE: frame stats are NOT here. They are an app service (IStatsService, I4): a passive
+        // facility you submit scopes to, which the HOST tells about the frame boundary. The engine
+        // is a consumer like anything else — it caches a FrameProfiler* and names four scopes.
 
         // End Foundation subsystems
         // =============================================================================

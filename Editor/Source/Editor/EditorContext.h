@@ -8,6 +8,7 @@ namespace Opaax
     class IPaths;
     class IFileSystem;
     class IConfigSystem;
+    class IStatsService;
     class Window;
 
     namespace Editor
@@ -115,6 +116,11 @@ namespace Opaax
             // The engine's config registry — what the Config panel lists. Read LIVE, never snapshotted:
             // Get<T>() auto-registers, so a system reading its config on a later frame grows it.
             IConfigSystem& Configs;
+
+            // ④ — what the last frame cost. An APP SERVICE, not something on IEngine (I4): the
+            // engine is a consumer of it too. Never null; with stats off it answers an empty frame,
+            // which the Stats panel renders as "nothing measured" without a special case.
+            IStatsService& Stats;
 
             // The window the editor is drawn in — resolved once by EditorService, like Paths and
             // FileSystem beside it. Here because a command that needs something the composition

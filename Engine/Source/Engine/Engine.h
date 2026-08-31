@@ -17,6 +17,7 @@ namespace Opaax
     class World;
     class IFramebuffer;
     class IRenderTarget;
+    class FrameProfiler;
     struct FramebufferSpec;
     struct LevelResource;
 
@@ -131,6 +132,8 @@ namespace Opaax
         //Render
         void                        PresentBackbuffer() override;
         void                        SetPrimaryRenderTarget(IRenderTarget* InTarget) override;
+        void                        SetVSync(bool InEnabled) override;
+        bool                        IsVSyncEnabled() const override;
         TUniquePtr<IFramebuffer>    CreateFramebuffer(const FramebufferSpec& InSpec) override;
         TUniquePtr<ITexture2D>      CreateTexture(const void* InPixels, Uint32 InWidth,
                                                   Uint32 InHeight, Int32 InChannels) override;
@@ -152,7 +155,11 @@ namespace Opaax
         IJobSystem* m_JobSystem = nullptr;
         IPlatform*  m_Platform  = nullptr;
         IPaths*     m_Paths     = nullptr;
-        
+
+        // ④ — borrowed from the stats app service, cached like the three above. NULL when stats are
+        // off, which is a normal state: OPAAX_STAT_SCOPE no-ops on it. The engine OWNS no stats.
+        FrameProfiler* m_Profiler = nullptr;
+
         // End Delta Time
         FrameInfo m_FrameInfo;
 

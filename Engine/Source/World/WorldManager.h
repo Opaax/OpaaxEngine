@@ -180,6 +180,10 @@ namespace Opaax
         // Resolves a level manifest's asset-relative map paths. Cached with the others in Startup;
         // it is an APP service rather than an engine subsystem, which is the only difference.
         const IPaths*    m_Paths     = nullptr;
+
+        // ④ — resolved in Startup like the siblings above, put into every WorldContext, and used
+        // for this manager's own tick scope. Null in a bare test manager.
+        FrameProfiler*   m_Profiler  = nullptr;
         
         bool m_bPaused        = false;
         bool m_bStepRequested = false;

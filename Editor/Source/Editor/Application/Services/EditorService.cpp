@@ -5,6 +5,7 @@
 #include "Application/Services/IEngine.h"
 #include "Application/Services/ILogger.h"
 #include "Application/Services/IProjectManager.h"
+#include "Application/Services/IStatsService.h"
 #include "Application/Services/Platforms/IFileSystem.h"
 #include "Application/Services/Platforms/IPlatform.h"
 #include "Application/Services/Window/IWindowManager.h"
@@ -25,6 +26,7 @@
 #include "Editor/Panels/PlayToolbarPanel.h"
 #include "Editor/Panels/ResourceBrowserPanel.h"
 #include "Editor/Panels/ResourcePreviewPanel.h"
+#include "Editor/Panels/StatsPanel.h"
 #include "Editor/Panels/ViewportPanel.h"
 #include "Engine/Config/Config_Engine.h"
 #include "Engine/Registries/EngineRegistries.h"
@@ -135,6 +137,7 @@ namespace Opaax::Editor
             OpaaxApplication::GetAppService<IPaths>(),
             OpaaxApplication::GetAppService<IPlatform>().GetFileSystem(),
             OpaaxApplication::GetAppService<IConfigSystem>(),
+            OpaaxApplication::GetAppService<IStatsService>(),
             *InWindow,
             m_EditorPaths
         });
@@ -238,6 +241,7 @@ namespace Opaax::Editor
         lPanelsRegistry.Register<ResourcePreviewPanel>(PanelDesc{.Id = ResourcePreviewPanel::PanelID(), .DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<ConfigPanel>(PanelDesc         {.Id = ConfigPanel::PanelID(),          .DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<InputPanel>(PanelDesc          {.Id = InputPanel::PanelID(),           .DefaultVisibility = EPanelVisibility::Hidden });
+        lPanelsRegistry.Register<StatsPanel>(PanelDesc          {.Id = StatsPanel::PanelID(),           .DefaultVisibility = EPanelVisibility::Hidden });
     }
 
     void EditorService::RegisterNativeEditorCommand()

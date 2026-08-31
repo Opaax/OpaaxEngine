@@ -12,6 +12,7 @@
 //   Engine::Loop makes — rather than the flags in isolation, because the ordering IS the design.
 #include <doctest.h>
 
+#include "Core/Profiling/FrameProfiler.h"
 #include "Core/String/OpaaxStringID.hpp"
 #include "Engine/Subsystems/EventBus/EngineEventBus.h"
 #include "Engine/Subsystems/Resources/ResourceManager.h"
@@ -52,6 +53,7 @@ namespace
         ResourceManager  Resources;
         EngineEventBus   Events;
         DebugDraw        Debug;
+        FrameProfiler    Profiler;
         WorldManager     Worlds;
         World*           TheWorld = nullptr;
         CounterSubsystem* Counter = nullptr;
@@ -61,7 +63,7 @@ namespace
             TheWorld = Worlds.CreateWorld("Gated", InMode);
             REQUIRE(TheWorld != nullptr);
 
-            TheWorld->SetContext(WorldContext{*TheWorld, Resources, Events, Debug});
+            TheWorld->SetContext(WorldContext{*TheWorld, Resources, Events, Debug, &Profiler});
             TheWorld->GetSubsystems().RegisterSubsystem<CounterSubsystem>(std::ref(*TheWorld->GetContext()));
             TheWorld->GetSubsystems().StartupAll();
 

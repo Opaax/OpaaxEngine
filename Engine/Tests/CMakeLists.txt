@@ -65,6 +65,7 @@ set(OPAAX_TEST_SOURCES
     Core/World/EntityQueryTests.cpp
     Core/Maths/AngleTests.cpp
     Core/Maths/Bounds2DTests.cpp
+    Core/Profiling/StatsTests.cpp
 
     # Editor-side, and the FIRST of its kind — header-only editor types only (see the include dir
     # below). ③'s gizmo delta math, pinned after a scale bug that only showed away from (0,0).

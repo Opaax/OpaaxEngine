@@ -98,7 +98,10 @@ null-pointer checks around `Get<T>()`.
 **I4 — Gregory layer split decides App vs Engine.** Before placing any system, name its layer in Gregory's
 runtime diagram (Fig 1.16):
 - **App service** = Platform-Independence + Core-Systems layers — *passive facilities* you submit-to/query:
-  Platform, Paths, Logger, Config, ProjectManager, JobSystem, WindowManager. They do not tick.
+  Platform, Paths, Logger, Config, ProjectManager, JobSystem, WindowManager, **Stats** (**ST2**).
+  They do not tick. *Stats is the case that tests this rule: it is told `BeginFrame()` once per
+  frame, which LOOKS like a tick and is a submission — the host says when, exactly as it does for
+  input (**IN2**). Being driven per frame is not the same as ticking.*
 - **Engine** = Resources/Assets layer *and up* — anything that ticks per frame or owns game concepts
   (Resources, Renderer, World, Physics, Input). Lives as an `EngineSubsystem`, never as an app service.
 - Test: *ticks per frame or knows about textures/worlds* ⇒ engine. *Passive facility* ⇒ app service.
@@ -767,6 +770,9 @@ no legal window, check whether something is happening in the wrong phase before 
 **F1 — Tick order** (`IEngine`, driven by the host): `Update(dt)` → `FixedUpdate(fixedDt)` *[may run 0..N
 times]* → `Render(alpha)`. Then the **host** calls `PresentBackbuffer()` — outside the engine. Delta is clamped
 to `MAX_FRAME_DELTA = 0.25`.
+- **All four are MEASURED as of ④** (**ST1**), and `Present` is one of them precisely because it is
+  outside `Loop`: under vsync it is where most of the frame goes, so leaving it unnamed would put the
+  frame's whole cost in an "Other" row.
 
 **F2 — Present is split from Render (render north star, S7/D2).** `Render` draws; present swaps. The
 **host owns WHEN** (`RunApplication` calls `Engine().PresentBackbuffer()` after `TickFrame()`); the **device
@@ -849,6 +855,154 @@ while there is one producer (`m2-panels.md` §F3 — never an API with no caller
 producer (physics/collision debug), which also earns the editor toggle panel. The cross-module identity
 question this raised is already **closed** — `OpaaxStringID`'s intern pool was moved out-of-line into the
 DLL the same day (see **I2**), so channel ids agree across the DLL line by construction.
+
+---
+
+## ST — Frame stats & profiling (landed ④, 2026-08-31)
+
+**ST1 — NAMED SCOPES, not fixed fields — and I1 is what shapes them.** `FrameProfiler`
+(`Core/Profiling/FrameProfiler.h`) holds a frame's `{Name, Milliseconds, Calls, Depth}` list;
+`ScopedStat` + `OPAAX_STAT_SCOPE(profiler, "Name")` is the RAII that fills it. This is the shape
+Unreal (`SCOPE_CYCLE_COUNTER`), Unity (`ProfilerMarker.Auto()`) and Godot all have, and the user asked
+for it by name — *"at the end i want something extensible to have something like all other engine"*,
+then again as *"STATS_SCOPE(ID) or somethings you judge better"*.
+- **Those engines reach a GLOBAL stat manager, which is exactly the static this codebase forbids.**
+  So a scope takes its profiler **by pointer**, and the two tiers that would otherwise have nowhere
+  to get one already have a carrier (**ST3**). A `nullptr` profiler is a no-op, so "not profiling"
+  costs no branch at any call site.
+- **The sample is recorded on `Open`, not on `Close`.** Closing innermost-first would emit children
+  before their parent; reserving the slot on the way in leaves `Samples()` in **pre-order**, so
+  `Depth` alone renders the tree and nothing sorts. Ten lines of bookkeeping instead of a sort per
+  frame, and the panel is a plain loop.
+- **A scope re-entered UNDER THE SAME PARENT is one row with a call count, and a smoke run is what
+  caught this.** The first measured frame logged **115 scopes**: `Loop` clamps a long first delta to
+  `MAX_FRAME_DELTA`, which is 15 fixed steps, and every scope inside a `FixedUpdate` body therefore
+  runs 15 times. `Milliseconds` accumulates and `Calls` counts, which is Unreal's stat-row shape and
+  reads correctly on the frame that matters (a hitch is exactly when someone opens this panel).
+  Merging is scoped to the open parent — by name alone, a subsystem's `Update` cost would fold into
+  its `Render` cost — and compares the pointer first, `strcmp` second, so two literals spelling one
+  name are still one row. *(The 115 came from the blanket wrapping **ST3** used to do; that is gone,
+  but the merge is what makes a fixed-step scope readable and it stays.)*
+- **`Name` is a `const char*` contracted to outlive the frame.** Not `OpaaxStringView` — **I13** gives
+  the view no `CStr()` on purpose and a UI needs a terminator. Not `OpaaxStringID` — I13 says
+  interning is for **keys**, and this is display text on a per-frame path. Every producer passes a
+  literal.
+- Header-only, **no `OPAAX_API`** — no static, no identity tag, the **I6** shape `ISubsystemManager`
+  already uses.
+- **THERE IS NO COMPILE-TIME SWITCH, and a `#if` one was built and then DELETED** (2026-08-31). An
+  `OPAAX_STATS` flag derived from `OPAAX_DEV_BUILD` shipped first; the user's question —
+  *"what is the cost of StatsService::Null on ship game?"* — retired it, because the answer made the
+  flag worthless and its cost visible. **A null profiler pointer costs ONE PREDICTED BRANCH per
+  scope**: `ScopedStat`'s ctor returns before taking a timestamp, the pointer is raw so there is no
+  virtual call, and consumers cache it at `Startup` so there is no locator lookup. Under a
+  microsecond a frame at 200 scopes, against ~10 µs enabled.
+  - **And the flag actively cost something: it made `Stats.EnableInShipBuild` unreachable.** You
+    cannot runtime-enable what was compiled out, so the two switches were contradictory rather than
+    complementary. **One switch — the config — and it is what lets a SHIPPED game be profiled
+    without a rebuild**, which is the case Unreal keeps a whole `Test` configuration for.
+
+**ST2 — STATS ARE AN APP SERVICE, and the HOST owns the frame boundary.** `IStatsService`
+(`Application/Services/`) owns the `FrameStats`; `OpaaxApplication::RunApplication` calls
+`Stats().BeginFrame()` at the top of each iteration, beside `GetInput().EndFrame()`.
+- **I4's test says app service, not engine subsystem**: it knows nothing about textures or worlds
+  and it does not tick — it is a *passive facility you submit scopes to*, the Logger's shape. What
+  looks like a tick is `BeginFrame`, which is a SUBMISSION: the host tells it a frame ended.
+- **IN2 already settled which frame that is.** `Engine::Loop` is the engine's tick, not the frame —
+  which is why input's `EndFrame` lives in the host loop. Publishing stats inside `Loop` was the
+  same misplacement [[L28]] describes, and it had the same consequence: the frame the panel read
+  was missing its `Present`, because Present runs *after* `Loop` returns.
+- **The reader draws in the MIDDLE of the wall-clock frame.** The order is
+  `BeginFrame(N)` → poll → `Loop(N)` → editor UI pass(N) → `Present(N)` → `BeginFrame(N+1)`, and the
+  Stats panel draws inside that UI pass. `FrameProfiler` therefore **double-buffers** (`Publish()`
+  swaps, so capacity stays and a warm frame allocates nothing) and a reader always sees the last
+  **complete** frame, one frame old.
+- **The service measures its own wall time between `BeginFrame` calls**, so nothing hands it a
+  delta. It is the true host frame, and the first call reports 0 rather than the time since process
+  start — one absurd sample at the front of every graph is worse than a missing one.
+- **`FixedSteps` was DELETED as a field.** The `FixedUpdate` scope moved INSIDE the catch-up loop,
+  so the profiler's own `Calls` merge (**ST1**) reports the step count and `Milliseconds` the total.
+  One mechanism saying it once, instead of two saying it twice.
+- **Never swap or move the `FrameStats` object** — consumers cache `&m_Stats.Profiler`. Fill it in
+  place.
+- *Corrects this entry's previous form, which had `Engine` own the snapshot and publish it at
+  `Loop`'s top. The user's objection was three words — "still, engine have FrameStats".*
+
+**ST3 — MEASURING IS OPT-IN, AT THE SITE THE AUTHOR CHOOSES. Core knows nothing about stats.**
+`ISubsystem` does not mention the profiler, `ISubsystemManager` does not hold one, and no tick loop
+wraps anything on an author's behalf. A scope exists because someone wrote `OPAAX_STAT_SCOPE` in the
+body they cared about — Unreal's model exactly.
+- **This entry replaces the opposite rule, and the correction came from the user** (2026-08-31, after
+  the first build shipped): *"i do not realized that it was so much 'integrated' in core"* and
+  *"there is too much noise in stats like for example input manager is write down on render slice
+  even no input is in render"*. Both halves were one mistake. `ISubsystemManager` had gained a
+  `FrameProfiler*` and wrapped every subsystem in `UpdateAll`/`FixedUpdateAll`/`RenderAll`, which
+  put stats into the SUBSYSTEM CONTRACT (a pure-virtual `GetStatName()` every subsystem had to
+  answer, in **Core**) and emitted a row for every subsystem × every phase — including
+  `InputManager` under `Render`, whose `Render` is an empty override. **Automatic coverage is not a
+  feature when most of what it covers does nothing:** a reader has to learn which rows to ignore,
+  which is the opposite of what a profiler is for.
+- **The fix was DELETION, not a filter.** Suppressing near-zero rows would have kept the Core
+  coupling and hidden a real 0.00 (a subsystem that stopped working looks identical to one that was
+  never meant to run). Removing the wrapping removes both problems and shrinks the contract.
+- **The two carriers already existed, so opting in needs no new plumbing.**
+  `IStatsService::GetProfiler()` is resolved once in `Startup` and cached like any other sibling
+  (**F3**) — `Engine`, `RendererManager` and `WorldManager` all do it. A world subsystem takes
+  `WorldContext::Profiler`, which is precisely what **WS3** says that struct is for: the
+  registration site takes no arguments, so a dependency has nowhere else to arrive.
+- **`WorldContext::Profiler` is the ONE member of that struct that may be null**, and deliberately:
+  every other reference's absence is a boot failure, while this one's is a supported configuration.
+  `WorldManager::CreateSubsystemsFor` therefore does NOT null-check it beside the others.
+- **A GAME module's subsystem is one line** — `Sandbox`'s `QuadOscillatorSubsystem::Update` carries
+  `OPAAX_STAT_SCOPE(&m_Context->Profiler, "QuadOscillator")` and appears in the tree under `World`,
+  with the engine still never naming the type. That is the extensibility claim, dogfooded rather
+  than asserted ([[L23]]).
+- **The tree is now small on purpose**: `Update` → `World` → the game's own scopes, `FixedUpdate`,
+  `Render` → `Renderer`, `Present`. Every row is work someone chose to name.
+
+**ST6 — NOT PROVIDING THE SERVICE *IS* THE OFF SWITCH** (**I3**). `BootStatsService` either provides
+`StatsService` or returns `IStatsService::Null()`, whose `GetProfiler()` is `nullptr`. There is no
+`bEnabled` member anywhere and no disabled state to keep correct — the locator's null object, which
+this codebase already requires every service to have, IS the feature.
+- **Config-driven, hence provided AFTER the config system** ([[L1]]'s locked boot order, the same
+  reason the job system's worker count is). `Stats.EnableInShipBuild` defaults **false**.
+- **A dev build always profiles**; the config answers only the question the build cannot. The
+  provider keys on `defined(OPAAX_WORKSPACE_DIR)` — **I12**'s dev signal, the one `IPaths` uses —
+  never on the editor flag, because a debug GAME build is a dev build with no editor.
+- The field is named for what it does (`EnableInShipBuild`) rather than a bare `Enabled`, so it
+  cannot be read as "turn stats off in the editor". Renaming it later is a **file-format** change,
+  not a rename (the nlohmann macro uses field names as json keys).
+
+**ST4 — The engine MEASURES; the reader keeps HISTORY.** `FrameStats` is one frame and nothing more —
+**F4**'s immediate-mode doctrine, one scope out. A snapshot is what every consumer can agree on; a
+history *length* is a display choice (a graph wants 120 samples, a log line wants none). So
+`StatsPanel` owns its own `TStatsHistory<120>` and the engine holds no instance of one.
+- `TStatsHistory` still lives in `Core/Profiling/` beside the profiler, because that is where someone
+  would look for it — **placement is findability, not ownership.**
+- Its `Offset()` is the **oldest** sample, not the write cursor, which is exactly what
+  `ImGui::PlotLines`' `values_offset` wants. Confusing the two scrolls the graph backwards and is
+  invisible by eye, so `StatsTests.cpp` pins the wrap-around case explicitly.
+
+**ST5 — A CORRECT per-frame snapshot drawn raw is unreadable, and that is a DISPLAY defect, not a
+measurement one.** The first build was accurate and the user's verdict was *"visually its very
+glitchy"*. Three independent sources, all fixed on the editor side with the engine untouched:
+- **Every number changed 60 times a second.** ~24 rows of `%.2f` shimmering. The panel now refreshes
+  its text on a **0.25 s throttle** — `EditorService::RefreshDirtyCache`'s interval, and Unity's
+  Statistics window does the same — and the headline is the history AVERAGE rather than the last
+  frame. **The graph still samples every frame**, because a spike landing between two refreshes must
+  not be lost; it is the one thing that should move at frame rate.
+- **Rows APPEARED AND DISAPPEARED.** A frame whose accumulator took no fixed step has no
+  `FixedUpdate` children, so every row below jumped up and back. `StatsDisplay`
+  (`Editor/Panels/StatsDisplay.h`) holds the layout: a known scope keeps its place and reads 0.00 for
+  the frames it did not run, and only a frame that is **not an ordered subsequence** of what is shown
+  — a world change, a module registering a subsystem — rebuilds. Matched as a subsequence rather
+  than by name because `Renderer` appears under both `Update` and `Render` at the same depth, so a
+  name lookup would post the render cost onto the update row. Cleared on `OnActiveWorldChanged`, or a
+  dead world's subsystems would sit there at 0.00 forever.
+- **The graph ceiling rescaled continuously** as the window's maximum drifted. It now steps in whole
+  60 Hz frames, with a floor of 33.3 ms so an idle 16 ms frame does not fill the plot.
+- **`StatsDisplay` is header-only and ImGui-free so `OpaaxTests` can reach it** ([[L55]]'s include
+  path). The fold is an algorithm with an ordering trap; putting it in the `.cpp` beside the widgets
+  would have made it exactly the kind of by-eye-only code ③ opened that path to stop.
 
 ---
 

@@ -11,6 +11,7 @@
 #include "Application/Services/ILogger.h"
 #include "Application/Services/IJobSystem.h"
 #include "Application/Services/IPaths.h"        // the startup level's path is asset-relative
+#include "Application/Services/IStatsService.h" // the borrowed FrameProfiler + OPAAX_STAT_SCOPE
 #include "Application/Services/Platforms/IPlatform.h"
 
 //Subsystems
@@ -128,6 +129,9 @@ namespace Opaax
         {
             OPAAX_ENGINE_LOG(Warn, "Paths service is a Null service");
         }
+
+        // Null when stats are off, and that is NOT a warning — it is the configured state.
+        m_Profiler = lServices.Get<IStatsService>().GetProfiler();
     }
 
     // =============================================================================
@@ -366,21 +370,34 @@ namespace Opaax
         // ----------------------------------------------------------------
         // 2. Time
         // ----------------------------------------------------------------
-        
+
         m_FrameInfo.m_DeltaTime = GetDeltaTime();
-        Update(m_FrameInfo.m_DeltaTime);
-        
+
+        {
+            OPAAX_STAT_SCOPE(m_Profiler, "Update");
+            Update(m_FrameInfo.m_DeltaTime);
+        }
+
         m_FrameInfo.m_AccumulatedDeltaTime += m_FrameInfo.m_DeltaTime;
         m_FrameInfo.m_FixedDeltaTime = GetFixedDeltaTime();
-        
+
         while (m_FrameInfo.m_AccumulatedDeltaTime >= m_FrameInfo.m_FixedDeltaTime)
         {
+            // INSIDE the loop, so the scope's own Calls IS the step count and its Milliseconds is
+            // the total — the profiler merges a re-entered scope (ST1). A separate FixedSteps field
+            // said the same thing a second way.
+            OPAAX_STAT_SCOPE(m_Profiler, "FixedUpdate");
+
             FixedUpdate(m_FrameInfo.m_FixedDeltaTime);
             m_FrameInfo.m_AccumulatedDeltaTime -= m_FrameInfo.m_FixedDeltaTime;
         }
-        
+
         m_FrameInfo.m_AlphaPhysic = m_FrameInfo.m_AccumulatedDeltaTime / m_FrameInfo.m_FixedDeltaTime;
-        Render(m_FrameInfo.m_AlphaPhysic);
+
+        {
+            OPAAX_STAT_SCOPE(m_Profiler, "Render");
+            Render(m_FrameInfo.m_AlphaPhysic);
+        }
     }
     
     void Engine::TearDown()
@@ -446,6 +463,11 @@ namespace Opaax
     
     void Engine::PresentBackbuffer()
     {
+        // Scoped HERE rather than in Loop because the HOST calls it, after the frame's UI pass (F2).
+        // It is also where vsync blocks, so leaving it unnamed would put most of the frame in a row
+        // called "Other" and make the panel useless.
+        OPAAX_STAT_SCOPE(m_Profiler, "Present");
+
         if (m_RendererManager != nullptr)
         {
             m_RendererManager->Present();
@@ -458,6 +480,19 @@ namespace Opaax
         {
             m_RendererManager->SetPrimaryRenderTarget(InTarget);
         }
+    }
+
+    void Engine::SetVSync(bool InEnabled)
+    {
+        if (m_RendererManager != nullptr)
+        {
+            m_RendererManager->SetVSync(InEnabled);
+        }
+    }
+
+    bool Engine::IsVSyncEnabled() const
+    {
+        return m_RendererManager != nullptr && m_RendererManager->IsVSyncEnabled();
     }
     
     TUniquePtr<IFramebuffer> Engine::CreateFramebuffer(const FramebufferSpec& InSpec)
