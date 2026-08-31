@@ -959,6 +959,31 @@ body they cared about — Unreal's model exactly.
 - **The tree is now small on purpose**: `Update` → `World` → the game's own scopes, `FixedUpdate`,
   `Render` → `Renderer`, `Present`. Every row is work someone chose to name.
 
+**ST7 — A COUNTER IS THE TWIN OF A SCOPE: named, submitted by anyone, published together**
+(landed ④ S2). `FrameProfiler::AddCount("Draw Calls", n)` beside `OPAAX_STAT_SCOPE`, keyed by name,
+crossing the frame boundary in the same `Publish()`.
+- **The shape was FORCED by layering, and it came out better than the typed struct planned.** ④'s
+  plan had `FrameStats` hold a `Renderer2DStats`. It cannot: `FrameStats` lives in `Core/Profiling/`
+  and **Core must not know what a draw call is** (**I4**). The alternatives were to move `FrameStats`
+  up a layer or to put renderer nouns in Core; naming the counters instead does neither, and it
+  makes a GAME's own numbers ("Bullets alive") free — the same extensibility the scopes have.
+- **`RendererManager` translates**, because it is already *"the only render-side code allowed to
+  reach host globals"*. `Renderer2D` keeps a typed `Renderer2DStats` internally (it is renderer
+  code, that is fine); the adapter turns it into three named counters. The Stats panel therefore
+  needs no renderer type to display them.
+- **`AddCount` ACCUMULATES.** A producer may submit per-object or once with a total and both read
+  correctly; a name-keyed merge with the same pointer-then-`strcmp` compare the scopes use.
+- **Counters are reset by the FRAME, never by a pass.** `RenderSystem::BeginFrame` calls
+  `Renderer2D::ResetStats()` — ⑥'s multi-view will run several `BeginPass`/`EndPass` brackets inside
+  one frame and their draw calls all belong to one total. `StartBatch` deliberately does NOT reset:
+  a batch restart is exactly the event being counted.
+- **The submit sits OUTSIDE `RenderFrame`'s early-outs**, like the `DebugDraw` clear beside it
+  (**F4**), so a frame that drew nothing reports zeros instead of leaving stale numbers on screen.
+- **`DrawCalls` IS the flush count** — `Flush` issues exactly one `DrawIndexed` — so shipping both
+  would be one number twice. Above 1 it is ⑥'s bug made visible: `Renderer2D` sorts the CURRENT
+  batch only, so the painter's algorithm does not hold across the split. The panel colours that row
+  and says why; `Quads` past `MAX_QUADS` and `Texture Slots` at 16 name which limit split it.
+
 **ST6 — NOT PROVIDING THE SERVICE *IS* THE OFF SWITCH** (**I3**). `BootStatsService` either provides
 `StatsService` or returns `IStatsService::Null()`, whose `GetProfiler()` is `nullptr`. There is no
 `bEnabled` member anywhere and no disabled state to keep correct — the locator's null object, which

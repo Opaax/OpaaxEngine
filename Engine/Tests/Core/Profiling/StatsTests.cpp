@@ -531,3 +531,98 @@ TEST_CASE("StatsDisplay: the unmeasured remainder never goes negative")
 
     CHECK(lDisplay.UnmeasuredMs() == doctest::Approx(0.0));
 }
+
+// =============================================================================
+// FrameProfiler — named counters
+// =============================================================================
+
+TEST_CASE("FrameProfiler: a counter ACCUMULATES within the frame and publishes with the scopes")
+{
+    // Counters and scopes must cross the frame boundary TOGETHER, or a reader sees a draw-call
+    // count from one frame beside a Render time from another.
+    FrameProfiler lProfiler;
+
+    lProfiler.AddCount("Draw Calls", 1);
+    lProfiler.AddCount("Quads", 40);
+    lProfiler.AddCount("Draw Calls", 2);   // a second producer, or a second pass
+
+    CHECK(lProfiler.Counters().empty());   // not readable until published
+
+    lProfiler.Publish();
+
+    REQUIRE(lProfiler.Counters().size() == 2u);
+    CHECK(lProfiler.Counters()[0].Name == doctest::String("Draw Calls"));
+    CHECK(lProfiler.Counters()[0].Value == 3u);
+    CHECK(lProfiler.Counters()[1].Name == doctest::String("Quads"));
+    CHECK(lProfiler.Counters()[1].Value == 40u);
+}
+
+TEST_CASE("FrameProfiler: counters do not survive a frame")
+{
+    FrameProfiler lProfiler;
+
+    lProfiler.AddCount("Quads", 10);
+    lProfiler.Publish();
+    REQUIRE(lProfiler.Counters().size() == 1u);
+
+    lProfiler.Publish();
+    CHECK(lProfiler.Counters().empty());
+}
+
+TEST_CASE("FrameProfiler: counters merge by TEXT, like scope names do")
+{
+    FrameProfiler lProfiler;
+
+    const char lFirst[]  = "Quads";
+    const char lSecond[] = "Quads";   // distinct storage, same text
+
+    lProfiler.AddCount(lFirst, 3);
+    lProfiler.AddCount(lSecond, 4);
+    lProfiler.Publish();
+
+    REQUIRE(lProfiler.Counters().size() == 1u);
+    CHECK(lProfiler.Counters()[0].Value == 7u);
+}
+
+TEST_CASE("FrameProfiler: IsEmpty accounts for counters, not just scopes")
+{
+    // A frame that only submitted counters has still measured something — and the one-shot
+    // "stats live" log gates on this.
+    FrameProfiler lProfiler;
+
+    lProfiler.AddCount("Quads", 1);
+    lProfiler.Publish();
+
+    CHECK_FALSE(lProfiler.IsEmpty());
+}
+
+TEST_CASE("StatsDisplay: a counter that stops being submitted holds its row at zero")
+{
+    FrameProfiler lProfiler;
+    lProfiler.AddCount("Draw Calls", 2);
+    lProfiler.AddCount("Quads", 99);
+    lProfiler.Publish();
+
+    FrameStats lStats;
+    lStats.FrameMs  = 16.0;
+    lStats.Profiler = lProfiler;
+
+    Editor::StatsDisplay lDisplay;
+    lDisplay.Update(lStats);
+    REQUIRE(lDisplay.Counters().size() == 2u);
+
+    // Next frame drew nothing at all — the renderer still submits, but as zeros.
+    FrameProfiler lEmpty;
+    lEmpty.AddCount("Draw Calls", 0);
+    lEmpty.Publish();
+
+    FrameStats lNext;
+    lNext.FrameMs  = 16.0;
+    lNext.Profiler = lEmpty;
+    lDisplay.Update(lNext);
+
+    REQUIRE(lDisplay.Counters().size() == 2u);
+    CHECK(lDisplay.Counters()[0].Value == 0u);
+    CHECK(lDisplay.Counters()[1].Name == doctest::String("Quads"));
+    CHECK(lDisplay.Counters()[1].Value == 0u);   // held, not dropped
+}

@@ -54,6 +54,9 @@ namespace Opaax::Editor
         /** Every scope in the held snapshot, plus the unmeasured remainder. */
         void DrawBreakdown();
 
+        /** The frame's named counters — draw calls, quads, and whatever a game submits. */
+        void DrawCounters();
+
         /** Ceiling for the plot, in whole 60 Hz frames so it steps rather than drifting. */
         float GraphCeilingMs() const;
 

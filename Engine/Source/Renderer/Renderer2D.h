@@ -21,6 +21,23 @@ namespace Opaax
     inline constexpr LogCategory LogRenderer2D{"Renderer2D"};
 
     /**
+     * What one FRAME of batching cost. Per frame, not per pass — ⑥'s multi-view will run several
+     * passes into one frame and the interesting numbers are the totals.
+     *
+     * DrawCalls is also the FLUSH count: Flush issues exactly one DrawIndexed, so shipping both
+     * would be the same number twice. Above 1 the painter's algorithm no longer holds ACROSS the
+     * split (Renderer2D.cpp sorts the current batch only) — which is the ⑥ bug this exists to make
+     * visible before it bites. Why it split is readable from the other two: Quads past MAX_QUADS
+     * means the buffer filled, PeakTextureSlots at the limit means the samplers did.
+     */
+    struct Renderer2DStats
+    {
+        Uint32 Quads            = 0;
+        Uint32 DrawCalls        = 0;
+        Uint32 PeakTextureSlots = 0;
+    };
+
+    /**
      * @class Renderer2D
      *
      * Instance-owned 2D batch renderer (one per render department — RendererManager owns it).
@@ -78,6 +95,16 @@ namespace Opaax
 
         // Call once per frame after all draw calls — flushes the remaining batch.
         void End();
+
+        // =============================================================================
+        // Stats
+        // =============================================================================
+    public:
+        /** This frame's batching counters, complete once the last pass has ended. */
+        const Renderer2DStats& GetStats() const noexcept;
+
+        /** Zero them. The FRAME owner calls this (RenderSystem::BeginFrame), never a pass. */
+        void ResetStats() noexcept;
 
         // =============================================================================
         // Draw calls

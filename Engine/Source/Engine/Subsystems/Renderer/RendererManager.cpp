@@ -133,7 +133,27 @@ namespace Opaax
             RenderFrame();
         }
 
+        SubmitRenderCounters();
+
         m_DebugDraw.Clear();
+    }
+
+    void RendererManager::SubmitRenderCounters()
+    {
+        if (m_Profiler == nullptr) { return; }
+
+        // OUTSIDE RenderFrame's early-outs, so a frame that drew nothing reports zeros rather than
+        // leaving the previous frame's numbers on screen — the same reason the DebugDraw clear is
+        // out here (F4).
+        const Renderer2DStats lStats = m_RenderSystem
+                                           ? m_RenderSystem->GetRenderer2D().GetStats()
+                                           : Renderer2DStats{};
+
+        // Translated into NAMED counters here, at the adapter, so Core never learns what a draw call
+        // is and the Stats panel needs no renderer type to display them.
+        m_Profiler->AddCount("Draw Calls",    lStats.DrawCalls);
+        m_Profiler->AddCount("Quads",         lStats.Quads);
+        m_Profiler->AddCount("Texture Slots", lStats.PeakTextureSlots);
     }
 
     void RendererManager::RenderFrame()

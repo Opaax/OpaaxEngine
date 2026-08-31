@@ -8,6 +8,7 @@
 #include <imgui.h>
 
 #include <cmath>
+#include <cstring>
 
 using namespace Opaax;
 
@@ -18,6 +19,12 @@ namespace
 
     /** One 60 Hz frame. The graph's ceiling steps in these so it never drifts under the line. */
     constexpr float k_FrameMs60 = 1000.f / 60.f;
+
+    /** Whether a counter carries this exact name. */
+    bool SameCounter(const Opaax::StatCounter& InCounter, const char* InName)
+    {
+        return InCounter.Name != nullptr && std::strcmp(InCounter.Name, InName) == 0;
+    }
 
     /** Percentage of the frame InMilliseconds represents. Zero for a frame with no duration. */
     float PercentOfFrame(const double InMilliseconds, const double InFrameMs)
@@ -67,6 +74,8 @@ namespace Opaax::Editor
         ImGui::Separator();
 
         DrawBreakdown();
+
+        DrawCounters();
     }
 
     float StatsPanel::GraphCeilingMs() const
@@ -175,6 +184,58 @@ namespace Opaax::Editor
 
         ImGui::TableSetColumnIndex(2);
         ImGui::TextDisabled("%.1f", PercentOfFrame(lUnmeasured, m_Display.FrameMs()));
+
+        ImGui::EndTable();
+    }
+
+    void StatsPanel::DrawCounters()
+    {
+        const TDynArray<StatCounter>& lCounters = m_Display.Counters();
+
+        if (lCounters.empty()) { return; }
+
+        ImGui::Separator();
+        ImGui::TextUnformatted("Counters");
+
+        if (!ImGui::BeginTable("##counters", 2, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp))
+        {
+            return;
+        }
+
+        ImGui::TableSetupColumn("Counter", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("Value",   ImGuiTableColumnFlags_WidthFixed, 80.f);
+
+        for (const StatCounter& lCounter : lCounters)
+        {
+            ImGui::TableNextRow();
+
+            ImGui::TableSetColumnIndex(0);
+            ImGui::TextUnformatted(lCounter.Name != nullptr ? lCounter.Name : "(unnamed)");
+
+            ImGui::TableSetColumnIndex(1);
+
+            // A frame that split its batch is ⑥'s bug made visible: Renderer2D sorts the CURRENT
+            // batch only, so past one draw call the painter's algorithm no longer holds between
+            // them. Flagged rather than explained in a comment nobody reads.
+            const bool bSplitBatch = lCounter.Value > 1 && SameCounter(lCounter, "Draw Calls");
+
+            if (bSplitBatch)
+            {
+                ImGui::TextColored(ImVec4(1.f, 0.7f, 0.2f, 1.f), "%llu", lCounter.Value);
+            }
+            else
+            {
+                ImGui::Text("%llu", lCounter.Value);
+            }
+
+            if (bSplitBatch && ImGui::IsItemHovered())
+            {
+                ImGui::SetTooltip("The frame split into several batches.\n"
+                                  "Draw order is only sorted WITHIN a batch, so sprites can\n"
+                                  "overlap wrongly across the split. Check Quads (>1000 fills\n"
+                                  "the buffer) and Texture Slots (16 exhausts the samplers).");
+            }
+        }
 
         ImGui::EndTable();
     }

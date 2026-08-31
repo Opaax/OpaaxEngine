@@ -70,6 +70,10 @@ namespace Opaax
         Uint32                                      TextureSlotIndex = 1; // slot 0 = white
 
         glm::mat4 ViewProjection = glm::mat4(1.f);
+
+        // Per-FRAME counters (④). Reset by RenderSystem::BeginFrame, never by StartBatch — a batch
+        // restart is exactly the event they exist to count.
+        Renderer2DStats Stats;
     };
 
     // =============================================================================
@@ -207,9 +211,30 @@ namespace Opaax
         m_Data->TextureSlotIndex = 1;  // slot 0 = white, always bound
     }
 
+    const Renderer2DStats& Renderer2D::GetStats() const noexcept
+    {
+        return m_Data->Stats;
+    }
+
+    void Renderer2D::ResetStats() noexcept
+    {
+        m_Data->Stats = Renderer2DStats{};
+    }
+
     void Renderer2D::Flush()
     {
         if (m_Data->QuadCount == 0) { return; }
+
+        // Counted here rather than at the call sites: this is the ONE place a DrawIndexed is issued,
+        // and an empty batch returns above without costing one.
+        ++m_Data->Stats.DrawCalls;
+
+        // The PEAK across the frame's batches — a max, not a sum, because the pressure that matters
+        // is how close any single batch came to running out of samplers.
+        if (m_Data->TextureSlotIndex > m_Data->Stats.PeakTextureSlots)
+        {
+            m_Data->Stats.PeakTextureSlots = m_Data->TextureSlotIndex;
+        }
 
         // Sort the quad draw order by (Layer, OrderInLayer, textureSlot). Stable so equal keys
         // keep submission order. Painter's algorithm — ascending key draws back-to-front; depth
@@ -396,6 +421,9 @@ namespace Opaax
         // batch's draw call count down when many sprites share one atlas.
         m_Data->SortKeys[m_Data->QuadCount] = MakeSortKey(InLayer, InOrderInLayer, static_cast<Uint32>(lTexIndex));
         ++m_Data->QuadCount;
+
+        // Frame total, so it survives the QuadCount reset a flush does.
+        ++m_Data->Stats.Quads;
     }
 
 } // namespace Opaax

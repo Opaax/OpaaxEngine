@@ -38,12 +38,15 @@ namespace Opaax::Editor
             {
                 m_Scopes = InStats.Profiler.Samples();
             }
+
+            FoldCounters(InStats.Profiler.Counters());
         }
 
         /** Drop the layout — the scopes of a world that is gone would linger at 0.00 forever. */
         void Clear() noexcept
         {
             m_Scopes.clear();
+            m_Counters.clear();
             m_FrameMs = 0.0;
         }
 
@@ -54,6 +57,8 @@ namespace Opaax::Editor
         double FrameMs() const noexcept { return m_FrameMs; }
 
         const TDynArray<ScopeSample>& Scopes() const noexcept { return m_Scopes; }
+
+        const TDynArray<StatCounter>& Counters() const noexcept { return m_Counters; }
 
         /** The frame's measured total — everything at depth 0. The remainder is what nobody timed. */
         double TopLevelMs() const noexcept
@@ -129,11 +134,44 @@ namespace Opaax::Editor
             return true;
         }
 
+        /**
+         * Counters keyed by NAME — no parent, no depth, so a plain lookup is enough and the
+         * subsequence walk the scopes need would be overkill.
+         *
+         * A known counter that stops being submitted holds its place at 0 rather than collapsing,
+         * for the reason the scopes do: a row vanishing moves every row under it.
+         */
+        void FoldCounters(const TDynArray<StatCounter>& InIncoming)
+        {
+            for (StatCounter& lRow : m_Counters) { lRow.Value = 0; }
+
+            for (const StatCounter& lIn : InIncoming)
+            {
+                StatCounter* lRow = nullptr;
+                for (StatCounter& lCandidate : m_Counters)
+                {
+                    if (SameName(lCandidate.Name, lIn.Name)) { lRow = &lCandidate; break; }
+                }
+
+                if (lRow != nullptr) { lRow->Value = lIn.Value; }
+                else                 { m_Counters.emplace_back(lIn); }
+            }
+        }
+
+        static bool SameName(const char* InA, const char* InB) noexcept
+        {
+            if (InA == InB)                       { return true; }
+            if (InA == nullptr || InB == nullptr) { return false; }
+
+            return std::strcmp(InA, InB) == 0;
+        }
+
         // =============================================================================
         // Members
         // =============================================================================
     private:
         TDynArray<ScopeSample> m_Scopes;
+        TDynArray<StatCounter> m_Counters;
         double                 m_FrameMs = 0.0;
     };
 }

@@ -31,6 +31,20 @@ namespace Opaax
     };
 
     /**
+     * One named number for the frame — draw calls, quads, bullets alive.
+     *
+     * The COUNTING twin of ScopeSample, and deliberately the same shape: a name and a value, keyed
+     * by name, published on the same boundary. That symmetry is what keeps renderer nouns out of
+     * Core — nothing here knows what a draw call is — and what lets a game submit its own numbers
+     * without the engine or the Stats panel learning about them.
+     */
+    struct StatCounter
+    {
+        const char* Name  = nullptr;
+        Uint64      Value = 0;
+    };
+
+    /**
      * @class FrameProfiler
      *
      * The frame's named scopes, in the shape every engine has one (Unreal's SCOPE_CYCLE_COUNTER,
@@ -101,6 +115,28 @@ namespace Opaax
             return lIndex;
         }
 
+        /**
+         * Add to the frame's counter named InName, creating it on first use.
+         *
+         * ADDS rather than sets, so a producer may submit per-object or once with a total and both
+         * read correctly. Order of first appearance is preserved, like the scopes.
+         *
+         * InName must outlive the frame — pass a literal.
+         */
+        void AddCount(const char* InName, const Uint64 InValue)
+        {
+            for (StatCounter& lCounter : m_RecordingCounters)
+            {
+                if (SameName(lCounter.Name, InName))
+                {
+                    lCounter.Value += InValue;
+                    return;
+                }
+            }
+
+            m_RecordingCounters.emplace_back(InName, InValue);
+        }
+
         /** Close the scope Open returned InIndex for, ADDING how long this call took to its total. */
         void Close(const Int32 InIndex, const double InMilliseconds)
         {
@@ -116,11 +152,20 @@ namespace Opaax
         // Frame boundary
         // =============================================================================
     public:
-        /** The frame is over: what was recorded becomes readable, and recording starts empty. */
+        /**
+         * The frame is over: what was recorded becomes readable, and recording starts empty.
+         *
+         * Scopes AND counters cross together, so a reader can never see a draw-call count from one
+         * frame beside a Render time from another.
+         */
         void Publish()
         {
             m_Published.swap(m_Recording);   // swap, not copy — capacity stays with both buffers
             m_Recording.clear();
+
+            m_PublishedCounters.swap(m_RecordingCounters);
+            m_RecordingCounters.clear();
+
             m_OpenStack.clear();
             m_Depth = 0;
         }
@@ -132,12 +177,28 @@ namespace Opaax
         /** The last COMPLETE frame, in pre-order. Empty until the first Publish. */
         const TDynArray<ScopeSample>& Samples() const noexcept { return m_Published; }
 
-        bool IsEmpty() const noexcept { return m_Published.empty(); }
+        /** The last COMPLETE frame's counters, in order of first appearance. */
+        const TDynArray<StatCounter>& Counters() const noexcept { return m_PublishedCounters; }
+
+        bool IsEmpty() const noexcept { return m_Published.empty() && m_PublishedCounters.empty(); }
 
         // =============================================================================
         // Internal
         // =============================================================================
     private:
+        /**
+         * Pointer first — one call site means one literal, so this hits every time in practice.
+         * strcmp only covers two literals that happen to spell the same name, which would otherwise
+         * show up as two identical rows.
+         */
+        static bool SameName(const char* InA, const char* InB) noexcept
+        {
+            if (InA == InB)                         { return true; }
+            if (InA == nullptr || InB == nullptr)   { return false; }
+
+            return std::strcmp(InA, InB) == 0;
+        }
+
         /**
          * An already-recorded scope with this name under the CURRENTLY OPEN parent, or -1.
          *
@@ -153,16 +214,7 @@ namespace Opaax
             {
                 if (m_Recording[i].Depth != m_Depth) { continue; }
 
-                // Pointer first — one call site means one literal, so this hits every time in
-                // practice. strcmp only covers two literals that happen to spell the same name,
-                // which would otherwise show up as two identical rows.
-                if (m_Recording[i].Name == InName) { return i; }
-
-                if (m_Recording[i].Name != nullptr && InName != nullptr
-                    && std::strcmp(m_Recording[i].Name, InName) == 0)
-                {
-                    return i;
-                }
+                if (SameName(m_Recording[i].Name, InName)) { return i; }
             }
 
             return -1;
@@ -176,6 +228,8 @@ namespace Opaax
 
         TDynArray<ScopeSample> m_Recording;   // this frame, still filling
         TDynArray<ScopeSample> m_Published;   // last frame, complete
+        TDynArray<StatCounter> m_RecordingCounters;
+        TDynArray<StatCounter> m_PublishedCounters;
         TDynArray<Int32>       m_OpenStack;   // indices of the scopes currently open, outermost first
         Uint8                  m_Depth = 0;
     };

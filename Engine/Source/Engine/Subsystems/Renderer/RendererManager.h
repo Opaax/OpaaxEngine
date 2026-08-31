@@ -84,6 +84,12 @@ namespace Opaax
         void DrawWorldSprites(World& InWorld, Renderer2D& InRenderer);
 
         /**
+         * Publish the batcher's frame counters as named stats (④). Called from Render, OUTSIDE
+         * RenderFrame's early-outs, so a frame that drew nothing reports zeros.
+         */
+        void SubmitRenderCounters();
+
+        /**
          * The GPU texture behind an asset-relative path, loading it once and keeping the claim.
          *
          * Cached by INTERNED PATH, so a hundred sprites sharing one image resolve to one integer

@@ -87,7 +87,14 @@ namespace Opaax
         {
             return;
         }
-        
+
+        // The FRAME owns the counters, not a pass: ⑥'s multi-view runs several BeginPass/EndPass
+        // brackets in here and their draw calls all belong to one frame's total.
+        if (IsValidRenderer2D())
+        {
+            m_Renderer2D->ResetStats();
+        }
+
         m_Device->BeginFrame();
     }
 

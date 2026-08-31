@@ -77,8 +77,10 @@ namespace Opaax
         {
             m_bLoggedFirst = true;
 
-            OPAAX_LOG(LogStats, Info, "Frame stats live — {} scope(s) in the first measured frame ({:.2f} ms)",
-                      m_Stats.Profiler.Samples().size(), m_Stats.FrameMs);
+            OPAAX_LOG(LogStats, Info,
+                      "Frame stats live — {} scope(s), {} counter(s) in the first measured frame ({:.2f} ms)",
+                      m_Stats.Profiler.Samples().size(), m_Stats.Profiler.Counters().size(),
+                      m_Stats.FrameMs);
         }
     }
 }
