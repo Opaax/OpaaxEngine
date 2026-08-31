@@ -295,3 +295,62 @@ TEST_CASE("EntityQuery: combined bounds cover every listed entity, skipping the 
     TDynArray<EntityID> lNone;
     CHECK_FALSE(EntityQuery::TryGetBounds(lWorld, lNone, lBounds));
 }
+
+// =============================================================================
+// Negative scale — a flip is legal, and it must not cost the entity its bounds
+// =============================================================================
+
+TEST_CASE("EntityQuery: a NEGATIVE scale still yields a positive half-extent")
+{
+    // Found by eye as "the outline takes all", which was the mildest symptom. A negative Scale made
+    // Size * Scale negative, so HalfExtent went negative — and Contains compares
+    // fabs(point - centre) <= HalfExtent, which is FALSE for every point against a negative bound.
+    // The entity silently stopped being clickable, marquee-selectable and focusable.
+    World lWorld("Flipped");
+
+    Entity lQuad = MakeQuad(lWorld, "Flipped", { 10.f, 20.f }, { 80.f, 40.f });
+    lQuad.Get<TransformComponent>().Scale = { -1.f, 1.f };
+
+    Bounds2D lBounds;
+    REQUIRE(EntityQuery::TryGetBounds(lQuad, lBounds));
+
+    CHECK(lBounds.HalfExtent.x == doctest::Approx(40.f));
+    CHECK(lBounds.HalfExtent.y == doctest::Approx(20.f));
+
+    // The box covers the same ground as the unflipped one — a mirror about the centre is the same
+    // rectangle.
+    CHECK(lBounds.Contains({ 10.f, 20.f }));
+    CHECK(lBounds.Contains({ -29.f, 20.f }));
+    CHECK(lBounds.Contains({ 49.f, 20.f }));
+    CHECK_FALSE(lBounds.Contains({ 51.f, 20.f }));
+}
+
+TEST_CASE("EntityQuery: a flipped entity is still PICKABLE")
+{
+    // The consequence that actually mattered, asserted through the verb an author uses.
+    World lWorld("PickFlipped");
+
+    Entity lQuad = MakeQuad(lWorld, "Flipped", { 0.f, 0.f }, { 100.f, 100.f });
+    lQuad.Get<TransformComponent>().Scale = { -2.f, -2.f };
+
+    // Scaled by 2 as well as flipped, so the box is 200 wide: a point at 80 is inside the scaled
+    // box and outside the unscaled one, which pins that the MAGNITUDE is used rather than dropped.
+    const Entity lHit = EntityQuery::PickAt(lWorld, { 80.f, 80.f });
+
+    REQUIRE(lHit.IsValid());
+    CHECK(lHit.GetHandle() == lQuad.GetHandle());
+}
+
+TEST_CASE("Bounds2D: FromCenterSize is unsigned, so a mirrored size is the same box")
+{
+    const Bounds2D lPositive = Bounds2D::FromCenterSize({ 0.f, 0.f }, { 10.f, 6.f });
+    const Bounds2D lMirrored = Bounds2D::FromCenterSize({ 0.f, 0.f }, { -10.f, -6.f });
+
+    CHECK(lMirrored.HalfExtent.x == doctest::Approx(lPositive.HalfExtent.x));
+    CHECK(lMirrored.HalfExtent.y == doctest::Approx(lPositive.HalfExtent.y));
+
+    // Rotated too — that overload does its own multiply and had the same hole.
+    const Bounds2D lRotated = Bounds2D::FromCenterSizeRotated({ 0.f, 0.f }, { -10.f, -6.f }, 0.f);
+    CHECK(lRotated.HalfExtent.x == doctest::Approx(5.f));
+    CHECK(lRotated.HalfExtent.y == doctest::Approx(3.f));
+}

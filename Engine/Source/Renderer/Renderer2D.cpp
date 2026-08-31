@@ -370,11 +370,17 @@ namespace Opaax
         // shader happens to render it the same as 0.5 (a hole larger than the quad is still the
         // whole quad), leaving it unclamped would make the returned value stop meaning what its
         // name says. The result stays monotonic: more thickness, smaller hole, more drawn.
+        // The MAGNITUDE of the size, because the hole lives in the quad's LOCAL 0..1 space and
+        // mirroring does not move it. A negative size is a legal flip — SubmitQuad mirrors the
+        // corners, which is how a flipped sprite mirrors its texture — but it must not be read here
+        // as "no size", which would answer 0 and draw the outline SOLID.
         const auto lInnerHalf = [](const float InExtent, const float InBorder) noexcept
         {
-            if (InExtent <= 0.f) { return 0.f; }
+            const float lMagnitude = InExtent < 0.f ? -InExtent : InExtent;
 
-            const float lHalf = 0.5f - InBorder / InExtent;
+            if (lMagnitude <= 0.f) { return 0.f; }
+
+            const float lHalf = 0.5f - InBorder / lMagnitude;
 
             return lHalf < 0.f ? 0.f : (lHalf > 0.5f ? 0.5f : lHalf);
         };

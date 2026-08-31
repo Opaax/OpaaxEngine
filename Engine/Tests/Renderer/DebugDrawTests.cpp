@@ -278,3 +278,16 @@ TEST_CASE("MakeOutlineInnerHalf: the result is CLAMPED to [0, 0.5] at both ends"
     CHECK(MakeOutlineInnerHalf({ 10.f, 10.f }, 0.f).x  == doctest::Approx(0.5f));
     CHECK(MakeOutlineInnerHalf({ 10.f, 10.f }, -1.f).x == doctest::Approx(0.5f));
 }
+
+TEST_CASE("MakeOutlineInnerHalf: a MIRRORED size is the same hole, not a solid quad")
+{
+    // The reported bug: a negative Scale reached here as a negative size, the <= 0 guard read it as
+    // "no size" and answered 0, and the outline drew SOLID. The hole lives in the quad's local
+    // 0..1 space, which mirroring does not move.
+    const Vector2F lPositive = MakeOutlineInnerHalf({ 100.f, 100.f }, 10.f);
+    const Vector2F lMirrored = MakeOutlineInnerHalf({ -100.f, -100.f }, 10.f);
+
+    CHECK(lMirrored.x == doctest::Approx(lPositive.x));
+    CHECK(lMirrored.y == doctest::Approx(lPositive.y));
+    CHECK(lMirrored.x == doctest::Approx(0.4f));
+}

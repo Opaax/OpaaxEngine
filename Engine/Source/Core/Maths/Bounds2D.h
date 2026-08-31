@@ -24,9 +24,17 @@ namespace Opaax
         // Construction
         // =============================================================================
 
+        /**
+         * A HALF-EXTENT IS A DISTANCE AND IS NEVER SIGNED — hence the fabs, which is load-bearing.
+         *
+         * A negative `Scale` is a legal flip and makes `Size * Scale` negative, which the RENDERER
+         * wants (mirrored corners mirror the texture). A box does not: with a negative half-extent
+         * `Contains` compares `fabs(...) <= negative`, which is false for every point, so the entity
+         * silently stops being clickable, marquee-selectable and focusable.
+         */
         static Bounds2D FromCenterSize(const Vector2F& InCenter, const Vector2F& InSize) noexcept
         {
-            return Bounds2D{ InCenter, { InSize.x * 0.5f, InSize.y * 0.5f } };
+            return Bounds2D{ InCenter, { std::fabs(InSize.x) * 0.5f, std::fabs(InSize.y) * 0.5f } };
         }
 
         /**
@@ -34,14 +42,17 @@ namespace Opaax
          *
          * A picked sprite draws rotated, so its axis-aligned cover has to grow with the angle or a
          * turned sprite would stop being clickable at its own corners.
+         *
+         * Unsigned for the same reason as FromCenterSize — the cos/sin were already fabs'd, and the
+         * size has to be too or a flipped entity loses its bounds entirely.
          */
         static Bounds2D FromCenterSizeRotated(const Vector2F& InCenter, const Vector2F& InSize,
                                               float InRotationRad) noexcept
         {
             const float lCos = std::fabs(std::cos(InRotationRad));
             const float lSin = std::fabs(std::sin(InRotationRad));
-            const float lHx  = InSize.x * 0.5f;
-            const float lHy  = InSize.y * 0.5f;
+            const float lHx  = std::fabs(InSize.x) * 0.5f;
+            const float lHy  = std::fabs(InSize.y) * 0.5f;
 
             return Bounds2D{ InCenter, { lHx * lCos + lHy * lSin, lHx * lSin + lHy * lCos } };
         }
