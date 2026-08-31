@@ -826,10 +826,32 @@ candidates as you create them.
 (`Renderer/DebugDraw.h`, owned **by value** by `RendererManager` — the thing that drains it, I5) is drained
 and cleared **every frame, unconditionally** — including on frames that fail to render, which is why
 `Render()` clears *outside* `RenderFrame()`'s early-outs. A producer that wants a line visible re-submits it
-every frame; nothing is retained. Lines render as thin rotated quads through the existing
-`Renderer2D::DrawQuad` on the `ERenderLayer::Debug` band — **zero new RHI/shader/vertex-layout surface**;
-keep it that way. Engine-owned, not editor-owned (D10: it serves dev builds of `Game.exe`, which never
-links `OpaaxEditorLib`); reached via `IEngine::GetDebugDraw()`.
+every frame; nothing is retained. Engine-owned, not editor-owned (D10: it serves dev builds of `Game.exe`,
+which never links `OpaaxEditorLib`); reached via `IEngine::GetDebugDraw()`.
+
+**F4d — It draws LINES and BOXES, and the box cost ONE vertex attribute** (2026-08-31, user's call:
+*"we make it with 4 quads, we should create one using bounds and one shape empty with outline"*).
+*This amends the clause that used to read "zero new RHI/shader/vertex-layout surface; keep it that
+way" — a deliberate change, not drift.*
+- **`DrawBox` was four `DrawLine`s**, so a selection of N entities cost 4N quads and the icon overlay
+  4 more per entity. It is now one `DebugBox` rendering as one HOLLOW quad.
+- **A quad carries the half-extent of its own hole** (`QuadVertex::InnerHalf`, local 0..1 space);
+  the fragment shader discards inside it. `{0,0}` is solid, so **every pre-existing draw is
+  unchanged** and an outline is a *value* rather than a second pipeline.
+- **The part of the old clause that MATTERED survives**: still one pipeline, one batch, no second
+  flush. A second pipeline was the obvious alternative and is worse — it would force a flush between
+  world geometry and overlays, i.e. raise the very `Draw Calls` counter (**ST7**) this was meant to
+  lower. Vertex cost is 40 → 48 bytes.
+- **The outline path is UNTEXTURED by construction**, and that is load-bearing: the shader reads
+  `v_TexCoord` as the fragment's LOCAL position, which only holds while the UVs span the full 0..1.
+  A textured outline sampling an atlas sub-rect would carve the hole somewhere else, so there is
+  deliberately no overload taking a texture.
+- `MakeOutlineInnerHalf` is free and pure so the border maths is testable with no GL context, and
+  **clamped to `[0, 0.5]` at BOTH ends** — below 0 is an inside-out hole that discards the whole
+  quad (a too-thick border would *vanish* instead of drawing solid), above 0.5 is what a negative
+  thickness produces. The first version clamped only the bottom and a test caught it.
+- **`DrawBounds(Bounds2D, …)` is the entry point to reach for.** Every caller already holds one from
+  `EntityQuery::TryGetBounds` and was unpacking it into a centre and a size just to hand both back.
 
 This is not an implementation detail — it is the invariant that makes a whole bug class impossible.
 Unreal's `FlushPersistentDebugLines(World)` is destructive-to-everyone *because* a shared retained pool

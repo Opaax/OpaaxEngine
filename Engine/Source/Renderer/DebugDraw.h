@@ -2,6 +2,7 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
+#include "Core/Maths/Bounds2D.h"    // DrawBounds — the form every caller already holds
 #include "Core/Maths/MathTypes.h"
 #include "Renderer/RenderLayer.h"   // ERenderLayer — a segment states its own band
 
@@ -23,6 +24,21 @@ namespace Opaax
          * could express until ③b needed a BACKGROUND grid: a grid drawn over every sprite is not a
          * grid, it is a cage.
          */
+        ERenderLayer Layer = ERenderLayer::Debug;
+    };
+
+    /**
+     * One queued rectangle OUTLINE, in world units. Its own entry rather than four DebugLines,
+     * because it renders as ONE hollow quad (Renderer2D::DrawQuadOutline) — the whole point of
+     * having it: a selection of N entities costs N quads instead of 4N.
+     */
+    struct DebugBox
+    {
+        Vector2F Center    = { 0.f, 0.f };
+        Vector2F Size      = { 0.f, 0.f };   // FULL width and height, border included
+        Vector4F Color     = { 1.f, 1.f, 1.f, 1.f };
+        float    Thickness = 1.f;
+
         ERenderLayer Layer = ERenderLayer::Debug;
     };
 
@@ -55,9 +71,9 @@ namespace Opaax
      * never links OpaaxEditorLib. Owned by value by RendererManager — the thing that drains it —
      * and reached through IEngine::GetDebugDraw().
      *
-     * Lines only. Everything else (circles, text, persistent durations) waits for a caller that
-     * needs it. Rendering costs no new RHI surface: each line becomes a thin rotated quad through
-     * the existing Renderer2D::DrawQuad.
+     * Lines and BOXES. Everything else (circles, text, persistent durations) waits for a caller that
+     * needs it. A line becomes a thin rotated quad; a box becomes ONE hollow quad rather than four
+     * of them (F4d) — still one pipeline and one batch, which is the property worth keeping.
      */
     class OPAAX_API DebugDraw
     {
@@ -77,15 +93,29 @@ namespace Opaax
                       float InThickness = 1.f, ERenderLayer InLayer = ERenderLayer::Debug);
 
         /**
-         * Queue an axis-aligned rectangle outline as four segments.
+         * Queue an axis-aligned rectangle outline as ONE hollow quad.
+         *
+         * It used to be four segments; a border is now a property of a quad rather than four thin
+         * ones laid end to end, so this costs a quarter of the geometry and the corners are exact
+         * instead of overlapping by half a line width.
+         *
          * @param InCenter rectangle centre, world units
-         * @param InSize full width and height
+         * @param InSize full width and height, border included
          * @param InColor RGBA normalised [0,1]
-         * @param InThickness line width in world units
-         * @param InLayer draw band, applied to all four segments
+         * @param InThickness border width in world units. Thick enough to close the middle draws solid.
+         * @param InLayer draw band
          */
         void DrawBox(const Vector2F& InCenter, const Vector2F& InSize, const Vector4F& InColor,
                      float InThickness = 1.f, ERenderLayer InLayer = ERenderLayer::Debug);
+
+        /**
+         * The same box, taking the shape every caller already has.
+         *
+         * `EntityQuery::TryGetBounds` answers a Bounds2D and each call site was unpacking it into a
+         * centre and a size just to hand both back; this is the one that should be reached for.
+         */
+        void DrawBounds(const Bounds2D& InBounds, const Vector4F& InColor,
+                        float InThickness = 1.f, ERenderLayer InLayer = ERenderLayer::Debug);
 
         // =============================================================================
         // Consumption — the renderer's side
@@ -94,15 +124,19 @@ namespace Opaax
         /*** Everything queued since the last Clear(), in submission order. */
         const TDynArray<DebugLine>& GetLines() const noexcept { return m_Lines; }
 
-        /*** Drop the queue. Called once per frame by the owner, drawn or not. */
+        /*** Boxes queued since the last Clear(). Drained beside the lines, one quad each. */
+        const TDynArray<DebugBox>& GetBoxes() const noexcept { return m_Boxes; }
+
+        /*** Drop BOTH queues. Called once per frame by the owner, drawn or not. */
         void Clear() noexcept;
 
-        bool IsEmpty() const noexcept { return m_Lines.empty(); }
+        bool IsEmpty() const noexcept { return m_Lines.empty() && m_Boxes.empty(); }
 
         // =============================================================================
         // Members
         // =============================================================================
     private:
         TDynArray<DebugLine> m_Lines;
+        TDynArray<DebugBox>  m_Boxes;
     };
 }

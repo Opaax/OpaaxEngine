@@ -37,6 +37,11 @@ namespace Opaax
         Vector4F Color;        // RGBA tint
         Vector2F TexCoord;     // UV
         float     TexIndex;     // texture slot index (float for shader compatibility)
+
+        // Half-extent of the quad's HOLE, in local 0..1 space. {0,0} = solid, which is what every
+        // ordinary draw passes — so an outline is a VALUE, not a second pipeline (and therefore not
+        // a second flush). See MakeOutlineInnerHalf.
+        Vector2F InnerHalf;
     };
 
     // =============================================================================
@@ -102,6 +107,7 @@ namespace Opaax
                 { EShaderDataType::Float4 },  // Color
                 { EShaderDataType::Float2 },  // TexCoord
                 { EShaderDataType::Float  },  // TexIndex
+                { EShaderDataType::Float2 },  // InnerHalf
             };
         }
 
@@ -354,6 +360,44 @@ namespace Opaax
         return lSlot;
     }
 
+    Vector2F MakeOutlineInnerHalf(const Vector2F& InSize, const float InThickness) noexcept
+    {
+        // Per axis: the border eats InThickness off each edge, so the hole's half-extent in local
+        // 0..1 space is 0.5 - thickness/size.
+        //
+        // CLAMPED TO [0, 0.5] AT BOTH ENDS, and both ends matter. Below 0 is an inside-out hole; a
+        // zero size divides by zero. Above 0.5 is what a NEGATIVE thickness produces, and while the
+        // shader happens to render it the same as 0.5 (a hole larger than the quad is still the
+        // whole quad), leaving it unclamped would make the returned value stop meaning what its
+        // name says. The result stays monotonic: more thickness, smaller hole, more drawn.
+        const auto lInnerHalf = [](const float InExtent, const float InBorder) noexcept
+        {
+            if (InExtent <= 0.f) { return 0.f; }
+
+            const float lHalf = 0.5f - InBorder / InExtent;
+
+            return lHalf < 0.f ? 0.f : (lHalf > 0.5f ? 0.5f : lHalf);
+        };
+
+        return { lInnerHalf(InSize.x, InThickness), lInnerHalf(InSize.y, InThickness) };
+    }
+
+    void Renderer2D::DrawQuadOutline(const Vector2F& InPosition,
+                                     const Vector2F& InSize,
+                                     const Vector4F& InColor,
+                                     const float     InThickness,
+                                     const float     InRotationRad,
+                                     const ERenderLayer InLayer,
+                                     const Int16     InOrderInLayer)
+    {
+        // UNTEXTURED, and that is load-bearing rather than a simplification: the shader reads
+        // v_TexCoord as the quad's LOCAL position to find the border, which only holds while the UVs
+        // span the full 0..1. A textured outline sampling an atlas sub-rect would carve the hole in
+        // the wrong place, so there is deliberately no overload that takes one.
+        SubmitQuad(InPosition, InSize, InColor, InRotationRad, InLayer, InOrderInLayer,
+                   0.f, { 0.f, 0.f }, { 1.f, 1.f }, MakeOutlineInnerHalf(InSize, InThickness));
+    }
+
     void Renderer2D::SubmitQuad(const Vector2F& InPosition,
                                 const Vector2F& InSize,
                                 const Vector4F& InColor,
@@ -362,7 +406,8 @@ namespace Opaax
                                 Int16           InOrderInLayer,
                                 float           InTexIndex,
                                 const Vector2F& InUVMin,
-                                const Vector2F& InUVMax)
+                                const Vector2F& InUVMax,
+                                const Vector2F& InInnerHalf)
     {
         EnsureBatchRoom();   // no-op for DrawSprite, which already made room before claiming its slot
 
@@ -394,6 +439,7 @@ namespace Opaax
         m_Data->VertexBufferPtr->Color    = InColor;
         m_Data->VertexBufferPtr->TexCoord = { InUVMin.x, InUVMin.y };
         m_Data->VertexBufferPtr->TexIndex = lTexIndex;
+        m_Data->VertexBufferPtr->InnerHalf = InInnerHalf;
         ++m_Data->VertexBufferPtr;
 
         // Bottom-right
@@ -401,6 +447,7 @@ namespace Opaax
         m_Data->VertexBufferPtr->Color    = InColor;
         m_Data->VertexBufferPtr->TexCoord = { InUVMax.x, InUVMin.y };
         m_Data->VertexBufferPtr->TexIndex = lTexIndex;
+        m_Data->VertexBufferPtr->InnerHalf = InInnerHalf;
         ++m_Data->VertexBufferPtr;
 
         // Top-right
@@ -408,6 +455,7 @@ namespace Opaax
         m_Data->VertexBufferPtr->Color    = InColor;
         m_Data->VertexBufferPtr->TexCoord = { InUVMax.x, InUVMax.y };
         m_Data->VertexBufferPtr->TexIndex = lTexIndex;
+        m_Data->VertexBufferPtr->InnerHalf = InInnerHalf;
         ++m_Data->VertexBufferPtr;
 
         // Top-left
@@ -415,6 +463,7 @@ namespace Opaax
         m_Data->VertexBufferPtr->Color    = InColor;
         m_Data->VertexBufferPtr->TexCoord = { InUVMin.x, InUVMax.y };
         m_Data->VertexBufferPtr->TexIndex = lTexIndex;
+        m_Data->VertexBufferPtr->InnerHalf = InInnerHalf;
         ++m_Data->VertexBufferPtr;
 
         // The slot rides in the key so equal-order quads group by texture, which is what keeps a

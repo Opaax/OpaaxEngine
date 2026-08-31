@@ -212,6 +212,13 @@ namespace Opaax
             lRenderer.DrawQuad(lQuad.Center, lQuad.Size, lLine.Color, lQuad.RotationRad, lLine.Layer);
         }
 
+        // Boxes are ONE hollow quad each, not four thin ones — same band rule as the lines.
+        for (const DebugBox& lBox : m_DebugDraw.GetBoxes())
+        {
+            lRenderer.DrawQuadOutline(lBox.Center, lBox.Size, lBox.Color, lBox.Thickness,
+                                      0.f, lBox.Layer);
+        }
+
         m_RenderSystem->EndPass();
         m_RenderSystem->EndFrame();
     }

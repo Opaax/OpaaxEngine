@@ -7,6 +7,7 @@
 #include <doctest.h>
 
 #include "Renderer/DebugDraw.h"
+#include "Renderer/Renderer2D.h"   // MakeOutlineInnerHalf — the border maths, GPU-free
 
 #include <cmath>
 
@@ -58,41 +59,35 @@ TEST_CASE("DebugDraw: submission order is preserved (the renderer draws them in 
     CHECK(lDebug.GetLines()[1].End.x == doctest::Approx(2.f));
 }
 
-TEST_CASE("DebugDraw: DrawBox emits exactly 4 segments forming a CLOSED rectangle")
+TEST_CASE("DebugDraw: DrawBox covers the rectangle it was given, corner to corner")
 {
+    // This used to assert FOUR segments forming a closed loop. A box is one hollow quad now, so the
+    // loop is gone — but the thing that loop actually proved, that the outline lands on the right
+    // rectangle, still has to hold.
     DebugDraw lDebug;
     lDebug.DrawBox({ 10.f, 20.f }, { 4.f, 6.f }, { 1.f, 1.f, 1.f, 1.f }, 1.f);
 
-    REQUIRE(lDebug.GetLines().size() == 4u);
+    REQUIRE(lDebug.GetBoxes().size() == 1u);
 
-    // Centre (10,20), half-extent (2,3) -> corners x in [8,12], y in [17,23].
-    for (const DebugLine& lLine : lDebug.GetLines())
-    {
-        CHECK(std::fabs(std::fabs(lLine.Start.x - 10.f) - 2.f) < kEps);
-        CHECK(std::fabs(std::fabs(lLine.Start.y - 20.f) - 3.f) < kEps);
-    }
-
-    // Closed loop: every segment starts where the previous one ended, and the last closes onto
-    // the first. This is what makes the outline a rectangle rather than four stray sticks.
-    const TDynArray<DebugLine>& lLines = lDebug.GetLines();
-    for (size_t i = 0; i < lLines.size(); ++i)
-    {
-        const DebugLine& lNext = lLines[(i + 1) % lLines.size()];
-        CHECK(lLines[i].End.x == doctest::Approx(lNext.Start.x));
-        CHECK(lLines[i].End.y == doctest::Approx(lNext.Start.y));
-    }
+    // Centre (10,20), full size (4,6) -> corners x in [8,12], y in [17,23].
+    const DebugBox& lBox = lDebug.GetBoxes()[0];
+    CHECK(std::fabs((lBox.Center.x - lBox.Size.x * 0.5f) - 8.f)  < kEps);
+    CHECK(std::fabs((lBox.Center.x + lBox.Size.x * 0.5f) - 12.f) < kEps);
+    CHECK(std::fabs((lBox.Center.y - lBox.Size.y * 0.5f) - 17.f) < kEps);
+    CHECK(std::fabs((lBox.Center.y + lBox.Size.y * 0.5f) - 23.f) < kEps);
 }
 
 TEST_CASE("DebugDraw: Clear drops the queue (per-frame contract — nothing survives a frame)")
 {
     DebugDraw lDebug;
     lDebug.DrawBox({ 0.f, 0.f }, { 1.f, 1.f }, { 1.f, 1.f, 1.f, 1.f });
-    REQUIRE(lDebug.GetLines().size() == 4u);
+    REQUIRE(lDebug.GetBoxes().size() == 1u);
 
     lDebug.Clear();
 
     CHECK(lDebug.IsEmpty());
     CHECK(lDebug.GetLines().empty());
+    CHECK(lDebug.GetBoxes().empty());
 
     // Reusable after a drain — the renderer clears every frame and producers refill it.
     lDebug.DrawLine({ 0.f, 0.f }, { 1.f, 1.f }, { 1.f, 1.f, 1.f, 1.f });
@@ -183,17 +178,103 @@ TEST_CASE("DebugDraw: a segment can name a band BELOW world geometry")
     CHECK(static_cast<int>(ERenderLayer::Background) < static_cast<int>(ERenderLayer::Default));
 }
 
-TEST_CASE("DebugDraw: DrawBox puts ALL FOUR of its segments in the named band")
+TEST_CASE("DebugDraw: a box carries the band it was given")
 {
-    // The box forwards to DrawLine four times; forgetting the layer on one of them would leave a
-    // single edge floating above the others, which reads as a rendering glitch rather than a bug.
+    // ③b's grid needs Background; everything else defaults to Debug and draws above the world. A
+    // box that ignored its band would sit on the wrong side of the sprites.
     DebugDraw lDraw;
     lDraw.DrawBox({ 0.f, 0.f }, { 10.f, 10.f }, { 1.f, 1.f, 1.f, 1.f }, 1.f, ERenderLayer::Background);
 
-    REQUIRE(lDraw.GetLines().size() == 4u);
+    REQUIRE(lDraw.GetBoxes().size() == 1u);
+    CHECK(lDraw.GetBoxes()[0].Layer == ERenderLayer::Background);
 
-    for (const DebugLine& lLine : lDraw.GetLines())
-    {
-        CHECK(lLine.Layer == ERenderLayer::Background);
-    }
+    lDraw.DrawBounds(Bounds2D::FromCenterSize({ 0.f, 0.f }, { 2.f, 2.f }), { 1.f, 1.f, 1.f, 1.f });
+    CHECK(lDraw.GetBoxes()[1].Layer == ERenderLayer::Debug);   // the default
+}
+
+// =============================================================================
+// Boxes — one hollow quad, not four lines
+// =============================================================================
+
+TEST_CASE("DebugDraw: DrawBox queues ONE box and no lines")
+{
+    // The whole point of the change: a selection of N entities costs N quads, not 4N.
+    DebugDraw lDebug;
+    lDebug.DrawBox({ 0.f, 0.f }, { 10.f, 20.f }, { 1.f, 0.f, 0.f, 1.f }, 2.f);
+
+    CHECK(lDebug.GetLines().empty());
+    REQUIRE(lDebug.GetBoxes().size() == 1u);
+
+    const DebugBox& lBox = lDebug.GetBoxes()[0];
+    CHECK(lBox.Center.x  == doctest::Approx(0.f));
+    CHECK(lBox.Size.x    == doctest::Approx(10.f));
+    CHECK(lBox.Size.y    == doctest::Approx(20.f));
+    CHECK(lBox.Thickness == doctest::Approx(2.f));
+    CHECK(lBox.Layer     == ERenderLayer::Debug);
+}
+
+TEST_CASE("DebugDraw: DrawBounds is DrawBox taking the shape callers already hold")
+{
+    DebugDraw lDebug;
+    lDebug.DrawBounds(Bounds2D::FromCenterSize({ 5.f, 6.f }, { 8.f, 4.f }), { 0.f, 1.f, 0.f, 1.f }, 3.f);
+
+    REQUIRE(lDebug.GetBoxes().size() == 1u);
+
+    // Bounds2D is centre + HALF extent; the box wants the FULL size. Getting that conversion
+    // backwards would draw a box at half scale, which reads as "the outline is slightly off".
+    const DebugBox& lBox = lDebug.GetBoxes()[0];
+    CHECK(lBox.Center.x == doctest::Approx(5.f));
+    CHECK(lBox.Center.y == doctest::Approx(6.f));
+    CHECK(lBox.Size.x   == doctest::Approx(8.f));
+    CHECK(lBox.Size.y   == doctest::Approx(4.f));
+}
+
+TEST_CASE("DebugDraw: Clear empties BOTH queues, and IsEmpty accounts for boxes")
+{
+    DebugDraw lDebug;
+    lDebug.DrawBox({ 0.f, 0.f }, { 1.f, 1.f }, { 1.f, 1.f, 1.f, 1.f });
+
+    CHECK_FALSE(lDebug.IsEmpty());   // a box alone is not an empty queue
+
+    lDebug.DrawLine({ 0.f, 0.f }, { 1.f, 1.f }, { 1.f, 1.f, 1.f, 1.f });
+    lDebug.Clear();
+
+    CHECK(lDebug.IsEmpty());
+    CHECK(lDebug.GetLines().empty());
+    CHECK(lDebug.GetBoxes().empty());
+}
+
+// =============================================================================
+// MakeOutlineInnerHalf — the border maths, GPU-free
+// =============================================================================
+
+TEST_CASE("MakeOutlineInnerHalf: a border eats its thickness off each edge")
+{
+    // 100 wide, 10 thick: the hole spans 80 of the 100, so its half-extent is 0.4 in local space.
+    const Vector2F lInner = MakeOutlineInnerHalf({ 100.f, 100.f }, 10.f);
+
+    CHECK(lInner.x == doctest::Approx(0.4f));
+    CHECK(lInner.y == doctest::Approx(0.4f));
+}
+
+TEST_CASE("MakeOutlineInnerHalf: each axis is independent, so a non-square box is not skewed")
+{
+    // Same thickness on a 100x20 box eats a tenth of the width and a half of the height.
+    const Vector2F lInner = MakeOutlineInnerHalf({ 100.f, 20.f }, 10.f);
+
+    CHECK(lInner.x == doctest::Approx(0.4f));
+    CHECK(lInner.y == doctest::Approx(0.f));   // 0.5 - 10/20 = 0 — the border meets in the middle
+}
+
+TEST_CASE("MakeOutlineInnerHalf: the result is CLAMPED to [0, 0.5] at both ends")
+{
+    // Below 0 is an inside-out hole — the shader's abs() test would pass everywhere and discard the
+    // whole quad, so a too-thick border would VANISH instead of drawing solid.
+    CHECK(MakeOutlineInnerHalf({ 10.f, 10.f }, 50.f).x == doctest::Approx(0.f));   // thicker than the box
+    CHECK(MakeOutlineInnerHalf({ 0.f, 0.f }, 2.f).x    == doctest::Approx(0.f));   // no size at all
+
+    // The OTHER end, which the first version of this got wrong: a zero-width border draws nothing,
+    // and a negative one cannot draw less than nothing — both cap at a hole the size of the quad.
+    CHECK(MakeOutlineInnerHalf({ 10.f, 10.f }, 0.f).x  == doctest::Approx(0.5f));
+    CHECK(MakeOutlineInnerHalf({ 10.f, 10.f }, -1.f).x == doctest::Approx(0.5f));
 }

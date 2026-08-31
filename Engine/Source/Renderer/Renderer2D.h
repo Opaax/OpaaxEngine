@@ -21,6 +21,16 @@ namespace Opaax
     inline constexpr LogCategory LogRenderer2D{"Renderer2D"};
 
     /**
+     * Half-extent of an outlined quad's HOLE, in local 0..1 space — what the shader compares the
+     * fragment's local position against. `{0,0}` is a SOLID quad.
+     *
+     * Free and pure so the maths is testable with no GL context. Every degenerate input (zero size,
+     * negative thickness, a border thick enough to swallow the box) answers solid rather than a
+     * divide-by-zero or an inside-out hole.
+     */
+    OPAAX_API Vector2F MakeOutlineInnerHalf(const Vector2F& InSize, float InThickness) noexcept;
+
+    /**
      * What one FRAME of batching cost. Per frame, not per pass — ⑥'s multi-view will run several
      * passes into one frame and the interesting numbers are the totals.
      *
@@ -151,6 +161,31 @@ namespace Opaax
                         const Vector2F& InUVMin        = { 0.f, 0.f },
                         const Vector2F& InUVMax        = { 1.f, 1.f });
 
+        /**
+         * Draw a HOLLOW quad — a border of InThickness with nothing inside. ONE quad, not four
+         * lines, so an editor overlay costs a quarter of what DrawBox used to.
+         *
+         * UNTEXTURED by design: the shader reads the fragment's texcoord as its LOCAL position to
+         * find the border, which only holds while the UVs span the full 0..1. A textured outline
+         * sampling an atlas sub-rect would carve the hole in the wrong place, so there is
+         * deliberately no overload taking a texture.
+         *
+         * @param InPosition centre of the quad (Y-up world space)
+         * @param InSize full width and height, border included
+         * @param InColor RGBA normalised [0,1]
+         * @param InThickness border width in world units. Thick enough to close the hole draws solid.
+         * @param InRotationRad rotation around the centre, radians, CCW
+         * @param InLayer coarse draw-order band
+         * @param InOrderInLayer fine tie-break within the band, lower = behind
+         */
+        void DrawQuadOutline(const Vector2F& InPosition,
+                             const Vector2F& InSize,
+                             const Vector4F& InColor,
+                             float           InThickness,
+                             float           InRotationRad  = 0.f,
+                             ERenderLayer    InLayer        = ERenderLayer::Debug,
+                             Int16           InOrderInLayer = 0);
+
         // =============================================================================
         // Internal
         // =============================================================================
@@ -176,7 +211,8 @@ namespace Opaax
                          Int16           InOrderInLayer,
                          float           InTexIndex,
                          const Vector2F& InUVMin,
-                         const Vector2F& InUVMax);
+                         const Vector2F& InUVMax,
+                         const Vector2F& InInnerHalf = { 0.f, 0.f });
 
         /**
          * The slot InTexture is bound to for this batch: an existing one if it is already bound,

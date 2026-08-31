@@ -500,8 +500,9 @@ namespace Opaax::Editor
                 continue;
             }
 
-            m_Context.Engine.GetDebugDraw().DrawBox(lBounds.Center, lBounds.Size() + m_OutlinePadding,
-                                                    m_OutlineColor, m_OutlineThickness);
+            m_Context.Engine.GetDebugDraw().DrawBounds(
+                Bounds2D::FromCenterSize(lBounds.Center, lBounds.Size() + m_OutlinePadding),
+                m_OutlineColor, m_OutlineThickness);
             ++lDrawn;
         }
 
@@ -554,7 +555,7 @@ namespace Opaax::Editor
                 return;   // no transform at all — not reachable through CreateEntity
             }
 
-            m_Context.Engine.GetDebugDraw().DrawBox(lIcon.Center, lIcon.Size(), m_IconColor, m_IconThickness);
+            m_Context.Engine.GetDebugDraw().DrawBounds(lIcon, m_IconColor, m_IconThickness);
             ++lDrawn;
         });
 

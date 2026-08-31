@@ -32,28 +32,28 @@ namespace Opaax
     }
 
     // =========================================================================
-    // DrawBox — four segments, corner to corner, clockwise from the bottom-left. The corners are
-    // shared between adjacent segments, so the joints overlap by half a line width; at debug-overlay
-    // thicknesses that reads as a clean corner and costs nothing (no mitring maths).
+    // DrawBox — ONE entry, rendered as a single hollow quad.
+    //
+    // It used to enqueue four segments, corner to corner, whose joints overlapped by half a line
+    // width. That was the right call while a quad could only be solid; now that a quad carries the
+    // half-extent of its own hole, the border is a property of one quad — a quarter of the geometry
+    // and exact corners, with no mitring maths either way.
     // =========================================================================
     void DebugDraw::DrawBox(const Vector2F& InCenter, const Vector2F& InSize, const Vector4F& InColor,
                             float InThickness, ERenderLayer InLayer)
     {
-        const Vector2F lHalf = InSize * 0.5f;
+        m_Boxes.emplace_back(InCenter, InSize, InColor, InThickness, InLayer);
+    }
 
-        const Vector2F lBottomLeft  = { InCenter.x - lHalf.x, InCenter.y - lHalf.y };
-        const Vector2F lBottomRight = { InCenter.x + lHalf.x, InCenter.y - lHalf.y };
-        const Vector2F lTopRight    = { InCenter.x + lHalf.x, InCenter.y + lHalf.y };
-        const Vector2F lTopLeft     = { InCenter.x - lHalf.x, InCenter.y + lHalf.y };
-
-        DrawLine(lBottomLeft,  lBottomRight, InColor, InThickness, InLayer);
-        DrawLine(lBottomRight, lTopRight,    InColor, InThickness, InLayer);
-        DrawLine(lTopRight,    lTopLeft,     InColor, InThickness, InLayer);
-        DrawLine(lTopLeft,     lBottomLeft,  InColor, InThickness, InLayer);
+    void DebugDraw::DrawBounds(const Bounds2D& InBounds, const Vector4F& InColor,
+                               float InThickness, ERenderLayer InLayer)
+    {
+        DrawBox(InBounds.Center, InBounds.Size(), InColor, InThickness, InLayer);
     }
 
     void DebugDraw::Clear() noexcept
     {
         m_Lines.clear();
+        m_Boxes.clear();
     }
 }
