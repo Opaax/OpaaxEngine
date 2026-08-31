@@ -604,6 +604,27 @@ module's first real content and they stay.
   minutes vs a whole slice of unverified machinery is not a trade-off, it is an answer. Escalate to
   "record and defer" only when the fix is expensive, risky, or blocked — and say which ([[L18]]).
 
+**FOURTH STRIKE, 2026-08-30 — stop treating this as a hazard to remember and make it MECHANICAL**
+(the **I6** move, one file over). Having just landed the `IEditorGui` seam, I noticed `EditorService.cpp`
+still held ~150 lines of viewport-toolbar widget code — the only `ImGui::` calls left in the composition
+root — and closed my report with *"if that bothers you, those closures moving to their own file is a
+separate, small job."* They said **"move those toolbar closures to their own file"** and it took fifteen
+minutes. The family is now [[L18]] (a documented caveat is a bug with a comment on it) → [[L19]] (a
+comment explaining why you are bypassing the right abstraction IS the work item) → [[L23]] (a labelled
+gap is still a deferral) → this, plus an un-promoted twin in `.claude/task/lessons.md` from 2026-08-09
+(*"I wrote 'named here rather than fixed' TWICE"*). Five occurrences of one mistake means the rule is
+not being applied, so it becomes a **check, not a virtue**:
+- **The tell is textual and I can grep my own draft for it.** Every occurrence contains a sentence whose
+  job is to explain why I am *not* doing something: "named, not built", "a separate, small job", "known
+  gap, stated not hidden", "if that bothers you". **Before sending a report, find that sentence. If the
+  work it excuses is smaller than the paragraph excusing it, delete the paragraph and do the work.**
+- **My own price estimate is the verdict, not an input to a conversation.** In all five cases I had
+  already computed "small" *before* offering it. Offering a fix I have priced as cheap is not deference,
+  it is deferral with better manners — the user has to spend a turn saying yes, and the turn costs more
+  than the fix.
+- **The honest exception stays narrow and must be NAMED:** expensive, risky, or blocked ([[L18]]). "Out
+  of this slice's scope" and "it is their call stylistically" are neither.
+
 ## L24 — Confirm the binary you smoke-tested is the one you just built (2026-07-29)
 
 **What happened (M4 S3).** After building `test` + `release` + `release-editor`, I smoke-tested
@@ -1620,3 +1641,218 @@ choke point's argument into a `TransformDelta` carrying matrix + frame + origin 
 - **A parameter list that grows twice is telling you the arguments are one value.** Matrix, then
   origin, then frame — the third addition is where it became a struct, and it should have been the
   second.
+
+## L58 — "Extensible like other engines" names a CALL SITE, not a coverage policy (2026-08-31)
+
+**What happened (④ S1).** Asked for stats *"extensible… like all other engine"*, and later handed the
+shape by name — *"STATS_SCOPE(ID)"* — I built the macro **and then, reaching for coverage, also wired
+`ISubsystemManager` to wrap every subsystem in all three tick loops.** That put a pure-virtual
+`GetStatName()` into `ISubsystem` — in **Core** — and emitted a row per subsystem per phase, so
+`InputManager` appeared under `Render` at 0.00 ms because its `Render` is an empty override. Their
+verdict was both halves at once: *"it was so much 'integrated' in core"* and *"too much noise"*.
+
+**They were ONE mistake.** The automation is what forced Core to know about stats, and the automation
+is what produced rows for work that does not exist. Unreal has `SCOPE_CYCLE_COUNTER` and deliberately
+*not* the blanket wrapping — the model I was copying already contained the answer.
+
+**Rules for next time:**
+- **When copying a shape from another engine, copy where it is INVOKED, not an automation those
+  engines chose not to have.** "Like Unreal" is a statement about the call site.
+- **Blanket instrumentation is a tax on the reader.** A row for work that does nothing has to be
+  learned-and-ignored, which inverts the tool's purpose. If most of what a mechanism covers is empty,
+  the mechanism is wrong — and do NOT reach for a "hide near-zero rows" filter, which would also hide
+  a real 0.00 (a system that stopped working looks identical to one that never runs).
+- **Ask what a feature adds to a CONTRACT.** `ISubsystem` gained a pure virtual so a *display* could
+  have a label. A base class in Core is the most expensive place in this tree to put anything; the
+  test is *"would this interface be poorer without it?"*, and the answer was no.
+- **The fix for over-integration is DELETION, and the carrier usually already exists** — here
+  `IEngine::GetProfiler()` (the **F3** resolve-and-cache every subsystem already does) and
+  `WorldContext::Profiler`, which **WS3** exists for. I invented plumbing beside plumbing built for
+  the case.
+
+## L59 — A CORRECT per-frame value drawn raw is unreadable, and that is a defect (2026-08-31)
+
+**What happened (④ S1).** The first Stats panel was accurate and their verdict was *"visually its
+very glitchy"*. Three causes, none of them a measurement bug: ~24 rows of `%.2f` changing 60×/s; the
+ROW SET changing (a frame that takes no fixed step has no `FixedUpdate` children, so everything below
+jumped); and a graph ceiling rescaling continuously.
+
+**Rules for next time:**
+- **A readout of a per-frame value needs a refresh throttle and a smoothed headline, always.** 0.25 s
+  and a rolling average. Throttle the TEXT, never the SAMPLING — a spike between refreshes must still
+  reach the graph.
+- **Ask whether the ROW SET is stable, not just the numbers.** Anything conditional per frame makes a
+  list jump. Hold the layout and show 0.00 rather than collapsing.
+- **Match a held list as an ordered SUBSEQUENCE, not by name.** `Renderer` sits under both `Update`
+  and `Render` at the same depth; a name lookup posts the render cost onto the update row — a wrong
+  number that looks entirely plausible.
+- **Log a COUNT, not just "it worked".** A smoke run DID catch one of these (115 scopes in the first
+  frame, from `MAX_FRAME_DELTA`'s 15 fixed steps) purely because the one-shot line printed a number.
+  The other three needed their eyes. A number is the cheapest thing that can look wrong.
+
+## L60 — Run the layer rule on the DEFINITION; and price the disabled path before adding a switch to avoid it (2026-08-31)
+
+**What happened (④).** Three corrections on one axis, each one me not going far enough: Core coupling,
+then `Engine` still owning `FrameStats`. Their last message was not a choice but an instruction to
+evaluate — *"Can it be app service? what is the cost of StatsServices::Null on ship game?"* — and both
+answers were already derivable from the contract.
+- **I4's own test answered the placement**: *"passive facility you submit-to/query ⇒ app service."* A
+  profiler is submitted to. What made me file it under "engine" was that it is *driven* once per
+  frame — but **IN2 had already ruled on exactly that shape**: input is driven once per frame too and
+  its boundary lives in the HOST loop. I cited IN2 while writing the publish INTO `Engine::Loop`,
+  which is [[L28]] verbatim, with the same symptom (the frame the panel read was missing its Present).
+- **Pricing the null path retired a feature I had just built.** `OPAAX_STATS` existed to save two
+  clock reads per scope. Costed honestly: a null profiler POINTER is one predicted branch, under a
+  microsecond a frame — and the flag *forbade* the shipped-game profiling they wanted, because you
+  cannot runtime-enable what was compiled out.
+
+**Rules for next time:**
+- **"It is driven per frame" is not "it ticks".** Ask who calls it: if the HOST does, it is a
+  submission and the thing is passive.
+- **When a rule already adjudicated a near-identical case, apply it instead of re-deriving.** Search
+  the contract for the SHAPE ("who owns the frame boundary"), not for the noun ("stats").
+- **Price the disabled path before adding a switch to avoid it, and ask what the switch FORBIDS.** No
+  amount of saved nanoseconds pays for a capability the user asked for.
+- **`Null()` is not just null-safety, it is a feature switch.** **I3** already requires every service
+  to have one, so "do not provide it" is a complete, zero-state off switch — no `bEnabled` member, no
+  second disabled path to keep correct. Reach for that before inventing configuration.
+- **Verify a ship-only path IN A SHIP BUILD.** The release exe had never been run in this project's
+  history; running it proved both branches AND that a Play world contributes a scope the editor never
+  shows (7 vs 6).
+
+## L61 — The reported symptom is the mildest one; fix the invariant in the type that OWNS it (2026-08-31)
+
+**What happened.** Reported as *"when the scale is neg the outline take all"* — a cosmetic complaint
+about a selection outline drawing solid. The cause was that a negative `Scale` made `Size * Scale`
+negative and `Bounds2D::HalfExtent` went negative with it. `Contains` is
+`fabs(point - centre) <= HalfExtent`, which against a negative bound is **false for every point**: a
+flipped entity had silently stopped being clickable, marquee-selectable and focusable. The outline
+was the only part that was *visible*.
+
+**Rules for next time:**
+- **When a visual bug traces to a shared value, enumerate every OTHER reader of it before fixing.**
+  The reported symptom is wherever the user happened to be looking, not the blast radius. One grep of
+  the broken field's consumers turns a cosmetic fix into the real one.
+- **Fix it in the type that owns the invariant, not at the call site that noticed.** A half-extent is
+  a DISTANCE and is never signed, so `Bounds2D`'s named constructors take the magnitude — which
+  repaired picking, the marquee, focus, the outline and the icons in one edit and cannot regress.
+- **The same raw value can be legitimately signed for one consumer and not another.** The renderer
+  WANTS the negative size (mirrored corners are how a flipped sprite mirrors its texture). "Just
+  abs() it at the source" would have broken flipping; the distinction is per-consumer.
+
+## L62 — Designing AROUND a constraint is the tell that the constraint was never checked (2026-08-08)
+
+Two corrections in one session with one root, kept together because the pair is the lesson.
+
+**(a) A warning in the UI is the shape of a design bug.** I grouped the Hierarchy by map and greyed
+every map but the edited one, with a comment insisting the greying *"is not decoration"* — a Save was
+filtered to the focused map, so edits elsewhere would be lost. The user: *"all maps has to be saved if
+we say 'save level'."* The greying was a warning about a behaviour that should not have existed;
+fixing the behaviour deleted the UI.
+
+**(b) "The clean version is hard to implement" is usually a MISSING OBJECT talking.** I made
+`EditorMapDocument::Open` mount the level's persistent map too, deduped by `MapId`, and justified
+deviating from my own plan by an implementation difficulty about comparing path shapes. The user:
+*"That why we neeed a 'Level' class."* Mount policy had nowhere sane to live because the object that
+owns it did not exist. The path comparison was never the problem.
+
+**Rules for next time:**
+- **When about to warn the user about a consequence of my own design, ask whether the consequence is
+  acceptable at all.** A guard rail is right for a hazard that must exist; for one I introduced it is
+  a bug with a label on it. **"This is not decoration, it is important" in a comment about UI is a
+  smell** — if a visual has to argue for itself, the thing it describes is probably wrong.
+- **When a fix needs a special rule to work, ask which object should have owned the rule** before
+  arguing about how to implement it. A dedup, a "does X belong to Y" test, or a policy parameter
+  threaded into a class that does not care about it are all the same smell.
+- **"The clean way is hard HERE" is evidence about HERE.** It says the code is in the wrong place far
+  more often than it says the design is wrong.
+- **Grep the contract for a TRIGGER before designing around a limitation.** **WM4** had named this
+  exact moment in advance (*"the first thing that needs to load or unload a map while the world is
+  running"*). Deferred work carries its own wake-up condition, and the condition is checkable.
+
+## L63 — An authoring verb must be REACHABLE and COHERENT, and I verified neither (2026-08-09/13)
+
+**(a) Nothing could CREATE the thing being read.** The tag slice shipped a component, a drawer for it
+and a match log line; both hosts booted clean, 330 tests green. I was about to hand off *"add a tag in
+the Inspector"* as the gate — and the drawer only renders for an entity that already HAS the
+component. There was **no Add Component UI anywhere**. The gate was unreachable, not merely
+unverified. `ComponentRegistry`'s own header had promised that menu for two milestones.
+
+**(b) A command half-committed to disk.** `New Map` wrote the map file and left the membership in
+memory. The user closed without Save Level and the level forgot the map.
+
+**Rules for next time:**
+- **Trace the authoring chain to its FIRST link: how does instance number one come into existence?**
+  [[L23]] asks "has this run in the real app?"; the sharper version is *can a user produce one at all
+  with what ships in this slice?* Registering a drawer makes a component **inspectable**, not
+  **existent**.
+- **Ask of any authoring verb: if the process died right now, is what is on disk coherent?** A verb
+  that writes half its effect is a bug, not a trade-off.
+- **A stale "later" in a header is a missing feature with a date on it.** A doc comment naming a
+  consumer that does not exist is [[L19]]'s FIXME wearing a nicer hat — grep for the consumer.
+
+## L64 — In an immediate-mode UI, a click callback runs INSIDE the loop that drew the widget (2026-08-09)
+
+**What happened.** I put per-map verbs on the Hierarchy's map headers and called them straight from
+the `ImGui::MenuItem` branch. `Remove from Level` destroyed that map's entities — from inside the loop
+about to draw those very entities' rows, using handles snapshotted at the top of `Draw`. entt asserted
+on the first `Get<EntityMeta>`. The user hit it on their first real use; **my smoke runs could not,
+because a smoke run never clicks.**
+
+**Why I missed it:** I checked the ORDER of the ImGui calls and never asked what the *command* did to
+the data the loop was still holding. The tell was already in my own code — the rows are `EntityID`
+handles taken before the click, which is the definition of an iterator a mutation invalidates.
+
+**Rules for next time:**
+- **Before wiring a command to a widget, ask what it mutates and whether the enclosing draw is still
+  walking it.** If yes: record the action, run it after the pass. General rule, not a workaround.
+- **Destructive verbs deserve the first thought, not the last.** Save and SetPersistent were harmless
+  in the same position; Remove was not, and it was in the same four-line block.
+- **Name what the automated run did NOT reach.** [[L12]] says a human gate needs something observable;
+  the second half is that reporting "editor RUN clean" for a feature whose only path is a right-click
+  implies a coverage that does not exist.
+
+## L65 — [[L15]] applies to the NO-OP branch, not only the success branch (2026-08-08)
+
+**What happened.** *"Save level do not work"*. The log had no trace of it at all, so I could not tell
+"never clicked" from "clicked and silently did nothing". After adding an invocation log and a
+`0 map(s) written, 2 unchanged, manifest unchanged` summary, the next session showed it working — and
+showed the silent case explicitly. The original symptom was most likely a Save that correctly wrote
+nothing and said nothing about it.
+
+**Rules:** *"It happened and there was nothing to do"* is a different statement from *"it happened and
+here is what changed"*, and a user cannot tell either from silence. **Any command that can
+legitimately do nothing must SAY it did nothing, with the count that proves it.** And log the
+invocation at the single DISPATCH point rather than inside each command — one line, impossible for a
+later command to forget, and it turns "did the click land?" from an inference into a fact.
+
+## L66 — "Continue" resolves against the ▶ NEXT pointer, not against keyword match (2026-08-09)
+
+Asked to *"continue our tasks of cleaning the code/archi/project"*, I went to `CLAUDE.local.md`'s
+**STILL OPEN** list, spent a research pass on it and put two scope questions to the user. Their reply:
+**"wtf we are still on world system cleaning the top bar command..."** The active thread was
+`todo.md`'s ▶ NEXT, which I had read at session start and walked past.
+
+**Why:** I matched on the WORD. Their message said "cleaning", the STILL OPEN list is labelled
+cleanup, and the last five commits were all `[Update] ... clean ...` — the wrong target had more
+surface evidence than the right one.
+
+**Rule:** both state files open with an explicit ▶ NEXT precisely so a session need not guess. If the
+user's words seem to point elsewhere, the question is ONE sentence asked BEFORE a research pass, not
+after one — and asking a scope question about the wrong backlog is worse than asking nothing, because
+it looks like I had already chosen.
+
+## L67 — Before calling something fragile, grep the contract for the invariant that already forbids it (2026-08-05)
+
+I reported the editor's viewport-FBO release as safe *"by luck"* and called `RendererManager` having
+no `TearDown()` an accident a future change would plausibly undo — *"nothing in `RendererManager`
+warns against it"*. The user: **"We did split to let the device live until all other stuff that has
+GPU resource to releasing them."** The TearDown/Shutdown split exists *for* that.
+
+**Why I got it wrong:** I verified the ordering empirically and then reasoned about the FUTURE from
+one file. The **LC** table I had already read lists TearDown's guarantee as "window, **GPU**, bus, all
+siblings still alive" — that guarantee IS the prohibition.
+
+**Rules:** *"Nothing warns against it"* is a claim about the whole contract, not about the file in
+front of me — do not make it from one file. And **the absence of an override is as likely to be a
+DECISION as an oversight**; ask which before writing it up as the latter.
