@@ -1940,3 +1940,41 @@ count of 7213 vs 7214 that I reported as unattributable. It was two different bu
 - **When two runs of "the same" suite disagree by a small number, suspect two binaries before
   suspecting a regression.** Reporting the discrepancy as unexplained was better than ignoring it and
   worse than checking which file I had executed.
+
+## L71 — Before declaring a pattern violated, READ THE SIBLING THAT ALREADY IMPLEMENTS IT (2026-09-01)
+
+**What happened (Editor Chrome, the follow-on).** The user pointed at two lines —
+`SetMenu(m_Extensions.Menus())` beside `SetPanels(*m_EditorPanels)` — and said the two should work
+the same way. I diagnosed it as an *ownership* problem and built a whole argument on one premise I
+never checked: that a thing living in `EditorExtensionRegistrar` and drawing itself was the defect.
+I proposed moving ownership to the gui, a `Bind` route, a teardown restructure — reasoning that was
+internally consistent and rested on nothing.
+
+The user's next message was one sentence: *"Editor Menu is the only one to not be a registry. All
+the rest is."* Reading `ViewportToolbarRegistry.h` took under a minute and demolished the premise:
+it stores, **it draws itself**, it includes `<imgui.h>` directly, it has explicit `// Register` and
+`// Consume` sections, and it is the model ③b was built on. "A registry that draws" was the
+established pattern, not the smell. The real defect was one word — `EditorMenu` was the only route
+not *named* as a registry, which made a thing that was already uniform look different.
+
+**Why I got it wrong.** I had read all eight routes in an earlier sweep and formed an impression of
+what they had in common. An impression is not a reading. The specific failure is that I checked the
+*registrar's member list* (which shows names and types) and never opened the one sibling whose body
+would have answered the question. It is [[L21]]'s rule — prove the premise before designing on it —
+in the case where the premise is about *my own codebase* rather than about a compiler or an OS, which
+is exactly where it feels least necessary to check.
+
+**Rules for next time:**
+- **When about to say "X breaks the pattern", open the file that best exemplifies the pattern and
+  read its body.** Not its declaration, not the container that holds it. If X and the exemplar do the
+  same things, the difference is cosmetic and the fix is a rename, not a restructure.
+- **A user pointing at two lines is reporting a symptom, not a diagnosis.** They said "make them work
+  the same"; I heard "ownership is wrong". The cheaper hypothesis — *the names disagree* — was
+  available first and I skipped past it. **Rank hypotheses by cost before by interest.**
+- **Their one-line correction was more precise than my three paragraphs.** When someone who lives in
+  the code says "X is the only one that is not a Y", treat it as a measurement and go verify what Y
+  actually is, rather than as an opening for the design you already had.
+- The recovery was right and is the part to keep: say plainly which claim was false, show the file
+  that disproves it, and let the recommendation shrink. Here it went from ~16 files of restructuring
+  to a rename — and the ownership move survived only because the user then chose it *on its own
+  merits*, not as a fix for a problem that did not exist.

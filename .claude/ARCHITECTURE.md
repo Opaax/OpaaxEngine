@@ -1544,10 +1544,25 @@ consumer and dogfood were one atomic step ([[L16]] predicted this in M2 and it h
 apply to the slice where the route itself goes real, and cannot. It applies again from the next entry.
 
 **MR2b — the menu bar is a TREE the caller builds, and a node is a COMMAND TAG** (landed 2026-08-19,
-replacing `MenuRegistry`). `Menus()` now returns an **`EditorMenu`** (`Editor/Menus/`): root categories
-in `Category()`-call order, each holding one ordered list of `TUniquePtr<IEditorMenuNode>` —
+replacing the ORIGINAL `MenuRegistry`). `Menus()` returns a **`MenuRegistry`** (`Editor/Menus/`): root
+categories in `Category()`-call order, each holding one ordered list of `TUniquePtr<IEditorMenuNode>` —
 `EditorMenuCategory`, `EditorMenuCommandNode`, `EditorMenuSeparatorNode` — so categories, entries and
 separators interleave and nesting goes as deep as it is written.
+- **THE NAME CAME BACK ON 2026-09-01; THE DESIGN DID NOT** — read this before trusting git history.
+  The type was called `MenuRegistry` until M5 S4, was renamed `EditorMenu` here, and is
+  `MenuRegistry` again now. **The 2026-08-19 rename was the only one that changed anything**: flat
+  `{Path, FMenuCommand}` closures → a tree of command TAGS, which is what [[L37]]/[[L38]] retired the
+  closures for and what `ViewportToolbarRegistry.h` still cites. The 2026-09-01 rename changed
+  **nothing but the name**, restoring it because `EditorMenu` was the one member of
+  `EditorExtensionRegistrar` not called a registry — see the bullet below. A `MenuRegistry` in an old
+  commit is the closure version; a `MenuRegistry` today is the tree.
+- **Every route in the registrar is now a `*Registry` or a `*Route`, with the same three parts:
+  register, consume, `Count()`.** That uniformity is the whole point of the second rename — the user's
+  own framing: *"Editor Menu is the only one to not be a registry. All the rest is. We have to make
+  one design."* **`ViewportToolbarRegistry` is the model and settles the shape question**: it stores,
+  it draws *itself*, and it lives in the registrar — so "a thing in the registrar that draws" was
+  never the defect it looked like, and `MenuRegistry::Draw` needs no apology. Registries live with
+  what they register (`Editor/Menus/`, `Editor/Commands/`), not in one folder.
 *This supersedes MR2a's "flat array of `{Path, FMenuCommand}` … nesting computed at draw time, because a
 tree built at registration would be a second structure to keep consistent with the paths it came from."*
 That argument was sound **only while a category had no identity of its own**. A path string can carry a
@@ -1672,15 +1687,11 @@ same way `Init` already picks the GL backend.
 - **`EditorService` owns it as a `TUniquePtr<IEditorGui>` built in the CONSTRUCTOR**, not in
   `InitGUI` — the context holds a reference to it, and a member that is null between construction and
   `Initialize` would put a null check in front of every `IsReady()`.
-- **The gui RECEIVES what it draws; it does not look it up** (2026-09-01). `Draw` reached into
-  `EditorContext` for `Extensions.Menus()` and `Panels` every frame. `IEditorGui` now holds both, as
-  **protected members with non-virtual `SetMenu`/`SetPanels`** — two facets rather than one
-  `Bind(a, b)`, the `SetIcon`/`SetGlyph` and `SetEnabled`/`SetChecked` idiom, and non-virtual
-  because every implementation would store exactly these two pointers and a second one re-deriving
-  that is the drift. Bound once at `PostInitialized`, the first point where both exist (the tree
-  seals at `OnModulesRegistered`, the panels are built one line above). **Unbound is legal** — the
-  pass then emits the dockspace and nothing else. `Draw` KEEPS its `EditorContext&`: the context is
-  the per-frame *subject* (a menu node executes a command through it), not the content.
+- **The gui does not look up what it draws** (2026-09-01). `Draw` reached into `EditorContext` for
+  `Extensions.Menus()` and `Panels` every frame. It was given them by two setters the same day, and
+  **superseded within hours by outright ownership — see MR2e**, once the registrar's own vocabulary
+  was made uniform. `Draw` KEEPS its `EditorContext&` either way: the context is the per-frame
+  *subject* (a menu node executes a command through it), not the content.
 
 **MR2e — The editor draws its own TITLE BAR, and DECORATION is an axis of its own** (landed
 2026-09-01). The OS caption is gone (`Window::SetDecorated(false)`); the editor paints menus on the
@@ -1692,10 +1703,30 @@ implementation names the type, which is **MR2d**'s chrome-vs-contents line appli
   already registers into (D10). The alternative — a `TitleBarRegistry` beside `ViewportTools()` —
   would have been a second way to say the same thing, for nothing.
 - **`BeginMainMenuBar`/`EndMainMenuBar` LEFT the seam rather than being renamed, and the reason is
-  structural.** The approved plan said rename; building it showed that if `EditorMenu::Draw` both
-  *opens and closes* the bar, the window buttons can never share the row. So `EditorMenu::Draw`
+  structural.** The approved plan said rename; building it showed that if `MenuRegistry::Draw` both
+  *opens and closes* the bar, the window buttons can never share the row. So `MenuRegistry::Draw`
   emits **categories** and the host opens the strip that holds them. The seam got smaller, and the
   menu tree genuinely stopped knowing where its bar is.
+- **The gui OWNS what it draws** (2026-09-01, superseding **MR2d**'s "receives it" bullet).
+  `IEditorGui` holds `MenuRegistry` and `EditorPanels` **by value, on the base** — so `SetMenu`,
+  `SetPanels`, `BindGuiContent` and their null checks are all deleted. On the base rather than the
+  implementation because a second backend wants the same tree and the same panels, not its own
+  copies: what is backend-specific is the ~20 virtual chrome calls, not the content they draw.
+  `Menus()` is therefore a **bound route** (the **MR4** `WorldSubsystemRoute` shape), bound in
+  `EditorService`'s **constructor** — so "unbound" is not a reachable state rather than one every
+  caller has to check, which is exactly the failure **MR2a** records.
+- **`IEditorGui::Teardown()` is NON-VIRTUAL, and that is the change worth the most.** It runs the
+  panels down, then the backend. `ViewportPanel::Shutdown` frees an FBO and clears the engine's
+  primary render target, both of which need a live GL context (**F2a**) — an order that used to be
+  two calls sitting correctly in `EditorService::OnShutdown`, i.e. a rule a future edit could break
+  in silence. One owner makes it structural (**LC3**).
+- **`EditorPanels` stays a separate live object and CANNOT be folded into `PanelRegistry`.** Two
+  existing invariants forbid it, neither of them taste: registration runs at `OnModulesRegistered`
+  with **no `EditorContext` in existence** (a panel needs one by ctor, **D3** — `PanelRegistry`'s own
+  header says *"Registration STORES ONLY"*), and `EditorContext::Extensions` is **const by
+  construction** while panel visibility mutates on every Window-menu tick. So panels are the one
+  registration that becomes objects with lifetime, because a panel is an instance and the other
+  seven routes are descriptions. That is the single exception, and it is stated rather than drifted.
 - **Decoration is ORTHOGONAL to `EWindowMode`, which had welded them.** `Borderless` meant
   undecorated *and* primary-monitor fullscreen, and `SetWindowed()` hard-set `GLFW_DECORATED=TRUE` —
   so "Windowed AND undecorated", which is exactly what an editor with its own caption is, was not

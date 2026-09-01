@@ -65,6 +65,31 @@ lists sources **explicitly**, so the new file was never compiled; and `build.bat
 **debug-editor** preset while I was running `build/debug`'s binary. Both were caught by the same
 instrument — the **case count**, not the pass/fail. → [[L70]]
 
+## The follow-on: one design for every route (`0d8c757`)
+
+After the visual gates passed the user pointed at `SetMenu(m_Extensions.Menus())` beside
+`SetPanels(*m_EditorPanels)` — *"one is from extension, the other from the class owned by editor
+service"* — and then, when my first answer over-reached, gave the precise version:
+**"Editor Menu is the only one to not be a registry. All the rest is."**
+
+They were right, and `ViewportToolbarRegistry` settles the shape question: it stores, it draws
+*itself*, it lives in the registrar, and it is the model ③b was built on — so "a thing in the
+registrar that draws" was never the defect I had claimed. → [[L71]]
+
+- **`EditorMenu` → `MenuRegistry`**, same `Register` / `Consume` / `Count` shape as its seven
+  siblings, staying in `Editor/Menus/` (the `EditorCommandRegistry` precedent). **The name is a
+  RETURN**: it was `MenuRegistry` before M5 S4, when the *design* changed from path-closures to a
+  tag tree. This rename changed nothing but the name — recorded in **MR2b** so git history does not
+  mislead.
+- **The gui OWNS both** (the user's call, taken on its own merits once the naming fix had dissolved
+  the problem it was originally proposed to solve). `SetMenu`/`SetPanels`/`BindGuiContent` deleted;
+  `Menus()` became a bound route, bound in the constructor so unbound is unreachable.
+- **`IEditorGui::Teardown()` non-virtual** — panels then backend. The best part of the change: that
+  order is load-bearing (**F2a**) and had been two correctly-sequenced calls in `OnShutdown`.
+- **`EditorPanels` cannot be folded into `PanelRegistry`**, and the reasons are two existing
+  invariants: no `EditorContext` exists at registration, and `EditorContext::Extensions` is const
+  while visibility mutates.
+
 ## Deviation from the approved plan
 
 The plan said rename `BeginMainMenuBar` → `BeginMenuBar`. Building it showed the rename is
