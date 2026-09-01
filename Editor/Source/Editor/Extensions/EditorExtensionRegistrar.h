@@ -6,7 +6,7 @@
 #include "Editor/Extensions/DrawerRegistry.h"      
 #include "Editor/Extensions/ResourceTypeRegistry.h"
 #include "Editor/Extensions/ViewportToolbarRegistry.h"
-#include "Editor/Menus/EditorMenu.h"
+#include "Editor/Menus/MenuRegistry.h"
 #include "Editor/Commands/EditorCommandRegistry.h"
 
 namespace Opaax::Editor
@@ -31,11 +31,21 @@ namespace Opaax::Editor
     class EditorExtensionRegistrar
     {
     public:
+        /**
+         * Point Menus() at the gui's tree — the WorldSubsystemRoute shape, and for the same reason:
+         * the storage belongs to the CONSUMER (the gui draws it), the route belongs here.
+         *
+         * Called from EditorService's CONSTRUCTOR, where both objects already exist, so "unbound"
+         * is not a reachable state rather than one every caller has to check. MR2a is why that
+         * matters: a route that shipped unbound dropped every registration with one Error.
+         */
+        void BindMenus(MenuRegistry& InMenus) noexcept { m_Menus = &InMenus; }
+
         ComponentDrawerRegistry&   Drawers()          noexcept { return m_Drawers; }
         ConfigDrawerRegistry&      ConfigDrawers()    noexcept { return m_ConfigDrawers; }
         PanelRegistry&             Panels()           noexcept { return m_Panels; }
         ResourceTypeRegistry&      ResourceTypes()    noexcept { return m_ResourceTypes; }
-        EditorMenu&                Menus()            noexcept { return m_Menus; }
+        MenuRegistry&              Menus()            noexcept { return *m_Menus; }
         WorldSubsystemRoute&       EditWorldSystems() noexcept { return m_EditWorldSystems; }
         EditorCommandRegistry&     Commands()         noexcept { return m_EditorCommands; }
         ViewportToolbarRegistry&   ViewportTools()    noexcept { return m_ViewportTools; }
@@ -44,7 +54,7 @@ namespace Opaax::Editor
         const ConfigDrawerRegistry&  ConfigDrawers()   const noexcept { return m_ConfigDrawers; }
         const PanelRegistry&         Panels()          const noexcept { return m_Panels; }
         const ResourceTypeRegistry&  ResourceTypes()   const noexcept { return m_ResourceTypes; }
-        const EditorMenu&            Menus()           const noexcept { return m_Menus; }
+        const MenuRegistry&          Menus()           const noexcept { return *m_Menus; }
         const WorldSubsystemRoute&   EditWorldSystems() const noexcept { return m_EditWorldSystems; }
         const EditorCommandRegistry& Commands()        const noexcept { return m_EditorCommands; }
         const ViewportToolbarRegistry& ViewportTools() const noexcept { return m_ViewportTools; }
@@ -60,7 +70,11 @@ namespace Opaax::Editor
         ConfigDrawerRegistry    m_ConfigDrawers;
         PanelRegistry        m_Panels;
         ResourceTypeRegistry m_ResourceTypes;
-        EditorMenu           m_Menus;
+
+        // A ROUTE, not storage: the tree lives on the gui, which is what draws it (MR2e). Bound in
+        // EditorService's constructor, before anything can register.
+        MenuRegistry*        m_Menus = nullptr;
+
         WorldSubsystemRoute  m_EditWorldSystems;
         EditorCommandRegistry m_EditorCommands;
 

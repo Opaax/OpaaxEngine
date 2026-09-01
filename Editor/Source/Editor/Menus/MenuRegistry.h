@@ -5,10 +5,15 @@
 namespace Opaax::Editor
 {
     /**
-     * @class EditorMenu
+     * @class MenuRegistry
      *
-     * The editor's top bar: an ordered set of root categories, and the storage behind
+     * WHAT sits on the editor's menu bar: an ordered set of root categories, and the storage behind
      * EditorExtensionRegistrar::Menus() (Editor.md D10).
+     *
+     * The same three parts every other route has — register, consume, Count — so a reader who knows
+     * ViewportToolbarRegistry or PanelRegistry already knows this one. It was called `EditorMenu`
+     * until 2026-09-01, the only route in the registrar not named as a registry, which made it look
+     * like a different kind of thing when it never was (**MR2b**).
      *
      * IT IS A TREE, BUILT BY THE CALLER. It used to be a flat list of slash-separated path strings
      * whose nesting was re-derived every frame; a path can carry an ORDER, an enabled predicate or
@@ -21,14 +26,17 @@ namespace Opaax::Editor
      *
      * A node carries a COMMAND TAG, never a closure: clicking is Commands().Execute(tag, context),
      * the same call a key binding makes.
+     *
+     * OWNED BY THE GUI, which is what draws it (**MR2e**). The registrar reaches it through a bound
+     * route, the WorldSubsystemRoute shape — so `Menus()` reads the same at every call site.
      */
-    class EditorMenu
+    class MenuRegistry
     {
         // =============================================================================
         // Ctor - Dtor
         // =============================================================================
     public:
-        EditorMenu() = default;
+        MenuRegistry() = default;
 
         // =============================================================================
         // Copy - Move Delete
@@ -36,11 +44,11 @@ namespace Opaax::Editor
 
         // Owns nodes through TUniquePtr and hands out references into them (I6's corollary: an
         // owner of a move-only member must say so, or the implicit copy is instantiated anyway).
-        EditorMenu(const EditorMenu&)            = delete;
-        EditorMenu& operator=(const EditorMenu&) = delete;
+        MenuRegistry(const MenuRegistry&)            = delete;
+        MenuRegistry& operator=(const MenuRegistry&) = delete;
 
         // =============================================================================
-        // Functions
+        // Register
         // =============================================================================
     public:
         /**
@@ -50,6 +58,10 @@ namespace Opaax::Editor
          */
         EditorMenuCategory& Category(OpaaxStringID InID);
 
+        // =============================================================================
+        // Consume
+        // =============================================================================
+    public:
         /**
          * Emit every root category, in bar order.
          *
@@ -61,14 +73,8 @@ namespace Opaax::Editor
          */
         void Draw(EditorContext& InContext) const;
 
-        // =============================================================================
-        // Getter
-
         /** @return How many COMMAND entries exist, at any depth — what the seal log reports. */
         Uint64 Count() const noexcept;
-
-        // End Getter
-        // =============================================================================
 
         // =============================================================================
         // Members

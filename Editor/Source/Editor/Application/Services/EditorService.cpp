@@ -69,6 +69,10 @@ namespace Opaax::Editor
         : m_Gui(MakeUnique<ImGuiEditorGui>())
         , m_Dialogs(MakeUnique<TinyFdEditorDialogs>())
     {
+        // HERE, in the constructor, so "unbound" is not a reachable state: RegisterExtensions runs
+        // long after this and would otherwise be the first thing to notice (MR2a's failure, where a
+        // route shipped unbound and dropped every registration with one Error).
+        m_Extensions.BindMenus(m_Gui->Menus());
     }
 
     // =============================================================================
@@ -103,7 +107,6 @@ namespace Opaax::Editor
         m_InputRoute        = MakeUnique<InputRoute>(*m_WorldMgr, InEngine.GetInput(), *m_PIE);
         m_MapDocument       = MakeUnique<EditorMapDocument>();
         m_LevelDocument     = MakeUnique<EditorLevelDocument>();
-        m_EditorPanels         = MakeUnique<EditorPanels>();
     }
 
     void EditorService::ClearEditorSystems()
@@ -115,7 +118,6 @@ namespace Opaax::Editor
         m_Gizmo.reset();
         m_InputRoute.reset();
         m_PIE.reset();
-        m_EditorPanels.reset();
     }
 
     void EditorService::CreateEditorContext(Window* InWindow, IEngine& InEngine)
@@ -137,7 +139,7 @@ namespace Opaax::Editor
             *m_LevelDocument,
             *m_MapDocument,
             m_Extensions,
-            *m_EditorPanels,
+            m_Gui->Panels(),
             *m_Preview,
             OpaaxApplication::GetAppService<IPaths>(),
             OpaaxApplication::GetAppService<IPlatform>().GetFileSystem(),
@@ -156,7 +158,6 @@ namespace Opaax::Editor
     void EditorService::PostInitialized()
     {
         BuildPanels();
-        BindGuiContent();
         AdoptStartupLevel();
     }
     
@@ -183,7 +184,7 @@ namespace Opaax::Editor
     
     void EditorService::RegisterNativeMenus()
     {
-        EditorMenu& lMenu = m_Extensions.Menus();
+        MenuRegistry& lMenu = m_Extensions.Menus();
 
         // --- Native File  --------------------------
         EditorMenuCategory& lFile = lMenu.Category("File");
@@ -430,10 +431,7 @@ namespace Opaax::Editor
             }
         }
 
-        if (m_EditorPanels != nullptr)
-        {
-            m_EditorPanels->OnActiveWorldChanged(InOld, InNew);
-        }
+        m_Gui->Panels().OnActiveWorldChanged(InOld, InNew);
     }
 
     void EditorService::HandleWorldDestroyed(World* InWorld)
@@ -492,16 +490,9 @@ namespace Opaax::Editor
 
     void EditorService::ClearGUI()
     {
-        m_Gui->Shutdown();
-    }
-
-    void EditorService::BindGuiContent()
-    {
-        m_Gui->SetMenu(m_Extensions.Menus());
-        m_Gui->SetPanels(*m_EditorPanels);
-
-        OPAAX_LOG(LogEditorService, Info, "Editor GUI content bound: menu entries={}, panels={}",
-                  m_Extensions.Menus().Count(), m_EditorPanels->Count());
+        // Teardown, not Shutdown: the gui owns the panels, so it owns the order they die in
+        // (panels -> backend, F2a/LC3). Non-virtual on IEditorGui, so that cannot be got wrong here.
+        m_Gui->Teardown();
     }
 
     OpaaxString EditorService::ResolveLayoutIniPath() const
@@ -553,16 +544,8 @@ namespace Opaax::Editor
 
     void EditorService::BuildPanels()
     {
-        m_EditorPanels->Build(m_Extensions.Panels(), *m_Context);
-        OPAAX_LOG(LogEditorService, Info, "Editor panels registered: {}, constructed: {}", m_Extensions.Panels().Count(), m_EditorPanels->Count());
-    }
-
-    void EditorService::ClearPanels()
-    {
-        if (m_EditorPanels != nullptr)
-        {
-            m_EditorPanels->Shutdown();
-        }
+        m_Gui->Panels().Build(m_Extensions.Panels(), *m_Context);
+        OPAAX_LOG(LogEditorService, Info, "Editor panels registered: {}, constructed: {}", m_Extensions.Panels().Count(), m_Gui->Panels().Count());
     }
 
     // =============================================================================
@@ -661,7 +644,7 @@ namespace Opaax::Editor
         // Apply any pending viewport resize (measured last DrawContents) BEFORE Engine().Loop()
         // renders the world, so Render() reads the new FBO size this frame (deferred-resize
         // handshake, §5).
-        if (m_EditorPanels != nullptr) { m_EditorPanels->OnPreRender(); }
+        m_Gui->Panels().OnPreRender();
     }
 
     void EditorService::EndFrame()
@@ -876,16 +859,12 @@ namespace Opaax::Editor
         //    otherwise call back into a half-torn-down editor.
         ClearWorldManager();
 
-        // 1. Every panel, reverse construction order (LC3). The Viewport registered first so it dies
-        //    LAST, which is the right end: its Shutdown clears the engine's primary render target
-        //    while the engine is alive (no live frame reads a dangling target) and frees the FBO
-        //    while the GL context is still current — both true here, since the UI backend below has
-        //    not gone yet. All of it must precede m_Context.reset(): panels hold a reference into it.
-        ClearPanels();
-
-        // 3. The UI stack — the renderer impl's shutdown requires the GL context, still alive here,
-        //    and destroying the context is what FLUSHES the dock layout. EditorGui owns both halves
-        //    and the ordering between them.
+        // 1. The whole UI stack, panels first then the backend — ONE call, because the gui owns
+        //    both and IEditorGui::Teardown is non-virtual (MR2e). That ordering is not a style
+        //    choice: the Viewport registered first so it dies LAST, and its Shutdown clears the
+        //    engine's primary render target while the engine is alive and frees the FBO while the
+        //    GL context is still current. Destroying that context is also what FLUSHES the dock
+        //    layout. All of it must precede m_Context.reset(): panels hold a reference into it.
         ClearGUI();
 
         // 4. Selection, PIE and the input route — after the panels that read them, before the

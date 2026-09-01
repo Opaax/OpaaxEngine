@@ -203,15 +203,9 @@ namespace Opaax::Editor
          * @return False if not initialized correctly
          */
         bool InitGUI(Window* InWindow);
-        void ClearGUI();
 
-        /**
-         * Hand the gui WHAT it draws — the sealed menu tree and the live panels.
-         *
-         * At PostInitialized, the first point where both exist: the tree is sealed at
-         * OnModulesRegistered, the panels are built one line above this call.
-         */
-        void BindGuiContent();
+        /** The whole UI stack down, panels then backend — IEditorGui::Teardown owns that order. */
+        void ClearGUI();
 
         /**
          * Resolves <ProjectRoot>/Editor/Save/imgui.ini — the dock layout ImGui loads on the first frame and
@@ -251,7 +245,6 @@ namespace Opaax::Editor
          * 
          */
         void BuildPanels();
-        void ClearPanels();
         
         /**
          * Runs AFTER the game module has registered (so its panels get a toggle too) and BEFORE the seal.
@@ -321,7 +314,6 @@ namespace Opaax::Editor
         TUniquePtr<InputRoute>          m_InputRoute;  
         TUniquePtr<EditorMapDocument>   m_MapDocument;
         TUniquePtr<EditorLevelDocument> m_LevelDocument;
-        TUniquePtr<EditorPanels>        m_EditorPanels;
         
         TUniquePtr<EditorContext>       m_Context;
         

@@ -5,7 +5,7 @@
 namespace Opaax::Editor
 {
     struct EditorContext;
-    class EditorMenu;
+    class MenuRegistry;
 
     // =============================================================================
     // ImGuiTitleBar — the editor's own caption: the menu tree on the left, a drag region, and
@@ -32,7 +32,7 @@ namespace Opaax::Editor
          * draggable area is whatever the other two do not claim, and a menu click cannot be
          * swallowed by it.
          */
-        void DrawBar(EditorContext& InContext, const EditorMenu* InMenu);
+        void DrawBar(EditorContext& InContext, const MenuRegistry& InMenus);
 
         /**
          * The 8-region resize border around the whole window, and the cursor that goes with it.

@@ -2,6 +2,8 @@
 
 #include "Engine/Subsystems/Input/InputCodes.h"   // EKeyCode — the editor's one key vocabulary
 #include "Core/String/OpaaxString.hpp"
+#include "Editor/Menus/MenuRegistry.h"     // owned by value — needs the complete type
+#include "Editor/Panels/EditorPanels.h"    // likewise
 
 namespace Opaax
 {
@@ -12,8 +14,7 @@ namespace Opaax::Editor
 {
     struct EditorContext;
     struct PanelWindowStyle;   // Editor/Panels/IEditorPanel.h — backend-agnostic already
-    class EditorMenu;
-    class EditorPanels;
+    class PanelRegistry;
     class IEditorUIBackend;
 
     // =============================================================================
@@ -64,6 +65,21 @@ namespace Opaax::Editor
         /** Backends down, then the context. The GL context must still be alive. Idempotent. */
         virtual void Shutdown() = 0;
 
+        /**
+         * Bring the whole UI stack down, IN ORDER: the panels, then the backend.
+         *
+         * NON-VIRTUAL, and that is the point. `ViewportPanel::Shutdown` frees an FBO and clears the
+         * engine's primary render target, both of which need a live GL context (**F2a**) — so the
+         * panels must die BEFORE the implementation destroys its context. That used to be two calls
+         * sitting in the right order in `EditorService::OnShutdown`, i.e. a rule a future edit could
+         * break silently. Owning both halves is what makes the order structural (**LC3**).
+         */
+        void Teardown()
+        {
+            m_Panels.Shutdown();
+            Shutdown();
+        }
+
         /** @return true once Init has succeeded — "the UI is up", the caller's pass-through gate. */
         virtual bool IsReady() const noexcept = 0;
 
@@ -71,16 +87,18 @@ namespace Opaax::Editor
         // =============================================================================
 
         // =============================================================================
-        // Content — WHAT the pass draws, bound once by EditorService rather than looked up from
-        //   EditorContext every frame. Two facets, not one Bind(a, b): the menu tree and the panel
-        //   set arrive from different owners.
+        // Content — WHAT the pass draws. OWNED, not borrowed (**MR2e**): the gui is the consumer of
+        //   both, so it holds both, and there is nothing to bind or null-check.
         //
-        //   Non-virtual, storing into the base, because every implementation would hold exactly
-        //   these two pointers — a second one re-deriving that is the drift. Unbound is a legal
-        //   state: Draw then emits the dockspace and nothing else.
+        //   On the BASE rather than the implementation: a second backend would want the same menu
+        //   tree and the same panels, not its own copies. What is backend-specific is the ~20
+        //   virtual chrome calls below, not the content they draw.
     public:
-        void SetMenu(const EditorMenu& InMenu) noexcept { m_Menu = &InMenu; }
-        void SetPanels(EditorPanels& InPanels) noexcept { m_Panels = &InPanels; }
+        MenuRegistry&       Menus()       noexcept { return m_Menus; }
+        const MenuRegistry& Menus() const noexcept { return m_Menus; }
+
+        EditorPanels&       Panels()       noexcept { return m_Panels; }
+        const EditorPanels& Panels() const noexcept { return m_Panels; }
 
         // End Content
         // =============================================================================
@@ -108,12 +126,12 @@ namespace Opaax::Editor
         // =============================================================================
 
         // =============================================================================
-        // Chrome — the structural widgets the HOST emits, so EditorMenu and EditorPanels never name
-        //   a backend. A panel's CONTENTS are not here: a panel IS UI and draws its own (MR2c).
+        // Chrome — the structural widgets the HOST emits, so MenuRegistry and EditorPanels never
+        //   name a backend. A panel's CONTENTS are not here: a panel IS UI and draws its own (MR2c).
     public:
         // NOTE: there is no BeginMenuBar here any more. OPENING the bar is the implementation's
         // own business — it is a row inside the editor's title bar, which the implementation
-        // composes — so EditorMenu emits CATEGORIES and never the strip that holds them.
+        // composes — so MenuRegistry emits CATEGORIES and never the strip that holds them.
 
         /** A submenu. @return true when it is open, i.e. when children must be emitted. */
         virtual bool BeginMenu(const char* InLabel, bool bInEnabled) = 0;
@@ -204,8 +222,9 @@ namespace Opaax::Editor
         // Members
         // =============================================================================
     protected:
-        // Non-owning: EditorService owns both and outlives the gui's last Draw.
-        const EditorMenu* m_Menu   = nullptr;
-        EditorPanels*     m_Panels = nullptr;
+        // The menu tree is populated during RegisterExtensions, which runs BEFORE Init — these
+        // exist from construction precisely so that is legal.
+        MenuRegistry m_Menus;
+        EditorPanels m_Panels;
     };
 }

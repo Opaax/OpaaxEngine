@@ -7,7 +7,7 @@
 #include "Editor/Commands/EditorNativeCommandsTags.hpp"
 #include "Editor/EditorContext.h"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
-#include "Editor/Menus/EditorMenu.h"
+#include "Editor/Menus/MenuRegistry.h"
 
 namespace
 {
@@ -132,9 +132,9 @@ namespace
 
 namespace Opaax::Editor
 {
-    void ImGuiTitleBar::DrawBar(EditorContext& InContext, const EditorMenu* InMenu)
+    void ImGuiTitleBar::DrawBar(EditorContext& InContext, const MenuRegistry& InMenus)
     {
-        if (InMenu != nullptr) { InMenu->Draw(InContext); }
+        InMenus.Draw(InContext);
 
         Window&                lWindow   = InContext.MainWindow;
         const EditorCommandRegistry& lCommands = InContext.Extensions.Commands();

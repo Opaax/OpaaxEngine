@@ -9,7 +9,7 @@
 #include "Core/EngineAPI.h"   // OPAAX_ASSERT
 #include "Core/Window/Window.h"
 #include "Editor/EditorContext.h"
-#include "Editor/Menus/EditorMenu.h"
+#include "Editor/Menus/MenuRegistry.h"
 #include "Editor/Panels/EditorPanels.h"
 #include "Editor/Panels/IEditorPanel.h"   // PanelWindowStyle — the window chrome's one parameter
 #include "Editor/UI/OpenGLEditorUIBackend.h"
@@ -258,7 +258,7 @@ namespace Opaax::Editor
 
         if (ImGui::BeginMenuBar())
         {
-            m_TitleBar.DrawBar(InContext, m_Menu);
+            m_TitleBar.DrawBar(InContext, m_Menus);
             ImGui::EndMenuBar();
         }
 
@@ -267,7 +267,7 @@ namespace Opaax::Editor
         ImGui::DockSpace(ImGui::GetID("DockSpace"));
         ImGui::End();
 
-        if (m_Panels != nullptr) { m_Panels->Draw(*this); }
+        m_Panels.Draw(*this);
 
         // LAST: it reads IsAnyItemActive, which only means anything once the panels have submitted.
         m_TitleBar.UpdateResizeBorder(InContext);

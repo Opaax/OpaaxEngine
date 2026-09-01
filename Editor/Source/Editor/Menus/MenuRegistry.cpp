@@ -1,10 +1,10 @@
-#include "Editor/Menus/EditorMenu.h"
+#include "Editor/Menus/MenuRegistry.h"
 
 #include "Editor/EditorContext.h"
 
 namespace Opaax::Editor
 {
-    EditorMenuCategory& EditorMenu::Category(const OpaaxStringID InID)
+    EditorMenuCategory& MenuRegistry::Category(const OpaaxStringID InID)
     {
         for (const TUniquePtr<EditorMenuCategory>& lCategory : m_Categories)
         {
@@ -15,7 +15,7 @@ namespace Opaax::Editor
         return *m_Categories.back();
     }
 
-    void EditorMenu::Draw(EditorContext& InContext) const
+    void MenuRegistry::Draw(EditorContext& InContext) const
     {
         // CATEGORIES ONLY — the bar they sit in is opened by whoever hosts it (the title bar),
         // which is also what lets the window buttons share that same row.
@@ -25,7 +25,7 @@ namespace Opaax::Editor
         }
     }
 
-    Uint64 EditorMenu::Count() const noexcept
+    Uint64 MenuRegistry::Count() const noexcept
     {
         Uint64 lCount = 0;
         for (const TUniquePtr<EditorMenuCategory>& lCategory : m_Categories)
