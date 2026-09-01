@@ -1883,3 +1883,60 @@ Two failure modes compounded: a fix that was never validated, and an instrument 
   eight dead macros and the reason nobody noticed. Read the whole report, not just the verdict
   ([[L18]]) — and verify its load-bearing claims yourself, which is how the "glad reads it nowhere"
   and "8 files" numbers got confirmed rather than repeated.
+
+## L69 — Open-coding a library helper inherits the IDENTITIES it generated, not just its behaviour (2026-09-01)
+
+**What happened (Editor Chrome S3).** The title bar needed a dockspace with a caption row above it,
+which `ImGui::DockSpaceOverViewport` cannot express — so I replaced it with the host window it builds
+internally. Before writing the replacement I read imgui's implementation, and found the part that had
+nothing to do with behaviour: the dockspace id is `GetID("DockSpace")` **seeded by a window literally
+labelled `WindowOverViewport_%08X`**. The user's `imgui.ini` names that derived id, `0x08BD597D`, and
+every saved dock position hangs off it. A replacement that opened a sensibly-named
+`"##EditorHost"` window and called `GetID("EditorDockSpace")` would have compiled, run, looked
+correct on a fresh layout — and **silently orphaned their entire dock arrangement**.
+
+**Why it is worth a lesson.** I was reading that function for a different reason (which flags it
+passes to `Begin`). The id derivation was three lines away and is invisible from the call site: the
+signature says `DockSpaceOverViewport(0, viewport)` and `0` means *"use the default"*, which reads as
+"don't care" when it actually means "a specific value the persisted file depends on". This is
+[[L20]]'s family — spending unrecoverable user state — reached by a route where nothing deletes
+anything.
+
+**Rules for next time:**
+- **When you open-code a library convenience function, ask what NAMES it generated.** Window labels,
+  hash seeds, ids, default filenames — anything derived from a literal inside the helper is part of
+  its contract the moment something persisted it. Behaviour parity is the easy half.
+- **A "default" argument that feeds a hash is a value, not an absence.** `0`/`nullptr`/`""` meaning
+  "compute the usual one" is exactly where this hides.
+- **Verify by DIFFING the persisted artifact across a run**, not by looking at the screen: back the
+  file up, run, diff the section that matters. Here the `[Docking]` block came back identical apart
+  from the run's own window geometry, which is the only evidence that actually answers the question.
+- The general shape: **user state is not only destroyed by deleting it — it is destroyed by changing
+  the key it was filed under.**
+
+## L70 — A green suite says nothing about a test that was never built, and the COUNT is what tells you (2026-09-01)
+
+**What happened (Editor Chrome S3).** I wrote 8 cases for the title bar's frame geometry — the part a
+smoke run physically cannot reach — ran the suite, and got `486 passed, 0 failed`. Green, and
+meaningless twice over. **First**, `Engine/Tests/CMakeLists.txt` lists sources **explicitly** (by
+design, so a suite is never added by a stale glob), so my file was not compiled at all. **Second**,
+after fixing that, I ran `build/debug/bin/Debug/OpaaxTests.exe` while `build.bat test` builds the
+**debug-editor** preset — so I was reading an hour-old binary. Both times the pass/fail line was
+identical to a correct run. The discriminator was the **case count**: 486 where 494 was expected, and
+a `-tc="*Frame*"` filter matching **0 of 493**.
+
+That same wrong-binary mistake also produced a phantom finding earlier in the session — an assertion
+count of 7213 vs 7214 that I reported as unattributable. It was two different builds, not a drift.
+
+**Rules for next time:**
+- **After adding a test file, check the case COUNT went up by what you wrote.** "0 failed" is the one
+  number that cannot distinguish "my tests passed" from "my tests do not exist" — [[L15]]'s
+  discriminate rule and [[L59]]'s *log a number* applied to the instrument itself.
+- **Run the filter for your own suite and confirm it matches non-zero.** One command, and it fails
+  loudly in exactly the case a full run hides.
+- **Know which preset each build verb writes to.** `build.bat test` → `debug-editor`,
+  not `debug`. This is [[L24]] (compare the artifact's mtime) with the twist that both binaries
+  exist and both run — so mtime alone would not have caught it; the *path* was the error.
+- **When two runs of "the same" suite disagree by a small number, suspect two binaries before
+  suspecting a regression.** Reporting the discrepancy as unexplained was better than ignoring it and
+  worse than checking which file I had executed.

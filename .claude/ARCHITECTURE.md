@@ -1643,9 +1643,12 @@ same way `Init` already picks the GL backend.
 - **The line is CHROME vs CONTENTS, and it is the one every reference editor draws.** Unity splits
   `EditorWindow` (the host owns the window) from `OnGUI()` (the leaf owns its widgets); Godot's
   `EditorPlugin` adds a dock and paints nothing in it. So the seam carries exactly the structural
-  widgets a HOST emits — `BeginMainMenuBar`, `BeginMenu`, `MenuItem`, `MenuSeparator`,
+  widgets a HOST emits — `BeginMenu`, `MenuItem`, `MenuSeparator`,
   `BeginPanelWindow`/`EndPanelWindow` — and `Editor/Menus/` (4 files) plus `EditorPanels.cpp` name no
-  backend at all. A panel's contents, a `TPropertyDrawer` and a `ViewportToolbarRegistry` item still
+  backend at all.
+  *Amended 2026-09-01: this list began with `BeginMainMenuBar`/`EndMainMenuBar`, which are now
+  **deleted** rather than renamed — see **MR2e**. Opening the bar turned out to be the
+  implementation's business, not the seam's.* A panel's contents, a `TPropertyDrawer` and a `ViewportToolbarRegistry` item still
   call ImGui directly, which was always the stated exception (**MR2c**) — but each of those now lives
   in a file whose job IS drawing. `EditorService.cpp` was the exception to that and is no longer: its
   five inline toolbar lambdas moved out (**GIZ8**), leaving the composition root with zero `ImGui::`.
@@ -1669,6 +1672,96 @@ same way `Init` already picks the GL backend.
 - **`EditorService` owns it as a `TUniquePtr<IEditorGui>` built in the CONSTRUCTOR**, not in
   `InitGUI` — the context holds a reference to it, and a member that is null between construction and
   `Initialize` would put a null check in front of every `IsReady()`.
+- **The gui RECEIVES what it draws; it does not look it up** (2026-09-01). `Draw` reached into
+  `EditorContext` for `Extensions.Menus()` and `Panels` every frame. `IEditorGui` now holds both, as
+  **protected members with non-virtual `SetMenu`/`SetPanels`** — two facets rather than one
+  `Bind(a, b)`, the `SetIcon`/`SetGlyph` and `SetEnabled`/`SetChecked` idiom, and non-virtual
+  because every implementation would store exactly these two pointers and a second one re-deriving
+  that is the drift. Bound once at `PostInitialized`, the first point where both exist (the tree
+  seals at `OnModulesRegistered`, the panels are built one line above). **Unbound is legal** — the
+  pass then emits the dockspace and nothing else. `Draw` KEEPS its `EditorContext&`: the context is
+  the per-frame *subject* (a menu node executes a command through it), not the content.
+
+**MR2e — The editor draws its own TITLE BAR, and DECORATION is an axis of its own** (landed
+2026-09-01). The OS caption is gone (`Window::SetDecorated(false)`); the editor paints menus on the
+left, a drag region, and Minimize / Maximize / Close on the right. `ImGuiTitleBar`
+(`Editor/Imgui/`) composes it and `ImGuiEditorGui` owns one — nothing outside the ImGui
+implementation names the type, which is **MR2d**'s chrome-vs-contents line applied to the caption.
+- **The MENU REGISTRY IS THE EXTENSION POINT, so there is no title-bar registry.** The bar draws
+  the whole `Menus()` tree, so a game module's category appears in the caption through the route it
+  already registers into (D10). The alternative — a `TitleBarRegistry` beside `ViewportTools()` —
+  would have been a second way to say the same thing, for nothing.
+- **`BeginMainMenuBar`/`EndMainMenuBar` LEFT the seam rather than being renamed, and the reason is
+  structural.** The approved plan said rename; building it showed that if `EditorMenu::Draw` both
+  *opens and closes* the bar, the window buttons can never share the row. So `EditorMenu::Draw`
+  emits **categories** and the host opens the strip that holds them. The seam got smaller, and the
+  menu tree genuinely stopped knowing where its bar is.
+- **Decoration is ORTHOGONAL to `EWindowMode`, which had welded them.** `Borderless` meant
+  undecorated *and* primary-monitor fullscreen, and `SetWindowed()` hard-set `GLFW_DECORATED=TRUE` —
+  so "Windowed AND undecorated", which is exactly what an editor with its own caption is, was not
+  expressible. `WindowData` carries the host's `bDecorated` preference and `SetWindowed` applies it;
+  `Borderless` still overrides while active *without overwriting it*, so leaving borderless restores
+  what was asked for. `IsDecorated()` asks GLFW rather than the preference, so the two cannot drift.
+  Same two-axes shape as **I12**, one layer down.
+- **It is a RUNTIME verb, not a `WindowProps` field, and that is forced.**
+  `WindowManager::CreateMainWindow` builds props from `EngineConfigData` alone — there is no host
+  seam to override at creation — so `EditorService::Initialize` undecorates after the fact. The cost
+  is a possible one-frame OS-caption flash at boot; the fix if it shows is an
+  `OpaaxApplication::OnConfigureWindow(WindowProps&)` seam, named and not built.
+- **`Window` grew what a client-drawn caption needs**: `GetPosition`/`SetPosition`, `SetSize`,
+  `Minimize`/`Maximize`/`Restore`/`IsMaximized`. **`WindowData::PosX/PosY` became `Int32`** — they
+  were `Uint32` while `SaveWindowedState` writes `glfwGetWindowPos` straight into them, so a monitor
+  left of the primary, or a maximized window's `-8,-8`, wrapped silently. Latent until something
+  dragged the window; the title bar is that something.
+- **The buttons are COMMANDS** (**MR2b**), so the caption and a later key binding reach one verb.
+  Close reuses `EDITOR_COMMAND_QUIT` — the X and File/Exit are the same verb, not two, the same
+  argument `Window::RequestClose` already makes one level down.
+- **`Draw` open-codes `DockSpaceOverViewport`, and TWO details are load-bearing:** the host window's
+  label `WindowOverViewport_%08X` and `GetID("DockSpace")` *inside it* are what produce the
+  dockspace id the user's `imgui.ini` already names (`0x08BD597D`). Change either and every saved
+  dock position is orphaned — a silent loss of the user's own state ([[L20]]). Verified by diffing
+  the ini's `[Docking]` section across a run.
+- **The captions are PAINTED, not typed.** ImGui's default font covers Basic Latin + Latin-1, so
+  `—` (U+2014), `□` (U+25A1) and `✕` (U+2715) would every one have rendered as a box. Strokes on the
+  draw list need no font — the `ImguiDraw`/`ImguiWidgets` split already names this shape.
+- **`Editor/UI/WindowFrameGeometry.h` is ImGui-free ON PURPOSE.** The 8-region hit test (corners beat
+  edges) and the resize clamp are the fiddliest logic here and the part a smoke run physically
+  cannot reach — it never drags a window edge. `ImguiLayout.h` is the tree's home for pure geometry
+  and calls itself *"the half testable without a context"*, but it includes `imgui.h`, and
+  `OpaaxTests` may reach editor headers only when they pull no ImGui. So the geometry got its own
+  header and 8 test cases. **The clamp is the one worth naming**: a left/top drag moves the origin
+  *and* sizes, so the minimum has to give back what it refused, or the origin keeps walking while
+  the size stands still and the window slides out from under the cursor.
+- **GLFW-only frame, Win32 later, decided with the user.** Aero Snap, the drop shadow and rounded
+  corners are gone the moment decoration is; edge-resize is the one sub-item a `WM_NCCALCSIZE` frame
+  gives for free. The editor side is written against the `Window` verbs precisely so that upgrade
+  touches `WindowsWindow` only.
+
+**MR2f — A MODAL is a seam too, and its result arrives by CONTINUATION** (landed 2026-09-01).
+`IEditorDialogs` (`Editor/UI/`) fronts file pickers and message boxes;
+`TinyFdEditorDialogs.cpp` is the **only file in the editor that includes `<tinyfiledialogs.h>`**.
+Six `tinyfd_*` calls had sat inside command bodies — the exact shape **MR2d** removed for ImGui,
+still standing for the other backend the editor names.
+- **Its own seam, not a section of `IEditorGui`**, for the reason `EditorContext` already gives for
+  keeping `UIBackend` beside `Gui`: it is the narrower dependency, and a command asking where to
+  save a file has no business with the menu bar.
+- **The continuation IS the design.** The native backend blocks and fires it inline, so a call site
+  may capture `EditorContext&` and still read as a guard — but an ImGui modal is inherently
+  multi-frame and a *returned value could never have expressed that*. Writing the call sites this
+  way now is what makes an in-editor implementation a class swap instead of a rewrite of all six.
+  **What a second implementation inherits:** by the time a deferred continuation runs, the world it
+  captured may be gone; it must re-resolve or refuse.
+- **That reached `LevelOps::ConfirmDiscardingEdits`, which returned `bool`.** It takes a
+  continuation now. Only 2 callers, both guards, so keeping the seam *uniformly* async-capable was
+  cheaper than leaving half of it blocking — and a confirm is the **easiest** dialog to draw in
+  ImGui, so making exactly that one blocking would have been backwards.
+- **Each post-pick body moved to a file-local function** (`CreateMapAt`, `AddMapAt`) rather than
+  nesting fifty lines in a lambda: the interesting half stays readable and is callable with no
+  dialog in front of it — which is what would make these commands testable at all.
+- **`FileDialogRequest::Filters` is PLURAL from the start.** Every caller today passes one pattern;
+  a texture field wants `*.png`, `*.jpg`, `*.tga`, and a singular field would have had to grow.
+  `EDialogAnswer` is Yes/No — a three-button Save/Don't Save/Cancel costs one enumerator and
+  tinyfd's `"yesnocancel"`, named and not built because nothing asks it.
 
 **MR3 — One module shape.** Runtime and editor modules share a marker base **`IModule`**
 (`Application/IModule.h`): `IRuntimeModule : IModule` (`OnRegister(ModuleRegistrar&)`) and
