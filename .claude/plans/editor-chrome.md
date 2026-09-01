@@ -90,6 +90,36 @@ registrar that draws" was never the defect I had claimed. → [[L71]]
   invariants: no `EditorContext` exists at registration, and `EditorContext::Extensions` is const
   while visibility mutates.
 
+## The third pass: one pipeline, and the requirement that was never stated (`0d8c757` → `+1`)
+
+*"Close still not the same design."* — and they were right again. The rename had left **two
+registries with two homes** (`PanelRegistry` in the registrar, `MenuRegistry` in the gui) and the
+gui's two members were still a *registry* and a *live object*. Then the fourth message gave the
+actual spec: ***"If i want to move to QT its easy."***
+
+Everything settled once that was on the table:
+
+| Stage | Owner | Panels | Title bar |
+|---|---|---|---|
+| Registry — data, no backend | registrar, by value | `PanelRegistry` | `TitleBarRegistry` |
+| Live — walks it, draws via the seam | gui, by value | `EditorPanels` | `EditorTitleBar` |
+
+- `MenuRegistry` → **`TitleBarRegistry`** (`Editor/TitleBar/`), back in the registrar; the bound
+  route is deleted, so **MR2a**'s hazard cannot recur. `Menus()` → `TitleBar()`.
+- **`EditorTitleBar`** is the live object, and it is not a wrapper — it owns the bar's *furniture*
+  (drag region, three caption buttons), which nobody registers. That answered my own objection to
+  giving menus a live stage at all.
+- Policy stays backend-agnostic; only input is the backend's — `TitleBarDragRegion` returns
+  `{Delta, bDoubleClicked}`, `TitleBarButton` takes a *kind*.
+- **The real Qt blockers turned out to be elsewhere**: `DrawerRegistry.h` and
+  `ViewportToolbarRegistry.h` were the only headers under `Extensions/` including `<imgui.h>`, both
+  for id-scoping and layout. Those moved to the seam, and **no registry names a backend now**.
+- **Stated honestly and recorded in MR2g:** panel contents, property drawers and viewport-tool
+  closures are still ImGui (~360 call sites **MR2d** ruled stay). The *frame* ports cheaply; the
+  *leaves* do not.
+
+Durable in **MR2g**; lesson [[L71]].
+
 ## Deviation from the approved plan
 
 The plan said rename `BeginMainMenuBar` → `BeginMenuBar`. Building it showed the rename is

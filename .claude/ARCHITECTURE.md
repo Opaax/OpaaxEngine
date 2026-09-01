@@ -1794,6 +1794,56 @@ still standing for the other backend the editor names.
   `EDialogAnswer` is Yes/No — a three-button Save/Don't Save/Cancel costs one enumerator and
   tinyfd's `"yesnocancel"`, named and not built because nothing asks it.
 
+**MR2g — ONE PIPELINE for every extension route: registry → live object → backend** (landed
+2026-09-01, and it supersedes the ownership bullets in **MR2e** that preceded it). The driving
+requirement is the user's, stated only after two wrong attempts at the symptom: ***"If i want to move
+to QT its easy."*** Everything below follows from that rather than from the surface asymmetry.
+
+> **A REGISTRY holds data and names no backend. A LIVE OBJECT walks a registry and draws through
+> `IEditorGui`. The BACKEND implements `IEditorGui`.** Moving to another toolkit is one new
+> `IEditorGui`, not an edit spread across the editor.
+
+| Stage | Owner | Panels | Title bar |
+|---|---|---|---|
+| Registry — data | the registrar, **by value** | `PanelRegistry` | `TitleBarRegistry` |
+| Live — walks it, draws via the seam | the gui, **by value** | `EditorPanels` | `EditorTitleBar` |
+
+- **`MenuRegistry` → `TitleBarRegistry` (`Editor/TitleBar/`), back in the registrar by value.** The
+  bound route added hours earlier is **deleted** — with the storage back where the other seven live,
+  there is nothing to bind and **MR2a**'s hazard cannot recur. The *node* types stay in
+  `Editor/Menus/`: they are menus, and the bar is what holds them. The registry lost its `Draw` —
+  it exposes `Categories()` and the live object walks it, exactly as `PanelRegistry` exposes
+  `Entries()`. Accessor `Menus()` → **`TitleBar()`**, five call sites, one of them the game module.
+- **`EditorTitleBar` is not a wrapper, which was the objection to giving menus a live object at
+  all.** It owns the bar's **FURNITURE** — the drag region and the three caption buttons — which
+  *nobody registers*. That is precisely the counterpart of `EditorPanels` owning per-panel
+  visibility on top of the registry's descriptions. Without it the stage really would have been
+  empty, and the objection would have stood.
+- **The POLICY is backend-agnostic; only the INPUT is the backend's.** `TitleBarDragRegion` returns
+  `{Delta, bDoubleClicked}` and `TitleBarButton` takes an `EWindowButtonKind`, so *a drag moves the
+  window, a double-click toggles maximize, and the middle glyph follows the state* are all decided in
+  `EditorTitleBar`. A second toolkit inherits the behaviour and supplies pointer data.
+- **`ImGuiTitleBar` is now purely the ImGui side of those two calls, plus the resize border.** The
+  border deliberately is NOT part of the bar: it is frame chrome around the whole window, and a
+  toolkit that keeps the OS frame has none. `WindowFrameGeometry.h` and its 8 tests are untouched.
+- **NO REGISTRY IN THE EDITOR NAMES A BACKEND ANY MORE.** `DrawerRegistry.h` and
+  `ViewportToolbarRegistry.h` were the only two headers under `Extensions/` that `#include
+  <imgui.h>`, both to do **id scoping and layout** inline — which is *structure*, not presentation,
+  so it moved to the seam: `PushIdScope`/`PopIdScope`, `CollapsingHeader`, `SameLine`,
+  `ToolbarSeparator`. A drawer entry now takes an `IEditorGui&`. Gate:
+  `grep -rn "#include <imgui" Editor/Source/Editor/Extensions/` is **empty**.
+- **What is still NOT portable, stated so nobody is surprised later:** panel contents, every
+  `TPropertyDrawer`, and the viewport tools' closures all call ImGui directly — ~360 call sites that
+  **MR2d** ruled stay direct, and the reason holds. So the *frame* moves toolkits cheaply and the
+  *leaves* do not. R5 buys the generic machinery, not the widgets.
+- **`EditorPanels` cannot be folded into `PanelRegistry`**, so the two-stage shape is forced rather
+  than chosen: registration runs at `OnModulesRegistered` with **no `EditorContext` in existence**
+  (`PanelRegistry`'s own header: *"Registration STORES ONLY"*), and `EditorContext::Extensions` is
+  **const by construction** while panel visibility mutates on every Window-menu tick.
+- **Three attempts, and the first two were mine being wrong about the same thing** — see [[L71]].
+  The registrar had held four different shapes at once; what looked like an ownership defect was a
+  naming one, and what the user actually wanted was a *pipeline*.
+
 **MR3 — One module shape.** Runtime and editor modules share a marker base **`IModule`**
 (`Application/IModule.h`): `IRuntimeModule : IModule` (`OnRegister(ModuleRegistrar&)`) and
 `IEditorModule : IModule` (`OnRegister(EditorExtensionRegistrar&)`). `OnRegister` stays on each derived
