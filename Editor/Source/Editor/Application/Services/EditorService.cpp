@@ -151,6 +151,7 @@ namespace Opaax::Editor
     void EditorService::PostInitialized()
     {
         BuildPanels();
+        BindGuiContent();
         AdoptStartupLevel();
     }
     
@@ -485,6 +486,15 @@ namespace Opaax::Editor
     void EditorService::ClearGUI()
     {
         m_Gui->Shutdown();
+    }
+
+    void EditorService::BindGuiContent()
+    {
+        m_Gui->SetMenu(m_Extensions.Menus());
+        m_Gui->SetPanels(*m_EditorPanels);
+
+        OPAAX_LOG(LogEditorService, Info, "Editor GUI content bound: menu entries={}, panels={}",
+                  m_Extensions.Menus().Count(), m_EditorPanels->Count());
     }
 
     OpaaxString EditorService::ResolveLayoutIniPath() const

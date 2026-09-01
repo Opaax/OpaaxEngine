@@ -203,7 +203,15 @@ namespace Opaax::Editor
          */
         bool InitGUI(Window* InWindow);
         void ClearGUI();
-        
+
+        /**
+         * Hand the gui WHAT it draws — the sealed menu tree and the live panels.
+         *
+         * At PostInitialized, the first point where both exist: the tree is sealed at
+         * OnModulesRegistered, the panels are built one line above this call.
+         */
+        void BindGuiContent();
+
         /**
          * Resolves <ProjectRoot>/Editor/Save/imgui.ini — the dock layout ImGui loads on the first frame and
          * rewrites as it changes — CREATING the directory if absent (ImGui will not, and its save fails

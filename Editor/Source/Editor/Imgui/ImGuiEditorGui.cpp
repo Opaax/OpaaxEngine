@@ -7,7 +7,7 @@
 #include "Core/EngineAPI.h"   // OPAAX_ASSERT
 #include "Core/Window/Window.h"
 #include "Editor/EditorContext.h"
-#include "Editor/Extensions/EditorExtensionRegistrar.h"
+#include "Editor/Menus/EditorMenu.h"
 #include "Editor/Panels/EditorPanels.h"
 #include "Editor/Panels/IEditorPanel.h"   // PanelWindowStyle — the window chrome's one parameter
 #include "Editor/UI/OpenGLEditorUIBackend.h"
@@ -218,8 +218,8 @@ namespace Opaax::Editor
         // against a bar that has yet to reserve its height (L56).
         ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
 
-        InContext.Extensions.Menus().Draw(InContext);
-        InContext.Panels.Draw(*this);
+        if (m_Menu != nullptr) { m_Menu->Draw(InContext); }
+        if (m_Panels != nullptr) { m_Panels->Draw(*this); }
     }
 
     bool ImGuiEditorGui::BeginMainMenuBar()

@@ -12,6 +12,8 @@ namespace Opaax::Editor
 {
     struct EditorContext;
     struct PanelWindowStyle;   // Editor/Panels/IEditorPanel.h — backend-agnostic already
+    class EditorMenu;
+    class EditorPanels;
     class IEditorUIBackend;
 
     // =============================================================================
@@ -66,6 +68,21 @@ namespace Opaax::Editor
         virtual bool IsReady() const noexcept = 0;
 
         // End Lifecycle
+        // =============================================================================
+
+        // =============================================================================
+        // Content — WHAT the pass draws, bound once by EditorService rather than looked up from
+        //   EditorContext every frame. Two facets, not one Bind(a, b): the menu tree and the panel
+        //   set arrive from different owners.
+        //
+        //   Non-virtual, storing into the base, because every implementation would hold exactly
+        //   these two pointers — a second one re-deriving that is the drift. Unbound is a legal
+        //   state: Draw then emits the dockspace and nothing else.
+    public:
+        void SetMenu(const EditorMenu& InMenu) noexcept { m_Menu = &InMenu; }
+        void SetPanels(EditorPanels& InPanels) noexcept { m_Panels = &InPanels; }
+
+        // End Content
         // =============================================================================
 
         // =============================================================================
@@ -182,5 +199,13 @@ namespace Opaax::Editor
 
         // End Get - Set
         // =============================================================================
+
+        // =============================================================================
+        // Members
+        // =============================================================================
+    protected:
+        // Non-owning: EditorService owns both and outlives the gui's last Draw.
+        const EditorMenu* m_Menu   = nullptr;
+        EditorPanels*     m_Panels = nullptr;
     };
 }

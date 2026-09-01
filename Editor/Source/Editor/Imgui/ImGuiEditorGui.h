@@ -67,6 +67,9 @@ namespace Opaax::Editor
     private:
         TUniquePtr<IEditorUIBackend> m_Backend;
 
+        // The menu tree and the panel set are m_Menu/m_Panels on IEditorGui — bound by EditorService,
+        // not looked up per frame.
+
         // ImGui stores io.IniFilename as a BORROWED const char* — it never copies the string — so
         // this must stay alive, and unmodified, until DestroyContext() (which saves through that
         // very pointer). Assigned once in Init(); never cleared in Shutdown().
