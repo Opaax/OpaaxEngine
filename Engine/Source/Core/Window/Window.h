@@ -140,8 +140,45 @@ namespace Opaax
         virtual void SetFullscreen()        = 0;
         
         virtual void SaveWindowedState()    = 0;
-        
-        // Window Mode 
+
+        // Window Mode
+        /*-------------------------------------------------------------------------*/
+
+        /*-------------------------------------------------------------------------*/
+        // Decoration — ORTHOGONAL to EWindowMode.
+        //
+        // Mode answers "which monitor, at what size"; this answers "does the OS draw a caption and
+        // a sizing border". Borderless conflates them, so a host that draws its own title bar and
+        // is otherwise an ordinary movable window needs its own axis. SetWindowed() APPLIES the
+        // flag rather than forcing decoration back on.
+
+        virtual void SetDecorated(bool bInDecorated) = 0;
+        virtual bool IsDecorated() const             = 0;
+
+        // Decoration
+        /*-------------------------------------------------------------------------*/
+
+        /*-------------------------------------------------------------------------*/
+        // Placement — what a client-drawn title bar needs in order to move, size and button the
+        // window itself.
+
+        /**
+         * Top-left in SCREEN coordinates.
+         *
+         * Int32, not Uint32: a monitor left of the primary and a maximized window's -8,-8 on
+         * Windows both give a legitimately negative position.
+         */
+        virtual void GetPosition(Int32& OutX, Int32& OutY) const = 0;
+        virtual void SetPosition(Int32 InX, Int32 InY)           = 0;
+
+        virtual void SetSize(Uint32 InWidth, Uint32 InHeight)    = 0;
+
+        virtual void Minimize()          = 0;
+        virtual void Maximize()          = 0;
+        virtual void Restore()           = 0;
+        virtual bool IsMaximized() const = 0;
+
+        // Placement
         /*-------------------------------------------------------------------------*/
 
         /**

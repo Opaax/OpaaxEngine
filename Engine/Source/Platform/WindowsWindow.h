@@ -61,8 +61,32 @@ namespace Opaax
         void SetFullscreen()    override;
         
         void SaveWindowedState() override;
-        
-        // Window Mode 
+
+        // Window Mode
+        /*-------------------------------------------------------------------------*/
+
+        /*-------------------------------------------------------------------------*/
+        // Decoration
+
+        void SetDecorated(bool bInDecorated) override;
+        bool IsDecorated() const override;
+
+        // Decoration
+        /*-------------------------------------------------------------------------*/
+
+        /*-------------------------------------------------------------------------*/
+        // Placement
+
+        void GetPosition(Int32& OutX, Int32& OutY) const override;
+        void SetPosition(Int32 InX, Int32 InY) override;
+        void SetSize(Uint32 InWidth, Uint32 InHeight) override;
+
+        void Minimize() override;
+        void Maximize() override;
+        void Restore() override;
+        bool IsMaximized() const override;
+
+        // Placement
         /*-------------------------------------------------------------------------*/
         //~End Window interface
 
@@ -78,9 +102,18 @@ namespace Opaax
         struct WindowData
         {
             OpaaxString Title;
-            Uint32 PosX, PosY, Width, Height;
+
+            // SIGNED: a monitor left of the primary gives a negative X, and SaveWindowedState
+            // writes glfwGetWindowPos straight in here.
+            Int32 PosX = 0, PosY = 0;
+
+            Uint32 Width, Height;
             Uint32 RefreshRate = GLFW_DONT_CARE;
             EWindowMode Mode;
+
+            // The host's STATED preference, which SetWindowed re-applies. Borderless overrides it
+            // while active without overwriting it, so leaving borderless restores what was asked for.
+            bool bDecorated = true;
 
             EventCallbackFunc EventCallback;
         };

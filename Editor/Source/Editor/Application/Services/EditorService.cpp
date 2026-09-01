@@ -612,7 +612,12 @@ namespace Opaax::Editor
             return;
         }
 
-        // No gui means editor without ui so it make no sense init 
+        // The editor draws its own title bar, so the OS must not draw one. A runtime verb rather
+        // than a WindowProps field because WindowManager::CreateMainWindow builds those from
+        // EngineConfigData alone — there is no host seam to override at creation.
+        lWindow->SetDecorated(false);
+
+        // No gui means editor without ui so it make no sense init
         if (!InitGUI(lWindow))
         {
             //TODO Log

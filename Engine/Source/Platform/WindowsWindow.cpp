@@ -324,10 +324,12 @@ namespace Opaax
 
 	void WindowsWindow::SetWindowed()
 	{
+		// The host's flag, not GLFW_TRUE: an editor drawing its own title bar is Windowed AND
+		// undecorated, and forcing decoration here would undo that on every mode change.
 		glfwSetWindowAttrib(
 		m_Window,
 		GLFW_DECORATED,
-		GLFW_TRUE);
+		m_Data.bDecorated ? GLFW_TRUE : GLFW_FALSE);
 
 		glfwSetWindowMonitor(
 			m_Window,
@@ -408,12 +410,12 @@ namespace Opaax
 	void WindowsWindow::SaveWindowedState()
 	{
 		GLFWmonitor* monitor = glfwGetWindowMonitor(m_Window);
-		
+
 		if (monitor != nullptr)
 		{
 			return;
 		}
-		
+
 		int lPosX = 0;
 		int lPosY = 0;
 
@@ -421,8 +423,86 @@ namespace Opaax
 			m_Window,
 			&lPosX,
 			&lPosY);
-		
+
 		m_Data.PosX = lPosX;
 		m_Data.PosY = lPosY;
+	}
+
+	// =============================================================================
+	// Decoration
+	// =============================================================================
+
+	void WindowsWindow::SetDecorated(const bool bInDecorated)
+	{
+		m_Data.bDecorated = bInDecorated;
+
+		if (m_Window == nullptr) { return; }
+
+		glfwSetWindowAttrib(m_Window, GLFW_DECORATED, bInDecorated ? GLFW_TRUE : GLFW_FALSE);
+
+		// Reads the attribute BACK rather than echoing the argument: the log has to be able to
+		// disagree with the request, or it says nothing about the window (L15).
+		OPAAX_LOG(LogWindowsWindow, Info, "Window decoration requested {} — GLFW reports {}",
+		          bInDecorated ? "on" : "off", IsDecorated() ? "on" : "off");
+	}
+
+	bool WindowsWindow::IsDecorated() const
+	{
+		// Asked of GLFW rather than of m_Data.bDecorated: Borderless turns decoration off without
+		// touching the preference, so only the live attribute answers what is actually on screen.
+		return m_Window != nullptr && glfwGetWindowAttrib(m_Window, GLFW_DECORATED) == GLFW_TRUE;
+	}
+
+	// =============================================================================
+	// Placement
+	// =============================================================================
+
+	void WindowsWindow::GetPosition(Int32& OutX, Int32& OutY) const
+	{
+		OutX = 0;
+		OutY = 0;
+
+		if (m_Window == nullptr) { return; }
+
+		int lPosX = 0;
+		int lPosY = 0;
+		glfwGetWindowPos(m_Window, &lPosX, &lPosY);
+
+		OutX = static_cast<Int32>(lPosX);
+		OutY = static_cast<Int32>(lPosY);
+	}
+
+	void WindowsWindow::SetPosition(const Int32 InX, const Int32 InY)
+	{
+		if (m_Window == nullptr) { return; }
+
+		glfwSetWindowPos(m_Window, static_cast<int>(InX), static_cast<int>(InY));
+	}
+
+	void WindowsWindow::SetSize(const Uint32 InWidth, const Uint32 InHeight)
+	{
+		if (m_Window == nullptr) { return; }
+
+		glfwSetWindowSize(m_Window, static_cast<int>(InWidth), static_cast<int>(InHeight));
+	}
+
+	void WindowsWindow::Minimize()
+	{
+		if (m_Window != nullptr) { glfwIconifyWindow(m_Window); }
+	}
+
+	void WindowsWindow::Maximize()
+	{
+		if (m_Window != nullptr) { glfwMaximizeWindow(m_Window); }
+	}
+
+	void WindowsWindow::Restore()
+	{
+		if (m_Window != nullptr) { glfwRestoreWindow(m_Window); }
+	}
+
+	bool WindowsWindow::IsMaximized() const
+	{
+		return m_Window != nullptr && glfwGetWindowAttrib(m_Window, GLFW_MAXIMIZED) == GLFW_TRUE;
 	}
 }
