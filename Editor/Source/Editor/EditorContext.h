@@ -15,6 +15,7 @@ namespace Opaax
     {
         class IEditorGui;               // editor-owned; the UI backend seam and the owner of the UI pass
         class IEditorUIBackend;         // editor-owned; the context carries it so panels reach it by ctor
+        class IEditorDialogs;           // editor-owned; file pickers and message boxes
         class EditorCamera;             // editor-owned; how the author is looking at an Edit world
         class EditorSelection;          // editor-owned; what is selected (Hierarchy + viewport write, Inspector reads)
         class EditorViewport;           // editor-owned; how big the viewport image is, in pixels
@@ -55,6 +56,13 @@ namespace Opaax
             // Gui.Backend(). Kept as its own member because it is the NARROWER dependency: a panel
             // that only turns a texture into an image has no business with the rest of the UI.
             IEditorUIBackend& UIBackend;
+
+            // The modal seam — "where do I save this?", "are you sure?". Beside Gui rather than a
+            // section of it for UIBackend's reason: a command that asks where to save a file has no
+            // business with the menu bar. The answer arrives by CONTINUATION; the native
+            // implementation fires it inline, so a call site may capture this context.
+            IEditorDialogs&   Dialogs;
+
             EditorSelection&  Selection;   // M2a — Hierarchy writes, Inspector reads
 
             // ② — the viewport's pixel size, measured by the panel. Here because the WRITER is a

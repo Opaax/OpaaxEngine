@@ -13,6 +13,7 @@
 #include "Editor/EditorLevelDocument.h"
 #include "Editor/PIE/PlayInEditor.h"
 #include "Editor/UI/IEditorGui.h"
+#include "Editor/UI/IEditorDialogs.h"
 #include "Editor/Panels/EditorPanels.h"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Core/OpaaxTypes.h"   // TUniquePtr
@@ -304,6 +305,11 @@ namespace Opaax::Editor
         // Built in the ctor and never reset — the context holds a reference to it until OnShutdown's
         // last step, well after ClearGUI().
         TUniquePtr<IEditorGui>          m_Gui;
+
+        // Beside the gui, and built with it: the concrete modal backend. It owns no OS resource and
+        // has nothing to shut down, so unlike the gui it needs no Clear step.
+        TUniquePtr<IEditorDialogs>      m_Dialogs;
+
         EditorExtensionRegistrar        m_Extensions;
 
         TUniquePtr<ResourcePreview>     m_Preview;     

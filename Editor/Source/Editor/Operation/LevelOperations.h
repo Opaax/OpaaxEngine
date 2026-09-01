@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/OpaaxTypes.h"            // TFunction
 #include "Core/String/OpaaxString.hpp"
 
 namespace Opaax::Editor
@@ -40,8 +41,13 @@ namespace Opaax::Editor
          * Not needed for merely changing which map is focused: the baselines are per map and
          * survive a focus change (**MP5**), so nothing is at risk there.
          *
-         * @return true to go ahead.
+         * @param InOnConfirmed Runs when it is safe to proceed — the user said yes, or there was
+         *   nothing at risk and no dialog was shown at all. It does NOT run on a refusal.
+         *
+         *   A CONTINUATION rather than a bool return, because the question goes through
+         *   IEditorDialogs and an answer there is not required to arrive before the call returns.
+         *   With the native backend it always does, so this still reads as a guard.
          */
-        bool ConfirmDiscardingEdits(EditorContext& InContext);
+        void ConfirmDiscardingEdits(EditorContext& InContext, TFunction<void()> InOnConfirmed);
     }
 }

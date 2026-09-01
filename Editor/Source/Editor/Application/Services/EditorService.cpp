@@ -14,6 +14,7 @@
 #include "Editor/Commands/EditorNativeCommands.h"
 #include "Editor/Commands/EditorNativeCommandsTags.hpp"
 #include "Editor/Imgui/ImGuiEditorGui.h"        // the concrete IEditorGui this service picks
+#include "Editor/UI/TinyFdEditorDialogs.h"      // ...and the concrete IEditorDialogs
 #include "Editor/Toolbar/EditorNativeViewportTools.h"
 
 #include "Editor/Operation/EditorGizmo.hpp"
@@ -61,9 +62,12 @@ namespace Opaax::Editor
 {
     // The one place the editor names a UI backend, the way ImGuiEditorGui::Init already names
     // OpenGLEditorUIBackend one level down. Built here rather than in InitGUI so m_Gui is never
-    // null — the context holds a reference to it.
+    // null — the context holds a reference to it. The modal backend is picked the same way, and
+    // is a SEPARATE choice: it is the OS's dialogs, not ImGui's, and swapping one does not imply
+    // swapping the other.
     EditorService::EditorService()
         : m_Gui(MakeUnique<ImGuiEditorGui>())
+        , m_Dialogs(MakeUnique<TinyFdEditorDialogs>())
     {
     }
 
@@ -123,6 +127,7 @@ namespace Opaax::Editor
             InEngine.GetResources(),
             *m_Gui,
             m_Gui->Backend(),
+            *m_Dialogs,
             *m_Selection,
             *m_Viewport,
             *m_Camera,

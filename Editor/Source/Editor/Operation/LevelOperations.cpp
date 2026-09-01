@@ -14,7 +14,7 @@
 #include "World/WorldManager.h"
 #include "World/Components/ComponentRegistry.h"
 
-#include <tinyfiledialogs.h>
+#include "Editor/UI/IEditorDialogs.h"
 
 using namespace Opaax;   // OPAAX_LOG expands to an unqualified ToSpdLevel(...)
 
@@ -63,31 +63,35 @@ namespace Opaax::Editor
         InContext.MapDocument.Focus(InContext.Paths.AssetToAbsolute(lEdited->AssetRelPath));
     }
 
-    bool LevelOps::ConfirmDiscardingEdits(EditorContext& InContext)
+    void LevelOps::ConfirmDiscardingEdits(EditorContext& InContext, TFunction<void()> InOnConfirmed)
     {
+        if (!InOnConfirmed) { return; }
+
         World* const lWorld = InContext.Worlds.GetActiveWorld();
         Level* const lLevel = MapOps::ActiveLevel(InContext);
 
-        if (lWorld == nullptr || lLevel == nullptr) { return true; }
-
-        if (!InContext.LevelDocument.IsDirty(*lWorld, InContext.Engine.GetRegistries().Components(), *lLevel))
+        // Nothing at risk — no dialog at all, which is why the continuation is the only route
+        // through here rather than one branch of two.
+        if (lWorld == nullptr || lLevel == nullptr
+            || !InContext.LevelDocument.IsDirty(*lWorld, InContext.Engine.GetRegistries().Components(), *lLevel))
         {
-            return true;
+            InOnConfirmed();
+            return;
         }
 
-        // UNSAVED WORK IS CONFIRMED, NOT DISCARDED. tinyfiledialogs is already the editor's
-        // file-dialog vendor, so the modal costs no new dependency.
-        const int lAnswer = tinyfd_messageBox(
-            "Unsaved changes",
-            "This level has unsaved changes.\nContinue and lose them?",
-            "yesno", "warning", /*defaultButton*/0); // default NO — the safe answer
+        // UNSAVED WORK IS CONFIRMED, NOT DISCARDED.
+        InContext.Dialogs.Confirm(
+            OpaaxString("Unsaved changes"),
+            OpaaxString("This level has unsaved changes.\nContinue and lose them?"),
+            [InOnConfirmed = Move(InOnConfirmed)](const EDialogAnswer InAnswer)
+            {
+                if (InAnswer != EDialogAnswer::Yes)
+                {
+                    OPAAX_LOG(LogLevelOps, Info, "Cancelled — unsaved changes kept");
+                    return;
+                }
 
-        if (lAnswer != 1)
-        {
-            OPAAX_LOG(LogLevelOps, Info, "Cancelled — unsaved changes kept");
-            return false;
-        }
-
-        return true;
+                InOnConfirmed();
+            });
     }
 }
