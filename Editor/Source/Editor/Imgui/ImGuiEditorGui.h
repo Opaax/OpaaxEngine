@@ -1,6 +1,7 @@
 #pragma once
 
-#include "Editor/Imgui/ImGuiTitleBar.h"   // held by value — needs the complete type
+#include "Editor/Imgui/ImGuiEditorWidgets.h"   // held by value — needs the complete type
+#include "Editor/Imgui/ImGuiTitleBar.h"        // likewise
 #include "Editor/UI/IEditorGui.h"
 #include "Editor/UI/IEditorUIBackend.h"   // owned through a TUniquePtr — needs the complete type
 #include "Core/OpaaxTypes.h"              // TUniquePtr
@@ -51,11 +52,6 @@ namespace Opaax::Editor
         bool TitleBarButton(EWindowButtonKind InKind) override;
         bool BeginPanelWindow(const char* InLabel, const PanelWindowStyle& InStyle, bool& bOutWantOpen) override;
         void EndPanelWindow() override;
-        void PushIdScope(const char* InId) override;
-        void PopIdScope() override;
-        bool CollapsingHeader(const char* InLabel) override;
-        void SameLine() override;
-        void ToolbarSeparator() override;
 
         double GetTime() const override;
         bool   IsPointerOverUI() const override;
@@ -63,6 +59,7 @@ namespace Opaax::Editor
         bool   Shortcut(EKeyCode InModifier, EKeyCode InKey) const override;
 
         IEditorUIBackend& Backend() const noexcept override { return *m_Backend; }
+        IEditorWidgets&   Widgets() noexcept override { return m_Widgets; }
         //~End IEditorGui interface
 
         using IEditorGui::Shortcut;   // the unmodified overload, hidden by the override above
@@ -81,6 +78,9 @@ namespace Opaax::Editor
         // The ImGui SIDE of the caption. Named apart from the base's m_TitleBar
         // (EditorTitleBar, the backend-agnostic one) so neither shadows the other.
         ImGuiTitleBar                m_ImGuiTitleBar;
+
+        // Stateless; held by value because the gui is what a caller reaches it through.
+        ImGuiEditorWidgets           m_Widgets;
 
         // ImGui stores io.IniFilename as a BORROWED const char* — it never copies the string — so
         // this must stay alive, and unmodified, until DestroyContext() (which saves through that

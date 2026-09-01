@@ -14,8 +14,8 @@ namespace Opaax::Editor
     // =============================================================================
     // The BUILT-IN property drawers — the field types the engine's own value vocabulary is made of.
     //
-    //   Bodies live in the .cpp so ImGui stays out of every registration site. Declarations only
-    //   here, which is all the fold needs.
+    //   Bodies live in the .cpp; declarations only here, which is all the fold needs. NOTHING in
+    //   this file names a backend — every drawer speaks IEditorWidgets.
     //
     //   Dispatch is BY TYPE, which is why LinearColor gets the picker and a bare Vector4F gets four
     //   drags: the type says what the value is, and PropertyMeta says how it behaves (a range).
@@ -28,7 +28,8 @@ namespace Opaax::Editor
 
 #define OPAAX_DECLARE_PROPERTY_DRAWER(Type)                                                 \
     template<> struct TPropertyDrawer<Type>                                                 \
-    { static void Draw(const char* InLabel, Type& InValue, const PropertyMeta& InMeta); }
+    { static void Draw(IEditorWidgets& InWidgets, const char* InLabel, Type& InValue,             \
+                       const PropertyMeta& InMeta); }
 
     OPAAX_DECLARE_PROPERTY_DRAWER(bool);
     OPAAX_DECLARE_PROPERTY_DRAWER(Int16);
@@ -72,46 +73,46 @@ namespace Opaax::Editor
     template<typename TResource>
     struct TPropertyDrawer<TResourcePath<TResource>>
     {
-        static void Draw(const char* InLabel, TResourcePath<TResource>& InValue, const PropertyMeta&)
+        static void Draw(IEditorWidgets& InWidgets, const char* InLabel,
+                         TResourcePath<TResource>& InValue, const PropertyMeta&)
         {
-            ImGui::PushID(InLabel);
+            InWidgets.PushId(InLabel);
 
-            // A button, not a read-only InputText: the button IS the drop target, and it reads as a
+            // A button, not a read-only text field: the button IS the drop target, and it reads as a
             // slot to put something in rather than a field someone forgot to make editable.
+            //
+            // The full path rides as the TOOLTIP, because the button truncates and a path reading
+            // "Textures/He..." is worse than none when two of them share a prefix.
             const char* lText = InValue.IsEmpty() ? "(drop a resource here)" : InValue.Path.CStr();
-            ImGui::Button(lText, ImVec2(ImGui::CalcItemWidth(), 0.f));
 
+            InWidgets.Button(lText, -1.f, InValue.IsEmpty() ? nullptr : InValue.Path.CStr());
+
+            // Immediately after the widget that receives it — the drop target is opened and closed
+            // by this call, and its header names no backend (only its .cpp does).
             if (OpaaxString lDropped; AcceptResourceDragPayload(ResourceTypeID::Get<TResource>(), lDropped))
             {
                 InValue.Path = Move(lDropped);
             }
 
-            // The full path when it does not fit — the button truncates, and a path that says
-            // "Textures/He..." is worse than no path at all when two of them share a prefix.
-            if (!InValue.IsEmpty() && ImGui::IsItemHovered())
-            {
-                ImGui::SetTooltip("%s", InValue.Path.CStr());
-            }
-
             if (!InValue.IsEmpty())
             {
-                ImGui::SameLine();
-                if (ImGui::SmallButton("x")) { InValue.Path = OpaaxString(); }
+                InWidgets.SameLine();
+                if (InWidgets.SmallButton("x")) { InValue.Path = OpaaxString(); }
             }
 
-            ImGui::SameLine();
-            ImGui::TextUnformatted(InLabel);
+            InWidgets.SameLine();
+            InWidgets.Text(InLabel);
 
-            ImGui::PopID();
+            InWidgets.PopId();
         }
     };
 
     template<CEnumWithValues T>
     struct TPropertyDrawer<T>
     {
-        static void Draw(const char* InLabel, T& InValue, const PropertyMeta&)
+        static void Draw(IEditorWidgets& InWidgets, const char* InLabel, T& InValue, const PropertyMeta&)
         {
-            if (!ImGui::BeginCombo(InLabel, ToString(InValue)))
+            if (!InWidgets.BeginCombo(InLabel, ToString(InValue)))
             {
                 return;
             }
@@ -120,18 +121,18 @@ namespace Opaax::Editor
             {
                 const bool bSelected = lCandidate == InValue;
 
-                if (ImGui::Selectable(ToString(lCandidate), bSelected))
+                if (InWidgets.Selectable(ToString(lCandidate), bSelected))
                 {
                     InValue = lCandidate;
                 }
 
                 if (bSelected)
                 {
-                    ImGui::SetItemDefaultFocus();
+                    InWidgets.SetDefaultFocus();
                 }
             }
 
-            ImGui::EndCombo();
+            InWidgets.EndCombo();
         }
     };
 }

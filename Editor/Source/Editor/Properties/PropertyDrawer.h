@@ -2,7 +2,7 @@
 
 #include <tuple>
 
-#include <imgui.h>
+#include "Editor/UI/IEditorWidgets.h"
 
 #include "Core/Reflection/OpaaxProperty.h"
 
@@ -21,9 +21,14 @@ namespace Opaax::Editor
     //   A registry would only buy registering a drawer for a type you cannot include — which nobody
     //   needs — and would cost a lookup per field per frame plus something to seal.
     //
-    //   The contract: static void Draw(const char* InLabel, T& InValue, const PropertyMeta& InMeta).
-    //   Uniform, so the fold needs no dispatch of its own — and the meta arrives as ONE object so a
-    //   new facet never changes this signature.
+    //   The contract: static void Draw(IEditorWidgets&, const char* InLabel, T& InValue,
+    //   const PropertyMeta& InMeta). Uniform, so the fold needs no dispatch of its own — and the
+    //   meta arrives as ONE object so a new facet never changes this signature.
+    //
+    //   THE SEAM COMES FIRST because a drawer must name no backend: TPropertyDrawer is the point a
+    //   GAME extends to support a new field type (I15), and one that called ImGui directly would
+    //   bind every game's custom editor to it forever. See IEditorWidgets for why this is not
+    //   simply MR2d being violated.
     // =============================================================================
     template<typename T>
     struct TPropertyDrawer;
@@ -36,18 +41,18 @@ namespace Opaax::Editor
      * as a blanket line on the panel — the blanket version goes stale the day one value is read live
      * and nobody remembers to update the sentence.
      */
-    inline void DrawPropertyNote(const PropertyMeta& InMeta)
+    inline void DrawPropertyNote(IEditorWidgets& InWidgets, const PropertyMeta& InMeta)
     {
         if (!HasFlag(InMeta.Flags, EPropertyFlags::NeedRestart)) { return; }
 
-        ImGui::SameLine();
-        ImGui::TextDisabled("(restart)");
+        InWidgets.SameLine();
+        InWidgets.TextDisabled("(restart)");
     }
 
     // Declared ahead of DrawProperty because the two are MUTUALLY RECURSIVE: a group is a property
     // whose value has properties of its own.
     template<CReflected TOwner>
-    void DrawProperties(TOwner& InOwner);
+    void DrawProperties(IEditorWidgets& InWidgets, TOwner& InOwner);
 
     /**
      * Draw one described field of InOwner.
@@ -56,7 +61,7 @@ namespace Opaax::Editor
      * no runtime lookup and no type tag.
      */
     template<typename TProperty, typename TOwner>
-    void DrawProperty(const TProperty& InProperty, TOwner& InOwner)
+    void DrawProperty(IEditorWidgets& InWidgets, const TProperty& InProperty, TOwner& InOwner)
     {
         using ValueType = typename TProperty::ValueType;
 
@@ -66,17 +71,18 @@ namespace Opaax::Editor
         // never sensibly exist.
         if constexpr (CReflected<ValueType>)
         {
-            if (ImGui::TreeNodeEx(InProperty.Name, ImGuiTreeNodeFlags_DefaultOpen))
+            if (InWidgets.BeginTreeNode(InProperty.Name))
             {
-                DrawPropertyNote(InProperty.Meta);
-                DrawProperties(InOwner.*(InProperty.Member));
-                ImGui::TreePop();
+                DrawPropertyNote(InWidgets, InProperty.Meta);
+                DrawProperties(InWidgets, InOwner.*(InProperty.Member));
+                InWidgets.EndTreeNode();
             }
         }
         else
         {
-            TPropertyDrawer<ValueType>::Draw(InProperty.Name, InOwner.*(InProperty.Member), InProperty.Meta);
-            DrawPropertyNote(InProperty.Meta);
+            TPropertyDrawer<ValueType>::Draw(InWidgets, InProperty.Name, InOwner.*(InProperty.Member),
+                                             InProperty.Meta);
+            DrawPropertyNote(InWidgets, InProperty.Meta);
         }
     }
 
@@ -84,14 +90,14 @@ namespace Opaax::Editor
      * Draw every property InOwner describes, in declaration order.
      *
      * Writes STRAIGHT INTO the live object, as a hand-written drawer does — the Inspector marks the
-     * world changed centrally off ImGui::IsAnyItemActive(), so nothing here has to report an edit.
+     * world changed centrally off its own "any item active" check, so nothing here reports an edit.
      */
     template<CReflected TOwner>
-    void DrawProperties(TOwner& InOwner)
+    void DrawProperties(IEditorWidgets& InWidgets, TOwner& InOwner)
     {
-        std::apply([&InOwner](const auto&... lProperties)
+        std::apply([&InWidgets, &InOwner](const auto&... lProperties)
                    {
-                       (DrawProperty(lProperties, InOwner), ...);
+                       (DrawProperty(InWidgets, lProperties, InOwner), ...);
                    },
                    TOwner::GetProperties());
     }

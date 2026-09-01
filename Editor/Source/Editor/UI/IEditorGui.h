@@ -17,6 +17,7 @@ namespace Opaax::Editor
     struct PanelWindowStyle;   // Editor/Panels/IEditorPanel.h — backend-agnostic already
     class PanelRegistry;
     class IEditorUIBackend;
+    class IEditorWidgets;
 
     /** Which caption button — the seam names the KIND and lets each backend draw it. */
     enum class EWindowButtonKind : Uint8
@@ -201,26 +202,6 @@ namespace Opaax::Editor
         /** Closes it. Runs whether or not BeginPanelWindow returned true. */
         virtual void EndPanelWindow() = 0;
 
-        /**
-         * An ID SCOPE — the boundary between two independently-authored things drawn into one
-         * window, so widgets that share a label cannot fight over hover and active state (**I15**).
-         *
-         * Here rather than left to each registry because a scope is STRUCTURE, not presentation:
-         * it is the reason `DrawerRegistry` and `ViewportToolbarRegistry` no longer include a
-         * backend header, and the reason a registry stays pure data (**MR2g**).
-         */
-        virtual void PushIdScope(const char* InId) = 0;
-        virtual void PopIdScope() = 0;
-
-        /** A collapsible section header, open by default. @return true when the body must be drawn. */
-        virtual bool CollapsingHeader(const char* InLabel) = 0;
-
-        /** Keep the next item on the current row. */
-        virtual void SameLine() = 0;
-
-        /** A vertical rule between groups on a toolbar strip. */
-        virtual void ToolbarSeparator() = 0;
-
         // End Chrome
         // =============================================================================
 
@@ -273,6 +254,16 @@ namespace Opaax::Editor
          * @pre IsReady()
          */
         virtual IEditorUIBackend& Backend() const noexcept = 0;
+
+        /**
+         * The VALUE-EDITOR vocabulary, for property drawers and anything else editing a field.
+         *
+         * Off the gui rather than owned separately because it is the SAME backend one level down,
+         * exactly like Backend() - where IEditorDialogs is the OS and therefore is not.
+         *
+         * @pre IsReady()
+         */
+        virtual IEditorWidgets& Widgets() noexcept = 0;
 
         // End Get - Set
         // =============================================================================

@@ -6,7 +6,7 @@
 #include "Engine/Modules/ModuleRegistrar.h"     // DeriveTypeLeafName — a section's label
 #include "Editor/Properties/PropertyDrawers.h"  // the built-in widgets, so every call site has them
 
-#include "Editor/UI/IEditorGui.h"
+#include "Editor/UI/IEditorWidgets.h"
 
 namespace Opaax
 {
@@ -103,7 +103,7 @@ namespace Opaax::Editor
             const OpaaxStringID lName = DeriveTypeLeafName<typename TDrawerResolver<TSubject, TTarget>::DrawableType>();
 
             m_Entries.emplace_back(
-                [lName](TSubject& InSubject, IEditorGui& InGui) -> bool
+                [lName](TSubject& InSubject, IEditorWidgets& InWidgets) -> bool
                 {
                     using Resolver = TDrawerResolver<TSubject, TTarget>;
 
@@ -113,10 +113,10 @@ namespace Opaax::Editor
                         return false;
                     }
 
-                    InGui.PushIdScope(lName.CStr());
+                    InWidgets.PushId(lName.CStr());
                     TDrawer lDrawer;
-                    lDrawer.Draw(*lDrawable);
-                    InGui.PopIdScope();
+                    lDrawer.Draw(InWidgets, *lDrawable);
+                    InWidgets.PopId();
 
                     return true;
                 });
@@ -144,7 +144,7 @@ namespace Opaax::Editor
                       lName, PropertyCount<typename Resolver::DrawableType>());
 
             m_Entries.emplace_back(
-                [lName](TSubject& InSubject, IEditorGui& InGui) -> bool
+                [lName](TSubject& InSubject, IEditorWidgets& InWidgets) -> bool
                 {
                     typename Resolver::DrawableType* lDrawable = Resolver::Resolve(InSubject);
                     if (lDrawable == nullptr)
@@ -165,21 +165,21 @@ namespace Opaax::Editor
                     // boundary between two independently-authored types. Keyed by the type NAME, not
                     // by the registration index, so a stored open/closed header state survives
                     // someone registering another drawer before it.
-                    InGui.PushIdScope(lName.CStr());
+                    InWidgets.PushId(lName.CStr());
 
                     if constexpr (Resolver::bDrawsSection)
                     {
-                        if (InGui.CollapsingHeader(lName.CStr()))
+                        if (InWidgets.CollapsingHeader(lName.CStr()))
                         {
-                            DrawProperties(*lDrawable);
+                            DrawProperties(InWidgets, *lDrawable);
                         }
                     }
                     else
                     {
-                        DrawProperties(*lDrawable);
+                        DrawProperties(InWidgets, *lDrawable);
                     }
 
-                    InGui.PopIdScope();
+                    InWidgets.PopId();
 
                     return true;
                 });
@@ -191,11 +191,11 @@ namespace Opaax::Editor
          * @return false when nothing applied — which is what lets a caller tell "no drawer for this"
          *   from "drew nothing", and is how the Config panel decides to fall back to its json view.
          */
-        bool DrawFirst(TSubject& InSubject, IEditorGui& InGui) const
+        bool DrawFirst(TSubject& InSubject, IEditorWidgets& InWidgets) const
         {
-            for (const TFunction<bool(TSubject&, IEditorGui&)>& lEntry : m_Entries)
+            for (const TFunction<bool(TSubject&, IEditorWidgets&)>& lEntry : m_Entries)
             {
-                if (lEntry && lEntry(InSubject, InGui)) { return true; }
+                if (lEntry && lEntry(InSubject, InWidgets)) { return true; }
             }
 
             return false;
@@ -205,7 +205,7 @@ namespace Opaax::Editor
         // Get - Set
     public:
         /** The registered drawers in registration order (= display order). */
-        const TDynArray<TFunction<bool(TSubject&, IEditorGui&)>>& Entries() const noexcept { return m_Entries; }
+        const TDynArray<TFunction<bool(TSubject&, IEditorWidgets&)>>& Entries() const noexcept { return m_Entries; }
 
         Uint64 Count() const noexcept { return static_cast<Uint64>(m_Entries.size()); }
         // End Get - Set
@@ -215,7 +215,7 @@ namespace Opaax::Editor
         // Members
         // =============================================================================
     private:
-        TDynArray<TFunction<bool(TSubject&, IEditorGui&)>> m_Entries;
+        TDynArray<TFunction<bool(TSubject&, IEditorWidgets&)>> m_Entries;
     };
 
     // Explicit at the call site, as the routes read: Drawers() / ConfigDrawers().

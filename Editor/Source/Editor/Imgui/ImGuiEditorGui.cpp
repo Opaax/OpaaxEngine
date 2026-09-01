@@ -323,31 +323,6 @@ namespace Opaax::Editor
         ImGui::End();
     }
 
-    void ImGuiEditorGui::PushIdScope(const char* InId)
-    {
-        ImGui::PushID(InId);
-    }
-
-    void ImGuiEditorGui::PopIdScope()
-    {
-        ImGui::PopID();
-    }
-
-    bool ImGuiEditorGui::CollapsingHeader(const char* InLabel)
-    {
-        return ImGui::CollapsingHeader(InLabel, ImGuiTreeNodeFlags_DefaultOpen);
-    }
-
-    void ImGuiEditorGui::SameLine()
-    {
-        ImGui::SameLine();
-    }
-
-    void ImGuiEditorGui::ToolbarSeparator()
-    {
-        ImGui::TextDisabled("|");
-    }
-
     double ImGuiEditorGui::GetTime() const
     {
         return ImGui::GetTime();

@@ -16,6 +16,7 @@ namespace Opaax
         class IEditorGui;               // editor-owned; the UI backend seam and the owner of the UI pass
         class IEditorUIBackend;         // editor-owned; the context carries it so panels reach it by ctor
         class IEditorDialogs;           // editor-owned; file pickers and message boxes
+        class IEditorWidgets;           // editor-owned; the value-editor vocabulary drawers use
         class EditorCamera;             // editor-owned; how the author is looking at an Edit world
         class EditorSelection;          // editor-owned; what is selected (Hierarchy + viewport write, Inspector reads)
         class EditorViewport;           // editor-owned; how big the viewport image is, in pixels
@@ -62,6 +63,10 @@ namespace Opaax
             // business with the menu bar. The answer arrives by CONTINUATION; the native
             // implementation fires it inline, so a call site may capture this context.
             IEditorDialogs&   Dialogs;
+
+            // Gui.Widgets(). Beside it for UIBackend's reason: a drawer editing a float has no
+            // business with the menu bar, and a hand-written drawer receives only this.
+            IEditorWidgets&   Widgets;
 
             EditorSelection&  Selection;   // M2a — Hierarchy writes, Inspector reads
 

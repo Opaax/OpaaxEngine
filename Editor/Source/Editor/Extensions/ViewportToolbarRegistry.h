@@ -4,7 +4,7 @@
 #include "Core/String/OpaaxStringID.hpp"
 
 #include "Editor/EditorContext.h"
-#include "Editor/UI/IEditorGui.h"
+#include "Editor/UI/IEditorWidgets.h"
 
 namespace Opaax::Editor
 {
@@ -79,24 +79,24 @@ namespace Opaax::Editor
          */
         void Draw(EditorContext& InContext) const
         {
-            IEditorGui& lGui = InContext.Gui;
+            IEditorWidgets& lWidgets = InContext.Widgets;
 
             bool bFirst = true;
 
             for (const Item& lItem : m_Items)
             {
-                if (!bFirst) { lGui.SameLine(); }
+                if (!bFirst) { lWidgets.SameLine(); }
                 bFirst = false;
 
                 if (lItem.bSeparator)
                 {
-                    lGui.ToolbarSeparator();
+                    lWidgets.ToolbarSeparator();
                     continue;
                 }
 
-                lGui.PushIdScope(lItem.Id.CStr());
+                lWidgets.PushId(lItem.Id.CStr());
                 lItem.Draw(InContext);
-                lGui.PopIdScope();
+                lWidgets.PopId();
             }
         }
 

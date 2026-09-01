@@ -1,8 +1,9 @@
 #include "Drawers/TagsComponentDrawer.h"
 
-#include <imgui.h>
+#include "Editor/UI/IEditorWidgets.h"
 
 using namespace Opaax;
+using namespace Opaax::Editor;
 
 namespace
 {
@@ -11,9 +12,9 @@ namespace
     char g_NewTagBuffer[96] = {};
 }
 
-void TagsComponentDrawer::Draw(Sandbox::TagsComponent& InComponent) const
+void TagsComponentDrawer::Draw(IEditorWidgets& InWidgets, Sandbox::TagsComponent& InComponent) const
 {
-    if (!ImGui::CollapsingHeader("Tags", ImGuiTreeNodeFlags_DefaultOpen))
+    if (!InWidgets.CollapsingHeader("Tags"))
     {
         return;
     }
@@ -24,37 +25,38 @@ void TagsComponentDrawer::Draw(Sandbox::TagsComponent& InComponent) const
 
     for (const OpaaxTag lTag : InComponent.Tags)
     {
-        ImGui::PushID(static_cast<int>(lTag.GetName().GetId()));
+        // Keyed by the interned id: two tags never share a scope, and the label is not the identity.
+        InWidgets.PushId(lTag.GetName().GetId());
 
-        if (ImGui::SmallButton("x")) { lToRemove = lTag; }
+        if (InWidgets.SmallButton("x")) { lToRemove = lTag; }
 
-        ImGui::SameLine();
-        ImGui::TextUnformatted(lTag.GetName().CStr());
+        InWidgets.SameLine();
+        InWidgets.Text(lTag.GetName().CStr());
 
-        ImGui::PopID();
+        InWidgets.PopId();
     }
 
     if (InComponent.Tags.IsEmpty())
     {
-        ImGui::TextDisabled("No tags");
+        InWidgets.TextDisabled("No tags");
     }
 
     if (lToRemove.IsValid()) { InComponent.Tags.RemoveTag(lToRemove); }
 
-    ImGui::Separator();
+    InWidgets.Separator();
 
-    const bool lSubmitted = ImGui::InputText("##NewTag", g_NewTagBuffer, sizeof(g_NewTagBuffer),
-                                             ImGuiInputTextFlags_EnterReturnsTrue);
-    ImGui::SameLine();
+    const bool lSubmitted = InWidgets.InputText("##NewTag", g_NewTagBuffer, sizeof(g_NewTagBuffer),
+                                                /*bInSubmitOnEnter*/ true);
+    InWidgets.SameLine();
 
     // A typed field is UNTRUSTED input: gate on the predicate rather than letting the OpaaxTag ctor
     // assert on every half-finished word (I14).
     const OpaaxStringView lTyped(g_NewTagBuffer);
     const bool            lIsValid = OpaaxTag::IsValidTagText(lTyped);
 
-    ImGui::BeginDisabled(!lIsValid);
-    const bool lAdded = ImGui::Button("Add");
-    ImGui::EndDisabled();
+    InWidgets.BeginDisabled(!lIsValid);
+    const bool lAdded = InWidgets.Button("Add");
+    InWidgets.EndDisabled();
 
     if (lIsValid && (lAdded || lSubmitted))
     {
@@ -64,6 +66,6 @@ void TagsComponentDrawer::Draw(Sandbox::TagsComponent& InComponent) const
 
     if (!lTyped.IsEmpty() && !lIsValid)
     {
-        ImGui::TextDisabled("Tag needs dotted segments, e.g. Sandbox.Quad.White");
+        InWidgets.TextDisabled("Tag needs dotted segments, e.g. Sandbox.Quad.White");
     }
 }

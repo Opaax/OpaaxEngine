@@ -130,6 +130,7 @@ namespace Opaax::Editor
             *m_Gui,
             m_Gui->Backend(),
             *m_Dialogs,
+            m_Gui->Widgets(),
             *m_Selection,
             *m_Viewport,
             *m_Camera,
