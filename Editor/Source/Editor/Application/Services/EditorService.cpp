@@ -40,6 +40,10 @@
 #include "World/World.h"
 #include "World/WorldManager.h"
 #include "World/Entity/Entity.h"
+#include "World/Components/CameraComponent.h"      // the engine-native components the
+#include "World/Components/DummyComponent.h"       // editor draws by default (I15)
+#include "World/Components/SpriteComponent.h"
+#include "World/Components/TransformComponent.h"
 
 using namespace Opaax; // OPAAX_LOG expands to an unqualified ToSpdLevel(...)
 
@@ -299,6 +303,25 @@ namespace Opaax::Editor
 
         lTools.Add(OPAAX_ID("Pivot"), NativeViewportTools::DrawPivot);
         lTools.Add(OPAAX_ID("Space"), NativeViewportTools::DrawSpace);
+    }
+
+    void EditorService::RegisterNativeDrawers()
+    {
+        // The ENGINE's own components, through the same route and the same generic form a game's
+        // component takes. They were registered by the GAME module until 2026-09-01 — so a fresh
+        // project had a blank Inspector for every engine type until it remembered to register four
+        // things it does not own. Every other native route already had its RegisterNativeX().
+        //
+        // No drawer code exists for any of these: all four are CReflected, so the fold reads
+        // OPAAX_PROPERTIES and the registration IS the whole implementation (I15).
+        ComponentDrawerRegistry& lDrawers = m_Extensions.Drawers();
+
+        // Every entity has one (I17), so this is the drawer that always shows.
+        lDrawers.Register<TransformComponent>();
+
+        lDrawers.Register<SpriteComponent>();
+        lDrawers.Register<CameraComponent>();
+        lDrawers.Register<DummyComponent>();
     }
 
     void EditorService::RegisterNativeConfigDrawers()
@@ -562,6 +585,7 @@ namespace Opaax::Editor
         RegisterNativeMenus();
         RegisterNativeResourceTypes();
         RegisterNativeEditorCommand();
+        RegisterNativeDrawers();
         RegisterNativeConfigDrawers();
 
         // AFTER the commands, because the mode buttons dispatch by tag and a toolbar registered

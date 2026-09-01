@@ -120,6 +120,15 @@ namespace Opaax::Editor
         void RegisterNativeResourceTypes();
 
         /**
+         * The ENGINE's own components into m_Extensions.Drawers(), so a game project gets an
+         * Inspector for them without registering four types it does not own. Same route, same
+         * ordering rule and same lack of privilege as RegisterNativePanels.
+         *
+         * All four are CReflected, so the generic Register<T>() is the entire implementation.
+         */
+        void RegisterNativeDrawers();
+
+        /**
          * The engine's own configs into m_Extensions.ConfigDrawers(), so the Config panel draws
          * their fields instead of their json. Same registry template, same two forms and the same
          * ordering rule as the component drawers — only the resolver differs.

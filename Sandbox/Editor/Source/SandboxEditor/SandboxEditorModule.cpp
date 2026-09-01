@@ -8,10 +8,6 @@
 #include "Drawers/TagsComponentDrawer.h"
 #include "Components/HealthComponent.h"
 #include "Resources/WaveResource.h"
-#include "World/Components/CameraComponent.h"
-#include "World/Components/DummyComponent.h"
-#include "World/Components/SpriteComponent.h"
-#include "World/Components/TransformComponent.h"
 
 // OPAAX_LOG expands to an unqualified ToSpdLevel(...) — bring Opaax into scope, as SandboxPanel does.
 using namespace Opaax;
@@ -48,25 +44,15 @@ void SandboxEditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& In
     InRegistrar.TitleBar().Category("Tools").SubCategory("Debug")
                .AddCommand("Validate Sandbox", SandboxEditor::Tags::SANDBOX_COMMAND_VALIDATE);
 
-    // The DEFAULT drawer, folded from what each component declares with OPAAX_PROPERTIES. It
-    // replaced a hand-written DummyComponentDrawer that was three ImGui calls in a file of its own —
-    // and HealthComponent, which never had a drawer and was therefore invisible, becomes editable
-    // for the price of this line.
-    // Every entity has one, so this is the drawer that always shows.
-    InRegistrar.Drawers().Register<Opaax::TransformComponent>();
-
-    InRegistrar.Drawers().Register<Opaax::DummyComponent>();
+    // THE GAME'S OWN COMPONENTS ONLY. Transform, Sprite, Camera and Dummy are engine types and are
+    // registered by EditorService::RegisterNativeDrawers — this module used to register them, which
+    // meant a new project had a blank Inspector for every engine component until it remembered four
+    // types it does not own.
+    //
+    // The DEFAULT drawer, folded from what the component declares with OPAAX_PROPERTIES: Health
+    // never had a drawer and was therefore invisible, and becomes editable for the price of this
+    // line — no drawer code anywhere.
     InRegistrar.Drawers().Register<Sandbox::HealthComponent>();
-
-    // Seven fields, four widget kinds, zero drawer code — including the texture slot, which is a
-    // drag target because the field's TYPE says which resource it names (TResourcePath).
-    InRegistrar.Drawers().Register<Opaax::SpriteComponent>();
-
-    // ① — two fields, both already covered by a built-in drawer, so the camera costs the editor
-    // this line and nothing else. (Engine-native components getting their drawers from the GAME's
-    // module is a gap: a new project's editor would have to remember this. Its answer is a
-    // RegisterNativeDrawers() in EditorService, and that is not this milestone's job.)
-    InRegistrar.Drawers().Register<Opaax::CameraComponent>();
 
     // Still HAND-WRITTEN, and the reason the override exists: a tag is not a field you type into, it
     // is add/remove against a validated vocabulary (I14). The authoring half of the tag dogfood — a
