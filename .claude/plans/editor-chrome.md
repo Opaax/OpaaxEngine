@@ -120,6 +120,34 @@ Everything settled once that was on the table:
 
 Durable in **MR2g**; lesson [[L71]].
 
+## The fourth pass: drawers (`2420ec9`, `7510e49`)
+
+*"Since you have seen the problems of drawers. Lets tackle thats!"* — two of them, one cheap and one
+architectural.
+
+**Native drawers (`2420ec9`).** `SandboxEditorModule` registered `TransformComponent`,
+`DummyComponent`, `SpriteComponent` and `CameraComponent` — all engine types — so a fresh project had
+a blank Inspector until it remembered four things it does not own. `RegisterNativeDrawers()` now sits
+with the other five native routes. **The gap was documented in a comment explaining why it was not
+being fixed**, which is [[L19]]'s work item verbatim.
+
+**`IEditorWidgets` (`7510e49`).** ~24 value-editor calls, derived from the call sites that exist.
+`TPropertyDrawer::Draw` gains the seam as its first parameter, amending **I15**'s stated contract —
+because *"supporting a new field type is a `TPropertyDrawer<T>`"* is a promise to **games**, and a
+drawer calling ImGui made that promise backend-bound.
+
+- **MR2d gains one stated exception rather than being waived.** Its objection — immediate mode, an ID
+  stack, `IsItemHovered` late-bound to submission order — is answered: the vocabulary is derived not
+  invented, and the late-bound queries are **folded into the calls** (`Button` takes its tooltip).
+- **The hand-written `TagsComponentDrawer` is the dogfood** and it mattered: a *bespoke* game drawer
+  needed almost the same vocabulary as the built-ins. Had it needed a dozen more calls, the
+  closed-vocabulary claim would have been false.
+- **Result:** `grep -rn "ImGui::" Editor/Source/Editor/Properties/ Editor/Source/Editor/Extensions/
+  Sandbox/Editor/` is **empty**. The whole drawer layer, both registries and the game's editor module
+  name no backend.
+
+Durable in **MR2h** (+ **MR2d** and **I15** amended).
+
 ## Deviation from the approved plan
 
 The plan said rename `BeginMainMenuBar` → `BeginMenuBar`. Building it showed the rename is

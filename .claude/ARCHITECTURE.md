@@ -420,6 +420,17 @@ editor-side `TPropertyDrawer<T>`, never a new `FLOAT_PROP`/`INT_PROP` macro here
   component's key in a `.opaaxmap`, so the Inspector and the file agree by construction, not by care.
 - **`EPropertyHint` exists because a type is not always a widget**: a `Vector4F` is four numbers or an
   RGBA colour and only the author knows. One value today, one caller — a growth point, not a taxonomy.
+- **A DRAWER NAMES NO BACKEND** (2026-09-01, amending this rule's stated contract). The signature is
+  `Draw(IEditorWidgets&, const char* InLabel, T& InValue, const PropertyMeta&)` — the seam comes
+  first. It changed because *"supporting one is an editor-side `TPropertyDrawer<T>`"* is a promise to
+  **games**, and a drawer that called ImGui directly made that promise backend-bound. Everything else
+  here is untouched: still a specialization, still declared-and-never-defined, still no registry.
+  See **MR2h** for the vocabulary and for why it is not simply **MR2d** being violated.
+- **The engine's own components register their drawers in `EditorService::RegisterNativeDrawers()`**
+  (2026-09-01). They were registered by the GAME module, so a fresh project had a blank Inspector for
+  every engine type until it remembered four it does not own. Drawers were the last native route
+  without a `RegisterNativeX()`. No drawer code exists for any of them — all four are `CReflected`,
+  so the registration IS the implementation.
 - **Properties do NOT drive serialization yet.** `NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT` still
   owns `to_json`/`from_json` (**I8**), so a type states its fields twice. Deliberate: map files are
   byte-exact-verified (**MP6**), so collapsing the two lists is its own step with its own gate.
@@ -1672,6 +1683,12 @@ same way `Init` already picks the GL backend.
   ID stack, `IsItemHovered` late-bound to submission order (**L56**) — so it would buy the *word*
   portability and none of the property. What the seam does buy is real and small: the pass has one
   owner, and the ~20 chrome calls are behind one interface.
+  - **ONE EXCEPTION, added 2026-09-01 with its reason: property DRAWERS** (**MR2h**). They are not
+    bespoke panel UI — `TPropertyDrawer<T>` is the point a **game** extends to support a new field
+    type (**I15**), so leaving it backend-bound binds every game's custom editor forever. The
+    objection above is answered rather than waived: the vocabulary is *derived from the call sites
+    that exist*, and the late-bound queries are **folded into the calls**, so nothing in it depends
+    on submission order. Panel contents and viewport-tool closures are still covered by this bullet.
 - **`EditorContext` carries `IEditorGui& Gui`**, which is why no `Draw` signature changed: a menu node
   already took the context, and a panel already gets one by ctor (**D3**). `UIBackend` STAYS beside it
   rather than collapsing into `Gui.Backend()` — it is the narrower dependency, and a panel that only
@@ -1843,6 +1860,45 @@ to QT its easy."*** Everything below follows from that rather than from the surf
 - **Three attempts, and the first two were mine being wrong about the same thing** — see [[L71]].
   The registrar had held four different shapes at once; what looked like an ownership defect was a
   naming one, and what the user actually wanted was a *pipeline*.
+
+**MR2h — A DRAWER names no backend: `IEditorWidgets`** (landed 2026-09-01). The value-editor
+vocabulary — ~24 calls in `Editor/UI/IEditorWidgets.h`, implemented by
+`Editor/Imgui/ImGuiEditorWidgets.{h,cpp}` — is what a property drawer speaks instead of ImGui. With
+it, **the whole drawer layer, both registries and the game's editor module name no backend at all**
+(`grep -rn "ImGui::" Editor/Source/Editor/Properties/ Editor/Source/Editor/Extensions/ Sandbox/Editor/`
+is empty).
+- **Its own seam, not a section of `IEditorGui`**, for the reason `EditorContext` already gives for
+  `IEditorUIBackend` and `IEditorDialogs`: it is the **narrower dependency**. A drawer editing a
+  float has no business with the menu bar, the dockspace or a panel window. Reached as
+  `IEditorGui::Widgets()` — the `Backend()` shape, because it is the *same* backend one level down,
+  where `IEditorDialogs` is the OS and is therefore owned separately.
+- **Why this is not MR2d being violated**, and the distinction is the whole justification: MR2d
+  ruled against abstracting *bespoke panel UI*, and that still holds for the ~360 call sites. A
+  property drawer is the opposite kind of thing — a **closed** vocabulary of value editors, and the
+  extension point a **game** uses (**I15**). Its specific objection — *"immediate mode, an ID stack,
+  `IsItemHovered` late-bound to submission order"* — is answered: the vocabulary is **derived from
+  the call sites that exist** rather than invented, and **the late-bound queries are FOLDED INTO the
+  calls** (`Button(label, width, tooltip)`, never `Button` then a hover query), so nothing in the
+  seam depends on submission order. The id scope is explicit rather than implied.
+- **The HAND-WRITTEN drawer is the dogfood, and it mattered.** `TagsComponentDrawer` — a game's
+  bespoke drawer, not the generic fold — needed almost the same vocabulary as the built-ins
+  (header, id scope, small button, text, separator, text field, disabled state, button). That it
+  rewrites cleanly is what makes the seam worth its size; had it needed a dozen more calls, the
+  closed-vocabulary argument would have been false.
+- **One `DragFloat` with a component COUNT** replaces four ImGui entry points (scalar through
+  `Vector4F`) — a backend implements the widget once. **The integer drags stay TYPED** (`DragInt16`,
+  `DragInt32`, `DragUint32`) and that is not verbosity: a round trip through a wider type lets a drag
+  past the real type's bounds **wrap** — past 32767 to a large negative draw order, below zero to ~4
+  billion — so the clamp has to happen at the type the value actually is.
+- **The five chrome calls MR2g had put on `IEditorGui` moved here.** They were widget vocabulary on a
+  host-chrome seam; with a widget seam existing they have a home, and `IEditorGui` is pure host
+  chrome again. `DrawerRegistry` and `ViewportToolbarRegistry` speak `IEditorWidgets`.
+- **`AcceptResourceDragPayload` deliberately did NOT move.** `ResourceDragDrop.h` is already
+  backend-free — only its `.cpp` names ImGui, the `TinyFdEditorDialogs` shape — so a drawer calling
+  it names no backend already. Its `SetResourceDragPayload` twin stays with the browser, which is a
+  panel and draws directly.
+- **Still not portable, and still deliberate:** panel contents, the viewport tools' closures, and
+  `Editor/ImguiLibrary/*`. The *frame* and the *fields* port; bespoke panel UI does not.
 
 **MR3 — One module shape.** Runtime and editor modules share a marker base **`IModule`**
 (`Application/IModule.h`): `IRuntimeModule : IModule` (`OnRegister(ModuleRegistrar&)`) and
