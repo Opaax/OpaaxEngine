@@ -2,8 +2,9 @@
 
 #include "Engine/Subsystems/Input/InputCodes.h"   // EKeyCode — the editor's one key vocabulary
 #include "Core/String/OpaaxString.hpp"
-#include "Editor/Menus/MenuRegistry.h"     // owned by value — needs the complete type
-#include "Editor/Panels/EditorPanels.h"    // likewise
+#include "Core/Maths/MathTypes.h"               // Vector2F — TitleBarDrag
+#include "Editor/TitleBar/EditorTitleBar.h"     // owned by value — needs the complete type
+#include "Editor/Panels/EditorPanels.h"         // likewise
 
 namespace Opaax
 {
@@ -16,6 +17,24 @@ namespace Opaax::Editor
     struct PanelWindowStyle;   // Editor/Panels/IEditorPanel.h — backend-agnostic already
     class PanelRegistry;
     class IEditorUIBackend;
+
+    /** Which caption button — the seam names the KIND and lets each backend draw it. */
+    enum class EWindowButtonKind : Uint8
+    {
+        Minimize,
+        Maximize,
+        Restore,
+        Close
+    };
+
+    /** What the pointer did over the caption's draggable stretch this frame. */
+    struct TitleBarDrag
+    {
+        /** Pointer movement while held, in screen pixels. Zero unless a drag is live. */
+        Vector2F Delta{0.f, 0.f};
+
+        bool bDoubleClicked = false;
+    };
 
     // =============================================================================
     // IEditorGui — the editor's UI backend seam, and the owner of the whole UI pass.
@@ -87,15 +106,15 @@ namespace Opaax::Editor
         // =============================================================================
 
         // =============================================================================
-        // Content — WHAT the pass draws. OWNED, not borrowed (**MR2e**): the gui is the consumer of
-        //   both, so it holds both, and there is nothing to bind or null-check.
+        // Content — WHAT the pass draws: the two LIVE objects. Each is built from a registry the
+        //   registrar owns, and each draws through the chrome below, so neither names a backend.
         //
         //   On the BASE rather than the implementation: a second backend would want the same menu
         //   tree and the same panels, not its own copies. What is backend-specific is the ~20
         //   virtual chrome calls below, not the content they draw.
     public:
-        MenuRegistry&       Menus()       noexcept { return m_Menus; }
-        const MenuRegistry& Menus() const noexcept { return m_Menus; }
+        EditorTitleBar&       TitleBar()       noexcept { return m_TitleBar; }
+        const EditorTitleBar& TitleBar() const noexcept { return m_TitleBar; }
 
         EditorPanels&       Panels()       noexcept { return m_Panels; }
         const EditorPanels& Panels() const noexcept { return m_Panels; }
@@ -126,12 +145,12 @@ namespace Opaax::Editor
         // =============================================================================
 
         // =============================================================================
-        // Chrome — the structural widgets the HOST emits, so MenuRegistry and EditorPanels never
+        // Chrome — the structural widgets the HOST emits, so EditorTitleBar and EditorPanels never
         //   name a backend. A panel's CONTENTS are not here: a panel IS UI and draws its own (MR2c).
     public:
         // NOTE: there is no BeginMenuBar here any more. OPENING the bar is the implementation's
         // own business — it is a row inside the editor's title bar, which the implementation
-        // composes — so MenuRegistry emits CATEGORIES and never the strip that holds them.
+        // composes — so EditorTitleBar emits CATEGORIES and never the strip that holds them.
 
         /** A submenu. @return true when it is open, i.e. when children must be emitted. */
         virtual bool BeginMenu(const char* InLabel, bool bInEnabled) = 0;
@@ -149,6 +168,26 @@ namespace Opaax::Editor
         virtual void MenuSeparator() = 0;
 
         /**
+         * The draggable stretch of the caption — everything the menus and the trailing buttons
+         * leave.
+         *
+         * Reports what the pointer DID; it does not act. Moving the window and toggling maximize are
+         * EditorTitleBar's policy, so a second backend supplies input and inherits the behaviour.
+         *
+         * @param InTrailingButtons How many TitleBarButton calls follow, so the backend can reserve
+         *   their width. A COUNT rather than a width: only the backend knows how wide it draws one.
+         */
+        virtual TitleBarDrag TitleBarDragRegion(Uint32 InTrailingButtons) = 0;
+
+        /**
+         * One caption button. @return true on the frame it is clicked.
+         *
+         * The KIND, not a label: every toolkit draws these its own way, and the glyph is the
+         * backend's business (ImGui's default font has none of the characters they want).
+         */
+        virtual bool TitleBarButton(EWindowButtonKind InKind) = 0;
+
+        /**
          * Open a panel's window: first-use size, the style's padding and the close button, in one
          * call — so a caller cannot get the push/pop pairing around it wrong.
          *
@@ -161,6 +200,26 @@ namespace Opaax::Editor
 
         /** Closes it. Runs whether or not BeginPanelWindow returned true. */
         virtual void EndPanelWindow() = 0;
+
+        /**
+         * An ID SCOPE — the boundary between two independently-authored things drawn into one
+         * window, so widgets that share a label cannot fight over hover and active state (**I15**).
+         *
+         * Here rather than left to each registry because a scope is STRUCTURE, not presentation:
+         * it is the reason `DrawerRegistry` and `ViewportToolbarRegistry` no longer include a
+         * backend header, and the reason a registry stays pure data (**MR2g**).
+         */
+        virtual void PushIdScope(const char* InId) = 0;
+        virtual void PopIdScope() = 0;
+
+        /** A collapsible section header, open by default. @return true when the body must be drawn. */
+        virtual bool CollapsingHeader(const char* InLabel) = 0;
+
+        /** Keep the next item on the current row. */
+        virtual void SameLine() = 0;
+
+        /** A vertical rule between groups on a toolbar strip. */
+        virtual void ToolbarSeparator() = 0;
 
         // End Chrome
         // =============================================================================
@@ -222,9 +281,9 @@ namespace Opaax::Editor
         // Members
         // =============================================================================
     protected:
-        // The menu tree is populated during RegisterExtensions, which runs BEFORE Init — these
-        // exist from construction precisely so that is legal.
-        MenuRegistry m_Menus;
-        EditorPanels m_Panels;
+        // BOTH are LIVE objects built from a registry the registrar owns — the one shape, so the
+        // next route that grows live state lands here without a decision.
+        EditorTitleBar m_TitleBar;
+        EditorPanels   m_Panels;
     };
 }

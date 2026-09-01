@@ -99,7 +99,7 @@ namespace Opaax::Editor
         void RegisterNativePanels();
 
         /**
-         * The editor's own menu commands, into m_Extensions.Menus() — same route, same ordering rule
+         * The editor's own menu commands, into m_Extensions.TitleBar() — same route, same ordering rule
          * and same lack of privilege as RegisterNativePanels (M5 S4).
          */
         void RegisterNativeMenus();

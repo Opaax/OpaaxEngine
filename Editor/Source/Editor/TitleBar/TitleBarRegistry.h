@@ -5,15 +5,15 @@
 namespace Opaax::Editor
 {
     /**
-     * @class MenuRegistry
+     * @class TitleBarRegistry
      *
-     * WHAT sits on the editor's menu bar: an ordered set of root categories, and the storage behind
-     * EditorExtensionRegistrar::Menus() (Editor.md D10).
+     * WHAT a module puts in the editor's title bar, and the storage behind
+     * EditorExtensionRegistrar::TitleBar() (Editor.md D10). Menu categories today; the bar is simply
+     * where they go, which is why the type is named for the bar rather than for its current content.
      *
-     * The same three parts every other route has — register, consume, Count — so a reader who knows
-     * ViewportToolbarRegistry or PanelRegistry already knows this one. It was called `EditorMenu`
-     * until 2026-09-01, the only route in the registrar not named as a registry, which made it look
-     * like a different kind of thing when it never was (**MR2b**).
+     * DATA ONLY — it stores and it counts, and EditorTitleBar is what walks it and draws. That is the
+     * PanelRegistry -> EditorPanels pipeline exactly, and it is what makes moving to another UI
+     * backend a matter of implementing IEditorGui rather than rewriting anything here.
      *
      * IT IS A TREE, BUILT BY THE CALLER. It used to be a flat list of slash-separated path strings
      * whose nesting was re-derived every frame; a path can carry an ORDER, an enabled predicate or
@@ -26,17 +26,14 @@ namespace Opaax::Editor
      *
      * A node carries a COMMAND TAG, never a closure: clicking is Commands().Execute(tag, context),
      * the same call a key binding makes.
-     *
-     * OWNED BY THE GUI, which is what draws it (**MR2e**). The registrar reaches it through a bound
-     * route, the WorldSubsystemRoute shape — so `Menus()` reads the same at every call site.
      */
-    class MenuRegistry
+    class TitleBarRegistry
     {
         // =============================================================================
         // Ctor - Dtor
         // =============================================================================
     public:
-        MenuRegistry() = default;
+        TitleBarRegistry() = default;
 
         // =============================================================================
         // Copy - Move Delete
@@ -44,8 +41,8 @@ namespace Opaax::Editor
 
         // Owns nodes through TUniquePtr and hands out references into them (I6's corollary: an
         // owner of a move-only member must say so, or the implicit copy is instantiated anyway).
-        MenuRegistry(const MenuRegistry&)            = delete;
-        MenuRegistry& operator=(const MenuRegistry&) = delete;
+        TitleBarRegistry(const TitleBarRegistry&)            = delete;
+        TitleBarRegistry& operator=(const TitleBarRegistry&) = delete;
 
         // =============================================================================
         // Register
@@ -62,16 +59,8 @@ namespace Opaax::Editor
         // Consume
         // =============================================================================
     public:
-        /**
-         * Emit every root category, in bar order.
-         *
-         * The BAR ITSELF is not opened here — the caller has already opened it, which is what lets
-         * the title bar put its window buttons in the same row.
-         *
-         * CONST like EditorCommandRegistry::Execute: the tree is built before the extension
-         * registrar seals, and a draw must not be able to add to it.
-         */
-        void Draw(EditorContext& InContext) const;
+        /** The root categories in bar order — what EditorTitleBar walks. */
+        const TDynArray<TUniquePtr<EditorMenuCategory>>& Categories() const noexcept { return m_Categories; }
 
         /** @return How many COMMAND entries exist, at any depth — what the seal log reports. */
         Uint64 Count() const noexcept;

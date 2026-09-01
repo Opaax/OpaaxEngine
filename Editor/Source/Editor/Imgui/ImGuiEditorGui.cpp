@@ -9,7 +9,6 @@
 #include "Core/EngineAPI.h"   // OPAAX_ASSERT
 #include "Core/Window/Window.h"
 #include "Editor/EditorContext.h"
-#include "Editor/Menus/MenuRegistry.h"
 #include "Editor/Panels/EditorPanels.h"
 #include "Editor/Panels/IEditorPanel.h"   // PanelWindowStyle — the window chrome's one parameter
 #include "Editor/UI/OpenGLEditorUIBackend.h"
@@ -258,7 +257,7 @@ namespace Opaax::Editor
 
         if (ImGui::BeginMenuBar())
         {
-            m_TitleBar.DrawBar(InContext, m_Menus);
+            m_TitleBar.Draw(InContext, *this);
             ImGui::EndMenuBar();
         }
 
@@ -270,7 +269,7 @@ namespace Opaax::Editor
         m_Panels.Draw(*this);
 
         // LAST: it reads IsAnyItemActive, which only means anything once the panels have submitted.
-        m_TitleBar.UpdateResizeBorder(InContext);
+        m_ImGuiTitleBar.UpdateResizeBorder(InContext);
     }
 
     bool ImGuiEditorGui::BeginMenu(const char* InLabel, const bool bInEnabled)
@@ -293,6 +292,16 @@ namespace Opaax::Editor
         ImGui::Separator();
     }
 
+    TitleBarDrag ImGuiEditorGui::TitleBarDragRegion(const Uint32 InTrailingButtons)
+    {
+        return m_ImGuiTitleBar.DragRegion(InTrailingButtons);
+    }
+
+    bool ImGuiEditorGui::TitleBarButton(const EWindowButtonKind InKind)
+    {
+        return m_ImGuiTitleBar.Button(InKind);
+    }
+
     bool ImGuiEditorGui::BeginPanelWindow(const char* InLabel, const PanelWindowStyle& InStyle,
                                           bool& bOutWantOpen)
     {
@@ -312,6 +321,31 @@ namespace Opaax::Editor
     void ImGuiEditorGui::EndPanelWindow()
     {
         ImGui::End();
+    }
+
+    void ImGuiEditorGui::PushIdScope(const char* InId)
+    {
+        ImGui::PushID(InId);
+    }
+
+    void ImGuiEditorGui::PopIdScope()
+    {
+        ImGui::PopID();
+    }
+
+    bool ImGuiEditorGui::CollapsingHeader(const char* InLabel)
+    {
+        return ImGui::CollapsingHeader(InLabel, ImGuiTreeNodeFlags_DefaultOpen);
+    }
+
+    void ImGuiEditorGui::SameLine()
+    {
+        ImGui::SameLine();
+    }
+
+    void ImGuiEditorGui::ToolbarSeparator()
+    {
+        ImGui::TextDisabled("|");
     }
 
     double ImGuiEditorGui::GetTime() const

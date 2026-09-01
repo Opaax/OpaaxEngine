@@ -69,10 +69,6 @@ namespace Opaax::Editor
         : m_Gui(MakeUnique<ImGuiEditorGui>())
         , m_Dialogs(MakeUnique<TinyFdEditorDialogs>())
     {
-        // HERE, in the constructor, so "unbound" is not a reachable state: RegisterExtensions runs
-        // long after this and would otherwise be the first thing to notice (MR2a's failure, where a
-        // route shipped unbound and dropped every registration with one Error).
-        m_Extensions.BindMenus(m_Gui->Menus());
     }
 
     // =============================================================================
@@ -184,7 +180,7 @@ namespace Opaax::Editor
     
     void EditorService::RegisterNativeMenus()
     {
-        MenuRegistry& lMenu = m_Extensions.Menus();
+        TitleBarRegistry& lMenu = m_Extensions.TitleBar();
 
         // --- Native File  --------------------------
         EditorMenuCategory& lFile = lMenu.Category("File");
@@ -532,7 +528,7 @@ namespace Opaax::Editor
         {
             const PanelDesc& lDesc = lEntry.Desc;
 
-            m_Extensions.Menus().Category(lDesc.Menu)
+            m_Extensions.TitleBar().Category(lDesc.Menu)
                         .AddCommand(lDesc.Id, Tags::EDITOR_COMMAND_TOGGLE_PANEL)
                         .SetParams(PanelIdParams{lDesc.Id})
                         .SetChecked([lId = lDesc.Id](const EditorContext& InContext)
@@ -544,8 +540,14 @@ namespace Opaax::Editor
 
     void EditorService::BuildPanels()
     {
+        // BOTH live objects, each from the registry the registrar owns — one shape, one place, so
+        // the next route that grows live state lands here without a decision.
+        m_Gui->TitleBar().Build(m_Extensions.TitleBar());
         m_Gui->Panels().Build(m_Extensions.Panels(), *m_Context);
-        OPAAX_LOG(LogEditorService, Info, "Editor panels registered: {}, constructed: {}", m_Extensions.Panels().Count(), m_Gui->Panels().Count());
+
+        OPAAX_LOG(LogEditorService, Info,
+                  "Editor UI built: title-bar entries={}, panels registered={}, constructed={}",
+                  m_Extensions.TitleBar().Count(), m_Extensions.Panels().Count(), m_Gui->Panels().Count());
     }
 
     // =============================================================================
@@ -580,10 +582,10 @@ namespace Opaax::Editor
         m_Extensions.Seal();
 
         OPAAX_LOG(LogEditorService, Info,
-                  "Editor extensions sealed (before first world): drawers={}, configDrawers={}, panels={}, resourceTypes={}, menus={}, editWorldSystems={}, commands={}",
+                  "Editor extensions sealed (before first world): drawers={}, configDrawers={}, panels={}, resourceTypes={}, titleBar={}, editWorldSystems={}, commands={}",
                   m_Extensions.Drawers().Count(), m_Extensions.ConfigDrawers().Count(),
                   m_Extensions.Panels().Count(), m_Extensions.ResourceTypes().Count(),
-                  m_Extensions.Menus().Count(), m_Extensions.EditWorldSystems().Count(),
+                  m_Extensions.TitleBar().Count(), m_Extensions.EditWorldSystems().Count(),
                   m_Extensions.Commands().Count());
     }
 

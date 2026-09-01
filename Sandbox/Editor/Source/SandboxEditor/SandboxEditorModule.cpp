@@ -45,7 +45,7 @@ void SandboxEditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& In
 
     // Two levels deep, from a game module, with the editor's own "Tools" — if it had one — merged
     // in by identity rather than by string prefix.
-    InRegistrar.Menus().Category("Tools").SubCategory("Debug")
+    InRegistrar.TitleBar().Category("Tools").SubCategory("Debug")
                .AddCommand("Validate Sandbox", SandboxEditor::Tags::SANDBOX_COMMAND_VALIDATE);
 
     // The DEFAULT drawer, folded from what each component declares with OPAAX_PROPERTIES. It

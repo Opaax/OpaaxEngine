@@ -58,7 +58,7 @@ namespace Opaax::Editor
 
         // A registered drawer folds the config's own property list; anything else falls back to the
         // json view, so a config nobody registered is still readable rather than blank.
-        const bool lDrawn = m_Context.Extensions.ConfigDrawers().DrawFirst(InConfig);
+        const bool lDrawn = m_Context.Extensions.ConfigDrawers().DrawFirst(InConfig, m_Context.Gui);
 
         // Re-serialized every frame rather than cached: it is both what the fallback shows and how
         // dirty is DERIVED below, and a cache here would need an invalidation nobody owns.

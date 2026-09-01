@@ -1,23 +1,22 @@
 #pragma once
 
+#include "Editor/UI/IEditorGui.h"          // EWindowButtonKind, TitleBarDrag
 #include "Editor/UI/WindowFrameGeometry.h"
 
 namespace Opaax::Editor
 {
     struct EditorContext;
-    class MenuRegistry;
 
     // =============================================================================
-    // ImGuiTitleBar — the editor's own caption: the menu tree on the left, a drag region, and
-    //   Minimize / Maximize / Close on the right. The OS draws none of it (Window::SetDecorated).
+    // ImGuiTitleBar — the ImGui SIDE of the caption: how a drag region and a caption button look
+    //   and report, plus the window's resize border.
     //
-    //   ImGuiEditorGui owns one and composes it into its host window; nothing outside the ImGui
-    //   implementation names this type, which is what MR2d's chrome-vs-contents line asks for.
+    //   WHAT the bar contains and what its input MEANS are not here — that is EditorTitleBar, which
+    //   names no backend. This file is what a Qt port would replace and nothing else.
     //
-    //   The MENU REGISTRY IS THE EXTENSION POINT — a game module's category appears in the bar
-    //   through the route it already registers into, so there is no title-bar registry.
-    //
-    //   It holds state because a drag spans frames.
+    //   The resize border is deliberately NOT part of the bar: it is frame chrome around the whole
+    //   window, and under a toolkit that keeps the OS frame it does not exist at all. It holds
+    //   state because a drag spans frames.
     // =============================================================================
     class ImGuiTitleBar
     {
@@ -25,14 +24,11 @@ namespace Opaax::Editor
         // Functions
         // =============================================================================
     public:
-        /**
-         * The bar's contents. Call between ImGui::BeginMenuBar and EndMenuBar.
-         *
-         * Order is menus, then the drag region taking the slack, then the buttons — so the
-         * draggable area is whatever the other two do not claim, and a menu click cannot be
-         * swallowed by it.
-         */
-        void DrawBar(EditorContext& InContext, const MenuRegistry& InMenus);
+        /** IEditorGui::TitleBarDragRegion, in ImGui terms. Call inside the menu bar. */
+        TitleBarDrag DragRegion(Uint32 InTrailingButtons);
+
+        /** IEditorGui::TitleBarButton, in ImGui terms. @return true on the frame it is clicked. */
+        bool Button(EWindowButtonKind InKind);
 
         /**
          * The 8-region resize border around the whole window, and the cursor that goes with it.

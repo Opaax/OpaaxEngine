@@ -47,8 +47,15 @@ namespace Opaax::Editor
         void EndMenu() override;
         bool MenuItem(const char* InLabel, bool bInChecked, bool bInEnabled) override;
         void MenuSeparator() override;
+        TitleBarDrag TitleBarDragRegion(Uint32 InTrailingButtons) override;
+        bool TitleBarButton(EWindowButtonKind InKind) override;
         bool BeginPanelWindow(const char* InLabel, const PanelWindowStyle& InStyle, bool& bOutWantOpen) override;
         void EndPanelWindow() override;
+        void PushIdScope(const char* InId) override;
+        void PopIdScope() override;
+        bool CollapsingHeader(const char* InLabel) override;
+        void SameLine() override;
+        void ToolbarSeparator() override;
 
         double GetTime() const override;
         bool   IsPointerOverUI() const override;
@@ -71,7 +78,9 @@ namespace Opaax::Editor
 
         // The editor's own caption. Composed into the host window's menu bar by Draw; it holds the
         // live border-drag state, which is why it is an object rather than a free function.
-        ImGuiTitleBar                m_TitleBar;
+        // The ImGui SIDE of the caption. Named apart from the base's m_TitleBar
+        // (EditorTitleBar, the backend-agnostic one) so neither shadows the other.
+        ImGuiTitleBar                m_ImGuiTitleBar;
 
         // ImGui stores io.IniFilename as a BORROWED const char* — it never copies the string — so
         // this must stay alive, and unmodified, until DestroyContext() (which saves through that

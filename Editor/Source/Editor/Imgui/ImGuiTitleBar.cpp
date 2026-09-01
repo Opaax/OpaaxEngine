@@ -3,11 +3,7 @@
 #include <imgui.h>
 
 #include "Core/Window/Window.h"
-#include "Editor/Commands/EditorCommandRegistry.h"
-#include "Editor/Commands/EditorNativeCommandsTags.hpp"
 #include "Editor/EditorContext.h"
-#include "Editor/Extensions/EditorExtensionRegistrar.h"
-#include "Editor/Menus/MenuRegistry.h"
 
 namespace
 {
@@ -21,13 +17,8 @@ namespace
     constexpr Int32 k_MinWindowWidth  = 480;
     constexpr Int32 k_MinWindowHeight = 320;
 
-    enum class EWindowButton : Uint8
-    {
-        Minimize,
-        Maximize,
-        Restore,
-        Close
-    };
+    /** One caption button's width. Asked in two places — the drag's reservation and the button. */
+    float ButtonWidth() { return ImGui::GetFontSize() * 2.6f; }
 
     /**
      * The three captions are PAINTED, not typed.
@@ -35,24 +26,24 @@ namespace
      * ImGui's default font covers Basic Latin + Latin-1 only, so the glyphs these want — U+2014,
      * U+25A1, U+2715 — would all render as boxes. Strokes on the draw list need no font at all.
      */
-    void PaintButtonGlyph(ImDrawList* InDrawList, const EWindowButton InButton, const ImVec2 InCenter,
+    void PaintButtonGlyph(ImDrawList* InDrawList, const EWindowButtonKind InKind, const ImVec2 InCenter,
                           const float InSide, const ImU32 InColor)
     {
         const float lHalf = InSide * 0.5f;
 
-        switch (InButton)
+        switch (InKind)
         {
-        case EWindowButton::Minimize:
+        case EWindowButtonKind::Minimize:
             InDrawList->AddLine(ImVec2(InCenter.x - lHalf, InCenter.y),
                                 ImVec2(InCenter.x + lHalf, InCenter.y), InColor, 1.f);
             break;
 
-        case EWindowButton::Maximize:
+        case EWindowButtonKind::Maximize:
             InDrawList->AddRect(ImVec2(InCenter.x - lHalf, InCenter.y - lHalf),
                                 ImVec2(InCenter.x + lHalf, InCenter.y + lHalf), InColor, 0.f, 0, 1.f);
             break;
 
-        case EWindowButton::Restore:
+        case EWindowButtonKind::Restore:
         {
             // Two offset squares — the "already maximized" caption every OS uses.
             const float lShift = InSide * 0.22f;
@@ -71,7 +62,7 @@ namespace
             break;
         }
 
-        case EWindowButton::Close:
+        case EWindowButtonKind::Close:
             InDrawList->AddLine(ImVec2(InCenter.x - lHalf, InCenter.y - lHalf),
                                 ImVec2(InCenter.x + lHalf, InCenter.y + lHalf), InColor, 1.2f);
             InDrawList->AddLine(ImVec2(InCenter.x - lHalf, InCenter.y + lHalf),
@@ -80,33 +71,17 @@ namespace
         }
     }
 
-    /**
-     * One caption button: an InvisibleButton that owns the interaction, painted underneath it.
-     *
-     * @param InHoverColor Close gets the red every OS gives it; the other two get the ordinary
-     *   header highlight.
-     */
-    bool WindowButton(const char* InId, const EWindowButton InButton, const ImVec2 InSize,
-                      const ImU32 InHoverColor)
+    const char* ButtonId(const EWindowButtonKind InKind) noexcept
     {
-        ImDrawList* lDrawList = ImGui::GetWindowDrawList();
-        const ImVec2 lMin     = ImGui::GetCursorScreenPos();
-
-        const bool lClicked = ImGui::InvisibleButton(InId, InSize);
-
-        const ImVec2 lMax = ImVec2(lMin.x + InSize.x, lMin.y + InSize.y);
-
-        if (ImGui::IsItemActive() || ImGui::IsItemHovered())
+        switch (InKind)
         {
-            lDrawList->AddRectFilled(lMin, lMax, InHoverColor);
+        case EWindowButtonKind::Minimize: return "##TitleBarMinimize";
+        case EWindowButtonKind::Maximize:
+        case EWindowButtonKind::Restore:  return "##TitleBarMaximize";   // one button, two glyphs
+        case EWindowButtonKind::Close:    return "##TitleBarClose";
         }
 
-        PaintButtonGlyph(lDrawList, InButton,
-                         ImVec2((lMin.x + lMax.x) * 0.5f, (lMin.y + lMax.y) * 0.5f),
-                         ImGui::GetFontSize() * 0.5f,
-                         ImGui::GetColorU32(ImGuiCol_Text));
-
-        return lClicked;
+        return "##TitleBarButton";
     }
 
     ImGuiMouseCursor CursorForEdge(const EWindowFrameEdge InEdge) noexcept
@@ -132,78 +107,69 @@ namespace
 
 namespace Opaax::Editor
 {
-    void ImGuiTitleBar::DrawBar(EditorContext& InContext, const MenuRegistry& InMenus)
+    TitleBarDrag ImGuiTitleBar::DragRegion(const Uint32 InTrailingButtons)
     {
-        InMenus.Draw(InContext);
+        TitleBarDrag lResult;
 
-        Window&                lWindow   = InContext.MainWindow;
-        const EditorCommandRegistry& lCommands = InContext.Extensions.Commands();
+        const float lBarHeight = ImGui::GetFrameHeight();
+        const float lReserved  = ButtonWidth() * static_cast<float>(InTrailingButtons);
+        const float lSlack     = ImGui::GetContentRegionAvail().x - lReserved;
 
-        // GetFrameHeight, not the window's MenuBarHeight: that member needs imgui_internal.h, and
-        // the bar's height IS a frame height — it is what the pushed FramePadding produced.
-        const float lBarHeight    = ImGui::GetFrameHeight();
-        const float lButtonWidth  = ImGui::GetFontSize() * 2.6f;
-        const float lButtonsSpan  = lButtonWidth * 3.f;
+        if (lSlack <= 0.f) { return lResult; }
 
-        // The drag region takes whatever the menus and the buttons leave. Claiming it LAST of the
-        // two would let it cover the buttons; claiming it first would let it cover the menus.
-        const float lSlack = ImGui::GetContentRegionAvail().x - lButtonsSpan;
+        ImGui::InvisibleButton("##TitleBarDrag", ImVec2(lSlack, lBarHeight));
 
-        if (lSlack > 0.f)
+        if (ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Left))
         {
-            ImGui::InvisibleButton("##TitleBarDrag", ImVec2(lSlack, lBarHeight));
-
-            // A maximized window is not draggable — Windows would restore-and-follow, which is
-            // polish this does not have yet (named, and the Win32 frame gets it for free).
-            if (ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Left)
-                && !lWindow.IsMaximized())
-            {
-                const ImVec2 lDelta = ImGui::GetIO().MouseDelta;
-
-                Int32 lPosX = 0;
-                Int32 lPosY = 0;
-                lWindow.GetPosition(lPosX, lPosY);
-
-                lWindow.SetPosition(lPosX + static_cast<Int32>(lDelta.x),
-                                    lPosY + static_cast<Int32>(lDelta.y));
-            }
-
-            if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
-            {
-                lCommands.Execute(Tags::EDITOR_COMMAND_TOGGLE_MAXIMIZE_WINDOW, InContext);
-            }
+            const ImVec2 lDelta = ImGui::GetIO().MouseDelta;
+            lResult.Delta = Vector2F(lDelta.x, lDelta.y);
         }
+
+        lResult.bDoubleClicked = ImGui::IsItemHovered()
+                              && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
+
+        // Right-align whatever follows: the reservation above is only a width, this is the position.
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - lReserved);
+
+        return lResult;
+    }
+
+    bool ImGuiTitleBar::Button(const EWindowButtonKind InKind)
+    {
+        const float  lBarHeight = ImGui::GetFrameHeight();
+        const float  lWidth     = ButtonWidth();
+        ImDrawList*  lDrawList  = ImGui::GetWindowDrawList();
 
         // FLUSH, like every OS caption — and not merely cosmetic: a menu bar lays items out
-        // horizontally with ItemSpacing between them, so three spaced buttons would overrun the
-        // span reserved for them and push Close off the edge.
+        // horizontally with ItemSpacing between them, so spaced buttons would overrun the width the
+        // drag region reserved and push Close off the edge. Pushed and popped INSIDE one call, so
+        // there is no pairing for a caller to get wrong.
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.f, 0.f));
 
-        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - lButtonsSpan);
+        const ImVec2 lMin = ImGui::GetCursorScreenPos();
 
-        const ImU32 lHover = ImGui::GetColorU32(ImGuiCol_HeaderHovered);
-        const ImU32 lClose = ImGui::GetColorU32(ImVec4(0.78f, 0.16f, 0.16f, 1.f));
+        const bool lClicked = ImGui::InvisibleButton(ButtonId(InKind), ImVec2(lWidth, lBarHeight));
 
-        const bool lMaximized = lWindow.IsMaximized();
+        const ImVec2 lMax = ImVec2(lMin.x + lWidth, lMin.y + lBarHeight);
 
-        if (WindowButton("##Minimize", EWindowButton::Minimize, ImVec2(lButtonWidth, lBarHeight), lHover))
+        if (ImGui::IsItemActive() || ImGui::IsItemHovered())
         {
-            lCommands.Execute(Tags::EDITOR_COMMAND_MINIMIZE_WINDOW, InContext);
+            // Close gets the red every OS gives it; the other two the ordinary header highlight.
+            const ImU32 lHighlight = InKind == EWindowButtonKind::Close
+                                         ? ImGui::GetColorU32(ImVec4(0.78f, 0.16f, 0.16f, 1.f))
+                                         : ImGui::GetColorU32(ImGuiCol_HeaderHovered);
+
+            lDrawList->AddRectFilled(lMin, lMax, lHighlight);
         }
 
-        if (WindowButton("##Maximize", lMaximized ? EWindowButton::Restore : EWindowButton::Maximize,
-                         ImVec2(lButtonWidth, lBarHeight), lHover))
-        {
-            lCommands.Execute(Tags::EDITOR_COMMAND_TOGGLE_MAXIMIZE_WINDOW, InContext);
-        }
+        PaintButtonGlyph(lDrawList, InKind,
+                         ImVec2((lMin.x + lMax.x) * 0.5f, (lMin.y + lMax.y) * 0.5f),
+                         ImGui::GetFontSize() * 0.5f,
+                         ImGui::GetColorU32(ImGuiCol_Text));
 
-        // The SAME verb the File menu's Exit runs — one close path, as Window::RequestClose is.
-        if (WindowButton("##Close", EWindowButton::Close, ImVec2(lButtonWidth, lBarHeight), lClose))
-        {
-            lCommands.Execute(Tags::EDITOR_COMMAND_QUIT, InContext);
-        }
+        ImGui::PopStyleVar();
 
-        ImGui::PopStyleVar();   // ItemSpacing
+        return lClicked;
     }
 
     void ImGuiTitleBar::UpdateResizeBorder(EditorContext& InContext)

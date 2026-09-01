@@ -3,7 +3,8 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxStringID.hpp"
 
-#include <imgui.h>
+#include "Editor/EditorContext.h"
+#include "Editor/UI/IEditorGui.h"
 
 namespace Opaax::Editor
 {
@@ -17,7 +18,7 @@ namespace Opaax::Editor
     //   a panel, a menu entry or a drawer takes.
     //
     //   AN ITEM IS A CLOSURE, WHERE A MENU NODE IS A TAG, and the difference is principled rather
-    //   than a relapse (L37/L38 retired MenuRegistry's closures for exactly the opposite reason). A
+    //   than a relapse (L37/L38 retired the original MenuRegistry's closures for exactly the opposite reason). A
     //   menu node has ONE behaviour — invoke a command — so a tag says everything about it. A toolbar
     //   item is a WIDGET: a toggle, a drag-float, a combo, a colour swatch. There is no uniform
     //   behaviour to name, so tags here would mean a new item TYPE per widget kind, which is the
@@ -78,22 +79,24 @@ namespace Opaax::Editor
          */
         void Draw(EditorContext& InContext) const
         {
+            IEditorGui& lGui = InContext.Gui;
+
             bool bFirst = true;
 
             for (const Item& lItem : m_Items)
             {
-                if (!bFirst) { ImGui::SameLine(); }
+                if (!bFirst) { lGui.SameLine(); }
                 bFirst = false;
 
                 if (lItem.bSeparator)
                 {
-                    ImGui::TextDisabled("|");
+                    lGui.ToolbarSeparator();
                     continue;
                 }
 
-                ImGui::PushID(lItem.Id.CStr());
+                lGui.PushIdScope(lItem.Id.CStr());
                 lItem.Draw(InContext);
-                ImGui::PopID();
+                lGui.PopIdScope();
             }
         }
 
