@@ -149,16 +149,9 @@ namespace Opaax::Editor
         ImGui::CreateContext();
 
         ImGuiIO& lIO = ImGui::GetIO();
-        lIO.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-
-        // A panel moves by its TITLE BAR, never by its body. ImGui's default lets a drag on a
-        // FLOATING window's background move the window, and ImGui::Image is not an interactive item
-        // — so a marquee drawn on an undocked Viewport dragged the panel instead of selecting.
-        // Docked panels were unaffected, which is exactly what made it look like a viewport bug.
-        //
-        // Global rather than a per-panel flag: it is the convention every editor already follows,
-        // and dragging inside the Hierarchy's body should not move that panel either. Drag-drop is
-        // untouched — a payload source is an ITEM, and items outrank a window move regardless.
+        lIO.ConfigFlags |= ImGuiConfigFlags_DockingEnable; //Docking
+        lIO.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable; //Panels can be drag outside the main viewport
+        
         lIO.ConfigWindowsMoveFromTitleBarOnly = true;
 
         //ImGui::StyleColorsDark();
