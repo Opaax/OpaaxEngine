@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Editor/Imgui/ImGuiTitleBar.h"   // held by value — needs the complete type
 #include "Editor/UI/IEditorGui.h"
 #include "Editor/UI/IEditorUIBackend.h"   // owned through a TUniquePtr — needs the complete type
 #include "Core/OpaaxTypes.h"              // TUniquePtr
@@ -42,8 +43,6 @@ namespace Opaax::Editor
         void EndFrame() override;
         void Draw(EditorContext& InContext) override;
 
-        bool BeginMainMenuBar() override;
-        void EndMainMenuBar() override;
         bool BeginMenu(const char* InLabel, bool bInEnabled) override;
         void EndMenu() override;
         bool MenuItem(const char* InLabel, bool bInChecked, bool bInEnabled) override;
@@ -69,6 +68,10 @@ namespace Opaax::Editor
 
         // The menu tree and the panel set are m_Menu/m_Panels on IEditorGui — bound by EditorService,
         // not looked up per frame.
+
+        // The editor's own caption. Composed into the host window's menu bar by Draw; it holds the
+        // live border-drag state, which is why it is an object rather than a free function.
+        ImGuiTitleBar                m_TitleBar;
 
         // ImGui stores io.IniFilename as a BORROWED const char* — it never copies the string — so
         // this must stay alive, and unmodified, until DestroyContext() (which saves through that

@@ -10,6 +10,12 @@ namespace Opaax::Editor::Tags
     //Miscs
     inline const OpaaxTag EDITOR_COMMAND_QUIT = OpaaxTag("Editor.Command.Quit");
 
+    //Window — the title bar's buttons. Commands rather than direct Window calls so the caption and
+    //a later key binding reach ONE verb, the rule every other front-end here already follows.
+    //Close is EDITOR_COMMAND_QUIT: the X and File/Exit are the same verb, not two.
+    inline const OpaaxTag EDITOR_COMMAND_MINIMIZE_WINDOW        = OpaaxTag("Editor.Command.MinimizeWindow");
+    inline const OpaaxTag EDITOR_COMMAND_TOGGLE_MAXIMIZE_WINDOW = OpaaxTag("Editor.Command.ToggleMaximizeWindow");
+
     //Panels — ONE tag for every panel; which one is the PanelIdParams payload.
     inline const OpaaxTag EDITOR_COMMAND_TOGGLE_PANEL = OpaaxTag("Editor.Command.TogglePanel");
 

@@ -51,7 +51,10 @@ namespace Opaax::Editor
         EditorMenuCategory& Category(OpaaxStringID InID);
 
         /**
-         * Emit the whole bar.
+         * Emit every root category, in bar order.
+         *
+         * The BAR ITSELF is not opened here — the caller has already opened it, which is what lets
+         * the title bar put its window buttons in the same row.
          *
          * CONST like EditorCommandRegistry::Execute: the tree is built before the extension
          * registrar seals, and a draw must not be able to add to it.

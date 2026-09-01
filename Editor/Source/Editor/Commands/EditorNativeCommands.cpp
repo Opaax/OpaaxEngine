@@ -78,6 +78,19 @@ namespace Opaax::Editor
         InContext.MainWindow.RequestClose();
     }
 
+    void MinimizeWindowCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        InContext.MainWindow.Minimize();
+    }
+
+    void ToggleMaximizeWindowCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        Window& lWindow = InContext.MainWindow;
+
+        if (lWindow.IsMaximized()) { lWindow.Restore(); }
+        else                       { lWindow.Maximize(); }
+    }
+
     void TogglePanelCommand::Execute(EditorContext& InContext, const Params& InParams)
     {
         // No log here on purpose: EditorPanels::SetVisible is the single mutation point and announces

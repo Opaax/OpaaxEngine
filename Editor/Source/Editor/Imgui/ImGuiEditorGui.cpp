@@ -3,6 +3,8 @@
 #include <imgui.h>
 #include <ImGuizmo.h>
 
+#include <cstdio>   // snprintf — the host window's label
+
 #include "Application/Services/ILogger.h"
 #include "Core/EngineAPI.h"   // OPAAX_ASSERT
 #include "Core/Window/Window.h"
@@ -115,6 +117,9 @@ namespace
         }
     }
 
+    /** Vertical frame padding for the caption row — what makes the menu bar title-bar height. */
+    constexpr float k_TitleBarPaddingY = 8.f;
+
     /** The chord bit for a modifier KEY. Left and Right fold together — ImGui's mods are side-agnostic. */
     ImGuiKeyChord ToModifier(const EKeyCode InKey) noexcept
     {
@@ -213,23 +218,59 @@ namespace Opaax::Editor
 
     void ImGuiEditorGui::Draw(EditorContext& InContext)
     {
-        // The whole UI pass, in submission order. Panels dock into the space opened first, and the
-        // menu bar is submitted before them so a positional query inside a panel is not measured
-        // against a bar that has yet to reserve its height (L56).
-        ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
+        // The whole UI pass, in submission order. The title bar is submitted before the panels so a
+        // positional query inside a panel is not measured against a bar that has yet to reserve its
+        // height (L56).
+        //
+        // This is DockSpaceOverViewport open-coded, and the two details it copies are load-bearing:
+        // the window LABEL and GetID("DockSpace") inside it are what produce the dockspace id the
+        // user's imgui.ini already names. Change either and every saved dock position is orphaned.
+        const ImGuiViewport* lViewport = ImGui::GetMainViewport();
 
-        if (m_Menu != nullptr) { m_Menu->Draw(InContext); }
+        ImGui::SetNextWindowPos(lViewport->Pos);
+        ImGui::SetNextWindowSize(lViewport->Size);
+        ImGui::SetNextWindowViewport(lViewport->ID);
+
+        constexpr ImGuiWindowFlags k_HostFlags =
+            ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
+            ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDocking |
+            ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus |
+            ImGuiWindowFlags_MenuBar;
+
+        // snprintf, not ImGui's ImFormatString — that one lives in imgui_internal.h. The FORMAT is
+        // copied verbatim from DockSpaceOverViewport; it is what the saved layout is keyed on.
+        char lLabel[32];
+        std::snprintf(lLabel, sizeof(lLabel), "WindowOverViewport_%08X", lViewport->ID);
+
+        // Pos/Size rather than WorkPos/WorkSize: the bar is INSIDE this window now, so there is no
+        // reserved strip above it to avoid.
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.f, 0.f));
+
+        // Taller than a menu strip — this is a caption. Pushed before Begin because the menu bar's
+        // height is decided there, and kept through the bar so its items match it.
+        const ImVec2 lFramePadding = ImGui::GetStyle().FramePadding;
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(lFramePadding.x, k_TitleBarPaddingY));
+
+        ImGui::Begin(lLabel, nullptr, k_HostFlags);
+        ImGui::PopStyleVar(3);   // the three window vars; FramePadding stays for the bar
+
+        if (ImGui::BeginMenuBar())
+        {
+            m_TitleBar.DrawBar(InContext, m_Menu);
+            ImGui::EndMenuBar();
+        }
+
+        ImGui::PopStyleVar();   // FramePadding
+
+        ImGui::DockSpace(ImGui::GetID("DockSpace"));
+        ImGui::End();
+
         if (m_Panels != nullptr) { m_Panels->Draw(*this); }
-    }
 
-    bool ImGuiEditorGui::BeginMainMenuBar()
-    {
-        return ImGui::BeginMainMenuBar();
-    }
-
-    void ImGuiEditorGui::EndMainMenuBar()
-    {
-        ImGui::EndMainMenuBar();
+        // LAST: it reads IsAnyItemActive, which only means anything once the panels have submitted.
+        m_TitleBar.UpdateResizeBorder(InContext);
     }
 
     bool ImGuiEditorGui::BeginMenu(const char* InLabel, const bool bInEnabled)

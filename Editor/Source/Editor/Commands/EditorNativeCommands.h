@@ -66,6 +66,32 @@ namespace Opaax::Editor
     };
 
     /**
+     * Send the window to the taskbar — the title bar's first caption button.
+     *
+     * A command rather than a direct Window call for QuitCommand's reason one button over: the
+     * caption and any later key binding then reach one verb. The window comes off the context.
+     */
+    struct MinimizeWindowCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
+    /**
+     * Maximize the window, or restore it when it already is.
+     *
+     * ONE toggling verb rather than two, because the caption button is one button whose glyph
+     * follows the state, and a double-click on the bar means exactly the same thing.
+     */
+    struct ToggleMaximizeWindowCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
+    /**
      * Show or hide one panel — the verb behind every entry in the Window menu, and behind the
      * window's own close button by way of the same bool.
      *

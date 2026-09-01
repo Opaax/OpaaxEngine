@@ -250,6 +250,8 @@ namespace Opaax::Editor
         EditorCommandRegistry& lCommands = m_Extensions.Commands();
 
         lCommands.Register<QuitCommand>(Tags::EDITOR_COMMAND_QUIT);
+        lCommands.Register<MinimizeWindowCommand>(Tags::EDITOR_COMMAND_MINIMIZE_WINDOW);
+        lCommands.Register<ToggleMaximizeWindowCommand>(Tags::EDITOR_COMMAND_TOGGLE_MAXIMIZE_WINDOW);
         lCommands.Register<TogglePanelCommand>(Tags::EDITOR_COMMAND_TOGGLE_PANEL);
 
         lCommands.Register<PlayCommand>(Tags::EDITOR_COMMAND_PLAY);

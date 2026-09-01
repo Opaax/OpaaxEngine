@@ -111,9 +111,9 @@ namespace Opaax::Editor
         // Chrome — the structural widgets the HOST emits, so EditorMenu and EditorPanels never name
         //   a backend. A panel's CONTENTS are not here: a panel IS UI and draws its own (MR2c).
     public:
-        /** @return true when the bar opened. End only when it did — the backend's pairing rule. */
-        virtual bool BeginMainMenuBar() = 0;
-        virtual void EndMainMenuBar()   = 0;
+        // NOTE: there is no BeginMenuBar here any more. OPENING the bar is the implementation's
+        // own business — it is a row inside the editor's title bar, which the implementation
+        // composes — so EditorMenu emits CATEGORIES and never the strip that holds them.
 
         /** A submenu. @return true when it is open, i.e. when children must be emitted. */
         virtual bool BeginMenu(const char* InLabel, bool bInEnabled) = 0;

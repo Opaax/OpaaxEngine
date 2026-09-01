@@ -1,7 +1,6 @@
 #include "Editor/Menus/EditorMenu.h"
 
 #include "Editor/EditorContext.h"
-#include "Editor/UI/IEditorGui.h"
 
 namespace Opaax::Editor
 {
@@ -18,19 +17,12 @@ namespace Opaax::Editor
 
     void EditorMenu::Draw(EditorContext& InContext) const
     {
-        IEditorGui& lGui = InContext.Gui;
-
-        if (!lGui.BeginMainMenuBar())
-        {
-            return;
-        }
-
+        // CATEGORIES ONLY — the bar they sit in is opened by whoever hosts it (the title bar),
+        // which is also what lets the window buttons share that same row.
         for (const TUniquePtr<EditorMenuCategory>& lCategory : m_Categories)
         {
             lCategory->Draw(InContext);
         }
-
-        lGui.EndMainMenuBar();
     }
 
     Uint64 EditorMenu::Count() const noexcept
