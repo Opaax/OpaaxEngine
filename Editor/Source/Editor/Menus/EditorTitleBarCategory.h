@@ -1,13 +1,13 @@
 #pragma once
 
 #include "Core/Tag/OpaaxTag.h"
-#include "Editor/Menus/EditorMenuCommandNode.h"
-#include "Editor/Menus/IEditorMenuNode.h"
+#include "Editor/Menus/EditorTitleBarCommandNode.h"
+#include "Editor/Menus/IEditorTitleBarNode.h"
 
 namespace Opaax::Editor
 {
     /**
-     * @class EditorMenuCategory
+     * @class EditorTitleBarCategory
      *
      * A menu that opens: "File", or "Tools/Debug". A category IS a node, so a category holds
      * categories and the bar nests as deep as it is written.
@@ -20,14 +20,14 @@ namespace Opaax::Editor
      * hand back a reference the caller keeps and adds to, so storing children by value would leave
      * that reference dangling the moment the next child reallocated the array.
      */
-    class EditorMenuCategory final : public IEditorMenuNode
+    class EditorTitleBarCategory final : public IEditorTitleBarNode
     {
         // =============================================================================
         // Ctor - Dtor
         // =============================================================================
     public:
-        explicit EditorMenuCategory(const OpaaxStringID InID, const OpaaxString& InParentPath = OpaaxString())
-            : IEditorMenuNode(InID, InParentPath)
+        explicit EditorTitleBarCategory(const OpaaxStringID InID, const OpaaxString& InParentPath = OpaaxString())
+            : IEditorTitleBarNode(InID, InParentPath)
         {
         }
 
@@ -36,8 +36,8 @@ namespace Opaax::Editor
         // =============================================================================
     private:
         /** @return The child under InID that is a category / a command, or null. */
-        EditorMenuCategory*    FindCategory(OpaaxStringID InID);
-        EditorMenuCommandNode* FindCommand(OpaaxStringID InID);
+        EditorTitleBarCategory*    FindCategory(OpaaxStringID InID);
+        EditorTitleBarCommandNode* FindCommand(OpaaxStringID InID);
 
     public:
         /**
@@ -47,7 +47,7 @@ namespace Opaax::Editor
          * menu: this is what makes a game module's "Tools" the editor's "Tools" with nobody
          * coordinating. Keyed on the interned id, so the lookup is an integer compare.
          */
-        EditorMenuCategory& SubCategory(OpaaxStringID InID);
+        EditorTitleBarCategory& SubCategory(OpaaxStringID InID);
 
         /**
          * Add an entry that dispatches InCommand.
@@ -59,13 +59,13 @@ namespace Opaax::Editor
          * @return The new entry, so SetEnabled / SetChecked chain onto this call. A duplicate label
          *   keeps the FIRST entry and warns, matching EditorCommandRegistry::Register.
          */
-        EditorMenuCommandNode& AddCommand(OpaaxStringID InLabel, const OpaaxTag& InCommand);
+        EditorTitleBarCommandNode& AddCommand(OpaaxStringID InLabel, const OpaaxTag& InCommand);
 
         /** Add a rule below the entries registered so far. */
         void AddSeparator();
 
         /** Grey this whole menu — asked every frame, unset means always enabled. */
-        EditorMenuCategory& SetEnabled(FMenuPredicate InPredicate);
+        EditorTitleBarCategory& SetEnabled(FMenuPredicate InPredicate);
 
         // =============================================================================
         // Override
@@ -75,14 +75,14 @@ namespace Opaax::Editor
         void   Draw(EditorContext& InContext) const override;
         Uint64 CountCommands() const noexcept override;
 
-        EditorMenuCategory* AsCategory() noexcept override { return this; }
+        EditorTitleBarCategory* AsCategory() noexcept override { return this; }
         //~End IEditorMenuNode interface
 
         // =============================================================================
         // Getter
 
         /** The children in registration order — what Draw walks, and what EditorMenu counts. */
-        const TDynArray<TUniquePtr<IEditorMenuNode>>& GetChildren() const noexcept { return m_Children; }
+        const TDynArray<TUniquePtr<IEditorTitleBarNode>>& GetChildren() const noexcept { return m_Children; }
 
         bool IsEmpty() const noexcept { return m_Children.empty(); }
 
@@ -93,7 +93,7 @@ namespace Opaax::Editor
         // Members
         // =============================================================================
     private:
-        TDynArray<TUniquePtr<IEditorMenuNode>> m_Children;
+        TDynArray<TUniquePtr<IEditorTitleBarNode>> m_Children;
         FMenuPredicate                         m_IsEnabled;
     };
 }

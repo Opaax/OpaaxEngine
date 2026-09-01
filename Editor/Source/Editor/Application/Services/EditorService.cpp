@@ -153,7 +153,7 @@ namespace Opaax::Editor
 
     void EditorService::PostInitialized()
     {
-        BuildPanels();
+        BuildGUIs();
         AdoptStartupLevel();
     }
     
@@ -183,7 +183,7 @@ namespace Opaax::Editor
         TitleBarRegistry& lMenu = m_Extensions.TitleBar();
 
         // --- Native File  --------------------------
-        EditorMenuCategory& lFile = lMenu.Category("File");
+        EditorTitleBarCategory& lFile = lMenu.Category("File");
         lFile.AddCommand("New Map...", Tags::EDITOR_COMMAND_NEW_MAP).SetEnabled(IsEditing);
         lFile.AddCommand("Open Map...", Tags::EDITOR_COMMAND_OPEN_MAP);
         lFile.AddSeparator();
@@ -198,7 +198,7 @@ namespace Opaax::Editor
         // --- Native Edit  --------------------------
         // Enabled only while editing: all three are refused in a Play world anyway, and a menu that
         // states the rule beats one that answers a click with a log line nobody reads.
-        EditorMenuCategory& lEdit = lMenu.Category("Edit");
+        EditorTitleBarCategory& lEdit = lMenu.Category("Edit");
         lEdit.AddCommand("Create Entity", Tags::EDITOR_COMMAND_CREATE_ENTITY).SetEnabled(IsEditing);
         lEdit.AddCommand("Delete Selected", Tags::EDITOR_COMMAND_DELETE_ENTITY).SetEnabled(IsEditing);
         lEdit.AddSeparator();
@@ -217,11 +217,11 @@ namespace Opaax::Editor
              .SetChecked([](const EditorContext& InContext) { return InContext.Gizmo.GetMode() == EGizmoMode::Scale; });
 
         // --- Native Level  --------------------------
-        EditorMenuCategory& lLevel = lMenu.Category("Level");
+        EditorTitleBarCategory& lLevel = lMenu.Category("Level");
         lLevel.AddCommand("Add Map...", Tags::EDITOR_COMMAND_ADD_MAP_TO_LEVEL).SetEnabled(IsEditing);
 
         // --- Native Play  --------------------------
-        EditorMenuCategory& lPlay = lMenu.Category("Play");
+        EditorTitleBarCategory& lPlay = lMenu.Category("Play");
         lPlay.AddCommand("Play", Tags::EDITOR_COMMAND_PLAY).SetEnabled(IsEditing);
         lPlay.AddCommand("Pause", Tags::EDITOR_COMMAND_TOGGLE_PAUSE).SetChecked(IsPaused).SetEnabled(IsPlaying);
         lPlay.AddCommand("Step", Tags::EDITOR_COMMAND_STEP).SetEnabled(IsPaused);
@@ -538,7 +538,7 @@ namespace Opaax::Editor
         }
     }
 
-    void EditorService::BuildPanels()
+    void EditorService::BuildGUIs()
     {
         // BOTH live objects, each from the registry the registrar owns — one shape, one place, so
         // the next route that grows live state lands here without a decision.

@@ -235,17 +235,18 @@ namespace Opaax::Editor
          */
         bool HandleReservedKeys(Event& InEvent);
         
+        /**
+         * 
+         */
+        void BuildGUIs();
+        
+        
         // End GUI
         // =============================================================================
         
         // =============================================================================
         // Panels
     private:
-        /**
-         * 
-         */
-        void BuildPanels();
-        
         /**
          * Runs AFTER the game module has registered (so its panels get a toggle too) and BEFORE the seal.
          */

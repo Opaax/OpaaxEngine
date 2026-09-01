@@ -2,12 +2,12 @@
 
 #include "Core/Tag/OpaaxTag.h"
 #include "Editor/Commands/EditorCommandParams.h"
-#include "Editor/Menus/IEditorMenuNode.h"
+#include "Editor/Menus/IEditorTitleBarNode.h"
 
 namespace Opaax::Editor
 {
     /**
-     * @class EditorMenuCommandNode
+     * @class EditorTitleBarCommandNode
      *
      * A clickable entry. It carries a COMMAND TAG and nothing else — clicking it is
      * `Commands().Execute(tag, context)`, the identical call a key binding will make, which is what
@@ -20,14 +20,14 @@ namespace Opaax::Editor
      * (SetEnabled, SetChecked); SetParams is the payload, which is why AddCommand did not grow an
      * overload for it.
      */
-    class EditorMenuCommandNode final : public IEditorMenuNode
+    class EditorTitleBarCommandNode final : public IEditorTitleBarNode
     {
         // =============================================================================
         // Ctor - Dtor
         // =============================================================================
     public:
-        EditorMenuCommandNode(OpaaxStringID InLabel, const OpaaxString& InParentPath, const OpaaxTag& InCommand)
-            : IEditorMenuNode(InLabel, InParentPath)
+        EditorTitleBarCommandNode(OpaaxStringID InLabel, const OpaaxString& InParentPath, const OpaaxTag& InCommand)
+            : IEditorTitleBarNode(InLabel, InParentPath)
             , m_Command(InCommand)
         {
         }
@@ -42,7 +42,7 @@ namespace Opaax::Editor
          * @param InPredicate Asked every frame. Unset means always enabled.
          * @return this, so facets chain onto the AddCommand call that made the node.
          */
-        EditorMenuCommandNode& SetEnabled(FMenuPredicate InPredicate);
+        EditorTitleBarCommandNode& SetEnabled(FMenuPredicate InPredicate);
 
         /**
          * Draw the entry as a CHECKABLE item reading InPredicate for its tick.
@@ -50,7 +50,7 @@ namespace Opaax::Editor
          * Setting it is what makes the entry checkable at all — the state stays wherever it really
          * lives, so the tick cannot drift from it.
          */
-        EditorMenuCommandNode& SetChecked(FMenuPredicate InPredicate);
+        EditorTitleBarCommandNode& SetChecked(FMenuPredicate InPredicate);
 
         /**
          * The payload this entry dispatches with. Unset means NoParams.
@@ -61,7 +61,7 @@ namespace Opaax::Editor
          * EditorContext::MainWindow instead.
          */
         template<typename TParams>
-        EditorMenuCommandNode& SetParams(TParams InParams)
+        EditorTitleBarCommandNode& SetParams(TParams InParams)
         {
             m_Params = MakeUnique<EditorCommandParamsBox<TParams>>(Move(InParams));
             return *this;
@@ -75,7 +75,7 @@ namespace Opaax::Editor
         void   Draw(EditorContext& InContext) const override;
         Uint64 CountCommands() const noexcept override { return 1; }
 
-        EditorMenuCommandNode* AsCommand() noexcept override { return this; }
+        EditorTitleBarCommandNode* AsCommand() noexcept override { return this; }
         //~End IEditorMenuNode interface
 
         // =============================================================================

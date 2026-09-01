@@ -10,8 +10,8 @@ namespace Opaax::Editor
     OPAAX_LOG_CATEGORY(EditorMenu);
 
     struct EditorContext;
-    class EditorMenuCategory;
-    class EditorMenuCommandNode;
+    class EditorTitleBarCategory;
+    class EditorTitleBarCommandNode;
 
     /**
      * A live question asked at DRAW time — is this node enabled, is it shown checked.
@@ -23,7 +23,7 @@ namespace Opaax::Editor
     using FMenuPredicate = TFunction<bool(const EditorContext&)>;
 
     /**
-     * @class IEditorMenuNode
+     * @class IEditorTitleBarNode
      *
      * One node of the menu bar: a category, a command or a separator.
      *
@@ -35,19 +35,19 @@ namespace Opaax::Editor
      * what the invocation log names — it is the only place in the editor that still speaks paths,
      * and it is a read-out rather than the storage it used to be.
      */
-    class IEditorMenuNode
+    class IEditorTitleBarNode
     {
         // =============================================================================
         // Ctor - Dtor
         // =============================================================================
     public:
-        IEditorMenuNode(const OpaaxStringID InID, const OpaaxString& InParentPath)
+        IEditorTitleBarNode(const OpaaxStringID InID, const OpaaxString& InParentPath)
             : m_ID(InID)
             , m_Path(InParentPath.IsEmpty() ? OpaaxString(InID.CStr()) : InParentPath + "/" + InID.CStr())
         {
         }
 
-        virtual ~IEditorMenuNode() = default;
+        virtual ~IEditorTitleBarNode() = default;
 
         // =============================================================================
         // Copy - Move Delete
@@ -55,8 +55,8 @@ namespace Opaax::Editor
 
         // A node is owned by exactly one parent, through a TUniquePtr, and hands out references
         // that outlive the call — copying one would be a second owner of the same entry.
-        IEditorMenuNode(const IEditorMenuNode&)            = delete;
-        IEditorMenuNode& operator=(const IEditorMenuNode&) = delete;
+        IEditorTitleBarNode(const IEditorTitleBarNode&)            = delete;
+        IEditorTitleBarNode& operator=(const IEditorTitleBarNode&) = delete;
 
         // =============================================================================
         // Functions
@@ -80,8 +80,8 @@ namespace Opaax::Editor
          * under this id the kind I am about to extend?", and the node itself is the only thing
          * that has to know the answer.
          */
-        virtual EditorMenuCategory*    AsCategory() noexcept { return nullptr; }
-        virtual EditorMenuCommandNode* AsCommand()  noexcept { return nullptr; }
+        virtual EditorTitleBarCategory*    AsCategory() noexcept { return nullptr; }
+        virtual EditorTitleBarCommandNode* AsCommand()  noexcept { return nullptr; }
 
         // =============================================================================
         // Getter

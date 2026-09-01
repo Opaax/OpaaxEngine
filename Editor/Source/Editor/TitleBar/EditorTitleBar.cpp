@@ -15,7 +15,7 @@ namespace Opaax::Editor
         // --- Registered content, in bar order --------------------------------------------------
         if (m_Registry != nullptr)
         {
-            for (const TUniquePtr<EditorMenuCategory>& lCategory : m_Registry->Categories())
+            for (const TUniquePtr<EditorTitleBarCategory>& lCategory : m_Registry->Categories())
             {
                 lCategory->Draw(InContext);
             }

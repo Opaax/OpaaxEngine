@@ -36,7 +36,7 @@ namespace Opaax
     {
         None        = 0,
         /** Editing it does nothing until the next launch, because whoever reads it reads it at boot. */
-        NeedRestart = BIT(0)
+        NeedRestart = BIT(0),
     };
 
     constexpr EPropertyFlags operator|(const EPropertyFlags InA, const EPropertyFlags InB) noexcept

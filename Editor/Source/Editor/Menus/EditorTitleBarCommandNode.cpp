@@ -1,4 +1,4 @@
-#include "Editor/Menus/EditorMenuCommandNode.h"
+#include "Editor/Menus/EditorTitleBarCommandNode.h"
 
 #include "Editor/EditorContext.h"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
@@ -8,19 +8,19 @@ using namespace Opaax; // OPAAX_LOG expands to an unqualified ToSpdLevel(...)
 
 namespace Opaax::Editor
 {
-    EditorMenuCommandNode& EditorMenuCommandNode::SetEnabled(FMenuPredicate InPredicate)
+    EditorTitleBarCommandNode& EditorTitleBarCommandNode::SetEnabled(FMenuPredicate InPredicate)
     {
         m_IsEnabled = Move(InPredicate);
         return *this;
     }
 
-    EditorMenuCommandNode& EditorMenuCommandNode::SetChecked(FMenuPredicate InPredicate)
+    EditorTitleBarCommandNode& EditorTitleBarCommandNode::SetChecked(FMenuPredicate InPredicate)
     {
         m_IsChecked = Move(InPredicate);
         return *this;
     }
 
-    void EditorMenuCommandNode::Draw(EditorContext& InContext) const
+    void EditorTitleBarCommandNode::Draw(EditorContext& InContext) const
     {
         const bool bEnabled = !m_IsEnabled || m_IsEnabled(InContext);
         const bool bChecked = m_IsChecked && m_IsChecked(InContext);

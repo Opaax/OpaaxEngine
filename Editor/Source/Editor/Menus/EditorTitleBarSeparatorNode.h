@@ -1,11 +1,11 @@
 #pragma once
 
-#include "Editor/Menus/IEditorMenuNode.h"
+#include "Editor/Menus/IEditorTitleBarNode.h"
 
 namespace Opaax::Editor
 {
     /**
-     * @class EditorMenuSeparatorNode
+     * @class EditorTitleBarSeparatorNode
      *
      * A rule between entries. A node rather than a flag on the entry below it, because a separator
      * is POSITIONAL: it lives in the same ordered child list as everything else, so where it was
@@ -14,14 +14,14 @@ namespace Opaax::Editor
      *
      * Its id is invalid: there is nothing to label and nothing to look it up by.
      */
-    class EditorMenuSeparatorNode final : public IEditorMenuNode
+    class EditorTitleBarSeparatorNode final : public IEditorTitleBarNode
     {
         // =============================================================================
         // Ctor - Dtor
         // =============================================================================
     public:
-        explicit EditorMenuSeparatorNode(const OpaaxString& InParentPath)
-            : IEditorMenuNode(OpaaxStringID(), InParentPath)
+        explicit EditorTitleBarSeparatorNode(const OpaaxString& InParentPath)
+            : IEditorTitleBarNode(OpaaxStringID(), InParentPath)
         {
         }
 

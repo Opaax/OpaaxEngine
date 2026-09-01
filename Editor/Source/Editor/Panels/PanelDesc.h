@@ -33,7 +33,7 @@ namespace Opaax::Editor
         OpaaxStringID Id;
 
         /** The root menu category holding this panel's toggle — "Tools" for a tool-shaped panel. */
-        OpaaxStringID Menu = OPAAX_ID("Window");
+        OpaaxStringID Menu = OPAAX_ID("Panels");
 
         EPanelVisibility DefaultVisibility = EPanelVisibility::Visible;
     };
