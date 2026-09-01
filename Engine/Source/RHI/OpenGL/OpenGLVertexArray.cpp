@@ -1,7 +1,6 @@
 #include "OpenGLVertexArray.h"
 #include "Application/Services/ILogger.h"
 
-#define GLAD_APIENTRY
 #include <glad/glad.h>
 
 namespace Opaax

@@ -14,7 +14,6 @@
 #include "RHI/OpenGL/OpenGLBindGroup.h"
 #include "RHI/OpenGL/OpenGLFramebuffer.h"
 
-#define GLAD_APIENTRY
 #include <glad/glad.h>
 
 namespace Opaax

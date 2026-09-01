@@ -2,7 +2,6 @@
 
 #include "RHI/Shader.h"
 
-#define GLAD_APIENTRY
 #include <glad/glad.h>
 
 namespace Opaax

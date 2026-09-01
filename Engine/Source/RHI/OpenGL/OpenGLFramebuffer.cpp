@@ -1,6 +1,5 @@
 #include "OpenGLFramebuffer.h"
 
-#define GLAD_APIENTRY
 #include <glad/glad.h>
 
 #include "Application/Services/ILogger.h"

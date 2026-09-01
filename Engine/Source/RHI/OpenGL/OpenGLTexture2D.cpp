@@ -1,7 +1,13 @@
 #include "OpenGLTexture2D.h"
 
-#include <glad/glad.h>
+// ILogger FIRST, and the order is load-bearing: it reaches windows.h through spdlog, and
+// minwindef.h defines APIENTRY UNGUARDED while glad.h guards on !defined(APIENTRY). Whichever
+// lands second loses — so the windows.h-bearing header has to go first or the build warns C4005.
+// OpenGLShader.cpp and OpenGLVertexArray.cpp already sit this way round, which is why only this
+// file warned.
 #include "Application/Services/ILogger.h"
+
+#include <glad/glad.h>
 #include "Core/EngineAPI.h"
 
 namespace Opaax

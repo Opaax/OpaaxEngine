@@ -1856,3 +1856,30 @@ siblings still alive" — that guarantee IS the prohibition.
 **Rules:** *"Nothing warns against it"* is a claim about the whole contract, not about the file in
 front of me — do not make it from one file. And **the absence of an override is as likely to be a
 DECISION as an oversight**; ask which before writing it up as the latter.
+
+## L68 — A fix nobody watched fail is a fix nobody can trust (2026-08-31)
+
+**What happened.** Chasing a `C4005: 'APIENTRY' macro redefinition` warning in the OpenGL backend, the
+investigation turned up something better than the warning: **`#define GLAD_APIENTRY` sat immediately
+before `#include <glad/glad.h>` in EIGHT files, and glad reads that macro nowhere** — not in
+`glad.h`, not anywhere in the vendor tree. A no-op fix attempt had been sitting in the tree for
+months looking like the problem was handled. It was not even applied to `OpenGLTexture2D.cpp`, the
+one file that actually warned.
+
+**Why it survived.** [[L14]]'s stale objects. `build.bat fast` only recompiles dirty TUs, so the GL
+files had not been rebuilt in months and the warning never appeared — nobody saw the "fix" fail.
+Two failure modes compounded: a fix that was never validated, and an instrument that never ran.
+
+**Rules for next time:**
+- **A fix whose failure mode is invisible has not been verified, it has been assumed.** Before
+  believing a mitigation in the tree, ask *what would I see if this were doing nothing?* If the
+  answer is "exactly what I see now", it is unverified regardless of how long it has been there.
+- **Force the recompile when validating a compile-time fix.** Touch the TUs or clean-build the
+  target; an incremental green says nothing about files it did not open.
+- **A defensive line with no reader is dead code with a comment's authority.** Grep the consumer —
+  the same check [[L63]] applies to a doc comment naming a feature that does not exist. `#define`s
+  aimed at a third party are the easiest place for this to hide, because nothing ever errors.
+- **Sub-agent findings can beat the brief.** The task was "fix a warning"; the durable result was
+  eight dead macros and the reason nobody noticed. Read the whole report, not just the verdict
+  ([[L18]]) — and verify its load-bearing claims yourself, which is how the "glad reads it nowhere"
+  and "8 files" numbers got confirmed rather than repeated.
