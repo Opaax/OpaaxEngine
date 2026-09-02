@@ -16,6 +16,7 @@ set(OPAAX_TEST_SOURCES
     SmokeTest.cpp
     Renderer/CameraViewTests.cpp
     Renderer/SortKeyTests.cpp
+    Renderer/BatchPlanTests.cpp
     Renderer/RenderTargetTests.cpp
     Renderer/DebugDrawTests.cpp
     Core/StringTests.cpp
