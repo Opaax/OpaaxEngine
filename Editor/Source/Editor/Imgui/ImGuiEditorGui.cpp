@@ -5,10 +5,14 @@
 
 #include <cstdio>   // snprintf — the host window's label
 
+#include "ImguiHelper.h"
+#include "Application/Services/IConfigSystem.h"
 #include "Application/Services/ILogger.h"
+#include "Configs/Config_EditorImgui.h"
 #include "Core/EngineAPI.h"   // OPAAX_ASSERT
 #include "Core/Window/Window.h"
 #include "Editor/EditorContext.h"
+#include "Editor/Application/EditorApplication.h"
 #include "Editor/Panels/EditorPanels.h"
 #include "Editor/Panels/IEditorPanel.h"   // PanelWindowStyle — the window chrome's one parameter
 #include "Editor/UI/OpenGLEditorUIBackend.h"
@@ -139,6 +143,49 @@ namespace
 
 namespace Opaax::Editor
 {
+    void ImGuiEditorGui::CheckStyle()
+    {
+        IConfigSystem& lConfigSys = OpaaxApplication::GetAppService<IConfigSystem>();
+        
+        if (lConfigSys.IsNull())
+        {
+            ImGui::StyleColorsClassic();
+            return;
+        }
+        
+        const EditorImguiConfigData& lImguiCG = lConfigSys.Get<Config_EditorImgui>().GetData();
+        
+        UpdateStyle(lImguiCG);
+    }
+
+    void ImGuiEditorGui::UpdateStyle(const EditorImguiConfigData& InCFG)
+    {
+        ImGuiStyle* lStyle = &ImGui::GetStyle();
+        ImVec4* lColors = lStyle->Colors;
+        
+        // --- 1. Framing & Spacing ---
+        lStyle->WindowPadding = ImguiHelper::Vector2FToImVec2(InCFG.WindowPadding);
+        lStyle->FramePadding = ImVec2(6.0f, 4.0f);
+        lStyle->ItemSpacing = ImVec2(8.0f, 6.0f);
+        lStyle->ScrollbarSize = 14.0f;
+        lStyle->GrabMinSize = 12.0f;
+
+        // --- 2. Borders & Rounding ---
+        lStyle->WindowRounding = 6.0f;
+        lStyle->FrameRounding = 4.0f;
+        lStyle->PopupRounding = 4.0f;
+        lStyle->ScrollbarRounding = 12.0f;
+        lStyle->GrabRounding = 4.0f;
+        lStyle->TabRounding = 4.0f;
+
+        lStyle->WindowBorderSize = 1.0f;
+        lStyle->FrameBorderSize = 1.0f;
+        
+        lColors[ImGuiCol_Text]                      = ImguiHelper::LinearColorToImColor(InCFG.TextColor);
+        lColors[ImGuiCol_TextDisabled]              = ImguiHelper::LinearColorToImColor(InCFG.TextDisabledColor);
+        lColors[ImGuiCol_WindowBg]                  = ImguiHelper::LinearColorToImColor(InCFG.WindowBackground);
+    }
+
     bool ImGuiEditorGui::Init(Window& InWindow, OpaaxString InLayoutIniPath)
     {
         // Checked BEFORE the context exists, so a failure has nothing to unwind.
@@ -157,9 +204,11 @@ namespace Opaax::Editor
         lIO.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable; //Panels can be drag outside the main viewport
         
         lIO.ConfigWindowsMoveFromTitleBarOnly = true;
+        
+        CheckStyle();
 
         //ImGui::StyleColorsDark();
-        ImGui::StyleColorsClassic();
+        //ImGui::StyleColorsClassic();
         //ImGui::StyleColorsLight();
 
         // --- Dock layout persistence. Set BEFORE the first NewFrame: that is where ImGui loads the ini
@@ -196,6 +245,7 @@ namespace Opaax::Editor
     void ImGuiEditorGui::BeginFrame()
     {
         m_Backend->NewFrame();
+        CheckStyle();
         ImGui::NewFrame();
 
         // ③ — right after ImGui's own NewFrame, as ImGuizmo's header asks. Needed even though the
@@ -217,13 +267,6 @@ namespace Opaax::Editor
 
     void ImGuiEditorGui::Draw(EditorContext& InContext)
     {
-        // The whole UI pass, in submission order. The title bar is submitted before the panels so a
-        // positional query inside a panel is not measured against a bar that has yet to reserve its
-        // height (L56).
-        //
-        // This is DockSpaceOverViewport open-coded, and the two details it copies are load-bearing:
-        // the window LABEL and GetID("DockSpace") inside it are what produce the dockspace id the
-        // user's imgui.ini already names. Change either and every saved dock position is orphaned.
         const ImGuiViewport* lViewport = ImGui::GetMainViewport();
 
         ImGui::SetNextWindowPos(lViewport->Pos);

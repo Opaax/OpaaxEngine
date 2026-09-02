@@ -4,6 +4,9 @@
 
 #include "Editor/Application/Services/EditorService.h"
 #include "Editor/Application/Services/EditorPaths.h"
+#include "Editor/Imgui/Configs/Config_EditorImgui.h"
+
+#include "Application/Services/IConfigSystem.h"
 
 #include "Application/Services/IEngine.h"   // Engine().Loop() — full type, not just the fwd decl
 #include "Application/Services/ILogger.h"   // OPAAX_LOG + LogCategory
@@ -94,6 +97,13 @@ namespace Opaax::Editor
         lSpec.Mode = EWorldMode::Edit;
 
         return lSpec;
+    }
+
+    void EditorApplication::PreRegisterConfig(IConfigSystem& ConfigSystem)
+    {
+        OpaaxApplication::PreRegisterConfig(ConfigSystem);
+
+        ConfigSystem.Register<Config_EditorImgui>();
     }
 
     void EditorApplication::PostEngineStartup()

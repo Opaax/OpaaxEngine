@@ -15,7 +15,7 @@ namespace Opaax::Editor
     //   WHY THIS EXISTS WHEN MR2d RULED WIDGETS STAY DIRECT. That ruling was about the ~360 call
     //   sites of bespoke panel UI, and it stands for them. A property drawer is the opposite kind of
     //   thing: `TPropertyDrawer<T>` is the extension point a GAME uses to support a new field type
-    //   (I15), so leaving it backend-bound binds every game's custom field editor forever. The
+    //   so leaving it backend-bound binds every game's custom field editor forever. The
     //   vocabulary below is CLOSED and was derived from the call sites that exist — not invented —
     //   and every entry is a value editor any toolkit has a direct equivalent for.
     //
@@ -24,8 +24,6 @@ namespace Opaax::Editor
     //   than ignored: the late-bound queries are FOLDED INTO the calls (Button takes its tooltip),
     //   so nothing here depends on submission order, and the id scope is explicit rather than
     //   implied.
-    //
-    //   No OPAAX_API: OpaaxEditorLib is a static lib archived into the editor exe, not a DLL.
     // =============================================================================
     class IEditorWidgets
     {

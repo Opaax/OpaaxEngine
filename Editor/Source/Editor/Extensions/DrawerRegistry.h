@@ -82,8 +82,9 @@ namespace Opaax::Editor
     //   a curve.
     //
     //   DUCK-TYPED contract, checked at instantiation, with NO base class (D7 declines OOP/virtual
-    //   drawers). A TDrawer must be default-constructible and callable as void Draw(DrawableType&);
-    //   its body may live in a .cpp, since the closure only needs to CALL it.
+    //   drawers). A TDrawer must be default-constructible and callable as
+    //   void Draw(IEditorWidgets&, DrawableType&); its body may live in a .cpp, since the closure
+    //   only needs to CALL it. Worked example: EditorImguiConfigDrawer.
     //
     //   Registration STORES ONLY; nothing is constructed. It must: RegisterExtensions runs at the
     //   OnModulesRegistered seam, before any world exists.
@@ -151,20 +152,7 @@ namespace Opaax::Editor
                     {
                         return false;
                     }
-
-                    // EVERY entry draws inside its own ID scope, keyed by the type it draws.
-                    //
-                    // An ImGui widget's identity is its LABEL, and a label here is a field name — so
-                    // two drawables sharing a field name in one window are one id, twice. That is not
-                    // an edge case: Dummy and Sprite both have Position, Size and Color by design,
-                    // and the day an entity carries both, ImGui reports conflicting IDs and the two
-                    // widgets fight over the active-item state.
-                    //
-                    // The scope belongs HERE rather than in each TPropertyDrawer: a drawer sees one
-                    // field and cannot know what else the window holds, while an entry is exactly the
-                    // boundary between two independently-authored types. Keyed by the type NAME, not
-                    // by the registration index, so a stored open/closed header state survives
-                    // someone registering another drawer before it.
+                    
                     InWidgets.PushId(lName.CStr());
 
                     if constexpr (Resolver::bDrawsSection)

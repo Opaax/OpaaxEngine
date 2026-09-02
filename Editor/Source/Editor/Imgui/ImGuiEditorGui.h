@@ -6,6 +6,10 @@
 #include "Editor/UI/IEditorUIBackend.h"   // owned through a TUniquePtr — needs the complete type
 #include "Core/OpaaxTypes.h"              // TUniquePtr
 
+namespace Opaax {
+    struct EditorImguiConfigData;
+}
+
 namespace Opaax::Editor
 {
     // =============================================================================
@@ -30,7 +34,14 @@ namespace Opaax::Editor
         // must say so, or the implicit copy is instantiated anyway).
         ImGuiEditorGui(const ImGuiEditorGui&)            = delete;
         ImGuiEditorGui& operator=(const ImGuiEditorGui&) = delete;
-
+        
+        // =============================================================================
+        // Functions
+        // =============================================================================
+    private:
+        void CheckStyle();
+        void UpdateStyle(const EditorImguiConfigData& InCFG);
+        
         // =============================================================================
         // Override
         // =============================================================================

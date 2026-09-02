@@ -55,6 +55,7 @@ namespace Opaax::Editor
         void OnModulesRegistered() override;
         TUniquePtr<IPaths> CreatePaths(const IPlatform& InPlatform, int InArgc, char** InArgv) override;
         WorldSpec GetStartupWorldSpec() const override;
+        void PreRegisterConfig(IConfigSystem& ConfigSystem) override;
     public:
         void PostEngineStartup() override;
         void OnEvent(Event& InEvent) override;

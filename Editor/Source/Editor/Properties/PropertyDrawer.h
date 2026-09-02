@@ -55,6 +55,23 @@ namespace Opaax::Editor
     void DrawProperties(IEditorWidgets& InWidgets, TOwner& InOwner);
 
     /**
+     * Draw ONE value by hand, outside any property list — what a CUSTOM drawer uses to lay fields
+     * out in groups of its own choosing.
+     *
+     * The third facet of the same vocabulary (DrawProperty / DrawProperties / DrawField), and it
+     * exists so hand-grouping does not cost the type dispatch: this resolves the same
+     * TPropertyDrawer<T> the generic fold would have picked, so a LinearColor still gets the picker
+     * and an enum still gets its dropdown. The LABEL is the caller's, since inside a "Text" group
+     * the field's own name is usually redundant.
+     */
+    template<typename TValue>
+    void DrawField(IEditorWidgets& InWidgets, const char* InLabel, TValue& InValue,
+                   const PropertyMeta& InMeta = {})
+    {
+        TPropertyDrawer<TValue>::Draw(InWidgets, InLabel, InValue, InMeta);
+    }
+
+    /**
      * Draw one described field of InOwner.
      *
      * The member pointer carries the field's type, so this resolves the right specialization with

@@ -25,7 +25,8 @@
 //       OPAAX_PROPERTIES(MyConfigData, OPAAX_PROP(Value))                  // optional — the editor draws it
 //   };
 //
-//   DECLARE_OPAAX_T_CONFIG(MyConfig, MyConfigData)   // exported; DECLARE_T_CONFIG if DLL-internal
+//   DECLARE_OPAAX_T_CONFIG(MyConfig, MyConfigData)   // engine DLL only — see the macros below
+//   DECLARE_T_CONFIG(MyConfig, MyConfigData)   // see the macros below
 //
 // In your .cpp:
 //   IMPL_T_CONFIG(MyConfig)
@@ -163,6 +164,18 @@ namespace Opaax
     };
 }
     
+// =============================================================================
+// WHICH MACRO: the axis is WHICH MODULE COMPILES THE CONFIG, not how widely it is used.
+//
+//   DECLARE_OPAAX_T_CONFIG — declared in the ENGINE. IMPL_T_CONFIG puts StaticTypeID() in an engine
+//   .cpp, so an exe naming the type (registering it, drawing it) needs the export or it is LNK2019.
+//
+//   DECLARE_T_CONFIG — declared in ANY OTHER module (editor lib, game module). Those are static libs
+//   folded into ONE exe, so the tag is emitted once and needs no export (I2's one-module case).
+//   Reaching for OPAAX_API here points dllimport at a definition the same module provides: MSVC
+//   answers with warning C4273 and keeps going, then fails at the first cross-TU call with LNK2019 —
+//   a warning where the mistake is, an error somewhere else entirely.
+// =============================================================================
 #define DECLARE_OPAAX_T_CONFIG(ConfigName, DataType)\
 class OPAAX_API Config_##ConfigName final : public TConfig<DataType> \
 { public: OPAAX_CONFIG_TYPE(ConfigName) const char* FileName() const override { return STR(ConfigName) ".config"; } };
