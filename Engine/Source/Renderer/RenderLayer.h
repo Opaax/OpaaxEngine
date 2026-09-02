@@ -12,9 +12,10 @@ namespace Opaax
     // =============================================================================
     /**
      * @enum ERenderLayer
-     * Coarse draw-order band for 2D draws. Renderer2D sorts the batch by
-     * (Layer, OrderInLayer, textureSlot) before flushing, so a higher band always
-     * draws on top regardless of submission order. The enum body and the matching
+     * Coarse draw-order band for 2D draws. Renderer2D sorts the whole PASS by
+     * (Layer, OrderInLayer, texture) before cutting it into batches, so a higher band always
+     * draws on top regardless of submission order or of how many draw calls the frame took.
+     * The enum body and the matching
      * g_RenderLayerIDs[] are both generated from RenderLayerList.h — adding a band
      * means a single new line in that list file.
      *

@@ -81,6 +81,9 @@ namespace Opaax
         lDesc.SpriteShader = ShaderSource::FromSource(lShaderSrc, lShaderPath);
         lDesc.ClearColor   = lRenderCfg.ClearColor;
 
+        lDesc.Limits.MaxQuads        = lRenderCfg.MaxQuadsPerBatch;
+        lDesc.Limits.MaxTextureSlots = lRenderCfg.MaxTextureSlots;
+
         m_RenderSystem = MakeUnique<RenderSystem>();
         if (!m_RenderSystem->Init(lDesc))
         {

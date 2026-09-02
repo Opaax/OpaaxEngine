@@ -131,7 +131,7 @@ namespace Opaax
         }
         
         m_Device->GetCommandBuffer().BeginRenderPass(InTarget, ELoadOp::Clear, m_ClearColor);
-        m_Renderer2D->BeginScene(InView, m_Device->GetCommandBuffer());
+        m_Renderer2D->BeginPass(InView, m_Device->GetCommandBuffer());
     }
 
     void RenderSystem::EndPass()
@@ -141,7 +141,7 @@ namespace Opaax
             return;
         }
         
-        m_Renderer2D->End();
+        m_Renderer2D->EndPass();
         m_Device->GetCommandBuffer().EndRenderPass();
     }
     

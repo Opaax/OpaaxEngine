@@ -240,9 +240,8 @@ namespace Opaax::Editor
 
             ImGui::TableSetColumnIndex(1);
 
-            // A frame that split its batch is ⑥'s bug made visible: Renderer2D sorts the CURRENT
-            // batch only, so past one draw call the painter's algorithm no longer holds between
-            // them. Flagged rather than explained in a comment nobody reads.
+            // A split frame is a COST, not a drawing error: a pass is sorted whole before it is
+            // cut (F5). Still flagged — it is the one number a 2D batcher is judged by.
             const bool bSplitBatch = lCounter.Value > 1 && SameCounter(lCounter, "Draw Calls");
 
             if (bSplitBatch)
@@ -256,10 +255,10 @@ namespace Opaax::Editor
 
             if (bSplitBatch && ImGui::IsItemHovered())
             {
-                ImGui::SetTooltip("The frame split into several batches.\n"
-                                  "Draw order is only sorted WITHIN a batch, so sprites can\n"
-                                  "overlap wrongly across the split. Check Quads (>1000 fills\n"
-                                  "the buffer) and Texture Slots (16 exhausts the samplers).");
+                ImGui::SetTooltip("The frame split into several batches — a cost, not a\n"
+                                  "drawing error: a pass is sorted whole before it is cut.\n"
+                                  "Quads names the buffer limit, Texture Slots the samplers;\n"
+                                  "both are Renderer.config values.");
             }
         }
 

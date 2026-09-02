@@ -31,14 +31,14 @@ namespace Opaax
     OPAAX_API Vector2F MakeOutlineInnerHalf(const Vector2F& InSize, float InThickness) noexcept;
 
     /**
-     * What one FRAME of batching cost. Per frame, not per pass — ⑥'s multi-view will run several
-     * passes into one frame and the interesting numbers are the totals.
+     * What one FRAME of batching cost. Per frame, not per pass — multi-view runs several passes
+     * into one frame and the interesting numbers are the totals.
      *
      * DrawCalls is also the FLUSH count: Flush issues exactly one DrawIndexed, so shipping both
-     * would be the same number twice. Above 1 the painter's algorithm no longer holds ACROSS the
-     * split (Renderer2D.cpp sorts the current batch only) — which is the ⑥ bug this exists to make
-     * visible before it bites. Why it split is readable from the other two: Quads past MAX_QUADS
-     * means the buffer filled, PeakTextureSlots at the limit means the samplers did.
+     * would be the same number twice. Above 1 the frame split, which is a COST and no longer a
+     * correctness problem — a pass is sorted whole before it is cut. Why it split is readable from
+     * the other two: Quads past the batch limit means the buffer filled, PeakTextureSlots at the
+     * limit means the samplers did.
      */
     struct Renderer2DStats
     {
@@ -51,15 +51,16 @@ namespace Opaax
      * @class Renderer2D
      *
      * Instance-owned 2D batch renderer (one per render department — RendererManager owns it).
-     * Stateless from the caller's perspective per frame: call Begin/End around your draw calls.
-     * Internally accumulates a vertex batch and flushes when full or when all texture slots are
-     * occupied. One draw call per flush. All GPU state lives in the pImpl (Renderer2DData).
+     * Stateless from the caller's perspective per frame: call BeginPass/EndPass around your draw
+     * calls. A pass is RECORDED whole, then sorted once and cut into batches at EndPass — so draw
+     * order never depends on where a flush landed. One draw call per batch. All GPU state lives in
+     * the pImpl (Renderer2DData).
      *
      * Usage:
-     *          renderer.BeginScene(view, cmd);
+     *          renderer.BeginPass(view, cmd);
      *          renderer.DrawQuad({0,0}, {100,100}, {1,0,0,1});     // red quad
      *          renderer.DrawSprite({0,0}, {100,100}, texture);     // textured quad
-     *          renderer.End();
+     *          renderer.EndPass();
      *
      * Init()/Shutdown() build/release the GPU resources — call from the owner's Startup/Shutdown
      * (render API up, context current), never mid-frame.
@@ -86,8 +87,14 @@ namespace Opaax
         // Lifecycle
         // =============================================================================
     public:
-        // Build the batch GPU resources through the device (the live path). All resources are
-        // created via InDevice, so nothing routes through a global backend factory.
+        /**
+         * Build the batch GPU resources through the device (the live path). All resources are
+         * created via InDevice, so nothing routes through a global backend factory.
+         *
+         * InLimits sizes the batch: the vertex/index buffers hold MaxQuads, and MaxTextureSlots
+         * caps the samplers a single draw may bind. Both are clamped to what the sprite shader
+         * and the buffers can honour, loudly.
+         */
         void Init(IRHIDevice& InDevice, const RenderLimits& InLimits, const ShaderDesc& InShader);
 
         void Shutdown();
@@ -97,14 +104,14 @@ namespace Opaax
         // =============================================================================
     public:
         /**
-         * Open a scene from a per-frame RenderView snapshot (the live path — no camera object).
-         * Sets the viewport, uploads the view-projection, and starts a fresh batch. Draws issued
-         * until End() record into InCmd.
+         * Open a pass from a per-frame RenderView snapshot (the live path — no camera object).
+         * Sets the viewport, uploads the view-projection, and starts a fresh recording. Draws
+         * issued until EndPass() record into InCmd.
          */
-        void BeginScene(const RenderView& InView, ICommandBuffer& InCmd);
+        void BeginPass(const RenderView& InView, ICommandBuffer& InCmd);
 
-        // Call once per frame after all draw calls — flushes the remaining batch.
-        void End();
+        // Close the pass: sort everything recorded, cut it into batches, draw them.
+        void EndPass();
 
         // =============================================================================
         // Stats
@@ -190,35 +197,37 @@ namespace Opaax
         // Internal
         // =============================================================================
     private:
-        void  BeginInternal(const Matrix44F& InViewProjection, ICommandBuffer& InCmd);
-        void  Flush();
-        void  StartBatch();
+        /** Drop the recording and re-seat the white texture as id 0. */
+        void   StartPass();
 
-        /** Flush + restart the batch if the vertex buffer is full. Called before anything that
-         *  derives state FROM the batch (a texture slot), because a flush resets it. */
-        void  EnsureBatchRoom();
+        /** Plan the recorded quads, then walk the plan gathering and drawing one batch at a time. */
+        void   EmitPass();
+
+        /** Upload InQuadCount gathered quads, bind the batch's samplers, issue the one DrawIndexed. */
+        void   Flush(Uint32 InQuadCount, Uint32 InSlotCount);
 
         /**
          * The ONE body that writes a quad's four vertices and its sort key. A coloured quad is a
-         * sprite on slot 0 sampling the whole white texture, so both entry points come here — one
-         * place for the winding, the rotation and the key to be right or wrong.
+         * sprite on texture id 0 sampling the whole white texture, so both entry points come here —
+         * one place for the winding, the rotation and the key to be right or wrong.
          */
-        void  SubmitQuad(const Vector2F& InPosition,
-                         const Vector2F& InSize,
-                         const Vector4F& InColor,
-                         float           InRotationRad,
-                         ERenderLayer    InLayer,
-                         Int16           InOrderInLayer,
-                         float           InTexIndex,
-                         const Vector2F& InUVMin,
-                         const Vector2F& InUVMax,
-                         const Vector2F& InInnerHalf = { 0.f, 0.f });
+        void   SubmitQuad(const Vector2F& InPosition,
+                          const Vector2F& InSize,
+                          const Vector4F& InColor,
+                          float           InRotationRad,
+                          ERenderLayer    InLayer,
+                          Int16           InOrderInLayer,
+                          Uint32          InTexId,
+                          const Vector2F& InUVMin,
+                          const Vector2F& InUVMax,
+                          const Vector2F& InInnerHalf = { 0.f, 0.f });
 
         /**
-         * The slot InTexture is bound to for this batch: an existing one if it is already bound,
-         * else a fresh one — flushing first when all slots are taken.
+         * InTexture's id for this PASS — an existing one if it has been drawn already, else a fresh
+         * one. A pass may name more textures than a batch can bind; which of them share a draw call
+         * is the batch plan's answer, not this one's.
          */
-        float GetTextureSlot(ITexture2D& InTexture);
+        Uint32 GetTextureId(ITexture2D& InTexture);
 
         // =============================================================================
         // Members
