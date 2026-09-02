@@ -15,9 +15,10 @@
 
 namespace Opaax
 {
-    // TextureResource is only NAMED here — TResourcePath never completes its parameter — so a
-    // component header does not drag the RHI into every TU that draws one.
+    // Only NAMED here — TResourcePath never completes its parameter — so a component header does
+    // not drag the RHI or the resource system into every TU that draws one.
     struct TextureResource;
+    struct SpriteSheetResource;
 
     // =============================================================================
     // SpriteComponent — an image drawn in the world. The first component that references a
@@ -27,14 +28,20 @@ namespace Opaax
     //   never one per component. A local Offset (Godot's Sprite2D.offset) is the growth point for
     //   art that sits off its entity's origin; nothing needs it yet.
     //
-    //   No UVs either. The renderer's call takes them so a sprite sheet needs no second entry
-    //   point, but hand-typed atlas floats are worse authoring than none — a sheet is its own
-    //   resource type, with its own editor.
+    //   TWO WAYS TO NAME AN IMAGE, and the precedence is the contract: a Sheet wins when it is set,
+    //   otherwise the Texture, otherwise nothing is drawn. Both exist because a plain image — a
+    //   backdrop, a UI panel — must not need a `.opaaxsheet` beside it to be usable.
     // =============================================================================
     struct SpriteComponent
     {
         /** Asset-relative ("Textures/Hero.png"). EMPTY draws nothing — a real state, not an error. */
         TResourcePath<TextureResource> Texture;
+
+        /** Asset-relative ("Sheets/Hero.opaaxsheet"). Set, it WINS over Texture. */
+        TResourcePath<SpriteSheetResource> Sheet;
+
+        /** Which of the sheet's frames. NEGATIVE = the sheet's own DefaultFrame. Ignored with no sheet. */
+        Int32        Frame        = -1;
 
         Vector2F     Size         = { 100.f, 100.f };
 
@@ -51,14 +58,20 @@ namespace Opaax
         // macro reads every field with at(), which THROWS on a missing key — so adding a field here
         // would refuse every map saved before it existed, at boot, inside Level::MountAll.
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(SpriteComponent,
-                                                    Texture, Size, Color, bVisible, Layer, OrderInLayer)
+                                                    Texture, Sheet, Frame, Size, Color, bVisible, Layer, OrderInLayer)
 
         // What the Inspector draws, with no drawer written for it. Every field type resolves to a
         // built-in specialization: the path gets a drag & drop target, the layer a dropdown, the
         // colour a picker — each from its TYPE alone (I15).
         OPAAX_PROPERTIES(SpriteComponent,
-                         OPAAX_PROP(Texture),
-                         OPAAX_PROP(Size).SetRange(1.f, 4096.f),
+                         OPAAX_PROP(Texture).SetTooltip("The whole image. Ignored while a Sheet is set."),
+                         OPAAX_PROP(Sheet).SetTooltip("A sliced image. Set, it WINS over Texture."),
+                         OPAAX_PROP(Frame).SetRange(-1.f, 4096.f)
+                                          .SetTooltip("Which of the sheet's frames to draw.\n"
+                                                      "-1 means the sheet's own default frame."),
+                         OPAAX_PROP(Size).SetRange(1.f, 4096.f)
+                                         .SetTooltip("World size. The frame decides WHAT is drawn,\n"
+                                                     "this decides how big — they are separate."),
                          OPAAX_PROP(Color),
                          OPAAX_PROP(bVisible),
                          OPAAX_PROP(Layer),

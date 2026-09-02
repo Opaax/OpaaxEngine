@@ -23,6 +23,10 @@ namespace Opaax
     class FrameProfiler;
     struct FramebufferSpec;
     struct TextureResource;
+    struct SpriteSheetResource;
+    struct SpriteSheetData;
+    struct SpriteComponent;
+    struct SpriteUVRect;
     struct WindowResize;
 
     template<typename TResource>
@@ -98,6 +102,25 @@ namespace Opaax
          * placeholder instead, which is visible rather than absent.
          */
         ITexture2D* ResolveTexture(const TResourcePath<TextureResource>& InPath);
+
+        /**
+         * The sheet behind an asset-relative path, loading it once and keeping the claim.
+         *
+         * ResolveTexture's twin, cache and all — a sheet is a resource like any other and the same
+         * "one lookup per draw, one load per session" rule applies. Null when the path is empty.
+         */
+        const SpriteSheetData* ResolveSheet(const TResourcePath<SpriteSheetResource>& InPath);
+
+        /**
+         * What one sprite draws: its texture, and the sub-rectangle of it to sample.
+         *
+         * The ONE place the Sheet-wins-over-Texture precedence lives, so the Inspector's tooltip and
+         * the frame cannot disagree. A sheet naming a frame that does not exist warns ONCE and falls
+         * back to the whole texture rather than drawing nothing, which would read as a broken sprite.
+         *
+         * @return false when there is nothing to draw at all — the ordinary "no image named yet".
+         */
+        bool ResolveSpriteDraw(const SpriteComponent& InSprite, ITexture2D*& OutTexture, SpriteUVRect& OutUV);
 
         // =============================================================================
         // Getters - Setter
@@ -175,5 +198,11 @@ namespace Opaax
         // portable), and released in Shutdown — which runs BEFORE the ResourceManager's, i.e. while
         // the GL context is still alive to delete the GPU handles.
         TUnorderedMap<Uint32, ResourceRef<TextureResource>> m_TextureCache;
+
+        /** The same claim-and-keep cache for sheets. Released in Shutdown beside the textures'. */
+        TUnorderedMap<Uint32, ResourceRef<SpriteSheetResource>> m_SheetCache;
+
+        /** Sheets already warned about for naming a frame they do not have — one line, not one per frame. */
+        TUnorderedSet<Uint32> m_WarnedFrameRange;
     };
 }

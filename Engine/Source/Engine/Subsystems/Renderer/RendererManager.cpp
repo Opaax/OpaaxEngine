@@ -37,6 +37,7 @@
 
 #include "Engine/Subsystems/Resources/ResourceManager.h"          // Load<TextureResource> — the cache
 #include "Engine/Subsystems/Resources/Types/TextureResource.h"
+#include "Engine/Subsystems/Resources/Types/SpriteSheetResource.h" // the sheet a sprite may name instead
 
 #include "Engine/Config/Config_Engine.h"
 #include "Engine/Subsystems/EventBus/EngineEventBus.h"
@@ -110,10 +111,11 @@ namespace Opaax
         // would touch a destroyed m_RenderSystem.
         OpaaxApplication::GetAppService<IEngine>().GetEngineEventBus().GetEventBus().UnsubscribeAll(this);
 
-        // Drop the texture claims FIRST. Shutdown order is the reverse of registration, so the
+        // Drop the resource claims FIRST. Shutdown order is the reverse of registration, so the
         // ResourceManager is still alive here to take the releases — and its own FlushAll, which
         // destroys the GPU handles, runs after this while the window's GL context is still up.
         m_TextureCache.clear();
+        m_SheetCache.clear();
 
         m_RenderSystem.reset(); // ~RenderSystem = WaitIdle + teardown while the window/context is alive
         OPAAX_LOG(LogRendererManager, Info, "RendererManager shutdown");
@@ -241,19 +243,105 @@ namespace Opaax
                     return;
                 }
 
-                // No texture named yet is a normal authoring state — a component just added, or one
-                // whose image was cleared. Drawing a white quad for it would look like a bug in the
-                // sprite; drawing nothing looks like what it is.
-                ITexture2D* lTexture = ResolveTexture(InSprite.Texture);
-                if (lTexture == nullptr)
+                ITexture2D*  lTexture = nullptr;
+                SpriteUVRect lUV;
+
+                if (!ResolveSpriteDraw(InSprite, lTexture, lUV))
                 {
                     return;
                 }
 
                 InRenderer.DrawSprite(InXf.Position, InSprite.Size * InXf.Scale, *lTexture, InSprite.Color,
                                       Maths::DegreesToRadians(InXf.Rotation),
-                                      InSprite.Layer, InSprite.OrderInLayer);
+                                      InSprite.Layer, InSprite.OrderInLayer,
+                                      lUV.UVMin, lUV.UVMax);
             });
+    }
+
+    bool RendererManager::ResolveSpriteDraw(const SpriteComponent& InSprite, ITexture2D*& OutTexture, SpriteUVRect& OutUV)
+    {
+        // THE PRECEDENCE, in one place: a sheet wins when it is set, otherwise the texture. No image
+        // named at all is a normal authoring state — a component just added, or one whose image was
+        // cleared — so it draws nothing rather than a white quad that reads as a broken sprite.
+        const SpriteSheetData* lSheet = ResolveSheet(InSprite.Sheet);
+
+        if (lSheet == nullptr)
+        {
+            OutTexture = ResolveTexture(InSprite.Texture);
+            OutUV      = SpriteUVRect{};
+
+            return OutTexture != nullptr;
+        }
+
+        OutTexture = ResolveTexture(lSheet->Texture);
+        if (OutTexture == nullptr)
+        {
+            return false;
+        }
+
+        const SpriteFrame* lFrame = lSheet->FrameAt(InSprite.Frame);
+
+        if (lFrame == nullptr)
+        {
+            // A sheet with no frames at all is simply its whole texture, which is what an author
+            // sees the moment they create one — not worth a warning. An explicit index that does
+            // not exist IS worth one, ONCE per sheet: it is a typo with a plausible-looking result.
+            if (InSprite.Frame >= 0 && lSheet->FrameCount() > 0)
+            {
+                const Uint32 lKey = OpaaxStringID(InSprite.Sheet.Path).GetId();
+
+                if (m_WarnedFrameRange.emplace(lKey).second)
+                {
+                    OPAAX_LOG(LogRendererManager, Warn, "Sheet '{}' has no frame {} ({} frame(s)) — drawing the whole texture",
+                              InSprite.Sheet.Path.CStr(), InSprite.Frame, lSheet->FrameCount());
+                }
+            }
+
+            OutUV = SpriteUVRect{};
+            return true;
+        }
+
+        OutUV = MakeFrameUV(*lFrame, OutTexture->GetWidth(), OutTexture->GetHeight());
+
+        return true;
+    }
+
+    const SpriteSheetData* RendererManager::ResolveSheet(const TResourcePath<SpriteSheetResource>& InPath)
+    {
+        if (InPath.IsEmpty())
+        {
+            return nullptr;
+        }
+
+        const OpaaxStringID lKey(InPath.Path);
+
+        auto lIt = m_SheetCache.find(lKey.GetId());
+        if (lIt == m_SheetCache.end())
+        {
+            const OpaaxString lAbsolute = OpaaxApplication::GetAppService<IPaths>().AssetToAbsolute(InPath.Path);
+
+            ResourceRef<SpriteSheetResource> lRef =
+                OpaaxApplication::GetAppService<IEngine>().GetResources().Load<SpriteSheetResource>(lAbsolute.CStr());
+
+            // Cached even when the load FAILED, for ResolveTexture's reason: keeping the empty ref
+            // stops a missing file being retried once per sprite per frame.
+            lIt = m_SheetCache.emplace(lKey.GetId(), Move(lRef)).first;
+
+            if (const SpriteSheetResource* lLoaded = lIt->second.IsValid() ? lIt->second.Get() : nullptr)
+            {
+                OPAAX_LOG(LogRendererManager, Info, "Sheet '{}' -> {} frame(s) of '{}'",
+                          InPath.Path.CStr(), lLoaded->Data.FrameCount(), lLoaded->Data.Texture.Path.CStr());
+            }
+            else
+            {
+                OPAAX_LOG(LogRendererManager, Warn, "Sheet '{}' did not load — the sprite draws nothing",
+                          InPath.Path.CStr());
+            }
+        }
+
+        const SpriteSheetResource* lResource = lIt->second.Get();
+
+        return (lResource != nullptr) ? &lResource->Data : nullptr;
     }
 
     ITexture2D* RendererManager::ResolveTexture(const TResourcePath<TextureResource>& InPath)
