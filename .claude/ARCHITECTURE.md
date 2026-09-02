@@ -11,6 +11,9 @@
 > **Scope:** the *new* engine (branch `refresh_engine`). The old world (`CoreEngineApp`, `*Old` classes,
 > `EventOld/`) is dead-but-compiled — see **X1**. When code and this file disagree, the code wins *and you
 > fix this file in the same change*.
+>
+> **This file holds *why*, never *how to*.** Step-by-step recipes live in `.claude/howto/` — currently
+> [configs & drawers](howto/configs-and-drawers.md). Add a recipe there rather than growing this file.
 
 ---
 
@@ -163,6 +166,20 @@ struct, `Engine`), never on the template itself.
      works; the trick is running it at authoring time instead of at link time. *(They are also
      out-of-line for a second reason — inline bodies would drag
      `glm/gtc/matrix_transform.hpp` into every TU that includes `World.h`.)*
+- **The MIRROR-IMAGE strike, and it fails WORSE (2026-09-01): `OPAAX_API` on a type the engine does not
+  compile.** `Config_EditorImgui` — the tree's first non-DLL config, the decision **GIZ10** left open —
+  was declared with `DECLARE_OPAAX_T_CONFIG` in `OpaaxEditorLib`, where `OPAAX_API` is `dllimport`. That
+  points an import declaration at a definition the *same module* supplies, and MSVC answers with
+  **warning C4273 and keeps going**, so it builds green until a second TU calls it and the linker asks
+  for `__imp_`. Every strike above announces itself as `LNK2019` *where the mistake is*; this one warns
+  in one file and breaks in another. **So exported-ness is a question with two wrong answers, and the
+  axis is WHICH MODULE COMPILES THE TYPE** — engine → `OPAAX_API`, editor lib or game module → none
+  (static libs folded into one exe, so **I2**'s one-module case: the tag is emitted once). Proven both
+  ways: the editor config registers, draws and round-trips `Configs/EditorImgui.config`; a throwaway
+  `DECLARE_T_CONFIG` probe in `SandboxModule` named from a `SandboxRuntime` TU linked to **one**
+  out-of-line tag. Costed **nothing to prevent and was left to chance**: `DECLARE_T_CONFIG` had existed
+  since the codec rewrite with **zero users** and a comment reading "if DLL-internal" — which names the
+  engine's inside, i.e. the one place it is *not* for.
 - **Corollary (M3): `OPAAX_API` instantiates every IMPLICITLY-declared member**, so an exported class
   holding a move-only member (`TDynArray<TUniquePtr<T>>`) fails to compile on its implicit *copy*-assign
   (C2280) even though nothing ever copies one. Declaring copy/move `= delete` is therefore **required**,
@@ -1262,6 +1279,18 @@ of a twenty-call-site hunt, and `Editor.md` §7's promise about identifiable mut
 true rather than aspirational. The Inspector's field edits are the one mutation that cannot come
 through it (a drawer writes straight through a `TComponent&`), which is exactly why
 `World::GetRevision` exists.
+- **It held for FOUR of the six, and ⑤ closed the fifth** (2026-09-01). The count was never four:
+  the Inspector's Add/Remove Component popups called `IComponentEntry::Add/Remove` **directly**, with
+  their own `MarkChanged` and their own log — a leak this entry did not know it had until undo needed
+  the list to be complete. Both are `EntityOps` verbs now (`AddComponent`/`RemoveComponent`, taking the
+  type's authoring name, since that is what a command can carry). **No panel mutates entt any more.**
+  The sixth, the drawer's field write, is still uncatchable by a verb — and **UN6** is how it is
+  recorded anyway. *The general shape: a choke-point claim is only as true as the last audit of it,
+  and the audit that finds the leak is the one that has to enumerate every mutation for another reason.*
+- **This entry became LOAD-BEARING on 2026-09-02**, when **UN1** was reversed and each verb started
+  recording its own undo step. It used to be a convenience — the dispatch bracketed everything, so a
+  verb reached outside `EntityOps` lost only its log line. Now it loses its undo, silently. Six verbs,
+  one file, and the rule is the only thing enforcing it.
 - **`Create` takes its `MapId` as a REQUIRED argument**, which is how **WM2** is closed by
   construction: an entity made without one lands in `(runtime - not saved)` where no Save can reach
   it. That was a live bug in the deleted `SandboxPanel`. The Hierarchy's header menu knows the map
@@ -1447,9 +1476,156 @@ Spacing IS the translate snap step, Edit worlds only, on the **Background** band
   lines. With the grid hidden the authored number is honoured literally, because then there is
   nothing to match. **What you snap to is what you can see.**
 - **Named, not built:** cross-session persistence of any of this. `EditorCamera`'s pan and zoom do not
-  survive a restart either, and a `Config_Editor` would be the tree's first non-DLL config
-  (`IMPL_T_CONFIG` defines `StaticTypeID()` in a DLL `.cpp`), so it is a real decision rather than a
-  free one.
+  survive a restart either. *(The "first non-DLL config" question this used to raise is CLOSED —
+  `Config_EditorImgui` answered it 2026-09-01: `DECLARE_T_CONFIG`, no `OPAAX_API`. See **I6**'s
+  mirror-image strike. Only the persistence itself is still unbuilt.)*
+
+---
+
+## UN — Undo / redo (landed ⑤, 2026-09-01)
+
+> **REWRITTEN 2026-09-02, and UN1 is REVERSED.** The first shipped version made the executed
+> `IEditorCommand` the undo entry and had the dispatch bracket every verb with a before/after
+> capture; a standing baseline plus a per-frame poll covered the drawer writes no verb announces.
+> It was rejected on first hands-on use — a slow drag recorded one step per micro-pause, the poll
+> flooded the log, and `EditorUndo` had grown to 17 public members. The user's replacement is below
+> and it is smaller in every dimension. See [[L73]] for the post-mortem; the old shape is recorded
+> only where this section says "it used to".
+
+**UN1 — THE STACK HOLDS UNDOABLE OBJECTS AND NOTHING ELSE** (user's call, 2026-09-02: *"The undo
+system do not care about a property changing or whatever. The property itself calls undo to record its
+own stuff."*). `EditorUndo` (`Editor/Undo/`) is **`Record` · `Undo` · `Redo`**, plus the four reads the
+Edit menu needs and `Clear` — 8 public members, 3 members, and **it includes no engine header at all**.
+It knows nothing about `World`, `MapData`, `EntityOps`, `EditorSelection`, revisions or ImGui.
+- **The verb that made the edit is the one that builds the step**, because it is the only thing that
+  knows what changed. `EntityOps`' five verbs each end in one `Record` call; the two multi-frame
+  gestures are built by the panels that own their edges (**UN5**).
+- **`EditorCommandRegistry::Execute` brackets nothing** — find, typecheck, run, return, and the
+  instance dies with its call. That reverses this rule's first version, in which the registry opened
+  and closed a record around every dispatch and kept the command alive as the entry.
+- **What the reversal cost is real and is stated, not hidden: a new mutation verb that forgets to
+  `Record` has no undo, silently.** The bracket caught that automatically. The mitigation is
+  **SEL6** — `EntityOps` is one named choke point with six verbs — and this sentence. It is
+  discipline, not structure, and nothing makes it impossible.
+- **What it bought:** the poll, the baseline, the gesture API, `EntityEdit`, both command concepts,
+  `IEditorCommand`'s five undo virtuals, the 20-line dispatch bracket, all seven `UndoLabel()`
+  declarations and the empty `EditPropertiesCommand` all went away in one change.
+- **Policy is NOT the stack's.** `UndoCommand`/`RedoCommand` gate on `MapOps::CanEdit`, and
+  `EditorService::HandleWorldDestroyed` calls `Clear()` when an **Edit**-mode world dies — asked of
+  `World::GetMode()` rather than of a recorded world id, which is what lets `EditorUndo` not name
+  `World`. Same behaviour as the old key-on-`GetId()` rule: a PIE cycle destroys the Play clone, so
+  Play/Stop keeps the history exactly as Unreal does.
+
+**UN2 — A STEP IS A SMALL TYPED OBJECT THAT STATES ITS OWN INVERSE.** Seven of them, one per verb,
+each carrying exactly what its inverse needs and nothing else — **four serialize nothing at all**:
+
+| Step | Payload | Serializes |
+|------|---------|-----------|
+| `EntityCreate` / `EntityDelete` | the entities as `MapData` | yes (`CaptureEntities` / `Restore`) |
+| `EntityRename` | `Guid` + two `OpaaxString` | no |
+| `EntityTransform` | `{Guid, TransformComponent Before, After}[]` + its own name | no |
+| `ComponentAdd` | `Guid` + type name | no |
+| `ComponentRemove` | + the component's `json` | one component |
+| `EntityComponentsEdit` | `Guid` + the changed `ComponentData` both sides | the changed ones only |
+
+- **`ComponentAdd` deliberately carries no payload**: `AddComponent` default-constructs, so redo has
+  nothing to restore. `ComponentRemove` must carry one, or undo brings the type back at its defaults —
+  which reads as data loss rather than as an undo.
+- **`EntityTransform` is ONE type for three modes and any count.** The payload is identical whichever
+  handle was grabbed, so the mode is only the *name*, and one entity is a list of one. Four types with
+  the same body would be four places to fix a bug. Its label is `ToString(EGizmoMode)`, so the menu
+  reads **"Undo Translate"** — the gizmo's own word, the one the toolbar already shows.
+- **Create and delete are the same two bodies run in opposite directions** (`RestoreEntities` /
+  `DestroyEntities`), and restore re-selects while destroy clears — which is what makes the
+  selection need no payload of its own, unlike the record this replaced.
+
+**UN3 — ONE CONCEPT, three members, the exact parallel of `EditorCommand`.**
+`EditorUndoable<T, ContextType>` (`Editor/Undo/EditorUndoableConcept.h`) requires `Undo(Ctx)`,
+`Redo(Ctx)` and a `const` `Label()`. `IEditorUndoable` erases it with the same `Concept`/`Model<T>`
+shape `IEditorCommand` uses, and constrains the same two places: the erasure's ctor and the public
+entry point (`Record<T>`, where `Register<T>` sits for commands).
+- **`Label()` is an INSTANCE method, not `static`.** That is the whole reason a step can name itself
+  from its own data ("Translate" / "Rotate" / "Scale"), which is what let the gesture API — whose only
+  remaining job was carrying that label — be deleted rather than renamed.
+- **No base class and no registry**, the `CComponent`/`CResource` shape (**I8**). A game module's own
+  step is one struct with three members; nothing has to be registered, and a type that cannot answer
+  all three fails at the `Record` call naming itself.
+- `EditorContext` is only FORWARD-DECLARED in `IEditorUndoable.h` — `Model<T>`'s bodies instantiate at
+  the `Record<T>` call site, where it is complete. That is what keeps the stack's header clean.
+
+**UN4 — REDO IS NEVER A SECOND `Execute`.** Re-running the verb is the obvious move and it is wrong:
+`EntityOps::Create` mints a **fresh Guid** and a freshly uniquified name, so a second run produces a
+*different* entity and breaks every reference the Guid exists to protect; `SaveMapAsCommand` would
+re-open a file dialog. **A step re-asserts what it recorded**, which is also why a step is state
+rather than a hand-written inverse wherever the inverse is not exact: `TransformSelected` only *looks*
+invertible — it writes `Rotation +=`, `Scale *=`, and skips entities whose handle went stale.
+- **The two state-shaped steps reuse the engine's snapshot core, which already was this**:
+  `MapSerializer::CaptureEntities` (a third NAMED capture, **MP10**'s idiom) and `MapFactory::Restore`
+  (recreate-by-Guid / overwrite / **remove the registered components the data does not name**; an
+  essential type refuses and stays, **I17**). `Restore` bumps the revision, because an in-place
+  component write is invisible to the world.
+- **Identity is the Guid, everywhere** — a step outlives the edit, and an entt handle does not survive
+  an undo that recreated the entity. The selection stores handles, so it is re-resolved after a
+  restore.
+- Pinned headless by `Engine/Tests/Core/World/MapRestoreTests.cpp` — the gate is
+  **capture → edit → restore → re-capture, byte-equal** through `MapJson::Serialize`. It did not move
+  when UN1 was reversed, which is the proof the engine half never depended on the editor's shape.
+
+**UN5 — A MULTI-FRAME EDIT IS ONE STEP BECAUSE THE PANEL HOLDS THE STEP ACROSS FRAMES.** `Begin` on
+the rising edge, `End` on the falling edge, one `Record` in between. **No baseline, no poll, no
+gesture API, and nothing in `EditorUndo` knows a drag happened.** The two edges already existed in the
+code for other reasons; this rule only says what they are now wired to.
+- **The viewport** owns `ImGuizmo::IsUsing()` and holds an `EntityTransform`. It closes in
+  `OnPreRender`, after `ApplyGizmoDrag`, never at the edge seen in the ImGui pass: a delta measured in
+  frame N is applied in frame N+1 (**SEL3**), so closing early would read a world that predates the
+  final motion. `m_bGizmoMeasured` closes it when the panel stops drawing at all.
+- **The Inspector** owns `ImGui::IsAnyItemActive()` — the line it already kept for `MarkChanged` — and
+  holds an `EntityComponentsEdit`. **Global is the point, not a compromise:** a resource dragged from
+  the Browser holds `ActiveId` over there, so the bracket opens before the drop and closes on it.
+  (Verified by hand 2026-09-02; the plan had wrongly listed that path as uncovered.)
+- **A step must be CLOSED on the falling edge whether or not it recorded.** One left holding entries
+  keeps re-reading them, and the next unrelated edit to the same entity surfaces as a phantom step
+  under the old label. Both panels reset unconditionally.
+- **THE RISING EDGE IS READ AFTER THE DRAWERS RAN, and that is correct rather than lucky.** ImGui
+  zeroes the drag accumulator on the frame an item is activated (`ActiveIdIsJustActivated`) and
+  trickles the click and the first move into different frames, so a `Drag*` has not written yet;
+  `InputText` has only taken focus; a `Checkbox` commits on release. A **click-set** widget is the
+  exception — the colour picker popup's SV square jumps on its activation frame, so that first jump
+  sits outside the step. Named, not built: caching at the top of `DrawContents` fixes it in one line.
+- **SETTLING IS NOT A BOUNDARY, and the first version's central mistake was assuming it could be.**
+  It committed a step whenever the value stopped changing for one frame, so a slow drag became one
+  step per micro-pause. No engine does this: Unreal brackets at the widget
+  (`OnBegin`/`OnEndSliderMovement` → `FScopedTransaction`), Unity groups on the mouse-down event,
+  Godot and Lumix merge in the stack by name within a time window. **All four push "what is one step"
+  outward to whoever made the edit** — which is what UN1 now does.
+
+**UN6 — THE PROPERTY STEP RECORDS VALUES ONLY, and it needs to know the ENTITY, never the field.**
+A `TPropertyDrawer` writes straight through a `T&` (**I15**), so a field edit is the one mutation no
+verb announces — but the Inspector draws exactly **one** entity, the primary selection, so whatever
+was edited belongs to a known Guid. `EntityComponentsEdit` narrows at `End()` to the components whose
+*payload* differs, and that narrowing is load-bearing rather than tidy:
+- **A type on one side and not the other was added or removed** — `ComponentAdd`'s and
+  `ComponentRemove`'s steps — and the entity's NAME is `EntityRename`'s. So committing a name in the
+  same frame the gesture closes records **nothing** here, instead of a second step that undoes the
+  same rename. That hazard was a live gate in the first version ("if one rename takes two Ctrl+Z,
+  that is this"); here it cannot arise. Same for Add and Remove Component.
+- **Per-COMPONENT attribution is available and was not needed.** `TDrawerRegistry::Register`'s entry
+  captures the component's authoring name and receives the `Entity` at exactly the point it pushes the
+  ID scope (**I15**) — so "whose value is this" is answerable. Undo restores state, not a field, so
+  the entity is enough. The growth point, if a step ever needs to *name* the field: it is there.
+- **HISTORY IS ONE WORLD'S.** Every mutation gates on `MapOps::CanEdit`, so only edit-world state is
+  ever recorded, and `Undo`/`Redo` gate on it too. `MapOps::RemoveFromLevel` clears the stack, and it
+  is the **only** structural verb that does: those entities are gone *and* unmounted, so undoing a
+  step naming one would recreate it into a world no Save can write it from (**WM2**). Add-map and
+  set-persistent touch no recorded entity.
+- **`Record` is a no-op while a step is replaying** (`m_bApplying`, private), or an undo pushes
+  itself as the next step. Nothing outside has to remember to ask.
+- **The Edit menu names the step** — `EditorTitleBarCommandNode::SetLabel(FMenuLabel)`, a facet beside
+  `SetEnabled`/`SetChecked`, so the entry reads "Undo Translate (Ctrl+Z)". Identity stays the node's
+  id, so the lookups and the invocation log are untouched; only a LEAF's displayed text became state.
+- **Ctrl+Z / Ctrl+Y**, beside Ctrl+S in `HandleAuthoringShortcuts` and for its reason (**IN**'s route
+  is closed in Edit, so ImGui's view of the keyboard is the authoritative one). Ctrl+Shift+Z is not
+  expressible — `IEditorGui::Shortcut` takes one modifier — and Ctrl+Y is what Windows and Unreal use.
 
 ---
 
@@ -1586,6 +1762,13 @@ game-side `ModuleRegistrar`; it was never a promise about `Menus()`, and the bre
 - **A node is a TAG, never a closure.** `AddCommand(label, tag)` is the whole entry API; clicking is
   `Commands().Execute(tag, context)`, the identical call a key binding makes. That is what makes "the
   menu and the shortcut trigger one verb" true by construction rather than by discipline.
+  - *This bullet used to add "and that one funnel is why UNDO lives in the dispatch" — **UN1** was
+    reversed on 2026-09-02 and `Execute` now brackets nothing. The funnel claim above stands on its
+    own; it never needed undo to be true.*
+- **A FOURTH facet, `SetLabel(FMenuLabel)`** (2026-09-01): the drawn text computed per draw, for the
+  entry whose name is state — "Undo Translate (Ctrl+Z)". Identity stays the node's id, so the
+  get-or-create lookups and the invocation log are untouched; only a LEAF's display became dynamic,
+  and nothing looks a leaf up.
 - **Params are allowed, and the test is the CLASS OF PAYLOAD** (amended 2026-08-19, **MR2c**). This
   bullet used to reject a params-carrying entry outright, reasoning from `QuitCommand`'s `Window*`:
   *a payload only the composition root can supply is a payload a key binding cannot carry, so such a

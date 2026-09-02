@@ -1978,3 +1978,107 @@ is exactly where it feels least necessary to check.
   that disproves it, and let the recommendation shrink. Here it went from ~16 files of restructuring
   to a rename — and the ownership move survived only because the user then chose it *on its own
   merits*, not as a fix for a problem that did not exist.
+
+## L72 — Grade an objection FATAL vs MERELY WORK, or a fixable constraint reads as a refutation (2026-09-01)
+
+**What happened (⑤ undo/redo).** The user said *"I belive we can consolidate 'Command'"* — and they
+had already written the hooks and commented them out (`IEditorCommand`'s `CanUndo`/`Undo`,
+`EditorCommandConcept`'s `UndoableEditorCommand`). I agreed with the consolidation and then gave three
+reasons the commented-out `Undo(EditorContext&)` could not be the hook. **The first one was not a
+reason at all:** *"the registry builds one command per dispatch and the instance dies with `Execute`,
+so there is nothing left to undo with."* True, and **fixable in one line** — I even wrote *"keeping
+the instance alive in a stack is possible, but it makes every command stateful"*, i.e. I had priced it
+and argued against it in the same breath. They answered in one sentence: *"Just on the UndoSystem keep
+them alive until we reach the maximum undo stack."*
+
+**Their version was better than mine, not just acceptable.** Keeping the executed command as the undo
+entry is *more* general than the separate transaction list I had proposed: a command can carry undo
+data an entity snapshot cannot express (a level manifest), which is exactly what the second concept
+now exists for. My "objection" was hiding a capability.
+
+**What survived is the part that was genuinely fatal**, and it is worth seeing the difference: redo
+**cannot** be a second `Execute`, because `CreateEntityCommand` mints a fresh Guid and a dialog command
+would re-prompt. That one is a property of the verbs, not of the plumbing — no amount of stack
+bookkeeping fixes it. Reason #1 was plumbing. Reason #3 (a hand-written inverse drifts) was a *cost*,
+not a blocker, and should have been labelled as one.
+
+**Rules for next time:**
+- **Before listing objections to the user's design, sort them: FATAL (no implementation makes this
+  work), COST (this works and here is the price), COSMETIC (I prefer otherwise).** Say which is which
+  in the reply. An unlabelled mixed list reads as a refutation, and the user has to spend a turn
+  overruling the weakest item to get to the real question.
+- **If I have already estimated the fix while writing the objection, it is not an objection.** The
+  tell is textual and greppable in my own draft, exactly like [[L23]]'s: *"is possible, but…"*,
+  *"fixable, however…"*. Take the fix and keep only what survives it.
+- **Their design may be doing work mine isn't.** When a user's alternative is rejected on one axis,
+  check what it buys on the others before answering — here, "the instance survives" was also "a
+  command can hold non-entity undo state", which my shape could not do at all.
+- **Read the commented-out code as the spec** ([[L71]]'s neighbour, and now the SECOND time: the
+  editor UI seam started from their breadcrumb comments too). Dead code the user wrote is a design
+  they have already had; open it before proposing a shape, and keep its vocabulary when it is right —
+  `UndoableEditorCommand` survived with its name, its `if constexpr` dispatch and its opt-in shape
+  intact, and only what it *declared* changed.
+
+
+## L73 — When a heuristic REPLACES the explicit signal the design specified, it is a defect the docs will not show you (2026-09-02)
+
+**What happened.** ⑤ shipped 2026-09-01 as "code complete, not user-verified". The user ran it and
+rejected it in one message: a drag from 100 to 150 undid as 149, 148, 147...; the log was flooded with
+`Captured 1 of 1 named entity(ies)` every frame; and *"Undo class have many function to record or
+whatever undo things."*
+
+All three came from ONE function. `EditorUndo::RefreshBaseline` re-serialized the selection every frame
+and committed a step whenever the value **stopped changing for one frame**. That is the step-per-pause
+bug and the log flood, and it is also why the class had 17 public members: a poll needs a baseline,
+the baseline needs two revision gates, the gates need a pending-edit pair, and a per-frame committer
+needs a gesture API to suppress it.
+
+**The plan had specified the right thing and the code did something else.** `.claude/plans/undo-redo.md`
+§4 said *"the falling edge dispatches `EditPropertiesCommand`"*. `EditPropertiesCommand`'s own
+doc-comment said *"the Inspector dispatches this at the END of an edit — the falling edge of the same
+'any item active' bracket"*. **ARCHITECTURE.md UN5 said `IsAnyItemActive()` was the Inspector's edge.**
+Three documents described the edge design; only the implementation had drifted to a poll, and I wrote
+all four.
+
+**The justification for the drift was FALSE and I never checked it.** The record claimed the edge
+version *"silently missed every generic property edit while catching the hand-written ones."*
+`ImGui::IsAnyItemActive()` is a **global** query — it cannot discriminate generic from hand-written,
+because it does not know what a drawer is. The real failure was that a gesture recorded nothing unless
+a command was dispatched inside it, and nothing dispatched `EditPropertiesCommand`. **A wiring bug,
+written up as a limitation of the approach, and the write-up then justified 200 lines of machinery.**
+
+**Rules for next time:**
+- **When the code stops matching the design doc, the doc is a WITNESS, not a stale artifact.** [[L26]]
+  says a doc's ordering claims drift ahead of the code. This is the mirror case and it is more
+  dangerous: the doc was RIGHT and the code drifted *behind* it. Before rewriting a plan's mechanism
+  mid-build, re-read the sentence you are abandoning and say why in the same edit — if the reason
+  cannot be written down, it is not a reason.
+- **"Approach X silently misses cases" is a claim about a MECHANISM. Verify it against the
+  mechanism.** One minute reading what `IsAnyItemActive()` returns would have killed the poll before
+  it was written. Same shape as [[L71]] (read the sibling before calling a pattern violated) and
+  [[L18]] (a documented caveat is a bug with a comment on it): I recorded a defeat instead of
+  checking it.
+- **A HEURISTIC where the design called for an EDGE is a smell with a name: it infers what something
+  already knows.** The research confirmed it — Unreal brackets at the widget, Unity groups on the
+  mouse-down event, Godot and Lumix merge in the stack. **All four push "what is one step" outward to
+  whoever made the edit. None infers it from values settling.** When a design starts inferring intent
+  from state changes, ask who already has the intent.
+- **The user's fix was smaller than my bug.** *"The undo system do not care about a property changing
+  or whatever. The property itself calls undo to record its own stuff."* That reversed **UN1** — their
+  own earlier steer, which [[L72]] records me learning to respect — and it deleted the poll, the
+  baseline, the gesture API, `EntityEdit`, both command concepts, the dispatch bracket and an empty
+  command, leaving an 8-member stack that includes no engine header. **When the user rejects a system
+  they previously steered, the new steer supersedes the old one; do not defend the old one on their
+  behalf.**
+- **Sub-agents earned their cost here, and only because the findings were checkable.** Three ran in
+  parallel (reference-engine research, a whole-world-snapshot design, a widget-seam design). The
+  research produced the "nobody infers a boundary from settling" fact; the widget-seam agent
+  independently found the `IsAnyItemActive()` claim was a misdiagnosis. **Both were verified against
+  the code before being used** ([[L16]]/[[L18]]) — and the user then rejected all three designs for a
+  fourth, so their value was the EVIDENCE, not the recommendations.
+
+**Sub-lesson, from a correction in the same block: a gate that names an exact UI STRING must have that
+string read from the code.** I handed over *"check the menu reads **Undo Move**"*; it reads **"Undo
+Translate"** — `ToString(EGizmoMode)`, which I had wired one line earlier without reading. A gate is an
+instrument ([[L15]]): a wrong expected-string makes a CORRECT build look broken. Grep the function that
+produces the string; never re-derive it from the name you gave a variable.
