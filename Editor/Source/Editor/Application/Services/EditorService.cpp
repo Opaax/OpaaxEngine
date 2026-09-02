@@ -27,6 +27,7 @@
 #include "Editor/Panels/PlayToolbarPanel.h"
 #include "Editor/Panels/ResourceBrowserPanel.h"
 #include "Editor/Panels/ResourcePreviewPanel.h"
+#include "Editor/Panels/SpriteSheetPanel.h"
 #include "Editor/Panels/StatsPanel.h"
 #include "Editor/Panels/ViewportPanel.h"
 #include "Editor/Imgui/Configs/Config_EditorImgui.h"
@@ -39,6 +40,7 @@
 #include "World/Serialization/MapResource.hpp"
 #include "Engine/Subsystems/Resources/ResourceTypeID.hpp"   // the id the preview is opened with
 #include "Engine/Subsystems/Resources/Types/TextureResource.h"
+#include "Engine/Subsystems/Resources/Types/SpriteSheetResource.h"
 #include "World/World.h"
 #include "World/WorldManager.h"
 #include "World/Entity/Entity.h"
@@ -110,6 +112,7 @@ namespace Opaax::Editor
         m_InputRoute        = MakeUnique<InputRoute>(*m_WorldMgr, InEngine.GetInput(), *m_PIE);
         m_MapDocument       = MakeUnique<EditorMapDocument>();
         m_LevelDocument     = MakeUnique<EditorLevelDocument>();
+        m_SheetDocument     = MakeUnique<EditorSpriteSheetDocument>();
     }
 
     void EditorService::ClearEditorSystems()
@@ -144,6 +147,7 @@ namespace Opaax::Editor
             *m_InputRoute,
             *m_LevelDocument,
             *m_MapDocument,
+            *m_SheetDocument,
             m_Extensions,
             m_Gui->Panels(),
             *m_Preview,
@@ -279,6 +283,7 @@ namespace Opaax::Editor
         
         //Hidden by default
         lPanelsRegistry.Register<ResourcePreviewPanel>(PanelDesc{.Id = ResourcePreviewPanel::PanelID(), .DefaultVisibility = EPanelVisibility::Hidden});
+        lPanelsRegistry.Register<SpriteSheetPanel>(PanelDesc    {.Id = SpriteSheetPanel::PanelID(),     .DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<ConfigPanel>(PanelDesc         {.Id = ConfigPanel::PanelID(),          .DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<InputPanel>(PanelDesc          {.Id = InputPanel::PanelID(),           .DefaultVisibility = EPanelVisibility::Hidden });
         lPanelsRegistry.Register<StatsPanel>(PanelDesc          {.Id = StatsPanel::PanelID(),           .DefaultVisibility = EPanelVisibility::Hidden });
@@ -402,6 +407,19 @@ namespace Opaax::Editor
             {
                 InContext.Preview.Open(InFile, ResourceTypeID::Get<TextureResource>());
                 InContext.Panels.SetVisible(ResourcePreviewPanel::PanelID(), true);
+            });
+
+        // A sheet opens its EDITOR, not the preview: it is a document with its own panel, the way a
+        // map and a level are, and the browser's double-click is the one seam that says so.
+        m_Extensions.ResourceTypes().Register<SpriteSheetResource>()
+            .SetIcon(OpaaxString("Icons/T_SpriteSheet_Icon.png"))
+            .SetGlyph(OpaaxString("[S]"))
+            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
+            {
+                if (InContext.SheetDocument.Open(InFile.AbsPath))
+                {
+                    InContext.Panels.SetVisible(SpriteSheetPanel::PanelID(), true);
+                }
             });
 
         m_Extensions.ResourceTypes().Register<LevelResource>()

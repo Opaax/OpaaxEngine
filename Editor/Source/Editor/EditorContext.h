@@ -26,6 +26,7 @@ namespace Opaax
         class InputRoute;               // editor-owned; whether the engine is being fed (D5 steps 2 + 4)
         class EditorMapDocument;        // editor-owned; WHICH map is open and whether it changed (M5)
         class EditorLevelDocument;      // editor-owned; WHICH level is open and whether it changed
+        class EditorSpriteSheetDocument;// editor-owned; the open .opaaxsheet AND its data (⑥ S2)
         class EditorExtensionRegistrar; // editor-owned; the sealed D10 routes (Inspector reads Drawers())
         class EditorPaths;              // editor-owned IPaths subclass; the editor-space directories
         class EditorPanels;             // editor-owned; the LIVE panels and their visibility
@@ -111,6 +112,11 @@ namespace Opaax
             // what was last written. Here rather than inside a Save command so the menu, the title
             // bar and any future panel all read ONE answer — the same reason PIE and Route are here.
             EditorMapDocument& MapDocument;
+
+            // ⑥ S2 — the open sprite sheet. Unlike the two documents above it OWNS its data: the
+            // copy in the ResourceManager is what the renderer draws, so editing that one would
+            // change the running game mid-edit and lose the work on the next reload.
+            EditorSpriteSheetDocument& SheetDocument;
 
             // M2b — the sealed extension routes, so a panel can consume what modules registered (the
             // Inspector walks Drawers(), the Resource Browser ResourceTypes()). CONST by construction:
