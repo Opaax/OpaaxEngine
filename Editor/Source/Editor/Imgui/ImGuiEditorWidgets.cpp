@@ -44,6 +44,12 @@ namespace Opaax::Editor
         ImGui::LabelText(InLabel, "%s", InValue);
     }
 
+    void ImGuiEditorWidgets::HelpMarker(const char* InText)
+    {
+        ImGui::TextDisabled("(?)");
+        ImGui::SetItemTooltip("%s", InText);
+    }
+
     bool ImGuiEditorWidgets::Button(const char* InLabel, const float InWidth, const char* InTooltip)
     {
         // Negative width fills, matching ImGui's own convention; 0 fits the label.

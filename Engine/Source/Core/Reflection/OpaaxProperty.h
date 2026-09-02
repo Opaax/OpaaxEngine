@@ -57,6 +57,10 @@ namespace Opaax
      * belongs here is behaviour: the bounds a value must stay inside, and — from S2 — whether
      * changing it takes effect now or at the next launch.
      *
+     * Tooltip is the one entry that is neither a bound nor a behaviour, and it does not break that
+     * rule: it chooses no widget and cannot be derived from the type, because it is authored English
+     * about what the field MEANS. A literal, never owned — the property list is constexpr.
+     *
      * An unset range is Min == Max, which every ImGui drag reads as "unbounded", so the ordinary
      * property needs no branch and no extra flag.
      */
@@ -65,6 +69,7 @@ namespace Opaax
         float          RangeMin = 0.f;
         float          RangeMax = 0.f;
         EPropertyFlags Flags    = EPropertyFlags::None;
+        const char*    Tooltip  = nullptr;
     };
 
     // =============================================================================
@@ -108,6 +113,18 @@ namespace Opaax
         {
             TProperty lCopy = *this;
             lCopy.Meta.Flags = InFlags;
+
+            return lCopy;
+        }
+
+        /**
+         * What the field MEANS, in one or two sentences — the thing a reader cannot get from the
+         * name, the type or the range. Borrowed, so pass a literal.
+         */
+        constexpr TProperty SetTooltip(const char* InText) const noexcept
+        {
+            TProperty lCopy = *this;
+            lCopy.Meta.Tooltip = InText;
 
             return lCopy;
         }

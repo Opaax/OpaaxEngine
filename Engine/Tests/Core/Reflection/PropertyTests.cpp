@@ -21,7 +21,7 @@ namespace
         Vector4F Colour = {1.f, 1.f, 1.f, 1.f};
 
         OPAAX_PROPERTIES(Probe,
-                         OPAAX_PROP(Speed).SetRange(0.f, 10.f),
+                         OPAAX_PROP(Speed).SetRange(0.f, 10.f).SetTooltip("Units per second."),
                          OPAAX_PROP(Count),
                          OPAAX_PROP(Colour))
     };
@@ -77,6 +77,19 @@ TEST_CASE("OPAAX_PROPERTIES: SetRange marks one property and leaves its siblings
     // needs no flag saying it has no range.
     CHECK(std::get<1>(lProperties).Meta.RangeMin == std::get<1>(lProperties).Meta.RangeMax);
     CHECK(std::get<2>(lProperties).Meta.RangeMin == std::get<2>(lProperties).Meta.RangeMax);
+}
+
+TEST_CASE("OPAAX_PROPERTIES: SetTooltip carries the text and chains with the other facets")
+{
+    constexpr auto lProperties = Probe::GetProperties();
+
+    // Chained onto SetRange, so neither facet may drop the other's work — every facet returns a
+    // modified COPY, which is what makes the order they are written in irrelevant.
+    CHECK(OpaaxString(std::get<0>(lProperties).Meta.Tooltip) == "Units per second.");
+    CHECK(std::get<0>(lProperties).Meta.RangeMax == doctest::Approx(10.f));
+
+    // Absent is null, so a property with nothing to explain draws no marker.
+    CHECK(std::get<1>(lProperties).Meta.Tooltip == nullptr);
 }
 
 TEST_CASE("OPAAX_PROPERTIES: the value type comes from the member pointer, not from the author")

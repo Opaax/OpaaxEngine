@@ -85,6 +85,16 @@ namespace Opaax::Editor
         /** A labelled read-only value, for something that cannot be edited in place. */
         virtual void LabelText(const char* InLabel, const char* InValue) = 0;
 
+        /**
+         * A small "(?)" carrying InText on hover — what a property's SetTooltip becomes.
+         *
+         * ITS OWN ITEM rather than a decoration of the previous one, which is what keeps this seam
+         * free of submission order (the rule Button's folded tooltip already follows). It costs one
+         * marker of width and buys the other half: a reader can SEE that an explanation exists,
+         * where an invisible hover target announces nothing.
+         */
+        virtual void HelpMarker(const char* InText) = 0;
+
         // =============================================================================
         // Buttons
     public:

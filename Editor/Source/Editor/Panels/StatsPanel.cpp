@@ -8,7 +8,6 @@
 #include <imgui.h>
 
 #include <cmath>
-#include <cstring>
 
 using namespace Opaax;
 
@@ -19,12 +18,6 @@ namespace
 
     /** One 60 Hz frame. The graph's ceiling steps in these so it never drifts under the line. */
     constexpr float k_FrameMs60 = 1000.f / 60.f;
-
-    /** Whether a counter carries this exact name. */
-    bool SameCounter(const Opaax::StatCounter& InCounter, const char* InName)
-    {
-        return InCounter.Name != nullptr && std::strcmp(InCounter.Name, InName) == 0;
-    }
 
     /** Percentage of the frame InMilliseconds represents. Zero for a frame with no duration. */
     float PercentOfFrame(const double InMilliseconds, const double InFrameMs)
@@ -240,26 +233,10 @@ namespace Opaax::Editor
 
             ImGui::TableSetColumnIndex(1);
 
-            // A split frame is a COST, not a drawing error: a pass is sorted whole before it is
-            // cut (F5). Still flagged — it is the one number a 2D batcher is judged by.
-            const bool bSplitBatch = lCounter.Value > 1 && SameCounter(lCounter, "Draw Calls");
-
-            if (bSplitBatch)
-            {
-                ImGui::TextColored(ImVec4(1.f, 0.7f, 0.2f, 1.f), "%llu", lCounter.Value);
-            }
-            else
-            {
-                ImGui::Text("%llu", lCounter.Value);
-            }
-
-            if (bSplitBatch && ImGui::IsItemHovered())
-            {
-                ImGui::SetTooltip("The frame split into several batches — a cost, not a\n"
-                                  "drawing error: a pass is sorted whole before it is cut.\n"
-                                  "Quads names the buffer limit, Texture Slots the samplers;\n"
-                                  "both are Renderer.config values.");
-            }
+            // Plain, every counter alike. Draw Calls used to go amber above 1 because a split frame
+            // WAS a drawing bug (⑥); F5 made it a cost, and a colour with no budget behind it just
+            // cries wolf at a batch limit the author configured.
+            ImGui::Text("%llu", lCounter.Value);
         }
 
         ImGui::EndTable();

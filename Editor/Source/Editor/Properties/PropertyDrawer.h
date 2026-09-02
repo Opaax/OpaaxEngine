@@ -34,7 +34,12 @@ namespace Opaax::Editor
     struct TPropertyDrawer;
 
     /**
-     * What the value's FLAGS have to say, under the value.
+     * What the META has to say, beside the value: the field's own explanation, then its flags.
+     *
+     * ONE place for both, and it is the right one — a TPropertyDrawer sees a value and a label, so
+     * a tooltip written per drawer would have to be remembered by every game that adds a field
+     * type. Here every described property gets it, generic and hand-written alike (I15's "the
+     * placement is the rule", the same argument that put PushId on the registry entry).
      *
      * Editing a NeedRestart field does nothing visible until the next launch, and a UI that stays
      * silent about that reads as a bug in the field. Stated per property (usually per GROUP), never
@@ -43,10 +48,17 @@ namespace Opaax::Editor
      */
     inline void DrawPropertyNote(IEditorWidgets& InWidgets, const PropertyMeta& InMeta)
     {
-        if (!HasFlag(InMeta.Flags, EPropertyFlags::NeedRestart)) { return; }
+        if (InMeta.Tooltip != nullptr)
+        {
+            InWidgets.SameLine();
+            InWidgets.HelpMarker(InMeta.Tooltip);
+        }
 
-        InWidgets.SameLine();
-        InWidgets.TextDisabled("(restart)");
+        if (HasFlag(InMeta.Flags, EPropertyFlags::NeedRestart))
+        {
+            InWidgets.SameLine();
+            InWidgets.TextDisabled("(restart)");
+        }
     }
 
     // Declared ahead of DrawProperty because the two are MUTUALLY RECURSIVE: a group is a property

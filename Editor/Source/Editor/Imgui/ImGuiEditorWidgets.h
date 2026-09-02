@@ -39,6 +39,7 @@ namespace Opaax::Editor
         void Text(const char* InText) override;
         void TextDisabled(const char* InText) override;
         void LabelText(const char* InLabel, const char* InValue) override;
+        void HelpMarker(const char* InText) override;
 
         bool Button(const char* InLabel, float InWidth, const char* InTooltip) override;
         bool SmallButton(const char* InLabel) override;
