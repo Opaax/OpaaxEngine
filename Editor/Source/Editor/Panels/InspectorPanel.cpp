@@ -3,12 +3,13 @@
 #include <cstring>   // memcpy — the name field's edit buffer
 
 #include "Editor/EditorContext.h"
+#include "Editor/Commands/EditorNativeCommands.h"       // the params the Inspector's verbs carry (⑤)
+#include "Editor/Commands/EditorNativeCommandsTags.hpp"
 #include "Editor/Operation/EditorSelection.hpp"
-#include "Editor/Operation/EntityOps.h"
+#include "Editor/Undo/EditorUndo.h"                     // the step a field edit records (⑤)
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 
 #include "Application/Services/IEngine.h"
-#include "Application/Services/ILogger.h"
 #include "Engine/Registries/EngineRegistries.h"
 #include "World/Components/ComponentRegistry.h"
 #include "World/Entity/Entity.h"
@@ -18,11 +19,6 @@
 #include <imgui.h>
 
 using namespace Opaax;
-
-namespace
-{
-    constexpr LogCategory LogInspector{"InspectorPanel"};
-}
 
 namespace Opaax::Editor
 {
@@ -95,6 +91,28 @@ namespace Opaax::Editor
             if (World* lWorld = lSelected.GetWorld()) { lWorld->MarkChanged(); }
         }
 
+        // ⑤ — THE EDIT GESTURE'S TWO EDGES, and the whole of the property step.
+        //
+        // The RISING edge is read AFTER the drawers ran, and that is correct rather than lucky:
+        // ImGui zeroes the drag accumulator on the frame an item is activated and trickles the
+        // click and the first move into different frames, so a Drag* has not written yet; InputText
+        // has only taken focus; a Checkbox commits on release. So the values captured here are the
+        // pre-edit ones.
+        //
+        // GLOBAL is the point, not a compromise: a resource dragged from the Browser holds ActiveId
+        // over there, so the bracket opens before the drop and closes on it.
+        if (lItemActive && !m_bWasItemActive)
+        {
+            m_Edit.Begin(m_Context, lSelected);
+        }
+        else if (!lItemActive && m_bWasItemActive)
+        {
+            if (m_Edit.End(m_Context)) { m_Context.Undo.Record(Move(m_Edit)); }
+
+            // Closed either way — a step left holding entries would fold the next edit into it.
+            m_Edit = EntityComponentsEdit{};
+        }
+
         m_bWasItemActive = lItemActive;
     }
 
@@ -128,7 +146,8 @@ namespace Opaax::Editor
 
         if (lEnter || ImGui::IsItemDeactivatedAfterEdit())
         {
-            EntityOps::Rename(m_Context, InEntity, OpaaxString(m_NameBuffer));
+            m_Context.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_RENAME_SELECTED, m_Context,
+                                                    EntityNameParams{ OpaaxString(m_NameBuffer) });
         }
     }
 
@@ -170,15 +189,8 @@ namespace Opaax::Editor
 
         if (lChosen != nullptr)
         {
-            const OpaaxString lName = InEntity.Get<EntityMeta>().Name;
-
-            if (lChosen->Remove(lEntities, lHandle))
-            {
-                if (World* lWorld = InEntity.GetWorld()) { lWorld->MarkChanged(); }
-
-                OPAAX_LOG(LogInspector, Info, "Removed component '{}' from entity '{}'",
-                          lChosen->GetName().CStr(), lName.CStr());
-            }
+            m_Context.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_REMOVE_COMPONENT, m_Context,
+                                                    ComponentTypeParams{ lChosen->GetName() });
         }
     }
 
@@ -219,14 +231,11 @@ namespace Opaax::Editor
 
         if (lChosen != nullptr)
         {
-            lChosen->Add(lEntities, lHandle);
-
-            // Explicit rather than left to the ImGui check in Draw: emplacing a component IS a
-            // content change, and it should not depend on a popup item still counting as active.
-            if (World* lWorld = InEntity.GetWorld()) { lWorld->MarkChanged(); }
-
-            OPAAX_LOG(LogInspector, Info, "Added component '{}' to entity '{}'",
-                lChosen->GetName().CStr(), InEntity.Get<EntityMeta>().Name.CStr());
+            // BY TAG, like every other edit: the verb (and its MarkChanged and its log) moved into
+            // EntityOps, and the dispatch is what records the step. These two popups were the last
+            // place a panel reached entt directly (**SEL6**).
+            m_Context.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_ADD_COMPONENT, m_Context,
+                                                    ComponentTypeParams{ lChosen->GetName() });
         }
     }
 }

@@ -10,7 +10,9 @@
 #include "Editor/ImguiLibrary/ImguiCursor.h"     // the infinite drag — wrap the cursor at the edge
 #include "Editor/ImguiLibrary/ImguiWidgets.h"
 #include "Editor/Operation/EditorGizmo.hpp"      // the transform handles' grab state (③)
+#include "Editor/Commands/EditorNativeCommandsTags.hpp"   // the transform tag a drag dispatches (⑤)
 #include "Editor/Operation/EditorSelection.hpp"
+#include "Editor/Undo/EditorUndo.h"              // the ONE step a whole drag records (⑤)
 #include "Editor/Operation/EditorViewport.hpp"
 #include "Editor/Operation/EntityOps.h"          // the choke point a gizmo drag writes through (SEL6)
 #include "Editor/UI/IEditorUIBackend.h"
@@ -114,6 +116,7 @@ namespace Opaax::Editor
         // the two calls below are about to change.
         ApplyPendingPick();
         ApplyGizmoDrag();
+        CloseGizmoGesture();
 
         ApplyPendingResize();
         ApplyCameraGesture();
@@ -277,7 +280,9 @@ namespace Opaax::Editor
                               ? EntityOps::ETransformOrigin::Individual
                               : EntityOps::ETransformOrigin::Shared;
 
-        EntityOps::TransformSelected(m_Context, lDelta);
+        // BY TAG, not by calling EntityOps: the dispatch is what records an edit (⑤), and a drag
+        // that bypassed it would be the one mutation in the editor with no undo.
+        m_Context.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_TRANSFORM_SELECTED, m_Context, lDelta);
 
         // ONE-SHOT PER MODE, because a drag lands one of these per frame. Without it a gizmo that
         // draws but never writes looks exactly like one that writes — the L15 discriminate rule, and
@@ -291,6 +296,40 @@ namespace Opaax::Editor
                       ToString(lMode), m_Context.Selection.Count());
             m_GizmoLoggedModes |= lBit;
         }
+    }
+
+    // =========================================================================
+    // CloseGizmoGesture — the drag's FALLING EDGE, taken AFTER ApplyGizmoDrag has spent the last
+    // banked delta. Reading it at the edge seen in the ImGui pass would see a world that predates
+    // the final motion, because a delta measured in frame N is applied in frame N+1 (**SEL3**'s
+    // measure-then-apply lag).
+    //
+    // m_bGizmoMeasured is the other half: MeasureGizmo stops being called when the panel is hidden
+    // or the selection empties, and an edge never seen would merge the next unrelated edit in.
+    // =========================================================================
+    void ViewportPanel::CloseGizmoGesture()
+    {
+        const bool lStillDragging = m_bGizmoWasUsing && m_bGizmoMeasured;
+
+        if (!lStillDragging && !m_Context.Gizmo.HasPendingDelta())
+        {
+            // The whole drag, as ONE step. End answers false for a step nobody opened and for a
+            // drag that ended where it started, so this runs on every idle frame and records
+            // nothing — which is why it needs no flag of its own.
+            if (m_GizmoStep.End(m_Context))
+            {
+                m_Context.Undo.Record(Move(m_GizmoStep));
+            }
+
+            // CLOSED EITHER WAY. A step left holding entries would keep re-reading them every idle
+            // frame, and the next Inspector edit to one of those entities would land in the stack
+            // as a phantom "Move".
+            m_GizmoStep = EntityTransform{};
+
+            m_bGizmoWasUsing = false;
+        }
+
+        m_bGizmoMeasured = false;   // set again by the next MeasureGizmo
     }
 
     // =========================================================================
@@ -726,6 +765,20 @@ namespace Opaax::Editor
         {
             lGizmo.BankFrameDelta();
         }
+
+        // ⑤ — THE DRAG'S RISING EDGE, and the step opens HERE rather than at the first applied
+        // delta because nothing has been written yet: the first delta banks this frame and lands
+        // next, so the transforms read now are the pre-drag ones. The step is named by MODE, which
+        // is what makes the menu read "Undo Rotate" rather than the verb's own "Transform".
+        const bool lUsing = ImGuizmo::IsUsing();
+
+        if (lUsing && !m_bGizmoWasUsing)
+        {
+            m_GizmoStep.Begin(m_Context, ToString(lGizmo.GetMode()));
+        }
+
+        m_bGizmoWasUsing = lUsing;
+        m_bGizmoMeasured = true;   // CloseGizmoGesture's guard against a panel that stops drawing
 
         // IsOver() as well as IsUsing(): hovering a handle must already suppress the marquee, or the
         // press that starts a drag also starts a rubber band underneath it.

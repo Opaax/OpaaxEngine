@@ -6,6 +6,7 @@
 #include "Editor/Panels/IEditorPanel.h"
 #include "Core/String/OpaaxStringID.hpp"
 #include "Editor/UI/IEditorUIBackend.h"
+#include "Editor/Undo/EntityUndoables.h"   // the ONE step a whole drag records (⑤)
 
 namespace Opaax
 {
@@ -229,11 +230,19 @@ namespace Opaax::Editor
         bool DrawToolbarOverlay(const Vector2F& InOrigin);
 
         /**
-         * Spend the banked gizmo delta through EntityOps (SEL6), so a drag is undoable the day ⑤
-         * wraps the choke point. Runs in OnPreRender beside ApplyPendingPick, and for the same
-         * reason: the motion was measured against the frame that was RENDERED.
+         * Spend the banked gizmo delta by DISPATCHING the transform command — the route that
+         * records it (⑤). Runs in OnPreRender beside ApplyPendingPick, and for the same reason: the
+         * motion was measured against the frame that was RENDERED.
          */
         void ApplyGizmoDrag();
+
+        /**
+         * End the undo step the drag opened, once its last delta has been spent.
+         *
+         * Beside ApplyGizmoDrag and strictly after it — see the body for why the ImGui pass is the
+         * wrong place to notice a drag has ended.
+         */
+        void CloseGizmoGesture();
 
         /**
          * Keep a live drag inside [InMin, InMax] — the infinite drag. One instrument for both
@@ -359,5 +368,16 @@ namespace Opaax::Editor
         // mode, and a single one-shot would leave rotate and scale permanently silent after the
         // first translate (L15 — the instrument has to discriminate).
         Uint8  m_GizmoLoggedModes = 0;
+
+        // ⑤ — the drag's two edges. WasUsing is ImGuizmo's grab state as of the last pass; Measured
+        // says that pass happened at all, so a panel that stops drawing mid-drag cannot leave the
+        // step open (see CloseGizmoGesture).
+        bool   m_bGizmoWasUsing = false;
+        bool   m_bGizmoMeasured = false;
+
+        // ⑤ — the drag's undo step, held ACROSS FRAMES: opened with the transforms as they were at
+        // the grab, closed with them as they are at the release. That is what makes a sixty-frame
+        // drag one entry, with nothing in the stack having to know a drag happened.
+        EntityTransform m_GizmoStep;
     };
 }

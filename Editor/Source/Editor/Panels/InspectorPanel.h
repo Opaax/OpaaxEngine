@@ -2,6 +2,7 @@
 
 #include "Core/String/OpaaxString.hpp"
 #include "Editor/Panels/IEditorPanel.h"
+#include "Editor/Undo/ComponentUndoables.h"   // the step a field edit records (⑤)
 
 namespace Opaax
 {
@@ -122,6 +123,11 @@ namespace Opaax::Editor
          * counts as an edit too. See Draw() for why this is asked of ImGui rather than of the drawer.
          */
         bool m_bWasItemActive = false;
+
+        // ⑤ — the field edit's undo step, held ACROSS FRAMES: opened with the component values as
+        // they were when the gesture began, closed with them as they are when it ends. That is what
+        // makes a drag from 100 to 150 ONE entry rather than one per frame.
+        EntityComponentsEdit m_Edit;
 
         // The name field's edit buffer. Refreshed from the entity whenever the field is NOT being
         // typed into, so it follows the selection without fighting the keystrokes.
