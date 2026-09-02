@@ -10,6 +10,13 @@
 
 namespace Opaax::Editor
 {
+    // =============================================================================
+    // IEditorCommand — the type-erased command: run this verb with this payload.
+    //
+    //   IT KNOWS NOTHING ABOUT UNDO, and that is ⑤'s shape (**UN1**): a verb records its own step
+    //   because it is the one that knows what changed, so the dispatch has nothing to bracket and
+    //   the instance dies with its call, as it always did.
+    // =============================================================================
     class IEditorCommand
     {
     private:
@@ -18,9 +25,6 @@ namespace Opaax::Editor
             virtual ~Concept() = default;
 
             virtual void Execute(EditorContext& Context, const void* Params) = 0;
-
-            //virtual bool CanUndo() const = 0;
-            //virtual void Undo(EditorContext&) = 0;
         };
 
         template<EditorCommand<EditorContext> T>
@@ -28,23 +32,10 @@ namespace Opaax::Editor
         {
             explicit Model(T InCommand) : m_Command(std::move(InCommand)) {}
 
-            void Execute( EditorContext& Context, const void* RawParams) override
+            void Execute(EditorContext& Context, const void* RawParams) override
             {
-                m_Command.Execute( Context, *static_cast<const typename T::Params*>(RawParams));
+                m_Command.Execute(Context, *static_cast<const typename T::Params*>(RawParams));
             }
-
-            //bool CanUndo() const override
-            //{
-            //    return UndoableEditorCommand<T, EditorContext>;
-            //}
-            //
-            //void Undo(EditorContext& Context) override
-            //{
-            //    if constexpr (UndoableEditorCommand<T, EditorContext>)
-            //    {
-            //        m_Command.Undo(Context);
-            //    }
-            //}
 
             T m_Command;
         };
@@ -64,15 +55,5 @@ namespace Opaax::Editor
         {
             m_Self->Execute(Context, &Params);
         }
-
-        //bool CanUndo() const
-        //{
-        //    return m_Self->CanUndo();
-        //}
-        //
-        //void Undo(EditorContext& Context)
-        //{
-        //    m_Self->Undo(Context);
-        //}
     };
 }

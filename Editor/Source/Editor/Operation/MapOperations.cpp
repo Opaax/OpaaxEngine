@@ -4,6 +4,7 @@
 #include "Editor/EditorLevelDocument.h"
 #include "Editor/EditorMapDocument.h"
 #include "Editor/Operation/EditorSelection.hpp"
+#include "Editor/Undo/EditorUndo.h"
 #include "Editor/PIE/PlayInEditor.h"
 
 #include "Application/Services/IEngine.h"
@@ -84,6 +85,12 @@ namespace Opaax::Editor
         InContext.Selection.Clear();
 
         if (!lLevel->RemoveMap(InMapId)) { return; }
+
+        // THE ONE STRUCTURAL CHANGE THAT INVALIDATES HISTORY (⑤): those entities are gone AND their
+        // map is unmounted, so undoing a step that names one would recreate it into a world no Save
+        // can write it from (**WM2**). Adding a map or choosing the persistent one touches no
+        // recorded entity, so neither clears.
+        InContext.Undo.Clear();
 
         // RECONCILE, never re-adopt: a fresh AdoptExisting would re-take every baseline from the
         // world and quietly declare every other map's unsaved edits to be the clean state.

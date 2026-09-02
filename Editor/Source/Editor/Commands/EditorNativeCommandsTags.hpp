@@ -25,11 +25,26 @@ namespace Opaax::Editor::Tags
     inline const OpaaxTag EDITOR_COMMAND_STEP         = OpaaxTag("Editor.Command.Step");
     inline const OpaaxTag EDITOR_COMMAND_STOP         = OpaaxTag("Editor.Command.Stop");
 
+    //Undo (⑤) — the two commands that are never themselves recorded.
+    inline const OpaaxTag EDITOR_COMMAND_UNDO = OpaaxTag("Editor.Command.Undo");
+    inline const OpaaxTag EDITOR_COMMAND_REDO = OpaaxTag("Editor.Command.Redo");
+
     //Entity — the author loop's own verbs (②). Reached from the Edit menu, the Hierarchy's context
     //menus and the viewport's keys, so all three make one call rather than three copies of it.
     inline const OpaaxTag EDITOR_COMMAND_CREATE_ENTITY  = OpaaxTag("Editor.Command.CreateEntity");
     inline const OpaaxTag EDITOR_COMMAND_DELETE_ENTITY  = OpaaxTag("Editor.Command.DeleteEntity");
     inline const OpaaxTag EDITOR_COMMAND_FOCUS_SELECTED = OpaaxTag("Editor.Command.FocusSelected");
+
+    //The Inspector's own three, so its edits route through EntityOps like every other one. A field
+    //edit has no tag: a drawer writes straight through a T& (**I15**), so the panel records the
+    //step itself rather than dispatching a verb with nothing to do (⑤).
+    inline const OpaaxTag EDITOR_COMMAND_RENAME_SELECTED  = OpaaxTag("Editor.Command.RenameSelected");
+    inline const OpaaxTag EDITOR_COMMAND_ADD_COMPONENT    = OpaaxTag("Editor.Command.AddComponent");
+    inline const OpaaxTag EDITOR_COMMAND_REMOVE_COMPONENT = OpaaxTag("Editor.Command.RemoveComponent");
+
+    //The gizmo's MUTATION, dispatched per frame of a drag. It records nothing — the viewport builds
+    //ONE EntityTransform from the transforms it cached at either end of the drag (⑤).
+    inline const OpaaxTag EDITOR_COMMAND_TRANSFORM_SELECTED = OpaaxTag("Editor.Command.TransformSelected");
 
     //Gizmo (③) — THREE tags rather than one with a mode payload, because a key binding carries a
     //tag and no payload (the reason QuitParams died). W/E/R have to reach these directly.

@@ -23,6 +23,16 @@ namespace Opaax::Editor
     using FMenuPredicate = TFunction<bool(const EditorContext&)>;
 
     /**
+     * A live LABEL, asked at draw time — for the entry whose TEXT is state, not just its enabled-ness.
+     *
+     * Optional like the predicates, and used by exactly one thing today: "Undo Move" rather than a
+     * bare "Undo", which every reference editor does because a stack of unnamed steps is a stack you
+     * have to guess at. Returns by value; a category only draws its children while it is open, so the
+     * string is built when a menu is on screen and never per frame.
+     */
+    using FMenuLabel = TFunction<OpaaxString(const EditorContext&)>;
+
+    /**
      * @class IEditorTitleBarNode
      *
      * One node of the menu bar: a category, a command or a separator.
@@ -30,6 +40,10 @@ namespace Opaax::Editor
      * Identity is an OpaaxStringID and it doubles as the LABEL, so a category cannot be looked up
      * by one name and drawn under another. CStr() into the intern pool is free and valid for the
      * life of the process (I2), which is what the label passed to IEditorGui points into.
+     *
+     * A COMMAND node may override the drawn text with FMenuLabel — identity stays the id, which is
+     * what the lookups and the invocation log use, so the guarantee above is untouched: only what a
+     * leaf DISPLAYS becomes state-dependent, and only a leaf, which nothing looks up.
      *
      * The full slash path ("File/Save Map") is built ONCE at construction from the parent's, and is
      * what the invocation log names — it is the only place in the editor that still speaks paths,

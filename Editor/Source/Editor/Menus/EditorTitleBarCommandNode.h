@@ -53,6 +53,14 @@ namespace Opaax::Editor
         EditorTitleBarCommandNode& SetChecked(FMenuPredicate InPredicate);
 
         /**
+         * Draw this entry under a name computed at draw time — "Undo Move", not "Undo".
+         *
+         * Identity is still the id: the lookups and the invocation log are unaffected, and unset
+         * means the id is the label, which is what every other entry does.
+         */
+        EditorTitleBarCommandNode& SetLabel(FMenuLabel InLabel);
+
+        /**
          * The payload this entry dispatches with. Unset means NoParams.
          *
          * Only for PLAIN DATA a key binding could also carry — an interned id, a number, a path.
@@ -93,6 +101,7 @@ namespace Opaax::Editor
         OpaaxTag       m_Command;
         FMenuPredicate m_IsEnabled;
         FMenuPredicate m_IsChecked;
+        FMenuLabel     m_Label;
 
         // Null means NoParams — the shape every entry had before SetParams existed.
         TUniquePtr<IEditorCommandParams> m_Params;

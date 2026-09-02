@@ -6,6 +6,7 @@
 #include "Editor/Camera/EditorCamera.h"
 #include "Editor/Operation/EditorGizmo.hpp"
 #include "Editor/Operation/EditorSelection.hpp"
+#include "Editor/Undo/EditorUndo.h"
 #include "Editor/Operation/EditorViewport.hpp"
 #include "Editor/Resources/ResourcePreview.h"
 #include "Editor/Input/InputRoute.h"
@@ -129,7 +130,7 @@ namespace Opaax::Editor
         void RegisterNativeDrawers();
 
         /**
-         * The engine's own configs into m_Extensions.ConfigDrawers(), so the Config panel draws
+         * The engine's and the editor's own configs into m_Extensions.ConfigDrawers(), so the Config panel draws
          * their fields instead of their json. Same registry template, same two forms and the same
          * ordering rule as the component drawers — only the resolver differs.
          */
@@ -320,6 +321,7 @@ namespace Opaax::Editor
         TUniquePtr<EditorViewport>      m_Viewport;    
         TUniquePtr<EditorCamera>        m_Camera;      
         TUniquePtr<EditorGizmo>         m_Gizmo;       
+        TUniquePtr<EditorUndo>          m_Undo;
         TUniquePtr<PlayInEditor>        m_PIE;         
         TUniquePtr<InputRoute>          m_InputRoute;  
         TUniquePtr<EditorMapDocument>   m_MapDocument;

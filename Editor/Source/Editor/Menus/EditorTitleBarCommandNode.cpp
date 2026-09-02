@@ -20,12 +20,22 @@ namespace Opaax::Editor
         return *this;
     }
 
+    EditorTitleBarCommandNode& EditorTitleBarCommandNode::SetLabel(FMenuLabel InLabel)
+    {
+        m_Label = Move(InLabel);
+        return *this;
+    }
+
     void EditorTitleBarCommandNode::Draw(EditorContext& InContext) const
     {
         const bool bEnabled = !m_IsEnabled || m_IsEnabled(InContext);
         const bool bChecked = m_IsChecked && m_IsChecked(InContext);
 
-        if (!InContext.Gui.MenuItem(GetLabel(), bChecked, bEnabled))
+        // Held in a local for the length of the call: MenuItem takes a borrowed pointer, and an
+        // id's CStr() is pool-immortal (I2) while a computed one is not.
+        const OpaaxString lComputed = m_Label ? m_Label(InContext) : OpaaxString();
+
+        if (!InContext.Gui.MenuItem(m_Label ? lComputed.CStr() : GetLabel(), bChecked, bEnabled))
         {
             return;
         }

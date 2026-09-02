@@ -29,6 +29,8 @@
 #include "Editor/Panels/ResourcePreviewPanel.h"
 #include "Editor/Panels/StatsPanel.h"
 #include "Editor/Panels/ViewportPanel.h"
+#include "Editor/Imgui/Configs/Config_EditorImgui.h"
+#include "Editor/Imgui/Configs/EditorImguiConfigDrawer.h"
 #include "Engine/Config/Config_Engine.h"
 #include "Engine/Registries/EngineRegistries.h"
 #include "Renderer/Config/Config_Renderer.h"
@@ -103,6 +105,7 @@ namespace Opaax::Editor
         m_Preview           = MakeUnique<ResourcePreview>();
         m_Camera            = MakeUnique<EditorCamera>();
         m_Gizmo             = MakeUnique<EditorGizmo>();
+        m_Undo              = MakeUnique<EditorUndo>();
         m_PIE               = MakeUnique<PlayInEditor>(*m_WorldMgr);
         m_InputRoute        = MakeUnique<InputRoute>(*m_WorldMgr, InEngine.GetInput(), *m_PIE);
         m_MapDocument       = MakeUnique<EditorMapDocument>();
@@ -116,6 +119,7 @@ namespace Opaax::Editor
         m_Preview.reset();
         m_Camera.reset();
         m_Gizmo.reset();
+        m_Undo.reset();
         m_InputRoute.reset();
         m_PIE.reset();
     }
@@ -135,6 +139,7 @@ namespace Opaax::Editor
             *m_Viewport,
             *m_Camera,
             *m_Gizmo,
+            *m_Undo,
             *m_PIE,
             *m_InputRoute,
             *m_LevelDocument,
@@ -204,7 +209,34 @@ namespace Opaax::Editor
         // Enabled only while editing: all three are refused in a Play world anyway, and a menu that
         // states the rule beats one that answers a click with a log line nobody reads.
         EditorTitleBarCategory& lEdit = lMenu.Category("Edit");
-        lEdit.AddCommand("Create Entity", Tags::EDITOR_COMMAND_CREATE_ENTITY).SetEnabled(IsEditing);
+
+        // FIRST, where every editor puts them. Greyed with an empty stack rather than answering a
+        // click with nothing — the same rule as the entries below, one step earlier.
+        // The LABEL names the step — "Undo Move (Ctrl+Z)". A stack of unnamed steps is a stack an
+        // author has to guess at, which is why every reference editor spells the verb out.
+        lEdit.AddCommand("Undo", Tags::EDITOR_COMMAND_UNDO)
+             .SetEnabled([](const EditorContext& InContext) { return InContext.Undo.CanUndo(); })
+             .SetLabel([](const EditorContext& InContext)
+             {
+                 return InContext.Undo.CanUndo()
+                            ? OpaaxString("Undo ") + InContext.Undo.UndoLabel() + OpaaxString(" (Ctrl+Z)")
+                            : OpaaxString("Undo (Ctrl+Z)");
+             });
+
+        lEdit.AddCommand("Redo", Tags::EDITOR_COMMAND_REDO)
+             .SetEnabled([](const EditorContext& InContext) { return InContext.Undo.CanRedo(); })
+             .SetLabel([](const EditorContext& InContext)
+             {
+                 return InContext.Undo.CanRedo()
+                            ? OpaaxString("Redo ") + InContext.Undo.RedoLabel() + OpaaxString(" (Ctrl+Y)")
+                            : OpaaxString("Redo (Ctrl+Y)");
+             });
+        lEdit.AddSeparator();
+
+        // An EMPTY map id = "the focused map", which is the only one a menu entry can name.
+        lEdit.AddCommand("Create Entity", Tags::EDITOR_COMMAND_CREATE_ENTITY)
+             .SetEnabled(IsEditing)
+             .SetParams(MapIdParams{});
         lEdit.AddCommand("Delete Selected", Tags::EDITOR_COMMAND_DELETE_ENTITY).SetEnabled(IsEditing);
         lEdit.AddSeparator();
         lEdit.AddCommand("Focus Selected", Tags::EDITOR_COMMAND_FOCUS_SELECTED).SetEnabled(IsEditing);
@@ -284,6 +316,15 @@ namespace Opaax::Editor
         lCommands.Register<OpenLevelAtCommand>(Tags::EDITOR_COMMAND_OPEN_LEVEL_AT);
         lCommands.Register<SaveLevelCommand>(Tags::EDITOR_COMMAND_SAVE_LEVEL);
         lCommands.Register<AddMapToLevelCommand>(Tags::EDITOR_COMMAND_ADD_MAP_TO_LEVEL);
+
+        lCommands.Register<TransformSelectedCommand>(Tags::EDITOR_COMMAND_TRANSFORM_SELECTED);
+
+        lCommands.Register<RenameSelectedCommand>(Tags::EDITOR_COMMAND_RENAME_SELECTED);
+        lCommands.Register<AddComponentCommand>(Tags::EDITOR_COMMAND_ADD_COMPONENT);
+        lCommands.Register<RemoveComponentCommand>(Tags::EDITOR_COMMAND_REMOVE_COMPONENT);
+
+        lCommands.Register<UndoCommand>(Tags::EDITOR_COMMAND_UNDO);
+        lCommands.Register<RedoCommand>(Tags::EDITOR_COMMAND_REDO);
     }
 
     void EditorService::RegisterNativeViewportTools()
@@ -327,12 +368,13 @@ namespace Opaax::Editor
 
     void EditorService::RegisterNativeConfigDrawers()
     {
-        // The engine's own configs, through the SAME route and the same registry template a game's
-        // config would use. Both draw from their data type's OPAAX_PROPERTIES — there is no
-        // config-shaped drawer code anywhere, only the resolver that says which config a drawer is
-        // for.
+        // The engine's and the editor's own configs, through the SAME route and the same registry
+        // template a game's config would use. All draw from their data type's OPAAX_PROPERTIES —
+        // there is no config-shaped drawer code anywhere, only the resolver that says which config a
+        // drawer is for.
         m_Extensions.ConfigDrawers().Register<Config_Engine>();
         m_Extensions.ConfigDrawers().Register<Config_Renderer>();
+        m_Extensions.ConfigDrawers().Register<Config_EditorImgui, EditorImguiConfigDrawer>();
     }
 
     void EditorService::RegisterNativeResourceTypes()
@@ -456,6 +498,16 @@ namespace Opaax::Editor
 
     void EditorService::HandleWorldDestroyed(World* InWorld)
     {
+        // FIRST, and ahead of the selection guard below: a step names entities of the EDIT world,
+        // so the history dies with it whether or not anything is selected. Asked of the MODE rather
+        // than of a recorded world id — that is what keeps EditorUndo free of World entirely (⑤) —
+        // and it is the same answer: a PIE cycle destroys the Play clone, so Play/Stop keeps the
+        // history exactly as Unreal does.
+        if (m_Undo != nullptr && InWorld != nullptr && InWorld->GetMode() == EWorldMode::Edit)
+        {
+            m_Undo->Clear();
+        }
+
         // The active world's death already came through HandleActiveWorldChanged (DestroyWorld clears
         // the active slot first). This covers the other case — a NON-active world dying while holding
         // the selection, which nothing else would notice.
@@ -828,6 +880,18 @@ namespace Opaax::Editor
         if (m_Gui->Shortcut(EKeyCode::LeftControl, EKeyCode::S))
         {
             m_Context->Extensions.Commands().Execute(Tags::EDITOR_COMMAND_SAVE_MAP, *m_Context);
+        }
+
+        // Ctrl+Z / Ctrl+Y, beside Ctrl+S and for its reason. NOT Ctrl+Shift+Z: Shortcut takes one
+        // modifier, and Ctrl+Y is what Windows and Unreal both use anyway.
+        if (m_Gui->Shortcut(EKeyCode::LeftControl, EKeyCode::Z))
+        {
+            m_Context->Extensions.Commands().Execute(Tags::EDITOR_COMMAND_UNDO, *m_Context);
+        }
+
+        if (m_Gui->Shortcut(EKeyCode::LeftControl, EKeyCode::Y))
+        {
+            m_Context->Extensions.Commands().Execute(Tags::EDITOR_COMMAND_REDO, *m_Context);
         }
 
         // F and Delete are EDITOR-WIDE, not the viewport's. They were measured on the viewport

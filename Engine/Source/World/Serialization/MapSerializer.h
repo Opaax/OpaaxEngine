@@ -55,5 +55,22 @@ namespace Opaax
          * @return The captured data. Empty when nothing matched.
          */
         static MapData CaptureMap(const World& InWorld, const ComponentRegistry& InRegistry, MapId InMapId);
+
+        /**
+         * Just the entities NAMED, whatever map authored them — the editor's undo record.
+         *
+         * A THIRD NAMED CAPTURE rather than a filter argument on either of the two above, for the
+         * reason stated at the top: these are three different questions, and giving each its own
+         * name is what keeps the dangerous one unwritable.
+         *
+         * The result's `Id` is left INVALID — a hand-picked set is not a map and never reaches a
+         * file, the rule `CaptureWorld` already sets.
+         *
+         * A handle that is no longer valid is SKIPPED rather than refused: a caller holding a
+         * selection may have had an entity destroyed under it between measuring and capturing, and
+         * a record of what is left is the useful answer.
+         */
+        static MapData CaptureEntities(const World& InWorld, const ComponentRegistry& InRegistry,
+                                       const TDynArray<EntityID>& InEntities);
     };
 }

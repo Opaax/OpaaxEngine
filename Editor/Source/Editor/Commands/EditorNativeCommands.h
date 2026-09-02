@@ -3,6 +3,7 @@
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
 #include "Editor/Commands/EditorCommandConcept.h"   // NoParams
+#include "Editor/Operation/EntityOps.h"             // TransformDelta — a command's Params, verbatim
 
 namespace Opaax::Editor
 {
@@ -44,6 +45,36 @@ namespace Opaax::Editor
     struct PanelIdParams
     {
         OpaaxStringID PanelId;
+    };
+
+    /**
+     * WHICH MAP a verb authors into.
+     *
+     * An INVALID id means "the focused map" — the only thing a menu entry can name, since it has no
+     * click target to take one from. That defaulting is safe here in a way **MP10** forbids for
+     * capture: there, invalid meant "no filter, the whole world" and silently widened a query; here
+     * it names the same map the document already points at, and the verb refuses when there is none.
+     */
+    struct MapIdParams
+    {
+        MapId Map;
+    };
+
+    /** A new name for the primary selection. */
+    struct EntityNameParams
+    {
+        OpaaxString Name;
+    };
+
+    /**
+     * Which component type a verb acts on — its AUTHORING name.
+     *
+     * The interned id rather than the registry entry it names, for PanelIdParams' reason: plain data
+     * is what a key binding could also carry, and a pointer into a sealed registry is not.
+     */
+    struct ComponentTypeParams
+    {
+        OpaaxStringID TypeName;
     };
 
     // =============================================================================
@@ -108,6 +139,32 @@ namespace Opaax::Editor
     };
 
     // =============================================================================
+    // Undo (⑤)
+    //
+    //   These two record nothing, and nothing here has to say so: a command is not an undo step
+    //   (**UN1**), and EditorUndo::Record is a no-op while a step is replaying anyway.
+    //
+    //   THE PIE GATE LIVES IN THESE BODIES, not in the stack. EditorUndo deliberately knows nothing
+    //   about worlds, so MapOps::CanEdit is asked here, where every other editor policy is.
+    // =============================================================================
+
+    /** Put the last recorded step back. Refused while PIE runs. */
+    struct UndoCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
+    /** Re-assert the step an Undo took off. NEVER a second Execute — see **UN4**. */
+    struct RedoCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
+    // =============================================================================
     // Play in editor
     //
     //   PIE's four verbs as commands, so the THREE front-ends that drive them — the toolbar's
@@ -168,9 +225,9 @@ namespace Opaax::Editor
      */
     struct CreateEntityCommand
     {
-        using Params = NoParams;
+        using Params = MapIdParams;
 
-        void Execute(EditorContext& InContext, const Params&);
+        void Execute(EditorContext& InContext, const Params& InParams);
     };
 
     /** Destroy everything selected. Refused while PIE runs. */
@@ -179,6 +236,47 @@ namespace Opaax::Editor
         using Params = NoParams;
 
         void Execute(EditorContext& InContext, const Params&);
+    };
+
+    /** Rename the PRIMARY selection — the Inspector's name field, committed on Enter or focus loss. */
+    struct RenameSelectedCommand
+    {
+        using Params = EntityNameParams;
+
+        void Execute(EditorContext& InContext, const Params& InParams);
+    };
+
+    /** Put a component on the primary selection — the Inspector's Add popup. */
+    struct AddComponentCommand
+    {
+        using Params = ComponentTypeParams;
+
+        void Execute(EditorContext& InContext, const Params& InParams);
+    };
+
+    /** Take one off it — the Remove popup. An essential type is refused by the registry entry. */
+    struct RemoveComponentCommand
+    {
+        using Params = ComponentTypeParams;
+
+        void Execute(EditorContext& InContext, const Params& InParams);
+    };
+
+    /**
+     * Apply one drag frame to the selection — the gizmo's mutation.
+     *
+     * THE PARAMS ARE EntityOps::TransformDelta ITSELF, not a wrapper around it: that struct was
+     * already "one answer to what the gizmo just did", and its own header called the call
+     * REPLAYABLE. Being a command is what makes that literal.
+     *
+     * Dispatched every frame a drag moves, and it records nothing: ⑤'s step for a drag is ONE
+     * EntityTransform built by the viewport from the transforms it cached at either end.
+     */
+    struct TransformSelectedCommand
+    {
+        using Params = EntityOps::TransformDelta;
+
+        void Execute(EditorContext& InContext, const Params& InParams);
     };
 
     /** Frame the selection with the editor camera. Refused outside Edit — see EntityOps. */

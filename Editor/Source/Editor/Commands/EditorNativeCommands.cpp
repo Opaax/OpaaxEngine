@@ -4,6 +4,8 @@
 #include "Editor/EditorLevelDocument.h"
 #include "Editor/EditorMapDocument.h"
 #include "Editor/Operation/EditorGizmo.hpp"   // SetMode — the three gizmo commands (③)
+#include "Editor/Operation/EditorSelection.hpp"   // the primary — what the Inspector's verbs act on
+#include "Editor/Undo/EditorUndo.h"           // the two commands that drive the stack (⑤)
 #include "Editor/Operation/EntityOps.h"
 #include "Editor/Operation/LevelOperations.h"
 #include "Editor/Operation/MapOperations.h"
@@ -300,17 +302,57 @@ namespace Opaax::Editor
     // Entity — thin by design. Every body is EntityOps', so the Edit menu, the Hierarchy's context
     // menus and the viewport's keys cannot drift into three behaviours.
     // =========================================================================
-    void CreateEntityCommand::Execute(EditorContext& InContext, const Params&)
+    // THE POLICY GATE LIVES HERE, not in the stack: rewinding authored state while a Play clone is
+    // active would be written over by the next Stop, and EditorUndo deliberately knows nothing
+    // about worlds (⑤).
+    void UndoCommand::Execute(EditorContext& InContext, const Params&)
     {
-        // The FOCUSED map, because a menu entry has no other way to name one — the same choice
-        // SaveMapCommand makes below, and for the same reason. The Hierarchy's header menu is the
-        // route for saying WHICH map.
-        EntityOps::Create(InContext, InContext.MapDocument.GetMapId(), OpaaxString("Entity"));
+        if (!MapOps::CanEdit(InContext, "Undo")) { return; }
+
+        InContext.Undo.Undo(InContext);
+    }
+
+    void RedoCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        if (!MapOps::CanEdit(InContext, "Redo")) { return; }
+
+        InContext.Undo.Redo(InContext);
+    }
+
+    void CreateEntityCommand::Execute(EditorContext& InContext, const Params& InParams)
+    {
+        // The TARGET RIDES IN THE PAYLOAD, defaulting to the focused map — which is all a menu entry
+        // can name. The Hierarchy's header menu says WHICH map because it was clicked, and it used to
+        // reach EntityOps directly for exactly that reason; carrying the id is what let it come back
+        // through the dispatch, and therefore be recorded (⑤).
+        const MapId lMap = InParams.Map.IsValid() ? InParams.Map : InContext.MapDocument.GetMapId();
+
+        EntityOps::Create(InContext, lMap, OpaaxString("Entity"));
     }
 
     void DeleteSelectedCommand::Execute(EditorContext& InContext, const Params&)
     {
         EntityOps::DestroySelected(InContext);
+    }
+
+    void RenameSelectedCommand::Execute(EditorContext& InContext, const Params& InParams)
+    {
+        EntityOps::Rename(InContext, InContext.Selection.Get(), InParams.Name);
+    }
+
+    void AddComponentCommand::Execute(EditorContext& InContext, const Params& InParams)
+    {
+        EntityOps::AddComponent(InContext, InContext.Selection.Get(), InParams.TypeName);
+    }
+
+    void RemoveComponentCommand::Execute(EditorContext& InContext, const Params& InParams)
+    {
+        EntityOps::RemoveComponent(InContext, InContext.Selection.Get(), InParams.TypeName);
+    }
+
+    void TransformSelectedCommand::Execute(EditorContext& InContext, const Params& InParams)
+    {
+        EntityOps::TransformSelected(InContext, InParams);
     }
 
     void FocusSelectedCommand::Execute(EditorContext& InContext, const Params&)

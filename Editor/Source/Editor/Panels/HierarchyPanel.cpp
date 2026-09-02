@@ -3,6 +3,9 @@
 #include "Editor/EditorContext.h"
 #include "Editor/EditorLevelDocument.h"   // the throttled per-map dirty answers
 #include "Editor/EditorMapDocument.h"
+#include "Editor/Commands/EditorNativeCommands.h"       // MapIdParams — which map was clicked (⑤)
+#include "Editor/Commands/EditorNativeCommandsTags.hpp"
+#include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Editor/Operation/EditorSelection.hpp"
 #include "Editor/Operation/EntityOps.h"
 #include "Editor/Operation/MapOperations.h"
@@ -363,8 +366,16 @@ namespace Opaax::Editor
             case EMapAction::SetPersistent:  MapOps::SetPersistent(m_Context, lAction.Map);   break;
             case EMapAction::Remove:         MapOps::RemoveFromLevel(m_Context, lAction.Map); break;
             case EMapAction::RemoveMissing:  MapOps::RemoveMissingFromLevel(m_Context, lAction.AssetRelPath); break;
-            case EMapAction::CreateEntity:   EntityOps::Create(m_Context, lAction.Map, OpaaxString("Entity")); break;
-            case EMapAction::DeleteSelected: EntityOps::DestroySelected(m_Context);           break;
+            // BY TAG, like the Edit menu and the keys: the dispatch is what records an edit (⑤), so
+            // a verb called straight from here is a verb with no undo. The map rides in the payload
+            // because THIS call site is the one that knows which map was clicked.
+            case EMapAction::CreateEntity:
+                m_Context.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_CREATE_ENTITY, m_Context,
+                                                        MapIdParams{ lAction.Map });
+                break;
+            case EMapAction::DeleteSelected:
+                m_Context.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_DELETE_ENTITY, m_Context);
+                break;
             case EMapAction::None:                                                            break;
         }
     }

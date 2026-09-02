@@ -21,6 +21,7 @@ namespace Opaax
         class EditorSelection;          // editor-owned; what is selected (Hierarchy + viewport write, Inspector reads)
         class EditorViewport;           // editor-owned; how big the viewport image is, in pixels
         class EditorGizmo;              // editor-owned; the transform handles' grab state
+        class EditorUndo;               // editor-owned; the undo/redo stacks of executed commands
         class PlayInEditor;             // editor-owned; the PIE state machine (toolbar + reserved keys drive it)
         class InputRoute;               // editor-owned; whether the engine is being fed (D5 steps 2 + 4)
         class EditorMapDocument;        // editor-owned; WHICH map is open and whether it changed (M5)
@@ -85,6 +86,11 @@ namespace Opaax
             // the reason Selection is: its subject is the SELECTION, which no panel owns (SEL7), and
             // the gizmo MODE is set by an editor-wide shortcut.
             EditorGizmo&      Gizmo;
+
+            // ⑤ — the undo/redo stacks. Here rather than inside the command registry because the
+            // WRITER is the dispatch and the READERS are the Edit menu and the shortcuts, and the
+            // registry is const by construction (it seals). The Selection/Gizmo shape.
+            EditorUndo&       Undo;
 
             // M4 S5 — the PIE state machine. Here rather than inside the toolbar panel because the
             // reserved keys (EditorService::RouteInput) drive the very same object, so the buttons

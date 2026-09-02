@@ -3,6 +3,7 @@
 #include "Core/Maths/MathTypes.h"       // Vector2F / Matrix44F — the gizmo's delta
 #include "Core/OpaaxTypes.h"            // Uint8
 #include "Core/String/OpaaxString.hpp"
+#include "Core/String/OpaaxStringID.hpp"   // a component's authoring name — what a command carries
 #include "World/Entity/EntityTypes.h"   // MapId
 
 namespace Opaax
@@ -61,6 +62,29 @@ namespace Opaax::Editor
 
         /** Destroy everything selected, and clear the selection. Refused while PIE runs. */
         void DestroySelected(EditorContext& InContext);
+
+        /**
+         * Put one registered component on InEntity, by its AUTHORING name.
+         *
+         * By name rather than by `IComponentEntry*` because that is what a command can carry: an
+         * interned id is plain data, a pointer into the registry is not (**the PanelIdParams rule**).
+         *
+         * These two were the last mutations reaching entt directly from a panel — the Inspector's
+         * two popups did their own Add/Remove plus their own MarkChanged and log. Here, they route
+         * like every other verb, which is what makes the choke point's claim true rather than
+         * nearly true.
+         *
+         * @return false when the type is unknown, already present, or the edit was refused.
+         */
+        bool AddComponent(EditorContext& InContext, Entity InEntity, OpaaxStringID InTypeName);
+
+        /**
+         * Take one component off InEntity. An ESSENTIAL type is refused by the registry entry
+         * itself (**I17**), not by this call remembering to check.
+         *
+         * @return false when the type is unknown, absent, essential, or the edit was refused.
+         */
+        bool RemoveComponent(EditorContext& InContext, Entity InEntity, OpaaxStringID InTypeName);
 
         /**
          * WHERE a delta's rotation and scale act on a multi-selection.

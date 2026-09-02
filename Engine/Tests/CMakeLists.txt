@@ -50,6 +50,7 @@ set(OPAAX_TEST_SOURCES
     Core/World/ComponentRegistryTests.cpp
     Core/World/WorldEntityTests.cpp
     Core/World/MapSnapshotTests.cpp
+    Core/World/MapRestoreTests.cpp
     Core/World/MapJsonTests.cpp
     Core/World/MapFileTests.cpp
     Core/World/LevelFileTests.cpp

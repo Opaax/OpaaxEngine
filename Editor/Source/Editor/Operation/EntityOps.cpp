@@ -6,19 +6,26 @@
 #include "Editor/Operation/EditorViewport.hpp"
 #include "Editor/Operation/MapOperations.h"
 #include "Editor/PIE/PlayInEditor.h"   // IsEdit — the focus rule is about which camera owns the view
+#include "Editor/Undo/ComponentUndoables.h"   // ⑤ — the steps these verbs record
+#include "Editor/Undo/EditorUndo.h"
+#include "Editor/Undo/EntityUndoables.h"
 
 #include <cmath>                 // atan2 — the delta's turn, read off its own basis
 #include <glm/geometric.hpp>     // length — and its stretch
 #include <glm/mat2x2.hpp>        // the delta's LINEAR part, conjugated into an entity's own frame
 #include <glm/matrix.hpp>        // transpose — a rotation's inverse
 
+#include "Application/Services/IEngine.h"
 #include "Application/Services/ILogger.h"
 #include "Core/Maths/Bounds2D.h"
+#include "Engine/Registries/EngineRegistries.h"
+#include "World/Components/ComponentRegistry.h"
 #include "Core/Maths/Maths.h"    // RadiansToDegrees — the transform authors degrees
 #include "World/Components/TransformComponent.h"   // I17 — the one position a drag writes
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityMeta.h"
 #include "World/Entity/EntityQuery.h"
+#include "World/Serialization/MapSerializer.h"   // ⑤ — what a create/delete step carries
 #include "World/World.h"
 #include "World/WorldManager.h"
 
@@ -111,6 +118,12 @@ namespace Opaax::Editor
         InContext.Selection.Select(lEntity);
         lWorld->MarkChanged();
 
+        // THE VERB RECORDS ITS OWN STEP (⑤). Captured AFTER the fact, which is the only moment the
+        // entity exists to be captured — and it is what lets redo bring it back on the same Guid.
+        InContext.Undo.Record(EntityCreate{
+            MapSerializer::CaptureEntities(*lWorld, InContext.Engine.GetRegistries().Components(),
+                                           { lEntity.GetHandle() }) });
+
         OPAAX_LOG(LogEntityOps, Info, "Created entity '{}' in map '{}'",
                   lName.CStr(), InOwnerMap.ToString().CStr());
 
@@ -127,6 +140,9 @@ namespace Opaax::Editor
         if (lMeta.Name == InName) { return; }   // committing an untouched field is not an edit
 
         OPAAX_LOG(LogEntityOps, Info, "Renamed '{}' -> '{}'", lMeta.Name.CStr(), InName.CStr());
+
+        // Two strings and a Guid: the whole step, and the reason a rename serializes nothing (⑤).
+        InContext.Undo.Record(EntityRename{ InEntity.GetGuid(), lMeta.Name, InName });
 
         lMeta.Name = InName;
 
@@ -151,6 +167,12 @@ namespace Opaax::Editor
         // entities destroyed, and iterating the live list while doing either is the shape that made
         // the Hierarchy's Remove from Level assert.
         const TDynArray<EntityID> lIds = InContext.Selection.Ids();
+
+        // BEFORE the fact, unlike every other verb here: once these are destroyed nothing else in
+        // the editor can say what they were (⑤).
+        EntityDelete lStep{ MapSerializer::CaptureEntities(
+            *lWorld, InContext.Engine.GetRegistries().Components(), lIds) };
+
         InContext.Selection.Clear();
 
         for (const EntityID lId : lIds)
@@ -160,7 +182,76 @@ namespace Opaax::Editor
 
         lWorld->MarkChanged();
 
+        InContext.Undo.Record(Move(lStep));
+
         OPAAX_LOG(LogEntityOps, Info, "Deleted {} entity(ies)", static_cast<Uint64>(lIds.size()));
+    }
+
+    bool EntityOps::AddComponent(EditorContext& InContext, Entity InEntity, const OpaaxStringID InTypeName)
+    {
+        if (!InEntity.IsValid() || !MapOps::CanEdit(InContext, "Add Component")) { return false; }
+
+        const ComponentRegistry& lTypes = InContext.Engine.GetRegistries().Components();
+        const IComponentEntry*   lEntry = lTypes.FindByName(InTypeName);
+
+        if (lEntry == nullptr)
+        {
+            OPAAX_LOG(LogEntityOps, Warn, "Add Component refused — '{}' is not a registered type", InTypeName);
+            return false;
+        }
+
+        EntityRegistry& lEntities = InEntity.GetWorld()->GetRegistry();
+
+        if (lEntry->Has(lEntities, InEntity.GetHandle())) { return false; }
+
+        lEntry->Add(lEntities, InEntity.GetHandle());
+
+        // Explicit, not left to the Inspector's "any item active" check: emplacing a component IS a
+        // content change whether or not a popup item still counts as active.
+        InEntity.GetWorld()->MarkChanged();
+
+        // No payload — Add default-constructs, so there is nothing for a redo to restore (⑤).
+        InContext.Undo.Record(ComponentAdd{ InEntity.GetGuid(), InTypeName });
+
+        OPAAX_LOG(LogEntityOps, Info, "Added component '{}' to entity '{}'",
+                  InTypeName, InEntity.Get<EntityMeta>().Name.CStr());
+
+        return true;
+    }
+
+    bool EntityOps::RemoveComponent(EditorContext& InContext, Entity InEntity, const OpaaxStringID InTypeName)
+    {
+        if (!InEntity.IsValid() || !MapOps::CanEdit(InContext, "Remove Component")) { return false; }
+
+        const ComponentRegistry& lTypes = InContext.Engine.GetRegistries().Components();
+        const IComponentEntry*   lEntry = lTypes.FindByName(InTypeName);
+
+        if (lEntry == nullptr)
+        {
+            OPAAX_LOG(LogEntityOps, Warn, "Remove Component refused — '{}' is not a registered type", InTypeName);
+            return false;
+        }
+
+        EntityRegistry& lEntities = InEntity.GetWorld()->GetRegistry();
+
+        if (!lEntry->Has(lEntities, InEntity.GetHandle())) { return false; }
+
+        // Read while it still exists: without its values, undo would bring the type back at its
+        // defaults, which reads as data loss rather than as an undo (⑤).
+        nlohmann::json lData = lEntry->Save(lEntities, InEntity.GetHandle());
+
+        // Refuses an essential type on its own — the guarantee lives in the entry, not in every
+        // caller remembering it.
+        if (!lEntry->Remove(lEntities, InEntity.GetHandle())) { return false; }
+
+        InEntity.GetWorld()->MarkChanged();
+
+        InContext.Undo.Record(ComponentRemove{ InEntity.GetGuid(), InTypeName, Move(lData) });
+
+        OPAAX_LOG(LogEntityOps, Info, "Removed component '{}' from entity '{}'",
+                  InTypeName, InEntity.Get<EntityMeta>().Name.CStr());
+
+        return true;
     }
 
     void EntityOps::TransformSelected(EditorContext& InContext, const TransformDelta& InDelta)

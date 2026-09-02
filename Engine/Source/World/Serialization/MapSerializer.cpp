@@ -8,10 +8,33 @@ namespace Opaax
 {
     namespace
     {
+        // One entity as data — the unit every capture below shares, so a subset capture and a
+        // whole-world one cannot disagree about what an entity IS.
+        EntityData CaptureOne(const EntityRegistry& InEntities, const ComponentRegistry& InRegistry,
+                              const EntityID InEntity, const EntityMeta& InMeta)
+        {
+            EntityData lData;
+            lData.Id       = InMeta.Id;
+            lData.Name     = InMeta.Name;
+            lData.OwnerMap = InMeta.OwnerMap;
+
+            InRegistry.ForEach([&](const IComponentEntry& InEntry)
+            {
+                if (!InEntry.Has(InEntities, InEntity))
+                {
+                    return;
+                }
+
+                lData.Components.emplace_back(InEntry.GetName(), InEntry.Save(InEntities, InEntity));
+            });
+
+            return lData;
+        }
+
         // The shared walk. An invalid InMapId takes EVERYTHING — which is why this is private:
         // the two public entry points are what decide that, so the ambiguity that made MP10
         // possible is not reachable from outside this file.
-        MapData CaptureEntities(const World& InWorld, const ComponentRegistry& InRegistry, MapId InMapId)
+        MapData CaptureFiltered(const World& InWorld, const ComponentRegistry& InRegistry, MapId InMapId)
         {
             MapData lData;
 
@@ -33,22 +56,7 @@ namespace Opaax
                     continue;
                 }
 
-                EntityData lEntityData;
-                lEntityData.Id       = lMeta.Id;
-                lEntityData.Name     = lMeta.Name;
-                lEntityData.OwnerMap = lMeta.OwnerMap;
-
-                InRegistry.ForEach([&](const IComponentEntry& InEntry)
-                {
-                    if (!InEntry.Has(lRegistry, lEntity))
-                    {
-                        return;
-                    }
-
-                    lEntityData.Components.emplace_back(InEntry.GetName(), InEntry.Save(lRegistry, lEntity));
-                });
-
-                lData.Entities.emplace_back(Move(lEntityData));
+                lData.Entities.emplace_back(CaptureOne(lRegistry, InRegistry, lEntity, lMeta));
             }
 
             // TRACE, not Info. Capture is a pure transformation with several callers, and one of
@@ -68,7 +76,7 @@ namespace Opaax
     {
         // Id deliberately left invalid — a whole-world snapshot is not a map and never reaches a
         // file. MapJson writes that as "" (MP1), so nothing can mistake it for one either.
-        return CaptureEntities(InWorld, InRegistry, MapId());
+        return CaptureFiltered(InWorld, InRegistry, MapId());
     }
 
     MapData MapSerializer::CaptureMap(const World& InWorld, const ComponentRegistry& InRegistry, MapId InMapId)
@@ -84,11 +92,39 @@ namespace Opaax
             return MapData();
         }
 
-        MapData lData = CaptureEntities(InWorld, InRegistry, InMapId);
+        MapData lData = CaptureFiltered(InWorld, InRegistry, InMapId);
 
         // The map carries its OWN name to the file, so an empty one is still identifiable.
         lData.Id = InMapId;
 
+        return lData;
+    }
+
+    MapData MapSerializer::CaptureEntities(const World& InWorld, const ComponentRegistry& InRegistry,
+                                           const TDynArray<EntityID>& InEntities)
+    {
+        MapData lData;
+        lData.Entities.reserve(InEntities.size());
+
+        const EntityRegistry& lRegistry = InWorld.GetRegistry();
+
+        for (const EntityID lEntity : InEntities)
+        {
+            const EntityMeta* lMeta = InWorld.IsValid(lEntity) ? lRegistry.try_get<EntityMeta>(lEntity)
+                                                               : nullptr;
+
+            if (lMeta == nullptr)
+            {
+                continue;   // destroyed under the caller, or never ours — see the header
+            }
+
+            lData.Entities.emplace_back(CaptureOne(lRegistry, InRegistry, lEntity, *lMeta));
+        }
+
+        // NO LOG LINE, unlike its two neighbours. This one answers a question about a HANDFUL of
+        // entities on an interactive path — the editor calls it per recorded edit — so a line here
+        // says nothing the verb's own Info line does not, and one caller flooding the log is what
+        // it cost last time.
         return lData;
     }
 }

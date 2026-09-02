@@ -19,12 +19,4 @@ namespace Opaax::Editor
     {
         { Command.Execute(Context, Params) } -> std::same_as<void>;
     };
-
-    //template<typename T, typename ContextType>
-    //concept UndoableEditorCommand =
-    //    EditorCommand<T, ContextType> &&
-    //    requires(T Command, ContextType& Context)
-    //{
-    //    { Command.Undo(Context) } -> std::same_as<void>;
-    //};
 }

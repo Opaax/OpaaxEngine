@@ -87,6 +87,8 @@ namespace Opaax::Editor
                 return false;
             }
 
+            // NOTHING IS BRACKETED HERE (⑤, **UN1**). A verb records its own undo step because it
+            // is the one that knows what changed; the dispatch just runs it.
             IEditorCommand lCommand = lCommandEntry.Create();
             lCommand.Execute(InContext, InParams);
 
