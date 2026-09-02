@@ -906,6 +906,45 @@ producer (physics/collision debug), which also earns the editor toggle panel. Th
 question this raised is already **closed** — `OpaaxStringID`'s intern pool was moved out-of-line into the
 DLL the same day (see **I2**), so channel ids agree across the DLL line by construction.
 
+**F5 — A PASS is recorded whole, sorted ONCE, then cut into batches** (landed ⑥ S1, 2026-09-02).
+`BeginPass` starts a recording, every `Draw*` appends four vertices + a sort key + a pass-wide
+texture id, and `EndPass` calls `PlanQuadBatches` (`Renderer/Renderer2DBatchPlan.h`) before anything
+reaches the GPU. **The ORDER of those two steps is the invariant**, and it is the whole entry: the
+old code sorted *inside* `Flush`, i.e. after the batch had already been cut, so past `MAX_QUADS` or
+the sampler limit the painter's algorithm held only *within* a batch and a later flush drew a
+`Background` quad over a `UI` one. Draw order is now independent of where a flush lands.
+- **A batch is a LIMIT, not a constant.** `RenderLimits{MaxQuads, MaxTextureSlots}` had sat in
+  `RenderSystemDesc` unread since M1 under a NOTE saying dynamic buffers were "deferred"; it is now
+  what sizes the vertex/index buffers at `Init`, fed from `RendererConfigData` by
+  `RendererManager::Startup` — the adapter pattern `ClearColor` already used. **That is also the
+  gate**: the split path is unreachable in a 7-quad scene until you can shrink the batch, so a
+  config value is what let it run at all ([[L23]] — a feature that has never run in the real app is
+  not done). Values outside what the buffers and the shader can honour clamp **loudly**; the floor
+  of 2 slots is white plus one texture, because a batch no sprite fits in is not a limit.
+  `SHADER_TEXTURE_SLOTS = 16` stays a constant — it is the length of `u_Textures[]` in
+  `Sprite.glsl`, a shader fact rather than a policy, and the bind group still fills all 16 (unused
+  ones bound to white), so **no shader change was needed**.
+- **The texture in the sort key is now a PASS id, not a batch slot** — a slot cannot exist before
+  the batch does. Same job (group equal-order quads by texture so a shared atlas draws in one call),
+  now stable across the whole sort. `MakeSortKey`'s bit layout is untouched.
+- **A whole trap is gone rather than documented.** `DrawSprite` used to carry an "ORDER MATTERS"
+  comment: claim a slot before making room and a mid-`SubmitQuad` flush left the index naming a slot
+  that no longer held the texture — the wrong image, silently. Nothing flushes during recording now,
+  so `EnsureBatchRoom` is deleted and the trap is unrepresentable ([[L18]]'s "make the wrong thing
+  impossible, not merely unlikely").
+- **`PlanQuadBatches` is free, pure and exported** — the `MakeSortKey`/`MakeOutlineInnerHalf` shape,
+  for the same reason: the ordering is the part worth pinning and it needs no GL context.
+  `BatchPlanTests.cpp` holds the regression gate directly — four quads submitted `[UI, Bg, UI, Bg]`
+  with room for two, asserting both `Bg` land in batch 0 and both `UI` in batch 1, **an ordering the
+  old code could not produce**.
+- **The instrument is a one-shot Info line** naming the batch count, quad count and both limits, the
+  first time a pass needs more than one draw call ([[L12]]/[[L15]] — a smoke run cannot read the
+  Stats panel, and "no errors" never discriminated here). The Stats panel's amber `Draw Calls` row
+  survives with its meaning corrected: a split is a **cost**, not a drawing error (**ST7**).
+- **Cost:** the record is `TDynArray`s that keep their capacity, so a steady frame allocates nothing
+  and the per-quad memory is what the old fixed arrays already reserved. A pass may now name more
+  textures than one batch can bind, which is exactly the question the plan answers.
+
 ---
 
 ## ST — Frame stats & profiling (landed ④, 2026-08-31)
@@ -1024,15 +1063,17 @@ crossing the frame boundary in the same `Publish()`.
 - **`AddCount` ACCUMULATES.** A producer may submit per-object or once with a total and both read
   correctly; a name-keyed merge with the same pointer-then-`strcmp` compare the scopes use.
 - **Counters are reset by the FRAME, never by a pass.** `RenderSystem::BeginFrame` calls
-  `Renderer2D::ResetStats()` — ⑥'s multi-view will run several `BeginPass`/`EndPass` brackets inside
-  one frame and their draw calls all belong to one total. `StartBatch` deliberately does NOT reset:
-  a batch restart is exactly the event being counted.
+  `Renderer2D::ResetStats()` — multi-view runs several `BeginPass`/`EndPass` brackets inside one
+  frame and their draw calls all belong to one total. `StartPass` deliberately does NOT reset:
+  a batch split is exactly the event being counted.
 - **The submit sits OUTSIDE `RenderFrame`'s early-outs**, like the `DebugDraw` clear beside it
   (**F4**), so a frame that drew nothing reports zeros instead of leaving stale numbers on screen.
 - **`DrawCalls` IS the flush count** — `Flush` issues exactly one `DrawIndexed` — so shipping both
-  would be one number twice. Above 1 it is ⑥'s bug made visible: `Renderer2D` sorts the CURRENT
-  batch only, so the painter's algorithm does not hold across the split. The panel colours that row
-  and says why; `Quads` past `MAX_QUADS` and `Texture Slots` at 16 name which limit split it.
+  would be one number twice. Above 1 the frame split, which since **F5** is a **cost and not a
+  drawing error**; the panel colours that row and says so, and `Quads` / `Texture Slots` name which
+  of the two configured limits did it. *This bullet used to read "⑥'s bug made visible: Renderer2D
+  sorts the CURRENT batch only" — that was the point of shipping the counter, and it is what F5
+  then fixed.*
 
 **ST8 — THE DEVICE TIMES ITSELF, AND THE RESULT IS ALWAYS LATE** (landed ④ S3).
 `IRHIDevice::GetLastGpuFrameTimeMs()` is **one** virtual, and the timing happens inside the
