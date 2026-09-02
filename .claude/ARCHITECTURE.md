@@ -464,6 +464,17 @@ editor-side `TPropertyDrawer<T>`, never a new `FLOAT_PROP`/`INT_PROP` macro here
   needs no flag) and `SetFlags(EPropertyFlags::NeedRestart)`. The restart flag sits on the **group**
   — one marker on `Window`, not fourteen — and it replaced a blanket "changes apply on restart"
   sentence on the panel, which would have gone stale the day one value became live.
+  - **`SetTooltip(text)` (2026-09-02) is the third facet and the one that is NEITHER**, so it is
+    worth saying why it does not break the rule: it selects no widget and cannot be derived from the
+    type, because it is authored English about what the field MEANS. The trigger was the user asking
+    what `MaxQuadsPerBatch` was for — **a question about a field is a missing tooltip**, and
+    answering it in chat leaves the next reader to ask again.
+  - **It is drawn by `DrawPropertyNote`, beside `(restart)`, and the PLACEMENT is again the rule.**
+    A `TPropertyDrawer` sees one value and one label, so a tooltip threaded through the drawers
+    would have to be re-remembered by every game that adds a field type; in the fold, every described
+    property gets one — generic, hand-written and grouped alike. The same argument that put `PushId`
+    on the registry entry rather than inside each drawer. The widget it uses is **MR2h**'s
+    `HelpMarker`, an item of its own rather than a decoration of the previous one.
 - **An enum gets a dropdown from ONE constrained partial specialization** (2026-08-20).
   `TPropertyDrawer<CEnumWithValues T>` walks `TEnumValues<T>::Values` in a combo, labelling each with
   **I11**'s `ToString` — so a new enum field is a dropdown the moment its enum stamps
@@ -1069,11 +1080,16 @@ crossing the frame boundary in the same `Publish()`.
 - **The submit sits OUTSIDE `RenderFrame`'s early-outs**, like the `DebugDraw` clear beside it
   (**F4**), so a frame that drew nothing reports zeros instead of leaving stale numbers on screen.
 - **`DrawCalls` IS the flush count** — `Flush` issues exactly one `DrawIndexed` — so shipping both
-  would be one number twice. Above 1 the frame split, which since **F5** is a **cost and not a
-  drawing error**; the panel colours that row and says so, and `Quads` / `Texture Slots` name which
-  of the two configured limits did it. *This bullet used to read "⑥'s bug made visible: Renderer2D
-  sorts the CURRENT batch only" — that was the point of shipping the counter, and it is what F5
-  then fixed.*
+  would be one number twice. Above 1 the frame split, and `Quads` / `Texture Slots` name which of
+  the two configured limits did it.
+- **Its amber highlight was DELETED with the bug it was built for** (2026-09-02). This bullet used
+  to read *"above 1 it is ⑥'s bug made visible: `Renderer2D` sorts the CURRENT batch only"*, and the
+  panel coloured that row to say so — correct, and the whole reason the counter shipped ahead of ⑥.
+  **F5** made a split a cost, so the colour started crying wolf at a batch limit the author had
+  configured deliberately (found the first time the user ran the ⑥ gate: *"3 was a bit red
+  already"*). Every reference engine colours a counter against a **budget**; there is none here, so
+  the honest form is a plain number. **An instrument built to expose one defect is finished when
+  that defect is — retiring it is part of the fix, not a separate tidy-up.**
 
 **ST8 — THE DEVICE TIMES ITSELF, AND THE RESULT IS ALWAYS LATE** (landed ④ S3).
 `IRHIDevice::GetLastGpuFrameTimeMs()` is **one** virtual, and the timing happens inside the
@@ -2104,6 +2120,13 @@ is empty).
   the call sites that exist** rather than invented, and **the late-bound queries are FOLDED INTO the
   calls** (`Button(label, width, tooltip)`, never `Button` then a hover query), so nothing in the
   seam depends on submission order. The id scope is explicit rather than implied.
+  - **That rule then DECIDED a later feature rather than merely surviving it** (property tooltips,
+    2026-09-02). The obvious shape is "attach this text to the item just drawn" — precisely the
+    banned decorate-the-previous-item verb. So `HelpMarker(text)` draws **its own item**, a `(?)`
+    carrying the text, and the seam stays order-free. The constraint paid: a marker is *visible*,
+    where an invisible hover target never tells a reader that an explanation exists. **When a
+    stated invariant forces a different design, check whether the different design is better
+    before treating it as a cost.**
 - **The HAND-WRITTEN drawer is the dogfood, and it mattered.** `TagsComponentDrawer` — a game's
   bespoke drawer, not the generic fold — needed almost the same vocabulary as the built-ins
   (header, id scope, small button, text, separator, text field, disabled state, button). That it
