@@ -41,6 +41,19 @@ amended, **F4d** untouched).
   look **identical** to `1000` — ③b's grid behind, sprites in authored order, selection outline on
   top — while Stats' `Draw Calls` reads ~4 and its amber tooltip now says *cost, not drawing error*.
 
+### Follow-up from the user's own gate run (same day, `3167b0b` · `594468d`)
+
+They ran it, saw `Draw Calls` go 2 → 3 at a 2-quad limit, and reported the number was **amber**.
+- **The amber row is deleted.** It was ④'s instrument for making the ⑥ bug visible; F5 retired the
+  bug, so the colour was warning about a limit the author configured on purpose. → [[L74]], **ST7**.
+- **`MaxQuadsPerBatch` defaults to 10000, not 1000** (1.9 MB at 192 bytes a quad). 1000 was a
+  bring-up number that splits every frame of a bullet-heavy scene. **An explicit key still wins** —
+  a project that has saved the value keeps it.
+- **`PropertyMeta::SetTooltip` + `IEditorWidgets::HelpMarker`** — their question *"why do we give
+  limits like this?"* was a missing tooltip, so both limits now carry the answer in the Config
+  panel. Design notes in **I15** and **MR2h**; the marker is its own `(?)` item because MR2h forbids
+  decorating the previous one, which turned out to be the better shape anyway.
+
 ### Notes for whoever reads this next
 
 - **The texture in the sort key is a PASS id now, not a batch slot** — a slot cannot exist before

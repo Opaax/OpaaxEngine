@@ -2082,3 +2082,35 @@ string read from the code.** I handed over *"check the menu reads **Undo Move**"
 Translate"** — `ToString(EGizmoMode)`, which I had wired one line earlier without reading. A gate is an
 instrument ([[L15]]): a wrong expected-string makes a CORRECT build look broken. Grep the function that
 produces the string; never re-derive it from the name you gave a variable.
+
+## L74 — A fix RETIRES the instrument built to expose the defect; I rewrote its wording instead (2026-09-02)
+
+**What happened (⑥ S1).** The Stats panel coloured `Draw Calls` amber above 1, with a tooltip saying
+draw order breaks across the split. That instrument existed for exactly one reason: to make the ⑥
+sort bug visible before it bit. S1 fixed the bug. While landing it I opened that very code, noticed
+the tooltip was now false, and **rewrote the sentence** — "a split is a cost, not a drawing error" —
+leaving the amber colour and the hover in place. The user ran the gate and answered in one line:
+*"3 was a bit red already."* At `MaxQuadsPerBatch: 2` the panel was warning them about a limit they
+had configured on purpose.
+
+**The tell I walked straight past.** I edited the instrument to keep it TRUE. The question I never
+asked was whether it should still EXIST. An amber highlight is a claim that a number is bad, and
+after the fix nothing here can say that: a split costs draw calls, and "how many is too many" is a
+budget the engine does not have. Every reference engine colours against a budget, never against 1.
+
+**Rules for next time:**
+- **When a change closes a defect, list what was built to OBSERVE that defect and retire it in the
+  same change.** A counter, a colour, a warning log, a one-shot line, a test double — each was
+  justified by the bug. Some survive on their own merit (the `Draw Calls` count is still the number
+  a batcher is judged by); a judgement rendered ON that number does not survive with it.
+- **"This comment is now false" has two fixes and I habitually reach for the weaker one.** Rewriting
+  the text keeps the thing; deleting the thing removes the need for text. Ask which before editing
+  the sentence — the same instinct as [[L18]]/[[L19]], one level over: there the comment excused a
+  defect, here it maintained a fixture whose reason had expired.
+- **A warning with no budget behind it is noise by construction.** Before colouring, dimming or
+  flagging a value, name the threshold and where it comes from. "Greater than the trivial case" is
+  not a threshold.
+- **Corollary that paid off the same day:** the user's question *"why do we give limits like this?"*
+  was not a request for a chat answer — it was a **missing tooltip**. A field a reader has to ask
+  about is under-documented at the field, and answering only in conversation leaves the next reader
+  to ask again. That is what `PropertyMeta::SetTooltip` is now for.
