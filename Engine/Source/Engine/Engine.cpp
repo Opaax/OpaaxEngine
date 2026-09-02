@@ -31,6 +31,7 @@
 #include "RHI/Framebuffer.h"   // FramebufferSpec + the TUniquePtr<IFramebuffer> deleter
 #include "RHI/Texture.h"       // the TUniquePtr<ITexture2D> deleter
 #include "Engine/Subsystems/Resources/Types/TextureResource.h" // registered as a native format
+#include "Engine/Subsystems/Resources/Types/SpriteSheetResource.h" // registered as a native format
 
 namespace Opaax
 {
@@ -84,6 +85,7 @@ namespace Opaax
         m_Registries.Resources().Register<LevelResource>(OPAAX_ID("Level"));
         m_Registries.Resources().Register<MapResource>(OPAAX_ID("Map"));
         m_Registries.Resources().Register<TextureResource>(OPAAX_ID("Texture"));
+        m_Registries.Resources().Register<SpriteSheetResource>(OPAAX_ID("SpriteSheet"));
     }
 
     void Engine::RegisterNativeSubsystems()

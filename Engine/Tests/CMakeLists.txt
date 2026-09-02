@@ -42,6 +42,7 @@ set(OPAAX_TEST_SOURCES
     Core/Engine/Subsystems/Resources/ResourceSystemTests.cpp
     Core/Engine/Subsystems/Resources/ResourceFormatRegistryTests.cpp
     Core/Engine/Subsystems/Resources/TextureResourceTests.cpp
+    Core/Engine/Subsystems/Resources/SpriteSheetTests.cpp
     Core/Engine/CameraResolveTests.cpp
     Core/Engine/ModuleRegistrarTests.cpp
     Core/Engine/InputManagerTests.cpp

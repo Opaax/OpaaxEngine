@@ -15,6 +15,7 @@
 #include <doctest.h>
 
 #include "Core/String/OpaaxStringID.hpp"
+#include "Core/String/OpaaxStringIDJson.h"
 #include "Renderer/RenderLayer.h"
 
 #include <cstring>
@@ -276,4 +277,43 @@ TEST_CASE("OpaaxStringID: ids interned by engine headers agree with ids interned
     CHECK(OPAAX_ID("Background") == g_RenderLayerIDs[static_cast<Uint8>(ERenderLayer::Background)]);
     CHECK(OPAAX_ID("Debug")      == g_RenderLayerIDs[static_cast<Uint8>(ERenderLayer::Debug)]);
     CHECK(RenderLayerFromStringID(OPAAX_ID("Debug")) == ERenderLayer::Debug);
+}
+
+// =============================================================================
+// The json bridge (Core/String/OpaaxStringIDJson.h). Its one rule: the TEXT crosses, never the id.
+// =============================================================================
+TEST_CASE("OpaaxStringID json: a round trip COMPARES EQUAL, and writes the text")
+{
+    const OpaaxStringID lId = OPAAX_ID("Idle_0");
+
+    const nlohmann::json lJson = lId;
+
+    // The text, not the index. A pool index is built in whatever order a process happened to
+    // intern things, so a number written today names a different string tomorrow.
+    CHECK(lJson.is_string());
+    CHECK(lJson.get<std::string>() == "Idle_0");
+
+    // The assertion that actually matters: equality survives, which is the whole point of interning.
+    CHECK(lJson.get<OpaaxStringID>() == lId);
+}
+
+TEST_CASE("OpaaxStringID json: an invalid id writes EMPTY and reads back invalid")
+{
+    // Not "None". CStr() answers "None" for the invalid id, so a bridge built on it would write a
+    // name that reads back as a real string literally spelled None (I14 hit this trap once).
+    const nlohmann::json lJson = OpaaxStringID();
+
+    CHECK(lJson.get<std::string>().empty());
+    CHECK_FALSE(lJson.get<OpaaxStringID>().IsValid());
+}
+
+TEST_CASE("OpaaxStringID json: reading a name does not depend on it being interned first")
+{
+    // The file is the writer here — nothing in this process has ever said "Attack_Windup_3".
+    const nlohmann::json lJson = std::string("Attack_Windup_3");
+
+    const OpaaxStringID lRead = lJson.get<OpaaxStringID>();
+
+    CHECK(lRead.IsValid());
+    CHECK(lRead == OPAAX_ID("Attack_Windup_3"));
 }
