@@ -74,9 +74,10 @@ set(OPAAX_TEST_SOURCES
     # below). ③'s gizmo delta math, pinned after a scale bug that only showed away from (0,0).
     Editor/EditorGizmoTests.cpp
 
-    # The client-drawn title bar's frame arithmetic. Same reason as the gizmo one level over: a
-    # smoke run never drags a window edge, so the 8 regions and the min-size clamp live here.
-    Editor/WindowFrameGeometryTests.cpp
+    # The rect arithmetic behind the title bar AND the sprite sheet editor's frames. Same reason as
+    # the gizmo one level over: a smoke run never drags an edge, so the 8 regions, the min-size
+    # clamp and the clamp-inside-the-texture live here.
+    Editor/EditorRectGeometryTests.cpp
 
     # NOTE: every quarantined suite now lives under Tests/Legacy/ with the code it exercises
     # (ARCHITECTURE.md X1) — ECS/*, Physics/CollisionProfile, Assets/AssetIdResolve and

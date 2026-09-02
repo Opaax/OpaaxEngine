@@ -6,6 +6,12 @@
 #include "Editor/EditorSpriteSheetDocument.h"
 #include "Editor/ImguiLibrary/ImguiLayout.h"
 #include "Editor/ImguiLibrary/ImguiWidgets.h"
+#include "Editor/Commands/EditorCommandRegistry.h"
+#include "Editor/Commands/EditorNativeCommandsTags.hpp"
+#include "Editor/Extensions/EditorExtensionRegistrar.h"
+#include "Editor/Operation/SheetOperations.h"
+#include "Editor/Properties/PropertyDrawers.h"   // the specializations DrawProperties folds over
+#include "Editor/Undo/EditorUndo.h"
 #include "Editor/UI/IEditorUIBackend.h"
 
 #include "Engine/Subsystems/Resources/ResourceManager.h"
@@ -62,12 +68,19 @@ namespace Opaax::Editor
             return;
         }
 
-        const SpriteSheetData& lData = m_Context.SheetDocument.GetData();
+        SpriteSheetData&       lData    = m_Context.SheetDocument.GetMutableData();
+        const TextureResource* lTexture = ClaimTexture(lData);
 
         DrawHeader(lData);
         ImGui::Separator();
 
-        DrawCanvas(lData, ClaimTexture(lData));
+        DrawCanvas(lData, lTexture);
+        ImGui::Separator();
+
+        DrawSliceTools(lTexture);
+        ImGui::Separator();
+
+        DrawSelectedFrame(lData);
         ImGui::Separator();
 
         DrawFrameList(lData);
@@ -76,12 +89,97 @@ namespace Opaax::Editor
     void SpriteSheetPanel::DrawHeader(const SpriteSheetData& InData)
     {
         // The dirty marker is derived by the document, so it cannot disagree with what a Save writes.
-        const OpaaxString lName = m_Context.SheetDocument.FileName();
+        const OpaaxString lName  = m_Context.SheetDocument.FileName();
+        const bool        bDirty = m_Context.SheetDocument.IsDirty();
 
-        ImGui::Text("%s%s", lName.CStr(), m_Context.SheetDocument.IsDirty() ? " *" : "");
+        ImGui::Text("%s%s", lName.CStr(), bDirty ? " *" : "");
+
+        ImGui::SameLine(ImGui::GetContentRegionAvail().x - 46.f);
+
+        // Its own button rather than Ctrl+S: that chord is Save Map editor-wide, and one global
+        // shortcut cannot mean two things without a "which panel has focus" question the UI seam
+        // does not answer. GROWTH POINT, named not built — the command exists, so binding it later
+        // is a routing change and not a feature.
+        ImGui::BeginDisabled(!bDirty);
+        if (ImGui::SmallButton("Save"))
+        {
+            m_Context.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_SAVE_SHEET, m_Context);
+        }
+        ImGui::EndDisabled();
 
         ImGui::TextDisabled("Texture : %s", InData.Texture.IsEmpty() ? "(none)" : InData.Texture.Path.CStr());
         ImGui::TextDisabled("Frames  : %u    Default : %u", InData.FrameCount(), InData.DefaultFrame);
+    }
+
+    void SpriteSheetPanel::DrawSliceTools(const TextureResource* InTexture)
+    {
+        if (!ImGui::TreeNodeEx("Grid", ImGuiTreeNodeFlags_DefaultOpen)) { return; }
+
+        // The grid's own fields, drawn from its property list — it is CReflected, so this is the
+        // whole of the UI for it and a new knob there needs nothing here.
+        DrawProperties(m_Context.Widgets, m_Context.SheetDocument.GetMutableData().Grid);
+
+        // Slicing needs the texture's SIZE, which the sheet does not store: how many pixels a path
+        // is, is the image's answer, and the panel is what has it loaded.
+        ImGui::BeginDisabled(InTexture == nullptr);
+
+        if (ImGui::Button("Slice") && InTexture != nullptr)
+        {
+            if (SheetOps::Slice(m_Context, InTexture->Width, InTexture->Height))
+            {
+                m_Selected = -1;   // the old selection named a frame from the list that just went
+            }
+        }
+
+        ImGui::EndDisabled();
+
+        ImGui::SameLine();
+        ImGui::TextDisabled("replaces every frame");
+
+        ImGui::TreePop();
+    }
+
+    void SpriteSheetPanel::DrawSelectedFrame(SpriteSheetData& InData)
+    {
+        if (m_Selected < 0 || static_cast<Uint32>(m_Selected) >= InData.FrameCount())
+        {
+            ImGui::TextDisabled("Select a frame to edit it.");
+            return;
+        }
+
+        const Uint32 lIndex = static_cast<Uint32>(m_Selected);
+
+        ImGui::Text("Frame %u", lIndex);
+        ImGui::SameLine();
+
+        ImGui::BeginDisabled(lIndex == InData.DefaultFrame);
+        if (ImGui::SmallButton("Set as default")) { SheetOps::SetDefaultFrame(m_Context, lIndex); }
+        ImGui::EndDisabled();
+
+        ImGui::PushID(static_cast<int>(lIndex));
+        DrawProperties(m_Context.Widgets, InData.Frames[lIndex]);
+        ImGui::PopID();
+
+        // THE FIELD HALF OF THE GESTURE, read after the drawers ran — the Inspector's bracket, for
+        // its reason: a TPropertyDrawer writes straight through a reference and cannot report that
+        // it did, so the edges of "any item is active" are what open and close the step. A canvas
+        // drag is not an ImGui item, so the two sources never overlap.
+        const bool lItemActive = ImGui::IsAnyItemActive();
+
+        if (lItemActive && !m_bWasItemActive && !m_bDraggingRect)
+        {
+            m_Gesture.Begin(m_Context, lIndex);
+            m_bGestureOpen = true;
+        }
+        else if (!lItemActive && m_bWasItemActive && m_bGestureOpen && !m_bDraggingRect)
+        {
+            if (m_Gesture.End(m_Context)) { m_Context.Undo.Record(Move(m_Gesture)); }
+
+            m_Gesture      = SheetFrameEdit{};
+            m_bGestureOpen = false;
+        }
+
+        m_bWasItemActive = lItemActive;
     }
 
     void SpriteSheetPanel::DrawCanvas(const SpriteSheetData& InData, const TextureResource* InTexture)
@@ -135,7 +233,89 @@ namespace Opaax::Editor
             }
         }
 
+        UpdateFrameDrag(m_Context.SheetDocument.GetMutableData(), *InTexture,
+                        { lImgMin.x, lImgMin.y }, lScale);
+
         ImGui::TextDisabled("%u x %u", InTexture->Width, InTexture->Height);
+    }
+
+    void SpriteSheetPanel::UpdateFrameDrag(SpriteSheetData& InData, const TextureResource& InTexture,
+                                           const Vector2F InImageMin, const float InScale)
+    {
+        if (m_Selected < 0 || static_cast<Uint32>(m_Selected) >= InData.FrameCount() || InScale <= 0.f)
+        {
+            return;
+        }
+
+        SpriteFrame& lFrame = InData.Frames[static_cast<Uint32>(m_Selected)];
+
+        // Everything below is in TEXTURE pixels, which is what the frame is stored in — converting
+        // once here beats converting the rect into screen space and the answer back again.
+        const ImVec2 lMouse = ImGui::GetIO().MousePos;
+        const float  lTexX  = (lMouse.x - InImageMin.x) / InScale;
+        const float  lTexY  = (lMouse.y - InImageMin.y) / InScale;
+
+        const TEditorRect<float> lRect{ lFrame.Offset.x, lFrame.Offset.y, lFrame.Size.x, lFrame.Size.y };
+        const float              lGrab = GRAB_THICKNESS / InScale;
+
+        if (!m_bDraggingRect)
+        {
+            if (!ImGui::IsItemHovered() || !ImGui::IsMouseClicked(ImGuiMouseButton_Left)) { return; }
+
+            const ERectEdge lEdge = HitTestRect(lRect, lTexX, lTexY, lGrab);
+
+            const bool lInside = lTexX >= lRect.X && lTexX < lRect.X + lRect.Width
+                              && lTexY >= lRect.Y && lTexY < lRect.Y + lRect.Height;
+
+            // An edge RESIZES, the middle MOVES — which is why None-while-dragging is not an idle
+            // state but the move case; HitTestRect answers None for the interior and the outside
+            // alike, and only one of those is a grab.
+            if (lEdge == ERectEdge::None && !lInside) { return; }
+
+            m_bDraggingRect = true;
+            m_DragEdge      = lEdge;
+
+            m_Gesture.Begin(m_Context, static_cast<Uint32>(m_Selected));
+            m_bGestureOpen  = true;
+            return;
+        }
+
+        const ImVec2 lDelta = ImGui::GetIO().MouseDelta;
+        const float  lDX    = lDelta.x / InScale;
+        const float  lDY    = lDelta.y / InScale;
+
+        TEditorRect<float> lNext = lRect;
+
+        if (m_DragEdge == ERectEdge::None)
+        {
+            lNext.X += lDX;
+            lNext.Y += lDY;
+        }
+        else
+        {
+            lNext = ResizeRect(lRect, m_DragEdge, lDX, lDY, 1.f, 1.f);
+        }
+
+        // A frame may never name pixels the texture does not have — the sheet's own rule, and the
+        // reason ClampRectInside exists beside the resize rather than inside it (a window may
+        // legitimately hang off a monitor).
+        lNext = ClampRectInside(lNext, static_cast<float>(InTexture.Width), static_cast<float>(InTexture.Height));
+
+        lFrame.Offset = { lNext.X, lNext.Y };
+        lFrame.Size   = { lNext.Width, lNext.Height };
+
+        if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+        {
+            m_bDraggingRect = false;
+            m_DragEdge      = ERectEdge::None;
+
+            // A drag that returned home is not a step — End says so, and the gesture is dropped
+            // either way so the next one cannot fold into it.
+            if (m_bGestureOpen && m_Gesture.End(m_Context)) { m_Context.Undo.Record(Move(m_Gesture)); }
+
+            m_Gesture      = SheetFrameEdit{};
+            m_bGestureOpen = false;
+        }
     }
 
     void SpriteSheetPanel::DrawFrameList(const SpriteSheetData& InData)

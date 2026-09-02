@@ -8,6 +8,8 @@
 #include "Editor/Undo/EditorUndo.h"           // the two commands that drive the stack (⑤)
 #include "Editor/Operation/EntityOps.h"
 #include "Editor/Operation/LevelOperations.h"
+#include "Editor/Operation/SheetOperations.h"
+#include "Editor/EditorSpriteSheetDocument.h"
 #include "Editor/Operation/MapOperations.h"
 #include "Editor/PIE/PlayInEditor.h"
 #include "Editor/Panels/EditorPanels.h"
@@ -451,6 +453,17 @@ namespace Opaax::Editor
 
             LevelOps::AdoptOpen(InContext, InParams.AbsPath);
         });
+    }
+
+    void SaveSheetCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        if (!InContext.SheetDocument.IsOpen())
+        {
+            OPAAX_LOG(LogEditorCommands, Warn, "Save Sheet ignored — no sprite sheet is open");
+            return;
+        }
+
+        SheetOps::Save(InContext);   // SheetOps logs the write and rebases the dirty marker
     }
 
     void SaveLevelCommand::Execute(EditorContext& InContext, const Params&)

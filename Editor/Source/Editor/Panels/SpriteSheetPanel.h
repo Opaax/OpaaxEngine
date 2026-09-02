@@ -5,6 +5,8 @@
 #include "Core/String/OpaaxString.hpp"
 #include "Engine/Subsystems/Resources/ResourceRef.hpp"   // the claim on the sheet's image
 #include "Editor/Panels/IEditorPanel.h"
+#include "Editor/UI/EditorRectGeometry.h"                // the drag's hit test and clamp
+#include "Editor/Undo/SpriteSheetUndoables.h"            // the open edit gesture
 
 namespace Opaax
 {
@@ -68,6 +70,27 @@ namespace Opaax::Editor
         /** One selectable row per frame: its index or name, and its rect. */
         void DrawFrameList(const SpriteSheetData& InData);
 
+        /** The grid fields and the [Slice] button that replaces the frames with what they cut. */
+        void DrawSliceTools(const TextureResource* InTexture);
+
+        /**
+         * The selected frame's own fields, and the buttons acting on it.
+         *
+         * Bracketed for undo the way the Inspector brackets its drawers: the rising and falling
+         * edges of "any item is active" open and close one step, because a TPropertyDrawer writes
+         * straight through a reference and cannot report that it did.
+         */
+        void DrawSelectedFrame(SpriteSheetData& InData);
+
+        /**
+         * Turn a drag on the selected frame's edge, corner or middle into a new rect.
+         *
+         * @param InImageMin Where the image was drawn, in screen pixels.
+         * @param InScale    Screen pixels per texture pixel — one number, since the fit is uniform.
+         */
+        void UpdateFrameDrag(SpriteSheetData& InData, const TextureResource& InTexture,
+                             Vector2F InImageMin, float InScale);
+
         /**
          * The claim on the open sheet's image, loading it once and dropping it when the sheet
          * changes — so closing a sheet actually releases its texture.
@@ -108,7 +131,26 @@ namespace Opaax::Editor
         /** Which frame the list and the canvas highlight. -1 = none. Presentation, not document state. */
         Int32 m_Selected = -1;
 
+        // =============================================================================
+        // The open edit gesture — ONE step, whichever of the two sources opened it.
+        //
+        //   They cannot overlap in practice: a canvas drag begins with a click on the image, which
+        //   is what deactivates any field that was being typed into.
+        // =============================================================================
+        SheetFrameEdit m_Gesture;
+        bool           m_bGestureOpen   = false;
+
+        /** The Inspector's rising/falling edge detector, for the FIELD half of the gesture. */
+        bool           m_bWasItemActive = false;
+
+        /** The canvas drag. None WHILE DRAGGING means a move rather than a resize. */
+        bool           m_bDraggingRect  = false;
+        ERectEdge      m_DragEdge       = ERectEdge::None;
+
         /** The largest edge the sheet image is drawn at, in pixels. */
         static constexpr float MAX_CANVAS_SIZE = 420.f;
+
+        /** How close to an edge, in SCREEN pixels, counts as grabbing it. */
+        static constexpr float GRAB_THICKNESS = 5.f;
     };
 }

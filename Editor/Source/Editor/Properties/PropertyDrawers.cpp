@@ -106,4 +106,35 @@ namespace Opaax::Editor
             InValue = OpaaxString(lBuffer);
         }
     }
+
+    void TPropertyDrawer<OpaaxStringID>::Draw(IEditorWidgets& InWidgets, const char* InLabel,
+                                              OpaaxStringID& InValue, const PropertyMeta&)
+    {
+        // SUBMIT ON ENTER, and that is the whole design of this drawer. An id is INTERNED, the pool
+        // is never reclaimed, and interning per keystroke would leave "H", "He", "Her" and "Hero"
+        // in it forever — OpaaxStringID::Find's own note names an editor text field as the case to
+        // avoid. Committing once is also what the value means: a name, not a work in progress.
+        constexpr Uint32 k_BufferSize = 128;
+
+        char lBuffer[k_BufferSize] = {};
+
+        // IsValid, never ToString: the invalid id resolves to the pool's "None", and showing that
+        // in the field would turn "unnamed" into a name the moment anyone pressed Enter (I14).
+        if (InValue.IsValid())
+        {
+            const OpaaxStringView lText = InValue.GetView();
+            const Uint32          lLen  = lText.GetLength() < k_BufferSize - 1
+                                              ? lText.GetLength() : k_BufferSize - 1;
+
+            std::memcpy(lBuffer, lText.Data(), lLen);
+            lBuffer[lLen] = '\0';
+        }
+
+        if (InWidgets.InputText(InLabel, lBuffer, k_BufferSize, /*bInSubmitOnEnter*/ true))
+        {
+            // Cleared back to nothing is a real answer — an unnamed frame is addressed by index —
+            // so an empty field is the INVALID id rather than an interned empty string.
+            InValue = (lBuffer[0] == '\0') ? OpaaxStringID() : OpaaxStringID(OpaaxString(lBuffer));
+        }
+    }
 }

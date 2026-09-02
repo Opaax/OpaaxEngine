@@ -1,4 +1,8 @@
-// Suite: the client-drawn window frame's arithmetic (Editor/UI/WindowFrameGeometry.h).
+// Suite: the rect arithmetic behind BOTH the client-drawn window frame and the sprite sheet
+// editor's frame rects (Editor/UI/EditorRectGeometry.h).
+//
+// The window cases below still speak the window's own vocabulary, which is now an ALIAS of the
+// generic one — so they double as the guard that the alias still names the same thing.
 //
 // The editor draws its own title bar, so it re-implements what the OS used to do: hit-test the
 // resize border and turn a drag into a new window rect. A smoke run cannot reach ANY of it — it
@@ -9,7 +13,7 @@
 // headers only when they pull no ImGui.
 #include <doctest.h>
 
-#include "Editor/UI/WindowFrameGeometry.h"
+#include "Editor/UI/EditorRectGeometry.h"
 
 using namespace Opaax;
 using namespace Opaax::Editor;
@@ -119,4 +123,77 @@ TEST_CASE("ResizeFrame: None is a no-op in both axes")
     CHECK(lOut.Y == k_Rect.Y);
     CHECK(lOut.Width == k_Rect.Width);
     CHECK(lOut.Height == k_Rect.Height);
+}
+
+// =============================================================================
+// The FLOAT instantiation — a sprite sheet frame, in texture pixels. Same body, so these cases
+// are about the generalisation holding rather than about the arithmetic being re-derived.
+// =============================================================================
+using SheetRect = Opaax::Editor::TEditorRect<float>;
+
+TEST_CASE("EditorRectGeometry: the eight regions work in float texture pixels")
+{
+    const SheetRect lFrame{ 32.f, 32.f, 32.f, 32.f };
+
+    // A 4px grab band, which is what a sheet canvas uses at 1:1 zoom.
+    CHECK(HitTestRect(lFrame, 33.f, 33.f, 4.f) == ERectEdge::TopLeft);
+    CHECK(HitTestRect(lFrame, 62.f, 33.f, 4.f) == ERectEdge::TopRight);
+    CHECK(HitTestRect(lFrame, 33.f, 62.f, 4.f) == ERectEdge::BottomLeft);
+    CHECK(HitTestRect(lFrame, 48.f, 33.f, 4.f) == ERectEdge::Top);
+    CHECK(HitTestRect(lFrame, 48.f, 48.f, 4.f) == ERectEdge::None);   // the interior
+    CHECK(HitTestRect(lFrame, 10.f, 10.f, 4.f) == ERectEdge::None);   // outside
+}
+
+TEST_CASE("EditorRectGeometry: dragging a frame's left edge moves its origin, and stops at the minimum")
+{
+    const SheetRect lFrame{ 32.f, 32.f, 32.f, 32.f };
+
+    const SheetRect lWider = ResizeRect(lFrame, ERectEdge::Left, -8.f, 0.f, 1.f, 1.f);
+    CHECK(lWider.X     == doctest::Approx(24.f));
+    CHECK(lWider.Width == doctest::Approx(40.f));
+
+    // Past the minimum the origin must STOP with the size, or the frame walks out from under the
+    // cursor — the same compensation the window frame needs, now proven for float too.
+    const SheetRect lPinned = ResizeRect(lFrame, ERectEdge::Left, 100.f, 0.f, 4.f, 4.f);
+    CHECK(lPinned.Width == doctest::Approx(4.f));
+    CHECK(lPinned.X     == doctest::Approx(60.f));   // 32 + 32 - 4, the right edge held still
+}
+
+// =============================================================================
+// ClampRectInside — the sheet's own rule: a frame may never name pixels the texture lacks.
+// =============================================================================
+TEST_CASE("ClampRectInside: a frame dragged off an edge SLIDES BACK, it does not shrink")
+{
+    // Shrinking here would be data loss disguised as a clamp: the author moved it, they did not
+    // resize it.
+    const SheetRect lOff = ClampRectInside(SheetRect{ -10.f, -6.f, 32.f, 32.f }, 64.f, 64.f);
+
+    CHECK(lOff.X      == doctest::Approx(0.f));
+    CHECK(lOff.Y      == doctest::Approx(0.f));
+    CHECK(lOff.Width  == doctest::Approx(32.f));
+    CHECK(lOff.Height == doctest::Approx(32.f));
+
+    const SheetRect lPast = ClampRectInside(SheetRect{ 50.f, 40.f, 32.f, 32.f }, 64.f, 64.f);
+    CHECK(lPast.X == doctest::Approx(32.f));
+    CHECK(lPast.Y == doctest::Approx(32.f));
+}
+
+TEST_CASE("ClampRectInside: a frame LARGER than the texture is cut down to it")
+{
+    const SheetRect lHuge = ClampRectInside(SheetRect{ 10.f, 10.f, 200.f, 90.f }, 64.f, 64.f);
+
+    CHECK(lHuge.X      == doctest::Approx(0.f));
+    CHECK(lHuge.Y      == doctest::Approx(0.f));
+    CHECK(lHuge.Width  == doctest::Approx(64.f));
+    CHECK(lHuge.Height == doctest::Approx(64.f));
+}
+
+TEST_CASE("ClampRectInside: a frame already inside is untouched")
+{
+    const SheetRect lIn = ClampRectInside(SheetRect{ 8.f, 8.f, 16.f, 16.f }, 64.f, 64.f);
+
+    CHECK(lIn.X      == doctest::Approx(8.f));
+    CHECK(lIn.Y      == doctest::Approx(8.f));
+    CHECK(lIn.Width  == doctest::Approx(16.f));
+    CHECK(lIn.Height == doctest::Approx(16.f));
 }

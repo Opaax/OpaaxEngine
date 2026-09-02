@@ -4,6 +4,7 @@
 #include "Core/Maths/MathTypes.h"
 #include "Core/Reflection/OpaaxEnum.h"   // CEnumWithValues — the one drawer that serves every enum
 #include "Core/String/OpaaxString.hpp"
+#include "Core/String/OpaaxStringID.hpp"
 #include "Engine/Subsystems/Resources/ResourcePath.h"     // TResourcePath — the one that serves every resource
 #include "Engine/Subsystems/Resources/ResourceTypeID.hpp" // the id the drop target gates on
 #include "Editor/Properties/PropertyDrawer.h"
@@ -41,6 +42,7 @@ namespace Opaax::Editor
     OPAAX_DECLARE_PROPERTY_DRAWER(Vector4F);
     OPAAX_DECLARE_PROPERTY_DRAWER(LinearColor);
     OPAAX_DECLARE_PROPERTY_DRAWER(OpaaxString);
+    OPAAX_DECLARE_PROPERTY_DRAWER(OpaaxStringID);
 
 #undef OPAAX_DECLARE_PROPERTY_DRAWER
 

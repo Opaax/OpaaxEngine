@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Editor/UI/IEditorGui.h"          // EWindowButtonKind, TitleBarDrag
-#include "Editor/UI/WindowFrameGeometry.h"
+#include "Editor/UI/EditorRectGeometry.h"
 
 namespace Opaax::Editor
 {

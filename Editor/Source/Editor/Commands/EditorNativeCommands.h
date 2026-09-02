@@ -417,6 +417,24 @@ namespace Opaax::Editor
     };
 
     /**
+     * Write the open `.opaaxsheet` back to its file.
+     *
+     * A COMMAND rather than a call from the panel's button, because every other Save in the editor
+     * is one: it is the route a File-menu entry or a key binding takes, and the button dispatching
+     * the same tag is what keeps those from being a second implementation.
+     *
+     * Ctrl+S is deliberately NOT bound to it — that chord means Save Map editor-wide, and one
+     * global shortcut cannot mean two things without a "which panel has focus" question the UI seam
+     * does not answer today.
+     */
+    struct SaveSheetCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
+    /**
      * The only Level entry on the menu bar, because it is the only one that does not need a map
      * named first — it goes and picks one. Removing a map and choosing the persistent one live on
      * the Hierarchy's map headers (MapOps), where the target is what was clicked instead of
