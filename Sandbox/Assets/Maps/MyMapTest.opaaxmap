@@ -55,10 +55,10 @@
                         "y": 1.0,
                         "z": 1.0
                     },
-                    "Frame": -1,
+                    "Frame": 1,
                     "Layer": "Default",
                     "OrderInLayer": 0,
-                    "Sheet": "/Engine/SpriteSheets/TSS_Default_128.opaaxsheet",
+                    "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxsheet",
                     "Size": {
                         "x": 128.0,
                         "y": 64.0
