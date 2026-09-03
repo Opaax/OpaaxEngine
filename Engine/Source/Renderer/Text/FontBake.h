@@ -3,11 +3,10 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Application/Services/ILogger.h"
+#include "Renderer/Text/FontFaceData.h"   // DEFAULT_FONT_PIXEL_HEIGHT — the bake's default is its
 
 namespace Opaax
 {
-    struct FontFaceData;
-
     inline constexpr LogCategory LogFontBake{"FontBake"};
 
     // =============================================================================
@@ -31,7 +30,7 @@ namespace Opaax
         struct BakeParams
         {
             /** Rasterisation height. A draw at another size scales the baked metrics. */
-            float PixelHeight = 32.f;
+            float PixelHeight = DEFAULT_FONT_PIXEL_HEIGHT;
 
             /**
              * Supersampling factor. (2,2) costs 4x the atlas footprint per glyph and buys visibly

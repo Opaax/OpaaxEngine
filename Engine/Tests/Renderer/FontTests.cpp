@@ -15,8 +15,10 @@
 
 #include "Engine/Subsystems/Resources/ResourceManager.h"   // completes LoadContext
 #include "Engine/Subsystems/Resources/Types/FontFaceResource.h"
+#include "Engine/Subsystems/Resources/Types/FontFamilyData.h"
 #include "Renderer/Text/FontBake.h"
 #include "Renderer/Text/FontFaceData.h"
+#include "Renderer/Text/Text2D.h"
 
 using namespace Opaax;
 
@@ -27,25 +29,61 @@ namespace
     constexpr Uint32 ZHE     = 0x0416u;   // Ж — a different script, so a Uint8 key would alias it
     constexpr Uint32 MISSING = 0x0041u;   // 'A', deliberately NOT in the faces built below
 
-    /** A face carrying two Greek glyphs and one Cyrillic one. No atlas — none of this needs a GPU. */
+    // The same three characters as UTF-8 BYTES, for the strings Measure walks. Explicit \x rather
+    // than literal characters: this file has no BOM and the build sets no /utf-8, so a literal would
+    // be decoded by the ANSI code page — the mechanism under test one layer down ([[L21]]).
+    constexpr const char* U_GAMMA = "\xCE\x93";
+    constexpr const char* U_ALPHA = "\xCE\xB1";
+
+    constexpr float FACE_PIXEL_HEIGHT = 32.f;
+    constexpr float FACE_LINE_ADVANCE = 32.f;
+    constexpr float GAMMA_ADVANCE     = 17.f;
+    constexpr float ALPHA_ADVANCE     = 19.f;
+    constexpr float SPACE_ADVANCE     = 10.f;
+
+    /** A face carrying two Greek glyphs, one Cyrillic one and a space. No atlas — no GPU needed. */
     FontFaceData MakeFace()
     {
         FontFaceData lFace;
-        lFace.PixelHeight  = 32.f;
-        lFace.AtlasWidth   = 512u;
-        lFace.AtlasHeight  = 512u;
+        lFace.PixelHeight          = FACE_PIXEL_HEIGHT;
+        lFace.AtlasWidth           = 512u;
+        lFace.AtlasHeight          = 512u;
+        lFace.VMetrics.Ascent      = 25.f;
+        lFace.VMetrics.Descent     = -7.f;
+        lFace.VMetrics.LineAdvance = FACE_LINE_ADVANCE;
 
         FontGlyph lGlyph;
-        lGlyph.XAdvance = 17.f;
+        lGlyph.QuadSize = { 12.f, 20.f };
+
+        lGlyph.XAdvance = GAMMA_ADVANCE;
         lFace.Glyphs.emplace(GAMMA, lGlyph);
 
-        lGlyph.XAdvance = 19.f;
+        lGlyph.XAdvance = ALPHA_ADVANCE;
         lFace.Glyphs.emplace(ALPHA, lGlyph);
 
         lGlyph.XAdvance = 21.f;
         lFace.Glyphs.emplace(ZHE, lGlyph);
 
+        // Blank, like a real space: it advances the pen and submits no quad.
+        lGlyph.XAdvance = SPACE_ADVANCE;
+        lGlyph.QuadSize = { 0.f, 0.f };
+        lFace.Glyphs.emplace(static_cast<Uint32>(' '), lGlyph);
+
         return lFace;
+    }
+
+    /** One entry of a family, spelled out. */
+    FontFamilyEntry MakeEntry(const EFontSubset InSubset, const EFontWeight InWeight,
+                              const EFontWidth InWidth, const EFontSlant InSlant, const char* InPath)
+    {
+        FontFamilyEntry lEntry;
+        lEntry.Style.Subset = InSubset;
+        lEntry.Style.Weight = InWeight;
+        lEntry.Style.Width  = InWidth;
+        lEntry.Style.Slant  = InSlant;
+        lEntry.Face.Path    = OpaaxString(InPath);
+
+        return lEntry;
     }
 
     /** A context to hand Load. Every case here is a leaf load — nothing acquires a child. */
@@ -70,7 +108,7 @@ TEST_SUITE("FontFaceData")
         // NULLPTR, not a substitute: choosing what a miss looks like is the caller's decision, and a
         // face that quietly answered '?' would make "does this face cover this text?" unanswerable.
         CHECK(lFace.FindGlyph(MISSING) == nullptr);
-        CHECK(lFace.GlyphCount() == 3u);
+        CHECK(lFace.GlyphCount() == 4u);       // three letters and a space
         CHECK_FALSE(lFace.IsEmpty());
     }
 
@@ -131,7 +169,7 @@ TEST_SUITE("FontBake")
         CHECK_FALSE(FontBake::Bake(lNotAFont.data(), lNotAFont.size(), FontBake::BakeParams{}, lData, lPixels));
 
         // A reload that fails must not half-replace the face the caller already had.
-        CHECK(lData.GlyphCount() == 3u);
+        CHECK(lData.GlyphCount() == 4u);
         CHECK(lPixels.size() == 3u);
     }
 
@@ -158,6 +196,233 @@ TEST_SUITE("FontBake")
         // 0x3400 is CJK Unified Ideographs Extension A. Raising this bound would not make Chinese
         // work — it would overflow the atlas cap. That day needs a dynamic atlas, not a bigger number.
         CHECK(lParams.LastCodepoint < 0x3400u);
+    }
+}
+
+TEST_SUITE("FontFamilyData")
+{
+    /** Latin at Regular and Bold, upright and italic; Greek at Regular upright only. */
+    FontFamilyData MakeFamily()
+    {
+        using enum EFontSubset;
+
+        FontFamilyData lFamily;
+        lFamily.Entries.emplace_back(MakeEntry(Latin, EFontWeight::Regular, EFontWidth::Normal, EFontSlant::Normal, "latin-400.ttf"));
+        lFamily.Entries.emplace_back(MakeEntry(Latin, EFontWeight::Regular, EFontWidth::Normal, EFontSlant::Italic, "latin-400i.ttf"));
+        lFamily.Entries.emplace_back(MakeEntry(Latin, EFontWeight::Bold,    EFontWidth::Normal, EFontSlant::Normal, "latin-700.ttf"));
+        lFamily.Entries.emplace_back(MakeEntry(Greek, EFontWeight::Regular, EFontWidth::Normal, EFontSlant::Normal, "greek-400.ttf"));
+
+        return lFamily;
+    }
+
+    TEST_CASE("an exact request answers the exact face")
+    {
+        const FontFamilyData lFamily = MakeFamily();
+
+        FontStyleKey lWanted;
+        lWanted.Subset = EFontSubset::Latin;
+        lWanted.Weight = EFontWeight::Bold;
+
+        REQUIRE(lFamily.Find(lWanted) != nullptr);
+        CHECK(lFamily.Find(lWanted)->Face.Path == "latin-700.ttf");
+        CHECK(lFamily.FindExact(lWanted) != nullptr);
+    }
+
+    TEST_CASE("a weight the family lacks falls back to the NEAREST one it has")
+    {
+        const FontFamilyData lFamily = MakeFamily();
+
+        FontStyleKey lWanted;
+        lWanted.Subset = EFontSubset::Latin;
+        lWanted.Weight = EFontWeight::SemiBold;   // 600: 100 from Bold, 200 from Regular
+
+        CHECK(lFamily.FindExact(lWanted) == nullptr);
+        REQUIRE(lFamily.Find(lWanted) != nullptr);
+        CHECK(lFamily.Find(lWanted)->Face.Path == "latin-700.ttf");
+
+        lWanted.Weight = EFontWeight::Medium;     // 500: 100 from Regular, 200 from Bold
+        REQUIRE(lFamily.Find(lWanted) != nullptr);
+        CHECK(lFamily.Find(lWanted)->Face.Path == "latin-400.ttf");
+    }
+
+    TEST_CASE("the SLANT outranks the weight — a Bold Italic request takes Regular Italic")
+    {
+        const FontFamilyData lFamily = MakeFamily();
+
+        FontStyleKey lWanted;
+        lWanted.Subset = EFontSubset::Latin;
+        lWanted.Weight = EFontWeight::Bold;
+        lWanted.Slant  = EFontSlant::Italic;
+
+        // Bold upright is the right weight and Regular italic is the right slant. CSS resolves slant
+        // first, so keeping the italic is correct — an upright "italic" reads as a bug, a slightly
+        // light one reads as the font.
+        REQUIRE(lFamily.Find(lWanted) != nullptr);
+        CHECK(lFamily.Find(lWanted)->Face.Path == "latin-400i.ttf");
+    }
+
+    TEST_CASE("the WIDTH outranks the slant, which is CSS's own order")
+    {
+        FontFamilyData lFamily;
+        lFamily.Entries.emplace_back(MakeEntry(EFontSubset::Latin, EFontWeight::Regular,
+                                               EFontWidth::Normal, EFontSlant::Normal, "normal-upright.ttf"));
+        lFamily.Entries.emplace_back(MakeEntry(EFontSubset::Latin, EFontWeight::Regular,
+                                               EFontWidth::Condensed, EFontSlant::Italic, "condensed-italic.ttf"));
+
+        FontStyleKey lWanted;
+        lWanted.Subset = EFontSubset::Latin;
+        lWanted.Width  = EFontWidth::Normal;
+        lWanted.Slant  = EFontSlant::Italic;
+
+        // Right width and wrong slant beats right slant and wrong width.
+        REQUIRE(lFamily.Find(lWanted) != nullptr);
+        CHECK(lFamily.Find(lWanted)->Face.Path == "normal-upright.ttf");
+    }
+
+    TEST_CASE("the SUBSET is never crossed — a script the family lacks answers nullptr")
+    {
+        const FontFamilyData lFamily = MakeFamily();
+
+        FontStyleKey lWanted;
+        lWanted.Subset = EFontSubset::Cyrillic;   // the family has Latin and Greek only
+
+        // The one axis with no fallback, and the reason is that this one does not degrade: a Latin
+        // face standing in for Cyrillic draws a screenful of tofu, so the honest miss is better.
+        CHECK(lFamily.Find(lWanted) == nullptr);
+
+        // ...while a Greek request at a weight it lacks still resolves, because that one degrades.
+        lWanted.Subset = EFontSubset::Greek;
+        lWanted.Weight = EFontWeight::Black;
+        REQUIRE(lFamily.Find(lWanted) != nullptr);
+        CHECK(lFamily.Find(lWanted)->Face.Path == "greek-400.ttf");
+    }
+
+    TEST_CASE("an empty family answers nullptr rather than reaching into nothing")
+    {
+        const FontFamilyData lFamily;
+
+        CHECK(lFamily.EntryCount() == 0u);
+        CHECK(lFamily.Find(FontStyleKey{}) == nullptr);
+        CHECK(lFamily.FindExact(FontStyleKey{}) == nullptr);
+    }
+}
+
+TEST_SUITE("Text2D::Measure")
+{
+    TEST_CASE("a single line is the sum of its advances, scaled by Size")
+    {
+        const FontFaceData lFace = MakeFace();
+        const FontFaceView lView{ &lFace, nullptr };
+
+        TextDrawParams lParams;
+        lParams.Size     = FACE_PIXEL_HEIGHT;   // scale 1
+        lParams.bKerning = false;
+
+        const OpaaxString lText = OpaaxString(U_GAMMA) + U_ALPHA;
+        const Vector2F    lSize = Text2D::Measure(lText.CStr(), lView, lParams);
+
+        CHECK(lSize.x == doctest::Approx(GAMMA_ADVANCE + ALPHA_ADVANCE));
+        CHECK(lSize.y == doctest::Approx(FACE_LINE_ADVANCE));
+
+        // Size is ABSOLUTE, so doubling it doubles both extents — the property an author relies on.
+        lParams.Size = FACE_PIXEL_HEIGHT * 2.f;
+        const Vector2F lDouble = Text2D::Measure(lText.CStr(), lView, lParams);
+
+        CHECK(lDouble.x == doctest::Approx(lSize.x * 2.f));
+        CHECK(lDouble.y == doctest::Approx(lSize.y * 2.f));
+    }
+
+    TEST_CASE("kerning narrows the pair, and switching it off restores the plain advance")
+    {
+        FontFaceData lFace = MakeFace();
+        lFace.Kerning.emplace_back(FontKerningPair{ GAMMA, ALPHA, -1.5f });
+
+        const FontFaceView lView{ &lFace, nullptr };
+        const OpaaxString  lText = OpaaxString(U_GAMMA) + U_ALPHA;
+
+        TextDrawParams lParams;
+        lParams.Size = FACE_PIXEL_HEIGHT;
+
+        lParams.bKerning = true;
+        CHECK(Text2D::Measure(lText.CStr(), lView, lParams).x
+              == doctest::Approx(GAMMA_ADVANCE + ALPHA_ADVANCE - 1.5f));
+
+        lParams.bKerning = false;
+        CHECK(Text2D::Measure(lText.CStr(), lView, lParams).x
+              == doctest::Approx(GAMMA_ADVANCE + ALPHA_ADVANCE));
+    }
+
+    TEST_CASE("'\\n' starts a line, and the width is the WIDEST one rather than the last")
+    {
+        const FontFaceData lFace = MakeFace();
+        const FontFaceView lView{ &lFace, nullptr };
+
+        TextDrawParams lParams;
+        lParams.Size     = FACE_PIXEL_HEIGHT;
+        lParams.bKerning = false;
+
+        // "α α\nΓ" — the FIRST line is the wide one, so a walker that reported the last would fail.
+        const OpaaxString lText = OpaaxString(U_ALPHA) + " " + U_ALPHA + "\n" + U_GAMMA;
+        const Vector2F    lSize = Text2D::Measure(lText.CStr(), lView, lParams);
+
+        CHECK(lSize.x == doctest::Approx(ALPHA_ADVANCE + SPACE_ADVANCE + ALPHA_ADVANCE));
+        CHECK(lSize.y == doctest::Approx(FACE_LINE_ADVANCE * 2.f));
+
+        lParams.LineHeightScale = 1.5f;
+        CHECK(Text2D::Measure(lText.CStr(), lView, lParams).y
+              == doctest::Approx(FACE_LINE_ADVANCE * 2.f * 1.5f));
+    }
+
+    TEST_CASE("'\\t' advances four spaces")
+    {
+        const FontFaceData lFace = MakeFace();
+        const FontFaceView lView{ &lFace, nullptr };
+
+        TextDrawParams lParams;
+        lParams.Size = FACE_PIXEL_HEIGHT;
+
+        CHECK(Text2D::Measure("\t", lView, lParams).x == doctest::Approx(SPACE_ADVANCE * 4.f));
+    }
+
+    TEST_CASE("a missing codepoint still advances, proportionally to Size")
+    {
+        const FontFaceData lFace = MakeFace();
+        const FontFaceView lView{ &lFace, nullptr };
+
+        REQUIRE(lFace.FindGlyph(MISSING) == nullptr);
+
+        TextDrawParams lParams;
+        lParams.Size = FACE_PIXEL_HEIGHT;
+
+        const float lOne = Text2D::Measure("A", lView, lParams).x;
+
+        // The RATIO is the source's business; what this pins is that a tofu box occupies real width
+        // (a zero would pile the whole string on one spot) and that three cost exactly three.
+        CHECK(lOne > 0.f);
+        CHECK(Text2D::Measure("AAA", lView, lParams).x == doctest::Approx(lOne * 3.f));
+
+        lParams.Size = FACE_PIXEL_HEIGHT * 2.f;
+        CHECK(Text2D::Measure("A", lView, lParams).x == doctest::Approx(lOne * 2.f));
+    }
+
+    TEST_CASE("nothing to measure is {0,0}, never a division by the face's zero height")
+    {
+        const FontFaceData lFace = MakeFace();
+        const FontFaceView lValid{ &lFace, nullptr };
+
+        CHECK(Text2D::Measure(nullptr, lValid).x == doctest::Approx(0.f));
+        CHECK(Text2D::Measure("",      lValid).y == doctest::Approx(0.f));
+
+        // No face named at all.
+        CHECK(Text2D::Measure("A", FontFaceView{}).x == doctest::Approx(0.f));
+
+        // A value-initialised face has PixelHeight 0 — the divide FontFaceData::Tofu exists to avoid.
+        const FontFaceData lZero;
+        CHECK(Text2D::Measure("A", FontFaceView{ &lZero, nullptr }).x == doctest::Approx(0.f));
+
+        // ...and the tofu face, which is what a failed load resolves to, measures normally.
+        const FontFaceData lTofu = FontFaceData::Tofu();
+        CHECK(Text2D::Measure("A", FontFaceView{ &lTofu, nullptr }).x > 0.f);
     }
 }
 

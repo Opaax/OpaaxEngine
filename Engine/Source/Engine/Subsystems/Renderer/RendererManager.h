@@ -28,6 +28,12 @@ namespace Opaax
     struct SpriteComponent;
     struct SpriteUVRect;
     struct WindowResize;
+    struct FontFaceResource;
+    struct FontFamilyResource;
+    struct FontFamilyData;
+    struct FontStyleKey;
+    struct FontFaceView;
+    struct TextComponent;
 
     template<typename TResource>
     struct TResourcePath;
@@ -87,6 +93,9 @@ namespace Opaax
          *  two draw sources read as two lines, not as one long body. */
         void DrawWorldSprites(World& InWorld, Renderer2D& InRenderer);
 
+        /** Every TextComponent in InWorld. DrawWorldSprites' twin, one draw source per body. */
+        void DrawWorldTexts(World& InWorld, Renderer2D& InRenderer);
+
         /**
          * Publish the batcher's frame counters as named stats (④). Called from Render, OUTSIDE
          * RenderFrame's early-outs, so a frame that drew nothing reports zeros.
@@ -121,6 +130,30 @@ namespace Opaax
          * @return false when there is nothing to draw at all — the ordinary "no image named yet".
          */
         bool ResolveSpriteDraw(const SpriteComponent& InSprite, ITexture2D*& OutTexture, SpriteUVRect& OutUV);
+
+        /**
+         * The face behind an asset-relative `.ttf` path, loading it once and keeping the claim.
+         *
+         * ResolveTexture's shape a third time. Answers the metrics AND the atlas together, because
+         * the layout walker needs both and neither is usable alone.
+         */
+        FontFaceView ResolveFace(const TResourcePath<FontFaceResource>& InPath);
+
+        /**
+         * The family behind an asset-relative `.opaaxfont` path, loading it once and keeping the
+         * claim. Null when the path is empty.
+         */
+        const FontFamilyData* ResolveFamily(const TResourcePath<FontFamilyResource>& InPath);
+
+        /**
+         * What one text component draws with.
+         *
+         * The ONE place the Font-wins-over-Face precedence lives, so the Inspector's tooltip and the
+         * frame cannot disagree. A family that has nothing in the requested SCRIPT, or that answers
+         * a different cut than the one asked for, warns ONCE — a family is consulted every frame, so
+         * anything per-draw would be noise rather than a diagnostic.
+         */
+        FontFaceView ResolveTextDraw(const TextComponent& InText);
 
         // =============================================================================
         // Getters - Setter
@@ -204,5 +237,18 @@ namespace Opaax
 
         /** Sheets already warned about for naming a frame they do not have — one line, not one per frame. */
         TUnorderedSet<Uint32> m_WarnedFrameRange;
+
+        /** The same claim-and-keep caches for text: one per `.ttf`, one per `.opaaxfont`. */
+        TUnorderedMap<Uint32, ResourceRef<FontFaceResource>>   m_FaceCache;
+        TUnorderedMap<Uint32, ResourceRef<FontFamilyResource>> m_FamilyCache;
+
+        /**
+         * (family, style) pairs already warned about for resolving to nothing or to a different cut.
+         *
+         * Keyed on the REQUEST rather than on the family, because a family that lacks Greek and is
+         * asked for both Greek and Cyrillic has two things to say. Uint64 so the interned path id and
+         * the four packed axes both fit without colliding.
+         */
+        TUnorderedSet<Uint64> m_WarnedFontStyle;
     };
 }

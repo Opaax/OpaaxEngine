@@ -38,12 +38,47 @@
 #include "Engine/Subsystems/Resources/ResourceManager.h"          // Load<TextureResource> — the cache
 #include "Engine/Subsystems/Resources/Types/TextureResource.h"
 #include "Engine/Subsystems/Resources/Types/SpriteSheetResource.h" // the sheet a sprite may name instead
+#include "Engine/Subsystems/Resources/Types/FontFaceResource.h"    // the baked atlas a text draws from
+#include "Engine/Subsystems/Resources/Types/FontFamilyResource.h"  // the family a text may name instead
+
+#include "Renderer/Text/Text2D.h"
+#include "World/Components/TextComponent.h"
 
 #include "Engine/Config/Config_Engine.h"
 #include "Engine/Subsystems/EventBus/EngineEventBus.h"
 
 namespace Opaax
 {
+    namespace
+    {
+        /**
+         * The four style axes as one integer, so a (family, style) pair keys a one-shot warning set.
+         *
+         * Every axis is small — nine subsets, nine weights, four widths, two slants — so a byte each
+         * is room to spare and the packing cannot collide.
+         */
+        Uint32 PackStyle(const FontStyleKey& InKey) noexcept
+        {
+            return (static_cast<Uint32>(InKey.Subset)              << 24)
+                 | ((WeightValue(InKey.Weight) / 100u)             << 16)
+                 | (static_cast<Uint32>(InKey.Width)               << 8)
+                 |  static_cast<Uint32>(InKey.Slant);
+        }
+
+        /**
+         * The face a family answers with when it has nothing in the requested script.
+         *
+         * A VIEW ONTO THIS rather than an invalid one, because drawing nothing would make the wrong
+         * subset look like the wrong position, the wrong colour, or a component nobody wired — four
+         * indistinguishable bugs. A row of boxes says exactly one thing, and it is the true one.
+         */
+        const FontFaceData& TofuFace() noexcept
+        {
+            static const FontFaceData s_Tofu = FontFaceData::Tofu();
+            return s_Tofu;
+        }
+    }
+
     RendererManager::RendererManager()  = default;
     RendererManager::~RendererManager() = default;
     
@@ -116,6 +151,8 @@ namespace Opaax
         // destroys the GPU handles, runs after this while the window's GL context is still up.
         m_TextureCache.clear();
         m_SheetCache.clear();
+        m_FaceCache.clear();     // holds the R8 atlases — same GL-context deadline as the textures
+        m_FamilyCache.clear();
 
         m_RenderSystem.reset(); // ~RenderSystem = WaitIdle + teardown while the window/context is alive
         OPAAX_LOG(LogRendererManager, Info, "RendererManager shutdown");
@@ -209,6 +246,7 @@ namespace Opaax
                 });
 
             DrawWorldSprites(*lWorld, lRenderer);
+            DrawWorldTexts(*lWorld, lRenderer);
         }
 
         // Debug overlay — each queued line as a thin rotated quad, so this reuses the world's batch
@@ -255,6 +293,37 @@ namespace Opaax
                                       Maths::DegreesToRadians(InXf.Rotation),
                                       InSprite.Layer, InSprite.OrderInLayer,
                                       lUV.UVMin, lUV.UVMax);
+            });
+    }
+
+    void RendererManager::DrawWorldTexts(World& InWorld, Renderer2D& InRenderer)
+    {
+        InWorld.Each<TransformComponent, TextComponent>(
+            [this, &InRenderer](EntityID, TransformComponent& InXf, TextComponent& InText)
+            {
+                if (!InText.bVisible || InText.Text.IsEmpty())
+                {
+                    return;
+                }
+
+                const FontFaceView lFace = ResolveTextDraw(InText);
+                if (!lFace.IsValid())
+                {
+                    return;
+                }
+
+                // Scale MULTIPLIES the authored size, the same rule a sprite's extent follows. X
+                // only: a text scaled differently on the two axes would need a non-uniform glyph
+                // path, and nothing asks for one.
+                TextDrawParams lParams;
+                lParams.Color           = InText.Color;
+                lParams.Size            = InText.Size * InXf.Scale.x;
+                lParams.LineHeightScale = InText.LineHeightScale;
+                lParams.bKerning        = InText.bKerning;
+                lParams.Layer           = InText.Layer;
+                lParams.OrderInLayer    = InText.OrderInLayer;
+
+                Text2D::DrawString(InRenderer, InText.Text.CStr(), InXf.Position, lFace, lParams);
             });
     }
 
@@ -386,6 +455,132 @@ namespace Opaax
         // Null while an async load is still in flight, or with no device at all — both mean "not
         // drawable this frame", and neither is worth a per-frame log line.
         return (lResource != nullptr) ? lResource->GetTexture() : nullptr;
+    }
+
+    FontFaceView RendererManager::ResolveFace(const TResourcePath<FontFaceResource>& InPath)
+    {
+        if (InPath.IsEmpty())
+        {
+            return FontFaceView{};
+        }
+
+        const OpaaxStringID lKey(InPath.Path);
+
+        auto lIt = m_FaceCache.find(lKey.GetId());
+        if (lIt == m_FaceCache.end())
+        {
+            const OpaaxString lAbsolute = OpaaxApplication::GetAppService<IPaths>().AssetToAbsolute(InPath.Path);
+
+            ResourceRef<FontFaceResource> lRef =
+                OpaaxApplication::GetAppService<IEngine>().GetResources().Load<FontFaceResource>(lAbsolute.CStr());
+
+            // Cached even when the load FAILED, for ResolveTexture's reason: keeping the empty ref
+            // stops a missing file being retried once per text per frame. The failed ref resolves to
+            // the empty placeholder face, which draws tofu.
+            lIt = m_FaceCache.emplace(lKey.GetId(), Move(lRef)).first;
+
+            if (const FontFaceResource* lLoaded = lIt->second.IsValid() ? lIt->second.Get() : nullptr)
+            {
+                OPAAX_LOG(LogRendererManager, Info, "Face '{}' -> {} glyph(s), atlas {}x{}",
+                          InPath.Path.CStr(), lLoaded->Face.GlyphCount(),
+                          lLoaded->Face.AtlasWidth, lLoaded->Face.AtlasHeight);
+            }
+            else
+            {
+                OPAAX_LOG(LogRendererManager, Warn, "Face '{}' did not load — the text draws tofu",
+                          InPath.Path.CStr());
+            }
+        }
+
+        FontFaceResource* lResource = lIt->second.Get();
+        if (lResource == nullptr)
+        {
+            return FontFaceView{};
+        }
+
+        // The atlas is null while the upload is still in flight. The view stays VALID: the walker
+        // lays the line out and draws none of it, so the frame after lands in the right place.
+        return FontFaceView{ &lResource->Face, lResource->GetAtlas() };
+    }
+
+    const FontFamilyData* RendererManager::ResolveFamily(const TResourcePath<FontFamilyResource>& InPath)
+    {
+        if (InPath.IsEmpty())
+        {
+            return nullptr;
+        }
+
+        const OpaaxStringID lKey(InPath.Path);
+
+        auto lIt = m_FamilyCache.find(lKey.GetId());
+        if (lIt == m_FamilyCache.end())
+        {
+            const OpaaxString lAbsolute = OpaaxApplication::GetAppService<IPaths>().AssetToAbsolute(InPath.Path);
+
+            ResourceRef<FontFamilyResource> lRef =
+                OpaaxApplication::GetAppService<IEngine>().GetResources().Load<FontFamilyResource>(lAbsolute.CStr());
+
+            lIt = m_FamilyCache.emplace(lKey.GetId(), Move(lRef)).first;
+
+            if (const FontFamilyResource* lLoaded = lIt->second.IsValid() ? lIt->second.Get() : nullptr)
+            {
+                OPAAX_LOG(LogRendererManager, Info, "Family '{}' -> {} face(s)",
+                          InPath.Path.CStr(), lLoaded->Data.EntryCount());
+            }
+            else
+            {
+                OPAAX_LOG(LogRendererManager, Warn, "Family '{}' did not load — the text draws nothing",
+                          InPath.Path.CStr());
+            }
+        }
+
+        const FontFamilyResource* lResource = lIt->second.Get();
+
+        return (lResource != nullptr) ? &lResource->Data : nullptr;
+    }
+
+    FontFaceView RendererManager::ResolveTextDraw(const TextComponent& InText)
+    {
+        // THE PRECEDENCE, in one place: a family wins when it is set, otherwise the face named
+        // directly. Naming neither is a normal authoring state — a component just added — so it
+        // draws nothing rather than a row of boxes that reads as a broken font.
+        const FontFamilyData* lFamily = ResolveFamily(InText.Font);
+
+        if (lFamily == nullptr)
+        {
+            return ResolveFace(InText.Face);
+        }
+
+        const FontFamilyEntry* lEntry = lFamily->Find(InText.Style);
+
+        // ONCE per (family, style), not per frame: this runs inside the draw loop, and the same
+        // sentence sixty times a second is noise rather than a diagnostic.
+        const Uint64 lWarnKey = (static_cast<Uint64>(OpaaxStringID(InText.Font.Path).GetId()) << 32)
+                              |  static_cast<Uint64>(PackStyle(InText.Style));
+
+        if (lEntry == nullptr)
+        {
+            if (m_WarnedFontStyle.emplace(lWarnKey).second)
+            {
+                OPAAX_LOG(LogRendererManager, Warn, "Family '{}' has no {} face — the text draws tofu",
+                          InText.Font.Path.CStr(), ToString(InText.Style.Subset));
+            }
+
+            return FontFaceView{ &TofuFace(), nullptr };
+        }
+
+        if (lEntry->Style != InText.Style && m_WarnedFontStyle.emplace(lWarnKey).second)
+        {
+            // A fallback is never silent. The subset always matches — Find refuses to cross it — so
+            // what differed is one of the other three, and naming both cuts says which.
+            OPAAX_LOG(LogRendererManager, Warn,
+                      "Family '{}' has no {}/{}/{} face — drawing {}/{}/{} instead",
+                      InText.Font.Path.CStr(),
+                      ToString(InText.Style.Width), ToString(InText.Style.Slant), ToString(InText.Style.Weight),
+                      ToString(lEntry->Style.Width), ToString(lEntry->Style.Slant), ToString(lEntry->Style.Weight));
+        }
+
+        return ResolveFace(lEntry->Face);
     }
 
     void RendererManager::SetPrimaryRenderTarget(IRenderTarget* InTarget)

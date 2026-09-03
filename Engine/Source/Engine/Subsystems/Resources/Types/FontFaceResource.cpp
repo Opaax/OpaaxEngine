@@ -12,14 +12,6 @@ namespace Opaax
     {
         /** Single-channel coverage — the R8 branch OpenGLTexture2D::Upload already carries. */
         constexpr Int32 ATLAS_CHANNELS = 1;
-
-        /**
-         * The placeholder's vertical rhythm. Invented, because there is no font to ask — but not
-         * arbitrary: a face with a zero LineAdvance would stack every line of tofu on top of itself,
-         * and one with a zero PixelHeight would divide by zero the moment something scaled it.
-         */
-        constexpr float PLACEHOLDER_ASCENT_RATIO  = 0.8f;
-        constexpr float PLACEHOLDER_DESCENT_RATIO = -0.2f;
     }
 
     std::optional<FontFaceResource> FontFaceResource::Load(const char* InPath, LoadContext& /*InCtx*/)
@@ -74,16 +66,12 @@ namespace Opaax
 
     FontFaceResource FontFaceResource::Placeholder()
     {
-        const float lHeight = FontBake::BakeParams{}.PixelHeight;
-
-        FontFaceResource lResource;
-        lResource.Face.PixelHeight          = lHeight;
-        lResource.Face.VMetrics.Ascent      = lHeight * PLACEHOLDER_ASCENT_RATIO;
-        lResource.Face.VMetrics.Descent     = lHeight * PLACEHOLDER_DESCENT_RATIO;
-        lResource.Face.VMetrics.LineAdvance = lHeight;
-
         // No glyphs and no atlas, deliberately: every codepoint misses, so the whole string draws as
-        // tofu boxes rather than as nothing at all.
+        // tofu boxes rather than as nothing at all. FontFaceData::Tofu is the ONE definition of that
+        // shape — a family with nothing in the requested script answers the same thing.
+        FontFaceResource lResource;
+        lResource.Face = FontFaceData::Tofu();
+
         return lResource;
     }
 

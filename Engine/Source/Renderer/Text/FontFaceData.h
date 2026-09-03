@@ -28,6 +28,15 @@ namespace Opaax
     // =============================================================================
 
     /**
+     * The height a face is rasterised at unless something says otherwise, and the one every face
+     * with no file behind it reports.
+     *
+     * Here rather than on FontBake::BakeParams because it is a property of BAKED DATA — what
+     * PixelHeight means — and because the tofu face below needs it without reaching for the baker.
+     */
+    inline constexpr float DEFAULT_FONT_PIXEL_HEIGHT = 32.f;
+
+    /**
      * One glyph's rectangle in the atlas, and what it does to the pen. All distances are in the
      * face's BAKE pixels — a draw at another size scales them.
      */
@@ -140,6 +149,30 @@ namespace Opaax
         static constexpr Uint64 PackKey(const Uint32 InFirst, const Uint32 InSecond) noexcept
         {
             return (static_cast<Uint64>(InFirst) << 32) | static_cast<Uint64>(InSecond);
+        }
+
+        /**
+         * A face with NO glyphs but usable metrics — so a string drawn with it lays out normally and
+         * comes out as a row of tofu boxes.
+         *
+         * The ONE definition of that, because three things want it and they must agree: a `.ttf`
+         * that failed to load, a family with nothing in the requested script, and any future "I have
+         * no face for you" answer. A zero PixelHeight divides by zero the moment a draw scales it,
+         * and a zero LineAdvance stacks every line on top of itself — which is why an empty
+         * value-initialised FontFaceData is NOT the same thing.
+         */
+        static FontFaceData Tofu() noexcept
+        {
+            constexpr float ASCENT_RATIO  =  0.8f;
+            constexpr float DESCENT_RATIO = -0.2f;
+
+            FontFaceData lFace;
+            lFace.PixelHeight          = DEFAULT_FONT_PIXEL_HEIGHT;
+            lFace.VMetrics.Ascent      = DEFAULT_FONT_PIXEL_HEIGHT * ASCENT_RATIO;
+            lFace.VMetrics.Descent     = DEFAULT_FONT_PIXEL_HEIGHT * DESCENT_RATIO;
+            lFace.VMetrics.LineAdvance = DEFAULT_FONT_PIXEL_HEIGHT;
+
+            return lFace;
         }
     };
 }

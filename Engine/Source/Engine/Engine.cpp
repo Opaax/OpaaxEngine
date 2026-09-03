@@ -35,6 +35,8 @@
 #include "Engine/Subsystems/Resources/Types/AnimationClipResource.h" // registered as a native format
 #include "Engine/Subsystems/Resources/Types/AnimationLibraryResource.h" // registered as a native format
 #include "Engine/Subsystems/Resources/Types/FontFaceResource.h" // registered as a native format
+#include "Engine/Subsystems/Resources/Types/FontFamilyResource.h" // registered as a native format
+#include "World/Components/TextComponent.h"
 #include "World/Components/SpriteAnimatorComponent.h"
 #include "World/Systems/SpriteAnimationSubsystem.h"
 
@@ -85,6 +87,7 @@ namespace Opaax
         m_Registries.Components().Register<SpriteComponent>("Sprite");
         m_Registries.Components().Register<CameraComponent>("Camera");
         m_Registries.Components().Register<SpriteAnimatorComponent>("SpriteAnimator");
+        m_Registries.Components().Register<TextComponent>("Text");
     }
     
     void Engine::RegisterNativeResourceFormats()
@@ -96,6 +99,7 @@ namespace Opaax
         m_Registries.Resources().Register<AnimationClipResource>(OPAAX_ID("AnimationClip"));
         m_Registries.Resources().Register<AnimationLibraryResource>(OPAAX_ID("AnimationLibrary"));
         m_Registries.Resources().Register<FontFaceResource>(OPAAX_ID("FontFace"));
+        m_Registries.Resources().Register<FontFamilyResource>(OPAAX_ID("FontFamily"));
     }
 
     void Engine::RegisterNativeWorldSubsystems()
