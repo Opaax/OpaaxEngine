@@ -28,6 +28,7 @@
 #include "Editor/Panels/ResourceBrowserPanel.h"
 #include "Editor/Panels/ResourcePreviewPanel.h"
 #include "Editor/Panels/AnimationClipPanel.h"
+#include "Editor/Panels/AnimationLibraryPanel.h"
 #include "Editor/Panels/SpriteSheetPanel.h"
 #include "Editor/Panels/StatsPanel.h"
 #include "Editor/Panels/ViewportPanel.h"
@@ -43,6 +44,7 @@
 #include "Engine/Subsystems/Resources/Types/TextureResource.h"
 #include "Engine/Subsystems/Resources/Types/SpriteSheetResource.h"
 #include "Engine/Subsystems/Resources/Types/AnimationClipResource.h"
+#include "Engine/Subsystems/Resources/Types/AnimationLibraryResource.h"
 #include "World/World.h"
 #include "World/WorldManager.h"
 #include "World/Entity/Entity.h"
@@ -117,6 +119,7 @@ namespace Opaax::Editor
         m_LevelDocument     = MakeUnique<EditorLevelDocument>();
         m_SheetDocument     = MakeUnique<EditorSpriteSheetDocument>();
         m_ClipDocument      = MakeUnique<EditorAnimationClipDocument>();
+        m_LibraryDocument   = MakeUnique<EditorAnimationLibraryDocument>();
     }
 
     void EditorService::ClearEditorSystems()
@@ -153,6 +156,7 @@ namespace Opaax::Editor
             *m_MapDocument,
             *m_SheetDocument,
             *m_ClipDocument,
+            *m_LibraryDocument,
             m_Extensions,
             m_Gui->Panels(),
             *m_Preview,
@@ -290,6 +294,7 @@ namespace Opaax::Editor
         lPanelsRegistry.Register<ResourcePreviewPanel>(PanelDesc{.Id = ResourcePreviewPanel::PanelID(), .DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<SpriteSheetPanel>(PanelDesc    {.Id = SpriteSheetPanel::PanelID(),     .DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<AnimationClipPanel>(PanelDesc  {.Id = AnimationClipPanel::PanelID(),   .DefaultVisibility = EPanelVisibility::Hidden});
+        lPanelsRegistry.Register<AnimationLibraryPanel>(PanelDesc{.Id = AnimationLibraryPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<ConfigPanel>(PanelDesc         {.Id = ConfigPanel::PanelID(),          .DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<InputPanel>(PanelDesc          {.Id = InputPanel::PanelID(),           .DefaultVisibility = EPanelVisibility::Hidden });
         lPanelsRegistry.Register<StatsPanel>(PanelDesc          {.Id = StatsPanel::PanelID(),           .DefaultVisibility = EPanelVisibility::Hidden });
@@ -328,6 +333,7 @@ namespace Opaax::Editor
         lCommands.Register<SaveLevelCommand>(Tags::EDITOR_COMMAND_SAVE_LEVEL);
         lCommands.Register<SaveSheetCommand>(Tags::EDITOR_COMMAND_SAVE_SHEET);
         lCommands.Register<SaveClipCommand>(Tags::EDITOR_COMMAND_SAVE_CLIP);
+        lCommands.Register<SaveLibraryCommand>(Tags::EDITOR_COMMAND_SAVE_LIBRARY);
         lCommands.Register<AddMapToLevelCommand>(Tags::EDITOR_COMMAND_ADD_MAP_TO_LEVEL);
 
         lCommands.Register<TransformSelectedCommand>(Tags::EDITOR_COMMAND_TRANSFORM_SELECTED);
@@ -439,6 +445,16 @@ namespace Opaax::Editor
                 if (InContext.ClipDocument.Open(InFile.AbsPath))
                 {
                     InContext.Panels.SetVisible(AnimationClipPanel::PanelID(), true);
+                }
+            });
+
+        m_Extensions.ResourceTypes().Register<AnimationLibraryResource>()
+            .SetGlyph(OpaaxString("[A]"))
+            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
+            {
+                if (InContext.LibraryDocument.Open(InFile.AbsPath))
+                {
+                    InContext.Panels.SetVisible(AnimationLibraryPanel::PanelID(), true);
                 }
             });
 
@@ -928,9 +944,14 @@ namespace Opaax::Editor
                 m_Gui->Panels().FocusedPanel() == AnimationClipPanel::PanelID()
                 && m_Context->ClipDocument.IsOpen();
 
-            const OpaaxTag lTarget = bClipFocused  ? Tags::EDITOR_COMMAND_SAVE_CLIP
-                                   : bSheetFocused ? Tags::EDITOR_COMMAND_SAVE_SHEET
-                                                   : Tags::EDITOR_COMMAND_SAVE_MAP;
+            const bool bLibraryFocused =
+                m_Gui->Panels().FocusedPanel() == AnimationLibraryPanel::PanelID()
+                && m_Context->LibraryDocument.IsOpen();
+
+            const OpaaxTag lTarget = bLibraryFocused ? Tags::EDITOR_COMMAND_SAVE_LIBRARY
+                                   : bClipFocused    ? Tags::EDITOR_COMMAND_SAVE_CLIP
+                                   : bSheetFocused   ? Tags::EDITOR_COMMAND_SAVE_SHEET
+                                                     : Tags::EDITOR_COMMAND_SAVE_MAP;
 
             m_Context->Extensions.Commands().Execute(lTarget, *m_Context);
         }

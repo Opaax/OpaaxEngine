@@ -448,6 +448,14 @@ namespace Opaax::Editor
         void Execute(EditorContext& InContext, const Params&);
     };
 
+    /** Write the open `.opaaxanim` and publish it — SaveClipCommand's shape, one asset over. */
+    struct SaveLibraryCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
     /**
      * The only Level entry on the menu bar, because it is the only one that does not need a map
      * named first — it goes and picks one. Removing a map and choosing the persistent one live on

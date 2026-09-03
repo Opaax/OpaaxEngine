@@ -10,8 +10,10 @@
 #include "Editor/Operation/LevelOperations.h"
 #include "Editor/Operation/SheetOperations.h"
 #include "Editor/Operation/ClipOperations.h"
+#include "Editor/Operation/LibraryOperations.h"
 #include "Editor/EditorSpriteSheetDocument.h"
 #include "Editor/EditorAnimationClipDocument.h"
+#include "Editor/EditorAnimationLibraryDocument.h"
 #include "Editor/Operation/MapOperations.h"
 #include "Editor/PIE/PlayInEditor.h"
 #include "Editor/Panels/EditorPanels.h"
@@ -477,6 +479,17 @@ namespace Opaax::Editor
         }
 
         ClipOps::Save(InContext);   // ClipOps logs the write, rebases the marker and publishes it
+    }
+
+    void SaveLibraryCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        if (!InContext.LibraryDocument.IsOpen())
+        {
+            OPAAX_LOG(LogEditorCommands, Warn, "Save Library ignored — no animation library is open");
+            return;
+        }
+
+        LibraryOps::Save(InContext);
     }
 
     void SaveLevelCommand::Execute(EditorContext& InContext, const Params&)
