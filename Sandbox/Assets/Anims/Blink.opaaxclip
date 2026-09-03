@@ -12,6 +12,11 @@
             "Frame": "",
             "Hold": 1,
             "Texture": "/Engine/Textures/T_Square_128_White.png"
+        },
+        {
+            "Frame": "",
+            "Hold": 1,
+            "Texture": "/Engine/Textures/T_Checker_256.png"
         }
     ]
 }

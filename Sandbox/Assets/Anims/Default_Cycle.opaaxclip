@@ -1,7 +1,7 @@
 {
     "Fps": 6.0,
     "PlayMode": "Loop",
-    "Sheet": "/Engine/SpriteSheets/TSS_Default_128.opaaxsheet",
+    "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxsheet",
     "Steps": [
         {
             "Frame": "Frame_0",
@@ -20,7 +20,7 @@
         },
         {
             "Frame": "Frame_3",
-            "Hold": 2,
+            "Hold": 1,
             "Texture": ""
         }
     ]
