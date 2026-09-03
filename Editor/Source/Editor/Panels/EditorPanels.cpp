@@ -40,6 +40,10 @@ namespace Opaax::Editor
 
     void EditorPanels::Draw(IEditorGui& InGui)
     {
+        // Recomputed from scratch every frame: a panel closed or hidden since the last one must not
+        // keep answering "focused" to a shortcut router.
+        m_Focused = OpaaxStringID();
+
         for (LivePanel& lLive : m_Panels)
         {
             if (!lLive.bVisible) { continue; }
@@ -51,6 +55,10 @@ namespace Opaax::Editor
 
             const bool lOpen = InGui.BeginPanelWindow(lLive.Desc.Id.CStr(),
                                                       lLive.Panel->GetWindowStyle(), lWantVisible);
+
+            // Asked INSIDE the bracket, where "the window just begun" is well-defined. A collapsed
+            // panel is skipped by lOpen but can still hold focus, so this is asked either way.
+            if (InGui.IsPanelWindowFocused()) { m_Focused = lLive.Desc.Id; }
 
             // EndPanelWindow runs whether or not the body opened — the pairing every panel used to
             // have to get right on its own.

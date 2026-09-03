@@ -199,6 +199,20 @@ namespace Opaax::Editor
         virtual bool BeginPanelWindow(const char* InLabel, const PanelWindowStyle& InStyle,
                                       bool& bOutWantOpen) = 0;
 
+        /**
+         * Whether the panel window BeginPanelWindow just opened has keyboard focus, its child
+         * windows included.
+         *
+         * ASKED INSIDE THE BRACKET, which is what keeps it honest: "the window just begun" is
+         * well-defined between BeginPanelWindow and EndPanelWindow and meaningless outside it. That
+         * is a different thing from the decorate-the-previous-item query MR2h rules out of
+         * IEditorWidgets — this seam is host chrome, and its windows are already an ordered pair.
+         *
+         * It exists so an authoring chord can mean the right thing: Ctrl+S saves the sheet when the
+         * sheet editor has focus and the map otherwise.
+         */
+        virtual bool IsPanelWindowFocused() const = 0;
+
         /** Closes it. Runs whether or not BeginPanelWindow returned true. */
         virtual void EndPanelWindow() = 0;
 

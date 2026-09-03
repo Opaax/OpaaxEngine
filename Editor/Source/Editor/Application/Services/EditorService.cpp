@@ -898,7 +898,16 @@ namespace Opaax::Editor
 
         if (m_Gui->Shortcut(EKeyCode::LeftControl, EKeyCode::S))
         {
-            m_Context->Extensions.Commands().Execute(Tags::EDITOR_COMMAND_SAVE_MAP, *m_Context);
+            // ONE chord, whichever document is in front. Ctrl+S in a sheet editor saving the MAP is
+            // the kind of surprise that costs work, so the target follows the focused panel — which
+            // the draw loop measured while that panel's window was open.
+            const bool bSheetFocused =
+                m_Gui->Panels().FocusedPanel() == SpriteSheetPanel::PanelID()
+                && m_Context->SheetDocument.IsOpen();
+
+            m_Context->Extensions.Commands().Execute(
+                bSheetFocused ? Tags::EDITOR_COMMAND_SAVE_SHEET : Tags::EDITOR_COMMAND_SAVE_MAP,
+                *m_Context);
         }
 
         // Ctrl+Z / Ctrl+Y, beside Ctrl+S and for its reason. NOT Ctrl+Shift+Z: Shortcut takes one

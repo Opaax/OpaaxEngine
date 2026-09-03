@@ -175,6 +175,49 @@ namespace Opaax
             return true;
         }
 
+        /** Whether InPath occupies a slot that is Loaded — the cheap half of a reload's question. */
+        bool IsResident(const char* InPath) const
+        {
+            const OpaaxStringID lId(InPath);
+
+            const auto lIt = m_PathToSlot.find(lId.GetId());
+
+            return lIt != m_PathToSlot.end() && MetaRef(lIt->second).State == EResourceState::Loaded;
+        }
+
+        /**
+         * Swap a NEW payload into the slot a path already occupies — hot reload's one mutation.
+         *
+         * THE HANDLE, THE REFCOUNT AND THE GENERATION ALL SURVIVE, which is the entire point:
+         * every holder of a ResourceRef keeps it and simply sees the new data next time it looks.
+         * Bumping the generation would stale exactly the refs this exists to update.
+         *
+         * MAIN THREAD, because MaybeInitialize is the GPU log-in. The caller loaded InValue itself,
+         * so a load that FAILED never reaches here and the resident payload survives untouched —
+         * blanking a live resource because a re-read failed is the worse of the two outcomes.
+         *
+         * @return false when InPath is not resident, or is still loading.
+         */
+        bool ReplaceIfLoaded(const char* InPath, T&& InValue)
+        {
+            const OpaaxStringID lId(InPath);
+
+            const auto lIt = m_PathToSlot.find(lId.GetId());
+            if (lIt == m_PathToSlot.end()) { return false; }
+
+            SlotMeta& lMeta = MetaRef(lIt->second);
+            if (lMeta.State != EResourceState::Loaded) { return false; }
+
+            MaybeInitialize(InValue);
+
+            m_TotalBytes -= lMeta.Bytes;
+            PayloadRef(lIt->second).emplace(Move(InValue));   // the old payload dies here
+            lMeta.Bytes   = ComputeBytes(PayloadRef(lIt->second).value());
+            m_TotalBytes += lMeta.Bytes;
+
+            return true;
+        }
+
         // Main-thread publish of a filled slot: Initialize (GPU log-in) + flip Loaded if
         // still referenced, else abandon it (a parent load failed and released it before
         // this pump). Virtual — LoadContext::PublishAll drives it type-erased.

@@ -601,3 +601,73 @@ TEST_CASE("Resources: CheckedView flags a Resolve pointer held across a pump")
     lMgr.Update(0.0);                      // pump -> epoch advances
     CHECK(lView.IsStale());                // a cached view is now flagged (Get() would assert in debug)
 }
+
+// =============================================================================
+// Reload — the same slot, new bytes. Added the day the sprite sheet editor shipped: the editor
+// saves a file that a sprite is ALREADY holding, and without this the renderer kept drawing what
+// was loaded the first time. So the case that matters is not "the payload changed", it is "a ref
+// TAKEN BEFORE the reload sees the change".
+// =============================================================================
+TEST_CASE("ResourceManager::Reload: a ref taken BEFORE the reload sees the new payload")
+{
+    TempWorkspace lWs;
+    const std::string lPath = lWs.Write("hot.bin", "before");
+
+    ResourceManager lMgr;
+    REQUIRE(lMgr.Startup());
+
+    ResourceRef<BinaryResource> lHeld = lMgr.Load<BinaryResource>(lPath.c_str());
+    REQUIRE(lHeld.IsValid());
+    REQUIRE(Trim(std::string(reinterpret_cast<const char*>(lHeld.Get()->Bytes.data()),
+                             lHeld.Get()->Bytes.size())) == "before");
+
+    lWs.Write("hot.bin", "after!");
+
+    CHECK(lMgr.Reload<BinaryResource>(lPath.c_str()));
+
+    // The SAME claim, never re-taken — this is the assertion the bug was about.
+    CHECK(lHeld.IsValid());
+    CHECK(Trim(std::string(reinterpret_cast<const char*>(lHeld.Get()->Bytes.data()),
+                           lHeld.Get()->Bytes.size())) == "after!");
+
+    lMgr.Shutdown();
+}
+
+TEST_CASE("ResourceManager::Reload: a path nobody holds is FALSE, and is not a failure")
+{
+    TempWorkspace lWs;
+    const std::string lPath = lWs.Write("cold.bin", "x");
+
+    ResourceManager lMgr;
+    REQUIRE(lMgr.Startup());
+
+    // Never loaded, so nothing to update — and deliberately NOT a load, or saving a file would
+    // pull it into memory for nobody.
+    CHECK_FALSE(lMgr.Reload<BinaryResource>(lPath.c_str()));
+    CHECK(lMgr.GetLoadedCount<BinaryResource>() == 0u);
+
+    lMgr.Shutdown();
+}
+
+TEST_CASE("ResourceManager::Reload: a failed re-read KEEPS the resident payload")
+{
+    TempWorkspace lWs;
+    const std::string lPath = lWs.Write("vanish.bin", "original");
+
+    ResourceManager lMgr;
+    REQUIRE(lMgr.Startup());
+
+    ResourceRef<BinaryResource> lHeld = lMgr.Load<BinaryResource>(lPath.c_str());
+    REQUIRE(lHeld.IsValid());
+
+    std::error_code lEc;
+    std::filesystem::remove(lWs.Dir / "vanish.bin", lEc);
+
+    // Blanking a live resource because a re-read failed is worse than keeping something stale.
+    CHECK_FALSE(lMgr.Reload<BinaryResource>(lPath.c_str()));
+    CHECK(lHeld.IsValid());
+    CHECK(Trim(std::string(reinterpret_cast<const char*>(lHeld.Get()->Bytes.data()),
+                           lHeld.Get()->Bytes.size())) == "original");
+
+    lMgr.Shutdown();
+}

@@ -84,6 +84,15 @@ namespace Opaax::Editor
          */
         void SetVisible(OpaaxStringID InID, bool bInVisible);
 
+        /**
+         * Which panel had keyboard focus when the last Draw ran, or an invalid id.
+         *
+         * Measured by the DRAW LOOP because that is the only place each panel's window is open —
+         * the same shape the ViewportPanel's measured size has, and the reason an editor-wide
+         * shortcut can mean different things in different panels without every panel owning a chord.
+         */
+        OpaaxStringID FocusedPanel() const noexcept { return m_Focused; }
+
         Uint64 Count() const noexcept { return static_cast<Uint64>(m_Panels.size()); }
         // End Get - Set
         // =============================================================================
@@ -103,5 +112,8 @@ namespace Opaax::Editor
         const LivePanel* Find(OpaaxStringID InID) const noexcept;
 
         TDynArray<LivePanel> m_Panels;
+
+        /** The focused panel's id as of the last Draw. Invalid when the focus is elsewhere. */
+        OpaaxStringID        m_Focused;
     };
 }

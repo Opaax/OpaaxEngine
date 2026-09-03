@@ -141,6 +141,25 @@ namespace Opaax
          */
         template<CResource T>
         ResourceRef<T> Find(const char* InPath);
+
+        /**
+         * Re-read a resource that is ALREADY resident, in place.
+         *
+         * The other half of Find's question: "this file changed on disk — everyone holding it
+         * should see the new one." Every existing ResourceRef stays valid and simply resolves to
+         * the new payload, because the slot, its refcount and its generation are untouched.
+         *
+         * NOT RESIDENT IS NOT A FAILURE, it is the answer "nobody was looking" — which is why this
+         * never loads. A caller that wants it loaded says Load.
+         *
+         * MAIN THREAD: the swap runs the type's Initialize, which is the GPU log-in (**I16**).
+         *
+         * @return false when InPath is not resident, is still loading, or failed to re-read — and
+         *   in that last case the OLD payload survives, since blanking a live resource because a
+         *   re-read failed is worse than keeping something stale.
+         */
+        template<CResource T>
+        bool Reload(const char* InPath);
         
         /**
          * Frame-stable view. O(1). Never null for Placeholder-policy types
@@ -434,6 +453,42 @@ namespace Opaax
         }
 
         return ResourceRef<T>{ this, lHandle }; // adopt the +1 FindLoadedSlot applied
+    }
+
+    /***/
+    template<CResource T>
+    bool ResourceManager::Reload(const char* InPath)
+    {
+        // Nothing resident, nothing to update — asked FIRST so a re-read of a file nobody holds
+        // costs one lookup instead of a full parse.
+        {
+            TLockGuard<RecursiveMutex> lLock(m_Mutex);
+            if (!GetOrCreatePool<T>().IsResident(InPath)) { return false; }
+        }
+
+        // UNLOCKED, exactly as LoadInternal runs FillSlot: a composite's Load recurses through this
+        // manager, and it must not do so holding the lock through a file read.
+        LoadContext      lCtx(*this, m_Deps);
+        std::optional<T> lLoaded = T::Load(InPath, lCtx);
+
+        if (!lLoaded.has_value())
+        {
+            OPAAX_LOG(LogResourceManager, Warn, "Reload failed for '{}' — the resident copy is kept", InPath);
+            return false;
+        }
+
+        TLockGuard<RecursiveMutex> lLock(m_Mutex);
+
+        // Re-checked under the lock: between the two, another thread may have released it. The
+        // freshly loaded payload is then simply dropped, which is the correct outcome.
+        const bool lSwapped = GetOrCreatePool<T>().ReplaceIfLoaded(InPath, Move(*lLoaded));
+
+        if (lSwapped)
+        {
+            OPAAX_LOG(LogResourceManager, Info, "Reloaded '{}'", InPath);
+        }
+
+        return lSwapped;
     }
 
     /***/

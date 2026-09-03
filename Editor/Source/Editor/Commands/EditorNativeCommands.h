@@ -420,12 +420,12 @@ namespace Opaax::Editor
      * Write the open `.opaaxsheet` back to its file.
      *
      * A COMMAND rather than a call from the panel's button, because every other Save in the editor
-     * is one: it is the route a File-menu entry or a key binding takes, and the button dispatching
-     * the same tag is what keeps those from being a second implementation.
+     * is one: it is the route the panel's button AND Ctrl+S both take, which is what keeps them
+     * from being two implementations of saving.
      *
-     * Ctrl+S is deliberately NOT bound to it — that chord means Save Map editor-wide, and one
-     * global shortcut cannot mean two things without a "which panel has focus" question the UI seam
-     * does not answer today.
+     * Ctrl+S reaches it when the sheet panel has focus, and Save Map otherwise — the routing lives
+     * in EditorService::HandleAuthoringShortcuts, since one chord cannot mean two things without
+     * asking which document is in front.
      */
     struct SaveSheetCommand
     {

@@ -62,6 +62,7 @@ namespace Opaax::Editor
         TitleBarDrag TitleBarDragRegion(Uint32 InTrailingButtons) override;
         bool TitleBarButton(EWindowButtonKind InKind) override;
         bool BeginPanelWindow(const char* InLabel, const PanelWindowStyle& InStyle, bool& bOutWantOpen) override;
+        bool IsPanelWindowFocused() const override;
         void EndPanelWindow() override;
 
         double GetTime() const override;

@@ -5,7 +5,9 @@
 #include "Editor/Undo/EditorUndo.h"
 #include "Editor/Undo/SpriteSheetUndoables.h"
 
+#include "Engine/Subsystems/Resources/ResourceManager.h"
 #include "Engine/Subsystems/Resources/Types/SpriteSheetFile.h"
+#include "Engine/Subsystems/Resources/Types/SpriteSheetResource.h"
 
 namespace Opaax::Editor
 {
@@ -75,6 +77,16 @@ namespace Opaax::Editor
         // Only after a SUCCESSFUL write: rebasing on a failed save would clear the dirty marker
         // while the file still holds the old content — the marker lying is worse than the failure.
         InContext.SheetDocument.MarkSaved();
+
+        // AND PUBLISH IT. The editor edits its own copy, so without this the renderer keeps drawing
+        // whatever the ResourceManager loaded the first time a sprite named this sheet — re-slicing
+        // changed the file and nothing on screen. Reload swaps the payload in place, so every
+        // ResourceRef already held stays valid and simply sees the new frames.
+        //
+        // Not resident is the ordinary case (no sprite uses this sheet yet) and answers false, so
+        // the result is deliberately not treated as a failure of the save.
+        InContext.Resources.Reload<SpriteSheetResource>(InContext.SheetDocument.AbsPath().CStr());
+
         return true;
     }
 }

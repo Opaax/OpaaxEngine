@@ -96,10 +96,8 @@ namespace Opaax::Editor
 
         ImGui::SameLine(ImGui::GetContentRegionAvail().x - 46.f);
 
-        // Its own button rather than Ctrl+S: that chord is Save Map editor-wide, and one global
-        // shortcut cannot mean two things without a "which panel has focus" question the UI seam
-        // does not answer. GROWTH POINT, named not built — the command exists, so binding it later
-        // is a routing change and not a feature.
+        // The button and Ctrl+S dispatch the SAME tag — the chord follows the focused panel, so
+        // saving here and saving the map are one command each rather than two code paths.
         ImGui::BeginDisabled(!bDirty);
         if (ImGui::SmallButton("Save"))
         {

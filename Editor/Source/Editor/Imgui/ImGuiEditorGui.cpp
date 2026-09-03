@@ -361,6 +361,13 @@ namespace Opaax::Editor
         return lOpen;
     }
 
+    bool ImGuiEditorGui::IsPanelWindowFocused() const
+    {
+        // RootAndChildWindows, so typing in the frame list's scroll child still counts as being in
+        // the panel — a focus test that a child window can turn off is one nobody can rely on.
+        return ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
+    }
+
     void ImGuiEditorGui::EndPanelWindow()
     {
         ImGui::End();
