@@ -12,8 +12,11 @@
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Editor/Operation/ClipOperations.h"
 #include "Editor/Properties/PropertyDrawers.h"   // the specializations DrawProperties folds over
+#include "Editor/Resources/ResourceDragDrop.h"   // the step list is a drop target for textures
 #include "Editor/Undo/EditorUndo.h"
 #include "Editor/UI/IEditorUIBackend.h"
+
+#include "Engine/Subsystems/Resources/ResourceTypeID.hpp"
 
 #include "Engine/Subsystems/Resources/ResourceManager.h"
 #include "Engine/Subsystems/Resources/Types/AnimationClipData.h"
@@ -296,6 +299,20 @@ namespace Opaax::Editor
         }
 
         ImGui::EndDisabled();
+
+        // A TEXTURE-LIST clip is authored by dragging: each drop appends a step, so the loop is
+        // drag, drop, drag, drop rather than Add Step then hunt for the field. Only offered when
+        // the clip names no sheet, because a sheet clip picks FRAMES and a texture would be ignored.
+        if (InData.Sheet.IsEmpty())
+        {
+            ImGui::Button("Drop a texture here to add a step", ImVec2(-1.f, 0.f));
+
+            if (OpaaxString lDropped;
+                AcceptResourceDragPayload(ResourceTypeID::Get<TextureResource>(), lDropped))
+            {
+                ClipOps::AddStepWithTexture(m_Context, lDropped);
+            }
+        }
 
         for (Uint32 lIndex = 0; lIndex < InData.StepCount(); ++lIndex)
         {

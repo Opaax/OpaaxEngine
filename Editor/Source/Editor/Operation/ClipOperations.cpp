@@ -49,6 +49,27 @@ namespace Opaax::Editor
         return true;
     }
 
+    bool ClipOps::AddStepWithTexture(EditorContext& InContext, const OpaaxString& InAssetPath)
+    {
+        if (!InContext.ClipDocument.IsOpen() || InAssetPath.IsEmpty()) { return false; }
+
+        const AnimationClipData& lData = InContext.ClipDocument.GetData();
+
+        TDynArray<AnimationStep> lAfter = lData.Steps;
+
+        AnimationStep lStep;
+        lStep.Texture.Path = InAssetPath;
+        lStep.Hold         = lAfter.empty() ? 1u : lAfter.back().EffectiveHold();
+
+        lAfter.emplace_back(Move(lStep));
+
+        RecordSteps(InContext, Move(lAfter), "Add Step");
+
+        OPAAX_LOG(LogEditorAnimationClipDocument, Info, "Added step {} showing '{}'",
+                  InContext.ClipDocument.GetData().StepCount() - 1u, InAssetPath.CStr());
+        return true;
+    }
+
     bool ClipOps::RemoveStep(EditorContext& InContext, const Uint32 InIndex)
     {
         if (!InContext.ClipDocument.IsOpen()) { return false; }

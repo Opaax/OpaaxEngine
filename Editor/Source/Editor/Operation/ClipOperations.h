@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/OpaaxTypes.h"
+#include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
 
 namespace Opaax::Editor
@@ -23,6 +24,16 @@ namespace Opaax::Editor
          * @return false when no clip is open.
          */
         bool AddStep(EditorContext& InContext);
+
+        /**
+         * Append a step showing InAssetPath — what a texture dropped on the step list becomes.
+         *
+         * The authoring loop for a sheet-less clip: drag, drop, drag, drop. Each drop is its own
+         * step and its own undo step, because each is its own decision.
+         *
+         * @return false when nothing is open or the path is empty.
+         */
+        bool AddStepWithTexture(EditorContext& InContext, const OpaaxString& InAssetPath);
 
         /** Remove the step at InIndex. @return false when nothing is open or the index is past the end. */
         bool RemoveStep(EditorContext& InContext, Uint32 InIndex);
