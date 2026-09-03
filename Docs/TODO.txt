@@ -7,5 +7,9 @@ Render:
 - handle/pool DOD RHI, device owning context CREATION, RenderStats overlay, multi-view, camera-view system, full RHI-only DrawSprite, Vulkan device.
 
 Misc:
-- Add Entity in map hiarchie
-- 
+- Better config edition
+   - Avoiding checking all frame 
+   - Undo Redo
+
+- Import
+- Convert Texture to sheet
