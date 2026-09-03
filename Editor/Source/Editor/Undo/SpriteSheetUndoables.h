@@ -33,6 +33,23 @@ namespace Opaax::Editor
     };
 
     /**
+     * Every unnamed frame got a name — ONE act, however many it filled.
+     *
+     * Its own type rather than a SheetSlice, because the Edit menu names the step ("Undo Auto-Name
+     * Frames") and "Undo Slice Sheet" would describe an edit that never happened.
+     */
+    struct SheetAutoName
+    {
+        OpaaxString            SheetPath;
+        TDynArray<SpriteFrame> Before;
+        TDynArray<SpriteFrame> After;
+
+        void        Undo(EditorContext& InContext);
+        void        Redo(EditorContext& InContext);
+        const char* Label() const noexcept { return "Auto-Name Frames"; }
+    };
+
+    /**
      * ONE frame's rect or name changed — a drag on the canvas, or a field in the panel.
      *
      * The gesture pattern EntityComponentsEdit already uses, and for the same reason: a drag writes

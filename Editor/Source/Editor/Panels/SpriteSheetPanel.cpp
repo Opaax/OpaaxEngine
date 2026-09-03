@@ -134,6 +134,16 @@ namespace Opaax::Editor
         ImGui::SameLine();
         ImGui::TextDisabled("replaces every frame");
 
+        // Beside Slice because it is what you press NEXT: SliceGrid generates unnamed frames, and
+        // an animation step names a frame by NAME, so an unnamed frame is one a clip cannot use.
+        if (ImGui::Button("Auto-Name"))
+        {
+            SheetOps::AutoNameFrames(m_Context);
+        }
+
+        ImGui::SameLine();
+        ImGui::TextDisabled("names the unnamed, keeps the rest");
+
         ImGui::TreePop();
     }
 

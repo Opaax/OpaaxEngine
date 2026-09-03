@@ -29,6 +29,22 @@ namespace Opaax::Editor
          */
         bool Slice(EditorContext& InContext, Uint32 InTexWidth, Uint32 InTexHeight);
 
+        /**
+         * Give every UNNAMED frame a name — "Frame_0", "Frame_1", … — leaving authored ones alone.
+         *
+         * SliceGrid deliberately generates unnamed frames, and an animation step references a frame
+         * BY NAME, so a freshly sliced sheet has nothing a clip can point at. This is the one click
+         * that closes that gap; without it a 64-frame sheet is 64 renames before the first clip.
+         *
+         * Non-destructive on purpose (it only fills blanks) and it guarantees UNIQUENESS, because
+         * the animation binder resolves a name by first match — two frames sharing one would
+         * silently animate the wrong picture.
+         *
+         * @return false when nothing is open or every frame was already named; the second says so
+         *   in the log rather than recording an undo step that changes nothing.
+         */
+        bool AutoNameFrames(EditorContext& InContext);
+
         /** Point the sheet's DefaultFrame at InIndex. No-op when it already is, or is out of range. */
         bool SetDefaultFrame(EditorContext& InContext, Uint32 InIndex);
 

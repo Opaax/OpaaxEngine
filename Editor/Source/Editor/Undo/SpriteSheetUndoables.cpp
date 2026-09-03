@@ -41,6 +41,19 @@ namespace Opaax::Editor
     }
 
     // =============================================================================
+    // SheetAutoName
+    // =============================================================================
+    void SheetAutoName::Undo(EditorContext& InContext)
+    {
+        if (SpriteSheetData* lData = TargetSheet(InContext, SheetPath)) { lData->Frames = Before; }
+    }
+
+    void SheetAutoName::Redo(EditorContext& InContext)
+    {
+        if (SpriteSheetData* lData = TargetSheet(InContext, SheetPath)) { lData->Frames = After; }
+    }
+
+    // =============================================================================
     // SheetFrameEdit
     // =============================================================================
     void SheetFrameEdit::Begin(const EditorContext& InContext, const Uint32 InIndex)
