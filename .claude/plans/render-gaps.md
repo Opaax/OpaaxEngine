@@ -68,11 +68,51 @@ They ran it, saw `Draw Calls` go 2 → 3 at a 2-quad limit, and reported the num
 
 ---
 
+---
+
+## S2 — SPRITE SHEETS ✅ landed 2026-09-02, user-verified (*"Eye gate passed. ctrl s ctrl z ctrl y works."*)
+
+Built the sentence `SpriteComponent.h` had been carrying since ④: *"a sheet is its own resource
+type, with its own editor."* Contract → **SS1–SS6**. Lesson → [[L75]].
+
+Four decisions, theirs: the sheet carries a `DefaultFrame` a component may override · a grid
+GENERATES a stored frame list, then rects are editable · `SpriteComponent` keeps `Texture`, `Sheet`
+wins · the editor is a DOCUMENT. Plus `SpriteFrame::Name` as an `OpaaxStringID`.
+
+| | | |
+|---|---|---|
+| `148a8a0` | S2.1 the asset type | `SpriteSheetData`/`File`/`Resource`, `MakeFrameUV` (the V flip), `SliceGrid`, `FrameAt`, and `OpaaxStringIDJson.h` |
+| `c4ba918` | S2.2 the renderer | `Sheet`+`Frame`, `ResolveSpriteDraw` (one precedence body), sheet cache, **`SpriteSheets` added to the engine deploy list** |
+| `f263214` | S2.3 the editor, read-only | type chrome, `EditorSpriteSheetDocument`, canvas + rect overlay + frame list |
+| `c42b2d3` | S2.4 editing | `SheetOps`, three undo steps, `TPropertyDrawer<OpaaxStringID>`, **`EditorRectGeometry.h`** |
+| `633fa4f` | S2.4b their two findings | `ResourceManager::Reload<T>`, Ctrl+S by focused panel |
+| `5384d95` `922ae68` `2179d2f` | content | their art + icon, the `.opaaxsheet`, the first sprite drawing a frame |
+
+**537 / 7465 / 7** (from 512 / 7349), zero warnings, `commands=31`, `resourceTypes=5`, `panels=10`.
+
+### The two things worth remembering
+
+- **THE BUG THEY FOUND WAS IN MY OWN COMMENT.** "A Save is what publishes it" shipped in the
+  document header describing a mechanism that did not exist, so a sprite already holding the sheet
+  kept drawing the first parse. → [[L75]], **SS4**, and `ResourceManager::Reload` (**SS5**), which is
+  the first piece of the hot-reload item on their TODO.
+- **`WindowFrameGeometry` generalised rather than duplicated.** The title bar's eight-region hit test
+  IS a frame-rect drag in different units; templates plus back-compat aliases meant the verified
+  title bar and its eight cases were untouched (**SS6**).
+
+### Named, not built
+
+Live update while dragging (Save publishes today, Unity's Apply model) · a multi-document sheet
+editor, which is what would retire the undo steps' path guard · `LoadContext` carrying a path
+resolver, which is what unblocks `Acquire` for both sheets and maps · nine-slice / per-frame pivot ·
+auto-slice by alpha · packing several textures into one atlas.
+
+---
+
 ## Still to come in ⑥ (not planned, not started)
 
-- **Sprite sheets + UV authoring, then animation.** `DrawSprite` already takes UVs and nothing
-  authors them. A sheet is its own resource type + a component + a world subsystem advancing frames
-  (**D7**'s data-plus-subsystem shape, never a polymorphic component).
+- **Animation.** Additive on top of ordered, named frames — a component naming frame ranges plus a
+  world subsystem advancing them (**D7**'s data-plus-subsystem shape, never a polymorphic component).
 - **Text rendering.** The DebugDraw/HUD consumer, and what unblocks a `Game.exe` stats overlay.
   `Old/milestone/M5_Text_Rendering.md` is salvage.
 - **Multi-view.** Nearly free now: one `BeginPass`/`EndPass` bracket per view, each sorted whole.

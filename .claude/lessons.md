@@ -2114,3 +2114,40 @@ budget the engine does not have. Every reference engine colours against a budget
   was not a request for a chat answer — it was a **missing tooltip**. A field a reader has to ask
   about is under-documented at the field, and answering only in conversation leaves the next reader
   to ask again. That is what `PropertyMeta::SetTooltip` is now for.
+
+## L75 — A design sentence containing "and then X publishes it" is a TODO, not a description (2026-09-02)
+
+**What happened (⑥ S2).** The sprite sheet editor keeps its own copy of the sheet, and I wrote the
+reason down twice - in the approved plan and in the document's header: *"the copy in the
+ResourceManager is what the RENDERER draws... A Save is what publishes it."* Then I built the copy,
+built the Save, and never built the publish. The user found it in minutes: a sprite already holding
+the sheet kept drawing the first parse, so re-slicing changed the file and nothing on screen.
+
+**The tell was in my own prose.** "A Save is what publishes it" describes a mechanism that did not
+exist. I read the sentence as a statement of design - it IS one - and never asked the next question,
+which is *what function does that*. The header shipped with the sentence in it, so the code and its
+own documentation disagreed from the first commit, and the doc was the more optimistic of the two.
+
+**Why the gates missed it.** Every automated check passed, because each half is correct on its own:
+the document round-trips, the file writes, the renderer resolves. The defect lives in the SEAM
+between two copies of one thing, and nothing tested the seam because nothing named it - the
+composed path needs a running editor AND a sprite already using that sheet, which is precisely the
+[[L23]] shape ("has the feature ever run in the real app?") one layer down: the feature HAD run,
+just never twice against the same resource.
+
+**Rules for next time:**
+- **When a design introduces a SECOND COPY of shared state, name the publish path as a function in
+  the same breath, or do not introduce the copy.** "A Save publishes it" is a promise; `Save()`
+  calling `Reload()` is a design. If the sentence cannot name a callee, the copy is not yet a design.
+- **Grep your own doc comments for verbs with no implementation.** "publishes", "propagates",
+  "invalidates", "notifies", "refreshes" - each names an action, and each is a claim that something
+  performs it. The comment is where the missing work is most visible, because it is where I stated
+  the requirement while my attention was on something else.
+- **Two copies of one thing need a test that holds BOTH.** The case that mattered was not "the
+  payload changed" but *a ref taken BEFORE the update sees it* - which is the user's bug written as
+  an assertion, and which no test of either half could have expressed.
+- **The user's bug report was better than my design note.** They said "if the sheet is already load
+  in sprite comp then changing slice doesn't change in sprite comp" - that is the seam, named
+  precisely, by someone using it for five minutes. **A report phrased as "X is already loaded and
+  then Y" is almost always about a cache, and the fix is almost always a publish, not a reload at
+  the reader.**

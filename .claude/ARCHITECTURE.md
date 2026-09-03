@@ -1686,6 +1686,108 @@ was edited belongs to a known Guid. `EntityComponentsEdit` narrows at `End()` to
 
 ---
 
+## SS — Sprite sheets (landed ⑥ S2, 2026-09-02)
+
+**SS1 — THE FRAMES ARE THE TRUTH; the grid only generated them.** `SpriteSheetData`
+(`Engine/Subsystems/Resources/Types/`) holds a texture path, a `TDynArray<SpriteFrame>`, a
+`DefaultFrame` and the `SpriteSheetGrid` that last sliced it. `SliceGrid` is an explicit, undoable
+act that REPLACES the list; nothing recomputes a rect afterwards. That is what makes "edit bounds"
+a thing that exists at all, and what lets an irregular packed atlas be described — a stored grid
+that derived frames on read could describe only uniform ones, and would silently un-move every
+hand-dragged rect.
+- **The stack is `MapData`/`MapFile`/`MapResource`'s, one layer over** — data · file · resource,
+  each knowing only its neighbours. There is no `SpriteSheetJson` beside the file layer because a
+  sheet is a plain aggregate, so the nlohmann macro **is** its serializer; a map needed its own
+  layer only because a component payload is opaque json it must not interpret.
+- **`SpriteFrame::Name` is an `OpaaxStringID`** (user's call) — **I13**'s split exactly: a frame
+  name IDENTIFIES, so what the field wants is four bytes and an integer compare, not a heap string
+  per frame. Animation will look frames up by it. It forced `Core/String/OpaaxStringIDJson.h`, whose
+  one rule is the one `MapJson` had hand-written since M5: **the TEXT crosses, never the id**,
+  because a pool index is built in whatever order a process happened to intern things. An invalid
+  id writes EMPTY, not `"None"` — which is what `CStr()` answers and would read back as a name.
+- **Pixels are floats** (Unity's `Rect`, Godot's `Rect2`): the UV division is float anyway, and
+  `Vector2F` draws in the Inspector with no new drawer. **Not `Bounds2D`** — that is a *world-space*
+  centre + half-extent built for picking, and sharing the type would invite passing one where the
+  other is meant.
+
+**SS2 — `MakeFrameUV` is one named function BECAUSE of the V flip.** `TextureResource` decodes
+bottom-up since GL samples that way (**I16**), while a frame's `Offset.y` counts from the TOP —
+which is how an artist and every atlas tool count. Getting it backwards draws a plausible-looking
+WRONG frame rather than failing, so it is a free pure function with cases asserting a known cell of
+a 64×64 sheet. Degenerate input answers the whole texture, never a division by zero.
+
+**SS3 — A sprite names a sheet OR a texture, and `Sheet` wins.** Both survive because a plain image
+— a backdrop, a UI panel — must not need a `.opaaxsheet` beside it to be usable. `SpriteComponent::
+Frame` is `Int32` with **−1 meaning the sheet's own `DefaultFrame`**: one field says both "which
+frame" and "I have no opinion", and `SpriteSheetData::FrameAt` resolves the sentinel so the renderer
+and the editor cannot disagree about what it shows.
+- **`FrameAt` answers NULL for an out-of-range index rather than clamping.** A caller that silently
+  drew a different frame would be the wrong-answer failure; `RendererManager` warns ONCE per sheet
+  and falls back to the whole texture, which is **BO4c**'s skip-and-say-so one level down.
+- **`Size` still decides world size.** The frame decides *what* is drawn, `Size` × `Scale` decides
+  *how big* — **I17**'s "an extent is what a thing IS" split, unchanged.
+- **`SpriteSheetResource` does NOT `Acquire` its texture**, and the reason is placement, not
+  laziness: `Acquire` needs an ABSOLUTE path and asset→absolute lives in `IPaths`, an app service
+  the Resources layer does not reach. `RendererManager` — the one adapter allowed to — resolves both
+  through the texture cache it already owns. *This also corrects `MapResource.hpp`'s standing note,
+  which blamed "no component names a texture yet": one has since ④, and the real blocker is the
+  path resolver. The day `LoadContext` carries one, maps and sheets adopt `Acquire` together.*
+
+**SS4 — THE EDITOR EDITS ITS OWN COPY, AND SAVE IS WHAT PUBLISHES IT.**
+`EditorSpriteSheetDocument` owns a `SpriteSheetData`, unlike the map and level documents which are
+cursors into state the engine holds. It has to: the copy in the `ResourceManager` is what the
+RENDERER draws, so editing that one would change the running game mid-edit. **The publish half is
+not optional and was missed once** — a sprite already holding the sheet kept drawing the first
+parse, so re-slicing changed the file and nothing on screen ([[L75]]). `SheetOps::Save` therefore
+writes the file *and* calls `ResourceManager::Reload`.
+- **The dirty marker is DERIVED**, never a flag: `IsDirty` re-serializes and compares against a
+  baseline taken at Open/Save. A bool would have to be set by every mutation, and the one that
+  forgets is a `*` that lies.
+- **Every sheet undo step carries its sheet's PATH**, which no entity step needs. One sheet is open
+  at a time and the stack outlives that, so without it an undo after opening a second sheet would
+  write the first one's frames into it. A step whose sheet is not open is a **no-op with a warning**
+  — a silently skipped undo is indistinguishable from one that had nothing to do. *Trigger for
+  revisiting: a multi-document sheet editor.*
+- **Slice REFUSES to produce nothing.** Replacing an authored list with an empty one because a cell
+  size was mistyped is data loss with an undo step on it. It clamps a now-dangling `DefaultFrame` in
+  the SAME step, so one Ctrl+Z puts both back.
+
+**SS5 — `ResourceManager::Reload<T>` keeps the slot, the refcount AND the generation.** That is its
+whole design: every `ResourceRef` already held stays valid and simply resolves to the new payload.
+Bumping the generation would stale exactly the refs it exists to update. Three refusals around it,
+each deliberate:
+- **Not resident answers `false` and never loads** — the honest answer to "nobody was looking".
+  Turning a save into a load would pull files into memory for nobody.
+- **A failed re-read KEEPS the resident payload.** Blanking a live resource because a file went
+  missing is worse than something stale.
+- **The load runs UNLOCKED** (as `LoadInternal` runs `FillSlot`, since a composite's `Load` recurses
+  through the manager) and the swap is re-checked under the lock; a slot released in between simply
+  drops the freshly parsed payload.
+- It is the **first piece of the hot-reload item** on `Docs/TODO.txt`, scoped to one call site. The
+  general form — a file watcher — is ⑧ and needs nothing here to change.
+
+**SS6 — The editor's rect arithmetic is ONE tested body, two units.** `Editor/UI/EditorRectGeometry.h`
+(was `WindowFrameGeometry.h`): the eight-region hit test with corner priority and the resize with
+left/top origin compensation are identical for a client-drawn WINDOW frame (`Int32` screen pixels)
+and a sheet FRAME (float texture pixels), so they are templates. **The window's own vocabulary
+survives as aliases** — `WindowFrameRect`, `EWindowFrameEdge`, `HitTestFrame`, `ResizeFrame` — so
+the title bar's code and its eight cases are untouched, which is what made generalising a
+hand-verified feature safe rather than brave.
+- **`ClampRectInside` is the sheet's rule and does not belong to the window**: a window may
+  legitimately hang off a monitor; a frame may never name pixels the texture lacks. It SLIDES a
+  dragged frame back rather than shrinking it — the author moved it, they did not resize it.
+- **`TPropertyDrawer<OpaaxStringID>` submits on ENTER**, and that is the design rather than a
+  preference: an id is interned, the pool is never reclaimed, and per-keystroke interning would
+  leave `"H"`, `"He"`, `"Her"` and `"Hero"` in it forever — the case `OpaaxStringID::Find`'s own
+  note names. An emptied field is the INVALID id, not an interned empty string.
+- **`IEditorGui::IsPanelWindowFocused` is on the CHROME seam, not the widget one.** **MR2h** rules
+  out a decorate-the-previous-item query in the *value* vocabulary; this is host chrome, whose
+  windows are already an ordered `Begin`/`End` pair, so "the window just begun" is well-defined.
+  `EditorPanels` records it per frame and Ctrl+S routes to Save Sheet or Save Map from it — one
+  chord, one command each, no second implementation.
+
+---
+
 ## SE — Extension seams (composition-root-only)
 
 Only a **composition root** (an `OpaaxApplication` subclass — `Sandbox`, `EditorApplication`) overrides

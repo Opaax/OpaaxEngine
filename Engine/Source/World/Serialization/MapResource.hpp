@@ -24,10 +24,15 @@ namespace Opaax
     //
     //   NO LoadContext::Acquire — and that is the rule, not an omission (**WM4**). Acquire is
     //   for HARD dependencies: it loads them inline and chains their refcounts to the parent.
-    //   A map has none today, and when a map gains texture references those ARE Acquire'd while
-    //   a Level's maps still are not — acquiring a level's maps would load every one of them at
-    //   once and make unloading a single map impossible, which is the exact opposite of
-    //   streaming.
+    //   A Level's maps are deliberately NOT acquired — that would load every one at once and make
+    //   unloading a single map impossible, the exact opposite of streaming.
+    //
+    //   This used to add "when a map gains texture references those ARE Acquire'd". A component has
+    //   named a texture since ④ and they are still not, so the real blocker is worth stating:
+    //   Acquire takes an ABSOLUTE path, and asset-relative -> absolute lives in IPaths, an app
+    //   service the Resources layer does not reach. RendererManager resolves them instead, through
+    //   the cache it owns. The day LoadContext carries a path resolver, maps and sprite sheets
+    //   adopt Acquire together (SS3).
     //
     //   No Initialize(): nothing here touches the GPU, so the payload is complete the moment
     //   Load returns and the pool can publish it without a main-thread pass.
