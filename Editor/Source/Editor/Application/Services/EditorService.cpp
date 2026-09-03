@@ -46,6 +46,7 @@
 #include "World/Entity/Entity.h"
 #include "World/Components/CameraComponent.h"      // the engine-native components the
 #include "World/Components/DummyComponent.h"       // editor draws by default (I15)
+#include "World/Components/SpriteAnimatorComponent.h"
 #include "World/Components/SpriteComponent.h"
 #include "World/Components/TransformComponent.h"
 
@@ -368,6 +369,7 @@ namespace Opaax::Editor
         lDrawers.Register<TransformComponent>();
 
         lDrawers.Register<SpriteComponent>();
+        lDrawers.Register<SpriteAnimatorComponent>();
         lDrawers.Register<CameraComponent>();
         lDrawers.Register<DummyComponent>();
     }

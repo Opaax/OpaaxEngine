@@ -1,0 +1,17 @@
+{
+    "Fps": 2.0,
+    "PlayMode": "Loop",
+    "Sheet": "",
+    "Steps": [
+        {
+            "Frame": "",
+            "Hold": 1,
+            "Texture": "/Engine/Textures/T_Square_128_Black.png"
+        },
+        {
+            "Frame": "",
+            "Hold": 1,
+            "Texture": "/Engine/Textures/T_Square_128_White.png"
+        }
+    ]
+}

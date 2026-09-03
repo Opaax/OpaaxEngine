@@ -12,6 +12,7 @@
 //   Engine::Loop makes — rather than the flags in isolation, because the ordering IS the design.
 #include <doctest.h>
 
+#include "Application/Services/IPaths.h"   // IPaths::Null() — the context's paths reference
 #include "Core/Profiling/FrameProfiler.h"
 #include "Core/String/OpaaxStringID.hpp"
 #include "Engine/Subsystems/EventBus/EngineEventBus.h"
@@ -63,7 +64,7 @@ namespace
             TheWorld = Worlds.CreateWorld("Gated", InMode);
             REQUIRE(TheWorld != nullptr);
 
-            TheWorld->SetContext(WorldContext{*TheWorld, Resources, Events, Debug, &Profiler});
+            TheWorld->SetContext(WorldContext{*TheWorld, Resources, IPaths::Null(), Events, Debug, &Profiler});
             TheWorld->GetSubsystems().RegisterSubsystem<CounterSubsystem>(std::ref(*TheWorld->GetContext()));
             TheWorld->GetSubsystems().StartupAll();
 

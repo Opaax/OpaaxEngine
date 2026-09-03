@@ -1,0 +1,9 @@
+{
+    "DefaultClip": "Cycle",
+    "Entries": [
+        {
+            "Clip": "Anims/Default_Cycle.opaaxclip",
+            "Name": "Cycle"
+        }
+    ]
+}

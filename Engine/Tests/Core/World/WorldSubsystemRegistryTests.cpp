@@ -21,6 +21,7 @@
 //   (L22), exactly as it was for S2.
 #include <doctest.h>
 
+#include "Application/Services/IPaths.h"   // IPaths::Null() — the context's paths reference
 #include "Core/Profiling/FrameProfiler.h"
 #include "Core/String/OpaaxStringID.hpp"
 #include "Engine/Registries/EngineRegistries.h"
@@ -199,13 +200,14 @@ TEST_CASE("world subsystem registry: CreateInto constructs from the context and 
 
     // Stand in for what WorldManager::CreateWorld composes. These are the REAL types, just never
     // started — each is default-constructible and other suites already stack-allocate them, so
-    // the context carries valid references rather than anything cast into place.
+    // the context carries valid references rather than anything cast into place. Paths is the
+    // engine's own inert null object (I3) rather than a third StubPaths: nothing here loads.
     ResourceManager lResources;
     EngineEventBus  lEvents;
     DebugDraw       lDebug;
     FrameProfiler   lProfiler;
 
-    WorldContext lContext{lWorld, lResources, lEvents, lDebug, &lProfiler};
+    WorldContext lContext{lWorld, lResources, IPaths::Null(), lEvents, lDebug, &lProfiler};
 
     const IWorldSubsystemEntry* lEntry = lRegistry.FindByName(Name("Always"));
     REQUIRE(lEntry != nullptr);

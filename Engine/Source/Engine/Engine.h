@@ -63,6 +63,16 @@ namespace Opaax
 
         /** Register Default engine subsystems*/
         void RegisterNativeSubsystems();
+
+        /**
+         * Register the WORLD subsystems the engine itself owns — the candidates every new world
+         * filters through ShouldCreate.
+         *
+         * The fourth native route, added with the first engine-owned world subsystem (⑥ S3). Until
+         * then every candidate came from a game or editor module, so the engine had a registry it
+         * never wrote to.
+         */
+        void RegisterNativeWorldSubsystems();
         
         /** Cache convenient subsystems */
         void CacheSubsystems();

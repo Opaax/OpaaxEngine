@@ -20,6 +20,13 @@
                     "Texture": "Textures/Checker.png",
                     "bVisible": true
                 },
+                "SpriteAnimator": {
+                    "Clip": "",
+                    "ClipAsset": "Anims/Blink.opaaxclip",
+                    "Library": "",
+                    "Speed": 1.0,
+                    "bPlaying": true
+                },
                 "Transform": {
                     "Position": {
                         "x": 35.1003532409668,
@@ -58,6 +65,13 @@
                     },
                     "Texture": "",
                     "bVisible": true
+                },
+                "SpriteAnimator": {
+                    "Clip": "",
+                    "ClipAsset": "",
+                    "Library": "Anims/Default.opaaxanim",
+                    "Speed": 1.0,
+                    "bPlaying": true
                 },
                 "Transform": {
                     "Position": {

@@ -33,6 +33,9 @@
 #include "Engine/Subsystems/Resources/Types/TextureResource.h" // registered as a native format
 #include "Engine/Subsystems/Resources/Types/SpriteSheetResource.h" // registered as a native format
 #include "Engine/Subsystems/Resources/Types/AnimationClipResource.h" // registered as a native format
+#include "Engine/Subsystems/Resources/Types/AnimationLibraryResource.h" // registered as a native format
+#include "World/Components/SpriteAnimatorComponent.h"
+#include "World/Systems/SpriteAnimationSubsystem.h"
 
 namespace Opaax
 {
@@ -41,6 +44,7 @@ namespace Opaax
         RegisterNativeComponents();
         RegisterNativeResourceFormats();
         RegisterNativeSubsystems();
+        RegisterNativeWorldSubsystems();
     }
 
     Engine::~Engine()
@@ -79,6 +83,7 @@ namespace Opaax
         m_Registries.Components().Register<DummyComponent>("Dummy");
         m_Registries.Components().Register<SpriteComponent>("Sprite");
         m_Registries.Components().Register<CameraComponent>("Camera");
+        m_Registries.Components().Register<SpriteAnimatorComponent>("SpriteAnimator");
     }
     
     void Engine::RegisterNativeResourceFormats()
@@ -88,6 +93,14 @@ namespace Opaax
         m_Registries.Resources().Register<TextureResource>(OPAAX_ID("Texture"));
         m_Registries.Resources().Register<SpriteSheetResource>(OPAAX_ID("SpriteSheet"));
         m_Registries.Resources().Register<AnimationClipResource>(OPAAX_ID("AnimationClip"));
+        m_Registries.Resources().Register<AnimationLibraryResource>(OPAAX_ID("AnimationLibrary"));
+    }
+
+    void Engine::RegisterNativeWorldSubsystems()
+    {
+        // Play worlds only — its own ShouldCreate decides, so registering it here costs an Edit
+        // world nothing: a rejected candidate is never constructed (WS2).
+        m_Registries.WorldSubsystems().Register<SpriteAnimationSubsystem>(OPAAX_ID("SpriteAnimation"));
     }
 
     void Engine::RegisterNativeSubsystems()

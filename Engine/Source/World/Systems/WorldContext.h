@@ -7,6 +7,7 @@ namespace Opaax
     class EngineEventBus;
     class DebugDraw;
     class FrameProfiler;
+    class IPaths;
 
     // =============================================================================
     // WorldContext — the flat struct of references a world subsystem is constructed with.
@@ -29,6 +30,8 @@ namespace Opaax
     // NOT INCLUDED: EngineRegistries. A registry is TYPE METADATA (MR0), not something a
     //   running subsystem should poke, and nothing needs it — adding a member later is one line
     //   and breaks no existing subsystem, so this starts at what has callers.
+    //   *Paths arrived exactly that way (⑥ S3): SpriteAnimationSubsystem is the first world
+    //   subsystem to load an ASSET, and ResourceManager::Load takes an absolute path.*
     // =============================================================================
     struct WorldContext
     {
@@ -37,6 +40,13 @@ namespace Opaax
 
         /** Load-by-path resources (textures, shaders). Engine-owned, shared by every world. */
         ResourceManager& Resources;
+
+        /**
+         * Asset-relative -> absolute, which is what ResourceManager::Load needs and what a
+         * TResourcePath deliberately is not (MP8). Const: a subsystem asks where things are, it
+         * never reconfigures the project's layout.
+         */
+        const IPaths& Paths;
 
         /** The engine bus. A subsystem reacts to engine/world events without touching the locator. */
         EngineEventBus& Events;

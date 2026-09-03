@@ -20,6 +20,8 @@
 #include "Engine/Subsystems/Resources/Types/AnimationClipData.h"
 #include "Engine/Subsystems/Resources/Types/AnimationClipFile.h"
 #include "Engine/Subsystems/Resources/Types/AnimationClipResource.h"
+#include "Engine/Subsystems/Resources/Types/AnimationLibraryData.h"
+#include "Engine/Subsystems/Resources/Types/AnimationLibraryFile.h"
 
 using namespace Opaax;
 
@@ -457,5 +459,117 @@ TEST_SUITE("AnimationClipResource")
 
         // Case-insensitively, the way every other format is matched — Windows paths are.
         CHECK(lRegistry.FindByExtension(NormalizeExtension(".OPAAXCLIP")) == lClip);
+    }
+}
+
+// =============================================================================
+// AnimationLibraryData — the ALIAS table, and the one asymmetry in its lookup
+// =============================================================================
+TEST_SUITE("AnimationLibrary")
+{
+    /** Idle / Run / Jump, with Run as the default. */
+    AnimationLibraryData MakeProbeLibrary()
+    {
+        AnimationLibraryData lLibrary;
+        lLibrary.DefaultClip = OPAAX_ID("Run");
+
+        lLibrary.Entries.emplace_back(AnimationLibraryEntry{ OPAAX_ID("Idle"), { OpaaxString("Anims/Idle.opaaxclip") } });
+        lLibrary.Entries.emplace_back(AnimationLibraryEntry{ OPAAX_ID("Run"),  { OpaaxString("Anims/Run.opaaxclip") } });
+        lLibrary.Entries.emplace_back(AnimationLibraryEntry{ OPAAX_ID("Jump"), { OpaaxString("Anims/Jump.opaaxclip") } });
+
+        return lLibrary;
+    }
+
+    TEST_CASE("Find: a name resolves to its own entry")
+    {
+        const AnimationLibraryData lLibrary = MakeProbeLibrary();
+
+        REQUIRE(lLibrary.Find(OPAAX_ID("Jump")) != nullptr);
+        CHECK(lLibrary.Find(OPAAX_ID("Jump"))->Clip.Path == OpaaxString("Anims/Jump.opaaxclip"));
+        CHECK(lLibrary.EntryCount() == 3u);
+    }
+
+    TEST_CASE("Find: NO OPINION falls back, a MISSPELLING does not")
+    {
+        // The one asymmetry in this type, and the reason it is asserted rather than assumed:
+        // playing some other animation because a name was mistyped is the silent wrong answer.
+        const AnimationLibraryData lLibrary = MakeProbeLibrary();
+
+        REQUIRE(lLibrary.Find(OpaaxStringID()) != nullptr);
+        CHECK(lLibrary.Find(OpaaxStringID())->Name == OPAAX_ID("Run"));   // the DefaultClip
+
+        CHECK(lLibrary.Find(OPAAX_ID("Runn")) == nullptr);
+        CHECK(lLibrary.Find(OPAAX_ID("Attack")) == nullptr);
+    }
+
+    TEST_CASE("Find: no opinion and no usable default answers the FIRST entry")
+    {
+        AnimationLibraryData lNoDefault = MakeProbeLibrary();
+        lNoDefault.DefaultClip = OpaaxStringID();
+
+        REQUIRE(lNoDefault.Find(OpaaxStringID()) != nullptr);
+        CHECK(lNoDefault.Find(OpaaxStringID())->Name == OPAAX_ID("Idle"));
+
+        // A default naming a clip that was since removed must not strand the lookup either.
+        AnimationLibraryData lStaleDefault = MakeProbeLibrary();
+        lStaleDefault.DefaultClip = OPAAX_ID("Deleted");
+
+        REQUIRE(lStaleDefault.Find(OpaaxStringID()) != nullptr);
+        CHECK(lStaleDefault.Find(OpaaxStringID())->Name == OPAAX_ID("Idle"));
+    }
+
+    TEST_CASE("Find and FindExact: an empty library resolves nothing, either way")
+    {
+        const AnimationLibraryData lEmpty;
+
+        CHECK(lEmpty.Find(OpaaxStringID()) == nullptr);
+        CHECK(lEmpty.Find(OPAAX_ID("Idle")) == nullptr);
+        CHECK(lEmpty.FindExact(OPAAX_ID("Idle")) == nullptr);
+    }
+
+    TEST_CASE("FindExact: no fallback at all, which is what a rename check needs")
+    {
+        const AnimationLibraryData lLibrary = MakeProbeLibrary();
+
+        CHECK(lLibrary.FindExact(OPAAX_ID("Idle")) != nullptr);
+        CHECK(lLibrary.FindExact(OpaaxStringID()) == nullptr);   // NOT the default
+        CHECK(lLibrary.FindExact(OPAAX_ID("Nope")) == nullptr);
+    }
+
+    TEST_CASE("AnimationLibraryFile: save then load round-trips the names and the default")
+    {
+        const ScopedTempDir lDir("lib_roundtrip");
+        const OpaaxString   lPath = lDir.Sub("Hero.opaaxanim");
+
+        const AnimationLibraryData lSaved = MakeProbeLibrary();
+        REQUIRE(AnimationLibraryFile::Save(lPath, lSaved));
+
+        AnimationLibraryData lLoaded;
+        REQUIRE(AnimationLibraryFile::Load(lPath, lLoaded));
+
+        CHECK(lLoaded.EntryCount() == 3u);
+        CHECK(lLoaded.DefaultClip == OPAAX_ID("Run"));
+        REQUIRE(lLoaded.Find(OPAAX_ID("Idle")) != nullptr);
+        CHECK(lLoaded.Find(OPAAX_ID("Idle"))->Clip.Path == OpaaxString("Anims/Idle.opaaxclip"));
+
+        // Order is preserved, because "the first entry" is a documented fallback.
+        CHECK(lLoaded.Entries[0].Name == OPAAX_ID("Idle"));
+        CHECK(AnimationLibraryFile::Serialize(lLoaded) == AnimationLibraryFile::Serialize(lSaved));
+    }
+
+    TEST_CASE("AnimationLibraryFile: a malformed file leaves the caller's data untouched")
+    {
+        const ScopedTempDir lDir("lib_bad");
+
+        AnimationLibraryData lExisting = MakeProbeLibrary();
+
+        CHECK_FALSE(AnimationLibraryFile::Load(lDir.Sub("Nope.opaaxanim"), lExisting));
+        CHECK(lExisting.EntryCount() == 3u);
+
+        const OpaaxString lArray = lDir.Sub("Array.opaaxanim");
+        REQUIRE(FileIO::WriteAllText(lArray, OpaaxString("[]")));
+
+        CHECK_FALSE(AnimationLibraryFile::Load(lArray, lExisting));
+        CHECK(lExisting.EntryCount() == 3u);
     }
 }
