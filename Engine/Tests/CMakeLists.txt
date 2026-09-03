@@ -18,6 +18,10 @@ set(OPAAX_TEST_SOURCES
     Renderer/SortKeyTests.cpp
     Renderer/BatchPlanTests.cpp
     Renderer/RenderTargetTests.cpp
+    # ⑥ S4's headless half: the codepoint-keyed glyph tables and the bake's refusals. Baking a real
+    # typeface needs a real .ttf, which this suite does not read — the smoke run's counting log line
+    # is that gate.
+    Renderer/FontTests.cpp
     Renderer/DebugDrawTests.cpp
     Core/StringTests.cpp
     Core/StringViewTests.cpp

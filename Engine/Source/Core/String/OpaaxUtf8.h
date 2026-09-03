@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
 
 #include <filesystem>
@@ -33,6 +34,84 @@ namespace Opaax::Utf8
     // Header-only and stateless — no OPAAX_API (I6). Nothing here throws; malformed input degrades to
     // U+FFFD, so the path simply does not exist and the caller gets its ordinary failure.
     // =============================================================================
+
+    // =============================================================================
+    // Codepoints — reading UTF-8 as CHARACTERS rather than as a path.
+    //
+    // The other half of the boundary, and the one text rendering needs: a glyph is keyed by
+    // codepoint, so "Γειά" has to become four numbers rather than eight bytes. Same file because it
+    // is the same invariant (**I7**) seen from the other end, and the same no-throw contract.
+    // =============================================================================
+
+    /** What malformed input decodes to — U+FFFD REPLACEMENT CHARACTER, the Unicode-sanctioned answer. */
+    inline constexpr Uint32 REPLACEMENT = 0xFFFDu;
+
+    /**
+     * Decode the codepoint at InOutCursor and advance past it.
+     *
+     * ALWAYS ADVANCES on a non-empty string — that is the contract that matters, because every caller
+     * is a `while` loop and a decoder that can stand still turns one bad byte into a hang. Malformed
+     * input (a stray continuation byte, a truncated sequence, an overlong form, a surrogate half)
+     * consumes ONE byte and answers REPLACEMENT, so the rest of the string still reads.
+     *
+     * @param InOutCursor Cursor into a NUL-terminated UTF-8 string. Advanced past the codepoint read.
+     * @return The codepoint, or 0 at the terminator — the loop condition, and the cursor stays put.
+     */
+    inline Uint32 Decode(const char*& InOutCursor) noexcept
+    {
+        const Uint8* lBytes = reinterpret_cast<const Uint8*>(InOutCursor);
+        const Uint8  lLead  = lBytes[0];
+
+        if (lLead == 0u)
+        {
+            return 0u;   // the terminator: answer "done" WITHOUT advancing past it
+        }
+
+        // How many bytes the lead announces. 0xC0/0xC1 are overlong two-byte forms and 0xF5+ is past
+        // U+10FFFF, so both are rejected by the lead alone rather than after decoding.
+        Uint32 lLength   = 0u;
+        Uint32 lCodepoint = 0u;
+
+        if (lLead < 0x80u)                        { lLength = 1u; lCodepoint = lLead; }
+        else if (lLead >= 0xC2u && lLead <= 0xDFu) { lLength = 2u; lCodepoint = lLead & 0x1Fu; }
+        else if (lLead >= 0xE0u && lLead <= 0xEFu) { lLength = 3u; lCodepoint = lLead & 0x0Fu; }
+        else if (lLead >= 0xF0u && lLead <= 0xF4u) { lLength = 4u; lCodepoint = lLead & 0x07u; }
+        else
+        {
+            ++InOutCursor;
+            return REPLACEMENT;
+        }
+
+        for (Uint32 lIndex = 1u; lIndex < lLength; ++lIndex)
+        {
+            const Uint8 lContinuation = lBytes[lIndex];
+
+            // Catches the truncated sequence too: a NUL is not 10xxxxxx, so a lead byte at the end of
+            // the string cannot walk the cursor past the terminator.
+            if ((lContinuation & 0xC0u) != 0x80u)
+            {
+                ++InOutCursor;
+                return REPLACEMENT;
+            }
+
+            lCodepoint = (lCodepoint << 6) | (lContinuation & 0x3Fu);
+        }
+
+        // Overlong three/four-byte forms and the UTF-16 surrogate range. Both are encodable and both
+        // are illegal — a decoder that passes them on hands the caller a codepoint no font has.
+        const bool bOverlong  = (lLength == 3u && lCodepoint < 0x800u)
+                             || (lLength == 4u && lCodepoint < 0x10000u);
+        const bool bSurrogate = (lCodepoint >= 0xD800u && lCodepoint <= 0xDFFFu);
+
+        if (bOverlong || bSurrogate || lCodepoint > 0x10FFFFu)
+        {
+            ++InOutCursor;
+            return REPLACEMENT;
+        }
+
+        InOutCursor += lLength;
+        return lCodepoint;
+    }
 
 #ifdef OPAAX_PLATFORM_WINDOWS
 

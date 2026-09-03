@@ -417,16 +417,17 @@ add_custom_command(TARGET OpaaxEngine POST_BUILD
     COMMENT "Creating Engine/Assets directory..."
 )
 
-# What the runtime reads out of Engine/Assets: Shaders (Renderer2D::Init), Textures and SpriteSheets
-# — the prototyping content a game references through the "/Engine/" mount (IPaths::ENGINE_MOUNT),
-# which a release build resolves from the EXE dir rather than the source tree (I12). Fonts / Meshes /
+# What the runtime reads out of Engine/Assets: Shaders (Renderer2D::Init), Textures, SpriteSheets and
+# Fonts — the prototyping content a game references through the "/Engine/" mount (IPaths::ENGINE_MOUNT),
+# which a release build resolves from the EXE dir rather than the source tree (I12). Meshes /
 # AssetManifest.json belonged to the retired Legacy/Assets manifest world and went in the
-# 2026-08-21 cleanup along with their copy steps.
+# 2026-08-21 cleanup along with their copy steps; Fonts came BACK with ⑥ S4's text rendering, which
+# reads them as real resources rather than through a manifest.
 # ADDING A MOUNTED FOLDER MEANS ADDING IT HERE. Content that resolves in a dev build and to nothing
 # in a shipped one is the failure this list exists to prevent, and it is silent.
 # Guarded on EXISTS because an empty asset folder is not tracked by git, so a fresh clone
 # (e.g. CI) legitimately lacks it and an unconditional copy_directory would fail.
-foreach(ENGINE_ASSET_DIR Shaders Textures SpriteSheets)
+foreach(ENGINE_ASSET_DIR Shaders Textures SpriteSheets Fonts)
     if(EXISTS ${ENGINE_ASSETS_SOURCE}/${ENGINE_ASSET_DIR})
         add_custom_command(TARGET OpaaxEngine POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_directory

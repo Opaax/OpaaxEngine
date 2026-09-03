@@ -100,6 +100,89 @@ TEST_CASE("Utf8: empty in, empty out — every entry point, no crash")
 }
 
 // =============================================================================
+// Codepoint decoding — the same header seen from the text-rendering end (⑥ S4).
+//
+// Every sequence below is written as explicit \x BYTES, not as \uXXXX and never as literal
+// characters. The subject IS the byte decoder, so stating the bytes is stating the input; anything
+// else would put the source file's encoding between the case and the thing it measures ([[L21]]).
+// =============================================================================
+TEST_CASE("Utf8::Decode: one, two, three and four byte sequences, each advancing by its own length")
+{
+    // U+0041 'A' · U+0393 GREEK CAPITAL GAMMA · U+65E5 (CJK, outside CP-1252 entirely) ·
+    // U+1F600 GRINNING FACE, which needs the four-byte form.
+    const char* lCursor = "\x41" "\xCE\x93" "\xE6\x97\xA5" "\xF0\x9F\x98\x80";
+    const char* lStart  = lCursor;
+
+    CHECK(Utf8::Decode(lCursor) == 0x0041u);
+    CHECK(lCursor - lStart == 1);
+
+    CHECK(Utf8::Decode(lCursor) == 0x0393u);
+    CHECK(lCursor - lStart == 3);
+
+    CHECK(Utf8::Decode(lCursor) == 0x65E5u);
+    CHECK(lCursor - lStart == 6);
+
+    CHECK(Utf8::Decode(lCursor) == 0x1F600u);
+    CHECK(lCursor - lStart == 10);
+}
+
+TEST_CASE("Utf8::Decode: the terminator answers 0 and does NOT advance — the loop condition")
+{
+    const char* lCursor = "";
+    const char* lStart  = lCursor;
+
+    CHECK(Utf8::Decode(lCursor) == 0u);
+    CHECK(lCursor == lStart);
+
+    // Asked again it must still answer 0 rather than walking off the end.
+    CHECK(Utf8::Decode(lCursor) == 0u);
+    CHECK(lCursor == lStart);
+}
+
+TEST_CASE("Utf8::Decode: every malformed form answers REPLACEMENT and consumes exactly one byte")
+{
+    // The property under test is not the value, it is the ADVANCE: a decoder that can stand still
+    // turns one bad byte into a hang, which is the only failure mode here that is not survivable.
+    struct Malformed { const char* Bytes; const char* What; };
+
+    const Malformed lCases[] =
+    {
+        { "\x80",         "a stray continuation byte with no lead" },
+        { "\xC0\xAF",     "an overlong two-byte '/'" },
+        { "\xE0\x80\xAF", "an overlong three-byte '/'" },
+        { "\xED\xA0\x80", "a UTF-16 surrogate half (U+D800), encodable and illegal" },
+        { "\xF5\x80\x80\x80", "a lead past U+10FFFF" },
+        { "\xE6\x97",     "a three-byte sequence truncated by the terminator" },
+    };
+
+    for (const Malformed& lCase : lCases)
+    {
+        CAPTURE(lCase.What);
+
+        const char* lCursor = lCase.Bytes;
+        const char* lStart  = lCursor;
+
+        CHECK(Utf8::Decode(lCursor) == Utf8::REPLACEMENT);
+        CHECK(lCursor - lStart == 1);
+    }
+}
+
+TEST_CASE("Utf8::Decode: a mixed-script string walks to its end and terminates")
+{
+    // "AΓ日" — the shape a text draw actually feeds it.
+    const char* lCursor = "\x41" "\xCE\x93" "\xE6\x97\xA5";
+
+    Uint32 lCount = 0;
+    while (Utf8::Decode(lCursor) != 0u)
+    {
+        ++lCount;
+        REQUIRE(lCount < 16u);   // a decoder that failed to advance would spin here, not hang the suite
+    }
+
+    CHECK(lCount == 3u);
+}
+
+// =============================================================================
 // The call sites that open files
 // =============================================================================
 TEST_CASE("FileIO: text round-trips through a non-ASCII directory")
