@@ -13,6 +13,7 @@
 #include "Editor/EditorMapDocument.h"
 #include "Editor/EditorLevelDocument.h"
 #include "Editor/EditorSpriteSheetDocument.h"
+#include "Editor/EditorAnimationClipDocument.h"
 #include "Editor/PIE/PlayInEditor.h"
 #include "Editor/UI/IEditorGui.h"
 #include "Editor/UI/IEditorDialogs.h"
@@ -328,6 +329,9 @@ namespace Opaax::Editor
         TUniquePtr<EditorMapDocument>   m_MapDocument;
         TUniquePtr<EditorLevelDocument> m_LevelDocument;
         TUniquePtr<EditorSpriteSheetDocument> m_SheetDocument;
+
+        /** The open `.opaaxclip` and its data (S3), beside the sheet document and for its reason. */
+        TUniquePtr<EditorAnimationClipDocument> m_ClipDocument;
         
         TUniquePtr<EditorContext>       m_Context;
         

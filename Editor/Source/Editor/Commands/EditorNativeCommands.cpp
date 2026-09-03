@@ -9,7 +9,9 @@
 #include "Editor/Operation/EntityOps.h"
 #include "Editor/Operation/LevelOperations.h"
 #include "Editor/Operation/SheetOperations.h"
+#include "Editor/Operation/ClipOperations.h"
 #include "Editor/EditorSpriteSheetDocument.h"
+#include "Editor/EditorAnimationClipDocument.h"
 #include "Editor/Operation/MapOperations.h"
 #include "Editor/PIE/PlayInEditor.h"
 #include "Editor/Panels/EditorPanels.h"
@@ -464,6 +466,17 @@ namespace Opaax::Editor
         }
 
         SheetOps::Save(InContext);   // SheetOps logs the write and rebases the dirty marker
+    }
+
+    void SaveClipCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        if (!InContext.ClipDocument.IsOpen())
+        {
+            OPAAX_LOG(LogEditorCommands, Warn, "Save Clip ignored — no animation clip is open");
+            return;
+        }
+
+        ClipOps::Save(InContext);   // ClipOps logs the write, rebases the marker and publishes it
     }
 
     void SaveLevelCommand::Execute(EditorContext& InContext, const Params&)

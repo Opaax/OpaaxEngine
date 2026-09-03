@@ -57,7 +57,7 @@ static_assert(PathString::Extension("Maps/Decor.opaaxmap") == ".opaaxmap");
 TEST_CASE("PathString::Extension: everything after the last dot, dot included")
 {
     CHECK(PathString::Extension("C:/Proj/Assets/Maps/Decor.opaaxmap") == ".opaaxmap");
-    CHECK(PathString::Extension("C:\Proj\Maps\Decor.opaaxmap") == ".opaaxmap");
+    CHECK(PathString::Extension("C:\\Proj\\Maps\\Decor.opaaxmap") == ".opaaxmap");
     CHECK(PathString::Extension("Decor.opaaxmap") == ".opaaxmap");
 
     // The LAST dot wins, so a dotted stem keeps only its real extension.
@@ -96,4 +96,40 @@ TEST_CASE("PathString::Extension: the result VIEWS the path it was given")
 
     CHECK(lExt == ".opaaxmap");
     CHECK(lExt.Data() == lPath.CStr() + 18);   // points INTO the argument's own bytes
+}
+
+// =============================================================================
+// FileName — the document-title question, beside Stem's
+// =============================================================================
+TEST_CASE("PathString::FileName: the name WITH its extension")
+{
+    CHECK(PathString::FileName("C:/Proj/Maps/Decor.opaaxmap") == "Decor.opaaxmap");
+    CHECK(PathString::FileName("C:\\Proj\\Maps\\Decor.opaaxmap") == "Decor.opaaxmap");
+
+    // Unlike Stem, the extension is the part that says WHICH editor you are looking at, so a
+    // document title keeps it. The two answers must differ for the same path, or one of them is
+    // answering the wrong question.
+    CHECK(PathString::FileName("Anims/Hero_Run.opaaxclip") == "Hero_Run.opaaxclip");
+    CHECK(PathString::Stem("Anims/Hero_Run.opaaxclip") == "Hero_Run");
+}
+
+TEST_CASE("PathString::FileName: no directory part answers the whole path")
+{
+    CHECK(PathString::FileName("Decor.opaaxmap") == "Decor.opaaxmap");
+    CHECK(PathString::FileName(".gitignore") == ".gitignore");   // a dotfile is still a name
+}
+
+TEST_CASE("PathString::FileName: a trailing slash names nothing")
+{
+    CHECK(PathString::FileName("C:/Proj/Maps/").IsEmpty());
+    CHECK(PathString::FileName("").IsEmpty());
+}
+
+TEST_CASE("PathString::FileName: the result VIEWS the path it was given")
+{
+    const OpaaxString     lPath("C:/Proj/Maps/Decor.opaaxmap");
+    const OpaaxStringView lName = PathString::FileName(lPath);
+
+    CHECK(lName == "Decor.opaaxmap");
+    CHECK(lName.Data() == lPath.CStr() + 13);   // points INTO the argument's own bytes
 }

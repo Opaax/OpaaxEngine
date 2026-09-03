@@ -435,6 +435,20 @@ namespace Opaax::Editor
     };
 
     /**
+     * Write the open `.opaaxclip` and publish it, so an entity already playing it picks the change
+     * up — SaveSheetCommand's shape, one asset over.
+     *
+     * Ctrl+S reaches it when the clip panel has focus, ahead of the sheet and the map, for the same
+     * reason: one chord cannot mean three things without asking which document is in front.
+     */
+    struct SaveClipCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
+    /**
      * The only Level entry on the menu bar, because it is the only one that does not need a map
      * named first — it goes and picks one. Removing a map and choosing the persistent one live on
      * the Hierarchy's map headers (MapOps), where the target is what was clicked instead of

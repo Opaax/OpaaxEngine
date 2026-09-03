@@ -40,6 +40,22 @@ namespace Opaax::PathString
     }
 
     /**
+     * The filename WITH its extension: "…/Maps/Decor.opaaxmap" -> "Decor.opaaxmap".
+     *
+     * What a document panel puts in its title, where the extension is the part that says which
+     * editor you are looking at. `Stem` answers the other question; both live here so a second
+     * copy of "find the last slash" cannot drift from this one (I13).
+     *
+     * @return The whole path when it has no directory part, and an empty view for a trailing slash.
+     */
+    constexpr OpaaxStringView FileName(OpaaxStringView InPath) noexcept
+    {
+        const Int32 lSlash = InPath.FindLastOf("/\\");
+
+        return (lSlash < 0) ? InPath : InPath.SubString(static_cast<Uint32>(lSlash) + 1u);
+    }
+
+    /**
      * The extension WITH its dot: "…/Maps/Decor.opaaxmap" -> ".opaaxmap". Everything after the last
      * dot, the same rule std::filesystem::path::extension applies — without building an fs::path.
      *

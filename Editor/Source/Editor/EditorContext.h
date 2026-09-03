@@ -27,6 +27,7 @@ namespace Opaax
         class EditorMapDocument;        // editor-owned; WHICH map is open and whether it changed (M5)
         class EditorLevelDocument;      // editor-owned; WHICH level is open and whether it changed
         class EditorSpriteSheetDocument;// editor-owned; the open .opaaxsheet AND its data (⑥ S2)
+        class EditorAnimationClipDocument; // editor-owned; the open .opaaxclip AND its data (⑥ S3)
         class EditorExtensionRegistrar; // editor-owned; the sealed D10 routes (Inspector reads Drawers())
         class EditorPaths;              // editor-owned IPaths subclass; the editor-space directories
         class EditorPanels;             // editor-owned; the LIVE panels and their visibility
@@ -117,6 +118,11 @@ namespace Opaax
             // copy in the ResourceManager is what the renderer draws, so editing that one would
             // change the running game mid-edit and lose the work on the next reload.
             EditorSpriteSheetDocument& SheetDocument;
+
+            // ⑥ S3 — the open animation clip. Owns its data for SheetDocument's reason: the copy in
+            // the ResourceManager is what a PLAYING entity animates from, so editing that one would
+            // change a running game mid-edit. A Save is what publishes it (ClipOps::Save).
+            EditorAnimationClipDocument& ClipDocument;
 
             // M2b — the sealed extension routes, so a panel can consume what modules registered (the
             // Inspector walks Drawers(), the Resource Browser ResourceTypes()). CONST by construction:
