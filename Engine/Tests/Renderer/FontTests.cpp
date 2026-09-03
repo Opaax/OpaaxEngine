@@ -426,6 +426,65 @@ TEST_SUITE("Text2D::Measure")
     }
 }
 
+TEST_SUITE("Text2D::EstimateExtent")
+{
+    // The extent EntityQuery uses for PICKING and for the selection outline, computed with no face
+    // to ask. Its contract is not accuracy, it is "never short" — a box that comes up small makes
+    // the tail of a string unclickable, which reads as a broken entity rather than as a near miss.
+
+    TEST_CASE("never comes up SHORT of the real measurement — the whole contract")
+    {
+        const FontFaceData lFace = MakeFace();
+        const FontFaceView lView{ &lFace, nullptr };
+
+        TextDrawParams lParams;
+        lParams.Size     = FACE_PIXEL_HEIGHT;
+        lParams.bKerning = false;
+
+        const OpaaxString lLine  = OpaaxString(U_GAMMA) + U_ALPHA + " " + U_ALPHA;
+        const OpaaxString lMulti = lLine + "\n" + lLine + "\n" + U_GAMMA;
+
+        for (const OpaaxString* lText : { &lLine, &lMulti })
+        {
+            CAPTURE(lText->CStr());
+
+            const Vector2F lMeasured  = Text2D::Measure(lText->CStr(), lView, lParams);
+            const Vector2F lEstimated = Text2D::EstimateExtent(lText->CStr(), lParams);
+
+            CHECK(lEstimated.x >= lMeasured.x);
+            CHECK(lEstimated.y >= lMeasured.y);
+        }
+    }
+
+    TEST_CASE("counts CODEPOINTS, not bytes — a Greek string is not three times as wide")
+    {
+        TextDrawParams lParams;
+        lParams.Size = FACE_PIXEL_HEIGHT;
+
+        // "Γα" is two codepoints in four bytes. A byte count would double the box.
+        const OpaaxString lGreek = OpaaxString(U_GAMMA) + U_ALPHA;
+
+        CHECK(Text2D::EstimateExtent(lGreek.CStr(), lParams).x
+              == doctest::Approx(Text2D::EstimateExtent("ab", lParams).x));
+    }
+
+    TEST_CASE("scales with Size, counts lines, and answers zero for nothing")
+    {
+        TextDrawParams lParams;
+        lParams.Size = FACE_PIXEL_HEIGHT;
+
+        const float lOneLine = Text2D::EstimateExtent("abc", lParams).y;
+        CHECK(Text2D::EstimateExtent("abc\ndef", lParams).y == doctest::Approx(lOneLine * 2.f));
+
+        lParams.Size = FACE_PIXEL_HEIGHT * 2.f;
+        CHECK(Text2D::EstimateExtent("abc", lParams).x
+              == doctest::Approx(Text2D::EstimateExtent("abc", TextDrawParams{}).x * 2.f));
+
+        CHECK(Text2D::EstimateExtent(nullptr).x == doctest::Approx(0.f));
+        CHECK(Text2D::EstimateExtent("").y      == doctest::Approx(0.f));
+    }
+}
+
 TEST_SUITE("FontFaceResource")
 {
     TEST_CASE("Placeholder is an empty face that can still LAY OUT")

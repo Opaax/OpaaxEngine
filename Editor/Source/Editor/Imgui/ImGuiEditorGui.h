@@ -48,6 +48,7 @@ namespace Opaax::Editor
     public:
         //~Begin IEditorGui interface
         bool Init(Window& InWindow, OpaaxString InLayoutIniPath) override;
+        void SetUIFont(const EditorUIFont& InFont) override;
         void Shutdown() override;
         bool IsReady() const noexcept override { return m_Backend != nullptr; }
 

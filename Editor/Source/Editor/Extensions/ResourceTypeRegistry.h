@@ -6,6 +6,7 @@
 #include "Engine/Subsystems/Resources/ResourceFormat.h"   // CResourceFormat — what may carry chrome
 #include "Engine/Subsystems/Resources/ResourceTypeID.hpp" // the key: one id per resource type
 #include "Editor/Resources/ResourceScan.h"      // ResourceFile (the callback's argument)
+#include "Editor/Resources/ResourcePreviewClaim.h" // FResourcePreviewOpen — the preview facet's type
 
 namespace Opaax::Editor
 {
@@ -33,11 +34,12 @@ namespace Opaax::Editor
     // =============================================================================
     struct ResourceTypeDesc
     {
-        Uint32            TypeId = 0;    // ResourceTypeID::Get<T>()
-        OpaaxStringID     Label;         // OPTIONAL override; invalid => the format's own Label
-        OpaaxString       Icon;          // OPTIONAL editor-assets-relative image; empty => the Glyph
-        OpaaxString       Glyph;         // short text, "[W]" — the fallback when Icon is absent or missing
-        FResourceActivate OnActivate;
+        Uint32               TypeId = 0;    // ResourceTypeID::Get<T>()
+        OpaaxStringID        Label;         // OPTIONAL override; invalid => the format's own Label
+        OpaaxString          Icon;          // OPTIONAL editor-assets-relative image; empty => the Glyph
+        OpaaxString          Glyph;         // short text, "[W]" — the fallback when Icon is absent or missing
+        FResourceActivate    OnActivate;
+        FResourcePreviewOpen OnPreviewOpen; // OPTIONAL; absent => "no preview for this type"
     };
 
     class ResourceTypeRegistry;
@@ -87,6 +89,25 @@ namespace Opaax::Editor
 
         /** What a double-click does. Omitted, the browser logs the activation and nothing else. */
         ResourceTypeBuilder& SetActivate(FResourceActivate InActivate);
+
+        /**
+         * What the Preview panel draws for this type, given the loaded resource.
+         *
+         * The TYPE IS NAMED HERE and nowhere else — the panel holds an IResourcePreviewClaim and
+         * knows nothing about textures or fonts. That is the point of the facet: adding a
+         * previewable type touches its own registration and no panel.
+         *
+         * @tparam TResource The resource type this chrome describes.
+         * @param InDraw Runs every frame the entry is open, with a claim already held for it.
+         */
+        template<CResource TResource>
+        ResourceTypeBuilder& SetPreview(typename TResourcePreviewClaim<TResource>::FDraw InDraw)
+        {
+            return SetPreviewOpen(MakePreviewOpener<TResource>(Move(InDraw)));
+        }
+
+        /** The type-erased half, for a caller that already built its opener. */
+        ResourceTypeBuilder& SetPreviewOpen(FResourcePreviewOpen InOpen);
 
         // =============================================================================
         // Members
@@ -222,6 +243,16 @@ namespace Opaax::Editor
         if (ResourceTypeDesc* lEntry = m_Registry != nullptr ? m_Registry->EntryAt(m_Index) : nullptr)
         {
             lEntry->OnActivate = Move(InActivate);
+        }
+
+        return *this;
+    }
+
+    inline ResourceTypeBuilder& ResourceTypeBuilder::SetPreviewOpen(FResourcePreviewOpen InOpen)
+    {
+        if (ResourceTypeDesc* lEntry = m_Registry != nullptr ? m_Registry->EntryAt(m_Index) : nullptr)
+        {
+            lEntry->OnPreviewOpen = Move(InOpen);
         }
 
         return *this;

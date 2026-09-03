@@ -28,6 +28,33 @@ namespace Opaax::Editor
         Close
     };
 
+    /**
+     * The typeface the editor's own UI is drawn in.
+     *
+     * States a REQUIREMENT, never a toolkit's spelling: "this file, this size, and these scripts
+     * must also be readable". ImGui merges the fallbacks into one font; Qt would hand the primary to
+     * QApplication::setFont and let fontconfig do the rest. Neither answer leaks into the caller.
+     *
+     * It matters because the editor authors text: a Greek string typed into the Inspector renders
+     * correctly in the VIEWPORT (that is the engine's own atlas) and as boxes in the FIELD, unless
+     * the UI toolkit was given a face that covers it too.
+     */
+    struct EditorUIFont
+    {
+        /** ABSOLUTE path to the primary face. EMPTY keeps whatever the backend ships with. */
+        OpaaxString Path;
+
+        /**
+         * Extra faces folded into the same typeface, for the scripts the primary does not carry.
+         *
+         * A list because the source files are SUBSETTED — Google's Roboto ships latin, greek and
+         * cyrillic as separate files, so "one path" cannot express a UI that reads all three.
+         */
+        TDynArray<OpaaxString> Fallbacks;
+
+        float SizePx = 16.f;
+    };
+
     /** What the pointer did over the caption's draggable stretch this frame. */
     struct TitleBarDrag
     {
@@ -81,6 +108,21 @@ namespace Opaax::Editor
          *   needs unwinding and the caller simply has no UI.
          */
         virtual bool Init(Window& InWindow, OpaaxString InLayoutIniPath) = 0;
+
+        /**
+         * Draw the UI in InFont from now on.
+         *
+         * Separate from Init rather than a parameter of it, because WHICH typeface is a config
+         * question and Init's job is bringing the toolkit up — the same split CheckStyle already
+         * makes for colours and padding. Called by the composition root, so a second backend
+         * inherits the choice without EditorService changing.
+         *
+         * A face that cannot be read is logged and SKIPPED, never fatal: a mistyped path in a config
+         * must leave the editor usable in its default font.
+         *
+         * @param InFont Absolute paths. An empty primary keeps the backend's own default.
+         */
+        virtual void SetUIFont(const EditorUIFont& InFont) = 0;
 
         /** Backends down, then the context. The GL context must still be alive. Idempotent. */
         virtual void Shutdown() = 0;

@@ -24,6 +24,16 @@ namespace Opaax::Text2D
         constexpr float TOFU_THICKNESS_RATIO = 0.06f;
 
         /**
+         * EstimateExtent's per-codepoint advance and per-line height, as fractions of Size.
+         *
+         * Both are ROUNDED UP from Roboto's real numbers (its average advance is nearer 0.55 of the
+         * bake height and its line advance 1.17). Over-estimating is the whole contract: an extent
+         * used for picking that comes up short makes the tail of a string unclickable.
+         */
+        constexpr float ESTIMATE_ADVANCE_RATIO = 0.62f;
+        constexpr float ESTIMATE_LINE_RATIO    = 1.25f;
+
+        /**
          * THE ONE WALK, for both entry points.
          *
          * Measure and DrawString differ by exactly one thing — whether a renderer is present — and
@@ -146,5 +156,38 @@ namespace Opaax::Text2D
     Vector2F Measure(const char* InUtf8, const FontFaceView& InFace, const TextDrawParams& InParams)
     {
         return WalkText(nullptr, InUtf8, { 0.f, 0.f }, InFace, InParams);
+    }
+
+    Vector2F EstimateExtent(const char* InUtf8, const TextDrawParams& InParams)
+    {
+        if (InUtf8 == nullptr || *InUtf8 == '\0')
+        {
+            return { 0.f, 0.f };
+        }
+
+        Uint32 lWidestLine = 0u;
+        Uint32 lThisLine   = 0u;
+        Uint32 lLineCount  = 1u;
+
+        const char* lCursor = InUtf8;
+
+        while (const Uint32 lCodepoint = Utf8::Decode(lCursor))
+        {
+            if (lCodepoint == '\n')
+            {
+                lWidestLine = (lThisLine > lWidestLine) ? lThisLine : lWidestLine;
+                lThisLine   = 0u;
+                ++lLineCount;
+                continue;
+            }
+
+            lThisLine += (lCodepoint == '\t') ? TAB_SPACES : 1u;
+        }
+
+        lWidestLine = (lThisLine > lWidestLine) ? lThisLine : lWidestLine;
+
+        return { static_cast<float>(lWidestLine) * InParams.Size * ESTIMATE_ADVANCE_RATIO,
+                 static_cast<float>(lLineCount)  * InParams.Size * ESTIMATE_LINE_RATIO
+                                                 * InParams.LineHeightScale };
     }
 }

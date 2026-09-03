@@ -45,6 +45,9 @@
 #include "Engine/Subsystems/Resources/Types/SpriteSheetResource.h"
 #include "Engine/Subsystems/Resources/Types/AnimationClipResource.h"
 #include "Engine/Subsystems/Resources/Types/AnimationLibraryResource.h"
+#include "Engine/Subsystems/Resources/Types/FontFaceResource.h"
+#include "Engine/Subsystems/Resources/Types/FontFamilyResource.h"
+#include "Editor/Resources/ResourcePreviewDrawers.h"   // what a preview DRAWS; no ImGui in this file
 #include "World/World.h"
 #include "World/WorldManager.h"
 #include "World/Entity/Entity.h"
@@ -422,7 +425,26 @@ namespace Opaax::Editor
             {
                 InContext.Preview.Open(InFile, ResourceTypeID::Get<TextureResource>());
                 InContext.Panels.SetVisible(ResourcePreviewPanel::PanelID(), true);
-            });
+            })
+            .SetPreview<TextureResource>(&NativeResourcePreviews::DrawTexture);
+
+        // A `.ttf` previews its BAKED ATLAS, which is the only way to see what the engine actually
+        // made of the file — the glyph count, the atlas it needed and the metrics are what a wrong
+        // bake shows up in.
+        m_Extensions.ResourceTypes().Register<FontFaceResource>()
+            .SetGlyph(OpaaxString("[F]"))
+            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
+            {
+                InContext.Preview.Open(InFile, ResourceTypeID::Get<FontFaceResource>());
+                InContext.Panels.SetVisible(ResourcePreviewPanel::PanelID(), true);
+            })
+            .SetPreview<FontFaceResource>(&NativeResourcePreviews::DrawFontFace);
+
+        // A family has no preview and no document editor: it is an alias TABLE, and the thing worth
+        // looking at is the face it resolves to. Chrome only, so the browser can still tell one
+        // from a map at a glance.
+        m_Extensions.ResourceTypes().Register<FontFamilyResource>()
+            .SetGlyph(OpaaxString("[FF]"));
 
         // A sheet opens its EDITOR, not the preview: it is a document with its own panel, the way a
         // map and a level are, and the browser's double-click is the one seam that says so.
@@ -611,7 +633,47 @@ namespace Opaax::Editor
      */
     bool EditorService::InitGUI(Window* InWindow)
     {
-        return m_Gui->Init(*InWindow, ResolveLayoutIniPath());
+        if (!m_Gui->Init(*InWindow, ResolveLayoutIniPath()))
+        {
+            return false;
+        }
+
+        // AFTER Init (there is no font atlas before the context exists) and BEFORE the first frame.
+        // Here rather than inside the implementation because WHICH typeface is a config question:
+        // this is the composition root, so a second backend inherits the choice unchanged.
+        m_Gui->SetUIFont(ResolveUIFont());
+
+        return true;
+    }
+
+    EditorUIFont EditorService::ResolveUIFont() const
+    {
+        IConfigSystem& lConfigSys = OpaaxApplication::GetAppService<IConfigSystem>();
+        if (lConfigSys.IsNull())
+        {
+            return {};   // no config, no opinion — the backend keeps its default
+        }
+
+        const EditorImguiConfigData& lCFG = lConfigSys.Get<Config_EditorImgui>().GetData();
+
+        // The config states MOUNT paths ("/Engine/Fonts/…") because that is what survives a shipped
+        // build; the seam takes absolute ones because a toolkit opens files, not mounts. This is the
+        // one place the two meet.
+        IPaths& lPaths = OpaaxApplication::GetAppService<IPaths>();
+
+        EditorUIFont lFont;
+        lFont.SizePx = lCFG.UIFontSizePx;
+        lFont.Path   = lCFG.UIFontPath.IsEmpty() ? OpaaxString() : lPaths.AssetToAbsolute(lCFG.UIFontPath);
+
+        for (const OpaaxString& lFallback : lCFG.UIFontFallbacks)
+        {
+            if (!lFallback.IsEmpty())
+            {
+                lFont.Fallbacks.emplace_back(lPaths.AssetToAbsolute(lFallback));
+            }
+        }
+
+        return lFont;
     }
 
     void EditorService::ClearGUI()

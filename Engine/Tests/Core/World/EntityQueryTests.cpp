@@ -9,6 +9,7 @@
 #include "Core/Maths/Bounds2D.h"
 #include "World/Components/DummyComponent.h"
 #include "World/Components/SpriteComponent.h"
+#include "World/Components/TextComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityQuery.h"
@@ -144,6 +145,72 @@ TEST_CASE("EntityQuery: an invalid entity has no bounds")
 {
     Bounds2D lBounds;
     CHECK_FALSE(EntityQuery::TryGetBounds(Entity{}, lBounds, 8.f));
+}
+
+// =============================================================================
+// Text — the one renderable that is NOT centred on its transform
+// =============================================================================
+TEST_CASE("EntityQuery: a text's box hangs DOWN-RIGHT of the transform, not around it")
+{
+    World lWorld("Text");
+
+    Entity lText = lWorld.CreateEntity("Label");
+    lText.Get<TransformComponent>().Position = { 10.f, 200.f };
+
+    TextComponent& lComp = lText.Add<TextComponent>();
+    lComp.Text = "Hello";
+    lComp.Size = 40.f;
+
+    Bounds2D lBounds;
+    REQUIRE(EntityQuery::TryGetBounds(lText, lBounds));
+
+    // The transform is where the first line STARTS — top-left — so the box sits to the right of it
+    // and below it. Centring on the position (every other renderable's rule) would put half the
+    // clickable area where there are no glyphs, which is the bug this case exists to catch.
+    CHECK(lBounds.Center.x > 10.f);
+    CHECK(lBounds.Center.y < 200.f);
+
+    // The transform's corner is ON the box, not outside it.
+    CHECK(lBounds.Center.x - lBounds.HalfExtent.x == doctest::Approx(10.f));
+    CHECK(lBounds.Center.y + lBounds.HalfExtent.y == doctest::Approx(200.f));
+}
+
+TEST_CASE("EntityQuery: an EMPTY string has no extent, so a text entity falls back to the anchor")
+{
+    World lWorld("Text");
+
+    Entity lText = lWorld.CreateEntity("Label");
+    lText.Get<TransformComponent>().Position = { 0.f, 0.f };
+    lText.Add<TextComponent>().Text = OpaaxString();
+
+    // Nothing is drawn, so nothing is claimed — the entity is an icon like any other empty one.
+    Bounds2D lBounds;
+    CHECK_FALSE(EntityQuery::TryGetBounds(lText, lBounds));
+    CHECK(EntityQuery::TryGetBounds(lText, lBounds, 8.f));
+}
+
+TEST_CASE("EntityQuery: a text and a sprite on one entity get the UNION, and the text's LAYER counts")
+{
+    World lWorld("Text");
+
+    Entity lBoth = lWorld.CreateEntity("Both");
+    lBoth.Get<TransformComponent>().Position = { 0.f, 0.f };
+    lBoth.Add<SpriteComponent>().Size        = { 10.f, 10.f };
+
+    TextComponent& lComp = lBoth.Add<TextComponent>();
+    lComp.Text  = "wide enough to matter";
+    lComp.Size  = 40.f;
+    lComp.Layer = ERenderLayer::UI;
+
+    Bounds2D lBounds;
+    REQUIRE(EntityQuery::TryGetBounds(lBoth, lBounds));
+    CHECK(lBounds.HalfExtent.x > 5.f);   // the sprite alone would be 5
+
+    // A UI-band text must win a click over a Default-band sprite behind it, which only holds if
+    // DrawRank reads the text's layer too.
+    Entity lQuad = MakeQuad(lWorld, "Behind", { 0.f, 0.f }, { 400.f, 400.f });
+    CHECK(EntityQuery::PickAt(lWorld, { 5.f, -5.f }).GetHandle() == lBoth.GetHandle());
+    CHECK(lQuad.IsValid());
 }
 
 // =============================================================================

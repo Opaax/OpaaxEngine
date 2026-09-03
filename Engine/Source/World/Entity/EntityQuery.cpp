@@ -2,8 +2,11 @@
 
 #include "Core/Maths/Maths.h"   // DegreesToRadians — the transform authors degrees
 
+#include "Renderer/Text/Text2D.h"   // EstimateExtent — a text's box with no face to ask
+
 #include "World/Components/DummyComponent.h"
 #include "World/Components/SpriteComponent.h"
+#include "World/Components/TextComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityMeta.h"
@@ -40,6 +43,12 @@ namespace Opaax
             {
                 const Int32 lSpriteRank = MakeRank(lSprite->Layer, lSprite->OrderInLayer);
                 if (lRank == RANK_ANCHOR_ONLY || lSpriteRank > lRank) { lRank = lSpriteRank; }
+            }
+
+            if (const TextComponent* lText = InEntity.TryGet<TextComponent>())
+            {
+                const Int32 lTextRank = MakeRank(lText->Layer, lText->OrderInLayer);
+                if (lRank == RANK_ANCHOR_ONLY || lTextRank > lRank) { lRank = lTextRank; }
             }
 
             return lRank;
@@ -85,6 +94,33 @@ namespace Opaax
 
             if (lHasExtent) { lBounds.Encapsulate(lSpriteBounds); }
             else            { lBounds = lSpriteBounds; lHasExtent = true; }
+        }
+
+        if (const TextComponent* lText = InEntity.TryGet<TextComponent>())
+        {
+            // TOP-LEFT ANCHORED, unlike every other renderable: the transform is where the first
+            // line STARTS, and the text runs right and down from it. So the box has to be offset by
+            // half its own extent rather than centred on the position.
+            //
+            // ESTIMATED, not measured — this query is headless by design and cannot reach the face
+            // cache. The estimate is deliberately generous so the whole string stays clickable
+            // (Text2D::EstimateExtent).
+            TextDrawParams lParams;
+            lParams.Size            = lText->Size * lScale.x;
+            lParams.LineHeightScale = lText->LineHeightScale;
+
+            const Vector2F lExtent = Text2D::EstimateExtent(lText->Text.CStr(), lParams);
+
+            if (lExtent.x > 0.f && lExtent.y > 0.f)
+            {
+                const Vector2F lCentre{ lTransform->Position.x + lExtent.x * 0.5f,
+                                        lTransform->Position.y - lExtent.y * 0.5f };
+
+                const Bounds2D lTextBounds = Bounds2D::FromCenterSizeRotated(lCentre, lExtent, lRotation);
+
+                if (lHasExtent) { lBounds.Encapsulate(lTextBounds); }
+                else            { lBounds = lTextBounds; lHasExtent = true; }
+            }
         }
 
         if (!lHasExtent)

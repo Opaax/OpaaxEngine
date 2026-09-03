@@ -3,16 +3,11 @@
 #include "Editor/EditorContext.h"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Editor/Extensions/ResourceTypeRegistry.h"
-#include "Editor/ImguiLibrary/ImguiLayout.h"
-#include "Editor/ImguiLibrary/ImguiWidgets.h"
 #include "Editor/Resources/ResourcePreview.h"
-#include "Editor/UI/IEditorUIBackend.h"
 
 #include "Application/Services/IEngine.h"
 #include "Engine/Registries/EngineRegistries.h"
 #include "Engine/Subsystems/Resources/ResourceManager.h"
-#include "Engine/Subsystems/Resources/ResourceTypeID.hpp"
-#include "Engine/Subsystems/Resources/Types/TextureResource.h"
 
 #include <imgui.h>
 
@@ -95,12 +90,12 @@ namespace Opaax::Editor
         {
             DrawIdentity(InEntry);
 
-            // ONE previewable type today, so one branch. GROWTH POINT, named not built: the second
-            // type that wants content here turns this into a `SetPreview` chrome facet beside
-            // SetActivate, where per-type presentation already lives — not a chain of ifs.
-            if (InEntry.TypeId == ResourceTypeID::Get<TextureResource>())
+            // NO TYPE ID IS COMPARED HERE any more. The chrome's SetPreview facet built the live
+            // object, and it is the only thing that named a resource type — which is what this
+            // panel's own growth-point note asked for when a second previewable type arrived.
+            if (IResourcePreviewClaim* lClaim = ClaimFor(InEntry))
             {
-                DrawTexture(InEntry.File.AbsPath);
+                lClaim->Draw(m_Context);
             }
             else
             {
@@ -132,53 +127,39 @@ namespace Opaax::Editor
         ImGui::TextDisabled("Path : %s", InEntry.File.AbsPath.CStr());
     }
 
-    void ResourcePreviewPanel::DrawTexture(const OpaaxString& InAbsPath)
-    {
-        const TextureResource* lTexture = ClaimTexture(InAbsPath);
-        if (lTexture == nullptr)
-        {
-            ImGui::TextDisabled("Could not load this image.");
-            return;
-        }
-
-        const ImVec2 lSize = ImguiLayout::AspectFit(lTexture->Width, lTexture->Height, MAX_IMAGE_SIZE);
-
-        ImguiWidgets::Image(lTexture->GetTexture() != nullptr
-                                ? m_Context.UIBackend.GetTextureImage(*lTexture->GetTexture())
-                                : EditorImage{},
-                            lSize);
-
-        ImGui::TextDisabled("%u x %u", lTexture->Width, lTexture->Height);
-    }
-
     // =============================================================================
     // Claims
     // =============================================================================
-    const TextureResource* ResourcePreviewPanel::ClaimTexture(const OpaaxString& InAbsPath)
+    IResourcePreviewClaim* ResourcePreviewPanel::ClaimFor(const ResourcePreviewEntry& InEntry)
     {
-        const OpaaxStringID lKey(InAbsPath);
+        const OpaaxStringID lKey(InEntry.File.AbsPath);
 
         auto lIt = m_Claims.find(lKey.GetId());
-        if (lIt == m_Claims.end())
+        if (lIt != m_Claims.end())
         {
-            ResourceRef<TextureResource> lRef = m_Context.Resources.Load<TextureResource>(InAbsPath.CStr());
-
-            // Once per open, not per frame: the discrete event, and the only signal that a
-            // double-click reached this panel at all.
-            if (lRef.IsValid())
-            {
-                OPAAX_LOG(LogResourcePreviewPanel, Info, "Previewing '{}'", InAbsPath.CStr());
-            }
-            else
-            {
-                OPAAX_LOG(LogResourcePreviewPanel, Warn, "Cannot preview '{}' — it did not load", InAbsPath.CStr());
-                return nullptr;   // NOT cached: Get() on a failed claim answers the placeholder
-            }
-
-            lIt = m_Claims.emplace(lKey.GetId(), Move(lRef)).first;
+            return lIt->second.get();
         }
 
-        return lIt->second.Get();
+        const ResourceTypeDesc* lChrome = m_Context.Extensions.ResourceTypes().Find(InEntry.TypeId);
+        if (lChrome == nullptr || !lChrome->OnPreviewOpen)
+        {
+            return nullptr;   // NOT cached: a type with no preview has nothing to keep
+        }
+
+        TUniquePtr<IResourcePreviewClaim> lClaim = lChrome->OnPreviewOpen(m_Context.Resources, InEntry.File);
+
+        // Once per open, not per frame: the discrete event, and the only signal that a double-click
+        // reached this panel at all.
+        if (lClaim == nullptr)
+        {
+            OPAAX_LOG(LogResourcePreviewPanel, Warn, "Cannot preview '{}' — it did not load",
+                      InEntry.File.AbsPath.CStr());
+            return nullptr;
+        }
+
+        OPAAX_LOG(LogResourcePreviewPanel, Info, "Previewing '{}'", InEntry.File.AbsPath.CStr());
+
+        return m_Claims.emplace(lKey.GetId(), Move(lClaim)).first->second.get();
     }
 
     void ResourcePreviewPanel::ReleaseClosedClaims()

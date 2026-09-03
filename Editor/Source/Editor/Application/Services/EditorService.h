@@ -229,7 +229,19 @@ namespace Opaax::Editor
          *   which case the caller must leave IniFilename null (ImGui's own "don't persist" contract).
          */
         OpaaxString ResolveLayoutIniPath() const;
-        
+
+        /**
+         * The editor's UI typeface, from config, with every path turned absolute.
+         *
+         * A config states MOUNT paths so a shipped build resolves them; a toolkit opens files. This
+         * is the one place the two meet, and it is why `IEditorGui::SetUIFont` documents its
+         * argument as absolute.
+         *
+         * @return An empty primary when there is no config or none is set, which keeps the
+         *   backend's own default font.
+         */
+        EditorUIFont ResolveUIFont() const;
+
         /**
          * Ctrl+S, in the UI pass.
          *

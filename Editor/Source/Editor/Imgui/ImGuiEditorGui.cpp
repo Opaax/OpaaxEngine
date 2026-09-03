@@ -230,6 +230,57 @@ namespace Opaax::Editor
         return true;
     }
 
+    void ImGuiEditorGui::SetUIFont(const EditorUIFont& InFont)
+    {
+        if (InFont.Path.IsEmpty())
+        {
+            return;   // keep ProggyClean — an unset config is a choice, not an error
+        }
+
+        ImGuiIO& lIO = ImGui::GetIO();
+
+        // NoLoadError turns ImGui's assert-on-missing-file into a null return, which is what makes a
+        // mistyped config path survivable: the editor keeps its default font instead of dying on an
+        // IM_ASSERT before it has drawn a single frame.
+        ImFontConfig lPrimaryCfg;
+        lPrimaryCfg.Flags |= ImFontFlags_NoLoadError;
+
+        ImFont* lPrimary = lIO.Fonts->AddFontFromFileTTF(InFont.Path.CStr(), InFont.SizePx, &lPrimaryCfg);
+        if (lPrimary == nullptr)
+        {
+            OPAAX_LOG(LogEditorGui, Warn, "UI font '{}' could not be read — keeping the default",
+                      InFont.Path.CStr());
+            return;
+        }
+
+        // MERGED into the primary, not stacked beside it: the fallbacks are SUBSET files, so the
+        // result has to be one typeface that happens to cover Greek and Cyrillic — not three fonts a
+        // caller would have to choose between per string. ImGui 1.92 loads glyphs on demand, so no
+        // range table is needed and merging costs nothing until a character is actually drawn.
+        Uint32 lMerged = 0u;
+        for (const OpaaxString& lFallback : InFont.Fallbacks)
+        {
+            ImFontConfig lMergeCfg;
+            lMergeCfg.MergeMode = true;
+            lMergeCfg.Flags    |= ImFontFlags_NoLoadError;
+
+            if (lIO.Fonts->AddFontFromFileTTF(lFallback.CStr(), InFont.SizePx, &lMergeCfg) != nullptr)
+            {
+                ++lMerged;
+            }
+            else
+            {
+                OPAAX_LOG(LogEditorGui, Warn, "UI font fallback '{}' could not be read — skipped",
+                          lFallback.CStr());
+            }
+        }
+
+        lIO.FontDefault = lPrimary;
+
+        OPAAX_LOG(LogEditorGui, Info, "UI font: '{}' at {}px, {} of {} fallback(s) merged",
+                  InFont.Path.CStr(), InFont.SizePx, lMerged, InFont.Fallbacks.size());
+    }
+
     void ImGuiEditorGui::Shutdown()
     {
         if (m_Backend == nullptr) { return; }

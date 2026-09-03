@@ -73,5 +73,21 @@ namespace Opaax
          */
         OPAAX_API Vector2F Measure(const char* InUtf8, const FontFaceView& InFace,
                                    const TextDrawParams& InParams = {});
+
+        /**
+         * What InUtf8 will roughly occupy, with NO FACE to ask.
+         *
+         * For the callers that need an extent but cannot reach a font: EntityQuery computes an
+         * entity's bounds for PICKING and for the selection outline, and it is deliberately a pure
+         * headless query — reaching the renderer's face cache from it would make the engine's
+         * hit-testing depend on what happens to be uploaded.
+         *
+         * DELIBERATELY GENEROUS. An over-estimate means the whole string is clickable and the
+         * outline has a little air; an under-estimate means the last characters cannot be selected
+         * at all, which reads as a broken entity. Given the choice, be too big.
+         *
+         * @return { codepoints * a generous average advance, lines * a generous line height }.
+         */
+        OPAAX_API Vector2F EstimateExtent(const char* InUtf8, const TextDrawParams& InParams = {});
     }
 }

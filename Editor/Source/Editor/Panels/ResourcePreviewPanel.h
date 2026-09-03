@@ -2,14 +2,12 @@
 
 #include "Application/Services/ILogger.h"
 #include "Core/String/OpaaxString.hpp"
-#include "Engine/Subsystems/Resources/ResourceRef.hpp"   // one claim per open preview
 #include "Editor/Panels/IEditorPanel.h"
+#include "Editor/Resources/ResourcePreviewClaim.h"   // the live preview this owns, one per entry
 
 namespace Opaax
 {
     OPAAX_LOG_CATEGORY(ResourcePreviewPanel);
-
-    struct TextureResource;   // only NAMED by the held claims
 }
 
 namespace Opaax::Editor
@@ -65,16 +63,15 @@ namespace Opaax::Editor
         /** Name / Path / Type — everything true of a resource whatever its type. */
         void DrawIdentity(const ResourcePreviewEntry& InEntry) const;
 
-        /** The image itself, aspect-fit into a square box, plus its dimensions. */
-        void DrawTexture(const OpaaxString& InAbsPath);
-
         /**
-         * The claim on InAbsPath, loading it on first request and keeping it.
+         * The live preview for InEntry, built from its type's chrome on first request and kept.
          *
          * Keyed by INTERNED path so a redraw is an integer lookup, never a Load — a Load of a
          * resident path is only a dedup hit, but one that bumps a refcount once per frame.
+         *
+         * @return nullptr when the type registered no preview, or when the file did not load.
          */
-        const TextureResource* ClaimTexture(const OpaaxString& InAbsPath);
+        IResourcePreviewClaim* ClaimFor(const ResourcePreviewEntry& InEntry);
 
         /** Drop claims for paths no longer open, so closing a preview actually releases its image. */
         void ReleaseClosedClaims();
@@ -104,11 +101,13 @@ namespace Opaax::Editor
     private:
         EditorContext& m_Context;
 
-        /** The largest edge a preview image is drawn at, in pixels. */
-        static constexpr float MAX_IMAGE_SIZE = 256.f;
-
-        // Interned abs path -> the claim keeping that image loaded. One per OPEN entry; pruned by
-        // ReleaseClosedClaims so a closed preview does not keep its texture resident forever.
-        TUnorderedMap<Uint32, ResourceRef<TextureResource>> m_Claims;
+        // Interned abs path -> the live preview, which holds both the claim and the drawer. One per
+        // OPEN entry; pruned by ReleaseClosedClaims so a closed preview does not keep its resource
+        // resident forever.
+        //
+        // TYPE-ERASED, and that is the change the old TUnorderedMap<..., ResourceRef<TextureResource>>
+        // could not survive: this panel no longer names a single resource type, so a second
+        // previewable one costs a registration and nothing here (MR2g).
+        TUnorderedMap<Uint32, TUniquePtr<IResourcePreviewClaim>> m_Claims;
     };
 }
