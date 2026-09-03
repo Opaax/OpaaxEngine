@@ -153,6 +153,129 @@
             "guid": "c79d7e04cbbcbd26c617b8ad427fc4a7",
             "name": "QuadRed",
             "ownerMap": "Main"
+        },
+        {
+            "components": {
+                "Text": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Face": "",
+                    "Font": "/Engine/Fonts/Roboto.opaaxfont",
+                    "Layer": "Foreground",
+                    "LineHeightScale": 1.0,
+                    "OrderInLayer": 0,
+                    "Size": 40.0,
+                    "Style": {
+                        "Slant": "Normal",
+                        "Subset": "Latin",
+                        "Weight": "Bold",
+                        "Width": "Normal"
+                    },
+                    "Text": "Opaax\nAVATAR Wa To",
+                    "bKerning": true,
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -600.0,
+                        "y": 260.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "073eada4049d46f99d3dba3e30892664",
+            "name": "TextLatin",
+            "ownerMap": "Main"
+        },
+        {
+            "components": {
+                "Text": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.55,
+                        "y": 0.85,
+                        "z": 1.0
+                    },
+                    "Face": "",
+                    "Font": "/Engine/Fonts/Roboto.opaaxfont",
+                    "Layer": "Foreground",
+                    "LineHeightScale": 1.0,
+                    "OrderInLayer": 0,
+                    "Size": 40.0,
+                    "Style": {
+                        "Slant": "Normal",
+                        "Subset": "Greek",
+                        "Weight": "Regular",
+                        "Width": "Normal"
+                    },
+                    "Text": "Γειά σου κόσμε",
+                    "bKerning": true,
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -600.0,
+                        "y": 150.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "85a50d12a4a443078e2fa4708293e525",
+            "name": "TextGreek",
+            "ownerMap": "Main"
+        },
+        {
+            "components": {
+                "Text": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 0.75,
+                        "z": 0.35
+                    },
+                    "Face": "",
+                    "Font": "/Engine/Fonts/Roboto.opaaxfont",
+                    "Layer": "Foreground",
+                    "LineHeightScale": 1.0,
+                    "OrderInLayer": 0,
+                    "Size": 40.0,
+                    "Style": {
+                        "Slant": "Italic",
+                        "Subset": "Cyrillic",
+                        "Weight": "Medium",
+                        "Width": "Normal"
+                    },
+                    "Text": "Привет мир",
+                    "bKerning": true,
+                    "bVisible": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -600.0,
+                        "y": 70.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "2d7299512f9242a499b25554f39ba1cf",
+            "name": "TextCyrillic",
+            "ownerMap": "Main"
         }
     ],
     "mapId": "Main",
