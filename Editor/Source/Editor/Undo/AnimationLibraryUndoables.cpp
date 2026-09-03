@@ -26,12 +26,20 @@ namespace Opaax::Editor
     // =============================================================================
     void LibraryEntriesEdit::Undo(EditorContext& InContext)
     {
-        if (AnimationLibraryData* lData = TargetLibrary(InContext, LibraryPath)) { lData->Entries = Before; }
+        if (AnimationLibraryData* lData = TargetLibrary(InContext, LibraryPath))
+        {
+            lData->Entries     = Before;
+            lData->DefaultClip = BeforeDefault;
+        }
     }
 
     void LibraryEntriesEdit::Redo(EditorContext& InContext)
     {
-        if (AnimationLibraryData* lData = TargetLibrary(InContext, LibraryPath)) { lData->Entries = After; }
+        if (AnimationLibraryData* lData = TargetLibrary(InContext, LibraryPath))
+        {
+            lData->Entries     = After;
+            lData->DefaultClip = AfterDefault;
+        }
     }
 
     // =============================================================================

@@ -27,6 +27,15 @@ namespace Opaax::Editor
         TDynArray<AnimationLibraryEntry> Before;
         TDynArray<AnimationLibraryEntry> After;
 
+        /**
+         * The default rides in the SAME step, because the edits that dangle it are the edits to the
+         * list: renaming the default entry orphans it, removing it deletes it. `SheetOps::Slice`
+         * set this precedent for `DefaultFrame` — one Ctrl+Z has to put BOTH back, or undoing a
+         * rename leaves a default naming something that is no longer there.
+         */
+        OpaaxStringID BeforeDefault;
+        OpaaxStringID AfterDefault;
+
         /** What the Edit menu shows — "Add Clip", "Remove Clip", "Rename Clip"… */
         const char* LabelText = "Edit Clip List";
 

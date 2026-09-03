@@ -14,21 +14,61 @@ namespace Opaax::Editor
 {
     namespace
     {
-        /** Record a whole-list replacement under InLabel, and publish it into the document. */
+        /**
+         * Record a whole-list replacement under InLabel, and publish it into the document.
+         *
+         * The default is carried in the same step and RE-VALIDATED here rather than at each call
+         * site: every list edit can dangle it, and a default naming a clip the library no longer
+         * has resolves to the FIRST entry — silently, and to a different clip than it says.
+         */
         void RecordEntries(EditorContext& InContext, TDynArray<AnimationLibraryEntry> InAfter,
-                           const char* InLabel)
+                           const char* InLabel, const OpaaxStringID InAfterDefault)
         {
             AnimationLibraryData& lData = InContext.LibraryDocument.GetMutableData();
 
-            LibraryEntriesEdit lStep;
-            lStep.LibraryPath = InContext.LibraryDocument.AbsPath();
-            lStep.Before      = lData.Entries;
-            lStep.After       = InAfter;
-            lStep.LabelText   = InLabel;
+            // Cleared rather than repointed: which clip should inherit the role is the author's
+            // call, and the empty default already MEANS "the first entry".
+            OpaaxStringID lDefault = InAfterDefault;
 
-            lData.Entries = Move(InAfter);
+            if (lDefault.IsValid())
+            {
+                bool lStillThere = false;
+
+                for (const AnimationLibraryEntry& lEntry : InAfter)
+                {
+                    if (lEntry.Name == lDefault) { lStillThere = true; break; }
+                }
+
+                if (!lStillThere)
+                {
+                    OPAAX_LOG(LogEditorAnimationLibraryDocument, Info,
+                              "Default clip '{}' is no longer in this library — cleared to the first entry",
+                              lDefault.CStr());
+                    lDefault = OpaaxStringID();
+                }
+            }
+
+            LibraryEntriesEdit lStep;
+            lStep.LibraryPath   = InContext.LibraryDocument.AbsPath();
+            lStep.Before        = lData.Entries;
+            lStep.After         = InAfter;
+            lStep.BeforeDefault = lData.DefaultClip;
+            lStep.AfterDefault  = lDefault;
+            lStep.LabelText     = InLabel;
+
+            lData.Entries     = Move(InAfter);
+            lData.DefaultClip = lDefault;
 
             InContext.Undo.Record(Move(lStep));
+        }
+
+        /** The overload every edit that does not MOVE the default uses. */
+        void RecordEntries(EditorContext& InContext, TDynArray<AnimationLibraryEntry> InAfter,
+                           const char* InLabel)
+        {
+            const OpaaxStringID lDefault = InContext.LibraryDocument.GetData().DefaultClip;
+
+            RecordEntries(InContext, Move(InAfter), InLabel, lDefault);
         }
 
         /** Whether any entry OTHER than InSkip already answers to InName. */
@@ -139,16 +179,31 @@ namespace Opaax::Editor
             return false;   // a gesture that changed nothing is not a step
         }
 
+        // A RENAME CARRIES THE DEFAULT WITH IT. Without this, renaming the default entry leaves the
+        // default naming something that no longer exists — which does not fail, it falls through to
+        // the FIRST entry, so the library silently plays a different clip than it says it does.
+        // `SheetOps::Slice` clamps its DefaultFrame in the same step for exactly this reason.
+        OpaaxStringID lDefault = lData.DefaultClip;
+
+        if (lDefault.IsValid() && lDefault == InBefore.Name && lEntry.Name.IsValid())
+        {
+            lDefault = lEntry.Name;
+        }
+
         // The list AFTER the fix-ups, with InBefore put back in place as the undo target.
         TDynArray<AnimationLibraryEntry> lAfter  = lData.Entries;
         TDynArray<AnimationLibraryEntry> lBefore = lData.Entries;
         lBefore[InIndex] = InBefore;
 
         LibraryEntriesEdit lStep;
-        lStep.LibraryPath = InContext.LibraryDocument.AbsPath();
-        lStep.Before      = Move(lBefore);
-        lStep.After       = Move(lAfter);
-        lStep.LabelText   = "Edit Clip";
+        lStep.LibraryPath   = InContext.LibraryDocument.AbsPath();
+        lStep.Before        = Move(lBefore);
+        lStep.After         = Move(lAfter);
+        lStep.BeforeDefault = lData.DefaultClip;
+        lStep.AfterDefault  = lDefault;
+        lStep.LabelText     = "Edit Clip";
+
+        lData.DefaultClip = lDefault;
 
         InContext.Undo.Record(Move(lStep));
         return true;
