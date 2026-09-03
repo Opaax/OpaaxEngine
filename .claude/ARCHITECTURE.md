@@ -166,6 +166,14 @@ struct, `Engine`), never on the template itself.
      works; the trick is running it at authoring time instead of at link time. *(They are also
      out-of-line for a second reason — inline bodies would drag
      `glm/gtc/matrix_transform.hpp` into every TU that includes `World.h`.)*
+  5. **`AnimationClipData::TotalTicks` (⑥ S3, 2026-09-03) — the FIFTH strike, and the cheapest tell
+     yet: the sibling had already answered it.** A MEMBER defined in the DLL's `.cpp` on a plain
+     data struct with no `OPAAX_API`; the test exe could not resolve it. `SpriteSheetData` — the
+     type being mirrored, open in the next tab — keeps `FrameCount` and `FrameAt` inline for exactly
+     this reason and exports only its free functions. **So the check has a cheaper form than the
+     question in strike 3: when copying a type's SHAPE, copy where its members LIVE.** A plain
+     aggregate's members go inline in the header, full stop; `OPAAX_API` is for the free functions
+     beside it (`MakeFrameUV`, `SliceGrid`, `SampleClip`).
 - **The MIRROR-IMAGE strike, and it fails WORSE (2026-09-01): `OPAAX_API` on a type the engine does not
   compile.** `Config_EditorImgui` — the tree's first non-DLL config, the decision **GIZ10** left open —
   was declared with `DECLARE_OPAAX_T_CONFIG` in `OpaaxEditorLib`, where `OPAAX_API` is `dllimport`. That
@@ -1701,7 +1709,10 @@ hand-dragged rect.
   layer only because a component payload is opaque json it must not interpret.
 - **`SpriteFrame::Name` is an `OpaaxStringID`** (user's call) — **I13**'s split exactly: a frame
   name IDENTIFIES, so what the field wants is four bytes and an integer compare, not a heap string
-  per frame. Animation will look frames up by it. It forced `Core/String/OpaaxStringIDJson.h`, whose
+  per frame. Animation will look frames up by it. **KEPT, ⑥ S3 (**AN5**): a clip step names a frame
+  by this id and binds it to an index once. What the promise did not price is that `SliceGrid`
+  leaves frames UNNAMED, so the feature arrived owing an authoring button —
+  `SheetOps::AutoNameFrames`, without which a freshly sliced sheet has nothing a clip can name.** It forced `Core/String/OpaaxStringIDJson.h`, whose
   one rule is the one `MapJson` had hand-written since M5: **the TEXT crosses, never the id**,
   because a pool index is built in whatever order a process happened to intern things. An invalid
   id writes EMPTY, not `"None"` — which is what `CStr()` answers and would read back as a name.
@@ -1785,6 +1796,112 @@ hand-verified feature safe rather than brave.
   windows are already an ordered `Begin`/`End` pair, so "the window just begun" is well-defined.
   `EditorPanels` records it per frame and Ctrl+S routes to Save Sheet or Save Map from it — one
   chord, one command each, no second implementation.
+
+---
+
+## AN — Animation (landed ⑥ S3, 2026-09-03)
+
+**AN1 — ANIMATION ADDS NO RENDER PATH.** `SpriteAnimationSubsystem` writes into the
+`SpriteComponent` that `RendererManager::ResolveSpriteDraw` already reads (**SS3**), so `Renderer2D`,
+`RendererManager` and every shader are untouched by this whole block. It is **D7** exactly:
+authoring data plus a world subsystem, never a polymorphic component. *The measure of the design is
+that the diff contains no renderer file at all.*
+
+**AN2 — A CLIP IS ITS OWN ASSET; THE LIBRARY IS AN ALIAS TABLE.** Two formats, and the split is the
+user's call (2026-09-03) with a stated reason: a notify track, curves and events all hang off a
+*clip*, so making the clip the asset means adding them later is one field in one file, with no
+library, component or subsystem change. It also makes a clip reusable across characters.
+- `.opaaxclip` — `AnimationClipData`: a sheet, ordered `AnimationStep`s, `Fps`, `EAnimPlayMode`.
+- `.opaaxanim` — `AnimationLibraryData`: `{Name -> clip path}` entries plus a `DefaultClip`. Its
+  whole job is to let gameplay say `OPAAX_ID("Run")` instead of naming a file, so switching state is
+  an integer compare rather than a string copy.
+- **A component names a library OR one clip directly, and Library wins.** The THIRD instance of an
+  idiom already in the tree (`SpriteComponent`'s `Sheet`|`Texture`, a clip's sheet|texture-list), so
+  a spinning coin costs one `.opaaxclip` and a hero costs a library plus five clips. A one-off prop
+  must not need two assets to exist.
+- **`Hold` counts TICKS, not seconds** (Unreal's `PaperFlipbook` keyframe, Aseprite's frame): pixel
+  timing is quantized, so integers remove drift from the total. A `Hold` of 0 reads as 1 — dropping
+  a mistyped step would shift every index after it, silently.
+
+**AN3 — `SampleClip` IS STATELESS, and that is the playback model, not an optimisation.** The step
+is a pure function of the elapsed time — never of the previous frame — so playback cannot drift and
+a frame hitch SKIPS rather than queueing up the frames it missed. It is free and pure for
+`MakeFrameUV`/`SliceGrid`/`PlanQuadBatches`' reason: it needs no world, no GL and no clock to test,
+and 21 cases pin Loop's wrap, Once's clamp, PingPong's `2n-2` period (the ends are not held twice)
+and every degenerate that could divide by zero or index past the steps.
+- **`bFinished` means "nothing new will be shown from here"** — the end of a `Once` clip, and any
+  clip that cannot advance at all. A Loop or PingPong clip that CAN advance never finishes, because
+  a caller that stopped accumulating on one would freeze it.
+
+**AN4 — THE SUBSYSTEM IS PLAY-ONLY, and that is what makes writing to authored components safe.**
+`ShouldCreate` returns Play worlds only (**WS2**), so in an Edit world the type is never
+*constructed* — proven by `World 'Main' (Edit) — 0 of 2 subsystem candidate(s) created`. A PIE clone
+is a separate world (**WM6**), so what it writes is thrown away with the clone and the authored map
+is untouched. Authoring preview is the clip panel's job, on its own copy (**SS4**).
+- **While an animator drives a sprite it OWNS that sprite's `Sheet`, `Texture` and `Frame`.** The
+  sprite's authored values are what shows when no animator is present — which, since this is
+  Play-only, is exactly what the editor viewport keeps showing. `bPlaying = false` freezes on the
+  current step rather than reverting.
+- A `TResourcePath` is assigned only when it CHANGED: it is a string copy, and this runs per
+  animated entity per frame.
+
+**AN5 — A FRAME NAME BECOMES AN INDEX ONCE, AT BIND — never per tick and never per entity.**
+A clip step names a sheet frame by `OpaaxStringID`, which is what **SS1** promised when
+`SpriteFrame::Name` was made an id. Binding builds one `{clip path -> per-step index}` table; a name
+the sheet does not have resolves to -1, warns once, and that step is skipped rather than drawing
+some other frame (**BO4c** one level down).
+- **Name-based costs an authoring step that index-based would not, and the fix is one button.**
+  `SliceGrid` deliberately generates UNNAMED frames, so a freshly sliced sheet had nothing a clip
+  could reference — 64 renames before the first clip on a 64-frame sheet. `SheetOps::AutoNameFrames`
+  fills only the blanks (an authored name is never overwritten, so it is safe to press twice) and
+  guarantees UNIQUENESS, because the binder resolves by FIRST match and a duplicate would silently
+  animate the wrong picture. The same rule is why `LibraryOps::CommitEntryEdit` REVERTS a duplicate
+  clip name.
+
+**AN6 — A COMPONENT MAY HOLD TRANSIENT STATE, and the json macro is what makes it transient.**
+`SpriteAnimatorComponent::PlayTime` and `BoundClipPath` are in neither
+`NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT` nor `OPAAX_PROPERTIES`, so they cannot reach a
+`.opaaxmap` and the Inspector does not offer them. A PIE clone round-trips through the map snapshot
+(**MP5**/**WM6**), so a cloned world starts every animation at zero for free, with nothing to reset.
+Unreal's `PaperFlipbookComponent::AccumulatedTime` is the same shape.
+- The bound identity is the resolved clip's PATH, not its name: it is the one thing both component
+  routes share, so a clip SWITCH restarts at zero whichever way the clip was named.
+
+**AN7 — `WorldContext` GAINED `IPaths` UNDER WS3's OWN CLAUSE.** WS3 said adding a member later "is
+one line and breaks no existing subsystem, so this starts at what has callers"; this is the first
+world subsystem to load an ASSET, and `ResourceManager::Load` takes an absolute path while a
+`TResourcePath` is deliberately relative (**MP8**). One member, one argument at
+`WorldManager.cpp`'s `SetContext` — where `m_Paths` was already resolved — and the guard beside it
+gained `m_Paths` so the new dereference is checked like its three siblings.
+- It is also **the engine's first world subsystem**, so `Engine` gained a fourth
+  `RegisterNativeWorldSubsystems()` beside components, resource formats and engine subsystems. Until
+  ⑥ S3 every candidate came from a game or editor module, so the engine owned a registry it never
+  wrote to — **I15**'s `RegisterNativeDrawers` gap, one route over.
+
+**AN8 — THE EDITOR HAS TWO DOCUMENTS, AND BOTH OWN THEIR DATA.** `EditorAnimationClipDocument` and
+`EditorAnimationLibraryDocument` are **SS4** verbatim: the copy in the `ResourceManager` is what a
+PLAYING entity animates from, so editing that one would change a running game mid-edit. `Save`
+writes the file **and** `Reload`s it, which is the half [[L75]] records as having been missed once.
+Every undo step carries its document's PATH; a step whose document is not open is a no-op with a
+warning.
+- **The clip preview runs on the PANEL's own clock.** An Edit world has no animation subsystem by
+  construction, and what is previewed is the document's copy, which no world has ever seen. Its
+  frame crop LERPS inside the UVs `GetTextureImage` reported rather than recomputing them, so the
+  panel cannot hold a second opinion about which way up a texture is (**I16**).
+- **Policy lives in the ops, not in the drawers and not in the panel.** An `AnimationLibraryEntry`
+  is `CReflected`, so `DrawProperties` gives the name field and the typed drop target for free — but
+  a property drawer sees one value and knows nothing about the rest of the library, which is why the
+  gesture closes through `LibraryOps::CommitEntryEdit`.
+- **Creating a clip or a sheet from nothing is deliberately NOT here.** No `New Sheet` verb exists
+  either, and `Docs/TODO.txt` reserves asset creation for a factory pattern ("Create asset type
+  (Unreal pattern? asset action + Factory?)"). Building a one-off menu entry now would pre-empt that
+  design. **Trigger: that factory, or the first time copying a file to start one costs real time.**
+
+**AN9 — Named, not built:** notify tracks (`{Uint32 Tick; OpaaxTag Tag;}` — **I14**'s tag is already
+the right type and the subsystem already reaches the bus through `WorldContext::Events`, so it is
+one field plus a publish), a state machine or blending, a per-entity start offset for crowd
+de-sync, multi-document editing. Each has no reader today (**X5**), and none of them changes a shape
+above — which is the whole point of **AN2**.
 
 ---
 
@@ -2303,6 +2420,11 @@ ResourceManager& Resources; EngineEventBus& Events; DebugDraw& Debug; }`. Per-wo
 `WorldContext&` for the world's whole life. `EngineRegistries` is deliberately **not** a member: a
 registry is type metadata, not a running subsystem's business, and nothing needs it — add a member when
 something does.
+- **`IPaths` arrived by exactly that clause (⑥ S3, 2026-09-03)** — the first world subsystem to load
+  an ASSET, since `ResourceManager::Load` takes an absolute path while a `TResourcePath` is
+  deliberately relative (**MP8**). One member, and `WorldManager` had already resolved `m_Paths`.
+  **The clause works as written; what it did not say is that the null-guard beside the construction
+  must grow too** — three siblings were checked and the fourth dereference would not have been.
 
 **WS4 — `std::ref` at the injection point is LOAD-BEARING.** `ISubsystemManager::RegisterSubsystem`
 captures ctor args **by value** into the factory lambda, and `StartupAll` **clears `m_Factories`** once

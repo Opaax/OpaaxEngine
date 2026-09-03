@@ -2151,3 +2151,39 @@ just never twice against the same resource.
   precisely, by someone using it for five minutes. **A report phrased as "X is already loaded and
   then Y" is almost always about a cache, and the fix is almost always a publish, not a reload at
   the reader.**
+
+## L76 — An instrument that fires on the FIRST WRITE proves arrival, not motion (2026-09-03)
+
+**What happened (⑥ S3).** S2's gate was "a sprite visibly cycling", and the log said
+`Advancing 2 animated sprite(s)`. I caught that this does not discriminate — it prints identically
+whether the clip runs or is bound-and-frozen ([[L15]]) — and added what I described as the fix: a
+one-shot line on the first frame CHANGE. It fired, I reported it as proof of playback, and it was
+not. `SpriteComponent::Frame` is authored as **-1** (the "no opinion" sentinel, **SS3**), so the
+very first write always differs from it. A clip that bound correctly and then never advanced would
+have printed the same line, at the same moment, with the same step number.
+
+**I caught it only because the number looked odd** — "now on step 1" on the first tick — and went
+back to ask *why 1?*. The replacement watches ONE entity and requires two DIFFERENT step indices
+over time, which is the claim the gate actually makes: `Playing — step 1 -> 2 on the watched sprite`.
+
+**Why this is not just [[L15]] again.** L15 says the log must discriminate, and L21 says the
+instrument must not share a failure mode with the thing it measures. Both are about the instrument
+being *wrong*. This one was **right about a different question**: it truly reported "the animator
+wrote to the sprite", which is a real fact, adjacent to the one being claimed, and satisfying enough
+that I shipped it as evidence. The gap between "the machinery is connected" and "the machinery is
+running" is exactly one sentinel value wide.
+
+**Rules for next time:**
+- **When an instrument watches a field with a SENTINEL or a default, its first observation is
+  meaningless.** `-1`, `0`, empty, null: the first write past one of those is guaranteed, so
+  anything triggered by "it changed" is measuring initialisation. Require a second, different
+  observation — or watch a value that had no special starting state.
+- **State the claim in one sentence, then read the log line beside it.** "The clip is playing"
+  versus "the animator wrote a frame" are visibly different sentences; the line only supported the
+  second. Doing this at the moment of WRITING the log is cheaper than doing it after it passes.
+- **A number that surprises you is the review.** "Step 1" instead of "step 0" was the whole tell,
+  and it cost one question. Log a number rather than a fact wherever it is free — a fact can only
+  be true, a number can be *odd* ([[L59]]).
+- **The correction is worth more than the original catch.** I had already applied [[L15]] once here
+  and still shipped a non-discriminating instrument; the lesson is that "I fixed the discrimination
+  problem" is not a state you get to reach and stop checking.
