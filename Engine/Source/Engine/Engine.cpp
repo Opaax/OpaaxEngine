@@ -32,6 +32,7 @@
 #include "RHI/Texture.h"       // the TUniquePtr<ITexture2D> deleter
 #include "Engine/Subsystems/Resources/Types/TextureResource.h" // registered as a native format
 #include "Engine/Subsystems/Resources/Types/SpriteSheetResource.h" // registered as a native format
+#include "Engine/Subsystems/Resources/Types/AnimationClipResource.h" // registered as a native format
 
 namespace Opaax
 {
@@ -86,6 +87,7 @@ namespace Opaax
         m_Registries.Resources().Register<MapResource>(OPAAX_ID("Map"));
         m_Registries.Resources().Register<TextureResource>(OPAAX_ID("Texture"));
         m_Registries.Resources().Register<SpriteSheetResource>(OPAAX_ID("SpriteSheet"));
+        m_Registries.Resources().Register<AnimationClipResource>(OPAAX_ID("AnimationClip"));
     }
 
     void Engine::RegisterNativeSubsystems()
