@@ -1892,6 +1892,16 @@ warning.
   is `CReflected`, so `DrawProperties` gives the name field and the typed drop target for free — but
   a property drawer sees one value and knows nothing about the rest of the library, which is why the
   gesture closes through `LibraryOps::CommitEntryEdit`.
+- **`DefaultClip` RIDES IN THE SAME UNDO STEP AS THE ENTRY LIST**, because the edits that dangle it
+  are the edits to the list: a rename orphans it, a remove deletes it. A dangling default does not
+  fail — `Find` falls through to the FIRST entry — so the library silently plays a different clip
+  than it names, and a different one again once the list is reordered. A rename CARRIES it; every
+  other list edit re-validates and CLEARS it, cleared rather than repointed because which clip
+  inherits the role is the author's call and the empty default already *means* the first entry.
+  **This is `SheetOps::Slice`'s `DefaultFrame` clamp, one asset over — and it shipped missing,
+  caught only because the user's own renaming produced the dangling case within the hour.** The
+  general shape: *whenever a type holds a NAME that points into a list it also owns, every list
+  verb is a verb on that name too.*
 - **Creating a clip or a sheet from nothing is deliberately NOT here.** No `New Sheet` verb exists
   either, and `Docs/TODO.txt` reserves asset creation for a factory pattern ("Create asset type
   (Unreal pattern? asset action + Factory?)"). Building a one-off menu entry now would pre-empt that
