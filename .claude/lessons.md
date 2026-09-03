@@ -2187,3 +2187,67 @@ running" is exactly one sentinel value wide.
 - **The correction is worth more than the original catch.** I had already applied [[L15]] once here
   and still shipped a non-discriminating instrument; the lesson is that "I fixed the discrimination
   problem" is not a state you get to reach and stop checking.
+
+## L77 — I read the wrong process's log for two whole steps, and the number I was not looking for was the defect (2026-09-03)
+
+**What happened (⑥ S4, text rendering).** `build/debug-editor/bin/Debug/` holds **two** hosts —
+`Sandbox.exe` (the game) and `SandboxEditor.exe` (the editor). I smoke-tested `Sandbox.exe` for S1
+and S2, reported "0 errors, editor boots clean", and only found out when S3's `SetUIFont` success
+line **failed to appear**: the log had no `[Editor*]` category in it at all, and never had. Every
+"the editor is fine" statement I had made rested on a log the editor had not written.
+
+The game-host runs were not worthless — they proved `Game.exe` bakes and draws text, which is a real
+gate. But I did not *choose* that gate; I thought I was testing the editor and was not.
+
+**Then reading the whole editor log found the actual defect.** `ViewportPanel] Drawing 4 entity
+icon(s) — entities with nothing to render` — a number I had gone nowhere near. My three text
+entities were being counted as *entities with nothing to render*, which meant
+`EntityQuery::TryGetBounds` did not know about `TextComponent`: a text could not be clicked, its
+selection outline was a 16px anchor, and it drew a "nothing here" icon over itself. No unit test
+would have found it, and no gate I had written was looking at it. Teaching the query about text took
+twenty minutes and the count went **4 → 1**.
+
+**Rules for next time:**
+- **Before reading a smoke log, confirm which BINARY wrote it.** [[L24]] said compare the exe's mtime
+  to the DLL's; this is the same question one step earlier — *is this the right program at all?*
+  `ls *.exe` in the output dir takes one second, and a directory with two hosts in it is the norm
+  here, not an edge case. The cheap check: grep the log for a category **only that host emits**
+  (`[EditorService]`, `[EditorGui]`). Absent ⇒ wrong log, whatever else it says.
+- **A log with zero lines from the subsystem under test is not a clean log** — it is [[L24]]'s "an
+  empty log is not a passing log", applied per-subsystem instead of per-file. I grepped for errors,
+  found none, and read that as evidence about code that had never run.
+- **Read the numbers you did not come for** ([[L27]] again, and this is its strongest instance yet).
+  The icon count was in *every* editor run; it only became a finding when I stopped scanning for the
+  one line I wanted. A count that changed because of my diff is a question, even when nothing warned.
+- **Adding a renderable component means teaching the QUERY, not only the renderer.** `DrawWorldTexts`
+  was the obvious half; `TryGetBounds` and `DrawRank` are what make the thing selectable, outlinable
+  and orderable. The sweep for "who else knows what a renderable is" is part of the component, not a
+  follow-up (**TX7**).
+
+## L78 — A claim about a log line is checkable in seconds; I wrote two of them into git history instead (2026-09-03)
+
+**What happened (⑥ S4).** The Main map has a standing `MP6` re-serialize warning. I wrote in a
+content commit that rewriting the map through a sorted `dump(4)` had **cleared** it — inferred from a
+log where the warning was absent, which was the *game* host, where `EditorLevelDocument` never runs
+that check at all ([[L77]]). Caught it, amended to "UNCHANGED, still pre-existing" — and that was
+wrong too: the warning's *first difference* had moved from a missing `Frame` key to an entity-order
+difference my own three entities introduced. Two commits, two confident sentences, zero measurements.
+Settling it properly took one 22-second run against the previous map and one Python round-trip.
+
+**Why it happened.** Both claims were free to make and felt like colour in a commit message. Neither
+was load-bearing for the code — which is exactly what made me sloppy: I was writing *narrative*, and
+narrative does not feel like it needs a gate. But a commit message is the most durable thing I
+produce, and the next reader has no way to tell which sentences I verified.
+
+**Rules for next time:**
+- **A sentence in a commit message asserting a behaviour is a claim under the same rule as a comment
+  or a doc line** ([[L26]]: a doc's ordering claims are the ones to distrust). Before writing "this
+  also fixed X" or "X is unchanged", ask: *did I observe X, in the right process, after this change?*
+  If not, either measure it or do not write it.
+- **"It stopped warning" needs the run where it WOULD have warned.** Absence of a message proves
+  nothing unless the check that emits it actually executed — the [[L15]] discriminate rule applied to
+  a negative.
+- **Prefer the message that states what I ran.** "601 / 7744 / 7" and "the icon count went 4 → 1" are
+  claims I cannot get wrong; "cleared the standing warning" is one I got wrong twice.
+- Amending is cheap and correct — but a second wrong amend is worse than the first, so **settle the
+  fact before the second attempt**, not between them.

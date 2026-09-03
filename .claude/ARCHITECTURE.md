@@ -1915,6 +1915,107 @@ above — which is the whole point of **AN2**.
 
 ---
 
+## TX — Text rendering (⑥ S4, landed 2026-09-03)
+
+**TX1 — A FACE IS A FILE; A FAMILY IS AN ALIAS TABLE OVER FACES.** `FontFaceResource` is one `.ttf`:
+one subset, one weight, one slant, one baked atlas. `FontFamilyResource` (`.opaaxfont`) maps
+`FontStyleKey{Subset, Weight, Width, Slant}` → a face path, and holds nothing else.
+**AnimationLibraryData's split, for AN3's reason** — the face is the unit that grows, the table is a
+pure alias — and it is why 162 Roboto cuts cost one asset instead of 162 decisions.
+- **A component may name either** (`TextComponent.Font` vs `.Face`), and **Font WINS**. That is
+  `SpriteComponent`'s Sheet-over-Texture precedence and the same justification: a single label, a
+  debug readout, a game whose whole UI is one weight, must not need a family asset beside it.
+- **The family has NO default entry**, unlike its animation sibling. A clip alias is a string that
+  can be absent; a style key cannot be — the four axes always have a value — so there is no "no
+  opinion" case to answer.
+
+**TX2 — THE BAKE ASKS THE FILE WHAT IT HAS. There is no range parameter to get wrong.** `FontBake`
+scans `0x20..0x33FF` with `stbtt_FindGlyphIndex` and packs whatever answers. A fontsource subset
+bakes its subset; any other `.ttf` bakes everything it carries. ~13k cmap probes, a few ms.
+- **0x33FF is the CJK line, drawn deliberately** — the last code point before CJK Extension A.
+  Chinese and Japanese need a DYNAMIC atlas, not a bigger window: raising the bound would not make
+  them work, it would overflow the 2048 cap. When that day comes the change is inside `FontBake` and
+  `FontFaceResource`; **`FontFaceData`'s codepoint-keyed lookup does not move**, which is the
+  property that made "static now, dynamic later" a safe answer rather than a deferral.
+- The atlas starts at 512 and **doubles**, failing loud past 2048. Latin Bold at 224 glyphs really
+  does need 1024 — the grow path is exercised at every boot, not theoretical.
+- Kerning is an N² walk over the covered set, **skipped with a warning above 512 glyphs**: `symbols`
+  and `math` carry a thousand glyphs nobody kerns. stb 1.26 reads GPOS, so real faces do kern
+  (2495 pairs on latin-700).
+
+**TX3 — GLYPHS ARE KEYED BY CODEPOINT, AND THAT IS THE WHOLE DIFFERENCE FROM THE RETIRED M5.** The
+old shape was a 95-slot array indexed by `char - 0x20`; a Greek face could not exist in it. UTF-8
+decoding joins the path boundary in `Core/String/OpaaxUtf8.h` (**I7**) — same invariant, read from
+the text end. `Utf8::Decode` **always advances on a non-empty string**: a decoder that can stand
+still turns one bad byte into a hang, which is the only failure mode here that is not survivable.
+
+**TX4 — THE DATA IS PORTABLE, THE RESOURCE IS NOT.** `FontFaceData` (glyphs, metrics, kerning) lives
+under `Renderer/Text/`; `FontFaceResource` composes it under `Resources/Types/` the way
+`TextureResource` composes an `ITexture2D`. **Resources → Renderer is the allowed direction**, never
+the reverse, which is what lets the whole layout walker be unit-tested with no device. `Text2D`
+consumes a `FontFaceView{Data, Atlas}` — the `RenderView` idiom — built by `RendererManager`, the one
+adapter allowed to reach the ResourceManager.
+
+**TX5 — MEASURE AND DRAW ARE ONE WALK.** `WalkText` takes a nullable `Renderer2D*`. Two
+implementations is how the drawn string and the measured one start disagreeing —
+`Renderer2D::SubmitQuad`'s argument, one layer up. One `DrawSprite` per visible glyph, all on one
+atlas, so a whole string costs one texture slot and sorts with everything else; a blank glyph submits
+nothing.
+
+**TX6 — A MISSING GLYPH DRAWS A TOFU BOX, AND THE SUBSET NEVER FALLS BACK.** Width, slant and weight
+all fall back on CSS's own priority order (width first, then slant, then weight) because asking for
+Medium in a family that stops at Regular is a *style request*, not a typo. **Asking for Greek and
+getting Latin does not degrade — it returns a screenful of boxes**, so the honest miss is the better
+answer and the caller can say which script it lacks. Anything inexact warns **once per (family,
+style)**, never per frame.
+- `FontFaceData::Tofu()` is the ONE definition of "empty but still able to lay out", shared by a face
+  that failed to load and a family with nothing in the script asked for. A value-initialised
+  `FontFaceData` is NOT the same thing: its zero `PixelHeight` divides by zero the moment a draw
+  scales it, and its zero `LineAdvance` stacks every line on one spot.
+
+**TX7 — A TEXT'S BOUNDS ARE ESTIMATED, GENEROUS, AND HANG DOWN-RIGHT OF THE TRANSFORM.**
+`EntityQuery::TryGetBounds` is headless by design — hit-testing must not depend on what happens to be
+uploaded — so it calls `Text2D::EstimateExtent` rather than `Measure`. **Over-estimating is the
+contract**: a box that comes up short makes the tail of a string unclickable, which reads as a broken
+entity. Text is the one renderable **not centred on its position**: the transform is where the first
+line starts. `DrawRank` reads the text's layer too, or a UI-band label could not win a click from a
+Default-band sprite behind it.
+
+**TX8 — THE EDITOR'S OWN TYPEFACE GOES THROUGH THE GUI SEAM** (user requirement, 2026-09-03: *"Go
+through GUI API. if we switch to QT it has to easy."*). `IEditorGui::SetUIFont(EditorUIFont)` states a
+REQUIREMENT — this file, this size, these scripts must read — never ImGui's spelling; Qt hands the
+primary to `QApplication::setFont`. `EditorService` resolves the config's mount paths to absolute
+ones and calls it, so a second backend inherits the choice unchanged.
+- **The fallbacks are a LIST because the source files are subsetted.** One path cannot express a UI
+  that reads Latin, Greek and Cyrillic. ImGui merges them into one `ImFont`; 1.92 loads glyphs on
+  demand, so no range table is needed. `ImFontFlags_NoLoadError` turns a mistyped path from an
+  `IM_ASSERT` before the first frame into a warning and the default font.
+- Applied at Init, so both drawn config fields carry `NeedRestart` and the drawer prints "(restart)".
+  `UIFontFallbacks` is json-only — no drawer draws a list, the split `SpriteSheetData` already makes.
+
+**TX9 — THE PREVIEW ROUTE IS A CHROME FACET, NOT A CHAIN OF IFS.**
+`ResourceTypeBuilder::SetPreview<T>(drawer)` stores a `FResourcePreviewOpen`; the panel holds an
+`IResourcePreviewClaim` per open entry and **names no resource type at all**. Registry → live object,
+**MR2g**'s shape for every other route.
+- **The claim travels WITH the drawing, and it must:** `ResourcePool::Release` defers an unload to the
+  next `CollectGarbage` pump, so a drawer that re-`Load`ed each frame would re-bake a font from disk
+  the first time the pump landed between two frames.
+- The drawers live in `Editor/Resources/ResourcePreviewDrawers.{h,cpp}`, not as lambdas in
+  `EditorService` — that composition root has zero `ImGui::` and keeps it (**GIZ8**).
+- **A font atlas draws with STRAIGHT `(0,0)-(1,1)` UVs where a texture needs them swapped.**
+  stb_image flips on load, so a `TextureResource`'s row 0 is the image's *bottom*; stb_truetype writes
+  top-down, so an atlas's row 0 is its *top*. Two buffers, opposite orientations, one y-down widget —
+  the F-Text-1 bug of the retired M5, now stated where both call sites can read it.
+
+**TX10 — Named, not built:** screen-space text (a stats overlay pinned to a corner) is **blocked on
+multi-view**, not deferred by choice — it is a second ortho pass, and faking it by moving a world
+position against the camera is the thing multi-view exists to stop. Alignment, word-wrap, rotation,
+outline/shadow, SDF and per-glyph cross-subset fallback each have no caller (**X5**). **Width has no
+files**: the static Roboto export carries no width axis, so only `Normal` resolves until a
+`Roboto_Condensed` family drops in — the axis is in the key so that costs no file-format change.
+
+---
+
 ## SE — Extension seams (composition-root-only)
 
 Only a **composition root** (an `OpaaxApplication` subclass — `Sandbox`, `EditorApplication`) overrides
@@ -3100,7 +3201,7 @@ the old groups opens fine (nlohmann ignores undeclared keys — pinned by a test
 
 ## Pointers
 
-- **Post-mortems / rules:** `.claude/lessons.md` (L1–**L51**).
+- **Post-mortems / rules:** `.claude/lessons.md` (L1–**L78**).
 - **Live session state:** `.claude/CLAUDE.local.md` (current milestone, standing decisions).
 - **Working checklist:** `.claude/task/todo.md`.
 - **Ground truth for engine design:** `.claude/data/` — *Game Engine Architecture* (Gregory). Prefer it over
