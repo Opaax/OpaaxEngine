@@ -1,4 +1,19 @@
-# ⑥ S5 — MULTI-VIEW
+# ⑥ S5 — MULTI-VIEW ✅ CLOSED, user-verified 2026-09-04
+
+**4 commits `7e0ece2`→`dcd34b3`, zero new warnings, 608 / 7781 / 7.**
+`panels=13→14`, `titleBar=34→35`, **`drawers=8` unchanged** (a registration changed FORM, not count).
+Eye gates passed twice — the panel (*"yes, eye gate passed"*) and the button (*"yes eye gate
+passed"*) — with **one defect their use found immediately**, fixed in `dcd34b3` and now **MV4**.
+
+Durable → **MV1–MV6** (+ **F2**, **CAM6**, **TX10** amended). Lessons → **L80**–**L82**.
+**The block owes nothing.**
+
+| Step | Commit | What |
+|---|---|---|
+| S5.1 | `7e0ece2` | A frame is a list of views, submitted fresh each frame |
+| S5.2 | `93cc2de` | The second view: `CameraPreviewPanel` |
+| S5.3 | `a237740` | A drawer may ask for the editor, and the camera's asks only to call a verb |
+| S5.3a | `dcd34b3` | The preview stays on its camera (their find) |
 
 ## Context
 
@@ -76,9 +91,21 @@ SubmitView(IRenderTarget&, const CameraView&, bool bDrawOverlays)
   `ViewportPanel`'s deferred-resize shape (measure in `DrawContents`, apply in `OnPreRender`). In
   `OnPreRender` it resolves the selected entity's `TransformComponent` + `CameraComponent` into a
   `CameraView` — the same pair `CameraManager::Resolve` builds — and submits it.
+- **The preview is STICKY, and following the raw selection was wrong** (their find in use, fixed in
+  `dcd34b3`): a camera claims the preview, anything else leaves it alone. Clicking ordinary geometry
+  used to blank the panel — and you select geometry to position it AGAINST the framing, so it went
+  dark exactly when it was being used. `TrackSelection` banks the primary **only when it carries a
+  camera**; the view is re-resolved from that id every frame, so a move or an `OrthoSize` edit still
+  lands the same frame while a deleted entity falls back rather than showing a stale picture.
+- **An `EntityID`, not an `Entity` and not a `CameraPreview` object on the context.** Only entities
+  of the ACTIVE world are ever banked, so the resolve rebuilds the handle against that world and no
+  `World*` is stored to dangle; `OnActiveWorldChanged` forgets it, because an id means nothing in
+  another world and entt reuses handles — a kept one could silently resolve to a different entity
+  that happens to have a camera.
 - **No camera resolved is a first-class state**, not an error: the panel draws "No camera" and
-  submits no pass. Covers a deselection, a non-camera selection, a deleted entity, and a PIE clone
-  whose ids do not carry.
+  submits no pass. It is what a panel opened from the Window menu shows before any camera has been
+  picked, and what remains after the previewed one is deleted, loses its component, or belongs to a
+  world that is no longer active.
 - **`TDrawerRegistry` gains an optional `Draw(IEditorWidgets&, T&, Entity&, EditorContext&)` form**,
   detected with `if constexpr` — the same duck-typing the registry already uses to tell its generic
   form from its custom one (*"DUCK-TYPED contract, checked at instantiation, with NO base class"*).

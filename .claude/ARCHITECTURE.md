@@ -831,8 +831,10 @@ is instance-based (no statics — **I1**).
 - **Render-pass shape (landed M1, 2026-07-26):** `BeginFrame / BeginPass(target,view) / EndPass / EndFrame /
   PresentBackbuffer`. `BeginFrame`/`EndFrame` bracket the device frame; the pass bracket
   (`BeginRenderPass`/`EndRenderPass`) lives in `BeginPass`/`EndPass`, so a frame renders into any
-  `IRenderTarget` (backbuffer or offscreen FBO — `RendererManager` picks via `m_PrimaryTarget`, size read
-  from the target). "scene" is retired vocabulary — a render *pass into a target with a view*. New render
+  `IRenderTarget` (backbuffer or offscreen FBO, size read from the target). *Amended ⑥ S5,
+  2026-09-04: `m_PrimaryTarget` is GONE — a frame is N passes, and which targets they land in comes
+  from the per-frame view list (**MV1**).* "scene" is retired vocabulary — a render *pass into a
+  target with a view*. New render
   path is **OpenGL-only** today; the VK backend is **parked in `Legacy/RHI/Vulkan`** (2026-07-22) pending a
   new-path `VulkanRHIDevice`.
 
@@ -1267,8 +1269,10 @@ is current, which is the same source **IN8** already sends `Ctrl+S` to.
 ③'s fold **three** components, not two — recorded in `.claude/plans/engine-sequence.md` §③.
 
 **CAM6 — What ① deliberately did NOT build** ([[L23]] — never an API with no caller): follow, shake,
-priority/blending, `ViewportRect` and multi-view (⑥ owns it; `RenderView` already promises it is nearly
-free), perspective, confiner/bounds, a scene view that detaches from the game camera during PIE, and
+priority/blending, `ViewportRect` and multi-view (**LANDED ⑥ S5, 2026-09-04 — see §MV.** It was
+nearly free as promised, and **CAM1**'s slot survived untouched because the consumer that justified
+it reads a camera entity instead of writing the world's view), perspective, confiner/bounds, a scene
+view that detaches from the game camera during PIE, and
 screen→world **picking** (`ScreenToWorld` landed here because zoom-at-cursor needs it; turning it into
 click-select is ②).
 
@@ -2073,12 +2077,112 @@ InputTextMultiline`, so `TextComponent::Text` is authored as prose and Enter ins
   item id, which outranks `ImGuiInputFlags_RouteGlobal` while it is active. Verified in
   `imgui_widgets.cpp` rather than assumed, and nothing was added to arbitrate it.
 
-**TX10 — Named, not built:** screen-space text (a stats overlay pinned to a corner) is **blocked on
-multi-view**, not deferred by choice — it is a second ortho pass, and faking it by moving a world
-position against the camera is the thing multi-view exists to stop. Alignment, word-wrap, rotation,
+**TX10 — Named, not built:** screen-space text (a stats overlay pinned to a corner) is a second ortho
+pass, and faking it by moving a world position against the camera is the thing multi-view exists to
+stop. *Amended 2026-09-04: multi-view LANDED (**MV**), so this is no longer blocked — and the user
+then deferred the overlay itself (*"We have stats panels, for now is very ok"*). What it now waits
+on is the HUD, whose design they are keeping.* Alignment, word-wrap, rotation,
 outline/shadow, SDF and per-glyph cross-subset fallback each have no caller (**X5**). **Width has no
 files**: the static Roboto export carries no width axis, so only `Normal` resolves until a
 `Roboto_Condensed` family drops in — the axis is in the key so that costs no file-format change.
+
+---
+
+## MV — Multi-view (landed ⑥ S5, 2026-09-04, USER-VERIFIED)
+
+**MV1 — A frame is a LIST of views, and each is claimed ONE FRAME AT A TIME.**
+`RendererManager::SubmitRenderView(IRenderTarget&, const CameraView&, bool bDrawOverlays)` replaced
+`SetPrimaryRenderTarget` through the whole route (`IEngine` / `NullEngine` / `Engine` /
+`RendererManager`). Producers submit in `OnPreRender`; `RenderFrame` loops the list; `Render` clears
+it beside the debug queue. **This is F4's immediate-mode contract applied to views**, and it buys the
+same thing: a producer that wants a view re-submits it, and one that stops — hidden, destroyed, mid
+teardown — stops being drawn with nothing to unregister. `ViewportPanel::Shutdown` lost its
+"clear the target first, in this order, or a live frame reads a dangling pointer" ordering rule
+entirely; that window is now unrepresentable rather than documented.
+- **The RUNTIME path is a SUBMISSION, not a branch.** An empty list makes `RenderFrame` submit the
+  backbuffer framed by the active world — what it always drew. One line, no second code path to keep
+  in step, and `Sandbox.exe` never learns any of this exists. *(**BO4c**'s never-a-black-frame rule
+  one level down, and the shape **CAM1**'s default-constructed fallback already uses.)*
+- **`RenderPass` composes the matrices against THAT target's pixels**, so **CAM1**'s split holds per
+  view: the submitter says where it is looked at from, the adapter is what knows pixels. Two views of
+  different sizes frame the same world correctly with neither producer knowing about pixels.
+- **A zero-size target skips its PASS, not the frame** — the early-out moved from per-frame to
+  per-target. A frame with no drawable pass still opens no device frame.
+- **The debug queue is READ per pass and CLEARED once per frame.** Two views that both want overlays
+  each draw them.
+- **`bDrawOverlays` had two callers on day one** — true for the Viewport, false for the Camera
+  Preview, which must look like the GAME. That is the rule `EnqueueEntityIcons` already states for
+  Play worlds, not a new one, and it is why this is a field rather than a spec (**X5**).
+- **A per-pass `ELoadOp` was planned and REFUSED at build time.** `Load` is only needed when two
+  passes share ONE target; every view here owns its own, so all `Clear`. Adding the parameter would
+  have been an enumerator with no caller — the trap this whole block was shaped to avoid.
+  **`ELoadOp::Load` still has zero callers**, and `ICommandBuffer.h` names the one it waits for: the
+  HUD, the first thing that draws twice into one target.
+
+**MV2 — The block was defined by its CONSUMER, because the plumbing alone cannot be verified.**
+With one pass still composed, the change renders byte-identically: no smoke run, no log line and no
+test can tell it from no change, and `Renderer2D`'s pass loop needs a GL context so the headless
+suite cannot reach it either ([[L23]] / **X5**). Every cheap consumer considered had a cheaper answer
+that is **not** multi-view — a camera-framing rectangle is `DebugDraw`; asset previews are ImGui
+images the clip editor already draws; the selection outline's zoom-thinning is `WorldPerPixel()`,
+which the grid already uses. See [[L80]].
+
+**MV3 — `CameraPreviewPanel` is the second view, and READ-ONLY is what makes it cheap.** It resolves
+the previewed entity's `TransformComponent` + `CameraComponent` — the same pair
+`CameraManager::Resolve` reads, so the preview and the game cannot disagree about what a camera means
+— and **never writes `World::SetCameraView`**. **CAM1**'s one-view-per-world slot is untouched and
+there is no second producer to arbitrate. *A second **editing** viewport is the change that would
+move the view off the World; it is deliberately not this.*
+- It owns its FBO + `OffscreenRenderTarget` and copies `ViewportPanel`'s deferred-resize shape.
+- **A hidden panel submits nothing**, so it costs no pass while closed (`EditorPanels::IsVisible`).
+
+**MV4 — The preview is STICKY: a camera claims it, nothing else disturbs it.** *Corrected in use by
+the user (`dcd34b3`) — the first version followed the raw selection, which blanked the panel on every
+click on ordinary geometry, and you select geometry to position it AGAINST the framing.*
+`TrackSelection` banks the primary selection **only when it carries a camera**; the view is
+re-resolved from that id **every frame**, so a move or an `OrthoSize` edit lands the same frame while
+a deleted entity falls back rather than showing a stale picture. Tracking runs while hidden, so
+opening the panel shows the camera already selected.
+- **An `EntityID` in the PANEL** — not an `Entity`, not a `CameraPreview` object on `EditorContext`
+  (which was proposed and deleted). Only entities of the ACTIVE world are ever banked, so the resolve
+  rebuilds the handle against that world and no `World*` is stored to dangle.
+- **Forgotten on `OnActiveWorldChanged`, and that is CORRECTNESS, not hygiene**: an id means nothing
+  in another world and **entt reuses handles**, so a kept one could silently resolve to a different
+  entity that happens to have a camera — a plausible, wrong picture.
+- **"No camera" is a first-class state**, not an error: what a panel opened from the Window menu
+  shows before any camera is picked, and what remains after the previewed one is deleted, loses its
+  component, or leaves the active world.
+
+**MV5 — A DRAWER MAY ASK FOR THE EDITOR, and only to call a verb.** `TDrawerRegistry` gained an
+optional `Draw(IEditorWidgets&, TDrawable&, TSubject&, EditorContext&)`, detected by the
+`CContextDrawer` concept + `if constexpr` — the same duck typing that already tells the custom form
+from the generic one, so every existing drawer compiled untouched. The closure carried the subject
+all along; only the context is new, and it comes down from the Inspector, which holds it.
+- **`CameraComponentDrawer` is the first and only taker**: its own `CollapsingHeader`, then
+  `DrawProperties` (so a field added to `CameraComponent` needs no change here), then a button that
+  dispatches **`EDITOR_COMMAND_TOGGLE_PANEL`** with the panel's id. **No new command, no new tag** —
+  the button and the Window menu entry are one verb, and a key binding would be a third front-end.
+- **This does NOT contradict I15.** A field is still written straight through the `T&`; what needs
+  the context is a *verb*, which is the registry's business. **The cost is stated in the header
+  rather than hidden:** a drawer holding the context can reach the whole editor, and what keeps it to
+  a verb is convention, not the type system. Accepted deliberately (user: *"Maybe its good to have
+  editor context for drawer too. some custom drawer may need it more often"*), with `Docs/TODO.txt`'s
+  "Convert Texture to sheet" as the next expected taker.
+- **A `ComponentActions()` registry was proposed and REJECTED** as machinery (*"cant we make it
+  simplier"*). The drawer plus the context does the same job with no new route and no new counter.
+
+**MV6 — The counts, and the one that did NOT move.** `panels=13→14`, `titleBar=34→35` (the Window
+menu gains an entry per panel), and **`drawers=8` UNCHANGED** — a registration changed FORM, not
+count. The discriminating signal for that is in the boot log: the generic form logs itself at
+registration, so `Generic drawer: CameraComponent` **disappearing** is the proof the custom form took
+over, with Camera now absent beside the three already-custom drawers while Transform and Dummy
+remain. *(**L79**'s rule turned around: predict which counts move, and know why one does not.)*
+
+**Growth points, named and not built:** the HUD (theirs to design — one more submitted view, into the
+same target, with `ELoadOp::Load` and a pixel projection) · split-screen and minimap (no caller) · a
+second **editing** viewport (needs **CAM1**'s slot to move off the World) · the asset preview WORLD
+(Unreal's preview scene — its trigger is ⑦ prefabs, the first preview an image cannot fake) · pinning
+or stacking several previews (the user declined the stack: *"i do not really like the stack"*).
 
 ---
 

@@ -2292,3 +2292,101 @@ one that moves wrongly.
   is absent reads as *not built*, not as *half built*. Report against the loop, not against the layer.
 - **When you are about to write a comment explaining why a type gets less than its siblings, open
   the sibling.** One minute in `AnimationLibraryPanel` would have refuted the sentence I wrote.
+
+---
+
+## L80 — An infrastructure feature with no caller: I checked for a cheap consumer, not for a cheaper NON-consumer (2026-09-04)
+
+**⑥ S5 multi-view.** The render half is two changes — a list of views, and a loop. Small enough that
+I was ready to build it as "getting ready for the HUD", which the user had just deferred.
+
+**What stopped it was asking what would PROVE it.** With one pass still composed the frame renders
+byte-identically: no smoke run, no log line and no test can tell the change from no change, and
+`Renderer2D`'s pass loop needs a GL context so the headless suite cannot reach it either. Two commits
+that no instrument can distinguish from an empty diff.
+
+**Then the real finding, and it is the transferable one.** I went looking for a cheap consumer to
+justify it, found four, and every single one had a cheaper answer that did **not** use multi-view:
+
+| Candidate consumer | The cheaper answer that skips the infrastructure |
+|---|---|
+| Camera-framing preview | a rectangle through `DebugDraw` |
+| Asset preview through the real renderer | ImGui already draws it; `AnimationClipPanel` already PLAYS one |
+| Browser thumbnails | same — a texture, a sheet frame and a clip frame are all just images |
+| Crisp selection outline at any zoom | `WorldPerPixel()`, which the grid already uses |
+
+**"Is there a caller?" is the wrong question when the caller is one I am inventing to justify the
+build.** The right one is: *for each candidate caller, what is the cheapest way to give them that
+result — and does it involve this feature at all?* Four times the answer was no. The consumer that
+survived (a camera preview panel needing its own target AND its own view in one frame) is the only
+one that could not be faked, which is exactly why it was worth building.
+
+**Rules:**
+- **When a change cannot be distinguished from an empty diff by any instrument you have, that is a
+  STOP, not a "verify later".** Name it out loud before writing the code, not in the hand-off.
+- **Price the alternative that does NOT use your feature.** A consumer list is worthless if every
+  entry has a two-line answer elsewhere; the surviving entry is the design's actual justification.
+- **State the un-verifiability to the user as a first-class finding.** They deleted a whole framing
+  from it and picked a better consumer in one message — that only happened because the problem was
+  put in front of them instead of being absorbed.
+
+---
+
+## L81 — A smoke run cannot open a hidden panel; build the throwaway harness rather than ship unrun code (2026-09-04)
+
+**⑥ S5.2.** `CameraPreviewPanel` is hidden by default and follows the selection. A smoke run does
+neither — so shipping it would have meant handing over the *entire point of the block* (a second
+render pass) with zero evidence it had ever executed. [[L23]]'s exact shape, and the gate I had
+written for myself said "their eyes", which would have made it their problem.
+
+**What I did instead:** a deliberately temporary harness — register the panel VISIBLE, and resolve
+the preview from the world's first camera instead of the selection. Two edits. It produced the line
+the step exists for:
+
+```
+[RendererManager] Frame composed of 2 render passes — the first multi-view frame
+[CameraPreviewPanel] Previewing a camera at (-352.00037, 0), orthoSize 300
+```
+
+Then: harness removed, rebuilt, re-smoked, and the SHIPPED build verified to show the opposite —
+no pass line at all, because a hidden panel submitting nothing is the correct result.
+
+**Why the numbers mattered more than the lines.** `(-352, 0)` is not the editor camera's position,
+so the preview was demonstrably framing something else rather than duplicating the viewport. A
+harness that printed "preview ok" would have proved nothing ([[L59]] again).
+
+**Rules:**
+- **If the feature's proof needs a click, write the harness that removes the click.** It is minutes,
+  it is deleted in the same session, and the alternative is prose in a commit message.
+- **Smoke the SHIPPED build after removing the harness, and state what it should NOT show.** The
+  absence of the pass line is what proves the harness is really gone.
+- **Say in the commit that a harness was used and what it changed.** Otherwise the log lines quoted
+  there look like they came from the shipped path.
+
+---
+
+## L82 — A panel that follows the selection: ask what the author selects WHILE looking at it (2026-09-04)
+
+**⑥ S5.** The Camera Preview followed the primary selection — Unity's behaviour, defensible on
+paper, and the user approved the design before I built it. It survived one eye gate and then failed
+in about thirty seconds of real use: *"clicking an entity with no cam comp change the preview."*
+
+**The defect is invisible from the design and obvious from the loop.** You open a camera preview in
+order to *place things against the framing* — so the very next thing you click is a crate, a
+platform, an enemy. Following the selection meant the panel went dark at exactly the moment it was
+being used. Every entity click was a de-facto "close the preview".
+
+**The fix is smaller than the bug.** A camera claims the preview; anything else leaves it alone.
+That restored, in eight lines inside the panel, the "which camera" state that an earlier design round
+had deleted as unnecessary — and it was unnecessary *for the mechanism* and required *for the loop*.
+
+**Rules:**
+- **For any panel keyed to the selection, ask: what does the author select while this panel is
+  open?** If the answer is "things that are not its subject", following the selection is wrong and
+  sticky is right. This generalises immediately — an inspector-adjacent preview, a profiler pinned to
+  an entity, a future material preview.
+- **Design approval is not use approval.** They approved "follows the selection" and rejected it on
+  contact. The gate that mattered was the one where they drove.
+- **When a fix re-introduces state a previous round deleted, that is not a reversal to apologise
+  for** — the earlier deletion was right about the mechanism and wrong about the loop. Record which,
+  so the next round does not re-delete it.
