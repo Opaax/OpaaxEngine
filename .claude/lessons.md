@@ -2251,3 +2251,44 @@ produce, and the next reader has no way to tell which sentences I verified.
   claims I cannot get wrong; "cleared the standing warning" is one I got wrong twice.
 - Amending is cheap and correct — but a second wrong amend is worse than the first, so **settle the
   fact before the second attempt**, not between them.
+
+## L79 — I shipped the ENGINE side of a feature and called it code-complete; the authoring surface was half missing (2026-09-04)
+
+**What happened (⑥ S4).** I reported text rendering code-complete with a six-item eye-gate list and
+handed it over. The user opened the editor and answered in one line: *"yeah correct side, but where
+is the component? the panel for opaaxfont? missing so many things."*
+
+Both were real, and neither needed their eyes to find:
+- **`TextComponent` had no Inspector drawer.** It was registered with the engine's
+  `ComponentRegistry`, so "Add Component → Text" worked — and then drew **nothing**. Addable,
+  invisible, uneditable: the worst of the three possible states. One line in
+  `EditorService::RegisterNativeDrawers`.
+- **`.opaaxfont` opened nothing.** Sheet, clip and library each open a document panel; the family
+  had chrome and no verb.
+
+**The tell was in my own diff, and it is the one [[L19]] names.** I had written, in the registration:
+*"A family has no preview and no document editor: it is an alias TABLE, and the thing worth looking
+at is the face it resolves to."* A sentence whose entire job is to explain why a route was skipped.
+Being an alias table is what the **library** is too — and it has a panel, ops, undoables and a Ctrl+S.
+I had the counter-example in the file I was copying from.
+
+**Why the gates did not catch it.** Every gate I wrote was about the RUNTIME: does it bake, does it
+draw, does it kern, does it pick. The registration counts were in the log all along —
+`drawers=7`, `panels=12` — and I read them as "unchanged, good" rather than "unchanged, and one of
+these should have gone up." A count that does NOT move after adding a type is as much a finding as
+one that moves wrongly.
+
+**Rules for next time:**
+- **A type is not done until every route that could show it has been told**, and the list is now
+  mechanical rather than remembered — ARCHITECTURE.md **MR2i** tabulates it for components and for
+  resource types. Walk it before reporting. The routes are separate on purpose (**D4**), which is
+  exactly why nothing warns when one is missing.
+- **After adding a type, the registration counts must MOVE.** `drawers`, `panels`, `resourceTypes`,
+  `commands`, `components`, `formats` are all in one seal line. Predict which should change before
+  the run, then check. This is [[L59]]'s "log a number" turned around: the number was there and I did
+  not compare it to an expectation.
+- **"Engine-complete" is not a milestone the user recognises.** They judge from the authoring loop —
+  what they stop redoing in the editor — so a feature whose engine half works and whose editor half
+  is absent reads as *not built*, not as *half built*. Report against the loop, not against the layer.
+- **When you are about to write a comment explaining why a type gets less than its siblings, open
+  the sibling.** One minute in `AnimationLibraryPanel` would have refuted the sentence I wrote.

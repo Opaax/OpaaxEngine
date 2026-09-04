@@ -2007,6 +2007,40 @@ ones and calls it, so a second backend inherits the choice unchanged.
   top-down, so an atlas's row 0 is its *top*. Two buffers, opposite orientations, one y-down widget —
   the F-Text-1 bug of the retired M5, now stated where both call sites can read it.
 
+**TX11 — THE FAMILY EDITOR IS A MATRIX, AND THE FALLBACK IS PRINTED** (landed 2026-09-04).
+`FontFamilyPanel` copies `AnimationLibraryPanel` in every respect but one: Roboto is 162 entries, and
+scrolling 162 rows to answer *"do I have Greek Bold Italic?"* is not an answer. So the table is the
+question a family is actually asked — **subset across, weight down**, for one (width, slant) plane at
+a time. 81 cells, one screen, reads as coverage.
+- **A cell is a verb**: `*` selects that face, `?` is one that names no file yet, `+` adds an entry
+  already carrying its style. Which is why the panel has no Add button — an add always has a style.
+- **A Resolve section asks the family what a `TextComponent` would ask** and prints the answer:
+  exact, or which of width / slant / weight it fell back on, or "no Greek face — text asking for it
+  draws a row of boxes". **TX6**'s ladder is otherwise unreadable from a matrix of the cuts that DO
+  exist; you would meet it in the viewport instead.
+- `FamilyOps::CommitEntryEdit` **refuses a duplicate style** the way `LibraryOps` refuses a duplicate
+  name, for the identical reason: `Find` resolves by first match, so a second entry for one style
+  makes the first unreachable. **Reverted, not refused** — the drawer has already written it.
+- **No `MoveEntry`.** Order is not meaningful: `Find` scores every candidate and stops on an exact
+  match, so first-wins only decides a tie, and a tie is the duplicate the rule above forbids.
+
+**TX12 — THE ACTIVE SOURCE IS DERIVED, NEVER STORED** (landed 2026-09-04). Three components name a
+resource two ways with one winning — `SpriteComponent` (Texture/Sheet), `SpriteAnimatorComponent`
+(ClipAsset/Library), `TextComponent` (Face/Font) — and the generic drawer showed both fields with no
+hint which the renderer would use. Each now opens with a **Source** line, and says so when both are
+set: *"Texture is ignored while Sheet is set."*
+- **A stored "which type" enum is the better model and is deliberately NOT built.** It is what
+  Unity's Draw Mode is — but a component gaining one needs a DEFAULT, and no static default is
+  right: a map already carrying a Sheet, with the field defaulting to Texture, **silently stops
+  drawing at load**. That is a migration, not a field. Reading the same rule the renderer reads
+  means the picker cannot disagree with the frame.
+- **The custom drawer adds one line above the same `DrawProperties` fold**, never a hand-listed
+  field set. Enumerating fields in a custom drawer is how a new property silently stops appearing.
+- **Do not pre-wire `SetIcon` to art that does not exist yet.** Tried on 2026-09-04 so a later
+  drop-in would be free; the browser's fallback works exactly as documented (glyph + one warning) but
+  the missing file costs **four `[error]` lines at every boot**, which is a worse trade than the one
+  line it saves.
+
 **TX10 — Named, not built:** screen-space text (a stats overlay pinned to a corner) is **blocked on
 multi-view**, not deferred by choice — it is a second ortho pass, and faking it by moving a world
 position against the camera is the thing multi-view exists to stop. Alignment, word-wrap, rotation,
@@ -2476,6 +2510,38 @@ is empty).
   panel and draws directly.
 - **Still not portable, and still deliberate:** panel contents, the viewport tools' closures, and
   `Editor/ImguiLibrary/*`. The *frame* and the *fields* port; bespoke panel UI does not.
+
+**MR2i — A NEW TYPE IS NOT DONE UNTIL EVERY ROUTE THAT COULD SHOW IT HAS BEEN TOLD** (landed
+2026-09-04, from ⑥ S4 shipping half an authoring surface and the user finding both halves in one
+minute: *"where is the component? the panel for opaaxfont? missing so many things."*).
+
+The routes are separate on purpose — that is what keeps the engine editor-ignorant (**D4**) and lets
+a game register its own — but "separate" means **nothing tells you one is missing**. A component
+registered with the engine and not with the drawer registry is *addable, invisible and uneditable*:
+the worst of the three states, and no build or test can see it. So the list is mechanical.
+
+**A COMPONENT:**
+| Route | Where | Without it |
+|---|---|---|
+| `Components().Register<T>()` | `Engine::RegisterNativeComponents` | not addable, not serialized |
+| `Drawers().Register<T>()` | `EditorService::RegisterNativeDrawers` | **blank Inspector** — the ⑥ S4 bug |
+| `EntityQuery::TryGetBounds` + `DrawRank` | if it RENDERS | unclickable, wrong outline, "nothing to render" icon (**TX7**) |
+| a draw pass | `RendererManager` | invisible |
+
+**A RESOURCE TYPE:**
+| Route | Where | Without it |
+|---|---|---|
+| `Resources().Register<T>()` | `Engine::RegisterNativeResourceFormats` | the file has no type |
+| chrome + **`SetActivate`** | `EditorService::RegisterNativeResourceTypes` | **double-click does nothing** — the other ⑥ S4 gap |
+| `SetPreview<T>` **or** a document + panel + ops + undoables | per type | it can be seen and never opened |
+| the deploy list | `Engine/CMakeLists.txt` | resolves in a dev build, missing in a shipped one |
+
+- **The tell is a comment justifying the absence.** ⑥ S4 registered the family with chrome and no
+  verb under *"A family has no preview and no document editor: it is an alias TABLE"* — a sentence
+  whose whole job was to explain why a route was skipped, which is [[L19]]'s exact signature. Every
+  other document type in the tree opens a panel; being an alias table is what the LIBRARY is too,
+  and it has one.
+- **"Which routes does this type still owe?" is a question to ask before reporting, not after.**
 
 **MR3 — One module shape.** Runtime and editor modules share a marker base **`IModule`**
 (`Application/IModule.h`): `IRuntimeModule : IModule` (`OnRegister(ModuleRegistrar&)`) and
@@ -3201,7 +3267,7 @@ the old groups opens fine (nlohmann ignores undeclared keys — pinned by a test
 
 ## Pointers
 
-- **Post-mortems / rules:** `.claude/lessons.md` (L1–**L78**).
+- **Post-mortems / rules:** `.claude/lessons.md` (L1–**L79**).
 - **Live session state:** `.claude/CLAUDE.local.md` (current milestone, standing decisions).
 - **Working checklist:** `.claude/task/todo.md`.
 - **Ground truth for engine design:** `.claude/data/` — *Game Engine Architecture* (Gregory). Prefer it over

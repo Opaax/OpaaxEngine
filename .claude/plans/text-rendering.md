@@ -249,3 +249,40 @@ outline, the atlas preview on double-click, and Greek typed into a text field.
   lines in it. Caught only because a success line I had just added failed to appear (**L77**).
 - **Two wrong claims about one log line went into commit messages**, both inferred rather than
   measured, and the first amend was wrong too (**L78**).
+
+---
+
+# FOLLOW-UP — 2026-09-04, after the first hand-off was rejected
+
+*"yeah correct side, but where is the component? the panel for opaaxfont? missing so many things."*
+
+The glyphs were right (**orientation confirmed** — M5's old F-Text-1 V-swap is correct). What was
+missing was the authoring surface, and both halves were findable without their eyes:
+
+- **`TextComponent` had no Inspector drawer.** Registered with the engine, not with
+  `EditorService::RegisterNativeDrawers` — so Add Component worked and then showed nothing.
+- **`.opaaxfont` opened nothing**, while sheet / clip / library each open a document panel.
+
+Fixed in `8a07d66`, plus `ce2940e` after they picked two more from a priced list:
+
+| Landed | What |
+|---|---|
+| `8a07d66` | the drawer registration · `FontFamilyPanel` + document + ops + undoables + Save command |
+| `ce2940e` | the Resolve section (**TX11**) · the Source line on all three two-way components (**TX12**) |
+
+**The family panel is a MATRIX**, not a list: 162 entries make a row-per-entry list useless, so it is
+subset across, weight down, one (width, slant) plane at a time. A cell is a verb — `*` selects, `?`
+has no file, `+` adds at that style.
+
+**Declined, with the reason stated: a stored "which source" enum.** It is the better model, but a
+component gaining one needs a default, and no static default is safe — a map already carrying a Sheet
+would silently stop drawing at load. That is a migration.
+
+**Their call, not mine:** the icons (*"the icon, i will make it later"*). I tried pre-wiring the
+`SetIcon` paths so the art would be drop-in and **reverted it**: the fallback works, but two missing
+files cost four `[error]` lines at every boot (**TX12**'s last bullet).
+
+**The lesson is [[L79]]**, and its rule is now mechanical in **MR2i**: a type is not done until every
+route that could show it has been told, and the seal line's counts must MOVE when one is added.
+`drawers 7 -> 8`, `panels 12 -> 13`, `commands 33 -> 34` — all three were in the log the whole time,
+and I read "unchanged" as "fine".
