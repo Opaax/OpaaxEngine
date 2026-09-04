@@ -2,7 +2,7 @@
 
 #include <cstdio>   // snprintf — the entry list's row labels
 
-#include "Editor/EditorAnimationLibraryDocument.h"
+#include "Editor/Resources/Types/Animation/EditorAnimationLibraryDocument.h"
 #include "Editor/EditorContext.h"
 #include "Editor/Commands/EditorCommandRegistry.h"
 #include "Editor/Commands/EditorNativeCommandsTags.hpp"

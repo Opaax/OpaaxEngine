@@ -1,6 +1,6 @@
 #include "Editor/Undo/AnimationClipUndoables.h"
 
-#include "Editor/EditorAnimationClipDocument.h"
+#include "Editor/Resources/Types/Animation/EditorAnimationClipDocument.h"
 #include "Editor/EditorContext.h"
 
 namespace Opaax::Editor

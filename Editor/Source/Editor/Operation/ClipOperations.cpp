@@ -1,6 +1,6 @@
 #include "Editor/Operation/ClipOperations.h"
 
-#include "Editor/EditorAnimationClipDocument.h"
+#include "Editor/Resources/Types/Animation/EditorAnimationClipDocument.h"
 #include "Editor/EditorContext.h"
 #include "Editor/Undo/AnimationClipUndoables.h"
 #include "Editor/Undo/EditorUndo.h"

@@ -1,4 +1,4 @@
-#include "Editor/EditorAnimationLibraryDocument.h"
+#include "Editor/Resources/Types/Animation/EditorAnimationLibraryDocument.h"
 
 #include "Core/String/OpaaxPathString.h"
 #include "Engine/Subsystems/Resources/Types/Animation/AnimationLibraryFile.h"

@@ -3,7 +3,7 @@
 #include <cmath>    // fmod — the scrub wraps a running clock
 #include <cstdio>   // snprintf — the step list's row labels
 
-#include "Editor/EditorAnimationClipDocument.h"
+#include "Editor/Resources/Types/Animation/EditorAnimationClipDocument.h"
 #include "Editor/EditorContext.h"
 #include "Editor/ImguiLibrary/ImguiLayout.h"
 #include "Editor/ImguiLibrary/ImguiWidgets.h"

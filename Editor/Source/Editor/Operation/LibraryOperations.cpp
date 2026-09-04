@@ -1,7 +1,7 @@
 #include "Editor/Operation/LibraryOperations.h"
 
 #include "Core/String/OpaaxPathString.h"
-#include "Editor/EditorAnimationLibraryDocument.h"
+#include "Editor/Resources/Types/Animation/EditorAnimationLibraryDocument.h"
 #include "Editor/EditorContext.h"
 #include "Editor/Undo/AnimationLibraryUndoables.h"
 #include "Editor/Undo/EditorUndo.h"
