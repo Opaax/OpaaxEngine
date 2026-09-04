@@ -51,12 +51,47 @@ namespace Opaax::Editor
 
     void CameraPreviewPanel::OnPreRender()
     {
+        // BEFORE the submit, so a camera picked this frame is previewed in this frame.
+        TrackSelection();
+
         ApplyPendingResize();
         SubmitView();
     }
 
     // =========================================================================
-    // TryResolveCameraView — the primary selection, if it is a camera in the world being drawn.
+    // TrackSelection — a camera claims the preview; nothing else disturbs it.
+    //
+    // The PRIMARY selection, which is the entity the Inspector draws — so the panel and the button
+    // that opens it cannot disagree about which camera was meant.
+    // =========================================================================
+    void CameraPreviewPanel::TrackSelection()
+    {
+        World* const lWorld = m_Context.Worlds.GetActiveWorld();
+
+        if (lWorld == nullptr)
+        {
+            return;
+        }
+
+        Entity lSelected = m_Context.Selection.Get();
+
+        // The camera must belong to the world being DRAWN: a pass renders the ACTIVE world, so an
+        // Edit-world selection during PIE would frame the clone from a stranger's position.
+        if (!lSelected.IsValid() || lSelected.GetWorld() != lWorld)
+        {
+            return;
+        }
+
+        if (lSelected.TryGet<TransformComponent>() == nullptr || lSelected.TryGet<CameraComponent>() == nullptr)
+        {
+            return;
+        }
+
+        m_Previewed = lSelected.GetHandle();
+    }
+
+    // =========================================================================
+    // TryResolveCameraView — the previewed entity, if it is still a camera in the active world.
     //
     // The same pair CameraManager::Resolve reads (a position from the transform, a size from the
     // component), so the preview and the game cannot disagree about what a camera means.
@@ -65,16 +100,16 @@ namespace Opaax::Editor
     {
         World* const lWorld = m_Context.Worlds.GetActiveWorld();
 
-        if (lWorld == nullptr)
+        if (lWorld == nullptr || m_Previewed == ENTITY_NONE)
         {
             return false;
         }
 
-        Entity lEntity = m_Context.Selection.Get();
+        // Rebuilt against the ACTIVE world, never a stored World*: TrackSelection only ever banks an
+        // entity of that world, and OnActiveWorldChanged forgets the id when it is replaced.
+        Entity lEntity{ m_Previewed, lWorld };
 
-        // The camera must belong to the world being DRAWN: a pass renders the ACTIVE world, so an
-        // Edit-world selection during PIE would frame the clone from a stranger's position.
-        if (!lEntity.IsValid() || lEntity.GetWorld() != lWorld)
+        if (!lEntity.IsValid())
         {
             return false;
         }
@@ -90,6 +125,11 @@ namespace Opaax::Editor
         OutView = CameraView{ lTransform->Position, lCamera->OrthoSize };
 
         return true;
+    }
+
+    void CameraPreviewPanel::OnActiveWorldChanged(World* /*InOld*/, World* /*InNew*/)
+    {
+        m_Previewed = ENTITY_NONE;
     }
 
     void CameraPreviewPanel::SubmitView()
@@ -165,6 +205,7 @@ namespace Opaax::Editor
             // last frame's stale image instead would look like a camera that stopped moving.
             ImGui::TextDisabled("No camera");
             ImGui::TextDisabled("Select an entity with a CameraComponent.");
+            ImGui::TextDisabled("It stays on that camera until you pick another.");
 
             return;
         }

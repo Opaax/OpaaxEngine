@@ -4,6 +4,7 @@
 #include "Core/OpaaxTypes.h"             // TUniquePtr, Uint32
 #include "Core/Maths/MathTypes.h"
 #include "Editor/Panels/IEditorPanel.h"
+#include "World/Entity/EntityTypes.h"    // EntityID — which camera is being previewed
 
 namespace Opaax
 {
@@ -34,9 +35,14 @@ namespace Opaax::Editor
     //   the game that is decorated like the editor is not a preview (the rule EnqueueEntityIcons
     //   already follows for Play worlds).
     //
-    //   NO CAMERA IS A FIRST-CLASS STATE, not an error: nothing selected, a selection with no
-    //   CameraComponent, or a selection belonging to another world all draw "No camera" and submit
-    //   no pass.
+    //   THE PREVIEW IS STICKY. Selecting a camera points it there; selecting anything else leaves it
+    //   where it was. Following the raw selection meant every click on ordinary geometry blanked the
+    //   picture — and since you select geometry to POSITION IT AGAINST the framing, the preview went
+    //   dark exactly when it was being used.
+    //
+    //   NO CAMERA IS A FIRST-CLASS STATE, not an error: it is what a panel opened from the Window
+    //   menu shows before any camera has been picked, and what remains after the previewed one is
+    //   deleted, loses its component, or belongs to a world that is no longer active.
     // =============================================================================
     class CameraPreviewPanel final : public IEditorPanel
     {
@@ -65,14 +71,25 @@ namespace Opaax::Editor
         // =============================================================================
     private:
         /**
-         * How the SELECTED entity frames the world, if it frames it at all.
+         * Point the preview at the primary selection — ONLY when that selection is a camera.
          *
-         * The PRIMARY selection — the same entity the Inspector draws, so the panel and the button
-         * that opens it cannot disagree about which camera is meant.
+         * The whole of the sticky rule, and the reason it is its own step: anything else is not a
+         * new subject, it is the author working on the scene the preview is there to frame.
          *
-         * @return False for every ordinary "nothing to preview": no world, nothing selected, a
-         *   selection without a camera, or one belonging to a world that is not the one being drawn
-         *   (an Edit-world selection during PIE would frame the clone with a stranger's position).
+         * Runs even while hidden, so opening the panel shows the camera already selected rather
+         * than an empty state that needs a re-click.
+         */
+        void TrackSelection();
+
+        /**
+         * How the PREVIEWED entity frames the world, if it still frames it at all.
+         *
+         * Re-resolved from the id every frame rather than cached, so moving the camera or editing
+         * its OrthoSize lands the same frame — and so an entity that has been deleted or has lost
+         * its component answers false instead of a stale picture.
+         *
+         * @return False for every ordinary "nothing to preview": no world, nothing ever picked, or
+         *   a previewed entity that is gone, no longer a camera, or not in the world being drawn.
          */
         bool TryResolveCameraView(CameraView& OutView) const;
 
@@ -98,6 +115,13 @@ namespace Opaax::Editor
         void DrawContents() override;
         void Shutdown()     override;
 
+        /**
+         * Forget the previewed camera: an EntityID means nothing in another world, and entt reuses
+         * handles — so a kept id could silently resolve to a DIFFERENT entity that happens to have
+         * a camera. Back to "No camera", which is the honest answer across a PIE cycle.
+         */
+        void OnActiveWorldChanged(World* InOld, World* InNew) override;
+
         /** Zero padding: the preview fills the window edge to edge, as the Viewport's does. */
         PanelWindowStyle GetWindowStyle() const override { return { m_DefaultSize, true }; }
         //~End IEditorPanel interface
@@ -114,6 +138,11 @@ namespace Opaax::Editor
         Vector2F   m_DefaultSize = { 400.f, 260.f };
         Vector2u32 m_Size        = { 1, 1 };
         Vector2u32 m_PendingSize = { 1, 1 };
+
+        // WHICH camera is being previewed — the sticky half. Only TrackSelection writes it, and only
+        // ever with an entity of the ACTIVE world, which is what lets the resolve rebuild a handle
+        // from it without carrying a World* that could dangle.
+        EntityID m_Previewed = ENTITY_NONE;
 
         // One line the first time a camera is actually previewed. A smoke run never selects an
         // entity, so without it "nothing was selected" and "the resolve is broken" read the same.
