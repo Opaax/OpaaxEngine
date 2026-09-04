@@ -2041,6 +2041,23 @@ set: *"Texture is ignored while Sheet is set."*
   the missing file costs **four `[error]` lines at every boot**, which is a worse trade than the one
   line it saves.
 
+**TX14 — ONE WALK, MANY SINKS: `Text2D::Layout` is the primitive** (landed 2026-09-04, user:
+*"I could be cool to have an example text like window .ttf in the opaaxfont panel"*). The family
+panel renders a sample string with the selected face's own glyphs — Windows' font viewer, where a
+family is chosen. It could not go through `Renderer2D`, and re-implementing the layout in the editor
+is exactly what **TX5** forbids: a preview that lies about the thing it previews is worse than none.
+- So `Layout(text, origin, face, params, sink)` is the primitive and **`DrawString` is a sink over
+  it**. `Measure` is the empty sink. Adding a third consumer costs a lambda.
+- The seam is a **`TextQuad`** in world units — centre, size, atlas rect, and a `bTofu` flag. It
+  carries the WORLD's V convention, so a y-down sink negates Y and swaps the V components back:
+  **TX9**'s asymmetry arriving per glyph instead of per atlas.
+- **The ImGui half cannot be tested** (it needs ImGui), so the QUADS are: one per visible glyph in
+  reading order, none for a space, the origin being top-left with Y going up, a newline dropping
+  exactly one line step, tofu carrying no atlas rect, and the empty sink matching `Measure`.
+- The panel holds **one claim**, re-taken when the selection points elsewhere and released in
+  `Shutdown` (**LC3**). An un-uploaded atlas says so rather than drawing nothing — the bake runs on
+  `Load`, the upload at the next pump (**TX4**).
+
 **TX13 — A STRING CAN SAY IT IS A BLOCK OF TEXT** (landed 2026-09-04, user: *"we cannot really edit
 text properly. I cannot jump line etc..."*). `EPropertyFlags::Multiline` + `IEditorWidgets::
 InputTextMultiline`, so `TextComponent::Text` is authored as prose and Enter inserts a break.
