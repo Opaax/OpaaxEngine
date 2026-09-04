@@ -1915,7 +1915,7 @@ above — which is the whole point of **AN2**.
 
 ---
 
-## TX — Text rendering (⑥ S4, landed 2026-09-03)
+## TX — Text rendering (⑥ S4, landed 2026-09-03, USER-VERIFIED 2026-09-04)
 
 **TX1 — A FACE IS A FILE; A FAMILY IS AN ALIAS TABLE OVER FACES.** `FontFaceResource` is one `.ttf`:
 one subset, one weight, one slant, one baked atlas. `FontFamilyResource` (`.opaaxfont`) maps

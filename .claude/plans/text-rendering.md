@@ -286,3 +286,33 @@ files cost four `[error]` lines at every boot (**TX12**'s last bullet).
 route that could show it has been told, and the seal line's counts must MOVE when one is added.
 `drawers 7 -> 8`, `panels 12 -> 13`, `commands 33 -> 34` — all three were in the log the whole time,
 and I read "unchanged" as "fine".
+
+---
+
+# CLOSED — 2026-09-04, user-verified
+
+*"look good. eye gate done."*
+
+**12 commits `031227c` → `ffe0598`. 608 / 7781 / 7.** `drawers=8, panels=13, resourceTypes=9,
+commands=34`, components=8, formats=9 over 14 extensions. Zero warnings in test / debug-editor /
+release; the boot log carries 0 errors and 2 expected warnings.
+
+Two more rounds landed after the follow-up above, both from one-line asks:
+
+| Landed | Ask | What |
+|---|---|---|
+| `5de29cf` `2674fc1` | *"I cannot jump line etc..."* | `EPropertyFlags::Multiline` + `IEditorWidgets::InputTextMultiline` (**TX13**) |
+| `f30f3b4` `ffe0598` | *"an example text like window .ttf in the opaaxfont panel"* | `Text2D::Layout` as the primitive, `DrawString` as one sink over it (**TX14**) |
+
+**The last one is the change worth remembering.** The obvious implementation — walk the glyphs again
+and emit ImGui images — is exactly what **TX5** forbids, so instead the walker gained a sink and
+`DrawString` became a consumer of it. The refactor was behaviour-neutral (all 603 prior cases passed
+untouched) and it means a third consumer costs a lambda.
+
+**Still owed to nobody, but worth knowing:** the family panel starts hidden, so no smoke run has
+ever executed its ImGui half. The quads it feeds are tested; the `AddImage` plumbing was verified by
+their eyes and by nothing else.
+
+**Next in ⑥ is multi-view**, which is what the `Game.exe` stats overlay has been waiting on:
+screen-space text is a second ortho pass, deliberately not faked by walking a world position against
+the camera (**TX10**).
