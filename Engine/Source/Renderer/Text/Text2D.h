@@ -46,8 +46,50 @@ namespace Opaax
     //   to a sibling face: choosing the wrong script is an authoring mistake and it should look like
     //   one.
     // =============================================================================
+    /**
+     * ONE placed glyph, as the layout walker produces it. World units, Y-up, relative to the
+     * position the walk was given.
+     *
+     * The seam that lets the SAME walk feed something other than Renderer2D — the editor draws a
+     * font preview through ImGui, which is a different renderer entirely. Laying the text out twice
+     * is exactly how the drawn string and the previewed one start disagreeing, so there is one walk
+     * and two sinks.
+     */
+    struct TextQuad
+    {
+        Vector2F Centre = { 0.f, 0.f };
+        Vector2F Size   = { 0.f, 0.f };
+
+        /**
+         * The atlas rectangle, in the WORLD's V convention — UVMin is the quad's BOTTOM edge, so
+         * UVMin.y is numerically the larger (**TX9**). A y-down sink swaps them back.
+         *
+         * Meaningless when bTofu: there is no glyph to sample.
+         */
+        Vector2F UVMin = { 0.f, 0.f };
+        Vector2F UVMax = { 0.f, 0.f };
+
+        /** The face has no glyph for this codepoint — draw a hollow box, sample nothing. */
+        bool bTofu = false;
+    };
+
+    /** What a sink is handed, once per visible glyph, in reading order. */
+    using FTextQuadSink = TFunction<void(const TextQuad&)>;
+
     namespace Text2D
     {
+        /**
+         * Lay InUtf8 out and hand every visible glyph to InSink. The primitive under DrawString.
+         *
+         * Public because the EDITOR needs it: a font preview drawn through ImGui cannot go through
+         * Renderer2D, and must not re-implement the walk to get there.
+         *
+         * @param InSink Called per glyph. Empty measures only — which is what Measure is.
+         * @return The extent, identical to what Measure would answer.
+         */
+        OPAAX_API Vector2F Layout(const char* InUtf8, const Vector2F& InOrigin, const FontFaceView& InFace,
+                                  const TextDrawParams& InParams, const FTextQuadSink& InSink);
+
         /**
          * Draw InUtf8 at InWorldPos. Call between InRenderer's BeginPass and EndPass.
          *

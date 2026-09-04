@@ -34,16 +34,16 @@ namespace Opaax::Text2D
         constexpr float ESTIMATE_LINE_RATIO    = 1.25f;
 
         /**
-         * THE ONE WALK, for both entry points.
+         * THE ONE WALK, for every entry point.
          *
-         * Measure and DrawString differ by exactly one thing — whether a renderer is present — and
-         * writing the layout twice is how the drawn string and the measured one start disagreeing.
-         * Same argument Renderer2D::SubmitQuad makes for its two draw calls.
+         * Measure, DrawString and the editor's preview differ by exactly one thing — what they do
+         * with each placed glyph — and writing the layout more than once is how they start
+         * disagreeing. Same argument Renderer2D::SubmitQuad makes for its two draw calls.
          *
-         * @param InRenderer Null to measure only.
+         * @param InSink Empty to measure only.
          * @return { widest line, total line-box height }.
          */
-        Vector2F WalkText(Renderer2D* InRenderer, const char* InUtf8, const Vector2F& InWorldPos,
+        Vector2F WalkText(const FTextQuadSink& InSink, const char* InUtf8, const Vector2F& InWorldPos,
                           const FontFaceView& InFace, const TextDrawParams& InParams)
         {
             if (InUtf8 == nullptr || *InUtf8 == '\0' || !InFace.IsValid() || InFace.Data->PixelHeight <= 0.f)
@@ -101,15 +101,14 @@ namespace Opaax::Text2D
                 {
                     // Tofu. Sits ON the baseline and is sized from Size rather than from the face,
                     // because the face is precisely what does not know this character.
-                    if (InRenderer != nullptr)
+                    if (InSink)
                     {
-                        const Vector2F lBox{ InParams.Size * TOFU_WIDTH_RATIO,
-                                             InParams.Size * TOFU_HEIGHT_RATIO };
+                        TextQuad lQuad;
+                        lQuad.Size   = { InParams.Size * TOFU_WIDTH_RATIO, InParams.Size * TOFU_HEIGHT_RATIO };
+                        lQuad.Centre = { lPenX + lQuad.Size.x * 0.5f, lBaselineY + lQuad.Size.y * 0.5f };
+                        lQuad.bTofu  = true;
 
-                        InRenderer->DrawQuadOutline({ lPenX + lBox.x * 0.5f, lBaselineY + lBox.y * 0.5f },
-                                                    lBox, InParams.Color,
-                                                    InParams.Size * TOFU_THICKNESS_RATIO, 0.f,
-                                                    InParams.Layer, InParams.OrderInLayer);
+                        InSink(lQuad);
                     }
 
                     lPenX    += InParams.Size * TOFU_ADVANCE_RATIO;
@@ -117,24 +116,21 @@ namespace Opaax::Text2D
                     continue;
                 }
 
-                // A blank glyph (space) submits nothing but still advances — one quad per space saved
-                // on every string in the frame. Atlas-less means the face is still uploading: lay the
-                // line out, draw none of it, and the next frame draws it in the right place.
-                const bool bDrawable = (InRenderer != nullptr) && (InFace.Atlas != nullptr)
-                                    && (lGlyph->QuadSize.x > 0.f) && (lGlyph->QuadSize.y > 0.f);
-
-                if (bDrawable)
+                // A blank glyph (space) emits nothing but still advances — one quad per space saved on
+                // every string in the frame.
+                if (InSink && lGlyph->QuadSize.x > 0.f && lGlyph->QuadSize.y > 0.f)
                 {
-                    const Vector2F lSize{ lGlyph->QuadSize.x * lScale, lGlyph->QuadSize.y * lScale };
+                    TextQuad lQuad;
+                    lQuad.Size  = { lGlyph->QuadSize.x * lScale, lGlyph->QuadSize.y * lScale };
 
                     // QuadOffset is stb's, measured from the pen with Y going DOWN. This world's Y
                     // goes up, so the vertical term subtracts and the horizontal one adds.
-                    const Vector2F lCentre{ lPenX      + (lGlyph->QuadOffset.x + lGlyph->QuadSize.x * 0.5f) * lScale,
-                                            lBaselineY - (lGlyph->QuadOffset.y + lGlyph->QuadSize.y * 0.5f) * lScale };
+                    lQuad.Centre = { lPenX      + (lGlyph->QuadOffset.x + lGlyph->QuadSize.x * 0.5f) * lScale,
+                                     lBaselineY - (lGlyph->QuadOffset.y + lGlyph->QuadSize.y * 0.5f) * lScale };
+                    lQuad.UVMin  = lGlyph->UVMin;
+                    lQuad.UVMax  = lGlyph->UVMax;
 
-                    InRenderer->DrawSprite(lCentre, lSize, *InFace.Atlas, InParams.Color, 0.f,
-                                           InParams.Layer, InParams.OrderInLayer,
-                                           lGlyph->UVMin, lGlyph->UVMax);
+                    InSink(lQuad);
                 }
 
                 lPenX    += lGlyph->XAdvance * lScale;
@@ -147,15 +143,43 @@ namespace Opaax::Text2D
         }
     }
 
+    Vector2F Layout(const char* InUtf8, const Vector2F& InOrigin, const FontFaceView& InFace,
+                    const TextDrawParams& InParams, const FTextQuadSink& InSink)
+    {
+        return WalkText(InSink, InUtf8, InOrigin, InFace, InParams);
+    }
+
     Vector2F DrawString(Renderer2D& InRenderer, const char* InUtf8, const Vector2F& InWorldPos,
                         const FontFaceView& InFace, const TextDrawParams& InParams)
     {
-        return WalkText(&InRenderer, InUtf8, InWorldPos, InFace, InParams);
+        // NO ATLAS means the face is still uploading: lay the line out, draw none of it, and the
+        // next frame draws it in the right place. The tofu boxes still go through, because a face
+        // with no glyphs has nothing to wait for.
+        ITexture2D* lAtlas = InFace.Atlas;
+
+        return WalkText([&InRenderer, &InParams, lAtlas](const TextQuad& InQuad)
+                        {
+                            if (InQuad.bTofu)
+                            {
+                                InRenderer.DrawQuadOutline(InQuad.Centre, InQuad.Size, InParams.Color,
+                                                           InParams.Size * TOFU_THICKNESS_RATIO, 0.f,
+                                                           InParams.Layer, InParams.OrderInLayer);
+                                return;
+                            }
+
+                            if (lAtlas != nullptr)
+                            {
+                                InRenderer.DrawSprite(InQuad.Centre, InQuad.Size, *lAtlas, InParams.Color,
+                                                      0.f, InParams.Layer, InParams.OrderInLayer,
+                                                      InQuad.UVMin, InQuad.UVMax);
+                            }
+                        },
+                        InUtf8, InWorldPos, InFace, InParams);
     }
 
     Vector2F Measure(const char* InUtf8, const FontFaceView& InFace, const TextDrawParams& InParams)
     {
-        return WalkText(nullptr, InUtf8, { 0.f, 0.f }, InFace, InParams);
+        return WalkText({}, InUtf8, { 0.f, 0.f }, InFace, InParams);
     }
 
     Vector2F EstimateExtent(const char* InUtf8, const TextDrawParams& InParams)

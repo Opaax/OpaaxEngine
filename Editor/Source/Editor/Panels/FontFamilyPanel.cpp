@@ -7,6 +7,12 @@
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Editor/Operation/FontFamilyOperations.h"
 #include "Editor/Properties/PropertyDrawers.h"   // the specializations DrawProperties folds over
+#include "Editor/UI/IEditorUIBackend.h"          // the atlas as an ImGui image
+
+#include "Application/Services/IPaths.h"
+#include "Engine/Subsystems/Resources/ResourceManager.h"
+#include "Engine/Subsystems/Resources/Types/FontFaceResource.h"
+#include "Renderer/Text/Text2D.h"                // Layout — the SAME walk the viewport uses
 
 #include <imgui.h>
 
@@ -40,11 +46,115 @@ namespace Opaax::Editor
         DrawSelectedEntry(lData);
         ImGui::Separator();
 
+        DrawSample(lData);
+        ImGui::Separator();
+
         DrawPlaneSelectors();
         DrawMatrix(lData);
 
         ImGui::Separator();
         DrawResolve(lData);
+    }
+
+    void FontFamilyPanel::Shutdown()
+    {
+        m_SampleFace     = ResourceRef<FontFaceResource>();
+        m_SampleFacePath = OpaaxString();
+    }
+
+    void FontFamilyPanel::ClaimSampleFace(const OpaaxString& InPath)
+    {
+        if (InPath == m_SampleFacePath)
+        {
+            return;   // already held — this runs every frame
+        }
+
+        m_SampleFacePath = InPath;
+        m_SampleFace     = ResourceRef<FontFaceResource>();   // release before claiming the next
+
+        if (InPath.IsEmpty())
+        {
+            return;
+        }
+
+        const OpaaxString lAbsolute = m_Context.Paths.AssetToAbsolute(InPath);
+        m_SampleFace = m_Context.Resources.Load<FontFaceResource>(lAbsolute.CStr());
+    }
+
+    void FontFamilyPanel::DrawSample(const FontFamilyData& InData)
+    {
+        if (!ImGui::TreeNodeEx("Sample", ImGuiTreeNodeFlags_DefaultOpen)) { return; }
+
+        const FontFamilyEntry* lEntry = (m_Selected >= 0 && static_cast<Uint32>(m_Selected) < InData.EntryCount())
+                                            ? &InData.Entries[static_cast<Uint32>(m_Selected)]
+                                            : nullptr;
+
+        ClaimSampleFace(lEntry != nullptr ? lEntry->Face.Path : OpaaxString());
+
+        DrawField(m_Context.Widgets, "Text", m_SampleText,
+                  PropertyMeta{ .Flags = EPropertyFlags::Multiline });
+
+        ImGui::SetNextItemWidth(160.f);
+        ImGui::DragFloat("Size", &m_SampleSize, 0.5f, 6.f, 200.f, "%.0f px");
+
+        const FontFaceResource* lFace = m_SampleFace.Get();
+
+        if (lFace == nullptr)
+        {
+            ImGui::TextDisabled(lEntry == nullptr ? "Pick a cell to see its face."
+                                                  : "That cut names no file yet.");
+            ImGui::TreePop();
+            return;
+        }
+
+        if (lFace->GetAtlas() == nullptr)
+        {
+            // A frame or two: the bake ran on Load, the UPLOAD runs at the next pump (TX4).
+            ImGui::TextDisabled("Uploading the atlas...");
+            ImGui::TreePop();
+            return;
+        }
+
+        // ONE walk, an ImGui sink. The world's Y goes up and ImGui's goes down, so the origin is the
+        // top-left of the box and every quad's Y is negated into it.
+        const EditorImage lImage  = m_Context.UIBackend.GetTextureImage(*lFace->GetAtlas());
+        const ImVec2      lOrigin = ImGui::GetCursorScreenPos();
+        ImDrawList* const lDraw   = ImGui::GetWindowDrawList();
+        const ImU32       lColour = ImGui::GetColorU32(ImGuiCol_Text);
+
+        TextDrawParams lParams;
+        lParams.Size = m_SampleSize;
+
+        const FontFaceView lView{ &lFace->Face, lFace->GetAtlas() };
+
+        const Vector2F lExtent = Text2D::Layout(
+            m_SampleText.CStr(), { 0.f, 0.f }, lView, lParams,
+            [lDraw, lOrigin, lColour, &lImage](const TextQuad& InQuad)
+            {
+                const ImVec2 lMin(lOrigin.x + InQuad.Centre.x - InQuad.Size.x * 0.5f,
+                                  lOrigin.y - InQuad.Centre.y - InQuad.Size.y * 0.5f);
+                const ImVec2 lMax(lMin.x + InQuad.Size.x, lMin.y + InQuad.Size.y);
+
+                if (InQuad.bTofu)
+                {
+                    lDraw->AddRect(lMin, lMax, lColour);
+                    return;
+                }
+
+                // THE V SWAP, per glyph. The quad carries the world's convention — UVMin is its
+                // BOTTOM edge — and ImGui's uv0 goes with the TOP-left corner (**TX9**).
+                lDraw->AddImage(static_cast<ImTextureID>(lImage.Handle), lMin, lMax,
+                                ImVec2(InQuad.UVMin.x, InQuad.UVMax.y),
+                                ImVec2(InQuad.UVMax.x, InQuad.UVMin.y), lColour);
+            });
+
+        // The layout DREW into the draw list, which does not advance the cursor — so the box has to
+        // be reserved afterwards, or everything below would draw on top of the sample.
+        ImGui::Dummy(ImVec2(lExtent.x, lExtent.y));
+
+        ImGui::TextDisabled("%s", m_SampleFacePath.CStr());
+
+        ImGui::TreePop();
     }
 
     void FontFamilyPanel::DrawResolve(const FontFamilyData& InData)

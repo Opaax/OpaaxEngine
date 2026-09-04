@@ -4,11 +4,14 @@
 #include "Core/OpaaxTypes.h"
 #include "Editor/Panels/IEditorPanel.h"
 
+#include "Engine/Subsystems/Resources/ResourceRef.hpp"          // one claim for the sample's face
 #include "Engine/Subsystems/Resources/Types/FontFamilyData.h"   // the gesture caches an entry
 
 namespace Opaax
 {
     OPAAX_LOG_CATEGORY(FontFamilyPanel);
+
+    struct FontFaceResource;   // only NAMED by the held claim
 }
 
 namespace Opaax::Editor
@@ -82,6 +85,19 @@ namespace Opaax::Editor
          */
         void DrawResolve(const FontFamilyData& InData);
 
+        /**
+         * The selected face, drawing a sample string with its OWN glyphs — Windows' font viewer, in
+         * the panel where a family is chosen.
+         *
+         * It goes through `Text2D::Layout`, the same walk `DrawString` uses, with an ImGui sink
+         * instead of a Renderer2D one. Re-implementing the layout here is what would let the preview
+         * and the viewport disagree, which would make the preview worse than nothing (**TX5**).
+         */
+        void DrawSample(const FontFamilyData& InData);
+
+        /** Keep a claim on InPath's face, releasing the previous one. Empty releases and holds none. */
+        void ClaimSampleFace(const OpaaxString& InPath);
+
         /** Index of the entry at InStyle, or -1. The matrix asks this once per cell. */
         Int32 FindEntry(const FontFamilyData& InData, const FontStyleKey& InStyle) const;
 
@@ -98,8 +114,8 @@ namespace Opaax::Editor
 
         void DrawContents() override;
 
-        /** Nothing claimed, so nothing to release. */
-        void Shutdown()    override {}
+        /** Release the sample's claim while the ResourceManager and the GL context are both alive (LC3). */
+        void Shutdown()    override;
 
         PanelWindowStyle GetWindowStyle() const override { return { { 620.f, 460.f } }; }
         //~End IEditorPanel interface
@@ -119,6 +135,16 @@ namespace Opaax::Editor
 
         /** The style DrawResolve asks the family for. Presentation, not document state. */
         FontStyleKey m_Ask;
+
+        // =============================================================================
+        // The sample — what the selected face looks like, and the claim keeping it resident
+        // =============================================================================
+        OpaaxString m_SampleText = "Sphinx of black quartz,\njudge my vow. 0123";
+        float       m_SampleSize = 48.f;
+
+        /** The face the sample draws with. Re-claimed when the selection points somewhere else. */
+        ResourceRef<FontFaceResource> m_SampleFace;
+        OpaaxString                   m_SampleFacePath;
 
         // =============================================================================
         // The open edit gesture — the entry as it was when the first field went active

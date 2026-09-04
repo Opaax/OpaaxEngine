@@ -427,6 +427,111 @@ TEST_SUITE("Text2D::Measure")
     }
 }
 
+TEST_SUITE("Text2D::Layout")
+{
+    // The sink is what lets ONE walk feed two renderers — the viewport through Renderer2D and the
+    // editor's font preview through ImGui. What a sink receives is therefore a contract, and the
+    // editor's half cannot be tested (it needs ImGui), so the QUADS are tested here instead.
+
+    TEST_CASE("emits one quad per VISIBLE glyph, in reading order, and none for a space")
+    {
+        const FontFaceData lFace = MakeFace();
+        const FontFaceView lView{ &lFace, nullptr };
+
+        TDynArray<TextQuad> lQuads;
+
+        // "Γ αΓ" — four codepoints, one of them a blank space glyph.
+        const OpaaxString lText = OpaaxString(U_GAMMA) + " " + U_ALPHA + U_GAMMA;
+
+        Text2D::Layout(lText.CStr(), { 0.f, 0.f }, lView, TextDrawParams{},
+                       [&lQuads](const TextQuad& InQuad) { lQuads.emplace_back(InQuad); });
+
+        REQUIRE(lQuads.size() == 3u);
+
+        // Reading order, left to right — a sink that drew them in any other order would still LOOK
+        // right for one glyph and wrong for a kerned pair.
+        CHECK(lQuads[0].Centre.x < lQuads[1].Centre.x);
+        CHECK(lQuads[1].Centre.x < lQuads[2].Centre.x);
+
+        for (const TextQuad& lQuad : lQuads)
+        {
+            CHECK_FALSE(lQuad.bTofu);
+            CHECK(lQuad.Size.x > 0.f);
+            CHECK(lQuad.Size.y > 0.f);
+        }
+    }
+
+    TEST_CASE("the origin is the TOP-LEFT and Y goes UP, so every glyph sits below it")
+    {
+        const FontFaceData lFace = MakeFace();
+        const FontFaceView lView{ &lFace, nullptr };
+
+        TDynArray<TextQuad> lQuads;
+
+        // The one sign the whole layout turns on, and the one a y-down sink has to negate. A sink
+        // that got this backwards would draw the string above its box, off-panel.
+        Text2D::Layout(U_GAMMA, { 0.f, 0.f }, lView, TextDrawParams{},
+                       [&lQuads](const TextQuad& InQuad) { lQuads.emplace_back(InQuad); });
+
+        REQUIRE(lQuads.size() == 1u);
+        CHECK(lQuads[0].Centre.x > 0.f);
+        CHECK(lQuads[0].Centre.y < 0.f);
+    }
+
+    TEST_CASE("a newline drops the next glyph by one line step")
+    {
+        const FontFaceData lFace = MakeFace();
+        const FontFaceView lView{ &lFace, nullptr };
+
+        TDynArray<TextQuad> lQuads;
+
+        const OpaaxString lText = OpaaxString(U_GAMMA) + "\n" + U_GAMMA;
+
+        TextDrawParams lParams;
+        lParams.Size = FACE_PIXEL_HEIGHT;   // scale 1, so the step is the face's own advance
+
+        Text2D::Layout(lText.CStr(), { 0.f, 0.f }, lView, lParams,
+                       [&lQuads](const TextQuad& InQuad) { lQuads.emplace_back(InQuad); });
+
+        REQUIRE(lQuads.size() == 2u);
+        CHECK(lQuads[1].Centre.x == doctest::Approx(lQuads[0].Centre.x));
+        CHECK(lQuads[0].Centre.y - lQuads[1].Centre.y == doctest::Approx(FACE_LINE_ADVANCE));
+    }
+
+    TEST_CASE("a missing codepoint emits a TOFU quad, and it carries no atlas rectangle")
+    {
+        const FontFaceData lFace = MakeFace();
+        const FontFaceView lView{ &lFace, nullptr };
+
+        TDynArray<TextQuad> lQuads;
+
+        Text2D::Layout("A", { 0.f, 0.f }, lView, TextDrawParams{},
+                       [&lQuads](const TextQuad& InQuad) { lQuads.emplace_back(InQuad); });
+
+        REQUIRE(lQuads.size() == 1u);
+        CHECK(lQuads[0].bTofu);
+        CHECK(lQuads[0].Size.x > 0.f);
+
+        // A sink must not sample the atlas for one of these — there is no glyph behind it.
+        CHECK(lQuads[0].UVMin.x == doctest::Approx(0.f));
+        CHECK(lQuads[0].UVMax.x == doctest::Approx(0.f));
+    }
+
+    TEST_CASE("an EMPTY sink answers exactly what Measure answers — they are one walk")
+    {
+        const FontFaceData lFace = MakeFace();
+        const FontFaceView lView{ &lFace, nullptr };
+
+        const OpaaxString lText = OpaaxString(U_GAMMA) + U_ALPHA + "\n" + U_ALPHA;
+
+        const Vector2F lMeasured = Text2D::Measure(lText.CStr(), lView);
+        const Vector2F lLaidOut  = Text2D::Layout(lText.CStr(), { 0.f, 0.f }, lView, TextDrawParams{}, {});
+
+        CHECK(lLaidOut.x == doctest::Approx(lMeasured.x));
+        CHECK(lLaidOut.y == doctest::Approx(lMeasured.y));
+    }
+}
+
 TEST_SUITE("Text2D::EstimateExtent")
 {
     // The extent EntityQuery uses for PICKING and for the selection outline, computed with no face
