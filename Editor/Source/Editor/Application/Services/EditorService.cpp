@@ -20,6 +20,7 @@
 #include "Editor/Operation/EditorGizmo.hpp"
 #include "Editor/Operation/EditorViewport.hpp"   // the grid toggle lives on the viewport (③b)
 #include "Editor/Operation/LevelOperations.h"
+#include "Editor/Panels/CameraPreviewPanel.h"
 #include "Editor/Panels/ConfigPanel.h"
 #include "Editor/Panels/HierarchyPanel.h"
 #include "Editor/Panels/InputPanel.h"
@@ -300,6 +301,7 @@ namespace Opaax::Editor
         lPanelsRegistry.Register<ResourceBrowserPanel>(PanelDesc{.Id = ResourceBrowserPanel::PanelID()});
         
         //Hidden by default
+        lPanelsRegistry.Register<CameraPreviewPanel>(PanelDesc  {.Id = CameraPreviewPanel::PanelID(),   .DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<ResourcePreviewPanel>(PanelDesc{.Id = ResourcePreviewPanel::PanelID(), .DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<SpriteSheetPanel>(PanelDesc    {.Id = SpriteSheetPanel::PanelID(),     .DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<AnimationClipPanel>(PanelDesc  {.Id = AnimationClipPanel::PanelID(),   .DefaultVisibility = EPanelVisibility::Hidden});
