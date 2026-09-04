@@ -29,6 +29,7 @@ namespace Opaax
         class EditorSpriteSheetDocument;// editor-owned; the open .opaaxsheet AND its data (⑥ S2)
         class EditorAnimationClipDocument; // editor-owned; the open .opaaxclip AND its data (⑥ S3)
         class EditorAnimationLibraryDocument; // editor-owned; the open .opaaxanim AND its data (⑥ S4)
+        class EditorFontFamilyDocument;       // editor-owned; the open .opaaxfont AND its data (⑥ S4)
         class EditorExtensionRegistrar; // editor-owned; the sealed D10 routes (Inspector reads Drawers())
         class EditorPaths;              // editor-owned IPaths subclass; the editor-space directories
         class EditorPanels;             // editor-owned; the LIVE panels and their visibility
@@ -128,6 +129,10 @@ namespace Opaax
             // ⑥ S4 — the open animation library: the alias table that turns a short gameplay name
             // into one of the clips above. Owns its data for ClipDocument's reason.
             EditorAnimationLibraryDocument& LibraryDocument;
+
+            // ⑥ S4 — the open font family: the alias table that turns (subset, weight, width, slant)
+            // into one `.ttf`. Owns its data for ClipDocument's reason.
+            EditorFontFamilyDocument& FamilyDocument;
 
             // M2b — the sealed extension routes, so a panel can consume what modules registered (the
             // Inspector walks Drawers(), the Resource Browser ResourceTypes()). CONST by construction:

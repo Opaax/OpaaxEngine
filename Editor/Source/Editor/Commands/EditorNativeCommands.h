@@ -456,6 +456,14 @@ namespace Opaax::Editor
         void Execute(EditorContext& InContext, const Params&);
     };
 
+    /** Write the open `.opaaxfont` and publish it — SaveLibraryCommand's shape, one asset over. */
+    struct SaveFamilyCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
     /**
      * The only Level entry on the menu bar, because it is the only one that does not need a map
      * named first — it goes and picks one. Removing a map and choosing the persistent one live on

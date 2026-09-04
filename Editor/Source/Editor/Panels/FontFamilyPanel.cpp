@@ -1,0 +1,224 @@
+#include "Editor/Panels/FontFamilyPanel.h"
+
+#include "Editor/EditorContext.h"
+#include "Editor/EditorFontFamilyDocument.h"
+#include "Editor/Commands/EditorCommandRegistry.h"
+#include "Editor/Commands/EditorNativeCommandsTags.hpp"
+#include "Editor/Extensions/EditorExtensionRegistrar.h"
+#include "Editor/Operation/FontFamilyOperations.h"
+#include "Editor/Properties/PropertyDrawers.h"   // the specializations DrawProperties folds over
+
+#include <imgui.h>
+
+using namespace Opaax;
+
+namespace Opaax::Editor
+{
+    FontFamilyPanel::FontFamilyPanel(EditorContext& InContext)
+        : m_Context(InContext)
+    {
+    }
+
+    FontFamilyPanel::~FontFamilyPanel() = default;
+
+    void FontFamilyPanel::DrawContents()
+    {
+        if (!m_Context.FamilyDocument.IsOpen())
+        {
+            ImGui::TextDisabled("No font family open.");
+            ImGui::TextDisabled("Double-click a .opaaxfont in the Resource Browser.");
+
+            m_Selected = -1;
+            return;
+        }
+
+        FontFamilyData& lData = m_Context.FamilyDocument.GetMutableData();
+
+        DrawHeader(lData);
+        ImGui::Separator();
+
+        DrawSelectedEntry(lData);
+        ImGui::Separator();
+
+        DrawPlaneSelectors();
+        DrawMatrix(lData);
+    }
+
+    void FontFamilyPanel::DrawHeader(const FontFamilyData& InData)
+    {
+        const OpaaxString lName  = m_Context.FamilyDocument.FileName();
+        const bool        bDirty = m_Context.FamilyDocument.IsDirty();
+
+        ImGui::Text("%s%s", lName.CStr(), bDirty ? " *" : "");
+
+        ImGui::SameLine(ImGui::GetContentRegionAvail().x - 46.f);
+
+        ImGui::BeginDisabled(!bDirty);
+        if (ImGui::SmallButton("Save"))
+        {
+            m_Context.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_SAVE_FAMILY, m_Context);
+        }
+        ImGui::EndDisabled();
+
+        ImGui::TextDisabled("Faces : %u", InData.EntryCount());
+    }
+
+    void FontFamilyPanel::DrawPlaneSelectors()
+    {
+        // The matrix is subset x weight, so width and slant have to be chosen OUTSIDE it. Two
+        // combos rather than a 4x larger table: 81 cells reads, 324 does not.
+        ImGui::SetNextItemWidth(140.f);
+        if (ImGui::BeginCombo("Width", ToString(m_PlaneWidth)))
+        {
+            for (const EFontWidth lCandidate : TEnumValues<EFontWidth>::Values)
+            {
+                if (ImGui::Selectable(ToString(lCandidate), lCandidate == m_PlaneWidth))
+                {
+                    m_PlaneWidth = lCandidate;
+                }
+            }
+
+            ImGui::EndCombo();
+        }
+
+        ImGui::SameLine();
+
+        ImGui::SetNextItemWidth(140.f);
+        if (ImGui::BeginCombo("Slant", ToString(m_PlaneSlant)))
+        {
+            for (const EFontSlant lCandidate : TEnumValues<EFontSlant>::Values)
+            {
+                if (ImGui::Selectable(ToString(lCandidate), lCandidate == m_PlaneSlant))
+                {
+                    m_PlaneSlant = lCandidate;
+                }
+            }
+
+            ImGui::EndCombo();
+        }
+    }
+
+    Int32 FontFamilyPanel::FindEntry(const FontFamilyData& InData, const FontStyleKey& InStyle) const
+    {
+        for (Uint32 lIndex = 0; lIndex < InData.EntryCount(); ++lIndex)
+        {
+            if (InData.Entries[lIndex].Style == InStyle) { return static_cast<Int32>(lIndex); }
+        }
+
+        return -1;
+    }
+
+    void FontFamilyPanel::DrawMatrix(const FontFamilyData& InData)
+    {
+        constexpr Uint32 SUBSET_COUNT = static_cast<Uint32>(std::size(TEnumValues<EFontSubset>::Values));
+
+        // +1 for the weight labels down the left.
+        if (!ImGui::BeginTable("FamilyMatrix", static_cast<int>(SUBSET_COUNT) + 1,
+                               ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedFit
+                             | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY))
+        {
+            return;
+        }
+
+        ImGui::TableSetupScrollFreeze(1, 1);   // the weight column and the subset row stay put
+        ImGui::TableSetupColumn("Weight");
+
+        for (const EFontSubset lSubset : TEnumValues<EFontSubset>::Values)
+        {
+            ImGui::TableSetupColumn(ToString(lSubset));
+        }
+
+        ImGui::TableHeadersRow();
+
+        for (const EFontWeight lWeight : TEnumValues<EFontWeight>::Values)
+        {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted(ToString(lWeight));
+
+            for (const EFontSubset lSubset : TEnumValues<EFontSubset>::Values)
+            {
+                ImGui::TableNextColumn();
+
+                const FontStyleKey lStyle{ lSubset, lWeight, m_PlaneWidth, m_PlaneSlant };
+                const Int32        lIndex = FindEntry(InData, lStyle);
+
+                // PushID per cell, not per row: two cells in one row would otherwise share an id and
+                // ImGui would route both clicks to the first (I16).
+                ImGui::PushID(static_cast<int>(lWeight));
+                ImGui::PushID(static_cast<int>(lSubset));
+
+                if (lIndex < 0)
+                {
+                    // A face this family does not have. The button ADDS it, already carrying its
+                    // style — which is why there is no separate Add button anywhere on this panel.
+                    if (ImGui::SmallButton("+") && FamilyOps::AddEntry(m_Context, lStyle))
+                    {
+                        m_Selected = static_cast<Int32>(InData.EntryCount()) - 1;
+                    }
+                }
+                else
+                {
+                    const bool bSelected = (m_Selected == lIndex);
+                    const bool bEmpty    = InData.Entries[static_cast<Uint32>(lIndex)].Face.IsEmpty();
+
+                    // An entry with no file yet is a real state — just added, or cleared — and it has
+                    // to look different from one that resolves, or a half-built family reads as done.
+                    if (ImGui::Selectable(bEmpty ? "?" : "*", bSelected))
+                    {
+                        m_Selected = lIndex;
+                    }
+                }
+
+                ImGui::PopID();
+                ImGui::PopID();
+            }
+        }
+
+        ImGui::EndTable();
+    }
+
+    void FontFamilyPanel::DrawSelectedEntry(FontFamilyData& InData)
+    {
+        if (m_Selected < 0 || static_cast<Uint32>(m_Selected) >= InData.EntryCount())
+        {
+            ImGui::TextDisabled("Pick a cell below. '*' has a face, '?' has none, '+' adds one.");
+            return;
+        }
+
+        const Uint32 lIndex = static_cast<Uint32>(m_Selected);
+
+        ImGui::PushID(static_cast<int>(lIndex));
+        DrawProperties(m_Context.Widgets, InData.Entries[lIndex]);
+        ImGui::PopID();
+
+        if (ImGui::SmallButton("Remove Face") && FamilyOps::RemoveEntry(m_Context, lIndex))
+        {
+            m_Selected       = -1;
+            m_bGestureOpen   = false;
+            m_bWasItemActive = false;
+            return;   // the list just changed under everything below
+        }
+
+        // The Inspector's bracket: a TPropertyDrawer writes straight through a reference and cannot
+        // report that it did, so the edges of "any item is active" open and close one step. The
+        // CLOSE goes through FamilyOps, which is what judges the style against the rest of the family.
+        const bool lItemActive = ImGui::IsAnyItemActive();
+
+        if (lItemActive && !m_bWasItemActive)
+        {
+            m_GestureBefore = InData.Entries[lIndex];
+            m_GestureIndex  = lIndex;
+            m_bGestureOpen  = true;
+        }
+        else if (!lItemActive && m_bWasItemActive && m_bGestureOpen)
+        {
+            FamilyOps::CommitEntryEdit(m_Context, m_GestureIndex, m_GestureBefore);
+
+            m_GestureBefore = FontFamilyEntry{};
+            m_bGestureOpen  = false;
+        }
+
+        m_bWasItemActive = lItemActive;
+    }
+}

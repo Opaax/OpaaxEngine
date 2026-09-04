@@ -3,6 +3,7 @@
 #include <nlohmann/json.hpp>
 
 #include "Core/OpaaxTypes.h"
+#include "Core/Reflection/OpaaxProperty.h"
 #include "Engine/Subsystems/Resources/ResourcePath.h"
 #include "Engine/Subsystems/Resources/ResourcePathJson.h"
 #include "Engine/Subsystems/Resources/Types/FontStyle.h"
@@ -39,6 +40,14 @@ namespace Opaax
         TResourcePath<FontFaceResource> Face;
 
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(FontFamilyEntry, Style, Face)
+
+        // What the family editor folds over for the SELECTED entry — Style becomes a group of four
+        // dropdowns and Face a typed drop target, with no drawer written for either (I15). The list
+        // itself is the panel's own UI, which is what a 162-row matrix has to be.
+        OPAAX_PROPERTIES(FontFamilyEntry,
+                         OPAAX_PROP(Style),
+                         OPAAX_PROP(Face).SetTooltip("The .ttf this cut resolves to.\n"
+                                                     "Drag one from the Resource Browser."))
     };
 
     struct FontFamilyData

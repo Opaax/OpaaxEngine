@@ -29,6 +29,8 @@
 #include "Editor/Panels/ResourcePreviewPanel.h"
 #include "Editor/Panels/AnimationClipPanel.h"
 #include "Editor/Panels/AnimationLibraryPanel.h"
+#include "Editor/Panels/FontFamilyPanel.h"
+#include "Editor/EditorFontFamilyDocument.h"
 #include "Editor/Panels/SpriteSheetPanel.h"
 #include "Editor/Panels/StatsPanel.h"
 #include "Editor/Panels/ViewportPanel.h"
@@ -54,6 +56,7 @@
 #include "World/Components/CameraComponent.h"      // the engine-native components the
 #include "World/Components/DummyComponent.h"       // editor draws by default (I15)
 #include "World/Components/SpriteAnimatorComponent.h"
+#include "World/Components/TextComponent.h"
 #include "World/Components/SpriteComponent.h"
 #include "World/Components/TransformComponent.h"
 
@@ -123,6 +126,7 @@ namespace Opaax::Editor
         m_SheetDocument     = MakeUnique<EditorSpriteSheetDocument>();
         m_ClipDocument      = MakeUnique<EditorAnimationClipDocument>();
         m_LibraryDocument   = MakeUnique<EditorAnimationLibraryDocument>();
+        m_FamilyDocument    = MakeUnique<EditorFontFamilyDocument>();
     }
 
     void EditorService::ClearEditorSystems()
@@ -160,6 +164,7 @@ namespace Opaax::Editor
             *m_SheetDocument,
             *m_ClipDocument,
             *m_LibraryDocument,
+            *m_FamilyDocument,
             m_Extensions,
             m_Gui->Panels(),
             *m_Preview,
@@ -298,6 +303,7 @@ namespace Opaax::Editor
         lPanelsRegistry.Register<SpriteSheetPanel>(PanelDesc    {.Id = SpriteSheetPanel::PanelID(),     .DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<AnimationClipPanel>(PanelDesc  {.Id = AnimationClipPanel::PanelID(),   .DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<AnimationLibraryPanel>(PanelDesc{.Id = AnimationLibraryPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden});
+        lPanelsRegistry.Register<FontFamilyPanel>(PanelDesc{.Id = FontFamilyPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<ConfigPanel>(PanelDesc         {.Id = ConfigPanel::PanelID(),          .DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<InputPanel>(PanelDesc          {.Id = InputPanel::PanelID(),           .DefaultVisibility = EPanelVisibility::Hidden });
         lPanelsRegistry.Register<StatsPanel>(PanelDesc          {.Id = StatsPanel::PanelID(),           .DefaultVisibility = EPanelVisibility::Hidden });
@@ -337,6 +343,7 @@ namespace Opaax::Editor
         lCommands.Register<SaveSheetCommand>(Tags::EDITOR_COMMAND_SAVE_SHEET);
         lCommands.Register<SaveClipCommand>(Tags::EDITOR_COMMAND_SAVE_CLIP);
         lCommands.Register<SaveLibraryCommand>(Tags::EDITOR_COMMAND_SAVE_LIBRARY);
+        lCommands.Register<SaveFamilyCommand>(Tags::EDITOR_COMMAND_SAVE_FAMILY);
         lCommands.Register<AddMapToLevelCommand>(Tags::EDITOR_COMMAND_ADD_MAP_TO_LEVEL);
 
         lCommands.Register<TransformSelectedCommand>(Tags::EDITOR_COMMAND_TRANSFORM_SELECTED);
@@ -385,6 +392,7 @@ namespace Opaax::Editor
 
         lDrawers.Register<SpriteComponent>();
         lDrawers.Register<SpriteAnimatorComponent>();
+        lDrawers.Register<TextComponent>();
         lDrawers.Register<CameraComponent>();
         lDrawers.Register<DummyComponent>();
     }
@@ -443,8 +451,16 @@ namespace Opaax::Editor
         // A family has no preview and no document editor: it is an alias TABLE, and the thing worth
         // looking at is the face it resolves to. Chrome only, so the browser can still tell one
         // from a map at a glance.
+        // A family opens its EDITOR, for the sheet's and the library's reason: it is a document.
         m_Extensions.ResourceTypes().Register<FontFamilyResource>()
-            .SetGlyph(OpaaxString("[FF]"));
+            .SetGlyph(OpaaxString("[FF]"))
+            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
+            {
+                if (InContext.FamilyDocument.Open(InFile.AbsPath))
+                {
+                    InContext.Panels.SetVisible(FontFamilyPanel::PanelID(), true);
+                }
+            });
 
         // A sheet opens its EDITOR, not the preview: it is a document with its own panel, the way a
         // map and a level are, and the browser's double-click is the one seam that says so.
@@ -1010,7 +1026,12 @@ namespace Opaax::Editor
                 m_Gui->Panels().FocusedPanel() == AnimationLibraryPanel::PanelID()
                 && m_Context->LibraryDocument.IsOpen();
 
-            const OpaaxTag lTarget = bLibraryFocused ? Tags::EDITOR_COMMAND_SAVE_LIBRARY
+            const bool bFamilyFocused =
+                m_Gui->Panels().FocusedPanel() == FontFamilyPanel::PanelID()
+                && m_Context->FamilyDocument.IsOpen();
+
+            const OpaaxTag lTarget = bFamilyFocused  ? Tags::EDITOR_COMMAND_SAVE_FAMILY
+                                   : bLibraryFocused ? Tags::EDITOR_COMMAND_SAVE_LIBRARY
                                    : bClipFocused    ? Tags::EDITOR_COMMAND_SAVE_CLIP
                                    : bSheetFocused   ? Tags::EDITOR_COMMAND_SAVE_SHEET
                                                      : Tags::EDITOR_COMMAND_SAVE_MAP;

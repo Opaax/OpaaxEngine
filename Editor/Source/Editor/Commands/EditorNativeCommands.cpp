@@ -11,6 +11,8 @@
 #include "Editor/Operation/SheetOperations.h"
 #include "Editor/Operation/ClipOperations.h"
 #include "Editor/Operation/LibraryOperations.h"
+#include "Editor/Operation/FontFamilyOperations.h"
+#include "Editor/EditorFontFamilyDocument.h"
 #include "Editor/EditorSpriteSheetDocument.h"
 #include "Editor/EditorAnimationClipDocument.h"
 #include "Editor/EditorAnimationLibraryDocument.h"
@@ -490,6 +492,17 @@ namespace Opaax::Editor
         }
 
         LibraryOps::Save(InContext);
+    }
+
+    void SaveFamilyCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        if (!InContext.FamilyDocument.IsOpen())
+        {
+            OPAAX_LOG(LogEditorCommands, Warn, "Save Family ignored — no font family is open");
+            return;
+        }
+
+        FamilyOps::Save(InContext);
     }
 
     void SaveLevelCommand::Execute(EditorContext& InContext, const Params&)

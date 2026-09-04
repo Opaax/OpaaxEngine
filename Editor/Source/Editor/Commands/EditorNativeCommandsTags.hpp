@@ -72,4 +72,5 @@ namespace Opaax::Editor::Tags
     //Animation
     inline const OpaaxTag EDITOR_COMMAND_SAVE_CLIP    = OpaaxTag("Editor.Command.SaveClip");
     inline const OpaaxTag EDITOR_COMMAND_SAVE_LIBRARY = OpaaxTag("Editor.Command.SaveLibrary");
+    inline const OpaaxTag EDITOR_COMMAND_SAVE_FAMILY  = OpaaxTag("Editor.Command.SaveFamily");
 }
