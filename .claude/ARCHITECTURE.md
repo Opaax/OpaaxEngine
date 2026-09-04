@@ -2041,6 +2041,21 @@ set: *"Texture is ignored while Sheet is set."*
   the missing file costs **four `[error]` lines at every boot**, which is a worse trade than the one
   line it saves.
 
+**TX13 — A STRING CAN SAY IT IS A BLOCK OF TEXT** (landed 2026-09-04, user: *"we cannot really edit
+text properly. I cannot jump line etc..."*). `EPropertyFlags::Multiline` + `IEditorWidgets::
+InputTextMultiline`, so `TextComponent::Text` is authored as prose and Enter inserts a break.
+- **The flag is on the META, not the type**, and that survives the header's own "not a widget hint"
+  rule: a window title and a sign's inscription are both `OpaaxString`, and only one can hold a
+  `'\n'`. That is exactly "what a field's TYPE cannot say about it" — the same shape as `SetRange`.
+- **Its own seam entry, not a flag on `InputText`**: every toolkit splits the two widgets (ImGui
+  `InputText`/`InputTextMultiline`, Qt `QLineEdit`/`QPlainTextEdit`), so a caller is choosing a
+  shape rather than an option.
+- A block gets a 4096 buffer where a line keeps 512; the refuse-rather-than-truncate rule is
+  unchanged at both sizes.
+- **Ctrl+Z inside the field is ImGui's**, not the editor's: `InputText` claims the chord with its own
+  item id, which outranks `ImGuiInputFlags_RouteGlobal` while it is active. Verified in
+  `imgui_widgets.cpp` rather than assumed, and nothing was added to arbitrate it.
+
 **TX10 — Named, not built:** screen-space text (a stats overlay pinned to a corner) is **blocked on
 multi-view**, not deferred by choice — it is a second ortho pass, and faking it by moving a world
 position against the camera is the thing multi-view exists to stop. Alignment, word-wrap, rotation,
