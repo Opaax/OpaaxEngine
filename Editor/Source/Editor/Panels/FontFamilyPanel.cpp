@@ -42,6 +42,57 @@ namespace Opaax::Editor
 
         DrawPlaneSelectors();
         DrawMatrix(lData);
+
+        ImGui::Separator();
+        DrawResolve(lData);
+    }
+
+    void FontFamilyPanel::DrawResolve(const FontFamilyData& InData)
+    {
+        if (!ImGui::TreeNodeEx("Resolve", ImGuiTreeNodeFlags_DefaultOpen)) { return; }
+
+        ImGui::TextDisabled("What a TextComponent asking for this style would get.");
+
+        ImGui::PushID("ask");
+        DrawProperties(m_Context.Widgets, m_Ask);
+        ImGui::PopID();
+
+        const FontFamilyEntry* lFound = InData.Find(m_Ask);
+
+        if (lFound == nullptr)
+        {
+            // The one axis with no fallback, and the loudest outcome — worth saying in full rather
+            // than leaving it as an empty result.
+            ImGui::TextDisabled("No %s face in this family.", ToString(m_Ask.Subset));
+            ImGui::TextDisabled("Text asking for it draws a row of boxes.");
+        }
+        else if (lFound->Style == m_Ask)
+        {
+            ImGui::TextDisabled("Exact.");
+            ImGui::TextDisabled("%s", lFound->Face.IsEmpty() ? "(this cut names no file yet)"
+                                                             : lFound->Face.Path.CStr());
+        }
+        else
+        {
+            // The subset always matches — Find refuses to cross it — so what differed is one of the
+            // other three, and naming both cuts says which.
+            ImGui::TextDisabled("No %s / %s / %s — falls back to %s / %s / %s",
+                                ToString(m_Ask.Width),      ToString(m_Ask.Slant),      ToString(m_Ask.Weight),
+                                ToString(lFound->Style.Width), ToString(lFound->Style.Slant),
+                                ToString(lFound->Style.Weight));
+
+            ImGui::TextDisabled("%s", lFound->Face.IsEmpty() ? "(that cut names no file yet)"
+                                                             : lFound->Face.Path.CStr());
+        }
+
+        if (lFound != nullptr && ImGui::SmallButton("Select it"))
+        {
+            m_Selected   = FindEntry(InData, lFound->Style);
+            m_PlaneWidth = lFound->Style.Width;
+            m_PlaneSlant = lFound->Style.Slant;
+        }
+
+        ImGui::TreePop();
     }
 
     void FontFamilyPanel::DrawHeader(const FontFamilyData& InData)

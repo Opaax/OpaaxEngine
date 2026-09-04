@@ -50,6 +50,7 @@
 #include "Engine/Subsystems/Resources/Types/FontFaceResource.h"
 #include "Engine/Subsystems/Resources/Types/FontFamilyResource.h"
 #include "Editor/Resources/ResourcePreviewDrawers.h"   // what a preview DRAWS; no ImGui in this file
+#include "Editor/Properties/NativeComponentDrawers.h"  // the three that name a resource two ways
 #include "World/World.h"
 #include "World/WorldManager.h"
 #include "World/Entity/Entity.h"
@@ -390,9 +391,14 @@ namespace Opaax::Editor
         // Every entity has one (I17), so this is the drawer that always shows.
         lDrawers.Register<TransformComponent>();
 
-        lDrawers.Register<SpriteComponent>();
-        lDrawers.Register<SpriteAnimatorComponent>();
-        lDrawers.Register<TextComponent>();
+        // The three that name a resource TWO WAYS get a custom drawer, because the generic fold
+        // shows both fields with no hint which one the renderer will actually use. It adds ONE line
+        // above the same properties — the fields are still the property list's, so a new field
+        // appears here without touching these (NativeComponentDrawers).
+        lDrawers.Register<SpriteComponent,          NativeComponentDrawers::SpriteComponentDrawer>();
+        lDrawers.Register<SpriteAnimatorComponent,  NativeComponentDrawers::SpriteAnimatorComponentDrawer>();
+        lDrawers.Register<TextComponent,            NativeComponentDrawers::TextComponentDrawer>();
+
         lDrawers.Register<CameraComponent>();
         lDrawers.Register<DummyComponent>();
     }

@@ -70,6 +70,18 @@ namespace Opaax::Editor
         /** The selected entry's two fields, bracketed for undo and committed through FamilyOps. */
         void DrawSelectedEntry(FontFamilyData& InData);
 
+        /**
+         * What a style request actually answers — the FALLBACK LADDER, spelled out where the family
+         * is authored.
+         *
+         * **TX6** is invisible otherwise: width, slant and weight all fall back and the subset never
+         * does, so a family missing Greek Bold quietly draws Greek Regular while a family missing
+         * Greek entirely draws boxes. Both are correct and neither is discoverable by looking at a
+         * matrix of the cuts that DO exist — you find out at runtime, in the viewport, on the wrong
+         * day. This asks the family the same question a TextComponent asks it, and prints the answer.
+         */
+        void DrawResolve(const FontFamilyData& InData);
+
         /** Index of the entry at InStyle, or -1. The matrix asks this once per cell. */
         Int32 FindEntry(const FontFamilyData& InData, const FontStyleKey& InStyle) const;
 
@@ -104,6 +116,9 @@ namespace Opaax::Editor
 
         /** Which entry the matrix highlights. -1 = none. Presentation, not document state. */
         Int32 m_Selected = -1;
+
+        /** The style DrawResolve asks the family for. Presentation, not document state. */
+        FontStyleKey m_Ask;
 
         // =============================================================================
         // The open edit gesture — the entry as it was when the first field went active
