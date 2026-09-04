@@ -118,7 +118,13 @@ namespace Opaax::Editor
         /**
          * Forget the previewed camera: an EntityID means nothing in another world, and entt reuses
          * handles — so a kept id could silently resolve to a DIFFERENT entity that happens to have
-         * a camera. Back to "No camera", which is the honest answer across a PIE cycle.
+         * a camera.
+         *
+         * IT RARELY SHOWS, and that is not luck: EditorService retargets the SELECTION by Guid
+         * before notifying panels (WM3 — a clone preserves entity Guids), so a previewed camera
+         * that is ALSO selected is re-tracked on the very next frame and the preview survives Play
+         * and Stop. It falls back to "No camera" only when the preview was sticky on a camera that
+         * was not the current selection.
          */
         void OnActiveWorldChanged(World* InOld, World* InNew) override;
 

@@ -2149,6 +2149,17 @@ opening the panel shows the camera already selected.
 - **Forgotten on `OnActiveWorldChanged`, and that is CORRECTNESS, not hygiene**: an id means nothing
   in another world and **entt reuses handles**, so a kept one could silently resolve to a different
   entity that happens to have a camera — a plausible, wrong picture.
+- **A PIE cycle nevertheless KEEPS the preview, and that is the selection's doing, not this panel's.**
+  *Corrected 2026-09-04 after the user ran it (*"preview still with latest when start and stop"*) —
+  I had predicted "No camera" by reading my own handler and not its caller.*
+  `EditorService::HandleActiveWorldChanged` **retargets the selection by `Guid` first** (**WM3** — a
+  clone preserves them; clearing instead *"would throw away the exact guarantee the snapshot core
+  exists for"*), so a previewed camera that is also selected is re-tracked on the next frame.
+  **The gap that remains, named and left alone at the user's call** (*"keep at it is"*): a preview
+  left STICKY on a camera that is not the current selection does fall back to "No camera" across
+  Play. The fix, if it ever bites, is SMALLER than the code it replaces — bank the camera's `Guid`
+  instead of its `EntityID` and resolve it through `World::FindByGuid`, which is the mechanism the
+  selection already uses and which deletes this override entirely.
 - **"No camera" is a first-class state**, not an error: what a panel opened from the Window menu
   shows before any camera is picked, and what remains after the previewed one is deleted, loses its
   component, or leaves the active world.
