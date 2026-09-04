@@ -79,17 +79,25 @@ namespace Opaax::Editor
     }
 
     void TPropertyDrawer<OpaaxString>::Draw(IEditorWidgets& InWidgets, const char* InLabel,
-                                            OpaaxString& InValue, const PropertyMeta&)
+                                            OpaaxString& InValue, const PropertyMeta& InMeta)
     {
         // A stack buffer per frame rather than a cached one: the value is the source of truth and the
         // widget edits the buffer in place, so copying in each frame is what keeps it honest when
         // something else changes the string. No state, nothing to invalidate.
-        constexpr Uint32 k_BufferSize = 512;
+        //
+        // A BLOCK of text gets a bigger one, because prose legitimately is: a sign, a line of
+        // dialogue or a label with three lines in it outgrows a field sized for a window title.
+        constexpr Uint32 k_LineSize   = 512;
+        constexpr Uint32 k_BlockSize  = 4096;
+        constexpr Uint32 k_BlockLines = 5;
+
+        const bool   bMultiline = HasFlag(InMeta.Flags, EPropertyFlags::Multiline);
+        const Uint32 lCapacity  = bMultiline ? k_BlockSize : k_LineSize;
 
         // REFUSED rather than truncated. Silently dropping the tail of a path because the editor's
         // buffer is smaller than the value is the failure class this codebase hates most; a value
         // this long is not editable here, and says so.
-        if (InValue.GetLength() >= k_BufferSize)
+        if (InValue.GetLength() >= lCapacity)
         {
             InWidgets.LabelText(InLabel, InValue.CStr());
             InWidgets.SameLine();
@@ -97,11 +105,15 @@ namespace Opaax::Editor
             return;
         }
 
-        char lBuffer[k_BufferSize];
+        char lBuffer[k_BlockSize];
         std::memcpy(lBuffer, InValue.CStr(), InValue.GetLength());
         lBuffer[InValue.GetLength()] = '\0';
 
-        if (InWidgets.InputText(InLabel, lBuffer, k_BufferSize))
+        const bool bEdited = bMultiline
+                                 ? InWidgets.InputTextMultiline(InLabel, lBuffer, lCapacity, k_BlockLines)
+                                 : InWidgets.InputText(InLabel, lBuffer, lCapacity);
+
+        if (bEdited)
         {
             InValue = OpaaxString(lBuffer);
         }

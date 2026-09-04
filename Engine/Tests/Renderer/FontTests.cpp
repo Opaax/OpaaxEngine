@@ -19,6 +19,7 @@
 #include "Renderer/Text/FontBake.h"
 #include "Renderer/Text/FontFaceData.h"
 #include "Renderer/Text/Text2D.h"
+#include "World/Components/TextComponent.h"
 
 using namespace Opaax;
 
@@ -482,6 +483,52 @@ TEST_SUITE("Text2D::EstimateExtent")
 
         CHECK(Text2D::EstimateExtent(nullptr).x == doctest::Approx(0.f));
         CHECK(Text2D::EstimateExtent("").y      == doctest::Approx(0.f));
+    }
+}
+
+TEST_SUITE("TextComponent")
+{
+    // What AUTHORING a string has to survive. The Inspector's field is multiline as of 2026-09-04,
+    // so a '\n' is now something a user can type — and a component that lost it on save would lose
+    // it silently, at the one moment nobody is looking.
+
+    TEST_CASE("a multi-line, multi-script string round-trips through the component's json")
+    {
+        TextComponent lWritten;
+        lWritten.Text  = OpaaxString("Opaax\n") + U_GAMMA + U_ALPHA + "\t" + U_ALPHA + "\nend";
+        lWritten.Size  = 48.f;
+        lWritten.Style.Subset = EFontSubset::Greek;
+        lWritten.Style.Weight = EFontWeight::Medium;
+        lWritten.Style.Slant  = EFontSlant::Italic;
+        lWritten.Font.Path    = OpaaxString("/Engine/Fonts/Roboto.opaaxfont");
+
+        const nlohmann::json lJson = lWritten;
+        const TextComponent  lRead = lJson.get<TextComponent>();
+
+        // The escapes are the point: '\n' and '\t' are the two characters the layout walker acts on,
+        // and json is where they would quietly become spaces.
+        CHECK(lRead.Text == lWritten.Text);
+        CHECK(lRead.Text.Find("\n") >= 0);
+        CHECK(lRead.Text.Find("\t") >= 0);
+
+        // The style is four enums written as LABELS, so a reordered enum cannot silently repoint them.
+        CHECK(lRead.Style.Subset == EFontSubset::Greek);
+        CHECK(lRead.Style.Weight == EFontWeight::Medium);
+        CHECK(lRead.Style.Slant  == EFontSlant::Italic);
+        CHECK(lRead.Size == doctest::Approx(48.f));
+        CHECK(lRead.Font.Path == "/Engine/Fonts/Roboto.opaaxfont");
+    }
+
+    TEST_CASE("a map written before this component existed still reads — _WITH_DEFAULT, not at()")
+    {
+        // The empty object is the shape an older `.opaaxmap` presents: every key absent. The plain
+        // NLOHMANN macro would THROW here, at boot, inside Level::MountAll.
+        const TextComponent lRead = nlohmann::json::object().get<TextComponent>();
+
+        CHECK(lRead.Text == "Text");
+        CHECK(lRead.Font.IsEmpty());
+        CHECK(lRead.Face.IsEmpty());
+        CHECK(lRead.bVisible);
     }
 }
 

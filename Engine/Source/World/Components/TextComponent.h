@@ -74,7 +74,9 @@ namespace Opaax
         // Style is a GROUP, not a widget: it describes its own fields, so the Inspector folds it into
         // a tree node of four dropdowns with no drawer written for it (I15).
         OPAAX_PROPERTIES(TextComponent,
-                         OPAAX_PROP(Text),
+                         OPAAX_PROP(Text).SetFlags(EPropertyFlags::Multiline)
+                                         .SetTooltip("Enter breaks the line. UTF-8, so Greek and\n"
+                                                     "Cyrillic are ordinary content."),
                          OPAAX_PROP(Font).SetTooltip("A font family. Ignored while empty;\n"
                                                      "set, it WINS over Face."),
                          OPAAX_PROP(Style).SetTooltip("Which cut of the family to ask for.\n"

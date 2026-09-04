@@ -51,6 +51,7 @@ namespace Opaax::Editor
         bool DragUint32(const char* InLabel, Uint32& InValue, Uint32 InMin, Uint32 InMax) override;
         bool ColorEdit(const char* InLabel, float* InRgba) override;
         bool InputText(const char* InLabel, char* InBuffer, Uint32 InSize, bool bInSubmitOnEnter) override;
+        bool InputTextMultiline(const char* InLabel, char* InBuffer, Uint32 InSize, Uint32 InLineCount) override;
 
         bool BeginCombo(const char* InLabel, const char* InPreview) override;
         bool Selectable(const char* InLabel, bool bInSelected) override;

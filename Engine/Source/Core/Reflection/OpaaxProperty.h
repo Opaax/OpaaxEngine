@@ -37,6 +37,16 @@ namespace Opaax
         None        = 0,
         /** Editing it does nothing until the next launch, because whoever reads it reads it at boot. */
         NeedRestart = BIT(0),
+
+        /**
+         * The value is a BLOCK OF TEXT — it may contain line breaks and is written as prose.
+         *
+         * A behaviour, not a widget hint, and the distinction survives the header's rule above: the
+         * TYPE cannot say it. A window title and a sign's inscription are both `OpaaxString`, and
+         * only one of them can hold a '\n'. Same shape as a range — `SetRange` states that a value is
+         * bounded and lets the drawer decide what to draw for that.
+         */
+        Multiline   = BIT(1),
     };
 
     constexpr EPropertyFlags operator|(const EPropertyFlags InA, const EPropertyFlags InB) noexcept

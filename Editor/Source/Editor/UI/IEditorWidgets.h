@@ -147,6 +147,19 @@ namespace Opaax::Editor
         virtual bool InputText(const char* InLabel, char* InBuffer, Uint32 InSize,
                                bool bInSubmitOnEnter = false) = 0;
 
+        /**
+         * The same, for a value that is a BLOCK of text: Enter inserts a line break instead of
+         * committing, and the field is InLineCount rows tall.
+         *
+         * Its own entry rather than a flag on InputText, because the two are different WIDGETS in
+         * every toolkit — ImGui splits InputText from InputTextMultiline, Qt splits QLineEdit from
+         * QPlainTextEdit — and a caller choosing between them is choosing a shape, not an option.
+         *
+         * @param InLineCount Visible rows. The text scrolls past it; it does not truncate.
+         */
+        virtual bool InputTextMultiline(const char* InLabel, char* InBuffer, Uint32 InSize,
+                                        Uint32 InLineCount) = 0;
+
         // =============================================================================
         // Choice
     public:

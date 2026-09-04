@@ -120,6 +120,16 @@ namespace Opaax::Editor
                                                  : ImGuiInputTextFlags_None);
     }
 
+    bool ImGuiEditorWidgets::InputTextMultiline(const char* InLabel, char* InBuffer, const Uint32 InSize,
+                                                const Uint32 InLineCount)
+    {
+        // Width 0 = "fill the remaining space", which is what every other field here does. The height
+        // is rows x line height, so the box scales with the UI font rather than with a pixel guess.
+        const ImVec2 lSize(0.f, ImGui::GetTextLineHeight() * static_cast<float>(InLineCount));
+
+        return ImGui::InputTextMultiline(InLabel, InBuffer, InSize, lSize);
+    }
+
     bool ImGuiEditorWidgets::BeginCombo(const char* InLabel, const char* InPreview)
     {
         return ImGui::BeginCombo(InLabel, InPreview);
