@@ -161,16 +161,17 @@ namespace Opaax
     // =========================================================================
     // Render — the frame, then the drain.
     //
-    // The debug queue is strictly per-frame and its producers refill it every frame (the editor's
-    // ViewportPanel enqueues in OnPreRender, before this runs). Clearing OUTSIDE RenderFrame is what
-    // keeps a frame we could NOT render — no render core, zero-size target — from letting the queue
-    // grow without bound: those early-outs skip the draw, never the drain.
+    // The debug queue and the submitted views are both strictly per-frame, and their producers
+    // refill them every frame (the editor's ViewportPanel does both in OnPreRender, before this
+    // runs). Clearing OUTSIDE RenderFrame is what keeps a frame we could NOT render — no render
+    // core, zero-size target — from letting either grow without bound: those early-outs skip the
+    // draw, never the drain.
     // =========================================================================
     void RendererManager::Render(double /*Alpha*/)
     {
         {
-            // Around RenderFrame only — the DebugDraw clear below is bookkeeping, not frame work,
-            // and F4 requires it to run whether or not anything rendered.
+            // Around RenderFrame only — the two clears below are bookkeeping, not frame work, and
+            // F4 requires them to run whether or not anything rendered.
             OPAAX_STAT_SCOPE(m_Profiler, "Renderer");
             RenderFrame();
         }
@@ -178,6 +179,7 @@ namespace Opaax
         SubmitRenderCounters();
 
         m_DebugDraw.Clear();
+        m_SubmittedViews.clear();
     }
 
     void RendererManager::SubmitRenderCounters()
@@ -203,6 +205,13 @@ namespace Opaax
         m_Profiler->AddCount("Texture Slots", lStats.PeakTextureSlots);
     }
 
+    // =========================================================================
+    // RenderFrame — one device frame, N passes.
+    //
+    // The runtime path is a SUBMISSION rather than a branch: with nothing submitted the frame is the
+    // backbuffer framed by the active world, which is byte for byte what this drew before views
+    // could be submitted at all. One rule, one loop, nothing to keep in step.
+    // =========================================================================
     void RendererManager::RenderFrame()
     {
         if (!m_RenderSystem)
@@ -210,33 +219,69 @@ namespace Opaax
             return;
         }
 
-        // The primary target decides where the world lands: the editor's offscreen FBO when set,
-        // else the backbuffer (runtime default). Its size — not a cached window size — drives the
-        // view, so an undocked/resized viewport rescales the render (D2: resize is inverted).
-        IRenderTarget& lTarget = m_PrimaryTarget ? *m_PrimaryTarget : m_RenderSystem->GetBackbuffer();
-
-        const Uint32 lWidth  = lTarget.GetWidth();
-        const Uint32 lHeight = lTarget.GetHeight();
-        if (lWidth == 0 || lHeight == 0) { return; }
-
         World* lWorld = (m_WorldManager != nullptr) ? m_WorldManager->GetActiveWorld() : nullptr;
 
-        // The world says WHERE it is looked at from; this adapter is what knows pixels, so it
-        // composes the matrix. No world, or a world nobody produced a view for, falls back to the
-        // default CameraView — the centred frame the engine drew before cameras existed.
-        RenderView lView;
-        lView.ViewProjection = MakeViewProjection(lWorld ? lWorld->GetCameraView() : CameraView{}, lWidth, lHeight);
-        lView.Viewport       = Viewport{ 0, 0, lWidth, lHeight };
+        if (m_SubmittedViews.empty())
+        {
+            // A world nobody produced a view for falls back to the default CameraView — the centred
+            // frame the engine drew before cameras existed (CAM1).
+            SubmitRenderView(m_RenderSystem->GetBackbuffer(),
+                             lWorld != nullptr ? lWorld->GetCameraView() : CameraView{},
+                             /*bInDrawOverlays*/ true);
+        }
+
+        // Counted BEFORE the device frame opens, so a frame with nothing drawable opens none — the
+        // early-out this has always had, now per target rather than per frame.
+        Uint32 lPasses = 0;
+
+        for (const RenderPassRequest& lRequest : m_SubmittedViews)
+        {
+            if (lRequest.Target != nullptr && lRequest.Target->GetWidth() > 0 && lRequest.Target->GetHeight() > 0)
+            {
+                ++lPasses;
+            }
+        }
+
+        if (lPasses == 0) { return; }
+
+        ReportPassCount(lPasses);
 
         m_RenderSystem->BeginFrame();
-        m_RenderSystem->BeginPass(lTarget, lView);
+
+        for (const RenderPassRequest& lRequest : m_SubmittedViews)
+        {
+            if (lRequest.Target == nullptr || lRequest.Target->GetWidth() == 0 || lRequest.Target->GetHeight() == 0)
+            {
+                continue;
+            }
+
+            RenderPass(*lRequest.Target, lWorld, lRequest.View, lRequest.bDrawOverlays);
+        }
+
+        m_RenderSystem->EndFrame();
+    }
+
+    void RendererManager::RenderPass(IRenderTarget& InTarget, World* InWorld, const CameraView& InView, bool bInDrawOverlays)
+    {
+        // The target's size — not a cached window size — drives the view, so an undocked/resized
+        // viewport rescales the render (D2: resize is inverted).
+        const Uint32 lWidth  = InTarget.GetWidth();
+        const Uint32 lHeight = InTarget.GetHeight();
+
+        // The submitter says WHERE it is looked at from; this adapter is what knows pixels, so it
+        // composes the matrix.
+        RenderView lView;
+        lView.ViewProjection = MakeViewProjection(InView, lWidth, lHeight);
+        lView.Viewport       = Viewport{ 0, 0, lWidth, lHeight };
+
+        m_RenderSystem->BeginPass(InTarget, lView);
 
         Renderer2D& lRenderer = m_RenderSystem->GetRenderer2D();
 
         // Draw the active world: a solid quad per DummyComponent, a textured one per Sprite.
-        if (lWorld != nullptr)
+        if (InWorld != nullptr)
         {
-            lWorld->Each<TransformComponent, DummyComponent>(
+            InWorld->Each<TransformComponent, DummyComponent>(
                 [&lRenderer](EntityID, TransformComponent& InXf, DummyComponent& InComp)
                 {
                     // Scale MULTIPLIES the component's own Size (③): the extent is what the thing
@@ -245,30 +290,47 @@ namespace Opaax
                                        Maths::DegreesToRadians(InXf.Rotation));
                 });
 
-            DrawWorldSprites(*lWorld, lRenderer);
-            DrawWorldTexts(*lWorld, lRenderer);
+            DrawWorldSprites(*InWorld, lRenderer);
+            DrawWorldTexts(*InWorld, lRenderer);
         }
 
         // Debug overlay — each queued line as a thin rotated quad, so this reuses the world's batch
         // and adds no RHI/shader/vertex-layout surface. The Debug band sorts above world geometry
         // regardless of submission order, so no manual ordering is needed here.
-        for (const DebugLine& lLine : m_DebugDraw.GetLines())
+        //
+        // READ per pass, CLEARED once per frame (Render): two views that both want overlays each
+        // draw them, which is what a second authoring view would expect.
+        if (bInDrawOverlays)
         {
-            const DebugQuad lQuad = ToQuad(lLine);
-            // The LINE's band, not a hardcoded Debug: ③b's grid has to sit BEHIND world geometry,
-            // and everything else still defaults to Debug and draws above it.
-            lRenderer.DrawQuad(lQuad.Center, lQuad.Size, lLine.Color, lQuad.RotationRad, lLine.Layer);
-        }
+            for (const DebugLine& lLine : m_DebugDraw.GetLines())
+            {
+                const DebugQuad lQuad = ToQuad(lLine);
+                // The LINE's band, not a hardcoded Debug: ③b's grid has to sit BEHIND world geometry,
+                // and everything else still defaults to Debug and draws above it.
+                lRenderer.DrawQuad(lQuad.Center, lQuad.Size, lLine.Color, lQuad.RotationRad, lLine.Layer);
+            }
 
-        // Boxes are ONE hollow quad each, not four thin ones — same band rule as the lines.
-        for (const DebugBox& lBox : m_DebugDraw.GetBoxes())
-        {
-            lRenderer.DrawQuadOutline(lBox.Center, lBox.Size, lBox.Color, lBox.Thickness,
-                                      0.f, lBox.Layer);
+            // Boxes are ONE hollow quad each, not four thin ones — same band rule as the lines.
+            for (const DebugBox& lBox : m_DebugDraw.GetBoxes())
+            {
+                lRenderer.DrawQuadOutline(lBox.Center, lBox.Size, lBox.Color, lBox.Thickness,
+                                          0.f, lBox.Layer);
+            }
         }
 
         m_RenderSystem->EndPass();
-        m_RenderSystem->EndFrame();
+    }
+
+    void RendererManager::ReportPassCount(Uint32 InPasses)
+    {
+        if (InPasses <= 1 || m_bMultiPassLogged)
+        {
+            return;
+        }
+
+        m_bMultiPassLogged = true;
+
+        OPAAX_LOG(LogRendererManager, Info, "Frame composed of {} render passes — the first multi-view frame", InPasses);
     }
     
     void RendererManager::DrawWorldSprites(World& InWorld, Renderer2D& InRenderer)
@@ -583,10 +645,9 @@ namespace Opaax
         return ResolveFace(lEntry->Face);
     }
 
-    void RendererManager::SetPrimaryRenderTarget(IRenderTarget* InTarget)
+    void RendererManager::SubmitRenderView(IRenderTarget& InTarget, const CameraView& InView, bool bInDrawOverlays)
     {
-        m_PrimaryTarget = InTarget;
-        OPAAX_LOG(LogRendererManager, Info, "Primary render target set to {}", InTarget ? "offscreen" : "backbuffer");
+        m_SubmittedViews.emplace_back(RenderPassRequest{ &InTarget, InView, bInDrawOverlays });
     }
     
     TUniquePtr<IFramebuffer> RendererManager::CreateFramebuffer(const FramebufferSpec& InSpec)

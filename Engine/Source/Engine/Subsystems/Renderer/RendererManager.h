@@ -5,6 +5,7 @@
 #include "Application/Services/ILogger.h"
 #include "Engine/Subsystems/EngineSubsystem.h"
 #include "Engine/Subsystems/Resources/ResourceRef.hpp"   // the texture cache holds Refs BY VALUE
+#include "Renderer/CameraView.h"  // a submitted view holds one BY VALUE
 #include "Renderer/DebugDraw.h"   // owned BY VALUE — full type, not a forward decl
 
 
@@ -89,6 +90,27 @@ namespace Opaax
          */
         void RenderFrame();
 
+        /**
+         * ONE pass: compose the matrices for InTarget's pixels, open the pass, draw the world, then
+         * the debug overlays if this view wants them.
+         *
+         * InView is in world units and the matrices are composed HERE, against this target's size —
+         * that is CAM1's split, and it is what lets two views of different sizes frame the same
+         * world correctly without either producer knowing about pixels.
+         *
+         * @param bInDrawOverlays False for a view that must look like the GAME — a camera preview
+         *   shows no grid, no selection outline and no entity icons.
+         */
+        void RenderPass(IRenderTarget& InTarget, World* InWorld, const CameraView& InView, bool bInDrawOverlays);
+
+        /**
+         * Say ONCE that a frame needed more than one pass, naming the count.
+         *
+         * A smoke run cannot read the Stats panel, and "multi-view works" is not a thing a log can
+         * say — a NUMBER is (L59). One shot, because the answer stops being news after the first.
+         */
+        void ReportPassCount(Uint32 InPasses);
+
         /** Every SpriteComponent in InWorld, in one pass. Split from RenderFrame so the world's
          *  two draw sources read as two lines, not as one long body. */
         void DrawWorldSprites(World& InWorld, Renderer2D& InRenderer);
@@ -166,16 +188,26 @@ namespace Opaax
         void Present();
 
         /**
-         * Redirect the world render into InTarget instead of the backbuffer; nullptr restores the
-         * backbuffer. Non-owning — the caller (editor's ViewportPanel) owns the target. Stored, then
-         * read by Render() each frame to pick the target and its size (D2: the target's size drives
-         * the view, replacing the old window-size cache).
+         * Draw the active world into InTarget, framed by InView, for THIS FRAME ONLY.
+         *
+         * IMMEDIATE MODE, exactly like the debug queue beside it (F4): the list is drained by
+         * Render() and cleared every frame, so a producer that wants its view keeps submitting. That
+         * is what makes a panel that hides — or dies — stop costing a pass with nothing to unregister,
+         * and why there is no dangling-target window to order a shutdown around.
+         *
+         * SUBMITTING NOTHING IS THE RUNTIME PATH: a frame with no submissions draws the backbuffer
+         * framed by the active world, which is what this always did.
+         *
+         * @param InTarget BORROWED for the frame — the submitter owns it (I5).
+         * @param InView In WORLD units; the matrices are composed against InTarget's pixels (CAM1).
+         * @param bInDrawOverlays Whether the debug queue draws in this view. False makes it look
+         *   like the game.
          */
-        void SetPrimaryRenderTarget(IRenderTarget* InTarget);
+        void SubmitRenderView(IRenderTarget& InTarget, const CameraView& InView, bool bInDrawOverlays);
 
         /**
          * Create an offscreen framebuffer on the render core's device (F2a). The natural companion to
-         * SetPrimaryRenderTarget: a caller that wants the world in a texture needs both — the backing
+         * SubmitRenderView: a caller that wants the world in a texture needs both — the backing
          * store, then the target wrapping it. CALLER-OWNED, and it must be released before the render
          * core shuts down. nullptr before Startup (no core yet) or if the device is gone.
          */
@@ -211,12 +243,30 @@ namespace Opaax
         //~End EngineSubsystemBase Interface
 
         // =============================================================================
+        // Types
+        // =============================================================================
+    private:
+        /** One submitted view: where it lands, how the world is framed for it, and what it shows. */
+        struct RenderPassRequest
+        {
+            IRenderTarget* Target        = nullptr;  // non-owning; the submitter owns it (I5)
+            CameraView     View;
+            bool           bDrawOverlays = true;
+        };
+
+        // =============================================================================
         // Members
         // =============================================================================
     private:
         TUniquePtr<RenderSystem> m_RenderSystem;
         WorldManager*           m_WorldManager  = nullptr; // non-owning; active world = draw source
-        IRenderTarget*          m_PrimaryTarget = nullptr; // non-owning; nullptr = backbuffer (I5)
+
+        // This frame's views, cleared beside the debug queue in Render() (F4). Keeps its capacity,
+        // so a steady frame allocates nothing.
+        TDynArray<RenderPassRequest> m_SubmittedViews;
+
+        /** Whether ReportPassCount has already spoken. One line per session, not one per frame. */
+        bool m_bMultiPassLogged = false;
 
         // ④ — resolved in Startup like m_WorldManager. This subsystem opts IN to being measured;
         // nothing times it on its behalf.

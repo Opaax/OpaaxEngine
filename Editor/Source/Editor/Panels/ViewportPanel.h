@@ -23,8 +23,8 @@ namespace Opaax::Editor
     // =============================================================================
     // ViewportPanel — the dockable "Viewport" panel: the world is rendered into an offscreen FBO
     //   and shown as an ImGui image, so render resolution is decoupled from the window (D2). The
-    //   panel OWNS the FBO + its OffscreenRenderTarget wrapper (I5), and registers the target as the
-    //   engine's primary render target for its whole lifetime (Startup sets it, Shutdown clears it).
+    //   panel OWNS the FBO + its OffscreenRenderTarget wrapper (I5), and SUBMITS it as a render view
+    //   every frame in OnPreRender — immediate mode, so there is nothing to unregister.
     //
     //   Resize is deferred by one frame to avoid reallocating the FBO between the world render and
     //   the sample within a single frame:
@@ -73,6 +73,15 @@ namespace Opaax::Editor
          * OnPreRender.
          */
         void ApplyPendingResize();
+
+        /**
+         * Claim a pass in this frame: draw the active world into this panel's FBO, framed the way
+         * the world says it is framed, WITH the editor overlays.
+         *
+         * Re-submitted every frame (F4's idiom) rather than registered once, so nothing has to be
+         * cleared when this panel goes away.
+         */
+        void SubmitView();
 
         /**
          * Queue an outline around EVERY selected entity into the engine's DebugDraw for THIS

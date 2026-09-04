@@ -17,6 +17,7 @@ namespace Opaax
     class DebugDraw;
     class EngineRegistries;
     struct FramebufferSpec;
+    struct CameraView;
 
     // =============================================================================
     // IEngine — the engine, exposed as an application service. Owns the engine
@@ -77,11 +78,21 @@ namespace Opaax
         virtual void PresentBackbuffer()                = 0;
 
         /**
-         * Redirect the world render into InTarget instead of the window backbuffer; nullptr restores
-         * the backbuffer. Non-owning: the caller owns the target's lifetime and must clear it (pass nullptr) before the target dies. 
-         * The editor points this at its ViewportPanel's offscreen FBO so the world lands in a texture.
+         * Draw the active world into InTarget, framed by InView, for THIS FRAME ONLY.
+         *
+         * IMMEDIATE MODE like the debug queue (F4): re-submit every frame, and stop submitting to
+         * stop drawing. Nothing is registered, so nothing has to be cleared before a target dies —
+         * the editor's ViewportPanel submits its offscreen FBO each frame so the world lands in a
+         * texture, and a second panel submitting a second one is what multi-view is.
+         *
+         * A frame with NO submissions draws the backbuffer framed by the active world, which is the
+         * runtime path and needs no caller at all.
+         *
+         * @param InTarget BORROWED for the frame — the submitter owns its lifetime (I5).
+         * @param InView In WORLD units; the matrices are composed against InTarget's pixels (CAM1).
+         * @param bInDrawOverlays Whether the debug queue draws in this view. False looks like the game.
          */
-        virtual void SetPrimaryRenderTarget(IRenderTarget* InTarget) = 0;
+        virtual void SubmitRenderView(IRenderTarget& InTarget, const CameraView& InView, bool bInDrawOverlays) = 0;
         
         /**
          * The CALLER owns the result and must release it while the engine — and its GPU context — is still alive. 

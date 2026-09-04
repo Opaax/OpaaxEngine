@@ -497,11 +497,11 @@ namespace Opaax
         }
     }
     
-    void Engine::SetPrimaryRenderTarget(IRenderTarget* InTarget)
+    void Engine::SubmitRenderView(IRenderTarget& InTarget, const CameraView& InView, bool bInDrawOverlays)
     {
         if (m_RendererManager != nullptr)
         {
-            m_RendererManager->SetPrimaryRenderTarget(InTarget);
+            m_RendererManager->SubmitRenderView(InTarget, InView, bInDrawOverlays);
         }
     }
 

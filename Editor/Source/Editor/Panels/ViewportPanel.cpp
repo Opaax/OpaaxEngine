@@ -91,8 +91,6 @@ namespace Opaax::Editor
 
         m_RenderTarget = MakeUnique<OffscreenRenderTarget>(m_Framebuffer.get());
 
-        m_Context.Engine.SetPrimaryRenderTarget(m_RenderTarget.get());
-
         OPAAX_LOG(LogViewportPanel, Info, "ViewportPanel startup — offscreen FBO {}x{}", m_viewportSize.x, m_viewportSize.y);
     }
 
@@ -127,6 +125,33 @@ namespace Opaax::Editor
 
         EnqueueSelectionOutline();
         EnqueueEntityIcons();
+
+        // LAST: the view is published once everything that could move it this frame has run.
+        SubmitView();
+    }
+
+    // =========================================================================
+    // SubmitView — this panel's standing claim on the frame, renewed every frame.
+    //
+    // UNCONDITIONAL, hidden or not: OnPreRender runs either way, and a hidden viewport that stopped
+    // submitting would stop rendering the world it is about to be shown again with.
+    //
+    // The ACTIVE WORLD's view, not the editor camera's, for ViewportToWorld's reason — a PIE clone
+    // is framed by its CameraComponent, and asking the world how it is framed is right in either
+    // mode with no branch.
+    // =========================================================================
+    void ViewportPanel::SubmitView()
+    {
+        if (m_RenderTarget == nullptr)
+        {
+            return;
+        }
+
+        World* const lWorld = m_Context.Worlds.GetActiveWorld();
+
+        m_Context.Engine.SubmitRenderView(*m_RenderTarget,
+                                          lWorld != nullptr ? lWorld->GetCameraView() : CameraView{},
+                                          /*bInDrawOverlays*/ true);
     }
 
     // =========================================================================
@@ -970,9 +995,9 @@ namespace Opaax::Editor
 
     void ViewportPanel::Shutdown()
     {
-        // Clear the engine's primary target FIRST (while the engine is alive — LC/TearDown), so no live
-        // frame reads a dangling target, THEN free the FBO (GL context still current). Order matters.
-        m_Context.Engine.SetPrimaryRenderTarget(nullptr);
+        // NOTHING to unregister: the view is submitted per frame, so a panel that has stopped
+        // running has already stopped being drawn. The dangling-target window this used to have to
+        // order around does not exist.
         m_RenderTarget.reset();
         m_Framebuffer.reset();
 
