@@ -3,8 +3,8 @@
 #include <optional>
 
 #include "Engine/Subsystems/Resources/ResourceFormat.h"
-#include "Engine/Subsystems/Resources/Types/SpriteSheetData.h"
-#include "Engine/Subsystems/Resources/Types/SpriteSheetFile.h"
+#include "Engine/Subsystems/Resources/Types/SpriteSheet/SpriteSheetData.h"
+#include "Engine/Subsystems/Resources/Types/SpriteSheet/SpriteSheetFile.h"
 
 namespace Opaax
 {

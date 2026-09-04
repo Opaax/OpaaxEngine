@@ -1,4 +1,4 @@
-#include "Engine/Subsystems/Resources/Types/SpriteSheetData.h"
+#include "Engine/Subsystems/Resources/Types/SpriteSheet/SpriteSheetData.h"
 
 namespace Opaax
 {

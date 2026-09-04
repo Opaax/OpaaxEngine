@@ -3,8 +3,8 @@
 #include <optional>
 
 #include "Engine/Subsystems/Resources/ResourceFormat.h"
-#include "Engine/Subsystems/Resources/Types/AnimationLibraryData.h"
-#include "Engine/Subsystems/Resources/Types/AnimationLibraryFile.h"
+#include "Engine/Subsystems/Resources/Types/Animation/AnimationLibraryData.h"
+#include "Engine/Subsystems/Resources/Types/Animation/AnimationLibraryFile.h"
 
 namespace Opaax
 {

@@ -3,7 +3,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
-#include "Engine/Subsystems/Resources/Types/AnimationLibraryData.h"
+#include "Engine/Subsystems/Resources/Types/Animation/AnimationLibraryData.h"
 
 namespace Opaax::Editor
 {

@@ -3,9 +3,9 @@
 #include "Application/Services/IPaths.h"
 #include "Core/Profiling/FrameProfiler.h"   // OPAAX_STAT_SCOPE
 #include "Engine/Subsystems/Resources/ResourceManager.h"
-#include "Engine/Subsystems/Resources/Types/AnimationClipResource.h"
-#include "Engine/Subsystems/Resources/Types/AnimationLibraryResource.h"
-#include "Engine/Subsystems/Resources/Types/SpriteSheetResource.h"
+#include "Engine/Subsystems/Resources/Types/Animation/AnimationClipResource.h"
+#include "Engine/Subsystems/Resources/Types/Animation/AnimationLibraryResource.h"
+#include "Engine/Subsystems/Resources/Types/SpriteSheet/SpriteSheetResource.h"
 #include "World/Components/SpriteAnimatorComponent.h"
 #include "World/Components/SpriteComponent.h"
 #include "World/Systems/WorldContext.h"

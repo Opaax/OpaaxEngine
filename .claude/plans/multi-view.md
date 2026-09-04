@@ -62,10 +62,13 @@ SubmitView(IRenderTarget&, const CameraView&, bool bDrawOverlays)
   entity icons), false for the Camera Preview, which must look like the GAME. That is the rule
   `EnqueueEntityIcons` already states for Play worlds, not a new one. Not a field nothing reads
   (**X5**).
-- **`RenderSystem::BeginPass` takes an `ELoadOp`.** Two passes into one target need `Load` on the
-  second; two passes into two targets are both `Clear`. **`ELoadOp::Load` has zero callers today** —
-  this is its first, and `ICommandBuffer.h` already names the case in its own comment
-  (*"composite-on-top passes like the overlay"*).
+- **A per-pass `ELoadOp` is NOT part of this block** — decided while building S5.1, and the plan is
+  corrected rather than followed. `Load` is only needed when two passes share ONE target, and
+  nothing here does: the Viewport and the Camera Preview each own their FBO, so both `Clear`. Adding
+  the parameter now would be an enumerator with no caller (**X5**) — the trap this whole block was
+  shaped to avoid. **`ELoadOp::Load` still has zero callers**, and `ICommandBuffer.h` already names
+  the one it is waiting for in its own comment (*"composite-on-top passes like the overlay"*): the
+  HUD, which is the first thing that draws twice into one target.
 
 ## The editor shape
 

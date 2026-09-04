@@ -43,12 +43,12 @@
 #include "World/Serialization/LevelResource.hpp"   // the types whose chrome is registered below
 #include "World/Serialization/MapResource.hpp"
 #include "Engine/Subsystems/Resources/ResourceTypeID.hpp"   // the id the preview is opened with
-#include "Engine/Subsystems/Resources/Types/TextureResource.h"
-#include "Engine/Subsystems/Resources/Types/SpriteSheetResource.h"
-#include "Engine/Subsystems/Resources/Types/AnimationClipResource.h"
-#include "Engine/Subsystems/Resources/Types/AnimationLibraryResource.h"
-#include "Engine/Subsystems/Resources/Types/FontFaceResource.h"
-#include "Engine/Subsystems/Resources/Types/FontFamilyResource.h"
+#include "Engine/Subsystems/Resources/Types/Texture/TextureResource.h"
+#include "Engine/Subsystems/Resources/Types/SpriteSheet/SpriteSheetResource.h"
+#include "Engine/Subsystems/Resources/Types/Animation/AnimationClipResource.h"
+#include "Engine/Subsystems/Resources/Types/Animation/AnimationLibraryResource.h"
+#include "Engine/Subsystems/Resources/Types/Font/FontFaceResource.h"
+#include "Engine/Subsystems/Resources/Types/Font/FontFamilyResource.h"
 #include "Editor/Resources/ResourcePreviewDrawers.h"   // what a preview DRAWS; no ImGui in this file
 #include "Editor/Properties/NativeComponentDrawers.h"  // the three that name a resource two ways
 #include "World/World.h"

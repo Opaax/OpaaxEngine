@@ -1,7 +1,7 @@
 #include "Editor/EditorAnimationClipDocument.h"
 
 #include "Core/String/OpaaxPathString.h"
-#include "Engine/Subsystems/Resources/Types/AnimationClipFile.h"
+#include "Engine/Subsystems/Resources/Types/Animation/AnimationClipFile.h"
 
 namespace Opaax::Editor
 {

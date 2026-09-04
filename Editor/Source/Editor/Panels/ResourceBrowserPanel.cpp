@@ -14,7 +14,7 @@
 #include "Engine/Registries/EngineRegistries.h"   // extension -> resource type, the engine's half
 #include "Engine/Subsystems/Resources/ResourceManager.h"
 #include "Engine/Subsystems/Resources/ResourceTypeID.hpp"        // which type a thumbnail is for
-#include "Engine/Subsystems/Resources/Types/TextureResource.h"   // icons are textures like any other
+#include "Engine/Subsystems/Resources/Types/Texture/TextureResource.h"   // icons are textures like any other
 
 #include <imgui.h>
 

@@ -1,9 +1,9 @@
-#include "Engine/Subsystems/Resources/Types/SpriteSheetFile.h"
+#include "Engine/Subsystems/Resources/Types/SpriteSheet/SpriteSheetFile.h"
 
 #include <nlohmann/json.hpp>
 
 #include "Core/IO/FileIO.h"
-#include "Engine/Subsystems/Resources/Types/SpriteSheetData.h"
+#include "Engine/Subsystems/Resources/Types/SpriteSheet/SpriteSheetData.h"
 
 namespace Opaax
 {

@@ -1,7 +1,7 @@
 #include "Editor/EditorAnimationLibraryDocument.h"
 
 #include "Core/String/OpaaxPathString.h"
-#include "Engine/Subsystems/Resources/Types/AnimationLibraryFile.h"
+#include "Engine/Subsystems/Resources/Types/Animation/AnimationLibraryFile.h"
 
 namespace Opaax::Editor
 {

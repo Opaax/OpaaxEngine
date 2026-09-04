@@ -5,7 +5,7 @@
 #include "Editor/Panels/IEditorPanel.h"
 
 #include "Engine/Subsystems/Resources/ResourceRef.hpp"          // one claim for the sample's face
-#include "Engine/Subsystems/Resources/Types/FontFamilyData.h"   // the gesture caches an entry
+#include "Engine/Subsystems/Resources/Types/Font/FontFamilyData.h"   // the gesture caches an entry
 
 namespace Opaax
 {

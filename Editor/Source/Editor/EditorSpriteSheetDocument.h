@@ -2,7 +2,7 @@
 
 #include "Application/Services/ILogger.h"
 #include "Core/String/OpaaxString.hpp"
-#include "Engine/Subsystems/Resources/Types/SpriteSheetData.h"
+#include "Engine/Subsystems/Resources/Types/SpriteSheet/SpriteSheetData.h"
 
 namespace Opaax::Editor
 {

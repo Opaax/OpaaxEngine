@@ -17,11 +17,11 @@
 #include "Core/IO/FileIO.h"   // the malformed-file cases author their own bytes
 #include "Engine/Subsystems/Resources/ResourceManager.h"        // completes LoadContext
 #include "Engine/Subsystems/Resources/ResourceFormatRegistry.h"
-#include "Engine/Subsystems/Resources/Types/AnimationClipData.h"
-#include "Engine/Subsystems/Resources/Types/AnimationClipFile.h"
-#include "Engine/Subsystems/Resources/Types/AnimationClipResource.h"
-#include "Engine/Subsystems/Resources/Types/AnimationLibraryData.h"
-#include "Engine/Subsystems/Resources/Types/AnimationLibraryFile.h"
+#include "Engine/Subsystems/Resources/Types/Animation/AnimationClipData.h"
+#include "Engine/Subsystems/Resources/Types/Animation/AnimationClipFile.h"
+#include "Engine/Subsystems/Resources/Types/Animation/AnimationClipResource.h"
+#include "Engine/Subsystems/Resources/Types/Animation/AnimationLibraryData.h"
+#include "Engine/Subsystems/Resources/Types/Animation/AnimationLibraryFile.h"
 
 using namespace Opaax;
 

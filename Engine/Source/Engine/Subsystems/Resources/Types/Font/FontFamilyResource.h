@@ -3,8 +3,8 @@
 #include <optional>
 
 #include "Engine/Subsystems/Resources/ResourceFormat.h"
-#include "Engine/Subsystems/Resources/Types/FontFamilyData.h"
-#include "Engine/Subsystems/Resources/Types/FontFamilyFile.h"
+#include "Engine/Subsystems/Resources/Types/Font/FontFamilyData.h"
+#include "Engine/Subsystems/Resources/Types/Font/FontFamilyFile.h"
 
 namespace Opaax
 {

@@ -6,8 +6,8 @@
 #include "Editor/Undo/SpriteSheetUndoables.h"
 
 #include "Engine/Subsystems/Resources/ResourceManager.h"
-#include "Engine/Subsystems/Resources/Types/SpriteSheetFile.h"
-#include "Engine/Subsystems/Resources/Types/SpriteSheetResource.h"
+#include "Engine/Subsystems/Resources/Types/SpriteSheet/SpriteSheetFile.h"
+#include "Engine/Subsystems/Resources/Types/SpriteSheet/SpriteSheetResource.h"
 
 namespace Opaax::Editor
 {

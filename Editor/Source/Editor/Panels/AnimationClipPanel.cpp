@@ -19,10 +19,10 @@
 #include "Engine/Subsystems/Resources/ResourceTypeID.hpp"
 
 #include "Engine/Subsystems/Resources/ResourceManager.h"
-#include "Engine/Subsystems/Resources/Types/AnimationClipData.h"
-#include "Engine/Subsystems/Resources/Types/SpriteSheetData.h"
-#include "Engine/Subsystems/Resources/Types/SpriteSheetResource.h"
-#include "Engine/Subsystems/Resources/Types/TextureResource.h"
+#include "Engine/Subsystems/Resources/Types/Animation/AnimationClipData.h"
+#include "Engine/Subsystems/Resources/Types/SpriteSheet/SpriteSheetData.h"
+#include "Engine/Subsystems/Resources/Types/SpriteSheet/SpriteSheetResource.h"
+#include "Engine/Subsystems/Resources/Types/Texture/TextureResource.h"
 #include "Application/Services/IPaths.h"
 
 #include <imgui.h>

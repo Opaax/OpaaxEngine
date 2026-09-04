@@ -6,7 +6,7 @@
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Engine/Subsystems/Resources/ResourcePath.h"
 #include "Engine/Subsystems/Resources/ResourcePathJson.h"
-#include "Engine/Subsystems/Resources/Types/FontStyle.h"
+#include "Engine/Subsystems/Resources/Types/Font/FontStyle.h"
 
 namespace Opaax
 {

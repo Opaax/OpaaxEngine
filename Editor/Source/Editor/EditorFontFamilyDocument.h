@@ -2,7 +2,7 @@
 
 #include "Application/Services/ILogger.h"
 #include "Core/String/OpaaxString.hpp"
-#include "Engine/Subsystems/Resources/Types/FontFamilyData.h"
+#include "Engine/Subsystems/Resources/Types/Font/FontFamilyData.h"
 
 namespace Opaax::Editor
 {

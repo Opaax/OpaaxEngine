@@ -1,7 +1,7 @@
 #include "Editor/EditorSpriteSheetDocument.h"
 
 #include "Core/String/OpaaxPathString.h"
-#include "Engine/Subsystems/Resources/Types/SpriteSheetFile.h"
+#include "Engine/Subsystems/Resources/Types/SpriteSheet/SpriteSheetFile.h"
 
 namespace Opaax::Editor
 {

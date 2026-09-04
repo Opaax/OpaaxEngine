@@ -9,7 +9,7 @@
 #include "Core/String/OpaaxStringJson.h"
 #include "Engine/Subsystems/Resources/ResourcePath.h"
 #include "Engine/Subsystems/Resources/ResourcePathJson.h"
-#include "Engine/Subsystems/Resources/Types/FontStyle.h"
+#include "Engine/Subsystems/Resources/Types/Font/FontStyle.h"
 #include "Renderer/RenderLayer.h"
 
 namespace Opaax

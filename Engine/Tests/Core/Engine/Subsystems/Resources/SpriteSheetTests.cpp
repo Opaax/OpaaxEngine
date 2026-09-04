@@ -14,8 +14,8 @@
 #include <string>
 
 #include "Core/IO/FileIO.h"   // the malformed-file cases author their own bytes
-#include "Engine/Subsystems/Resources/Types/SpriteSheetData.h"
-#include "Engine/Subsystems/Resources/Types/SpriteSheetFile.h"
+#include "Engine/Subsystems/Resources/Types/SpriteSheet/SpriteSheetData.h"
+#include "Engine/Subsystems/Resources/Types/SpriteSheet/SpriteSheetFile.h"
 
 using namespace Opaax;
 

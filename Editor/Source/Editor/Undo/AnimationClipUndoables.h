@@ -2,7 +2,7 @@
 
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
-#include "Engine/Subsystems/Resources/Types/AnimationClipData.h"
+#include "Engine/Subsystems/Resources/Types/Animation/AnimationClipData.h"
 
 namespace Opaax::Editor
 {

@@ -11,7 +11,7 @@
 
 #include "Application/Services/IPaths.h"
 #include "Engine/Subsystems/Resources/ResourceManager.h"
-#include "Engine/Subsystems/Resources/Types/FontFaceResource.h"
+#include "Engine/Subsystems/Resources/Types/Font/FontFaceResource.h"
 #include "Renderer/Text/Text2D.h"                // Layout — the SAME walk the viewport uses
 
 #include <imgui.h>

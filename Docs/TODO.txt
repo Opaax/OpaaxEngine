@@ -11,5 +11,21 @@ Misc:
    - Avoiding checking all frame 
    - Undo Redo
 
+Editor: 
 - Import
-- Convert Texture to sheet
+	From menus
+	Drag drop from windows
+- Right Click action on assets
+	- Convert Texture to sheet
+	- Create asset type (Unreal pattern ? asset action + Factory?)
+- Animation
+	- UX Component
+		- Anim type
+			- Clip
+			- AnimAsset
+- SpriteComponent
+	- UX Component
+		- Texture Type
+			- Textuure
+			- Sheet
+

@@ -21,7 +21,7 @@
 
 #include "Engine/Subsystems/Resources/ResourceManager.h"        // completes LoadContext
 #include "Engine/Subsystems/Resources/ResourceFormatRegistry.h"
-#include "Engine/Subsystems/Resources/Types/TextureResource.h"
+#include "Engine/Subsystems/Resources/Types/Texture/TextureResource.h"
 
 using namespace Opaax;
 

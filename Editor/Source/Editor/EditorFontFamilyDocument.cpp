@@ -1,7 +1,7 @@
 #include "Editor/EditorFontFamilyDocument.h"
 
 #include "Core/String/OpaaxPathString.h"
-#include "Engine/Subsystems/Resources/Types/FontFamilyFile.h"
+#include "Engine/Subsystems/Resources/Types/Font/FontFamilyFile.h"
 
 namespace Opaax::Editor
 {

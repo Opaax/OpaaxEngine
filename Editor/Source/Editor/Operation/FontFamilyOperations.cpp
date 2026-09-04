@@ -6,8 +6,8 @@
 #include "Editor/Undo/FontFamilyUndoables.h"
 
 #include "Engine/Subsystems/Resources/ResourceManager.h"
-#include "Engine/Subsystems/Resources/Types/FontFamilyFile.h"
-#include "Engine/Subsystems/Resources/Types/FontFamilyResource.h"
+#include "Engine/Subsystems/Resources/Types/Font/FontFamilyFile.h"
+#include "Engine/Subsystems/Resources/Types/Font/FontFamilyResource.h"
 
 namespace Opaax::Editor
 {

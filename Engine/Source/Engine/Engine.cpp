@@ -30,12 +30,12 @@
 
 #include "RHI/Framebuffer.h"   // FramebufferSpec + the TUniquePtr<IFramebuffer> deleter
 #include "RHI/Texture.h"       // the TUniquePtr<ITexture2D> deleter
-#include "Engine/Subsystems/Resources/Types/TextureResource.h" // registered as a native format
-#include "Engine/Subsystems/Resources/Types/SpriteSheetResource.h" // registered as a native format
-#include "Engine/Subsystems/Resources/Types/AnimationClipResource.h" // registered as a native format
-#include "Engine/Subsystems/Resources/Types/AnimationLibraryResource.h" // registered as a native format
-#include "Engine/Subsystems/Resources/Types/FontFaceResource.h" // registered as a native format
-#include "Engine/Subsystems/Resources/Types/FontFamilyResource.h" // registered as a native format
+#include "Engine/Subsystems/Resources/Types/Texture/TextureResource.h" // registered as a native format
+#include "Engine/Subsystems/Resources/Types/SpriteSheet/SpriteSheetResource.h" // registered as a native format
+#include "Engine/Subsystems/Resources/Types/Animation/AnimationClipResource.h" // registered as a native format
+#include "Engine/Subsystems/Resources/Types/Animation/AnimationLibraryResource.h" // registered as a native format
+#include "Engine/Subsystems/Resources/Types/Font/FontFaceResource.h" // registered as a native format
+#include "Engine/Subsystems/Resources/Types/Font/FontFamilyResource.h" // registered as a native format
 #include "World/Components/TextComponent.h"
 #include "World/Components/SpriteAnimatorComponent.h"
 #include "World/Systems/SpriteAnimationSubsystem.h"

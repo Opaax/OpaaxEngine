@@ -36,10 +36,10 @@
 #include "Core/Maths/Maths.h"     // DegreesToRadians — the transform authors degrees, the renderer takes radians
 
 #include "Engine/Subsystems/Resources/ResourceManager.h"          // Load<TextureResource> — the cache
-#include "Engine/Subsystems/Resources/Types/TextureResource.h"
-#include "Engine/Subsystems/Resources/Types/SpriteSheetResource.h" // the sheet a sprite may name instead
-#include "Engine/Subsystems/Resources/Types/FontFaceResource.h"    // the baked atlas a text draws from
-#include "Engine/Subsystems/Resources/Types/FontFamilyResource.h"  // the family a text may name instead
+#include "Engine/Subsystems/Resources/Types/Texture/TextureResource.h"
+#include "Engine/Subsystems/Resources/Types/SpriteSheet/SpriteSheetResource.h" // the sheet a sprite may name instead
+#include "Engine/Subsystems/Resources/Types/Font/FontFaceResource.h"    // the baked atlas a text draws from
+#include "Engine/Subsystems/Resources/Types/Font/FontFamilyResource.h"  // the family a text may name instead
 
 #include "Renderer/Text/Text2D.h"
 #include "World/Components/TextComponent.h"

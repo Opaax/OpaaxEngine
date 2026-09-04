@@ -4,7 +4,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Editor/Panels/IEditorPanel.h"
 
-#include "Engine/Subsystems/Resources/Types/AnimationLibraryData.h"   // the gesture caches an entry
+#include "Engine/Subsystems/Resources/Types/Animation/AnimationLibraryData.h"   // the gesture caches an entry
 
 namespace Opaax
 {
