@@ -5,8 +5,18 @@
 #include "Editor/Properties/PropertyDrawers.h"   // DrawProperties, and the specializations it folds over
 #include "Editor/UI/IEditorWidgets.h"
 
+// The camera's button is a DISPATCH, so it needs the registry the context carries — and the panel
+// only for its id.
+#include "Editor/EditorContext.h"
+#include "Editor/Extensions/EditorExtensionRegistrar.h"
+#include "Editor/Commands/EditorCommandRegistry.h"
+#include "Editor/Commands/EditorNativeCommands.h"        // PanelIdParams
+#include "Editor/Commands/EditorNativeCommandsTags.hpp"
+#include "Editor/Panels/CameraPreviewPanel.h"
+
 #include "Engine/Modules/ModuleRegistrar.h"      // DeriveTypeLeafName — the header's name, and the map key's
 
+#include "World/Components/CameraComponent.h"
 #include "World/Components/SpriteAnimatorComponent.h"
 #include "World/Components/SpriteComponent.h"
 #include "World/Components/TextComponent.h"
@@ -87,5 +97,24 @@ namespace Opaax::Editor::NativeComponentDrawers
                                     "Font", !InText.Font.IsEmpty());
 
         DrawProperties(InWidgets, InText);
+    }
+
+    void CameraComponentDrawer::Draw(IEditorWidgets& InWidgets, CameraComponent& InCamera,
+                                     Entity& /*InEntity*/, EditorContext& InContext)
+    {
+        if (!BeginComponent<CameraComponent>(InWidgets)) { return; }
+
+        // The component's own fields first, through the same fold the generic drawer uses — so a
+        // field added to CameraComponent shows up here without this file being touched.
+        DrawProperties(InWidgets, InCamera);
+
+        // THE SAME VERB the Window menu invokes, reached by the tag rather than by touching
+        // EditorPanels: the button and the menu entry cannot drift apart, and a key binding would
+        // be a third front-end on the same one.
+        if (InWidgets.Button("Open Preview", 0.f, "Show what this camera frames, in its own panel"))
+        {
+            InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_TOGGLE_PANEL, InContext,
+                                                    PanelIdParams{ CameraPreviewPanel::PanelID() });
+        }
     }
 }

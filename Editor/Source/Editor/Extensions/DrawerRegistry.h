@@ -15,6 +15,27 @@ namespace Opaax
 
 namespace Opaax::Editor
 {
+    struct EditorContext;
+
+    // =============================================================================
+    // CContextDrawer — a drawer that wants MORE than its own fields: the subject it belongs to, and
+    //   the editor around it.
+    //
+    //   The wider Draw is OPTIONAL and detected, never required, so every existing drawer compiles
+    //   untouched — the same duck typing that already tells the custom form from the generic one.
+    //
+    //   WHAT IT IS FOR: a drawer that dispatches a COMMAND. Fields are written straight through a
+    //   T& and need nothing (**I15**); a verb needs the registry the context carries. The cost is
+    //   named rather than hidden — a drawer that takes the context can reach the whole editor, and
+    //   what keeps it to a verb is convention, not the type system.
+    // =============================================================================
+    template<typename TDrawer, typename TDrawable, typename TSubject>
+    concept CContextDrawer = requires(TDrawer InDrawer, IEditorWidgets& InWidgets, TDrawable& InDrawable,
+                                      TSubject& InSubject, EditorContext& InContext)
+    {
+        InDrawer.Draw(InWidgets, InDrawable, InSubject, InContext);
+    };
+
     // =============================================================================
     // TDrawerResolver<TSubject, TTarget> — "given one of these, is this drawer applicable, and what
     //   does it draw?". DECLARED, NEVER DEFINED: a subject nobody taught the registry about is a
@@ -104,7 +125,7 @@ namespace Opaax::Editor
             const OpaaxStringID lName = DeriveTypeLeafName<typename TDrawerResolver<TSubject, TTarget>::DrawableType>();
 
             m_Entries.emplace_back(
-                [lName](TSubject& InSubject, IEditorWidgets& InWidgets) -> bool
+                [lName](TSubject& InSubject, IEditorWidgets& InWidgets, EditorContext& InContext) -> bool
                 {
                     using Resolver = TDrawerResolver<TSubject, TTarget>;
 
@@ -116,7 +137,18 @@ namespace Opaax::Editor
 
                     InWidgets.PushId(lName.CStr());
                     TDrawer lDrawer;
-                    lDrawer.Draw(InWidgets, *lDrawable);
+
+                    // The wider form only when the drawer asked for it, so the narrow contract stays
+                    // the default and nothing existing has to change.
+                    if constexpr (CContextDrawer<TDrawer, typename Resolver::DrawableType, TSubject>)
+                    {
+                        lDrawer.Draw(InWidgets, *lDrawable, InSubject, InContext);
+                    }
+                    else
+                    {
+                        lDrawer.Draw(InWidgets, *lDrawable);
+                    }
+
                     InWidgets.PopId();
 
                     return true;
@@ -145,14 +177,14 @@ namespace Opaax::Editor
                       lName, PropertyCount<typename Resolver::DrawableType>());
 
             m_Entries.emplace_back(
-                [lName](TSubject& InSubject, IEditorWidgets& InWidgets) -> bool
+                [lName](TSubject& InSubject, IEditorWidgets& InWidgets, EditorContext&) -> bool
                 {
                     typename Resolver::DrawableType* lDrawable = Resolver::Resolve(InSubject);
                     if (lDrawable == nullptr)
                     {
                         return false;
                     }
-                    
+
                     InWidgets.PushId(lName.CStr());
 
                     if constexpr (Resolver::bDrawsSection)
@@ -179,11 +211,11 @@ namespace Opaax::Editor
          * @return false when nothing applied — which is what lets a caller tell "no drawer for this"
          *   from "drew nothing", and is how the Config panel decides to fall back to its json view.
          */
-        bool DrawFirst(TSubject& InSubject, IEditorWidgets& InWidgets) const
+        bool DrawFirst(TSubject& InSubject, IEditorWidgets& InWidgets, EditorContext& InContext) const
         {
-            for (const TFunction<bool(TSubject&, IEditorWidgets&)>& lEntry : m_Entries)
+            for (const TFunction<bool(TSubject&, IEditorWidgets&, EditorContext&)>& lEntry : m_Entries)
             {
-                if (lEntry && lEntry(InSubject, InWidgets)) { return true; }
+                if (lEntry && lEntry(InSubject, InWidgets, InContext)) { return true; }
             }
 
             return false;
@@ -193,7 +225,7 @@ namespace Opaax::Editor
         // Get - Set
     public:
         /** The registered drawers in registration order (= display order). */
-        const TDynArray<TFunction<bool(TSubject&, IEditorWidgets&)>>& Entries() const noexcept { return m_Entries; }
+        const TDynArray<TFunction<bool(TSubject&, IEditorWidgets&, EditorContext&)>>& Entries() const noexcept { return m_Entries; }
 
         Uint64 Count() const noexcept { return static_cast<Uint64>(m_Entries.size()); }
         // End Get - Set
@@ -203,7 +235,7 @@ namespace Opaax::Editor
         // Members
         // =============================================================================
     private:
-        TDynArray<TFunction<bool(TSubject&, IEditorWidgets&)>> m_Entries;
+        TDynArray<TFunction<bool(TSubject&, IEditorWidgets&, EditorContext&)>> m_Entries;
     };
 
     // Explicit at the call site, as the routes read: Drawers() / ConfigDrawers().

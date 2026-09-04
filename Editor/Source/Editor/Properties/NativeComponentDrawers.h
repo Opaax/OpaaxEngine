@@ -5,11 +5,14 @@ namespace Opaax
     struct SpriteComponent;
     struct SpriteAnimatorComponent;
     struct TextComponent;
+    struct CameraComponent;
+    class  Entity;
 }
 
 namespace Opaax::Editor
 {
     class IEditorWidgets;
+    struct EditorContext;
 
     // =============================================================================
     // The editor's drawers for the three components that name a resource TWO WAYS.
@@ -51,6 +54,23 @@ namespace Opaax::Editor
         struct TextComponentDrawer
         {
             void Draw(IEditorWidgets& InWidgets, TextComponent& InText);
+        };
+
+        /**
+         * The camera's own field, then the verb that shows you what it frames.
+         *
+         * THE ONE DRAWER THAT TAKES THE CONTEXT (CContextDrawer), and only to DISPATCH: a field is
+         * written straight through the T& like every other (**I15**), while opening a panel is an
+         * editor verb and goes through the command registry the context carries. It reaches for the
+         * tag the Window menu already uses, so the button and the menu entry are one verb.
+         *
+         * The subject is taken but unused: what the preview follows is the SELECTION, and this
+         * drawer is only ever called for the primary — the same entity. It is in the signature
+         * because the wider form is one form, not four.
+         */
+        struct CameraComponentDrawer
+        {
+            void Draw(IEditorWidgets& InWidgets, CameraComponent& InCamera, Entity& InEntity, EditorContext& InContext);
         };
     }
 }

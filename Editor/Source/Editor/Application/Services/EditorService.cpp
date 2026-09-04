@@ -401,7 +401,10 @@ namespace Opaax::Editor
         lDrawers.Register<SpriteAnimatorComponent,  NativeComponentDrawers::SpriteAnimatorComponentDrawer>();
         lDrawers.Register<TextComponent,            NativeComponentDrawers::TextComponentDrawer>();
 
-        lDrawers.Register<CameraComponent>();
+        // The one drawer that takes the CONTEXT, and only to dispatch a verb: the button that opens
+        // the Camera Preview. Its fields still come from the property list, so this is the generic
+        // fold plus one line.
+        lDrawers.Register<CameraComponent,          NativeComponentDrawers::CameraComponentDrawer>();
         lDrawers.Register<DummyComponent>();
     }
 
