@@ -2234,6 +2234,42 @@ with zero migration** — the reason it is safe to defer. `CollisionChannelList.
 single source of truth, and its ordinal IS the filter bit index: **append only, never reorder**, or
 every saved map renumbers.
 
+**PH6 — PHYSICS IS A PLAY-WORLD SUBSYSTEM, and that one line is the whole PIE story.** M9 ran physics
+as an *engine* subsystem with a process-lifetime world and hand-rolled per-play body churn
+(`OnPlayBegin` / `OnPlayEnd` / `ClearBodies`, plus a standing worry about Box2D state leaking across
+Start/Stop). One tier down, all of it evaporates: `ShouldCreate` returns Play-only exactly like
+`SpriteAnimationSubsystem`, so a PIE clone builds its own physics world and takes it with it (**WM6**),
+`WorldManager` already forwards `FixedUpdate` to the **active** world only (**WS5**), and **WS8**
+already resolves pause/step once per frame — so the subsystem holds no gate of its own. **The editor
+proves this by ABSENCE:** an Edit world logs zero `[Physics]` lines, because a rejected candidate is
+never constructed.
+
+**PH7 — BODIES ARE RECONCILED EVERY FIXED STEP, NEVER BUILT ONCE — and that is what closes WS7.**
+`ReconcileDeadBodies` then `ReconcileLiveBodies` run before `Step`. Entities spawned by the host in
+`PostEngineStartup`, by a clone's `Instantiate`, or by gameplay mid-play therefore all arrive by the
+same route, and **the post-instantiate hook WS7 named as physics' likely need stays unbuilt** — the
+reconcile is a better answer than a hook, because it also covers the cases a hook would miss. Two
+consequences worth keeping: a body whose entity died is reaped FIRST, so it cannot emit contacts for a
+step it should not be in; and a body whose `BuiltType` no longer matches what its components imply is
+**rebuilt**, which is what makes component add-order irrelevant (a `Rigidbody` added after a
+`Collider` would otherwise stay static forever — silently, which is why it has a test).
+
+**PH8 — ONE BODY PER COLLIDER; the rigidbody only says what KIND.** A collider with no rigidbody is
+**static**, because level geometry is the overwhelmingly common case and should not need a second
+component to declare what it already is. A rigidbody with **no** collider is skipped entirely: a body
+with no shape is something nothing can touch, moved invisibly by gravity. The collider authors FULL
+size and the seam takes half extents — halved once, in `MakeShapeDesc`, so no call site has to
+remember which convention it is holding. `TransformComponent::Rotation` is DEGREES and the seam is
+RADIANS; both crossings go through `Maths::DegreesToRadians`/`RadiansToDegrees`, the same pair the
+renderer uses, and a round-trip test pins it because getting it wrong is silent rather than loud.
+
+**PH9 — `WorldContext` carries `Config`, and the null-guard grew with it.** A world subsystem has no
+other route to a config: `IConfigSystem` is an app service and reaching the locator is what **D3**
+forbids. It arrived by **WS3**'s stated growth clause, the second member to do so after `IPaths`, and
+as the WHOLE `EngineConfigData` rather than a physics-shaped slice — it is one config object, and the
+next reader wants a different part of it. **Both existing `WorldContext` test fixtures failed to
+compile on the new field**, which is the aggregate doing the job a grep would have missed ([[L10]]).
+
 **PH5 — `EngineConfigData::Physics` came back on the clause that deleted it.** The group was removed
 2026-08-21 for having no reader, under "each comes back with the system that reads it". It is a real
 `EPhysicsBackend` enum (a typo is not expressible, and the editor gets a dropdown), with gravity,
@@ -2826,10 +2862,16 @@ first `Update`** (landed M4 S4). True on both creation paths, which is the point
 subsystems before the entities land. Instantiating before starting would "fix" the clone at the cost of
 making it the only populated-at-`Startup` world in the engine — and "can I read the world in `Startup`?"
 would answer *"depends how your world was made"*, which is a far worse contract than a uniform **no**.
-`QuadOscillatorSubsystem` is the worked example (baselines on first tick). If something ever genuinely
-needs a populated-world moment — physics rebuilding bodies from authoring components — the answer is an
-explicit post-instantiate hook (Unreal's `OnWorldBeginPlay` beside `Initialize`), **named here and
-deliberately not built**: it has no caller yet.
+`QuadOscillatorSubsystem` is the worked example (baselines on first tick).
+
+**The named candidate for a post-instantiate hook was PHYSICS, and it did not need one** (⑦-A P1,
+2026-09-07). This entry used to say that "physics rebuilding bodies from authoring components" would
+be what finally justified an explicit `OnWorldBeginPlay`. Building it showed the opposite: a
+**per-step reconcile** (**PH7**) is strictly better than a hook, because one pass covers the
+host's `PostEngineStartup` spawn, a clone's `Instantiate`, gameplay spawning mid-play AND a component
+added to a live entity — where a hook covers only the first two and leaves the rest silently
+unhandled. So the hook remains **unbuilt, now with its best candidate spent**: the next proposal for
+one must first say why a reconcile is not the answer.
 
 **WS8 — The PIE tick gate lives in `WorldManager`, and the decision is taken ONCE PER FRAME** (landed
 M4 S5). `SetPaused` / `RequestStep` are flags; `Update` — the once-per-frame hook — resolves them into
