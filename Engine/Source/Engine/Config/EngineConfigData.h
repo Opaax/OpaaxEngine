@@ -64,9 +64,21 @@ namespace Opaax
         // asked at the point of use — Vulkan is a legal thing to write here and is coerced, loudly.
         EBackend Backend = EBackend::OpenGL;
 
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(RenderSettings, Backend)
+        /**
+         * Blend a fixed-step pose toward the next one for DISPLAY, so motion does not step at the
+         * fixed rate on a faster screen. Deleted in the 2026-08-21 cleanup for having no reader;
+         * back with one (PH21). ON by default — the interpolated picture is the correct one.
+         */
+        bool bInterpolation = true;
 
-        OPAAX_PROPERTIES(RenderSettings, OPAAX_PROP(Backend))
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(RenderSettings, Backend, bInterpolation)
+
+        OPAAX_PROPERTIES(RenderSettings,
+                         OPAAX_PROP(Backend),
+                         OPAAX_PROP(bInterpolation)
+                             .SetTooltip("Smooth motion between fixed steps.\n"
+                                         "Display only — gameplay always reads the raw pose.\n"
+                                         "Subtle at 60Hz with vsync, pronounced above it."))
     };
 
     struct WorldBoundsSettings

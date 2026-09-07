@@ -11,6 +11,7 @@
 #include "World/Components/ColliderComponent.h"
 #include "World/Components/RigidbodyComponent.h"
 #include "World/Components/TransformComponent.h"
+#include "World/Components/TransformInterpolationComponent.h"
 #include "World/Systems/WorldContext.h"
 #include "World/World.h"
 
@@ -281,6 +282,14 @@ namespace Opaax
             Vector2F lPosition;
             float    lRotation = 0.f;
             m_World->GetBodyTransform(lRecord.Handle, lPosition, lRotation);
+
+            // The pose we are ABOUT to overwrite becomes the previous one, so the renderer has
+            // both ends of this step to blend between (**PH21**). Recorded here rather than in a
+            // pass of its own because this is the one place that knows a write is coming.
+            auto& lPrevious = InWorld.GetRegistry().get_or_emplace<TransformInterpolationComponent>(lEntity);
+            lPrevious.Position     = lTransform->Position;
+            lPrevious.Rotation     = lTransform->Rotation;
+            lPrevious.bHasPrevious = true;
 
             lTransform->Position = lPosition;
             lTransform->Rotation = Maths::RadiansToDegrees(lRotation);

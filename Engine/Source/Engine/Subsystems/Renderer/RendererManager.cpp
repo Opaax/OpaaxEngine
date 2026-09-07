@@ -32,6 +32,7 @@
 #include "World/Components/DummyComponent.h"
 #include "World/Components/SpriteComponent.h"
 #include "World/Components/TransformComponent.h"
+#include "World/Components/TransformInterpolationComponent.h"
 
 #include "Core/Maths/Maths.h"     // DegreesToRadians — the transform authors degrees, the renderer takes radians
 
@@ -117,6 +118,8 @@ namespace Opaax
         lDesc.SpriteShader = ShaderSource::FromSource(lShaderSrc, lShaderPath);
         lDesc.ClearColor   = lRenderCfg.ClearColor;
 
+        m_bInterpolate     = lEngineCfg.Render.bInterpolation;
+
         lDesc.Limits.MaxQuads        = lRenderCfg.MaxQuadsPerBatch;
         lDesc.Limits.MaxTextureSlots = lRenderCfg.MaxTextureSlots;
 
@@ -167,8 +170,13 @@ namespace Opaax
     // core, zero-size target — from letting either grow without bound: those early-outs skip the
     // draw, never the drain.
     // =========================================================================
-    void RendererManager::Render(double /*Alpha*/)
+    void RendererManager::Render(double InAlpha)
     {
+        // The alpha was PLUMBED here since the fixed step existed and discarded at this exact line
+        // for three milestones. It is the fraction of a fixed step the frame sits past the last
+        // one — display only, never written back into the world (PH21).
+        m_FrameAlpha = static_cast<float>(InAlpha);
+
         {
             // Around RenderFrame only — the two clears below are bookkeeping, not frame work, and
             // F4 requires them to run whether or not anything rendered.
@@ -176,10 +184,48 @@ namespace Opaax
             RenderFrame();
         }
 
+        // The SUCCESS branch, once ([[L15]]): the toggle being ON and anything being BLENDED are
+        // different claims, and only the second one says the feature works.
+        if (!m_bLoggedFirstBlend && m_BlendedThisFrame > 0)
+        {
+            m_bLoggedFirstBlend = true;
+            OPAAX_LOG(LogRendererManager, Info, "Interpolating {} drawn pose(s) — alpha {:.2f}",
+                      m_BlendedThisFrame, m_FrameAlpha);
+        }
+
+        m_BlendedThisFrame = 0;
+
         SubmitRenderCounters();
 
         m_DebugDraw.Clear();
         m_SubmittedViews.clear();
+    }
+
+    DisplayPose RendererManager::PoseFor(World& InWorld, const EntityID InEntity,
+                                         const TransformComponent& InTransform)
+    {
+        // OFF means "do not blend", which is NOT the same as alpha 0 — alpha 0 is the PREVIOUS
+        // pose, so expressing the toggle that way drew every fixed-step entity one step behind.
+        // The instrument that found it counted 5 blends at alpha 0.00, which is the contradiction
+        // that gave it away.
+        if (!m_bInterpolate)
+        {
+            return DisplayPose{ InTransform.Position, InTransform.Rotation };
+        }
+
+        const auto* lPrevious = InWorld.GetRegistry().try_get<TransformInterpolationComponent>(InEntity);
+
+        const DisplayPose lPose = ResolveDisplayPose(InTransform, lPrevious, m_FrameAlpha);
+
+        // Counted only when the blend actually MOVED the draw: an entity at rest, or one with no
+        // previous pose, must not report as interpolated or the number would mean nothing.
+        if (lPrevious != nullptr && lPrevious->bHasPrevious
+            && (lPose.Position != InTransform.Position || lPose.RotationDeg != InTransform.Rotation))
+        {
+            ++m_BlendedThisFrame;
+        }
+
+        return lPose;
     }
 
     void RendererManager::SubmitRenderCounters()
@@ -282,12 +328,14 @@ namespace Opaax
         if (InWorld != nullptr)
         {
             InWorld->Each<TransformComponent, DummyComponent>(
-                [&lRenderer](EntityID, TransformComponent& InXf, DummyComponent& InComp)
+                [this, &lRenderer, InWorld](EntityID InEntity, TransformComponent& InXf, DummyComponent& InComp)
                 {
+                    const DisplayPose lPose = PoseFor(*InWorld, InEntity, InXf);
+
                     // Scale MULTIPLIES the component's own Size (③): the extent is what the thing
                     // is, the scale is what the transform does to it.
-                    lRenderer.DrawQuad(InXf.Position, InComp.Size * InXf.Scale, InComp.Color,
-                                       Maths::DegreesToRadians(InXf.Rotation));
+                    lRenderer.DrawQuad(lPose.Position, InComp.Size * InXf.Scale, InComp.Color,
+                                       Maths::DegreesToRadians(lPose.RotationDeg));
                 });
 
             DrawWorldSprites(*InWorld, lRenderer);
@@ -336,7 +384,7 @@ namespace Opaax
     void RendererManager::DrawWorldSprites(World& InWorld, Renderer2D& InRenderer)
     {
         InWorld.Each<TransformComponent, SpriteComponent>(
-            [this, &InRenderer](EntityID, TransformComponent& InXf, SpriteComponent& InSprite)
+            [this, &InRenderer, &InWorld](EntityID InEntity, TransformComponent& InXf, SpriteComponent& InSprite)
             {
                 if (!InSprite.bVisible)
                 {
@@ -351,8 +399,10 @@ namespace Opaax
                     return;
                 }
 
-                InRenderer.DrawSprite(InXf.Position, InSprite.Size * InXf.Scale, *lTexture, InSprite.Color,
-                                      Maths::DegreesToRadians(InXf.Rotation),
+                const DisplayPose lPose = PoseFor(InWorld, InEntity, InXf);
+
+                InRenderer.DrawSprite(lPose.Position, InSprite.Size * InXf.Scale, *lTexture, InSprite.Color,
+                                      Maths::DegreesToRadians(lPose.RotationDeg),
                                       InSprite.Layer, InSprite.OrderInLayer,
                                       lUV.UVMin, lUV.UVMax);
             });
@@ -361,7 +411,7 @@ namespace Opaax
     void RendererManager::DrawWorldTexts(World& InWorld, Renderer2D& InRenderer)
     {
         InWorld.Each<TransformComponent, TextComponent>(
-            [this, &InRenderer](EntityID, TransformComponent& InXf, TextComponent& InText)
+            [this, &InRenderer, &InWorld](EntityID InEntity, TransformComponent& InXf, TextComponent& InText)
             {
                 if (!InText.bVisible || InText.Text.IsEmpty())
                 {
@@ -385,7 +435,9 @@ namespace Opaax
                 lParams.Layer           = InText.Layer;
                 lParams.OrderInLayer    = InText.OrderInLayer;
 
-                Text2D::DrawString(InRenderer, InText.Text.CStr(), InXf.Position, lFace, lParams);
+                const DisplayPose lPose = PoseFor(InWorld, InEntity, InXf);
+
+                Text2D::DrawString(InRenderer, InText.Text.CStr(), lPose.Position, lFace, lParams);
             });
     }
 

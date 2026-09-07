@@ -12,6 +12,7 @@
 #include "Physics/IPhysicsWorld.h"
 #include "World/Components/MoverComponent.h"
 #include "World/Components/TransformComponent.h"
+#include "World/Components/TransformInterpolationComponent.h"
 #include "World/Systems/Movement/MoverModeRegistry.h"
 #include "World/Systems/PhysicsSubsystem.h"
 #include "World/Systems/WorldContext.h"
@@ -160,6 +161,14 @@ namespace Opaax
             }
             return;
         }
+
+        // Before the mode writes: the pose it is about to overwrite is what the renderer blends
+        // FROM (**PH21**). Physics records its own the same way, one subsystem over.
+        auto& lPrevious = m_Context->OwningWorld.GetRegistry()
+                                    .get_or_emplace<TransformInterpolationComponent>(InEntity);
+        lPrevious.Position     = InTransform.Position;
+        lPrevious.Rotation     = InTransform.Rotation;
+        lPrevious.bHasPrevious = true;
 
         MoverTickContext lTick{ InWorld, InMover, InTransform, *lParams, InDelta, ToUserData(InEntity) };
         lMode->Tick(lTick);

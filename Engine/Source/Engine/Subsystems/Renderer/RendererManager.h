@@ -7,6 +7,7 @@
 #include "Engine/Subsystems/Resources/ResourceRef.hpp"   // the texture cache holds Refs BY VALUE
 #include "Renderer/CameraView.h"  // a submitted view holds one BY VALUE
 #include "Renderer/DebugDraw.h"   // owned BY VALUE — full type, not a forward decl
+#include "World/Entity/EntityTypes.h"   // EntityID — PoseFor takes one
 
 
 // =============================================================================
@@ -35,6 +36,8 @@ namespace Opaax
     struct FontStyleKey;
     struct FontFaceView;
     struct TextComponent;
+    struct TransformComponent;
+    struct DisplayPose;   // returned by value; only PoseFor's DEFINITION needs it complete
 
     template<typename TResource>
     struct TResourcePath;
@@ -239,7 +242,7 @@ namespace Opaax
     public:
         bool Startup()             override;
         void Shutdown()            override;
-        void Render(double Alpha)  override;
+        void Render(double InAlpha) override;
         //~End EngineSubsystemBase Interface
 
         // =============================================================================
@@ -271,6 +274,26 @@ namespace Opaax
         // ④ — resolved in Startup like m_WorldManager. This subsystem opts IN to being measured;
         // nothing times it on its behalf.
         FrameProfiler*          m_Profiler      = nullptr;
+
+        /**
+         * Where InEntity should be DRAWN: its raw pose, or the blend toward it when a fixed step
+         * wrote a previous one. Counts the blends it performs, so "interpolation is on" and
+         * "something was actually interpolated" stay different claims ([[L15]]).
+         */
+        DisplayPose PoseFor(World& InWorld, EntityID InEntity, const TransformComponent& InTransform);
+
+        /**
+         * This frame's progress through the fixed step, for DISPLAY only (**PH21**). Zero when
+         * interpolation is off, which makes every draw site read the raw pose with no branch.
+         */
+        float m_FrameAlpha = 0.f;
+
+        /** Render.Interpolation, read once at Startup like every other config field. */
+        bool m_bInterpolate = true;
+
+        /** Blends performed on the last frame, and the one-shot that reports the first of them. */
+        Uint64 m_BlendedThisFrame  = 0;
+        bool   m_bLoggedFirstBlend = false;
 
         // Per-frame debug lines. Owned here because this is what DRAINS it (I5): the queue's
         // lifetime is the renderer's, and it cannot outlive its only consumer.
