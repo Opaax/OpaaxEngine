@@ -81,6 +81,9 @@ set(OPAAX_TEST_SOURCES
     # P1. A World needs no GL context either, so the SUBSYSTEM runs headless too — which is what
     # lets "a box falls and lands" be a gate rather than a screenshot.
     Core/Physics/PhysicsSubsystemTests.cpp
+    # P2. The ordering cases (a Stayed must not outlive its Ended; a handler that destroys an
+    # entity must not produce a phantom) are what M9 had to find by running it.
+    Core/Physics/PhysicsEventTests.cpp
 
     # Editor-side, and the FIRST of its kind — header-only editor types only (see the include dir
     # below). ③'s gizmo delta math, pinned after a scale bug that only showed away from (0,0).

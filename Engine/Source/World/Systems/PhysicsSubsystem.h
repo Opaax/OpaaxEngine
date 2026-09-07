@@ -100,6 +100,18 @@ namespace Opaax
         /** Write each dynamic body's post-step pose back into its TransformComponent. */
         void SyncDynamicTransforms(World& InWorld);
 
+        /**
+         * Drain the backend's touch edges and publish them, once per step, after Step.
+         *
+         * Began then Ended then Stayed, in that order and for a reason: the live-overlap set has
+         * to reflect this step's edges BEFORE the survivors are ticked, or a pair that ended this
+         * very step would get one more Stayed after its Ended.
+         */
+        void DispatchPhysicsEvents(World& InWorld);
+
+        /** A normalized key for an unordered pair, so (A,B) and (B,A) are one entry. */
+        static Uint64 PairKey(Uint64 InEntityBitsA, Uint64 InEntityBitsB) noexcept;
+
         /** The body type an entity implies: its Rigidbody's, or Static when it has none. */
         static EBodyType ResolveBodyType(const RigidbodyComponent* InRigidbody) noexcept;
 
@@ -142,6 +154,30 @@ namespace Opaax
 
         /** Scratch, reused every step: never mutate m_Bodies mid-iteration. */
         TDynArray<Uint32> m_DeadBodyVictims;
+
+        /** Drained from the backend each step. Members so a step allocates nothing. */
+        TDynArray<PhysicsContactPair> m_SensorBegan;
+        TDynArray<PhysicsContactPair> m_SensorEnded;
+        TDynArray<PhysicsContactPair> m_ContactBegan;
+        TDynArray<PhysicsContactPair> m_ContactEnded;
+
+        /**
+         * Pairs currently overlapping, keyed by the NORMALIZED pair so (A,B) and (B,A) collapse
+         * to one entry. The value keeps the ordered (sensor, visitor) pair, so a Stayed re-fires
+         * with the same sensor-first meaning its Began had.
+         *
+         * This map is the only reason a Stayed event can exist: the backend reports edges, and a
+         * state has to be remembered between them.
+         */
+        TUnorderedMap<Uint64, PhysicsContactPair> m_LiveOverlaps;
+
+        /** Scratch for pairs whose entity died — same never-mutate-mid-iteration rule. */
+        TDynArray<Uint64> m_StaleOverlaps;
+
+        /** Counted for the one-shot log, so "events are flowing" is a NUMBER, not a claim. */
+        Uint64 m_OverlapEventCount   = 0;
+        Uint64 m_CollisionEventCount = 0;
+        bool   m_bLoggedFirstTouch   = false;
 
         /** One-shot log flags — a fixed step must not print sixty lines a second ([[L15]]). */
         bool   m_bLoggedFirstStep = false;

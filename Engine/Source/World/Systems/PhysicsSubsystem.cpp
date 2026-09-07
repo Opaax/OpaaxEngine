@@ -1,10 +1,13 @@
 #include "World/Systems/PhysicsSubsystem.h"
 
+#include "Core/Events/EventBus.h"
 #include "Core/Maths/Maths.h"   // DegreesToRadians — the transform authors degrees, the seam takes radians
 #include "Core/Profiling/FrameProfiler.h"
 #include "Engine/Config/EngineConfigData.h"
+#include "Engine/Subsystems/EventBus/EngineEventBus.h"
 #include "Physics/Collision/CollisionChannel.h"
 #include "Physics/PhysicsAPI.h"
+#include "Physics/PhysicsEvents.h"
 #include "World/Components/ColliderComponent.h"
 #include "World/Components/RigidbodyComponent.h"
 #include "World/Components/TransformComponent.h"
@@ -27,6 +30,14 @@ namespace Opaax
         }
 
         Uint32 EntityBits(EntityID InEntity) noexcept { return static_cast<Uint32>(InEntity); }
+
+        /** The inverse of ToUserData. 0 is the seam's "unresolved", and yields ENTITY_NONE. */
+        EntityID FromUserData(Uint64 InUserData) noexcept
+        {
+            return InUserData == 0
+                       ? ENTITY_NONE
+                       : static_cast<EntityID>(static_cast<Uint32>(InUserData - 1ull));
+        }
     }
 
     // =========================================================================
@@ -95,6 +106,7 @@ namespace Opaax
         m_World->Step(static_cast<float>(InFixedDeltaTime), m_SubStepCount);
 
         SyncDynamicTransforms(lWorld);
+        DispatchPhysicsEvents(lWorld);
 
         // The SUCCESS branch, once ([[L15]]). A subsystem that logged only failures would read
         // identically whether it simulated forty bodies or none at all.
@@ -209,6 +221,22 @@ namespace Opaax
 
         m_World->DestroyBody(lFound->second.Handle);
         m_Bodies.erase(lFound);
+
+        // Scrub the live overlaps this body was in, or a pair that can no longer end would sit
+        // there being Stayed forever — a body with no shape reports nothing, including its Ended.
+        m_StaleOverlaps.clear();
+        for (const auto& [lKey, lPair] : m_LiveOverlaps)
+        {
+            if (FromUserData(lPair.EntityA) == InEntity || FromUserData(lPair.EntityB) == InEntity)
+            {
+                m_StaleOverlaps.push_back(lKey);
+            }
+        }
+
+        for (const Uint64 lKey : m_StaleOverlaps)
+        {
+            m_LiveOverlaps.erase(lKey);
+        }
     }
 
     // =========================================================================
@@ -263,6 +291,121 @@ namespace Opaax
         m_bLoggedMotion = true;
         OPAAX_LOG(LogPhysics, Info, "Body {} has moved {:.1f} units from where it was built — the solver is live",
                   EntityBits(InEntity), lDistance);
+    }
+
+    // =========================================================================
+    // Events
+    // =========================================================================
+    Uint64 PhysicsSubsystem::PairKey(const Uint64 InEntityBitsA, const Uint64 InEntityBitsB) noexcept
+    {
+        const Uint64 lLow  = InEntityBitsA < InEntityBitsB ? InEntityBitsA : InEntityBitsB;
+        const Uint64 lHigh = InEntityBitsA < InEntityBitsB ? InEntityBitsB : InEntityBitsA;
+        return (lLow << 32) | (lHigh & 0xFFFFFFFFull);
+    }
+
+    void PhysicsSubsystem::DispatchPhysicsEvents(World& InWorld)
+    {
+        EventBus& lBus = m_Context->Events.GetEventBus();
+
+        m_World->GetSensorEvents(m_SensorBegan, m_SensorEnded);
+        m_World->GetContactEvents(m_ContactBegan, m_ContactEnded);
+
+        // ---- overlap: Began -------------------------------------------------------------
+        for (const PhysicsContactPair& lPair : m_SensorBegan)
+        {
+            const EntityID lSensor  = FromUserData(lPair.EntityA);
+            const EntityID lVisitor = FromUserData(lPair.EntityB);
+
+            if (lSensor == ENTITY_NONE || lVisitor == ENTITY_NONE)
+            {
+                continue;
+            }
+
+            m_LiveOverlaps[PairKey(lPair.EntityA, lPair.EntityB)] = lPair;
+            ++m_OverlapEventCount;
+
+            lBus.Publish(PhysicsOverlapBegan{ lSensor, lVisitor });
+        }
+
+        // ---- overlap: Ended, BEFORE the survivors tick -----------------------------------
+        for (const PhysicsContactPair& lPair : m_SensorEnded)
+        {
+            m_LiveOverlaps.erase(PairKey(lPair.EntityA, lPair.EntityB));
+
+            const EntityID lSensor  = FromUserData(lPair.EntityA);
+            const EntityID lVisitor = FromUserData(lPair.EntityB);
+
+            if (lSensor == ENTITY_NONE || lVisitor == ENTITY_NONE)
+            {
+                continue;
+            }
+
+            ++m_OverlapEventCount;
+            lBus.Publish(PhysicsOverlapEnded{ lSensor, lVisitor });
+        }
+
+        // ---- overlap: Stayed, for whatever survived both edges ---------------------------
+        // A handler above may have destroyed an entity, so each survivor is re-validated here
+        // rather than trusted: a dead sensor must not keep reporting.
+        m_StaleOverlaps.clear();
+
+        for (const auto& [lKey, lPair] : m_LiveOverlaps)
+        {
+            const EntityID lSensor  = FromUserData(lPair.EntityA);
+            const EntityID lVisitor = FromUserData(lPair.EntityB);
+
+            if (!InWorld.IsValid(lSensor) || !InWorld.IsValid(lVisitor))
+            {
+                m_StaleOverlaps.push_back(lKey);
+                continue;
+            }
+
+            ++m_OverlapEventCount;
+            lBus.Publish(PhysicsOverlapStayed{ lSensor, lVisitor });
+        }
+
+        for (const Uint64 lKey : m_StaleOverlaps)
+        {
+            m_LiveOverlaps.erase(lKey);
+        }
+
+        // ---- solid contacts: edges only, no state to keep ---------------------------------
+        for (const PhysicsContactPair& lPair : m_ContactBegan)
+        {
+            const EntityID lA = FromUserData(lPair.EntityA);
+            const EntityID lB = FromUserData(lPair.EntityB);
+
+            if (lA == ENTITY_NONE || lB == ENTITY_NONE)
+            {
+                continue;
+            }
+
+            ++m_CollisionEventCount;
+            lBus.Publish(PhysicsCollisionBegan{ lA, lB });
+        }
+
+        for (const PhysicsContactPair& lPair : m_ContactEnded)
+        {
+            const EntityID lA = FromUserData(lPair.EntityA);
+            const EntityID lB = FromUserData(lPair.EntityB);
+
+            if (lA == ENTITY_NONE || lB == ENTITY_NONE)
+            {
+                continue;
+            }
+
+            ++m_CollisionEventCount;
+            lBus.Publish(PhysicsCollisionEnded{ lA, lB });
+        }
+
+        // The success branch, once ([[L15]]) — and it counts, because "physics is running" and
+        // "physics is reporting touches" are different claims and only the second one is this.
+        if (!m_bLoggedFirstTouch && (m_OverlapEventCount > 0 || m_CollisionEventCount > 0))
+        {
+            m_bLoggedFirstTouch = true;
+            OPAAX_LOG(LogPhysics, Info, "First touches dispatched — {} overlap, {} collision",
+                      m_OverlapEventCount, m_CollisionEventCount);
+        }
     }
 
     // =========================================================================
