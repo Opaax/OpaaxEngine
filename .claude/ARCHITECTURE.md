@@ -2337,12 +2337,34 @@ asserting the exact radius fails, and the code is right (that is how this one wa
 axis-aligned — until a collider on the physics test map's `-25°` ramp annotated itself with a level
 outline. One field, one argument at the drain, and every future box caller inherits it.
 
+**PH16 — A QUERY ANSWERS IN ENTITIES, and an unresolvable hit is a MISS.** The seam speaks raw body
+user-data (**PH1**); `PhysicsSubsystem::RayCast` / `OverlapAABB` are the same answers with the entity
+decoded, and that decode is the layer's whole reason to exist. Two decisions ride on it: a hit whose
+body carries no resolvable entity is reported as **no hit** rather than as a hit on `ENTITY_NONE` —
+every caller would otherwise have to check and most would forget — and a query made when there is **no
+physics world** answers empty rather than failing, because asking before Play (a tool, a script, an
+Edit world) is legitimate rather than an error. User-data is the entity's bits **+1**, so entity 0 is
+distinguishable from the seam's reserved 0.
+
+**PH17 — THE KILL VOLUME IS OFF BY DEFAULT, RUNS LAST, AND LATCHES.** Off, because a bounded world is
+the wrong default for an endless scroller and a body quietly vanishing is worse than one falling
+forever. **Last in the step**, after `DispatchPhysicsEvents`, so every contact and overlap that step
+produced is already delivered before anything is reaped — a body that touches something on the way out
+still reports it. **Latched** via a set of out-of-bounds entity bits, which is the property that makes
+it usable at all: "it fires" would be satisfied by a version firing sixty times a second. Coming back
+inside un-latches, so leaving twice reports twice — the honest answer. **Static colliders are skipped
+entirely**: one authored outside the bounds is level geometry, and reaping it would delete something
+someone placed. The event is published **before** the reap, so a handler still sees a live entity.
+
 **PH5 — `EngineConfigData::Physics` came back on the clause that deleted it.** The group was removed
 2026-08-21 for having no reader, under "each comes back with the system that reads it". It is a real
 `EPhysicsBackend` enum (a typo is not expressible, and the editor gets a dropdown), with gravity,
 length-units and sub-steps. `EPhysicsBackend` lives in its own small `Physics/PhysicsBackend.h`
 mirroring `RHI/RHIBackend.h`, so the config type does not drag the whole seam in behind it — and for
 the same reason RHI's did, **`BackendFromString` does not exist**: the enum json bridge parses it.
+*The rule is about the SEAM (`IPhysicsWorld.h`, and `PhysicsAPI.h` which includes it), not about
+`PhysicsTypes.h`* — that one is PODs over Core with no backend and no interface, so P4's
+`WorldBounds` group includes it for `EWorldBoundsResponse` at no cost.
 
 ---
 
