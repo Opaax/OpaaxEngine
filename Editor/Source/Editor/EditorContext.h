@@ -30,6 +30,8 @@ namespace Opaax
         class EditorAnimationClipDocument; // editor-owned; the open .opaaxclip AND its data (⑥ S3)
         class EditorAnimationLibraryDocument; // editor-owned; the open .opaaxanim AND its data (⑥ S4)
         class EditorFontFamilyDocument;       // editor-owned; the open .opaaxfont AND its data (⑥ S4)
+        class EditorMoveModeDocument;         // editor-owned; the open .opaaxmovemode AND its data (⑦-A)
+        class EditorMoverDocument;            // editor-owned; the open .opaaxmover AND its data (⑦-A)
         class EditorExtensionRegistrar; // editor-owned; the sealed D10 routes (Inspector reads Drawers())
         class EditorPaths;              // editor-owned IPaths subclass; the editor-space directories
         class EditorPanels;             // editor-owned; the LIVE panels and their visibility
@@ -133,6 +135,13 @@ namespace Opaax
             // ⑥ S4 — the open font family: the alias table that turns (subset, weight, width, slant)
             // into one `.ttf`. Owns its data for ClipDocument's reason.
             EditorFontFamilyDocument& FamilyDocument;
+
+            // ⑦-A P5a — the open movement tuning: one mode's knobs. The CLIP of the mover family.
+            EditorMoveModeDocument& MoveModeDocument;
+
+            // ⑦-A P5a — the open mover: the alias table that turns a short gameplay name into one of
+            // the tunings above. The LIBRARY of the mover family, and its shape exactly.
+            EditorMoverDocument& MoverDocument;
 
             // M2b — the sealed extension routes, so a panel can consume what modules registered (the
             // Inspector walks Drawers(), the Resource Browser ResourceTypes()). CONST by construction:

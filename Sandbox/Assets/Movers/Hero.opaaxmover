@@ -1,0 +1,13 @@
+{
+    "DefaultMode": "Ground",
+    "Entries": [
+        {
+            "ModeAsset": "Movers/Hero_Ground.opaaxmovemode",
+            "Name": "Ground"
+        },
+        {
+            "ModeAsset": "Movers/Hero_Fly.opaaxmovemode",
+            "Name": "Fly"
+        }
+    ]
+}

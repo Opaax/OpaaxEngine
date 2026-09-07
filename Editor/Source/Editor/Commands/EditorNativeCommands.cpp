@@ -11,11 +11,14 @@
 #include "Editor/Operation/SheetOperations.h"
 #include "Editor/Operation/ClipOperations.h"
 #include "Editor/Operation/LibraryOperations.h"
+#include "Editor/Operation/MoverOperations.h"
 #include "Editor/Operation/FontFamilyOperations.h"
 #include "Editor/EditorFontFamilyDocument.h"
 #include "Editor/EditorSpriteSheetDocument.h"
 #include "Editor/Resources/Types/Animation/EditorAnimationClipDocument.h"
 #include "Editor/Resources/Types/Animation/EditorAnimationLibraryDocument.h"
+#include "Editor/Resources/Types/Mover/EditorMoveModeDocument.h"
+#include "Editor/Resources/Types/Mover/EditorMoverDocument.h"
 #include "Editor/Operation/MapOperations.h"
 #include "Editor/PIE/PlayInEditor.h"
 #include "Editor/Panels/EditorPanels.h"
@@ -492,6 +495,28 @@ namespace Opaax::Editor
         }
 
         LibraryOps::Save(InContext);
+    }
+
+    void SaveMoveModeCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        if (!InContext.MoveModeDocument.IsOpen())
+        {
+            OPAAX_LOG(LogEditorCommands, Warn, "Save Move Mode ignored — no move mode is open");
+            return;
+        }
+
+        MoveModeOps::Save(InContext);
+    }
+
+    void SaveMoverCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        if (!InContext.MoverDocument.IsOpen())
+        {
+            OPAAX_LOG(LogEditorCommands, Warn, "Save Mover ignored — no mover is open");
+            return;
+        }
+
+        MoverOps::Save(InContext);
     }
 
     void SaveFamilyCommand::Execute(EditorContext& InContext, const Params&)

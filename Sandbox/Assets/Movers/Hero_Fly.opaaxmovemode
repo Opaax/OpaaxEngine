@@ -1,0 +1,12 @@
+{
+    "Acceleration": 14.0,
+    "AirSteer": 1.0,
+    "GravityScale": 0.0,
+    "GroundDeceleration": 8.0,
+    "JumpSpeed": 0.0,
+    "MaxSlopeAngleDeg": 50.0,
+    "MaxSpeed": 600.0,
+    "MinSpeed": 10.0,
+    "Mode": "FlyMove",
+    "StopSpeed": 100.0
+}

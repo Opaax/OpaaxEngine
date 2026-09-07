@@ -30,6 +30,8 @@
 #include "Editor/Panels/ResourcePreviewPanel.h"
 #include "Editor/Panels/AnimationClipPanel.h"
 #include "Editor/Panels/AnimationLibraryPanel.h"
+#include "Editor/Panels/MoveModePanel.h"
+#include "Editor/Panels/MoverPanel.h"
 #include "Editor/Panels/FontFamilyPanel.h"
 #include "Editor/EditorFontFamilyDocument.h"
 #include "Editor/Panels/SpriteSheetPanel.h"
@@ -48,6 +50,8 @@
 #include "Engine/Subsystems/Resources/Types/SpriteSheet/SpriteSheetResource.h"
 #include "Engine/Subsystems/Resources/Types/Animation/AnimationClipResource.h"
 #include "Engine/Subsystems/Resources/Types/Animation/AnimationLibraryResource.h"
+#include "Engine/Subsystems/Resources/Types/Mover/MoveModeResource.h"
+#include "Engine/Subsystems/Resources/Types/Mover/MoverResource.h"
 #include "Engine/Subsystems/Resources/Types/Font/FontFaceResource.h"
 #include "Engine/Subsystems/Resources/Types/Font/FontFamilyResource.h"
 #include "Editor/Resources/ResourcePreviewDrawers.h"   // what a preview DRAWS; no ImGui in this file
@@ -131,6 +135,8 @@ namespace Opaax::Editor
         m_ClipDocument      = MakeUnique<EditorAnimationClipDocument>();
         m_LibraryDocument   = MakeUnique<EditorAnimationLibraryDocument>();
         m_FamilyDocument    = MakeUnique<EditorFontFamilyDocument>();
+        m_MoveModeDocument  = MakeUnique<EditorMoveModeDocument>();
+        m_MoverDocument     = MakeUnique<EditorMoverDocument>();
     }
 
     void EditorService::ClearEditorSystems()
@@ -169,6 +175,8 @@ namespace Opaax::Editor
             *m_ClipDocument,
             *m_LibraryDocument,
             *m_FamilyDocument,
+            *m_MoveModeDocument,
+            *m_MoverDocument,
             m_Extensions,
             m_Gui->Panels(),
             *m_Preview,
@@ -308,6 +316,8 @@ namespace Opaax::Editor
         lPanelsRegistry.Register<SpriteSheetPanel>(PanelDesc    {.Id = SpriteSheetPanel::PanelID(),     .DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<AnimationClipPanel>(PanelDesc  {.Id = AnimationClipPanel::PanelID(),   .DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<AnimationLibraryPanel>(PanelDesc{.Id = AnimationLibraryPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden});
+        lPanelsRegistry.Register<MoveModePanel>(PanelDesc{.Id = MoveModePanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden});
+        lPanelsRegistry.Register<MoverPanel>(PanelDesc{.Id = MoverPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<FontFamilyPanel>(PanelDesc{.Id = FontFamilyPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<ConfigPanel>(PanelDesc         {.Id = ConfigPanel::PanelID(),          .DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<InputPanel>(PanelDesc          {.Id = InputPanel::PanelID(),           .DefaultVisibility = EPanelVisibility::Hidden });
@@ -348,6 +358,8 @@ namespace Opaax::Editor
         lCommands.Register<SaveSheetCommand>(Tags::EDITOR_COMMAND_SAVE_SHEET);
         lCommands.Register<SaveClipCommand>(Tags::EDITOR_COMMAND_SAVE_CLIP);
         lCommands.Register<SaveLibraryCommand>(Tags::EDITOR_COMMAND_SAVE_LIBRARY);
+        lCommands.Register<SaveMoveModeCommand>(Tags::EDITOR_COMMAND_SAVE_MOVE_MODE);
+        lCommands.Register<SaveMoverCommand>(Tags::EDITOR_COMMAND_SAVE_MOVER);
         lCommands.Register<SaveFamilyCommand>(Tags::EDITOR_COMMAND_SAVE_FAMILY);
         lCommands.Register<AddMapToLevelCommand>(Tags::EDITOR_COMMAND_ADD_MAP_TO_LEVEL);
 
@@ -515,6 +527,29 @@ namespace Opaax::Editor
                 if (InContext.LibraryDocument.Open(InFile.AbsPath))
                 {
                     InContext.Panels.SetVisible(AnimationLibraryPanel::PanelID(), true);
+                }
+            });
+
+        // ⑦-A P5a. Both open their EDITOR, for the clip's and the library's reason: they are
+        // documents with their own panels. A tuning is the smallest document in the editor and is
+        // still a document — it is edited and saved.
+        m_Extensions.ResourceTypes().Register<MoveModeResource>()
+            .SetGlyph(OpaaxString("[MM]"))
+            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
+            {
+                if (InContext.MoveModeDocument.Open(InFile.AbsPath))
+                {
+                    InContext.Panels.SetVisible(MoveModePanel::PanelID(), true);
+                }
+            });
+
+        m_Extensions.ResourceTypes().Register<MoverResource>()
+            .SetGlyph(OpaaxString("[MV]"))
+            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
+            {
+                if (InContext.MoverDocument.Open(InFile.AbsPath))
+                {
+                    InContext.Panels.SetVisible(MoverPanel::PanelID(), true);
                 }
             });
 
@@ -778,6 +813,7 @@ namespace Opaax::Editor
         OPAAX_LOG(LogEditorService, Info,
                   "Editor UI built: title-bar entries={}, panels registered={}, constructed={}",
                   m_Extensions.TitleBar().Count(), m_Extensions.Panels().Count(), m_Gui->Panels().Count());
+
     }
 
     // =============================================================================
