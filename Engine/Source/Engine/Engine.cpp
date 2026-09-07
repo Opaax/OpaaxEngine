@@ -36,6 +36,8 @@
 #include "Engine/Subsystems/Resources/Types/SpriteSheet/SpriteSheetResource.h" // registered as a native format
 #include "Engine/Subsystems/Resources/Types/Animation/AnimationClipResource.h" // registered as a native format
 #include "Engine/Subsystems/Resources/Types/Animation/AnimationLibraryResource.h" // registered as a native format
+#include "Engine/Subsystems/Resources/Types/Mover/MoveModeResource.h"             // registered as a native format
+#include "Engine/Subsystems/Resources/Types/Mover/MoverResource.h"                // registered as a native format
 #include "Engine/Subsystems/Resources/Types/Font/FontFaceResource.h" // registered as a native format
 #include "Engine/Subsystems/Resources/Types/Font/FontFamilyResource.h" // registered as a native format
 #include "World/Components/TextComponent.h"
@@ -109,6 +111,11 @@ namespace Opaax
         m_Registries.Resources().Register<AnimationLibraryResource>(OPAAX_ID("AnimationLibrary"));
         m_Registries.Resources().Register<FontFaceResource>(OPAAX_ID("FontFace"));
         m_Registries.Resources().Register<FontFamilyResource>(OPAAX_ID("FontFamily"));
+
+        // ⑦-A P5a. The animation pair's shape one family over: a MoveMode is the CLIP (one tuning,
+        // reusable across entities) and a Mover is the LIBRARY that names them.
+        m_Registries.Resources().Register<MoveModeResource>(OPAAX_ID("MoveMode"));
+        m_Registries.Resources().Register<MoverResource>(OPAAX_ID("Mover"));
     }
 
     void Engine::RegisterNativeWorldSubsystems()
