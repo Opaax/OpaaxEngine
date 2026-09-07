@@ -2356,6 +2356,39 @@ inside un-latches, so leaving twice reports twice — the honest answer. **Stati
 entirely**: one authored outside the bounds is level geometry, and reaping it would delete something
 someone placed. The event is published **before** the reap, so a handler still sees a live entity.
 
+**PH18 — A MODE IS A CLIP AND A MOVER IS THE BAG THAT NAMES THEM** (⑦-A P5a, their design). M9 put
+per-mode tuning on the component behind `IMoverModeParams::DrawEditor()` — an ImGui virtual inside the
+engine — which cannot come back: the engine always builds `OPAAX_WITH_EDITOR=0` and **MR2d** forbids it.
+As RESOURCES the knobs get the editor for free and gain what the clip gained in ⑥ S3: a tuning is
+authored once and **shared**, and it is the unit that grows. `.opaaxmovemode` is the clip (one tuning
+plus the id of the `IMoverMode` that reads it); `.opaaxmover` is the library (an alias table, so
+gameplay says `OPAAX_ID("Fly")` instead of a path). `MoverData::Find` is `AnimationLibraryData::Find`
+verbatim in shape, **including the rule**: a NAMED mode that is absent answers nullptr rather than
+falling back, and only "I have no opinion" gets a default.
+*The measurement that made the old shape indefensible: `GroundMoveParams` was 8 floats and
+`FlyMoveParams` was 1 — the same speed-at-full-input Ground already had. Per-mode TYPING bought zero
+distinct fields.* **ONE resource type, not one per mode**, for the clip's reason — clips differ in
+DATA. Which knobs a mode ignores is a PRESENTATION question, answered by `MoveModePanel` opening
+`DrawProperties`' fold so a field can be skipped; the engine never has to care, and a mode a game
+registers shows everything, which is the honest answer for one the editor has never met.
+
+**PH19 — `IMoverMode` IS Tick PLUS TWO HOOKS, and the resource is why.** No `CreateDefaultParams`, no
+`TypeTag`, no assert-and-downcast — every M9 mode opened with all three. `MoverTickContext::Params` is
+a plain `const MoveModeData&`. Modes are **STATELESS** (all per-entity state is on the component), so
+`MoverModeRegistry` — the FOURTH engine registry, in `EngineRegistries` for that aggregate's stated
+reason — owns ONE instance of each. **A mode's name IS an on-disk key**, so unlike a world subsystem
+the name is required at registration and a duplicate is REFUSED rather than replacing: a game module
+must not silently shadow a built-in that assets already name.
+
+**PH20 — THE MOVER TICKS AFTER PHYSICS, and registration order is the only thing that says so.** A
+mover sweeps against the world's shapes, so it must see the poses THIS step produced rather than last
+step's; the subsystem manager ticks in registration order, so `Engine::RegisterNativeWorldSubsystems`
+puts `MoverSubsystem` after `PhysicsSubsystem` and that line is load-bearing. Two policy rules the
+modes own rather than the component: a jump is spent **only when grounded** (otherwise holding the key
+is flight), and the edge is consumed **by the mode**, so one request is one jump however many fixed
+steps the frame ran. `FlyMoveMode::OnModeEnter` drops carried momentum — without it, switching mid-fall
+keeps sinking, which reads as a bug rather than as physics.
+
 **PH5 — `EngineConfigData::Physics` came back on the clause that deleted it.** The group was removed
 2026-08-21 for having no reader, under "each comes back with the system that reads it". It is a real
 `EPhysicsBackend` enum (a typo is not expressible, and the editor gets a dropdown), with gravity,
