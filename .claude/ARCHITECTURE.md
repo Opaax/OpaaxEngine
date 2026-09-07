@@ -921,11 +921,21 @@ Three forward constraints, decided before a second producer existed:
   every producer. Revisit only for a concrete *same-frame* retraction need.
 
 A **channel tag for central toggling** ("hide all physics debug" from one editor checkbox) is the one thing
-"stop calling" cannot give you, since the toggle must live outside the producer. Deliberately **not built**
-while there is one producer (`m2-panels.md` §F3 — never an API with no caller). **Trigger:** the second real
-producer (physics/collision debug), which also earns the editor toggle panel. The cross-module identity
-question this raised is already **closed** — `OpaaxStringID`'s intern pool was moved out-of-line into the
-DLL the same day (see **I2**), so channel ids agree across the DLL line by construction.
+"stop calling" cannot give you, since the toggle must live outside the producer. **BUILT ⑦-A P3
+(2026-09-07) — the trigger fired exactly as written**, when collider outlines became the second real
+producer. `using DebugChannel = OpaaxStringID`, as specified; the cross-module identity question was
+already closed by **I2**'s out-of-line intern pool, so ids agree across the DLL line by construction.
+Three things the build settled that the plan did not say:
+- **Filtered at SUBMIT, not at the drain.** A silenced channel costs one lookup instead of memory that
+  will never be rendered — and it keeps the immediate-mode contract honest, since a dropped submission
+  never existed rather than being queued and skipped.
+- **An unknown channel is ENABLED.** A disabled-SET, not an enabled-set, so a producer added later is
+  visible without anyone registering it first. That is the right default for debug output specifically.
+- **It is NOT an editor toggle panel.** F4 predicted a panel; the viewport toolbar already hosts exactly
+  this kind of control (Grid), so `Colliders` sits beside it — but the STATE lives on the engine's
+  `DebugDraw`, not on `EditorViewport`, because the producer also runs in a dev build of `Game.exe` and
+  a toggle inside one host's UI could never reach it.
+`Clear()` drops the queues and **keeps** the channel settings: a toggle is a setting, not per-frame state.
 
 **F5 — A PASS is recorded whole, sorted ONCE, then cut into batches** (landed ⑥ S1, 2026-09-02).
 `BeginPass` starts a recording, every `Draw*` appends four vertices + a sort key + a pass-wide
@@ -2301,6 +2311,31 @@ rather than trusted, and `RemoveBodyForEntity` scrubs the pairs its body was in 
 reports nothing, including its own `Ended`, so a pair that can never end would otherwise tick forever).
 Killing the visitor and killing the sensor each yield exactly one `Began` and nothing after — the
 assertion M9's close-out records having found by hand, now a test.
+
+**PH13 — COLLIDER OUTLINES ARE A SEPARATE SUBSYSTEM WITH NO `ShouldCreate`, and that is the design.**
+`ColliderDebugSubsystem` is the first native world subsystem without a creation filter, deliberately: a
+collider must be visible while you are **authoring** it, and that is precisely when `PhysicsSubsystem`
+does not exist (**PH6**). So it reads the **components** rather than the simulation and runs in Edit and
+Play alike — which costs nothing in accuracy, because in Play the transform is synced back from the body
+each step, so the authored pose *is* the simulated one. **Visibility is a CHANNEL, not a mode**
+(`DebugChannels::Physics`), which is the only version that also silences it in a dev build of `Game.exe`
+— something "just don't register it in the editor" could never have done. The gate is its absence:
+the editor logs `Drawing 8 collider outline(s)` in an **Edit** world with **zero** `[Physics]` lines.
+
+**PH14 — Circles and capsules are POLYGONS OF LINES, not queue entries.** `DebugDraw` gained
+`DrawCircle`/`DrawCapsule` on ⑦-A P3's caller, and neither adds a drain path, an RHI primitive or a
+renderer concept — they build a closed point loop and emit the segments the line queue already carries
+(`ToQuad`'s trick, one level up). The builders (`BuildCircleOutline`, `BuildCapsuleOutline`) are **free
+and pure**, so the part that can be wrong is arithmetic a test holds without a GL context. Two facts
+worth keeping: a capsule whose cap centres coincide **is** a circle and comes out as one; and the
+polygon is **inscribed**, so its extent is `radius * cos(halfStep)` rather than `radius` — a test
+asserting the exact radius fails, and the code is right (that is how this one was written first).
+
+**PH15 — `DebugBox` carries a rotation because a rotated collider proved the drain site was lying.**
+`Renderer2D::DrawQuadOutline` has always taken a `RotationRad`; the debug queue never carried one and
+`RendererManager` passed a hardcoded `0.f`. Invisible for three milestones — every prior box was
+axis-aligned — until a collider on the physics test map's `-25°` ramp annotated itself with a level
+outline. One field, one argument at the drain, and every future box caller inherits it.
 
 **PH5 — `EngineConfigData::Physics` came back on the clause that deleted it.** The group was removed
 2026-08-21 for having no reader, under "each comes back with the system that reads it". It is a real
