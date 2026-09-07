@@ -3,7 +3,7 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Maths/MathTypes.h"
-#include "Core/String/OpaaxString.hpp"
+#include "Core/Reflection/OpaaxEnum.h"   // OPAAX_ENUM_VALUES — every enum below is authored
 
 namespace Opaax
 {
@@ -109,8 +109,13 @@ namespace Opaax
     };
 
     // =============================================================================
-    // String mapping — closed enums serialize as NAMES, so map files stay readable and
-    //   tolerate the enum being appended to (mirrors SpriteComponent's layer names).
+    // Enum labels — I11's free ToString, found by ADL.
+    //
+    //   Each of these is stamped with OPAAX_ENUM_VALUES at the bottom of the file, which is
+    //   what gives them BOTH halves for free: the json bridge writes and parses the label
+    //   (so a map stays readable and survives the enum being appended to), and the Inspector
+    //   draws a dropdown in which a wrong value is not expressible. That is also why there is
+    //   no hand-written FromString here — the same thing that retired RHI's BackendFromString.
     // =============================================================================
     inline const char* ToString(EBodyType InType) noexcept
     {
@@ -121,13 +126,6 @@ namespace Opaax
             case EBodyType::Dynamic:   return "Dynamic";
         }
         return "Static";
-    }
-
-    inline EBodyType BodyTypeFromString(const OpaaxString& InName) noexcept
-    {
-        if (InName == "Kinematic") { return EBodyType::Kinematic; }
-        if (InName == "Dynamic")   { return EBodyType::Dynamic; }
-        return EBodyType::Static;
     }
 
     inline const char* ToString(EColliderShape InShape) noexcept
@@ -141,13 +139,6 @@ namespace Opaax
         return "Box";
     }
 
-    inline EColliderShape ColliderShapeFromString(const OpaaxString& InName) noexcept
-    {
-        if (InName == "Circle")  { return EColliderShape::Circle; }
-        if (InName == "Capsule") { return EColliderShape::Capsule; }
-        return EColliderShape::Box;
-    }
-
     inline const char* ToString(EColliderMode InMode) noexcept
     {
         switch (InMode)
@@ -158,13 +149,6 @@ namespace Opaax
         return "Solid";
     }
 
-    inline EColliderMode ColliderModeFromString(const OpaaxString& InName) noexcept
-    {
-        // "Trigger" kept as an alias: M9-era scenes were authored before the Overlap rename.
-        if (InName == "Overlap" || InName == "Trigger") { return EColliderMode::Overlap; }
-        return EColliderMode::Solid;
-    }
-
     inline const char* ToString(EWorldBoundsResponse InResponse) noexcept
     {
         switch (InResponse)
@@ -173,12 +157,6 @@ namespace Opaax
             case EWorldBoundsResponse::EventAndDestroy: return "EventAndDestroy";
         }
         return "EventAndDestroy";
-    }
-
-    inline EWorldBoundsResponse WorldBoundsResponseFromString(const OpaaxString& InName) noexcept
-    {
-        if (InName == "EventOnly") { return EWorldBoundsResponse::EventOnly; }
-        return EWorldBoundsResponse::EventAndDestroy;
     }
 
     // =============================================================================
@@ -339,3 +317,8 @@ namespace Opaax
         Vector2F GroundNormal = { 0.f, 0.f };
     };
 }
+
+OPAAX_ENUM_VALUES(Opaax::EBodyType, Static, Kinematic, Dynamic);
+OPAAX_ENUM_VALUES(Opaax::EColliderShape, Box, Circle, Capsule);
+OPAAX_ENUM_VALUES(Opaax::EColliderMode, Solid, Overlap);
+OPAAX_ENUM_VALUES(Opaax::EWorldBoundsResponse, EventOnly, EventAndDestroy);

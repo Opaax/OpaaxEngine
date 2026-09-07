@@ -15,6 +15,7 @@ namespace Opaax
     class EngineEventBus;
     class DebugDraw;
     class IPaths;
+    struct EngineConfigData;
 
     inline constexpr LogCategory LogWorldManager{"WorldManager"};
 
@@ -180,6 +181,10 @@ namespace Opaax
         // Resolves a level manifest's asset-relative map paths. Cached with the others in Startup;
         // it is an APP service rather than an engine subsystem, which is the only difference.
         const IPaths*    m_Paths     = nullptr;
+
+        // ⑦-A — the engine's boot config, put into every WorldContext so a world subsystem can be
+        // configured without reaching the locator (D3). Read-only: this manager never writes it.
+        const EngineConfigData* m_Config = nullptr;
 
         // ④ — resolved in Startup like the siblings above, put into every WorldContext, and used
         // for this manager's own tick scope. Null in a bare test manager.

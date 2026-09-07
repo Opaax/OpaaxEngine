@@ -15,6 +15,7 @@
 #include "Application/Services/IPaths.h"   // IPaths::Null() — the context's paths reference
 #include "Core/Profiling/FrameProfiler.h"
 #include "Core/String/OpaaxStringID.hpp"
+#include "Engine/Config/EngineConfigData.h"   // the context's config reference
 #include "Engine/Subsystems/EventBus/EngineEventBus.h"
 #include "Engine/Subsystems/Resources/ResourceManager.h"
 #include "Renderer/DebugDraw.h"
@@ -55,6 +56,7 @@ namespace
         EngineEventBus   Events;
         DebugDraw        Debug;
         FrameProfiler    Profiler;
+        EngineConfigData Config;
         WorldManager     Worlds;
         World*           TheWorld = nullptr;
         CounterSubsystem* Counter = nullptr;
@@ -64,7 +66,7 @@ namespace
             TheWorld = Worlds.CreateWorld("Gated", InMode);
             REQUIRE(TheWorld != nullptr);
 
-            TheWorld->SetContext(WorldContext{*TheWorld, Resources, IPaths::Null(), Events, Debug, &Profiler});
+            TheWorld->SetContext(WorldContext{*TheWorld, Resources, IPaths::Null(), Events, Config, Debug, &Profiler});
             TheWorld->GetSubsystems().RegisterSubsystem<CounterSubsystem>(std::ref(*TheWorld->GetContext()));
             TheWorld->GetSubsystems().StartupAll();
 

@@ -1,0 +1,8 @@
+{
+    "maps": [
+        "Maps/PhysicsTest.opaaxmap"
+    ],
+    "name": "PhysicsTest",
+    "persistentMap": "Maps/PhysicsTest.opaaxmap",
+    "version": 1
+}

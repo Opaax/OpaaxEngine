@@ -1,7 +1,9 @@
 #include "Engine.h"
 
 #include "World/Components/CameraComponent.h"
+#include "World/Components/ColliderComponent.h"
 #include "World/Components/DummyComponent.h"
+#include "World/Components/RigidbodyComponent.h"
 #include "World/Components/SpriteComponent.h"
 #include "World/Components/TransformComponent.h"
 
@@ -38,6 +40,7 @@
 #include "Engine/Subsystems/Resources/Types/Font/FontFamilyResource.h" // registered as a native format
 #include "World/Components/TextComponent.h"
 #include "World/Components/SpriteAnimatorComponent.h"
+#include "World/Systems/PhysicsSubsystem.h"
 #include "World/Systems/SpriteAnimationSubsystem.h"
 
 namespace Opaax
@@ -88,6 +91,11 @@ namespace Opaax
         m_Registries.Components().Register<CameraComponent>("Camera");
         m_Registries.Components().Register<SpriteAnimatorComponent>("SpriteAnimator");
         m_Registries.Components().Register<TextComponent>("Text");
+
+        // ⑦-A. The collider is what puts an entity in the physics world; the rigidbody only says
+        // what KIND of body it gets, which is why one is optional and the other is not.
+        m_Registries.Components().Register<ColliderComponent>("Collider");
+        m_Registries.Components().Register<RigidbodyComponent>("Rigidbody");
     }
     
     void Engine::RegisterNativeResourceFormats()
@@ -107,6 +115,10 @@ namespace Opaax
         // Play worlds only — its own ShouldCreate decides, so registering it here costs an Edit
         // world nothing: a rejected candidate is never constructed (WS2).
         m_Registries.WorldSubsystems().Register<SpriteAnimationSubsystem>(OPAAX_ID("SpriteAnimation"));
+
+        // Also Play-only, and for the same reason: it MOVES authored transforms, which an Edit
+        // world must never have done to it.
+        m_Registries.WorldSubsystems().Register<PhysicsSubsystem>(OPAAX_ID("Physics"));
     }
 
     void Engine::RegisterNativeSubsystems()

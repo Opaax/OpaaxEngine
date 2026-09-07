@@ -24,6 +24,7 @@
 #include "Application/Services/IPaths.h"   // IPaths::Null() — the context's paths reference
 #include "Core/Profiling/FrameProfiler.h"
 #include "Core/String/OpaaxStringID.hpp"
+#include "Engine/Config/EngineConfigData.h"   // the context's config reference
 #include "Engine/Registries/EngineRegistries.h"
 #include "Engine/Subsystems/EventBus/EngineEventBus.h"
 #include "Engine/Subsystems/Resources/ResourceManager.h"
@@ -202,12 +203,13 @@ TEST_CASE("world subsystem registry: CreateInto constructs from the context and 
     // started — each is default-constructible and other suites already stack-allocate them, so
     // the context carries valid references rather than anything cast into place. Paths is the
     // engine's own inert null object (I3) rather than a third StubPaths: nothing here loads.
-    ResourceManager lResources;
-    EngineEventBus  lEvents;
-    DebugDraw       lDebug;
-    FrameProfiler   lProfiler;
+    ResourceManager  lResources;
+    EngineEventBus   lEvents;
+    DebugDraw        lDebug;
+    FrameProfiler    lProfiler;
+    EngineConfigData lConfig;
 
-    WorldContext lContext{lWorld, lResources, IPaths::Null(), lEvents, lDebug, &lProfiler};
+    WorldContext lContext{lWorld, lResources, IPaths::Null(), lEvents, lConfig, lDebug, &lProfiler};
 
     const IWorldSubsystemEntry* lEntry = lRegistry.FindByName(Name("Always"));
     REQUIRE(lEntry != nullptr);

@@ -2,6 +2,7 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
+#include "Core/Reflection/OpaaxEnum.h"
 #include "Core/String/OpaaxStringID.hpp"
 
 namespace Opaax
@@ -30,8 +31,38 @@ namespace Opaax
                   "ECollisionChannel exceeds the 64-bit collision filter category limit.");
 
     // =============================================================================
-    // Name table
+    // Labels + values
     // =============================================================================
+    /** The channel's label (I11 — a free ToString found by ADL), for logs and the dropdown. */
+    inline const char* ToString(ECollisionChannel InChannel) noexcept
+    {
+        switch (InChannel)
+        {
+            #define OPAAX_COLLISION_CHANNEL(Name) case ECollisionChannel::Name: return #Name;
+            #include "CollisionChannelList.h"
+            #undef OPAAX_COLLISION_CHANNEL
+            default: return "Unknown";
+        }
+    }
+
+    /**
+     * The channels as DATA, so any ECollisionChannel field draws as a dropdown and serializes by
+     * label with no per-type editor code. Written out rather than stamped with OPAAX_ENUM_VALUES
+     * for RenderLayer.h's reason: the list lives in an #include, and a preprocessor directive
+     * cannot appear inside a macro argument. `Count` is absent on purpose — it is a bound, not a
+     * channel.
+     */
+    template<>
+    struct TEnumValues<ECollisionChannel>
+    {
+        static constexpr ECollisionChannel Values[] =
+        {
+            #define OPAAX_COLLISION_CHANNEL(Name) ECollisionChannel::Name,
+            #include "CollisionChannelList.h"
+            #undef OPAAX_COLLISION_CHANNEL
+        };
+    };
+
     /** Parallel canonical-name array. Index by static_cast<Uint8>(ECollisionChannel). */
     inline const OpaaxStringID g_CollisionChannelIDs[] =
     {

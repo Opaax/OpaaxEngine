@@ -8,6 +8,7 @@ namespace Opaax
     class DebugDraw;
     class FrameProfiler;
     class IPaths;
+    struct EngineConfigData;
 
     // =============================================================================
     // WorldContext — the flat struct of references a world subsystem is constructed with.
@@ -31,7 +32,10 @@ namespace Opaax
     //   running subsystem should poke, and nothing needs it — adding a member later is one line
     //   and breaks no existing subsystem, so this starts at what has callers.
     //   *Paths arrived exactly that way (⑥ S3): SpriteAnimationSubsystem is the first world
-    //   subsystem to load an ASSET, and ResourceManager::Load takes an absolute path.*
+    //   subsystem to load an ASSET, and ResourceManager::Load takes an absolute path.
+    //   Config followed (⑦-A P1), for PhysicsSubsystem. Both times the NULL-GUARD in
+    //   WorldManager::CreateSubsystemsFor had to grow with the member — a sibling resolved but
+    //   never checked is the failure this struct's own history keeps producing.*
     // =============================================================================
     struct WorldContext
     {
@@ -50,6 +54,18 @@ namespace Opaax
 
         /** The engine bus. A subsystem reacts to engine/world events without touching the locator. */
         EngineEventBus& Events;
+
+        /**
+         * The engine's boot configuration, read-only — a subsystem is configured BY it, it never
+         * reconfigures the project.
+         *
+         * Arrived by the growth clause below, the way Paths did (⑦-A P1): PhysicsSubsystem builds
+         * its world from Config.Physics, and a world subsystem has no other route to a config —
+         * IConfigSystem is an app service and reaching the locator is what D3 forbids. The WHOLE
+         * block rather than a physics-shaped slice, because it is one config object and the next
+         * reader (Render.Interpolation) wants a different part of it.
+         */
+        const EngineConfigData& Config;
 
         /**
          * Per-frame debug lines. IMMEDIATE MODE by contract (F4): nothing is retained, so a

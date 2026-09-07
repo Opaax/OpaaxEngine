@@ -56,7 +56,9 @@
 #include "World/WorldManager.h"
 #include "World/Entity/Entity.h"
 #include "World/Components/CameraComponent.h"      // the engine-native components the
-#include "World/Components/DummyComponent.h"       // editor draws by default (I15)
+#include "World/Components/ColliderComponent.h"    // editor draws by default (I15)
+#include "World/Components/DummyComponent.h"
+#include "World/Components/RigidbodyComponent.h"
 #include "World/Components/SpriteAnimatorComponent.h"
 #include "World/Components/TextComponent.h"
 #include "World/Components/SpriteComponent.h"
@@ -406,6 +408,11 @@ namespace Opaax::Editor
         // fold plus one line.
         lDrawers.Register<CameraComponent,          NativeComponentDrawers::CameraComponentDrawer>();
         lDrawers.Register<DummyComponent>();
+
+        // ⑦-A. Both are CReflected, so the generic fold IS the implementation — the collider's
+        // shape and channel come out as dropdowns from their enum type alone (I15).
+        lDrawers.Register<ColliderComponent>();
+        lDrawers.Register<RigidbodyComponent>();
     }
 
     void EditorService::RegisterNativeConfigDrawers()
