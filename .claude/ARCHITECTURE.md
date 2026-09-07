@@ -2389,6 +2389,27 @@ is flight), and the edge is consumed **by the mode**, so one request is one jump
 steps the frame ran. `FlyMoveMode::OnModeEnter` drops carried momentum — without it, switching mid-fall
 keeps sinking, which reads as a bug rather than as physics.
 
+**PH21 — THE ALPHA WAS PLUMBED AND DISCARDED FOR THREE MILESTONES; it is consumed now** (⑦-A P6,
+M9's P7). `RendererManager::Render` took `double /*Alpha*/` and threw it away, so a fixed-step pose
+drew stepped rather than smooth. `TransformInterpolationComponent` holds where an entity was at the
+END of the previous fixed step and is **deliberately NOT registered** with the ComponentRegistry: a
+saved previous pose would be a lie the first time the map loaded, and since **WM6** copies exactly
+what the registry knows, staying out of it leaves every map, snapshot and PIE clone byte-unchanged.
+The fixed-step WRITERS record it (physics and the mover, each just before overwriting), the renderer
+blends toward the current pose, and **gameplay, queries and picking keep the RAW value** — that split
+is what makes this display-only rather than a second source of truth. `ResolveDisplayPose` is free and
+pure, so the two cases a screenshot cannot judge are tests: the **shortest-arc wrap** (350° → 10° is
++20°, not −340°, or a body visibly spins backwards) and the **first step**, which has no previous pose
+and must not blend from a default-constructed one.
+
+**PH21a — "OFF" IS NOT ALPHA 0, and getting that wrong drew everything one step behind.** Alpha 0 is
+the PREVIOUS pose, so expressing the disabled state as `m_FrameAlpha = 0` made every fixed-step entity
+render a step late while looking entirely plausible. **The instrument is what caught it**: the blend
+counter reported *"Interpolating 5 drawn pose(s) — alpha 0.00"*, and a blend at alpha zero is a
+contradiction. Off now skips the blend entirely — also one fewer lookup per entity. The counter stays,
+because "the toggle is on" and "something was actually blended" are different claims and only the
+second one says the feature works ([[L15]]).
+
 **PH5 — `EngineConfigData::Physics` came back on the clause that deleted it.** The group was removed
 2026-08-21 for having no reader, under "each comes back with the system that reads it". It is a real
 `EPhysicsBackend` enum (a typo is not expressible, and the editor gets a dropdown), with gravity,
