@@ -1062,10 +1062,16 @@ body they cared about — Unreal's model exactly.
 - **`WorldContext::Profiler` is the ONE member of that struct that may be null**, and deliberately:
   every other reference's absence is a boot failure, while this one's is a supported configuration.
   `WorldManager::CreateSubsystemsFor` therefore does NOT null-check it beside the others.
-- **A GAME module's subsystem is one line** — `Sandbox`'s `QuadOscillatorSubsystem::Update` carries
-  `OPAAX_STAT_SCOPE(&m_Context->Profiler, "QuadOscillator")` and appears in the tree under `World`,
-  with the engine still never naming the type. That is the extensibility claim, dogfooded rather
+- **A GAME module's subsystem is one line** — `Sandbox`'s `QuadOscillatorSubsystem::Update` carried
+  `OPAAX_STAT_SCOPE(&m_Context->Profiler, "QuadOscillator")` and appeared in the tree under `World`,
+  with the engine still never naming the type. That was the extensibility claim, dogfooded rather
   than asserted ([[L23]]).
+  **STALE AS OF 2026-09-07** — the user commented that registration out of `Sandbox.cpp`. The class
+  is still in the tree and still compiles, but nothing registers it, so **the game-module
+  world-subsystem route now has NO caller in either host** — `EditWorldSystems()` lost its last one
+  when `QuadBoundsSubsystem` went, and this was the runtime half. The engine-owned route
+  (`SpriteAnimation`, `Physics`) is exercised; **MR4**'s "a game module and an editor module land in
+  one candidate list" is currently asserted, not dogfooded. One `Register` call restores it.
 - **The tree is now small on purpose**: `Update` → `World` → the game's own scopes, `FixedUpdate`,
   `Render` → `Renderer`, `Present`. Every row is work someone chose to name.
 
@@ -2270,6 +2276,32 @@ as the WHOLE `EngineConfigData` rather than a physics-shaped slice — it is one
 next reader wants a different part of it. **Both existing `WorldContext` test fixtures failed to
 compile on the new field**, which is the aggregate doing the job a grep would have missed ([[L10]]).
 
+**PH10 — Physics events are PODs on the bus, and they are PUBLISHED, not enqueued.** Five payloads in
+`Physics/PhysicsEvents.h`, shaped exactly like `WorldEvents.h`: adding one is adding a struct, with no
+`EEventType` entry (that Tier-1 enum stays closed to OS/window/input) and no central registration. The
+dispatch choice is a deliberate departure from the bus's stated default, and the reason is **where
+`Flush` sits — at the TOP of `Engine::Loop`, before `Update` and before the fixed-step catch-up loop**.
+An enqueued contact would therefore arrive a whole frame later, after the reconcile had already run,
+and a frame that ran three fixed steps would deliver three steps' worth of edges in one batch with no
+relationship to the simulation that produced them. Immediate dispatch puts the handler directly after
+the `Step` that produced the touch, with both entities still live. (Same conclusion as **WorldEvents**
+and [[L7]]'s teardown corollary, reached from a different constraint: theirs is pointer lifetime,
+this one is step coherence.)
+
+**PH11 — `OverlapStayed` is SYNTHESIZED; the backend only reports edges.** Box2D gives begin- and
+end-touch and nothing in between, so the subsystem keeps a live-overlap set keyed by the **normalized**
+pair — `(A,B)` and `(B,A)` collapse to one entry, and the value keeps the ordered *(sensor, visitor)*
+pair so a `Stayed` re-fires with the same meaning its `Began` had. **The order within a step is
+load-bearing: Began → Ended → tick the survivors.** Ending before ticking is what stops a pair that
+ended *this very step* from receiving one more `Stayed` after its `Ended`.
+
+**PH12 — A handler MAY destroy an entity, and nothing phantom may follow.** That is the pickup case and
+it is supported on both sides: each survivor is **re-validated against the world** before its `Stayed`
+rather than trusted, and `RemoveBodyForEntity` scrubs the pairs its body was in (a body with no shape
+reports nothing, including its own `Ended`, so a pair that can never end would otherwise tick forever).
+Killing the visitor and killing the sensor each yield exactly one `Began` and nothing after — the
+assertion M9's close-out records having found by hand, now a test.
+
 **PH5 — `EngineConfigData::Physics` came back on the clause that deleted it.** The group was removed
 2026-08-21 for having no reader, under "each comes back with the system that reads it". It is a real
 `EPhysicsBackend` enum (a typo is not expressible, and the editor gets a dropdown), with gravity,
@@ -2862,7 +2894,8 @@ first `Update`** (landed M4 S4). True on both creation paths, which is the point
 subsystems before the entities land. Instantiating before starting would "fix" the clone at the cost of
 making it the only populated-at-`Startup` world in the engine — and "can I read the world in `Startup`?"
 would answer *"depends how your world was made"*, which is a far worse contract than a uniform **no**.
-`QuadOscillatorSubsystem` is the worked example (baselines on first tick).
+`QuadOscillatorSubsystem` is the worked example (baselines on first tick) — *still readable as code,
+but unregistered since 2026-09-07, so `PhysicsSubsystem`'s reconcile is now the LIVE one.*
 
 **The named candidate for a post-instantiate hook was PHYSICS, and it did not need one** (⑦-A P1,
 2026-09-07). This entry used to say that "physics rebuilding bodies from authoring components" would
