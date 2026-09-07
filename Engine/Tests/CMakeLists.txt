@@ -74,6 +74,10 @@ set(OPAAX_TEST_SOURCES
     Core/Maths/AngleTests.cpp
     Core/Maths/Bounds2DTests.cpp
     Core/Profiling/StatsTests.cpp
+    # ⑦-A P0. Physics needs no GL context, so unlike the renderer the seam can be gated by a test
+    # instead of by a smoke run — and because box2d is PRIVATE to the DLL, a case that builds a
+    # world here also proves the seam is exported and that no consumer needs the vendor (L11).
+    Core/Physics/PhysicsSeamTests.cpp
 
     # Editor-side, and the FIRST of its kind — header-only editor types only (see the include dir
     # below). ③'s gizmo delta math, pinned after a scale bug that only showed away from (0,0).

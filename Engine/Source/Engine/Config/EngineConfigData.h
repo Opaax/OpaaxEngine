@@ -4,11 +4,14 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
+#include "Core/Maths/MathTypes.h"            // Vector2F — Physics.Gravity
+#include "Core/Maths/MathsJson.hpp"          // ...and the json bridge that writes it
 #include "Core/Reflection/OpaaxEnumJson.h"   // every enum field below writes its ToString label
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringJson.h"
 #include "Core/Window/Window.h"              // EWindowMode
+#include "Physics/PhysicsBackend.h"          // EPhysicsBackend
 #include "RHI/RHIBackend.h"                  // EBackend
 
 namespace Opaax
@@ -28,6 +31,7 @@ namespace Opaax
     //   EVERY FIELD HERE HAS A READER. The Assets / Log / Physics groups and Render.Interpolation
     //   were deleted on 2026-08-21 — they had none, and a settings screen offering values that do
     //   nothing is worse than a short one. Each comes back with the system that reads it.
+    //   *Physics came back on 2026-09-07 with the physics seam, exactly on that clause.*
     //
     //   Defaults match the historical hardcoded values, so a missing config keeps behaviour
     //   unchanged — and with _WITH_DEFAULT, so does a config missing any single key.
@@ -64,6 +68,33 @@ namespace Opaax
         OPAAX_PROPERTIES(RenderSettings, OPAAX_PROP(Backend))
     };
 
+    struct PhysicsSettings
+    {
+        /**
+         * Which implementation backs IPhysicsWorld. A real enum, so the editor gives it a dropdown
+         * and an unbuildable backend is not expressible — the same treatment Render.Backend gets.
+         */
+        EPhysicsBackend Backend = EPhysicsBackend::Box2D;
+
+        /** Acceleration on dynamic bodies, world units / s^2. Y-up, so falling is negative. */
+        Vector2F Gravity = { 0.f, -981.f };
+
+        /** How many world units make a metre. ~100 is the 2D convention the sprites are authored at. */
+        float LengthUnitsPerMeter = 100.f;
+
+        /** Solver sub-steps per fixed step. Higher is a stabler stack for more cost. */
+        Int32 SubStepCount = 4;
+
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(PhysicsSettings, Backend, Gravity,
+                                                    LengthUnitsPerMeter, SubStepCount)
+
+        OPAAX_PROPERTIES(PhysicsSettings,
+                         OPAAX_PROP(Backend),
+                         OPAAX_PROP(Gravity),
+                         OPAAX_PROP(LengthUnitsPerMeter).SetRange(1.f, 1000.f),
+                         OPAAX_PROP(SubStepCount).SetRange(1.f, 16.f))
+    };
+
     struct StatsSettings
     {
         /**
@@ -82,18 +113,21 @@ namespace Opaax
 
     struct EngineConfigData
     {
-        WindowSettings Window;
-        RenderSettings Render;
-        StatsSettings  Stats;
+        WindowSettings  Window;
+        RenderSettings  Render;
+        PhysicsSettings Physics;
+        StatsSettings   Stats;
 
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(EngineConfigData, Window, Render, Stats)
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(EngineConfigData, Window, Render, Physics, Stats)
 
         // NeedRestart on every group, because every reader of this file reads it once during boot:
-        // the window is built from Window, RendererManager resolves Render.Backend at Startup, and
-        // the stats service is provided-or-not in Bootstrap.
+        // the window is built from Window, RendererManager resolves Render.Backend at Startup, the
+        // stats service is provided-or-not in Bootstrap, and a physics world is built from Physics
+        // when a Play world starts — which a running one cannot be re-founded on.
         OPAAX_PROPERTIES(EngineConfigData,
                          OPAAX_PROP(Window).SetFlags(EPropertyFlags::NeedRestart),
                          OPAAX_PROP(Render).SetFlags(EPropertyFlags::NeedRestart),
+                         OPAAX_PROP(Physics).SetFlags(EPropertyFlags::NeedRestart),
                          OPAAX_PROP(Stats).SetFlags(EPropertyFlags::NeedRestart))
     };
 }

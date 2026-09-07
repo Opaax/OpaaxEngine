@@ -19,6 +19,9 @@ file(GLOB_RECURSE ENGINE_CORE_SOURCES CONFIGURE_DEPENDS
     "Source/RHI/*.cpp"
     "Source/RHI/*.h"
     "Source/RHI/*.hpp"
+    "Source/Physics/*.cpp"
+    "Source/Physics/*.h"
+    "Source/Physics/*.hpp"
     "Source/Platform/*.cpp"
     "Source/Platform/*.h"
     "Source/Platform/*.hpp"
@@ -351,16 +354,22 @@ target_link_libraries(OpaaxEngine
         glad
         entt
         nlohmann_json
-        box2d
 )
 
 # glfw is PRIVATE (not PUBLIC): it is embedded in + EXPORTED from OpaaxEngine.dll (_GLFW_BUILD_DLL above).
 # PUBLIC would make every consumer statically relink a SECOND glfw copy with its own uninitialised global
 # state — the exact bug this fixes. No public engine header includes <GLFW/glfw3.h> (only .cpp + the private
 # WindowsWindow.h), so nothing downstream needs glfw's headers transitively.
+#
+# box2d is PRIVATE for the SAME reason (L11), moved off PUBLIC when the physics seam landed: it is a static
+# lib with GLOBAL state (b2SetLengthUnitsPerMeter), so PUBLIC gave every host its own copy of it. Latent
+# only because nothing outside the engine included box2d — the seam is what makes that permanent. Physics is
+# reached through the OPAAX_API IPhysicsWorld / PhysicsAPI::Create, so the one instance lives in the DLL and
+# no consumer needs box2d's headers or its symbols (its include dir was already PRIVATE).
 target_link_libraries(OpaaxEngine
     PRIVATE
         glfw
+        box2d
         ${OPAAX_GLSLANG_LINK}
         ${OPAAX_VULKAN_LINK}
 )

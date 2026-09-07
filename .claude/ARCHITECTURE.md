@@ -2197,6 +2197,52 @@ or stacking several previews (the user declined the stack: *"i do not really lik
 
 ---
 
+## PH — Physics (⑦-A, P0 landed 2026-09-07)
+
+Salvaged from **M9** (closed with user sign-off 2026-06-12), whose seam survived the architecture it was
+written for. The seam and the Box2D backend came back as a restyle; everything above them is rewritten
+onto the live tiers. Collision **profiles did not come back** — see **PH4**.
+
+**PH1 — `IPhysicsWorld` is the seam, and it is shaped like the RHI's.** A concrete world is built only
+through `PhysicsAPI::Create`, the backend is a config enum resolved once, and **no `b2*` symbol appears
+above `Physics/Box2D/`** — a grep gate proves it and is run at every slice close. The interface speaks
+engine concepts (world units, Y-up, opaque `BodyHandle`/`ShapeHandle`); each backend absorbs its own
+quirks (poll-based events, length units, native filter bits) behind the methods. This is the property
+the user asked for by name — *"interfaces to make the physic itself swappable easily"* — so a direct
+Box2D call from gameplay is a contract violation, not a shortcut.
+
+**PH2 — box2d is linked PRIVATE, and that is an I1/I2 rule, not a build preference.** It is a static lib
+with GLOBAL state (`b2SetLengthUnitsPerMeter`), so `PUBLIC` gave `Sandbox.exe` and `SandboxEditor.exe`
+each their own copy of it — **exactly [[L11]]'s glfw bug**, latent only because nothing outside the
+engine had ever included box2d. Fixed when the seam landed: box2d moved beside glfw in the PRIVATE
+block, its include dir was already private, and physics is reached through the `OPAAX_API`
+`IPhysicsWorld` / `PhysicsAPI::Create`. The one instance now lives in the DLL by construction rather
+than by nobody having called it yet.
+
+**PH3 — the seam is TESTABLE, which makes it the rare engine path that needs no eyes.** Physics wants no
+GL context, so `Engine/Tests/Core/Physics/PhysicsSeamTests.cpp` runs the real Box2D backend through the
+neutral interface (fall, land-and-rest at a computed height, ray hit + miss, channel-filtered miss,
+overlap collection, `MoveCapsule` grounded + free). Because `OpaaxTests` links the **import lib** like a
+game exe, those cases simultaneously prove the seam is exported and that no consumer needs the vendor
+(**PH2**). Contrast the renderer, where every equivalent claim is a smoke run and a pair of eyes.
+
+**PH4 — a collider carries its CHANNEL and its MASK; there is no CollisionProfile asset.** M9 made the
+profile a first-class `IAsset` with a three-state response matrix; that base is retired and the user's
+call was channels-only (2026-09-07). `ShapeDesc` already takes `CategoryBits`/`MaskBits`, so the
+channel's `CategoryBit` goes straight onto the shape and a profile resource later is **pure addition
+with zero migration** — the reason it is safe to defer. `CollisionChannelList.h` stays the X-macro
+single source of truth, and its ordinal IS the filter bit index: **append only, never reorder**, or
+every saved map renumbers.
+
+**PH5 — `EngineConfigData::Physics` came back on the clause that deleted it.** The group was removed
+2026-08-21 for having no reader, under "each comes back with the system that reads it". It is a real
+`EPhysicsBackend` enum (a typo is not expressible, and the editor gets a dropdown), with gravity,
+length-units and sub-steps. `EPhysicsBackend` lives in its own small `Physics/PhysicsBackend.h`
+mirroring `RHI/RHIBackend.h`, so the config type does not drag the whole seam in behind it — and for
+the same reason RHI's did, **`BackendFromString` does not exist**: the enum json bridge parses it.
+
+---
+
 ## SE — Extension seams (composition-root-only)
 
 Only a **composition root** (an `OpaaxApplication` subclass — `Sandbox`, `EditorApplication`) overrides
