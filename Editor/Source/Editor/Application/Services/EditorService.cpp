@@ -62,6 +62,7 @@
 #include "World/Components/CameraComponent.h"      // the engine-native components the
 #include "World/Components/ColliderComponent.h"    // editor draws by default (I15)
 #include "World/Components/DummyComponent.h"
+#include "World/Components/MoverComponent.h"
 #include "World/Components/RigidbodyComponent.h"
 #include "World/Components/SpriteAnimatorComponent.h"
 #include "World/Components/TextComponent.h"
@@ -429,6 +430,7 @@ namespace Opaax::Editor
         // shape and channel come out as dropdowns from their enum type alone (I15).
         lDrawers.Register<ColliderComponent>();
         lDrawers.Register<RigidbodyComponent>();
+        lDrawers.Register<MoverComponent>();
     }
 
     void EditorService::RegisterNativeConfigDrawers()

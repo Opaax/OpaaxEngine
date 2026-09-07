@@ -39,6 +39,7 @@ namespace Opaax
         m_Profiler  = OpaaxApplication::GetAppService<IStatsService>().GetProfiler();
         m_Paths     = &OpaaxApplication::GetAppService<IPaths>();
         m_Config    = &OpaaxApplication::GetAppService<IConfigSystem>().Get<Config_Engine>().GetData();
+        m_Input     = &lEngine.GetInput();
 
         OPAAX_LOG(LogWorldManager, Info, "WorldManager started (no world yet — the host creates it)");
         return true;
@@ -199,7 +200,7 @@ namespace Opaax
         // than a context full of dangling references.
         // m_Profiler is deliberately NOT checked — null is its configured off state, not a failure.
         if (m_Resources == nullptr || m_Events == nullptr || m_Debug == nullptr || m_Paths == nullptr
-            || m_Config == nullptr)
+            || m_Config == nullptr || m_Input == nullptr)
         {
             OPAAX_LOG(LogWorldManager, Error,
                       "CreateWorld '{}' — WorldManager was never started, so there is no engine context. World created with NO subsystems.",
@@ -207,7 +208,8 @@ namespace Opaax
             return;
         }
 
-        InWorld.SetContext(WorldContext{InWorld, *m_Resources, *m_Paths, *m_Events, *m_Config, *m_Debug, m_Profiler});
+        InWorld.SetContext(WorldContext{InWorld, *m_Resources, *m_Paths, *m_Events, *m_Input, *m_Config,
+                                        *m_Debug, m_Profiler});
 
         WorldContext* lContext = InWorld.GetContext();
         OPAAX_ASSERT(lContext != nullptr);

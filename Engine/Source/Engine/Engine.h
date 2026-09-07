@@ -73,6 +73,7 @@ namespace Opaax
          * never wrote to.
          */
         void RegisterNativeWorldSubsystems();
+        void RegisterNativeMoverModes();
         
         /** Cache convenient subsystems */
         void CacheSubsystems();

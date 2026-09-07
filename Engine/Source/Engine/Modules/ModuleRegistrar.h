@@ -168,6 +168,56 @@ namespace Opaax
     };
 
     // =============================================================================
+    // MoverModeRoute — the MoverModes() channel, LIVE since ⑦-A P5b.
+    //
+    //   Forwards into the engine's MoverModeRegistry. A mode's name IS an on-disk key — a
+    //   `.opaaxmovemode` writes it in its Mode field — so unlike a world subsystem, the name is
+    //   REQUIRED and renaming it breaks assets that name it.
+    // =============================================================================
+    class OPAAX_API MoverModeRoute
+    {
+        // =========================================================================
+        // Registration
+        // =========================================================================
+    public:
+        /**
+         * Register T as a movement behaviour a tuning asset may name.
+         *
+         * @tparam T Derives IMoverMode and is default-constructible (modes are STATELESS).
+         * @param InName The id a `.opaaxmovemode` writes. Required — it is a file key.
+         * @return true when the registry accepted it.
+         */
+        template<typename T>
+        requires std::is_base_of_v<IMoverMode, T>
+        bool Register(const OpaaxStringID InName)
+        {
+            ++m_Count;
+
+            if (m_Registry == nullptr)
+            {
+                OPAAX_LOG(LogModuleRegistrar, Error,
+                          "MoverModes().Register — route is not bound to a MoverModeRegistry; registration dropped.");
+                return false;
+            }
+
+            return m_Registry->Register<T>(InName);
+        }
+
+        /** Wire this route to the live registry. Called once, before any module registers. */
+        void Bind(MoverModeRegistry* InRegistry) noexcept { m_Registry = InRegistry; }
+
+        /** How many times a module asked — refusals included. */
+        Uint64 Count() const noexcept { return m_Count; }
+
+        // =========================================================================
+        // Members
+        // =========================================================================
+    private:
+        MoverModeRegistry* m_Registry = nullptr; // non-owning; the engine owns it (I5)
+        Uint64             m_Count    = 0;
+    };
+
+    // =============================================================================
     // ResourceFormatRoute — the Resources() channel.
     //
     //   Forwards into the engine's ResourceFormatRegistry: which resource type loads which file
@@ -233,6 +283,7 @@ namespace Opaax
     //     Components()      -> ComponentRegistry        (LIVE, M3)
     //     WorldSubsystems() -> WorldSubsystemRegistry   (LIVE, M4)
     //     Resources()       -> ResourceFormatRegistry   (LIVE)
+    //     MoverModes()      -> MoverModeRegistry        (LIVE, ⑦-A)
     //
     //   ENGINE LAYER, not Application (moved M3). It exists to front the engine registries,
     //   and by I4's test a registrar that knows about component types knows about worlds.
@@ -247,10 +298,12 @@ namespace Opaax
         ComponentRoute&      Components()      noexcept { return m_Components; }
         WorldSubsystemRoute& WorldSubsystems() noexcept { return m_WorldSubsystems; }
         ResourceFormatRoute& Resources()       noexcept { return m_ResourceFormats; }
+        MoverModeRoute&      MoverModes()      noexcept { return m_MoverModes; }
 
         const ComponentRoute&      Components()      const noexcept { return m_Components; }
         const WorldSubsystemRoute& WorldSubsystems() const noexcept { return m_WorldSubsystems; }
         const ResourceFormatRoute& Resources()       const noexcept { return m_ResourceFormats; }
+        const MoverModeRoute&      MoverModes()      const noexcept { return m_MoverModes; }
 
         /**
          * Point every live route at the engine's registries. Must run BEFORE the first
@@ -261,11 +314,13 @@ namespace Opaax
             m_Components.Bind(&InRegistries.Components());
             m_WorldSubsystems.Bind(&InRegistries.WorldSubsystems());
             m_ResourceFormats.Bind(&InRegistries.Resources());
+            m_MoverModes.Bind(&InRegistries.MoverModes());
         }
 
     private:
         ComponentRoute      m_Components;
         WorldSubsystemRoute m_WorldSubsystems;
         ResourceFormatRoute m_ResourceFormats;
+        MoverModeRoute      m_MoverModes;
     };
 }

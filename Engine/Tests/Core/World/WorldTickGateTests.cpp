@@ -17,6 +17,7 @@
 #include "Core/String/OpaaxStringID.hpp"
 #include "Engine/Config/EngineConfigData.h"   // the context's config reference
 #include "Engine/Subsystems/EventBus/EngineEventBus.h"
+#include "Engine/Subsystems/Input/InputManager.h"
 #include "Engine/Subsystems/Resources/ResourceManager.h"
 #include "Renderer/DebugDraw.h"
 #include "World/Systems/WorldContext.h"
@@ -57,6 +58,7 @@ namespace
         DebugDraw        Debug;
         FrameProfiler    Profiler;
         EngineConfigData Config;
+        InputManager     Input;
         WorldManager     Worlds;
         World*           TheWorld = nullptr;
         CounterSubsystem* Counter = nullptr;
@@ -66,7 +68,7 @@ namespace
             TheWorld = Worlds.CreateWorld("Gated", InMode);
             REQUIRE(TheWorld != nullptr);
 
-            TheWorld->SetContext(WorldContext{*TheWorld, Resources, IPaths::Null(), Events, Config, Debug, &Profiler});
+            TheWorld->SetContext(WorldContext{*TheWorld, Resources, IPaths::Null(), Events, Input, Config, Debug, &Profiler});
             TheWorld->GetSubsystems().RegisterSubsystem<CounterSubsystem>(std::ref(*TheWorld->GetContext()));
             TheWorld->GetSubsystems().StartupAll();
 

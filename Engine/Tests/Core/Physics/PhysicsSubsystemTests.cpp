@@ -16,6 +16,7 @@
 #include "Core/Profiling/FrameProfiler.h"
 #include "Engine/Config/EngineConfigData.h"
 #include "Engine/Subsystems/EventBus/EngineEventBus.h"
+#include "Engine/Subsystems/Input/InputManager.h"
 #include "Engine/Subsystems/Resources/ResourceManager.h"
 #include "Renderer/DebugDraw.h"
 #include "World/Components/ColliderComponent.h"
@@ -42,6 +43,7 @@ namespace
         DebugDraw        Debug;
         FrameProfiler    Profiler;
         EngineConfigData Config;
+        InputManager     Input;
         WorldManager     Worlds;
 
         World*            TheWorld = nullptr;
@@ -53,7 +55,7 @@ namespace
             REQUIRE(TheWorld != nullptr);
 
             TheWorld->SetContext(WorldContext{ *TheWorld, Resources, IPaths::Null(), Events,
-                                               Config, Debug, &Profiler });
+                                               Input, Config, Debug, &Profiler });
 
             // std::ref is load-bearing — WS4. By value, the context would be copied into a factory
             // lambda that StartupAll then destroys.

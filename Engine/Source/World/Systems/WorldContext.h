@@ -8,6 +8,7 @@ namespace Opaax
     class DebugDraw;
     class FrameProfiler;
     class IPaths;
+    class InputManager;
     struct EngineConfigData;
 
     // =============================================================================
@@ -33,7 +34,8 @@ namespace Opaax
     //   and breaks no existing subsystem, so this starts at what has callers.
     //   *Paths arrived exactly that way (⑥ S3): SpriteAnimationSubsystem is the first world
     //   subsystem to load an ASSET, and ResourceManager::Load takes an absolute path.
-    //   Config followed (⑦-A P1), for PhysicsSubsystem. Both times the NULL-GUARD in
+    //   Config followed (⑦-A P1) for PhysicsSubsystem, and Input (⑦-A P5b) for the mover's
+    //   control system. Each time the NULL-GUARD in
     //   WorldManager::CreateSubsystemsFor had to grow with the member — a sibling resolved but
     //   never checked is the failure this struct's own history keeps producing.*
     // =============================================================================
@@ -54,6 +56,16 @@ namespace Opaax
 
         /** The engine bus. A subsystem reacts to engine/world events without touching the locator. */
         EngineEventBus& Events;
+
+        /**
+         * This frame's input. A gameplay subsystem READS intent from it; nothing here clears it —
+         * the frame boundary is the host loop's (**IN2**) and stays there.
+         *
+         * The third member to arrive by the growth clause below (⑦-A P5b), for the mover: a
+         * control system turns keys into a MoverComponent's intent, and a world subsystem has no
+         * other route to input without reaching the locator, which D3 forbids.
+         */
+        const InputManager& Input;
 
         /**
          * The engine's boot configuration, read-only — a subsystem is configured BY it, it never

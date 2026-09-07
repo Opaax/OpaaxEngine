@@ -4,6 +4,7 @@
 
 #include "Engine/Subsystems/Resources/ResourceFormatRegistry.h"
 #include "World/Components/ComponentRegistry.h"
+#include "World/Systems/Movement/MoverModeRegistry.h"
 #include "World/Systems/WorldSubsystemRegistry.h"
 
 namespace Opaax
@@ -63,6 +64,11 @@ namespace Opaax
         ResourceFormatRegistry&       Resources()       noexcept { return m_ResourceFormats; }
         const ResourceFormatRegistry& Resources() const noexcept { return m_ResourceFormats; }
 
+        // ⑦-A P5b — which behaviours a `.opaaxmovemode` may name. Here for the reason above and
+        // not on MoverSubsystem: a world subsystem is created per world, and the modes are one set.
+        MoverModeRegistry&       MoverModes()       noexcept { return m_MoverModes; }
+        const MoverModeRegistry& MoverModes() const noexcept { return m_MoverModes; }
+
         // =========================================================================
         // Functions
         // =========================================================================
@@ -77,6 +83,7 @@ namespace Opaax
             m_Components.Seal();
             m_WorldSubsystems.Seal();
             m_ResourceFormats.Seal();
+            m_MoverModes.Seal();
         }
 
         // =========================================================================
@@ -86,5 +93,6 @@ namespace Opaax
         ComponentRegistry      m_Components;
         WorldSubsystemRegistry m_WorldSubsystems;
         ResourceFormatRegistry m_ResourceFormats;
+        MoverModeRegistry      m_MoverModes;
     };
 }

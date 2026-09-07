@@ -42,7 +42,11 @@
 #include "Engine/Subsystems/Resources/Types/Font/FontFamilyResource.h" // registered as a native format
 #include "World/Components/TextComponent.h"
 #include "World/Components/SpriteAnimatorComponent.h"
+#include "World/Components/MoverComponent.h"
 #include "World/Systems/ColliderDebugSubsystem.h"
+#include "World/Systems/Movement/FlyMoveMode.h"
+#include "World/Systems/Movement/GroundMoveMode.h"
+#include "World/Systems/MoverSubsystem.h"
 #include "World/Systems/PhysicsSubsystem.h"
 #include "World/Systems/SpriteAnimationSubsystem.h"
 
@@ -54,6 +58,7 @@ namespace Opaax
         RegisterNativeResourceFormats();
         RegisterNativeSubsystems();
         RegisterNativeWorldSubsystems();
+        RegisterNativeMoverModes();
     }
 
     Engine::~Engine()
@@ -99,6 +104,7 @@ namespace Opaax
         // what KIND of body it gets, which is why one is optional and the other is not.
         m_Registries.Components().Register<ColliderComponent>("Collider");
         m_Registries.Components().Register<RigidbodyComponent>("Rigidbody");
+        m_Registries.Components().Register<MoverComponent>("Mover");
     }
     
     void Engine::RegisterNativeResourceFormats()
@@ -128,10 +134,23 @@ namespace Opaax
         // world must never have done to it.
         m_Registries.WorldSubsystems().Register<PhysicsSubsystem>(OPAAX_ID("Physics"));
 
+        // AFTER Physics, and the ORDER IS THE DESIGN: a mover sweeps against the world's shapes,
+        // so it must see the poses this step produced rather than last step's. The subsystem
+        // manager ticks in registration order, which is the only thing that guarantees it.
+        m_Registries.WorldSubsystems().Register<MoverSubsystem>(OPAAX_ID("Mover"));
+
         // NO ShouldCreate — the first native subsystem without one, deliberately. A collider has
         // to be visible while you AUTHOR it, which is exactly when physics does not exist. What
         // switches it off is the debug CHANNEL, not the world's mode.
         m_Registries.WorldSubsystems().Register<ColliderDebugSubsystem>(OPAAX_ID("ColliderDebug"));
+    }
+
+    void Engine::RegisterNativeMoverModes()
+    {
+        // The id a `.opaaxmovemode` writes in its Mode field, so these names are FILE KEYS —
+        // renaming one breaks every asset that names it.
+        m_Registries.MoverModes().Register<GroundMoveMode>(OPAAX_ID("GroundMove"));
+        m_Registries.MoverModes().Register<FlyMoveMode>(OPAAX_ID("FlyMove"));
     }
 
     void Engine::RegisterNativeSubsystems()

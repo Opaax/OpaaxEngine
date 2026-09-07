@@ -2,10 +2,47 @@
     "entities": [
         {
             "components": {
+                "Dummy": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.95,
+                        "y": 0.55,
+                        "z": 0.15
+                    },
+                    "Size": {
+                        "x": 50.0,
+                        "y": 100.0
+                    }
+                },
+                "Mover": {
+                    "Channel": "Pawn",
+                    "Height": 100.0,
+                    "ModeName": "Ground",
+                    "Mover": "Movers/Hero.opaaxmover",
+                    "Radius": 25.0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -40.0,
+                        "y": 100.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "88888888888888888888888888888888",
+            "name": "PhysicsPlayer",
+            "ownerMap": "PhysicsTest"
+        },
+        {
+            "components": {
                 "Collider": {
                     "Channel": "WorldStatic",
                     "Density": 1.0,
-                    "Friction": 0.6,
+                    "Friction": 0.6000000238418579,
                     "Mode": "Solid",
                     "Offset": {
                         "x": 0.0,
@@ -15,25 +52,25 @@
                     "Restitution": 0.0,
                     "Shape": "Box",
                     "Size": {
-                        "x": 900.0,
+                        "x": 1436.0,
                         "y": 40.0
                     }
                 },
                 "Dummy": {
                     "Color": {
                         "w": 1.0,
-                        "x": 0.35,
-                        "y": 0.35,
-                        "z": 0.4
+                        "x": 0.3499999940395355,
+                        "y": 0.3499999940395355,
+                        "z": 0.4000000059604645
                     },
                     "Size": {
-                        "x": 900.0,
+                        "x": 1436.0,
                         "y": 40.0
                     }
                 },
                 "Transform": {
                     "Position": {
-                        "x": 0.0,
+                        "x": 267.5057067871094,
                         "y": -260.0
                     },
                     "Rotation": 0.0,
@@ -52,7 +89,7 @@
                 "Collider": {
                     "Channel": "WorldStatic",
                     "Density": 1.0,
-                    "Friction": 0.3,
+                    "Friction": 0.30000001192092896,
                     "Mode": "Solid",
                     "Offset": {
                         "x": 0.0,
@@ -69,9 +106,9 @@
                 "Dummy": {
                     "Color": {
                         "w": 1.0,
-                        "x": 0.35,
-                        "y": 0.35,
-                        "z": 0.4
+                        "x": 0.3499999940395355,
+                        "y": 0.3499999940395355,
+                        "z": 0.4000000059604645
                     },
                     "Size": {
                         "x": 40.0,
@@ -99,7 +136,7 @@
                 "Collider": {
                     "Channel": "WorldStatic",
                     "Density": 1.0,
-                    "Friction": 0.2,
+                    "Friction": 0.20000000298023224,
                     "Mode": "Solid",
                     "Offset": {
                         "x": 0.0,
@@ -116,9 +153,9 @@
                 "Dummy": {
                     "Color": {
                         "w": 1.0,
-                        "x": 0.3,
-                        "y": 0.42,
-                        "z": 0.35
+                        "x": 0.30000001192092896,
+                        "y": 0.41999998688697815,
+                        "z": 0.3499999940395355
                     },
                     "Size": {
                         "x": 360.0,
@@ -127,7 +164,7 @@
                 },
                 "Transform": {
                     "Position": {
-                        "x": 240.0,
+                        "x": -250.73590087890625,
                         "y": -140.0
                     },
                     "Rotation": -25.0,
@@ -146,7 +183,7 @@
                 "Collider": {
                     "Channel": "WorldDynamic",
                     "Density": 1.0,
-                    "Friction": 0.4,
+                    "Friction": 0.4000000059604645,
                     "Mode": "Solid",
                     "Offset": {
                         "x": 0.0,
@@ -163,8 +200,8 @@
                 "Dummy": {
                     "Color": {
                         "w": 1.0,
-                        "x": 0.85,
-                        "y": 0.3,
+                        "x": 0.8500000238418579,
+                        "y": 0.30000001192092896,
                         "z": 0.25
                     },
                     "Size": {
@@ -181,8 +218,8 @@
                 },
                 "Transform": {
                     "Position": {
-                        "x": -120.0,
-                        "y": 320.0
+                        "x": -146.16250610351563,
+                        "y": 194.46295166015625
                     },
                     "Rotation": 0.0,
                     "Scale": {
@@ -197,17 +234,38 @@
         },
         {
             "components": {
+                "Camera": {
+                    "OrthoSize": 585.0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 300.7618103027344,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "4f3297b615eec051be0dae2b8b32f744",
+            "name": "Camera",
+            "ownerMap": "PhysicsTest"
+        },
+        {
+            "components": {
                 "Collider": {
                     "Channel": "WorldDynamic",
                     "Density": 1.0,
-                    "Friction": 0.2,
+                    "Friction": 0.20000000298023224,
                     "Mode": "Solid",
                     "Offset": {
                         "x": 0.0,
                         "y": 0.0
                     },
                     "Radius": 28.0,
-                    "Restitution": 0.65,
+                    "Restitution": 0.6499999761581421,
                     "Shape": "Circle",
                     "Size": {
                         "x": 100.0,
@@ -218,8 +276,8 @@
                     "Color": {
                         "w": 1.0,
                         "x": 0.25,
-                        "y": 0.55,
-                        "z": 0.85
+                        "y": 0.550000011920929,
+                        "z": 0.8500000238418579
                     },
                     "Size": {
                         "x": 56.0,
@@ -235,7 +293,7 @@
                 },
                 "Transform": {
                     "Position": {
-                        "x": 30.0,
+                        "x": 719.9361572265625,
                         "y": 420.0
                     },
                     "Rotation": 0.0,
@@ -254,7 +312,7 @@
                 "Collider": {
                     "Channel": "WorldDynamic",
                     "Density": 1.0,
-                    "Friction": 0.05,
+                    "Friction": 0.05000000074505806,
                     "Mode": "Solid",
                     "Offset": {
                         "x": 0.0,
@@ -271,7 +329,7 @@
                 "Dummy": {
                     "Color": {
                         "w": 1.0,
-                        "x": 0.9,
+                        "x": 0.8999999761581421,
                         "y": 0.75,
                         "z": 0.25
                     },
@@ -289,7 +347,7 @@
                 },
                 "Transform": {
                     "Position": {
-                        "x": 300.0,
+                        "x": 452.1939697265625,
                         "y": 260.0
                     },
                     "Rotation": 0.0,
@@ -308,26 +366,26 @@
                 "Collider": {
                     "Channel": "Pawn",
                     "Density": 1.0,
-                    "Friction": 0.3,
+                    "Friction": 0.30000001192092896,
                     "Mode": "Solid",
                     "Offset": {
                         "x": 0.0,
                         "y": 0.0
                     },
-                    "Radius": 25.0,
+                    "Radius": 24.0,
                     "Restitution": 0.0,
                     "Shape": "Capsule",
                     "Size": {
-                        "x": 50.0,
-                        "y": 100.0
+                        "x": 1.0,
+                        "y": 111.0
                     }
                 },
                 "Dummy": {
                     "Color": {
                         "w": 1.0,
-                        "x": 0.7,
-                        "y": 0.45,
-                        "z": 0.8
+                        "x": 0.699999988079071,
+                        "y": 0.44999998807907104,
+                        "z": 0.800000011920929
                     },
                     "Size": {
                         "x": 50.0,
@@ -355,6 +413,100 @@
             },
             "guid": "77777777777777777777777777777777",
             "name": "PhysicsCapsule",
+            "ownerMap": "PhysicsTest"
+        },
+        {
+            "components": {
+                "Collider": {
+                    "Channel": "WorldStatic",
+                    "Density": 1.0,
+                    "Friction": 0.30000001192092896,
+                    "Mode": "Solid",
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Radius": 50.0,
+                    "Restitution": 0.0,
+                    "Shape": "Box",
+                    "Size": {
+                        "x": 40.0,
+                        "y": 360.0
+                    }
+                },
+                "Dummy": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.3490196168422699,
+                        "y": 0.3490196168422699,
+                        "z": 0.4000000059604645
+                    },
+                    "Size": {
+                        "x": 40.0,
+                        "y": 360.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 995.4641723632813,
+                        "y": -97.43585968017578
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "8a5e5115569d089699d8f0a4cc8402d6",
+            "name": "PhysicsRightWall",
+            "ownerMap": "PhysicsTest"
+        },
+        {
+            "components": {
+                "Collider": {
+                    "Channel": "WorldStatic",
+                    "Density": 1.0,
+                    "Friction": 0.30000001192092896,
+                    "Mode": "Solid",
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Radius": 50.0,
+                    "Restitution": 0.0,
+                    "Shape": "Box",
+                    "Size": {
+                        "x": 611.0,
+                        "y": 35.0
+                    }
+                },
+                "Dummy": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.3137255012989044,
+                        "y": 0.3137255012989044,
+                        "z": 0.47058823704719543
+                    },
+                    "Size": {
+                        "x": 609.0,
+                        "y": 26.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 691.2251586914063,
+                        "y": -141.4767303466797
+                    },
+                    "Rotation": 16.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "aa124a187a537cadadb1bd6881435e14",
+            "name": "PhysicRamp2",
             "ownerMap": "PhysicsTest"
         }
     ],

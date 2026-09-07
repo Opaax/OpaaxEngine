@@ -27,6 +27,7 @@
 #include "Engine/Config/EngineConfigData.h"   // the context's config reference
 #include "Engine/Registries/EngineRegistries.h"
 #include "Engine/Subsystems/EventBus/EngineEventBus.h"
+#include "Engine/Subsystems/Input/InputManager.h"
 #include "Engine/Subsystems/Resources/ResourceManager.h"
 #include "Renderer/DebugDraw.h"
 #include "World/Systems/WorldContext.h"
@@ -208,8 +209,9 @@ TEST_CASE("world subsystem registry: CreateInto constructs from the context and 
     DebugDraw        lDebug;
     FrameProfiler    lProfiler;
     EngineConfigData lConfig;
+    InputManager     lInput;
 
-    WorldContext lContext{lWorld, lResources, IPaths::Null(), lEvents, lConfig, lDebug, &lProfiler};
+    WorldContext lContext{lWorld, lResources, IPaths::Null(), lEvents, lInput, lConfig, lDebug, &lProfiler};
 
     const IWorldSubsystemEntry* lEntry = lRegistry.FindByName(Name("Always"));
     REQUIRE(lEntry != nullptr);

@@ -4,6 +4,7 @@
 #include "Components/HealthComponent.h"
 #include "Components/TagsComponent.h"
 #include "Resources/WaveResource.h"
+#include "Systems/PlayerControlSubsystem.h"
 #include "Systems/QuadOscillatorSubsystem.h"
 #include "Application/Services/ILogger.h"  // OPAAX_LOG + LogCategory
 
@@ -37,7 +38,12 @@ void SandboxModule::OnRegister(Opaax::ModuleRegistrar& InRegistrar)
     // NOTE: this is the only world-subsystem candidate in either host now. The Edit-only
     // QuadBoundsSubsystem that used to make SandboxEditor.exe's count two was deleted on
     // 2026-08-31 — see SandboxEditorModule.cpp for what that costs.
-    InRegistrar.WorldSubsystems().Register<Sandbox::QuadOscillatorSubsystem>();
+    //InRegistrar.WorldSubsystems().Register<Sandbox::QuadOscillatorSubsystem>();
+
+    // ⑦-A P5b — the game's side of the mover seam: keys in, MoverInput out. It is also what
+    // puts a caller back on this route, which has had none in either host since the line above
+    // was commented out.
+    InRegistrar.WorldSubsystems().Register<Sandbox::PlayerControlSubsystem>();
 
     // A resource type the ENGINE has never heard of, claiming its own extension. This is what makes
     // `.wave` a known file everywhere at once — the browser names it, and the editor module adds

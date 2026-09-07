@@ -14,6 +14,7 @@
 #include "Core/Profiling/FrameProfiler.h"
 #include "Engine/Config/EngineConfigData.h"
 #include "Engine/Subsystems/EventBus/EngineEventBus.h"
+#include "Engine/Subsystems/Input/InputManager.h"
 #include "Engine/Subsystems/Resources/ResourceManager.h"
 #include "Physics/Collision/CollisionChannel.h"
 #include "Physics/PhysicsEvents.h"
@@ -40,6 +41,7 @@ namespace
         DebugDraw        Debug;
         FrameProfiler    Profiler;
         EngineConfigData Config;
+        InputManager     Input;
         WorldManager     Worlds;
 
         World*            TheWorld = nullptr;
@@ -58,7 +60,7 @@ namespace
             REQUIRE(TheWorld != nullptr);
 
             TheWorld->SetContext(WorldContext{ *TheWorld, Resources, IPaths::Null(), Events,
-                                               Config, Debug, &Profiler });
+                                               Input, Config, Debug, &Profiler });
             TheWorld->GetSubsystems().RegisterSubsystem<PhysicsSubsystem>(std::ref(*TheWorld->GetContext()));
             TheWorld->GetSubsystems().StartupAll();
 

@@ -16,6 +16,7 @@ namespace Opaax
     class DebugDraw;
     class IPaths;
     struct EngineConfigData;
+    class InputManager;
 
     inline constexpr LogCategory LogWorldManager{"WorldManager"};
 
@@ -185,6 +186,10 @@ namespace Opaax
         // ⑦-A — the engine's boot config, put into every WorldContext so a world subsystem can be
         // configured without reaching the locator (D3). Read-only: this manager never writes it.
         const EngineConfigData* m_Config = nullptr;
+
+        // ⑦-A P5b — this frame's input, put into every WorldContext so a gameplay subsystem can
+        // read intent without reaching the locator (D3).
+        const InputManager* m_Input = nullptr;
 
         // ④ — resolved in Startup like the siblings above, put into every WorldContext, and used
         // for this manager's own tick scope. Null in a bare test manager.
