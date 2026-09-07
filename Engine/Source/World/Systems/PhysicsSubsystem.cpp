@@ -61,7 +61,13 @@ namespace Opaax
         lDesc.SubStepCount        = lSettings.SubStepCount;
 
         m_SubStepCount = lSettings.SubStepCount;
-        m_World        = PhysicsAPI::Create(lSettings.Backend, lDesc);
+
+        m_bWorldBoundsEnabled = lSettings.WorldBounds.bEnabled;
+        m_WorldBoundsMin      = lSettings.WorldBounds.Min;
+        m_WorldBoundsMax      = lSettings.WorldBounds.Max;
+        m_WorldBoundsResponse = lSettings.WorldBounds.Response;
+
+        m_World = PhysicsAPI::Create(lSettings.Backend, lDesc);
 
         if (m_World == nullptr)
         {
@@ -73,6 +79,14 @@ namespace Opaax
         // No entities yet, by contract (WS7) — the first FixedUpdate is what populates the world.
         OPAAX_LOG(LogPhysics, Info, "Physics started (Play world, {} backend, gravity {},{})",
                   ToString(lSettings.Backend), lSettings.Gravity.x, lSettings.Gravity.y);
+
+        if (m_bWorldBoundsEnabled)
+        {
+            OPAAX_LOG(LogPhysics, Info, "World bounds ON: [{},{}]..[{},{}], response {}",
+                      m_WorldBoundsMin.x, m_WorldBoundsMin.y, m_WorldBoundsMax.x, m_WorldBoundsMax.y,
+                      ToString(m_WorldBoundsResponse));
+        }
+
         return true;
     }
 
@@ -107,6 +121,10 @@ namespace Opaax
 
         SyncDynamicTransforms(lWorld);
         DispatchPhysicsEvents(lWorld);
+
+        // LAST, so every contact and overlap this step produced has already been delivered before
+        // anything is reaped — a body that touches something on the way out still reports it.
+        EnforceWorldBounds(lWorld);
 
         // The SUCCESS branch, once ([[L15]]). A subsystem that logged only failures would read
         // identically whether it simulated forty bodies or none at all.
@@ -405,6 +423,146 @@ namespace Opaax
             m_bLoggedFirstTouch = true;
             OPAAX_LOG(LogPhysics, Info, "First touches dispatched — {} overlap, {} collision",
                       m_OverlapEventCount, m_CollisionEventCount);
+        }
+    }
+
+    // =========================================================================
+    // Queries
+    // =========================================================================
+    PhysicsSubsystem::RaycastHit PhysicsSubsystem::RayCast(const Vector2F InOrigin, const Vector2F InDirection,
+                                                           const float InDistance, const Uint64 InChannelMask)
+    {
+        RaycastHit lResult;
+
+        // Nothing is playing, so nothing can be hit. A state, not an error — asking before Play is
+        // a legitimate thing for a tool or a script to do.
+        if (m_World == nullptr)
+        {
+            return lResult;
+        }
+
+        const PhysicsRayHit lHit = m_World->RayCastClosest(InOrigin, InDirection, InDistance, InChannelMask);
+        if (!lHit.bHit)
+        {
+            return lResult;
+        }
+
+        const EntityID lEntity = FromUserData(lHit.UserData);
+
+        // A hit whose body carries no resolvable entity is reported as a MISS rather than as a hit
+        // on ENTITY_NONE: every caller would have to check, and most would forget.
+        if (lEntity == ENTITY_NONE)
+        {
+            return lResult;
+        }
+
+        lResult.bHit     = true;
+        lResult.Entity   = lEntity;
+        lResult.Point    = lHit.Point;
+        lResult.Normal   = lHit.Normal;
+        lResult.Fraction = lHit.Fraction;
+        return lResult;
+    }
+
+    void PhysicsSubsystem::OverlapAABB(const Vector2F InMin, const Vector2F InMax,
+                                       TDynArray<EntityID>& OutEntities, const Uint64 InChannelMask)
+    {
+        OutEntities.clear();
+
+        if (m_World == nullptr)
+        {
+            return;
+        }
+
+        m_World->OverlapAABB(InMin, InMax, InChannelMask, m_QueryScratch);
+
+        for (const Uint64 lUserData : m_QueryScratch)
+        {
+            const EntityID lEntity = FromUserData(lUserData);
+            if (lEntity != ENTITY_NONE)
+            {
+                OutEntities.push_back(lEntity);
+            }
+        }
+    }
+
+    // =========================================================================
+    // World bounds
+    // =========================================================================
+    void PhysicsSubsystem::EnforceWorldBounds(World& InWorld)
+    {
+        if (!m_bWorldBoundsEnabled)
+        {
+            return;
+        }
+
+        EventBus& lBus = m_Context->Events.GetEventBus();
+
+        m_BoundsVictims.clear();
+
+        for (const auto& [lBits, lRecord] : m_Bodies)
+        {
+            // Only bodies that MOVE on their own can leave: a static collider outside the bounds
+            // was authored there, and reaping it would delete level geometry.
+            if (!lRecord.bSyncToTransform)
+            {
+                continue;
+            }
+
+            Vector2F lPosition;
+            float    lRotation = 0.f;
+            m_World->GetBodyTransform(lRecord.Handle, lPosition, lRotation);
+
+            const bool bInside = lPosition.x >= m_WorldBoundsMin.x && lPosition.x <= m_WorldBoundsMax.x
+                              && lPosition.y >= m_WorldBoundsMin.y && lPosition.y <= m_WorldBoundsMax.y;
+
+            if (bInside)
+            {
+                // Back inside: un-latch, so leaving again reports again.
+                m_OutOfBounds.erase(lBits);
+                continue;
+            }
+
+            // Already reported. A body that keeps falling is one occurrence, not sixty a second.
+            if (m_OutOfBounds.find(lBits) != m_OutOfBounds.end())
+            {
+                continue;
+            }
+
+            m_OutOfBounds.insert(lBits);
+
+            // Published BEFORE the reap, so a handler still sees a live entity.
+            lBus.Publish(PhysicsExitedWorldBounds{ static_cast<EntityID>(lBits), lPosition });
+
+            // Once, and only for the first ([[L15]]): "World bounds ON" says the feature is
+            // configured, which is a different claim from anything ever having left them. Not per
+            // exit — a level draining into a pit would print a line per body.
+            if (!m_bLoggedFirstExit)
+            {
+                m_bLoggedFirstExit = true;
+                OPAAX_LOG(LogPhysics, Info, "Entity {} left the world bounds at ({:.0f},{:.0f}) — {}",
+                          lBits, lPosition.x, lPosition.y, ToString(m_WorldBoundsResponse));
+            }
+
+            if (m_WorldBoundsResponse == EWorldBoundsResponse::EventAndDestroy)
+            {
+                m_BoundsVictims.push_back(lBits);
+            }
+        }
+
+        // Collected during the walk, destroyed after it — never mutate m_Bodies mid-iteration.
+        for (const Uint32 lBits : m_BoundsVictims)
+        {
+            const auto lEntity = static_cast<EntityID>(lBits);
+
+            // A handler may already have destroyed it, which is a supported thing to do.
+            if (InWorld.IsValid(lEntity))
+            {
+                InWorld.DestroyEntity(lEntity);
+            }
+
+            RemoveBodyForEntity(lEntity);
+            m_OutOfBounds.erase(lBits);
         }
     }
 

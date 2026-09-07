@@ -12,6 +12,7 @@
 #include "Core/String/OpaaxStringJson.h"
 #include "Core/Window/Window.h"              // EWindowMode
 #include "Physics/PhysicsBackend.h"          // EPhysicsBackend
+#include "Physics/PhysicsTypes.h"            // EWorldBoundsResponse — PODs over Core, NOT the seam
 #include "RHI/RHIBackend.h"                  // EBackend
 
 namespace Opaax
@@ -68,6 +69,33 @@ namespace Opaax
         OPAAX_PROPERTIES(RenderSettings, OPAAX_PROP(Backend))
     };
 
+    struct WorldBoundsSettings
+    {
+        /**
+         * OFF by default, and generously sized when on. A kill volume is the wrong default for an
+         * endless scroller, and a body quietly vanishing is worse than one falling forever.
+         */
+        bool bEnabled = false;
+
+        Vector2F Min = { -100000.f, -100000.f };
+        Vector2F Max = {  100000.f,  100000.f };
+
+        /**
+         * What the ENGINE does after the event, which always fires either way. EventOnly leaves
+         * the reaction to the game; EventAndDestroy also reaps the entity.
+         */
+        EWorldBoundsResponse Response = EWorldBoundsResponse::EventAndDestroy;
+
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(WorldBoundsSettings, bEnabled, Min, Max, Response)
+
+        OPAAX_PROPERTIES(WorldBoundsSettings,
+                         OPAAX_PROP(bEnabled).SetTooltip("Reap dynamic bodies that leave the box below.\n"
+                                                         "Off by default: an endless scroller has no bounds."),
+                         OPAAX_PROP(Min),
+                         OPAAX_PROP(Max),
+                         OPAAX_PROP(Response))
+    };
+
     struct PhysicsSettings
     {
         /**
@@ -85,14 +113,18 @@ namespace Opaax
         /** Solver sub-steps per fixed step. Higher is a stabler stack for more cost. */
         Int32 SubStepCount = 4;
 
+        /** The optional kill volume. Its own type, so the json nests because the C++ nests. */
+        WorldBoundsSettings WorldBounds;
+
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(PhysicsSettings, Backend, Gravity,
-                                                    LengthUnitsPerMeter, SubStepCount)
+                                                    LengthUnitsPerMeter, SubStepCount, WorldBounds)
 
         OPAAX_PROPERTIES(PhysicsSettings,
                          OPAAX_PROP(Backend),
                          OPAAX_PROP(Gravity),
                          OPAAX_PROP(LengthUnitsPerMeter).SetRange(1.f, 1000.f),
-                         OPAAX_PROP(SubStepCount).SetRange(1.f, 16.f))
+                         OPAAX_PROP(SubStepCount).SetRange(1.f, 16.f),
+                         OPAAX_PROP(WorldBounds))
     };
 
     struct StatsSettings

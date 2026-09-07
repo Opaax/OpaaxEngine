@@ -84,6 +84,9 @@ set(OPAAX_TEST_SOURCES
     # P2. The ordering cases (a Stayed must not outlive its Ended; a handler that destroys an
     # entity must not produce a phantom) are what M9 had to find by running it.
     Core/Physics/PhysicsEventTests.cpp
+    # P4. The seam's queries are covered in PhysicsSeamTests; what is here is the resolution to
+    # EntityID, and the kill volume's LATCH — "it fires" would pass for a version firing 60x/sec.
+    Core/Physics/PhysicsQueryTests.cpp
 
     # Editor-side, and the FIRST of its kind — header-only editor types only (see the include dir
     # below). ③'s gizmo delta math, pinned after a scale bug that only showed away from (0,0).

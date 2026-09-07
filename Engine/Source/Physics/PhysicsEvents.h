@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/Maths/MathTypes.h"
 #include "World/Entity/EntityTypes.h"
 
 namespace Opaax
@@ -78,5 +79,25 @@ namespace Opaax
     {
         EntityID EntityA = ENTITY_NONE;
         EntityID EntityB = ENTITY_NONE;
+    };
+
+    // =============================================================================
+    // World bounds — the optional kill volume
+    // =============================================================================
+    /**
+     * A dynamic body left the configured world bounds.
+     *
+     * Fires ONCE, on the inside-to-outside transition, not every step the body keeps falling — a
+     * body that left is a single occurrence, and a per-step version would be unusable in exactly
+     * the case it exists for.
+     *
+     * It fires whatever the configured response is: `EventAndDestroy` reaps the entity AFTER this
+     * is published, so a handler still sees a live entity and can read whatever it needs off it.
+     * LastPosition is where it was when it crossed out.
+     */
+    struct PhysicsExitedWorldBounds
+    {
+        EntityID Entity       = ENTITY_NONE;
+        Vector2F LastPosition = { 0.f, 0.f };
     };
 }

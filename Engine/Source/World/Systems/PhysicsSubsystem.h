@@ -68,6 +68,45 @@ namespace Opaax
         //~End ISubsystem interface
 
         // =============================================================================
+        // Queries — the seam answers in USER-DATA; these answer in entities
+        // =============================================================================
+    public:
+        /**
+         * @struct RaycastHit
+         *
+         * A closest-hit result resolved to the engine's own vocabulary. The seam's PhysicsRayHit
+         * carries raw body user-data, which is meaningless to a caller; this is the same answer
+         * with the entity decoded. Entity is ENTITY_NONE whenever bHit is false.
+         */
+        struct RaycastHit
+        {
+            bool     bHit     = false;
+            EntityID Entity   = ENTITY_NONE;
+            Vector2F Point    = { 0.f, 0.f };
+            Vector2F Normal   = { 0.f, 0.f };
+            float    Fraction = 0.f;
+        };
+
+        /**
+         * Closest hit from InOrigin along InDirection for InDistance world units.
+         *
+         * @param InChannelMask which channels are hittable — combine `CategoryBit(channel)` values.
+         *   The default hits everything.
+         * @return an empty result when there is no physics world (nothing is playing), which is a
+         *   state rather than an error: a query before Play is a legitimate thing to ask.
+         */
+        RaycastHit RayCast(Vector2F InOrigin, Vector2F InDirection, float InDistance,
+                           Uint64 InChannelMask = ~0ull);
+
+        /**
+         * Every entity whose collider overlaps the world-space box [InMin..InMax], filtered by
+         * InChannelMask. OutEntities is cleared first, and unresolvable hits are dropped rather
+         * than reported as ENTITY_NONE — a caller iterating the result never has to check.
+         */
+        void OverlapAABB(Vector2F InMin, Vector2F InMax, TDynArray<EntityID>& OutEntities,
+                         Uint64 InChannelMask = ~0ull);
+
+        // =============================================================================
         // Get
         // =============================================================================
     public:
@@ -111,6 +150,12 @@ namespace Opaax
 
         /** A normalized key for an unordered pair, so (A,B) and (B,A) are one entry. */
         static Uint64 PairKey(Uint64 InEntityBitsA, Uint64 InEntityBitsB) noexcept;
+
+        /**
+         * The kill volume, run LAST in the step so this step's contacts and overlaps have already
+         * fired before anything is reaped. Latched, so a body that keeps falling reports once.
+         */
+        void EnforceWorldBounds(World& InWorld);
 
         /** The body type an entity implies: its Rigidbody's, or Static when it has none. */
         static EBodyType ResolveBodyType(const RigidbodyComponent* InRigidbody) noexcept;
@@ -178,6 +223,28 @@ namespace Opaax
         Uint64 m_OverlapEventCount   = 0;
         Uint64 m_CollisionEventCount = 0;
         bool   m_bLoggedFirstTouch   = false;
+
+        // ---- world bounds, read from config at Startup --------------------------------------
+        bool                 m_bWorldBoundsEnabled = false;
+        Vector2F             m_WorldBoundsMin      = { 0.f, 0.f };
+        Vector2F             m_WorldBoundsMax      = { 0.f, 0.f };
+        EWorldBoundsResponse m_WorldBoundsResponse = EWorldBoundsResponse::EventAndDestroy;
+
+        /**
+         * Entity bits currently OUTSIDE the bounds, so the event fires on the transition rather
+         * than every step a body keeps falling. An entity that comes back in is removed, so
+         * re-entering and leaving again reports twice — which is the honest answer.
+         */
+        TUnorderedSet<Uint32> m_OutOfBounds;
+
+        /** Scratch for entities to reap this step — collected during the walk, destroyed after. */
+        TDynArray<Uint32> m_BoundsVictims;
+
+        /** One-shot: the feature being CONFIGURED and anything having left are separate claims. */
+        bool m_bLoggedFirstExit = false;
+
+        /** Reused by OverlapAABB so a per-frame query allocates nothing. */
+        TDynArray<Uint64> m_QueryScratch;
 
         /** One-shot log flags — a fixed step must not print sixty lines a second ([[L15]]). */
         bool   m_bLoggedFirstStep = false;
