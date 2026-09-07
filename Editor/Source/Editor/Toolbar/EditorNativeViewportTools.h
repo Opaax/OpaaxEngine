@@ -29,6 +29,13 @@ namespace Opaax::Editor
         /** The grid toggle. Its spacing is the translate snap step, so it belongs beside Snap. */
         void DrawGrid(EditorContext& InContext);
 
+        /**
+         * The collider-outline toggle. Unlike Grid, the state it flips is NOT the editor's — it is
+         * the engine's `DebugDraw` channel, which is what lets one switch silence a producer that
+         * also runs in a dev build of Game.exe (F4b).
+         */
+        void DrawColliders(EditorContext& InContext);
+
         /** Center / Origin / Individual — one button that cycles and names its state. */
         void DrawPivot(EditorContext& InContext);
 

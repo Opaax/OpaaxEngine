@@ -375,6 +375,10 @@ namespace Opaax::Editor
         // IS the translate step, so the two belong in the same group.
         lTools.Add(OPAAX_ID("Snap"), NativeViewportTools::DrawSnap);
         lTools.Add(OPAAX_ID("Grid"), NativeViewportTools::DrawGrid);
+
+        // Beside Grid because it is the same KIND of control — what the viewport shows you rather
+        // than what a drag does — even though the state it flips is the engine's, not the editor's.
+        lTools.Add(OPAAX_ID("Colliders"), NativeViewportTools::DrawColliders);
         lTools.AddSeparator();
 
         lTools.Add(OPAAX_ID("Pivot"), NativeViewportTools::DrawPivot);

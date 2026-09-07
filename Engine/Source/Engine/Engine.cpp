@@ -40,6 +40,7 @@
 #include "Engine/Subsystems/Resources/Types/Font/FontFamilyResource.h" // registered as a native format
 #include "World/Components/TextComponent.h"
 #include "World/Components/SpriteAnimatorComponent.h"
+#include "World/Systems/ColliderDebugSubsystem.h"
 #include "World/Systems/PhysicsSubsystem.h"
 #include "World/Systems/SpriteAnimationSubsystem.h"
 
@@ -119,6 +120,11 @@ namespace Opaax
         // Also Play-only, and for the same reason: it MOVES authored transforms, which an Edit
         // world must never have done to it.
         m_Registries.WorldSubsystems().Register<PhysicsSubsystem>(OPAAX_ID("Physics"));
+
+        // NO ShouldCreate — the first native subsystem without one, deliberately. A collider has
+        // to be visible while you AUTHOR it, which is exactly when physics does not exist. What
+        // switches it off is the debug CHANNEL, not the world's mode.
+        m_Registries.WorldSubsystems().Register<ColliderDebugSubsystem>(OPAAX_ID("ColliderDebug"));
     }
 
     void Engine::RegisterNativeSubsystems()

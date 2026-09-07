@@ -7,6 +7,9 @@
 #include "Editor/Operation/EditorGizmo.hpp"
 #include "Editor/Operation/EditorViewport.hpp"   // the grid toggle lives on the viewport (③b)
 
+#include "Application/Services/IEngine.h"   // GetDebugDraw — the collider toggle's real subject
+#include "Renderer/DebugDraw.h"
+
 #include <imgui.h>
 
 #include <cstdio>   // snprintf — the pivot button's state-carrying label
@@ -95,6 +98,28 @@ namespace Opaax::Editor::NativeViewportTools
         {
             ImGui::SetTooltip("Show a grid at the TRANSLATE snap step.\n"
                               "It coarsens by decades as you zoom out.");
+        }
+    }
+
+    void DrawColliders(EditorContext& InContext)
+    {
+        // The state lives on the ENGINE's DebugDraw, not on EditorViewport beside the grid: the
+        // producer is a world subsystem that also runs in a dev Game.exe, and F4b's whole point is
+        // that the toggle sits outside the producer rather than inside one host's UI.
+        DebugDraw& lDebug = InContext.Engine.GetDebugDraw();
+
+        const bool bVisible = lDebug.IsChannelEnabled(DebugChannels::Physics);
+
+        if (ImguiWidgets::ToggleButton("Colliders", bVisible))
+        {
+            lDebug.SetChannelEnabled(DebugChannels::Physics, !bVisible);
+        }
+
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("Outline every ColliderComponent.\n"
+                              "Green blocks, yellow passes through.\n"
+                              "Drawn while editing, not only while playing.");
         }
     }
 

@@ -291,3 +291,211 @@ TEST_CASE("MakeOutlineInnerHalf: a MIRRORED size is the same hole, not a solid q
     CHECK(lMirrored.y == doctest::Approx(lPositive.y));
     CHECK(lMirrored.x == doctest::Approx(0.4f));
 }
+
+// =============================================================================
+// Channels — the central toggle (F4b), landed with ⑦-A P3's second producer
+// =============================================================================
+
+TEST_CASE("DebugDraw: an unknown channel is ENABLED, so a new producer is visible by default")
+{
+    const DebugDraw lDebug;
+
+    CHECK(lDebug.IsChannelEnabled(DebugChannels::Default));
+    CHECK(lDebug.IsChannelEnabled(DebugChannels::Physics));
+    CHECK(lDebug.IsChannelEnabled(OPAAX_ID("SomethingNobodyHasWrittenYet")));
+}
+
+TEST_CASE("DebugDraw: a disabled channel drops the submission, it does not queue it")
+{
+    DebugDraw lDebug;
+    lDebug.SetChannelEnabled(DebugChannels::Physics, false);
+
+    lDebug.DrawLine({ 0.f, 0.f }, { 1.f, 1.f }, { 1.f, 1.f, 1.f, 1.f }, 1.f,
+                    ERenderLayer::Debug, DebugChannels::Physics);
+    lDebug.DrawBox({ 0.f, 0.f }, { 10.f, 10.f }, { 1.f, 1.f, 1.f, 1.f }, 1.f,
+                   ERenderLayer::Debug, DebugChannels::Physics);
+    lDebug.DrawCircle({ 0.f, 0.f }, 10.f, { 1.f, 1.f, 1.f, 1.f }, 1.f,
+                      ERenderLayer::Debug, DebugChannels::Physics);
+
+    // Filtered at SUBMIT, so a silenced channel costs no memory at all — not merely no pixels.
+    CHECK(lDebug.IsEmpty());
+}
+
+TEST_CASE("DebugDraw: disabling one channel leaves the others alone")
+{
+    DebugDraw lDebug;
+    lDebug.SetChannelEnabled(DebugChannels::Physics, false);
+
+    lDebug.DrawLine({ 0.f, 0.f }, { 1.f, 1.f }, { 1.f, 1.f, 1.f, 1.f });   // Default channel
+    lDebug.DrawLine({ 0.f, 0.f }, { 1.f, 1.f }, { 1.f, 1.f, 1.f, 1.f }, 1.f,
+                    ERenderLayer::Debug, DebugChannels::Physics);
+
+    CHECK(lDebug.GetLines().size() == 1u);
+
+    // And re-enabling restores it, rather than being a one-way switch.
+    lDebug.SetChannelEnabled(DebugChannels::Physics, true);
+    lDebug.DrawLine({ 0.f, 0.f }, { 1.f, 1.f }, { 1.f, 1.f, 1.f, 1.f }, 1.f,
+                    ERenderLayer::Debug, DebugChannels::Physics);
+
+    CHECK(lDebug.GetLines().size() == 2u);
+}
+
+TEST_CASE("DebugDraw: Clear drops the queues and KEEPS the channel settings")
+{
+    DebugDraw lDebug;
+    lDebug.SetChannelEnabled(DebugChannels::Physics, false);
+
+    lDebug.DrawLine({ 0.f, 0.f }, { 1.f, 1.f }, { 1.f, 1.f, 1.f, 1.f });
+    lDebug.Clear();
+
+    // A toggle is a SETTING, not per-frame state: a channel that re-enabled itself every frame
+    // would flicker back on one frame after being switched off.
+    CHECK(lDebug.IsEmpty());
+    CHECK_FALSE(lDebug.IsChannelEnabled(DebugChannels::Physics));
+}
+
+// =============================================================================
+// Outline geometry — pure, so it cannot pass by being drawn plausibly
+// =============================================================================
+
+TEST_CASE("BuildCircleOutline: every point is EXACTLY the radius from the centre")
+{
+    TDynArray<Vector2F> lPoints;
+    BuildCircleOutline({ 30.f, -12.f }, 25.f, 24, lPoints);
+
+    REQUIRE(lPoints.size() == 24u);
+
+    for (const Vector2F& lPoint : lPoints)
+    {
+        const Vector2F lDelta = lPoint - Vector2F{ 30.f, -12.f };
+        CHECK(std::sqrt(lDelta.x * lDelta.x + lDelta.y * lDelta.y) == doctest::Approx(25.f));
+    }
+}
+
+TEST_CASE("BuildCircleOutline: consecutive points are EVENLY spaced")
+{
+    TDynArray<Vector2F> lPoints;
+    BuildCircleOutline({ 0.f, 0.f }, 10.f, 12, lPoints);
+
+    REQUIRE(lPoints.size() == 12u);
+
+    // The closing edge is implied, so the wrap-around span is measured too — an off-by-one in the
+    // step would leave exactly that one gap wrong while every other span looked perfect.
+    const Vector2F lFirstSpan = lPoints[1] - lPoints[0];
+    const float    lExpected  = std::sqrt(lFirstSpan.x * lFirstSpan.x + lFirstSpan.y * lFirstSpan.y);
+
+    for (size_t i = 0; i < lPoints.size(); ++i)
+    {
+        const Vector2F lSpan = lPoints[(i + 1) % lPoints.size()] - lPoints[i];
+        CHECK(std::sqrt(lSpan.x * lSpan.x + lSpan.y * lSpan.y) == doctest::Approx(lExpected));
+    }
+}
+
+TEST_CASE("BuildCircleOutline: fewer than three segments encloses nothing, so it yields nothing")
+{
+    TDynArray<Vector2F> lPoints;
+
+    BuildCircleOutline({ 0.f, 0.f }, 10.f, 2, lPoints);
+    CHECK(lPoints.empty());
+
+    BuildCircleOutline({ 0.f, 0.f }, 10.f, 0, lPoints);
+    CHECK(lPoints.empty());
+}
+
+TEST_CASE("BuildCapsuleOutline: every point is the radius from the cap it belongs to")
+{
+    const Vector2F lC1{ 0.f, -40.f };
+    const Vector2F lC2{ 0.f, 40.f };
+
+    TDynArray<Vector2F> lPoints;
+    BuildCapsuleOutline(lC1, lC2, 20.f, 12, lPoints);
+
+    REQUIRE(lPoints.size() == 24u);
+
+    for (const Vector2F& lPoint : lPoints)
+    {
+        const Vector2F lD1 = lPoint - lC1;
+        const Vector2F lD2 = lPoint - lC2;
+
+        const float lDist1 = std::sqrt(lD1.x * lD1.x + lD1.y * lD1.y);
+        const float lDist2 = std::sqrt(lD2.x * lD2.x + lD2.y * lD2.y);
+
+        // Belonging to the NEARER cap is the whole invariant: a point that is the right distance
+        // from neither centre is on some other shape entirely.
+        const float lNearest = lDist1 < lDist2 ? lDist1 : lDist2;
+        CHECK(lNearest == doctest::Approx(20.f));
+    }
+}
+
+TEST_CASE("BuildCapsuleOutline: a capsule is never SHORTER than the span between its caps")
+{
+    TDynArray<Vector2F> lPoints;
+    BuildCapsuleOutline({ 0.f, -40.f }, { 0.f, 40.f }, 20.f, 12, lPoints);
+
+    REQUIRE_FALSE(lPoints.empty());
+
+    float lMinY = lPoints[0].y;
+    float lMaxY = lPoints[0].y;
+    for (const Vector2F& lPoint : lPoints)
+    {
+        lMinY = lPoint.y < lMinY ? lPoint.y : lMinY;
+        lMaxY = lPoint.y > lMaxY ? lPoint.y : lMaxY;
+    }
+
+    // The caps must bulge PAST their centres, or the outline would sit inside the shape it
+    // annotates — the failure that looks almost right.
+    CHECK(lMaxY > 40.f);
+    CHECK(lMinY < -40.f);
+
+    // But NOT to exactly 60. The polygon is INSCRIBED: its vertices sit on the circle, and the
+    // apex at 60 falls BETWEEN two of them, so the extent is radius*cos(halfStep) — about 59.8
+    // here. Asserting 60 exactly is what this test did first, and the code was right.
+    // Both bounds, so the approximation can be neither absent nor circumscribed.
+    CHECK(lMaxY <= 60.f);
+    CHECK(lMinY >= -60.f);
+    CHECK(lMaxY == doctest::Approx(60.f).epsilon(0.02));
+    CHECK(lMinY == doctest::Approx(-60.f).epsilon(0.02));
+}
+
+TEST_CASE("BuildCapsuleOutline: coincident caps ARE a circle, not a zero-length capsule")
+{
+    TDynArray<Vector2F> lPoints;
+    BuildCapsuleOutline({ 5.f, 5.f }, { 5.f, 5.f }, 15.f, 12, lPoints);
+
+    REQUIRE(lPoints.size() == 24u);
+
+    for (const Vector2F& lPoint : lPoints)
+    {
+        const Vector2F lDelta = lPoint - Vector2F{ 5.f, 5.f };
+        CHECK(std::sqrt(lDelta.x * lDelta.x + lDelta.y * lDelta.y) == doctest::Approx(15.f));
+    }
+}
+
+TEST_CASE("DrawCircle queues one line PER SEGMENT, closing the loop")
+{
+    DebugDraw lDebug;
+    lDebug.DrawCircle({ 0.f, 0.f }, 10.f, { 1.f, 1.f, 1.f, 1.f }, 1.f,
+                      ERenderLayer::Debug, DebugChannels::Default, 8);
+
+    // Eight points make eight segments, not seven: the last joins back to the first.
+    CHECK(lDebug.GetLines().size() == 8u);
+    CHECK(lDebug.GetBoxes().empty());   // a circle is lines, never a box entry
+
+    // The loop is closed — the last segment's end is the first segment's start.
+    const TDynArray<DebugLine>& lLines = lDebug.GetLines();
+    CHECK(lLines.back().End.x == doctest::Approx(lLines.front().Start.x));
+    CHECK(lLines.back().End.y == doctest::Approx(lLines.front().Start.y));
+}
+
+TEST_CASE("DrawBox carries its ROTATION through to the queue")
+{
+    DebugDraw lDebug;
+    lDebug.DrawBox({ 0.f, 0.f }, { 10.f, 10.f }, { 1.f, 1.f, 1.f, 1.f }, 1.f,
+                   ERenderLayer::Debug, DebugChannels::Default, 1.25f);
+
+    REQUIRE(lDebug.GetBoxes().size() == 1u);
+
+    // The field the drain site used to hardcode to 0, which left a rotated collider's outline
+    // axis-aligned while the shape it annotated was not.
+    CHECK(lDebug.GetBoxes()[0].RotationRad == doctest::Approx(1.25f));
+}

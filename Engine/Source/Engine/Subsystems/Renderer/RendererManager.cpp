@@ -314,7 +314,7 @@ namespace Opaax
             for (const DebugBox& lBox : m_DebugDraw.GetBoxes())
             {
                 lRenderer.DrawQuadOutline(lBox.Center, lBox.Size, lBox.Color, lBox.Thickness,
-                                          0.f, lBox.Layer);
+                                          lBox.RotationRad, lBox.Layer);
             }
         }
 
