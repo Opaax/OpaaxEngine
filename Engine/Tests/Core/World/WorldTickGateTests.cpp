@@ -68,7 +68,7 @@ namespace
             TheWorld = Worlds.CreateWorld("Gated", InMode);
             REQUIRE(TheWorld != nullptr);
 
-            TheWorld->SetContext(WorldContext{*TheWorld, Resources, IPaths::Null(), Events, Input, Config, Debug, &Profiler});
+            TheWorld->SetContext(WorldContext{*TheWorld, Resources, IPaths::Null(), Events, Input, Config, /*Actions*/ nullptr, Debug, &Profiler});
             TheWorld->GetSubsystems().RegisterSubsystem<CounterSubsystem>(std::ref(*TheWorld->GetContext()));
             TheWorld->GetSubsystems().StartupAll();
 

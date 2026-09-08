@@ -3180,6 +3180,90 @@ no "down" to hold.
 
 ---
 
+## IM — Input mapping (landed ⑦-B B1/B2, 2026-09-08)
+
+**IM1 — The chain has TWO halves, and the seam is "physical" vs "meaning".** `InputManager`
+(**§IN**) is the raw end: what is held, what changed this frame, physical codes only — its own
+header says *"there is no 'Jump' in here"*. `InputMappingSubsystem` is where there is one. It reads
+`InputManager` once per frame and publishes named action values. Nothing was changed on the raw
+side to make this work.
+
+**IM2 — It is SESSION-scoped, and that requirement chose the tier.** A pushed mapping context must
+survive level travel, and a UI context must outlive any single world, so it lives on the
+GameInstance (**GI1**) rather than on a world. The consequence that matters: a context **cannot
+leak across a PIE cycle**, because Stop destroys the whole game instance rather than resetting
+anything (**GI6**). It ticks before every world (**BO4d**), so this frame's answers are published
+before any gameplay subsystem reads them.
+
+**IM3 — `InputActionValue` is a TAGGED VECTOR, not a variant.** Unreal's `FInputActionValue` is the
+same shape for the same reason: every modifier is then plain `Vector2F` arithmetic. A
+`std::variant` would put a `std::visit` in every modifier — roughly three times the code — to
+express what the vector already expresses. The type tag says what a reader asked for; it never
+changes how the value is stored.
+
+**IM4 — The TRIGGER is named by the BINDING, not by the mapping.** Unreal splits `UInputTrigger`
+(on the mapping) from `ETriggerEvent` (on the binding); collapsing them to one concept on the
+binding side is what `Bind(action, trigger, this, &T::Fn)` asks for, and it made the asset
+*smaller* — a key mapping carries no trigger and no hold time at all. `HoldSeconds` belongs to the
+ACTION, because "Crouch is a half-second hold" is a property of the action and two authoring sites
+would be **L30**'s two-sources trap.
+
+**IM5 — Modifiers exist at TWO levels, and the second one is not optional.** A binding's modifiers
+transform ONE key's value; an action's transform the SUM of every binding that fed it.
+`Normalize` is why the second level exists: a WASD composite is four bindings each contributing a
+unit vector, so normalizing them individually changes nothing and the diagonal still comes out
+1.41x too fast. **Only the total can be clamped.** *Found by writing the sample asset, against a
+B1 test whose name claimed "the diagonal is not faster" while asserting `(1, 1)` — the test passed
+and the name was a lie.*
+
+**IM6 — Consumption is per KEY, walking contexts highest priority first.** That is what makes a
+menu context *swallow* `Jump` rather than merely outrank it. Priority lives on the ASSET, not on
+the `AddContext` call (Unreal puts it on the call) — one source, with an override parameter
+available the day a caller wants one. `AddContext` is **idempotent by name**: two Play worlds
+coexist during a level swap, so the second world's control subsystem re-adds the same context
+every time, and doubling the stack would double every binding's contribution.
+
+**IM7 — Gameplay BINDS, and `UnbindAll(this)` in the owner's `Shutdown` is the contract.** The
+whole callback layer is four `TMulticastDelegate`s per action — `AddMember` returns a handle,
+`RemoveAll(owner)` bulk-unbinds by the `this` that was passed, and `Broadcast` iterates a snapshot,
+so all of it already existed. A world subsystem dies with its world at PIE Stop while the
+GameInstance is still alive for one more step (**BO4d**), so a binding left behind is a dangling
+call — which is exactly what `TMulticastDelegate`'s own header warns about. The instrument is
+`Shutdown` logging `N binding(s) still registered`: forgetting the call is a **number**, not a
+crash three frames later. `GetValue` remains available and reads the same table — one table, two
+readers, not two mechanisms.
+
+**IM8 — A bound handler fires for EVERY listener, so a world-scoped one must ask whether its world
+is active.** Bindings outlive worlds (**IM2**) while only the active world ticks, so a callback
+reaches the outgoing world's subsystem too during a level swap. **World MODE cannot answer this** —
+both worlds in a swap are `Play`; `World::IsActive()` can, and it exists because `OnActive` /
+`OnDesactive` were already called at every transition and only logged. Harmless for a handler that
+writes a member its own `Update` reads; **not** harmless for the first one that spawns something.
+The engine cannot enforce it: a delegate's owner is an opaque `void*`, so the subsystem has no idea
+which world a handler belongs to.
+
+**IM9 — An action is an ASSET; a mapping references it BY PATH and gameplay binds it BY NAME.**
+One `.opaaxaction` per action (the user's call, Unreal's shape). The mapping entry holds a
+`TResourcePath<InputActionResource>` — that is what makes the editor field a resource picker rather
+than free text a typo breaks — and the NAME lives in the action asset, because two contexts
+pointing at one action must agree on what it is called. Resolution happens **once**, at
+`AddContext`, never per key per frame; that is the only reason the runtime and asset forms differ.
+Each referenced action is registered on first sight, so a context is self-sufficient.
+
+**IM10 — `EKeyCode` serializes as a LABEL, and the name table is an X-macro list.**
+`"Key": "Space"`, never `65` — a mapping file is hand-editable, and the engine writes labels
+everywhere else (`OpaaxEnumJson.h`). `InputKeyCodeList.h` is included several times with the macro
+redefined to generate `ToString` and `TEnumValues<EKeyCode>` from one source — `CollisionChannel.h`'s
+shape, for its reason. It is NOT the editor's `KeyName` (`InputPanel.cpp`), which abbreviates
+("Esc", "LMB") for display; abbreviations are right in a panel and wrong in a file format.
+
+**IM11 — Gamepad bindings are REFUSED at `AddContext`, loudly.** The codes are reserved in
+`EKeyCode` but GLFW exposes pads by polling and that feed does not exist (**IN7**). Accepting one
+would look supported and never fire, which is the failure mode this engine refuses. The format
+absorbs gamepad at zero cost the day the feed lands — only the refusal goes away.
+
+---
+
 ## WM — World model (World > Level > Map)
 
 Settled with the user 2026-07-28, superseding the retired `Scene` vocabulary (**X4**); the World/Level

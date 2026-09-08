@@ -9,6 +9,7 @@ namespace Opaax
     class FrameProfiler;
     class IPaths;
     class InputManager;
+    class InputMappingSubsystem;
     struct EngineConfigData;
 
     // =============================================================================
@@ -78,6 +79,21 @@ namespace Opaax
          * reader (Render.Interpolation) wants a different part of it.
          */
         const EngineConfigData& Config;
+
+        /**
+         * This frame's ACTIONS — the layer above Input that knows what keys MEAN (§IM).
+         *
+         * A POINTER, and NULL IS NORMAL: it belongs to the GameInstance, and an Edit world has no
+         * game (GI1). It therefore follows Profiler's rule rather than the guarded members' —
+         * deliberately absent from CreateSubsystemsFor's null check, because "there is no game" is
+         * a supported state and not a boot failure. A Play-only subsystem can dereference it
+         * safely; anything else must ask.
+         *
+         * Arrived by the growth clause below (⑦-B B2), for PlayerControlSubsystem: a control
+         * system binds Jump rather than polling Space, and a world subsystem has no other route
+         * to the session without reaching the locator, which D3 forbids.
+         */
+        InputMappingSubsystem* Actions;
 
         /**
          * Per-frame debug lines. IMMEDIATE MODE by contract (F4): nothing is retained, so a

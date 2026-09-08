@@ -92,8 +92,17 @@ namespace Opaax
         {
             if (lExisting.Name == InContext.Name)
             {
-                OPAAX_LOG(LogInputEvaluator, Warn, "AddContext '{}' — already added.", InContext.Name);
-                return false;
+                // IDEMPOTENT, and true is the honest answer: the postcondition the caller wants —
+                // "this context is active" — already holds. Adding it twice would double every
+                // binding, so refusing the WORK is right; refusing the CALL is not.
+                //
+                // Trace, not Warn: two Play worlds coexist during a level swap (OpenLevel creates
+                // the new one before destroying the old), so each world's control subsystem adds
+                // the same context and the second one lands here EVERY time. A warning on a
+                // routine path is how a log stops being read.
+                OPAAX_LOG(LogInputEvaluator, Trace, "AddContext '{}' — already active, nothing to do.",
+                          InContext.Name);
+                return true;
             }
         }
 
@@ -224,6 +233,11 @@ namespace Opaax
         {
             ActionEntry&     lEntry = m_Actions[lIdx];
             InputActionState& lState = lEntry.State;
+
+            // AFTER the sum, which is the whole point: a binding's own modifiers see one key, and
+            // Normalize on four unit contributions changes nothing. Only here can the diagonal of
+            // a WASD composite be clamped to 1.
+            lState.Value.Value = InputModifiers::ApplyAll(lState.Value.Value, lEntry.Action.Modifiers);
 
             lState.bTriggered = lState.Value.AsBool();
             lState.bStarted   = lState.bTriggered && !lWasActuated[lIdx];

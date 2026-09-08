@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
+#include "Core/Reflection/OpaaxEnum.h"   // OPAAX_ENUM_VALUES — the two enums below stamp it
 #include "Core/Maths/MathTypes.h"
 #include "Core/String/OpaaxStringID.hpp"
 #include "Engine/Input/InputActionValue.h"
@@ -32,11 +32,28 @@ namespace Opaax
         Hold
     };
 
-    OPAAX_API const char* ToString(EInputTrigger InTrigger) noexcept;
+    /** I11: the mapping lives with the enum, found by ADL. */
+    inline const char* ToString(const EInputTrigger InTrigger) noexcept
+    {
+        switch (InTrigger)
+        {
+        case EInputTrigger::Started:   return "Started";
+        case EInputTrigger::Triggered: return "Triggered";
+        case EInputTrigger::Completed: return "Completed";
+        case EInputTrigger::Hold:      return "Hold";
+        }
+
+        return "Triggered";
+    }
 
     /** Every trigger phase, for iterating the four delegate slots. */
     inline constexpr Uint8 INPUT_TRIGGER_COUNT = 4;
+}
 
+OPAAX_ENUM_VALUES(Opaax::EInputTrigger, Started, Triggered, Completed, Hold)
+
+namespace Opaax
+{
     // =============================================================================
     // EInputModifier — how one binding's raw value is transformed before it reaches the
     //   action. A CLOSED set, applied in the order the mapping lists them: DeadZone-then-
@@ -61,8 +78,26 @@ namespace Opaax
         Normalize
     };
 
-    OPAAX_API const char* ToString(EInputModifier InModifier) noexcept;
+    /** I11: the mapping lives with the enum, found by ADL. */
+    inline const char* ToString(const EInputModifier InModifier) noexcept
+    {
+        switch (InModifier)
+        {
+        case EInputModifier::Negate:    return "Negate";
+        case EInputModifier::Swizzle:   return "Swizzle";
+        case EInputModifier::DeadZone:  return "DeadZone";
+        case EInputModifier::Scalar:    return "Scalar";
+        case EInputModifier::Normalize: return "Normalize";
+        }
 
+        return "Scalar";
+    }
+}
+
+OPAAX_ENUM_VALUES(Opaax::EInputModifier, Negate, Swizzle, DeadZone, Scalar, Normalize)
+
+namespace Opaax
+{
     // =============================================================================
     // InputModifierData — one step of a binding's modifier pipeline.
     //
@@ -79,21 +114,31 @@ namespace Opaax
         Vector2F Scale{1.f, 1.f};
 
         /** DeadZone only. Below Lower is zero, above Upper is one, between is rescaled. */
-        float DeadZoneLower = 0.2f;
+        float DeadZoneLower = 0.25f;
         float DeadZoneUpper = 1.0f;
     };
 
     // =============================================================================
     // InputAction — what an action IS, resolved. Name, shape, and how long a Hold takes.
     //
-    //   HoldSeconds lives HERE and not on the binding: "Crouch is a 0.4s hold" is a property
+    //   HoldSeconds lives HERE and not on the binding: "Crouch is a half-second hold" is a property
     //   of the action, and putting it in both places is the two-sources trap (L30).
     // =============================================================================
     struct InputAction
     {
         OpaaxStringID   Name;
         EInputValueType ValueType   = EInputValueType::Bool;
-        float           HoldSeconds = 0.4f;
+        float           HoldSeconds = 0.5f;
+
+        /**
+         * Applied to the SUM of every binding that fed this action, after they are added together.
+         *
+         * The level a binding's own modifiers cannot reach. Normalize is the reason it exists: a
+         * WASD composite is four bindings each contributing a unit vector, so normalizing them
+         * INDIVIDUALLY changes nothing and the diagonal still comes out 1.41x too fast. Only the
+         * total can be clamped, and only here.
+         */
+        TDynArray<InputModifierData> Modifiers;
     };
 
     // =============================================================================

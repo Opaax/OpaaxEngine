@@ -10,6 +10,8 @@
 //   and is driven through its own feed — OnKeyPressed / OnKeyReleased / EndFrame. No fake input
 //   source was invented for testability: an instrument that shares no code with the thing it
 //   measures is the point of [[L21]], and here the real feed IS available.
+#include <cmath>
+
 #include <doctest.h>
 
 #include "Application/Services/IPaths.h"
@@ -207,10 +209,36 @@ TEST_SUITE("InputActionEvaluator — actions and contexts")
         CHECK(lEval.GetContextAt(0)->Name == Name("Menu"));
         CHECK(lEval.GetContextAt(1)->Name == Name("Gameplay"));
 
-        CHECK_FALSE(lEval.AddContext(lHigh));   // already added
+        // IDEMPOTENT: true because the postcondition holds, and the stack must NOT grow — a level
+        // swap has two Play worlds adding the same context, and doubling it would double every
+        // binding's contribution to its action.
+        CHECK(lEval.AddContext(lHigh));
+        CHECK(lEval.GetContextCount() == 2);
+
         CHECK(lEval.RemoveContext(Name("Menu")));
         CHECK(lEval.GetContextCount() == 1);
         CHECK_FALSE(lEval.RemoveContext(Name("Menu")));
+    }
+
+    TEST_CASE("Re-adding a context does not double its contribution")
+    {
+        InputActionEvaluator lEval;
+        InputManager         lInput;
+        lEval.RegisterAction(MakeAction("Move", EInputValueType::Axis1D));
+
+        InputMappingContext lContext;
+        lContext.Name = Name("Gameplay");
+        lContext.Bindings.emplace_back(Bind("Move", EKeyCode::D));
+
+        CHECK(lEval.AddContext(lContext));
+        CHECK(lEval.AddContext(lContext));   // the second Play world during a level swap
+
+        lInput.OnKeyPressed(EKeyCode::D, false);
+        Step(lEval, lInput);
+
+        // 1, not 2. This is the assertion the idempotence is FOR — a doubled stack would read 2
+        // and the character would walk at twice the speed after every level change.
+        CHECK(lEval.GetValue(Name("Move")).AsAxis1D() == doctest::Approx(1.f));
     }
 
     TEST_CASE("A binding naming an unregistered action is SKIPPED, not silently dead")
@@ -357,7 +385,11 @@ TEST_SUITE("InputActionEvaluator — composites, priority and consumption")
     {
         InputActionEvaluator lEval;
         InputManager         lInput;
-        lEval.RegisterAction(MakeAction("Move", EInputValueType::Axis2D));
+
+        // Normalize on the ACTION, not on the bindings — see the diagonal check below.
+        InputAction lMove = MakeAction("Move", EInputValueType::Axis2D);
+        lMove.Modifiers.emplace_back(Norm());
+        lEval.RegisterAction(lMove);
 
         // The Unreal composite, with no composite concept in the format: raw rides in x, and
         // Negate/Swizzle move it where it belongs.
@@ -385,8 +417,14 @@ TEST_SUITE("InputActionEvaluator — composites, priority and consumption")
 
         lInput.OnKeyPressed(EKeyCode::W, false);
         Step(lEval, lInput);
-        CHECK(lEval.GetValue(Name("Move")).AsAxis2D().x == doctest::Approx(1.f));
-        CHECK(lEval.GetValue(Name("Move")).AsAxis2D().y == doctest::Approx(1.f));
+
+        // THE DIAGONAL. Each binding contributes a unit vector, so a Normalize on the BINDINGS
+        // would change nothing — only the action-level modifier can clamp the sum. Without it
+        // this reads (1, 1), magnitude 1.41, and the player moves faster diagonally.
+        const Vector2F lDiagonal = lEval.GetValue(Name("Move")).AsAxis2D();
+        const float    lLength   = std::sqrt(lDiagonal.x * lDiagonal.x + lDiagonal.y * lDiagonal.y);
+        CHECK(lLength == doctest::Approx(1.f));
+        CHECK(lDiagonal.x == doctest::Approx(lDiagonal.y));
 
         // Opposite keys cancel, which is the accumulate-then-read model working.
         lInput.OnKeyPressed(EKeyCode::A, false);

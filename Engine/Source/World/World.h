@@ -120,9 +120,22 @@ namespace Opaax
         
         /***/
         void OnActive();
-        
+
         /***/
         void OnDesactive();
+
+        /**
+         * Whether this is the world WorldManager currently considers active.
+         *
+         * Worlds COEXIST — a PIE clone beside the edit world, and briefly two Play worlds during
+         * a level swap, since OpenLevel creates the new one before destroying the old. Only the
+         * active one ticks, so anything that reacts OUTSIDE the tick has to ask.
+         *
+         * The concrete reader is a world subsystem bound to input: bindings live on the
+         * GameInstance and outlive any single world, so a callback reaches every listener
+         * regardless of which world is active (§IM).
+         */
+        bool IsActive() const noexcept { return m_bActive; }
         
         /***/
         void Clear() noexcept;
@@ -288,5 +301,9 @@ namespace Opaax
         EWorldMode     m_Mode = EWorldMode::Play; // const-by-convention: set in the ctor, never after
         Uint64         m_EntityCount = 0;
         Uint64         m_Revision    = 0;   // see GetRevision — a gate, not a dirty flag
+
+        // Driven by OnActive/OnDesactive, which WorldManager calls at every transition. A world
+        // that has been created but never activated is correctly false.
+        bool           m_bActive     = false;
     };
 }

@@ -55,7 +55,7 @@ namespace
             REQUIRE(TheWorld != nullptr);
 
             TheWorld->SetContext(WorldContext{ *TheWorld, Resources, IPaths::Null(), Events,
-                                               Input, Config, Debug, &Profiler });
+                                               Input, Config, /*Actions*/ nullptr, Debug, &Profiler });
 
             // std::ref is load-bearing — WS4. By value, the context would be copied into a factory
             // lambda that StartupAll then destroys.

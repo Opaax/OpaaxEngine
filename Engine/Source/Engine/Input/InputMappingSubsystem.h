@@ -71,6 +71,21 @@ namespace Opaax
          */
         bool AddContext(const InputMappingContext& InContext);
 
+        /**
+         * Load a `.opaaxinputmap`, resolve every action it references, and push it under InName.
+         *
+         * THE ASSET ROUTE, and where the two forms of a mapping meet: on disk an entry names its
+         * action by PATH (so the editor field is a resource picker), and the evaluator needs it by
+         * NAME. Resolution happens HERE, once per AddContext — never per key per frame.
+         *
+         * Each referenced action is registered on first sight, so a context is self-sufficient:
+         * nothing has to declare the actions before adding the map that uses them.
+         *
+         * @param InName      What RemoveContext will ask for. The asset carries no name of its own.
+         * @param InAssetPath Asset-relative ("Input/Gameplay.opaaxinputmap").
+         */
+        bool AddContextAsset(OpaaxStringID InName, const OpaaxString& InAssetPath);
+
         /** @return true when a context of that name was pushed and is now gone. */
         bool RemoveContext(OpaaxStringID InName);
 

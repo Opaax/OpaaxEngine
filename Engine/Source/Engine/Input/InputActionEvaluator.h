@@ -60,7 +60,10 @@ namespace Opaax
          * in EKeyCode but have no feed (IN7), and a binding that silently never fires is the
          * failure this engine refuses.
          *
-         * @return true when the context was added.
+         * IDEMPOTENT by name. Two Play worlds coexist during a level swap, so each one's control
+         * subsystem adds the same context and the second call is routine, not a mistake.
+         *
+         * @return true when the context is active — whether this call is what added it or not.
          */
         bool AddContext(const InputMappingContext& InContext);
 

@@ -211,7 +211,7 @@ TEST_CASE("world subsystem registry: CreateInto constructs from the context and 
     EngineConfigData lConfig;
     InputManager     lInput;
 
-    WorldContext lContext{lWorld, lResources, IPaths::Null(), lEvents, lInput, lConfig, lDebug, &lProfiler};
+    WorldContext lContext{lWorld, lResources, IPaths::Null(), lEvents, lInput, lConfig, /*Actions*/ nullptr, lDebug, &lProfiler};
 
     const IWorldSubsystemEntry* lEntry = lRegistry.FindByName(Name("Always"));
     REQUIRE(lEntry != nullptr);

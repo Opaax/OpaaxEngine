@@ -60,7 +60,7 @@ namespace
             REQUIRE(TheWorld != nullptr);
 
             TheWorld->SetContext(WorldContext{ *TheWorld, Resources, IPaths::Null(), Events,
-                                               Input, Config, Debug, &Profiler });
+                                               Input, Config, /*Actions*/ nullptr, Debug, &Profiler });
             TheWorld->GetSubsystems().RegisterSubsystem<PhysicsSubsystem>(std::ref(*TheWorld->GetContext()));
             TheWorld->GetSubsystems().StartupAll();
 

@@ -1,0 +1,7 @@
+{
+    "Description": "Toggle the Hero mover between its Ground and Fly modes.",
+    "HoldSeconds": 0.5,
+    "Modifiers": [],
+    "Name": "SwitchMode",
+    "ValueType": "Bool"
+}

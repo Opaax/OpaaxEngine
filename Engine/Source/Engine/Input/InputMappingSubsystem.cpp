@@ -1,6 +1,11 @@
 #include "Engine/Input/InputMappingSubsystem.h"
 
+#include "Application/Services/IPaths.h"
 #include "Engine/GameInstance/GameInstanceContext.h"
+#include "Engine/Subsystems/Input/InputKeyNames.h"   // ToString(EKeyCode) for the skip warnings
+#include "Engine/Subsystems/Resources/ResourceManager.h"
+#include "Engine/Subsystems/Resources/Types/Input/InputActionResource.h"
+#include "Engine/Subsystems/Resources/Types/Input/InputMappingContextResource.h"
 #include "World/WorldManager.h"
 
 namespace Opaax
@@ -21,6 +26,79 @@ namespace Opaax
     bool InputMappingSubsystem::AddContext(const InputMappingContext& InContext)
     {
         return m_Evaluator.AddContext(InContext);
+    }
+
+    bool InputMappingSubsystem::AddContextAsset(OpaaxStringID InName, const OpaaxString& InAssetPath)
+    {
+        const OpaaxString lAbsolute = m_Context->Paths.AssetToAbsolute(InAssetPath);
+
+        const ResourceRef<InputMappingContextResource> lMapRef =
+            m_Context->Resources.Load<InputMappingContextResource>(lAbsolute.CStr());
+
+        const InputMappingContextResource* lMap = lMapRef.Get();
+        if (lMap == nullptr)
+        {
+            OPAAX_LOG(LogInputMapping, Error, "AddContextAsset '{}' — '{}' did not load.",
+                      InName, InAssetPath.CStr());
+            return false;
+        }
+
+        InputMappingContext lContext;
+        lContext.Name     = InName;
+        lContext.Priority = lMap->Data.Priority;
+
+        for (const InputMappingEntry& lEntry : lMap->Data.Mappings)
+        {
+            if (lEntry.Action.IsEmpty())
+            {
+                OPAAX_LOG(LogInputMapping, Warn, "Context '{}' — a mapping for key '{}' names no action. Skipped.",
+                          InName, ToString(lEntry.Key));
+                continue;
+            }
+
+            const OpaaxString lActionAbs = m_Context->Paths.AssetToAbsolute(lEntry.Action.Path);
+
+            const ResourceRef<InputActionResource> lActionRef =
+                m_Context->Resources.Load<InputActionResource>(lActionAbs.CStr());
+
+            const InputActionResource* lAction = lActionRef.Get();
+
+            // A Placeholder action has no name, which is exactly how a missing file shows up here.
+            if (lAction == nullptr || !lAction->Data.Name.IsValid())
+            {
+                OPAAX_LOG(LogInputMapping, Warn,
+                          "Context '{}' — action '{}' did not load or has no name. Skipped.",
+                          InName, lEntry.Action.Path.CStr());
+                continue;
+            }
+
+            // Registered on FIRST SIGHT, so a context is self-sufficient — nothing has to declare
+            // the actions before the map that uses them. A second context naming the same action
+            // finds it already there and reuses the same definition.
+            if (m_Evaluator.FindAction(lAction->Data.Name) == nullptr)
+            {
+                InputAction lDefinition;
+                lDefinition.Name        = lAction->Data.Name;
+                lDefinition.ValueType   = lAction->Data.ValueType;
+                lDefinition.HoldSeconds = lAction->Data.HoldSeconds;
+                lDefinition.Modifiers   = lAction->Data.Modifiers;
+
+                m_Evaluator.RegisterAction(lDefinition);
+            }
+
+            InputKeyBinding lBinding;
+            lBinding.Action    = lAction->Data.Name;
+            lBinding.Key       = lEntry.Key;
+            lBinding.Modifiers = lEntry.Modifiers;
+            lBinding.bConsume  = lEntry.bConsume;
+
+            lContext.Bindings.emplace_back(Move(lBinding));
+        }
+
+        // The refs go out of scope here on purpose: everything the evaluator needs — the name, the
+        // key, the modifier list — was COPIED above, so nothing downstream depends on the assets
+        // staying resident.
+        return m_Evaluator.AddContext(lContext);
     }
 
     bool InputMappingSubsystem::RemoveContext(OpaaxStringID InName)

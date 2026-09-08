@@ -3,6 +3,7 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Maths/MathTypes.h"
+#include "Core/Reflection/OpaaxEnum.h"
 
 namespace Opaax
 {
@@ -17,8 +18,24 @@ namespace Opaax
         Axis2D
     };
 
-    OPAAX_API const char* ToString(EInputValueType InType) noexcept;
+    /** I11: the mapping lives with the enum, found by ADL. */
+    inline const char* ToString(const EInputValueType InType) noexcept
+    {
+        switch (InType)
+        {
+        case EInputValueType::Bool:   return "Bool";
+        case EInputValueType::Axis1D: return "Axis1D";
+        case EInputValueType::Axis2D: return "Axis2D";
+        }
 
+        return "Bool";
+    }
+}
+
+OPAAX_ENUM_VALUES(Opaax::EInputValueType, Bool, Axis1D, Axis2D)
+
+namespace Opaax
+{
     // =============================================================================
     // InputActionValue — one action's value this frame.
     //

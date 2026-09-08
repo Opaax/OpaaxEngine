@@ -17,6 +17,7 @@ namespace Opaax
     class IPaths;
     struct EngineConfigData;
     class InputManager;
+    class GameInstanceManager;
 
     inline constexpr LogCategory LogWorldManager{"WorldManager"};
 
@@ -204,6 +205,11 @@ namespace Opaax
         // ⑦-A P5b — this frame's input, put into every WorldContext so a gameplay subsystem can
         // read intent without reaching the locator (D3).
         const InputManager* m_Input = nullptr;
+
+        // ⑦-B B2 — the running game, if any. Resolved per WORLD rather than cached once: a session
+        // comes and goes across PIE cycles while this manager lives the whole run, so the
+        // InputMappingSubsystem a context points at must be looked up when the world is built.
+        GameInstanceManager* m_GameInstances = nullptr;
 
         // ④ — resolved in Startup like the siblings above, put into every WorldContext, and used
         // for this manager's own tick scope. Null in a bare test manager.

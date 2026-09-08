@@ -20,6 +20,8 @@
 #include "Engine/EngineEvents.h"
 #include "Engine/GameInstance/GameInstanceManager.h"
 #include "Engine/Input/InputMappingSubsystem.h"
+#include "Engine/Subsystems/Resources/Types/Input/InputActionResource.h"
+#include "Engine/Subsystems/Resources/Types/Input/InputMappingContextResource.h"
 #include "Engine/Subsystems/Resources/ResourceManager.h"
 #include "Core/Maths/MathsStatics.h"
 #include "Subsystems/Camera/CameraManager.h"
@@ -125,6 +127,12 @@ namespace Opaax
         // reusable across entities) and a Mover is the LIBRARY that names them.
         m_Registries.Resources().Register<MoveModeResource>(OPAAX_ID("MoveMode"));
         m_Registries.Resources().Register<MoverResource>(OPAAX_ID("Mover"));
+
+        // ⑦-B B2. An action is what gameplay BINDS; a mapping context is which keys reach it.
+        // Split so rebinding never touches the action, and one action can be driven by four keys
+        // in one context and a single key in another.
+        m_Registries.Resources().Register<InputActionResource>(OPAAX_ID("InputAction"));
+        m_Registries.Resources().Register<InputMappingContextResource>(OPAAX_ID("InputMappingContext"));
     }
 
     void Engine::RegisterNativeWorldSubsystems()

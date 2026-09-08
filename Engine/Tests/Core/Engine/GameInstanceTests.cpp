@@ -354,6 +354,32 @@ TEST_SUITE("WorldManager::DestroyWorldsOfMode")
         CHECK(lWorlds.GetWorldCount() == 1);
     }
 
+    TEST_CASE("IsActive tracks the active slot, and only ONE world holds it")
+    {
+        WorldManager lWorlds;
+
+        World* lFirst  = lWorlds.CreateWorld("First", EWorldMode::Play);
+        World* lSecond = lWorlds.CreateWorld("Second", EWorldMode::Play);
+
+        // Created is not activated — the startup world is created before anything activates it.
+        CHECK_FALSE(lFirst->IsActive());
+        CHECK_FALSE(lSecond->IsActive());
+
+        lWorlds.SetActiveWorld(lFirst);
+        CHECK(lFirst->IsActive());
+        CHECK_FALSE(lSecond->IsActive());
+
+        // The level-swap shape: both worlds exist, the active slot moves. This is what a bound
+        // input handler asks, because a callback reaches every listener regardless of which
+        // world is ticking — and world MODE cannot answer it, since both of these are Play.
+        lWorlds.SetActiveWorld(lSecond);
+        CHECK_FALSE(lFirst->IsActive());
+        CHECK(lSecond->IsActive());
+
+        lWorlds.DestroyWorld(lSecond);
+        CHECK(lWorlds.GetActiveWorld() == nullptr);
+    }
+
     TEST_CASE("CountWorldsOfMode separates Edit from Play")
     {
         WorldManager lWorlds;

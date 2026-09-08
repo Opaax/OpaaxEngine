@@ -163,11 +163,15 @@ namespace Opaax
 
     void World::OnActive()
     {
+        m_bActive = true;
+
         OPAAX_LOG(LogWorld, Info, "World '{}' activated", m_Name.CStr());
     }
     
     void World::OnDesactive()
     {
+        m_bActive = false;
+
         OPAAX_LOG(LogWorld, Info, "World '{}' deactivated", m_Name.CStr());
     }
 

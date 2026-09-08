@@ -6,6 +6,9 @@
 #include "Application/Services/IPaths.h"
 #include "Application/Services/IStatsService.h"   // OPAAX_STAT_SCOPE — this subsystem opts in
 #include "Engine/Config/Config_Engine.h"          // the EngineConfigData every WorldContext carries
+#include "Engine/GameInstance/GameInstance.h"
+#include "Engine/GameInstance/GameInstanceManager.h"
+#include "Engine/Input/InputMappingSubsystem.h"   // the Actions pointer every WorldContext carries
 #include "Engine/Registries/EngineRegistries.h"
 #include "World/Level.h"
 #include "World/Serialization/MapFactory.h"
@@ -40,6 +43,7 @@ namespace Opaax
         m_Paths     = &OpaaxApplication::GetAppService<IPaths>();
         m_Config    = &OpaaxApplication::GetAppService<IConfigSystem>().Get<Config_Engine>().GetData();
         m_Input     = &lEngine.GetInput();
+        m_GameInstances = &lEngine.GetGameInstances();
 
         OPAAX_LOG(LogWorldManager, Info, "WorldManager started (no world yet — the host creates it)");
         return true;
@@ -245,8 +249,21 @@ namespace Opaax
             return;
         }
 
+        // Resolved HERE, per world, and NOT part of the guard above: an Edit world legitimately has
+        // no game, so null is a supported state rather than a boot failure — Profiler's rule, not
+        // the guarded members'.
+        InputMappingSubsystem* lActions = nullptr;
+
+        if (m_GameInstances != nullptr)
+        {
+            if (GameInstance* lGame = m_GameInstances->GetGameInstance())
+            {
+                lActions = lGame->GetSubsystems().GetSubsystem<InputMappingSubsystem>();
+            }
+        }
+
         InWorld.SetContext(WorldContext{InWorld, *m_Resources, *m_Paths, *m_Events, *m_Input, *m_Config,
-                                        *m_Debug, m_Profiler});
+                                        lActions, *m_Debug, m_Profiler});
 
         WorldContext* lContext = InWorld.GetContext();
         OPAAX_ASSERT(lContext != nullptr);
