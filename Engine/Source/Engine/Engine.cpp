@@ -18,6 +18,8 @@
 
 //Subsystems
 #include "Engine/EngineEvents.h"
+#include "Engine/GameInstance/GameInstanceManager.h"
+#include "Engine/Input/InputMappingSubsystem.h"
 #include "Engine/Subsystems/Resources/ResourceManager.h"
 #include "Core/Maths/MathsStatics.h"
 #include "Subsystems/Camera/CameraManager.h"
@@ -59,6 +61,7 @@ namespace Opaax
         RegisterNativeSubsystems();
         RegisterNativeWorldSubsystems();
         RegisterNativeMoverModes();
+        RegisterNativeGameInstanceSubsystems();
     }
 
     Engine::~Engine()
@@ -153,11 +156,24 @@ namespace Opaax
         m_Registries.MoverModes().Register<FlyMoveMode>(OPAAX_ID("FlyMove"));
     }
 
+    void Engine::RegisterNativeGameInstanceSubsystems()
+    {
+        // The engine's own session subsystem, and the tier's first tenant: the layer that turns
+        // InputManager's physical keys into named actions.
+        m_Registries.GameInstanceSubsystems().Register<InputMappingSubsystem>(OPAAX_ID("InputMapping"));
+    }
+
     void Engine::RegisterNativeSubsystems()
     {
         m_Subsystems.RegisterSubsystem<EngineEventBus>();
         m_Subsystems.RegisterSubsystem<ResourceManager>();
         m_Subsystems.RegisterSubsystem<InputManager>();
+
+        // BEFORE WorldManager, and the ORDER IS THE DESIGN, twice over: UpdateAll walks
+        // registration order, so a session subsystem publishes this frame's answer before any
+        // world subsystem reads it — and TearDownAll walks it in REVERSE, so worlds are destroyed
+        // before the session they belong to, with nothing enforcing it by hand.
+        m_Subsystems.RegisterSubsystem<GameInstanceManager>(&m_Registries);
         m_Subsystems.RegisterSubsystem<WorldManager>(&m_Registries);
 
         // Before the renderer for readability only — Loop runs UpdateAll and RenderAll as separate
@@ -173,6 +189,7 @@ namespace Opaax
         m_EngineEventBus  = m_Subsystems.GetSubsystem<EngineEventBus>();
         m_WorldManager    = m_Subsystems.GetSubsystem<WorldManager>();
         m_InputManager    = m_Subsystems.GetSubsystem<InputManager>();
+        m_GameInstances   = m_Subsystems.GetSubsystem<GameInstanceManager>();
     }
     
     void Engine::CacheAppServices()
@@ -412,6 +429,44 @@ namespace Opaax
         return true;
     }
 
+    bool Engine::StartGame()
+    {
+        if (!m_bStarted)
+        {
+            OPAAX_ENGINE_LOG(Error, "StartGame called before Startup — no game created");
+            return false;
+        }
+
+        if (m_GameInstances == nullptr)
+        {
+            OPAAX_ENGINE_LOG(Error, "StartGame: no GameInstanceManager subsystem — no game created");
+            return false;
+        }
+
+        return m_GameInstances->StartGame();
+    }
+
+    bool Engine::EndGame()
+    {
+        if (m_GameInstances == nullptr || !m_GameInstances->IsGameRunning())
+        {
+            return false;
+        }
+
+        // Worlds FIRST. A world subsystem may hold a pointer into a session subsystem, so the
+        // session has to outlive every world that belongs to it — the same reasoning that puts
+        // GameInstanceManager before WorldManager in the registration order.
+        const Uint64 lDestroyed = (m_WorldManager != nullptr)
+                                      ? m_WorldManager->DestroyWorldsOfMode(EWorldMode::Play)
+                                      : 0;
+
+        // Logged HERE, not after the call below, so the log reads in execution order: the worlds
+        // are already gone by the time the session's own "GAME ENDED" line prints.
+        OPAAX_ENGINE_LOG(Info, "EndGame — {} play world(s) destroyed, now ending the game instance", lDestroyed);
+
+        return m_GameInstances->EndGame();
+    }
+
     World* Engine::FinishStartup(const WorldSpec& InSpec)
     {
         if (!CanFinishStartup())
@@ -628,6 +683,24 @@ namespace Opaax
 
         OPAAX_ASSERT(m_WorldManager != nullptr);
         return *m_WorldManager;
+    }
+
+    GameInstanceManager& Engine::GetGameInstances()
+    {
+        // Resolve-from-manager first (see GetResources): never re-enter Startup.
+        if (m_GameInstances == nullptr)
+        {
+            m_GameInstances = m_Subsystems.GetSubsystem<GameInstanceManager>();
+        }
+
+        if (m_GameInstances == nullptr && !m_bStarted)
+        {
+            Startup();
+            m_GameInstances = m_Subsystems.GetSubsystem<GameInstanceManager>();
+        }
+
+        OPAAX_ASSERT(m_GameInstances != nullptr);
+        return *m_GameInstances;
     }
 
     InputManager& Engine::GetInput()

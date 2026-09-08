@@ -186,6 +186,43 @@ namespace Opaax
         return lClone;
     }
 
+    Uint64 WorldManager::DestroyWorldsOfMode(EWorldMode InMode)
+    {
+        // Collected BEFORE destroying: DestroyWorld erases from m_Worlds, so walking it while
+        // destroying would invalidate the iteration halfway through.
+        TDynArray<World*> lDoomed;
+
+        for (const TUniquePtr<World>& lWorld : m_Worlds)
+        {
+            if (lWorld != nullptr && lWorld->GetMode() == InMode)
+            {
+                lDoomed.emplace_back(lWorld.get());
+            }
+        }
+
+        for (World* lWorld : lDoomed)
+        {
+            DestroyWorld(lWorld);
+        }
+
+        return static_cast<Uint64>(lDoomed.size());
+    }
+
+    Uint64 WorldManager::CountWorldsOfMode(EWorldMode InMode) const noexcept
+    {
+        Uint64 lCount = 0;
+
+        for (const TUniquePtr<World>& lWorld : m_Worlds)
+        {
+            if (lWorld != nullptr && lWorld->GetMode() == InMode)
+            {
+                ++lCount;
+            }
+        }
+
+        return lCount;
+    }
+
     void WorldManager::CreateSubsystemsFor(World& InWorld)
     {
         if (m_Registries == nullptr)

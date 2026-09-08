@@ -6,6 +6,7 @@ namespace Opaax
 {
     class World;
     class WorldManager;
+    class IEngine;
 }
 
 namespace Opaax::Editor
@@ -45,7 +46,8 @@ namespace Opaax::Editor
         // Ctor
         // =============================================================================
     public:
-        explicit PlayInEditor(WorldManager& InWorlds) noexcept : m_Worlds(InWorlds) {}
+        PlayInEditor(WorldManager& InWorlds, IEngine& InEngine) noexcept
+            : m_Worlds(InWorlds), m_Engine(InEngine) {}
 
         // =============================================================================
         // Copy - Move Delete
@@ -58,10 +60,14 @@ namespace Opaax::Editor
         // =============================================================================
     public:
         /**
-         * Clone the ACTIVE (edit) world into a Play world and activate the clone.
+         * Start a GAME, then clone the ACTIVE (edit) world into a Play world and activate it.
+         *
+         * That order is the contract, not a preference: a world subsystem's context is built
+         * inside CreateWorld, so the game instance has to exist before the clone is made or every
+         * subsystem in it would be handed a session that is not there yet.
          *
          * The source is remembered so Stop can restore it. Refused unless the state is Edit and
-         * there is an active world to clone.
+         * there is an active world to clone; a failed clone ends the game it just started.
          *
          * @return true when the Play world is live.
          */
@@ -80,8 +86,12 @@ namespace Opaax::Editor
         bool Step();
 
         /**
-         * Re-activate the edit world, then destroy the Play clone — that order, so no frame ever
-         * runs without an active world. Refused when already in Edit.
+         * Re-activate the edit world, then end the game — that order, so no frame ever runs
+         * without an active world. Refused when already in Edit.
+         *
+         * EndGame is what destroys the clone: it destroys every PLAY world, and the edit world is
+         * an Edit world. So the clone and the session go together, in the right order, and this
+         * verb never names either of them.
          */
         bool Stop();
 
@@ -100,6 +110,10 @@ namespace Opaax::Editor
         // =============================================================================
     private:
         WorldManager& m_Worlds;
+
+        // The game bracket. PIE is one game session, so Play/Stop are StartGame/EndGame with a
+        // world clone in between — the same two verbs a runtime host calls around its whole run.
+        IEngine& m_Engine;
 
         // Non-owning: WorldManager owns every world (I5). Both are set by Play and cleared by
         // Stop, and are only ever dereferenced between the two.

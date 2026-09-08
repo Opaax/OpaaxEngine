@@ -83,6 +83,20 @@ namespace Opaax
         World* CloneWorld(const World& InSource, EWorldMode InMode);
 
         void   DestroyWorld(World* InWorld);
+
+        /**
+         * Destroy every world running in InMode.
+         *
+         * The mechanism behind IEngine::EndGame: a game owns the PLAY worlds, so ending one
+         * destroys exactly those and leaves an Edit world — the editor's authoring world —
+         * untouched. That is what makes one verb serve both hosts.
+         *
+         * @return how many worlds were destroyed.
+         */
+        Uint64 DestroyWorldsOfMode(EWorldMode InMode);
+
+        /** @return how many worlds are currently running in InMode. */
+        Uint64 CountWorldsOfMode(EWorldMode InMode) const noexcept;
         // End World Lifetime
         // =========================================================================
 

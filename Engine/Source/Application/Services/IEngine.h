@@ -10,6 +10,7 @@ namespace Opaax
     class ResourceManager;
     class WorldManager;
     class InputManager;
+    class GameInstanceManager;
     class World;
     class IFramebuffer;
     class IRenderTarget;
@@ -43,6 +44,37 @@ namespace Opaax
          * @return 
          */
         virtual bool Startup() = 0;
+
+        /**
+         * Begin a GAME: create the GameInstance and start every registered session subsystem.
+         *
+         * BEFORE THE FIRST WORLD, and that ordering is the contract. A world subsystem's context
+         * is built inside CreateWorld, so a session created in reaction to a world would arrive
+         * too late for every world that already exists.
+         *
+         * Called by a runtime host between OnModulesRegistered and FinishStartup, and by the
+         * editor's PlayInEditor::Play. An editor sitting in an Edit world never calls it — there
+         * is legitimately no game, and IsGameRunning answers false all session.
+         *
+         * REFUSES LOUDLY when a game is already running.
+         *
+         * @return true when a game is running as a result of this call.
+         */
+        virtual bool StartGame() = 0;
+
+        /**
+         * End the game: destroy every PLAY world, then the GameInstance. That order, and it is
+         * the mirror of StartGame's.
+         *
+         * A SILENT no-op when no game is running — hosts call it unconditionally on the teardown
+         * path, so "there was nothing to end" is a normal answer.
+         *
+         * Destroying "every Play world" is what makes this the editor's Stop: the edit world is
+         * an Edit world, so the only thing that goes is the PIE clone.
+         *
+         * @return true when a game was actually ended.
+         */
+        virtual bool EndGame() = 0;
 
         /**
          * @param InSpec Which world to open, in which mode.
@@ -170,6 +202,12 @@ namespace Opaax
         virtual ResourceManager&            GetResources() = 0;
         virtual EngineEventBus&             GetEngineEventBus() = 0;
         virtual WorldManager&               GetWorldManager() = 0;
+
+        /**
+         * Owns the running GameInstance (0 or 1) — ask it IsGameRunning before reaching further.
+         * No game is a normal state, not a failure: it is what an editor in an Edit world has.
+         */
+        virtual GameInstanceManager&        GetGameInstances() = 0;
 
         /**
          * Enqueue from anywhere in the frame BEFORE the render that should show it — the renderer drains and clears it every frame, so a line must be

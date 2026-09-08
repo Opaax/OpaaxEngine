@@ -1,6 +1,7 @@
 #include "Editor/PIE/PlayInEditor.h"
 
 #include "Application/Services/ILogger.h"   // OPAAX_LOG + LogCategory
+#include "Application/Services/IEngine.h"
 #include "World/World.h"
 #include "World/WorldManager.h"
 
@@ -40,11 +41,19 @@ namespace Opaax::Editor
             return false;
         }
 
+        // The game comes FIRST, before any Play world exists — see the header. StartGame logs
+        // its own refusal (a session already running).
+        if (!m_Engine.StartGame())
+        {
+            return false;
+        }
+
         World* lPlayWorld = m_Worlds.CloneWorld(*lEditWorld, EWorldMode::Play);
         if (lPlayWorld == nullptr)
         {
-            // CloneWorld already logged why. Nothing was created, so the state stays Edit and the
-            // editor keeps showing the world it was showing.
+            // CloneWorld already logged why. Roll the game back rather than leaving a session with
+            // nothing to play — the state stays Edit and the editor keeps showing its world.
+            m_Engine.EndGame();
             return false;
         }
 
@@ -121,17 +130,17 @@ namespace Opaax::Editor
             return false;
         }
 
-        // Re-activate BEFORE destroying: DestroyWorld clears the active slot when it is destroying
-        // the active world, which would leave the editor with no world for the rest of the frame.
+        // Re-activate BEFORE ending: EndGame destroys every Play world, and DestroyWorld clears
+        // the active slot when it is destroying the active world — which would leave the editor
+        // with no world for the rest of the frame.
         if (m_EditWorld != nullptr)
         {
             m_Worlds.SetActiveWorld(m_EditWorld);
         }
 
-        if (m_PlayWorld != nullptr)
-        {
-            m_Worlds.DestroyWorld(m_PlayWorld);
-        }
+        // Takes the clone with it (every PLAY world), then the session. The edit world is an Edit
+        // world and is untouched — that asymmetry is the whole restore mechanism.
+        m_Engine.EndGame();
 
         const OpaaxString lRestored = m_EditWorld != nullptr ? m_EditWorld->GetName() : OpaaxString("<none>");
 

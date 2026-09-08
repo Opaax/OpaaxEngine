@@ -55,6 +55,9 @@ set(OPAAX_TEST_SOURCES
     Core/Engine/ModuleRegistrarTests.cpp
     Core/Engine/InputManagerTests.cpp
     Core/Engine/EngineEventsTests.cpp
+    # ⑦-B B0. The game bracket and the GameInstance tier need no GL context and no host, so the
+    # mechanism is gated here; where the HOSTS call it is gated by their ordered boot log (L22).
+    Core/Engine/GameInstanceTests.cpp
     Core/World/WorldEventsTests.cpp
     Core/World/ComponentIdentityTests.cpp
     Core/World/ComponentRegistryTests.cpp

@@ -1,5 +1,6 @@
 #include "IEngine.h"
 
+#include "Engine/GameInstance/GameInstanceManager.h"
 #include "Engine/Subsystems/EventBus/EngineEventBus.h"
 #include "Engine/Subsystems/Input/InputManager.h"
 #include "Engine/Subsystems/Resources/ResourceManager.h"
@@ -30,6 +31,12 @@ namespace Opaax
             // world consumer already handles (BO4).
             World* FinishStartup(const WorldSpec&) override { return nullptr; }
             World* OpenLevel(const WorldSpec&)     override { return nullptr; }
+
+            // No registries and no subsystems to create, so a "game" here would be an empty object
+            // pretending to be a session. False is the honest answer, and it matches the null
+            // world above: nothing was created, and the caller's own null handling runs.
+            bool StartGame() override { return false; }
+            bool EndGame()   override { return false; }
 
             void Loop()                   override {}
             void PresentBackbuffer()      override {}
@@ -72,6 +79,14 @@ namespace Opaax
             {
                 static WorldManager s_NullWorlds; // inert — owns no worlds
                 return s_NullWorlds;
+            }
+
+            GameInstanceManager& GetGameInstances() override
+            {
+                // Inert — never started, so IsGameRunning answers false forever. That is the
+                // right answer for a host with no engine: "no game" rather than a dangling ref.
+                static GameInstanceManager s_NullGameInstances;
+                return s_NullGameInstances;
             }
 
             InputManager& GetInput() override

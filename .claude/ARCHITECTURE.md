@@ -807,6 +807,47 @@ instead of removing it. Deleting the world from subsystem startup deleted the ph
 no legal window, check whether something is happening in the wrong phase before inventing a new one**
 ([[L22]]).
 
+**BO4d — BO4's three stages are FOUR: a GAME starts between registration and the first world**
+(landed ⑦-B B0, 2026-09-08 — user design: *"we need a proper game start scope like: Start Game /
+Create Game instance / Init First world / etc... / loop / End Game / Destroy World / Destroy
+GameInstance."*).
+
+```
+Engine().Startup()            → every subsystem constructed and started. NO WORLD, NO GAME.
+RegisterModules(...)          → components, world subsystems, GAME-INSTANCE subsystems
+OnModulesRegistered()         → editor extensions
+Engine().StartGame()          → the GameInstance exists. STILL NO WORLD.
+Engine().FinishStartup(spec)  → the first world
+... loop ...
+Engine().EndGame()            → every PLAY world, then the GameInstance
+Engine().TearDown()
+```
+
+**Why the game must precede the world, and why it cannot be an event.** `WorldManager::CreateWorld`
+builds a world subsystem's `WorldContext` inside `CreateSubsystemsFor` and broadcasts
+`OnWorldCreated` only **afterwards**. So a session created in *reaction* to a world is too late for
+every world that already exists — every context would carry a null session. Hanging the session off
+`CreateWorld` as a side effect was the first design and it was **machinery protecting a missing
+phase** ([[L22]]); a phase dissolves the problem instead.
+
+**The bracket is HOST policy, and both hosts state it** (BO4's own rule). `OpaaxApplication::
+EngineStartup` calls `StartGame` only when the startup world's mode is **Play** — which is what
+leaves an editor sitting in an Edit world with no game at all — and `EngineTeardown` calls `EndGame`
+unconditionally, because it is a silent no-op when none is running. The editor's `PlayInEditor`
+brackets one game per PIE cycle with the *same two verbs*.
+
+**`EndGame` destroys every PLAY world, and that asymmetry is the editor's whole restore story.**
+The edit world is an `Edit` world, so "every Play world" is exactly the PIE clone — which is why
+`PlayInEditor::Stop` **lost** its `DestroyWorld(m_PlayWorld)` line rather than gaining one, and why
+one verb serves a runtime host and the editor without either naming the other's worlds.
+
+**Teardown symmetry costs NO code.** `GameInstanceManager` is registered **before** `WorldManager`
+(`Engine::RegisterNativeSubsystems`), and `ISubsystemManager::TearDownAll` walks **reverse**
+registration order — so worlds tear down first and the session second, which is the user's "Destroy
+World / Destroy GameInstance" falling out of a rule that already existed. The same order makes
+`UpdateAll` tick the session **before** any world, so a session subsystem publishes this frame's
+answer before gameplay reads it.
+
 **Full frame of the run:**
 `Bootstrap() → InitializeApplication() [window] → RunApplication{ EngineStartup → loop → EngineTeardown } → ShutdownApplication()`
 
@@ -2938,6 +2979,55 @@ subsystem → `"class QuadBoundsSubsystem"`), because there was no `::` left to 
 serious rather than cosmetic: a derived name is the key written into map files, so the first
 global-namespace component would have written an unreadable one. Stripped explicitly now, with both
 routes covered by a test.
+
+---
+
+## GI — The GameInstance tier (landed ⑦-B B0, 2026-09-08)
+
+**GI1 — A GameInstance is ONE GAME, and its lifetime is the bracket, not a world.** Created by
+`IEngine::StartGame()` before any world exists, destroyed by `EndGame()` after the last Play world
+is gone — so it **outlives every world it plays through**. Level travel (`OpenLevel`) destroys one
+world and creates another; the session is what does not change across that. The user's constraint,
+in their words: *"when the game start, this will never change."* Sequencing lives in **BO4d**.
+
+**GI2 — It holds SUBSYSTEMS and a CONTEXT, and nothing else.** Everything session-scoped is a
+**tenant** — input mapping today (**IM**), save/score later — never a member of the class. That is
+what keeps "the game instance knows about a lot of things" from making it a bag: it knows about a
+lot of things because its tenants do. Pause and time-scale were considered for it and **deliberately
+left out** (user: *"that change from world or for specific entity/system i do not know yet"*);
+pause remains **WS8**'s tick gate on `WorldManager`, which works.
+
+**GI3 — `GameInstanceManager` is an engine subsystem owning 0-or-1 instance** — `WorldManager`'s
+relationship to worlds, one tier up. Registered **before** `WorldManager`, and that placement buys
+tick order and teardown order at once (**BO4d**). It does **not** decide when a game starts: the
+verbs are `IEngine`'s and the host drives them.
+*Rejected: `Engine` owning the `GameInstance` directly. It would need an explicit tick line in
+`Engine::Loop` and hand-written teardown ordering; the subsystem route gets both from registration
+order and matches the sibling that already solves the same problem.*
+
+**GI4 — `GameInstanceContext` is `WorldContext` one tier up**, injected by constructor, with
+`std::ref` at the injection point — **WS4 applies verbatim and is load-bearing**, because
+`RegisterSubsystem` copies its ctor args into a factory lambda that `StartupAll` then destroys.
+It carries `WorldManager&` and **not** a `World&`: a game outlives its worlds, so caching one would
+dangle. The context lives in a heap slot the `GameInstance` owns, so a stored
+`GameInstanceContext&` is valid for the whole game; the regression gate asserts the subsystem's
+stored **address** equals `GameInstance::GetContext()`, never a field (**L15** — freed memory
+usually still holds the old value).
+
+**GI5 — `GameInstanceSubsystemRegistry` has NO `ShouldCreate`, deliberately.** A world filters its
+candidates because Edit and Play worlds coexist and want different sets (**WS2**); there is only
+ever one kind of game, so a filter here would be a hook with nothing to decide. It is the **fifth**
+member of `EngineRegistries` and seals with its siblings at the first `CreateWorld` — a game starts
+*before* the first world, so the registration window a module gets is exactly the one components and
+world subsystems get, and it closes at the same moment.
+
+**GI6 — Reconstruction, not reset, is the guarantee the tier exists for.** A second `StartGame`
+builds a **fresh** instance with fresh subsystems, so nothing can leak across a PIE cycle — a
+pushed input mapping context cannot survive Stop, because the object holding it was destroyed
+rather than cleared. This is why input mapping is a tenant of this tier and not a flag on an
+engine subsystem. `StartGame` **refuses loudly** when a game is already running (a double-bracket
+in a host is a caller mistake worth seeing); `EndGame` is a **silent no-op** when none is, because
+hosts call it unconditionally on the teardown path.
 
 ---
 

@@ -14,6 +14,7 @@ namespace Opaax
     class ResourceManager;
     class EngineEventBus;
     class WorldManager;
+    class GameInstanceManager;
     class World;
     class IFramebuffer;
     class IRenderTarget;
@@ -74,6 +75,12 @@ namespace Opaax
          */
         void RegisterNativeWorldSubsystems();
         void RegisterNativeMoverModes();
+
+        /**
+         * Register the SESSION subsystems the engine itself owns — the candidates every game
+         * creates, in order, when StartGame runs.
+         */
+        void RegisterNativeGameInstanceSubsystems();
         
         /** Cache convenient subsystems */
         void CacheSubsystems();
@@ -129,6 +136,8 @@ namespace Opaax
     public:
         //Life cycle
         bool    Startup() override;
+        bool    StartGame() override;
+        bool    EndGame() override;
         World*  FinishStartup(const WorldSpec& InSpec) override;
         World*  OpenLevel(const WorldSpec& InSpec) override;
         void    Loop() override;
@@ -153,6 +162,7 @@ namespace Opaax
         ResourceManager&    GetResources()      override;
         EngineEventBus&     GetEngineEventBus() override;
         WorldManager&       GetWorldManager()   override;
+        GameInstanceManager& GetGameInstances() override;
         DebugDraw&          GetDebugDraw()      override;
         InputManager&       GetInput()          override;
         //~End IEngine interface
@@ -185,6 +195,7 @@ namespace Opaax
         RendererManager*    m_RendererManager = nullptr;
         WorldManager*       m_WorldManager = nullptr;
         InputManager*       m_InputManager = nullptr;
+        GameInstanceManager* m_GameInstances = nullptr;
 
         //Internal
         bool m_bStarted = false;

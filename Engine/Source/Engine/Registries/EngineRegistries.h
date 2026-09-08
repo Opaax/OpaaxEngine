@@ -2,6 +2,7 @@
 
 #include "Core/EngineAPI.h"
 
+#include "Engine/GameInstance/GameInstanceSubsystemRegistry.h"
 #include "Engine/Subsystems/Resources/ResourceFormatRegistry.h"
 #include "World/Components/ComponentRegistry.h"
 #include "World/Systems/Movement/MoverModeRegistry.h"
@@ -69,6 +70,12 @@ namespace Opaax
         MoverModeRegistry&       MoverModes()       noexcept { return m_MoverModes; }
         const MoverModeRegistry& MoverModes() const noexcept { return m_MoverModes; }
 
+        // ⑦-B — which subsystems a game SESSION runs. Here rather than on GameInstanceManager for
+        // the reason above: the candidates are one set, and the instance that runs them is created
+        // and destroyed repeatedly across a session's life (every PIE cycle).
+        GameInstanceSubsystemRegistry&       GameInstanceSubsystems()       noexcept { return m_GameInstanceSubsystems; }
+        const GameInstanceSubsystemRegistry& GameInstanceSubsystems() const noexcept { return m_GameInstanceSubsystems; }
+
         // =========================================================================
         // Functions
         // =========================================================================
@@ -84,15 +91,17 @@ namespace Opaax
             m_WorldSubsystems.Seal();
             m_ResourceFormats.Seal();
             m_MoverModes.Seal();
+            m_GameInstanceSubsystems.Seal();
         }
 
         // =========================================================================
         // Members
         // =========================================================================
     private:
-        ComponentRegistry      m_Components;
-        WorldSubsystemRegistry m_WorldSubsystems;
-        ResourceFormatRegistry m_ResourceFormats;
-        MoverModeRegistry      m_MoverModes;
+        ComponentRegistry             m_Components;
+        WorldSubsystemRegistry        m_WorldSubsystems;
+        ResourceFormatRegistry        m_ResourceFormats;
+        MoverModeRegistry             m_MoverModes;
+        GameInstanceSubsystemRegistry m_GameInstanceSubsystems;
     };
 }

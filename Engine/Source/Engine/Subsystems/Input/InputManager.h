@@ -24,6 +24,10 @@ namespace Opaax
     //   ever reads it. It knows about physical keys and nothing about meaning — action maps are a
     //   game-layer concept built on top (D5), so there is no "Jump" in here.
     //
+    //   WHERE THERE IS ONE: Engine/Input/InputMappingSubsystem. It reads this every frame and
+    //   turns it into named actions, and it is a GAME-INSTANCE subsystem rather than an engine one
+    //   because a mapping context must outlive any single world (GI1). Nothing here knows about it.
+    //
     //   FEEDING IS IMMEDIATE, not queued. Events are applied during PollEvents, before the frame
     //   ticks, so a reader mid-route (the editor asking "is Shift held?" while handling a key) gets
     //   the truth rather than last frame's copy.

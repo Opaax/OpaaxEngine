@@ -128,7 +128,7 @@ namespace Opaax::Editor
         m_Camera            = MakeUnique<EditorCamera>();
         m_Gizmo             = MakeUnique<EditorGizmo>();
         m_Undo              = MakeUnique<EditorUndo>();
-        m_PIE               = MakeUnique<PlayInEditor>(*m_WorldMgr);
+        m_PIE               = MakeUnique<PlayInEditor>(*m_WorldMgr, InEngine);
         m_InputRoute        = MakeUnique<InputRoute>(*m_WorldMgr, InEngine.GetInput(), *m_PIE);
         m_MapDocument       = MakeUnique<EditorMapDocument>();
         m_LevelDocument     = MakeUnique<EditorLevelDocument>();

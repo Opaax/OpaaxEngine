@@ -347,8 +347,19 @@ void OpaaxApplication::EngineStartup()
         //2.3 
     OnModulesRegistered();
 
-    // 3. Content.
-    Engine().FinishStartup(GetStartupWorldSpec());
+    // 3. The game. A Play startup world means this host IS a game, so its whole run is one
+    //    session. The editor's startup world is an Edit world and gets NO game — PlayInEditor
+    //    brackets one per PIE cycle instead.
+    //    BEFORE the world, always: a world subsystem's context is built inside CreateWorld.
+    const WorldSpec lStartupSpec = GetStartupWorldSpec();
+
+    if (lStartupSpec.Mode == EWorldMode::Play)
+    {
+        Engine().StartGame();
+    }
+
+    // 4. Content.
+    Engine().FinishStartup(lStartupSpec);
 
     PostEngineStartup();
 }
@@ -373,6 +384,10 @@ WorldSpec OpaaxApplication::GetStartupWorldSpec() const
 
 void OpaaxApplication::EngineTeardown()
 {
+    // Mirrors EngineStartup: the game ends before the engine is torn down, and it takes its
+    // Play worlds with it. Unconditional — a silent no-op when this host never started one.
+    Engine().EndGame();
+
     Engine().TearDown();
 }
 
