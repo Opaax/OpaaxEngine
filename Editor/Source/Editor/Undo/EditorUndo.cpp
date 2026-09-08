@@ -39,7 +39,15 @@ namespace Opaax::Editor
 
     void EditorUndo::Undo(EditorContext& InContext)
     {
-        if (!CanUndo()) { return; }
+        if (!CanUndo())
+        {
+            // SAYS SO. A silent return made "Ctrl+Z did nothing" indistinguishable from three
+            // different causes — the chord never fired, the command was gated, or no step was ever
+            // recorded — which is exactly the ambiguity that made a real report undiagnosable.
+            OPAAX_LOG(LogEditorUndo, Info, "Undo - nothing to undo ({} step(s) redoable)",
+                      static_cast<Uint64>(m_Redo.size()));
+            return;
+        }
 
         IEditorUndoable lStep = Move(m_Undo.back());
         m_Undo.pop_back();
@@ -57,7 +65,12 @@ namespace Opaax::Editor
 
     void EditorUndo::Redo(EditorContext& InContext)
     {
-        if (!CanRedo()) { return; }
+        if (!CanRedo())
+        {
+            OPAAX_LOG(LogEditorUndo, Info, "Redo - nothing to redo ({} step(s) undoable)",
+                      static_cast<Uint64>(m_Undo.size()));
+            return;
+        }
 
         IEditorUndoable lStep = Move(m_Redo.back());
         m_Redo.pop_back();

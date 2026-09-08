@@ -323,14 +323,14 @@ namespace Opaax::Editor
         //Hidden by default
         lPanelsRegistry.Register<CameraPreviewPanel>(PanelDesc  {.Id = CameraPreviewPanel::PanelID(),   .DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<ResourcePreviewPanel>(PanelDesc{.Id = ResourcePreviewPanel::PanelID(), .DefaultVisibility = EPanelVisibility::Hidden});
-        lPanelsRegistry.Register<SpriteSheetPanel>(PanelDesc    {.Id = SpriteSheetPanel::PanelID(),     .DefaultVisibility = EPanelVisibility::Hidden});
-        lPanelsRegistry.Register<AnimationClipPanel>(PanelDesc  {.Id = AnimationClipPanel::PanelID(),   .DefaultVisibility = EPanelVisibility::Hidden});
-        lPanelsRegistry.Register<AnimationLibraryPanel>(PanelDesc{.Id = AnimationLibraryPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden});
-        lPanelsRegistry.Register<MoveModePanel>(PanelDesc{.Id = MoveModePanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden});
-        lPanelsRegistry.Register<MoverPanel>(PanelDesc{.Id = MoverPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden});
-        lPanelsRegistry.Register<InputActionPanel>(PanelDesc{.Id = InputActionPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden});
-        lPanelsRegistry.Register<InputMappingContextPanel>(PanelDesc{.Id = InputMappingContextPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden});
-        lPanelsRegistry.Register<FontFamilyPanel>(PanelDesc{.Id = FontFamilyPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden});
+        lPanelsRegistry.Register<SpriteSheetPanel>(PanelDesc    {.Id = SpriteSheetPanel::PanelID(),     .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_SHEET});
+        lPanelsRegistry.Register<AnimationClipPanel>(PanelDesc  {.Id = AnimationClipPanel::PanelID(),   .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_CLIP});
+        lPanelsRegistry.Register<AnimationLibraryPanel>(PanelDesc{.Id = AnimationLibraryPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_LIBRARY});
+        lPanelsRegistry.Register<MoveModePanel>(PanelDesc{.Id = MoveModePanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_MOVE_MODE});
+        lPanelsRegistry.Register<MoverPanel>(PanelDesc{.Id = MoverPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_MOVER});
+        lPanelsRegistry.Register<InputActionPanel>(PanelDesc{.Id = InputActionPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_INPUT_ACTION});
+        lPanelsRegistry.Register<InputMappingContextPanel>(PanelDesc{.Id = InputMappingContextPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_INPUT_MAP});
+        lPanelsRegistry.Register<FontFamilyPanel>(PanelDesc{.Id = FontFamilyPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_FAMILY});
         lPanelsRegistry.Register<ConfigPanel>(PanelDesc         {.Id = ConfigPanel::PanelID(),          .DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<InputPanel>(PanelDesc          {.Id = InputPanel::PanelID(),           .DefaultVisibility = EPanelVisibility::Hidden });
         lPanelsRegistry.Register<StatsPanel>(PanelDesc          {.Id = StatsPanel::PanelID(),           .DefaultVisibility = EPanelVisibility::Hidden });
@@ -1109,27 +1109,24 @@ namespace Opaax::Editor
             // ONE chord, whichever document is in front. Ctrl+S in a sheet editor saving the MAP is
             // the kind of surprise that costs work, so the target follows the focused panel — which
             // the draw loop measured while that panel's window was open.
-            const bool bSheetFocused =
-                m_Gui->Panels().FocusedPanel() == SpriteSheetPanel::PanelID()
-                && m_Context->SheetDocument.IsOpen();
+            //
+            // A LOOKUP, not a chain. This used to be a hand-written ladder of "is the sheet
+            // focused? the clip? the library?" and it was forgotten FOUR times: MoveMode and Mover
+            // shipped without an entry in ⑦-A, and both input panels in ⑦-B, so Ctrl+S in any of
+            // them silently saved the map. A panel now DECLARES its save command (PanelDesc), so
+            // adding a document editor cannot forget to update a list somewhere else.
+            const OpaaxStringID lFocused = m_Gui->Panels().FocusedPanel();
 
-            const bool bClipFocused =
-                m_Gui->Panels().FocusedPanel() == AnimationClipPanel::PanelID()
-                && m_Context->ClipDocument.IsOpen();
+            OpaaxTag lTarget = Tags::EDITOR_COMMAND_SAVE_MAP;
 
-            const bool bLibraryFocused =
-                m_Gui->Panels().FocusedPanel() == AnimationLibraryPanel::PanelID()
-                && m_Context->LibraryDocument.IsOpen();
-
-            const bool bFamilyFocused =
-                m_Gui->Panels().FocusedPanel() == FontFamilyPanel::PanelID()
-                && m_Context->FamilyDocument.IsOpen();
-
-            const OpaaxTag lTarget = bFamilyFocused  ? Tags::EDITOR_COMMAND_SAVE_FAMILY
-                                   : bLibraryFocused ? Tags::EDITOR_COMMAND_SAVE_LIBRARY
-                                   : bClipFocused    ? Tags::EDITOR_COMMAND_SAVE_CLIP
-                                   : bSheetFocused   ? Tags::EDITOR_COMMAND_SAVE_SHEET
-                                                     : Tags::EDITOR_COMMAND_SAVE_MAP;
+            for (const PanelEntry& lEntry : m_Extensions.Panels().Entries())
+            {
+                if (lEntry.Desc.Id == lFocused && lEntry.Desc.SaveCommand.IsValid())
+                {
+                    lTarget = lEntry.Desc.SaveCommand;
+                    break;
+                }
+            }
 
             m_Context->Extensions.Commands().Execute(lTarget, *m_Context);
         }

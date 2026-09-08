@@ -2,6 +2,7 @@
 
 #include "Core/OpaaxTypes.h"               // Uint8
 #include "Core/String/OpaaxStringID.hpp"   // OPAAX_ID — the panel's interned identity
+#include "Core/Tag/OpaaxTag.h"             // the command Ctrl+S runs while this panel is focused
 
 namespace Opaax::Editor
 {
@@ -36,5 +37,20 @@ namespace Opaax::Editor
         OpaaxStringID Menu = OPAAX_ID("Panels");
 
         EPanelVisibility DefaultVisibility = EPanelVisibility::Visible;
+
+        /**
+         * The command Ctrl+S runs while this panel is focused. Invalid = this panel does not save,
+         * and the chord falls through to the map.
+         *
+         * DECLARED HERE rather than matched in HandleAuthoringShortcuts, which used to hold a
+         * hand-written chain of "is the sheet focused? the clip? the library?". That chain was
+         * forgotten FOUR times — MoveMode and Mover shipped without it in ⑦-A, and both input
+         * panels in ⑦-B — and the failure is silent and expensive: Ctrl+S in a document editor
+         * saved the MAP instead, which is exactly the surprise the chain existed to prevent.
+         *
+         * A panel that owns a document is the only thing that knows what saving it means, so it
+         * says so at its registration and nothing central has to be kept in step.
+         */
+        OpaaxTag SaveCommand;
     };
 }
