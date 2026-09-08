@@ -58,6 +58,10 @@ set(OPAAX_TEST_SOURCES
     # ⑦-B B0. The game bracket and the GameInstance tier need no GL context and no host, so the
     # mechanism is gated here; where the HOSTS call it is gated by their ordered boot log (L22).
     Core/Engine/GameInstanceTests.cpp
+    # ⑦-B B1. The transform half of input mapping is pure — modifiers, the context stack, the
+    # four trigger phases — so it is gated here against a REAL InputManager driven by its own
+    # feed, rather than by a fake input source that would share the bug it is meant to catch.
+    Core/Engine/InputMappingTests.cpp
     Core/World/WorldEventsTests.cpp
     Core/World/ComponentIdentityTests.cpp
     Core/World/ComponentRegistryTests.cpp
