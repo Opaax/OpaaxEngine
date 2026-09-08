@@ -471,6 +471,47 @@ TEST_SUITE("InputActionEvaluator — composites, priority and consumption")
         CHECK_FALSE(lEval.GetValue(Name("MenuAccept")).AsBool());
     }
 
+    TEST_CASE("The SAME key reaches a different action once a menu is pushed")
+    {
+        // B4's shape, gated headlessly: a menu does not set a flag the game checks, it pushes a
+        // higher-priority context whose bindings consume. The key is held THROUGHOUT — the only
+        // thing that changes is which context owns it.
+        InputActionEvaluator lEval;
+        InputManager         lInput;
+        lEval.RegisterAction(MakeAction("Jump", EInputValueType::Bool));
+        lEval.RegisterAction(MakeAction("MenuAccept", EInputValueType::Bool));
+
+        InputMappingContext lGameplay;
+        lGameplay.Name     = Name("Gameplay");
+        lGameplay.Priority = 0;
+        lGameplay.Bindings.emplace_back(Bind("Jump", EKeyCode::Space));
+        REQUIRE(lEval.AddContext(lGameplay));
+
+        InputMappingContext lMenu;
+        lMenu.Name     = Name("Menu");
+        lMenu.Priority = 100;
+        lMenu.Bindings.emplace_back(Bind("MenuAccept", EKeyCode::Space));
+
+        lInput.OnKeyPressed(EKeyCode::Space, false);
+        Step(lEval, lInput);
+        CHECK(lEval.GetValue(Name("Jump")).AsBool());
+        CHECK_FALSE(lEval.GetValue(Name("MenuAccept")).AsBool());
+
+        REQUIRE(lEval.AddContext(lMenu));
+        Step(lEval, lInput);
+
+        // BOTH halves matter. Jump going false is the consumption; MenuAccept going true is what
+        // proves the key still arrived — a version that simply dropped the binding would pass the
+        // first check and fail this one.
+        CHECK_FALSE(lEval.GetValue(Name("Jump")).AsBool());
+        CHECK(lEval.GetValue(Name("MenuAccept")).AsBool());
+
+        lEval.RemoveContext(Name("Menu"));
+        Step(lEval, lInput);
+        CHECK(lEval.GetValue(Name("Jump")).AsBool());
+        CHECK_FALSE(lEval.GetValue(Name("MenuAccept")).AsBool());
+    }
+
     TEST_CASE("bConsume = false lets BOTH contexts see the key")
     {
         InputActionEvaluator lEval;

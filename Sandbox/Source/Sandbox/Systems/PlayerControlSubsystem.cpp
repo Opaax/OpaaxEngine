@@ -25,10 +25,15 @@ namespace Sandbox
         const OpaaxStringID kJumpAction   = OPAAX_ID("Jump");
         const OpaaxStringID kSwitchAction = OPAAX_ID("SwitchMode");
 
-        /** The context this game plays under. */
+        const OpaaxStringID kMenuToggleAction = OPAAX_ID("MenuToggle");
+        const OpaaxStringID kMenuAcceptAction = OPAAX_ID("MenuAccept");
+
+        /** The context this game plays under, and the one a menu pushes ON TOP of it. */
         const OpaaxStringID kGameplayContext = OPAAX_ID("Gameplay");
+        const OpaaxStringID kMenuContext     = OPAAX_ID("Menu");
 
         constexpr const char* kGameplayMapAsset = "Input/Gameplay.opaaxinputmap";
+        constexpr const char* kMenuMapAsset     = "Input/Menu.opaaxinputmap";
     }
 
     bool PlayerControlSubsystem::ShouldCreate(const World& InWorld)
@@ -55,6 +60,7 @@ namespace Sandbox
         lActions->Bind(kMoveAction,   EInputTrigger::Completed, this, &PlayerControlSubsystem::OnMoveCompleted);
         lActions->Bind(kJumpAction,   EInputTrigger::Started,   this, &PlayerControlSubsystem::OnJump);
         lActions->Bind(kSwitchAction, EInputTrigger::Started,   this, &PlayerControlSubsystem::OnSwitchMode);
+        lActions->Bind(kMenuToggleAction, EInputTrigger::Started, this, &PlayerControlSubsystem::OnMenuToggle);
 
         OPAAX_LOG(LogPlayerControl, Info,
                   "Player control started — {} action(s) over {} context(s), {} binding(s)",
@@ -112,6 +118,38 @@ namespace Sandbox
         if (!IsOwningWorldActive()) { return; }
 
         m_bSwitchQueued = true;
+    }
+
+    void PlayerControlSubsystem::OnMenuToggle(const InputActionValue& /*InValue*/)
+    {
+        if (!IsOwningWorldActive()) { return; }
+
+        InputMappingSubsystem* lActions = m_Context->Actions;
+        if (lActions == nullptr) { return; }
+
+        m_bMenuOpen = !m_bMenuOpen;
+
+        if (m_bMenuOpen)
+        {
+            lActions->AddContextAsset(kMenuContext, kMenuMapAsset);
+        }
+        else
+        {
+            lActions->RemoveContext(kMenuContext);
+
+            // Nothing is falsely held on the way out: the evaluator re-derives every action from
+            // InputManager each frame and keeps only HeldSeconds, so a key that was swallowed
+            // simply starts being read again (IM2 / IN5).
+            m_MoveDir = Vector2F{0.f, 0.f};
+        }
+
+        // The CONTEXT COUNT only. Action values are deliberately NOT logged here: this runs inside
+        // a handler, so the stack has just changed and nothing has re-evaluated against it — the
+        // numbers would be last frame's, which is a stale reading wearing the clothes of a proof.
+        // The Input panel's Actions section shows them live, a frame later, which is when they
+        // actually mean what they say.
+        OPAAX_LOG(LogPlayerControl, Info, "MENU {} — {} context(s) active",
+                  m_bMenuOpen ? "OPENED" : "CLOSED", lActions->GetContextCount());
     }
 
     // =========================================================================

@@ -110,6 +110,18 @@ namespace Sandbox
         /** Started: one switch per press. */
         void OnSwitchMode(const Opaax::InputActionValue& InValue);
 
+        /**
+         * Started: push or pop the MENU context — the UI half of input mapping.
+         *
+         * A menu is not a flag the game checks; it is a higher-priority mapping context whose
+         * bindings CONSUME. While it is up, Space reaches MenuAccept and Jump never evaluates at
+         * all (**IM6**), which is the difference between a menu that outranks gameplay and one
+         * that merely sits on top of it.
+         *
+         * Bound in BOTH contexts, so Escape opens it from gameplay and closes it from itself.
+         */
+        void OnMenuToggle(const Opaax::InputActionValue& InValue);
+
         // =============================================================================
         // Members
         // =============================================================================
@@ -124,5 +136,8 @@ namespace Sandbox
 
         Opaax::Uint64 m_LastDriven       = 0;
         bool          m_bLoggedFirstTick = false;
+
+        /** Whether the Menu context is currently pushed. */
+        bool m_bMenuOpen = false;
     };
 }

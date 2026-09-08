@@ -137,6 +137,12 @@
             "Key": "Tab",
             "Modifiers": [],
             "bConsume": true
+        },
+        {
+            "Action": "Input/MenuToggle.opaaxaction",
+            "Key": "Escape",
+            "Modifiers": [],
+            "bConsume": true
         }
     ],
     "Priority": 0

@@ -133,6 +133,12 @@ namespace Opaax
             lAccepted.Bindings.emplace_back(lBinding);
         }
 
+        // Counted BEFORE the move and the sort. Reading it back off m_Contexts.back() afterwards
+        // reports a DIFFERENT context's total, because a higher priority sorts to the FRONT — the
+        // first context added was the only one where back() happened to be the right answer, which
+        // is why "11 of 2 binding(s)" only appeared once a second context existed.
+        const Uint64 lAcceptedCount = static_cast<Uint64>(lAccepted.Bindings.size());
+
         m_Contexts.emplace_back(Move(lAccepted));
 
         // Highest priority first. stable_sort so two contexts at one priority keep the order they
@@ -143,10 +149,10 @@ namespace Opaax
                              return InLeft.Priority > InRight.Priority;
                          });
 
-        OPAAX_LOG(LogInputEvaluator, Info, "Context '{}' added at priority {} — {} of {} binding(s) accepted",
+        OPAAX_LOG(LogInputEvaluator, Info, "Context '{}' added at priority {} — {} of {} binding(s) accepted, {} context(s) active",
                   InContext.Name, InContext.Priority,
-                  static_cast<Uint64>(m_Contexts.back().Bindings.size()),
-                  static_cast<Uint64>(InContext.Bindings.size()));
+                  lAcceptedCount, static_cast<Uint64>(InContext.Bindings.size()),
+                  static_cast<Uint64>(m_Contexts.size()));
 
         return true;
     }
