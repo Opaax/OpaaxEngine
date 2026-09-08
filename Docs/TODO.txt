@@ -11,6 +11,9 @@ Misc:
    - Avoiding checking all frame 
    - Undo Redo
 
+- Folder clean
+	- Code location (its messy right now)
+
 Editor: 
 - Import
 	From menus
