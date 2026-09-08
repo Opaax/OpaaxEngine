@@ -480,6 +480,22 @@ namespace Opaax::Editor
         void Execute(EditorContext& InContext, const Params&);
     };
 
+    /** Write the open `.opaaxaction` and publish it. */
+    struct SaveInputActionCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
+    /** Write the open `.opaaxinputmap` and publish it — this is what a rebind saves. */
+    struct SaveInputMapCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
     /**
      * The only Level entry on the menu bar, because it is the only one that does not need a map
      * named first — it goes and picks one. Removing a map and choosing the persistent one live on

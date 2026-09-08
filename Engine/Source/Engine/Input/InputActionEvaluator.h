@@ -48,6 +48,22 @@ namespace Opaax
 
         Uint64 GetActionCount() const noexcept { return static_cast<Uint64>(m_Actions.size()); }
 
+        /**
+         * Walk every action and its live state, in registration order.
+         *
+         * The registries' ForEach idiom. Its caller is the editor's Input panel: an action layer
+         * whose values cannot be SEEN is one you debug by adding log lines, which is the thing
+         * this engine keeps deciding not to do.
+         */
+        template<typename TFunc>
+        void ForEachAction(TFunc&& InFunc) const
+        {
+            for (const ActionEntry& lEntry : m_Actions)
+            {
+                InFunc(lEntry.Action, lEntry.State);
+            }
+        }
+
         // =========================================================================
         // Contexts
         // =========================================================================

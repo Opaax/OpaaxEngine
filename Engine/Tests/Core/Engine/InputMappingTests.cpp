@@ -26,6 +26,7 @@
 #include "Engine/Subsystems/Input/InputManager.h"
 #include "Engine/Subsystems/Resources/ResourceManager.h"
 #include "World/WorldManager.h"
+#include "Editor/Operation/InputOperations.h"   // MakeComposite2D — header-only, no ImGui
 
 using namespace Opaax;
 
@@ -523,6 +524,79 @@ TEST_SUITE("InputActionEvaluator — composites, priority and consumption")
 
         CHECK_FALSE(lEval.GetValue(Name("Jump")).AsBool());   // Space was swallowed
         CHECK(lEval.GetValue(Name("Fire")).AsBool());         // F was not
+    }
+}
+
+// =============================================================================
+TEST_SUITE("MakeComposite2D — the editor's 2D composite verb")
+{
+    TEST_CASE("The four generated rows drive the four directions")
+    {
+        // The one piece of real LOGIC in the input editor: which direction gets which modifier.
+        // A swapped pair walks the character sideways when you press up, and nothing about the
+        // panel would look wrong — the same silent shape as B1's diagonal.
+        InputMappingEntry lTemplate;
+        lTemplate.Action.Path = "Input/Move.opaaxaction";
+        lTemplate.bConsume    = true;
+
+        const TDynArray<InputMappingEntry> lRows =
+            Editor::MakeComposite2D(lTemplate, EKeyCode::W, EKeyCode::S, EKeyCode::A, EKeyCode::D);
+
+        REQUIRE(lRows.size() == 4);
+
+        // Every row inherits the action and the consume flag — the point of a template.
+        for (const InputMappingEntry& lRow : lRows)
+        {
+            CHECK(lRow.Action.Path == lTemplate.Action.Path);
+            CHECK(lRow.bConsume == lTemplate.bConsume);
+        }
+
+        // Asserted through the EVALUATOR rather than by reading the modifier names back: what
+        // matters is that pressing D moves +X and pressing W moves +Y, which is a claim about the
+        // maths and not about the list.
+        InputActionEvaluator lEval;
+        InputManager         lInput;
+
+        InputAction lMove = MakeAction("Move", EInputValueType::Axis2D);
+        lEval.RegisterAction(lMove);
+
+        InputMappingContext lContext;
+        lContext.Name = Name("Gameplay");
+
+        for (const InputMappingEntry& lRow : lRows)
+        {
+            InputKeyBinding lBinding;
+            lBinding.Action    = Name("Move");
+            lBinding.Key       = lRow.Key;
+            lBinding.Modifiers = lRow.Modifiers;
+            lContext.Bindings.emplace_back(lBinding);
+        }
+
+        REQUIRE(lEval.AddContext(lContext));
+
+        struct Expected { EKeyCode Key; float X; float Y; const char* What; };
+
+        const Expected lCases[] = {
+            { EKeyCode::D, +1.f,  0.f, "D is +X" },
+            { EKeyCode::A, -1.f,  0.f, "A is -X" },
+            { EKeyCode::W,  0.f, +1.f, "W is +Y" },
+            { EKeyCode::S,  0.f, -1.f, "S is -Y" },
+        };
+
+        for (const Expected& lCase : lCases)
+        {
+            CAPTURE(lCase.What);
+
+            lInput.OnKeyPressed(lCase.Key, false);
+            Step(lEval, lInput);
+
+            const Vector2F lValue = lEval.GetValue(Name("Move")).AsAxis2D();
+            CHECK(lValue.x == doctest::Approx(lCase.X));
+            CHECK(lValue.y == doctest::Approx(lCase.Y));
+
+            lInput.OnKeyReleased(lCase.Key);
+            Step(lEval, lInput);
+        }
     }
 }
 

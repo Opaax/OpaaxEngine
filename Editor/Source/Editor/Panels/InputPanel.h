@@ -56,6 +56,19 @@ namespace Opaax::Editor
         /** Route state, held keys, last press/release, mouse position + delta, scroll. */
         void DrawContents() override;
 
+        // =============================================================================
+        // Functions
+        // =============================================================================
+    private:
+        /**
+         * The running game's ACTIONS: name, shape, live value and which phases fired.
+         *
+         * Below the raw keys on purpose — the two halves of the input chain in the order they
+         * run, so a key that is down while its action reads zero is a visible contradiction
+         * rather than something to go looking for (IM1).
+         */
+        void DrawActions();
+
         /** Nothing to release. */
         void Shutdown()    override {}
 

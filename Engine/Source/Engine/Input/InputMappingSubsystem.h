@@ -1,5 +1,7 @@
 #pragma once
 
+#include <utility>   // std::forward — ForEachAction
+
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Application/Services/ILogger.h"
@@ -136,6 +138,10 @@ namespace Opaax
 
         Uint64 GetContextCount() const noexcept { return m_Evaluator.GetContextCount(); }
         Uint64 GetActionCount()  const noexcept { return m_Evaluator.GetActionCount(); }
+
+        /** Walk every action and its live state — what the editor's Input panel shows. */
+        template<typename TFunc>
+        void ForEachAction(TFunc&& InFunc) const { m_Evaluator.ForEachAction(std::forward<TFunc>(InFunc)); }
 
         /** How many handlers are registered, across every action and trigger. */
         Uint64 GetBindingCount() const noexcept;

@@ -77,4 +77,9 @@ namespace Opaax::Editor::Tags
     //Mover
     inline const OpaaxTag EDITOR_COMMAND_SAVE_MOVE_MODE = OpaaxTag("Editor.Command.SaveMoveMode");
     inline const OpaaxTag EDITOR_COMMAND_SAVE_MOVER     = OpaaxTag("Editor.Command.SaveMover");
+
+    // ⑦-B B3. An action and the context that binds keys to it are separate assets, so they save
+    // separately — a rebind never rewrites the action.
+    inline const OpaaxTag EDITOR_COMMAND_SAVE_INPUT_ACTION = OpaaxTag("Editor.Command.SaveInputAction");
+    inline const OpaaxTag EDITOR_COMMAND_SAVE_INPUT_MAP    = OpaaxTag("Editor.Command.SaveInputMap");
 }

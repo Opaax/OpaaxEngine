@@ -11,12 +11,15 @@
 #include "Editor/Operation/SheetOperations.h"
 #include "Editor/Operation/ClipOperations.h"
 #include "Editor/Operation/LibraryOperations.h"
+#include "Editor/Operation/InputOperations.h"
 #include "Editor/Operation/MoverOperations.h"
 #include "Editor/Operation/FontFamilyOperations.h"
 #include "Editor/EditorFontFamilyDocument.h"
 #include "Editor/EditorSpriteSheetDocument.h"
 #include "Editor/Resources/Types/Animation/EditorAnimationClipDocument.h"
 #include "Editor/Resources/Types/Animation/EditorAnimationLibraryDocument.h"
+#include "Editor/Resources/Types/Input/EditorInputActionDocument.h"
+#include "Editor/Resources/Types/Input/EditorInputMappingContextDocument.h"
 #include "Editor/Resources/Types/Mover/EditorMoveModeDocument.h"
 #include "Editor/Resources/Types/Mover/EditorMoverDocument.h"
 #include "Editor/Operation/MapOperations.h"
@@ -517,6 +520,28 @@ namespace Opaax::Editor
         }
 
         MoverOps::Save(InContext);
+    }
+
+    void SaveInputActionCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        if (!InContext.InputActionDocument.IsOpen())
+        {
+            OPAAX_LOG(LogEditorCommands, Warn, "Save Input Action ignored — no input action is open");
+            return;
+        }
+
+        InputActionOps::Save(InContext);
+    }
+
+    void SaveInputMapCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        if (!InContext.InputMapDocument.IsOpen())
+        {
+            OPAAX_LOG(LogEditorCommands, Warn, "Save Input Map ignored — no input mapping context is open");
+            return;
+        }
+
+        InputMapOps::Save(InContext);
     }
 
     void SaveFamilyCommand::Execute(EditorContext& InContext, const Params&)

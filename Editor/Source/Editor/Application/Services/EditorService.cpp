@@ -31,6 +31,8 @@
 #include "Editor/Panels/AnimationClipPanel.h"
 #include "Editor/Panels/AnimationLibraryPanel.h"
 #include "Editor/Panels/MoveModePanel.h"
+#include "Editor/Panels/InputActionPanel.h"
+#include "Editor/Panels/InputMappingContextPanel.h"
 #include "Editor/Panels/MoverPanel.h"
 #include "Editor/Panels/FontFamilyPanel.h"
 #include "Editor/EditorFontFamilyDocument.h"
@@ -52,6 +54,8 @@
 #include "Engine/Subsystems/Resources/Types/Animation/AnimationLibraryResource.h"
 #include "Engine/Subsystems/Resources/Types/Mover/MoveModeResource.h"
 #include "Engine/Subsystems/Resources/Types/Mover/MoverResource.h"
+#include "Engine/Subsystems/Resources/Types/Input/InputActionResource.h"
+#include "Engine/Subsystems/Resources/Types/Input/InputMappingContextResource.h"
 #include "Engine/Subsystems/Resources/Types/Font/FontFaceResource.h"
 #include "Engine/Subsystems/Resources/Types/Font/FontFamilyResource.h"
 #include "Editor/Resources/ResourcePreviewDrawers.h"   // what a preview DRAWS; no ImGui in this file
@@ -138,6 +142,8 @@ namespace Opaax::Editor
         m_FamilyDocument    = MakeUnique<EditorFontFamilyDocument>();
         m_MoveModeDocument  = MakeUnique<EditorMoveModeDocument>();
         m_MoverDocument     = MakeUnique<EditorMoverDocument>();
+        m_InputActionDocument = MakeUnique<EditorInputActionDocument>();
+        m_InputMapDocument    = MakeUnique<EditorInputMappingContextDocument>();
     }
 
     void EditorService::ClearEditorSystems()
@@ -178,6 +184,8 @@ namespace Opaax::Editor
             *m_FamilyDocument,
             *m_MoveModeDocument,
             *m_MoverDocument,
+            *m_InputActionDocument,
+            *m_InputMapDocument,
             m_Extensions,
             m_Gui->Panels(),
             *m_Preview,
@@ -204,6 +212,7 @@ namespace Opaax::Editor
     void EditorService::DrawGUI()
     {
         if (m_Context == nullptr) { return; }
+
 
         // Ahead of the pass, not inside it: a shortcut can execute a command that destroys the
         // world, and doing that before any widget is submitted is safer than mid-pass. ImGui's
@@ -319,6 +328,8 @@ namespace Opaax::Editor
         lPanelsRegistry.Register<AnimationLibraryPanel>(PanelDesc{.Id = AnimationLibraryPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<MoveModePanel>(PanelDesc{.Id = MoveModePanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<MoverPanel>(PanelDesc{.Id = MoverPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden});
+        lPanelsRegistry.Register<InputActionPanel>(PanelDesc{.Id = InputActionPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden});
+        lPanelsRegistry.Register<InputMappingContextPanel>(PanelDesc{.Id = InputMappingContextPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<FontFamilyPanel>(PanelDesc{.Id = FontFamilyPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<ConfigPanel>(PanelDesc         {.Id = ConfigPanel::PanelID(),          .DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<InputPanel>(PanelDesc          {.Id = InputPanel::PanelID(),           .DefaultVisibility = EPanelVisibility::Hidden });
@@ -361,6 +372,8 @@ namespace Opaax::Editor
         lCommands.Register<SaveLibraryCommand>(Tags::EDITOR_COMMAND_SAVE_LIBRARY);
         lCommands.Register<SaveMoveModeCommand>(Tags::EDITOR_COMMAND_SAVE_MOVE_MODE);
         lCommands.Register<SaveMoverCommand>(Tags::EDITOR_COMMAND_SAVE_MOVER);
+        lCommands.Register<SaveInputActionCommand>(Tags::EDITOR_COMMAND_SAVE_INPUT_ACTION);
+        lCommands.Register<SaveInputMapCommand>(Tags::EDITOR_COMMAND_SAVE_INPUT_MAP);
         lCommands.Register<SaveFamilyCommand>(Tags::EDITOR_COMMAND_SAVE_FAMILY);
         lCommands.Register<AddMapToLevelCommand>(Tags::EDITOR_COMMAND_ADD_MAP_TO_LEVEL);
 
@@ -552,6 +565,28 @@ namespace Opaax::Editor
                 if (InContext.MoverDocument.Open(InFile.AbsPath))
                 {
                     InContext.Panels.SetVisible(MoverPanel::PanelID(), true);
+                }
+            });
+
+        // ⑦-B B3. Two types, two editors, and the split is the point: an action is what gameplay
+        // binds, a context is which keys reach it, and a rebind opens only the second (**IM9**).
+        m_Extensions.ResourceTypes().Register<InputActionResource>()
+            .SetGlyph(OpaaxString("[IA]"))
+            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
+            {
+                if (InContext.InputActionDocument.Open(InFile.AbsPath))
+                {
+                    InContext.Panels.SetVisible(InputActionPanel::PanelID(), true);
+                }
+            });
+
+        m_Extensions.ResourceTypes().Register<InputMappingContextResource>()
+            .SetGlyph(OpaaxString("[IM]"))
+            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
+            {
+                if (InContext.InputMapDocument.Open(InFile.AbsPath))
+                {
+                    InContext.Panels.SetVisible(InputMappingContextPanel::PanelID(), true);
                 }
             });
 

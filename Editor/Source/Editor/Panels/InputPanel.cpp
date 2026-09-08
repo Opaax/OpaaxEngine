@@ -4,6 +4,9 @@
 #include "Editor/Input/InputRoute.h"
 
 #include "Application/Services/IEngine.h"
+#include "Engine/GameInstance/GameInstance.h"
+#include "Engine/GameInstance/GameInstanceManager.h"
+#include "Engine/Input/InputMappingSubsystem.h"
 #include "Engine/Subsystems/Input/InputManager.h"
 
 #include <imgui.h>
@@ -12,8 +15,10 @@ using namespace Opaax;
 
 namespace
 {
-    // Display names, panel-local on purpose: a real key-name table belongs with the rebinding UI
-    // that does not exist yet. Printables render as themselves, the groups a reader actually looks
+    // Display names, panel-local on purpose. The canonical table now EXISTS
+    // (Engine/Subsystems/Input/InputKeyNames.h) and this is deliberately still not it: that one is
+    // what a .opaaxinputmap writes, so it spells every code out. These abbreviate, which is right
+    // in a panel and wrong in a file format (IM10). Printables render as themselves, the groups a reader actually looks
     // for get names, and anything else shows its code rather than a lie.
     OpaaxString KeyName(EKeyCode InKey)
     {
@@ -142,5 +147,63 @@ namespace Opaax::Editor
         {
             ImGui::TextDisabled("Scroll: 0, 0");
         }
+
+        DrawActions();
+    }
+
+    void InputPanel::DrawActions()
+    {
+        ImGui::Separator();
+
+        // The SESSION, not the world: mapping lives on the GameInstance, so there is nothing to
+        // show while the editor is authoring. That absence is the honest answer, and it is the
+        // same one the log gives as "0 game session(s) ran" (GI1).
+        const GameInstanceManager& lGames = m_Context.Engine.GetGameInstances();
+        const GameInstance*        lGame  = lGames.GetGameInstance();
+
+        if (lGame == nullptr)
+        {
+            ImGui::TextDisabled("Actions: no game running.");
+            ImGui::SetItemTooltip("Input mapping lives on the GameInstance. Press Play.");
+            return;
+        }
+
+        const InputMappingSubsystem* lActions = lGame->GetSubsystems().GetSubsystem<InputMappingSubsystem>();
+
+        if (lActions == nullptr)
+        {
+            ImGui::TextDisabled("Actions: the session has no input mapping subsystem.");
+            return;
+        }
+
+        ImGui::Text("Actions (%llu over %llu context(s), %llu binding(s))",
+                    static_cast<unsigned long long>(lActions->GetActionCount()),
+                    static_cast<unsigned long long>(lActions->GetContextCount()),
+                    static_cast<unsigned long long>(lActions->GetBindingCount()));
+
+        if (lActions->GetActionCount() == 0)
+        {
+            ImGui::TextDisabled("  (no context added)");
+            return;
+        }
+
+        // The VALUE and the PHASE together. A value alone cannot tell "held" from "pressed this
+        // frame", which is exactly the distinction a binding is written against, so a panel
+        // showing only the number would leave the trigger half unobservable.
+        lActions->ForEachAction([](const InputAction& InAction, const InputActionState& InState)
+        {
+            OpaaxString lPhase;
+            if (InState.bStarted)   { lPhase += "Started ";   }
+            if (InState.bTriggered) { lPhase += "Triggered "; }
+            if (InState.bCompleted) { lPhase += "Completed "; }
+            if (InState.bHold)      { lPhase += "Hold ";      }
+
+            const ImVec4 lColour = InState.bTriggered ? ImVec4(0.4f, 1.f, 0.4f, 1.f)
+                                                      : ImVec4(0.6f, 0.6f, 0.6f, 1.f);
+
+            ImGui::TextColored(lColour, "  %-12s %-7s (%+.2f, %+.2f) %s",
+                               InAction.Name.CStr(), ToString(InAction.ValueType),
+                               InState.Value.Value.x, InState.Value.Value.y, lPhase.CStr());
+        });
     }
 }

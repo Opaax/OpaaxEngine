@@ -16,6 +16,8 @@
 #include "Editor/Resources/Types/Animation/EditorAnimationClipDocument.h"
 #include "Editor/Resources/Types/Animation/EditorAnimationLibraryDocument.h"
 #include "Editor/EditorFontFamilyDocument.h"
+#include "Editor/Resources/Types/Input/EditorInputActionDocument.h"
+#include "Editor/Resources/Types/Input/EditorInputMappingContextDocument.h"
 #include "Editor/Resources/Types/Mover/EditorMoveModeDocument.h"
 #include "Editor/Resources/Types/Mover/EditorMoverDocument.h"
 #include "Editor/PIE/PlayInEditor.h"
@@ -356,6 +358,8 @@ namespace Opaax::Editor
         /** ⑦-A P5a — the mover pair, the same clip/library split one family over. */
         TUniquePtr<EditorMoveModeDocument>         m_MoveModeDocument;
         TUniquePtr<EditorMoverDocument>            m_MoverDocument;
+        TUniquePtr<EditorInputActionDocument>      m_InputActionDocument;
+        TUniquePtr<EditorInputMappingContextDocument> m_InputMapDocument;
         
         TUniquePtr<EditorContext>       m_Context;
         

@@ -1,7 +1,8 @@
 #pragma once
 
 #include "Core/OpaaxTypes.h"
-#include "Core/Reflection/OpaaxEnum.h"   // OPAAX_ENUM_VALUES — the two enums below stamp it
+#include "Core/Reflection/OpaaxEnum.h"     // OPAAX_ENUM_VALUES — the two enums below stamp it
+#include "Core/Reflection/OpaaxProperty.h" // OPAAX_PROPERTIES — InputModifierData draws itself
 #include "Core/Maths/MathTypes.h"
 #include "Core/String/OpaaxStringID.hpp"
 #include "Engine/Input/InputActionValue.h"
@@ -116,6 +117,18 @@ namespace Opaax
         /** DeadZone only. Below Lower is zero, above Upper is one, between is rescaled. */
         float DeadZoneLower = 0.25f;
         float DeadZoneUpper = 1.0f;
+
+        // REFLECTED, so both input panels draw a modifier with no per-type editor code — the Type
+        // field becomes a dropdown on its own, because TPropertyDrawer specialises for any enum
+        // that declared its values. The knobs a given Type ignores are still shown; which ones
+        // matter is a presentation question and this struct is deliberately not the place for it.
+        OPAAX_PROPERTIES(InputModifierData,
+                         OPAAX_PROP(Type).SetTooltip("Which transform. Applied in list order."),
+                         OPAAX_PROP(Scale).SetTooltip("Scalar only: multiplied per component."),
+                         OPAAX_PROP(DeadZoneLower).SetRange(0.f, 1.f)
+                                                  .SetTooltip("DeadZone only: below this reads zero."),
+                         OPAAX_PROP(DeadZoneUpper).SetRange(0.f, 1.f)
+                                                  .SetTooltip("DeadZone only: at or above this reads one."))
     };
 
     // =============================================================================
