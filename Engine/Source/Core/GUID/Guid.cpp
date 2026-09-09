@@ -19,6 +19,19 @@ namespace
         }
     }
 
+    // SplitMix64's finalizer — the standard 64-bit avalanche mix. Every input bit affects every
+    // output bit, which is what Derive needs from each of its stages.
+    Opaax::Uint64 Mix64(Opaax::Uint64 InValue) noexcept
+    {
+        InValue ^= InValue >> 30;
+        InValue *= 0xbf58476d1ce4e5b9ULL;
+        InValue ^= InValue >> 27;
+        InValue *= 0x94d049bb133111ebULL;
+        InValue ^= InValue >> 31;
+
+        return InValue;
+    }
+
     bool ReadHex64(const char* InChars, Opaax::Uint64& OutValue) noexcept
     {
         Opaax::Uint64 lValue = 0;
@@ -56,6 +69,28 @@ namespace Opaax
         Guid lGuid;
         lGuid.High = lDist(sEngine);
         lGuid.Low  = lDist(sEngine);
+
+        if ((lGuid.High | lGuid.Low) == 0)
+        {
+            lGuid.Low = 1;
+        }
+
+        return lGuid;
+    }
+
+    // =========================================================================
+    // Derive — each half folds BOTH words of BOTH inputs, so the result cannot
+    // inherit a collision from one 64-bit half of either argument. Forced non-zero
+    // for New()'s reason: the invalid sentinel must never be mintable by accident.
+    // =========================================================================
+    Guid Guid::Derive(const Guid& InInstance, const Guid& InTemplate) noexcept
+    {
+        const Uint64 lTemplateSeed = Mix64(InTemplate.High ^ (InTemplate.Low + 0x9e3779b97f4a7c15ULL));
+        const Uint64 lInstanceSeed = Mix64(InInstance.High ^ (InInstance.Low + 0x9e3779b97f4a7c15ULL));
+
+        Guid lGuid;
+        lGuid.High = Mix64(lTemplateSeed ^ lInstanceSeed);
+        lGuid.Low  = Mix64(lTemplateSeed + ~lInstanceSeed);
 
         if ((lGuid.High | lGuid.Low) == 0)
         {

@@ -23,6 +23,9 @@ set(OPAAX_TEST_SOURCES
     # is that gate.
     Renderer/FontTests.cpp
     Renderer/DebugDrawTests.cpp
+    # ⑦-C P1a. Guid::Derive is what lets one prefab be instantiated twice into one world, so a
+    # collision here is not a hash nitpick — it is an instance that silently fails to appear.
+    Core/GuidTests.cpp
     Core/StringTests.cpp
     Core/StringViewTests.cpp
     Core/StringIDTests.cpp

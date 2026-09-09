@@ -41,6 +41,26 @@ namespace Opaax
         // =========================================================================
         static Guid New() noexcept; // random 128-bit, never zero
 
+        /**
+         * The identity an INSTANCE gives to one of a template's entities — a hash of the pair,
+         * never a fresh draw and never a stored table (⑦-C **K2**).
+         *
+         * A prefab's entities carry the guids its FILE authored, and MapFactory::Instantiate
+         * refuses a guid already live in the world, so instantiating one prefab twice would be
+         * refused outright. Deriving is what makes the second instance legal, and choosing a
+         * derivation over a remap TABLE is what buys three further things: an override record can
+         * key by the stable TEMPLATE guid rather than by a runtime one, nesting composes without
+         * anything storing the composition, and re-applying a changed prefab lands on the same
+         * entities — which is what every inter-entity reference (**WM3**) depends on.
+         *
+         * Deterministic and stable across runs and platforms: it mixes the four 64-bit words with
+         * fixed constants and touches no global state. Both halves of the result depend on all
+         * four inputs, so two templates differing only in their low word cannot collide in High.
+         *
+         * @return A valid Guid — never the all-zero sentinel, for New()'s reason.
+         */
+        static Guid Derive(const Guid& InInstance, const Guid& InTemplate) noexcept;
+
         // =========================================================================
         // Text form — the ONE way a Guid is written to disk (M5)
         // =========================================================================

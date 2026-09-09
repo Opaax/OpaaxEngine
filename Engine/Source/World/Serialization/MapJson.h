@@ -5,6 +5,7 @@
 #include "Core/EngineAPI.h"
 #include "Application/Services/ILogger.h"
 
+#include "World/Serialization/EntityJson.h"
 #include "World/Serialization/MapData.h"
 
 namespace Opaax
@@ -38,21 +39,21 @@ namespace Opaax
         inline constexpr Uint32 MAP_FORMAT_VERSION = 1;
 
         // ---- keys ---------------------------------------------------------------
-        // Named constants rather than literals: the reader and the writer must agree, and a
-        // typo in one of them is a silently-empty field rather than a compile error.
-        inline constexpr const char* KEY_VERSION     = "version";
+        // `mapId` is the only key a MAP owns; everything else describes an ENTITY and is
+        // EntityJson's, shared with the prefab format so the two cannot drift (⑦-C P1a).
+        // Re-exported rather than re-declared: one definition, and no caller moved.
         inline constexpr const char* KEY_MAP_ID      = "mapId";
-        inline constexpr const char* KEY_ENTITIES    = "entities";
-        inline constexpr const char* KEY_GUID        = "guid";
-        inline constexpr const char* KEY_NAME        = "name";
-        inline constexpr const char* KEY_OWNER_MAP   = "ownerMap";
-        inline constexpr const char* KEY_COMPONENTS  = "components";
+
+        inline constexpr const char* KEY_VERSION     = EntityJson::KEY_VERSION;
+        inline constexpr const char* KEY_ENTITIES    = EntityJson::KEY_ENTITIES;
+        inline constexpr const char* KEY_GUID        = EntityJson::KEY_GUID;
+        inline constexpr const char* KEY_NAME        = EntityJson::KEY_NAME;
+        inline constexpr const char* KEY_OWNER_MAP   = EntityJson::KEY_OWNER_MAP;
+        inline constexpr const char* KEY_COMPONENTS  = EntityJson::KEY_COMPONENTS;
 
         // ---- dump forms ---------------------------------------------------------
-        // The file is indented because a map lives in git and a human reads the diff. The
-        // comparison form is not a file and has no reader — see SerializeCompact.
-        inline constexpr int k_FileIndent    =  4;
-        inline constexpr int k_CompactIndent = -1;   // nlohmann: negative => no whitespace
+        inline constexpr int k_FileIndent    = EntityJson::k_FileIndent;
+        inline constexpr int k_CompactIndent = EntityJson::k_CompactIndent;
 
         /**
          * Serialize InData.
