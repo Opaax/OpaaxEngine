@@ -2,6 +2,7 @@
 
 #include "Editor/Camera/EditorCamera.h"
 #include "Editor/EditorContext.h"
+#include "Editor/EditorMapDocument.h"
 #include "Editor/Operation/EditorSelection.hpp"
 #include "Editor/Operation/EditorViewport.hpp"
 #include "Editor/Operation/MapOperations.h"
@@ -32,6 +33,7 @@
 #include "Application/Services/IPaths.h"         // ⑦-C — the marker stores an ASSET-relative path
 #include "Engine/Subsystems/Resources/ResourceManager.h"  // before PrefabResource — completes LoadContext
 #include "World/Prefab/PrefabFactory.h"
+#include "World/Prefab/PrefabFile.h"
 #include "World/Prefab/PrefabResource.hpp"
 #include "World/Serialization/MapFactory.h"
 
@@ -229,6 +231,105 @@ namespace Opaax::Editor
                   lCount, lAssetPath.CStr(), InOwnerMap.ToString().CStr());
 
         return lCount;
+    }
+
+    bool EntityOps::CreatePrefabFromSelection(EditorContext& InContext, const OpaaxString& InAbsPath)
+    {
+        if (!MapOps::CanEdit(InContext, "Create Prefab")) { return false; }
+
+        World* const lWorld = InContext.Worlds.GetActiveWorld();
+        if (lWorld == nullptr) { return false; }
+
+        if (InContext.Selection.Count() == 0)
+        {
+            OPAAX_LOG(LogEntityOps, Warn, "Create Prefab refused — nothing is selected.");
+            return false;
+        }
+
+        // BEFORE writing anything: a prefab no map could reference is worse than no prefab, and the
+        // author would have a stray file to clean up (**MP8**).
+        const OpaaxString lAssetPath = InContext.Paths.AbsoluteToAsset(InAbsPath);
+        if (lAssetPath.IsEmpty())
+        {
+            OPAAX_LOG(LogEntityOps, Warn,
+                      "Create Prefab refused — '{}' is outside the project's and the engine's asset "
+                      "trees, so no map could reference it", InAbsPath.CStr());
+            return false;
+        }
+
+        const ComponentRegistry& lRegistry = InContext.Engine.GetRegistries().Components();
+
+        // Captured BEFORE the swap — nothing else can recover the originals.
+        MapData lOriginals = MapSerializer::CaptureEntities(*lWorld, lRegistry, InContext.Selection.Ids());
+        if (lOriginals.IsEmpty())
+        {
+            OPAAX_LOG(LogEntityOps, Warn, "Create Prefab refused — the selection captured nothing.");
+            return false;
+        }
+
+        // The ORIGINALS' map, not the focused one: cutting a prefab out of map A while B is focused
+        // must not move the result to B. A purely runtime-spawned selection falls back.
+        const MapId lOwnerMap = lOriginals.OwnerId().IsValid() ? lOriginals.OwnerId()
+                                                               : InContext.MapDocument.GetMapId();
+        if (!lOwnerMap.IsValid())
+        {
+            OPAAX_LOG(LogEntityOps, Warn,
+                      "Create Prefab refused — the selection belongs to no map and none is focused.");
+            return false;
+        }
+
+        const PrefabData lPrefab = PrefabFactory::BuildPrefab(lOriginals, lRegistry);
+
+        if (!PrefabFile::Save(InAbsPath, lPrefab))
+        {
+            return false;   // PrefabFile logged it; nothing has been touched
+        }
+
+        MapData lInstance = PrefabFactory::BuildInstance(lPrefab, lAssetPath, Guid::New(), lOwnerMap,
+                                                          lRegistry);
+        if (lInstance.IsEmpty())
+        {
+            // The file is written and the originals are untouched — a recoverable state, which is
+            // why the write goes first. PrefabFactory logged the refusal.
+            return false;
+        }
+
+        // THE SWAP. Destroy first so the derived guids cannot meet their own templates: an instance
+        // built from these very entities carries DIFFERENT ids (Guid::Derive), so a collision is not
+        // actually possible — but destroying first is also what makes the selection end up on the
+        // instance rather than on entities that are about to go.
+        InContext.Selection.Clear();
+        for (const EntityData& lEntity : lOriginals.Entities)
+        {
+            if (Entity lFound = lWorld->FindByGuid(lEntity.Id); lFound.IsValid())
+            {
+                lWorld->DestroyEntity(lFound.GetHandle());
+            }
+        }
+
+        const Uint64 lCount = MapFactory::Instantiate(lInstance, *lWorld, lRegistry);
+
+        TDynArray<EntityID> lIds;
+        lIds.reserve(lInstance.Entities.size());
+        for (const EntityData& lEntity : lInstance.Entities)
+        {
+            if (Entity lFound = lWorld->FindByGuid(lEntity.Id); lFound.IsValid())
+            {
+                lIds.emplace_back(lFound.GetHandle());
+            }
+        }
+
+        InContext.Selection.Replace(lWorld, lIds);
+        lWorld->MarkChanged();
+
+        // ONE step for one gesture — see PrefabCreateFromSelection for why this is not two.
+        InContext.Undo.Record(PrefabCreateFromSelection{ Move(lOriginals), Move(lInstance) });
+
+        OPAAX_LOG(LogEntityOps, Info,
+                  "Created prefab '{}' from {} entity(ies) and replaced them with an instance of {}",
+                  lAssetPath.CStr(), lPrefab.EntityCount(), lCount);
+
+        return true;
     }
 
     void EntityOps::Rename(EditorContext& InContext, Entity InEntity, const OpaaxString& InName)

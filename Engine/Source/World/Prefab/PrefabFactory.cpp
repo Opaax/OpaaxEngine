@@ -79,4 +79,41 @@ namespace Opaax
 
         return lInstance;
     }
+
+    PrefabData PrefabFactory::BuildPrefab(const MapData& InCaptured, const ComponentRegistry& InRegistry)
+    {
+        PrefabData lPrefab;
+
+        // The marker's authoring name comes from the REGISTRY for BuildInstance's reason. Absent, no
+        // entity can be carrying one, so there is nothing to strip and this is not a refusal.
+        const IComponentEntry* lMarkerEntry =
+            InRegistry.FindByTypeId(entt::type_hash<PrefabInstanceComponent>::value());
+        const OpaaxStringID    lMarkerName = (lMarkerEntry != nullptr) ? lMarkerEntry->GetName()
+                                                                      : OpaaxStringID();
+
+        lPrefab.Entities.reserve(InCaptured.Entities.size());
+
+        for (const EntityData& lCaptured : InCaptured.Entities)
+        {
+            EntityData lEntity = lCaptured;
+
+            // Guids are KEPT — they become the file's template ids. See the header.
+            lEntity.OwnerMap = MapId();
+
+            if (lMarkerName.IsValid())
+            {
+                std::erase_if(lEntity.Components,
+                              [lMarkerName](const ComponentData& InComponent)
+                              {
+                                  return InComponent.TypeName == lMarkerName;
+                              });
+            }
+
+            lPrefab.Entities.emplace_back(Move(lEntity));
+        }
+
+        OPAAX_LOG(LogPrefabFactory, Trace, "Built a prefab of {} entity(ies)", lPrefab.EntityCount());
+
+        return lPrefab;
+    }
 }

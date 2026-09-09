@@ -297,6 +297,122 @@ TEST_CASE("Prefab: a marker already in the FILE is replaced, never doubled")
 }
 
 // =============================================================================
+// BuildPrefab — the other direction (⑦-C P2)
+// =============================================================================
+TEST_CASE("Prefab: BuildPrefab clears OwnerMap and KEEPS the guids")
+{
+    ComponentRegistry lRegistry;
+    FillRegistry(lRegistry);
+
+    World lWorld("Authoring");
+    Entity lA = lWorld.CreateEntity("A", MapId("Level01"));
+    Entity lB = lWorld.CreateEntity("B", MapId("Level01"));
+
+    const MapData lCaptured = MapSerializer::CaptureEntities(
+        lWorld, lRegistry, { lA.GetHandle(), lB.GetHandle() });
+
+    const PrefabData lPrefab = PrefabFactory::BuildPrefab(lCaptured, lRegistry);
+
+    REQUIRE(lPrefab.EntityCount() == 2);
+    for (const EntityData& lEntity : lPrefab.Entities)
+    {
+        // Belongs to no map — an instance is what stamps one (**WM2**).
+        CHECK_FALSE(lEntity.OwnerMap.IsValid());
+    }
+
+    // The guids become the file's TEMPLATE ids, so they must survive: BuildInstance derives from
+    // them and an override record will key by them.
+    std::unordered_set<Guid> lKept;
+    for (const EntityData& lEntity : lPrefab.Entities) { lKept.insert(lEntity.Id); }
+    CHECK(lKept.count(lA.GetGuid()) == 1);
+    CHECK(lKept.count(lB.GetGuid()) == 1);
+}
+
+TEST_CASE("Prefab: BuildPrefab STRIPS an existing instance marker rather than baking it in")
+{
+    // Making a prefab out of entities that were themselves an instance must not produce a file
+    // whose entities claim to belong to a DIFFERENT prefab. Nesting is P7; flattening is the
+    // honest answer until then.
+    ComponentRegistry lRegistry;
+    FillRegistry(lRegistry);
+
+    const PrefabData lSource = MakePrefab(lRegistry);
+    const MapId      lMap    = MapId("Level01");
+
+    World   lWorld("Target");
+    MapData lInstance = PrefabFactory::BuildInstance(
+        lSource, OpaaxString("Prefabs/Gun.opaaxprefab"), Guid::New(), lMap, lRegistry);
+    REQUIRE(MapFactory::Instantiate(lInstance, lWorld, lRegistry) == 2);
+
+    // Capture what the instance produced — entities that DO carry a marker.
+    TDynArray<EntityID> lHandles;
+    for (const EntityData& lEntity : lInstance.Entities)
+    {
+        lHandles.emplace_back(lWorld.FindByGuid(lEntity.Id).GetHandle());
+    }
+
+    const MapData    lCaptured = MapSerializer::CaptureEntities(lWorld, lRegistry, lHandles);
+    const PrefabData lRebuilt  = PrefabFactory::BuildPrefab(lCaptured, lRegistry);
+
+    REQUIRE(lRebuilt.EntityCount() == 2);
+    for (const EntityData& lEntity : lRebuilt.Entities)
+    {
+        for (const ComponentData& lComponent : lEntity.Components)
+        {
+            CHECK(lComponent.TypeName != OpaaxStringID("PrefabInstance"));
+        }
+    }
+}
+
+TEST_CASE("Prefab: the FULL round trip — world entities -> prefab -> file -> two placements")
+{
+    // What "Create Prefab from Selection" is, end to end and headless. The two placements at the
+    // end are what make it a prefab rather than an export.
+    const ScopedTempDir lTemp("full_round_trip");
+    const OpaaxString   lPath = lTemp.Sub("Made.opaaxprefab");
+
+    ComponentRegistry lRegistry;
+    FillRegistry(lRegistry);
+
+    World lWorld("Session");
+    Entity lA = lWorld.CreateEntity("Part A", MapId("Level01"));
+    lA.Get<TransformComponent>().Position = Vector2F{7.f, 8.f};
+    lA.Add<DummyComponent>();
+    Entity lB = lWorld.CreateEntity("Part B", MapId("Level01"));
+
+    const MapData    lCaptured = MapSerializer::CaptureEntities(
+        lWorld, lRegistry, { lA.GetHandle(), lB.GetHandle() });
+    const PrefabData lPrefab   = PrefabFactory::BuildPrefab(lCaptured, lRegistry);
+
+    REQUIRE(PrefabFile::Save(lPath, lPrefab));
+
+    PrefabData lReloaded;
+    REQUIRE(PrefabFile::Load(lPath, lReloaded));
+    REQUIRE(lReloaded.EntityCount() == 2);
+
+    MapData lFirst = PrefabFactory::BuildInstance(lReloaded, OpaaxString("P/Made.opaaxprefab"),
+                                                  Guid::New(), MapId("Level01"), lRegistry);
+    MapData lSecond = PrefabFactory::BuildInstance(lReloaded, OpaaxString("P/Made.opaaxprefab"),
+                                                   Guid::New(), MapId("Level01"), lRegistry);
+
+    CHECK(MapFactory::Instantiate(lFirst,  lWorld, lRegistry) == 2);
+    CHECK(MapFactory::Instantiate(lSecond, lWorld, lRegistry) == 2);
+
+    // The two originals plus two placements of two.
+    CHECK(lWorld.GetEntityCount() == 6);
+
+    // The authored data survived the whole trip, not merely the entity count.
+    Entity lPlaced = lWorld.FindByGuid(lFirst.Entities[0].Id);
+    REQUIRE(lPlaced.IsValid());
+    const bool lIsPartA = lPlaced.Get<EntityMeta>().Name == OpaaxString("Part A");
+    if (lIsPartA)
+    {
+        CHECK(lPlaced.Get<TransformComponent>().Position.x == doctest::Approx(7.f));
+        CHECK(lPlaced.Has<DummyComponent>());
+    }
+}
+
+// =============================================================================
 // The document layers
 // =============================================================================
 TEST_CASE("PrefabJson: round trip preserves entities, names and components")

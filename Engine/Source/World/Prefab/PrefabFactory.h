@@ -59,5 +59,30 @@ namespace Opaax
         static MapData BuildInstance(const PrefabData& InPrefab, const OpaaxString& InPrefabAssetPath,
                                      const Guid& InInstanceId, MapId InOwnerMap,
                                      const ComponentRegistry& InRegistry);
+
+        /**
+         * The OTHER DIRECTION: captured world entities become a prefab (⑦-C P2).
+         *
+         * `BuildInstance`'s inverse, and deliberately its neighbour — the two ends of one round trip
+         * drift when they live apart. Both are pure, which is what lets the editor's "Create Prefab
+         * from Selection" be a thin verb over a transform a headless test can reach.
+         *
+         * Two things are REMOVED, and each is the same rule stated from the other side:
+         *   - `OwnerMap` is cleared. A prefab's entities belong to no map (**WM2**); an instance is
+         *     what stamps one, so carrying the authoring map into the file would make every
+         *     placement claim the map it was cut from.
+         *   - any `PrefabInstanceComponent` is dropped. Building a prefab out of entities that were
+         *     themselves an instance must not bake the OLD link into the new file — the result
+         *     would be a prefab whose entities claim to belong to a different prefab. Composing the
+         *     two is nesting (⑦-C P7); flattening is the honest answer until then.
+         *
+         * GUIDS ARE KEPT AS CAPTURED. They become the file's TEMPLATE guids — the stable ids
+         * `BuildInstance` derives from and an override record keys by — so they must be the prefab's
+         * own, not re-minted on every save.
+         *
+         * @return The prefab. EMPTY when InCaptured is empty; that is a refusal the caller makes,
+         *   not one this makes, since an empty prefab is a legal document.
+         */
+        static PrefabData BuildPrefab(const MapData& InCaptured, const ComponentRegistry& InRegistry);
     };
 }

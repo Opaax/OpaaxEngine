@@ -49,6 +49,7 @@ namespace Opaax::Editor
             case EMapAction::RemoveMissing:  return "Remove Missing from Level";
             case EMapAction::CreateEntity:   return "Create Entity";
             case EMapAction::DeleteSelected: return "Delete Selected";
+            case EMapAction::CreatePrefab:   return "Create Prefab from Selection";
             case EMapAction::None:           return "None";
         }
 
@@ -341,6 +342,16 @@ namespace Opaax::Editor
         ImGui::TextDisabled("%llu selected", static_cast<unsigned long long>(m_Context.Selection.Count()));
         ImGui::Separator();
 
+        // ⑦-C P2. Queued like everything else here: it destroys the selected entities and creates
+        // an instance in their place, which is exactly the mid-walk mutation that made this queue
+        // exist. It also opens a modal, which must not happen inside the tree either.
+        if (ImGui::MenuItem("Create Prefab from Selection..."))
+        {
+            m_Pending = PendingMapAction{EMapAction::CreatePrefab, MapId{}, {}};
+        }
+
+        ImGui::Separator();
+
         if (ImGui::MenuItem("Delete"))
         {
             m_Pending = PendingMapAction{EMapAction::DeleteSelected, MapId{}, {}};
@@ -375,6 +386,11 @@ namespace Opaax::Editor
                 break;
             case EMapAction::DeleteSelected:
                 m_Context.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_DELETE_ENTITY, m_Context);
+                break;
+            // No payload: the subject is the SELECTION, which the context already holds.
+            case EMapAction::CreatePrefab:
+                m_Context.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_CREATE_PREFAB_FROM_SELECTION,
+                                                        m_Context);
                 break;
             case EMapAction::None:                                                            break;
         }

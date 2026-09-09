@@ -30,7 +30,8 @@ namespace Opaax::Editor
         Remove,
         RemoveMissing,  // a manifest entry whose file never mounted — named by PATH, it has no id
         CreateEntity,   // ② — into the map whose header was clicked
-        DeleteSelected  // ② — the row's own menu; the row is selected first, so it needs no target
+        DeleteSelected, // ② — the row's own menu; the row is selected first, so it needs no target
+        CreatePrefab    // ⑦-C — the selection becomes a prefab, and an instance of it
     };
 
     /** **I11** — an enum gets a free ToString, found by ADL, declared with the enum. */

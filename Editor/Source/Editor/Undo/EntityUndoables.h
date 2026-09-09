@@ -57,6 +57,36 @@ namespace Opaax::Editor
         const char* Label() const noexcept { return "Instantiate Prefab"; }
     };
 
+    /**
+     * A selection BECAME an instance of a new prefab (⑦-C P2) — one step for a swap, because it
+     * was one gesture.
+     *
+     * Two payloads because the edit destroyed one set of entities and created another, and undo has
+     * to put back exactly what was there. Recording it as an `EntityDelete` plus an
+     * `EntityInstantiate` would need TWO Ctrl+Z for one action, which is the classic way a
+     * composite verb ends up feeling broken.
+     *
+     * ORDER IS LOAD-BEARING in both directions: destroy first, restore second. `RestoreEntities`
+     * SELECTS what it brought back and `DestroyEntities` clears the selection, so doing them the
+     * other way round would leave nothing selected after an undo.
+     *
+     * THE FILE IS NOT PART OF THIS (⑦-C **K6**). Undo puts the original entities back and takes the
+     * instance away; the `.opaaxprefab` it wrote stays on disk, exactly as Unity leaves the asset.
+     * The prefab can be placed again from the browser, or deleted in the file system.
+     */
+    struct PrefabCreateFromSelection
+    {
+        /** What was selected, captured BEFORE the swap: nothing else can recover it. */
+        MapData Originals;
+
+        /** What replaced it, captured after — the instance's derived guids. */
+        MapData Instance;
+
+        void        Undo(EditorContext& InContext);
+        void        Redo(EditorContext& InContext);
+        const char* Label() const noexcept { return "Create Prefab"; }
+    };
+
     /** Entities were destroyed — the same two bodies as EntityCreate, the other way round. */
     struct EntityDelete
     {

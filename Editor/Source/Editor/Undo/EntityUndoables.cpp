@@ -112,6 +112,20 @@ namespace Opaax::Editor
     void PrefabInstantiate::Undo(EditorContext& InContext) { DestroyEntities(InContext, Entities); }
     void PrefabInstantiate::Redo(EditorContext& InContext) { RestoreEntities(InContext, Entities); }
 
+    // Destroy THEN restore, both ways: RestoreEntities selects what it brought back and
+    // DestroyEntities clears, so the opposite order would leave an empty selection.
+    void PrefabCreateFromSelection::Undo(EditorContext& InContext)
+    {
+        DestroyEntities(InContext, Instance);
+        RestoreEntities(InContext, Originals);
+    }
+
+    void PrefabCreateFromSelection::Redo(EditorContext& InContext)
+    {
+        DestroyEntities(InContext, Originals);
+        RestoreEntities(InContext, Instance);
+    }
+
     void EntityDelete::Undo(EditorContext& InContext) { RestoreEntities(InContext, Entities); }
     void EntityDelete::Redo(EditorContext& InContext) { DestroyEntities(InContext, Entities); }
 

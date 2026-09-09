@@ -411,6 +411,37 @@ namespace Opaax::Editor
         EntityOps::InstantiatePrefab(InContext, InParams.AbsPath, InContext.MapDocument.GetMapId());
     }
 
+    void CreatePrefabFromSelectionCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        if (!MapOps::CanEdit(InContext, "Create Prefab")) { return; }
+
+        if (InContext.Selection.Count() == 0)
+        {
+            OPAAX_LOG(LogEditorCommands, Warn, "Create Prefab — nothing is selected.");
+            return;
+        }
+
+        // Named after the PRIMARY entity, so the common case is confirm-without-typing. A name is a
+        // debug label and may contain anything, so this is a suggestion the dialog can overwrite,
+        // never a path this command commits to.
+        OpaaxString lSuggested = OpaaxString("Prefab");
+        if (World* const lWorld = InContext.Worlds.GetActiveWorld(); lWorld != nullptr)
+        {
+            Entity lPrimary{ InContext.Selection.Ids().front(), lWorld };
+            if (lPrimary.IsValid()) { lSuggested = lPrimary.Get<EntityMeta>().Name; }
+        }
+
+        InContext.Dialogs.SaveFile(
+            MakeFileRequest("Create Prefab",
+                            InContext.Paths.AssetToAbsolute(
+                                OpaaxString("Prefabs/") + lSuggested + OpaaxString(".opaaxprefab")),
+                            "*.opaaxprefab", "Opaax Prefab"),
+            [&InContext](const OpaaxString& InPicked)
+            {
+                EntityOps::CreatePrefabFromSelection(InContext, InPicked);
+            });
+    }
+
     void SaveMapAsCommand::Execute(EditorContext& InContext, const Params&)
     {
         if (!MapOps::CanEdit(InContext, "Save Map As")) { return; }

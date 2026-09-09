@@ -409,6 +409,20 @@ namespace Opaax::Editor
         void Execute(EditorContext& InContext, const Params& InParams);
     };
 
+    /**
+     * Ask where, write the SELECTION there as a prefab, and replace it with an instance.
+     *
+     * NoParams: the subject is the selection, which the context already holds — the same reason
+     * `DeleteSelected` takes none. The dialog defaults to the primary entity's name, so the common
+     * case is type-nothing-and-confirm.
+     */
+    struct CreatePrefabFromSelectionCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
     // =============================================================================
     // Level
     // =============================================================================

@@ -70,6 +70,29 @@ namespace Opaax::Editor
         Uint64 InstantiatePrefab(EditorContext& InContext, const OpaaxString& InAbsPath, MapId InOwnerMap);
 
         /**
+         * Write the SELECTION to InAbsPath as a new prefab, then REPLACE it with an instance of
+         * that prefab (⑦-C P2).
+         *
+         * The replacement is what makes this "create a prefab" rather than "export one". Unity,
+         * Unreal and Godot all do it, and the reason is the same in each: leaving the originals
+         * unlinked produces entities that look like the prefab and silently ignore every later edit
+         * to it — a half-built feature that only announces itself much later.
+         *
+         * WHICH MAP the instance lands in is the ORIGINALS' map, not the focused one: cutting a
+         * prefab out of map A while map B happens to be focused must not move the result to B. A
+         * selection of purely runtime-spawned entities has no map and falls back to the focused one.
+         *
+         * THE FILE IS WRITTEN FIRST and is not rolled back if the swap fails — and it is not part of
+         * undo either (**K6**). A written prefab with the originals still in place is a recoverable
+         * state; a swap with no file behind it is not.
+         *
+         * @param InAbsPath Where to write. Refused when it is outside the project's and the engine's
+         *   asset trees, because no map could then reference it (**MP8**) — checked BEFORE writing.
+         * @return true when the prefab was written AND the selection replaced.
+         */
+        bool CreatePrefabFromSelection(EditorContext& InContext, const OpaaxString& InAbsPath);
+
+        /**
          * Rename one entity. Empty input is refused — a nameless row in the Hierarchy is
          * unclickable in practice and tells an author nothing.
          *
