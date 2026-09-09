@@ -35,6 +35,7 @@
 #include "World/Components/PrefabInstanceComponent.h"
 #include "World/Prefab/PrefabFactory.h"
 #include "World/Prefab/PrefabFile.h"
+#include "Editor/Operation/ResourceOperations.h"
 #include "World/Prefab/ResourcePrefabResolver.h"
 #include "World/Prefab/PrefabResource.hpp"
 #include "World/Serialization/MapFactory.h"
@@ -301,6 +302,13 @@ namespace Opaax::Editor
         {
             return false;   // PrefabFile logged it; nothing has been touched
         }
+
+        // ⑦-C P4. Usually a no-op — a NEW prefab has no instances to update. It matters when this
+        // OVERWRITES a prefab that is already placed: every existing instance of that path then
+        // rebuilds against what was just written, keeping its own overrides. Announced here rather
+        // than left to the caller for the reason the other eight Save ops go through this seam: a
+        // write that does not announce is a write half the editor never hears about.
+        ResourceOps::SavedToDisk<PrefabResource>(InContext, InAbsPath);
 
         MapData lInstance = PrefabFactory::BuildInstance(lPrefab, lAssetPath, Guid::New(), lOwnerMap,
                                                           lRegistry);

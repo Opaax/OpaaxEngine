@@ -1,4 +1,5 @@
 #include "Editor/Operation/ClipOperations.h"
+#include "Editor/Operation/ResourceOperations.h"
 
 #include "Editor/Resources/Types/Animation/EditorAnimationClipDocument.h"
 #include "Editor/EditorContext.h"
@@ -152,7 +153,7 @@ namespace Opaax::Editor
         //
         // Not resident is the ordinary case (nothing plays this clip yet) and answers false, so the
         // result is deliberately not treated as a failure of the save.
-        InContext.Resources.Reload<AnimationClipResource>(InContext.ClipDocument.AbsPath().CStr());
+        ResourceOps::SavedToDisk<AnimationClipResource>(InContext, InContext.ClipDocument.AbsPath());
 
         return true;
     }

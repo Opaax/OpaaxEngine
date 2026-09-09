@@ -19,6 +19,7 @@ namespace Opaax
         class IEditorWidgets;           // editor-owned; the value-editor vocabulary drawers use
         class EditorCamera;             // editor-owned; how the author is looking at an Edit world
         class EditorSelection;          // editor-owned; what is selected (Hierarchy + viewport write, Inspector reads)
+        class EditorResourceEvents;     // editor-owned; "a document was saved", two-phase (⑦-C P4)
         class EditorViewport;           // editor-owned; how big the viewport image is, in pixels
         class EditorGizmo;              // editor-owned; the transform handles' grab state
         class EditorUndo;               // editor-owned; the undo/redo stacks of executed commands
@@ -78,6 +79,11 @@ namespace Opaax
             IEditorWidgets&   Widgets;
 
             EditorSelection&  Selection;   // M2a — Hierarchy writes, Inspector reads
+
+            // ⑦-C P4 — "a document was saved", in two phases. Here rather than inside any one
+            // document because the WRITERS are eight different Save ops and the READERS are
+            // whatever cares; the Selection/Undo shape.
+            EditorResourceEvents& ResourceEvents;
 
             // ② — the viewport's pixel size, measured by the panel. Here because the WRITER is a
             // panel and the READER is a menu command: focus-selected needs the aspect to frame a

@@ -1,4 +1,5 @@
 #include "Editor/Operation/InputOperations.h"
+#include "Editor/Operation/ResourceOperations.h"
 
 #include "Editor/EditorContext.h"
 #include "Editor/Resources/Types/Input/EditorInputActionDocument.h"
@@ -126,7 +127,7 @@ namespace Opaax::Editor
 
         InContext.InputActionDocument.MarkSaved();
 
-        InContext.Resources.Reload<InputActionResource>(InContext.InputActionDocument.AbsPath().CStr());
+        ResourceOps::SavedToDisk<InputActionResource>(InContext, InContext.InputActionDocument.AbsPath());
 
         return true;
     }
@@ -300,7 +301,7 @@ namespace Opaax::Editor
 
         InContext.InputMapDocument.MarkSaved();
 
-        InContext.Resources.Reload<InputMappingContextResource>(InContext.InputMapDocument.AbsPath().CStr());
+        ResourceOps::SavedToDisk<InputMappingContextResource>(InContext, InContext.InputMapDocument.AbsPath());
 
         return true;
     }

@@ -1,4 +1,5 @@
 #include "Editor/Operation/LibraryOperations.h"
+#include "Editor/Operation/ResourceOperations.h"
 
 #include "Core/String/OpaaxPathString.h"
 #include "Editor/Resources/Types/Animation/EditorAnimationLibraryDocument.h"
@@ -242,7 +243,7 @@ namespace Opaax::Editor
 
         // AND PUBLISH IT, for ClipOps::Save's reason ([[L75]]): without this an entity already
         // holding this library keeps resolving names against the first parse.
-        InContext.Resources.Reload<AnimationLibraryResource>(InContext.LibraryDocument.AbsPath().CStr());
+        ResourceOps::SavedToDisk<AnimationLibraryResource>(InContext, InContext.LibraryDocument.AbsPath());
 
         return true;
     }

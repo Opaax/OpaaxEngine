@@ -1,4 +1,5 @@
 #include "Editor/Operation/MoverOperations.h"
+#include "Editor/Operation/ResourceOperations.h"
 
 #include "Core/String/OpaaxPathString.h"
 #include "Editor/EditorContext.h"
@@ -244,7 +245,7 @@ namespace Opaax::Editor
 
         // AND PUBLISH IT ([[L75]]): without this an entity already holding this mover keeps
         // resolving names against the first parse.
-        InContext.Resources.Reload<MoverResource>(InContext.MoverDocument.AbsPath().CStr());
+        ResourceOps::SavedToDisk<MoverResource>(InContext, InContext.MoverDocument.AbsPath());
 
         return true;
     }
@@ -287,7 +288,7 @@ namespace Opaax::Editor
 
         InContext.MoveModeDocument.MarkSaved();
 
-        InContext.Resources.Reload<MoveModeResource>(InContext.MoveModeDocument.AbsPath().CStr());
+        ResourceOps::SavedToDisk<MoveModeResource>(InContext, InContext.MoveModeDocument.AbsPath());
 
         return true;
     }

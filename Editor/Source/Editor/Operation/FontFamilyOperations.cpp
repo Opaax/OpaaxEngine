@@ -1,4 +1,5 @@
 #include "Editor/Operation/FontFamilyOperations.h"
+#include "Editor/Operation/ResourceOperations.h"
 
 #include "Editor/EditorContext.h"
 #include "Editor/EditorFontFamilyDocument.h"
@@ -136,7 +137,7 @@ namespace Opaax::Editor
 
         // AND PUBLISH IT ([[L75]]): without this a TextComponent already holding this family keeps
         // resolving styles against the first parse.
-        InContext.Resources.Reload<FontFamilyResource>(InContext.FamilyDocument.AbsPath().CStr());
+        ResourceOps::SavedToDisk<FontFamilyResource>(InContext, InContext.FamilyDocument.AbsPath());
 
         return true;
     }

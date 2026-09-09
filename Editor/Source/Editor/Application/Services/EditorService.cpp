@@ -48,6 +48,7 @@
 #include "World/Serialization/LevelResource.hpp"   // the types whose chrome is registered below
 #include "World/Serialization/MapResource.hpp"
 #include "World/Prefab/PrefabResource.hpp"          // ⑦-C — registered as a native resource type
+#include "Editor/Operation/ResourceOperations.h"
 #include "Engine/Subsystems/Resources/ResourceTypeID.hpp"   // the id the preview is opened with
 #include "Engine/Subsystems/Resources/Types/Texture/TextureResource.h"
 #include "Engine/Subsystems/Resources/Types/SpriteSheet/SpriteSheetResource.h"
@@ -129,6 +130,7 @@ namespace Opaax::Editor
     void EditorService::CreateEditorSystems(IEngine& InEngine)
     {
         m_Selection         = MakeUnique<EditorSelection>();
+        m_ResourceEvents    = MakeUnique<EditorResourceEvents>();
         m_Viewport          = MakeUnique<EditorViewport>();
         m_Preview           = MakeUnique<ResourcePreview>();
         m_Camera            = MakeUnique<EditorCamera>();
@@ -177,6 +179,7 @@ namespace Opaax::Editor
             *m_Dialogs,
             m_Gui->Widgets(),
             *m_Selection,
+            *m_ResourceEvents,
             *m_Viewport,
             *m_Camera,
             *m_Gizmo,
@@ -203,10 +206,23 @@ namespace Opaax::Editor
             *InWindow,
             m_EditorPaths
         });
+
+        // ⑦-C P4. AFTER the context, because it holds one. The reconciler is the only listener a
+        // plain Reload cannot serve: a prefab's instances are entities, not refs.
+        m_PrefabReconciler = MakeUnique<PrefabReconciler>(*m_Context);
+        m_PrefabReconciler->Bind(*m_ResourceEvents);
     }
 
     void EditorService::ClearEditorContext()
     {
+        // Unbound BEFORE the context it holds goes: a delegate still pointing at a destroyed
+        // listener is the one failure a Tier-2 broadcast cannot survive.
+        if (m_PrefabReconciler != nullptr && m_ResourceEvents != nullptr)
+        {
+            m_PrefabReconciler->Unbind(*m_ResourceEvents);
+        }
+
+        m_PrefabReconciler.reset();
         m_Context.reset();
     }
 
@@ -219,6 +235,7 @@ namespace Opaax::Editor
     void EditorService::DrawGUI()
     {
         if (m_Context == nullptr) { return; }
+
 
 
 

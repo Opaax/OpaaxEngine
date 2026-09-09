@@ -1,4 +1,5 @@
 #include "Editor/Operation/SheetOperations.h"
+#include "Editor/Operation/ResourceOperations.h"
 
 #include "Editor/EditorContext.h"
 #include "Editor/EditorSpriteSheetDocument.h"
@@ -149,7 +150,7 @@ namespace Opaax::Editor
         //
         // Not resident is the ordinary case (no sprite uses this sheet yet) and answers false, so
         // the result is deliberately not treated as a failure of the save.
-        InContext.Resources.Reload<SpriteSheetResource>(InContext.SheetDocument.AbsPath().CStr());
+        ResourceOps::SavedToDisk<SpriteSheetResource>(InContext, InContext.SheetDocument.AbsPath());
 
         return true;
     }
