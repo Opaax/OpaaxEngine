@@ -6,6 +6,7 @@ namespace Opaax
     struct SpriteAnimatorComponent;
     struct TextComponent;
     struct CameraComponent;
+    struct PrefabInstanceComponent;
     class  Entity;
 }
 
@@ -71,6 +72,23 @@ namespace Opaax::Editor
         struct CameraComponentDrawer
         {
             void Draw(IEditorWidgets& InWidgets, CameraComponent& InCamera, Entity& InEntity, EditorContext& InContext);
+        };
+
+        /**
+         * WHICH prefab this entity came from — READ-ONLY, and that is the whole design (⑦-C P1b).
+         *
+         * The component is IDENTITY, not user data, so it carries no OPAAX_PROPERTIES and the
+         * generic fold would be wrong here rather than merely plain: it would render three editable
+         * fields, and retyping a guid does not re-point an instance at anything — it breaks the
+         * link silently. Re-pointing an instance is a VERB, and it does not exist yet.
+         *
+         * A BROKEN LINK IS DRAWN AS SUCH rather than left blank, because that is a state an author
+         * reaches by renaming or moving a `.opaaxprefab` — **MP11**'s missing-map lesson, one type
+         * over: a state the app can produce has to be visible before it can be repaired.
+         */
+        struct PrefabInstanceComponentDrawer
+        {
+            void Draw(IEditorWidgets& InWidgets, PrefabInstanceComponent& InInstance);
         };
     }
 }

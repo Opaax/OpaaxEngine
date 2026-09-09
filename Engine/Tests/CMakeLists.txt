@@ -73,6 +73,10 @@ set(OPAAX_TEST_SOURCES
     Core/World/MapRestoreTests.cpp
     Core/World/MapJsonTests.cpp
     Core/World/MapFileTests.cpp
+    # ⑦-C P1b. The gate is "twice into one world": a prefab carries the guids its file authored
+    # and CreateEntityWithGuid refuses a live one, so before Guid::Derive a second instance
+    # silently did not appear.
+    Core/World/PrefabTests.cpp
     Core/World/LevelFileTests.cpp
     Core/World/LevelTests.cpp
     # Two TUs on purpose: the identity question is "one tag per type or per TU?", which a

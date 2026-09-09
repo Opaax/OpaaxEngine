@@ -47,6 +47,8 @@
 #include "World/Components/TextComponent.h"
 #include "World/Components/SpriteAnimatorComponent.h"
 #include "World/Components/MoverComponent.h"
+#include "World/Components/PrefabInstanceComponent.h"
+#include "World/Prefab/PrefabResource.hpp"       // registered as a native format
 #include "World/Systems/ColliderDebugSubsystem.h"
 #include "World/Systems/Movement/FlyMoveMode.h"
 #include "World/Systems/Movement/GroundMoveMode.h"
@@ -110,6 +112,11 @@ namespace Opaax
         m_Registries.Components().Register<ColliderComponent>("Collider");
         m_Registries.Components().Register<RigidbodyComponent>("Rigidbody");
         m_Registries.Components().Register<MoverComponent>("Mover");
+
+        // ⑦-C P1b. IDENTITY, not user data: it says which prefab an entity came from, which
+        // placement, and which entity of that prefab it is. Registered like any other component
+        // so the link is written into the map with no extra format work.
+        m_Registries.Components().Register<PrefabInstanceComponent>("PrefabInstance");
     }
     
     void Engine::RegisterNativeResourceFormats()
@@ -133,6 +140,11 @@ namespace Opaax
         // in one context and a single key in another.
         m_Registries.Resources().Register<InputActionResource>(OPAAX_ID("InputAction"));
         m_Registries.Resources().Register<InputMappingContextResource>(OPAAX_ID("InputMappingContext"));
+
+        // ⑦-C P1b. A prefab is a Map's entities without a map's membership, so it is a resource
+        // for MapResource's reasons — dedup above all: a level placing forty instances of one
+        // prefab parses the file once.
+        m_Registries.Resources().Register<PrefabResource>(OPAAX_ID("Prefab"));
     }
 
     void Engine::RegisterNativeWorldSubsystems()

@@ -41,6 +41,12 @@ namespace Opaax::Editor
         OpaaxString AbsPath;
     };
 
+    /** An ABSOLUTE path to a `.opaaxprefab`. Its own type for MapPathParams' reason. */
+    struct PrefabPathParams
+    {
+        OpaaxString AbsPath;
+    };
+
     /** Which panel a panel verb acts on — the id from its PanelDesc. */
     struct PanelIdParams
     {
@@ -382,6 +388,25 @@ namespace Opaax::Editor
         using Params = NoParams;
 
         void Execute(EditorContext& InContext, const Params&);
+    };
+
+    // =============================================================================
+    // Prefab (⑦-C)
+    // =============================================================================
+
+    /**
+     * Place one instance of the prefab at Params::AbsPath into the FOCUSED map.
+     *
+     * A thin dispatch onto `EntityOps::InstantiatePrefab`, which is where the policy lives — the
+     * PIE guard, the map requirement, the selection and the undo step. The browser's double-click
+     * is its only front-end today; a Hierarchy entry and a viewport drop are the two that come
+     * next, and neither needs anything new here.
+     */
+    struct InstantiatePrefabAtCommand
+    {
+        using Params = PrefabPathParams;
+
+        void Execute(EditorContext& InContext, const Params& InParams);
     };
 
     // =============================================================================

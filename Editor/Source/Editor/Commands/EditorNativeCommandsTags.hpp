@@ -66,6 +66,11 @@ namespace Opaax::Editor::Tags
     inline const OpaaxTag EDITOR_COMMAND_SAVE_MAP    = OpaaxTag("Editor.Command.SaveMap");
     inline const OpaaxTag EDITOR_COMMAND_SAVE_MAP_AS = OpaaxTag("Editor.Command.SaveMapAs");
 
+    //Prefab (⑦-C) — a COMMAND, not a browser callback, so the double-click, a future Hierarchy
+    //entry and a key binding are one verb rather than three copies of it (**MR2b**).
+    inline const OpaaxTag EDITOR_COMMAND_INSTANTIATE_PREFAB_AT =
+        OpaaxTag("Editor.Command.InstantiatePrefabAt");
+
     //Sprite sheet
     inline const OpaaxTag EDITOR_COMMAND_SAVE_SHEET  = OpaaxTag("Editor.Command.SaveSheet");
 

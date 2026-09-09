@@ -29,6 +29,12 @@
 #include "World/World.h"
 #include "World/WorldManager.h"
 
+#include "Application/Services/IPaths.h"         // ⑦-C — the marker stores an ASSET-relative path
+#include "Engine/Subsystems/Resources/ResourceManager.h"  // before PrefabResource — completes LoadContext
+#include "World/Prefab/PrefabFactory.h"
+#include "World/Prefab/PrefabResource.hpp"
+#include "World/Serialization/MapFactory.h"
+
 using namespace Opaax;   // OPAAX_LOG expands to an unqualified ToSpdLevel(...)
 
 namespace
@@ -128,6 +134,101 @@ namespace Opaax::Editor
                   lName.CStr(), InOwnerMap.ToString().CStr());
 
         return lEntity;
+    }
+
+    Uint64 EntityOps::InstantiatePrefab(EditorContext& InContext, const OpaaxString& InAbsPath,
+                                        MapId InOwnerMap)
+    {
+        if (!MapOps::CanEdit(InContext, "Instantiate Prefab")) { return 0; }
+
+        World* const lWorld = InContext.Worlds.GetActiveWorld();
+        if (lWorld == nullptr) { return 0; }
+
+        // Create's rule (**WM2**): without a map these entities would read as runtime-spawned and
+        // no Save could ever write them.
+        if (!InOwnerMap.IsValid())
+        {
+            OPAAX_LOG(LogEntityOps, Warn,
+                      "Instantiate Prefab refused — no map to author into. Open or focus a map first.");
+            return 0;
+        }
+
+        // What the MARKER stores (**MP8**). Empty means the file is under neither asset root, so no
+        // map could name it — refuse rather than write a path that resolves on this machine only.
+        const OpaaxString lAssetPath = InContext.Paths.AbsoluteToAsset(InAbsPath);
+        if (lAssetPath.IsEmpty())
+        {
+            OPAAX_LOG(LogEntityOps, Warn,
+                      "Instantiate Prefab refused — '{}' is outside the project's and the engine's "
+                      "asset trees, so no map could reference it", InAbsPath.CStr());
+            return 0;
+        }
+
+        // Through the ResourceManager, which is what dedups a level placing many instances of one
+        // prefab. FailFast, so a missing or malformed file resolves to null rather than to an empty
+        // prefab that would instantiate nothing and report success.
+        const ResourceRef<PrefabResource> lRef    = InContext.Resources.Load<PrefabResource>(InAbsPath.CStr());
+        const PrefabResource* const       lPrefab = lRef.Get();
+
+        if (lPrefab == nullptr)
+        {
+            OPAAX_LOG(LogEntityOps, Warn, "Instantiate Prefab refused — '{}' did not load",
+                      InAbsPath.CStr());
+            return 0;
+        }
+
+        const ComponentRegistry& lRegistry = InContext.Engine.GetRegistries().Components();
+
+        MapData lInstance = PrefabFactory::BuildInstance(lPrefab->Data, lAssetPath, Guid::New(),
+                                                         InOwnerMap, lRegistry);
+        if (lInstance.IsEmpty())
+        {
+            return 0;   // PrefabFactory logged which refusal it was
+        }
+
+        // Read BEFORE instantiating: MapFactory answers only a count, and these derived guids are
+        // the only way back to the entities it is about to create.
+        TDynArray<Guid> lCreatedIds;
+        lCreatedIds.reserve(lInstance.Entities.size());
+        for (const EntityData& lEntity : lInstance.Entities)
+        {
+            lCreatedIds.emplace_back(lEntity.Id);
+        }
+
+        const Uint64 lCount = MapFactory::Instantiate(lInstance, *lWorld, lRegistry);
+        if (lCount == 0)
+        {
+            OPAAX_LOG(LogEntityOps, Warn, "Instantiate Prefab created nothing from '{}'",
+                      lAssetPath.CStr());
+            return 0;
+        }
+
+        lWorld->MarkChanged();
+
+        // The WHOLE instance is selected — **K10**. Handles collected in the same pass, because the
+        // undo step wants them too and resolving each guid twice would say the same thing slower.
+        TDynArray<EntityID> lHandles;
+        lHandles.reserve(lCreatedIds.size());
+
+        InContext.Selection.Clear();
+        for (const Guid& lId : lCreatedIds)
+        {
+            Entity lEntity = lWorld->FindByGuid(lId);
+            if (!lEntity.IsValid()) { continue; }
+
+            InContext.Selection.Add(lEntity);
+            lHandles.emplace_back(lEntity.GetHandle());
+        }
+
+        // Captured AFTER the fact, exactly as Create does — it records what the world actually got,
+        // not what was asked for, so an entity Instantiate refused is not in the step either.
+        InContext.Undo.Record(PrefabInstantiate{
+            MapSerializer::CaptureEntities(*lWorld, lRegistry, lHandles) });
+
+        OPAAX_LOG(LogEntityOps, Info, "Instantiated {} entity(ies) from '{}' into map '{}'",
+                  lCount, lAssetPath.CStr(), InOwnerMap.ToString().CStr());
+
+        return lCount;
     }
 
     void EntityOps::Rename(EditorContext& InContext, Entity InEntity, const OpaaxString& InName)

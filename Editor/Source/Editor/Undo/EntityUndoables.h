@@ -36,6 +36,27 @@ namespace Opaax::Editor
         const char* Label() const noexcept { return "Create Entity"; }
     };
 
+    /**
+     * A prefab was instantiated (⑦-C P1b).
+     *
+     * EntityCreate's two bodies verbatim — an instance is entities, and undoing one is destroying
+     * them. It exists for its LABEL: "Undo Create Entity" after placing a prefab names the wrong
+     * verb, and the Edit menu shows that text.
+     *
+     * THE FILE IS NOT PART OF THIS. Undo takes back the placement, never the `.opaaxprefab` on
+     * disk (⑦-C **K6**, matching Unity) — a step that deleted an asset would be the one undo
+     * nobody expects.
+     */
+    struct PrefabInstantiate
+    {
+        /** The instance's entities, captured after the fact — EntityCreate's rule. */
+        MapData Entities;
+
+        void        Undo(EditorContext& InContext);
+        void        Redo(EditorContext& InContext);
+        const char* Label() const noexcept { return "Instantiate Prefab"; }
+    };
+
     /** Entities were destroyed — the same two bodies as EntityCreate, the other way round. */
     struct EntityDelete
     {

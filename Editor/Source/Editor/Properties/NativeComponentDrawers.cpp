@@ -17,6 +17,7 @@
 #include "Engine/Modules/ModuleRegistrar.h"      // DeriveTypeLeafName — the header's name, and the map key's
 
 #include "World/Components/CameraComponent.h"
+#include "World/Components/PrefabInstanceComponent.h"
 #include "World/Components/SpriteAnimatorComponent.h"
 #include "World/Components/SpriteComponent.h"
 #include "World/Components/TextComponent.h"
@@ -116,5 +117,30 @@ namespace Opaax::Editor::NativeComponentDrawers
             InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_TOGGLE_PANEL, InContext,
                                                     PanelIdParams{ CameraPreviewPanel::PanelID() });
         }
+    }
+
+    void PrefabInstanceComponentDrawer::Draw(IEditorWidgets& InWidgets,
+                                             PrefabInstanceComponent& InInstance)
+    {
+        if (!BeginComponent<PrefabInstanceComponent>(InWidgets)) { return; }
+
+        if (!InInstance.IsLinked())
+        {
+            // Visible rather than blank — **MP11**'s rule: a state the app can produce (rename the
+            // `.opaaxprefab`, move it) has to be seen before anything can repair it.
+            InWidgets.TextDisabled("Broken link - this entity came from a prefab that cannot be named");
+            return;
+        }
+
+        // LabelText, never an input: read-only is the design, not a missing feature. See the header.
+        InWidgets.LabelText("Prefab", InInstance.Prefab.Path.CStr());
+
+        char lBuffer[64];
+
+        std::snprintf(lBuffer, sizeof(lBuffer), "%s", InInstance.InstanceId.ToString().CStr());
+        InWidgets.LabelText("Instance", lBuffer);
+
+        std::snprintf(lBuffer, sizeof(lBuffer), "%s", InInstance.TemplateGuid.ToString().CStr());
+        InWidgets.LabelText("Template", lBuffer);
     }
 }

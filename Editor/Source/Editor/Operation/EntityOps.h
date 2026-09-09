@@ -52,6 +52,24 @@ namespace Opaax::Editor
         Entity Create(EditorContext& InContext, MapId InOwnerMap, const OpaaxString& InName);
 
         /**
+         * Place ONE instance of the prefab at InAbsPath into InOwnerMap, select all of it, and
+         * record one undo step (⑦-C P1b).
+         *
+         * The map is a required argument for Create's reason (**WM2**), and the prefab is named by
+         * an ABSOLUTE path because that is what a browser hands over; the marker written onto the
+         * entities stores the ASSET-relative form (**MP8**), since an absolute one would bake this
+         * machine's layout into every map that places the prefab.
+         *
+         * THE WHOLE INSTANCE IS SELECTED, not its first entity. That is what makes the gizmo move a
+         * multi-entity prefab as one thing, and it costs nothing because the gizmo already
+         * transforms a list (**UN2**) — ⑦-C **K10**'s stand-in for parenting, which this block
+         * deliberately does not build.
+         *
+         * @return How many entities were created. 0 means refused, and the log says which reason.
+         */
+        Uint64 InstantiatePrefab(EditorContext& InContext, const OpaaxString& InAbsPath, MapId InOwnerMap);
+
+        /**
          * Rename one entity. Empty input is refused — a nameless row in the Hierarchy is
          * unclickable in practice and tells an author nothing.
          *

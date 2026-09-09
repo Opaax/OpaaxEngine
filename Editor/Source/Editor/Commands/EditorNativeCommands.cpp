@@ -404,6 +404,13 @@ namespace Opaax::Editor
         MapOps::Save(InContext, InContext.MapDocument.GetMapId());
     }
 
+    void InstantiatePrefabAtCommand::Execute(EditorContext& InContext, const Params& InParams)
+    {
+        // The FOCUSED map, for SaveMapCommand's reason: a browser double-click has a cursor, not a
+        // named target. EntityOps refuses (with a Warn) when there is no focused map.
+        EntityOps::InstantiatePrefab(InContext, InParams.AbsPath, InContext.MapDocument.GetMapId());
+    }
+
     void SaveMapAsCommand::Execute(EditorContext& InContext, const Params&)
     {
         if (!MapOps::CanEdit(InContext, "Save Map As")) { return; }

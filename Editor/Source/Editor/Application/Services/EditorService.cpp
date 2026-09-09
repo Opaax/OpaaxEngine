@@ -47,6 +47,7 @@
 #include "Engine/Subsystems/Input/InputEvents.h"
 #include "World/Serialization/LevelResource.hpp"   // the types whose chrome is registered below
 #include "World/Serialization/MapResource.hpp"
+#include "World/Prefab/PrefabResource.hpp"          // ⑦-C — registered as a native resource type
 #include "Engine/Subsystems/Resources/ResourceTypeID.hpp"   // the id the preview is opened with
 #include "Engine/Subsystems/Resources/Types/Texture/TextureResource.h"
 #include "Engine/Subsystems/Resources/Types/SpriteSheet/SpriteSheetResource.h"
@@ -67,6 +68,7 @@
 #include "World/Components/ColliderComponent.h"    // editor draws by default (I15)
 #include "World/Components/DummyComponent.h"
 #include "World/Components/MoverComponent.h"
+#include "World/Components/PrefabInstanceComponent.h"
 #include "World/Components/RigidbodyComponent.h"
 #include "World/Components/SpriteAnimatorComponent.h"
 #include "World/Components/TextComponent.h"
@@ -212,6 +214,7 @@ namespace Opaax::Editor
     void EditorService::DrawGUI()
     {
         if (m_Context == nullptr) { return; }
+
 
 
         // Ahead of the pass, not inside it: a shortcut can execute a command that destroys the
@@ -361,6 +364,7 @@ namespace Opaax::Editor
         lCommands.Register<NewMapCommand>(Tags::EDITOR_COMMAND_NEW_MAP);
         lCommands.Register<OpenMapCommand>(Tags::EDITOR_COMMAND_OPEN_MAP);
         lCommands.Register<OpenMapAtCommand>(Tags::EDITOR_COMMAND_OPEN_MAP_AT);
+        lCommands.Register<InstantiatePrefabAtCommand>(Tags::EDITOR_COMMAND_INSTANTIATE_PREFAB_AT);
         lCommands.Register<SaveMapCommand>(Tags::EDITOR_COMMAND_SAVE_MAP);
         lCommands.Register<SaveMapAsCommand>(Tags::EDITOR_COMMAND_SAVE_MAP_AS);
 
@@ -437,6 +441,10 @@ namespace Opaax::Editor
         // the Camera Preview. Its fields still come from the property list, so this is the generic
         // fold plus one line.
         lDrawers.Register<CameraComponent,          NativeComponentDrawers::CameraComponentDrawer>();
+
+        // ⑦-C P1b. Custom because the component is IDENTITY: the generic fold would offer three
+        // editable fields, and retyping a guid breaks the link rather than re-pointing it.
+        lDrawers.Register<PrefabInstanceComponent,  NativeComponentDrawers::PrefabInstanceComponentDrawer>();
         lDrawers.Register<DummyComponent>();
 
         // ⑦-A. Both are CReflected, so the generic fold IS the implementation — the collider's
@@ -469,6 +477,18 @@ namespace Opaax::Editor
             {
                 InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_MAP_AT, InContext,
                                                         MapPathParams{InFile.AbsPath});
+            });
+
+        // ⑦-C P1b. Double-click PLACES ONE into the focused map — the verb a prefab is FOR, and the
+        // only one that exists yet. It becomes "open the prefab editor" at P6, when there is an
+        // editor to open; instantiating stays reachable from the Hierarchy and the viewport drop,
+        // which are the same command with a different front-end (**MR2b**).
+        m_Extensions.ResourceTypes().Register<PrefabResource>()
+            .SetGlyph(OpaaxString("[P]"))
+            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
+            {
+                InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_INSTANTIATE_PREFAB_AT,
+                                                        InContext, PrefabPathParams{InFile.AbsPath});
             });
 
         // Double-click OPENS THE PREVIEW, through the seam that already answers "what does a
