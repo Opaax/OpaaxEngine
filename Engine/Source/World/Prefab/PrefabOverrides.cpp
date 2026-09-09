@@ -15,6 +15,59 @@ namespace Opaax
             return nullptr;
         }
 
+        // Are these two json values the same AS THE ENGINE STORES THEM?
+        //
+        // THE FILE AND THE CAPTURE DO NOT AGREE BIT-FOR-BIT, and that is not a rounding nicety —
+        // it silently detaches properties from their prefab. Every component field is a `float`,
+        // but json numbers are `double`: a hand-authored prefab says `0.35`, the live component
+        // holds `0.35f`, and capturing it writes `0.3499999940395355`. A plain `==` then reports a
+        // difference on a value nobody touched, records it as an override, and that channel stops
+        // following the prefab FOREVER — the precise failure per-property overrides exist to avoid.
+        //
+        // So two FLOATING-POINT numbers are equal when they are equal at float precision, which is
+        // the only precision the value ever actually had. INTEGERS are compared exactly: narrowing
+        // them would make two ids above 2^24 compare equal, and nothing here is float-shaped.
+        //
+        // LIMIT, stated: a component that genuinely stored a `double` would be compared too
+        // loosely. None does — every field comes from a typed C++ member and they are all float,
+        // int, bool or string — and the day one does, this is the line that needs to know.
+        bool SameValue(const nlohmann::json& InLeft, const nlohmann::json& InRight)
+        {
+            if (InLeft.is_number_float() || InRight.is_number_float())
+            {
+                if (!InLeft.is_number() || !InRight.is_number()) { return false; }
+
+                return static_cast<float>(InLeft.get<double>()) == static_cast<float>(InRight.get<double>());
+            }
+
+            if (InLeft.is_object() && InRight.is_object())
+            {
+                if (InLeft.size() != InRight.size()) { return false; }
+
+                for (const auto& [lKey, lValue] : InLeft.items())
+                {
+                    const auto lIt = InRight.find(lKey);
+                    if (lIt == InRight.end() || !SameValue(lValue, *lIt)) { return false; }
+                }
+
+                return true;
+            }
+
+            if (InLeft.is_array() && InRight.is_array())
+            {
+                if (InLeft.size() != InRight.size()) { return false; }
+
+                for (std::size_t lIndex = 0; lIndex < InLeft.size(); ++lIndex)
+                {
+                    if (!SameValue(InLeft[lIndex], InRight[lIndex])) { return false; }
+                }
+
+                return true;
+            }
+
+            return InLeft == InRight;
+        }
+
         // The merge-patch (RFC 7386) that turns InFrom into InTo: only the members that differ,
         // recursing into nested objects so a Transform whose Position moved does not drag its
         // Rotation and Scale along.
@@ -42,7 +95,7 @@ namespace Opaax
                 {
                     lPatch[lKey] = lValue;
                 }
-                else if (*lIt != lValue)
+                else if (!SameValue(*lIt, lValue))
                 {
                     lPatch[lKey] = MakeMergePatch(*lIt, lValue);
                 }
@@ -80,7 +133,9 @@ namespace Opaax
                 continue;
             }
 
-            if (lTemplate->Payload == lInstance.Payload) { continue; }   // identical: no entry
+            // SameValue, not ==: a float that came from a file and one that came from a capture are
+            // the same number and different doubles. See SameValue.
+            if (SameValue(lTemplate->Payload, lInstance.Payload)) { continue; }   // identical: no entry
 
             lComponents[lInstance.TypeName.CStr()] = MakeMergePatch(lTemplate->Payload, lInstance.Payload);
         }

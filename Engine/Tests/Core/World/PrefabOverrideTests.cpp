@@ -96,6 +96,44 @@ TEST_CASE("PrefabOverrides: an untouched instance produces an EMPTY patch")
     CHECK(PrefabOverrides::IsEmpty(lPatch));
 }
 
+TEST_CASE("PrefabOverrides: a FILE's float and a CAPTURE's float are the same value")
+{
+    // REGRESSION, found by the user: a freshly placed instance arrived already carrying overrides.
+    // Every component field is a float but json numbers are doubles, so a hand-authored prefab
+    // saying 0.35 and a captured 0.35f (which prints as 0.3499999940395355) are different doubles
+    // and the same number. Reported as a difference, they became phantom overrides — and that
+    // channel would then never follow the prefab again.
+    const double lAuthored = 0.35;                                  // what a hand-written file says
+    const double lCaptured = static_cast<double>(0.35f);            // what capturing the float writes
+    REQUIRE(lAuthored != lCaptured);                                // they really are different doubles
+
+    const EntityData lTemplate = Entity("A", { Component("Sprite", nlohmann::json{
+        { "Color", { { "r", lAuthored }, { "g", 0.75 }, { "b", 0.25 } } } }) });
+    const EntityData lInstance = Entity("A", { Component("Sprite", nlohmann::json{
+        { "Color", { { "r", lCaptured }, { "g", 0.75 }, { "b", 0.25 } } } }) });
+
+    CHECK(PrefabOverrides::IsEmpty(PrefabOverrides::Diff(lTemplate, lInstance, k_NoIgnore)));
+}
+
+TEST_CASE("PrefabOverrides: a REAL float change is still caught")
+{
+    // The other side of the tolerance: narrowing to float must not swallow an actual edit.
+    const EntityData lTemplate = Entity("A", { Component("S", nlohmann::json{ { "v", 0.35 } }) });
+    const EntityData lInstance = Entity("A", { Component("S", nlohmann::json{ { "v", 0.36 } }) });
+
+    CHECK_FALSE(PrefabOverrides::IsEmpty(PrefabOverrides::Diff(lTemplate, lInstance, k_NoIgnore)));
+}
+
+TEST_CASE("PrefabOverrides: INTEGERS are compared exactly, not narrowed")
+{
+    // Two ints above 2^24 are distinguishable as doubles and NOT as floats. Narrowing them would
+    // report them equal, which is why the float rule is gated on is_number_float.
+    const EntityData lTemplate = Entity("A", { Component("S", nlohmann::json{ { "n", 16777217 } }) });
+    const EntityData lInstance = Entity("A", { Component("S", nlohmann::json{ { "n", 16777218 } }) });
+
+    CHECK_FALSE(PrefabOverrides::IsEmpty(PrefabOverrides::Diff(lTemplate, lInstance, k_NoIgnore)));
+}
+
 TEST_CASE("PrefabOverrides: Apply(Diff(t, i), t) reproduces i")
 {
     const EntityData lTemplate = Entity("Base", {
