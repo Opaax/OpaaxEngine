@@ -36,6 +36,8 @@
 #include "Editor/Panels/MoverPanel.h"
 #include "Editor/Panels/FontFamilyPanel.h"
 #include "Editor/EditorFontFamilyDocument.h"
+#include "Editor/Panels/PrefabPanel.h"
+#include "Renderer/RenderTarget.hpp"   // the panels own OffscreenRenderTargets by TUniquePtr
 #include "Editor/Panels/SpriteSheetPanel.h"
 #include "Editor/Panels/StatsPanel.h"
 #include "Editor/Panels/ViewportPanel.h"
@@ -131,6 +133,7 @@ namespace Opaax::Editor
     {
         m_Selection         = MakeUnique<EditorSelection>();
         m_ResourceEvents    = MakeUnique<EditorResourceEvents>();
+        m_PrefabDocument    = MakeUnique<EditorPrefabDocument>();
         m_Viewport          = MakeUnique<EditorViewport>();
         m_Preview           = MakeUnique<ResourcePreview>();
         m_Camera            = MakeUnique<EditorCamera>();
@@ -180,6 +183,7 @@ namespace Opaax::Editor
             m_Gui->Widgets(),
             *m_Selection,
             *m_ResourceEvents,
+            *m_PrefabDocument,
             *m_Viewport,
             *m_Camera,
             *m_Gizmo,
@@ -235,6 +239,7 @@ namespace Opaax::Editor
     void EditorService::DrawGUI()
     {
         if (m_Context == nullptr) { return; }
+
 
 
 
@@ -350,6 +355,9 @@ namespace Opaax::Editor
         lPanelsRegistry.Register<CameraPreviewPanel>(PanelDesc  {.Id = CameraPreviewPanel::PanelID(),   .DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<ResourcePreviewPanel>(PanelDesc{.Id = ResourcePreviewPanel::PanelID(), .DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<SpriteSheetPanel>(PanelDesc    {.Id = SpriteSheetPanel::PanelID(),     .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_SHEET});
+        // ⑦-C P6. Hidden until a prefab is opened, and its SaveCommand is what routes Ctrl+S to
+        // the prefab rather than to the map ([[L86]]'s fix, which is why no panel hand-writes a save).
+        lPanelsRegistry.Register<PrefabPanel>(PanelDesc         {.Id = PrefabPanel::PanelID(),          .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_PREFAB});
         lPanelsRegistry.Register<AnimationClipPanel>(PanelDesc  {.Id = AnimationClipPanel::PanelID(),   .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_CLIP});
         lPanelsRegistry.Register<AnimationLibraryPanel>(PanelDesc{.Id = AnimationLibraryPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_LIBRARY});
         lPanelsRegistry.Register<MoveModePanel>(PanelDesc{.Id = MoveModePanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_MOVE_MODE});
@@ -390,6 +398,8 @@ namespace Opaax::Editor
         lCommands.Register<InstantiatePrefabAtCommand>(Tags::EDITOR_COMMAND_INSTANTIATE_PREFAB_AT);
         lCommands.Register<CreatePrefabFromSelectionCommand>(Tags::EDITOR_COMMAND_CREATE_PREFAB_FROM_SELECTION);
         lCommands.Register<RevertToPrefabCommand>(Tags::EDITOR_COMMAND_REVERT_TO_PREFAB);
+        lCommands.Register<OpenPrefabAtCommand>(Tags::EDITOR_COMMAND_OPEN_PREFAB_AT);
+        lCommands.Register<SavePrefabCommand>(Tags::EDITOR_COMMAND_SAVE_PREFAB);
         lCommands.Register<SaveMapCommand>(Tags::EDITOR_COMMAND_SAVE_MAP);
         lCommands.Register<SaveMapAsCommand>(Tags::EDITOR_COMMAND_SAVE_MAP_AS);
 
@@ -512,7 +522,7 @@ namespace Opaax::Editor
             .SetGlyph(OpaaxString("[P]"))
             .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
             {
-                InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_INSTANTIATE_PREFAB_AT,
+                InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_OPEN_PREFAB_AT,
                                                         InContext, PrefabPathParams{InFile.AbsPath});
             });
 

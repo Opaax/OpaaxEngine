@@ -210,7 +210,8 @@ namespace Opaax
          * @param bInDrawOverlays Whether the debug queue draws in this view. False makes it look
          *   like the game.
          */
-        void SubmitRenderView(IRenderTarget& InTarget, const CameraView& InView, bool bInDrawOverlays);
+        void SubmitRenderView(IRenderTarget& InTarget, const CameraView& InView, bool bInDrawOverlays,
+                              World* InSource = nullptr);
 
         /**
          * Create an offscreen framebuffer on the render core's device (F2a). The natural companion to
@@ -259,6 +260,17 @@ namespace Opaax
             IRenderTarget* Target        = nullptr;  // non-owning; the submitter owns it (I5)
             CameraView     View;
             bool           bDrawOverlays = true;
+
+            /**
+             * WHICH WORLD this view draws. NULL means the ACTIVE one (P6).
+             *
+             * Until now every view drew whatever `RenderFrame` resolved once at the top, so
+             * multi-view (**MV1**) meant N views of ONE world — which is all the Camera Preview
+             * ever needed. A prefab is edited in a world that is deliberately never active, so it
+             * could not be drawn at all. Null-means-active keeps every existing submission
+             * byte-identical, including the backbuffer fallback.
+             */
+            World*         Source        = nullptr;  // non-owning; the submitter owns its lifetime
         };
 
         // =============================================================================

@@ -124,7 +124,8 @@ namespace Opaax
          * @param InView In WORLD units; the matrices are composed against InTarget's pixels (CAM1).
          * @param bInDrawOverlays Whether the debug queue draws in this view. False looks like the game.
          */
-        virtual void SubmitRenderView(IRenderTarget& InTarget, const CameraView& InView, bool bInDrawOverlays) = 0;
+        virtual void SubmitRenderView(IRenderTarget& InTarget, const CameraView& InView, bool bInDrawOverlays,
+                                      World* InSource = nullptr) = 0;
         
         /**
          * The CALLER owns the result and must release it while the engine — and its GPU context — is still alive. 

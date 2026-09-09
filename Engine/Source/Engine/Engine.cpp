@@ -616,11 +616,12 @@ namespace Opaax
         }
     }
     
-    void Engine::SubmitRenderView(IRenderTarget& InTarget, const CameraView& InView, bool bInDrawOverlays)
+    void Engine::SubmitRenderView(IRenderTarget& InTarget, const CameraView& InView, bool bInDrawOverlays,
+                                  World* InSource)
     {
         if (m_RendererManager != nullptr)
         {
-            m_RendererManager->SubmitRenderView(InTarget, InView, bInDrawOverlays);
+            m_RendererManager->SubmitRenderView(InTarget, InView, bInDrawOverlays, InSource);
         }
     }
 

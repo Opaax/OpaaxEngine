@@ -301,7 +301,10 @@ namespace Opaax
                 continue;
             }
 
-            RenderPass(*lRequest.Target, lWorld, lRequest.View, lRequest.bDrawOverlays);
+            // The view's OWN world when it named one, else the active one — which is every
+            // submission that existed before P6, so this line changes none of them.
+            RenderPass(*lRequest.Target, lRequest.Source != nullptr ? lRequest.Source : lWorld,
+                       lRequest.View, lRequest.bDrawOverlays);
         }
 
         m_RenderSystem->EndFrame();
@@ -697,9 +700,10 @@ namespace Opaax
         return ResolveFace(lEntry->Face);
     }
 
-    void RendererManager::SubmitRenderView(IRenderTarget& InTarget, const CameraView& InView, bool bInDrawOverlays)
+    void RendererManager::SubmitRenderView(IRenderTarget& InTarget, const CameraView& InView, bool bInDrawOverlays,
+                                           World* InSource)
     {
-        m_SubmittedViews.emplace_back(RenderPassRequest{ &InTarget, InView, bInDrawOverlays });
+        m_SubmittedViews.emplace_back(RenderPassRequest{ &InTarget, InView, bInDrawOverlays, InSource });
     }
     
     TUniquePtr<IFramebuffer> RendererManager::CreateFramebuffer(const FramebufferSpec& InSpec)

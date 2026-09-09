@@ -6,6 +6,7 @@
 #include "Editor/Camera/EditorCamera.h"
 #include "Editor/Operation/EditorGizmo.hpp"
 #include "Editor/Operation/EditorSelection.hpp"
+#include "Editor/Prefab/EditorPrefabDocument.h"      // ⑦-C P6
 #include "Editor/Prefab/PrefabReconciler.h"          // ⑦-C P4
 #include "Editor/Resources/EditorResourceEvents.h"   // ⑦-C P4
 #include "Editor/Undo/EditorUndo.h"
@@ -343,6 +344,9 @@ namespace Opaax::Editor
 
         /** P4 - 'a document was saved', two-phase. Owned here; referenced by EditorContext. */
         TUniquePtr<EditorResourceEvents> m_ResourceEvents;
+
+        /** P6 - the open prefab and the world it is edited in. */
+        TUniquePtr<EditorPrefabDocument> m_PrefabDocument;
 
         /** P4 - the only listener that a Reload cannot serve: a prefab's instances are entities. */
         TUniquePtr<PrefabReconciler>     m_PrefabReconciler;   

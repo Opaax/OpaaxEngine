@@ -152,7 +152,7 @@ namespace Opaax
         //Render
         void                        PresentBackbuffer() override;
         void                        SubmitRenderView(IRenderTarget& InTarget, const CameraView& InView,
-                                                     bool bInDrawOverlays) override;
+                                                     bool bInDrawOverlays, World* InSource = nullptr) override;
         TUniquePtr<IFramebuffer>    CreateFramebuffer(const FramebufferSpec& InSpec) override;
         TUniquePtr<ITexture2D>      CreateTexture(const void* InPixels, Uint32 InWidth,
                                                   Uint32 InHeight, Int32 InChannels) override;

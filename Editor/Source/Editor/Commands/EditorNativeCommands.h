@@ -443,6 +443,22 @@ namespace Opaax::Editor
         void Execute(EditorContext& InContext, const Params& InParams);
     };
 
+    /** Open Params::AbsPath in the Prefab panel, in a world of its own (⑦-C P6). */
+    struct OpenPrefabAtCommand
+    {
+        using Params = PrefabPathParams;
+
+        void Execute(EditorContext& InContext, const Params& InParams);
+    };
+
+    /** Write the open prefab. What the panel's button AND Ctrl+S both reach (PanelDesc::SaveCommand). */
+    struct SavePrefabCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
     // =============================================================================
     // Level
     // =============================================================================

@@ -25,6 +25,9 @@
 #include "Editor/Operation/MapOperations.h"
 #include "Editor/PIE/PlayInEditor.h"
 #include "Editor/Panels/EditorPanels.h"
+#include "Editor/Panels/PrefabPanel.h"
+#include "Renderer/RenderTarget.hpp"   // PrefabPanel owns one by TUniquePtr - its dtor needs the type
+#include "Editor/Prefab/EditorPrefabDocument.h"
 
 #include "Application/Services/IEngine.h"
 #include "Application/Services/ILogger.h"
@@ -445,6 +448,19 @@ namespace Opaax::Editor
     void RevertToPrefabCommand::Execute(EditorContext& InContext, const Params& InParams)
     {
         EntityOps::RevertToPrefab(InContext, InParams.bWholeInstance);
+    }
+
+    void OpenPrefabAtCommand::Execute(EditorContext& InContext, const Params& InParams)
+    {
+        if (InContext.PrefabDocument.Open(InContext, InParams.AbsPath))
+        {
+            InContext.Panels.SetVisible(PrefabPanel::PanelID(), true);
+        }
+    }
+
+    void SavePrefabCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        InContext.PrefabDocument.Save(InContext);
     }
 
     void SaveMapAsCommand::Execute(EditorContext& InContext, const Params&)
