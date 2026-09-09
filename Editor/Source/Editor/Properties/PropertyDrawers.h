@@ -72,11 +72,13 @@ namespace Opaax::Editor
     //   is what the type parameter buys: dropping a .wave on a texture field cannot compile a wrong
     //   path into a component.
     // =============================================================================
-    template<typename TResource>
-    struct TPropertyDrawer<TResourcePath<TResource>>
+    // ONE specialization for BOTH load policies: whether a reference is soft or hard changes what
+    // the LOADER does, never what the field looks like or what may be dropped on it.
+    template<typename TResource, EResourceLoad TLoad>
+    struct TPropertyDrawer<TResourcePath<TResource, TLoad>>
     {
         static void Draw(IEditorWidgets& InWidgets, const char* InLabel,
-                         TResourcePath<TResource>& InValue, const PropertyMeta&)
+                         TResourcePath<TResource, TLoad>& InValue, const PropertyMeta&)
         {
             InWidgets.PushId(InLabel);
 

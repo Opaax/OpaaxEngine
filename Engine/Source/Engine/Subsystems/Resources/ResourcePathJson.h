@@ -14,14 +14,14 @@ namespace Opaax
     // object would make a hand-edited map noisier for nothing. It also means a field that was an
     // OpaaxString before becoming a TResourcePath reads back unchanged.
     // =============================================================================
-    template<typename TResource>
-    void to_json(nlohmann::json& InJson, const TResourcePath<TResource>& InValue)
+    template<typename TResource, EResourceLoad TLoad>
+    void to_json(nlohmann::json& InJson, const TResourcePath<TResource, TLoad>& InValue)
     {
         InJson = InValue.Path;
     }
 
-    template<typename TResource>
-    void from_json(const nlohmann::json& InJson, TResourcePath<TResource>& InValue)
+    template<typename TResource, EResourceLoad TLoad>
+    void from_json(const nlohmann::json& InJson, TResourcePath<TResource, TLoad>& InValue)
     {
         // Throws type_error on a non-string, which MapFactory::Instantiate catches per component
         // (I8) — tolerance lives there, once, not in every field.

@@ -8,6 +8,10 @@
 // Pure json in, pure json out — no World, no registry, no resources.
 #include <doctest.h>
 
+#include "Engine/Subsystems/Resources/ResourcePathJson.h"
+#include "World/Components/ComponentRegistry.h"
+#include "World/Components/PrefabInstanceComponent.h"
+#include "World/Components/TransformComponent.h"
 #include "World/Prefab/PrefabOverrides.h"
 
 using namespace Opaax;
@@ -271,4 +275,97 @@ TEST_CASE("PrefabOverrides: Apply survives a malformed patch instead of throwing
 
     CHECK(lEntity.Name == lUntouched.Name);
     CHECK(lEntity.Components.size() == lUntouched.Components.size());
+}
+
+// =============================================================================
+// P5 — hard vs soft references, the part that is pure declaration
+// =============================================================================
+
+namespace
+{
+    struct ProbeResource;   // never defined: a path only ever NAMES its type
+
+    struct SoftOnlyComponent
+    {
+        TResourcePath<ProbeResource> Texture;
+
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(SoftOnlyComponent, Texture)
+        OPAAX_PROPERTIES(SoftOnlyComponent, OPAAX_PROP(Texture))
+    };
+
+    // The user's own case: a gun naming the bullet it spawns.
+    struct GunComponent
+    {
+        THardResourcePath<ProbeResource> Bullet;
+        TResourcePath<ProbeResource>     MuzzleFlash;
+        float                            RateOfFire = 1.f;
+
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(GunComponent, Bullet, MuzzleFlash, RateOfFire)
+        OPAAX_PROPERTIES(GunComponent,
+                         OPAAX_PROP(Bullet),
+                         OPAAX_PROP(MuzzleFlash),
+                         OPAAX_PROP(RateOfFire))
+    };
+
+    struct NoPropertiesComponent
+    {
+        int V = 0;
+
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(NoPropertiesComponent, V)
+    };
+}
+
+TEST_CASE("P5: the load policy is part of the TYPE")
+{
+    // static_assert as well as CHECK: these are compile-time guarantees, and a build that broke
+    // one should not get as far as running.
+    static_assert(k_IsHardResourcePath<THardResourcePath<ProbeResource>>);
+    static_assert(!k_IsHardResourcePath<TResourcePath<ProbeResource>>);
+    static_assert(TResourcePath<ProbeResource>::LoadPolicy == EResourceLoad::Soft);
+    static_assert(THardResourcePath<ProbeResource>::LoadPolicy == EResourceLoad::Hard);
+
+    // The alias is the SAME type, not a parallel one — which is why one json bridge and one
+    // property drawer serve both.
+    static_assert(std::is_same_v<THardResourcePath<ProbeResource>,
+                                 TResourcePath<ProbeResource, EResourceLoad::Hard>>);
+
+    CHECK(k_IsHardResourcePath<THardResourcePath<ProbeResource>>);
+    CHECK_FALSE(k_IsHardResourcePath<TResourcePath<ProbeResource>>);
+
+    // The default is SOFT, which is what keeps every field written before P5 unchanged.
+    CHECK(TResourcePath<ProbeResource>::LoadPolicy == EResourceLoad::Soft);
+}
+
+TEST_CASE("P5: the registry derives a component's hard fields, by type")
+{
+    ComponentRegistry lRegistry;
+    REQUIRE(lRegistry.Register<SoftOnlyComponent>("SoftOnly"));
+    REQUIRE(lRegistry.Register<GunComponent>("Gun"));
+    REQUIRE(lRegistry.Register<NoPropertiesComponent>("NoProps"));
+
+    // A soft-only component owes the loader nothing.
+    CHECK(lRegistry.FindByName(OpaaxStringID("SoftOnly"))->GetHardRefFields().empty());
+
+    // A type that describes no fields has no field anyone could have marked — not a gap.
+    CHECK(lRegistry.FindByName(OpaaxStringID("NoProps"))->GetHardRefFields().empty());
+
+    // The gun names exactly ONE: its bullet. The muzzle flash is soft and the float is not a
+    // reference at all, and neither needed to be excluded by hand.
+    const TDynArray<OpaaxStringID>& lHard = lRegistry.FindByName(OpaaxStringID("Gun"))->GetHardRefFields();
+    REQUIRE(lHard.size() == 1);
+
+    // The name is the JSON KEY, which is what lets a loader reading untyped payloads find it.
+    CHECK(lHard[0] == OpaaxStringID("Bullet"));
+}
+
+TEST_CASE("P5: no ENGINE component is hard yet, and that is the migration being zero")
+{
+    // Every field written before P5 stays soft, so this change loads every existing map and prefab
+    // exactly as before. The day one goes hard, this case is what will say so.
+    ComponentRegistry lRegistry;
+    REQUIRE(lRegistry.Register<TransformComponent>("Transform", true));
+    REQUIRE(lRegistry.Register<PrefabInstanceComponent>("PrefabInstance"));
+
+    CHECK(lRegistry.FindByName(OpaaxStringID("Transform"))->GetHardRefFields().empty());
+    CHECK(lRegistry.FindByName(OpaaxStringID("PrefabInstance"))->GetHardRefFields().empty());
 }

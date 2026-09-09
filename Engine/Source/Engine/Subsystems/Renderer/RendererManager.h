@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/EngineAPI.h"
+#include "Engine/Subsystems/Resources/ResourcePath.h"
 #include "Core/OpaaxTypes.h"
 #include "Application/Services/ILogger.h"
 #include "Engine/Subsystems/EngineSubsystem.h"
@@ -39,8 +40,11 @@ namespace Opaax
     struct TransformComponent;
     struct DisplayPose;   // returned by value; only PoseFor's DEFINITION needs it complete
 
-    template<typename TResource>
-    struct TResourcePath;
+    // INCLUDED, not forward-declared (⑦-C **K5**). Its second parameter is defaulted, and a default
+    // may be stated only once — on the definition — so a forward declaration here could no longer
+    // let this header write `TResourcePath<TextureResource>`. Including it costs nothing the old
+    // declaration was protecting against: ResourcePath.h pulls in a string and <type_traits>, and
+    // names no part of the resource system. (See the include block above.)
 
     inline constexpr LogCategory LogRendererManager{"RendererManager"};
 

@@ -7,8 +7,13 @@
 #include "Core/String/OpaaxStringID.hpp"
 #include "Application/Services/ILogger.h"
 
+#include "Core/Reflection/OpaaxProperty.h"                  // ⑦-C P5 — CReflected + the property walk
+#include "Engine/Subsystems/Resources/ResourcePath.h"       // ⑦-C P5 — k_IsHardResourcePath
 #include "World/Components/ComponentConcept.hpp"
 #include "World/Entity/EntityTypes.h"
+
+#include <tuple>       // std::apply over the property list
+#include <type_traits>
 
 namespace Opaax
 {
@@ -62,6 +67,19 @@ namespace Opaax
 
         /** Deserialize onto InEntity, adding the component when it isn't there yet. */
         virtual void Load(EntityRegistry& InRegistry, EntityID InEntity, const nlohmann::json& InJson) const = 0;
+
+        /**
+         * The json keys of this component's HARD resource references (P5).
+         *
+         * A document loader reads its entities as untyped json, so it cannot tell a field that must
+         * be resident up front from one that may wait. This is how it asks: the names are derived
+         * from the type's own property list at registration, by TYPE, so declaring a field
+         * `THardResourcePath<T>` is the entire opt-in and no list is maintained anywhere.
+         *
+         * EMPTY for most components, and cheaply so — a type with no properties, or none of them
+         * hard, contributes nothing to walk.
+         */
+        virtual const TDynArray<OpaaxStringID>& GetHardRefFields() const = 0;
     };
 
     // =============================================================================
@@ -77,7 +95,10 @@ namespace Opaax
     {
     public:
         TComponentEntry(OpaaxStringID InName, bool bInEssential)
-            : m_Name(InName), m_bEssential(bInEssential) {}
+            : m_Name(InName), m_bEssential(bInEssential)
+        {
+            CollectHardRefFields();
+        }
 
         OpaaxStringID GetName()     const override { return m_Name; }
         entt::id_type GetTypeId()   const override { return entt::type_hash<T>::value(); }
@@ -113,6 +134,8 @@ namespace Opaax
             return lComponent != nullptr ? nlohmann::json(*lComponent) : nlohmann::json{};
         }
 
+        const TDynArray<OpaaxStringID>& GetHardRefFields() const override { return m_HardRefFields; }
+
         void Load(EntityRegistry& InRegistry, EntityID InEntity, const nlohmann::json& InJson) const override
         {
             T& lComponent = InRegistry.get_or_emplace<T>(InEntity);
@@ -120,8 +143,45 @@ namespace Opaax
         }
 
     private:
+        /**
+         * Walk T's property list at construction and keep the names of its HARD resource fields.
+         *
+         * BY TYPE, with `if constexpr` — the property carries its `ValueType`, so a field opts in by
+         * being declared `THardResourcePath<T>` and this needs no macro, no annotation and no list
+         * (**I15**'s rule, which is also why a typed drop target costs no editor code).
+         *
+         * A type with no `OPAAX_PROPERTIES` is simply not reflected and contributes nothing — which
+         * is correct rather than a gap: a component that describes no fields has no field anyone
+         * could have marked.
+         */
+        void CollectHardRefFields()
+        {
+            if constexpr (CReflected<T>)
+            {
+                std::apply([this](const auto&... lProperties)
+                           {
+                               ([this](const auto& InProperty)
+                                {
+                                    using TValue = typename std::decay_t<decltype(InProperty)>::ValueType;
+
+                                    if constexpr (k_IsHardResourcePath<TValue>)
+                                    {
+                                        // The property NAME is the json key — the nlohmann macro
+                                        // writes fields under their own names, so one string serves
+                                        // the Inspector and the loader both.
+                                        m_HardRefFields.emplace_back(OpaaxStringID(InProperty.Name));
+                                    }
+                                }(lProperties), ...);
+                           },
+                           T::GetProperties());
+            }
+        }
+
         OpaaxStringID m_Name;
         bool          m_bEssential = false;
+
+        /** P5 — see GetHardRefFields. Computed once, at registration. */
+        TDynArray<OpaaxStringID> m_HardRefFields;
     };
 
     // =============================================================================
