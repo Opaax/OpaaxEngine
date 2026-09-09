@@ -77,6 +77,9 @@ set(OPAAX_TEST_SOURCES
     # and CreateEntityWithGuid refuses a live one, so before Guid::Derive a second instance
     # silently did not appear.
     Core/World/PrefabTests.cpp
+    # ⑦-C P3. The headline case is "the prefab moves a property the instance did not touch" — what
+    # separates per-PROPERTY overrides from per-COMPONENT ones, and the bug the latter hides.
+    Core/World/PrefabOverrideTests.cpp
     Core/World/LevelFileTests.cpp
     Core/World/LevelTests.cpp
     # Two TUs on purpose: the identity question is "one tag per type or per TU?", which a

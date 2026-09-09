@@ -50,6 +50,39 @@ namespace Opaax
         TDynArray<ComponentData> Components;
     };
 
+    // One instance entity's deviation from its template. Kept as a LIST rather than a map because
+    // it is written as a json object keyed by the guid's text, which nlohmann already sorts
+    // (object_t is a std::map) — so the file's order is stable without a comparator on Guid.
+    struct PrefabOverrideEntry
+    {
+        Guid           TemplateGuid;   // which entity OF the prefab
+        nlohmann::json Patch;          // PrefabOverrides' form: { components: {...}, name: "..." }
+    };
+
+    // =============================================================================
+    // PrefabInstanceRecord — ONE placement of a prefab, as a map file stores it (⑦-C **K3**).
+    //
+    //   THE ENTITIES ARE NOT HERE, and that is the whole point. A map records the LINK plus the
+    //   deltas, exactly as o3de, Unity and Godot do, so an edit to the prefab reaches every
+    //   instance the next time the map is read — with no propagation machinery anywhere.
+    //
+    //   It lives in MapData rather than behind a fold/expand step inside the json layer, which
+    //   keeps `MapJson` a pure transformation: the format layer reads and writes this field like
+    //   any other, and knows nothing about prefabs. Turning entities into records and back is
+    //   `PrefabFold`'s job, called at the two moments that actually have a prefab to consult.
+    // =============================================================================
+    struct PrefabInstanceRecord
+    {
+        /** Asset-relative ("Prefabs/Turret.opaaxprefab"). */
+        OpaaxString Prefab;
+
+        /** Identifies this placement; the left half of Guid::Derive (**K2**). */
+        Guid InstanceId;
+
+        /** Only the entities that deviate. An untouched instance carries none. */
+        TDynArray<PrefabOverrideEntry> Overrides;
+    };
+
     struct MapData
     {
         /**
@@ -69,8 +102,22 @@ namespace Opaax
 
         TDynArray<EntityData> Entities;
 
-        bool   IsEmpty()      const noexcept { return Entities.empty(); }
+        /**
+         * The prefab placements this map holds, FOLDED (⑦-C P3).
+         *
+         * Empty in every MapData that has not been through `PrefabFold::Fold` — a capture, a PIE
+         * clone snapshot (**WM6**) and an undo record all carry their instance entities expanded in
+         * `Entities`, because none of them is a file and none has a prefab to consult. It is
+         * populated on the way OUT to a `.opaaxmap` and consumed on the way back IN.
+         */
+        TDynArray<PrefabInstanceRecord> Instances;
+
+        /** True only when there is nothing at all — no loose entities AND no placements. */
+        bool   IsEmpty()      const noexcept { return Entities.empty() && Instances.empty(); }
         Uint64 EntityCount()  const noexcept { return static_cast<Uint64>(Entities.size()); }
+
+        /** How many placements are folded here. Zero for anything that never went through Fold. */
+        Uint64 InstanceCount() const noexcept { return static_cast<Uint64>(Instances.size()); }
 
         /**
          * WHICH MAP these entities claim to belong to — the first valid `OwnerMap` among them,

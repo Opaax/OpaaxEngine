@@ -23,9 +23,11 @@
 #include "World/Entity/EntityMeta.h"
 #include "World/Prefab/PrefabFactory.h"
 #include "World/Prefab/PrefabFile.h"
+#include "World/Prefab/PrefabFold.h"
 #include "World/Prefab/PrefabJson.h"
 #include "World/Prefab/PrefabResource.hpp"
 #include "World/Serialization/MapFactory.h"
+#include "World/Serialization/MapJson.h"
 #include "World/Serialization/MapSerializer.h"
 #include "World/World.h"
 
@@ -410,6 +412,239 @@ TEST_CASE("Prefab: the FULL round trip — world entities -> prefab -> file -> t
         CHECK(lPlaced.Get<TransformComponent>().Position.x == doctest::Approx(7.f));
         CHECK(lPlaced.Has<DummyComponent>());
     }
+}
+
+// =============================================================================
+// PrefabFold — entities <-> instance records (⑦-C P3)
+// =============================================================================
+namespace
+{
+    // A resolver backed by a plain table; the editor's is backed by the ResourceManager.
+    class StubResolver final : public IPrefabResolver
+    {
+    public:
+        void Add(const char* InPath, PrefabData InData)
+        {
+            m_Paths.emplace_back(OpaaxString(InPath));
+            m_Data.emplace_back(Move(InData));
+        }
+
+        const PrefabData* Resolve(const OpaaxString& InAssetPath) const override
+        {
+            for (Uint64 lIndex = 0; lIndex < m_Paths.size(); ++lIndex)
+            {
+                if (m_Paths[lIndex] == InAssetPath) { return &m_Data[lIndex]; }
+            }
+            return nullptr;
+        }
+
+    private:
+        TDynArray<OpaaxString> m_Paths;
+        TDynArray<PrefabData>  m_Data;
+    };
+
+    // A world holding one placement of InPrefab, captured as a MapData ready to fold.
+    MapData PlaceAndCapture(World& InWorld, const PrefabData& InPrefab, const ComponentRegistry& InRegistry,
+                            const char* InPath, const Guid& InInstanceId, MapId InMap)
+    {
+        MapData lInstance = PrefabFactory::BuildInstance(InPrefab, OpaaxString(InPath), InInstanceId,
+                                                         InMap, InRegistry);
+        REQUIRE(MapFactory::Instantiate(lInstance, InWorld, InRegistry) == InPrefab.EntityCount());
+
+        return MapSerializer::CaptureMap(InWorld, InRegistry, InMap);
+    }
+}
+
+TEST_CASE("PrefabFold: two placements fold to two RECORDS and no entities")
+{
+    ComponentRegistry lRegistry;
+    FillRegistry(lRegistry);
+
+    const PrefabData lPrefab = MakePrefab(lRegistry);
+    StubResolver     lResolver;
+    lResolver.Add("Prefabs/Gun.opaaxprefab", lPrefab);
+
+    const MapId lMap = MapId("Level01");
+    World       lWorld("W");
+
+    PlaceAndCapture(lWorld, lPrefab, lRegistry, "Prefabs/Gun.opaaxprefab", Guid::New(), lMap);
+    MapData lCaptured = PlaceAndCapture(lWorld, lPrefab, lRegistry, "Prefabs/Gun.opaaxprefab",
+                                        Guid::New(), lMap);
+
+    REQUIRE(lCaptured.EntityCount() == 4);
+
+    CHECK(PrefabFold::Fold(lCaptured, lResolver, lRegistry) == 2);
+    CHECK(lCaptured.EntityCount() == 0);        // all four folded away
+    CHECK(lCaptured.InstanceCount() == 2);
+
+    // An untouched placement carries NO overrides — the common case, and what keeps a map small.
+    for (const PrefabInstanceRecord& lRecord : lCaptured.Instances)
+    {
+        CHECK(lRecord.Overrides.empty());
+    }
+}
+
+TEST_CASE("PrefabFold: Fold -> Expand reproduces the entities, guids included")
+{
+    ComponentRegistry lRegistry;
+    FillRegistry(lRegistry);
+
+    const PrefabData lPrefab = MakePrefab(lRegistry);
+    StubResolver     lResolver;
+    lResolver.Add("Prefabs/Gun.opaaxprefab", lPrefab);
+
+    const MapId lMap = MapId("Level01");
+    World       lWorld("W");
+
+    MapData lCaptured = PlaceAndCapture(lWorld, lPrefab, lRegistry, "Prefabs/Gun.opaaxprefab",
+                                        Guid::New(), lMap);
+
+    std::unordered_set<Guid> lBefore;
+    for (const EntityData& lEntity : lCaptured.Entities) { lBefore.insert(lEntity.Id); }
+
+    REQUIRE(PrefabFold::Fold(lCaptured, lResolver, lRegistry) == 1);
+    REQUIRE(PrefabFold::Expand(lCaptured, lResolver, lRegistry) == 1);
+
+    REQUIRE(lCaptured.EntityCount() == 2);
+    CHECK(lCaptured.InstanceCount() == 0);
+
+    // The guids came back IDENTICAL, which is what an inter-entity reference survives on (**WM3**)
+    // — and it works because Expand re-derives rather than re-mints.
+    std::unordered_set<Guid> lAfter;
+    for (const EntityData& lEntity : lCaptured.Entities) { lAfter.insert(lEntity.Id); }
+    CHECK(lAfter == lBefore);
+}
+
+TEST_CASE("PrefabFold: THE GATE — an override survives, an untouched property follows the prefab")
+{
+    // The whole point of storing a patch rather than the entities. Place, override ONE property,
+    // then change the prefab in a DIFFERENT property, and both must hold.
+    ComponentRegistry lRegistry;
+    FillRegistry(lRegistry);
+
+    PrefabData lPrefab = MakePrefab(lRegistry);
+    const MapId lMap   = MapId("Level01");
+
+    StubResolver lResolver;
+    lResolver.Add("Prefabs/Gun.opaaxprefab", lPrefab);
+
+    World         lWorld("W");
+    const Guid    lInstanceId = Guid::New();
+    MapData lInstance = PrefabFactory::BuildInstance(lPrefab, OpaaxString("Prefabs/Gun.opaaxprefab"),
+                                                     lInstanceId, lMap, lRegistry);
+    REQUIRE(MapFactory::Instantiate(lInstance, lWorld, lRegistry) == 2);
+
+    // The author moves one entity — an override on Transform.Position.
+    Entity lPlaced = lWorld.FindByGuid(lInstance.Entities[0].Id);
+    REQUIRE(lPlaced.IsValid());
+    lPlaced.Get<TransformComponent>().Position = Vector2F{999.f, 111.f};
+
+    MapData lCaptured = MapSerializer::CaptureMap(lWorld, lRegistry, lMap);
+    REQUIRE(PrefabFold::Fold(lCaptured, lResolver, lRegistry) == 1);
+    REQUIRE(lCaptured.Instances[0].Overrides.size() == 1);   // ONLY the moved entity
+
+    // Now the PREFAB changes a property nobody overrode: the same entity's Rotation.
+    for (EntityData& lTemplate : lPrefab.Entities)
+    {
+        if (lTemplate.Id != lCaptured.Instances[0].Overrides[0].TemplateGuid) { continue; }
+
+        for (ComponentData& lComponent : lTemplate.Components)
+        {
+            if (lComponent.TypeName == OpaaxStringID("Transform")) { lComponent.Payload["Rotation"] = 45.0; }
+        }
+    }
+
+    StubResolver lNewResolver;
+    lNewResolver.Add("Prefabs/Gun.opaaxprefab", lPrefab);
+
+    REQUIRE(PrefabFold::Expand(lCaptured, lNewResolver, lRegistry) == 1);
+
+    const EntityData* lResult = nullptr;
+    for (const EntityData& lEntity : lCaptured.Entities)
+    {
+        if (lEntity.Id == lPlaced.GetGuid()) { lResult = &lEntity; }
+    }
+    REQUIRE(lResult != nullptr);
+
+    for (const ComponentData& lComponent : lResult->Components)
+    {
+        if (lComponent.TypeName != OpaaxStringID("Transform")) { continue; }
+
+        // The override HELD...
+        CHECK(lComponent.Payload["Position"]["x"].get<float>() == doctest::Approx(999.f));
+        // ...and the prefab's change ARRIVED. Storing the entities instead of a patch would
+        // report 0 here, and no later prefab edit would ever reach this map again.
+        CHECK(lComponent.Payload["Rotation"].get<float>() == doctest::Approx(45.f));
+    }
+}
+
+TEST_CASE("PrefabFold: an UNRESOLVABLE prefab keeps its entities rather than losing them")
+{
+    // A renamed or deleted prefab file must cost the author a link, never their level.
+    ComponentRegistry lRegistry;
+    FillRegistry(lRegistry);
+
+    const PrefabData lPrefab = MakePrefab(lRegistry);
+    const MapId      lMap    = MapId("Level01");
+
+    World   lWorld("W");
+    MapData lCaptured = PlaceAndCapture(lWorld, lPrefab, lRegistry, "Prefabs/Gone.opaaxprefab",
+                                        Guid::New(), lMap);
+
+    StubResolver lEmpty;   // resolves nothing
+
+    CHECK(PrefabFold::Fold(lCaptured, lEmpty, lRegistry) == 0);
+    CHECK(lCaptured.EntityCount() == 2);       // still there, expanded
+    CHECK(lCaptured.InstanceCount() == 0);
+}
+
+TEST_CASE("MapJson: a map with placements round-trips, and one WITHOUT is byte-identical to before")
+{
+    ComponentRegistry lRegistry;
+    FillRegistry(lRegistry);
+
+    const PrefabData lPrefab = MakePrefab(lRegistry);
+    StubResolver     lResolver;
+    lResolver.Add("Prefabs/Gun.opaaxprefab", lPrefab);
+
+    const MapId lMap = MapId("Level01");
+    World       lWorld("W");
+    MapData lCaptured = PlaceAndCapture(lWorld, lPrefab, lRegistry, "Prefabs/Gun.opaaxprefab",
+                                        Guid::New(), lMap);
+    REQUIRE(PrefabFold::Fold(lCaptured, lResolver, lRegistry) == 1);
+
+    const OpaaxString lText = MapJson::Serialize(lCaptured);
+
+    MapData lParsed;
+    REQUIRE(MapJson::Deserialize(lText, lParsed));
+    REQUIRE(lParsed.InstanceCount() == 1);
+    CHECK(lParsed.Instances[0].Prefab == OpaaxString("Prefabs/Gun.opaaxprefab"));
+    CHECK(lParsed.Instances[0].InstanceId == lCaptured.Instances[0].InstanceId);
+
+    // The fixed point MP6 gates the whole layer on.
+    CHECK(MapJson::Serialize(lParsed) == lText);
+
+    // AND the key is OMITTED when there is nothing to say, so every existing map on disk is
+    // unaffected until it actually holds a placement.
+    MapData lPlain;
+    lPlain.Id = lMap;
+    lPlain.Entities.emplace_back();
+    lPlain.Entities[0].Id = Guid::New();
+    CHECK(MapJson::Serialize(lPlain).Find("prefabInstances") < 0);
+}
+
+TEST_CASE("MapJson: a v1 map (no prefabInstances) still reads, with no placements")
+{
+    const nlohmann::json lV1{
+        { MapJson::KEY_VERSION,  1u },
+        { MapJson::KEY_MAP_ID,   "Old" },
+        { MapJson::KEY_ENTITIES, nlohmann::json::array() }
+    };
+
+    MapData lParsed;
+    REQUIRE(MapJson::FromJson(lV1, lParsed));
+    CHECK(lParsed.InstanceCount() == 0);
+    CHECK(lParsed.Id == MapId("Old"));
 }
 
 // =============================================================================

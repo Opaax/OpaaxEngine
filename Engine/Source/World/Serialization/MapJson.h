@@ -36,13 +36,32 @@ namespace Opaax
          * the new field and nothing else, which is the same forward-compatibility MapFactory
          * already gives unknown COMPONENTS.
          */
-        inline constexpr Uint32 MAP_FORMAT_VERSION = 1;
+        inline constexpr Uint32 MAP_FORMAT_VERSION = 2;
+
+        /**
+         * v2 (⑦-C P3) added `prefabInstances`, and THIS one had to bump where `mapId` did not.
+         *
+         * The rule is unchanged — a version moves only for what an older reader would MISREAD —
+         * and the two cases differ exactly there. A v1 reader ignoring `mapId` derived the same
+         * identity from the entities; a v1 reader ignoring `prefabInstances` would produce a map
+         * with its placed entities SILENTLY MISSING, then write that back over the original. So it
+         * must refuse the file instead, which is what the version check makes it do.
+         *
+         * Reading v1 in a v2 build needs nothing: an absent key is an empty list.
+         */
+        inline constexpr Uint32 MAP_FORMAT_VERSION_PREFABS = 2;
 
         // ---- keys ---------------------------------------------------------------
         // `mapId` is the only key a MAP owns; everything else describes an ENTITY and is
         // EntityJson's, shared with the prefab format so the two cannot drift (⑦-C P1a).
         // Re-exported rather than re-declared: one definition, and no caller moved.
         inline constexpr const char* KEY_MAP_ID      = "mapId";
+
+        // ⑦-C P3 — the folded prefab placements, and the keys inside one.
+        inline constexpr const char* KEY_INSTANCES    = "prefabInstances";
+        inline constexpr const char* KEY_PREFAB       = "prefab";
+        inline constexpr const char* KEY_INSTANCE_ID  = "instanceId";
+        inline constexpr const char* KEY_OVERRIDES    = "overrides";
 
         inline constexpr const char* KEY_VERSION     = EntityJson::KEY_VERSION;
         inline constexpr const char* KEY_ENTITIES    = EntityJson::KEY_ENTITIES;
