@@ -8,6 +8,8 @@
 #include "World/Entity/EntityMeta.h"
 #include "World/Serialization/MapFactory.h"
 #include "World/Serialization/MapResource.hpp"
+#include "World/Prefab/PrefabFold.h"
+#include "World/Prefab/ResourcePrefabResolver.h"
 #include "World/World.h"
 
 namespace Opaax
@@ -104,6 +106,27 @@ namespace Opaax
 
         ++OutResult.MapsMounted;
         OutResult.EntitiesCreated += MapFactory::Instantiate(lMap->Data, m_World, m_Components);
+
+        // ⑦-C P3. The map's PLACEMENTS, rebuilt from their prefabs and their overrides.
+        //
+        // Only the RECORDS are copied — they are a path, a guid and a patch — so this does not
+        // duplicate the map's entities to reach a mutable MapData. Instantiate is additive
+        // (**MapFactory**), which is what lets the placements go in as a second pass rather than
+        // forcing the whole map through one mutable copy.
+        if (!lMap->Data.Instances.empty())
+        {
+            MapData lPlacements;
+            lPlacements.Id        = lMapId;
+            lPlacements.Instances = lMap->Data.Instances;
+
+            ResourcePrefabResolver lResolver(m_Paths, m_Resources);
+            const Uint64 lExpanded = PrefabFold::Expand(lPlacements, lResolver, m_Components);
+
+            OutResult.EntitiesCreated += MapFactory::Instantiate(lPlacements, m_World, m_Components);
+
+            OPAAX_LOG(LogLevel, Info, "Map '{}' expanded {} of {} prefab placement(s)",
+                      InAssetRelPath.CStr(), lExpanded, lMap->Data.InstanceCount());
+        }
 
         m_Mounted.emplace_back(lMapId, InAssetRelPath);
         return true;

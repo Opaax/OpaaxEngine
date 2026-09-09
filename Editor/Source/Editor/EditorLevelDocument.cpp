@@ -11,6 +11,8 @@
 #include "World/Serialization/MapFile.h"
 #include "World/Serialization/MapJson.h"
 #include "World/Serialization/MapSerializer.h"
+#include "World/Prefab/PrefabFold.h"              // ⑦-C — placements become records on the way out
+#include "World/Prefab/ResourcePrefabResolver.h"
 
 namespace
 {
@@ -42,8 +44,25 @@ namespace
 
 namespace Opaax::Editor
 {
+    MapData EditorLevelDocument::CaptureFolded(const World& InWorld, const ComponentRegistry& InRegistry,
+                                               MapId InMapId) const
+    {
+        MapData lData = MapSerializer::CaptureMap(InWorld, InRegistry, InMapId);
+
+        // ⑦-C P3. Placements become RECORDS on every path that turns a capture into map text —
+        // the dirty check, the round-trip check and Save all come through here. A baseline taken
+        // UNFOLDED could never match a file written FOLDED, so the marker would read dirty forever.
+        if (m_Paths != nullptr && m_Resources != nullptr)
+        {
+            ResourcePrefabResolver lResolver(*m_Paths, *m_Resources);
+            PrefabFold::Fold(lData, lResolver, InRegistry);
+        }
+
+        return lData;
+    }
+
     OpaaxString EditorLevelDocument::CompareText(const World& InWorld, const ComponentRegistry& InRegistry,
-                                                 MapId InMapId)
+                                                 MapId InMapId) const
     {
         // CaptureMap, never CaptureWorld — "this map", not "the world". A runtime-spawned entity
         // carries an invalid OwnerMap and so can never match (WM2), which is what keeps bullets
@@ -53,7 +72,7 @@ namespace Opaax::Editor
         //
         // The capture is a temporary, so SerializeCompact MOVES its payloads out rather than
         // deep-copying every component tree into the json.
-        return MapJson::SerializeCompact(MapSerializer::CaptureMap(InWorld, InRegistry, InMapId));
+        return MapJson::SerializeCompact(CaptureFolded(InWorld, InRegistry, InMapId));
     }
 
     EditorLevelDocument::MapRecord* EditorLevelDocument::Find(MapId InMapId) noexcept
@@ -136,7 +155,7 @@ namespace Opaax::Editor
             // The FILE form, not the baseline: this one question is about the bytes on disk, so it
             // is the only place that pays for a second, indented dump. Once per mount, not per check.
             const OpaaxString lOnDisk = FileIO::ReadAllText(lRecord.AbsPath);
-            const OpaaxString lAsFile = MapJson::Serialize(MapSerializer::CaptureMap(InWorld, InRegistry, lMap.Id));
+            const OpaaxString lAsFile = MapJson::Serialize(CaptureFolded(InWorld, InRegistry, lMap.Id));
 
             if (lOnDisk.IsEmpty())
             {
@@ -196,7 +215,7 @@ namespace Opaax::Editor
         // The two forms differ only in whitespace but each needs its own dump, so the capture is
         // turned into json twice and no more: SaveText takes the file text this already holds,
         // where Save(path, data) would have serialized the whole map a SECOND time.
-        const MapData     lData = MapSerializer::CaptureMap(InWorld, InRegistry, InMapId);
+        const MapData     lData = CaptureFolded(InWorld, InRegistry, InMapId);
         const OpaaxString lFileText = MapJson::Serialize(lData);
         const OpaaxString lText     = MapJson::SerializeCompact(lData);
 

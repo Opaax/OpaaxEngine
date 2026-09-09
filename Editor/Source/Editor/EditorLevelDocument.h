@@ -11,6 +11,8 @@ namespace Opaax
     class World;
     class ComponentRegistry;
     class IPaths;
+    class ResourceManager;
+    struct MapData;
 }
 
 namespace Opaax::Editor
@@ -65,6 +67,20 @@ namespace Opaax::Editor
 
         EditorLevelDocument(const EditorLevelDocument&)            = delete;
         EditorLevelDocument& operator=(const EditorLevelDocument&) = delete;
+
+        /**
+         * Supply what a prefab path is resolved WITH (⑦-C P3). Called once by EditorService, the
+         * only place holding both — the `BindEngineRegistries` shape (**MR1a**), chosen over adding
+         * a resolver argument to six public methods and every one of their call sites.
+         *
+         * Until this is called the document does not fold, which is correct for the only caller
+         * that never calls it: a test constructing this type directly, with no placements to fold.
+         */
+        void BindPrefabSources(const IPaths& InPaths, ResourceManager& InResources) noexcept
+        {
+            m_Paths     = &InPaths;
+            m_Resources = &InResources;
+        }
 
         // =============================================================================
         // Functions
@@ -192,13 +208,36 @@ namespace Opaax::Editor
          * NOT the file's bytes, and it must not be written as them. The dirty check only ever asks
          * "same or not", and indentation is a third of the pass it pays per edit.
          */
-        static OpaaxString CompareText(const World& InWorld, const ComponentRegistry& InRegistry, MapId InMapId);
+        OpaaxString CompareText(const World& InWorld, const ComponentRegistry& InRegistry, MapId InMapId) const;
+
+        /**
+         * The world's content for ONE map, with its prefab placements FOLDED into records (⑦-C P3).
+         *
+         * Every path that turns a capture into map TEXT goes through here — the dirty check, the
+         * round-trip check and Save — because a baseline taken unfolded could never match a file
+         * written folded, and the marker would then lie permanently.
+         *
+         * Unfolded when the sources are unbound, which is only a test holding this type directly.
+         */
+        MapData CaptureFolded(const World& InWorld, const ComponentRegistry& InRegistry,
+                              MapId InMapId) const;
 
         MapRecord*       Find(MapId InMapId) noexcept;
         const MapRecord* Find(MapId InMapId) const noexcept;
 
         /** No capture has run yet — a real revision can never equal it, so the first check always runs. */
         static constexpr Uint64 k_RevisionNever = ~0ull;
+
+        /**
+         * What a prefab path is resolved WITH (⑦-C P3) — bound once by EditorService, which is the
+         * only place holding both. Bound rather than threaded through six signatures, the shape
+         * `ModuleRegistrar::BindEngineRegistries` already uses (**MR1a**).
+         *
+         * Null until then, and a document that is never bound simply does not fold — which is only
+         * a test constructing this type directly, where no world has a placement to fold.
+         */
+        const IPaths*        m_Paths     = nullptr;
+        ResourceManager*     m_Resources = nullptr;
 
         OpaaxString          m_AbsPath;
         OpaaxString          m_ManifestBaseline;

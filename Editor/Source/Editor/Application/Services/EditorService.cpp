@@ -138,6 +138,11 @@ namespace Opaax::Editor
         m_InputRoute        = MakeUnique<InputRoute>(*m_WorldMgr, InEngine.GetInput(), *m_PIE);
         m_MapDocument       = MakeUnique<EditorMapDocument>();
         m_LevelDocument     = MakeUnique<EditorLevelDocument>();
+
+        // ⑦-C P3. What a prefab path is resolved with when a map is folded on the way to disk.
+        // Bound here because this is the only place holding both (**MR1a**'s shape).
+        m_LevelDocument->BindPrefabSources(OpaaxApplication::GetAppService<IPaths>(),
+                                           OpaaxApplication::GetAppService<IEngine>().GetResources());
         m_SheetDocument     = MakeUnique<EditorSpriteSheetDocument>();
         m_ClipDocument      = MakeUnique<EditorAnimationClipDocument>();
         m_LibraryDocument   = MakeUnique<EditorAnimationLibraryDocument>();
@@ -214,6 +219,7 @@ namespace Opaax::Editor
     void EditorService::DrawGUI()
     {
         if (m_Context == nullptr) { return; }
+
 
 
 
