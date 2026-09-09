@@ -172,6 +172,15 @@ namespace Opaax::Editor
         Vector2F ViewportToWorld(const Vector2F& InLocalPx) const;
 
         /**
+         * Place whatever was dropped on the image this frame, AFTER the draw pass (⑦-C).
+         *
+         * Queued rather than run inline for the Hierarchy's reason (**MP7**): it creates entities,
+         * and a panel's draw is a READ of the world. Clearing the request first means a refused
+         * drop does not retry itself every frame.
+         */
+        void RunPendingDrop();
+
+        /**
          * Read this frame's pan drag and wheel from ImGui and bank them. Call while the panel's
          * window is current.
          *
@@ -347,6 +356,10 @@ namespace Opaax::Editor
         enum class EPendingPick : Uint8 { None, Point, Box };
 
         EPendingPick m_PendingPick    = EPendingPick::None;
+        /** ⑦-C — a prefab dropped on the image this frame, asset-relative. Empty = nothing dropped. */
+        OpaaxString  m_PendingDropPrefab;
+        Vector2F     m_PendingDropPx  = {0.f, 0.f};   // viewport-local, where it was released
+
         Vector2F     m_PickStartPx    = {0.f, 0.f};   // viewport-local, where the button went down
         Vector2F     m_PickEndPx      = {0.f, 0.f};   // viewport-local, where it came up
         bool         m_bPickAdditive  = false;        // Ctrl was held — add rather than replace

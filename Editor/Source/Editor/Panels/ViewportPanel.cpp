@@ -15,6 +15,10 @@
 #include "Editor/Undo/EditorUndo.h"              // the ONE step a whole drag records (⑤)
 #include "Editor/Operation/EditorViewport.hpp"
 #include "Editor/Operation/EntityOps.h"          // the choke point a gizmo drag writes through (SEL6)
+#include "Editor/EditorMapDocument.h"            // ⑦-C — a drop authors into the focused map
+#include "Editor/Resources/ResourceDragDrop.h"   // ⑦-C — the typed payload the browser drags
+#include "Engine/Subsystems/Resources/ResourceManager.h"   // before PrefabResource — LoadContext
+#include "World/Prefab/PrefabResource.hpp"       // ⑦-C — which type the drop target accepts
 #include "Editor/UI/IEditorUIBackend.h"
 
 #include "Application/Services/IEngine.h"
@@ -970,6 +974,24 @@ namespace Opaax::Editor
         const bool   lImageRawHovered = ImGui::IsItemHovered();
         const ImVec2 lOrigin          = ImGui::GetItemRectMin();
 
+        // ⑦-C. DROP A PREFAB TO PLACE ONE. Taken here because BeginDragDropTarget names the LAST
+        // SUBMITTED ITEM, which is the image — nothing has been submitted since, and the three
+        // measures above only read its rect.
+        //
+        // RECORDED, not run: it creates entities, and doing that mid-pass is the same hazard the
+        // Hierarchy's queue exists for (**MP7**). The local pixel is banked with it because the
+        // origin is only knowable here.
+        {
+            OpaaxString lDropped;
+            if (AcceptResourceDragPayload(ResourceTypeID::Get<PrefabResource>(), lDropped))
+            {
+                const ImVec2 lMouse = ImGui::GetMousePos();
+
+                m_PendingDropPrefab = lDropped;
+                m_PendingDropPx     = Vector2F{ lMouse.x - lOrigin.x, lMouse.y - lOrigin.y };
+            }
+        }
+
         // The toolbar is drawn FIRST and SUBTRACTED from the image's hover. It sits on top of the
         // image, so every gesture below would otherwise fire underneath its buttons — a click on
         // "Snap" would start a marquee, and a drag off a button would pan the camera.
@@ -991,6 +1013,23 @@ namespace Opaax::Editor
             OPAAX_LOG(LogViewportPanel, Info, "Viewport displaying world FBO (handle={}, {}x{})", lImg.Handle, m_viewportSize.x, m_viewportSize.y);
             m_bImageLogged = true;
         }
+
+        RunPendingDrop();
+    }
+
+    void ViewportPanel::RunPendingDrop()
+    {
+        const OpaaxString lPrefab = m_PendingDropPrefab;
+        m_PendingDropPrefab = OpaaxString();   // cleared FIRST — a refused drop must not retry
+
+        if (lPrefab.IsEmpty()) { return; }
+
+        // ViewportToWorld reads the ACTIVE world's camera, so a drop lands where the author saw the
+        // cursor rather than where the editor camera happens to be.
+        const Vector2F lWorldPos = ViewportToWorld(m_PendingDropPx);
+
+        EntityOps::InstantiatePrefab(m_Context, m_Context.Paths.AssetToAbsolute(lPrefab),
+                                     m_Context.MapDocument.GetMapId(), &lWorldPos);
     }
 
     void ViewportPanel::Shutdown()

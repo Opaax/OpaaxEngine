@@ -106,6 +106,15 @@ namespace Opaax::Editor
         /** The prefab's state, captured after. */
         MapData After;
 
+        /**
+         * Pieces the revert BROUGHT BACK — entities the author had deleted from the instance.
+         *
+         * They need their own list because `MapFactory::Restore` leaves entities it does not name
+         * alone, so restoring `Before` cannot remove them: nothing in `Before` can express "and
+         * this one should not exist", since it was captured when it did not.
+         */
+        MapData Created;
+
         void        Undo(EditorContext& InContext);
         void        Redo(EditorContext& InContext);
         const char* Label() const noexcept { return "Revert to Prefab"; }

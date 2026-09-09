@@ -141,7 +141,7 @@ namespace Opaax::Editor
     }
 
     Uint64 EntityOps::InstantiatePrefab(EditorContext& InContext, const OpaaxString& InAbsPath,
-                                        MapId InOwnerMap)
+                                        MapId InOwnerMap, const Vector2F* InAtWorld)
     {
         if (!MapOps::CanEdit(InContext, "Instantiate Prefab")) { return 0; }
 
@@ -222,6 +222,21 @@ namespace Opaax::Editor
 
             InContext.Selection.Add(lEntity);
             lHandles.emplace_back(lEntity.GetHandle());
+        }
+
+        // MOVED BEFORE THE CAPTURE, so a drop is ONE undo step rather than a place followed by a
+        // move. The first entity is the anchor and the rest keep their relative offsets, which is
+        // what makes a multi-entity prefab arrive intact (**K10** — no parenting needed for this).
+        if (InAtWorld != nullptr && !lHandles.empty())
+        {
+            Entity lAnchor{ lHandles.front(), lWorld };
+            const Vector2F lDelta = *InAtWorld - lAnchor.Get<TransformComponent>().Position;
+
+            for (const EntityID lHandle : lHandles)
+            {
+                Entity lEntity{ lHandle, lWorld };
+                lEntity.Get<TransformComponent>().Position += lDelta;
+            }
         }
 
         // Captured AFTER the fact, exactly as Create does — it records what the world actually got,
@@ -378,6 +393,7 @@ namespace Opaax::Editor
         // One MapData naming every entity to restore, built from the TEMPLATES — which is what
         // makes this a revert rather than a re-save of what is already there.
         MapData             lRestore;
+        MapData             lCreated;   // pieces the revert brings BACK — what undo must destroy
         TDynArray<EntityID> lHandles;
 
         for (const Guid& lInstanceId : lInstanceIds)
@@ -428,10 +444,13 @@ namespace Opaax::Editor
                 lEntity.OwnerMap = lOwnerMap;
 
                 Entity lLive = lWorld->FindByGuid(lEntity.Id);
-                if (!lLive.IsValid()) { continue; }   // never placed, or already deleted
 
                 if (!bInWholeInstance)
                 {
+                    // Selection-only: a DELETED entity cannot be selected, so it is not a target
+                    // here. Bringing deleted pieces back is what the whole-instance entry is for.
+                    if (!lLive.IsValid()) { continue; }
+
                     bool lSelected = false;
                     for (const Guid& lTarget : lSelectedTargets)
                     {
@@ -441,7 +460,21 @@ namespace Opaax::Editor
                     if (!lSelected) { continue; }
                 }
 
-                lHandles.emplace_back(lLive.GetHandle());
+                if (lLive.IsValid())
+                {
+                    lHandles.emplace_back(lLive.GetHandle());
+                }
+                else
+                {
+                    // A DELETED piece of the placement. MapFactory::Restore recreates it on its own
+                    // Guid — that is what "be this again" means — and SKIPPING it here was why
+                    // deleting one half of a turret could never be undone by a revert.
+                    //
+                    // Kept so the undo step knows what to destroy: nothing else can tell that this
+                    // entity did not exist beforehand, and Restore leaves absent entities alone.
+                    lCreated.Entities.emplace_back(lEntity);
+                }
+
                 lRestore.Entities.emplace_back(Move(lEntity));
             }
         }
@@ -458,11 +491,31 @@ namespace Opaax::Editor
 
         const Uint64 lReverted = MapFactory::Restore(lRestore, *lWorld, lRegistry);
 
-        InContext.Undo.Record(PrefabRevert{ Move(lBefore),
-                                            MapSerializer::CaptureEntities(*lWorld, lRegistry, lHandles) });
+        // Handles re-resolved AFTER the restore: a recreated entity did not exist when the list
+        // above was built, and an After that omitted it would make redo silently drop it again.
+        TDynArray<EntityID> lAfterHandles;
+        lAfterHandles.reserve(lRestore.Entities.size());
+        for (const EntityData& lEntity : lRestore.Entities)
+        {
+            if (Entity lLive = lWorld->FindByGuid(lEntity.Id); lLive.IsValid())
+            {
+                lAfterHandles.emplace_back(lLive.GetHandle());
+            }
+        }
 
-        OPAAX_LOG(LogEntityOps, Info, "Reverted {} entity(ies) across {} placement(s) to their prefab",
-                  lReverted, lInstanceIds.size());
+        lWorld->MarkChanged();
+
+        // Read BEFORE the move — a moved-from container is not required to still hold anything.
+        const Uint64 lRecreated = lCreated.EntityCount();
+
+        InContext.Undo.Record(PrefabRevert{
+            Move(lBefore),
+            MapSerializer::CaptureEntities(*lWorld, lRegistry, lAfterHandles),
+            Move(lCreated) });
+
+        OPAAX_LOG(LogEntityOps, Info,
+                  "Reverted {} entity(ies) across {} placement(s) to their prefab ({} recreated)",
+                  lReverted, lInstanceIds.size(), lRecreated);
 
         return lReverted;
     }

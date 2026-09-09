@@ -67,7 +67,15 @@ namespace Opaax::Editor
          *
          * @return How many entities were created. 0 means refused, and the log says which reason.
          */
-        Uint64 InstantiatePrefab(EditorContext& InContext, const OpaaxString& InAbsPath, MapId InOwnerMap);
+        /**
+         * @param InAtWorld WHERE to put it, or null to keep the prefab's authored positions.
+         *   Given, the whole instance is translated so its FIRST entity lands there — an anchor
+         *   rather than a centroid, because an author dropping a turret means "the turret goes
+         *   here", and the first entity is the one a prefab is built around. Applied BEFORE the
+         *   undo step is captured, so a drop is one step and not a place-then-move pair.
+         */
+        Uint64 InstantiatePrefab(EditorContext& InContext, const OpaaxString& InAbsPath, MapId InOwnerMap,
+                                 const Vector2F* InAtWorld = nullptr);
 
         /**
          * Write the SELECTION to InAbsPath as a new prefab, then REPLACE it with an instance of

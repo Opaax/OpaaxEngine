@@ -126,9 +126,16 @@ namespace Opaax::Editor
         RestoreEntities(InContext, Instance);
     }
 
-    // One body both ways: a revert creates and destroys nothing, so "be this again" in either
-    // direction is the whole inverse (**UN4**).
-    void PrefabRevert::Undo(EditorContext& InContext) { RestoreEntities(InContext, Before); }
+    // A revert normally creates and destroys nothing, so "be this again" is the whole inverse
+    // (**UN4**) — EXCEPT when it brought a deleted piece back, which undo has to take away again.
+    // Destroy first, restore second, for PrefabCreateFromSelection's reason: RestoreEntities
+    // selects what it brought back and DestroyEntities clears.
+    void PrefabRevert::Undo(EditorContext& InContext)
+    {
+        DestroyEntities(InContext, Created);
+        RestoreEntities(InContext, Before);
+    }
+
     void PrefabRevert::Redo(EditorContext& InContext) { RestoreEntities(InContext, After); }
 
     void EntityDelete::Undo(EditorContext& InContext) { RestoreEntities(InContext, Entities); }

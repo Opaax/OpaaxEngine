@@ -67,6 +67,7 @@ namespace Opaax
         // Grouped by placement, in FIRST-SEEN order; MapJson sorts the records on write (**MP2**),
         // so nothing here has to care about ordering.
         TDynArray<PrefabInstanceRecord> lRecords;
+        TDynArray<TDynArray<Guid>>      lPresent;   // per record: the templates still in the world
         TDynArray<EntityData>           lLoose;
         lLoose.reserve(InOutData.Entities.size());
 
@@ -101,23 +102,51 @@ namespace Opaax
                 continue;
             }
 
-            PrefabInstanceRecord* lRecord = nullptr;
-            for (PrefabInstanceRecord& lCandidate : lRecords)
+            Uint64 lIndex = 0;
+            for (; lIndex < lRecords.size(); ++lIndex)
             {
-                if (lCandidate.InstanceId == lMarker.InstanceId) { lRecord = &lCandidate; break; }
+                if (lRecords[lIndex].InstanceId == lMarker.InstanceId) { break; }
             }
 
-            if (lRecord == nullptr)
+            if (lIndex == lRecords.size())
             {
                 lRecords.emplace_back(PrefabInstanceRecord{ lMarker.Prefab.Path, lMarker.InstanceId, {} });
-                lRecord = &lRecords.back();
+                lPresent.emplace_back();
             }
+
+            // WHICH TEMPLATES THIS PLACEMENT STILL HAS. The complement is what was DELETED, and
+            // without it a removal is unrepresentable — the record would be identical to one where
+            // the entity is simply unmodified, and Expand would bring it back.
+            lPresent[lIndex].emplace_back(lMarker.TemplateGuid);
 
             nlohmann::json lPatch = PrefabOverrides::Diff(*lTemplate, lEntity, lMarkerName);
             if (!PrefabOverrides::IsEmpty(lPatch))
             {
-                lRecord->Overrides.emplace_back(
+                lRecords[lIndex].Overrides.emplace_back(
                     PrefabOverrideEntry{ lMarker.TemplateGuid, Move(lPatch) });
+            }
+        }
+
+        // THE REMOVALS, recorded as a NULL patch — merge-patch's own convention, and the same one
+        // PrefabOverrides already uses a level down for a deleted component. An entity of the
+        // prefab that this placement no longer has gets `"<templateGuid>": null`.
+        for (Uint64 lIndex = 0; lIndex < lRecords.size(); ++lIndex)
+        {
+            const PrefabData* lPrefab = InResolver.Resolve(lRecords[lIndex].Prefab);
+            if (lPrefab == nullptr) { continue; }   // already warned above
+
+            for (const EntityData& lTemplate : lPrefab->Entities)
+            {
+                bool lStillHere = false;
+                for (const Guid& lSeen : lPresent[lIndex])
+                {
+                    if (lSeen == lTemplate.Id) { lStillHere = true; break; }
+                }
+
+                if (lStillHere) { continue; }
+
+                lRecords[lIndex].Overrides.emplace_back(
+                    PrefabOverrideEntry{ lTemplate.Id, nlohmann::json() });   // null == removed
             }
         }
 
@@ -161,6 +190,8 @@ namespace Opaax
 
             for (EntityData& lEntity : lInstance.Entities)
             {
+                bool lRemoved = false;
+
                 // The patch is keyed by TEMPLATE guid, which BuildInstance derived from — so it is
                 // recovered the same way rather than stored a second time on the entity.
                 for (const PrefabOverrideEntry& lEntry : lRecord.Overrides)
@@ -168,9 +199,15 @@ namespace Opaax
                     const Guid lDerived = Guid::Derive(lRecord.InstanceId, lEntry.TemplateGuid);
                     if (lDerived != lEntity.Id) { continue; }
 
-                    PrefabOverrides::Apply(lEntry.Patch, lEntity);
+                    // A NULL patch means this placement DELETED that piece of the prefab. Checked
+                    // before Apply, which reads null as "nothing to do" — the reading that made a
+                    // deletion silently come back.
+                    lRemoved = lEntry.Patch.is_null();
+                    if (!lRemoved) { PrefabOverrides::Apply(lEntry.Patch, lEntity); }
                     break;
                 }
+
+                if (lRemoved) { continue; }
 
                 InOutData.Entities.emplace_back(Move(lEntity));
             }

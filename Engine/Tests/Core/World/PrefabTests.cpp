@@ -578,6 +578,58 @@ TEST_CASE("PrefabFold: THE GATE — an override survives, an untouched property 
     }
 }
 
+TEST_CASE("PrefabFold: DELETING one piece of a placement survives the round trip")
+{
+    // REGRESSION, found by the user: deleting half a turret did not persist. A record for a
+    // placement whose piece was deleted was byte-identical to one where that piece was merely
+    // unmodified, so Expand brought it straight back — silently, on every load.
+    ComponentRegistry lRegistry;
+    FillRegistry(lRegistry);
+
+    const PrefabData lPrefab = MakePrefab(lRegistry);
+    REQUIRE(lPrefab.EntityCount() == 2);
+
+    StubResolver lResolver;
+    lResolver.Add("Prefabs/Gun.opaaxprefab", lPrefab);
+
+    const MapId lMap = MapId("Level01");
+    World       lWorld("W");
+
+    const Guid lInstanceId = Guid::New();
+    MapData lInstance = PrefabFactory::BuildInstance(lPrefab, OpaaxString("Prefabs/Gun.opaaxprefab"),
+                                                     lInstanceId, lMap, lRegistry);
+    REQUIRE(MapFactory::Instantiate(lInstance, lWorld, lRegistry) == 2);
+
+    // The author deletes ONE of the two pieces.
+    const Guid lKilled = lInstance.Entities[0].Id;
+    lWorld.DestroyEntity(lWorld.FindByGuid(lKilled).GetHandle());
+    REQUIRE(lWorld.GetEntityCount() == 1);
+
+    MapData lCaptured = MapSerializer::CaptureMap(lWorld, lRegistry, lMap);
+    REQUIRE(PrefabFold::Fold(lCaptured, lResolver, lRegistry) == 1);
+
+    // The removal is RECORDED, as a null patch — without it the record cannot say this happened.
+    bool lFoundNull = false;
+    for (const PrefabOverrideEntry& lEntry : lCaptured.Instances[0].Overrides)
+    {
+        if (lEntry.Patch.is_null()) { lFoundNull = true; }
+    }
+    CHECK(lFoundNull);
+
+    // And it STAYS deleted through a file round trip.
+    const OpaaxString lText = MapJson::Serialize(lCaptured);
+    MapData lParsed;
+    REQUIRE(MapJson::Deserialize(lText, lParsed));
+    REQUIRE(PrefabFold::Expand(lParsed, lResolver, lRegistry) == 1);
+
+    CHECK(lParsed.EntityCount() == 1);   // ONE, not two — the deletion survived
+
+    for (const EntityData& lEntity : lParsed.Entities)
+    {
+        CHECK(lEntity.Id != lKilled);
+    }
+}
+
 TEST_CASE("PrefabFold: an UNRESOLVABLE prefab keeps its entities rather than losing them")
 {
     // A renamed or deleted prefab file must cost the author a link, never their level.

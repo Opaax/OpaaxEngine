@@ -36,7 +36,7 @@ namespace Opaax
          * the new field and nothing else, which is the same forward-compatibility MapFactory
          * already gives unknown COMPONENTS.
          */
-        inline constexpr Uint32 MAP_FORMAT_VERSION = 2;
+        inline constexpr Uint32 MAP_FORMAT_VERSION = 3;
 
         /**
          * v2 (⑦-C P3) added `prefabInstances`, and THIS one had to bump where `mapId` did not.
@@ -50,6 +50,18 @@ namespace Opaax
          * Reading v1 in a v2 build needs nothing: an absent key is an empty list.
          */
         inline constexpr Uint32 MAP_FORMAT_VERSION_PREFABS = 2;
+
+        /**
+         * v3 made a DELETED instance entity representable, as a `null` override patch.
+         *
+         * v2 could not say it at all: a record for a placement whose piece had been deleted was
+         * byte-identical to one where that piece was merely unmodified, so every load brought the
+         * deleted entity back. A v2 reader meeting a v3 file does exactly that — it reads the null
+         * as "nothing to change" and recreates the entity — which is a MISREAD, hence the bump.
+         *
+         * Reading v1 or v2 in a v3 build needs nothing: no null patches means nothing was removed.
+         */
+        inline constexpr Uint32 MAP_FORMAT_VERSION_PREFAB_REMOVALS = 3;
 
         // ---- keys ---------------------------------------------------------------
         // `mapId` is the only key a MAP owns; everything else describes an ENTITY and is
