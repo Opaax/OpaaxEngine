@@ -77,6 +77,12 @@ namespace Opaax::Editor
         const ComponentRegistry& lRegistry = InContext.Engine.GetRegistries().Components();
         const PrefabData         lData     = CaptureAsPrefab(*m_World, lRegistry);
 
+        // BEFORE THE WRITE, and that ordering is the whole correctness of the reconcile: a
+        // listener that needs the OLD prefab has to read it while the OLD FILE is still on disk.
+        // Announced after the write, every resolve returned the NEW template, the fold recorded the
+        // author's own edit as an override, and expand cancelled it straight back out.
+        ResourceOps::AboutToSave<PrefabResource>(InContext, m_AbsPath);
+
         if (!PrefabFile::Save(m_AbsPath, lData))
         {
             // Baseline untouched, so the document keeps reporting unsaved work rather than claiming

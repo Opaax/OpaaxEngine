@@ -245,6 +245,7 @@ namespace Opaax::Editor
 
 
 
+
         // Ahead of the pass, not inside it: a shortcut can execute a command that destroys the
         // world, and doing that before any widget is submitted is safer than mid-pass. ImGui's
         // global route defers its decision, so the chords fire either way.
@@ -357,7 +358,7 @@ namespace Opaax::Editor
         lPanelsRegistry.Register<SpriteSheetPanel>(PanelDesc    {.Id = SpriteSheetPanel::PanelID(),     .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_SHEET});
         // ⑦-C P6. Hidden until a prefab is opened, and its SaveCommand is what routes Ctrl+S to
         // the prefab rather than to the map ([[L86]]'s fix, which is why no panel hand-writes a save).
-        lPanelsRegistry.Register<PrefabPanel>(PanelDesc         {.Id = PrefabPanel::PanelID(),          .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_PREFAB});
+        lPanelsRegistry.Register<PrefabPanel>(PanelDesc         {.Id = PrefabPanel::PanelID(),          .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_PREFAB, .bGlobalUndoApplies = false});
         lPanelsRegistry.Register<AnimationClipPanel>(PanelDesc  {.Id = AnimationClipPanel::PanelID(),   .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_CLIP});
         lPanelsRegistry.Register<AnimationLibraryPanel>(PanelDesc{.Id = AnimationLibraryPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_LIBRARY});
         lPanelsRegistry.Register<MoveModePanel>(PanelDesc{.Id = MoveModePanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_MOVE_MODE});
@@ -1188,14 +1189,40 @@ namespace Opaax::Editor
 
         // Ctrl+Z / Ctrl+Y, beside Ctrl+S and for its reason. NOT Ctrl+Shift+Z: Shortcut takes one
         // modifier, and Ctrl+Y is what Windows and Unreal both use anyway.
-        if (m_Gui->Shortcut(EKeyCode::LeftControl, EKeyCode::Z))
-        {
-            m_Context->Extensions.Commands().Execute(Tags::EDITOR_COMMAND_UNDO, *m_Context);
-        }
+        //
+        // AND THE FOCUSED PANEL CAN SWALLOW THEM, which is Ctrl+S's rule one chord over. The stack
+        // is the LEVEL's (**UN1**), so letting the chord through from a document editor undid an
+        // edit in a level the author could not even see — found in a minute of real use. A panel
+        // DECLARES the answer (PanelDesc::bGlobalUndoApplies) rather than a ladder here trying to
+        // remember which panels are document editors, which is exactly how Ctrl+S was got wrong
+        // four times ([[L86]]).
+        // SAMPLED ONCE EACH. Shortcut() is an edge query, so asking the same chord twice in one
+        // frame answers true only the first time — a second call to pick the branch would have
+        // made Ctrl+Z fall through to Redo.
+        const bool lUndoChord = m_Gui->Shortcut(EKeyCode::LeftControl, EKeyCode::Z);
+        const bool lRedoChord = m_Gui->Shortcut(EKeyCode::LeftControl, EKeyCode::Y);
 
-        if (m_Gui->Shortcut(EKeyCode::LeftControl, EKeyCode::Y))
+        if (lUndoChord || lRedoChord)
         {
-            m_Context->Extensions.Commands().Execute(Tags::EDITOR_COMMAND_REDO, *m_Context);
+            const OpaaxStringID lFocused = m_Gui->Panels().FocusedPanel();
+
+            bool lApplies = true;
+            for (const PanelEntry& lEntry : m_Extensions.Panels().Entries())
+            {
+                if (lEntry.Desc.Id == lFocused) { lApplies = lEntry.Desc.bGlobalUndoApplies; break; }
+            }
+
+            if (!lApplies)
+            {
+                OPAAX_LOG(LogEditorService, Trace,
+                          "Undo/Redo swallowed by '{}' — the stack is the level's, and this panel "
+                          "edits something else", lFocused);
+            }
+            else
+            {
+                m_Context->Extensions.Commands().Execute(
+                    lUndoChord ? Tags::EDITOR_COMMAND_UNDO : Tags::EDITOR_COMMAND_REDO, *m_Context);
+            }
         }
 
         // F and Delete are EDITOR-WIDE, not the viewport's. They were measured on the viewport

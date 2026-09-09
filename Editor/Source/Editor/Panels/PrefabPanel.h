@@ -99,6 +99,9 @@ namespace Opaax::Editor
         /** How much world the preview frames. Fixed for now; framing the contents is a growth point. */
         float m_OrthoSize = 400.f;
 
+        /** How much of the panel the world gets. ImGui's ResizeX lets the author move it from there. */
+        static constexpr float k_PreviewSplit = 0.6f;
+
         /** THIS panel's selection — see the class note on why it is not EditorSelection. */
         EntityID m_Selected = entt::null;
     };

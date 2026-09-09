@@ -30,6 +30,7 @@ namespace Opaax::Editor
     // =============================================================================
     struct PanelDesc
     {
+
         /** Identity, label and dock key. Displayed verbatim, so spaces are fine. */
         OpaaxStringID Id;
 
@@ -52,5 +53,18 @@ namespace Opaax::Editor
          * says so at its registration and nothing central has to be kept in step.
          */
         OpaaxTag SaveCommand;
+
+        /**
+         * Does Ctrl+Z mean the LEVEL's history while this panel is focused? (⑦-C P6)
+         *
+         * The undo stack is the level's (**UN1**). A document panel that edits something else must
+         * SWALLOW the chord rather than let it through, or Ctrl+Z in a prefab editor silently
+         * undoes an edit in a level you cannot see — which is exactly what the user hit.
+         *
+         * This is Ctrl+S's rule one chord over: the target follows the focused panel, and a panel
+         * DECLARES its own answer instead of a ladder somewhere else trying to remember it
+         * ([[L86]]). A panel with its own undo will later name commands here rather than a bool.
+         */
+        bool bGlobalUndoApplies = true;
     };
 }

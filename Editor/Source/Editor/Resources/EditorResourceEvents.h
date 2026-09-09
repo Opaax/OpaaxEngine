@@ -36,13 +36,20 @@ namespace Opaax::Editor
     //   instance was BUILT from — which stops existing the moment `Reload` swaps the payload. So a
     //   listener that needs the old data has to run before it goes:
     //
-    //     OnSaving  — the file is written, the OLD payload is STILL RESIDENT. Read it now.
-    //     OnSaved   — the reload has happened and the NEW payload is live.
+    //     OnSaving  — the file is ABOUT TO BE WRITTEN. The old one is still on disk and the old
+    //                 payload still resident, so this is the only moment the previous state exists.
+    //     OnSaved   — the write and the reload have happened; the NEW payload is live.
+    //
+    //   THE BOUNDARY IS THE WRITE, NOT THE RELOAD, and getting that wrong shipped a bug the user
+    //   found in a minute: announced after the file was written, every resolve returned the NEW
+    //   template, so a prefab's fold recorded the author's own edit as an override and the expand
+    //   cancelled it straight back out — Save appeared to do nothing at all.
     //
     //   This is **LC**'s TearDown rule one layer over ("everything still alive" vs "it is being
     //   replaced"), and the same shape `WorldDestroying`/`WorldCreated` already uses.
     //
-    //   Both are broadcast SYNCHRONOUSLY inside one `ResourceOps::SavedToDisk` call, so a listener
+    //   The two come from `ResourceOps::AboutToSave` and `ResourceOps::SavedToDisk`, which a saver
+    //   calls either side of its write. Both run synchronously within that one save, so a listener
     //   may hold state between them without a lifetime question.
     // =============================================================================
     DECLARE_MULTICAST_DELEGATE_OneParam(FOnResourceSaving, const ResourceSavedEvent&)
@@ -51,7 +58,7 @@ namespace Opaax::Editor
     class EditorResourceEvents
     {
     public:
-        /** The file is written; the OLD resident payload is still there. */
+        /** The file is ABOUT to be written — the previous state is still readable. */
         FOnResourceSaving OnResourceSaving;
 
         /** The resident payload is now the new one. */

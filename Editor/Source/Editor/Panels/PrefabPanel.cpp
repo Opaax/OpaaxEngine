@@ -86,11 +86,27 @@ namespace Opaax::Editor
 
         ImGui::Separator();
 
-        DrawHierarchy();
-        ImGui::Separator();
-        DrawProperties();
-        ImGui::Separator();
-        DrawPreview();
+        // SPLIT HORIZONTALLY: the world on the left, everything else on the right (their call).
+        // Stacked vertically the preview got whatever was left under the tree and the property
+        // form, which on a docked panel is almost nothing — so the image scaled down to a stamp.
+        const float lAvailX   = ImGui::GetContentRegionAvail().x;
+        const float lPreviewW = lAvailX * k_PreviewSplit;
+
+        if (ImGui::BeginChild("prefab_preview", ImVec2(lPreviewW, 0.f), ImGuiChildFlags_ResizeX))
+        {
+            DrawPreview();
+        }
+        ImGui::EndChild();
+
+        ImGui::SameLine();
+
+        if (ImGui::BeginChild("prefab_edit", ImVec2(0.f, 0.f)))
+        {
+            DrawHierarchy();
+            ImGui::Separator();
+            DrawProperties();
+        }
+        ImGui::EndChild();
     }
 
     void PrefabPanel::DrawHierarchy()
@@ -136,19 +152,21 @@ namespace Opaax::Editor
 
     void PrefabPanel::DrawPreview()
     {
-        ImGui::TextDisabled("Preview");
-
         const ImVec2 lAvail = ImGui::GetContentRegionAvail();
-        if (lAvail.x > 0.f && lAvail.y > 0.f)
-        {
-            m_PendingSize = { static_cast<Uint32>(lAvail.x), static_cast<Uint32>(lAvail.y) };
-        }
+        if (lAvail.x <= 0.f || lAvail.y <= 0.f) { return; }
+
+        // THE FRAMEBUFFER IS SIZED TO THE REGION, so the image is drawn 1:1 and never rescaled.
+        // Fitting a fixed-size texture into a changing box is what made it look like it was
+        // "scaling too much" — the pixels were being resampled every time the panel moved.
+        m_PendingSize = { static_cast<Uint32>(lAvail.x), static_cast<Uint32>(lAvail.y) };
 
         const EditorImage lImage = m_Framebuffer != nullptr
                                        ? m_Context.UIBackend.GetViewportImage(*m_Framebuffer)
                                        : EditorImage{};
 
-        ImguiWidgets::Image(lImage, lAvail);
+        // Drawn at the FRAMEBUFFER's size rather than the region's: they agree from the frame after
+        // a resize, and using the region on the frame they disagree is exactly the stretch above.
+        ImguiWidgets::Image(lImage, ImVec2(static_cast<float>(m_Size.x), static_cast<float>(m_Size.y)));
     }
 
     void PrefabPanel::Shutdown()

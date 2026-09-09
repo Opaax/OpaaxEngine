@@ -298,6 +298,10 @@ namespace Opaax::Editor
 
         const PrefabData lPrefab = PrefabFactory::BuildPrefab(lOriginals, lRegistry);
 
+        // Before the write — see EditorPrefabDocument::Save. Matters when this OVERWRITES a
+        // prefab that is already placed.
+        ResourceOps::AboutToSave<PrefabResource>(InContext, InAbsPath);
+
         if (!PrefabFile::Save(InAbsPath, lPrefab))
         {
             return false;   // PrefabFile logged it; nothing has been touched

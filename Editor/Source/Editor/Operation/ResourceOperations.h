@@ -29,17 +29,34 @@ namespace Opaax::Editor
     namespace ResourceOps
     {
         /**
-         * Announce, reload, announce — the whole of "this document was saved".
+         * The BEFORE half — call it immediately before writing the file.
          *
-         * Call it INSTEAD of `Resources.Reload<T>(...)`, after the file is written. The order is
-         * the contract, not an implementation detail:
-         *   1. `OnResourceSaving` — listeners that need the OLD payload read it here, while it is
-         *      still resident (a prefab's instances compute their overrides against it).
-         *   2. `Reload<T>` — the resident copy becomes the file's contents.
-         *   3. `OnResourceSaved` — listeners rebuild against the new one.
+         * This is the only moment the previous state exists: the old file is still on disk and the
+         * old payload still resident. A listener that must read it (a prefab's instances, whose
+         * overrides are only meaningful against the template they were built from) runs here.
+         *
+         * OPTIONAL. A saver whose listeners do not need the old state can call `SavedToDisk` alone,
+         * which is what the eight document Save ops do.
+         */
+        template<CResource T>
+        void AboutToSave(EditorContext& InContext, const OpaaxString& InAbsPath)
+        {
+            ResourceSavedEvent lEvent;
+            lEvent.TypeId    = ResourceTypeID::Get<T>();
+            lEvent.AbsPath   = InAbsPath;
+            lEvent.AssetPath = InContext.Paths.AbsoluteToAsset(InAbsPath);
+
+            InContext.ResourceEvents.OnResourceSaving.Broadcast(lEvent);
+        }
+
+        /**
+         * Reload and announce — the AFTER half of "this document was saved".
+         *
+         * Call it INSTEAD of `Resources.Reload<T>(...)`, after the file is written. Together with
+         * `AboutToSave` it brackets the WRITE, which is the boundary that matters — not the reload.
          *
          * NOT RESIDENT IS NOT A FAILURE (`Reload`'s own rule): it means nobody was holding the
-         * resource, so there is nothing to swap. The events fire ANYWAY — a listener may care about
+         * resource, so there is nothing to swap. The event fires ANYWAY — a listener may care about
          * the file having changed even when no `ResourceRef` existed, which is exactly a prefab
          * whose instances are entities rather than refs.
          *
@@ -53,8 +70,6 @@ namespace Opaax::Editor
             lEvent.TypeId    = ResourceTypeID::Get<T>();
             lEvent.AbsPath   = InAbsPath;
             lEvent.AssetPath = InContext.Paths.AbsoluteToAsset(InAbsPath);
-
-            InContext.ResourceEvents.OnResourceSaving.Broadcast(lEvent);
 
             const bool lSwapped = InContext.Resources.Reload<T>(InAbsPath.CStr());
 
