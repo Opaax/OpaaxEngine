@@ -2390,3 +2390,101 @@ had deleted as unnecessary — and it was unnecessary *for the mechanism* and re
 - **When a fix re-introduces state a previous round deleted, that is not a reversal to apologise
   for** — the earlier deletion was right about the mechanism and wrong about the loop. Record which,
   so the next round does not re-delete it.
+
+## L83 — When an ordering constraint has no legal window, the answer may be a PHASE, not a hook on the funnel that already exists (2026-09-08)
+
+**What happened (⑦-B B0).** The GameInstance had to exist before the first world — proven, not
+assumed: `WorldManager::CreateWorld` builds a world subsystem's `WorldContext` inside
+`CreateSubsystemsFor` and broadcasts `OnWorldCreated` only *afterwards*, so anything reacting to a
+world arrives too late for every world that already exists. My plan hung the session off
+`CreateWorld` — `EnsureSession()` on a Play world, `EndSession()` when the last one died — and I
+argued for it precisely because it needed **no host code** and was "impossible to forget".
+
+They rejected it in one line: *"We need a better 'start engine / game' structure. The game instance
+should be create before the world."*
+
+**Why theirs is better, concretely.** `StartGame`/`EndGame` is symmetric and readable; it needs no
+Play-world refcount and no documented dependence on `OpenLevel` creating before destroying; teardown
+order falls out of a rule that already existed (registering `GameInstanceManager` before
+`WorldManager` makes reverse-order `TearDownAll` destroy worlds first); and it made
+`PlayInEditor::Stop` **shorter**, because "destroy every Play world" already means the PIE clone.
+
+**Rule for next time.** [[L22]] says *check whether something is running in the wrong phase before
+inventing a new one*. This is its twin: **"hang it off the funnel that already exists" is not the
+elegant alternative to a missing phase — it is the phase-shaped hole wearing a hook.** Before
+choosing a mechanism, write the sequence out end to end. If it reads like a list a person would say
+aloud (start game / make world / … / end game / destroy world / destroy game), build that list.
+
+## L84 — Do not design around a limitation the user intends to REMOVE (2026-09-08)
+
+**What happened (⑦-B planning).** They asked for Unreal-style per-action Input Action assets. I
+counter-proposed a single action-SET asset, and my load-bearing argument was **AN8**: this engine has
+no `New Asset` verb, so per-action files would mean hand-copying one every time. They answered:
+*"we will do it too. Unreal can create action by code too."*
+
+**Why I was wrong.** AN8 is a **missing feature with an owner and a plan**, not a property of the
+engine. Designing the file format around its absence bakes a temporary gap into a permanent shape —
+and the fix I was routing around (`SetCreate` beside `SetActivate`) I had already priced at ~2h *in
+the same document* while listing it as out of scope.
+
+**Rule for next time.** Before arguing "X is impractical because the engine lacks Y", check whether Y
+is a **recorded intention** (`Docs/TODO.txt`, an AN-numbered gap, their own architecture docs). A gap
+they plan to close is a dependency, not a constraint: price closing it. Same family as [[L19]] and
+[[L23]] — *the thing I was routing around was the work item.*
+
+## L85 — An instrument must discriminate in EVERY configuration it runs in; three misses in one milestone made this mechanical (2026-09-08)
+
+[[L15]] says a log line must discriminate. ⑦-B produced **three** instruments that were fine in one
+configuration and meaningless in another, which is enough to stop treating it as a hazard to remember.
+
+1. **The gate line was mute in the second HOST.** `Input mapping started before any world exists
+   (N world(s))` printed `0` in the runtime and proved the ordering. In the editor it printed `1`,
+   because the Edit world is already open when Play starts — and `1` is what a *broken* boot prints
+   too. Fixed by counting **Play** worlds (`0 play world(s), 1 total`).
+2. **The log was mute about the second OBJECT.** `GameInstanceManager` (engine-lifetime) and
+   `GameInstance` (per-game) differ by one word, and the only editor run I had shown them contained
+   just the manager's boot/shutdown pair. Their reading — *"GameInstance is instanced once"* — was
+   the only conclusion that log supported. Fixed with a session COUNTER (`GAME STARTED (session #2)`,
+   `shutdown (2 game session(s) ran)`).
+3. **The count was mute until the second CONTEXT.** `AddContext` read its accepted total off
+   `m_Contexts.back()` *after* a `stable_sort`; a higher priority sorts to the front, so it reported
+   a different context's total — `Menu added — 11 of 2 binding(s) accepted`. Correct for the first
+   context, where `back()` happened to be right.
+
+**The check, not the virtue.** For every gate line, **name the wrong-world in which it prints the same
+thing.** Enumerate the hosts, modes and counts that execute it, and ask what it prints when the code
+is CORRECT and when it is BROKEN. If those are equal anywhere, it is not a gate there. Corollaries
+earned here: prefer a POSITIVE absence statement (`0 game session(s) ran`) to a missing line; when
+two types differ only by LIFETIME the log must name the lifetime, not the type; and a harness that
+runs a cycle ONCE cannot answer "is it per cycle?" — if the property is repetition, the harness must
+repeat.
+
+## L86 — A dispatch ladder forgotten four times is a design, and a silent refusal makes their report undiagnosable (2026-09-08)
+
+**What happened.** They tested the new input editors: *"Every thing works execpt: Ctrl s, Ctrl Z,
+Ctrl Y."* Two separate defects sat behind one sentence.
+
+**Ctrl+S — a ladder.** `HandleAuthoringShortcuts` dispatched by a hand-written chain naming Sheet,
+Clip, Library and Family, with everything else falling through to `SAVE_MAP`. **MoveMode and Mover
+were never added in ⑦-A, and neither were my two panels**, so Ctrl+S in any of the four silently
+wrote the MAP — not "nothing happened" but "the wrong file was saved", which is the exact surprise
+the ladder existed to prevent. **The fix was not two more entries.** Four omissions across two
+milestones is the ladder telling you what it is: `PanelDesc` now carries a `SaveCommand`, each
+document panel declares its own, and the handler is a lookup.
+
+**Ctrl+Z / Ctrl+Y — a silent return.** I could not diagnose it by reading, and `EditorUndo` is why:
+`if (!CanUndo()) { return; }`. So "Ctrl+Z did nothing" was indistinguishable from the chord never
+firing, the command being gated, or no step ever being recorded. Both stacks log on empty now.
+
+**Rules for next time.**
+- **When a central `if/else` names types that live elsewhere, it duplicates knowledge those types
+  already have.** Push it to the type; make the centre a lookup. The tell is a chain appended to
+  more than twice. **Count the omissions before choosing a fix** — one is a bug, four is a design.
+- **A fallback that DOES something is worse than one that does nothing** when the branch is reached
+  by mistake.
+- **An early return on a user-facing verb must say why.** [[L15]] is usually about the success
+  branch; this is its mirror, and the cost lands when someone reports a symptom rather than when the
+  code is written.
+- **When a report cannot be diagnosed by reading, ship the instrument, not a guess** — and NAME the
+  unconfirmed suspect (here: ImGui's `InputText` claims Ctrl+Z/Y for its own text undo) rather than
+  quietly "fixing" past it.
