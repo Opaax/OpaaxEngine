@@ -72,6 +72,8 @@ namespace Opaax::Editor::Tags
         OpaaxTag("Editor.Command.InstantiatePrefabAt");
     inline const OpaaxTag EDITOR_COMMAND_CREATE_PREFAB_FROM_SELECTION =
         OpaaxTag("Editor.Command.CreatePrefabFromSelection");
+    inline const OpaaxTag EDITOR_COMMAND_REVERT_TO_PREFAB =
+        OpaaxTag("Editor.Command.RevertToPrefab");
 
     //Sprite sheet
     inline const OpaaxTag EDITOR_COMMAND_SAVE_SHEET  = OpaaxTag("Editor.Command.SaveSheet");

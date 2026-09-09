@@ -423,6 +423,26 @@ namespace Opaax::Editor
         void Execute(EditorContext& InContext, const Params&);
     };
 
+    /** Which entities a revert covers — plain data, so the entry stays bindable (**MR2c**). */
+    struct PrefabRevertParams
+    {
+        /** false: exactly what is selected. true: every entity of the instances it touches. */
+        bool bWholeInstance = false;
+    };
+
+    /**
+     * Put the selected instance entities back to their prefab's values.
+     *
+     * A thin dispatch onto `EntityOps::RevertToPrefab`. ONE command with a payload rather than two
+     * tags, for the reason `TogglePanel` is one: the verb is the same and only its scope differs.
+     */
+    struct RevertToPrefabCommand
+    {
+        using Params = PrefabRevertParams;
+
+        void Execute(EditorContext& InContext, const Params& InParams);
+    };
+
     // =============================================================================
     // Level
     // =============================================================================

@@ -93,6 +93,25 @@ namespace Opaax::Editor
         bool CreatePrefabFromSelection(EditorContext& InContext, const OpaaxString& InAbsPath);
 
         /**
+         * Put the selected instance entities back to their prefab's values (⑦-C P3).
+         *
+         * NOT a delete-and-replace: the entities keep their guids and go through
+         * `MapFactory::Restore`, which is already "be this again" — it overwrites every component
+         * the prefab names and REMOVES the registered ones it does not, so a component the author
+         * added to an instance goes away and one they deleted comes back. Re-instantiating instead
+         * would mint nothing new (the guids are derived) but would destroy and recreate entities
+         * for an edit that changes only their contents.
+         *
+         * @param bInWholeInstance false reverts exactly the entities selected; true widens to every
+         *   entity of the instances they belong to — Unity's "Revert All" on the instance. Two
+         *   entries rather than a guess, since a multi-entity prefab makes them genuinely different
+         *   and the selection cannot say which was meant.
+         * @return How many entities were reverted. 0 means nothing selected carried a prefab link,
+         *   or the prefab could not be resolved — the log says which.
+         */
+        Uint64 RevertToPrefab(EditorContext& InContext, bool bInWholeInstance);
+
+        /**
          * Rename one entity. Empty input is refused — a nameless row in the Hierarchy is
          * unclickable in practice and tells an author nothing.
          *

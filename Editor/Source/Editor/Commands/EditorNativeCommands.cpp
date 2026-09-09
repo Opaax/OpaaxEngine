@@ -442,6 +442,11 @@ namespace Opaax::Editor
             });
     }
 
+    void RevertToPrefabCommand::Execute(EditorContext& InContext, const Params& InParams)
+    {
+        EntityOps::RevertToPrefab(InContext, InParams.bWholeInstance);
+    }
+
     void SaveMapAsCommand::Execute(EditorContext& InContext, const Params&)
     {
         if (!MapOps::CanEdit(InContext, "Save Map As")) { return; }

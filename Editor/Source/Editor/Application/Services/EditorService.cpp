@@ -372,6 +372,7 @@ namespace Opaax::Editor
         lCommands.Register<OpenMapAtCommand>(Tags::EDITOR_COMMAND_OPEN_MAP_AT);
         lCommands.Register<InstantiatePrefabAtCommand>(Tags::EDITOR_COMMAND_INSTANTIATE_PREFAB_AT);
         lCommands.Register<CreatePrefabFromSelectionCommand>(Tags::EDITOR_COMMAND_CREATE_PREFAB_FROM_SELECTION);
+        lCommands.Register<RevertToPrefabCommand>(Tags::EDITOR_COMMAND_REVERT_TO_PREFAB);
         lCommands.Register<SaveMapCommand>(Tags::EDITOR_COMMAND_SAVE_MAP);
         lCommands.Register<SaveMapAsCommand>(Tags::EDITOR_COMMAND_SAVE_MAP_AS);
 

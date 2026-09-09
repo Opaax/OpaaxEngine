@@ -126,6 +126,11 @@ namespace Opaax::Editor
         RestoreEntities(InContext, Instance);
     }
 
+    // One body both ways: a revert creates and destroys nothing, so "be this again" in either
+    // direction is the whole inverse (**UN4**).
+    void PrefabRevert::Undo(EditorContext& InContext) { RestoreEntities(InContext, Before); }
+    void PrefabRevert::Redo(EditorContext& InContext) { RestoreEntities(InContext, After); }
+
     void EntityDelete::Undo(EditorContext& InContext) { RestoreEntities(InContext, Entities); }
     void EntityDelete::Redo(EditorContext& InContext) { DestroyEntities(InContext, Entities); }
 

@@ -32,8 +32,10 @@
 
 #include "Application/Services/IPaths.h"         // ⑦-C — the marker stores an ASSET-relative path
 #include "Engine/Subsystems/Resources/ResourceManager.h"  // before PrefabResource — completes LoadContext
+#include "World/Components/PrefabInstanceComponent.h"
 #include "World/Prefab/PrefabFactory.h"
 #include "World/Prefab/PrefabFile.h"
+#include "World/Prefab/ResourcePrefabResolver.h"
 #include "World/Prefab/PrefabResource.hpp"
 #include "World/Serialization/MapFactory.h"
 
@@ -330,6 +332,139 @@ namespace Opaax::Editor
                   lAssetPath.CStr(), lPrefab.EntityCount(), lCount);
 
         return true;
+    }
+
+    Uint64 EntityOps::RevertToPrefab(EditorContext& InContext, bool bInWholeInstance)
+    {
+        if (!MapOps::CanEdit(InContext, "Revert to Prefab")) { return 0; }
+
+        World* const lWorld = InContext.Worlds.GetActiveWorld();
+        if (lWorld == nullptr) { return 0; }
+
+        // Which PLACEMENTS the selection touches. Deduped, because a multi-entity selection inside
+        // one instance must revert that instance once, not once per entity.
+        TDynArray<Guid> lInstanceIds;
+        TDynArray<Guid> lSelectedTargets;
+
+        for (const EntityID lId : InContext.Selection.Ids())
+        {
+            Entity lEntity{ lId, lWorld };
+            if (!lEntity.IsValid() || !lEntity.Has<PrefabInstanceComponent>()) { continue; }
+
+            const PrefabInstanceComponent& lMarker = lEntity.Get<PrefabInstanceComponent>();
+            if (!lMarker.IsLinked()) { continue; }
+
+            lSelectedTargets.emplace_back(lEntity.GetGuid());
+
+            bool lKnown = false;
+            for (const Guid& lSeen : lInstanceIds)
+            {
+                if (lSeen == lMarker.InstanceId) { lKnown = true; break; }
+            }
+
+            if (!lKnown) { lInstanceIds.emplace_back(lMarker.InstanceId); }
+        }
+
+        if (lInstanceIds.empty())
+        {
+            OPAAX_LOG(LogEntityOps, Warn,
+                      "Revert to Prefab — nothing in the selection came from a prefab.");
+            return 0;
+        }
+
+        const ComponentRegistry& lRegistry = InContext.Engine.GetRegistries().Components();
+        ResourcePrefabResolver   lResolver(InContext.Paths, InContext.Resources);
+
+        // One MapData naming every entity to restore, built from the TEMPLATES — which is what
+        // makes this a revert rather than a re-save of what is already there.
+        MapData             lRestore;
+        TDynArray<EntityID> lHandles;
+
+        for (const Guid& lInstanceId : lInstanceIds)
+        {
+            // The path and the map come off any entity of the instance; every entity of one
+            // placement carries the same pair.
+            OpaaxString lPrefabPath;
+            MapId       lOwnerMap;
+
+            lWorld->Each<PrefabInstanceComponent>([&lPrefabPath, &lInstanceId](const PrefabInstanceComponent& InMarker)
+            {
+                if (InMarker.InstanceId == lInstanceId && lPrefabPath.IsEmpty())
+                {
+                    lPrefabPath = InMarker.Prefab.Path;
+                }
+            });
+
+            const PrefabData* lPrefab = lResolver.Resolve(lPrefabPath);
+            if (lPrefab == nullptr)
+            {
+                OPAAX_LOG(LogEntityOps, Warn,
+                          "Revert to Prefab skipped one placement — '{}' could not be resolved",
+                          lPrefabPath.CStr());
+                continue;
+            }
+
+            // Built ONCE, against the prefab's own guids; the map is stamped afterwards because it
+            // is not knowable until a live entity has been found. `BuildInstance` refuses an
+            // invalid map, so a placeholder goes in and the real answer replaces it below.
+            MapData lPristine = PrefabFactory::BuildInstance(*lPrefab, lPrefabPath, lInstanceId,
+                                                             MapId("Pending"), lRegistry);
+
+            // READ FROM A LIVE ENTITY, never assumed to be the focused map: reverting a placement
+            // that lives in an unfocused map must not re-stamp it into the cursor's map.
+            for (const EntityData& lProbe : lPristine.Entities)
+            {
+                if (Entity lLive = lWorld->FindByGuid(lProbe.Id); lLive.IsValid())
+                {
+                    lOwnerMap = lLive.Get<EntityMeta>().OwnerMap;
+                    break;
+                }
+            }
+
+            if (!lOwnerMap.IsValid()) { continue; }   // no entity of this placement is in the world
+
+            for (EntityData& lEntity : lPristine.Entities)
+            {
+                lEntity.OwnerMap = lOwnerMap;
+
+                Entity lLive = lWorld->FindByGuid(lEntity.Id);
+                if (!lLive.IsValid()) { continue; }   // never placed, or already deleted
+
+                if (!bInWholeInstance)
+                {
+                    bool lSelected = false;
+                    for (const Guid& lTarget : lSelectedTargets)
+                    {
+                        if (lTarget == lEntity.Id) { lSelected = true; break; }
+                    }
+
+                    if (!lSelected) { continue; }
+                }
+
+                lHandles.emplace_back(lLive.GetHandle());
+                lRestore.Entities.emplace_back(Move(lEntity));
+            }
+        }
+
+        if (lRestore.Entities.empty())
+        {
+            OPAAX_LOG(LogEntityOps, Warn, "Revert to Prefab — nothing to revert.");
+            return 0;
+        }
+
+        // BEFORE, captured while the overrides are still on the entities — nothing else can
+        // recover them once Restore has run.
+        MapData lBefore = MapSerializer::CaptureEntities(*lWorld, lRegistry, lHandles);
+
+        const Uint64 lReverted = MapFactory::Restore(lRestore, *lWorld, lRegistry);
+
+        InContext.Undo.Record(PrefabRevert{ Move(lBefore),
+                                            MapSerializer::CaptureEntities(*lWorld, lRegistry, lHandles) });
+
+        OPAAX_LOG(LogEntityOps, Info, "Reverted {} entity(ies) across {} placement(s) to their prefab",
+                  lReverted, lInstanceIds.size());
+
+        return lReverted;
     }
 
     void EntityOps::Rename(EditorContext& InContext, Entity InEntity, const OpaaxString& InName)

@@ -87,6 +87,30 @@ namespace Opaax::Editor
         const char* Label() const noexcept { return "Create Prefab"; }
     };
 
+    /**
+     * Instance entities were put back to their prefab's values (⑦-C P3).
+     *
+     * Both sides are full component records rather than a hand-written inverse, for **UN4**'s
+     * reason: a revert is not exactly invertible by re-running anything — it removes components the
+     * template does not have and restores ones the instance had deleted, so only "be this again"
+     * in each direction is honest.
+     *
+     * No entity is created or destroyed here, which is why one type serves both directions with
+     * the same body: the guids are untouched throughout.
+     */
+    struct PrefabRevert
+    {
+        /** The overridden state, captured before. */
+        MapData Before;
+
+        /** The prefab's state, captured after. */
+        MapData After;
+
+        void        Undo(EditorContext& InContext);
+        void        Redo(EditorContext& InContext);
+        const char* Label() const noexcept { return "Revert to Prefab"; }
+    };
+
     /** Entities were destroyed — the same two bodies as EntityCreate, the other way round. */
     struct EntityDelete
     {

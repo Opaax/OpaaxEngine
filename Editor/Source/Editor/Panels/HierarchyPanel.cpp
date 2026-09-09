@@ -15,6 +15,7 @@
 #include "World/WorldManager.h"
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityMeta.h"
+#include "World/Components/PrefabInstanceComponent.h"   // ⑦-C — the revert entries gate on the link
 
 #include <imgui.h>
 
@@ -50,6 +51,8 @@ namespace Opaax::Editor
             case EMapAction::CreateEntity:   return "Create Entity";
             case EMapAction::DeleteSelected: return "Delete Selected";
             case EMapAction::CreatePrefab:   return "Create Prefab from Selection";
+            case EMapAction::RevertPrefab:   return "Revert to Prefab";
+            case EMapAction::RevertPrefabAll: return "Revert Instance to Prefab";
             case EMapAction::None:           return "None";
         }
 
@@ -350,6 +353,32 @@ namespace Opaax::Editor
             m_Pending = PendingMapAction{EMapAction::CreatePrefab, MapId{}, {}};
         }
 
+        // ⑦-C P3. DISABLED rather than absent when nothing selected came from a prefab — MP7's
+        // rule: the menu states what applies instead of answering a click with a log line.
+        bool lHasLink = false;
+        if (World* const lWorld = m_Context.Worlds.GetActiveWorld(); lWorld != nullptr)
+        {
+            for (const EntityID lId : m_Context.Selection.Ids())
+            {
+                Entity lCandidate{ lId, lWorld };
+                if (lCandidate.IsValid() && lCandidate.Has<PrefabInstanceComponent>())
+                {
+                    lHasLink = true;
+                    break;
+                }
+            }
+        }
+
+        if (ImGui::MenuItem("Revert to Prefab", nullptr, false, lHasLink))
+        {
+            m_Pending = PendingMapAction{EMapAction::RevertPrefab, MapId{}, {}};
+        }
+
+        if (ImGui::MenuItem("Revert Instance to Prefab", nullptr, false, lHasLink))
+        {
+            m_Pending = PendingMapAction{EMapAction::RevertPrefabAll, MapId{}, {}};
+        }
+
         ImGui::Separator();
 
         if (ImGui::MenuItem("Delete"))
@@ -391,6 +420,15 @@ namespace Opaax::Editor
             case EMapAction::CreatePrefab:
                 m_Context.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_CREATE_PREFAB_FROM_SELECTION,
                                                         m_Context);
+                break;
+            // ONE command, and the scope is the payload — the TogglePanel shape (**MR2c**).
+            case EMapAction::RevertPrefab:
+                m_Context.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_REVERT_TO_PREFAB, m_Context,
+                                                        PrefabRevertParams{ /*bWholeInstance*/false });
+                break;
+            case EMapAction::RevertPrefabAll:
+                m_Context.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_REVERT_TO_PREFAB, m_Context,
+                                                        PrefabRevertParams{ /*bWholeInstance*/true });
                 break;
             case EMapAction::None:                                                            break;
         }
