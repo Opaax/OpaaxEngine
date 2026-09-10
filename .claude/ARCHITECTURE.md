@@ -2248,8 +2248,9 @@ remain. *(**L79**'s rule turned around: predict which counts move, and know why 
 
 **Growth points, named and not built:** the HUD (theirs to design — one more submitted view, into the
 same target, with `ELoadOp::Load` and a pixel projection) · split-screen and minimap (no caller) · a
-second **editing** viewport (needs **CAM1**'s slot to move off the World) · the asset preview WORLD
-(Unreal's preview scene — its trigger is ⑦ prefabs, the first preview an image cannot fake) · pinning
+second **editing** viewport (needs **CAM1**'s slot to move off the World) · ~~the asset preview
+WORLD~~ **BUILT ⑦-C, see PF9** — `RenderPassRequest::Source`, and the prefab panel is its consumer;
+the second *editing* viewport is what it is becoming (P8) · pinning
 or stacking several previews (the user declined the stack: *"i do not really like the stack"*).
 
 ---
@@ -3665,6 +3666,13 @@ first, then `EngineAssetsDir()` as `/Engine/…` — so "empty" means "under nei
 now yields a `/Engine/` path instead of empty (a deliberate navigation, and naming an engine-shipped map
 is legitimate), and the *only* thing that still answers empty is a file genuinely outside both trees.
 
+**MP12 — v3: A MAP MAY STORE A PLACEMENT INSTEAD OF ENTITIES** (landed ⑦-C, 2026-09-09). The full
+rules are **§PF** — `prefabInstances`, folded on capture and expanded on mount, with per-entity
+merge-patch overrides and a `null` patch for a removal. Recorded here because it is the **first**
+`MAP_FORMAT_VERSION` bump since this section was written, and it obeys **MP10**'s rule rather than
+breaking it: a v2 reader would produce a map **missing entities**, which is a misread, not an
+ignorable key.
+
 **MP11 — A MANIFEST ENTRY THAT NEVER MOUNTED IS NAMED BY ITS PATH, AND MUST BE REMOVABLE** (landed
 2026-08-27, user-verified with the one click that fixed the level). A map whose file is missing,
 renamed or moved leaves an entry with **no `MapId`** — an id comes from the file's entities
@@ -3734,6 +3742,113 @@ shape of a save that loses work.
   scope, not in mechanism; both go through the same per-map record (**MP5**).
 - **The earlier behaviour was the bug, not the UI that exposed it.** Filtering a Save to the focused map
   made the Hierarchy grey the others to warn that their edits would be lost — a warning is not a design.
+
+---
+
+## PF — Prefabs (⑦-C, P1–P6 + P8 V1 landed 2026-09-09; P5b / P7 / P8 V2–V4 NOT built)
+
+**PF1 — A prefab IS a map's entities, so the two share ONE writer.** `PrefabData` is nothing but
+`TDynArray<EntityData>`; the entity-array walk was **moved out of `MapJson` into `EntityJson`** so a
+component gained by one format is gained by both. `.opaaxprefab`, `PREFAB_FORMAT_VERSION = 1`,
+`PrefabResource` with `EFailPolicy::FailFast` (a prefab that half-loads places half a turret).
+- **NO `prefabId`.** **MP10**'s reasons do not transfer: a map is *named* because a level's manifest
+  refers to it by id and an empty one was anonymous. A prefab is referred to **by its path**, which
+  the referring map already stores, so an id would be a second name for the same thing.
+
+**PF2 — An instance's guids are DERIVED, never remapped through a table.**
+`Guid::Derive(instance, template)` — SplitMix64 mixing where both output halves fold all four input
+words, and which never returns zero.
+- **The defect this closed before it shipped:** `MapFactory::Instantiate` refuses guids already live
+  in the world (**WM3**), so placing the *same* prefab twice would have made the second placement
+  silently not appear. A remap table would have worked and would then have had to be persisted,
+  versioned and kept in step with every edit.
+- Derivation makes an instance entity's identity a pure function of (instance id, template guid):
+  stable across sessions with nothing stored, which is what lets **PF7**'s `Restore` and **PF8**'s
+  reconcile find the right entity later. *Probe: neutering `Derive` turns 4 assertions red.*
+
+**PF3 — A map stores the LINK and the DELTAS, not the entities** (`MAP_FORMAT_VERSION = 3`).
+`PrefabInstanceRecord { Prefab, InstanceId, Overrides[] }` under `prefabInstances`; records sorted by
+`InstanceId` for **MP2**'s reason, and the key is **omitted when empty** so a map that places no
+prefab is byte-identical to a v2 one.
+- **This one DOES bump the version, by MP10's own rule:** a v2 reader ignoring a record it does not
+  understand produces a map **missing entities** — the misread that rule exists to catch.
+- Fold on capture, expand on mount (`Level::MountOne`). The editor's dirty check compares *folded*
+  text, so an instance placed and left alone reports clean.
+
+**PF4 — Fold NEVER loses data; expand cannot be symmetric.** An instance whose prefab will not
+resolve stays **expanded** in the file rather than folding into a link nothing can rebuild.
+`IPrefabResolver` is the seam; `ResourcePrefabResolver` is the one real implementation and **holds
+its claims** for its own lifetime — that is ownership, not a cache.
+
+**PF5 — A REMOVAL is a null patch, and its absence was the first defect they found.** Overrides are
+RFC 7386 merge-patch per entity (nlohmann ships the *applier*; `MakeMergePatch` is ours).
+- **What v2 could not say:** *"this placement deleted one piece of the turret."* So deleting a piece
+  did not persist and Revert could not bring it back. **I designed the diff from "what does an
+  instance CHANGE" and never asked "what can an instance REMOVE"** ([[L87]]). A removed entity is now
+  a `null` patch keyed by template guid; Revert stopped skipping entities that are missing, and
+  `PrefabRevert::Created` is what lets undo destroy what a revert recreated.
+
+**PF6 — A float from a file and a float from a capture are the same number.** `SameValue` compares at
+**float** precision when either side is a float, and integers exactly. json round-trips through
+`double`, so `0.35` returns as `0.3499999940395355` and a freshly placed instance showed phantom
+overrides on every float field it owned ([[L89]]).
+
+**PF7 — Revert is "be this again", not delete-and-replace.** `MapFactory::Restore` already overwrites
+every component the prefab names and removes the registered ones it does not, so entities **keep
+their guids** and a re-instantiate would destroy and recreate entities for an edit that changes only
+their contents. Two entries — per entity, and whole instance — because a multi-entity prefab makes
+them genuinely different and the selection cannot say which was meant.
+
+**PF8 — SAVING IS AN EVENT, AND THE BRACKET GOES AROUND THE WRITE** (their design: *"Save call
+event… This can apply for all things too right?"*). `ResourceOps::AboutToSave<T>` fires **before the
+bytes are written**, `SavedToDisk<T>` reloads and announces after. `PrefabReconciler` folds every
+affected placement against the **old** prefab in the first phase and expands + `Restore`s in the
+second.
+- **The defect this closed:** the first version bracketed the **reload** instead of the write, so
+  `OnResourceSaving` fired when the file had *already* been overwritten — the "old" prefab it folded
+  against was the new one, and Save silently did not reconcile ([[L88]]). *Probe: removing
+  `AboutToSave` reproduces the exact symptom (`0.35 → 0.35`, no reconciler line).*
+- The count is logged, because a reconciler that found **zero** instances looks identical to one that
+  worked ([[L15]]).
+
+**PF9 — A prefab is edited in a WORLD OF ITS OWN.** `RenderPassRequest::Source` (null ⇒ the active
+world) is what made **MV1**'s list of views a list of *worlds* — **MV**'s named asset-preview-world
+growth point, whose stated trigger was exactly this.
+- **`EditorPrefabDocument` creates its world once and NEVER destroys it.**
+  `EditorService::HandleWorldDestroyed` calls `EditorUndo::Clear()` for any Edit world (**UN1**), so
+  closing the panel would otherwise wipe the **level's** undo history. Decided before writing it.
+- **The panel's selection is its own**, never `EditorSelection`: entt reuses handles, so a shared one
+  could resolve to a real but wrong entity in the other world (**MV4**, one panel over).
+
+**PF10 — A panel says whether the global undo applies to it** (`PanelDesc::bGlobalUndoApplies`).
+Ctrl+Z with a document panel focused was undoing the **level** behind it. *To be retired by P8 V4,
+which gives the prefab panel a stack of its own rather than a branch that does nothing.*
+- **`Shortcut()` is an EDGE query.** Sampling one chord twice in a frame consumes the edge and the
+  second read falls through — which is how a gate on Ctrl+Z made it fire Redo.
+
+**PF11 — A reference says WHEN it loads, and the COMPONENT AUTHOR decides** (their call, Unreal's
+`TObjectPtr` / `TWeakObjectPtr` semantics). `TResourcePath<T, EResourceLoad>` with a defaulted second
+parameter and a `THardResourcePath<T>` alias, so **no existing declaration changed**. Hard-ref fields
+are discovered from `OPAAX_PROPERTIES` **by field type** at registration
+(`IComponentEntry::GetHardRefFields`) — the same type-driven mechanism that already gives
+`TResourcePath` its typed drop target (**I15**), with no per-type hand-written code.
+- **THE ACQUIRE ITSELF IS NOT BUILT (P5b), and that is stated rather than implied.** The declaration
+  is honoured by nothing yet: `LoadContext::Acquire<TSub>` is a **template**, so acquiring from a
+  json field needs type erasure through `ResourceFormatRegistry`. The gate that will prove it must
+  assert **both** cases — hard ⇒ resident, soft ⇒ *not* resident — or it passes in a build where
+  everything eager-loads.
+
+**PF12 — The mutation verb names the world it acts on** (P8 V1).
+`EntityOps::TransformEntities(World&, ids, delta)` is the world-agnostic core;
+`TransformSelected` is the level's thin wrapper over it (active world + global selection).
+Everything subtle lives in the core exactly once — the delta is conjugated into the **gizmo's**
+frame for the whole set (per entity was the old multi-selection scale drift), and positions run
+through the matrix so a rotate orbits the shared pivot. It takes **no `EditorContext`** and therefore
+enforces no policy: no PIE guard, no undo, no selection. Those belong to the surface calling it.
+
+**Growth points, named and not built:** nesting + variants (P7 — a variant is **PF3**'s instance
+record promoted to a file, `{ base, overrides }`) · the hard-ref acquire (**PF11**) · the prefab
+panel as a real editing viewport (P8 V2–V4: its own camera, picking, gizmo and undo stack).
 
 ---
 
@@ -3820,7 +3935,7 @@ the old groups opens fine (nlohmann ignores undeclared keys — pinned by a test
 
 ## Pointers
 
-- **Post-mortems / rules:** `.claude/lessons.md` (L1–**L79**).
+- **Post-mortems / rules:** `.claude/lessons.md` (L1–**L90**).
 - **Live session state:** `.claude/CLAUDE.local.md` (current milestone, standing decisions).
 - **Working checklist:** `.claude/task/todo.md`.
 - **Ground truth for engine design:** `.claude/data/` — *Game Engine Architecture* (Gregory). Prefer it over

@@ -2488,3 +2488,73 @@ firing, the command being gated, or no step ever being recorded. Both stacks log
 - **When a report cannot be diagnosed by reading, ship the instrument, not a guess** — and NAME the
   unconfirmed suspect (here: ImGui's `InputText` claims Ctrl+Z/Y for its own text undo) rather than
   quietly "fixing" past it.
+
+## L87 — I designed a delta format from "what CHANGES" and never asked "what can be REMOVED" (2026-09-09)
+
+**What happened.** ⑦-C P3 gave a map file per-entity merge-patch overrides, so a placed prefab could
+differ from its template. Their first real use found it in minutes: *"when deleting one piece of the
+turret the revert prefab does not work. And its does not appear in MyMapTest."* The format had no way
+to express a **deletion**. Not a bug in the writer — the writer was correct about everything it could
+say. The vocabulary was short one word, so the delete round-tripped away on every save and Revert
+found nothing to bring back. It cost a `MAP_FORMAT_VERSION` bump (2→3) that a day earlier would have
+been free.
+
+**Rule for next time.**
+- **A delta format is over a SET, not over fields.** Enumerate the three operations explicitly —
+  **add / change / remove** — and write down what each looks like on disk *before* implementing any
+  of them. Field-level thinking produces "change" and silently omits the other two.
+- **The tell:** if a diff is produced by walking the NEW state, it structurally cannot see a removal.
+  Whatever is only in the OLD state is the operation you forgot.
+- Removal is also the one that must survive **undo**: reverting a delete *creates* an entity, so the
+  step has to remember what it made (`PrefabRevert::Created`) or Ctrl+Z leaves a duplicate.
+
+## L88 — A "before" hook placed around the wrong statement observes the state it exists to precede (2026-09-09)
+
+**What happened.** Their report was *"Save do not reconcile in edit world"* — the prefab's instances
+in the level did not move when the prefab was saved. The event fired, the reconciler ran, and it
+correctly re-applied **the new prefab over the new prefab**: I had wrapped the two-phase bracket
+around the **reload** rather than around the **write**, so `OnResourceSaving` reached the reconciler
+*after* the bytes were already on disk. Every mechanism worked and the feature did nothing.
+
+**Rule for next time.**
+- **Name what the "before" phase must still be able to OBSERVE, then place the bracket around the
+  statement that destroys it.** Here: the old file. `AboutToSave` goes before `PrefabFile::Save`, not
+  before `Reload`. A phase named "before" is not self-checking — it is before *whatever you wrapped*.
+- **This class of bug survives every test that asserts an outcome**, because the outcome is a
+  fixed point: applying the new template over entities already matching it changes nothing. The
+  discriminating probe is to remove the hook and confirm the symptom is **identical** — if it is, the
+  hook was never doing the work.
+
+## L89 — A float from a file and a float from a capture compare equal only at FLOAT precision (2026-09-09)
+
+**What happened.** Dragging a prefab into the viewport immediately showed overrides on entities
+nobody had touched: `0.35` on one side, `0.3499999940395355` on the other. json holds numbers as
+`double`; a `float` widened for the file and narrowed on load is the same value, but the two *json
+nodes* are not equal. The diff dutifully reported every float field of every fresh instance as
+changed.
+
+**Rule for next time.**
+- **Any comparison over serialized numbers needs its own predicate**, comparing at the precision the
+  ENGINE stores, not the one the format uses. `SameValue`: if either side is a float, compare as
+  `float`; integers exactly; recurse for objects and arrays.
+- The general shape is [[L30]]'s cousin — two representations of one value, where equality is a
+  property of the *pair of encodings*, not of `==`. Suspect it wherever a round trip crosses a type
+  boundary (float↔double, id↔string, enum↔int).
+
+## L90 — A mechanical replace matched the FIRST of two identical patterns, in the function no test covers (2026-09-09)
+
+**What happened.** Extracting `TransformEntities` out of `TransformSelected`, I ran a scripted
+`replace(..., 1)` for a loop body that appears **twice** in `EntityOps.cpp` — and it rewrote the one
+in `RevertToPrefab`. The build caught it. What the build could **not** have caught is the version
+where it compiles: **no headless test covers `RevertToPrefab`**, so a subtly wrong body there would
+have shipped, and the symptom would have surfaced days later as "revert is broken."
+
+**Rules for next time.**
+- **A scripted edit is not verified by the tool reporting a match.** Read the diff, or anchor on
+  something provably unique (a line number, an adjacent signature). "First occurrence" is a guess
+  about the file's shape.
+- **Before trusting a refactor, ask which of the touched functions a test would catch.** The
+  editor-side ops (`EntityOps`, the documents, the panels) are the **least-tested layer in the
+  tree** — for them the answer is usually *none*, and that is when a throwaway harness ([[L81]]) is
+  not optional. Mine printed `moved=true x -70 -> -30 | reverted=2 x 4242 -> -70`: one number for the
+  thing I built, one for the thing I nearly broke.
