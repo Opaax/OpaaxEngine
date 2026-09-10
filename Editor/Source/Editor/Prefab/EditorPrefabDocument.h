@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Application/Services/ILogger.h"
+#include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
 
 namespace Opaax
@@ -73,11 +74,19 @@ namespace Opaax::Editor
         World*             GetWorld() const noexcept { return m_World; }
 
         /**
+         * Bumped by every Open and Close — i.e. every time the world's entities were REPLACED.
+         * A reader holding entity handles compares against it: entt reuses handles, so a handle
+         * that survived a rebuild would silently name a different entity (**MV4**).
+         */
+        Uint64             Generation() const noexcept { return m_Generation; }
+
+        /**
          * Does the editing world differ from what was last written?
          *
          * DERIVED, never tracked — **MP5**'s rule, and for its reason: there is nothing to hook,
          * because every edit goes through a drawer whose contract says "was it drawn", not "was it
-         * changed".
+         * changed". Cached against the world's revision, so a per-frame caller costs nothing
+         * between edits (the level document's gate).
          */
         bool IsDirty(EditorContext& InContext) const;
 
@@ -95,5 +104,11 @@ namespace Opaax::Editor
 
         /** Non-owning: WorldManager owns it. Created on the first Open and kept (see the note). */
         World*      m_World = nullptr;
+
+        Uint64      m_Generation = 0;
+
+        /** IsDirty's cache, keyed by the world's revision — recomputed only when it moved. */
+        mutable Uint64 m_LastRevision = ~0ull;
+        mutable bool   m_bDirty       = false;
     };
 }

@@ -8,27 +8,50 @@
 #include "Editor/Panels/EditorPanels.h"
 #include "Editor/Prefab/EditorPrefabDocument.h"
 #include "Editor/Extensions/DrawerRegistry.h"
+#include "Editor/UI/IEditorGui.h"
 #include "Editor/UI/IEditorUIBackend.h"
+#include "Editor/Viewport/ViewportOverlays.h"
 
 #include "Application/Services/IEngine.h"
+#include "Core/Maths/Bounds2D.h"
 #include "RHI/Framebuffer.h"
 #include "Renderer/CameraView.h"
 #include "Renderer/RenderTarget.hpp"        // OffscreenRenderTarget
 
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityMeta.h"
+#include "World/Entity/EntityQuery.h"
 #include "World/World.h"
 
 namespace Opaax::Editor
 {
+    namespace
+    {
+        // Keeps an entity with nothing to draw framable — EntityOps::FocusSelected's value, for its
+        // reason: a fixed world size, since this runs before the camera has a meaningful pixel scale.
+        constexpr float k_FrameAnchor = 25.f;
+    }
+
     PrefabPanel::~PrefabPanel() = default;
 
+    Vector2F PrefabPanel::ViewportPx() const
+    {
+        return { static_cast<float>(m_Size.x), static_cast<float>(m_Size.y) };
+    }
+
+    // =========================================================================
+    // OnPreRender — the ViewportPanel's order, for SEL3's reason: the click is spent against the
+    // frame that was RENDERED, before the resize and the camera move that would change it.
+    // =========================================================================
     void PrefabPanel::OnPreRender()
     {
         World* const lWorld = m_Context.PrefabDocument.GetWorld();
 
         // A hidden panel submits nothing, so it costs no pass while closed (**MV3**'s rule).
         if (lWorld == nullptr || !m_Context.Panels.IsVisible(PanelID())) { return; }
+
+        PickGesture::Apply(m_PickGesture.Take(), *lWorld, m_Selection, ViewportPx(),
+                           ViewportOverlays::AnchorHalfExtent(lWorld->GetCameraView(), ViewportPx()));
 
         if (m_Framebuffer == nullptr)
         {
@@ -47,12 +70,54 @@ namespace Opaax::Editor
             m_Framebuffer->Resize(m_Size.x, m_Size.y);
         }
 
-        CameraView lView;
-        lView.OrthoSize = m_OrthoSize;
+        m_CameraGesture.Spend(m_Camera, ViewportPx());
+        ApplyPendingFrame(*lWorld);
+        m_Camera.Apply(*lWorld);   // an Edit world, so this never refuses
 
-        // NAMING ITS OWN WORLD — the whole reason P6 gave a view a Source. No overlays: a prefab is
-        // previewed as the game will draw it, not decorated like the editor (**MV1**/**MV3**).
-        m_Context.Engine.SubmitRenderView(*m_RenderTarget, lView, /*bInDrawOverlays*/ false, lWorld);
+        // Tagged with THIS world (the DebugDraw source rule), so the level's pass never sees them
+        // and the level's grid never lands here.
+        const float lAnchor = ViewportOverlays::AnchorHalfExtent(lWorld->GetCameraView(), ViewportPx());
+
+        const Uint64 lOutlined = ViewportOverlays::EnqueueSelectionOutline(
+            m_Context.Engine.GetDebugDraw(), *lWorld, m_Selection.Ids(), lAnchor);
+        const Uint64 lIcons    = ViewportOverlays::EnqueueEntityIcons(
+            m_Context.Engine.GetDebugDraw(), *lWorld, lAnchor);
+
+        if (!m_bOutlineLogged && lOutlined > 0)
+        {
+            OPAAX_LOG(LogPrefabPanel, Info, "Selection outline enqueued for {} entity(ies)", lOutlined);
+            m_bOutlineLogged = true;
+        }
+        if (!m_bIconsLogged && lIcons > 0)
+        {
+            OPAAX_LOG(LogPrefabPanel, Info, "Drawing {} entity icon(s) — entities with nothing to render", lIcons);
+            m_bIconsLogged = true;
+        }
+
+        // NAMING ITS OWN WORLD — the whole reason P6 gave a view a Source. Framed by this panel's
+        // camera, which was just published as the world's view.
+        m_Context.Engine.SubmitRenderView(*m_RenderTarget, lWorld->GetCameraView(), /*bInDrawOverlays*/ true, lWorld);
+    }
+
+    void PrefabPanel::ApplyPendingFrame(World& InWorld)
+    {
+        if (!m_bPendingFrame) { return; }
+        m_bPendingFrame = false;
+
+        TDynArray<EntityID> lIds = m_Selection.Ids();
+        if (lIds.empty())
+        {
+            InWorld.Each<EntityMeta>([&lIds](EntityID InId, const EntityMeta&) { lIds.emplace_back(InId); });
+        }
+
+        Bounds2D lBounds;
+        if (!EntityQuery::TryGetBounds(InWorld, lIds, lBounds, k_FrameAnchor))
+        {
+            OPAAX_LOG(LogPrefabPanel, Warn, "Frame — nothing in the prefab has a position");
+            return;
+        }
+
+        m_Camera.FocusOn(lBounds, ViewportPx());   // logs where it went, every time
     }
 
     void PrefabPanel::DrawContents()
@@ -62,6 +127,28 @@ namespace Opaax::Editor
             ImGui::TextDisabled("No prefab open.");
             ImGui::TextDisabled("Double-click a .opaaxprefab in the Resource Browser.");
             return;
+        }
+
+        // THE ENTITIES WERE REPLACED: handles held from before may now name other entities (MV4).
+        // Also the moment to frame — an opened prefab may sit anywhere in x/y.
+        if (m_Context.PrefabDocument.Generation() != m_ShownGeneration)
+        {
+            m_ShownGeneration = m_Context.PrefabDocument.Generation();
+            m_Selection.Clear();
+            m_bPendingFrame = true;
+        }
+
+        // THIS WINDOW'S route, which ImGui ranks above EditorService's global one — so with this
+        // panel focused the level's F and Delete do not fire. The text-field guard is the same one
+        // the global route uses: typing "Fred" into a name must not frame anything.
+        if (!m_Context.Gui.IsKeyboardOwnedByUI())
+        {
+            if (ImGui::Shortcut(ImGuiKey_F)) { m_bPendingFrame = true; }
+
+            if (ImGui::Shortcut(ImGuiKey_Delete))
+            {
+                OPAAX_LOG(LogPrefabPanel, Trace, "Delete swallowed — the prefab panel has no delete verb until it has undo (P8 V4)");
+            }
         }
 
         const bool lDirty = m_Context.PrefabDocument.IsDirty(m_Context);
@@ -79,7 +166,7 @@ namespace Opaax::Editor
         ImGui::SameLine();
         if (ImGui::Button("Close"))
         {
-            m_Selected = entt::null;
+            m_Selection.Clear();
             m_Context.PrefabDocument.Close();
             return;
         }
@@ -120,9 +207,12 @@ namespace Opaax::Editor
         {
             ImGui::PushID(static_cast<int>(InId));
 
-            if (ImGui::Selectable(InMeta.Name.CStr(), m_Selected == InId))
+            const Entity lEntity{ InId, lWorld };
+
+            if (ImGui::Selectable(InMeta.Name.CStr(), m_Selection.Contains(lEntity)))
             {
-                m_Selected = InId;
+                if (ImGui::GetIO().KeyCtrl) { m_Selection.Toggle(lEntity); }
+                else                        { m_Selection.Select(lEntity); }
             }
 
             ImGui::PopID();
@@ -131,15 +221,13 @@ namespace Opaax::Editor
 
     void PrefabPanel::DrawProperties()
     {
-        World* const lWorld = m_Context.PrefabDocument.GetWorld();
+        Entity lEntity = m_Selection.Get();
 
-        if (lWorld == nullptr || m_Selected == entt::null || !lWorld->GetRegistry().valid(m_Selected))
+        if (!lEntity.IsValid())
         {
             ImGui::TextDisabled("Select an entity to edit it.");
             return;
         }
-
-        Entity lEntity{ m_Selected, lWorld };
 
         // THE SAME REGISTRY THE INSPECTOR USES, so a component gains a form here by being registered
         // once (**MR2i**) and this panel never learns a component type.
@@ -156,8 +244,6 @@ namespace Opaax::Editor
         if (lAvail.x <= 0.f || lAvail.y <= 0.f) { return; }
 
         // THE FRAMEBUFFER IS SIZED TO THE REGION, so the image is drawn 1:1 and never rescaled.
-        // Fitting a fixed-size texture into a changing box is what made it look like it was
-        // "scaling too much" — the pixels were being resampled every time the panel moved.
         m_PendingSize = { static_cast<Uint32>(lAvail.x), static_cast<Uint32>(lAvail.y) };
 
         const EditorImage lImage = m_Framebuffer != nullptr
@@ -165,8 +251,16 @@ namespace Opaax::Editor
                                        : EditorImage{};
 
         // Drawn at the FRAMEBUFFER's size rather than the region's: they agree from the frame after
-        // a resize, and using the region on the frame they disagree is exactly the stretch above.
-        ImguiWidgets::Image(lImage, ImVec2(static_cast<float>(m_Size.x), static_cast<float>(m_Size.y)));
+        // a resize, and using the region on the frame they disagree is exactly a stretch.
+        const Vector2F lSizePx = ViewportPx();
+        ImguiWidgets::Image(lImage, ImVec2(lSizePx.x, lSizePx.y));
+
+        // The image is the LAST SUBMITTED ITEM here, so these name it (the ViewportPanel's rule).
+        const bool   lHovered = ImGui::IsItemHovered();
+        const ImVec2 lOrigin  = ImGui::GetItemRectMin();
+
+        m_CameraGesture.Measure(lHovered, { lOrigin.x, lOrigin.y }, lSizePx);
+        m_PickGesture.Measure(lHovered, { lOrigin.x, lOrigin.y });
     }
 
     void PrefabPanel::Shutdown()

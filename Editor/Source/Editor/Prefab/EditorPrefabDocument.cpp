@@ -63,6 +63,9 @@ namespace Opaax::Editor
 
         m_AbsPath  = InAbsPath;
         m_Baseline = PrefabJson::Serialize(CaptureAsPrefab(*m_World, lRegistry));
+        ++m_Generation;
+        m_LastRevision = ~0ull;   // a new baseline — the cached answer is about the old one
+        m_bDirty       = false;
 
         OPAAX_LOG(LogEditorPrefabDocument, Info, "Editing prefab '{}' — {} entity(ies)",
                   InAbsPath.CStr(), lCreated);
@@ -90,7 +93,8 @@ namespace Opaax::Editor
             return false;
         }
 
-        m_Baseline = PrefabJson::Serialize(lData);
+        m_Baseline     = PrefabJson::Serialize(lData);
+        m_LastRevision = ~0ull;
 
         // THE POINT OF EDITING A PREFAB (P4): reload the resource and re-apply it to every placement
         // in the level, each keeping its own overrides.
@@ -103,6 +107,9 @@ namespace Opaax::Editor
     {
         m_AbsPath  = OpaaxString();
         m_Baseline = OpaaxString();
+        ++m_Generation;
+        m_LastRevision = ~0ull;
+        m_bDirty       = false;
 
         if (m_World != nullptr) { m_World->Clear(); }
     }
@@ -111,8 +118,24 @@ namespace Opaax::Editor
     {
         if (!IsOpen() || m_World == nullptr) { return false; }
 
-        return PrefabJson::Serialize(
-                   CaptureAsPrefab(*m_World, InContext.Engine.GetRegistries().Components()))
-               != m_Baseline;
+        // GATED ON THE WORLD'S REVISION, the level document's rule: the capture below is a full
+        // serialize, and this is asked every frame the panel is drawn.
+        const Uint64 lRevision = m_World->GetRevision();
+        if (lRevision == m_LastRevision) { return m_bDirty; }
+        m_LastRevision = lRevision;
+
+        const bool lDirty = PrefabJson::Serialize(
+                                CaptureAsPrefab(*m_World, InContext.Engine.GetRegistries().Components()))
+                            != m_Baseline;
+
+        // On the transition only — "did my edit register?" deserves an answer in the log ([[L12]]).
+        if (lDirty != m_bDirty)
+        {
+            OPAAX_LOG(LogEditorPrefabDocument, Info, "Prefab '{}' {}", m_AbsPath.CStr(),
+                      lDirty ? "has unsaved changes" : "matches its file again");
+        }
+
+        m_bDirty = lDirty;
+        return lDirty;
     }
 }

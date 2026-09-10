@@ -3,13 +3,16 @@
 #include "Application/Services/ILogger.h"
 #include "Core/Maths/MathTypes.h"
 #include "Core/OpaaxTypes.h"
+#include "Editor/Camera/EditorCamera.h"
+#include "Editor/Operation/EditorSelection.hpp"
 #include "Editor/Panels/IEditorPanel.h"
-#include "World/Entity/EntityTypes.h"
+#include "Editor/Viewport/ViewportGestures.h"
 
 namespace Opaax
 {
     class IFramebuffer;
     class OffscreenRenderTarget;
+    class World;
 
     OPAAX_LOG_CATEGORY(PrefabPanel);
 }
@@ -20,28 +23,30 @@ namespace Opaax::Editor
     struct EditorImage;
 
     // =============================================================================
-    // PrefabPanel — a prefab edited in a world of its own (⑦-C P6).
+    // PrefabPanel — a prefab edited in a world of its own (⑦-C P6), as a real viewport (P8).
     //
-    //   THE THIRD VIEW, and the first that draws a world which is not the active one. **MV1** made a
-    //   frame a list of views, but every one of them drew whatever `RenderFrame` resolved once — so
-    //   multi-view meant N views of ONE world, which is all the Camera Preview needed. A prefab is
-    //   edited in a world that is deliberately never active, which is why P6 had to give a view a
-    //   `Source`. This is **MV**'s named "asset preview WORLD" growth point, whose stated trigger
-    //   was ⑦'s prefabs.
+    //   THE THIRD VIEW, and the first that draws a world which is not the active one — **MV**'s
+    //   named "asset preview WORLD" growth point, which is why P6 gave a render view a `Source`.
     //
-    //   SELF-CONTAINED, like every other document panel here (`SpriteSheetPanel`,
-    //   `AnimationClipPanel`, `InputMappingContextPanel`): its own tree, its own properties, its own
-    //   Save. That is what keeps it out of the way of `EditorSelection`, the gizmo and the
-    //   Inspector, all of which are bound to the ACTIVE world and would each have needed a second
-    //   target otherwise.
+    //   IT OWNS WHAT THE LEVEL SHARES. The level's camera, selection and gizmo live on the
+    //   EditorContext because they must outlive a PIE cycle and be reachable by editor-wide
+    //   commands; this panel's are its own members, because its world is never active and no
+    //   command addresses it. The gestures are the level viewport's exact types (Editor/Viewport/),
+    //   so pan, zoom, click and marquee cannot drift between the two surfaces.
     //
-    //   ITS SELECTION IS ITS OWN, one `EntityID`, never `EditorSelection`. A handle from another
-    //   world means nothing — and entt REUSES handles, so a shared selection could silently resolve
-    //   to a different entity that happens to exist in the level (**MV4**'s reason, one panel over).
+    //   ITS SELECTION IS ITS OWN, never `EditorSelection` on the context: entt REUSES handles, so a
+    //   shared one could resolve to a real but wrong entity in the other world (**MV4**, **PF9**).
+    //   The same hazard exists ACROSS opens — `EditorPrefabDocument::Open` clears and refills one
+    //   world — so the panel clears its selection whenever the document's generation moves.
     //
-    //   NO GIZMO AND NO UNDO INSIDE IT YET, and both are stated rather than discovered: editing is
-    //   the Inspector-style property form, and the undo stack belongs to the level's world (**UN1**).
-    //   The Config panel already sets that precedent and the user accepted it there.
+    //   `F` IS MEASURED HERE, not declared on PanelDesc like Ctrl+S: its subject is this panel's
+    //   camera, which no command can reach. A focused window's ImGui::Shortcut takes priority over
+    //   EditorService's global route, so the level's F does not also fire. `Delete` is claimed the
+    //   same way and does nothing yet — a delete with no undo is worse than none (V4 owns it), and
+    //   letting it through would delete in the LEVEL.
+    //
+    //   Properties come from the Inspector's drawer registry, so it never learns a component type.
+    //   NO GIZMO AND NO UNDO YET (P8 V3/V4).
     // =============================================================================
     class PrefabPanel final : public IEditorPanel
     {
@@ -63,14 +68,20 @@ namespace Opaax::Editor
         // Internal
         // =========================================================================
     private:
-        /** One row per entity of the prefab, and the click that selects one. */
+        /** One row per entity of the prefab; click selects, Ctrl+click toggles. */
         void DrawHierarchy();
 
-        /** The selected entity's components, through the SAME drawer registry the Inspector uses. */
+        /** The primary's components, through the SAME drawer registry the Inspector uses. */
         void DrawProperties();
 
-        /** The rendered prefab, and the deferred resize ViewportPanel's shape already uses. */
+        /** The rendered prefab, the deferred resize, and the gestures measured on the image. */
         void DrawPreview();
+
+        /** Frame the selection, or the whole prefab when nothing is selected. Spent in OnPreRender. */
+        void ApplyPendingFrame(World& InWorld);
+
+        /** The image's size in pixels, as a float pair — what every conversion takes. */
+        Vector2F ViewportPx() const;
 
         // =========================================================================
         // Override
@@ -96,13 +107,23 @@ namespace Opaax::Editor
         Vector2u32 m_Size        = { 512, 512 };
         Vector2u32 m_PendingSize = { 512, 512 };
 
-        /** How much world the preview frames. Fixed for now; framing the contents is a growth point. */
-        float m_OrthoSize = 400.f;
-
         /** How much of the panel the world gets. ImGui's ResizeX lets the author move it from there. */
         static constexpr float k_PreviewSplit = 0.6f;
 
-        /** THIS panel's selection — see the class note on why it is not EditorSelection. */
-        EntityID m_Selected = entt::null;
+        // THIS panel's viewpoint and selection — see the class note on why neither is the context's.
+        EditorCamera    m_Camera;
+        EditorSelection m_Selection;
+
+        CameraGesture   m_CameraGesture;
+        PickGesture     m_PickGesture;
+
+        /** The document generation last shown — a change means the entities were replaced (see the note). */
+        Uint64          m_ShownGeneration = 0;
+
+        /** Frame on open and on F. Set in DrawContents, spent in OnPreRender against a measured size. */
+        bool            m_bPendingFrame  = false;
+
+        bool            m_bOutlineLogged = false;
+        bool            m_bIconsLogged   = false;
     };
 }
