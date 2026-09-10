@@ -1,9 +1,12 @@
 #include "Editor/Prefab/EditorPrefabDocument.h"
 
 #include "Editor/EditorContext.h"
+#include "Editor/Operation/EntityOps.h"           // PlaceInstance — the world-explicit verb (P7)
 #include "Editor/Operation/ResourceOperations.h"
+#include "Editor/Undo/EntityUndoables.h"
 
 #include "Application/Services/IEngine.h"
+#include "Application/Services/IPaths.h"
 #include "Engine/Registries/EngineRegistries.h"
 
 #include "World/Components/ComponentRegistry.h"
@@ -126,6 +129,100 @@ namespace Opaax::Editor
         ResourceOps::SavedToDisk<PrefabResource>(InContext, m_AbsPath);
 
         return true;
+    }
+
+    bool EditorPrefabDocument::SaveAsVariant(EditorContext& InContext, const OpaaxString& InAbsPath)
+    {
+        if (!IsOpen() || m_World == nullptr) { return false; }
+
+        if (IsDirty(InContext))
+        {
+            OPAAX_LOG(LogEditorPrefabDocument, Warn,
+                      "Save As Variant refused — '{}' has unsaved changes, and a variant is of the file. Save first.",
+                      m_AbsPath.CStr());
+            return false;
+        }
+
+        // Compared ASSET-relative, the form the record stores (**MP8**): the browser's absolute path
+        // and the dialog's may spell one file two ways.
+        const OpaaxString lBase    = InContext.Paths.AbsoluteToAsset(m_AbsPath);
+        const OpaaxString lVariant = InContext.Paths.AbsoluteToAsset(InAbsPath);
+
+        if (lVariant.IsEmpty())
+        {
+            OPAAX_LOG(LogEditorPrefabDocument, Warn,
+                      "Save As Variant refused — '{}' is outside the project's and the engine's asset "
+                      "trees, so no map could reference it", InAbsPath.CStr());
+            return false;
+        }
+
+        if (lVariant == lBase)
+        {
+            OPAAX_LOG(LogEditorPrefabDocument, Error,
+                      "Save As Variant refused — '{}' is the base itself; a prefab cannot be its own variant",
+                      lBase.CStr());
+            return false;
+        }
+
+        // The whole of a variant: no entities, one record. Overrides come from editing it.
+        PrefabData lData;
+        lData.Instances.emplace_back(PrefabInstanceRecord{ lBase, Guid::New(), {} });
+
+        // Save's bracket, so a variant written OVER an existing prefab reaches its placements.
+        ResourceOps::AboutToSave<PrefabResource>(InContext, InAbsPath);
+
+        if (!PrefabFile::Save(InAbsPath, lData)) { return false; }
+
+        ResourceOps::SavedToDisk<PrefabResource>(InContext, InAbsPath);
+
+        OPAAX_LOG(LogEditorPrefabDocument, Info, "Wrote '{}' as a variant of '{}'", lVariant.CStr(), lBase.CStr());
+
+        return Open(InContext, InAbsPath);
+    }
+
+    Uint64 EditorPrefabDocument::Place(EditorContext& InContext, const OpaaxString& InAssetPath,
+                                       const Vector2F& InAtWorld)
+    {
+        if (!IsOpen() || m_World == nullptr) { return 0; }
+
+        const ComponentRegistry& lRegistry = InContext.Engine.GetRegistries().Components();
+        ResourcePrefabResolver   lResolver(InContext.Paths, InContext.Resources, lRegistry);
+
+        const OpaaxString lOwnPath = InContext.Paths.AbsoluteToAsset(m_AbsPath);
+
+        if (InAssetPath == lOwnPath || lResolver.Places(InAssetPath, lOwnPath))
+        {
+            OPAAX_LOG(LogEditorPrefabDocument, Error,
+                      "Refused to place '{}' into '{}' — the prefab would place itself",
+                      InAssetPath.CStr(), lOwnPath.CStr());
+            return 0;
+        }
+
+        const PrefabData* const lPrefab = lResolver.Resolve(InAssetPath);
+        if (lPrefab == nullptr)
+        {
+            OPAAX_LOG(LogEditorPrefabDocument, Warn, "Place refused — '{}' did not load", InAssetPath.CStr());
+            return 0;
+        }
+
+        // Open's rule: a placeholder map for BuildInstance, cleared off — this world holds no map.
+        // The marker stays; it is what Save folds by.
+        MapData lInstance = PrefabFactory::BuildInstance(*lPrefab, InAssetPath, Guid::New(),
+                                                         MapId("Prefab"), lRegistry);
+        for (EntityData& lEntity : lInstance.Entities) { lEntity.OwnerMap = MapId(); }
+
+        const TDynArray<EntityID> lHandles = EntityOps::PlaceInstance(*m_World, lInstance, &InAtWorld, lRegistry);
+        if (lHandles.empty()) { return 0; }
+
+        m_Selection.Replace(m_World, lHandles);
+
+        m_Undo.Record(PrefabInstantiate{ MapSerializer::CaptureEntities(*m_World, lRegistry, lHandles),
+                                         EUndoWorld::Prefab });
+
+        OPAAX_LOG(LogEditorPrefabDocument, Info, "Placed '{}' into '{}' — {} entity(ies)",
+                  InAssetPath.CStr(), lOwnPath.CStr(), lHandles.size());
+
+        return lHandles.size();
     }
 
     void EditorPrefabDocument::Close()

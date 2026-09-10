@@ -186,61 +186,23 @@ namespace Opaax::Editor
             return 0;
         }
 
-        MapData lInstance = PrefabFactory::BuildInstance(*lPrefab, lAssetPath, Guid::New(),
-                                                         InOwnerMap, lRegistry);
+        const MapData lInstance = PrefabFactory::BuildInstance(*lPrefab, lAssetPath, Guid::New(),
+                                                               InOwnerMap, lRegistry);
         if (lInstance.IsEmpty())
         {
             return 0;   // PrefabFactory logged which refusal it was
         }
 
-        // Read BEFORE instantiating: MapFactory answers only a count, and these derived guids are
-        // the only way back to the entities it is about to create.
-        TDynArray<Guid> lCreatedIds;
-        lCreatedIds.reserve(lInstance.Entities.size());
-        for (const EntityData& lEntity : lInstance.Entities)
-        {
-            lCreatedIds.emplace_back(lEntity.Id);
-        }
-
-        const Uint64 lCount = MapFactory::Instantiate(lInstance, *lWorld, lRegistry);
-        if (lCount == 0)
+        const TDynArray<EntityID> lHandles = PlaceInstance(*lWorld, lInstance, InAtWorld, lRegistry);
+        if (lHandles.empty())
         {
             OPAAX_LOG(LogEntityOps, Warn, "Instantiate Prefab created nothing from '{}'",
                       lAssetPath.CStr());
             return 0;
         }
 
-        lWorld->MarkChanged();
-
-        // The WHOLE instance is selected — **K10**. Handles collected in the same pass, because the
-        // undo step wants them too and resolving each guid twice would say the same thing slower.
-        TDynArray<EntityID> lHandles;
-        lHandles.reserve(lCreatedIds.size());
-
-        InContext.Selection.Clear();
-        for (const Guid& lId : lCreatedIds)
-        {
-            Entity lEntity = lWorld->FindByGuid(lId);
-            if (!lEntity.IsValid()) { continue; }
-
-            InContext.Selection.Add(lEntity);
-            lHandles.emplace_back(lEntity.GetHandle());
-        }
-
-        // MOVED BEFORE THE CAPTURE, so a drop is ONE undo step rather than a place followed by a
-        // move. The first entity is the anchor and the rest keep their relative offsets, which is
-        // what makes a multi-entity prefab arrive intact (**K10** — no parenting needed for this).
-        if (InAtWorld != nullptr && !lHandles.empty())
-        {
-            Entity lAnchor{ lHandles.front(), lWorld };
-            const Vector2F lDelta = *InAtWorld - lAnchor.Get<TransformComponent>().Position;
-
-            for (const EntityID lHandle : lHandles)
-            {
-                Entity lEntity{ lHandle, lWorld };
-                lEntity.Get<TransformComponent>().Position += lDelta;
-            }
-        }
+        // The WHOLE instance is selected — **K10**.
+        InContext.Selection.Replace(lWorld, lHandles);
 
         // Captured AFTER the fact, exactly as Create does — it records what the world actually got,
         // not what was asked for, so an entity Instantiate refused is not in the step either.
@@ -248,9 +210,47 @@ namespace Opaax::Editor
             MapSerializer::CaptureEntities(*lWorld, lRegistry, lHandles) });
 
         OPAAX_LOG(LogEntityOps, Info, "Instantiated {} entity(ies) from '{}' into map '{}'",
-                  lCount, lAssetPath.CStr(), InOwnerMap.ToString().CStr());
+                  lHandles.size(), lAssetPath.CStr(), InOwnerMap.ToString().CStr());
 
-        return lCount;
+        return lHandles.size();
+    }
+
+    TDynArray<EntityID> EntityOps::PlaceInstance(World& InWorld, const MapData& InInstance,
+                                                 const Vector2F* InAtWorld, const ComponentRegistry& InRegistry)
+    {
+        TDynArray<EntityID> lHandles;
+
+        if (MapFactory::Instantiate(InInstance, InWorld, InRegistry) == 0) { return lHandles; }
+
+        // MapFactory answers only a count; the instance's derived guids are the way back to what it
+        // created, in the instance's order.
+        lHandles.reserve(InInstance.Entities.size());
+        for (const EntityData& lEntity : InInstance.Entities)
+        {
+            if (Entity lFound = InWorld.FindByGuid(lEntity.Id); lFound.IsValid())
+            {
+                lHandles.emplace_back(lFound.GetHandle());
+            }
+        }
+
+        // MOVED BEFORE THE CALLER CAPTURES, so a drop is ONE undo step rather than a place followed
+        // by a move. The first entity is the anchor and the rest keep their relative offsets, which
+        // is what makes a multi-entity prefab arrive intact (**K10** — no parenting needed for this).
+        if (InAtWorld != nullptr && !lHandles.empty())
+        {
+            Entity lAnchor{ lHandles.front(), &InWorld };
+            const Vector2F lDelta = *InAtWorld - lAnchor.Get<TransformComponent>().Position;
+
+            for (const EntityID lHandle : lHandles)
+            {
+                Entity lEntity{ lHandle, &InWorld };
+                lEntity.Get<TransformComponent>().Position += lDelta;
+            }
+        }
+
+        InWorld.MarkChanged();
+
+        return lHandles;
     }
 
     bool EntityOps::CreatePrefabFromSelection(EditorContext& InContext, const OpaaxString& InAbsPath)

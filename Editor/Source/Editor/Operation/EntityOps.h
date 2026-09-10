@@ -8,8 +8,10 @@
 
 namespace Opaax
 {
-    class Entity;
-    class World;   // ⑦-C P8 — TransformEntities names the world it acts on
+    class  ComponentRegistry;
+    class  Entity;
+    struct MapData;   // ⑦-C P7 — a BUILT instance, PlaceInstance's subject
+    class  World;     // ⑦-C P8 — TransformEntities names the world it acts on
 }
 
 namespace Opaax::Editor
@@ -77,6 +79,18 @@ namespace Opaax::Editor
          */
         Uint64 InstantiatePrefab(EditorContext& InContext, const OpaaxString& InAbsPath, MapId InOwnerMap,
                                  const Vector2F* InAtWorld = nullptr);
+
+        /**
+         * Put a BUILT instance into a NAMED world, anchored at InAtWorld — the world-agnostic core
+         * of `InstantiatePrefab` (⑦-C P7), `DestroyEntities`' idiom: no `EditorContext`, so no PIE
+         * guard, no undo step, no selection. The prefab document places a NESTED prefab through it
+         * into its own world; the level's wrapper adds the map, the selection and the step.
+         *
+         * @return The created handles in the instance's order, the anchor first — what the caller
+         *   selects and captures. Empty when nothing was created.
+         */
+        TDynArray<EntityID> PlaceInstance(World& InWorld, const MapData& InInstance, const Vector2F* InAtWorld,
+                                          const ComponentRegistry& InRegistry);
 
         /**
          * Write the SELECTION to InAbsPath as a new prefab, then REPLACE it with an instance of

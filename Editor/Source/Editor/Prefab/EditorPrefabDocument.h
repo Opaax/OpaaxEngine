@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Application/Services/ILogger.h"
+#include "Core/Maths/MathTypes.h"   // Vector2F — where a nested placement lands
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Editor/Operation/EditorSelection.hpp"
@@ -69,6 +70,29 @@ namespace Opaax::Editor
          * keeping its own overrides. Until P6 that seam had no natural trigger.
          */
         bool Save(EditorContext& InContext);
+
+        /**
+         * Write InAbsPath as a VARIANT of the open prefab — no entities, one record placing this
+         * one — and open it (P7). Unity's Prefab Variant in this engine's own vocabulary: the
+         * base's changes keep reaching it, and its own edits fold into the record's overrides.
+         *
+         * Refused while dirty (a variant is of the FILE, and opening it would drop the unsaved
+         * edits), onto the open file itself, or outside the asset trees (**MP8**).
+         */
+        bool SaveAsVariant(EditorContext& InContext, const OpaaxString& InAbsPath);
+
+        /**
+         * Place one instance of the prefab at InAssetPath into the editing world, anchored at
+         * InAtWorld — a NESTED placement (P7). Selected whole and recorded on this stack; Save
+         * folds it back to a record.
+         *
+         * REFUSED when it would make the file place itself: the open prefab, or one that places it
+         * at any depth. The resolver refuses the same cycle at read time, but a refusal here costs
+         * an Error where one there costs the author a prefab that no longer loads whole.
+         *
+         * @return How many entities were created. 0 means refused, and the log says why.
+         */
+        Uint64 Place(EditorContext& InContext, const OpaaxString& InAssetPath, const Vector2F& InAtWorld);
 
         /** Forget the document. The world is kept — see the class note. */
         void Close();

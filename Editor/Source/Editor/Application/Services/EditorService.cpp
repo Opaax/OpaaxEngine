@@ -401,6 +401,7 @@ namespace Opaax::Editor
         lCommands.Register<RevertToPrefabCommand>(Tags::EDITOR_COMMAND_REVERT_TO_PREFAB);
         lCommands.Register<OpenPrefabAtCommand>(Tags::EDITOR_COMMAND_OPEN_PREFAB_AT);
         lCommands.Register<SavePrefabCommand>(Tags::EDITOR_COMMAND_SAVE_PREFAB);
+        lCommands.Register<SavePrefabAsVariantCommand>(Tags::EDITOR_COMMAND_SAVE_PREFAB_AS_VARIANT);
         lCommands.Register<UndoPrefabCommand>(Tags::EDITOR_COMMAND_UNDO_PREFAB);
         lCommands.Register<RedoPrefabCommand>(Tags::EDITOR_COMMAND_REDO_PREFAB);
         lCommands.Register<DeletePrefabSelectionCommand>(Tags::EDITOR_COMMAND_DELETE_PREFAB_SELECTION);

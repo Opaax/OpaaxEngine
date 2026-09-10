@@ -3,6 +3,7 @@
 #include "Application/Services/ILogger.h"
 #include "Core/Maths/MathTypes.h"
 #include "Core/OpaaxTypes.h"
+#include "Core/String/OpaaxString.hpp"
 #include "Editor/Camera/EditorCamera.h"
 #include "Editor/Panels/IEditorPanel.h"
 #include "Editor/Undo/ComponentUndoables.h"   // EntityComponentsEdit — the property form's one step
@@ -45,8 +46,10 @@ namespace Opaax::Editor
     //   EVERY EDIT LANDS ON THE DOCUMENT'S STACK (P8 V3/V4): the gizmo's drag (the level's
     //   GizmoGesture, reading the editor-wide settings, applied straight through
     //   EntityOps::TransformEntities — no PIE guard, this world is Edit whatever the level does),
-    //   the property form's gesture (the Inspector's bracket, verbatim), and Delete (the declared
-    //   DeletePrefabSelectionCommand). Ctrl+Z reaches it through the panel's declared UndoCommand.
+    //   the property form's gesture (the Inspector's bracket, verbatim), Delete (the declared
+    //   DeletePrefabSelectionCommand), and a prefab dropped on the preview — a NESTED placement,
+    //   the ViewportPanel's drop target over the document's Place (P7). Ctrl+Z reaches it through
+    //   the panel's declared UndoCommand. Save As Variant... dispatches the declared command.
     //
     //   Properties come from the Inspector's drawer registry, so it never learns a component type.
     // =============================================================================
@@ -84,6 +87,9 @@ namespace Opaax::Editor
 
         /** Spend the gizmo's banked delta on InWorld and close the drag onto the document's stack. */
         void ApplyGizmoDrag(World& InWorld);
+
+        /** Place the prefab dropped on the preview, if any — the ViewportPanel's banked drop (P7). */
+        void RunPendingDrop();
 
         /** The image's size in pixels, as a float pair — what every conversion takes. */
         Vector2F ViewportPx() const;
@@ -128,6 +134,10 @@ namespace Opaax::Editor
 
         /** Frame on open and on F. Set in DrawContents, spent in OnPreRender against a measured size. */
         bool            m_bPendingFrame  = false;
+
+        /** A prefab dropped on the preview this frame, and where — run once the pass is over (**MP7**). */
+        OpaaxString     m_PendingDropPrefab;
+        Vector2F        m_PendingDropPx = { 0.f, 0.f };
 
         /** Last frame's ImGui::IsAnyItemActive — the edit bracket's edge, and the release frame still marks. */
         bool            m_bWasItemActive = false;

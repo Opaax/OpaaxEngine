@@ -460,6 +460,18 @@ namespace Opaax::Editor
     };
 
     /**
+     * Ask where, then write the open prefab's VARIANT there and open it (P7) — Save As's shape,
+     * fronting `EditorPrefabDocument::SaveAsVariant`. The dialog defaults to "<Base>Variant"
+     * beside the base, so the common case is rename-and-confirm.
+     */
+    struct SavePrefabAsVariantCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
+    /**
      * Step the PREFAB DOCUMENT's own history (P8 V3) — what Ctrl+Z/Y reach while the panel is
      * focused (PanelDesc::UndoCommand). No PIE gate: the prefab world is Edit whatever the level
      * is doing, and the panel has never been gated on it.

@@ -78,6 +78,8 @@ namespace Opaax::Editor::Tags
         OpaaxTag("Editor.Command.OpenPrefabAt");
     inline const OpaaxTag EDITOR_COMMAND_SAVE_PREFAB =
         OpaaxTag("Editor.Command.SavePrefab");
+    inline const OpaaxTag EDITOR_COMMAND_SAVE_PREFAB_AS_VARIANT =
+        OpaaxTag("Editor.Command.SavePrefabAsVariant");
     inline const OpaaxTag EDITOR_COMMAND_UNDO_PREFAB =
         OpaaxTag("Editor.Command.UndoPrefab");
     inline const OpaaxTag EDITOR_COMMAND_REDO_PREFAB =

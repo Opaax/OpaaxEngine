@@ -465,6 +465,24 @@ namespace Opaax::Editor
         InContext.PrefabDocument.Save(InContext);
     }
 
+    void SavePrefabAsVariantCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        if (!InContext.PrefabDocument.IsOpen()) { return; }
+
+        // "<Base>Variant.opaaxprefab", beside the base.
+        const OpaaxString& lBase      = InContext.PrefabDocument.AbsPath();
+        const Int32        lExtension = lBase.Find(".opaaxprefab");
+        const OpaaxString  lSuggested = (lExtension >= 0 ? lBase.SubString(0, static_cast<Uint32>(lExtension)) : lBase)
+                                        + OpaaxString("Variant.opaaxprefab");
+
+        InContext.Dialogs.SaveFile(
+            MakeFileRequest("Save As Variant", lSuggested, "*.opaaxprefab", "Opaax Prefab"),
+            [&InContext](const OpaaxString& InPicked)
+            {
+                InContext.PrefabDocument.SaveAsVariant(InContext, InPicked);
+            });
+    }
+
     void UndoPrefabCommand::Execute(EditorContext& InContext, const Params&)
     {
         InContext.PrefabDocument.Undo().Undo(InContext);

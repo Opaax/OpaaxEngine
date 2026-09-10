@@ -2,6 +2,8 @@
 
 #include <imgui.h>
 
+#include "Editor/Commands/EditorCommandRegistry.h"
+#include "Editor/Commands/EditorNativeCommandsTags.hpp"
 #include "Editor/EditorContext.h"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Editor/ImguiLibrary/ImguiWidgets.h"
@@ -10,12 +12,14 @@
 #include "Editor/Extensions/DrawerRegistry.h"
 #include "Editor/Operation/EditorGizmo.hpp"     // the editor-wide settings the gizmo reads
 #include "Editor/Operation/EntityOps.h"         // TransformEntities — the world-explicit verb (PF12)
+#include "Editor/Resources/ResourceDragDrop.h"  // a prefab dropped on the preview (P7)
 #include "Editor/UI/IEditorGui.h"
 #include "Editor/UI/IEditorUIBackend.h"
 #include "Editor/Viewport/ViewportOverlays.h"
 
 #include "Application/Services/IEngine.h"
 #include "Core/Maths/Bounds2D.h"
+#include "Engine/Subsystems/Resources/ResourceManager.h"   // before PrefabResource — LoadContext
 #include "RHI/Framebuffer.h"
 #include "Renderer/CameraView.h"
 #include "Renderer/RenderTarget.hpp"        // OffscreenRenderTarget
@@ -23,6 +27,7 @@
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityMeta.h"
 #include "World/Entity/EntityQuery.h"
+#include "World/Prefab/PrefabResource.hpp"
 #include "World/World.h"
 
 namespace Opaax::Editor
@@ -174,6 +179,19 @@ namespace Opaax::Editor
             m_Context.PrefabDocument.Save(m_Context);
         }
 
+        // A variant is of the FILE (P7), so the button waits for the save rather than dropping edits.
+        ImGui::SameLine();
+        ImGui::BeginDisabled(lDirty);
+        if (ImGui::Button("Save As Variant..."))
+        {
+            m_Context.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_SAVE_PREFAB_AS_VARIANT, m_Context);
+        }
+        ImGui::EndDisabled();
+        if (lDirty && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+        {
+            ImGui::SetTooltip("Save first — a variant is made of the file on disk.");
+        }
+
         ImGui::SameLine();
         if (ImGui::Button("Close"))
         {
@@ -204,6 +222,24 @@ namespace Opaax::Editor
             DrawProperties();
         }
         ImGui::EndChild();
+
+        RunPendingDrop();
+    }
+
+    void PrefabPanel::RunPendingDrop()
+    {
+        const OpaaxString lPrefab = m_PendingDropPrefab;
+        m_PendingDropPrefab = OpaaxString();   // cleared FIRST — a refused drop must not retry
+
+        if (lPrefab.IsEmpty()) { return; }
+
+        World* const lWorld = m_Context.PrefabDocument.GetWorld();
+        if (lWorld == nullptr) { return; }
+
+        // This panel's camera, as published to the world in OnPreRender — the view the drop was seen in.
+        const Vector2F lWorldPos = ScreenToWorld(lWorld->GetCameraView(), ViewportPx(), m_PendingDropPx);
+
+        m_Context.PrefabDocument.Place(m_Context, lPrefab, lWorldPos);
     }
 
     void PrefabPanel::DrawHierarchy()
@@ -292,6 +328,19 @@ namespace Opaax::Editor
         // The image is the LAST SUBMITTED ITEM here, so these name it (the ViewportPanel's rule).
         const bool   lHovered = ImGui::IsItemHovered();
         const ImVec2 lOrigin  = ImGui::GetItemRectMin();
+
+        // DROP A PREFAB TO NEST ONE (P7) — the ViewportPanel's target, verbatim: banked with the
+        // local pixel, run once the pass is over (**MP7**).
+        {
+            OpaaxString lDropped;
+            if (AcceptResourceDragPayload(ResourceTypeID::Get<PrefabResource>(), lDropped))
+            {
+                const ImVec2 lMouse = ImGui::GetMousePos();
+
+                m_PendingDropPrefab = lDropped;
+                m_PendingDropPx     = Vector2F{ lMouse.x - lOrigin.x, lMouse.y - lOrigin.y };
+            }
+        }
 
         m_CameraGesture.Measure(lHovered, { lOrigin.x, lOrigin.y }, lSizePx);
 
