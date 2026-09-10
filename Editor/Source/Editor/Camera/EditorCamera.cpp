@@ -16,12 +16,6 @@ namespace Opaax::Editor
         // never zooms closer than this — a point-sized entity would otherwise fill the screen.
         constexpr float k_FocusMargin       = 1.25f;
         constexpr float k_FocusMinOrthoSize = 100.f;
-
-        /** World units covered by one viewport pixel. Square, since width follows the aspect. */
-        float WorldPerPixel(float InOrthoSize, float InViewportHeightPx)
-        {
-            return (InOrthoSize * 2.f) / InViewportHeightPx;
-        }
     }
 
     void EditorCamera::Pan(const Vector2F& InScreenDelta, const Vector2F& InViewportPx)
@@ -31,7 +25,7 @@ namespace Opaax::Editor
             return;
         }
 
-        const float lScale = WorldPerPixel(m_OrthoSize, InViewportPx.y);
+        const float lScale = WorldPerPixel(CameraView{ m_Position, m_OrthoSize }, InViewportPx.y);
 
         m_Position += Vector2F(-InScreenDelta.x, InScreenDelta.y) * lScale;
 

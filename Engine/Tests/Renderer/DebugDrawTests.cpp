@@ -77,6 +77,37 @@ TEST_CASE("DebugDraw: DrawBox covers the rectangle it was given, corner to corne
     CHECK(std::fabs((lBox.Center.y + lBox.Size.y * 0.5f) - 23.f) < kEps);
 }
 
+TEST_CASE("DebugDraw: a primitive names its world, and null is what every pre-P8 caller means")
+{
+    // The tag is an identity token only — the renderer compares pointers and never dereferences
+    // one, so a non-null address that is not a World is all the test needs.
+    const World* const lSomeWorld = reinterpret_cast<const World*>(0x1);
+
+    DebugDraw lDebug;
+    lDebug.DrawLine({ 0.f, 0.f }, { 1.f, 0.f }, { 1.f, 1.f, 1.f, 1.f });
+    lDebug.DrawLine({ 0.f, 0.f }, { 1.f, 0.f }, { 1.f, 1.f, 1.f, 1.f }, 1.f, ERenderLayer::Debug,
+                    DebugChannels::Default, lSomeWorld);
+    lDebug.DrawBounds(Bounds2D::FromCenterSize({ 0.f, 0.f }, { 2.f, 2.f }), { 1.f, 1.f, 1.f, 1.f });
+    lDebug.DrawBounds(Bounds2D::FromCenterSize({ 0.f, 0.f }, { 2.f, 2.f }), { 1.f, 1.f, 1.f, 1.f }, 1.f,
+                      ERenderLayer::Debug, DebugChannels::Default, lSomeWorld);
+    lDebug.DrawCircle({ 0.f, 0.f }, 1.f, { 1.f, 1.f, 1.f, 1.f }, 1.f, ERenderLayer::Debug,
+                      DebugChannels::Default, 4, lSomeWorld);
+
+    REQUIRE(lDebug.GetLines().size() == 6u);   // 2 + the circle's 4 segments
+    REQUIRE(lDebug.GetBoxes().size() == 2u);
+
+    CHECK(lDebug.GetLines()[0].Source == nullptr);
+    CHECK(lDebug.GetLines()[1].Source == lSomeWorld);
+    CHECK(lDebug.GetBoxes()[0].Source == nullptr);
+    CHECK(lDebug.GetBoxes()[1].Source == lSomeWorld);
+
+    // A polygon carries the tag onto EVERY segment it emits, not just the first.
+    for (size_t lIndex = 2; lIndex < 6; ++lIndex)
+    {
+        CHECK(lDebug.GetLines()[lIndex].Source == lSomeWorld);
+    }
+}
+
 TEST_CASE("DebugDraw: Clear drops the queue (per-frame contract — nothing survives a frame)")
 {
     DebugDraw lDebug;

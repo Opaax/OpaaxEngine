@@ -53,4 +53,9 @@ namespace Opaax
         return InView.Position + Vector2F(lCentred.x / (InViewportPx.x * 0.5f) * lHalfW,
                                           -lCentred.y / (InViewportPx.y * 0.5f) * lHalfH);
     }
+
+    float WorldPerPixel(const CameraView& InView, const float InViewportHeightPx)
+    {
+        return InViewportHeightPx > 0.f ? (InView.OrthoSize * 2.f) / InViewportHeightPx : 1.f;
+    }
 }

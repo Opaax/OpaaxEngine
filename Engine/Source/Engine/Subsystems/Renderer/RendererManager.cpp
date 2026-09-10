@@ -349,12 +349,22 @@ namespace Opaax
         // and adds no RHI/shader/vertex-layout surface. The Debug band sorts above world geometry
         // regardless of submission order, so no manual ordering is needed here.
         //
-        // READ per pass, CLEARED once per frame (Render): two views that both want overlays each
-        // draw them, which is what a second authoring view would expect.
+        // READ per pass, CLEARED once per frame (Render), and FILTERED BY WORLD: a primitive that
+        // named none belongs to the active world. Two views of ONE world both draw them; a view of
+        // another world draws only what was queued for it, or the level's grid would land in the
+        // prefab's coordinates and the prefab's outline in the level (⑦-C P8).
         if (bInDrawOverlays)
         {
+            const World* const lActive = (m_WorldManager != nullptr) ? m_WorldManager->GetActiveWorld() : nullptr;
+            const auto lBelongsHere = [InWorld, lActive](const World* InSource)
+            {
+                return (InSource != nullptr ? InSource : lActive) == InWorld;
+            };
+
             for (const DebugLine& lLine : m_DebugDraw.GetLines())
             {
+                if (!lBelongsHere(lLine.Source)) { continue; }
+
                 const DebugQuad lQuad = ToQuad(lLine);
                 // The LINE's band, not a hardcoded Debug: ③b's grid has to sit BEHIND world geometry,
                 // and everything else still defaults to Debug and draws above it.
@@ -364,6 +374,8 @@ namespace Opaax
             // Boxes are ONE hollow quad each, not four thin ones — same band rule as the lines.
             for (const DebugBox& lBox : m_DebugDraw.GetBoxes())
             {
+                if (!lBelongsHere(lBox.Source)) { continue; }
+
                 lRenderer.DrawQuadOutline(lBox.Center, lBox.Size, lBox.Color, lBox.Thickness,
                                           lBox.RotationRad, lBox.Layer);
             }

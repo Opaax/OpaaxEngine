@@ -59,4 +59,11 @@ namespace Opaax
      * Returns InView.Position for a degenerate viewport.
      */
     OPAAX_API Vector2F ScreenToWorld(const CameraView& InView, const Vector2F& InViewportPx, const Vector2F& InLocalPx);
+
+    /**
+     * World units covered by ONE viewport pixel — square, since width follows the aspect.
+     * OrthoSize is the vertical half-extent, so a pixel is (2 * OrthoSize) / height.
+     * Returns 1 (the pre-camera convention) for a zero height, so no caller divides by zero.
+     */
+    OPAAX_API float WorldPerPixel(const CameraView& InView, float InViewportHeightPx);
 }

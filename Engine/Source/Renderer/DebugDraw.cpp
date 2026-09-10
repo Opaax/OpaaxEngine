@@ -106,14 +106,15 @@ namespace Opaax
     // Draw calls
     // =========================================================================
     void DebugDraw::DrawLine(const Vector2F& InStart, const Vector2F& InEnd, const Vector4F& InColor,
-                             float InThickness, ERenderLayer InLayer, DebugChannel InChannel)
+                             float InThickness, ERenderLayer InLayer, DebugChannel InChannel,
+                             const World* InSource)
     {
         if (!IsChannelEnabled(InChannel))
         {
             return;
         }
 
-        m_Lines.emplace_back(InStart, InEnd, InColor, InThickness, InLayer);
+        m_Lines.emplace_back(InStart, InEnd, InColor, InThickness, InLayer, InSource);
     }
 
     // =========================================================================
@@ -126,26 +127,28 @@ namespace Opaax
     // =========================================================================
     void DebugDraw::DrawBox(const Vector2F& InCenter, const Vector2F& InSize, const Vector4F& InColor,
                             float InThickness, ERenderLayer InLayer, DebugChannel InChannel,
-                            float InRotationRad)
+                            float InRotationRad, const World* InSource)
     {
         if (!IsChannelEnabled(InChannel))
         {
             return;
         }
 
-        m_Boxes.emplace_back(InCenter, InSize, InColor, InThickness, InRotationRad, InLayer);
+        m_Boxes.emplace_back(InCenter, InSize, InColor, InThickness, InRotationRad, InLayer, InSource);
     }
 
     void DebugDraw::DrawBounds(const Bounds2D& InBounds, const Vector4F& InColor,
-                               float InThickness, ERenderLayer InLayer, DebugChannel InChannel)
+                               float InThickness, ERenderLayer InLayer, DebugChannel InChannel,
+                               const World* InSource)
     {
         // Bounds are axis-aligned by definition, so no rotation can reach this one.
-        DrawBox(InBounds.Center, InBounds.Size(), InColor, InThickness, InLayer, InChannel);
+        DrawBox(InBounds.Center, InBounds.Size(), InColor, InThickness, InLayer, InChannel, 0.f, InSource);
     }
 
     void DebugDraw::DrawCircle(const Vector2F& InCenter, const float InRadius, const Vector4F& InColor,
                                const float InThickness, const ERenderLayer InLayer,
-                               const DebugChannel InChannel, const Uint32 InSegments)
+                               const DebugChannel InChannel, const Uint32 InSegments,
+                               const World* InSource)
     {
         if (!IsChannelEnabled(InChannel))
         {
@@ -153,12 +156,13 @@ namespace Opaax
         }
 
         BuildCircleOutline(InCenter, InRadius, InSegments, m_OutlineScratch);
-        EmitClosedPolygon(InColor, InThickness, InLayer);
+        EmitClosedPolygon(InColor, InThickness, InLayer, InSource);
     }
 
     void DebugDraw::DrawCapsule(const Vector2F& InCenter1, const Vector2F& InCenter2, const float InRadius,
                                 const Vector4F& InColor, const float InThickness, const ERenderLayer InLayer,
-                                const DebugChannel InChannel, const Uint32 InSegmentsPerCap)
+                                const DebugChannel InChannel, const Uint32 InSegmentsPerCap,
+                                const World* InSource)
     {
         if (!IsChannelEnabled(InChannel))
         {
@@ -166,11 +170,11 @@ namespace Opaax
         }
 
         BuildCapsuleOutline(InCenter1, InCenter2, InRadius, InSegmentsPerCap, m_OutlineScratch);
-        EmitClosedPolygon(InColor, InThickness, InLayer);
+        EmitClosedPolygon(InColor, InThickness, InLayer, InSource);
     }
 
     void DebugDraw::EmitClosedPolygon(const Vector4F& InColor, const float InThickness,
-                                      const ERenderLayer InLayer)
+                                      const ERenderLayer InLayer, const World* InSource)
     {
         const size_t lCount = m_OutlineScratch.size();
         if (lCount < 2)
@@ -185,7 +189,7 @@ namespace Opaax
             const Vector2F& lFrom = m_OutlineScratch[i];
             const Vector2F& lTo   = m_OutlineScratch[(i + 1) % lCount];
 
-            m_Lines.emplace_back(lFrom, lTo, InColor, InThickness, InLayer);
+            m_Lines.emplace_back(lFrom, lTo, InColor, InThickness, InLayer, InSource);
         }
     }
 

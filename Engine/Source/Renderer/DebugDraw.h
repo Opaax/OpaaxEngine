@@ -9,6 +9,8 @@
 
 namespace Opaax
 {
+    class World;
+
     // =============================================================================
     // Channels — what a central toggle switches off (F4b)
     // =============================================================================
@@ -50,6 +52,9 @@ namespace Opaax
          * grid, it is a cage.
          */
         ERenderLayer Layer = ERenderLayer::Debug;
+
+        /** WHICH WORLD the segment annotates. Null is the ACTIVE one — see the class note. */
+        const World* Source = nullptr;
     };
 
     /**
@@ -72,7 +77,8 @@ namespace Opaax
          */
         float RotationRad = 0.f;
 
-        ERenderLayer Layer = ERenderLayer::Debug;
+        ERenderLayer Layer  = ERenderLayer::Debug;
+        const World* Source = nullptr;
     };
 
     /**
@@ -139,6 +145,12 @@ namespace Opaax
      * and filtering at submit means a silenced channel costs one lookup instead of memory it will
      * never render. A channel nobody has touched is ENABLED — a new producer is visible by
      * default, which is the right way round for debug output.
+     *
+     * EVERY SUBMISSION NAMES ITS WORLD, and null means the ACTIVE one (⑦-C P8 — the rule a render
+     * view already follows, one layer down). The queue is one list per frame and a pass drains only
+     * the primitives of the world it draws; without the tag a second edited world would receive the
+     * level's grid in its own coordinates and hand its outline back. No producer that existed
+     * before had to change: only the active world ticks, so null was always what they meant.
      */
     class OPAAX_API DebugDraw
     {
@@ -153,10 +165,11 @@ namespace Opaax
          * @param InColor RGBA normalised [0,1]
          * @param InThickness line width in world units (1 unit = 1px at the render target's native size)
          * @param InLayer draw band; the default keeps every existing caller above world geometry
+         * @param InSource the world this annotates; null is the active one
          */
         void DrawLine(const Vector2F& InStart, const Vector2F& InEnd, const Vector4F& InColor,
                       float InThickness = 1.f, ERenderLayer InLayer = ERenderLayer::Debug,
-                      DebugChannel InChannel = DebugChannels::Default);
+                      DebugChannel InChannel = DebugChannels::Default, const World* InSource = nullptr);
 
         /**
          * Queue an axis-aligned rectangle outline as ONE hollow quad.
@@ -173,7 +186,8 @@ namespace Opaax
          */
         void DrawBox(const Vector2F& InCenter, const Vector2F& InSize, const Vector4F& InColor,
                      float InThickness = 1.f, ERenderLayer InLayer = ERenderLayer::Debug,
-                     DebugChannel InChannel = DebugChannels::Default, float InRotationRad = 0.f);
+                     DebugChannel InChannel = DebugChannels::Default, float InRotationRad = 0.f,
+                     const World* InSource = nullptr);
 
         /**
          * The same box, taking the shape every caller already has.
@@ -183,7 +197,7 @@ namespace Opaax
          */
         void DrawBounds(const Bounds2D& InBounds, const Vector4F& InColor,
                         float InThickness = 1.f, ERenderLayer InLayer = ERenderLayer::Debug,
-                        DebugChannel InChannel = DebugChannels::Default);
+                        DebugChannel InChannel = DebugChannels::Default, const World* InSource = nullptr);
 
         /**
          * Queue a circle OUTLINE as a closed polygon of segments.
@@ -193,7 +207,8 @@ namespace Opaax
          */
         void DrawCircle(const Vector2F& InCenter, float InRadius, const Vector4F& InColor,
                         float InThickness = 1.f, ERenderLayer InLayer = ERenderLayer::Debug,
-                        DebugChannel InChannel = DebugChannels::Default, Uint32 InSegments = 24);
+                        DebugChannel InChannel = DebugChannels::Default, Uint32 InSegments = 24,
+                        const World* InSource = nullptr);
 
         /**
          * Queue a capsule OUTLINE — two half-turn caps joined by their flanks — as one closed
@@ -204,7 +219,7 @@ namespace Opaax
                          const Vector4F& InColor, float InThickness = 1.f,
                          ERenderLayer InLayer = ERenderLayer::Debug,
                          DebugChannel InChannel = DebugChannels::Default,
-                         Uint32 InSegmentsPerCap = 12);
+                         Uint32 InSegmentsPerCap = 12, const World* InSource = nullptr);
 
         // =============================================================================
         // Channels — the central toggle (F4b)
@@ -236,7 +251,8 @@ namespace Opaax
         // =============================================================================
     private:
         /** Queue m_OutlineScratch as a closed loop of segments. The channel is already checked. */
-        void EmitClosedPolygon(const Vector4F& InColor, float InThickness, ERenderLayer InLayer);
+        void EmitClosedPolygon(const Vector4F& InColor, float InThickness, ERenderLayer InLayer,
+                               const World* InSource);
 
         // =============================================================================
         // Members
