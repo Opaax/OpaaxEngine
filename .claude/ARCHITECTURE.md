@@ -1670,12 +1670,14 @@ each carrying exactly what its inverse needs and nothing else — **four seriali
   handle was grabbed, so the mode is only the *name*, and one entity is a list of one. Four types with
   the same body would be four places to fix a bug. Its label is `ToString(EGizmoMode)`, so the menu
   reads **"Undo Translate"** — the gizmo's own word, the one the toolbar already shows.
-  - *And ONE type for two worlds (P8 V3).* A step resolves its world at REPLAY time — never a stored
-    pointer, the level's is replaced by a PIE cycle — and the prefab panel needed the same step to
-    find its entities in a different world. `EUndoWorld` (`Editor/Undo/UndoWorld.h`: `Active` |
-    `Prefab`) is one field on the step and one resolver, where "their own step types per document"
-    would have been a copy per document (**MP7**). `EntityComponentsEdit` and `EntityDelete` take the
-    same field when the prefab panel's property edits and delete land (V4).
+  - *And ONE type for two worlds (P8 V3/V4).* A step resolves its world at REPLAY time — never a
+    stored pointer, the level's is replaced by a PIE cycle — and the prefab panel needed the same
+    step to find its entities in a different world. `EUndoWorld` (`Editor/Undo/UndoWorld.h`:
+    `Active` | `Prefab`) is one field on `EntityTransform`, `EntityComponentsEdit` and `EntityDelete`,
+    with two resolvers — `UndoWorld` and `UndoSelection`, since a restore re-selects and a destroy
+    clears — where "their own step types per document" would have been a copy per document
+    (**MP7**). The four level-only steps name `Active` literally. `EntityComponentsEdit::Begin` also
+    captures from the ENTITY's world now; it read the active one, a latent cross-world bug.
 - **Create and delete are the same two bodies run in opposite directions** (`RestoreEntities` /
   `DestroyEntities`), and restore re-selects while destroy clears — which is what makes the
   selection need no payload of its own, unlike the record this replaced.
@@ -3761,7 +3763,7 @@ shape of a save that loses work.
 
 ---
 
-## PF — Prefabs (⑦-C, P1–P6 + P8 V1 landed 2026-09-09, V2–V3 2026-09-10; P5b / P7 / P8 V4 NOT built)
+## PF — Prefabs (⑦-C, P1–P6 + P8 V1 landed 2026-09-09, P8 V2–V4 2026-09-10; P5b / P7 NOT built)
 
 **PF1 — A prefab IS a map's entities, so the two share ONE writer.** `PrefabData` is nothing but
 `TDynArray<EntityData>`; the entity-array walk was **moved out of `MapJson` into `EntityJson`** so a
@@ -3843,18 +3845,21 @@ growth point, whose stated trigger was exactly this.
   draws only what belongs to its world. No engine producer changed: only the active world ticks, so
   null was always what they meant. This is what lets the prefab preview show its own outline and
   icons without the level's grid landing in its coordinates.
-- **The prefab panel OWNS its camera, selection and gestures** (P8 V2) rather than generalising the
-  context's. The level's live on `EditorContext` because they must outlive a PIE cycle and be reached
-  by editor-wide commands; this world is never active and no command addresses it. `F` is therefore
-  MEASURED in the panel (a focused window's `ImGui::Shortcut` outranks the global route), where
-  Ctrl+S is DECLARED on `PanelDesc` — two idioms, split by whether a command can reach the subject.
-  `Delete` is claimed and swallowed until V4 gives it undo; letting it through deleted in the LEVEL.
+- **The VIEW is the panel's, the rest is the DOCUMENT's** (P8 V2→V4). The camera and the gestures
+  are panel members; the world, the **selection** and the **history** live on `EditorPrefabDocument`,
+  because an undo step replays against a selection (restore re-selects, destroy clears) and a step
+  can reach a document, never a panel. None of it is the context's: the level's must outlive a PIE
+  cycle and be reached by editor-wide commands, and entt reuses handles across worlds. `F` is
+  therefore MEASURED in the panel (a focused window's `ImGui::Shortcut` outranks the global route),
+  where Ctrl+S/Z/Y and Delete are DECLARED on `PanelDesc` — two idioms, split by whether a command
+  can reach the subject (**PF10**).
 - `IsDirty` is gated on the world's revision, the level document's rule — a per-frame caller was a
   full capture + serialize per frame (found by V2's harness, the first smoke with the panel open).
 
-**PF10 — A panel DECLARES what Ctrl+Z runs** (`PanelDesc::UndoCommand` / `RedoCommand`, invalid = the
-level's stack). Ctrl+S's rule one chord over ([[L86]]): the target follows the focused panel, and the
-panel says so at registration rather than a ladder in `EditorService` remembering it.
+**PF10 — A panel DECLARES what Ctrl+Z and Delete run** (`PanelDesc::UndoCommand` / `RedoCommand` /
+`DeleteCommand`, invalid = the level's). Ctrl+S's rule, three keys over ([[L86]]): the target follows
+the focused panel, and the panel says so at registration rather than a ladder in `EditorService`
+remembering it — the four lookups are ONE helper there (P8 V4).
 - **History:** P6 shipped this as a bool, `bGlobalUndoApplies`, that only SWALLOWED the chord —
   Ctrl+Z with the prefab panel focused was undoing the **level** behind it. Its own comment said a
   panel with a history of its own would name commands instead; **P8 V3 did**, and the swallow branch
@@ -3862,10 +3867,11 @@ panel says so at registration rather than a ladder in `EditorService` rememberin
   owns its data, its world, and its history* — cleared with the entities on Open and Close, since a
   step names guids that no longer exist afterwards. `UndoPrefab`/`RedoPrefab` step it, with no PIE
   gate: the prefab world is Edit whatever the level is doing.
-- **Two idioms for one key, split by reach:** Ctrl+S / Ctrl+Z are DECLARED because a command can
-  reach their subject (a document on the context); `F` and `Delete` are MEASURED in the panel
-  (`ImGui::Shortcut`, a focused window outranks the global route) because their subject is the
-  panel's own camera or, for now, nothing.
+- **Two idioms, split by reach:** Ctrl+S / Ctrl+Z / Ctrl+Y / Delete are DECLARED because a command
+  can reach their subject (a document on the context — its world, history, selection); `F` is
+  MEASURED in the panel (`ImGui::Shortcut`, a focused window outranks the global route) because its
+  subject is the panel's own camera. *Delete was measured-and-swallowed in V2, while the selection
+  was the panel's; it became declarable the moment the selection moved to the document (V4).*
 - **`Shortcut()` is an EDGE query.** Sampling one chord twice in a frame consumes the edge and the
   second read falls through — which is how a gate on Ctrl+Z made it fire Redo.
 - **Not moved:** the Edit menu's Undo/Redo entries and labels still read the level's stack.
@@ -3900,11 +3906,11 @@ enforces no policy: no PIE guard, no undo, no selection. Those belong to the sur
   that carries the PIE guard, the prefab panel calls `TransformEntities` on its world.
 
 **Growth points, named and not built:** nesting + variants (P7 — a variant is **PF3**'s instance
-record promoted to a file, `{ base, overrides }`) · the hard-ref acquire (**PF11**) · the prefab
-panel's property edits and delete on its own stack (P8 V4 — `EUndoWorld` on `EntityComponentsEdit`
-and `EntityDelete`, the Inspector's edit bracket in the panel) · the snap grid in the prefab preview
-(the V2b extraction once more, ~70 lines out of `EnqueueGrid`) · the Edit menu's Undo label
-following the focused panel.
+record promoted to a file, `{ base, overrides }`) · the hard-ref acquire (**PF11**) · the snap grid
+in the prefab preview (the V2b extraction once more, ~70 lines out of `EnqueueGrid`) · the Edit
+menu's Undo label following the focused panel · add/remove-component in the prefab panel
+(`ComponentAdd`/`ComponentRemove` take the `EUndoWorld` field the day the buttons exist) · a
+per-surface W/E/R mode (~1h; the shared mode is Unity's and Godot's, and the user confirmed it).
 
 ---
 

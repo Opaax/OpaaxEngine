@@ -2558,3 +2558,31 @@ have shipped, and the symptom would have surfaced days later as "revert is broke
   tree** — for them the answer is usually *none*, and that is when a throwaway harness ([[L81]]) is
   not optional. Mine printed `moved=true x -70 -> -30 | reverted=2 x 4242 -> -70`: one number for the
   thing I built, one for the thing I nearly broke.
+
+## L91 — A cache keyed on a revision must be checked against every WRITER, and the one that does not bump it is the one a comment already names (2026-09-10)
+
+**What happened (⑦-C P8 V2).** V2's harness was the first smoke with the prefab panel open, and
+it showed `IsDirty` capturing and serializing the whole world every frame — 6669 log lines in a
+13 s run. I gated it on `World::GetRevision()`, the level document's own idiom, and shipped; the
+eye gate passed. Reading the Inspector's edit bracket while sizing V3, I found the writer that does
+NOT move the revision: a drawer writes a component through a raw reference, and the Inspector has
+always compensated with `MarkChanged()` while any widget is active. The prefab panel never had that
+line, because until V2 it never needed one — so the optimisation turned "dirty after a property
+edit" from true to **false**, silently. Fixed in `f322f5a`, and a V3 harness later exercised the
+gate under a real writer (the dirty transition flipped with every undo/redo).
+
+**Why it survived.** The gate was correct in the configuration it was copied FROM. The Inspector's
+own comment names the exception in capitals — *"THE ONE MUTATION THE WORLD CANNOT SEE"* — and I
+copied the gate without the compensating write beside it. The eye gate passed because nobody edited
+a property in the panel that hour. [[L85]]'s shape again: an instrument correct in one
+configuration, mute in the second.
+
+**Rules for next time.**
+- **Before keying a cache on a revision / generation / version, list the WRITERS of the thing being
+  derived and check that each one bumps the key.** Here the list was three — `World` mutations
+  (bump), the gizmo through `EntityOps` (bump), drawers through raw references (**do not**) — and
+  the third is the one that matters, because it is the one the type cannot see.
+- **When copying a mechanism from a sibling, copy its COMPENSATIONS too.** Grep the sibling for the
+  key's writers (`MarkChanged` here); each one is a line the copy needs or a reason it does not.
+- **A gate on a derived value is a claim that every writer is visible.** Say which writers were
+  audited in the commit; "the level document does it this way" is not an audit.
