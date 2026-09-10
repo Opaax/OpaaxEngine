@@ -135,14 +135,6 @@ namespace Opaax::Editor
     {
         if (!IsOpen() || m_World == nullptr) { return false; }
 
-        if (IsDirty(InContext))
-        {
-            OPAAX_LOG(LogEditorPrefabDocument, Warn,
-                      "Save As Variant refused — '{}' has unsaved changes, and a variant is of the file. Save first.",
-                      m_AbsPath.CStr());
-            return false;
-        }
-
         // Compared ASSET-relative, the form the record stores (**MP8**): the browser's absolute path
         // and the dialog's may spell one file two ways.
         const OpaaxString lBase    = InContext.Paths.AbsoluteToAsset(m_AbsPath);
@@ -164,9 +156,15 @@ namespace Opaax::Editor
             return false;
         }
 
-        // The whole of a variant: no entities, one record. Overrides come from editing it.
-        PrefabData lData;
-        lData.Instances.emplace_back(PrefabInstanceRecord{ lBase, Guid::New(), {} });
+        // THE EDITS ARE THE VARIANT: whatever differs from the file on disk becomes the record's
+        // overrides, and the base is left as it is — the moment the author moved a barrel is the
+        // moment they want this. Unsaved edits are not lost: they open again as the variant.
+        const ComponentRegistry& lRegistry = InContext.Engine.GetRegistries().Components();
+        ResourcePrefabResolver   lResolver(InContext.Paths, InContext.Resources, lRegistry);
+
+        const PrefabData lData = PrefabFactory::BuildVariant(
+            MapSerializer::CaptureWorld(*m_World, lRegistry), lBase, lResolver, lRegistry);
+        if (lData.Instances.empty()) { return false; }   // the base did not resolve; logged
 
         // Save's bracket, so a variant written OVER an existing prefab reaches its placements.
         ResourceOps::AboutToSave<PrefabResource>(InContext, InAbsPath);
@@ -175,7 +173,14 @@ namespace Opaax::Editor
 
         ResourceOps::SavedToDisk<PrefabResource>(InContext, InAbsPath);
 
-        OPAAX_LOG(LogEditorPrefabDocument, Info, "Wrote '{}' as a variant of '{}'", lVariant.CStr(), lBase.CStr());
+        Uint64 lOverrides = 0;
+        for (const PrefabInstanceRecord& lRecord : lData.Instances)
+        {
+            if (lRecord.Prefab == lBase) { lOverrides = lRecord.Overrides.size(); break; }
+        }
+
+        OPAAX_LOG(LogEditorPrefabDocument, Info, "Wrote '{}' as a variant of '{}' — {} override(s), {} own entity(ies)",
+                  lVariant.CStr(), lBase.CStr(), lOverrides, lData.EntityCount());
 
         return Open(InContext, InAbsPath);
     }

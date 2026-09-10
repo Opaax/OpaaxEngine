@@ -179,18 +179,14 @@ namespace Opaax::Editor
             m_Context.PrefabDocument.Save(m_Context);
         }
 
-        // A variant is of the FILE (P7), so the button waits for the save rather than dropping edits.
+        // Live whatever the document's state (P7): unsaved edits become the variant's overrides,
+        // and the base file is left alone — the moment the author moved a barrel is the moment.
         ImGui::SameLine();
-        ImGui::BeginDisabled(lDirty);
         if (ImGui::Button("Save As Variant..."))
         {
             m_Context.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_SAVE_PREFAB_AS_VARIANT, m_Context);
         }
-        ImGui::EndDisabled();
-        if (lDirty && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-        {
-            ImGui::SetTooltip("Save first — a variant is made of the file on disk.");
-        }
+        ImGui::SetItemTooltip("A new prefab of this one: the file, plus your edits as overrides.");
 
         ImGui::SameLine();
         if (ImGui::Button("Close"))

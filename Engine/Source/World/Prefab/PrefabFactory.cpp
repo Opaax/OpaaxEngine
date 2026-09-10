@@ -168,4 +168,71 @@ namespace Opaax
 
         return lFlat;
     }
+
+    PrefabData PrefabFactory::BuildVariant(const MapData& InState, const OpaaxString& InBaseAssetPath,
+                                           const IPrefabResolver& InResolver, const ComponentRegistry& InRegistry)
+    {
+        const PrefabData* const lBase = InResolver.Resolve(InBaseAssetPath);
+        if (lBase == nullptr)
+        {
+            OPAAX_LOG(LogPrefabFactory, Error, "Cannot build a variant of '{}' — it did not resolve",
+                      InBaseAssetPath.CStr());
+            return PrefabData{};
+        }
+
+        const OpaaxStringID lMarkerName = MarkerName(InRegistry);
+        if (!lMarkerName.IsValid())
+        {
+            OPAAX_LOG(LogPrefabFactory, Error,
+                      "PrefabInstanceComponent is not registered — a variant of '{}' could not name its base",
+                      InBaseAssetPath.CStr());
+            return PrefabData{};
+        }
+
+        const Guid lInstanceId = Guid::New();
+        MapData    lAsInstance = InState;
+
+        // Every entity the base has is re-marked as THIS instance of it — its own marker replaced,
+        // since a nested entity of the base names the nested prefab, and the base's flatten already
+        // carries that nesting. Fold then diffs each against its template and records what is gone.
+        for (EntityData& lEntity : lAsInstance.Entities)
+        {
+            bool lOfBase = false;
+            for (const EntityData& lTemplate : lBase->Entities)
+            {
+                if (lTemplate.Id == lEntity.Id) { lOfBase = true; break; }
+            }
+            if (!lOfBase) { continue; }
+
+            StripMarker(lEntity, lMarkerName);
+
+            PrefabInstanceComponent lMarker;
+            lMarker.Prefab.Path  = InBaseAssetPath;
+            lMarker.InstanceId   = lInstanceId;
+            lMarker.TemplateGuid = lEntity.Id;
+
+            lEntity.Components.emplace_back(lMarkerName, nlohmann::json(lMarker));
+        }
+
+        PrefabFold::Fold(lAsInstance, InResolver, InRegistry);
+
+        // An empty base marks nothing, so Fold produced no record for it — added by hand: a variant
+        // that names no base is not a variant.
+        bool lNamed = false;
+        for (const PrefabInstanceRecord& lRecord : lAsInstance.Instances)
+        {
+            if (lRecord.InstanceId == lInstanceId) { lNamed = true; break; }
+        }
+        if (!lNamed)
+        {
+            lAsInstance.Instances.emplace_back(PrefabInstanceRecord{ InBaseAssetPath, lInstanceId, {} });
+        }
+
+        PrefabData lVariant = BuildPrefab(lAsInstance, InRegistry);
+
+        OPAAX_LOG(LogPrefabFactory, Trace, "Built a variant of '{}': {} own entity(ies), {} placement(s)",
+                  InBaseAssetPath.CStr(), lVariant.EntityCount(), lVariant.InstanceCount());
+
+        return lVariant;
+    }
 }

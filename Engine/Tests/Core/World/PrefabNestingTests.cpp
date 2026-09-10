@@ -342,6 +342,193 @@ TEST_CASE("Flatten: a VARIANT is its base with the overrides applied, on derived
     CHECK(lMap.Entities[0].Id != lMap.Entities[2].Id);
 }
 
+// =============================================================================
+// BuildVariant — the edits ARE the variant
+// =============================================================================
+
+namespace
+{
+    const EntityData* FindById(const PrefabData& InPrefab, const Guid& InId)
+    {
+        for (const EntityData& lEntity : InPrefab.Entities)
+        {
+            if (lEntity.Id == InId) { return &lEntity; }
+        }
+        return nullptr;
+    }
+}
+
+TEST_CASE("BuildVariant: an unchanged world is one record with no override and no entity of its own")
+{
+    ComponentRegistry lRegistry;
+    FillRegistry(lRegistry);
+
+    PrefabData lBase;
+    lBase.Entities.emplace_back(Piece("A", 10.f));
+    lBase.Entities.emplace_back(Piece("B", 20.f));
+
+    FlatteningStub lResolver(lRegistry);
+    lResolver.Add("Prefabs/Base.opaaxprefab", lBase);
+
+    // What the document holds after Open: the base's own entities, on the base's own guids.
+    MapData lState;
+    lState.Entities = lBase.Entities;
+
+    const PrefabData lVariant = PrefabFactory::BuildVariant(lState, OpaaxString("Prefabs/Base.opaaxprefab"),
+                                                            lResolver, lRegistry);
+
+    CHECK(lVariant.EntityCount() == 0);
+    REQUIRE(lVariant.InstanceCount() == 1);
+    CHECK(lVariant.Instances[0].Prefab == OpaaxString("Prefabs/Base.opaaxprefab"));
+    CHECK(lVariant.Instances[0].InstanceId.IsValid());
+    CHECK(lVariant.Instances[0].Overrides.empty());
+
+    // A base that does not resolve is not a variant of anything.
+    CHECK(PrefabFactory::BuildVariant(lState, OpaaxString("Prefabs/Missing.opaaxprefab"), lResolver, lRegistry).IsEmpty());
+}
+
+TEST_CASE("BuildVariant: a moved, a deleted and an added entity become a patch, a null and the variant's own — and flatten back")
+{
+    ComponentRegistry lRegistry;
+    FillRegistry(lRegistry);
+
+    const Guid lA = Guid::New();
+    const Guid lB = Guid::New();
+    const Guid lC = Guid::New();
+
+    PrefabData lBase;
+    lBase.Entities.emplace_back(Piece("A", 10.f, lA));
+    lBase.Entities.emplace_back(Piece("B", 20.f, lB));
+
+    FlatteningStub lResolver(lRegistry);
+    lResolver.Add("Prefabs/Base.opaaxprefab", lBase);
+
+    // The author moved A, deleted B, and added C.
+    MapData lState;
+    lState.Entities.emplace_back(Piece("A", 42.f, lA));
+    lState.Entities.emplace_back(Piece("C", 7.f, lC));
+
+    const PrefabData lVariant = PrefabFactory::BuildVariant(lState, OpaaxString("Prefabs/Base.opaaxprefab"),
+                                                            lResolver, lRegistry);
+
+    REQUIRE(lVariant.EntityCount() == 1);
+    CHECK(lVariant.Entities[0].Id == lC);                 // its own, on its own guid
+    CHECK_FALSE(HasMarker(lVariant.Entities[0]));
+
+    REQUIRE(lVariant.InstanceCount() == 1);
+    const PrefabInstanceRecord& lRecord = lVariant.Instances[0];
+    REQUIRE(lRecord.Overrides.size() == 2);
+
+    bool lSawMove = false, lSawRemoval = false;
+    for (const PrefabOverrideEntry& lEntry : lRecord.Overrides)
+    {
+        if (lEntry.TemplateGuid == lA)
+        {
+            lSawMove = true;
+            REQUIRE(lEntry.Patch.is_object());
+            CHECK(lEntry.Patch["components"]["Transform"]["Position"]["x"].get<double>() == doctest::Approx(42.0));
+        }
+        if (lEntry.TemplateGuid == lB) { lSawRemoval = true; CHECK(lEntry.Patch.is_null()); }
+    }
+    CHECK(lSawMove);
+    CHECK(lSawRemoval);
+
+    // THE ROUND TRIP: the variant flattens to what the author was looking at.
+    lResolver.Add("Prefabs/Variant.opaaxprefab", lVariant);
+    const PrefabData* lFlat = lResolver.Resolve(OpaaxString("Prefabs/Variant.opaaxprefab"));
+    REQUIRE(lFlat != nullptr);
+    REQUIRE(lFlat->EntityCount() == 2);
+
+    const EntityData* lFlatA = FindById(*lFlat, Guid::Derive(lRecord.InstanceId, lA));
+    REQUIRE(lFlatA != nullptr);
+    CHECK(XOf(*lFlatA) == doctest::Approx(42.f));
+    CHECK(FindById(*lFlat, Guid::Derive(lRecord.InstanceId, lB)) == nullptr);
+    REQUIRE(FindById(*lFlat, lC) != nullptr);
+    CHECK(XOf(*FindById(*lFlat, lC)) == doctest::Approx(7.f));
+}
+
+TEST_CASE("BuildVariant: an edit to the base's NESTED entity keys by the flattened guid, and a fresh drop stays the variant's own placement")
+{
+    ComponentRegistry lRegistry;
+    FillRegistry(lRegistry);
+
+    const Guid lInnerTmpl = Guid::New();
+    const Guid lRecordId  = Guid::New();
+
+    PrefabData lInner;
+    lInner.Entities.emplace_back(Piece("Inner", 1.f, lInnerTmpl));
+
+    PrefabData lOuter;
+    lOuter.Entities.emplace_back(Piece("Mount", 0.f));
+    lOuter.Instances.emplace_back(Placement("Prefabs/Inner.opaaxprefab", lRecordId));
+
+    FlatteningStub lResolver(lRegistry);
+    lResolver.Add("Prefabs/Inner.opaaxprefab", lInner);
+    lResolver.Add("Prefabs/Outer.opaaxprefab", lOuter);
+
+    // The document's world after Open: the outer's own entity, plus its placement expanded ONE
+    // level — marked as Inner's instance — exactly as EditorPrefabDocument::Open builds it.
+    MapData lState;
+    lState.Id       = MapId("Prefab");
+    lState.Entities = lOuter.Entities;
+    lState.Instances = lOuter.Instances;
+    REQUIRE(PrefabFold::Expand(lState, lResolver, lRegistry) == 1);
+    REQUIRE(lState.EntityCount() == 2);
+
+    const Guid lNestedGuid = Guid::Derive(lRecordId, lInnerTmpl);
+    for (EntityData& lEntity : lState.Entities)
+    {
+        lEntity.OwnerMap = MapId();
+        if (lEntity.Id == lNestedGuid)
+        {
+            for (ComponentData& lComponent : lEntity.Components)
+            {
+                if (lComponent.TypeName == OpaaxStringID("Transform")) { lComponent.Payload["Position"]["x"] = 99.0; }
+            }
+        }
+    }
+
+    // And a fresh drop of Inner (a second placement, its own instance id) the author made after.
+    const Guid lDropId = Guid::New();
+    MapData lDrop = PrefabFactory::BuildInstance(*lResolver.Resolve(OpaaxString("Prefabs/Inner.opaaxprefab")),
+                                                 OpaaxString("Prefabs/Inner.opaaxprefab"), lDropId, MapId("Prefab"), lRegistry);
+    for (EntityData& lEntity : lDrop.Entities) { lEntity.OwnerMap = MapId(); lState.Entities.emplace_back(Move(lEntity)); }
+    REQUIRE(lState.EntityCount() == 3);
+
+    const PrefabData lVariant = PrefabFactory::BuildVariant(lState, OpaaxString("Prefabs/Outer.opaaxprefab"),
+                                                            lResolver, lRegistry);
+
+    CHECK(lVariant.EntityCount() == 0);          // nothing loose: the drop folded to a record
+    REQUIRE(lVariant.InstanceCount() == 2);
+
+    const PrefabInstanceRecord* lOfOuter = nullptr;
+    const PrefabInstanceRecord* lOfDrop  = nullptr;
+    for (const PrefabInstanceRecord& lRecord : lVariant.Instances)
+    {
+        if (lRecord.Prefab == OpaaxString("Prefabs/Outer.opaaxprefab")) { lOfOuter = &lRecord; }
+        if (lRecord.InstanceId == lDropId)                               { lOfDrop  = &lRecord; }
+    }
+    REQUIRE(lOfOuter != nullptr);
+    REQUIRE(lOfDrop  != nullptr);
+    CHECK(lOfDrop->Prefab == OpaaxString("Prefabs/Inner.opaaxprefab"));
+    CHECK(lOfDrop->Overrides.empty());
+
+    // The nested edit keys by the guid the base FLATTENS to — not Inner's template guid.
+    REQUIRE(lOfOuter->Overrides.size() == 1);
+    CHECK(lOfOuter->Overrides[0].TemplateGuid == lNestedGuid);
+
+    // Round trip: the variant's flatten carries the nested edit and the extra placement.
+    lResolver.Add("Prefabs/Variant.opaaxprefab", lVariant);
+    const PrefabData* lFlat = lResolver.Resolve(OpaaxString("Prefabs/Variant.opaaxprefab"));
+    REQUIRE(lFlat != nullptr);
+    REQUIRE(lFlat->EntityCount() == 3);
+
+    const EntityData* lNested = FindById(*lFlat, Guid::Derive(lOfOuter->InstanceId, lNestedGuid));
+    REQUIRE(lNested != nullptr);
+    CHECK(XOf(*lNested) == doctest::Approx(99.f));
+    CHECK(FindById(*lFlat, Guid::Derive(lDropId, lInnerTmpl)) != nullptr);
+}
+
 TEST_CASE("Fold/Expand at the level: an override on a NESTED entity keys by its in-prefab guid and survives the round trip")
 {
     ComponentRegistry lRegistry;

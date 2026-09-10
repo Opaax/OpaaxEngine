@@ -72,12 +72,13 @@ namespace Opaax::Editor
         bool Save(EditorContext& InContext);
 
         /**
-         * Write InAbsPath as a VARIANT of the open prefab — no entities, one record placing this
-         * one — and open it (P7). Unity's Prefab Variant in this engine's own vocabulary: the
-         * base's changes keep reaching it, and its own edits fold into the record's overrides.
+         * Write InAbsPath as a VARIANT of the open prefab — one record placing the FILE, with
+         * whatever the world differs by as its overrides — and open it (P7). Unity's Prefab
+         * Variant in this engine's own vocabulary: the base's changes keep reaching it, its own
+         * edits fold into the record. THE EDITS ARE THE VARIANT: move a barrel, ask for a variant,
+         * and the base file stays as it was while the move opens again as the variant's override.
          *
-         * Refused while dirty (a variant is of the FILE, and opening it would drop the unsaved
-         * edits), onto the open file itself, or outside the asset trees (**MP8**).
+         * Refused onto the open file itself, or outside the asset trees (**MP8**).
          */
         bool SaveAsVariant(EditorContext& InContext, const OpaaxString& InAbsPath);
 

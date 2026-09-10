@@ -105,5 +105,25 @@ namespace Opaax
          */
         static PrefabData Flatten(const PrefabData& InRaw, const OpaaxString& InPrefabAssetPath,
                                   const IPrefabResolver& InResolver, const ComponentRegistry& InRegistry);
+
+        /**
+         * InState as a VARIANT of the prefab at InBaseAssetPath (⑦-C P7): the base's entities that
+         * InState still has become ONE record's overrides — a merge patch per entity that differs,
+         * null per one that is gone — and everything else stays the variant's own (loose entities,
+         * and nested placements folded to records). The base file is not touched.
+         *
+         * THE EDIT IS THE VARIANT. The author opens a prefab, moves a barrel and asks for a variant
+         * at that moment; this is what makes that moment the right one rather than a refusal. The
+         * base's entities are matched BY GUID: a world opened from the base carries its template
+         * guids, and a nested entity of the base carries `Derive(record, template)`, which is also
+         * what the base flattens to — so both fold into the same record. Unchanged, the record
+         * carries no override, and the variant is exactly "the base".
+         *
+         * @param InState Captured entities, expanded (a nested placement as marked entities).
+         * @return The variant, ready to write. EMPTY, with an Error, when the base cannot be
+         *   resolved — a variant of nothing is not a file worth writing.
+         */
+        static PrefabData BuildVariant(const MapData& InState, const OpaaxString& InBaseAssetPath,
+                                       const IPrefabResolver& InResolver, const ComponentRegistry& InRegistry);
     };
 }
