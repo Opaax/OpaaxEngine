@@ -1501,8 +1501,14 @@ so it looked right there and only there — and compounded the cumulative factor
   branch before treating it as uniform.
 
 **GIZ5 — The matrix is STATE, re-seated only while idle.** ImGuizmo captures its start pose when a
-drag begins and then drives the matrix it was handed, so `EditorGizmo::ReseatAt` runs on every frame
+drag begins and then drives the matrix it was handed, so `GizmoDrag::ReseatAt` runs on every frame
 `IsUsing()` is false and never during a drag — re-seating mid-drag would fight that captured state.
+- **THE DRAG IS PER SURFACE; THE SETTINGS ARE THE EDITOR'S** (⑦-C P8 V3, 2026-09-10). `EditorGizmo`
+  keeps mode, pivot, space and snap — set by W/E/R and the toolbar, read by every surface — and the
+  matrix/delta/frame moved out to `GizmoDrag`, owned by each panel's `GizmoGesture`
+  (`Editor/Viewport/ViewportGizmo`). Two panels reseating ONE matrix would have fought a live drag;
+  every ImGuizmo call sits inside `PushID(this)`, which is what makes `IsUsing`/`IsOver` answer for
+  one gizmo when two are on screen (`ImGuizmo.cpp:1093` — usage is keyed by the pushed id).
 `ReseatAt` moves **both** `m_Matrix` and `m_PrevMatrix`, or the first frame of the next drag
 differences against a stale pose and jumps. *(③b: it takes a ROTATION too, and remembers it — see
 **GIZ9**. Scale is always seeded to unit: the matrix measures a DRAG, not the entity, and seeding it
@@ -1664,6 +1670,12 @@ each carrying exactly what its inverse needs and nothing else — **four seriali
   handle was grabbed, so the mode is only the *name*, and one entity is a list of one. Four types with
   the same body would be four places to fix a bug. Its label is `ToString(EGizmoMode)`, so the menu
   reads **"Undo Translate"** — the gizmo's own word, the one the toolbar already shows.
+  - *And ONE type for two worlds (P8 V3).* A step resolves its world at REPLAY time — never a stored
+    pointer, the level's is replaced by a PIE cycle — and the prefab panel needed the same step to
+    find its entities in a different world. `EUndoWorld` (`Editor/Undo/UndoWorld.h`: `Active` |
+    `Prefab`) is one field on the step and one resolver, where "their own step types per document"
+    would have been a copy per document (**MP7**). `EntityComponentsEdit` and `EntityDelete` take the
+    same field when the prefab panel's property edits and delete land (V4).
 - **Create and delete are the same two bodies run in opposite directions** (`RestoreEntities` /
   `DestroyEntities`), and restore re-selects while destroy clears — which is what makes the
   selection need no payload of its own, unlike the record this replaced.
@@ -3749,7 +3761,7 @@ shape of a save that loses work.
 
 ---
 
-## PF — Prefabs (⑦-C, P1–P6 + P8 V1 landed 2026-09-09, V2 2026-09-10; P5b / P7 / P8 V3–V4 NOT built)
+## PF — Prefabs (⑦-C, P1–P6 + P8 V1 landed 2026-09-09, V2–V3 2026-09-10; P5b / P7 / P8 V4 NOT built)
 
 **PF1 — A prefab IS a map's entities, so the two share ONE writer.** `PrefabData` is nothing but
 `TDynArray<EntityData>`; the entity-array walk was **moved out of `MapJson` into `EntityJson`** so a
@@ -3840,11 +3852,23 @@ growth point, whose stated trigger was exactly this.
 - `IsDirty` is gated on the world's revision, the level document's rule — a per-frame caller was a
   full capture + serialize per frame (found by V2's harness, the first smoke with the panel open).
 
-**PF10 — A panel says whether the global undo applies to it** (`PanelDesc::bGlobalUndoApplies`).
-Ctrl+Z with a document panel focused was undoing the **level** behind it. *To be retired by P8 V4,
-which gives the prefab panel a stack of its own rather than a branch that does nothing.*
+**PF10 — A panel DECLARES what Ctrl+Z runs** (`PanelDesc::UndoCommand` / `RedoCommand`, invalid = the
+level's stack). Ctrl+S's rule one chord over ([[L86]]): the target follows the focused panel, and the
+panel says so at registration rather than a ladder in `EditorService` remembering it.
+- **History:** P6 shipped this as a bool, `bGlobalUndoApplies`, that only SWALLOWED the chord —
+  Ctrl+Z with the prefab panel focused was undoing the **level** behind it. Its own comment said a
+  panel with a history of its own would name commands instead; **P8 V3 did**, and the swallow branch
+  is gone. `EditorPrefabDocument` owns an `EditorUndo` beside its world and baseline — *a document
+  owns its data, its world, and its history* — cleared with the entities on Open and Close, since a
+  step names guids that no longer exist afterwards. `UndoPrefab`/`RedoPrefab` step it, with no PIE
+  gate: the prefab world is Edit whatever the level is doing.
+- **Two idioms for one key, split by reach:** Ctrl+S / Ctrl+Z are DECLARED because a command can
+  reach their subject (a document on the context); `F` and `Delete` are MEASURED in the panel
+  (`ImGui::Shortcut`, a focused window outranks the global route) because their subject is the
+  panel's own camera or, for now, nothing.
 - **`Shortcut()` is an EDGE query.** Sampling one chord twice in a frame consumes the edge and the
   second read falls through — which is how a gate on Ctrl+Z made it fire Redo.
+- **Not moved:** the Edit menu's Undo/Redo entries and labels still read the level's stack.
 
 **PF11 — A reference says WHEN it loads, and the COMPONENT AUTHOR decides** (their call, Unreal's
 `TObjectPtr` / `TWeakObjectPtr` semantics). `TResourcePath<T, EResourceLoad>` with a defaulted second
@@ -3870,12 +3894,17 @@ enforces no policy: no PIE guard, no undo, no selection. Those belong to the sur
   `ViewportOverlays` draws the outline and the icon with the ONE size the hit test uses (**SEL4**).
   Both panels own instances. Copying the ViewportPanel's code would have been ~250 lines for V2 and
   ~400 once the gizmo followed — the drift **MP7** names, on the hardest UI code in the editor.
+- **And the GIZMO** (P8 V3): `GizmoGesture` measures, banks into its own `GizmoDrag` (**GIZ5**), hands
+  the delta back as a `TransformDelta`, and closes the drag's `EntityTransform` onto the stack the
+  caller names. The caller applies the delta through ITS route — the level dispatches the command
+  that carries the PIE guard, the prefab panel calls `TransformEntities` on its world.
 
 **Growth points, named and not built:** nesting + variants (P7 — a variant is **PF3**'s instance
 record promoted to a file, `{ base, overrides }`) · the hard-ref acquire (**PF11**) · the prefab
-panel's gizmo and undo stack (P8 V3–V4; camera and picking landed in V2). **V3 must split
-`EditorGizmo`** — it bundles editor-wide SETTINGS (mode/pivot/space/snap, set by W/E/R) with per-drag
-STATE (the matrix, the delta), and two panels reseating one matrix would fight a live drag (**GIZ5**).
+panel's property edits and delete on its own stack (P8 V4 — `EUndoWorld` on `EntityComponentsEdit`
+and `EntityDelete`, the Inspector's edit bracket in the panel) · the snap grid in the prefab preview
+(the V2b extraction once more, ~70 lines out of `EnqueueGrid`) · the Edit menu's Undo label
+following the focused panel.
 
 ---
 
