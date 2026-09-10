@@ -2561,6 +2561,10 @@ the design to a placeholder's shape, and amend `Docs/Architectures/Editor.md` in
   reaches, whereas binding to a *subsystem* would hand the registrar an owner from a different tier.
   A type declares its formats in-class with `OPAAX_RESOURCE_FORMAT` (**I15**'s idiom); the facet is
   OPTIONAL because `BinaryResource` is format-agnostic and would have to invent an extension.
+  *Since ⑦-C P5b an entry also carries ONE erased call — `Acquire`, a pointer to `AcquireHold<T>`
+  baked at `Register<T>()` — because a hard reference is read from json as a path and a type id
+  and something has to turn the id back into a typed `Load` (**PF11**). The registry stays a table;
+  it just has one thing to call now.*
 - **A duplicate extension is REFUSED with an Error naming both types, and it claims none of its others.**
   Two loaders for one extension make "what opens this file?" depend on registration order. Overriding an
   engine-claimed extension is a deliberate future `Override<T>()`, never a silent last-wins.
@@ -3763,7 +3767,7 @@ shape of a save that loses work.
 
 ---
 
-## PF — Prefabs (⑦-C, P1–P6 + P8 V1 landed 2026-09-09, P8 V2–V4 2026-09-10; P5b / P7 NOT built)
+## PF — Prefabs (⑦-C, P1–P6 + P8 V1 landed 2026-09-09, P8 V2–V4 + P5b 2026-09-10; P7 NOT built)
 
 **PF1 — A prefab IS a map's entities, so the two share ONE writer.** `PrefabData` is nothing but
 `TDynArray<EntityData>`; the entity-array walk was **moved out of `MapJson` into `EntityJson`** so a
@@ -3888,11 +3892,28 @@ parameter and a `THardResourcePath<T>` alias, so **no existing declaration chang
 are discovered from `OPAAX_PROPERTIES` **by field type** at registration
 (`IComponentEntry::GetHardRefFields`) — the same type-driven mechanism that already gives
 `TResourcePath` its typed drop target (**I15**), with no per-type hand-written code.
-- **THE ACQUIRE ITSELF IS NOT BUILT (P5b), and that is stated rather than implied.** The declaration
-  is honoured by nothing yet: `LoadContext::Acquire<TSub>` is a **template**, so acquiring from a
-  json field needs type erasure through `ResourceFormatRegistry`. The gate that will prove it must
-  assert **both** cases — hard ⇒ resident, soft ⇒ *not* resident — or it passes in a build where
-  everything eager-loads.
+- **THE ACQUIRE IS BUILT (P5b, 2026-09-10) — AT THE LEVEL, NOT IN THE LOADER.** The plan's first
+  shape, `PrefabResource::Load` acquiring through `LoadContext`, was stopped for touching the two
+  most guarded surfaces and then found to be the wrong altitude: a chain hung off the prefab
+  PAYLOAD would not keep the bullet alive while the gun ENTITY lived, because
+  `ResourcePrefabResolver` releases the prefab resource the moment the instance is instantiated
+  (**PF4**). What lives exactly as long as the entities is the map that mounted them —
+  **`Level::MountedMap` holds `TUniquePtr<IResourceHold>`s, acquired at mount, released with the
+  record.** `ResourceManager` and `LoadContext` are untouched.
+  - **Three parts, each pure where it can be:** `HardRefField` carries the `ResourceTypeID` beside
+    the json key (`T` named, never completed); `HardReferences::Collect(MapData, ComponentRegistry)`
+    says WHAT must be resident and is headless; `ResourceFormatEntry::Acquire` — a function pointer
+    to `AcquireHold<T>`, baked at `Register<T>()` — is the ONE erased call a format entry has, and
+    turns the id back into a typed `Load` (`ResourceHold.hpp`). Baking `Load<T>` for every native
+    type into `Engine.cpp` crossed MSVC's 65k-section limit; `/bigobj` is build-wide.
+  - **A clone adopts ids and paths, not holds** — a PIE clone never outlives the edit world it was
+    taken from. **Not held, named:** an entity placed in the editor after mount (resident once the
+    level is saved and reopened) and a runtime SPAWN into a Play world (the growth point is a hold
+    list on `World`, built the day a spawner exists).
+  - The gate asserts **both** cases (`LevelTests`): the SAME map with the bullet on the hard field
+    has the prefab resident the moment it mounts, across a pump, released on unmount; on the soft
+    field it holds nothing. *No Sandbox component declares a hard field yet — the user's gun is
+    their gameplay code; the smoke shows the walk ran (`names no hard reference`, Trace, per map).*
 
 **PF12 — The mutation verb names the world it acts on** (P8 V1).
 `EntityOps::TransformEntities(World&, ids, delta)` is the world-agnostic core;
@@ -3912,11 +3933,12 @@ enforces no policy: no PIE guard, no undo, no selection. Those belong to the sur
   that carries the PIE guard, the prefab panel calls `TransformEntities` on its world.
 
 **Growth points, named and not built:** nesting + variants (P7 — a variant is **PF3**'s instance
-record promoted to a file, `{ base, overrides }`) · the hard-ref acquire (**PF11**) · the snap grid
-in the prefab preview (the V2b extraction once more, ~70 lines out of `EnqueueGrid`) · the Edit
-menu's Undo label following the focused panel · add/remove-component in the prefab panel
-(`ComponentAdd`/`ComponentRemove` take the `EUndoWorld` field the day the buttons exist) · a
-per-surface W/E/R mode (~1h; the shared mode is Unity's and Godot's, and the user confirmed it).
+record promoted to a file, `{ base, overrides }`) · hard-ref holds for runtime spawns and for
+editor placements after mount (**PF11**) · the snap grid in the prefab preview (the V2b extraction
+once more, ~70 lines out of `EnqueueGrid`) · the Edit menu's Undo label following the focused
+panel · add/remove-component in the prefab panel (`ComponentAdd`/`ComponentRemove` take the
+`EUndoWorld` field the day the buttons exist) · a per-surface W/E/R mode (~1h; the shared mode is
+Unity's and Godot's, and the user confirmed it).
 
 ---
 
