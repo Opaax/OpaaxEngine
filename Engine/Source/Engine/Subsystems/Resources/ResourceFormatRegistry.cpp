@@ -5,9 +5,10 @@ namespace Opaax
     // NOTE: every refusal below is an Error log + a false return, never OPAAX_ASSERT — the same
     // ruling ComponentRegistry::AddEntry carries, for the same reasons (a debugbreak is untestable
     // in Debug and compiles away in Release, which is the build where a late registration matters).
-    bool ResourceFormatRegistry::AddEntry(Uint32 InTypeId, OpaaxStringID InName, const ResourceFormat* InFormat)
+    bool ResourceFormatRegistry::AddEntry(Uint32 InTypeId, OpaaxStringID InName, const ResourceFormat* InFormat,
+                                          ResourceAcquireFn InAcquire)
     {
-        if (InFormat == nullptr)
+        if (InFormat == nullptr || InAcquire == nullptr)
         {
             return false;
         }
@@ -67,7 +68,7 @@ namespace Opaax
         }
 
         const Uint64 lEntryIndex = static_cast<Uint64>(m_Entries.size());
-        m_Entries.emplace_back(InTypeId, InName, InFormat);
+        m_Entries.emplace_back(InTypeId, InName, InFormat, InAcquire);
 
         for (const OpaaxStringID& lExtension : lExtensions)
         {

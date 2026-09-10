@@ -6,6 +6,7 @@
 #include "Application/Services/ILogger.h"
 
 #include "ResourceFormat.h"
+#include "ResourceHold.hpp"    // the one thing an entry can CALL (P5b) — brings ResourceManager.h
 #include "ResourceTypeID.hpp"
 
 namespace Opaax
@@ -20,15 +21,22 @@ namespace Opaax
         Uint32                TypeId = 0;        // ResourceTypeID::Get<T>()
         OpaaxStringID         Name;              // authoring / log name, derived by the route
         const ResourceFormat* Format = nullptr;  // -> a static constexpr; valid for the process
+
+        /**
+         * Load one file of this type and hand back an erased claim on it (P5b). THE ONE THING AN
+         * ENTRY CAN CALL: a hard reference is read from a component's json as a path and a type
+         * id, and this is how the id becomes a typed Load without anyone naming T again.
+         */
+        ResourceAcquireFn     Acquire = nullptr;
     };
 
     // =============================================================================
     // ResourceFormatRegistry — "which resource type loads this file?", answered by extension.
     //
-    //   NO TYPE ERASURE, unlike its two siblings. IComponentEntry / IWorldSubsystemEntry exist
-    //   because the engine CALLS through them (Save, CreateInto); a format has nothing to call —
-    //   it is data. The editor's own ResourceTypeRegistry already made this call: a template
-    //   would be ceremony with nothing to erase.
+    //   ONE erased call, unlike its two siblings' many. IComponentEntry / IWorldSubsystemEntry
+    //   exist because the engine CALLS through them (Save, CreateInto); a format was pure data
+    //   until ⑦-C P5b needed "load a file of type #N" — so an entry carries exactly that pointer
+    //   and nothing else. The editor's own ResourceTypeRegistry still needs no erasure at all.
     //
     //   MANY extensions map to ONE type. Register<TextureResource>() claims .png, .jpg and .tga
     //   in one call, which is what keeps a new spelling out of every consumer downstream.
@@ -78,7 +86,7 @@ namespace Opaax
             // NOTE: the call is instantiated wherever T is known (a game module, the exe), but the
             // entry LIST is only ever touched by the out-of-line sink below — i.e. DLL-side. Same
             // arrangement as ComponentRegistry::Register.
-            return AddEntry(ResourceTypeID::Get<T>(), InName, &T::Format);
+            return AddEntry(ResourceTypeID::Get<T>(), InName, &T::Format, &AcquireHold<T>);
         }
 
         /** Idempotent. Called by EngineRegistries::SealAll — after this, Register refuses. */
@@ -116,7 +124,8 @@ namespace Opaax
         // =========================================================================
     private:
         /** Out-of-line sink for Register<T> — see the NOTE there. */
-        bool AddEntry(Uint32 InTypeId, OpaaxStringID InName, const ResourceFormat* InFormat);
+        bool AddEntry(Uint32 InTypeId, OpaaxStringID InName, const ResourceFormat* InFormat,
+                      ResourceAcquireFn InAcquire);
 
         // =========================================================================
         // Members

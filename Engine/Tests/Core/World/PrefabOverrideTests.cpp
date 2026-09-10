@@ -351,11 +351,14 @@ TEST_CASE("P5: the registry derives a component's hard fields, by type")
 
     // The gun names exactly ONE: its bullet. The muzzle flash is soft and the float is not a
     // reference at all, and neither needed to be excluded by hand.
-    const TDynArray<OpaaxStringID>& lHard = lRegistry.FindByName(OpaaxStringID("Gun"))->GetHardRefFields();
+    const TDynArray<HardRefField>& lHard = lRegistry.FindByName(OpaaxStringID("Gun"))->GetHardRefFields();
     REQUIRE(lHard.size() == 1);
 
-    // The name is the JSON KEY, which is what lets a loader reading untyped payloads find it.
-    CHECK(lHard[0] == OpaaxStringID("Bullet"));
+    // The name is the JSON KEY, which is what lets a loader reading untyped payloads find it —
+    // and the type id is what turns the value back into a typed load (P5b), named without ever
+    // completing ProbeResource.
+    CHECK(lHard[0].Name   == OpaaxStringID("Bullet"));
+    CHECK(lHard[0].TypeId == ResourceTypeID::Get<ProbeResource>());
 }
 
 TEST_CASE("P5: no ENGINE component is hard yet, and that is the migration being zero")

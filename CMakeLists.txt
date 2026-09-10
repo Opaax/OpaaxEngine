@@ -10,6 +10,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # thing in every file and reaches the binary as UTF-8.
 add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 
+# A TU that registers every native resource type instantiates Load<T> for each of them (⑦-C
+# P5b — the format entry bakes its typed acquire at Register<T>), and Engine.cpp crossed the
+# 65k-section limit of the default object format (C1128). /bigobj lifts it; it changes nothing
+# else about the build.
+add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/bigobj>)
+
 # Options — editor and dev are TWO axes (ARCHITECTURE.md I12), one flag each.
 #   OPAAX_EDITOR_SUPPORT : does OpaaxEditorLib + the editor exe exist?
 #   OPAAX_DEV_BUILD      : where do assets resolve from — the source tree, or the exe dir?

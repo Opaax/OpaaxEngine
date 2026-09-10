@@ -9,6 +9,7 @@
 
 #include "Core/Reflection/OpaaxProperty.h"                  // ⑦-C P5 — CReflected + the property walk
 #include "Engine/Subsystems/Resources/ResourcePath.h"       // ⑦-C P5 — k_IsHardResourcePath
+#include "Engine/Subsystems/Resources/ResourceTypeID.hpp"   // ⑦-C P5b — a hard field names its type's id
 #include "World/Components/ComponentConcept.hpp"
 #include "World/Entity/EntityTypes.h"
 
@@ -18,6 +19,13 @@
 namespace Opaax
 {
     inline constexpr LogCategory LogComponentRegistry{"ComponentRegistry"};
+
+    /** One HARD resource field of a component: its json key, and which resource type it names. */
+    struct HardRefField
+    {
+        OpaaxStringID Name;
+        Uint32        TypeId = 0;   // ResourceTypeID::Get<T>() of the field's ResourceType
+    };
 
     // =============================================================================
     // IComponentEntry — the type-erased view of one registered component type.
@@ -69,7 +77,9 @@ namespace Opaax
         virtual void Load(EntityRegistry& InRegistry, EntityID InEntity, const nlohmann::json& InJson) const = 0;
 
         /**
-         * The json keys of this component's HARD resource references (P5).
+         * This component's HARD resource references (P5): the json key of each, and the id of the
+         * resource type it names — which is what lets a holder that reads untyped json turn the
+         * field into a typed load (**PF11**, P5b) without anyone naming T again.
          *
          * A document loader reads its entities as untyped json, so it cannot tell a field that must
          * be resident up front from one that may wait. This is how it asks: the names are derived
@@ -79,7 +89,7 @@ namespace Opaax
          * EMPTY for most components, and cheaply so — a type with no properties, or none of them
          * hard, contributes nothing to walk.
          */
-        virtual const TDynArray<OpaaxStringID>& GetHardRefFields() const = 0;
+        virtual const TDynArray<HardRefField>& GetHardRefFields() const = 0;
     };
 
     // =============================================================================
@@ -134,7 +144,7 @@ namespace Opaax
             return lComponent != nullptr ? nlohmann::json(*lComponent) : nlohmann::json{};
         }
 
-        const TDynArray<OpaaxStringID>& GetHardRefFields() const override { return m_HardRefFields; }
+        const TDynArray<HardRefField>& GetHardRefFields() const override { return m_HardRefFields; }
 
         void Load(EntityRegistry& InRegistry, EntityID InEntity, const nlohmann::json& InJson) const override
         {
@@ -168,8 +178,11 @@ namespace Opaax
                                     {
                                         // The property NAME is the json key — the nlohmann macro
                                         // writes fields under their own names, so one string serves
-                                        // the Inspector and the loader both.
-                                        m_HardRefFields.emplace_back(OpaaxStringID(InProperty.Name));
+                                        // the Inspector and the loader both. The type id needs T
+                                        // NAMED, never complete (ResourcePath.h's own rule).
+                                        m_HardRefFields.emplace_back(
+                                            OpaaxStringID(InProperty.Name),
+                                            ResourceTypeID::Get<typename TValue::ResourceType>());
                                     }
                                 }(lProperties), ...);
                            },
@@ -181,7 +194,7 @@ namespace Opaax
         bool          m_bEssential = false;
 
         /** P5 — see GetHardRefFields. Computed once, at registration. */
-        TDynArray<OpaaxStringID> m_HardRefFields;
+        TDynArray<HardRefField> m_HardRefFields;
     };
 
     // =============================================================================
