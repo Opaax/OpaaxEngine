@@ -1,6 +1,7 @@
 #include "Sandbox.h"
 
 #include "Engine/Modules/ModuleRegistrar.h"
+#include "Components/GunComponent.h"
 #include "Components/HealthComponent.h"
 #include "Components/TagsComponent.h"
 #include "Resources/WaveResource.h"
@@ -30,6 +31,10 @@ void SandboxModule::OnRegister(Opaax::ModuleRegistrar& InRegistrar)
     // The first caller of OpaaxTag (I14). Nothing new is needed to make it serializable: an
     // OpaaxTagContainer writes as an array of strings, so a tag is readable in the .opaaxmap.
     InRegistrar.Components().Register<Sandbox::TagsComponent>();
+
+    // The first HARD reference (⑦-C P5b): the registry finds `Bullet` by its type at this line,
+    // and a level mounting a map that carries a gun holds its bullet prefab from then on.
+    InRegistrar.Components().Register<Sandbox::GunComponent>();
 
     // A world subsystem the ENGINE has never heard of. Play-only: it exists in a Play world and is
     // never constructed in an Edit one (WS1/WS2). Registering costs one line — no base-class

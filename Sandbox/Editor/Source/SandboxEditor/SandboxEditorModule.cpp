@@ -6,6 +6,7 @@
 #include "Commands/SandboxEditorCommandTags.h"
 #include "Commands/ValidateSandboxCommand.h"
 #include "Drawers/TagsComponentDrawer.h"
+#include "Components/GunComponent.h"
 #include "Components/HealthComponent.h"
 #include "Resources/WaveResource.h"
 
@@ -53,6 +54,10 @@ void SandboxEditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& In
     // never had a drawer and was therefore invisible, and becomes editable for the price of this
     // line — no drawer code anywhere.
     InRegistrar.Drawers().Register<Sandbox::HealthComponent>();
+
+    // Same default drawer; its two prefab fields get the typed drop target for free (I15), so a
+    // bullet is assigned by dragging a .opaaxprefab from the browser onto the field.
+    InRegistrar.Drawers().Register<Sandbox::GunComponent>();
 
     // Still HAND-WRITTEN, and the reason the override exists: a tag is not a field you type into, it
     // is add/remove against a validated vocabulary (I14). The authoring half of the tag dogfood — a
