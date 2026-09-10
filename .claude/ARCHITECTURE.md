@@ -1272,6 +1272,9 @@ from the game would be lying about what the game will look like.
     out because ImGuizmo takes them separately, and `MakeViewProjection` is **defined as their
     product** so the halves and the whole cannot drift — see **GIZ2**, including why its zero-size
     guard has to stay duplicated rather than defer to the projection half.
+  - *And a fourth, 2026-09-10 (⑦-C P8 V2):* `WorldPerPixel(view, heightPx)` — how much world one
+    pixel covers, the icon size and the grid's hairline both need it. It had two private copies
+    (`EditorCamera.cpp`, `ViewportPanel`) and a third panel was about to add one.
 
 **CAM3 — The Play producer is an ENGINE subsystem, and the resolve is a PURE FUNCTION.**
 `CameraManager` (`Engine/Subsystems/Camera/`) reads the active world in `Update`, refuses anything but
@@ -2166,7 +2169,8 @@ entirely; that window is now unrepresentable rather than documented.
 - **A zero-size target skips its PASS, not the frame** — the early-out moved from per-frame to
   per-target. A frame with no drawable pass still opens no device frame.
 - **The debug queue is READ per pass and CLEARED once per frame.** Two views that both want overlays
-  each draw them.
+  each draw them — *of the SAME world. Since ⑦-C P8 V2 a primitive names its world (null = active)
+  and a pass draws only its own; see **PF9**. This line was written when every view drew one world.*
 - **`bDrawOverlays` had two callers on day one** — true for the Viewport, false for the Camera
   Preview, which must look like the GAME. That is the rule `EnqueueEntityIcons` already states for
   Play worlds, not a new one, and it is why this is a field rather than a spec (**X5**).
@@ -3745,7 +3749,7 @@ shape of a save that loses work.
 
 ---
 
-## PF — Prefabs (⑦-C, P1–P6 + P8 V1 landed 2026-09-09; P5b / P7 / P8 V2–V4 NOT built)
+## PF — Prefabs (⑦-C, P1–P6 + P8 V1 landed 2026-09-09, V2 2026-09-10; P5b / P7 / P8 V3–V4 NOT built)
 
 **PF1 — A prefab IS a map's entities, so the two share ONE writer.** `PrefabData` is nothing but
 `TDynArray<EntityData>`; the entity-array walk was **moved out of `MapJson` into `EntityJson`** so a
@@ -3818,7 +3822,23 @@ growth point, whose stated trigger was exactly this.
   `EditorService::HandleWorldDestroyed` calls `EditorUndo::Clear()` for any Edit world (**UN1**), so
   closing the panel would otherwise wipe the **level's** undo history. Decided before writing it.
 - **The panel's selection is its own**, never `EditorSelection`: entt reuses handles, so a shared one
-  could resolve to a real but wrong entity in the other world (**MV4**, one panel over).
+  could resolve to a real but wrong entity in the other world (**MV4**, one panel over). *The same
+  hazard exists ACROSS opens — `Open` clears and refills one world — so the document carries a
+  `Generation` and the panel clears its selection when it moves (P8 V2).*
+- **A DEBUG PRIMITIVE NAMES ITS WORLD, and null is the active one** (P8 V2, 2026-09-10). The
+  `DebugDraw` queue is one list per frame and `RenderPass` used to drain all of it into every pass
+  with overlays — written for two views of ONE world. `DebugLine`/`DebugBox` carry a `Source`; a pass
+  draws only what belongs to its world. No engine producer changed: only the active world ticks, so
+  null was always what they meant. This is what lets the prefab preview show its own outline and
+  icons without the level's grid landing in its coordinates.
+- **The prefab panel OWNS its camera, selection and gestures** (P8 V2) rather than generalising the
+  context's. The level's live on `EditorContext` because they must outlive a PIE cycle and be reached
+  by editor-wide commands; this world is never active and no command addresses it. `F` is therefore
+  MEASURED in the panel (a focused window's `ImGui::Shortcut` outranks the global route), where
+  Ctrl+S is DECLARED on `PanelDesc` — two idioms, split by whether a command can reach the subject.
+  `Delete` is claimed and swallowed until V4 gives it undo; letting it through deleted in the LEVEL.
+- `IsDirty` is gated on the world's revision, the level document's rule — a per-frame caller was a
+  full capture + serialize per frame (found by V2's harness, the first smoke with the panel open).
 
 **PF10 — A panel says whether the global undo applies to it** (`PanelDesc::bGlobalUndoApplies`).
 Ctrl+Z with a document panel focused was undoing the **level** behind it. *To be retired by P8 V4,
@@ -3845,10 +3865,17 @@ Everything subtle lives in the core exactly once — the delta is conjugated int
 frame for the whole set (per entity was the old multi-selection scale drift), and positions run
 through the matrix so a rotate orbits the shared pivot. It takes **no `EditorContext`** and therefore
 enforces no policy: no PIE guard, no undo, no selection. Those belong to the surface calling it.
+- **The GESTURES are shared the same way** (P8 V2, `Editor/Viewport/`): `CameraGesture` and
+  `PickGesture` measure in the ImGui pass, bank, and are spent in OnPreRender (**SEL3**);
+  `ViewportOverlays` draws the outline and the icon with the ONE size the hit test uses (**SEL4**).
+  Both panels own instances. Copying the ViewportPanel's code would have been ~250 lines for V2 and
+  ~400 once the gizmo followed — the drift **MP7** names, on the hardest UI code in the editor.
 
 **Growth points, named and not built:** nesting + variants (P7 — a variant is **PF3**'s instance
 record promoted to a file, `{ base, overrides }`) · the hard-ref acquire (**PF11**) · the prefab
-panel as a real editing viewport (P8 V2–V4: its own camera, picking, gizmo and undo stack).
+panel's gizmo and undo stack (P8 V3–V4; camera and picking landed in V2). **V3 must split
+`EditorGizmo`** — it bundles editor-wide SETTINGS (mode/pivot/space/snap, set by W/E/R) with per-drag
+STATE (the matrix, the delta), and two panels reseating one matrix would fight a live drag (**GIZ5**).
 
 ---
 
