@@ -459,6 +459,25 @@ namespace Opaax::Editor
         void Execute(EditorContext& InContext, const Params&);
     };
 
+    /**
+     * Step the PREFAB DOCUMENT's own history (P8 V3) — what Ctrl+Z/Y reach while the panel is
+     * focused (PanelDesc::UndoCommand). No PIE gate: the prefab world is Edit whatever the level
+     * is doing, and the panel has never been gated on it.
+     */
+    struct UndoPrefabCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
+    struct RedoPrefabCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
     // =============================================================================
     // Level
     // =============================================================================

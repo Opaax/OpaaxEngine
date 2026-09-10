@@ -463,6 +463,16 @@ namespace Opaax::Editor
         InContext.PrefabDocument.Save(InContext);
     }
 
+    void UndoPrefabCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        InContext.PrefabDocument.Undo().Undo(InContext);
+    }
+
+    void RedoPrefabCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        InContext.PrefabDocument.Undo().Redo(InContext);
+    }
+
     void SaveMapAsCommand::Execute(EditorContext& InContext, const Params&)
     {
         if (!MapOps::CanEdit(InContext, "Save Map As")) { return; }

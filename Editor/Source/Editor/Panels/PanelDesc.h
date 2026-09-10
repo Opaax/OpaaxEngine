@@ -55,16 +55,16 @@ namespace Opaax::Editor
         OpaaxTag SaveCommand;
 
         /**
-         * Does Ctrl+Z mean the LEVEL's history while this panel is focused? (⑦-C P6)
+         * The commands Ctrl+Z / Ctrl+Y run while this panel is focused. Invalid = the LEVEL's
+         * history (**UN1**), which is right for every panel whose edits land on that stack.
          *
-         * The undo stack is the level's (**UN1**). A document panel that edits something else must
-         * SWALLOW the chord rather than let it through, or Ctrl+Z in a prefab editor silently
-         * undoes an edit in a level you cannot see — which is exactly what the user hit.
-         *
-         * This is Ctrl+S's rule one chord over: the target follows the focused panel, and a panel
-         * DECLARES its own answer instead of a ladder somewhere else trying to remember it
-         * ([[L86]]). A panel with its own undo will later name commands here rather than a bool.
+         * SaveCommand's rule one chord over, and for its reason: the target follows the focused
+         * panel, and a panel DECLARES its answer instead of a ladder elsewhere remembering it
+         * ([[L86]]). This was a bool that only SWALLOWED the chord (⑦-C P6 — Ctrl+Z in the prefab
+         * editor was undoing the level behind it); a document with a history of its own names the
+         * commands that step it (P8 V3).
          */
-        bool bGlobalUndoApplies = true;
+        OpaaxTag UndoCommand;
+        OpaaxTag RedoCommand;
     };
 }

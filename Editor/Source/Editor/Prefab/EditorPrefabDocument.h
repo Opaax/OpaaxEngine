@@ -3,6 +3,7 @@
 #include "Application/Services/ILogger.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
+#include "Editor/Undo/EditorUndo.h"
 
 namespace Opaax
 {
@@ -34,6 +35,11 @@ namespace Opaax::Editor
     //
     //   The entities keep the prefab's OWN guids — they are the templates, so nothing is derived
     //   here (**K2** applies to placements, not to the prefab itself).
+    //
+    //   IT OWNS ITS HISTORY TOO (P8 V3). The level's stack is the level's (**UN1**); a step
+    //   recorded here names this document's world (EUndoWorld::Prefab) and is reached by the
+    //   panel's declared Undo/Redo commands, Ctrl+S's exact shape. Cleared with the entities —
+    //   a step holds guids of entities that no longer exist after an Open.
     // =============================================================================
     class EditorPrefabDocument
     {
@@ -80,6 +86,9 @@ namespace Opaax::Editor
          */
         Uint64             Generation() const noexcept { return m_Generation; }
 
+        /** This document's own history — see the class note. */
+        EditorUndo&        Undo() noexcept { return m_Undo; }
+
         /**
          * Does the editing world differ from what was last written?
          *
@@ -106,6 +115,8 @@ namespace Opaax::Editor
         World*      m_World = nullptr;
 
         Uint64      m_Generation = 0;
+
+        EditorUndo  m_Undo;
 
         /** IsDirty's cache, keyed by the world's revision — recomputed only when it moved. */
         mutable Uint64 m_LastRevision = ~0ull;

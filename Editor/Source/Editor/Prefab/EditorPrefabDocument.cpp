@@ -64,6 +64,7 @@ namespace Opaax::Editor
         m_AbsPath  = InAbsPath;
         m_Baseline = PrefabJson::Serialize(CaptureAsPrefab(*m_World, lRegistry));
         ++m_Generation;
+        m_Undo.Clear();           // the steps name entities that were just replaced
         m_LastRevision = ~0ull;   // a new baseline — the cached answer is about the old one
         m_bDirty       = false;
 
@@ -108,6 +109,7 @@ namespace Opaax::Editor
         m_AbsPath  = OpaaxString();
         m_Baseline = OpaaxString();
         ++m_Generation;
+        m_Undo.Clear();
         m_LastRevision = ~0ull;
         m_bDirty       = false;
 
