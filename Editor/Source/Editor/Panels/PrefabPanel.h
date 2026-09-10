@@ -4,7 +4,6 @@
 #include "Core/Maths/MathTypes.h"
 #include "Core/OpaaxTypes.h"
 #include "Editor/Camera/EditorCamera.h"
-#include "Editor/Operation/EditorSelection.hpp"
 #include "Editor/Panels/IEditorPanel.h"
 #include "Editor/Viewport/ViewportGestures.h"
 #include "Editor/Viewport/ViewportGizmo.h"
@@ -29,16 +28,14 @@ namespace Opaax::Editor
     //   THE THIRD VIEW, and the first that draws a world which is not the active one — **MV**'s
     //   named "asset preview WORLD" growth point, which is why P6 gave a render view a `Source`.
     //
-    //   IT OWNS WHAT THE LEVEL SHARES. The level's camera, selection and gizmo live on the
-    //   EditorContext because they must outlive a PIE cycle and be reachable by editor-wide
-    //   commands; this panel's are its own members, because its world is never active and no
-    //   command addresses it. The gestures are the level viewport's exact types (Editor/Viewport/),
-    //   so pan, zoom, click and marquee cannot drift between the two surfaces.
-    //
-    //   ITS SELECTION IS ITS OWN, never `EditorSelection` on the context: entt REUSES handles, so a
-    //   shared one could resolve to a real but wrong entity in the other world (**MV4**, **PF9**).
-    //   The same hazard exists ACROSS opens — `EditorPrefabDocument::Open` clears and refills one
-    //   world — so the panel clears its selection whenever the document's generation moves.
+    //   THE VIEW IS THE PANEL'S, THE REST IS THE DOCUMENT'S. The camera and the gestures are
+    //   members here (view state); the world, the selection and the history live on
+    //   `EditorPrefabDocument`, because an undo step replays against a selection and a step can
+    //   reach a document, never a panel (P8 V4). None of it is the context's: the level's camera,
+    //   selection and history must outlive a PIE cycle and be reachable by editor-wide commands,
+    //   and entt REUSES handles, so a shared selection could resolve to a real but wrong entity in
+    //   the other world (**MV4**, **PF9**). The gestures are the level viewport's exact types
+    //   (Editor/Viewport/), so pan, zoom, click, marquee and gizmo cannot drift between surfaces.
     //
     //   `F` IS MEASURED HERE, not declared on PanelDesc like Ctrl+S: its subject is this panel's
     //   camera, which no command can reach. A focused window's ImGui::Shortcut takes priority over
@@ -120,15 +117,15 @@ namespace Opaax::Editor
         /** How much of the panel the world gets. ImGui's ResizeX lets the author move it from there. */
         static constexpr float k_PreviewSplit = 0.6f;
 
-        // THIS panel's viewpoint and selection — see the class note on why neither is the context's.
+        // THIS panel's viewpoint. The selection and the history are the DOCUMENT's (an undo step
+        // replays against them, and a step can reach a document, never a panel).
         EditorCamera    m_Camera;
-        EditorSelection m_Selection;
 
         CameraGesture   m_CameraGesture;
         PickGesture     m_PickGesture;
         GizmoGesture    m_Gizmo;
 
-        /** The document generation last shown — a change means the entities were replaced (see the note). */
+        /** The document generation last shown — a change means the entities were replaced: frame again. */
         Uint64          m_ShownGeneration = 0;
 
         /** Frame on open and on F. Set in DrawContents, spent in OnPreRender against a measured size. */

@@ -20,14 +20,20 @@ namespace Opaax::Editor
                                              : InContext.Worlds.GetActiveWorld();
     }
 
+    EditorSelection& UndoSelection(const EditorContext& InContext, const EUndoWorld InScope)
+    {
+        return InScope == EUndoWorld::Prefab ? InContext.PrefabDocument.Selection()
+                                             : InContext.Selection;
+    }
+
     namespace
     {
         // Put InData's entities back and select them — recreating any that are gone, on their own
         // Guids. MapFactory::Restore answers exactly this question ("be this again"), so create and
         // delete share one body run in opposite directions.
-        void RestoreEntities(EditorContext& InContext, const MapData& InData)
+        void RestoreEntities(EditorContext& InContext, const MapData& InData, const EUndoWorld InScope)
         {
-            World* const lWorld = InContext.Worlds.GetActiveWorld();
+            World* const lWorld = UndoWorld(InContext, InScope);
             if (lWorld == nullptr) { return; }
 
             MapFactory::Restore(InData, *lWorld, InContext.Engine.GetRegistries().Components());
@@ -45,17 +51,17 @@ namespace Opaax::Editor
                 }
             }
 
-            InContext.Selection.Replace(lWorld, lIds);
+            UndoSelection(InContext, InScope).Replace(lWorld, lIds);
         }
 
         // The inverse, and it clears the selection for the reason DestroySelected does: what was
         // selected no longer exists.
-        void DestroyEntities(EditorContext& InContext, const MapData& InData)
+        void DestroyEntities(EditorContext& InContext, const MapData& InData, const EUndoWorld InScope)
         {
-            World* const lWorld = InContext.Worlds.GetActiveWorld();
+            World* const lWorld = UndoWorld(InContext, InScope);
             if (lWorld == nullptr) { return; }
 
-            InContext.Selection.Clear();
+            UndoSelection(InContext, InScope).Clear();
 
             for (const EntityData& lEntity : InData.Entities)
             {
@@ -112,24 +118,26 @@ namespace Opaax::Editor
         }
     }
 
-    void EntityCreate::Undo(EditorContext& InContext) { DestroyEntities(InContext, Entities); }
-    void EntityCreate::Redo(EditorContext& InContext) { RestoreEntities(InContext, Entities); }
+    // The level-only verbs name the active world literally; EntityDelete carries its scope, being
+    // the one of these the prefab panel records too (P8 V4).
+    void EntityCreate::Undo(EditorContext& InContext) { DestroyEntities(InContext, Entities, EUndoWorld::Active); }
+    void EntityCreate::Redo(EditorContext& InContext) { RestoreEntities(InContext, Entities, EUndoWorld::Active); }
 
-    void PrefabInstantiate::Undo(EditorContext& InContext) { DestroyEntities(InContext, Entities); }
-    void PrefabInstantiate::Redo(EditorContext& InContext) { RestoreEntities(InContext, Entities); }
+    void PrefabInstantiate::Undo(EditorContext& InContext) { DestroyEntities(InContext, Entities, EUndoWorld::Active); }
+    void PrefabInstantiate::Redo(EditorContext& InContext) { RestoreEntities(InContext, Entities, EUndoWorld::Active); }
 
     // Destroy THEN restore, both ways: RestoreEntities selects what it brought back and
     // DestroyEntities clears, so the opposite order would leave an empty selection.
     void PrefabCreateFromSelection::Undo(EditorContext& InContext)
     {
-        DestroyEntities(InContext, Instance);
-        RestoreEntities(InContext, Originals);
+        DestroyEntities(InContext, Instance, EUndoWorld::Active);
+        RestoreEntities(InContext, Originals, EUndoWorld::Active);
     }
 
     void PrefabCreateFromSelection::Redo(EditorContext& InContext)
     {
-        DestroyEntities(InContext, Originals);
-        RestoreEntities(InContext, Instance);
+        DestroyEntities(InContext, Originals, EUndoWorld::Active);
+        RestoreEntities(InContext, Instance, EUndoWorld::Active);
     }
 
     // A revert normally creates and destroys nothing, so "be this again" is the whole inverse
@@ -138,14 +146,14 @@ namespace Opaax::Editor
     // selects what it brought back and DestroyEntities clears.
     void PrefabRevert::Undo(EditorContext& InContext)
     {
-        DestroyEntities(InContext, Created);
-        RestoreEntities(InContext, Before);
+        DestroyEntities(InContext, Created, EUndoWorld::Active);
+        RestoreEntities(InContext, Before, EUndoWorld::Active);
     }
 
-    void PrefabRevert::Redo(EditorContext& InContext) { RestoreEntities(InContext, After); }
+    void PrefabRevert::Redo(EditorContext& InContext) { RestoreEntities(InContext, After, EUndoWorld::Active); }
 
-    void EntityDelete::Undo(EditorContext& InContext) { RestoreEntities(InContext, Entities); }
-    void EntityDelete::Redo(EditorContext& InContext) { DestroyEntities(InContext, Entities); }
+    void EntityDelete::Undo(EditorContext& InContext) { RestoreEntities(InContext, Entities, Scope); }
+    void EntityDelete::Redo(EditorContext& InContext) { DestroyEntities(InContext, Entities, Scope); }
 
     void EntityRename::Undo(EditorContext& InContext) { WriteName(InContext, EntityId, Before); }
     void EntityRename::Redo(EditorContext& InContext) { WriteName(InContext, EntityId, After); }

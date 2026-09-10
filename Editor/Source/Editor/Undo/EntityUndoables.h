@@ -127,11 +127,16 @@ namespace Opaax::Editor
         const char* Label() const noexcept { return "Revert to Prefab"; }
     };
 
-    /** Entities were destroyed — the same two bodies as EntityCreate, the other way round. */
+    /**
+     * Entities were destroyed — the same two bodies as EntityCreate, the other way round.
+     * Names its world (P8 V4): the level's Delete and the prefab panel's record the same type.
+     */
     struct EntityDelete
     {
         /** What was destroyed, captured BEFORE the fact: nothing else can recover it. */
-        MapData Entities;
+        MapData    Entities;
+
+        EUndoWorld Scope = EUndoWorld::Active;
 
         void        Undo(EditorContext& InContext);
         void        Redo(EditorContext& InContext);

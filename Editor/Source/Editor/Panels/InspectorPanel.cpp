@@ -103,7 +103,7 @@ namespace Opaax::Editor
         // over there, so the bracket opens before the drop and closes on it.
         if (lItemActive && !m_bWasItemActive)
         {
-            m_Edit.Begin(m_Context, lSelected);
+            m_Edit.Begin(m_Context, lSelected, EUndoWorld::Active);
         }
         else if (!lItemActive && m_bWasItemActive)
         {

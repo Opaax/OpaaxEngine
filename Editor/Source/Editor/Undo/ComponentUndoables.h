@@ -5,6 +5,7 @@
 
 #include "Core/GUID/Guid.h"
 #include "Core/String/OpaaxStringID.hpp"
+#include "Editor/Undo/UndoWorld.h"
 #include "World/Entity/Entity.h"
 #include "World/Serialization/MapData.h"
 
@@ -70,8 +71,11 @@ namespace Opaax::Editor
         TDynArray<ComponentData> Before;
         TDynArray<ComponentData> After;
 
-        /** Cache the entity's components as the BEFORE half, dropping any step left open. */
-        void Begin(const EditorContext& InContext, Entity InEntity);
+        /** Which document's world the entity lives in (P8 V4) — the Inspector's and the prefab panel's record the same type. */
+        EUndoWorld               Scope = EUndoWorld::Active;
+
+        /** Cache the entity's components (in ITS world) as the BEFORE half, dropping any step left open. */
+        void Begin(const EditorContext& InContext, Entity InEntity, EUndoWorld InScope);
 
         /**
          * Keep only the components whose PAYLOAD differs, on both sides.

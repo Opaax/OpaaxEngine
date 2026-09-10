@@ -52,7 +52,7 @@ namespace Opaax::Editor
         // A hidden panel submits nothing, so it costs no pass while closed (**MV3**'s rule).
         if (lWorld == nullptr || !m_Context.Panels.IsVisible(PanelID())) { return; }
 
-        PickGesture::Apply(m_PickGesture.Take(), *lWorld, m_Selection, ViewportPx(),
+        PickGesture::Apply(m_PickGesture.Take(), *lWorld, m_Context.PrefabDocument.Selection(), ViewportPx(),
                            ViewportOverlays::AnchorHalfExtent(lWorld->GetCameraView(), ViewportPx()));
         ApplyGizmoDrag(*lWorld);
 
@@ -82,7 +82,7 @@ namespace Opaax::Editor
         const float lAnchor = ViewportOverlays::AnchorHalfExtent(lWorld->GetCameraView(), ViewportPx());
 
         const Uint64 lOutlined = ViewportOverlays::EnqueueSelectionOutline(
-            m_Context.Engine.GetDebugDraw(), *lWorld, m_Selection.Ids(), lAnchor);
+            m_Context.Engine.GetDebugDraw(), *lWorld, m_Context.PrefabDocument.Selection().Ids(), lAnchor);
         const Uint64 lIcons    = ViewportOverlays::EnqueueEntityIcons(
             m_Context.Engine.GetDebugDraw(), *lWorld, lAnchor);
 
@@ -107,7 +107,7 @@ namespace Opaax::Editor
         if (!m_bPendingFrame) { return; }
         m_bPendingFrame = false;
 
-        TDynArray<EntityID> lIds = m_Selection.Ids();
+        TDynArray<EntityID> lIds = m_Context.PrefabDocument.Selection().Ids();
         if (lIds.empty())
         {
             InWorld.Each<EntityMeta>([&lIds](EntityID InId, const EntityMeta&) { lIds.emplace_back(InId); });
@@ -130,7 +130,7 @@ namespace Opaax::Editor
         EntityOps::TransformDelta lDelta;
         if (m_Gizmo.TakeDelta(m_Context.Gizmo, lDelta))
         {
-            EntityOps::TransformEntities(InWorld, m_Selection.Ids(), lDelta);
+            EntityOps::TransformEntities(InWorld, m_Context.PrefabDocument.Selection().Ids(), lDelta);
         }
 
         m_Gizmo.Close(m_Context, m_Context.PrefabDocument.Undo());
@@ -145,13 +145,12 @@ namespace Opaax::Editor
             return;
         }
 
-        // THE ENTITIES WERE REPLACED: handles held from before may now name other entities (MV4).
-        // Also the moment to frame — an opened prefab may sit anywhere in x/y.
+        // THE ENTITIES WERE REPLACED — the moment to frame, since an opened prefab may sit anywhere
+        // in x/y. (The document cleared its own selection and history where it cleared the world.)
         if (m_Context.PrefabDocument.Generation() != m_ShownGeneration)
         {
             m_ShownGeneration = m_Context.PrefabDocument.Generation();
-            m_Selection.Clear();
-            m_bPendingFrame = true;
+            m_bPendingFrame   = true;
         }
 
         // THIS WINDOW'S route, which ImGui ranks above EditorService's global one — so with this
@@ -182,7 +181,6 @@ namespace Opaax::Editor
         ImGui::SameLine();
         if (ImGui::Button("Close"))
         {
-            m_Selection.Clear();
             m_Context.PrefabDocument.Close();
             return;
         }
@@ -225,10 +223,10 @@ namespace Opaax::Editor
 
             const Entity lEntity{ InId, lWorld };
 
-            if (ImGui::Selectable(InMeta.Name.CStr(), m_Selection.Contains(lEntity)))
+            if (ImGui::Selectable(InMeta.Name.CStr(), m_Context.PrefabDocument.Selection().Contains(lEntity)))
             {
-                if (ImGui::GetIO().KeyCtrl) { m_Selection.Toggle(lEntity); }
-                else                        { m_Selection.Select(lEntity); }
+                if (ImGui::GetIO().KeyCtrl) { m_Context.PrefabDocument.Selection().Toggle(lEntity); }
+                else                        { m_Context.PrefabDocument.Selection().Select(lEntity); }
             }
 
             ImGui::PopID();
@@ -237,7 +235,7 @@ namespace Opaax::Editor
 
     void PrefabPanel::DrawProperties()
     {
-        Entity lEntity = m_Selection.Get();
+        Entity lEntity = m_Context.PrefabDocument.Selection().Get();
 
         if (!lEntity.IsValid())
         {
@@ -290,7 +288,7 @@ namespace Opaax::Editor
         // never sees it. No grid here, so translate snaps to the authored step.
         World* const lWorld = m_Context.PrefabDocument.GetWorld();
         const bool   lGizmoOwns = lWorld != nullptr
-            && m_Gizmo.Measure(m_Context.Gizmo, *lWorld, m_Selection, lWorld->GetCameraView(), lSizePx,
+            && m_Gizmo.Measure(m_Context.Gizmo, *lWorld, m_Context.PrefabDocument.Selection(), lWorld->GetCameraView(), lSizePx,
                                { lOrigin.x, lOrigin.y }, lSizePx,
                                m_Context.Gizmo.GetSnapStep(EGizmoMode::Translate), /*bInSuppress*/ false,
                                EUndoWorld::Prefab);

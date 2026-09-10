@@ -9,6 +9,7 @@ namespace Opaax
 
 namespace Opaax::Editor
 {
+    class EditorSelection;
     struct EditorContext;
 
     /**
@@ -25,4 +26,10 @@ namespace Opaax::Editor
 
     /** The world InScope names right now, or null. */
     World* UndoWorld(const EditorContext& InContext, EUndoWorld InScope);
+
+    /**
+     * The selection that lives in that world (P8 V4) — a restore re-selects what it brought back
+     * and a destroy clears, and each document has a selection of its own.
+     */
+    EditorSelection& UndoSelection(const EditorContext& InContext, EUndoWorld InScope);
 }

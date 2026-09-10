@@ -573,20 +573,32 @@ namespace Opaax::Editor
         // BEFORE the fact, unlike every other verb here: once these are destroyed nothing else in
         // the editor can say what they were (⑤).
         EntityDelete lStep{ MapSerializer::CaptureEntities(
-            *lWorld, InContext.Engine.GetRegistries().Components(), lIds) };
+            *lWorld, InContext.Engine.GetRegistries().Components(), lIds), EUndoWorld::Active };
 
         InContext.Selection.Clear();
 
-        for (const EntityID lId : lIds)
-        {
-            lWorld->DestroyEntity(lId);
-        }
-
-        lWorld->MarkChanged();
+        const Uint64 lCount = DestroyEntities(*lWorld, lIds);
 
         InContext.Undo.Record(Move(lStep));
 
-        OPAAX_LOG(LogEntityOps, Info, "Deleted {} entity(ies)", static_cast<Uint64>(lIds.size()));
+        OPAAX_LOG(LogEntityOps, Info, "Deleted {} entity(ies)", lCount);
+    }
+
+    Uint64 EntityOps::DestroyEntities(World& InWorld, const TDynArray<EntityID>& InEntities)
+    {
+        Uint64 lCount = 0;
+
+        for (const EntityID lId : InEntities)
+        {
+            if (!InWorld.IsValid(lId)) { continue; }
+
+            InWorld.DestroyEntity(lId);
+            ++lCount;
+        }
+
+        if (lCount > 0) { InWorld.MarkChanged(); }
+
+        return lCount;
     }
 
     bool EntityOps::AddComponent(EditorContext& InContext, Entity InEntity, const OpaaxStringID InTypeName)

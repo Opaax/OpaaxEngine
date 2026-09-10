@@ -134,6 +134,15 @@ namespace Opaax::Editor
         void DestroySelected(EditorContext& InContext);
 
         /**
+         * Destroy NAMED entities of a NAMED world — the world-agnostic core of `DestroySelected`
+         * (⑦-C P8 V4), `TransformEntities`' idiom: no `EditorContext`, so no PIE guard, no undo
+         * step, no selection. The surface calling it captures the step BEFORE, clears its own
+         * selection, and records on its own stack.
+         * @return How many were destroyed.
+         */
+        Uint64 DestroyEntities(World& InWorld, const TDynArray<EntityID>& InEntities);
+
+        /**
          * Put one registered component on InEntity, by its AUTHORING name.
          *
          * By name rather than by `IComponentEntry*` because that is what a command can carry: an

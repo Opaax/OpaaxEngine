@@ -3,6 +3,7 @@
 #include "Application/Services/ILogger.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
+#include "Editor/Operation/EditorSelection.hpp"
 #include "Editor/Undo/EditorUndo.h"
 
 namespace Opaax
@@ -36,10 +37,12 @@ namespace Opaax::Editor
     //   The entities keep the prefab's OWN guids — they are the templates, so nothing is derived
     //   here (**K2** applies to placements, not to the prefab itself).
     //
-    //   IT OWNS ITS HISTORY TOO (P8 V3). The level's stack is the level's (**UN1**); a step
-    //   recorded here names this document's world (EUndoWorld::Prefab) and is reached by the
-    //   panel's declared Undo/Redo commands, Ctrl+S's exact shape. Cleared with the entities —
-    //   a step holds guids of entities that no longer exist after an Open.
+    //   IT OWNS ITS HISTORY TOO (P8 V3), AND ITS SELECTION (V4). The level's stack is the level's
+    //   (**UN1**); a step recorded here names this document's world (EUndoWorld::Prefab) and is
+    //   reached by the panel's declared Undo/Redo commands, Ctrl+S's exact shape. The selection is
+    //   here rather than on the panel because a step's replay touches it — a restore re-selects,
+    //   a destroy clears — and a step can reach a document, never a panel. All three are cleared
+    //   with the entities: a step or a handle from before an Open names nothing.
     // =============================================================================
     class EditorPrefabDocument
     {
@@ -89,6 +92,9 @@ namespace Opaax::Editor
         /** This document's own history — see the class note. */
         EditorUndo&        Undo() noexcept { return m_Undo; }
 
+        /** What is selected in THIS world — never the context's (entt reuses handles across worlds, **MV4**). */
+        EditorSelection&   Selection() noexcept { return m_Selection; }
+
         /**
          * Does the editing world differ from what was last written?
          *
@@ -116,7 +122,8 @@ namespace Opaax::Editor
 
         Uint64      m_Generation = 0;
 
-        EditorUndo  m_Undo;
+        EditorUndo      m_Undo;
+        EditorSelection m_Selection;
 
         /** IsDirty's cache, keyed by the world's revision — recomputed only when it moved. */
         mutable Uint64 m_LastRevision = ~0ull;

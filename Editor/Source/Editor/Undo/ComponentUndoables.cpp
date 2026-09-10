@@ -109,13 +109,13 @@ namespace Opaax::Editor
             return nullptr;
         }
 
-        void WritePayloads(EditorContext& InContext, const Guid& InId,
+        void WritePayloads(EditorContext& InContext, const EntityComponentsEdit& InStep,
                            const TDynArray<ComponentData>& InSide)
         {
-            World* const lWorld = InContext.Worlds.GetActiveWorld();
+            World* const lWorld = UndoWorld(InContext, InStep.Scope);
             if (lWorld == nullptr) { return; }
 
-            Entity lEntity = lWorld->FindByGuid(InId);
+            Entity lEntity = lWorld->FindByGuid(InStep.EntityId);
             if (!lEntity.IsValid()) { return; }
 
             EntityRegistry&          lEntities = lEntity.GetWorld()->GetRegistry();
@@ -136,23 +136,25 @@ namespace Opaax::Editor
         }
     }
 
-    void EntityComponentsEdit::Begin(const EditorContext& InContext, Entity InEntity)
+    void EntityComponentsEdit::Begin(const EditorContext& InContext, Entity InEntity, const EUndoWorld InScope)
     {
         EntityId = Guid();
         Before.clear();
         After.clear();
+        Scope = InScope;
 
-        const World* const lWorld = InContext.Worlds.GetActiveWorld();
-        if (lWorld == nullptr || !InEntity.IsValid()) { return; }
+        // The ENTITY's world, not the active one: a handle means nothing in another registry, and
+        // the prefab panel's entities are not the active world's.
+        if (!InEntity.IsValid()) { return; }
 
-        Before = CaptureComponents(InContext, *lWorld, InEntity.GetHandle(), EntityId);
+        Before = CaptureComponents(InContext, *InEntity.GetWorld(), InEntity.GetHandle(), EntityId);
     }
 
     bool EntityComponentsEdit::End(const EditorContext& InContext)
     {
         if (!EntityId.IsValid() || Before.empty()) { return false; }
 
-        World* const lWorld = InContext.Worlds.GetActiveWorld();
+        World* const lWorld = UndoWorld(InContext, Scope);
         if (lWorld == nullptr) { return false; }
 
         Entity lEntity = lWorld->FindByGuid(EntityId);
@@ -183,6 +185,6 @@ namespace Opaax::Editor
         return !Before.empty();
     }
 
-    void EntityComponentsEdit::Undo(EditorContext& InContext) { WritePayloads(InContext, EntityId, Before); }
-    void EntityComponentsEdit::Redo(EditorContext& InContext) { WritePayloads(InContext, EntityId, After); }
+    void EntityComponentsEdit::Undo(EditorContext& InContext) { WritePayloads(InContext, *this, Before); }
+    void EntityComponentsEdit::Redo(EditorContext& InContext) { WritePayloads(InContext, *this, After); }
 }
