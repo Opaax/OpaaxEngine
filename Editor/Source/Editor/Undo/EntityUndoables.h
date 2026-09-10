@@ -3,8 +3,15 @@
 
 #include "Core/GUID/Guid.h"
 #include "Core/String/OpaaxString.hpp"
+#include "Editor/Undo/UndoWorld.h"
 #include "World/Components/TransformComponent.h"
+#include "World/Entity/EntityTypes.h"
 #include "World/Serialization/MapData.h"
+
+namespace Opaax
+{
+    class World;
+}
 
 namespace Opaax::Editor
 {
@@ -155,6 +162,9 @@ namespace Opaax::Editor
      *
      * A whole drag is ONE of these because the panel owns it across frames — Begin on the grab,
      * End on the release. The per-frame TransformSelectedCommand records nothing.
+     *
+     * NAMES ITS WORLD (P8 V3): the level's gizmo and the prefab panel's record the same type, and
+     * Scope is what makes Undo find the right entities — by guid, in that world.
      */
     struct EntityTransform
     {
@@ -170,8 +180,10 @@ namespace Opaax::Editor
         /** "Move" / "Rotate" / "Scale" — the mode's own name, so the menu reads "Undo Move". */
         OpaaxString Name;
 
-        /** Cache the selection's transforms as the BEFORE half, dropping any step left open. */
-        void Begin(const EditorContext& InContext, const char* InName);
+        EUndoWorld  Scope = EUndoWorld::Active;
+
+        /** Cache InIds' transforms in InWorld as the BEFORE half, dropping any step left open. */
+        void Begin(World& InWorld, const TDynArray<EntityID>& InIds, const char* InName, EUndoWorld InScope);
 
         /**
          * Cache them again as the AFTER half.

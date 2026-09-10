@@ -2,6 +2,7 @@
 
 #include "Editor/EditorContext.h"
 #include "Editor/Operation/EditorSelection.hpp"
+#include "Editor/Prefab/EditorPrefabDocument.h"
 
 #include "Application/Services/IEngine.h"
 #include "Engine/Registries/EngineRegistries.h"
@@ -13,6 +14,12 @@
 
 namespace Opaax::Editor
 {
+    World* UndoWorld(const EditorContext& InContext, const EUndoWorld InScope)
+    {
+        return InScope == EUndoWorld::Prefab ? InContext.PrefabDocument.GetWorld()
+                                             : InContext.Worlds.GetActiveWorld();
+    }
+
     namespace
     {
         // Put InData's entities back and select them — recreating any that are gone, on their own
@@ -84,13 +91,12 @@ namespace Opaax::Editor
 
         // Put one side of a drag back. Nothing else has to happen: a drag never changed the
         // selection, so there is none to restore.
-        void WriteTransforms(EditorContext& InContext, const TDynArray<EntityTransform::Entry>& InEntries,
-                             const bool bInBefore)
+        void WriteTransforms(EditorContext& InContext, const EntityTransform& InStep, const bool bInBefore)
         {
-            World* const lWorld = InContext.Worlds.GetActiveWorld();
+            World* const lWorld = UndoWorld(InContext, InStep.Scope);
             if (lWorld == nullptr) { return; }
 
-            for (const EntityTransform::Entry& lEntry : InEntries)
+            for (const EntityTransform::Entry& lEntry : InStep.Entries)
             {
                 Entity lEntity = lWorld->FindByGuid(lEntry.Id);
                 if (!lEntity.IsValid()) { continue; }
@@ -144,19 +150,18 @@ namespace Opaax::Editor
     void EntityRename::Undo(EditorContext& InContext) { WriteName(InContext, EntityId, Before); }
     void EntityRename::Redo(EditorContext& InContext) { WriteName(InContext, EntityId, After); }
 
-    void EntityTransform::Begin(const EditorContext& InContext, const char* InName)
+    void EntityTransform::Begin(World& InWorld, const TDynArray<EntityID>& InIds, const char* InName,
+                                const EUndoWorld InScope)
     {
         Entries.clear();
-        Name = InName != nullptr ? InName : "Transform";
-
-        World* const lWorld = InContext.Worlds.GetActiveWorld();
-        if (lWorld == nullptr) { return; }
+        Name  = InName != nullptr ? InName : "Transform";
+        Scope = InScope;
 
         // BY GUID, not by handle: a step outlives the drag, and a handle does not survive an undo
         // that recreated the entity.
-        for (const EntityID lId : InContext.Selection.Ids())
+        for (const EntityID lId : InIds)
         {
-            Entity lEntity{ lId, lWorld };
+            Entity lEntity{ lId, &InWorld };
 
             const TransformComponent* const lTransform = lEntity.TryGet<TransformComponent>();
             if (lTransform == nullptr) { continue; }
@@ -167,7 +172,7 @@ namespace Opaax::Editor
 
     bool EntityTransform::End(const EditorContext& InContext)
     {
-        World* const lWorld = InContext.Worlds.GetActiveWorld();
+        World* const lWorld = UndoWorld(InContext, Scope);
         if (lWorld == nullptr) { return false; }
 
         bool lMoved = false;
@@ -188,6 +193,6 @@ namespace Opaax::Editor
         return lMoved;
     }
 
-    void EntityTransform::Undo(EditorContext& InContext) { WriteTransforms(InContext, Entries, true); }
-    void EntityTransform::Redo(EditorContext& InContext) { WriteTransforms(InContext, Entries, false); }
+    void EntityTransform::Undo(EditorContext& InContext) { WriteTransforms(InContext, *this, true); }
+    void EntityTransform::Redo(EditorContext& InContext) { WriteTransforms(InContext, *this, false); }
 }

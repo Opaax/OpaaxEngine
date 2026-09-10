@@ -74,23 +74,16 @@ namespace Opaax::Editor
     }
 
     // =============================================================================
-    // EditorGizmo — the transform gizmo's STATE: which mode is active, whether snapping is held,
-    //   the matrix ImGuizmo drives, and the delta that matrix produced.
+    // EditorGizmo — the transform gizmo's SETTINGS: which mode is active, the pivot, the space,
+    //   whether snapping is on and by how much.
     //
     //   Owned by EditorService and reached through EditorContext, the EditorSelection /
-    //   EditorCamera shape — not a ViewportPanel member. Its subject is the SELECTION, which no
-    //   panel owns (**SEL7**), and the mode is set by an editor-wide shortcut.
+    //   EditorCamera shape — not a ViewportPanel member. The mode is set by an editor-wide shortcut
+    //   and the toolbar, and every surface that draws a gizmo follows the same choice.
     //
-    //   THE MATRIX IS STATE, AND THAT IS THE WHOLE TRICK. ImGuizmo captures its start pose on the
-    //   frame a drag begins and then drives the SAME matrix it was handed last frame, so the matrix
-    //   has to persist across frames rather than be rebuilt from the selection each time. Re-seating
-    //   it every frame would fight that captured state and the drag would fold back on itself. So it
-    //   follows the selection only while nothing is being dragged (ReseatAt) and is left strictly
-    //   alone in between.
-    //
-    //   The delta is BANKED, not applied: the panel measures inside the ImGui pass and spends it in
-    //   OnPreRender through EntityOps (**MP7**/**SEL3**), because a draw pass reads the world and
-    //   anything that writes it runs outside the pass.
+    //   THE DRAG ITSELF IS NOT HERE (⑦-C P8 V3). It was, until a second surface drew a gizmo: the
+    //   matrix ImGuizmo drives is per-drag state, and two panels reseating one matrix would fight a
+    //   live drag. That half is GizmoDrag below, owned per surface.
     // =============================================================================
     class EditorGizmo
     {
@@ -205,6 +198,42 @@ namespace Opaax::Editor
         }
 
         // =============================================================================
+        // Members
+        // =============================================================================
+    private:
+        EGizmoMode  m_Mode  = EGizmoMode::Translate;
+        EGizmoPivot m_Pivot = EGizmoPivot::Center;
+        EGizmoSpace m_Space = EGizmoSpace::World;
+
+        // Snapping: a persistent toggle, plus this frame's Ctrl, which inverts it.
+        bool  m_bSnapEnabled  = false;
+        bool  m_bSnapInverted = false;
+
+        // ③'s constants, now editable from the toolbar. Session-only, like EditorCamera's pan and
+        // zoom — viewport state in this editor does not survive a restart.
+        float m_SnapTranslate = 10.f;
+        float m_SnapRotate    = 15.f;
+        float m_SnapScale     = 0.1f;
+    };
+
+    // =============================================================================
+    // GizmoDrag — ONE surface's live drag: the matrix ImGuizmo drives and the delta it produced.
+    //   Owned by every panel that draws a gizmo, beside its selection and camera.
+    //
+    //   THE MATRIX IS STATE, AND THAT IS THE WHOLE TRICK. ImGuizmo captures its start pose on the
+    //   frame a drag begins and then drives the SAME matrix it was handed last frame, so the matrix
+    //   has to persist across frames rather than be rebuilt from the selection each time. Re-seating
+    //   it every frame would fight that captured state and the drag would fold back on itself. So it
+    //   follows the selection only while nothing is being dragged (ReseatAt) and is left strictly
+    //   alone in between.
+    //
+    //   The delta is BANKED, not applied: the panel measures inside the ImGui pass and spends it in
+    //   OnPreRender through EntityOps (**MP7**/**SEL3**), because a draw pass reads the world and
+    //   anything that writes it runs outside the pass.
+    // =============================================================================
+    class GizmoDrag
+    {
+        // =============================================================================
         // The matrix ImGuizmo drives
         // =============================================================================
     public:
@@ -296,20 +325,6 @@ namespace Opaax::Editor
         // Members
         // =============================================================================
     private:
-        EGizmoMode  m_Mode  = EGizmoMode::Translate;
-        EGizmoPivot m_Pivot = EGizmoPivot::Center;
-        EGizmoSpace m_Space = EGizmoSpace::World;
-
-        // Snapping: a persistent toggle, plus this frame's Ctrl, which inverts it.
-        bool  m_bSnapEnabled  = false;
-        bool  m_bSnapInverted = false;
-
-        // ③'s constants, now editable from the toolbar. Session-only, like EditorCamera's pan and
-        // zoom — viewport state in this editor does not survive a restart.
-        float m_SnapTranslate = 10.f;
-        float m_SnapRotate    = 15.f;
-        float m_SnapScale     = 0.1f;
-
         Matrix44F  m_Matrix       = Matrix44F(1.f);
 
         // What m_Matrix was last frame — the other half of the delta. Kept in step by ReseatAt while

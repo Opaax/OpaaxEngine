@@ -6,8 +6,8 @@
 #include "Editor/Panels/IEditorPanel.h"
 #include "Core/String/OpaaxStringID.hpp"
 #include "Editor/UI/IEditorUIBackend.h"
-#include "Editor/Undo/EntityUndoables.h"   // the ONE step a whole drag records (⑤)
 #include "Editor/Viewport/ViewportGestures.h"   // pan/zoom and click/marquee, shared with the prefab panel (P8)
+#include "Editor/Viewport/ViewportGizmo.h"      // the transform gizmo and the step a drag records, shared too
 
 namespace Opaax
 {
@@ -149,21 +149,6 @@ namespace Opaax::Editor
         float AnchorHalfExtent() const;
 
         /**
-         * WHERE the gizmo sits and HOW it is turned — one query, because both answers come from the
-         * PRIMARY entity and handles that pointed one way while turning about another would be a lie.
-         *
-         * The pivot is the selection's combined bounds centre (through the same EntityQuery the
-         * outline and focus-selected use, SEL1) or the primary's own position, per EGizmoPivot. The
-         * rotation is the primary's when the EFFECTIVE space is Local, and zero otherwise — which is
-         * the whole of what makes Local differ from World.
-         *
-         * @return False when there is nothing to draw a gizmo for — no selection, no bounds, or a
-         *   PLAY world, which must look like the game rather than like the editor (the rule
-         *   EnqueueEntityIcons already states).
-         */
-        bool TryGetGizmoPose(Vector2F& OutPivot, float& OutRotationRad) const;
-
-        /**
          * Viewport-local pixels -> world, through the ACTIVE WORLD's own view (CAM2's ScreenToWorld).
          * The world's view, not the editor camera's, so picking needs no Edit/Play fork: it asks the
          * world how it was framed and therefore works inside a PIE session too.
@@ -187,23 +172,6 @@ namespace Opaax::Editor
         void ApplyCameraGesture();
 
         /**
-         * Draw the transform gizmo and bank whatever the drag produced.
-         *
-         * ImGuizmo both DRAWS and MANIPULATES in one call, so unlike the other overlays this one
-         * lives in the ImGui pass rather than in OnPreRender. What it must not do is write the world
-         * from there (MP7) — so the drag's delta is banked and ApplyGizmoDrag spends it.
-         *
-         * Call it while the panel's window is current and after the image, since it takes the image
-         * rect as its viewport.
-         *
-         * @param InOrigin Top-left of the image, in SCREEN pixels — ImGuizmo::SetRect's frame.
-         * @param InSizePx The image's size in screen pixels.
-         * @return True while the gizmo owns the mouse, in which case the caller must not run
-         *   MeasureViewportInput — one button, two consumers, and the order is stated here once.
-         */
-        bool MeasureGizmo(const Vector2F& InOrigin, const Vector2F& InSizePx, bool bInSuppress);
-
-        /**
          * Draw the viewport's tool strip (③b) from EditorExtensionRegistrar::ViewportTools().
          *
          * Called BEFORE the gesture measures and its result handed to them: the strip sits ON the
@@ -218,27 +186,11 @@ namespace Opaax::Editor
 
         /**
          * Spend the banked gizmo delta by DISPATCHING the transform command — the route that
-         * records it (⑤). Runs in OnPreRender beside ApplyPendingPick, and for the same reason: the
-         * motion was measured against the frame that was RENDERED.
+         * carries the PIE guard. Then close the drag's step onto the level's stack. Runs in
+         * OnPreRender beside ApplyPendingPick, and for the same reason: the motion was measured
+         * against the frame that was RENDERED.
          */
         void ApplyGizmoDrag();
-
-        /**
-         * End the undo step the drag opened, once its last delta has been spent.
-         *
-         * Beside ApplyGizmoDrag and strictly after it — see the body for why the ImGui pass is the
-         * wrong place to notice a drag has ended.
-         */
-        void CloseGizmoGesture();
-
-        /**
-         * Keep a live gizmo drag inside [InMin, InMax] — the infinite drag, with a one-shot log so
-         * "the wrap never fired" and "it fired and misbehaved" stay distinguishable. The pan's wrap
-         * lives in CameraGesture with a one-shot of its own.
-         *
-         * @return The correction an ABSOLUTE-position reader must accumulate; see ImguiCursor.
-         */
-        Vector2F WrapDragCursor(const Vector2F& InMin, const Vector2F& InMax);
 
         // =============================================================================
         // Override
@@ -270,9 +222,10 @@ namespace Opaax::Editor
         // The mouse on the image, measured in DrawContents and spent in OnPreRender — the same
         // measure-then-apply the resize above uses, and for the same reason: a panel's draw pass
         // reads the world, anything that writes it runs outside the pass. Shared types (P8), so
-        // the prefab panel's pan, zoom, click and marquee are these exact ones.
+        // the prefab panel's pan, zoom, click, marquee and gizmo are these exact ones.
         CameraGesture m_CameraGesture;
         PickGesture   m_PickGesture;
+        GizmoGesture  m_Gizmo;
 
         // The snap grid. Dim enough to read as paper rather than as content; the two AXES are
         // brighter and coloured like the gizmo's, because a visible origin is worth more than the
@@ -296,14 +249,6 @@ namespace Opaax::Editor
         float    m_ToolbarRounding = 4.f;
         Vector4F m_ToolbarBg       = {0.10f, 0.10f, 0.12f, 0.85f};
 
-        // Infinite drag: how far the cursor has been TELEPORTED back into the image during the
-        // current gizmo drag, accumulated in screen pixels. Added to io.MousePos for the length of
-        // the Manipulate call, because ImGuizmo reads the ABSOLUTE position and would otherwise see
-        // the wrap as a leap across the viewport. Reset whenever no drag is live.
-        //
-        // The camera pan needs no equivalent — it reads MouseDelta, which the teleport zeroes.
-        Vector2F m_GizmoWrapOffset = {0.f, 0.f};
-
         /** ⑦-C — a prefab dropped on the image this frame, asset-relative. Empty = nothing dropped. */
         OpaaxString  m_PendingDropPrefab;
         Vector2F     m_PendingDropPx  = {0.f, 0.f};   // viewport-local, where it was released
@@ -311,23 +256,6 @@ namespace Opaax::Editor
         bool   m_bImageLogged    = false;
         bool   m_bOutlineLogged  = false;
         bool   m_bIconsLogged    = false;
-        bool   m_bWrapLogged     = false;
         bool   m_bGridLogged     = false;
-
-        // One bit per EGizmoMode, not one flag: "does the gizmo write?" is a separate question per
-        // mode, and a single one-shot would leave rotate and scale permanently silent after the
-        // first translate (L15 — the instrument has to discriminate).
-        Uint8  m_GizmoLoggedModes = 0;
-
-        // ⑤ — the drag's two edges. WasUsing is ImGuizmo's grab state as of the last pass; Measured
-        // says that pass happened at all, so a panel that stops drawing mid-drag cannot leave the
-        // step open (see CloseGizmoGesture).
-        bool   m_bGizmoWasUsing = false;
-        bool   m_bGizmoMeasured = false;
-
-        // ⑤ — the drag's undo step, held ACROSS FRAMES: opened with the transforms as they were at
-        // the grab, closed with them as they are at the release. That is what makes a sixty-frame
-        // drag one entry, with nothing in the stack having to know a drag happened.
-        EntityTransform m_GizmoStep;
     };
 }

@@ -7,12 +7,10 @@
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Editor/PIE/PlayInEditor.h"             // IsEdit — the toolbar is authoring furniture
 #include "Editor/Input/InputRoute.h"        // hover/focus is pushed, not read back out (D5 step 2)
-#include "Editor/ImguiLibrary/ImguiCursor.h"     // the infinite drag — wrap the cursor at the edge
 #include "Editor/ImguiLibrary/ImguiWidgets.h"
-#include "Editor/Operation/EditorGizmo.hpp"      // the transform handles' grab state (③)
-#include "Editor/Commands/EditorNativeCommandsTags.hpp"   // the transform tag a drag dispatches (⑤)
+#include "Editor/Operation/EditorGizmo.hpp"      // the gizmo SETTINGS — mode, snap step (③)
 #include "Editor/Operation/EditorSelection.hpp"
-#include "Editor/Undo/EditorUndo.h"              // the ONE step a whole drag records (⑤)
+#include "Editor/Undo/EditorUndo.h"              // the stack a drag's step lands on (⑤)
 #include "Editor/Operation/EditorViewport.hpp"
 #include "Editor/Operation/EntityOps.h"          // the choke point a gizmo drag writes through (SEL6)
 #include "Editor/EditorMapDocument.h"            // ⑦-C — a drop authors into the focused map
@@ -32,42 +30,15 @@
 #include "RHI/Framebuffer.h"                // IFramebuffer + FramebufferSpec (created by the device)
 
 #include "Core/Maths/Bounds2D.h"
-#include "Core/Maths/Maths.h"               // DegreesToRadians — the transform authors degrees
-#include "Renderer/CameraView.h"            // ScreenToWorld (CAM2) + the view/projection halves ImGuizmo needs
+#include "Renderer/CameraView.h"            // ScreenToWorld (CAM2)
 
-#include "World/Components/TransformComponent.h"
 #include "World/Entity/Entity.h"
-#include "World/Entity/EntityQuery.h"       // the ONE entity-AABB rule — the gizmo's pivot
 #include "World/World.h"                    // Apply publishes the camera as the world's view
 #include "World/WorldManager.h"             // the active world is what gets it
 
 #include <imgui.h>
-#include <ImGuizmo.h>
-#include <glm/gtc/type_ptr.hpp>   // value_ptr — ImGuizmo takes raw float[16]
 
 using namespace Opaax;
-
-namespace
-{
-    /**
-     * The 2D subset of ImGuizmo's operations. Z is masked off on every one of them: this engine has
-     * no third axis to author, and an unmasked gizmo would offer handles that write a field no
-     * component reads.
-     */
-    ImGuizmo::OPERATION ToGizmoOperation(const Opaax::Editor::EGizmoMode InMode) noexcept
-    {
-        using namespace Opaax::Editor;
-
-        switch (InMode)
-        {
-        case EGizmoMode::Translate: return ImGuizmo::TRANSLATE_X | ImGuizmo::TRANSLATE_Y;
-        case EGizmoMode::Rotate:    return ImGuizmo::ROTATE_Z;   // face-on under an ortho view
-        case EGizmoMode::Scale:     return ImGuizmo::SCALE_X | ImGuizmo::SCALE_Y;
-        }
-
-        return ImGuizmo::TRANSLATE_X | ImGuizmo::TRANSLATE_Y;
-    }
-}
 
 namespace Opaax::Editor
 {
@@ -118,7 +89,6 @@ namespace Opaax::Editor
         // the two calls below are about to change.
         ApplyPendingPick();
         ApplyGizmoDrag();
-        CloseGizmoGesture();
 
         ApplyPendingResize();
         ApplyCameraGesture();
@@ -190,46 +160,6 @@ namespace Opaax::Editor
         return ViewportOverlays::AnchorHalfExtent(ActiveView(), ViewportPx());
     }
 
-    bool ViewportPanel::TryGetGizmoPose(Vector2F& OutPivot, float& OutRotationRad) const
-    {
-        World* const lWorld = m_Context.Selection.GetWorld();
-
-        // Edit worlds only, the same rule EnqueueEntityIcons states: an overlay is authoring
-        // furniture, and a running game must look like the game.
-        if (lWorld == nullptr || lWorld->GetMode() != EWorldMode::Edit || !m_Context.Selection.HasSelection())
-        {
-            return false;
-        }
-
-        const EditorGizmo& lGizmo   = m_Context.Gizmo;
-        Entity             lPrimary = m_Context.Selection.Get();
-
-        // BOTH answers come from the PRIMARY, which is why they are one query: the entity whose
-        // axes Local follows must be the entity Origin sits on, or the handles would point one way
-        // and turn about another.
-        const TransformComponent* lPrimaryXf = lPrimary.IsValid() ? lPrimary.TryGet<TransformComponent>()
-                                                                  : nullptr;
-
-        OutRotationRad = (lGizmo.GetEffectiveSpace() == EGizmoSpace::Local && lPrimaryXf != nullptr)
-                             ? Maths::DegreesToRadians(lPrimaryXf->Rotation)
-                             : 0.f;
-
-        if (lGizmo.GetPivot() == EGizmoPivot::Origin && lPrimaryXf != nullptr)
-        {
-            OutPivot = lPrimaryXf->Position;
-            return true;
-        }
-
-        Bounds2D lBounds;
-        if (!EntityQuery::TryGetBounds(*lWorld, m_Context.Selection.Ids(), lBounds, AnchorHalfExtent()))
-        {
-            return false;
-        }
-
-        OutPivot = lBounds.Center;
-        return true;
-    }
-
     void ViewportPanel::ApplyPendingPick()
     {
         const PickGesture::Pick lPick = m_PickGesture.Take();   // cleared FIRST, whether spent or not
@@ -241,77 +171,22 @@ namespace Opaax::Editor
     }
 
     // =========================================================================
-    // ApplyGizmoDrag — spend what MeasureGizmo banked, through EntityOps (SEL6). That route is the
-    // whole point of the gizmo landing in ③ rather than ⑤: a drag is many small mutations, and
-    // undo becomes "coalesce these" instead of a retrofit across every call site.
+    // ApplyGizmoDrag — spend what the gesture banked, through the transform COMMAND (SEL6): that
+    // dispatch carries the PIE guard, which is the level's policy and not the gesture's. Then the
+    // drag's falling edge, onto the level's stack.
     //
     // Beside ApplyPendingPick and for the same reason — the motion was measured against the frame
     // that was already RENDERED, so it is spent before the resize and the camera change that frame.
     // =========================================================================
     void ViewportPanel::ApplyGizmoDrag()
     {
-        if (!m_Context.Gizmo.HasPendingDelta())
-        {
-            return;
-        }
-
         EntityOps::TransformDelta lDelta;
-        lDelta.Matrix   = m_Context.Gizmo.ConsumeDelta();
-        lDelta.FrameRad = m_Context.Gizmo.GetFrameRad();
-        lDelta.Origin   = m_Context.Gizmo.UsesIndividualOrigins()
-                              ? EntityOps::ETransformOrigin::Individual
-                              : EntityOps::ETransformOrigin::Shared;
-
-        // BY TAG, not by calling EntityOps: the dispatch is what records an edit (⑤), and a drag
-        // that bypassed it would be the one mutation in the editor with no undo.
-        m_Context.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_TRANSFORM_SELECTED, m_Context, lDelta);
-
-        // ONE-SHOT PER MODE, because a drag lands one of these per frame. Without it a gizmo that
-        // draws but never writes looks exactly like one that writes — the L15 discriminate rule, and
-        // the reason the verb itself stays silent.
-        const EGizmoMode lMode = m_Context.Gizmo.GetMode();
-        const Uint8      lBit  = static_cast<Uint8>(1u << static_cast<Uint8>(lMode));
-
-        if ((m_GizmoLoggedModes & lBit) == 0)
+        if (m_Gizmo.TakeDelta(m_Context.Gizmo, lDelta))
         {
-            OPAAX_LOG(LogViewportPanel, Info, "Gizmo {} applied to {} entity(ies)",
-                      ToString(lMode), m_Context.Selection.Count());
-            m_GizmoLoggedModes |= lBit;
-        }
-    }
-
-    // =========================================================================
-    // CloseGizmoGesture — the drag's FALLING EDGE, taken AFTER ApplyGizmoDrag has spent the last
-    // banked delta. Reading it at the edge seen in the ImGui pass would see a world that predates
-    // the final motion, because a delta measured in frame N is applied in frame N+1 (**SEL3**'s
-    // measure-then-apply lag).
-    //
-    // m_bGizmoMeasured is the other half: MeasureGizmo stops being called when the panel is hidden
-    // or the selection empties, and an edge never seen would merge the next unrelated edit in.
-    // =========================================================================
-    void ViewportPanel::CloseGizmoGesture()
-    {
-        const bool lStillDragging = m_bGizmoWasUsing && m_bGizmoMeasured;
-
-        if (!lStillDragging && !m_Context.Gizmo.HasPendingDelta())
-        {
-            // The whole drag, as ONE step. End answers false for a step nobody opened and for a
-            // drag that ended where it started, so this runs on every idle frame and records
-            // nothing — which is why it needs no flag of its own.
-            if (m_GizmoStep.End(m_Context))
-            {
-                m_Context.Undo.Record(Move(m_GizmoStep));
-            }
-
-            // CLOSED EITHER WAY. A step left holding entries would keep re-reading them every idle
-            // frame, and the next Inspector edit to one of those entities would land in the stack
-            // as a phantom "Move".
-            m_GizmoStep = EntityTransform{};
-
-            m_bGizmoWasUsing = false;
+            m_Context.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_TRANSFORM_SELECTED, m_Context, lDelta);
         }
 
-        m_bGizmoMeasured = false;   // set again by the next MeasureGizmo
+        m_Gizmo.Close(m_Context, m_Context.Undo);
     }
 
     // =========================================================================
@@ -559,143 +434,6 @@ namespace Opaax::Editor
         return lHovered;
     }
 
-    Vector2F ViewportPanel::WrapDragCursor(const Vector2F& InMin, const Vector2F& InMax)
-    {
-        const Vector2F lCorrection = ImguiCursor::WrapInRect(ImVec2{ InMin.x, InMin.y },
-                                                             ImVec2{ InMax.x, InMax.y });
-
-        if (!m_bWrapLogged && (lCorrection.x != 0.f || lCorrection.y != 0.f))
-        {
-            OPAAX_LOG(LogViewportPanel, Info,
-                      "Cursor wrapped at the viewport edge during a gizmo drag — the gesture continues");
-            m_bWrapLogged = true;
-        }
-
-        return lCorrection;
-    }
-
-    // =========================================================================
-    // MeasureGizmo — ImGuizmo both draws the handles and manipulates the matrix, in one call.
-    //
-    // That is why this one lives in the ImGui pass while every other overlay is enqueued in
-    // OnPreRender: it needs the draw list and the mouse. What it must NOT do from here is write the
-    // world (MP7), so the delta is banked and ApplyGizmoDrag spends it next frame — the same
-    // measure-then-apply handshake the camera gesture and the pick already use.
-    //
-    // The matrix is EditorGizmo's, not a local: ImGuizmo captures its start pose when a drag begins
-    // and then drives the matrix it was handed, so re-seating it mid-drag would fight that state.
-    // It follows the selection only while nothing is being dragged.
-    // =========================================================================
-    bool ViewportPanel::MeasureGizmo(const Vector2F& InOrigin, const Vector2F& InSizePx, bool bInSuppress)
-    {
-        World* const lWorld = m_Context.Selection.GetWorld();
-
-        Vector2F lPivot;
-        float    lRotationRad = 0.f;
-
-        if (lWorld == nullptr || !TryGetGizmoPose(lPivot, lRotationRad) || InSizePx.x <= 0.f || InSizePx.y <= 0.f)
-        {
-            return false;
-        }
-
-        EditorGizmo& lGizmo = m_Context.Gizmo;
-
-        // INFINITE DRAG. Wrap the cursor back into the image once it leaves, so a drag never runs
-        // out of screen — Blender, Unreal and Unity all do this for exactly this gesture.
-        //
-        // ImGuizmo reads the ABSOLUTE io.MousePos, so the teleport alone would fling the selection
-        // to the far side. The accumulated correction is added back below, which is what makes the
-        // gizmo see a cursor that walked off the edge and kept walking. Reset when idle so the
-        // offset cannot leak into the next drag.
-        if (ImGuizmo::IsUsing())
-        {
-            m_GizmoWrapOffset += WrapDragCursor(InOrigin, InOrigin + InSizePx);
-        }
-        else
-        {
-            m_GizmoWrapOffset = { 0.f, 0.f };
-        }
-
-        ImGuizmo::SetOrthographic(true);
-        ImGuizmo::SetDrawlist();   // this panel's list, so the gizmo clips to the viewport image
-        ImGuizmo::SetRect(InOrigin.x, InOrigin.y, InSizePx.x, InSizePx.y);
-
-        // The view and the projection SEPARATELY — the reason ③ split them out of
-        // MakeViewProjection, which is still their product so the three cannot drift.
-        const CameraView lView = lWorld->GetCameraView();
-        const Matrix44F  lViewMatrix = MakeView(lView);
-        const Matrix44F  lProjMatrix = MakeProjection(lView, m_viewportSize.x, m_viewportSize.y);
-
-        if (!ImGuizmo::IsUsing())
-        {
-            lGizmo.ReseatAt(lPivot, lRotationRad);
-        }
-
-        // Ctrl INVERTS the toolbar's toggle rather than setting it, so the key works whichever way
-        // the toggle is left.
-        lGizmo.SetSnapInverted(ImGui::GetIO().KeyCtrl);
-
-        // Translate follows the GRID when one is shown (see TranslateSnapStep); rotate and scale
-        // have no grid to match, so they use the authored step.
-        const float lStep    = lGizmo.GetMode() == EGizmoMode::Translate ? TranslateSnapStep()
-                                                                         : lGizmo.GetSnapStep();
-        const float lSnap[3] = { lStep, lStep, lStep };
-
-        // A handle under the toolbar must not be grabbable through it — but NEVER mid-drag, because
-        // Enable(false) CANCELS the interaction it is editing, which would drop a drag the moment
-        // the cursor crossed the strip. Disabled still DRAWS, it only refuses to manipulate.
-        const bool bSuppress = bInSuppress && !ImGuizmo::IsUsing();
-        ImGuizmo::Enable(!bSuppress);
-
-        // The VIRTUAL cursor, for the length of the Manipulate call only. Everything else in the
-        // frame — ImGui's own hover, the marquee, the pan — wants the real one, so it is restored
-        // immediately rather than left shifted.
-        ImGuiIO&     lIO         = ImGui::GetIO();
-        const ImVec2 lRealMouse  = lIO.MousePos;
-
-        lIO.MousePos = ImVec2{ lRealMouse.x + m_GizmoWrapOffset.x, lRealMouse.y + m_GizmoWrapOffset.y };
-
-        // NO deltaMatrix out-parameter, deliberately — see EditorGizmo::BankFrameDelta. ImGuizmo's
-        // is per-frame for translate and rotate but cumulative-and-origin-centred for SCALE, which
-        // is invisible at (0,0) and wrong everywhere else. The delta is taken from our own matrix.
-        //
-        // Manipulate returns whether it actually CHANGED the matrix, which is the guard that keeps a
-        // click-without-motion from dirtying the map — IsUsing() alone stays true for the whole
-        // gesture and would bank an identity delta every frame.
-        const bool bChanged = ImGuizmo::Manipulate(glm::value_ptr(lViewMatrix), glm::value_ptr(lProjMatrix),
-                                                   ToGizmoOperation(lGizmo.GetMode()),
-                                                   lGizmo.GetEffectiveSpace() == EGizmoSpace::Local
-                                                       ? ImGuizmo::LOCAL : ImGuizmo::WORLD,
-                                                   glm::value_ptr(lGizmo.Matrix()), nullptr,
-                                                   lGizmo.IsSnappingNow() ? lSnap : nullptr);
-
-        lIO.MousePos = lRealMouse;
-        ImGuizmo::Enable(true);   // restored immediately — the flag is global and persists otherwise
-
-        if (bChanged)
-        {
-            lGizmo.BankFrameDelta();
-        }
-
-        // ⑤ — THE DRAG'S RISING EDGE, and the step opens HERE rather than at the first applied
-        // delta because nothing has been written yet: the first delta banks this frame and lands
-        // next, so the transforms read now are the pre-drag ones. The step is named by MODE, which
-        // is what makes the menu read "Undo Rotate" rather than the verb's own "Transform".
-        const bool lUsing = ImGuizmo::IsUsing();
-
-        if (lUsing && !m_bGizmoWasUsing)
-        {
-            m_GizmoStep.Begin(m_Context, ToString(lGizmo.GetMode()));
-        }
-
-        m_bGizmoWasUsing = lUsing;
-        m_bGizmoMeasured = true;   // CloseGizmoGesture's guard against a panel that stops drawing
-
-        // IsOver() as well as IsUsing(): hovering a handle must already suppress the marquee, or the
-        // press that starts a drag also starts a rubber band underneath it.
-        return ImGuizmo::IsUsing() || ImGuizmo::IsOver();
-    }
-
     EditorImage ViewportPanel::GetViewportImage() const
     {
         return m_Framebuffer != nullptr ? m_Context.UIBackend.GetViewportImage(*m_Framebuffer) : EditorImage{};
@@ -771,7 +509,16 @@ namespace Opaax::Editor
         // ONE left button, TWO consumers, and the order is stated here once: a press that lands on a
         // handle belongs to the gizmo, so the marquee never sees it. Without this a drag on a handle
         // would move the entity AND rubber-band a selection over it.
-        if (!MeasureGizmo({ lOrigin.x, lOrigin.y }, { lAvail.x, lAvail.y }, lToolbarHovered))
+        //
+        // The gizmo measures against the world the SELECTION is in, which after a PIE start is the
+        // clone — and TryGetGizmoPose refuses a Play world, so nothing draws there.
+        World* const lGizmoWorld = m_Context.Selection.GetWorld();
+        const bool   lGizmoOwns  = lGizmoWorld != nullptr
+            && m_Gizmo.Measure(m_Context.Gizmo, *lGizmoWorld, m_Context.Selection, lGizmoWorld->GetCameraView(),
+                               ViewportPx(), { lOrigin.x, lOrigin.y }, { lAvail.x, lAvail.y },
+                               TranslateSnapStep(), lToolbarHovered, EUndoWorld::Active);
+
+        if (!lGizmoOwns)
         {
             m_PickGesture.Measure(lImageHovered, { lOrigin.x, lOrigin.y });
         }
