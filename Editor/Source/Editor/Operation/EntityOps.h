@@ -9,6 +9,7 @@
 namespace Opaax
 {
     class Entity;
+    class World;   // ⑦-C P8 — TransformEntities names the world it acts on
 }
 
 namespace Opaax::Editor
@@ -119,6 +120,7 @@ namespace Opaax::Editor
          */
         Uint64 RevertToPrefab(EditorContext& InContext, bool bInWholeInstance);
 
+
         /**
          * Rename one entity. Empty input is refused — a nameless row in the Hierarchy is
          * unclickable in practice and tells an author nothing.
@@ -210,6 +212,25 @@ namespace Opaax::Editor
          * means.
          */
         void TransformSelected(EditorContext& InContext, const TransformDelta& InDelta);
+
+        /**
+         * Apply a gizmo delta to NAMED entities of a NAMED world — the world-agnostic core of
+         * `TransformSelected` (⑦-C P8).
+         *
+         * Split out so the PREFAB viewport drives the same verb with its own world and its own
+         * selection instead of a second copy of the gizmo maths, which is the drift **MP7** names.
+         * Everything subtle lives here: the delta is conjugated into the GIZMO's frame once for the
+         * whole set (doing it per entity was the bug that made a multi-selection scale drift), and
+         * positions run through the matrix so a rotate orbits the shared pivot.
+         *
+         * It takes no `EditorContext` and therefore enforces NO policy — no PIE guard, no undo, no
+         * selection. Those belong to the surface calling it, which is why `TransformSelected` still
+         * exists as the level's wrapper.
+         *
+         * @return true when anything actually moved; the caller decides what to record.
+         */
+        bool TransformEntities(World& InWorld, const TDynArray<EntityID>& InEntities,
+                               const TransformDelta& InDelta);
 
         /**
          * Frame the selection with the editor camera.

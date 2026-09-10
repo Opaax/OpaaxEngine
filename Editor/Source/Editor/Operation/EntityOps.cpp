@@ -665,6 +665,15 @@ namespace Opaax::Editor
         World* const lWorld = InContext.Selection.GetWorld();
         if (lWorld == nullptr) { return; }
 
+        // THE LEVEL'S surface, named explicitly. Everything below this line is world-agnostic and
+        // lives in TransformEntities, so the prefab viewport drives the SAME verb with its own world
+        // and its own selection rather than a second copy of the gizmo maths (**MP7**).
+        TransformEntities(*lWorld, InContext.Selection.Ids(), InDelta);
+    }
+
+    bool EntityOps::TransformEntities(World& InWorld, const TDynArray<EntityID>& InEntities,
+                                      const TransformDelta& InDelta)
+    {
         // The delta's LINEAR part carries the rotation and the scale; the translation is handled by
         // running each position through the whole matrix below.
         //
@@ -683,9 +692,9 @@ namespace Opaax::Editor
         // once, the way it does for the outline and the icons (L15 without the flood).
         bool lChanged = false;
 
-        for (const EntityID lId : InContext.Selection.Ids())
+        for (const EntityID lId : InEntities)
         {
-            Entity lEntity{ lId, lWorld };
+            Entity lEntity{ lId, &InWorld };
 
             // Every entity has one (I17), so a miss means the handle went stale between the measure
             // and this call — skip it rather than emplacing a transform nobody asked for.
@@ -711,7 +720,9 @@ namespace Opaax::Editor
             lChanged = true;
         }
 
-        if (lChanged) { lWorld->MarkChanged(); }
+        if (lChanged) { InWorld.MarkChanged(); }
+
+        return lChanged;
     }
 
     void EntityOps::FocusSelected(EditorContext& InContext)
