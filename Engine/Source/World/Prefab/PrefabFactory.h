@@ -9,6 +9,7 @@
 namespace Opaax
 {
     class ComponentRegistry;
+    class IPrefabResolver;
 
     inline constexpr LogCategory LogPrefabFactory{"PrefabFactory"};
 
@@ -73,8 +74,9 @@ namespace Opaax
          *     placement claim the map it was cut from.
          *   - any `PrefabInstanceComponent` is dropped. Building a prefab out of entities that were
          *     themselves an instance must not bake the OLD link into the new file — the result
-         *     would be a prefab whose entities claim to belong to a different prefab. Composing the
-         *     two is nesting (⑦-C P7); flattening is the honest answer until then.
+         *     would be a prefab whose entities claim to belong to a different prefab. A NESTED
+         *     placement is carried as a RECORD instead (P7): the caller folds first, and the
+         *     captured `Instances` come along into the file.
          *
          * GUIDS ARE KEPT AS CAPTURED. They become the file's TEMPLATE guids — the stable ids
          * `BuildInstance` derives from and an override record keys by — so they must be the prefab's
@@ -84,5 +86,24 @@ namespace Opaax
          *   not one this makes, since an empty prefab is a legal document.
          */
         static PrefabData BuildPrefab(const MapData& InCaptured, const ComponentRegistry& InRegistry);
+
+        /**
+         * The prefab AS EVERY CONSUMER SEES IT (⑦-C P7): its own entities plus every nested
+         * placement expanded — recursively, since the resolver hands nested prefabs back flattened
+         * — with `OwnerMap` cleared and the nested markers stripped.
+         *
+         * This is what makes nesting cost `BuildInstance`, `Fold`, `Expand`, `Restore` and the
+         * reconciler NOTHING: they keep working over "the prefab's entities". A nested entity's
+         * in-prefab guid is `Derive(record.InstanceId, template)`, authored in the file and stable,
+         * and a level placement derives it once more — **PF2**'s composition, free.
+         *
+         * A VARIANT (no entities, one record) flattens to its base with the overrides applied.
+         * Cycles are the RESOLVER's to refuse (it owns the in-flight chain); a refused record
+         * simply expands to nothing here.
+         *
+         * PURE. Only IPrefabResolver implementations should need it.
+         */
+        static PrefabData Flatten(const PrefabData& InRaw, const OpaaxString& InPrefabAssetPath,
+                                  const IPrefabResolver& InResolver, const ComponentRegistry& InRegistry);
     };
 }

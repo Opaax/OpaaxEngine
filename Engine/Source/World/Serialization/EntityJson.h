@@ -97,6 +97,31 @@ namespace Opaax
         OPAAX_API OpaaxString DumpToString(const nlohmann::json& InJson, int InIndent);
 
         // =====================================================================
+        // The placements (⑦-C P3 records, shared by the map and the prefab file since P7)
+        // =====================================================================
+        // ONE writer for both, PF1's rule extended: a prefab file that places prefabs holds the
+        // same records a map does, and a key spelled twice would drift.
+        inline constexpr const char* KEY_INSTANCES   = "prefabInstances";
+        inline constexpr const char* KEY_PREFAB      = "prefab";
+        inline constexpr const char* KEY_INSTANCE_ID = "instanceId";
+        inline constexpr const char* KEY_OVERRIDES   = "overrides";
+
+        /**
+         * The records as a json array, SORTED by InstanceId (for the reason entities are sorted by
+         * guid, **MP2**) with each record's overrides keyed by template guid text. The caller's
+         * order is untouched — a copy of the pointers is sorted.
+         */
+        OPAAX_API nlohmann::json InstancesToJson(const TDynArray<PrefabInstanceRecord>& InInstances);
+
+        /**
+         * Read the `prefabInstances` array under InRoot, if any, appending to OutInstances.
+         * Tolerant and total (**MP3**): a record missing its path or carrying an unparseable id
+         * is skipped, because a half-read placement would instantiate the wrong prefab.
+         * @return How many records were skipped.
+         */
+        OPAAX_API Uint64 InstancesFromJson(const nlohmann::json& InRoot, TDynArray<PrefabInstanceRecord>& OutInstances);
+
+        // =====================================================================
         // The walk
         // =====================================================================
         /**

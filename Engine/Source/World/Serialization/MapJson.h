@@ -69,11 +69,12 @@ namespace Opaax
         // Re-exported rather than re-declared: one definition, and no caller moved.
         inline constexpr const char* KEY_MAP_ID      = "mapId";
 
-        // ⑦-C P3 — the folded prefab placements, and the keys inside one.
-        inline constexpr const char* KEY_INSTANCES    = "prefabInstances";
-        inline constexpr const char* KEY_PREFAB       = "prefab";
-        inline constexpr const char* KEY_INSTANCE_ID  = "instanceId";
-        inline constexpr const char* KEY_OVERRIDES    = "overrides";
+        // ⑦-C P3 — the folded prefab placements, and the keys inside one. EntityJson's since P7,
+        // when a prefab file learned to hold the same records; re-exported like the rest.
+        inline constexpr const char* KEY_INSTANCES    = EntityJson::KEY_INSTANCES;
+        inline constexpr const char* KEY_PREFAB       = EntityJson::KEY_PREFAB;
+        inline constexpr const char* KEY_INSTANCE_ID  = EntityJson::KEY_INSTANCE_ID;
+        inline constexpr const char* KEY_OVERRIDES    = EntityJson::KEY_OVERRIDES;
 
         inline constexpr const char* KEY_VERSION     = EntityJson::KEY_VERSION;
         inline constexpr const char* KEY_ENTITIES    = EntityJson::KEY_ENTITIES;

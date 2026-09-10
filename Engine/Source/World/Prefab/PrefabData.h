@@ -22,13 +22,21 @@ namespace Opaax
     //   stamps one (PrefabFactory::BuildInstance), which is the same rule WM2 already states:
     //   default-invalid means "no map authored this".
     //
+    //   AND ITS PLACEMENTS (⑦-C P7): a prefab may place other prefabs, held as the SAME records a
+    //   map holds (**PF3**). A file with no entities and ONE record is a VARIANT — "that prefab,
+    //   plus these overrides" — and needs no type of its own. Every consumer reads the prefab
+    //   FLATTENED through IPrefabResolver (records expanded, guids `Derive(record, template)`);
+    //   only the file, the prefab document and PrefabFactory::Flatten ever see the records.
+    //
     //   Plain aggregate, no OPAAX_API: no vtable, no out-of-line members, nothing to export.
     // =============================================================================
     struct PrefabData
     {
-        TDynArray<EntityData> Entities;
+        TDynArray<EntityData>           Entities;
+        TDynArray<PrefabInstanceRecord> Instances;
 
-        bool   IsEmpty()     const noexcept { return Entities.empty(); }
-        Uint64 EntityCount() const noexcept { return static_cast<Uint64>(Entities.size()); }
+        bool   IsEmpty()       const noexcept { return Entities.empty() && Instances.empty(); }
+        Uint64 EntityCount()   const noexcept { return static_cast<Uint64>(Entities.size()); }
+        Uint64 InstanceCount() const noexcept { return static_cast<Uint64>(Instances.size()); }
     };
 }

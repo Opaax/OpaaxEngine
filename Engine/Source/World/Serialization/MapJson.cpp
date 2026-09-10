@@ -7,62 +7,6 @@ namespace Opaax
 {
     namespace
     {
-        // The folded placements (⑦-C P3). Tolerant and total like everything else down here
-        // (**MP3**): a record missing its prefab path or carrying an unparseable instance id is
-        // SKIPPED with a warning rather than half-read, because a half-read placement would
-        // instantiate the wrong prefab or collide identities.
-        void ReadInstances(const nlohmann::json& InJson, TDynArray<PrefabInstanceRecord>& OutInstances)
-        {
-            const auto lIt = InJson.find(MapJson::KEY_INSTANCES);
-            if (lIt == InJson.end() || !lIt->is_array()) { return; }
-
-            Uint64 lSkipped = 0;
-
-            for (const nlohmann::json& lRecordJson : *lIt)
-            {
-                if (!lRecordJson.is_object()) { ++lSkipped; continue; }
-
-                PrefabInstanceRecord lRecord;
-                lRecord.Prefab = EntityJson::ReadString(lRecordJson, MapJson::KEY_PREFAB);
-
-                if (lRecord.Prefab.IsEmpty()
-                    || !Guid::FromString(EntityJson::ReadString(lRecordJson, MapJson::KEY_INSTANCE_ID),
-                                         lRecord.InstanceId))
-                {
-                    ++lSkipped;
-                    continue;
-                }
-
-                const auto lOverridesIt = lRecordJson.find(MapJson::KEY_OVERRIDES);
-                if (lOverridesIt != lRecordJson.end() && lOverridesIt->is_object())
-                {
-                    for (const auto& [lGuidText, lPatch] : lOverridesIt->items())
-                    {
-                        PrefabOverrideEntry lEntry;
-                        if (!Guid::FromString(OpaaxString(lGuidText.c_str(),
-                                                          static_cast<Uint32>(lGuidText.size())),
-                                              lEntry.TemplateGuid))
-                        {
-                            // An override naming no entity of the prefab cannot be applied to
-                            // anything; dropping it leaves that entity at the prefab's values.
-                            continue;
-                        }
-
-                        lEntry.Patch = lPatch;
-                        lRecord.Overrides.emplace_back(Move(lEntry));
-                    }
-                }
-
-                OutInstances.emplace_back(Move(lRecord));
-            }
-
-            if (lSkipped > 0)
-            {
-                OPAAX_LOG(LogMapJson, Warn,
-                          "Skipped {} prefab instance(s) with a missing path or malformed id", lSkipped);
-            }
-        }
-
         // ToJson's body, shared by the copying and the CONSUMING entry points.
         //
         // TData is a forwarding reference: an lvalue MapData deduces MapData&, a temporary deduces
@@ -97,48 +41,7 @@ namespace Opaax
             // whole project the moment this ships.
             if (!InData.Instances.empty())
             {
-                nlohmann::json lInstances = nlohmann::json::array();
-
-                // SORTED BY InstanceId, for the reason entities are sorted by Guid (**MP2**): a map
-                // file lives in git, and Fold produces these in the world's storage order, which
-                // reshuffles whenever an entity is destroyed. Sorting a copy of the pointers leaves
-                // the caller's MapData order untouched.
-                TDynArray<const PrefabInstanceRecord*> lOrdered;
-                lOrdered.reserve(InData.Instances.size());
-                for (const PrefabInstanceRecord& lRecord : InData.Instances)
-                {
-                    lOrdered.emplace_back(&lRecord);
-                }
-
-                std::sort(lOrdered.begin(), lOrdered.end(),
-                    [](const PrefabInstanceRecord* InLeft, const PrefabInstanceRecord* InRight)
-                    {
-                        return InLeft->InstanceId.High != InRight->InstanceId.High
-                            ? InLeft->InstanceId.High < InRight->InstanceId.High
-                            : InLeft->InstanceId.Low  < InRight->InstanceId.Low;
-                    });
-
-                for (const PrefabInstanceRecord* lPtr : lOrdered)
-                {
-                    const PrefabInstanceRecord& lRecord = *lPtr;
-
-                    nlohmann::json lOverrides = nlohmann::json::object();
-                    for (const PrefabOverrideEntry& lEntry : lRecord.Overrides)
-                    {
-                        // Keyed by the guid's TEXT: nlohmann's object_t is a std::map, so the file's
-                        // override order is sorted and stable without a comparator on Guid.
-                        lOverrides[lEntry.TemplateGuid.ToString().CStr()] = lEntry.Patch;
-                    }
-
-                    nlohmann::json lRecordJson = nlohmann::json::object();
-                    lRecordJson[MapJson::KEY_PREFAB]      = lRecord.Prefab.CStr();
-                    lRecordJson[MapJson::KEY_INSTANCE_ID] = lRecord.InstanceId.ToString().CStr();
-                    lRecordJson[MapJson::KEY_OVERRIDES]   = Move(lOverrides);
-
-                    lInstances.emplace_back(Move(lRecordJson));
-                }
-
-                lRoot[MapJson::KEY_INSTANCES] = Move(lInstances);
+                lRoot[MapJson::KEY_INSTANCES] = EntityJson::InstancesToJson(InData.Instances);
             }
 
             return lRoot;
@@ -180,7 +83,7 @@ namespace Opaax
         // ⑦-C P3. Read BEFORE the early-out below: a map may legitimately hold nothing but
         // placements — every entity folded away — and losing them because there was no `entities`
         // array would be exactly the silent data loss the version bump exists to prevent.
-        ReadInstances(InJson, lParsed.Instances);
+        EntityJson::InstancesFromJson(InJson, lParsed.Instances);
 
         const auto lEntitiesIt = InJson.find(KEY_ENTITIES);
         if (lEntitiesIt == InJson.end() || !lEntitiesIt->is_array())

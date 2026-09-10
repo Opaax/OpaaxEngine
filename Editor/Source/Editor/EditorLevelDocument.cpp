@@ -54,7 +54,7 @@ namespace Opaax::Editor
         // UNFOLDED could never match a file written FOLDED, so the marker would read dirty forever.
         if (m_Paths != nullptr && m_Resources != nullptr)
         {
-            ResourcePrefabResolver lResolver(*m_Paths, *m_Resources);
+            ResourcePrefabResolver lResolver(*m_Paths, *m_Resources, InRegistry);
             PrefabFold::Fold(lData, lResolver, InRegistry);
         }
 

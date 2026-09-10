@@ -4,9 +4,31 @@
 
 #include "World/Components/ComponentRegistry.h"
 #include "World/Components/PrefabInstanceComponent.h"
+#include "World/Prefab/PrefabFold.h"
 
 namespace Opaax
 {
+    namespace
+    {
+        OpaaxStringID MarkerName(const ComponentRegistry& InRegistry)
+        {
+            const IComponentEntry* const lEntry =
+                InRegistry.FindByTypeId(entt::type_hash<PrefabInstanceComponent>::value());
+            return lEntry != nullptr ? lEntry->GetName() : OpaaxStringID();
+        }
+
+        void StripMarker(EntityData& InOutEntity, const OpaaxStringID InMarkerName)
+        {
+            if (!InMarkerName.IsValid()) { return; }
+
+            std::erase_if(InOutEntity.Components,
+                          [InMarkerName](const ComponentData& InComponent)
+                          {
+                              return InComponent.TypeName == InMarkerName;
+                          });
+        }
+    }
+
     MapData PrefabFactory::BuildInstance(const PrefabData& InPrefab, const OpaaxString& InPrefabAssetPath,
                                          const Guid& InInstanceId, MapId InOwnerMap,
                                          const ComponentRegistry& InRegistry)
@@ -55,14 +77,10 @@ namespace Opaax
             lEntity.Id       = Guid::Derive(InInstanceId, lTemplate.Id);
             lEntity.OwnerMap = InOwnerMap;
 
-            // A prefab file may already carry a marker — that is a NESTED instance, and composing
-            // the two is ⑦-C P7. Until then the outer instance owns the entity, so its marker
-            // replaces rather than stacks; erased first so the payload cannot appear twice.
-            std::erase_if(lEntity.Components,
-                          [lMarkerName](const ComponentData& InComponent)
-                          {
-                              return InComponent.TypeName == lMarkerName;
-                          });
+            // The outer instance owns the entity: its marker replaces rather than stacks, erased
+            // first so the payload cannot appear twice. A FLATTENED prefab (P7) carries none, but
+            // a caller handing raw entities that were an instance might.
+            StripMarker(lEntity, lMarkerName);
 
             PrefabInstanceComponent lMarker;
             lMarker.Prefab.Path  = InPrefabAssetPath;
@@ -99,21 +117,55 @@ namespace Opaax
 
             // Guids are KEPT — they become the file's template ids. See the header.
             lEntity.OwnerMap = MapId();
-
-            if (lMarkerName.IsValid())
-            {
-                std::erase_if(lEntity.Components,
-                              [lMarkerName](const ComponentData& InComponent)
-                              {
-                                  return InComponent.TypeName == lMarkerName;
-                              });
-            }
+            StripMarker(lEntity, lMarkerName);
 
             lPrefab.Entities.emplace_back(Move(lEntity));
         }
 
-        OPAAX_LOG(LogPrefabFactory, Trace, "Built a prefab of {} entity(ies)", lPrefab.EntityCount());
+        // The RECORDS come along (P7): a capture that was folded first holds its nested placements
+        // here, and they are what the file stores — expanding them is the reader's business.
+        lPrefab.Instances = InCaptured.Instances;
+
+        OPAAX_LOG(LogPrefabFactory, Trace, "Built a prefab of {} entity(ies) and {} placement(s)",
+                  lPrefab.EntityCount(), lPrefab.InstanceCount());
 
         return lPrefab;
+    }
+
+    PrefabData PrefabFactory::Flatten(const PrefabData& InRaw, const OpaaxString& InPrefabAssetPath,
+                                      const IPrefabResolver& InResolver, const ComponentRegistry& InRegistry)
+    {
+        PrefabData lFlat;
+        lFlat.Entities = InRaw.Entities;   // its own, as authored
+
+        if (InRaw.Instances.empty()) { return lFlat; }
+
+        // The same expansion a map's placements get, on a placeholder map: BuildInstance refuses
+        // an invalid one, and the id is cleared off every entity below anyway (WM2 — a prefab's
+        // entities belong to no map).
+        MapData lPlacements;
+        lPlacements.Id        = MapId("Prefab");
+        lPlacements.Instances = InRaw.Instances;
+
+        const Uint64 lExpanded = PrefabFold::Expand(lPlacements, InResolver, InRegistry);
+
+        // "As if these were the prefab's own": no map, no marker. The guid each carries —
+        // Derive(record.InstanceId, template) — IS the in-prefab identity a level's BuildInstance
+        // derives from again and an override record keys by; nothing else about the nesting has to
+        // survive into the flat view.
+        const OpaaxStringID lMarkerName = MarkerName(InRegistry);
+
+        for (EntityData& lEntity : lPlacements.Entities)
+        {
+            lEntity.OwnerMap = MapId();
+            StripMarker(lEntity, lMarkerName);
+            lFlat.Entities.emplace_back(Move(lEntity));
+        }
+
+        OPAAX_LOG(LogPrefabFactory, Trace, "Flattened '{}': {} own entity(ies) + {} of {} placement(s) -> {}",
+                  InPrefabAssetPath.CStr(), InRaw.EntityCount(), lExpanded, InRaw.InstanceCount(),
+                  lFlat.EntityCount());
+
+        return lFlat;
     }
 }

@@ -70,4 +70,105 @@ namespace Opaax
 
         return lSkipped;
     }
+
+    // =========================================================================
+    // The placements — moved out of MapJson in ⑦-C P7 so a prefab file holding records shares
+    // the writer, exactly as the entity array was moved in P1a.
+    // =========================================================================
+    nlohmann::json EntityJson::InstancesToJson(const TDynArray<PrefabInstanceRecord>& InInstances)
+    {
+        nlohmann::json lInstances = nlohmann::json::array();
+
+        // SORTED BY InstanceId, for the reason entities are sorted by Guid (**MP2**): the file
+        // lives in git, and Fold produces these in the world's storage order, which reshuffles
+        // whenever an entity is destroyed. Sorting a copy of the pointers leaves the caller's
+        // order untouched.
+        TDynArray<const PrefabInstanceRecord*> lOrdered;
+        lOrdered.reserve(InInstances.size());
+        for (const PrefabInstanceRecord& lRecord : InInstances)
+        {
+            lOrdered.emplace_back(&lRecord);
+        }
+
+        std::sort(lOrdered.begin(), lOrdered.end(),
+            [](const PrefabInstanceRecord* InLeft, const PrefabInstanceRecord* InRight)
+            {
+                return InLeft->InstanceId.High != InRight->InstanceId.High
+                    ? InLeft->InstanceId.High < InRight->InstanceId.High
+                    : InLeft->InstanceId.Low  < InRight->InstanceId.Low;
+            });
+
+        for (const PrefabInstanceRecord* lPtr : lOrdered)
+        {
+            const PrefabInstanceRecord& lRecord = *lPtr;
+
+            nlohmann::json lOverrides = nlohmann::json::object();
+            for (const PrefabOverrideEntry& lEntry : lRecord.Overrides)
+            {
+                // Keyed by the guid's TEXT: nlohmann's object_t is a std::map, so the file's
+                // override order is sorted and stable without a comparator on Guid.
+                lOverrides[lEntry.TemplateGuid.ToString().CStr()] = lEntry.Patch;
+            }
+
+            nlohmann::json lRecordJson = nlohmann::json::object();
+            lRecordJson[KEY_PREFAB]      = lRecord.Prefab.CStr();
+            lRecordJson[KEY_INSTANCE_ID] = lRecord.InstanceId.ToString().CStr();
+            lRecordJson[KEY_OVERRIDES]   = Move(lOverrides);
+
+            lInstances.emplace_back(Move(lRecordJson));
+        }
+
+        return lInstances;
+    }
+
+    Uint64 EntityJson::InstancesFromJson(const nlohmann::json& InRoot, TDynArray<PrefabInstanceRecord>& OutInstances)
+    {
+        const auto lIt = InRoot.find(KEY_INSTANCES);
+        if (lIt == InRoot.end() || !lIt->is_array()) { return 0; }
+
+        Uint64 lSkipped = 0;
+
+        for (const nlohmann::json& lRecordJson : *lIt)
+        {
+            if (!lRecordJson.is_object()) { ++lSkipped; continue; }
+
+            PrefabInstanceRecord lRecord;
+            lRecord.Prefab = ReadString(lRecordJson, KEY_PREFAB);
+
+            if (lRecord.Prefab.IsEmpty()
+                || !Guid::FromString(ReadString(lRecordJson, KEY_INSTANCE_ID), lRecord.InstanceId))
+            {
+                ++lSkipped;
+                continue;
+            }
+
+            const auto lOverridesIt = lRecordJson.find(KEY_OVERRIDES);
+            if (lOverridesIt != lRecordJson.end() && lOverridesIt->is_object())
+            {
+                for (const auto& [lGuidText, lPatch] : lOverridesIt->items())
+                {
+                    PrefabOverrideEntry lEntry;
+                    if (!Guid::FromString(OpaaxString(lGuidText.c_str(), static_cast<Uint32>(lGuidText.size())),
+                                          lEntry.TemplateGuid))
+                    {
+                        // An override naming no entity of the prefab cannot be applied to
+                        // anything; dropping it leaves that entity at the prefab's values.
+                        continue;
+                    }
+
+                    lEntry.Patch = lPatch;
+                    lRecord.Overrides.emplace_back(Move(lEntry));
+                }
+            }
+
+            OutInstances.emplace_back(Move(lRecord));
+        }
+
+        if (lSkipped > 0)
+        {
+            OPAAX_LOG(LogEntityJson, Warn, "Skipped {} prefab instance(s) with a missing path or malformed id", lSkipped);
+        }
+
+        return lSkipped;
+    }
 }

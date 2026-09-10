@@ -80,6 +80,9 @@ set(OPAAX_TEST_SOURCES
     # ⑦-C P3. The headline case is "the prefab moves a property the instance did not touch" — what
     # separates per-PROPERTY overrides from per-COMPONENT ones, and the bug the latter hides.
     Core/World/PrefabOverrideTests.cpp
+    # ⑦-C P7. Nesting + variants: a prefab file holds records, the resolver flattens, a variant is
+    # one record. Composed guids across two placements, the cycle refused once, the v2 round trip.
+    Core/World/PrefabNestingTests.cpp
     # ⑦-C P5b. The hard-ref acquire, both halves pure: what a map's entities must have resident,
     # and how a type id becomes a typed load. Asserted from both sides — hard held, soft not.
     Core/World/HardReferencesTests.cpp

@@ -72,7 +72,7 @@ namespace Opaax::Editor
         // orphan check in HandleSaved needs to know what was there.
         for (const EntityData& lEntity : m_Pending.Entities) { m_Affected.emplace_back(lEntity.Id); }
 
-        ResourcePrefabResolver lResolver(m_Context.Paths, m_Context.Resources);
+        ResourcePrefabResolver lResolver(m_Context.Paths, m_Context.Resources, lRegistry);
         const Uint64 lFolded = PrefabFold::Fold(m_Pending, lResolver, lRegistry);
 
         if (lFolded == 0)
@@ -107,7 +107,7 @@ namespace Opaax::Editor
         }
 
         // Expanded against the NEW payload — the reload has already happened.
-        ResourcePrefabResolver lResolver(m_Context.Paths, m_Context.Resources);
+        ResourcePrefabResolver lResolver(m_Context.Paths, m_Context.Resources, lRegistry);
         const Uint64 lExpanded = PrefabFold::Expand(lPending, lResolver, lRegistry);
 
         // Restore, not Instantiate: these entities still exist and must keep their identities. It

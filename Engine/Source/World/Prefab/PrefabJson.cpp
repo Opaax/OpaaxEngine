@@ -26,6 +26,12 @@ namespace Opaax
             lRoot[PrefabJson::KEY_VERSION]  = PrefabJson::PREFAB_FORMAT_VERSION;
             lRoot[PrefabJson::KEY_ENTITIES] = Move(lEntities);
 
+            // Omitted when empty — MapJson's rule, for the same reason (the round-trip gate).
+            if (!InData.Instances.empty())
+            {
+                lRoot[PrefabJson::KEY_INSTANCES] = EntityJson::InstancesToJson(InData.Instances);
+            }
+
             return lRoot;
         }
     }
@@ -56,23 +62,23 @@ namespace Opaax
             return false;
         }
 
+        PrefabData lParsed;
+
+        // An EMPTY prefab is a real thing, not a broken one — the state a freshly created prefab
+        // is in before anything is put in it. A VARIANT has no entities at all, only a record.
         const auto lEntitiesIt = InJson.find(KEY_ENTITIES);
-        if (lEntitiesIt == InJson.end() || !lEntitiesIt->is_array())
+        if (lEntitiesIt != InJson.end() && lEntitiesIt->is_array())
         {
-            // An EMPTY prefab is a real thing, not a broken one — the state a freshly created
-            // prefab is in before anything is put in it.
-            OutData.Entities.clear();
-            return true;
+            const Uint64 lSkipped = EntityJson::EntitiesFromJson(*lEntitiesIt, lParsed.Entities);
+
+            if (lSkipped > 0)
+            {
+                OPAAX_LOG(LogPrefabJson, Warn, "Skipped {} entity(ies) with a missing or malformed guid",
+                          lSkipped);
+            }
         }
 
-        PrefabData   lParsed;
-        const Uint64 lSkipped = EntityJson::EntitiesFromJson(*lEntitiesIt, lParsed.Entities);
-
-        if (lSkipped > 0)
-        {
-            OPAAX_LOG(LogPrefabJson, Warn, "Skipped {} entity(ies) with a missing or malformed guid",
-                      lSkipped);
-        }
+        EntityJson::InstancesFromJson(InJson, lParsed.Instances);   // v2; absent in v1, and tolerated
 
         OutData = Move(lParsed);
         return true;

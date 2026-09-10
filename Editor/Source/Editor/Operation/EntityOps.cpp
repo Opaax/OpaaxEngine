@@ -400,7 +400,7 @@ namespace Opaax::Editor
         }
 
         const ComponentRegistry& lRegistry = InContext.Engine.GetRegistries().Components();
-        ResourcePrefabResolver   lResolver(InContext.Paths, InContext.Resources);
+        ResourcePrefabResolver   lResolver(InContext.Paths, InContext.Resources, lRegistry);
 
         // One MapData naming every entity to restore, built from the TEMPLATES — which is what
         // makes this a revert rather than a re-save of what is already there.

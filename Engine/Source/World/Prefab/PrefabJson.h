@@ -28,14 +28,17 @@ namespace Opaax
          * Bumped ONLY for a change a v1 reader would MISREAD — the rule MAP_FORMAT_VERSION
          * follows. Adding a field does not qualify, since FromJson ignores what it does not know.
          *
-         * EXPECTED TO MOVE AT ⑦-C P3: an instance record a v1 reader skipped would produce a
-         * prefab that is silently missing entities, which is exactly what the rule catches.
+         * v2 (⑦-C P7) added `prefabInstances` — a prefab may place prefabs, and a variant is one
+         * such record and nothing else. It bumped by that rule: a v1 reader skipping the records
+         * would produce a prefab silently missing entities. The key is OMITTED when empty, so a
+         * prefab placing nothing re-serializes identically but for this number.
          */
-        inline constexpr Uint32 PREFAB_FORMAT_VERSION = 1;
+        inline constexpr Uint32 PREFAB_FORMAT_VERSION = 2;
 
-        // The document-level keys. Everything describing an ENTITY is EntityJson's.
-        inline constexpr const char* KEY_VERSION  = EntityJson::KEY_VERSION;
-        inline constexpr const char* KEY_ENTITIES = EntityJson::KEY_ENTITIES;
+        // The document-level keys. Everything describing an ENTITY or a PLACEMENT is EntityJson's.
+        inline constexpr const char* KEY_VERSION   = EntityJson::KEY_VERSION;
+        inline constexpr const char* KEY_ENTITIES  = EntityJson::KEY_ENTITIES;
+        inline constexpr const char* KEY_INSTANCES = EntityJson::KEY_INSTANCES;
 
         /** Serialize InData. Entities sorted by Guid, for EntityJson::EntitiesToJson's reasons. */
         OPAAX_API nlohmann::json ToJson(const PrefabData& InData);

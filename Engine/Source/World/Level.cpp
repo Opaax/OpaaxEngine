@@ -138,7 +138,7 @@ namespace Opaax
             lPlacements.Id        = lMapId;
             lPlacements.Instances = lMap->Data.Instances;
 
-            ResourcePrefabResolver lResolver(m_Paths, m_Resources);
+            ResourcePrefabResolver lResolver(m_Paths, m_Resources, m_Components);
             const Uint64 lExpanded = PrefabFold::Expand(lPlacements, lResolver, m_Components);
 
             OutResult.EntitiesCreated += MapFactory::Instantiate(lPlacements, m_World, m_Components);

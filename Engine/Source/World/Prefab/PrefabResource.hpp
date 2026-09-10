@@ -21,13 +21,13 @@ namespace Opaax
     //   the instantiate reports success, nothing appears, and no layer says why. That is the
     //   silent-wrong-answer class this codebase treats as its worst.
     //
-    //   NO LoadContext::Acquire YET, and this is the one that is an OMISSION rather than a rule.
-    //   MapResource cannot acquire because Acquire takes an ABSOLUTE path and asset-relative ->
-    //   absolute lives in IPaths, which the Resources layer does not reach. A prefab has the same
-    //   blocker AND a harder requirement than a map: ⑦-C **K5**'s HARD reference (a gun naming
-    //   its bullet prefab) must be resident before the gun runs, which a resolve-on-first-touch
-    //   cache cannot promise. That is ⑦-C P5, and it is what finally forces LoadContext to carry
-    //   a path resolver.
+    //   NO LoadContext::Acquire, and since P5b that is a RULE for a prefab too (**PF11**): a hard
+    //   reference is held by the MAP that mounted the entity, not by this payload — the resolver
+    //   releases the prefab resource the moment an instance is instantiated, so a chain hung off
+    //   it would not outlive the gun it was meant to serve.
+    //
+    //   THE DATA IS RAW (P7): its own entities and its placement RECORDS, as the file holds them.
+    //   Consumers never read it directly — IPrefabResolver hands back the FLATTENED prefab.
     //
     //   No Initialize(): nothing here touches the GPU, so the payload is complete the moment Load
     //   returns and the pool can publish it without a main-thread pass.
@@ -75,6 +75,12 @@ namespace Opaax
             {
                 lBytes += sizeof(EntityData) + lEntity.Name.GetLength();
                 lBytes += static_cast<Uint64>(lEntity.Components.size()) * sizeof(ComponentData);
+            }
+
+            for (const PrefabInstanceRecord& lRecord : Data.Instances)
+            {
+                lBytes += sizeof(PrefabInstanceRecord) + lRecord.Prefab.GetLength();
+                lBytes += static_cast<Uint64>(lRecord.Overrides.size()) * sizeof(PrefabOverrideEntry);
             }
 
             return lBytes;
