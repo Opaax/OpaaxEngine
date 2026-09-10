@@ -4,8 +4,11 @@
 
 #include "Application/Services/IPaths.h"
 #include "Engine/Subsystems/Resources/ResourceManager.h"   // before the resources — completes LoadContext
+#include "Engine/Subsystems/Resources/ResourceFormatRegistry.h"   // P5b — a hard field's id -> a typed load
+#include "Engine/Subsystems/Resources/ResourceHold.hpp"           // P5b — completes IResourceHold for MountedMap's dtor
 #include "World/Components/ComponentRegistry.h"
 #include "World/Entity/EntityMeta.h"
+#include "World/Serialization/HardReferences.h"
 #include "World/Serialization/MapFactory.h"
 #include "World/Serialization/MapResource.hpp"
 #include "World/Prefab/PrefabFold.h"
@@ -15,8 +18,10 @@
 namespace Opaax
 {
     Level::Level(World& InWorld, const ComponentRegistry& InComponents,
-                 const IPaths& InPaths, ResourceManager& InResources) noexcept
+                 const IPaths& InPaths, ResourceManager& InResources,
+                 const ResourceFormatRegistry& InFormats) noexcept
         : m_World(InWorld), m_Components(InComponents), m_Paths(InPaths), m_Resources(InResources)
+        , m_Formats(InFormats)
     {
     }
 
@@ -37,8 +42,17 @@ namespace Opaax
         // snapshot MapSerializer::Capture took (WM6). Mounting them again would re-read every map
         // and CreateEntityWithGuid would refuse every entity as a live duplicate (WM3), leaving a
         // wall of warnings and a clone identical to the one this line already produced.
-        m_Data    = InSource.m_Data;
-        m_Mounted = InSource.m_Mounted;
+        m_Data = InSource.m_Data;
+
+        // The ids and paths, NOT the hard-reference holds (P5b): those stay with the source, and a
+        // clone borrows them by living inside the source's lifetime — a PIE clone never outlives
+        // the edit world it was taken from. A second claim per clone would be correct and
+        // pointless; a clone that outlived its source would be a new rule, not a missing line.
+        m_Mounted.clear();
+        for (const MountedMap& lMap : InSource.m_Mounted)
+        {
+            m_Mounted.emplace_back(MountedMap{ lMap.Id, lMap.AssetRelPath });
+        }
     }
 
     // =============================================================================
@@ -107,6 +121,11 @@ namespace Opaax
         ++OutResult.MapsMounted;
         OutResult.EntitiesCreated += MapFactory::Instantiate(lMap->Data, m_World, m_Components);
 
+        MountedMap lMounted{ lMapId, InAssetRelPath };
+
+        // ⑦-C P5b. What the map's own entities must have resident, held by the record.
+        HoldHardReferences(lMap->Data, lMounted);
+
         // ⑦-C P3. The map's PLACEMENTS, rebuilt from their prefabs and their overrides.
         //
         // Only the RECORDS are copied — they are a path, a guid and a patch — so this does not
@@ -126,10 +145,65 @@ namespace Opaax
 
             OPAAX_LOG(LogLevel, Info, "Map '{}' expanded {} of {} prefab placement(s)",
                       InAssetRelPath.CStr(), lExpanded, lMap->Data.InstanceCount());
+
+            // The placements' entities too — an instance's gun names a bullet like any other.
+            HoldHardReferences(lPlacements, lMounted);
         }
 
-        m_Mounted.emplace_back(lMapId, InAssetRelPath);
+        m_Mounted.emplace_back(Move(lMounted));
         return true;
+    }
+
+    // =============================================================================
+    // HoldHardReferences — the honouring of THardResourcePath (⑦-C P5b, **PF11**).
+    //
+    // What to hold is a pure question over the data (HardReferences::Collect); turning each id
+    // back into a typed load is the format registry's one erased call. The holds go on the
+    // record, so the map's own lifetime is the reference's — no release code anywhere.
+    // =============================================================================
+    void Level::HoldHardReferences(const MapData& InData, MountedMap& OutMounted)
+    {
+        const TDynArray<HardReference> lRefs = HardReferences::Collect(InData, m_Components);
+
+        if (lRefs.empty())
+        {
+            // Trace, not silence: "the walk ran and found nothing" must stay distinguishable from
+            // "the walk never ran" (L15) without an Info line per map on every boot.
+            OPAAX_LOG(LogLevel, Trace, "Map '{}' names no hard reference", OutMounted.AssetRelPath.CStr());
+            return;
+        }
+
+        Uint64 lHeld = 0;
+
+        for (const HardReference& lRef : lRefs)
+        {
+            const ResourceFormatEntry* const lEntry = m_Formats.FindByTypeId(lRef.TypeId);
+            if (lEntry == nullptr)
+            {
+                OPAAX_LOG(LogLevel, Warn, "Map '{}' names a hard reference '{}' of a resource type "
+                                          "this build has not registered — not held",
+                          OutMounted.AssetRelPath.CStr(), lRef.Path.CStr());
+                continue;
+            }
+
+            TUniquePtr<IResourceHold> lHold = lEntry->Acquire(m_Resources, m_Paths.AssetToAbsolute(lRef.Path).CStr());
+
+            if (lHold == nullptr || !lHold->IsLoaded())
+            {
+                // A FailFast type answers a null ref; the field is still hard, and a gun whose
+                // bullet did not load is a defect worth a line at boot rather than at the first shot.
+                OPAAX_LOG(LogLevel, Warn, "Map '{}' — hard reference '{}' ({}) did not load",
+                          OutMounted.AssetRelPath.CStr(), lRef.Path.CStr(), lEntry->Name);
+                continue;
+            }
+
+            OutMounted.HardRefs.emplace_back(Move(lHold));
+            ++lHeld;
+        }
+
+        // The success branch, logged (L15): held and resident, with the count that says so.
+        OPAAX_LOG(LogLevel, Info, "Map '{}' holds {} of {} hard reference(s)",
+                  OutMounted.AssetRelPath.CStr(), lHeld, static_cast<Uint64>(lRefs.size()));
     }
 
     Level::MountResult Level::MountAll()

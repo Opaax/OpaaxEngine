@@ -12,7 +12,10 @@ namespace Opaax
     class World;
     class ComponentRegistry;
     class ResourceManager;
+    class ResourceFormatRegistry;
+    class IResourceHold;   // complete only in Level.cpp, where every MountedMap is destroyed
     class IPaths;
+    struct MapData;
 
     inline constexpr LogCategory LogLevel{"Level"};
 
@@ -48,6 +51,15 @@ namespace Opaax
         {
             MapId       Id;
             OpaaxString AssetRelPath;
+
+            /**
+             * What this map's entities must have RESIDENT (⑦-C P5b, **PF11**) — every hard field
+             * they name, acquired at mount and released with this record. The map is the holder
+             * because it lives exactly as long as the entities do: the prefab RESOURCE an instance
+             * came from is released the moment it is instantiated, so a chain hung off that
+             * payload would not outlive the gun it was meant to serve.
+             */
+            TDynArray<TUniquePtr<IResourceHold>> HardRefs;
         };
 
         /**
@@ -75,9 +87,11 @@ namespace Opaax
          *                     with a warning by MapFactory, exactly as for a PIE clone.
          * @param InPaths      Resolves the manifest's asset-relative map paths.
          * @param InResources  Maps are loaded THROUGH the manager (**WM4**), never MapFile::Load.
+         * @param InFormats    Turns a hard field's type id back into a typed load (P5b).
          */
         Level(World& InWorld, const ComponentRegistry& InComponents,
-              const IPaths& InPaths, ResourceManager& InResources) noexcept;
+              const IPaths& InPaths, ResourceManager& InResources,
+              const ResourceFormatRegistry& InFormats) noexcept;
 
         ~Level();
 
@@ -103,7 +117,8 @@ namespace Opaax
          * Copy another level's manifest AND its mounted list WITHOUT mounting anything.
          *
          * The PIE clone path, and the reason it exists rather than a second MountAll: the clone's
-         * entities came from the snapshot, so re-mounting would duplicate every one of them.
+         * entities came from the snapshot, so re-mounting would duplicate every one of them. The
+         * source keeps its hard-reference holds (P5b); a clone lives inside the source's lifetime.
          */
         void AdoptMountedFrom(const Level& InSource);
 
@@ -217,10 +232,17 @@ namespace Opaax
          */
         void EraseFromManifest(Uint64 InIndex);
 
-        World&                   m_World;
-        const ComponentRegistry& m_Components;
-        const IPaths&            m_Paths;
-        ResourceManager&         m_Resources;
+        /**
+         * Acquire every hard reference InData's entities name and hand the holds to OutMounted,
+         * logging the count — the success branch — and warning per reference that did not load.
+         */
+        void HoldHardReferences(const MapData& InData, MountedMap& OutMounted);
+
+        World&                        m_World;
+        const ComponentRegistry&      m_Components;
+        const IPaths&                 m_Paths;
+        ResourceManager&              m_Resources;
+        const ResourceFormatRegistry& m_Formats;
 
         LevelData             m_Data;
         TDynArray<MountedMap> m_Mounted;

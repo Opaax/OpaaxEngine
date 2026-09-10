@@ -127,7 +127,7 @@ namespace Opaax
         if (m_Registries != nullptr && m_Paths != nullptr && m_Resources != nullptr)
         {
             lWorld->SetLevel(MakeUnique<Level>(*lWorld, m_Registries->Components(),
-                                               *m_Paths, *m_Resources));
+                                               *m_Paths, *m_Resources, m_Registries->Resources()));
         }
 
         CreateSubsystemsFor(*lWorld);
