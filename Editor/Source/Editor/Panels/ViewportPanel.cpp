@@ -20,6 +20,7 @@
 #include "Engine/Subsystems/Resources/ResourceManager.h"   // before PrefabResource — LoadContext
 #include "World/Prefab/PrefabResource.hpp"       // ⑦-C — which type the drop target accepts
 #include "Editor/UI/IEditorUIBackend.h"
+#include "Editor/Viewport/ViewportOverlays.h"    // the outline and the icons, shared with the prefab panel (P8)
 
 #include "Application/Services/IEngine.h"
 #include "Application/Services/ILogger.h"   // OPAAX_LOG + LogCategory
@@ -36,8 +37,7 @@
 
 #include "World/Components/TransformComponent.h"
 #include "World/Entity/Entity.h"
-#include "World/Entity/EntityMeta.h"        // the complete all-entities view, for the icon pass
-#include "World/Entity/EntityQuery.h"       // the ONE entity-AABB rule — outline, pick and marquee
+#include "World/Entity/EntityQuery.h"       // the ONE entity-AABB rule — the gizmo's pivot
 #include "World/World.h"                    // Apply publishes the camera as the world's view
 #include "World/WorldManager.h"             // the active world is what gets it
 
@@ -159,35 +159,35 @@ namespace Opaax::Editor
     }
 
     // =========================================================================
-    // ViewportToWorld / AnchorHalfExtent — the two conversions everything selection-related needs.
-    //
-    // Both read the ACTIVE WORLD's view rather than the editor camera, which is what keeps picking
-    // free of an Edit/Play fork: a PIE clone is framed by its CameraComponent, and asking the world
-    // how it is framed gets the right answer in either mode with no branch.
+    // ActiveView / ViewportToWorld / AnchorHalfExtent — the conversions everything selection-related
+    // needs. All read the ACTIVE WORLD's view rather than the editor camera, which is what keeps
+    // picking free of an Edit/Play fork: a PIE clone is framed by its CameraComponent, and asking
+    // the world how it is framed gets the right answer in either mode with no branch.
     // =========================================================================
+    CameraView ViewportPanel::ActiveView() const
+    {
+        World* const lWorld = m_Context.Worlds.GetActiveWorld();
+        return lWorld != nullptr ? lWorld->GetCameraView() : CameraView{};
+    }
+
+    Vector2F ViewportPanel::ViewportPx() const
+    {
+        return { static_cast<float>(m_viewportSize.x), static_cast<float>(m_viewportSize.y) };
+    }
+
     Vector2F ViewportPanel::ViewportToWorld(const Vector2F& InLocalPx) const
     {
-        World* const   lWorld = m_Context.Worlds.GetActiveWorld();
-        const Vector2F lViewportPx{ static_cast<float>(m_viewportSize.x), static_cast<float>(m_viewportSize.y) };
-
-        return ScreenToWorld(lWorld != nullptr ? lWorld->GetCameraView() : CameraView{}, lViewportPx, InLocalPx);
+        return ScreenToWorld(ActiveView(), ViewportPx(), InLocalPx);
     }
 
     float ViewportPanel::WorldPerPixel() const
     {
-        World* const lWorld = m_Context.Worlds.GetActiveWorld();
-        if (lWorld == nullptr || m_viewportSize.y == 0)
-        {
-            return 1.f;   // the pre-camera convention: one world unit per pixel
-        }
-
-        // OrthoSize is the vertical HALF-extent, so one pixel is (2 * OrthoSize) / height world units.
-        return (lWorld->GetCameraView().OrthoSize * 2.f) / static_cast<float>(m_viewportSize.y);
+        return Opaax::WorldPerPixel(ActiveView(), ViewportPx().y);
     }
 
     float ViewportPanel::AnchorHalfExtent() const
     {
-        return m_IconHalfPx * WorldPerPixel();
+        return ViewportOverlays::AnchorHalfExtent(ActiveView(), ViewportPx());
     }
 
     bool ViewportPanel::TryGetGizmoPose(Vector2F& OutPivot, float& OutRotationRad) const
@@ -230,61 +230,14 @@ namespace Opaax::Editor
         return true;
     }
 
-    // =========================================================================
-    // ApplyPendingPick — spend the banked click or marquee. A point asks EntityQuery for the
-    // topmost entity; a box asks for everything it overlaps. Ctrl adds, otherwise it replaces —
-    // and a plain click on empty space clears, which is how an author drops a selection.
-    // =========================================================================
     void ViewportPanel::ApplyPendingPick()
     {
-        const EPendingPick lPending = m_PendingPick;
-        m_PendingPick = EPendingPick::None;   // cleared FIRST: a refused pick must not retry next frame
+        const PickGesture::Pick lPick = m_PickGesture.Take();   // cleared FIRST, whether spent or not
 
-        if (lPending == EPendingPick::None)
+        if (World* lWorld = m_Context.Worlds.GetActiveWorld())
         {
-            return;
+            PickGesture::Apply(lPick, *lWorld, m_Context.Selection, ViewportPx(), AnchorHalfExtent());
         }
-
-        World* lWorld = m_Context.Worlds.GetActiveWorld();
-        if (lWorld == nullptr)
-        {
-            return;
-        }
-
-        const float lAnchor = AnchorHalfExtent();
-
-        if (lPending == EPendingPick::Point)
-        {
-            Entity lHit = EntityQuery::PickAt(*lWorld, ViewportToWorld(m_PickStartPx), lAnchor);
-
-            if (m_bPickAdditive) { m_Context.Selection.Toggle(lHit); }   // ignores a miss
-            else if (lHit.IsValid()) { m_Context.Selection.Select(lHit); }
-            else { m_Context.Selection.Clear(); }
-
-            OPAAX_LOG(LogViewportPanel, Info, "Viewport click at ({:.1f}, {:.1f}) -> {} ({} selected)",
-                      m_PickStartPx.x, m_PickStartPx.y,
-                      lHit.IsValid() ? lHit.Get<EntityMeta>().Name.CStr() : "nothing",
-                      m_Context.Selection.Count());
-            return;
-        }
-
-        const Bounds2D lRegion = Bounds2D::FromMinMax(ViewportToWorld(m_PickStartPx),
-                                                      ViewportToWorld(m_PickEndPx));
-
-        TDynArray<EntityID> lHits;
-        EntityQuery::QueryOverlapping(*lWorld, lRegion, lHits, lAnchor);
-
-        if (m_bPickAdditive)
-        {
-            for (const EntityID lId : lHits) { m_Context.Selection.Add(Entity{ lId, lWorld }); }
-        }
-        else
-        {
-            m_Context.Selection.Replace(lWorld, lHits);
-        }
-
-        OPAAX_LOG(LogViewportPanel, Info, "Viewport marquee took {} entity(ies) ({} selected)",
-                  static_cast<Uint64>(lHits.size()), m_Context.Selection.Count());
     }
 
     // =========================================================================
@@ -372,26 +325,7 @@ namespace Opaax::Editor
     // =========================================================================
     void ViewportPanel::ApplyCameraGesture()
     {
-        const Vector2F lViewportPx{ static_cast<float>(m_viewportSize.x), static_cast<float>(m_viewportSize.y) };
-
-        // Open on the framing the editor had before cameras existed — that view was one world unit
-        // per pixel, so half the panel's height is the equivalent OrthoSize. One-shot, and it
-        // ignores the 1x1 reported before the first measured resize.
-        m_Context.Camera.SeedFromViewportHeight(lViewportPx.y);
-
-        // Zoom BEFORE pan: the wheel is anchored at the cursor, so it must not be applied to a
-        // position the pan has already moved out from under the pointer.
-        if (m_PendingZoom != 0.f)
-        {
-            m_Context.Camera.ZoomAtCursor(m_PendingZoom, m_PendingZoomCursorPx, lViewportPx);
-            m_PendingZoom = 0.f;
-        }
-
-        if (m_PendingPanPx.x != 0.f || m_PendingPanPx.y != 0.f)
-        {
-            m_Context.Camera.Pan(m_PendingPanPx, lViewportPx);
-            m_PendingPanPx = { 0.f, 0.f };
-        }
+        m_CameraGesture.Spend(m_Context.Camera, ViewportPx());
 
         // Refuses a Play world on its own (the clone is framed by its CameraComponent), so there is
         // no mode check here — one statement of that rule, and it lives with the camera.
@@ -539,12 +473,10 @@ namespace Opaax::Editor
     }
 
     // =========================================================================
-    // EnqueueSelectionOutline — mark the selected entity in the world itself, not just as a
-    // highlighted Hierarchy row. Re-submitted every frame by design: DebugDraw is drained and
-    // cleared by the renderer each frame, so "still selected" means "queue it again".
-    //
-    // DummyComponent is what carries position/size and the only thing RendererManager draws — the
-    // same component the Inspector edits (M2b). A real TransformComponent is M3's work.
+    // EnqueueSelectionOutline / EnqueueEntityIcons — re-submitted every frame by design: DebugDraw
+    // is drained and cleared by the renderer each frame, so "still selected" means "queue it again".
+    // Both log the SUCCESS branch once (L15): "selected something with no bounds" would otherwise
+    // look exactly like a broken DebugDraw pipe.
     // =========================================================================
     void ViewportPanel::EnqueueSelectionOutline()
     {
@@ -554,28 +486,9 @@ namespace Opaax::Editor
             return;
         }
 
-        // Through EntityQuery, which is what fixed the bug this used to have: it read DummyComponent
-        // directly, so a SPRITE-only entity outlined nothing at all. Every selected entity now, and
-        // an anchor-only one gets its icon-sized box.
-        const float lAnchor = AnchorHalfExtent();
-        Uint64      lDrawn  = 0;
+        const Uint64 lDrawn = ViewportOverlays::EnqueueSelectionOutline(
+            m_Context.Engine.GetDebugDraw(), *lWorld, m_Context.Selection.Ids(), AnchorHalfExtent());
 
-        for (const EntityID lId : m_Context.Selection.Ids())
-        {
-            Bounds2D lBounds;
-            if (!EntityQuery::TryGetBounds(Entity{ lId, lWorld }, lBounds, lAnchor))
-            {
-                continue;
-            }
-
-            m_Context.Engine.GetDebugDraw().DrawBounds(
-                Bounds2D::FromCenterSize(lBounds.Center, lBounds.Size() + m_OutlinePadding),
-                m_OutlineColor, m_OutlineThickness);
-            ++lDrawn;
-        }
-
-        // Log the SUCCESS branch (L15): every return above is silent, so "selected something with no
-        // bounds" would otherwise look exactly like a broken DebugDraw pipe. One-shot — per frame.
         if (!m_bOutlineLogged && lDrawn > 0)
         {
             OPAAX_LOG(LogViewportPanel, Info, "Selection outline enqueued for {} entity(ies)", lDrawn);
@@ -583,16 +496,6 @@ namespace Opaax::Editor
         }
     }
 
-    // =========================================================================
-    // EnqueueEntityIcons — an entity that draws nothing still has to be findable and clickable.
-    // Every engine solves this the same way (Unreal's editor billboard, Unity's gizmo icon, Godot's
-    // origin grab-area) and all of them hang it off a transform every object is guaranteed to have,
-    // which is exactly what TransformComponent now is.
-    //
-    // The anchor size is the SAME value EntityQuery::PickAt is given, so the box drawn is the box
-    // hit-tested — what you see is what you click, by construction rather than by two constants
-    // being kept in step.
-    // =========================================================================
     void ViewportPanel::EnqueueEntityIcons()
     {
         World* lWorld = m_Context.Worlds.GetActiveWorld();
@@ -604,28 +507,8 @@ namespace Opaax::Editor
             return;
         }
 
-        const float lAnchor = AnchorHalfExtent();
-        Uint64      lDrawn  = 0;
-
-        lWorld->Each<EntityMeta>([&](EntityID InId, const EntityMeta&)
-        {
-            // An entity with an EXTENT is already visible — asking without an anchor is what
-            // distinguishes the two, and it is one call rather than a list of component checks.
-            Bounds2D lUnused;
-            if (EntityQuery::TryGetBounds(Entity{ InId, lWorld }, lUnused))
-            {
-                return;
-            }
-
-            Bounds2D lIcon;
-            if (!EntityQuery::TryGetBounds(Entity{ InId, lWorld }, lIcon, lAnchor))
-            {
-                return;   // no transform at all — not reachable through CreateEntity
-            }
-
-            m_Context.Engine.GetDebugDraw().DrawBounds(lIcon, m_IconColor, m_IconThickness);
-            ++lDrawn;
-        });
+        const Uint64 lDrawn = ViewportOverlays::EnqueueEntityIcons(
+            m_Context.Engine.GetDebugDraw(), *lWorld, AnchorHalfExtent());
 
         if (!m_bIconsLogged && lDrawn > 0)
         {
@@ -676,7 +559,7 @@ namespace Opaax::Editor
         return lHovered;
     }
 
-    Vector2F ViewportPanel::WrapDragCursor(const Vector2F& InMin, const Vector2F& InMax, const char* InGesture)
+    Vector2F ViewportPanel::WrapDragCursor(const Vector2F& InMin, const Vector2F& InMax)
     {
         const Vector2F lCorrection = ImguiCursor::WrapInRect(ImVec2{ InMin.x, InMin.y },
                                                              ImVec2{ InMax.x, InMax.y });
@@ -684,8 +567,7 @@ namespace Opaax::Editor
         if (!m_bWrapLogged && (lCorrection.x != 0.f || lCorrection.y != 0.f))
         {
             OPAAX_LOG(LogViewportPanel, Info,
-                      "Cursor wrapped at the viewport edge during a {} drag — the gesture continues",
-                      InGesture);
+                      "Cursor wrapped at the viewport edge during a gizmo drag — the gesture continues");
             m_bWrapLogged = true;
         }
 
@@ -727,7 +609,7 @@ namespace Opaax::Editor
         // offset cannot leak into the next drag.
         if (ImGuizmo::IsUsing())
         {
-            m_GizmoWrapOffset += WrapDragCursor(InOrigin, InOrigin + InSizePx, "gizmo");
+            m_GizmoWrapOffset += WrapDragCursor(InOrigin, InOrigin + InSizePx);
         }
         else
         {
@@ -814,124 +696,6 @@ namespace Opaax::Editor
         return ImGuizmo::IsUsing() || ImGuizmo::IsOver();
     }
 
-    // =========================================================================
-    // MeasureCameraGesture — read the pan drag and the wheel while this window is current, and
-    // bank them for OnPreRender.
-    //
-    // THE IMAGE RECT IS PASSED IN, not read from GetItemRect*. It used to be read, which was correct
-    // only for as long as the image happened to be the last submitted item — ③b's toolbar is a child
-    // window, i.e. an item, drawn before this, so those calls silently began naming the STRIP: the
-    // pan wrapped the cursor inside a 200x30 box in the corner, and the zoom anchored to it. An
-    // argument cannot be retargeted by what someone submits earlier.
-    //
-    // ImGui IS the source here, not a workaround: an Edit world puts the input route in
-    // ClosedEditMode, so InputManager is never fed and would report every button up forever (IN8).
-    // The gate is the IMAGE's hover — never io.WantCaptureMouse, which is true the whole time the
-    // pointer is over the viewport because the viewport is an ImGui window (L29), and never the
-    // WINDOW's, which includes the title bar.
-    // =========================================================================
-    void ViewportPanel::MeasureCameraGesture(bool bInHovered, const Vector2F& InOrigin, const Vector2F& InSizePx)
-    {
-        const ImGuiIO& lIO = ImGui::GetIO();
-
-        // The drag STARTS on the viewport and then belongs to the gesture: releasing is what ends
-        // it, not leaving the panel. Dragging out of the window mid-pan is normal at the edges of
-        // a level, and cutting it there would feel broken.
-        if (bInHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Middle))
-        {
-            m_bPanning = true;
-        }
-
-        if (!ImGui::IsMouseDown(ImGuiMouseButton_Middle))
-        {
-            m_bPanning = false;
-        }
-
-        if (m_bPanning)
-        {
-            // WRAPPED TOO, which AMENDS CAM4. That entry lets a pan continue off-panel because
-            // "cutting it at the panel edge is worst exactly when you are panning to the edge of a
-            // level" — and wrapping serves that reason strictly better than wandering off does.
-            //
-            // No correction to accumulate here, unlike the gizmo: a pan reads MouseDelta, and
-            // TeleportMousePos zeroes it on the frame it jumps. One frame of no motion, invisible.
-            WrapDragCursor(InOrigin, InOrigin + InSizePx, "pan");
-
-            m_PendingPanPx.x += lIO.MouseDelta.x;
-            m_PendingPanPx.y += lIO.MouseDelta.y;
-        }
-
-        // The wheel, unlike the drag, needs the pointer to be here — it is anchored at the cursor,
-        // and a cursor somewhere else has no world point to anchor to.
-        if (bInHovered && lIO.MouseWheel != 0.f)
-        {
-            m_PendingZoom          = lIO.MouseWheel;
-            m_PendingZoomCursorPx  = { lIO.MousePos.x - InOrigin.x, lIO.MousePos.y - InOrigin.y };
-        }
-    }
-
-    // =========================================================================
-    // MeasureViewportInput — ONE left-button gesture with two outcomes. The press banks a point;
-    // crossing ImGui's own MouseDragThreshold promotes it to a box. Using ImGui's threshold rather
-    // than a constant of my own is what keeps a click here feeling like a click everywhere else.
-    //
-    // m_bSelecting is the gate that matters: it is set only by a press that landed ON the image, so
-    // a drag begun over the Hierarchy and released here selects nothing. Once it IS ours the drag
-    // survives leaving the panel, exactly as the middle-button pan does — releasing ends a gesture,
-    // wandering off does not.
-    // =========================================================================
-    void ViewportPanel::MeasureViewportInput(bool bInHovered, const Vector2F& InOrigin)
-    {
-        const ImGuiIO& lIO = ImGui::GetIO();
-
-        if (bInHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
-        {
-            m_bSelecting    = true;
-            m_bWasDrag      = false;
-            m_bPickAdditive = lIO.KeyCtrl;
-            m_PickStartPx   = { lIO.MousePos.x - InOrigin.x, lIO.MousePos.y - InOrigin.y };
-        }
-
-        if (!m_bSelecting)
-        {
-            return;
-        }
-
-        // REMEMBERED, never asked for after the fact: IsMouseDragging requires the button to still
-        // be DOWN, so on the release frame it is false and every drag would bank as a click at the
-        // pixel the drag STARTED from — which selects whatever is under the drag's origin, or
-        // clears when that is empty space.
-        m_PickEndPx = { lIO.MousePos.x - InOrigin.x, lIO.MousePos.y - InOrigin.y };
-
-        if (ImGui::IsMouseDown(ImGuiMouseButton_Left))
-        {
-            if (ImGui::IsMouseDragging(ImGuiMouseButton_Left, lIO.MouseDragThreshold))
-            {
-                m_bWasDrag = true;
-                // PAINTED HERE, in screen pixels, on the foreground list. A marquee is UI, not world
-                // geometry — DebugDraw would put it a frame behind and make it scale with the zoom.
-                const ImVec2 lFrom{ InOrigin.x + m_PickStartPx.x, InOrigin.y + m_PickStartPx.y };
-                const ImVec2 lTo = lIO.MousePos;
-
-                const ImU32 lLine = ImGui::GetColorU32(ImVec4{m_MarqueeColor.r, m_MarqueeColor.g,
-                                                              m_MarqueeColor.b, m_MarqueeColor.a});
-                const ImU32 lFill = ImGui::GetColorU32(ImVec4{m_MarqueeColor.r, m_MarqueeColor.g,
-                                                              m_MarqueeColor.b, m_MarqueeFillAlpha});
-
-                ImDrawList* lDraw = ImGui::GetForegroundDrawList();
-                lDraw->AddRectFilled(lFrom, lTo, lFill);
-                lDraw->AddRect(lFrom, lTo, lLine);
-            }
-
-            return;   // still held — nothing to spend yet
-        }
-
-        // Released: bank exactly one outcome for OnPreRender.
-        m_PendingPick = m_bWasDrag ? EPendingPick::Box : EPendingPick::Point;
-        m_bSelecting  = false;
-        m_bWasDrag    = false;
-    }
-
     EditorImage ViewportPanel::GetViewportImage() const
     {
         return m_Framebuffer != nullptr ? m_Context.UIBackend.GetViewportImage(*m_Framebuffer) : EditorImage{};
@@ -971,6 +735,10 @@ namespace Opaax::Editor
         // measures below take the rect as an ARGUMENT instead of re-reading it. They used to
         // re-read, which was correct until ③b drew a toolbar (a child window IS an item) before
         // them, at which point the pan silently began wrapping inside the strip.
+        //
+        // The gestures read ImGui directly, and that is forced (IN8): an Edit world leaves the input
+        // route closed, so InputManager never sees a button. The gate is the IMAGE's hover — never
+        // io.WantCaptureMouse (L29), and never the WINDOW's, which is true over the title bar.
         const bool   lImageRawHovered = ImGui::IsItemHovered();
         const ImVec2 lOrigin          = ImGui::GetItemRectMin();
 
@@ -998,14 +766,14 @@ namespace Opaax::Editor
         const bool lToolbarHovered = DrawToolbarOverlay({ lOrigin.x, lOrigin.y });
         const bool lImageHovered   = lImageRawHovered && !lToolbarHovered;
 
-        MeasureCameraGesture(lImageHovered, { lOrigin.x, lOrigin.y }, { lAvail.x, lAvail.y });
+        m_CameraGesture.Measure(lImageHovered, { lOrigin.x, lOrigin.y }, { lAvail.x, lAvail.y });
 
         // ONE left button, TWO consumers, and the order is stated here once: a press that lands on a
         // handle belongs to the gizmo, so the marquee never sees it. Without this a drag on a handle
         // would move the entity AND rubber-band a selection over it.
         if (!MeasureGizmo({ lOrigin.x, lOrigin.y }, { lAvail.x, lAvail.y }, lToolbarHovered))
         {
-            MeasureViewportInput(lImageHovered, { lOrigin.x, lOrigin.y });
+            m_PickGesture.Measure(lImageHovered, { lOrigin.x, lOrigin.y });
         }
 
         if (lImg.IsValid() && !m_bImageLogged)
