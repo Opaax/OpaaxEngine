@@ -3767,7 +3767,7 @@ shape of a save that loses work.
 
 ---
 
-## PF — Prefabs (⑦-C, P1–P6 + P8 V1 landed 2026-09-09, P8 V2–V4 + P5b + P7 2026-09-10 — block complete)
+## PF — Prefabs (⑦-C, P1–P6 + P8 V1 landed 2026-09-09, P8 V2–V4 + P5b + P7 2026-09-10 — block CLOSED, user-verified)
 
 **PF1 — A prefab IS a map's entities, so the two share ONE writer.** `PrefabData` is
 `TDynArray<EntityData>` **plus `TDynArray<PrefabInstanceRecord>` (P7)**; the entity-array walk was

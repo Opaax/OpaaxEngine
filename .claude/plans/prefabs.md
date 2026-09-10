@@ -1,11 +1,11 @@
 # ⑦-C — Prefabs
 
-**CODE-COMPLETE 2026-09-10.** 37 commits `e3cc05b` → `e288466` over two days. P1–P6, P8 V1–V4 and
-P5b are user-verified (*"Its working!"* · *"The reconcile works fine"* · *"eye gate passed"* ·
-*"ok, works"*); **P7's eye gate is OPEN** — mechanism verified by harness, not yet by their hands.
-**723 / 8423 / 7 → 781 / 8781 / 7** (the suite wobbles ±2 assertions between runs, pre-existing).
+**CLOSED 2026-09-10, USER-VERIFIED.** 40 commits `e3cc05b` → `86f397d` over two days. Every
+step went through their eyes (*"Its working!"* · *"The reconcile works fine"* · *"eye gate passed"*
+· *"ok, works"* · P7: *"1, 2, 3 its good"*, then *"ok good"* after the variant fix).
+**723 / 8423 / 7 → 784 / 8824 / 7** (the suite wobbles ±2 assertions between runs, pre-existing).
 Durable: **§PF** (PF1–PF13), **MP12**, **GIZ5**, **UN2**, **CAM2**, **MV1** as amended.
-Lessons: [[L87]]–[[L91]].
+Lessons: [[L87]]–[[L92]].
 
 ---
 
@@ -43,6 +43,7 @@ every consumer the prefab FLATTENED, and a variant is one record in a file (**PF
 | **P7a** `f231ec7` | Prefab v2 holds records; `Flatten`; the resolver flattens, owns, and refuses cycles; `Places`. |
 | **P7b** `462e7d2` | Instantiate through the resolver; affected follows nesting; the document expands/folds. |
 | **P7c** `e288466` | Drop a prefab on the preview to nest it (self/transitive refusal); Save As Variant… |
+| **their fix** `56d69dd` | The edits ARE the variant: the moved barrel becomes the override, the base untouched (L92). |
 
 ---
 
@@ -69,6 +70,14 @@ every consumer the prefab FLATTENED, and a variant is one record in a file (**PF
 4. *"Save do not reconcile in edit world"* — the bracket was around the reload ([[L88]]); every
    mechanism worked and the feature did nothing.
 5. Ctrl+Z undoing the LEVEL behind a focused prefab panel — **PF10**, retired by V4.
+
+## THE SIXTH, from P7's gate
+
+*"I move barrel on x… save as variant is grey. But it's exactly at this moment I want to save as
+variant."* Save As Variant shipped disabled while dirty. The edit IS the variant; the guard was a
+file-centric refusal at the one moment the verb exists for ([[L92]]). `BuildVariant` marks the
+base's entities the world still has as one instance of it and folds — the machinery already
+existed; only the semantic was wrong.
 
 ## The three altitude decisions worth re-reading
 
