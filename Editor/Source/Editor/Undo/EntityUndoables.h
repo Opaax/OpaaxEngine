@@ -57,7 +57,10 @@ namespace Opaax::Editor
     struct PrefabInstantiate
     {
         /** The instance's entities, captured after the fact — EntityCreate's rule. */
-        MapData Entities;
+        MapData    Entities;
+
+        /** The level, or the prefab panel placing a NESTED prefab into its own world (P7). */
+        EUndoWorld Scope = EUndoWorld::Active;
 
         void        Undo(EditorContext& InContext);
         void        Redo(EditorContext& InContext);

@@ -44,13 +44,21 @@ namespace Opaax::Editor
 
         const ComponentRegistry& lRegistry = m_Context.Engine.GetRegistries().Components();
 
-        // Only THIS prefab's entities. Every other placement is left alone — folding the whole
-        // world would be correct but would rewrite entities nobody asked about.
+        // ONE resolver for both halves of this phase — it is built BEFORE the write, so what it
+        // flattens is the OLD prefab, which is the whole point of folding here (**PF8**).
+        ResourcePrefabResolver lResolver(m_Context.Paths, m_Context.Resources, lRegistry);
+
+        // The placements this save REACHES: those of the prefab itself, and those of any prefab
+        // that places it, at any depth (P7) — an outer prefab or a variant whose base just changed.
+        // Every other placement is left alone; folding the whole world would be correct but would
+        // rewrite entities nobody asked about.
         TDynArray<EntityID> lAffected;
-        lWorld->Each<PrefabInstanceComponent>([&lAffected, &InEvent](EntityID InId,
-                                                                    const PrefabInstanceComponent& InMarker)
+        lWorld->Each<PrefabInstanceComponent>([&](EntityID InId, const PrefabInstanceComponent& InMarker)
         {
-            if (InMarker.IsLinked() && InMarker.Prefab.Path == InEvent.AssetPath)
+            if (!InMarker.IsLinked()) { return; }
+
+            if (InMarker.Prefab.Path == InEvent.AssetPath
+                || lResolver.Places(InMarker.Prefab.Path, InEvent.AssetPath))
             {
                 lAffected.emplace_back(InId);
             }
@@ -72,7 +80,6 @@ namespace Opaax::Editor
         // orphan check in HandleSaved needs to know what was there.
         for (const EntityData& lEntity : m_Pending.Entities) { m_Affected.emplace_back(lEntity.Id); }
 
-        ResourcePrefabResolver lResolver(m_Context.Paths, m_Context.Resources, lRegistry);
         const Uint64 lFolded = PrefabFold::Fold(m_Pending, lResolver, lRegistry);
 
         if (lFolded == 0)

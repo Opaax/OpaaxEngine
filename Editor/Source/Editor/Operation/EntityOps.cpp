@@ -169,11 +169,15 @@ namespace Opaax::Editor
             return 0;
         }
 
-        // Through the ResourceManager, which is what dedups a level placing many instances of one
-        // prefab. FailFast, so a missing or malformed file resolves to null rather than to an empty
-        // prefab that would instantiate nothing and report success.
-        const ResourceRef<PrefabResource> lRef    = InContext.Resources.Load<PrefabResource>(InAbsPath.CStr());
-        const PrefabResource* const       lPrefab = lRef.Get();
+        const ComponentRegistry& lRegistry = InContext.Engine.GetRegistries().Components();
+
+        // Through the RESOLVER, never the raw resource (P7): it hands the prefab back FLATTENED —
+        // its nested placements expanded — and goes through the ResourceManager underneath, which
+        // is what dedups a level placing many instances of one prefab. FailFast makes a missing or
+        // malformed file a null rather than an empty prefab that instantiates nothing and reports
+        // success.
+        ResourcePrefabResolver  lResolver(InContext.Paths, InContext.Resources, lRegistry);
+        const PrefabData* const lPrefab = lResolver.Resolve(lAssetPath);
 
         if (lPrefab == nullptr)
         {
@@ -182,9 +186,7 @@ namespace Opaax::Editor
             return 0;
         }
 
-        const ComponentRegistry& lRegistry = InContext.Engine.GetRegistries().Components();
-
-        MapData lInstance = PrefabFactory::BuildInstance(lPrefab->Data, lAssetPath, Guid::New(),
+        MapData lInstance = PrefabFactory::BuildInstance(*lPrefab, lAssetPath, Guid::New(),
                                                          InOwnerMap, lRegistry);
         if (lInstance.IsEmpty())
         {
