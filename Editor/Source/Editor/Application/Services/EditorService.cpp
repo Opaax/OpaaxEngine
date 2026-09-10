@@ -358,7 +358,7 @@ namespace Opaax::Editor
         lPanelsRegistry.Register<SpriteSheetPanel>(PanelDesc    {.Id = SpriteSheetPanel::PanelID(),     .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_SHEET});
         // ⑦-C P6. Hidden until a prefab is opened, and its SaveCommand is what routes Ctrl+S to
         // the prefab rather than to the map ([[L86]]'s fix, which is why no panel hand-writes a save).
-        lPanelsRegistry.Register<PrefabPanel>(PanelDesc         {.Id = PrefabPanel::PanelID(),          .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_PREFAB, .UndoCommand = Tags::EDITOR_COMMAND_UNDO_PREFAB, .RedoCommand = Tags::EDITOR_COMMAND_REDO_PREFAB});
+        lPanelsRegistry.Register<PrefabPanel>(PanelDesc         {.Id = PrefabPanel::PanelID(),          .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_PREFAB, .UndoCommand = Tags::EDITOR_COMMAND_UNDO_PREFAB, .RedoCommand = Tags::EDITOR_COMMAND_REDO_PREFAB, .DeleteCommand = Tags::EDITOR_COMMAND_DELETE_PREFAB_SELECTION});
         lPanelsRegistry.Register<AnimationClipPanel>(PanelDesc  {.Id = AnimationClipPanel::PanelID(),   .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_CLIP});
         lPanelsRegistry.Register<AnimationLibraryPanel>(PanelDesc{.Id = AnimationLibraryPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_LIBRARY});
         lPanelsRegistry.Register<MoveModePanel>(PanelDesc{.Id = MoveModePanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_MOVE_MODE});
@@ -403,6 +403,7 @@ namespace Opaax::Editor
         lCommands.Register<SavePrefabCommand>(Tags::EDITOR_COMMAND_SAVE_PREFAB);
         lCommands.Register<UndoPrefabCommand>(Tags::EDITOR_COMMAND_UNDO_PREFAB);
         lCommands.Register<RedoPrefabCommand>(Tags::EDITOR_COMMAND_REDO_PREFAB);
+        lCommands.Register<DeletePrefabSelectionCommand>(Tags::EDITOR_COMMAND_DELETE_PREFAB_SELECTION);
         lCommands.Register<SaveMapCommand>(Tags::EDITOR_COMMAND_SAVE_MAP);
         lCommands.Register<SaveMapAsCommand>(Tags::EDITOR_COMMAND_SAVE_MAP_AS);
 
@@ -1162,70 +1163,56 @@ namespace Opaax::Editor
         // which is exactly when ImGui's view of the keyboard is the authoritative one.
         if (m_Context == nullptr) { return; }
 
-        if (m_Gui->Shortcut(EKeyCode::LeftControl, EKeyCode::S))
-        {
-            // ONE chord, whichever document is in front. Ctrl+S in a sheet editor saving the MAP is
-            // the kind of surprise that costs work, so the target follows the focused panel — which
-            // the draw loop measured while that panel's window was open.
-            //
-            // A LOOKUP, not a chain. This used to be a hand-written ladder of "is the sheet
-            // focused? the clip? the library?" and it was forgotten FOUR times: MoveMode and Mover
-            // shipped without an entry in ⑦-A, and both input panels in ⑦-B, so Ctrl+S in any of
-            // them silently saved the map. A panel now DECLARES its save command (PanelDesc), so
-            // adding a document editor cannot forget to update a list somewhere else.
-            const OpaaxStringID lFocused = m_Gui->Panels().FocusedPanel();
-
-            OpaaxTag lTarget = Tags::EDITOR_COMMAND_SAVE_MAP;
-
-            for (const PanelEntry& lEntry : m_Extensions.Panels().Entries())
-            {
-                if (lEntry.Desc.Id == lFocused && lEntry.Desc.SaveCommand.IsValid())
-                {
-                    lTarget = lEntry.Desc.SaveCommand;
-                    break;
-                }
-            }
-
-            m_Context->Extensions.Commands().Execute(lTarget, *m_Context);
-        }
-
-        // Ctrl+Z / Ctrl+Y, beside Ctrl+S and for its reason. NOT Ctrl+Shift+Z: Shortcut takes one
-        // modifier, and Ctrl+Y is what Windows and Unreal both use anyway.
+        // ONE chord, whichever document is in front — the target follows the focused panel, which
+        // the draw loop measured while that panel's window was open, and the panel DECLARES it
+        // (PanelDesc::SaveCommand and, since P8 V3/V4, Undo/Redo/DeleteCommand). Invalid = the
+        // level's verb.
         //
-        // THE SAME LOOKUP AS Ctrl+S, one chord over: the target follows the focused panel, and a
-        // panel DECLARES it (PanelDesc::UndoCommand). A document with its own history names the
-        // commands that step it; every other panel falls through to the level's stack (**UN1**).
-        // This began as a bool that only swallowed the chord — Ctrl+Z from the prefab editor was
-        // undoing the level behind it — and the swallow retired when the panel got a stack (P8 V3).
-        //
-        // SAMPLED ONCE EACH. Shortcut() is an edge query, so asking the same chord twice in one
-        // frame answers true only the first time — a second call to pick the branch would have
-        // made Ctrl+Z fall through to Redo.
-        const bool lUndoChord = m_Gui->Shortcut(EKeyCode::LeftControl, EKeyCode::Z);
-        const bool lRedoChord = m_Gui->Shortcut(EKeyCode::LeftControl, EKeyCode::Y);
-
-        if (lUndoChord || lRedoChord)
+        // A LOOKUP, not a chain. Ctrl+S used to be a hand-written ladder of "is the sheet focused?
+        // the clip? the library?" and it was forgotten FOUR times ([[L86]]); Ctrl+Z was then a bool
+        // that only swallowed the chord. A panel adding a document cannot forget a list elsewhere.
+        const auto lCommandForFocused = [this](const OpaaxTag& InDefault, OpaaxTag PanelDesc::* InMember)
         {
             const OpaaxStringID lFocused = m_Gui->Panels().FocusedPanel();
-
-            OpaaxTag lTarget = lUndoChord ? Tags::EDITOR_COMMAND_UNDO : Tags::EDITOR_COMMAND_REDO;
 
             for (const PanelEntry& lEntry : m_Extensions.Panels().Entries())
             {
                 if (lEntry.Desc.Id != lFocused) { continue; }
 
-                const OpaaxTag& lDeclared = lUndoChord ? lEntry.Desc.UndoCommand : lEntry.Desc.RedoCommand;
-                if (lDeclared.IsValid()) { lTarget = lDeclared; }
-                break;
+                const OpaaxTag& lDeclared = lEntry.Desc.*InMember;
+                return lDeclared.IsValid() ? lDeclared : InDefault;
             }
 
-            m_Context->Extensions.Commands().Execute(lTarget, *m_Context);
+            return InDefault;
+        };
+
+        if (m_Gui->Shortcut(EKeyCode::LeftControl, EKeyCode::S))
+        {
+            m_Context->Extensions.Commands().Execute(
+                lCommandForFocused(Tags::EDITOR_COMMAND_SAVE_MAP, &PanelDesc::SaveCommand), *m_Context);
+        }
+
+        // Ctrl+Z / Ctrl+Y. NOT Ctrl+Shift+Z: Shortcut takes one modifier, and Ctrl+Y is what
+        // Windows and Unreal both use anyway. SAMPLED ONCE EACH — Shortcut() is an edge query, so
+        // asking the same chord twice in one frame answers true only the first time.
+        if (m_Gui->Shortcut(EKeyCode::LeftControl, EKeyCode::Z))
+        {
+            m_Context->Extensions.Commands().Execute(
+                lCommandForFocused(Tags::EDITOR_COMMAND_UNDO, &PanelDesc::UndoCommand), *m_Context);
+        }
+
+        if (m_Gui->Shortcut(EKeyCode::LeftControl, EKeyCode::Y))
+        {
+            m_Context->Extensions.Commands().Execute(
+                lCommandForFocused(Tags::EDITOR_COMMAND_REDO, &PanelDesc::RedoCommand), *m_Context);
         }
 
         // F and Delete are EDITOR-WIDE, not the viewport's. They were measured on the viewport
         // first, which meant they did nothing from the Hierarchy — the panel an author is most
         // likely to be in when deleting something. Their subject is the SELECTION, and the
-        // selection is not owned by any one panel, so neither are its verbs.
+        // selection is not owned by any one panel, so neither are its verbs. (Delete follows the
+        // focused panel like the chords above; F stays the level's — the prefab panel claims it
+        // itself, because its subject there is a camera no command can reach.)
         //
         // What made a bare key unsafe was never the route, it was a text field: guarding on
         // IsKeyboardOwnedByUI is what lets these be global, so typing "Fred" into the name field
@@ -1239,7 +1226,8 @@ namespace Opaax::Editor
 
         if (m_Gui->Shortcut(EKeyCode::Delete))
         {
-            m_Context->Extensions.Commands().Execute(Tags::EDITOR_COMMAND_DELETE_ENTITY, *m_Context);
+            m_Context->Extensions.Commands().Execute(
+                lCommandForFocused(Tags::EDITOR_COMMAND_DELETE_ENTITY, &PanelDesc::DeleteCommand), *m_Context);
         }
 
         // W / E / R — the binding Unreal, Unity and Godot all share, so an author already knows it.

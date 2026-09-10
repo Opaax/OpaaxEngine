@@ -5,6 +5,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Editor/Camera/EditorCamera.h"
 #include "Editor/Panels/IEditorPanel.h"
+#include "Editor/Undo/ComponentUndoables.h"   // EntityComponentsEdit — the property form's one step
 #include "Editor/Viewport/ViewportGestures.h"
 #include "Editor/Viewport/ViewportGizmo.h"
 
@@ -37,20 +38,17 @@ namespace Opaax::Editor
     //   the other world (**MV4**, **PF9**). The gestures are the level viewport's exact types
     //   (Editor/Viewport/), so pan, zoom, click, marquee and gizmo cannot drift between surfaces.
     //
-    //   `F` IS MEASURED HERE, not declared on PanelDesc like Ctrl+S: its subject is this panel's
-    //   camera, which no command can reach. A focused window's ImGui::Shortcut takes priority over
-    //   EditorService's global route, so the level's F does not also fire. `Delete` is claimed the
-    //   same way and does nothing yet — a delete with no undo is worse than none (V4 owns it), and
-    //   letting it through would delete in the LEVEL.
+    //   `F` IS MEASURED HERE, not declared on PanelDesc like Ctrl+S/Z/Y/Delete: its subject is this
+    //   panel's camera, which no command can reach. A focused window's ImGui::Shortcut takes
+    //   priority over EditorService's global route, so the level's F does not also fire.
     //
-    //   THE GIZMO (P8 V3) is the level's GizmoGesture, reading the editor-wide settings (W/E/R,
-    //   the toolbar) and driving its own drag. Its delta goes straight through
-    //   EntityOps::TransformEntities — no PIE guard, because this world is Edit whatever the level
-    //   is doing — and the drag's step lands on the DOCUMENT's stack, which Ctrl+Z reaches through
-    //   the panel's declared UndoCommand. Ctrl+S's shape, twice over.
+    //   EVERY EDIT LANDS ON THE DOCUMENT'S STACK (P8 V3/V4): the gizmo's drag (the level's
+    //   GizmoGesture, reading the editor-wide settings, applied straight through
+    //   EntityOps::TransformEntities — no PIE guard, this world is Edit whatever the level does),
+    //   the property form's gesture (the Inspector's bracket, verbatim), and Delete (the declared
+    //   DeletePrefabSelectionCommand). Ctrl+Z reaches it through the panel's declared UndoCommand.
     //
     //   Properties come from the Inspector's drawer registry, so it never learns a component type.
-    //   Property edits and Delete are not on the stack yet (V4).
     // =============================================================================
     class PrefabPanel final : public IEditorPanel
     {
@@ -131,8 +129,11 @@ namespace Opaax::Editor
         /** Frame on open and on F. Set in DrawContents, spent in OnPreRender against a measured size. */
         bool            m_bPendingFrame  = false;
 
-        /** Last frame's ImGui::IsAnyItemActive — the release frame of a widget still marks the world. */
+        /** Last frame's ImGui::IsAnyItemActive — the edit bracket's edge, and the release frame still marks. */
         bool            m_bWasItemActive = false;
+
+        /** The property form's step, held across the gesture — the Inspector's shape (⑤). */
+        EntityComponentsEdit m_Edit;
 
         bool            m_bOutlineLogged = false;
         bool            m_bIconsLogged   = false;

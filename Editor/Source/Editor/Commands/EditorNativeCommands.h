@@ -478,6 +478,18 @@ namespace Opaax::Editor
         void Execute(EditorContext& InContext, const Params&);
     };
 
+    /**
+     * Destroy what is selected in the PREFAB DOCUMENT's world and record it on its stack (P8 V4)
+     * — what Delete reaches while the panel is focused (PanelDesc::DeleteCommand). The level's
+     * DestroySelected, one document over; no PIE gate for the reason UndoPrefab has none.
+     */
+    struct DeletePrefabSelectionCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
     // =============================================================================
     // Level
     // =============================================================================

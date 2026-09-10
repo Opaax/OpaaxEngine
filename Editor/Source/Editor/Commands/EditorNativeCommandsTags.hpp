@@ -82,6 +82,8 @@ namespace Opaax::Editor::Tags
         OpaaxTag("Editor.Command.UndoPrefab");
     inline const OpaaxTag EDITOR_COMMAND_REDO_PREFAB =
         OpaaxTag("Editor.Command.RedoPrefab");
+    inline const OpaaxTag EDITOR_COMMAND_DELETE_PREFAB_SELECTION =
+        OpaaxTag("Editor.Command.DeletePrefabSelection");
 
     //Sprite sheet
     inline const OpaaxTag EDITOR_COMMAND_SAVE_SHEET  = OpaaxTag("Editor.Command.SaveSheet");

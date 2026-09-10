@@ -154,16 +154,12 @@ namespace Opaax::Editor
         }
 
         // THIS WINDOW'S route, which ImGui ranks above EditorService's global one — so with this
-        // panel focused the level's F and Delete do not fire. The text-field guard is the same one
-        // the global route uses: typing "Fred" into a name must not frame anything.
-        if (!m_Context.Gui.IsKeyboardOwnedByUI())
+        // panel focused the level's F does not fire. F is the one key measured here rather than
+        // declared: its subject is this panel's camera, which no command can reach. The text-field
+        // guard is the same one the global route uses: typing "Fred" into a name must not frame.
+        if (!m_Context.Gui.IsKeyboardOwnedByUI() && ImGui::Shortcut(ImGuiKey_F))
         {
-            if (ImGui::Shortcut(ImGuiKey_F)) { m_bPendingFrame = true; }
-
-            if (ImGui::Shortcut(ImGuiKey_Delete))
-            {
-                OPAAX_LOG(LogPrefabPanel, Trace, "Delete swallowed — the prefab panel has no delete verb until it has undo (P8 V4)");
-            }
+            m_bPendingFrame = true;
         }
 
         const bool lDirty = m_Context.PrefabDocument.IsDirty(m_Context);
@@ -258,6 +254,21 @@ namespace Opaax::Editor
         {
             if (World* lWorld = lEntity.GetWorld()) { lWorld->MarkChanged(); }
         }
+
+        // THE EDIT GESTURE'S TWO EDGES — the Inspector's bracket, verbatim (P8 V4). The rising
+        // edge is read AFTER the drawers ran, which is what makes the captured values the pre-edit
+        // ones; the falling edge records onto the DOCUMENT's stack.
+        if (lItemActive && !m_bWasItemActive)
+        {
+            m_Edit.Begin(m_Context, lEntity, EUndoWorld::Prefab);
+        }
+        else if (!lItemActive && m_bWasItemActive)
+        {
+            if (m_Edit.End(m_Context)) { m_Context.PrefabDocument.Undo().Record(Move(m_Edit)); }
+
+            m_Edit = EntityComponentsEdit{};   // closed either way, or the next edit folds into it
+        }
+
         m_bWasItemActive = lItemActive;
     }
 

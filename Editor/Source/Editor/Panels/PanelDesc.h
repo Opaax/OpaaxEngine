@@ -66,5 +66,12 @@ namespace Opaax::Editor
          */
         OpaaxTag UndoCommand;
         OpaaxTag RedoCommand;
+
+        /**
+         * The command Delete runs while this panel is focused. Invalid = the level's selection.
+         * Declared for the same reason as the two above (P8 V4): a document with a selection of
+         * its own is the only thing that knows what deleting in it means.
+         */
+        OpaaxTag DeleteCommand;
     };
 }

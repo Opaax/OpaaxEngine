@@ -6,6 +6,8 @@
 #include "Editor/Operation/EditorGizmo.hpp"   // SetMode — the three gizmo commands (③)
 #include "Editor/Operation/EditorSelection.hpp"   // the primary — what the Inspector's verbs act on
 #include "Editor/Undo/EditorUndo.h"           // the two commands that drive the stack (⑤)
+#include "Editor/Undo/EntityUndoables.h"      // EntityDelete — the prefab's Delete records one (P8 V4)
+#include "World/Serialization/MapSerializer.h"   // CaptureEntities — the step's payload, before the fact
 #include "Editor/Operation/EntityOps.h"
 #include "Editor/Operation/LevelOperations.h"
 #include "Editor/Operation/SheetOperations.h"
@@ -471,6 +473,32 @@ namespace Opaax::Editor
     void RedoPrefabCommand::Execute(EditorContext& InContext, const Params&)
     {
         InContext.PrefabDocument.Undo().Redo(InContext);
+    }
+
+    void DeletePrefabSelectionCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        EditorSelection& lSelection = InContext.PrefabDocument.Selection();
+        World* const     lWorld     = InContext.PrefabDocument.GetWorld();
+
+        if (!lSelection.HasSelection() || lWorld == nullptr || lSelection.GetWorld() != lWorld)
+        {
+            return;   // Delete on empty is ordinary — DestroySelected's rule
+        }
+
+        // COPY the handles first: the selection is about to be cleared (DestroySelected's reason).
+        const TDynArray<EntityID> lIds = lSelection.Ids();
+
+        // BEFORE the fact — once destroyed nothing can say what they were (⑤).
+        EntityDelete lStep{ MapSerializer::CaptureEntities(
+            *lWorld, InContext.Engine.GetRegistries().Components(), lIds), EUndoWorld::Prefab };
+
+        lSelection.Clear();
+
+        const Uint64 lCount = EntityOps::DestroyEntities(*lWorld, lIds);
+
+        InContext.PrefabDocument.Undo().Record(Move(lStep));
+
+        OPAAX_LOG(LogEditorCommands, Info, "Deleted {} entity(ies) from the prefab", lCount);
     }
 
     void SaveMapAsCommand::Execute(EditorContext& InContext, const Params&)
