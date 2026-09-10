@@ -2586,3 +2586,29 @@ configuration, mute in the second.
   key's writers (`MarkChanged` here); each one is a line the copy needs or a reason it does not.
 - **A gate on a derived value is a claim that every writer is visible.** Say which writers were
   audited in the commit; "the level document does it this way" is not an audit.
+
+## L92 — A guard that refuses the verb at the moment the author most wants it is a wrong SEMANTIC, not a safety (2026-09-10)
+
+**What happened (⑦-C P7c).** *Save As Variant…* shipped disabled while the document was dirty,
+with a tooltip: *"Save first — a variant is made of the file on disk."* Their report, one gate
+later: *"I move barrel on x… save as variant is grey. But it's exactly at this moment I want to
+save as variant."* The edit IS the variant. The button was greyed at the only moment it had a
+reason to exist. The fix was one pure transform (`PrefabFactory::BuildVariant`: mark the base's
+entities the world still has as one instance of it, fold, everything else stays the variant's own)
+and the deletion of the gate — and the machinery it needed, `PrefabOverrides::Diff` and `Fold`'s
+null-for-missing, already existed.
+
+**Why it happened.** I wrote the guard from the FILE's point of view ("a variant references the
+file, so the file must be current") and never asked what the author is doing when they reach for
+the button. My own memory says they justify every design from the authoring loop — I had the
+rule and did not run it. Unity's own gesture (*Create → Prefab Variant* on an instance with
+overrides) says the same thing: variant creation is *"this state, as a child of that asset"*, and
+the state's deviations are the point.
+
+**Rules for next time.**
+- **Before disabling a button, write the sentence "the author clicks this when …" and check the
+  guard against it.** If the guard fires in that sentence, the guard is the bug.
+- **"Unsaved edits would be lost" is a reason to CARRY them, not to refuse.** Ask what the edits
+  become on the other side of the verb; here they were the deliverable.
+- **A file-centric refusal in an authoring surface is a smell.** The document has a world; the
+  verb should be defined on the world's state, with the file as its baseline.

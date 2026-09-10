@@ -3973,8 +3973,14 @@ enforces no policy: no PIE guard, no undo, no selection. Those belong to the sur
   adds the map, the selection and the step, the document's `Place` adds its own. `PrefabInstantiate`
   carries `Scope` like the other three steps.
 - **Save As Variant is a declared command** (`SavePrefabAsVariantCommand`, the panel dispatches it)
-  because it fronts a dialog — `CreatePrefabFromSelection`'s shape. Disabled while dirty: a variant
-  is of the FILE, and opening it would drop the unsaved edits.
+  because it fronts a dialog — `CreatePrefabFromSelection`'s shape.
+- **THE EDITS ARE THE VARIANT** (their report, *"it's exactly at this moment I want to save as
+  variant"*, [[L92]]). It shipped disabled while dirty — a file-centric refusal at the one moment
+  the verb exists for. `PrefabFactory::BuildVariant` marks the base's entities the world still
+  has as one instance of it and folds: a merge patch per entity that differs, null per one that
+  is gone, everything else the variant's own (a loose entity, a fresh nested drop as its own
+  record). Unchanged, the record is bare. The base file is untouched; the edits open again as the
+  variant. Unity's *Create → Prefab Variant* on an instance with overrides, and the same reason.
 
 **Growth points, named and not built:** *Create Variant* from a placement in the LEVEL (promote its
 record to a file, then relink the placement) · Revert to Prefab inside the prefab panel, and a nested
