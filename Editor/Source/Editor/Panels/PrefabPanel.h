@@ -123,6 +123,9 @@ namespace Opaax::Editor
         /** Frame on open and on F. Set in DrawContents, spent in OnPreRender against a measured size. */
         bool            m_bPendingFrame  = false;
 
+        /** Last frame's ImGui::IsAnyItemActive — the release frame of a widget still marks the world. */
+        bool            m_bWasItemActive = false;
+
         bool            m_bOutlineLogged = false;
         bool            m_bIconsLogged   = false;
     };

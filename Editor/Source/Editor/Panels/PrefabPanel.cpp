@@ -236,6 +236,15 @@ namespace Opaax::Editor
         {
             lDrawer(lEntity, m_Context.Widgets, m_Context);
         }
+
+        // A drawer writes through a raw reference, which no World method sees — and IsDirty is gated
+        // on the revision. The Inspector's rule: any active widget, plus the release frame, marks.
+        const bool lItemActive = ImGui::IsAnyItemActive();
+        if (lItemActive || m_bWasItemActive)
+        {
+            if (World* lWorld = lEntity.GetWorld()) { lWorld->MarkChanged(); }
+        }
+        m_bWasItemActive = lItemActive;
     }
 
     void PrefabPanel::DrawPreview()
