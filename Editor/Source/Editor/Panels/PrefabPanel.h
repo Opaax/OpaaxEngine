@@ -7,6 +7,7 @@
 #include "Editor/Operation/EditorSelection.hpp"
 #include "Editor/Panels/IEditorPanel.h"
 #include "Editor/Viewport/ViewportGestures.h"
+#include "Editor/Viewport/ViewportGizmo.h"
 
 namespace Opaax
 {
@@ -45,8 +46,14 @@ namespace Opaax::Editor
     //   same way and does nothing yet — a delete with no undo is worse than none (V4 owns it), and
     //   letting it through would delete in the LEVEL.
     //
+    //   THE GIZMO (P8 V3) is the level's GizmoGesture, reading the editor-wide settings (W/E/R,
+    //   the toolbar) and driving its own drag. Its delta goes straight through
+    //   EntityOps::TransformEntities — no PIE guard, because this world is Edit whatever the level
+    //   is doing — and the drag's step lands on the DOCUMENT's stack, which Ctrl+Z reaches through
+    //   the panel's declared UndoCommand. Ctrl+S's shape, twice over.
+    //
     //   Properties come from the Inspector's drawer registry, so it never learns a component type.
-    //   NO GIZMO AND NO UNDO YET (P8 V3/V4).
+    //   Property edits and Delete are not on the stack yet (V4).
     // =============================================================================
     class PrefabPanel final : public IEditorPanel
     {
@@ -79,6 +86,9 @@ namespace Opaax::Editor
 
         /** Frame the selection, or the whole prefab when nothing is selected. Spent in OnPreRender. */
         void ApplyPendingFrame(World& InWorld);
+
+        /** Spend the gizmo's banked delta on InWorld and close the drag onto the document's stack. */
+        void ApplyGizmoDrag(World& InWorld);
 
         /** The image's size in pixels, as a float pair — what every conversion takes. */
         Vector2F ViewportPx() const;
@@ -116,6 +126,7 @@ namespace Opaax::Editor
 
         CameraGesture   m_CameraGesture;
         PickGesture     m_PickGesture;
+        GizmoGesture    m_Gizmo;
 
         /** The document generation last shown — a change means the entities were replaced (see the note). */
         Uint64          m_ShownGeneration = 0;

@@ -8,6 +8,8 @@
 #include "Editor/Panels/EditorPanels.h"
 #include "Editor/Prefab/EditorPrefabDocument.h"
 #include "Editor/Extensions/DrawerRegistry.h"
+#include "Editor/Operation/EditorGizmo.hpp"     // the editor-wide settings the gizmo reads
+#include "Editor/Operation/EntityOps.h"         // TransformEntities — the world-explicit verb (PF12)
 #include "Editor/UI/IEditorGui.h"
 #include "Editor/UI/IEditorUIBackend.h"
 #include "Editor/Viewport/ViewportOverlays.h"
@@ -52,6 +54,7 @@ namespace Opaax::Editor
 
         PickGesture::Apply(m_PickGesture.Take(), *lWorld, m_Selection, ViewportPx(),
                            ViewportOverlays::AnchorHalfExtent(lWorld->GetCameraView(), ViewportPx()));
+        ApplyGizmoDrag(*lWorld);
 
         if (m_Framebuffer == nullptr)
         {
@@ -118,6 +121,19 @@ namespace Opaax::Editor
         }
 
         m_Camera.FocusOn(lBounds, ViewportPx());   // logs where it went, every time
+    }
+
+    void PrefabPanel::ApplyGizmoDrag(World& InWorld)
+    {
+        // Straight through the verb (PF12): the command the level dispatches carries the PIE
+        // guard, which is the level's policy — this world is Edit whatever the level is doing.
+        EntityOps::TransformDelta lDelta;
+        if (m_Gizmo.TakeDelta(m_Context.Gizmo, lDelta))
+        {
+            EntityOps::TransformEntities(InWorld, m_Selection.Ids(), lDelta);
+        }
+
+        m_Gizmo.Close(m_Context, m_Context.PrefabDocument.Undo());
     }
 
     void PrefabPanel::DrawContents()
@@ -269,7 +285,20 @@ namespace Opaax::Editor
         const ImVec2 lOrigin  = ImGui::GetItemRectMin();
 
         m_CameraGesture.Measure(lHovered, { lOrigin.x, lOrigin.y }, lSizePx);
-        m_PickGesture.Measure(lHovered, { lOrigin.x, lOrigin.y });
+
+        // ONE left button, TWO consumers: a press on a handle belongs to the gizmo, so the marquee
+        // never sees it. No grid here, so translate snaps to the authored step.
+        World* const lWorld = m_Context.PrefabDocument.GetWorld();
+        const bool   lGizmoOwns = lWorld != nullptr
+            && m_Gizmo.Measure(m_Context.Gizmo, *lWorld, m_Selection, lWorld->GetCameraView(), lSizePx,
+                               { lOrigin.x, lOrigin.y }, lSizePx,
+                               m_Context.Gizmo.GetSnapStep(EGizmoMode::Translate), /*bInSuppress*/ false,
+                               EUndoWorld::Prefab);
+
+        if (!lGizmoOwns)
+        {
+            m_PickGesture.Measure(lHovered, { lOrigin.x, lOrigin.y });
+        }
     }
 
     void PrefabPanel::Shutdown()
