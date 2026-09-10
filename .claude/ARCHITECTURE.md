@@ -3767,12 +3767,14 @@ shape of a save that loses work.
 
 ---
 
-## PF — Prefabs (⑦-C, P1–P6 + P8 V1 landed 2026-09-09, P8 V2–V4 + P5b 2026-09-10; P7 NOT built)
+## PF — Prefabs (⑦-C, P1–P6 + P8 V1 landed 2026-09-09, P8 V2–V4 + P5b + P7 2026-09-10 — block complete)
 
-**PF1 — A prefab IS a map's entities, so the two share ONE writer.** `PrefabData` is nothing but
-`TDynArray<EntityData>`; the entity-array walk was **moved out of `MapJson` into `EntityJson`** so a
-component gained by one format is gained by both. `.opaaxprefab`, `PREFAB_FORMAT_VERSION = 1`,
-`PrefabResource` with `EFailPolicy::FailFast` (a prefab that half-loads places half a turret).
+**PF1 — A prefab IS a map's entities, so the two share ONE writer.** `PrefabData` is
+`TDynArray<EntityData>` **plus `TDynArray<PrefabInstanceRecord>` (P7)**; the entity-array walk was
+**moved out of `MapJson` into `EntityJson`** so a component gained by one format is gained by both —
+**and so were the records** (`EntityJson::InstancesToJson/FromJson`), for the same reason.
+`.opaaxprefab`, `PREFAB_FORMAT_VERSION = 2`, `PrefabResource` with `EFailPolicy::FailFast` (a prefab
+that half-loads places half a turret).
 - **NO `prefabId`.** **MP10**'s reasons do not transfer: a map is *named* because a level's manifest
   refers to it by id and an empty one was anonymous. A prefab is referred to **by its path**, which
   the referring map already stores, so an id would be a second name for the same thing.
@@ -3787,6 +3789,10 @@ words, and which never returns zero.
 - Derivation makes an instance entity's identity a pure function of (instance id, template guid):
   stable across sessions with nothing stored, which is what lets **PF7**'s `Restore` and **PF8**'s
   reconcile find the right entity later. *Probe: neutering `Derive` turns 4 assertions red.*
+- **AND IT COMPOSES, which is what made nesting free (P7).** A nested entity's in-prefab guid is
+  `Derive(record.InstanceId, template)`, authored in the file; a level placement derives it once more,
+  `Derive(placement, Derive(record, tmpl))`. Two placements of an outer prefab give 6 distinct guids
+  with nothing stored and nothing remapped.
 
 **PF3 — A map stores the LINK and the DELTAS, not the entities** (`MAP_FORMAT_VERSION = 3`).
 `PrefabInstanceRecord { Prefab, InstanceId, Overrides[] }` under `prefabInstances`; records sorted by
@@ -3796,6 +3802,8 @@ prefab is byte-identical to a v2 one.
   understand produces a map **missing entities** — the misread that rule exists to catch.
 - Fold on capture, expand on mount (`Level::MountOne`). The editor's dirty check compares *folded*
   text, so an instance placed and left alone reports clean.
+- **A PREFAB FILE HOLDS RECORDS TOO (P7, `PREFAB_FORMAT_VERSION` 1→2, by the same rule).** The key is
+  omitted when empty, so a prefab placing nothing differs from v1 by the version number alone.
 
 **PF4 — Fold NEVER loses data; expand cannot be symmetric.** An instance whose prefab will not
 resolve stays **expanded** in the file rather than folding into a link nothing can rebuild.
@@ -3838,6 +3846,11 @@ second.
   banks the affected guids before the fold and destroys the orphans after the expand — **L87**'s
   other half, one verb over. **PF7**'s revert had the same gap and got the same fix, with
   `PrefabRevert::Destroyed` so redo can take the orphans away again.
+- **AFFECTED FOLLOWS NESTING (P7):** a placement is affected when its prefab IS the saved one **or
+  places it at any depth** (`ResourcePrefabResolver::Places`, transitive over the raw records). That
+  one predicate is what makes an outer prefab's placement follow the inner's save, and a variant
+  follow its base while keeping its overrides — the fold against the OLD flattened prefab and the
+  expand against the NEW are unchanged.
 
 **PF9 — A prefab is edited in a WORLD OF ITS OWN.** `RenderPassRequest::Source` (null ⇒ the active
 world) is what made **MV1**'s list of views a list of *worlds* — **MV**'s named asset-preview-world
@@ -3932,13 +3945,45 @@ enforces no policy: no PIE guard, no undo, no selection. Those belong to the sur
   caller names. The caller applies the delta through ITS route — the level dispatches the command
   that carries the PIE guard, the prefab panel calls `TransformEntities` on its world.
 
-**Growth points, named and not built:** nesting + variants (P7 — a variant is **PF3**'s instance
-record promoted to a file, `{ base, overrides }`) · hard-ref holds for runtime spawns and for
-editor placements after mount (**PF11**) · the snap grid in the prefab preview (the V2b extraction
-once more, ~70 lines out of `EnqueueGrid`) · the Edit menu's Undo label following the focused
-panel · add/remove-component in the prefab panel (`ComponentAdd`/`ComponentRemove` take the
-`EUndoWorld` field the day the buttons exist) · a per-surface W/E/R mode (~1h; the shared mode is
-Unity's and Godot's, and the user confirmed it).
+**PF13 — NESTING IS A PROPERTY OF THE RESOLVER, AND A VARIANT IS ONE RECORD IN A FILE** (P7,
+2026-09-10, three commits `f231ec7`→`e288466`).
+- **`IPrefabResolver::Resolve` hands back the prefab FLATTENED** (`PrefabFactory::Flatten`: the
+  file's own entities plus every record expanded through the resolver, `OwnerMap` cleared, nested
+  markers stripped). Every consumer already worked over "the prefab's entities" through that one
+  call — `Fold`/`Expand`, `Level::MountOne`, `RevertToPrefab`, the reconciler, `InstantiatePrefab` —
+  so nesting cost them **nothing**; a level sees an outer prefab as a flat set on composed guids
+  (**PF2**). `ResourcePrefabResolver` flattens once per claim and owns the result (**PF4**'s
+  lifetime rule, one level deeper).
+- **A variant is a `.opaaxprefab` with no entities and one record** `{ base, instanceId, overrides }`
+  — **PF3**'s record promoted to a file, exactly as planned. No new type, extension or reader:
+  `Flatten(variant)` = the base with the overrides applied; the panel edits it as an instance of
+  the base and Save folds the edits into the record; the base's saves reach it through **PF8**'s
+  transitive affected. Unity's Prefab Variant in this engine's own vocabulary.
+- **THE DOCUMENT IS THE ONE PLACE THAT READS THE RAW STRUCTURE.** `EditorPrefabDocument::Open`
+  expands one level (a nested placement shows as an instance with a marker, as in a level; anything
+  deeper is one instance, already flattened); Save folds back to records. `CaptureAsPrefab` is the
+  one function Save, the baseline and `IsDirty` share, so they cannot disagree.
+- **CYCLES ARE REFUSED TWICE, at different prices.** At read: the resolver keeps an in-flight chain
+  and answers null + Error for a prefab that places itself through any path (the record is
+  skipped, the rest of the prefab loads — a file that reached disk is not lost). At the DROP:
+  `EditorPrefabDocument::Place` refuses the open prefab and anything that `Places` it, so the file
+  never carries the cycle. `SaveAsVariant` refuses the base itself (it would overwrite it).
+- **`PlaceInstance` is `InstantiatePrefab`'s world-explicit half** (**PF12**'s idiom, third
+  instance): instantiate a BUILT `MapData`, anchor it, hand back the handles; the level's wrapper
+  adds the map, the selection and the step, the document's `Place` adds its own. `PrefabInstantiate`
+  carries `Scope` like the other three steps.
+- **Save As Variant is a declared command** (`SavePrefabAsVariantCommand`, the panel dispatches it)
+  because it fronts a dialog — `CreatePrefabFromSelection`'s shape. Disabled while dirty: a variant
+  is of the FILE, and opening it would drop the unsaved edits.
+
+**Growth points, named and not built:** *Create Variant* from a placement in the LEVEL (promote its
+record to a file, then relink the placement) · Revert to Prefab inside the prefab panel, and a nested
+instance's own revert · hard-ref holds for runtime spawns and for editor placements after mount
+(**PF11**) · the snap grid in the prefab preview (the V2b extraction once more, ~70 lines out of
+`EnqueueGrid`) · the Edit menu's Undo label following the focused panel · add/remove-component in
+the prefab panel (`ComponentAdd`/`ComponentRemove` take the `EUndoWorld` field the day the buttons
+exist) · a per-surface W/E/R mode (~1h; the shared mode is Unity's and Godot's, and the user
+confirmed it).
 
 ---
 
