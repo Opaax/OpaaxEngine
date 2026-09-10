@@ -3828,6 +3828,12 @@ second.
   `AboutToSave` reproduces the exact symptom (`0.35 → 0.35`, no reconciler line).*
 - The count is logged, because a reconciler that found **zero** instances looks identical to one that
   worked ([[L15]]).
+- **AND IT REMOVES WHAT THE PREFAB REMOVED** (2026-09-10, their report *"Delete from panel prefab
+  is not reconcile"*). `Restore` rebuilds what the new prefab names and creates what it added; an
+  instance entity whose TEMPLATE was deleted is named by nothing and stayed behind. The reconciler
+  banks the affected guids before the fold and destroys the orphans after the expand — **L87**'s
+  other half, one verb over. **PF7**'s revert had the same gap and got the same fix, with
+  `PrefabRevert::Destroyed` so redo can take the orphans away again.
 
 **PF9 — A prefab is edited in a WORLD OF ITS OWN.** `RenderPassRequest::Source` (null ⇒ the active
 world) is what made **MV1**'s list of views a list of *worlds* — **MV**'s named asset-preview-world
