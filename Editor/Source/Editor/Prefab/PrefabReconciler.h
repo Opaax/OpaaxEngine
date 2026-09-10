@@ -79,5 +79,12 @@ namespace Opaax::Editor
          * lifetime. Cleared by HandleSaved unconditionally, including when it rebuilds nothing.
          */
         MapData m_Pending;
+
+        /**
+         * Every instance entity the fold consumed, by guid. `Restore` rebuilds what the NEW prefab
+         * names and creates what it added; an entity whose TEMPLATE the prefab dropped is named
+         * by nothing and would stay behind — this list is how HandleSaved finds it.
+         */
+        TDynArray<Guid> m_Affected;
     };
 }

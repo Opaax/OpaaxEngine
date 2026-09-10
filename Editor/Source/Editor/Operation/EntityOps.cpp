@@ -407,6 +407,7 @@ namespace Opaax::Editor
         MapData             lRestore;
         MapData             lCreated;   // pieces the revert brings BACK — what undo must destroy
         TDynArray<EntityID> lHandles;
+        TDynArray<EntityID> lOrphans;   // pieces whose TEMPLATE the prefab no longer has — taken away
 
         for (const Guid& lInstanceId : lInstanceIds)
         {
@@ -451,6 +452,33 @@ namespace Opaax::Editor
 
             if (!lOwnerMap.IsValid()) { continue; }   // no entity of this placement is in the world
 
+            // A PREFAB CAN REMOVE A PIECE (L87's other half): an entity of this placement whose
+            // template is no longer in the prefab is named by nothing above, and "be this again"
+            // means it goes. Selection-only reverts take only the selected ones.
+            lWorld->Each<PrefabInstanceComponent>([&](EntityID InId, const PrefabInstanceComponent& InMarker)
+            {
+                if (InMarker.InstanceId != lInstanceId) { return; }
+
+                const Guid lGuid = Entity{ InId, lWorld }.GetGuid();
+
+                for (const EntityData& lNamed : lPristine.Entities)
+                {
+                    if (lNamed.Id == lGuid) { return; }
+                }
+
+                if (!bInWholeInstance)
+                {
+                    bool lSelected = false;
+                    for (const Guid& lTarget : lSelectedTargets)
+                    {
+                        if (lTarget == lGuid) { lSelected = true; break; }
+                    }
+                    if (!lSelected) { return; }
+                }
+
+                lOrphans.emplace_back(InId);
+            });
+
             for (EntityData& lEntity : lPristine.Entities)
             {
                 lEntity.OwnerMap = lOwnerMap;
@@ -491,17 +519,28 @@ namespace Opaax::Editor
             }
         }
 
-        if (lRestore.Entities.empty())
+        if (lRestore.Entities.empty() && lOrphans.empty())
         {
             OPAAX_LOG(LogEntityOps, Warn, "Revert to Prefab — nothing to revert.");
             return 0;
         }
 
         // BEFORE, captured while the overrides are still on the entities — nothing else can
-        // recover them once Restore has run.
-        MapData lBefore = MapSerializer::CaptureEntities(*lWorld, lRegistry, lHandles);
+        // recover them once Restore has run. The orphans are in it too, which is what lets undo
+        // bring them back; what redo must destroy again is captured on its own.
+        for (const EntityID lOrphan : lOrphans) { lHandles.emplace_back(lOrphan); }
+
+        MapData lBefore    = MapSerializer::CaptureEntities(*lWorld, lRegistry, lHandles);
+        MapData lDestroyed = MapSerializer::CaptureEntities(*lWorld, lRegistry, lOrphans);
 
         const Uint64 lReverted = MapFactory::Restore(lRestore, *lWorld, lRegistry);
+
+        // Out of the selection before they go, so no destroyed handle lingers there.
+        for (const EntityID lOrphan : lOrphans)
+        {
+            if (Entity lE{ lOrphan, lWorld }; InContext.Selection.Contains(lE)) { InContext.Selection.Toggle(lE); }
+        }
+        const Uint64 lRemoved = DestroyEntities(*lWorld, lOrphans);
 
         // Handles re-resolved AFTER the restore: a recreated entity did not exist when the list
         // above was built, and an After that omitted it would make redo silently drop it again.
@@ -523,13 +562,14 @@ namespace Opaax::Editor
         InContext.Undo.Record(PrefabRevert{
             Move(lBefore),
             MapSerializer::CaptureEntities(*lWorld, lRegistry, lAfterHandles),
-            Move(lCreated) });
+            Move(lCreated),
+            Move(lDestroyed) });
 
         OPAAX_LOG(LogEntityOps, Info,
-                  "Reverted {} entity(ies) across {} placement(s) to their prefab ({} recreated)",
-                  lReverted, lInstanceIds.size(), lRecreated);
+                  "Reverted {} entity(ies) across {} placement(s) to their prefab ({} recreated, {} removed)",
+                  lReverted, lInstanceIds.size(), lRecreated, lRemoved);
 
-        return lReverted;
+        return lReverted + lRemoved;
     }
 
     void EntityOps::Rename(EditorContext& InContext, Entity InEntity, const OpaaxString& InName)

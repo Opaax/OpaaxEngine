@@ -122,6 +122,13 @@ namespace Opaax::Editor
          */
         MapData Created;
 
+        /**
+         * Pieces the revert TOOK AWAY — instance entities whose template the prefab no longer has
+         * (the prefab REMOVED a piece; L87's other half). `Before` holds them too, so undo brings
+         * them back by restoring it; this list is what redo destroys, since `After` never named them.
+         */
+        MapData Destroyed;
+
         void        Undo(EditorContext& InContext);
         void        Redo(EditorContext& InContext);
         const char* Label() const noexcept { return "Revert to Prefab"; }

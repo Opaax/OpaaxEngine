@@ -1,6 +1,7 @@
 #include "Editor/Prefab/PrefabReconciler.h"
 
 #include "Editor/EditorContext.h"
+#include "Editor/Operation/EditorSelection.hpp"
 
 #include "Application/Services/IEngine.h"
 #include "Engine/Registries/EngineRegistries.h"
@@ -34,6 +35,7 @@ namespace Opaax::Editor
     void PrefabReconciler::HandleSaving(const ResourceSavedEvent& InEvent)
     {
         m_Pending = MapData{};
+        m_Affected.clear();
 
         if (InEvent.TypeId != ResourceTypeID::Get<PrefabResource>()) { return; }
 
@@ -66,57 +68,81 @@ namespace Opaax::Editor
         // to replace with records. Expand needs it, because BuildInstance refuses an invalid map.
         m_Pending.Id = m_Pending.OwnerId();
 
+        // And the guids, for the same reason: Fold replaces the entities with records, and the
+        // orphan check in HandleSaved needs to know what was there.
+        for (const EntityData& lEntity : m_Pending.Entities) { m_Affected.emplace_back(lEntity.Id); }
+
         ResourcePrefabResolver lResolver(m_Context.Paths, m_Context.Resources);
         const Uint64 lFolded = PrefabFold::Fold(m_Pending, lResolver, lRegistry);
 
         if (lFolded == 0)
         {
             m_Pending = MapData{};   // nothing foldable — leave the world alone
+            m_Affected.clear();
         }
     }
 
     void PrefabReconciler::HandleSaved(const ResourceSavedEvent& InEvent)
     {
-        if (m_Pending.Instances.empty())
-        {
-            m_Pending = MapData{};
-            return;
-        }
+        // Taken and cleared FIRST, whatever happens below — both are one save's parameters.
+        MapData             lPending  = Move(m_Pending);
+        const TDynArray<Guid> lAffected = Move(m_Affected);
+        m_Pending = MapData{};
+        m_Affected.clear();
+
+        if (lPending.Instances.empty()) { return; }
 
         World* const lWorld = m_Context.Worlds.GetActiveWorld();
-        if (lWorld == nullptr)
-        {
-            m_Pending = MapData{};
-            return;
-        }
+        if (lWorld == nullptr) { return; }
 
         const ComponentRegistry& lRegistry = m_Context.Engine.GetRegistries().Components();
 
-        if (!m_Pending.Id.IsValid())
+        if (!lPending.Id.IsValid())
         {
             // Banked in HandleSaving; without it Expand can build nothing.
             OPAAX_LOG(LogPrefabReconciler, Warn,
                       "Prefab '{}' saved, but its placements name no map — not re-applied",
                       InEvent.AssetPath.CStr());
-            m_Pending = MapData{};
             return;
         }
 
         // Expanded against the NEW payload — the reload has already happened.
         ResourcePrefabResolver lResolver(m_Context.Paths, m_Context.Resources);
-        const Uint64 lExpanded = PrefabFold::Expand(m_Pending, lResolver, lRegistry);
+        const Uint64 lExpanded = PrefabFold::Expand(lPending, lResolver, lRegistry);
 
         // Restore, not Instantiate: these entities still exist and must keep their identities. It
         // also REMOVES components the new prefab no longer has, which is what makes deleting a
         // component from a prefab reach its instances.
-        const Uint64 lUpdated = MapFactory::Restore(m_Pending, *lWorld, lRegistry);
+        const Uint64 lUpdated = MapFactory::Restore(lPending, *lWorld, lRegistry);
+
+        // AND DESTROYS WHAT THE PREFAB NO LONGER HAS. Restore names what the new template
+        // produced; an instance entity whose template was DELETED from the prefab is named by
+        // nothing and would stay behind — the user's report, found in a minute of real use.
+        Uint64 lRemoved = 0;
+
+        for (const Guid& lWas : lAffected)
+        {
+            bool lStillNamed = false;
+            for (const EntityData& lNow : lPending.Entities)
+            {
+                if (lNow.Id == lWas) { lStillNamed = true; break; }
+            }
+            if (lStillNamed) { continue; }
+
+            Entity lOrphan = lWorld->FindByGuid(lWas);
+            if (!lOrphan.IsValid()) { continue; }
+
+            // Out of the selection first — a destroyed entity's handle must not linger there.
+            if (m_Context.Selection.Contains(lOrphan)) { m_Context.Selection.Toggle(lOrphan); }
+
+            lWorld->DestroyEntity(lOrphan.GetHandle());
+            ++lRemoved;
+        }
 
         lWorld->MarkChanged();
 
         OPAAX_LOG(LogPrefabReconciler, Info,
-                  "Prefab '{}' saved — re-applied to {} placement(s), {} entity(ies) updated",
-                  InEvent.AssetPath.CStr(), lExpanded, lUpdated);
-
-        m_Pending = MapData{};
+                  "Prefab '{}' saved — re-applied to {} placement(s), {} entity(ies) updated, {} removed",
+                  InEvent.AssetPath.CStr(), lExpanded, lUpdated, lRemoved);
     }
 }

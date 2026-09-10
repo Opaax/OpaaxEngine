@@ -141,16 +141,21 @@ namespace Opaax::Editor
     }
 
     // A revert normally creates and destroys nothing, so "be this again" is the whole inverse
-    // (**UN4**) — EXCEPT when it brought a deleted piece back, which undo has to take away again.
-    // Destroy first, restore second, for PrefabCreateFromSelection's reason: RestoreEntities
-    // selects what it brought back and DestroyEntities clears.
+    // (**UN4**) — EXCEPT when it brought a deleted piece back (undo takes it away again) or took
+    // an orphaned piece away (Before holds it, so restoring Before brings it back; redo destroys
+    // it again). Destroy first, restore second, both ways, for PrefabCreateFromSelection's reason:
+    // RestoreEntities selects what it brought back and DestroyEntities clears.
     void PrefabRevert::Undo(EditorContext& InContext)
     {
         DestroyEntities(InContext, Created, EUndoWorld::Active);
         RestoreEntities(InContext, Before, EUndoWorld::Active);
     }
 
-    void PrefabRevert::Redo(EditorContext& InContext) { RestoreEntities(InContext, After, EUndoWorld::Active); }
+    void PrefabRevert::Redo(EditorContext& InContext)
+    {
+        DestroyEntities(InContext, Destroyed, EUndoWorld::Active);
+        RestoreEntities(InContext, After, EUndoWorld::Active);
+    }
 
     void EntityDelete::Undo(EditorContext& InContext) { RestoreEntities(InContext, Entities, Scope); }
     void EntityDelete::Redo(EditorContext& InContext) { DestroyEntities(InContext, Entities, Scope); }
