@@ -17,14 +17,14 @@
 
 #include "Services/IConfigSystem.h"
 #include "Services/IEngine.h"
-#include "Services/Window/IWindowManager.h"
-#include "Services/Window/WindowManager.h"
+#include "Window/WindowManager.h"
 
 #include "Window/WindowEvents.h"
 
 #include "Core/Events/Event.h"
 #include "Core/Events/EventBus.h"
 #include "Core/Events/EventTypes.hpp"
+#include "Services/Window/IWindowManager.h"
 
 #ifdef OPAAX_PLATFORM_WINDOWS
 #include "Platform/Windows/WindowsPlatform.h"

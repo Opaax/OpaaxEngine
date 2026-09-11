@@ -1,11 +1,12 @@
-﻿#include "WindowManager.h"
+﻿#include "Window/WindowManager.h"
 
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IConfigSystem.h"
 #include "Engine/Config/Config_Engine.h"
 
-namespace Opaax{
-// =========================================================================
+namespace Opaax
+{
+    // =========================================================================
     // WindowManager
     // =========================================================================
     Window* WindowManager::CreateMainWindow()

@@ -25,12 +25,12 @@ file(GLOB_RECURSE ENGINE_CORE_SOURCES CONFIGURE_DEPENDS
     "Source/Renderer/*.cpp"
     "Source/Renderer/*.h"
     "Source/Renderer/*.hpp"
+    "Source/Window/*.cpp"
+    "Source/Window/*.h"
+    "Source/Window/*.hpp"
 )
 
 set(ENGINE_SOURCES ${ENGINE_CORE_SOURCES})
-
-# D4: the engine DLL has ZERO editor knowledge. Source/Editor/** is NEVER globbed here —
-# it belongs to OpaaxEditorLib. (This empty marker exists so the old glob is not reintroduced.)
 
 # ==================================
 # GLFW Configuration
