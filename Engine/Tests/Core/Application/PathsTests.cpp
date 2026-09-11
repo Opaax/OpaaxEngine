@@ -11,8 +11,8 @@
 #include <utility>
 
 #include "Application/Services/IPaths.h"
-#include "Application/Services/Platforms/IPlatform.h"
-#include "Application/Services/Platforms/IFileSystem.h"   // StubPlatform hands out the null one
+#include "Platform/IPlatform.h"
+#include "Platform/IFileSystem.h"   // StubPlatform hands out the null one
 #include "Application/Services/AppServiceLocator.h"
 
 using namespace Opaax;

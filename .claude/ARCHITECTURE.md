@@ -4004,8 +4004,8 @@ five mutable statics, i.e. an **I1** violation; superseded by `IPaths`/`ResolveP
 2026-07-28) — all live under `Engine/Source/Legacy/`, **NOT globbed by the engine DLL** (compiled = zero). Their old-world tests live in `Engine/Tests/Legacy/`. **Do not add new
 dependencies on any of it, and do not re-glob `Legacy/`.** It will be deleted; anything you hang off it dies with
 it. *(Exception: `Core/Systems/Subsystem.h` — `ISubsystem`/`ISubsystemManager` — stayed LIVE; it is the base of
-the new `EngineSubsystemBase`.)* Next: Gregory-layer the live remainder (plan `~/.claude/plans/inherited-orbiting-clover.md` — the
-auto-named plans live in the USER-level `.claude/plans/`, not the repo's).
+the new `EngineSubsystemBase`.)* Next: Gregory-layer the live remainder — plan written 2026-09-11 at
+`.claude/plans/gregory-layout.md` (executed by the user; the earlier user-level plan file no longer exists).
 **X2 — New systems get collision-proof identities up front.** When old and new coexist, the *new* type gets
 a scoped `enum class` / distinct name — never rely on include order or forward-decl tricks to avoid a
 clash. Two unscoped enums sharing enumerator names collide the moment one TU needs both (**L4**).

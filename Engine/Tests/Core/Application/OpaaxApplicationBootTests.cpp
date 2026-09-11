@@ -5,7 +5,7 @@
 #include <doctest.h>
 
 #include "Application/OpaaxApplication.h"
-#include "Application/Services/Platforms/IPlatform.h"
+#include "Platform/IPlatform.h"
 #include "Application/Services/IPaths.h"
 #include "Application/Services/ILogger.h"
 

@@ -1,8 +1,5 @@
 # Src Engine core
 file(GLOB_RECURSE ENGINE_CORE_SOURCES CONFIGURE_DEPENDS
-    # Gregory runtime layers (Phase B). Core/ = foundations (Config, Log, Container, Jobs, Time,
-    # Serialize, Events, Systems/Subsystem.h + Core/*.h). Application/ Engine/ World/ were promoted
-    # out of the old Core/ junk-drawer into top-level layer dirs.
     "Source/Core/*.cpp"
     "Source/Core/*.h"
     "Source/Core/*.hpp"

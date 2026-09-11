@@ -10,7 +10,7 @@
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringJson.h"
-#include "Core/Window/Window.h"              // EWindowMode
+#include "Window/Window.h"                   // EWindowMode
 #include "Physics/PhysicsBackend.h"          // EPhysicsBackend
 #include "Physics/PhysicsTypes.h"            // EWorldBoundsResponse — PODs over Core, NOT the seam
 #include "RHI/RHIBackend.h"                  // EBackend

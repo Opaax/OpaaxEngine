@@ -1,6 +1,6 @@
 #include "Editor/TitleBar/EditorTitleBar.h"
 
-#include "Core/Window/Window.h"
+#include "Window/Window.h"
 #include "Editor/Commands/EditorCommandRegistry.h"
 #include "Editor/Commands/EditorNativeCommandsTags.hpp"
 #include "Editor/EditorContext.h"

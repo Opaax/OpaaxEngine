@@ -10,12 +10,12 @@
 
 #include "Application/Services/AppServiceLocator.h"
 #include "Application/Services/IAppService.h"
-#include "Application/Services/Platforms/IPlatform.h"
+#include "Platform/IPlatform.h"
 #include "Core/OpaaxTypes.h"
 
 #ifdef OPAAX_PLATFORM_WINDOWS
 #include <string>
-#include "Application/Services/Platforms/Windows/WindowsPlatform.h"
+#include "Platform/Windows/WindowsPlatform.h"
 #endif
 
 using namespace Opaax;

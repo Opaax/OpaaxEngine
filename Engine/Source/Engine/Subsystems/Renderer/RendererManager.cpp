@@ -10,7 +10,7 @@
 #include "Renderer/Config/Config_Renderer.h"
 
 #include "Core/Events/EventBus.h"
-#include "Core/Window/WindowEvents.h"
+#include "Window/WindowEvents.h"
 
 #include "RHI/RHIBackend.h"       // BackendFromString
 #include "RHI/IGraphicsContext.h"

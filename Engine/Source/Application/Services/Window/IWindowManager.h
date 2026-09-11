@@ -2,7 +2,7 @@
 
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
-#include "Core/Window/Window.h"
+#include "Window/Window.h"
 
 #include "Application/Services/ILogger.h"
 #include "Application/Services/IAppService.h"

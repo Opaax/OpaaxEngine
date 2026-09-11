@@ -6,7 +6,7 @@
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IConfigSystem.h"
 #include "Application/Services/Window/IWindowManager.h"   // ToString(EWindowMode)
-#include "Core/Window/WindowEvents.h"
+#include "Window/WindowEvents.h"
 #include "Engine/Config/Config_Engine.h"
 
 #include "Engine/Subsystems/Input/InputTypesFwd.hpp"

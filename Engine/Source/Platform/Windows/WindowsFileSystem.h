@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Application/Services/Platforms/IFileSystem.h"
+#include "Platform/IFileSystem.h"
 #include "Core/EngineAPI.h"
 
 #ifdef OPAAX_PLATFORM_WINDOWS

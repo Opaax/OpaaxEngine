@@ -2,7 +2,7 @@
 
 #include <imgui.h>
 
-#include "Core/Window/Window.h"
+#include "Window/Window.h"
 #include "Editor/EditorContext.h"
 
 namespace

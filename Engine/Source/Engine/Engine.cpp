@@ -14,7 +14,7 @@
 #include "Application/Services/IJobSystem.h"
 #include "Application/Services/IPaths.h"        // the startup level's path is asset-relative
 #include "Application/Services/IStatsService.h" // the borrowed FrameProfiler + OPAAX_STAT_SCOPE
-#include "Application/Services/Platforms/IPlatform.h"
+#include "Platform/IPlatform.h"
 
 //Subsystems
 #include "Engine/EngineEvents.h"

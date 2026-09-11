@@ -34,8 +34,8 @@
 #include "Application/Services/IEngine.h"
 #include "Application/Services/ILogger.h"
 #include "Application/Services/IPaths.h"
-#include "Application/Services/Platforms/IFileSystem.h"
-#include "Core/Window/Window.h"
+#include "Platform/IFileSystem.h"
+#include "Window/Window.h"
 #include "Engine/Registries/EngineRegistries.h"
 #include "World/Entity/Entity.h"   // EntityOps::Create returns one by value
 #include "World/Level.h"

@@ -10,7 +10,7 @@
 #include "Application/Services/ILogger.h"
 #include "Configs/Config_EditorImgui.h"
 #include "Core/EngineAPI.h"   // OPAAX_ASSERT
-#include "Core/Window/Window.h"
+#include "Window/Window.h"
 #include "Editor/EditorContext.h"
 #include "Editor/Application/EditorApplication.h"
 #include "Editor/Panels/EditorPanels.h"

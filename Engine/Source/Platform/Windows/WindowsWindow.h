@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "Core/Window/Window.h"
+#include "Window/Window.h"
 #include "Application/Services/ILogger.h"
 #include "GLFW/glfw3.h"
 

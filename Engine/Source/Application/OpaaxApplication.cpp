@@ -1,6 +1,6 @@
 #include "OpaaxApplication.h"
 
-#include "Application/Services/Platforms/IPlatform.h"
+#include "Platform/IPlatform.h"
 #include "Application/Services/IPaths.h"
 #include "Application/Services/ILogger.h"
 #include "Application/Services/IProjectManager.h"
@@ -20,14 +20,14 @@
 #include "Services/Window/IWindowManager.h"
 #include "Services/Window/WindowManager.h"
 
-#include "Core/Window/WindowEvents.h"
+#include "Window/WindowEvents.h"
 
 #include "Core/Events/Event.h"
 #include "Core/Events/EventBus.h"
 #include "Core/Events/EventTypes.hpp"
 
 #ifdef OPAAX_PLATFORM_WINDOWS
-#include "Application/Services/Platforms/Windows/WindowsPlatform.h"
+#include "Platform/Windows/WindowsPlatform.h"
 #endif
 
 using namespace Opaax;

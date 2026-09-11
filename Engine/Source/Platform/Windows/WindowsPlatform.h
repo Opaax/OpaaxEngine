@@ -1,12 +1,12 @@
 #pragma once
 
-#include "Application/Services/Platforms/IFileSystem.h"
 #include "Core/EngineAPI.h"
-#include "Application/Services/Platforms/IPlatform.h"
+#include "Platform/IPlatform.h"
+#include "Platform/IFileSystem.h"
 
 #ifdef OPAAX_PLATFORM_WINDOWS
 
-#include "Application/Services/Platforms/Windows/WindowsFileSystem.h"
+#include "Platform/Windows/WindowsFileSystem.h"
 
 namespace Opaax
 {

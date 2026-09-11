@@ -1,6 +1,6 @@
 #include "Editor/Resources/ResourceScan.h"
 
-#include "Application/Services/Platforms/IFileSystem.h"
+#include "Platform/IFileSystem.h"
 #include "Core/String/OpaaxPathString.h"                  // Extension — the ONE extension-of-a-path rule
 #include "Engine/Subsystems/Resources/ResourceFormat.h"   // NormalizeExtension — the ONE comparability rule
 

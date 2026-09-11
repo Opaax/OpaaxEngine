@@ -6,7 +6,7 @@
 
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/ILogger.h"
-#include "Application/Services/Platforms/IPlatform.h"
+#include "Platform/IPlatform.h"
 
 namespace Opaax
 {

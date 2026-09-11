@@ -10,7 +10,7 @@
 
 #include "Application/Services/IEngine.h"
 #include "Application/Services/IPaths.h"
-#include "Application/Services/Platforms/IFileSystem.h"
+#include "Platform/IFileSystem.h"
 #include "Engine/Registries/EngineRegistries.h"   // extension -> resource type, the engine's half
 #include "Engine/Subsystems/Resources/ResourceManager.h"
 #include "Engine/Subsystems/Resources/ResourceTypeID.hpp"        // which type a thumbnail is for
