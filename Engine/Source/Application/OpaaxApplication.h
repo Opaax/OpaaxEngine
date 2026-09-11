@@ -3,7 +3,7 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Application/Services/AppServiceLocator.h"
-#include "Application/WorldSpec.h"   // GetStartupWorldSpec returns one by value
+#include "World/WorldSpec.h"   // GetStartupWorldSpec returns one by value
 #include "Core/Events/Event.h"
 
 namespace Opaax

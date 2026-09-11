@@ -2,7 +2,7 @@
 
 #include "IAppService.h"
 #include "Core/OpaaxTypes.h"   // TUniquePtr (CreateFramebuffer's return)
-#include "Application/WorldSpec.h"   // WorldSpec (by value across the seam)
+#include "World/WorldSpec.h"   // WorldSpec (by value across the seam)
 
 namespace Opaax
 {

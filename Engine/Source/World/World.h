@@ -4,7 +4,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Application/Services/ILogger.h"
-#include "Application/WorldSpec.h"   // EWorldMode
+#include "World/WorldSpec.h"   // EWorldMode
 #include "World/WorldGuidRegistry.h"
 
 #include "Core/GUID/Guid.h"
