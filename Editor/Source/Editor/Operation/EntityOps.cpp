@@ -288,12 +288,48 @@ namespace Opaax::Editor
 
         const ComponentRegistry& lRegistry = InContext.Engine.GetRegistries().Components();
 
-        // Captured BEFORE the swap — nothing else can recover the originals.
-        MapData lOriginals = MapSerializer::CaptureEntities(*lWorld, lRegistry, InContext.Selection.Ids());
+        // THE SUBTREE, not the rows clicked (§HR): a prefab made of a parent takes its children,
+        // as Unity's does. Captured BEFORE the swap — nothing else can recover the originals.
+        TDynArray<EntityID> lIds;
+        EntityHierarchy::CollectSubtree(*lWorld, InContext.Selection.Ids(), lIds);
+
+        MapData lOriginals = MapSerializer::CaptureEntities(*lWorld, lRegistry, lIds);
         if (lOriginals.IsEmpty())
         {
             OPAAX_LOG(LogEntityOps, Warn, "Create Prefab refused — the selection captured nothing.");
             return false;
+        }
+
+        // An entity parented OUTSIDE the set becomes one of the prefab's roots. Its local is
+        // relative to a parent the file will not hold, so the prefab gets its WORLD pose instead —
+        // only this caller has the world to ask — and the instance's root is hung back under that
+        // parent below, so nothing moves and nothing changes place in the tree.
+        struct OutsideLink { Guid Template; Guid Parent; };
+        TDynArray<OutsideLink> lOutside;
+
+        MapData lForPrefab = lOriginals;
+        if (const IComponentEntry* lTransformEntry = lRegistry.FindByTypeId(entt::type_hash<TransformComponent>::value()))
+        {
+            for (EntityData& lEntity : lForPrefab.Entities)
+            {
+                if (!lEntity.Parent.IsValid()) { continue; }
+
+                bool lInSet = false;
+                for (const EntityData& lOther : lForPrefab.Entities)
+                {
+                    if (lOther.Id == lEntity.Parent) { lInSet = true; break; }
+                }
+                if (lInSet) { continue; }
+
+                lOutside.emplace_back(OutsideLink{ lEntity.Id, lEntity.Parent });
+                lEntity.Parent = Guid{};
+
+                const TransformComponent lWorldXf = EntityHierarchy::WorldTransform(lWorld->FindByGuid(lEntity.Id));
+                for (ComponentData& lComponent : lEntity.Components)
+                {
+                    if (lComponent.TypeName == lTransformEntry->GetName()) { lComponent.Payload = lWorldXf; }
+                }
+            }
         }
 
         // The ORIGINALS' map, not the focused one: cutting a prefab out of map A while B is focused
@@ -307,7 +343,7 @@ namespace Opaax::Editor
             return false;
         }
 
-        const PrefabData lPrefab = PrefabFactory::BuildPrefab(lOriginals, lRegistry);
+        const PrefabData lPrefab = PrefabFactory::BuildPrefab(lForPrefab, lRegistry);
 
         // Before the write — see EditorPrefabDocument::Save. Matters when this OVERWRITES a
         // prefab that is already placed.
@@ -325,8 +361,9 @@ namespace Opaax::Editor
         // write that does not announce is a write half the editor never hears about.
         ResourceOps::SavedToDisk<PrefabResource>(InContext, InAbsPath);
 
-        MapData lInstance = PrefabFactory::BuildInstance(lPrefab, lAssetPath, Guid::New(), lOwnerMap,
-                                                          lRegistry);
+        const Guid lInstanceId = Guid::New();
+        MapData    lInstance   = PrefabFactory::BuildInstance(lPrefab, lAssetPath, lInstanceId, lOwnerMap,
+                                                              lRegistry);
         if (lInstance.IsEmpty())
         {
             // The file is written and the originals are untouched — a recoverable state, which is
@@ -349,21 +386,33 @@ namespace Opaax::Editor
 
         const Uint64 lCount = MapFactory::Instantiate(lInstance, *lWorld, lRegistry);
 
-        TDynArray<EntityID> lIds;
-        lIds.reserve(lInstance.Entities.size());
+        // The roots go back under the parents the originals had — a placement's root parent is
+        // scene state, not a prefab property, so it lands as ONE override on this record at save.
+        for (const OutsideLink& lLink : lOutside)
+        {
+            Entity lRoot   = lWorld->FindByGuid(Guid::Derive(lInstanceId, lLink.Template));
+            Entity lParent = lWorld->FindByGuid(lLink.Parent);
+
+            if (lRoot.IsValid() && lParent.IsValid()) { EntityHierarchy::SetParent(lRoot, lParent); }
+        }
+
+        TDynArray<EntityID> lPlaced;
+        lPlaced.reserve(lInstance.Entities.size());
         for (const EntityData& lEntity : lInstance.Entities)
         {
             if (Entity lFound = lWorld->FindByGuid(lEntity.Id); lFound.IsValid())
             {
-                lIds.emplace_back(lFound.GetHandle());
+                lPlaced.emplace_back(lFound.GetHandle());
             }
         }
 
-        InContext.Selection.Replace(lWorld, lIds);
+        InContext.Selection.Replace(lWorld, lPlaced);
         lWorld->MarkChanged();
 
-        // ONE step for one gesture — see PrefabCreateFromSelection for why this is not two.
-        InContext.Undo.Record(PrefabCreateFromSelection{ Move(lOriginals), Move(lInstance) });
+        // ONE step for one gesture — see PrefabCreateFromSelection for why this is not two. The
+        // instance is captured AFTER the re-parenting so redo puts it back where it hangs.
+        InContext.Undo.Record(PrefabCreateFromSelection{
+            Move(lOriginals), MapSerializer::CaptureEntities(*lWorld, lRegistry, lPlaced) });
 
         OPAAX_LOG(LogEntityOps, Info,
                   "Created prefab '{}' from {} entity(ies) and replaced them with an instance of {}",

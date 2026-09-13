@@ -372,3 +372,42 @@ TEST_CASE("P5: no ENGINE component is hard yet, and that is the migration being 
     CHECK(lRegistry.FindByName(OpaaxStringID("Transform"))->GetHardRefFields().empty());
     CHECK(lRegistry.FindByName(OpaaxStringID("PrefabInstance"))->GetHardRefFields().empty());
 }
+
+// =============================================================================
+// §HR — the parent link rides in the patch beside the name
+// =============================================================================
+TEST_CASE("PrefabOverrides: a re-parented instance entity records ONE `parent` override, and it applies back")
+{
+    EntityData lTemplate = Entity("Barrel", {});
+    lTemplate.Parent = Guid::New();   // as BUILT: the placement's base
+
+    EntityData lInstance = lTemplate;
+    lInstance.Parent = Guid::New();   // the author hung it somewhere else
+
+    const nlohmann::json lPatch = PrefabOverrides::Diff(lTemplate, lInstance, k_NoIgnore);
+    REQUIRE(lPatch.contains(PrefabOverrides::KEY_PARENT));
+    CHECK_FALSE(lPatch.contains(PrefabOverrides::KEY_COMPONENTS));
+
+    EntityData lRebuilt = lTemplate;
+    PrefabOverrides::Apply(lPatch, lRebuilt);
+    CHECK(lRebuilt.Parent == lInstance.Parent);
+}
+
+TEST_CASE("PrefabOverrides: a DETACHED instance entity records `parent: \"\"`, and an unchanged link records nothing")
+{
+    EntityData lTemplate = Entity("Barrel", {});
+    lTemplate.Parent = Guid::New();
+
+    EntityData lDetached = lTemplate;
+    lDetached.Parent = Guid{};
+
+    const nlohmann::json lPatch = PrefabOverrides::Diff(lTemplate, lDetached, k_NoIgnore);
+    REQUIRE(lPatch.contains(PrefabOverrides::KEY_PARENT));
+    CHECK(lPatch[PrefabOverrides::KEY_PARENT].get<std::string>().empty());
+
+    EntityData lRebuilt = lTemplate;
+    PrefabOverrides::Apply(lPatch, lRebuilt);
+    CHECK_FALSE(lRebuilt.Parent.IsValid());
+
+    CHECK(PrefabOverrides::IsEmpty(PrefabOverrides::Diff(lTemplate, lTemplate, k_NoIgnore)));
+}

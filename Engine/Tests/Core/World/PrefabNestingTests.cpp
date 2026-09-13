@@ -12,10 +12,12 @@
 #include "World/Components/PrefabInstanceComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Entity/Entity.h"
+#include "World/Entity/EntityHierarchy.h"
 #include "World/Entity/EntityMeta.h"
 #include "World/Prefab/PrefabFactory.h"
 #include "World/Prefab/PrefabFold.h"
 #include "World/Prefab/PrefabJson.h"
+#include "World/Prefab/PrefabOverrides.h"
 #include "World/Serialization/MapFactory.h"
 #include "World/Serialization/MapSerializer.h"
 #include "World/World.h"
@@ -578,4 +580,112 @@ TEST_CASE("Fold/Expand at the level: an override on a NESTED entity keys by its 
     Entity lBack = lAgain.FindByGuid(lNestedInLevel);
     REQUIRE(lBack.IsValid());
     CHECK(lBack.Get<TransformComponent>().Position.x == doctest::Approx(77.f));
+}
+
+// =============================================================================
+// §HR — a link composes through nesting exactly as a guid does
+// =============================================================================
+
+TEST_CASE("Flatten §HR: an inner prefab's link survives the outer derivation, and a level placement derives it once more")
+{
+    ComponentRegistry lRegistry;
+    FillRegistry(lRegistry);
+
+    const Guid lBaseId   = Guid::New();
+    const Guid lBarrelId = Guid::New();
+    const Guid lRecord   = Guid::New();
+
+    PrefabData lTurret;
+    lTurret.Entities.emplace_back(Piece("Base", 100.f, lBaseId));
+    lTurret.Entities.emplace_back(Piece("Barrel", 10.f, lBarrelId));
+    lTurret.Entities.back().Parent = lBaseId;
+
+    PrefabData lOutpost;
+    lOutpost.Entities.emplace_back(Piece("Wall", 0.f));
+    lOutpost.Instances.emplace_back(Placement("Prefabs/Turret.opaaxprefab", lRecord));
+
+    FlatteningStub lResolver(lRegistry);
+    lResolver.Add("Prefabs/Turret.opaaxprefab", lTurret);
+    lResolver.Add("Prefabs/Outpost.opaaxprefab", lOutpost);
+
+    // In the FLAT outpost the barrel names the in-prefab base: Derive(record, base).
+    const PrefabData* lFlat = lResolver.Resolve(OpaaxString("Prefabs/Outpost.opaaxprefab"));
+    REQUIRE(lFlat != nullptr);
+    REQUIRE(lFlat->EntityCount() == 3);
+
+    const Guid lFlatBase   = Guid::Derive(lRecord, lBaseId);
+    const Guid lFlatBarrel = Guid::Derive(lRecord, lBarrelId);
+
+    const EntityData* lFlatBarrelData = FindById(*lFlat, lFlatBarrel);
+    REQUIRE(lFlatBarrelData != nullptr);
+    CHECK(lFlatBarrelData->Parent == lFlatBase);
+
+    // Placed in a level, the link derives AGAIN with the guids — and resolves in the world.
+    const Guid lPlacement = Guid::New();
+    MapData lMap;
+    lMap.Id = MapId("Level");
+    lMap.Instances.emplace_back(Placement("Prefabs/Outpost.opaaxprefab", lPlacement));
+    REQUIRE(PrefabFold::Expand(lMap, lResolver, lRegistry) == 1);
+
+    World lWorld("Level");
+    REQUIRE(MapFactory::Instantiate(lMap, lWorld, lRegistry) == 3);
+
+    Entity lBase   = lWorld.FindByGuid(Guid::Derive(lPlacement, lFlatBase));
+    Entity lBarrel = lWorld.FindByGuid(Guid::Derive(lPlacement, lFlatBarrel));
+    REQUIRE(lBase.IsValid());
+    REQUIRE(lBarrel.IsValid());
+    CHECK(EntityHierarchy::GetParent(lBarrel).GetHandle() == lBase.GetHandle());
+    CHECK(EntityHierarchy::WorldTransform(lBarrel).Position.x == doctest::Approx(110.f));
+}
+
+TEST_CASE("BuildVariant §HR: a variant keeps the base's link, and records a re-parent as its own override")
+{
+    ComponentRegistry lRegistry;
+    FillRegistry(lRegistry);
+
+    const Guid lBaseId   = Guid::New();
+    const Guid lBarrelId = Guid::New();
+    const Guid lExtraId  = Guid::New();
+
+    PrefabData lTurret;
+    lTurret.Entities.emplace_back(Piece("Base", 100.f, lBaseId));
+    lTurret.Entities.emplace_back(Piece("Barrel", 10.f, lBarrelId));
+    lTurret.Entities.back().Parent = lBaseId;
+    lTurret.Entities.emplace_back(Piece("Extra", 0.f, lExtraId));
+
+    FlatteningStub lResolver(lRegistry);
+    lResolver.Add("Prefabs/Turret.opaaxprefab", lTurret);
+
+    // The base as a world would hold it (the prefab document's Open): the author hangs Extra
+    // under the barrel.
+    MapData lState;
+    lState.Entities = lTurret.Entities;
+    for (EntityData& lEntity : lState.Entities)
+    {
+        if (lEntity.Id == lExtraId) { lEntity.Parent = lBarrelId; }
+    }
+
+    const PrefabData lVariant = PrefabFactory::BuildVariant(lState, OpaaxString("Prefabs/Turret.opaaxprefab"),
+                                                            lResolver, lRegistry);
+    REQUIRE(lVariant.InstanceCount() == 1);
+    REQUIRE(lVariant.Entities.empty());
+
+    // ONE override, on Extra, and it is the parent — the barrel's own link is the base's, not an edit.
+    REQUIRE(lVariant.Instances[0].Overrides.size() == 1);
+    CHECK(lVariant.Instances[0].Overrides[0].TemplateGuid == lExtraId);
+    CHECK(lVariant.Instances[0].Overrides[0].Patch.contains(PrefabOverrides::KEY_PARENT));
+
+    // Flattened, the variant's Extra hangs under the variant's barrel, on derived guids.
+    lResolver.Add("Prefabs/Variant.opaaxprefab", lVariant);
+    const PrefabData* lFlat = lResolver.Resolve(OpaaxString("Prefabs/Variant.opaaxprefab"));
+    REQUIRE(lFlat != nullptr);
+    REQUIRE(lFlat->EntityCount() == 3);
+
+    const Guid lRecord = lVariant.Instances[0].InstanceId;
+    const EntityData* lExtra  = FindById(*lFlat, Guid::Derive(lRecord, lExtraId));
+    const EntityData* lBarrel = FindById(*lFlat, Guid::Derive(lRecord, lBarrelId));
+    REQUIRE(lExtra != nullptr);
+    REQUIRE(lBarrel != nullptr);
+    CHECK(lExtra->Parent  == Guid::Derive(lRecord, lBarrelId));
+    CHECK(lBarrel->Parent == Guid::Derive(lRecord, lBaseId));
 }

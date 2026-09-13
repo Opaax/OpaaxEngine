@@ -67,9 +67,14 @@ namespace Opaax
         // Grouped by placement, in FIRST-SEEN order; MapJson sorts the records on write (**MP2**),
         // so nothing here has to care about ordering.
         TDynArray<PrefabInstanceRecord> lRecords;
-        TDynArray<TDynArray<Guid>>      lPresent;   // per record: the templates still in the world
+        TDynArray<TDynArray<Guid>>      lPresent;    // per record: the templates still in the world
+        TDynArray<MapData>              lPristine;   // per record: the instance AS BUILT — the diff's baseline
         TDynArray<EntityData>           lLoose;
         lLoose.reserve(InOutData.Entities.size());
+
+        // BuildInstance refuses an invalid map; a capture that names none (the prefab document's
+        // own world) gets a placeholder, and OwnerMap is not part of the diff anyway.
+        const MapId lBuildMap = InOutData.Id.IsValid() ? InOutData.Id : MapId("Pending");
 
         for (EntityData& lEntity : InOutData.Entities)
         {
@@ -112,6 +117,13 @@ namespace Opaax
             {
                 lRecords.emplace_back(PrefabInstanceRecord{ lMarker.Prefab.Path, lMarker.InstanceId, {} });
                 lPresent.emplace_back();
+
+                // The baseline is the instance Expand would BUILD, not the file's template: guids
+                // and parent links are derived per placement (§HR), so diffing against the raw
+                // template would record every child's parent as an override. This is what makes
+                // Fold the exact inverse of Expand, which applies the patch over the same build.
+                lPristine.emplace_back(PrefabFactory::BuildInstance(*lPrefab, lMarker.Prefab.Path,
+                                                                    lMarker.InstanceId, lBuildMap, InRegistry));
             }
 
             // WHICH TEMPLATES THIS PLACEMENT STILL HAS. The complement is what was DELETED, and
@@ -119,7 +131,13 @@ namespace Opaax
             // the entity is simply unmodified, and Expand would bring it back.
             lPresent[lIndex].emplace_back(lMarker.TemplateGuid);
 
-            nlohmann::json lPatch = PrefabOverrides::Diff(*lTemplate, lEntity, lMarkerName);
+            const EntityData* lBaseline = lTemplate;
+            for (const EntityData& lBuilt : lPristine[lIndex].Entities)
+            {
+                if (lBuilt.Id == lEntity.Id) { lBaseline = &lBuilt; break; }
+            }
+
+            nlohmann::json lPatch = PrefabOverrides::Diff(*lBaseline, lEntity, lMarkerName);
             if (!PrefabOverrides::IsEmpty(lPatch))
             {
                 lRecords[lIndex].Overrides.emplace_back(

@@ -42,6 +42,7 @@ namespace Opaax
         // be confused with the entity's own fields.
         inline constexpr const char* KEY_COMPONENTS = "components";
         inline constexpr const char* KEY_NAME       = "name";
+        inline constexpr const char* KEY_PARENT     = "parent";   // "" = detached (§HR)
 
         /**
          * The patch that turns InTemplate into InInstance.
@@ -52,7 +53,12 @@ namespace Opaax
          *   - a component on BOTH, differing      → the changed properties only
          *   - a component ONLY on the instance    → its full payload (an added component)
          *   - a component ONLY on the template    → `null` (merge-patch's removal)
-         * The entity's `Name` rides beside them under its own key, and is absent when unchanged.
+         * The entity's `Name` and `Parent` ride beside them under their own keys, absent when
+         * unchanged.
+         *
+         * InTemplate is the entity AS BUILT FOR THIS PLACEMENT (`PrefabFactory::BuildInstance`'s
+         * output), not the raw file's — its guids are derived, and a parent link compared against
+         * the raw template would differ on every child (§HR).
          *
          * @param InIgnore A component to leave out entirely — the caller passes the
          *   `PrefabInstanceComponent`'s authoring name, since the marker is identity and the

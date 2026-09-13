@@ -163,6 +163,11 @@ namespace Opaax
             lPatch[KEY_NAME] = InInstance.Name.CStr();
         }
 
+        if (InTemplate.Parent != InInstance.Parent)
+        {
+            lPatch[KEY_PARENT] = InInstance.Parent.IsValid() ? InInstance.Parent.ToString().CStr() : "";
+        }
+
         return lPatch;
     }
 
@@ -183,6 +188,19 @@ namespace Opaax
         {
             const std::string lName = lNameIt->get<std::string>();
             InOutEntity.Name = OpaaxString(lName.c_str(), static_cast<Uint32>(lName.size()));
+        }
+
+        // A parent override is the guid as the WORLD holds it (derived), or "" for detached.
+        // Unparseable reads as detached rather than as the template's — the patch did say so.
+        if (const auto lParentIt = InPatch.find(KEY_PARENT);
+            lParentIt != InPatch.end() && lParentIt->is_string())
+        {
+            const std::string lText = lParentIt->get<std::string>();
+
+            Guid lParsed;
+            InOutEntity.Parent = Guid::FromString(OpaaxString(lText.c_str(), static_cast<Uint32>(lText.size())), lParsed)
+                                     ? lParsed
+                                     : Guid{};
         }
 
         const auto lComponentsIt = InPatch.find(KEY_COMPONENTS);

@@ -27,6 +27,15 @@ namespace Opaax
                               return InComponent.TypeName == InMarkerName;
                           });
         }
+
+        bool Names(const TDynArray<EntityData>& InEntities, const Guid& InId)
+        {
+            for (const EntityData& lEntity : InEntities)
+            {
+                if (lEntity.Id == InId) { return true; }
+            }
+            return false;
+        }
     }
 
     MapData PrefabFactory::BuildInstance(const PrefabData& InPrefab, const OpaaxString& InPrefabAssetPath,
@@ -77,6 +86,11 @@ namespace Opaax
             lEntity.Id       = Guid::Derive(InInstanceId, lTemplate.Id);
             lEntity.OwnerMap = InOwnerMap;
 
+            // The link derives WITH the identity it names (§HR): a barrel's parent is THIS
+            // placement's base. A link to anything outside the prefab cannot follow and is dropped.
+            lEntity.Parent   = Names(InPrefab.Entities, lTemplate.Parent) ? Guid::Derive(InInstanceId, lTemplate.Parent)
+                                                                           : Guid{};
+
             // The outer instance owns the entity: its marker replaces rather than stacks, erased
             // first so the payload cannot appear twice. A FLATTENED prefab (P7) carries none, but
             // a caller handing raw entities that were an instance might.
@@ -118,6 +132,18 @@ namespace Opaax
             // Guids are KEPT — they become the file's template ids. See the header.
             lEntity.OwnerMap = MapId();
             StripMarker(lEntity, lMarkerName);
+
+            // A prefab's roots have no parent (§HR — WM2's "belongs to no map", one field over).
+            // The caller is expected to have put such an entity at its WORLD pose first; this only
+            // makes sure no file can name an entity it does not hold. Judged only for an UNFOLDED
+            // capture: once placements are records, an own entity may legitimately hang under one
+            // of their entities, and the flat set is not here to check against.
+            if (lEntity.Parent.IsValid() && InCaptured.Instances.empty() && !Names(InCaptured.Entities, lEntity.Parent))
+            {
+                OPAAX_LOG(LogPrefabFactory, Warn, "Entity '{}' was parented outside the prefab — it becomes a root",
+                          lEntity.Name.CStr());
+                lEntity.Parent = Guid{};
+            }
 
             lPrefab.Entities.emplace_back(Move(lEntity));
         }
@@ -195,14 +221,16 @@ namespace Opaax
         // Every entity the base has is re-marked as THIS instance of it — its own marker replaced,
         // since a nested entity of the base names the nested prefab, and the base's flatten already
         // carries that nesting. Fold then diffs each against its template and records what is gone.
+        //
+        // AND THE STATE IS PUT ON DERIVED GUIDS FIRST (§HR): the world holds the base's raw ids, but
+        // a record is applied over BuildInstance's derived entities, so a `parent` recorded raw
+        // would name nothing in the flat variant. Ids and in-base links derive together, exactly
+        // as a level placement's do; the marker keeps the raw id as the template it names.
         for (EntityData& lEntity : lAsInstance.Entities)
         {
-            bool lOfBase = false;
-            for (const EntityData& lTemplate : lBase->Entities)
-            {
-                if (lTemplate.Id == lEntity.Id) { lOfBase = true; break; }
-            }
-            if (!lOfBase) { continue; }
+            if (Names(lBase->Entities, lEntity.Parent)) { lEntity.Parent = Guid::Derive(lInstanceId, lEntity.Parent); }
+
+            if (!Names(lBase->Entities, lEntity.Id)) { continue; }
 
             StripMarker(lEntity, lMarkerName);
 
@@ -212,6 +240,7 @@ namespace Opaax
             lMarker.TemplateGuid = lEntity.Id;
 
             lEntity.Components.emplace_back(lMarkerName, nlohmann::json(lMarker));
+            lEntity.Id = Guid::Derive(lInstanceId, lEntity.Id);
         }
 
         PrefabFold::Fold(lAsInstance, InResolver, InRegistry);

@@ -20,13 +20,16 @@
 #include "World/Components/PrefabInstanceComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Entity/Entity.h"
+#include "World/Entity/EntityHierarchy.h"
 #include "World/Entity/EntityMeta.h"
 #include "World/Prefab/PrefabFactory.h"
 #include "World/Prefab/PrefabFile.h"
 #include "World/Prefab/PrefabFold.h"
 #include "World/Prefab/PrefabJson.h"
+#include "World/Prefab/PrefabOverrides.h"
 #include "World/Prefab/PrefabResource.hpp"
 #include "World/Serialization/MapFactory.h"
+#include "World/Serialization/MapFile.h"
 #include "World/Serialization/MapJson.h"
 #include "World/Serialization/MapSerializer.h"
 #include "World/World.h"
@@ -784,4 +787,226 @@ TEST_CASE("PrefabResource: a missing file resolves to NULL, never to an empty pr
     CHECK(lRef.Get() == nullptr);
 
     lResources.FlushAll();
+}
+
+// =============================================================================
+// §HR — the link derives with the identity it names
+// =============================================================================
+namespace
+{
+    // A turret: a barrel PARENTED under its base, captured the way P2 captures — links intact.
+    PrefabData MakeTurret(const ComponentRegistry& InRegistry, Guid& OutBase, Guid& OutBarrel)
+    {
+        World lAuthoring("Authoring");
+
+        Entity lBase = lAuthoring.CreateEntity("Base", MapId("Source"));
+        lBase.Get<TransformComponent>().Position = Vector2F{ 100.f, 0.f };
+        lBase.Get<TransformComponent>().Rotation = 90.f;
+
+        Entity lBarrel = lAuthoring.CreateEntity("Barrel", MapId("Source"));
+        lBarrel.Get<TransformComponent>().Position = Vector2F{ 10.f, 0.f };
+        REQUIRE(EntityHierarchy::SetParent(lBarrel, lBase, /*bKeepWorld*/false));
+
+        OutBase   = lBase.GetGuid();
+        OutBarrel = lBarrel.GetGuid();
+
+        return PrefabFactory::BuildPrefab(MapSerializer::CaptureMap(lAuthoring, InRegistry, MapId("Source")), InRegistry);
+    }
+}
+
+TEST_CASE("Prefab §HR: a turret placed TWICE — each barrel hangs under ITS base, on derived guids, and draws there")
+{
+    ComponentRegistry lRegistry;
+    FillRegistry(lRegistry);
+
+    Guid lBaseTmpl, lBarrelTmpl;
+    const PrefabData lTurret = MakeTurret(lRegistry, lBaseTmpl, lBarrelTmpl);
+
+    // The file keeps the link on the template guids.
+    Uint64 lLinked = 0;
+    for (const EntityData& lEntity : lTurret.Entities)
+    {
+        if (lEntity.Id == lBarrelTmpl) { ++lLinked; CHECK(lEntity.Parent == lBaseTmpl); }
+        if (lEntity.Id == lBaseTmpl)   { CHECK_FALSE(lEntity.Parent.IsValid()); }
+    }
+    REQUIRE(lLinked == 1);
+
+    const MapId lMap = MapId("Level01");
+    World       lWorld("W");
+
+    const Guid lFirst  = Guid::New();
+    const Guid lSecond = Guid::New();
+    PlaceAndCapture(lWorld, lTurret, lRegistry, "Prefabs/Turret.opaaxprefab", lFirst,  lMap);
+    PlaceAndCapture(lWorld, lTurret, lRegistry, "Prefabs/Turret.opaaxprefab", lSecond, lMap);
+
+    for (const Guid& lPlacement : { lFirst, lSecond })
+    {
+        Entity lBase   = lWorld.FindByGuid(Guid::Derive(lPlacement, lBaseTmpl));
+        Entity lBarrel = lWorld.FindByGuid(Guid::Derive(lPlacement, lBarrelTmpl));
+        REQUIRE(lBase.IsValid());
+        REQUIRE(lBarrel.IsValid());
+
+        CHECK(EntityHierarchy::GetParent(lBarrel).GetHandle() == lBase.GetHandle());
+
+        // (10,0) under a base at (100,0) turned 90°: the barrel is at (100,10), in BOTH placements.
+        const TransformComponent lWorldXf = EntityHierarchy::WorldTransform(lBarrel);
+        CHECK(lWorldXf.Position.x == doctest::Approx(100.f));
+        CHECK(lWorldXf.Position.y == doctest::Approx(10.f));
+    }
+}
+
+TEST_CASE("PrefabFold §HR: an untouched placement folds to a BARE record — no phantom parent override")
+{
+    ComponentRegistry lRegistry;
+    FillRegistry(lRegistry);
+
+    Guid lBaseTmpl, lBarrelTmpl;
+    const PrefabData lTurret = MakeTurret(lRegistry, lBaseTmpl, lBarrelTmpl);
+    StubResolver     lResolver;
+    lResolver.Add("Prefabs/Turret.opaaxprefab", lTurret);
+
+    const MapId lMap = MapId("Level01");
+    World       lWorld("W");
+
+    MapData lCaptured = PlaceAndCapture(lWorld, lTurret, lRegistry, "Prefabs/Turret.opaaxprefab", Guid::New(), lMap);
+
+    // The world's barrel names a DERIVED base; the file's names the template. Diffed against the
+    // raw template that is an override on every barrel of every placement — the L89 shape.
+    REQUIRE(PrefabFold::Fold(lCaptured, lResolver, lRegistry) == 1);
+    REQUIRE(lCaptured.InstanceCount() == 1);
+    CHECK(lCaptured.Instances[0].Overrides.empty());
+}
+
+TEST_CASE("PrefabFold §HR: a barrel DETACHED in one placement is one `parent` override, and comes back detached")
+{
+    ComponentRegistry lRegistry;
+    FillRegistry(lRegistry);
+
+    Guid lBaseTmpl, lBarrelTmpl;
+    const PrefabData lTurret = MakeTurret(lRegistry, lBaseTmpl, lBarrelTmpl);
+    StubResolver     lResolver;
+    lResolver.Add("Prefabs/Turret.opaaxprefab", lTurret);
+
+    const MapId lMap = MapId("Level01");
+    World       lWorld("W");
+
+    const Guid lPlacement = Guid::New();
+    PlaceAndCapture(lWorld, lTurret, lRegistry, "Prefabs/Turret.opaaxprefab", lPlacement, lMap);
+
+    Entity lBarrel = lWorld.FindByGuid(Guid::Derive(lPlacement, lBarrelTmpl));
+    REQUIRE(EntityHierarchy::SetParent(lBarrel, Entity{}));   // to root, world pose kept
+    const TransformComponent lWorldBefore = EntityHierarchy::WorldTransform(lBarrel);
+
+    MapData lCaptured = MapSerializer::CaptureMap(lWorld, lRegistry, lMap);
+    REQUIRE(PrefabFold::Fold(lCaptured, lResolver, lRegistry) == 1);
+    REQUIRE(lCaptured.Instances[0].Overrides.size() == 1);
+
+    const nlohmann::json& lPatch = lCaptured.Instances[0].Overrides[0].Patch;
+    CHECK(lCaptured.Instances[0].Overrides[0].TemplateGuid == lBarrelTmpl);
+    REQUIRE(lPatch.contains(PrefabOverrides::KEY_PARENT));
+    CHECK(lPatch[PrefabOverrides::KEY_PARENT].get<std::string>().empty());
+    CHECK(lPatch.contains(PrefabOverrides::KEY_COMPONENTS));   // the local moved when it was detached
+
+    REQUIRE(PrefabFold::Expand(lCaptured, lResolver, lRegistry) == 1);
+
+    World lReloaded("Reloaded");
+    REQUIRE(MapFactory::Instantiate(lCaptured, lReloaded, lRegistry) == 2);
+
+    Entity lBarrelAgain = lReloaded.FindByGuid(Guid::Derive(lPlacement, lBarrelTmpl));
+    REQUIRE(lBarrelAgain.IsValid());
+    CHECK_FALSE(EntityHierarchy::GetParent(lBarrelAgain).IsValid());
+    CHECK(EntityHierarchy::WorldTransform(lBarrelAgain).Position.x == doctest::Approx(lWorldBefore.Position.x));
+    CHECK(EntityHierarchy::WorldTransform(lBarrelAgain).Position.y == doctest::Approx(lWorldBefore.Position.y));
+}
+
+TEST_CASE("Prefab §HR: BuildPrefab drops a link to an entity OUTSIDE the set, and the roots stay roots")
+{
+    ComponentRegistry lRegistry;
+    FillRegistry(lRegistry);
+
+    World lWorld("W");
+    Entity lHolder = lWorld.CreateEntity("Holder", MapId("Source"));
+    Entity lPiece  = lWorld.CreateEntity("Piece", MapId("Source"));
+    REQUIRE(EntityHierarchy::SetParent(lPiece, lHolder));
+
+    // Only the piece is captured — its parent is not in the set.
+    const MapData    lCaptured = MapSerializer::CaptureEntities(lWorld, lRegistry, { lPiece.GetHandle() });
+    const PrefabData lPrefab   = PrefabFactory::BuildPrefab(lCaptured, lRegistry);
+
+    REQUIRE(lPrefab.EntityCount() == 1);
+    CHECK_FALSE(lPrefab.Entities[0].Parent.IsValid());
+}
+
+TEST_CASE("Prefab §HR — THE GATE: a turret file placed twice, one ROOT moved, saved and reloaded")
+{
+    // Through real files, both formats. Two records; the untouched placement bare; the moved one
+    // carrying ONE Transform override on its root and nothing on its barrel — which rides along
+    // because it is a child, not because anything was written about it.
+    const ScopedTempDir lTemp("hr_gate");
+    const OpaaxString   lPrefabPath = lTemp.Sub("Turret.opaaxprefab");
+    const OpaaxString   lMapPath    = lTemp.Sub("Level.opaaxmap");
+
+    ComponentRegistry lRegistry;
+    FillRegistry(lRegistry);
+
+    Guid lBaseTmpl, lBarrelTmpl;
+    REQUIRE(PrefabFile::Save(lPrefabPath, MakeTurret(lRegistry, lBaseTmpl, lBarrelTmpl)));
+
+    PrefabData lTurret;
+    REQUIRE(PrefabFile::Load(lPrefabPath, lTurret));
+    StubResolver lResolver;
+    lResolver.Add("Prefabs/Turret.opaaxprefab", lTurret);
+
+    const MapId lMap = MapId("Level");
+    World       lWorld("W");
+
+    const Guid lStill = Guid::New();
+    const Guid lMoved = Guid::New();
+    PlaceAndCapture(lWorld, lTurret, lRegistry, "Prefabs/Turret.opaaxprefab", lStill, lMap);
+    PlaceAndCapture(lWorld, lTurret, lRegistry, "Prefabs/Turret.opaaxprefab", lMoved, lMap);
+
+    // Move the second placement's ROOT by (50, 0), the way the gizmo would.
+    Entity lRoot = lWorld.FindByGuid(Guid::Derive(lMoved, lBaseTmpl));
+    REQUIRE(lRoot.IsValid());
+    lRoot.Get<TransformComponent>().Position += Vector2F{ 50.f, 0.f };
+
+    MapData lCaptured = MapSerializer::CaptureMap(lWorld, lRegistry, lMap);
+    REQUIRE(PrefabFold::Fold(lCaptured, lResolver, lRegistry) == 2);
+    REQUIRE(MapFile::Save(lMapPath, lCaptured));
+
+    MapData lRead;
+    REQUIRE(MapFile::Load(lMapPath, lRead));
+    REQUIRE(lRead.InstanceCount() == 2);
+    CHECK(lRead.EntityCount() == 0);
+
+    for (const PrefabInstanceRecord& lRecord : lRead.Instances)
+    {
+        if (lRecord.InstanceId == lStill) { CHECK(lRecord.Overrides.empty()); }
+        if (lRecord.InstanceId == lMoved)
+        {
+            REQUIRE(lRecord.Overrides.size() == 1);
+            CHECK(lRecord.Overrides[0].TemplateGuid == lBaseTmpl);
+            CHECK(lRecord.Overrides[0].Patch.contains(PrefabOverrides::KEY_COMPONENTS));
+            CHECK_FALSE(lRecord.Overrides[0].Patch.contains(PrefabOverrides::KEY_PARENT));
+        }
+    }
+
+    REQUIRE(PrefabFold::Expand(lRead, lResolver, lRegistry) == 2);
+
+    World lReloaded("Reloaded");
+    REQUIRE(MapFactory::Instantiate(lRead, lReloaded, lRegistry) == 4);
+
+    // Both barrels under their own base; the moved one's barrel followed by 50 with nothing written.
+    for (const Guid& lPlacement : { lStill, lMoved })
+    {
+        Entity lBase   = lReloaded.FindByGuid(Guid::Derive(lPlacement, lBaseTmpl));
+        Entity lBarrel = lReloaded.FindByGuid(Guid::Derive(lPlacement, lBarrelTmpl));
+        REQUIRE(lBase.IsValid());
+        REQUIRE(lBarrel.IsValid());
+        CHECK(EntityHierarchy::GetParent(lBarrel).GetHandle() == lBase.GetHandle());
+
+        const float lExpectedX = lPlacement == lMoved ? 150.f : 100.f;
+        CHECK(EntityHierarchy::WorldTransform(lBarrel).Position.x == doctest::Approx(lExpectedX));
+        CHECK(EntityHierarchy::WorldTransform(lBarrel).Position.y == doctest::Approx(10.f));
+    }
 }
