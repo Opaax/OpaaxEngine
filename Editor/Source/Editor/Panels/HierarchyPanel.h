@@ -2,6 +2,7 @@
 
 #include "Application/Services/ILogger.h"
 #include "Core/String/OpaaxString.hpp"
+#include "Editor/Panels/EntityTreeView.h"   // held BY VALUE — the rows
 #include "Editor/Panels/IEditorPanel.h"
 #include "World/Entity/EntityTypes.h"   // MapId — the context menu's target
 
@@ -33,7 +34,8 @@ namespace Opaax::Editor
         DeleteSelected, // ② — the row's own menu; the row is selected first, so it needs no target
         CreatePrefab,     // ⑦-C — the selection becomes a prefab, and an instance of it
         RevertPrefab,     // ⑦-C — the selected entities go back to their prefab's values
-        RevertPrefabAll   // ⑦-C — every entity of the instances the selection touches
+        RevertPrefabAll,  // ⑦-C — every entity of the instances the selection touches
+        Detach            // §HR — every selected entity with a parent becomes a root
     };
 
     /** **I11** — an enum gets a free ToString, found by ADL, declared with the enum. */
@@ -49,6 +51,11 @@ namespace Opaax::Editor
     //   The groups are a filter over EntityMeta::OwnerMap (WM2), which is also why the invalid id
     //   gets its own "(runtime - not saved)" header rather than being hidden: it means "no map
     //   authored this", and therefore that no Save will ever write it.
+    //
+    //   THE ROWS ARE A TREE (§HR): only ROOTS are bucketed by map, each drawn by the shared
+    //   EntityTreeView with its children under it. A row dragged onto another nests it; onto a
+    //   map header, it becomes a root of that map. The drop is banked by the tree and spent after
+    //   the walk, the rule every verb here follows.
     //
     //   THE HEADERS COME FROM THE LEVEL, NOT FROM THE ENTITIES. Groups are seeded from
     //   Level::GetMountedMaps() in mount order and the entities are bucketed into them, so a map
@@ -179,6 +186,9 @@ namespace Opaax::Editor
         EditorContext& m_Context;
 
         PendingMapAction m_Pending;
+
+        /** The rows, and the drop they bank (§HR). */
+        EntityTreeView m_Tree;
 
         // One-shot: Draw() is per-frame, and BOTH empty states are silent — a clean log would otherwise be
         // indistinguishable from an empty panel (L15). Logs the SUCCESS branch once, then never again.

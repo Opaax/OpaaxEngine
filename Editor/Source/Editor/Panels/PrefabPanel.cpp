@@ -25,6 +25,7 @@
 #include "Renderer/RenderTarget.hpp"        // OffscreenRenderTarget
 
 #include "World/Entity/Entity.h"
+#include "World/Entity/EntityHierarchy.h"   // §HR — Detach gates on a parent existing
 #include "World/Entity/EntityMeta.h"
 #include "World/Entity/EntityQuery.h"
 #include "World/Prefab/PrefabResource.hpp"
@@ -220,6 +221,12 @@ namespace Opaax::Editor
         ImGui::EndChild();
 
         RunPendingDrop();
+
+        if (m_bPendingDetach)
+        {
+            m_bPendingDetach = false;
+            EntityOps::DetachSelected(m_Context, EUndoWorld::Prefab);
+        }
     }
 
     void PrefabPanel::RunPendingDrop()
@@ -245,20 +252,44 @@ namespace Opaax::Editor
 
         ImGui::TextDisabled("Entities");
 
-        lWorld->Each<EntityMeta>([this, lWorld](EntityID InId, const EntityMeta& InMeta)
+        // THE SAME TREE THE HIERARCHY DRAWS (§HR), over this document's world and selection. A
+        // prefab's roots sit at the top; a row dragged onto another nests it, or onto the strip
+        // below to unparent. The drop is banked and spent after the walk.
+        m_Tree.Rebuild(*lWorld);
+
+        for (const EntityID lRoot : m_Tree.Roots())
         {
-            ImGui::PushID(static_cast<int>(InId));
+            m_Tree.DrawNode(*lWorld, lRoot, m_Context.PrefabDocument.Selection(),
+                            [this](Entity InEntity) { DrawEntityContextMenu(InEntity); });
+        }
 
-            const Entity lEntity{ InId, lWorld };
+        m_Tree.DrawUnparentStrip(MapId{});
 
-            if (ImGui::Selectable(InMeta.Name.CStr(), m_Context.PrefabDocument.Selection().Contains(lEntity)))
-            {
-                if (ImGui::GetIO().KeyCtrl) { m_Context.PrefabDocument.Selection().Toggle(lEntity); }
-                else                        { m_Context.PrefabDocument.Selection().Select(lEntity); }
-            }
+        EntityTreeDrop lDrop;
+        if (m_Tree.TakeDrop(lDrop))
+        {
+            EntityOps::Reparent(m_Context, EUndoWorld::Prefab, lDrop.Child, lDrop.Parent);
+        }
+    }
 
-            ImGui::PopID();
-        });
+    void PrefabPanel::DrawEntityContextMenu(Entity InEntity)
+    {
+        if (!ImGui::BeginPopupContextItem("prefab_entity_ops")) { return; }
+
+        // Right-clicking a row that is NOT selected selects it — the Hierarchy's rule.
+        EditorSelection& lSelection = m_Context.PrefabDocument.Selection();
+        if (!lSelection.Contains(InEntity)) { lSelection.Select(InEntity); }
+
+        bool lHasParent = false;
+        for (const EntityID lId : lSelection.Ids())
+        {
+            lHasParent = lHasParent || EntityHierarchy::GetParent(Entity{ lId, InEntity.GetWorld() }).IsValid();
+        }
+
+        // Queued, not run: the popup sits inside the tree walk (MP7's rule).
+        if (ImGui::MenuItem("Detach from Parent", nullptr, false, lHasParent)) { m_bPendingDetach = true; }
+
+        ImGui::EndPopup();
     }
 
     void PrefabPanel::DrawProperties()

@@ -26,6 +26,12 @@ namespace Opaax::Editor
                                              : InContext.Selection;
     }
 
+    EditorUndo& UndoStack(const EditorContext& InContext, const EUndoWorld InScope)
+    {
+        return InScope == EUndoWorld::Prefab ? InContext.PrefabDocument.Undo()
+                                             : InContext.Undo;
+    }
+
     namespace
     {
         // Put InData's entities back and select them — recreating any that are gone, on their own
@@ -159,6 +165,35 @@ namespace Opaax::Editor
 
     void EntityDelete::Undo(EditorContext& InContext) { RestoreEntities(InContext, Entities, Scope); }
     void EntityDelete::Redo(EditorContext& InContext) { DestroyEntities(InContext, Entities, Scope); }
+
+    namespace
+    {
+        void WriteLinks(EditorContext& InContext, const EntityReparent& InStep, const bool bInBefore)
+        {
+            World* const lWorld = UndoWorld(InContext, InStep.Scope);
+            if (lWorld == nullptr) { return; }
+
+            for (const EntityReparent::Entry& lEntry : InStep.Entries)
+            {
+                Entity lEntity = lWorld->FindByGuid(lEntry.Id);
+                if (!lEntity.IsValid()) { continue; }
+
+                EntityMeta& lMeta = lEntity.Get<EntityMeta>();
+                lMeta.Parent   = bInBefore ? lEntry.ParentBefore : lEntry.ParentAfter;
+                lMeta.OwnerMap = bInBefore ? lEntry.MapBefore    : lEntry.MapAfter;
+
+                if (TransformComponent* const lTransform = lEntity.TryGet<TransformComponent>())
+                {
+                    *lTransform = bInBefore ? lEntry.LocalBefore : lEntry.LocalAfter;
+                }
+            }
+
+            lWorld->MarkChanged();
+        }
+    }
+
+    void EntityReparent::Undo(EditorContext& InContext) { WriteLinks(InContext, *this, /*bInBefore*/true); }
+    void EntityReparent::Redo(EditorContext& InContext) { WriteLinks(InContext, *this, /*bInBefore*/false); }
 
     void EntityRename::Undo(EditorContext& InContext) { WriteName(InContext, EntityId, Before); }
     void EntityRename::Redo(EditorContext& InContext) { WriteName(InContext, EntityId, After); }

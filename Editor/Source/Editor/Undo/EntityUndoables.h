@@ -153,6 +153,33 @@ namespace Opaax::Editor
         const char* Label() const noexcept { return "Delete Entity"; }
     };
 
+    /**
+     * A subtree was hung somewhere else (§HR): a drag in the Hierarchy, or Detach.
+     *
+     * One entry per entity of the subtree — the ROOT's parent and local change (the world pose
+     * is kept, so the local is what moved), and every entity's map follows a cross-map drop.
+     * Written back FIELD BY FIELD rather than through SetParent, which would recompute the local:
+     * a step restores the exact state, not the verb's answer.
+     */
+    struct EntityReparent
+    {
+        struct Entry
+        {
+            Guid               Id;
+            Guid               ParentBefore, ParentAfter;
+            MapId              MapBefore,    MapAfter;
+            TransformComponent LocalBefore,  LocalAfter;
+        };
+
+        TDynArray<Entry> Entries;
+
+        EUndoWorld Scope = EUndoWorld::Active;
+
+        void        Undo(EditorContext& InContext);
+        void        Redo(EditorContext& InContext);
+        const char* Label() const noexcept { return "Reparent"; }
+    };
+
     /** One entity was renamed. Nothing to serialize — a name is its own inverse. */
     struct EntityRename
     {

@@ -10,6 +10,7 @@ namespace Opaax
 namespace Opaax::Editor
 {
     class EditorSelection;
+    class EditorUndo;
     struct EditorContext;
 
     /**
@@ -32,4 +33,7 @@ namespace Opaax::Editor
      * and a destroy clears, and each document has a selection of its own.
      */
     EditorSelection& UndoSelection(const EditorContext& InContext, EUndoWorld InScope);
+
+    /** The stack a step of that scope is recorded on — a document owns its history (**PF10**). */
+    EditorUndo& UndoStack(const EditorContext& InContext, EUndoWorld InScope);
 }

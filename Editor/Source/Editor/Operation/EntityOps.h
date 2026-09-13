@@ -4,6 +4,7 @@
 #include "Core/OpaaxTypes.h"            // Uint8
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"   // a component's authoring name — what a command carries
+#include "Editor/Undo/UndoWorld.h"      // EUndoWorld — Reparent names the document it acts on
 #include "World/Entity/EntityTypes.h"   // MapId
 
 namespace Opaax
@@ -144,7 +145,29 @@ namespace Opaax::Editor
          */
         void Rename(EditorContext& InContext, Entity InEntity, const OpaaxString& InName);
 
-        /** Destroy everything selected, and clear the selection. Refused while PIE runs. */
+        /**
+         * Hang InChild's subtree under InParent (§HR) — an invalid InParent detaches it to root.
+         * The world pose is kept; the local is what changes. A drop on a MAP HEADER passes InToMap
+         * and the detached subtree moves there (a drop under a parent follows the parent's map on
+         * its own).
+         *
+         * Scoped like Delete (P8 V4): the level's Hierarchy and the prefab panel's tree record
+         * the same step, each on its own stack and against its own world.
+         *
+         * @return true when something changed and a step was recorded. A refused link (self, a
+         *   cycle, PIE running) changes nothing and records nothing.
+         */
+        bool Reparent(EditorContext& InContext, EUndoWorld InScope, EntityID InChild, EntityID InParent,
+                      MapId InToMap = {});
+
+        /** Detach every selected entity that has a parent, one step each. */
+        void DetachSelected(EditorContext& InContext, EUndoWorld InScope);
+
+        /**
+         * Destroy everything selected AND its descendants (§HR — a child cannot outlive its
+         * parent, and the step must capture what the cascade would take), and clear the
+         * selection. Refused while PIE runs.
+         */
         void DestroySelected(EditorContext& InContext);
 
         /**

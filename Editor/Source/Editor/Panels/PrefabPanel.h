@@ -5,6 +5,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Editor/Camera/EditorCamera.h"
+#include "Editor/Panels/EntityTreeView.h"   // held BY VALUE — the rows
 #include "Editor/Panels/IEditorPanel.h"
 #include "Editor/Undo/ComponentUndoables.h"   // EntityComponentsEdit — the property form's one step
 #include "Editor/Viewport/ViewportGestures.h"
@@ -73,8 +74,11 @@ namespace Opaax::Editor
         // Internal
         // =========================================================================
     private:
-        /** One row per entity of the prefab; click selects, Ctrl+click toggles. */
+        /** The prefab's entities as a TREE (§HR) — the shared EntityTreeView over this document's world. */
         void DrawHierarchy();
+
+        /** The right-clicked row's verbs: Detach, queued for after the walk. */
+        void DrawEntityContextMenu(Entity InEntity);
 
         /** The primary's components, through the SAME drawer registry the Inspector uses. */
         void DrawProperties();
@@ -138,6 +142,10 @@ namespace Opaax::Editor
         /** A prefab dropped on the preview this frame, and where — run once the pass is over (**MP7**). */
         OpaaxString     m_PendingDropPrefab;
         Vector2F        m_PendingDropPx = { 0.f, 0.f };
+
+        /** The rows and the drop they bank (§HR); Detach asked of the context menu, spent after the pass. */
+        EntityTreeView  m_Tree;
+        bool            m_bPendingDetach = false;
 
         /** Last frame's ImGui::IsAnyItemActive — the edit bracket's edge, and the release frame still marks. */
         bool            m_bWasItemActive = false;

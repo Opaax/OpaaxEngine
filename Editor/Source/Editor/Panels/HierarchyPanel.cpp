@@ -14,6 +14,7 @@
 #include "World/Level.h"
 #include "World/WorldManager.h"
 #include "World/Entity/Entity.h"
+#include "World/Entity/EntityHierarchy.h"   // §HR — Detach gates on a parent existing
 #include "World/Entity/EntityMeta.h"
 #include "World/Components/PrefabInstanceComponent.h"   // ⑦-C — the revert entries gate on the link
 
@@ -36,7 +37,7 @@ namespace Opaax::Editor
             bool                bPersistent = false;
             bool                bDirty      = false;
             bool                bMissing    = false;   // in the manifest, never mounted — no file
-            TDynArray<EntityID> Entities;
+            TDynArray<EntityID> Roots;      // §HR: children draw under their parent, wherever it is
         };
     }
 
@@ -53,6 +54,7 @@ namespace Opaax::Editor
             case EMapAction::CreatePrefab:   return "Create Prefab from Selection";
             case EMapAction::RevertPrefab:   return "Revert to Prefab";
             case EMapAction::RevertPrefabAll: return "Revert Instance to Prefab";
+            case EMapAction::Detach:         return "Detach from Parent";
             case EMapAction::None:           return "None";
         }
 
@@ -132,11 +134,15 @@ namespace Opaax::Editor
         // WM2: a Map is a PARTITION of the world's one registry, so bucketing is a FILTER over
         // EntityMeta::OwnerMap and never a second store to keep in sync. An entity whose map is not
         // mounted still gets a group — a bare world (no Level) lists exactly as it did before.
-        Uint64 lCount = 0;
+        // ONLY THE ROOTS are bucketed (§HR): a child is drawn under its parent, whichever map
+        // either belongs to.
+        const Uint64 lCount = lWorld->GetEntityCount();
 
-        lWorld->Each<EntityMeta>([&](EntityID InId, const EntityMeta& InMeta)
+        m_Tree.Rebuild(*lWorld);
+
+        for (const EntityID lId : m_Tree.Roots())
         {
-            ++lCount;
+            const EntityMeta& lMeta = Entity{ lId, lWorld }.Get<EntityMeta>();
 
             MapGroup* lGroup = nullptr;
             for (MapGroup& lCandidate : lGroups)
@@ -146,18 +152,18 @@ namespace Opaax::Editor
                 // does not exist. Skip: a group with no file can own nothing.
                 if (lCandidate.bMissing) { continue; }
 
-                if (lCandidate.Map == InMeta.OwnerMap) { lGroup = &lCandidate; break; }
+                if (lCandidate.Map == lMeta.OwnerMap) { lGroup = &lCandidate; break; }
             }
 
             if (lGroup == nullptr)
             {
-                lGroups.emplace_back(MapGroup{InMeta.OwnerMap, {}, /*bMounted*/false, /*bPersistent*/false,
+                lGroups.emplace_back(MapGroup{lMeta.OwnerMap, {}, /*bMounted*/false, /*bPersistent*/false,
                                            /*bDirty*/false, /*bMissing*/false, {}});
                 lGroup = &lGroups.back();
             }
 
-            lGroup->Entities.emplace_back(InId);
-        });
+            lGroup->Roots.emplace_back(lId);
+        }
 
         if (lCount == 0 && lGroups.empty())
         {
@@ -204,6 +210,10 @@ namespace Opaax::Editor
                 lIsFocused ? ImGuiTreeNodeFlags_DefaultOpen : ImGuiTreeNodeFlags_None,
                 "%s", lLabel.CStr());
 
+            // A drop ON THE HEADER: to root, in this map (§HR). A mounted map names itself; the
+            // runtime bucket names nothing, so a drop there only detaches.
+            if (!lGroup.bMissing) { m_Tree.AcceptRootDrop(lGroup.Map); }
+
             DrawMapContextMenu(lGroup.Map, lGroup.AssetRelPath, lGroup.bMounted, lGroup.bPersistent,
                                lGroup.bMissing);
 
@@ -213,29 +223,11 @@ namespace Opaax::Editor
                 continue;
             }
 
-            for (const EntityID lId : lGroup.Entities)
+            // The rows are the tree's (§HR): a root, its children under it, drag and drop banked.
+            for (const EntityID lId : lGroup.Roots)
             {
-                Entity            lEntity{lId, lWorld};
-                const EntityMeta& lMeta = lEntity.Get<EntityMeta>();
-
-                // Names are a debug label and may repeat; the handle is what makes each row's ImGui ID unique.
-                ImGui::PushID(static_cast<int>(static_cast<Uint32>(lId)));
-                if (ImGui::Selectable(lMeta.Name.CStr(), m_Context.Selection.Contains(lEntity)))
-                {
-                    // Ctrl toggles, a plain click replaces — the convention every editor shares, and
-                    // asked of ImGui rather than of the engine's InputManager because an Edit world
-                    // leaves the input route closed and Ctrl would read as up forever (IN8).
-                    if (ImGui::GetIO().KeyCtrl) { m_Context.Selection.Toggle(lEntity); }
-                    else                        { m_Context.Selection.Select(lEntity); }
-
-                    // Discrete (a click), so no spam. The COUNT is what makes a multi-selection
-                    // observable at all — one row highlighting looks the same either way.
-                    OPAAX_LOG(LogHierarchyPanel, Info, "Hierarchy selected '{}' ({} selected)",
-                              lMeta.Name.CStr(), m_Context.Selection.Count());
-                }
-
-                DrawEntityContextMenu(lEntity);
-                ImGui::PopID();
+                m_Tree.DrawNode(*lWorld, lId, m_Context.Selection,
+                                [this](Entity InEntity) { DrawEntityContextMenu(InEntity); });
             }
 
             ImGui::TreePop();
@@ -244,6 +236,13 @@ namespace Opaax::Editor
 
         // AFTER the walk: anything queued above may destroy the very entities the rows just drew.
         RunPendingAction();
+
+        // And the drop the tree banked — one verb, one step, on the level's stack.
+        EntityTreeDrop lDrop;
+        if (m_Tree.TakeDrop(lDrop))
+        {
+            EntityOps::Reparent(m_Context, EUndoWorld::Active, lDrop.Child, lDrop.Parent, lDrop.ToMap);
+        }
     }
 
     void HierarchyPanel::DrawMapContextMenu(MapId InMapId, const OpaaxString& InAssetRelPath,
@@ -354,20 +353,28 @@ namespace Opaax::Editor
         }
 
         // ⑦-C P3. DISABLED rather than absent when nothing selected came from a prefab — MP7's
-        // rule: the menu states what applies instead of answering a click with a log line.
-        bool lHasLink = false;
+        // rule: the menu states what applies instead of answering a click with a log line. The
+        // same rule for Detach (§HR): a root has nothing to detach from.
+        bool lHasLink   = false;
+        bool lHasParent = false;
         if (World* const lWorld = m_Context.Worlds.GetActiveWorld(); lWorld != nullptr)
         {
             for (const EntityID lId : m_Context.Selection.Ids())
             {
                 Entity lCandidate{ lId, lWorld };
-                if (lCandidate.IsValid() && lCandidate.Has<PrefabInstanceComponent>())
-                {
-                    lHasLink = true;
-                    break;
-                }
+                if (!lCandidate.IsValid()) { continue; }
+
+                lHasLink   = lHasLink   || lCandidate.Has<PrefabInstanceComponent>();
+                lHasParent = lHasParent || EntityHierarchy::GetParent(lCandidate).IsValid();
             }
         }
+
+        if (ImGui::MenuItem("Detach from Parent", nullptr, false, lHasParent))
+        {
+            m_Pending = PendingMapAction{EMapAction::Detach, MapId{}, {}};
+        }
+
+        ImGui::Separator();
 
         if (ImGui::MenuItem("Revert to Prefab", nullptr, false, lHasLink))
         {
@@ -415,6 +422,10 @@ namespace Opaax::Editor
                 break;
             case EMapAction::DeleteSelected:
                 m_Context.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_DELETE_ENTITY, m_Context);
+                break;
+            // Straight to the verb: it records its own step per entity (§HR), like a drop does.
+            case EMapAction::Detach:
+                EntityOps::DetachSelected(m_Context, EUndoWorld::Active);
                 break;
             // No payload: the subject is the SELECTION, which the context already holds.
             case EMapAction::CreatePrefab:

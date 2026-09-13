@@ -38,6 +38,7 @@
 #include "Window/Window.h"
 #include "Engine/Registries/EngineRegistries.h"
 #include "World/Entity/Entity.h"   // EntityOps::Create returns one by value
+#include "World/Entity/EntityHierarchy.h"   // §HR — Delete takes the subtree
 #include "World/Level.h"
 #include "World/World.h"
 #include "World/WorldManager.h"
@@ -503,8 +504,10 @@ namespace Opaax::Editor
             return;   // Delete on empty is ordinary — DestroySelected's rule
         }
 
-        // COPY the handles first: the selection is about to be cleared (DestroySelected's reason).
-        const TDynArray<EntityID> lIds = lSelection.Ids();
+        // COPY the handles first: the selection is about to be cleared (DestroySelected's reason),
+        // and WITH THE SUBTREE (§HR) — the step must hold what the cascade takes.
+        TDynArray<EntityID> lIds;
+        EntityHierarchy::CollectSubtree(*lWorld, lSelection.Ids(), lIds);
 
         // BEFORE the fact — once destroyed nothing can say what they were (⑤).
         EntityDelete lStep{ MapSerializer::CaptureEntities(

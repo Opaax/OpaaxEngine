@@ -653,6 +653,92 @@ namespace Opaax::Editor
         if (World* lWorld = InEntity.GetWorld()) { lWorld->MarkChanged(); }
     }
 
+    bool EntityOps::Reparent(EditorContext& InContext, const EUndoWorld InScope, const EntityID InChild,
+                             const EntityID InParent, const MapId InToMap)
+    {
+        // The prefab world is Edit whatever the level is doing (PF10); only the level gates on PIE.
+        if (InScope == EUndoWorld::Active && !MapOps::CanEdit(InContext, "Reparent")) { return false; }
+
+        World* const lWorld = UndoWorld(InContext, InScope);
+        if (lWorld == nullptr) { return false; }
+
+        Entity lChild{ InChild, lWorld };
+        Entity lParent{ InParent, lWorld };
+        if (!lChild.IsValid()) { return false; }
+
+        // BEFORE, for the whole subtree: every entity's map may follow a cross-map drop.
+        TDynArray<EntityID> lSubtree;
+        EntityHierarchy::CollectSubtree(*lWorld, { InChild }, lSubtree);
+
+        EntityReparent lStep;
+        lStep.Scope = InScope;
+        lStep.Entries.reserve(lSubtree.size());
+
+        for (const EntityID lId : lSubtree)
+        {
+            Entity            lEntity{ lId, lWorld };
+            const EntityMeta& lMeta = lEntity.Get<EntityMeta>();
+
+            EntityReparent::Entry lEntry;
+            lEntry.Id          = lMeta.Id;
+            lEntry.ParentBefore = lMeta.Parent;
+            lEntry.MapBefore    = lMeta.OwnerMap;
+            lEntry.LocalBefore  = lEntity.Get<TransformComponent>();
+            lStep.Entries.emplace_back(Move(lEntry));
+        }
+
+        if (!EntityHierarchy::SetParent(lChild, lParent)) { return false; }   // refused, and it said why
+
+        // A drop on a map HEADER: to root, in THAT map. A parent pulls its map on its own.
+        if (!lParent.IsValid() && InToMap.IsValid())
+        {
+            for (const EntityID lId : lSubtree)
+            {
+                EntityMeta& lMeta = lWorld->GetRegistry().get<EntityMeta>(lId);
+                if (lMeta.OwnerMap.IsValid()) { lMeta.OwnerMap = InToMap; }
+            }
+        }
+
+        bool lChanged = false;
+        for (EntityReparent::Entry& lEntry : lStep.Entries)
+        {
+            Entity lEntity = lWorld->FindByGuid(lEntry.Id);
+            if (!lEntity.IsValid()) { continue; }
+
+            const EntityMeta& lMeta = lEntity.Get<EntityMeta>();
+            lEntry.ParentAfter = lMeta.Parent;
+            lEntry.MapAfter    = lMeta.OwnerMap;
+            lEntry.LocalAfter  = lEntity.Get<TransformComponent>();
+
+            lChanged = lChanged || lEntry.ParentAfter != lEntry.ParentBefore || lEntry.MapAfter != lEntry.MapBefore;
+        }
+
+        if (!lChanged) { return false; }   // already there — SetParent said nothing, nothing to record
+
+        lWorld->MarkChanged();
+        UndoStack(InContext, InScope).Record(Move(lStep));
+
+        return true;
+    }
+
+    void EntityOps::DetachSelected(EditorContext& InContext, const EUndoWorld InScope)
+    {
+        World* const lWorld = UndoWorld(InContext, InScope);
+        if (lWorld == nullptr) { return; }
+
+        // A copy: Reparent does not touch the selection, but the rule costs nothing.
+        const TDynArray<EntityID> lIds = UndoSelection(InContext, InScope).Ids();
+
+        Uint64 lDetached = 0;
+        for (const EntityID lId : lIds)
+        {
+            if (!EntityHierarchy::GetParent(Entity{ lId, lWorld }).IsValid()) { continue; }
+            if (Reparent(InContext, InScope, lId, ENTITY_NONE)) { ++lDetached; }
+        }
+
+        OPAAX_LOG(LogEntityOps, Info, "Detached {} entity(ies) to root", lDetached);
+    }
+
     void EntityOps::DestroySelected(EditorContext& InContext)
     {
         if (!InContext.Selection.HasSelection())
@@ -667,8 +753,10 @@ namespace Opaax::Editor
 
         // COPY the handles before touching anything: the selection is about to be cleared and the
         // entities destroyed, and iterating the live list while doing either is the shape that made
-        // the Hierarchy's Remove from Level assert.
-        const TDynArray<EntityID> lIds = InContext.Selection.Ids();
+        // the Hierarchy's Remove from Level assert. WITH THE SUBTREE (§HR): the world would cascade
+        // anyway, and the step must hold what the cascade takes or undo brings back half of it.
+        TDynArray<EntityID> lIds;
+        EntityHierarchy::CollectSubtree(*lWorld, InContext.Selection.Ids(), lIds);
 
         // BEFORE the fact, unlike every other verb here: once these are destroyed nothing else in
         // the editor can say what they were (⑤).
