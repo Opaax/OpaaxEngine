@@ -4,7 +4,7 @@
 #include <doctest.h>
 
 #include "Application/Services/Window/IWindowManager.h"
-#include "Application/Services/Window/WindowManager.h"
+#include "Window/WindowManager.h"
 #include "Application/Services/AppServiceLocator.h"
 #include "Engine/Config/EngineConfigData.h"
 #include "Core/String/OpaaxString.hpp"

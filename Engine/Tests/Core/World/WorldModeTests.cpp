@@ -20,7 +20,7 @@
 //   log of both hosts, checked in the S2 verification.
 #include <doctest.h>
 
-#include "Application/WorldSpec.h"
+#include "World/WorldSpec.h"
 #include "World/World.h"
 #include "World/WorldManager.h"
 

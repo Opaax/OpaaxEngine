@@ -12,8 +12,8 @@
 #include <fstream>
 #include <string>
 
-#include "Application/Services/Platforms/IFileSystem.h"
-#include "Application/Services/Platforms/Windows/WindowsFileSystem.h"
+#include "Platform/IFileSystem.h"
+#include "Platform/Windows/WindowsFileSystem.h"
 
 using namespace Opaax;
 
