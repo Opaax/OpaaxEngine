@@ -1,4 +1,4 @@
-# Parenting — record (2026-09-13, H1–H5; contract **§HR**, HR1–HR9)
+# Parenting — record (2026-09-13, H1–H5 + 2 fixes; contract **§HR**, HR1–HR9 — CLOSED, user-verified: *"ok works, close the block"*)
 
 > The block ⑦-C's **K10** stood in for. Plan: `C:\Users\engue\.claude\plans\eager-honking-badger.md`.
 > Legacy had one (`Legacy/ECS/Hierarchy.*`, `ParentComponent`): parent-only, world walked, cycles
@@ -13,9 +13,24 @@
 | **H3** | `aad0612` | Links derive with guids; Fold diffs against the built instance; `parent` in the patch; BuildVariant on derived ids. 9 cases. |
 | **H4** | `18cdf21` | `EntityTreeView`; drag-drop; `EntityReparent` + `UndoStack`; Detach; Delete takes the subtree. |
 | **H5** | `fc752e4` | The Gun under `PhysicsPlayer` in `PhysicsTest.opaaxmap`. |
+| docs | `cb058df` | §HR, L93, this record. |
+| **fix 1** | `2ab3880` | Instance rows BLUE + tooltip; a grey Revert says why ([[L94]]). |
+| **fix 2** | `b8a8f38` | A prefab from the browser drops on a header (into the map) or a row (as its child). |
 
 **784 → 810 / 8824 → 9029 / 7.** Both hosts boot with no errors; the only new warning is each
 existing map's one-time round-trip line on the version digit (**HR9**, stated in the plan).
+
+## THEIR EYES — two reports, neither a parenting defect
+1. *"the instance has the gun as child of player but a different position and I cannot revert"* —
+   the log showed four Ctrl+Z after Stop, one of them `Undo 'Create Prefab'`: the originals were
+   back, link-less, and the map saved so. Every mechanism had been right. The panel could not show
+   the difference → [[L94]], fix 1. *"So now the color is blue for prefab."*
+2. *"drag n drop prefab onto map header not working, in hierarchy panel in general"* — the
+   browser's payload was only ever accepted by the viewport. Fix 2, harness-verified, *"ok works"*.
+Confirmed by them across the two passes: drag a row onto another, unparent, save → reconcile, Play,
+reparent in the prefab panel, the blue rows, the prefab drop. **Not individually confirmed:** an
+entity row onto a map header, delete-parent + Ctrl+Z, parent+child selected moving once, the
+unparent strip, the Gun riding the player in Play — the block was closed on the whole.
 
 ## Their two calls (asked, both the recommendation)
 - **A cross-map drop MOVES the subtree into the parent's map** — the drop is the author saying where
@@ -48,16 +63,13 @@ detach, logging world/local/parent/map per entity and the dirty transitions. It 
 the step and the dirty gate end to end; the drag GESTURE, the tree rendering and the header drop
 are the eye gate.
 
-## Owed — the user's eyes
-Drag a row onto another (nested, nothing moves, Ctrl+Z) · onto a map header (root, in that map) ·
-delete a parent (children go, Ctrl+Z returns all) · gizmo on a parent moves the children · parent +
-child both selected moves once · the prefab panel's tree and its strip while dragging · **open
-`Levels/PhysicsTest`, Play, move: the Gun rides the player.** `Save Level` once clears every map's
-round-trip warning.
-
 ## Named, not built
 World-pose cache (HR3's trigger) · sibling order · drop a prefab onto a row to instantiate as its
 child · *Create Empty Child* · a world-pose line in the Transform drawer · child count on
-`EntityMeta` (HR6's trigger). **Hand-authoring recipe correction:** `json.dumps(sort_keys, indent=4)`
-is NOT byte-exact for arbitrary floats (nlohmann's Grisu printed `…563`, Python `…562` for one
-double) — splice into the original bytes, or let the editor save.
+`EntityMeta` (HR6's trigger) · **every dirty check re-reads each placed prefab from disk**
+(`PrefabFile Loaded` per check — the resolver releases its claim when it dies and nothing else
+holds the resource; pre-existing from P7, louder now that a fold builds an instance per record;
+the fix is a held claim on the level document, MP5's measured trigger). **Hand-authoring recipe
+correction:** `json.dumps(sort_keys, indent=4)` is NOT byte-exact for arbitrary floats (nlohmann's
+Grisu printed `…563`, Python `…562` for one double) — splice into the original bytes, or let the
+editor save.

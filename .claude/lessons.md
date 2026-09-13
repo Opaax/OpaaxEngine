@@ -2638,3 +2638,24 @@ shown it.
   Make the inverse structural (diff against what the other side builds).
 - **Write the case for the identity space nobody edits in.** The document opens a BASE on raw guids;
   every other path runs on derived ones. That asymmetry is exactly where a per-space rule hides.
+
+## L94 — A state the panel cannot DISTINGUISH is a bug report waiting, even when the engine is right (2026-09-13)
+
+**What happened (parenting, their first eye pass).** The report read like a reconcile/revert
+defect: *"the instance has the gun as child of player but a different position and I cannot
+revert."* Every mechanism was correct. The log showed four Ctrl+Z right after Stop, one of them
+`Undo 'Create Prefab'` — the instance destroyed, the ORIGINALS put back, link-less, and the map
+saved so. Nothing on screen distinguished those originals from an instance: same rows, same names,
+same positions; and the grey *Revert* said nothing about why it was grey. Ten minutes of colour and
+a tooltip (Unity's blue rows, "Nothing selected is a prefab instance") closed what cost them a
+session of confusion.
+
+**Rules for next time:**
+- **[[L15]]'s discriminate rule applies to the PANEL, not only the log.** When a verb's undo leaves a
+  state that LOOKS like the state before the verb, the panel must show which one it is. The check,
+  per structural verb (Create Prefab, Reparent, Detach, Revert): *what does its undo look like on
+  screen, and can the author tell?*
+- **A disabled entry must say why** (**MP7**'s "the menu states the rule" extended to its
+  negative): grey with no reason reads as "the verb is broken", and the author reports it that way.
+- **Read their session log BEFORE reasoning from the report.** The report named three mechanisms;
+  the log named one undo. The mechanism I would have gone looking for was not involved at all.

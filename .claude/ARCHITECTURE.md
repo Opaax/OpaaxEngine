@@ -4006,7 +4006,7 @@ confirmed it).
 
 ---
 
-## HR — Parenting (landed 2026-09-13, H1–H5; the block ⑦-C's K10 stood in for)
+## HR — Parenting (landed 2026-09-13, H1–H5 — block CLOSED, user-verified; the block ⑦-C's K10 stood in for)
 
 **The guarantee, which Unity, Godot and Unreal all rest on: you AUTHOR local, you READ world, and
 the two never disagree.** Their caches are an implementation of it; here there is none.
@@ -4088,6 +4088,15 @@ is the verb: scoped like Delete (`UndoStack` now sits beside `UndoWorld`/`UndoSe
 BY FIELD on replay, never through `SetParent`, which would recompute. **Detach from Parent** in
 both context menus; **Delete takes the subtree** in the level and in the prefab panel, so the step
 holds what the cascade would take.
+- **A PREFAB from the browser drops on the tree too** (their report, 2026-09-13 — it was only ever
+  accepted by the viewport): onto a **header**, into that map at its authored position; onto a
+  **row**, hung under it with the authored root pose as the LOCAL (`EntityOps::ParentPlaced`,
+  Unity's drag-into-hierarchy), in the level and as a nested placement in the prefab panel. A
+  prefab whose entities are all roots (one authored before this block) hangs every root.
+- **An instance row reads BLUE, with the prefab path as its tooltip, and a grey Revert says
+  "Nothing selected is a prefab instance"** ([[L94]]): an Undo of *Create Prefab* puts the
+  originals back looking exactly like the instance, and their first eye pass reported that as a
+  reconcile defect.
 
 **HR9 — Format: map v4, prefab v3, by MP10's rule.** An old reader ignoring `parent` places every
 child at local-as-world — a misread, not an ignorable key. `parent` is omitted for a root, so a map
@@ -4184,7 +4193,7 @@ the old groups opens fine (nlohmann ignores undeclared keys — pinned by a test
 
 ## Pointers
 
-- **Post-mortems / rules:** `.claude/lessons.md` (L1–**L90**).
+- **Post-mortems / rules:** `.claude/lessons.md` (L1–**L94**).
 - **Live session state:** `.claude/CLAUDE.local.md` (current milestone, standing decisions).
 - **Working checklist:** `.claude/task/todo.md`.
 - **Ground truth for engine design:** `.claude/data/` — *Game Engine Architecture* (Gregory). Prefer it over
