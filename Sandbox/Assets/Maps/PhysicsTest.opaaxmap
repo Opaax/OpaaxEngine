@@ -464,6 +464,42 @@
         },
         {
             "components": {
+                "Dummy": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.25,
+                        "y": 0.25,
+                        "z": 0.25
+                    },
+                    "Size": {
+                        "x": 36.0,
+                        "y": 12.0
+                    }
+                },
+                "GunComponent": {
+                    "Bullet": "",
+                    "MuzzleFlash": "",
+                    "RateOfFire": 4.0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 40.0,
+                        "y": 20.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "99999999999999999999999999999999",
+            "name": "Gun",
+            "ownerMap": "PhysicsTest",
+            "parent": "88888888888888888888888888888888"
+        },
+        {
+            "components": {
                 "Collider": {
                     "Channel": "WorldStatic",
                     "Density": 1.0,
@@ -511,5 +547,5 @@
         }
     ],
     "mapId": "PhysicsTest",
-    "version": 1
+    "version": 4
 }
