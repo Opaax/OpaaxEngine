@@ -2,6 +2,7 @@
 
 #include "Editor/Operation/EditorSelection.hpp"
 
+#include "World/Components/PrefabInstanceComponent.h"   // a linked row reads blue
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityHierarchy.h"
 #include "World/Entity/EntityMeta.h"
@@ -56,7 +57,20 @@ namespace Opaax::Editor
         // Names are a debug label and may repeat; the handle is what makes each row's ImGui ID unique.
         ImGui::PushID(static_cast<int>(Bits(InEntity)));
 
+        // A PREFAB INSTANCE reads blue, Unity's convention. Without it an author cannot tell an
+        // instance from the plain entities an Undo of Create Prefab puts back — and then wonders
+        // why a prefab save reaches nothing and Revert is grey.
+        const PrefabInstanceComponent* lMarker = lEntity.TryGet<PrefabInstanceComponent>();
+        const bool lLinked = lMarker != nullptr && lMarker->IsLinked();
+        if (lLinked) { ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.55f, 0.75f, 1.f, 1.f)); }
+
         const bool lOpen = ImGui::TreeNodeEx("node", lFlags, "%s", lMeta->Name.CStr());
+
+        if (lLinked)
+        {
+            ImGui::PopStyleColor();
+            ImGui::SetItemTooltip("Instance of %s", lMarker->Prefab.Path.CStr());
+        }
 
         // The arrow toggles, the rest of the row selects. Ctrl toggles, a plain click replaces —
         // asked of ImGui rather than the InputManager because an Edit world leaves the input route

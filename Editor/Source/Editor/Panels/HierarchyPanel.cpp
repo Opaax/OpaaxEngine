@@ -376,15 +376,27 @@ namespace Opaax::Editor
 
         ImGui::Separator();
 
+        // A grey entry SAYS WHY: a selection that is not an instance (the originals an Undo of
+        // Create Prefab put back look exactly like one) otherwise reads as a verb that does nothing.
+        const auto lWhyDisabled = [lHasLink]()
+        {
+            if (!lHasLink && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+            {
+                ImGui::SetTooltip("Nothing selected is a prefab instance");
+            }
+        };
+
         if (ImGui::MenuItem("Revert to Prefab", nullptr, false, lHasLink))
         {
             m_Pending = PendingMapAction{EMapAction::RevertPrefab, MapId{}, {}};
         }
+        lWhyDisabled();
 
         if (ImGui::MenuItem("Revert Instance to Prefab", nullptr, false, lHasLink))
         {
             m_Pending = PendingMapAction{EMapAction::RevertPrefabAll, MapId{}, {}};
         }
+        lWhyDisabled();
 
         ImGui::Separator();
 
