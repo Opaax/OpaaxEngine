@@ -186,7 +186,7 @@ namespace Opaax::Editor
     }
 
     Uint64 EditorPrefabDocument::Place(EditorContext& InContext, const OpaaxString& InAssetPath,
-                                       const Vector2F& InAtWorld)
+                                       const Vector2F* InAtWorld, const EntityID InParent)
     {
         if (!IsOpen() || m_World == nullptr) { return 0; }
 
@@ -216,8 +216,11 @@ namespace Opaax::Editor
                                                          MapId("Prefab"), lRegistry);
         for (EntityData& lEntity : lInstance.Entities) { lEntity.OwnerMap = MapId(); }
 
-        const TDynArray<EntityID> lHandles = EntityOps::PlaceInstance(*m_World, lInstance, &InAtWorld, lRegistry);
+        const TDynArray<EntityID> lHandles = EntityOps::PlaceInstance(*m_World, lInstance, InAtWorld, lRegistry);
         if (lHandles.empty()) { return 0; }
+
+        // Under the row it was dropped on (§HR), before the capture so the link is in the step.
+        EntityOps::ParentPlaced(*m_World, lHandles, InParent);
 
         m_Selection.Replace(m_World, lHandles);
 

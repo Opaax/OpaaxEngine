@@ -1,7 +1,11 @@
 #include "Editor/Panels/EntityTreeView.h"
 
 #include "Editor/Operation/EditorSelection.hpp"
+#include "Editor/Resources/ResourceDragDrop.h"   // a prefab dropped on a row or a header
 
+#include "Engine/Subsystems/Resources/ResourceManager.h"   // before PrefabResource — completes LoadContext
+#include "Engine/Subsystems/Resources/ResourceTypeID.hpp"
+#include "World/Prefab/PrefabResource.hpp"
 #include "World/Components/PrefabInstanceComponent.h"   // a linked row reads blue
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityHierarchy.h"
@@ -102,6 +106,13 @@ namespace Opaax::Editor
             ImGui::EndDragDropTarget();
         }
 
+        // A PREFAB from the browser, dropped on a row: an instance as this entity's child.
+        if (OpaaxString lPrefab; AcceptResourceDragPayload(ResourceTypeID::Get<PrefabResource>(), lPrefab))
+        {
+            m_PrefabDrop     = EntityTreePrefabDrop{ Move(lPrefab), InEntity, MapId{} };
+            m_bHasPrefabDrop = true;
+        }
+
         InContextMenu(lEntity);
 
         if (lOpen && lHasChildren)
@@ -118,14 +129,22 @@ namespace Opaax::Editor
 
     void EntityTreeView::AcceptRootDrop(const MapId InMap)
     {
-        if (!ImGui::BeginDragDropTarget()) { return; }
-
-        if (const ImGuiPayload* lPayload = ImGui::AcceptDragDropPayload(k_Payload))
+        if (ImGui::BeginDragDropTarget())
         {
-            m_Drop     = EntityTreeDrop{ *static_cast<const EntityID*>(lPayload->Data), ENTITY_NONE, InMap };
-            m_bHasDrop = true;
+            if (const ImGuiPayload* lPayload = ImGui::AcceptDragDropPayload(k_Payload))
+            {
+                m_Drop     = EntityTreeDrop{ *static_cast<const EntityID*>(lPayload->Data), ENTITY_NONE, InMap };
+                m_bHasDrop = true;
+            }
+            ImGui::EndDragDropTarget();
         }
-        ImGui::EndDragDropTarget();
+
+        // A PREFAB on a map header: an instance into that map, at its authored position.
+        if (OpaaxString lPrefab; AcceptResourceDragPayload(ResourceTypeID::Get<PrefabResource>(), lPrefab))
+        {
+            m_PrefabDrop     = EntityTreePrefabDrop{ Move(lPrefab), ENTITY_NONE, InMap };
+            m_bHasPrefabDrop = true;
+        }
     }
 
     void EntityTreeView::DrawUnparentStrip(const MapId InMap)
@@ -146,6 +165,16 @@ namespace Opaax::Editor
         OutDrop    = m_Drop;
         m_Drop     = EntityTreeDrop{};
         m_bHasDrop = false;
+        return true;
+    }
+
+    bool EntityTreeView::TakePrefabDrop(EntityTreePrefabDrop& OutDrop)
+    {
+        if (!m_bHasPrefabDrop) { return false; }
+
+        OutDrop          = Move(m_PrefabDrop);
+        m_PrefabDrop     = EntityTreePrefabDrop{};
+        m_bHasPrefabDrop = false;
         return true;
     }
 }

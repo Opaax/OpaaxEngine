@@ -242,7 +242,7 @@ namespace Opaax::Editor
         // This panel's camera, as published to the world in OnPreRender — the view the drop was seen in.
         const Vector2F lWorldPos = ScreenToWorld(lWorld->GetCameraView(), ViewportPx(), m_PendingDropPx);
 
-        m_Context.PrefabDocument.Place(m_Context, lPrefab, lWorldPos);
+        m_Context.PrefabDocument.Place(m_Context, lPrefab, &lWorldPos);
     }
 
     void PrefabPanel::DrawHierarchy()
@@ -269,6 +269,13 @@ namespace Opaax::Editor
         if (m_Tree.TakeDrop(lDrop))
         {
             EntityOps::Reparent(m_Context, EUndoWorld::Prefab, lDrop.Child, lDrop.Parent);
+        }
+
+        // A prefab dropped on a row: a NESTED placement under it, at its authored pose.
+        EntityTreePrefabDrop lPrefabDrop;
+        if (m_Tree.TakePrefabDrop(lPrefabDrop))
+        {
+            m_Context.PrefabDocument.Place(m_Context, lPrefabDrop.AssetPath, nullptr, lPrefabDrop.OnEntity);
         }
     }
 

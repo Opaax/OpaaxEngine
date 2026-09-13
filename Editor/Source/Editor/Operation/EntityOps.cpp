@@ -142,8 +142,25 @@ namespace Opaax::Editor
         return lEntity;
     }
 
+    void EntityOps::ParentPlaced(World& InWorld, const TDynArray<EntityID>& InHandles, const EntityID InParent)
+    {
+        Entity lParent{ InParent, &InWorld };
+        if (!lParent.IsValid()) { return; }
+
+        TDynArray<EntityID> lRoots;
+        EntityHierarchy::TopmostOf(InWorld, InHandles, lRoots);
+
+        // NOT keeping the world pose: the prefab's authored root pose is what its local becomes,
+        // so a turret authored at the origin sits ON its new parent rather than staying where the
+        // prefab happened to be authored.
+        for (const EntityID lRoot : lRoots)
+        {
+            EntityHierarchy::SetParent(Entity{ lRoot, &InWorld }, lParent, /*bKeepWorld*/false);
+        }
+    }
+
     Uint64 EntityOps::InstantiatePrefab(EditorContext& InContext, const OpaaxString& InAbsPath,
-                                        MapId InOwnerMap, const Vector2F* InAtWorld)
+                                        MapId InOwnerMap, const Vector2F* InAtWorld, const EntityID InParent)
     {
         if (!MapOps::CanEdit(InContext, "Instantiate Prefab")) { return 0; }
 
@@ -201,6 +218,9 @@ namespace Opaax::Editor
                       lAssetPath.CStr());
             return 0;
         }
+
+        // Under the row it was dropped on (§HR), BEFORE the capture so the link is in the step.
+        ParentPlaced(*lWorld, lHandles, InParent);
 
         // The WHOLE instance is selected — **K10**.
         InContext.Selection.Replace(lWorld, lHandles);

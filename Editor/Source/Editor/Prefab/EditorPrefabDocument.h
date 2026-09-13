@@ -91,9 +91,13 @@ namespace Opaax::Editor
          * at any depth. The resolver refuses the same cycle at read time, but a refusal here costs
          * an Error where one there costs the author a prefab that no longer loads whole.
          *
+         * @param InAtWorld Where the anchor lands, or null for the prefab's authored positions.
+         * @param InParent  A row it was dropped on (§HR): the placement's roots hang under it with
+         *   the authored pose as their local. ENTITY_NONE places at root.
          * @return How many entities were created. 0 means refused, and the log says why.
          */
-        Uint64 Place(EditorContext& InContext, const OpaaxString& InAssetPath, const Vector2F& InAtWorld);
+        Uint64 Place(EditorContext& InContext, const OpaaxString& InAssetPath, const Vector2F* InAtWorld,
+                     EntityID InParent = ENTITY_NONE);
 
         /** Forget the document. The world is kept — see the class note. */
         void Close();

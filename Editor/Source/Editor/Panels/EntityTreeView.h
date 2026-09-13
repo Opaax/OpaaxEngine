@@ -2,6 +2,7 @@
 
 #include "Application/Services/ILogger.h"
 #include "Core/OpaaxTypes.h"
+#include "Core/String/OpaaxString.hpp"
 #include "World/Entity/EntityTypes.h"
 
 #include <unordered_map>
@@ -18,12 +19,20 @@ namespace Opaax::Editor
 {
     class EditorSelection;
 
-    /** What a drag landed on — banked for the caller to spend AFTER the walk (**MP7**). */
+    /** What a dragged ROW landed on — banked for the caller to spend AFTER the walk (**MP7**). */
     struct EntityTreeDrop
     {
         EntityID Child  = ENTITY_NONE;
         EntityID Parent = ENTITY_NONE;   // invalid = to root
         MapId    ToMap;                  // a map header names its map; invalid = keep the child's
+    };
+
+    /** What a dragged PREFAB (from the browser) landed on — the same bank, one type over. */
+    struct EntityTreePrefabDrop
+    {
+        OpaaxString AssetPath;           // asset-relative, as the browser drags it
+        EntityID    OnEntity = ENTITY_NONE;   // a row: instantiate as its child; invalid = a header
+        MapId       ToMap;               // the header's map
     };
 
     // =============================================================================
@@ -62,14 +71,20 @@ namespace Opaax::Editor
         void DrawNode(World& InWorld, EntityID InEntity, EditorSelection& InSelection,
                       const ContextMenuFn& InContextMenu);
 
-        /** Make the LAST ITEM a drop target meaning "to root, in InMap" — a map header. */
+        /**
+         * Make the LAST ITEM a drop target — a map header: a row dropped there goes to root in
+         * InMap; a prefab dropped there is instantiated into InMap.
+         */
         void AcceptRootDrop(MapId InMap);
 
         /** A "drop here to unparent" row, drawn only while an entity is being dragged. */
         void DrawUnparentStrip(MapId InMap);
 
-        /** The drop banked this pass, if any. Cleared. */
+        /** The row drop banked this pass, if any. Cleared. */
         bool TakeDrop(EntityTreeDrop& OutDrop);
+
+        /** The prefab drop banked this pass, if any. Cleared. */
+        bool TakePrefabDrop(EntityTreePrefabDrop& OutDrop);
 
         // =============================================================================
         // Members
@@ -82,7 +97,10 @@ namespace Opaax::Editor
         std::unordered_map<Uint32, TDynArray<EntityID>> m_Children;   // by entity bits
         TDynArray<EntityID>                             m_Roots;
 
-        EntityTreeDrop m_Drop;
-        bool           m_bHasDrop = false;
+        EntityTreeDrop       m_Drop;
+        bool                 m_bHasDrop = false;
+
+        EntityTreePrefabDrop m_PrefabDrop;
+        bool                 m_bHasPrefabDrop = false;
     };
 }

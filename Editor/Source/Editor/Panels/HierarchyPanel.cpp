@@ -243,6 +243,25 @@ namespace Opaax::Editor
         {
             EntityOps::Reparent(m_Context, EUndoWorld::Active, lDrop.Child, lDrop.Parent, lDrop.ToMap);
         }
+
+        // A PREFAB from the browser: onto a header, into that map at its authored position; onto
+        // a row, into that row's map as its child. The viewport's drop is the same verb with a
+        // world point instead.
+        EntityTreePrefabDrop lPrefabDrop;
+        if (m_Tree.TakePrefabDrop(lPrefabDrop))
+        {
+            MapId lMap = lPrefabDrop.ToMap;
+            if (lPrefabDrop.OnEntity != ENTITY_NONE && lWorld->IsValid(lPrefabDrop.OnEntity))
+            {
+                lMap = Entity{ lPrefabDrop.OnEntity, lWorld }.Get<EntityMeta>().OwnerMap;
+            }
+
+            // InstantiatePrefab refuses an invalid map itself (WM2) — the runtime bucket, or a row
+            // no map authored — and says so.
+            EntityOps::InstantiatePrefab(m_Context, m_Context.Paths.AssetToAbsolute(lPrefabDrop.AssetPath),
+                                         lMap, nullptr, lPrefabDrop.OnEntity);
+        }
+
     }
 
     void HierarchyPanel::DrawMapContextMenu(MapId InMapId, const OpaaxString& InAssetRelPath,

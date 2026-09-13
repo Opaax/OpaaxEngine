@@ -78,9 +78,18 @@ namespace Opaax::Editor
          *   rather than a centroid, because an author dropping a turret means "the turret goes
          *   here", and the first entity is the one a prefab is built around. Applied BEFORE the
          *   undo step is captured, so a drop is one step and not a place-then-move pair.
+         * @param InParent An entity of InOwnerMap to hang the instance's roots under (§HR — a
+         *   prefab dropped on a Hierarchy row). The authored root pose becomes the LOCAL, Unity's
+         *   rule for a prefab dragged into the hierarchy. ENTITY_NONE places at root.
          */
         Uint64 InstantiatePrefab(EditorContext& InContext, const OpaaxString& InAbsPath, MapId InOwnerMap,
-                                 const Vector2F* InAtWorld = nullptr);
+                                 const Vector2F* InAtWorld = nullptr, EntityID InParent = ENTITY_NONE);
+
+        /**
+         * Hang the ROOTS among InHandles under InParent with their current pose as the LOCAL — what
+         * a prefab dropped on a row gets, in the level and in the prefab document alike.
+         */
+        void ParentPlaced(World& InWorld, const TDynArray<EntityID>& InHandles, EntityID InParent);
 
         /**
          * Put a BUILT instance into a NAMED world, anchored at InAtWorld — the world-agnostic core
