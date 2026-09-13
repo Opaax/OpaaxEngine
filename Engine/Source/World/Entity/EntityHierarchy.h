@@ -64,6 +64,35 @@ namespace Opaax
         /** The pose in world space: the chain composed root → leaf. A root answers its own transform. */
         OPAAX_API TransformComponent WorldTransform(Entity InEntity);
 
+        /**
+         * The chain composed root → leaf with InLocalOf(Entity) supplying each hop's local — the
+         * one walk WorldTransform and the renderer's blended display pose both run.
+         */
+        template<typename TLocalOf>
+        TransformComponent ComposeChain(Entity InEntity, TLocalOf&& InLocalOf)
+        {
+            TransformComponent lWorld;
+            if (!InEntity.IsValid()) { return lWorld; }
+
+            Entity lChain[MAX_DEPTH];
+            Uint32 lCount = 0;
+
+            for (Entity lCursor = InEntity; lCursor.IsValid() && lCount < MAX_DEPTH; lCursor = GetParent(lCursor))
+            {
+                lChain[lCount++] = lCursor;
+            }
+
+            // A root's local IS its world — no sincos for the common case.
+            if (lCount == 1) { return InLocalOf(InEntity); }
+
+            for (Uint32 lIndex = lCount; lIndex > 0; --lIndex)
+            {
+                lWorld = Compose(lWorld, InLocalOf(lChain[lIndex - 1]));
+            }
+
+            return lWorld;
+        }
+
         /** Store InWorld as the LOCAL that puts the entity there under its current parent. */
         OPAAX_API void SetWorldTransform(Entity InEntity, const TransformComponent& InWorld);
 

@@ -33,6 +33,7 @@
 #include "World/Components/SpriteComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Components/TransformInterpolationComponent.h"
+#include "World/Entity/EntityHierarchy.h"   // ComposeChain — a child draws where its parent puts it
 
 #include "Core/Maths/Maths.h"     // DegreesToRadians — the transform authors degrees, the renderer takes radians
 
@@ -204,28 +205,39 @@ namespace Opaax
     DisplayPose RendererManager::PoseFor(World& InWorld, const EntityID InEntity,
                                          const TransformComponent& InTransform)
     {
-        // OFF means "do not blend", which is NOT the same as alpha 0 — alpha 0 is the PREVIOUS
-        // pose, so expressing the toggle that way drew every fixed-step entity one step behind.
-        // The instrument that found it counted 5 blends at alpha 0.00, which is the contradiction
-        // that gave it away.
-        if (!m_bInterpolate)
+        // Each hop's local is blended on its own, then the chain is composed (§HR) — so a child of
+        // an interpolated body is drawn where the body is drawn, not one step behind it.
+        const auto lDisplayLocal = [this, &InWorld, InEntity, &InTransform](Entity InHop) -> TransformComponent
         {
-            return DisplayPose{ InTransform.Position, InTransform.Rotation };
-        }
+            const TransformComponent* lLocal = InHop.GetHandle() == InEntity ? &InTransform
+                                                                             : InHop.TryGet<TransformComponent>();
+            if (lLocal == nullptr) { return TransformComponent{}; }
 
-        const auto* lPrevious = InWorld.GetRegistry().try_get<TransformInterpolationComponent>(InEntity);
+            // OFF means "do not blend", which is NOT the same as alpha 0 — alpha 0 is the PREVIOUS
+            // pose, so expressing the toggle that way drew every fixed-step entity one step behind.
+            if (!m_bInterpolate) { return *lLocal; }
 
-        const DisplayPose lPose = ResolveDisplayPose(InTransform, lPrevious, m_FrameAlpha);
+            const auto* lPrevious = InWorld.GetRegistry().try_get<TransformInterpolationComponent>(InHop.GetHandle());
 
-        // Counted only when the blend actually MOVED the draw: an entity at rest, or one with no
-        // previous pose, must not report as interpolated or the number would mean nothing.
-        if (lPrevious != nullptr && lPrevious->bHasPrevious
-            && (lPose.Position != InTransform.Position || lPose.RotationDeg != InTransform.Rotation))
-        {
-            ++m_BlendedThisFrame;
-        }
+            const DisplayPose lBlend = ResolveDisplayPose(*lLocal, lPrevious, m_FrameAlpha);
 
-        return lPose;
+            // Counted for the drawn entity only, and only when the blend actually MOVED it: an
+            // entity at rest, or one with no previous pose, must not report as interpolated.
+            if (InHop.GetHandle() == InEntity && lPrevious != nullptr && lPrevious->bHasPrevious
+                && (lBlend.Position != lLocal->Position || lBlend.RotationDeg != lLocal->Rotation))
+            {
+                ++m_BlendedThisFrame;
+            }
+
+            TransformComponent lOut = *lLocal;
+            lOut.Position = lBlend.Position;
+            lOut.Rotation = lBlend.RotationDeg;
+            return lOut;
+        };
+
+        const TransformComponent lWorld = EntityHierarchy::ComposeChain(Entity{ InEntity, &InWorld }, lDisplayLocal);
+
+        return DisplayPose{ lWorld.Position, lWorld.Rotation, lWorld.Scale };
     }
 
     void RendererManager::SubmitRenderCounters()
@@ -337,7 +349,7 @@ namespace Opaax
 
                     // Scale MULTIPLIES the component's own Size (③): the extent is what the thing
                     // is, the scale is what the transform does to it.
-                    lRenderer.DrawQuad(lPose.Position, InComp.Size * InXf.Scale, InComp.Color,
+                    lRenderer.DrawQuad(lPose.Position, InComp.Size * lPose.Scale, InComp.Color,
                                        Maths::DegreesToRadians(lPose.RotationDeg));
                 });
 
@@ -416,7 +428,7 @@ namespace Opaax
 
                 const DisplayPose lPose = PoseFor(InWorld, InEntity, InXf);
 
-                InRenderer.DrawSprite(lPose.Position, InSprite.Size * InXf.Scale, *lTexture, InSprite.Color,
+                InRenderer.DrawSprite(lPose.Position, InSprite.Size * lPose.Scale, *lTexture, InSprite.Color,
                                       Maths::DegreesToRadians(lPose.RotationDeg),
                                       InSprite.Layer, InSprite.OrderInLayer,
                                       lUV.UVMin, lUV.UVMax);
@@ -439,18 +451,18 @@ namespace Opaax
                     return;
                 }
 
+                const DisplayPose lPose = PoseFor(InWorld, InEntity, InXf);
+
                 // Scale MULTIPLIES the authored size, the same rule a sprite's extent follows. X
                 // only: a text scaled differently on the two axes would need a non-uniform glyph
                 // path, and nothing asks for one.
                 TextDrawParams lParams;
                 lParams.Color           = InText.Color;
-                lParams.Size            = InText.Size * InXf.Scale.x;
+                lParams.Size            = InText.Size * lPose.Scale.x;
                 lParams.LineHeightScale = InText.LineHeightScale;
                 lParams.bKerning        = InText.bKerning;
                 lParams.Layer           = InText.Layer;
                 lParams.OrderInLayer    = InText.OrderInLayer;
-
-                const DisplayPose lPose = PoseFor(InWorld, InEntity, InXf);
 
                 Text2D::DrawString(InRenderer, InText.Text.CStr(), lPose.Position, lFace, lParams);
             });

@@ -5,6 +5,7 @@
 #include "Renderer/DebugDraw.h"
 #include "World/Components/ColliderComponent.h"
 #include "World/Components/TransformComponent.h"
+#include "World/Entity/EntityHierarchy.h"
 #include "World/Systems/WorldContext.h"
 #include "World/World.h"
 
@@ -68,10 +69,13 @@ namespace Opaax
 
         Uint64 lDrawn = 0;
 
-        m_Context->OwningWorld.Each<ColliderComponent, TransformComponent>(
-            [this, &lDrawn](EntityID, ColliderComponent& InCollider, TransformComponent& InTransform)
+        World& lWorld = m_Context->OwningWorld;
+
+        lWorld.Each<ColliderComponent, TransformComponent>(
+            [this, &lWorld, &lDrawn](EntityID InEntity, ColliderComponent& InCollider, TransformComponent&)
             {
-                DrawCollider(InCollider, InTransform);
+                // WORLD, where the body actually is (§HR).
+                DrawCollider(InCollider, EntityHierarchy::WorldTransform(Entity{ InEntity, &lWorld }));
                 ++lDrawn;
             });
 

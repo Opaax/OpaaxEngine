@@ -12,6 +12,7 @@
 #include "World/Components/RigidbodyComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Components/TransformInterpolationComponent.h"
+#include "World/Entity/EntityHierarchy.h"   // bodies live in WORLD space; the component is local (§HR)
 #include "World/Systems/WorldContext.h"
 #include "World/World.h"
 
@@ -186,14 +187,17 @@ namespace Opaax
 
     void PhysicsSubsystem::BuildBodyForEntity(World& InWorld, const EntityID InEntity,
                                               const ColliderComponent& InCollider,
-                                              const TransformComponent& InTransform)
+                                              const TransformComponent& /*InLocal*/)
     {
         const auto* lRigidbody = InWorld.GetRegistry().try_get<RigidbodyComponent>(InEntity);
 
+        // Box2D simulates in WORLD space; the component is local to a parent (§HR).
+        const TransformComponent lWorldXf = EntityHierarchy::WorldTransform(Entity{ InEntity, &InWorld });
+
         BodyDesc lBody;
         lBody.Type     = ResolveBodyType(lRigidbody);
-        lBody.Position = InTransform.Position;
-        lBody.Rotation = Maths::DegreesToRadians(InTransform.Rotation);
+        lBody.Position = lWorldXf.Position;
+        lBody.Rotation = Maths::DegreesToRadians(lWorldXf.Rotation);
         lBody.UserData = ToUserData(InEntity);
 
         if (lRigidbody != nullptr)
@@ -291,8 +295,13 @@ namespace Opaax
             lPrevious.Rotation     = lTransform->Rotation;
             lPrevious.bHasPrevious = true;
 
-            lTransform->Position = lPosition;
-            lTransform->Rotation = Maths::RadiansToDegrees(lRotation);
+            // The body answers in WORLD; the verb stores the local that lands there (§HR). For a
+            // root that is the same write as before. Read as world first so the scale is world too.
+            const Entity       lLive{ lEntity, &InWorld };
+            TransformComponent lWorldXf = EntityHierarchy::WorldTransform(lLive);
+            lWorldXf.Position = lPosition;
+            lWorldXf.Rotation = Maths::RadiansToDegrees(lRotation);
+            EntityHierarchy::SetWorldTransform(lLive, lWorldXf);
 
             NoteBodyMoved(lEntity, lPosition);
         }

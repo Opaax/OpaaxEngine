@@ -9,6 +9,7 @@
 #include "World/Components/TextComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Entity/Entity.h"
+#include "World/Entity/EntityHierarchy.h"
 #include "World/Entity/EntityMeta.h"
 #include "World/World.h"
 
@@ -62,14 +63,16 @@ namespace Opaax
             return false;
         }
 
-        const TransformComponent* lTransform = InEntity.TryGet<TransformComponent>();
-        if (lTransform == nullptr)
+        if (InEntity.TryGet<TransformComponent>() == nullptr)
         {
             // Only reachable for an entity built outside CreateEntity — every entity gets one.
             return false;
         }
 
-        const float lRotation = Maths::DegreesToRadians(lTransform->Rotation);
+        // WORLD, walked (§HR): a child is clickable where it draws, not at its local offset.
+        const TransformComponent lWorldXf = EntityHierarchy::WorldTransform(InEntity);
+
+        const float lRotation = Maths::DegreesToRadians(lWorldXf.Rotation);
 
         bool     lHasExtent = false;
         Bounds2D lBounds;
@@ -77,11 +80,11 @@ namespace Opaax
         // The SAME multiply RendererManager applies (③) — a scaled entity has to be clickable at the
         // size it draws, and this is the one body that keeps picking, the outline, focus-selected and
         // the marquee agreeing about that (SEL1).
-        const Vector2F lScale = lTransform->Scale;
+        const Vector2F lScale = lWorldXf.Scale;
 
         if (const DummyComponent* lQuad = InEntity.TryGet<DummyComponent>())
         {
-            lBounds    = Bounds2D::FromCenterSizeRotated(lTransform->Position, lQuad->Size * lScale, lRotation);
+            lBounds    = Bounds2D::FromCenterSizeRotated(lWorldXf.Position, lQuad->Size * lScale, lRotation);
             lHasExtent = true;
         }
 
@@ -90,7 +93,7 @@ namespace Opaax
             // Hit-testable whether or not it is VISIBLE: an author has to be able to select a
             // sprite they just hid in order to show it again.
             const Bounds2D lSpriteBounds =
-                Bounds2D::FromCenterSizeRotated(lTransform->Position, lSprite->Size * lScale, lRotation);
+                Bounds2D::FromCenterSizeRotated(lWorldXf.Position, lSprite->Size * lScale, lRotation);
 
             if (lHasExtent) { lBounds.Encapsulate(lSpriteBounds); }
             else            { lBounds = lSpriteBounds; lHasExtent = true; }
@@ -113,8 +116,8 @@ namespace Opaax
 
             if (lExtent.x > 0.f && lExtent.y > 0.f)
             {
-                const Vector2F lCentre{ lTransform->Position.x + lExtent.x * 0.5f,
-                                        lTransform->Position.y - lExtent.y * 0.5f };
+                const Vector2F lCentre{ lWorldXf.Position.x + lExtent.x * 0.5f,
+                                        lWorldXf.Position.y - lExtent.y * 0.5f };
 
                 const Bounds2D lTextBounds = Bounds2D::FromCenterSizeRotated(lCentre, lExtent, lRotation);
 
@@ -130,7 +133,7 @@ namespace Opaax
                 return false;
             }
 
-            lBounds = Bounds2D{ lTransform->Position, { InAnchorHalfExtent, InAnchorHalfExtent } };
+            lBounds = Bounds2D{ lWorldXf.Position, { InAnchorHalfExtent, InAnchorHalfExtent } };
         }
 
         OutBounds = lBounds;

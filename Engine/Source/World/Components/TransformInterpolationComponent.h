@@ -38,12 +38,13 @@ namespace Opaax
     // =============================================================================
     /**
      * @struct DisplayPose
-     * Where an entity should be DRAWN this frame. Never written back into the world.
+     * Where an entity should be DRAWN this frame, in WORLD space. Never written back into the world.
      */
     struct DisplayPose
     {
         Vector2F Position    = { 0.f, 0.f };
         float    RotationDeg = 0.f;
+        Vector2F Scale       = { 1.f, 1.f };   // never blended — nothing writes it at fixed step
     };
 
     /**
@@ -65,6 +66,7 @@ namespace Opaax
         DisplayPose lPose;
         lPose.Position    = InCurrent.Position;
         lPose.RotationDeg = InCurrent.Rotation;
+        lPose.Scale       = InCurrent.Scale;
 
         if (InPrevious == nullptr || !InPrevious->bHasPrevious)
         {

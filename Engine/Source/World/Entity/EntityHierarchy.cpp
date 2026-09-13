@@ -50,28 +50,11 @@ namespace Opaax
 
     TransformComponent EntityHierarchy::WorldTransform(Entity InEntity)
     {
-        TransformComponent lWorld;
-        if (!InEntity.IsValid()) { return lWorld; }
-
-        // Leaf first, then composed root → leaf. A stack rather than recursion: the depth cap is
-        // what bounds it, not the call stack.
-        Entity lChain[MAX_DEPTH];
-        Uint32 lCount = 0;
-
-        for (Entity lCursor = InEntity; lCursor.IsValid() && lCount < MAX_DEPTH; lCursor = GetParent(lCursor))
+        return ComposeChain(InEntity, [](Entity InHop)
         {
-            lChain[lCount++] = lCursor;
-        }
-
-        for (Uint32 lIndex = lCount; lIndex > 0; --lIndex)
-        {
-            if (const TransformComponent* lLocal = lChain[lIndex - 1].TryGet<TransformComponent>())
-            {
-                lWorld = Compose(lWorld, *lLocal);
-            }
-        }
-
-        return lWorld;
+            const TransformComponent* lLocal = InHop.TryGet<TransformComponent>();
+            return lLocal != nullptr ? *lLocal : TransformComponent{};
+        });
     }
 
     void EntityHierarchy::SetWorldTransform(Entity InEntity, const TransformComponent& InWorld)

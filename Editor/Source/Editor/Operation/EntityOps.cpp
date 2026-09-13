@@ -24,6 +24,7 @@
 #include "Core/Maths/Maths.h"    // RadiansToDegrees — the transform authors degrees
 #include "World/Components/TransformComponent.h"   // I17 — the one position a drag writes
 #include "World/Entity/Entity.h"
+#include "World/Entity/EntityHierarchy.h"   // §HR — a drag moves the WORLD pose of the topmost selected
 #include "World/Entity/EntityMeta.h"
 #include "World/Entity/EntityQuery.h"
 #include "World/Serialization/MapSerializer.h"   // ⑤ — what a create/delete step carries
@@ -234,17 +235,25 @@ namespace Opaax::Editor
         }
 
         // MOVED BEFORE THE CALLER CAPTURES, so a drop is ONE undo step rather than a place followed
-        // by a move. The first entity is the anchor and the rest keep their relative offsets, which
-        // is what makes a multi-entity prefab arrive intact (**K10** — no parenting needed for this).
+        // by a move. The instance's ROOTS move and their children ride along (§HR); the first root
+        // is the anchor and the rest keep their relative offsets.
         if (InAtWorld != nullptr && !lHandles.empty())
         {
-            Entity lAnchor{ lHandles.front(), &InWorld };
-            const Vector2F lDelta = *InAtWorld - lAnchor.Get<TransformComponent>().Position;
+            TDynArray<EntityID> lRoots;
+            EntityHierarchy::TopmostOf(InWorld, lHandles, lRoots);
 
-            for (const EntityID lHandle : lHandles)
+            if (!lRoots.empty())
             {
-                Entity lEntity{ lHandle, &InWorld };
-                lEntity.Get<TransformComponent>().Position += lDelta;
+                const Vector2F lDelta =
+                    *InAtWorld - EntityHierarchy::WorldTransform(Entity{ lRoots.front(), &InWorld }).Position;
+
+                for (const EntityID lRoot : lRoots)
+                {
+                    Entity             lEntity{ lRoot, &InWorld };
+                    TransformComponent lWorldXf = EntityHierarchy::WorldTransform(lEntity);
+                    lWorldXf.Position += lDelta;
+                    EntityHierarchy::SetWorldTransform(lEntity, lWorldXf);
+                }
             }
         }
 
@@ -746,14 +755,21 @@ namespace Opaax::Editor
         // once, the way it does for the outline and the icons (L15 without the flood).
         bool lChanged = false;
 
-        for (const EntityID lId : InEntities)
+        // A selected child of a selected parent rides along — moved once, through its parent (§HR).
+        TDynArray<EntityID> lTopmost;
+        EntityHierarchy::TopmostOf(InWorld, InEntities, lTopmost);
+
+        for (const EntityID lId : lTopmost)
         {
             Entity lEntity{ lId, &InWorld };
 
             // Every entity has one (I17), so a miss means the handle went stale between the measure
             // and this call — skip it rather than emplacing a transform nobody asked for.
-            TransformComponent* lTransform = lEntity.TryGet<TransformComponent>();
-            if (lTransform == nullptr) { continue; }
+            if (lEntity.TryGet<TransformComponent>() == nullptr) { continue; }
+
+            // The delta is world-space, so it is applied to the WORLD pose and the verb stores the
+            // local that lands there. For a root the two are the same three fields.
+            TransformComponent lWorldXf = EntityHierarchy::WorldTransform(lEntity);
 
             // The POSITION goes through the matrix rather than being offset by hand, which is what
             // makes a rotate or a scale orbit the shared pivot instead of spinning each entity where
@@ -764,12 +780,14 @@ namespace Opaax::Editor
             // land below while the position is left alone. Nothing else differs between the modes.
             const Vector4F lMoved =
                 InDelta.Origin == ETransformOrigin::Individual
-                    ? Vector4F(lTransform->Position.x, lTransform->Position.y, 0.f, 1.f)
-                    : InDelta.Matrix * Vector4F(lTransform->Position.x, lTransform->Position.y, 0.f, 1.f);
+                    ? Vector4F(lWorldXf.Position.x, lWorldXf.Position.y, 0.f, 1.f)
+                    : InDelta.Matrix * Vector4F(lWorldXf.Position.x, lWorldXf.Position.y, 0.f, 1.f);
 
-            lTransform->Position = { lMoved.x, lMoved.y };
-            lTransform->Rotation += lDeltaDegrees;
-            lTransform->Scale    *= lDeltaScale;
+            lWorldXf.Position  = { lMoved.x, lMoved.y };
+            lWorldXf.Rotation += lDeltaDegrees;
+            lWorldXf.Scale    *= lDeltaScale;
+
+            EntityHierarchy::SetWorldTransform(lEntity, lWorldXf);
 
             lChanged = true;
         }

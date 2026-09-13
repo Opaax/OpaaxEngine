@@ -13,6 +13,7 @@
 #include "World/Components/MoverComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Components/TransformInterpolationComponent.h"
+#include "World/Entity/EntityHierarchy.h"   // a mode moves the WORLD pose; the component is local (§HR)
 #include "World/Systems/Movement/MoverModeRegistry.h"
 #include "World/Systems/PhysicsSubsystem.h"
 #include "World/Systems/WorldContext.h"
@@ -83,10 +84,24 @@ namespace Opaax
         Uint64      lAdvanced = 0;
 
         lWorld.Each<MoverComponent, TransformComponent>(
-            [this, lSweep, lDelta, &lAdvanced](EntityID InEntity, MoverComponent& InMover,
-                                               TransformComponent& InTransform)
+            [this, &lWorld, lSweep, lDelta, &lAdvanced](EntityID InEntity, MoverComponent& InMover,
+                                                        TransformComponent& InLocal)
             {
-                Advance(InEntity, InMover, InTransform, *lSweep, lDelta);
+                // Before the mode writes: the LOCAL pose about to be overwritten is what the
+                // renderer blends FROM (**PH21**). Physics records its own the same way.
+                auto& lPrevious = lWorld.GetRegistry().get_or_emplace<TransformInterpolationComponent>(InEntity);
+                lPrevious.Position     = InLocal.Position;
+                lPrevious.Rotation     = InLocal.Rotation;
+                lPrevious.bHasPrevious = true;
+
+                // A mode sweeps in WORLD space and never learns about parents (§HR): it is handed
+                // the world pose and the verb stores whatever local lands there.
+                const Entity       lLive{ InEntity, &lWorld };
+                TransformComponent lWorldXf = EntityHierarchy::WorldTransform(lLive);
+
+                Advance(InEntity, InMover, lWorldXf, *lSweep, lDelta);
+
+                EntityHierarchy::SetWorldTransform(lLive, lWorldXf);
                 ++lAdvanced;
             });
 
@@ -161,14 +176,6 @@ namespace Opaax
             }
             return;
         }
-
-        // Before the mode writes: the pose it is about to overwrite is what the renderer blends
-        // FROM (**PH21**). Physics records its own the same way, one subsystem over.
-        auto& lPrevious = m_Context->OwningWorld.GetRegistry()
-                                    .get_or_emplace<TransformInterpolationComponent>(InEntity);
-        lPrevious.Position     = InTransform.Position;
-        lPrevious.Rotation     = InTransform.Rotation;
-        lPrevious.bHasPrevious = true;
 
         MoverTickContext lTick{ InWorld, InMover, InTransform, *lParams, InDelta, ToUserData(InEntity) };
         lMode->Tick(lTick);

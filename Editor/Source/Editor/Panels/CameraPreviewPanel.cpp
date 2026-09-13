@@ -16,6 +16,7 @@
 #include "World/Components/CameraComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Entity/Entity.h"
+#include "World/Entity/EntityHierarchy.h"
 #include "World/World.h"
 #include "World/WorldManager.h"
 
@@ -122,7 +123,8 @@ namespace Opaax::Editor
             return false;
         }
 
-        OutView = CameraView{ lTransform->Position, lCamera->OrthoSize };
+        // WORLD (§HR), the same answer CameraManager::Resolve gives the game.
+        OutView = CameraView{ EntityHierarchy::WorldTransform(lEntity).Position, lCamera->OrthoSize };
 
         return true;
     }

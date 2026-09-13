@@ -23,6 +23,8 @@
 #include "World/Components/RigidbodyComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Entity/Entity.h"   // World.h only forward-declares it
+#include "World/Entity/EntityHierarchy.h"
+#include "World/Entity/EntityMeta.h"
 #include "World/Systems/PhysicsSubsystem.h"
 #include "World/Systems/WorldContext.h"
 #include "World/World.h"
@@ -223,6 +225,35 @@ TEST_CASE("PhysicsSubsystem: a dynamic box falls and comes to rest on static geo
     // And it STOPPED — another second may not move it.
     lFixture.TickFrames(60);
     CHECK(lFixture.PositionY(lFaller) == doctest::Approx(lRestY).epsilon(0.01));
+}
+
+TEST_CASE("PhysicsSubsystem: a dynamic body on a CHILD simulates in world space and stores its LOCAL (§HR)")
+{
+    PhysicsFixture lFixture;
+
+    lFixture.SpawnBox(0.f, { 1000.f, 100.f }, /*dynamic*/ false);   // floor top at y = 50
+
+    // A holder at (300, 0), and a faller hung under it at LOCAL (0, 500) — world (300, 500).
+    Entity lHolder = lFixture.TheWorld->CreateEntity("Holder");
+    lHolder.Get<TransformComponent>().Position = { 300.f, 0.f };
+
+    Entity lFaller = lFixture.SpawnBox(500.f, { 50.f, 50.f }, /*dynamic*/ true);
+    lFaller.Get<RigidbodyComponent>().bFixedRotation = true;   // a tilted landing slides a hair
+    REQUIRE(EntityHierarchy::SetParent(lFaller, lHolder, /*bKeepWorld*/false));
+
+    lFixture.TickFrames(180);
+
+    // It fell from WORLD (300, 500) and landed at world y = 75. The component holds the LOCAL that
+    // puts it there — exactly the world pose minus the holder's — and the world answer is the
+    // body's. (Box2D slides a landing box a unit or so in x; the relationship is what is asserted.)
+    const TransformComponent lWorldXf = EntityHierarchy::WorldTransform(lFaller);
+    const TransformComponent lLocalXf = lFaller.Get<TransformComponent>();
+    CHECK(lWorldXf.Position.x == doctest::Approx(300.f).epsilon(0.01));
+    CHECK(lWorldXf.Position.y == doctest::Approx(75.f).epsilon(0.05));
+
+    CHECK(lLocalXf.Position.x == doctest::Approx(lWorldXf.Position.x - 300.f));
+    CHECK(lLocalXf.Position.y == doctest::Approx(lWorldXf.Position.y));
+    CHECK(lFaller.Get<EntityMeta>().Parent == lHolder.GetGuid());
 }
 
 TEST_CASE("PhysicsSubsystem: the tick GATE stops the simulation, and resuming continues it")

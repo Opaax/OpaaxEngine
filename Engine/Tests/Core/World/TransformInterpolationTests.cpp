@@ -6,6 +6,9 @@
 #include <doctest.h>
 
 #include "World/Components/TransformInterpolationComponent.h"
+#include "World/Entity/Entity.h"
+#include "World/Entity/EntityHierarchy.h"
+#include "World/World.h"
 
 using namespace Opaax;
 
@@ -109,4 +112,47 @@ TEST_CASE("ResolveDisplayPose: a mover that did not move draws where it is")
         CHECK(lPose.Position.y == doctest::Approx(-7.f));
         CHECK(lPose.RotationDeg == doctest::Approx(33.f));
     }
+}
+
+// =============================================================================
+// §HR — the blended pose composes up the chain
+// =============================================================================
+TEST_CASE("ResolveDisplayPose: the display pose carries the current SCALE, unblended")
+{
+    TransformComponent lCurrent = At(0.f, 0.f);
+    lCurrent.Scale = { 3.f, 0.5f };
+
+    const DisplayPose lPose = ResolveDisplayPose(lCurrent, nullptr, 0.5f);
+    CHECK(lPose.Scale.x == doctest::Approx(3.f));
+    CHECK(lPose.Scale.y == doctest::Approx(0.5f));
+}
+
+TEST_CASE("ComposeChain: a child of an interpolated parent is drawn where the parent is DRAWN, not where it is")
+{
+    World lWorld("Blend");
+
+    Entity lParent = lWorld.CreateEntity("Body");
+    Entity lChild  = lWorld.CreateEntity("Sprite");
+
+    lParent.Get<TransformComponent>() = At(100.f, 0.f);     // the current fixed-step pose
+    lChild.Get<TransformComponent>()  = At(10.f, 0.f);      // local: 10 to the right of the body
+    REQUIRE(EntityHierarchy::SetParent(lChild, lParent, /*bKeepWorld*/false));
+
+    lParent.Add<TransformInterpolationComponent>(Prev(0.f, 0.f));   // the body was at 0 a step ago
+
+    // The renderer's local-of: each hop blended by the frame's alpha (RendererManager::PoseFor).
+    const auto lDisplayLocal = [](Entity InHop) -> TransformComponent
+    {
+        TransformComponent lLocal = InHop.Get<TransformComponent>();
+        const DisplayPose  lBlend = ResolveDisplayPose(lLocal, InHop.TryGet<TransformInterpolationComponent>(), 0.5f);
+        lLocal.Position = lBlend.Position;
+        lLocal.Rotation = lBlend.RotationDeg;
+        return lLocal;
+    };
+
+    const TransformComponent lDrawn = EntityHierarchy::ComposeChain(lChild, lDisplayLocal);
+
+    // Half a step in, the body draws at 50 — and the sprite rides it to 60, not 110.
+    CHECK(lDrawn.Position.x == doctest::Approx(60.f));
+    CHECK(EntityHierarchy::WorldTransform(lChild).Position.x == doctest::Approx(110.f));   // the RAW world, for gameplay
 }

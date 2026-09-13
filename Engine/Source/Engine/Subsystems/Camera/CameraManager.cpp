@@ -10,6 +10,7 @@
 #include "World/Components/CameraComponent.h"
 #include "World/Components/TransformComponent.h"   // WHERE the camera looks from
 #include "World/Entity/Entity.h"
+#include "World/Entity/EntityHierarchy.h"
 #include "World/Entity/EntityMeta.h"
 
 namespace Opaax
@@ -37,13 +38,16 @@ namespace Opaax
         CameraResolution lResolution;
 
         InWorld.Each<TransformComponent, CameraComponent>(
-            [&lResolution](EntityID InEntity, TransformComponent& InXf, CameraComponent& InCamera)
+            [&lResolution, &InWorld](EntityID InEntity, TransformComponent&, CameraComponent& InCamera)
             {
                 ++lResolution.Count;
 
                 if (lResolution.Count == 1)
                 {
-                    lResolution.View   = CameraView{ InXf.Position, InCamera.OrthoSize };
+                    // WORLD (§HR) — a camera parented to the player follows it for free.
+                    const Vector2F lFrom = EntityHierarchy::WorldTransform(Entity{ InEntity, &InWorld }).Position;
+
+                    lResolution.View   = CameraView{ lFrom, InCamera.OrthoSize };
                     lResolution.Entity = InEntity;
                 }
             });

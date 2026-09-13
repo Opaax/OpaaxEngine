@@ -12,6 +12,7 @@
 #include "World/Components/TextComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Entity/Entity.h"
+#include "World/Entity/EntityHierarchy.h"
 #include "World/Entity/EntityQuery.h"
 #include "World/World.h"
 
@@ -81,6 +82,32 @@ TEST_CASE("EntityQuery: bounds follow the transform's ROTATION")
     // unclickable at its ends.
     CHECK(lBounds.HalfExtent.x == doctest::Approx(10.f));
     CHECK(lBounds.HalfExtent.y == doctest::Approx(50.f));
+}
+
+TEST_CASE("EntityQuery: a CHILD's bounds land where it draws — under its parent's pose, not at its local (§HR)")
+{
+    World lWorld("Parented");
+
+    Entity lParent = MakeQuad(lWorld, "Parent", { 100.f, 0.f }, { 10.f, 10.f });
+    lParent.Get<TransformComponent>().Rotation = 90.f;
+    lParent.Get<TransformComponent>().Scale    = { 2.f, 2.f };
+
+    Entity lChild = MakeQuad(lWorld, "Child", { 10.f, 0.f }, { 20.f, 10.f });
+    REQUIRE(EntityHierarchy::SetParent(lChild, lParent, /*bKeepWorld*/false));
+
+    Bounds2D lBounds;
+    REQUIRE(EntityQuery::TryGetBounds(lChild, lBounds));
+
+    // (10,0) local, scaled x2 and turned 90° about a parent at (100,0) → (100, 20); the extent
+    // is doubled and turned on its side.
+    CHECK(lBounds.Center.x == doctest::Approx(100.f));
+    CHECK(lBounds.Center.y == doctest::Approx(20.f));
+    CHECK(lBounds.HalfExtent.x == doctest::Approx(10.f));
+    CHECK(lBounds.HalfExtent.y == doctest::Approx(20.f));
+
+    // And the pick agrees: the child is under its WORLD position, and nothing is at its local one.
+    CHECK(EntityQuery::PickAt(lWorld, { 100.f, 20.f }).GetHandle() == lChild.GetHandle());
+    CHECK_FALSE(EntityQuery::PickAt(lWorld, { 10.f, 0.f }).IsValid());
 }
 
 TEST_CASE("EntityQuery: bounds follow the transform's SCALE")

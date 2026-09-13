@@ -10,6 +10,7 @@
 #include "Renderer/CameraView.h"               // MakeView / MakeProjection — ImGuizmo takes them separately (GIZ2)
 #include "World/Components/TransformComponent.h"
 #include "World/Entity/Entity.h"
+#include "World/Entity/EntityHierarchy.h"
 #include "World/Entity/EntityQuery.h"
 #include "World/World.h"
 
@@ -53,17 +54,18 @@ namespace Opaax::Editor
 
         // BOTH answers come from the PRIMARY, which is why they are one query: the entity whose
         // axes Local follows must be the entity Origin sits on, or the handles would point one way
-        // and turn about another.
-        const TransformComponent* lPrimaryXf = lPrimary.IsValid() ? lPrimary.TryGet<TransformComponent>()
-                                                                  : nullptr;
+        // and turn about another. Its WORLD pose (§HR) — the gizmo seats where the entity draws.
+        const bool               lHasPrimary = lPrimary.IsValid() && lPrimary.TryGet<TransformComponent>() != nullptr;
+        const TransformComponent lPrimaryXf  = lHasPrimary ? EntityHierarchy::WorldTransform(lPrimary)
+                                                           : TransformComponent{};
 
-        OutRotationRad = (InSettings.GetEffectiveSpace() == EGizmoSpace::Local && lPrimaryXf != nullptr)
-                             ? Maths::DegreesToRadians(lPrimaryXf->Rotation)
+        OutRotationRad = (InSettings.GetEffectiveSpace() == EGizmoSpace::Local && lHasPrimary)
+                             ? Maths::DegreesToRadians(lPrimaryXf.Rotation)
                              : 0.f;
 
-        if (InSettings.GetPivot() == EGizmoPivot::Origin && lPrimaryXf != nullptr)
+        if (InSettings.GetPivot() == EGizmoPivot::Origin && lHasPrimary)
         {
-            OutPivot = lPrimaryXf->Position;
+            OutPivot = lPrimaryXf.Position;
             return true;
         }
 
