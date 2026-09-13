@@ -93,7 +93,24 @@ namespace Opaax
 
             ++lCreated;
 
+            lEntity.Get<EntityMeta>().Parent = lEntityData.Parent;
+
             LoadComponents(lEntityData, InWorld.GetRegistry(), lEntity.GetHandle(), InRegistry);
+        }
+
+        // Links are guids, so nothing above depended on order — but a link naming an entity that
+        // never arrived (skipped, or not in this file) would be saved back forever. Cleared, and
+        // said: the child now sits at its local pose as world, which the author will see.
+        for (const EntityData& lEntityData : InData.Entities)
+        {
+            if (!lEntityData.Parent.IsValid() || InWorld.FindByGuid(lEntityData.Parent).IsValid()) { continue; }
+
+            if (Entity lOrphan = InWorld.FindByGuid(lEntityData.Id); lOrphan.IsValid())
+            {
+                OPAAX_LOG(LogMapFactory, Warn, "Entity '{}' names a parent that is not in the world — now a root",
+                          lEntityData.Name.CStr());
+                lOrphan.Get<EntityMeta>().Parent = Guid{};
+            }
         }
 
         OPAAX_LOG(LogMapFactory, Info, "Instantiated {}/{} entity(ies) into world '{}'",
@@ -116,6 +133,7 @@ namespace Opaax
 
                 lMeta.Name     = lEntityData.Name;
                 lMeta.OwnerMap = lEntityData.OwnerMap;
+                lMeta.Parent   = lEntityData.Parent;
             }
             else
             {
@@ -125,6 +143,8 @@ namespace Opaax
                 {
                     continue;   // World logged the reason
                 }
+
+                lEntity.Get<EntityMeta>().Parent = lEntityData.Parent;
             }
 
             LoadComponents(lEntityData, InWorld.GetRegistry(), lEntity.GetHandle(), InRegistry);

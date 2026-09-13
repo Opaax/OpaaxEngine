@@ -3,16 +3,23 @@
 #include <nlohmann/json.hpp>
 
 #include "Core/Maths/MathTypes.h"
+#include "Core/Maths/Maths.h"
 #include "Core/Maths/MathsJson.hpp"
 #include "Core/Reflection/OpaaxProperty.h"
 
 namespace Opaax
 {
     // =============================================================================
-    // TransformComponent — WHERE an entity is. The one position in the engine: World::CreateEntity
-    //   emplaces it beside EntityMeta, so every entity has one and Each<TransformComponent> is a
-    //   complete view. That guarantee is what the editor's picking and its icon for an entity with
-    //   nothing to draw both stand on — an entity with no anchor could not be clicked at all.
+    // TransformComponent — WHERE an entity is, RELATIVE TO ITS PARENT (§HR). The one position in
+    //   the engine: World::CreateEntity emplaces it beside EntityMeta, so every entity has one and
+    //   Each<TransformComponent> is a complete view. That guarantee is what the editor's picking
+    //   and its icon for an entity with nothing to draw both stand on — an entity with no anchor
+    //   could not be clicked at all.
+    //
+    //   LOCAL, not world. A root's local is its world, which is every entity there was before
+    //   parenting; a child's is composed up the chain by EntityHierarchy::WorldTransform, and that
+    //   is what every reader (renderer, picking, physics, camera) asks for. Nothing reads Position
+    //   as a world coordinate any more except a writer that knows it holds a root.
     //
     //   It replaced the Position that used to sit on SpriteComponent, DummyComponent and
     //   CameraComponent separately, where one entity could carry three of them and they could
@@ -47,4 +54,59 @@ namespace Opaax
                          OPAAX_PROP(Rotation).SetRange(-360.f, 360.f),
                          OPAAX_PROP(Scale))
     };
+
+    // =============================================================================
+    // Composition — the pure half, and therefore the testable one (ResolveDisplayPose's idiom).
+    //
+    //   TRS only: position is rotated and scaled by the parent then translated, rotation adds,
+    //   scale multiplies. A child rotated under a NON-UNIFORMLY scaled parent is a shear, which
+    //   three fields cannot hold — Unity's `lossyScale` limit, accepted here for the same reason
+    //   the scale tool already forces Local space.
+    // =============================================================================
+
+    /** InLocal placed under InParent (both in InParent's parent's frame). */
+    inline TransformComponent Compose(const TransformComponent& InParent, const TransformComponent& InLocal) noexcept
+    {
+        const float lRad = Maths::DegreesToRadians(InParent.Rotation);
+        const float lCos = Maths::Cos(lRad);
+        const float lSin = Maths::Sin(lRad);
+
+        const Vector2F lScaled = InLocal.Position * InParent.Scale;
+
+        TransformComponent lWorld;
+        lWorld.Position = InParent.Position + Vector2F{ lCos * lScaled.x - lSin * lScaled.y,
+                                                        lSin * lScaled.x + lCos * lScaled.y };
+        lWorld.Rotation = InParent.Rotation + InLocal.Rotation;
+        lWorld.Scale    = InParent.Scale * InLocal.Scale;
+
+        return lWorld;
+    }
+
+    /**
+     * The local that Compose(InParent, local) == InWorld — Compose's inverse.
+     * A zero parent scale axis has no inverse; that axis is passed through unscaled rather
+     * than divided into infinity.
+     */
+    inline TransformComponent ToLocal(const TransformComponent& InParent, const TransformComponent& InWorld) noexcept
+    {
+        const float lRad = Maths::DegreesToRadians(InParent.Rotation);
+        const float lCos = Maths::Cos(lRad);
+        const float lSin = Maths::Sin(lRad);
+
+        const Vector2F lDelta = InWorld.Position - InParent.Position;
+        const Vector2F lUnrotated{  lCos * lDelta.x + lSin * lDelta.y,
+                                   -lSin * lDelta.x + lCos * lDelta.y };
+
+        const auto lSafeDivide = [](const float InValue, const float InBy) noexcept
+        {
+            return InBy != 0.f ? InValue / InBy : InValue;
+        };
+
+        TransformComponent lLocal;
+        lLocal.Position = { lSafeDivide(lUnrotated.x, InParent.Scale.x), lSafeDivide(lUnrotated.y, InParent.Scale.y) };
+        lLocal.Rotation = InWorld.Rotation - InParent.Rotation;
+        lLocal.Scale    = { lSafeDivide(InWorld.Scale.x, InParent.Scale.x), lSafeDivide(InWorld.Scale.y, InParent.Scale.y) };
+
+        return lLocal;
+    }
 }

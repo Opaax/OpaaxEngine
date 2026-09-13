@@ -97,6 +97,8 @@ set(OPAAX_TEST_SOURCES
     Core/World/WorldCloneTests.cpp
     Core/World/WorldTickGateTests.cpp
     Core/World/EntityQueryTests.cpp
+    # §HR. Parenting: the local/world composition, the walk, the cascade, and the file's `parent`.
+    Core/World/EntityHierarchyTests.cpp
     # P6. The blend is pure, so the shortest-arc wrap and the no-previous-pose case are
     # testable without a world — and neither is judgeable from a screenshot.
     Core/World/TransformInterpolationTests.cpp

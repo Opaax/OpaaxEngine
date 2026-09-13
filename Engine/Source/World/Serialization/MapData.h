@@ -47,6 +47,7 @@ namespace Opaax
         Guid                     Id;
         OpaaxString              Name;
         MapId                    OwnerMap;
+        Guid                     Parent;      // invalid => root (§HR); derived with Id by BuildInstance
         TDynArray<ComponentData> Components;
     };
 

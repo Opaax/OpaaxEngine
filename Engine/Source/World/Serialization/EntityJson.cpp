@@ -54,6 +54,16 @@ namespace Opaax
             lEntity.Name     = ReadString(lEntityJson, KEY_NAME);
             lEntity.OwnerMap = IdFromText(ReadString(lEntityJson, KEY_OWNER_MAP));
 
+            // Absent means root. Present but unreadable ALSO means root — and says so, because a
+            // child silently landing at its local pose as world is the misread the version bump
+            // exists to prevent, and a hand-edited guid is the one way it can still happen.
+            if (const OpaaxString lParentText = ReadString(lEntityJson, KEY_PARENT);
+                !lParentText.IsEmpty() && !Guid::FromString(lParentText, lEntity.Parent))
+            {
+                OPAAX_LOG(LogEntityJson, Warn, "Entity '{}' names an unreadable parent '{}' — read as a root",
+                          lEntity.Name.CStr(), lParentText.CStr());
+            }
+
             const auto lComponentsIt = lEntityJson.find(KEY_COMPONENTS);
             if (lComponentsIt != lEntityJson.end() && lComponentsIt->is_object())
             {

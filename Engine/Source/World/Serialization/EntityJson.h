@@ -40,6 +40,7 @@ namespace Opaax
         inline constexpr const char* KEY_GUID       = "guid";
         inline constexpr const char* KEY_NAME       = "name";
         inline constexpr const char* KEY_OWNER_MAP  = "ownerMap";
+        inline constexpr const char* KEY_PARENT     = "parent";       // omitted for a root (§HR)
         inline constexpr const char* KEY_COMPONENTS = "components";
 
         // =====================================================================
@@ -213,6 +214,13 @@ namespace Opaax
                 lEntityJson[KEY_NAME]       = lEntity->Name.CStr();
                 lEntityJson[KEY_OWNER_MAP]  = IdToText(lEntity->OwnerMap);
                 lEntityJson[KEY_COMPONENTS] = Move(lComponents);
+
+                // OMITTED for a root, so a map with no hierarchy re-serializes as it did before
+                // the key existed — the same reason `prefabInstances` is omitted when empty.
+                if (lEntity->Parent.IsValid())
+                {
+                    lEntityJson[KEY_PARENT] = lEntity->Parent.ToString().CStr();
+                }
 
                 lEntities.emplace_back(Move(lEntityJson));
             }

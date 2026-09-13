@@ -36,7 +36,7 @@ namespace Opaax
          * the new field and nothing else, which is the same forward-compatibility MapFactory
          * already gives unknown COMPONENTS.
          */
-        inline constexpr Uint32 MAP_FORMAT_VERSION = 3;
+        inline constexpr Uint32 MAP_FORMAT_VERSION = 4;
 
         /**
          * v2 (⑦-C P3) added `prefabInstances`, and THIS one had to bump where `mapId` did not.
@@ -63,6 +63,17 @@ namespace Opaax
          */
         inline constexpr Uint32 MAP_FORMAT_VERSION_PREFAB_REMOVALS = 3;
 
+        /**
+         * v4 (§HR) added `parent` on an entity, and with it TransformComponent became LOCAL to
+         * that parent. A v3 reader ignoring the key would place every child at its local pose as
+         * if it were world — a misread, hence the bump. The key is omitted for a root, so a map
+         * with no hierarchy differs from its v3 bytes by this number alone.
+         *
+         * Reading v1–v3 in a v4 build needs nothing: no `parent` means every entity is a root,
+         * whose local is its world.
+         */
+        inline constexpr Uint32 MAP_FORMAT_VERSION_PARENTS = 4;
+
         // ---- keys ---------------------------------------------------------------
         // `mapId` is the only key a MAP owns; everything else describes an ENTITY and is
         // EntityJson's, shared with the prefab format so the two cannot drift (⑦-C P1a).
@@ -81,6 +92,7 @@ namespace Opaax
         inline constexpr const char* KEY_GUID        = EntityJson::KEY_GUID;
         inline constexpr const char* KEY_NAME        = EntityJson::KEY_NAME;
         inline constexpr const char* KEY_OWNER_MAP   = EntityJson::KEY_OWNER_MAP;
+        inline constexpr const char* KEY_PARENT      = EntityJson::KEY_PARENT;
         inline constexpr const char* KEY_COMPONENTS  = EntityJson::KEY_COMPONENTS;
 
         // ---- dump forms ---------------------------------------------------------

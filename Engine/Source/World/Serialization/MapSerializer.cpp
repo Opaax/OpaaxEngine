@@ -17,6 +17,7 @@ namespace Opaax
             lData.Id       = InMeta.Id;
             lData.Name     = InMeta.Name;
             lData.OwnerMap = InMeta.OwnerMap;
+            lData.Parent   = InMeta.Parent;
 
             InRegistry.ForEach([&](const IComponentEntry& InEntry)
             {

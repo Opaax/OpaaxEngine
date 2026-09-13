@@ -275,7 +275,11 @@ namespace Opaax
             if (InMeta.OwnerMap == InMapId) { lDoomed.emplace_back(InId); }
         });
 
-        for (const EntityID lId : lDoomed) { m_World.DestroyEntity(lId); }
+        // IsValid per handle: a destroyed parent already took its children with it (§HR).
+        for (const EntityID lId : lDoomed)
+        {
+            if (m_World.IsValid(lId)) { m_World.DestroyEntity(lId); }
+        }
 
         OPAAX_LOG(LogLevel, Info, "Unmounted '{}' from world '{}' — {} entity(ies) destroyed",
                   m_Mounted[lFound].AssetRelPath.CStr(), m_World.GetName().CStr(), lDoomed.size());

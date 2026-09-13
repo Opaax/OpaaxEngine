@@ -140,13 +140,24 @@ namespace Opaax
             return;
         }
         
-        const EntityMeta* lMeta = m_Registry.try_get<EntityMeta>(InEntity);
-
-        if (lMeta != nullptr)
+        if (const EntityMeta* lMeta = m_Registry.try_get<EntityMeta>(InEntity))
         {
             OPAAX_LOG(LogWorld, Trace, "DestroyEntity — {}", lMeta->Name.CStr());
-            m_Guids.Unregister(lMeta->Id);
-        }else
+
+            // CASCADE (§HR): a child cannot outlive its parent. Collected first — destroying inside
+            // the view is unsafe, and the pool may move lMeta out from under us — then recursed.
+            const Guid lId = lMeta->Id;
+            m_Guids.Unregister(lId);
+
+            TDynArray<EntityID> lChildren;
+            m_Registry.view<EntityMeta>().each([&](const EntityID InId, const EntityMeta& InChild)
+            {
+                if (InChild.Parent == lId) { lChildren.emplace_back(InId); }
+            });
+
+            for (const EntityID lChild : lChildren) { DestroyEntity(lChild); }
+        }
+        else
         {
             OPAAX_LOG(LogWorld, Trace, "DestroyEntity — Unknown Entity destroy");
         }

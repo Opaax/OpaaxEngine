@@ -32,8 +32,11 @@ namespace Opaax
          * such record and nothing else. It bumped by that rule: a v1 reader skipping the records
          * would produce a prefab silently missing entities. The key is OMITTED when empty, so a
          * prefab placing nothing re-serializes identically but for this number.
+         *
+         * v3 (§HR) added `parent` on an entity, making its Transform LOCAL — MapJson's v4, same
+         * rule, same omission for a root.
          */
-        inline constexpr Uint32 PREFAB_FORMAT_VERSION = 2;
+        inline constexpr Uint32 PREFAB_FORMAT_VERSION = 3;
 
         // The document-level keys. Everything describing an ENTITY or a PLACEMENT is EntityJson's.
         inline constexpr const char* KEY_VERSION   = EntityJson::KEY_VERSION;
