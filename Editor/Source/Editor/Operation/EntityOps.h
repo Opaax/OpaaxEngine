@@ -66,8 +66,9 @@ namespace Opaax::Editor
          *
          * THE WHOLE INSTANCE IS SELECTED, not its first entity. That is what makes the gizmo move a
          * multi-entity prefab as one thing, and it costs nothing because the gizmo already
-         * transforms a list (**UN2**) — ⑦-C **K10**'s stand-in for parenting, which this block
-         * deliberately does not build.
+         * transforms a list (**UN2**). It was ⑦-C **K10**'s stand-in for parenting; with §HR a
+         * prefab authored with a root needs only that root moved, and a selection holding both a
+         * parent and its child moves the child once (TopmostOf).
          *
          * @return How many entities were created. 0 means refused, and the log says which reason.
          */

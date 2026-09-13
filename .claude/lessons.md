@@ -2612,3 +2612,29 @@ the state's deviations are the point.
   become on the other side of the verb; here they were the deliverable.
 - **A file-centric refusal in an authoring surface is a smell.** The document has a world; the
   verb should be defined on the world's state, with the file as its baseline.
+
+## L93 — A REFERENCE field must ride every remap its REFERENTS ride; enumerate the identity spaces and test the one nobody walks (2026-09-13)
+
+**What happened (parenting, H3).** `EntityMeta::Parent` is a guid naming another entity. Prefab
+guids live in three spaces — the file's raw template ids, a placement's `Derive(instance, tmpl)`,
+and a nested/variant's `Derive(record, tmpl)` composed again by the level. I derived the link in
+`BuildInstance` beside the id it names, made `Fold` diff against `BuildInstance`'s output so no child
+carried a phantom override, and every level test went green. Then the *variant* test: `BuildVariant`
+folds a world the prefab document holds in the RAW space (the base's own guids), but a record's
+patch is applied over DERIVED entities at Expand — so a re-parent recorded raw named nothing in the
+flat variant. The fix was to put the state on derived ids and links before folding, i.e. make the
+variant's world look like a placement, which is what it is. Caught by a test written *because* the
+path existed, not because I suspected it ([[L21]]'s shape); nothing in the level path could have
+shown it.
+
+**Rules for next time:**
+- **When a field is a REFERENCE, list every transformation its referents undergo** (derive, flatten,
+  variant-fold, restore, clone) and check the reference goes through the same one in each. A value
+  that survives one remap and not another is a dangling link with no crash and no null — the
+  worst class in this codebase's own taxonomy ([[L18]]).
+- **Two functions that must be inverses should share their baseline, not agree by accident.** Fold
+  diffed against the raw template while Expand applied over the built instance; they matched only
+  while `BuildInstance` touched fields the diff ignored. The first derived field broke the accident.
+  Make the inverse structural (diff against what the other side builds).
+- **Write the case for the identity space nobody edits in.** The document opens a BASE on raw guids;
+  every other path runs on derived ones. That asymmetry is exactly where a per-space rule hides.

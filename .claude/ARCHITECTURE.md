@@ -621,6 +621,8 @@ reaches the device through `IEngine`** (landed 2026-08-20 with `TextureResource`
 2026-08-27). `World::CreateEntityWithGuid` emplaces it beside `EntityMeta`, so it is present
 unconditionally and `Each<TransformComponent>` is a complete view. That guarantee is not tidiness —
 it is what the editor stands on, and it was pulled a whole block forward *because* of that.
+*Amended 2026-09-13 (**§HR**): the position is LOCAL to the entity's parent; a root's local is its
+world. Readers ask `EntityHierarchy::WorldTransform`, never the field.*
 - **The hole it filled:** `Position` used to live separately on `SpriteComponent`, `DummyComponent`
   and `CameraComponent`, so one entity could carry three of them and they could disagree — and an
   entity carrying none had **no position at all**, which meant it could not be picked, framed, or
@@ -3694,6 +3696,9 @@ merge-patch overrides and a `null` patch for a removal. Recorded here because it
 `MAP_FORMAT_VERSION` bump since this section was written, and it obeys **MP10**'s rule rather than
 breaking it: a v2 reader would produce a map **missing entities**, which is a misread, not an
 ignorable key.
+- **v4 (2026-09-13, §HR): an entity may name a `parent`, and its Transform is LOCAL to it.** Same
+  rule: a v3 reader ignoring the key places every child at local-as-world. Omitted for a root, so an
+  untouched map differs by the version alone. `PREFAB_FORMAT_VERSION` 2→3 for the same reason.
 
 **MP11 — A MANIFEST ENTRY THAT NEVER MOUNTED IS NAMED BY ITS PATH, AND MUST BE REMOVABLE** (landed
 2026-08-27, user-verified with the one click that fixed the level). A map whose file is missing,
@@ -3793,6 +3798,9 @@ words, and which never returns zero.
   `Derive(record.InstanceId, template)`, authored in the file; a level placement derives it once more,
   `Derive(placement, Derive(record, tmpl))`. Two placements of an outer prefab give 6 distinct guids
   with nothing stored and nothing remapped.
+- ***Amended 2026-09-13 (**HR5**): a link derives WITH the identity it names.* `EntityData::Parent`
+  naming an entity of the prefab becomes `Derive(instance, Parent)` in the same line — so each
+  barrel hangs under ITS base, and nesting composes the link exactly as it composes the guid.*
 
 **PF3 — A map stores the LINK and the DELTAS, not the entities** (`MAP_FORMAT_VERSION = 3`).
 `PrefabInstanceRecord { Prefab, InstanceId, Overrides[] }` under `prefabInstances`; records sorted by
@@ -3802,6 +3810,9 @@ prefab is byte-identical to a v2 one.
   understand produces a map **missing entities** — the misread that rule exists to catch.
 - Fold on capture, expand on mount (`Level::MountOne`). The editor's dirty check compares *folded*
   text, so an instance placed and left alone reports clean.
+- ***Amended 2026-09-13 (**HR5**): Fold diffs against the BUILT instance, not the raw template.*
+  Expand applies a patch over `BuildInstance`'s output, so that output is the only honest baseline
+  once a template field is derived; the record's patch carries `parent` beside `name`.*
 - **A PREFAB FILE HOLDS RECORDS TOO (P7, `PREFAB_FORMAT_VERSION` 1→2, by the same rule).** The key is
   omitted when empty, so a prefab placing nothing differs from v1 by the version number alone.
 
@@ -3817,6 +3828,8 @@ RFC 7386 merge-patch per entity (nlohmann ships the *applier*; `MakeMergePatch` 
   instance CHANGE" and never asked "what can an instance REMOVE"** ([[L87]]). A removed entity is now
   a `null` patch keyed by template guid; Revert stopped skipping entities that are missing, and
   `PrefabRevert::Created` is what lets undo destroy what a revert recreated.
+- *Amended 2026-09-13 (**HR6**): deleting a placement's parent entity takes its children with it,
+  and each is its own `null` patch — the cascade and the format agree without a special case.*
 
 **PF6 — A float from a file and a float from a capture are the same number.** `SameValue` compares at
 **float** precision when either side is a float, and integers exactly. json round-trips through
@@ -3990,6 +4003,101 @@ instance's own revert · hard-ref holds for runtime spawns and for editor placem
 the prefab panel (`ComponentAdd`/`ComponentRemove` take the `EUndoWorld` field the day the buttons
 exist) · a per-surface W/E/R mode (~1h; the shared mode is Unity's and Godot's, and the user
 confirmed it).
+
+---
+
+## HR — Parenting (landed 2026-09-13, H1–H5; the block ⑦-C's K10 stood in for)
+
+**The guarantee, which Unity, Godot and Unreal all rest on: you AUTHOR local, you READ world, and
+the two never disagree.** Their caches are an implementation of it; here there is none.
+
+**HR1 — The link is IDENTITY: `EntityMeta::Parent` (a Guid), not a component.** `EntityData`
+carries it flat beside `Id`/`Name`/`OwnerMap`; the file writes `parent` **only for a child**.
+- **Why not in a component:** `PrefabFactory::BuildInstance` copies payloads verbatim and derives
+  only the hand-written identity fields, and `Fold` diffs against a template — a guid inside a
+  payload would land every child of every placement with a phantom `parent` override, [[L89]]'s
+  shape one type over. The identity fields are the one place guids are already derived, so the
+  remap is one line there (**HR5**).
+- No cached `EntityID`: the hop is `World::FindByGuid`, one source of truth, nothing to go stale. A
+  parent that resolves to nothing reads as a **root**; `MapFactory::Instantiate` ends with a pass
+  that warns and clears such a link, or it would be saved back forever.
+- **Children are DERIVED, never stored** — `ForEachChild` is a scan over `EntityMeta`, the rule
+  that makes a Map a partition (**WM2**). The Hierarchy rebuilds its child map per pass.
+
+**HR2 — `TransformComponent` is LOCAL to the parent; a root's local is its world.** `Compose` /
+`ToLocal` sit below the struct (`ResolveDisplayPose`'s idiom, pure and tested). TRS only: a child
+rotated under a non-uniformly scaled parent is a shear three fields cannot hold — Unity's
+`lossyScale` limit, and the same reason the scale tool forces Local space. **Every map written
+before this block keeps its meaning**: no `parent` ⇒ every entity a root ⇒ local == world.
+
+**HR3 — World is WALKED, never cached.** `EntityHierarchy::ComposeChain` is the one walk, with the
+hop's local supplied by the caller: `WorldTransform` runs it over raw locals; the renderer's
+`PoseFor` over BLENDED ones, so a child of an interpolated body draws where the body draws, not
+one step behind. Depth-capped at 256 (legacy's number); a root takes a fast path with no sincos.
+No dirty flag, no propagation order, no stale-frame bug — an Inspector edit is visible to the pick
+on the same frame. **The cache is the growth point, gated on MP5's trigger: measure at 1k entities
+first.**
+
+**HR4 — Readers read WORLD; fixed-step writers write WORLD through the verb.** `TryGetBounds`
+(so picking, outline, marquee, focus, gizmo pivot follow — **SEL1**), both cameras, the collider
+outline and the gizmo's seat ask `WorldTransform`. Box2D and the mover work in world space: the
+body is built from the world pose and `SetWorldTransform` stores the local that lands there; the
+mover is handed a world COPY and its modes never learn about parents. The previous-pose record
+stays LOCAL — it mirrors the component. A gizmo delta applies to the world pose of the **topmost**
+selected (`TopmostOf`: a selected child of a selected parent moves once, through its parent — Unity's
+rule); a drop moves an instance's roots. For a root every one of these is bit-identical to before.
+
+**HR5 — A prefab's links derive WITH its guids, and Fold diffs against the BUILT instance.**
+`BuildInstance` derives an in-prefab parent beside the id it names, so each barrel hangs under ITS
+base (**PF2**, composed through nesting for free — `Flatten` derives within, the level derives
+again over the flat set). `BuildPrefab` drops a link to anything outside an **unfolded** capture
+(a document's own entity may legitimately hang under a nested instance's entity, and the flat set
+is not there to check against). **`Fold`'s baseline is `BuildInstance`'s output, not the raw
+template** — the same build `Expand` applies the patch over — which makes Fold structurally the
+inverse of Expand; before this block the two were equivalent by accident. `parent` rides in the
+patch beside `name` (`""` = detached), so a placement's root parented under a level entity is
+ONE override on that record — Unity's rule: an instance root's parent is scene state, not a prefab
+property. **`BuildVariant` puts the base's raw guids and in-base links on derived ones before
+folding**: the test found that a re-parent recorded raw dangled in the flat variant, since a
+record is applied over derived entities.
+- `CreatePrefabFromSelection` takes the SUBTREE (Unity's), captures an outside-parented root at
+  its WORLD pose (only the caller has the world; the file's roots are in prefab space), and hangs
+  the instance's root back under that parent after the swap — nothing moves, nothing changes place.
+
+**HR6 — `World::DestroyEntity` CASCADES** (Unity `Destroy`, Godot `queue_free`): a child cannot
+outlive its parent, enforced in the World rather than remembered by every caller. Collected first
+(the pool may move under the view), then recursed. Cost: a `ForEachChild` scan per destroy — a
+bullet is a root and still pays it. **Measured trigger:** a despawn-heavy profile; the fix is a
+child COUNT on `EntityMeta` at the `SetParent`/`Instantiate` chokepoints, not a children list.
+Bulk destroyers `IsValid`-check per handle so a cascaded child does not log "invalid entity".
+
+**HR7 — `SetParent` keeps the world pose and moves the subtree into the parent's map.**
+`worldPositionStays` / `keep_global_transform`: nothing visibly moves when a row is dragged. **A
+child lives in its parent's map** (the user's call): a mapped parent pulls the subtree's `OwnerMap`;
+a runtime-spawned parent pulls nothing and a runtime-spawned child stays runtime (**WM2**). Refuses
+self, a cycle, and a parent in another world — with a Warn, changing nothing.
+
+**HR8 — The Hierarchy is a TREE, and the tree is shared.** `EntityTreeView` draws one world's
+entities as tree rows and **BANKS a drop for the panel to spend after the walk** (**MP7**'s rule —
+a drop arrives mid-iteration). The Hierarchy buckets only ROOTS by map and draws each subtree
+under it; the prefab panel draws the same tree over its own world. A row onto a row nests; a row
+onto a **map header** roots it in that map (which is also "move to map" for free); a strip
+"Drop here to unparent" appears only while an entity payload is in flight. `EntityOps::Reparent`
+is the verb: scoped like Delete (`UndoStack` now sits beside `UndoWorld`/`UndoSelection`), records
+`EntityReparent` per subtree entity — parent, map, local, before and after — written back FIELD
+BY FIELD on replay, never through `SetParent`, which would recompute. **Detach from Parent** in
+both context menus; **Delete takes the subtree** in the level and in the prefab panel, so the step
+holds what the cascade would take.
+
+**HR9 — Format: map v4, prefab v3, by MP10's rule.** An old reader ignoring `parent` places every
+child at local-as-world — a misread, not an ignorable key. `parent` is omitted for a root, so a map
+with no hierarchy differs from its v3 bytes by the version alone; every existing file warns once at
+adopt (**MP6**) until the next Save Level.
+
+**Named, not built:** the world-pose cache (**HR3**'s trigger) · sibling order (no consumer — draw
+order is Layer/OrderInLayer) · dropping a PREFAB onto an entity row to instantiate as its child ·
+*Create Empty Child* · a read-only world-pose line in the Transform drawer · the child count on
+`EntityMeta` (**HR6**'s trigger).
 
 ---
 
