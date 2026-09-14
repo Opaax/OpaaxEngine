@@ -36,6 +36,13 @@
 #include "Editor/Panels/MoverPanel.h"
 #include "Editor/Panels/FontFamilyPanel.h"
 #include "Editor/EditorFontFamilyDocument.h"
+#include "Editor/Panels/UICanvasPanel.h"
+#include "Editor/EditorUICanvasDocument.h"
+#include "UI/UICanvasFile.h"
+#include "UI/Widgets/UIImage.h"
+#include "UI/Widgets/UIPanel.h"
+#include "UI/Widgets/UIText.h"
+#include "Engine/Subsystems/Resources/Types/UI/UICanvasResource.h"
 #include "Editor/Panels/PrefabPanel.h"
 #include "Renderer/RenderTarget.hpp"   // the panels own OffscreenRenderTargets by TUniquePtr
 #include "Editor/Panels/SpriteSheetPanel.h"
@@ -152,6 +159,7 @@ namespace Opaax::Editor
         m_ClipDocument      = MakeUnique<EditorAnimationClipDocument>();
         m_LibraryDocument   = MakeUnique<EditorAnimationLibraryDocument>();
         m_FamilyDocument    = MakeUnique<EditorFontFamilyDocument>();
+        m_UICanvasDocument  = MakeUnique<EditorUICanvasDocument>();
         m_MoveModeDocument  = MakeUnique<EditorMoveModeDocument>();
         m_MoverDocument     = MakeUnique<EditorMoverDocument>();
         m_InputActionDocument = MakeUnique<EditorInputActionDocument>();
@@ -196,6 +204,7 @@ namespace Opaax::Editor
             *m_ClipDocument,
             *m_LibraryDocument,
             *m_FamilyDocument,
+            *m_UICanvasDocument,
             *m_MoveModeDocument,
             *m_MoverDocument,
             *m_InputActionDocument,
@@ -274,6 +283,9 @@ namespace Opaax::Editor
         lFile.AddSeparator();
         lFile.AddCommand("Save Map", Tags::EDITOR_COMMAND_SAVE_MAP).SetEnabled(IsEditing);
         lFile.AddCommand("Save Map As...", Tags::EDITOR_COMMAND_SAVE_MAP_AS).SetEnabled(IsEditing);
+        lFile.AddSeparator();
+        lFile.AddSeparator();
+        lFile.AddCommand("New UI...", Tags::EDITOR_COMMAND_NEW_UI);
         lFile.AddSeparator();
         lFile.AddCommand("Open Level...", Tags::EDITOR_COMMAND_OPEN_LEVEL);
         lFile.AddCommand("Save Level", Tags::EDITOR_COMMAND_SAVE_LEVEL).SetEnabled(IsEditing);
@@ -366,6 +378,7 @@ namespace Opaax::Editor
         lPanelsRegistry.Register<InputActionPanel>(PanelDesc{.Id = InputActionPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_INPUT_ACTION});
         lPanelsRegistry.Register<InputMappingContextPanel>(PanelDesc{.Id = InputMappingContextPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_INPUT_MAP});
         lPanelsRegistry.Register<FontFamilyPanel>(PanelDesc{.Id = FontFamilyPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_FAMILY});
+        lPanelsRegistry.Register<UICanvasPanel>(PanelDesc{.Id = UICanvasPanel::PanelID(), .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_UI});
         lPanelsRegistry.Register<ConfigPanel>(PanelDesc         {.Id = ConfigPanel::PanelID(),          .DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<InputPanel>(PanelDesc          {.Id = InputPanel::PanelID(),           .DefaultVisibility = EPanelVisibility::Hidden });
         lPanelsRegistry.Register<StatsPanel>(PanelDesc          {.Id = StatsPanel::PanelID(),           .DefaultVisibility = EPanelVisibility::Hidden });
@@ -419,6 +432,10 @@ namespace Opaax::Editor
         lCommands.Register<SaveInputActionCommand>(Tags::EDITOR_COMMAND_SAVE_INPUT_ACTION);
         lCommands.Register<SaveInputMapCommand>(Tags::EDITOR_COMMAND_SAVE_INPUT_MAP);
         lCommands.Register<SaveFamilyCommand>(Tags::EDITOR_COMMAND_SAVE_FAMILY);
+
+        // UI U4 — a first-class document type gets its own New, the way a map and a level do.
+        lCommands.Register<NewUICommand>(Tags::EDITOR_COMMAND_NEW_UI);
+        lCommands.Register<SaveUICommand>(Tags::EDITOR_COMMAND_SAVE_UI);
         lCommands.Register<AddMapToLevelCommand>(Tags::EDITOR_COMMAND_ADD_MAP_TO_LEVEL);
 
         lCommands.Register<TransformSelectedCommand>(Tags::EDITOR_COMMAND_TRANSFORM_SELECTED);
@@ -568,6 +585,20 @@ namespace Opaax::Editor
                 if (InContext.FamilyDocument.Open(InFile.AbsPath))
                 {
                     InContext.Panels.SetVisible(FontFamilyPanel::PanelID(), true);
+                }
+            });
+
+        // A canvas opens its EDITOR, for the family's and the sheet's reason: it is a document.
+        m_Extensions.ResourceTypes().Register<UICanvasResource>()
+            .SetGlyph(OpaaxString("[UI]"))
+            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
+            {
+                const UIWidgetRegistry& lRegistry =
+                    OpaaxApplication::GetAppService<IEngine>().GetRegistries().UIWidgets();
+
+                if (InContext.UICanvasDocument.Open(InFile.AbsPath, lRegistry))
+                {
+                    InContext.Panels.SetVisible(UICanvasPanel::PanelID(), true);
                 }
             });
 

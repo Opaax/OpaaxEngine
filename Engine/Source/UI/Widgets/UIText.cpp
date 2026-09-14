@@ -1,5 +1,6 @@
 #include "UI/Widgets/UIText.h"
 
+#include "Core/Reflection/OpaaxEnumJson.h"
 #include "Renderer/Text/Text2D.h"
 
 namespace Opaax
@@ -42,6 +43,36 @@ namespace Opaax
     // =============================================================================
     // UIWidget
     // =============================================================================
+
+    void UIText::SaveFields(nlohmann::json& InOutJson) const
+    {
+        UIWidget::SaveFields(InOutJson);
+
+        InOutJson["Text"]            = Text;
+        InOutJson["Font"]            = Font;
+        InOutJson["Size"]            = Size;
+        InOutJson["Color"]           = Color;
+        InOutJson["HAlign"]          = HAlign;
+        InOutJson["VAlign"]          = VAlign;
+        InOutJson["bWrap"]           = bWrap;
+        InOutJson["LineHeightScale"] = LineHeightScale;
+        InOutJson["bKerning"]        = bKerning;
+    }
+
+    void UIText::LoadFields(const nlohmann::json& InJson)
+    {
+        UIWidget::LoadFields(InJson);
+
+        Text            = InJson.value("Text", Text);
+        Font            = InJson.value("Font", Font);
+        Size            = InJson.value("Size", Size);
+        Color           = InJson.value("Color", Color);
+        HAlign          = InJson.value("HAlign", HAlign);
+        VAlign          = InJson.value("VAlign", VAlign);
+        bWrap           = InJson.value("bWrap", bWrap);
+        LineHeightScale = InJson.value("LineHeightScale", LineHeightScale);
+        bKerning        = InJson.value("bKerning", bKerning);
+    }
 
     void UIText::Rebuild(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads)
     {

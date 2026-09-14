@@ -1,8 +1,11 @@
 #pragma once
 
+#include <nlohmann/json.hpp>
+
 #include "Core/EngineAPI.h"
 #include "Core/Maths/Bounds2D.h"
 #include "Core/Maths/MathTypes.h"
+#include "Core/Maths/MathsJson.hpp"
 #include "Core/Reflection/OpaaxProperty.h"
 
 namespace Opaax
@@ -30,6 +33,11 @@ namespace Opaax
 
         /** Size minus the anchor rect's size — the full size for a point anchor. */
         Vector2F SizeDelta = { 100.f, 100.f };
+
+        // _WITH_DEFAULT is required, not preferred: the plain macro reads with at(), which THROWS
+        // on a missing key, so adding a field here would refuse every `.opaaxui` written before it.
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(UIRect,
+                                                    AnchorMin, AnchorMax, Pivot, AnchoredPosition, SizeDelta)
 
         OPAAX_PROPERTIES(UIRect,
                          OPAAX_PROP(AnchorMin).SetRange(0.f, 1.f),

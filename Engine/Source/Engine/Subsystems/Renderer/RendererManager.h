@@ -6,6 +6,7 @@
 #include "Application/Services/ILogger.h"
 #include "Engine/Subsystems/EngineSubsystem.h"
 #include "Engine/Subsystems/Resources/ResourceRef.hpp"   // the texture cache holds Refs BY VALUE
+#include "RHI/ICommandBuffer.h"    // ELoadOp — a canvas pass says whether it keeps what is there
 #include "Renderer/CameraView.h"  // a submitted view holds one BY VALUE
 #include "Renderer/DebugDraw.h"   // owned BY VALUE — full type, not a forward decl
 #include "UI/UIFontProvider.h"    // implemented here: the face cache below IS the provider
@@ -120,6 +121,9 @@ namespace Opaax
          */
         void RenderCanvases(IRenderTarget& InTarget);
 
+        /** One canvas alone in InTarget, cleared first — the panel-preview path (**UI14**). */
+        void RenderCanvasPass(UICanvas& InCanvas, IRenderTarget& InTarget, ELoadOp InLoadOp);
+
         /**
          * Say ONCE that a frame needed more than one pass, naming the count.
          *
@@ -232,8 +236,10 @@ namespace Opaax
          * Draw InCanvas over every view that asked for UI, THIS FRAME ONLY — SubmitRenderView's
          * idiom: cleared every frame, so a canvas that stops being submitted stops being drawn.
          * @param InCanvas BORROWED for the frame; the submitter owns it (I5).
+         * @param InTarget Null = over every view that opted into UI. Named = that target alone,
+         *   with its own Clear pass — an editor panel previewing one document (**UI14**).
          */
-        void SubmitUICanvas(UICanvas& InCanvas);
+        void SubmitUICanvas(UICanvas& InCanvas, IRenderTarget* InTarget = nullptr);
 
         /**
          * Create an offscreen framebuffer on the render core's device (F2a). The natural companion to
@@ -307,8 +313,15 @@ namespace Opaax
         // so a steady frame allocates nothing.
         TDynArray<RenderPassRequest> m_SubmittedViews;
 
+        /** One submitted canvas: what to draw, and whether it belongs to one target alone. */
+        struct UICanvasRequest
+        {
+            UICanvas*      Canvas = nullptr;   // non-owning; the submitter owns it (I5)
+            IRenderTarget* Target = nullptr;   // null = the over-the-world path
+        };
+
         /** This frame's canvases, same lifetime as the views above. */
-        TDynArray<UICanvas*> m_SubmittedCanvases;
+        TDynArray<UICanvasRequest> m_SubmittedCanvases;
 
         /** The frame's UI work, summed over canvases and views, published as counters (ST). */
         Uint32 m_UILayouts  = 0;

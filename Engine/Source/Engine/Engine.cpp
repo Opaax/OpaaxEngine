@@ -21,6 +21,11 @@
 #include "Engine/GameInstance/GameInstanceManager.h"
 #include "Engine/Input/InputMappingSubsystem.h"
 #include "Engine/UI/UISubsystem.h"
+#include "Engine/Subsystems/Resources/Types/UI/UICanvasResource.h"
+#include "UI/Widgets/UIButton.h"
+#include "UI/Widgets/UIImage.h"
+#include "UI/Widgets/UIPanel.h"
+#include "UI/Widgets/UIText.h"
 #include "Engine/Subsystems/Resources/Types/Input/InputActionResource.h"
 #include "Engine/Subsystems/Resources/Types/Input/InputMappingContextResource.h"
 #include "Engine/Subsystems/Resources/ResourceManager.h"
@@ -67,6 +72,7 @@ namespace Opaax
         RegisterNativeWorldSubsystems();
         RegisterNativeMoverModes();
         RegisterNativeGameInstanceSubsystems();
+        RegisterNativeUIWidgets();
     }
 
     Engine::~Engine()
@@ -146,6 +152,20 @@ namespace Opaax
         // for MapResource's reasons — dedup above all: a level placing forty instances of one
         // prefab parses the file once.
         m_Registries.Resources().Register<PrefabResource>(OPAAX_ID("Prefab"));
+
+        // UI U4. An authored widget tree. The runtime BUILDS one per instance out of the text it
+        // holds, so a HUD is an asset rather than a function (**UI13**).
+        m_Registries.Resources().Register<UICanvasResource>(OPAAX_ID("UICanvas"));
+    }
+
+    void Engine::RegisterNativeUIWidgets()
+    {
+        // The names a `.opaaxui` may carry. A game module adds its own through the registrar, and
+        // an unknown one is a skipped NODE rather than a refused file (**UI12**).
+        m_Registries.UIWidgets().Register<UIPanel>(OPAAX_ID("UIPanel"));
+        m_Registries.UIWidgets().Register<UIImage>(OPAAX_ID("UIImage"));
+        m_Registries.UIWidgets().Register<UIText>(OPAAX_ID("UIText"));
+        m_Registries.UIWidgets().Register<UIButton>(OPAAX_ID("UIButton"));
     }
 
     void Engine::RegisterNativeWorldSubsystems()
@@ -630,11 +650,11 @@ namespace Opaax
         }
     }
 
-    void Engine::SubmitUICanvas(UICanvas& InCanvas)
+    void Engine::SubmitUICanvas(UICanvas& InCanvas, IRenderTarget* InTarget)
     {
         if (m_RendererManager != nullptr)
         {
-            m_RendererManager->SubmitUICanvas(InCanvas);
+            m_RendererManager->SubmitUICanvas(InCanvas, InTarget);
         }
     }
 

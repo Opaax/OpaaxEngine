@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Color/LinearColor.h"
+#include "Core/Color/LinearColorJson.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Reflection/OpaaxEnum.h"
 #include "Core/String/OpaaxStringID.hpp"
@@ -62,6 +63,9 @@ namespace Opaax
         // =============================================================================
     public:
         OpaaxStringID GetTypeName() const noexcept override { return OPAAX_ID("UIImage"); }
+
+        void SaveFields(nlohmann::json& InOutJson) const override;
+        void LoadFields(const nlohmann::json& InJson) override;
 
     protected:
         void Rebuild(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads) override;

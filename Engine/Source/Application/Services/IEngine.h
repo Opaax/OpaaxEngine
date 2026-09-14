@@ -133,8 +133,11 @@ namespace Opaax
          * Draw InCanvas over every view that opted into UI, THIS FRAME ONLY — the submission idiom
          * above. The GameInstance's UI tenant is the caller; a canvas it stops submitting stops drawing.
          * @param InCanvas BORROWED for the frame (I5).
+         * @param InTarget WHERE it draws. Null = over every view that opted into UI (the game).
+         *   Named = that target ALONE, cleared first — an editor panel previewing its own document
+         *   (**UI14**), which must not receive the game's canvases nor donate its own to the world.
          */
-        virtual void SubmitUICanvas(UICanvas& InCanvas) = 0;
+        virtual void SubmitUICanvas(UICanvas& InCanvas, IRenderTarget* InTarget = nullptr) = 0;
         
         /**
          * The CALLER owns the result and must release it while the engine — and its GPU context — is still alive. 

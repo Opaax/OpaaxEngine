@@ -137,6 +137,9 @@ set(OPAAX_TEST_SOURCES
     # one level up in Core/Engine/UIInputRouterTests.cpp against a real InputManager.
     UI/UIEventTests.cpp
     UI/UIButtonTests.cpp
+    # U4. The `.opaaxui` format: a widget serializes itself, the registry rebuilds it. The
+    # round trip is the gate a smoke run cannot be — it sees a HUD, not whether a field survived.
+    UI/UICanvasFileTests.cpp
 
     # Editor-side, and the FIRST of its kind — header-only editor types only (see the include dir
     # below). ③'s gizmo delta math, pinned after a scale bug that only showed away from (0,0).

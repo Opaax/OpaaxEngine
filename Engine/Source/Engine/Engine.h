@@ -81,6 +81,9 @@ namespace Opaax
          * creates, in order, when StartGame runs.
          */
         void RegisterNativeGameInstanceSubsystems();
+
+        /** UI U4 — the widget types a `.opaaxui` may name (**UI12**). */
+        void RegisterNativeUIWidgets();
         
         /** Cache convenient subsystems */
         void CacheSubsystems();
@@ -154,7 +157,7 @@ namespace Opaax
         void                        SubmitRenderView(IRenderTarget& InTarget, const CameraView& InView,
                                                      bool bInDrawOverlays, World* InSource = nullptr,
                                                      bool bInDrawUI = false) override;
-        void                        SubmitUICanvas(UICanvas& InCanvas) override;
+        void                        SubmitUICanvas(UICanvas& InCanvas, IRenderTarget* InTarget = nullptr) override;
         TUniquePtr<IFramebuffer>    CreateFramebuffer(const FramebufferSpec& InSpec) override;
         TUniquePtr<ITexture2D>      CreateTexture(const void* InPixels, Uint32 InWidth,
                                                   Uint32 InHeight, Int32 InChannels) override;

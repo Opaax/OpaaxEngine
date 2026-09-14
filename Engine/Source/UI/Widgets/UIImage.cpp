@@ -2,6 +2,8 @@
 
 #include <algorithm>
 
+#include "Core/Reflection/OpaaxEnumJson.h"
+
 namespace Opaax
 {
     void UIImage::SetColor(const LinearColor& InColor)
@@ -27,6 +29,26 @@ namespace Opaax
     {
         m_Texture = InTexture;
         InvalidateContent();
+    }
+
+    void UIImage::SaveFields(nlohmann::json& InOutJson) const
+    {
+        UIWidget::SaveFields(InOutJson);
+
+        // Texture is NOT written: it is a borrowed runtime pointer. A texture PATH field arrives
+        // with the sliced image (U5), which is when a UI image first names an asset.
+        InOutJson["Color"]      = Color;
+        InOutJson["Fill"]       = Fill;
+        InOutJson["FillAmount"] = FillAmount;
+    }
+
+    void UIImage::LoadFields(const nlohmann::json& InJson)
+    {
+        UIWidget::LoadFields(InJson);
+
+        Color      = InJson.value("Color", Color);
+        Fill       = InJson.value("Fill", Fill);
+        FillAmount = InJson.value("FillAmount", FillAmount);
     }
 
     void UIImage::Rebuild(const UIBuildContext& /*InContext*/, TDynArray<UIQuad>& OutQuads)

@@ -66,6 +66,44 @@ namespace Opaax
         return lRemoved;
     }
 
+    UIWidget* UIWidget::FindByName(const OpaaxString& InName)
+    {
+        if (Name == InName)
+        {
+            return this;
+        }
+
+        for (const TUniquePtr<UIWidget>& lChild : m_Children)
+        {
+            if (UIWidget* lFound = lChild->FindByName(InName))
+            {
+                return lFound;
+            }
+        }
+
+        return nullptr;
+    }
+
+    // =============================================================================
+    // Serialization
+    // =============================================================================
+
+    void UIWidget::SaveFields(nlohmann::json& InOutJson) const
+    {
+        InOutJson["Name"]         = Name;
+        InOutJson["Rect"]         = Rect;
+        InOutJson["bVisible"]     = bVisible;
+        InOutJson["bHitTestable"] = bHitTestable;
+    }
+
+    void UIWidget::LoadFields(const nlohmann::json& InJson)
+    {
+        Name         = InJson.value("Name", Name);
+        Rect         = InJson.value("Rect", Rect);
+        bVisible     = InJson.value("bVisible", bVisible);
+        bHitTestable = InJson.value("bHitTestable", bHitTestable);
+    }
+
     void UIWidget::SetCanvasRecursive(UICanvas* InCanvas)
     {
         m_Canvas = InCanvas;

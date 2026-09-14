@@ -62,6 +62,29 @@ namespace Opaax
         }
     }
 
+    void UIButton::SaveFields(nlohmann::json& InOutJson) const
+    {
+        UIWidget::SaveFields(InOutJson);
+
+        // OnClick is NOT written: a handler is code. Gameplay binds it by NAME after loading (UI13).
+        InOutJson["Normal"]   = Normal;
+        InOutJson["Hovered"]  = Hovered;
+        InOutJson["Pressed"]  = Pressed;
+        InOutJson["Disabled"] = Disabled;
+        InOutJson["bEnabled"] = bEnabled;
+    }
+
+    void UIButton::LoadFields(const nlohmann::json& InJson)
+    {
+        UIWidget::LoadFields(InJson);
+
+        Normal   = InJson.value("Normal", Normal);
+        Hovered  = InJson.value("Hovered", Hovered);
+        Pressed  = InJson.value("Pressed", Pressed);
+        Disabled = InJson.value("Disabled", Disabled);
+        bEnabled = InJson.value("bEnabled", bEnabled);
+    }
+
     void UIButton::Rebuild(const UIBuildContext& /*InContext*/, TDynArray<UIQuad>& OutQuads)
     {
         UIQuad& lQuad = OutQuads.emplace_back();

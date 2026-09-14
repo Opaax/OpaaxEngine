@@ -16,9 +16,11 @@ namespace Opaax
 namespace Sandbox
 {
     /**
-     * The first HUD (UI U2): a jump counter top-left, a speed bar bottom-left, over the Play
-     * world. Hangs its ONE panel under the GameInstance's persistent canvas on Startup and takes
-     * it back on Shutdown, so a level swap leaves the canvas clean.
+     * The HUD (UI U2, AUTHORED since U4): a jump counter and a speed bar over the Play world.
+     *
+     * The tree is NOT built here — it is loaded from `UI/Hud.opaaxui` and hung under the
+     * GameInstance's persistent canvas; this only binds the pieces it DRIVES, by name. A widget the
+     * author renames goes quiet with a log line rather than silently doing nothing.
      */
     class HudSubsystem final : public Opaax::WorldSubsystemBase
     {
@@ -41,8 +43,8 @@ namespace Sandbox
     private:
         Opaax::WorldContext* m_Context = nullptr;   // borrowed; the World owns it
 
-        Opaax::UIWidget* m_Panel = nullptr;   // owned by the canvas until Shutdown takes it back
-        Opaax::UIText*   m_Jumps = nullptr;
+        Opaax::UIWidget* m_Root  = nullptr;   // owned by the canvas until Shutdown takes it back
+        Opaax::UIText*   m_Jumps = nullptr;   // resolved by name out of the authored tree
         Opaax::UIImage*  m_Speed = nullptr;
 
         Opaax::Uint32 m_JumpCount = 0;

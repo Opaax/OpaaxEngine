@@ -1,11 +1,14 @@
 #pragma once
 
+#include <nlohmann/json.hpp>
+
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Maths/Bounds2D.h"
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
+#include "Core/String/OpaaxStringJson.h"
 #include "UI/UIEvents.h"
 #include "UI/UIFontProvider.h"
 #include "UI/UIQuad.h"
@@ -92,6 +95,30 @@ namespace Opaax
 
         /** The canvas this node hangs under, or null while detached. */
         UICanvas* GetCanvas() const noexcept { return m_Canvas; }
+
+        /**
+         * The first descendant (or me) named InName, depth-first in tree order. Null when none is.
+         *
+         * How gameplay reaches an AUTHORED widget: a HUD loads its tree from a `.opaaxui` and binds
+         * the pieces it drives by name (**UI13**). First match wins — a duplicate name is an
+         * authoring mistake the editor shows, not something to arbitrate here.
+         */
+        UIWidget* FindByName(const OpaaxString& InName);
+
+        // =============================================================================
+        // Serialization — the base writes its own fields; a derived type chains (UI12)
+        // =============================================================================
+    public:
+        /**
+         * Write MY fields (not my type tag, not my children) into InOutJson.
+         *
+         * An override calls `UIWidget::SaveFields` first, then adds its own — so a field on the
+         * base is written once, for every widget type, and a new leaf type states only what is new.
+         */
+        virtual void SaveFields(nlohmann::json& InOutJson) const;
+
+        /** The mirror. A missing key keeps the constructed default, never throws (UI12). */
+        virtual void LoadFields(const nlohmann::json& InJson);
 
         // =============================================================================
         // Input — override to take an event; the default lets it bubble on

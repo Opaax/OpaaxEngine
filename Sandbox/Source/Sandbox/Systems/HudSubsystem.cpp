@@ -4,13 +4,18 @@
 
 #include <glm/geometric.hpp>   // glm::length
 
+#include "Application/OpaaxApplication.h"
 #include "Application/Services/ILogger.h"
+#include "Application/Services/IEngine.h"
+#include "Application/Services/IPaths.h"
 #include "Engine/Input/InputMappingSubsystem.h"
 #include "Engine/Input/InputTypes.h"
+#include "Engine/Registries/EngineRegistries.h"
+#include "Engine/Subsystems/Resources/ResourceManager.h"
+#include "Engine/Subsystems/Resources/Types/UI/UICanvasResource.h"
 #include "Engine/UI/UISubsystem.h"
 #include "UI/UICanvas.h"
 #include "UI/Widgets/UIImage.h"
-#include "UI/Widgets/UIPanel.h"
 #include "UI/Widgets/UIText.h"
 #include "World/Components/MoverComponent.h"
 #include "World/Systems/WorldContext.h"
@@ -26,28 +31,13 @@ namespace Sandbox
 
         const OpaaxStringID kJumpAction = OPAAX_ID("Jump");
 
-        constexpr const char* kFace = "/Engine/Fonts/Roboto/roboto-latin-700-normal.ttf";
+        /** The authored tree, and the two widgets this drives inside it. */
+        constexpr const char* kHudAsset  = "UI/Hud.opaaxui";
+        constexpr const char* kJumpsName = "Jumps";
+        constexpr const char* kSpeedName = "SpeedFill";
 
         /** MoveModeData's default MaxSpeed — the bar is full at it. A constant until a HUD reads tunings. */
         constexpr float kFullSpeed = 400.f;
-
-        UIRect Corner(const Vector2F& InAnchor, const Vector2F& InOffset, const Vector2F& InSize)
-        {
-            UIRect lRect;
-            lRect.AnchorMin = lRect.AnchorMax = lRect.Pivot = InAnchor;
-            lRect.AnchoredPosition = InOffset;
-            lRect.SizeDelta        = InSize;
-            return lRect;
-        }
-
-        UIRect Stretched()
-        {
-            UIRect lRect;
-            lRect.AnchorMin = { 0.f, 0.f };
-            lRect.AnchorMax = { 1.f, 1.f };
-            lRect.SizeDelta = { 0.f, 0.f };
-            return lRect;
-        }
     }
 
     bool HudSubsystem::ShouldCreate(const World& InWorld)
@@ -63,41 +53,48 @@ namespace Sandbox
             return true;
         }
 
+        IEngine&          lEngine  = OpaaxApplication::GetAppService<IEngine>();
+        const OpaaxString lAbsPath = m_Context->Paths.AssetToAbsolute(OpaaxString(kHudAsset));
+
+        ResourceRef<UICanvasResource> lRef = m_Context->Resources.Load<UICanvasResource>(lAbsPath.CStr());
+        const UICanvasResource* const lResource = lRef.IsValid() ? lRef.Get() : nullptr;
+
+        if (lResource == nullptr)
+        {
+            OPAAX_LOG(LogHud, Error, "HUD asset '{}' did not load — no HUD is drawn.", kHudAsset);
+            return true;
+        }
+
+        float lReferenceHeight = 0.f;
+        TUniquePtr<UIWidget> lTree = lResource->BuildTree(lEngine.GetRegistries().UIWidgets(), lReferenceHeight);
+
+        if (!lTree)
+        {
+            OPAAX_LOG(LogHud, Error, "HUD asset '{}' did not parse — no HUD is drawn.", kHudAsset);
+            return true;
+        }
+
         UICanvas& lCanvas = m_Context->UI->GetCanvas();
+        m_Root = lCanvas.Root().AddChild(Move(lTree));
 
-        // One node of mine under the canvas root, so Shutdown takes exactly one thing back.
-        m_Panel = lCanvas.Root().AddChild(MakeUnique<UIPanel>());
-        m_Panel->Name = "Hud";
-        m_Panel->SetRect(Stretched());
+        // Bound BY NAME out of the authored tree (UI13). A rename is a quiet HUD, so it says so.
+        m_Jumps = static_cast<UIText*>(m_Root->FindByName(OpaaxString(kJumpsName)));
+        m_Speed = static_cast<UIImage*>(m_Root->FindByName(OpaaxString(kSpeedName)));
 
-        auto lJumps = MakeUnique<UIText>();
-        lJumps->Name = "Jumps";
-        lJumps->SetRect(Corner({ 0.f, 1.f }, { 24.f, -24.f }, { 600.f, 60.f }));
-        lJumps->SetFont(kFace);
-        lJumps->SetSize(40.f);
-        lJumps->SetText("Jumps: 0");
-        m_Jumps = static_cast<UIText*>(m_Panel->AddChild(std::move(lJumps)));
-
-        auto lTrack = MakeUnique<UIImage>();
-        lTrack->Name = "SpeedTrack";
-        lTrack->SetRect(Corner({ 0.f, 0.f }, { 24.f, 24.f }, { 320.f, 28.f }));
-        lTrack->SetColor({ 0.08f, 0.08f, 0.1f, 0.85f });
-        UIWidget* lTrackWidget = m_Panel->AddChild(std::move(lTrack));
-
-        auto lFill = MakeUnique<UIImage>();
-        lFill->Name = "SpeedFill";
-        lFill->SetRect(Stretched());
-        lFill->SetColor({ 0.2f, 0.85f, 0.35f, 1.f });
-        lFill->SetFill(EUIFill::Horizontal, 0.f);
-        m_Speed = static_cast<UIImage*>(lTrackWidget->AddChild(std::move(lFill)));
+        if (m_Jumps == nullptr || m_Speed == nullptr)
+        {
+            OPAAX_LOG(LogHud, Error, "HUD loaded but '{}' or '{}' is not in it — that piece stays static.",
+                      kJumpsName, kSpeedName);
+        }
 
         if (m_Context->Actions != nullptr)
         {
             m_Context->Actions->Bind(kJumpAction, EInputTrigger::Started, this, &HudSubsystem::OnJump);
         }
 
-        OPAAX_LOG(LogHud, Info, "HUD started — {} widget(s) under '{}', face '{}'",
-                  4, m_Panel->Name.CStr(), kFace);
+        OPAAX_LOG(LogHud, Info, "HUD loaded '{}' — {} widget(s), reference height {}, Jumps {}, SpeedFill {}",
+                  kHudAsset, UICanvasFile::CountWidgets(*m_Root), lReferenceHeight,
+                  m_Jumps != nullptr ? "bound" : "MISSING", m_Speed != nullptr ? "bound" : "MISSING");
         return true;
     }
 
@@ -129,12 +126,12 @@ namespace Sandbox
         }
 
         // The canvas outlives this world (GI1); the HUD does not.
-        if (m_Panel != nullptr && m_Context->UI != nullptr)
+        if (m_Root != nullptr && m_Context->UI != nullptr)
         {
-            m_Context->UI->GetCanvas().Root().RemoveChild(*m_Panel);
+            m_Context->UI->GetCanvas().Root().RemoveChild(*m_Root);
         }
 
-        m_Panel = nullptr;
+        m_Root  = nullptr;
         m_Jumps = nullptr;
         m_Speed = nullptr;
 

@@ -308,6 +308,16 @@ namespace Opaax
             }
         }
 
+        // A targeted canvas is drawable on its own — a UI panel open with no viewport still renders.
+        for (const UICanvasRequest& lCanvasRequest : m_SubmittedCanvases)
+        {
+            if (lCanvasRequest.Target != nullptr && lCanvasRequest.Target->GetWidth() > 0
+                && lCanvasRequest.Target->GetHeight() > 0)
+            {
+                ++lPasses;
+            }
+        }
+
         if (lPasses == 0) { return; }
 
         ReportPassCount(lPasses);
@@ -329,6 +339,16 @@ namespace Opaax
             if (lRequest.bDrawUI && !m_SubmittedCanvases.empty())
             {
                 RenderCanvases(*lRequest.Target);
+            }
+        }
+
+        // A canvas that named its own target is a pass of its OWN, with no world under it — the
+        // editor previewing one document (**UI14**). Cleared, because nothing else drew there.
+        for (const UICanvasRequest& lCanvasRequest : m_SubmittedCanvases)
+        {
+            if (lCanvasRequest.Target != nullptr)
+            {
+                RenderCanvasPass(*lCanvasRequest.Canvas, *lCanvasRequest.Target, ELoadOp::Clear);
             }
         }
 
@@ -414,32 +434,47 @@ namespace Opaax
         const Uint32 lWidth  = InTarget.GetWidth();
         const Uint32 lHeight = InTarget.GetHeight();
 
-        const UIBuildContext lContext{ this };
-
-        for (UICanvas* lCanvas : m_SubmittedCanvases)
+        for (const UICanvasRequest& lRequest : m_SubmittedCanvases)
         {
-            lCanvas->SetTargetSize(lWidth, lHeight);
-
-            const UICanvasStats lStats = lCanvas->Update(lContext);
-            m_UILayouts  += lStats.Layouts;
-            m_UIRebuilds += lStats.Rebuilds;
-
-            RenderView lView;
-            lView.ViewProjection = MakeViewProjection(lCanvas->MakeView(), lWidth, lHeight);
-            lView.Viewport       = Viewport{ 0, 0, lWidth, lHeight };
+            // A canvas that named a target is that target's alone — it does not pour into the
+            // world's views, and the world's canvases do not pour into it (**UI14**).
+            if (lRequest.Target != nullptr) { continue; }
 
             // Load, not Clear: the world is already in this target and the canvas goes over it.
-            m_RenderSystem->BeginPass(InTarget, lView, ELoadOp::Load);
-            lCanvas->Submit(m_RenderSystem->GetRenderer2D());
-            m_RenderSystem->EndPass();
+            RenderCanvasPass(*lRequest.Canvas, InTarget, ELoadOp::Load);
         }
 
         if (!m_bLoggedFirstUI)
         {
             m_bLoggedFirstUI = true;
             OPAAX_LOG(LogRendererManager, Info, "First UI frame: {} canvas(es) over a {}x{} target, {} layout(s)",
-                      m_SubmittedCanvases.size(), lWidth, lHeight, m_UILayouts);
+                      static_cast<Uint64>(m_SubmittedCanvases.size()), lWidth, lHeight, m_UILayouts);
         }
+    }
+
+    void RendererManager::RenderCanvasPass(UICanvas& InCanvas, IRenderTarget& InTarget, const ELoadOp InLoadOp)
+    {
+        const Uint32 lWidth  = InTarget.GetWidth();
+        const Uint32 lHeight = InTarget.GetHeight();
+
+        if (lWidth == 0 || lHeight == 0) { return; }
+
+        // The TARGET says how wide the canvas is (UI2), so the layout happens here rather than in
+        // whoever submitted it — Unity's willRenderCanvases.
+        InCanvas.SetTargetSize(lWidth, lHeight);
+
+        const UIBuildContext lContext{ this };
+        const UICanvasStats  lStats = InCanvas.Update(lContext);
+        m_UILayouts  += lStats.Layouts;
+        m_UIRebuilds += lStats.Rebuilds;
+
+        RenderView lView;
+        lView.ViewProjection = MakeViewProjection(InCanvas.MakeView(), lWidth, lHeight);
+        lView.Viewport       = Viewport{ 0, 0, lWidth, lHeight };
+
+        m_RenderSystem->BeginPass(InTarget, lView, InLoadOp);
+        InCanvas.Submit(m_RenderSystem->GetRenderer2D());
+        m_RenderSystem->EndPass();
     }
 
     void RendererManager::ReportPassCount(Uint32 InPasses)
@@ -783,9 +818,9 @@ namespace Opaax
         m_SubmittedViews.emplace_back(RenderPassRequest{ &InTarget, InView, bInDrawOverlays, bInDrawUI, InSource });
     }
 
-    void RendererManager::SubmitUICanvas(UICanvas& InCanvas)
+    void RendererManager::SubmitUICanvas(UICanvas& InCanvas, IRenderTarget* InTarget)
     {
-        m_SubmittedCanvases.emplace_back(&InCanvas);
+        m_SubmittedCanvases.emplace_back(UICanvasRequest{ &InCanvas, InTarget });
     }
     
     TUniquePtr<IFramebuffer> RendererManager::CreateFramebuffer(const FramebufferSpec& InSpec)

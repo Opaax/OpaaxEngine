@@ -4265,15 +4265,74 @@ editor owns the game's pointer position. `Sandbox.exe` is untouched. *Named, pre
 fixed:* an UNDOCKED viewport is a second OS window whose GLFW callbacks never reach the app, so
 button/key events do not reach PIE there today either.
 
-**Growth points, named and not built:** the `.opaaxui` asset and its panel (U4) · `UIMask` as a
+**UI12 — A `.opaaxui` IS A TREE OF TAGGED NODES, AND A WIDGET SERIALIZES ITSELF** (U4). A node
+carries its `Type`, its own fields and its `Children`; `UIWidgetRegistry` turns the tag back into
+an empty widget (`ComponentRegistry`'s shape, much smaller) and the widget reads itself through the
+`SaveFields`/`LoadFields` virtuals — an override chains to `UIWidget::` first, so a base field is
+written once for every type and a new leaf states only what is new.
+- **AN UNKNOWN TAG IS A SKIPPED NODE, NOT A FAILED PARSE.** A file written by a build that knows a
+  widget type this one does not must still open — the author loses that node, not the screen. One
+  warning per unknown name. A newer FORMAT VERSION is refused outright, because a newer shape may
+  mean something different by the same key.
+- **The JSON is hand-written BESIDE `OPAAX_PROPERTIES`**, which is what every component already
+  does (`TextComponent` carries both). `_WITH_DEFAULT` is required, not preferred: the plain macro
+  reads with `at()` and throws on a missing key, so a field added later would refuse every file
+  written before it. *A reflection-driven serializer that reads `GetProperties()` and deletes the
+  second list is the obvious dedup and is deliberately NOT this step — every property value type
+  must round-trip first. The FORMAT does not change when it lands.*
+- **`Texture` and `OnClick` are deliberately absent.** A borrowed runtime pointer and a code handler
+  are not authorable; a texture PATH field arrives with the sliced image (U5), and a handler is
+  bound by name (**UI13**). `UICanvasFile` keeps Save and Load as ONE unit (`FontFamilyFile`'s
+  stated rule) and exposes the TEXT form too, which is what makes the dirty check a string compare.
+
+**UI13 — THE RUNTIME LOADS THE ASSET; IT DOES NOT BUILD A TREE IN CODE.** `UICanvasResource` holds
+the file's BYTES and `BuildTree` parses a fresh tree per call. That is the design, not laziness: a
+widget is a non-copyable node that knows its parent and its canvas, so handing out "the resource's
+tree" would either share one mutable tree between instances or need a deep clone per widget type —
+re-reading the text IS the clone, with no `Clone` override to keep in step as types are added. A
+HUD is built once or twice a session; when something ever is on a hot path the cache goes in the
+resource and no consumer changes.
+- **Gameplay binds BY NAME**: `UIWidget::FindByName` (depth-first, first match). `HudSubsystem`
+  loads `UI/Hud.opaaxui`, hangs it under the persistent canvas and resolves `Jumps` / `SpeedFill` —
+  a widget the author renames goes quiet **with a log line**, which is the failure this shape can
+  actually report. `PauseMenuSubsystem` keeps its code-built tree: it binds `OnClick` delegates,
+  which the format does not carry, and that is the honest boundary of "authored" today.
+
+**UI14 — THE PANEL PREVIEWS THE DOCUMENT ITSELF, so a submitted canvas may NAME A TARGET.**
+`EditorUICanvasDocument` owns a real `UICanvas` (not plain data) and `UICanvasPanel` renders THAT
+into its own framebuffer — what is on screen and what a Save writes cannot disagree. U2's
+`SubmitUICanvas` drew every canvas over every `bDrawUI` view, which is right for the game and wrong
+for a panel, so the submission gained an optional target: **null keeps U2's over-the-world path
+byte-identical; a named target gets its own Clear pass** and neither borrows the other's canvases.
+A targeted canvas counts toward the frame's drawable passes, so a UI panel open with no viewport
+still renders. The property pane is `DrawProperties` and nothing else — a widget is `CReflected`,
+so a field added to a type appears with no change to the panel.
+
+**UI15 — A TREE STEP CARRIES THE WHOLE TREE AS TEXT, AND THE SELECTION IS A PATH.** `UITreeEdit`
+holds the serialized before and after; add, delete, reparent and a property edit are all one type
+with a varying LABEL (`FontFamilyEntriesEdit`'s rule). For a TREE that is not merely convenient —
+a step restoring PART of a tree could leave a parent pointing at a child that no longer exists, so
+text-in/text-out is the only shape that cannot half-restore. It carries the canvas's path, so an
+undo after opening a second `.opaaxui` is a no-op with a warning.
+- **The selection is `UIWidgetPath`, child indices from the root**, because a step replaces the
+  tree wholesale and every raw pointer into it dies. The prefab document solves the same problem
+  with entity guids; a tree has no ids and its SHAPE is the address. `Resolve` answers null when
+  the path names something no longer there, which is the whole point.
+- A reparent INTO ITS OWN SUBTREE is refused — a cycle is a walk that does not terminate (**HR**'s
+  rule, one module over).
+
+**Growth points, named and not built:** `UIMask` as a
 clip-rect vertex attribute (**F4d**'s idiom, never stencil — it would break **F5**'s one-pipeline
-batch), `Sliced` images, `UISafeArea` (U5) · the deferred `OpenLevel` + loading cover (U6) · rich
-text as `UIText` runs · layout groups · canvas-group alpha · `UIBinding` (pull a named reflected
-property per frame — the reflection is half of MVVM already; notification is what a per-frame pull
-replaces at HUD scale) · **keyboard/gamepad FOCUS navigation** (UIOnly with no pointer needs it —
-the next thing after U3; `SetFocus` and key bubbling are already in) · cursor lock/hide beyond
-"shown" · pausing the world from a menu (WS8's gate is the editor's PIE pause; theirs to design) ·
-a per-canvas Match parameter for portrait targets.
+batch), `Sliced` images + a texture PATH on `UIImage`, `UISafeArea` (U5) · the deferred `OpenLevel`
++ loading cover (U6) · rich text as `UIText` runs · layout groups · canvas-group alpha ·
+`UIBinding` (pull a named reflected property per frame — the reflection is half of MVVM already;
+notification is what a per-frame pull replaces at HUD scale) · **keyboard/gamepad FOCUS
+navigation** (deferred by them at U3 close: *"focus will be done with gamepad or when need for
+keyboard"*; `SetFocus` and key bubbling are already in) · cursor lock/hide beyond "shown" ·
+pausing the world from a menu (WS8's gate is the editor's PIE pause; theirs to design) · a
+per-canvas Match parameter for portrait targets · **a reflection-driven widget serializer**
+(**UI12**) · a `.opaaxui` NESTED in another (PF13's "nesting is the resolver's" — not asked for
+yet) · a canvas authored at a reference height the panel lets you change.
 
 ---
 

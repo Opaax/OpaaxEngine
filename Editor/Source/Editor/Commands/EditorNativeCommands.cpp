@@ -16,7 +16,15 @@
 #include "Editor/Operation/InputOperations.h"
 #include "Editor/Operation/MoverOperations.h"
 #include "Editor/Operation/FontFamilyOperations.h"
+#include "Editor/Operation/UICanvasOperations.h"
 #include "Editor/EditorFontFamilyDocument.h"
+#include "Editor/EditorUICanvasDocument.h"
+#include "Editor/Panels/UICanvasPanel.h"
+#include "Application/OpaaxApplication.h"
+#include "Engine/Registries/EngineRegistries.h"
+#include "UI/UICanvasFile.h"
+#include "UI/UIWidgetRegistry.h"
+#include "UI/Widgets/UIPanel.h"
 #include "Editor/EditorSpriteSheetDocument.h"
 #include "Editor/Resources/Types/Animation/EditorAnimationClipDocument.h"
 #include "Editor/Resources/Types/Animation/EditorAnimationLibraryDocument.h"
@@ -671,6 +679,58 @@ namespace Opaax::Editor
         }
 
         FamilyOps::Save(InContext);
+    }
+
+    // =============================================================================
+    // UI canvas (U4)
+    // =============================================================================
+
+    void NewUICommand::Execute(EditorContext& InContext, const Params&)
+    {
+        InContext.Dialogs.SaveFile(
+            MakeFileRequest("New UI", InContext.Paths.AssetToAbsolute(OpaaxString("UI/NewUI.opaaxui")),
+                            "*.opaaxui", "Opaax UI Canvas"),
+            [&InContext](const OpaaxString& InPicked)
+            {
+                // NEW MEANS NEW — NewMapCommand's rule: the OS dialog warns about overwriting, but
+                // truncating an authored canvas is not a thing to leave to a dialog the author is
+                // used to clicking through.
+                if (InContext.FileSystem.IsPathExist(InPicked))
+                {
+                    OPAAX_LOG(LogEditorCommands, Warn,
+                              "'{}' already exists — open it from the Resource Browser instead of overwriting it",
+                              InPicked.CStr());
+                    return;
+                }
+
+                UICanvasFile::UICanvasDoc lDoc;
+                lDoc.Root = MakeUnique<UIPanel>();
+                lDoc.Root->Name = "Root";
+
+                if (!UICanvasFile::Save(InPicked, lDoc))
+                {
+                    return;   // UICanvasFile logged why
+                }
+
+                const UIWidgetRegistry& lRegistry =
+                    OpaaxApplication::GetAppService<IEngine>().GetRegistries().UIWidgets();
+
+                if (InContext.UICanvasDocument.Open(InPicked, lRegistry))
+                {
+                    InContext.Panels.SetVisible(UICanvasPanel::PanelID(), true);
+                }
+            });
+    }
+
+    void SaveUICommand::Execute(EditorContext& InContext, const Params&)
+    {
+        if (!InContext.UICanvasDocument.IsOpen())
+        {
+            OPAAX_LOG(LogEditorCommands, Warn, "Save UI ignored — no UI canvas is open");
+            return;
+        }
+
+        UICanvasOps::Save(InContext);
     }
 
     void SaveLevelCommand::Execute(EditorContext& InContext, const Params&)

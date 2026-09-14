@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Color/LinearColor.h"
+#include "Core/Color/LinearColorJson.h"
 #include "Core/Events/Delegate.h"
 #include "Core/String/OpaaxStringID.hpp"
 #include "UI/UIWidget.h"
@@ -52,6 +53,9 @@ namespace Opaax
         OpaaxStringID GetTypeName() const noexcept override { return OPAAX_ID("UIButton"); }
 
         EUIReply OnPointerEvent(const UIPointerEvent& InEvent) override;
+
+        void SaveFields(nlohmann::json& InOutJson) const override;
+        void LoadFields(const nlohmann::json& InJson) override;
 
     protected:
         void Rebuild(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads) override;
