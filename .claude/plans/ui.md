@@ -1,4 +1,18 @@
-# UI — seed (2026-09-14, pre-branch; nothing built)
+# UI — record (branch `User_Interface`, started 2026-09-14)
+
+| Step | Commit | What landed |
+|---|---|---|
+| **U1** | `276b905` | `Engine/Source/UI/`: `UIRect` + `ResolveRect`, `UIWidget` (3 flags, 2 verbs, one walk), `UICanvas` (view = `CameraView{0, H/2}`, stats), `UIPanel`, `UIImage` (fill). 16 cases, **810 → 826 / 9029 → 9114**. No caller yet. |
+
+**Settled in U1, not in the seed:** a resolve that lands on the SAME rect stops propagation below
+it (a corner-anchored child of a widening root costs one resolve, its subtree nothing) · the root
+is `bHitTestable = false` and `UIPanel` defaults to pass-through, so "a widget was hit" can never
+mean "the pointer is on screen" · visibility and hit-testability dirty nothing — they are read at
+submit / hit-test time · `RemoveChild` hands the node back (undo will want it) and dirties nothing.
+
+---
+
+## The seed (2026-09-14, pre-branch)
 
 > The block after parenting. Their first notes + four decisions, and the shape those decisions
 > settle. Noesis is a **reference for shape only** (a UI core that knows nothing about the game;
