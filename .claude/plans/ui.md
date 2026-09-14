@@ -4,6 +4,16 @@
 |---|---|---|
 | **U1** | `276b905` | `Engine/Source/UI/`: `UIRect` + `ResolveRect`, `UIWidget` (3 flags, 2 verbs, one walk), `UICanvas` (view = `CameraView{0, H/2}`, stats), `UIPanel`, `UIImage` (fill). 16 cases, **810 → 826 / 9029 → 9114**. No caller yet. |
 | **U2** | `6578fea` | The canvas over the world: `bDrawUI` opt-in on the world pass, `SubmitUICanvas`, `RenderCanvases` with **`ELoadOp::Load`'s first caller**, ST rows. `Text2D` box (wrap/align, scan-then-emit). `IUIFontProvider` + the re-arm. `UIText`. `UISubsystem` tenant + `WorldContext::UI`. Sandbox `HudSubsystem` (Jumps + speed bar). 10 cases, **826 → 836 / 9114 → 9161**. Contract **§UI** (UI1–UI8). **User-verified:** *"Eye gate good. Resize -> UI stay and resize correctly"*. |
+| **U3** | `66b7b48` | Input bubbles (Slate's FReply), press captures, focus routes keys, detach clears (**UI9**). Three modes `GameOnly/UIOnly/GameAndUI` on the tenant, which now ticks BEFORE mapping; `UIInputRouter` reports a consumed mask the evaluator pre-consumes (**UI10**). `UIButton`. PIE pointer is viewport-local (**UI11**). Sandbox `PauseMenuSubsystem` (HUD button opens, UIOnly modal, Resume/Escape close). **A phantom Started on a masked-then-held key fixed in the evaluator** (`bMaskSuppressed`). 21 cases, **836 → 857 / 9161 → 9266**. §UI9–11, IM6 amended. |
+
+**Settled in U3, not the plan:** the input mode chose the seam — bubbling (their steer) + Unreal's
+three modes, the mask being IM6 with the UI on top, not a new mechanism. **The phantom-edge bug the
+harness caught is the payload of the block:** masking a HELD key then unmasking it read a rising
+edge, so a menu bound to the key that closed it reopened next frame. It was latent in IM6 (a higher
+context popping mid-hold) with no caller until a mode toggled a mask. `bMaskSuppressed` gates
+`bStarted`. → [[L95]]. The world is NOT paused while the menu is up (theirs to design). One PIE
+harness ([[L81]]), removed; the reopen showed as `opened 2 time(s)` / `0 jumps`, the fix as
+`opened 1 time` / `1 jump`.
 
 **Settled in U2, not in the seed:** the UI is NOT a view of its own — the runtime fallback keys on
 an empty list, so it rides the world pass, opt-in (UI5) · layout happens at RENDER time, per

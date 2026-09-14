@@ -2659,3 +2659,31 @@ session of confusion.
   negative): grey with no reason reads as "the verb is broken", and the author reports it that way.
 - **Read their session log BEFORE reasoning from the report.** The report named three mechanisms;
   the log named one undo. The mechanism I would have gone looking for was not involved at all.
+
+## L95 — A consumed HELD key fabricates a rising edge when the mask lifts; the edge must be gated by "was this suppressed last frame" (2026-09-14)
+
+**What happened (UI U3, caught by the PIE harness).** A pause menu bound Escape both to OPEN (via
+the mapping, GameAndUI) and to CLOSE (via the focused panel, UIOnly-muted). It opened, then closed
+on the next Escape, then **reopened one frame later** — `opened 2 time(s)`, and both scripted
+Space presses read `0 jumps`. The evaluator's edge was `bStarted = bTriggered && !wasActuated`.
+While the menu is up (UIOnly), the mask forces Escape's action value to zero, so `wasActuated`
+reads false; the frame the menu closes and the mask lifts, the STILL-HELD Escape produces a value
+again → `!false` → a phantom `Started` → the menu reopens. A real user holds Escape for many
+frames after the close too, so this was never a harness artifact.
+
+**Rules for next time:**
+- **Consumption zeroes the VALUE, so it corrupts any edge computed from the value across the
+  consumption boundary.** Record the physical suppression (`bMaskSuppressed` = "a binding was
+  consumed while its key was physically down") and gate the rising edge on last frame's flag:
+  `bStarted = bTriggered && !wasActuated && !wasMaskSuppressed`. The falling edge (`bCompleted`) is
+  fine — muting SHOULD read as a release.
+- **A new consumer of an old mechanism re-runs its corner cases.** IM6's per-key consumption had
+  this latent phantom for a higher context popping mid-hold; nothing toggled a mask mid-hold until
+  a UI input MODE did. When you add the first caller that exercises a path (here: consumption that
+  flips on and off while a key is held), test the transition, not just the steady state.
+- **Bind the CLOSE of a modal to the focused widget, not the muted mapping** — but that alone does
+  not save you: the OPEN binding still sees the fabricated edge. The fix belongs at the evaluator,
+  once, for every action.
+- **The harness earned its keep again ([[L81]]):** a smoke run cannot press Escape twice with a
+  Space between; the reopen was invisible to "0 errors" and only the `opened N time(s)` counter and
+  the jump count discriminated it ([[L59]]).
