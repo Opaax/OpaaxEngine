@@ -18,6 +18,12 @@ second list is a growth point and costs no format change. **Deploy needed no CMa
 **Pre-existing, observed not fixed:** `FileIO::WriteAllText` is text-mode, so every engine-written
 asset is CRLF locally and git normalizes to LF — `.opaaxui` behaves exactly like `.opaaxmap`.
 **Not proven by a smoke run:** everything interactive in the panel — their eyes.
+**User-verified** (*"Overall its working well"*), with ONE finding their eyes caught that the block
+did not cause but did expose: **the viewport still PICKS during PIE**, so a click on a `UIButton`
+also selects the entity behind it. The UI's consumption mask (**UI10**) cannot fix it — that mask
+reaches input MAPPING, while the editor's pick is the ImGui side. Their two shapes, unpicked: a
+gate on `PIE.IsEdit()` (~1 line, the viewport toolbar already reads it) or an editor config
+toggle. Filed in `task/todo.md`.
 
 **Settled in U3, not the plan:** the input mode chose the seam — bubbling (their steer) + Unreal's
 three modes, the mask being IM6 with the UI on top, not a new mechanism. **The phantom-edge bug the
