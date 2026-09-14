@@ -121,6 +121,11 @@ set(OPAAX_TEST_SOURCES
     # P5b. The MODES are pure policy plus one MoveCapsule call, which is where "almost right"
     # hides — a jump that does not clear the ground, an air-steer that equals the ground one.
     Core/Physics/MoverModeTests.cpp
+    # UI U1. The module is World-free and GL-free by design, so the whole contract is gated here:
+    # the rect resolution, and the invalidation numbers (a same-aspect resize = 0 layouts, an
+    # idle frame = 0/0). Only the submit loop needs a context.
+    UI/UIRectTests.cpp
+    UI/UICanvasTests.cpp
 
     # Editor-side, and the FIRST of its kind — header-only editor types only (see the include dir
     # below). ③'s gizmo delta math, pinned after a scale bug that only showed away from (0,0).
