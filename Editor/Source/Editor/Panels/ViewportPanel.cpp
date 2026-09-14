@@ -123,9 +123,11 @@ namespace Opaax::Editor
 
         World* const lWorld = m_Context.Worlds.GetActiveWorld();
 
+        // The game's UI composites over this view — it is where PIE is watched. The Camera Preview
+        // and the prefab panel leave the default (no UI): one frames, the other edits.
         m_Context.Engine.SubmitRenderView(*m_RenderTarget,
                                           lWorld != nullptr ? lWorld->GetCameraView() : CameraView{},
-                                          /*bInDrawOverlays*/ true);
+                                          /*bInDrawOverlays*/ true, /*InSource*/ nullptr, /*bInDrawUI*/ true);
     }
 
     // =========================================================================

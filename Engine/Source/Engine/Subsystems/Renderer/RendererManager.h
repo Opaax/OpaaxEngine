@@ -8,6 +8,7 @@
 #include "Engine/Subsystems/Resources/ResourceRef.hpp"   // the texture cache holds Refs BY VALUE
 #include "Renderer/CameraView.h"  // a submitted view holds one BY VALUE
 #include "Renderer/DebugDraw.h"   // owned BY VALUE — full type, not a forward decl
+#include "UI/UIFontProvider.h"    // implemented here: the face cache below IS the provider
 #include "World/Entity/EntityTypes.h"   // EntityID — PoseFor takes one
 
 
@@ -38,6 +39,7 @@ namespace Opaax
     struct FontFaceView;
     struct TextComponent;
     struct TransformComponent;
+    class UICanvas;
     struct DisplayPose;   // returned by value; only PoseFor's DEFINITION needs it complete
 
     // INCLUDED, not forward-declared (⑦-C **K5**). Its second parameter is defaulted, and a default
@@ -55,7 +57,7 @@ namespace Opaax
     //   frame each tick. All actual rendering lives in the RenderSystem module, which knows
     //   nothing of this engine — so the same core runs unchanged in any other host.
     // =============================================================================
-    class OPAAX_API RendererManager final : public EngineSubsystemBase
+    class OPAAX_API RendererManager final : public EngineSubsystemBase, public IUIFontProvider
     {
         // =============================================================================
         // Base Implementation
@@ -109,6 +111,14 @@ namespace Opaax
          *   shows no grid, no selection outline and no entity icons.
          */
         void RenderPass(IRenderTarget& InTarget, World* InWorld, const CameraView& InView, bool bInDrawOverlays);
+
+        /**
+         * The UI over a world view: every submitted canvas, laid out for THIS target's size, in a
+         * second pass into the same target that keeps what the world pass drew (ELoadOp::Load).
+         * Layout happens here rather than in the tenant's tick because the target is what says
+         * how wide the canvas is (CAM2).
+         */
+        void RenderCanvases(IRenderTarget& InTarget);
 
         /**
          * Say ONCE that a frame needed more than one pass, naming the count.
@@ -168,6 +178,9 @@ namespace Opaax
          */
         FontFaceView ResolveFace(const TResourcePath<FontFaceResource>& InPath);
 
+        /** IUIFontProvider — the same cache, reached by a widget that can only spell a path. */
+        FontFaceView ResolveFace(const char* InAssetPath) override;
+
         /**
          * The family behind an asset-relative `.opaaxfont` path, loading it once and keeping the
          * claim. Null when the path is empty.
@@ -209,9 +222,18 @@ namespace Opaax
          * @param InView In WORLD units; the matrices are composed against InTarget's pixels (CAM1).
          * @param bInDrawOverlays Whether the debug queue draws in this view. False makes it look
          *   like the game.
+         * @param bInDrawUI Whether the submitted canvases composite over this view. OPT-IN: the
+         *   game's own view and the editor's viewport say yes; a framing preview stays clean.
          */
         void SubmitRenderView(IRenderTarget& InTarget, const CameraView& InView, bool bInDrawOverlays,
-                              World* InSource = nullptr);
+                              World* InSource = nullptr, bool bInDrawUI = false);
+
+        /**
+         * Draw InCanvas over every view that asked for UI, THIS FRAME ONLY — SubmitRenderView's
+         * idiom: cleared every frame, so a canvas that stops being submitted stops being drawn.
+         * @param InCanvas BORROWED for the frame; the submitter owns it (I5).
+         */
+        void SubmitUICanvas(UICanvas& InCanvas);
 
         /**
          * Create an offscreen framebuffer on the render core's device (F2a). The natural companion to
@@ -260,6 +282,7 @@ namespace Opaax
             IRenderTarget* Target        = nullptr;  // non-owning; the submitter owns it (I5)
             CameraView     View;
             bool           bDrawOverlays = true;
+            bool           bDrawUI       = false;
 
             /**
              * WHICH WORLD this view draws. NULL means the ACTIVE one (P6).
@@ -283,6 +306,14 @@ namespace Opaax
         // This frame's views, cleared beside the debug queue in Render() (F4). Keeps its capacity,
         // so a steady frame allocates nothing.
         TDynArray<RenderPassRequest> m_SubmittedViews;
+
+        /** This frame's canvases, same lifetime as the views above. */
+        TDynArray<UICanvas*> m_SubmittedCanvases;
+
+        /** The frame's UI work, summed over canvases and views, published as counters (ST). */
+        Uint32 m_UILayouts  = 0;
+        Uint32 m_UIRebuilds = 0;
+        bool   m_bLoggedFirstUI = false;
 
         /** Whether ReportPassCount has already spoken. One line per session, not one per frame. */
         bool m_bMultiPassLogged = false;

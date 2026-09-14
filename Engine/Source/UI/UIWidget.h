@@ -6,6 +6,7 @@
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
+#include "UI/UIFontProvider.h"
 #include "UI/UIQuad.h"
 #include "UI/UIRect.h"
 
@@ -25,6 +26,10 @@ namespace Opaax
     //   Three flags: Layout (my rect must be re-resolved), Content (my quads must be rebuilt),
     //   Subtree (something below me is dirty — the walk descends only where this is set).
     //   Visibility and hit-testability are READ at submit / hit-test time and dirty nothing.
+    //
+    //   The walk CLEARS a node's flags before acting on them, so a Rebuild that finds its input
+    //   not ready (an atlas still uploading) calls InvalidateContent() and is simply visited again
+    //   next frame — waiting costs no polling anywhere.
     // =============================================================================
     class OPAAX_API UIWidget
     {
@@ -101,15 +106,22 @@ namespace Opaax
         // Leaf contract
         // =============================================================================
     protected:
-        /** Emit my quads for the resolved bounds. Called only when content is dirty. */
-        virtual void Rebuild(TDynArray<UIQuad>& OutQuads) { (void)OutQuads; }
+        /**
+         * Emit my quads for the resolved bounds. Called only when content is dirty. Call
+         * InvalidateContent() from inside to be asked again next frame.
+         */
+        virtual void Rebuild(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads)
+        {
+            (void)InContext; (void)OutQuads;
+        }
 
         // =============================================================================
         // Internal — the canvas's walk
         // =============================================================================
     private:
         /** Resolve + rebuild where dirty, descend where marked; bInParentChanged forces a resolve. */
-        void UpdateTree(const Bounds2D& InParentBounds, bool bInParentChanged, UICanvasStats& OutStats);
+        void UpdateTree(const Bounds2D& InParentBounds, bool bInParentChanged, const UIBuildContext& InContext,
+                        UICanvasStats& OutStats);
 
         /** The deepest visible, hit-testable descendant (or me) containing InPoint; top-most first. */
         const UIWidget* HitTest(const Vector2F& InPoint) const;

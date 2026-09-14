@@ -26,7 +26,12 @@ namespace Opaax
             {
                 const Int16 lOrder = static_cast<Int16>(InOutOrder < MAX_ORDER ? InOutOrder++ : MAX_ORDER);
 
-                if (lQuad.Texture != nullptr)
+                if (lQuad.Outline > 0.f)
+                {
+                    InRenderer.DrawQuadOutline(lQuad.Bounds.Center, lQuad.Bounds.Size(), lQuad.Color, lQuad.Outline,
+                                               0.f, ERenderLayer::UI, lOrder);
+                }
+                else if (lQuad.Texture != nullptr)
                 {
                     InRenderer.DrawSprite(lQuad.Bounds.Center, lQuad.Bounds.Size(), *lQuad.Texture, lQuad.Color,
                                           0.f, ERenderLayer::UI, lOrder, lQuad.UVMin, lQuad.UVMax);
@@ -105,11 +110,11 @@ namespace Opaax
     // Frame
     // =============================================================================
 
-    UICanvasStats UICanvas::Update()
+    UICanvasStats UICanvas::Update(const UIBuildContext& InContext)
     {
         UICanvasStats lStats;
 
-        m_Root->UpdateTree(m_VisibleBounds, m_bVisibleChanged, lStats);
+        m_Root->UpdateTree(m_VisibleBounds, m_bVisibleChanged, InContext, lStats);
         m_bVisibleChanged = false;
 
         return lStats;

@@ -78,6 +78,9 @@ namespace Opaax
 
     namespace Text2D
     {
+        /** A tofu box's border, as a fraction of Size — public so every sink draws the same box. */
+        constexpr float TOFU_THICKNESS_RATIO = 0.06f;
+
         /**
          * Lay InUtf8 out and hand every visible glyph to InSink. The primitive under DrawString.
          *

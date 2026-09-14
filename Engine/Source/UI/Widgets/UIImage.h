@@ -64,7 +64,7 @@ namespace Opaax
         OpaaxStringID GetTypeName() const noexcept override { return OPAAX_ID("UIImage"); }
 
     protected:
-        void Rebuild(TDynArray<UIQuad>& OutQuads) override;
+        void Rebuild(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads) override;
 
         // =============================================================================
         // Members

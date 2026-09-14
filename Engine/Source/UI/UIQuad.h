@@ -19,5 +19,7 @@ namespace Opaax
         ITexture2D* Texture = nullptr;   // borrowed; the owning resource outlives the frame it draws in
         Vector2F    UVMin   = { 0.f, 0.f };
         Vector2F    UVMax   = { 1.f, 1.f };
+        /** > 0 draws a HOLLOW box of this border width instead — a tofu glyph (TX6). Untextured. */
+        float       Outline = 0.f;
     };
 }

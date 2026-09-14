@@ -126,6 +126,9 @@ set(OPAAX_TEST_SOURCES
     # idle frame = 0/0). Only the submit loop needs a context.
     UI/UIRectTests.cpp
     UI/UICanvasTests.cpp
+    # U2. A string in a rect through a stub font provider — the atlas-still-uploading re-arm is
+    # the case a smoke run could only ever see as "the text appeared a frame late".
+    UI/UITextTests.cpp
 
     # Editor-side, and the FIRST of its kind — header-only editor types only (see the include dir
     # below). ③'s gizmo delta math, pinned after a scale bug that only showed away from (0,0).

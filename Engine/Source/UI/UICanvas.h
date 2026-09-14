@@ -72,7 +72,7 @@ namespace Opaax
         // =============================================================================
     public:
         /** Resolve and rebuild what is dirty — one walk, once a frame. */
-        UICanvasStats Update();
+        UICanvasStats Update(const UIBuildContext& InContext = {});
 
         /** Every visible widget's quads, tree order, into the open pass. */
         void Submit(Renderer2D& InRenderer) const;

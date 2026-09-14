@@ -20,6 +20,7 @@
 #include "Engine/EngineEvents.h"
 #include "Engine/GameInstance/GameInstanceManager.h"
 #include "Engine/Input/InputMappingSubsystem.h"
+#include "Engine/UI/UISubsystem.h"
 #include "Engine/Subsystems/Resources/Types/Input/InputActionResource.h"
 #include "Engine/Subsystems/Resources/Types/Input/InputMappingContextResource.h"
 #include "Engine/Subsystems/Resources/ResourceManager.h"
@@ -181,6 +182,9 @@ namespace Opaax
         // The engine's own session subsystem, and the tier's first tenant: the layer that turns
         // InputManager's physical keys into named actions.
         m_Registries.GameInstanceSubsystems().Register<InputMappingSubsystem>(OPAAX_ID("InputMapping"));
+
+        // The persistent canvas. After input mapping: UI reads this frame's actions, never last frame's.
+        m_Registries.GameInstanceSubsystems().Register<UISubsystem>(OPAAX_ID("UI"));
     }
 
     void Engine::RegisterNativeSubsystems()
@@ -617,11 +621,19 @@ namespace Opaax
     }
     
     void Engine::SubmitRenderView(IRenderTarget& InTarget, const CameraView& InView, bool bInDrawOverlays,
-                                  World* InSource)
+                                  World* InSource, bool bInDrawUI)
     {
         if (m_RendererManager != nullptr)
         {
-            m_RendererManager->SubmitRenderView(InTarget, InView, bInDrawOverlays, InSource);
+            m_RendererManager->SubmitRenderView(InTarget, InView, bInDrawOverlays, InSource, bInDrawUI);
+        }
+    }
+
+    void Engine::SubmitUICanvas(UICanvas& InCanvas)
+    {
+        if (m_RendererManager != nullptr)
+        {
+            m_RendererManager->SubmitUICanvas(InCanvas);
         }
     }
 

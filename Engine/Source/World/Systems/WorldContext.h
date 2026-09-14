@@ -10,6 +10,7 @@ namespace Opaax
     class IPaths;
     class InputManager;
     class InputMappingSubsystem;
+    class UISubsystem;
     struct EngineConfigData;
 
     // =============================================================================
@@ -94,6 +95,9 @@ namespace Opaax
          * to the session without reaching the locator, which D3 forbids.
          */
         InputMappingSubsystem* Actions;
+
+        /** The game's persistent canvas (§UI). Actions' rule exactly: session-owned, null with no game. */
+        UISubsystem* UI;
 
         /**
          * Per-frame debug lines. IMMEDIATE MODE by contract (F4): nothing is retained, so a

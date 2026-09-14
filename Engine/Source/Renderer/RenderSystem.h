@@ -4,6 +4,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/Maths/MathTypes.h"
 #include "Application/Services/ILogger.h"
+#include "RHI/ICommandBuffer.h"   // ELoadOp
 
 namespace Opaax
 {
@@ -80,15 +81,11 @@ namespace Opaax
         void Present();
 
         /**
-         * Open a render pass into InTarget (backbuffer or offscreen FBO): 
-         *      binds the target + clears
-         *      then opens the batcher on InView.
-         * Draws issued until EndPass record into this pass.
-         * @param InTarget 
-         * @param InView 
+         * Open a render pass into InTarget (backbuffer or offscreen FBO): binds the target, clears
+         * it (or keeps it — a pass composited over another, the UI), then opens the batcher on
+         * InView. Draws issued until EndPass record into this pass.
          */
-        
-        void BeginPass(IRenderTarget& InTarget, const RenderView& InView);
+        void BeginPass(IRenderTarget& InTarget, const RenderView& InView, ELoadOp InLoadOp = ELoadOp::Clear);
         /** flush the batch, then close the pass */
         void EndPass();
         

@@ -250,6 +250,61 @@ TEST_CASE("UICanvas: the view is origin-centred at half the reference height, an
     CheckVec(lCanvas.ScreenToCanvas({ 0.f, 0.f }), { -960.f, 540.f });
 }
 
+namespace
+{
+    /** A leaf whose input is "not ready" for N rebuilds: it re-arms itself from inside Rebuild. */
+    class ReArmingWidget final : public UIWidget
+    {
+    public:
+        Uint32 NotReadyFor = 0;
+        Uint32 Rebuilds    = 0;
+
+        OpaaxStringID GetTypeName() const noexcept override { return OPAAX_ID("ReArming"); }
+
+    protected:
+        void Rebuild(const UIBuildContext&, TDynArray<UIQuad>& OutQuads) override
+        {
+            ++Rebuilds;
+            if (NotReadyFor > 0)
+            {
+                --NotReadyFor;
+                InvalidateContent();   // ask again next frame
+                return;
+            }
+            OutQuads.emplace_back();
+        }
+    };
+}
+
+TEST_CASE("UICanvas: a Rebuild that re-arms is visited again next frame, and the walk reaches it")
+{
+    UICanvas lCanvas(1080.f);
+    lCanvas.SetTargetSize(1920, 1080);
+
+    // Two levels down, so the re-arm has to climb through a parent whose flags the walk already cleared.
+    UIWidget*       lPanel = lCanvas.Root().AddChild(MakeUnique<UIPanel>());
+    ReArmingWidget* lLeaf  = static_cast<ReArmingWidget*>(lPanel->AddChild(MakeUnique<ReArmingWidget>()));
+    lLeaf->NotReadyFor = 2;
+
+    lCanvas.Update();
+    CHECK(lLeaf->Rebuilds == 1);
+    CHECK(lLeaf->GetQuads().empty());
+
+    UICanvasStats lStats = lCanvas.Update();
+    CHECK(lStats.Layouts  == 0);   // nothing moved — only the rebuild is owed
+    CHECK(lStats.Rebuilds == 1);
+    CHECK(lLeaf->Rebuilds == 2);
+
+    lStats = lCanvas.Update();
+    CHECK(lLeaf->Rebuilds == 3);
+    CHECK(lLeaf->GetQuads().size() == 1);
+
+    // Ready: the re-arm stops and the canvas goes idle.
+    lStats = lCanvas.Update();
+    CHECK(lStats.Rebuilds == 0);
+    CHECK(lLeaf->Rebuilds == 3);
+}
+
 TEST_CASE("UICanvas: a reference-height change re-lays the root")
 {
     UICanvas lCanvas(1080.f);

@@ -12,6 +12,7 @@ namespace Opaax
     class InputManager;
     class GameInstanceManager;
     class World;
+    class UICanvas;
     class IFramebuffer;
     class IRenderTarget;
     class ITexture2D;
@@ -123,9 +124,17 @@ namespace Opaax
          * @param InTarget BORROWED for the frame — the submitter owns its lifetime (I5).
          * @param InView In WORLD units; the matrices are composed against InTarget's pixels (CAM1).
          * @param bInDrawOverlays Whether the debug queue draws in this view. False looks like the game.
+         * @param bInDrawUI Whether submitted canvases composite over it. Opt-in; a framing preview says no.
          */
         virtual void SubmitRenderView(IRenderTarget& InTarget, const CameraView& InView, bool bInDrawOverlays,
-                                      World* InSource = nullptr) = 0;
+                                      World* InSource = nullptr, bool bInDrawUI = false) = 0;
+
+        /**
+         * Draw InCanvas over every view that opted into UI, THIS FRAME ONLY — the submission idiom
+         * above. The GameInstance's UI tenant is the caller; a canvas it stops submitting stops drawing.
+         * @param InCanvas BORROWED for the frame (I5).
+         */
+        virtual void SubmitUICanvas(UICanvas& InCanvas) = 0;
         
         /**
          * The CALLER owns the result and must release it while the engine — and its GPU context — is still alive. 

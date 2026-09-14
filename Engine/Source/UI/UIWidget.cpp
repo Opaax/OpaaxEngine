@@ -88,11 +88,22 @@ namespace Opaax
     // Internal — the canvas's walk
     // =============================================================================
 
-    void UIWidget::UpdateTree(const Bounds2D& InParentBounds, bool bInParentChanged, UICanvasStats& OutStats)
+    void UIWidget::UpdateTree(const Bounds2D& InParentBounds, bool bInParentChanged, const UIBuildContext& InContext,
+                              UICanvasStats& OutStats)
     {
+        // Snapshot, then clear: anything set from here on (a Rebuild re-arming, a child marking
+        // me) is next frame's work and survives.
+        const bool lLayout  = m_bLayoutDirty || bInParentChanged;
+        bool       lContent = m_bContentDirty;
+        const bool lSubtree = m_bSubtreeDirty;
+
+        m_bLayoutDirty  = false;
+        m_bContentDirty = false;
+        m_bSubtreeDirty = false;
+
         bool lChanged = false;
 
-        if (m_bLayoutDirty || bInParentChanged)
+        if (lLayout)
         {
             const Bounds2D lBounds = ResolveRect(Rect, InParentBounds);
             ++OutStats.Layouts;
@@ -101,30 +112,23 @@ namespace Opaax
             // below me moved, so nothing below me is re-resolved.
             lChanged = lBounds.Center != m_Bounds.Center || lBounds.HalfExtent != m_Bounds.HalfExtent;
             m_Bounds = lBounds;
-            if (lChanged)
-            {
-                m_bContentDirty = true;
-            }
+            lContent = lContent || lChanged;
         }
 
-        if (m_bContentDirty)
+        if (lContent)
         {
             m_Quads.clear();
-            Rebuild(m_Quads);
+            Rebuild(InContext, m_Quads);
             ++OutStats.Rebuilds;
         }
 
-        if (lChanged || m_bSubtreeDirty)
+        if (lChanged || lSubtree)
         {
             for (const TUniquePtr<UIWidget>& lChild : m_Children)
             {
-                lChild->UpdateTree(m_Bounds, lChanged, OutStats);
+                lChild->UpdateTree(m_Bounds, lChanged, InContext, OutStats);
             }
         }
-
-        m_bLayoutDirty  = false;
-        m_bContentDirty = false;
-        m_bSubtreeDirty = false;
     }
 
     const UIWidget* UIWidget::HitTest(const Vector2F& InPoint) const

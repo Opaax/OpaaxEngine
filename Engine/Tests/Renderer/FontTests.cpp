@@ -530,6 +530,91 @@ TEST_SUITE("Text2D::Layout")
         CHECK(lLaidOut.x == doctest::Approx(lMeasured.x));
         CHECK(lLaidOut.y == doctest::Approx(lMeasured.y));
     }
+
+    // ---- The box (UI U2): wrap and horizontal alignment, the same walk. ----
+
+    TEST_CASE("wrapping breaks after the last space that fits, consumes it, and starts the next line at the origin")
+    {
+        const FontFaceData lFace = MakeFace();
+        const FontFaceView lView{ &lFace, nullptr };
+
+        TDynArray<TextQuad> lQuads;
+
+        // "α α α" is 3 alphas + 2 spaces wide; a box holding two alphas and a space breaks before the third.
+        const OpaaxString lText = OpaaxString(U_ALPHA) + " " + U_ALPHA + " " + U_ALPHA;
+
+        TextDrawParams lParams;
+        lParams.Size     = FACE_PIXEL_HEIGHT;
+        lParams.bKerning = false;
+        lParams.bWrap    = true;
+        lParams.BoxWidth = ALPHA_ADVANCE * 2.f + SPACE_ADVANCE + 1.f;
+
+        const Vector2F lExtent = Text2D::Layout(lText.CStr(), { 0.f, 0.f }, lView, lParams,
+                                                [&lQuads](const TextQuad& InQuad) { lQuads.emplace_back(InQuad); });
+
+        REQUIRE(lQuads.size() == 3u);
+        CHECK(lQuads[2].Centre.x == doctest::Approx(lQuads[0].Centre.x));                          // back at the origin
+        CHECK(lQuads[0].Centre.y - lQuads[2].Centre.y == doctest::Approx(FACE_LINE_ADVANCE));    // one line down
+        CHECK(lExtent.x == doctest::Approx(ALPHA_ADVANCE * 2.f + SPACE_ADVANCE));                // the space before the break is not counted
+        CHECK(lExtent.y == doctest::Approx(FACE_LINE_ADVANCE * 2.f));
+    }
+
+    TEST_CASE("a word wider than the box breaks inside itself, and a first glyph always lands")
+    {
+        const FontFaceData lFace = MakeFace();
+        const FontFaceView lView{ &lFace, nullptr };
+
+        TDynArray<TextQuad> lQuads;
+
+        const OpaaxString lText = OpaaxString(U_ALPHA) + U_ALPHA + U_ALPHA;
+
+        TextDrawParams lParams;
+        lParams.Size     = FACE_PIXEL_HEIGHT;
+        lParams.bKerning = false;
+        lParams.bWrap    = true;
+        lParams.BoxWidth = ALPHA_ADVANCE * 0.5f;   // narrower than ONE glyph
+
+        const Vector2F lExtent = Text2D::Layout(lText.CStr(), { 0.f, 0.f }, lView, lParams,
+                                                [&lQuads](const TextQuad& InQuad) { lQuads.emplace_back(InQuad); });
+
+        REQUIRE(lQuads.size() == 3u);
+        CHECK(lExtent.y == doctest::Approx(FACE_LINE_ADVANCE * 3.f));   // one glyph per line, no hang
+        CHECK(lQuads[1].Centre.x == doctest::Approx(lQuads[0].Centre.x));
+    }
+
+    TEST_CASE("Right ends the line on the box's right edge; Center straddles its middle; no box means the origin")
+    {
+        const FontFaceData lFace = MakeFace();
+        const FontFaceView lView{ &lFace, nullptr };
+
+        TextDrawParams lParams;
+        lParams.Size     = FACE_PIXEL_HEIGHT;
+        lParams.bKerning = false;
+
+        const auto lFirstCentreX = [&](const TextDrawParams& InParams)
+        {
+            float lX = 0.f;
+            Text2D::Layout(U_ALPHA, { 100.f, 0.f }, lView, InParams, [&lX](const TextQuad& InQuad) { lX = InQuad.Centre.x; });
+            return lX;
+        };
+
+        const float lLeft = lFirstCentreX(lParams);
+
+        lParams.BoxWidth = 200.f;
+        lParams.HAlign   = ETextAlign::Right;
+        CHECK(lFirstCentreX(lParams) == doctest::Approx(lLeft + 200.f - ALPHA_ADVANCE));
+
+        lParams.HAlign = ETextAlign::Center;
+        CHECK(lFirstCentreX(lParams) == doctest::Approx(lLeft + (200.f - ALPHA_ADVANCE) * 0.5f));
+
+        // A point box: the glyph ends ON the origin.
+        lParams.BoxWidth = 0.f;
+        lParams.HAlign   = ETextAlign::Right;
+        CHECK(lFirstCentreX(lParams) == doctest::Approx(lLeft - ALPHA_ADVANCE));
+
+        // Alignment never changes what is measured.
+        CHECK(Text2D::Measure(U_ALPHA, lView, lParams).x == doctest::Approx(ALPHA_ADVANCE));
+    }
 }
 
 TEST_SUITE("Text2D::EstimateExtent")

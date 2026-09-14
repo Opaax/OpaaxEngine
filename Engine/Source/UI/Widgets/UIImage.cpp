@@ -29,7 +29,7 @@ namespace Opaax
         InvalidateContent();
     }
 
-    void UIImage::Rebuild(TDynArray<UIQuad>& OutQuads)
+    void UIImage::Rebuild(const UIBuildContext& /*InContext*/, TDynArray<UIQuad>& OutQuads)
     {
         const float lAmount = Fill == EUIFill::None ? 1.f : std::clamp(FillAmount, 0.f, 1.f);
         if (lAmount <= 0.f)
