@@ -5,6 +5,19 @@
 | **U1** | `276b905` | `Engine/Source/UI/`: `UIRect` + `ResolveRect`, `UIWidget` (3 flags, 2 verbs, one walk), `UICanvas` (view = `CameraView{0, H/2}`, stats), `UIPanel`, `UIImage` (fill). 16 cases, **810 → 826 / 9029 → 9114**. No caller yet. |
 | **U2** | `6578fea` | The canvas over the world: `bDrawUI` opt-in on the world pass, `SubmitUICanvas`, `RenderCanvases` with **`ELoadOp::Load`'s first caller**, ST rows. `Text2D` box (wrap/align, scan-then-emit). `IUIFontProvider` + the re-arm. `UIText`. `UISubsystem` tenant + `WorldContext::UI`. Sandbox `HudSubsystem` (Jumps + speed bar). 10 cases, **826 → 836 / 9114 → 9161**. Contract **§UI** (UI1–UI8). **User-verified:** *"Eye gate good. Resize -> UI stay and resize correctly"*. |
 | **U3** | `66b7b48` | Input bubbles (Slate's FReply), press captures, focus routes keys, detach clears (**UI9**). Three modes `GameOnly/UIOnly/GameAndUI` on the tenant, which now ticks BEFORE mapping; `UIInputRouter` reports a consumed mask the evaluator pre-consumes (**UI10**). `UIButton`. PIE pointer is viewport-local (**UI11**). Sandbox `PauseMenuSubsystem` (HUD button opens, UIOnly modal, Resume/Escape close). **A phantom Started on a masked-then-held key fixed in the evaluator** (`bMaskSuppressed`). 21 cases, **836 → 857 / 9161 → 9266**. §UI9–11, IM6 amended. |
+| **U4** | `d020feb` | `.opaaxui`: tagged nodes + `SaveFields`/`LoadFields` + `UIWidgetRegistry` (**UI12**); `UICanvasResource` re-parses per instance, `FindByName`, **`HudSubsystem` LOADS the asset** (**UI13**); `EditorUICanvasDocument` + `UICanvasPanel` previewing the document through a **targeted** canvas submission (**UI14**); `UITreeEdit` = the whole tree as text, selection as an index path (**UI15**); **New UI…** + Save + `SetActivate`. 7 cases, **857 → 864 / 9266 → 9335**. All four MR2i routes: `panels` 19→20, `commands` 47→49, `resourceTypes` 14→15, `titleBar` 39→42. |
+
+**Settled in U4, not the plan:** the resource holds TEXT and re-parses per `BuildTree` — a widget is
+a non-copyable node that knows its parent and canvas, so "hand out the tree" is either shared
+mutable state or a per-type deep clone; re-reading IS the clone, with nothing to keep in step as
+types are added. The panel needed a canvas submission that NAMES a target (UI14) — U2's broadcast
+would have poured the game's canvases into the panel's framebuffer. The JSON is hand-written beside
+the properties, as components already do; the reflection-driven serializer that would delete the
+second list is a growth point and costs no format change. **Deploy needed no CMake edit** —
+`Sandbox/Assets` copies whole, so `UI/` rides along (MR2i's deploy row, satisfied by what exists).
+**Pre-existing, observed not fixed:** `FileIO::WriteAllText` is text-mode, so every engine-written
+asset is CRLF locally and git normalizes to LF — `.opaaxui` behaves exactly like `.opaaxmap`.
+**Not proven by a smoke run:** everything interactive in the panel — their eyes.
 
 **Settled in U3, not the plan:** the input mode chose the seam — bubbling (their steer) + Unreal's
 three modes, the mask being IM6 with the UI on top, not a new mechanism. **The phantom-edge bug the
