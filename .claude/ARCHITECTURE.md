@@ -2157,7 +2157,8 @@ InputTextMultiline`, so `TextComponent::Text` is authored as prose and Enter ins
 pass, and faking it by moving a world position against the camera is the thing multi-view exists to
 stop. *Amended 2026-09-04: multi-view LANDED (**MV**), so this is no longer blocked — and the user
 then deferred the overlay itself (*"We have stats panels, for now is very ok"*). What it now waits
-on is the HUD, whose design they are keeping.* Alignment, word-wrap, rotation,
+on is the HUD, whose design they are keeping. Amended 2026-09-14: the HUD is the UI block, and
+**alignment and word-wrap are BUILT** for it (**UI7**) — `UIText` is their caller.* Rotation,
 outline/shadow, SDF and per-glyph cross-subset fallback each have no caller (**X5**). **Width has no
 files**: the static Roboto export carries no width axis, so only `Normal` resolves until a
 `Roboto_Condensed` family drops in — the axis is in the key so that costs no file-format change.
@@ -2193,8 +2194,9 @@ entirely; that window is now unrepresentable rather than documented.
 - **A per-pass `ELoadOp` was planned and REFUSED at build time.** `Load` is only needed when two
   passes share ONE target; every view here owns its own, so all `Clear`. Adding the parameter would
   have been an enumerator with no caller — the trap this whole block was shaped to avoid.
-  **`ELoadOp::Load` still has zero callers**, and `ICommandBuffer.h` names the one it waits for: the
-  HUD, the first thing that draws twice into one target.
+  ~~**`ELoadOp::Load` still has zero callers**, and `ICommandBuffer.h` names the one it waits for: the
+  HUD, the first thing that draws twice into one target.~~ **Its first caller landed 2026-09-14
+  (UI U2, `RenderSystem::BeginPass` takes the op): the canvas pass over the world view — see UI5.**
 
 **MV2 — The block was defined by its CONSUMER, because the plumbing alone cannot be verified.**
 With one pass still composed, the change renders byte-identically: no smoke run, no log line and no
@@ -2266,8 +2268,9 @@ registration, so `Generic drawer: CameraComponent` **disappearing** is the proof
 over, with Camera now absent beside the three already-custom drawers while Transform and Dummy
 remain. *(**L79**'s rule turned around: predict which counts move, and know why one does not.)*
 
-**Growth points, named and not built:** the HUD (theirs to design — one more submitted view, into the
-same target, with `ELoadOp::Load` and a pixel projection) · split-screen and minimap (no caller) · a
+**Growth points, named and not built:** ~~the HUD (theirs to design — one more submitted view, into the
+same target, with `ELoadOp::Load` and a pixel projection)~~ **BUILT 2026-09-14 as §UI — not a view of
+its own but carried by the world pass, opt-in (UI5)** · split-screen and minimap (no caller) · a
 second **editing** viewport (needs **CAM1**'s slot to move off the World) · ~~the asset preview
 WORLD~~ **BUILT ⑦-C, see PF9** — `RenderPassRequest::Source`, and the prefab panel is its consumer;
 the second *editing* viewport is what it is becoming (P8) · pinning
@@ -3016,7 +3019,8 @@ world and creates another; the session is what does not change across that. The 
 in their words: *"when the game start, this will never change."* Sequencing lives in **BO4d**.
 
 **GI2 — It holds SUBSYSTEMS and a CONTEXT, and nothing else.** Everything session-scoped is a
-**tenant** — input mapping today (**IM**), save/score later — never a member of the class. That is
+**tenant** — input mapping (**IM**) and the UI canvas (**UI8**) today, save/score later — never a member
+of the class. That is
 what keeps "the game instance knows about a lot of things" from making it a bag: it knows about a
 lot of things because its tenants do. Pause and time-scale were considered for it and **deliberately
 left out** (user: *"that change from world or for specific entity/system i do not know yet"*);
@@ -4107,6 +4111,113 @@ adopt (**MP6**) until the next Save Level.
 order is Layer/OrderInLayer) · dropping a PREFAB onto an entity row to instantiate as its child ·
 *Create Empty Child* · a read-only world-pose line in the Transform drawer · the child count on
 `EntityMeta` (**HR6**'s trigger).
+
+---
+
+## UI — The user interface (U1 `276b905`, U2 2026-09-14; block OPEN, record `.claude/plans/ui.md`)
+
+**UI1 — THE UI IS DECOUPLED FROM THE WORLD.** `Engine/Source/UI/` depends on `Core/` and
+`Renderer/` (and `RHI/ITexture2D` as a borrowed pointer) and never on `World/`, `Engine/`, or
+entt — the user's call (*"lets decouple the UI from world"*), Slate's altitude under UMG, Noesis's
+core under its hosts. A canvas is an OBJECT anyone can own; the world is one possible host, not
+the model. The whole contract is therefore gated headless (`Engine/Tests/UI/`): rects,
+invalidation, hit-testing, text quads. Only `UICanvas::Submit`'s loop needs a GL context.
+- **No vendor** (*"Do not include any vendors, I just like the fact that Noesis is a good ref"*).
+  A toolkit that would own the authoring loop — its own tree, its own editor, its own text stack —
+  is a second object model, and that is the cost the refusal is about.
+
+**UI2 — CANVAS UNITS ARE REFERENCE PIXELS, AND THE VIEW IS A `CameraView`.** A `UICanvas` is
+`ReferenceHeight` tall (1080), centred on the origin, and as wide as the target's aspect makes
+it; its view is `CameraView{ {0,0}, ReferenceHeight/2 }`, so **CAM2** does the scaling — Unity's
+CanvasScaler with Match = height, for free, chosen for the shmup for the same reason. **Y-UP**,
+anchor `(0,0)` bottom-left: one convention with the world, `Renderer2D` and `Text2D`, so the pass
+is a plain `MakeViewProjection` and `ScreenToWorld` stays the ONE screen→canvas rule.
+- `UIRect` is Unity's RectTransform verbatim (anchor min/max, pivot, anchored position, size
+  delta); `ResolveRect` is free, pure and exported; **the resolved rect IS a `Bounds2D`** — what
+  `DrawQuad`/`DrawSprite` take and what `Contains` hit-tests. No second rect type.
+- **A same-aspect resize lays out NOTHING** — equal rationals round to equal floats, so
+  1920×1080 → 1280×720 lands on the bit-identical visible rect and dirties nothing; only an
+  aspect change moves a rect, and only the anchored ones. Pinned in `UICanvasTests`.
+
+**UI3 — INVALIDATION IS A VERB, NEVER A POLL** (the user: *"canvas is an expensive cost because
+resizing etc.. so make sure to handle that correctly"*). Three flags per widget — Layout (my rect),
+Content (my quads), Subtree (descend into me) — and two verbs, `InvalidateLayout` /
+`InvalidateContent`. Setters call the one they owe; the editor writes the reflected field and
+calls the verb (**I15** — `DrawProperties` writes through `T&` and returns nothing). Nothing
+compares state frame to frame; `UICanvasStats{Layouts, Rebuilds}` reads **0/0 on an idle frame**,
+and that number is a Stats row (`UI Layouts` / `UI Rebuilds`, **ST1**'s `AddCount`).
+- **ONE walk per frame**, descending only where marked. A resolve that lands on the SAME rect
+  stops propagation below it: a corner-anchored child of a widening root costs one resolve, its
+  subtree nothing.
+- **The walk snapshots-then-clears a node's flags BEFORE acting**, so a `Rebuild` that finds its
+  input not ready calls `InvalidateContent()` and is visited again next frame. That is how
+  `UIText` waits for an atlas still uploading (**TX4**) with no polling anywhere — emit nothing,
+  re-arm, drawn the frame it lands. Pinned by a re-arming stub two levels deep.
+- **Unity's canvas cost does not transfer, and the part that does is layout + text.** Unity rebuilds
+  a retained MESH per dirty canvas; `Renderer2D` is immediate-mode and **F5** records the pass
+  whole every frame anyway, so there is no mesh to rebuild. What IS retained is each widget's
+  `TDynArray<UIQuad>` — rebuilt on content-dirty, submitted every frame in tree order
+  (`OrderInLayer` = a running index, so F5's sort reproduces the tree).
+- Visibility and hit-testability dirty nothing: read at submit / hit-test time.
+
+**UI4 — THE ROOT IS NEVER A HIT, AND A PANEL IS PASS-THROUGH.** The root stretches over the whole
+visible rect, so "the root was hit" would mean "the pointer is on screen" — [[L29]] in another
+coat. `bHitTestable` is Unity's raycastTarget; `UIPanel` defaults it off, leaves default it on.
+`HitTest` walks children last-to-first (drawn last = on top) and skips invisible subtrees.
+Nothing clips yet — a child outside its parent is still hit (U5's mask adds the miss).
+
+**UI5 — THE UI IS CARRIED BY THE WORLD PASS, OPT-IN, AND IS NEVER A VIEW OF ITS OWN.**
+`RenderFrame`'s runtime fallback keys on an EMPTY submission list, so a UI `RenderPassRequest`
+would silently drop the world in `Sandbox.exe`. Instead `SubmitRenderView` gained
+`bInDrawUI = false` (`RenderPassRequest::bDrawUI`) and the tenant submits its canvas through
+`IEngine::SubmitUICanvas` every frame — **MV1**'s idiom, cleared beside the views. After each
+world pass that opted in, `RenderCanvases` lays every submitted canvas out for THAT target's
+size and draws it in a second pass into the same target with **`ELoadOp::Load` — its first
+caller**, the one `ICommandBuffer.h` named on 2026-09-04. `RenderSystem::BeginPass` takes the
+load op (it hard-coded Clear).
+- **Layout happens at RENDER time**, not in the tenant's tick, because the target is what says
+  how wide the canvas is (UI2) — Unity's `willRenderCanvases`. Two views of different sizes both
+  opting in would re-lay one canvas twice a frame; nothing does today, and the answer then is a
+  canvas per target, not a cache.
+- **Who opts in:** the runtime fallback and the editor's `ViewportPanel` (where PIE is watched).
+  The Camera Preview (a framing tool) and the prefab panel (edits a world that is not the game)
+  keep the default. Opt-in so a new view never gets the game's UI by accident.
+
+**UI6 — WIDGETS ASK THE HOST FOR A FACE: `IUIFontProvider`.** A `UIText` names its face by ASSET
+PATH (a string — the module cannot spell `TResourcePath`) and resolves it at rebuild through the
+`UIBuildContext` the canvas hands down. **`RendererManager` implements the provider** — its
+`ResolveFace` cache by path is exactly this; the override builds the path. The view's atlas is
+null while the upload is in flight (**TX4**) and UI3's re-arm absorbs it. Family + style is a
+second provider method for the day a `.opaaxui` names a family.
+
+**UI7 — `Text2D` LEARNED A BOX, STILL ONE WALK (TX5).** `TextDrawParams` gained `BoxWidth` (the
+alignment box from the origin; 0 is a POINT — Center straddles the origin, Right ends on it),
+`bWrap` (break at the box: after the last blank, consumed, or inside a word wider than the box —
+a first glyph always lands) and `HAlign`. The walk is now SCAN-then-EMIT per line through ONE
+advance rule (`StepPen`), so a wrapped or aligned line is exactly the width it was measured.
+Defaults reproduce the pre-U2 layout — the existing `Text2D` cases were the regression gate and
+did not move. **Vertical alignment is the widget's** (`UIText::VAlign` shifts the cached quads by
+the returned extent), not the walker's. `TOFU_THICKNESS_RATIO` moved to the header so every sink
+draws the same tofu box; `UIQuad::Outline` carries it.
+
+**UI8 — `UISubsystem` IS THE GAMEINSTANCE'S UI TENANT, AND `WorldContext::UI` IS THE ROUTE.** It
+owns ONE persistent `UICanvas` and submits it every frame; the game outlives its worlds (**GI1**)
+so a HUD, a pause menu or a loading cover stays up across a level swap and is torn down whole at
+EndGame (**GI6**). Registered AFTER input mapping, so the UI reads this frame's actions.
+`WorldContext::UI` follows `Actions`' rule exactly — session-owned, null with no game — and is
+how gameplay reaches it (D3 forbids the locator). **The Sandbox `HudSubsystem` is the dogfood:**
+a Play-world subsystem that hangs ONE `UIPanel` under the canvas root on Startup, binds `Jump`
+(**IM7**, gated on `IsActive` per **IM8**) for a top-left counter, drives a bottom-left bar from
+`|MoverComponent::Velocity| / 400`, and `RemoveChild`s its panel on Shutdown — the log's
+`0 root child(ren) dropped with the canvas` at EndGame is the proof the canvas was left clean.
+
+**Growth points, named and not built:** `UIButton` + pointer capture (U3) · the `.opaaxui`
+asset and its panel (U4) · `UIMask` as a clip-rect vertex attribute (**F4d**'s idiom, never
+stencil — it would break **F5**'s one-pipeline batch), `Sliced` images, `UISafeArea` (U5) ·
+the deferred `OpenLevel` + loading cover (U6) · rich text as `UIText` runs · layout groups ·
+canvas-group alpha · `UIBinding` (pull a named reflected property per frame — the reflection is
+half of MVVM already; notification is what a per-frame pull replaces at HUD scale) ·
+gamepad focus/navigation · a per-canvas Match parameter for portrait targets.
 
 ---
 

@@ -3,6 +3,16 @@
 | Step | Commit | What landed |
 |---|---|---|
 | **U1** | `276b905` | `Engine/Source/UI/`: `UIRect` + `ResolveRect`, `UIWidget` (3 flags, 2 verbs, one walk), `UICanvas` (view = `CameraView{0, H/2}`, stats), `UIPanel`, `UIImage` (fill). 16 cases, **810 → 826 / 9029 → 9114**. No caller yet. |
+| **U2** | `6578fea` | The canvas over the world: `bDrawUI` opt-in on the world pass, `SubmitUICanvas`, `RenderCanvases` with **`ELoadOp::Load`'s first caller**, ST rows. `Text2D` box (wrap/align, scan-then-emit). `IUIFontProvider` + the re-arm. `UIText`. `UISubsystem` tenant + `WorldContext::UI`. Sandbox `HudSubsystem` (Jumps + speed bar). 10 cases, **826 → 836 / 9114 → 9161**. Contract **§UI** (UI1–UI8). |
+
+**Settled in U2, not in the seed:** the UI is NOT a view of its own — the runtime fallback keys on
+an empty list, so it rides the world pass, opt-in (UI5) · layout happens at RENDER time, per
+target (UI5) · the face is a string path through a provider the renderer implements (UI6) · a
+`Rebuild` may re-arm, which is how an uploading atlas is waited for with no polling (UI3) ·
+"score + health" became **Jumps + speed** — the player has no health and the gun does not fire;
+both are real. **Not proven by a smoke run:** the picture itself, and a resize keeping the
+corners — their eyes. `Sandbox.exe` opens `Main`, which has no mover, so its bar stays empty
+there; `PhysicsTest` in PIE is where both move.
 
 **Settled in U1, not in the seed:** a resolve that lands on the SAME rect stops propagation below
 it (a corner-anchored child of a widening root costs one resolve, its subtree nothing) · the root
