@@ -1,6 +1,7 @@
 #pragma once
 
-#include "Core/OpaaxTypes.h"   // Uint8
+#include "Core/OpaaxTypes.h"        // Uint8
+#include "Core/Maths/MathTypes.h"   // Vector2F
 
 namespace Opaax
 {
@@ -87,6 +88,14 @@ namespace Opaax::Editor
          */
         void SetViewportFocus(bool bInHovered, bool bInFocused) noexcept;
 
+        /**
+         * The pointer's position inside the viewport IMAGE, pixels. The editor owns the game's
+         * pointer because the game's window IS the viewport: the OS position is window pixels while
+         * the game hit-tests in its own view (UI11). Pushed by ViewportPanel, fed to the engine's
+         * InputManager in Evaluate while the route is Open.
+         */
+        void SetPointerLocalPx(const Vector2F& InLocalPx) noexcept { m_PointerLocalPx = InLocalPx; }
+
         // =============================================================================
         // Get
         // =============================================================================
@@ -115,5 +124,8 @@ namespace Opaax::Editor
         // for the pointer to be over.
         bool m_bViewportHovered = false;
         bool m_bViewportFocused = false;
+
+        // The pointer inside the viewport image, pushed by ViewportPanel. Fed to the engine while Open.
+        Vector2F m_PointerLocalPx = { 0.f, 0.f };
     };
 }

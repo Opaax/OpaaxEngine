@@ -5,6 +5,7 @@
 #include "Core/Maths/Bounds2D.h"
 #include "Core/Maths/MathTypes.h"
 #include "Renderer/CameraView.h"
+#include "UI/UIEvents.h"
 #include "UI/UIWidget.h"
 
 namespace Opaax
@@ -78,12 +79,36 @@ namespace Opaax
         void Submit(Renderer2D& InRenderer) const;
 
         /** The top-most hit-testable widget under InCanvasPoint, or null. */
-        const UIWidget* HitTest(const Vector2F& InCanvasPoint) const;
+        UIWidget* HitTest(const Vector2F& InCanvasPoint);
+
+        // =============================================================================
+        // Input — events bubble from the hit / focused widget (UIEvents.h)
+        // =============================================================================
+    public:
+        /** Move re-hovers (Enter/Leave), Down/Up bubble and capture. @return whether a widget took it. */
+        EUIReply RoutePointer(const UIPointerEvent& InEvent);
+
+        /** Bubble from the focused widget; Unhandled when none has focus. */
+        EUIReply RouteKey(const UIKeyEvent& InEvent);
+
+        void            SetFocus(UIWidget* InWidget) noexcept;
+        UIWidget*       GetFocus()   const noexcept { return m_Focused; }
+        const UIWidget* GetHovered() const noexcept { return m_Hovered; }
+        const UIWidget* GetPressed() const noexcept { return m_Pressed; }
+
+        /** Leave the hovered widget and drop capture — a switch to GameOnly, or a canvas going dark. */
+        void ClearPointer();
+
+        /** A subtree is leaving: forget any hovered / pressed / focused pointer that rests under it. */
+        void OnDetached(UIWidget& InSubtreeRoot);
 
         // =============================================================================
         // Members
         // =============================================================================
     private:
+        /** Walk up from InFrom asking each handler; the widget that answered Handled, or null. */
+        UIWidget* BubblePointer(UIWidget* InFrom, const UIPointerEvent& InEvent);
+
         float    m_ReferenceHeight;
         Uint32   m_TargetWidth  = 0;
         Uint32   m_TargetHeight = 0;
@@ -92,5 +117,10 @@ namespace Opaax
 
         TUniquePtr<UIWidget> m_Root;
         mutable bool         m_bWarnedOrderOverflow = false;
+
+        UIWidget*        m_Hovered      = nullptr;   // non-owning
+        UIWidget*        m_Pressed      = nullptr;   // captured between Down and Up
+        EUIPointerButton m_PressButton  = EUIPointerButton::None;
+        UIWidget*        m_Focused      = nullptr;
     };
 }

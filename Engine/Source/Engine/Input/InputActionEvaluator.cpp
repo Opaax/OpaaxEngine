@@ -180,34 +180,44 @@ namespace Opaax
     // =========================================================================
     // Per frame
     // =========================================================================
-    void InputActionEvaluator::Evaluate(const InputManager& InInput, double InDeltaTime)
+    void InputActionEvaluator::Evaluate(const InputManager& InInput, double InDeltaTime, const InputKeyMask* InPreConsumed)
     {
         // Captured BEFORE the values are cleared: Started and Completed are edges against the
-        // PREVIOUS frame's actuation, and that is the only thing carried across.
+        // PREVIOUS frame's actuation, and that is the only thing carried across. The suppression
+        // flag rides alongside so a key held across a consumption boundary fires no phantom edge.
         TDynArray<bool> lWasActuated;
+        TDynArray<bool> lWasMaskSuppressed;
         lWasActuated.reserve(m_Actions.size());
+        lWasMaskSuppressed.reserve(m_Actions.size());
 
         for (ActionEntry& lEntry : m_Actions)
         {
             lWasActuated.emplace_back(lEntry.State.Value.AsBool());
+            lWasMaskSuppressed.emplace_back(lEntry.State.bMaskSuppressed);
 
-            lEntry.State.Value.Value = Vector2F{0.f, 0.f};
-            lEntry.State.Value.Type  = lEntry.Action.ValueType;
-            lEntry.State.bStarted    = false;
-            lEntry.State.bTriggered  = false;
-            lEntry.State.bCompleted  = false;
-            lEntry.State.bHold       = false;
+            lEntry.State.Value.Value      = Vector2F{0.f, 0.f};
+            lEntry.State.Value.Type       = lEntry.Action.ValueType;
+            lEntry.State.bStarted         = false;
+            lEntry.State.bTriggered       = false;
+            lEntry.State.bCompleted       = false;
+            lEntry.State.bHold            = false;
+            lEntry.State.bMaskSuppressed  = false;
         }
 
-        // Consumption is per KEY and lives for one frame only.
-        TFixedArray<bool, InputManager::KEY_STATE_COUNT> lConsumed{};
+        // Consumption is per KEY and lives for one frame only. It starts from what the UI already
+        // swallowed (UI10): a bound key the UI took is skipped exactly as a higher context's would be.
+        InputKeyMask lConsumed{};
+        if (InPreConsumed != nullptr)
+        {
+            lConsumed = *InPreConsumed;
+        }
 
         for (const InputMappingContext& lContext : m_Contexts)
         {
             for (const InputKeyBinding& lBinding : lContext.Bindings)
             {
                 const Uint16 lIndex = ToKeyIndex(lBinding.Key);
-                if (lIndex == InputManager::KEY_STATE_COUNT || lConsumed[lIndex])
+                if (lIndex == InputManager::KEY_STATE_COUNT)
                 {
                     continue;
                 }
@@ -217,6 +227,15 @@ namespace Opaax
                 ActionEntry* lEntry = FindEntry(lBinding.Action);
                 if (lEntry == nullptr)
                 {
+                    continue;
+                }
+
+                // A masked binding contributes no value, but a key physically down while masked is
+                // recorded so the un-mask frame does not read a rising edge (UI10). Checked here,
+                // not before FindEntry, so the flag lands on the action the key would have driven.
+                if (lConsumed[lIndex])
+                {
+                    if (bActuated) { lEntry->State.bMaskSuppressed = true; }
                     continue;
                 }
 
@@ -246,7 +265,10 @@ namespace Opaax
             lState.Value.Value = InputModifiers::ApplyAll(lState.Value.Value, lEntry.Action.Modifiers);
 
             lState.bTriggered = lState.Value.AsBool();
-            lState.bStarted   = lState.bTriggered && !lWasActuated[lIdx];
+            // A rise off a key that was merely UN-MASKED (still physically held from last frame) is
+            // not a press: it fires no Started, or a menu bound to the same key that closed it would
+            // reopen on the very next frame (UI10).
+            lState.bStarted   = lState.bTriggered && !lWasActuated[lIdx] && !lWasMaskSuppressed[lIdx];
             lState.bCompleted = !lState.bTriggered && lWasActuated[lIdx];
 
             if (lState.bTriggered)

@@ -3251,6 +3251,10 @@ the `AddContext` call (Unreal puts it on the call) — one source, with an overr
 available the day a caller wants one. `AddContext` is **idempotent by name**: two Play worlds
 coexist during a level swap, so the second world's control subsystem re-adds the same context
 every time, and doubling the stack would double every binding's contribution.
+- **A key CONSUMED while physically held fires no phantom Started when the mask lifts** (added UI
+  U3, see **UI10**). The UI is the first consumer to toggle mid-hold; the `bMaskSuppressed` gate
+  on `bStarted` also covers a higher context popping while its key is still down. `Evaluate` takes
+  an optional pre-consumed mask (`&m_PreConsumed`), seeded from what the UI swallowed this frame.
 
 **IM7 — Gameplay BINDS, and `UnbindAll(this)` in the owner's `Shutdown` is the contract.** The
 whole callback layer is four `TMulticastDelegate`s per action — `AddMember` returns a handle,
@@ -4211,13 +4215,65 @@ a Play-world subsystem that hangs ONE `UIPanel` under the canvas root on Startup
 `|MoverComponent::Velocity| / 400`, and `RemoveChild`s its panel on Shutdown — the log's
 `0 root child(ren) dropped with the canvas` at EndGame is the proof the canvas was left clean.
 
-**Growth points, named and not built:** `UIButton` + pointer capture (U3) · the `.opaaxui`
-asset and its panel (U4) · `UIMask` as a clip-rect vertex attribute (**F4d**'s idiom, never
-stencil — it would break **F5**'s one-pipeline batch), `Sliced` images, `UISafeArea` (U5) ·
-the deferred `OpenLevel` + loading cover (U6) · rich text as `UIText` runs · layout groups ·
-canvas-group alpha · `UIBinding` (pull a named reflected property per frame — the reflection is
-half of MVVM already; notification is what a per-frame pull replaces at HUD scale) ·
-gamepad focus/navigation · a per-canvas Match parameter for portrait targets.
+**UI9 — INPUT BUBBLES (U3), Slate's `FReply`.** `UICanvas::RoutePointer` / `RouteKey` ask the hit
+(or focused) widget, then its parents up to the root, until one returns `EUIReply::Handled`; a
+widget with no opinion returns `Unhandled` and **the event falls through to the game** — a bare
+`UIImage` on the HUD lets a click through exactly as Unreal's `SImage` does, only `UIButton` eats
+it. `bHitTestable = false` is `SelfHitTestInvisible` — skipped as a target, children still tested.
+- **A press CAPTURES.** The widget that handled a `Down` becomes `m_Pressed` and hears the `Up`
+  even released outside — so a drag off a button cancels the click but still consumes the release
+  (**UIButton**: Down + Up *inside* clicks; a captured Up outside does not). Enter/Leave are
+  DELIVERED to the hovered widget, never bubbled (Slate). Keys bubble from `m_Focused`; no focus,
+  no delivery.
+- **Detach cannot dangle:** `UIWidget::m_Canvas` is set recursively on `AddChild` and
+  `RemoveChild` calls `UICanvas::OnDetached(subtree)` BEFORE the pointers die, nulling any
+  hovered/pressed/focused that lay under it. No validation walk over freed memory. All pure —
+  `UIEventTests` / `UIButtonTests`.
+- The module names `EKeyCode` by an **opaque `enum class EKeyCode : Uint16;`** (the real enum has
+  a fixed underlying type), so it carries a key without including the Engine tier — the same trick
+  that keeps `UI/` World-free (**UI1**).
+
+**UI10 — THREE INPUT MODES, and what the UI handled is CONSUMED before the mapping evaluates.**
+`EUIInputMode { GameOnly, UIOnly, GameAndUI }` lives on the `UISubsystem` (there is no
+PlayerController tier; the session is where Unreal's mode effectively lives), default `GameAndUI`.
+The tenant is now registered **BEFORE** input mapping, so `UIInputRouter::Route` runs first each
+frame: it drives the canvas from the raw `InputManager` and reports the keys a widget swallowed as
+an `InputKeyMask`, handed to `InputMappingSubsystem::ConsumeThisFrame`. The evaluator seeds its
+per-frame consumed set from that mask — **IM6's "per key, highest priority first" with the UI as
+the top of the stack**, no new mechanism. GameOnly clears the pointer and routes nothing; UIOnly
+fills the mask WHOLE (the mapping is muted); GameAndUI marks only what a widget took (and a button
+held after a captured press stays consumed, so a drag never leaks mid-gesture). `UIInputRouter` is
+hoisted pure and tested against a real `InputManager` (`UIInputRouterTests`), the way
+`InputActionEvaluator` is tested apart from its subsystem.
+- **A masked-then-unmasked HELD key must not fabricate a press edge**, or a menu bound to the key
+  that closed it reopens on the next frame. `bStarted = bTriggered && !wasActuated` read a phantom
+  rise the moment a mask lifted on a still-held key (the value was forced to zero while masked).
+  `InputActionState::bMaskSuppressed` records "a binding was consumed while its key was physically
+  down" and gates the edge: `bStarted = bTriggered && !wasActuated && !wasMaskSuppressed`. This is
+  a **fix to IM as much as UI** — the same phantom existed for a higher context popping mid-hold
+  (**IM6**), it just had no caller until a mode toggled a mask. Found by the U3 PIE harness (the
+  menu reopened one frame after Escape closed it, `opened 2 time(s)`); regression-gated in
+  `InputMappingTests`.
+
+**UI11 — IN PIE THE GAME'S POINTER IS THE VIEWPORT-LOCAL ONE.** `InputManager`'s mouse is window
+pixels; in `Sandbox.exe` that IS the target, but in the editor the game's view is the viewport
+IMAGE, so a canvas hit-test in window pixels would be off by the panel's origin. `ViewportPanel`
+pushes the image-local position (`GetMousePos − GetItemRectMin`, the origin only knowable there —
+the prefab-drop pixel's reason) to `InputRoute`, which feeds `InputManager::OnMouseMoved` once per
+frame while Open; `EditorService::RouteInput` **swallows every raw `MouseMovedEvent`** so the
+editor owns the game's pointer position. `Sandbox.exe` is untouched. *Named, pre-existing, not
+fixed:* an UNDOCKED viewport is a second OS window whose GLFW callbacks never reach the app, so
+button/key events do not reach PIE there today either.
+
+**Growth points, named and not built:** the `.opaaxui` asset and its panel (U4) · `UIMask` as a
+clip-rect vertex attribute (**F4d**'s idiom, never stencil — it would break **F5**'s one-pipeline
+batch), `Sliced` images, `UISafeArea` (U5) · the deferred `OpenLevel` + loading cover (U6) · rich
+text as `UIText` runs · layout groups · canvas-group alpha · `UIBinding` (pull a named reflected
+property per frame — the reflection is half of MVVM already; notification is what a per-frame pull
+replaces at HUD scale) · **keyboard/gamepad FOCUS navigation** (UIOnly with no pointer needs it —
+the next thing after U3; `SetFocus` and key bubbling are already in) · cursor lock/hide beyond
+"shown" · pausing the world from a menu (WS8's gate is the editor's PIE pause; theirs to design) ·
+a per-canvas Match parameter for portrait targets.
 
 ---
 

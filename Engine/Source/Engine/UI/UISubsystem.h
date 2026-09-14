@@ -3,11 +3,13 @@
 #include "Core/EngineAPI.h"
 #include "Application/Services/ILogger.h"
 #include "Engine/GameInstance/IGameInstanceSubsystem.h"
+#include "Engine/UI/UIInputMode.h"
 #include "UI/UICanvas.h"
 
 namespace Opaax
 {
     struct GameInstanceContext;
+    class  InputMappingSubsystem;
 
     inline constexpr LogCategory LogUISubsystem{"UI"};
 
@@ -44,6 +46,13 @@ namespace Opaax
         const UICanvas& GetCanvas() const noexcept { return m_Canvas; }
 
         // =========================================================================
+        // Input mode (UI10) — Unreal's three, on the session
+        // =========================================================================
+    public:
+        void         SetInputMode(EUIInputMode InMode) noexcept;
+        EUIInputMode GetInputMode() const noexcept { return m_InputMode; }
+
+        // =========================================================================
         // ISubsystem
         // =========================================================================
     public:
@@ -55,7 +64,9 @@ namespace Opaax
         // Members
         // =========================================================================
     private:
-        GameInstanceContext* m_Context = nullptr;   // borrowed; the GameInstance owns it
-        UICanvas             m_Canvas;
+        GameInstanceContext*   m_Context = nullptr;   // borrowed; the GameInstance owns it
+        InputMappingSubsystem* m_Mapping = nullptr;   // sibling tenant, resolved in Startup; may be null
+        UICanvas               m_Canvas;
+        EUIInputMode           m_InputMode = EUIInputMode::GameAndUI;
     };
 }

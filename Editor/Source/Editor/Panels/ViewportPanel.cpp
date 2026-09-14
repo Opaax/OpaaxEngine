@@ -482,6 +482,11 @@ namespace Opaax::Editor
         const bool   lImageRawHovered = ImGui::IsItemHovered();
         const ImVec2 lOrigin          = ImGui::GetItemRectMin();
 
+        // The game's pointer, in viewport-image pixels (UI11): the origin is only knowable here, the
+        // same reason the prefab-drop local pixel is taken here. The route feeds it to the engine.
+        const ImVec2 lMouse = ImGui::GetMousePos();
+        m_Context.Route.SetPointerLocalPx({ lMouse.x - lOrigin.x, lMouse.y - lOrigin.y });
+
         // ⑦-C. DROP A PREFAB TO PLACE ONE. Taken here because BeginDragDropTarget names the LAST
         // SUBMITTED ITEM, which is the image — nothing has been submitted since, and the three
         // measures above only read its rect.

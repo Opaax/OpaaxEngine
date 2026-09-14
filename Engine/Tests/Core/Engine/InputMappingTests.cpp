@@ -311,6 +311,77 @@ TEST_SUITE("InputActionEvaluator — triggers")
         CHECK_FALSE(lState->bCompleted);
     }
 
+    TEST_CASE("A key the UI pre-consumed drives no action, and the mask lasts one frame (UI10)")
+    {
+        InputActionEvaluator lEval;
+        InputManager         lInput;
+        lEval.RegisterAction(MakeAction("Jump", EInputValueType::Bool));
+
+        InputMappingContext lContext;
+        lContext.Name = Name("Gameplay");
+        lContext.Bindings.emplace_back(Bind("Jump", EKeyCode::Space));
+        lEval.AddContext(lContext);
+
+        InputKeyMask lMask{};
+        lMask[static_cast<Uint16>(EKeyCode::Space)] = true;
+
+        // Space is held, but the UI already spoke for it this frame.
+        lInput.OnKeyPressed(EKeyCode::Space, false);
+        lEval.Evaluate(lInput, 1.0 / 60.0, &lMask);
+        lInput.EndFrame();
+
+        const InputActionState* lState = lEval.FindState(Name("Jump"));
+        REQUIRE(lState != nullptr);
+        CHECK_FALSE(lState->bStarted);
+        CHECK_FALSE(lState->bTriggered);
+
+        // UN-MASKING a still-held key is NOT a fresh press: no phantom Started (a menu bound to the
+        // key that closed it must not reopen on the next frame). It IS triggered — the key is down.
+        Step(lEval, lInput);
+        CHECK_FALSE(lState->bStarted);
+        CHECK(lState->bTriggered);
+
+        // Release and press cleanly: a REAL edge fires Started as ever.
+        lInput.OnKeyReleased(EKeyCode::Space);
+        Step(lEval, lInput);
+        lInput.OnKeyPressed(EKeyCode::Space, false);
+        Step(lEval, lInput);
+        CHECK(lState->bStarted);
+    }
+
+    TEST_CASE("A full mask mid-hold reads as a release, and the hold does not re-fire on un-mask (UI10)")
+    {
+        InputActionEvaluator lEval;
+        InputManager         lInput;
+        lEval.RegisterAction(MakeAction("Jump", EInputValueType::Bool));
+
+        InputMappingContext lContext;
+        lContext.Name = Name("Gameplay");
+        lContext.Bindings.emplace_back(Bind("Jump", EKeyCode::Space));
+        lEval.AddContext(lContext);
+
+        InputKeyMask lAll{};
+        for (bool& lFlag : lAll) { lFlag = true; }
+
+        // Held and visible: Started, then Triggered.
+        lInput.OnKeyPressed(EKeyCode::Space, false);
+        Step(lEval, lInput);
+        const InputActionState* lState = lEval.FindState(Name("Jump"));
+        REQUIRE(lState != nullptr);
+        CHECK(lState->bStarted);
+
+        // Muted mid-hold: reads as a release. Completed fires once, the value drops.
+        lEval.Evaluate(lInput, 1.0 / 60.0, &lAll);
+        lInput.EndFrame();
+        CHECK_FALSE(lState->bTriggered);
+        CHECK(lState->bCompleted);
+
+        // Un-muted, still held: Triggered resumes but NO Started — the game does not see a re-press.
+        Step(lEval, lInput);
+        CHECK(lState->bTriggered);
+        CHECK_FALSE(lState->bStarted);
+    }
+
     TEST_CASE("A press and release inside ONE frame is not dropped (IN3)")
     {
         InputActionEvaluator lEval;

@@ -65,6 +65,9 @@ set(OPAAX_TEST_SOURCES
     # four trigger phases — so it is gated here against a REAL InputManager driven by its own
     # feed, rather than by a fake input source that would share the bug it is meant to catch.
     Core/Engine/InputMappingTests.cpp
+    # UI U3. The three input modes at the raw->mapping seam: which keys the game still hears
+    # after the UI routed a frame. A real InputManager, a real canvas, a button under the pointer.
+    Core/Engine/UIInputRouterTests.cpp
     Core/World/WorldEventsTests.cpp
     Core/World/ComponentIdentityTests.cpp
     Core/World/ComponentRegistryTests.cpp
@@ -129,6 +132,11 @@ set(OPAAX_TEST_SOURCES
     # U2. A string in a rect through a stub font provider — the atlas-still-uploading re-arm is
     # the case a smoke run could only ever see as "the text appeared a frame late".
     UI/UITextTests.cpp
+    # U3. Events bubble (Slate's FReply), a press captures, focus routes keys, a detach forgets;
+    # the button's click is Down + Up inside. Pure — the mask the UI hands the mapping is tested
+    # one level up in Core/Engine/UIInputRouterTests.cpp against a real InputManager.
+    UI/UIEventTests.cpp
+    UI/UIButtonTests.cpp
 
     # Editor-side, and the FIRST of its kind — header-only editor types only (see the include dir
     # below). ③'s gizmo delta math, pinned after a scale bug that only showed away from (0,0).

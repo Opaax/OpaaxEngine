@@ -4,12 +4,14 @@
 #include "Core/OpaaxTypes.h"
 #include "Application/Services/ILogger.h"
 #include "Engine/Input/InputTypes.h"
+#include "Engine/Subsystems/Input/InputManager.h"   // KEY_STATE_COUNT — the mask's width
 
 namespace Opaax
 {
-    class InputManager;
-
     inline constexpr LogCategory LogInputEvaluator{"InputEvaluator"};
+
+    /** A per-key "already spoken for this frame" flag — the UI marks keys it swallowed (UI10). */
+    using InputKeyMask = TFixedArray<bool, InputManager::KEY_STATE_COUNT>;
 
     // =============================================================================
     // InputActionEvaluator — turns held keys into named action values, once per frame.
@@ -100,8 +102,11 @@ namespace Opaax
          *
          * Runs BEFORE any world subsystem reads it — GameInstanceManager is registered ahead of
          * WorldManager, so UpdateAll reaches this first (BO4d).
+         *
+         * @param InPreConsumed Keys the UI already swallowed this frame (UI10). Seeds the per-frame
+         *   consumed set, so a bound key the UI took drives no action. Null = nothing pre-consumed.
          */
-        void Evaluate(const InputManager& InInput, double InDeltaTime);
+        void Evaluate(const InputManager& InInput, double InDeltaTime, const InputKeyMask* InPreConsumed = nullptr);
 
         // =========================================================================
         // Query

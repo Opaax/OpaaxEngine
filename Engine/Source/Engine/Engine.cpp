@@ -181,10 +181,11 @@ namespace Opaax
     {
         // The engine's own session subsystem, and the tier's first tenant: the layer that turns
         // InputManager's physical keys into named actions.
-        m_Registries.GameInstanceSubsystems().Register<InputMappingSubsystem>(OPAAX_ID("InputMapping"));
-
-        // The persistent canvas. After input mapping: UI reads this frame's actions, never last frame's.
+        // The persistent canvas, FIRST: its Update routes raw input and pre-consumes what the UI
+        // swallowed, so it must run before input mapping evaluates this frame (UI10).
         m_Registries.GameInstanceSubsystems().Register<UISubsystem>(OPAAX_ID("UI"));
+
+        m_Registries.GameInstanceSubsystems().Register<InputMappingSubsystem>(OPAAX_ID("InputMapping"));
     }
 
     void Engine::RegisterNativeSubsystems()

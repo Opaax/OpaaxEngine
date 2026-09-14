@@ -29,6 +29,7 @@ namespace Opaax
 
         UIWidget* lChild = InChild.get();
         lChild->m_Parent = this;
+        lChild->SetCanvasRecursive(m_Canvas);
         m_Children.emplace_back(std::move(InChild));
 
         // A new child arrives with fresh flags; the walk only needs to reach it.
@@ -50,11 +51,28 @@ namespace Opaax
         TUniquePtr<UIWidget> lRemoved = std::move(*lIt);
         m_Children.erase(lIt);
 
+        // Drop any pointer state resting under this subtree BEFORE the pointers can die — no walk
+        // ever touches freed memory looking for a stale hovered/pressed/focused widget.
+        if (m_Canvas != nullptr)
+        {
+            lRemoved->m_Canvas->OnDetached(*lRemoved);
+        }
+
         lRemoved->m_Parent        = nullptr;
+        lRemoved->SetCanvasRecursive(nullptr);
         lRemoved->m_bLayoutDirty  = true;   // it will be resolved against a new parent, if any
         lRemoved->m_bContentDirty = true;
 
         return lRemoved;
+    }
+
+    void UIWidget::SetCanvasRecursive(UICanvas* InCanvas)
+    {
+        m_Canvas = InCanvas;
+        for (const TUniquePtr<UIWidget>& lChild : m_Children)
+        {
+            lChild->SetCanvasRecursive(InCanvas);
+        }
     }
 
     // =============================================================================
@@ -131,7 +149,7 @@ namespace Opaax
         }
     }
 
-    const UIWidget* UIWidget::HitTest(const Vector2F& InPoint) const
+    UIWidget* UIWidget::HitTest(const Vector2F& InPoint)
     {
         if (!bVisible)
         {
@@ -141,7 +159,7 @@ namespace Opaax
         // Drawn last = on top, so the last child is asked first.
         for (auto lIt = m_Children.rbegin(); lIt != m_Children.rend(); ++lIt)
         {
-            if (const UIWidget* lHit = (*lIt)->HitTest(InPoint))
+            if (UIWidget* lHit = (*lIt)->HitTest(InPoint))
             {
                 return lHit;
             }

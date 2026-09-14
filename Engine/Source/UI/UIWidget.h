@@ -6,12 +6,14 @@
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
+#include "UI/UIEvents.h"
 #include "UI/UIFontProvider.h"
 #include "UI/UIQuad.h"
 #include "UI/UIRect.h"
 
 namespace Opaax
 {
+    class  UICanvas;
     struct UICanvasStats;
 
     // =============================================================================
@@ -30,6 +32,9 @@ namespace Opaax
     //   The walk CLEARS a node's flags before acting on them, so a Rebuild that finds its input
     //   not ready (an atlas still uploading) calls InvalidateContent() and is simply visited again
     //   next frame — waiting costs no polling anywhere.
+    //
+    //   INPUT BUBBLES (UIEvents.h): the canvas asks the hit widget, then its parents, until one
+    //   returns Handled. The base has no opinion — an image or a panel lets a click fall through.
     // =============================================================================
     class OPAAX_API UIWidget
     {
@@ -85,6 +90,16 @@ namespace Opaax
         /** Hand ownership back — undo wants the node, not a copy. Null when InChild is not mine. */
         TUniquePtr<UIWidget> RemoveChild(UIWidget& InChild);
 
+        /** The canvas this node hangs under, or null while detached. */
+        UICanvas* GetCanvas() const noexcept { return m_Canvas; }
+
+        // =============================================================================
+        // Input — override to take an event; the default lets it bubble on
+        // =============================================================================
+    public:
+        virtual EUIReply OnPointerEvent(const UIPointerEvent& InEvent) { (void)InEvent; return EUIReply::Unhandled; }
+        virtual EUIReply OnKeyEvent(const UIKeyEvent& InEvent)         { (void)InEvent; return EUIReply::Unhandled; }
+
         // =============================================================================
         // Invalidation
         // =============================================================================
@@ -124,15 +139,17 @@ namespace Opaax
                         UICanvasStats& OutStats);
 
         /** The deepest visible, hit-testable descendant (or me) containing InPoint; top-most first. */
-        const UIWidget* HitTest(const Vector2F& InPoint) const;
+        UIWidget* HitTest(const Vector2F& InPoint);
 
         void MarkSubtreeUp();
+        void SetCanvasRecursive(UICanvas* InCanvas);
 
         // =============================================================================
         // Members
         // =============================================================================
     private:
         UIWidget*                        m_Parent = nullptr;   // non-owning
+        UICanvas*                        m_Canvas = nullptr;   // non-owning; set on attach
         TDynArray<TUniquePtr<UIWidget>>  m_Children;
 
         Bounds2D           m_Bounds;

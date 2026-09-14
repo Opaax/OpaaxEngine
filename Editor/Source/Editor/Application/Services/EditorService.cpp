@@ -1036,6 +1036,15 @@ namespace Opaax::Editor
         const bool lViewportHovered = m_InputRoute != nullptr && m_InputRoute->IsViewportHovered();
 
         bool lConsumed = false;
+
+        // The editor OWNS the game's pointer POSITION (UI11): the OS event is in window pixels, but
+        // the game's window is the viewport image, so InputRoute feeds the viewport-local position
+        // once per frame instead. A raw window-pixel move must never reach the engine.
+        if (InEvent.GetEventType() == MouseMovedEvent::GetStaticType())
+        {
+            return true;
+        }
+
         if (InEvent.IsInCategory(EEventCategory::Mouse) || InEvent.IsInCategory(EEventCategory::MouseButton))
         {
             lConsumed = m_Gui->IsPointerOverUI() && !lViewportHovered;
