@@ -13,7 +13,7 @@ edge, so a menu bound to the key that closed it reopened next frame. It was late
 context popping mid-hold) with no caller until a mode toggled a mask. `bMaskSuppressed` gates
 `bStarted`. → [[L95]]. The world is NOT paused while the menu is up (theirs to design). One PIE
 harness ([[L81]]), removed; the reopen showed as `opened 2 time(s)` / `0 jumps`, the fix as
-`opened 1 time` / `1 jump`.
+`opened 1 time` / `1 jump`. **User-verified:** *"eye gate good"*. **Focus deferred by them:** *"focus will be done with gamepad or when need for keyboard"* — built the day UIOnly must work with no mouse; `SetFocus` + key bubbling already in.
 
 **Settled in U2, not in the seed:** the UI is NOT a view of its own — the runtime fallback keys on
 an empty list, so it rides the world pass, opt-in (UI5) · layout happens at RENDER time, per
