@@ -3,18 +3,13 @@
 #include <algorithm>   // std::min / std::max — the fade's clamp
 
 #include "Application/OpaaxApplication.h"
-#include "Application/Services/IEngine.h"
+#include "Application/Services/IEngine.h"          // RequestOpenLevel
 #include "Application/Services/ILogger.h"
-#include "Application/Services/IPaths.h"
 #include "Engine/Input/InputMappingSubsystem.h"
 #include "Engine/Input/InputTypes.h"
-#include "Engine/Registries/EngineRegistries.h"
 #include "Engine/Subsystems/Input/InputCodes.h"
-#include "Engine/Subsystems/Resources/ResourceManager.h"
-#include "Engine/Subsystems/Resources/Types/UI/UICanvasResource.h"
 #include "Engine/UI/UISubsystem.h"
 #include "UI/UICanvas.h"
-#include "UI/UICanvasFile.h"
 #include "UI/Widgets/UIButton.h"
 #include "UI/Widgets/UIText.h"
 #include "World/Systems/WorldContext.h"
@@ -133,26 +128,12 @@ namespace Sandbox
         lMenu->OnEscape = [this]() { Close(); };
         m_Menu = lCanvas.Root().AddChild(std::move(lMenu));
 
-        Uint64 lWidgets = 0;
         UIButton* lResume = nullptr;
         UIButton* lNext   = nullptr;
 
-        IEngine&          lEngine  = OpaaxApplication::GetAppService<IEngine>();
-        const OpaaxString lAbsPath = m_Context->Paths.AssetToAbsolute(OpaaxString(kMenuAsset));
-
-        ResourceRef<UICanvasResource> lRef = m_Context->Resources.Load<UICanvasResource>(lAbsPath.CStr());
-        const UICanvasResource* const lResource = lRef.IsValid() ? lRef.Get() : nullptr;
-
-        float lReferenceHeight = 0.f;
-        TUniquePtr<UIWidget> lTree = lResource != nullptr
-            ? lResource->BuildTree(lEngine.GetRegistries().UIWidgets(), lReferenceHeight)
-            : nullptr;
-
-        if (lTree)
+        // The tenant loads, checks the height against its canvas and hangs it under the modal's root.
+        if (UIWidget* const lRoot = m_Context->UI->MountAsset(OpaaxString(kMenuAsset), m_Menu))
         {
-            UIWidget* const lRoot = m_Menu->AddChild(Move(lTree));
-            lWidgets = UICanvasFile::CountWidgets(*lRoot);
-
             // Bound BY NAME out of the authored tree (UI13): a renamed button goes quiet, and says so.
             lResume = dynamic_cast<UIButton*>(lRoot->FindByName(OpaaxString(kResumeName)));
             lNext   = dynamic_cast<UIButton*>(lRoot->FindByName(OpaaxString(kNextLevelName)));
@@ -162,7 +143,7 @@ namespace Sandbox
         }
         else
         {
-            OPAAX_LOG(LogPauseMenu, Error, "Menu asset '{}' did not load — the menu opens EMPTY (Escape still closes it).", kMenuAsset);
+            OPAAX_LOG(LogPauseMenu, Error, "Menu asset '{}' did not mount — the menu opens EMPTY (Escape still closes it).", kMenuAsset);
         }
 
         if (m_Context->Actions != nullptr)
@@ -170,8 +151,7 @@ namespace Sandbox
             m_Context->Actions->Bind(kMenuToggleAction, EInputTrigger::Started, this, &PauseMenuSubsystem::OnMenuToggle);
         }
 
-        OPAAX_LOG(LogPauseMenu, Info, "Pause menu loaded '{}' — {} widget(s), {} {}, {} {}, mode {}",
-                  kMenuAsset, lWidgets,
+        OPAAX_LOG(LogPauseMenu, Info, "Pause menu up — {} {}, {} {}, mode {}",
                   kResumeName,    lResume != nullptr ? "bound" : "MISSING",
                   kNextLevelName, lNext   != nullptr ? "bound" : "MISSING",
                   ToString(m_Context->UI->GetInputMode()));

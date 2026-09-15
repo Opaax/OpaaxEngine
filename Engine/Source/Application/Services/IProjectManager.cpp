@@ -23,6 +23,7 @@ namespace Opaax
             OpaaxString StartupLevel()  const override { return OpaaxString(); }
             OpaaxString LoadingScreen() const override { return OpaaxString(); }
             float       LoadingScreenMinSeconds() const override { return 0.f; }
+            float       UIReferenceHeight() const override { return 1080.f; }
         };
     }
 
@@ -73,11 +74,22 @@ namespace Opaax
 
         lOut.LoadingScreen = lReadString(Opaax_Project_Identity::PROJECT_LOADING_SCREEN_KEY);
 
-        // A number; anything else (absent, a string) keeps 0 — tolerant, like every key here.
-        if (const char* lKey = Opaax_Project_Identity::PROJECT_LOADING_SCREEN_MIN_SECONDS_KEY;
-            lRoot.contains(lKey) && lRoot[lKey].is_number())
+        // A number; anything else (absent, a string) keeps the default — tolerant, like every key here.
+        const auto lReadNumber = [&lRoot](const char* InKey, float& InOutValue)
         {
-            lOut.LoadingScreenMinSeconds = lRoot[lKey].get<float>();
+            if (lRoot.contains(InKey) && lRoot[InKey].is_number())
+            {
+                InOutValue = lRoot[InKey].get<float>();
+            }
+        };
+
+        lReadNumber(Opaax_Project_Identity::PROJECT_LOADING_SCREEN_MIN_SECONDS_KEY, lOut.LoadingScreenMinSeconds);
+        lReadNumber(Opaax_Project_Identity::PROJECT_UI_REFERENCE_HEIGHT_KEY, lOut.UIReferenceHeight);
+
+        // A height of nothing is not a canvas; the default stands in and says so.
+        if (lOut.UIReferenceHeight <= 0.f)
+        {
+            lOut.UIReferenceHeight = 1080.f;
         }
         return lOut;
     }

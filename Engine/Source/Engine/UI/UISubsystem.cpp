@@ -34,14 +34,66 @@ namespace Opaax
             m_Mapping = lGame->GetSubsystems().GetSubsystem<InputMappingSubsystem>();
         }
 
+        // The ONE height every asset is authored against (UI2) — the project's, never an asset's.
+        m_Canvas.SetReferenceHeight(OpaaxApplication::GetAppService<IProjectManager>().UIReferenceHeight());
+
         BuildLoadingCover();
 
         m_Context->Events.GetEventBus().Subscribe<LevelLoadRequested>(this, &UISubsystem::OnLevelLoadRequested);
         m_Context->Events.GetEventBus().Subscribe<LevelLoadFinished>(this, &UISubsystem::OnLevelLoadFinished);
 
-        OPAAX_LOG(LogUISubsystem, Info, "UI started — canvas reference height {}, mode {}, mapping {}",
+        OPAAX_LOG(LogUISubsystem, Info, "UI started — canvas reference height {} (project), mode {}, mapping {}",
                   m_Canvas.GetReferenceHeight(), ToString(m_InputMode), m_Mapping != nullptr ? "linked" : "absent");
         return true;
+    }
+
+    TUniquePtr<UIWidget> UISubsystem::LoadTree(const OpaaxString& InAssetPath, float& OutAuthoredHeight) const
+    {
+        const OpaaxString lAbsPath = m_Context->Paths.AssetToAbsolute(InAssetPath);
+
+        const ResourceRef<UICanvasResource> lRef      = m_Context->Resources.Load<UICanvasResource>(lAbsPath.CStr());
+        const UICanvasResource* const       lResource = lRef.IsValid() ? lRef.Get() : nullptr;
+
+        if (lResource == nullptr)
+        {
+            OPAAX_LOG(LogUISubsystem, Error, "UI asset '{}' did not load", InAssetPath.CStr());
+            return nullptr;
+        }
+
+        TUniquePtr<UIWidget> lTree =
+            lResource->BuildTree(OpaaxApplication::GetAppService<IEngine>().GetRegistries().UIWidgets(), OutAuthoredHeight);
+
+        if (!lTree)
+        {
+            OPAAX_LOG(LogUISubsystem, Error, "UI asset '{}' did not parse", InAssetPath.CStr());
+        }
+
+        return lTree;
+    }
+
+    UIWidget* UISubsystem::MountAsset(const OpaaxString& InAssetPath, UIWidget* InParent)
+    {
+        float lAuthoredHeight = 0.f;
+        TUniquePtr<UIWidget> lTree = LoadTree(InAssetPath, lAuthoredHeight);
+        if (!lTree)
+        {
+            return nullptr;   // LoadTree said why; the caller says what it loses
+        }
+
+        // The panel previewed it at ITS height; this canvas draws at the project's. Said once,
+        // here, rather than discovered as "it looks different in the game".
+        if (lAuthoredHeight != m_Canvas.GetReferenceHeight())
+        {
+            OPAAX_LOG(LogUISubsystem, Warn, "'{}' was authored at a reference height of {} but the canvas is {} — it will not look like the panel (set uiReferenceHeight in the project, or re-save the asset at {})",
+                      InAssetPath.CStr(), lAuthoredHeight, m_Canvas.GetReferenceHeight(), m_Canvas.GetReferenceHeight());
+        }
+
+        UIWidget& lParent  = InParent != nullptr ? *InParent : m_Canvas.Root();
+        UIWidget* lMounted = lParent.AddChild(Move(lTree));
+
+        OPAAX_LOG(LogUISubsystem, Info, "Mounted '{}' — {} widget(s) under '{}'",
+                  InAssetPath.CStr(), UICanvasFile::CountWidgets(*lMounted), lParent.Name.CStr());
+        return lMounted;
     }
 
     void UISubsystem::BuildLoadingCover()
@@ -55,19 +107,11 @@ namespace Opaax
 
         if (!lAsset.IsEmpty())
         {
-            const OpaaxString lAbsPath = m_Context->Paths.AssetToAbsolute(lAsset);
-
-            const ResourceRef<UICanvasResource> lRef = m_Context->Resources.Load<UICanvasResource>(lAbsPath.CStr());
-            const UICanvasResource* const       lResource = lRef.IsValid() ? lRef.Get() : nullptr;
-
-            float lReferenceHeight = 0.f;
-            TUniquePtr<UIWidget> lTree = lResource != nullptr
-                ? lResource->BuildTree(OpaaxApplication::GetAppService<IEngine>().GetRegistries().UIWidgets(), lReferenceHeight)
-                : nullptr;
-
-            if (lTree)
+            // Alone on its canvas, so the asset's own height IS the canvas's — nothing to disagree with.
+            float lAuthoredHeight = 0.f;
+            if (TUniquePtr<UIWidget> lTree = LoadTree(lAsset, lAuthoredHeight))
             {
-                m_LoadingCanvas.SetReferenceHeight(lReferenceHeight);
+                m_LoadingCanvas.SetReferenceHeight(lAuthoredHeight);
                 lRoot.AddChild(Move(lTree));
 
                 OPAAX_LOG(LogUISubsystem, Info, "Loading cover: '{}' — {} widget(s), up at least {} s",

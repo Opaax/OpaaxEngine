@@ -7,6 +7,7 @@
 
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IEngine.h"
+#include "Application/Services/IProjectManager.h"   // the reference height the game draws at
 #include "Editor/Commands/EditorCommandRegistry.h"
 #include "Editor/Commands/EditorNativeCommandsTags.hpp"
 #include "Editor/EditorContext.h"
@@ -350,6 +351,18 @@ namespace Opaax::Editor
             if (ImGui::DragFloat("Reference height", &lHeight, 1.f, 16.f, 8192.f, "%.0f"))
             {
                 lCanvas.SetReferenceHeight(lHeight);
+            }
+
+            // The game draws every asset at the PROJECT's height (UI2); this one is the preview's.
+            // A difference is said here, where the author is, before the mount log says it again.
+            const float lProjectHeight = OpaaxApplication::GetAppService<IProjectManager>().UIReferenceHeight();
+            ImGui::SameLine();
+            ImGui::TextDisabled("(project: %.0f)", lProjectHeight);
+            if (lHeight != lProjectHeight)
+            {
+                ImGui::TextColored(ImVec4(1.f, 0.7f, 0.2f, 1.f),
+                                   "Authored at %.0f, the game draws at %.0f - it will not look like this preview.",
+                                   lHeight, lProjectHeight);
             }
         }
         else

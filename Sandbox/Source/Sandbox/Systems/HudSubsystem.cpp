@@ -4,19 +4,12 @@
 
 #include <glm/geometric.hpp>   // glm::length
 
-#include "Application/OpaaxApplication.h"
 #include "Application/Services/ILogger.h"
-#include "Application/Services/IEngine.h"
-#include "Application/Services/IPaths.h"
 #include "Engine/Input/InputMappingSubsystem.h"
 #include "Engine/Input/InputTypes.h"
-#include "Engine/Registries/EngineRegistries.h"
-#include "Engine/Subsystems/Resources/ResourceManager.h"
-#include "Engine/Subsystems/Resources/Types/UI/UICanvasResource.h"
 #include "Engine/UI/UISubsystem.h"
 #include "UI/UIBinding.h"
 #include "UI/UICanvas.h"
-#include "UI/UICanvasFile.h"
 #include "World/Components/MoverComponent.h"
 #include "World/Systems/WorldContext.h"
 #include "World/World.h"
@@ -52,34 +45,19 @@ namespace Sandbox
             return true;
         }
 
-        IEngine&          lEngine  = OpaaxApplication::GetAppService<IEngine>();
-        const OpaaxString lAbsPath = m_Context->Paths.AssetToAbsolute(OpaaxString(kHudAsset));
-
-        ResourceRef<UICanvasResource> lRef = m_Context->Resources.Load<UICanvasResource>(lAbsPath.CStr());
-        const UICanvasResource* const lResource = lRef.IsValid() ? lRef.Get() : nullptr;
-
-        if (lResource == nullptr)
+        // The tenant loads, checks the height against its canvas and hangs it (UI13, UI2).
+        m_Root = m_Context->UI->MountAsset(OpaaxString(kHudAsset));
+        if (m_Root == nullptr)
         {
-            OPAAX_LOG(LogHud, Error, "HUD asset '{}' did not load — no HUD is drawn.", kHudAsset);
+            OPAAX_LOG(LogHud, Error, "HUD asset '{}' did not mount — no HUD is drawn.", kHudAsset);
             return true;
         }
-
-        float lReferenceHeight = 0.f;
-        TUniquePtr<UIWidget> lTree = lResource->BuildTree(lEngine.GetRegistries().UIWidgets(), lReferenceHeight);
-
-        if (!lTree)
-        {
-            OPAAX_LOG(LogHud, Error, "HUD asset '{}' did not parse — no HUD is drawn.", kHudAsset);
-            return true;
-        }
-
-        UICanvas& lCanvas = m_Context->UI->GetCanvas();
-        m_Root = lCanvas.Root().AddChild(Move(lTree));
 
         // The model is the ONE thing this owns that the tree reads; which widget shows which field
         // is the asset's business (UI24). Removed BY HANDLE in Shutdown, before the model dies:
         // during a level swap the next world's HUD has already re-registered "Hud", and a remove
         // by name would take its source away.
+        UICanvas& lCanvas = m_Context->UI->GetCanvas();
         m_Source = lCanvas.Bindings().Add(kHudSource, MakeBindingReader(m_Model));
 
         if (m_Context->Actions != nullptr)
@@ -87,8 +65,8 @@ namespace Sandbox
             m_Context->Actions->Bind(kJumpAction, EInputTrigger::Started, this, &HudSubsystem::OnJump);
         }
 
-        OPAAX_LOG(LogHud, Info, "HUD loaded '{}' — {} widget(s), reference height {}, source '{}' registered ({} sources on the canvas)",
-                  kHudAsset, UICanvasFile::CountWidgets(*m_Root), lReferenceHeight, kHudSource, lCanvas.Bindings().Count());
+        OPAAX_LOG(LogHud, Info, "HUD up — source '{}' registered ({} sources on the canvas)",
+                  kHudSource, lCanvas.Bindings().Count());
         return true;
     }
 

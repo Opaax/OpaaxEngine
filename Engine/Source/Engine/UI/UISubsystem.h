@@ -31,6 +31,10 @@ namespace Opaax
     //   the project's `loadingScreenMinSeconds` — a synchronous swap is one frame, which is a
     //   flash, not a screen; the world underneath runs meanwhile.
     //
+    //   THE CANVAS IS THE PROJECT'S REFERENCE HEIGHT (UI2). Every asset is authored against that
+    //   one number; an asset's own `ReferenceHeight` is what the panel previews at, and MountAsset
+    //   warns when the two disagree rather than letting the game draw what the panel did not show.
+    //
     //   Gameplay reaches it through WorldContext::UI, the way it reaches input mapping.
     // =============================================================================
     class OPAAX_API UISubsystem final : public GameInstanceSubsystemBase
@@ -54,6 +58,16 @@ namespace Opaax
     public:
         UICanvas&       GetCanvas()       noexcept { return m_Canvas; }
         const UICanvas& GetCanvas() const noexcept { return m_Canvas; }
+
+        /**
+         * Load a `.opaaxui` and hang its tree under InParent (the root when null) — the route a
+         * HUD or a menu takes (UI13). Warns once per asset when it was authored at another height
+         * than this canvas's. @return the tree's root, owned by the canvas; null when it did not load.
+         */
+        UIWidget* MountAsset(const OpaaxString& InAssetPath, UIWidget* InParent = nullptr);
+
+        /** The parse half of MountAsset, for a caller with a canvas of its own (the cover). */
+        TUniquePtr<UIWidget> LoadTree(const OpaaxString& InAssetPath, float& OutAuthoredHeight) const;
 
         // =========================================================================
         // The loading cover (UI21) — drawn over everything while a level is on its way

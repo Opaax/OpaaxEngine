@@ -4160,6 +4160,14 @@ is a plain `MakeViewProjection` and `ScreenToWorld` stays the ONE screen→canva
 - **A same-aspect resize lays out NOTHING** — equal rationals round to equal floats, so
   1920×1080 → 1280×720 lands on the bit-identical visible rect and dirties nothing; only an
   aspect change moves a rect, and only the anchored ones. Pinned in `UICanvasTests`.
+- **The reference height is the PROJECT's** (U11): `.opaaxproj` `uiReferenceHeight` (1080 when
+  absent), read once by the tenant into its canvas. An asset's own `ReferenceHeight` is what the
+  panel previews at and what `New UI…` seeds from the project — never what the game draws at.
+  `UISubsystem::MountAsset` is the one route a HUD or menu takes onto the canvas (load, parse,
+  hang under a parent) and it warns ONCE when the asset was authored at another height; the
+  panel's canvas inspector says the same beside the field. U7's editable height had made the
+  split reachable — set 720 in the panel and the game, hard-defaulted to 1080, drew it differently.
+  The loading cover is alone on its own canvas, so there the asset's height IS the canvas's.
 
 **UI3 — INVALIDATION IS A VERB, NEVER A POLL** (the user: *"canvas is an expensive cost because
 resizing etc.. so make sure to handle that correctly"*). Three flags per widget — Layout (my rect),

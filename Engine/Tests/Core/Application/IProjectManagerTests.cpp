@@ -54,6 +54,17 @@ TEST_CASE("ParseProjectIdentity: 'loadingScreen' names the cover, and a project 
     CHECK(lBad.LoadingScreenMinSeconds == 0.f);
 }
 
+TEST_CASE("ParseProjectIdentity: 'uiReferenceHeight' is the canvas's height, 1080 when absent, bad or zero (U11)")
+{
+    // The one number every HUD is authored against (UI2) — the PROJECT's, not each asset's.
+    const ProjectIdentity lSet = ParseProjectIdentity(OpaaxString(R"({"name":"MyGame","uiReferenceHeight":720})"));
+    CHECK(lSet.UIReferenceHeight == doctest::Approx(720.f));
+
+    CHECK(ParseProjectIdentity(OpaaxString(R"({"name":"MyGame"})")).UIReferenceHeight == doctest::Approx(1080.f));
+    CHECK(ParseProjectIdentity(OpaaxString(R"({"uiReferenceHeight":"720"})")).UIReferenceHeight == doctest::Approx(1080.f));
+    CHECK(ParseProjectIdentity(OpaaxString(R"({"uiReferenceHeight":0})")).UIReferenceHeight == doctest::Approx(1080.f));
+}
+
 TEST_CASE("ParseProjectIdentity: 'startupScene' still feeds StartupLevel when the live key is absent")
 {
     const ProjectIdentity lId = ParseProjectIdentity(OpaaxString(

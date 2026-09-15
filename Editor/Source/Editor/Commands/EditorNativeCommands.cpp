@@ -21,6 +21,7 @@
 #include "Editor/EditorUICanvasDocument.h"
 #include "Editor/Panels/UICanvasPanel.h"
 #include "Application/OpaaxApplication.h"
+#include "Application/Services/IProjectManager.h"   // New UI is authored at the project's reference height
 #include "Engine/Registries/EngineRegistries.h"
 #include "UI/UICanvasFile.h"
 #include "UI/UIWidgetRegistry.h"
@@ -703,9 +704,11 @@ namespace Opaax::Editor
                     return;
                 }
 
+                // Authored at the PROJECT's height (UI2), so what the panel shows is what the game draws.
                 UICanvasFile::UICanvasDoc lDoc;
-                lDoc.Root = MakeUnique<UIPanel>();
-                lDoc.Root->Name = "Root";
+                lDoc.ReferenceHeight = OpaaxApplication::GetAppService<IProjectManager>().UIReferenceHeight();
+                lDoc.Root            = MakeUnique<UIPanel>();
+                lDoc.Root->Name      = "Root";
 
                 if (!UICanvasFile::Save(InPicked, lDoc))
                 {
