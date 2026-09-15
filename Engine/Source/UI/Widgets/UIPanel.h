@@ -14,6 +14,15 @@ namespace Opaax
     public:
         UIPanel() { bHitTestable = false; }
 
+        /**
+         * EMPTY, and declared rather than inherited (**UI18**).
+         *
+         * Without it `GetProperties()` resolves to `UIWidget`'s, so a panel's inspector would draw
+         * the base fields a SECOND time under its own drawer. Every widget type states its own
+         * list, even when that list is nothing.
+         */
+        OPAAX_PROPERTIES(UIPanel)
+
         OpaaxStringID GetTypeName() const noexcept override { return OPAAX_ID("UIPanel"); }
     };
 }

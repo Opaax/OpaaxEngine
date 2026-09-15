@@ -32,6 +32,7 @@ namespace Opaax::Editor
     {
     public:
         ComponentDrawerRegistry&   Drawers()          noexcept { return m_Drawers; }
+        UIWidgetDrawerRegistry&    UIWidgetDrawers()  noexcept { return m_UIWidgetDrawers; }
         ConfigDrawerRegistry&      ConfigDrawers()    noexcept { return m_ConfigDrawers; }
         PanelRegistry&             Panels()           noexcept { return m_Panels; }
         ResourceTypeRegistry&      ResourceTypes()    noexcept { return m_ResourceTypes; }
@@ -41,6 +42,7 @@ namespace Opaax::Editor
         ViewportToolbarRegistry&   ViewportTools()    noexcept { return m_ViewportTools; }
 
         const ComponentDrawerRegistry& Drawers()       const noexcept { return m_Drawers; }
+        const UIWidgetDrawerRegistry&  UIWidgetDrawers() const noexcept { return m_UIWidgetDrawers; }
         const ConfigDrawerRegistry&  ConfigDrawers()   const noexcept { return m_ConfigDrawers; }
         const PanelRegistry&         Panels()          const noexcept { return m_Panels; }
         const ResourceTypeRegistry&  ResourceTypes()   const noexcept { return m_ResourceTypes; }
@@ -58,6 +60,9 @@ namespace Opaax::Editor
         // job. The route names stay separate so a call site still reads plainly.
         ComponentDrawerRegistry m_Drawers;
         ConfigDrawerRegistry    m_ConfigDrawers;
+
+        // U5 fix — a THIRD instantiation of the same registry, for the same reason as the first two.
+        UIWidgetDrawerRegistry  m_UIWidgetDrawers;
         PanelRegistry        m_Panels;
         ResourceTypeRegistry m_ResourceTypes;
 

@@ -2687,3 +2687,35 @@ frames after the close too, so this was never a harness artifact.
 - **The harness earned its keep again ([[L81]]):** a smoke run cannot press Escape twice with a
   Space between; the reopen was invisible to "0 errors" and only the `opened N time(s)` counter and
   the jump count discriminated it ([[L59]]).
+
+## L96 — A hand-written dispatch ladder IS a missing registration; and an inherited static makes a derived type look reflected (2026-09-14)
+
+**What happened (UI U5, their report).** *"I think there are some widget i cant see their prop in
+detail panel nor UI panel. Like mask, i cant see texture."* The UI panel chose a widget's property
+drawer with a `dynamic_cast` ladder I wrote in U4. When U5 added `UIMask`, I registered it with the
+ENGINE (so it was addable and serializable) and never touched the ladder — so its `Texture` was
+addable, invisible and uneditable, which is **MR2i's exact failure one level down**. Reading the
+code for the fix found a SECOND half nobody had reported yet: the ladder called
+`DrawProperties(widgets, *lText)`, which folds over `UIText`'s OWN list — and a leaf's list does
+not repeat the base's, so `UIText`, `UIImage` and `UIButton` had **no editable Rect at all**.
+
+**Rules for next time:**
+- **A hand-maintained `if/else if` over types is a registry with no registration check.** It has
+  every property MR2i warns about — nothing fails to build, nothing fails a test, and the symptom
+  is a field that is simply not there. When you catch yourself writing one, look for the registry
+  that already exists: `DrawerRegistry.h` literally said *"whatever comes next is one more
+  specialization rather than a third registry"*, and the fix was a six-line `TDrawerResolver`
+  specialization plus DELETING the ladder.
+- **Count one registry against the other, and log it.** `UI widget drawers: 5 for 5 registered
+  type(s)` is what makes the next omission loud. A missing registration is invisible to the
+  compiler by construction, so the instrument is the only gate there can be ([[L59]]).
+- **`static` members are INHERITED, so a derived type can satisfy a concept using its base's
+  data.** `CReflected<UIPanel>` was true via `UIWidget::GetProperties()`, so `UIPanel` would have
+  drawn the base's four fields a second time under its own drawer. **A test asserting the count was
+  what caught it** — I had written `PropertyCount<UIPanel>() == 0` expecting empty, and it returned
+  4. Every type in such a hierarchy must declare its own list, even when that list is empty.
+- **The editor's registration seam has NO EditorContext yet.** `RegisterExtensions` runs at
+  `OnModulesRegistered`; `CreateEditorContext` runs later. My count check dereferenced `m_Context`
+  there and segfaulted on the first launch — caught by the smoke run, not by the build. Reach the
+  engine through the service locator at that seam, and re-read the registry header's own warning
+  ("registration STORES ONLY; nothing is constructed") before adding anything to it.

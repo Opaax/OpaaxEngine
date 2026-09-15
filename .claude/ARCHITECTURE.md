@@ -2974,6 +2974,13 @@ the worst of the three states, and no build or test can see it. So the list is m
 | `EntityQuery::TryGetBounds` + `DrawRank` | if it RENDERS | unclickable, wrong outline, "nothing to render" icon (**TX7**) |
 | a draw pass | `RendererManager` | invisible |
 
+**A UI WIDGET TYPE (U5):**
+| Route | Where | Without it |
+|---|---|---|
+| `UIWidgets().Register<T>()` | `Engine::RegisterNativeUIWidgets` | a `.opaaxui` naming it skips that node |
+| `UIWidgetDrawers().Register<T>()` | `EditorService::RegisterNativeDrawers` | **its own fields are invisible** — the **UI18** bug |
+| its own `OPAAX_PROPERTIES`, even empty | the widget header | the base's list is INHERITED and drawn twice |
+
 **A RESOURCE TYPE:**
 | Route | Where | Without it |
 |---|---|---|
@@ -4365,6 +4372,30 @@ gained an authored `Texture` PATH, and a runtime `SetTexture` pointer **wins** o
   Cost, stated: a pass with many distinct masks splits into more batches (**ST7** — a split is a
   cost, not an error); nothing unmasked pays anything, which the pre-U5 cases prove by passing
   untouched.
+
+**UI18 — A WIDGET'S PROPERTIES COME FROM THE DRAWER REGISTRY, NEVER A LADDER** (U5 fix, from their
+report: *"i cant see their prop in detail panel nor UI panel — like mask, i cant see texture"*).
+The UI panel used to pick a drawer with a hand-written `dynamic_cast` ladder. That is the same
+failure **MR2i** exists to prevent, one level down: `UIMask` was registered as a widget type and
+never added to the ladder, so its `Texture` was **addable, invisible and uneditable**.
+- **`TDrawerResolver<UIWidget, TTarget>` is the whole fix** — a `dynamic_cast` specialization, which
+  is exactly what `DrawerRegistry.h` already promised: *"whatever comes next is one more
+  specialization rather than a third registry"*. The registry that serves components and configs
+  now serves widgets, and the ladder is **deleted** rather than extended.
+- **TWO FOLDS, and the ladder only ever drew one.** A leaf's `OPAAX_PROPERTIES` does NOT repeat the
+  base's, so drawing only the leaf left `UIText`, `UIImage` and `UIButton` with **no editable
+  Rect** — a second, quieter half of the same bug. The panel draws `DrawProperties(base)` first,
+  then asks the registry for the type's own.
+- **EVERY widget type declares its own property list, even an EMPTY one.** `GetProperties()` is a
+  static member, so a type without one silently INHERITS the base's and `CReflected` is still
+  satisfied — which would have drawn `UIPanel`'s base fields twice under its own drawer. Found by a
+  test asserting `PropertyCount<UIPanel>() == 0`; it read 4. See [[L96]].
+- **The instrument is a COUNT, logged at registration:** `UI widget drawers: 5 for 5 registered
+  type(s)`, and a WARNING when they differ. That is what makes the next omission loud, since no
+  build or test can see a missing registration on its own (**MR2i**'s rule).
+- *Registration runs at the `OnModulesRegistered` seam, where `EditorContext` does NOT exist yet* —
+  reading `m_Context` there is a null dereference (it was, and it segfaulted). The engine is reached
+  through the service locator instead.
 
 **Growth points, named and not built:** **9-slice `Sliced` images** and **`UISafeArea`** (U5b —
 split out by them so the renderer change landed alone) · the deferred `OpenLevel`

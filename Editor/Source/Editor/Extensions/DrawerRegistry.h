@@ -3,6 +3,7 @@
 #include "Core/Config/IConfig.h"                // the second subject
 #include "Core/OpaaxTypes.h"                    // TFunction, TDynArray, Uint64
 #include "World/Entity/Entity.h"                // Entity::TryGet — the component resolver
+#include "UI/UIWidget.h"                        // the third subject (**UI18**)
 #include "Engine/Modules/ModuleRegistrar.h"     // DeriveTypeLeafName — a section's label
 #include "Editor/Properties/PropertyDrawers.h"  // the built-in widgets, so every call site has them
 
@@ -64,6 +65,27 @@ namespace Opaax::Editor
         static constexpr bool bDrawsSection = true;
 
         static DrawableType* Resolve(Entity& InSubject) { return InSubject.TryGet<TTarget>(); }
+    };
+
+    /**
+     * UI widgets: a widget arrives as a BASE reference, so the check is a cast (**UI18**).
+     *
+     * bDrawsSection is false because the panel already names the type above the fields — the
+     * Config panel's reason, not the Inspector's.
+     *
+     * This entry is why the UI panel has no `dynamic_cast` ladder of its own: the header above
+     * promised that a new subject is one more specialization rather than a third registry, and a
+     * hand-written ladder was exactly the thing that silently lost a type's fields when one was
+     * added and the ladder was not.
+     */
+    template<typename TTarget>
+    struct TDrawerResolver<UIWidget, TTarget>
+    {
+        using DrawableType = TTarget;
+
+        static constexpr bool bDrawsSection = false;
+
+        static DrawableType* Resolve(UIWidget& InSubject) { return dynamic_cast<TTarget*>(&InSubject); }
     };
 
     /** Configs: a config knows its own type id, so the check is an integer compare, not a cast. */
@@ -240,5 +262,6 @@ namespace Opaax::Editor
 
     // Explicit at the call site, as the routes read: Drawers() / ConfigDrawers().
     using ComponentDrawerRegistry = TDrawerRegistry<Entity>;
+    using UIWidgetDrawerRegistry  = TDrawerRegistry<UIWidget>;
     using ConfigDrawerRegistry    = TDrawerRegistry<IConfig>;
 }

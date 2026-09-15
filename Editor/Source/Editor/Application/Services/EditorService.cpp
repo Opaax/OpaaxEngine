@@ -39,7 +39,9 @@
 #include "Editor/Panels/UICanvasPanel.h"
 #include "Editor/EditorUICanvasDocument.h"
 #include "UI/UICanvasFile.h"
+#include "UI/Widgets/UIButton.h"
 #include "UI/Widgets/UIImage.h"
+#include "UI/Widgets/UIMask.h"
 #include "UI/Widgets/UIPanel.h"
 #include "UI/Widgets/UIText.h"
 #include "Engine/Subsystems/Resources/Types/UI/UICanvasResource.h"
@@ -481,6 +483,33 @@ namespace Opaax::Editor
         //
         // No drawer code exists for any of these: all four are CReflected, so the fold reads
         // OPAAX_PROPERTIES and the registration IS the whole implementation (I15).
+        // UI WIDGETS (U5 fix, **UI18**). Every registered widget type owes a drawer, or its own
+        // fields are invisible in the UI panel — the bug their eyes found on UIMask's Texture.
+        // The count check below is what makes the NEXT omission loud instead of silent.
+        UIWidgetDrawerRegistry& lWidgetDrawers = m_Extensions.UIWidgetDrawers();
+        lWidgetDrawers.Register<UIPanel>();
+        lWidgetDrawers.Register<UIImage>();
+        lWidgetDrawers.Register<UIText>();
+        lWidgetDrawers.Register<UIButton>();
+        lWidgetDrawers.Register<UIMask>();
+
+        // THROUGH THE LOCATOR, not m_Context: this runs at the OnModulesRegistered seam, where the
+        // EditorContext does not exist yet (the registry header's "registration STORES ONLY" rule).
+        // Reading m_Context here is a null dereference, which is exactly what it was.
+        const Uint64 lWidgetTypes =
+            OpaaxApplication::GetAppService<IEngine>().GetRegistries().UIWidgets().Count();
+        if (lWidgetDrawers.Count() != lWidgetTypes)
+        {
+            OPAAX_LOG(LogEditorService, Warn,
+                      "{} UI widget type(s) registered but {} drawer(s) — a type with no drawer shows only "
+                      "its base fields (**UI18**)", lWidgetTypes, lWidgetDrawers.Count());
+        }
+        else
+        {
+            OPAAX_LOG(LogEditorService, Info, "UI widget drawers: {} for {} registered type(s)",
+                      lWidgetDrawers.Count(), lWidgetTypes);
+        }
+
         ComponentDrawerRegistry& lDrawers = m_Extensions.Drawers();
 
         // Every entity has one (I17), so this is the drawer that always shows.

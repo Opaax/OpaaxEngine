@@ -153,6 +153,11 @@ set(OPAAX_TEST_SOURCES
     # clamp and the clamp-inside-the-texture live here.
     Editor/EditorRectGeometryTests.cpp
 
+    # UI U5 fix. The widget drawer dispatch, header-only and ImGui-free, so the EDITOR's real
+    # registry runs here: a type with no drawer showed only its base fields, and a leaf in the
+    # old ladder showed none of them. Both halves gated.
+    Editor/UIWidgetDrawerTests.cpp
+
     # NOTE: every quarantined suite now lives under Tests/Legacy/ with the code it exercises
     # (ARCHITECTURE.md X1) — ECS/*, Physics/CollisionProfile, Assets/AssetIdResolve and
     # Renderer/FontKerning. None are listed here; re-add live equivalents when the new world

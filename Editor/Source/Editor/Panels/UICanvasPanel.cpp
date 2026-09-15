@@ -38,18 +38,6 @@ namespace Opaax::Editor
             return OpaaxApplication::GetAppService<IEngine>().GetRegistries().UIWidgets();
         }
 
-        /** Draw the concrete widget's own fields — the one place a type is named by hand. */
-        void DrawWidgetFields(IEditorWidgets& InWidgets, UIWidget& InWidget)
-        {
-            // A dynamic_cast ladder, deliberately: the DRAWER registry keys on a static type and a
-            // widget arrives as a base pointer. Four types, and a new one is one line here — the
-            // generic half (Name/Rect/visibility) is already covered by the base's properties.
-            if (auto* lText = dynamic_cast<UIText*>(&InWidget))     { DrawProperties(InWidgets, *lText);   return; }
-            if (auto* lImage = dynamic_cast<UIImage*>(&InWidget))   { DrawProperties(InWidgets, *lImage);  return; }
-            if (auto* lButton = dynamic_cast<UIButton*>(&InWidget)) { DrawProperties(InWidgets, *lButton); return; }
-
-            DrawProperties(InWidgets, InWidget);
-        }
     }
 
     UICanvasPanel::UICanvasPanel(EditorContext& InContext)
@@ -282,7 +270,21 @@ namespace Opaax::Editor
 
         ImGui::TextDisabled("%s", lWidget->GetTypeName().CStr());
 
-        DrawWidgetFields(m_Context.Widgets, *lWidget);
+        // TWO HALVES, and the ladder that used to be here drew only one of them (**UI18**):
+        //   the BASE fields every widget has (Name, Rect, visibility) — which a leaf type's own
+        //   property list does not repeat, so a UIText had no editable Rect at all;
+        //   then the TYPE's own, through the drawer registry, so a widget type nobody added to a
+        //   hand-written list cannot silently lose its fields.
+        DrawProperties(m_Context.Widgets, static_cast<UIWidget&>(*lWidget));
+
+        ImGui::Separator();
+
+        if (!m_Context.Extensions.UIWidgetDrawers().DrawFirst(*lWidget, m_Context.Widgets, m_Context))
+        {
+            // A registered widget type with no drawer: say so where the author is looking, rather
+            // than showing a short list that looks complete.
+            ImGui::TextDisabled("No drawer registered for %s.", lWidget->GetTypeName().CStr());
+        }
 
         // THE GESTURE: a drag is many frames, and a step per frame would flood the history. Open on
         // the first active frame, close when nothing is active any more — FontFamilyPanel's shape,
