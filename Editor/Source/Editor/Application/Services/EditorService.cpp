@@ -44,6 +44,7 @@
 #include "UI/Widgets/UIMask.h"
 #include "UI/Widgets/UIPanel.h"
 #include "UI/Widgets/UISafeArea.h"
+#include "UI/Widgets/UIStack.h"
 #include "UI/Widgets/UIText.h"
 #include "Engine/Subsystems/Resources/Types/UI/UICanvasResource.h"
 #include "Editor/Panels/PrefabPanel.h"
@@ -495,6 +496,7 @@ namespace Opaax::Editor
         lWidgetDrawers.Register<UIButton>();
         lWidgetDrawers.Register<UIMask>();
         lWidgetDrawers.Register<UISafeArea>();
+        lWidgetDrawers.Register<UIStack>();
 
         // THROUGH THE LOCATOR, not m_Context: this runs at the OnModulesRegistered seam, where the
         // EditorContext does not exist yet (the registry header's "registration STORES ONLY" rule).

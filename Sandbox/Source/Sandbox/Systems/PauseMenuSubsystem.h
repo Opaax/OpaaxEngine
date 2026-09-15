@@ -19,6 +19,9 @@ namespace Sandbox
      * game keeps its keys), and a dimmed modal with Resume (UIOnly — the mapping is muted, Escape
      * closes it through the focused panel). One owner for the menu; the world keeps running
      * underneath, by design for now.
+     *
+     * The modal's contents are `UI/PauseMenu.opaaxui` (since U9), hung under a code-built root that
+     * handles Escape; the two buttons are bound by name, the HUD's shape.
      */
     class PauseMenuSubsystem final : public Opaax::WorldSubsystemBase
     {

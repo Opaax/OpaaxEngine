@@ -126,7 +126,7 @@ namespace Opaax
     {
         UICanvasStats lStats;
 
-        m_Root->UpdateTree(m_VisibleBounds, m_bVisibleChanged, InContext, lStats);
+        m_Root->UpdateTree(m_VisibleBounds, nullptr, m_bVisibleChanged, InContext, lStats);
         m_bVisibleChanged = false;
 
         return lStats;

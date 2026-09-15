@@ -27,6 +27,7 @@
 #include "UI/Widgets/UIMask.h"
 #include "UI/Widgets/UIPanel.h"
 #include "UI/Widgets/UISafeArea.h"
+#include "UI/Widgets/UIStack.h"
 #include "UI/Widgets/UIText.h"
 #include "Engine/Subsystems/Resources/Types/Input/InputActionResource.h"
 #include "Engine/Subsystems/Resources/Types/Input/InputMappingContextResource.h"
@@ -174,6 +175,9 @@ namespace Opaax
 
         // U5b. A container that keeps its children clear of the edges (**UI20**).
         m_Registries.UIWidgets().Register<UISafeArea>(OPAAX_ID("UISafeArea"));
+
+        // U9. A container that lays its children out along an axis (**UI23**).
+        m_Registries.UIWidgets().Register<UIStack>(OPAAX_ID("UIStack"));
     }
 
     void Engine::RegisterNativeWorldSubsystems()

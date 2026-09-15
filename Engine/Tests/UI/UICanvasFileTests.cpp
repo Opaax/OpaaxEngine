@@ -14,6 +14,7 @@
 #include "UI/Widgets/UIMask.h"
 #include "UI/Widgets/UIPanel.h"
 #include "UI/Widgets/UISafeArea.h"
+#include "UI/Widgets/UIStack.h"
 #include "UI/Widgets/UIText.h"
 
 using namespace Opaax;
@@ -30,6 +31,7 @@ namespace
         lRegistry.Register<UIButton>(OPAAX_ID("UIButton"));
         lRegistry.Register<UIMask>(OPAAX_ID("UIMask"));
         lRegistry.Register<UISafeArea>(OPAAX_ID("UISafeArea"));
+        lRegistry.Register<UIStack>(OPAAX_ID("UIStack"));
         return lRegistry;
     }
 
@@ -215,18 +217,18 @@ TEST_CASE("UIWidgetRegistry: an unknown name builds nothing, a duplicate is refu
 {
     UIWidgetRegistry lRegistry = MakeRegistry();
 
-    CHECK(lRegistry.Count() == 6u);
+    CHECK(lRegistry.Count() == 7u);
     CHECK(lRegistry.IsRegistered(OPAAX_ID("UIText")));
     CHECK_FALSE(lRegistry.IsRegistered(OPAAX_ID("UIHologram")));
     CHECK(lRegistry.Create(OPAAX_ID("UIHologram")) == nullptr);
     CHECK(lRegistry.Create(OPAAX_ID("UIText")) != nullptr);
 
     CHECK_FALSE(lRegistry.Register<UIText>(OPAAX_ID("UIText")));   // the name is taken
-    CHECK(lRegistry.Count() == 6u);
+    CHECK(lRegistry.Count() == 7u);
 
     lRegistry.Seal();
     CHECK_FALSE(lRegistry.Register<UIPanel>(OPAAX_ID("UILater")));
-    CHECK(lRegistry.Count() == 6u);
+    CHECK(lRegistry.Count() == 7u);
 }
 
 TEST_CASE("UIWidget: FindByName takes the FIRST match in tree order, and misses answer null")

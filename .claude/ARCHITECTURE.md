@@ -2980,6 +2980,7 @@ the worst of the three states, and no build or test can see it. So the list is m
 | `UIWidgets().Register<T>()` | `Engine::RegisterNativeUIWidgets` | a `.opaaxui` naming it skips that node |
 | `UIWidgetDrawers().Register<T>()` | `EditorService::RegisterNativeDrawers` | **its own fields are invisible** — the **UI18** bug |
 | its own `OPAAX_PROPERTIES`, even empty | the widget header | the base's list is INHERITED and drawn twice |
+| `UIWidgetDrawerTests` resolve + count, `UICanvasFileTests::MakeRegistry` | the two suites | the registry count assertion goes red (how U9 was reminded) |
 
 **A RESOURCE TYPE:**
 | Route | Where | Without it |
@@ -4507,6 +4508,34 @@ carries the ancestors' product down and each `UIDrawItem` arrives with its effec
   false`, so the window where an invisible thing eats a click is the fade's own 0.15 s.
 - The base's property list is 5 (`UIWidgetDrawerTests` pins the count); the key is optional in a
   `.opaaxui`, so every file written before U8 reads unchanged.
+
+**UI23 — A LAYOUT CONTAINER OWNS ITS CHILDREN'S RECTS, AND A CHILD'S SIZE CLIMBS ONLY THROUGH
+CONTAINERS** (U9). `UIStack` is ONE type with an `Axis` (Godot's `BoxContainer`), not a Horizontal
+and a Vertical class: one registration, one drawer, and the axis is a dropdown. `Spacing`,
+`Padding` (`UIMargin`, units), `ChildAlign` across the axis (Start = left or TOP, the canvas being
+Y-up; `Stretch` fills), `bFitContent`.
+- **UMG's slot rule.** Under a stack a child's `Rect.SizeDelta` is its DESIRED size and its
+  anchors, pivot and anchored position are ignored — the slot the container hands it IS its rect.
+  The walk learned that as one pointer: `UpdateTree(parent, InSlot, …)` assigns the slot instead of
+  calling `ResolveBounds`. A container states itself in its ctor (`m_bArrangesChildren`, the
+  `bHitTestable = false` idiom) and overrides `ArrangeChildren(OutSlots)`; the designer asks
+  `ArrangesChildren()` and does not MOVE such a child (resize still edits the size it reads).
+- **The up-propagation the seed reserved, with its first consumer.** `InvalidateLayout` also
+  invalidates the parent when the parent arranges — and so on up, stopping at the first ancestor
+  that does not (a panel's rect owes nothing to what is under it). `AddChild` / `RemoveChild` do
+  the same. So a child's SIZE change re-lays the stack and every sibling (stats say 1 + n), a
+  child's CONTENT change re-lays nothing (0 / 1), and an idle stack is 0 / 0.
+- **A container that was re-laid ALWAYS re-arranges**, even onto the same rect: its slots depend on
+  its fields (spacing, alignment, a child added), not only its rect. The first test run caught
+  the version that only descended on a changed rect — `SetChildAlign` moved nothing.
+- **A hidden child KEEPS its slot** — Unreal's `Hidden`, not `Collapsed`. Visibility stays a
+  draw-time flag (UI3, no layout climbs off it); close the gap with `RemoveChild`, dim a lost heart
+  with `Opacity`. A `Collapsed` flag is a growth point.
+- **`bFitContent`** sizes the stack ALONG its axis from its children (padding and spacing in), and
+  only when that axis is point-anchored — a stretched axis is the parent's to size. The row of lives.
+- *Dogfood:* the pause menu's modal is `UI/PauseMenu.opaaxui` — Dim, Box, a `UIStack` of Title /
+  Resume / Next Level — hung under the code-built `PauseMenuPanel` (the Escape handler), the two
+  buttons bound by name. ~40 lines of builders gone; the menu is edited in the panel like the HUD.
 
 **Growth points, named and not built:** rich text as `UIText` runs · **keyboard/gamepad FOCUS
 navigation** (deferred by them at U3 close: *"focus will be done with gamepad or when need for

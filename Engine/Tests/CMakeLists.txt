@@ -147,6 +147,9 @@ set(OPAAX_TEST_SOURCES
     # texture and no canvas: the 9-slice against a texture SIZE, the safe area through the walk.
     UI/UISliceTests.cpp
     UI/UISafeAreaTests.cpp
+    # U9. The container owns its children's rects: where each slot lands, a hidden child keeping
+    # its slot, and the up-propagation numbers (a child's size re-lays the stack, its content does not).
+    UI/UIStackTests.cpp
 
     # Editor-side, and the FIRST of its kind — header-only editor types only (see the include dir
     # below). ③'s gizmo delta math, pinned after a scale bug that only showed away from (0,0).

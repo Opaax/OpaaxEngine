@@ -5,14 +5,17 @@
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IEngine.h"
 #include "Application/Services/ILogger.h"
+#include "Application/Services/IPaths.h"
 #include "Engine/Input/InputMappingSubsystem.h"
 #include "Engine/Input/InputTypes.h"
+#include "Engine/Registries/EngineRegistries.h"
 #include "Engine/Subsystems/Input/InputCodes.h"
+#include "Engine/Subsystems/Resources/ResourceManager.h"
+#include "Engine/Subsystems/Resources/Types/UI/UICanvasResource.h"
 #include "Engine/UI/UISubsystem.h"
 #include "UI/UICanvas.h"
+#include "UI/UICanvasFile.h"
 #include "UI/Widgets/UIButton.h"
-#include "UI/Widgets/UIImage.h"
-#include "UI/Widgets/UIPanel.h"
 #include "UI/Widgets/UIText.h"
 #include "World/Systems/WorldContext.h"
 #include "World/World.h"
@@ -28,6 +31,11 @@ namespace Sandbox
         const OpaaxStringID kMenuToggleAction = OPAAX_ID("MenuToggle");
 
         constexpr const char* kFace = "/Engine/Fonts/Roboto/roboto-latin-700-normal.ttf";
+
+        /** The authored modal, and the two buttons this drives inside it. */
+        constexpr const char* kMenuAsset     = "UI/PauseMenu.opaaxui";
+        constexpr const char* kResumeName    = "ResumeButton";
+        constexpr const char* kNextLevelName = "NextLevelButton";
 
         /** How long the menu takes to fade in or out. */
         constexpr float kFadeSeconds = 0.15f;
@@ -114,53 +122,59 @@ namespace Sandbox
                                  Anchored({ 1.f, 1.f }, { -24.f, -24.f }, { 160.f, 56.f }), 32.f);
         m_MenuButton->OnClick.AddMember(this, &PauseMenuSubsystem::Open);
 
-        // The modal, added AFTER the button so it draws over it and is hit-tested first.
+        // The modal's ROOT stays code — it is the Escape handler — and everything it shows is the
+        // asset hung under it (UI13), edited in the UI panel like the HUD. Added AFTER the button
+        // so it draws over it and is hit-tested first.
         auto lMenu     = MakeUnique<PauseMenuPanel>();
         lMenu->Name    = "PauseMenu";
         lMenu->bVisible = false;
         lMenu->Opacity  = 0.f;   // so the first Open fades in too
         lMenu->SetRect(Stretched());
         lMenu->OnEscape = [this]() { Close(); };
-
-        auto lDim = MakeUnique<UIImage>();
-        lDim->Name = "Dim";
-        lDim->SetRect(Stretched());
-        lDim->SetColor({ 0.f, 0.f, 0.f, 0.55f });
-        lMenu->AddChild(std::move(lDim));
-
-        auto lBox = MakeUnique<UIImage>();
-        lBox->Name = "Box";
-        lBox->SetRect(Anchored({ 0.5f, 0.5f }, { 0.f, 0.f }, { 520.f, 300.f }));
-        lBox->SetColor({ 0.12f, 0.12f, 0.15f, 0.95f });
-        UIWidget* lBoxWidget = lMenu->AddChild(std::move(lBox));
-
-        auto lTitle = MakeUnique<UIText>();
-        lTitle->Name = "Title";
-        lTitle->SetRect(Anchored({ 0.5f, 1.f }, { 0.f, -24.f }, { 480.f, 80.f }));
-        lTitle->bHitTestable = false;
-        lTitle->SetFont(kFace);
-        lTitle->SetSize(64.f);
-        lTitle->SetAlign(ETextAlign::Center, EUIVAlign::Middle);
-        lTitle->SetText("Paused");
-        lBoxWidget->AddChild(std::move(lTitle));
-
-        UIButton* lResume = AddButton(*lBoxWidget, "ResumeButton", "Resume",
-                                      Anchored({ 0.5f, 0.f }, { 0.f, 110.f }, { 240.f, 64.f }), 36.f);
-        lResume->OnClick.AddMember(this, &PauseMenuSubsystem::Close);
-
-        UIButton* lNext = AddButton(*lBoxWidget, "NextLevelButton", "Next Level",
-                                    Anchored({ 0.5f, 0.f }, { 0.f, 30.f }, { 240.f, 64.f }), 36.f);
-        lNext->OnClick.AddMember(this, &PauseMenuSubsystem::NextLevel);
-
         m_Menu = lCanvas.Root().AddChild(std::move(lMenu));
+
+        Uint64 lWidgets = 0;
+        UIButton* lResume = nullptr;
+        UIButton* lNext   = nullptr;
+
+        IEngine&          lEngine  = OpaaxApplication::GetAppService<IEngine>();
+        const OpaaxString lAbsPath = m_Context->Paths.AssetToAbsolute(OpaaxString(kMenuAsset));
+
+        ResourceRef<UICanvasResource> lRef = m_Context->Resources.Load<UICanvasResource>(lAbsPath.CStr());
+        const UICanvasResource* const lResource = lRef.IsValid() ? lRef.Get() : nullptr;
+
+        float lReferenceHeight = 0.f;
+        TUniquePtr<UIWidget> lTree = lResource != nullptr
+            ? lResource->BuildTree(lEngine.GetRegistries().UIWidgets(), lReferenceHeight)
+            : nullptr;
+
+        if (lTree)
+        {
+            UIWidget* const lRoot = m_Menu->AddChild(Move(lTree));
+            lWidgets = UICanvasFile::CountWidgets(*lRoot);
+
+            // Bound BY NAME out of the authored tree (UI13): a renamed button goes quiet, and says so.
+            lResume = dynamic_cast<UIButton*>(lRoot->FindByName(OpaaxString(kResumeName)));
+            lNext   = dynamic_cast<UIButton*>(lRoot->FindByName(OpaaxString(kNextLevelName)));
+
+            if (lResume != nullptr) { lResume->OnClick.AddMember(this, &PauseMenuSubsystem::Close); }
+            if (lNext   != nullptr) { lNext->OnClick.AddMember(this, &PauseMenuSubsystem::NextLevel); }
+        }
+        else
+        {
+            OPAAX_LOG(LogPauseMenu, Error, "Menu asset '{}' did not load — the menu opens EMPTY (Escape still closes it).", kMenuAsset);
+        }
 
         if (m_Context->Actions != nullptr)
         {
             m_Context->Actions->Bind(kMenuToggleAction, EInputTrigger::Started, this, &PauseMenuSubsystem::OnMenuToggle);
         }
 
-        OPAAX_LOG(LogPauseMenu, Info, "Pause menu started — {} widget(s), mode {}",
-                  10, ToString(m_Context->UI->GetInputMode()));
+        OPAAX_LOG(LogPauseMenu, Info, "Pause menu loaded '{}' — {} widget(s), {} {}, {} {}, mode {}",
+                  kMenuAsset, lWidgets,
+                  kResumeName,    lResume != nullptr ? "bound" : "MISSING",
+                  kNextLevelName, lNext   != nullptr ? "bound" : "MISSING",
+                  ToString(m_Context->UI->GetInputMode()));
         return true;
     }
 

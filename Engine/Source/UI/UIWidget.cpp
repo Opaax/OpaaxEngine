@@ -38,9 +38,11 @@ namespace Opaax
         m_Children.emplace(m_Children.begin() + static_cast<std::ptrdiff_t>(std::min(InIndex, static_cast<Uint64>(m_Children.size()))),
                            std::move(InChild));
 
-        // A new child arrives with fresh flags; the walk only needs to reach it.
+        // A new child arrives with fresh flags; the walk only needs to reach it — unless I place my
+        // children, in which case every sibling's slot may have moved.
         m_bSubtreeDirty = true;
         MarkSubtreeUp();
+        if (m_bArrangesChildren) { InvalidateLayout(); }
 
         return lChild;
     }
@@ -68,6 +70,8 @@ namespace Opaax
         lRemoved->SetCanvasRecursive(nullptr);
         lRemoved->m_bLayoutDirty  = true;   // it will be resolved against a new parent, if any
         lRemoved->m_bContentDirty = true;
+
+        if (m_bArrangesChildren) { InvalidateLayout(); }   // the siblings after it close the gap
 
         return lRemoved;
     }
@@ -130,6 +134,14 @@ namespace Opaax
         m_bLayoutDirty  = true;
         m_bContentDirty = true;
         MarkSubtreeUp();
+
+        // UP, through every ancestor whose layout depends on its children, and no further: my size
+        // shifts my siblings under a container, and the container's size may shift ITS siblings.
+        // A plain panel's rect owes nothing to what is under it, so the climb stops there.
+        if (m_Parent != nullptr && m_Parent->m_bArrangesChildren && !m_Parent->m_bLayoutDirty)
+        {
+            m_Parent->InvalidateLayout();
+        }
     }
 
     void UIWidget::InvalidateContent()
@@ -152,8 +164,8 @@ namespace Opaax
     // Internal — the canvas's walk
     // =============================================================================
 
-    void UIWidget::UpdateTree(const Bounds2D& InParentBounds, bool bInParentChanged, const UIBuildContext& InContext,
-                              UICanvasStats& OutStats)
+    void UIWidget::UpdateTree(const Bounds2D& InParentBounds, const Bounds2D* InSlot, const bool bInParentChanged,
+                              const UIBuildContext& InContext, UICanvasStats& OutStats)
     {
         // Snapshot, then clear: anything set from here on (a Rebuild re-arming, a child marking
         // me) is next frame's work and survives.
@@ -169,7 +181,8 @@ namespace Opaax
 
         if (lLayout)
         {
-            const Bounds2D lBounds = ResolveBounds(InParentBounds);
+            // Arranged by my parent: the slot IS my rect. Otherwise my anchors say where I sit.
+            const Bounds2D lBounds = InSlot != nullptr ? *InSlot : ResolveBounds(InParentBounds);
             ++OutStats.Layouts;
 
             // Same rect from a changed parent (a corner-anchored child of a widening root): nothing
@@ -186,12 +199,37 @@ namespace Opaax
             ++OutStats.Rebuilds;
         }
 
-        if (lChanged || lSubtree)
+        if (!m_bArrangesChildren)
         {
+            if (!lChanged && !lSubtree)
+            {
+                return;
+            }
+
             for (const TUniquePtr<UIWidget>& lChild : m_Children)
             {
-                lChild->UpdateTree(m_Bounds, lChanged, InContext, OutStats);
+                lChild->UpdateTree(m_Bounds, nullptr, lChanged, InContext, OutStats);
             }
+            return;
+        }
+
+        // A container hands each child its slot, and the slots depend on MY fields (spacing,
+        // alignment, a child added) as much as on my rect — so a re-layout of me re-arranges even
+        // when my rect came out the same. Each child re-resolves when I was re-laid; the same-rect
+        // compare above then stops what did not move. Cheap, and only reached when I or something
+        // under me is dirty.
+        if (!lLayout && !lSubtree)
+        {
+            return;
+        }
+
+        TDynArray<Bounds2D> lSlots;
+        ArrangeChildren(lSlots);
+
+        for (Uint64 lIndex = 0; lIndex < m_Children.size(); ++lIndex)
+        {
+            const Bounds2D* lSlot = lIndex < lSlots.size() ? &lSlots[lIndex] : nullptr;
+            m_Children[lIndex]->UpdateTree(m_Bounds, lSlot, lLayout, InContext, OutStats);
         }
     }
 

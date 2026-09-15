@@ -18,6 +18,7 @@
 #include "UI/Widgets/UIMask.h"
 #include "UI/Widgets/UIPanel.h"
 #include "UI/Widgets/UISafeArea.h"
+#include "UI/Widgets/UIStack.h"
 #include "UI/Widgets/UIText.h"
 
 using namespace Opaax;
@@ -41,6 +42,12 @@ TEST_CASE("UIWidgetDrawers: every widget type resolves to ITS OWN drawer and no 
     UIButton    lButton;
     UIMask      lMask;
     UISafeArea  lSafe;
+    UIStack     lStack;
+
+    // U9's container, through the same gate as U5b's.
+    CHECK(ResolvesTo<UIStack>(lStack));
+    CHECK_FALSE(ResolvesTo<UIStack>(lPanel));
+    CHECK_FALSE(ResolvesTo<UIPanel>(lStack));
 
     // U5b's type, through the same gate: a container whose ONE field would be invisible under a
     // ladder for exactly the reason UIMask's was.
@@ -74,6 +81,7 @@ TEST_CASE("UIWidgetDrawers: a leaf's property list does NOT repeat the base's â€
 
     CHECK(PropertyCount<UIMask>()     == 2u); // Texture (invisible before UI18) + bShowMaskGraphic (U7)
     CHECK(PropertyCount<UISafeArea>() == 1u); // Insets, likewise
+    CHECK(PropertyCount<UIStack>()    == 5u); // Axis, Spacing, Padding, ChildAlign, bFitContent (U9)
     CHECK(PropertyCount<UIText>()   > 1u);
     CHECK(PropertyCount<UIImage>()  > 1u);
     CHECK(PropertyCount<UIButton>() > 1u);

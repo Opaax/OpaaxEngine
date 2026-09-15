@@ -359,8 +359,10 @@ namespace Opaax::Editor
             // The RESOLVED rect, read-only: what the anchors actually produced, so an odd one reads
             // as numbers here rather than as "it went somewhere" in the preview.
             const Bounds2D& lBounds = lWidget->GetBounds();
-            ImGui::TextDisabled("resolved  min (%.0f, %.0f)  size %.0f x %.0f",
-                                lBounds.Min().x, lBounds.Min().y, lBounds.Size().x, lBounds.Size().y);
+            ImGui::TextDisabled("resolved  min (%.0f, %.0f)  size %.0f x %.0f%s",
+                                lBounds.Min().x, lBounds.Min().y, lBounds.Size().x, lBounds.Size().y,
+                                lWidget->GetParent() != nullptr && lWidget->GetParent()->ArrangesChildren()
+                                    ? "  (placed by parent)" : "");
 
             // TWO HALVES, and the ladder that used to be here drew only one of them (**UI18**):
             //   the BASE fields every widget has (Name, Rect, visibility) — which a leaf type's own
@@ -529,7 +531,11 @@ namespace Opaax::Editor
             const Vector2F lStepPx{ lTotal.x - m_PreviewAppliedPx.x, lTotal.y - m_PreviewAppliedPx.y };
             m_PreviewAppliedPx = { lTotal.x, lTotal.y };
 
-            if (lStepPx.x != 0.f || lStepPx.y != 0.f)
+            // Under a layout container the position is the container's, so a drag moves nothing —
+            // the resize above still counts, since SizeDelta is what the container reads (UI23).
+            const bool lArranged = lWidget->GetParent() != nullptr && lWidget->GetParent()->ArrangesChildren();
+
+            if (!lArranged && (lStepPx.x != 0.f || lStepPx.y != 0.f))
             {
                 // Pixels → canvas units, Y flipped: the canvas is Y-up and the image is not.
                 const float lUnits = lCanvas.UnitsPerPixel();
@@ -553,9 +559,10 @@ namespace Opaax::Editor
     void UICanvasPanel::NudgeSelected(const Vector2F& InDelta, const char* InLabel)
     {
         UIWidget* const lWidget = m_Context.UICanvasDocument.SelectedWidget();
-        if (lWidget == nullptr || m_Context.UICanvasDocument.SelectedPath().empty())
+        if (lWidget == nullptr || m_Context.UICanvasDocument.SelectedPath().empty()
+            || (lWidget->GetParent() != nullptr && lWidget->GetParent()->ArrangesChildren()))
         {
-            return;
+            return;   // nothing, or a widget whose position is its container's
         }
 
         const OpaaxString lBefore = UICanvasOps::Snapshot(m_Context);

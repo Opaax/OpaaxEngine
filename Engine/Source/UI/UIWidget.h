@@ -107,6 +107,13 @@ namespace Opaax
         UICanvas* GetCanvas() const noexcept { return m_Canvas; }
 
         /**
+         * Whether I place my children myself (a layout container). Under one, a child's anchors
+         * and anchored position are ignored — its `Rect.SizeDelta` is its desired size and the
+         * slot I hand it is its rect. The designer asks this before moving a child.
+         */
+        bool ArrangesChildren() const noexcept { return m_bArrangesChildren; }
+
+        /**
          * The first descendant (or me) named InName, depth-first in tree order. Null when none is.
          *
          * How gameplay reaches an AUTHORED widget: a HUD loads its tree from a `.opaaxui` and binds
@@ -180,13 +187,25 @@ namespace Opaax
             return ResolveRect(Rect, InParentBounds);
         }
 
+        /**
+         * A container's half of the layout: one slot per child, in child order, inside my resolved
+         * bounds. Called only when `m_bArrangesChildren` is set (the ctor's statement, like
+         * `bHitTestable`), each time the walk descends into me. A child's rect IS its slot.
+         */
+        virtual void ArrangeChildren(TDynArray<Bounds2D>& OutSlots) const { (void)OutSlots; }
+
+        bool m_bArrangesChildren = false;
+
         // =============================================================================
         // Internal — the canvas's walk
         // =============================================================================
     private:
-        /** Resolve + rebuild where dirty, descend where marked; bInParentChanged forces a resolve. */
-        void UpdateTree(const Bounds2D& InParentBounds, bool bInParentChanged, const UIBuildContext& InContext,
-                        UICanvasStats& OutStats);
+        /**
+         * Resolve + rebuild where dirty, descend where marked; bInParentChanged forces a resolve.
+         * InSlot, when given, IS my rect (my parent arranged me) and my own Rect only sized it.
+         */
+        void UpdateTree(const Bounds2D& InParentBounds, const Bounds2D* InSlot, bool bInParentChanged,
+                        const UIBuildContext& InContext, UICanvasStats& OutStats);
 
         /** The deepest visible, hit-testable descendant (or me) containing InPoint; top-most first. */
         UIWidget* HitTest(const Vector2F& InPoint);
