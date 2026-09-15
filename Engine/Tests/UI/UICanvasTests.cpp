@@ -323,3 +323,46 @@ TEST_CASE("UICanvas: a reference-height change re-lays the root")
     CHECK(lStats.Layouts == 1);
     CheckVec(lCanvas.Root().GetBounds().Size(), { 1280.f, 720.f });
 }
+
+TEST_CASE("UICanvas: Opacity multiplies down the tree, a subtree at 0 emits nothing, and changing it costs 0/0 (U8)")
+{
+    UICanvas lCanvas(1080.f);
+    lCanvas.SetTargetSize(1920, 1080);
+
+    UIWidget* lGroup = lCanvas.Root().AddChild(MakeUnique<UIPanel>());
+    UIWidget* lInner = lGroup->AddChild(MakeUnique<UIImage>());
+    UIWidget* lLeaf  = lInner->AddChild(MakeUnique<UIImage>());
+    UIWidget* lOther = lCanvas.Root().AddChild(MakeUnique<UIImage>());
+    lCanvas.Update();
+
+    TDynArray<UIDrawItem> lItems;
+    lCanvas.BuildDrawList(lItems);
+    REQUIRE(lItems.size() == 3u);   // inner, leaf, other — the panels draw nothing
+    for (const UIDrawItem& lItem : lItems) { CHECK(lItem.Alpha == doctest::Approx(1.f)); }
+
+    // A group at half: everything under it is halved, and a leaf at half on top of that is a
+    // quarter — a widget's own opacity counts for its own quads too. The sibling outside is untouched.
+    lGroup->Opacity = 0.5f;
+    lLeaf->Opacity  = 0.5f;
+    const UICanvasStats lStats = lCanvas.Update();
+    CHECK(lStats.Layouts  == 0);
+    CHECK(lStats.Rebuilds == 0);
+
+    lCanvas.BuildDrawList(lItems);
+    REQUIRE(lItems.size() == 3u);
+    CHECK(lItems[0].Quad == &lInner->GetQuads()[0]);
+    CHECK(lItems[0].Alpha == doctest::Approx(0.5f));
+    CHECK(lItems[1].Quad == &lLeaf->GetQuads()[0]);
+    CHECK(lItems[1].Alpha == doctest::Approx(0.25f));
+    CHECK(lItems[2].Quad == &lOther->GetQuads()[0]);
+    CHECK(lItems[2].Alpha == doctest::Approx(1.f));
+
+    // Fully transparent: the whole subtree is skipped, like a hidden one — but it still HITS.
+    lGroup->Opacity = 0.f;
+    lCanvas.BuildDrawList(lItems);
+    REQUIRE(lItems.size() == 1u);
+    CHECK(lItems[0].Quad == &lOther->GetQuads()[0]);
+    CHECK(lCanvas.HitTest({ 0.f, 0.f }) == lOther);     // the later sibling, as before
+    lOther->bVisible = false;
+    CHECK(lCanvas.HitTest({ 0.f, 0.f }) == lLeaf);      // invisible by opacity, still a target
+}

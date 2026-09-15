@@ -1,5 +1,7 @@
 #include "Systems/PauseMenuSubsystem.h"
 
+#include <algorithm>   // std::min / std::max — the fade's clamp
+
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IEngine.h"
 #include "Application/Services/ILogger.h"
@@ -26,6 +28,9 @@ namespace Sandbox
         const OpaaxStringID kMenuToggleAction = OPAAX_ID("MenuToggle");
 
         constexpr const char* kFace = "/Engine/Fonts/Roboto/roboto-latin-700-normal.ttf";
+
+        /** How long the menu takes to fade in or out. */
+        constexpr float kFadeSeconds = 0.15f;
 
         /** The two levels Next Level swaps between; the world's name says which one is up. */
         constexpr const char* kLevelMain    = "Levels/Main.opaaxlevel";
@@ -113,6 +118,7 @@ namespace Sandbox
         auto lMenu     = MakeUnique<PauseMenuPanel>();
         lMenu->Name    = "PauseMenu";
         lMenu->bVisible = false;
+        lMenu->Opacity  = 0.f;   // so the first Open fades in too
         lMenu->SetRect(Stretched());
         lMenu->OnEscape = [this]() { Close(); };
 
@@ -158,6 +164,28 @@ namespace Sandbox
         return true;
     }
 
+    void PauseMenuSubsystem::Update(const double InDeltaTime)
+    {
+        if (m_Menu == nullptr || !m_Menu->bVisible)
+        {
+            return;
+        }
+
+        // Opacity is read at draw time (UI3), so this is a write and nothing else — no relayout, no
+        // rebuild. The panel goes invisible only once the fade OUT has landed, so its hit-test stops
+        // exactly when it stops being seen.
+        const float lStep   = static_cast<float>(InDeltaTime) / kFadeSeconds;
+        const float lTarget = m_bOpen ? 1.f : 0.f;
+
+        m_Menu->Opacity = m_Menu->Opacity < lTarget ? std::min(m_Menu->Opacity + lStep, lTarget)
+                                                    : std::max(m_Menu->Opacity - lStep, lTarget);
+
+        if (!m_bOpen && m_Menu->Opacity <= 0.f)
+        {
+            m_Menu->bVisible = false;
+        }
+    }
+
     void PauseMenuSubsystem::Shutdown()
     {
         if (m_Context->Actions != nullptr)
@@ -195,6 +223,7 @@ namespace Sandbox
         m_bOpen = true;
         ++m_Opens;
 
+        // Visible at once, faded in by Update; a re-open mid-fade-out simply reverses.
         m_Menu->bVisible = true;
         m_Context->UI->GetCanvas().SetFocus(m_Menu);
         m_Context->UI->SetInputMode(EUIInputMode::UIOnly);
@@ -211,7 +240,7 @@ namespace Sandbox
 
         m_bOpen = false;
 
-        m_Menu->bVisible = false;
+        // Input goes back to the game NOW; the panel stays visible while Update fades it out.
         m_Context->UI->GetCanvas().SetFocus(nullptr);
         m_Context->UI->SetInputMode(EUIInputMode::GameAndUI);
 

@@ -30,7 +30,7 @@ namespace Opaax
     //
     //   Three flags: Layout (my rect must be re-resolved), Content (my quads must be rebuilt),
     //   Subtree (something below me is dirty — the walk descends only where this is set).
-    //   Visibility and hit-testability are READ at submit / hit-test time and dirty nothing.
+    //   Visibility, opacity and hit-testability are READ at submit / hit-test time and dirty nothing.
     //
     //   The walk CLEARS a node's flags before acting on them, so a Rebuild that finds its input
     //   not ready (an atlas still uploading) calls InvalidateContent() and is simply visited again
@@ -64,12 +64,19 @@ namespace Opaax
         bool        bVisible     = true;
         /** Unity's raycastTarget: false lets a click pass through to whatever is behind. */
         bool        bHitTestable = true;
+        /**
+         * Unreal's RenderOpacity: MULTIPLIES down the tree, so fading a panel fades everything under
+         * it (a canvas group without a second type). Drawing only — a widget at 0 still takes a hit;
+         * `bVisible` is the flag that stops one.
+         */
+        float       Opacity      = 1.f;
 
         OPAAX_PROPERTIES(UIWidget,
                          OPAAX_PROP(Name),
                          OPAAX_PROP(Rect),
                          OPAAX_PROP(bVisible),
-                         OPAAX_PROP(bHitTestable))
+                         OPAAX_PROP(bHitTestable),
+                         OPAAX_PROP(Opacity).SetRange(0.f, 1.f).SetDragStep(0.01f))
 
         void SetRect(const UIRect& InRect);
 

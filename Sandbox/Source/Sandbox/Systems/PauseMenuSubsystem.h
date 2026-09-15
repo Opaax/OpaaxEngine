@@ -32,6 +32,10 @@ namespace Sandbox
 
     public:
         bool Startup() override;
+
+        /** The fade: Opacity chases 1 while open and 0 while closing; the panel hides when it gets there. */
+        void Update(double InDeltaTime) override;
+
         void Shutdown() override;
 
         void Open();

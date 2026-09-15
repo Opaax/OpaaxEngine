@@ -70,7 +70,7 @@ TEST_CASE("UIWidgetDrawers: a leaf's property list does NOT repeat the base's â€
 {
     // The second half of the bug. The panel draws the base fold first and THEN asks the registry;
     // if it only did the latter (as the ladder did), none of these base fields would be editable.
-    CHECK(PropertyCount<UIWidget>() == 4u);   // Name, Rect, bVisible, bHitTestable
+    CHECK(PropertyCount<UIWidget>() == 5u);   // Name, Rect, bVisible, bHitTestable, Opacity (U8)
 
     CHECK(PropertyCount<UIMask>()     == 2u); // Texture (invisible before UI18) + bShowMaskGraphic (U7)
     CHECK(PropertyCount<UISafeArea>() == 1u); // Insets, likewise

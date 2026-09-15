@@ -4179,7 +4179,7 @@ and that number is a Stats row (`UI Layouts` / `UI Rebuilds`, **ST1**'s `AddCoun
   whole every frame anyway, so there is no mesh to rebuild. What IS retained is each widget's
   `TDynArray<UIQuad>` — rebuilt on content-dirty, submitted every frame in tree order
   (`OrderInLayer` = a running index, so F5's sort reproduces the tree).
-- Visibility and hit-testability dirty nothing: read at submit / hit-test time.
+- Visibility, opacity (**UI22**) and hit-testability dirty nothing: read at submit / hit-test time.
 
 **UI4 — THE ROOT IS NEVER A HIT, AND A PANEL IS PASS-THROUGH.** The root stretches over the whole
 visible rect, so "the root was hit" would mean "the pointer is on screen" — [[L29]] in another
@@ -4493,15 +4493,29 @@ UI changing* — so the seam is the REQUEST, not the load.
   loading screen (the project's is one for all) · PIE: a swap during Play works by `EndGame`'s
   "every Play world" rule (`PlayInEditor::m_PlayWorld` is never dereferenced), not eye-verified.
 
-**Growth points, named and not built:** rich text as `UIText` runs · layout groups · canvas-group alpha ·
-`UIBinding` (pull a named reflected property per frame — the reflection is half of MVVM already;
-notification is what a per-frame pull replaces at HUD scale) · **keyboard/gamepad FOCUS
+**UI22 — OPACITY IS ONE FIELD ON EVERY WIDGET, AND IT MULTIPLIES DOWN THE TREE** (U8, the "canvas
+group" they asked for). `UIWidget::Opacity` is Unreal's `RenderOpacity`, not Unity's `CanvasGroup`
+component: no second type, and fading a panel fades everything under it because `BuildDrawList`
+carries the ancestors' product down and each `UIDrawItem` arrives with its effective `Alpha`;
+`Submit` multiplies the quad's colour by it. A subtree whose product is 0 emits nothing.
+- **Read at DRAW time, dirties nothing** — it joins `bVisible` under UI3's last rule, so a fade is
+  a write per frame and 0 layouts / 0 rebuilds. That is what makes the pause menu's fade fifteen
+  lines in the game (`PauseMenuSubsystem::Update` chases 1 or 0 and hides the panel when it lands)
+  and not a tween system; the tween system is the growth point and this fade is its first customer.
+- **Drawing only.** A widget at 0 still takes a hit; `bVisible` is the flag that stops one. Unity's
+  `blocksRaycasts` stays a separate concept, not built — a faded-OUT menu ends with `bVisible =
+  false`, so the window where an invisible thing eats a click is the fade's own 0.15 s.
+- The base's property list is 5 (`UIWidgetDrawerTests` pins the count); the key is optional in a
+  `.opaaxui`, so every file written before U8 reads unchanged.
+
+**Growth points, named and not built:** rich text as `UIText` runs · **keyboard/gamepad FOCUS
 navigation** (deferred by them at U3 close: *"focus will be done with gamepad or when need for
 keyboard"*; `SetFocus` and key bubbling are already in) · cursor lock/hide beyond "shown" ·
 pausing the world from a menu (WS8's gate is the editor's PIE pause; theirs to design) · a
 per-canvas Match parameter for portrait targets · **a reflection-driven widget serializer**
 (**UI12**) · a `.opaaxui` NESTED in another (PF13's "nesting is the resolver's" — not asked for
-yet) · a canvas authored at a reference height the panel lets you change.
+yet) · a tween system (UI22) · `blocksRaycasts` (UI22) · a `Collapsed` visibility that gives up
+its slot.
 
 ---
 

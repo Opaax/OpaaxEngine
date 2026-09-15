@@ -19,12 +19,15 @@ namespace Opaax
          * Tree order, parents before children, so OrderInLayer reproduces it through F5's sort.
          *
          * InMask is the NEAREST ancestor mask, carried DOWN rather than walked up per widget — and
-         * a UIMask met on the way replaces it, which is the nearest-wins rule (**UI16**).
+         * a UIMask met on the way replaces it, which is the nearest-wins rule (**UI16**). InAlpha is
+         * the ancestors' opacity product, carried the same way; a subtree at 0 emits nothing.
          */
-        void CollectTree(const UIWidget& InWidget, const UIMask* InMask, Int32& InOutOrder,
+        void CollectTree(const UIWidget& InWidget, const UIMask* InMask, const float InAlpha, Int32& InOutOrder,
                          TDynArray<UIDrawItem>& OutItems)
         {
-            if (!InWidget.bVisible)
+            const float lAlpha = InAlpha * InWidget.Opacity;
+
+            if (!InWidget.bVisible || lAlpha <= 0.f)
             {
                 return;
             }
@@ -36,12 +39,12 @@ namespace Opaax
             for (const UIQuad& lQuad : InWidget.GetQuads())
             {
                 const Int16 lOrder = static_cast<Int16>(InOutOrder < MAX_ORDER ? InOutOrder++ : MAX_ORDER);
-                OutItems.emplace_back(UIDrawItem{ &lQuad, lMask, lOrder });
+                OutItems.emplace_back(UIDrawItem{ &lQuad, lMask, lAlpha, lOrder });
             }
 
             for (const TUniquePtr<UIWidget>& lChild : InWidget.GetChildren())
             {
-                CollectTree(*lChild, lMask, InOutOrder, OutItems);
+                CollectTree(*lChild, lMask, lAlpha, InOutOrder, OutItems);
             }
         }
     }
@@ -134,7 +137,7 @@ namespace Opaax
         OutItems.clear();
 
         Int32 lOrder = 0;
-        CollectTree(*m_Root, nullptr, lOrder, OutItems);
+        CollectTree(*m_Root, nullptr, 1.f, lOrder, OutItems);
     }
 
     void UICanvas::Submit(Renderer2D& InRenderer) const
@@ -155,19 +158,22 @@ namespace Opaax
                 lMask.Texture = lItem.Mask->GetResolvedTexture();   // null = clip to the rect alone
             }
 
+            Vector4F lColor = lQuad.Color;
+            lColor.a *= lItem.Alpha;
+
             if (lQuad.Outline > 0.f)
             {
-                InRenderer.DrawQuadOutline(lQuad.Bounds.Center, lQuad.Bounds.Size(), lQuad.Color, lQuad.Outline,
+                InRenderer.DrawQuadOutline(lQuad.Bounds.Center, lQuad.Bounds.Size(), lColor, lQuad.Outline,
                                            0.f, ERenderLayer::UI, lItem.Order, lMask);
             }
             else if (lQuad.Texture != nullptr)
             {
-                InRenderer.DrawSprite(lQuad.Bounds.Center, lQuad.Bounds.Size(), *lQuad.Texture, lQuad.Color,
+                InRenderer.DrawSprite(lQuad.Bounds.Center, lQuad.Bounds.Size(), *lQuad.Texture, lColor,
                                       0.f, ERenderLayer::UI, lItem.Order, lQuad.UVMin, lQuad.UVMax, lMask);
             }
             else
             {
-                InRenderer.DrawQuad(lQuad.Bounds.Center, lQuad.Bounds.Size(), lQuad.Color,
+                InRenderer.DrawQuad(lQuad.Bounds.Center, lQuad.Bounds.Size(), lColor,
                                     0.f, ERenderLayer::UI, lItem.Order, lMask);
             }
         }

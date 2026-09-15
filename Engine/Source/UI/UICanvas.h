@@ -24,6 +24,7 @@ namespace Opaax
     {
         const UIQuad* Quad  = nullptr;   // non-owning; the widget owns it for the frame
         const UIMask* Mask  = nullptr;   // the NEAREST ancestor mask, or null
+        float         Alpha = 1.f;       // every ancestor's Opacity multiplied in, the widget's own included
         Int16         Order = 0;         // tree order, so F5's sort reproduces it
     };
 

@@ -100,6 +100,7 @@ namespace Opaax
         InOutJson["Rect"]         = Rect;
         InOutJson["bVisible"]     = bVisible;
         InOutJson["bHitTestable"] = bHitTestable;
+        InOutJson["Opacity"]      = Opacity;
     }
 
     void UIWidget::LoadFields(const nlohmann::json& InJson)
@@ -108,6 +109,7 @@ namespace Opaax
         Rect         = InJson.value("Rect", Rect);
         bVisible     = InJson.value("bVisible", bVisible);
         bHitTestable = InJson.value("bHitTestable", bHitTestable);
+        Opacity      = InJson.value("Opacity", Opacity);
     }
 
     void UIWidget::SetCanvasRecursive(UICanvas* InCanvas)
