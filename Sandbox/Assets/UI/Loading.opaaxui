@@ -1,0 +1,119 @@
+{
+    "ReferenceHeight": 1080.0,
+    "Root": {
+        "Children": [
+            {
+                "Border": {
+                    "Bottom": 0.0,
+                    "Left": 0.0,
+                    "Right": 0.0,
+                    "Top": 0.0
+                },
+                "Color": {
+                    "w": 1.0,
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0
+                },
+                "Fill": "None",
+                "FillAmount": 1.0,
+                "Name": "Backdrop",
+                "Rect": {
+                    "AnchorMax": {
+                        "x": 1.0,
+                        "y": 1.0
+                    },
+                    "AnchorMin": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "AnchoredPosition": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Pivot": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "SizeDelta": {
+                        "x": 0.0,
+                        "y": 0.0
+                    }
+                },
+                "Texture": "",
+                "Type": "UIImage",
+                "bHitTestable": true,
+                "bVisible": true
+            },
+            {
+                "Color": {
+                    "w": 1.0,
+                    "x": 1.0,
+                    "y": 1.0,
+                    "z": 1.0
+                },
+                "Font": "/Engine/Fonts/Roboto/roboto-latin-700-normal.ttf",
+                "HAlign": "Center",
+                "LineHeightScale": 1.0,
+                "Name": "Label",
+                "Rect": {
+                    "AnchorMax": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchorMin": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchoredPosition": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Pivot": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "SizeDelta": {
+                        "x": 800.0,
+                        "y": 120.0
+                    }
+                },
+                "Size": 72.0,
+                "Text": "Loading...",
+                "Type": "UIText",
+                "VAlign": "Middle",
+                "bHitTestable": true,
+                "bKerning": true,
+                "bVisible": true,
+                "bWrap": true
+            }
+        ],
+        "Name": "Root",
+        "Rect": {
+            "AnchorMax": {
+                "x": 1.0,
+                "y": 1.0
+            },
+            "AnchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "AnchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "Pivot": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "SizeDelta": {
+                "x": 0.0,
+                "y": 0.0
+            }
+        },
+        "Type": "UIPanel",
+        "bHitTestable": false,
+        "bVisible": true
+    },
+    "Version": 1
+}

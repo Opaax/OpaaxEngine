@@ -1,4 +1,5 @@
 {
     "name": "Sandbox",
-    "startupLevel": "Levels/Main.opaaxlevel"
+    "startupLevel": "Levels/Main.opaaxlevel",
+    "loadingScreen": "UI/Loading.opaaxui"
 }

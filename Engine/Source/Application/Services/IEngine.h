@@ -99,6 +99,19 @@ namespace Opaax
         virtual World* OpenLevel(const WorldSpec& InSpec) = 0;
 
         /**
+         * Ask for InSpec to replace the active world at the START of the next frame — the route
+         * GAMEPLAY takes (**UI21**), where `OpenLevel` is the host's.
+         *
+         * The frame in between is what a loading cover exists for: `LevelLoadRequested` is
+         * published at once, so a listener draws over THIS frame's render, and the swap is one
+         * `OpenLevel` at the top of the next `Loop`, followed by `LevelLoadFinished`. Synchronous
+         * today; the same two events will bracket an asynchronous load, and no listener changes.
+         *
+         * A second request before the first resolves REPLACES it — last wins, said in the log.
+         */
+        virtual void RequestOpenLevel(const WorldSpec& InSpec) = 0;
+
+        /**
          * Engine Loop
          */
         virtual void Loop()                             = 0;

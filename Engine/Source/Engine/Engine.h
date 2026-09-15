@@ -111,6 +111,9 @@ namespace Opaax
          *   does not resolve (a warning). Either way the caller boots the NullLevel world.
          */
         ResourceRef<LevelResource> ResolveLevel(const OpaaxString& InAssetRelPath) const;
+
+        /** Spend a RequestOpenLevel at the top of the frame — WS8's flag-then-resolve, one tier up. */
+        void ResolvePendingLevel();
         // End Startup
         // =============================================================================
 
@@ -143,6 +146,7 @@ namespace Opaax
         bool    EndGame() override;
         World*  FinishStartup(const WorldSpec& InSpec) override;
         World*  OpenLevel(const WorldSpec& InSpec) override;
+        void    RequestOpenLevel(const WorldSpec& InSpec) override;
         void    Loop() override;
         void    TearDown() override;
         void    Shutdown() override;
@@ -204,5 +208,9 @@ namespace Opaax
 
         //Internal
         bool m_bStarted = false;
+
+        /** The level a RequestOpenLevel asked for, spent at the next frame's start (UI21). */
+        WorldSpec m_PendingLevel;
+        bool      m_bLevelPending = false;
     };
 }

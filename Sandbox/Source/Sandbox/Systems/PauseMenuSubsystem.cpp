@@ -1,5 +1,7 @@
 #include "Systems/PauseMenuSubsystem.h"
 
+#include "Application/OpaaxApplication.h"
+#include "Application/Services/IEngine.h"
 #include "Application/Services/ILogger.h"
 #include "Engine/Input/InputMappingSubsystem.h"
 #include "Engine/Input/InputTypes.h"
@@ -24,6 +26,10 @@ namespace Sandbox
         const OpaaxStringID kMenuToggleAction = OPAAX_ID("MenuToggle");
 
         constexpr const char* kFace = "/Engine/Fonts/Roboto/roboto-latin-700-normal.ttf";
+
+        /** The two levels Next Level swaps between; the world's name says which one is up. */
+        constexpr const char* kLevelMain    = "Levels/Main.opaaxlevel";
+        constexpr const char* kLevelPhysics = "Levels/PhysicsTest.opaaxlevel";
 
         /** The modal's root: the focused widget while the menu is up, so Escape reaches it in UIOnly. */
         class PauseMenuPanel final : public UIWidget
@@ -133,8 +139,12 @@ namespace Sandbox
         lBoxWidget->AddChild(std::move(lTitle));
 
         UIButton* lResume = AddButton(*lBoxWidget, "ResumeButton", "Resume",
-                                      Anchored({ 0.5f, 0.f }, { 0.f, 40.f }, { 240.f, 64.f }), 36.f);
+                                      Anchored({ 0.5f, 0.f }, { 0.f, 110.f }, { 240.f, 64.f }), 36.f);
         lResume->OnClick.AddMember(this, &PauseMenuSubsystem::Close);
+
+        UIButton* lNext = AddButton(*lBoxWidget, "NextLevelButton", "Next Level",
+                                    Anchored({ 0.5f, 0.f }, { 0.f, 30.f }, { 240.f, 64.f }), 36.f);
+        lNext->OnClick.AddMember(this, &PauseMenuSubsystem::NextLevel);
 
         m_Menu = lCanvas.Root().AddChild(std::move(lMenu));
 
@@ -144,7 +154,7 @@ namespace Sandbox
         }
 
         OPAAX_LOG(LogPauseMenu, Info, "Pause menu started — {} widget(s), mode {}",
-                  8, ToString(m_Context->UI->GetInputMode()));
+                  10, ToString(m_Context->UI->GetInputMode()));
         return true;
     }
 
@@ -206,6 +216,21 @@ namespace Sandbox
         m_Context->UI->SetInputMode(EUIInputMode::GameAndUI);
 
         OPAAX_LOG(LogPauseMenu, Info, "CLOSE (GameAndUI)");
+    }
+
+    void PauseMenuSubsystem::NextLevel()
+    {
+        // A REQUEST, not a call: this runs inside the UI tick, and OpenLevel here would destroy the
+        // world this subsystem belongs to from under its own button. The engine swaps at the next
+        // frame's start, and the cover is up for this one (UI21).
+        WorldSpec lSpec;
+        lSpec.LevelPath = m_Context->OwningWorld.GetName() == OpaaxString("Main") ? kLevelPhysics : kLevelMain;
+        lSpec.Mode      = EWorldMode::Play;
+
+        OPAAX_LOG(LogPauseMenu, Info, "Next Level — '{}' requested from '{}'",
+                  lSpec.LevelPath.CStr(), m_Context->OwningWorld.GetName().CStr());
+
+        OpaaxApplication::GetAppService<IEngine>().RequestOpenLevel(lSpec);
     }
 
     void PauseMenuSubsystem::OnMenuToggle(const InputActionValue& /*InValue*/)

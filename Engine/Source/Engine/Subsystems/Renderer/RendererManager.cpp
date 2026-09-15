@@ -459,6 +459,10 @@ namespace Opaax
 
         if (lWidth == 0 || lHeight == 0) { return; }
 
+        // A canvas whose root is hidden draws nothing, so it opens no pass — what lets a cover be
+        // SUBMITTED every frame and only cost anything on the frames it is up (UI21).
+        if (!InCanvas.Root().bVisible) { return; }
+
         // The TARGET says how wide the canvas is (UI2), so the layout happens here rather than in
         // whoever submitted it — Unity's willRenderCanvases.
         InCanvas.SetTargetSize(lWidth, lHeight);

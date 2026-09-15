@@ -386,7 +386,46 @@ namespace Opaax
 
         return lWorld;
     }
-    
+
+    void Engine::RequestOpenLevel(const WorldSpec& InSpec)
+    {
+        if (m_bLevelPending)
+        {
+            OPAAX_ENGINE_LOG(Warn, "RequestOpenLevel: '{}' replaces the pending '{}' — last wins",
+                             InSpec.LevelPath.CStr(), m_PendingLevel.LevelPath.CStr());
+        }
+
+        m_PendingLevel  = InSpec;
+        m_bLevelPending = true;
+
+        // Immediate, so a cover drawn THIS frame is possible — the whole point of deferring (UI21).
+        if (m_EngineEventBus != nullptr)
+        {
+            m_EngineEventBus->GetEventBus().Publish(LevelLoadRequested{});
+        }
+
+        OPAAX_ENGINE_LOG(Info, "Level '{}' requested — opens at the next frame's start", InSpec.LevelPath.CStr());
+    }
+
+    void Engine::ResolvePendingLevel()
+    {
+        if (!m_bLevelPending)
+        {
+            return;
+        }
+
+        // Cleared FIRST: a level that fails to open must not be retried every frame.
+        m_bLevelPending = false;
+        const WorldSpec lSpec = m_PendingLevel;
+
+        OpenLevel(lSpec);
+
+        if (m_EngineEventBus != nullptr)
+        {
+            m_EngineEventBus->GetEventBus().Publish(LevelLoadFinished{});
+        }
+    }
+
     // =========================================================================
     // World
     // =========================================================================
@@ -541,6 +580,11 @@ namespace Opaax
         // Single flush point — deliver this frame's queued events (window/input enqueued
         // in OnEvent before Loop, plus any from the job completions above) before update.
         m_EngineEventBus->GetEventBus().Flush();
+
+        // A level asked for last frame swaps in HERE, before anything ticks: the frame that made
+        // the request has already been rendered — with its cover — and this one runs the new world
+        // from its first tick (UI21).
+        ResolvePendingLevel();
 
         // ----------------------------------------------------------------
         // 2. Time

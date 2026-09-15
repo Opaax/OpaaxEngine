@@ -21,6 +21,7 @@ namespace Opaax
             OpaaxString Id()            const override { return OpaaxString(); }
             OpaaxString EngineVersion() const override { return OpaaxString(); }
             OpaaxString StartupLevel()  const override { return OpaaxString(); }
+            OpaaxString LoadingScreen() const override { return OpaaxString(); }
         };
     }
 
@@ -68,6 +69,8 @@ namespace Opaax
         {
             lOut.StartupLevel = lReadString(Opaax_Project_Identity::PROJECT_STARTUP_LEVEL_KEY_DEFAULT);
         }
+
+        lOut.LoadingScreen = lReadString(Opaax_Project_Identity::PROJECT_LOADING_SCREEN_KEY);
         return lOut;
     }
 

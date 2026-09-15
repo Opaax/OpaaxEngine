@@ -34,6 +34,17 @@ TEST_CASE("ParseProjectIdentity: 'startupLevel' is the live key and wins over bo
     CHECK(lId.StartupLevel == "Levels/Main.opaaxlevel");
 }
 
+TEST_CASE("ParseProjectIdentity: 'loadingScreen' names the cover, and a project without one reads empty (UI21)")
+{
+    const ProjectIdentity lWith = ParseProjectIdentity(OpaaxString(
+        R"({"name":"MyGame","startupLevel":"Levels/Main.opaaxlevel","loadingScreen":"UI/Loading.opaaxui"})"));
+    CHECK(lWith.LoadingScreen == "UI/Loading.opaaxui");
+
+    // Every project written before the key: empty, which the UI tenant reads as "a black cover".
+    const ProjectIdentity lWithout = ParseProjectIdentity(OpaaxString(R"({"name":"MyGame"})"));
+    CHECK(lWithout.LoadingScreen.IsEmpty());
+}
+
 TEST_CASE("ParseProjectIdentity: 'startupScene' still feeds StartupLevel when the live key is absent")
 {
     const ProjectIdentity lId = ParseProjectIdentity(OpaaxString(

@@ -4456,8 +4456,44 @@ against a texture SIZE rather than a texture.
   today, and a route with no caller is what **L23** is about. Also a `PixelsPerUnitMultiplier` on
   the border, Unity's knob for art authored at another density.
 
-**Growth points, named and not built:** the deferred `OpenLevel`
-+ loading cover (U6) · rich text as `UIText` runs · layout groups · canvas-group alpha ·
+**UI21 — A LEVEL SWAP IS A REQUEST, AND THE COVER IS A SECOND CANVAS** (U6). Their two settled
+answers shaped it: async comes later, and the cover must become a progress screen *without the
+UI changing* — so the seam is the REQUEST, not the load.
+- **`IEngine::RequestOpenLevel` is gameplay's route; `OpenLevel` stays the host's.** Flag-then-
+  resolve (**WS8**'s shape one tier up): the spec is stored, `LevelLoadRequested` is published AT
+  ONCE, and the swap is one `OpenLevel` at the top of the next `Loop` — after the event flush,
+  before anything ticks — followed by `LevelLoadFinished`. The frame that asked has already been
+  rendered with its cover; the next runs the new world from its first tick. A second request
+  before the first resolves replaces it (last wins, in the log). Synchronous today; the same two
+  events will bracket an asynchronous load and no listener changes.
+- **A subsystem must not `OpenLevel` from inside its own tick** — it would destroy the world it
+  belongs to from under its own button. That is the sentence the request exists for.
+- **The cover is a SECOND `UICanvas` on the `UISubsystem`, submitted after the main one EVERY
+  frame, and its root's `bVisible` is the flag.** Visibility is read at DRAW time (**UI3**), so a
+  request made mid-frame — from a button in this tenant's own tick or a trigger in the world's —
+  covers THAT frame's render, whichever of the two it came from. "Submit only while loading"
+  cannot do that: the tenant's submit has already run when the world ticks. A canvas whose root is
+  hidden **opens no pass** (`RenderCanvasPass`), so the always-submitted cover costs nothing on
+  the frames it is down.
+- **The cover is AUTHORED, never built in code (UI13).** `.opaaxproj` gained `"loadingScreen"`
+  beside `startupLevel`; the tenant loads that `.opaaxui` into the cover canvas at its reference
+  height, and a project naming none (or one that fails) gets a black stretched image with a
+  warning. `GetLoadingCanvas()` is where a game binds a progress bar the day async lands — the
+  tree is theirs to design in the panel, which is the whole point.
+- **Measured** (harness, removed): a request from the world tick at frame 60 → `cover up AFTER
+  the request = true` → that frame's render `LOADING COVER DRAWN — 11 draw item(s)` (one
+  backdrop, ten glyphs) → frame 61 begins `World 'PhysicsTest' opened and activated`, old HUD and
+  menu shut down, new ones started, cover down. **Exactly one covered frame** for a synchronous
+  swap, and the persistent canvas ended the session with `0 root child(ren) dropped`.
+- *Dogfood:* the pause menu's **Next Level** (Main ⇄ PhysicsTest, keyed on the world's name).
+  The menu closes with its world — its `Shutdown` restores `GameAndUI`, so a swap from an open
+  menu does not leave the session muted (**UI10**).
+- *Named, not built:* a minimum cover time (a one-frame black flash on a fast swap is honest,
+  not a bug) · routing input to the cover canvas (a loading screen takes none) · a level's own
+  loading screen (the project's is one for all) · PIE: a swap during Play works by `EndGame`'s
+  "every Play world" rule (`PlayInEditor::m_PlayWorld` is never dereferenced), not eye-verified.
+
+**Growth points, named and not built:** rich text as `UIText` runs · layout groups · canvas-group alpha ·
 `UIBinding` (pull a named reflected property per frame — the reflection is half of MVVM already;
 notification is what a per-frame pull replaces at HUD scale) · **keyboard/gamepad FOCUS
 navigation** (deferred by them at U3 close: *"focus will be done with gamepad or when need for

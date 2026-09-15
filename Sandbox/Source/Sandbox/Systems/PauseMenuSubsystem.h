@@ -41,6 +41,9 @@ namespace Sandbox
     private:
         void OnMenuToggle(const Opaax::InputActionValue& InValue);
 
+        /** Main ⇄ PhysicsTest through the deferred request — the level swap the cover is for (UI21). */
+        void NextLevel();
+
     private:
         Opaax::WorldContext* m_Context = nullptr;   // borrowed; the World owns it
 

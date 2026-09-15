@@ -31,6 +31,7 @@ namespace Opaax
             // world consumer already handles (BO4).
             World* FinishStartup(const WorldSpec&) override { return nullptr; }
             World* OpenLevel(const WorldSpec&)     override { return nullptr; }
+            void   RequestOpenLevel(const WorldSpec&) override {}
 
             // No registries and no subsystems to create, so a "game" here would be an empty object
             // pretending to be a session. False is the honest answer, and it matches the null
