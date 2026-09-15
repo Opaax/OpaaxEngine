@@ -3,8 +3,8 @@
 #include <algorithm>
 
 #include "Core/Reflection/OpaaxEnumJson.h"
-#include "RHI/Texture.h"
 #include "UI/UIBinding.h"
+#include "UI/UIImageSource.h"
 #include "UI/UISlice.h"
 
 namespace Opaax
@@ -49,6 +49,13 @@ namespace Opaax
     void UIImage::SetTexturePath(const OpaaxString& InAssetPath)
     {
         Texture.Path = InAssetPath;
+        InvalidateContent();
+    }
+
+    void UIImage::SetSheetFrame(const OpaaxString& InSheetPath, const Int32 InFrame)
+    {
+        Sheet.Path = InSheetPath;
+        Frame      = InFrame;
         InvalidateContent();
     }
 
@@ -97,6 +104,8 @@ namespace Opaax
         // handle that only code can hand over (**UI17**).
         InOutJson["Color"]       = Color;
         InOutJson["Texture"]     = Texture;
+        InOutJson["Sheet"]       = Sheet;
+        InOutJson["Frame"]       = Frame;
         InOutJson["Border"]      = Border;
         InOutJson["Fill"]        = Fill;
         InOutJson["FillAmount"]  = FillAmount;
@@ -109,6 +118,8 @@ namespace Opaax
 
         Color       = InJson.value("Color", Color);
         Texture     = InJson.value("Texture", Texture);
+        Sheet       = InJson.value("Sheet", Sheet);
+        Frame       = InJson.value("Frame", Frame);
         Border      = InJson.value("Border", Border);
         Fill        = InJson.value("Fill", Fill);
         FillAmount  = InJson.value("FillAmount", FillAmount);
@@ -123,29 +134,21 @@ namespace Opaax
             return;
         }
 
-        // The runtime pointer WINS; otherwise the authored path is resolved through the host.
-        ITexture2D* lTexture = m_Texture;
-
-        if (lTexture == nullptr && !Texture.IsEmpty() && InContext.Assets != nullptr)
+        // Runtime pointer > sheet frame > texture (UI25). Something named but not ready draws
+        // nothing and asks again next frame (**UI3**); nothing named is a plain colour.
+        UIResolvedImage lImage;
+        bool            bNamed = false;
+        if (!ResolveImageSource(InContext, m_Texture, Texture, Sheet, Frame, lImage, bNamed) && bNamed)
         {
-            lTexture = InContext.Assets->ResolveTexture(Texture.Path.CStr());
-
-            if (lTexture == nullptr)
-            {
-                // Still uploading (or missing): draw nothing and ask again next frame (**UI3**).
-                InvalidateContent();
-                return;
-            }
+            InvalidateContent();
+            return;
         }
 
-        // A border is a statement about ART, so it needs a texture to measure against; without one
-        // this is the single quad U1 shipped (**UI20**).
-        if (!Border.IsZero() && lTexture != nullptr)
+        // A border is a statement about ART, so it needs an image to measure against — the FRAME's
+        // size for a sheet; without one this is the single quad U1 shipped (**UI20**).
+        if (!Border.IsZero() && lImage.Texture != nullptr)
         {
-            const Vector2F lTextureSize{ static_cast<float>(lTexture->GetWidth()),
-                                         static_cast<float>(lTexture->GetHeight()) };
-
-            BuildSlicedQuads(GetBounds(), Border, lTextureSize, OutQuads);
+            BuildSlicedQuads(GetBounds(), Border, lImage.SizePx, OutQuads);
         }
         else
         {
@@ -155,8 +158,11 @@ namespace Opaax
         for (UIQuad& lQuad : OutQuads)
         {
             lQuad.Color   = Color;
-            lQuad.Texture = lTexture;
+            lQuad.Texture = lImage.Texture;
         }
+
+        // The slice's UVs are 0..1 of the image; a frame is a sub-rect of its sheet's texture.
+        MapQuadUVsInto(OutQuads, lImage.UVMin, lImage.UVMax);
 
         // The fill is a CLIP over whatever was emitted, not a second geometry path: it crops from
         // the min edge so the bar empties toward it, and the UVs go with it so the texture is cut

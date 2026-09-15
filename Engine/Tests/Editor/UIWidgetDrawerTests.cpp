@@ -83,8 +83,8 @@ TEST_CASE("UIWidgetDrawers: a leaf's property list does NOT repeat the base's â€
     CHECK(PropertyCount<UISafeArea>() == 1u); // Insets, likewise
     CHECK(PropertyCount<UIStack>()    == 5u); // Axis, Spacing, Padding, ChildAlign, bFitContent (U9)
     CHECK(PropertyCount<UIText>()   > 1u);
-    CHECK(PropertyCount<UIImage>()  > 1u);
-    CHECK(PropertyCount<UIButton>() > 1u);
+    CHECK(PropertyCount<UIImage>()  == 8u); // Color, Texture, Sheet, Frame, Border, Fill, FillAmount, FillBinding (U12)
+    CHECK(PropertyCount<UIButton>() == 8u); // four colours, bEnabled, Texture, Sheet, Frame (U12)
 
     // A UIPanel adds nothing of its own, so the base fold is the WHOLE of its inspector â€” which is
     // why "the registry drew nothing for it" must not read as "this widget has no fields".

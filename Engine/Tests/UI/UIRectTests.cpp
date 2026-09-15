@@ -142,3 +142,51 @@ TEST_CASE("UIRect: FitRect is ResolveRect's inverse for every anchor shape, and 
     // A stretched axis fits by its DELTA: the same target under a wider parent is a different delta.
     CheckVec(lStretch.SizeDelta, { 550.f - 1920.f, 160.f - 540.f });
 }
+
+TEST_CASE("UIRect: every anchor preset keeps the widget where it is, and reads back as itself (U12)")
+{
+    // The designer's grid: a preset rewrites anchors + pivot and refits, so the resolved rect is
+    // byte-for-byte where it was — only what happens on a resize changes. An off-centre parent and
+    // an off-centre widget, so a wrong pivot or a swapped Y would show.
+    const Bounds2D lParent = Bounds2D::FromCenterSize({ 300.f, -100.f }, { 1600.f, 900.f });
+
+    UIRect lStart;
+    lStart.AnchorMin = lStart.AnchorMax = { 0.25f, 0.75f };
+    lStart.Pivot            = { 0.f, 1.f };
+    lStart.AnchoredPosition = { 40.f, -60.f };
+    lStart.SizeDelta        = { 220.f, 80.f };
+    const Bounds2D lWas = ResolveRect(lStart, lParent);
+
+    for (Uint8 lX = 0; lX < 4; ++lX)
+    {
+        for (Uint8 lY = 0; lY < 4; ++lY)
+        {
+            UIRect lRect = lStart;
+            ApplyAnchorPreset(lRect, static_cast<EUIAnchorX>(lX), static_cast<EUIAnchorY>(lY), lWas, lParent);
+
+            const Bounds2D lNow = ResolveRect(lRect, lParent);
+            CheckVec(lNow.Min(), lWas.Min());
+            CheckVec(lNow.Max(), lWas.Max());
+
+            const UIAnchorPreset lRead = CurrentAnchorPreset(lRect);
+            CHECK(lRead.bKnown);
+            CHECK(lRead.X == static_cast<EUIAnchorX>(lX));
+            CHECK(lRead.Y == static_cast<EUIAnchorY>(lY));
+        }
+    }
+
+    // Top is the canvas's MAX y (Y-up), and a stretched axis pivots at its middle.
+    UIRect lTopLeft = lStart;
+    ApplyAnchorPreset(lTopLeft, EUIAnchorX::Left, EUIAnchorY::Top, lWas, lParent);
+    CheckVec(lTopLeft.AnchorMin, { 0.f, 1.f });
+    CheckVec(lTopLeft.Pivot,     { 0.f, 1.f });
+
+    UIRect lStretchX = lStart;
+    ApplyAnchorPreset(lStretchX, EUIAnchorX::Stretch, EUIAnchorY::Bottom, lWas, lParent);
+    CheckVec(lStretchX.AnchorMin, { 0.f, 0.f });
+    CheckVec(lStretchX.AnchorMax, { 1.f, 0.f });
+    CheckVec(lStretchX.Pivot,     { 0.5f, 0.f });
+
+    // Not one of the sixteen: a hand-typed anchor reads as unknown, and the grid highlights nothing.
+    CHECK_FALSE(CurrentAnchorPreset(lStart).bKnown);
+}

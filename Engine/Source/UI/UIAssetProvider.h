@@ -1,11 +1,22 @@
 #pragma once
 
 #include "Core/EngineAPI.h"
+#include "Core/Maths/MathTypes.h"
+#include "Core/OpaaxTypes.h"
 #include "Renderer/Text/Text2D.h"
 
 namespace Opaax
 {
     class ITexture2D;
+
+    /** One frame of a sheet: the sheet's texture, the frame's UVs in it, and the frame's size in pixels. */
+    struct UISheetFrameView
+    {
+        ITexture2D* Texture = nullptr;   // null while the upload is in flight, or when nothing loads
+        Vector2F    UVMin   = { 0.f, 0.f };
+        Vector2F    UVMax   = { 1.f, 1.f };
+        Vector2F    SizePx  = { 0.f, 0.f };
+    };
 
     // =============================================================================
     // IUIAssetProvider — how a widget names an asset without knowing what a resource is.
@@ -31,6 +42,20 @@ namespace Opaax
          * @return null while the upload is in flight, or when nothing loads from there.
          */
         virtual ITexture2D* ResolveTexture(const char* InAssetPath) = 0;
+
+        /**
+         * A frame of a sprite sheet — an icon cut from an atlas (U12).
+         *
+         * DEFAULTED to nothing: a host with no sheets (a test stub) need not know the type. A frame
+         * index the sheet does not have answers the whole texture, the sprite's rule.
+         *
+         * @param InFrame the frame's index; -1 = the sheet's own default.
+         */
+        virtual UISheetFrameView ResolveSheetFrame(const char* InSheetPath, Int32 InFrame)
+        {
+            (void)InSheetPath; (void)InFrame;
+            return {};
+        }
     };
 
     /** What a rebuild may ask of its host. Every pointer is optional — a test passes none. */

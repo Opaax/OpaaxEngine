@@ -123,4 +123,15 @@ namespace Opaax
 
         InOutQuads.resize(lKept);
     }
+
+    void MapQuadUVsInto(TDynArray<UIQuad>& InOutQuads, const Vector2F& InUVMin, const Vector2F& InUVMax) noexcept
+    {
+        const Vector2F lSpan = InUVMax - InUVMin;
+
+        for (UIQuad& lQuad : InOutQuads)
+        {
+            lQuad.UVMin = InUVMin + lQuad.UVMin * lSpan;
+            lQuad.UVMax = InUVMin + lQuad.UVMax * lSpan;
+        }
+    }
 }

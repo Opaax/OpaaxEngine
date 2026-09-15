@@ -17,6 +17,7 @@ namespace Opaax
 
     // NAMED, never completed — a path carries its type, not its header.
     struct TextureResource;
+    struct SpriteSheetResource;
 
     /** How FillAmount crops the image. None ignores it. */
     enum class EUIFill : Uint8
@@ -38,11 +39,11 @@ namespace Opaax
     }
 
     // =============================================================================
-    // UIImage — a rect of colour, or a texture tinted by it. ONE quad, unless a Border makes it
-    //   nine (**UI20**). A fill crops both the rect and the sampled UVs from the min edge, which
-    //   is the health bar — and it is a CLIP over whatever geometry was emitted, so a filled
-    //   9-slice keeps its caps.
-    //   Sheet sub-rects are still named, not built.
+    // UIImage — a rect of colour, or an image tinted by it: a texture, or one FRAME of a sheet
+    //   (**UI25** — the sheet wins when both are named, the sprite's rule). ONE quad, unless a
+    //   Border makes it nine (**UI20**), measured against the frame. A fill crops both the rect
+    //   and the sampled UVs from the min edge, which is the health bar — and it is a CLIP over
+    //   whatever geometry was emitted, so a filled 9-slice keeps its caps.
     // =============================================================================
     class OPAAX_API UIImage final : public UIWidget
     {
@@ -59,6 +60,12 @@ namespace Opaax
         /** A texture's asset path. TYPED, so a `.png` can be DROPPED on it (**UI19**). */
         TResourcePath<TextureResource> Texture;
 
+        /** A sheet's asset path — an icon cut from an atlas. Wins over Texture when set (**UI25**). */
+        TResourcePath<SpriteSheetResource> Sheet;
+
+        /** Which frame of the sheet; -1 is the sheet's own default. */
+        Int32 Frame = -1;
+
         /**
          * The 9-slice border, in TEXTURE PIXELS — how much of each edge must NOT stretch (**UI20**).
          *
@@ -71,12 +78,15 @@ namespace Opaax
         OPAAX_PROPERTIES(UIImage,
                          OPAAX_PROP(Color),
                          OPAAX_PROP(Texture),
+                         OPAAX_PROP(Sheet).SetTooltip("An icon cut from a sheet. Wins over Texture when set."),
+                         OPAAX_PROP(Frame).SetRange(-1.f, 4096.f).SetDragStep(1.f).SetTooltip("-1 is the sheet's own default frame."),
                          OPAAX_PROP(Border).SetDragStep(1.f),   // pixels; flows to the four edges
                          OPAAX_PROP(Fill),
                          OPAAX_PROP(FillAmount).SetRange(0.f, 1.f),
                          OPAAX_PROP(FillBinding).SetTooltip("Source.Property, pulled each frame into FillAmount."))
 
         void SetTexturePath(const OpaaxString& InAssetPath);
+        void SetSheetFrame(const OpaaxString& InSheetPath, Int32 InFrame);
 
         void SetColor(const LinearColor& InColor);
         void SetFill(EUIFill InFill, float InAmount);

@@ -340,6 +340,12 @@ namespace Opaax::Editor
                                       ? nullptr
                                       : m_Context.UICanvasDocument.SelectedWidget();
 
+        // THE GESTURE brackets the FIELDS below and nothing else. IsAnyItemActive is frame-global,
+        // so a verb button pressed elsewhere this frame (Delete, Duplicate, a preset) would open a
+        // gesture whose commit re-records the verb's own step as a phantom "Edit Widget". Sampled
+        // before the fields: an item already active is not one of theirs.
+        bool lActiveBefore = ImGui::IsAnyItemActive();
+
         if (lWidget == nullptr)
         {
             // Nothing selected is the CANVAS: its one field lives here, under the same gesture as a
@@ -377,6 +383,22 @@ namespace Opaax::Editor
                                 lWidget->GetParent() != nullptr && lWidget->GetParent()->ArrangesChildren()
                                     ? "  (placed by parent)" : "");
 
+            // The anchors as an author sets them — a preset, not four vectors — above the Rect
+            // that shows what it wrote. Meaningless under a container, which places the child.
+            const bool lArranged = lWidget->GetParent() != nullptr && lWidget->GetParent()->ArrangesChildren();
+            ImGui::BeginDisabled(lArranged);
+            if (ImGui::Button("Anchors...")) { ImGui::OpenPopup("UIAnchorPresets"); }
+            ImGui::EndDisabled();
+
+            if (ImGui::BeginPopup("UIAnchorPresets"))
+            {
+                DrawAnchorPresets(*lWidget);
+                ImGui::EndPopup();
+            }
+
+            // The preset is a verb with its own step; re-sampled so its press does not open the gesture.
+            lActiveBefore = ImGui::IsAnyItemActive();
+
             // TWO HALVES, and the ladder that used to be here drew only one of them (**UI18**):
             //   the BASE fields every widget has (Name, Rect, visibility) — which a leaf type's own
             //   property list does not repeat, so a UIText had no editable Rect at all;
@@ -395,11 +417,12 @@ namespace Opaax::Editor
         }
 
         // THE GESTURE: a drag is many frames, and a step per frame would flood the history. Open on
-        // the first active frame, close when nothing is active any more — FontFamilyPanel's shape,
-        // with the whole TREE as the before-image because that is what a step carries (UI15).
+        // the first active frame — one of THESE fields, not something active before them — and
+        // close when nothing is active any more: FontFamilyPanel's shape, with the whole TREE as
+        // the before-image because that is what a step carries (UI15).
         const bool lActive = ImGui::IsAnyItemActive();
 
-        if (lActive && !m_bWasItemActive && !m_bGestureOpen)
+        if (lActive && !lActiveBefore && !m_bWasItemActive && !m_bGestureOpen)
         {
             m_GestureBefore = UICanvasOps::Snapshot(m_Context);
             m_bGestureOpen  = true;
@@ -417,6 +440,62 @@ namespace Opaax::Editor
         {
             lWidget->InvalidateLayout();
         }
+    }
+
+    void UICanvasPanel::DrawAnchorPresets(UIWidget& InWidget)
+    {
+        static constexpr const char* kColumns[4] = { "Left", "Center", "Right", "Stretch" };
+        static constexpr const char* kRows[4]    = { "Top", "Middle", "Bottom", "Stretch" };
+
+        const UIAnchorPreset lCurrent = CurrentAnchorPreset(InWidget.Rect);
+
+        ImGui::TextDisabled("The widget stays where it is; only what it does on a resize changes.");
+
+        if (!ImGui::BeginTable("UIAnchorGrid", 5, ImGuiTableFlags_SizingFixedFit))
+        {
+            return;
+        }
+
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        for (const char* lColumn : kColumns)
+        {
+            ImGui::TableNextColumn();
+            ImGui::TextDisabled("%s", lColumn);
+        }
+
+        for (Uint8 lY = 0; lY < 4; ++lY)
+        {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::TextDisabled("%s", kRows[lY]);
+
+            for (Uint8 lX = 0; lX < 4; ++lX)
+            {
+                ImGui::TableNextColumn();
+                ImGui::PushID(lY * 4 + lX);
+
+                const bool lIsCurrent = lCurrent.bKnown
+                                     && lCurrent.X == static_cast<EUIAnchorX>(lX)
+                                     && lCurrent.Y == static_cast<EUIAnchorY>(lY);
+
+                if (ImGui::Button(lIsCurrent ? "[*]" : " . ", ImVec2(36.f, 0.f)))
+                {
+                    const OpaaxString lBefore = UICanvasOps::Snapshot(m_Context);
+
+                    ApplyAnchorPreset(InWidget.Rect, static_cast<EUIAnchorX>(lX), static_cast<EUIAnchorY>(lY),
+                                      InWidget.GetBounds(), InWidget.GetParent()->GetBounds());
+                    InWidget.InvalidateLayout();
+
+                    UICanvasOps::CommitEdit(m_Context, lBefore, "Anchor Preset");
+                    ImGui::CloseCurrentPopup();
+                }
+
+                ImGui::PopID();
+            }
+        }
+
+        ImGui::EndTable();
     }
 
     // =============================================================================

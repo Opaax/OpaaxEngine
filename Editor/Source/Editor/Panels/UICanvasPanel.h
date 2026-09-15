@@ -75,6 +75,9 @@ namespace Opaax::Editor
         /** The selected widget's fields — or the canvas's own when nothing is — bracketed for undo. */
         void DrawInspector();
 
+        /** Unity's 4x4 anchor grid for InWidget; a click is one step and keeps the widget where it is. */
+        void DrawAnchorPresets(UIWidget& InWidget);
+
         /** The canvas rendered into this panel's own framebuffer, and the designer over it. */
         void DrawPreview();
 

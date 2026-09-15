@@ -168,3 +168,40 @@ TEST_CASE("UISlice: a clip keeps what is inside, cuts what straddles and DROPS w
     CHECK(lMiddle->UVMin.x == doctest::Approx(1.f / 3.f));
     CHECK(lMiddle->UVMax.x == doctest::Approx(1.f / 3.f + (1.f / 3.f) * 0.5f));
 }
+
+TEST_CASE("UISlice: MapQuadUVsInto lands every sliced UV inside the frame's rect, and is the identity for a whole texture (U12)")
+{
+    const Bounds2D lRect = Bounds2D::FromCenterSize({ 0.f, 0.f }, { 300.f, 120.f });
+
+    TDynArray<UIQuad> lQuads;
+    BuildSlicedQuads(lRect, UIMargin{ 16.f, 16.f, 16.f, 16.f }, { 64.f, 64.f }, lQuads);
+    REQUIRE(lQuads.size() == 9u);
+
+    // A 64x64 frame at (128, 64) of a 512x256 sheet, as MakeFrameUV would hand it over.
+    const Vector2F lFrameMin{ 0.25f, 0.5f };
+    const Vector2F lFrameMax{ 0.375f, 0.75f };
+    MapQuadUVsInto(lQuads, lFrameMin, lFrameMax);
+
+    for (const UIQuad& lQuad : lQuads)
+    {
+        CHECK(lQuad.UVMin.x >= lFrameMin.x - 1e-5f);
+        CHECK(lQuad.UVMin.y >= lFrameMin.y - 1e-5f);
+        CHECK(lQuad.UVMax.x <= lFrameMax.x + 1e-5f);
+        CHECK(lQuad.UVMax.y <= lFrameMax.y + 1e-5f);
+    }
+
+    // The corners still sample the border: the first quad's UV span is 16/64 of the frame's span.
+    CHECK(lQuads[0].UVMax.x - lQuads[0].UVMin.x == doctest::Approx(0.125f * 0.25f));
+
+    TDynArray<UIQuad> lUnmapped;
+    TDynArray<UIQuad> lWhole;
+    BuildSlicedQuads(lRect, UIMargin{ 16.f, 16.f, 16.f, 16.f }, { 64.f, 64.f }, lUnmapped);
+    BuildSlicedQuads(lRect, UIMargin{ 16.f, 16.f, 16.f, 16.f }, { 64.f, 64.f }, lWhole);
+    MapQuadUVsInto(lWhole, { 0.f, 0.f }, { 1.f, 1.f });
+    REQUIRE(lWhole.size() == lUnmapped.size());
+    for (Uint64 lIndex = 0; lIndex < lWhole.size(); ++lIndex)
+    {
+        CHECK(lWhole[lIndex].UVMin.x == doctest::Approx(lUnmapped[lIndex].UVMin.x));
+        CHECK(lWhole[lIndex].UVMax.y == doctest::Approx(lUnmapped[lIndex].UVMax.y));
+    }
+}

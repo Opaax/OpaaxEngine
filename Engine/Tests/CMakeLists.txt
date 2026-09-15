@@ -153,6 +153,9 @@ set(OPAAX_TEST_SOURCES
     # U10. A widget pulls a named value from a reflected object: the reader by name, the table's
     # "Source.Property", and the number that matters — a value that HOLDS rebuilds nothing.
     UI/UIBindingTests.cpp
+    # U12. One image resolve for UIImage and UIButton: runtime > sheet frame > texture, a frame's
+    # UVs reaching the quad (sliced too), and "named but not ready" re-arming. The pixels are theirs.
+    UI/UIImageSourceTests.cpp
 
     # Editor-side, and the FIRST of its kind — header-only editor types only (see the include dir
     # below). ③'s gizmo delta math, pinned after a scale bug that only showed away from (0,0).

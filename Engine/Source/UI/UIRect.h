@@ -64,4 +64,31 @@ namespace Opaax
      * inside InParent. Anchors and pivot are kept — a resize handle edits a size, never an anchor.
      */
     OPAAX_API void FitRect(UIRect& InOutRect, const Bounds2D& InTarget, const Bounds2D& InParent) noexcept;
+
+    // =============================================================================
+    // Anchor presets — Unity's 4x4 grid, the way an author actually sets anchors (U12).
+    // =============================================================================
+
+    enum class EUIAnchorX : Uint8 { Left, Center, Right, Stretch };
+    enum class EUIAnchorY : Uint8 { Top, Middle, Bottom, Stretch };
+
+    /** A preset per axis, or None when the anchors are not one of the sixteen. */
+    struct UIAnchorPreset
+    {
+        EUIAnchorX X     = EUIAnchorX::Center;
+        EUIAnchorY Y     = EUIAnchorY::Middle;
+        bool       bKnown = false;
+    };
+
+    /**
+     * Set InOutRect's anchors AND pivot to the preset, then FitRect it to InCurrent inside
+     * InParent — so the widget does not move on screen; only what it does on a resize changes.
+     * The pivot follows the anchor (Unity's Shift+Alt click, made the only behaviour), 0.5 on a
+     * stretched axis.
+     */
+    OPAAX_API void ApplyAnchorPreset(UIRect& InOutRect, EUIAnchorX InX, EUIAnchorY InY,
+                                     const Bounds2D& InCurrent, const Bounds2D& InParent) noexcept;
+
+    /** Which preset InRect's anchors are, for the highlight; bKnown = false for anything else. */
+    OPAAX_API UIAnchorPreset CurrentAnchorPreset(const UIRect& InRect) noexcept;
 }

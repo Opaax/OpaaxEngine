@@ -1,5 +1,7 @@
 #include "UI/Widgets/UIButton.h"
 
+#include "UI/UIImageSource.h"
+
 namespace Opaax
 {
     void UIButton::SetEnabled(const bool bInEnabled)
@@ -72,6 +74,9 @@ namespace Opaax
         InOutJson["Pressed"]  = Pressed;
         InOutJson["Disabled"] = Disabled;
         InOutJson["bEnabled"] = bEnabled;
+        InOutJson["Texture"]  = Texture;
+        InOutJson["Sheet"]    = Sheet;
+        InOutJson["Frame"]    = Frame;
     }
 
     void UIButton::LoadFields(const nlohmann::json& InJson)
@@ -83,13 +88,28 @@ namespace Opaax
         Pressed  = InJson.value("Pressed", Pressed);
         Disabled = InJson.value("Disabled", Disabled);
         bEnabled = InJson.value("bEnabled", bEnabled);
+        Texture  = InJson.value("Texture", Texture);
+        Sheet    = InJson.value("Sheet", Sheet);
+        Frame    = InJson.value("Frame", Frame);
     }
 
-    void UIButton::Rebuild(const UIBuildContext& /*InContext*/, TDynArray<UIQuad>& OutQuads)
+    void UIButton::Rebuild(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads)
     {
+        // The image's sources, the image's rule (UI25): named but not ready draws nothing and
+        // asks again; nothing named is the state colour on a plain quad.
+        UIResolvedImage lImage;
+        bool            bNamed = false;
+        if (!ResolveImageSource(InContext, m_Texture, Texture, Sheet, Frame, lImage, bNamed) && bNamed)
+        {
+            InvalidateContent();
+            return;
+        }
+
         UIQuad& lQuad = OutQuads.emplace_back();
         lQuad.Bounds  = GetBounds();
-        lQuad.Texture = m_Texture;
+        lQuad.Texture = lImage.Texture;
+        lQuad.UVMin   = lImage.UVMin;
+        lQuad.UVMax   = lImage.UVMax;
         lQuad.Color   = !bEnabled ? Disabled
                       : m_bPressed ? Pressed
                       : m_bHovered ? Hovered

@@ -42,4 +42,11 @@ namespace Opaax
      * excluding each other: the fill is a clip rect over whatever geometry the image emitted.
      */
     OPAAX_API void ClipQuadsTo(TDynArray<UIQuad>& InOutQuads, const Bounds2D& InClip);
+
+    /**
+     * Map every quad's 0..1 UVs into the InUVMin..InUVMax rect of a larger texture — a sheet
+     * FRAME (**UI25**). Identity for the whole texture. Run after the slice and before the clip,
+     * since the clip cuts UVs proportionally and does not care what range they are in.
+     */
+    OPAAX_API void MapQuadUVsInto(TDynArray<UIQuad>& InOutQuads, const Vector2F& InUVMin, const Vector2F& InUVMax) noexcept;
 }

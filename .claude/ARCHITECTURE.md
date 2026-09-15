@@ -4417,7 +4417,9 @@ from their eyes: *"Cannot drag drop texture font and all other"*, *"guard invert
   `TPropertyDrawer<TResourcePath<T>>`; a bare string gets a text box and nothing else. `UIText::
   Font`, `UIImage::Texture` and `UIMask::Texture` are `TResourcePath` now, so the drop target, the
   type gate (a `.png` is refused on a font field) and the picker all arrive for free — the same
-  route every component has always had.
+  route every component has always had. U12 gave `UIButton` the same trio as `UIImage` (`Texture`,
+  `Sheet`, `Frame`) — until then its art was `SetTexture` from code only, and no asset could give
+  a button a picture.
 - **ZERO FORMAT CHANGE, and the format's own header predicted it:** `ResourcePathJson.h` writes a
   path as a BARE STRING and states *"a field that was an OpaaxString before becoming a
   TResourcePath reads back unchanged"*. `UI_FORMAT_VERSION` stays 1; a `.opaaxui` written before
@@ -4586,6 +4588,33 @@ Y-up; `Stretch` fills), `bFitContent`.
 - *Dogfood:* `HudSubsystem` names no widget. It registers `"Hud"`, writes `m_Model`, and
   `Hud.opaaxui` says `Binding = Hud.Jumps` / `FillBinding = Hud.Speed`. `FindByName`, both widget
   pointers and the "MISSING" branch are gone.
+
+**UI25 — AN IMAGE SOURCE IS RUNTIME > SHEET FRAME > TEXTURE, RESOLVED ONCE FOR EVERY IMAGE-SHAPED
+WIDGET; AND THE ANCHORS ARE SET BY PRESET** (U12, "a HUD from real art").
+- **`ResolveImageSource`** (`UI/UIImageSource.h`) is the one resolve `UIImage` and `UIButton` share:
+  a texture handed over by code wins (TX1's Font-over-Face), then a `Sheet` + `Frame`, then a
+  `Texture` path — `ResolveSpriteDraw`'s sheet-over-texture rule, so a sprite and a widget cannot
+  mean different things by a sheet. It answers "named but not ready" apart from "nothing named":
+  only the first re-arms (UI3); the second draws the plain colour. The fields stay FLAT on each
+  widget (a shared reflected group would have moved `UIImage::Texture`'s file key).
+- **`IUIAssetProvider::ResolveSheetFrame(path, frame)`** answers the sheet's texture, the frame's
+  UVs and the frame's pixel size — DEFAULTED to nothing so a stub need not know sheets. The
+  renderer implements it from `ResolveSheet` + `ResolveTexture` + `FrameAt` + `MakeFrameUV`, with
+  the sprite's rule for a frame the sheet lacks (whole texture, warned once).
+- **A 9-slice is measured against the FRAME's size, and its 0..1 UVs are mapped into the frame's
+  rect** (`MapQuadUVsInto`, run after the slice, before the fill's clip, which cuts UVs
+  proportionally and does not care what range they are in). An icon cut from an atlas keeps its
+  caps and still fills. Proven in-game (harness, removed): frame 3 of the engine's 2×2 sheet,
+  sliced, `9 quad(s); first UV (0.5, 0)-(0.5625, 0.0625)`.
+- **Anchor presets** (`ApplyAnchorPreset` in `UIRect.h`, pure): Unity's 4×4 grid sets anchors AND
+  pivot, then `FitRect`s to the current rect — the widget does not move, only what it does on a
+  resize changes (Unity's Shift+Alt click, made the only behaviour). Top is anchor y = 1 (Y-up);
+  a stretched axis pivots at 0.5. `CurrentAnchorPreset` reads the sixteen back for the highlight;
+  a hand-typed anchor reads as none. Disabled under a container (UI23 — the container places it).
+- **The inspector's undo gesture brackets only ITS fields** (found wiring the preset): `IsAnyItemActive`
+  is frame-global, so a verb button pressed the same frame — Delete, Duplicate, the preset — opened
+  a gesture whose commit re-recorded the verb's step as a phantom "Edit Widget". Sampled BEFORE
+  the fields: an item already active is not one of theirs. Every U7 button had that phantom.
 
 **Growth points, named and not built:** rich text as `UIText` runs · a format spec beyond `{}` ·
 `UIBinding` onto more than Text and Fill (a Color, a visibility — one field each, UI24) ·

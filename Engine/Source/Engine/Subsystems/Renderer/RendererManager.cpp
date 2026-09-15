@@ -743,6 +743,46 @@ namespace Opaax
         return ResolveTexture(lPath);
     }
 
+    UISheetFrameView RendererManager::ResolveSheetFrame(const char* InSheetPath, const Int32 InFrame)
+    {
+        TResourcePath<SpriteSheetResource> lPath;
+        lPath.Path = OpaaxString(InSheetPath);
+
+        UISheetFrameView lView;
+
+        const SpriteSheetData* lSheet = ResolveSheet(lPath);
+        if (lSheet == nullptr)
+        {
+            return lView;
+        }
+
+        lView.Texture = ResolveTexture(lSheet->Texture);
+        if (lView.Texture == nullptr)
+        {
+            return lView;   // still uploading — the widget re-arms
+        }
+
+        lView.SizePx = { static_cast<float>(lView.Texture->GetWidth()), static_cast<float>(lView.Texture->GetHeight()) };
+
+        // ResolveSpriteDraw's rule: a frame the sheet does not have is the whole texture, warned once.
+        const SpriteFrame* lFrame = lSheet->FrameAt(InFrame);
+        if (lFrame == nullptr)
+        {
+            if (InFrame >= 0 && lSheet->FrameCount() > 0 && m_WarnedFrameRange.emplace(OpaaxStringID(lPath.Path).GetId()).second)
+            {
+                OPAAX_LOG(LogRendererManager, Warn, "Sheet '{}' has no frame {} ({} frame(s)) — drawing the whole texture",
+                          InSheetPath, InFrame, lSheet->FrameCount());
+            }
+            return lView;
+        }
+
+        const SpriteUVRect lUV = MakeFrameUV(*lFrame, lView.Texture->GetWidth(), lView.Texture->GetHeight());
+        lView.UVMin  = lUV.UVMin;
+        lView.UVMax  = lUV.UVMax;
+        lView.SizePx = lFrame->Size;
+        return lView;
+    }
+
     const FontFamilyData* RendererManager::ResolveFamily(const TResourcePath<FontFamilyResource>& InPath)
     {
         if (InPath.IsEmpty())

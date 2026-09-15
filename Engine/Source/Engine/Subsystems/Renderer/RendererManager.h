@@ -183,8 +183,9 @@ namespace Opaax
         FontFaceView ResolveFace(const TResourcePath<FontFaceResource>& InPath);
 
         /** IUIAssetProvider — the same caches, reached by a widget that can only spell a path. */
-        FontFaceView ResolveFace(const char* InAssetPath) override;
-        ITexture2D*  ResolveTexture(const char* InAssetPath) override;
+        FontFaceView     ResolveFace(const char* InAssetPath) override;
+        ITexture2D*      ResolveTexture(const char* InAssetPath) override;
+        UISheetFrameView ResolveSheetFrame(const char* InSheetPath, Int32 InFrame) override;
 
         /**
          * The family behind an asset-relative `.opaaxfont` path, loading it once and keeping the
