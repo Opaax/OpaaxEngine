@@ -1,6 +1,8 @@
 #include "Editor/Operation/UICanvasOperations.h"
 #include "Editor/Operation/ResourceOperations.h"
 
+#include <algorithm>   // std::clamp — the reorder's bounds
+
 #include "Application/OpaaxApplication.h"
 #include "Core/IO/FileIO.h"
 #include "Application/Services/IEngine.h"
@@ -133,6 +135,79 @@ namespace Opaax::Editor
 
         Record(InContext, Move(lBefore), "Reparent Widget");
         return true;
+    }
+
+    bool UICanvasOps::MoveWidget(EditorContext& InContext, const UIWidgetPath& InPath, const Int32 InDelta)
+    {
+        if (!InContext.UICanvasDocument.IsOpen() || InPath.empty() || InDelta == 0) { return false; }
+
+        UIWidget* const lWidget = InContext.UICanvasDocument.Resolve(InPath);
+        if (lWidget == nullptr || lWidget->GetParent() == nullptr) { return false; }
+
+        UIWidget& lParent = *lWidget->GetParent();
+        const Int64 lCount = static_cast<Int64>(lParent.GetChildren().size());
+        const Int64 lFrom  = static_cast<Int64>(InPath.back());
+        const Int64 lTo    = std::clamp(lFrom + InDelta, Int64{ 0 }, lCount - 1);
+
+        if (lTo == lFrom) { return false; }   // already at the end it was pushed toward
+
+        OpaaxString lBefore = Snapshot(InContext);
+
+        TUniquePtr<UIWidget> lOwned = lParent.RemoveChild(*lWidget);
+        UIWidget* const      lMoved = lParent.AddChild(Move(lOwned), static_cast<Uint64>(lTo));
+
+        InContext.UICanvasDocument.Select(InContext.UICanvasDocument.PathOf(*lMoved));
+
+        Record(InContext, Move(lBefore), InDelta < 0 ? "Move Widget Up" : "Move Widget Down");
+        return true;
+    }
+
+    UIWidgetPath UICanvasOps::DuplicateWidget(EditorContext& InContext, const UIWidgetPath& InPath)
+    {
+        if (!InContext.UICanvasDocument.IsOpen() || InPath.empty()) { return {}; }
+
+        UIWidget* const lWidget = InContext.UICanvasDocument.Resolve(InPath);
+        if (lWidget == nullptr || lWidget->GetParent() == nullptr) { return {}; }
+
+        TUniquePtr<UIWidget> lClone = UICanvasFile::CloneWidget(*lWidget, Registry());
+        if (!lClone) { return {}; }
+
+        OpaaxString lBefore = Snapshot(InContext);
+
+        // A same-named twin would shadow the original for FindByName; the suffix is Unity's.
+        lClone->Name = lWidget->Name + " (1)";
+
+        UIWidget* const lAdded = lWidget->GetParent()->AddChild(Move(lClone), InPath.back() + 1);
+        Record(InContext, Move(lBefore), "Duplicate Widget");
+
+        return InContext.UICanvasDocument.PathOf(*lAdded);
+    }
+
+    OpaaxString UICanvasOps::CopyWidget(EditorContext& InContext, const UIWidgetPath& InPath)
+    {
+        if (!InContext.UICanvasDocument.IsOpen() || InPath.empty()) { return {}; }
+
+        const UIWidget* const lWidget = InContext.UICanvasDocument.Resolve(InPath);
+        return lWidget != nullptr ? UICanvasFile::SerializeNode(*lWidget) : OpaaxString();
+    }
+
+    UIWidgetPath UICanvasOps::PasteWidget(EditorContext& InContext, const OpaaxString& InText,
+                                          const UIWidgetPath& InParent)
+    {
+        if (!InContext.UICanvasDocument.IsOpen() || InText.IsEmpty()) { return {}; }
+
+        UIWidget* const lParent = InContext.UICanvasDocument.Resolve(InParent);
+        if (lParent == nullptr) { return {}; }
+
+        TUniquePtr<UIWidget> lWidget = UICanvasFile::DeserializeNode(InText, Registry());
+        if (!lWidget) { return {}; }   // not a node — the clipboard held something else
+
+        OpaaxString lBefore = Snapshot(InContext);
+
+        UIWidget* const lAdded = lParent->AddChild(Move(lWidget));
+        Record(InContext, Move(lBefore), "Paste Widget");
+
+        return InContext.UICanvasDocument.PathOf(*lAdded);
     }
 
     bool UICanvasOps::CommitEdit(EditorContext& InContext, const OpaaxString& InBefore, const char* InLabel)

@@ -90,6 +90,9 @@ namespace Opaax
         /** Take ownership; drawn after (on top of) its siblings. @return the child, for chaining. */
         UIWidget* AddChild(TUniquePtr<UIWidget> InChild);
 
+        /** Take ownership at InIndex among my children (clamped to the end) — a duplicate lands beside its source. */
+        UIWidget* AddChild(TUniquePtr<UIWidget> InChild, Uint64 InIndex);
+
         /** Hand ownership back — undo wants the node, not a copy. Null when InChild is not mine. */
         TUniquePtr<UIWidget> RemoveChild(UIWidget& InChild);
 

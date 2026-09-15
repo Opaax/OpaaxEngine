@@ -43,6 +43,18 @@ namespace Opaax::Editor
          */
         bool ReparentWidget(EditorContext& InContext, const UIWidgetPath& InPath, const UIWidgetPath& InNewParent);
 
+        /** Move the widget at InPath InDelta places among its siblings (clamped). Sibling order IS draw order. */
+        bool MoveWidget(EditorContext& InContext, const UIWidgetPath& InPath, Int32 InDelta);
+
+        /** A deep copy of the widget at InPath, right after it, named "<Name> (1)". @return its path, empty on failure. */
+        UIWidgetPath DuplicateWidget(EditorContext& InContext, const UIWidgetPath& InPath);
+
+        /** The widget at InPath as node text — what the panel hands the clipboard. Empty when nothing is there. */
+        OpaaxString CopyWidget(EditorContext& InContext, const UIWidgetPath& InPath);
+
+        /** A subtree from node text, under InParent. @return its path; empty when the text is not a node. */
+        UIWidgetPath PasteWidget(EditorContext& InContext, const OpaaxString& InText, const UIWidgetPath& InParent);
+
         /**
          * Close an in-place property edit — the panel's DrawProperties gesture.
          *

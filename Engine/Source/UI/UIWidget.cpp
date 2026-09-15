@@ -22,6 +22,11 @@ namespace Opaax
 
     UIWidget* UIWidget::AddChild(TUniquePtr<UIWidget> InChild)
     {
+        return AddChild(std::move(InChild), m_Children.size());
+    }
+
+    UIWidget* UIWidget::AddChild(TUniquePtr<UIWidget> InChild, const Uint64 InIndex)
+    {
         if (!InChild)
         {
             return nullptr;
@@ -30,7 +35,8 @@ namespace Opaax
         UIWidget* lChild = InChild.get();
         lChild->m_Parent = this;
         lChild->SetCanvasRecursive(m_Canvas);
-        m_Children.emplace_back(std::move(InChild));
+        m_Children.emplace(m_Children.begin() + static_cast<std::ptrdiff_t>(std::min(InIndex, static_cast<Uint64>(m_Children.size()))),
+                           std::move(InChild));
 
         // A new child arrives with fresh flags; the walk only needs to reach it.
         m_bSubtreeDirty = true;

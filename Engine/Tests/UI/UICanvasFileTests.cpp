@@ -367,3 +367,63 @@ TEST_CASE("UICanvasFile: a file written when the asset fields were STRINGS still
     const OpaaxString lText2 = UICanvasFile::Serialize(lDoc);
     CHECK(lText2.Find("\"Font\": \"/Engine/Fonts/Roboto/roboto-latin-700-normal.ttf\"") >= 0);
 }
+
+TEST_CASE("UICanvasFile: CloneWidget is a deep copy through the format, and a node's text pastes back (U7)")
+{
+    const UIWidgetRegistry lRegistry = MakeRegistry();
+
+    // A button with a label under it: two types, two levels, one field of each kind.
+    auto lButton      = MakeUnique<UIButton>();
+    lButton->Name     = "Resume";
+    lButton->bEnabled = false;
+    lButton->SetRect(Corner({ 0.5f, 0.f }, { 0.f, 30.f }, { 240.f, 64.f }));
+
+    auto lLabel  = MakeUnique<UIText>();
+    lLabel->Name = "ResumeLabel";
+    lLabel->Text = "Resume";
+    lButton->AddChild(Move(lLabel));
+
+    TUniquePtr<UIWidget> lClone = UICanvasFile::CloneWidget(*lButton, lRegistry);
+    REQUIRE(lClone != nullptr);
+    CHECK(lClone.get() != lButton.get());
+    CHECK(lClone->GetParent() == nullptr);   // detached, whoever asked will place it
+
+    const auto* lCloned = dynamic_cast<const UIButton*>(lClone.get());
+    REQUIRE(lCloned != nullptr);
+    CHECK(lCloned->Name == OpaaxString("Resume"));
+    CHECK_FALSE(lCloned->bEnabled);
+    CheckVec(lCloned->Rect.SizeDelta, { 240.f, 64.f });
+    REQUIRE(lCloned->GetChildren().size() == 1u);
+    CHECK(lCloned->GetChildren()[0]->Name == OpaaxString("ResumeLabel"));
+    CHECK(lCloned->GetChildren()[0].get() != lButton->GetChildren()[0].get());
+
+    // The clipboard's unit: the same text the file would hold for that node, read back alone.
+    const OpaaxString lText = UICanvasFile::SerializeNode(*lButton);
+    CHECK(lText.Find("\"Type\": \"UIButton\"") >= 0);
+
+    TUniquePtr<UIWidget> lPasted = UICanvasFile::DeserializeNode(lText, lRegistry);
+    REQUIRE(lPasted != nullptr);
+    CHECK(lPasted->Name == OpaaxString("Resume"));
+    CHECK(lPasted->GetChildren().size() == 1u);
+
+    // Not a node: a paste of unrelated clipboard text is a no-op, not a crash.
+    CHECK(UICanvasFile::DeserializeNode(OpaaxString("hello"), lRegistry) == nullptr);
+    CHECK(UICanvasFile::DeserializeNode(OpaaxString("[1, 2]"), lRegistry) == nullptr);
+}
+
+TEST_CASE("UIWidget: AddChild at an index inserts there, and past the end appends (U7)")
+{
+    UIPanel lParent;
+
+    UIWidget* const lA = lParent.AddChild(MakeUnique<UIPanel>());
+    UIWidget* const lC = lParent.AddChild(MakeUnique<UIPanel>());
+    UIWidget* const lB = lParent.AddChild(MakeUnique<UIPanel>(), 1);   // between A and C
+    UIWidget* const lD = lParent.AddChild(MakeUnique<UIPanel>(), 99);  // clamped to the end
+
+    REQUIRE(lParent.GetChildren().size() == 4u);
+    CHECK(lParent.GetChildren()[0].get() == lA);
+    CHECK(lParent.GetChildren()[1].get() == lB);
+    CHECK(lParent.GetChildren()[2].get() == lC);
+    CHECK(lParent.GetChildren()[3].get() == lD);
+    CHECK(lB->GetParent() == &lParent);
+}

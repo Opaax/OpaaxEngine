@@ -72,7 +72,7 @@ TEST_CASE("UIWidgetDrawers: a leaf's property list does NOT repeat the base's â€
     // if it only did the latter (as the ladder did), none of these base fields would be editable.
     CHECK(PropertyCount<UIWidget>() == 4u);   // Name, Rect, bVisible, bHitTestable
 
-    CHECK(PropertyCount<UIMask>()     == 1u); // Texture, and nothing else â€” invisible before UI18
+    CHECK(PropertyCount<UIMask>()     == 2u); // Texture (invisible before UI18) + bShowMaskGraphic (U7)
     CHECK(PropertyCount<UISafeArea>() == 1u); // Insets, likewise
     CHECK(PropertyCount<UIText>()   > 1u);
     CHECK(PropertyCount<UIImage>()  > 1u);

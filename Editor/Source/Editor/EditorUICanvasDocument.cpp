@@ -110,7 +110,12 @@ namespace Opaax::Editor
 
     UIWidget* EditorUICanvasDocument::Resolve(const UIWidgetPath& InPath)
     {
-        UIWidget* lNode = &m_Canvas.Root();
+        return const_cast<UIWidget*>(static_cast<const EditorUICanvasDocument&>(*this).Resolve(InPath));
+    }
+
+    const UIWidget* EditorUICanvasDocument::Resolve(const UIWidgetPath& InPath) const
+    {
+        const UIWidget* lNode = &m_Canvas.Root();
 
         for (const Uint32 lIndex : InPath)
         {

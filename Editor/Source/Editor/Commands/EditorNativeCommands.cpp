@@ -733,6 +733,14 @@ namespace Opaax::Editor
         UICanvasOps::Save(InContext);
     }
 
+    void DeleteUIWidgetCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        const UIWidgetPath& lSelected = InContext.UICanvasDocument.SelectedPath();
+        if (lSelected.empty()) { return; }   // Delete on nothing is ordinary — DestroySelected's rule
+
+        UICanvasOps::RemoveWidget(InContext, lSelected);
+    }
+
     void SaveLevelCommand::Execute(EditorContext& InContext, const Params&)
     {
         Level* const lLevel = MapOps::ActiveLevel(InContext);

@@ -69,5 +69,18 @@ namespace Opaax
 
         /** How many widgets InRoot's subtree holds, itself included. The log's number. */
         OPAAX_API Uint64 CountWidgets(const UIWidget& InRoot);
+
+        // =============================================================================
+        // One NODE, not a whole canvas — the clipboard's unit, so a paste crosses documents.
+        // =============================================================================
+
+        /** InWidget and its subtree as text, in the file's node form. */
+        OPAAX_API OpaaxString SerializeNode(const UIWidget& InWidget);
+
+        /** The mirror: a fresh subtree from InText, or null when it is not a node this build reads. */
+        OPAAX_API TUniquePtr<UIWidget> DeserializeNode(const OpaaxString& InText, const UIWidgetRegistry& InRegistry);
+
+        /** A deep copy through the format — the only copy a non-copyable node has. */
+        OPAAX_API TUniquePtr<UIWidget> CloneWidget(const UIWidget& InWidget, const UIWidgetRegistry& InRegistry);
     }
 }

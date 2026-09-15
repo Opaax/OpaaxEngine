@@ -96,8 +96,9 @@ namespace Opaax::Editor::Tags
     inline const OpaaxTag EDITOR_COMMAND_SAVE_FAMILY  = OpaaxTag("Editor.Command.SaveFamily");
 
     //UI (U4)
-    inline const OpaaxTag EDITOR_COMMAND_NEW_UI  = OpaaxTag("Editor.Command.NewUI");
-    inline const OpaaxTag EDITOR_COMMAND_SAVE_UI = OpaaxTag("Editor.Command.SaveUI");
+    inline const OpaaxTag EDITOR_COMMAND_NEW_UI           = OpaaxTag("Editor.Command.NewUI");
+    inline const OpaaxTag EDITOR_COMMAND_SAVE_UI          = OpaaxTag("Editor.Command.SaveUI");
+    inline const OpaaxTag EDITOR_COMMAND_DELETE_UI_WIDGET = OpaaxTag("Editor.Command.DeleteUIWidget");
 
     //Mover
     inline const OpaaxTag EDITOR_COMMAND_SAVE_MOVE_MODE = OpaaxTag("Editor.Command.SaveMoveMode");

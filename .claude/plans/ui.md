@@ -1,14 +1,18 @@
-# UI — record (branch `User_Interface`, 2026-09-14 → 2026-09-15) — CLOSED, user-verified
+# UI — record (branch `User_Interface`, 2026-09-14 → ) — U1–U6 CLOSED, user-verified; U7–U10 OPEN
 
-> **Closed 2026-09-15** on *"close the block"*, after *"eye gate good. pie selection fixed, next level
-> works."* Every seeded step U1–U6 landed and was eye-gated; 12 step commits + 2 fixes + their own
+> **U1–U6 closed 2026-09-15** on *"close the block"*, after *"eye gate good. pie selection fixed, next
+> level works."* Every seeded step landed and was eye-gated; 12 step commits + 2 fixes + their own
 > `a1bce9a`. **896 cases / 9548 assertions / 7 skipped**, `UI widget drawers: 6 for 6`. Durable:
 > **§UI** (UI1–UI21), IM6/MV1/GI2/TX10/F4d/F5 amended, [[L95]]–[[L97]]. **Still unseen by anyone:**
-> a swap started inside PIE · two masks nested · the Camera Preview staying UI-free. **Growth
-> points** are listed under UI21 in the contract — theirs to order; none is started.
+> a swap started inside PIE · two masks nested · the Camera Preview staying UI-free.
+>
+> **Reopened 2026-09-15** (*"Lets continue UI works"*) — they picked four growth points at once:
+> designer polish · layout groups · opacity + fade · `UIBinding`. Sequenced U7–U10 by what becomes
+> visible; each commits alone and ends at a gate.
 
 | Step | Commit | What landed |
 |---|---|---|
+| **U7** | — | **Designer polish.** `FitRect` (UIRect.cpp — `ResolveRect`'s inverse, anchors kept) · 8 grips on the selection, resize through `EditorRectGeometry`'s `HitTestRect`/`ResizeRect` in PIXEL space then `ScreenToCanvas` ×2 → `FitRect`, one step "Resize Widget", cursor per edge · `UIWidget::AddChild(child, index)` · `UICanvasFile::CloneWidget` / `SerializeNode` / `DeserializeNode` · `UICanvasOps` `DuplicateWidget` (" (1)"), `CopyWidget`/`PasteWidget` (the node's JSON is the clipboard text — paste crosses documents), `MoveWidget` (▲▼) · Ctrl+D/C/V/Up/Down window-local · **`DeleteUIWidgetCommand` + `.DeleteCommand`** — Delete in the UI panel used to delete a LEVEL entity · the canvas's reference height in the inspector when nothing is selected ("Edit Canvas") · `UIMask::bShowMaskGraphic`. 3 cases, **896 → 899 / 9546 → 9603**, `commands` 49→50. |
 | **U1** | `276b905` | `Engine/Source/UI/`: `UIRect` + `ResolveRect`, `UIWidget` (3 flags, 2 verbs, one walk), `UICanvas` (view = `CameraView{0, H/2}`, stats), `UIPanel`, `UIImage` (fill). 16 cases, **810 → 826 / 9029 → 9114**. No caller yet. |
 | **U2** | `6578fea` | The canvas over the world: `bDrawUI` opt-in on the world pass, `SubmitUICanvas`, `RenderCanvases` with **`ELoadOp::Load`'s first caller**, ST rows. `Text2D` box (wrap/align, scan-then-emit). `IUIFontProvider` + the re-arm. `UIText`. `UISubsystem` tenant + `WorldContext::UI`. Sandbox `HudSubsystem` (Jumps + speed bar). 10 cases, **826 → 836 / 9114 → 9161**. Contract **§UI** (UI1–UI8). **User-verified:** *"Eye gate good. Resize -> UI stay and resize correctly"*. |
 | **U3** | `66b7b48` | Input bubbles (Slate's FReply), press captures, focus routes keys, detach clears (**UI9**). Three modes `GameOnly/UIOnly/GameAndUI` on the tenant, which now ticks BEFORE mapping; `UIInputRouter` reports a consumed mask the evaluator pre-consumes (**UI10**). `UIButton`. PIE pointer is viewport-local (**UI11**). Sandbox `PauseMenuSubsystem` (HUD button opens, UIOnly modal, Resume/Escape close). **A phantom Started on a masked-then-held key fixed in the evaluator** (`bMaskSuppressed`). 21 cases, **836 → 857 / 9161 → 9266**. §UI9–11, IM6 amended. |
@@ -18,6 +22,17 @@
 | **PIE fix** | `03610cd` | The viewport never picks during PIE (their U4 finding, restated): `PickGesture::Measure` gated on `PIE.IsEdit()` — one gate for the point and the marquee; a pick whose press began in Edit is dropped. Their first-named shape, the one-line one. **User-verified:** *"pie selection fixed"*. |
 | **Panel designer** | `0559f7d` | Their *"Editing hud in ui panel more easier"*: click SELECTS (`PickAt`, ignoring `bHitTestable` on purpose), drag MOVES (`UnitsPerPixel`, one step), arrows NUDGE, an OUTLINE for the selection and the hover, the RESOLVED rect as numbers. `WorldToScreen` beside `ScreenToWorld`. **Their own `a1bce9a` starts working:** a group's range/step now FLOW to its children (`InheritMeta`). **894 → 895.** **User-verified** (*"eye gate good"*). |
 | **U6** | `976b5b0` | **The deferred `OpenLevel` and the loading cover** (**UI21**). `IEngine::RequestOpenLevel` — flag-then-resolve at the top of `Loop`, `LevelLoadRequested`/`LevelLoadFinished` on the bus; the `UISubsystem`'s SECOND canvas with its root's visibility as the flag (read at draw time, so a mid-frame request covers that frame); a hidden root opens no pass; the cover is AUTHORED — `.opaaxproj` `loadingScreen` → `UI/Loading.opaaxui`. Dogfood: the pause menu's **Next Level** (Main ⇄ PhysicsTest). **895 → 896.** **User-verified:** *"next level works"*. |
+
+**Settled in U7, not the plan:** the resize is done in PIXEL space, where the grip was hit, and only
+the two corners cross into canvas units — no edge flip (the canvas is Y-up, the image is not), no
+unit conversion of deltas, and `EditorRectGeometry`'s min-size clamp comes free. `FitRect` is the
+one new piece of arithmetic, and it is the inverse the model always implied. The reference height
+went into the INSPECTOR rather than the header: "nothing selected" is the canvas, and the
+inspector's existing gesture (`IsAnyItemActive` → whole-tree step) brackets it with no second
+mechanism — a header field would have opened that same gesture anyway and double-recorded.
+**Not proven by a smoke run:** every gesture (the panel starts hidden and nothing opens a document
+headless). **Found while wiring it:** Delete with the UI panel focused ran the LEVEL's delete —
+the P8 V4 trap, one panel over.
 
 **Settled in U6, not the plan:** the request had to publish IMMEDIATELY and the cover had to be a
 flag read at DRAW time, or the frame that asked would never be covered — the tenant's submit has

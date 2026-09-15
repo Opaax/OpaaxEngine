@@ -195,4 +195,35 @@ namespace Opaax
 
         return lCount;
     }
+
+    OpaaxString UICanvasFile::SerializeNode(const UIWidget& InWidget)
+    {
+        return OpaaxString(WriteNode(InWidget).dump(4).c_str());
+    }
+
+    TUniquePtr<UIWidget> UICanvasFile::DeserializeNode(const OpaaxString& InText, const UIWidgetRegistry& InRegistry)
+    {
+        const nlohmann::json lJson = nlohmann::json::parse(InText.CStr(), nullptr, false);
+        if (lJson.is_discarded() || !lJson.is_object())
+        {
+            return nullptr;   // not a node — a paste of unrelated clipboard text is a no-op
+        }
+
+        Uint64 lSkipped = 0;
+        try
+        {
+            return ReadNode(lJson, InRegistry, lSkipped);
+        }
+        catch (const nlohmann::json::exception& InError)
+        {
+            OPAAX_LOG(LogUICanvasFile, Error, "Unreadable node: {}", InError.what());
+            return nullptr;
+        }
+    }
+
+    TUniquePtr<UIWidget> UICanvasFile::CloneWidget(const UIWidget& InWidget, const UIWidgetRegistry& InRegistry)
+    {
+        Uint64 lSkipped = 0;
+        return ReadNode(WriteNode(InWidget), InRegistry, lSkipped);
+    }
 }

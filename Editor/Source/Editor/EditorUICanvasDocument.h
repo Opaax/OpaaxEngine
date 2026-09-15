@@ -90,10 +90,12 @@ namespace Opaax::Editor
         void                ClearSelection() { m_Selected.clear(); }
 
         /** The selected widget, or null when the path names nothing (a deleted node). */
-        UIWidget* SelectedWidget();
+        UIWidget*       SelectedWidget();
+        const UIWidget* SelectedWidget() const { return Resolve(m_Selected); }
 
         /** The widget InPath names, or null. An empty path is the root. */
-        UIWidget* Resolve(const UIWidgetPath& InPath);
+        UIWidget*       Resolve(const UIWidgetPath& InPath);
+        const UIWidget* Resolve(const UIWidgetPath& InPath) const;
 
         /** InWidget's path from the root. Empty when it is the root OR not in this tree. */
         UIWidgetPath PathOf(const UIWidget& InWidget) const;

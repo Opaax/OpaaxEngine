@@ -1,6 +1,7 @@
 #include "Editor/Panels/UICanvasPanel.h"
 
 #include <algorithm>
+#include <cmath>       // std::fabs — the selection's pixel rect
 
 #include <imgui.h>
 
@@ -13,6 +14,7 @@
 #include "Editor/ImguiLibrary/ImguiWidgets.h"
 #include "Editor/Operation/UICanvasOperations.h"
 #include "Editor/Properties/PropertyDrawers.h"   // the specializations DrawProperties folds over
+#include "Editor/UI/IEditorGui.h"                 // IsKeyboardOwnedByUI — the shortcut guard
 #include "Editor/UI/IEditorUIBackend.h"
 
 #include "Engine/Registries/EngineRegistries.h"
@@ -34,12 +36,26 @@ namespace Opaax::Editor
     {
         constexpr const char* DRAG_PAYLOAD = "OPAAX_UI_WIDGET";
 
+        /** How far from the selection's edge a press still counts as a grip, in image pixels. */
+        constexpr float GRIP_PX = 6.f;
+
         /** The registry every route here asks for the buildable type names. */
         const UIWidgetRegistry& Registry()
         {
             return OpaaxApplication::GetAppService<IEngine>().GetRegistries().UIWidgets();
         }
 
+        ImGuiMouseCursor CursorFor(const ERectEdge InEdge) noexcept
+        {
+            switch (InEdge)
+            {
+                case ERectEdge::Left:        case ERectEdge::Right:       return ImGuiMouseCursor_ResizeEW;
+                case ERectEdge::Top:         case ERectEdge::Bottom:      return ImGuiMouseCursor_ResizeNS;
+                case ERectEdge::TopLeft:     case ERectEdge::BottomRight: return ImGuiMouseCursor_ResizeNWSE;
+                case ERectEdge::TopRight:    case ERectEdge::BottomLeft:  return ImGuiMouseCursor_ResizeNESW;
+                default:                                                  return ImGuiMouseCursor_Arrow;
+            }
+        }
     }
 
     UICanvasPanel::UICanvasPanel(EditorContext& InContext)
@@ -89,6 +105,7 @@ namespace Opaax::Editor
         }
 
         DrawHeader();
+        HandleShortcuts();
         ImGui::Separator();
 
         ImGui::BeginChild("UITree", ImVec2(m_TreeWidth, 0.f), ImGuiChildFlags_ResizeX);
@@ -126,6 +143,46 @@ namespace Opaax::Editor
         ImGui::EndDisabled();
     }
 
+    void UICanvasPanel::HandleShortcuts()
+    {
+        // THIS WINDOW's route (PrefabPanel's F): the chords fire with the tree or the preview focused,
+        // never from another panel, and never while a name is being typed.
+        if (m_Context.Gui.IsKeyboardOwnedByUI()) { return; }
+
+        EditorUICanvasDocument& lDoc      = m_Context.UICanvasDocument;
+        const UIWidgetPath      lSelected = lDoc.SelectedPath();
+
+        if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_D))
+        {
+            if (const UIWidgetPath lPath = UICanvasOps::DuplicateWidget(m_Context, lSelected); !lPath.empty())
+            {
+                lDoc.Select(lPath);
+            }
+        }
+
+        if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C))
+        {
+            if (const OpaaxString lText = UICanvasOps::CopyWidget(m_Context, lSelected); !lText.IsEmpty())
+            {
+                ImGui::SetClipboardText(lText.CStr());
+            }
+        }
+
+        if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_V))
+        {
+            // Under the selection when there is one, else at the top level — the Add menu's rule.
+            const char* lClipboard = ImGui::GetClipboardText();
+            if (const UIWidgetPath lPath = UICanvasOps::PasteWidget(m_Context, OpaaxString(lClipboard), lSelected);
+                !lPath.empty())
+            {
+                lDoc.Select(lPath);
+            }
+        }
+
+        if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_UpArrow))   { UICanvasOps::MoveWidget(m_Context, lSelected, -1); }
+        if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_DownArrow)) { UICanvasOps::MoveWidget(m_Context, lSelected, +1); }
+    }
+
     // =============================================================================
     // The tree
     // =============================================================================
@@ -136,13 +193,28 @@ namespace Opaax::Editor
 
         ImGui::SameLine();
 
-        const UIWidgetPath& lSelected = m_Context.UICanvasDocument.SelectedPath();
+        const UIWidgetPath lSelected = m_Context.UICanvasDocument.SelectedPath();
 
         ImGui::BeginDisabled(lSelected.empty());
         if (ImGui::Button("Delete"))
         {
             UICanvasOps::RemoveWidget(m_Context, lSelected);
         }
+
+        ImGui::SameLine();
+        if (ImGui::Button("Duplicate"))
+        {
+            if (const UIWidgetPath lPath = UICanvasOps::DuplicateWidget(m_Context, lSelected); !lPath.empty())
+            {
+                m_Context.UICanvasDocument.Select(lPath);
+            }
+        }
+
+        // Sibling order is draw order AND, under a layout container, the order on screen.
+        ImGui::SameLine();
+        if (ImGui::ArrowButton("MoveUp", ImGuiDir_Up))     { UICanvasOps::MoveWidget(m_Context, lSelected, -1); }
+        ImGui::SameLine();
+        if (ImGui::ArrowButton("MoveDown", ImGuiDir_Down)) { UICanvasOps::MoveWidget(m_Context, lSelected, +1); }
         ImGui::EndDisabled();
 
         ImGui::Separator();
@@ -262,36 +334,49 @@ namespace Opaax::Editor
 
     void UICanvasPanel::DrawInspector()
     {
-        UIWidget* const lWidget = m_Context.UICanvasDocument.SelectedWidget();
+        UICanvas&       lCanvas = m_Context.UICanvasDocument.GetCanvas();
+        UIWidget* const lWidget = m_Context.UICanvasDocument.SelectedPath().empty()
+                                      ? nullptr
+                                      : m_Context.UICanvasDocument.SelectedWidget();
 
-        if (lWidget == nullptr || m_Context.UICanvasDocument.SelectedPath().empty())
+        if (lWidget == nullptr)
         {
-            ImGui::TextDisabled("Select a widget.");
-            return;
+            // Nothing selected is the CANVAS: its one field lives here, under the same gesture as a
+            // widget's, and the step it records carries the height with the tree (UI15).
+            ImGui::TextDisabled("Canvas");
+
+            float lHeight = lCanvas.GetReferenceHeight();
+            ImGui::SetNextItemWidth(120.f);
+            if (ImGui::DragFloat("Reference height", &lHeight, 1.f, 16.f, 8192.f, "%.0f"))
+            {
+                lCanvas.SetReferenceHeight(lHeight);
+            }
         }
-
-        ImGui::TextDisabled("%s", lWidget->GetTypeName().CStr());
-
-        // The RESOLVED rect, read-only: what the anchors actually produced, so an odd one reads
-        // as numbers here rather than as "it went somewhere" in the preview.
-        const Bounds2D& lBounds = lWidget->GetBounds();
-        ImGui::TextDisabled("resolved  min (%.0f, %.0f)  size %.0f x %.0f",
-                            lBounds.Min().x, lBounds.Min().y, lBounds.Size().x, lBounds.Size().y);
-
-        // TWO HALVES, and the ladder that used to be here drew only one of them (**UI18**):
-        //   the BASE fields every widget has (Name, Rect, visibility) — which a leaf type's own
-        //   property list does not repeat, so a UIText had no editable Rect at all;
-        //   then the TYPE's own, through the drawer registry, so a widget type nobody added to a
-        //   hand-written list cannot silently lose its fields.
-        DrawProperties(m_Context.Widgets, static_cast<UIWidget&>(*lWidget));
-
-        ImGui::Separator();
-
-        if (!m_Context.Extensions.UIWidgetDrawers().DrawFirst(*lWidget, m_Context.Widgets, m_Context))
+        else
         {
-            // A registered widget type with no drawer: say so where the author is looking, rather
-            // than showing a short list that looks complete.
-            ImGui::TextDisabled("No drawer registered for %s.", lWidget->GetTypeName().CStr());
+            ImGui::TextDisabled("%s", lWidget->GetTypeName().CStr());
+
+            // The RESOLVED rect, read-only: what the anchors actually produced, so an odd one reads
+            // as numbers here rather than as "it went somewhere" in the preview.
+            const Bounds2D& lBounds = lWidget->GetBounds();
+            ImGui::TextDisabled("resolved  min (%.0f, %.0f)  size %.0f x %.0f",
+                                lBounds.Min().x, lBounds.Min().y, lBounds.Size().x, lBounds.Size().y);
+
+            // TWO HALVES, and the ladder that used to be here drew only one of them (**UI18**):
+            //   the BASE fields every widget has (Name, Rect, visibility) — which a leaf type's own
+            //   property list does not repeat, so a UIText had no editable Rect at all;
+            //   then the TYPE's own, through the drawer registry, so a widget type nobody added to a
+            //   hand-written list cannot silently lose its fields.
+            DrawProperties(m_Context.Widgets, static_cast<UIWidget&>(*lWidget));
+
+            ImGui::Separator();
+
+            if (!m_Context.Extensions.UIWidgetDrawers().DrawFirst(*lWidget, m_Context.Widgets, m_Context))
+            {
+                // A registered widget type with no drawer: say so where the author is looking, rather
+                // than showing a short list that looks complete.
+                ImGui::TextDisabled("No drawer registered for %s.", lWidget->GetTypeName().CStr());
+            }
         }
 
         // THE GESTURE: a drag is many frames, and a step per frame would flood the history. Open on
@@ -306,14 +391,17 @@ namespace Opaax::Editor
         }
         else if (!lActive && m_bWasItemActive && m_bGestureOpen)
         {
-            UICanvasOps::CommitEdit(m_Context, m_GestureBefore, "Edit Widget");
+            UICanvasOps::CommitEdit(m_Context, m_GestureBefore, lWidget != nullptr ? "Edit Widget" : "Edit Canvas");
             m_bGestureOpen = false;
         }
 
         m_bWasItemActive = lActive;
 
         // The widget's own state may have changed under the drawer; it cannot know to re-layout.
-        lWidget->InvalidateLayout();
+        if (lWidget != nullptr)
+        {
+            lWidget->InvalidateLayout();
+        }
     }
 
     // =============================================================================
@@ -357,10 +445,32 @@ namespace Opaax::Editor
 
         m_HoverPath = bInHovered ? lDoc.PickAt(lCanvas.ScreenToCanvas(lLocalPx)) : UIWidgetPath{};
 
+        // A grip on the SELECTION wins over whatever is under the pointer: the outline is drawn over
+        // the preview, so its handles are what the author sees there. The eight regions and their
+        // corner priority are EditorRectGeometry's — the title bar's and the sheet editor's.
+        ERectEdge lEdge = ERectEdge::None;
+        if (bInHovered && !m_bPreviewDrag && !lDoc.SelectedPath().empty() && lDoc.SelectedWidget() != nullptr)
+        {
+            lEdge = HitTestRect(SelectionRectPx(), lLocalPx.x, lLocalPx.y, GRIP_PX);
+        }
+
+        if (const ERectEdge lShown = m_bPreviewDrag ? m_PreviewEdge : lEdge; lShown != ERectEdge::None)
+        {
+            ImGui::SetMouseCursor(CursorFor(lShown));
+        }
+
         if (bInHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
         {
-            lDoc.Select(m_HoverPath);   // empty is bare canvas, and that clears
+            if (lEdge != ERectEdge::None)
+            {
+                m_PressRectPx = SelectionRectPx();   // the resize is measured from here
+            }
+            else
+            {
+                lDoc.Select(m_HoverPath);   // empty is bare canvas, and that clears
+            }
 
+            m_PreviewEdge      = lEdge;
             m_bPreviewDrag     = true;
             m_bPreviewMoved    = false;
             m_PreviewAppliedPx = { 0.f, 0.f };
@@ -390,23 +500,42 @@ namespace Opaax::Editor
 
         if (ImGui::IsMouseDown(ImGuiMouseButton_Left))
         {
-            // The TOTAL since the press, minus what is already applied: exact across frames, and
-            // the threshold ImGui applies before calling it a drag keeps a plain click from nudging.
-            if (ImGui::IsMouseDragging(ImGuiMouseButton_Left))
+            // The TOTAL since the press: exact across frames, and the threshold ImGui applies before
+            // calling it a drag keeps a plain click from nudging.
+            UIWidget* const lWidget = lDoc.SelectedWidget();
+            if (!ImGui::IsMouseDragging(ImGuiMouseButton_Left) || lWidget == nullptr || lDoc.SelectedPath().empty())
             {
-                const ImVec2   lTotal = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left, 0.f);
-                const Vector2F lStepPx{ lTotal.x - m_PreviewAppliedPx.x, lTotal.y - m_PreviewAppliedPx.y };
-                m_PreviewAppliedPx = { lTotal.x, lTotal.y };
+                return;
+            }
 
-                UIWidget* const lWidget = lDoc.SelectedWidget();
-                if (lWidget != nullptr && !lDoc.SelectedPath().empty() && (lStepPx.x != 0.f || lStepPx.y != 0.f))
-                {
-                    // Pixels → canvas units, Y flipped: the canvas is Y-up and the image is not.
-                    const float lUnits = lCanvas.UnitsPerPixel();
-                    lWidget->Rect.AnchoredPosition += Vector2F{ lStepPx.x * lUnits, -lStepPx.y * lUnits };
-                    lWidget->InvalidateLayout();
-                    m_bPreviewMoved = true;
-                }
+            const ImVec2 lTotal = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left, 0.f);
+
+            if (m_PreviewEdge != ERectEdge::None)
+            {
+                // Resized in PIXEL space, where the grip was hit, then the two corners back through
+                // the one pixel→canvas rule; FitRect keeps the anchors and solves the rest.
+                const TEditorRect<float> lRect = ResizeRect(m_PressRectPx, m_PreviewEdge, lTotal.x, lTotal.y, 1.f, 1.f);
+
+                const Bounds2D lTarget = Bounds2D::FromMinMax(
+                    lCanvas.ScreenToCanvas({ lRect.X, lRect.Y }),
+                    lCanvas.ScreenToCanvas({ lRect.X + lRect.Width, lRect.Y + lRect.Height }));
+
+                FitRect(lWidget->Rect, lTarget, lWidget->GetParent()->GetBounds());
+                lWidget->InvalidateLayout();
+                m_bPreviewMoved = true;
+                return;
+            }
+
+            const Vector2F lStepPx{ lTotal.x - m_PreviewAppliedPx.x, lTotal.y - m_PreviewAppliedPx.y };
+            m_PreviewAppliedPx = { lTotal.x, lTotal.y };
+
+            if (lStepPx.x != 0.f || lStepPx.y != 0.f)
+            {
+                // Pixels → canvas units, Y flipped: the canvas is Y-up and the image is not.
+                const float lUnits = lCanvas.UnitsPerPixel();
+                lWidget->Rect.AnchoredPosition += Vector2F{ lStepPx.x * lUnits, -lStepPx.y * lUnits };
+                lWidget->InvalidateLayout();
+                m_bPreviewMoved = true;
             }
             return;
         }
@@ -415,8 +544,10 @@ namespace Opaax::Editor
         m_bPreviewDrag = false;
         if (m_bPreviewMoved)
         {
-            UICanvasOps::CommitEdit(m_Context, m_PreviewBefore, "Move Widget");
+            UICanvasOps::CommitEdit(m_Context, m_PreviewBefore,
+                                    m_PreviewEdge != ERectEdge::None ? "Resize Widget" : "Move Widget");
         }
+        m_PreviewEdge = ERectEdge::None;
     }
 
     void UICanvasPanel::NudgeSelected(const Vector2F& InDelta, const char* InLabel)
@@ -468,12 +599,48 @@ namespace Opaax::Editor
         }
         lOutline(lDoc.SelectedPath(), IM_COL32(255, 170, 40, 255), 2.f);
 
+        // The eight grips, on the same rect the hit-test reads.
+        if (!lDoc.SelectedPath().empty() && lDoc.SelectedWidget() != nullptr)
+        {
+            const TEditorRect<float> lRect = SelectionRectPx();
+            const float lXs[3] = { lRect.X, lRect.X + lRect.Width * 0.5f, lRect.X + lRect.Width };
+            const float lYs[3] = { lRect.Y, lRect.Y + lRect.Height * 0.5f, lRect.Y + lRect.Height };
+
+            for (const float lX : lXs)
+            {
+                for (const float lY : lYs)
+                {
+                    if (lX == lXs[1] && lY == lYs[1]) { continue; }   // the centre is not a grip
+
+                    const ImVec2 lAt{ InOrigin.x + lX, InOrigin.y + lY };
+                    lDraw->AddRectFilled({ lAt.x - GRIP_PX * 0.5f, lAt.y - GRIP_PX * 0.5f },
+                                         { lAt.x + GRIP_PX * 0.5f, lAt.y + GRIP_PX * 0.5f },
+                                         IM_COL32(255, 170, 40, 255));
+                }
+            }
+        }
+
         lDraw->PopClipRect();
     }
 
     Vector2F UICanvasPanel::PreviewPx() const
     {
         return { static_cast<float>(m_Size.x), static_cast<float>(m_Size.y) };
+    }
+
+    TEditorRect<float> UICanvasPanel::SelectionRectPx() const
+    {
+        const EditorUICanvasDocument& lDoc    = m_Context.UICanvasDocument;
+        const UICanvas&               lCanvas = lDoc.GetCanvas();
+        const UIWidget* const         lWidget = lDoc.SelectedWidget();
+
+        if (lWidget == nullptr) { return {}; }
+
+        // Two corners through the one canvas→pixel rule; Y flips, so min/max are re-sorted.
+        const Vector2F lA = lCanvas.CanvasToScreen(lWidget->GetBounds().Min());
+        const Vector2F lB = lCanvas.CanvasToScreen(lWidget->GetBounds().Max());
+
+        return { std::min(lA.x, lB.x), std::min(lA.y, lB.y), std::fabs(lB.x - lA.x), std::fabs(lB.y - lA.y) };
     }
 
     void UICanvasPanel::Shutdown()

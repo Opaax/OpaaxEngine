@@ -28,8 +28,8 @@ namespace Opaax
     //   AN EMPTY TEXTURE PATH IS A PURE RECT CLIP, free from the same mechanism: outside the rect
     //   is discarded and inside samples white, so "clip to this box" needs no art.
     //
-    //   It draws nothing of its own (Unity's "Show Mask Graphic" off — named, not built), and it
-    //   is not a hit target, so a mask never swallows a click meant for what it masks.
+    //   It draws nothing of its own unless asked (Unity's "Show Mask Graphic"), and it is not a hit
+    //   target, so a mask never swallows a click meant for what it masks.
     // =============================================================================
     class OPAAX_API UIMask final : public UIWidget
     {
@@ -40,10 +40,15 @@ namespace Opaax
         /** A texture's asset path. EMPTY = clip to the rect alone; droppable (**UI19**). */
         TResourcePath<TextureResource> Texture;
 
+        /** Draw the mask's own shape too (white where it shows) — how an author sees where the cut is. */
+        bool bShowMaskGraphic = false;
+
         OPAAX_PROPERTIES(UIMask,
-                         OPAAX_PROP(Texture))
+                         OPAAX_PROP(Texture),
+                         OPAAX_PROP(bShowMaskGraphic))
 
         void SetTexture(const OpaaxString& InAssetPath);
+        void SetShowMaskGraphic(bool bInShow);
 
         // =============================================================================
         // UIWidget

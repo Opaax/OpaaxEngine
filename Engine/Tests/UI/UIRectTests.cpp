@@ -106,3 +106,39 @@ TEST_CASE("UIRect: a normal pair is untouched by the clamp")
     const Bounds2D lOut = ResolveRect(lStretch, lParent);
     CheckVec(lOut.Size(), { 500.f, 500.f });   // half the width, the full height — as authored
 }
+
+TEST_CASE("UIRect: FitRect is ResolveRect's inverse for every anchor shape, and keeps the anchors (U7)")
+{
+    // The designer's resize: a target rect in canvas units becomes SizeDelta + AnchoredPosition, so
+    // dragging a grip never rewrites what the author anchored to.
+    const Bounds2D lParent = Bounds2D::FromCenterSize({ 100.f, -200.f }, { 1920.f, 1080.f });
+    const Bounds2D lTarget = Bounds2D::FromMinMax({ -300.f, -100.f }, { 250.f, 60.f });
+
+    UIRect lPoint;                                   // the default: centred point anchor
+    UIRect lCorner;
+    lCorner.AnchorMin = lCorner.AnchorMax = { 1.f, 1.f };
+    lCorner.Pivot     = { 0.25f, 0.75f };            // an off-centre pivot is where the arithmetic bites
+    UIRect lStretch;
+    lStretch.AnchorMin = { 0.f, 0.f };
+    lStretch.AnchorMax = { 1.f, 0.5f };
+    lStretch.Pivot     = { 0.f, 1.f };
+
+    for (UIRect* lRect : { &lPoint, &lCorner, &lStretch })
+    {
+        const Vector2F lAnchorMin = lRect->AnchorMin;
+        const Vector2F lAnchorMax = lRect->AnchorMax;
+        const Vector2F lPivot     = lRect->Pivot;
+
+        FitRect(*lRect, lTarget, lParent);
+
+        const Bounds2D lOut = ResolveRect(*lRect, lParent);
+        CheckVec(lOut.Min(), lTarget.Min());
+        CheckVec(lOut.Max(), lTarget.Max());
+        CheckVec(lRect->AnchorMin, lAnchorMin);
+        CheckVec(lRect->AnchorMax, lAnchorMax);
+        CheckVec(lRect->Pivot,     lPivot);
+    }
+
+    // A stretched axis fits by its DELTA: the same target under a wider parent is a different delta.
+    CheckVec(lStretch.SizeDelta, { 550.f - 1920.f, 160.f - 540.f });
+}

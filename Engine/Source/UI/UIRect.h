@@ -58,4 +58,10 @@ namespace Opaax
      * The rect InRect describes inside InParent. Pure, so the maths is testable with nothing else built.
      */
     OPAAX_API Bounds2D ResolveRect(const UIRect& InRect, const Bounds2D& InParent) noexcept;
+
+    /**
+     * The inverse: InOutRect's SizeDelta and AnchoredPosition so that ResolveRect lands on InTarget
+     * inside InParent. Anchors and pivot are kept — a resize handle edits a size, never an anchor.
+     */
+    OPAAX_API void FitRect(UIRect& InOutRect, const Bounds2D& InTarget, const Bounds2D& InParent) noexcept;
 }

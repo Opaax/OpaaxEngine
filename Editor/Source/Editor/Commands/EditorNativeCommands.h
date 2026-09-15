@@ -604,6 +604,14 @@ namespace Opaax::Editor
         void Execute(EditorContext& InContext, const Params&);
     };
 
+    /** Delete the UI panel's selected widget — what Delete runs while that panel is focused (PanelDesc::DeleteCommand). */
+    struct DeleteUIWidgetCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
     /** Write the open `.opaaxmovemode` and publish it. */
     struct SaveMoveModeCommand
     {

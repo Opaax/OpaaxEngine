@@ -11,22 +11,38 @@ namespace Opaax
         InvalidateLayout();
     }
 
-    void UIMask::Rebuild(const UIBuildContext& InContext, TDynArray<UIQuad>& /*OutQuads*/)
+    void UIMask::SetShowMaskGraphic(const bool bInShow)
     {
-        // A mask emits NO quads of its own — it only resolves what its children will be cut by.
+        bShowMaskGraphic = bInShow;
+        InvalidateContent();
+    }
+
+    void UIMask::Rebuild(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads)
+    {
         if (Texture.IsEmpty() || InContext.Assets == nullptr)
         {
             m_Resolved = nullptr;   // an empty path is a pure rect clip, which needs no texture
-            return;
+        }
+        else
+        {
+            m_Resolved = InContext.Assets->ResolveTexture(Texture.Path.CStr());
+
+            if (m_Resolved == nullptr)
+            {
+                // Still uploading: ask again next frame rather than masking with nothing, which would
+                // flash the children UNMASKED for a frame.
+                InvalidateContent();
+                return;
+            }
         }
 
-        m_Resolved = InContext.Assets->ResolveTexture(Texture.Path.CStr());
-
-        if (m_Resolved == nullptr)
+        // The graphic is its own quad, cut by itself like everything under it: a white shape on
+        // transparency shows as that shape.
+        if (bShowMaskGraphic)
         {
-            // Still uploading: ask again next frame rather than masking with nothing, which would
-            // flash the children UNMASKED for a frame.
-            InvalidateContent();
+            UIQuad& lQuad = OutQuads.emplace_back();
+            lQuad.Bounds  = GetBounds();
+            lQuad.Texture = m_Resolved;
         }
     }
 
@@ -34,13 +50,15 @@ namespace Opaax
     {
         UIWidget::SaveFields(InOutJson);
 
-        InOutJson["Texture"] = Texture;
+        InOutJson["Texture"]          = Texture;
+        InOutJson["bShowMaskGraphic"] = bShowMaskGraphic;
     }
 
     void UIMask::LoadFields(const nlohmann::json& InJson)
     {
         UIWidget::LoadFields(InJson);
 
-        Texture = InJson.value("Texture", Texture);
+        Texture          = InJson.value("Texture", Texture);
+        bShowMaskGraphic = InJson.value("bShowMaskGraphic", bShowMaskGraphic);
     }
 }

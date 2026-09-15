@@ -6,6 +6,7 @@
 #include "Core/String/OpaaxString.hpp"
 #include "Editor/EditorUICanvasDocument.h"   // UIWidgetPath
 #include "Editor/Panels/IEditorPanel.h"
+#include "Editor/UI/EditorRectGeometry.h"    // the grips: ERectEdge, TEditorRect
 
 namespace Opaax
 {
@@ -59,7 +60,10 @@ namespace Opaax::Editor
         /** Name, dirty marker, Save, and the widget count. */
         void DrawHeader();
 
-        /** The tree: select, drag to reparent, Add and Delete. */
+        /** Ctrl+D / C / V / Up / Down on this window — the selection's verbs; Delete is the panel's DeleteCommand. */
+        void HandleShortcuts();
+
+        /** The tree: select, drag to reparent, Add, Delete, Duplicate and reorder. */
         void DrawTree();
 
         /** One node and its subtree, recursively. */
@@ -68,19 +72,19 @@ namespace Opaax::Editor
         /** The Add menu — every registered widget type, under the selection. */
         void DrawAddMenu();
 
-        /** The selected widget's fields, bracketed for undo. */
+        /** The selected widget's fields — or the canvas's own when nothing is — bracketed for undo. */
         void DrawInspector();
 
         /** The canvas rendered into this panel's own framebuffer, and the designer over it. */
         void DrawPreview();
 
         /**
-         * Click selects, drag moves, arrows nudge — read right after the image, while its window
-         * is current. A press on bare canvas clears the selection; a drag is ONE undo step.
+         * Click selects, drag moves, a grip resizes, arrows nudge — read right after the image, while
+         * its window is current. A press on bare canvas clears the selection; a drag is ONE undo step.
          */
         void MeasurePreviewGesture(bool bInHovered, const Vector2F& InOrigin);
 
-        /** The selection's rect (and, faintly, the hovered one) over the image — how an invisible container is seen. */
+        /** The selection's rect with its grips (and, faintly, the hovered one) over the image — how an invisible container is seen. */
         void DrawPreviewOverlay(const Vector2F& InOrigin);
 
         /** Move the selected widget by InDelta canvas units as one step labelled InLabel. */
@@ -88,6 +92,9 @@ namespace Opaax::Editor
 
         /** The framebuffer's size, as floats. */
         Vector2F PreviewPx() const;
+
+        /** The selection's resolved rect in image pixels — what the grips are hit-tested and drawn on. */
+        TEditorRect<float> SelectionRectPx() const;
 
         // =============================================================================
         // Override
@@ -141,5 +148,9 @@ namespace Opaax::Editor
         Vector2F     m_PreviewAppliedPx = { 0.f, 0.f };   // of the drag's total, already applied
         bool         m_bPreviewDrag     = false;
         bool         m_bPreviewMoved    = false;
+
+        /** The grip the press landed on (None = a move), and the selection's pixel rect at that press. */
+        ERectEdge          m_PreviewEdge = ERectEdge::None;
+        TEditorRect<float> m_PressRectPx;
     };
 }
