@@ -27,7 +27,7 @@ namespace Opaax
 
     void UIImage::SetTexturePath(const OpaaxString& InAssetPath)
     {
-        Texture = InAssetPath;
+        Texture.Path = InAssetPath;
         InvalidateContent();
     }
 
@@ -72,7 +72,7 @@ namespace Opaax
 
         if (lTexture == nullptr && !Texture.IsEmpty() && InContext.Assets != nullptr)
         {
-            lTexture = InContext.Assets->ResolveTexture(Texture.CStr());
+            lTexture = InContext.Assets->ResolveTexture(Texture.Path.CStr());
 
             if (lTexture == nullptr)
             {

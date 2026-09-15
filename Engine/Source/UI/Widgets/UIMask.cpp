@@ -4,7 +4,7 @@ namespace Opaax
 {
     void UIMask::SetTexture(const OpaaxString& InAssetPath)
     {
-        Texture = InAssetPath;
+        Texture.Path = InAssetPath;
 
         // The mask is resolved by the canvas's draw walk, not by this widget's own quads — so what
         // must be rebuilt is everything UNDER it, which is what a layout invalidation reaches.
@@ -20,7 +20,7 @@ namespace Opaax
             return;
         }
 
-        m_Resolved = InContext.Assets->ResolveTexture(Texture.CStr());
+        m_Resolved = InContext.Assets->ResolveTexture(Texture.Path.CStr());
 
         if (m_Resolved == nullptr)
         {

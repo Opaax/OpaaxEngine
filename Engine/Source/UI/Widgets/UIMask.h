@@ -3,11 +3,16 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
+#include "Engine/Subsystems/Resources/ResourcePath.h"       // a TYPED reference (**UI19**)
+#include "Engine/Subsystems/Resources/ResourcePathJson.h"
 #include "UI/UIWidget.h"
 
 namespace Opaax
 {
     class ITexture2D;
+
+    // NAMED, never completed — a path carries its type, not its header.
+    struct TextureResource;
 
     // =============================================================================
     // UIMask — a container that MASKS EVERYTHING UNDER IT (**UI16**), Unity's Mask.
@@ -32,8 +37,8 @@ namespace Opaax
         // Authored state
         // =============================================================================
     public:
-        /** A texture's asset path. EMPTY = clip to the rect alone. */
-        OpaaxString Texture;
+        /** A texture's asset path. EMPTY = clip to the rect alone; droppable (**UI19**). */
+        TResourcePath<TextureResource> Texture;
 
         OPAAX_PROPERTIES(UIMask,
                          OPAAX_PROP(Texture))

@@ -6,11 +6,16 @@
 #include "Core/Reflection/OpaaxEnum.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
+#include "Engine/Subsystems/Resources/ResourcePath.h"       // a TYPED reference — what the drop target keys on (**UI19**)
+#include "Engine/Subsystems/Resources/ResourcePathJson.h"
 #include "Renderer/Text/TextDrawParams.h"
 #include "UI/UIWidget.h"
 
 namespace Opaax
 {
+    // NAMED, never completed — a path carries its type, not its header.
+    struct FontFaceResource;
+
     /** Where the block of lines sits in the rect's height. */
     enum class EUIVAlign : Uint8
     {
@@ -46,8 +51,8 @@ namespace Opaax
         // =============================================================================
     public:
         OpaaxString Text;
-        /** A face's asset path ("/Engine/Fonts/Roboto/roboto-latin-700-normal.ttf"). */
-        OpaaxString Font;
+        /** A face's asset path. TYPED, so the editor gives it a `.ttf` drop target (**UI19**). */
+        TResourcePath<FontFaceResource> Font;
         float       Size            = 32.f;
         LinearColor Color;
         ETextAlign  HAlign          = ETextAlign::Left;

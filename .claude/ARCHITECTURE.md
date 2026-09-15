@@ -4134,7 +4134,12 @@ order is Layer/OrderInLayer) · dropping a PREFAB onto an entity row to instanti
 
 **UI1 — THE UI IS DECOUPLED FROM THE WORLD.** `Engine/Source/UI/` depends on `Core/` and
 `Renderer/` (and `RHI/ITexture2D` as a borrowed pointer) and never on `World/`, `Engine/`, or
-entt — the user's call (*"lets decouple the UI from world"*), Slate's altitude under UMG, Noesis's
+entt — **with ONE stated exception: `Engine/Subsystems/Resources/ResourcePath.h`** (U5c). A
+`TResourcePath` is a value type, a string plus a phantom template parameter; it names no loader and
+no manager, and `RendererManager.h` already records that including it "names no part of the
+resource system". The UI holds typed REFERENCES and still cannot resolve one — that is the
+provider's job (**UI17**). It is what the editor's drop target keys on (**UI19**); the alternative
+was moving that header into `Core/`, which is the same decision with a wider blast radius — the user's call (*"lets decouple the UI from world"*), Slate's altitude under UMG, Noesis's
 core under its hosts. A canvas is an OBJECT anyone can own; the world is one possible host, not
 the model. The whole contract is therefore gated headless (`Engine/Tests/UI/`): rects,
 invalidation, hit-testing, text quads. Only `UICanvas::Submit`'s loop needs a GL context.
@@ -4396,6 +4401,24 @@ never added to the ladder, so its `Texture` was **addable, invisible and unedita
 - *Registration runs at the `OnModulesRegistered` seam, where `EditorContext` does NOT exist yet* —
   reading `m_Context` there is a null dereference (it was, and it segfaulted). The engine is reached
   through the service locator instead.
+
+**UI19 — A WIDGET'S ASSET FIELD IS A TYPED PATH, AND AN INVERTED ANCHOR IS CLAMPED** (U5c, both
+from their eyes: *"Cannot drag drop texture font and all other"*, *"guard inverted anchors"*).
+- **`OpaaxString` was the reason drag-drop did not work.** The editor's typed drop target lives on
+  `TPropertyDrawer<TResourcePath<T>>`; a bare string gets a text box and nothing else. `UIText::
+  Font`, `UIImage::Texture` and `UIMask::Texture` are `TResourcePath` now, so the drop target, the
+  type gate (a `.png` is refused on a font field) and the picker all arrive for free — the same
+  route every component has always had.
+- **ZERO FORMAT CHANGE, and the format's own header predicted it:** `ResourcePathJson.h` writes a
+  path as a BARE STRING and states *"a field that was an OpaaxString before becoming a
+  TResourcePath reads back unchanged"*. `UI_FORMAT_VERSION` stays 1; a `.opaaxui` written before
+  the change loads untouched, which the real `Hud.opaaxui` proved in a smoke run.
+- **An INVERTED anchor pair (`AnchorMax` below `AnchorMin`) is clamped in `ResolveRect`.** It makes
+  a negative anchor size → a negative widget size → `Bounds2D::FromMinMax` silently SORTS the
+  corners, so the widget resolves somewhere plausible and wrong rather than failing. Their own HUD
+  had one (a panel at `Min(1,1)`/`Max(0,0)` resolving to a ~1788x965 box centred on the origin).
+  Clamped in the ONE function every rect resolves through; only the INVERSION, since anchors
+  outside 0..1 are legitimate. No log — `ResolveRect` is pure and runs per widget per layout.
 
 **Growth points, named and not built:** **9-slice `Sliced` images** and **`UISafeArea`** (U5b —
 split out by them so the renderer change landed alone) · the deferred `OpenLevel`

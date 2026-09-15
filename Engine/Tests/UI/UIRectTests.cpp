@@ -69,3 +69,40 @@ TEST_CASE("UIRect: a stretched axis grows with the parent, a point axis does not
     CheckVec(lNarrow.Size(), { 960.f, 30.f });
     CheckVec(lWide.Size(),   { 1960.f, 30.f });
 }
+
+TEST_CASE("UIRect: an INVERTED anchor pair is clamped, not honoured (UI19)")
+{
+    const Bounds2D lParent = Bounds2D::FromCenterSize({ 0.f, 0.f }, { 1920.f, 1080.f });
+
+    // Exactly what their Hud.opaaxui held: Min above Max on both axes. Un-clamped this makes a
+    // negative anchor size, a negative widget size, and FromMinMax silently sorts the corners —
+    // so the widget resolved to a ~1788x965 box centred on the origin instead of a 132x115 one.
+    UIRect lInverted;
+    lInverted.AnchorMin        = { 1.f, 1.f };
+    lInverted.AnchorMax        = { 0.f, 0.f };
+    lInverted.AnchoredPosition = { 1.f, 1.f };
+    lInverted.SizeDelta        = { 132.f, 115.f };
+
+    const Bounds2D lOut = ResolveRect(lInverted, lParent);
+
+    // Clamped to a POINT anchor at (1,1), so it is the size it says it is, at the parent's corner.
+    CheckVec(lOut.Size(), { 132.f, 115.f });
+
+    UIRect lPoint = lInverted;
+    lPoint.AnchorMax = { 1.f, 1.f };   // what the clamp makes of it
+    const Bounds2D lExpected = ResolveRect(lPoint, lParent);
+    CheckVec(lOut.Center, lExpected.Center);
+}
+
+TEST_CASE("UIRect: a normal pair is untouched by the clamp")
+{
+    const Bounds2D lParent = Bounds2D::FromCenterSize({ 0.f, 0.f }, { 1000.f, 500.f });
+
+    UIRect lStretch;
+    lStretch.AnchorMin = { 0.25f, 0.f };
+    lStretch.AnchorMax = { 0.75f, 1.f };
+    lStretch.SizeDelta = { 0.f, 0.f };
+
+    const Bounds2D lOut = ResolveRect(lStretch, lParent);
+    CheckVec(lOut.Size(), { 500.f, 500.f });   // half the width, the full height — as authored
+}

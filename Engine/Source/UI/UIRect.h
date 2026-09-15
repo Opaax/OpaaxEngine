@@ -21,7 +21,13 @@ namespace Opaax
     // =============================================================================
     struct UIRect
     {
-        /** Where in the parent, 0..1. Equal = a point anchor; different = the widget stretches. */
+        /**
+         * Where in the parent, 0..1. Equal = a point anchor; different = the widget stretches.
+         *
+         * An INVERTED pair (Max below Min) is clamped at resolve rather than honoured — see
+         * ResolveRect. Authoring one is easy (two drag fields, no ordering between them) and the
+         * un-clamped result is a widget that silently moves somewhere else (**UI19**).
+         */
         Vector2F AnchorMin = { 0.5f, 0.5f };
         Vector2F AnchorMax = { 0.5f, 0.5f };
 

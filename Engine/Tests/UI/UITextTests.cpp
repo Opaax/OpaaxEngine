@@ -82,7 +82,7 @@ namespace
         {
             Canvas.SetTargetSize(1920, 1080);
             Text = static_cast<UIText*>(Canvas.Root().AddChild(MakeUnique<UIText>()));
-            Text->Font = "/Fonts/fake.ttf";
+            Text->Font.Path = "/Fonts/fake.ttf";
             Text->Size = PIXEL_HEIGHT;   // scale 1
         }
 

@@ -17,7 +17,7 @@ namespace Opaax
 
     void UIText::SetFont(const OpaaxString& InFacePath)
     {
-        Font = InFacePath;
+        Font.Path = InFacePath;
         InvalidateContent();
     }
 
@@ -81,7 +81,7 @@ namespace Opaax
             return;
         }
 
-        const FontFaceView lFace = InContext.Assets->ResolveFace(Font.CStr());
+        const FontFaceView lFace = InContext.Assets->ResolveFace(Font.Path.CStr());
         if (!lFace.IsValid())
         {
             return;

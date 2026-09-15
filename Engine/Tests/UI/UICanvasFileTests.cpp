@@ -11,6 +11,7 @@
 #include "UI/UIWidgetRegistry.h"
 #include "UI/Widgets/UIButton.h"
 #include "UI/Widgets/UIImage.h"
+#include "UI/Widgets/UIMask.h"
 #include "UI/Widgets/UIPanel.h"
 #include "UI/Widgets/UIText.h"
 
@@ -18,7 +19,7 @@ using namespace Opaax;
 
 namespace
 {
-    /** The four native types, as Engine::RegisterNativeUIWidgets registers them. */
+    /** The native types, as Engine::RegisterNativeUIWidgets registers them. */
     UIWidgetRegistry MakeRegistry()
     {
         UIWidgetRegistry lRegistry;
@@ -26,6 +27,7 @@ namespace
         lRegistry.Register<UIImage>(OPAAX_ID("UIImage"));
         lRegistry.Register<UIText>(OPAAX_ID("UIText"));
         lRegistry.Register<UIButton>(OPAAX_ID("UIButton"));
+        lRegistry.Register<UIMask>(OPAAX_ID("UIMask"));
         return lRegistry;
     }
 
@@ -63,7 +65,7 @@ TEST_CASE("UICanvasFile: every widget type round-trips its own fields and the tr
     auto lText = MakeUnique<UIText>();
     lText->Name            = "Jumps";
     lText->Text            = "Jumps: 0";
-    lText->Font            = "/Engine/Fonts/Roboto/roboto-latin-700-normal.ttf";
+    lText->Font.Path       = "/Engine/Fonts/Roboto/roboto-latin-700-normal.ttf";
     lText->Size            = 40.f;
     lText->Color           = { 0.1f, 0.2f, 0.3f, 0.9f };
     lText->HAlign          = ETextAlign::Right;
@@ -112,7 +114,7 @@ TEST_CASE("UICanvasFile: every widget type round-trips its own fields and the tr
     const auto* lBackText = dynamic_cast<const UIText*>(lBackPanel.GetChildren()[0].get());
     REQUIRE(lBackText != nullptr);
     CHECK(lBackText->Text == OpaaxString("Jumps: 0"));
-    CHECK(lBackText->Font == OpaaxString("/Engine/Fonts/Roboto/roboto-latin-700-normal.ttf"));
+    CHECK(lBackText->Font.Path == OpaaxString("/Engine/Fonts/Roboto/roboto-latin-700-normal.ttf"));
     CHECK(lBackText->Size == doctest::Approx(40.f));
     CHECK(lBackText->Color.b == doctest::Approx(0.3f));
     CHECK(lBackText->HAlign == ETextAlign::Right);
@@ -211,18 +213,18 @@ TEST_CASE("UIWidgetRegistry: an unknown name builds nothing, a duplicate is refu
 {
     UIWidgetRegistry lRegistry = MakeRegistry();
 
-    CHECK(lRegistry.Count() == 4u);
+    CHECK(lRegistry.Count() == 5u);
     CHECK(lRegistry.IsRegistered(OPAAX_ID("UIText")));
     CHECK_FALSE(lRegistry.IsRegistered(OPAAX_ID("UIHologram")));
     CHECK(lRegistry.Create(OPAAX_ID("UIHologram")) == nullptr);
     CHECK(lRegistry.Create(OPAAX_ID("UIText")) != nullptr);
 
     CHECK_FALSE(lRegistry.Register<UIText>(OPAAX_ID("UIText")));   // the name is taken
-    CHECK(lRegistry.Count() == 4u);
+    CHECK(lRegistry.Count() == 5u);
 
     lRegistry.Seal();
     CHECK_FALSE(lRegistry.Register<UIPanel>(OPAAX_ID("UILater")));
-    CHECK(lRegistry.Count() == 4u);
+    CHECK(lRegistry.Count() == 5u);
 }
 
 TEST_CASE("UIWidget: FindByName takes the FIRST match in tree order, and misses answer null")
@@ -274,4 +276,45 @@ TEST_CASE("UICanvasResource: BuildTree yields an INDEPENDENT tree every time (UI
     // A placeholder builds a real (empty) tree rather than a null — a failed load still draws.
     float lPlaceholderHeight = 0.f;
     CHECK(UICanvasResource::Placeholder().BuildTree(lRegistry, lPlaceholderHeight) != nullptr);
+}
+
+TEST_CASE("UICanvasFile: a file written when the asset fields were STRINGS still reads (UI19)")
+{
+    // The zero-format-change claim, asserted rather than trusted. TResourcePath serializes as a
+    // BARE STRING (ResourcePathJson.h), so a `.opaaxui` authored before the fields became typed
+    // must load with its paths intact — no migration, no version bump.
+    const UIWidgetRegistry lRegistry = MakeRegistry();
+
+    const OpaaxString lLegacy = OpaaxString(R"({
+    "ReferenceHeight": 1080.0,
+    "Root": {
+        "Type": "UIPanel",
+        "Children": [
+            { "Type": "UIText",  "Name": "Label", "Font": "/Engine/Fonts/Roboto/roboto-latin-700-normal.ttf" },
+            { "Type": "UIImage", "Name": "Art",   "Texture": "UI/Art.png" },
+            { "Type": "UIMask",  "Name": "Cut",   "Texture": "UI/MaskDisc.png" }
+        ]
+    },
+    "Version": 1
+})");
+
+    UICanvasFile::UICanvasDoc lDoc;
+    REQUIRE(UICanvasFile::Deserialize(lLegacy, lRegistry, lDoc));
+    REQUIRE(lDoc.Root != nullptr);
+    REQUIRE(lDoc.Root->GetChildren().size() == 3u);
+
+    const auto* lText  = dynamic_cast<const UIText*>(lDoc.Root->GetChildren()[0].get());
+    const auto* lImage = dynamic_cast<const UIImage*>(lDoc.Root->GetChildren()[1].get());
+    const auto* lMask  = dynamic_cast<const UIMask*>(lDoc.Root->GetChildren()[2].get());
+    REQUIRE(lText  != nullptr);
+    REQUIRE(lImage != nullptr);
+    REQUIRE(lMask  != nullptr);
+
+    CHECK(lText->Font.Path == OpaaxString("/Engine/Fonts/Roboto/roboto-latin-700-normal.ttf"));
+    CHECK(lImage->Texture.Path == OpaaxString("UI/Art.png"));
+    CHECK(lMask->Texture.Path == OpaaxString("UI/MaskDisc.png"));
+
+    // And it writes back as bare strings, so the file does not churn on the next save.
+    const OpaaxString lText2 = UICanvasFile::Serialize(lDoc);
+    CHECK(lText2.Find("\"Font\": \"/Engine/Fonts/Roboto/roboto-latin-700-normal.ttf\"") >= 0);
 }

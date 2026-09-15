@@ -6,11 +6,16 @@
 #include "Core/Reflection/OpaaxEnum.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
+#include "Engine/Subsystems/Resources/ResourcePath.h"       // a TYPED reference (**UI19**)
+#include "Engine/Subsystems/Resources/ResourcePathJson.h"
 #include "UI/UIWidget.h"
 
 namespace Opaax
 {
     class ITexture2D;
+
+    // NAMED, never completed — a path carries its type, not its header.
+    struct TextureResource;
 
     /** How FillAmount crops the image. None ignores it. */
     enum class EUIFill : Uint8
@@ -46,8 +51,8 @@ namespace Opaax
         EUIFill     Fill       = EUIFill::None;
         float       FillAmount = 1.f;
 
-        /** A texture's asset path. Empty draws the colour alone (**UI17**). */
-        OpaaxString Texture;
+        /** A texture's asset path. TYPED, so a `.png` can be DROPPED on it (**UI19**). */
+        TResourcePath<TextureResource> Texture;
 
         OPAAX_PROPERTIES(UIImage,
                          OPAAX_PROP(Color),
