@@ -6,6 +6,16 @@
 | **U2** | `6578fea` | The canvas over the world: `bDrawUI` opt-in on the world pass, `SubmitUICanvas`, `RenderCanvases` with **`ELoadOp::Load`'s first caller**, ST rows. `Text2D` box (wrap/align, scan-then-emit). `IUIFontProvider` + the re-arm. `UIText`. `UISubsystem` tenant + `WorldContext::UI`. Sandbox `HudSubsystem` (Jumps + speed bar). 10 cases, **826 → 836 / 9114 → 9161**. Contract **§UI** (UI1–UI8). **User-verified:** *"Eye gate good. Resize -> UI stay and resize correctly"*. |
 | **U3** | `66b7b48` | Input bubbles (Slate's FReply), press captures, focus routes keys, detach clears (**UI9**). Three modes `GameOnly/UIOnly/GameAndUI` on the tenant, which now ticks BEFORE mapping; `UIInputRouter` reports a consumed mask the evaluator pre-consumes (**UI10**). `UIButton`. PIE pointer is viewport-local (**UI11**). Sandbox `PauseMenuSubsystem` (HUD button opens, UIOnly modal, Resume/Escape close). **A phantom Started on a masked-then-held key fixed in the evaluator** (`bMaskSuppressed`). 21 cases, **836 → 857 / 9161 → 9266**. §UI9–11, IM6 amended. |
 | **U4** | `d020feb` | `.opaaxui`: tagged nodes + `SaveFields`/`LoadFields` + `UIWidgetRegistry` (**UI12**); `UICanvasResource` re-parses per instance, `FindByName`, **`HudSubsystem` LOADS the asset** (**UI13**); `EditorUICanvasDocument` + `UICanvasPanel` previewing the document through a **targeted** canvas submission (**UI14**); `UITreeEdit` = the whole tree as text, selection as an index path (**UI15**); **New UI…** + Save + `SetActivate`. 7 cases, **857 → 864 / 9266 → 9335**. All four MR2i routes: `panels` 19→20, `commands` 47→49, `resourceTypes` 14→15, `titleBar` 39→42. |
+| **U5** | `628d1c7` | **THE MASK** (**UI16**): a `UIMask` container cuts everything under it, `mask.r * mask.a` — white shows, black hides. `QuadVertex` +`MaskUV`/`MaskIndex` (48→60 B, `-1` untouched), `Sprite.glsl`, `QuadMask` on the 3 Draw calls, `PlanQuadBatches` takes a second texture. `IUIFontProvider`→`IUIAssetProvider`, `UIImage::Texture` path, `UICanvas::Submit` split into a pure `BuildDrawList` (**UI17**). 9 cases, **868 → 876 / 9335 → 9387**. |
+
+**Settled in U5, not the plan:** masked TEXT cost **nothing** — `UIText` already goes through
+`UIQuad`, so `Text2D` was not touched at all (the exploration's best find). A rect-only mask cannot
+use id 0 (that means "no mask"), so it takes a real id resolving to white and all rect-only masks
+share it. A mask resolves its texture at REBUILD, not at submit — submit is `const` and has no host
+to ask. The **draw list** was worth building for its own sake: mask inheritance and draw order are
+now assertable headless, where before they lived inside a function only a running frame reached.
+**Their scope call held:** 9-slice + `UISafeArea` deferred to U5b, so the renderer change landed
+alone. **Not proven by a smoke run:** the PIXELS — theirs.
 
 **Settled in U4, not the plan:** the resource holds TEXT and re-parses per `BuildTree` — a widget is
 a non-copyable node that knows its parent and canvas, so "hand out the tree" is either shared
