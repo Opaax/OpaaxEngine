@@ -942,6 +942,8 @@ way" — a deliberate change, not drift.*
   **clamped to `[0, 0.5]` at BOTH ends** — below 0 is an inside-out hole that discards the whole
   quad (a too-thick border would *vanish* instead of drawing solid), above 0.5 is what a negative
   thickness produces. The first version clamped only the bottom and a test caught it.
+- **A quad now carries a MASK the same way** (U5): `MaskUV` + `MaskIndex`, `-1` for "none", so the
+  outline's bargain held a second time — see **UI16**. Vertex cost 48 → 60 bytes.
 - **`DrawBounds(Bounds2D, …)` is the entry point to reach for.** Every caller already holds one from
   `EntityQuery::TryGetBounds` and was unpacking it into a centre and a size just to hand both back.
 
@@ -1015,6 +1017,9 @@ the sampler limit the painter's algorithm held only *within* a batch and a later
   first time a pass needs more than one draw call ([[L12]]/[[L15]] — a smoke run cannot read the
   Stats panel, and "no errors" never discriminated here). The Stats panel's amber `Draw Calls` row
   survives with its meaning corrected: a split is a **cost**, not a drawing error (**ST7**).
+- **A masked quad needs TWO textures bound** (U5, **UI16**), so `PlanQuadBatches` takes a parallel
+  mask-id array and hands out a second slot — shared when the mask and the texture are one id. An
+  unmasked pass plans exactly as it did, which the pre-U5 cases gate by passing unchanged.
 - **Cost:** the record is `TDynArray`s that keep their capacity, so a steady frame allocates nothing
   and the per-quad memory is what the old fixed arrays already reserved. A pass may now name more
   textures than one batch can bind, which is exactly the question the plan answers.
@@ -4321,9 +4326,48 @@ undo after opening a second `.opaaxui` is a no-op with a warning.
 - A reparent INTO ITS OWN SUBTREE is refused — a cycle is a walk that does not terminate (**HR**'s
   rule, one module over).
 
-**Growth points, named and not built:** `UIMask` as a
-clip-rect vertex attribute (**F4d**'s idiom, never stencil — it would break **F5**'s one-pipeline
-batch), `Sliced` images + a texture PATH on `UIImage`, `UISafeArea` (U5) · the deferred `OpenLevel`
+**UI16 — THE MASK IS A VALUE ON THE QUAD: white shows, black hides** (U5, their call:
+*"if i put a black and white png, white is what we see black hide"*). A `UIMask` is a CONTAINER
+(Unity's Mask, their pick): its texture stretches across its own rect and **everything under it**
+is cut the same way — text, images and buttons alike, because the mask rides on the QUAD rather
+than on the widget type.
+- **The formula is `mask.r * mask.a`, and it is one expression on purpose.** A black-and-white png
+  with no alpha reads as its LUMINANCE (their sentence exactly); a white shape on transparency
+  reads as its SILHOUETTE. Both intuitions, no mode flag to get wrong.
+- **`QuadVertex` carries `MaskUV` + `MaskIndex`** (48 → 60 bytes). `MaskIndex = -1` is "no mask"
+  and is what every pre-existing draw passes, so **nothing that existed before changed** — exactly
+  the bargain `InnerHalf` struck for the outline (**F4d**): one pipeline, one batch, no extra flush.
+  `QuadMask{Rect, Texture}` is ONE defaulted parameter on the three Draw calls, not three.
+- **AN EMPTY TEXTURE PATH IS A PURE RECT CLIP**, free from the same mechanism: outside 0..1 is
+  discarded, inside samples white. "Clip to this box" needs no art. Id 0 already means "no mask",
+  so a rect-only mask takes a real id that resolves to the white texture — every rect-only mask in
+  a pass shares that one entry.
+- **NESTING: THE NEAREST ANCESTOR WINS**, it does not intersect. Intersecting two TEXTURE masks
+  would mean two mask samplers per quad — doubling the vertex format AND the planner's fit rule.
+  Named, not built. "Show Mask Graphic" likewise: a mask draws nothing of its own, and is not a
+  hit target, so it never swallows a click meant for what it masks.
+- **A mask resolves its texture at REBUILD, not at submit** — submit is `const` and has no host to
+  ask — and a texture still uploading **re-arms** rather than masking with nothing, which would
+  flash the children unmasked for a frame (**UI3**).
+
+**UI17 — `IUIAssetProvider`, and the DRAW LIST that makes the walk testable.** The provider
+resolves two kinds now (a face for text, a texture for an image or a mask), so it is no longer
+called a font provider; `RendererManager` implements both from caches it already owned. `UIImage`
+gained an authored `Texture` PATH, and a runtime `SetTexture` pointer **wins** over it —
+`TextComponent`'s Font-over-Face precedence (**TX1**).
+- **`UICanvas::Submit` split into a pure `BuildDrawList` + the feed** (**TX14**'s one-walk-many-sinks,
+  one level up). The list pairs each quad with the mask that applies, carried DOWN the walk rather
+  than searched upward per widget — so there is ONE implementation of the rule, and it is asserted
+  headlessly. Before this, "which mask applies" lived inside a function only a running frame could
+  reach.
+- **The batch planner takes a SECOND texture per quad** (`InMaskIds`, `QuadPlacement::MaskSlot`).
+  A quad needs 0, 1 or 2 new slots, and **a mask that IS the quad's own texture shares one**.
+  Cost, stated: a pass with many distinct masks splits into more batches (**ST7** — a split is a
+  cost, not an error); nothing unmasked pays anything, which the pre-U5 cases prove by passing
+  untouched.
+
+**Growth points, named and not built:** **9-slice `Sliced` images** and **`UISafeArea`** (U5b —
+split out by them so the renderer change landed alone) · the deferred `OpenLevel`
 + loading cover (U6) · rich text as `UIText` runs · layout groups · canvas-group alpha ·
 `UIBinding` (pull a named reflected property per frame — the reflection is half of MVVM already;
 notification is what a per-frame pull replaces at HUD scale) · **keyboard/gamepad FOCUS

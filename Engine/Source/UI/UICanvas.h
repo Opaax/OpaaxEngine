@@ -11,6 +11,21 @@
 namespace Opaax
 {
     class Renderer2D;
+    class UIMask;
+
+    /**
+     * ONE quad about to be drawn, with the mask that applies to it (**UI16**).
+     *
+     * The seam that makes the submit walk TESTABLE: building the list needs no GL context, so
+     * "which mask applies to this widget" is asserted headlessly instead of being taken on faith
+     * inside a function only a running frame can reach (**TX14**'s one-walk-many-sinks, one level up).
+     */
+    struct UIDrawItem
+    {
+        const UIQuad* Quad  = nullptr;   // non-owning; the widget owns it for the frame
+        const UIMask* Mask  = nullptr;   // the NEAREST ancestor mask, or null
+        Int16         Order = 0;         // tree order, so F5's sort reproduces it
+    };
 
     /** What one Update cost. Zero on an idle frame is the number the design owes. */
     struct UICanvasStats
@@ -74,6 +89,13 @@ namespace Opaax
     public:
         /** Resolve and rebuild what is dirty — one walk, once a frame. */
         UICanvasStats Update(const UIBuildContext& InContext = {});
+
+        /**
+         * Every visible widget's quads in tree order, each paired with the mask that applies.
+         *
+         * PURE — no renderer, no GL. `Submit` is this plus the three Draw calls.
+         */
+        void BuildDrawList(TDynArray<UIDrawItem>& OutItems) const;
 
         /** Every visible widget's quads, tree order, into the open pass. */
         void Submit(Renderer2D& InRenderer) const;

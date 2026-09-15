@@ -10,7 +10,7 @@
 #include "Core/String/OpaaxStringID.hpp"
 #include "Core/String/OpaaxStringJson.h"
 #include "UI/UIEvents.h"
-#include "UI/UIFontProvider.h"
+#include "UI/UIAssetProvider.h"
 #include "UI/UIQuad.h"
 #include "UI/UIRect.h"
 

@@ -76,12 +76,12 @@ namespace Opaax
 
     void UIText::Rebuild(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads)
     {
-        if (Text.IsEmpty() || Font.IsEmpty() || InContext.Fonts == nullptr)
+        if (Text.IsEmpty() || Font.IsEmpty() || InContext.Assets == nullptr)
         {
             return;
         }
 
-        const FontFaceView lFace = InContext.Fonts->ResolveFace(Font.CStr());
+        const FontFaceView lFace = InContext.Assets->ResolveFace(Font.CStr());
         if (!lFace.IsValid())
         {
             return;

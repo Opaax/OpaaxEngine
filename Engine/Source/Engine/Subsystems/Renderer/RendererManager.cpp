@@ -732,6 +732,13 @@ namespace Opaax
         return ResolveFace(lPath);
     }
 
+    ITexture2D* RendererManager::ResolveTexture(const char* InAssetPath)
+    {
+        TResourcePath<TextureResource> lPath;
+        lPath.Path = OpaaxString(InAssetPath);
+        return ResolveTexture(lPath);
+    }
+
     const FontFamilyData* RendererManager::ResolveFamily(const TResourcePath<FontFamilyResource>& InPath)
     {
         if (InPath.IsEmpty())

@@ -21,6 +21,7 @@ namespace Opaax
 
     void PlanQuadBatches(const TDynArray<Uint64>&  InKeys,
                          const TDynArray<Uint32>&  InTextureIds,
+                         const TDynArray<Uint32>&  InMaskIds,
                          const QuadBatchLimits&    InLimits,
                          TDynArray<QuadPlacement>& OutPlan)
     {
@@ -33,7 +34,7 @@ namespace Opaax
         const Uint32 lMaxSlots = std::max(InLimits.MaxTextureSlots, 2u);
 
         OutPlan.reserve(lCount);
-        for (Uint32 i = 0; i < lCount; ++i) { OutPlan.emplace_back(i, 0u, 0u); }
+        for (Uint32 i = 0; i < lCount; ++i) { OutPlan.emplace_back(i, 0u, 0u, 0u); }
 
         std::stable_sort(OutPlan.begin(), OutPlan.end(),
             [&InKeys](const QuadPlacement& InA, const QuadPlacement& InB)
@@ -45,21 +46,32 @@ namespace Opaax
         Uint32 lBatch        = 0;
         Uint32 lQuadsInBatch = 0;
 
+        const bool lHasMasks = !InMaskIds.empty();
+
         for (QuadPlacement& lPlacement : OutPlan)
         {
-            const Uint32 lTexId = InTextureIds[lPlacement.QuadIndex];
+            const Uint32 lTexId  = InTextureIds[lPlacement.QuadIndex];
+            const Uint32 lMaskId = (lHasMasks && lPlacement.QuadIndex < InMaskIds.size())
+                                       ? InMaskIds[lPlacement.QuadIndex] : 0u;
 
-            Uint32     lSlot      = FindSlot(lSlotTexIds, lTexId);
-            const bool lNeedsSlot = (lTexId != 0 && lSlot == 0);
+            Uint32 lSlot     = FindSlot(lSlotTexIds, lTexId);
+            Uint32 lMaskSlot = (lMaskId != 0) ? FindSlot(lSlotTexIds, lMaskId) : 0u;
+
+            // How many NEW slots this quad would claim. A mask that is the same texture as the
+            // quad's own shares one slot, which is why they are counted together rather than
+            // checked one after the other (**UI16**).
+            Uint32 lNeeded = (lTexId != 0 && lSlot == 0) ? 1u : 0u;
+            if (lMaskId != 0 && lMaskSlot == 0 && lMaskId != lTexId) { ++lNeeded; }
 
             // Quad room first, then samplers: a full batch closes whatever texture comes next.
             if (lQuadsInBatch >= lMaxQuads
-                || (lNeedsSlot && static_cast<Uint32>(lSlotTexIds.size()) + 1 >= lMaxSlots))
+                || (lNeeded > 0 && static_cast<Uint32>(lSlotTexIds.size()) + lNeeded >= lMaxSlots))
             {
                 ++lBatch;
                 lQuadsInBatch = 0;
                 lSlotTexIds.clear();
-                lSlot = 0;
+                lSlot     = 0;
+                lMaskSlot = 0;
             }
 
             if (lTexId != 0 && lSlot == 0)
@@ -68,8 +80,22 @@ namespace Opaax
                 lSlot = static_cast<Uint32>(lSlotTexIds.size());
             }
 
-            lPlacement.Batch = lBatch;
-            lPlacement.Slot  = lSlot;
+            if (lMaskId != 0)
+            {
+                // Re-asked AFTER the texture was bound: when the two ids match, the mask rides the
+                // slot the texture just took.
+                lMaskSlot = FindSlot(lSlotTexIds, lMaskId);
+
+                if (lMaskSlot == 0)
+                {
+                    lSlotTexIds.emplace_back(lMaskId);
+                    lMaskSlot = static_cast<Uint32>(lSlotTexIds.size());
+                }
+            }
+
+            lPlacement.Batch    = lBatch;
+            lPlacement.Slot     = lSlot;
+            lPlacement.MaskSlot = lMaskSlot;
             ++lQuadsInBatch;
         }
     }

@@ -24,6 +24,7 @@
 #include "Engine/Subsystems/Resources/Types/UI/UICanvasResource.h"
 #include "UI/Widgets/UIButton.h"
 #include "UI/Widgets/UIImage.h"
+#include "UI/Widgets/UIMask.h"
 #include "UI/Widgets/UIPanel.h"
 #include "UI/Widgets/UIText.h"
 #include "Engine/Subsystems/Resources/Types/Input/InputActionResource.h"
@@ -166,6 +167,9 @@ namespace Opaax
         m_Registries.UIWidgets().Register<UIImage>(OPAAX_ID("UIImage"));
         m_Registries.UIWidgets().Register<UIText>(OPAAX_ID("UIText"));
         m_Registries.UIWidgets().Register<UIButton>(OPAAX_ID("UIButton"));
+
+        // U5. A container that masks everything under it — white shows, black hides (**UI16**).
+        m_Registries.UIWidgets().Register<UIMask>(OPAAX_ID("UIMask"));
     }
 
     void Engine::RegisterNativeWorldSubsystems()

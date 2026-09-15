@@ -4,6 +4,7 @@
 
 #include "Application/Services/ILogger.h"
 #include "Renderer/Renderer2D.h"
+#include "UI/Widgets/UIMask.h"
 #include "UI/Widgets/UIPanel.h"
 
 namespace Opaax
@@ -14,38 +15,33 @@ namespace Opaax
     {
         constexpr Int32 MAX_ORDER = std::numeric_limits<Int16>::max();
 
-        /** Tree order, parents before children, so OrderInLayer reproduces it through F5's sort. */
-        void SubmitTree(const UIWidget& InWidget, Renderer2D& InRenderer, Int32& InOutOrder)
+        /**
+         * Tree order, parents before children, so OrderInLayer reproduces it through F5's sort.
+         *
+         * InMask is the NEAREST ancestor mask, carried DOWN rather than walked up per widget — and
+         * a UIMask met on the way replaces it, which is the nearest-wins rule (**UI16**).
+         */
+        void CollectTree(const UIWidget& InWidget, const UIMask* InMask, Int32& InOutOrder,
+                         TDynArray<UIDrawItem>& OutItems)
         {
             if (!InWidget.bVisible)
             {
                 return;
             }
 
+            // A mask is a container: from here down, this is the one that applies.
+            const UIMask* lMask = InMask;
+            if (const auto* lAsMask = dynamic_cast<const UIMask*>(&InWidget)) { lMask = lAsMask; }
+
             for (const UIQuad& lQuad : InWidget.GetQuads())
             {
                 const Int16 lOrder = static_cast<Int16>(InOutOrder < MAX_ORDER ? InOutOrder++ : MAX_ORDER);
-
-                if (lQuad.Outline > 0.f)
-                {
-                    InRenderer.DrawQuadOutline(lQuad.Bounds.Center, lQuad.Bounds.Size(), lQuad.Color, lQuad.Outline,
-                                               0.f, ERenderLayer::UI, lOrder);
-                }
-                else if (lQuad.Texture != nullptr)
-                {
-                    InRenderer.DrawSprite(lQuad.Bounds.Center, lQuad.Bounds.Size(), *lQuad.Texture, lQuad.Color,
-                                          0.f, ERenderLayer::UI, lOrder, lQuad.UVMin, lQuad.UVMax);
-                }
-                else
-                {
-                    InRenderer.DrawQuad(lQuad.Bounds.Center, lQuad.Bounds.Size(), lQuad.Color,
-                                        0.f, ERenderLayer::UI, lOrder);
-                }
+                OutItems.emplace_back(UIDrawItem{ &lQuad, lMask, lOrder });
             }
 
             for (const TUniquePtr<UIWidget>& lChild : InWidget.GetChildren())
             {
-                SubmitTree(*lChild, InRenderer, InOutOrder);
+                CollectTree(*lChild, lMask, InOutOrder, OutItems);
             }
         }
     }
@@ -121,10 +117,50 @@ namespace Opaax
         return lStats;
     }
 
+    void UICanvas::BuildDrawList(TDynArray<UIDrawItem>& OutItems) const
+    {
+        OutItems.clear();
+
+        Int32 lOrder = 0;
+        CollectTree(*m_Root, nullptr, lOrder, OutItems);
+    }
+
     void UICanvas::Submit(Renderer2D& InRenderer) const
     {
-        Int32 lOrder = 0;
-        SubmitTree(*m_Root, InRenderer, lOrder);
+        TDynArray<UIDrawItem> lItems;
+        BuildDrawList(lItems);
+
+        for (const UIDrawItem& lItem : lItems)
+        {
+            const UIQuad& lQuad = *lItem.Quad;
+
+            // The mask travels WITH the quad — a value, like the outline beside it (**F4d**), so
+            // masked text and masked images take the same path as everything else.
+            QuadMask lMask;
+            if (lItem.Mask != nullptr)
+            {
+                lMask.Rect    = lItem.Mask->GetBounds();
+                lMask.Texture = lItem.Mask->GetResolvedTexture();   // null = clip to the rect alone
+            }
+
+            if (lQuad.Outline > 0.f)
+            {
+                InRenderer.DrawQuadOutline(lQuad.Bounds.Center, lQuad.Bounds.Size(), lQuad.Color, lQuad.Outline,
+                                           0.f, ERenderLayer::UI, lItem.Order, lMask);
+            }
+            else if (lQuad.Texture != nullptr)
+            {
+                InRenderer.DrawSprite(lQuad.Bounds.Center, lQuad.Bounds.Size(), *lQuad.Texture, lQuad.Color,
+                                      0.f, ERenderLayer::UI, lItem.Order, lQuad.UVMin, lQuad.UVMax, lMask);
+            }
+            else
+            {
+                InRenderer.DrawQuad(lQuad.Bounds.Center, lQuad.Bounds.Size(), lQuad.Color,
+                                    0.f, ERenderLayer::UI, lItem.Order, lMask);
+            }
+        }
+
+        const Int32 lOrder = lItems.empty() ? 0 : static_cast<Int32>(lItems.back().Order) + 1;
 
         if (lOrder >= MAX_ORDER && !m_bWarnedOrderOverflow)
         {

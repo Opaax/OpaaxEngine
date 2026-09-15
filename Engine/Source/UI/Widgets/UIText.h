@@ -35,7 +35,7 @@ namespace Opaax
     //   wraps at the width, aligns inside it; the vertical alignment is a shift of the cached
     //   quads by the extent the walk returns.
     //
-    //   The face is named by ASSET PATH and resolved through the host (IUIFontProvider) at
+    //   The face is named by ASSET PATH and resolved through the host (IUIAssetProvider) at
     //   rebuild — this module cannot name a resource. An atlas still uploading re-arms the widget
     //   for the next frame; a face the host cannot resolve draws nothing.
     // =============================================================================

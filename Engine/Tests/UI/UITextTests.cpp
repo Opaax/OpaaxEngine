@@ -53,7 +53,7 @@ namespace
         bool   IsLoaded()      const noexcept override { return true; }
     };
 
-    class StubFonts final : public IUIFontProvider
+    class StubFonts final : public IUIAssetProvider
     {
     public:
         FontFaceData Face  = MakeFace();
@@ -68,6 +68,8 @@ namespace
             LastPath = InAssetPath;
             return FontFaceView{ &Face, bUploaded ? &Atlas : nullptr };
         }
+
+        ITexture2D* ResolveTexture(const char*) override { return nullptr; }
     };
 
     struct Fixture

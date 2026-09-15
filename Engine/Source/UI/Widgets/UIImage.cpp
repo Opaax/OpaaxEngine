@@ -25,6 +25,12 @@ namespace Opaax
         InvalidateContent();
     }
 
+    void UIImage::SetTexturePath(const OpaaxString& InAssetPath)
+    {
+        Texture = InAssetPath;
+        InvalidateContent();
+    }
+
     void UIImage::SetTexture(ITexture2D* InTexture)
     {
         m_Texture = InTexture;
@@ -35,9 +41,10 @@ namespace Opaax
     {
         UIWidget::SaveFields(InOutJson);
 
-        // Texture is NOT written: it is a borrowed runtime pointer. A texture PATH field arrives
-        // with the sliced image (U5), which is when a UI image first names an asset.
+        // The PATH is written; the runtime pointer beside it is not, because it is a borrowed
+        // handle that only code can hand over (**UI17**).
         InOutJson["Color"]      = Color;
+        InOutJson["Texture"]    = Texture;
         InOutJson["Fill"]       = Fill;
         InOutJson["FillAmount"] = FillAmount;
     }
@@ -47,11 +54,12 @@ namespace Opaax
         UIWidget::LoadFields(InJson);
 
         Color      = InJson.value("Color", Color);
+        Texture    = InJson.value("Texture", Texture);
         Fill       = InJson.value("Fill", Fill);
         FillAmount = InJson.value("FillAmount", FillAmount);
     }
 
-    void UIImage::Rebuild(const UIBuildContext& /*InContext*/, TDynArray<UIQuad>& OutQuads)
+    void UIImage::Rebuild(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads)
     {
         const float lAmount = Fill == EUIFill::None ? 1.f : std::clamp(FillAmount, 0.f, 1.f);
         if (lAmount <= 0.f)
@@ -59,9 +67,24 @@ namespace Opaax
             return;
         }
 
+        // The runtime pointer WINS; otherwise the authored path is resolved through the host.
+        ITexture2D* lTexture = m_Texture;
+
+        if (lTexture == nullptr && !Texture.IsEmpty() && InContext.Assets != nullptr)
+        {
+            lTexture = InContext.Assets->ResolveTexture(Texture.CStr());
+
+            if (lTexture == nullptr)
+            {
+                // Still uploading (or missing): draw nothing and ask again next frame (**UI3**).
+                InvalidateContent();
+                return;
+            }
+        }
+
         UIQuad& lQuad  = OutQuads.emplace_back();
         lQuad.Color    = Color;
-        lQuad.Texture  = m_Texture;
+        lQuad.Texture  = lTexture;
 
         const Vector2F lMin  = GetBounds().Min();
         Vector2F       lSize = GetBounds().Size();

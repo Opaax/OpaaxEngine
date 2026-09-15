@@ -6,6 +6,7 @@
 #include "Core/String/OpaaxString.hpp"
 #include "Application/Services/ILogger.h"
 
+#include "Core/Maths/Bounds2D.h"   // QuadMask's rect
 #include "Renderer/RenderLayer.h"
 
 namespace Opaax
@@ -29,6 +30,26 @@ namespace Opaax
      * divide-by-zero or an inside-out hole.
      */
     OPAAX_API Vector2F MakeOutlineInnerHalf(const Vector2F& InSize, float InThickness) noexcept;
+
+    /**
+     * What MASKS a quad: a rect in the same space as the quad, and the texture sampled across it
+     * (**UI16**). WHITE SHOWS, BLACK HIDES — the fragment multiplies alpha by `mask.r * mask.a`.
+     *
+     * A default `QuadMask` masks nothing, which is what every draw that does not mention one
+     * passes, so the mask is a VALUE on the quad rather than a second pipeline — `InnerHalf`'s
+     * bargain (**F4d**), for the same reason: no extra flush, no branch in the batcher.
+     *
+     * A null Texture with a real Rect is a pure RECT CLIP: outside 0..1 is discarded and inside
+     * samples the white texture, so "clip to this box" costs no art.
+     */
+    struct QuadMask
+    {
+        Bounds2D    Rect;
+        ITexture2D* Texture = nullptr;   // borrowed for the batch, like every other draw texture
+
+        /** A zero-size rect is no mask — the state a defaulted QuadMask is in. */
+        bool IsActive() const noexcept { return Rect.HalfExtent.x > 0.f && Rect.HalfExtent.y > 0.f; }
+    };
 
     /**
      * What one FRAME of batching cost. Per frame, not per pass — multi-view runs several passes
@@ -141,7 +162,8 @@ namespace Opaax
                       const Vector4F& InColor,
                       float           InRotationRad  = 0.f,
                       ERenderLayer    InLayer        = ERenderLayer::Default,
-                      Int16           InOrderInLayer = 0);
+                      Int16           InOrderInLayer = 0,
+                      const QuadMask& InMask         = {});
 
         /**
          * Draw a textured quad. The texture is bound to one of the batch's sampler slots; a batch
@@ -166,7 +188,8 @@ namespace Opaax
                         ERenderLayer    InLayer        = ERenderLayer::Default,
                         Int16           InOrderInLayer = 0,
                         const Vector2F& InUVMin        = { 0.f, 0.f },
-                        const Vector2F& InUVMax        = { 1.f, 1.f });
+                        const Vector2F& InUVMax        = { 1.f, 1.f },
+                        const QuadMask& InMask         = {});
 
         /**
          * Draw a HOLLOW quad — a border of InThickness with nothing inside. ONE quad, not four
@@ -191,7 +214,8 @@ namespace Opaax
                              float           InThickness,
                              float           InRotationRad  = 0.f,
                              ERenderLayer    InLayer        = ERenderLayer::Debug,
-                             Int16           InOrderInLayer = 0);
+                             Int16           InOrderInLayer = 0,
+                             const QuadMask& InMask         = {});
 
         // =============================================================================
         // Internal
@@ -220,7 +244,8 @@ namespace Opaax
                           Uint32          InTexId,
                           const Vector2F& InUVMin,
                           const Vector2F& InUVMax,
-                          const Vector2F& InInnerHalf = { 0.f, 0.f });
+                          const Vector2F& InInnerHalf = { 0.f, 0.f },
+                          const QuadMask& InMask      = {});
 
         /**
          * InTexture's id for this PASS — an existing one if it has been drawn already, else a fresh

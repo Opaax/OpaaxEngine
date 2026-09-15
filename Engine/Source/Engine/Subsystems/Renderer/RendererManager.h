@@ -9,7 +9,7 @@
 #include "RHI/ICommandBuffer.h"    // ELoadOp — a canvas pass says whether it keeps what is there
 #include "Renderer/CameraView.h"  // a submitted view holds one BY VALUE
 #include "Renderer/DebugDraw.h"   // owned BY VALUE — full type, not a forward decl
-#include "UI/UIFontProvider.h"    // implemented here: the face cache below IS the provider
+#include "UI/UIAssetProvider.h"   // implemented here: the face + texture caches ARE the provider
 #include "World/Entity/EntityTypes.h"   // EntityID — PoseFor takes one
 
 
@@ -58,7 +58,7 @@ namespace Opaax
     //   frame each tick. All actual rendering lives in the RenderSystem module, which knows
     //   nothing of this engine — so the same core runs unchanged in any other host.
     // =============================================================================
-    class OPAAX_API RendererManager final : public EngineSubsystemBase, public IUIFontProvider
+    class OPAAX_API RendererManager final : public EngineSubsystemBase, public IUIAssetProvider
     {
         // =============================================================================
         // Base Implementation
@@ -182,8 +182,9 @@ namespace Opaax
          */
         FontFaceView ResolveFace(const TResourcePath<FontFaceResource>& InPath);
 
-        /** IUIFontProvider — the same cache, reached by a widget that can only spell a path. */
+        /** IUIAssetProvider — the same caches, reached by a widget that can only spell a path. */
         FontFaceView ResolveFace(const char* InAssetPath) override;
+        ITexture2D*  ResolveTexture(const char* InAssetPath) override;
 
         /**
          * The family behind an asset-relative `.opaaxfont` path, loading it once and keeping the
