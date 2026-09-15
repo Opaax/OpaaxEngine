@@ -4131,7 +4131,7 @@ order is Layer/OrderInLayer) · dropping a PREFAB onto an entity row to instanti
 
 ---
 
-## UI — The user interface (U1 `276b905` → U6 `976b5b0`, U7 `2498a33` → U10 `4f9288b`, U11 `9562051` → U12 `c45e914`, 2026-09-14/15; all three blocks CLOSED, user-verified — record `.claude/plans/ui.md`)
+## UI — The user interface (U1 `276b905` → U6 `976b5b0`, U7 `2498a33` → U10 `4f9288b`, U11 `9562051` → U12 `c45e914`, U13 `feb96ce`, 2026-09-14/15; all four blocks CLOSED, user-verified — record `.claude/plans/ui.md`)
 
 **UI1 — THE UI IS DECOUPLED FROM THE WORLD.** `Engine/Source/UI/` depends on `Core/` and
 `Renderer/` (and `RHI/ITexture2D` as a borrowed pointer) and never on `World/`, `Engine/`, or
