@@ -19,6 +19,7 @@ namespace Opaax
         OpaaxString EngineVersion; // engine compat tag; "" if absent
         OpaaxString StartupLevel;  // asset-relative scene; falls back to legacy "defaultScene"
         OpaaxString LoadingScreen; // asset-relative `.opaaxui` drawn over a level swap; "" = a black cover (UI21)
+        float       LoadingScreenMinSeconds = 0.f; // the cover stays up at least this long; 0 = only as long as the load
     };
 
     namespace Opaax_Project_Identity
@@ -33,6 +34,7 @@ namespace Opaax
         inline const char* PROJECT_STARTUP_LEVEL_KEY_LEGACY     = "startupScene";
         inline const char* PROJECT_STARTUP_LEVEL_KEY_DEFAULT    = "defaultScene";
         inline const char* PROJECT_LOADING_SCREEN_KEY           = "loadingScreen";
+        inline const char* PROJECT_LOADING_SCREEN_MIN_SECONDS_KEY = "loadingScreenMinSeconds";
     }
 
     // Pure, tolerant parser — bad JSON or missing fields yield empty values, never throws.
@@ -58,6 +60,7 @@ namespace Opaax
         virtual OpaaxString EngineVersion() const = 0;
         virtual OpaaxString StartupLevel()  const = 0;
         virtual OpaaxString LoadingScreen() const = 0;
+        virtual float       LoadingScreenMinSeconds() const = 0;
 
         //----- null object ----------------------------------------------------
         static IProjectManager& Null();
@@ -84,6 +87,7 @@ namespace Opaax
         OpaaxString EngineVersion() const override { return m_Identity.EngineVersion; }
         OpaaxString StartupLevel()  const override { return m_Identity.StartupLevel; }
         OpaaxString LoadingScreen() const override { return m_Identity.LoadingScreen; }
+        float       LoadingScreenMinSeconds() const override { return m_Identity.LoadingScreenMinSeconds; }
 
         // =============================================================================
         // Members

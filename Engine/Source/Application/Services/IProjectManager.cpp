@@ -22,6 +22,7 @@ namespace Opaax
             OpaaxString EngineVersion() const override { return OpaaxString(); }
             OpaaxString StartupLevel()  const override { return OpaaxString(); }
             OpaaxString LoadingScreen() const override { return OpaaxString(); }
+            float       LoadingScreenMinSeconds() const override { return 0.f; }
         };
     }
 
@@ -71,6 +72,13 @@ namespace Opaax
         }
 
         lOut.LoadingScreen = lReadString(Opaax_Project_Identity::PROJECT_LOADING_SCREEN_KEY);
+
+        // A number; anything else (absent, a string) keeps 0 — tolerant, like every key here.
+        if (const char* lKey = Opaax_Project_Identity::PROJECT_LOADING_SCREEN_MIN_SECONDS_KEY;
+            lRoot.contains(lKey) && lRoot[lKey].is_number())
+        {
+            lOut.LoadingScreenMinSeconds = lRoot[lKey].get<float>();
+        }
         return lOut;
     }
 

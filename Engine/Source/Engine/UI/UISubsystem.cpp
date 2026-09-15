@@ -49,7 +49,9 @@ namespace Opaax
         UIWidget& lRoot = m_LoadingCanvas.Root();
         lRoot.bVisible  = false;   // down until a level is asked for
 
-        const OpaaxString lAsset = OpaaxApplication::GetAppService<IProjectManager>().LoadingScreen();
+        const IProjectManager& lProject = OpaaxApplication::GetAppService<IProjectManager>();
+        const OpaaxString      lAsset   = lProject.LoadingScreen();
+        m_CoverMinSeconds = lProject.LoadingScreenMinSeconds();
 
         if (!lAsset.IsEmpty())
         {
@@ -68,8 +70,8 @@ namespace Opaax
                 m_LoadingCanvas.SetReferenceHeight(lReferenceHeight);
                 lRoot.AddChild(Move(lTree));
 
-                OPAAX_LOG(LogUISubsystem, Info, "Loading cover: '{}' — {} widget(s)",
-                          lAsset.CStr(), UICanvasFile::CountWidgets(lRoot));
+                OPAAX_LOG(LogUISubsystem, Info, "Loading cover: '{}' — {} widget(s), up at least {} s",
+                          lAsset.CStr(), UICanvasFile::CountWidgets(lRoot), m_CoverMinSeconds);
                 return;
             }
 
@@ -94,15 +96,20 @@ namespace Opaax
     void UISubsystem::OnLevelLoadRequested(const LevelLoadRequested&)
     {
         // Visibility is read when the canvas is DRAWN, so this covers the frame the request came
-        // in on, wherever in the frame that was.
+        // in on, wherever in the frame that was. A request while the cover is already up (a second
+        // swap) restarts its clock.
         m_LoadingCanvas.Root().bVisible = true;
+        m_CoverElapsed  = 0.0;
+        m_bLoadFinished = false;
     }
 
     void UISubsystem::OnLevelLoadFinished(const LevelLoadFinished&)
     {
         // The old world's widgets left through RemoveChild, which already forgot any pointer under
-        // them (UI9) — only the cover is this tenant's to bring down.
-        m_LoadingCanvas.Root().bVisible = false;
+        // them (UI9) — only the cover is this tenant's to bring down, and Update does, once the
+        // floor is met. With no floor that is THIS frame: the swap resolves at the top of the loop
+        // and this tick runs after it, before the render.
+        m_bLoadFinished = true;
     }
 
     void UISubsystem::SetInputMode(const EUIInputMode InMode) noexcept
@@ -110,8 +117,19 @@ namespace Opaax
         m_InputMode = InMode;
     }
 
-    void UISubsystem::Update(double /*InDeltaTime*/)
+    void UISubsystem::Update(const double InDeltaTime)
     {
+        if (m_LoadingCanvas.Root().bVisible)
+        {
+            m_CoverElapsed += InDeltaTime;
+
+            if (m_bLoadFinished && m_CoverElapsed >= m_CoverMinSeconds)
+            {
+                m_LoadingCanvas.Root().bVisible = false;
+                OPAAX_LOG(LogUISubsystem, Info, "Loading cover down after {:.2f} s (floor {} s)", m_CoverElapsed, m_CoverMinSeconds);
+            }
+        }
+
         // Route the raw feed through the canvas, and tell the mapping what the UI swallowed BEFORE
         // it evaluates — this tenant is registered ahead of input mapping so its Update runs first.
         InputKeyMask lConsumed{};

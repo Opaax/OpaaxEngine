@@ -43,6 +43,15 @@ TEST_CASE("ParseProjectIdentity: 'loadingScreen' names the cover, and a project 
     // Every project written before the key: empty, which the UI tenant reads as "a black cover".
     const ProjectIdentity lWithout = ParseProjectIdentity(OpaaxString(R"({"name":"MyGame"})"));
     CHECK(lWithout.LoadingScreen.IsEmpty());
+    CHECK(lWithout.LoadingScreenMinSeconds == 0.f);
+
+    // The minimum cover time beside it: a number reads, a string is ignored (tolerant, like the rest).
+    const ProjectIdentity lTimed = ParseProjectIdentity(OpaaxString(
+        R"({"name":"MyGame","loadingScreen":"UI/Loading.opaaxui","loadingScreenMinSeconds":3})"));
+    CHECK(lTimed.LoadingScreenMinSeconds == doctest::Approx(3.f));
+
+    const ProjectIdentity lBad = ParseProjectIdentity(OpaaxString(R"({"name":"MyGame","loadingScreenMinSeconds":"3"})"));
+    CHECK(lBad.LoadingScreenMinSeconds == 0.f);
 }
 
 TEST_CASE("ParseProjectIdentity: 'startupScene' still feeds StartupLevel when the live key is absent")

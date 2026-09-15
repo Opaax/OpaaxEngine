@@ -104,15 +104,32 @@ namespace Opaax
         };
     }
 
+    /**
+     * What Add hands back, and what Remove takes — so an owner can only ever remove ITS OWN source.
+     *
+     * Two worlds overlap during a level swap (the new one starts before the old one is destroyed),
+     * and both register "Hud": the new Add replaces, then the old Shutdown's Remove-by-name would
+     * delete the new one from under it. A ticket makes that Remove a no-op.
+     */
+    struct UIBindingHandle
+    {
+        OpaaxStringID Name;
+        Uint64        Ticket = 0;   // 0 = never registered
+
+        bool IsValid() const noexcept { return Ticket != 0; }
+    };
+
     // =============================================================================
     // UIBindingTable — the named sources a canvas's widgets may pull from. Owned by the canvas.
     // =============================================================================
     class OPAAX_API UIBindingTable
     {
     public:
-        /** Make InSource readable as InName; a second Add under the same name replaces the first. */
-        void Add(OpaaxStringID InName, UIBindingReader InReader);
-        void Remove(OpaaxStringID InName);
+        /** Make InSource readable as InName; a second Add under the same name REPLACES the first. */
+        UIBindingHandle Add(OpaaxStringID InName, UIBindingReader InReader);
+
+        /** Forget the source InHandle registered — nothing, if that name has since been re-added by someone else. */
+        void Remove(const UIBindingHandle& InHandle);
 
         bool   Has(OpaaxStringID InName) const noexcept;
         Uint64 Count() const noexcept { return m_Names.size(); }
@@ -127,7 +144,9 @@ namespace Opaax
     private:
         TDynArray<OpaaxStringID>   m_Names;
         TDynArray<UIBindingReader> m_Readers;   // parallel to m_Names; a handful of entries, so a scan is right
+        TDynArray<Uint64>          m_Tickets;   // parallel too: which Add owns the entry
         TDynArray<OpaaxString>     m_Warned;
+        Uint64                     m_NextTicket = 1;
     };
 
     /** InFormat with its first "{}" replaced by InValue — or InValue alone when there is none. */

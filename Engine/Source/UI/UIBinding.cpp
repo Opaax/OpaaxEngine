@@ -26,29 +26,37 @@ namespace Opaax
     // UIBindingTable
     // =============================================================================
 
-    void UIBindingTable::Add(const OpaaxStringID InName, UIBindingReader InReader)
+    UIBindingHandle UIBindingTable::Add(const OpaaxStringID InName, UIBindingReader InReader)
     {
+        const UIBindingHandle lHandle{ InName, m_NextTicket++ };
+
         for (Uint64 lIndex = 0; lIndex < m_Names.size(); ++lIndex)
         {
             if (m_Names[lIndex] == InName)
             {
                 m_Readers[lIndex] = Move(InReader);
-                return;
+                m_Tickets[lIndex] = lHandle.Ticket;
+                return lHandle;
             }
         }
 
         m_Names.emplace_back(InName);
         m_Readers.emplace_back(Move(InReader));
+        m_Tickets.emplace_back(lHandle.Ticket);
+        return lHandle;
     }
 
-    void UIBindingTable::Remove(const OpaaxStringID InName)
+    void UIBindingTable::Remove(const UIBindingHandle& InHandle)
     {
         for (Uint64 lIndex = 0; lIndex < m_Names.size(); ++lIndex)
         {
-            if (m_Names[lIndex] == InName)
+            // The TICKET decides, not the name: a source re-added under this name since belongs
+            // to whoever re-added it, and their entry stays.
+            if (m_Names[lIndex] == InHandle.Name && m_Tickets[lIndex] == InHandle.Ticket)
             {
                 m_Names.erase(m_Names.begin() + static_cast<std::ptrdiff_t>(lIndex));
                 m_Readers.erase(m_Readers.begin() + static_cast<std::ptrdiff_t>(lIndex));
+                m_Tickets.erase(m_Tickets.begin() + static_cast<std::ptrdiff_t>(lIndex));
                 return;
             }
         }

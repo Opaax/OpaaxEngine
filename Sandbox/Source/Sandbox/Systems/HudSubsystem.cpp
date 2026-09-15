@@ -77,8 +77,10 @@ namespace Sandbox
         m_Root = lCanvas.Root().AddChild(Move(lTree));
 
         // The model is the ONE thing this owns that the tree reads; which widget shows which field
-        // is the asset's business (UI24). Removed in Shutdown, before the model dies.
-        lCanvas.Bindings().Add(kHudSource, MakeBindingReader(m_Model));
+        // is the asset's business (UI24). Removed BY HANDLE in Shutdown, before the model dies:
+        // during a level swap the next world's HUD has already re-registered "Hud", and a remove
+        // by name would take its source away.
+        m_Source = lCanvas.Bindings().Add(kHudSource, MakeBindingReader(m_Model));
 
         if (m_Context->Actions != nullptr)
         {
@@ -111,7 +113,7 @@ namespace Sandbox
         // The canvas outlives this world (GI1); the HUD and its source do not.
         if (m_Context->UI != nullptr)
         {
-            m_Context->UI->GetCanvas().Bindings().Remove(kHudSource);
+            m_Context->UI->GetCanvas().Bindings().Remove(m_Source);
 
             if (m_Root != nullptr)
             {
@@ -119,7 +121,8 @@ namespace Sandbox
             }
         }
 
-        m_Root = nullptr;
+        m_Root   = nullptr;
+        m_Source = {};
 
         OPAAX_LOG(LogHud, Info, "HUD shutdown — {} jump(s) counted", m_Model.Jumps);
     }

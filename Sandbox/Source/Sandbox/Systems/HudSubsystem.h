@@ -2,6 +2,7 @@
 
 #include "Core/OpaaxTypes.h"
 #include "Core/Reflection/OpaaxProperty.h"
+#include "UI/UIBinding.h"   // UIBindingHandle — the source this owns on the canvas
 #include "World/Systems/WorldSubsystem.h"
 
 namespace Opaax
@@ -54,7 +55,8 @@ namespace Sandbox
     private:
         Opaax::WorldContext* m_Context = nullptr;   // borrowed; the World owns it
 
-        Opaax::UIWidget* m_Root = nullptr;   // owned by the canvas until Shutdown takes it back
-        HudModel         m_Model;            // read by the canvas until Shutdown removes the source
+        Opaax::UIWidget*       m_Root = nullptr;   // owned by the canvas until Shutdown takes it back
+        HudModel               m_Model;            // read by the canvas until Shutdown removes the source
+        Opaax::UIBindingHandle m_Source;           // MY "Hud" — the next world's HUD registers its own
     };
 }

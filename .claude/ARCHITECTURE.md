@@ -4489,9 +4489,15 @@ UI changing* — so the seam is the REQUEST, not the load.
 - *Dogfood:* the pause menu's **Next Level** (Main ⇄ PhysicsTest, keyed on the world's name).
   The menu closes with its world — its `Shutdown` restores `GameAndUI`, so a swap from an open
   menu does not leave the session muted (**UI10**).
-- *Named, not built:* a minimum cover time (a one-frame black flash on a fast swap is honest,
-  not a bug) · routing input to the cover canvas (a loading screen takes none) · a level's own
-  loading screen (the project's is one for all) · PIE: a swap during Play works by `EndGame`'s
+- **The cover stays up at least `loadingScreenMinSeconds`** (`.opaaxproj`, beside `loadingScreen`;
+  0 when absent). Their call after seeing the one-frame flash: *"add time delay like 3 sec … just
+  to make sure"*. `LevelLoadFinished` only marks the load done; the tenant's `Update` accumulates
+  the cover's clock and lowers it once both hold — with no floor that is the same frame as before,
+  since the swap resolves at the top of `Loop` and the tenant ticks after it. The world underneath
+  runs meanwhile (a cover takes no input, and pausing is theirs to design). Measured: `Loading
+  cover down after 3.00 s (floor 3 s)`.
+- *Named, not built:* routing input to the cover canvas (a loading screen takes none) · a level's
+  own loading screen (the project's is one for all) · PIE: a swap during Play works by `EndGame`'s
   "every Play world" rule (`PlayInEditor::m_PlayWorld` is never dereferenced), not eye-verified.
 
 **UI22 — OPACITY IS ONE FIELD ON EVERY WIDGET, AND IT MULTIPLIES DOWN THE TREE** (U8, the "canvas
@@ -4549,6 +4555,11 @@ Y-up; `Stretch` fills), `bFitContent`.
   canvas so it is headless-testable and so the loading canvas takes a progress source the same way
   the day async lands. An unresolvable path warns ONCE — a misspelling in a `.opaaxui` is one log
   line, not sixty a second — and the widget keeps its authored value.
+- **`Add` returns a `UIBindingHandle` and `Remove` takes it — never a name.** Their first report
+  (*"works on first map loaded, then do not change"*): `OpenLevel` starts the new world BEFORE
+  destroying the old (so no frame has no world), so the new HUD's `Add("Hud")` replaced the old's,
+  and the old HUD's `Shutdown` removed BY NAME — taking the new source with it. A ticket per Add
+  makes a stale Remove a no-op. Two lifetimes sharing one key is **MV4**'s shape one module over.
 - **The pull is a poll, and it is the one UI3 allows:** at the top of `Update`, a non-virtual walk
   calls `OnPullBindings` on every widget; a widget with a bound field reads it and invalidates
   ONLY if it differs from what it shows. A held value is 0 layouts / 0 rebuilds; a canvas with no

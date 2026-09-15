@@ -86,7 +86,8 @@ TEST_CASE("UIBinding: the table resolves Source.Property, and an unknown path fa
     UIBindingTable lTable;
     CHECK(lTable.Count() == 0u);
 
-    lTable.Add(OPAAX_ID("Player"), MakeBindingReader(lModel));
+    const UIBindingHandle lFirst = lTable.Add(OPAAX_ID("Player"), MakeBindingReader(lModel));
+    CHECK(lFirst.IsValid());
     CHECK(lTable.Count() == 1u);
     CHECK(lTable.Has(OPAAX_ID("Player")));
 
@@ -100,17 +101,33 @@ TEST_CASE("UIBinding: the table resolves Source.Property, and an unknown path fa
     CHECK_FALSE(lTable.Read(OpaaxString("Player"), lValue));            // no dot
     CHECK_FALSE(lTable.Read(OpaaxString(""), lValue));
 
-    // A second Add under the same name REPLACES; Remove forgets.
+    // A second Add under the same name REPLACES — the LEVEL SWAP: the next world's HUD registers
+    // "Player" while the old world is still alive.
     Model lOther;
     lOther.Lives = 9;
-    lTable.Add(OPAAX_ID("Player"), MakeBindingReader(lOther));
+    const UIBindingHandle lSecond = lTable.Add(OPAAX_ID("Player"), MakeBindingReader(lOther));
+    CHECK(lSecond.IsValid());
+    CHECK(lSecond.Ticket != lFirst.Ticket);
     CHECK(lTable.Count() == 1u);
     CHECK(lTable.Read(OpaaxString("Player.Lives"), lValue));
     CHECK(lValue.ToText() == OpaaxString("9"));
 
-    lTable.Remove(OPAAX_ID("Player"));
+    // THEN the old world shuts down and removes ITS source: the new one must survive that. This
+    // is the bug their eyes found — after a swap the HUD showed its authored "Jumps: {}" because
+    // the old HUD's remove-by-name had taken the new HUD's source with it.
+    lTable.Remove(lFirst);
+    CHECK(lTable.Count() == 1u);
+    CHECK(lTable.Has(OPAAX_ID("Player")));
+    CHECK(lTable.Read(OpaaxString("Player.Lives"), lValue));
+    CHECK(lValue.ToText() == OpaaxString("9"));
+
+    lTable.Remove(lSecond);
     CHECK(lTable.Count() == 0u);
     CHECK_FALSE(lTable.Has(OPAAX_ID("Player")));
+
+    lTable.Remove(lSecond);   // twice is nothing
+    lTable.Remove(UIBindingHandle{});
+    CHECK(lTable.Count() == 0u);
 }
 
 TEST_CASE("UIBinding: a bound UIText rebuilds when the value changes and not when it holds; unbound it shows its Text")
@@ -122,7 +139,7 @@ TEST_CASE("UIBinding: a bound UIText rebuilds when the value changes and not whe
     lCanvas.Update();   // the root's own first build, out of the numbers below
 
     Model lModel;
-    lCanvas.Bindings().Add(OPAAX_ID("Player"), MakeBindingReader(lModel));
+    const UIBindingHandle lSource = lCanvas.Bindings().Add(OPAAX_ID("Player"), MakeBindingReader(lModel));
 
     auto lOwned = MakeUnique<UIText>();
     lOwned->Text    = "Lives: {}";
@@ -155,7 +172,7 @@ TEST_CASE("UIBinding: a bound UIText rebuilds when the value changes and not whe
     CHECK(lStats.Rebuilds == 0);
 
     // The source leaves (a world ended): the last value stays on screen, nothing rebuilds.
-    lCanvas.Bindings().Remove(OPAAX_ID("Player"));
+    lCanvas.Bindings().Remove(lSource);
     lStats = lCanvas.Update();
     CHECK(lStats.Rebuilds == 0);
     CHECK(lText->GetDisplayText() == OpaaxString("Lives: 2"));

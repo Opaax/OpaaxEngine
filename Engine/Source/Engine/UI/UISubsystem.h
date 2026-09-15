@@ -27,7 +27,9 @@ namespace Opaax
     //   its root's visibility as the flag. Visibility is read at DRAW time (UI3), so a level
     //   requested mid-frame — a button in this tenant's own tick, a trigger in the world's — is
     //   covered on THAT frame's render, whichever of the two it came from. Its tree is the
-    //   project's `loadingScreen` asset; black when the project names none.
+    //   project's `loadingScreen` asset; black when the project names none. It stays up at least
+    //   the project's `loadingScreenMinSeconds` — a synchronous swap is one frame, which is a
+    //   flash, not a screen; the world underneath runs meanwhile.
     //
     //   Gameplay reaches it through WorldContext::UI, the way it reaches input mapping.
     // =============================================================================
@@ -97,5 +99,10 @@ namespace Opaax
         UICanvas               m_Canvas;
         UICanvas               m_LoadingCanvas;
         EUIInputMode           m_InputMode = EUIInputMode::GameAndUI;
+
+        /** The cover's clock: how long it has been up, the floor it must reach, and whether the load is done. */
+        double m_CoverElapsed    = 0.0;
+        float  m_CoverMinSeconds = 0.f;
+        bool   m_bLoadFinished   = false;
     };
 }

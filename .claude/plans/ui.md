@@ -26,6 +26,18 @@
 | **Panel designer** | `0559f7d` | Their *"Editing hud in ui panel more easier"*: click SELECTS (`PickAt`, ignoring `bHitTestable` on purpose), drag MOVES (`UnitsPerPixel`, one step), arrows NUDGE, an OUTLINE for the selection and the hover, the RESOLVED rect as numbers. `WorldToScreen` beside `ScreenToWorld`. **Their own `a1bce9a` starts working:** a group's range/step now FLOW to its children (`InheritMeta`). **894 → 895.** **User-verified** (*"eye gate good"*). |
 | **U6** | `976b5b0` | **The deferred `OpenLevel` and the loading cover** (**UI21**). `IEngine::RequestOpenLevel` — flag-then-resolve at the top of `Loop`, `LevelLoadRequested`/`LevelLoadFinished` on the bus; the `UISubsystem`'s SECOND canvas with its root's visibility as the flag (read at draw time, so a mid-frame request covers that frame); a hidden root opens no pass; the cover is AUTHORED — `.opaaxproj` `loadingScreen` → `UI/Loading.opaaxui`. Dogfood: the pause menu's **Next Level** (Main ⇄ PhysicsTest). **895 → 896.** **User-verified:** *"next level works"*. |
 
+**Their report on U10** (*"All works. Only binding is not working correctly … its work on first map
+loaded, then after do not change"*): a LEVEL SWAP. `OpenLevel` creates the new world before it
+destroys the old, so the new HUD's `Add("Hud")` replaced the old's reader, and the old HUD's
+`Shutdown` then removed BY NAME — the new HUD's source went with it, its pull resolved to nothing,
+and the widget kept its authored `Jumps: {}` (which is the literal they then tried to fix by
+changing the placeholder; `{}` is right, `{x}` replaces the whole text). Fix: `Add` returns a
+`UIBindingHandle`, `Remove` takes it, a stale remove is a no-op — a test reproduces the exact
+order. Proven in-game with a throwaway swap at frame 120 ([[L81]], removed): new HUD `.043`, old
+shutdown `.055`, the new HUD's `'Jumps' bound` at `.059`, no warning. And their second ask, the
+**cover floor**: `loadingScreenMinSeconds` in the project file — `Loading cover down after 3.00 s
+(floor 3 s)` in the same run.
+
 **Settled in U10, not the plan:** the plan held; the two things the run added were both about
 seeing it. The table warns once on a failure, but a success was silent — which is [[L15]]'s
 absence-of-error exactly — so the first resolve of each bound widget traces once, and the smoke
