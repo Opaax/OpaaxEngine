@@ -8,7 +8,7 @@ namespace
      * Every ImGui drag reads min >= max as "no bounds", so an unset range (0, 0) passes through
      * verbatim and the ordinary property costs no branch.
      */
-    constexpr float DRAG_SPEED = 1.f;
+    constexpr float DRAG_SPEED = 0.1f;
 }
 
 namespace Opaax::Editor
@@ -74,15 +74,16 @@ namespace Opaax::Editor
         return ImGui::Checkbox(InLabel, &InValue);
     }
 
-    bool ImGuiEditorWidgets::DragFloat(const char* InLabel, float* InValues, const Uint32 InCount,
+    bool ImGuiEditorWidgets::DragFloat(const char* InLabel, float* InValues, const Uint32 InCount, float InStep,
                                        const float InMin, const float InMax)
     {
+        float lSpeed = InStep != 0 ? InStep :DRAG_SPEED;
         switch (InCount)
         {
-        case 1:  return ImGui::DragFloat(InLabel, InValues, DRAG_SPEED, InMin, InMax);
-        case 2:  return ImGui::DragFloat2(InLabel, InValues, DRAG_SPEED, InMin, InMax);
-        case 3:  return ImGui::DragFloat3(InLabel, InValues, DRAG_SPEED, InMin, InMax);
-        case 4:  return ImGui::DragFloat4(InLabel, InValues, DRAG_SPEED, InMin, InMax);
+        case 1:  return ImGui::DragFloat(InLabel, InValues, lSpeed, InMin, InMax);
+        case 2:  return ImGui::DragFloat2(InLabel, InValues,lSpeed, InMin, InMax);
+        case 3:  return ImGui::DragFloat3(InLabel, InValues,lSpeed, InMin, InMax);
+        case 4:  return ImGui::DragFloat4(InLabel, InValues,lSpeed, InMin, InMax);
         default: return false;
         }
     }

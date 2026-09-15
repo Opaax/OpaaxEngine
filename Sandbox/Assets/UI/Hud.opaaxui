@@ -3,59 +3,54 @@
     "Root": {
         "Children": [
             {
-                "Color": {
-                    "w": 1.0,
-                    "x": 1.0,
-                    "y": 1.0,
-                    "z": 1.0
-                },
-                "Font": "/Engine/Fonts/Roboto/roboto-latin-700-normal.ttf",
-                "HAlign": "Left",
-                "LineHeightScale": 1.0,
-                "Name": "Jumps",
-                "Rect": {
-                    "AnchorMax": {
-                        "x": 0.0,
-                        "y": 1.0
-                    },
-                    "AnchorMin": {
-                        "x": 0.0,
-                        "y": 1.0
-                    },
-                    "AnchoredPosition": {
-                        "x": 24.0,
-                        "y": -24.0
-                    },
-                    "Pivot": {
-                        "x": 0.0,
-                        "y": 1.0
-                    },
-                    "SizeDelta": {
-                        "x": 600.0,
-                        "y": 60.0
-                    }
-                },
-                "Size": 40.0,
-                "Text": "Jumps: 0",
-                "Type": "UIText",
-                "VAlign": "Top",
-                "bHitTestable": true,
-                "bKerning": true,
-                "bVisible": true,
-                "bWrap": true
-            },
-            {
                 "Children": [
                     {
-                        "Color": {
-                            "w": 1.0,
-                            "x": 0.20000000298023224,
-                            "y": 0.8500000238418579,
-                            "z": 0.3499999940395355
-                        },
-                        "Fill": "Horizontal",
-                        "FillAmount": 0.0,
-                        "Name": "SpeedFill",
+                        "Children": [
+                            {
+                                "Border": {
+                                    "Bottom": 16.0,
+                                    "Left": 16.0,
+                                    "Right": 16.0,
+                                    "Top": 16.0
+                                },
+                                "Color": {
+                                    "w": 0.19607843458652496,
+                                    "x": 0.9215686321258545,
+                                    "y": 0.0,
+                                    "z": 0.0
+                                },
+                                "Fill": "None",
+                                "FillAmount": 1.0,
+                                "Name": "UIImage",
+                                "Rect": {
+                                    "AnchorMax": {
+                                        "x": 1.0,
+                                        "y": 1.0
+                                    },
+                                    "AnchorMin": {
+                                        "x": 0.0,
+                                        "y": 0.0
+                                    },
+                                    "AnchoredPosition": {
+                                        "x": 0.0,
+                                        "y": 0.0
+                                    },
+                                    "Pivot": {
+                                        "x": 0.5,
+                                        "y": 0.5
+                                    },
+                                    "SizeDelta": {
+                                        "x": 100.0,
+                                        "y": 100.0
+                                    }
+                                },
+                                "Texture": "UI/Panel9.png",
+                                "Type": "UIImage",
+                                "bHitTestable": true,
+                                "bVisible": true
+                            }
+                        ],
+                        "Name": "UIPanel",
                         "Rect": {
                             "AnchorMax": {
                                 "x": 1.0,
@@ -74,52 +69,180 @@
                                 "y": 0.5
                             },
                             "SizeDelta": {
-                                "x": 0.0,
-                                "y": 0.0
+                                "x": 100.0,
+                                "y": 100.0
                             }
                         },
+                        "Type": "UIPanel",
+                        "bHitTestable": false,
+                        "bVisible": true
+                    },
+                    {
+                        "Color": {
+                            "w": 1.0,
+                            "x": 1.0,
+                            "y": 1.0,
+                            "z": 1.0
+                        },
+                        "Font": "/Engine/Fonts/Roboto/roboto-latin-700-normal.ttf",
+                        "HAlign": "Left",
+                        "LineHeightScale": 3.0,
+                        "Name": "Jumps",
+                        "Rect": {
+                            "AnchorMax": {
+                                "x": 0.0,
+                                "y": 1.0
+                            },
+                            "AnchorMin": {
+                                "x": 0.0,
+                                "y": 0.0
+                            },
+                            "AnchoredPosition": {
+                                "x": 0.0,
+                                "y": 0.0
+                            },
+                            "Pivot": {
+                                "x": 0.0,
+                                "y": 0.0
+                            },
+                            "SizeDelta": {
+                                "x": 600.0,
+                                "y": 60.0
+                            }
+                        },
+                        "Size": 40.0,
+                        "Text": "Jumps: 0",
+                        "Type": "UIText",
+                        "VAlign": "Top",
+                        "bHitTestable": true,
+                        "bKerning": true,
+                        "bVisible": true,
+                        "bWrap": true
+                    },
+                    {
+                        "Border": {
+                            "Bottom": 0.0,
+                            "Left": 0.0,
+                            "Right": 0.0,
+                            "Top": 0.0
+                        },
+                        "Children": [
+                            {
+                                "Border": {
+                                    "Bottom": 0.0,
+                                    "Left": 0.0,
+                                    "Right": 0.0,
+                                    "Top": 0.0
+                                },
+                                "Color": {
+                                    "w": 1.0,
+                                    "x": 0.20000000298023224,
+                                    "y": 0.8500000238418579,
+                                    "z": 0.3499999940395355
+                                },
+                                "Fill": "Horizontal",
+                                "FillAmount": 0.0,
+                                "Name": "SpeedFill",
+                                "Rect": {
+                                    "AnchorMax": {
+                                        "x": 1.0,
+                                        "y": 1.0
+                                    },
+                                    "AnchorMin": {
+                                        "x": 0.0,
+                                        "y": 0.0
+                                    },
+                                    "AnchoredPosition": {
+                                        "x": 0.0,
+                                        "y": 0.0
+                                    },
+                                    "Pivot": {
+                                        "x": 0.5,
+                                        "y": 0.5
+                                    },
+                                    "SizeDelta": {
+                                        "x": 0.0,
+                                        "y": 0.0
+                                    }
+                                },
+                                "Texture": "",
+                                "Type": "UIImage",
+                                "bHitTestable": true,
+                                "bVisible": true
+                            }
+                        ],
+                        "Color": {
+                            "w": 0.8500000238418579,
+                            "x": 0.2471042275428772,
+                            "y": 0.19952963292598724,
+                            "z": 0.18699780106544495
+                        },
+                        "Fill": "None",
+                        "FillAmount": 1.0,
+                        "Name": "SpeedTrack",
+                        "Rect": {
+                            "AnchorMax": {
+                                "x": 0.0,
+                                "y": 0.0
+                            },
+                            "AnchorMin": {
+                                "x": 0.0,
+                                "y": 0.0
+                            },
+                            "AnchoredPosition": {
+                                "x": 24.0,
+                                "y": 24.0
+                            },
+                            "Pivot": {
+                                "x": 0.0,
+                                "y": 0.0
+                            },
+                            "SizeDelta": {
+                                "x": 320.0,
+                                "y": 28.0
+                            }
+                        },
+                        "Texture": "",
                         "Type": "UIImage",
                         "bHitTestable": true,
                         "bVisible": true
                     }
                 ],
-                "Color": {
-                    "w": 0.8500000238418579,
-                    "x": 0.07999999821186066,
-                    "y": 0.07999999821186066,
-                    "z": 0.10000000149011612
+                "Insets": {
+                    "Bottom": 0.10000000149011612,
+                    "Left": 0.10000000149011612,
+                    "Right": 0.10000000149011612,
+                    "Top": 0.10000000149011612
                 },
-                "Fill": "None",
-                "FillAmount": 1.0,
-                "Name": "SpeedTrack",
+                "Name": "UISafeArea",
                 "Rect": {
                     "AnchorMax": {
-                        "x": 0.0,
-                        "y": 0.0
+                        "x": 1.0,
+                        "y": 1.0
                     },
                     "AnchorMin": {
                         "x": 0.0,
                         "y": 0.0
                     },
                     "AnchoredPosition": {
-                        "x": 24.0,
-                        "y": 24.0
-                    },
-                    "Pivot": {
                         "x": 0.0,
                         "y": 0.0
                     },
+                    "Pivot": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
                     "SizeDelta": {
-                        "x": 320.0,
-                        "y": 28.0
+                        "x": 0.0,
+                        "y": 0.0
                     }
                 },
-                "Type": "UIImage",
-                "bHitTestable": true,
+                "Type": "UISafeArea",
+                "bHitTestable": false,
                 "bVisible": true
             }
         ],
-        "Name": "Hud",
+        "Name": "Root",
         "Rect": {
             "AnchorMax": {
                 "x": 1.0,

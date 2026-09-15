@@ -51,25 +51,25 @@ namespace Opaax::Editor
     void TPropertyDrawer<float>::Draw(IEditorWidgets& InWidgets, const char* InLabel, float& InValue,
                                       const PropertyMeta& InMeta)
     {
-        InWidgets.DragFloat(InLabel, &InValue, 1, InMeta.RangeMin, InMeta.RangeMax);
+        InWidgets.DragFloat(InLabel, &InValue, 1,InMeta.DragStep, InMeta.RangeMin, InMeta.RangeMax);
     }
 
     void TPropertyDrawer<Vector2F>::Draw(IEditorWidgets& InWidgets, const char* InLabel, Vector2F& InValue,
                                          const PropertyMeta& InMeta)
     {
-        InWidgets.DragFloat(InLabel, glm::value_ptr(InValue), 2, InMeta.RangeMin, InMeta.RangeMax);
+        InWidgets.DragFloat(InLabel, glm::value_ptr(InValue), 2,InMeta.DragStep, InMeta.RangeMin, InMeta.RangeMax);
     }
 
     void TPropertyDrawer<Vector3F>::Draw(IEditorWidgets& InWidgets, const char* InLabel, Vector3F& InValue,
                                          const PropertyMeta& InMeta)
     {
-        InWidgets.DragFloat(InLabel, glm::value_ptr(InValue), 3, InMeta.RangeMin, InMeta.RangeMax);
+        InWidgets.DragFloat(InLabel, glm::value_ptr(InValue), 3,InMeta.DragStep, InMeta.RangeMin, InMeta.RangeMax);
     }
 
     void TPropertyDrawer<Vector4F>::Draw(IEditorWidgets& InWidgets, const char* InLabel, Vector4F& InValue,
                                          const PropertyMeta& InMeta)
     {
-        InWidgets.DragFloat(InLabel, glm::value_ptr(InValue), 4, InMeta.RangeMin, InMeta.RangeMax);
+        InWidgets.DragFloat(InLabel, glm::value_ptr(InValue), 4,InMeta.DragStep, InMeta.RangeMin, InMeta.RangeMax);
     }
 
     void TPropertyDrawer<LinearColor>::Draw(IEditorWidgets& InWidgets, const char* InLabel,

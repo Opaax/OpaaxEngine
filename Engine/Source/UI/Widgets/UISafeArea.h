@@ -31,7 +31,7 @@ namespace Opaax
         UIMargin Insets{ 0.05f, 0.05f, 0.05f, 0.05f };
 
         OPAAX_PROPERTIES(UISafeArea,
-                         OPAAX_PROP(Insets))
+                         OPAAX_PROP(Insets).SetRange(0, 1).SetDragStep(0.01f))
 
         void SetInsets(const UIMargin& InInsets);
 
