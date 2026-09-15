@@ -44,7 +44,7 @@ namespace Opaax
             // Nothing renders, so a submitted view is dropped on the floor — the same inert answer
             // every other hook here gives.
             void SubmitRenderView(IRenderTarget&, const CameraView&, bool, World*, bool) override {}
-            void SubmitUICanvas(UICanvas&, IRenderTarget*) override {}
+            void SubmitUICanvas(UICanvas&, IRenderTarget*, const CameraView*) override {}
 
             // No device to create on — a caller gets nullptr and its own null-handling runs.
             TUniquePtr<IFramebuffer> CreateFramebuffer(const FramebufferSpec&) override { return nullptr; }

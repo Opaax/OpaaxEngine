@@ -4333,6 +4333,16 @@ byte-identical; a named target gets its own Clear pass** and neither borrows the
 A targeted canvas counts toward the frame's drawable passes, so a UI panel open with no viewport
 still renders. The property pane is `DrawProperties` and nothing else — a widget is `CReflected`,
 so a field added to a type appears with no change to the panel.
+- **A targeted submission may bring its own VIEW** (U13, *"can be nice to zoom"*): with a
+  `CameraView` the pass projects through it and does NOT size the canvas to the target — the
+  submitter laid the canvas out itself, against a LAYOUT TARGET it chose (`UIPreviewAspect`:
+  Free = the dock's size, or an exact 16:9 / 21:9 / 4:3 / 16:10 / 9:16). Zoom decouples the view
+  from the layout, which is what made the aspect a named choice. The game's path (no target, no
+  view) is untouched. The panel REUSES the world viewport's `EditorCamera` + `CameraGesture`
+  (middle-drag pan with cursor wrap, wheel zoom at the cursor, `F` = `FocusOn` the visible
+  bounds; `1:1` = `Set({0,0}, refH/2)`, today's picture) and maps pixels through CAM2's free
+  functions with ITS view — pick, drag, grips and nudges land under the pointer at any zoom. The
+  layout target's edge is drawn as a grey frame under the outlines. View state only: no step.
 
 **UI15 — A TREE STEP CARRIES THE WHOLE TREE AS TEXT, AND THE SELECTION IS A PATH.** `UITreeEdit`
 holds the serialized before and after; add, delete, reparent and a property edit are all one type

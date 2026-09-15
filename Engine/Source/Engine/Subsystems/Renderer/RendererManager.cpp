@@ -348,7 +348,8 @@ namespace Opaax
         {
             if (lCanvasRequest.Target != nullptr)
             {
-                RenderCanvasPass(*lCanvasRequest.Canvas, *lCanvasRequest.Target, ELoadOp::Clear);
+                RenderCanvasPass(*lCanvasRequest.Canvas, *lCanvasRequest.Target, ELoadOp::Clear,
+                                 lCanvasRequest.bHasView ? &lCanvasRequest.View : nullptr);
             }
         }
 
@@ -452,7 +453,8 @@ namespace Opaax
         }
     }
 
-    void RendererManager::RenderCanvasPass(UICanvas& InCanvas, IRenderTarget& InTarget, const ELoadOp InLoadOp)
+    void RendererManager::RenderCanvasPass(UICanvas& InCanvas, IRenderTarget& InTarget, const ELoadOp InLoadOp,
+                                           const CameraView* InView)
     {
         const Uint32 lWidth  = InTarget.GetWidth();
         const Uint32 lHeight = InTarget.GetHeight();
@@ -464,8 +466,12 @@ namespace Opaax
         if (!InCanvas.Root().bVisible) { return; }
 
         // The TARGET says how wide the canvas is (UI2), so the layout happens here rather than in
-        // whoever submitted it — Unity's willRenderCanvases.
-        InCanvas.SetTargetSize(lWidth, lHeight);
+        // whoever submitted it — Unity's willRenderCanvases. Unless the submitter brought a VIEW:
+        // then it laid the canvas out against its own target and this pass only looks at it.
+        if (InView == nullptr)
+        {
+            InCanvas.SetTargetSize(lWidth, lHeight);
+        }
 
         const UIBuildContext lContext{ this };
         const UICanvasStats  lStats = InCanvas.Update(lContext);
@@ -473,7 +479,7 @@ namespace Opaax
         m_UIRebuilds += lStats.Rebuilds;
 
         RenderView lView;
-        lView.ViewProjection = MakeViewProjection(InCanvas.MakeView(), lWidth, lHeight);
+        lView.ViewProjection = MakeViewProjection(InView != nullptr ? *InView : InCanvas.MakeView(), lWidth, lHeight);
         lView.Viewport       = Viewport{ 0, 0, lWidth, lHeight };
 
         m_RenderSystem->BeginPass(InTarget, lView, InLoadOp);
@@ -869,9 +875,15 @@ namespace Opaax
         m_SubmittedViews.emplace_back(RenderPassRequest{ &InTarget, InView, bInDrawOverlays, bInDrawUI, InSource });
     }
 
-    void RendererManager::SubmitUICanvas(UICanvas& InCanvas, IRenderTarget* InTarget)
+    void RendererManager::SubmitUICanvas(UICanvas& InCanvas, IRenderTarget* InTarget, const CameraView* InView)
     {
-        m_SubmittedCanvases.emplace_back(UICanvasRequest{ &InCanvas, InTarget });
+        UICanvasRequest lRequest{ &InCanvas, InTarget };
+        if (InView != nullptr)
+        {
+            lRequest.View     = *InView;
+            lRequest.bHasView = true;
+        }
+        m_SubmittedCanvases.emplace_back(lRequest);
     }
     
     TUniquePtr<IFramebuffer> RendererManager::CreateFramebuffer(const FramebufferSpec& InSpec)

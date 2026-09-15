@@ -91,9 +91,42 @@ namespace Opaax::Editor
             m_Framebuffer->Resize(m_Size.x, m_Size.y);
         }
 
+        UICanvas& lCanvas = m_Context.UICanvasDocument.GetCanvas();
+
+        // THE LAYOUT TARGET is the chosen aspect, not the framebuffer (U13): the canvas lays out
+        // as the game would show it, and the view below decides which part the image shows.
+        const Vector2u32 lLayout = PreviewLayoutSize(m_Aspect, m_Size.x, m_Size.y);
+        lCanvas.SetTargetSize(lLayout.x, lLayout.y);
+
+        // The view: seeded at 1:1 once a real size exists (today's picture) — again for every
+        // document opened, since each has its own reference height — then the gestures measured
+        // during the draw are spent here, outside the ImGui pass (SEL3).
+        if (m_ViewedPath != m_Context.UICanvasDocument.AbsPath())
+        {
+            m_ViewedPath  = m_Context.UICanvasDocument.AbsPath();
+            m_bViewSeeded = false;
+        }
+
+        if (!m_bViewSeeded && m_Size.x > 1 && m_Size.y > 1)
+        {
+            ResetView();
+            m_bViewSeeded = true;
+        }
+
+        if (m_bFitPending)
+        {
+            FitView();
+            m_bFitPending = false;
+        }
+
+        m_ViewGesture.Spend(m_View, PreviewPx());
+
         // NAMING ITS OWN TARGET — the whole reason U4 gave a canvas submission one: the game's
-        // canvases stay out of this framebuffer and this document stays out of the world (UI14).
-        m_Context.Engine.SubmitUICanvas(m_Context.UICanvasDocument.GetCanvas(), m_RenderTarget.get());
+        // canvases stay out of this framebuffer and this document stays out of the world (UI14) —
+        // and, since U13, bringing its own VIEW, so the pass projects through the zoom and leaves
+        // the layout target alone.
+        const CameraView lView = PreviewView();
+        m_Context.Engine.SubmitUICanvas(lCanvas, m_RenderTarget.get(), &lView);
     }
 
     void UICanvasPanel::DrawContents()
@@ -117,7 +150,8 @@ namespace Opaax::Editor
 
         ImGui::SameLine();
 
-        ImGui::BeginChild("UIPreview", ImVec2(0.f, 0.f));
+        // NoScrollWithMouse: the wheel over the image is the zoom's, not a scroll's.
+        ImGui::BeginChild("UIPreview", ImVec2(0.f, 0.f), ImGuiChildFlags_None, ImGuiWindowFlags_NoScrollWithMouse);
         DrawPreview();
         ImGui::EndChild();
     }
@@ -504,6 +538,8 @@ namespace Opaax::Editor
 
     void UICanvasPanel::DrawPreview()
     {
+        DrawPreviewToolbar();
+
         const ImVec2 lAvail = ImGui::GetContentRegionAvail();
 
         if (lAvail.x < 1.f || lAvail.y < 1.f) { return; }
@@ -524,9 +560,49 @@ namespace Opaax::Editor
         // rule for every gesture (the origin is only knowable at the item).
         const ImVec2   lItemMin = ImGui::GetItemRectMin();
         const Vector2F lOrigin{ lItemMin.x, lItemMin.y };
+        const bool     lHovered = ImGui::IsItemHovered();
 
-        MeasurePreviewGesture(ImGui::IsItemHovered(), lOrigin);
+        // The view's gestures — middle-drag and the wheel — beside the designer's left button.
+        m_ViewGesture.Measure(lHovered, lOrigin, lSizePx);
+
+        // F frames the canvas: THIS WINDOW's route, PrefabPanel's idiom, and never from a name field.
+        if (lHovered && !m_Context.Gui.IsKeyboardOwnedByUI() && ImGui::Shortcut(ImGuiKey_F))
+        {
+            m_bFitPending = true;
+        }
+
+        MeasurePreviewGesture(lHovered, lOrigin);
         DrawPreviewOverlay(lOrigin);
+    }
+
+    void UICanvasPanel::DrawPreviewToolbar()
+    {
+        ImGui::SetNextItemWidth(80.f);
+        if (ImGui::BeginCombo("##UIPreviewAspect", ToString(m_Aspect)))
+        {
+            for (const EUIPreviewAspect lAspect : kUIPreviewAspects)
+            {
+                if (ImGui::Selectable(ToString(lAspect), lAspect == m_Aspect))
+                {
+                    m_Aspect      = lAspect;
+                    m_bFitPending = true;   // a new frame is worth seeing whole
+                }
+            }
+            ImGui::EndCombo();
+        }
+        if (ImGui::IsItemHovered()) { ImGui::SetTooltip("The aspect the canvas lays out at — what the game's window would be."); }
+
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Fit")) { m_bFitPending = true; }
+        ImGui::SameLine();
+        if (ImGui::SmallButton("1:1")) { ResetView(); }
+
+        // One canvas unit per image pixel is 100%: the zoom reads in the author's terms.
+        const float lReference = m_Context.UICanvasDocument.GetCanvas().GetReferenceHeight();
+        ImGui::SameLine();
+        ImGui::TextDisabled("%.0f%%", m_View.GetOrthoSize() > 0.f ? 100.f * (lReference * 0.5f) / m_View.GetOrthoSize() : 0.f);
+        ImGui::SameLine();
+        ImGui::TextDisabled("(wheel: zoom, middle-drag: pan, F: fit)");
     }
 
     void UICanvasPanel::MeasurePreviewGesture(const bool bInHovered, const Vector2F& InOrigin)
@@ -537,7 +613,7 @@ namespace Opaax::Editor
 
         const Vector2F lLocalPx{ lIO.MousePos.x - InOrigin.x, lIO.MousePos.y - InOrigin.y };
 
-        m_HoverPath = bInHovered ? lDoc.PickAt(lCanvas.ScreenToCanvas(lLocalPx)) : UIWidgetPath{};
+        m_HoverPath = bInHovered ? lDoc.PickAt(PreviewToCanvas(lLocalPx)) : UIWidgetPath{};
 
         // A grip on the SELECTION wins over whatever is under the pointer: the outline is drawn over
         // the preview, so its handles are what the author sees there. The eight regions and their
@@ -611,8 +687,8 @@ namespace Opaax::Editor
                 const TEditorRect<float> lRect = ResizeRect(m_PressRectPx, m_PreviewEdge, lTotal.x, lTotal.y, 1.f, 1.f);
 
                 const Bounds2D lTarget = Bounds2D::FromMinMax(
-                    lCanvas.ScreenToCanvas({ lRect.X, lRect.Y }),
-                    lCanvas.ScreenToCanvas({ lRect.X + lRect.Width, lRect.Y + lRect.Height }));
+                    PreviewToCanvas({ lRect.X, lRect.Y }),
+                    PreviewToCanvas({ lRect.X + lRect.Width, lRect.Y + lRect.Height }));
 
                 FitRect(lWidget->Rect, lTarget, lWidget->GetParent()->GetBounds());
                 lWidget->InvalidateLayout();
@@ -630,7 +706,7 @@ namespace Opaax::Editor
             if (!lArranged && (lStepPx.x != 0.f || lStepPx.y != 0.f))
             {
                 // Pixels → canvas units, Y flipped: the canvas is Y-up and the image is not.
-                const float lUnits = lCanvas.UnitsPerPixel();
+                const float lUnits = UnitsPerPreviewPixel();
                 lWidget->Rect.AnchoredPosition += Vector2F{ lStepPx.x * lUnits, -lStepPx.y * lUnits };
                 lWidget->InvalidateLayout();
                 m_bPreviewMoved = true;
@@ -678,19 +754,26 @@ namespace Opaax::Editor
         // A widget may sit partly off the canvas; its outline stops at the image like it does.
         lDraw->PushClipRect(lClipMin, lClipMax, true);
 
-        const auto lOutline = [&](const UIWidgetPath& InPath, const ImU32 InColor, const float InThickness)
+        const auto lRect = [&](const Bounds2D& InBounds, const ImU32 InColor, const float InThickness)
         {
-            UIWidget* const lWidget = InPath.empty() ? nullptr : lDoc.Resolve(InPath);
-            if (lWidget == nullptr) { return; }
-
             // Two corners through the one canvas→pixel rule; Y flips, so min/max are re-sorted.
-            const Vector2F lA = lCanvas.CanvasToScreen(lWidget->GetBounds().Min()) + InOrigin;
-            const Vector2F lB = lCanvas.CanvasToScreen(lWidget->GetBounds().Max()) + InOrigin;
+            const Vector2F lA = CanvasToPreview(InBounds.Min()) + InOrigin;
+            const Vector2F lB = CanvasToPreview(InBounds.Max()) + InOrigin;
 
             lDraw->AddRect(ImVec2(std::min(lA.x, lB.x), std::min(lA.y, lB.y)),
                            ImVec2(std::max(lA.x, lB.x), std::max(lA.y, lB.y)),
                            InColor, 0.f, 0, InThickness);
         };
+
+        const auto lOutline = [&](const UIWidgetPath& InPath, const ImU32 InColor, const float InThickness)
+        {
+            UIWidget* const lWidget = InPath.empty() ? nullptr : lDoc.Resolve(InPath);
+            if (lWidget != nullptr) { lRect(lWidget->GetBounds(), InColor, InThickness); }
+        };
+
+        // The SCREEN's edge — the layout target — under everything: zoomed out, it is what says
+        // where the game's window ends; zoomed in, it is off the image and costs nothing.
+        lRect(lCanvas.GetVisibleBounds(), IM_COL32(200, 200, 200, 110), 1.f);
 
         if (m_HoverPath != lDoc.SelectedPath())
         {
@@ -730,16 +813,50 @@ namespace Opaax::Editor
     TEditorRect<float> UICanvasPanel::SelectionRectPx() const
     {
         const EditorUICanvasDocument& lDoc    = m_Context.UICanvasDocument;
-        const UICanvas&               lCanvas = lDoc.GetCanvas();
         const UIWidget* const         lWidget = lDoc.SelectedWidget();
 
         if (lWidget == nullptr) { return {}; }
 
         // Two corners through the one canvas→pixel rule; Y flips, so min/max are re-sorted.
-        const Vector2F lA = lCanvas.CanvasToScreen(lWidget->GetBounds().Min());
-        const Vector2F lB = lCanvas.CanvasToScreen(lWidget->GetBounds().Max());
+        const Vector2F lA = CanvasToPreview(lWidget->GetBounds().Min());
+        const Vector2F lB = CanvasToPreview(lWidget->GetBounds().Max());
 
         return { std::min(lA.x, lB.x), std::min(lA.y, lB.y), std::fabs(lB.x - lA.x), std::fabs(lB.y - lA.y) };
+    }
+
+    // =============================================================================
+    // The view
+    // =============================================================================
+
+    CameraView UICanvasPanel::PreviewView() const noexcept
+    {
+        return CameraView{ m_View.GetPosition(), m_View.GetOrthoSize() };
+    }
+
+    Vector2F UICanvasPanel::PreviewToCanvas(const Vector2F& InLocalPx) const noexcept
+    {
+        return ScreenToWorld(PreviewView(), PreviewPx(), InLocalPx);
+    }
+
+    Vector2F UICanvasPanel::CanvasToPreview(const Vector2F& InCanvasPoint) const noexcept
+    {
+        return WorldToScreen(PreviewView(), PreviewPx(), InCanvasPoint);
+    }
+
+    float UICanvasPanel::UnitsPerPreviewPixel() const noexcept
+    {
+        return WorldPerPixel(PreviewView(), PreviewPx().y);
+    }
+
+    void UICanvasPanel::FitView()
+    {
+        m_View.FocusOn(m_Context.UICanvasDocument.GetCanvas().GetVisibleBounds(), PreviewPx());
+    }
+
+    void UICanvasPanel::ResetView()
+    {
+        // Half the reference height IS the canvas's own view (UI2): one canvas unit per image pixel.
+        m_View.Set({ 0.f, 0.f }, m_Context.UICanvasDocument.GetCanvas().GetReferenceHeight() * 0.5f);
     }
 
     void UICanvasPanel::Shutdown()

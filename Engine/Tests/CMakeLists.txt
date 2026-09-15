@@ -171,6 +171,10 @@ set(OPAAX_TEST_SOURCES
     # old ladder showed none of them. Both halves gated.
     Editor/UIWidgetDrawerTests.cpp
 
+    # UI U13. The designer's layout target: a named aspect is EXACT (16:9 is 1920x1080, never a
+    # rounded 1919), Free is the dock's own size. Header-only, ImGui-free.
+    Editor/UIPreviewAspectTests.cpp
+
     # NOTE: every quarantined suite now lives under Tests/Legacy/ with the code it exercises
     # (ARCHITECTURE.md X1) — ECS/*, Physics/CollisionProfile, Assets/AssetIdResolve and
     # Renderer/FontKerning. None are listed here; re-add live equivalents when the new world

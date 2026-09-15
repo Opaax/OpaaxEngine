@@ -4,9 +4,13 @@
 #include "Core/Maths/MathTypes.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
+#include "Editor/Camera/EditorCamera.h"      // the preview's view — the world viewport's camera, reused (U13)
 #include "Editor/EditorUICanvasDocument.h"   // UIWidgetPath
 #include "Editor/Panels/IEditorPanel.h"
 #include "Editor/UI/EditorRectGeometry.h"    // the grips: ERectEdge, TEditorRect
+#include "Editor/UI/UIPreviewAspect.h"       // the layout target, now that the view is not the whole canvas
+#include "Editor/Viewport/ViewportGestures.h" // CameraGesture — middle-drag pan, wheel zoom at the cursor
+#include "Renderer/CameraView.h"
 
 namespace Opaax
 {
@@ -100,6 +104,26 @@ namespace Opaax::Editor
         TEditorRect<float> SelectionRectPx() const;
 
         // =============================================================================
+        // The view — CAM2's one screen<->world rule, through the preview's camera, not the canvas's
+        // =============================================================================
+
+        /** The zoomed / panned view the image is rendered and read through (U13). */
+        CameraView PreviewView() const noexcept;
+
+        Vector2F PreviewToCanvas(const Vector2F& InLocalPx) const noexcept;
+        Vector2F CanvasToPreview(const Vector2F& InCanvasPoint) const noexcept;
+        float    UnitsPerPreviewPixel() const noexcept;
+
+        /** Frame the whole layout target with a margin — `F`, the toolbar's Fit. */
+        void FitView();
+
+        /** The canvas at 1:1 — reference pixels are image pixels, today's picture before U13. */
+        void ResetView();
+
+        /** The row above the image: the layout aspect, Fit, 1:1, and the zoom as a percentage. */
+        void DrawPreviewToolbar();
+
+        // =============================================================================
         // Override
         // =============================================================================
     public:
@@ -155,5 +179,16 @@ namespace Opaax::Editor
         /** The grip the press landed on (None = a move), and the selection's pixel rect at that press. */
         ERectEdge          m_PreviewEdge = ERectEdge::None;
         TEditorRect<float> m_PressRectPx;
+
+        // =============================================================================
+        // The view (U13) — measured in the ImGui pass, spent in OnPreRender (SEL3). View state,
+        // not document state: no undo step, not saved.
+        // =============================================================================
+        EditorCamera     m_View;
+        CameraGesture    m_ViewGesture;
+        EUIPreviewAspect m_Aspect      = EUIPreviewAspect::Free;
+        OpaaxString      m_ViewedPath;                // the document the view was seeded for
+        bool             m_bViewSeeded = false;
+        bool             m_bFitPending = false;   // F pressed during the draw; framed before the next render
     };
 }

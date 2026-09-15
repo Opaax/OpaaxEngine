@@ -706,11 +706,11 @@ namespace Opaax
         }
     }
 
-    void Engine::SubmitUICanvas(UICanvas& InCanvas, IRenderTarget* InTarget)
+    void Engine::SubmitUICanvas(UICanvas& InCanvas, IRenderTarget* InTarget, const CameraView* InView)
     {
         if (m_RendererManager != nullptr)
         {
-            m_RendererManager->SubmitUICanvas(InCanvas, InTarget);
+            m_RendererManager->SubmitUICanvas(InCanvas, InTarget, InView);
         }
     }
 

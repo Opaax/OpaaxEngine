@@ -121,8 +121,12 @@ namespace Opaax
          */
         void RenderCanvases(IRenderTarget& InTarget);
 
-        /** One canvas alone in InTarget, cleared first — the panel-preview path (**UI14**). */
-        void RenderCanvasPass(UICanvas& InCanvas, IRenderTarget& InTarget, ELoadOp InLoadOp);
+        /**
+         * One canvas into InTarget. With InView the submitter laid the canvas out itself and the
+         * pass only projects through that view — the designer's zoom (**UI14**); without, the target
+         * sizes the canvas and the view is the canvas's own.
+         */
+        void RenderCanvasPass(UICanvas& InCanvas, IRenderTarget& InTarget, ELoadOp InLoadOp, const CameraView* InView = nullptr);
 
         /**
          * Say ONCE that a frame needed more than one pass, naming the count.
@@ -240,8 +244,9 @@ namespace Opaax
          * @param InCanvas BORROWED for the frame; the submitter owns it (I5).
          * @param InTarget Null = over every view that opted into UI. Named = that target alone,
          *   with its own Clear pass — an editor panel previewing one document (**UI14**).
+         * @param InView A named target's own way of looking (zoomed, panned); null = the canvas's.
          */
-        void SubmitUICanvas(UICanvas& InCanvas, IRenderTarget* InTarget = nullptr);
+        void SubmitUICanvas(UICanvas& InCanvas, IRenderTarget* InTarget = nullptr, const CameraView* InView = nullptr);
 
         /**
          * Create an offscreen framebuffer on the render core's device (F2a). The natural companion to
@@ -320,6 +325,8 @@ namespace Opaax
         {
             UICanvas*      Canvas = nullptr;   // non-owning; the submitter owns it (I5)
             IRenderTarget* Target = nullptr;   // null = the over-the-world path
+            CameraView     View;               // meaningful only with bHasView — a named target's own look
+            bool           bHasView = false;
         };
 
         /** This frame's canvases, same lifetime as the views above. */

@@ -149,8 +149,12 @@ namespace Opaax
          * @param InTarget WHERE it draws. Null = over every view that opted into UI (the game).
          *   Named = that target ALONE, cleared first — an editor panel previewing its own document
          *   (**UI14**), which must not receive the game's canvases nor donate its own to the world.
+         * @param InView HOW a named target looks at it: a zoomed / panned designer view. Null = the
+         *   canvas's own (origin-centred, the reference height tall — the game's). With a view the
+         *   submitter has laid the canvas out itself; the pass does not size it to the target.
          */
-        virtual void SubmitUICanvas(UICanvas& InCanvas, IRenderTarget* InTarget = nullptr) = 0;
+        virtual void SubmitUICanvas(UICanvas& InCanvas, IRenderTarget* InTarget = nullptr,
+                                    const CameraView* InView = nullptr) = 0;
         
         /**
          * The CALLER owns the result and must release it while the engine — and its GPU context — is still alive. 
