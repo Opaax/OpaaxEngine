@@ -2719,3 +2719,30 @@ not repeat the base's, so `UIText`, `UIImage` and `UIButton` had **no editable R
   there and segfaulted on the first launch — caught by the smoke run, not by the build. Reach the
   engine through the service locator at that seam, and re-read the registry header's own warning
   ("registration STORES ONLY; nothing is constructed") before adding anything to it.
+
+## L97 — A one-line fix they named is not a decision to wait for; and a value they wired must be traced to the screen (2026-09-15)
+
+**What happened (UI block close).** Two things, both about reading them. (1) At U4 close they
+reported the viewport picking during PIE and named two shapes in one breath — *"disable selection
+viewport OR as config"*. I filed it as *"theirs to pick — do not choose for them"* and left it
+across TWO hand-offs, until they restated it flat: *"The PIE selection still there."* The first
+shape was one line (`Measure(hovered && PIE.IsEdit())`), the second ~10; holding a one-line fix
+hostage to a choice cost them a round and me nothing to build. (2) They committed `a1bce9a`
+mid-task — `DragStep` on the property meta and `SetRange(0,1).SetDragStep(0.01)` on a GROUP
+property — and the fold DROPPED it: a group's meta reached the tooltip and nothing else, so their
+line did nothing and read as done. Their next message was *"Editing hud in ui panel more easier"*.
+
+**Rules for next time:**
+- **"A or B" from them, where A is a line and B is machinery, is an instruction to build A and
+  price B** — not a fork to hold open. "Do not choose for them" is for designs whose two shapes
+  cost the same or change the file format; it is not for a gate they already asked for twice.
+  If the cheap one is wrong they will say so in one line ([[L71]]'s rule, reversed).
+- **When they land a commit on a seam, trace the value to the widget before the next hand-off.**
+  `git log` at the top of every turn; for anything of theirs touching reflection, drawers or a
+  format, follow it end-to-end. A line that silently does nothing is worse than a missing one.
+  The fix belongs in MY next commit, named plainly ("your line starts working"), never an amend.
+- **A "submit while X" design is one frame late whenever the request can arrive after the
+  submit.** U6's cover: the tenant submits in its tick, the world ticks after it, and its own
+  button fires mid-route — so "submit while loading" misses the frame that asked in both cases.
+  A FLAG read at draw time (UI3's rule, already there) is the shape; found by tracing the frame
+  before writing code, which is the cheap time to find it.

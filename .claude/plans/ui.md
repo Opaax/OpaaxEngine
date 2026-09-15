@@ -1,4 +1,11 @@
-# UI — record (branch `User_Interface`, started 2026-09-14)
+# UI — record (branch `User_Interface`, 2026-09-14 → 2026-09-15) — CLOSED, user-verified
+
+> **Closed 2026-09-15** on *"close the block"*, after *"eye gate good. pie selection fixed, next level
+> works."* Every seeded step U1–U6 landed and was eye-gated; 12 step commits + 2 fixes + their own
+> `a1bce9a`. **896 cases / 9548 assertions / 7 skipped**, `UI widget drawers: 6 for 6`. Durable:
+> **§UI** (UI1–UI21), IM6/MV1/GI2/TX10/F4d/F5 amended, [[L95]]–[[L97]]. **Still unseen by anyone:**
+> a swap started inside PIE · two masks nested · the Camera Preview staying UI-free. **Growth
+> points** are listed under UI21 in the contract — theirs to order; none is started.
 
 | Step | Commit | What landed |
 |---|---|---|
