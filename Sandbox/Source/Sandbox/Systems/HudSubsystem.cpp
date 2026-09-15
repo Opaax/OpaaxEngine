@@ -14,9 +14,9 @@
 #include "Engine/Subsystems/Resources/ResourceManager.h"
 #include "Engine/Subsystems/Resources/Types/UI/UICanvasResource.h"
 #include "Engine/UI/UISubsystem.h"
+#include "UI/UIBinding.h"
 #include "UI/UICanvas.h"
-#include "UI/Widgets/UIImage.h"
-#include "UI/Widgets/UIText.h"
+#include "UI/UICanvasFile.h"
 #include "World/Components/MoverComponent.h"
 #include "World/Systems/WorldContext.h"
 #include "World/World.h"
@@ -31,10 +31,9 @@ namespace Sandbox
 
         const OpaaxStringID kJumpAction = OPAAX_ID("Jump");
 
-        /** The authored tree, and the two widgets this drives inside it. */
+        /** The authored tree, and the source name its bindings pull from. */
         constexpr const char* kHudAsset  = "UI/Hud.opaaxui";
-        constexpr const char* kJumpsName = "Jumps";
-        constexpr const char* kSpeedName = "SpeedFill";
+        const OpaaxStringID   kHudSource = OPAAX_ID("Hud");
 
         /** MoveModeData's default MaxSpeed — the bar is full at it. A constant until a HUD reads tunings. */
         constexpr float kFullSpeed = 400.f;
@@ -77,45 +76,29 @@ namespace Sandbox
         UICanvas& lCanvas = m_Context->UI->GetCanvas();
         m_Root = lCanvas.Root().AddChild(Move(lTree));
 
-        // Bound BY NAME out of the authored tree (UI13). A rename is a quiet HUD, so it says so.
-        m_Jumps = static_cast<UIText*>(m_Root->FindByName(OpaaxString(kJumpsName)));
-        m_Speed = static_cast<UIImage*>(m_Root->FindByName(OpaaxString(kSpeedName)));
-
-        if (m_Jumps == nullptr || m_Speed == nullptr)
-        {
-            OPAAX_LOG(LogHud, Error, "HUD loaded but '{}' or '{}' is not in it — that piece stays static.",
-                      kJumpsName, kSpeedName);
-        }
+        // The model is the ONE thing this owns that the tree reads; which widget shows which field
+        // is the asset's business (UI24). Removed in Shutdown, before the model dies.
+        lCanvas.Bindings().Add(kHudSource, MakeBindingReader(m_Model));
 
         if (m_Context->Actions != nullptr)
         {
             m_Context->Actions->Bind(kJumpAction, EInputTrigger::Started, this, &HudSubsystem::OnJump);
         }
 
-        OPAAX_LOG(LogHud, Info, "HUD loaded '{}' — {} widget(s), reference height {}, Jumps {}, SpeedFill {}",
-                  kHudAsset, UICanvasFile::CountWidgets(*m_Root), lReferenceHeight,
-                  m_Jumps != nullptr ? "bound" : "MISSING", m_Speed != nullptr ? "bound" : "MISSING");
+        OPAAX_LOG(LogHud, Info, "HUD loaded '{}' — {} widget(s), reference height {}, source '{}' registered ({} sources on the canvas)",
+                  kHudAsset, UICanvasFile::CountWidgets(*m_Root), lReferenceHeight, kHudSource, lCanvas.Bindings().Count());
         return true;
     }
 
     void HudSubsystem::Update(double)
     {
-        if (m_Speed == nullptr)
-        {
-            return;
-        }
-
         float lFastest = 0.f;
         m_Context->OwningWorld.Each<MoverComponent>([&lFastest](EntityID, const MoverComponent& InMover)
         {
             lFastest = std::max(lFastest, glm::length(InMover.Velocity));
         });
 
-        const float lAmount = std::clamp(lFastest / kFullSpeed, 0.f, 1.f);
-        if (lAmount != m_Speed->FillAmount)
-        {
-            m_Speed->SetFillAmount(lAmount);
-        }
+        m_Model.Speed = std::clamp(lFastest / kFullSpeed, 0.f, 1.f);
     }
 
     void HudSubsystem::Shutdown()
@@ -125,28 +108,30 @@ namespace Sandbox
             m_Context->Actions->UnbindAll(this);
         }
 
-        // The canvas outlives this world (GI1); the HUD does not.
-        if (m_Root != nullptr && m_Context->UI != nullptr)
+        // The canvas outlives this world (GI1); the HUD and its source do not.
+        if (m_Context->UI != nullptr)
         {
-            m_Context->UI->GetCanvas().Root().RemoveChild(*m_Root);
+            m_Context->UI->GetCanvas().Bindings().Remove(kHudSource);
+
+            if (m_Root != nullptr)
+            {
+                m_Context->UI->GetCanvas().Root().RemoveChild(*m_Root);
+            }
         }
 
-        m_Root  = nullptr;
-        m_Jumps = nullptr;
-        m_Speed = nullptr;
+        m_Root = nullptr;
 
-        OPAAX_LOG(LogHud, Info, "HUD shutdown — {} jump(s) counted", m_JumpCount);
+        OPAAX_LOG(LogHud, Info, "HUD shutdown — {} jump(s) counted", m_Model.Jumps);
     }
 
     void HudSubsystem::OnJump(const InputActionValue& /*InValue*/)
     {
         // Bindings outlive worlds (IM8): the outgoing world's HUD hears this too.
-        if (!m_Context->OwningWorld.IsActive() || m_Jumps == nullptr)
+        if (!m_Context->OwningWorld.IsActive())
         {
             return;
         }
 
-        ++m_JumpCount;
-        m_Jumps->SetText(OpaaxString("Jumps: ") + OpaaxString::FromUInt(m_JumpCount));
+        ++m_Model.Jumps;
     }
 }

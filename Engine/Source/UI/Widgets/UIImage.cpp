@@ -4,6 +4,7 @@
 
 #include "Core/Reflection/OpaaxEnumJson.h"
 #include "RHI/Texture.h"
+#include "UI/UIBinding.h"
 #include "UI/UISlice.h"
 
 namespace Opaax
@@ -63,28 +64,55 @@ namespace Opaax
         InvalidateContent();
     }
 
+    void UIImage::OnPullBindings(UIBindingTable& InBindings)
+    {
+        if (FillBinding.IsEmpty())
+        {
+            return;
+        }
+
+        UIBoundValue lValue;
+        if (!InBindings.Read(FillBinding, lValue))
+        {
+            return;
+        }
+
+        if (!m_bFillBound)
+        {
+            m_bFillBound = true;
+            OPAAX_LOG(LogUIBinding, Trace, "'{}' bound '{}' — fill {}", Name.CStr(), FillBinding.CStr(), lValue.ToFloat());
+        }
+
+        if (lValue.ToFloat() != FillAmount)
+        {
+            SetFillAmount(lValue.ToFloat());
+        }
+    }
+
     void UIImage::SaveFields(nlohmann::json& InOutJson) const
     {
         UIWidget::SaveFields(InOutJson);
 
         // The PATH is written; the runtime pointer beside it is not, because it is a borrowed
         // handle that only code can hand over (**UI17**).
-        InOutJson["Color"]      = Color;
-        InOutJson["Texture"]    = Texture;
-        InOutJson["Border"]     = Border;
-        InOutJson["Fill"]       = Fill;
-        InOutJson["FillAmount"] = FillAmount;
+        InOutJson["Color"]       = Color;
+        InOutJson["Texture"]     = Texture;
+        InOutJson["Border"]      = Border;
+        InOutJson["Fill"]        = Fill;
+        InOutJson["FillAmount"]  = FillAmount;
+        InOutJson["FillBinding"] = FillBinding;
     }
 
     void UIImage::LoadFields(const nlohmann::json& InJson)
     {
         UIWidget::LoadFields(InJson);
 
-        Color      = InJson.value("Color", Color);
-        Texture    = InJson.value("Texture", Texture);
-        Border     = InJson.value("Border", Border);
-        Fill       = InJson.value("Fill", Fill);
-        FillAmount = InJson.value("FillAmount", FillAmount);
+        Color       = InJson.value("Color", Color);
+        Texture     = InJson.value("Texture", Texture);
+        Border      = InJson.value("Border", Border);
+        Fill        = InJson.value("Fill", Fill);
+        FillAmount  = InJson.value("FillAmount", FillAmount);
+        FillBinding = InJson.value("FillBinding", FillBinding);
     }
 
     void UIImage::Rebuild(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads)

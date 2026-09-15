@@ -5,6 +5,7 @@
 #include "Core/Maths/Bounds2D.h"
 #include "Core/Maths/MathTypes.h"
 #include "Renderer/CameraView.h"
+#include "UI/UIBinding.h"
 #include "UI/UIEvents.h"
 #include "UI/UIWidget.h"
 
@@ -91,10 +92,17 @@ namespace Opaax
         const UIWidget& Root() const noexcept { return *m_Root; }
 
         // =============================================================================
+        // Bindings — the named sources this canvas's widgets pull from (UI24)
+        // =============================================================================
+    public:
+        UIBindingTable&       Bindings()       noexcept { return m_Bindings; }
+        const UIBindingTable& Bindings() const noexcept { return m_Bindings; }
+
+        // =============================================================================
         // Frame
         // =============================================================================
     public:
-        /** Resolve and rebuild what is dirty — one walk, once a frame. */
+        /** Pull the bindings, then resolve and rebuild what is dirty — one walk, once a frame. */
         UICanvasStats Update(const UIBuildContext& InContext = {});
 
         /**
@@ -145,6 +153,7 @@ namespace Opaax
         bool     m_bVisibleChanged = true;
 
         TUniquePtr<UIWidget> m_Root;
+        UIBindingTable       m_Bindings;
         mutable bool         m_bWarnedOrderOverflow = false;
 
         UIWidget*        m_Hovered      = nullptr;   // non-owning

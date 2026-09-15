@@ -43,6 +43,10 @@ namespace Opaax
     //   The face is named by ASSET PATH and resolved through the host (IUIAssetProvider) at
     //   rebuild — this module cannot name a resource. An atlas still uploading re-arms the widget
     //   for the next frame; a face the host cannot resolve draws nothing.
+    //
+    //   BOUND, the authored Text is the FORMAT (UI24): "Jumps: {}" with Binding "Hud.Jumps" shows
+    //   the value in the braces; a Text with no braces is replaced whole. Unbound (or unresolved),
+    //   it shows as written — which is what the editor's preview shows, having no sources.
     // =============================================================================
     class OPAAX_API UIText final : public UIWidget
     {
@@ -51,6 +55,8 @@ namespace Opaax
         // =============================================================================
     public:
         OpaaxString Text;
+        /** "Source.Property" to pull the text from each frame; empty = Text is what shows. */
+        OpaaxString Binding;
         /** A face's asset path. TYPED, so the editor gives it a `.ttf` drop target (**UI19**). */
         TResourcePath<FontFaceResource> Font;
         float       Size            = 32.f;
@@ -63,6 +69,7 @@ namespace Opaax
 
         OPAAX_PROPERTIES(UIText,
                          OPAAX_PROP(Text).SetFlags(EPropertyFlags::Multiline),
+                         OPAAX_PROP(Binding).SetTooltip("Source.Property, pulled each frame; Text is then the format and {} is the value."),
                          OPAAX_PROP(Font),
                          OPAAX_PROP(Size).SetRange(1.f, 512.f),
                          OPAAX_PROP(Color),
@@ -87,8 +94,20 @@ namespace Opaax
         void SaveFields(nlohmann::json& InOutJson) const override;
         void LoadFields(const nlohmann::json& InJson) override;
 
+        void OnPullBindings(UIBindingTable& InBindings) override;
+
+        /** What is drawn: the bound, formatted text when a binding resolved, else Text. */
+        const OpaaxString& GetDisplayText() const noexcept { return m_bBound ? m_BoundText : Text; }
+
     protected:
         void Rebuild(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads) override;
+
+        // =============================================================================
+        // Members
+        // =============================================================================
+    private:
+        OpaaxString m_BoundText;        // the last formatted value
+        bool        m_bBound = false;   // whether a pull has ever resolved
     };
 }
 

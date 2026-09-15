@@ -150,6 +150,9 @@ set(OPAAX_TEST_SOURCES
     # U9. The container owns its children's rects: where each slot lands, a hidden child keeping
     # its slot, and the up-propagation numbers (a child's size re-lays the stack, its content does not).
     UI/UIStackTests.cpp
+    # U10. A widget pulls a named value from a reflected object: the reader by name, the table's
+    # "Source.Property", and the number that matters — a value that HOLDS rebuilds nothing.
+    UI/UIBindingTests.cpp
 
     # Editor-side, and the FIRST of its kind — header-only editor types only (see the include dir
     # below). ③'s gizmo delta math, pinned after a scale bug that only showed away from (0,0).

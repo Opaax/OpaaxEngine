@@ -53,6 +53,8 @@ namespace Opaax
         LinearColor Color;
         EUIFill     Fill       = EUIFill::None;
         float       FillAmount = 1.f;
+        /** "Source.Property" to pull FillAmount from each frame (a 0..1 number); empty = authored (UI24). */
+        OpaaxString FillBinding;
 
         /** A texture's asset path. TYPED, so a `.png` can be DROPPED on it (**UI19**). */
         TResourcePath<TextureResource> Texture;
@@ -71,7 +73,8 @@ namespace Opaax
                          OPAAX_PROP(Texture),
                          OPAAX_PROP(Border).SetDragStep(1.f),   // pixels; flows to the four edges
                          OPAAX_PROP(Fill),
-                         OPAAX_PROP(FillAmount).SetRange(0.f, 1.f))
+                         OPAAX_PROP(FillAmount).SetRange(0.f, 1.f),
+                         OPAAX_PROP(FillBinding).SetTooltip("Source.Property, pulled each frame into FillAmount."))
 
         void SetTexturePath(const OpaaxString& InAssetPath);
 
@@ -97,6 +100,8 @@ namespace Opaax
         void SaveFields(nlohmann::json& InOutJson) const override;
         void LoadFields(const nlohmann::json& InJson) override;
 
+        void OnPullBindings(UIBindingTable& InBindings) override;
+
     protected:
         void Rebuild(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads) override;
 
@@ -104,7 +109,8 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        ITexture2D* m_Texture = nullptr;
+        ITexture2D* m_Texture    = nullptr;
+        bool        m_bFillBound = false;   // whether a pull has ever resolved — one log line
     };
 }
 

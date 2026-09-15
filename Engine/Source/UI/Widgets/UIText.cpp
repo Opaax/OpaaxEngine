@@ -2,6 +2,7 @@
 
 #include "Core/Reflection/OpaaxEnumJson.h"
 #include "Renderer/Text/Text2D.h"
+#include "UI/UIBinding.h"
 
 namespace Opaax
 {
@@ -44,11 +45,41 @@ namespace Opaax
     // UIWidget
     // =============================================================================
 
+    void UIText::OnPullBindings(UIBindingTable& InBindings)
+    {
+        if (Binding.IsEmpty())
+        {
+            return;
+        }
+
+        UIBoundValue lValue;
+        if (!InBindings.Read(Binding, lValue))
+        {
+            return;   // warned once by the table; the authored text stands
+        }
+
+        OpaaxString lText = FormatBoundText(Text, lValue.ToText());
+        if (m_bBound && lText == m_BoundText)
+        {
+            return;   // the value held: nothing to rebuild
+        }
+
+        if (!m_bBound)
+        {
+            OPAAX_LOG(LogUIBinding, Trace, "'{}' bound '{}' — shows \"{}\"", Name.CStr(), Binding.CStr(), lText.CStr());
+        }
+
+        m_BoundText = Move(lText);
+        m_bBound    = true;
+        InvalidateContent();
+    }
+
     void UIText::SaveFields(nlohmann::json& InOutJson) const
     {
         UIWidget::SaveFields(InOutJson);
 
         InOutJson["Text"]            = Text;
+        InOutJson["Binding"]         = Binding;
         InOutJson["Font"]            = Font;
         InOutJson["Size"]            = Size;
         InOutJson["Color"]           = Color;
@@ -64,6 +95,7 @@ namespace Opaax
         UIWidget::LoadFields(InJson);
 
         Text            = InJson.value("Text", Text);
+        Binding         = InJson.value("Binding", Binding);
         Font            = InJson.value("Font", Font);
         Size            = InJson.value("Size", Size);
         Color           = InJson.value("Color", Color);
@@ -76,7 +108,9 @@ namespace Opaax
 
     void UIText::Rebuild(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads)
     {
-        if (Text.IsEmpty() || Font.IsEmpty() || InContext.Assets == nullptr)
+        const OpaaxString& lText = GetDisplayText();
+
+        if (lText.IsEmpty() || Font.IsEmpty() || InContext.Assets == nullptr)
         {
             return;
         }
@@ -108,7 +142,7 @@ namespace Opaax
         const Uint64 lFirst = OutQuads.size();
 
         // Text2D anchors at the TOP-LEFT and walks down; the rect's top-left is the origin.
-        const Vector2F lExtent = Text2D::Layout(Text.CStr(), { lBounds.Min().x, lBounds.Max().y }, lFace, lParams,
+        const Vector2F lExtent = Text2D::Layout(lText.CStr(), { lBounds.Min().x, lBounds.Max().y }, lFace, lParams,
             [this, &OutQuads, &lFace](const TextQuad& InQuad)
             {
                 UIQuad& lQuad = OutQuads.emplace_back();

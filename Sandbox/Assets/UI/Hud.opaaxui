@@ -78,6 +78,7 @@
                         "bVisible": true
                     },
                     {
+                        "Binding": "Hud.Jumps",
                         "Color": {
                             "w": 1.0,
                             "x": 1.0,
@@ -111,7 +112,7 @@
                             }
                         },
                         "Size": 40.0,
-                        "Text": "Jumps: 0",
+                        "Text": "Jumps: {}",
                         "Type": "UIText",
                         "VAlign": "Top",
                         "bHitTestable": true,
@@ -142,6 +143,7 @@
                                 },
                                 "Fill": "Horizontal",
                                 "FillAmount": 0.0,
+                                "FillBinding": "Hud.Speed",
                                 "Name": "SpeedFill",
                                 "Rect": {
                                     "AnchorMax": {

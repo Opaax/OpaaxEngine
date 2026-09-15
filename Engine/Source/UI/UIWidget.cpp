@@ -233,6 +233,16 @@ namespace Opaax
         }
     }
 
+    void UIWidget::PullBindings(UIBindingTable& InBindings)
+    {
+        OnPullBindings(InBindings);
+
+        for (const TUniquePtr<UIWidget>& lChild : m_Children)
+        {
+            lChild->PullBindings(InBindings);
+        }
+    }
+
     UIWidget* UIWidget::HitTest(const Vector2F& InPoint)
     {
         if (!bVisible)

@@ -18,6 +18,7 @@ namespace Opaax
 {
     class  UICanvas;
     struct UICanvasStats;
+    class  UIBindingTable;
 
     // =============================================================================
     // UIWidget — one node of a canvas tree. Knows nothing about the World: a canvas is an object
@@ -145,6 +146,13 @@ namespace Opaax
         virtual EUIReply OnKeyEvent(const UIKeyEvent& InEvent)         { (void)InEvent; return EUIReply::Unhandled; }
 
         // =============================================================================
+        // Bindings — a widget with a bound field reads it here, once a frame, before the walk (UI24)
+        // =============================================================================
+    public:
+        /** Read what my binding fields name and invalidate ONLY if it differs from what I show. */
+        virtual void OnPullBindings(UIBindingTable& InBindings) { (void)InBindings; }
+
+        // =============================================================================
         // Invalidation
         // =============================================================================
     public:
@@ -209,6 +217,9 @@ namespace Opaax
 
         /** The deepest visible, hit-testable descendant (or me) containing InPoint; top-most first. */
         UIWidget* HitTest(const Vector2F& InPoint);
+
+        /** OnPullBindings on me, then every descendant. */
+        void PullBindings(UIBindingTable& InBindings);
 
         void MarkSubtreeUp();
         void SetCanvasRecursive(UICanvas* InCanvas);

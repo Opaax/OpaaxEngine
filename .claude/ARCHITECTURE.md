@@ -4131,7 +4131,7 @@ order is Layer/OrderInLayer) · dropping a PREFAB onto an entity row to instanti
 
 ---
 
-## UI — The user interface (U1 `276b905` → U6 `976b5b0`, 2026-09-14/15; block CLOSED 2026-09-15, user-verified — record `.claude/plans/ui.md`)
+## UI — The user interface (U1 `276b905` → U6 `976b5b0`, 2026-09-14/15, user-verified; U7–U10 2026-09-15, their four growth points — record `.claude/plans/ui.md`)
 
 **UI1 — THE UI IS DECOUPLED FROM THE WORLD.** `Engine/Source/UI/` depends on `Core/` and
 `Renderer/` (and `RHI/ITexture2D` as a borrowed pointer) and never on `World/`, `Engine/`, or
@@ -4537,7 +4537,40 @@ Y-up; `Stretch` fills), `bFitContent`.
   Resume / Next Level — hung under the code-built `PauseMenuPanel` (the Escape handler), the two
   buttons bound by name. ~40 lines of builders gone; the menu is edited in the panel like the HUD.
 
-**Growth points, named and not built:** rich text as `UIText` runs · **keyboard/gamepad FOCUS
+**UI24 — A WIDGET PULLS A NAMED VALUE FROM A VIEW MODEL, AND THE BIND SLOT IS PER PROPERTY**
+(U10, the seed's `UIBinding`). MVVM's data half without its notification half.
+- **The source is any `CReflected` object the game owns** — `HudModel { Jumps, Speed }` — read by
+  property NAME through the reflection that already existed: `ReadBoundProperty<T>` folds
+  `T::GetProperties()` and answers bool / integer / float / `OpaaxString`; a Vector or a nested
+  group is "not readable" and a binding to it is refused loudly. `MakeBindingReader(model)` is a
+  BORROWED closure — whoever registers it removes it before the model dies (the HUD does, in
+  `Shutdown`, before its own `RemoveChild`).
+- **`UICanvas::Bindings()` is the table** (`Add` / `Remove` / `Read("Source.Property")`), on the
+  canvas so it is headless-testable and so the loading canvas takes a progress source the same way
+  the day async lands. An unresolvable path warns ONCE — a misspelling in a `.opaaxui` is one log
+  line, not sixty a second — and the widget keeps its authored value.
+- **The pull is a poll, and it is the one UI3 allows:** at the top of `Update`, a non-virtual walk
+  calls `OnPullBindings` on every widget; a widget with a bound field reads it and invalidates
+  ONLY if it differs from what it shows. A held value is 0 layouts / 0 rebuilds; a canvas with no
+  sources (the editor's document) skips the walk. Change notification is what this replaces at
+  HUD scale, and a HUD is the scale it is built for.
+- **One slot per bindable property, on the widget that owns it** — UMG's shape, not a
+  `TDynArray<UIBinding>` on the base: `UIText::Binding` (the authored `Text` is then the FORMAT,
+  `{}` the value, and a Text with no braces is replaced whole) and `UIImage::FillBinding`. Two
+  `OpaaxString` fields the existing drawer already shows; the generic list would have needed an
+  array drawer that does not exist and a by-name WRITE into the widget, with nowhere natural for
+  the format. The next bindable property costs one field.
+- **The format is never overwritten.** `UIText` keeps `Text` as authored and draws `m_BoundText`
+  (`GetDisplayText`), so a Save writes `"Jumps: {}"` and the panel — a canvas with no sources —
+  previews the format. The first resolve traces `'Jumps' bound 'Hud.Jumps' — shows "Jumps: 0"`
+  ([[L15]]: the success branch, once).
+- *Dogfood:* `HudSubsystem` names no widget. It registers `"Hud"`, writes `m_Model`, and
+  `Hud.opaaxui` says `Binding = Hud.Jumps` / `FillBinding = Hud.Speed`. `FindByName`, both widget
+  pointers and the "MISSING" branch are gone.
+
+**Growth points, named and not built:** rich text as `UIText` runs · a format spec beyond `{}` ·
+`UIBinding` onto more than Text and Fill (a Color, a visibility — one field each, UI24) ·
+**keyboard/gamepad FOCUS
 navigation** (deferred by them at U3 close: *"focus will be done with gamepad or when need for
 keyboard"*; `SetFocus` and key bubbling are already in) · cursor lock/hide beyond "shown" ·
 pausing the world from a menu (WS8's gate is the editor's PIE pause; theirs to design) · a

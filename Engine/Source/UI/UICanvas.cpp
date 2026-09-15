@@ -126,6 +126,14 @@ namespace Opaax
     {
         UICanvasStats lStats;
 
+        // The pull is a poll by design — the one the seed allows, because a widget invalidates
+        // only when the value it read differs from what it shows. A canvas with no sources (the
+        // editor's document) skips the walk entirely.
+        if (m_Bindings.Count() > 0)
+        {
+            m_Root->PullBindings(m_Bindings);
+        }
+
         m_Root->UpdateTree(m_VisibleBounds, nullptr, m_bVisibleChanged, InContext, lStats);
         m_bVisibleChanged = false;
 
