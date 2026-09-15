@@ -2746,3 +2746,29 @@ line did nothing and read as done. Their next message was *"Editing hud in ui pa
   button fires mid-route — so "submit while loading" misses the frame that asked in both cases.
   A FLAG read at draw time (UI3's rule, already there) is the shape; found by tracing the frame
   before writing code, which is the cheap time to find it.
+
+## L98 — State a WORLD registers on a tier that OUTLIVES worlds is gated at the swap, and the swap harness already existed (2026-09-15)
+
+**What happened (UI U10 close).** The binding worked on the first map and went dead after a level
+swap. `Engine::OpenLevel` creates the new world BEFORE destroying the old (deliberately — no frame
+without a world), so the new HUD's `Bindings().Add("Hud")` replaced the old reader, and the old
+HUD's `Shutdown` then removed BY NAME — taking the new world's source with it. The pull resolved to
+nothing, the widget kept its authored `Jumps: {}`, and they spent a round changing the placeholder.
+My U10 gate was a boot smoke of ONE world (`0 jump(s)`, no swap) plus headless tests that construct
+one table and one owner. Nothing I ran could have seen two owners of one key overlapping — and
+U6 had built the exact instrument for it four commits earlier: a throwaway `RequestOpenLevel` at
+frame 60 from the world tick ([[L81]]). Running it once would have shown the `[UIBinding]` warning.
+
+**Rules for next time:**
+- **Anything a WORLD subsystem registers on a GAMEINSTANCE tier (a canvas, a mapping context, a
+  binding source, a pointer) has a swap case, and the swap OVERLAPS: new-Startup, then
+  old-Shutdown.** Ask, before the gate: "what does the old world's Shutdown do to the new world's
+  registration?" If the answer is "removes it by the same key", the key is not the identity — a
+  handle is (**MV4**'s shape: two lifetimes, one key, entt-style reuse).
+- **A feature whose owner is world-tier is not gated until it has survived a level swap in the
+  real app.** The U6 harness (a request from the world tick at frame N) costs ten lines and one
+  smoke; the second `'bound'` trace line after the old `HUD shutdown` IS the gate. Keep it in the
+  L81 toolbox beside "keep the numbers, remove, re-smoke".
+- **Log the success branch ONCE PER OWNER, not once per process** ([[L15]] sharpened): the
+  first-resolve trace is what made the swap readable in the log — new HUD `.043`, old shutdown
+  `.055`, new HUD's bind `.059`. A "bound" line that fired only once per run would have hidden it.
