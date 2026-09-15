@@ -4420,8 +4420,43 @@ from their eyes: *"Cannot drag drop texture font and all other"*, *"guard invert
   Clamped in the ONE function every rect resolves through; only the INVERSION, since anchors
   outside 0..1 are legitimate. No log — `ResolveRect` is pure and runs per widget per layout.
 
-**Growth points, named and not built:** **9-slice `Sliced` images** and **`UISafeArea`** (U5b —
-split out by them so the renderer change landed alone) · the deferred `OpenLevel`
+**UI20 — 9-SLICE IS A BORDER, AND THE SAFE AREA IS A CONTAINER** (U5b, the two they split out of
+U5 so the renderer change landed alone). Neither touches the renderer: both are RECT → QUADS
+geometry, which is the half of the UI that is pure — so both are gated headless, the 9-slice
+against a texture SIZE rather than a texture.
+- **THERE IS NO `Sliced` MODE.** `UIImage::Border` is a `UIMargin` in TEXTURE PIXELS, and a
+  non-zero border on a texture IS sliced; all-zero is the single quad U1 shipped, bit for bit. A
+  mode enum would have to be kept in step with a border that already says everything (Unity carries
+  both because its border lives on the SPRITE asset; here it lives on the widget). A border with no
+  texture is ignored — it is a statement about art.
+- **The UVs keep the authored border; the GEOMETRY is fitted to the rect.** A rect narrower than
+  `Left + Right` shrinks both proportionally (Unity's rule), so a squeezed widget compresses its
+  corner art instead of overlapping its corners and inverting its middle. A degenerate row or
+  column is SKIPPED, so a left/right-only border is 3 quads, not 9 with 6 empties.
+- **THE FILL IS NOW A CLIP, so fill and slice COMPOSE** instead of excluding each other (Unity
+  makes Filled and Sliced different Image types). `ClipQuadsTo` cuts bounds and UVs by the same
+  fraction and drops what falls outside, over one quad or nine alike — a filled 9-slice bar keeps
+  its left cap whole, cuts the middle and loses the right cap. The pre-existing fill case was the
+  regression gate and did not move.
+- **`UISafeArea` is a CONTAINER whose bounds are its own rect minus the insets**, Unreal's SafeZone
+  and the seed's call (*"fewer concepts than a flag on every widget"*). It needed exactly ONE new
+  seam: `UIWidget::ResolveBounds`, a protected virtual defaulting to `ResolveRect`. Its bounds ARE
+  the inset rect, so children, the hit-test and the preview cannot disagree about where safe is.
+- **THE INSETS ARE FRACTIONS**, 0.05 per edge by default — the 5% title-safe convention, and the
+  reason it adapts: a fraction is the same band on 16:9 and 21:9, where an absolute inset would be
+  a shrinking share of a widening screen (their *"adapting to all screen even wide"*). It is also
+  the one widget that starts STRETCHED rather than a 100x100 box, because one that covers less than
+  its parent cannot measure its parent's edges. Both consumers sanitize what they read — a negative
+  inset is no inset, and a pair that would swallow the rect is fitted — since a hand-edited
+  `.opaaxui` is not the inspector (**UI19**'s lesson).
+- **The format did not change.** Both fields read through `_WITH_DEFAULT`, so a `.opaaxui` written
+  before U5b takes a zero border and is untouched; `UI_FORMAT_VERSION` stays 1.
+- *Named, not built:* a PLATFORM-reported safe area (a notch, an overscan setting) — the canvas
+  would carry the device insets and the widget take the max of the two; there is no platform to ask
+  today, and a route with no caller is what **L23** is about. Also a `PixelsPerUnitMultiplier` on
+  the border, Unity's knob for art authored at another density.
+
+**Growth points, named and not built:** the deferred `OpenLevel`
 + loading cover (U6) · rich text as `UIText` runs · layout groups · canvas-group alpha ·
 `UIBinding` (pull a named reflected property per frame — the reflection is half of MVVM already;
 notification is what a per-frame pull replaces at HUD scale) · **keyboard/gamepad FOCUS

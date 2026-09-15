@@ -17,6 +17,7 @@
 #include "UI/Widgets/UIImage.h"
 #include "UI/Widgets/UIMask.h"
 #include "UI/Widgets/UIPanel.h"
+#include "UI/Widgets/UISafeArea.h"
 #include "UI/Widgets/UIText.h"
 
 using namespace Opaax;
@@ -34,11 +35,18 @@ namespace
 
 TEST_CASE("UIWidgetDrawers: every widget type resolves to ITS OWN drawer and no other")
 {
-    UIPanel  lPanel;
-    UIImage  lImage;
-    UIText   lText;
-    UIButton lButton;
-    UIMask   lMask;
+    UIPanel     lPanel;
+    UIImage     lImage;
+    UIText      lText;
+    UIButton    lButton;
+    UIMask      lMask;
+    UISafeArea  lSafe;
+
+    // U5b's type, through the same gate: a container whose ONE field would be invisible under a
+    // ladder for exactly the reason UIMask's was.
+    CHECK(ResolvesTo<UISafeArea>(lSafe));
+    CHECK_FALSE(ResolvesTo<UISafeArea>(lPanel));
+    CHECK_FALSE(ResolvesTo<UIPanel>(lSafe));
 
     // The one their eyes found: a UIMask must resolve, or its Texture is never drawn.
     CHECK(ResolvesTo<UIMask>(lMask));
@@ -64,7 +72,8 @@ TEST_CASE("UIWidgetDrawers: a leaf's property list does NOT repeat the base's �
     // if it only did the latter (as the ladder did), none of these base fields would be editable.
     CHECK(PropertyCount<UIWidget>() == 4u);   // Name, Rect, bVisible, bHitTestable
 
-    CHECK(PropertyCount<UIMask>()   == 1u);   // Texture, and nothing else — invisible before UI18
+    CHECK(PropertyCount<UIMask>()     == 1u); // Texture, and nothing else — invisible before UI18
+    CHECK(PropertyCount<UISafeArea>() == 1u); // Insets, likewise
     CHECK(PropertyCount<UIText>()   > 1u);
     CHECK(PropertyCount<UIImage>()  > 1u);
     CHECK(PropertyCount<UIButton>() > 1u);

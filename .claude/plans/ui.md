@@ -8,6 +8,19 @@
 | **U4** | `d020feb` | `.opaaxui`: tagged nodes + `SaveFields`/`LoadFields` + `UIWidgetRegistry` (**UI12**); `UICanvasResource` re-parses per instance, `FindByName`, **`HudSubsystem` LOADS the asset** (**UI13**); `EditorUICanvasDocument` + `UICanvasPanel` previewing the document through a **targeted** canvas submission (**UI14**); `UITreeEdit` = the whole tree as text, selection as an index path (**UI15**); **New UI…** + Save + `SetActivate`. 7 cases, **857 → 864 / 9266 → 9335**. All four MR2i routes: `panels` 19→20, `commands` 47→49, `resourceTypes` 14→15, `titleBar` 39→42. |
 | **U5** | `628d1c7` | **THE MASK** (**UI16**): a `UIMask` container cuts everything under it, `mask.r * mask.a` — white shows, black hides. `QuadVertex` +`MaskUV`/`MaskIndex` (48→60 B, `-1` untouched), `Sprite.glsl`, `QuadMask` on the 3 Draw calls, `PlanQuadBatches` takes a second texture. `IUIFontProvider`→`IUIAssetProvider`, `UIImage::Texture` path, `UICanvas::Submit` split into a pure `BuildDrawList` (**UI17**). 9 cases, **868 → 876 / 9335 → 9387**. |
 
+| **U5b** | *(this step)* | **9-slice + the safe area** (**UI20**), the two they split out of U5. `UIMargin` (four edges, one type, two units); `UI/UISlice.h` — pure `BuildSlicedQuads` (against a texture SIZE) + `ClipQuadsTo`; `UIImage::Border` with **no mode enum**; the fill re-expressed as a CLIP so **fill and slice compose**; `UIWidget::ResolveBounds` (one protected virtual) and `UISafeArea` on top of it. 12 cases, **882 → 894**, 9530 assertions. |
+
+**Settled in U5b, not the plan:** the fill did not need a second geometry path — re-expressing it as
+a CLIP over whatever was emitted made a filled 9-slice fall out for free and DELETED the inline
+crop, with the pre-existing fill case proving the two are the same arithmetic. The safe area cost
+**one virtual**: overriding the resolved bounds beats passing a different rect to children, because
+then the widget's own bounds would lie to the hit-test and the preview. Insets are FRACTIONS —
+that is the half of "adapt to wide" a reference height does not cover. **No renderer change at all**,
+which is what their U5 split was for. **Not proven by a smoke run:** the picture — a harness
+([[L81]], removed) logged `9 quad(s) over a 600x120 rect` and `safe area 1728x972 inside a
+1920x1080 root`, which is geometry, not pixels. `Sandbox/Assets/UI/Panel9.png` is a 64x64 rounded
+frame (radius = border = 16) generated to author with, `MaskDisc.png`'s role for U5.
+
 **Settled in U5, not the plan:** masked TEXT cost **nothing** — `UIText` already goes through
 `UIQuad`, so `Text2D` was not touched at all (the exploration's best find). A rect-only mask cannot
 use id 0 (that means "no mask"), so it takes a real id resolving to white and all rect-only masks

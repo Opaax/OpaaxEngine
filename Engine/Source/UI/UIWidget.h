@@ -157,6 +157,19 @@ namespace Opaax
             (void)InContext; (void)OutQuads;
         }
 
+        /**
+         * Where I sit inside my parent. The default IS the layout rule (`ResolveRect`); a type
+         * overrides it when its rect is not simply its anchors — `UISafeArea` insets it (**UI20**).
+         *
+         * ONE virtual, and it is what my children anchor to and what a hit-test asks, so a widget
+         * that moves its own rect cannot disagree with either. The alternative was insets on EVERY
+         * widget, which is the flag-on-everything the seed already turned down.
+         */
+        virtual Bounds2D ResolveBounds(const Bounds2D& InParentBounds) const
+        {
+            return ResolveRect(Rect, InParentBounds);
+        }
+
         // =============================================================================
         // Internal — the canvas's walk
         // =============================================================================

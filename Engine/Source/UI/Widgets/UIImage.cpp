@@ -3,9 +3,29 @@
 #include <algorithm>
 
 #include "Core/Reflection/OpaaxEnumJson.h"
+#include "RHI/Texture.h"
+#include "UI/UISlice.h"
 
 namespace Opaax
 {
+    namespace
+    {
+        /** What a fill leaves standing: the rect cropped from its min edge on the filled axis. */
+        Bounds2D FillClip(const Bounds2D& InRect, const EUIFill InFill, const float InAmount) noexcept
+        {
+            const Vector2F lMin  = InRect.Min();
+            const Vector2F lMax  = InRect.Max();
+            const Vector2F lSize = InRect.Size();
+
+            if (InFill == EUIFill::Horizontal)
+            {
+                return Bounds2D::FromMinMax(lMin, { lMin.x + lSize.x * InAmount, lMax.y });
+            }
+
+            return Bounds2D::FromMinMax(lMin, { lMax.x, lMin.y + lSize.y * InAmount });
+        }
+    }
+
     void UIImage::SetColor(const LinearColor& InColor)
     {
         Color = InColor;
@@ -31,6 +51,12 @@ namespace Opaax
         InvalidateContent();
     }
 
+    void UIImage::SetBorder(const UIMargin& InBorder)
+    {
+        Border = InBorder;
+        InvalidateContent();
+    }
+
     void UIImage::SetTexture(ITexture2D* InTexture)
     {
         m_Texture = InTexture;
@@ -45,6 +71,7 @@ namespace Opaax
         // handle that only code can hand over (**UI17**).
         InOutJson["Color"]      = Color;
         InOutJson["Texture"]    = Texture;
+        InOutJson["Border"]     = Border;
         InOutJson["Fill"]       = Fill;
         InOutJson["FillAmount"] = FillAmount;
     }
@@ -55,6 +82,7 @@ namespace Opaax
 
         Color      = InJson.value("Color", Color);
         Texture    = InJson.value("Texture", Texture);
+        Border     = InJson.value("Border", Border);
         Fill       = InJson.value("Fill", Fill);
         FillAmount = InJson.value("FillAmount", FillAmount);
     }
@@ -82,26 +110,32 @@ namespace Opaax
             }
         }
 
-        UIQuad& lQuad  = OutQuads.emplace_back();
-        lQuad.Color    = Color;
-        lQuad.Texture  = lTexture;
-
-        const Vector2F lMin  = GetBounds().Min();
-        Vector2F       lSize = GetBounds().Size();
-
-        // Crop from the min edge so the bar empties toward it; the UVs crop the same fraction so
-        // the texture is cut, not squashed.
-        if (Fill == EUIFill::Horizontal)
+        // A border is a statement about ART, so it needs a texture to measure against; without one
+        // this is the single quad U1 shipped (**UI20**).
+        if (!Border.IsZero() && lTexture != nullptr)
         {
-            lSize.x      *= lAmount;
-            lQuad.UVMax.x = lAmount;
+            const Vector2F lTextureSize{ static_cast<float>(lTexture->GetWidth()),
+                                         static_cast<float>(lTexture->GetHeight()) };
+
+            BuildSlicedQuads(GetBounds(), Border, lTextureSize, OutQuads);
         }
-        else if (Fill == EUIFill::Vertical)
+        else
         {
-            lSize.y      *= lAmount;
-            lQuad.UVMax.y = lAmount;
+            OutQuads.emplace_back().Bounds = GetBounds();
         }
 
-        lQuad.Bounds = Bounds2D::FromCenterSize(lMin + lSize * 0.5f, lSize);
+        for (UIQuad& lQuad : OutQuads)
+        {
+            lQuad.Color   = Color;
+            lQuad.Texture = lTexture;
+        }
+
+        // The fill is a CLIP over whatever was emitted, not a second geometry path: it crops from
+        // the min edge so the bar empties toward it, and the UVs go with it so the texture is cut
+        // rather than squashed — for nine quads exactly as for one.
+        if (Fill != EUIFill::None && lAmount < 1.f)
+        {
+            ClipQuadsTo(OutQuads, FillClip(GetBounds(), Fill, lAmount));
+        }
     }
 }

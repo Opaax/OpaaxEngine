@@ -143,6 +143,10 @@ set(OPAAX_TEST_SOURCES
     # U5. The mask: which mask applies to which quad, asserted through the pure draw list.
     # The PIXELS (white shows, black hides) are the shader's half and are theirs to confirm.
     UI/UIMaskTests.cpp
+    # U5b. Both halves are rect → quads geometry and nothing else, so both are gated with no
+    # texture and no canvas: the 9-slice against a texture SIZE, the safe area through the walk.
+    UI/UISliceTests.cpp
+    UI/UISafeAreaTests.cpp
 
     # Editor-side, and the FIRST of its kind — header-only editor types only (see the include dir
     # below). ③'s gizmo delta math, pinned after a scale bug that only showed away from (0,0).

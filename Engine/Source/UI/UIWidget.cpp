@@ -161,7 +161,7 @@ namespace Opaax
 
         if (lLayout)
         {
-            const Bounds2D lBounds = ResolveRect(Rect, InParentBounds);
+            const Bounds2D lBounds = ResolveBounds(InParentBounds);
             ++OutStats.Layouts;
 
             // Same rect from a changed parent (a corner-anchored child of a widening root): nothing

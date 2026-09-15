@@ -13,6 +13,7 @@
 #include "UI/Widgets/UIImage.h"
 #include "UI/Widgets/UIMask.h"
 #include "UI/Widgets/UIPanel.h"
+#include "UI/Widgets/UISafeArea.h"
 #include "UI/Widgets/UIText.h"
 
 using namespace Opaax;
@@ -28,6 +29,7 @@ namespace
         lRegistry.Register<UIText>(OPAAX_ID("UIText"));
         lRegistry.Register<UIButton>(OPAAX_ID("UIButton"));
         lRegistry.Register<UIMask>(OPAAX_ID("UIMask"));
+        lRegistry.Register<UISafeArea>(OPAAX_ID("UISafeArea"));
         return lRegistry;
     }
 
@@ -213,18 +215,18 @@ TEST_CASE("UIWidgetRegistry: an unknown name builds nothing, a duplicate is refu
 {
     UIWidgetRegistry lRegistry = MakeRegistry();
 
-    CHECK(lRegistry.Count() == 5u);
+    CHECK(lRegistry.Count() == 6u);
     CHECK(lRegistry.IsRegistered(OPAAX_ID("UIText")));
     CHECK_FALSE(lRegistry.IsRegistered(OPAAX_ID("UIHologram")));
     CHECK(lRegistry.Create(OPAAX_ID("UIHologram")) == nullptr);
     CHECK(lRegistry.Create(OPAAX_ID("UIText")) != nullptr);
 
     CHECK_FALSE(lRegistry.Register<UIText>(OPAAX_ID("UIText")));   // the name is taken
-    CHECK(lRegistry.Count() == 5u);
+    CHECK(lRegistry.Count() == 6u);
 
     lRegistry.Seal();
     CHECK_FALSE(lRegistry.Register<UIPanel>(OPAAX_ID("UILater")));
-    CHECK(lRegistry.Count() == 5u);
+    CHECK(lRegistry.Count() == 6u);
 }
 
 TEST_CASE("UIWidget: FindByName takes the FIRST match in tree order, and misses answer null")
@@ -276,6 +278,53 @@ TEST_CASE("UICanvasResource: BuildTree yields an INDEPENDENT tree every time (UI
     // A placeholder builds a real (empty) tree rather than a null — a failed load still draws.
     float lPlaceholderHeight = 0.f;
     CHECK(UICanvasResource::Placeholder().BuildTree(lRegistry, lPlaceholderHeight) != nullptr);
+}
+
+TEST_CASE("UICanvasFile: U5b's two new fields round-trip, and a file without them keeps the defaults")
+{
+    const UIWidgetRegistry lRegistry = MakeRegistry();
+
+    UICanvasFile::UICanvasDoc lDoc;
+    lDoc.Root = MakeUnique<UIPanel>();
+
+    auto lImage = MakeUnique<UIImage>();
+    lImage->Name   = "Frame";
+    lImage->Border = UIMargin{ 12.f, 13.f, 14.f, 15.f };
+    lDoc.Root->AddChild(Move(lImage));
+
+    auto lSafe = MakeUnique<UISafeArea>();
+    lSafe->Name   = "Safe";
+    lSafe->Insets = UIMargin{ 0.1f, 0.2f, 0.3f, 0.4f };
+    lDoc.Root->AddChild(Move(lSafe));
+
+    UICanvasFile::UICanvasDoc lBack;
+    REQUIRE(UICanvasFile::Deserialize(UICanvasFile::Serialize(lDoc), lRegistry, lBack));
+
+    const auto* lBackImage = dynamic_cast<const UIImage*>(lBack.Root->GetChildren()[0].get());
+    const auto* lBackSafe  = dynamic_cast<const UISafeArea*>(lBack.Root->GetChildren()[1].get());
+    REQUIRE(lBackImage != nullptr);
+    REQUIRE(lBackSafe  != nullptr);
+
+    CHECK(lBackImage->Border.Left  == doctest::Approx(12.f));
+    CHECK(lBackImage->Border.Right == doctest::Approx(13.f));
+    CHECK(lBackImage->Border.Bottom == doctest::Approx(14.f));
+    CHECK(lBackImage->Border.Top   == doctest::Approx(15.f));
+    CHECK(lBackSafe->Insets.Left == doctest::Approx(0.1f));
+    CHECK(lBackSafe->Insets.Top  == doctest::Approx(0.4f));
+
+    // AND THE FORMAT DID NOT CHANGE: an image node written before U5b names no Border, which must
+    // take the default rather than throw — the reason every field reads through _WITH_DEFAULT.
+    const OpaaxString lBefore = OpaaxString(R"({
+    "Root": { "Type": "UIPanel", "Children": [ { "Type": "UIImage", "Name": "Old" } ] },
+    "Version": 1
+})");
+
+    UICanvasFile::UICanvasDoc lOld;
+    REQUIRE(UICanvasFile::Deserialize(lBefore, lRegistry, lOld));
+
+    const auto* lOldImage = dynamic_cast<const UIImage*>(lOld.Root->GetChildren()[0].get());
+    REQUIRE(lOldImage != nullptr);
+    CHECK(lOldImage->Border.IsZero());
 }
 
 TEST_CASE("UICanvasFile: a file written when the asset fields were STRINGS still reads (UI19)")

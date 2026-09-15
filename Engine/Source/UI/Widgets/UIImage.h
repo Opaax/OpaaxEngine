@@ -8,6 +8,7 @@
 #include "Core/String/OpaaxStringID.hpp"
 #include "Engine/Subsystems/Resources/ResourcePath.h"       // a TYPED reference (**UI19**)
 #include "Engine/Subsystems/Resources/ResourcePathJson.h"
+#include "UI/UIMargin.h"
 #include "UI/UIWidget.h"
 
 namespace Opaax
@@ -37,9 +38,11 @@ namespace Opaax
     }
 
     // =============================================================================
-    // UIImage — a rect of colour, or a texture tinted by it. ONE quad. A fill crops both the
-    //   rect and the sampled UVs from the min edge, which is the health bar.
-    //   Sliced (9-slice) and sheet sub-rects are U5.
+    // UIImage — a rect of colour, or a texture tinted by it. ONE quad, unless a Border makes it
+    //   nine (**UI20**). A fill crops both the rect and the sampled UVs from the min edge, which
+    //   is the health bar — and it is a CLIP over whatever geometry was emitted, so a filled
+    //   9-slice keeps its caps.
+    //   Sheet sub-rects are still named, not built.
     // =============================================================================
     class OPAAX_API UIImage final : public UIWidget
     {
@@ -54,9 +57,19 @@ namespace Opaax
         /** A texture's asset path. TYPED, so a `.png` can be DROPPED on it (**UI19**). */
         TResourcePath<TextureResource> Texture;
 
+        /**
+         * The 9-slice border, in TEXTURE PIXELS — how much of each edge must NOT stretch (**UI20**).
+         *
+         * There is no Sliced mode to pick: a non-zero border on a texture IS sliced, and an
+         * all-zero one is the single quad this widget always emitted. Ignored without a texture,
+         * since a border is a statement about art.
+         */
+        UIMargin Border;
+
         OPAAX_PROPERTIES(UIImage,
                          OPAAX_PROP(Color),
                          OPAAX_PROP(Texture),
+                         OPAAX_PROP(Border),
                          OPAAX_PROP(Fill),
                          OPAAX_PROP(FillAmount).SetRange(0.f, 1.f))
 
@@ -65,6 +78,7 @@ namespace Opaax
         void SetColor(const LinearColor& InColor);
         void SetFill(EUIFill InFill, float InAmount);
         void SetFillAmount(float InAmount);
+        void SetBorder(const UIMargin& InBorder);
 
         /**
          * A RUNTIME texture, borrowed. It WINS over the authored path when set — `TextComponent`'s
