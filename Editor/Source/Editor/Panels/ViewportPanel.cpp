@@ -166,6 +166,12 @@ namespace Opaax::Editor
     {
         const PickGesture::Pick lPick = m_PickGesture.Take();   // cleared FIRST, whether spent or not
 
+        // A press that began in Edit and was released in Play still banks a pick; dropped here.
+        if (!m_Context.PIE.IsEdit())
+        {
+            return;
+        }
+
         if (World* lWorld = m_Context.Worlds.GetActiveWorld())
         {
             PickGesture::Apply(lPick, *lWorld, m_Context.Selection, ViewportPx(), AnchorHalfExtent());
@@ -525,9 +531,12 @@ namespace Opaax::Editor
                                ViewportPx(), { lOrigin.x, lOrigin.y }, { lAvail.x, lAvail.y },
                                TranslateSnapStep(), lToolbarHovered, EUndoWorld::Active);
 
+        // EDIT WORLDS ONLY, the toolbar's own rule one gesture down (their U4 finding): with the
+        // game's UI in this image, a click on a UIButton is the GAME's and must not also pick the
+        // entity behind it. One gate covers the point and the marquee — they are one gesture.
         if (!lGizmoOwns)
         {
-            m_PickGesture.Measure(lImageHovered, { lOrigin.x, lOrigin.y });
+            m_PickGesture.Measure(lImageHovered && m_Context.PIE.IsEdit(), { lOrigin.x, lOrigin.y });
         }
 
         if (lImg.IsValid() && !m_bImageLogged)
