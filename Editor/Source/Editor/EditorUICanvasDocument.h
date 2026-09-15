@@ -98,6 +98,15 @@ namespace Opaax::Editor
         /** InWidget's path from the root. Empty when it is the root OR not in this tree. */
         UIWidgetPath PathOf(const UIWidget& InWidget) const;
 
+        /**
+         * The widget an AUTHOR would mean by clicking InCanvasPoint: the deepest visible one under
+         * it, last-drawn first. Empty (the root) when nothing is there.
+         *
+         * NOT the canvas's HitTest, on purpose — that one honours `bHitTestable`, and a panel, a
+         * mask or a safe area the game never hits is exactly what the editor must still select.
+         */
+        UIWidgetPath PickAt(const Vector2F& InCanvasPoint) const;
+
         // =============================================================================
         // Members
         // =============================================================================

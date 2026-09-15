@@ -1,5 +1,7 @@
 #include "Editor/Panels/UICanvasPanel.h"
 
+#include <algorithm>
+
 #include <imgui.h>
 
 #include "Application/OpaaxApplication.h"
@@ -270,6 +272,12 @@ namespace Opaax::Editor
 
         ImGui::TextDisabled("%s", lWidget->GetTypeName().CStr());
 
+        // The RESOLVED rect, read-only: what the anchors actually produced, so an odd one reads
+        // as numbers here rather than as "it went somewhere" in the preview.
+        const Bounds2D& lBounds = lWidget->GetBounds();
+        ImGui::TextDisabled("resolved  min (%.0f, %.0f)  size %.0f x %.0f",
+                            lBounds.Min().x, lBounds.Min().y, lBounds.Size().x, lBounds.Size().y);
+
         // TWO HALVES, and the ladder that used to be here drew only one of them (**UI18**):
         //   the BASE fields every widget has (Name, Rect, visibility) — which a leaf type's own
         //   property list does not repeat, so a UIText had no editable Rect at all;
@@ -329,6 +337,138 @@ namespace Opaax::Editor
         // a resize, and using the region on the frame they disagree is exactly a stretch.
         const Vector2F lSizePx = PreviewPx();
         ImguiWidgets::Image(lImage, ImVec2(lSizePx.x, lSizePx.y));
+
+        // The image is the item, so its rect and hover are readable right here — the viewport's
+        // rule for every gesture (the origin is only knowable at the item).
+        const ImVec2   lItemMin = ImGui::GetItemRectMin();
+        const Vector2F lOrigin{ lItemMin.x, lItemMin.y };
+
+        MeasurePreviewGesture(ImGui::IsItemHovered(), lOrigin);
+        DrawPreviewOverlay(lOrigin);
+    }
+
+    void UICanvasPanel::MeasurePreviewGesture(const bool bInHovered, const Vector2F& InOrigin)
+    {
+        EditorUICanvasDocument& lDoc    = m_Context.UICanvasDocument;
+        const UICanvas&         lCanvas = lDoc.GetCanvas();
+        const ImGuiIO&          lIO     = ImGui::GetIO();
+
+        const Vector2F lLocalPx{ lIO.MousePos.x - InOrigin.x, lIO.MousePos.y - InOrigin.y };
+
+        m_HoverPath = bInHovered ? lDoc.PickAt(lCanvas.ScreenToCanvas(lLocalPx)) : UIWidgetPath{};
+
+        if (bInHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+        {
+            lDoc.Select(m_HoverPath);   // empty is bare canvas, and that clears
+
+            m_bPreviewDrag     = true;
+            m_bPreviewMoved    = false;
+            m_PreviewAppliedPx = { 0.f, 0.f };
+            m_PreviewBefore    = UICanvasOps::Snapshot(m_Context);
+        }
+
+        if (!m_bPreviewDrag)
+        {
+            // Arrow keys while the pointer is over the preview: 1 unit, Shift for 10.
+            if (bInHovered && !lDoc.SelectedPath().empty())
+            {
+                const float lStep = lIO.KeyShift ? 10.f : 1.f;
+                Vector2F    lDelta{ 0.f, 0.f };
+
+                if (ImGui::IsKeyPressed(ImGuiKey_LeftArrow))  { lDelta.x -= lStep; }
+                if (ImGui::IsKeyPressed(ImGuiKey_RightArrow)) { lDelta.x += lStep; }
+                if (ImGui::IsKeyPressed(ImGuiKey_DownArrow))  { lDelta.y -= lStep; }
+                if (ImGui::IsKeyPressed(ImGuiKey_UpArrow))    { lDelta.y += lStep; }
+
+                if (lDelta.x != 0.f || lDelta.y != 0.f)
+                {
+                    NudgeSelected(lDelta, "Nudge Widget");
+                }
+            }
+            return;
+        }
+
+        if (ImGui::IsMouseDown(ImGuiMouseButton_Left))
+        {
+            // The TOTAL since the press, minus what is already applied: exact across frames, and
+            // the threshold ImGui applies before calling it a drag keeps a plain click from nudging.
+            if (ImGui::IsMouseDragging(ImGuiMouseButton_Left))
+            {
+                const ImVec2   lTotal = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left, 0.f);
+                const Vector2F lStepPx{ lTotal.x - m_PreviewAppliedPx.x, lTotal.y - m_PreviewAppliedPx.y };
+                m_PreviewAppliedPx = { lTotal.x, lTotal.y };
+
+                UIWidget* const lWidget = lDoc.SelectedWidget();
+                if (lWidget != nullptr && !lDoc.SelectedPath().empty() && (lStepPx.x != 0.f || lStepPx.y != 0.f))
+                {
+                    // Pixels → canvas units, Y flipped: the canvas is Y-up and the image is not.
+                    const float lUnits = lCanvas.UnitsPerPixel();
+                    lWidget->Rect.AnchoredPosition += Vector2F{ lStepPx.x * lUnits, -lStepPx.y * lUnits };
+                    lWidget->InvalidateLayout();
+                    m_bPreviewMoved = true;
+                }
+            }
+            return;
+        }
+
+        // Released: one step for the whole drag, none for a click that only selected.
+        m_bPreviewDrag = false;
+        if (m_bPreviewMoved)
+        {
+            UICanvasOps::CommitEdit(m_Context, m_PreviewBefore, "Move Widget");
+        }
+    }
+
+    void UICanvasPanel::NudgeSelected(const Vector2F& InDelta, const char* InLabel)
+    {
+        UIWidget* const lWidget = m_Context.UICanvasDocument.SelectedWidget();
+        if (lWidget == nullptr || m_Context.UICanvasDocument.SelectedPath().empty())
+        {
+            return;
+        }
+
+        const OpaaxString lBefore = UICanvasOps::Snapshot(m_Context);
+
+        lWidget->Rect.AnchoredPosition += InDelta;
+        lWidget->InvalidateLayout();
+
+        UICanvasOps::CommitEdit(m_Context, lBefore, InLabel);
+    }
+
+    void UICanvasPanel::DrawPreviewOverlay(const Vector2F& InOrigin)
+    {
+        EditorUICanvasDocument& lDoc    = m_Context.UICanvasDocument;
+        const UICanvas&         lCanvas = lDoc.GetCanvas();
+        const Vector2F          lSizePx = PreviewPx();
+
+        ImDrawList* const lDraw = ImGui::GetWindowDrawList();
+        const ImVec2 lClipMin{ InOrigin.x, InOrigin.y };
+        const ImVec2 lClipMax{ InOrigin.x + lSizePx.x, InOrigin.y + lSizePx.y };
+
+        // A widget may sit partly off the canvas; its outline stops at the image like it does.
+        lDraw->PushClipRect(lClipMin, lClipMax, true);
+
+        const auto lOutline = [&](const UIWidgetPath& InPath, const ImU32 InColor, const float InThickness)
+        {
+            UIWidget* const lWidget = InPath.empty() ? nullptr : lDoc.Resolve(InPath);
+            if (lWidget == nullptr) { return; }
+
+            // Two corners through the one canvas→pixel rule; Y flips, so min/max are re-sorted.
+            const Vector2F lA = lCanvas.CanvasToScreen(lWidget->GetBounds().Min()) + InOrigin;
+            const Vector2F lB = lCanvas.CanvasToScreen(lWidget->GetBounds().Max()) + InOrigin;
+
+            lDraw->AddRect(ImVec2(std::min(lA.x, lB.x), std::min(lA.y, lB.y)),
+                           ImVec2(std::max(lA.x, lB.x), std::max(lA.y, lB.y)),
+                           InColor, 0.f, 0, InThickness);
+        };
+
+        if (m_HoverPath != lDoc.SelectedPath())
+        {
+            lOutline(m_HoverPath, IM_COL32(255, 255, 255, 90), 1.f);
+        }
+        lOutline(lDoc.SelectedPath(), IM_COL32(255, 170, 40, 255), 2.f);
+
+        lDraw->PopClipRect();
     }
 
     Vector2F UICanvasPanel::PreviewPx() const

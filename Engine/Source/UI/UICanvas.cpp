@@ -103,6 +103,18 @@ namespace Opaax
                              InPixel);
     }
 
+    Vector2F UICanvas::CanvasToScreen(const Vector2F& InCanvasPoint) const noexcept
+    {
+        return WorldToScreen(MakeView(),
+                             { static_cast<float>(m_TargetWidth), static_cast<float>(m_TargetHeight) },
+                             InCanvasPoint);
+    }
+
+    float UICanvas::UnitsPerPixel() const noexcept
+    {
+        return WorldPerPixel(MakeView(), static_cast<float>(m_TargetHeight));
+    }
+
     // =============================================================================
     // Frame
     // =============================================================================

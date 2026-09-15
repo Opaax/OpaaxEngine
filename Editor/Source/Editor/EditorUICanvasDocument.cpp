@@ -147,4 +147,35 @@ namespace Opaax::Editor
         std::reverse(lPath.begin(), lPath.end());
         return lPath;
     }
+
+    namespace
+    {
+        /** Deepest visible descendant of InNode containing InPoint, last child first; null when none. */
+        const UIWidget* DeepestAt(const UIWidget& InNode, const Vector2F& InPoint)
+        {
+            if (!InNode.bVisible)
+            {
+                return nullptr;
+            }
+
+            const TDynArray<TUniquePtr<UIWidget>>& lChildren = InNode.GetChildren();
+            for (auto lIt = lChildren.rbegin(); lIt != lChildren.rend(); ++lIt)
+            {
+                if (const UIWidget* lHit = DeepestAt(**lIt, InPoint))
+                {
+                    return lHit;
+                }
+            }
+
+            return InNode.GetBounds().Contains(InPoint) ? &InNode : nullptr;
+        }
+    }
+
+    UIWidgetPath EditorUICanvasDocument::PickAt(const Vector2F& InCanvasPoint) const
+    {
+        const UIWidget* lHit = DeepestAt(m_Canvas.Root(), InCanvasPoint);
+
+        // The root covers the whole canvas, so "the root was hit" is "nothing was" (UI4's rule).
+        return (lHit == nullptr || lHit == &m_Canvas.Root()) ? UIWidgetPath{} : PathOf(*lHit);
+    }
 }

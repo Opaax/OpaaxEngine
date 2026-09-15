@@ -248,6 +248,12 @@ TEST_CASE("UICanvas: the view is origin-centred at half the reference height, an
     // A smaller target of the same aspect maps to the SAME canvas point — resolution independence.
     lCanvas.SetTargetSize(1280, 720);
     CheckVec(lCanvas.ScreenToCanvas({ 0.f, 0.f }), { -960.f, 540.f });
+
+    // And back: the editor's outline is drawn through the inverse, so the two must agree — and a
+    // 720-tall target shows 1080 units, so a pixel is 1.5 of them (the drag's conversion).
+    CheckVec(lCanvas.CanvasToScreen({ -960.f, 540.f }), { 0.f, 0.f });
+    CheckVec(lCanvas.CanvasToScreen({ 0.f, 0.f }), { 640.f, 360.f });
+    CHECK(lCanvas.UnitsPerPixel() == doctest::Approx(1.5f));
 }
 
 namespace

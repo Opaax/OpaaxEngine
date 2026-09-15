@@ -76,6 +76,12 @@ namespace Opaax
         /** A pixel in the target → canvas units, through the ONE screen→world rule. */
         Vector2F ScreenToCanvas(const Vector2F& InPixel) const noexcept;
 
+        /** The inverse — where a canvas point lands in the target, for an overlay drawn over it. */
+        Vector2F CanvasToScreen(const Vector2F& InCanvasPoint) const noexcept;
+
+        /** Canvas units per target pixel — square, since width follows the aspect (CAM2). */
+        float UnitsPerPixel() const noexcept;
+
         // =============================================================================
         // Tree
         // =============================================================================

@@ -71,8 +71,20 @@ namespace Opaax::Editor
         /** The selected widget's fields, bracketed for undo. */
         void DrawInspector();
 
-        /** The canvas rendered into this panel's own framebuffer. */
+        /** The canvas rendered into this panel's own framebuffer, and the designer over it. */
         void DrawPreview();
+
+        /**
+         * Click selects, drag moves, arrows nudge — read right after the image, while its window
+         * is current. A press on bare canvas clears the selection; a drag is ONE undo step.
+         */
+        void MeasurePreviewGesture(bool bInHovered, const Vector2F& InOrigin);
+
+        /** The selection's rect (and, faintly, the hovered one) over the image — how an invisible container is seen. */
+        void DrawPreviewOverlay(const Vector2F& InOrigin);
+
+        /** Move the selected widget by InDelta canvas units as one step labelled InLabel. */
+        void NudgeSelected(const Vector2F& InDelta, const char* InLabel);
 
         /** The framebuffer's size, as floats. */
         Vector2F PreviewPx() const;
@@ -120,5 +132,14 @@ namespace Opaax::Editor
 
         /** The node a drag is carrying, banked at the drag source (the Hierarchy's rule). */
         UIWidgetPath m_DragPath;
+
+        // =============================================================================
+        // The preview gesture — a press over the image, spent on release
+        // =============================================================================
+        UIWidgetPath m_HoverPath;                    // what a click would take
+        OpaaxString  m_PreviewBefore;                // the tree when the press landed
+        Vector2F     m_PreviewAppliedPx = { 0.f, 0.f };   // of the drag's total, already applied
+        bool         m_bPreviewDrag     = false;
+        bool         m_bPreviewMoved    = false;
     };
 }

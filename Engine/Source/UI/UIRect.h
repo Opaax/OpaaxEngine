@@ -45,12 +45,13 @@ namespace Opaax
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(UIRect,
                                                     AnchorMin, AnchorMax, Pivot, AnchoredPosition, SizeDelta)
 
+        // Fractions drag by a hundredth, canvas units by one — the step is what makes each editable.
         OPAAX_PROPERTIES(UIRect,
-                         OPAAX_PROP(AnchorMin).SetRange(0.f, 1.f),
-                         OPAAX_PROP(AnchorMax).SetRange(0.f, 1.f),
-                         OPAAX_PROP(Pivot).SetRange(0.f, 1.f),
-                         OPAAX_PROP(AnchoredPosition),
-                         OPAAX_PROP(SizeDelta))
+                         OPAAX_PROP(AnchorMin).SetRange(0.f, 1.f).SetDragStep(0.01f),
+                         OPAAX_PROP(AnchorMax).SetRange(0.f, 1.f).SetDragStep(0.01f),
+                         OPAAX_PROP(Pivot).SetRange(0.f, 1.f).SetDragStep(0.01f),
+                         OPAAX_PROP(AnchoredPosition).SetDragStep(1.f),
+                         OPAAX_PROP(SizeDelta).SetDragStep(1.f))
     };
 
     /**

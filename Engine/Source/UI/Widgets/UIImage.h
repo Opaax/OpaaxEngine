@@ -69,7 +69,7 @@ namespace Opaax
         OPAAX_PROPERTIES(UIImage,
                          OPAAX_PROP(Color),
                          OPAAX_PROP(Texture),
-                         OPAAX_PROP(Border),
+                         OPAAX_PROP(Border).SetDragStep(1.f),   // pixels; flows to the four edges
                          OPAAX_PROP(Fill),
                          OPAAX_PROP(FillAmount).SetRange(0.f, 1.f))
 
