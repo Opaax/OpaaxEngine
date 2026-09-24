@@ -17,7 +17,9 @@
                 },
                 "Fill": "None",
                 "FillAmount": 1.0,
+                "FillBinding": "",
                 "Name": "Backdrop",
+                "Opacity": 1.0,
                 "Rect": {
                     "AnchorMax": {
                         "x": 1.0,
@@ -46,6 +48,7 @@
                 "bVisible": true
             },
             {
+                "Binding": "",
                 "Color": {
                     "w": 1.0,
                     "x": 1.0,
@@ -56,6 +59,7 @@
                 "HAlign": "Center",
                 "LineHeightScale": 1.0,
                 "Name": "Label",
+                "Opacity": 1.0,
                 "Rect": {
                     "AnchorMax": {
                         "x": 0.5,
@@ -89,6 +93,7 @@
             }
         ],
         "Name": "Root",
+        "Opacity": 1.0,
         "Rect": {
             "AnchorMax": {
                 "x": 1.0,

@@ -21,7 +21,10 @@
                                 },
                                 "Fill": "None",
                                 "FillAmount": 1.0,
+                                "FillBinding": "",
+                                "Frame": -1,
                                 "Name": "UIImage",
+                                "Opacity": 1.0,
                                 "Rect": {
                                     "AnchorMax": {
                                         "x": 1.0,
@@ -40,10 +43,11 @@
                                         "y": 0.5
                                     },
                                     "SizeDelta": {
-                                        "x": 100.0,
-                                        "y": 100.0
+                                        "x": 0.0,
+                                        "y": 0.0
                                     }
                                 },
+                                "Sheet": "",
                                 "Texture": "UI/Panel9.png",
                                 "Type": "UIImage",
                                 "bHitTestable": true,
@@ -51,6 +55,7 @@
                             }
                         ],
                         "Name": "UIPanel",
+                        "Opacity": 1.0,
                         "Rect": {
                             "AnchorMax": {
                                 "x": 1.0,
@@ -69,8 +74,8 @@
                                 "y": 0.5
                             },
                             "SizeDelta": {
-                                "x": 100.0,
-                                "y": 100.0
+                                "x": 0.0,
+                                "y": 0.0
                             }
                         },
                         "Type": "UIPanel",
@@ -89,6 +94,7 @@
                         "HAlign": "Left",
                         "LineHeightScale": 3.0,
                         "Name": "Jumps",
+                        "Opacity": 1.0,
                         "Rect": {
                             "AnchorMax": {
                                 "x": 0.0,
@@ -96,19 +102,19 @@
                             },
                             "AnchorMin": {
                                 "x": 0.0,
-                                "y": 0.0
+                                "y": 1.0
                             },
                             "AnchoredPosition": {
-                                "x": 0.0,
-                                "y": 0.0
+                                "x": 43.0,
+                                "y": -47.0
                             },
                             "Pivot": {
                                 "x": 0.0,
-                                "y": 0.0
+                                "y": 1.0
                             },
                             "SizeDelta": {
-                                "x": 600.0,
-                                "y": 60.0
+                                "x": 261.0,
+                                "y": 77.0
                             }
                         },
                         "Size": 40.0,
@@ -144,7 +150,9 @@
                                 "Fill": "Horizontal",
                                 "FillAmount": 0.0,
                                 "FillBinding": "Hud.Speed",
+                                "Frame": -1,
                                 "Name": "SpeedFill",
+                                "Opacity": 1.0,
                                 "Rect": {
                                     "AnchorMax": {
                                         "x": 1.0,
@@ -167,6 +175,7 @@
                                         "y": 0.0
                                     }
                                 },
+                                "Sheet": "",
                                 "Texture": "",
                                 "Type": "UIImage",
                                 "bHitTestable": true,
@@ -181,7 +190,10 @@
                         },
                         "Fill": "None",
                         "FillAmount": 1.0,
+                        "FillBinding": "",
+                        "Frame": -1,
                         "Name": "SpeedTrack",
+                        "Opacity": 1.0,
                         "Rect": {
                             "AnchorMax": {
                                 "x": 0.0,
@@ -204,6 +216,7 @@
                                 "y": 28.0
                             }
                         },
+                        "Sheet": "",
                         "Texture": "",
                         "Type": "UIImage",
                         "bHitTestable": true,
@@ -211,12 +224,13 @@
                     }
                 ],
                 "Insets": {
-                    "Bottom": 0.10000000149011612,
-                    "Left": 0.10000000149011612,
-                    "Right": 0.10000000149011612,
-                    "Top": 0.10000000149011612
+                    "Bottom": 0.03999999910593033,
+                    "Left": 0.03999999910593033,
+                    "Right": 0.03999999910593033,
+                    "Top": 0.03999999910593033
                 },
                 "Name": "UISafeArea",
+                "Opacity": 1.0,
                 "Rect": {
                     "AnchorMax": {
                         "x": 1.0,
@@ -245,6 +259,7 @@
             }
         ],
         "Name": "Root",
+        "Opacity": 1.0,
         "Rect": {
             "AnchorMax": {
                 "x": 1.0,
