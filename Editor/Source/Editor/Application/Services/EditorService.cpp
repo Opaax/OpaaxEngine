@@ -5,7 +5,6 @@
 #include "Application/Services/IEngine.h"
 #include "Core/Log/Logger.h"
 #include "Application/Services/IProjectManager.h"
-#include "Application/Services/IStatsService.h"
 #include "Platform/IFileSystem.h"
 #include "Platform/IPlatform.h"
 #include "Application/Services/Window/IWindowManager.h"
@@ -219,7 +218,6 @@ namespace Opaax::Editor
             OpaaxApplication::GetAppService<IPaths>(),
             OpaaxApplication::GetAppService<IPlatform>().GetFileSystem(),
             OpaaxApplication::GetAppService<IConfigSystem>(),
-            OpaaxApplication::GetAppService<IStatsService>(),
             *InWindow,
             m_EditorPaths
         });

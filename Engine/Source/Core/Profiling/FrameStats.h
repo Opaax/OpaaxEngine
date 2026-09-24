@@ -8,8 +8,8 @@ namespace Opaax
     /**
      * @struct FrameStats
      *
-     * ONE snapshot of what the last COMPLETE frame cost, owned by the stats app service and read
-     * through IStatsService::GetFrameStats().
+     * ONE snapshot of what the last COMPLETE frame cost, owned by the Profiler singleton and read
+     * through Profiler::GetFrameStats().
      *
      * Every field describes the SAME frame — the one before the current host iteration — and that
      * consistency is the whole point. The Stats panel draws in the middle of the wall-clock frame,

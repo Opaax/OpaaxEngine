@@ -3,9 +3,9 @@
 #include "Platform/IPlatform.h"
 #include "Application/Services/IPaths.h"
 #include "Core/Log/Logger.h"
+#include "Core/Profiling/Profiler.h"
 #include "Application/Services/IProjectManager.h"
 #include "Application/Services/IJobSystem.h"
-#include "Application/Services/IStatsService.h"
 
 #include "Engine/Config/Config_Engine.h"
 #include "Engine/Engine.h"
@@ -85,9 +85,9 @@ void OpaaxApplication::Bootstrap()
     OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Job System");
     IJobSystem& lJobSystem = BootJobSystem();
 
-    //Stats — config-driven, so after the config system. May deliberately provide nothing.
+    //Stats — config-driven, so after the config system.
     OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Stats");
-    BootStatsService(lConfigSystem);
+    BootProfiler(lConfigSystem);
 
     //Window manager — the window itself is created later, in InitializeApplication (needs a GL/VK context).
     OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Window Manager");
@@ -136,7 +136,7 @@ IJobSystem& OpaaxApplication::BootJobSystem()
     return m_Services.Provide<IJobSystem, Opaax::JobSystem>();
 }
 
-IStatsService& OpaaxApplication::BootStatsService(IConfigSystem& ConfigSystem)
+void OpaaxApplication::BootProfiler(IConfigSystem& ConfigSystem)
 {
     // A dev build always profiles — that is what dev means, and it is the same signal IPaths keys
     // on (I12), never the editor flag: a debug GAME build is a dev build with no editor.
@@ -149,17 +149,13 @@ IStatsService& OpaaxApplication::BootStatsService(IConfigSystem& ConfigSystem)
     const bool lbEnable = lbDevBuild
                        || ConfigSystem.Get<Opaax::Config_Engine>().GetData().Stats.EnableInShipBuild;
 
+    // Disabled is the off switch (ST6): every OPAAX_STAT_SCOPE is then one predicted branch.
+    Profiler::Get().Init(lbEnable);
+
     if (!lbEnable)
     {
-        // NOT PROVIDING IT *IS* THE OFF SWITCH. The locator answers IStatsService::Null(), whose
-        // GetProfiler() is nullptr, so every OPAAX_STAT_SCOPE in the tree collapses to one
-        // predicted branch — no clock read, no virtual call, no second "disabled" state to keep
-        // correct (I3).
         OPAAX_APP_LOG(Info, "Stats DISABLED (ship build; set Stats.EnableInShipBuild to profile)");
-        return IStatsService::Null();
     }
-
-    return m_Services.Provide<IStatsService, Opaax::StatsService>();
 }
 
 IWindowManager& OpaaxApplication::BootWindowManager()
@@ -238,7 +234,7 @@ void OpaaxApplication::RunApplication()
         //     the same reason (IN2). The frame ending here still holds its Present, which happens
         //     after Engine().Loop() returns; publishing inside Loop would drop that row.
         // ----------------------------------------------------------------
-        Stats().BeginFrame();
+        Profiler::Get().BeginFrame();
 
         // ----------------------------------------------------------------
         // 0. Close the PREVIOUS frame's input, immediately before the new events arrive.
@@ -315,6 +311,8 @@ void OpaaxApplication::ShutdownApplication()
     OPAAX_APP_LOG(Trace, "Shutdown Application");
     
     m_Services.ShutdownAll();
+
+    Profiler::Get().Shutdown();
 
     // Last: every service above may still log on its way down.
     Logger::Get().Shutdown();
@@ -477,6 +475,5 @@ IPaths&             OpaaxApplication::Paths()           { return m_Services.Get<
 IProjectManager&    OpaaxApplication::ProjectManager()  { return m_Services.Get<IProjectManager>(); }
 IConfigSystem&      OpaaxApplication::ConfigSystem()    { return m_Services.Get<IConfigSystem>();   }
 IJobSystem&         OpaaxApplication::JobSystem()       { return m_Services.Get<IJobSystem>();      }
-IStatsService&      OpaaxApplication::Stats()           { return m_Services.Get<IStatsService>();   }
 IWindowManager&     OpaaxApplication::WindowManager()   { return m_Services.Get<IWindowManager>();  }
 IEngine&            OpaaxApplication::Engine()          { return m_Services.Get<IEngine>();         }

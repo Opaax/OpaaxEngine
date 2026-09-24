@@ -20,7 +20,6 @@ namespace Opaax
     class IPlatform;
     class IPaths;
     class IJobSystem;
-    class IStatsService;
     class IWindowManager;
     class Event;
 
@@ -68,14 +67,8 @@ namespace Opaax
         IProjectManager&    BootProjectManager(const IPaths& Paths);
         IJobSystem&         BootJobSystem();
 
-        /**
-         * Provide the stats service — or deliberately DO NOT, which is how stats are turned off:
-         * the locator's null object (I3) is the disabled state, so there is no second flag.
-         *
-         * Config-driven, hence after BootConfigSystem (L1's locked order, the same reason the job
-         * system's worker count is).
-         */
-        IStatsService&      BootStatsService(IConfigSystem& ConfigSystem);
+        /** Enables the Profiler singleton, or not: dev builds always, ship builds by config (ST6). */
+        void                BootProfiler(IConfigSystem& ConfigSystem);
         IWindowManager&     BootWindowManager();
         IEngine&            BootEngine();
         
@@ -228,7 +221,6 @@ namespace Opaax
         IProjectManager&    ProjectManager();
         IConfigSystem&      ConfigSystem();
         IJobSystem&         JobSystem();
-        IStatsService&      Stats();
         IWindowManager&     WindowManager();
         IEngine&            Engine();
 

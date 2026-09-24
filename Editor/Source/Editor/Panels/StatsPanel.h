@@ -9,7 +9,7 @@ namespace Opaax::Editor
     struct EditorContext;
 
     // =============================================================================
-    // StatsPanel — where the frame went (④). Reads IEngine::GetFrameStats() and nothing else, so
+    // StatsPanel — where the frame went (④). Reads Profiler::GetFrameStats() and nothing else, so
     //   the readout cannot disagree with what the engine measured.
     //
     //   Three blocks: the frame-time graph, the fixed-step count, and the scope tree — every named

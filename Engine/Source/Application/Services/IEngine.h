@@ -252,9 +252,8 @@ namespace Opaax
          */
         virtual InputManager& GetInput() = 0;
 
-        // NOTE: frame stats are NOT here. They are an app service (IStatsService, I4): a passive
-        // facility you submit scopes to, which the HOST tells about the frame boundary. The engine
-        // is a consumer like anything else — it caches a FrameProfiler* and names four scopes.
+        // NOTE: frame stats are NOT here. They are the Profiler singleton (I1): the HOST tells it
+        // about the frame boundary, and the engine is a consumer like anything else.
 
         // End Foundation subsystems
         // =============================================================================

@@ -1,7 +1,7 @@
 #include "World/Systems/SpriteAnimationSubsystem.h"
 
 #include "Application/Services/IPaths.h"
-#include "Core/Profiling/FrameProfiler.h"   // OPAAX_STAT_SCOPE
+#include "Core/Profiling/Profiler.h"   // OPAAX_STAT_SCOPE
 #include "Engine/Subsystems/Resources/ResourceManager.h"
 #include "Engine/Subsystems/Resources/Types/Animation/AnimationClipResource.h"
 #include "Engine/Subsystems/Resources/Types/Animation/AnimationLibraryResource.h"
@@ -28,7 +28,7 @@ namespace Opaax
 
     void SpriteAnimationSubsystem::Update(const double InDeltaTime)
     {
-        OPAAX_STAT_SCOPE(m_Context->Profiler, "SpriteAnimation");
+        OPAAX_STAT_SCOPE("SpriteAnimation");
 
         const float lDelta    = static_cast<float>(InDeltaTime);
         Uint64      lAdvanced = 0;

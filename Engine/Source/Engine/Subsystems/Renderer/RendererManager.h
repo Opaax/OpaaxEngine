@@ -25,7 +25,6 @@ namespace Opaax
     class IFramebuffer;
     class IRenderTarget;
     class ITexture2D;
-    class FrameProfiler;
     struct FramebufferSpec;
     struct TextureResource;
     struct SpriteSheetResource;
@@ -339,10 +338,6 @@ namespace Opaax
 
         /** Whether ReportPassCount has already spoken. One line per session, not one per frame. */
         bool m_bMultiPassLogged = false;
-
-        // ④ — resolved in Startup like m_WorldManager. This subsystem opts IN to being measured;
-        // nothing times it on its behalf.
-        FrameProfiler*          m_Profiler      = nullptr;
 
         /**
          * Where InEntity should be DRAWN: its raw pose, or the blend toward it when a fixed step
