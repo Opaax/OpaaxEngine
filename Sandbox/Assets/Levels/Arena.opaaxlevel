@@ -1,0 +1,10 @@
+{
+    "maps": [
+        "Maps/Arena.opaaxmap",
+        "Maps/Decor.opaaxmap",
+        "Maps/MyMapTest.opaaxmap"
+    ],
+    "name": "Arena",
+    "persistentMap": "Maps/Arena.opaaxmap",
+    "version": 1
+}

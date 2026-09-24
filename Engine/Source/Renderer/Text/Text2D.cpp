@@ -1,199 +1,328 @@
-#include "Text2D.h"
+#include "Renderer/Text/Text2D.h"
 
+#include "Core/String/OpaaxUtf8.h"
 #include "Renderer/Renderer2D.h"
-#include "Renderer/Text/FontAsset.h"
-#include "Renderer/Texture2D.h"
+#include "Renderer/Text/FontFaceData.h"
 
 namespace Opaax::Text2D
 {
-    // =============================================================================
-    // Local helpers
-    // =============================================================================
     namespace
     {
-        // OD-4 lock: '\t' renders as 4 spaces — cheap, predictable, no tab-stop state.
-        constexpr Uint32 sTabSpaceWidth = 4u;
-        // OD-3 lock: out-of-range codepoints render '?' as fallback.
-        constexpr char   sFallbackGlyph = '?';
+        /** How many spaces a '\t' advances. */
+        constexpr Uint32 TAB_SPACES = 4u;
 
-        // Resolve glyph metrics, falling back to '?' if the codepoint is outside
-        // the baked [0x20..0x7E] range. Returns false only if '?' is also missing
-        // (would mean a malformed font; logged once at FontAsset::ctor).
-        bool ResolveGlyph(const FontAsset& InFont, char InCp, FontAsset::GlyphMetrics& OutG)
+        /** The space advance used when the face has no space glyph at all, as a fraction of Size. */
+        constexpr float FALLBACK_SPACE_RATIO = 0.5f;
+
+        /**
+         * The tofu box a missing codepoint draws, as fractions of Size. Roughly a capital's
+         * proportions, so a row of them reads as text that could not be shown rather than as debris.
+         */
+        constexpr float TOFU_WIDTH_RATIO     = 0.55f;
+        constexpr float TOFU_HEIGHT_RATIO    = 0.70f;
+        constexpr float TOFU_ADVANCE_RATIO   = 0.65f;
+
+        /**
+         * EstimateExtent's per-codepoint advance and per-line height, as fractions of Size.
+         *
+         * Both are ROUNDED UP from Roboto's real numbers (its average advance is nearer 0.55 of the
+         * bake height and its line advance 1.17). Over-estimating is the whole contract: an extent
+         * used for picking that comes up short makes the tail of a string unclickable.
+         */
+        constexpr float ESTIMATE_ADVANCE_RATIO = 0.62f;
+        constexpr float ESTIMATE_LINE_RATIO    = 1.25f;
+
+        /** The face as the walk reads it — scale and the space advance resolved once per string. */
+        struct WalkMetrics
         {
-            if (InFont.GetGlyphMetrics(InCp, OutG))
+            const FontFaceData&   Face;
+            const TextDrawParams& Params;
+            float                 Scale;
+            float                 SpaceAdvance;
+        };
+
+        /** One codepoint's pen movement: the kerning BEFORE it, the advance AFTER it, the glyph. */
+        struct PenStep
+        {
+            float            Kern    = 0.f;
+            float            Advance = 0.f;
+            const FontGlyph* Glyph   = nullptr;
+            bool             bTab    = false;
+        };
+
+        /**
+         * THE ONE ADVANCE RULE — the scan that finds a line's end and the emit that places it both
+         * step through here, which is what keeps a wrapped or aligned line the width it was measured.
+         * InOutPrevious is 0 at a line start (nothing kerns against it) and after a tab.
+         */
+        PenStep StepPen(const WalkMetrics& InM, const Uint32 InCodepoint, Uint32& InOutPrevious)
+        {
+            PenStep lStep;
+
+            if (InCodepoint == '\t')
             {
-                return true;
+                lStep.Advance  = InM.SpaceAdvance * TAB_SPACES;
+                lStep.bTab     = true;
+                InOutPrevious  = 0u;
+                return lStep;
             }
-            return InFont.GetGlyphMetrics(sFallbackGlyph, OutG);
-        }
-    }
 
-    // =============================================================================
-    // DrawString
-    // =============================================================================
-    void DrawString(const char*       InText,
-                    const Vector2F&   InWorldPos,
-                    const FontAsset&  InFont,
-                    const DrawParams& InParams)
-    {
-        if (!InText || !*InText || !InFont.IsLoaded())
-        {
-            return;
-        }
-        const Texture2D* lAtlasPtr = InFont.GetAtlasTexture();
-        if (!lAtlasPtr)
-        {
-            return;
-        }
-        // Renderer2D::DrawSprite mutates only its own bind-slot state, not the texture.
-        Texture2D& lAtlas = const_cast<Texture2D&>(*lAtlasPtr);
-
-        const FontAsset::FontVMetrics& lV = InFont.GetFontVMetrics();
-        const float lScale      = InParams.Scale;
-        const float lLineDownPx = lV.LineAdvance * InParams.LineHeightScale * lScale;
-
-        // Y-UP world: user passes the text's top-left. Baseline sits BELOW the top
-        // by Ascent*Scale (stb's Ascent is the distance from baseline to the highest
-        // glyph extent; in y-up world that distance goes upward, so baseline =
-        // top - Ascent).
-        const float lStartX     = InWorldPos.x;
-        const float lBaselineY0 = InWorldPos.y - lV.Ascent * lScale;
-
-        FontAsset::GlyphMetrics lSpace = {};
-        const bool              lSpaceOk = InFont.GetGlyphMetrics(' ', lSpace);
-
-        float lCursorX = lStartX;
-        float lCursorY = lBaselineY0;
-        char  lPrev    = 0;
-
-        for (const char* lP = InText; *lP; ++lP)
-        {
-            const char lC = *lP;
-
-            if (lC == '\n')
+            if (InM.Params.bKerning && InOutPrevious != 0u)
             {
-                lCursorX = lStartX;
-                lCursorY -= lLineDownPx; // y-up: new line moves the baseline downward
-                lPrev    = 0;
-                continue;
+                lStep.Kern = InM.Face.GetKerning(InOutPrevious, InCodepoint) * InM.Scale;
             }
-            if (lC == '\t')
+
+            lStep.Glyph   = InM.Face.FindGlyph(InCodepoint);
+            lStep.Advance = (lStep.Glyph != nullptr) ? lStep.Glyph->XAdvance * InM.Scale
+                                                     : InM.Params.Size * TOFU_ADVANCE_RATIO;
+            InOutPrevious = InCodepoint;
+            return lStep;
+        }
+
+        /** Where a line stops, where the next one starts, and how wide the stopped one is. */
+        struct LineSpan
+        {
+            const char* End   = nullptr;   // exclusive
+            const char* Next  = nullptr;   // the next line's first byte
+            float       Width = 0.f;
+            bool        bLast = false;     // the string ended here
+        };
+
+        /**
+         * Find the end of the line starting at InStart: '\n', the terminator, or — wrapping — the
+         * last space before the box's edge (consumed), else the glyph that would cross it.
+         */
+        LineSpan ScanLine(const WalkMetrics& InM, const char* InStart)
+        {
+            const bool lWrap = InM.Params.bWrap && InM.Params.BoxWidth > 0.f;
+
+            const char* lCursor   = InStart;
+            Uint32      lPrevious = 0u;
+            float       lWidth    = 0.f;
+
+            const char* lBreakEnd   = nullptr;   // the line's end if it breaks at the last space seen
+            const char* lBreakNext  = nullptr;
+            float       lBreakWidth = 0.f;
+
+            while (true)
             {
-                if (lSpaceOk)
+                const char*  lBefore    = lCursor;
+                const Uint32 lCodepoint = Utf8::Decode(lCursor);
+
+                if (lCodepoint == 0u)   { return { lBefore, lBefore, lWidth, true }; }
+                if (lCodepoint == '\n') { return { lBefore, lCursor, lWidth, false }; }
+
+                const PenStep lStep    = StepPen(InM, lCodepoint, lPrevious);
+                const float   lAfter   = lWidth + lStep.Kern + lStep.Advance;
+                const bool    lCrosses = lWrap && lAfter > InM.Params.BoxWidth && lWidth > 0.f;
+
+                if (lCodepoint == ' ' || lCodepoint == '\t')
                 {
-                    lCursorX += static_cast<float>(sTabSpaceWidth) * lSpace.XAdvance * lScale;
+                    // A blank crossing the edge IS the break — nothing of it is drawn.
+                    if (lCrosses) { return { lBefore, lCursor, lWidth, false }; }
+
+                    lBreakEnd   = lBefore;
+                    lBreakNext  = lCursor;
+                    lBreakWidth = lWidth;
                 }
-                lPrev = 0;
-                continue;
-            }
+                else if (lCrosses)
+                {
+                    // Back to the last blank; a word wider than the box breaks before this glyph. A
+                    // first glyph wider than the box is placed anyway (lWidth > 0 above).
+                    if (lBreakEnd != nullptr) { return { lBreakEnd, lBreakNext, lBreakWidth, false }; }
+                    return { lBefore, lBefore, lWidth, false };
+                }
 
-            FontAsset::GlyphMetrics lG = {};
-            if (!ResolveGlyph(InFont, lC, lG))
+                lWidth = lAfter;
+            }
+        }
+
+        /** Place one line's glyphs, pen starting at InPenX on InBaselineY. */
+        void EmitLine(const WalkMetrics& InM, const FTextQuadSink& InSink, const char* InBegin, const char* InEnd,
+                      float InPenX, const float InBaselineY)
+        {
+            const char* lCursor   = InBegin;
+            Uint32      lPrevious = 0u;
+
+            while (lCursor < InEnd)
             {
-                lPrev = 0;
-                continue;
-            }
+                const Uint32  lCodepoint = Utf8::Decode(lCursor);
+                const PenStep lStep      = StepPen(InM, lCodepoint, lPrevious);
 
-            // Apply kerning before fixing this glyph's draw position. GetKerning
-            // returns 0 for prev=0 (start of line / after tab) since 0 is outside
-            // the baked range — no special-case branch needed beyond the toggle.
-            if (InParams.EnableKerning && lPrev != 0)
+                InPenX += lStep.Kern;
+
+                if (lStep.bTab)
+                {
+                    InPenX += lStep.Advance;
+                    continue;
+                }
+
+                if (lStep.Glyph == nullptr)
+                {
+                    // Tofu. Sits ON the baseline and is sized from Size rather than from the face,
+                    // because the face is precisely what does not know this character.
+                    TextQuad lQuad;
+                    lQuad.Size   = { InM.Params.Size * TOFU_WIDTH_RATIO, InM.Params.Size * TOFU_HEIGHT_RATIO };
+                    lQuad.Centre = { InPenX + lQuad.Size.x * 0.5f, InBaselineY + lQuad.Size.y * 0.5f };
+                    lQuad.bTofu  = true;
+
+                    InSink(lQuad);
+                }
+                else if (lStep.Glyph->QuadSize.x > 0.f && lStep.Glyph->QuadSize.y > 0.f)
+                {
+                    // A blank glyph (space) emits nothing but still advances.
+                    const FontGlyph& lGlyph = *lStep.Glyph;
+
+                    TextQuad lQuad;
+                    lQuad.Size   = { lGlyph.QuadSize.x * InM.Scale, lGlyph.QuadSize.y * InM.Scale };
+
+                    // QuadOffset is stb's, measured from the pen with Y going DOWN. This world's Y
+                    // goes up, so the vertical term subtracts and the horizontal one adds.
+                    lQuad.Centre = { InPenX      + (lGlyph.QuadOffset.x + lGlyph.QuadSize.x * 0.5f) * InM.Scale,
+                                     InBaselineY - (lGlyph.QuadOffset.y + lGlyph.QuadSize.y * 0.5f) * InM.Scale };
+                    lQuad.UVMin  = lGlyph.UVMin;
+                    lQuad.UVMax  = lGlyph.UVMax;
+
+                    InSink(lQuad);
+                }
+
+                InPenX += lStep.Advance;
+            }
+        }
+
+        /**
+         * THE ONE WALK, for every entry point.
+         *
+         * Measure, DrawString and the editor's preview differ by exactly one thing — what they do
+         * with each placed glyph — and writing the layout more than once is how they start
+         * disagreeing. Same argument Renderer2D::SubmitQuad makes for its two draw calls.
+         *
+         * Per line: SCAN for its end and width, then EMIT it — alignment needs the width before
+         * the first glyph lands, and wrapping needs the break before the glyph that crosses.
+         *
+         * @param InSink Empty to measure only.
+         * @return { widest line, total line-box height }.
+         */
+        Vector2F WalkText(const FTextQuadSink& InSink, const char* InUtf8, const Vector2F& InWorldPos,
+                          const FontFaceView& InFace, const TextDrawParams& InParams)
+        {
+            if (InUtf8 == nullptr || *InUtf8 == '\0' || !InFace.IsValid() || InFace.Data->PixelHeight <= 0.f)
             {
-                lCursorX += InFont.GetKerning(lPrev, lC) * lScale;
+                return { 0.f, 0.f };
             }
 
-            // Y-UP quad geometry. QuadOffset.y is stb's yoff (offset from pen to
-            // bbox top in stb's y-down — typically negative for ascending glyphs).
-            // top_y    = cursor_y - QuadOffset.y * Scale    (subtracting a negative goes up)
-            // bottom_y = top_y - QuadSize.y * Scale         (y-up: down = subtract)
-            // center_y = top_y - QuadSize.y * Scale * 0.5
-            //
-            // Equivalent (LearnOpenGL §60 reference-glyph trick) but cleaner —
-            // uses the documented font Ascent instead of a top-touching probe glyph.
-            const float lQuadW   = lG.QuadSize.x * lScale;
-            const float lQuadH   = lG.QuadSize.y * lScale;
-            const float lTopY    = lCursorY - lG.QuadOffset.y * lScale;
-            const float lCenterX = lCursorX + lG.QuadOffset.x * lScale + lQuadW * 0.5f;
-            const float lCenterY = lTopY - lQuadH * 0.5f;
+            const FontFaceData& lFace  = *InFace.Data;
+            const float         lScale = InParams.Size / lFace.PixelHeight;
 
-            // UVMin/UVMax are V-swapped at bake (Step 2) — they map cleanly to
-            // Renderer2D's bottom-up vertex layout. No per-draw UV correction.
-            Renderer2D::DrawSprite({ lCenterX, lCenterY }, { lQuadW, lQuadH }, lAtlas,
-                                   lG.UVMin, lG.UVMax, InParams.Color, 0.f);
+            const FontGlyph* lSpace = lFace.FindGlyph(' ');
+            const WalkMetrics lM{ lFace, InParams, lScale,
+                                  (lSpace != nullptr) ? lSpace->XAdvance * lScale : InParams.Size * FALLBACK_SPACE_RATIO };
 
-            lCursorX += lG.XAdvance * lScale;
-            lPrev = lC;
+            // The pen sits on the BASELINE, which is one ascent below the caller's top-left. Y is up
+            // here, so "below" subtracts — the one sign the whole layout turns on.
+            const float lLineStep  = lFace.VMetrics.LineAdvance * InParams.LineHeightScale * lScale;
+            float       lBaselineY = InWorldPos.y - lFace.VMetrics.Ascent * lScale;
+
+            const float lAlign = InParams.HAlign == ETextAlign::Center ? 0.5f
+                               : InParams.HAlign == ETextAlign::Right  ? 1.f : 0.f;
+
+            float  lWidestLine = 0.f;
+            Uint32 lLineCount  = 0u;
+
+            const char* lLineStart = InUtf8;
+
+            while (true)
+            {
+                const LineSpan lSpan = ScanLine(lM, lLineStart);
+
+                lWidestLine = (lSpan.Width > lWidestLine) ? lSpan.Width : lWidestLine;
+                ++lLineCount;
+
+                if (InSink)
+                {
+                    EmitLine(lM, InSink, lLineStart, lSpan.End,
+                             InWorldPos.x + (InParams.BoxWidth - lSpan.Width) * lAlign, lBaselineY);
+                }
+
+                if (lSpan.bLast) { break; }
+
+                lBaselineY -= lLineStep;
+                lLineStart  = lSpan.Next;
+            }
+
+            return { lWidestLine, static_cast<float>(lLineCount) * lLineStep };
         }
     }
 
-    // =============================================================================
-    // Measure
-    // =============================================================================
-    Vector2F Measure(const char*       InText,
-                     const FontAsset&  InFont,
-                     const DrawParams& InParams)
+    Vector2F Layout(const char* InUtf8, const Vector2F& InOrigin, const FontFaceView& InFace,
+                    const TextDrawParams& InParams, const FTextQuadSink& InSink)
     {
-        if (!InText || !*InText || !InFont.IsLoaded())
+        return WalkText(InSink, InUtf8, InOrigin, InFace, InParams);
+    }
+
+    Vector2F DrawString(Renderer2D& InRenderer, const char* InUtf8, const Vector2F& InWorldPos,
+                        const FontFaceView& InFace, const TextDrawParams& InParams)
+    {
+        // NO ATLAS means the face is still uploading: lay the line out, draw none of it, and the
+        // next frame draws it in the right place. The tofu boxes still go through, because a face
+        // with no glyphs has nothing to wait for.
+        ITexture2D* lAtlas = InFace.Atlas;
+
+        return WalkText([&InRenderer, &InParams, lAtlas](const TextQuad& InQuad)
+                        {
+                            if (InQuad.bTofu)
+                            {
+                                InRenderer.DrawQuadOutline(InQuad.Centre, InQuad.Size, InParams.Color,
+                                                           InParams.Size * TOFU_THICKNESS_RATIO, 0.f,
+                                                           InParams.Layer, InParams.OrderInLayer);
+                                return;
+                            }
+
+                            if (lAtlas != nullptr)
+                            {
+                                InRenderer.DrawSprite(InQuad.Centre, InQuad.Size, *lAtlas, InParams.Color,
+                                                      0.f, InParams.Layer, InParams.OrderInLayer,
+                                                      InQuad.UVMin, InQuad.UVMax);
+                            }
+                        },
+                        InUtf8, InWorldPos, InFace, InParams);
+    }
+
+    Vector2F Measure(const char* InUtf8, const FontFaceView& InFace, const TextDrawParams& InParams)
+    {
+        return WalkText({}, InUtf8, { 0.f, 0.f }, InFace, InParams);
+    }
+
+    Vector2F EstimateExtent(const char* InUtf8, const TextDrawParams& InParams)
+    {
+        if (InUtf8 == nullptr || *InUtf8 == '\0')
         {
             return { 0.f, 0.f };
         }
 
-        const FontAsset::FontVMetrics& lV = InFont.GetFontVMetrics();
-        const float lScale      = InParams.Scale;
-        const float lLineDownPx = lV.LineAdvance * InParams.LineHeightScale * lScale;
+        Uint32 lWidestLine = 0u;
+        Uint32 lThisLine   = 0u;
+        Uint32 lLineCount  = 1u;
 
-        FontAsset::GlyphMetrics lSpace = {};
-        const bool              lSpaceOk = InFont.GetGlyphMetrics(' ', lSpace);
+        const char* lCursor = InUtf8;
 
-        float  lLineWidth = 0.f;
-        float  lMaxWidth  = 0.f;
-        Uint32 lLineCount = 1u;
-        char   lPrev      = 0;
-
-        for (const char* lP = InText; *lP; ++lP)
+        while (const Uint32 lCodepoint = Utf8::Decode(lCursor))
         {
-            const char lC = *lP;
-
-            if (lC == '\n')
+            if (lCodepoint == '\n')
             {
-                if (lLineWidth > lMaxWidth) { lMaxWidth = lLineWidth; }
-                lLineWidth = 0.f;
+                lWidestLine = (lThisLine > lWidestLine) ? lThisLine : lWidestLine;
+                lThisLine   = 0u;
                 ++lLineCount;
-                lPrev = 0;
-                continue;
-            }
-            if (lC == '\t')
-            {
-                if (lSpaceOk)
-                {
-                    lLineWidth += static_cast<float>(sTabSpaceWidth) * lSpace.XAdvance * lScale;
-                }
-                lPrev = 0;
                 continue;
             }
 
-            FontAsset::GlyphMetrics lG = {};
-            if (!ResolveGlyph(InFont, lC, lG))
-            {
-                lPrev = 0;
-                continue;
-            }
-
-            if (InParams.EnableKerning && lPrev != 0)
-            {
-                lLineWidth += InFont.GetKerning(lPrev, lC) * lScale;
-            }
-            lLineWidth += lG.XAdvance * lScale;
-            lPrev = lC;
+            lThisLine += (lCodepoint == '\t') ? TAB_SPACES : 1u;
         }
-        if (lLineWidth > lMaxWidth) { lMaxWidth = lLineWidth; }
 
-        // Total height = N_lines * LineAdvance — over-estimates by ~LineGap on the
-        // last line but matches "where the next line would start if appended" which
-        // is what layout callers (future Draw Debug API) actually need.
-        const float lTotalHeight = static_cast<float>(lLineCount) * lLineDownPx;
-        return { lMaxWidth, lTotalHeight };
+        lWidestLine = (lThisLine > lWidestLine) ? lThisLine : lWidestLine;
+
+        return { static_cast<float>(lWidestLine) * InParams.Size * ESTIMATE_ADVANCE_RATIO,
+                 static_cast<float>(lLineCount)  * InParams.Size * ESTIMATE_LINE_RATIO
+                                                 * InParams.LineHeightScale };
     }
-
-} // namespace Opaax::Text2D
+}

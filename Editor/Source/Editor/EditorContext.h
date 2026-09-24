@@ -1,0 +1,213 @@
+#pragma once
+
+namespace Opaax
+{
+    class IEngine;
+    class WorldManager;
+    class ResourceManager;
+    class IPaths;
+    class IFileSystem;
+    class IConfigSystem;
+    class IStatsService;
+    class Window;
+
+    namespace Editor
+    {
+        class IEditorGui;               // editor-owned; the UI backend seam and the owner of the UI pass
+        class IEditorUIBackend;         // editor-owned; the context carries it so panels reach it by ctor
+        class IEditorDialogs;           // editor-owned; file pickers and message boxes
+        class IEditorWidgets;           // editor-owned; the value-editor vocabulary drawers use
+        class EditorCamera;             // editor-owned; how the author is looking at an Edit world
+        class EditorSelection;          // editor-owned; what is selected (Hierarchy + viewport write, Inspector reads)
+        class EditorResourceEvents;     // editor-owned; "a document was saved", two-phase (⑦-C P4)
+        class EditorPrefabDocument;     // editor-owned; WHICH prefab is open, and its world (⑦-C P6)
+        class EditorViewport;           // editor-owned; how big the viewport image is, in pixels
+        class EditorGizmo;              // editor-owned; the transform handles' grab state
+        class EditorUndo;               // editor-owned; the undo/redo stacks of executed commands
+        class PlayInEditor;             // editor-owned; the PIE state machine (toolbar + reserved keys drive it)
+        class InputRoute;               // editor-owned; whether the engine is being fed (D5 steps 2 + 4)
+        class EditorMapDocument;        // editor-owned; WHICH map is open and whether it changed (M5)
+        class EditorLevelDocument;      // editor-owned; WHICH level is open and whether it changed
+        class EditorSpriteSheetDocument;// editor-owned; the open .opaaxsheet AND its data (⑥ S2)
+        class EditorAnimationClipDocument; // editor-owned; the open .opaaxclip AND its data (⑥ S3)
+        class EditorAnimationLibraryDocument; // editor-owned; the open .opaaxanim AND its data (⑥ S4)
+        class EditorFontFamilyDocument;       // editor-owned; the open .opaaxfont AND its data (⑥ S4)
+        class EditorUICanvasDocument;         // editor-owned; the open .opaaxui AND its canvas (UI U4)
+        class EditorMoveModeDocument;         // editor-owned; the open .opaaxmovemode AND its data (⑦-A)
+        class EditorMoverDocument;            // editor-owned; the open .opaaxmover AND its data (⑦-A)
+        class EditorInputActionDocument;      // editor-owned; the open .opaaxaction AND its data (⑦-B)
+        class EditorInputMappingContextDocument; // editor-owned; the open .opaaxinputmap AND its data (⑦-B)
+        class EditorExtensionRegistrar; // editor-owned; the sealed D10 routes (Inspector reads Drawers())
+        class EditorPaths;              // editor-owned IPaths subclass; the editor-space directories
+        class EditorPanels;             // editor-owned; the LIVE panels and their visibility
+        class ResourcePreview;          // editor-owned; WHICH resource a double-click asked to see
+
+        // =============================================================================
+        // EditorContext — a flat struct of engine-side references (Editor.md D3). Resolved ONCE by
+        //   EditorService (the editor's composition root) and injected BY CONSTRUCTOR into every panel
+        //   and drawer. Nothing downstream ever sees the AppServiceLocator or a static.
+        //
+        //   Built AFTER engine startup (PostEngineStartup): the subsystems it references are created in
+        //   Engine::Startup and then live for the engine's lifetime, so these refs are stable. Growing
+        //   set — AssetRegistry, EditorState, EditorEventBus join as their milestones land.
+        //
+        //   Gui and UIBackend are editor-owned rather than engine subsystems: the ViewportPanel needs the
+        //   second to turn its FBO into an image (GetViewportImage), and menus/panels draw their chrome
+        //   through the first. EditorService brings the UI up BEFORE building the context, so both
+        //   references are valid (see EditorService::Initialize ordering).
+        // =============================================================================
+        struct EditorContext
+        {
+            IEngine&          Engine;
+            WorldManager&     Worlds;
+            ResourceManager&  Resources;
+
+            // The UI backend seam — host chrome (menu bar, panel window) and the capture predicates.
+            // Here so a menu node or a panel draws through it without EditorService threading it down.
+            IEditorGui&       Gui;
+
+            // Gui.Backend(). Kept as its own member because it is the NARROWER dependency: a panel
+            // that only turns a texture into an image has no business with the rest of the UI.
+            IEditorUIBackend& UIBackend;
+
+            // The modal seam — "where do I save this?", "are you sure?". Beside Gui rather than a
+            // section of it for UIBackend's reason: a command that asks where to save a file has no
+            // business with the menu bar. The answer arrives by CONTINUATION; the native
+            // implementation fires it inline, so a call site may capture this context.
+            IEditorDialogs&   Dialogs;
+
+            // Gui.Widgets(). Beside it for UIBackend's reason: a drawer editing a float has no
+            // business with the menu bar, and a hand-written drawer receives only this.
+            IEditorWidgets&   Widgets;
+
+            EditorSelection&  Selection;   // M2a — Hierarchy writes, Inspector reads
+
+            // ⑦-C P4 — "a document was saved", in two phases. Here rather than inside any one
+            // document because the WRITERS are eight different Save ops and the READERS are
+            // whatever cares; the Selection/Undo shape.
+            EditorResourceEvents& ResourceEvents;
+
+            // ⑦-C P6 — the open `.opaaxprefab`. Owns its DATA and its WORLD, for SS4/AN8's reason:
+            // the copy in the ResourceManager is what every placed instance was built from.
+            EditorPrefabDocument& PrefabDocument;
+
+            // ② — the viewport's pixel size, measured by the panel. Here because the WRITER is a
+            // panel and the READER is a menu command: focus-selected needs the aspect to frame a
+            // wide selection, and there is no typed route to a panel (the ResourcePreview shape).
+            EditorViewport&   Viewport;
+
+            // ① — the Edit-side producer of World::CameraView, opposite the engine's CameraManager.
+            // Here rather than inside the ViewportPanel because it must OUTLIVE a PIE cycle: the panel
+            // is a panel, this is the session's viewpoint. It is also what ② will ask for the camera
+            // when it turns a click into a world position.
+            EditorCamera&     Camera;
+
+            // ③ — the transform handles' grab state. Here rather than inside the ViewportPanel for
+            // the reason Selection is: its subject is the SELECTION, which no panel owns (SEL7), and
+            // the gizmo MODE is set by an editor-wide shortcut.
+            EditorGizmo&      Gizmo;
+
+            // ⑤ — the undo/redo stacks. Here rather than inside the command registry because the
+            // WRITER is the dispatch and the READERS are the Edit menu and the shortcuts, and the
+            // registry is const by construction (it seals). The Selection/Gizmo shape.
+            EditorUndo&       Undo;
+
+            // M4 S5 — the PIE state machine. Here rather than inside the toolbar panel because the
+            // reserved keys (EditorService::RouteInput) drive the very same object, so the buttons
+            // and the shortcuts cannot disagree about what is playing.
+            PlayInEditor&     PIE;
+
+            // M-Input S2 — the one place that answers "is the engine being fed?". RouteInput gates
+            // on it and the Input panel displays it, so the behaviour and the readout cannot drift.
+            // Named Route, not InputRoute: a member sharing its type's name shadows it in-struct.
+            InputRoute&       Route;
+
+            // WM1a — WHICH `.opaaxlevel` the session has open, and whether its manifest changed.
+            // What a session holds is a LEVEL, not a map: the maps being edited are its maps. The
+            // manifest itself is NOT here — it lives in the world's Level, one owner.
+            EditorLevelDocument& LevelDocument;
+
+            // M5 — the open `.opaaxmap`: its path, its MapId, and whether the world still matches
+            // what was last written. Here rather than inside a Save command so the menu, the title
+            // bar and any future panel all read ONE answer — the same reason PIE and Route are here.
+            EditorMapDocument& MapDocument;
+
+            // ⑥ S2 — the open sprite sheet. Unlike the two documents above it OWNS its data: the
+            // copy in the ResourceManager is what the renderer draws, so editing that one would
+            // change the running game mid-edit and lose the work on the next reload.
+            EditorSpriteSheetDocument& SheetDocument;
+
+            // ⑥ S3 — the open animation clip. Owns its data for SheetDocument's reason: the copy in
+            // the ResourceManager is what a PLAYING entity animates from, so editing that one would
+            // change a running game mid-edit. A Save is what publishes it (ClipOps::Save).
+            EditorAnimationClipDocument& ClipDocument;
+
+            // ⑥ S4 — the open animation library: the alias table that turns a short gameplay name
+            // into one of the clips above. Owns its data for ClipDocument's reason.
+            EditorAnimationLibraryDocument& LibraryDocument;
+
+            // ⑥ S4 — the open font family: the alias table that turns (subset, weight, width, slant)
+            // into one `.ttf`. Owns its data for ClipDocument's reason.
+            EditorFontFamilyDocument& FamilyDocument;
+
+            // UI U4 — the open `.opaaxui`. It owns a real UICanvas rather than plain data, because
+            // the panel PREVIEWS it by rendering it (**UI14**): what is on screen IS the document.
+            EditorUICanvasDocument& UICanvasDocument;
+
+            // ⑦-A P5a — the open movement tuning: one mode's knobs. The CLIP of the mover family.
+            EditorMoveModeDocument& MoveModeDocument;
+
+            // ⑦-A P5a — the open mover: the alias table that turns a short gameplay name into one of
+            // the tunings above. The LIBRARY of the mover family, and its shape exactly.
+            EditorMoverDocument& MoverDocument;
+
+            // ⑦-B B3 — the open input action: what gameplay binds, and what its total is scaled by.
+            // It names no keys; the context below is what does (**IM9**).
+            EditorInputActionDocument& InputActionDocument;
+
+            // ⑦-B B3 — the open mapping context: which keys reach which actions. THIS is the file a
+            // rebind edits, which is why it is a separate document from the action.
+            EditorInputMappingContextDocument& InputMapDocument;
+
+            // M2b — the sealed extension routes, so a panel can consume what modules registered (the
+            // Inspector walks Drawers(), the Resource Browser ResourceTypes()). CONST by construction:
+            // Seal() happens at OnModulesRegistered, this context is built at PostEngineStartup, so
+            // nothing can register through it. One member serves every route.
+            const EditorExtensionRegistrar& Extensions;
+
+            // The LIVE panels — instances and visibility. Distinct from Extensions.Panels(), which is
+            // the sealed list of DESCRIPTIONS this was built from.
+            EditorPanels& Panels;
+
+            // ④b — WHICH resource a double-click asked to look at. A resource type's activate closure
+            // writes it and the Preview panel reads it; here because those are different objects and
+            // a closure gets no other way to reach one (the Selection/PIE/MapDocument shape).
+            ResourcePreview& Preview;
+
+            // M2d — the browser resolves its roots from paths and walks them through the file system.
+            // Both are resolved ONCE by EditorService: a panel never touches the locator (D3).
+            const IPaths&      Paths;
+            const IFileSystem& FileSystem;
+
+            // The engine's config registry — what the Config panel lists. Read LIVE, never snapshotted:
+            // Get<T>() auto-registers, so a system reading its config on a later frame grows it.
+            IConfigSystem& Configs;
+
+            // ④ — what the last frame cost. An APP SERVICE, not something on IEngine (I4): the
+            // engine is a consumer of it too. Never null; with stats off it answers an empty frame,
+            // which the Stats panel renders as "nothing measured" without a special case.
+            IStatsService& Stats;
+
+            // The window the editor is drawn in — resolved once by EditorService, like Paths and
+            // FileSystem beside it. Here because a command that needs something the composition
+            // root has to hand IN is a command nothing but a menu can invoke: a key binding carries
+            // a tag and no payload, so QuitCommand could never have been bound to one.
+            Window& MainWindow;
+
+            // The editor's own per-project space (<ProjectRoot>/Editor/Assets). NULL is a real state,
+            // not an error: EditorApplication installs a plain Paths when no edited project is declared,
+            // and then there simply is no editor space to browse.
+            const EditorPaths* EditorPathsOrNull;
+        };
+    }
+}

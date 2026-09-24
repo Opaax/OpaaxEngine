@@ -1,215 +1,203 @@
 #include "World.h"
 
-#include "Scene/Scene.h"
-#include "ECS/Components/SceneIDComponent.h"
+#include "World/Components/TransformComponent.h"   // emplaced on every entity, beside EntityMeta
+#include "World/Entity/Entity.h"
+#include "World/Entity/EntityMeta.h"
+#include "World/Level.h"   // complete type for the TUniquePtr<Level> member's destructor
 
 namespace Opaax
 {
-    // =============================================================================
-    // CTOR - DTOR (out-of-line: m_Scenes holds UniquePtr<Scene> forward-decl in header)
-    // =============================================================================
-    World::World()  = default;
-    World::~World() = default;
-
-    // =============================================================================
-    // Entity API
-    // =============================================================================
-    void World::Clear() noexcept
+    // =========================================================================
+    // CTOR - DTOR
+    // =========================================================================
+    World::World(OpaaxString InName, EWorldMode InMode)
+        : m_Id(Guid::New())
+        , m_Name(std::move(InName))
+        , m_Mode(InMode)
     {
-        m_Registry.clear();
-        m_EntityCount.store(0, std::memory_order_relaxed);
-
-        OPAAX_CORE_TRACE("World::Clear() — all entities destroyed.");
+        // The mode is in the log because it is otherwise invisible: an Edit and a Play world
+        // differ only by which subsystems they get (S3), so an ordered boot log is the only
+        // place the distinction shows up before PIE exists.
+        OPAAX_LOG(LogWorld, Info, "World '{}' created ({})", m_Name.CStr(), ToString(m_Mode));
     }
 
-    Uint32 World::GetEntityCount() const noexcept
+    World::~World()
     {
-        return m_EntityCount;
+        // Safety net only — DestroyWorld normally got here first, while the engine siblings a
+        // subsystem might reach were all still alive. Idempotent, so the normal path costs nothing.
+        ShutdownSubsystems();
+
+        OPAAX_LOG(LogWorld, Info, "World '{}' destroyed ({} entity(ies))", m_Name.CStr(), m_EntityCount);
     }
 
-    void World::DestroyEntity(EntityID InEntity, bool bDestroyChildren)
+    // =========================================================================
+    // Level
+    // =========================================================================
+    void World::SetLevel(TUniquePtr<Level> InLevel)
     {
-        if (!IsValid(InEntity))
+        m_Level = Move(InLevel);
+    }
+
+    // =========================================================================
+    // Subsystems
+    // =========================================================================
+    void World::SetContext(const WorldContext& InContext)
+    {
+        m_Context = MakeUnique<WorldContext>(InContext);
+    }
+
+    void World::ShutdownSubsystems()
+    {
+        if (m_bSubsystemsShutdown)
         {
-            OPAAX_CORE_WARN("World::DestroyEntity — invalid entity, ignored.");
             return;
         }
 
-        // Snapshot direct children — we cannot mutate the registry while iterating its view.
-        TDynArray<EntityID> lChildren;
+        m_bSubsystemsShutdown = true;
+        m_Subsystems.ShutdownAll();
+    }
+
+    void World::AddEntityCount()
+    {
+        ++m_EntityCount;
+        ++m_Revision;
+        LogEntityCount();
+    }
+
+    void World::RemoveEntityCount()
+    {
+        if (m_EntityCount <= 0 )
         {
-            auto lView = m_Registry.view<ECS::ParentComponent>();
-            for (auto lEnt : lView)
-            {
-                if (lView.get<ECS::ParentComponent>(lEnt).Parent == InEntity)
-                {
-                    lChildren.push_back(lEnt);
-                }
-            }
+            return;
         }
 
-        if (bDestroyChildren)
+        --m_EntityCount;
+        ++m_Revision;
+        LogEntityCount();
+    }
+
+    void World::LogEntityCount()
+    {
+        // TRACE, not Info: this fires on EVERY create and EVERY destroy, so the shmup hot path
+        // would put one line in the log per bullet spawned and another per bullet despawned.
+        OPAAX_LOG(LogWorld, Trace, "Entity count in world '{}' = {}", m_Name.CStr(), m_EntityCount);
+    }
+
+    // =========================================================================
+    // Entity lifecycle
+    // =========================================================================
+    Entity World::CreateEntity(OpaaxString InName, MapId InOwnerMap)
+    {
+        return CreateEntityWithGuid(Guid::New(), Move(InName), InOwnerMap);
+    }
+
+    Entity World::CreateEntityWithGuid(const Guid& InGuid, OpaaxString InName, MapId InOwnerMap)
+    {
+        if (!InGuid.IsValid())
         {
-            for (EntityID lChild : lChildren)
+            OPAAX_LOG(LogWorld, Error, "CreateEntityWithGuid — refused an invalid Guid for '{}'", InName.CStr());
+            return Entity{};
+        }
+
+        // Two entities under one Guid would make FindByGuid answer arbitrarily, and the
+        // second Register would silently evict the first mapping.
+        if (m_Guids.Contains(InGuid))
+        {
+            OPAAX_LOG(LogWorld, Error, "CreateEntityWithGuid — '{}' refused: that Guid is already live in world '{}'",
+                      InName.CStr(), m_Name.CStr());
+            return Entity{};
+        }
+
+        const EntityID lEnt  = m_Registry.create();
+        EntityMeta&    lMeta = m_Registry.emplace<EntityMeta>(lEnt, EntityMeta{ InGuid, Move(InName), InOwnerMap });
+
+        // Every entity has a position, unconditionally — that is what makes Each<TransformComponent>
+        // complete and every entity anchorable. A map's payload fills this one rather than fighting
+        // it: IComponentEntry::Load uses get_or_emplace.
+        m_Registry.emplace<TransformComponent>(lEnt);
+
+        m_Guids.Register(lMeta.Id, lEnt);
+        OPAAX_LOG(LogWorld, Trace, "CreateEntity '{}' in world '{}'", lMeta.Name.CStr(), m_Name.CStr());
+
+        AddEntityCount();
+
+        return Entity{ lEnt, this };
+    }
+
+    void World::DestroyEntity(Entity InEntity)
+    {
+        if (InEntity.IsValid())
+        {
+            DestroyEntity(InEntity.GetHandle());
+        }
+    }
+
+    void World::DestroyEntity(EntityID InEntity)
+    {
+        if (!m_Registry.valid(InEntity))
+        {
+            OPAAX_LOG(LogWorld, Warn, "DestroyEntity — invalid entity ignored");
+            return;
+        }
+        
+        if (const EntityMeta* lMeta = m_Registry.try_get<EntityMeta>(InEntity))
+        {
+            OPAAX_LOG(LogWorld, Trace, "DestroyEntity — {}", lMeta->Name.CStr());
+
+            // CASCADE (§HR): a child cannot outlive its parent. Collected first — destroying inside
+            // the view is unsafe, and the pool may move lMeta out from under us — then recursed.
+            const Guid lId = lMeta->Id;
+            m_Guids.Unregister(lId);
+
+            TDynArray<EntityID> lChildren;
+            m_Registry.view<EntityMeta>().each([&](const EntityID InId, const EntityMeta& InChild)
             {
-                DestroyEntity(lChild, true);
-            }
+                if (InChild.Parent == lId) { lChildren.emplace_back(InId); }
+            });
+
+            for (const EntityID lChild : lChildren) { DestroyEntity(lChild); }
         }
         else
         {
-            // Promote children to root — preserves their data.
-            for (EntityID lChild : lChildren)
-            {
-                if (m_Registry.valid(lChild) && m_Registry.all_of<ECS::ParentComponent>(lChild))
-                {
-                    m_Registry.remove<ECS::ParentComponent>(lChild);
-                }
-            }
+            OPAAX_LOG(LogWorld, Trace, "DestroyEntity — Unknown Entity destroy");
         }
 
         m_Registry.destroy(InEntity);
-        m_EntityCount.fetch_sub(1, std::memory_order_relaxed);
+        RemoveEntityCount();
     }
 
-    EntityID World::FindByUuid(Uint64 InUuid) const noexcept
+    Entity World::FindByGuid(const Guid& InGuid)
     {
-        if (InUuid == 0) { return ENTITY_NONE; }
-
-        auto lView = m_Registry.view<const ECS::UuidComponent>();
-        for (auto lEnt : lView)
-        {
-            if (lView.get<const ECS::UuidComponent>(lEnt).Id == InUuid)
-            {
-                return lEnt;
-            }
-        }
-        return ENTITY_NONE;
+        // ENTITY_NONE handle -> an invalid Entity (null-safe lookup).
+        return Entity{ m_Guids.Resolve(InGuid), this };
     }
 
-    // =============================================================================
-    // Scene stack
-    // =============================================================================
-    Uint32 World::AllocateSceneID() noexcept
+    void World::OnActive()
     {
-        // Monotonic, skip 0 (reserved for PersistentSceneID). Overflow at 2^32
-        // pushes is implausible; if reached, wraps back through 0 — accept and log.
-        const Uint32 lID = m_NextSceneID++;
-        if (m_NextSceneID == PersistentSceneID)
-        {
-            OPAAX_CORE_WARN("World::AllocateSceneID — counter wrapped, skipping sentinel.");
-            m_NextSceneID = 1;
-        }
-        return lID;
-    }
+        m_bActive = true;
 
-    Scene* World::PushScene(UniquePtr<Scene> InScene)
+        OPAAX_LOG(LogWorld, Info, "World '{}' activated", m_Name.CStr());
+    }
+    
+    void World::OnDesactive()
     {
-        OPAAX_CORE_ASSERT(InScene != nullptr)
+        m_bActive = false;
 
-        if (!m_Scenes.empty())
-        {
-            m_Scenes.back()->OnExit();
-            OPAAX_CORE_TRACE("World::PushScene — '{}' exited.", m_Scenes.back()->GetName());
-        }
-
-        InScene->SetSceneID(AllocateSceneID());
-        SetActiveSceneID(InScene->GetSceneID());
-        OPAAX_CORE_TRACE("World::PushScene — loading '{}' (SceneID={}).",
-            InScene->GetName(), InScene->GetSceneID());
-
-        InScene->OnLoad(*this);
-        InScene->OnEnter();
-
-        m_Scenes.push_back(std::move(InScene));
-        return m_Scenes.back().get();
+        OPAAX_LOG(LogWorld, Info, "World '{}' deactivated", m_Name.CStr());
     }
 
-    void World::PopScene()
+    void World::Clear() noexcept
     {
-        if (m_Scenes.empty())
-        {
-            OPAAX_CORE_WARN("World::PopScene — scene stack is empty, ignored.");
-            return;
-        }
+        m_Registry.clear();
+        m_Guids.Clear();
+        m_EntityCount = 0;
+        ++m_Revision;   // wiping every entity is the largest content change there is
 
-        OPAAX_CORE_TRACE("World::PopScene — unloading '{}' (SceneID={}).",
-            m_Scenes.back()->GetName(), m_Scenes.back()->GetSceneID());
-        m_Scenes.back()->OnExit();
-        m_Scenes.back()->OnUnload(*this);
-        DestroyEntitiesWithSceneID(m_Scenes.back()->GetSceneID());
-        m_Scenes.pop_back();
+        // The Level's mount records describe entities that no longer exist. Cleared, not
+        // unmounted: there is nothing left to destroy, and a Level still claiming a map would
+        // refuse to mount it again.
+        if (m_Level != nullptr) { m_Level->OnWorldCleared(); }
 
-        if (!m_Scenes.empty())
-        {
-            SetActiveSceneID(m_Scenes.back()->GetSceneID());
-            OPAAX_CORE_TRACE("World::PopScene — '{}' entered.", m_Scenes.back()->GetName());
-            m_Scenes.back()->OnEnter();
-        }
-        else
-        {
-            SetActiveSceneID(PersistentSceneID);
-        }
+        OPAAX_LOG(LogWorld, Info, "World '{}' cleared", m_Name.CStr());
     }
-
-    Scene* World::ReplaceScene(UniquePtr<Scene> InScene)
-    {
-        OPAAX_CORE_ASSERT(InScene != nullptr)
-
-        if (!m_Scenes.empty())
-        {
-            OPAAX_CORE_TRACE("World::ReplaceScene — unloading '{}'.", m_Scenes.back()->GetName());
-            m_Scenes.back()->OnExit();
-            m_Scenes.back()->OnUnload(*this);
-            DestroyEntitiesWithSceneID(m_Scenes.back()->GetSceneID());
-            m_Scenes.pop_back();
-        }
-
-        InScene->SetSceneID(AllocateSceneID());
-        SetActiveSceneID(InScene->GetSceneID());
-        OPAAX_CORE_TRACE("World::ReplaceScene — loading '{}' (SceneID={}).",
-            InScene->GetName(), InScene->GetSceneID());
-
-        InScene->OnLoad(*this);
-        InScene->OnEnter();
-
-        m_Scenes.push_back(std::move(InScene));
-        return m_Scenes.back().get();
-    }
-
-    Scene* World::GetActiveScene() noexcept
-    {
-        return m_Scenes.empty() ? nullptr : m_Scenes.back().get();
-    }
-
-    const Scene* World::GetActiveScene() const noexcept
-    {
-        return m_Scenes.empty() ? nullptr : m_Scenes.back().get();
-    }
-
-    Uint32 World::GetSceneCount() const noexcept
-    {
-        return static_cast<Uint32>(m_Scenes.size());
-    }
-
-    void World::DestroyEntitiesWithSceneID(Uint32 InSceneID)
-    {
-        // Snapshot before destroying — mutating during a view iteration is UB.
-        TDynArray<EntityID> lDoomed;
-        auto lView = m_Registry.view<const ECS::SceneIDComponent>();
-        for (auto lEnt : lView)
-        {
-            if (lView.get<const ECS::SceneIDComponent>(lEnt).SceneID == InSceneID)
-            {
-                lDoomed.push_back(lEnt);
-            }
-        }
-
-        for (EntityID lEnt : lDoomed)
-        {
-            DestroyEntity(lEnt, true);
-        }
-
-        OPAAX_CORE_TRACE("World::DestroyEntitiesWithSceneID — destroyed {} entity(ies) for SceneID={}.",
-            lDoomed.size(), InSceneID);
-    }
-} // namespace Opaax
+}

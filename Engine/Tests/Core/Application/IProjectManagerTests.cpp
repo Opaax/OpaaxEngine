@@ -1,0 +1,127 @@
+// Suite: IProjectManager — identity read from the .opaaxproj. The parsing is a PURE,
+// tolerant function (ParseProjectIdentity) driven with JSON strings; the service ctor's
+// file read is thin glue. NullPaths gives an empty identity (no file) through the locator.
+#include <doctest.h>
+
+#include "Application/Services/IProjectManager.h"
+#include "Application/Services/IPaths.h"
+#include "Application/Services/AppServiceLocator.h"
+
+using namespace Opaax;
+
+// =============================================================================
+// Pure parser
+// =============================================================================
+TEST_CASE("ParseProjectIdentity: full schema reads every field")
+{
+    const ProjectIdentity lId = ParseProjectIdentity(OpaaxString(
+        R"({"name":"MyGame","id":"a1b2","engineVersion":"0.4","startupScene":"Scenes/Main.opaaxscene"})"));
+
+    CHECK(lId.Name          == "MyGame");
+    CHECK(lId.Id            == "a1b2");
+    CHECK(lId.EngineVersion == "0.4");
+    CHECK(lId.StartupLevel  == "Scenes/Main.opaaxscene");
+}
+
+TEST_CASE("ParseProjectIdentity: 'startupLevel' is the live key and wins over both Scene-era ones")
+{
+    // X4 — the World > Level > Map vocabulary. A project carrying all three (mid-migration)
+    // must resolve to the new one, or migrating a project would silently change nothing.
+    const ProjectIdentity lId = ParseProjectIdentity(OpaaxString(
+        R"({"name":"MyGame","startupLevel":"Levels/Main.opaaxlevel",)"
+        R"("startupScene":"Scenes/Old.opaaxscene","defaultScene":"Scenes/Older.opaaxscene"})"));
+
+    CHECK(lId.StartupLevel == "Levels/Main.opaaxlevel");
+}
+
+TEST_CASE("ParseProjectIdentity: 'loadingScreen' names the cover, and a project without one reads empty (UI21)")
+{
+    const ProjectIdentity lWith = ParseProjectIdentity(OpaaxString(
+        R"({"name":"MyGame","startupLevel":"Levels/Main.opaaxlevel","loadingScreen":"UI/Loading.opaaxui"})"));
+    CHECK(lWith.LoadingScreen == "UI/Loading.opaaxui");
+
+    // Every project written before the key: empty, which the UI tenant reads as "a black cover".
+    const ProjectIdentity lWithout = ParseProjectIdentity(OpaaxString(R"({"name":"MyGame"})"));
+    CHECK(lWithout.LoadingScreen.IsEmpty());
+    CHECK(lWithout.LoadingScreenMinSeconds == 0.f);
+
+    // The minimum cover time beside it: a number reads, a string is ignored (tolerant, like the rest).
+    const ProjectIdentity lTimed = ParseProjectIdentity(OpaaxString(
+        R"({"name":"MyGame","loadingScreen":"UI/Loading.opaaxui","loadingScreenMinSeconds":3})"));
+    CHECK(lTimed.LoadingScreenMinSeconds == doctest::Approx(3.f));
+
+    const ProjectIdentity lBad = ParseProjectIdentity(OpaaxString(R"({"name":"MyGame","loadingScreenMinSeconds":"3"})"));
+    CHECK(lBad.LoadingScreenMinSeconds == 0.f);
+}
+
+TEST_CASE("ParseProjectIdentity: 'uiReferenceHeight' is the canvas's height, 1080 when absent, bad or zero (U11)")
+{
+    // The one number every HUD is authored against (UI2) — the PROJECT's, not each asset's.
+    const ProjectIdentity lSet = ParseProjectIdentity(OpaaxString(R"({"name":"MyGame","uiReferenceHeight":720})"));
+    CHECK(lSet.UIReferenceHeight == doctest::Approx(720.f));
+
+    CHECK(ParseProjectIdentity(OpaaxString(R"({"name":"MyGame"})")).UIReferenceHeight == doctest::Approx(1080.f));
+    CHECK(ParseProjectIdentity(OpaaxString(R"({"uiReferenceHeight":"720"})")).UIReferenceHeight == doctest::Approx(1080.f));
+    CHECK(ParseProjectIdentity(OpaaxString(R"({"uiReferenceHeight":0})")).UIReferenceHeight == doctest::Approx(1080.f));
+}
+
+TEST_CASE("ParseProjectIdentity: 'startupScene' still feeds StartupLevel when the live key is absent")
+{
+    const ProjectIdentity lId = ParseProjectIdentity(OpaaxString(
+        R"({"name":"MyGame","startupScene":"Scenes/Main.opaaxscene","defaultScene":"Scenes/Older.opaaxscene"})"));
+
+    // Two fallbacks deep: an existing project keeps opening without being rewritten.
+    CHECK(lId.StartupLevel == "Scenes/Main.opaaxscene");
+}
+
+TEST_CASE("ParseProjectIdentity: legacy 'defaultScene' feeds StartupLevel")
+{
+    const ProjectIdentity lId = ParseProjectIdentity(OpaaxString(
+        R"({"name":"Sandbox","defaultScene":"Scenes/Boot.opaaxscene"})"));
+
+    CHECK(lId.Name         == "Sandbox");
+    CHECK(lId.StartupLevel == "Scenes/Boot.opaaxscene");
+    CHECK(lId.Id.IsEmpty());
+    CHECK(lId.EngineVersion.IsEmpty());
+}
+
+TEST_CASE("ParseProjectIdentity: missing fields default to empty")
+{
+    const ProjectIdentity lId = ParseProjectIdentity(OpaaxString(R"({"name":"X"})"));
+
+    CHECK(lId.Name == "X");
+    CHECK(lId.Id.IsEmpty());
+    CHECK(lId.EngineVersion.IsEmpty());
+    CHECK(lId.StartupLevel.IsEmpty());
+}
+
+TEST_CASE("ParseProjectIdentity: malformed JSON yields an empty identity (no throw)")
+{
+    const ProjectIdentity lId = ParseProjectIdentity(OpaaxString("{ this is not json"));
+
+    CHECK(lId.Name.IsEmpty());
+    CHECK(lId.StartupLevel.IsEmpty());
+}
+
+// =============================================================================
+// Service / null object
+// =============================================================================
+TEST_CASE("IProjectManager: unprovided resolves to the null object")
+{
+    AppServiceLocator lLocator;
+    IProjectManager& lResolved = lLocator.Get<IProjectManager>();
+
+    CHECK(lResolved.IsNull());
+    CHECK(lResolved.Name().IsEmpty());
+    CHECK(&lResolved == &IProjectManager::Null());
+}
+
+TEST_CASE("IProjectManager: provided ProjectManager constructs (empty identity over NullPaths)")
+{
+    AppServiceLocator lLocator;
+    // NullPaths.ProjectFile() == "" -> no file -> empty identity, but a real (non-null) service.
+    IProjectManager& lPm = lLocator.Provide<IProjectManager, ProjectManager>(IPaths::Null());
+
+    CHECK_FALSE(lPm.IsNull());
+    CHECK(lPm.Name().IsEmpty());
+}

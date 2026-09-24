@@ -1,0 +1,17 @@
+{
+    "Description": "Walk left and right, and fly up and down. WASD or the arrow keys.",
+    "HoldSeconds": 0.5,
+    "Modifiers": [
+        {
+            "DeadZoneLower": 0.25,
+            "DeadZoneUpper": 1.0,
+            "Scale": {
+                "x": 1.0,
+                "y": 1.0
+            },
+            "Type": "Normalize"
+        }
+    ],
+    "Name": "Move",
+    "ValueType": "Axis2D"
+}

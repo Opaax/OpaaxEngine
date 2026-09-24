@@ -3,14 +3,16 @@
 #include <box2d/box2d.h>
 #include <cfloat>
 
-#include "Core/Log/OpaaxLog.h"
+#include "Application/Services/ILogger.h"
 
 namespace Opaax
 {
+    OPAAX_LOG_CATEGORY(Box2DPhysics);
+
     namespace
     {
-        b2Vec2   ToB2(Vector2F InV)   noexcept { return b2Vec2{ InV.x, InV.y }; }
-        Vector2F ToVec2(b2Vec2 InV)   noexcept { return Vector2F{ InV.x, InV.y }; }
+        b2Vec2   ToB2(Vector2F InVector) noexcept { return b2Vec2{ InVector.x, InVector.y }; }
+        Vector2F ToVec2(b2Vec2 InVector) noexcept { return Vector2F{ InVector.x, InVector.y }; }
 
         b2BodyType ToB2BodyType(EBodyType InType) noexcept
         {
@@ -23,16 +25,15 @@ namespace Opaax
             return b2_staticBody;
         }
 
-        // Resolve a shape to its owning entity's packed bits (BodyDesc::UserData). Returns 0 if the
-        // shape is stale — end-touch events may reference shapes destroyed since the step.
+        // 0 when the shape is stale — an end-touch event may name a shape destroyed since the step.
         Uint64 EntityBitsFromShape(b2ShapeId InShape) noexcept
         {
             if (!b2Shape_IsValid(InShape)) { return 0; }
+
             const b2BodyId lBody = b2Shape_GetBody(InShape);
             return static_cast<Uint64>(reinterpret_cast<uintptr_t>(b2Body_GetUserData(lBody)));
         }
 
-        // b2OverlapResultFcn for OverlapAABB — context is the out-vector; collect and continue.
         bool OverlapCollect(b2ShapeId InShape, void* InContext)
         {
             auto* lOut = static_cast<TDynArray<Uint64>*>(InContext);
@@ -40,28 +41,30 @@ namespace Opaax
             return true;
         }
 
-        // Collision-plane sink for b2World_CollideMover. A fixed buffer keeps the per-step
-        // work allocation-free; 8 planes is ample for 2D capsule movement (floor + a couple walls).
+        // A fixed buffer keeps the per-step mover work allocation-free; 8 planes is ample for 2D
+        // capsule movement (a floor and a couple of walls).
         constexpr int kMaxMoverPlanes = 8;
+
         struct MoverPlaneContext
         {
             b2CollisionPlane Planes[kMaxMoverPlanes] = {};
             int              Count                   = 0;
-            Uint64           IgnoreUserData          = 0;   // skip the mover's own body
+            Uint64           IgnoreUserData          = 0;
         };
 
-        // b2PlaneResultFcn: turn each hit plane into a rigid b2CollisionPlane (FLT_MAX pushLimit =
-        // hard surface, clipVelocity = true) for b2SolvePlanes / b2ClipVector. Skips the mover's own
-        // body (now a real kinematic body in the world) via IgnoreUserData.
+        // FLT_MAX pushLimit = a hard surface; clipVelocity = true so b2SolvePlanes clips against it.
         bool MoverPlaneFcn(b2ShapeId InShape, const b2PlaneResult* InPlane, void* InContext)
         {
             if (!InPlane->hit) { return true; }
 
             auto* lCtx = static_cast<MoverPlaneContext*>(InContext);
+
+            // The mover is itself a kinematic body in the world; it must not collide with its own capsule.
             if (lCtx->IgnoreUserData != 0 && EntityBitsFromShape(InShape) == lCtx->IgnoreUserData)
             {
-                return true;   // self — don't collide with our own capsule body
+                return true;
             }
+
             if (lCtx->Count < kMaxMoverPlanes)
             {
                 lCtx->Planes[lCtx->Count] = { InPlane->plane, FLT_MAX, 0.f, true };
@@ -76,29 +79,29 @@ namespace Opaax
     // =============================================================================
     Box2DPhysicsWorld::Box2DPhysicsWorld(const PhysicsWorldDesc& InDesc)
     {
-        // Global tuning: how many world units make a metre (sleep thresholds, margins).
+        // Global tuning: how many world units make a metre (sleep thresholds, speculative margins).
         b2SetLengthUnitsPerMeter(InDesc.LengthUnitsPerMeter);
 
         b2WorldDef lWorldDef = b2DefaultWorldDef();
         lWorldDef.gravity    = ToB2(InDesc.Gravity);
         m_WorldId            = b2CreateWorld(&lWorldDef);
 
-        OPAAX_CORE_INFO("Box2DPhysicsWorld: created (gravity={},{} units/m={} substeps={})",
-                        InDesc.Gravity.x, InDesc.Gravity.y, InDesc.LengthUnitsPerMeter, InDesc.SubStepCount);
+        OPAAX_LOG(LogBox2DPhysics, Info, "World created (gravity={},{} units/m={} substeps={})",
+                  InDesc.Gravity.x, InDesc.Gravity.y, InDesc.LengthUnitsPerMeter, InDesc.SubStepCount);
     }
 
     Box2DPhysicsWorld::~Box2DPhysicsWorld()
     {
         b2DestroyWorld(m_WorldId);
-        OPAAX_CORE_INFO("Box2DPhysicsWorld: destroyed");
+        OPAAX_LOG(LogBox2DPhysics, Info, "World destroyed");
     }
 
     // =============================================================================
-    // IPhysicsWorld Interface
+    // Simulation
     // =============================================================================
-    void Box2DPhysicsWorld::Step(float DeltaTime, int SubStepCount)
+    void Box2DPhysicsWorld::Step(float InDeltaTime, int InSubStepCount)
     {
-        b2World_Step(m_WorldId, DeltaTime, SubStepCount);
+        b2World_Step(m_WorldId, InDeltaTime, InSubStepCount);
     }
 
     void Box2DPhysicsWorld::SetGravity(Vector2F InGravity)
@@ -123,7 +126,7 @@ namespace Opaax
         lDef.gravityScale         = InDesc.GravityScale;
         lDef.linearDamping        = InDesc.LinearDamping;
         lDef.angularDamping       = InDesc.AngularDamping;
-        lDef.motionLocks.angularZ = InDesc.FixedRotation;
+        lDef.motionLocks.angularZ = InDesc.bFixedRotation;
         lDef.userData             = reinterpret_cast<void*>(static_cast<uintptr_t>(InDesc.UserData));
 
         const b2BodyId lId = b2CreateBody(m_WorldId, &lDef);
@@ -149,15 +152,15 @@ namespace Opaax
         lDef.density              = InShape.Density;
         lDef.material.friction    = InShape.Friction;
         lDef.material.restitution = InShape.Restitution;
-        lDef.isSensor             = InShape.IsSensor;
+        lDef.isSensor             = InShape.bIsSensor;
         lDef.filter.categoryBits  = InShape.CategoryBits;
         lDef.filter.maskBits      = InShape.MaskBits;
 
-        // Enable sensor events on every shape: a sensor needs them to report, and a solid
-        // visitor needs them to be SEEN by a sensor (Box2D 3.2 requires the visitor to opt in).
-        // Solid shapes additionally enable contact events for OnCollisionEnter/Exit.
+        // Sensor events on EVERY shape: a sensor needs them to report, and a solid visitor needs
+        // them to be SEEN by a sensor (Box2D 3.2 makes the visitor opt in). Contact events are
+        // solid-only, for OnCollisionEnter/Exit.
         lDef.enableSensorEvents  = true;
-        lDef.enableContactEvents = !InShape.IsSensor;
+        lDef.enableContactEvents = !InShape.bIsSensor;
 
         const ShapeGeometry& lGeo = InShape.Geometry;
 
@@ -176,7 +179,6 @@ namespace Opaax
         }
         else
         {
-            // Geometry carries half-extents directly (the component-side full size is halved upstream).
             const b2Polygon lBox = b2MakeOffsetBox(lGeo.HalfExtents.x, lGeo.HalfExtents.y,
                                                    ToB2(lGeo.Offset), b2MakeRot(0.f));
             lShape = b2CreatePolygonShape(lBody, &lDef, &lBox);
@@ -201,14 +203,15 @@ namespace Opaax
     void Box2DPhysicsWorld::SetBodyTargetTransform(BodyHandle InBody, Vector2F InPosition, float InRotation,
                                                    float InDeltaTime)
     {
-        const b2BodyId lId = b2LoadBodyId(InBody.Id);
+        const b2BodyId    lId = b2LoadBodyId(InBody.Id);
         const b2Transform lTarget{ ToB2(InPosition), b2MakeRot(InRotation) };
-        // Moves a kinematic body toward the target over the step (generates contacts); wake = true.
+
+        // Sweeps toward the target over the step, so it generates contacts instead of teleporting.
         b2Body_SetTargetTransform(lId, lTarget, InDeltaTime, true);
     }
 
     // =============================================================================
-    // Events (drained after Step)
+    // Events
     // =============================================================================
     void Box2DPhysicsWorld::GetSensorEvents(TDynArray<PhysicsContactPair>& OutBegan,
                                             TDynArray<PhysicsContactPair>& OutEnded)
@@ -221,15 +224,15 @@ namespace Opaax
         for (int i = 0; i < lEvents.beginCount; ++i)
         {
             const b2SensorBeginTouchEvent& lEvent = lEvents.beginEvents[i];
-            OutBegan.push_back({ EntityBitsFromShape(lEvent.sensorShapeId),
-                                 EntityBitsFromShape(lEvent.visitorShapeId) });
+            OutBegan.emplace_back(EntityBitsFromShape(lEvent.sensorShapeId),
+                                  EntityBitsFromShape(lEvent.visitorShapeId));
         }
 
         for (int i = 0; i < lEvents.endCount; ++i)
         {
             const b2SensorEndTouchEvent& lEvent = lEvents.endEvents[i];
-            OutEnded.push_back({ EntityBitsFromShape(lEvent.sensorShapeId),
-                                 EntityBitsFromShape(lEvent.visitorShapeId) });
+            OutEnded.emplace_back(EntityBitsFromShape(lEvent.sensorShapeId),
+                                  EntityBitsFromShape(lEvent.visitorShapeId));
         }
     }
 
@@ -244,32 +247,32 @@ namespace Opaax
         for (int i = 0; i < lEvents.beginCount; ++i)
         {
             const b2ContactBeginTouchEvent& lEvent = lEvents.beginEvents[i];
-            OutBegan.push_back({ EntityBitsFromShape(lEvent.shapeIdA),
-                                 EntityBitsFromShape(lEvent.shapeIdB) });
+            OutBegan.emplace_back(EntityBitsFromShape(lEvent.shapeIdA),
+                                  EntityBitsFromShape(lEvent.shapeIdB));
         }
 
         for (int i = 0; i < lEvents.endCount; ++i)
         {
             const b2ContactEndTouchEvent& lEvent = lEvents.endEvents[i];
-            OutEnded.push_back({ EntityBitsFromShape(lEvent.shapeIdA),
-                                 EntityBitsFromShape(lEvent.shapeIdB) });
+            OutEnded.emplace_back(EntityBitsFromShape(lEvent.shapeIdA),
+                                  EntityBitsFromShape(lEvent.shapeIdB));
         }
     }
 
     // =============================================================================
     // Queries
     // =============================================================================
-    PhysicsRayHit Box2DPhysicsWorld::RayCastClosest(Vector2F Origin, Vector2F Direction, float Distance,
-                                                    Uint64 ChannelMask)
+    PhysicsRayHit Box2DPhysicsWorld::RayCastClosest(Vector2F InOrigin, Vector2F InDirection,
+                                                    float InDistance, Uint64 InChannelMask)
     {
-        // translation = unit(Direction) * Distance; zero direction => zero-length ray (no hit).
-        const b2Vec2 lTranslation = b2MulSV(Distance, b2Normalize(ToB2(Direction)));
+        // A zero direction yields a zero-length ray, which cannot hit.
+        const b2Vec2 lTranslation = b2MulSV(InDistance, b2Normalize(ToB2(InDirection)));
 
         b2QueryFilter lFilter;
-        lFilter.categoryBits = ~0ull;        // the query belongs to all categories...
-        lFilter.maskBits     = ChannelMask;  // ...and accepts the channels the caller asked for.
+        lFilter.categoryBits = ~0ull;          // the query belongs to every category...
+        lFilter.maskBits     = InChannelMask;  // ...and accepts the channels the caller asked for.
 
-        const b2RayResult lResult = b2World_CastRayClosest(m_WorldId, ToB2(Origin), lTranslation, lFilter);
+        const b2RayResult lResult = b2World_CastRayClosest(m_WorldId, ToB2(InOrigin), lTranslation, lFilter);
 
         PhysicsRayHit lHit;
         lHit.bHit     = lResult.hit;
@@ -280,16 +283,16 @@ namespace Opaax
         return lHit;
     }
 
-    void Box2DPhysicsWorld::OverlapAABB(Vector2F Min, Vector2F Max, Uint64 ChannelMask,
+    void Box2DPhysicsWorld::OverlapAABB(Vector2F InMin, Vector2F InMax, Uint64 InChannelMask,
                                         TDynArray<Uint64>& OutUserData)
     {
         OutUserData.clear();
 
         b2QueryFilter lFilter;
         lFilter.categoryBits = ~0ull;
-        lFilter.maskBits     = ChannelMask;
+        lFilter.maskBits     = InChannelMask;
 
-        const b2AABB lAABB{ ToB2(Min), ToB2(Max) };
+        const b2AABB lAABB{ ToB2(InMin), ToB2(InMax) };
         b2World_OverlapAABB(m_WorldId, lAABB, lFilter, &OverlapCollect, &OutUserData);
     }
 
@@ -298,26 +301,26 @@ namespace Opaax
     // =============================================================================
     MoveCapsuleResult Box2DPhysicsWorld::MoveCapsule(const MoveCapsuleInput& InInput)
     {
-        // Mover is a query, not a shape: category ~0 (always queryable), mask = solid channels.
+        // The mover is a QUERY, not a shape: category ~0 (always queryable), mask = solid channels.
         b2QueryFilter lFilter;
         lFilter.categoryBits = ~0ull;
         lFilter.maskBits     = InInput.ChannelMask;
 
         b2Vec2       lPos    = ToB2(InInput.Position);
         const b2Vec2 lVel    = ToB2(InInput.Velocity);
-        const b2Vec2 lTarget = b2MulAdd(lPos, InInput.DeltaTime, lVel);  // target = pos + dt*velocity
+        const b2Vec2 lTarget = b2MulAdd(lPos, InInput.DeltaTime, lVel);
 
-        // Early-out distance — half a world unit; if a solve iteration barely moves, we're settled.
+        // Half a world unit: an iteration that barely moves means we have settled.
         constexpr float lToleranceSq = 0.5f * 0.5f;
-        const int lMaxIter = InInput.MaxIterations > 0 ? InInput.MaxIterations : 1;
+        const int       lMaxIter     = InInput.MaxIterations > 0 ? InInput.MaxIterations : 1;
 
         MoverPlaneContext lCtx;
         lCtx.IgnoreUserData = InInput.IgnoreUserData;
+
         for (int lIter = 0; lIter < lMaxIter; ++lIter)
         {
             lCtx.Count = 0;
 
-            // World-space capsule at the current resolved position.
             b2Capsule lMover;
             lMover.center1 = b2Add(lPos, ToB2(InInput.Capsule.Center1));
             lMover.center2 = b2Add(lPos, ToB2(InInput.Capsule.Center2));
@@ -329,15 +332,15 @@ namespace Opaax
             // Anti-tunnel: never advance further than a shape cast of the solved translation allows.
             const float  lFraction = b2World_CastMover(m_WorldId, &lMover, lSolve.translation, lFilter);
             const b2Vec2 lDelta    = b2MulSV(lFraction, lSolve.translation);
+
             lPos = b2Add(lPos, lDelta);
 
             if (b2LengthSquared(lDelta) < lToleranceSq) { break; }
         }
 
-        // Clip the velocity against the touched planes so the mover stops pushing into walls.
+        // Clipped against the touched planes, so the mover stops pushing into walls.
         const b2Vec2 lClipped = b2ClipVector(lVel, lCtx.Planes, lCtx.Count);
 
-        // Grounded = any touched plane whose normal is "up enough" (normal.y >= GroundNormalY).
         bool   lGrounded     = false;
         b2Vec2 lGroundNormal = { 0.f, 0.f };
         for (int i = 0; i < lCtx.Count; ++i)
@@ -353,9 +356,8 @@ namespace Opaax
         MoveCapsuleResult lResult;
         lResult.Position     = ToVec2(lPos);
         lResult.Velocity     = ToVec2(lClipped);
-        lResult.Grounded     = lGrounded;
+        lResult.bGrounded    = lGrounded;
         lResult.GroundNormal = ToVec2(lGroundNormal);
         return lResult;
     }
-
-} // namespace Opaax
+}

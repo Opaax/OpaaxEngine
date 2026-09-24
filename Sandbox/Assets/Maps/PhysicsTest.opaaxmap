@@ -1,0 +1,551 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Dummy": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.95,
+                        "y": 0.55,
+                        "z": 0.15
+                    },
+                    "Size": {
+                        "x": 50.0,
+                        "y": 100.0
+                    }
+                },
+                "Mover": {
+                    "Channel": "Pawn",
+                    "Height": 100.0,
+                    "ModeName": "Ground",
+                    "Mover": "Movers/Hero.opaaxmover",
+                    "Radius": 25.0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -40.0,
+                        "y": 100.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "88888888888888888888888888888888",
+            "name": "PhysicsPlayer",
+            "ownerMap": "PhysicsTest"
+        },
+        {
+            "components": {
+                "Collider": {
+                    "Channel": "WorldStatic",
+                    "Density": 1.0,
+                    "Friction": 0.6000000238418579,
+                    "Mode": "Solid",
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Radius": 50.0,
+                    "Restitution": 0.0,
+                    "Shape": "Box",
+                    "Size": {
+                        "x": 1436.0,
+                        "y": 40.0
+                    }
+                },
+                "Dummy": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.3499999940395355,
+                        "y": 0.3499999940395355,
+                        "z": 0.4000000059604645
+                    },
+                    "Size": {
+                        "x": 1436.0,
+                        "y": 40.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 267.5057067871094,
+                        "y": -260.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "11111111111111111111111111111111",
+            "name": "PhysicsFloor",
+            "ownerMap": "PhysicsTest"
+        },
+        {
+            "components": {
+                "Collider": {
+                    "Channel": "WorldStatic",
+                    "Density": 1.0,
+                    "Friction": 0.30000001192092896,
+                    "Mode": "Solid",
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Radius": 50.0,
+                    "Restitution": 0.0,
+                    "Shape": "Box",
+                    "Size": {
+                        "x": 40.0,
+                        "y": 360.0
+                    }
+                },
+                "Dummy": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.3499999940395355,
+                        "y": 0.3499999940395355,
+                        "z": 0.4000000059604645
+                    },
+                    "Size": {
+                        "x": 40.0,
+                        "y": 360.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -430.0,
+                        "y": -100.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "22222222222222222222222222222222",
+            "name": "PhysicsWallLeft",
+            "ownerMap": "PhysicsTest"
+        },
+        {
+            "components": {
+                "Collider": {
+                    "Channel": "WorldStatic",
+                    "Density": 1.0,
+                    "Friction": 0.20000000298023224,
+                    "Mode": "Solid",
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Radius": 50.0,
+                    "Restitution": 0.0,
+                    "Shape": "Box",
+                    "Size": {
+                        "x": 360.0,
+                        "y": 24.0
+                    }
+                },
+                "Dummy": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.30000001192092896,
+                        "y": 0.41999998688697815,
+                        "z": 0.3499999940395355
+                    },
+                    "Size": {
+                        "x": 360.0,
+                        "y": 24.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -250.73590087890625,
+                        "y": -140.0
+                    },
+                    "Rotation": -25.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "33333333333333333333333333333333",
+            "name": "PhysicsRamp",
+            "ownerMap": "PhysicsTest"
+        },
+        {
+            "components": {
+                "Collider": {
+                    "Channel": "WorldDynamic",
+                    "Density": 1.0,
+                    "Friction": 0.4000000059604645,
+                    "Mode": "Solid",
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Radius": 50.0,
+                    "Restitution": 0.0,
+                    "Shape": "Box",
+                    "Size": {
+                        "x": 60.0,
+                        "y": 60.0
+                    }
+                },
+                "Dummy": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.8500000238418579,
+                        "y": 0.30000001192092896,
+                        "z": 0.25
+                    },
+                    "Size": {
+                        "x": 60.0,
+                        "y": 60.0
+                    }
+                },
+                "Rigidbody": {
+                    "AngularDamping": 0.0,
+                    "GravityScale": 1.0,
+                    "LinearDamping": 0.0,
+                    "Type": "Dynamic",
+                    "bFixedRotation": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -146.16250610351563,
+                        "y": 194.46295166015625
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "44444444444444444444444444444444",
+            "name": "PhysicsBox",
+            "ownerMap": "PhysicsTest"
+        },
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 585.0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 300.7618103027344,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "4f3297b615eec051be0dae2b8b32f744",
+            "name": "Camera",
+            "ownerMap": "PhysicsTest"
+        },
+        {
+            "components": {
+                "Collider": {
+                    "Channel": "WorldDynamic",
+                    "Density": 1.0,
+                    "Friction": 0.20000000298023224,
+                    "Mode": "Solid",
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Radius": 28.0,
+                    "Restitution": 0.6499999761581421,
+                    "Shape": "Circle",
+                    "Size": {
+                        "x": 100.0,
+                        "y": 100.0
+                    }
+                },
+                "Dummy": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.25,
+                        "y": 0.550000011920929,
+                        "z": 0.8500000238418579
+                    },
+                    "Size": {
+                        "x": 56.0,
+                        "y": 56.0
+                    }
+                },
+                "Rigidbody": {
+                    "AngularDamping": 0.0,
+                    "GravityScale": 1.0,
+                    "LinearDamping": 0.0,
+                    "Type": "Dynamic",
+                    "bFixedRotation": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 719.9361572265625,
+                        "y": 420.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "55555555555555555555555555555555",
+            "name": "PhysicsBall",
+            "ownerMap": "PhysicsTest"
+        },
+        {
+            "components": {
+                "Collider": {
+                    "Channel": "WorldDynamic",
+                    "Density": 1.0,
+                    "Friction": 0.05000000074505806,
+                    "Mode": "Solid",
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Radius": 50.0,
+                    "Restitution": 0.0,
+                    "Shape": "Box",
+                    "Size": {
+                        "x": 50.0,
+                        "y": 50.0
+                    }
+                },
+                "Dummy": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.8999999761581421,
+                        "y": 0.75,
+                        "z": 0.25
+                    },
+                    "Size": {
+                        "x": 50.0,
+                        "y": 50.0
+                    }
+                },
+                "Rigidbody": {
+                    "AngularDamping": 0.0,
+                    "GravityScale": 1.0,
+                    "LinearDamping": 0.0,
+                    "Type": "Dynamic",
+                    "bFixedRotation": false
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 452.1939697265625,
+                        "y": 260.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "66666666666666666666666666666666",
+            "name": "PhysicsSlider",
+            "ownerMap": "PhysicsTest"
+        },
+        {
+            "components": {
+                "Collider": {
+                    "Channel": "Pawn",
+                    "Density": 1.0,
+                    "Friction": 0.30000001192092896,
+                    "Mode": "Solid",
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Radius": 24.0,
+                    "Restitution": 0.0,
+                    "Shape": "Capsule",
+                    "Size": {
+                        "x": 1.0,
+                        "y": 111.0
+                    }
+                },
+                "Dummy": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.699999988079071,
+                        "y": 0.44999998807907104,
+                        "z": 0.800000011920929
+                    },
+                    "Size": {
+                        "x": 50.0,
+                        "y": 100.0
+                    }
+                },
+                "Rigidbody": {
+                    "AngularDamping": 0.0,
+                    "GravityScale": 1.0,
+                    "LinearDamping": 0.0,
+                    "Type": "Dynamic",
+                    "bFixedRotation": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -280.0,
+                        "y": 300.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "77777777777777777777777777777777",
+            "name": "PhysicsCapsule",
+            "ownerMap": "PhysicsTest"
+        },
+        {
+            "components": {
+                "Collider": {
+                    "Channel": "WorldStatic",
+                    "Density": 1.0,
+                    "Friction": 0.30000001192092896,
+                    "Mode": "Solid",
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Radius": 50.0,
+                    "Restitution": 0.0,
+                    "Shape": "Box",
+                    "Size": {
+                        "x": 40.0,
+                        "y": 360.0
+                    }
+                },
+                "Dummy": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.3490196168422699,
+                        "y": 0.3490196168422699,
+                        "z": 0.4000000059604645
+                    },
+                    "Size": {
+                        "x": 40.0,
+                        "y": 360.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 995.4641723632813,
+                        "y": -97.43585968017578
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "8a5e5115569d089699d8f0a4cc8402d6",
+            "name": "PhysicsRightWall",
+            "ownerMap": "PhysicsTest"
+        },
+        {
+            "components": {
+                "Dummy": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.25,
+                        "y": 0.25,
+                        "z": 0.25
+                    },
+                    "Size": {
+                        "x": 36.0,
+                        "y": 12.0
+                    }
+                },
+                "GunComponent": {
+                    "Bullet": "",
+                    "MuzzleFlash": "",
+                    "RateOfFire": 4.0
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 40.0,
+                        "y": 20.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "99999999999999999999999999999999",
+            "name": "Gun",
+            "ownerMap": "PhysicsTest",
+            "parent": "88888888888888888888888888888888"
+        },
+        {
+            "components": {
+                "Collider": {
+                    "Channel": "WorldStatic",
+                    "Density": 1.0,
+                    "Friction": 0.30000001192092896,
+                    "Mode": "Solid",
+                    "Offset": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Radius": 50.0,
+                    "Restitution": 0.0,
+                    "Shape": "Box",
+                    "Size": {
+                        "x": 611.0,
+                        "y": 35.0
+                    }
+                },
+                "Dummy": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 0.3137255012989044,
+                        "y": 0.3137255012989044,
+                        "z": 0.47058823704719543
+                    },
+                    "Size": {
+                        "x": 609.0,
+                        "y": 26.0
+                    }
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 691.2251586914063,
+                        "y": -141.4767303466797
+                    },
+                    "Rotation": 16.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "aa124a187a537cadadb1bd6881435e14",
+            "name": "PhysicRamp2",
+            "ownerMap": "PhysicsTest"
+        }
+    ],
+    "mapId": "PhysicsTest",
+    "version": 4
+}

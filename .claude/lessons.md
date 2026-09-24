@@ -1,0 +1,2774 @@
+# Lessons
+
+## L1 — Place systems by Gregory's layer, not by a "services vs subsystems" gut call (2026-06-30)
+
+**Mistake:** I suggested `IAssetSystem` as an app-level *service*. The Resource/Asset Manager
+sits *above* Core Systems in Gregory's runtime-engine diagram (Fig 1.16) — it's pure **engine**.
+The app layer must stay ignorant of game concepts (textures, scenes).
+
+**Rule for next time:**
+- The App/Engine split is the horizontal Gregory line: **App = Platform-Independence + Core-Systems
+  layers** (passive facilities — Platform, Paths, Logger, Config, ProjectManager, JobSystem, Window).
+  **Engine = Resources/Assets and everything above.**
+- Before proposing where a system lives, name its Gregory layer. Resources-and-up => engine. If it
+  ticks per frame => engine. If it's a passive facility you submit-to/query => app service.
+- Init-order invariants (user, locked): **Config is loaded from disk in `Bootstrap()` before the
+  Engine exists**; **JobSystem is provided after Config** (worker count is config-driven) and stays
+  an app service. IEngine is created in the Initialize phase (post-window), not in Bootstrap.
+- Architecture is already specced in `.claude/Old/milestone/Engine_Refresh_Program.md` (4 instance-owned
+  tiers by lifetime). Read it before re-deriving the model from scratch.
+
+## L2 — Optimize the invariant the USER stated, not the one I prefer (2026-06-30)
+
+**Mistake:** I argued IEngine should NOT be a service in the locator, on a "services are passive,
+they don't tick" purity rule. The user's actual goal is **one single static root** (`AppServiceLocator`),
+with the whole graph instance-owned beneath it — which kills the DLL-static hazard by construction.
+Engine-as-service serves that invariant; my purity rule was the weaker concern.
+
+**Rule for next time:** when the user states the invariant they're optimizing (here: "AppServiceLocator
+the only static thing"), evaluate proposals against THAT, not against a textbook taxonomy. A
+"violation" of a clean category (a ticking service) is fine when it buys the invariant that actually
+matters for this codebase. Concede fast when their reason is stronger.
+
+## L3 — When a plan's PREMISE balloons mid-build, STOP and re-surface a scoped fork (2026-07-03)
+
+**What happened:** the approved M-RES-2 plan assumed "keep Resolve lock-free." Implementing it, the
+chosen async model forced that premise into a two-tier mutex + atomics + pre-reserved registry +
+destroy-outside-lock — roughly 3x the concurrency code, against the project's #1 value (Simple:
+"understandable end-to-end by one person"). I paused and asked (AskUserQuestion) coarse-uncontended-lock
+vs strictly-lock-free, recommending the simpler one; the user picked simple and it collapsed the machinery
+to a single recursive mutex.
+
+**Rule for next time:**
+- Distinguish a plan DETAIL that drifts (adjust inline) from a plan PREMISE that turns out costlier than
+  sketched (STOP and re-surface). The latter is the CLAUDE.md "deviate → STOP and re-plan" trigger.
+- Before committing hundreds of lines to a premise, estimate its true cost. If it fights the user's stated
+  top value (here Simple > max-concurrency), present the cheaper alternative as a scoped fork with a
+  recommendation — don't silently build the expensive version they haven't seen.
+- "Uncontended lock ≈ lock-free in steady state" for a solo 2D engine: don't pay large complexity for a
+  concurrency guarantee the workload won't measure.
+
+## L4 — Old+new coexistence: give the NEW system collision-proof identities; don't rely on include order (2026-07-13)
+
+**What happened:** building the refresh Event system beside the retired old one, I hit `C2365 redefinition`
+twice. Cause: the old `EEventCategoryOld` enum kept UNSCOPED enumerators named `EEventCategory_*` (the TYPE got
+the `Old` suffix, the enumerators didn't), and my new unscoped `EEventCategory` reused those exact names. No clash
+until ONE translation unit saw both headers. My first fix — forward-declare `Event` in `Window.h` — stopped the
+leak into TUs that only needed a reference, but the clash returned in `OpaaxApplication.cpp`, which LEGITIMATELY
+needs both (new event headers to route + the old event system transitively via `Engine.h`→subsystems). Include
+tricks can't save a TU that genuinely needs both. Real fix: scope the NEW `EEventCategory` as `enum class` + a
+`constexpr operator|` — enumerators become `EEventCategory::X`, never injected into the namespace.
+
+**Rule for next time:**
+- When old and new systems must COEXIST, give the NEW one collision-proof identities up front — **scoped
+  `enum class`** or distinct names — never rely on include order / hiding. Two unscoped enums sharing enumerator
+  names WILL collide the moment one TU needs both.
+- A rename to `*Old` must carry through to enumerators/consumers, not just the type name. An incomplete rename
+  (type suffixed, enumerators bare) is a latent collision waiting for the first shared TU.
+- Still forward-declare a type in headers that name it only by-reference/pointer (`Window.h` → `class Event;`) —
+  good hygiene that shrinks the blast radius, even though it isn't the root fix.
+- Cross-module type identity: hash a compiler-stable per-type string (`__FUNCSIG__`), NOT a function-local
+  template-static counter (duplicates per DLL/exe — the standing DLL-static hazard). Same rule that makes
+  out-of-line `.cpp` statics DLL-safe.
+
+## L5 — First build after your change is red? Separate YOUR diff from a pre-broken branch, and respect WIP boundaries (2026-07-16)
+
+**What happened:** after my World→WorldOld rename, `./build.bat` failed with 5 errors about `IEngine::GetEventBus`
+— in `OpaaxApplication.cpp` / `RendererManager.cpp` / `IEngine.cpp`, files my rename never touched. The branch HEAD
+simply didn't compile before I started (an unfinished `GetEngineEventBus`→`GetEventBus` migration the user was
+mid-way through). I proved my blast radius with `git status` (every modified file was a World consumer I swept),
+completed the minimal migration to unblock, and **told the user I'd touched their in-flight work**. The user reverted
+my version and fixed it their way, then said "don't touch the EventBus subsystem." Later a runtime restart-loop bug
+lived right next to that same wiring; I fixed it in **Engine boot only** and left the EventBus class alone.
+
+**Rule for next time:**
+- A red build right after your change is NOT proof your change broke it. `git status` shows your true scope; the
+  compiler's error *file paths* tell you whose code it is. If the errors are in files you never edited, it's
+  pre-existing — say so explicitly, don't silently absorb blame or thrash trying to "fix" your own clean diff.
+- Unblock with the MINIMAL fix and name it as touching the user's WIP. When they've fenced off a subsystem
+  ("don't touch X"), fix adjacent bugs on your side of the fence (Engine boot / accessors), never inside X.
+- The refresh branch can be committed-but-non-compiling (WIP commits). Don't assume HEAD builds; verify first.
+
+## L6 — Diagnose per-frame lifecycle loops by the log's repeating unit; a subsystem needing a sibling during Startup = resolve-from-manager, never lazy-Startup (2026-07-16)
+
+**What happened:** the render stack + ResourceManager re-initialised every ~25ms. Reading the log's repeating unit
+across cycle boundaries (not guessing) showed the whole `Engine::StartupAll` re-running. Root cause: `RendererManager::Startup`
+reached the bus via `IEngine::GetEngineEventBus()`, whose safety-net `if(!m_bStarted) Startup()` re-entered `Startup`
+while `m_bStarted` was still false (it's set only AFTER `StartupAll`), so `StartupAll` ran again — factories not yet
+consumed — rebuilding every subsystem. Fix: the accessors resolve their pointer from the owned `m_Subsystems` FIRST
+(the manager's create pass populates it before any subsystem's Startup), self-`Startup()` only as a genuine last resort.
+
+**Rule for next time:**
+- To diagnose a per-frame loop, find the exact repeating log sequence and its ONE trigger before proposing a fix;
+  shifting the cycle boundary often reveals the real order (here: Resource.Startup → Renderer.Startup rebuild).
+- A subsystem that needs a SIBLING during its own `Startup` must reach it through the owning manager
+  (`m_Subsystems.GetSubsystem<T>()`), never via a lazy accessor that can re-enter the owner's boot. Set a flag/cache
+  AFTER creation but expose it via resolve-from-manager so it's reachable mid-boot. Initialise all cached ptrs `= nullptr`.
+- See memory `project_engine_boot_reentrancy` for the accessor shape.
+
+## L7 — When cleanup has no good answer inside the existing phases, the missing thing is a PHASE (2026-07-16)
+
+**Distilled from the world-events task (task lesson L-E), because it is now doctrine, not an anecdote.**
+
+`WorldManager::Shutdown` destroyed worlds without announcing them. I proposed three patches — broadcast
+during destruction (subscribers half-dead), re-enter `DestroyWorld` from `Shutdown` (same problem), or
+document the hole. All three were bad. The user's answer was a new **TearDown phase**, which dissolved
+the problem instead of patching it.
+
+**The insight:** the real axis is not "teardown vs shutdown", it is **"everything still alive" vs
+"things are dying"**. No reordering *inside* `Shutdown` could ever have worked — by then Engine has
+unbound and the bus is going down.
+
+**Rule for next time:**
+- When a cleanup problem has no good answer inside the existing phases, check whether the lifecycle is
+  missing a "stopped but still alive" step BEFORE writing defensive code into a destructor path.
+- This is now one doctrine at every scope: `ISubsystem::TearDown` / `ISubsystemManager::TearDownAll` /
+  `IEngine::TearDown` / `OpaaxApplication::EngineTeardown`. Apply it one scope down without re-deriving
+  it — world subsystems broadcast `WorldDestroying` BEFORE deinit, `WorldCreated` AFTER init
+  (Editor.md §3, lock L3). Two-phase events are the same rule wearing a different hat.
+- **Corollary:** `Flush()` only runs inside `Loop()`, which has already stopped by teardown — an
+  *enqueued* teardown event is never delivered at all. Bridge teardown-time events with `Publish`,
+  never `Enqueue`.
+
+## L8 — `./build.bat` exit code is unreliable; verify by output, and dead-but-compiled code links against symbols (2026-07-17)
+
+Two operational rules from Editor M0.
+
+**`./build.bat` lies about success.** It uses `goto end` on failure, so it exits **0 even when the build
+FAILED**. A background build reported "completed (exit code 0)" while actually erroring. **Always grep the
+output** for `Build complete` vs `error C\d`/`error LNK`/`Build FAILED` — never trust the exit code. Also:
+run it directly (`./build.bat <preset> </dev/null`), not via `cmd //c` (not found). And the Visual Studio
+generator is multi-config: presets share build dirs; a fresh preset build recompiles all vendors (~5 min
+in Release) with **fully buffered** output (the file stays 0 lines until done) — wait for the completion
+notification, don't thrash polling.
+
+**Dead-but-compiled code still links against symbols.** "Just drop the `Editor/*` glob" (S0) broke the
+link because dead `CoreEngineApp`/`SceneManager`/`ComponentRegistry` — still compiled — reference editor
+symbols under `#if OPAAX_WITH_EDITOR`. Removing the symbol without compiling-out its dead consumers =
+unresolved externals. **Rule:** before an edit framed as "just remove X," grep who references X *under the
+same flag/condition*; the fix is usually to flip the CONDITION (here: engine DLL always
+`OPAAX_WITH_EDITOR=0`, which `release` already proved), not to hunt every consumer. When you flip a
+load-bearing flag, check what ELSE it gated (here `IPaths`' workspace-dir branch) and decouple it.
+
+## L9 — `git commit` takes the whole INDEX; a pre-populated index sweeps in the user's staged WIP (2026-07-18)
+
+**What happened:** asked to commit only the `.claude/` durable-knowledge docs, I ran `git add .claude/ &&
+git commit`. The index was NOT empty — the session-start `git status` first column already showed the
+user's staged WIP (`AD` Engine `IAppService` moves, `R`/`RM` Sandbox renames). `git commit` committed
+*everything staged*, producing a mixed commit (my docs + their in-flight refactor under a docs-only
+message) that ALSO missed my unstaged `.gitignore` change. Recovered with `git reset --soft HEAD~1` then a
+**pathspec commit** (`git commit .claude/ .gitignore -m …`), which commits only the named paths and leaves
+all other staged entries exactly as they were.
+
+**Rule for next time:**
+- Before ANY commit, read the index. `git status --short`: the **first column** is what's staged. If it
+  shows anything you didn't put there, a bare `git commit` will include it. This is doubly true here — the
+  session-start snapshot already listed staged `AD`/`R`/`RM` entries; I had that info and still missed it.
+- To commit a specific slice regardless of index state, use a **pathspec commit** (`git commit <paths>`).
+  It ignores other staged paths and leaves them staged — the surgical tool when the user has WIP staged.
+- Committing the user's staged WIP is touching their work (see [[L5]]): if it happens, STOP, say so
+  explicitly, and offer the `reset --soft` + re-scope fix rather than leaving misleading history.
+- Don't forget your OWN related unstaged changes (the `.gitignore` narrowing belonged in the same commit) —
+  the "what belongs together" set spans staged and unstaged.
+- **Corollary, the INVERSE trap (2026-08-19).** A pathspec commit only accepts paths git already knows, so
+  a slice containing NEW files needs `git add` first — and after that `git add`, a bare `git commit` takes
+  **only what you staged**, silently dropping every modified file in the slice. That is how the panel-host
+  commit landed as 4 new files with none of the 20 edits they depended on: a committed state that did not
+  compile, i.e. [[L17]]'s "never commit a state you haven't built" reached by the opposite route. Same
+  one-line defence either way — read `git status --short` *after* staging and before committing, and check
+  the file COUNT against the slice, not just for foreign entries.
+
+## L10 — Dead-code quarantine: the compiler+linker is the authoritative classifier, NOT grep (2026-07-19)
+
+**What happened:** reorganizing `Engine/Source`, I quarantined the old world to `Legacy/` and dropped it
+from the build. For the ambiguous `Assets/` dir I classified files "dead" via a grep of `#include
+"Assets/…"` referencers and moved the "unreferenced" ones. The build failed three ways grep couldn't see:
+(1) `AssetHandle.hpp` includes `"AssetRefBlock.hpp"` and `IAsset.hpp` includes `"AssetTypeList.h"` —
+**file-relative, same-dir** includes my `Assets/`-prefixed grep never matched; (2) `TAssetHandle::Get()`
+**links** against `AssetRegistry_TryResolveTyped` (a symbol dep, invisible to any include scan) → LNK2019.
+Assets was substantially LIVE (renderer + config wired through it). The user had asserted "Assets is
+legacy," but the linker disagreed. Per [[L3]] I stopped and reverted the whole Assets move rather than
+whack-a-mole moving live deps back one build at a time.
+
+**Rule for next time:**
+- To prove a file dead before quarantine, the authoritative test is **"drop it from the build and converge
+  to green"** ([[L8]]), NOT a grep of include referencers. Grep misses (a) file-relative/same-dir includes
+  (`"Sibling.h"`, not `"Dir/Sibling.h"`), and (b) **link-time symbol deps** (a live TU calling a free
+  function defined in the candidate `.cpp`). Grep is a fast SEED for the converge loop, never the verdict.
+- When the user asserts "X is legacy" but the compiler/linker says otherwise, **the code wins** — surface
+  the contradiction with the exact dependency evidence (the LNK2019 symbol, the includer) and recommend;
+  don't force the move.
+- Move the whole reachability cluster together and let build errors *extend* it. If a "dead" set keeps
+  pulling live deps back (premise balloons — [[L3]]), STOP and revert rather than fragment the tree.
+- Include-path rewrites for folder moves must handle BOTH `"…"` and `<…>` delimiters, and remember that
+  `#include "X/…"` also resolves file-relative (same-dir) — so an absolute-prefix rewrite can leave a
+  relative include silently resolving to the new location (usually fine, occasionally surprising).
+- **Confirmed again 2026-07-27 (M2c):** before inserting `ERenderLayer::Debug` mid-list I grepped every
+  consumer to prove no value was persisted — but scoped the grep to `Engine/Source Editor/Source Sandbox`
+  and **omitted `Engine/Tests`**. `SortKeyTests` hardcoded `LayerField(UI) == 3` and went red. Same moral:
+  grep is a SEED, the build is the verdict. When shifting a value, sweep the *whole* tree — tests hardcode
+  ordinals that source never does. (Fixed at the root: assert the field against the enum's own value, so
+  growing the list cannot break a test about bit *positions*.)
+- **THIRD time, 2026-08-20 (the config restructure):** the "who reads this field" grep covered
+  `Engine/Source`, `Editor/Source` and `Sandbox`, and again **omitted `Engine/Tests`** —
+  `IWindowManagerTests` sets `lData.WindowTitle` and broke. Three occurrences, one directory, so the fix
+  stops being "remember" and becomes mechanical: **a rename sweep greps from the REPO ROOT with
+  `Legacy/`/`Vendors/` excluded, never an allow-list of source directories.** Tests are consumers.
+
+## L11 — A vendor library's GLOBAL STATE duplicates across the DLL/exe line, exactly like our own statics (2026-07-20)
+
+**What happened (S10):** the ImGui overlay linked fine but crashed at `ImGui_ImplGlfw_InitForOpenGL`
+(`PrevWndProc != nullptr`). Root cause: the engine DLL linked glfw **PUBLIC + static**, so the editor exe
+relinked a **second glfw copy** with its own global state. `glfwInit` + the window ran in the DLL's glfw;
+ImGui (in the exe) called the **exe's** glfw copy, never initialised → `glfwGetWin32Window` null → null
+HWND → assert.
+
+**The insight:** I1/I2 ("one static instance across the DLL line") apply to a **vendor lib's global state**
+(glfw's init flag / window list / current-context) just as to our own types. A static third-party lib linked
+PUBLIC into a DLL gets a second, uninitialised copy in every consumer exe; the vendor's `REQUIRE_INIT`
+guards then fire in the consumer even though the DLL "initialised it."
+
+**Rules:**
+- Before wiring a vendor with GLOBAL STATE (glfw, an allocator, a logger registry, a GL loader) across a DLL
+  boundary, decide WHERE its single instance lives and make every module share it — never PUBLIC-static into
+  a DLL. It's the I1/I2 hazard wearing a vendor's hat.
+- Prefer the vendor's OWN dllexport/dllimport switch over reshaping the library: glfw ships `_GLFW_BUILD_DLL`
+  (export) / `GLFW_DLL` (import). Export the one instance from the DLL that owns it (glfw PRIVATE + exported;
+  consumers import). No vendor files touched, no extra DLL shipped, runtime deploy unchanged. (User steer:
+  fix at THIS PROJECT's link/ABI layer — don't rebuild the lib as shared or ship a new DLL.)
+- Check each vendor's actual proc-loading path before assuming: `imgui_impl_opengl3` uses its OWN GL loader,
+  not glad, so only glfw needed unifying.
+- Sibling of [[L4]] (our own cross-module type identity). See ARCHITECTURE.md **I6** for the related
+  "never dll-export a class template; stateless value types are header-only" rule (proven by the Angle module).
+
+## L12 — Don't hand off a "human eyeball" verification gate with nothing observable to look at (2026-07-20)
+
+**What happened (S11):** I closed the input-seam step reporting automated gates green and left "interactive
+hover/click" as a REMAINING human-eyeball check. The user tried and came back: **"no log appeared to check
+that correctly!"** The seam (`RouteInput` → ImGui `WantCapture*`) had **zero logging**, so clicking produced
+no observable signal — the "needs your eyes" handoff was a dead end.
+
+**The fix:** add a Trace-level `RouteInput` log (discrete mouse-button/key only — never per mouse-move, no
+spam) printing the consume decision + `WantMouse`/`WantKeyboard`, to console AND the file sink. The gate flip
+became visible (menu bar → CONSUMED; passthru viewport → passed) and the user confirmed at once.
+
+**Rules:**
+- When a verification step depends on the USER observing behavior, the observability must EXIST before the
+  handoff. A gate phrased "eyeball that X happens" is worthless if nothing prints/renders X — add the
+  instrument as part of the SAME step, don't defer and assume they'll see something.
+- Before writing "needs your eyes," ask: *what exactly will they look at, and does it exist yet?* (I even had
+  the file-sink path available and still handed off a blind gate.)
+- Match the instrument to event frequency: discrete events (button/key) log cleanly; high-frequency ones
+  (mouse-move) need gating or they flood. A per-event seam's verification log can legitimately STAY as
+  permanent Trace observability (invaluable for the follow-on milestone — here M-Input), not a throwaway probe.
+
+## L13 — A "green baseline" is a PREMISE to verify, not assume; converging a mid-reorg branch is a linker-driven, whole-tree job (2026-07-21)
+
+**What happened (M0.5):** I planned M1 "Viewport" on the recorded baseline (89/354, runtime draws 3 quads).
+The user then revealed the branch was mid-reorganization and **did not build** — a prior "move all legacy into
+legacy" commit had swept the *good* new-path RHI (`IRHIDevice`/`ICommandBuffer`/`IFramebuffer` + GL/VK backends
++ `BackendFactory`) into `Legacy/` (unlinked) alongside the genuinely-old facade (`IRenderAPI`/`RenderCommand`),
+and relocated `OpaaxLog.h`/`Core` headers, leaving live code dangling. The whole M1 premise was false. The task
+became a prerequisite **re-baseline**: extract the keepers back out of Legacy and converge to green.
+
+**Rules for next time:**
+- **Verify the branch builds before planning on top of it.** Session-start git status + a recorded baseline in
+  a doc are NOT proof the tree compiles — a refresh/WIP branch can be committed-but-broken ([[L5]], [[L8]]).
+  When about to "build feature X," a fast `build.bat fast` (or a status sanity pass) up front catches a false
+  green-baseline premise before it wastes a plan.
+- **Classify keepers by the LINKER, not grep** ([[L10]]). The keeper set for "pull the good code out of Legacy"
+  extended itself twice via build errors I couldn't have grepped: the Vulkan backend (SDK present → the
+  `#if OPAAX_HAS_VULKAN` branch compiled) and `RenderCommand` (an entangled `WaitIdle()` call). Seed from the
+  include closure, then drop-and-build until green; let unresolved externals *extend* the set.
+- **A file-move reorg's blast radius spans the whole tree, not the moved dir.** Moved headers + a retired macro
+  family (`OPAAX_CORE_*`→`OPAAX_ENGINE_LOG`) broke Sandbox, the editor, and the test harness — not just the
+  render tree. Scope it with one comprehensive grep of the known old→new paths before whack-a-mole; expect
+  test-double drift ([[L5]]'s StubPlatform, here StubPaths) and tests of now-Legacy code that must be
+  *quarantined* (they can't be repointed — Legacy isn't linked), matching **X1**.
+- **Keep entangled old bits transitionally to reach green, with a `// FIXME`, rather than decoupling mid-converge**
+  ([[L3]]): the old `IRenderAPI`/`RenderCommand` facade rode back in as a keeper because the new factories +
+  VulkanFramebuffer still lean on it. Decoupling is a dedicated follow-up, not a converge-loop detour.
+- **Surface premise/scope forks up front and let the user steer** — before touching a broad refactor, confirm
+  ownership ("I execute vs you execute"), and answer floated alternatives honestly (NVRHI: declined — no GL
+  backend, AAA/RT tier, fights the project's #1 *Simple* value; a 2D engine's thin GL RHI is the right altitude).
+
+## L14 — A STALE object file masks a committed-broken branch; a prior "green" doesn't survive a recompile trigger (2026-07-22)
+
+**What happened (facade decouple):** I retired the `IRenderAPI`/`RenderCommand` facade + VK backend to `Legacy/`
+cleanly — all my RHI/Renderer TUs compiled. But the build then failed in `OpaaxApplication.cpp`, a file I never
+touched: `switch (InEvent.GetCategoryFlags())` with `case EEventCategory::X:` labels. Root cause was **not mine** —
+`GetCategoryFlags()` returns `Uint16` and `EEventCategory` had migrated to a scoped **bitmask** `enum class`
+(an input event is `Input|Keyboard`), so single-value cases can't match *and* won't convert. The branch HEAD
+(`a829d87`) did **not** compile; a **stale `.o`** from a prior session's green `build.bat fast` had masked it, and
+my header change forced the recompile that surfaced it. Proven pre-existing with `git diff HEAD -- <file>` = empty.
+The harness flagged the file "modified on disk" mid-task — the **user was editing it concurrently**. I applied a
+consumer-side patch (`OnEvent` → `IsInCategory` bit-tests) to unblock, but the user fixed it their own way and
+committed it ("Fix app switch state") **while I worked**; my edit was superseded (working tree re-matched HEAD). My
+actual task (the RHI decouple) verified green on the shifted base (3 presets, test 80/339, Sandbox 3 quads clean).
+
+**Rules for next time:**
+- **A prior session's green is not this session's truth** ([[L13]] sharpened). `build.bat fast` only recompiles
+  *dirty* TUs — a committed-broken file with an up-to-date `.o` reports green until something dirties it. Before
+  building on a baseline, trigger a real recompile of the blast area (or a clean build) — don't trust a stale green.
+- **When the red is in a file you never edited, prove ownership fast**: `git diff HEAD -- <file>` empty ⇒ the broken
+  *source* is HEAD's, not your diff ([[L5]]). Say so explicitly; don't absorb blame or thrash your clean diff.
+- **When the harness says a file was "modified on disk," the USER is likely editing it live — defer, don't race.**
+  My consumer-side `OnEvent` patch was wasted effort: the user was actively fixing that exact WIP file and committed
+  their own version. If pre-existing breakage sits in a file the user is touching, surface it and let them own the
+  fix ([[L5]]); only patch it yourself if you must unblock AND they're not in it. HEAD can move under you mid-task
+  (they committed 3× while I worked) — re-verify on the shifted base and re-read the index before committing ([[L9]]).
+- **A `switch` is the wrong tool for a bitmask enum** — combined flags (`A|B`) match no single-value `case` and fall
+  through to `default`. Dispatch bitmask categories by bit-test (`IsInCategory`/`&`), not `switch`.
+- **Retiring a vestigial facade is clean when you trace live-vs-dead by the linker+grep** ([[L10]]): the two statics
+  (`RenderCommand::s_API`, `RenderAPI::s_Backend`) were consumed only by dead code; extract the still-live bits
+  (`EBackend`+string map → static-free `RHIBackend.h`), route everything through the instance (`IRHIDevice`), move
+  the cluster to `Legacy/` (unlinked — dangling includes there are fine, **X1**), grep-clean outside `Legacy/`.
+
+## L15 — Absence-of-error is not presence-of-result: log the SUCCESS branch, not just the failures (2026-07-26)
+
+**What happened (Editor M1):** after wiring the ViewportPanel, the run log looked conclusive — "Primary render
+target set to offscreen", a resize line, 0 err/warn. But `Draw()` has two branches: a non-zero FBO handle draws
+`ImGui::Image` (the world), a zero handle falls back to `ImGui::Dummy` (a blank rectangle) — and the Dummy path
+logs **nothing wrong**. A clean log was fully consistent with a blank panel. Fixed with a one-shot Info log on the
+*success* branch: `Viewport displaying world FBO (handle=2, WxH)`.
+
+**Rules for next time:**
+- [[L12]] said "the observability must exist." This sharpens it: it must **discriminate**. When a gate is
+  "no errors + a state-change log," ask *does any log positively assert the thing happened, or only that nothing
+  failed?* If a silent-fallback branch exists (Dummy / default / early-return no-op), log the success branch.
+  One-shot (`if (!m_bLogged)`) keeps a per-frame path from flooding.
+- **A render-to-texture panel has a self-referential sizing loop** (window sizes to content, content sizes to
+  window): it collapsed to **32x13 px** — correct pipeline, useless demo. Seed `SetNextWindowSize(..., FirstUseEver)`.
+- **Operational:** a still-running GUI exe locks the DLL → `LNK1104: cannot open OpaaxEngine.dll` on the next
+  build. Not a code error ([[L5]]/[[L8]] — suspect the environment when the red is in something you didn't
+  change). A GLFW window can outlive a bash `kill $PID`; kill by image name (`taskkill //F //IM Sandbox.exe`).
+  Smoke pattern that behaves: `./app.exe > log 2>&1 & sleep N; taskkill //F //IM app.exe;` then grep the log.
+
+## L16 — Type-check a plan's compile-level claims before building on them (2026-07-26)
+
+**What happened (Editor M2 planning):** a plan authored by another model (Fable, Plan agent) sequenced a step that
+landed real `DrawerRegistry`/`PanelRegistry` storage while leaving the M0 `int` placeholders in
+`SandboxEditorModule.cpp`, gated on "the placeholders still compile against the new signatures (they do)." They
+don't: `Drawers().Register<int,int>()` instantiates the stored lambda with `TDrawer = int` → `int d; d.Draw(*c);`
+→ ill-formed; and a factory lambda returning `int` is not convertible to
+`TFunction<UniquePtr<IEditorPanel>(EditorContext&)>`. Caught by reading the proposed template body, before writing
+any code. The consequence was structural, not cosmetic: registry + consumer + dogfood are **atomic**, which
+invalidated the plan's step split and forced a per-slice milestone decomposition.
+
+**Rules for next time:**
+- A plan's prose claims ("this still compiles", "runtime is unchanged") are **assertions to verify**, not
+  findings. Template-instantiation claims especially: a template body is only checked when instantiated, so
+  "nothing else changed" is not evidence a placeholder call site survives.
+- Research done by a sub-agent is worth its cost; its *conclusions* still need this session's review. Verify the
+  load-bearing factual claims yourself (here: `World::CreateEntity` always emplacing `EntityMeta`, so
+  `Each<EntityMeta>` is the all-entities view — true, and it removed a whole "new World API" premise).
+- When one deliverable in a milestone can't compile without another, they are one step. Discovering that early is
+  what turns an over-large milestone into a correct decomposition ([[L3]]) instead of a mid-build stall.
+
+## L17 — Commit at each step boundary, or the step's SCOPE GATE becomes unprovable (2026-07-27)
+
+**What happened (Editor M2a/M2b):** both slices end in a dogfood step whose gate is *literally a diff shape* —
+"a game module adds an editor extension with **zero changes to `OpaaxEditorLib`**", checked as "changed +
+untracked paths, filtered for anything outside `Sandbox/Editor/`, must be empty." In **M2a** I committed S1+S2
+before building S3, so that check ran against a clean tree and the gate was provable — and it stayed provable in
+history (`git show --stat`). In **M2b** I built S1 and S2 back-to-back without committing between. Both were
+green, but the working tree now mixed editor-side infra with the game-side dogfood, so the gate held only *by
+construction* ("I know which files I touched"), which is exactly the kind of claim this project doesn't accept.
+Recovering it was real work: revert the one file both steps touched (`SandboxEditorModule.cpp`) to its S1 state,
+**rebuild to confirm that intermediate state actually compiles** (never commit a state you haven't built),
+commit S1, re-apply S2, rebuild, commit.
+
+**Rules for next time:**
+- **If a step's gate is a property of the DIFF (scope, blast radius, "touches only X"), that step must start
+  from a clean tree.** Commit the previous step first. A gate you can only assert from memory is not a gate —
+  same standard as [[L15]] (the log must *discriminate*), applied to git instead of logging.
+- Plan the commit boundaries when planning the steps, not after. If step N's verification section says
+  `git diff --stat` / `--name-only`, that sentence *is* a commit instruction for step N-1.
+- When splitting after the fact, the shared file is the whole cost — reconstruct its intermediate state, and
+  **build before committing it**. A committed-but-unbuilt intermediate is the [[L14]] stale-green trap with
+  extra steps: it looks fine until someone bisects onto it.
+- Don't sweep the user's own files into a feature commit while doing this (`Docs/TODO.txt` here) — pathspec
+  commits only ([[L9]]); they may be mid-thought in them.
+
+## L18 — A documented caveat is a bug with a comment on it: if you can FIX it, fixing is the deliverable (2026-07-27)
+
+**What happened (M2c / debug-draw channel design):** reviewing a sub-agent's design I caught a genuine
+overclaim — it asserted cross-DLL `OpaaxStringID` identity was "already proven in production," when in fact
+*every* current interning call site runs on one side of the boundary, so nothing had ever exercised it. Good
+catch. But I then proposed to **record it in ARCHITECTURE.md as a caveat to verify later** ("an I2 assertion
+to test, not an established fact") and moved on. The user cut straight through it: *"So fix the cross-dll
+problem instead of record."* The fix was ~30 minutes — move `OpaaxStringIDPool` and its entry points
+out-of-line into the DLL — and it converted a compiler-courtesy into a **link-time guarantee**.
+
+**Why I got it wrong:** I was optimising for slice scope (M2c was about debug draw, not strings) and treated
+"write it down so it isn't lost" as the responsible move. But the defect was *latent and silent* — a
+duplicated intern pool makes the same string compare unequal across the DLL line, with no crash and no null,
+which is the worst failure mode in the codebase's own taxonomy. Documenting a silent, latent, cheap-to-fix
+defect is the one case where "record it" is close to worthless: the note only helps someone who reads it
+*before* being bitten, which is exactly nobody.
+
+**Rules for next time:**
+- When a review turns up a real defect, the default is **fix it now**, not file it. Escalate to "record and
+  defer" only when the fix is genuinely expensive, genuinely risky, or genuinely blocked — and say which.
+  "It's out of this slice's scope" is not one of those three.
+- Weight the decision by **failure mode, not by size**. A silent/latent defect (wrong answer, no signal)
+  outranks scope discipline; a loud one (crash, null, red build) can wait, because it will announce itself.
+  Same axis as [[L15]]: what matters is whether anything *discriminates* when it goes wrong.
+- Fix it so the wrong thing is **impossible, not merely unlikely**. Out-of-line in the DLL beats
+  exported-inline-and-hope; a forward-declared type beats a visible one a consumer could duplicate. Prefer
+  the shape where the compiler/linker enforces the invariant over the shape where a comment asks nicely.
+- **Don't let a sub-agent's verdict close a question you haven't checked** ([[L16]] sharpened): Fable's
+  design was good and its recommendation held up, but its one load-bearing "already proven" claim was false.
+  Verify the claims the decision *rests on*, and when one collapses, that is a finding to act on — not a
+  footnote.
+
+## L19 — Plan artifacts age; an inherited FIXME and a stale name are both defects you now own (2026-07-27)
+
+**What happened (M2d planning):** two premises of my plan came from *artifacts about* the code rather than
+the code, and the user corrected both in one message.
+(1) The M2 overview called the slice "AssetTypes + AssetBrowser", so I named everything `Asset*` — but
+`Asset` is the **retired** vocabulary (`Legacy/Assets`, unlinked), and the live system is
+`CResource`/`ResourceManager`. The overview predated that rename; I inherited its words without grepping
+them. *"Maybe lets match the terme 'Resource' since the engine use that."*
+(2) The browser needed directory enumeration. `IFileSystem` is the facility for that and was unusable —
+every method private, non-const behind a `const&` accessor — so `EditorService` already called
+`std::filesystem` directly under a FIXME. I planned to add a **second** direct caller plus a NOTE
+explaining why. *"Maybe its time to fix IFileSystem."* Repairing it took ~40 minutes, made the browser's
+scan go through the seam, deleted the FIXME, and added the first tests the facility has ever had — and it
+turned up a real bug nobody had hit: `GetPathIfNCreate` wrapped `CreateDirectories` in try/catch but
+called `IsPathExist` **outside** it, and `fs::exists` throws.
+
+**Why I got it wrong:** I wrote [[L18]] one slice earlier and still repeated its shape. L18 was about a
+defect *I* found, and I read it as "don't file your own findings". But a FIXME someone already wrote is
+not terrain — it is a defect with a note attached, and routing around it is exactly the deferral L18
+names. The tell is unmistakable in hindsight: *I was about to write a comment explaining why I was not
+using the obvious facility.*
+
+**Rules for next time:**
+- **When a comment explains why you are bypassing the right abstraction, that comment is the work item.**
+  An existing FIXME/TODO in your path is inherited scope, not scenery. Repairing a facility you are about
+  to lean on is cheaper than it looks, and it is the only way the seam ever gets exercised ([[L18]] —
+  which applies to defects you inherit, not only to ones you discover).
+- **Re-derive names and constraints from the CODE, not from the plan doc that named the slice.** Planning
+  artifacts freeze the vocabulary of the day they were written; a rename since then makes them actively
+  misleading. Grep the term before adopting it — if `Legacy/` owns it, the name is taken
+  (ARCHITECTURE.md **X4**).
+- **A skeleton call site is a guess when it names a type nothing defines.** `AssetTypes().Register<TAsset,
+  TActions>()` presumed an asset type that never existed; it could not survive contact. Amend the contract
+  (**MR1a**) rather than bend a design to fit a placeholder's shape.
+- When repairing a facility, make the *contract* honest too, not just the access specifier: `error_code`
+  overloads so nothing throws, and `CreateDirectories` answering "the directory exists" rather than
+  forwarding `std::filesystem`'s "I created nothing" `false` for an already-present dir.
+
+## L20 — Never spend unrecoverable user state on a test; and check that the test hits the branch (2026-07-27)
+
+**What happened (M2d S1):** to prove `GetPathIfNCreate` had correctly replaced a direct
+`fs::create_directories`, I ran `rm -f Sandbox/Editor/Save/imgui.ini` and relaunched the editor. It came
+back, so the swap looked verified. But that file is **gitignored and untracked** — unrecoverable — and it
+held the user's saved dock layout, which was regenerated at the default arrangement. Worse, the deletion
+did not even exercise the branch I was testing: removing the *file* leaves the *directory*, so
+`GetPathIfNCreate` took its "already exists" path. I destroyed real state and learned nothing from it.
+
+**Rules for next time:**
+- **Before deleting anything to test with, ask whether it is recoverable.** `git check-ignore <path>` /
+  `git ls-files --error-unmatch <path>` answers it in one command. Gitignored + untracked = gone. Local
+  user state (layouts, saves, configs, logs they are reading) is the user's data even when it is
+  regenerable in principle — the regenerated file is not the one they had.
+- **Exercise destructive branches against a scratch path.** I had *just written* a temp-dir test suite
+  that does exactly this; the right instrument existed and I reached past it for the live file.
+- **Name the branch you intend to hit, then confirm the setup reaches it.** "Delete the file" and "delete
+  the directory" are different preconditions; only one of them tested the code I had changed.
+- If it happens anyway, say so **first**, at the top of the next message — not buried under the green
+  gates that followed.
+
+## L21 — Prove the premise with a failing test BEFORE designing on it; and don't let the instrument depend on the thing under test (2026-07-28)
+
+**What happened (`WindowsFileSystem`):** the ask was structural — make `IFileSystem` virtual so each
+platform holds its own type. Written that way, `WindowsFileSystem` would have been a byte-for-byte copy
+of the base, the kind of class that invites "why does this exist?". Before designing, I noticed
+`WindowsPlatform::GetExecutablePath` converts to **CP_UTF8** while `IFileSystem` fed those bytes to
+`std::filesystem::path(const char*)`, and I *believed* MSVC decodes that as ANSI — but "I recall MSVC
+does X" is not a finding. So I wrote the test first and ran it against the unmodified code: `IsPathExist`
+returned **false** for a directory that plainly existed, and `ListDirectory` returned CP-1252 bytes. A
+guessed-at concern became a proven, silent, latent defect — and gave the new class its actual reason to
+exist ([[L18]]: the default is fix it now).
+
+**The near-miss:** my first version of that test wrote the Unicode name as **literal characters**
+(`L"Éclair"`). The build sets no `/utf-8` and the sources have no BOM, so MSVC would decode those source
+bytes *using the ANSI code page* — the exact mechanism under test. The test could have gone red because
+the literal was mangled, or green because both sides were mangled identically. I caught it before
+trusting the result and switched to `\uXXXX` escapes, which mean the same thing regardless of file
+encoding.
+
+**Rules for next time:**
+- **When a design rests on "X behaves badly", make X fail a test before you build the fix.** It costs one
+  build, converts a recollection into evidence, and the failing test becomes the regression gate for
+  free. It also tells you honestly when the concern was imaginary and the smaller change was right.
+- **An instrument must not share a failure mode with the thing it measures** ([[L15]] sharpened: there,
+  the log had to *discriminate*; here, the test must not be decoded by the mechanism under test). Ask
+  what the instrument itself depends on. Encoding tests use escapes, not literals; timing tests don't use
+  the clock under test; a serialisation round-trip that only checks itself proves nothing.
+- **Prefer an assertion that cannot pass by accident.** A CP-1252-representable character (`É`) can
+  round-trip through a wrong-but-consistent encoding; a CJK one (`U+65E5`) cannot survive ANSI at all. Pick
+  the input whose failure is structural, and verify against a *different* API (the OS's wide call) than
+  the one you are testing.
+- A "just make it virtual" refactor is worth a look at what the seam has been quietly getting wrong —
+  splitting an interface is when you finally read the implementation as a contract.
+
+## L22 — Before inventing a phase to fit an ordering constraint, ask whether something is running in the WRONG phase (2026-07-28)
+
+**What happened (M3 S4).** My approved plan asserted "the subsystem create-pass has already run
+(BootEngine), so WorldManager — and the ComponentRegistry it owns — exist". It hadn't:
+`ISubsystemManager::StartupAll` constructed *and* started in one call, so no subsystem existed until
+`Engine::Startup()`. My bind call therefore reached `Engine().GetWorldManager()`, hit that accessor's
+lazy-Startup safety net, and **booted the whole engine 0.7s early** — world created,
+`ComponentRegistry` sealed, and the game module's component refused when `RegisterModules` finally
+ran. I had taken the claim from **ARCHITECTURE.md's own SE table**, which turned out to be aspiration.
+
+**My fix was machinery. The user's fix was deletion.** I split the create pass out of `StartupAll`
+and added an `IEngine::BootSubsystems()` phase to squeeze registration into the new gap. It worked,
+it was defensible, I cited LC1 for it — and it was wrong. The user pushed back: *"instead of create
+world at start up of the subsystem, lets create a real flow where all the engine boot then at the end
+create the world."* The actual defect was that **`WorldManager::Startup` created a world at all** —
+a subsystem doing CONTENT work during INFRASTRUCTURE boot. Remove that, and the ordering problem
+evaporates: nothing seals during startup, registration has all the room it needs, and `CreateAll` /
+`BootSubsystems` get deleted. The "always have a render target" justification for the default world
+was already dead — every consumer null-checks.
+
+**Why the tests were green throughout.** All 162 passed, including a `ModuleRegistrar` suite that
+registers a component and round-trips it. They construct a `ComponentRegistry` and `ModuleRegistrar`
+**directly**, so they verify the route's *logic* while saying nothing about *when the real thing is
+wired during boot*. Only the ordered `Sealed with N component type(s)` log line could discriminate —
+it exists because [[L15]] says to log the success branch.
+
+**Rules for next time:**
+- **When ordering has no legal window, suspect a MISPLACED step before inventing a new phase.**
+  [[L7]]/LC1 ("the missing thing is a phase") is real but it is not the first question — it is the
+  answer when every step is in its right place and the phases genuinely don't cover the transition.
+  Ask first: *is something running in a phase it doesn't belong to?* A new phase that preserves a
+  layering mistake is machinery protecting a bug. Adding code to make a wrong thing work should feel
+  worse than deleting the wrong thing.
+- **Sort a lifecycle step by INFRASTRUCTURE vs CONTENT.** Starting a subsystem brings up capability;
+  choosing which world/level/asset to open is content, and content is the host's call, driven by
+  config. A subsystem's `Startup` that creates game objects is the smell.
+- **A lifecycle/ordering claim is a premise, not a finding — even when the CONTRACT states it**
+  ([[L21]] applied to boot order). ARCHITECTURE.md records intent and can drift ahead of the code
+  exactly like a planning doc ([[L19]]). Verify by reading the call chain or a log before designing
+  on it.
+- **Unit tests that construct the subject directly cannot verify wiring.** When correctness depends
+  on *where in boot* something is called, the gate is a run of the real host with an ordered log. Ask:
+  "could this test pass in a build where the wiring is absent?" Here the answer was yes, for all 162.
+- **A lazy "safety net" accessor turns a too-early call into a silent reorder, not an error**
+  ([[L6]] from the caller's side). `if (!m_bStarted) Startup()` inside a getter means a premature
+  reach *succeeds* while quietly moving the whole boot.
+
+## L23 — "Known gap, stated not hidden" is still a deferral. If the missing gate is cheap, BUILD it (2026-07-29)
+
+**What happened (M4 S3).** I shipped the whole world-subsystem mechanism — registry, `WorldContext`,
+per-world creation, tick path — with every unit test green and both hosts booting clean. Then I wrote
+into my own review: *"Known gap, stated not hidden: end-to-end filtering in a real world is proven only
+link-by-link… the composed gate is S5's dogfood."* I even justified not closing it, with a rule I like:
+*"registering a throwaway candidate now would be an API with a disposable caller."* And I moved on to
+propose S4. The user asked one question — **"So do we have an concrete example subsystem?"** — and the
+answer was no: all six world subsystems in the tree were test doubles, nothing registered one, and both
+hosts logged `0 of 0 subsystem candidate(s) created`. The headline feature of the milestone had never
+run in an actual game.
+
+Closing it took about thirty minutes and needed **no** S5 machinery, because `ShouldCreate` reads the
+world's mode — so a Play-only and an Edit-only subsystem both go through the route that already existed.
+The payoff was not cosmetic: the two `Update`-only log lines (`Captured 3 quad baseline(s)` /
+`drawing 3 outline(s) per frame`) **proved the tick path**, which no run with zero candidates could, and
+the mirrored `1 of 2` in each host turned a link-by-link argument into one observable fact.
+
+**Why I got it wrong, and why this one stings.** This is [[L18]]'s shape (*a documented caveat is a bug
+with a comment on it*) and [[L19]]'s (*when a comment explains why you are bypassing the right thing,
+that comment is the work item*) — and I wrote the caveat **in the very review section where I had just
+quoted both lessons back to myself**. Writing the gap down felt like rigor: it was labelled, scoped, and
+assigned to a future slice. That is exactly what makes this failure mode durable — honest disclosure is
+indistinguishable from diligence right up until someone asks the obvious question. My "no API without a
+caller" rule was also misapplied: the example subsystems are not scaffolding to delete, they are the
+module's first real content and they stay.
+
+**Rules for next time:**
+- **A plan that defers the only COMPOSED gate has no gate.** When the milestone's headline claim
+  ("a world runs a filtered set of subsystems") is proven only as a conjunction of separately-tested
+  links, the deliverable is not done. Ask directly: *has the feature ever run in the real app?* If the
+  answer is no, that is the next step — not the next slice.
+- **Sequencing from the plan is not a reason.** S5 owned the dogfood only because the plan bundled it
+  with a toolbar; the *subsystem* half needed nothing from S5. Before deferring to a later step, check
+  which part of it you actually depend on — often it is none of it.
+- **Judge a first example by whether it SURVIVES, not by whether it is minimal.** "An API with no
+  caller" forbids speculative surface; it does not forbid the first real caller. If the example is
+  something the project keeps, writing it is delivery, not scaffolding.
+- **When you catch yourself labelling a gap instead of closing it, price the close first.** Thirty
+  minutes vs a whole slice of unverified machinery is not a trade-off, it is an answer. Escalate to
+  "record and defer" only when the fix is expensive, risky, or blocked — and say which ([[L18]]).
+
+**FOURTH STRIKE, 2026-08-30 — stop treating this as a hazard to remember and make it MECHANICAL**
+(the **I6** move, one file over). Having just landed the `IEditorGui` seam, I noticed `EditorService.cpp`
+still held ~150 lines of viewport-toolbar widget code — the only `ImGui::` calls left in the composition
+root — and closed my report with *"if that bothers you, those closures moving to their own file is a
+separate, small job."* They said **"move those toolbar closures to their own file"** and it took fifteen
+minutes. The family is now [[L18]] (a documented caveat is a bug with a comment on it) → [[L19]] (a
+comment explaining why you are bypassing the right abstraction IS the work item) → [[L23]] (a labelled
+gap is still a deferral) → this, plus an un-promoted twin in `.claude/task/lessons.md` from 2026-08-09
+(*"I wrote 'named here rather than fixed' TWICE"*). Five occurrences of one mistake means the rule is
+not being applied, so it becomes a **check, not a virtue**:
+- **The tell is textual and I can grep my own draft for it.** Every occurrence contains a sentence whose
+  job is to explain why I am *not* doing something: "named, not built", "a separate, small job", "known
+  gap, stated not hidden", "if that bothers you". **Before sending a report, find that sentence. If the
+  work it excuses is smaller than the paragraph excusing it, delete the paragraph and do the work.**
+- **My own price estimate is the verdict, not an input to a conversation.** In all five cases I had
+  already computed "small" *before* offering it. Offering a fix I have priced as cheap is not deference,
+  it is deferral with better manners — the user has to spend a turn saying yes, and the turn costs more
+  than the fix.
+- **The honest exception stays narrow and must be NAMED:** expensive, risky, or blocked ([[L18]]). "Out
+  of this slice's scope" and "it is their call stylistically" are neither.
+
+## L24 — Confirm the binary you smoke-tested is the one you just built (2026-07-29)
+
+**What happened (M4 S3).** After building `test` + `release` + `release-editor`, I smoke-tested
+`Sandbox.exe` from `build/debug-editor/` and got a log that was **completely empty** — which my grep
+reported as `err/warn: 0`, i.e. indistinguishable from a clean boot. `build.bat test` builds only
+`OpaaxTests`, so that exe was still the **S2 build from an hour earlier**, now paired with an S3 DLL
+whose `World` layout and `WorldManager` vtable had both changed. It almost certainly died on load. One
+`ls -la` told the whole story: DLL 21:06, exe 20:06.
+
+**Rules for next time:**
+- **Before smoke-testing a host, compare the exe's mtime to the DLL's.** One `ls -la` on both. This is
+  the [[L14]] stale-object trap wearing different clothes: there, an up-to-date `.o` hid broken source;
+  here, a stale exe hid an ABI break. Same root — *a build artifact you did not just produce is not
+  evidence about the code you just wrote.*
+- **`build.bat test` builds ONLY `OpaaxTests`; `fast` skips editor targets.** Green tests say nothing
+  about whether the hosts still link. Run the full preset before touching a host.
+- **An empty log is not a passing log.** Grepping only for errors makes "produced no output" look
+  identical to "ran cleanly" — the [[L15]] discriminate rule applied to the *absence* of output. Check
+  line count (or assert on a known-good startup line) before reading a smoke result as success.
+
+## L25 — A defect caught by an INCIDENTAL compile error is a near-miss: ask what happens when it compiles (2026-07-29)
+
+**What happened (M4 S3).** Injecting `WorldContext&` into world subsystems failed to build with a
+confusing C2665 inside `<memory>`. Cause: `ISubsystemManager::RegisterSubsystem` captures its ctor args
+**by value** into the factory lambda, and `StartupAll` **clears `m_Factories`** once consumed — so the
+context was being copied into a lambda that is then destroyed, and every subsystem's stored
+`WorldContext&` would have pointed at freed memory. It only failed to compile because an rvalue will not
+bind to a non-const lvalue reference. Fixed with `std::ref`, so what gets copied is a pointer to the
+World-owned context.
+
+**The near-miss is the lesson.** Nothing about my design caught this. Had `WorldContext` been taken by
+value in the ctor, or been copy-assignable in the wrong way, it would have compiled and shipped as a
+silent use-after-free — the codebase's worst failure class ([[L18]]).
+
+**Rules for next time:**
+- **When a compile error stops a bug rather than a review doing so, treat it as luck and re-derive the
+  invariant.** Ask: *what would have happened if this had compiled?* If the answer is memory corruption
+  or a silent wrong answer, the mechanism needs a comment saying why, plus a test that fails when it
+  regresses — the compiler will not be there next time.
+- **Read the lifetime of anything captured into a stored callable.** "Forwards its arguments" usually
+  means *copies* them, and a factory list that is cleared after use makes those copies short-lived. A
+  reference handed to such an API is a dangling reference waiting for a caller.
+- **Pin it with an assertion on IDENTITY, not on contents.** The gate compares a started subsystem's
+  context address against `World::GetContext()`; comparing a *field* would pass anyway, since freed
+  memory usually still holds the old value ([[L15]]).
+
+## L26 — A design doc's ORDERING claims are the ones to distrust: they read as obvious and only execution falsifies them (2026-07-31)
+
+**What happened (M4 S4/S5).** `Editor.md` had said for months that PIE's runtime state is *"rebuilt in
+`WorldSubsystem::Initialize`"*. Building `CloneWorld` proved it cannot be: the clone is `Capture` →
+`CreateWorld` → `Instantiate`, and `CreateWorld` starts the subsystems, so at `Startup` the cloned world
+is still **empty**. This is the second time the same document was wrong in the same way — S3 found that
+its subsystem *injection* rule ("the registration site captures the dependency into the factory") was not
+implementable against a no-argument call site. Both sentences were plausible, both survived several
+readings, and both were only falsifiable by writing the caller.
+
+**Why ordering specifically.** A doc's claims about *structure* (what exists, what owns what) get checked
+constantly, because every reader compares them against the file tree. Claims about *sequence* — what has
+run by the time X runs — are checked by nothing until something actually runs in that order.
+
+**Rules for next time:**
+- **Before trusting a doc sentence of the form "by the time X happens, Y has already happened", find the
+  two call sites and read the order.** If the caller does not exist yet, mark the claim as unverified
+  rather than as contract.
+- **When execution contradicts the doc, fix the doc in the same change** (CLAUDE.md §0), and fix the
+  *substance*, not the vocabulary. Renaming `Initialize` to `Startup` in that sentence would have left it
+  just as false.
+- **Prefer the uniform contract over the locally convenient one.** Instantiating before starting would
+  have made the doc's claim true for clones — and made a cloned world the only populated-at-`Startup`
+  world in the engine. "Depends how your world was made" is a worse answer than a flat no (**WS7**).
+
+## L27 — When a transformation works, know WHY: it may be working by accident (2026-07-31)
+
+**What happened (M4 S5).** `DeriveTypeLeafName` turns a C++ type into a registry name by stripping
+everything up to the last `::`. It had been correct for two milestones. Moving one subsystem into the
+editor module — whose types live in the **global namespace** — produced the registry entry
+`'class QuadBoundsSubsystem'`. MSVC's `entt::type_name` is *elaborated* (`"class Opaax::Foo"`), and the
+`::` strip had been removing that keyword **as a side effect**. No `::`, no strip. For a subsystem the
+name is only logs and editor UI; for a **component** it is the key written into map files, so the first
+global-namespace component would have written a map nothing could read back.
+
+**Rules for next time:**
+- **A helper that handles every input you have tried is not the same as a correct helper.** Ask what
+  *class* of input has never been tried — here, "no namespace at all" had literally never occurred,
+  because every prior type was in `Opaax::` or a test namespace.
+- **When two transformations happen in one step, verify each independently.** "Strip the namespace" and
+  "strip the elaborated-type keyword" were one line pretending to be one operation.
+- **Moving code to a new context is a cheap fuzzer.** The relocation cost nothing and exposed a latent
+  defect no test would have found, because every test type was namespaced too. When a placement change is
+  otherwise neutral, the fact that it exercises a new shape is a reason to do it, not a risk.
+- **Read the whole smoke log, not the lines you went looking for.** This was found in a `Registered ...`
+  trace line during a run whose purpose was checking something else — the [[L15]] discriminate rule
+  applied to output nobody asked for.
+
+## L28 — "Per-frame" is meaningless until you name WHOSE frame, and which readers are outside it (2026-07-31)
+
+**What happened (M-Input).** `InputManager::EndFrame()` — the call that closes the input frame — went at
+the end of `Engine::Loop`. The reasoning was sound as far as it went: the host polls OS events *before*
+`Loop`, so a subsystem `Update()` hook would run after the very events it must precede. What I missed is
+that **`Loop` is not the end of the host's frame either.** The editor draws its whole UI *after* `Loop`
+returns, so every panel read edges, mouse delta and scroll that had already been cleared. The user found
+it in one glance: the Input panel showed held keys and nothing else.
+
+**Why it survived my own verification.** `EndFrame` clears the *transient* state and leaves the *held*
+state alone — and held state is the only part a log line or a boot smoke test can show. The tests passed
+because they call `EndFrame` themselves, in the order the design assumed. Every instrument I had was
+blind to it by construction.
+
+**Rules for next time:**
+- **Before placing a per-frame boundary, list the READERS and where each one runs.** Here they were a
+  game system in `Update` (inside `Loop`) and an editor panel in the UI pass (outside it). A boundary is
+  only correct if it sits outside *every* reader — which made the host loop the one honest place.
+- **`Engine::Loop` is the engine's tick, not the frame.** The frame belongs to `RunApplication`, which
+  also owns `PollEvents` and `Present`. Anything that must bracket the whole frame belongs there.
+- **When a feature "half works", the working half is a clue, not a comfort.** Ask what distinguishes the
+  part that works from the part that does not — here, "cleared by EndFrame" versus "not cleared", which
+  named the bug immediately once asked.
+
+## L29 — A third-party flag answers ITS question, not yours (2026-07-31)
+
+**What happened (M-Input).** D5's step 1 is "ImGui `WantCaptureMouse` → the UI eats it", and that is what
+was implemented. But `WantCaptureMouse` means *"the pointer is over some ImGui window"* — and in this
+editor one of those windows **is the game**, an ImGui image with the world rendered into it. So a game
+running inside the editor could never receive a click, a drag or the wheel. The mouse position in the
+Input panel appeared to update only when the cursor crossed a gap between windows.
+
+**The general shape.** The flag was not wrong; the *question* it answers stopped matching mine the moment
+the UI framework started hosting the thing the UI is supposed to keep its hands off. Keyboard was fine
+under the identical rule, because `WantCaptureKeyboard` only goes true for a text field — a genuinely
+narrower question that still matched.
+
+**Rules for next time:**
+- **Translate a borrowed predicate into your own words before gating on it.** "Is the pointer over an
+  ImGui window" is not "should the UI own this input" once one of those windows is the viewport.
+- **Ask which of your surfaces the library considers its own, and whether that is still true.** The
+  moment the world renders *into* the UI (M1's render-to-texture), every "is the UI busy" flag needed
+  re-reading — two milestones later.
+- **Check the exemption asymmetry.** Mouse needed the carve-out and keyboard did not; blanket-applying
+  either answer would have been wrong in one direction or the other.
+
+## L30 — A field two things share only because one of them is always empty is a latent bug (2026-08-03)
+
+**What happened (M5 S3).** `OpaaxApplication::GetStartupWorldSpec` put
+`IProjectManager::StartupLevel()` straight into `WorldSpec::Name`. That had been correct for three
+milestones — because `startupLevel` was `""` in every project file, so the fallback `"Main"` was
+what actually ran, every time. The moment M5 made the key real
+(`"Levels/Main.opaaxlevel"`), the same line would have produced a **world named
+`Levels/Main.opaaxlevel`**. The fix was to split the field: `LevelPath` for the path, `Name`
+derived from its stem.
+
+**Why it survived so long.** Nothing was wrong with the code *as executed*. Every test passed,
+both hosts booted, and the log printed `world 'Main'` exactly as intended. The defect lived
+entirely in the branch that had never been taken — and the only reason it had never been taken was
+that the FEATURE the field existed for had not been built yet.
+
+**Rules for next time:**
+- **When a config key finally gets a real value, re-read every consumer of it.** A key that has
+  been empty for the whole life of the codebase has consumers that were only ever exercised on
+  their fallback path. Grep the key, not just the feature you are adding.
+- **Two meanings in one field is the smell, and "it's always empty" is what hides it.** A *name*
+  and a *path* are different things; they were one field because nothing had ever made them
+  differ. Ask what the field would hold if the feature it serves actually worked.
+- Sibling of [[L27]] ("know WHY a transformation works — it may be working by accident"), one level
+  up: there the helper was right for every input tried, here the *caller* was right for every value
+  tried. Same question in both cases — **what class of input has never occurred?**
+
+## L31 — A derived answer is cheap to get right and expensive to get frequent (2026-08-03)
+
+**What happened (M5 S5).** The editor's "unsaved changes" marker is DERIVED — capture the world,
+serialize, compare against the text last written. That design is right, and I defended it in the
+plan against a tracked flag for good reasons (nothing to hook, no drift, and it correctly reports
+*clean* when an edit is undone back to the original). Then I implemented it **in the per-frame draw
+call** — which my own approved plan had explicitly said not to do ("evaluated on menu-open / Play /
+quit, never per frame"). A ten-second smoke run produced **1694 identical log lines**, and the
+readout I had reached for as evidence was the thing that exposed it.
+
+**Two distinct defects from one mistake.** The cost (a full capture + serialize per frame, fine for
+three quads and not for a real map) and the noise (an Info-level log on a path that now ran at
+framerate). Fixing only the log would have left a per-frame O(map) walk nobody would notice until
+a map got big.
+
+**Rules for next time:**
+- **When a design's whole premise is "compute it instead of storing it", the frequency is part of
+  the design, not an implementation detail.** Decide *when it runs* in the same breath as *what it
+  computes*, and write both down. I did write it down — and then did not read my own plan when it
+  came time to place the call.
+- **Put the throttle where the clock is, and keep the computation pure.** `IsDirty` stays a plain
+  function of (world, registry) — testable, unable to go stale — and the caching lives in the
+  frame-owning caller. A cache inside the pure thing would have made it neither.
+- **A log level is a claim about frequency.** `Info` says "this happens when something happens."
+  A pure transformation with several callers cannot promise that, so `MapSerializer::Capture`
+  belongs at `Trace`; the Info lines belong to `MapFile::Save`/`Load` and `MapFactory::Instantiate`,
+  which are things that happen *to* something. [[L12]]'s "match the instrument to the event
+  frequency" applies to the code being measured, not only to the probe.
+- **Read the log's line COUNT, not just its errors.** 145 lines vs 1796 was the entire signal, and
+  a grep for `error|warn` reported 0 in both. Same shape as [[L24]]'s empty log: the absence of
+  complaints is not evidence of correctness.
+
+## L32 — Deriving an identity from a FILE PATH is mining, not sourcing: ask where the authored value lives (2026-08-04)
+
+**What happened (code review).** M5 split `WorldSpec` into `{Name, LevelPath}` after [[L30]] caught the
+two-meanings-in-one-field bug, and I derived the `Name` from the path's stem —
+`Name = DeriveWorldName(LevelPath)`. I was pleased with it: static, pure, unit-tested against six path
+shapes, documented as "the one place the path-vs-name distinction is decided." The user read one line and
+said **"This is bad."** They were right. The fix to [[L30]] had corrected the *symptom* (one field holding
+two things) while keeping the actual mistake: **the world's identity was still a function of where its
+file happened to sit.** Move or rename the file and the world silently renames; two levels in different
+folders with the same filename become indistinguishable. The authored value — what the designer *calls*
+that level — had no home in the format at all.
+
+**The fix was to add the source, not to relocate the derivation.** `LevelData::Name` from a `name` key,
+stem as fallback. And once the level names the world, `WorldSpec::Name` has no source, so it **left the
+seam entirely** along with `DeriveWorldName` — a host that cannot supply a level cannot invent a name for
+one either. My instinct had been to move `DeriveWorldName` down into the engine, which would have kept the
+string surgery and just hidden it one layer lower.
+
+**Rules for next time:**
+- **When code computes an identity (name, id, key, title) from a path, stop and ask where the AUTHORED
+  value is supposed to live.** If the answer is "nowhere yet", the deliverable is a field in the format,
+  not a cleverer parser. A path is a *location*; a name is *data*. Deriving one from the other couples
+  identity to the filesystem, and the coupling is silent — nothing fails, things just quietly rename.
+- **A stem fallback is fine; a stem SOURCE is not.** Keep the derivation as the answer for files that
+  do not state a name, and put it next to the parser that has the path — not in the caller, and not in a
+  seam three layers up.
+- **Deleting the derived field is usually the real simplification** ([[prefers-deletion-over-machinery]]).
+  Once the value has a genuine source, ask which callers were only passing it along; here the whole
+  `Name` field and its host-side helper and its six tests all went, and the seam got smaller.
+- **A test suite over a bad rule proves the rule, not the design.** Six passing `DeriveWorldName` cases
+  made the stem convention look settled. Coverage measures whether code does what you said; it never asks
+  whether what you said was the right thing to say ([[L27]]'s "know WHY it works", one level up).
+
+## L33 — A plan that ADDS is not a plan that DELETES: enumerate the removals before you start (2026-08-06)
+
+**What happened (preset cleanup).** My plan described the destination — three presets, a new
+`OPAAX_DEV_BUILD` flag — and disposed of the thing being removed in a subordinate clause: "Drop
+`release-editor`." The user, on that exact section: **"make sure to delete previous correctly."** The
+`git grep` I then ran found `release-editor` in **8 live places across 2 files** and the dead
+`OPAAX_BUILD_EXAMPLES` option in **4 more**, plus a `RelWithDebInfo` branch in `Engine/CMakeLists.txt`
+that existed only to serve the deleted preset. Any one left behind is a half-existing preset: a
+`build.bat` dispatch line pointing at something CMake no longer defines.
+
+**Why the framing caused it.** Adding is self-verifying — the new thing either builds or it does not.
+Removing is not: every leftover reference still compiles, still looks intentional, and only fails for
+whoever types the dead name months later. So a deletion gets *no* feedback from the thing that gives
+implementation its confidence, which is exactly why it needs the enumeration up front instead of a verb.
+
+**Rules for next time:**
+- **Run the exhaustive `git grep` while PLANNING, not while implementing, and paste the hit list into
+  the plan as its own first step.** "Drop X" is a verb, not a step. The enumerated list is the step, and
+  a zero-hit re-grep is what proves it finished ([[L8]]'s "grep the marker" applied to source).
+- **Split live references from historical records, explicitly.** Plans, lessons and archives naming the
+  deleted thing must SURVIVE — they describe what was true then, and rewriting them is falsifying a log.
+  Say which files are exempt and why, or the sweep silently eats the project's memory of itself.
+- **Name what grep cannot reach.** A deleted `option()` lingers in every existing `CMakeCache.txt`
+  forever; the orphaned `build/<preset>/` tree, cached IDE profiles and generated `.sln`s are all state
+  no source-tree search will show you. Only a fresh tree drops them — list them for the user rather than
+  reporting the sweep as complete ([[state-blast-radius-of-fixes]]).
+- **This is the deletion-shaped case of [[prefers-deletion-over-machinery]].** The user reaches for
+  removal often, so "remove X and add Y" is a recurring plan shape here — treat the removal half as
+  first-class work with its own verification, never as the preamble to the interesting part.
+
+---
+
+## L34 — An authoring feature is justified by what the author stops REDOING, not by what the runtime preserves (2026-08-06)
+
+**What happened (the PersistentMap / `RootLevel` call).** To decide whether WM1's `RootLevel` was
+needed, I asked what I thought was the deciding question: *"is there entity state that must outlive a
+Level change?"* — and offered to drop `RootLevel` if the answer was no. The user answered a **different
+question**: the persistent map exists so the player, the lights and the managers are authored **once**
+and never dragged into another map again; open a decor map, hit Play, the player is there. That
+reframing deleted an entire runtime object. State survival needs a second `Level` above the first;
+authoring cost needs **one key in a manifest** (`persistentMap`, absent ⇒ first entry, no version bump).
+
+**Why the framing caused it.** I reasoned from the runtime data model — who owns what, what outlives
+what — because that is the vocabulary `ARCHITECTURE.md` §WM is written in, and the question sounded
+rigorous. But a persistent map is an **editor affordance**, and its value is measured in actions the
+author does *not* take. A runtime question about an authoring feature gets a runtime-shaped answer, and
+runtime-shaped answers are always bigger: they add objects and lifetimes where the authoring answer
+added a field.
+
+**Rules for next time:**
+- **For anything the author touches, ask "what does this stop them from redoing?" BEFORE "what does this
+  preserve?"** The second question builds objects; the first builds data. Both can be right, but only one
+  of them was the motivation, and the motivation is what sizes the solution.
+- **Test every proposed new noun against the workflow that motivated it.** When the workflow is *"I don't
+  want to do X twice"*, the answer is almost always DATA — a key, a flag, a mount order — not a new
+  runtime owner ([[prefers-deletion-over-machinery]]).
+- **When I ask a design question and the user answers a different one, theirs is usually the load-bearing
+  question.** They reason from their own authoring loop, which is the loop the engine exists to serve.
+  Re-derive from their framing rather than restating mine and asking them to pick.
+- Corollary for the contract: a settled invariant can be settled *for the wrong reason*. `RootLevel` was
+  in WM1 since 2026-07-28 and nothing had contradicted it — it survived because it was never asked the
+  authoring question, not because it had answered one ([[L32]]'s "ask where the authored value lives",
+  applied to a design instead of an identity).
+
+## L35 — A race is a symptom; find the INVARIANT under it and test that deterministically (2026-08-12)
+
+**What happened (the `OpaaxStringIDPool` dangling reference).** `Get()` returned a `const OpaaxString&`
+into a `std::vector` and released its `shared_lock` *on return*, before the caller copied — so a
+concurrent `GetOrAdd` reallocation left the reference naming freed memory. I fixed it (the lookup map
+owns the text, the id→text array holds pointers, entries never move) and wrote the obvious guard: four
+writer threads interning while four readers resolve names. It passed. Then, to check the guard was real,
+I reverted the storage to the broken shape and ran it again — **it passed there too, five runs out of
+five.** The window between dropping the lock and copying is a few instructions wide and a vector
+reallocates only log2(n) times, so millions of reader iterations sampled it zero times.
+
+The invariant the fix actually establishes is not concurrent at all: **an entry's address is stable
+across growth.** Take a `CStr()`, intern 4096 names, check the pointer still names the same text —
+single-threaded, deterministic, and it failed the broken storage on the first assertion, with the
+pointer resolving to *different bytes*. The threaded case was kept, but demoted to what it really pins:
+the interning contract under contention (same text from two threads ⇒ one id).
+
+**Why I reached for the wrong instrument.** The bug was *described* as a data race, so I wrote a race.
+But concurrency was only what made the defect **observable**; what made it a defect was a single-threaded
+property of the container. Threaded tests are probabilistic by construction — passing one is evidence of
+nothing, and I would have shipped a green suite claiming a guard it did not provide.
+
+**Rules for next time:**
+- **After fixing a race, state the invariant the fix establishes as a sentence with no threads in it.**
+  If that sentence exists — "entries never move", "this pointer stays valid", "this counter only grows" —
+  test *that*, deterministically. If it genuinely cannot be stated without threads, say so explicitly.
+- **A concurrency test that passes proves nothing until it has been run against the BROKEN code.** Revert
+  the fix, run it; if it still passes, it is documentation, not a guard. This is the cheap check and it
+  cost one build cycle here ([[L21]]: the instrument must be able to fail).
+- **Pick fixture data that can actually fail.** The long interned names survived even broken storage — a
+  moved `OpaaxString` steals its heap pointer, so `CStr()` kept answering the same address *by accident*
+  ([[L27]]). Only a short, SSO-stored name, whose bytes live inside the entry, discriminates. Ask which
+  input distinguishes the hypotheses before writing the assertion.
+- Corollary for reviews: "the pool is in the DLL, so it is DLL-safe" answered **where the table lives**
+  and was read, for the two weeks since, as if it had answered **what the table does**. A settled invariant covers the
+  question it was asked ([[L34]]'s corollary) — I2 had never once looked inside the pool it placed.
+
+## L36 — Read what the convenience layer COSTS before recommending the terser call (2026-08-12)
+
+**What happened.** Having made `OpaaxStringID::CStr()` zero-copy, I told the user their log sites could
+go further and drop the accessor entirely — `"{}", lName` instead of `"{}", lName.CStr()` — because a
+fmt formatter for the type already existed. They said do it. Opening the formatter to run the pass, it
+read `fmt::formatter<std::string>::format(std::string(StringID.CStr()), CTX)`: **it copies into a
+`std::string` on every call.** So the terser form I had just recommended *added* a heap allocation per
+argument, while `.CStr()` — the thing I was proposing to remove — passed a `const char*` that fmt
+formats in place with none. My advice was backwards, on the exact axis (cheapness) that motivated the
+whole change. The same copy sat in `OpaaxString`'s formatter, taxing ~100 existing log sites.
+
+The fix made the advice true rather than retracting it: both formatters now inherit
+`fmt::formatter<fmt::string_view>` and format a view over bytes already held (`OpaaxString` passes its
+length, so not even a `strlen`). Same format spec, zero allocation — *then* the conversion pass ran.
+
+**Rules for next time:**
+- **Before recommending "you can just pass X directly", open the adapter that makes it work.** A
+  formatter, a converting constructor, an `operator T()` — each is a small function nobody reads, and a
+  copy hidden in one silently inverts the cost argument you are making. One `tail -12` would have
+  caught this before I said it.
+- **When the point of a change is CHEAPNESS, the terser spelling is not automatically the cheaper one.**
+  Terseness and cost are independent axes; I merged them because the change so far had improved both.
+- **A defect in a convenience layer is multiplied by its call sites, so it is worth finding even when
+  you arrived by accident.** This one was taxing every logged string in the tree, not just the sites
+  under discussion — fixing it was a bigger win than the pass that uncovered it ([[L25]]: a defect found
+  incidentally is a near-miss; ask what it costs where nobody is looking).
+- Corollary: **when a conversion pass makes an existing call site look wrong, suspect the pass.** Mixed
+  `Label` / `AbsPath.CStr()` arguments on one line was the tell that I had a rule covering one type and
+  not the other, and the reason was that neither should have needed the accessor.
+
+## L37 — A display-only MIRROR of another system's state is coupling wearing a convenience hat (2026-08-19)
+
+**What happened (editor menu refactor).** My plan gave the menu node a `SetShortcut("Ctrl+S")` — text
+only, no binding, just the hint ImGui right-aligns. It felt free: one string, and Ctrl+S was genuinely
+undiscoverable. The user cut it in one line: *"Shortcut shouldnt be here too. Short cut should
+independent things that user can edit etc... Shortcut only trigger commands too."*
+
+**Why they were right.** A rebindable shortcut means the truth lives in a key→tag table. A hint string
+on the node is a **second copy of that truth**, hand-written at registration, which goes stale the first
+time anything is rebound — and *silently*, since nothing compares the label to the binding. The correct
+shape is the menu ASKING the binding system what key carries this tag: costs the menu nothing, cannot
+drift. That system did not exist yet, so the right amount of shortcut in this change was **zero**, not
+"the cheap half".
+
+**The tell I walked past:** I justified the field by the SYMPTOM ("Ctrl+S is undiscoverable") instead of
+asking who OWNS the fact. A field that must be kept in agreement with another subsystem's state is not a
+display detail, it is a denormalisation, and the only question is who the source is.
+
+**Rules for next time:**
+- **Before adding a field that merely SHOWS what another system decides, name that system and ask
+  whether the node can query it instead.** If the system does not exist yet, do not build the mirror as
+  a placeholder — build the *precondition* (here: make every verb a command, so a binding has something
+  to point at) and leave the display for when there is a source to read.
+- Same family as [[L30]] (a field two things share only because one is always empty) and [[L32]]
+  (deriving identity from a file path is mining, not sourcing): all three are "the value is written
+  where it is convenient rather than where it is owned."
+
+## L38 — Two ways in is one too many: if a route exists for behaviour, close the side door (2026-08-19)
+
+**What happened (same refactor).** The plan kept `AddItem(label, lambda)` beside `AddItem(label, tag)` —
+the tag form for the editor's own entries, a closure "escape hatch" for game modules and for
+`File > Exit`, which needed a `Window*` only the composition root could resolve. The user:
+**"Use Command !"**
+
+**What the escape hatch actually cost.** With a closure form available, a game module's verb lives inside
+the menu entry that shows it — invocable from exactly one place and never by tag: not by a key binding,
+not by another panel, not by a second entry. `File > Exit` was the same defect in different clothes: a
+command whose payload only the composition root can supply is a command **nothing but a menu can
+invoke**, because a binding carries a tag and nothing else. Deleting both forms forced the real fix —
+`EditorContext` carries the window, `QuitParams` is gone — and the API got *smaller*.
+
+**Rules for next time:**
+- **When a mechanism exists for a kind of thing, an alternate path that bypasses it is not flexibility —
+  it is a second class of that thing with fewer capabilities.** Before adding the convenience overload,
+  ask what the bypassing caller LOSES. If the answer is "everything the mechanism was built to give",
+  the overload is the bug.
+- **The one awkward call site an escape hatch exists for is usually pointing at a real gap.** `QuitParams`
+  had carried a `// because a command cannot ask for one` comment for a milestone — [[L19]]'s shape
+  exactly: the comment explaining the bypass IS the work item.
+
+## L39 — Sharing STATE is not sharing a code path: one bool with two writers is still two writers (2026-08-19)
+
+**What happened (editor panel toggles).** Panel visibility is one `bool` per panel. The Window menu
+ticks it through `TogglePanelCommand`; ImGui's window close button writes it directly, because
+`ImGui::Begin(label, &bVisible)` is handed the bool itself. I wrote — in the plan, in the header
+comment and in the commit message — *"the close button and the menu tick read the same bool, by
+construction, so they cannot disagree."* Every word of that is true, and I read it as covering more
+than it did. The user found the hole in one click: **closing a panel with its X logged nothing**, while
+the menu entry logged twice.
+
+**Why the claim was too small.** "They cannot disagree" is a statement about **correctness** — the two
+front-ends always show the same answer, and they did. It says nothing about **observability**, undo, or
+anything else that lives on the *path* rather than in the *value*. Two writers converging on one
+variable share the variable; they do not share the code that runs on the way in. Anything I attach to
+one path — a log line today, an undo record or a dirty flag tomorrow — silently does not exist for the
+other. The fix was to stop handing ImGui the real bool: `Begin` gets a local, the result is routed back
+through `SetVisible`, and that method becomes the single mutation point where the log lives and cannot
+be bypassed.
+
+**Rules for next time:**
+- **When two paths write one piece of state, ask what runs ON each path, not just what each path
+  writes.** "One source of truth" is about the value; it is not a claim that the paths are equivalent.
+  The test question is: *if I hang a side effect off this write, do both callers get it?*
+- **Prefer one mutation POINT to one mutation TARGET.** A shared variable that two places assign is a
+  latent fork; a setter both are forced through is the shape where a later side effect cannot be
+  forgotten ([[L18]]: make the wrong thing impossible, not merely unlikely). It costs a local variable.
+- **A third-party API handed a reference to your state IS a second writer** — [[L29]]'s shape (a
+  borrowed mechanism answers its own question, not yours). `p_open` is ImGui's convenience; the moment
+  the write matters to anything of mine, it has to come back through my door.
+- **The gap was invisible from the side I tested.** I verified the menu path end to end with a probe and
+  watched the tick update, which is exactly what a correct-but-uninstrumented second writer looks like
+  ([[L15]]: the instrument has to discriminate). When one of two front-ends is unreachable from a test,
+  say so rather than letting the reachable one stand for both.
+
+## L40 — A mechanical rename that preserves semantics exactly has delivered NOTHING; check the change you made is the change that was wanted (2026-08-19)
+
+**What happened (the emplace_back sweep).** Asked to *"use emplace_back when you can"* and then to
+convert the remaining ~60 sites, the obvious execution was one `sed` over the tree. I nearly ran it and
+stopped on the arithmetic: **`push_back(T{a,b})` and `emplace_back(T{a,b})` are the same thing.** Both
+materialise a temporary and move it in. The entire benefit — constructing the element in place — only
+exists once the type name is *gone*: `emplace_back(a, b)`. A pure rename would have touched 34 files,
+looked like the requested change, passed every gate, and improved nothing at exactly the ~15 sites the
+request was about.
+
+So it became two passes: the rename for one idiom in one tree, then dropping the redundant type name
+where it actually earned something. The second pass is also where the real constraints surfaced — a
+braced-init-list cannot be deduced (`push_back({a,b,c})` needs positional args), and a bare `{}` cannot
+bind to a forwarded parameter, so one aggregate legitimately keeps its braces. A sed would have found
+the first as a compile error and silently kept the second as a non-improvement.
+
+**Rules for next time:**
+- **Before running the bulk edit, hand-evaluate ONE site and state what changed.** If the honest answer
+  is "nothing, but it reads consistently", that is a fine goal — say so, and then go find where the
+  substantive version of the change actually lives. Do not let a consistency pass wear a performance
+  pass's justification.
+- **A style instruction usually names a mechanism but means its EFFECT.** "Use emplace_back" means
+  *construct in place*; the token is the shorthand. Ask what the rule is FOR, then check the diff
+  delivers that, not just the token.
+- **Green gates cannot distinguish a real refactor from a no-op one** — both compile and both pass.
+  When a change is semantics-preserving by design, the build says nothing about whether it was worth
+  making, so the reasoning has to happen before the edit ([[L15]]: the instrument must discriminate).
+- Mechanical sweeps still need the per-site read: the two constructs that broke here were invisible in
+  a `grep` listing and obvious in the source.
+
+## L41 — "Show me all of X" is a CONTAINER question before it is a verb question (2026-08-20)
+
+**What happened (the Config panel).** The ask was *"puts configs on Editor Menu — menu category, all
+registered configs appear, a new config shows up on its own"*. I took *menu* as given, designed a live
+`IEditorMenuNode` that enumerates the registry at draw time — plus `EditorMenuCategory::AddNode`, a
+command tag, a params struct and a stub command — and spent my one clarifying question on the **verb**:
+what happens when you click an entry. The user answered "list only for now", then one turn later named
+the real shape: *"we can make a complete panel. More like unreal. A panel that lists all config, click
+on 'Config Title' to set it current, draw configs?"* That deleted all five new types. A panel registered
+through `Panels()` gets its menu entry free from `BindPanelToggles`, so the entire menu story became one
+`PanelDesc`.
+
+**Why I got it wrong.** Their word was "menu", and a menu is where you *reach* a feature, not where a
+feature lives. The tell was in my own design: the moment a menu node needed live data, a selection and a
+payload, it was a window being spelled as a menu. The evidence was already in the tree — every other
+list in this editor (Hierarchy, Resource Browser) is a panel, and none of them is a menu.
+
+**Rules for next time:**
+- **Ask where that data lives in the tools being copied.** The user names them — Unreal, Unity, Godot —
+  and configs live in a Project Settings *window* in all three. Answer the container question first; the
+  verb usually follows from it.
+- **A menu is a list of VERBS. When the entries are nouns, the container is wrong.** An entry that needs
+  live data + selection state + a payload is a panel.
+- **Count what an alternative DELETES, not only what it adds.** The panel route removed five new types
+  and reused a registration path that already existed — [[L22]]'s shape (the user's fix is deletion,
+  mine is machinery) caught one step earlier, at design time instead of after building.
+
+## L42 — When a slice makes an action CHEAP, price that action on every path it touches (2026-08-20)
+
+**What happened (component properties).** The whole slice existed to make one action trivial: add a
+field to a component and have the editor draw it. The user did exactly that — three floats, added to
+`OPAAX_PROPERTIES` *and* to the NLOHMANN macro — and the app died at boot with
+`[json.exception.out_of_range.403] key 'Size' not found`, thrown out of `from_json` inside
+`Level::MountAll` → `FinishStartup`, where nothing catches.
+`NLOHMANN_DEFINE_TYPE_INTRUSIVE` reads every field with `at()`, which throws on a missing key, so the
+first field added to a component refuses **every map already saved**. One macro name — `_WITH_DEFAULT` —
+was the entire difference.
+
+**Why I missed it.** I read that macro three times while planning: I quoted it, I wrote
+`OPAAX_PROPERTIES` directly beneath it, and I wrote a paragraph about the two field lists being able to
+drift. I was checking whether the *lists* agreed with each other, never what either does against a file
+written before it grew. `MapFactory` even had the answer written above the line that threw — it
+tolerates an unknown component TYPE with a warning, and had no such tolerance for an unknown FIELD.
+
+**Rules for next time:**
+- **A feature that makes an action easy is a claim about every path that action reaches**, not only the
+  one you built. Ask what the newly-cheap action does to data that already exists — before shipping the
+  thing that encourages it.
+- **A generated serializer encodes a MIGRATION POLICY, and the strict one is usually the default.**
+  `at()` versus `value()` is "adding a field is routine" versus "adding a field bricks every save". Read
+  what codegen emits for the ABSENT case, not just the present one — [[L27]] (know *why* it works)
+  applied to inputs the code has never seen.
+- **Symmetry is a checklist.** Where a loader already tolerates one kind of mismatch, ask what it does
+  with the neighbouring kinds (unknown field, wrong type, non-object). The tolerance was already written
+  and reasoned one line above the gap.
+- **Boot-path throws are a severity multiplier** — before a window exists, an escaping exception is a
+  crash, not a broken file. That is why the fix was two-sided: defaults for the ordinary case, a catch
+  plus a Warn for the corrupt one.
+
+## L43 — Regenerating a tracked file is a MIGRATION, not a rebuild (2026-08-20)
+
+**What happened (config format unification).** Moving configs onto the shared nlohmann macro changed
+their key names, so the two `.config` files had to be regenerated: delete, boot a host, commit the
+result. `Engine.config` came back identical in value — every field was at its default. `Renderer.config`
+came back with `ClearColor` at the struct default, **black**, silently discarding the `0.1` dark grey
+the user had set. Caught only because I diffed the regenerated file against `git show HEAD:` before
+moving on, and carried the value across by hand.
+
+**Why it is worth a lesson.** Every gate was green while the data was wrong. The build passed, the tests
+passed, the host booted, the file was well-formed and matched the new schema perfectly — the only thing
+that had changed was a value the user chose, replaced by one the code chose. "Regenerate it" sounds like
+a build step and is actually the narrowest possible data migration, with no tooling and no diff review
+unless someone asks for one.
+
+**Rules for next time:**
+- **Before regenerating any file under version control, diff the new one against what it replaced**, and
+  account for every value that moved. `git show HEAD:<path>` costs one command.
+- **Ask which values in that file a HUMAN chose.** Defaults regenerate perfectly and prove nothing; the
+  customised value is the entire risk, and it is usually one line among thirty.
+- Prefer the order *back up, regenerate, port, verify* over *regenerate and eyeball* — even when the file
+  is tracked, because "it's in git" only helps someone who notices in the first place.
+- Same family as [[L20]] (never spend unrecoverable user state on a test): this one WAS recoverable, and
+  that is the only reason it is a lesson rather than an apology.
+
+## L44 — A convenience seam with NO CALLER is not yet a seam; grep who calls it before assuming your extension took effect (2026-08-20)
+
+**What happened (resource formats).** I added a third route to `ModuleRegistrar` and wired it inside
+`BindEngineRegistries` — the one call **MR0** documents as existing so the binding *"does not grow an
+argument per registry."* All three presets built, 374 tests passed. The first `Sandbox.exe` boot then
+said:
+
+```
+[error] [ModuleRegistrar] Resources().Register — route is not bound to a ResourceFormatRegistry; registration dropped.
+```
+
+`OpaaxApplication::PopulateEngineRegistries` had never called it. It bound each route by hand, two lines,
+and the aggregate helper had sat at **zero callers** since the day MR0 introduced it. So the new route
+shipped unbound and dropped every game-module registration — the precise failure MR0's one-call design
+exists to prevent, hiding inside the contract that describes the prevention.
+
+**Why I missed it.** I read the contract, found the seam named there, edited it, and treated "the seam
+now handles my route" as done. I never asked *who calls this*. A contract states intent; the call site
+had drifted from it years of commits ago, and **a contract is not a grep**. This is [[L8]] one level up —
+verify the mechanism *ran*, not that the mechanism *exists*.
+
+**Rules for next time:**
+- **When you extend a shared seam, grep its CALLERS before believing the extension does anything.**
+  Editing the function everyone "uses" is worthless if nobody uses it. One `grep -rn` showed two
+  hand-binds and zero uses.
+- **Two ways to do one wiring means one of them is stale**, and the stale one is usually the documented
+  one. Fix the cause — call the aggregate — rather than adding a third line to the hand-written list,
+  or the next person to add a registry repeats this exactly.
+- **The thing that saved it was the route's own unbound-Error**, written for [[L16]]'s reason. An
+  "impossible" wiring branch that logs earns its lines the first time somebody adds a route; a silent
+  `return false` would have made this a content bug reported days later, with nothing pointing at boot.
+- Generalises past wiring: whenever a doc names a helper as *the* way to do something, confirm the tree
+  agrees before relying on it. Same session, same file, `Engine::RegisterNativeTypes()` turned out never
+  to have existed either.
+## L45 — A generic UI system composes independent authors into ONE namespace; ask what the key is and who can collide in it (2026-08-20)
+
+**What happened (④ textures, S3 — the USER caught it, not any gate of mine).** `SpriteComponent` was
+written deliberately parallel to `DummyComponent`: same `Position`, same `Size`, same `Color`, because
+they mean the same things. The moment one entity carried both, ImGui reported *"visible items with
+conflicting ID"*. An ImGui widget's identity **is its label**; a label in the generic drawer is a
+*property name*; and `InspectorPanel` stacks every applicable drawer into one window. So two `Color`
+rows were one id, twice — the widgets shared hover and active state, and dragging one could drive the
+other. The user named the general case in the same breath: *"since we have drawer for LinearColor,
+(other will collide too)"*.
+
+**The fix is a SCOPE, and its PLACEMENT is the lesson.** `ImGui::PushID(<drawn type name>)` per registry
+**entry**, in `TDrawerRegistry` — not inside each `TPropertyDrawer`. A drawer sees one field and cannot
+know what else the window holds; an entry is exactly the boundary between two independently-authored
+types. One line covered components, configs, hand-written drawers and every future subject — including
+a latent copy of the same bug in the **Config panel**, which had no scope of its own and would have
+collided for two configs sharing a field name. Nobody had tried, because `EngineConfigData` and
+`RendererConfigData` happen not to overlap.
+
+**Why every automated gate was blind.** Three presets, 383 tests, two smoke runs, all green. The
+conflict needs *an entity carrying two components with overlapping fields*, selected, with the pointer
+over one of the rows — ImGui detects it on **hover** (`ItemHoverable`). No compile error, no log line,
+and a boot smoke test never selects anything.
+
+**Rules for next time:**
+- **When a generic system composes independently-authored pieces into one namespace, name the KEY and
+  ask who can collide in it.** Here the key was the field name. The tree already scopes every other
+  such namespace — map component keys, config keys, command tags, menu ids — which is why this one
+  stood out only in hindsight. The question is cheap and mechanical; ask it when writing the composer,
+  not when a user hovers a row.
+- **A new type modelled on an existing one INHERITS its field names, and the resemblance IS the hazard.**
+  The more faithfully `SpriteComponent` mirrored `DummyComponent`, the more certain the collision. "It
+  looks just like the one that already works" is a reason to check the shared namespace, not to relax.
+- **An interactive gate needs the NEGATIVE question.** [[L12]] says the observability must exist and
+  [[L15]] says it must discriminate; this adds: a handoff that lists what to *look at* still misses what
+  to *look for going wrong*. My S3 handoff had five numbered steps and not one of them was "does
+  anything complain?".
+- **Scope by NAME, not by index**, when the id also keys persisted UI state — an index-based scope
+  silently rebinds every stored header state the day a drawer is registered ahead of it.
+
+## L46 — A dead-code grep whose FILTER matches call syntax proves the opposite of what it reports (2026-08-21)
+
+**What happened (the cleanup sweep).** Asked to find unused code, I ran a whole-tree search for
+`World::Clear` — and I did include `Engine/Tests` in the paths, the omission that had already cost
+three sessions ([[L10]]). The command was:
+
+```
+rg -n "\bClear\s*\(" … Engine/Source Editor/Source Sandbox Engine/Tests | rg -v "\.Clear\(\)|…"
+```
+
+That second `rg -v` was a noise filter, meant to drop `m_Foo.Clear()` housekeeping. But a **call
+site** is spelled `lWorld.Clear()`, which matches `\.Clear\(\)` — so the filter deleted precisely
+the evidence the search existed to find. What survived was declarations and definitions only, which
+reads exactly like "declared, never called." I reported `World::Clear()` as dead, the user approved
+deleting it, and it had **five callers** (`WorldEntityTests` ×3, `MapSnapshotTests`,
+`ModuleRegistrarTests`). The build caught it in one pass, and restoring it pulled back
+`Level::OnWorldCleared` and `WorldGuidRegistry::Clear`, which had only looked dead because they
+serve it.
+
+**Why this is not just [[L10]] again.** L10's rule is *"grep is a SEED, the build is the VERDICT"*
+and its failure mode has always been **too narrow a path list**. This was a correct path list and a
+**self-defeating pattern** — a stricter search that was wrong in the one direction that matters,
+producing a confident false positive rather than a miss. Widening the sweep would not have helped;
+nothing about the output looked incomplete.
+
+**And the grep was the SECOND wrong witness, not the first.** `CLAUDE.local.md`'s STILL OPEN list
+already said *"`World::Clear()` has zero callers outside `World` (③ removed the last one)"* — so I
+went in believing it and read the grep as confirmation. Two independent-looking sources agreed, and
+they were not independent: that note was almost certainly written from the same kind of search. This
+is [[L22]]/[[L26]] wearing a third hat — **a doc's claim is a premise, not a finding, and my OWN
+notes are the easiest one to forget that about**, because I trust them like memory rather than like
+a document that can go stale. When a note and a grep agree, ask whether the grep is the note's
+source before counting it as a second opinion.
+
+**Rules for next time:**
+- **[[L21]] applies to a GREP, not only to a test.** The instrument must not share a failure mode
+  with the thing it measures. A search for "is this called?" whose filter can match **call syntax**
+  cannot answer that question. Before filtering a dead-code search, ask: *could this `-v` pattern
+  match a real caller?* If yes, read the noise instead — it is cheaper than a wrong deletion.
+- **For "is X used", grep for the USE, never for the declaration and then subtract.** `\.X\(` /
+  `->X\(` / `::X\(` as the primary query, with the declaring file excluded by path. Counting all
+  mentions and reasoning about the remainder is where a filter gets invented in the first place.
+- **A deletion the USER approved on my evidence is worse than one I got wrong alone.** They answered
+  "delete all 14" against a list I had verified badly, so my error consumed their decision too. When
+  a proposal's whole value is the verification behind it, the verification is the deliverable —
+  re-run it unfiltered before acting, not after the compiler objects.
+- **Restore the whole reachability cluster, not the symbol.** `Level::OnWorldCleared`'s own doc said
+  *"World::Clear already emptied us"* — a member that exists to serve one caller is dead or alive
+  with it, in both directions ([[L10]]'s cluster rule, run in reverse).
+- **The compiler stayed the honest gate, and it was cheap.** One `OPAAX_BUILD_FAIL` naming five
+  files, ~9 minutes. Never close a delete-only change on grep evidence alone, however careful the
+  grep looked — that is what a build is for ([[L8]]: grep the output, the exit code was 0 here too).
+
+---
+
+## L47 — A blocker I wrote down is a claim about PLACEMENT until proven otherwise; re-derive it before costing an invariant change (2026-08-24)
+
+**What happened (④b, the texture preview).** Both `todo.md` and `CLAUDE.local.md` recorded the
+preview as blocked on a contract question: `TPropertyDrawer::Draw(label, value, meta)` has no
+`EditorContext` by design, so a drawer can reach neither the UI backend nor the ResourceManager, and
+I had written *"Decide that first; it is the whole design question, and **I15** is the invariant it
+touches."* I carried that into the next session and put it to the user as a fork — browser-only, or
+amend **I15**. Their answer was neither: *"The preview is double click action, what do you think?"*
+`ResourceTypeBuilder::SetActivate` has BEEN "what does a double-click do" since M2d, Map and Level
+open documents through it, and a registered panel has an `EditorContext` by construction. **I15
+never had to move.** The registration I was editing even said so: *"No activation: double-clicking
+an image has nothing to open until a texture viewer exists."*
+
+**Why I framed it wrong.** I asked *"how do I get a context into a drawer?"* — a real question with
+only expensive answers — instead of *"where does a preview belong?"*. The blocker was genuine **for
+the location I had already assumed**, and assuming the location is the step that never got examined.
+Writing it down twice, months apart, laundered an assumption into a finding.
+
+**Rules for next time:**
+- **When a plan says "X is blocked on amending an invariant", re-derive WHY X is where it is before
+  costing the amendment.** The invariant is usually load-bearing; the placement usually is not. Ask
+  what already does this job elsewhere in the tree.
+- **My own notes are the easiest premise to mistake for evidence** — [[L46]]'s second-wrong-witness
+  shape, and [[L22]]'s. A carried-forward blocker deserves the same suspicion as a carried-forward
+  test assertion, *especially* when I wrote it and have since restated it.
+- The user reframes by asking **what does the user DO**, not what the code allows
+  ([[justifies-design-from-authoring-cost]]). Twice now that has collapsed a design instead of
+  growing one.
+
+---
+
+## L48 — Before a smoke run, name the log line that will PROVE the feature ran; absence of errors is not evidence (2026-08-24)
+
+**What happened.** Browser type-icons loaded lazily, resolved on the first tile that needed one, with
+a rationale I invented ("a handful of types, most never seen in a session"). Build clean, tests
+green, smoke run clean, 0 err/warn. Then I grepped the log for `Icon loaded` and found **nothing** —
+the browser opens at *Home*, where the tiles are the roots themselves and no **file** tile draws, so
+the icon path had never once executed. Every green signal was real and none was about the feature.
+
+**Why it nearly passed.** I checked the things that fail loudly and read the absence of failure as
+success. A lazy path that is never entered logs exactly like a correct one.
+
+**Rules for next time:**
+- **Name the expected positive log line BEFORE the run, then grep for that line.** If no such line
+  can exist, the run is not a verification of this change — it is a verification that nothing else
+  broke, which is a different claim.
+- **Laziness is a VERIFIABILITY cost, not only a performance choice.** Where the set is finite and
+  known — a sealed registry, a fixed list — eager is simpler *and* self-proving, and it moves the
+  failure to a known moment. Ask "what makes this set finite?" before choosing lazy.
+- Same family as [[L23]]: *has this run in the real app?* is not answered by *did the real app run?*
+
+---
+
+## L49 — "Absent" and "placeholder" are different answers; gate on IsValid(), never on Get() != nullptr (2026-08-24)
+
+**What happened.** The icon cache stored a `ResourceRef` even when the load failed, reasoning that
+caching a failure prevents a per-frame retry — which `RendererManager::ResolveTexture` does, with a
+comment saying exactly that. But `ResourceRef::Get()` is `manager->Resolve(handle)` →
+`pool.Get(handle)` → `PlaceholderOrNull()`, so a **failed** claim answers the type's placeholder: for
+a texture, the magenta 2×2. A missing icon file would have painted a magenta square precisely where
+I had promised the glyph fallback. Found by reading `Resolve` while designing `Find` — not by
+running anything, because every icon file happened to exist.
+
+**Why it hid.** The placeholder is *correct and valuable* for its designed consumer — a sprite
+drawing magenta is louder than a sprite drawing nothing. It is wrong for a consumer that has its own
+fallback. And the comment I copied described the behaviour accurately; what did not transfer was the
+**decision** behind it.
+
+**Rules for next time:**
+- **`Get()` non-null means DRAWABLE, not FOUND.** Wherever those differ to you, gate on `IsValid()`.
+- **Copying a cache's shape copies its POLICY.** Before reusing an idiom that carries a comment, ask
+  whether the sentence in that comment is still true of the new caller. "The empty ref resolves to
+  the magenta placeholder" was the point at one call site and the bug at the other.
+- When adding a query API, make the miss **structurally** honest rather than documented: `Find`
+  returns a null-manager ref, so `Get()` is `nullptr` — the choice `Pin` had already made, which I
+  only found by looking rather than by assuming.
+
+---
+
+## L50 — A PLACEMENT argument dies with the feature it rested on; re-derive it after every scope cut (2026-08-26)
+
+**What happened (① camera).** I planned `CameraSubsystem` as a **world** subsystem and defended it at
+length: `ShouldCreate` gives the Edit/Play split for free, camera state is world state, PIE keeps two
+worlds alive. The user then cut follow and shake from the block and asked, in five words,
+*"CameraSystem can be Engine no?"* — and they were right. Every one of my arguments rested on
+**behaviour that ticks**. With follow gone there is no per-world behaviour and no per-world state at
+all: a camera's position lives on its entity in the world's own registry, so the resolve is a pure
+function of the active world. The world tier would have cost a new `RegisterNativeWorldSubsystems()`,
+the first engine-native world subsystem, a `WorldContext` it barely touches, and an instance per world
+including every test world — all to avoid one `if` on `GetMode()`.
+
+**Why I did not catch it myself.** I made the cut and re-read the placement decision in the *same*
+reply, and treated the placement as settled because I had written it down the day before. The plan
+document had become an input rather than a claim to re-check. The tell was sitting in my own text: the
+paragraph justifying the tier used the word *"ticks"*, and "ticks" had just been deleted from scope.
+
+**Rules for next time:**
+- **When scope is cut, grep your own plan for the cut feature's name.** Every hit is a decision whose
+  justification just changed and has to be re-derived, not inherited.
+- **A placement argument is a claim about STATE and LIFETIME, not about vocabulary.** "It is a camera,
+  cameras belong to worlds" is a category feeling. "It holds nothing per world" is the real test, and
+  it answers in seconds once it is actually asked.
+- **Express the surviving argument as CODE.** The reason the engine tier is right is "the resolve needs
+  only the world", so `Resolve` became a `static` pure function. That made the claim checkable instead
+  of asserted — and incidentally made the positive branch unit-testable against a bare `World`, which
+  a smoke log could never have covered.
+- Sibling of [[L47]] from the other direction: L47 is about not trusting a written-down *obstacle*,
+  this is about not trusting a written-down *decision*.
+
+---
+
+## L51 — Guard a "seed from a measured size" against the value BEFORE the first measurement (2026-08-26)
+
+**What happened (① S3).** `EditorCamera::SeedFromViewportHeight` adopts the viewport's height as its
+starting `OrthoSize`, once, so the editor opens on the framing it had before cameras existed. But
+`ViewportPanel` starts at **1×1** and only learns its real size on the second frame — the
+deferred-resize handshake it has had since M1. Seeded on frame one, the editor would have opened
+zoomed into half a world unit: an empty-looking viewport, produced by a feature whose entire job is
+*"nothing should look different"*. The guard is one clause, and the smoke log is what then proved the
+right thing happened — `seeded from a 469px viewport — orthoSize 234.5`, not `from a 1px viewport`.
+
+**Rules for next time:**
+- **Before consuming a measured value, ask what it reads as BEFORE the first measurement.** Deferred
+  handshakes are everywhere in this tree (viewport resize, hover/focus, the input route) and every one
+  of them has a "not yet" value that is a **legal number**, not an obvious null.
+- **A one-shot latch makes the not-yet case PERMANENT.** `if (m_bSeeded) return;` plus a bad first
+  reading is not a one-frame glitch, it is the state for the whole session. One-shot code needs its
+  input validated harder than per-frame code does.
+- **Log the value you seeded FROM, not just that you seeded.** `from a 469px viewport` is what made
+  this verifiable with no eyes on it; `seeded` alone would have been printed just as cheerfully by the
+  broken version ([[L48]]).
+
+## L52 — A check that reports a difference must report WHERE; and byte-exact includes ARRAY ORDER (2026-08-27)
+
+**What happened (② step 1).** The transform migration rewrote three `.opaaxmap` files through Python
+with the writer's exact formatting — verified by diffing my output against the engine-written
+originals, which showed *only* the intended edits and zero drift. Two of the three round-tripped
+stably. `Main.opaaxmap` did not, because I **appended** the split-out `MainCamera` entity at the end
+of the array and the writer puts it third: `MapSerializer` walks `view<EntityMeta>`, whose order is not
+the order `MapFactory::Instantiate` created them in. Formatting parity was the easy half; the array's
+ORDER is part of the format too.
+
+**Why it cost four rounds.** The warning said only *that* the file differed, so I hypothesised in the
+dark — float formatting, key sorting, guid shape, unregistered components, reverse iteration. I had
+also convinced myself order was safe with "Arena is stable, therefore order is preserved", which was
+true of Arena's two entities and said nothing about a set containing an entity I had inserted myself.
+
+**What actually solved it was improving the instrument**, not the next hypothesis: the warning now
+prints the first differing byte offset, both lengths, and a 120-byte window from each side. One run
+named it — disk had `"Dummy"` where the rewrite had `"Camera"` — and the fix was moving one element.
+
+**Rules for next time:**
+- **When a check reports a difference, make it report WHERE.** A diff-shaped assertion that yields one
+  bit is [[L15]]'s discriminate rule half-applied: it says something is wrong and nothing about what.
+  Extending the diagnostic was cheaper than the third hypothesis, let alone the fifth — and it stays
+  useful forever, which no amount of guessing does.
+- **"Two of three pass, so that dimension is fine" generalizes from the wrong sample.** Ask what the
+  FAILING one has that the passing ones do not. Here: the only element I authored by hand.
+- **When you must hand-produce a format a program writes, prefer letting the PROGRAM write it.** Make
+  the change, save through the app, take its bytes as truth. Reproducing a writer's rules offline gets
+  the ones you can see and misses the ones you cannot — ordering, defaults, elision.
+
+## L53 — A state predicate is FALSE on the frame you want the answer; latch it while it is true (2026-08-27)
+
+**What happened (② step 3).** The drag marquee drew perfectly and selected nothing — and *cleared* any
+existing selection. One cause for both: `ImGui::IsMouseDragging()` requires the button to still be
+**down**, and I called it on the frame the button came **up**, which is exactly the frame that decides
+click-versus-box. It answered false every time, so every drag banked as a point pick at the pixel the
+drag *started* from; begun on empty space that picks nothing, and a replace with an empty list clears.
+
+**Why I could not have caught it.** A smoke run never drags. I had written in that step's own report
+that the marquee "has never run" and handed it over — honest, and precisely why the defect reached the
+user. The click path *was* exercised and worked perfectly, which made the whole gesture look healthy.
+
+**The same gesture then failed twice more, both borrowed defaults** ([[L29]]'s family, now five
+occurrences in this tree). An **undocked** viewport moved when dragged, because ImGui moves a floating
+window on a background drag and `ImGui::Image` is not an interactive item — docked worked, and that
+asymmetry named the layer: nothing in the picking code differs between docked and floating, so the
+cause could not be there. Then `IsWindowHovered()` turned out to include the **title bar**, so pressing
+there started a marquee while ImGui moved the panel.
+
+**Rules for next time:**
+- **A state-query predicate names a STATE, not an EVENT.** Before gating a decision on
+  `IsXHappening()`, ask whether X is still true at the moment the decision is made. Release, commit,
+  end-of-drag, end-of-frame are all moments where the thing that just ended reads as absent. The fix
+  shape is always: **latch it while it IS true**, never interrogate afterwards.
+- **Two symptoms with one cause is the common case, not the lucky one.** "Selects nothing" AND
+  "unselects what I had" looked like two bugs and was one line. Find the single explanation that
+  covers both before fixing either.
+- **An asymmetry between two states of the same widget names the LAYER of the bug** before you open a
+  file. Docked worked and floating did not; no picking code differs between them; therefore it is not
+  picking code.
+- **When you make a panel's body interactive, audit what the host already does with drags there.**
+  [[L29]] said a third-party flag answers its own question — the axis here is also TIME and OWNERSHIP.
+- **The path a smoke run cannot reach is where the bug will be**, because it is the only part nothing
+  checked. Naming an untested gate is right; treating the rest of the feature's health as evidence
+  about it is not.
+
+## L54 — A vendor's "delta" is a NAME, not a contract: read what it computes per branch (2026-08-28)
+
+**What happened (③, the gizmo).** I drove ImGuizmo with `Manipulate(..., &deltaMatrix)` and applied
+that delta uniformly through one choke-point verb — elegant, and wrong. `deltaMatrix` means three
+different things depending on which handle is being dragged: `HandleTranslation` (`ImGuizmo.cpp:2394`)
+writes a **per-frame increment**; `HandleRotation` (`:2674`) writes
+`modelInverse * rotation * model`, incremental **and already conjugated about the pivot**; but
+`HandleScale` (`:2544`) writes a **pure origin-centred** `Scale(...)` whose factor is measured **since
+the drag began**. So the scale path multiplied an entity's *position* about the world origin and
+compounded the cumulative factor every frame.
+
+**Why it survived everything I had.** The wrong term is multiplied by the entity's distance from the
+origin, so at (0,0) it is **exactly zero** — and the map's one authored entity near the origin looked
+fine. Translate and rotate were genuinely correct, so "the gizmo works" was two-thirds true. The user
+found it in one sentence: *"Scale do something weird when not on 0-0"* — a report whose *condition*
+named the bug faster than the symptom did.
+
+**The fix was to stop asking.** The delta now comes from the matrix I already own —
+`M * inverse(M last frame)` — which is per-frame by construction and, because that matrix sits **on
+the pivot**, conjugated for free. One expression for all three modes, no per-mode knowledge anywhere,
+and `deltaMatrix` passed `nullptr`. Shorter than what it replaced.
+
+**Rules for next time:**
+- **When a vendor hands you a value used across several branches, read EACH branch before treating it
+  as uniform.** "Delta" is a word, not a guarantee of frame-relativity or of a coordinate space. The
+  cost of reading three functions was ten minutes; the cost of not reading them was a silent,
+  position-dependent defect. Sibling of [[L29]] — a borrowed predicate answers its own question — now
+  extended from *predicates* to *values*.
+- **Prefer deriving a delta from state YOU control over accepting one you are given.** I already held
+  the matrix; differencing it needed no vendor knowledge at all and could not have had this bug.
+  A quantity you can compute from your own state is one fewer contract to be wrong about.
+- **A bug whose wrong term scales with a coordinate is INVISIBLE at the origin.** Test data sitting
+  near (0,0) is the default in every engine, so this class hides by default. When a transform is
+  involved, assert at a position far from the origin — and treat "works at the origin" as no evidence.
+- **A user's report often carries the diagnosis in its CONDITION.** "Weird when not on 0-0" is not a
+  vague complaint, it is "the wrong term is proportional to position". Read the qualifier first.
+
+## L55 — If a bug found by eye was reachable by a test, the gate was missing, not the tester (2026-08-28)
+
+**What happened (③).** The scale bug above was caught by the user in the running editor. My own note
+had said `EditorGizmo` shipped "test-*able*, untested", because `OpaaxTests` could not see editor
+headers — the M2a gap, carried as a known limitation for four milestones. Closing it turned out to
+cost **one `target_include_directories` line and no link at all**: `EditorGizmo` is header-only and
+touches no ImGui, so the test target needed the include path and nothing else. Seven cases now pin the
+pivot behaviour, the per-frame increments, composition across a skipped frame, and `ReseatAt` moving
+both matrices.
+
+**Why I got it wrong.** I had classified the whole gizmo as "interactive, therefore eyes-only" — true
+of the *drag* (ImGui, a cursor, a viewport) and false of the *math*, which is pure matrix arithmetic
+with no context at all. One honest sentence ("no machine gate here") covered a boundary I had never
+actually located. This is [[L23]]'s shape again: naming a gap read as diligence right up until the
+gap produced the defect.
+
+**Rules for next time:**
+- **Split "interactive" from "the arithmetic behind it" before concluding a feature is eyes-only.**
+  The gesture needs eyes; the transform it computes almost never does. Ask what fraction of the
+  feature is a pure function — that fraction is owed a test regardless of where the code lives.
+- **Re-price a standing limitation when you are about to lean on it.** "Tests cannot reach editor
+  code" was true of code that links the editor library, and simply false of a header-only value type.
+  A limitation inherited from another milestone is a claim about *that* milestone's code ([[L19]]).
+- **The trigger for closing a known gap is the first defect it let through** — and the fix should be
+  priced then, not deferred again. Here it was one line.
+- **Make the assertion structurally different from the wrong answer, not merely numerically.** The
+  cases demand 1200 where an origin-centred scale gives 2200, and 4/3 where a cumulative factor gives
+  2.0 — so they cannot pass by rounding or by accident ([[L21]]).
+
+## L56 — A POSITIONAL query is late-bound: inserting an item before its consumer silently retargets it (2026-08-29)
+
+**What happened (③b S1).** `ViewportPanel::MeasureCameraGesture` found the rect to wrap the cursor
+inside with `ImGui::GetItemRectMin()/Max()`. That was correct for as long as the viewport IMAGE
+happened to be the last submitted item. S1 drew a toolbar before the measures — and a child window
+**is** an item — so those calls silently began naming the strip. Panning captured the mouse in a
+small box in the corner and looped it there, which is what the user reported.
+
+**The second one nobody would have reported.** The same function read `GetItemRectMin` again for the
+ZOOM ANCHOR, so zoom-at-cursor had been anchoring to the toolbar's origin — off by the 8px inset.
+Small enough to feel like drift rather than a bug. One cause, two defects, and only the loud one
+surfaced.
+
+**The fix was not a reordering.** The rect is now PASSED to all three measures, and `DrawContents`
+holds the only `GetItemRect*` call in the file, taken immediately after the image. Reordering would
+have fixed this instance; passing the value closes the class — which mattered immediately, because
+S3 added another overlay two commits later.
+
+**Rules for next time:**
+- **A query that means "the last thing submitted" is late-bound to submission ORDER, so it is a
+  hidden parameter.** `GetItemRect*`, `IsItemHovered`, `SetTooltip`, `SetItemDefaultFocus` all bind
+  this way. When one is read anywhere but immediately after the item it describes, pass the value
+  instead. This is [[L29]]/**SEL8**'s family — a borrowed ImGui call answering about something other
+  than what you meant — now for *positional* queries rather than predicates. Sixth occurrence.
+- **Adding UI to a surface that already measures gestures is a REORDERING, and reordering is a
+  change.** Ask what each existing call reads implicitly before inserting anything ahead of it.
+- **When a defect comes from a shared cause, look for its quiet siblings before fixing the loud
+  one.** The wrap loop announced itself; the zoom anchor never would have.
+
+## L57 — A delta is only meaningful with the FRAME it was built in; conjugate by that, not by the one you are applying it to (2026-08-30)
+
+**What happened (③b S2).** With Local space, a scale drag produces a delta whose linear part is
+`R·S·R⁻¹`, where `R` is the pose the GIZMO was seated with. `TransformSelected` conjugated it by
+**each entity's own rotation** to recover the scale factors. For a single entity that is exactly
+right, because the gizmo adopts the primary's rotation and the two `R`s are the same — which is why
+it passed its tests and its eye gate. On a multi-selection every *other* entity got a non-diagonal
+matrix, and `atan2` of a non-diagonal matrix is a rotation nobody asked for: the user reported
+entities creeping round as they scaled.
+
+**The tell I missed.** My own test asserted the correct reading and the wrong one — 2.0×/0° in the
+entity's frame versus 1.58×/18.4° in the world's — and I read that as "the conjugation works". What
+it actually proved is that *the frame matters*, which should have raised the question **whose frame**
+the moment more than one entity could be selected. I had written the multi-selection case down as a
+named approximation and never asked whether it was even self-consistent.
+
+**The fix removed code.** Conjugating by the gizmo's frame gives the same clean `S` for every entity,
+so the conjugation left the per-entity loop entirely. `EditorGizmo` remembers the pose because a drag
+never reseats and `R·S·R⁻¹` cannot be reduced by anyone who does not know `R` — which also turned the
+choke point's argument into a `TransformDelta` carrying matrix + frame + origin together.
+
+**Rules for next time:**
+- **A transform delta without its frame is ambiguous, and the ambiguity is invisible in the
+  one-object case.** If a value is `R·X·R⁻¹` for some `R`, that `R` is part of the value — carry it,
+  do not re-derive it at the point of use from whatever happens to be nearby.
+- **When N things share one derived value, compute it ONCE outside the loop.** Doing it per element
+  is the shape that invites substituting a per-element quantity for a shared one; here, moving it out
+  and fixing it were the same edit.
+- **"Correct for one, approximate for many" deserves the same scrutiny as "wrong".** I labelled the
+  multi-selection case an accepted approximation without checking it was even coherent — the
+  approximation was fine, the frame was not ([[L23]]'s shape: a labelled gap still hides a defect).
+- **A parameter list that grows twice is telling you the arguments are one value.** Matrix, then
+  origin, then frame — the third addition is where it became a struct, and it should have been the
+  second.
+
+## L58 — "Extensible like other engines" names a CALL SITE, not a coverage policy (2026-08-31)
+
+**What happened (④ S1).** Asked for stats *"extensible… like all other engine"*, and later handed the
+shape by name — *"STATS_SCOPE(ID)"* — I built the macro **and then, reaching for coverage, also wired
+`ISubsystemManager` to wrap every subsystem in all three tick loops.** That put a pure-virtual
+`GetStatName()` into `ISubsystem` — in **Core** — and emitted a row per subsystem per phase, so
+`InputManager` appeared under `Render` at 0.00 ms because its `Render` is an empty override. Their
+verdict was both halves at once: *"it was so much 'integrated' in core"* and *"too much noise"*.
+
+**They were ONE mistake.** The automation is what forced Core to know about stats, and the automation
+is what produced rows for work that does not exist. Unreal has `SCOPE_CYCLE_COUNTER` and deliberately
+*not* the blanket wrapping — the model I was copying already contained the answer.
+
+**Rules for next time:**
+- **When copying a shape from another engine, copy where it is INVOKED, not an automation those
+  engines chose not to have.** "Like Unreal" is a statement about the call site.
+- **Blanket instrumentation is a tax on the reader.** A row for work that does nothing has to be
+  learned-and-ignored, which inverts the tool's purpose. If most of what a mechanism covers is empty,
+  the mechanism is wrong — and do NOT reach for a "hide near-zero rows" filter, which would also hide
+  a real 0.00 (a system that stopped working looks identical to one that never runs).
+- **Ask what a feature adds to a CONTRACT.** `ISubsystem` gained a pure virtual so a *display* could
+  have a label. A base class in Core is the most expensive place in this tree to put anything; the
+  test is *"would this interface be poorer without it?"*, and the answer was no.
+- **The fix for over-integration is DELETION, and the carrier usually already exists** — here
+  `IEngine::GetProfiler()` (the **F3** resolve-and-cache every subsystem already does) and
+  `WorldContext::Profiler`, which **WS3** exists for. I invented plumbing beside plumbing built for
+  the case.
+
+## L59 — A CORRECT per-frame value drawn raw is unreadable, and that is a defect (2026-08-31)
+
+**What happened (④ S1).** The first Stats panel was accurate and their verdict was *"visually its
+very glitchy"*. Three causes, none of them a measurement bug: ~24 rows of `%.2f` changing 60×/s; the
+ROW SET changing (a frame that takes no fixed step has no `FixedUpdate` children, so everything below
+jumped); and a graph ceiling rescaling continuously.
+
+**Rules for next time:**
+- **A readout of a per-frame value needs a refresh throttle and a smoothed headline, always.** 0.25 s
+  and a rolling average. Throttle the TEXT, never the SAMPLING — a spike between refreshes must still
+  reach the graph.
+- **Ask whether the ROW SET is stable, not just the numbers.** Anything conditional per frame makes a
+  list jump. Hold the layout and show 0.00 rather than collapsing.
+- **Match a held list as an ordered SUBSEQUENCE, not by name.** `Renderer` sits under both `Update`
+  and `Render` at the same depth; a name lookup posts the render cost onto the update row — a wrong
+  number that looks entirely plausible.
+- **Log a COUNT, not just "it worked".** A smoke run DID catch one of these (115 scopes in the first
+  frame, from `MAX_FRAME_DELTA`'s 15 fixed steps) purely because the one-shot line printed a number.
+  The other three needed their eyes. A number is the cheapest thing that can look wrong.
+
+## L60 — Run the layer rule on the DEFINITION; and price the disabled path before adding a switch to avoid it (2026-08-31)
+
+**What happened (④).** Three corrections on one axis, each one me not going far enough: Core coupling,
+then `Engine` still owning `FrameStats`. Their last message was not a choice but an instruction to
+evaluate — *"Can it be app service? what is the cost of StatsServices::Null on ship game?"* — and both
+answers were already derivable from the contract.
+- **I4's own test answered the placement**: *"passive facility you submit-to/query ⇒ app service."* A
+  profiler is submitted to. What made me file it under "engine" was that it is *driven* once per
+  frame — but **IN2 had already ruled on exactly that shape**: input is driven once per frame too and
+  its boundary lives in the HOST loop. I cited IN2 while writing the publish INTO `Engine::Loop`,
+  which is [[L28]] verbatim, with the same symptom (the frame the panel read was missing its Present).
+- **Pricing the null path retired a feature I had just built.** `OPAAX_STATS` existed to save two
+  clock reads per scope. Costed honestly: a null profiler POINTER is one predicted branch, under a
+  microsecond a frame — and the flag *forbade* the shipped-game profiling they wanted, because you
+  cannot runtime-enable what was compiled out.
+
+**Rules for next time:**
+- **"It is driven per frame" is not "it ticks".** Ask who calls it: if the HOST does, it is a
+  submission and the thing is passive.
+- **When a rule already adjudicated a near-identical case, apply it instead of re-deriving.** Search
+  the contract for the SHAPE ("who owns the frame boundary"), not for the noun ("stats").
+- **Price the disabled path before adding a switch to avoid it, and ask what the switch FORBIDS.** No
+  amount of saved nanoseconds pays for a capability the user asked for.
+- **`Null()` is not just null-safety, it is a feature switch.** **I3** already requires every service
+  to have one, so "do not provide it" is a complete, zero-state off switch — no `bEnabled` member, no
+  second disabled path to keep correct. Reach for that before inventing configuration.
+- **Verify a ship-only path IN A SHIP BUILD.** The release exe had never been run in this project's
+  history; running it proved both branches AND that a Play world contributes a scope the editor never
+  shows (7 vs 6).
+
+## L61 — The reported symptom is the mildest one; fix the invariant in the type that OWNS it (2026-08-31)
+
+**What happened.** Reported as *"when the scale is neg the outline take all"* — a cosmetic complaint
+about a selection outline drawing solid. The cause was that a negative `Scale` made `Size * Scale`
+negative and `Bounds2D::HalfExtent` went negative with it. `Contains` is
+`fabs(point - centre) <= HalfExtent`, which against a negative bound is **false for every point**: a
+flipped entity had silently stopped being clickable, marquee-selectable and focusable. The outline
+was the only part that was *visible*.
+
+**Rules for next time:**
+- **When a visual bug traces to a shared value, enumerate every OTHER reader of it before fixing.**
+  The reported symptom is wherever the user happened to be looking, not the blast radius. One grep of
+  the broken field's consumers turns a cosmetic fix into the real one.
+- **Fix it in the type that owns the invariant, not at the call site that noticed.** A half-extent is
+  a DISTANCE and is never signed, so `Bounds2D`'s named constructors take the magnitude — which
+  repaired picking, the marquee, focus, the outline and the icons in one edit and cannot regress.
+- **The same raw value can be legitimately signed for one consumer and not another.** The renderer
+  WANTS the negative size (mirrored corners are how a flipped sprite mirrors its texture). "Just
+  abs() it at the source" would have broken flipping; the distinction is per-consumer.
+
+## L62 — Designing AROUND a constraint is the tell that the constraint was never checked (2026-08-08)
+
+Two corrections in one session with one root, kept together because the pair is the lesson.
+
+**(a) A warning in the UI is the shape of a design bug.** I grouped the Hierarchy by map and greyed
+every map but the edited one, with a comment insisting the greying *"is not decoration"* — a Save was
+filtered to the focused map, so edits elsewhere would be lost. The user: *"all maps has to be saved if
+we say 'save level'."* The greying was a warning about a behaviour that should not have existed;
+fixing the behaviour deleted the UI.
+
+**(b) "The clean version is hard to implement" is usually a MISSING OBJECT talking.** I made
+`EditorMapDocument::Open` mount the level's persistent map too, deduped by `MapId`, and justified
+deviating from my own plan by an implementation difficulty about comparing path shapes. The user:
+*"That why we neeed a 'Level' class."* Mount policy had nowhere sane to live because the object that
+owns it did not exist. The path comparison was never the problem.
+
+**Rules for next time:**
+- **When about to warn the user about a consequence of my own design, ask whether the consequence is
+  acceptable at all.** A guard rail is right for a hazard that must exist; for one I introduced it is
+  a bug with a label on it. **"This is not decoration, it is important" in a comment about UI is a
+  smell** — if a visual has to argue for itself, the thing it describes is probably wrong.
+- **When a fix needs a special rule to work, ask which object should have owned the rule** before
+  arguing about how to implement it. A dedup, a "does X belong to Y" test, or a policy parameter
+  threaded into a class that does not care about it are all the same smell.
+- **"The clean way is hard HERE" is evidence about HERE.** It says the code is in the wrong place far
+  more often than it says the design is wrong.
+- **Grep the contract for a TRIGGER before designing around a limitation.** **WM4** had named this
+  exact moment in advance (*"the first thing that needs to load or unload a map while the world is
+  running"*). Deferred work carries its own wake-up condition, and the condition is checkable.
+
+## L63 — An authoring verb must be REACHABLE and COHERENT, and I verified neither (2026-08-09/13)
+
+**(a) Nothing could CREATE the thing being read.** The tag slice shipped a component, a drawer for it
+and a match log line; both hosts booted clean, 330 tests green. I was about to hand off *"add a tag in
+the Inspector"* as the gate — and the drawer only renders for an entity that already HAS the
+component. There was **no Add Component UI anywhere**. The gate was unreachable, not merely
+unverified. `ComponentRegistry`'s own header had promised that menu for two milestones.
+
+**(b) A command half-committed to disk.** `New Map` wrote the map file and left the membership in
+memory. The user closed without Save Level and the level forgot the map.
+
+**Rules for next time:**
+- **Trace the authoring chain to its FIRST link: how does instance number one come into existence?**
+  [[L23]] asks "has this run in the real app?"; the sharper version is *can a user produce one at all
+  with what ships in this slice?* Registering a drawer makes a component **inspectable**, not
+  **existent**.
+- **Ask of any authoring verb: if the process died right now, is what is on disk coherent?** A verb
+  that writes half its effect is a bug, not a trade-off.
+- **A stale "later" in a header is a missing feature with a date on it.** A doc comment naming a
+  consumer that does not exist is [[L19]]'s FIXME wearing a nicer hat — grep for the consumer.
+
+## L64 — In an immediate-mode UI, a click callback runs INSIDE the loop that drew the widget (2026-08-09)
+
+**What happened.** I put per-map verbs on the Hierarchy's map headers and called them straight from
+the `ImGui::MenuItem` branch. `Remove from Level` destroyed that map's entities — from inside the loop
+about to draw those very entities' rows, using handles snapshotted at the top of `Draw`. entt asserted
+on the first `Get<EntityMeta>`. The user hit it on their first real use; **my smoke runs could not,
+because a smoke run never clicks.**
+
+**Why I missed it:** I checked the ORDER of the ImGui calls and never asked what the *command* did to
+the data the loop was still holding. The tell was already in my own code — the rows are `EntityID`
+handles taken before the click, which is the definition of an iterator a mutation invalidates.
+
+**Rules for next time:**
+- **Before wiring a command to a widget, ask what it mutates and whether the enclosing draw is still
+  walking it.** If yes: record the action, run it after the pass. General rule, not a workaround.
+- **Destructive verbs deserve the first thought, not the last.** Save and SetPersistent were harmless
+  in the same position; Remove was not, and it was in the same four-line block.
+- **Name what the automated run did NOT reach.** [[L12]] says a human gate needs something observable;
+  the second half is that reporting "editor RUN clean" for a feature whose only path is a right-click
+  implies a coverage that does not exist.
+
+## L65 — [[L15]] applies to the NO-OP branch, not only the success branch (2026-08-08)
+
+**What happened.** *"Save level do not work"*. The log had no trace of it at all, so I could not tell
+"never clicked" from "clicked and silently did nothing". After adding an invocation log and a
+`0 map(s) written, 2 unchanged, manifest unchanged` summary, the next session showed it working — and
+showed the silent case explicitly. The original symptom was most likely a Save that correctly wrote
+nothing and said nothing about it.
+
+**Rules:** *"It happened and there was nothing to do"* is a different statement from *"it happened and
+here is what changed"*, and a user cannot tell either from silence. **Any command that can
+legitimately do nothing must SAY it did nothing, with the count that proves it.** And log the
+invocation at the single DISPATCH point rather than inside each command — one line, impossible for a
+later command to forget, and it turns "did the click land?" from an inference into a fact.
+
+## L66 — "Continue" resolves against the ▶ NEXT pointer, not against keyword match (2026-08-09)
+
+Asked to *"continue our tasks of cleaning the code/archi/project"*, I went to `CLAUDE.local.md`'s
+**STILL OPEN** list, spent a research pass on it and put two scope questions to the user. Their reply:
+**"wtf we are still on world system cleaning the top bar command..."** The active thread was
+`todo.md`'s ▶ NEXT, which I had read at session start and walked past.
+
+**Why:** I matched on the WORD. Their message said "cleaning", the STILL OPEN list is labelled
+cleanup, and the last five commits were all `[Update] ... clean ...` — the wrong target had more
+surface evidence than the right one.
+
+**Rule:** both state files open with an explicit ▶ NEXT precisely so a session need not guess. If the
+user's words seem to point elsewhere, the question is ONE sentence asked BEFORE a research pass, not
+after one — and asking a scope question about the wrong backlog is worse than asking nothing, because
+it looks like I had already chosen.
+
+## L67 — Before calling something fragile, grep the contract for the invariant that already forbids it (2026-08-05)
+
+I reported the editor's viewport-FBO release as safe *"by luck"* and called `RendererManager` having
+no `TearDown()` an accident a future change would plausibly undo — *"nothing in `RendererManager`
+warns against it"*. The user: **"We did split to let the device live until all other stuff that has
+GPU resource to releasing them."** The TearDown/Shutdown split exists *for* that.
+
+**Why I got it wrong:** I verified the ordering empirically and then reasoned about the FUTURE from
+one file. The **LC** table I had already read lists TearDown's guarantee as "window, **GPU**, bus, all
+siblings still alive" — that guarantee IS the prohibition.
+
+**Rules:** *"Nothing warns against it"* is a claim about the whole contract, not about the file in
+front of me — do not make it from one file. And **the absence of an override is as likely to be a
+DECISION as an oversight**; ask which before writing it up as the latter.
+
+## L68 — A fix nobody watched fail is a fix nobody can trust (2026-08-31)
+
+**What happened.** Chasing a `C4005: 'APIENTRY' macro redefinition` warning in the OpenGL backend, the
+investigation turned up something better than the warning: **`#define GLAD_APIENTRY` sat immediately
+before `#include <glad/glad.h>` in EIGHT files, and glad reads that macro nowhere** — not in
+`glad.h`, not anywhere in the vendor tree. A no-op fix attempt had been sitting in the tree for
+months looking like the problem was handled. It was not even applied to `OpenGLTexture2D.cpp`, the
+one file that actually warned.
+
+**Why it survived.** [[L14]]'s stale objects. `build.bat fast` only recompiles dirty TUs, so the GL
+files had not been rebuilt in months and the warning never appeared — nobody saw the "fix" fail.
+Two failure modes compounded: a fix that was never validated, and an instrument that never ran.
+
+**Rules for next time:**
+- **A fix whose failure mode is invisible has not been verified, it has been assumed.** Before
+  believing a mitigation in the tree, ask *what would I see if this were doing nothing?* If the
+  answer is "exactly what I see now", it is unverified regardless of how long it has been there.
+- **Force the recompile when validating a compile-time fix.** Touch the TUs or clean-build the
+  target; an incremental green says nothing about files it did not open.
+- **A defensive line with no reader is dead code with a comment's authority.** Grep the consumer —
+  the same check [[L63]] applies to a doc comment naming a feature that does not exist. `#define`s
+  aimed at a third party are the easiest place for this to hide, because nothing ever errors.
+- **Sub-agent findings can beat the brief.** The task was "fix a warning"; the durable result was
+  eight dead macros and the reason nobody noticed. Read the whole report, not just the verdict
+  ([[L18]]) — and verify its load-bearing claims yourself, which is how the "glad reads it nowhere"
+  and "8 files" numbers got confirmed rather than repeated.
+
+## L69 — Open-coding a library helper inherits the IDENTITIES it generated, not just its behaviour (2026-09-01)
+
+**What happened (Editor Chrome S3).** The title bar needed a dockspace with a caption row above it,
+which `ImGui::DockSpaceOverViewport` cannot express — so I replaced it with the host window it builds
+internally. Before writing the replacement I read imgui's implementation, and found the part that had
+nothing to do with behaviour: the dockspace id is `GetID("DockSpace")` **seeded by a window literally
+labelled `WindowOverViewport_%08X`**. The user's `imgui.ini` names that derived id, `0x08BD597D`, and
+every saved dock position hangs off it. A replacement that opened a sensibly-named
+`"##EditorHost"` window and called `GetID("EditorDockSpace")` would have compiled, run, looked
+correct on a fresh layout — and **silently orphaned their entire dock arrangement**.
+
+**Why it is worth a lesson.** I was reading that function for a different reason (which flags it
+passes to `Begin`). The id derivation was three lines away and is invisible from the call site: the
+signature says `DockSpaceOverViewport(0, viewport)` and `0` means *"use the default"*, which reads as
+"don't care" when it actually means "a specific value the persisted file depends on". This is
+[[L20]]'s family — spending unrecoverable user state — reached by a route where nothing deletes
+anything.
+
+**Rules for next time:**
+- **When you open-code a library convenience function, ask what NAMES it generated.** Window labels,
+  hash seeds, ids, default filenames — anything derived from a literal inside the helper is part of
+  its contract the moment something persisted it. Behaviour parity is the easy half.
+- **A "default" argument that feeds a hash is a value, not an absence.** `0`/`nullptr`/`""` meaning
+  "compute the usual one" is exactly where this hides.
+- **Verify by DIFFING the persisted artifact across a run**, not by looking at the screen: back the
+  file up, run, diff the section that matters. Here the `[Docking]` block came back identical apart
+  from the run's own window geometry, which is the only evidence that actually answers the question.
+- The general shape: **user state is not only destroyed by deleting it — it is destroyed by changing
+  the key it was filed under.**
+
+## L70 — A green suite says nothing about a test that was never built, and the COUNT is what tells you (2026-09-01)
+
+**What happened (Editor Chrome S3).** I wrote 8 cases for the title bar's frame geometry — the part a
+smoke run physically cannot reach — ran the suite, and got `486 passed, 0 failed`. Green, and
+meaningless twice over. **First**, `Engine/Tests/CMakeLists.txt` lists sources **explicitly** (by
+design, so a suite is never added by a stale glob), so my file was not compiled at all. **Second**,
+after fixing that, I ran `build/debug/bin/Debug/OpaaxTests.exe` while `build.bat test` builds the
+**debug-editor** preset — so I was reading an hour-old binary. Both times the pass/fail line was
+identical to a correct run. The discriminator was the **case count**: 486 where 494 was expected, and
+a `-tc="*Frame*"` filter matching **0 of 493**.
+
+That same wrong-binary mistake also produced a phantom finding earlier in the session — an assertion
+count of 7213 vs 7214 that I reported as unattributable. It was two different builds, not a drift.
+
+**Rules for next time:**
+- **After adding a test file, check the case COUNT went up by what you wrote.** "0 failed" is the one
+  number that cannot distinguish "my tests passed" from "my tests do not exist" — [[L15]]'s
+  discriminate rule and [[L59]]'s *log a number* applied to the instrument itself.
+- **Run the filter for your own suite and confirm it matches non-zero.** One command, and it fails
+  loudly in exactly the case a full run hides.
+- **Know which preset each build verb writes to.** `build.bat test` → `debug-editor`,
+  not `debug`. This is [[L24]] (compare the artifact's mtime) with the twist that both binaries
+  exist and both run — so mtime alone would not have caught it; the *path* was the error.
+- **When two runs of "the same" suite disagree by a small number, suspect two binaries before
+  suspecting a regression.** Reporting the discrepancy as unexplained was better than ignoring it and
+  worse than checking which file I had executed.
+
+## L71 — Before declaring a pattern violated, READ THE SIBLING THAT ALREADY IMPLEMENTS IT (2026-09-01)
+
+**What happened (Editor Chrome, the follow-on).** The user pointed at two lines —
+`SetMenu(m_Extensions.Menus())` beside `SetPanels(*m_EditorPanels)` — and said the two should work
+the same way. I diagnosed it as an *ownership* problem and built a whole argument on one premise I
+never checked: that a thing living in `EditorExtensionRegistrar` and drawing itself was the defect.
+I proposed moving ownership to the gui, a `Bind` route, a teardown restructure — reasoning that was
+internally consistent and rested on nothing.
+
+The user's next message was one sentence: *"Editor Menu is the only one to not be a registry. All
+the rest is."* Reading `ViewportToolbarRegistry.h` took under a minute and demolished the premise:
+it stores, **it draws itself**, it includes `<imgui.h>` directly, it has explicit `// Register` and
+`// Consume` sections, and it is the model ③b was built on. "A registry that draws" was the
+established pattern, not the smell. The real defect was one word — `EditorMenu` was the only route
+not *named* as a registry, which made a thing that was already uniform look different.
+
+**Why I got it wrong.** I had read all eight routes in an earlier sweep and formed an impression of
+what they had in common. An impression is not a reading. The specific failure is that I checked the
+*registrar's member list* (which shows names and types) and never opened the one sibling whose body
+would have answered the question. It is [[L21]]'s rule — prove the premise before designing on it —
+in the case where the premise is about *my own codebase* rather than about a compiler or an OS, which
+is exactly where it feels least necessary to check.
+
+**Rules for next time:**
+- **When about to say "X breaks the pattern", open the file that best exemplifies the pattern and
+  read its body.** Not its declaration, not the container that holds it. If X and the exemplar do the
+  same things, the difference is cosmetic and the fix is a rename, not a restructure.
+- **A user pointing at two lines is reporting a symptom, not a diagnosis.** They said "make them work
+  the same"; I heard "ownership is wrong". The cheaper hypothesis — *the names disagree* — was
+  available first and I skipped past it. **Rank hypotheses by cost before by interest.**
+- **Their one-line correction was more precise than my three paragraphs.** When someone who lives in
+  the code says "X is the only one that is not a Y", treat it as a measurement and go verify what Y
+  actually is, rather than as an opening for the design you already had.
+- The recovery was right and is the part to keep: say plainly which claim was false, show the file
+  that disproves it, and let the recommendation shrink. Here it went from ~16 files of restructuring
+  to a rename — and the ownership move survived only because the user then chose it *on its own
+  merits*, not as a fix for a problem that did not exist.
+
+## L72 — Grade an objection FATAL vs MERELY WORK, or a fixable constraint reads as a refutation (2026-09-01)
+
+**What happened (⑤ undo/redo).** The user said *"I belive we can consolidate 'Command'"* — and they
+had already written the hooks and commented them out (`IEditorCommand`'s `CanUndo`/`Undo`,
+`EditorCommandConcept`'s `UndoableEditorCommand`). I agreed with the consolidation and then gave three
+reasons the commented-out `Undo(EditorContext&)` could not be the hook. **The first one was not a
+reason at all:** *"the registry builds one command per dispatch and the instance dies with `Execute`,
+so there is nothing left to undo with."* True, and **fixable in one line** — I even wrote *"keeping
+the instance alive in a stack is possible, but it makes every command stateful"*, i.e. I had priced it
+and argued against it in the same breath. They answered in one sentence: *"Just on the UndoSystem keep
+them alive until we reach the maximum undo stack."*
+
+**Their version was better than mine, not just acceptable.** Keeping the executed command as the undo
+entry is *more* general than the separate transaction list I had proposed: a command can carry undo
+data an entity snapshot cannot express (a level manifest), which is exactly what the second concept
+now exists for. My "objection" was hiding a capability.
+
+**What survived is the part that was genuinely fatal**, and it is worth seeing the difference: redo
+**cannot** be a second `Execute`, because `CreateEntityCommand` mints a fresh Guid and a dialog command
+would re-prompt. That one is a property of the verbs, not of the plumbing — no amount of stack
+bookkeeping fixes it. Reason #1 was plumbing. Reason #3 (a hand-written inverse drifts) was a *cost*,
+not a blocker, and should have been labelled as one.
+
+**Rules for next time:**
+- **Before listing objections to the user's design, sort them: FATAL (no implementation makes this
+  work), COST (this works and here is the price), COSMETIC (I prefer otherwise).** Say which is which
+  in the reply. An unlabelled mixed list reads as a refutation, and the user has to spend a turn
+  overruling the weakest item to get to the real question.
+- **If I have already estimated the fix while writing the objection, it is not an objection.** The
+  tell is textual and greppable in my own draft, exactly like [[L23]]'s: *"is possible, but…"*,
+  *"fixable, however…"*. Take the fix and keep only what survives it.
+- **Their design may be doing work mine isn't.** When a user's alternative is rejected on one axis,
+  check what it buys on the others before answering — here, "the instance survives" was also "a
+  command can hold non-entity undo state", which my shape could not do at all.
+- **Read the commented-out code as the spec** ([[L71]]'s neighbour, and now the SECOND time: the
+  editor UI seam started from their breadcrumb comments too). Dead code the user wrote is a design
+  they have already had; open it before proposing a shape, and keep its vocabulary when it is right —
+  `UndoableEditorCommand` survived with its name, its `if constexpr` dispatch and its opt-in shape
+  intact, and only what it *declared* changed.
+
+
+## L73 — When a heuristic REPLACES the explicit signal the design specified, it is a defect the docs will not show you (2026-09-02)
+
+**What happened.** ⑤ shipped 2026-09-01 as "code complete, not user-verified". The user ran it and
+rejected it in one message: a drag from 100 to 150 undid as 149, 148, 147...; the log was flooded with
+`Captured 1 of 1 named entity(ies)` every frame; and *"Undo class have many function to record or
+whatever undo things."*
+
+All three came from ONE function. `EditorUndo::RefreshBaseline` re-serialized the selection every frame
+and committed a step whenever the value **stopped changing for one frame**. That is the step-per-pause
+bug and the log flood, and it is also why the class had 17 public members: a poll needs a baseline,
+the baseline needs two revision gates, the gates need a pending-edit pair, and a per-frame committer
+needs a gesture API to suppress it.
+
+**The plan had specified the right thing and the code did something else.** `.claude/plans/undo-redo.md`
+§4 said *"the falling edge dispatches `EditPropertiesCommand`"*. `EditPropertiesCommand`'s own
+doc-comment said *"the Inspector dispatches this at the END of an edit — the falling edge of the same
+'any item active' bracket"*. **ARCHITECTURE.md UN5 said `IsAnyItemActive()` was the Inspector's edge.**
+Three documents described the edge design; only the implementation had drifted to a poll, and I wrote
+all four.
+
+**The justification for the drift was FALSE and I never checked it.** The record claimed the edge
+version *"silently missed every generic property edit while catching the hand-written ones."*
+`ImGui::IsAnyItemActive()` is a **global** query — it cannot discriminate generic from hand-written,
+because it does not know what a drawer is. The real failure was that a gesture recorded nothing unless
+a command was dispatched inside it, and nothing dispatched `EditPropertiesCommand`. **A wiring bug,
+written up as a limitation of the approach, and the write-up then justified 200 lines of machinery.**
+
+**Rules for next time:**
+- **When the code stops matching the design doc, the doc is a WITNESS, not a stale artifact.** [[L26]]
+  says a doc's ordering claims drift ahead of the code. This is the mirror case and it is more
+  dangerous: the doc was RIGHT and the code drifted *behind* it. Before rewriting a plan's mechanism
+  mid-build, re-read the sentence you are abandoning and say why in the same edit — if the reason
+  cannot be written down, it is not a reason.
+- **"Approach X silently misses cases" is a claim about a MECHANISM. Verify it against the
+  mechanism.** One minute reading what `IsAnyItemActive()` returns would have killed the poll before
+  it was written. Same shape as [[L71]] (read the sibling before calling a pattern violated) and
+  [[L18]] (a documented caveat is a bug with a comment on it): I recorded a defeat instead of
+  checking it.
+- **A HEURISTIC where the design called for an EDGE is a smell with a name: it infers what something
+  already knows.** The research confirmed it — Unreal brackets at the widget, Unity groups on the
+  mouse-down event, Godot and Lumix merge in the stack. **All four push "what is one step" outward to
+  whoever made the edit. None infers it from values settling.** When a design starts inferring intent
+  from state changes, ask who already has the intent.
+- **The user's fix was smaller than my bug.** *"The undo system do not care about a property changing
+  or whatever. The property itself calls undo to record its own stuff."* That reversed **UN1** — their
+  own earlier steer, which [[L72]] records me learning to respect — and it deleted the poll, the
+  baseline, the gesture API, `EntityEdit`, both command concepts, the dispatch bracket and an empty
+  command, leaving an 8-member stack that includes no engine header. **When the user rejects a system
+  they previously steered, the new steer supersedes the old one; do not defend the old one on their
+  behalf.**
+- **Sub-agents earned their cost here, and only because the findings were checkable.** Three ran in
+  parallel (reference-engine research, a whole-world-snapshot design, a widget-seam design). The
+  research produced the "nobody infers a boundary from settling" fact; the widget-seam agent
+  independently found the `IsAnyItemActive()` claim was a misdiagnosis. **Both were verified against
+  the code before being used** ([[L16]]/[[L18]]) — and the user then rejected all three designs for a
+  fourth, so their value was the EVIDENCE, not the recommendations.
+
+**Sub-lesson, from a correction in the same block: a gate that names an exact UI STRING must have that
+string read from the code.** I handed over *"check the menu reads **Undo Move**"*; it reads **"Undo
+Translate"** — `ToString(EGizmoMode)`, which I had wired one line earlier without reading. A gate is an
+instrument ([[L15]]): a wrong expected-string makes a CORRECT build look broken. Grep the function that
+produces the string; never re-derive it from the name you gave a variable.
+
+## L74 — A fix RETIRES the instrument built to expose the defect; I rewrote its wording instead (2026-09-02)
+
+**What happened (⑥ S1).** The Stats panel coloured `Draw Calls` amber above 1, with a tooltip saying
+draw order breaks across the split. That instrument existed for exactly one reason: to make the ⑥
+sort bug visible before it bit. S1 fixed the bug. While landing it I opened that very code, noticed
+the tooltip was now false, and **rewrote the sentence** — "a split is a cost, not a drawing error" —
+leaving the amber colour and the hover in place. The user ran the gate and answered in one line:
+*"3 was a bit red already."* At `MaxQuadsPerBatch: 2` the panel was warning them about a limit they
+had configured on purpose.
+
+**The tell I walked straight past.** I edited the instrument to keep it TRUE. The question I never
+asked was whether it should still EXIST. An amber highlight is a claim that a number is bad, and
+after the fix nothing here can say that: a split costs draw calls, and "how many is too many" is a
+budget the engine does not have. Every reference engine colours against a budget, never against 1.
+
+**Rules for next time:**
+- **When a change closes a defect, list what was built to OBSERVE that defect and retire it in the
+  same change.** A counter, a colour, a warning log, a one-shot line, a test double — each was
+  justified by the bug. Some survive on their own merit (the `Draw Calls` count is still the number
+  a batcher is judged by); a judgement rendered ON that number does not survive with it.
+- **"This comment is now false" has two fixes and I habitually reach for the weaker one.** Rewriting
+  the text keeps the thing; deleting the thing removes the need for text. Ask which before editing
+  the sentence — the same instinct as [[L18]]/[[L19]], one level over: there the comment excused a
+  defect, here it maintained a fixture whose reason had expired.
+- **A warning with no budget behind it is noise by construction.** Before colouring, dimming or
+  flagging a value, name the threshold and where it comes from. "Greater than the trivial case" is
+  not a threshold.
+- **Corollary that paid off the same day:** the user's question *"why do we give limits like this?"*
+  was not a request for a chat answer — it was a **missing tooltip**. A field a reader has to ask
+  about is under-documented at the field, and answering only in conversation leaves the next reader
+  to ask again. That is what `PropertyMeta::SetTooltip` is now for.
+
+## L75 — A design sentence containing "and then X publishes it" is a TODO, not a description (2026-09-02)
+
+**What happened (⑥ S2).** The sprite sheet editor keeps its own copy of the sheet, and I wrote the
+reason down twice - in the approved plan and in the document's header: *"the copy in the
+ResourceManager is what the RENDERER draws... A Save is what publishes it."* Then I built the copy,
+built the Save, and never built the publish. The user found it in minutes: a sprite already holding
+the sheet kept drawing the first parse, so re-slicing changed the file and nothing on screen.
+
+**The tell was in my own prose.** "A Save is what publishes it" describes a mechanism that did not
+exist. I read the sentence as a statement of design - it IS one - and never asked the next question,
+which is *what function does that*. The header shipped with the sentence in it, so the code and its
+own documentation disagreed from the first commit, and the doc was the more optimistic of the two.
+
+**Why the gates missed it.** Every automated check passed, because each half is correct on its own:
+the document round-trips, the file writes, the renderer resolves. The defect lives in the SEAM
+between two copies of one thing, and nothing tested the seam because nothing named it - the
+composed path needs a running editor AND a sprite already using that sheet, which is precisely the
+[[L23]] shape ("has the feature ever run in the real app?") one layer down: the feature HAD run,
+just never twice against the same resource.
+
+**Rules for next time:**
+- **When a design introduces a SECOND COPY of shared state, name the publish path as a function in
+  the same breath, or do not introduce the copy.** "A Save publishes it" is a promise; `Save()`
+  calling `Reload()` is a design. If the sentence cannot name a callee, the copy is not yet a design.
+- **Grep your own doc comments for verbs with no implementation.** "publishes", "propagates",
+  "invalidates", "notifies", "refreshes" - each names an action, and each is a claim that something
+  performs it. The comment is where the missing work is most visible, because it is where I stated
+  the requirement while my attention was on something else.
+- **Two copies of one thing need a test that holds BOTH.** The case that mattered was not "the
+  payload changed" but *a ref taken BEFORE the update sees it* - which is the user's bug written as
+  an assertion, and which no test of either half could have expressed.
+- **The user's bug report was better than my design note.** They said "if the sheet is already load
+  in sprite comp then changing slice doesn't change in sprite comp" - that is the seam, named
+  precisely, by someone using it for five minutes. **A report phrased as "X is already loaded and
+  then Y" is almost always about a cache, and the fix is almost always a publish, not a reload at
+  the reader.**
+
+## L76 — An instrument that fires on the FIRST WRITE proves arrival, not motion (2026-09-03)
+
+**What happened (⑥ S3).** S2's gate was "a sprite visibly cycling", and the log said
+`Advancing 2 animated sprite(s)`. I caught that this does not discriminate — it prints identically
+whether the clip runs or is bound-and-frozen ([[L15]]) — and added what I described as the fix: a
+one-shot line on the first frame CHANGE. It fired, I reported it as proof of playback, and it was
+not. `SpriteComponent::Frame` is authored as **-1** (the "no opinion" sentinel, **SS3**), so the
+very first write always differs from it. A clip that bound correctly and then never advanced would
+have printed the same line, at the same moment, with the same step number.
+
+**I caught it only because the number looked odd** — "now on step 1" on the first tick — and went
+back to ask *why 1?*. The replacement watches ONE entity and requires two DIFFERENT step indices
+over time, which is the claim the gate actually makes: `Playing — step 1 -> 2 on the watched sprite`.
+
+**Why this is not just [[L15]] again.** L15 says the log must discriminate, and L21 says the
+instrument must not share a failure mode with the thing it measures. Both are about the instrument
+being *wrong*. This one was **right about a different question**: it truly reported "the animator
+wrote to the sprite", which is a real fact, adjacent to the one being claimed, and satisfying enough
+that I shipped it as evidence. The gap between "the machinery is connected" and "the machinery is
+running" is exactly one sentinel value wide.
+
+**Rules for next time:**
+- **When an instrument watches a field with a SENTINEL or a default, its first observation is
+  meaningless.** `-1`, `0`, empty, null: the first write past one of those is guaranteed, so
+  anything triggered by "it changed" is measuring initialisation. Require a second, different
+  observation — or watch a value that had no special starting state.
+- **State the claim in one sentence, then read the log line beside it.** "The clip is playing"
+  versus "the animator wrote a frame" are visibly different sentences; the line only supported the
+  second. Doing this at the moment of WRITING the log is cheaper than doing it after it passes.
+- **A number that surprises you is the review.** "Step 1" instead of "step 0" was the whole tell,
+  and it cost one question. Log a number rather than a fact wherever it is free — a fact can only
+  be true, a number can be *odd* ([[L59]]).
+- **The correction is worth more than the original catch.** I had already applied [[L15]] once here
+  and still shipped a non-discriminating instrument; the lesson is that "I fixed the discrimination
+  problem" is not a state you get to reach and stop checking.
+
+## L77 — I read the wrong process's log for two whole steps, and the number I was not looking for was the defect (2026-09-03)
+
+**What happened (⑥ S4, text rendering).** `build/debug-editor/bin/Debug/` holds **two** hosts —
+`Sandbox.exe` (the game) and `SandboxEditor.exe` (the editor). I smoke-tested `Sandbox.exe` for S1
+and S2, reported "0 errors, editor boots clean", and only found out when S3's `SetUIFont` success
+line **failed to appear**: the log had no `[Editor*]` category in it at all, and never had. Every
+"the editor is fine" statement I had made rested on a log the editor had not written.
+
+The game-host runs were not worthless — they proved `Game.exe` bakes and draws text, which is a real
+gate. But I did not *choose* that gate; I thought I was testing the editor and was not.
+
+**Then reading the whole editor log found the actual defect.** `ViewportPanel] Drawing 4 entity
+icon(s) — entities with nothing to render` — a number I had gone nowhere near. My three text
+entities were being counted as *entities with nothing to render*, which meant
+`EntityQuery::TryGetBounds` did not know about `TextComponent`: a text could not be clicked, its
+selection outline was a 16px anchor, and it drew a "nothing here" icon over itself. No unit test
+would have found it, and no gate I had written was looking at it. Teaching the query about text took
+twenty minutes and the count went **4 → 1**.
+
+**Rules for next time:**
+- **Before reading a smoke log, confirm which BINARY wrote it.** [[L24]] said compare the exe's mtime
+  to the DLL's; this is the same question one step earlier — *is this the right program at all?*
+  `ls *.exe` in the output dir takes one second, and a directory with two hosts in it is the norm
+  here, not an edge case. The cheap check: grep the log for a category **only that host emits**
+  (`[EditorService]`, `[EditorGui]`). Absent ⇒ wrong log, whatever else it says.
+- **A log with zero lines from the subsystem under test is not a clean log** — it is [[L24]]'s "an
+  empty log is not a passing log", applied per-subsystem instead of per-file. I grepped for errors,
+  found none, and read that as evidence about code that had never run.
+- **Read the numbers you did not come for** ([[L27]] again, and this is its strongest instance yet).
+  The icon count was in *every* editor run; it only became a finding when I stopped scanning for the
+  one line I wanted. A count that changed because of my diff is a question, even when nothing warned.
+- **Adding a renderable component means teaching the QUERY, not only the renderer.** `DrawWorldTexts`
+  was the obvious half; `TryGetBounds` and `DrawRank` are what make the thing selectable, outlinable
+  and orderable. The sweep for "who else knows what a renderable is" is part of the component, not a
+  follow-up (**TX7**).
+
+## L78 — A claim about a log line is checkable in seconds; I wrote two of them into git history instead (2026-09-03)
+
+**What happened (⑥ S4).** The Main map has a standing `MP6` re-serialize warning. I wrote in a
+content commit that rewriting the map through a sorted `dump(4)` had **cleared** it — inferred from a
+log where the warning was absent, which was the *game* host, where `EditorLevelDocument` never runs
+that check at all ([[L77]]). Caught it, amended to "UNCHANGED, still pre-existing" — and that was
+wrong too: the warning's *first difference* had moved from a missing `Frame` key to an entity-order
+difference my own three entities introduced. Two commits, two confident sentences, zero measurements.
+Settling it properly took one 22-second run against the previous map and one Python round-trip.
+
+**Why it happened.** Both claims were free to make and felt like colour in a commit message. Neither
+was load-bearing for the code — which is exactly what made me sloppy: I was writing *narrative*, and
+narrative does not feel like it needs a gate. But a commit message is the most durable thing I
+produce, and the next reader has no way to tell which sentences I verified.
+
+**Rules for next time:**
+- **A sentence in a commit message asserting a behaviour is a claim under the same rule as a comment
+  or a doc line** ([[L26]]: a doc's ordering claims are the ones to distrust). Before writing "this
+  also fixed X" or "X is unchanged", ask: *did I observe X, in the right process, after this change?*
+  If not, either measure it or do not write it.
+- **"It stopped warning" needs the run where it WOULD have warned.** Absence of a message proves
+  nothing unless the check that emits it actually executed — the [[L15]] discriminate rule applied to
+  a negative.
+- **Prefer the message that states what I ran.** "601 / 7744 / 7" and "the icon count went 4 → 1" are
+  claims I cannot get wrong; "cleared the standing warning" is one I got wrong twice.
+- Amending is cheap and correct — but a second wrong amend is worse than the first, so **settle the
+  fact before the second attempt**, not between them.
+
+## L79 — I shipped the ENGINE side of a feature and called it code-complete; the authoring surface was half missing (2026-09-04)
+
+**What happened (⑥ S4).** I reported text rendering code-complete with a six-item eye-gate list and
+handed it over. The user opened the editor and answered in one line: *"yeah correct side, but where
+is the component? the panel for opaaxfont? missing so many things."*
+
+Both were real, and neither needed their eyes to find:
+- **`TextComponent` had no Inspector drawer.** It was registered with the engine's
+  `ComponentRegistry`, so "Add Component → Text" worked — and then drew **nothing**. Addable,
+  invisible, uneditable: the worst of the three possible states. One line in
+  `EditorService::RegisterNativeDrawers`.
+- **`.opaaxfont` opened nothing.** Sheet, clip and library each open a document panel; the family
+  had chrome and no verb.
+
+**The tell was in my own diff, and it is the one [[L19]] names.** I had written, in the registration:
+*"A family has no preview and no document editor: it is an alias TABLE, and the thing worth looking
+at is the face it resolves to."* A sentence whose entire job is to explain why a route was skipped.
+Being an alias table is what the **library** is too — and it has a panel, ops, undoables and a Ctrl+S.
+I had the counter-example in the file I was copying from.
+
+**Why the gates did not catch it.** Every gate I wrote was about the RUNTIME: does it bake, does it
+draw, does it kern, does it pick. The registration counts were in the log all along —
+`drawers=7`, `panels=12` — and I read them as "unchanged, good" rather than "unchanged, and one of
+these should have gone up." A count that does NOT move after adding a type is as much a finding as
+one that moves wrongly.
+
+**Rules for next time:**
+- **A type is not done until every route that could show it has been told**, and the list is now
+  mechanical rather than remembered — ARCHITECTURE.md **MR2i** tabulates it for components and for
+  resource types. Walk it before reporting. The routes are separate on purpose (**D4**), which is
+  exactly why nothing warns when one is missing.
+- **After adding a type, the registration counts must MOVE.** `drawers`, `panels`, `resourceTypes`,
+  `commands`, `components`, `formats` are all in one seal line. Predict which should change before
+  the run, then check. This is [[L59]]'s "log a number" turned around: the number was there and I did
+  not compare it to an expectation.
+- **"Engine-complete" is not a milestone the user recognises.** They judge from the authoring loop —
+  what they stop redoing in the editor — so a feature whose engine half works and whose editor half
+  is absent reads as *not built*, not as *half built*. Report against the loop, not against the layer.
+- **When you are about to write a comment explaining why a type gets less than its siblings, open
+  the sibling.** One minute in `AnimationLibraryPanel` would have refuted the sentence I wrote.
+
+---
+
+## L80 — An infrastructure feature with no caller: I checked for a cheap consumer, not for a cheaper NON-consumer (2026-09-04)
+
+**⑥ S5 multi-view.** The render half is two changes — a list of views, and a loop. Small enough that
+I was ready to build it as "getting ready for the HUD", which the user had just deferred.
+
+**What stopped it was asking what would PROVE it.** With one pass still composed the frame renders
+byte-identically: no smoke run, no log line and no test can tell the change from no change, and
+`Renderer2D`'s pass loop needs a GL context so the headless suite cannot reach it either. Two commits
+that no instrument can distinguish from an empty diff.
+
+**Then the real finding, and it is the transferable one.** I went looking for a cheap consumer to
+justify it, found four, and every single one had a cheaper answer that did **not** use multi-view:
+
+| Candidate consumer | The cheaper answer that skips the infrastructure |
+|---|---|
+| Camera-framing preview | a rectangle through `DebugDraw` |
+| Asset preview through the real renderer | ImGui already draws it; `AnimationClipPanel` already PLAYS one |
+| Browser thumbnails | same — a texture, a sheet frame and a clip frame are all just images |
+| Crisp selection outline at any zoom | `WorldPerPixel()`, which the grid already uses |
+
+**"Is there a caller?" is the wrong question when the caller is one I am inventing to justify the
+build.** The right one is: *for each candidate caller, what is the cheapest way to give them that
+result — and does it involve this feature at all?* Four times the answer was no. The consumer that
+survived (a camera preview panel needing its own target AND its own view in one frame) is the only
+one that could not be faked, which is exactly why it was worth building.
+
+**Rules:**
+- **When a change cannot be distinguished from an empty diff by any instrument you have, that is a
+  STOP, not a "verify later".** Name it out loud before writing the code, not in the hand-off.
+- **Price the alternative that does NOT use your feature.** A consumer list is worthless if every
+  entry has a two-line answer elsewhere; the surviving entry is the design's actual justification.
+- **State the un-verifiability to the user as a first-class finding.** They deleted a whole framing
+  from it and picked a better consumer in one message — that only happened because the problem was
+  put in front of them instead of being absorbed.
+
+---
+
+## L81 — A smoke run cannot open a hidden panel; build the throwaway harness rather than ship unrun code (2026-09-04)
+
+**⑥ S5.2.** `CameraPreviewPanel` is hidden by default and follows the selection. A smoke run does
+neither — so shipping it would have meant handing over the *entire point of the block* (a second
+render pass) with zero evidence it had ever executed. [[L23]]'s exact shape, and the gate I had
+written for myself said "their eyes", which would have made it their problem.
+
+**What I did instead:** a deliberately temporary harness — register the panel VISIBLE, and resolve
+the preview from the world's first camera instead of the selection. Two edits. It produced the line
+the step exists for:
+
+```
+[RendererManager] Frame composed of 2 render passes — the first multi-view frame
+[CameraPreviewPanel] Previewing a camera at (-352.00037, 0), orthoSize 300
+```
+
+Then: harness removed, rebuilt, re-smoked, and the SHIPPED build verified to show the opposite —
+no pass line at all, because a hidden panel submitting nothing is the correct result.
+
+**Why the numbers mattered more than the lines.** `(-352, 0)` is not the editor camera's position,
+so the preview was demonstrably framing something else rather than duplicating the viewport. A
+harness that printed "preview ok" would have proved nothing ([[L59]] again).
+
+**Rules:**
+- **If the feature's proof needs a click, write the harness that removes the click.** It is minutes,
+  it is deleted in the same session, and the alternative is prose in a commit message.
+- **Smoke the SHIPPED build after removing the harness, and state what it should NOT show.** The
+  absence of the pass line is what proves the harness is really gone.
+- **Say in the commit that a harness was used and what it changed.** Otherwise the log lines quoted
+  there look like they came from the shipped path.
+
+---
+
+## L82 — A panel that follows the selection: ask what the author selects WHILE looking at it (2026-09-04)
+
+**⑥ S5.** The Camera Preview followed the primary selection — Unity's behaviour, defensible on
+paper, and the user approved the design before I built it. It survived one eye gate and then failed
+in about thirty seconds of real use: *"clicking an entity with no cam comp change the preview."*
+
+**The defect is invisible from the design and obvious from the loop.** You open a camera preview in
+order to *place things against the framing* — so the very next thing you click is a crate, a
+platform, an enemy. Following the selection meant the panel went dark at exactly the moment it was
+being used. Every entity click was a de-facto "close the preview".
+
+**The fix is smaller than the bug.** A camera claims the preview; anything else leaves it alone.
+That restored, in eight lines inside the panel, the "which camera" state that an earlier design round
+had deleted as unnecessary — and it was unnecessary *for the mechanism* and required *for the loop*.
+
+**Rules:**
+- **For any panel keyed to the selection, ask: what does the author select while this panel is
+  open?** If the answer is "things that are not its subject", following the selection is wrong and
+  sticky is right. This generalises immediately — an inspector-adjacent preview, a profiler pinned to
+  an entity, a future material preview.
+- **Design approval is not use approval.** They approved "follows the selection" and rejected it on
+  contact. The gate that mattered was the one where they drove.
+- **When a fix re-introduces state a previous round deleted, that is not a reversal to apologise
+  for** — the earlier deletion was right about the mechanism and wrong about the loop. Record which,
+  so the next round does not re-delete it.
+
+## L83 — When an ordering constraint has no legal window, the answer may be a PHASE, not a hook on the funnel that already exists (2026-09-08)
+
+**What happened (⑦-B B0).** The GameInstance had to exist before the first world — proven, not
+assumed: `WorldManager::CreateWorld` builds a world subsystem's `WorldContext` inside
+`CreateSubsystemsFor` and broadcasts `OnWorldCreated` only *afterwards*, so anything reacting to a
+world arrives too late for every world that already exists. My plan hung the session off
+`CreateWorld` — `EnsureSession()` on a Play world, `EndSession()` when the last one died — and I
+argued for it precisely because it needed **no host code** and was "impossible to forget".
+
+They rejected it in one line: *"We need a better 'start engine / game' structure. The game instance
+should be create before the world."*
+
+**Why theirs is better, concretely.** `StartGame`/`EndGame` is symmetric and readable; it needs no
+Play-world refcount and no documented dependence on `OpenLevel` creating before destroying; teardown
+order falls out of a rule that already existed (registering `GameInstanceManager` before
+`WorldManager` makes reverse-order `TearDownAll` destroy worlds first); and it made
+`PlayInEditor::Stop` **shorter**, because "destroy every Play world" already means the PIE clone.
+
+**Rule for next time.** [[L22]] says *check whether something is running in the wrong phase before
+inventing a new one*. This is its twin: **"hang it off the funnel that already exists" is not the
+elegant alternative to a missing phase — it is the phase-shaped hole wearing a hook.** Before
+choosing a mechanism, write the sequence out end to end. If it reads like a list a person would say
+aloud (start game / make world / … / end game / destroy world / destroy game), build that list.
+
+## L84 — Do not design around a limitation the user intends to REMOVE (2026-09-08)
+
+**What happened (⑦-B planning).** They asked for Unreal-style per-action Input Action assets. I
+counter-proposed a single action-SET asset, and my load-bearing argument was **AN8**: this engine has
+no `New Asset` verb, so per-action files would mean hand-copying one every time. They answered:
+*"we will do it too. Unreal can create action by code too."*
+
+**Why I was wrong.** AN8 is a **missing feature with an owner and a plan**, not a property of the
+engine. Designing the file format around its absence bakes a temporary gap into a permanent shape —
+and the fix I was routing around (`SetCreate` beside `SetActivate`) I had already priced at ~2h *in
+the same document* while listing it as out of scope.
+
+**Rule for next time.** Before arguing "X is impractical because the engine lacks Y", check whether Y
+is a **recorded intention** (`Docs/TODO.txt`, an AN-numbered gap, their own architecture docs). A gap
+they plan to close is a dependency, not a constraint: price closing it. Same family as [[L19]] and
+[[L23]] — *the thing I was routing around was the work item.*
+
+## L85 — An instrument must discriminate in EVERY configuration it runs in; three misses in one milestone made this mechanical (2026-09-08)
+
+[[L15]] says a log line must discriminate. ⑦-B produced **three** instruments that were fine in one
+configuration and meaningless in another, which is enough to stop treating it as a hazard to remember.
+
+1. **The gate line was mute in the second HOST.** `Input mapping started before any world exists
+   (N world(s))` printed `0` in the runtime and proved the ordering. In the editor it printed `1`,
+   because the Edit world is already open when Play starts — and `1` is what a *broken* boot prints
+   too. Fixed by counting **Play** worlds (`0 play world(s), 1 total`).
+2. **The log was mute about the second OBJECT.** `GameInstanceManager` (engine-lifetime) and
+   `GameInstance` (per-game) differ by one word, and the only editor run I had shown them contained
+   just the manager's boot/shutdown pair. Their reading — *"GameInstance is instanced once"* — was
+   the only conclusion that log supported. Fixed with a session COUNTER (`GAME STARTED (session #2)`,
+   `shutdown (2 game session(s) ran)`).
+3. **The count was mute until the second CONTEXT.** `AddContext` read its accepted total off
+   `m_Contexts.back()` *after* a `stable_sort`; a higher priority sorts to the front, so it reported
+   a different context's total — `Menu added — 11 of 2 binding(s) accepted`. Correct for the first
+   context, where `back()` happened to be right.
+
+**The check, not the virtue.** For every gate line, **name the wrong-world in which it prints the same
+thing.** Enumerate the hosts, modes and counts that execute it, and ask what it prints when the code
+is CORRECT and when it is BROKEN. If those are equal anywhere, it is not a gate there. Corollaries
+earned here: prefer a POSITIVE absence statement (`0 game session(s) ran`) to a missing line; when
+two types differ only by LIFETIME the log must name the lifetime, not the type; and a harness that
+runs a cycle ONCE cannot answer "is it per cycle?" — if the property is repetition, the harness must
+repeat.
+
+## L86 — A dispatch ladder forgotten four times is a design, and a silent refusal makes their report undiagnosable (2026-09-08)
+
+**What happened.** They tested the new input editors: *"Every thing works execpt: Ctrl s, Ctrl Z,
+Ctrl Y."* Two separate defects sat behind one sentence.
+
+**Ctrl+S — a ladder.** `HandleAuthoringShortcuts` dispatched by a hand-written chain naming Sheet,
+Clip, Library and Family, with everything else falling through to `SAVE_MAP`. **MoveMode and Mover
+were never added in ⑦-A, and neither were my two panels**, so Ctrl+S in any of the four silently
+wrote the MAP — not "nothing happened" but "the wrong file was saved", which is the exact surprise
+the ladder existed to prevent. **The fix was not two more entries.** Four omissions across two
+milestones is the ladder telling you what it is: `PanelDesc` now carries a `SaveCommand`, each
+document panel declares its own, and the handler is a lookup.
+
+**Ctrl+Z / Ctrl+Y — a silent return.** I could not diagnose it by reading, and `EditorUndo` is why:
+`if (!CanUndo()) { return; }`. So "Ctrl+Z did nothing" was indistinguishable from the chord never
+firing, the command being gated, or no step ever being recorded. Both stacks log on empty now.
+
+**Rules for next time.**
+- **When a central `if/else` names types that live elsewhere, it duplicates knowledge those types
+  already have.** Push it to the type; make the centre a lookup. The tell is a chain appended to
+  more than twice. **Count the omissions before choosing a fix** — one is a bug, four is a design.
+- **A fallback that DOES something is worse than one that does nothing** when the branch is reached
+  by mistake.
+- **An early return on a user-facing verb must say why.** [[L15]] is usually about the success
+  branch; this is its mirror, and the cost lands when someone reports a symptom rather than when the
+  code is written.
+- **When a report cannot be diagnosed by reading, ship the instrument, not a guess** — and NAME the
+  unconfirmed suspect (here: ImGui's `InputText` claims Ctrl+Z/Y for its own text undo) rather than
+  quietly "fixing" past it.
+
+## L87 — I designed a delta format from "what CHANGES" and never asked "what can be REMOVED" (2026-09-09)
+
+**What happened.** ⑦-C P3 gave a map file per-entity merge-patch overrides, so a placed prefab could
+differ from its template. Their first real use found it in minutes: *"when deleting one piece of the
+turret the revert prefab does not work. And its does not appear in MyMapTest."* The format had no way
+to express a **deletion**. Not a bug in the writer — the writer was correct about everything it could
+say. The vocabulary was short one word, so the delete round-tripped away on every save and Revert
+found nothing to bring back. It cost a `MAP_FORMAT_VERSION` bump (2→3) that a day earlier would have
+been free.
+
+**Rule for next time.**
+- **A delta format is over a SET, not over fields.** Enumerate the three operations explicitly —
+  **add / change / remove** — and write down what each looks like on disk *before* implementing any
+  of them. Field-level thinking produces "change" and silently omits the other two.
+- **The tell:** if a diff is produced by walking the NEW state, it structurally cannot see a removal.
+  Whatever is only in the OLD state is the operation you forgot.
+- Removal is also the one that must survive **undo**: reverting a delete *creates* an entity, so the
+  step has to remember what it made (`PrefabRevert::Created`) or Ctrl+Z leaves a duplicate.
+
+## L88 — A "before" hook placed around the wrong statement observes the state it exists to precede (2026-09-09)
+
+**What happened.** Their report was *"Save do not reconcile in edit world"* — the prefab's instances
+in the level did not move when the prefab was saved. The event fired, the reconciler ran, and it
+correctly re-applied **the new prefab over the new prefab**: I had wrapped the two-phase bracket
+around the **reload** rather than around the **write**, so `OnResourceSaving` reached the reconciler
+*after* the bytes were already on disk. Every mechanism worked and the feature did nothing.
+
+**Rule for next time.**
+- **Name what the "before" phase must still be able to OBSERVE, then place the bracket around the
+  statement that destroys it.** Here: the old file. `AboutToSave` goes before `PrefabFile::Save`, not
+  before `Reload`. A phase named "before" is not self-checking — it is before *whatever you wrapped*.
+- **This class of bug survives every test that asserts an outcome**, because the outcome is a
+  fixed point: applying the new template over entities already matching it changes nothing. The
+  discriminating probe is to remove the hook and confirm the symptom is **identical** — if it is, the
+  hook was never doing the work.
+
+## L89 — A float from a file and a float from a capture compare equal only at FLOAT precision (2026-09-09)
+
+**What happened.** Dragging a prefab into the viewport immediately showed overrides on entities
+nobody had touched: `0.35` on one side, `0.3499999940395355` on the other. json holds numbers as
+`double`; a `float` widened for the file and narrowed on load is the same value, but the two *json
+nodes* are not equal. The diff dutifully reported every float field of every fresh instance as
+changed.
+
+**Rule for next time.**
+- **Any comparison over serialized numbers needs its own predicate**, comparing at the precision the
+  ENGINE stores, not the one the format uses. `SameValue`: if either side is a float, compare as
+  `float`; integers exactly; recurse for objects and arrays.
+- The general shape is [[L30]]'s cousin — two representations of one value, where equality is a
+  property of the *pair of encodings*, not of `==`. Suspect it wherever a round trip crosses a type
+  boundary (float↔double, id↔string, enum↔int).
+
+## L90 — A mechanical replace matched the FIRST of two identical patterns, in the function no test covers (2026-09-09)
+
+**What happened.** Extracting `TransformEntities` out of `TransformSelected`, I ran a scripted
+`replace(..., 1)` for a loop body that appears **twice** in `EntityOps.cpp` — and it rewrote the one
+in `RevertToPrefab`. The build caught it. What the build could **not** have caught is the version
+where it compiles: **no headless test covers `RevertToPrefab`**, so a subtly wrong body there would
+have shipped, and the symptom would have surfaced days later as "revert is broken."
+
+**Rules for next time.**
+- **A scripted edit is not verified by the tool reporting a match.** Read the diff, or anchor on
+  something provably unique (a line number, an adjacent signature). "First occurrence" is a guess
+  about the file's shape.
+- **Before trusting a refactor, ask which of the touched functions a test would catch.** The
+  editor-side ops (`EntityOps`, the documents, the panels) are the **least-tested layer in the
+  tree** — for them the answer is usually *none*, and that is when a throwaway harness ([[L81]]) is
+  not optional. Mine printed `moved=true x -70 -> -30 | reverted=2 x 4242 -> -70`: one number for the
+  thing I built, one for the thing I nearly broke.
+
+## L91 — A cache keyed on a revision must be checked against every WRITER, and the one that does not bump it is the one a comment already names (2026-09-10)
+
+**What happened (⑦-C P8 V2).** V2's harness was the first smoke with the prefab panel open, and
+it showed `IsDirty` capturing and serializing the whole world every frame — 6669 log lines in a
+13 s run. I gated it on `World::GetRevision()`, the level document's own idiom, and shipped; the
+eye gate passed. Reading the Inspector's edit bracket while sizing V3, I found the writer that does
+NOT move the revision: a drawer writes a component through a raw reference, and the Inspector has
+always compensated with `MarkChanged()` while any widget is active. The prefab panel never had that
+line, because until V2 it never needed one — so the optimisation turned "dirty after a property
+edit" from true to **false**, silently. Fixed in `f322f5a`, and a V3 harness later exercised the
+gate under a real writer (the dirty transition flipped with every undo/redo).
+
+**Why it survived.** The gate was correct in the configuration it was copied FROM. The Inspector's
+own comment names the exception in capitals — *"THE ONE MUTATION THE WORLD CANNOT SEE"* — and I
+copied the gate without the compensating write beside it. The eye gate passed because nobody edited
+a property in the panel that hour. [[L85]]'s shape again: an instrument correct in one
+configuration, mute in the second.
+
+**Rules for next time.**
+- **Before keying a cache on a revision / generation / version, list the WRITERS of the thing being
+  derived and check that each one bumps the key.** Here the list was three — `World` mutations
+  (bump), the gizmo through `EntityOps` (bump), drawers through raw references (**do not**) — and
+  the third is the one that matters, because it is the one the type cannot see.
+- **When copying a mechanism from a sibling, copy its COMPENSATIONS too.** Grep the sibling for the
+  key's writers (`MarkChanged` here); each one is a line the copy needs or a reason it does not.
+- **A gate on a derived value is a claim that every writer is visible.** Say which writers were
+  audited in the commit; "the level document does it this way" is not an audit.
+
+## L92 — A guard that refuses the verb at the moment the author most wants it is a wrong SEMANTIC, not a safety (2026-09-10)
+
+**What happened (⑦-C P7c).** *Save As Variant…* shipped disabled while the document was dirty,
+with a tooltip: *"Save first — a variant is made of the file on disk."* Their report, one gate
+later: *"I move barrel on x… save as variant is grey. But it's exactly at this moment I want to
+save as variant."* The edit IS the variant. The button was greyed at the only moment it had a
+reason to exist. The fix was one pure transform (`PrefabFactory::BuildVariant`: mark the base's
+entities the world still has as one instance of it, fold, everything else stays the variant's own)
+and the deletion of the gate — and the machinery it needed, `PrefabOverrides::Diff` and `Fold`'s
+null-for-missing, already existed.
+
+**Why it happened.** I wrote the guard from the FILE's point of view ("a variant references the
+file, so the file must be current") and never asked what the author is doing when they reach for
+the button. My own memory says they justify every design from the authoring loop — I had the
+rule and did not run it. Unity's own gesture (*Create → Prefab Variant* on an instance with
+overrides) says the same thing: variant creation is *"this state, as a child of that asset"*, and
+the state's deviations are the point.
+
+**Rules for next time.**
+- **Before disabling a button, write the sentence "the author clicks this when …" and check the
+  guard against it.** If the guard fires in that sentence, the guard is the bug.
+- **"Unsaved edits would be lost" is a reason to CARRY them, not to refuse.** Ask what the edits
+  become on the other side of the verb; here they were the deliverable.
+- **A file-centric refusal in an authoring surface is a smell.** The document has a world; the
+  verb should be defined on the world's state, with the file as its baseline.
+
+## L93 — A REFERENCE field must ride every remap its REFERENTS ride; enumerate the identity spaces and test the one nobody walks (2026-09-13)
+
+**What happened (parenting, H3).** `EntityMeta::Parent` is a guid naming another entity. Prefab
+guids live in three spaces — the file's raw template ids, a placement's `Derive(instance, tmpl)`,
+and a nested/variant's `Derive(record, tmpl)` composed again by the level. I derived the link in
+`BuildInstance` beside the id it names, made `Fold` diff against `BuildInstance`'s output so no child
+carried a phantom override, and every level test went green. Then the *variant* test: `BuildVariant`
+folds a world the prefab document holds in the RAW space (the base's own guids), but a record's
+patch is applied over DERIVED entities at Expand — so a re-parent recorded raw named nothing in the
+flat variant. The fix was to put the state on derived ids and links before folding, i.e. make the
+variant's world look like a placement, which is what it is. Caught by a test written *because* the
+path existed, not because I suspected it ([[L21]]'s shape); nothing in the level path could have
+shown it.
+
+**Rules for next time:**
+- **When a field is a REFERENCE, list every transformation its referents undergo** (derive, flatten,
+  variant-fold, restore, clone) and check the reference goes through the same one in each. A value
+  that survives one remap and not another is a dangling link with no crash and no null — the
+  worst class in this codebase's own taxonomy ([[L18]]).
+- **Two functions that must be inverses should share their baseline, not agree by accident.** Fold
+  diffed against the raw template while Expand applied over the built instance; they matched only
+  while `BuildInstance` touched fields the diff ignored. The first derived field broke the accident.
+  Make the inverse structural (diff against what the other side builds).
+- **Write the case for the identity space nobody edits in.** The document opens a BASE on raw guids;
+  every other path runs on derived ones. That asymmetry is exactly where a per-space rule hides.
+
+## L94 — A state the panel cannot DISTINGUISH is a bug report waiting, even when the engine is right (2026-09-13)
+
+**What happened (parenting, their first eye pass).** The report read like a reconcile/revert
+defect: *"the instance has the gun as child of player but a different position and I cannot
+revert."* Every mechanism was correct. The log showed four Ctrl+Z right after Stop, one of them
+`Undo 'Create Prefab'` — the instance destroyed, the ORIGINALS put back, link-less, and the map
+saved so. Nothing on screen distinguished those originals from an instance: same rows, same names,
+same positions; and the grey *Revert* said nothing about why it was grey. Ten minutes of colour and
+a tooltip (Unity's blue rows, "Nothing selected is a prefab instance") closed what cost them a
+session of confusion.
+
+**Rules for next time:**
+- **[[L15]]'s discriminate rule applies to the PANEL, not only the log.** When a verb's undo leaves a
+  state that LOOKS like the state before the verb, the panel must show which one it is. The check,
+  per structural verb (Create Prefab, Reparent, Detach, Revert): *what does its undo look like on
+  screen, and can the author tell?*
+- **A disabled entry must say why** (**MP7**'s "the menu states the rule" extended to its
+  negative): grey with no reason reads as "the verb is broken", and the author reports it that way.
+- **Read their session log BEFORE reasoning from the report.** The report named three mechanisms;
+  the log named one undo. The mechanism I would have gone looking for was not involved at all.
+
+## L95 — A consumed HELD key fabricates a rising edge when the mask lifts; the edge must be gated by "was this suppressed last frame" (2026-09-14)
+
+**What happened (UI U3, caught by the PIE harness).** A pause menu bound Escape both to OPEN (via
+the mapping, GameAndUI) and to CLOSE (via the focused panel, UIOnly-muted). It opened, then closed
+on the next Escape, then **reopened one frame later** — `opened 2 time(s)`, and both scripted
+Space presses read `0 jumps`. The evaluator's edge was `bStarted = bTriggered && !wasActuated`.
+While the menu is up (UIOnly), the mask forces Escape's action value to zero, so `wasActuated`
+reads false; the frame the menu closes and the mask lifts, the STILL-HELD Escape produces a value
+again → `!false` → a phantom `Started` → the menu reopens. A real user holds Escape for many
+frames after the close too, so this was never a harness artifact.
+
+**Rules for next time:**
+- **Consumption zeroes the VALUE, so it corrupts any edge computed from the value across the
+  consumption boundary.** Record the physical suppression (`bMaskSuppressed` = "a binding was
+  consumed while its key was physically down") and gate the rising edge on last frame's flag:
+  `bStarted = bTriggered && !wasActuated && !wasMaskSuppressed`. The falling edge (`bCompleted`) is
+  fine — muting SHOULD read as a release.
+- **A new consumer of an old mechanism re-runs its corner cases.** IM6's per-key consumption had
+  this latent phantom for a higher context popping mid-hold; nothing toggled a mask mid-hold until
+  a UI input MODE did. When you add the first caller that exercises a path (here: consumption that
+  flips on and off while a key is held), test the transition, not just the steady state.
+- **Bind the CLOSE of a modal to the focused widget, not the muted mapping** — but that alone does
+  not save you: the OPEN binding still sees the fabricated edge. The fix belongs at the evaluator,
+  once, for every action.
+- **The harness earned its keep again ([[L81]]):** a smoke run cannot press Escape twice with a
+  Space between; the reopen was invisible to "0 errors" and only the `opened N time(s)` counter and
+  the jump count discriminated it ([[L59]]).
+
+## L96 — A hand-written dispatch ladder IS a missing registration; and an inherited static makes a derived type look reflected (2026-09-14)
+
+**What happened (UI U5, their report).** *"I think there are some widget i cant see their prop in
+detail panel nor UI panel. Like mask, i cant see texture."* The UI panel chose a widget's property
+drawer with a `dynamic_cast` ladder I wrote in U4. When U5 added `UIMask`, I registered it with the
+ENGINE (so it was addable and serializable) and never touched the ladder — so its `Texture` was
+addable, invisible and uneditable, which is **MR2i's exact failure one level down**. Reading the
+code for the fix found a SECOND half nobody had reported yet: the ladder called
+`DrawProperties(widgets, *lText)`, which folds over `UIText`'s OWN list — and a leaf's list does
+not repeat the base's, so `UIText`, `UIImage` and `UIButton` had **no editable Rect at all**.
+
+**Rules for next time:**
+- **A hand-maintained `if/else if` over types is a registry with no registration check.** It has
+  every property MR2i warns about — nothing fails to build, nothing fails a test, and the symptom
+  is a field that is simply not there. When you catch yourself writing one, look for the registry
+  that already exists: `DrawerRegistry.h` literally said *"whatever comes next is one more
+  specialization rather than a third registry"*, and the fix was a six-line `TDrawerResolver`
+  specialization plus DELETING the ladder.
+- **Count one registry against the other, and log it.** `UI widget drawers: 5 for 5 registered
+  type(s)` is what makes the next omission loud. A missing registration is invisible to the
+  compiler by construction, so the instrument is the only gate there can be ([[L59]]).
+- **`static` members are INHERITED, so a derived type can satisfy a concept using its base's
+  data.** `CReflected<UIPanel>` was true via `UIWidget::GetProperties()`, so `UIPanel` would have
+  drawn the base's four fields a second time under its own drawer. **A test asserting the count was
+  what caught it** — I had written `PropertyCount<UIPanel>() == 0` expecting empty, and it returned
+  4. Every type in such a hierarchy must declare its own list, even when that list is empty.
+- **The editor's registration seam has NO EditorContext yet.** `RegisterExtensions` runs at
+  `OnModulesRegistered`; `CreateEditorContext` runs later. My count check dereferenced `m_Context`
+  there and segfaulted on the first launch — caught by the smoke run, not by the build. Reach the
+  engine through the service locator at that seam, and re-read the registry header's own warning
+  ("registration STORES ONLY; nothing is constructed") before adding anything to it.
+
+## L97 — A one-line fix they named is not a decision to wait for; and a value they wired must be traced to the screen (2026-09-15)
+
+**What happened (UI block close).** Two things, both about reading them. (1) At U4 close they
+reported the viewport picking during PIE and named two shapes in one breath — *"disable selection
+viewport OR as config"*. I filed it as *"theirs to pick — do not choose for them"* and left it
+across TWO hand-offs, until they restated it flat: *"The PIE selection still there."* The first
+shape was one line (`Measure(hovered && PIE.IsEdit())`), the second ~10; holding a one-line fix
+hostage to a choice cost them a round and me nothing to build. (2) They committed `a1bce9a`
+mid-task — `DragStep` on the property meta and `SetRange(0,1).SetDragStep(0.01)` on a GROUP
+property — and the fold DROPPED it: a group's meta reached the tooltip and nothing else, so their
+line did nothing and read as done. Their next message was *"Editing hud in ui panel more easier"*.
+
+**Rules for next time:**
+- **"A or B" from them, where A is a line and B is machinery, is an instruction to build A and
+  price B** — not a fork to hold open. "Do not choose for them" is for designs whose two shapes
+  cost the same or change the file format; it is not for a gate they already asked for twice.
+  If the cheap one is wrong they will say so in one line ([[L71]]'s rule, reversed).
+- **When they land a commit on a seam, trace the value to the widget before the next hand-off.**
+  `git log` at the top of every turn; for anything of theirs touching reflection, drawers or a
+  format, follow it end-to-end. A line that silently does nothing is worse than a missing one.
+  The fix belongs in MY next commit, named plainly ("your line starts working"), never an amend.
+- **A "submit while X" design is one frame late whenever the request can arrive after the
+  submit.** U6's cover: the tenant submits in its tick, the world ticks after it, and its own
+  button fires mid-route — so "submit while loading" misses the frame that asked in both cases.
+  A FLAG read at draw time (UI3's rule, already there) is the shape; found by tracing the frame
+  before writing code, which is the cheap time to find it.
+
+## L98 — State a WORLD registers on a tier that OUTLIVES worlds is gated at the swap, and the swap harness already existed (2026-09-15)
+
+**What happened (UI U10 close).** The binding worked on the first map and went dead after a level
+swap. `Engine::OpenLevel` creates the new world BEFORE destroying the old (deliberately — no frame
+without a world), so the new HUD's `Bindings().Add("Hud")` replaced the old reader, and the old
+HUD's `Shutdown` then removed BY NAME — taking the new world's source with it. The pull resolved to
+nothing, the widget kept its authored `Jumps: {}`, and they spent a round changing the placeholder.
+My U10 gate was a boot smoke of ONE world (`0 jump(s)`, no swap) plus headless tests that construct
+one table and one owner. Nothing I ran could have seen two owners of one key overlapping — and
+U6 had built the exact instrument for it four commits earlier: a throwaway `RequestOpenLevel` at
+frame 60 from the world tick ([[L81]]). Running it once would have shown the `[UIBinding]` warning.
+
+**Rules for next time:**
+- **Anything a WORLD subsystem registers on a GAMEINSTANCE tier (a canvas, a mapping context, a
+  binding source, a pointer) has a swap case, and the swap OVERLAPS: new-Startup, then
+  old-Shutdown.** Ask, before the gate: "what does the old world's Shutdown do to the new world's
+  registration?" If the answer is "removes it by the same key", the key is not the identity — a
+  handle is (**MV4**'s shape: two lifetimes, one key, entt-style reuse).
+- **A feature whose owner is world-tier is not gated until it has survived a level swap in the
+  real app.** The U6 harness (a request from the world tick at frame N) costs ten lines and one
+  smoke; the second `'bound'` trace line after the old `HUD shutdown` IS the gate. Keep it in the
+  L81 toolbox beside "keep the numbers, remove, re-smoke".
+- **Log the success branch ONCE PER OWNER, not once per process** ([[L15]] sharpened): the
+  first-resolve trace is what made the swap readable in the log — new HUD `.043`, old shutdown
+  `.055`, new HUD's bind `.059`. A "bound" line that fired only once per run would have hidden it.

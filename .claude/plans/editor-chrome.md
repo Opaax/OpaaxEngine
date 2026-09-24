@@ -1,0 +1,172 @@
+# Editor Chrome — record (2026-09-01)
+
+A block inserted before ⑤ Undo/Redo, at the user's request: *"Custom TitleBar (our currently Menus
+in registar). Panels, menus, dialogs with windows etc.... Should be GUI."*
+
+**Five commits.** `cf66820` (the user's own, unsigned) · `f490e47` S1 · `42a8b95` S2 · `1746465` S3 ·
+`19d26f4` S4. Durable in **MR2d** (amended), **MR2e**, **MR2f**.
+**Gates: 494 / 7248 / 7, three presets, zero warnings tree-wide.**
+
+---
+
+## What it was
+
+**MR2d** had landed the `IEditorGui` seam — one UI pass, ~20 chrome calls behind one interface — and
+left three things:
+
+1. the gui **looked up** what it drew (`InContext.Extensions.Menus()`, `InContext.Panels`) instead of
+   being handed it; the user's own WIP TODOs said so;
+2. there was **no title bar** — the menus sat in an `ImGui::BeginMainMenuBar` below the OS caption;
+3. **dialogs bypassed the seam entirely** — six `tinyfd_*` calls inside command bodies.
+
+## Three forks, decided with the user before any code
+
+| Fork | Chosen | Why |
+|---|---|---|
+| Frame depth | **GLFW-only first, Win32 `WM_NCCALCSIZE` later** | The editor side is written against `Window` verbs, so the upgrade touches `WindowsWindow` only. Aero Snap, shadow and rounded corners are the stated price. |
+| Dialogs | **Native, behind a seam, callback-shaped** | Cheap now; an in-editor implementation becomes a class swap rather than rewriting six call sites. |
+| Bar contents | **The whole `Menus()` tree + Min/Max/Close** | The menu registry IS the extension point. No title-bar registry, no PIE transport. |
+
+The user's own framing on the third: *"I wasnt aware that in windows the bar the 'Quit' 'Minimize'
+'Maximize' was called 'TitleBar'. So its another 'refacto' on this but its worth to have a common
+name with others apps."* — the vocabulary was the point as much as the feature.
+
+## What the exploration turned up before planning
+
+- **`WindowManager::CreateMainWindow` builds `WindowProps` from `EngineConfigData` alone** — no host
+  seam — which is what forced decoration to be a *runtime* verb rather than a props field.
+- **`SetWindowed()` hard-set `GLFW_DECORATED = TRUE`**, so decoration was welded to `EWindowMode`.
+- **`WindowData::PosX/PosY` were `Uint32`** while `SaveWindowedState` writes `glfwGetWindowPos` into
+  them. Latent until something dragged the window.
+- **`ImguiLayout.h` calls itself the testable half but includes `imgui.h`**, which `OpaaxTests` may
+  not pull — so the frame geometry needed its own header to be testable at all.
+
+## The five steps
+
+- **S1** — `IEditorGui` gains protected `m_Menu`/`m_Panels` + non-virtual `SetMenu`/`SetPanels`;
+  bound at `PostInitialized`. Closes both user TODOs.
+- **S2** — decoration as its own axis; `Window` grows position/size/minimize/maximize/restore;
+  `PosX/PosY` → `Int32`.
+- **S3** — the title bar. `ImGuiTitleBar` + the ImGui-free `WindowFrameGeometry.h` + 8 tests.
+- **S4** — `IEditorDialogs` / `TinyFdEditorDialogs`; six call sites rewritten.
+- **S5** — this record and the contract.
+
+## Two things worth remembering
+
+**Replacing `DockSpaceOverViewport` nearly destroyed the user's dock layout.** The dockspace id is
+`GetID("DockSpace")` *seeded by a window literally labelled* `WindowOverViewport_%08X`. Open-coding
+the helper without copying both would have silently orphaned every saved dock position — regenerable
+in principle, but not the layout they had ([[L20]]). Caught by reading imgui's implementation before
+writing the replacement, and verified afterwards by diffing the ini's `[Docking]` section: same
+`0x08BD597D`, identical node tree. → [[L69]]
+
+**A green test suite proved nothing about the tests I had just written.** `Engine/Tests/CMakeLists.txt`
+lists sources **explicitly**, so the new file was never compiled; and `build.bat test` targets the
+**debug-editor** preset while I was running `build/debug`'s binary. Both were caught by the same
+instrument — the **case count**, not the pass/fail. → [[L70]]
+
+## The follow-on: one design for every route (`0d8c757`)
+
+After the visual gates passed the user pointed at `SetMenu(m_Extensions.Menus())` beside
+`SetPanels(*m_EditorPanels)` — *"one is from extension, the other from the class owned by editor
+service"* — and then, when my first answer over-reached, gave the precise version:
+**"Editor Menu is the only one to not be a registry. All the rest is."**
+
+They were right, and `ViewportToolbarRegistry` settles the shape question: it stores, it draws
+*itself*, it lives in the registrar, and it is the model ③b was built on — so "a thing in the
+registrar that draws" was never the defect I had claimed. → [[L71]]
+
+- **`EditorMenu` → `MenuRegistry`**, same `Register` / `Consume` / `Count` shape as its seven
+  siblings, staying in `Editor/Menus/` (the `EditorCommandRegistry` precedent). **The name is a
+  RETURN**: it was `MenuRegistry` before M5 S4, when the *design* changed from path-closures to a
+  tag tree. This rename changed nothing but the name — recorded in **MR2b** so git history does not
+  mislead.
+- **The gui OWNS both** (the user's call, taken on its own merits once the naming fix had dissolved
+  the problem it was originally proposed to solve). `SetMenu`/`SetPanels`/`BindGuiContent` deleted;
+  `Menus()` became a bound route, bound in the constructor so unbound is unreachable.
+- **`IEditorGui::Teardown()` non-virtual** — panels then backend. The best part of the change: that
+  order is load-bearing (**F2a**) and had been two correctly-sequenced calls in `OnShutdown`.
+- **`EditorPanels` cannot be folded into `PanelRegistry`**, and the reasons are two existing
+  invariants: no `EditorContext` exists at registration, and `EditorContext::Extensions` is const
+  while visibility mutates.
+
+## The third pass: one pipeline, and the requirement that was never stated (`0d8c757` → `+1`)
+
+*"Close still not the same design."* — and they were right again. The rename had left **two
+registries with two homes** (`PanelRegistry` in the registrar, `MenuRegistry` in the gui) and the
+gui's two members were still a *registry* and a *live object*. Then the fourth message gave the
+actual spec: ***"If i want to move to QT its easy."***
+
+Everything settled once that was on the table:
+
+| Stage | Owner | Panels | Title bar |
+|---|---|---|---|
+| Registry — data, no backend | registrar, by value | `PanelRegistry` | `TitleBarRegistry` |
+| Live — walks it, draws via the seam | gui, by value | `EditorPanels` | `EditorTitleBar` |
+
+- `MenuRegistry` → **`TitleBarRegistry`** (`Editor/TitleBar/`), back in the registrar; the bound
+  route is deleted, so **MR2a**'s hazard cannot recur. `Menus()` → `TitleBar()`.
+- **`EditorTitleBar`** is the live object, and it is not a wrapper — it owns the bar's *furniture*
+  (drag region, three caption buttons), which nobody registers. That answered my own objection to
+  giving menus a live stage at all.
+- Policy stays backend-agnostic; only input is the backend's — `TitleBarDragRegion` returns
+  `{Delta, bDoubleClicked}`, `TitleBarButton` takes a *kind*.
+- **The real Qt blockers turned out to be elsewhere**: `DrawerRegistry.h` and
+  `ViewportToolbarRegistry.h` were the only headers under `Extensions/` including `<imgui.h>`, both
+  for id-scoping and layout. Those moved to the seam, and **no registry names a backend now**.
+- **Stated honestly and recorded in MR2g:** panel contents, property drawers and viewport-tool
+  closures are still ImGui (~360 call sites **MR2d** ruled stay). The *frame* ports cheaply; the
+  *leaves* do not.
+
+Durable in **MR2g**; lesson [[L71]].
+
+## The fourth pass: drawers (`2420ec9`, `7510e49`)
+
+*"Since you have seen the problems of drawers. Lets tackle thats!"* — two of them, one cheap and one
+architectural.
+
+**Native drawers (`2420ec9`).** `SandboxEditorModule` registered `TransformComponent`,
+`DummyComponent`, `SpriteComponent` and `CameraComponent` — all engine types — so a fresh project had
+a blank Inspector until it remembered four things it does not own. `RegisterNativeDrawers()` now sits
+with the other five native routes. **The gap was documented in a comment explaining why it was not
+being fixed**, which is [[L19]]'s work item verbatim.
+
+**`IEditorWidgets` (`7510e49`).** ~24 value-editor calls, derived from the call sites that exist.
+`TPropertyDrawer::Draw` gains the seam as its first parameter, amending **I15**'s stated contract —
+because *"supporting a new field type is a `TPropertyDrawer<T>`"* is a promise to **games**, and a
+drawer calling ImGui made that promise backend-bound.
+
+- **MR2d gains one stated exception rather than being waived.** Its objection — immediate mode, an ID
+  stack, `IsItemHovered` late-bound to submission order — is answered: the vocabulary is derived not
+  invented, and the late-bound queries are **folded into the calls** (`Button` takes its tooltip).
+- **The hand-written `TagsComponentDrawer` is the dogfood** and it mattered: a *bespoke* game drawer
+  needed almost the same vocabulary as the built-ins. Had it needed a dozen more calls, the
+  closed-vocabulary claim would have been false.
+- **Result:** `grep -rn "ImGui::" Editor/Source/Editor/Properties/ Editor/Source/Editor/Extensions/
+  Sandbox/Editor/` is **empty**. The whole drawer layer, both registries and the game's editor module
+  name no backend.
+
+Durable in **MR2h** (+ **MR2d** and **I15** amended).
+
+## Deviation from the approved plan
+
+The plan said rename `BeginMainMenuBar` → `BeginMenuBar`. Building it showed the rename is
+impossible-in-spirit: if `EditorMenu` both opens and closes the bar, the window buttons can never
+share the row. The two calls **left the seam** instead. Smaller seam, and `EditorMenu` stopped
+knowing where its bar is. Recorded in **MR2e**.
+
+## Owed — the user's eyes, and a smoke run reaches none of it
+
+Confirmed in passing (*"seems to work"*) but **never ticked one-by-one**: drag across a second
+monitor and to a negative X · double-click maximize/restore · all 8 resize regions with corner
+priority and the min-size clamp · maximized not covering the taskbar · undock/redock a panel · every
+File dialog opening where it used to, Cancel a no-op, the Open Level confirm still blocking · whether
+the OS caption flashes at boot.
+
+## Named, not built
+
+- **Win32 `WM_NCCALCSIZE`** — the chosen follow-up; expect to want it for snap and edge-resize feel.
+- `OpaaxApplication::OnConfigureWindow(WindowProps&)` — only if the boot caption flash is visible.
+- A three-button `EDialogAnswer` (Save / Don't Save / Cancel) — one enumerator plus `"yesnocancel"`.
+- Dragging a *maximized* window does not restore-and-follow the way Windows does.
+- The ~360 widget call sites stay direct (**MR2d** already ruled).

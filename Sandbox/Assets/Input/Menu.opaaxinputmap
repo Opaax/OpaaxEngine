@@ -1,0 +1,17 @@
+{
+    "Mappings": [
+        {
+            "Action": "Input/MenuToggle.opaaxaction",
+            "Key": "Escape",
+            "Modifiers": [],
+            "bConsume": true
+        },
+        {
+            "Action": "Input/MenuAccept.opaaxaction",
+            "Key": "Space",
+            "Modifiers": [],
+            "bConsume": true
+        }
+    ],
+    "Priority": 100
+}

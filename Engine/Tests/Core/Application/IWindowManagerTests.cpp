@@ -1,0 +1,51 @@
+// Suite: IWindowManager. Verifies the pure config->props mapping and the null object,
+// WITHOUT creating a real window — Window::Create spins up a GL/VK context the headless
+// test runner can't provide, so CreateMainWindow() is never called on a real manager.
+#include <doctest.h>
+
+#include "Application/Services/Window/IWindowManager.h"
+#include "Window/WindowManager.h"
+#include "Application/Services/AppServiceLocator.h"
+#include "Engine/Config/EngineConfigData.h"
+#include "Core/String/OpaaxString.hpp"
+
+using namespace Opaax;
+
+TEST_CASE("MakeWindowProps: maps the engine config window fields 1:1")
+{
+    EngineConfigData lData;
+    lData.Window.Title  = OpaaxString("Test Title");
+    lData.Window.Width  = 1024;
+    lData.Window.Height = 768;
+    lData.Window.Mode   = EWindowMode::Borderless;
+
+    const WindowProps lProps = MakeWindowProps(lData);
+    CHECK(lProps.Title == "Test Title");
+    CHECK(lProps.Width == 1024);
+    CHECK(lProps.Height == 768);
+    CHECK(lProps.Mode == EWindowMode::Borderless);
+}
+
+// NOTE: the WindowModeFromString cases are GONE with the function. The config field is an
+// EWindowMode now, so "an unknown mode" is not a state MakeWindowProps can be handed — the parse,
+// and the fallback it needed, moved into the generic enum reader (Core/Reflection/EnumTests.cpp),
+// where an unknown LABEL throws instead of quietly becoming Windowed.
+
+TEST_CASE("IWindowManager: the null manager owns no window and is never null")
+{
+    AppServiceLocator lLocator;
+    IWindowManager& lSys = lLocator.Get<IWindowManager>(); // unprovided -> NullWindowManager
+    CHECK(lSys.IsNull());
+    CHECK(&lSys == &IWindowManager::Null());
+
+    CHECK(lSys.GetMainWindow()    == nullptr);
+    CHECK(lSys.CreateMainWindow() == nullptr); // null manager never builds a window
+    CHECK_FALSE(lSys.HasMainWindow());
+}
+
+TEST_CASE("WindowManager: a freshly constructed manager has no window (no GLFW at construction)")
+{
+    WindowManager lWm;
+    CHECK(lWm.GetMainWindow() == nullptr);
+    CHECK_FALSE(lWm.HasMainWindow());
+}

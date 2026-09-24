@@ -1,34 +1,18 @@
 #include "OpenGLTexture2D.h"
 
-#include <glad/glad.h>
-#include "Core/Log/OpaaxLog.h"
-#include "Core/EngineAPI.h"
+// ILogger FIRST, and the order is load-bearing: it reaches windows.h through spdlog, and
+// minwindef.h defines APIENTRY UNGUARDED while glad.h guards on !defined(APIENTRY). Whichever
+// lands second loses — so the windows.h-bearing header has to go first or the build warns C4005.
+// OpenGLShader.cpp and OpenGLVertexArray.cpp already sit this way round, which is why only this
+// file warned.
+#include "Application/Services/ILogger.h"
 
-// stb_image — implementation defined once here
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb/stb_image.h>
+#include <glad/glad.h>
+#include "Core/EngineAPI.h"
 
 namespace Opaax
 {
     // NOTE: the ITexture2D::Create factory dispatch lives in RHI/BackendFactory.cpp.
-
-    OpenGLTexture2D::OpenGLTexture2D(const char* InPath)
-    {
-        // Flip vertically — stb loads top-left origin, OpenGL expects bottom-left
-        stbi_set_flip_vertically_on_load(1);
- 
-        Int32 lWidth = 0, lHeight = 0, lChannels = 0;
-        unsigned char* lData = stbi_load(InPath, &lWidth, &lHeight, &lChannels, 0);
- 
-        if (!lData)
-        {
-            OPAAX_CORE_ERROR("OpenGLTexture2D: failed to load '{}'  — {}", InPath, stbi_failure_reason());
-            return;
-        }
- 
-        Upload(lData, static_cast<Uint32>(lWidth), static_cast<Uint32>(lHeight), lChannels);
-        stbi_image_free(lData);
-    }
 
     OpenGLTexture2D::OpenGLTexture2D(Uint32 InWidth, Uint32 InHeight)
     {
@@ -53,7 +37,7 @@ namespace Opaax
     {
         if (!InData)
         {
-            OPAAX_CORE_ERROR("OpenGLTexture2D: raw upload received null data");
+            OPAAX_ENGINE_LOG(Error, "OpenGLTexture2D: raw upload received null data");
             return;
         }
         Upload(InData, InWidth, InHeight, InChannels);

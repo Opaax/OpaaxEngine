@@ -1,7 +1,6 @@
 #include "OpenGLVertexArray.h"
-#include "Core/Log/OpaaxLog.h"
+#include "Application/Services/ILogger.h"
 
-#define GLAD_APIENTRY
 #include <glad/glad.h>
 
 namespace Opaax
@@ -29,7 +28,7 @@ namespace Opaax
         glBindVertexArray(0);
     }
     
-    void OpenGLVertexArray::AddVertexBuffer(UniquePtr<IVertexBuffer> InVBO)
+    void OpenGLVertexArray::AddVertexBuffer(TUniquePtr<IVertexBuffer> InVBO)
     {
         OPAAX_CORE_ASSERT(!InVBO->GetLayout().GetElements().empty())
  
@@ -79,10 +78,10 @@ namespace Opaax
             }
         }
  
-        m_VertexBuffers.push_back(Move(InVBO));
+        m_VertexBuffers.emplace_back(Move(InVBO));
     }
     
-    void OpenGLVertexArray::SetIndexBuffer(UniquePtr<IIndexBuffer> InIBO)
+    void OpenGLVertexArray::SetIndexBuffer(TUniquePtr<IIndexBuffer> InIBO)
     {
         glBindVertexArray(m_RendererID);
         InIBO->Bind();

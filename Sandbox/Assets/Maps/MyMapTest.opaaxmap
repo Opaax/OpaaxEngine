@@ -1,0 +1,95 @@
+{
+    "entities": [
+        {
+            "components": {
+                "Sprite": {
+                    "Color": {
+                        "w": 0.6235294342041016,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Frame": -1,
+                    "Layer": "Foreground",
+                    "OrderInLayer": 2,
+                    "Sheet": "",
+                    "Size": {
+                        "x": 272.0,
+                        "y": 169.0
+                    },
+                    "Texture": "Textures/Checker.png",
+                    "bVisible": true
+                },
+                "SpriteAnimator": {
+                    "Clip": "",
+                    "ClipAsset": "Anims/Blink.opaaxclip",
+                    "Library": "",
+                    "Speed": 1.0,
+                    "bPlaying": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": 35.1003532409668,
+                        "y": -101.00001525878906
+                    },
+                    "Rotation": 33.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "37448271eeebd688d4d3f01479241496",
+            "name": "Entity",
+            "ownerMap": "MyMapTest"
+        },
+        {
+            "components": {
+                "Camera": {
+                    "OrthoSize": 300.0
+                },
+                "Sprite": {
+                    "Color": {
+                        "w": 1.0,
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    },
+                    "Frame": 1,
+                    "Layer": "Default",
+                    "OrderInLayer": 0,
+                    "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxsheet",
+                    "Size": {
+                        "x": 128.0,
+                        "y": 64.0
+                    },
+                    "Texture": "",
+                    "bVisible": true
+                },
+                "SpriteAnimator": {
+                    "Clip": "",
+                    "ClipAsset": "",
+                    "Library": "Anims/Default.opaaxanim",
+                    "Speed": 1.0,
+                    "bPlaying": true
+                },
+                "Transform": {
+                    "Position": {
+                        "x": -352.0003662109375,
+                        "y": 0.0
+                    },
+                    "Rotation": 0.0,
+                    "Scale": {
+                        "x": 1.0,
+                        "y": 1.0
+                    }
+                }
+            },
+            "guid": "bd9e95af6e618c428171d69846ca9b38",
+            "name": "Entity 1",
+            "ownerMap": "MyMapTest"
+        }
+    ],
+    "mapId": "MyMapTest",
+    "version": 1
+}

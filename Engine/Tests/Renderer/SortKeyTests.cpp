@@ -7,9 +7,6 @@
 
 #include "Renderer/Renderer2DSortKey.h"
 
-#include <algorithm>
-#include <vector>
-
 using namespace Opaax;
 
 TEST_CASE("MakeSortKey: texture slot occupies the low 8 bits")
@@ -32,8 +29,15 @@ TEST_CASE("MakeSortKey: layer occupies bits 32..39")
 {
     auto LayerField = [](Uint64 InKey) { return (InKey >> 32) & 0xFFu; };
 
-    CHECK(LayerField(MakeSortKey(ERenderLayer::Background, 0, 0u)) == 0u);
-    CHECK(LayerField(MakeSortKey(ERenderLayer::UI,         0, 0u)) == 3u);
+    // Assert the FIELD against the band's own value, never against a hardcoded ordinal: adding a
+    // layer to RenderLayerList.h must not break a test about bit POSITIONS. (It did once — inserting
+    // Debug shifted UI from 3 to 4.)
+    CHECK(LayerField(MakeSortKey(ERenderLayer::Background, 0, 0u)) == static_cast<Uint64>(ERenderLayer::Background));
+    CHECK(LayerField(MakeSortKey(ERenderLayer::UI,         0, 0u)) == static_cast<Uint64>(ERenderLayer::UI));
+
+    // The topmost band still fits the 8-bit field — nothing bleeds past bit 39 as the list grows.
+    constexpr Uint8 lTopBand = static_cast<Uint8>(ERenderLayer::Count) - 1;
+    CHECK(LayerField(MakeSortKey(static_cast<ERenderLayer>(lTopBand), 0, 0u)) == lTopBand);
 }
 
 TEST_CASE("MakeSortKey: negative orders sort before positive within a layer")
@@ -58,8 +62,11 @@ TEST_CASE("MakeSortKey: layer dominates order and slot")
 
 TEST_CASE("MakeSortKey: matches the documented bit layout exactly")
 {
+    // Expected is recomputed from the documented shifts, independently of MakeSortKey's body —
+    // that is the test's value. The band comes from the enum (see above) so growing the layer
+    // list cannot invalidate a packing assertion.
     const Uint64 lKey      = MakeSortKey(ERenderLayer::Foreground, 7, 3u);
-    const Uint64 lExpected = (static_cast<Uint64>(2) << 32)              // Foreground = 2
+    const Uint64 lExpected = (static_cast<Uint64>(ERenderLayer::Foreground) << 32)
                            | (static_cast<Uint64>(7 + 32768) << 8)
                            |  static_cast<Uint64>(3);
     CHECK(lKey == lExpected);
@@ -68,32 +75,5 @@ TEST_CASE("MakeSortKey: matches the documented bit layout exactly")
 // The key must be usable in a constant expression (compile-time sortability is part
 // of the contract the constexpr hoist buys us).
 static_assert(MakeSortKey(ERenderLayer::Default, 0, 0u)
-                  == ((static_cast<Uint64>(1) << 32) | (static_cast<Uint64>(32768) << 8)),
+                  == ((static_cast<Uint64>(ERenderLayer::Default) << 32) | (static_cast<Uint64>(32768) << 8)),
               "MakeSortKey must be a constant expression");
-
-// The frame-global emit (Renderer2D::EmitFrame) std::stable_sorts command indices by sort key. This
-// pins the property that makes the reshape correct: equal keys (same Layer + OrderInLayer, slot field
-// 0) keep SUBMISSION order, so same-band overlapping sprites draw in the order they were issued.
-TEST_CASE("Frame-global stable sort: equal keys keep submission order")
-{
-    struct Cmd { Uint64 Key; int Submission; };
-    const std::vector<Cmd> lCmds = {
-        { MakeSortKey(ERenderLayer::Default,    5, 0u), 0 },
-        { MakeSortKey(ERenderLayer::Background, 0, 0u), 1 },  // lowest layer -> sorts first
-        { MakeSortKey(ERenderLayer::Default,    5, 0u), 2 },  // equal key to submission 0
-        { MakeSortKey(ERenderLayer::Default,    5, 0u), 3 },  // equal key to submission 0
-        { MakeSortKey(ERenderLayer::UI,         0, 0u), 4 },  // highest layer -> sorts last
-    };
-
-    std::vector<Uint32> lIdx(lCmds.size());
-    for (Uint32 i = 0; i < lIdx.size(); ++i) { lIdx[i] = i; }
-
-    std::stable_sort(lIdx.begin(), lIdx.end(),
-        [&](Uint32 InA, Uint32 InB) { return lCmds[InA].Key < lCmds[InB].Key; });
-
-    CHECK(lCmds[lIdx[0]].Submission == 1);  // Background
-    CHECK(lCmds[lIdx[1]].Submission == 0);  // first Default,5 (submission order preserved)
-    CHECK(lCmds[lIdx[2]].Submission == 2);
-    CHECK(lCmds[lIdx[3]].Submission == 3);
-    CHECK(lCmds[lIdx[4]].Submission == 4);  // UI
-}

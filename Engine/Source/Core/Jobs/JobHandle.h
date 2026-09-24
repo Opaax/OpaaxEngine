@@ -15,12 +15,12 @@ namespace Opaax
      * Heap control block shared between a queued job and every JobHandle that
      * refers to it. The worker thread flips bDone once the job's work has run;
      * handles observe completion through it. Lifetime is ref-counted via the
-     * SharedPtr the handle holds, so the block outlives both the job and the
+     * TSharedPtr the handle holds, so the block outlives both the job and the
      * handle independently.
      */
     struct JobState
     {
-        Atomic<bool> bDone{false};
+        TAtomic<bool> bDone{false};
     };
 
     // =============================================================================
@@ -45,7 +45,7 @@ namespace Opaax
         // =============================================================================
     public:
         JobHandle() = default;
-        explicit JobHandle(SharedPtr<JobState> InState) : m_State(Move(InState)) {}
+        explicit JobHandle(TSharedPtr<JobState> InState) : m_State(Move(InState)) {}
 
         // =============================================================================
         // Functions
@@ -64,13 +64,13 @@ namespace Opaax
         // Get - Set
         // =============================================================================
     public:
-        const SharedPtr<JobState>& GetState() const noexcept { return m_State; }
+        const TSharedPtr<JobState>& GetState() const noexcept { return m_State; }
 
         // =============================================================================
         // Members
         // =============================================================================
     private:
-        SharedPtr<JobState> m_State;
+        TSharedPtr<JobState> m_State;
     };
 
 } // namespace Opaax

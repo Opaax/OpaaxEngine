@@ -1,50 +1,39 @@
 # Src Engine core
-file(GLOB_RECURSE ENGINE_CORE_SOURCES
+file(GLOB_RECURSE ENGINE_CORE_SOURCES CONFIGURE_DEPENDS
     "Source/Core/*.cpp"
     "Source/Core/*.h"
     "Source/Core/*.hpp"
-    "Source/Systems/*.cpp"
-    "Source/Systems/*.h"
-    "Source/Systems/*.hpp"
+    "Source/Core/*.inl"
+    "Source/Application/*.cpp"
+    "Source/Application/*.h"
+    "Source/Application/*.hpp"
+    "Source/Engine/*.cpp"
+    "Source/Engine/*.h"
+    "Source/Engine/*.hpp"
+    "Source/World/*.cpp"
+    "Source/World/*.h"
+    "Source/World/*.hpp"
     "Source/RHI/*.cpp"
     "Source/RHI/*.h"
     "Source/RHI/*.hpp"
+    "Source/Physics/*.cpp"
+    "Source/Physics/*.h"
+    "Source/Physics/*.hpp"
     "Source/Platform/*.cpp"
     "Source/Platform/*.h"
     "Source/Platform/*.hpp"
     "Source/Renderer/*.cpp"
     "Source/Renderer/*.h"
     "Source/Renderer/*.hpp"
-    "Source/Assets/*.cpp"
-    "Source/Assets/*.h"
-    "Source/Assets/*.hpp"
-    "Source/Assets/*.cpp"
-    "Source/Assets/*.hpp"
-    "Source/ECS/*.cpp"
-    "Source/ECS/*.h"
-    "Source/ECS/*.hpp"
-    "Source/Scene/*.cpp"
-    "Source/Scene/*.h"
-    "Source/Scene/*.hpp"
-    "Source/World/*.cpp"
-    "Source/World/*.h"
-    "Source/World/*.hpp"
-    "Source/Physics/*.cpp"
-    "Source/Physics/*.h"
-    "Source/Physics/*.hpp"
+    "Source/UI/*.cpp"
+    "Source/UI/*.h"
+    "Source/UI/*.hpp"
+    "Source/Window/*.cpp"
+    "Source/Window/*.h"
+    "Source/Window/*.hpp"
 )
 
 set(ENGINE_SOURCES ${ENGINE_CORE_SOURCES})
-
-if(OPAAX_EDITOR_SUPPORT)
-    file(GLOB_RECURSE ENGINE_EDITOR_SOURCES
-        "Source/Editor/*.cpp"
-        "Source/Editor/*.h"
-    )
-    list(APPEND ENGINE_SOURCES ${ENGINE_EDITOR_SOURCES})
-    
-    message(STATUS "Editor support enabled in engine")
-endif()
 
 # ==================================
 # GLFW Configuration
@@ -67,6 +56,16 @@ add_subdirectory(Vendors/GLFW)
 if(NOT TARGET glfw)
     message(FATAL_ERROR "GLFW target 'glfw' was not created!")
 endif()
+
+# GLFW has ONE global state (glfwInit, the window list, the current context). OpaaxEngine is a DLL
+# and OWNS that state — it calls glfwInit and creates the window. The editor's ImGui GLFW backend
+# lives in the exe and MUST see the SAME glfw, or it hits an uninitialised second copy (glfwGetWin32Window
+# returns null -> ImGui_ImplGlfw assert). So the engine DLL EXPORTS glfw as part of its ABI, using glfw's
+# OWN dllexport switch (no glfw sources changed): _GLFW_BUILD_DLL makes GLFWAPI __declspec(dllexport), so
+# the glfw symbols compiled into OpaaxEngine.dll are exported. Consumers set GLFW_DLL (dllimport) instead of
+# relinking a second static glfw (see the imgui target + the PRIVATE link below). One instance, no glfw.dll
+# shipped, runtime deployment unchanged. Same "one instance across the DLL line" rule as ARCHITECTURE.md I1/I2.
+target_compile_definitions(glfw PUBLIC _GLFW_BUILD_DLL)
 
 # ==================================
 # END GLFW Configuration
@@ -95,32 +94,13 @@ target_include_directories(glad PUBLIC
 # ==================================
 
 # ==================================
-# tinyfiledialogs (editor only)
+# ImGui + tinyfiledialogs — EDITOR-OWNED (D4)
 # ==================================
-if(OPAAX_EDITOR_SUPPORT)
-    if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Vendors/tinyfiledialogs/tinyfiledialogs.h")
-        message(FATAL_ERROR
-            "tinyfiledialogs not found in Engine/Vendors/tinyfiledialogs!\n"
-            "Drop tinyfiledialogs.h + tinyfiledialogs.c into that folder."
-        )
-    endif()
-
-    add_library(tinyfiledialogs STATIC
-        Vendors/tinyfiledialogs/tinyfiledialogs.c
-    )
-
-    target_include_directories(tinyfiledialogs PUBLIC
-        Vendors/tinyfiledialogs
-    )
-
-    if(WIN32)
-        target_link_libraries(tinyfiledialogs PUBLIC comdlg32 ole32 user32 shell32)
-    endif()
-
-    message(STATUS "[Opaax] tinyfiledialogs: static lib created (editor mode)")
-endif()
-# ==================================
-# END tinyfiledialogs
+# The engine build no longer knows about ImGui or tinyfiledialogs. Both are editor UI vendors,
+# built in Editor/CMakeLists.txt from Editor/Vendors/* and linked into OpaaxEditorLib. This makes
+# "runtime carries zero imgui" STRUCTURAL (the engine can't link what it never builds), not just a
+# dumpbin convention. glfw stays engine-owned (shared window infra, exported from OpaaxEngine.dll —
+# see _GLFW_BUILD_DLL above); the editor's imgui imports it via GLFW_DLL.
 # ==================================
 
 # ==================================
@@ -178,7 +158,7 @@ if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Vendors/stb/stb_image.h")
 endif()
  
 # stb is header-only. We expose the include path as an interface library.
-# STB_IMAGE_IMPLEMENTATION is defined in OpenGLTexture2D.cpp only — do NOT define
+# STB_IMAGE_IMPLEMENTATION is defined in TextureResource.cpp only — do NOT define
 # it globally or you will get multiple definition linker errors.
 add_library(stb INTERFACE)
 target_include_directories(stb INTERFACE Vendors)
@@ -239,55 +219,7 @@ message(STATUS "Box2D: static lib target 'box2d' created")
 # END Box2D
 # ==================================
 
-# ==================================
-# ImGui
-# ==================================
-if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Vendors/imgui/imgui.h")
-    message(FATAL_ERROR
-        "ImGui not found in Engine/Vendors/imgui!\n"
-        "Please run: git clone https://github.com/ocornut/imgui.git Engine/Vendors/imgui"
-    )
-endif()
-
-if(OPAAX_EDITOR_SUPPORT)
-    if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Vendors/imgui/imgui.h")
-        message(FATAL_ERROR
-            "ImGui not found in Engine/Vendors/imgui!\n"
-            "Please run: git clone https://github.com/ocornut/imgui.git Engine/Vendors/imgui"
-        )
-    endif()
-
-    # Base ImGui + platform/OpenGL renderer backends. imgui_impl_vulkan.cpp is attached later,
-    # gated on the Vulkan SDK being present (see the Vulkan detection block below).
-    add_library(imgui STATIC
-        Vendors/imgui/imgui.cpp
-        Vendors/imgui/imgui_draw.cpp
-        Vendors/imgui/imgui_tables.cpp
-        Vendors/imgui/imgui_widgets.cpp
-        Vendors/imgui/imgui_demo.cpp
-        Vendors/imgui/backends/imgui_impl_glfw.cpp
-        Vendors/imgui/backends/imgui_impl_opengl3.cpp
-    )
-
-    target_include_directories(imgui
-        PUBLIC
-            Vendors/imgui
-            Vendors/imgui/backends
-            Vendors/GLFW/include
-    )
-
-    target_compile_definitions(imgui
-        PRIVATE
-            IMGUI_IMPL_OPENGL_LOADER_GLAD
-    )
-
-    message(STATUS "[Opaax] ImGui: static lib created (editor mode)")
-else()
-    message(STATUS "[Opaax] ImGui: skipped (release mode)")
-endif()
-# ==================================
-# END ImGui
-# ==================================
+# NOTE: ImGui target moved to Editor/CMakeLists.txt (editor-owned — see the D4 note above).
 
 # ==================================
 # Dll Engine
@@ -297,24 +229,24 @@ add_library(OpaaxEngine SHARED ${ENGINE_SOURCES})
 # ENGINE_EXPORTS
 target_compile_definitions(OpaaxEngine PRIVATE ENGINE_EXPORTS)
 
-# Editor
-if(OPAAX_EDITOR_SUPPORT)
-    target_compile_definitions(OpaaxEngine PUBLIC OPAAX_WITH_EDITOR=1)
-    # Project root — used by the editor so file dialogs default to source-tree paths
-    # instead of the build dir. Editor-only on purpose: release binaries must not bake
-    # in absolute build-host paths.
-    target_compile_definitions(OpaaxEngine PUBLIC OPAAX_PROJECT_ROOT="${CMAKE_SOURCE_DIR}")
-    message(STATUS "[Opaax] Editor support: ON")
-    message(STATUS "[Opaax] Project root: ${CMAKE_SOURCE_DIR}")
+# D4: the engine never knows about the editor. OPAAX_WITH_EDITOR is ALWAYS 0 on the engine DLL —
+# the editor lives entirely in OpaaxEditorLib. (EngineAPI.h defaults it to 0; we assert it here.)
+target_compile_definitions(OpaaxEngine PUBLIC OPAAX_WITH_EDITOR=0)
+
+# Workspace root — a dev build bakes the source-tree root so Paths can resolve source assets/configs;
+# a ship build must NOT bake a build-host path (it resolves from the exe dir, whose deploy mirrors the
+# workspace layout). Keyed on OPAAX_DEV_BUILD, never on the editor (I12): a debug GAME build is a dev
+# build with no editor. IPaths keys on defined(OPAAX_WORKSPACE_DIR), not on OPAAX_WITH_EDITOR.
+if(OPAAX_DEV_BUILD)
+    target_compile_definitions(OpaaxEngine PUBLIC OPAAX_WORKSPACE_DIR="${CMAKE_SOURCE_DIR}")
+    message(STATUS "[Opaax] Workspace root baked (dev build): ${CMAKE_SOURCE_DIR}")
 else()
-    target_compile_definitions(OpaaxEngine PUBLIC OPAAX_WITH_EDITOR=0)
-    message(STATUS "[Opaax] Editor support: OFF (Release build)")
+    message(STATUS "[Opaax] Ship build: no workspace path baked (exe-dir resolution)")
 endif()
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
-    target_compile_definitions(OpaaxEngine PUBLIC OPAAX_DEBUG)
-    message(STATUS "[Opaax] Debug mode: ON")
-endif()
+# Per-CONFIG, not CMAKE_BUILD_TYPE: the VS generator is multi-config, where CMAKE_BUILD_TYPE means
+# nothing at build time and the compiled config comes from --config.
+target_compile_definitions(OpaaxEngine PUBLIC $<$<CONFIG:Debug>:OPAAX_DEBUG>)
 
 # ==================================
 # glslang (GLSL -> SPIR-V) — OPTIONAL, from the Vulkan SDK.
@@ -403,14 +335,9 @@ if(Vulkan_FOUND AND EXISTS "${OPAAX_VULKAN_ROOT}/Include/vulkan/vulkan.h"
     set(OPAAX_VULKAN_LINK vk-bootstrap ${Vulkan_LIBRARIES})
     message(STATUS "[Opaax] Vulkan SDK found — Vulkan backend ENABLED (vk-bootstrap + VMA).")
 
-    # Editor: compile the ImGui Vulkan renderer backend (consumed by VulkanEditorUIBackend). The
-    # imgui static lib is created earlier, only under OPAAX_EDITOR_SUPPORT — attach the TU here so
-    # it stays gated on the SDK being present (mirrors the OpenGL-only default).
-    if(OPAAX_EDITOR_SUPPORT)
-        target_sources(imgui PRIVATE Vendors/imgui/backends/imgui_impl_vulkan.cpp)
-        target_include_directories(imgui PRIVATE "${OPAAX_VULKAN_INCLUDE}")
-        message(STATUS "[Opaax] ImGui: Vulkan renderer backend ENABLED (imgui_impl_vulkan).")
-    endif()
+    # NOTE: the ImGui Vulkan renderer backend (imgui_impl_vulkan) is NOT built — imgui is editor-owned
+    # now (Editor/CMakeLists.txt) and the live editor UI is OpenGL-only (the VK UI backend is in Legacy).
+    # Re-add it editor-side, with Vulkan detection, when the VK editor UI is revived.
 else()
     message(STATUS "[Opaax] Vulkan SDK not found — Vulkan backend DISABLED (OpenGL-only).")
 endif()
@@ -421,18 +348,28 @@ endif()
 
 target_link_libraries(OpaaxEngine
     PUBLIC
-        glfw
         spdlog::spdlog_header_only
         glm
         stb
         glad
         entt
         nlohmann_json
-        box2d
 )
 
+# glfw is PRIVATE (not PUBLIC): it is embedded in + EXPORTED from OpaaxEngine.dll (_GLFW_BUILD_DLL above).
+# PUBLIC would make every consumer statically relink a SECOND glfw copy with its own uninitialised global
+# state — the exact bug this fixes. No public engine header includes <GLFW/glfw3.h> (only .cpp + the private
+# WindowsWindow.h), so nothing downstream needs glfw's headers transitively.
+#
+# box2d is PRIVATE for the SAME reason (L11), moved off PUBLIC when the physics seam landed: it is a static
+# lib with GLOBAL state (b2SetLengthUnitsPerMeter), so PUBLIC gave every host its own copy of it. Latent
+# only because nothing outside the engine included box2d — the seam is what makes that permanent. Physics is
+# reached through the OPAAX_API IPhysicsWorld / PhysicsAPI::Create, so the one instance lives in the DLL and
+# no consumer needs box2d's headers or its symbols (its include dir was already PRIVATE).
 target_link_libraries(OpaaxEngine
     PRIVATE
+        glfw
+        box2d
         ${OPAAX_GLSLANG_LINK}
         ${OPAAX_VULKAN_LINK}
 )
@@ -443,9 +380,9 @@ target_compile_definitions(OpaaxEngine PRIVATE OPAAX_HAS_GLSLANG=$<BOOL:${OPAAX_
 # 1 when the Vulkan SDK is present (Vulkan backend compiled), 0 otherwise (OpenGL-only).
 target_compile_definitions(OpaaxEngine PRIVATE OPAAX_HAS_VULKAN=$<BOOL:${OPAAX_HAS_VULKAN}>)
 
-if(OPAAX_EDITOR_SUPPORT)
-    target_link_libraries(OpaaxEngine PRIVATE imgui tinyfiledialogs)
-endif()
+# D4: imgui + tinyfiledialogs are neither built nor linked by the engine — they are editor-owned
+# (Editor/CMakeLists.txt, from Editor/Vendors/*). The engine can't leak a symbol it never compiles;
+# the `dumpbin` gate on Sandbox.exe still guards it.
 
 # Include directories
 target_include_directories(OpaaxEngine
@@ -454,8 +391,7 @@ target_include_directories(OpaaxEngine
         $<INSTALL_INTERFACE:include>
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/Source/Private
-        ${CMAKE_CURRENT_SOURCE_DIR}/Vendors/imgui
-        ${CMAKE_CURRENT_SOURCE_DIR}/Vendors/imgui/backends
+        # D4: no imgui include paths on the engine — ImGui belongs to OpaaxEditorLib (S1).
         ${CMAKE_CURRENT_SOURCE_DIR}/Vendors/GLFW/include
         ${CMAKE_CURRENT_SOURCE_DIR}/Vendors/spdlog/include
         ${CMAKE_CURRENT_SOURCE_DIR}/Vendors/glad/include
@@ -490,71 +426,32 @@ add_custom_command(TARGET OpaaxEngine POST_BUILD
     COMMENT "Creating Engine/Assets directory..."
 )
 
-set(ENGINE_MANIFEST_SOURCE ${ENGINE_ASSETS_SOURCE}/AssetManifest.json)
-
-if(NOT EXISTS ${ENGINE_MANIFEST_SOURCE})
-    message(STATUS "[Opaax] Engine manifest not found — generating empty manifest.")
-    file(WRITE ${ENGINE_MANIFEST_SOURCE}
-"{\n    \"assets\": []\n}\n"
-    )
-    message(STATUS "[Opaax] Generated: ${ENGINE_MANIFEST_SOURCE}")
-endif()
-
-add_custom_command(TARGET OpaaxEngine POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        ${ENGINE_ASSETS_SOURCE}/AssetManifest.json
-        ${ENGINE_ASSETS_DEST}/AssetManifest.json
-    COMMENT "Copying engine asset manifest..."
-)
-
-# Asset dirs are copied only when they exist on disk. An empty asset folder is not
-# tracked by git, so a fresh clone (e.g. CI) legitimately lacks it — an unconditional
-# copy_directory would then fail with "cannot find the path specified".
-# Shader
-if(EXISTS ${ENGINE_ASSETS_SOURCE}/Shaders)
-    add_custom_command(TARGET OpaaxEngine POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-            ${ENGINE_ASSETS_SOURCE}/Shaders
-            ${ENGINE_ASSETS_DEST}/Shaders
-        COMMENT "Copying engine shaders..."
-    )
-endif()
-
-# Texture
-if(EXISTS ${ENGINE_ASSETS_SOURCE}/Textures)
-    add_custom_command(TARGET OpaaxEngine POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-            ${ENGINE_ASSETS_SOURCE}/Textures
-            ${ENGINE_ASSETS_DEST}/Textures
-        COMMENT "Copying engine textures..."
-    )
-endif()
-
-# Mesh
-if(EXISTS ${ENGINE_ASSETS_SOURCE}/Meshes)
-    add_custom_command(TARGET OpaaxEngine POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-            ${ENGINE_ASSETS_SOURCE}/Meshes
-            ${ENGINE_ASSETS_DEST}/Meshes
-        COMMENT "Copying engine meshes..."
-    )
-endif()
+# What the runtime reads out of Engine/Assets: Shaders (Renderer2D::Init), Textures, SpriteSheets and
+# Fonts — the prototyping content a game references through the "/Engine/" mount (IPaths::ENGINE_MOUNT),
+# which a release build resolves from the EXE dir rather than the source tree (I12). Meshes /
+# AssetManifest.json belonged to the retired Legacy/Assets manifest world and went in the
+# 2026-08-21 cleanup along with their copy steps; Fonts came BACK with ⑥ S4's text rendering, which
+# reads them as real resources rather than through a manifest.
+# ADDING A MOUNTED FOLDER MEANS ADDING IT HERE. Content that resolves in a dev build and to nothing
+# in a shipped one is the failure this list exists to prevent, and it is silent.
+# Guarded on EXISTS because an empty asset folder is not tracked by git, so a fresh clone
+# (e.g. CI) legitimately lacks it and an unconditional copy_directory would fail.
+foreach(ENGINE_ASSET_DIR Shaders Textures SpriteSheets Fonts)
+    if(EXISTS ${ENGINE_ASSETS_SOURCE}/${ENGINE_ASSET_DIR})
+        add_custom_command(TARGET OpaaxEngine POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+                ${ENGINE_ASSETS_SOURCE}/${ENGINE_ASSET_DIR}
+                ${ENGINE_ASSETS_DEST}/${ENGINE_ASSET_DIR}
+            COMMENT "Copying engine ${ENGINE_ASSET_DIR}..."
+        )
+    endif()
+endforeach()
 
 # ==================================
 # Unit tests (OpaaxTests) — links the engine DLL like any other consumer.
 # ==================================
 if(OPAAX_BUILD_TESTS)
     add_subdirectory(Tests)
-endif()
-
-# Font
-if(EXISTS ${ENGINE_ASSETS_SOURCE}/Fonts)
-    add_custom_command(TARGET OpaaxEngine POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-            ${ENGINE_ASSETS_SOURCE}/Fonts
-            ${ENGINE_ASSETS_DEST}/Fonts
-        COMMENT "Copying engine fonts..."
-    )
 endif()
 
 # ==================================

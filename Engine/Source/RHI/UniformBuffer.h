@@ -14,10 +14,9 @@ namespace Opaax
      * Backend-agnostic uniform buffer bound to a fixed binding point. Replaces the
      * name-based default-block uniform path, which SPIR-V GLSL forbids — shaders read
      * `layout(std140, binding = N) uniform Block { ... }`. Consumers hold a
-     * UniquePtr<IUniformBuffer> and write with SetData each frame.
+     * TUniquePtr<IUniformBuffer> and write with SetData each frame.
      *
-     * The concrete is selected by IUniformBuffer::Create, defined in the active
-     * backend's TU (OpenGLUniformBuffer.cpp) — mirrors the IVertexBuffer factory.
+     * The concrete is created via IRHIDevice::CreateUniformBuffer (OpenGLUniformBuffer today).
      */
     class OPAAX_API IUniformBuffer
     {
@@ -28,19 +27,9 @@ namespace Opaax
         virtual ~IUniformBuffer() = default;
 
         // =============================================================================
-        // Statics
-        // =============================================================================
-
-        /**
-         * @param InSize    byte size of the block (std140 layout)
-         * @param InBinding binding point the shader declares (layout(binding = N))
-         * @return owning uniform buffer
-         */
-        static UniquePtr<IUniformBuffer> Create(Uint32 InSize, Uint32 InBinding);
-
-        // =============================================================================
         // Functions
         // =============================================================================
+        // Created via IRHIDevice::CreateUniformBuffer.
     public:
         /**
          * Upload bytes into the block.

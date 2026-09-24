@@ -14,4 +14,7 @@
 OPAAX_RENDER_LAYER(Background)
 OPAAX_RENDER_LAYER(Default)
 OPAAX_RENDER_LAYER(Foreground)
+// Debug overlays (DebugDraw lines) sit ABOVE all world geometry but BELOW UI: an overlay that a
+// future 2D UI pass could hide would be useless, and one drawn over the UI would be noise.
+OPAAX_RENDER_LAYER(Debug)
 OPAAX_RENDER_LAYER(UI)

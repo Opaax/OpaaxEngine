@@ -1,0 +1,5 @@
+{
+  "wave": "Wave02",
+  "enemies": [ { "type": "Grunt", "count": 12, "pattern": "Spiral" },
+               { "type": "Turret", "count": 2, "pattern": "Static" } ]
+}

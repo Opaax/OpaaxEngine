@@ -1,11 +1,14 @@
 #pragma once
 
+#include "Application/Services/ILogger.h"
 #include "RHI/IGraphicsContext.h"
 
 struct GLFWwindow;
 
 namespace Opaax
 {
+    inline constexpr LogCategory LogOpenGLContext{"OpenGLContext"};
+    
     // =============================================================================
     // OpenGLContext
     // =============================================================================

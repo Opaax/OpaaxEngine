@@ -1,15 +1,22 @@
 [submodule "Engine/Vendors/spdlog"]
 	path = Engine/Vendors/spdlog
 	url = https://github.com/gabime/spdlog.git
+
 [submodule "Engine/Vendors/Entt/entt"]
 	path = Engine/Vendors/Entt/entt
 	url = https://github.com/skypjack/entt.git
+
 [submodule "Engine/Vendors/box2d"]
 	path = Engine/Vendors/box2d
 	url = https://github.com/erincatto/box2d.git
+
 [submodule "Engine/Vendors/glm"]
 	path = Engine/Vendors/glm
 	url = https://github.com/g-truc/glm.git
-[submodule "Engine/Vendors/imgui"]
-	path = Engine/Vendors/imgui
+
+[submodule "Editor/Vendors/imgui"]
+	path = Editor/Vendors/imgui
 	url = https://github.com/ocornut/imgui.git
+[submodule "Editor/Vendors/ImGuizmo"]
+	path = Editor/Vendors/ImGuizmo
+	url = https://github.com/CedricGuillemet/ImGuizmo.git

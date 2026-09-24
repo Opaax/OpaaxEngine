@@ -46,20 +46,43 @@
 #vs files
 .vs
 
+#rider per-user settings
+*.DotSettings.user
+
 # Builds
 build/*
+
+# OpaaxTests.exe resolves its project root to <workspace>/OpaaxTests/ and REGENERATES
+# Configs/ + Save/ there on every run. Pure runtime output — a tracked copy just goes
+# stale (the committed one was still in the pre-BO1b config format).
+/OpaaxTests/
 
 # Editor PIE temp snapshots (project-root-relative under EditorTemp/)
 EditorTemp/
 
-#Claude AI
+#Claude AI — ignore local/volatile by default; TRACK durable knowledge so it survives clean/clone.
+# (The plan-mode mirror was lost because this whole tree was ignored — never again.)
 /.claude/*
+!/.claude/CLAUDE.md
+!/.claude/lessons.md
+!/.claude/ARCHITECTURE.md
+!/.claude/plans/
+!/.claude/plans/**
+!/.claude/skills/
+!/.claude/skills/**
+# Stays local on purpose: CLAUDE.local.md (personal/machine), data/ (large PDFs), task/ (disposable working state), Old/ (archive).
 
-
-#Shmup
-SimpleShmup/Assets/Textures/Explosion Pack/*
-SimpleShmup/Assets/Textures/Enemy_Sheet.png
-SimpleShmup/Assets/*
 
 #OpaaxLog
 OpaaxEngine.log
+build_e2g.log
+
+# Editor dock layout — per-user working state written to <ProjectRoot>/Editor/Save/ at runtime.
+# (A SHIPPED default layout, if we ever want one, would be a separate template file, not this.)
+imgui.ini
+
+#Archi files
+Architectures/*
+
+#Builder
+OpaaxCreator/build/*

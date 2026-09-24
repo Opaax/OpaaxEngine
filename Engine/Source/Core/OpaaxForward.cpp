@@ -1,1 +1,0 @@
-﻿#include "OpaaxForward.h"

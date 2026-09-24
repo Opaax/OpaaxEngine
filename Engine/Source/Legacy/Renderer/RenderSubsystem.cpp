@@ -1,0 +1,95 @@
+#include "RenderSubsystem.h"
+
+#include "Renderer2D.h"
+#include "RHI/RenderCommand.h"
+#include "RHI/RenderAPI.h"
+#include "RHI/IGraphicsContext.h"
+#include "Renderer/Pass/WorldRenderPass.h"
+#include "Renderer/Pass/OverlayRenderPass.h"
+#include "Core/Config/EngineConfig.h"
+#include "Core/Log/OpaaxLog.h"
+
+#include "Core/CoreEngineApp.h"
+#include "Core/Window/Window.h"
+#include "Core/EventOld/ApplicationEventsOld.hpp"
+#include "Core/EventOld/OpaaxEventDispatcher.hpp"
+
+namespace Opaax
+{
+    bool RenderSubsystem::Startup()
+    {
+        OPAAX_CORE_INFO("RenderSubsystem::Startup()");
+
+        // Backend comes from engine config (string -> EBackend), not hardcoded.
+        // Context bootstrap (make-current + glad load) already happened in WindowsWindow::Init
+        // via the backend's IGraphicsContext — glad is confined there, not loaded here.
+        const EBackend lBackend = RenderAPI::BackendFromString(EngineConfig::RenderBackend());
+        OPAAX_CORE_INFO("RenderSubsystem: render backend = {}", RenderAPI::BackendToString(lBackend));
+
+        // RenderCommand takes ownership of the raw ptr (documented on RenderCommand);
+        // .release() hands the UniquePtr's payload over to that ownership contract.
+        UniquePtr<IRenderAPI> lAPI = RenderAPI::Create(lBackend);
+        if (!lAPI)
+        {
+            OPAAX_CORE_ERROR("RenderSubsystem: backend '{}' produced no IRenderAPI.",
+                EngineConfig::RenderBackend());
+            return false;
+        }
+
+        // The render API binds against the window's graphics context (Vulkan borrows its
+        // device/swapchain; OpenGL ignores it). The window created + Init'd the context already.
+        IGraphicsContext* lContext = GetEngineApp() ? GetEngineApp()->GetWindow().GetGraphicsContext()
+                                                    : nullptr;
+        if (!lContext)
+        {
+            OPAAX_CORE_ERROR("RenderSubsystem: no graphics context available for the render API.");
+            return false;
+        }
+        RenderCommand::Init(lAPI.release(), *lContext);
+
+        // The batch renderer is now an owned instance (was static Renderer2D). Build its GPU
+        // resources from the engine shader on disk, then thread it into the pass pipeline.
+        m_Renderer2D.Init(EngineConfig::EngineAssetsRoot() + "/Shaders/Sprite.glsl");
+        m_Pipeline.SetRenderer(m_Renderer2D);
+
+        // Register the built-in passes (registration order = execution order).
+        // Passes hold the engine app by pointer (IoC) and re-fetch volatile state at Execute.
+        // World first (clears + draws the scene), then Overlay (screen-space, composites on top).
+        m_Pipeline.AddPass(MakeUnique<WorldRenderPass>(GetEngineApp()));
+        m_Pipeline.AddPass(MakeUnique<OverlayRenderPass>(GetEngineApp()));
+
+        // Set initial viewport
+        if (GetEngineApp())
+        {
+            const auto& lWindow = GetEngineApp()->GetWindow();
+            RenderCommand::SetViewport(0, 0, lWindow.GetWidth(), lWindow.GetHeight());
+        }
+
+        return true;
+    }
+ 
+    void RenderSubsystem::Shutdown()
+    {
+        OPAAX_CORE_INFO("RenderSubsystem::Shutdown()");
+        // NOTE: the GPU-idle barrier is CoreEngineApp::Shutdown's single authoritative WaitIdle
+        //   (runs before ANY GPU teardown, incl. assets). No per-subsystem wait needed here.
+        m_Pipeline.Clear();          // drop passes before the render API/Renderer2D go away
+        m_Renderer2D.Shutdown();     // release GPU objects while the API/context are still alive
+        RenderCommand::Shutdown();
+    }
+ 
+    bool RenderSubsystem::OnEvent(OpaaxEvent& Event)
+    {
+        OpaaxEventDispatcher lDispatcher(Event);
+        lDispatcher.Dispatch<WindowResizeEventOld>(
+            [this](WindowResizeEventOld& E) { return OnWindowResize(E); });
+        return false;
+    }
+ 
+    bool RenderSubsystem::OnWindowResize(WindowResizeEventOld& Event)
+    {
+        RenderCommand::SetViewport(0, 0, Event.GetWidth(), Event.GetHeight());
+        return false;
+    }
+ 
+} // namespace Opaax

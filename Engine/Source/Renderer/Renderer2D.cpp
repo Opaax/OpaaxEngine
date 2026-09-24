@@ -1,35 +1,33 @@
 #include "Renderer2D.h"
-#include "RHI/RenderCommand.h"
+
+#include "RHI/IRHIDevice.h"
 #include "RHI/Buffer.h"
+#include "RHI/Texture.h"
+#include "RHI/Shader.h"
 #include "RHI/UniformBuffer.h"
 #include "RHI/Pipeline.h"
 #include "RHI/BindGroup.h"
 #include "RHI/ICommandBuffer.h"
-#include "Renderer/ShaderAsset.h"
-#include "Renderer/Texture2D.h"
+#include "Renderer/Renderer2DBatchPlan.h"
 #include "Renderer/Renderer2DSortKey.h"
-#include "Renderer/FrameBatcher.h"
-#include "Renderer/Camera/ICamera.h"
-#include "Core/Config/EngineConfig.h"
-#include "Core/Log/OpaaxLog.h"
+#include "Renderer/RenderView.h"
+#include "Renderer/RenderSystemDesc.h"
 #include "Core/EngineAPI.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <algorithm>
-#include <chrono>
-#include <cmath>
+#include "Core/Maths/Maths.h"
 
 namespace Opaax
 {
     // =============================================================================
-    // Batch constants
+    // Batch constants — a SHADER fact and a buffer bound. The per-batch limits themselves
+    //   are RenderLimits' (config-driven), which is why neither of these is one.
     // =============================================================================
-    static constexpr Uint32 MAX_QUADS         = 1000; // per-BATCH emission cap (not a frame cap)
-    static constexpr Uint32 MAX_VERTICES      = MAX_QUADS * 4;
-    static constexpr Uint32 MAX_INDICES       = MAX_QUADS * 6;
-    static constexpr Uint32 MAX_TEXTURE_SLOTS = 16;   // minimum guaranteed by OpenGL 3.3
-    
+    static constexpr Uint32 SHADER_TEXTURE_SLOTS = 16;      // length of u_Textures[] in Sprite.glsl
+    static constexpr Uint32 MAX_BATCH_QUADS      = 65536;   // ~12 MB of vertices; the sane ceiling
+
     // =============================================================================
     // Vertex layout
     // =============================================================================
@@ -38,298 +36,340 @@ namespace Opaax
         Vector3F Position;     // world space XYZ (Z = 0 for 2D)
         Vector4F Color;        // RGBA tint
         Vector2F TexCoord;     // UV
-        float    TexIndex;     // texture slot index (float for shader compatibility)
+        float     TexIndex;     // texture slot index (float for shader compatibility)
+
+        // Half-extent of the quad's HOLE, in local 0..1 space. {0,0} = solid, which is what every
+        // ordinary draw passes — so an outline is a VALUE, not a second pipeline (and therefore not
+        // a second flush). See MakeOutlineInnerHalf.
+        Vector2F InnerHalf;
+
+        // Where this corner falls in the MASK's rect, 0..1 (**UI16**). MaskIndex is the mask's
+        // sampler slot, or -1 for "no mask" — which is what every ordinary draw passes, so the
+        // fragment's mask path is not taken and nothing that existed before changed.
+        Vector2F MaskUV;
+        float    MaskIndex;
     };
-    
+
     // =============================================================================
-    // Recorded draw command
-    //
-    // One per DrawQuad/DrawSprite. Corners/UV/color are computed at record time; the texture SLOT is
-    // resolved later, at emit, so the recorded TexIndex is a placeholder overwritten in EmitFrame.
-    // =============================================================================
-    struct QuadCommand
-    {
-        Uint64     SortKey;       // MakeSortKey(Layer, OrderInLayer, 0) — slot is NOT part of the key
-        Texture2D* Texture;       // nullptr => white (slot 0)
-        QuadVertex Vertices[4];
-    };
- 
-    // =============================================================================
-    // Renderer2D internal state
+    // Renderer2DData — the pImpl. All GPU + batch state, owned by one Renderer2D instance.
+    //   GPU resources are raw RHI types (ITexture2D/IShader/...), created either through the
+    //   device (live path) or the global factories (transitional path) — the members are the same.
     // =============================================================================
     struct Renderer2DData
     {
-        UniquePtr<IVertexArray>   QuadVAO;
+        TUniquePtr<IVertexArray>   QuadVAO;
         IVertexBuffer*            QuadVBO      = nullptr;  // non-owning, owned by VAO
-        UniquePtr<ShaderAsset>    QuadShader;
-        UniquePtr<Texture2D>      WhiteTexture;
-        UniquePtr<IUniformBuffer> CameraUBO;  // binding 1: u_ViewProjection (std140)
-        UniquePtr<IPipeline>      QuadPipeline;     // sprite pipeline (shader + layout + alpha blend)
-        UniquePtr<IBindGroup>     QuadBindGroup;    // camera UBO + 16-sampler array
+        TUniquePtr<IShader>        QuadShader;
+        TUniquePtr<ITexture2D>     WhiteTexture;
+        TUniquePtr<IUniformBuffer> CameraUBO;  // binding 1: u_ViewProjection (std140)
+        TUniquePtr<IPipeline>      QuadPipeline;     // sprite pipeline (shader + layout + alpha blend)
+        TUniquePtr<IBindGroup>     QuadBindGroup;    // camera UBO + 16-sampler array
         ICommandBuffer*           Cmd          = nullptr;  // active recorder, set in Begin (non-owning)
 
-        // Frame-wide draw record (persistent capacity, cleared each Begin — never freed).
-        TDynArray<QuadCommand>    Commands;
+        QuadBatchLimits Limits;   // resolved from RenderLimits at Init
 
-        // Reused scratch for the frame-global sort + pure batch assignment (resized to N each frame).
-        TDynArray<Uint32>          SortIndices;
-        TDynArray<Uint64>          SortTexKeys;
-        TDynArray<BatchAssignment> Assign;
+        // The PASS, recorded whole: four vertices, a sort key and a texture id per quad. Nothing
+        // flushes while this fills, which is what lets the sort span the whole pass.
+        TDynArray<QuadVertex>  PassVertices;
+        TDynArray<Uint64>      PassKeys;
+        TDynArray<Uint32>      PassTexIds;
+        TDynArray<Uint32>      PassMaskIds;   // parallel; 0 = this quad has no mask (UI16)
+        TDynArray<ITexture2D*> PassTextures;   // texture id -> texture; id 0 is the white texture
 
-        // One batch's worth of upload-ready vertices, gathered in sorted order before each draw.
-        TFixedArray<QuadVertex, MAX_VERTICES>      SortedBuffer;
-        // Current batch's slot -> texture map (slot 0 = white).
-        TFixedArray<Texture2D*, MAX_TEXTURE_SLOTS> BatchTextures;
+        // Emit side, reused every pass.
+        TDynArray<QuadPlacement> Plan;
+        TDynArray<QuadVertex>    UploadBuffer;   // one batch's vertices, sized at Init
+        TDynArray<ITexture2D*>   SlotTextures;   // the current batch's samplers
 
         glm::mat4 ViewProjection = glm::mat4(1.f);
+
+        // Per-FRAME counters (④). Reset by RenderSystem::BeginFrame, never by StartPass — a batch
+        // split is exactly the event they exist to count.
+        Renderer2DStats Stats;
+
+        bool bLoggedSplit = false;   // one-shot: the first pass that needed more than one draw call
     };
- 
-    static Renderer2DData s_Data;
-    
-    // Stats: accumulate the in-flight frame, publish it one frame late (so the overlay's own draws
-    // never perturb the numbers it displays). NewFrame() rolls accum -> last.
-    static RenderStats s_StatsAccum;
-    static RenderStats s_StatsLast;
- 
+
     // =============================================================================
-    // Init / Shutdown
+    // CTORS - DTORS
     // =============================================================================
- 
-    void Renderer2D::Init()
+    Renderer2D::Renderer2D()
+        : m_Data(MakeUnique<Renderer2DData>())
     {
-        OPAAX_CORE_INFO("Renderer2D::Init()");
- 
-        // --- VAO + dynamic VBO (sized to one batch — the staging upload unit) ---
-        s_Data.QuadVAO = IVertexArray::Create();
- 
-        auto lVBO = IVertexBuffer::Create(MAX_VERTICES * sizeof(QuadVertex));
-        lVBO->SetLayout({
-            { EShaderDataType::Float3 },  // Position
-            { EShaderDataType::Float4 },  // Color
-            { EShaderDataType::Float2 },  // TexCoord
-            { EShaderDataType::Float  },  // TexIndex
-        });
- 
-        // Store raw ptr before ownership transfer — needed for SetData on emit
-        s_Data.QuadVBO = lVBO.get();
-        s_Data.QuadVAO->AddVertexBuffer(Move(lVBO));
-
-        // --- Static index buffer — indices never change for quads ---
-        TFixedArray<Uint32, MAX_INDICES> lIndices;
-        Uint32 lOffset = 0;
-        for (Uint32 i = 0; i < MAX_INDICES; i += 6)
-        {
-            // Two triangles per quad: 0 1 2  2 3 0
-            lIndices[i + 0] = lOffset + 0;
-            lIndices[i + 1] = lOffset + 1;
-            lIndices[i + 2] = lOffset + 2;
-            lIndices[i + 3] = lOffset + 2;
-            lIndices[i + 4] = lOffset + 3;
-            lIndices[i + 5] = lOffset + 0;
-            lOffset += 4;
-        }
-        s_Data.QuadVAO->SetIndexBuffer(
-            IIndexBuffer::Create(lIndices.data(), MAX_INDICES));
- 
-        // --- White 1x1 texture for solid colour quads (always slot 0) ---
-        s_Data.WhiteTexture     = MakeUnique<Texture2D>(1u, 1u);
-        s_Data.BatchTextures[0] = s_Data.WhiteTexture.get();
-        
-        // Persistent record capacity — the frame list grows past MAX_QUADS now; reserve up front so
-        // a typical frame never reallocates (CommandCapacity in stats watches this).
-        s_Data.Commands.reserve(MAX_QUADS * 4);
- 
-        // --- Shader ---
-        // Batch shader loads from disk (asset pipeline) — direct path ctor, not AssetRegistry:
-        // Init runs at RenderSubsystem::Startup, before the loader/manifest are guaranteed ready.
-        const OpaaxString lShaderPath = EngineConfig::EngineAssetsRoot() + "/Shaders/Sprite.glsl";
-        s_Data.QuadShader = MakeUnique<ShaderAsset>(lShaderPath, OPAAX_ID("Shaders/Sprite"));
-
-        // --- Camera UBO (binding 1) — sole source of u_ViewProjection, written each Begin.
-        //     Binding 1 (not 0) so it shares the Vulkan sprite descriptor set with the sampler
-        //     array at binding 0; GL is unaffected (separate UBO/texture namespaces).
-        s_Data.CameraUBO = IUniformBuffer::Create(static_cast<Uint32>(sizeof(glm::mat4)), 1);
-
-        // --- Sprite pipeline: shader + vertex layout + alpha blend. VertexLayout is consumed by
-        //     command-buffer backends (Vulkan); the GL VAO already encodes the layout.
-        PipelineDesc lPipelineDesc;
-        lPipelineDesc.Shader       = s_Data.QuadShader->GetRHIShader();
-        lPipelineDesc.VertexLayout = BufferLayout{
-            { EShaderDataType::Float3 },  // Position
-            { EShaderDataType::Float4 },  // Color
-            { EShaderDataType::Float2 },  // TexCoord
-            { EShaderDataType::Float  },  // TexIndex
-        };
-        lPipelineDesc.Blend     = EBlendMode::Alpha;
-        lPipelineDesc.Topology  = EPrimitiveTopology::Triangles;
-        lPipelineDesc.DebugName = "Renderer2D::Sprite";
-        s_Data.QuadPipeline = IPipeline::Create(lPipelineDesc);
-
-        // --- Bind group: camera UBO (binding 1) + the 16-sampler array. The UBO is set once;
-        //     textures are (re)set each emit.
-        s_Data.QuadBindGroup = IBindGroup::Create(BindGroupLayout{ 1u, MAX_TEXTURE_SLOTS });
-        s_Data.QuadBindGroup->SetUniformBuffer(*s_Data.CameraUBO);
     }
- 
+
+    Renderer2D::~Renderer2D()
+    {
+        Shutdown(); // idempotent — releases GPU handles in dependency order
+    }
+
+    // =============================================================================
+    // Shared batch setup — the vertex layout, index pattern, and pipeline desc that both
+    // Init paths share (only the resource *creator* differs).
+    // =============================================================================
+    namespace
+    {
+        BufferLayout MakeQuadLayout()
+        {
+            return BufferLayout{
+                { EShaderDataType::Float3 },  // Position
+                { EShaderDataType::Float4 },  // Color
+                { EShaderDataType::Float2 },  // TexCoord
+                { EShaderDataType::Float  },  // TexIndex
+                { EShaderDataType::Float2 },  // InnerHalf
+                { EShaderDataType::Float2 },  // MaskUV
+                { EShaderDataType::Float  },  // MaskIndex
+            };
+        }
+
+        void FillQuadIndices(TDynArray<Uint32>& OutIndices)
+        {
+            Uint32 lOffset = 0;
+            for (size_t i = 0; i < OutIndices.size(); i += 6)
+            {
+                // Two triangles per quad: 0 1 2  2 3 0
+                OutIndices[i + 0] = lOffset + 0;
+                OutIndices[i + 1] = lOffset + 1;
+                OutIndices[i + 2] = lOffset + 2;
+                OutIndices[i + 3] = lOffset + 2;
+                OutIndices[i + 4] = lOffset + 3;
+                OutIndices[i + 5] = lOffset + 0;
+                lOffset += 4;
+            }
+        }
+
+        PipelineDesc MakeSpritePipelineDesc(IShader* InShader)
+        {
+            PipelineDesc lDesc;
+            lDesc.Shader       = InShader;
+            lDesc.VertexLayout = MakeQuadLayout();
+            lDesc.Blend        = EBlendMode::Alpha;
+            lDesc.Topology     = EPrimitiveTopology::Triangles;
+            lDesc.DebugName    = "Renderer2D::Sprite";
+            return lDesc;
+        }
+
+        // What the buffers and the shader can actually honour. A configured value outside that
+        // says the author expected something the frame will not do, so it is clamped LOUDLY.
+        // The floor of 2 slots is white plus one texture — a batch no sprite fits in is not a limit.
+        QuadBatchLimits ResolveLimits(const RenderLimits& InLimits)
+        {
+            QuadBatchLimits lOut;
+            lOut.MaxQuads        = std::clamp(InLimits.MaxQuads, 1u, MAX_BATCH_QUADS);
+            lOut.MaxTextureSlots = std::clamp(InLimits.MaxTextureSlots, 2u, SHADER_TEXTURE_SLOTS);
+
+            if (lOut.MaxQuads != InLimits.MaxQuads || lOut.MaxTextureSlots != InLimits.MaxTextureSlots)
+            {
+                OPAAX_LOG(LogRenderer2D, Warn, "Batch limits clamped: {} quads / {} slots -> {} / {}",
+                          InLimits.MaxQuads, InLimits.MaxTextureSlots,
+                          lOut.MaxQuads, lOut.MaxTextureSlots);
+            }
+
+            return lOut;
+        }
+    }
+
+    // =============================================================================
+    // Init (live path) — everything through the device; no global factory / GetBackend.
+    // =============================================================================
+    void Renderer2D::Init(IRHIDevice& InDevice, const RenderLimits& InLimits, const ShaderDesc& InShader)
+    {
+        m_Data->Limits = ResolveLimits(InLimits);
+
+        OPAAX_LOG(LogRenderer2D, Info, "Renderer2D::Init(device) — {} quads and {} texture slots per batch",
+                  m_Data->Limits.MaxQuads, m_Data->Limits.MaxTextureSlots);
+
+        const Uint32 lMaxVertices = m_Data->Limits.MaxQuads * 4u;
+        const Uint32 lMaxIndices  = m_Data->Limits.MaxQuads * 6u;
+
+        m_Data->QuadVAO = InDevice.CreateVertexArray();
+
+        TUniquePtr<IVertexBuffer> lVBO = InDevice.CreateVertexBuffer(lMaxVertices * sizeof(QuadVertex));
+        lVBO->SetLayout(MakeQuadLayout());
+        m_Data->QuadVBO = lVBO.get();
+        m_Data->QuadVAO->AddVertexBuffer(Move(lVBO));
+
+        TDynArray<Uint32> lIndices(lMaxIndices);
+        FillQuadIndices(lIndices);
+        m_Data->QuadVAO->SetIndexBuffer(InDevice.CreateIndexBuffer(lIndices.data(), lMaxIndices));
+
+        m_Data->WhiteTexture = InDevice.CreateTexture(1u, 1u);
+
+        m_Data->UploadBuffer.resize(lMaxVertices);
+        m_Data->SlotTextures.assign(SHADER_TEXTURE_SLOTS, m_Data->WhiteTexture.get());
+
+        m_Data->QuadShader   = InDevice.CreateShader(InShader);
+        m_Data->CameraUBO    = InDevice.CreateUniformBuffer(static_cast<Uint32>(sizeof(glm::mat4)), 1);
+        m_Data->QuadPipeline = InDevice.CreatePipeline(MakeSpritePipelineDesc(m_Data->QuadShader.get()));
+
+        // The full sampler array, always: the shader declares u_Textures[16] whatever the batch
+        // limit is, and every unused unit stays bound to the white texture.
+        m_Data->QuadBindGroup = InDevice.CreateBindGroup(BindGroupLayout{ 1u, SHADER_TEXTURE_SLOTS });
+        m_Data->QuadBindGroup->SetUniformBuffer(*m_Data->CameraUBO);
+    }
+
     void Renderer2D::Shutdown()
     {
-        OPAAX_CORE_INFO("Renderer2D::Shutdown()");
-        s_Data.QuadBindGroup.reset();
-        s_Data.QuadPipeline.reset();   // before the shader it references
-        s_Data.QuadVAO.reset();
-        s_Data.QuadShader.reset();
-        s_Data.WhiteTexture.reset();
-        s_Data.CameraUBO.reset();
-    }
-    
-    // =============================================================================
-    // Frame stats
-    // =============================================================================
+        if (!m_Data) { return; }
 
-    void Renderer2D::NewFrame()
-    {
-        s_StatsLast  = s_StatsAccum;
-        s_StatsAccum = RenderStats{};
+        OPAAX_LOG(LogRenderer2D, Info, "Renderer2D::Shutdown()");
+        m_Data->QuadBindGroup.reset();
+        m_Data->QuadPipeline.reset();   // before the shader it references
+        m_Data->QuadVAO.reset();
+        m_Data->QuadShader.reset();
+        m_Data->WhiteTexture.reset();
+        m_Data->CameraUBO.reset();
     }
 
-    const RenderStats& Renderer2D::GetStats() { return s_StatsLast; }
- 
     // =============================================================================
     // Begin / End
     // =============================================================================
- 
-    void Renderer2D::Begin(ICamera& InCamera, ICommandBuffer& InCmd)
+    void Renderer2D::BeginPass(const RenderView& InView, ICommandBuffer& InCmd)
     {
-        s_Data.Cmd            = &InCmd;
-        s_Data.ViewProjection = InCamera.GetViewProjection();
+        InCmd.SetViewport(InView.Viewport.X, InView.Viewport.Y, InView.Viewport.Width, InView.Viewport.Height);
 
-        // Bind the sprite pipeline (shader + blend) on the command buffer.
-        s_Data.Cmd->BindPipeline(*s_Data.QuadPipeline);
+        m_Data->Cmd            = &InCmd;
+        m_Data->ViewProjection = InView.ViewProjection;
 
-        // u_ViewProjection rides the camera UBO (binding 1) — SPIR-V has no default-block path.
-        s_Data.CameraUBO->SetData(glm::value_ptr(s_Data.ViewProjection),
-                                  static_cast<Uint32>(sizeof(glm::mat4)));
-
-        StartBatch();
+        // Bind the sprite pipeline (shader + blend); upload the view-projection to the camera UBO.
+        m_Data->Cmd->BindPipeline(*m_Data->QuadPipeline);
+        m_Data->CameraUBO->SetData(glm::value_ptr(m_Data->ViewProjection),
+                                   static_cast<Uint32>(sizeof(glm::mat4)));
+        StartPass();
     }
 
-    void Renderer2D::End()
+    void Renderer2D::EndPass()
     {
-        EmitFrame();
-        s_Data.Cmd = nullptr;
+        EmitPass();
+        m_Data->Cmd = nullptr;
     }
- 
-    void Renderer2D::StartBatch()
+
+    void Renderer2D::StartPass()
     {
-        s_Data.Commands.clear();   // keeps capacity — the record is reused frame to frame
+        m_Data->PassVertices.clear();
+        m_Data->PassKeys.clear();
+        m_Data->PassTexIds.clear();
+        m_Data->PassMaskIds.clear();
+
+        // Id 0 is the white texture in every pass — an untextured quad samples it and pays no slot.
+        m_Data->PassTextures.clear();
+        m_Data->PassTextures.emplace_back(m_Data->WhiteTexture.get());
     }
-    
+
+    const Renderer2DStats& Renderer2D::GetStats() const noexcept
+    {
+        return m_Data->Stats;
+    }
+
+    void Renderer2D::ResetStats() noexcept
+    {
+        m_Data->Stats = Renderer2DStats{};
+    }
+
     // =============================================================================
-    // Frame emit — ONE global sort, then batches in sorted order
+    // Emit — the whole pass is here, and the ORDER of the two steps is the contract: sort
+    //   everything recorded, THEN cut it into batches. Cutting first is what used to let a later
+    //   flush draw a Background quad over a UI one (⑥). See ARCHITECTURE.md F5.
     // =============================================================================
- 
-    void Renderer2D::EmitFrame()
+    void Renderer2D::EmitPass()
     {
-        const Uint32 lCount = static_cast<Uint32>(s_Data.Commands.size());
-        if (lCount == 0) { return; }
+        if (m_Data->PassKeys.empty()) { return; }
 
-        // --- Frame-global stable sort by draw key. Stable => equal keys keep submission order.
-        //     Painter's algorithm: ascending key draws back-to-front; depth test stays OFF (correct
-        //     for alpha-blended 2D). The key is (Layer, OrderInLayer) only — texture grouping is the
-        //     per-batch slot window's job, so same-band overlapping sprites keep submission order. ---
-        s_Data.SortIndices.resize(lCount);
-        for (Uint32 i = 0; i < lCount; ++i) { s_Data.SortIndices[i] = i; }
+        PlanQuadBatches(m_Data->PassKeys, m_Data->PassTexIds, m_Data->PassMaskIds, m_Data->Limits, m_Data->Plan);
 
-        const auto lSortStart = std::chrono::steady_clock::now();
-        std::stable_sort(s_Data.SortIndices.begin(), s_Data.SortIndices.end(),
-            [](Uint32 InA, Uint32 InB)
-            { return s_Data.Commands[InA].SortKey < s_Data.Commands[InB].SortKey; });
-        const auto lSortEnd = std::chrono::steady_clock::now();
-        s_StatsAccum.SortMicros +=
-            std::chrono::duration<double, std::micro>(lSortEnd - lSortStart).count();
+        // Every batch starts from white, this first one included — a slot left over from the
+        // PREVIOUS pass would name a texture that may not exist any more.
+        m_Data->SlotTextures.assign(SHADER_TEXTURE_SLOTS, m_Data->WhiteTexture.get());
 
-        // --- Texture identities in sorted order -> pure batch/slot assignment ---
-        s_Data.SortTexKeys.resize(lCount);
-        s_Data.Assign.resize(lCount);
-        for (Uint32 k = 0; k < lCount; ++k)
+        Uint32 lBatch     = 0;
+        Uint32 lQuadCount = 0;
+        Uint32 lSlotCount = 1;   // slot 0 = white, bound in every batch
+
+        for (const QuadPlacement& lPlacement : m_Data->Plan)
         {
-            s_Data.SortTexKeys[k] =
-                 reinterpret_cast<Uint64>(s_Data.Commands[s_Data.SortIndices[k]].Texture);
-        }
-        AssignBatches(s_Data.SortTexKeys.data(), lCount, MAX_QUADS, MAX_TEXTURE_SLOTS,
-                      s_Data.Assign.data());
-        
-        // --- Walk sorted commands; gather each batch into the staging buffer; emit on boundaries ---
-        Uint32 lCurrentBatch = 0;
-        Uint32 lQuadInBatch  = 0;
-        Uint32 lSlotCount    = 1;                          // slot 0 = white
-        s_Data.BatchTextures[0] = s_Data.WhiteTexture.get();
-
-        for (Uint32 k = 0; k < lCount; ++k)
-        {
-            const BatchAssignment& lBA  = s_Data.Assign[k];
-            const QuadCommand&     lCmd = s_Data.Commands[s_Data.SortIndices[k]];
-
-            if (lBA.BatchIndex != lCurrentBatch)
+            if (lPlacement.Batch != lBatch)
             {
-                EmitBatch(lQuadInBatch, lSlotCount);
-                lCurrentBatch = lBA.BatchIndex;
-                lQuadInBatch  = 0;
-                lSlotCount    = 1;
-                s_Data.BatchTextures[0] = s_Data.WhiteTexture.get();
+                Flush(lQuadCount, lSlotCount);
+
+                lBatch     = lPlacement.Batch;
+                lQuadCount = 0;
+                lSlotCount = 1;
+                m_Data->SlotTextures.assign(SHADER_TEXTURE_SLOTS, m_Data->WhiteTexture.get());
             }
 
-            if (lBA.Slot != 0)
-            {
-                s_Data.BatchTextures[lBA.Slot] = lCmd.Texture;
-                if (lBA.Slot + 1 > lSlotCount) { lSlotCount = lBA.Slot + 1; }
-        }
+            // The slot is a property of the BATCH, so it is written here and not at record time.
+            const QuadVertex* lSrc = &m_Data->PassVertices[lPlacement.QuadIndex * 4u];
+            QuadVertex*       lDst = &m_Data->UploadBuffer[lQuadCount * 4u];
+            const Uint32 lMaskId = m_Data->PassMaskIds[lPlacement.QuadIndex];
 
-            // Copy the 4 vertices into the staging buffer, stamping the resolved slot as TexIndex.
-            const Uint32 lDst = lQuadInBatch * 4;
-            for (Uint32 v = 0; v < 4; ++v)
+            // -1 keeps the fragment's mask path untaken; a masked quad names the slot the plan
+            // gave its mask (**UI16**).
+            const float lMaskIndex = (lMaskId != 0) ? static_cast<float>(lPlacement.MaskSlot) : -1.f;
+
+            for (Uint32 i = 0; i < 4u; ++i)
             {
-                QuadVertex lVert = lCmd.Vertices[v];
-                lVert.TexIndex   = static_cast<float>(lBA.Slot);
-                s_Data.SortedBuffer[lDst + v] = lVert;
+                lDst[i]           = lSrc[i];
+                lDst[i].TexIndex  = static_cast<float>(lPlacement.Slot);
+                lDst[i].MaskIndex = lMaskIndex;
             }
-            ++lQuadInBatch;
-        }
-        EmitBatch(lQuadInBatch, lSlotCount);               // final partial batch
 
-        s_StatsAccum.CommandCapacity = static_cast<Uint32>(s_Data.Commands.capacity());
+            m_Data->SlotTextures[lPlacement.Slot] = m_Data->PassTextures[m_Data->PassTexIds[lPlacement.QuadIndex]];
+            lSlotCount = std::max(lSlotCount, lPlacement.Slot + 1u);
+
+            if (lMaskId != 0)
+            {
+                m_Data->SlotTextures[lPlacement.MaskSlot] = m_Data->PassTextures[lMaskId];
+                lSlotCount = std::max(lSlotCount, lPlacement.MaskSlot + 1u);
+            }
+            ++lQuadCount;
+        }
+
+        Flush(lQuadCount, lSlotCount);
+
+        // ONE line per process, the first time a pass needs more than one draw call — the condition
+        // the global sort exists for, and one a smoke run cannot read off the Stats panel.
+        if (!m_Data->bLoggedSplit && lBatch > 0)
+        {
+            OPAAX_LOG(LogRenderer2D, Info, "Pass split into {} batches for {} quads (limit {} quads / {} slots)",
+                      lBatch + 1u, static_cast<Uint32>(m_Data->PassKeys.size()),
+                      m_Data->Limits.MaxQuads, m_Data->Limits.MaxTextureSlots);
+            m_Data->bLoggedSplit = true;
+        }
     }
 
-    void Renderer2D::EmitBatch(Uint32 InQuadCount, Uint32 InSlotCount)
+    void Renderer2D::Flush(const Uint32 InQuadCount, const Uint32 InSlotCount)
     {
         if (InQuadCount == 0) { return; }
 
-        const Uint32 lDataSize = InQuadCount * 4u * static_cast<Uint32>(sizeof(QuadVertex));
-        s_Data.QuadVBO->SetData(s_Data.SortedBuffer.data(), lDataSize);
+        // Counted here rather than at the call sites: this is the ONE place a DrawIndexed is issued,
+        // and an empty batch returns above without costing one.
+        ++m_Data->Stats.DrawCalls;
 
-        // Every sampler unit must reference a live texture (no dangling descriptor across draws):
-        // active slots get their texture, the rest get white.
-        for (Uint32 i = 0; i < MAX_TEXTURE_SLOTS; ++i)
+        // The PEAK across the frame's batches — a max, not a sum, because the pressure that matters
+        // is how close any single batch came to running out of samplers.
+        if (InSlotCount > m_Data->Stats.PeakTextureSlots)
         {
-            Texture2D* lTex = (i < InSlotCount) ? s_Data.BatchTextures[i] : s_Data.WhiteTexture.get();
-            if (!lTex) { lTex = s_Data.WhiteTexture.get(); }
-            s_Data.QuadBindGroup->SetTexture(i, *lTex->GetRHITexture());
+            m_Data->Stats.PeakTextureSlots = InSlotCount;
         }
 
-        s_Data.Cmd->BindBindGroup(*s_Data.QuadBindGroup);
-        s_Data.Cmd->BindVertexArray(*s_Data.QuadVAO);
-        s_Data.Cmd->DrawIndexed(InQuadCount * 6);
+        const Uint32 lDataSize = InQuadCount * 4u * static_cast<Uint32>(sizeof(QuadVertex));
+        m_Data->QuadVBO->SetData(m_Data->UploadBuffer.data(), lDataSize);
 
-        ++s_StatsAccum.Batches;
-        ++s_StatsAccum.DrawCalls;
-        s_StatsAccum.Quads += InQuadCount;
-        if (InSlotCount > s_StatsAccum.PeakTextureSlots) { s_StatsAccum.PeakTextureSlots = InSlotCount; }
+        // Every unit references a live texture — unused ones are the white texture, so nothing
+        // dangles across batches.
+        for (Uint32 i = 0; i < SHADER_TEXTURE_SLOTS; ++i)
+        {
+            m_Data->QuadBindGroup->SetTexture(i, *m_Data->SlotTextures[i]);
+        }
+
+        m_Data->Cmd->BindBindGroup(*m_Data->QuadBindGroup);
+        m_Data->Cmd->BindVertexArray(*m_Data->QuadVAO);
+        m_Data->Cmd->DrawIndexed(InQuadCount * 6);
     }
- 
+
     // =============================================================================
     // Draw calls
     // =============================================================================
- 
     namespace
     {
         // Rotates an axis-aligned offset (Ox, Oy) around origin by (Cos, Sin), then translates by Center.
@@ -338,106 +378,167 @@ namespace Opaax
             return { InCenter.x + (InCos * InOx - InSin * InOy),
                      InCenter.y + (InSin * InOx + InCos * InOy) };
         }
-        
-        // Computes the four corners (BL, BR, TR, TL) of a quad, skipping trig when un-rotated.
-        FORCEINLINE void ComputeCorners(const Vector2F& InPosition, float InHalfW, float InHalfH,
-                                        float InRotationRad,
-                                        Vector2F& OutBL, Vector2F& OutBR, Vector2F& OutTR, Vector2F& OutTL)
+    }
+
+    void Renderer2D::DrawQuad(const Vector2F& InPosition,
+                              const Vector2F& InSize,
+                              const Vector4F& InColor,
+                              float           InRotationRad,
+                              ERenderLayer    InLayer,
+                              Int16           InOrderInLayer,
+                              const QuadMask& InMask)
+    {
+        // A coloured quad IS a sprite: texture id 0 is the white texture, so the sample is
+        // (1,1,1,1) and the shader's multiply leaves the tint exactly as given.
+        SubmitQuad(InPosition, InSize, InColor, InRotationRad, InLayer, InOrderInLayer,
+                   0u, { 0.f, 0.f }, { 1.f, 1.f }, { 0.f, 0.f }, InMask);
+    }
+
+    void Renderer2D::DrawSprite(const Vector2F& InPosition,
+                                const Vector2F& InSize,
+                                ITexture2D&     InTexture,
+                                const Vector4F& InTint,
+                                float           InRotationRad,
+                                ERenderLayer    InLayer,
+                                Int16           InOrderInLayer,
+                                const Vector2F& InUVMin,
+                                const Vector2F& InUVMax,
+                                const QuadMask& InMask)
+    {
+        SubmitQuad(InPosition, InSize, InTint, InRotationRad, InLayer, InOrderInLayer,
+                   GetTextureId(InTexture), InUVMin, InUVMax, { 0.f, 0.f }, InMask);
+    }
+
+    Uint32 Renderer2D::GetTextureId(ITexture2D& InTexture)
+    {
+        // Id 0 is the white texture and is never handed out, which is why the scan starts at 1.
+        for (Uint32 i = 1; i < static_cast<Uint32>(m_Data->PassTextures.size()); ++i)
         {
-            if (InRotationRad == 0.f)
+            if (m_Data->PassTextures[i] == &InTexture)
             {
-                OutBL = { InPosition.x - InHalfW, InPosition.y - InHalfH };
-                OutBR = { InPosition.x + InHalfW, InPosition.y - InHalfH };
-                OutTR = { InPosition.x + InHalfW, InPosition.y + InHalfH };
-                OutTL = { InPosition.x - InHalfW, InPosition.y + InHalfH };
-            }
-            else
-            {
-                const float lCos = std::cos(InRotationRad);
-                const float lSin = std::sin(InRotationRad);
-                OutBL = RotateOffset(InPosition, lCos, lSin, -InHalfW, -InHalfH);
-                OutBR = RotateOffset(InPosition, lCos, lSin, +InHalfW, -InHalfH);
-                OutTR = RotateOffset(InPosition, lCos, lSin, +InHalfW, +InHalfH);
-                OutTL = RotateOffset(InPosition, lCos, lSin, -InHalfW, +InHalfH);
+                return i;
             }
         }
 
-        // MakeSortKey hoisted to Renderer/Renderer2DSortKey.h (unit-tested in isolation).
+        m_Data->PassTextures.emplace_back(&InTexture);
+
+        return static_cast<Uint32>(m_Data->PassTextures.size()) - 1u;
     }
 
-    void Renderer2D::DrawQuad(  const Vector2F& InPosition,
+    Vector2F MakeOutlineInnerHalf(const Vector2F& InSize, const float InThickness) noexcept
+    {
+        // Per axis: the border eats InThickness off each edge, so the hole's half-extent in local
+        // 0..1 space is 0.5 - thickness/size.
+        //
+        // CLAMPED TO [0, 0.5] AT BOTH ENDS, and both ends matter. Below 0 is an inside-out hole; a
+        // zero size divides by zero. Above 0.5 is what a NEGATIVE thickness produces, and while the
+        // shader happens to render it the same as 0.5 (a hole larger than the quad is still the
+        // whole quad), leaving it unclamped would make the returned value stop meaning what its
+        // name says. The result stays monotonic: more thickness, smaller hole, more drawn.
+        // The MAGNITUDE of the size, because the hole lives in the quad's LOCAL 0..1 space and
+        // mirroring does not move it. A negative size is a legal flip — SubmitQuad mirrors the
+        // corners, which is how a flipped sprite mirrors its texture — but it must not be read here
+        // as "no size", which would answer 0 and draw the outline SOLID.
+        const auto lInnerHalf = [](const float InExtent, const float InBorder) noexcept
+        {
+            const float lMagnitude = InExtent < 0.f ? -InExtent : InExtent;
+
+            if (lMagnitude <= 0.f) { return 0.f; }
+
+            const float lHalf = 0.5f - InBorder / lMagnitude;
+
+            return lHalf < 0.f ? 0.f : (lHalf > 0.5f ? 0.5f : lHalf);
+        };
+
+        return { lInnerHalf(InSize.x, InThickness), lInnerHalf(InSize.y, InThickness) };
+    }
+
+    void Renderer2D::DrawQuadOutline(const Vector2F& InPosition,
+                                     const Vector2F& InSize,
+                                     const Vector4F& InColor,
+                                     const float     InThickness,
+                                     const float     InRotationRad,
+                                     const ERenderLayer InLayer,
+                                     const Int16     InOrderInLayer,
+                                     const QuadMask& InMask)
+    {
+        // UNTEXTURED, and that is load-bearing rather than a simplification: the shader reads
+        // v_TexCoord as the quad's LOCAL position to find the border, which only holds while the UVs
+        // span the full 0..1. A textured outline sampling an atlas sub-rect would carve the hole in
+        // the wrong place, so there is deliberately no overload that takes one.
+        SubmitQuad(InPosition, InSize, InColor, InRotationRad, InLayer, InOrderInLayer,
+                   0u, { 0.f, 0.f }, { 1.f, 1.f }, MakeOutlineInnerHalf(InSize, InThickness), InMask);
+    }
+
+    void Renderer2D::SubmitQuad(const Vector2F& InPosition,
                                 const Vector2F& InSize,
                                 const Vector4F& InColor,
                                 float           InRotationRad,
                                 ERenderLayer    InLayer,
-                                Int16           InOrderInLayer)
-    {
-        Vector2F lBL, lBR, lTR, lTL;
-        ComputeCorners(InPosition, InSize.x * 0.5f, InSize.y * 0.5f, InRotationRad, lBL, lBR, lTR, lTL);
-        QuadCommand lCmd;
-        lCmd.SortKey = MakeSortKey(InLayer, InOrderInLayer, 0u);
-        lCmd.Texture = nullptr;                       // white (slot 0), resolved at emit
-
-        constexpr float lTexIndex = 0.f;              // placeholder — EmitFrame stamps the real slot
-        lCmd.Vertices[0] = { { lBL.x, lBL.y, 0.f }, InColor, { 0.f, 0.f }, lTexIndex };
-        lCmd.Vertices[1] = { { lBR.x, lBR.y, 0.f }, InColor, { 1.f, 0.f }, lTexIndex };
-        lCmd.Vertices[2] = { { lTR.x, lTR.y, 0.f }, InColor, { 1.f, 1.f }, lTexIndex };
-        lCmd.Vertices[3] = { { lTL.x, lTL.y, 0.f }, InColor, { 0.f, 1.f }, lTexIndex };
-
-        s_Data.Commands.push_back(lCmd);
-    }
-
-    void Renderer2D::DrawSprite(const Vector2F& InPosition, const Vector2F& InSize, const TextureHandle& InTexture,
-        const Vector4F& InColor, float InRotationRad, ERenderLayer InLayer, Int16 InOrderInLayer)
-    {
-        OPAAX_CORE_ASSERT(InTexture.IsValid())
-        DrawSprite(InPosition, InSize, *InTexture.Get(), InColor, InRotationRad, InLayer, InOrderInLayer);
-    }
-
-    void Renderer2D::DrawSprite(const Vector2F& InPosition, const Vector2F& InSize, const TextureHandle& InTexture,
-        const Vector2F& InUVMin, const Vector2F& InUVMax, const Vector4F& InColor, float InRotationRad,
-        ERenderLayer InLayer, Int16 InOrderInLayer)
-    {
-        OPAAX_CORE_ASSERT(InTexture.IsValid())
-        DrawSprite(InPosition, InSize, *InTexture.Get(), InUVMin, InUVMax, InColor, InRotationRad, InLayer, InOrderInLayer);
-    }
-
-    void Renderer2D::DrawSprite(const Vector2F& InPosition,
-                                const Vector2F& InSize,
-                                Texture2D&      InTexture,
-                                const Vector4F& InColor,
-                                float           InRotationRad,
-                                ERenderLayer    InLayer,
-                                Int16           InOrderInLayer)
-    {
-        DrawSprite(InPosition, InSize, InTexture,
-                   { 0.f, 0.f }, { 1.f, 1.f }, InColor, InRotationRad, InLayer, InOrderInLayer);
-    }
-
-    void Renderer2D::DrawSprite(const Vector2F& InPosition,
-                                const Vector2F& InSize,
-                                Texture2D&      InTexture,
+                                Int16           InOrderInLayer,
+                                Uint32          InTexId,
                                 const Vector2F& InUVMin,
                                 const Vector2F& InUVMax,
-                                const Vector4F& InColor,
-                                float           InRotationRad,
-                                ERenderLayer    InLayer,
-                                Int16           InOrderInLayer)
+                                const Vector2F& InInnerHalf,
+                                const QuadMask& InMask)
     {
+        const float lHalfW = InSize.x * 0.5f;
+        const float lHalfH = InSize.y * 0.5f;
+
         Vector2F lBL, lBR, lTR, lTL;
-        ComputeCorners(InPosition, InSize.x * 0.5f, InSize.y * 0.5f, InRotationRad, lBL, lBR, lTR, lTL);
+        if (InRotationRad == 0.f)
+        {
+            lBL = { InPosition.x - lHalfW, InPosition.y - lHalfH };
+            lBR = { InPosition.x + lHalfW, InPosition.y - lHalfH };
+            lTR = { InPosition.x + lHalfW, InPosition.y + lHalfH };
+            lTL = { InPosition.x - lHalfW, InPosition.y + lHalfH };
+        }
+        else
+        {
+            const float lCos = Maths::Cos(InRotationRad);
+            const float lSin = Maths::Sin(InRotationRad);
+            lBL = RotateOffset(InPosition, lCos, lSin, -lHalfW, -lHalfH);
+            lBR = RotateOffset(InPosition, lCos, lSin, +lHalfW, -lHalfH);
+            lTR = RotateOffset(InPosition, lCos, lSin, +lHalfW, +lHalfH);
+            lTL = RotateOffset(InPosition, lCos, lSin, -lHalfW, +lHalfH);
+        }
 
-        QuadCommand lCmd;
-        lCmd.SortKey = MakeSortKey(InLayer, InOrderInLayer, 0u);  // slot resolved per-batch at emit
-        lCmd.Texture = &InTexture;
+        // The mask's rect in the SAME space as the corners, so each vertex's place inside it is a
+        // plain remap. Outside 0..1 the fragment discards, which is what clips a child that escapes
+        // its mask (**UI16**).
+        const bool     lMasked  = InMask.IsActive();
+        const Vector2F lMaskMin = lMasked ? InMask.Rect.Min() : Vector2F{ 0.f, 0.f };
+        const Vector2F lMaskSize = lMasked ? InMask.Rect.Size() : Vector2F{ 1.f, 1.f };
 
-        constexpr float lTexIndex = 0.f;                         // placeholder — EmitFrame stamps the slot
-        lCmd.Vertices[0] = { { lBL.x, lBL.y, 0.f }, InColor, { InUVMin.x, InUVMin.y }, lTexIndex };
-        lCmd.Vertices[1] = { { lBR.x, lBR.y, 0.f }, InColor, { InUVMax.x, InUVMin.y }, lTexIndex };
-        lCmd.Vertices[2] = { { lTR.x, lTR.y, 0.f }, InColor, { InUVMax.x, InUVMax.y }, lTexIndex };
-        lCmd.Vertices[3] = { { lTL.x, lTL.y, 0.f }, InColor, { InUVMin.x, InUVMax.y }, lTexIndex };
+        // Winding BL -> BR -> TR -> TL, matching the index pattern. TexIndex and MaskIndex are left
+        // at 0/-1 and written by EmitPass: a sampler slot belongs to a batch that does not exist yet.
+        const auto lPush = [&](const Vector2F& InCorner, const Vector2F& InUV)
+        {
+            const Vector2F lMaskUV{ (InCorner.x - lMaskMin.x) / lMaskSize.x,
+                                    (InCorner.y - lMaskMin.y) / lMaskSize.y };
 
-        s_Data.Commands.push_back(lCmd);
+            m_Data->PassVertices.emplace_back(
+                QuadVertex{ { InCorner.x, InCorner.y, 0.f }, InColor, InUV, 0.f, InInnerHalf, lMaskUV, -1.f });
+        };
+
+        lPush(lBL, { InUVMin.x, InUVMin.y });
+        lPush(lBR, { InUVMax.x, InUVMin.y });
+        lPush(lTR, { InUVMax.x, InUVMax.y });
+        lPush(lTL, { InUVMin.x, InUVMax.y });
+
+        // The texture rides in the key so equal-order quads group by it, which is what keeps the
+        // draw call count down when many sprites share one atlas. It is the PASS's id rather than
+        // a slot now — stable for the whole sort instead of only for one batch.
+        m_Data->PassKeys.emplace_back(MakeSortKey(InLayer, InOrderInLayer, InTexId));
+        m_Data->PassTexIds.emplace_back(InTexId);
+
+        // Id 0 means NO MASK, so a rect-only mask cannot use it: it takes a real id that happens to
+        // resolve to the white texture (sampling 1 everywhere = the rect alone clips). Every
+        // rect-only mask in a pass finds that same entry, so they share one slot between them.
+        m_Data->PassMaskIds.emplace_back(
+            lMasked ? GetTextureId(InMask.Texture != nullptr ? *InMask.Texture : *m_Data->WhiteTexture) : 0u);
+
+        ++m_Data->Stats.Quads;
     }
 
 } // namespace Opaax

@@ -1,0 +1,422 @@
+{
+    "ReferenceHeight": 1080.0,
+    "Root": {
+        "Children": [
+            {
+                "Border": {
+                    "Bottom": 0.0,
+                    "Left": 0.0,
+                    "Right": 0.0,
+                    "Top": 0.0
+                },
+                "Color": {
+                    "w": 0.550000011920929,
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0
+                },
+                "Fill": "None",
+                "FillAmount": 1.0,
+                "FillBinding": "",
+                "Frame": -1,
+                "Name": "Dim",
+                "Opacity": 1.0,
+                "Rect": {
+                    "AnchorMax": {
+                        "x": 1.0,
+                        "y": 1.0
+                    },
+                    "AnchorMin": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "AnchoredPosition": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Pivot": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "SizeDelta": {
+                        "x": 0.0,
+                        "y": 0.0
+                    }
+                },
+                "Sheet": "",
+                "Texture": "",
+                "Type": "UIImage",
+                "bHitTestable": true,
+                "bVisible": true
+            },
+            {
+                "Border": {
+                    "Bottom": 0.0,
+                    "Left": 0.0,
+                    "Right": 0.0,
+                    "Top": 0.0
+                },
+                "Children": [
+                    {
+                        "Axis": "Vertical",
+                        "ChildAlign": "Center",
+                        "Children": [
+                            {
+                                "Binding": "",
+                                "Color": {
+                                    "w": 1.0,
+                                    "x": 1.0,
+                                    "y": 1.0,
+                                    "z": 1.0
+                                },
+                                "Font": "/Engine/Fonts/Roboto/roboto-latin-700-normal.ttf",
+                                "HAlign": "Center",
+                                "LineHeightScale": 1.0,
+                                "Name": "Title",
+                                "Opacity": 1.0,
+                                "Rect": {
+                                    "AnchorMax": {
+                                        "x": 0.5,
+                                        "y": 0.5
+                                    },
+                                    "AnchorMin": {
+                                        "x": 0.5,
+                                        "y": 0.5
+                                    },
+                                    "AnchoredPosition": {
+                                        "x": 0.0,
+                                        "y": 0.0
+                                    },
+                                    "Pivot": {
+                                        "x": 0.5,
+                                        "y": 0.5
+                                    },
+                                    "SizeDelta": {
+                                        "x": 480.0,
+                                        "y": 80.0
+                                    }
+                                },
+                                "Size": 64.0,
+                                "Text": "Paused",
+                                "Type": "UIText",
+                                "VAlign": "Middle",
+                                "bHitTestable": false,
+                                "bKerning": true,
+                                "bVisible": true,
+                                "bWrap": true
+                            },
+                            {
+                                "Children": [
+                                    {
+                                        "Binding": "",
+                                        "Color": {
+                                            "w": 1.0,
+                                            "x": 1.0,
+                                            "y": 1.0,
+                                            "z": 1.0
+                                        },
+                                        "Font": "/Engine/Fonts/Roboto/roboto-latin-700-normal.ttf",
+                                        "HAlign": "Center",
+                                        "LineHeightScale": 1.0,
+                                        "Name": "ResumeButtonLabel",
+                                        "Opacity": 1.0,
+                                        "Rect": {
+                                            "AnchorMax": {
+                                                "x": 1.0,
+                                                "y": 1.0
+                                            },
+                                            "AnchorMin": {
+                                                "x": 0.0,
+                                                "y": 0.0
+                                            },
+                                            "AnchoredPosition": {
+                                                "x": 0.0,
+                                                "y": 0.0
+                                            },
+                                            "Pivot": {
+                                                "x": 0.5,
+                                                "y": 0.5
+                                            },
+                                            "SizeDelta": {
+                                                "x": 0.0,
+                                                "y": 0.0
+                                            }
+                                        },
+                                        "Size": 36.0,
+                                        "Text": "Resume",
+                                        "Type": "UIText",
+                                        "VAlign": "Middle",
+                                        "bHitTestable": false,
+                                        "bKerning": true,
+                                        "bVisible": true,
+                                        "bWrap": true
+                                    }
+                                ],
+                                "Disabled": {
+                                    "w": 0.5,
+                                    "x": 0.20000000298023224,
+                                    "y": 0.20000000298023224,
+                                    "z": 0.20000000298023224
+                                },
+                                "Frame": -1,
+                                "Hovered": {
+                                    "w": 1.0,
+                                    "x": 0.3499999940395355,
+                                    "y": 0.3499999940395355,
+                                    "z": 0.4000000059604645
+                                },
+                                "Name": "ResumeButton",
+                                "Normal": {
+                                    "w": 1.0,
+                                    "x": 0.25,
+                                    "y": 0.25,
+                                    "z": 0.2800000011920929
+                                },
+                                "Opacity": 1.0,
+                                "Pressed": {
+                                    "w": 1.0,
+                                    "x": 0.15000000596046448,
+                                    "y": 0.15000000596046448,
+                                    "z": 0.18000000715255737
+                                },
+                                "Rect": {
+                                    "AnchorMax": {
+                                        "x": 0.5,
+                                        "y": 0.5
+                                    },
+                                    "AnchorMin": {
+                                        "x": 0.5,
+                                        "y": 0.5
+                                    },
+                                    "AnchoredPosition": {
+                                        "x": 0.0,
+                                        "y": 0.0
+                                    },
+                                    "Pivot": {
+                                        "x": 0.5,
+                                        "y": 0.5
+                                    },
+                                    "SizeDelta": {
+                                        "x": 240.0,
+                                        "y": 64.0
+                                    }
+                                },
+                                "Sheet": "",
+                                "Texture": "",
+                                "Type": "UIButton",
+                                "bEnabled": true,
+                                "bHitTestable": true,
+                                "bVisible": true
+                            },
+                            {
+                                "Children": [
+                                    {
+                                        "Binding": "",
+                                        "Color": {
+                                            "w": 1.0,
+                                            "x": 1.0,
+                                            "y": 1.0,
+                                            "z": 1.0
+                                        },
+                                        "Font": "/Engine/Fonts/Roboto/roboto-latin-700-normal.ttf",
+                                        "HAlign": "Center",
+                                        "LineHeightScale": 1.0,
+                                        "Name": "NextLevelButtonLabel",
+                                        "Opacity": 1.0,
+                                        "Rect": {
+                                            "AnchorMax": {
+                                                "x": 1.0,
+                                                "y": 1.0
+                                            },
+                                            "AnchorMin": {
+                                                "x": 0.0,
+                                                "y": 0.0
+                                            },
+                                            "AnchoredPosition": {
+                                                "x": 0.0,
+                                                "y": 0.0
+                                            },
+                                            "Pivot": {
+                                                "x": 0.5,
+                                                "y": 0.5
+                                            },
+                                            "SizeDelta": {
+                                                "x": 0.0,
+                                                "y": 0.0
+                                            }
+                                        },
+                                        "Size": 36.0,
+                                        "Text": "Next Level",
+                                        "Type": "UIText",
+                                        "VAlign": "Middle",
+                                        "bHitTestable": false,
+                                        "bKerning": true,
+                                        "bVisible": true,
+                                        "bWrap": true
+                                    }
+                                ],
+                                "Disabled": {
+                                    "w": 0.5,
+                                    "x": 0.20000000298023224,
+                                    "y": 0.20000000298023224,
+                                    "z": 0.20000000298023224
+                                },
+                                "Frame": -1,
+                                "Hovered": {
+                                    "w": 1.0,
+                                    "x": 0.3499999940395355,
+                                    "y": 0.3499999940395355,
+                                    "z": 0.4000000059604645
+                                },
+                                "Name": "NextLevelButton",
+                                "Normal": {
+                                    "w": 1.0,
+                                    "x": 0.25,
+                                    "y": 0.25,
+                                    "z": 0.2800000011920929
+                                },
+                                "Opacity": 1.0,
+                                "Pressed": {
+                                    "w": 1.0,
+                                    "x": 0.15000000596046448,
+                                    "y": 0.15000000596046448,
+                                    "z": 0.18000000715255737
+                                },
+                                "Rect": {
+                                    "AnchorMax": {
+                                        "x": 0.5,
+                                        "y": 0.5
+                                    },
+                                    "AnchorMin": {
+                                        "x": 0.5,
+                                        "y": 0.5
+                                    },
+                                    "AnchoredPosition": {
+                                        "x": 0.0,
+                                        "y": 0.0
+                                    },
+                                    "Pivot": {
+                                        "x": 0.5,
+                                        "y": 0.5
+                                    },
+                                    "SizeDelta": {
+                                        "x": 240.0,
+                                        "y": 64.0
+                                    }
+                                },
+                                "Sheet": "",
+                                "Texture": "",
+                                "Type": "UIButton",
+                                "bEnabled": true,
+                                "bHitTestable": true,
+                                "bVisible": true
+                            }
+                        ],
+                        "Name": "Stack",
+                        "Opacity": 1.0,
+                        "Padding": {
+                            "Bottom": 24.0,
+                            "Left": 24.0,
+                            "Right": 24.0,
+                            "Top": 24.0
+                        },
+                        "Rect": {
+                            "AnchorMax": {
+                                "x": 1.0,
+                                "y": 1.0
+                            },
+                            "AnchorMin": {
+                                "x": 0.0,
+                                "y": 0.0
+                            },
+                            "AnchoredPosition": {
+                                "x": 0.0,
+                                "y": 0.0
+                            },
+                            "Pivot": {
+                                "x": 0.5,
+                                "y": 0.5
+                            },
+                            "SizeDelta": {
+                                "x": 0.0,
+                                "y": 0.0
+                            }
+                        },
+                        "Spacing": 16.0,
+                        "Type": "UIStack",
+                        "bFitContent": false,
+                        "bHitTestable": false,
+                        "bVisible": true
+                    }
+                ],
+                "Color": {
+                    "w": 0.949999988079071,
+                    "x": 0.11999999731779099,
+                    "y": 0.11999999731779099,
+                    "z": 0.15000000596046448
+                },
+                "Fill": "None",
+                "FillAmount": 1.0,
+                "FillBinding": "",
+                "Frame": -1,
+                "Name": "Box",
+                "Opacity": 1.0,
+                "Rect": {
+                    "AnchorMax": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchorMin": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "AnchoredPosition": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "Pivot": {
+                        "x": 0.5,
+                        "y": 0.5
+                    },
+                    "SizeDelta": {
+                        "x": 520.0,
+                        "y": 300.0
+                    }
+                },
+                "Sheet": "",
+                "Texture": "",
+                "Type": "UIImage",
+                "bHitTestable": true,
+                "bVisible": true
+            }
+        ],
+        "Name": "Root",
+        "Opacity": 1.0,
+        "Rect": {
+            "AnchorMax": {
+                "x": 1.0,
+                "y": 1.0
+            },
+            "AnchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "AnchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "Pivot": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "SizeDelta": {
+                "x": 0.0,
+                "y": 0.0
+            }
+        },
+        "Type": "UIPanel",
+        "bHitTestable": false,
+        "bVisible": true
+    },
+    "Version": 1
+}

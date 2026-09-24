@@ -1,0 +1,7 @@
+{
+    "Description": "Leap. Ground mode spends it only while grounded.",
+    "HoldSeconds": 0.5,
+    "Modifiers": [],
+    "Name": "Jump",
+    "ValueType": "Bool"
+}

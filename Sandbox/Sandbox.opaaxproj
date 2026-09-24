@@ -1,0 +1,7 @@
+{
+    "name": "Sandbox",
+    "startupLevel": "Levels/Main.opaaxlevel",
+    "loadingScreen": "UI/Loading.opaaxui",
+    "loadingScreenMinSeconds": 3.0,
+    "uiReferenceHeight": 1080
+}

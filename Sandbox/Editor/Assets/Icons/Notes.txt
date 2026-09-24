@@ -1,0 +1,2 @@
+Editor-only content for the Sandbox project: <ProjectRoot>/Editor/Assets.
+The Resource Browser lists this as the "Editor" root, beside "Project".

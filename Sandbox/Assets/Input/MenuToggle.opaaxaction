@@ -1,0 +1,7 @@
+{
+    "Description": "Close the menu and hand input back to the game.",
+    "HoldSeconds": 0.5,
+    "Modifiers": [],
+    "Name": "MenuToggle",
+    "ValueType": "Bool"
+}

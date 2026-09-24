@@ -2,7 +2,7 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
-#include "RHI/RenderAPI.h"
+#include "RHI/RHIBackend.h"
 
 namespace Opaax
 {
@@ -19,8 +19,7 @@ namespace Opaax
      * touches platform graphics bootstrap (glad for OpenGL; a swapchain for Vulkan).
      *
      * The concrete impl is selected by IGraphicsContext::Create, defined in the
-     * active backend's TU (OpenGLContext.cpp today) — mirrors the RenderAPI::Create
-     * and IShader::Create factory pattern.
+     * neutral backend TU (RHI/BackendFactory.cpp) — OpenGL-only today.
      */
     class OPAAX_API IGraphicsContext
     {
@@ -40,7 +39,7 @@ namespace Opaax
          * @param InNativeWindow opaque native window handle (GLFWwindow* today)
          * @return owning context, or nullptr on unknown backend (logged)
          */
-        static UniquePtr<IGraphicsContext> Create(EBackend InBackend, void* InNativeWindow);
+        static TUniquePtr<IGraphicsContext> Create(EBackend InBackend, void* InNativeWindow);
 
         /**
          * Apply backend-specific GLFW window hints. MUST run before glfwCreateWindow.

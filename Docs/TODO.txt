@@ -1,0 +1,34 @@
+Resource:
+- Hot reload: file watching (`ResourceHotReload`), reverse-edge dirty propagation, in-place pump swaps | Edit a PNG, see it in-game without restart
+- Resource Pipeline: cooked/packed assets, GUID cross-references + rename redirects | Shippable Steam build reads packs, not loose files
+- Editor layer: `GetSourcePath`, `ResourceTypeInfo` registry, `Save()` in concept,
+
+Render:
+- handle/pool DOD RHI, device owning context CREATION, RenderStats overlay, multi-view, camera-view system, full RHI-only DrawSprite, Vulkan device.
+
+Misc:
+- Better config edition
+   - Avoiding checking all frame 
+   - Undo Redo
+
+- Folder clean
+	- Code location (its messy right now)
+
+Editor: 
+- Import
+	From menus
+	Drag drop from windows
+- Right Click action on assets
+	- Convert Texture to sheet
+	- Create asset type (Unreal pattern ? asset action + Factory?)
+- Animation
+	- UX Component
+		- Anim type
+			- Clip
+			- AnimAsset
+- SpriteComponent
+	- UX Component
+		- Texture Type
+			- Textuure
+			- Sheet
+

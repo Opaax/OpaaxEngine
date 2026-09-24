@@ -1,0 +1,237 @@
+﻿#pragma once
+
+#include "Core/EngineAPI.h"
+#include "Core/OpaaxTypes.h"
+#include "Core/Log/OpaaxLog.h"
+#include "ECS/OpaaxEntity.hpp"
+#include "ECS/Components/TagComponent.h"
+#include "ECS/Components/UuidComponent.h"
+#include "ECS/Components/ParentComponent.h"
+#include "ECS/Components/SceneIDComponent.h"
+
+namespace Opaax
+{
+    class Scene;
+
+    // =============================================================================
+    // Usage:
+    //   EntityID lEnt = WorldOld.CreateEntity("Player");                  // dies with the active scene
+    //   EntityID lHud = WorldOld.CreatePersistentEntity("HUD");           // survives scene transitions
+    //   WorldOld.AddComponent<TransformComponent>(lEnt, {.Position = {100, 200}});
+    //   auto* lTr = WorldOld.GetComponent<TransformComponent>(lEnt);
+    //   WorldOld.DestroyEntity(lEnt);
+    // =============================================================================
+
+    /**
+     * @class WorldOld
+     *
+     * Owner of all entities and components, and (post-M2.5) the scene stack.
+     * Models Unreal's UWorld owning ULevels.
+     *
+     * WorldOld does not tick systems — that is the responsibility of the caller
+     * (CoreEngineApp / SceneManager subsystem facade). WorldOld is pure data + scene
+     * lifecycle orchestration.
+     */
+    class OPAAX_API WorldOld
+    {
+        // =============================================================================
+        // Constants
+        // =============================================================================
+    public:
+        // Sentinel SceneID for entities not owned by any Scene (persistent).
+        static constexpr Uint32 PersistentSceneID = 0;
+
+        // =============================================================================
+        // CTORs - DTOR
+        // =============================================================================
+    public:
+        WorldOld();
+        ~WorldOld();
+
+        // =============================================================================
+        // Copy - Delete
+        // =============================================================================
+        WorldOld(const WorldOld&)            = delete;
+        WorldOld& operator=(const WorldOld&) = delete;
+
+        // =============================================================================
+        // Move
+        // =============================================================================
+        WorldOld(WorldOld&&)                 = default;
+        WorldOld& operator=(WorldOld&&)      = default;
+
+        // =============================================================================
+        // Function 
+        // =============================================================================
+
+        //------------------------------------------------------------------------------
+        //  Entity Life cycle
+    public:
+        // Auto-tags with the active SceneID. Entity dies on the next
+        // DestroyEntitiesWithSceneID(m_ActiveSceneID) call.
+        EntityID CreateEntity(const char* InTag = "Entity")
+        {
+            const EntityID lID = m_Registry.create();
+            m_Registry.emplace<ECS::TagComponent>(lID, InTag);
+            m_Registry.emplace<ECS::UuidComponent>(lID, ECS::GenerateUuid());
+            m_Registry.emplace<ECS::SceneIDComponent>(lID, m_ActiveSceneID);
+            OPAAX_CORE_TRACE("WorldOld::CreateEntity '{}' — id={} sceneId={}",
+                InTag, static_cast<Uint32>(lID), m_ActiveSceneID);
+            m_EntityCount.fetch_add(1, std::memory_order_relaxed);
+            return lID;
+        }
+
+        // Explicit opt-out of scene-bound lifetime — entity survives every
+        // scene transition until DestroyEntity is called on it. Use for player
+        // state, score, inventory, anything that must outlive a level change.
+        EntityID CreatePersistentEntity(const char* InTag = "Entity")
+        {
+            const EntityID lID = m_Registry.create();
+            m_Registry.emplace<ECS::TagComponent>(lID, InTag);
+            m_Registry.emplace<ECS::UuidComponent>(lID, ECS::GenerateUuid());
+            m_Registry.emplace<ECS::SceneIDComponent>(lID, PersistentSceneID);
+            OPAAX_CORE_TRACE("WorldOld::CreatePersistentEntity '{}' — id={}",
+                InTag, static_cast<Uint32>(lID));
+            m_EntityCount.fetch_add(1, std::memory_order_relaxed);
+            return lID;
+        }
+
+        // Cascades by default: every entity whose ParentComponent.Parent == InEntity
+        // (and recursively their descendants) is destroyed too.
+        // bDestroyChildren = false re-parents direct children to the root instead.
+        void DestroyEntity(EntityID InEntity, bool bDestroyChildren = true);
+
+        // Resolve a stable UUID back to its runtime entity. Returns ENTITY_NONE if no match.
+        EntityID FindByUuid(Uint64 InUuid) const noexcept;
+
+        bool IsValid(EntityID InEntity) const noexcept
+        {
+            return m_Registry.valid(InEntity);
+        }
+
+        void Clear() noexcept;
+
+        //------------------------------------------------------------------------------
+        //  API
+    public:
+        template<typename T, typename... Args>
+        T& AddComponent(EntityID InEntity, Args&&... InArgs)
+        {
+            OPAAX_CORE_ASSERT(IsValid(InEntity))
+            return m_Registry.emplace<T>(InEntity, std::forward<Args>(InArgs)...);
+        }
+
+        // Add the component, or overwrite it in place if the entity already carries one.
+        // Unlike AddComponent (entt asserts on a double-emplace), this is safe to call
+        // whether or not T is already present.
+        template<typename T, typename... Args>
+        T& AddOrReplaceComponent(EntityID InEntity, Args&&... InArgs)
+        {
+            OPAAX_CORE_ASSERT(IsValid(InEntity))
+            return m_Registry.emplace_or_replace<T>(InEntity, std::forward<Args>(InArgs)...);
+        }
+
+        template<typename T>
+        void RemoveComponent(EntityID InEntity)
+        {
+            OPAAX_CORE_ASSERT(IsValid(InEntity))
+            m_Registry.remove<T>(InEntity);
+        }
+
+        template<typename T>
+        T* GetComponent(EntityID InEntity) noexcept
+        {
+            return m_Registry.try_get<T>(InEntity);
+        }
+
+        template<typename T>
+        const T* GetComponent(EntityID InEntity) const noexcept
+        {
+            return m_Registry.try_get<T>(InEntity);
+        }
+
+        template<typename T>
+        bool HasComponent(EntityID InEntity) const noexcept
+        {
+            return m_Registry.all_of<T>(InEntity);
+        }
+        
+        //------------------------------------------------------------------------------
+
+        // Single component — calls InFunc(EntityID, T&)
+        template<typename T, typename TFunc>
+        void Each(TFunc&& InFunc)
+        {
+            m_Registry.view<T>().each(std::forward<TFunc>(InFunc));
+        }
+
+        // Two components — calls InFunc(EntityID, A&, B&)
+        template<typename A, typename B, typename TFunc>
+        void Each(TFunc&& InFunc)
+        {
+            m_Registry.view<A, B>().each(std::forward<TFunc>(InFunc));
+        }
+
+        // Three components — calls InFunc(EntityID, A&, B&, C&)
+        template<typename A, typename B, typename C, typename TFunc>
+        void Each(TFunc&& InFunc)
+        {
+            m_Registry.view<A, B, C>().each(std::forward<TFunc>(InFunc));
+        }
+
+        // Raw registry access — for advanced use (editor, serializer).
+        // NOTE: Prefer the typed API above for game code.
+        entt::registry& GetRegistry() noexcept { return m_Registry; }
+        const entt::registry& GetRegistry() const noexcept { return m_Registry; }
+        
+        //------------------------------------------------------------------------------
+        // Scene stack
+    public:
+        // Allocate a fresh runtime SceneID. Monotonic, skips 0 (PersistentSceneID).
+        Uint32 AllocateSceneID() noexcept;
+
+        // Take ownership of InScene, stamp it with a fresh SceneID, drive
+        // OnExit (previous top) → OnLoad → OnEnter. Returns observer pointer.
+        Scene* PushScene(UniquePtr<Scene> InScene);
+
+        // Drive OnExit + OnUnload on the top scene, drop it, then OnEnter on the
+        // new top (if any).
+        void   PopScene();
+
+        // PopScene + PushScene in one shot. Returns observer pointer to the new
+        // top scene.
+        Scene* ReplaceScene(UniquePtr<Scene> InScene);
+
+        Scene*       GetActiveScene() noexcept;
+        const Scene* GetActiveScene() const noexcept;
+
+        Uint32 GetSceneCount() const noexcept;
+
+        // Destroy every entity carrying SceneIDComponent.SceneID == InSceneID.
+        // Persistent entities (SceneID == PersistentSceneID) survive unless
+        // InSceneID == PersistentSceneID is passed explicitly.
+        void DestroyEntitiesWithSceneID(Uint32 InSceneID);
+
+        // Active SceneID — every CreateEntity stamps freshly-created entities with
+        // this value. Set by SceneManager (today) and WorldOld::PushScene (when the
+        // ownership flip lands) before invoking scene OnLoad / scene Deserialize.
+        FORCEINLINE Uint32 GetActiveSceneID() const noexcept              { return m_ActiveSceneID; }
+        FORCEINLINE void   SetActiveSceneID(Uint32 InSceneID) noexcept    { m_ActiveSceneID = InSceneID; }
+
+        //------------------------------------------------------------------------------
+        // Get - Set
+    public:
+        Uint32 GetEntityCount() const noexcept;
+
+        // =============================================================================
+        // Members
+        // =============================================================================
+    private:
+        entt::registry              m_Registry;
+        Atomic<Uint32>              m_EntityCount{ 0 };
+        TDynArray<UniquePtr<Scene>> m_Scenes;
+        Uint32                      m_NextSceneID    = 1; // 0 reserved for PersistentSceneID
+        Uint32                      m_ActiveSceneID  = PersistentSceneID;
+    };
+
+} // namespace Opaax::ECS

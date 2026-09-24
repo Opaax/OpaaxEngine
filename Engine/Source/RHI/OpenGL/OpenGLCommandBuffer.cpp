@@ -5,7 +5,6 @@
 #include "RHI/Buffer.h"
 #include "Renderer/RenderTarget.hpp"
 
-#define GLAD_APIENTRY
 #include <glad/glad.h>
 
 namespace Opaax

@@ -1,6 +1,6 @@
 #include "ShaderCompiler.h"
 
-#include "Core/Log/OpaaxLog.h"
+#include "Application/Services/ILogger.h"
 
 // OPAAX_HAS_GLSLANG is defined (0/1) by the engine build; treat absent as 0 for safety.
 #ifndef OPAAX_HAS_GLSLANG
@@ -67,7 +67,7 @@ namespace Opaax
 
         if (!lShader.parse(lResources, lGlslVersion, false, lMessages))
         {
-            OPAAX_CORE_ERROR("ShaderCompiler: GLSL parse failed for '{}':\n{}\n{}",
+            OPAAX_ENGINE_LOG(Error, "ShaderCompiler: GLSL parse failed for '{}':\n{}\n{}",
                 InDebugName, lShader.getInfoLog(), lShader.getInfoDebugLog());
             return {};
         }
@@ -76,7 +76,7 @@ namespace Opaax
         lProgram.addShader(&lShader);
         if (!lProgram.link(lMessages))
         {
-            OPAAX_CORE_ERROR("ShaderCompiler: link failed for '{}':\n{}",
+            OPAAX_ENGINE_LOG(Error, "ShaderCompiler: link failed for '{}':\n{}",
                 InDebugName, lProgram.getInfoLog());
             return {};
         }

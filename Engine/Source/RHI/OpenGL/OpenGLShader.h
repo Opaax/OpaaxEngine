@@ -1,13 +1,11 @@
 #pragma once
 
 #include "Core/EngineAPI.h"
-#include "Core/OpaaxHash.h"
-#include "Core/OpaaxString.hpp"
+#include "Core/Hash/OpaaxHash.h"
+#include "Core/String/OpaaxString.hpp"
 #include "Core/OpaaxTypes.h"
 
-#include <glm/glm.hpp>
-
-#include "Core/OpaaxMathTypes.h"
+#include "Core/Maths/MathTypes.h"
 #include "RHI/Shader.h"
 
 namespace Opaax
@@ -80,6 +78,6 @@ namespace Opaax
         // OpaaxString keys + OpaaxHash — uniform lookup is not on the per-vertex
         //   hot path, only per draw call (batch flush). Per-call temporary
         //   OpaaxString construction from const char* is acceptable.
-        UnorderedMap<OpaaxString, Int32, OpaaxHash> m_UniformLocationCache;
+        TUnorderedMap<OpaaxString, Int32, OpaaxHash> m_UniformLocationCache;
     };
 }

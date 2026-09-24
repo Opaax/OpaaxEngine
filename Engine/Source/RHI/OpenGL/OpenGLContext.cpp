@@ -1,9 +1,9 @@
 #include "OpenGLContext.h"
 
-#include "Core/Log/OpaaxLog.h"
-
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+
+#include "Application/Services/ILogger.h"
 
 namespace Opaax
 {
@@ -26,7 +26,7 @@ namespace Opaax
 
         if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress)))
         {
-            OPAAX_CORE_ERROR("OpenGLContext: glad failed to load OpenGL functions.");
+            OPAAX_LOG(LogOpenGLContext, Error, "Failed to initialize GLAD");
             return false;
         }
 
@@ -48,16 +48,16 @@ namespace Opaax
         GLint lMaxTexUnits = 0, lMaxTexSize = 0;
         glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &lMaxTexUnits);
         glGetIntegerv(GL_MAX_TEXTURE_SIZE,        &lMaxTexSize);
-
-        OPAAX_CORE_INFO("====================  Render Backend  ====================");
-        OPAAX_CORE_INFO("  API .............. OpenGL {}", lStr(GL_VERSION));
-        OPAAX_CORE_INFO("  GPU .............. {}",         lStr(GL_RENDERER));
-        OPAAX_CORE_INFO("  Vendor ........... {}",         lStr(GL_VENDOR));
-        OPAAX_CORE_INFO("  GLSL ............. {}",         lStr(GL_SHADING_LANGUAGE_VERSION));
-        OPAAX_CORE_INFO("  Texture units .... {}",         lMaxTexUnits);
-        OPAAX_CORE_INFO("  Max texture size . {}",         lMaxTexSize);
-        OPAAX_CORE_INFO("  VSync ............ on");
-        OPAAX_CORE_INFO("==========================================================");
+        
+        OPAAX_LOG(LogOpenGLContext, Info, "====================  Render Backend  ====================");
+        OPAAX_LOG(LogOpenGLContext, Info, "  API .............. OpenGL {}", lStr(GL_VERSION));
+        OPAAX_LOG(LogOpenGLContext, Info, "  GPU .............. {}",         lStr(GL_RENDERER));
+        OPAAX_LOG(LogOpenGLContext, Info, "  Vendor ........... {}",         lStr(GL_VENDOR));
+        OPAAX_LOG(LogOpenGLContext, Info, "  GLSL ............. {}",         lStr(GL_SHADING_LANGUAGE_VERSION));
+        OPAAX_LOG(LogOpenGLContext, Info, "  Texture units .... {}",         lMaxTexUnits);
+        OPAAX_LOG(LogOpenGLContext, Info, "  Max texture size . {}",         lMaxTexSize);
+        OPAAX_LOG(LogOpenGLContext, Info, "  VSync ............ on");
+        OPAAX_LOG(LogOpenGLContext, Info, "==========================================================");
     }
 
     void OpenGLContext::SwapBuffers()

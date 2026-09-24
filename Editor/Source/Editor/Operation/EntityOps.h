@@ -1,0 +1,299 @@
+#pragma once
+
+#include "Core/Maths/MathTypes.h"       // Vector2F / Matrix44F — the gizmo's delta
+#include "Core/OpaaxTypes.h"            // Uint8
+#include "Core/String/OpaaxString.hpp"
+#include "Core/String/OpaaxStringID.hpp"   // a component's authoring name — what a command carries
+#include "Editor/Undo/UndoWorld.h"      // EUndoWorld — Reparent names the document it acts on
+#include "World/Entity/EntityTypes.h"   // MapId
+
+namespace Opaax
+{
+    class  ComponentRegistry;
+    class  Entity;
+    struct MapData;   // ⑦-C P7 — a BUILT instance, PlaceInstance's subject
+    class  World;     // ⑦-C P8 — TransformEntities names the world it acts on
+}
+
+namespace Opaax::Editor
+{
+    struct EditorContext;
+
+    // =============================================================================
+    // EntityOps — the verbs that CREATE, DESTROY or FRAME entities, beside MapOps and for the same
+    //   stated reason: a verb duplicated per call site is a verb that drifts. The Hierarchy's
+    //   context menus, the Edit menu and the viewport's keys all reach these, never the World.
+    //
+    //   THIS IS THE ONE NAMED MUTATION CHOKE POINT the sequence's ⑤ asks ② and ③ to hold. Undo is
+    //   then "wrap these", not a twenty-call-site hunt — and `Editor.md` §7's promise that panels
+    //   route edits through identifiable mutation points becomes true rather than aspirational.
+    //   The Inspector is the one edit that cannot come through here (a drawer writes straight
+    //   through a TComponent&), which is exactly why World::GetRevision exists.
+    //
+    //   EVERY MUTATOR GATES ON MapOps::CanEdit. Authoring into a Play clone would be written over
+    //   by the next Stop, so it is refused with a Warn naming the verb rather than half-working.
+    // =============================================================================
+    namespace EntityOps
+    {
+        /**
+         * Create an entity owned by InOwnerMap, select it, and mark the world changed.
+         *
+         * THE MAP IS A REQUIRED ARGUMENT, which is how **WM2** is closed by construction: an entity
+         * created without one lands in the Hierarchy's `(runtime - not saved)` bucket and no Save
+         * can ever write it. That was a live bug in `SandboxPanel`, and the fix is that the caller
+         * has to say which map it is authoring into — the Hierarchy's header knows because it was
+         * clicked, the menu command uses the focused map.
+         *
+         * It carries no components: the Inspector's Add Component is how one gains any, and the
+         * viewport draws it as an icon meanwhile so it is never invisible.
+         *
+         * InName is made UNIQUE in the world ("Entity", then "Entity 1", ...). Names are a debug
+         * label and may legally repeat, but a multi-selection reading "3 selected - editing Entity"
+         * cannot say WHICH, so the default has to be distinguishable on sight.
+         *
+         * @return The new entity, or an invalid one when refused (no world, PIE running, no map).
+         */
+        Entity Create(EditorContext& InContext, MapId InOwnerMap, const OpaaxString& InName);
+
+        /**
+         * Place ONE instance of the prefab at InAbsPath into InOwnerMap, select all of it, and
+         * record one undo step (⑦-C P1b).
+         *
+         * The map is a required argument for Create's reason (**WM2**), and the prefab is named by
+         * an ABSOLUTE path because that is what a browser hands over; the marker written onto the
+         * entities stores the ASSET-relative form (**MP8**), since an absolute one would bake this
+         * machine's layout into every map that places the prefab.
+         *
+         * THE WHOLE INSTANCE IS SELECTED, not its first entity. That is what makes the gizmo move a
+         * multi-entity prefab as one thing, and it costs nothing because the gizmo already
+         * transforms a list (**UN2**). It was ⑦-C **K10**'s stand-in for parenting; with §HR a
+         * prefab authored with a root needs only that root moved, and a selection holding both a
+         * parent and its child moves the child once (TopmostOf).
+         *
+         * @return How many entities were created. 0 means refused, and the log says which reason.
+         */
+        /**
+         * @param InAtWorld WHERE to put it, or null to keep the prefab's authored positions.
+         *   Given, the whole instance is translated so its FIRST entity lands there — an anchor
+         *   rather than a centroid, because an author dropping a turret means "the turret goes
+         *   here", and the first entity is the one a prefab is built around. Applied BEFORE the
+         *   undo step is captured, so a drop is one step and not a place-then-move pair.
+         * @param InParent An entity of InOwnerMap to hang the instance's roots under (§HR — a
+         *   prefab dropped on a Hierarchy row). The authored root pose becomes the LOCAL, Unity's
+         *   rule for a prefab dragged into the hierarchy. ENTITY_NONE places at root.
+         */
+        Uint64 InstantiatePrefab(EditorContext& InContext, const OpaaxString& InAbsPath, MapId InOwnerMap,
+                                 const Vector2F* InAtWorld = nullptr, EntityID InParent = ENTITY_NONE);
+
+        /**
+         * Hang the ROOTS among InHandles under InParent with their current pose as the LOCAL — what
+         * a prefab dropped on a row gets, in the level and in the prefab document alike.
+         */
+        void ParentPlaced(World& InWorld, const TDynArray<EntityID>& InHandles, EntityID InParent);
+
+        /**
+         * Put a BUILT instance into a NAMED world, anchored at InAtWorld — the world-agnostic core
+         * of `InstantiatePrefab` (⑦-C P7), `DestroyEntities`' idiom: no `EditorContext`, so no PIE
+         * guard, no undo step, no selection. The prefab document places a NESTED prefab through it
+         * into its own world; the level's wrapper adds the map, the selection and the step.
+         *
+         * @return The created handles in the instance's order, the anchor first — what the caller
+         *   selects and captures. Empty when nothing was created.
+         */
+        TDynArray<EntityID> PlaceInstance(World& InWorld, const MapData& InInstance, const Vector2F* InAtWorld,
+                                          const ComponentRegistry& InRegistry);
+
+        /**
+         * Write the SELECTION to InAbsPath as a new prefab, then REPLACE it with an instance of
+         * that prefab (⑦-C P2).
+         *
+         * The replacement is what makes this "create a prefab" rather than "export one". Unity,
+         * Unreal and Godot all do it, and the reason is the same in each: leaving the originals
+         * unlinked produces entities that look like the prefab and silently ignore every later edit
+         * to it — a half-built feature that only announces itself much later.
+         *
+         * WHICH MAP the instance lands in is the ORIGINALS' map, not the focused one: cutting a
+         * prefab out of map A while map B happens to be focused must not move the result to B. A
+         * selection of purely runtime-spawned entities has no map and falls back to the focused one.
+         *
+         * THE FILE IS WRITTEN FIRST and is not rolled back if the swap fails — and it is not part of
+         * undo either (**K6**). A written prefab with the originals still in place is a recoverable
+         * state; a swap with no file behind it is not.
+         *
+         * @param InAbsPath Where to write. Refused when it is outside the project's and the engine's
+         *   asset trees, because no map could then reference it (**MP8**) — checked BEFORE writing.
+         * @return true when the prefab was written AND the selection replaced.
+         */
+        bool CreatePrefabFromSelection(EditorContext& InContext, const OpaaxString& InAbsPath);
+
+        /**
+         * Put the selected instance entities back to their prefab's values (⑦-C P3).
+         *
+         * NOT a delete-and-replace: the entities keep their guids and go through
+         * `MapFactory::Restore`, which is already "be this again" — it overwrites every component
+         * the prefab names and REMOVES the registered ones it does not, so a component the author
+         * added to an instance goes away and one they deleted comes back. Re-instantiating instead
+         * would mint nothing new (the guids are derived) but would destroy and recreate entities
+         * for an edit that changes only their contents.
+         *
+         * @param bInWholeInstance false reverts exactly the entities selected; true widens to every
+         *   entity of the instances they belong to — Unity's "Revert All" on the instance. Two
+         *   entries rather than a guess, since a multi-entity prefab makes them genuinely different
+         *   and the selection cannot say which was meant.
+         * @return How many entities were reverted. 0 means nothing selected carried a prefab link,
+         *   or the prefab could not be resolved — the log says which.
+         */
+        Uint64 RevertToPrefab(EditorContext& InContext, bool bInWholeInstance);
+
+
+        /**
+         * Rename one entity. Empty input is refused — a nameless row in the Hierarchy is
+         * unclickable in practice and tells an author nothing.
+         *
+         * The name is NOT uniquified here, unlike Create's: this is an explicit choice by the
+         * author, and silently altering what they typed is worse than two rows agreeing.
+         */
+        void Rename(EditorContext& InContext, Entity InEntity, const OpaaxString& InName);
+
+        /**
+         * Hang InChild's subtree under InParent (§HR) — an invalid InParent detaches it to root.
+         * The world pose is kept; the local is what changes. A drop on a MAP HEADER passes InToMap
+         * and the detached subtree moves there (a drop under a parent follows the parent's map on
+         * its own).
+         *
+         * Scoped like Delete (P8 V4): the level's Hierarchy and the prefab panel's tree record
+         * the same step, each on its own stack and against its own world.
+         *
+         * @return true when something changed and a step was recorded. A refused link (self, a
+         *   cycle, PIE running) changes nothing and records nothing.
+         */
+        bool Reparent(EditorContext& InContext, EUndoWorld InScope, EntityID InChild, EntityID InParent,
+                      MapId InToMap = {});
+
+        /** Detach every selected entity that has a parent, one step each. */
+        void DetachSelected(EditorContext& InContext, EUndoWorld InScope);
+
+        /**
+         * Destroy everything selected AND its descendants (§HR — a child cannot outlive its
+         * parent, and the step must capture what the cascade would take), and clear the
+         * selection. Refused while PIE runs.
+         */
+        void DestroySelected(EditorContext& InContext);
+
+        /**
+         * Destroy NAMED entities of a NAMED world — the world-agnostic core of `DestroySelected`
+         * (⑦-C P8 V4), `TransformEntities`' idiom: no `EditorContext`, so no PIE guard, no undo
+         * step, no selection. The surface calling it captures the step BEFORE, clears its own
+         * selection, and records on its own stack.
+         * @return How many were destroyed.
+         */
+        Uint64 DestroyEntities(World& InWorld, const TDynArray<EntityID>& InEntities);
+
+        /**
+         * Put one registered component on InEntity, by its AUTHORING name.
+         *
+         * By name rather than by `IComponentEntry*` because that is what a command can carry: an
+         * interned id is plain data, a pointer into the registry is not (**the PanelIdParams rule**).
+         *
+         * These two were the last mutations reaching entt directly from a panel — the Inspector's
+         * two popups did their own Add/Remove plus their own MarkChanged and log. Here, they route
+         * like every other verb, which is what makes the choke point's claim true rather than
+         * nearly true.
+         *
+         * @return false when the type is unknown, already present, or the edit was refused.
+         */
+        bool AddComponent(EditorContext& InContext, Entity InEntity, OpaaxStringID InTypeName);
+
+        /**
+         * Take one component off InEntity. An ESSENTIAL type is refused by the registry entry
+         * itself (**I17**), not by this call remembering to check.
+         *
+         * @return false when the type is unknown, absent, essential, or the edit was refused.
+         */
+        bool RemoveComponent(EditorContext& InContext, Entity InEntity, OpaaxStringID InTypeName);
+
+        /**
+         * WHERE a delta's rotation and scale act on a multi-selection.
+         *
+         * Shared — the delta is a world-space map, so entities ORBIT whatever point it was built
+         * about and the selection keeps its formation. Individual — each entity turns about itself
+         * and none of them move. Only the second needs saying, because the first falls out of
+         * applying one matrix to everything.
+         */
+        enum class ETransformOrigin : Uint8
+        {
+            Shared,
+            Individual
+        };
+
+        /**
+         * ONE DRAG FRAME, described completely: what moved, in which frame, and about what.
+         *
+         * A struct rather than three arguments because these are not independent knobs — they are
+         * one answer to "what did the gizmo just do", and ⑤ records exactly this to replay a drag.
+         */
+        struct TransformDelta
+        {
+            /** World-space map from each entity's old placement to its new one. */
+            Matrix44F Matrix = Matrix44F(1.f);
+
+            /**
+             * The frame Matrix's LINEAR part is expressed in — the pose the gizmo was seated with,
+             * radians. A scale arrives as `R·S·R⁻¹`; without R there is no way to recover S, and
+             * guessing the entity's own rotation instead is what made a multi-selection drift.
+             */
+            float FrameRad = 0.f;
+
+            ETransformOrigin Origin = ETransformOrigin::Shared;
+        };
+
+        /**
+         * Apply a world-space transform delta to everything selected — the gizmo's drag (③).
+         *
+         * ONE VERB FOR ALL THREE MODES, and a matrix rather than three scalars, because that is what
+         * the gizmo actually produces: InDelta maps each entity's old placement to its new one, so
+         * translation, rotation ABOUT THE PIVOT and scaling about the pivot all arrive as the same
+         * value. A multi-selection therefore keeps its layout with no special case, and a single
+         * entity — whose pivot is its own origin — falls out of the identical code path.
+         *
+         * INCREMENTAL rather than absolute: it is the form ⑤ coalesces, since a drag is many of
+         * these and deltas compose by multiplication.
+         *
+         * Rotation and scale are read off the delta's own basis vectors (angle and length), which is
+         * why this stays free of ImGuizmo — the choke point speaks the engine's vocabulary, not a
+         * vendor's.
+         *
+         * Everything the mutation needs travels in InDelta, so the call is REPLAYABLE — ⑤ must be
+         * able to re-apply a recorded drag without the toolbar's current state changing what it
+         * means.
+         */
+        void TransformSelected(EditorContext& InContext, const TransformDelta& InDelta);
+
+        /**
+         * Apply a gizmo delta to NAMED entities of a NAMED world — the world-agnostic core of
+         * `TransformSelected` (⑦-C P8).
+         *
+         * Split out so the PREFAB viewport drives the same verb with its own world and its own
+         * selection instead of a second copy of the gizmo maths, which is the drift **MP7** names.
+         * Everything subtle lives here: the delta is conjugated into the GIZMO's frame once for the
+         * whole set (doing it per entity was the bug that made a multi-selection scale drift), and
+         * positions run through the matrix so a rotate orbits the shared pivot.
+         *
+         * It takes no `EditorContext` and therefore enforces NO policy — no PIE guard, no undo, no
+         * selection. Those belong to the surface calling it, which is why `TransformSelected` still
+         * exists as the level's wrapper.
+         *
+         * @return true when anything actually moved; the caller decides what to record.
+         */
+        bool TransformEntities(World& InWorld, const TDynArray<EntityID>& InEntities,
+                               const TransformDelta& InDelta);
+
+        /**
+         * Frame the selection with the editor camera.
+         *
+         * Refused outside Edit, and that is not caution: a Play world is framed by its own
+         * CameraComponent, so moving the editor camera there would do nothing visible at all.
+         */
+        void FocusSelected(EditorContext& InContext);
+    }
+}

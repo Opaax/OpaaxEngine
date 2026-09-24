@@ -1,13 +1,13 @@
 #include "OpenGLFramebuffer.h"
 
-#include "Core/Log/OpaaxLog.h"
-
-#define GLAD_APIENTRY
 #include <glad/glad.h>
+
+#include "Application/Services/ILogger.h"
 
 namespace Opaax
 {
-    // NOTE: the IFramebuffer::Create factory dispatch lives in RHI/BackendFactory.cpp.
+    // NOTE: this impl is selected by OpenGLRHIDevice::CreateFramebuffer — the device knows its own
+    // backend, so no free factory has to dispatch on one (F2a).
 
     // =============================================================================
     // CTOR - DTOR
@@ -69,7 +69,7 @@ namespace Opaax
 
         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         {
-            OPAAX_CORE_ERROR("OpenGLFramebuffer: FBO incomplete at {}x{}!", m_Width, m_Height);
+            OPAAX_LOG(LogOpenGLFramebuffer, Error, "FBO incomplete at {}x{}!", m_Width, m_Height);
         }
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);

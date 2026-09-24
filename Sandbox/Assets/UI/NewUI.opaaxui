@@ -1,0 +1,82 @@
+{
+    "ReferenceHeight": 1080.0,
+    "Root": {
+        "Children": [
+            {
+                "Border": {
+                    "Bottom": 0.0,
+                    "Left": 0.0,
+                    "Right": 0.0,
+                    "Top": 0.0
+                },
+                "Color": {
+                    "w": 1.0,
+                    "x": 1.0,
+                    "y": 1.0,
+                    "z": 1.0
+                },
+                "Fill": "None",
+                "FillAmount": 1.0,
+                "FillBinding": "",
+                "Frame": 2,
+                "Name": "UIImage",
+                "Opacity": 1.0,
+                "Rect": {
+                    "AnchorMax": {
+                        "x": 0.0,
+                        "y": 1.0
+                    },
+                    "AnchorMin": {
+                        "x": 0.0,
+                        "y": 1.0
+                    },
+                    "AnchoredPosition": {
+                        "x": 18.0,
+                        "y": -18.0
+                    },
+                    "Pivot": {
+                        "x": 0.0,
+                        "y": 1.0
+                    },
+                    "SizeDelta": {
+                        "x": 100.0,
+                        "y": 100.0
+                    }
+                },
+                "Sheet": "/Engine/SpriteSheets/TSS_Default_UnNamed_128.opaaxsheet",
+                "Texture": "",
+                "Type": "UIImage",
+                "bHitTestable": true,
+                "bVisible": true
+            }
+        ],
+        "Name": "Root",
+        "Opacity": 1.0,
+        "Rect": {
+            "AnchorMax": {
+                "x": 1.0,
+                "y": 1.0
+            },
+            "AnchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "AnchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "Pivot": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "SizeDelta": {
+                "x": 0.0,
+                "y": 0.0
+            }
+        },
+        "Type": "UIPanel",
+        "bHitTestable": false,
+        "bVisible": true
+    },
+    "Version": 1
+}
