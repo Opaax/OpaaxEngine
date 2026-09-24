@@ -3,7 +3,7 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 #include "Engine/Subsystems/EngineSubsystem.h"
 #include "World/World.h"
 #include "World/WorldEvents.h"

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Engine/Subsystems/Resources/ResourceRef.hpp"   // the icon cache holds Refs BY VALUE
 #include "Editor/Panels/IEditorPanel.h"

@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 #include "Engine/Subsystems/EngineSubsystem.h"
 #include "Core/Events/EventBus.h"
 

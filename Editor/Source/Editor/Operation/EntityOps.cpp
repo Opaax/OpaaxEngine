@@ -17,7 +17,7 @@
 #include <glm/matrix.hpp>        // transpose — a rotation's inverse
 
 #include "Application/Services/IEngine.h"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 #include "Core/Maths/Bounds2D.h"
 #include "Engine/Registries/EngineRegistries.h"
 #include "World/Components/ComponentRegistry.h"
@@ -41,7 +41,7 @@
 #include "World/Prefab/PrefabResource.hpp"
 #include "World/Serialization/MapFactory.h"
 
-using namespace Opaax;   // OPAAX_LOG expands to an unqualified ToSpdLevel(...)
+using namespace Opaax;
 
 namespace
 {

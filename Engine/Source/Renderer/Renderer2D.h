@@ -4,7 +4,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/Maths/MathTypes.h"
 #include "Core/String/OpaaxString.hpp"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 
 #include "Core/Maths/Bounds2D.h"   // QuadMask's rect
 #include "Renderer/RenderLayer.h"

@@ -4,7 +4,7 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 #include "Engine/Subsystems/Resources/ResourceFormat.h"
 #include "Renderer/Text/FontFaceData.h"
 #include "RHI/Texture.h"

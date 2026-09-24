@@ -22,7 +22,7 @@
 #include "Editor/Viewport/ViewportOverlays.h"    // the outline and the icons, shared with the prefab panel (P8)
 
 #include "Application/Services/IEngine.h"
-#include "Application/Services/ILogger.h"   // OPAAX_LOG + LogCategory
+#include "Core/Log/Logger.h"   // OPAAX_LOG + LogCategory
 
 #include <cmath>                            // ceil/floor/log10/pow — the grid's decade step-up
 

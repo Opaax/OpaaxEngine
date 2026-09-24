@@ -10,7 +10,7 @@
 #include <chrono>
 
 #include "Application/OpaaxApplication.h"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 #include "Application/Services/IJobSystem.h"
 #include "Application/Services/IPaths.h"        // the startup level's path is asset-relative
 #include "Application/Services/IStatsService.h" // the borrowed FrameProfiler + OPAAX_STAT_SCOPE

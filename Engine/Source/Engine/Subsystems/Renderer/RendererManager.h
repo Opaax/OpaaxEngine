@@ -3,7 +3,7 @@
 #include "Core/EngineAPI.h"
 #include "Engine/Subsystems/Resources/ResourcePath.h"
 #include "Core/OpaaxTypes.h"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 #include "Engine/Subsystems/EngineSubsystem.h"
 #include "Engine/Subsystems/Resources/ResourceRef.hpp"   // the texture cache holds Refs BY VALUE
 #include "RHI/ICommandBuffer.h"    // ELoadOp — a canvas pass says whether it keeps what is there

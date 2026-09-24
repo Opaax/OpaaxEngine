@@ -4,7 +4,7 @@
 
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IEngine.h"          // RequestOpenLevel
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 #include "Engine/Input/InputMappingSubsystem.h"
 #include "Engine/Input/InputTypes.h"
 #include "Engine/Subsystems/Input/InputCodes.h"

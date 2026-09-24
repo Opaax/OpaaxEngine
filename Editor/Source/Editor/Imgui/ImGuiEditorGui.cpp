@@ -7,7 +7,7 @@
 
 #include "ImguiHelper.h"
 #include "Application/Services/IConfigSystem.h"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 #include "Configs/Config_EditorImgui.h"
 #include "Core/EngineAPI.h"   // OPAAX_ASSERT
 #include "Window/Window.h"
@@ -17,7 +17,7 @@
 #include "Editor/Panels/IEditorPanel.h"   // PanelWindowStyle — the window chrome's one parameter
 #include "Editor/UI/OpenGLEditorUIBackend.h"
 
-using namespace Opaax; // OPAAX_LOG expands to an unqualified ToSpdLevel(...)
+using namespace Opaax;
 
 namespace
 {

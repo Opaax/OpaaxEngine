@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 #include "Core/Profiling/FrameProfiler.h"   // OPAAX_STAT_SCOPE — the game side of ④
 #include "World/Components/DummyComponent.h"
 #include "World/Components/TransformComponent.h"

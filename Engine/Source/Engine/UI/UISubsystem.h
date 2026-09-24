@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Core/EngineAPI.h"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 #include "Engine/GameInstance/IGameInstanceSubsystem.h"
 #include "Engine/UI/UIInputMode.h"
 #include "UI/UICanvas.h"

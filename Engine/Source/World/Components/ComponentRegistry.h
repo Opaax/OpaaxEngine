@@ -5,7 +5,7 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxStringID.hpp"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 
 #include "Core/Reflection/OpaaxProperty.h"                  // ⑦-C P5 — CReflected + the property walk
 #include "Engine/Subsystems/Resources/ResourcePath.h"       // ⑦-C P5 — k_IsHardResourcePath

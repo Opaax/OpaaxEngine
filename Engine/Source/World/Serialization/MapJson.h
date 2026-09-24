@@ -3,7 +3,7 @@
 #include <nlohmann/json.hpp>
 
 #include "Core/EngineAPI.h"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 
 #include "World/Serialization/EntityJson.h"
 #include "World/Serialization/MapData.h"

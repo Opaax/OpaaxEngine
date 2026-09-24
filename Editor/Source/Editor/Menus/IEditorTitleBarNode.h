@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Application/Services/ILogger.h"   // OPAAX_LOG_CATEGORY — shared by every node's .cpp
+#include "Core/Log/Logger.h"   // OPAAX_LOG_CATEGORY — shared by every node's .cpp
 #include "Core/OpaaxTypes.h"                // TFunction, Move
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"    // interned identity — dedupe is an integer compare

@@ -9,9 +9,8 @@
 #include "Systems/PauseMenuSubsystem.h"
 #include "Systems/PlayerControlSubsystem.h"
 #include "Systems/QuadOscillatorSubsystem.h"
-#include "Application/Services/ILogger.h"  // OPAAX_LOG + LogCategory
+#include "Core/Log/Logger.h"  // OPAAX_LOG + LogCategory
 
-// OPAAX_LOG expands to an unqualified ToSpdLevel(...) — bring Opaax into scope, as engine TUs do.
 using namespace Opaax;
 
 namespace

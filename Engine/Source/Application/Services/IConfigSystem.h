@@ -3,7 +3,7 @@
 #include <type_traits>
 
 #include "IAppService.h"
-#include "ILogger.h"
+#include "Core/Log/Logger.h"
 
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"

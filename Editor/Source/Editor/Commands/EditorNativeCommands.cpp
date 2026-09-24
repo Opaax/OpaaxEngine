@@ -41,7 +41,7 @@
 #include "Editor/Prefab/EditorPrefabDocument.h"
 
 #include "Application/Services/IEngine.h"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 #include "Application/Services/IPaths.h"
 #include "Platform/IFileSystem.h"
 #include "Window/Window.h"
@@ -57,7 +57,7 @@
 
 #include "Editor/UI/IEditorDialogs.h"
 
-using namespace Opaax;   // OPAAX_LOG expands to an unqualified ToSpdLevel(...)
+using namespace Opaax;
 
 namespace
 {

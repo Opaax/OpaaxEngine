@@ -4,7 +4,7 @@
 #include "Editor/Menus/EditorTitleBarSeparatorNode.h"
 #include "Editor/UI/IEditorGui.h"
 
-using namespace Opaax; // OPAAX_LOG expands to an unqualified ToSpdLevel(...)
+using namespace Opaax;
 
 namespace Opaax::Editor
 {

@@ -3,7 +3,7 @@
 #include <nlohmann/json.hpp>
 
 #include "Core/EngineAPI.h"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 
 #include "World/Prefab/PrefabData.h"
 #include "World/Serialization/EntityJson.h"

@@ -3,7 +3,7 @@
 
 #include <typeindex>
 
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Tag/OpaaxTag.h"
 #include "Editor/EditorContext.h"

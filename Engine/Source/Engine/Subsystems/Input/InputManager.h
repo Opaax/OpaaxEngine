@@ -5,7 +5,7 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Maths/MathTypes.h"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 #include "Engine/Subsystems/EngineSubsystem.h"
 #include "Engine/Subsystems/Input/InputCodes.h"
 

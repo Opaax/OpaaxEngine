@@ -1,6 +1,6 @@
 #include "World/Entity/EntityHierarchy.h"
 
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 
 namespace Opaax
 {

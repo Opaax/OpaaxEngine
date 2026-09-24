@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 #include "Core/EngineAPI.h"
 #include "Core/Maths/MathTypes.h"   // Vector2F — the motion probe
 #include "Core/OpaaxTypes.h"

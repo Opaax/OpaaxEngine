@@ -3,7 +3,7 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Maths/MathTypes.h"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 #include "RHI/ICommandBuffer.h"   // ELoadOp
 
 namespace Opaax

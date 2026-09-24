@@ -1,5 +1,5 @@
 #include "OpenGLVertexArray.h"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 
 #include <glad/glad.h>
 

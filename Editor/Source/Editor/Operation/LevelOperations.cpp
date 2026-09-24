@@ -6,7 +6,7 @@
 #include "Editor/Operation/MapOperations.h"
 
 #include "Application/Services/IEngine.h"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 #include "Application/Services/IPaths.h"
 #include "Engine/Registries/EngineRegistries.h"
 #include "World/Level.h"
@@ -16,7 +16,7 @@
 
 #include "Editor/UI/IEditorDialogs.h"
 
-using namespace Opaax;   // OPAAX_LOG expands to an unqualified ToSpdLevel(...)
+using namespace Opaax;
 
 namespace
 {

@@ -9,11 +9,11 @@
 #include "Application/Services/IConfigSystem.h"
 
 #include "Application/Services/IEngine.h"   // Engine().Loop() — full type, not just the fwd decl
-#include "Application/Services/ILogger.h"   // OPAAX_LOG + LogCategory
+#include "Core/Log/Logger.h"   // OPAAX_LOG + LogCategory
 
 #include <string>
 
-using namespace Opaax;   // OPAAX_LOG expands to an unqualified ToSpdLevel(...)
+using namespace Opaax;
 
 namespace
 {

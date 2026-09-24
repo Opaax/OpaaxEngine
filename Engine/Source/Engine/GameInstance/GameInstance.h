@@ -2,7 +2,7 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 #include "Engine/GameInstance/GameInstanceContext.h"
 #include "Engine/GameInstance/IGameInstanceSubsystem.h"
 

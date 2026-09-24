@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 #include "Core/Maths/Bounds2D.h"
 #include "Core/Maths/MathTypes.h"
 

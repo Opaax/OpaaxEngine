@@ -3,7 +3,7 @@
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IConfigSystem.h"
 #include "Application/Services/IEngine.h"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 #include "Application/Services/IProjectManager.h"
 #include "Application/Services/IStatsService.h"
 #include "Platform/IFileSystem.h"
@@ -89,7 +89,7 @@
 #include "World/Components/SpriteComponent.h"
 #include "World/Components/TransformComponent.h"
 
-using namespace Opaax; // OPAAX_LOG expands to an unqualified ToSpdLevel(...)
+using namespace Opaax;
 
 namespace
 {

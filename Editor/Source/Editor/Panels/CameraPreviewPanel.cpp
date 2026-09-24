@@ -7,7 +7,7 @@
 #include "Editor/UI/IEditorUIBackend.h"
 
 #include "Application/Services/IEngine.h"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 
 #include "Renderer/CameraView.h"
 #include "Renderer/RenderTarget.hpp"        // OffscreenRenderTarget

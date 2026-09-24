@@ -6,7 +6,7 @@
 #include <type_traits>
 
 #include "Core/EngineAPI.h"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 
 #include "World/Serialization/MapData.h"
 
