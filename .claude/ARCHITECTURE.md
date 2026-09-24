@@ -42,6 +42,15 @@ design optimizes (see **L2**); a proposal that adds a static is wrong by default
 - **SG5 — Safe outside `Init`…`Shutdown`.** Before `Init` and after `Shutdown` it degrades, never crashes.
   The instance is deliberately **leaked** (the `OpaaxStringID` pool rule, **I2**), so a log line from a
   static destructor still lands somewhere legal.
+- **The CrashHandler's shape.** A crash writes, *most robust first*: the minidump
+  (`Save/Crashes/Opaax_<stamp>.dmp`, before anything allocates), the symbolized stack into the log,
+  a copy of the log beside the dump (the next launch truncates the original), then the dialog —
+  the user's call, so a shipped crash is never silent. Every failure funnels into ONE path: the
+  non-SEH hooks (`terminate`, `SIGABRT`, pure call, invalid parameter) raise an exception so the OS
+  filter sees a real context. Symbols load at `Install`, never at crash time; Release links with
+  `/DEBUG` + `/OPT:REF,ICF` so a shipped dump is readable. **A test runner never installs it** —
+  the hooks are process-wide and a dialog would block CI; tests call `WriteReport` on their own
+  instance, and `--crash-test` (dev builds only, **I12**) proves the real path end to end.
 *The old static `RenderCommand`/`IRenderAPI` facade was **retired to `Legacy/RHI`** (2026-07-22, [[L14]]) —
 the render path is now instance-owned via `IRHIDevice` (`RenderSystem::m_Device`), zero facade statics; do not resurrect it.*
 

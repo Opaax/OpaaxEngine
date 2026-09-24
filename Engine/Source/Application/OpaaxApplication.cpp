@@ -1,5 +1,8 @@
 #include "OpaaxApplication.h"
 
+#include <cstring>
+
+#include "Platform/CrashHandler.h"
 #include "Platform/IPlatform.h"
 #include "Application/Services/IPaths.h"
 #include "Core/Log/Logger.h"
@@ -31,6 +34,18 @@
 #endif
 
 using namespace Opaax;
+
+namespace
+{
+    bool HasCommandLineFlag(const int InArgc, char** InArgv, const char* InFlag)
+    {
+        for (int i = 1; i < InArgc; ++i)
+        {
+            if (InArgv[i] != nullptr && std::strcmp(InArgv[i], InFlag) == 0) { return true; }
+        }
+        return false;
+    }
+}
 
 AppServiceLocator OpaaxApplication::m_Services = AppServiceLocator();
 
@@ -67,8 +82,12 @@ void OpaaxApplication::Bootstrap()
     
     //Log
     // The singleton existed all along (I1, SG); this gives it sinks and replays what it held.
-    Logger::Get().Init(lPath.SaveDir() + "/Log/OpaaxEngine.log");
+    const OpaaxString lLogFile = lPath.SaveDir() + "/Log/OpaaxEngine.log";
+    Logger::Get().Init(lLogFile);
     OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Logger just initialized");
+
+    //Crash reporting — as early as it can know where to write (I1, SG).
+    CrashHandler::Get().Install({ lPath.SaveDir() + "/Crashes", lLogFile, true });
     OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Platform: {}", lPlatform.GetPlatformName().CStr());
     lPath.LogPaths();
     
@@ -218,6 +237,14 @@ void OpaaxApplication::OnInitializeApplication()
 void OpaaxApplication::RunApplication()
 {
     EngineStartup();
+
+#if defined(OPAAX_WORKSPACE_DIR)
+    // Dev builds only (I12): proves the whole crash path — dump, stack, log copy, dialog.
+    if (HasCommandLineFlag(m_Argc, m_Argv, "--crash-test"))
+    {
+        CrashHandler::TriggerTestCrash();
+    }
+#endif
     
     while (bIsRunning)
     {
@@ -313,6 +340,7 @@ void OpaaxApplication::ShutdownApplication()
     m_Services.ShutdownAll();
 
     Profiler::Get().Shutdown();
+    CrashHandler::Get().Uninstall();
 
     // Last: every service above may still log on its way down.
     Logger::Get().Shutdown();

@@ -39,6 +39,7 @@ set(OPAAX_TEST_SOURCES
     Core/Application/AppServiceLocatorTests.cpp
     Core/Application/PathsTests.cpp
     Core/Application/FileSystemTests.cpp
+    Core/Application/CrashHandlerTests.cpp
     Core/Application/Utf8PathTests.cpp
     Core/Log/LoggerTests.cpp
     Core/Application/IProjectManagerTests.cpp
