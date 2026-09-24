@@ -45,7 +45,7 @@ namespace Opaax::Editor
         bool SmallButton(const char* InLabel) override;
 
         bool Checkbox(const char* InLabel, bool& InValue) override;
-        bool DragFloat(const char* InLabel, float* InValues, Uint32 InCount, float InMin, float InMax) override;
+        bool DragFloat(const char* InLabel, float* InValues, Uint32 InCount, float InStep, float InMin, float InMax) override;
         bool DragInt16(const char* InLabel, Int16& InValue, Int16 InMin, Int16 InMax) override;
         bool DragInt32(const char* InLabel, Int32& InValue, Int32 InMin, Int32 InMax) override;
         bool DragUint32(const char* InLabel, Uint32& InValue, Uint32 InMin, Uint32 InMax) override;

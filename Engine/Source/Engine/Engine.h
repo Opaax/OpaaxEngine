@@ -81,6 +81,9 @@ namespace Opaax
          * creates, in order, when StartGame runs.
          */
         void RegisterNativeGameInstanceSubsystems();
+
+        /** UI U4 — the widget types a `.opaaxui` may name (**UI12**). */
+        void RegisterNativeUIWidgets();
         
         /** Cache convenient subsystems */
         void CacheSubsystems();
@@ -108,6 +111,9 @@ namespace Opaax
          *   does not resolve (a warning). Either way the caller boots the NullLevel world.
          */
         ResourceRef<LevelResource> ResolveLevel(const OpaaxString& InAssetRelPath) const;
+
+        /** Spend a RequestOpenLevel at the top of the frame — WS8's flag-then-resolve, one tier up. */
+        void ResolvePendingLevel();
         // End Startup
         // =============================================================================
 
@@ -140,6 +146,7 @@ namespace Opaax
         bool    EndGame() override;
         World*  FinishStartup(const WorldSpec& InSpec) override;
         World*  OpenLevel(const WorldSpec& InSpec) override;
+        void    RequestOpenLevel(const WorldSpec& InSpec) override;
         void    Loop() override;
         void    TearDown() override;
         void    Shutdown() override;
@@ -152,7 +159,10 @@ namespace Opaax
         //Render
         void                        PresentBackbuffer() override;
         void                        SubmitRenderView(IRenderTarget& InTarget, const CameraView& InView,
-                                                     bool bInDrawOverlays, World* InSource = nullptr) override;
+                                                     bool bInDrawOverlays, World* InSource = nullptr,
+                                                     bool bInDrawUI = false) override;
+        void                        SubmitUICanvas(UICanvas& InCanvas, IRenderTarget* InTarget = nullptr,
+                                                   const CameraView* InView = nullptr) override;
         TUniquePtr<IFramebuffer>    CreateFramebuffer(const FramebufferSpec& InSpec) override;
         TUniquePtr<ITexture2D>      CreateTexture(const void* InPixels, Uint32 InWidth,
                                                   Uint32 InHeight, Int32 InChannels) override;
@@ -199,5 +209,9 @@ namespace Opaax
 
         //Internal
         bool m_bStarted = false;
+
+        /** The level a RequestOpenLevel asked for, spent at the next frame's start (UI21). */
+        WorldSpec m_PendingLevel;
+        bool      m_bLevelPending = false;
     };
 }

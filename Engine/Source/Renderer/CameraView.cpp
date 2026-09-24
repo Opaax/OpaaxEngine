@@ -54,6 +54,22 @@ namespace Opaax
                                           -lCentred.y / (InViewportPx.y * 0.5f) * lHalfH);
     }
 
+    Vector2F WorldToScreen(const CameraView& InView, const Vector2F& InViewportPx, const Vector2F& InWorld)
+    {
+        if (InViewportPx.x <= 0.f || InViewportPx.y <= 0.f)
+        {
+            return InViewportPx * 0.5f;
+        }
+
+        const float lHalfH = InView.OrthoSize;
+        const float lHalfW = lHalfH * (InViewportPx.x / InViewportPx.y);
+
+        const Vector2F lCentred = InWorld - InView.Position;
+
+        return InViewportPx * 0.5f + Vector2F(lCentred.x / lHalfW * (InViewportPx.x * 0.5f),
+                                              -lCentred.y / lHalfH * (InViewportPx.y * 0.5f));
+    }
+
     float WorldPerPixel(const CameraView& InView, const float InViewportHeightPx)
     {
         return InViewportHeightPx > 0.f ? (InView.OrthoSize * 2.f) / InViewportHeightPx : 1.f;

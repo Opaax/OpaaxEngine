@@ -23,6 +23,7 @@
 #include "Renderer/RenderView.h"
 #include "Renderer/RenderTarget.hpp"
 #include "Renderer/Renderer2D.h"
+#include "UI/UICanvas.h"
 
 #include "Renderer/ShaderSource.h"
 #include "Core/IO/FileIO.h"       // the host owns the read (see the shader load below)
@@ -200,6 +201,7 @@ namespace Opaax
 
         m_DebugDraw.Clear();
         m_SubmittedViews.clear();
+        m_SubmittedCanvases.clear();
     }
 
     DisplayPose RendererManager::PoseFor(World& InWorld, const EntityID InEntity,
@@ -261,6 +263,12 @@ namespace Opaax
         m_Profiler->AddCount("Draw Calls",    lStats.DrawCalls);
         m_Profiler->AddCount("Quads",         lStats.Quads);
         m_Profiler->AddCount("Texture Slots", lStats.PeakTextureSlots);
+
+        // The UI's own cost, and the number the block was named for: 0 / 0 on an idle frame.
+        m_Profiler->AddCount("UI Layouts",  m_UILayouts);
+        m_Profiler->AddCount("UI Rebuilds", m_UIRebuilds);
+        m_UILayouts  = 0;
+        m_UIRebuilds = 0;
     }
 
     // =========================================================================
@@ -285,7 +293,7 @@ namespace Opaax
             // frame the engine drew before cameras existed (CAM1).
             SubmitRenderView(m_RenderSystem->GetBackbuffer(),
                              lWorld != nullptr ? lWorld->GetCameraView() : CameraView{},
-                             /*bInDrawOverlays*/ true);
+                             /*bInDrawOverlays*/ true, /*InSource*/ nullptr, /*bInDrawUI*/ true);
         }
 
         // Counted BEFORE the device frame opens, so a frame with nothing drawable opens none — the
@@ -295,6 +303,16 @@ namespace Opaax
         for (const RenderPassRequest& lRequest : m_SubmittedViews)
         {
             if (lRequest.Target != nullptr && lRequest.Target->GetWidth() > 0 && lRequest.Target->GetHeight() > 0)
+            {
+                ++lPasses;
+            }
+        }
+
+        // A targeted canvas is drawable on its own — a UI panel open with no viewport still renders.
+        for (const UICanvasRequest& lCanvasRequest : m_SubmittedCanvases)
+        {
+            if (lCanvasRequest.Target != nullptr && lCanvasRequest.Target->GetWidth() > 0
+                && lCanvasRequest.Target->GetHeight() > 0)
             {
                 ++lPasses;
             }
@@ -317,6 +335,22 @@ namespace Opaax
             // submission that existed before P6, so this line changes none of them.
             RenderPass(*lRequest.Target, lRequest.Source != nullptr ? lRequest.Source : lWorld,
                        lRequest.View, lRequest.bDrawOverlays);
+
+            if (lRequest.bDrawUI && !m_SubmittedCanvases.empty())
+            {
+                RenderCanvases(*lRequest.Target);
+            }
+        }
+
+        // A canvas that named its own target is a pass of its OWN, with no world under it — the
+        // editor previewing one document (**UI14**). Cleared, because nothing else drew there.
+        for (const UICanvasRequest& lCanvasRequest : m_SubmittedCanvases)
+        {
+            if (lCanvasRequest.Target != nullptr)
+            {
+                RenderCanvasPass(*lCanvasRequest.Canvas, *lCanvasRequest.Target, ELoadOp::Clear,
+                                 lCanvasRequest.bHasView ? &lCanvasRequest.View : nullptr);
+            }
         }
 
         m_RenderSystem->EndFrame();
@@ -393,6 +427,63 @@ namespace Opaax
             }
         }
 
+        m_RenderSystem->EndPass();
+    }
+
+    void RendererManager::RenderCanvases(IRenderTarget& InTarget)
+    {
+        const Uint32 lWidth  = InTarget.GetWidth();
+        const Uint32 lHeight = InTarget.GetHeight();
+
+        for (const UICanvasRequest& lRequest : m_SubmittedCanvases)
+        {
+            // A canvas that named a target is that target's alone — it does not pour into the
+            // world's views, and the world's canvases do not pour into it (**UI14**).
+            if (lRequest.Target != nullptr) { continue; }
+
+            // Load, not Clear: the world is already in this target and the canvas goes over it.
+            RenderCanvasPass(*lRequest.Canvas, InTarget, ELoadOp::Load);
+        }
+
+        if (!m_bLoggedFirstUI)
+        {
+            m_bLoggedFirstUI = true;
+            OPAAX_LOG(LogRendererManager, Info, "First UI frame: {} canvas(es) over a {}x{} target, {} layout(s)",
+                      static_cast<Uint64>(m_SubmittedCanvases.size()), lWidth, lHeight, m_UILayouts);
+        }
+    }
+
+    void RendererManager::RenderCanvasPass(UICanvas& InCanvas, IRenderTarget& InTarget, const ELoadOp InLoadOp,
+                                           const CameraView* InView)
+    {
+        const Uint32 lWidth  = InTarget.GetWidth();
+        const Uint32 lHeight = InTarget.GetHeight();
+
+        if (lWidth == 0 || lHeight == 0) { return; }
+
+        // A canvas whose root is hidden draws nothing, so it opens no pass — what lets a cover be
+        // SUBMITTED every frame and only cost anything on the frames it is up (UI21).
+        if (!InCanvas.Root().bVisible) { return; }
+
+        // The TARGET says how wide the canvas is (UI2), so the layout happens here rather than in
+        // whoever submitted it — Unity's willRenderCanvases. Unless the submitter brought a VIEW:
+        // then it laid the canvas out against its own target and this pass only looks at it.
+        if (InView == nullptr)
+        {
+            InCanvas.SetTargetSize(lWidth, lHeight);
+        }
+
+        const UIBuildContext lContext{ this };
+        const UICanvasStats  lStats = InCanvas.Update(lContext);
+        m_UILayouts  += lStats.Layouts;
+        m_UIRebuilds += lStats.Rebuilds;
+
+        RenderView lView;
+        lView.ViewProjection = MakeViewProjection(InView != nullptr ? *InView : InCanvas.MakeView(), lWidth, lHeight);
+        lView.Viewport       = Viewport{ 0, 0, lWidth, lHeight };
+
+        m_RenderSystem->BeginPass(InTarget, lView, InLoadOp);
+        InCanvas.Submit(m_RenderSystem->GetRenderer2D());
         m_RenderSystem->EndPass();
     }
 
@@ -644,6 +735,60 @@ namespace Opaax
         return FontFaceView{ &lResource->Face, lResource->GetAtlas() };
     }
 
+    FontFaceView RendererManager::ResolveFace(const char* InAssetPath)
+    {
+        TResourcePath<FontFaceResource> lPath;
+        lPath.Path = OpaaxString(InAssetPath);
+        return ResolveFace(lPath);
+    }
+
+    ITexture2D* RendererManager::ResolveTexture(const char* InAssetPath)
+    {
+        TResourcePath<TextureResource> lPath;
+        lPath.Path = OpaaxString(InAssetPath);
+        return ResolveTexture(lPath);
+    }
+
+    UISheetFrameView RendererManager::ResolveSheetFrame(const char* InSheetPath, const Int32 InFrame)
+    {
+        TResourcePath<SpriteSheetResource> lPath;
+        lPath.Path = OpaaxString(InSheetPath);
+
+        UISheetFrameView lView;
+
+        const SpriteSheetData* lSheet = ResolveSheet(lPath);
+        if (lSheet == nullptr)
+        {
+            return lView;
+        }
+
+        lView.Texture = ResolveTexture(lSheet->Texture);
+        if (lView.Texture == nullptr)
+        {
+            return lView;   // still uploading — the widget re-arms
+        }
+
+        lView.SizePx = { static_cast<float>(lView.Texture->GetWidth()), static_cast<float>(lView.Texture->GetHeight()) };
+
+        // ResolveSpriteDraw's rule: a frame the sheet does not have is the whole texture, warned once.
+        const SpriteFrame* lFrame = lSheet->FrameAt(InFrame);
+        if (lFrame == nullptr)
+        {
+            if (InFrame >= 0 && lSheet->FrameCount() > 0 && m_WarnedFrameRange.emplace(OpaaxStringID(lPath.Path).GetId()).second)
+            {
+                OPAAX_LOG(LogRendererManager, Warn, "Sheet '{}' has no frame {} ({} frame(s)) — drawing the whole texture",
+                          InSheetPath, InFrame, lSheet->FrameCount());
+            }
+            return lView;
+        }
+
+        const SpriteUVRect lUV = MakeFrameUV(*lFrame, lView.Texture->GetWidth(), lView.Texture->GetHeight());
+        lView.UVMin  = lUV.UVMin;
+        lView.UVMax  = lUV.UVMax;
+        lView.SizePx = lFrame->Size;
+        return lView;
+    }
+
     const FontFamilyData* RendererManager::ResolveFamily(const TResourcePath<FontFamilyResource>& InPath)
     {
         if (InPath.IsEmpty())
@@ -725,9 +870,20 @@ namespace Opaax
     }
 
     void RendererManager::SubmitRenderView(IRenderTarget& InTarget, const CameraView& InView, bool bInDrawOverlays,
-                                           World* InSource)
+                                           World* InSource, bool bInDrawUI)
     {
-        m_SubmittedViews.emplace_back(RenderPassRequest{ &InTarget, InView, bInDrawOverlays, InSource });
+        m_SubmittedViews.emplace_back(RenderPassRequest{ &InTarget, InView, bInDrawOverlays, bInDrawUI, InSource });
+    }
+
+    void RendererManager::SubmitUICanvas(UICanvas& InCanvas, IRenderTarget* InTarget, const CameraView* InView)
+    {
+        UICanvasRequest lRequest{ &InCanvas, InTarget };
+        if (InView != nullptr)
+        {
+            lRequest.View     = *InView;
+            lRequest.bHasView = true;
+        }
+        m_SubmittedCanvases.emplace_back(lRequest);
     }
     
     TUniquePtr<IFramebuffer> RendererManager::CreateFramebuffer(const FramebufferSpec& InSpec)

@@ -36,6 +36,17 @@
 #include "Editor/Panels/MoverPanel.h"
 #include "Editor/Panels/FontFamilyPanel.h"
 #include "Editor/EditorFontFamilyDocument.h"
+#include "Editor/Panels/UICanvasPanel.h"
+#include "Editor/EditorUICanvasDocument.h"
+#include "UI/UICanvasFile.h"
+#include "UI/Widgets/UIButton.h"
+#include "UI/Widgets/UIImage.h"
+#include "UI/Widgets/UIMask.h"
+#include "UI/Widgets/UIPanel.h"
+#include "UI/Widgets/UISafeArea.h"
+#include "UI/Widgets/UIStack.h"
+#include "UI/Widgets/UIText.h"
+#include "Engine/Subsystems/Resources/Types/UI/UICanvasResource.h"
 #include "Editor/Panels/PrefabPanel.h"
 #include "Renderer/RenderTarget.hpp"   // the panels own OffscreenRenderTargets by TUniquePtr
 #include "Editor/Panels/SpriteSheetPanel.h"
@@ -152,6 +163,7 @@ namespace Opaax::Editor
         m_ClipDocument      = MakeUnique<EditorAnimationClipDocument>();
         m_LibraryDocument   = MakeUnique<EditorAnimationLibraryDocument>();
         m_FamilyDocument    = MakeUnique<EditorFontFamilyDocument>();
+        m_UICanvasDocument  = MakeUnique<EditorUICanvasDocument>();
         m_MoveModeDocument  = MakeUnique<EditorMoveModeDocument>();
         m_MoverDocument     = MakeUnique<EditorMoverDocument>();
         m_InputActionDocument = MakeUnique<EditorInputActionDocument>();
@@ -196,6 +208,7 @@ namespace Opaax::Editor
             *m_ClipDocument,
             *m_LibraryDocument,
             *m_FamilyDocument,
+            *m_UICanvasDocument,
             *m_MoveModeDocument,
             *m_MoverDocument,
             *m_InputActionDocument,
@@ -274,6 +287,9 @@ namespace Opaax::Editor
         lFile.AddSeparator();
         lFile.AddCommand("Save Map", Tags::EDITOR_COMMAND_SAVE_MAP).SetEnabled(IsEditing);
         lFile.AddCommand("Save Map As...", Tags::EDITOR_COMMAND_SAVE_MAP_AS).SetEnabled(IsEditing);
+        lFile.AddSeparator();
+        lFile.AddSeparator();
+        lFile.AddCommand("New UI...", Tags::EDITOR_COMMAND_NEW_UI);
         lFile.AddSeparator();
         lFile.AddCommand("Open Level...", Tags::EDITOR_COMMAND_OPEN_LEVEL);
         lFile.AddCommand("Save Level", Tags::EDITOR_COMMAND_SAVE_LEVEL).SetEnabled(IsEditing);
@@ -366,6 +382,7 @@ namespace Opaax::Editor
         lPanelsRegistry.Register<InputActionPanel>(PanelDesc{.Id = InputActionPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_INPUT_ACTION});
         lPanelsRegistry.Register<InputMappingContextPanel>(PanelDesc{.Id = InputMappingContextPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_INPUT_MAP});
         lPanelsRegistry.Register<FontFamilyPanel>(PanelDesc{.Id = FontFamilyPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_FAMILY});
+        lPanelsRegistry.Register<UICanvasPanel>(PanelDesc{.Id = UICanvasPanel::PanelID(), .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_UI, .DeleteCommand = Tags::EDITOR_COMMAND_DELETE_UI_WIDGET});
         lPanelsRegistry.Register<ConfigPanel>(PanelDesc         {.Id = ConfigPanel::PanelID(),          .DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<InputPanel>(PanelDesc          {.Id = InputPanel::PanelID(),           .DefaultVisibility = EPanelVisibility::Hidden });
         lPanelsRegistry.Register<StatsPanel>(PanelDesc          {.Id = StatsPanel::PanelID(),           .DefaultVisibility = EPanelVisibility::Hidden });
@@ -419,6 +436,11 @@ namespace Opaax::Editor
         lCommands.Register<SaveInputActionCommand>(Tags::EDITOR_COMMAND_SAVE_INPUT_ACTION);
         lCommands.Register<SaveInputMapCommand>(Tags::EDITOR_COMMAND_SAVE_INPUT_MAP);
         lCommands.Register<SaveFamilyCommand>(Tags::EDITOR_COMMAND_SAVE_FAMILY);
+
+        // UI U4 — a first-class document type gets its own New, the way a map and a level do.
+        lCommands.Register<NewUICommand>(Tags::EDITOR_COMMAND_NEW_UI);
+        lCommands.Register<SaveUICommand>(Tags::EDITOR_COMMAND_SAVE_UI);
+        lCommands.Register<DeleteUIWidgetCommand>(Tags::EDITOR_COMMAND_DELETE_UI_WIDGET);
         lCommands.Register<AddMapToLevelCommand>(Tags::EDITOR_COMMAND_ADD_MAP_TO_LEVEL);
 
         lCommands.Register<TransformSelectedCommand>(Tags::EDITOR_COMMAND_TRANSFORM_SELECTED);
@@ -464,6 +486,35 @@ namespace Opaax::Editor
         //
         // No drawer code exists for any of these: all four are CReflected, so the fold reads
         // OPAAX_PROPERTIES and the registration IS the whole implementation (I15).
+        // UI WIDGETS (U5 fix, **UI18**). Every registered widget type owes a drawer, or its own
+        // fields are invisible in the UI panel — the bug their eyes found on UIMask's Texture.
+        // The count check below is what makes the NEXT omission loud instead of silent.
+        UIWidgetDrawerRegistry& lWidgetDrawers = m_Extensions.UIWidgetDrawers();
+        lWidgetDrawers.Register<UIPanel>();
+        lWidgetDrawers.Register<UIImage>();
+        lWidgetDrawers.Register<UIText>();
+        lWidgetDrawers.Register<UIButton>();
+        lWidgetDrawers.Register<UIMask>();
+        lWidgetDrawers.Register<UISafeArea>();
+        lWidgetDrawers.Register<UIStack>();
+
+        // THROUGH THE LOCATOR, not m_Context: this runs at the OnModulesRegistered seam, where the
+        // EditorContext does not exist yet (the registry header's "registration STORES ONLY" rule).
+        // Reading m_Context here is a null dereference, which is exactly what it was.
+        const Uint64 lWidgetTypes =
+            OpaaxApplication::GetAppService<IEngine>().GetRegistries().UIWidgets().Count();
+        if (lWidgetDrawers.Count() != lWidgetTypes)
+        {
+            OPAAX_LOG(LogEditorService, Warn,
+                      "{} UI widget type(s) registered but {} drawer(s) — a type with no drawer shows only "
+                      "its base fields (**UI18**)", lWidgetTypes, lWidgetDrawers.Count());
+        }
+        else
+        {
+            OPAAX_LOG(LogEditorService, Info, "UI widget drawers: {} for {} registered type(s)",
+                      lWidgetDrawers.Count(), lWidgetTypes);
+        }
+
         ComponentDrawerRegistry& lDrawers = m_Extensions.Drawers();
 
         // Every entity has one (I17), so this is the drawer that always shows.
@@ -568,6 +619,20 @@ namespace Opaax::Editor
                 if (InContext.FamilyDocument.Open(InFile.AbsPath))
                 {
                     InContext.Panels.SetVisible(FontFamilyPanel::PanelID(), true);
+                }
+            });
+
+        // A canvas opens its EDITOR, for the family's and the sheet's reason: it is a document.
+        m_Extensions.ResourceTypes().Register<UICanvasResource>()
+            .SetGlyph(OpaaxString("[UI]"))
+            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
+            {
+                const UIWidgetRegistry& lRegistry =
+                    OpaaxApplication::GetAppService<IEngine>().GetRegistries().UIWidgets();
+
+                if (InContext.UICanvasDocument.Open(InFile.AbsPath, lRegistry))
+                {
+                    InContext.Panels.SetVisible(UICanvasPanel::PanelID(), true);
                 }
             });
 
@@ -1036,6 +1101,15 @@ namespace Opaax::Editor
         const bool lViewportHovered = m_InputRoute != nullptr && m_InputRoute->IsViewportHovered();
 
         bool lConsumed = false;
+
+        // The editor OWNS the game's pointer POSITION (UI11): the OS event is in window pixels, but
+        // the game's window is the viewport image, so InputRoute feeds the viewport-local position
+        // once per frame instead. A raw window-pixel move must never reach the engine.
+        if (InEvent.GetEventType() == MouseMovedEvent::GetStaticType())
+        {
+            return true;
+        }
+
         if (InEvent.IsInCategory(EEventCategory::Mouse) || InEvent.IsInCategory(EEventCategory::MouseButton))
         {
             lConsumed = m_Gui->IsPointerOverUI() && !lViewportHovered;

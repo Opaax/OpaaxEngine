@@ -64,7 +64,32 @@ namespace Opaax::Editor
     // Declared ahead of DrawProperty because the two are MUTUALLY RECURSIVE: a group is a property
     // whose value has properties of its own.
     template<CReflected TOwner>
-    void DrawProperties(IEditorWidgets& InWidgets, TOwner& InOwner);
+    void DrawProperties(IEditorWidgets& InWidgets, TOwner& InOwner, const PropertyMeta& InInherited = {});
+
+    /**
+     * InMeta with what it leaves UNSET taken from the group above it — the range and the drag step,
+     * the two facets that describe a VALUE rather than a field.
+     *
+     * A `UIMargin` is pixels on an image's Border and a fraction on a safe area's Insets, so the
+     * range cannot live on the type; stating it once on the group is what makes the four floats
+     * under it behave. A field's own range still wins.
+     */
+    inline PropertyMeta InheritMeta(const PropertyMeta& InMeta, const PropertyMeta& InInherited) noexcept
+    {
+        PropertyMeta lMeta = InMeta;
+
+        if (lMeta.RangeMin == lMeta.RangeMax)
+        {
+            lMeta.RangeMin = InInherited.RangeMin;
+            lMeta.RangeMax = InInherited.RangeMax;
+        }
+        if (lMeta.DragStep == 0.f)
+        {
+            lMeta.DragStep = InInherited.DragStep;
+        }
+
+        return lMeta;
+    }
 
     /**
      * Draw ONE value by hand, outside any property list — what a CUSTOM drawer uses to lay fields
@@ -90,9 +115,13 @@ namespace Opaax::Editor
      * no runtime lookup and no type tag.
      */
     template<typename TProperty, typename TOwner>
-    void DrawProperty(IEditorWidgets& InWidgets, const TProperty& InProperty, TOwner& InOwner)
+    void DrawProperty(IEditorWidgets& InWidgets, const TProperty& InProperty, TOwner& InOwner,
+                      const PropertyMeta& InInherited = {})
     {
         using ValueType = typename TProperty::ValueType;
+
+        // The value facets, this field's own or the group's above it; the NOTE stays the field's.
+        const PropertyMeta lMeta = InheritMeta(InProperty.Meta, InInherited);
 
         // A field that describes ITS OWN fields is a GROUP, not a widget — which is what lets a
         // config nest (Window: {Title, Width…}) with one declaration doing the file, the C++ and the
@@ -103,14 +132,13 @@ namespace Opaax::Editor
             if (InWidgets.BeginTreeNode(InProperty.Name))
             {
                 DrawPropertyNote(InWidgets, InProperty.Meta);
-                DrawProperties(InWidgets, InOwner.*(InProperty.Member));
+                DrawProperties(InWidgets, InOwner.*(InProperty.Member), lMeta);
                 InWidgets.EndTreeNode();
             }
         }
         else
         {
-            TPropertyDrawer<ValueType>::Draw(InWidgets, InProperty.Name, InOwner.*(InProperty.Member),
-                                             InProperty.Meta);
+            TPropertyDrawer<ValueType>::Draw(InWidgets, InProperty.Name, InOwner.*(InProperty.Member), lMeta);
             DrawPropertyNote(InWidgets, InProperty.Meta);
         }
     }
@@ -122,11 +150,11 @@ namespace Opaax::Editor
      * world changed centrally off its own "any item active" check, so nothing here reports an edit.
      */
     template<CReflected TOwner>
-    void DrawProperties(IEditorWidgets& InWidgets, TOwner& InOwner)
+    void DrawProperties(IEditorWidgets& InWidgets, TOwner& InOwner, const PropertyMeta& InInherited)
     {
-        std::apply([&InWidgets, &InOwner](const auto&... lProperties)
+        std::apply([&InWidgets, &InOwner, &InInherited](const auto&... lProperties)
                    {
-                       (DrawProperty(InWidgets, lProperties, InOwner), ...);
+                       (DrawProperty(InWidgets, lProperties, InOwner, InInherited), ...);
                    },
                    TOwner::GetProperties());
     }

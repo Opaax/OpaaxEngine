@@ -942,6 +942,8 @@ way" — a deliberate change, not drift.*
   **clamped to `[0, 0.5]` at BOTH ends** — below 0 is an inside-out hole that discards the whole
   quad (a too-thick border would *vanish* instead of drawing solid), above 0.5 is what a negative
   thickness produces. The first version clamped only the bottom and a test caught it.
+- **A quad now carries a MASK the same way** (U5): `MaskUV` + `MaskIndex`, `-1` for "none", so the
+  outline's bargain held a second time — see **UI16**. Vertex cost 48 → 60 bytes.
 - **`DrawBounds(Bounds2D, …)` is the entry point to reach for.** Every caller already holds one from
   `EntityQuery::TryGetBounds` and was unpacking it into a centre and a size just to hand both back.
 
@@ -1015,6 +1017,9 @@ the sampler limit the painter's algorithm held only *within* a batch and a later
   first time a pass needs more than one draw call ([[L12]]/[[L15]] — a smoke run cannot read the
   Stats panel, and "no errors" never discriminated here). The Stats panel's amber `Draw Calls` row
   survives with its meaning corrected: a split is a **cost**, not a drawing error (**ST7**).
+- **A masked quad needs TWO textures bound** (U5, **UI16**), so `PlanQuadBatches` takes a parallel
+  mask-id array and hands out a second slot — shared when the mask and the texture are one id. An
+  unmasked pass plans exactly as it did, which the pre-U5 cases gate by passing unchanged.
 - **Cost:** the record is `TDynArray`s that keep their capacity, so a steady frame allocates nothing
   and the per-quad memory is what the old fixed arrays already reserved. A pass may now name more
   textures than one batch can bind, which is exactly the question the plan answers.
@@ -2157,7 +2162,8 @@ InputTextMultiline`, so `TextComponent::Text` is authored as prose and Enter ins
 pass, and faking it by moving a world position against the camera is the thing multi-view exists to
 stop. *Amended 2026-09-04: multi-view LANDED (**MV**), so this is no longer blocked — and the user
 then deferred the overlay itself (*"We have stats panels, for now is very ok"*). What it now waits
-on is the HUD, whose design they are keeping.* Alignment, word-wrap, rotation,
+on is the HUD, whose design they are keeping. Amended 2026-09-14: the HUD is the UI block, and
+**alignment and word-wrap are BUILT** for it (**UI7**) — `UIText` is their caller.* Rotation,
 outline/shadow, SDF and per-glyph cross-subset fallback each have no caller (**X5**). **Width has no
 files**: the static Roboto export carries no width axis, so only `Normal` resolves until a
 `Roboto_Condensed` family drops in — the axis is in the key so that costs no file-format change.
@@ -2193,8 +2199,9 @@ entirely; that window is now unrepresentable rather than documented.
 - **A per-pass `ELoadOp` was planned and REFUSED at build time.** `Load` is only needed when two
   passes share ONE target; every view here owns its own, so all `Clear`. Adding the parameter would
   have been an enumerator with no caller — the trap this whole block was shaped to avoid.
-  **`ELoadOp::Load` still has zero callers**, and `ICommandBuffer.h` names the one it waits for: the
-  HUD, the first thing that draws twice into one target.
+  ~~**`ELoadOp::Load` still has zero callers**, and `ICommandBuffer.h` names the one it waits for: the
+  HUD, the first thing that draws twice into one target.~~ **Its first caller landed 2026-09-14
+  (UI U2, `RenderSystem::BeginPass` takes the op): the canvas pass over the world view — see UI5.**
 
 **MV2 — The block was defined by its CONSUMER, because the plumbing alone cannot be verified.**
 With one pass still composed, the change renders byte-identically: no smoke run, no log line and no
@@ -2266,8 +2273,9 @@ registration, so `Generic drawer: CameraComponent` **disappearing** is the proof
 over, with Camera now absent beside the three already-custom drawers while Transform and Dummy
 remain. *(**L79**'s rule turned around: predict which counts move, and know why one does not.)*
 
-**Growth points, named and not built:** the HUD (theirs to design — one more submitted view, into the
-same target, with `ELoadOp::Load` and a pixel projection) · split-screen and minimap (no caller) · a
+**Growth points, named and not built:** ~~the HUD (theirs to design — one more submitted view, into the
+same target, with `ELoadOp::Load` and a pixel projection)~~ **BUILT 2026-09-14 as §UI — not a view of
+its own but carried by the world pass, opt-in (UI5)** · split-screen and minimap (no caller) · a
 second **editing** viewport (needs **CAM1**'s slot to move off the World) · ~~the asset preview
 WORLD~~ **BUILT ⑦-C, see PF9** — `RenderPassRequest::Source`, and the prefab panel is its consumer;
 the second *editing* viewport is what it is becoming (P8) · pinning
@@ -2966,6 +2974,14 @@ the worst of the three states, and no build or test can see it. So the list is m
 | `EntityQuery::TryGetBounds` + `DrawRank` | if it RENDERS | unclickable, wrong outline, "nothing to render" icon (**TX7**) |
 | a draw pass | `RendererManager` | invisible |
 
+**A UI WIDGET TYPE (U5):**
+| Route | Where | Without it |
+|---|---|---|
+| `UIWidgets().Register<T>()` | `Engine::RegisterNativeUIWidgets` | a `.opaaxui` naming it skips that node |
+| `UIWidgetDrawers().Register<T>()` | `EditorService::RegisterNativeDrawers` | **its own fields are invisible** — the **UI18** bug |
+| its own `OPAAX_PROPERTIES`, even empty | the widget header | the base's list is INHERITED and drawn twice |
+| `UIWidgetDrawerTests` resolve + count, `UICanvasFileTests::MakeRegistry` | the two suites | the registry count assertion goes red (how U9 was reminded) |
+
 **A RESOURCE TYPE:**
 | Route | Where | Without it |
 |---|---|---|
@@ -3016,7 +3032,8 @@ world and creates another; the session is what does not change across that. The 
 in their words: *"when the game start, this will never change."* Sequencing lives in **BO4d**.
 
 **GI2 — It holds SUBSYSTEMS and a CONTEXT, and nothing else.** Everything session-scoped is a
-**tenant** — input mapping today (**IM**), save/score later — never a member of the class. That is
+**tenant** — input mapping (**IM**) and the UI canvas (**UI8**) today, save/score later — never a member
+of the class. That is
 what keeps "the game instance knows about a lot of things" from making it a bag: it knows about a
 lot of things because its tenants do. Pause and time-scale were considered for it and **deliberately
 left out** (user: *"that change from world or for specific entity/system i do not know yet"*);
@@ -3247,6 +3264,10 @@ the `AddContext` call (Unreal puts it on the call) — one source, with an overr
 available the day a caller wants one. `AddContext` is **idempotent by name**: two Play worlds
 coexist during a level swap, so the second world's control subsystem re-adds the same context
 every time, and doubling the stack would double every binding's contribution.
+- **A key CONSUMED while physically held fires no phantom Started when the mask lifts** (added UI
+  U3, see **UI10**). The UI is the first consumer to toggle mid-hold; the `bMaskSuppressed` gate
+  on `bStarted` also covers a higher context popping while its key is still down. `Evaluate` takes
+  an optional pre-consumed mask (`&m_PreConsumed`), seeded from what the UI swallowed this frame.
 
 **IM7 — Gameplay BINDS, and `UnbindAll(this)` in the owner's `Shutdown` is the contract.** The
 whole callback layer is four `TMulticastDelegate`s per action — `AddMember` returns a handle,
@@ -4107,6 +4128,514 @@ adopt (**MP6**) until the next Save Level.
 order is Layer/OrderInLayer) · dropping a PREFAB onto an entity row to instantiate as its child ·
 *Create Empty Child* · a read-only world-pose line in the Transform drawer · the child count on
 `EntityMeta` (**HR6**'s trigger).
+
+---
+
+## UI — The user interface (U1 `276b905` → U6 `976b5b0`, U7 `2498a33` → U10 `4f9288b`, U11 `9562051` → U12 `c45e914`, U13 `feb96ce`, 2026-09-14/15; all four blocks CLOSED, user-verified — record `.claude/plans/ui.md`)
+
+**UI1 — THE UI IS DECOUPLED FROM THE WORLD.** `Engine/Source/UI/` depends on `Core/` and
+`Renderer/` (and `RHI/ITexture2D` as a borrowed pointer) and never on `World/`, `Engine/`, or
+entt — **with ONE stated exception: `Engine/Subsystems/Resources/ResourcePath.h`** (U5c). A
+`TResourcePath` is a value type, a string plus a phantom template parameter; it names no loader and
+no manager, and `RendererManager.h` already records that including it "names no part of the
+resource system". The UI holds typed REFERENCES and still cannot resolve one — that is the
+provider's job (**UI17**). It is what the editor's drop target keys on (**UI19**); the alternative
+was moving that header into `Core/`, which is the same decision with a wider blast radius — the user's call (*"lets decouple the UI from world"*), Slate's altitude under UMG, Noesis's
+core under its hosts. A canvas is an OBJECT anyone can own; the world is one possible host, not
+the model. The whole contract is therefore gated headless (`Engine/Tests/UI/`): rects,
+invalidation, hit-testing, text quads. Only `UICanvas::Submit`'s loop needs a GL context.
+- **No vendor** (*"Do not include any vendors, I just like the fact that Noesis is a good ref"*).
+  A toolkit that would own the authoring loop — its own tree, its own editor, its own text stack —
+  is a second object model, and that is the cost the refusal is about.
+
+**UI2 — CANVAS UNITS ARE REFERENCE PIXELS, AND THE VIEW IS A `CameraView`.** A `UICanvas` is
+`ReferenceHeight` tall (1080), centred on the origin, and as wide as the target's aspect makes
+it; its view is `CameraView{ {0,0}, ReferenceHeight/2 }`, so **CAM2** does the scaling — Unity's
+CanvasScaler with Match = height, for free, chosen for the shmup for the same reason. **Y-UP**,
+anchor `(0,0)` bottom-left: one convention with the world, `Renderer2D` and `Text2D`, so the pass
+is a plain `MakeViewProjection` and `ScreenToWorld` stays the ONE screen→canvas rule.
+- `UIRect` is Unity's RectTransform verbatim (anchor min/max, pivot, anchored position, size
+  delta); `ResolveRect` is free, pure and exported; **the resolved rect IS a `Bounds2D`** — what
+  `DrawQuad`/`DrawSprite` take and what `Contains` hit-tests. No second rect type.
+- **A same-aspect resize lays out NOTHING** — equal rationals round to equal floats, so
+  1920×1080 → 1280×720 lands on the bit-identical visible rect and dirties nothing; only an
+  aspect change moves a rect, and only the anchored ones. Pinned in `UICanvasTests`.
+- **The reference height is the PROJECT's** (U11): `.opaaxproj` `uiReferenceHeight` (1080 when
+  absent), read once by the tenant into its canvas. An asset's own `ReferenceHeight` is what the
+  panel previews at and what `New UI…` seeds from the project — never what the game draws at.
+  `UISubsystem::MountAsset` is the one route a HUD or menu takes onto the canvas (load, parse,
+  hang under a parent) and it warns ONCE when the asset was authored at another height; the
+  panel's canvas inspector says the same beside the field. U7's editable height had made the
+  split reachable — set 720 in the panel and the game, hard-defaulted to 1080, drew it differently.
+  The loading cover is alone on its own canvas, so there the asset's height IS the canvas's.
+
+**UI3 — INVALIDATION IS A VERB, NEVER A POLL** (the user: *"canvas is an expensive cost because
+resizing etc.. so make sure to handle that correctly"*). Three flags per widget — Layout (my rect),
+Content (my quads), Subtree (descend into me) — and two verbs, `InvalidateLayout` /
+`InvalidateContent`. Setters call the one they owe; the editor writes the reflected field and
+calls the verb (**I15** — `DrawProperties` writes through `T&` and returns nothing). Nothing
+compares state frame to frame; `UICanvasStats{Layouts, Rebuilds}` reads **0/0 on an idle frame**,
+and that number is a Stats row (`UI Layouts` / `UI Rebuilds`, **ST1**'s `AddCount`).
+- **ONE walk per frame**, descending only where marked. A resolve that lands on the SAME rect
+  stops propagation below it: a corner-anchored child of a widening root costs one resolve, its
+  subtree nothing.
+- **The walk snapshots-then-clears a node's flags BEFORE acting**, so a `Rebuild` that finds its
+  input not ready calls `InvalidateContent()` and is visited again next frame. That is how
+  `UIText` waits for an atlas still uploading (**TX4**) with no polling anywhere — emit nothing,
+  re-arm, drawn the frame it lands. Pinned by a re-arming stub two levels deep.
+- **Unity's canvas cost does not transfer, and the part that does is layout + text.** Unity rebuilds
+  a retained MESH per dirty canvas; `Renderer2D` is immediate-mode and **F5** records the pass
+  whole every frame anyway, so there is no mesh to rebuild. What IS retained is each widget's
+  `TDynArray<UIQuad>` — rebuilt on content-dirty, submitted every frame in tree order
+  (`OrderInLayer` = a running index, so F5's sort reproduces the tree).
+- Visibility, opacity (**UI22**) and hit-testability dirty nothing: read at submit / hit-test time.
+
+**UI4 — THE ROOT IS NEVER A HIT, AND A PANEL IS PASS-THROUGH.** The root stretches over the whole
+visible rect, so "the root was hit" would mean "the pointer is on screen" — [[L29]] in another
+coat. `bHitTestable` is Unity's raycastTarget; `UIPanel` defaults it off, leaves default it on.
+`HitTest` walks children last-to-first (drawn last = on top) and skips invisible subtrees.
+Nothing clips yet — a child outside its parent is still hit (U5's mask adds the miss).
+
+**UI5 — THE UI IS CARRIED BY THE WORLD PASS, OPT-IN, AND IS NEVER A VIEW OF ITS OWN.**
+`RenderFrame`'s runtime fallback keys on an EMPTY submission list, so a UI `RenderPassRequest`
+would silently drop the world in `Sandbox.exe`. Instead `SubmitRenderView` gained
+`bInDrawUI = false` (`RenderPassRequest::bDrawUI`) and the tenant submits its canvas through
+`IEngine::SubmitUICanvas` every frame — **MV1**'s idiom, cleared beside the views. After each
+world pass that opted in, `RenderCanvases` lays every submitted canvas out for THAT target's
+size and draws it in a second pass into the same target with **`ELoadOp::Load` — its first
+caller**, the one `ICommandBuffer.h` named on 2026-09-04. `RenderSystem::BeginPass` takes the
+load op (it hard-coded Clear).
+- **Layout happens at RENDER time**, not in the tenant's tick, because the target is what says
+  how wide the canvas is (UI2) — Unity's `willRenderCanvases`. Two views of different sizes both
+  opting in would re-lay one canvas twice a frame; nothing does today, and the answer then is a
+  canvas per target, not a cache.
+- **Who opts in:** the runtime fallback and the editor's `ViewportPanel` (where PIE is watched).
+  The Camera Preview (a framing tool) and the prefab panel (edits a world that is not the game)
+  keep the default. Opt-in so a new view never gets the game's UI by accident.
+
+**UI6 — WIDGETS ASK THE HOST FOR A FACE: `IUIFontProvider`.** A `UIText` names its face by ASSET
+PATH (a string — the module cannot spell `TResourcePath`) and resolves it at rebuild through the
+`UIBuildContext` the canvas hands down. **`RendererManager` implements the provider** — its
+`ResolveFace` cache by path is exactly this; the override builds the path. The view's atlas is
+null while the upload is in flight (**TX4**) and UI3's re-arm absorbs it. Family + style is a
+second provider method for the day a `.opaaxui` names a family.
+
+**UI7 — `Text2D` LEARNED A BOX, STILL ONE WALK (TX5).** `TextDrawParams` gained `BoxWidth` (the
+alignment box from the origin; 0 is a POINT — Center straddles the origin, Right ends on it),
+`bWrap` (break at the box: after the last blank, consumed, or inside a word wider than the box —
+a first glyph always lands) and `HAlign`. The walk is now SCAN-then-EMIT per line through ONE
+advance rule (`StepPen`), so a wrapped or aligned line is exactly the width it was measured.
+Defaults reproduce the pre-U2 layout — the existing `Text2D` cases were the regression gate and
+did not move. **Vertical alignment is the widget's** (`UIText::VAlign` shifts the cached quads by
+the returned extent), not the walker's. `TOFU_THICKNESS_RATIO` moved to the header so every sink
+draws the same tofu box; `UIQuad::Outline` carries it.
+
+**UI8 — `UISubsystem` IS THE GAMEINSTANCE'S UI TENANT, AND `WorldContext::UI` IS THE ROUTE.** It
+owns ONE persistent `UICanvas` and submits it every frame; the game outlives its worlds (**GI1**)
+so a HUD, a pause menu or a loading cover stays up across a level swap and is torn down whole at
+EndGame (**GI6**). Registered AFTER input mapping, so the UI reads this frame's actions.
+`WorldContext::UI` follows `Actions`' rule exactly — session-owned, null with no game — and is
+how gameplay reaches it (D3 forbids the locator). **The Sandbox `HudSubsystem` is the dogfood:**
+a Play-world subsystem that hangs ONE `UIPanel` under the canvas root on Startup, binds `Jump`
+(**IM7**, gated on `IsActive` per **IM8**) for a top-left counter, drives a bottom-left bar from
+`|MoverComponent::Velocity| / 400`, and `RemoveChild`s its panel on Shutdown — the log's
+`0 root child(ren) dropped with the canvas` at EndGame is the proof the canvas was left clean.
+
+**UI9 — INPUT BUBBLES (U3), Slate's `FReply`.** `UICanvas::RoutePointer` / `RouteKey` ask the hit
+(or focused) widget, then its parents up to the root, until one returns `EUIReply::Handled`; a
+widget with no opinion returns `Unhandled` and **the event falls through to the game** — a bare
+`UIImage` on the HUD lets a click through exactly as Unreal's `SImage` does, only `UIButton` eats
+it. `bHitTestable = false` is `SelfHitTestInvisible` — skipped as a target, children still tested.
+- **A press CAPTURES.** The widget that handled a `Down` becomes `m_Pressed` and hears the `Up`
+  even released outside — so a drag off a button cancels the click but still consumes the release
+  (**UIButton**: Down + Up *inside* clicks; a captured Up outside does not). Enter/Leave are
+  DELIVERED to the hovered widget, never bubbled (Slate). Keys bubble from `m_Focused`; no focus,
+  no delivery.
+- **Detach cannot dangle:** `UIWidget::m_Canvas` is set recursively on `AddChild` and
+  `RemoveChild` calls `UICanvas::OnDetached(subtree)` BEFORE the pointers die, nulling any
+  hovered/pressed/focused that lay under it. No validation walk over freed memory. All pure —
+  `UIEventTests` / `UIButtonTests`.
+- The module names `EKeyCode` by an **opaque `enum class EKeyCode : Uint16;`** (the real enum has
+  a fixed underlying type), so it carries a key without including the Engine tier — the same trick
+  that keeps `UI/` World-free (**UI1**).
+
+**UI10 — THREE INPUT MODES, and what the UI handled is CONSUMED before the mapping evaluates.**
+`EUIInputMode { GameOnly, UIOnly, GameAndUI }` lives on the `UISubsystem` (there is no
+PlayerController tier; the session is where Unreal's mode effectively lives), default `GameAndUI`.
+The tenant is now registered **BEFORE** input mapping, so `UIInputRouter::Route` runs first each
+frame: it drives the canvas from the raw `InputManager` and reports the keys a widget swallowed as
+an `InputKeyMask`, handed to `InputMappingSubsystem::ConsumeThisFrame`. The evaluator seeds its
+per-frame consumed set from that mask — **IM6's "per key, highest priority first" with the UI as
+the top of the stack**, no new mechanism. GameOnly clears the pointer and routes nothing; UIOnly
+fills the mask WHOLE (the mapping is muted); GameAndUI marks only what a widget took (and a button
+held after a captured press stays consumed, so a drag never leaks mid-gesture). `UIInputRouter` is
+hoisted pure and tested against a real `InputManager` (`UIInputRouterTests`), the way
+`InputActionEvaluator` is tested apart from its subsystem.
+- **A masked-then-unmasked HELD key must not fabricate a press edge**, or a menu bound to the key
+  that closed it reopens on the next frame. `bStarted = bTriggered && !wasActuated` read a phantom
+  rise the moment a mask lifted on a still-held key (the value was forced to zero while masked).
+  `InputActionState::bMaskSuppressed` records "a binding was consumed while its key was physically
+  down" and gates the edge: `bStarted = bTriggered && !wasActuated && !wasMaskSuppressed`. This is
+  a **fix to IM as much as UI** — the same phantom existed for a higher context popping mid-hold
+  (**IM6**), it just had no caller until a mode toggled a mask. Found by the U3 PIE harness (the
+  menu reopened one frame after Escape closed it, `opened 2 time(s)`); regression-gated in
+  `InputMappingTests`.
+
+**UI11 — IN PIE THE GAME'S POINTER IS THE VIEWPORT-LOCAL ONE.** `InputManager`'s mouse is window
+pixels; in `Sandbox.exe` that IS the target, but in the editor the game's view is the viewport
+IMAGE, so a canvas hit-test in window pixels would be off by the panel's origin. `ViewportPanel`
+pushes the image-local position (`GetMousePos − GetItemRectMin`, the origin only knowable there —
+the prefab-drop pixel's reason) to `InputRoute`, which feeds `InputManager::OnMouseMoved` once per
+frame while Open; `EditorService::RouteInput` **swallows every raw `MouseMovedEvent`** so the
+editor owns the game's pointer position. `Sandbox.exe` is untouched. *Named, pre-existing, not
+fixed:* an UNDOCKED viewport is a second OS window whose GLFW callbacks never reach the app, so
+button/key events do not reach PIE there today either.
+
+**UI12 — A `.opaaxui` IS A TREE OF TAGGED NODES, AND A WIDGET SERIALIZES ITSELF** (U4). A node
+carries its `Type`, its own fields and its `Children`; `UIWidgetRegistry` turns the tag back into
+an empty widget (`ComponentRegistry`'s shape, much smaller) and the widget reads itself through the
+`SaveFields`/`LoadFields` virtuals — an override chains to `UIWidget::` first, so a base field is
+written once for every type and a new leaf states only what is new.
+- **AN UNKNOWN TAG IS A SKIPPED NODE, NOT A FAILED PARSE.** A file written by a build that knows a
+  widget type this one does not must still open — the author loses that node, not the screen. One
+  warning per unknown name. A newer FORMAT VERSION is refused outright, because a newer shape may
+  mean something different by the same key.
+- **The JSON is hand-written BESIDE `OPAAX_PROPERTIES`**, which is what every component already
+  does (`TextComponent` carries both). `_WITH_DEFAULT` is required, not preferred: the plain macro
+  reads with `at()` and throws on a missing key, so a field added later would refuse every file
+  written before it. *A reflection-driven serializer that reads `GetProperties()` and deletes the
+  second list is the obvious dedup and is deliberately NOT this step — every property value type
+  must round-trip first. The FORMAT does not change when it lands.*
+- **`Texture` and `OnClick` are deliberately absent.** A borrowed runtime pointer and a code handler
+  are not authorable; a texture PATH field arrives with the sliced image (U5), and a handler is
+  bound by name (**UI13**). `UICanvasFile` keeps Save and Load as ONE unit (`FontFamilyFile`'s
+  stated rule) and exposes the TEXT form too, which is what makes the dirty check a string compare.
+
+**UI13 — THE RUNTIME LOADS THE ASSET; IT DOES NOT BUILD A TREE IN CODE.** `UICanvasResource` holds
+the file's BYTES and `BuildTree` parses a fresh tree per call. That is the design, not laziness: a
+widget is a non-copyable node that knows its parent and its canvas, so handing out "the resource's
+tree" would either share one mutable tree between instances or need a deep clone per widget type —
+re-reading the text IS the clone, with no `Clone` override to keep in step as types are added. A
+HUD is built once or twice a session; when something ever is on a hot path the cache goes in the
+resource and no consumer changes.
+- **Gameplay binds BY NAME**: `UIWidget::FindByName` (depth-first, first match). `HudSubsystem`
+  loads `UI/Hud.opaaxui`, hangs it under the persistent canvas and resolves `Jumps` / `SpeedFill` —
+  a widget the author renames goes quiet **with a log line**, which is the failure this shape can
+  actually report. `PauseMenuSubsystem` keeps its code-built tree: it binds `OnClick` delegates,
+  which the format does not carry, and that is the honest boundary of "authored" today.
+
+**UI14 — THE PANEL PREVIEWS THE DOCUMENT ITSELF, so a submitted canvas may NAME A TARGET.**
+`EditorUICanvasDocument` owns a real `UICanvas` (not plain data) and `UICanvasPanel` renders THAT
+into its own framebuffer — what is on screen and what a Save writes cannot disagree. U2's
+`SubmitUICanvas` drew every canvas over every `bDrawUI` view, which is right for the game and wrong
+for a panel, so the submission gained an optional target: **null keeps U2's over-the-world path
+byte-identical; a named target gets its own Clear pass** and neither borrows the other's canvases.
+A targeted canvas counts toward the frame's drawable passes, so a UI panel open with no viewport
+still renders. The property pane is `DrawProperties` and nothing else — a widget is `CReflected`,
+so a field added to a type appears with no change to the panel.
+- **A targeted submission may bring its own VIEW** (U13, *"can be nice to zoom"*): with a
+  `CameraView` the pass projects through it and does NOT size the canvas to the target — the
+  submitter laid the canvas out itself, against a LAYOUT TARGET it chose (`UIPreviewAspect`:
+  Free = the dock's size, or an exact 16:9 / 21:9 / 4:3 / 16:10 / 9:16). Zoom decouples the view
+  from the layout, which is what made the aspect a named choice. The game's path (no target, no
+  view) is untouched. The panel REUSES the world viewport's `EditorCamera` + `CameraGesture`
+  (middle-drag pan with cursor wrap, wheel zoom at the cursor, `F` = `FocusOn` the visible
+  bounds; `1:1` = `Set({0,0}, refH/2)`, today's picture) and maps pixels through CAM2's free
+  functions with ITS view — pick, drag, grips and nudges land under the pointer at any zoom. The
+  layout target's edge is drawn as a grey frame under the outlines. View state only: no step.
+
+**UI15 — A TREE STEP CARRIES THE WHOLE TREE AS TEXT, AND THE SELECTION IS A PATH.** `UITreeEdit`
+holds the serialized before and after; add, delete, reparent and a property edit are all one type
+with a varying LABEL (`FontFamilyEntriesEdit`'s rule). For a TREE that is not merely convenient —
+a step restoring PART of a tree could leave a parent pointing at a child that no longer exists, so
+text-in/text-out is the only shape that cannot half-restore. It carries the canvas's path, so an
+undo after opening a second `.opaaxui` is a no-op with a warning.
+- **The selection is `UIWidgetPath`, child indices from the root**, because a step replaces the
+  tree wholesale and every raw pointer into it dies. The prefab document solves the same problem
+  with entity guids; a tree has no ids and its SHAPE is the address. `Resolve` answers null when
+  the path names something no longer there, which is the whole point.
+- A reparent INTO ITS OWN SUBTREE is refused — a cycle is a walk that does not terminate (**HR**'s
+  rule, one module over).
+
+**UI16 — THE MASK IS A VALUE ON THE QUAD: white shows, black hides** (U5, their call:
+*"if i put a black and white png, white is what we see black hide"*). A `UIMask` is a CONTAINER
+(Unity's Mask, their pick): its texture stretches across its own rect and **everything under it**
+is cut the same way — text, images and buttons alike, because the mask rides on the QUAD rather
+than on the widget type.
+- **The formula is `mask.r * mask.a`, and it is one expression on purpose.** A black-and-white png
+  with no alpha reads as its LUMINANCE (their sentence exactly); a white shape on transparency
+  reads as its SILHOUETTE. Both intuitions, no mode flag to get wrong.
+- **`QuadVertex` carries `MaskUV` + `MaskIndex`** (48 → 60 bytes). `MaskIndex = -1` is "no mask"
+  and is what every pre-existing draw passes, so **nothing that existed before changed** — exactly
+  the bargain `InnerHalf` struck for the outline (**F4d**): one pipeline, one batch, no extra flush.
+  `QuadMask{Rect, Texture}` is ONE defaulted parameter on the three Draw calls, not three.
+- **AN EMPTY TEXTURE PATH IS A PURE RECT CLIP**, free from the same mechanism: outside 0..1 is
+  discarded, inside samples white. "Clip to this box" needs no art. Id 0 already means "no mask",
+  so a rect-only mask takes a real id that resolves to the white texture — every rect-only mask in
+  a pass shares that one entry.
+- **NESTING: THE NEAREST ANCESTOR WINS**, it does not intersect. Intersecting two TEXTURE masks
+  would mean two mask samplers per quad — doubling the vertex format AND the planner's fit rule.
+  Named, not built. "Show Mask Graphic" likewise: a mask draws nothing of its own, and is not a
+  hit target, so it never swallows a click meant for what it masks.
+- **A mask resolves its texture at REBUILD, not at submit** — submit is `const` and has no host to
+  ask — and a texture still uploading **re-arms** rather than masking with nothing, which would
+  flash the children unmasked for a frame (**UI3**).
+
+**UI17 — `IUIAssetProvider`, and the DRAW LIST that makes the walk testable.** The provider
+resolves two kinds now (a face for text, a texture for an image or a mask), so it is no longer
+called a font provider; `RendererManager` implements both from caches it already owned. `UIImage`
+gained an authored `Texture` PATH, and a runtime `SetTexture` pointer **wins** over it —
+`TextComponent`'s Font-over-Face precedence (**TX1**).
+- **`UICanvas::Submit` split into a pure `BuildDrawList` + the feed** (**TX14**'s one-walk-many-sinks,
+  one level up). The list pairs each quad with the mask that applies, carried DOWN the walk rather
+  than searched upward per widget — so there is ONE implementation of the rule, and it is asserted
+  headlessly. Before this, "which mask applies" lived inside a function only a running frame could
+  reach.
+- **The batch planner takes a SECOND texture per quad** (`InMaskIds`, `QuadPlacement::MaskSlot`).
+  A quad needs 0, 1 or 2 new slots, and **a mask that IS the quad's own texture shares one**.
+  Cost, stated: a pass with many distinct masks splits into more batches (**ST7** — a split is a
+  cost, not an error); nothing unmasked pays anything, which the pre-U5 cases prove by passing
+  untouched.
+
+**UI18 — A WIDGET'S PROPERTIES COME FROM THE DRAWER REGISTRY, NEVER A LADDER** (U5 fix, from their
+report: *"i cant see their prop in detail panel nor UI panel — like mask, i cant see texture"*).
+The UI panel used to pick a drawer with a hand-written `dynamic_cast` ladder. That is the same
+failure **MR2i** exists to prevent, one level down: `UIMask` was registered as a widget type and
+never added to the ladder, so its `Texture` was **addable, invisible and uneditable**.
+- **`TDrawerResolver<UIWidget, TTarget>` is the whole fix** — a `dynamic_cast` specialization, which
+  is exactly what `DrawerRegistry.h` already promised: *"whatever comes next is one more
+  specialization rather than a third registry"*. The registry that serves components and configs
+  now serves widgets, and the ladder is **deleted** rather than extended.
+- **TWO FOLDS, and the ladder only ever drew one.** A leaf's `OPAAX_PROPERTIES` does NOT repeat the
+  base's, so drawing only the leaf left `UIText`, `UIImage` and `UIButton` with **no editable
+  Rect** — a second, quieter half of the same bug. The panel draws `DrawProperties(base)` first,
+  then asks the registry for the type's own.
+- **EVERY widget type declares its own property list, even an EMPTY one.** `GetProperties()` is a
+  static member, so a type without one silently INHERITS the base's and `CReflected` is still
+  satisfied — which would have drawn `UIPanel`'s base fields twice under its own drawer. Found by a
+  test asserting `PropertyCount<UIPanel>() == 0`; it read 4. See [[L96]].
+- **The instrument is a COUNT, logged at registration:** `UI widget drawers: 5 for 5 registered
+  type(s)`, and a WARNING when they differ. That is what makes the next omission loud, since no
+  build or test can see a missing registration on its own (**MR2i**'s rule).
+- *Registration runs at the `OnModulesRegistered` seam, where `EditorContext` does NOT exist yet* —
+  reading `m_Context` there is a null dereference (it was, and it segfaulted). The engine is reached
+  through the service locator instead.
+
+**UI19 — A WIDGET'S ASSET FIELD IS A TYPED PATH, AND AN INVERTED ANCHOR IS CLAMPED** (U5c, both
+from their eyes: *"Cannot drag drop texture font and all other"*, *"guard inverted anchors"*).
+- **`OpaaxString` was the reason drag-drop did not work.** The editor's typed drop target lives on
+  `TPropertyDrawer<TResourcePath<T>>`; a bare string gets a text box and nothing else. `UIText::
+  Font`, `UIImage::Texture` and `UIMask::Texture` are `TResourcePath` now, so the drop target, the
+  type gate (a `.png` is refused on a font field) and the picker all arrive for free — the same
+  route every component has always had. U12 gave `UIButton` the same trio as `UIImage` (`Texture`,
+  `Sheet`, `Frame`) — until then its art was `SetTexture` from code only, and no asset could give
+  a button a picture.
+- **ZERO FORMAT CHANGE, and the format's own header predicted it:** `ResourcePathJson.h` writes a
+  path as a BARE STRING and states *"a field that was an OpaaxString before becoming a
+  TResourcePath reads back unchanged"*. `UI_FORMAT_VERSION` stays 1; a `.opaaxui` written before
+  the change loads untouched, which the real `Hud.opaaxui` proved in a smoke run.
+- **An INVERTED anchor pair (`AnchorMax` below `AnchorMin`) is clamped in `ResolveRect`.** It makes
+  a negative anchor size → a negative widget size → `Bounds2D::FromMinMax` silently SORTS the
+  corners, so the widget resolves somewhere plausible and wrong rather than failing. Their own HUD
+  had one (a panel at `Min(1,1)`/`Max(0,0)` resolving to a ~1788x965 box centred on the origin).
+  Clamped in the ONE function every rect resolves through; only the INVERSION, since anchors
+  outside 0..1 are legitimate. No log — `ResolveRect` is pure and runs per widget per layout.
+
+**UI20 — 9-SLICE IS A BORDER, AND THE SAFE AREA IS A CONTAINER** (U5b, the two they split out of
+U5 so the renderer change landed alone). Neither touches the renderer: both are RECT → QUADS
+geometry, which is the half of the UI that is pure — so both are gated headless, the 9-slice
+against a texture SIZE rather than a texture.
+- **THERE IS NO `Sliced` MODE.** `UIImage::Border` is a `UIMargin` in TEXTURE PIXELS, and a
+  non-zero border on a texture IS sliced; all-zero is the single quad U1 shipped, bit for bit. A
+  mode enum would have to be kept in step with a border that already says everything (Unity carries
+  both because its border lives on the SPRITE asset; here it lives on the widget). A border with no
+  texture is ignored — it is a statement about art.
+- **The UVs keep the authored border; the GEOMETRY is fitted to the rect.** A rect narrower than
+  `Left + Right` shrinks both proportionally (Unity's rule), so a squeezed widget compresses its
+  corner art instead of overlapping its corners and inverting its middle. A degenerate row or
+  column is SKIPPED, so a left/right-only border is 3 quads, not 9 with 6 empties.
+- **THE FILL IS NOW A CLIP, so fill and slice COMPOSE** instead of excluding each other (Unity
+  makes Filled and Sliced different Image types). `ClipQuadsTo` cuts bounds and UVs by the same
+  fraction and drops what falls outside, over one quad or nine alike — a filled 9-slice bar keeps
+  its left cap whole, cuts the middle and loses the right cap. The pre-existing fill case was the
+  regression gate and did not move.
+- **`UISafeArea` is a CONTAINER whose bounds are its own rect minus the insets**, Unreal's SafeZone
+  and the seed's call (*"fewer concepts than a flag on every widget"*). It needed exactly ONE new
+  seam: `UIWidget::ResolveBounds`, a protected virtual defaulting to `ResolveRect`. Its bounds ARE
+  the inset rect, so children, the hit-test and the preview cannot disagree about where safe is.
+- **THE INSETS ARE FRACTIONS**, 0.05 per edge by default — the 5% title-safe convention, and the
+  reason it adapts: a fraction is the same band on 16:9 and 21:9, where an absolute inset would be
+  a shrinking share of a widening screen (their *"adapting to all screen even wide"*). It is also
+  the one widget that starts STRETCHED rather than a 100x100 box, because one that covers less than
+  its parent cannot measure its parent's edges. Both consumers sanitize what they read — a negative
+  inset is no inset, and a pair that would swallow the rect is fitted — since a hand-edited
+  `.opaaxui` is not the inspector (**UI19**'s lesson).
+- **The format did not change.** Both fields read through `_WITH_DEFAULT`, so a `.opaaxui` written
+  before U5b takes a zero border and is untouched; `UI_FORMAT_VERSION` stays 1.
+- *Named, not built:* a PLATFORM-reported safe area (a notch, an overscan setting) — the canvas
+  would carry the device insets and the widget take the max of the two; there is no platform to ask
+  today, and a route with no caller is what **L23** is about. Also a `PixelsPerUnitMultiplier` on
+  the border, Unity's knob for art authored at another density.
+
+**UI21 — A LEVEL SWAP IS A REQUEST, AND THE COVER IS A SECOND CANVAS** (U6). Their two settled
+answers shaped it: async comes later, and the cover must become a progress screen *without the
+UI changing* — so the seam is the REQUEST, not the load.
+- **`IEngine::RequestOpenLevel` is gameplay's route; `OpenLevel` stays the host's.** Flag-then-
+  resolve (**WS8**'s shape one tier up): the spec is stored, `LevelLoadRequested` is published AT
+  ONCE, and the swap is one `OpenLevel` at the top of the next `Loop` — after the event flush,
+  before anything ticks — followed by `LevelLoadFinished`. The frame that asked has already been
+  rendered with its cover; the next runs the new world from its first tick. A second request
+  before the first resolves replaces it (last wins, in the log). Synchronous today; the same two
+  events will bracket an asynchronous load and no listener changes.
+- **A subsystem must not `OpenLevel` from inside its own tick** — it would destroy the world it
+  belongs to from under its own button. That is the sentence the request exists for.
+- **The cover is a SECOND `UICanvas` on the `UISubsystem`, submitted after the main one EVERY
+  frame, and its root's `bVisible` is the flag.** Visibility is read at DRAW time (**UI3**), so a
+  request made mid-frame — from a button in this tenant's own tick or a trigger in the world's —
+  covers THAT frame's render, whichever of the two it came from. "Submit only while loading"
+  cannot do that: the tenant's submit has already run when the world ticks. A canvas whose root is
+  hidden **opens no pass** (`RenderCanvasPass`), so the always-submitted cover costs nothing on
+  the frames it is down.
+- **The cover is AUTHORED, never built in code (UI13).** `.opaaxproj` gained `"loadingScreen"`
+  beside `startupLevel`; the tenant loads that `.opaaxui` into the cover canvas at its reference
+  height, and a project naming none (or one that fails) gets a black stretched image with a
+  warning. `GetLoadingCanvas()` is where a game binds a progress bar the day async lands — the
+  tree is theirs to design in the panel, which is the whole point.
+- **Measured** (harness, removed): a request from the world tick at frame 60 → `cover up AFTER
+  the request = true` → that frame's render `LOADING COVER DRAWN — 11 draw item(s)` (one
+  backdrop, ten glyphs) → frame 61 begins `World 'PhysicsTest' opened and activated`, old HUD and
+  menu shut down, new ones started, cover down. **Exactly one covered frame** for a synchronous
+  swap, and the persistent canvas ended the session with `0 root child(ren) dropped`.
+- *Dogfood:* the pause menu's **Next Level** (Main ⇄ PhysicsTest, keyed on the world's name).
+  The menu closes with its world — its `Shutdown` restores `GameAndUI`, so a swap from an open
+  menu does not leave the session muted (**UI10**).
+- **The cover stays up at least `loadingScreenMinSeconds`** (`.opaaxproj`, beside `loadingScreen`;
+  0 when absent). Their call after seeing the one-frame flash: *"add time delay like 3 sec … just
+  to make sure"*. `LevelLoadFinished` only marks the load done; the tenant's `Update` accumulates
+  the cover's clock and lowers it once both hold — with no floor that is the same frame as before,
+  since the swap resolves at the top of `Loop` and the tenant ticks after it. The world underneath
+  runs meanwhile (a cover takes no input, and pausing is theirs to design). Measured: `Loading
+  cover down after 3.00 s (floor 3 s)`.
+- *Named, not built:* routing input to the cover canvas (a loading screen takes none) · a level's
+  own loading screen (the project's is one for all) · PIE: a swap during Play works by `EndGame`'s
+  "every Play world" rule (`PlayInEditor::m_PlayWorld` is never dereferenced), not eye-verified.
+
+**UI22 — OPACITY IS ONE FIELD ON EVERY WIDGET, AND IT MULTIPLIES DOWN THE TREE** (U8, the "canvas
+group" they asked for). `UIWidget::Opacity` is Unreal's `RenderOpacity`, not Unity's `CanvasGroup`
+component: no second type, and fading a panel fades everything under it because `BuildDrawList`
+carries the ancestors' product down and each `UIDrawItem` arrives with its effective `Alpha`;
+`Submit` multiplies the quad's colour by it. A subtree whose product is 0 emits nothing.
+- **Read at DRAW time, dirties nothing** — it joins `bVisible` under UI3's last rule, so a fade is
+  a write per frame and 0 layouts / 0 rebuilds. That is what makes the pause menu's fade fifteen
+  lines in the game (`PauseMenuSubsystem::Update` chases 1 or 0 and hides the panel when it lands)
+  and not a tween system; the tween system is the growth point and this fade is its first customer.
+- **Drawing only.** A widget at 0 still takes a hit; `bVisible` is the flag that stops one. Unity's
+  `blocksRaycasts` stays a separate concept, not built — a faded-OUT menu ends with `bVisible =
+  false`, so the window where an invisible thing eats a click is the fade's own 0.15 s.
+- The base's property list is 5 (`UIWidgetDrawerTests` pins the count); the key is optional in a
+  `.opaaxui`, so every file written before U8 reads unchanged.
+
+**UI23 — A LAYOUT CONTAINER OWNS ITS CHILDREN'S RECTS, AND A CHILD'S SIZE CLIMBS ONLY THROUGH
+CONTAINERS** (U9). `UIStack` is ONE type with an `Axis` (Godot's `BoxContainer`), not a Horizontal
+and a Vertical class: one registration, one drawer, and the axis is a dropdown. `Spacing`,
+`Padding` (`UIMargin`, units), `ChildAlign` across the axis (Start = left or TOP, the canvas being
+Y-up; `Stretch` fills), `bFitContent`.
+- **UMG's slot rule.** Under a stack a child's `Rect.SizeDelta` is its DESIRED size and its
+  anchors, pivot and anchored position are ignored — the slot the container hands it IS its rect.
+  The walk learned that as one pointer: `UpdateTree(parent, InSlot, …)` assigns the slot instead of
+  calling `ResolveBounds`. A container states itself in its ctor (`m_bArrangesChildren`, the
+  `bHitTestable = false` idiom) and overrides `ArrangeChildren(OutSlots)`; the designer asks
+  `ArrangesChildren()` and does not MOVE such a child (resize still edits the size it reads).
+- **The up-propagation the seed reserved, with its first consumer.** `InvalidateLayout` also
+  invalidates the parent when the parent arranges — and so on up, stopping at the first ancestor
+  that does not (a panel's rect owes nothing to what is under it). `AddChild` / `RemoveChild` do
+  the same. So a child's SIZE change re-lays the stack and every sibling (stats say 1 + n), a
+  child's CONTENT change re-lays nothing (0 / 1), and an idle stack is 0 / 0.
+- **A container that was re-laid ALWAYS re-arranges**, even onto the same rect: its slots depend on
+  its fields (spacing, alignment, a child added), not only its rect. The first test run caught
+  the version that only descended on a changed rect — `SetChildAlign` moved nothing.
+- **A hidden child KEEPS its slot** — Unreal's `Hidden`, not `Collapsed`. Visibility stays a
+  draw-time flag (UI3, no layout climbs off it); close the gap with `RemoveChild`, dim a lost heart
+  with `Opacity`. A `Collapsed` flag is a growth point.
+- **`bFitContent`** sizes the stack ALONG its axis from its children (padding and spacing in), and
+  only when that axis is point-anchored — a stretched axis is the parent's to size. The row of lives.
+- *Dogfood:* the pause menu's modal is `UI/PauseMenu.opaaxui` — Dim, Box, a `UIStack` of Title /
+  Resume / Next Level — hung under the code-built `PauseMenuPanel` (the Escape handler), the two
+  buttons bound by name. ~40 lines of builders gone; the menu is edited in the panel like the HUD.
+
+**UI24 — A WIDGET PULLS A NAMED VALUE FROM A VIEW MODEL, AND THE BIND SLOT IS PER PROPERTY**
+(U10, the seed's `UIBinding`). MVVM's data half without its notification half.
+- **The source is any `CReflected` object the game owns** — `HudModel { Jumps, Speed }` — read by
+  property NAME through the reflection that already existed: `ReadBoundProperty<T>` folds
+  `T::GetProperties()` and answers bool / integer / float / `OpaaxString`; a Vector or a nested
+  group is "not readable" and a binding to it is refused loudly. `MakeBindingReader(model)` is a
+  BORROWED closure — whoever registers it removes it before the model dies (the HUD does, in
+  `Shutdown`, before its own `RemoveChild`).
+- **`UICanvas::Bindings()` is the table** (`Add` / `Remove` / `Read("Source.Property")`), on the
+  canvas so it is headless-testable and so the loading canvas takes a progress source the same way
+  the day async lands. An unresolvable path warns ONCE — a misspelling in a `.opaaxui` is one log
+  line, not sixty a second — and the widget keeps its authored value.
+- **`Add` returns a `UIBindingHandle` and `Remove` takes it — never a name.** Their first report
+  (*"works on first map loaded, then do not change"*): `OpenLevel` starts the new world BEFORE
+  destroying the old (so no frame has no world), so the new HUD's `Add("Hud")` replaced the old's,
+  and the old HUD's `Shutdown` removed BY NAME — taking the new source with it. A ticket per Add
+  makes a stale Remove a no-op. Two lifetimes sharing one key is **MV4**'s shape one module over.
+- **The pull is a poll, and it is the one UI3 allows:** at the top of `Update`, a non-virtual walk
+  calls `OnPullBindings` on every widget; a widget with a bound field reads it and invalidates
+  ONLY if it differs from what it shows. A held value is 0 layouts / 0 rebuilds; a canvas with no
+  sources (the editor's document) skips the walk. Change notification is what this replaces at
+  HUD scale, and a HUD is the scale it is built for.
+- **One slot per bindable property, on the widget that owns it** — UMG's shape, not a
+  `TDynArray<UIBinding>` on the base: `UIText::Binding` (the authored `Text` is then the FORMAT,
+  `{}` the value, and a Text with no braces is replaced whole) and `UIImage::FillBinding`. Two
+  `OpaaxString` fields the existing drawer already shows; the generic list would have needed an
+  array drawer that does not exist and a by-name WRITE into the widget, with nowhere natural for
+  the format. The next bindable property costs one field.
+- **The format is never overwritten.** `UIText` keeps `Text` as authored and draws `m_BoundText`
+  (`GetDisplayText`), so a Save writes `"Jumps: {}"` and the panel — a canvas with no sources —
+  previews the format. The first resolve traces `'Jumps' bound 'Hud.Jumps' — shows "Jumps: 0"`
+  ([[L15]]: the success branch, once).
+- *Dogfood:* `HudSubsystem` names no widget. It registers `"Hud"`, writes `m_Model`, and
+  `Hud.opaaxui` says `Binding = Hud.Jumps` / `FillBinding = Hud.Speed`. `FindByName`, both widget
+  pointers and the "MISSING" branch are gone.
+
+**UI25 — AN IMAGE SOURCE IS RUNTIME > SHEET FRAME > TEXTURE, RESOLVED ONCE FOR EVERY IMAGE-SHAPED
+WIDGET; AND THE ANCHORS ARE SET BY PRESET** (U12, "a HUD from real art").
+- **`ResolveImageSource`** (`UI/UIImageSource.h`) is the one resolve `UIImage` and `UIButton` share:
+  a texture handed over by code wins (TX1's Font-over-Face), then a `Sheet` + `Frame`, then a
+  `Texture` path — `ResolveSpriteDraw`'s sheet-over-texture rule, so a sprite and a widget cannot
+  mean different things by a sheet. It answers "named but not ready" apart from "nothing named":
+  only the first re-arms (UI3); the second draws the plain colour. The fields stay FLAT on each
+  widget (a shared reflected group would have moved `UIImage::Texture`'s file key).
+- **`IUIAssetProvider::ResolveSheetFrame(path, frame)`** answers the sheet's texture, the frame's
+  UVs and the frame's pixel size — DEFAULTED to nothing so a stub need not know sheets. The
+  renderer implements it from `ResolveSheet` + `ResolveTexture` + `FrameAt` + `MakeFrameUV`, with
+  the sprite's rule for a frame the sheet lacks (whole texture, warned once).
+- **A 9-slice is measured against the FRAME's size, and its 0..1 UVs are mapped into the frame's
+  rect** (`MapQuadUVsInto`, run after the slice, before the fill's clip, which cuts UVs
+  proportionally and does not care what range they are in). An icon cut from an atlas keeps its
+  caps and still fills. Proven in-game (harness, removed): frame 3 of the engine's 2×2 sheet,
+  sliced, `9 quad(s); first UV (0.5, 0)-(0.5625, 0.0625)`.
+- **Anchor presets** (`ApplyAnchorPreset` in `UIRect.h`, pure): Unity's 4×4 grid sets anchors AND
+  pivot, then `FitRect`s to the current rect — the widget does not move, only what it does on a
+  resize changes (Unity's Shift+Alt click, made the only behaviour). Top is anchor y = 1 (Y-up);
+  a stretched axis pivots at 0.5. `CurrentAnchorPreset` reads the sixteen back for the highlight;
+  a hand-typed anchor reads as none. Disabled under a container (UI23 — the container places it).
+- **The inspector's undo gesture brackets only ITS fields** (found wiring the preset): `IsAnyItemActive`
+  is frame-global, so a verb button pressed the same frame — Delete, Duplicate, the preset — opened
+  a gesture whose commit re-recorded the verb's step as a phantom "Edit Widget". Sampled BEFORE
+  the fields: an item already active is not one of theirs. Every U7 button had that phantom.
+
+**Growth points, named and not built:** rich text as `UIText` runs · a format spec beyond `{}` ·
+`UIBinding` onto more than Text and Fill (a Color, a visibility — one field each, UI24) ·
+**keyboard/gamepad FOCUS
+navigation** (deferred by them at U3 close: *"focus will be done with gamepad or when need for
+keyboard"*; `SetFocus` and key bubbling are already in) · cursor lock/hide beyond "shown" ·
+pausing the world from a menu (WS8's gate is the editor's PIE pause; theirs to design) · a
+per-canvas Match parameter for portrait targets · **a reflection-driven widget serializer**
+(**UI12**) · a `.opaaxui` NESTED in another (PF13's "nesting is the resolver's" — not asked for
+yet) · a tween system (UI22) · `blocksRaycasts` (UI22) · a `Collapsed` visibility that gives up
+its slot.
 
 ---
 

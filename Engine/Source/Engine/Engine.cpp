@@ -20,6 +20,15 @@
 #include "Engine/EngineEvents.h"
 #include "Engine/GameInstance/GameInstanceManager.h"
 #include "Engine/Input/InputMappingSubsystem.h"
+#include "Engine/UI/UISubsystem.h"
+#include "Engine/Subsystems/Resources/Types/UI/UICanvasResource.h"
+#include "UI/Widgets/UIButton.h"
+#include "UI/Widgets/UIImage.h"
+#include "UI/Widgets/UIMask.h"
+#include "UI/Widgets/UIPanel.h"
+#include "UI/Widgets/UISafeArea.h"
+#include "UI/Widgets/UIStack.h"
+#include "UI/Widgets/UIText.h"
 #include "Engine/Subsystems/Resources/Types/Input/InputActionResource.h"
 #include "Engine/Subsystems/Resources/Types/Input/InputMappingContextResource.h"
 #include "Engine/Subsystems/Resources/ResourceManager.h"
@@ -66,6 +75,7 @@ namespace Opaax
         RegisterNativeWorldSubsystems();
         RegisterNativeMoverModes();
         RegisterNativeGameInstanceSubsystems();
+        RegisterNativeUIWidgets();
     }
 
     Engine::~Engine()
@@ -145,6 +155,29 @@ namespace Opaax
         // for MapResource's reasons — dedup above all: a level placing forty instances of one
         // prefab parses the file once.
         m_Registries.Resources().Register<PrefabResource>(OPAAX_ID("Prefab"));
+
+        // UI U4. An authored widget tree. The runtime BUILDS one per instance out of the text it
+        // holds, so a HUD is an asset rather than a function (**UI13**).
+        m_Registries.Resources().Register<UICanvasResource>(OPAAX_ID("UICanvas"));
+    }
+
+    void Engine::RegisterNativeUIWidgets()
+    {
+        // The names a `.opaaxui` may carry. A game module adds its own through the registrar, and
+        // an unknown one is a skipped NODE rather than a refused file (**UI12**).
+        m_Registries.UIWidgets().Register<UIPanel>(OPAAX_ID("UIPanel"));
+        m_Registries.UIWidgets().Register<UIImage>(OPAAX_ID("UIImage"));
+        m_Registries.UIWidgets().Register<UIText>(OPAAX_ID("UIText"));
+        m_Registries.UIWidgets().Register<UIButton>(OPAAX_ID("UIButton"));
+
+        // U5. A container that masks everything under it — white shows, black hides (**UI16**).
+        m_Registries.UIWidgets().Register<UIMask>(OPAAX_ID("UIMask"));
+
+        // U5b. A container that keeps its children clear of the edges (**UI20**).
+        m_Registries.UIWidgets().Register<UISafeArea>(OPAAX_ID("UISafeArea"));
+
+        // U9. A container that lays its children out along an axis (**UI23**).
+        m_Registries.UIWidgets().Register<UIStack>(OPAAX_ID("UIStack"));
     }
 
     void Engine::RegisterNativeWorldSubsystems()
@@ -180,6 +213,10 @@ namespace Opaax
     {
         // The engine's own session subsystem, and the tier's first tenant: the layer that turns
         // InputManager's physical keys into named actions.
+        // The persistent canvas, FIRST: its Update routes raw input and pre-consumes what the UI
+        // swallowed, so it must run before input mapping evaluates this frame (UI10).
+        m_Registries.GameInstanceSubsystems().Register<UISubsystem>(OPAAX_ID("UI"));
+
         m_Registries.GameInstanceSubsystems().Register<InputMappingSubsystem>(OPAAX_ID("InputMapping"));
     }
 
@@ -353,7 +390,46 @@ namespace Opaax
 
         return lWorld;
     }
-    
+
+    void Engine::RequestOpenLevel(const WorldSpec& InSpec)
+    {
+        if (m_bLevelPending)
+        {
+            OPAAX_ENGINE_LOG(Warn, "RequestOpenLevel: '{}' replaces the pending '{}' — last wins",
+                             InSpec.LevelPath.CStr(), m_PendingLevel.LevelPath.CStr());
+        }
+
+        m_PendingLevel  = InSpec;
+        m_bLevelPending = true;
+
+        // Immediate, so a cover drawn THIS frame is possible — the whole point of deferring (UI21).
+        if (m_EngineEventBus != nullptr)
+        {
+            m_EngineEventBus->GetEventBus().Publish(LevelLoadRequested{});
+        }
+
+        OPAAX_ENGINE_LOG(Info, "Level '{}' requested — opens at the next frame's start", InSpec.LevelPath.CStr());
+    }
+
+    void Engine::ResolvePendingLevel()
+    {
+        if (!m_bLevelPending)
+        {
+            return;
+        }
+
+        // Cleared FIRST: a level that fails to open must not be retried every frame.
+        m_bLevelPending = false;
+        const WorldSpec lSpec = m_PendingLevel;
+
+        OpenLevel(lSpec);
+
+        if (m_EngineEventBus != nullptr)
+        {
+            m_EngineEventBus->GetEventBus().Publish(LevelLoadFinished{});
+        }
+    }
+
     // =========================================================================
     // World
     // =========================================================================
@@ -509,6 +585,11 @@ namespace Opaax
         // in OnEvent before Loop, plus any from the job completions above) before update.
         m_EngineEventBus->GetEventBus().Flush();
 
+        // A level asked for last frame swaps in HERE, before anything ticks: the frame that made
+        // the request has already been rendered — with its cover — and this one runs the new world
+        // from its first tick (UI21).
+        ResolvePendingLevel();
+
         // ----------------------------------------------------------------
         // 2. Time
         // ----------------------------------------------------------------
@@ -617,11 +698,19 @@ namespace Opaax
     }
     
     void Engine::SubmitRenderView(IRenderTarget& InTarget, const CameraView& InView, bool bInDrawOverlays,
-                                  World* InSource)
+                                  World* InSource, bool bInDrawUI)
     {
         if (m_RendererManager != nullptr)
         {
-            m_RendererManager->SubmitRenderView(InTarget, InView, bInDrawOverlays, InSource);
+            m_RendererManager->SubmitRenderView(InTarget, InView, bInDrawOverlays, InSource, bInDrawUI);
+        }
+    }
+
+    void Engine::SubmitUICanvas(UICanvas& InCanvas, IRenderTarget* InTarget, const CameraView* InView)
+    {
+        if (m_RendererManager != nullptr)
+        {
+            m_RendererManager->SubmitUICanvas(InCanvas, InTarget, InView);
         }
     }
 

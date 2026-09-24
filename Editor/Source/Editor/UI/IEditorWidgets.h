@@ -122,7 +122,7 @@ namespace Opaax::Editor
          * An unset range arrives as min == max, which every drag reads as unbounded — so the
          * ordinary property needs no flag and no branch here.
          */
-        virtual bool DragFloat(const char* InLabel, float* InValues, Uint32 InCount,
+        virtual bool DragFloat(const char* InLabel, float* InValues, Uint32 InCount, float InStep,
                                float InMin, float InMax) = 0;
 
         /**

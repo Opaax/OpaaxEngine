@@ -61,6 +61,14 @@ namespace Opaax
     OPAAX_API Vector2F ScreenToWorld(const CameraView& InView, const Vector2F& InViewportPx, const Vector2F& InLocalPx);
 
     /**
+     * World units -> viewport-local pixels (origin TOP-LEFT, Y growing down): the INVERSE of
+     * ScreenToWorld, kept beside it so the one rule has both directions and neither can drift.
+     * An overlay drawn over a rendered view (a selection outline) is what asks. Returns the
+     * viewport's centre for a degenerate viewport.
+     */
+    OPAAX_API Vector2F WorldToScreen(const CameraView& InView, const Vector2F& InViewportPx, const Vector2F& InWorld);
+
+    /**
      * World units covered by ONE viewport pixel — square, since width follows the aspect.
      * OrthoSize is the vertical half-extent, so a pixel is (2 * OrthoSize) / height.
      * Returns 1 (the pre-camera convention) for a zero height, so no caller divides by zero.

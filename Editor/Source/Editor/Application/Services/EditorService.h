@@ -19,6 +19,7 @@
 #include "Editor/Resources/Types/Animation/EditorAnimationClipDocument.h"
 #include "Editor/Resources/Types/Animation/EditorAnimationLibraryDocument.h"
 #include "Editor/EditorFontFamilyDocument.h"
+#include "Editor/EditorUICanvasDocument.h"
 #include "Editor/Resources/Types/Input/EditorInputActionDocument.h"
 #include "Editor/Resources/Types/Input/EditorInputMappingContextDocument.h"
 #include "Editor/Resources/Types/Mover/EditorMoveModeDocument.h"
@@ -366,6 +367,9 @@ namespace Opaax::Editor
         /** The open `.opaaxanim` and its data (S4) — the alias table the clip document feeds. */
         TUniquePtr<EditorAnimationLibraryDocument> m_LibraryDocument;
         TUniquePtr<EditorFontFamilyDocument>       m_FamilyDocument;
+
+        /** UI U4 — the open `.opaaxui` and the canvas the panel previews (**UI14**). */
+        TUniquePtr<EditorUICanvasDocument>         m_UICanvasDocument;
 
         /** ⑦-A P5a — the mover pair, the same clip/library split one family over. */
         TUniquePtr<EditorMoveModeDocument>         m_MoveModeDocument;

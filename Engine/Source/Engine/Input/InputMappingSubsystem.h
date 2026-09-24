@@ -147,6 +147,17 @@ namespace Opaax
         Uint64 GetBindingCount() const noexcept;
 
         // =========================================================================
+        // Consumption from above (UI10)
+        // =========================================================================
+    public:
+        /**
+         * Mark keys already spoken for THIS FRAME — the UI ORs in what a widget swallowed, before
+         * this subsystem's Update evaluates. A bound key thus taken drives no action. The mask is
+         * cleared each frame after Evaluate reads it (F4: nothing is retained).
+         */
+        void ConsumeThisFrame(const InputKeyMask& InConsumed);
+
+        // =========================================================================
         // Override
         // =========================================================================
         //~Begin IGameInstanceSubsystem interface
@@ -186,5 +197,8 @@ namespace Opaax
         InputActionEvaluator m_Evaluator;
 
         TDynArray<ActionDelegates> m_Bindings;
+
+        /** This frame's UI-consumed keys, ORed in by ConsumeThisFrame, cleared after Evaluate. */
+        InputKeyMask m_PreConsumed{};
     };
 }

@@ -150,3 +150,26 @@ TEST_CASE("ScreenToWorld: a degenerate viewport answers the camera position, not
     CHECK(ScreenToWorld(lView, { 0.f, 600.f }, { 10.f, 10.f }).x == doctest::Approx(7.f));
     CHECK(ScreenToWorld(lView, { 960.f, 0.f }, { 10.f, 10.f }).y == doctest::Approx(8.f));
 }
+
+TEST_CASE("WorldToScreen: the exact inverse of ScreenToWorld, corners and an off-centre camera alike")
+{
+    // The overlay a UI panel draws over its preview is only right if the two directions agree —
+    // which is why the inverse lives beside the rule instead of being re-derived at the call site.
+    const CameraView lView{ { 12.f, -34.f }, 300.f };
+    const Vector2F   lViewport{ 960.f, 600.f };
+
+    const Vector2F lPixels[] = { { 0.f, 0.f }, lViewport, { 123.f, 456.f }, lViewport * 0.5f };
+    for (const Vector2F& lPx : lPixels)
+    {
+        const Vector2F lBack = WorldToScreen(lView, lViewport, ScreenToWorld(lView, lViewport, lPx));
+        CHECK(lBack.x == doctest::Approx(lPx.x));
+        CHECK(lBack.y == doctest::Approx(lPx.y));
+    }
+
+    // And the flip, stated directly: world +Y is UP the screen.
+    const Vector2F lAbove = WorldToScreen(lView, lViewport, { 12.f, -34.f + 150.f });
+    CHECK(lAbove.x == doctest::Approx(480.f));
+    CHECK(lAbove.y == doctest::Approx(150.f));   // half the 300-unit half-height, from the centre
+
+    CHECK(WorldToScreen(lView, { 0.f, 600.f }, { 1.f, 1.f }).x == doctest::Approx(0.f));   // degenerate
+}

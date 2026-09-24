@@ -123,14 +123,14 @@ namespace Opaax
         return IsValidDevice() ? m_Device->GetLastGpuFrameTimeMs() : -1.0;
     }
 
-    void RenderSystem::BeginPass(IRenderTarget& InTarget, const RenderView& InView)
+    void RenderSystem::BeginPass(IRenderTarget& InTarget, const RenderView& InView, const ELoadOp InLoadOp)
     {
         if (!IsValidDevice() || !IsValidRenderer2D())
         {
             return;
         }
-        
-        m_Device->GetCommandBuffer().BeginRenderPass(InTarget, ELoadOp::Clear, m_ClearColor);
+
+        m_Device->GetCommandBuffer().BeginRenderPass(InTarget, InLoadOp, m_ClearColor);
         m_Renderer2D->BeginPass(InView, m_Device->GetCommandBuffer());
     }
 

@@ -26,8 +26,8 @@ namespace Opaax::Editor
         {
             if (InWidgets.BeginTreeNode("Framing & Spacing"))
             {
-                InWidgets.DragFloat("Window Padding X", &InData.WindowPadding.x, 1, 0, 20);
-                InWidgets.DragFloat("Window Padding Y", &InData.WindowPadding.y, 1, 0, 20);
+                InWidgets.DragFloat("Window Padding X", &InData.WindowPadding.x, 1,.1f, 0, 20);
+                InWidgets.DragFloat("Window Padding Y", &InData.WindowPadding.y, 1,.1f, 0, 20);
             
                 InWidgets.EndTreeNode();
             }

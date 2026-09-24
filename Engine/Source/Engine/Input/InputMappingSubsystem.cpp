@@ -222,9 +222,18 @@ namespace Opaax
         return true;
     }
 
+    void InputMappingSubsystem::ConsumeThisFrame(const InputKeyMask& InConsumed)
+    {
+        for (Uint16 lIndex = 0; lIndex < InputManager::KEY_STATE_COUNT; ++lIndex)
+        {
+            if (InConsumed[lIndex]) { m_PreConsumed[lIndex] = true; }
+        }
+    }
+
     void InputMappingSubsystem::Update(double InDeltaTime)
     {
-        m_Evaluator.Evaluate(m_Context->Input, InDeltaTime);
+        m_Evaluator.Evaluate(m_Context->Input, InDeltaTime, &m_PreConsumed);
+        m_PreConsumed = InputKeyMask{};   // one frame only (F4)
 
         // BY INDEX and re-read each step: a handler may Bind (growing m_Bindings and
         // reallocating it) or RegisterAction (invalidating a state pointer) from inside its own

@@ -42,6 +42,12 @@ namespace Opaax
         // ordinary draw passes — so an outline is a VALUE, not a second pipeline (and therefore not
         // a second flush). See MakeOutlineInnerHalf.
         Vector2F InnerHalf;
+
+        // Where this corner falls in the MASK's rect, 0..1 (**UI16**). MaskIndex is the mask's
+        // sampler slot, or -1 for "no mask" — which is what every ordinary draw passes, so the
+        // fragment's mask path is not taken and nothing that existed before changed.
+        Vector2F MaskUV;
+        float    MaskIndex;
     };
 
     // =============================================================================
@@ -67,6 +73,7 @@ namespace Opaax
         TDynArray<QuadVertex>  PassVertices;
         TDynArray<Uint64>      PassKeys;
         TDynArray<Uint32>      PassTexIds;
+        TDynArray<Uint32>      PassMaskIds;   // parallel; 0 = this quad has no mask (UI16)
         TDynArray<ITexture2D*> PassTextures;   // texture id -> texture; id 0 is the white texture
 
         // Emit side, reused every pass.
@@ -110,6 +117,8 @@ namespace Opaax
                 { EShaderDataType::Float2 },  // TexCoord
                 { EShaderDataType::Float  },  // TexIndex
                 { EShaderDataType::Float2 },  // InnerHalf
+                { EShaderDataType::Float2 },  // MaskUV
+                { EShaderDataType::Float  },  // MaskIndex
             };
         }
 
@@ -240,6 +249,7 @@ namespace Opaax
         m_Data->PassVertices.clear();
         m_Data->PassKeys.clear();
         m_Data->PassTexIds.clear();
+        m_Data->PassMaskIds.clear();
 
         // Id 0 is the white texture in every pass — an untextured quad samples it and pays no slot.
         m_Data->PassTextures.clear();
@@ -265,7 +275,7 @@ namespace Opaax
     {
         if (m_Data->PassKeys.empty()) { return; }
 
-        PlanQuadBatches(m_Data->PassKeys, m_Data->PassTexIds, m_Data->Limits, m_Data->Plan);
+        PlanQuadBatches(m_Data->PassKeys, m_Data->PassTexIds, m_Data->PassMaskIds, m_Data->Limits, m_Data->Plan);
 
         // Every batch starts from white, this first one included — a slot left over from the
         // PREVIOUS pass would name a texture that may not exist any more.
@@ -290,14 +300,27 @@ namespace Opaax
             // The slot is a property of the BATCH, so it is written here and not at record time.
             const QuadVertex* lSrc = &m_Data->PassVertices[lPlacement.QuadIndex * 4u];
             QuadVertex*       lDst = &m_Data->UploadBuffer[lQuadCount * 4u];
+            const Uint32 lMaskId = m_Data->PassMaskIds[lPlacement.QuadIndex];
+
+            // -1 keeps the fragment's mask path untaken; a masked quad names the slot the plan
+            // gave its mask (**UI16**).
+            const float lMaskIndex = (lMaskId != 0) ? static_cast<float>(lPlacement.MaskSlot) : -1.f;
+
             for (Uint32 i = 0; i < 4u; ++i)
             {
-                lDst[i]          = lSrc[i];
-                lDst[i].TexIndex = static_cast<float>(lPlacement.Slot);
+                lDst[i]           = lSrc[i];
+                lDst[i].TexIndex  = static_cast<float>(lPlacement.Slot);
+                lDst[i].MaskIndex = lMaskIndex;
             }
 
             m_Data->SlotTextures[lPlacement.Slot] = m_Data->PassTextures[m_Data->PassTexIds[lPlacement.QuadIndex]];
             lSlotCount = std::max(lSlotCount, lPlacement.Slot + 1u);
+
+            if (lMaskId != 0)
+            {
+                m_Data->SlotTextures[lPlacement.MaskSlot] = m_Data->PassTextures[lMaskId];
+                lSlotCount = std::max(lSlotCount, lPlacement.MaskSlot + 1u);
+            }
             ++lQuadCount;
         }
 
@@ -362,12 +385,13 @@ namespace Opaax
                               const Vector4F& InColor,
                               float           InRotationRad,
                               ERenderLayer    InLayer,
-                              Int16           InOrderInLayer)
+                              Int16           InOrderInLayer,
+                              const QuadMask& InMask)
     {
         // A coloured quad IS a sprite: texture id 0 is the white texture, so the sample is
         // (1,1,1,1) and the shader's multiply leaves the tint exactly as given.
         SubmitQuad(InPosition, InSize, InColor, InRotationRad, InLayer, InOrderInLayer,
-                   0u, { 0.f, 0.f }, { 1.f, 1.f });
+                   0u, { 0.f, 0.f }, { 1.f, 1.f }, { 0.f, 0.f }, InMask);
     }
 
     void Renderer2D::DrawSprite(const Vector2F& InPosition,
@@ -378,10 +402,11 @@ namespace Opaax
                                 ERenderLayer    InLayer,
                                 Int16           InOrderInLayer,
                                 const Vector2F& InUVMin,
-                                const Vector2F& InUVMax)
+                                const Vector2F& InUVMax,
+                                const QuadMask& InMask)
     {
         SubmitQuad(InPosition, InSize, InTint, InRotationRad, InLayer, InOrderInLayer,
-                   GetTextureId(InTexture), InUVMin, InUVMax);
+                   GetTextureId(InTexture), InUVMin, InUVMax, { 0.f, 0.f }, InMask);
     }
 
     Uint32 Renderer2D::GetTextureId(ITexture2D& InTexture)
@@ -434,14 +459,15 @@ namespace Opaax
                                      const float     InThickness,
                                      const float     InRotationRad,
                                      const ERenderLayer InLayer,
-                                     const Int16     InOrderInLayer)
+                                     const Int16     InOrderInLayer,
+                                     const QuadMask& InMask)
     {
         // UNTEXTURED, and that is load-bearing rather than a simplification: the shader reads
         // v_TexCoord as the quad's LOCAL position to find the border, which only holds while the UVs
         // span the full 0..1. A textured outline sampling an atlas sub-rect would carve the hole in
         // the wrong place, so there is deliberately no overload that takes one.
         SubmitQuad(InPosition, InSize, InColor, InRotationRad, InLayer, InOrderInLayer,
-                   0u, { 0.f, 0.f }, { 1.f, 1.f }, MakeOutlineInnerHalf(InSize, InThickness));
+                   0u, { 0.f, 0.f }, { 1.f, 1.f }, MakeOutlineInnerHalf(InSize, InThickness), InMask);
     }
 
     void Renderer2D::SubmitQuad(const Vector2F& InPosition,
@@ -453,7 +479,8 @@ namespace Opaax
                                 Uint32          InTexId,
                                 const Vector2F& InUVMin,
                                 const Vector2F& InUVMax,
-                                const Vector2F& InInnerHalf)
+                                const Vector2F& InInnerHalf,
+                                const QuadMask& InMask)
     {
         const float lHalfW = InSize.x * 0.5f;
         const float lHalfH = InSize.y * 0.5f;
@@ -476,12 +503,22 @@ namespace Opaax
             lTL = RotateOffset(InPosition, lCos, lSin, -lHalfW, +lHalfH);
         }
 
-        // Winding BL -> BR -> TR -> TL, matching the index pattern. TexIndex is left at 0 and
-        // written by EmitPass: the sampler slot belongs to a batch that does not exist yet.
+        // The mask's rect in the SAME space as the corners, so each vertex's place inside it is a
+        // plain remap. Outside 0..1 the fragment discards, which is what clips a child that escapes
+        // its mask (**UI16**).
+        const bool     lMasked  = InMask.IsActive();
+        const Vector2F lMaskMin = lMasked ? InMask.Rect.Min() : Vector2F{ 0.f, 0.f };
+        const Vector2F lMaskSize = lMasked ? InMask.Rect.Size() : Vector2F{ 1.f, 1.f };
+
+        // Winding BL -> BR -> TR -> TL, matching the index pattern. TexIndex and MaskIndex are left
+        // at 0/-1 and written by EmitPass: a sampler slot belongs to a batch that does not exist yet.
         const auto lPush = [&](const Vector2F& InCorner, const Vector2F& InUV)
         {
+            const Vector2F lMaskUV{ (InCorner.x - lMaskMin.x) / lMaskSize.x,
+                                    (InCorner.y - lMaskMin.y) / lMaskSize.y };
+
             m_Data->PassVertices.emplace_back(
-                QuadVertex{ { InCorner.x, InCorner.y, 0.f }, InColor, InUV, 0.f, InInnerHalf });
+                QuadVertex{ { InCorner.x, InCorner.y, 0.f }, InColor, InUV, 0.f, InInnerHalf, lMaskUV, -1.f });
         };
 
         lPush(lBL, { InUVMin.x, InUVMin.y });
@@ -494,6 +531,12 @@ namespace Opaax
         // a slot now — stable for the whole sort instead of only for one batch.
         m_Data->PassKeys.emplace_back(MakeSortKey(InLayer, InOrderInLayer, InTexId));
         m_Data->PassTexIds.emplace_back(InTexId);
+
+        // Id 0 means NO MASK, so a rect-only mask cannot use it: it takes a real id that happens to
+        // resolve to the white texture (sampling 1 everywhere = the rect alone clips). Every
+        // rect-only mask in a pass finds that same entry, so they share one slot between them.
+        m_Data->PassMaskIds.emplace_back(
+            lMasked ? GetTextureId(InMask.Texture != nullptr ? *InMask.Texture : *m_Data->WhiteTexture) : 0u);
 
         ++m_Data->Stats.Quads;
     }

@@ -2659,3 +2659,116 @@ session of confusion.
   negative): grey with no reason reads as "the verb is broken", and the author reports it that way.
 - **Read their session log BEFORE reasoning from the report.** The report named three mechanisms;
   the log named one undo. The mechanism I would have gone looking for was not involved at all.
+
+## L95 — A consumed HELD key fabricates a rising edge when the mask lifts; the edge must be gated by "was this suppressed last frame" (2026-09-14)
+
+**What happened (UI U3, caught by the PIE harness).** A pause menu bound Escape both to OPEN (via
+the mapping, GameAndUI) and to CLOSE (via the focused panel, UIOnly-muted). It opened, then closed
+on the next Escape, then **reopened one frame later** — `opened 2 time(s)`, and both scripted
+Space presses read `0 jumps`. The evaluator's edge was `bStarted = bTriggered && !wasActuated`.
+While the menu is up (UIOnly), the mask forces Escape's action value to zero, so `wasActuated`
+reads false; the frame the menu closes and the mask lifts, the STILL-HELD Escape produces a value
+again → `!false` → a phantom `Started` → the menu reopens. A real user holds Escape for many
+frames after the close too, so this was never a harness artifact.
+
+**Rules for next time:**
+- **Consumption zeroes the VALUE, so it corrupts any edge computed from the value across the
+  consumption boundary.** Record the physical suppression (`bMaskSuppressed` = "a binding was
+  consumed while its key was physically down") and gate the rising edge on last frame's flag:
+  `bStarted = bTriggered && !wasActuated && !wasMaskSuppressed`. The falling edge (`bCompleted`) is
+  fine — muting SHOULD read as a release.
+- **A new consumer of an old mechanism re-runs its corner cases.** IM6's per-key consumption had
+  this latent phantom for a higher context popping mid-hold; nothing toggled a mask mid-hold until
+  a UI input MODE did. When you add the first caller that exercises a path (here: consumption that
+  flips on and off while a key is held), test the transition, not just the steady state.
+- **Bind the CLOSE of a modal to the focused widget, not the muted mapping** — but that alone does
+  not save you: the OPEN binding still sees the fabricated edge. The fix belongs at the evaluator,
+  once, for every action.
+- **The harness earned its keep again ([[L81]]):** a smoke run cannot press Escape twice with a
+  Space between; the reopen was invisible to "0 errors" and only the `opened N time(s)` counter and
+  the jump count discriminated it ([[L59]]).
+
+## L96 — A hand-written dispatch ladder IS a missing registration; and an inherited static makes a derived type look reflected (2026-09-14)
+
+**What happened (UI U5, their report).** *"I think there are some widget i cant see their prop in
+detail panel nor UI panel. Like mask, i cant see texture."* The UI panel chose a widget's property
+drawer with a `dynamic_cast` ladder I wrote in U4. When U5 added `UIMask`, I registered it with the
+ENGINE (so it was addable and serializable) and never touched the ladder — so its `Texture` was
+addable, invisible and uneditable, which is **MR2i's exact failure one level down**. Reading the
+code for the fix found a SECOND half nobody had reported yet: the ladder called
+`DrawProperties(widgets, *lText)`, which folds over `UIText`'s OWN list — and a leaf's list does
+not repeat the base's, so `UIText`, `UIImage` and `UIButton` had **no editable Rect at all**.
+
+**Rules for next time:**
+- **A hand-maintained `if/else if` over types is a registry with no registration check.** It has
+  every property MR2i warns about — nothing fails to build, nothing fails a test, and the symptom
+  is a field that is simply not there. When you catch yourself writing one, look for the registry
+  that already exists: `DrawerRegistry.h` literally said *"whatever comes next is one more
+  specialization rather than a third registry"*, and the fix was a six-line `TDrawerResolver`
+  specialization plus DELETING the ladder.
+- **Count one registry against the other, and log it.** `UI widget drawers: 5 for 5 registered
+  type(s)` is what makes the next omission loud. A missing registration is invisible to the
+  compiler by construction, so the instrument is the only gate there can be ([[L59]]).
+- **`static` members are INHERITED, so a derived type can satisfy a concept using its base's
+  data.** `CReflected<UIPanel>` was true via `UIWidget::GetProperties()`, so `UIPanel` would have
+  drawn the base's four fields a second time under its own drawer. **A test asserting the count was
+  what caught it** — I had written `PropertyCount<UIPanel>() == 0` expecting empty, and it returned
+  4. Every type in such a hierarchy must declare its own list, even when that list is empty.
+- **The editor's registration seam has NO EditorContext yet.** `RegisterExtensions` runs at
+  `OnModulesRegistered`; `CreateEditorContext` runs later. My count check dereferenced `m_Context`
+  there and segfaulted on the first launch — caught by the smoke run, not by the build. Reach the
+  engine through the service locator at that seam, and re-read the registry header's own warning
+  ("registration STORES ONLY; nothing is constructed") before adding anything to it.
+
+## L97 — A one-line fix they named is not a decision to wait for; and a value they wired must be traced to the screen (2026-09-15)
+
+**What happened (UI block close).** Two things, both about reading them. (1) At U4 close they
+reported the viewport picking during PIE and named two shapes in one breath — *"disable selection
+viewport OR as config"*. I filed it as *"theirs to pick — do not choose for them"* and left it
+across TWO hand-offs, until they restated it flat: *"The PIE selection still there."* The first
+shape was one line (`Measure(hovered && PIE.IsEdit())`), the second ~10; holding a one-line fix
+hostage to a choice cost them a round and me nothing to build. (2) They committed `a1bce9a`
+mid-task — `DragStep` on the property meta and `SetRange(0,1).SetDragStep(0.01)` on a GROUP
+property — and the fold DROPPED it: a group's meta reached the tooltip and nothing else, so their
+line did nothing and read as done. Their next message was *"Editing hud in ui panel more easier"*.
+
+**Rules for next time:**
+- **"A or B" from them, where A is a line and B is machinery, is an instruction to build A and
+  price B** — not a fork to hold open. "Do not choose for them" is for designs whose two shapes
+  cost the same or change the file format; it is not for a gate they already asked for twice.
+  If the cheap one is wrong they will say so in one line ([[L71]]'s rule, reversed).
+- **When they land a commit on a seam, trace the value to the widget before the next hand-off.**
+  `git log` at the top of every turn; for anything of theirs touching reflection, drawers or a
+  format, follow it end-to-end. A line that silently does nothing is worse than a missing one.
+  The fix belongs in MY next commit, named plainly ("your line starts working"), never an amend.
+- **A "submit while X" design is one frame late whenever the request can arrive after the
+  submit.** U6's cover: the tenant submits in its tick, the world ticks after it, and its own
+  button fires mid-route — so "submit while loading" misses the frame that asked in both cases.
+  A FLAG read at draw time (UI3's rule, already there) is the shape; found by tracing the frame
+  before writing code, which is the cheap time to find it.
+
+## L98 — State a WORLD registers on a tier that OUTLIVES worlds is gated at the swap, and the swap harness already existed (2026-09-15)
+
+**What happened (UI U10 close).** The binding worked on the first map and went dead after a level
+swap. `Engine::OpenLevel` creates the new world BEFORE destroying the old (deliberately — no frame
+without a world), so the new HUD's `Bindings().Add("Hud")` replaced the old reader, and the old
+HUD's `Shutdown` then removed BY NAME — taking the new world's source with it. The pull resolved to
+nothing, the widget kept its authored `Jumps: {}`, and they spent a round changing the placeholder.
+My U10 gate was a boot smoke of ONE world (`0 jump(s)`, no swap) plus headless tests that construct
+one table and one owner. Nothing I ran could have seen two owners of one key overlapping — and
+U6 had built the exact instrument for it four commits earlier: a throwaway `RequestOpenLevel` at
+frame 60 from the world tick ([[L81]]). Running it once would have shown the `[UIBinding]` warning.
+
+**Rules for next time:**
+- **Anything a WORLD subsystem registers on a GAMEINSTANCE tier (a canvas, a mapping context, a
+  binding source, a pointer) has a swap case, and the swap OVERLAPS: new-Startup, then
+  old-Shutdown.** Ask, before the gate: "what does the old world's Shutdown do to the new world's
+  registration?" If the answer is "removes it by the same key", the key is not the identity — a
+  handle is (**MV4**'s shape: two lifetimes, one key, entt-style reuse).
+- **A feature whose owner is world-tier is not gated until it has survived a level swap in the
+  real app.** The U6 harness (a request from the world tick at frame N) costs ten lines and one
+  smoke; the second `'bound'` trace line after the old `HUD shutdown` IS the gate. Keep it in the
+  L81 toolbox beside "keep the numbers, remove, re-smoke".
+- **Log the success branch ONCE PER OWNER, not once per process** ([[L15]] sharpened): the
+  first-resolve trace is what made the swap readable in the log — new HUD `.043`, old shutdown
+  `.055`, new HUD's bind `.059`. A "bound" line that fired only once per run would have hidden it.

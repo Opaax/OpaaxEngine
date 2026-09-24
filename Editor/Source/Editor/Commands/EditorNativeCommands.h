@@ -582,6 +582,36 @@ namespace Opaax::Editor
         void Execute(EditorContext& InContext, const Params&);
     };
 
+    /**
+     * Create a `.opaaxui` and open it — `NewMapCommand`'s shape for the UI document (U4).
+     *
+     * NOT AN8's generic asset factory: a first-class document type gets its own New, the way a map
+     * and a level already do. The file it writes is an empty canvas, so the panel opens on
+     * something rather than on nothing.
+     */
+    struct NewUICommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
+    /** Write the open `.opaaxui` and publish it — SaveFamilyCommand's shape, one asset over. */
+    struct SaveUICommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
+    /** Delete the UI panel's selected widget — what Delete runs while that panel is focused (PanelDesc::DeleteCommand). */
+    struct DeleteUIWidgetCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
     /** Write the open `.opaaxmovemode` and publish it. */
     struct SaveMoveModeCommand
     {

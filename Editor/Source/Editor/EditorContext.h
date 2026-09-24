@@ -32,6 +32,7 @@ namespace Opaax
         class EditorAnimationClipDocument; // editor-owned; the open .opaaxclip AND its data (⑥ S3)
         class EditorAnimationLibraryDocument; // editor-owned; the open .opaaxanim AND its data (⑥ S4)
         class EditorFontFamilyDocument;       // editor-owned; the open .opaaxfont AND its data (⑥ S4)
+        class EditorUICanvasDocument;         // editor-owned; the open .opaaxui AND its canvas (UI U4)
         class EditorMoveModeDocument;         // editor-owned; the open .opaaxmovemode AND its data (⑦-A)
         class EditorMoverDocument;            // editor-owned; the open .opaaxmover AND its data (⑦-A)
         class EditorInputActionDocument;      // editor-owned; the open .opaaxaction AND its data (⑦-B)
@@ -148,6 +149,10 @@ namespace Opaax
             // ⑥ S4 — the open font family: the alias table that turns (subset, weight, width, slant)
             // into one `.ttf`. Owns its data for ClipDocument's reason.
             EditorFontFamilyDocument& FamilyDocument;
+
+            // UI U4 — the open `.opaaxui`. It owns a real UICanvas rather than plain data, because
+            // the panel PREVIEWS it by rendering it (**UI14**): what is on screen IS the document.
+            EditorUICanvasDocument& UICanvasDocument;
 
             // ⑦-A P5a — the open movement tuning: one mode's knobs. The CLIP of the mover family.
             EditorMoveModeDocument& MoveModeDocument;

@@ -70,6 +70,14 @@ namespace Opaax::Editor
             m_State = EInputRouteState::Open;
         }
 
+        // While Open, the game's pointer IS the viewport-local one (UI11) — the OS position is window
+        // pixels and the game hit-tests in its own view. Fed once per frame, here, so the game reads
+        // the same value everything else this frame does.
+        if (m_State == EInputRouteState::Open)
+        {
+            m_Input.OnMouseMoved(m_PointerLocalPx.x, m_PointerLocalPx.y);
+        }
+
         if (m_State == lPrevious)
         {
             return;

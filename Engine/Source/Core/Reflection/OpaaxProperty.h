@@ -78,6 +78,7 @@ namespace Opaax
     {
         float          RangeMin = 0.f;
         float          RangeMax = 0.f;
+        float          DragStep = 0.f;
         EPropertyFlags Flags    = EPropertyFlags::None;
         const char*    Tooltip  = nullptr;
     };
@@ -110,6 +111,14 @@ namespace Opaax
             TProperty lCopy = *this;
             lCopy.Meta.RangeMin = InMin;
             lCopy.Meta.RangeMax = InMax;
+
+            return lCopy;
+        }
+        
+        constexpr TProperty SetDragStep(const float InStep) const noexcept
+        {
+            TProperty lCopy = *this;
+            lCopy.Meta.DragStep = InStep;
 
             return lCopy;
         }

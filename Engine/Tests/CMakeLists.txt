@@ -65,6 +65,9 @@ set(OPAAX_TEST_SOURCES
     # four trigger phases — so it is gated here against a REAL InputManager driven by its own
     # feed, rather than by a fake input source that would share the bug it is meant to catch.
     Core/Engine/InputMappingTests.cpp
+    # UI U3. The three input modes at the raw->mapping seam: which keys the game still hears
+    # after the UI routed a frame. A real InputManager, a real canvas, a button under the pointer.
+    Core/Engine/UIInputRouterTests.cpp
     Core/World/WorldEventsTests.cpp
     Core/World/ComponentIdentityTests.cpp
     Core/World/ComponentRegistryTests.cpp
@@ -121,6 +124,38 @@ set(OPAAX_TEST_SOURCES
     # P5b. The MODES are pure policy plus one MoveCapsule call, which is where "almost right"
     # hides — a jump that does not clear the ground, an air-steer that equals the ground one.
     Core/Physics/MoverModeTests.cpp
+    # UI U1. The module is World-free and GL-free by design, so the whole contract is gated here:
+    # the rect resolution, and the invalidation numbers (a same-aspect resize = 0 layouts, an
+    # idle frame = 0/0). Only the submit loop needs a context.
+    UI/UIRectTests.cpp
+    UI/UICanvasTests.cpp
+    # U2. A string in a rect through a stub font provider — the atlas-still-uploading re-arm is
+    # the case a smoke run could only ever see as "the text appeared a frame late".
+    UI/UITextTests.cpp
+    # U3. Events bubble (Slate's FReply), a press captures, focus routes keys, a detach forgets;
+    # the button's click is Down + Up inside. Pure — the mask the UI hands the mapping is tested
+    # one level up in Core/Engine/UIInputRouterTests.cpp against a real InputManager.
+    UI/UIEventTests.cpp
+    UI/UIButtonTests.cpp
+    # U4. The `.opaaxui` format: a widget serializes itself, the registry rebuilds it. The
+    # round trip is the gate a smoke run cannot be — it sees a HUD, not whether a field survived.
+    UI/UICanvasFileTests.cpp
+    # U5. The mask: which mask applies to which quad, asserted through the pure draw list.
+    # The PIXELS (white shows, black hides) are the shader's half and are theirs to confirm.
+    UI/UIMaskTests.cpp
+    # U5b. Both halves are rect → quads geometry and nothing else, so both are gated with no
+    # texture and no canvas: the 9-slice against a texture SIZE, the safe area through the walk.
+    UI/UISliceTests.cpp
+    UI/UISafeAreaTests.cpp
+    # U9. The container owns its children's rects: where each slot lands, a hidden child keeping
+    # its slot, and the up-propagation numbers (a child's size re-lays the stack, its content does not).
+    UI/UIStackTests.cpp
+    # U10. A widget pulls a named value from a reflected object: the reader by name, the table's
+    # "Source.Property", and the number that matters — a value that HOLDS rebuilds nothing.
+    UI/UIBindingTests.cpp
+    # U12. One image resolve for UIImage and UIButton: runtime > sheet frame > texture, a frame's
+    # UVs reaching the quad (sliced too), and "named but not ready" re-arming. The pixels are theirs.
+    UI/UIImageSourceTests.cpp
 
     # Editor-side, and the FIRST of its kind — header-only editor types only (see the include dir
     # below). ③'s gizmo delta math, pinned after a scale bug that only showed away from (0,0).
@@ -130,6 +165,15 @@ set(OPAAX_TEST_SOURCES
     # the gizmo one level over: a smoke run never drags an edge, so the 8 regions, the min-size
     # clamp and the clamp-inside-the-texture live here.
     Editor/EditorRectGeometryTests.cpp
+
+    # UI U5 fix. The widget drawer dispatch, header-only and ImGui-free, so the EDITOR's real
+    # registry runs here: a type with no drawer showed only its base fields, and a leaf in the
+    # old ladder showed none of them. Both halves gated.
+    Editor/UIWidgetDrawerTests.cpp
+
+    # UI U13. The designer's layout target: a named aspect is EXACT (16:9 is 1920x1080, never a
+    # rounded 1919), Free is the dock's own size. Header-only, ImGui-free.
+    Editor/UIPreviewAspectTests.cpp
 
     # NOTE: every quarantined suite now lives under Tests/Legacy/ with the code it exercises
     # (ARCHITECTURE.md X1) — ECS/*, Physics/CollisionProfile, Assets/AssetIdResolve and

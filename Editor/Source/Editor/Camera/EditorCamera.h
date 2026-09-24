@@ -70,6 +70,13 @@ namespace Opaax::Editor
         void FocusOn(const Bounds2D& InBounds, const Vector2F& InViewportPx);
 
         /**
+         * Put the camera exactly here — the primitive FocusOn is a policy over. An explicit framing
+         * counts as seeded, so the one-shot viewport seed never overwrites it. The UI designer's
+         * "1:1" (U13).
+         */
+        void Set(const Vector2F& InPosition, float InOrthoSize) noexcept;
+
+        /**
          * Publish this camera as InWorld's view — but ONLY for an Edit world. A Play world is
          * framed by its own CameraComponent, so this refuses rather than fighting CameraManager
          * for the slot. THE ONE PLACE the Edit/Play fork is stated on the editor's side.

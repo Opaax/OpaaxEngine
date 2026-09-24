@@ -123,9 +123,11 @@ namespace Opaax::Editor
 
         World* const lWorld = m_Context.Worlds.GetActiveWorld();
 
+        // The game's UI composites over this view — it is where PIE is watched. The Camera Preview
+        // and the prefab panel leave the default (no UI): one frames, the other edits.
         m_Context.Engine.SubmitRenderView(*m_RenderTarget,
                                           lWorld != nullptr ? lWorld->GetCameraView() : CameraView{},
-                                          /*bInDrawOverlays*/ true);
+                                          /*bInDrawOverlays*/ true, /*InSource*/ nullptr, /*bInDrawUI*/ true);
     }
 
     // =========================================================================
@@ -163,6 +165,12 @@ namespace Opaax::Editor
     void ViewportPanel::ApplyPendingPick()
     {
         const PickGesture::Pick lPick = m_PickGesture.Take();   // cleared FIRST, whether spent or not
+
+        // A press that began in Edit and was released in Play still banks a pick; dropped here.
+        if (!m_Context.PIE.IsEdit())
+        {
+            return;
+        }
 
         if (World* lWorld = m_Context.Worlds.GetActiveWorld())
         {
@@ -480,6 +488,11 @@ namespace Opaax::Editor
         const bool   lImageRawHovered = ImGui::IsItemHovered();
         const ImVec2 lOrigin          = ImGui::GetItemRectMin();
 
+        // The game's pointer, in viewport-image pixels (UI11): the origin is only knowable here, the
+        // same reason the prefab-drop local pixel is taken here. The route feeds it to the engine.
+        const ImVec2 lMouse = ImGui::GetMousePos();
+        m_Context.Route.SetPointerLocalPx({ lMouse.x - lOrigin.x, lMouse.y - lOrigin.y });
+
         // ⑦-C. DROP A PREFAB TO PLACE ONE. Taken here because BeginDragDropTarget names the LAST
         // SUBMITTED ITEM, which is the image — nothing has been submitted since, and the three
         // measures above only read its rect.
@@ -518,9 +531,12 @@ namespace Opaax::Editor
                                ViewportPx(), { lOrigin.x, lOrigin.y }, { lAvail.x, lAvail.y },
                                TranslateSnapStep(), lToolbarHovered, EUndoWorld::Active);
 
+        // EDIT WORLDS ONLY, the toolbar's own rule one gesture down (their U4 finding): with the
+        // game's UI in this image, a click on a UIButton is the GAME's and must not also pick the
+        // entity behind it. One gate covers the point and the marquee — they are one gesture.
         if (!lGizmoOwns)
         {
-            m_PickGesture.Measure(lImageHovered, { lOrigin.x, lOrigin.y });
+            m_PickGesture.Measure(lImageHovered && m_Context.PIE.IsEdit(), { lOrigin.x, lOrigin.y });
         }
 
         if (lImg.IsValid() && !m_bImageLogged)

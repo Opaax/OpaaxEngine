@@ -4,6 +4,7 @@
 
 #include "Engine/GameInstance/GameInstanceSubsystemRegistry.h"
 #include "Engine/Subsystems/Resources/ResourceFormatRegistry.h"
+#include "UI/UIWidgetRegistry.h"
 #include "World/Components/ComponentRegistry.h"
 #include "World/Systems/Movement/MoverModeRegistry.h"
 #include "World/Systems/WorldSubsystemRegistry.h"
@@ -76,6 +77,10 @@ namespace Opaax
         GameInstanceSubsystemRegistry&       GameInstanceSubsystems()       noexcept { return m_GameInstanceSubsystems; }
         const GameInstanceSubsystemRegistry& GameInstanceSubsystems() const noexcept { return m_GameInstanceSubsystems; }
 
+        /** UI U4 — the widget types a `.opaaxui` may name (**UI12**). */
+        UIWidgetRegistry&       UIWidgets()       noexcept { return m_UIWidgets; }
+        const UIWidgetRegistry& UIWidgets() const noexcept { return m_UIWidgets; }
+
         // =========================================================================
         // Functions
         // =========================================================================
@@ -92,6 +97,7 @@ namespace Opaax
             m_ResourceFormats.Seal();
             m_MoverModes.Seal();
             m_GameInstanceSubsystems.Seal();
+            m_UIWidgets.Seal();
         }
 
         // =========================================================================
@@ -103,5 +109,6 @@ namespace Opaax
         ResourceFormatRegistry        m_ResourceFormats;
         MoverModeRegistry             m_MoverModes;
         GameInstanceSubsystemRegistry m_GameInstanceSubsystems;
+        UIWidgetRegistry              m_UIWidgets;
     };
 }

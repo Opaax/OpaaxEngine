@@ -31,6 +31,7 @@ namespace Opaax
             // world consumer already handles (BO4).
             World* FinishStartup(const WorldSpec&) override { return nullptr; }
             World* OpenLevel(const WorldSpec&)     override { return nullptr; }
+            void   RequestOpenLevel(const WorldSpec&) override {}
 
             // No registries and no subsystems to create, so a "game" here would be an empty object
             // pretending to be a session. False is the honest answer, and it matches the null
@@ -42,7 +43,8 @@ namespace Opaax
             void PresentBackbuffer()      override {}
             // Nothing renders, so a submitted view is dropped on the floor — the same inert answer
             // every other hook here gives.
-            void SubmitRenderView(IRenderTarget&, const CameraView&, bool, World*) override {}
+            void SubmitRenderView(IRenderTarget&, const CameraView&, bool, World*, bool) override {}
+            void SubmitUICanvas(UICanvas&, IRenderTarget*, const CameraView*) override {}
 
             // No device to create on — a caller gets nullptr and its own null-handling runs.
             TUniquePtr<IFramebuffer> CreateFramebuffer(const FramebufferSpec&) override { return nullptr; }

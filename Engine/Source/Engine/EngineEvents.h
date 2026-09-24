@@ -24,4 +24,14 @@ namespace Opaax
      * sibling may already be gone (LC1).
      */
     struct EngineTearingDown {};
+
+    /**
+     * A level swap has been ASKED FOR (IEngine::RequestOpenLevel) and will happen at the start of
+     * the next frame. Published at once, mid-frame, so a cover can be drawn over THIS frame
+     * (**UI21**). The active world is still the old one.
+     */
+    struct LevelLoadRequested {};
+
+    /** The swap is done: the new world is active and the old one is gone. The cover comes down. */
+    struct LevelLoadFinished {};
 }

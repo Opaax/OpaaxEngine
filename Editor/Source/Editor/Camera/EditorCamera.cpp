@@ -86,6 +86,13 @@ namespace Opaax::Editor
         m_bMovedLogged = true;
     }
 
+    void EditorCamera::Set(const Vector2F& InPosition, const float InOrthoSize) noexcept
+    {
+        m_Position  = InPosition;
+        m_OrthoSize = Maths::Clamp(InOrthoSize, k_OrthoSizeMin, k_OrthoSizeMax);
+        m_bSeeded   = true;
+    }
+
     void EditorCamera::Apply(World& InWorld) const
     {
         if (InWorld.GetMode() != EWorldMode::Edit)

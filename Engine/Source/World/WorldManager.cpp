@@ -9,6 +9,7 @@
 #include "Engine/GameInstance/GameInstance.h"
 #include "Engine/GameInstance/GameInstanceManager.h"
 #include "Engine/Input/InputMappingSubsystem.h"   // the Actions pointer every WorldContext carries
+#include "Engine/UI/UISubsystem.h"                // and the UI one
 #include "Engine/Registries/EngineRegistries.h"
 #include "World/Level.h"
 #include "World/Serialization/MapFactory.h"
@@ -253,17 +254,19 @@ namespace Opaax
         // no game, so null is a supported state rather than a boot failure — Profiler's rule, not
         // the guarded members'.
         InputMappingSubsystem* lActions = nullptr;
+        UISubsystem*           lUI      = nullptr;
 
         if (m_GameInstances != nullptr)
         {
             if (GameInstance* lGame = m_GameInstances->GetGameInstance())
             {
                 lActions = lGame->GetSubsystems().GetSubsystem<InputMappingSubsystem>();
+                lUI      = lGame->GetSubsystems().GetSubsystem<UISubsystem>();
             }
         }
 
         InWorld.SetContext(WorldContext{InWorld, *m_Resources, *m_Paths, *m_Events, *m_Input, *m_Config,
-                                        lActions, *m_Debug, m_Profiler});
+                                        lActions, lUI, *m_Debug, m_Profiler});
 
         WorldContext* lContext = InWorld.GetContext();
         OPAAX_ASSERT(lContext != nullptr);

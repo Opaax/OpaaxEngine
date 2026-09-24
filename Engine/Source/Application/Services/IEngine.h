@@ -12,6 +12,7 @@ namespace Opaax
     class InputManager;
     class GameInstanceManager;
     class World;
+    class UICanvas;
     class IFramebuffer;
     class IRenderTarget;
     class ITexture2D;
@@ -98,6 +99,19 @@ namespace Opaax
         virtual World* OpenLevel(const WorldSpec& InSpec) = 0;
 
         /**
+         * Ask for InSpec to replace the active world at the START of the next frame — the route
+         * GAMEPLAY takes (**UI21**), where `OpenLevel` is the host's.
+         *
+         * The frame in between is what a loading cover exists for: `LevelLoadRequested` is
+         * published at once, so a listener draws over THIS frame's render, and the swap is one
+         * `OpenLevel` at the top of the next `Loop`, followed by `LevelLoadFinished`. Synchronous
+         * today; the same two events will bracket an asynchronous load, and no listener changes.
+         *
+         * A second request before the first resolves REPLACES it — last wins, said in the log.
+         */
+        virtual void RequestOpenLevel(const WorldSpec& InSpec) = 0;
+
+        /**
          * Engine Loop
          */
         virtual void Loop()                             = 0;
@@ -123,9 +137,24 @@ namespace Opaax
          * @param InTarget BORROWED for the frame — the submitter owns its lifetime (I5).
          * @param InView In WORLD units; the matrices are composed against InTarget's pixels (CAM1).
          * @param bInDrawOverlays Whether the debug queue draws in this view. False looks like the game.
+         * @param bInDrawUI Whether submitted canvases composite over it. Opt-in; a framing preview says no.
          */
         virtual void SubmitRenderView(IRenderTarget& InTarget, const CameraView& InView, bool bInDrawOverlays,
-                                      World* InSource = nullptr) = 0;
+                                      World* InSource = nullptr, bool bInDrawUI = false) = 0;
+
+        /**
+         * Draw InCanvas over every view that opted into UI, THIS FRAME ONLY — the submission idiom
+         * above. The GameInstance's UI tenant is the caller; a canvas it stops submitting stops drawing.
+         * @param InCanvas BORROWED for the frame (I5).
+         * @param InTarget WHERE it draws. Null = over every view that opted into UI (the game).
+         *   Named = that target ALONE, cleared first — an editor panel previewing its own document
+         *   (**UI14**), which must not receive the game's canvases nor donate its own to the world.
+         * @param InView HOW a named target looks at it: a zoomed / panned designer view. Null = the
+         *   canvas's own (origin-centred, the reference height tall — the game's). With a view the
+         *   submitter has laid the canvas out itself; the pass does not size it to the target.
+         */
+        virtual void SubmitUICanvas(UICanvas& InCanvas, IRenderTarget* InTarget = nullptr,
+                                    const CameraView* InView = nullptr) = 0;
         
         /**
          * The CALLER owns the result and must release it while the engine — and its GPU context — is still alive. 

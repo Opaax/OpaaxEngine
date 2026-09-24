@@ -5,6 +5,8 @@
 #include "Components/HealthComponent.h"
 #include "Components/TagsComponent.h"
 #include "Resources/WaveResource.h"
+#include "Systems/HudSubsystem.h"
+#include "Systems/PauseMenuSubsystem.h"
 #include "Systems/PlayerControlSubsystem.h"
 #include "Systems/QuadOscillatorSubsystem.h"
 #include "Application/Services/ILogger.h"  // OPAAX_LOG + LogCategory
@@ -49,6 +51,13 @@ void SandboxModule::OnRegister(Opaax::ModuleRegistrar& InRegistrar)
     // puts a caller back on this route, which has had none in either host since the line above
     // was commented out.
     InRegistrar.WorldSubsystems().Register<Sandbox::PlayerControlSubsystem>();
+
+    // UI U2 — the first HUD: a jump counter and a speed bar under the GameInstance's canvas.
+    InRegistrar.WorldSubsystems().Register<Sandbox::HudSubsystem>();
+
+    // UI U3 — the first menu: a HUD button (GameAndUI) and a dimmed modal (UIOnly). One owner for it;
+    // the Menu mapping context PlayerControl used to push is superseded by the real thing.
+    InRegistrar.WorldSubsystems().Register<Sandbox::PauseMenuSubsystem>();
 
     // A resource type the ENGINE has never heard of, claiming its own extension. This is what makes
     // `.wave` a known file everywhere at once — the browser names it, and the editor module adds

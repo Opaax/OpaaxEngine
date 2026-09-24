@@ -223,6 +223,14 @@ namespace Opaax
          */
         bool bHoldLatched = false;
 
+        /**
+         * INTERNAL to the evaluator: last frame a binding of this action was CONSUMED while its key
+         * was physically down (the UI swallowed it, or a higher context did — UI10 / IM6). Kept so
+         * the next frame does NOT fabricate a Started when the mask lifts on a still-held key: the
+         * value was forced to zero, so the plain rising-edge test would read a phantom press.
+         */
+        bool bMaskSuppressed = false;
+
         /** Whether it fires for InTrigger this frame. */
         bool FiresFor(EInputTrigger InTrigger) const noexcept
         {

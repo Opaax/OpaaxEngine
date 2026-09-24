@@ -20,6 +20,18 @@ namespace
         return lKeys;
     }
 
+    /**
+     * The pre-U5 call, unchanged: nothing is masked.
+     *
+     * Every case below this line was written before masks existed and is UNTOUCHED — which is the
+     * point. An unmasked pass must plan exactly as it always did (**UI16**).
+     */
+    void PlanQuadBatches(const TDynArray<Uint64>& InKeys, const TDynArray<Uint32>& InTextureIds,
+                         const QuadBatchLimits& InLimits, TDynArray<QuadPlacement>& OutPlan)
+    {
+        Opaax::PlanQuadBatches(InKeys, InTextureIds, {}, InLimits, OutPlan);
+    }
+
     // The layer each emitted quad came from, in emit order.
     TDynArray<Uint32> EmittedIndices(const TDynArray<QuadPlacement>& InPlan)
     {
@@ -150,4 +162,83 @@ TEST_CASE("PlanQuadBatches: degenerate limits terminate")
     CHECK(lPlan[0].Batch == 0u);
     CHECK(lPlan[1].Batch == 1u);
     CHECK(lPlan[2].Batch == 2u);
+}
+
+// =============================================================================
+// UI U5 — a masked quad needs its MASK bound too, so it may cost a SECOND slot (UI16).
+// =============================================================================
+
+TEST_CASE("PlanQuadBatches: a masked quad gets a slot for its mask, and 0 means no mask")
+{
+    const TDynArray<Uint64> lKeys = Keys({ ERenderLayer::UI, ERenderLayer::UI });
+    const TDynArray<Uint32> lTex  { 7u, 7u };
+    const TDynArray<Uint32> lMask { 0u, 9u };   // the first is unmasked, the second is masked
+
+    TDynArray<QuadPlacement> lPlan;
+    Opaax::PlanQuadBatches(lKeys, lTex, lMask, QuadBatchLimits{}, lPlan);
+
+    REQUIRE(lPlan.size() == 2u);
+    for (const QuadPlacement& lPlacement : lPlan) { CHECK(lPlacement.Batch == 0u); }
+
+    // Both share texture 7's slot; only the masked one names a mask slot, and it is a DIFFERENT one.
+    CHECK(lPlan[0].Slot == lPlan[1].Slot);
+    CHECK(lPlan[0].MaskSlot == 0u);
+    CHECK(lPlan[1].MaskSlot != 0u);
+    CHECK(lPlan[1].MaskSlot != lPlan[1].Slot);
+}
+
+TEST_CASE("PlanQuadBatches: a mask that IS the quad's own texture shares one slot")
+{
+    const TDynArray<Uint64> lKeys = Keys({ ERenderLayer::UI });
+    const TDynArray<Uint32> lTex  { 5u };
+    const TDynArray<Uint32> lMask { 5u };
+
+    TDynArray<QuadPlacement> lPlan;
+    Opaax::PlanQuadBatches(lKeys, lTex, lMask, QuadBatchLimits{}, lPlan);
+
+    REQUIRE(lPlan.size() == 1u);
+    CHECK(lPlan[0].MaskSlot == lPlan[0].Slot);   // one texture, one slot, used for both jobs
+}
+
+TEST_CASE("PlanQuadBatches: two DISTINCT masks over distinct textures cut the batch sooner")
+{
+    // Four slots: white + three. Each quad here wants two NEW ones, so only one fits per batch.
+    QuadBatchLimits lLimits;
+    lLimits.MaxTextureSlots = 4u;
+
+    const TDynArray<Uint64> lKeys = Keys({ ERenderLayer::UI, ERenderLayer::UI });
+    const TDynArray<Uint32> lTex  { 1u, 2u };
+    const TDynArray<Uint32> lMask { 10u, 20u };
+
+    TDynArray<QuadPlacement> lPlan;
+    Opaax::PlanQuadBatches(lKeys, lTex, lMask, QuadBatchLimits{ lLimits }, lPlan);
+
+    REQUIRE(lPlan.size() == 2u);
+    CHECK(lPlan[0].Batch != lPlan[1].Batch);   // the pair did not fit together
+
+    // The SAME pass without masks fits in one batch — the mask is what cost the split.
+    TDynArray<QuadPlacement> lUnmasked;
+    Opaax::PlanQuadBatches(lKeys, lTex, {}, lLimits, lUnmasked);
+    CHECK(lUnmasked[0].Batch == lUnmasked[1].Batch);
+}
+
+TEST_CASE("PlanQuadBatches: an EMPTY mask list plans exactly like the pre-mask call")
+{
+    const TDynArray<Uint64> lKeys = Keys({ ERenderLayer::UI, ERenderLayer::Background });
+    const TDynArray<Uint32> lTex  { 3u, 4u };
+
+    TDynArray<QuadPlacement> lWithout;
+    TDynArray<QuadPlacement> lZeroes;
+    Opaax::PlanQuadBatches(lKeys, lTex, {}, QuadBatchLimits{}, lWithout);
+    Opaax::PlanQuadBatches(lKeys, lTex, TDynArray<Uint32>{ 0u, 0u }, QuadBatchLimits{}, lZeroes);
+
+    REQUIRE(lWithout.size() == lZeroes.size());
+    for (Uint64 lIndex = 0; lIndex < lWithout.size(); ++lIndex)
+    {
+        CHECK(lWithout[lIndex].QuadIndex == lZeroes[lIndex].QuadIndex);
+        CHECK(lWithout[lIndex].Batch     == lZeroes[lIndex].Batch);
+        CHECK(lWithout[lIndex].Slot      == lZeroes[lIndex].Slot);
+        CHECK(lWithout[lIndex].MaskSlot  == 0u);
+        CHECK(lZeroes[lIndex].MaskSlot   == 0u);
+    }
 }
