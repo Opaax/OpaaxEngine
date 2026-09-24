@@ -62,6 +62,17 @@
 7. **Synthetize Lessons**: when the task is done; take the most important lessons, put it in `.claude/lessons.md`
 8. **Finish the task**: when the task is finished, called by the user, clean `.claude/task/todo.md` and `.claude/task/lessons.md`
 
+# Git Workflow
+
+- **`main` is always green.** It moves only by a merged PR whose CI passed. Never commit to `main` directly.
+- **One branch per piece of work, cut from a fresh `main`:** `feature/<name>` for a block (`feature/tilemap`),
+  `fix/<name>` for a bug, `chore/<name>` for build/CI/docs. Create it when the work starts, before the first commit.
+- **CI builds every push on every branch** (debug-editor, debug, release; OpenGL-only, no Vulkan SDK). A red
+  branch is fixed on the branch, never merged red.
+- **Merge = PR into `main` with a merge commit** (the block's commits stay readable); delete the branch after.
+- **Start of work:** `git switch main && git pull && git switch -c feature/<name>`.
+- **The user pushes and merges.** Claude commits on the branch and hands it over.
+
 # Project Context
 
 ## What This Project Is

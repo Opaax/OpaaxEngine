@@ -8,7 +8,7 @@
 > If a change must break an invariant here, that is a STOP-and-re-plan trigger (CLAUDE.md §1) — we amend
 > this file deliberately, we don't drift past it.
 >
-> **Scope:** the *new* engine (branch `refresh_engine`). The old world (`CoreEngineApp`, `*Old` classes,
+> **Scope:** the *new* engine (on `main` since 2026-09-24; the old engine's last state is tag `old-engine-final`). The old world (`CoreEngineApp`, `*Old` classes,
 > `EventOld/`) is dead-but-compiled — see **X1**. When code and this file disagree, the code wins *and you
 > fix this file in the same change*.
 >

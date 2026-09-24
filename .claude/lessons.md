@@ -2772,3 +2772,20 @@ frame 60 from the world tick ([[L81]]). Running it once would have shown the `[U
 - **Log the success branch ONCE PER OWNER, not once per process** ([[L15]] sharpened): the
   first-resolve trace is what made the swap readable in the log — new HUD `.043`, old shutdown
   `.055`, new HUD's bind `.059`. A "bound" line that fired only once per run would have hidden it.
+
+## L99 — A configuration nobody builds locally is broken until CI builds it; and CI must watch the branch the work is on (2026-09-24)
+
+**What happened (merging `refresh_engine` into `main`).** CI triggered only on `main`, and every
+PR since June targeted `refresh_engine` — so 424 commits of the new engine never met CI. The first
+run failed: `WindowsWindow.cpp` included `VkBootstrap.h` and used none of it (from a file-move
+commit, 2026-09-11). This machine has the Vulkan SDK, so every local build and every gate passed;
+the runner has none. A fresh clone with `-DCMAKE_DISABLE_FIND_PACKAGE_Vulkan=ON` found it in one build.
+
+**Rules for next time:**
+- **CI builds every branch on every push** (Git Workflow in CLAUDE.md). A trigger list naming
+  branches silently stops covering the work the day a branch is renamed.
+- **The no-SDK build is a configuration this machine never produces.** Before calling a build
+  change done — an include moved, a vendor touched, a CMake edit — ask what a machine WITHOUT the
+  optional SDKs compiles. The disable flag is the one-line local proof.
+- **A fresh clone is the only proof a merge builds.** It also catches files that exist only on
+  this disk. Build it in a new folder; never `rm -rf` to make room (denied — and rightly).
