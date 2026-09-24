@@ -11,6 +11,8 @@
 
 namespace Opaax
 {
+    class IPlatform;
+    class IPaths;
     class ResourceManager;
     class EngineEventBus;
     class WorldManager;

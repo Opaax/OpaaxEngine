@@ -19,7 +19,6 @@ namespace Opaax
     class IProjectManager;
     class IPlatform;
     class IPaths;
-    class ILogger;
     class IJobSystem;
     class IStatsService;
     class IWindowManager;
@@ -58,7 +57,6 @@ namespace Opaax
     private:
         IPlatform&          BootPlatform();
         IPaths&             BootPaths();
-        ILogger&            BootLogger(IPaths& Paths);
 
     protected:
         /**
@@ -227,7 +225,6 @@ namespace Opaax
         // Convenience accessors — never null (the locator returns the null object).
         IPlatform&          Platform();
         IPaths&             Paths();
-        ILogger&            Logger();
         IProjectManager&    ProjectManager();
         IConfigSystem&      ConfigSystem();
         IJobSystem&         JobSystem();

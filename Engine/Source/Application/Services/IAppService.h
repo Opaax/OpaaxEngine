@@ -21,7 +21,7 @@ namespace Opaax
     };
 }
 
-// Stamp on each *interface* (IPlatform, ILogger, ...). NOTE: StaticTypeID is
+// Stamp on each *interface* (IPlatform, IPaths, ...). NOTE: StaticTypeID is
 // declared here but DEFINED out-of-line in the interface's .cpp — that gives one
 // tag shared across the DLL/exe boundary (see your dll-static-template-hazard note).
 #define OPAAX_SERVICE_TYPE(Interface)                                       \

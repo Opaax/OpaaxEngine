@@ -4,6 +4,7 @@
 #include "Editor/Commands/EditorCommandRegistry.h"
 #include "Editor/Commands/EditorNativeCommandsTags.hpp"
 #include "Editor/EditorContext.h"
+#include "Application/Services/IPaths.h"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Editor/PIE/PlayInEditor.h"             // IsEdit — the toolbar is authoring furniture
 #include "Editor/Input/InputRoute.h"        // hover/focus is pushed, not read back out (D5 step 2)

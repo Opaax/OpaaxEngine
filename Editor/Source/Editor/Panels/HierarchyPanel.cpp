@@ -1,6 +1,7 @@
 #include "Editor/Panels/HierarchyPanel.h"
 
 #include "Editor/EditorContext.h"
+#include "Application/Services/IPaths.h"
 #include "Editor/EditorLevelDocument.h"   // the throttled per-map dirty answers
 #include "Editor/EditorMapDocument.h"
 #include "Editor/Commands/EditorNativeCommands.h"       // MapIdParams — which map was clicked (⑤)

@@ -40,7 +40,7 @@ set(OPAAX_TEST_SOURCES
     Core/Application/PathsTests.cpp
     Core/Application/FileSystemTests.cpp
     Core/Application/Utf8PathTests.cpp
-    Core/Application/ILoggerTests.cpp
+    Core/Log/LoggerTests.cpp
     Core/Application/IProjectManagerTests.cpp
     Core/Application/IConfigSystemTests.cpp
     Core/Application/IJobSystemTests.cpp

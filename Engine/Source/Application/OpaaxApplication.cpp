@@ -2,7 +2,7 @@
 
 #include "Platform/IPlatform.h"
 #include "Application/Services/IPaths.h"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 #include "Application/Services/IProjectManager.h"
 #include "Application/Services/IJobSystem.h"
 #include "Application/Services/IStatsService.h"
@@ -66,7 +66,8 @@ void OpaaxApplication::Bootstrap()
     IPaths& lPath = BootPaths();
     
     //Log
-    ILogger& lLogger = BootLogger(lPath);
+    // The singleton existed all along (I1, SG); this gives it sinks and replays what it held.
+    Logger::Get().Init(lPath.SaveDir() + "/Log/OpaaxEngine.log");
     OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Logger just initialized");
     OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Platform: {}", lPlatform.GetPlatformName().CStr());
     lPath.LogPaths();
@@ -118,11 +119,6 @@ IPaths& OpaaxApplication::BootPaths()
 TUniquePtr<IPaths> OpaaxApplication::CreatePaths(const IPlatform& InPlatform, int InArgc, char** InArgv)
 {
     return MakeUnique<Opaax::Paths>(InPlatform, InArgc, InArgv);
-}
-
-ILogger& OpaaxApplication::BootLogger(IPaths& Paths)
-{
-    return m_Services.Provide<ILogger, Opaax::Logger>(Paths);
 }
 
 IConfigSystem& OpaaxApplication::BootConfigSystem(const IPaths& Paths)
@@ -320,6 +316,9 @@ void OpaaxApplication::ShutdownApplication()
     
     m_Services.ShutdownAll();
 
+    // Last: every service above may still log on its way down.
+    Logger::Get().Shutdown();
+
     bHasShutdown    = true;
     bHasBootstrap   = false;
     bHasInitialized = false;
@@ -475,7 +474,6 @@ void OpaaxApplication::UnknownEvent(EventDispatcher& Dispatcher, Event& InEvent)
 
 IPlatform&          OpaaxApplication::Platform()        { return m_Services.Get<IPlatform>();       }
 IPaths&             OpaaxApplication::Paths()           { return m_Services.Get<IPaths>();          }
-ILogger&            OpaaxApplication::Logger()          { return m_Services.Get<ILogger>();         }
 IProjectManager&    OpaaxApplication::ProjectManager()  { return m_Services.Get<IProjectManager>(); }
 IConfigSystem&      OpaaxApplication::ConfigSystem()    { return m_Services.Get<IConfigSystem>();   }
 IJobSystem&         OpaaxApplication::JobSystem()       { return m_Services.Get<IJobSystem>();      }

@@ -1,9 +1,6 @@
 #include "IFileSystem.h"
 
-#include <iostream>
-
-#include "Application/OpaaxApplication.h"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 
 namespace Opaax
 {
@@ -41,17 +38,8 @@ namespace Opaax
             return InPath;
         }
 
-        // Reachable before the logger is provided (Bootstrap creates directories), hence the fallback.
-        ILogger& Logger = OpaaxApplication::GetAppService<ILogger>();
-
-        if (!Logger.IsNull())
-        {
-            OPAAX_APP_LOG(Error,"IFileSystem cannot create: {}", InPath.CStr());
-        }
-        else
-        {
-            std::cout << "IFileSystem cannot create: "<< InPath.CStr() << std::endl;
-        }
+        // Reachable before Logger::Init (Bootstrap creates directories): the line is held and replayed.
+        OPAAX_APP_LOG(Error, "IFileSystem cannot create: {}", InPath.CStr());
 
         return {};
     }

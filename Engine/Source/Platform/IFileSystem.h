@@ -90,8 +90,7 @@ namespace Opaax
          * Get the path after creating all necessary directories along the way.
          *
          * Deliberately NOT virtual: the only platform-specific part is the creation itself, which it
-         * delegates. What is left is policy — including the fallback that lets it report a failure
-         * during Bootstrap, before ILogger has been provided.
+         * delegates. What is left is policy.
          *
          * @param InPath The input path for which directories need to be created.
          * @return The final path after creating all necessary directories. Empty path if directories cannot be created.
