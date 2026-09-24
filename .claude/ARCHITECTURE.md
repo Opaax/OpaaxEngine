@@ -19,11 +19,29 @@
 
 ## I — Prime invariants (non-negotiable)
 
-**I1 — One static root.** `OpaaxApplication::m_Services` (a `static AppServiceLocator`) is the *only*
-mutable static in the engine. Everything else is instance-owned beneath it: the locator owns the services
+**I1 — One static root, plus a CLOSED list of process-wide singletons** (amended 2026-09-24, block SG,
+the user's call). `OpaaxApplication::m_Services` (a `static AppServiceLocator`) is the root. Everything
+that belongs to the app, the engine or a world is instance-owned beneath it: the locator owns the services
 (`TUniquePtr<IAppService>`), the `IEngine` service owns the `EngineSubsystemMgr`, the manager owns the
-subsystems. No `s_Data`, no function-local `static`, no singletons past the locator. This is the invariant
-the whole design optimizes (see **L2**); a proposal that adds a static is wrong by default, even a "clean" one.
+subsystems. No `s_Data`, no function-local `static`, no other singleton. This is the invariant the whole
+design optimizes (see **L2**); a proposal that adds a static is wrong by default, even a "clean" one.
+- **The closed list: `Logger` (`Core/Log/`), `Profiler` (`Core/Profiling/`), `CrashHandler`
+  (`Platform/`).** Instance-ownership built the tree; once it settled, these three were the facilities
+  whose service/carrier form cost more than it bought — a locator lookup on every one of ~660 log lines
+  plus two "no logger yet" workarounds; a `FrameProfiler*` threaded through five carriers (ST1 already
+  named the global stat manager every reference engine has); an OS callback that takes no user pointer.
+  **Adding a fourth is a contract amendment, never a drive-by.** Each member satisfies ALL of:
+- **SG1 — Process-wide by nature.** One per process, not per app / engine / world. It holds no engine or
+  game concept (no World, no Resource, no Entity).
+- **SG2 — Justified by REACH.** Needed outside the locator's lifetime, or at sites that cannot carry a
+  reference (every log line, every stat scope, an OS callback). "Convenient" is not reach.
+- **SG3 — Depends on nothing in the locator.** `Init` takes plain values (a path, a bool), never a service.
+- **SG4 — An ordinary class plus one accessor.** The class is constructible on its own and tests construct
+  THEIR OWN instance, never the global. `Get()` is defined **out-of-line in the engine DLL** — **I2**'s rule
+  for state-bearing accessors, so one instance is a link-time guarantee.
+- **SG5 — Safe outside `Init`…`Shutdown`.** Before `Init` and after `Shutdown` it degrades, never crashes.
+  The instance is deliberately **leaked** (the `OpaaxStringID` pool rule, **I2**), so a log line from a
+  static destructor still lands somewhere legal.
 *The old static `RenderCommand`/`IRenderAPI` facade was **retired to `Legacy/RHI`** (2026-07-22, [[L14]]) —
 the render path is now instance-owned via `IRHIDevice` (`RenderSystem::m_Device`), zero facade statics; do not resurrect it.*
 
@@ -101,10 +119,12 @@ null-pointer checks around `Get<T>()`.
 **I4 — Gregory layer split decides App vs Engine.** Before placing any system, name its layer in Gregory's
 runtime diagram (Fig 1.16):
 - **App service** = Platform-Independence + Core-Systems layers — *passive facilities* you submit-to/query:
-  Platform, Paths, Logger, Config, ProjectManager, JobSystem, WindowManager, **Stats** (**ST2**).
-  They do not tick. *Stats is the case that tests this rule: it is told `BeginFrame()` once per
-  frame, which LOOKS like a tick and is a submission — the host says when, exactly as it does for
-  input (**IN2**). Being driven per frame is not the same as ticking.*
+  Platform, Paths, Config, ProjectManager, JobSystem, WindowManager. They do not tick.
+  *Logging and profiling are Core-Systems too, but they are **I1** singletons, not services (block SG):
+  the layer answers "app side, never engine"; I1's list answers "instance or singleton".
+  The Profiler is still the case that tests the tick rule: it is told `BeginFrame()` once per frame,
+  which LOOKS like a tick and is a submission — the host says when, exactly as it does for input
+  (**IN2**). Being driven per frame is not the same as ticking.*
 - **Engine** = Resources/Assets layer *and up* — anything that ticks per frame or owns game concepts
   (Resources, Renderer, World, Physics, Input). Lives as an `EngineSubsystem`, never as an app service.
 - Test: *ticks per frame or knows about textures/worlds* ⇒ engine. *Passive facility* ⇒ app service.
