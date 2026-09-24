@@ -1,6 +1,5 @@
 ﻿#include "WindowsWindow.h"
 
-#include <VkBootstrap.h>
 #include <GLFW/glfw3.h>
 
 #include "Application/OpaaxApplication.h"
