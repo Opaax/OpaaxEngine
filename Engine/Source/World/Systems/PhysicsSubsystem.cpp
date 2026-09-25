@@ -210,15 +210,6 @@ namespace Opaax
         lRecord.bSyncToTransform = lBody.Type == EBodyType::Dynamic;
 
         m_Bodies.emplace(EntityBits(InEntity), lRecord);
-        ++m_LastBuiltCount;
-
-        // The first DYNAMIC body becomes the motion probe: a static one can never move, so
-        // watching it would prove nothing either way.
-        if (m_ProbeEntity == ENTITY_NONE && lRecord.bSyncToTransform)
-        {
-            m_ProbeEntity = InEntity;
-            m_ProbeOrigin = lBody.Position;
-        }
     }
 
     void PhysicsSubsystem::RemoveBodyForEntity(const EntityID InEntity)
@@ -289,31 +280,7 @@ namespace Opaax
             lWorldXf.Position = lPosition;
             lWorldXf.Rotation = Maths::RadiansToDegrees(lRotation);
             EntityHierarchy::SetWorldTransform(lLive, lWorldXf);
-
-            NoteBodyMoved(lEntity, lPosition);
         }
-    }
-
-    void PhysicsSubsystem::NoteBodyMoved(const EntityID InEntity, const Vector2F& InPosition)
-    {
-        if (m_bLoggedMotion || InEntity != m_ProbeEntity)
-        {
-            return;
-        }
-
-        // A whole world unit, so float noise on a body resting at its authored pose cannot pass
-        // for motion — the instrument must not be able to succeed by accident ([[L21]]).
-        const Vector2F lDelta    = InPosition - m_ProbeOrigin;
-        const float    lDistance = Maths::Sqrt(lDelta.x * lDelta.x + lDelta.y * lDelta.y);
-
-        if (lDistance < 1.f)
-        {
-            return;
-        }
-
-        m_bLoggedMotion = true;
-        OPAAX_LOG(LogPhysics, Trace, "Body {} has moved {:.1f} units from where it was built — the solver is live",
-                  EntityBits(InEntity), lDistance);
     }
 
     // =========================================================================
@@ -345,7 +312,6 @@ namespace Opaax
             }
 
             m_LiveOverlaps[PairKey(lPair.EntityA, lPair.EntityB)] = lPair;
-            ++m_OverlapEventCount;
 
             lBus.Publish(PhysicsOverlapBegan{ lSensor, lVisitor });
         }
@@ -363,7 +329,6 @@ namespace Opaax
                 continue;
             }
 
-            ++m_OverlapEventCount;
             lBus.Publish(PhysicsOverlapEnded{ lSensor, lVisitor });
         }
 
@@ -383,7 +348,6 @@ namespace Opaax
                 continue;
             }
 
-            ++m_OverlapEventCount;
             lBus.Publish(PhysicsOverlapStayed{ lSensor, lVisitor });
         }
 
@@ -403,7 +367,6 @@ namespace Opaax
                 continue;
             }
 
-            ++m_CollisionEventCount;
             lBus.Publish(PhysicsCollisionBegan{ lA, lB });
         }
 
@@ -417,17 +380,7 @@ namespace Opaax
                 continue;
             }
 
-            ++m_CollisionEventCount;
             lBus.Publish(PhysicsCollisionEnded{ lA, lB });
-        }
-
-        // The success branch, once ([[L15]]) — and it counts, because "physics is running" and
-        // "physics is reporting touches" are different claims and only the second one is this.
-        if (!m_bLoggedFirstTouch && (m_OverlapEventCount > 0 || m_CollisionEventCount > 0))
-        {
-            m_bLoggedFirstTouch = true;
-            OPAAX_LOG(LogPhysics, Trace, "First touches dispatched — {} overlap, {} collision",
-                      m_OverlapEventCount, m_CollisionEventCount);
         }
     }
 

@@ -95,9 +95,6 @@ namespace Opaax
         /** True the FIRST time InKey is passed, so a per-step path logs once and never again. */
         bool ShouldWarnOnce(Uint32 InKey);
 
-        /** Say ONCE that a mover actually MOVED — a count of movers is not a claim about motion. */
-        void NoteMoverMoved(EntityID InEntity, const Vector2F& InPosition);
-
         // =============================================================================
         // Members
         // =============================================================================
@@ -114,12 +111,6 @@ namespace Opaax
         /** Keys already warned about, so a missing tuning does not print sixty lines a second. */
         TUnorderedSet<Uint32> m_Warned;
 
-        Uint64 m_LastAdvanced     = 0;
-        bool   m_bLoggedFirstStep = false;
-
-        /** The one entity NoteMoverMoved watches, and where it started. */
-        EntityID m_ProbeEntity   = ENTITY_NONE;
-        Vector2F m_ProbeOrigin   = { 0.f, 0.f };
-        bool     m_bLoggedMotion = false;
+        Uint64 m_LastAdvanced = 0;
     };
 }

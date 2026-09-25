@@ -33,17 +33,17 @@ namespace Opaax
         Uint64      lAdvanced = 0;
 
         m_Context->OwningWorld.Each<SpriteComponent, SpriteAnimatorComponent>(
-            [this, lDelta, &lAdvanced](EntityID InEntity, SpriteComponent& InSprite, SpriteAnimatorComponent& InAnim)
+            [this, lDelta, &lAdvanced](EntityID, SpriteComponent& InSprite, SpriteAnimatorComponent& InAnim)
             {
-                Advance(InEntity, InSprite, InAnim, lDelta);
+                Advance(InSprite, InAnim, lDelta);
                 ++lAdvanced;
             });
 
         m_LastAdvanced = lAdvanced;
     }
 
-    void SpriteAnimationSubsystem::Advance(const EntityID InEntity, SpriteComponent& InSprite,
-                                           SpriteAnimatorComponent& InAnim, const float InDelta)
+    void SpriteAnimationSubsystem::Advance(SpriteComponent& InSprite, SpriteAnimatorComponent& InAnim,
+                                           const float InDelta)
     {
         OpaaxStringID lClipPath;
 
@@ -73,36 +73,8 @@ namespace Opaax
 
         if (const AnimationStep* lStep = lClip->StepAt(lSample.Step))
         {
-            NoteStepApplied(InEntity, lSample.Step);
             ApplyStep(InSprite, *lClip, *lStep, lSample.Step, lClipPath);
         }
-    }
-
-    void SpriteAnimationSubsystem::NoteStepApplied(const EntityID InEntity, const Uint32 InStepIndex)
-    {
-        if (m_bLoggedMotion)
-        {
-            return;
-        }
-
-        // Watch ONE entity: two sprites are legitimately on different steps at the same instant,
-        // so comparing across them would report motion that never happened.
-        if (m_ProbeStep < 0)
-        {
-            m_ProbeEntity = InEntity;
-            m_ProbeStep   = static_cast<Int32>(InStepIndex);
-            return;
-        }
-
-        if (InEntity != m_ProbeEntity || static_cast<Int32>(InStepIndex) == m_ProbeStep)
-        {
-            return;
-        }
-
-        m_bLoggedMotion = true;
-
-        OPAAX_LOG(LogSpriteAnimation, Trace, "Playing — step {} -> {} on the watched sprite",
-                  m_ProbeStep, InStepIndex);
     }
 
     void SpriteAnimationSubsystem::ApplyStep(SpriteComponent& InSprite, const AnimationClipData& InClip,
