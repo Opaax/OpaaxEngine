@@ -177,6 +177,10 @@ set(OPAAX_TEST_SOURCES
     # rounded 1919), Free is the dock's own size. Header-only, ImGui-free.
     Editor/UIPreviewAspectTests.cpp
 
+    # Block LG2. The Log panel's filter — level buttons (Critical rides Error) and the
+    # case-insensitive search. Header-only, ImGui-free.
+    Editor/LogFilterTests.cpp
+
     # NOTE: every quarantined suite now lives under Tests/Legacy/ with the code it exercises
     # (ARCHITECTURE.md X1) — ECS/*, Physics/CollisionProfile, Assets/AssetIdResolve and
     # Renderer/FontKerning. None are listed here; re-add live equivalents when the new world
