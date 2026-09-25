@@ -2789,3 +2789,25 @@ the runner has none. A fresh clone with `-DCMAKE_DISABLE_FIND_PACKAGE_Vulkan=ON`
   optional SDKs compiles. The disable flag is the one-line local proof.
 - **A fresh clone is the only proof a merge builds.** It also catches files that exist only on
   this disk. Build it in a new folder; never `rm -rf` to make room (denied — and rightly).
+
+## L100 — Restoring a checkout means restoring its HEAD REF, not just its commit (2026-09-24, block SG — USER CORRECTION)
+
+I pinned their box2d/entt submodules by SHA to build, then "restored" them by SHA. The commit was the
+same, but both had been ON `main` and mine left them DETACHED (*"Cant test, git head is detach some how"*).
+**Rule:** before touching any checkout's HEAD, record `git symbolic-ref -q HEAD` AND the SHA; restore
+with `git switch <branch>` when there was one; verify with `git status -sb`, never a SHA comparison.
+
+## L101 — "Same output" is a claim about the OBSERVED output, not the old code's intent (2026-09-24, block SG)
+
+The old Logger's `set_pattern` ran before its logger existed, so every host printed spdlog's DEFAULT
+pattern. Porting the stated pattern would have changed what everyone reads. **Rule:** when a refactor
+promises "same output", capture the old output FIRST and diff against it.
+
+## L102 — Flushing a buffer into N consumers is ONE operation; a one-consumer test cannot see the bug (2026-09-24, block SG)
+
+The pre-Init replay went into the console sink and was cleared before the file sink attached. Unit
+tests with one sink passed; the smoke diff caught it. **Rule:** replay over all N at once, test with two.
+
+## L103 — The Bash tool eats backslashes inside a quoted heredoc (2026-09-24, block SG)
+
+**Rule:** any edit script containing a backslash goes into a FILE via Write, then runs — or use Edit.

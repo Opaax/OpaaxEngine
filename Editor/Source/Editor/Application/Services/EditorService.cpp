@@ -49,6 +49,7 @@
 #include "Editor/Panels/PrefabPanel.h"
 #include "Renderer/RenderTarget.hpp"   // the panels own OffscreenRenderTargets by TUniquePtr
 #include "Editor/Panels/SpriteSheetPanel.h"
+#include "Editor/Panels/LogPanel.h"
 #include "Editor/Panels/StatsPanel.h"
 #include "Editor/Panels/ViewportPanel.h"
 #include "Editor/Imgui/Configs/Config_EditorImgui.h"
@@ -365,6 +366,7 @@ namespace Opaax::Editor
         lPanelsRegistry.Register<HierarchyPanel>(PanelDesc      {.Id = HierarchyPanel::PanelID()});
         lPanelsRegistry.Register<InspectorPanel>(PanelDesc      {.Id = InspectorPanel::PanelID()});
         lPanelsRegistry.Register<ResourceBrowserPanel>(PanelDesc{.Id = ResourceBrowserPanel::PanelID()});
+        lPanelsRegistry.Register<LogPanel>(PanelDesc            {.Id = LogPanel::PanelID()});
         
         //Hidden by default
         lPanelsRegistry.Register<CameraPreviewPanel>(PanelDesc  {.Id = CameraPreviewPanel::PanelID(),   .DefaultVisibility = EPanelVisibility::Hidden});
