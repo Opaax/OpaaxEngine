@@ -293,7 +293,7 @@ namespace Opaax
         lFilter.maskBits     = InChannelMask;
 
         const b2AABB lAABB{ ToB2(InMin), ToB2(InMax) };
-        b2World_OverlapAABB(m_WorldId, lAABB, lFilter, &OverlapCollect, &OutUserData);
+        b2World_OverlapAABB(m_WorldId, b2Pos_zero, lAABB, lFilter, &OverlapCollect, &OutUserData);
     }
 
     // =============================================================================
@@ -326,12 +326,12 @@ namespace Opaax
             lMover.center2 = b2Add(lPos, ToB2(InInput.Capsule.Center2));
             lMover.radius  = InInput.Capsule.Radius;
 
-            b2World_CollideMover(m_WorldId, &lMover, lFilter, MoverPlaneFcn, &lCtx);
+            b2World_CollideMover(m_WorldId, b2Pos_zero, &lMover, lFilter, MoverPlaneFcn, &lCtx);
             const b2PlaneSolverResult lSolve = b2SolvePlanes(b2Sub(lTarget, lPos), lCtx.Planes, lCtx.Count);
 
             // Anti-tunnel: never advance further than a shape cast of the solved translation allows.
-            const float  lFraction = b2World_CastMover(m_WorldId, &lMover, lSolve.translation, lFilter);
-            const b2Vec2 lDelta    = b2MulSV(lFraction, lSolve.translation);
+            const float  lFraction = b2World_CastMover(m_WorldId, b2Pos_zero, &lMover, lSolve.delta, lFilter);
+            const b2Vec2 lDelta    = b2MulSV(lFraction, lSolve.delta);
 
             lPos = b2Add(lPos, lDelta);
 
