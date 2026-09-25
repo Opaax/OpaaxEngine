@@ -3,6 +3,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Config/IConfig.h"          // ConfigTypeID — which config is current
 #include "Core/String/OpaaxString.hpp"    // the dirty baseline
+#include "Editor/Panels/ConfigChangeTracker.h"
 #include "Editor/Panels/IEditorPanel.h"
 
 namespace Opaax
@@ -113,5 +114,8 @@ namespace Opaax::Editor
         // What the shown config serialized to when it was selected, or last saved. Compared against
         // the live text each frame — that comparison IS the dirty flag.
         OpaaxString m_Baseline;
+
+        // When an edit is announced to the config's readers — once it is committed, not per frame.
+        ConfigChangeTracker m_ChangeTracker;
     };
 }

@@ -64,6 +64,12 @@ namespace Opaax::Editor
         // dirty is DERIVED below, and a cache here would need an invalidation nobody owns.
         const OpaaxString lText = InConfig.ToText();
 
+        // A drag announces on release, not per frame: IsAnyItemActive holds it for the gesture.
+        if (m_ChangeTracker.Update(InConfig.GetConfigTypeID(), lText, ImGui::IsAnyItemActive()))
+        {
+            InConfig.NotifyChanged();
+        }
+
         if (m_Reported != InConfig.GetConfigTypeID())
         {
             m_Reported = InConfig.GetConfigTypeID();
