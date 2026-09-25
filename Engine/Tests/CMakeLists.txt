@@ -42,6 +42,7 @@ set(OPAAX_TEST_SOURCES
     Core/Application/CrashHandlerTests.cpp
     Core/Application/Utf8PathTests.cpp
     Core/Log/LoggerTests.cpp
+    Core/Log/LogHistoryTests.cpp
     Core/Application/IProjectManagerTests.cpp
     Core/Application/IConfigSystemTests.cpp
     Core/Application/IJobSystemTests.cpp
@@ -175,6 +176,10 @@ set(OPAAX_TEST_SOURCES
     # UI U13. The designer's layout target: a named aspect is EXACT (16:9 is 1920x1080, never a
     # rounded 1919), Free is the dock's own size. Header-only, ImGui-free.
     Editor/UIPreviewAspectTests.cpp
+
+    # Block LG2/LG3. The Log panel's filter — level buttons (Critical rides Error), hidden
+    # categories, and the case-insensitive search. Header-only, ImGui-free.
+    Editor/LogFilterTests.cpp
 
     # NOTE: every quarantined suite now lives under Tests/Legacy/ with the code it exercises
     # (ARCHITECTURE.md X1) — ECS/*, Physics/CollisionProfile, Assets/AssetIdResolve and

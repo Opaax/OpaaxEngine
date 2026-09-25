@@ -42,6 +42,15 @@ design optimizes (see **L2**); a proposal that adds a static is wrong by default
 - **SG5 — Safe outside `Init`…`Shutdown`.** Before `Init` and after `Shutdown` it degrades, never crashes.
   The instance is deliberately **leaked** (the `OpaaxStringID` pool rule, **I2**), so a log line from a
   static destructor still lands somewhere legal.
+- **The Logger's history (block LG, 2026-09-25).** `LogHistory` (`Core/Log/`) keeps the last N lines
+  STRUCTURED (level, category as an interned `OpaaxStringID`, message without the `[Category] ` prefix),
+  sequence-numbered so a reader copies only what it has not seen (`Logger::CopyHistorySince`, under the
+  lock; nobody iterates it). **Off by default, capacity 0: a game never pays for it** (the user's call).
+  The editor opts in from `EditorApplication`'s constructor, before `Bootstrap`, so the Log panel has the
+  boot lines too. It is recorded in `WriteLine` whether or not sinks are attached; the sinks' text is
+  unchanged. The panel filters its OWN copy (`Editor/Panels/LogFilter.h`, header-only and tested):
+  level buttons (Critical rides Error), hidden categories (a set of the OFF ones, so a new category shows),
+  and a case-insensitive search.
 - **The CrashHandler's shape.** A crash writes, *most robust first*: the minidump
   (`Save/Crashes/Opaax_<stamp>.dmp`, before anything allocates), the symbolized stack into the log,
   a copy of the log beside the dump (the next launch truncates the original), then the dialog —

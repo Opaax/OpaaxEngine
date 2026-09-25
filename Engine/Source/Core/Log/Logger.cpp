@@ -126,6 +126,18 @@ namespace Opaax
         Logf(InLevel, InCategory, "{}", InMessage);
     }
 
+    void Logger::EnableHistory(const Uint32 InCapacity)
+    {
+        std::lock_guard lLock(m_Mutex);
+        m_History.SetCapacity(InCapacity);
+    }
+
+    Uint64 Logger::CopyHistorySince(const Uint64 InAfterSequence, TDynArray<LogEntry>& OutEntries) const
+    {
+        std::lock_guard lLock(m_Mutex);
+        return m_History.CopySince(InAfterSequence, OutEntries);
+    }
+
     bool Logger::HasSinks() const
     {
         std::lock_guard lLock(m_Mutex);
@@ -138,9 +150,17 @@ namespace Opaax
         return static_cast<Uint32>(m_Pending.size());
     }
 
-    void Logger::WriteLine(const ELogLevel InLevel, const std::string_view InLine)
+    void Logger::WriteLine(const ELogLevel InLevel, const LogCategory& InCategory, const std::string_view InLine,
+                           const size_t InMessageStart)
     {
         std::lock_guard lLock(m_Mutex);
+
+        // Before the sinks, and whether or not there are any: a line held for Init is in the history too.
+        // Interning under this lock is safe — the string pool has its own lock and never logs.
+        if (m_History.IsEnabled())
+        {
+            m_History.Push(InLevel, OpaaxStringID(InCategory.Name), InLine.substr(InMessageStart));
+        }
 
         const spdlog::level::level_enum lLevel = ToSpdLevel(InLevel);
 

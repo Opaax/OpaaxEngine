@@ -5,6 +5,7 @@
 #include "Editor/Application/Services/EditorService.h"
 #include "Editor/Application/Services/EditorPaths.h"
 #include "Editor/Imgui/Configs/Config_EditorImgui.h"
+#include "Editor/Panels/LogPanel.h"   // MAX_LINES — the history keeps what the panel can show
 
 #include "Application/Services/IConfigSystem.h"
 
@@ -29,6 +30,9 @@ namespace Opaax::Editor
     EditorApplication::EditorApplication(int InArgc, char** InArgv)
         : OpaaxApplication(InArgc, InArgv)
     {
+        // Here, not in EditorService: this runs before Bootstrap, so the Log panel gets the boot lines.
+        // A game never calls it, so the history costs a shipped build nothing (block LG).
+        Logger::Get().EnableHistory(LogPanel::MAX_LINES);
     }
     
     // =============================================================================

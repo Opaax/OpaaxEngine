@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/EngineAPI.h"
+#include "Core/Log/LogHistory.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
 
@@ -90,9 +91,20 @@ namespace Opaax
         {
             fmt::memory_buffer lLine;
             fmt::format_to(std::back_inserter(lLine), "[{}] ", InCategory.Name);
+            const size_t lMessageStart = lLine.size();
             fmt::format_to(std::back_inserter(lLine), InFormat, std::forward<TArgs>(InArgs)...);
-            WriteLine(InLevel, std::string_view(lLine.data(), lLine.size()));
+            WriteLine(InLevel, InCategory, std::string_view(lLine.data(), lLine.size()), lMessageStart);
         }
+
+        /**
+         * Keep the last InCapacity lines, structured, for a reader like the editor's Log panel. Off (0)
+         * by default: a game never pays for it. The editor turns it on before Bootstrap, so the boot
+         * lines are kept too.
+         */
+        void EnableHistory(Uint32 InCapacity);
+
+        /** LogHistory::CopySince, under the lock. The only way a reader sees the history. */
+        Uint64 CopyHistorySince(Uint64 InAfterSequence, TDynArray<LogEntry>& OutEntries) const;
 
         // =============================================================================
         // Getters
@@ -102,7 +114,8 @@ namespace Opaax
         Uint32 GetPendingCount() const;
 
     private:
-        void WriteLine(ELogLevel InLevel, std::string_view InLine);
+        /** InLine is "[Category] message"; the message starts at InMessageStart. */
+        void WriteLine(ELogLevel InLevel, const LogCategory& InCategory, std::string_view InLine, size_t InMessageStart);
 
         // =============================================================================
         // Members
@@ -120,6 +133,7 @@ namespace Opaax
         std::shared_ptr<spdlog::logger> m_Logger;
         std::deque<PendingLine>         m_Pending;
         Uint32                          m_DroppedPending = 0;
+        LogHistory                      m_History;
     };
 }
 
