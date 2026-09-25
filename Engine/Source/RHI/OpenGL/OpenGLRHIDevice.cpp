@@ -34,7 +34,7 @@ namespace Opaax
         // error every frame, so timing simply stays off and GetLastGpuFrameTimeMs answers -1.
         m_bTimersReady = m_TimerQueries[0] != 0;
 
-        OPAAX_LOG(LogOpenGLRHIDevice, Info, "OpenGL RHI device initialized (GPU timing {})",
+        OPAAX_LOG(LogOpenGLRHIDevice, Trace, "OpenGL RHI device initialized (GPU timing {})",
                   m_bTimersReady ? "on" : "UNAVAILABLE");
     }
 

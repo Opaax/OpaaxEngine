@@ -65,7 +65,7 @@ namespace Opaax
             OutData.Id = MapFile::StemId(InAbsPath);
         }
 
-        OPAAX_LOG(LogMapFile, Info, "Loaded {} entity(ies) from '{}' (map '{}')",
+        OPAAX_LOG(LogMapFile, Trace, "Loaded {} entity(ies) from '{}' (map '{}')",
                   OutData.EntityCount(), InAbsPath.CStr(),
                   OutData.Id.IsValid() ? OutData.Id.CStr() : "(none)");
         return true;

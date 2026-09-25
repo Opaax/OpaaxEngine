@@ -57,7 +57,7 @@ namespace Opaax
             return false;
         }
 
-        OPAAX_LOG(LogInputMappingContextFile, Info, "Loaded {} mapping(s) at priority {} from '{}'",
+        OPAAX_LOG(LogInputMappingContextFile, Trace, "Loaded {} mapping(s) at priority {} from '{}'",
                   OutData.EntryCount(), OutData.Priority, InAbsPath.CStr());
         return true;
     }

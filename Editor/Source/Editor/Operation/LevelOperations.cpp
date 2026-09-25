@@ -57,7 +57,7 @@ namespace Opaax::Editor
             }
         }
 
-        OPAAX_LOG(LogLevelOps, Info, "Level '{}': {} map(s) mounted, focused on '{}'",
+        OPAAX_LOG(LogLevelOps, Trace, "Level '{}': {} map(s) mounted, focused on '{}'",
                   lLevel->GetData().Name.CStr(), lMounted.size(), lEdited->AssetRelPath.CStr());
 
         InContext.MapDocument.Focus(InContext.Paths.AssetToAbsolute(lEdited->AssetRelPath));

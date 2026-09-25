@@ -14,14 +14,12 @@ namespace Opaax
 
     bool ResourceManager::Startup()
     {
-        OPAAX_LOG(LogResourceManager, Info, "ResourceManager startup — pools created on first Load<T>");
         return true;
     }
 
     void ResourceManager::Shutdown()
     {
         FlushAll();
-        OPAAX_LOG(LogResourceManager, Info, "ResourceManager shutdown");
     }
 
     // =========================================================================

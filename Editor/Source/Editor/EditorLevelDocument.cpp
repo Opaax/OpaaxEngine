@@ -157,16 +157,8 @@ namespace Opaax::Editor
             const OpaaxString lOnDisk = FileIO::ReadAllText(lRecord.AbsPath);
             const OpaaxString lAsFile = MapJson::Serialize(CaptureFolded(InWorld, InRegistry, lMap.Id));
 
-            if (lOnDisk.IsEmpty())
-            {
-                // No file yet (a brand-new map) — nothing to compare against.
-            }
-            else if (lOnDisk == lAsFile)
-            {
-                OPAAX_LOG(LogEditorLevelDocument, Info, "'{}' round trip is stable",
-                          lMap.AssetRelPath.CStr());
-            }
-            else
+            // No file yet (a brand-new map) has nothing to compare against; a stable one is silent (LOG1).
+            if (!lOnDisk.IsEmpty() && lOnDisk != lAsFile)
             {
                 // NAME THE DIVERGENCE, do not just report one. "It differs" sends a reader to diff
                 // two 130-line files by eye; the first differing offset plus a window either side

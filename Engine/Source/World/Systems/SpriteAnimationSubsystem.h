@@ -135,9 +135,8 @@ namespace Opaax
         /** Keys already warned about, so a missing clip does not print 60 lines a second. */
         TUnorderedSet<Uint32> m_Warned;
 
-        /** How many entities were advanced on the last tick — the number the Startup log promises. */
+        /** How many entities were advanced on the last tick. */
         Uint64 m_LastAdvanced = 0;
-        bool   m_bLoggedFirstTick = false;
 
         /** The one entity NoteStepApplied watches, and the first step it was seen on. */
         EntityID m_ProbeEntity     = ENTITY_NONE;

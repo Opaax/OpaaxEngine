@@ -42,8 +42,6 @@ namespace Opaax
         m_Context->Events.GetEventBus().Subscribe<LevelLoadRequested>(this, &UISubsystem::OnLevelLoadRequested);
         m_Context->Events.GetEventBus().Subscribe<LevelLoadFinished>(this, &UISubsystem::OnLevelLoadFinished);
 
-        OPAAX_LOG(LogUISubsystem, Info, "UI started — canvas reference height {} (project), mode {}, mapping {}",
-                  m_Canvas.GetReferenceHeight(), ToString(m_InputMode), m_Mapping != nullptr ? "linked" : "absent");
         return true;
     }
 
@@ -91,7 +89,7 @@ namespace Opaax
         UIWidget& lParent  = InParent != nullptr ? *InParent : m_Canvas.Root();
         UIWidget* lMounted = lParent.AddChild(Move(lTree));
 
-        OPAAX_LOG(LogUISubsystem, Info, "Mounted '{}' — {} widget(s) under '{}'",
+        OPAAX_LOG(LogUISubsystem, Trace, "Mounted '{}' — {} widget(s) under '{}'",
                   InAssetPath.CStr(), UICanvasFile::CountWidgets(*lMounted), lParent.Name.CStr());
         return lMounted;
     }
@@ -114,7 +112,7 @@ namespace Opaax
                 m_LoadingCanvas.SetReferenceHeight(lAuthoredHeight);
                 lRoot.AddChild(Move(lTree));
 
-                OPAAX_LOG(LogUISubsystem, Info, "Loading cover: '{}' — {} widget(s), up at least {} s",
+                OPAAX_LOG(LogUISubsystem, Trace, "Loading cover: '{}' — {} widget(s), up at least {} s",
                           lAsset.CStr(), UICanvasFile::CountWidgets(lRoot), m_CoverMinSeconds);
                 return;
             }
@@ -134,7 +132,7 @@ namespace Opaax
 
         lRoot.AddChild(Move(lBlack));
 
-        OPAAX_LOG(LogUISubsystem, Info, "Loading cover: black (the project names no loadingScreen)");
+        OPAAX_LOG(LogUISubsystem, Trace, "Loading cover: black (the project names no loadingScreen)");
     }
 
     void UISubsystem::OnLevelLoadRequested(const LevelLoadRequested&)
@@ -170,7 +168,7 @@ namespace Opaax
             if (m_bLoadFinished && m_CoverElapsed >= m_CoverMinSeconds)
             {
                 m_LoadingCanvas.Root().bVisible = false;
-                OPAAX_LOG(LogUISubsystem, Info, "Loading cover down after {:.2f} s (floor {} s)", m_CoverElapsed, m_CoverMinSeconds);
+                OPAAX_LOG(LogUISubsystem, Trace, "Loading cover down after {:.2f} s (floor {} s)", m_CoverElapsed, m_CoverMinSeconds);
             }
         }
 
@@ -194,8 +192,5 @@ namespace Opaax
     void UISubsystem::Shutdown()
     {
         m_Context->Events.GetEventBus().UnsubscribeAll(this);
-
-        OPAAX_LOG(LogUISubsystem, Info, "UI shutdown — {} root child(ren) dropped with the canvas",
-                  m_Canvas.Root().GetChildren().size());
     }
 }

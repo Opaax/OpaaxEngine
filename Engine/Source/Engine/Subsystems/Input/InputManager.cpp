@@ -9,13 +9,11 @@ namespace Opaax
     {
         ResetState();
 
-        OPAAX_LOG(LogInputManager, Info, "InputManager started (keyboard + mouse; fed by the application)");
         return true;
     }
 
     void InputManager::Shutdown()
     {
-        OPAAX_LOG(LogInputManager, Info, "InputManager shutdown");
     }
 
     // =========================================================================

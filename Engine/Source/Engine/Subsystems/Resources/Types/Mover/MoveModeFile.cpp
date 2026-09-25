@@ -57,7 +57,7 @@ namespace Opaax
             return false;
         }
 
-        OPAAX_LOG(LogMoveModeFile, Info, "Loaded move mode '{}' from '{}'",
+        OPAAX_LOG(LogMoveModeFile, Trace, "Loaded move mode '{}' from '{}'",
                   OutData.Mode.ToString().CStr(), InAbsPath.CStr());
         return true;
     }

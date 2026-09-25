@@ -61,7 +61,7 @@ namespace Opaax
             return false;
         }
 
-        OPAAX_LOG(LogAnimationClipFile, Info, "Loaded {} step(s) @ {} fps from '{}'",
+        OPAAX_LOG(LogAnimationClipFile, Trace, "Loaded {} step(s) @ {} fps from '{}'",
                   OutData.StepCount(), OutData.Fps, InAbsPath.CStr());
         return true;
     }

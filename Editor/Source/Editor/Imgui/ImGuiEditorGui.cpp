@@ -219,7 +219,7 @@ namespace Opaax::Editor
 
         if (!m_LayoutIniPath.IsEmpty())
         {
-            OPAAX_LOG(LogEditorGui, Info, "Dock layout: {}", m_LayoutIniPath.CStr());
+            OPAAX_LOG(LogEditorGui, Trace, "Dock layout: {}", m_LayoutIniPath.CStr());
         }
 
         // The renderer impl (OpenGL today, S7) — last, because ImGui_ImplOpenGL3_Init needs the
@@ -277,7 +277,7 @@ namespace Opaax::Editor
 
         lIO.FontDefault = lPrimary;
 
-        OPAAX_LOG(LogEditorGui, Info, "UI font: '{}' at {}px, {} of {} fallback(s) merged",
+        OPAAX_LOG(LogEditorGui, Trace, "UI font: '{}' at {}px, {} of {} fallback(s) merged",
                   InFont.Path.CStr(), InFont.SizePx, lMerged, InFont.Fallbacks.size());
     }
 

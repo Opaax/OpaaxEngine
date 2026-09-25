@@ -18,7 +18,7 @@ namespace Opaax
         // The mode is in the log because it is otherwise invisible: an Edit and a Play world
         // differ only by which subsystems they get (S3), so an ordered boot log is the only
         // place the distinction shows up before PIE exists.
-        OPAAX_LOG(LogWorld, Info, "World '{}' created ({})", m_Name.CStr(), ToString(m_Mode));
+        OPAAX_LOG(LogWorld, Trace, "World '{}' created ({})", m_Name.CStr(), ToString(m_Mode));
     }
 
     World::~World()
@@ -27,7 +27,7 @@ namespace Opaax
         // subsystem might reach were all still alive. Idempotent, so the normal path costs nothing.
         ShutdownSubsystems();
 
-        OPAAX_LOG(LogWorld, Info, "World '{}' destroyed ({} entity(ies))", m_Name.CStr(), m_EntityCount);
+        OPAAX_LOG(LogWorld, Trace, "World '{}' destroyed ({} entity(ies))", m_Name.CStr(), m_EntityCount);
     }
 
     // =========================================================================
@@ -61,7 +61,6 @@ namespace Opaax
     {
         ++m_EntityCount;
         ++m_Revision;
-        LogEntityCount();
     }
 
     void World::RemoveEntityCount()
@@ -73,14 +72,6 @@ namespace Opaax
 
         --m_EntityCount;
         ++m_Revision;
-        LogEntityCount();
-    }
-
-    void World::LogEntityCount()
-    {
-        // TRACE, not Info: this fires on EVERY create and EVERY destroy, so the shmup hot path
-        // would put one line in the log per bullet spawned and another per bullet despawned.
-        OPAAX_LOG(LogWorld, Trace, "Entity count in world '{}' = {}", m_Name.CStr(), m_EntityCount);
     }
 
     // =========================================================================
@@ -117,7 +108,6 @@ namespace Opaax
         m_Registry.emplace<TransformComponent>(lEnt);
 
         m_Guids.Register(lMeta.Id, lEnt);
-        OPAAX_LOG(LogWorld, Trace, "CreateEntity '{}' in world '{}'", lMeta.Name.CStr(), m_Name.CStr());
 
         AddEntityCount();
 
@@ -142,8 +132,6 @@ namespace Opaax
         
         if (const EntityMeta* lMeta = m_Registry.try_get<EntityMeta>(InEntity))
         {
-            OPAAX_LOG(LogWorld, Trace, "DestroyEntity — {}", lMeta->Name.CStr());
-
             // CASCADE (§HR): a child cannot outlive its parent. Collected first — destroying inside
             // the view is unsafe, and the pool may move lMeta out from under us — then recursed.
             const Guid lId = lMeta->Id;
@@ -156,10 +144,6 @@ namespace Opaax
             });
 
             for (const EntityID lChild : lChildren) { DestroyEntity(lChild); }
-        }
-        else
-        {
-            OPAAX_LOG(LogWorld, Trace, "DestroyEntity — Unknown Entity destroy");
         }
 
         m_Registry.destroy(InEntity);
@@ -176,14 +160,14 @@ namespace Opaax
     {
         m_bActive = true;
 
-        OPAAX_LOG(LogWorld, Info, "World '{}' activated", m_Name.CStr());
+        OPAAX_LOG(LogWorld, Trace, "World '{}' activated", m_Name.CStr());
     }
     
     void World::OnDesactive()
     {
         m_bActive = false;
 
-        OPAAX_LOG(LogWorld, Info, "World '{}' deactivated", m_Name.CStr());
+        OPAAX_LOG(LogWorld, Trace, "World '{}' deactivated", m_Name.CStr());
     }
 
     void World::Clear() noexcept
@@ -198,6 +182,6 @@ namespace Opaax
         // refuse to mount it again.
         if (m_Level != nullptr) { m_Level->OnWorldCleared(); }
 
-        OPAAX_LOG(LogWorld, Info, "World '{}' cleared", m_Name.CStr());
+        OPAAX_LOG(LogWorld, Trace, "World '{}' cleared", m_Name.CStr());
     }
 }

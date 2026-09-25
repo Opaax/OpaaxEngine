@@ -46,8 +46,6 @@ namespace Opaax::Editor
         }
 
         m_RenderTarget = MakeUnique<OffscreenRenderTarget>(m_Framebuffer.get());
-
-        OPAAX_LOG(LogCameraPreviewPanel, Info, "CameraPreviewPanel startup — offscreen FBO {}x{}", m_Size.x, m_Size.y);
     }
 
     void CameraPreviewPanel::OnPreRender()
@@ -181,8 +179,6 @@ namespace Opaax::Editor
         {
             m_Framebuffer->Resize(m_Size.x, m_Size.y);
         }
-
-        OPAAX_LOG(LogCameraPreviewPanel, Trace, "CameraPreviewPanel resized to {}x{}", m_Size.x, m_Size.y);
     }
 
     EditorImage CameraPreviewPanel::GetPreviewImage() const
@@ -221,7 +217,5 @@ namespace Opaax::Editor
         // running has already stopped being drawn.
         m_RenderTarget.reset();
         m_Framebuffer.reset();
-
-        OPAAX_LOG(LogCameraPreviewPanel, Info, "CameraPreviewPanel shutdown");
     }
 }

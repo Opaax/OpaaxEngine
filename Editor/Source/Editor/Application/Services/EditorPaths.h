@@ -63,11 +63,5 @@ namespace Opaax::Editor
 
         OpaaxString ToolAssetToAbsolute(const OpaaxString& InAssetRel) const; // under <WorkspaceRoot>/Editor/Assets
 
-        // =============================================================================
-        // Override
-        // =============================================================================
-        //~Begin Paths interface
-        void LogPaths() const override;
-        //~End Paths interface
     };
 }

@@ -56,25 +56,6 @@ namespace Opaax
         m_RecordingGpuMs = -1.0;
 
         m_LastFrameStart = lNow;
-
-        // The success branch, once (L15).
-        if (!m_bLoggedFirst && !m_Stats.Profiler.IsEmpty())
-        {
-            m_bLoggedFirst = true;
-
-            OPAAX_LOG(LogStats, Info,
-                      "Frame stats live — {} scope(s), {} counter(s) in the first measured frame ({:.2f} ms)",
-                      m_Stats.Profiler.Samples().size(), m_Stats.Profiler.Counters().size(),
-                      m_Stats.FrameMs);
-        }
-
-        // Its own one-shot: the GPU's first result lands a frame or two after the line above (L15).
-        if (!m_bLoggedFirstGpu && m_Stats.GpuMs >= 0.0)
-        {
-            m_bLoggedFirstGpu = true;
-
-            OPAAX_LOG(LogStats, Info, "GPU timing first reading — {:.3f} ms", m_Stats.GpuMs);
-        }
     }
 
     void Profiler::SubmitGpuMs(const double InGpuMs)

@@ -66,8 +66,6 @@ namespace Opaax::Editor
         }
 
         m_RenderTarget = MakeUnique<OffscreenRenderTarget>(m_Framebuffer.get());
-
-        OPAAX_LOG(LogViewportPanel, Info, "ViewportPanel startup — offscreen FBO {}x{}", m_viewportSize.x, m_viewportSize.y);
     }
 
     // =========================================================================
@@ -236,8 +234,6 @@ namespace Opaax::Editor
         {
             m_Framebuffer->Resize(m_viewportSize.x, m_viewportSize.y);
         }
-
-        OPAAX_LOG(LogViewportPanel, Trace, "ViewportPanel resized to {}x{}", m_viewportSize.x, m_viewportSize.y);
     }
 
     // =========================================================================
@@ -347,13 +343,6 @@ namespace Opaax::Editor
                            bAxis ? m_GridAxisXColor : m_GridColor,
                            bAxis ? lAxis : lThin, ERenderLayer::Background);
         }
-
-        if (!m_bGridLogged)
-        {
-            OPAAX_LOG(LogViewportPanel, Info, "Snap grid enqueued — {} line(s) at {:.1f} world units",
-                      lCount, lSpacing);
-            m_bGridLogged = true;
-        }
     }
 
     // =========================================================================
@@ -370,14 +359,8 @@ namespace Opaax::Editor
             return;
         }
 
-        const Uint64 lDrawn = ViewportOverlays::EnqueueSelectionOutline(
+        ViewportOverlays::EnqueueSelectionOutline(
             m_Context.Engine.GetDebugDraw(), *lWorld, m_Context.Selection.Ids(), AnchorHalfExtent());
-
-        if (!m_bOutlineLogged && lDrawn > 0)
-        {
-            OPAAX_LOG(LogViewportPanel, Info, "Selection outline enqueued for {} entity(ies)", lDrawn);
-            m_bOutlineLogged = true;
-        }
     }
 
     void ViewportPanel::EnqueueEntityIcons()
@@ -391,15 +374,7 @@ namespace Opaax::Editor
             return;
         }
 
-        const Uint64 lDrawn = ViewportOverlays::EnqueueEntityIcons(
-            m_Context.Engine.GetDebugDraw(), *lWorld, AnchorHalfExtent());
-
-        if (!m_bIconsLogged && lDrawn > 0)
-        {
-            OPAAX_LOG(LogViewportPanel, Info, "Drawing {} entity icon(s) — entities with nothing to render",
-                      lDrawn);
-            m_bIconsLogged = true;
-        }
+        ViewportOverlays::EnqueueEntityIcons(m_Context.Engine.GetDebugDraw(), *lWorld, AnchorHalfExtent());
     }
 
     // =========================================================================
@@ -540,12 +515,6 @@ namespace Opaax::Editor
             m_PickGesture.Measure(lImageHovered && m_Context.PIE.IsEdit(), { lOrigin.x, lOrigin.y });
         }
 
-        if (lImg.IsValid() && !m_bImageLogged)
-        {
-            OPAAX_LOG(LogViewportPanel, Info, "Viewport displaying world FBO (handle={}, {}x{})", lImg.Handle, m_viewportSize.x, m_viewportSize.y);
-            m_bImageLogged = true;
-        }
-
         RunPendingDrop();
     }
 
@@ -571,7 +540,5 @@ namespace Opaax::Editor
         // order around does not exist.
         m_RenderTarget.reset();
         m_Framebuffer.reset();
-
-        OPAAX_LOG(LogViewportPanel, Info, "ViewportPanel shutdown");
     }
 }

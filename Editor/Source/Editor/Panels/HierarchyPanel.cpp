@@ -71,8 +71,6 @@ namespace Opaax::Editor
 
     void HierarchyPanel::OnActiveWorldChanged(World* /*InOld*/, World* /*InNew*/)
     {
-        m_bListLogged = false;
-
         // A queued verb names a map of the world that just left. Dropping it beats running it
         // against whatever is here now, where the id would either miss or hit the wrong map.
         m_Pending = PendingMapAction{};
@@ -169,12 +167,6 @@ namespace Opaax::Editor
         if (lCount == 0 && lGroups.empty())
         {
             ImGui::TextDisabled("World is empty.");
-        }
-        else if (!m_bListLogged)
-        {
-            OPAAX_LOG(LogHierarchyPanel, Info, "Hierarchy listing {} entities in {} map(s) from world '{}'",
-                      lCount, lGroups.size(), lWorld->GetName().CStr());
-            m_bListLogged = true;
         }
 
         const MapId lFocusedMap = m_Context.MapDocument.GetMapId();

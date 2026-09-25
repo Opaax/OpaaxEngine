@@ -49,15 +49,10 @@ namespace Opaax
         glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &lMaxTexUnits);
         glGetIntegerv(GL_MAX_TEXTURE_SIZE,        &lMaxTexSize);
         
-        OPAAX_LOG(LogOpenGLContext, Info, "====================  Render Backend  ====================");
-        OPAAX_LOG(LogOpenGLContext, Info, "  API .............. OpenGL {}", lStr(GL_VERSION));
-        OPAAX_LOG(LogOpenGLContext, Info, "  GPU .............. {}",         lStr(GL_RENDERER));
-        OPAAX_LOG(LogOpenGLContext, Info, "  Vendor ........... {}",         lStr(GL_VENDOR));
-        OPAAX_LOG(LogOpenGLContext, Info, "  GLSL ............. {}",         lStr(GL_SHADING_LANGUAGE_VERSION));
-        OPAAX_LOG(LogOpenGLContext, Info, "  Texture units .... {}",         lMaxTexUnits);
-        OPAAX_LOG(LogOpenGLContext, Info, "  Max texture size . {}",         lMaxTexSize);
-        OPAAX_LOG(LogOpenGLContext, Info, "  VSync ............ on");
-        OPAAX_LOG(LogOpenGLContext, Info, "==========================================================");
+        // One line: what a bug report needs to know about the machine.
+        OPAAX_LOG(LogOpenGLContext, Info, "OpenGL {} on {} ({}) — GLSL {}, {} texture units, max texture {}, VSync on",
+                  lStr(GL_VERSION), lStr(GL_RENDERER), lStr(GL_VENDOR), lStr(GL_SHADING_LANGUAGE_VERSION),
+                  lMaxTexUnits, lMaxTexSize);
     }
 
     void OpenGLContext::SwapBuffers()

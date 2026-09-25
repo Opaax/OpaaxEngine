@@ -179,15 +179,8 @@ namespace Opaax
 
     void Paths::LogPaths() const
     {
-        OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Workspace Path:      {}", WorkspaceRoot().CStr());
-        OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Engine Path:         {}", EngineRoot().CStr());
-        OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Project Root Path:   {}", ProjectRoot().CStr());
-        OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Project File Path:   {}", ProjectFile().CStr());
-        OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Assets Directory:    {}", AssetsDir().CStr());
-        OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Configs Directory:   {}", ConfigsDir().CStr());
-        OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Sources Directory:   {}", SourceDir().CStr());
-        OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Save Directory:      {}", SaveDir().CStr());
-        OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Temp Directory:      {}", TempDir().CStr());
+        // The two roots; every other directory is derived from them (LOG2 — one line).
+        OPAAX_APP_LOG(Info, "Project root '{}', engine root '{}'", ProjectRoot().CStr(), EngineRoot().CStr());
     }
 
     OpaaxString Paths::EngineToAbsolute(const OpaaxString& InEngineRel) const

@@ -509,7 +509,7 @@ namespace Opaax::Editor
         }
         else
         {
-            OPAAX_LOG(LogEditorService, Info, "UI widget drawers: {} for {} registered type(s)",
+            OPAAX_LOG(LogEditorService, Trace, "UI widget drawers: {} for {} registered type(s)",
                       lWidgetDrawers.Count(), lWidgetTypes);
         }
 
@@ -1053,8 +1053,6 @@ namespace Opaax::Editor
         CreateEditorSystems(lEngine);
         CreateEditorContext(lWindow, lEngine);
         
-        OPAAX_LOG(LogEditorService, Info, "EditorService initialized");
-        
         PostInitialized();
     }
 
@@ -1347,7 +1345,5 @@ namespace Opaax::Editor
 
         // 5. The context refs last (nothing points into them anymore).
         ClearEditorContext();
-        
-        OPAAX_LOG(LogEditorService, Info, "EditorService shutdown");
     }
 }

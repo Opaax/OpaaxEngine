@@ -84,36 +84,28 @@ void OpaaxApplication::Bootstrap()
     // The singleton existed all along (I1, SG); this gives it sinks and replays what it held.
     const OpaaxString lLogFile = lPath.SaveDir() + "/Log/OpaaxEngine.log";
     Logger::Get().Init(lLogFile);
-    OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Logger just initialized");
 
     //Crash reporting — as early as it can know where to write (I1, SG).
     CrashHandler::Get().Install({ lPath.SaveDir() + "/Crashes", lLogFile, true });
-    OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Platform: {}", lPlatform.GetPlatformName().CStr());
     lPath.LogPaths();
     
     //Config
-    OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Config System");
     IConfigSystem& lConfigSystem = BootConfigSystem(lPath);
     PreRegisterConfig(lConfigSystem);
     
     //Project Manager
-    OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Project Manager");
     IProjectManager& lProjMgr = BootProjectManager(lPath);
     
     //Jobsystem
-    OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Job System");
     IJobSystem& lJobSystem = BootJobSystem();
 
     //Stats — config-driven, so after the config system.
-    OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Stats");
     BootProfiler(lConfigSystem);
 
     //Window manager — the window itself is created later, in InitializeApplication (needs a GL/VK context).
-    OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Window Manager");
     IWindowManager& lWindowMgr = BootWindowManager();
     
     //Engine
-    OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Engine");
     IEngine& lEngine = BootEngine();
     
     OnProvideServices(m_Services);
@@ -227,7 +219,6 @@ void OpaaxApplication::CreateApplicationWindow()
 
 void OpaaxApplication::OnInitializeApplication()
 {
-    OPAAX_APP_LOG(Trace, "OnInitializeApplication Not override in child app class");
 }
 
 // =============================================================================
@@ -335,8 +326,6 @@ void OpaaxApplication::OnEvent(Event& InEvent)
 
 void OpaaxApplication::ShutdownApplication()
 {
-    OPAAX_APP_LOG(Trace, "Shutdown Application");
-    
     m_Services.ShutdownAll();
 
     Profiler::Get().Shutdown();
@@ -357,7 +346,6 @@ void OpaaxApplication::ShutdownApplication()
 
 void OpaaxApplication::EngineStartup()
 {
-    OPAAX_APP_LOG(Info, "OpaaxApplication::EngineStartup ----> Pre Engine Startup.....");
     PreEngineStartup();
 
     // 1. Infrastructure. Every subsystem is constructed and started — and NO world exists,

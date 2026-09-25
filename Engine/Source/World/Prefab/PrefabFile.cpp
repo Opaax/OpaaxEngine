@@ -41,7 +41,7 @@ namespace Opaax
             return false;
         }
 
-        OPAAX_LOG(LogPrefabFile, Info, "Loaded {} entity(ies) from '{}'", OutData.EntityCount(),
+        OPAAX_LOG(LogPrefabFile, Trace, "Loaded {} entity(ies) from '{}'", OutData.EntityCount(),
                   InAbsPath.CStr());
         return true;
     }
