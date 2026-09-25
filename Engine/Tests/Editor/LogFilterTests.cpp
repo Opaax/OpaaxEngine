@@ -1,7 +1,7 @@
-// Suite: the Log panel's filter (Editor/Panels/LogFilter.h) — block LG2.
+// Suite: the Log panel's filter (Editor/Panels/LogFilter.h) — block LG2/LG3.
 //
-// What a line needs to be shown: its level's button on, and the search found in its message,
-// ignoring case. Critical rides Error's button.
+// What a line needs to be shown: its level's button on, its category not hidden, and the search
+// found in its message, ignoring case. Critical rides Error's button.
 #include <doctest.h>
 
 #include "Editor/Panels/LogFilter.h"
@@ -11,11 +11,12 @@ using namespace Opaax::Editor;
 
 namespace
 {
-    LogEntry MakeEntry(const ELogLevel InLevel, const char* InMessage)
+    LogEntry MakeEntry(const ELogLevel InLevel, const char* InMessage, const char* InCategory = "Cat")
     {
         LogEntry lEntry;
-        lEntry.Level   = InLevel;
-        lEntry.Message = OpaaxString(InMessage);
+        lEntry.Level    = InLevel;
+        lEntry.Category = OPAAX_ID(InCategory);
+        lEntry.Message  = OpaaxString(InMessage);
         return lEntry;
     }
 }
@@ -63,4 +64,19 @@ TEST_CASE("LogFilter: the search AND the level must both pass")
 
     lFilter.ShowLevel[static_cast<size_t>(ELogLevelFilter::Info)] = false;
     CHECK_FALSE(lFilter.Passes(MakeEntry(ELogLevel::Info, "Active World changed")));
+}
+
+TEST_CASE("LogFilter: a hidden category hides its lines only; one never named stays shown")
+{
+    LogFilter lFilter;
+    lFilter.HiddenCategories.insert(OPAAX_ID("OpaaxEngine"));
+
+    CHECK_FALSE(lFilter.Passes(MakeEntry(ELogLevel::Error, "x", "OpaaxEngine")));
+    CHECK(lFilter.Passes(MakeEntry(ELogLevel::Error, "x", "EditorService")));
+
+    // A category first seen AFTER the author filtered: nobody hid it, so it shows.
+    CHECK(lFilter.Passes(MakeEntry(ELogLevel::Info, "x", "BrandNewCategory")));
+
+    lFilter.HiddenCategories.clear();
+    CHECK(lFilter.Passes(MakeEntry(ELogLevel::Error, "x", "OpaaxEngine")));
 }

@@ -4,7 +4,9 @@
 
 #include <imgui.h>
 
+#include <algorithm>
 #include <cstdio>
+#include <cstring>
 #include <ctime>
 
 using namespace Opaax;
@@ -98,6 +100,7 @@ namespace Opaax::Editor
         for (LogEntry& lEntry : m_Incoming)
         {
             ++m_LevelCounts[LevelIndex(lEntry.Level)];
+            NoteCategory(lEntry.Category);
 
             if (m_Filter.Passes(lEntry))
             {
@@ -138,6 +141,9 @@ namespace Opaax::Editor
         }
 
         ImGui::SameLine();
+        bFilterChanged |= DrawCategoryFilter();
+
+        ImGui::SameLine();
         ImGui::SetNextItemWidth(220.f);
         if (ImGui::InputTextWithHint("##search", "Search messages", m_SearchBuffer, sizeof(m_SearchBuffer)))
         {
@@ -151,6 +157,65 @@ namespace Opaax::Editor
         if (bFilterChanged)
         {
             Refilter();
+        }
+    }
+
+    bool LogPanel::DrawCategoryFilter()
+    {
+        const size_t lHidden = m_Filter.HiddenCategories.size();
+
+        char lPreview[48];
+        if (lHidden == 0) { std::snprintf(lPreview, sizeof(lPreview), "All categories"); }
+        else              { std::snprintf(lPreview, sizeof(lPreview), "Categories (%zu hidden)", lHidden); }
+
+        ImGui::SetNextItemWidth(180.f);
+        if (!ImGui::BeginCombo("##categories", lPreview, ImGuiComboFlags_HeightLarge))
+        {
+            return false;
+        }
+
+        bool bChanged = false;
+
+        if (ImGui::SmallButton("All"))
+        {
+            m_Filter.HiddenCategories.clear();
+            bChanged = true;
+        }
+        ImGui::SameLine();
+        if (ImGui::SmallButton("None"))
+        {
+            m_Filter.HiddenCategories.insert(m_Categories.begin(), m_Categories.end());
+            bChanged = true;
+        }
+        ImGui::Separator();
+
+        // Checkboxes, not Selectables: a click toggles one and leaves the dropdown open for the next.
+        for (const OpaaxStringID lCategory : m_Categories)
+        {
+            bool bShown = m_Filter.IsShown(lCategory);
+            if (ImGui::Checkbox(lCategory.CStr(), &bShown))
+            {
+                if (bShown) { m_Filter.HiddenCategories.erase(lCategory); }
+                else        { m_Filter.HiddenCategories.insert(lCategory); }
+                bChanged = true;
+            }
+        }
+
+        ImGui::EndCombo();
+        return bChanged;
+    }
+
+    void LogPanel::NoteCategory(const OpaaxStringID InCategory)
+    {
+        const auto lByName = [](const OpaaxStringID InA, const OpaaxStringID InB)
+        {
+            return std::strcmp(InA.CStr(), InB.CStr()) < 0;
+        };
+
+        const auto lAt = std::lower_bound(m_Categories.begin(), m_Categories.end(), InCategory, lByName);
+        if (lAt == m_Categories.end() || *lAt != InCategory)
+        {
+            m_Categories.insert(lAt, InCategory);
         }
     }
 
@@ -185,15 +250,16 @@ namespace Opaax::Editor
         constexpr ImGuiTableFlags lFlags = ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg
                                          | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_Resizable;
 
-        if (!ImGui::BeginTable("##lines", 3, lFlags))
+        if (!ImGui::BeginTable("##lines", 4, lFlags))
         {
             return;
         }
 
         ImGui::TableSetupScrollFreeze(0, 1);
         ImGui::TableSetupColumn("Time",    ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("00:00:00").x);
-        ImGui::TableSetupColumn("Level",   ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("critical").x);
-        ImGui::TableSetupColumn("Message", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("Level",    ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("critical").x);
+        ImGui::TableSetupColumn("Category", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("OpaaxApplication").x);
+        ImGui::TableSetupColumn("Message",  ImGuiTableColumnFlags_WidthStretch);
         ImGui::TableHeadersRow();
 
         // Read BEFORE this frame's rows grow the content: at the bottom last frame = follow the new lines.
@@ -218,6 +284,8 @@ namespace Opaax::Editor
                 ImGui::TableSetColumnIndex(1);
                 ImGui::TextUnformatted(LevelLabel(lEntry.Level));
                 ImGui::TableSetColumnIndex(2);
+                ImGui::TextUnformatted(lEntry.Category.CStr());
+                ImGui::TableSetColumnIndex(3);
                 ImGui::TextUnformatted(lEntry.Message.CStr());
 
                 ImGui::PopStyleColor();

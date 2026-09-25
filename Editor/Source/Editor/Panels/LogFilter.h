@@ -73,11 +73,20 @@ namespace Opaax::Editor
         /** Matched against the message, case-insensitively. Empty = every message. */
         std::string Search;
 
+        /**
+         * The categories switched OFF. A set of hidden rather than of shown, so a category that
+         * first logs after the author filtered is shown — nobody has decided to hide it yet.
+         */
+        TUnorderedSet<OpaaxStringID> HiddenCategories;
+
         bool IsShown(const ELogLevelFilter InLevel) const noexcept { return ShowLevel[static_cast<size_t>(InLevel)]; }
 
-        bool Passes(const LogEntry& InEntry) const noexcept
+        bool IsShown(const OpaaxStringID InCategory) const { return !HiddenCategories.contains(InCategory); }
+
+        bool Passes(const LogEntry& InEntry) const
         {
-            return IsShown(ToLevelFilter(InEntry.Level)) && ContainsNoCase(InEntry.Message.CStr(), Search);
+            return IsShown(ToLevelFilter(InEntry.Level)) && IsShown(InEntry.Category)
+                && ContainsNoCase(InEntry.Message.CStr(), Search);
         }
     };
 }

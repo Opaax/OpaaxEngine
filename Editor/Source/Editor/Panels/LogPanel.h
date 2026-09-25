@@ -55,13 +55,19 @@ namespace Opaax::Editor
         /** Appends the lines logged since the last frame, oldest dropped past MAX_LINES. */
         void PullNewLines();
 
-        /** Clear, the level buttons, the search. Refilters when any of them changed. */
+        /** Clear, the level buttons, the categories, the search. Refilters when any of them changed. */
         void DrawToolbar();
+
+        /** The Categories dropdown: All / None, then one checkbox per category seen. @return changed. */
+        bool DrawCategoryFilter();
+
+        /** Adds InCategory to m_Categories, in name order, the first time it is seen. */
+        void NoteCategory(OpaaxStringID InCategory);
 
         /** One level's button, "Warn 3". @return true when it was clicked. */
         bool DrawLevelToggle(ELogLevelFilter InLevel);
 
-        /** Time | Level | Message, clipped to the visible rows, following the bottom while it is there. */
+        /** Time | Level | Category | Message, clipped to the visible rows, following the bottom while it is there. */
         void DrawLines();
 
         /** Rebuilds m_Shown from every held line — the filter changed. */
@@ -101,6 +107,12 @@ namespace Opaax::Editor
         std::array<Uint32, LEVEL_COUNT> m_LevelCounts{};
 
         LogFilter            m_Filter;
+
+        /**
+         * Every category that ever reached this panel, sorted by name — the dropdown's rows. Survives
+         * Clear: a category is an identity the author may have hidden, not a line.
+         */
+        TDynArray<OpaaxStringID> m_Categories;
 
         /** ImGui edits this; m_Filter.Search is its copy, taken when it changes. */
         char                 m_SearchBuffer[128] = {};
