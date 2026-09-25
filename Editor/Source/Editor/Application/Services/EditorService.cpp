@@ -1136,15 +1136,8 @@ namespace Opaax::Editor
             lConsumed = true;
         }
 
-        // Observability for the seam (Trace only, discrete events — never per mouse-move, so no spam).
-        // Over the UI -> CONSUMED; over the passthru viewport -> passed to engine.
-        if (InEvent.IsInCategory(EEventCategory::MouseButton) || InEvent.IsInCategory(EEventCategory::Keyboard))
-        {
-            OPAAX_LOG(LogEditorService, Trace, "RouteInput: {} -> {} (PointerOverUI={}, KeyboardOwnedByUI={})",
-                      InEvent.GetName(), lConsumed ? "CONSUMED by editor" : "passed to engine",
-                      m_Gui->IsPointerOverUI(), m_Gui->IsKeyboardOwnedByUI());
-        }
-
+        // No log here (LOG4): one line per key or click drowned everything else. The Input panel
+        // shows where input goes, live.
         return lConsumed;
     }
 

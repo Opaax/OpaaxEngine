@@ -111,16 +111,6 @@ namespace Opaax
         {
             m_Current[lIndex]          = true;
             m_PressedThisFrame[lIndex] = true;
-
-            // Once per run: proof the whole chain reached here — window -> application -> route ->
-            // engine. Everything else about input is silent by necessity (a per-event log would
-            // spam every frame), so without this line a host that feeds nothing at all looks
-            // exactly like one that works (L15).
-            if (!m_bLoggedFirstKey)
-            {
-                m_bLoggedFirstKey = true;
-                OPAAX_LOG(LogInputManager, Info, "First key reached the engine (code {}) — the input chain is live", lIndex);
-            }
         }
     }
 

@@ -96,12 +96,9 @@ namespace Opaax
                 // "this context is active" — already holds. Adding it twice would double every
                 // binding, so refusing the WORK is right; refusing the CALL is not.
                 //
-                // Trace, not Warn: two Play worlds coexist during a level swap (OpenLevel creates
-                // the new one before destroying the old), so each world's control subsystem adds
-                // the same context and the second one lands here EVERY time. A warning on a
-                // routine path is how a log stops being read.
-                OPAAX_LOG(LogInputEvaluator, Trace, "AddContext '{}' — already active, nothing to do.",
-                          InContext.Name);
+                // Silent: two Play worlds coexist during a level swap (OpenLevel creates the new one
+                // before destroying the old), so each world's control subsystem adds the same context
+                // and the second one lands here EVERY time. A routine path is not news.
                 return true;
             }
         }
@@ -149,7 +146,7 @@ namespace Opaax
                              return InLeft.Priority > InRight.Priority;
                          });
 
-        OPAAX_LOG(LogInputEvaluator, Info, "Context '{}' added at priority {} — {} of {} binding(s) accepted, {} context(s) active",
+        OPAAX_LOG(LogInputEvaluator, Trace, "Context '{}' added at priority {} — {} of {} binding(s) accepted, {} context(s) active",
                   InContext.Name, InContext.Priority,
                   lAcceptedCount, static_cast<Uint64>(InContext.Bindings.size()),
                   static_cast<Uint64>(m_Contexts.size()));
@@ -164,7 +161,7 @@ namespace Opaax
             if (lIt->Name == InName)
             {
                 m_Contexts.erase(lIt);
-                OPAAX_LOG(LogInputEvaluator, Info, "Context '{}' removed", InName);
+                OPAAX_LOG(LogInputEvaluator, Trace, "Context '{}' removed", InName);
                 return true;
             }
         }
