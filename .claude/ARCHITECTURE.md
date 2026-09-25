@@ -1312,9 +1312,10 @@ Warn/Error sites were not touched.
 - **One-shot success lines ([[L15]]'s `if (!m_bLogged)`) are not shipped where a panel shows the
   same thing.** L15's question stays right — *does anything positively assert the thing happened?* —
   but the answer is now a COUNT on a summary line (`constructed=20`, `2 map(s), 9 entity(ies)`), a
-  unit test, or a throwaway harness ([[L81]]), never a permanent line in every user's log. The few
-  one-shots that sit on a small probe (physics motion, sprite step, first touches) were demoted to
-  Trace rather than deleted with their machinery.
+  unit test, or a throwaway harness ([[L81]]), never a permanent line in every user's log. The
+  motion probes that fed such lines (Physics body moved + first touches, Mover moved + first step,
+  SpriteAnimation step changed) were deleted with their state on 2026-09-25 — a probe is a
+  harness's job, not the subsystem's.
 
 ---
 

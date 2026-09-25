@@ -2832,3 +2832,12 @@ LG1 came out +28 assertions against the recorded baseline while its new cases ra
 **Rule:** check a delta by running the NEW cases in isolation (`-tc=`) and the rest with `-tce=`; when
 the total itself moves, diff `-r=xml` per-case `OverallResultsAsserts` over ~10 runs to name the case.
 Report a total that flickers as a range, with its cause, never a single number.
+
+## L106 — Scratch files never go under `W:\` (2026-09-25 — USER CORRECTION)
+
+*"Stop creating 'tmp' in 'W:'"*. My edit scripts went to `W:\tmp\lg\` through the Write tool, and
+CLAUDE.local.md had recorded "Python reads bash's /tmp as W:\tmp" as a harmless fact. It put a folder
+on their project drive that nothing owns. **Rule:** scratch lives in
+`C:/Users/engue/AppData/Local/Temp/opaax/` (bash: `$TEMP/opaax`), by ABSOLUTE path in the Write tool
+and on the `python` command line — a bare `/tmp` resolves differently for bash and for Python. Prefer
+the Edit tool, which needs no scratch at all.

@@ -74,7 +74,7 @@ namespace Opaax
         // =============================================================================
     private:
         /** One entity's tick: resolve, advance, sample, write. */
-        void Advance(EntityID InEntity, SpriteComponent& InSprite, SpriteAnimatorComponent& InAnim, float InDelta);
+        void Advance(SpriteComponent& InSprite, SpriteAnimatorComponent& InAnim, float InDelta);
 
         /**
          * The clip InAnim plays this frame, or nullptr when it names none (a real state).
@@ -108,17 +108,6 @@ namespace Opaax
         /** True the FIRST time InKey is passed, so a per-frame path logs once and never again. */
         bool ShouldWarnOnce(Uint32 InKey);
 
-        /**
-         * Say ONCE that a clip actually MOVED — two different steps, on the same entity, over time.
-         *
-         * The instrument has to discriminate ([[L15]]) and must not share a failure mode with what
-         * it measures ([[L21]]). "Advancing N sprite(s)" prints the same whether the clip runs or
-         * is bound-and-frozen; so does "the sprite's frame changed", because the authored Frame is
-         * -1 and the FIRST write always differs from it. Only a second, different step proves
-         * motion — which is why this watches one entity rather than any write.
-         */
-        void NoteStepApplied(EntityID InEntity, Uint32 InStepIndex);
-
         // =============================================================================
         // Members
         // =============================================================================
@@ -137,10 +126,5 @@ namespace Opaax
 
         /** How many entities were advanced on the last tick. */
         Uint64 m_LastAdvanced = 0;
-
-        /** The one entity NoteStepApplied watches, and the first step it was seen on. */
-        EntityID m_ProbeEntity     = ENTITY_NONE;
-        Int32    m_ProbeStep       = -1;
-        bool     m_bLoggedMotion   = false;
     };
 }

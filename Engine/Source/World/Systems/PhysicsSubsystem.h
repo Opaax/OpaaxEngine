@@ -163,16 +163,6 @@ namespace Opaax
         /** ColliderComponent -> the neutral shape the seam takes. */
         static ShapeDesc MakeShapeDesc(const ColliderComponent& InCollider);
 
-        /**
-         * Say ONCE that the simulation actually MOVED something.
-         *
-         * "Simulating N body/bodies" is a count, and it prints the same for N frozen bodies as for
-         * N falling ones — the [[L76]] trap, in the shape SpriteAnimationSubsystem::NoteStepApplied
-         * already exists to avoid. So this watches ONE body against the pose it was built at and
-         * reports the distance it has travelled, which nothing but a live solver can produce.
-         */
-        void NoteBodyMoved(EntityID InEntity, const Vector2F& InPosition);
-
         // =============================================================================
         // Members
         // =============================================================================
@@ -219,11 +209,6 @@ namespace Opaax
         /** Scratch for pairs whose entity died — same never-mutate-mid-iteration rule. */
         TDynArray<Uint64> m_StaleOverlaps;
 
-        /** Counted for the one-shot log, so "events are flowing" is a NUMBER, not a claim. */
-        Uint64 m_OverlapEventCount   = 0;
-        Uint64 m_CollisionEventCount = 0;
-        bool   m_bLoggedFirstTouch   = false;
-
         // ---- world bounds, read from config at Startup --------------------------------------
         bool                 m_bWorldBoundsEnabled = false;
         Vector2F             m_WorldBoundsMin      = { 0.f, 0.f };
@@ -242,12 +227,5 @@ namespace Opaax
 
         /** Reused by OverlapAABB so a per-frame query allocates nothing. */
         TDynArray<Uint64> m_QueryScratch;
-
-        Uint64 m_LastBuiltCount = 0;
-
-        /** The one body NoteBodyMoved watches, and the pose it was BUILT at. */
-        EntityID m_ProbeEntity   = ENTITY_NONE;
-        Vector2F m_ProbeOrigin   = { 0.f, 0.f };
-        bool     m_bLoggedMotion = false;
     };
 }

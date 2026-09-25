@@ -103,12 +103,6 @@ namespace Opaax
             });
 
         m_LastAdvanced = lAdvanced;
-
-        if (!m_bLoggedFirstStep)
-        {
-            m_bLoggedFirstStep = true;
-            OPAAX_LOG(LogMover, Info, "Advancing {} mover(s)", lAdvanced);
-        }
     }
 
     // =========================================================================
@@ -176,14 +170,6 @@ namespace Opaax
 
         MoverTickContext lTick{ InWorld, InMover, InTransform, *lParams, InDelta, ToUserData(InEntity) };
         lMode->Tick(lTick);
-
-        if (m_ProbeEntity == ENTITY_NONE)
-        {
-            m_ProbeEntity = InEntity;
-            m_ProbeOrigin = InTransform.Position;
-        }
-
-        NoteMoverMoved(InEntity, InTransform.Position);
     }
 
     // =========================================================================
@@ -273,27 +259,5 @@ namespace Opaax
     bool MoverSubsystem::ShouldWarnOnce(const Uint32 InKey)
     {
         return m_Warned.emplace(InKey).second;
-    }
-
-    void MoverSubsystem::NoteMoverMoved(const EntityID InEntity, const Vector2F& InPosition)
-    {
-        if (m_bLoggedMotion || InEntity != m_ProbeEntity)
-        {
-            return;
-        }
-
-        // "Advancing N mover(s)" is a COUNT, and it prints the same for N movers standing still —
-        // the [[L76]] trap. A whole world unit, so float noise cannot pass for motion ([[L21]]).
-        const Vector2F lDelta    = InPosition - m_ProbeOrigin;
-        const float    lDistance = Maths::Sqrt(lDelta.x * lDelta.x + lDelta.y * lDelta.y);
-
-        if (lDistance < 1.f)
-        {
-            return;
-        }
-
-        m_bLoggedMotion = true;
-        OPAAX_LOG(LogMover, Info, "Mover {} has moved {:.1f} units — the mode is driving it",
-                  static_cast<Uint32>(InEntity), lDistance);
     }
 }
