@@ -179,7 +179,7 @@ namespace Opaax
             return false;
         }
 
-        OPAAX_LOG(LogUICanvasFile, Info, "Loaded {} widget(s) from '{}'",
+        OPAAX_LOG(LogUICanvasFile, Trace, "Loaded {} widget(s) from '{}'",
                   OutDoc.Root ? CountWidgets(*OutDoc.Root) : 0, InAbsPath.CStr());
         return true;
     }

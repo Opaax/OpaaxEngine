@@ -51,9 +51,6 @@ namespace Opaax
 		m_Data.Height 		= Props.Height;
 		m_Data.Mode	= Props.Mode;
 
-		OPAAX_LOG(LogWindowsWindow, Info, "Creating window {} ({}, {}) [{}]", Props.Title, Props.Width, Props.Height,
-			ToString(Props.Mode));
-
 		if (!s_GLFWInitialized)
 		{
 			int bSuccess = glfwInit();
@@ -441,7 +438,7 @@ namespace Opaax
 
 		// Reads the attribute BACK rather than echoing the argument: the log has to be able to
 		// disagree with the request, or it says nothing about the window (L15).
-		OPAAX_LOG(LogWindowsWindow, Info, "Window decoration requested {} — GLFW reports {}",
+		OPAAX_LOG(LogWindowsWindow, Trace, "Window decoration requested {} — GLFW reports {}",
 		          bInDecorated ? "on" : "off", IsDecorated() ? "on" : "off");
 	}
 

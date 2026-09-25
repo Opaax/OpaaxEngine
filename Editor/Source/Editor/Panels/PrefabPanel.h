@@ -152,8 +152,5 @@ namespace Opaax::Editor
 
         /** The property form's step, held across the gesture — the Inspector's shape (⑤). */
         EntityComponentsEdit m_Edit;
-
-        bool            m_bOutlineLogged = false;
-        bool            m_bIconsLogged   = false;
     };
 }

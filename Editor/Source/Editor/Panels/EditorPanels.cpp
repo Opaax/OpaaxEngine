@@ -23,10 +23,6 @@ namespace Opaax::Editor
 
             m_Panels.emplace_back(lEntry.Desc, Move(lPanel),
                                   lEntry.Desc.DefaultVisibility == EPanelVisibility::Visible);
-
-            // The SUCCESS branch (L15): a silent loop is indistinguishable from one that ran zero times.
-            OPAAX_LOG(LogEditorPanels, Info, "Panel '{}' built — menu '{}', starts {}",
-                      lEntry.Desc.Id, lEntry.Desc.Menu, ToString(lEntry.Desc.DefaultVisibility));
         }
     }
 

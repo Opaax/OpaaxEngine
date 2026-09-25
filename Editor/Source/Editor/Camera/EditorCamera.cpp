@@ -114,9 +114,6 @@ namespace Opaax::Editor
 
         m_OrthoSize = InHeightPx * 0.5f;
         m_bSeeded   = true;
-
-        OPAAX_LOG(LogEditorCamera, Info, "Editor camera seeded from a {}px viewport — orthoSize {}",
-                  InHeightPx, m_OrthoSize);
     }
 
     void EditorCamera::LogFirstMove(const char* InGesture)
@@ -128,7 +125,7 @@ namespace Opaax::Editor
 
         m_bMovedLogged = true;
 
-        OPAAX_LOG(LogEditorCamera, Info, "Editor camera moved ({}) — position ({}, {}), orthoSize {}",
+        OPAAX_LOG(LogEditorCamera, Trace, "Editor camera moved ({}) — position ({}, {}), orthoSize {}",
                   InGesture, m_Position.x, m_Position.y, m_OrthoSize);
     }
 }

@@ -441,7 +441,7 @@ namespace Opaax::Editor
 
             if (m_SheetClaim.IsValid())
             {
-                OPAAX_LOG(LogAnimationClipPanel, Info, "Clip sheet '{}' loaded — {} frame(s)",
+                OPAAX_LOG(LogAnimationClipPanel, Trace, "Clip sheet '{}' loaded — {} frame(s)",
                           lAbsolute.CStr(), m_SheetClaim.Get()->Data.FrameCount());
             }
             else

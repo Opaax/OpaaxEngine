@@ -85,9 +85,7 @@ namespace Opaax
         double m_RecordingGpuMs = -1.0;
         double m_LastFrameStart = 0.0;
 
-        bool m_bEnabled        = false;
-        bool m_bLoggedFirst    = false;
-        bool m_bLoggedFirstGpu = false;
+        bool m_bEnabled = false;
     };
 }
 

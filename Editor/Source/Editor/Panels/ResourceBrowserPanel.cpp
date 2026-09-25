@@ -75,7 +75,7 @@ namespace Opaax::Editor
         {
             if (ScanRoot(m_Context.FileSystem, lRoot))
             {
-                OPAAX_LOG(LogResourceBrowserPanel, Info, "Resource browser scanned '{}' ({}): {} files in {} folders",
+                OPAAX_LOG(LogResourceBrowserPanel, Trace, "Resource browser scanned '{}' ({}): {} files in {} folders",
                     lRoot.Label, lRoot.AbsPath.CStr(), lRoot.FileCount, lRoot.FolderCount);
             }
             else
@@ -549,7 +549,6 @@ namespace Opaax::Editor
                 continue;
             }
 
-            OPAAX_LOG(LogResourceBrowserPanel, Info, "Icon loaded: {}", lAbsolute.CStr());
             m_TypeIcons.emplace(lChrome.TypeId, Move(lRef));
         }
     }

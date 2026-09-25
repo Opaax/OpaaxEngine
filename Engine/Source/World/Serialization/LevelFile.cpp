@@ -92,7 +92,7 @@ namespace Opaax
             }
         }
 
-        OPAAX_LOG(LogLevelFile, Info, "Loaded level '{}' as '{}': {} map(s), persistent '{}'",
+        OPAAX_LOG(LogLevelFile, Trace, "Loaded level '{}' as '{}': {} map(s), persistent '{}'",
                   InAbsPath.CStr(), lParsed.Name.CStr(), lParsed.MapCount(),
                   lParsed.IsEmpty() ? "(none)" : lParsed.PersistentMap().CStr());
 

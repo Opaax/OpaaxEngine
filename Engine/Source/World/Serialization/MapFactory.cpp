@@ -113,7 +113,7 @@ namespace Opaax
             }
         }
 
-        OPAAX_LOG(LogMapFactory, Info, "Instantiated {}/{} entity(ies) into world '{}'",
+        OPAAX_LOG(LogMapFactory, Trace, "Instantiated {}/{} entity(ies) into world '{}'",
                   lCreated, InData.EntityCount(), InWorld.GetName().CStr());
 
         return lCreated;
@@ -160,7 +160,7 @@ namespace Opaax
             InWorld.MarkChanged();
         }
 
-        OPAAX_LOG(LogMapFactory, Info, "Restored {}/{} entity(ies) in world '{}'",
+        OPAAX_LOG(LogMapFactory, Trace, "Restored {}/{} entity(ies) in world '{}'",
                   lRestored, InData.EntityCount(), InWorld.GetName().CStr());
 
         return lRestored;

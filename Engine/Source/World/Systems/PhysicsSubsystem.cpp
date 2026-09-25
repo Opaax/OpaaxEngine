@@ -79,12 +79,9 @@ namespace Opaax
         }
 
         // No entities yet, by contract (WS7) — the first FixedUpdate is what populates the world.
-        OPAAX_LOG(LogPhysics, Info, "Physics started (Play world, {} backend, gravity {},{})",
-                  ToString(lSettings.Backend), lSettings.Gravity.x, lSettings.Gravity.y);
-
         if (m_bWorldBoundsEnabled)
         {
-            OPAAX_LOG(LogPhysics, Info, "World bounds ON: [{},{}]..[{},{}], response {}",
+            OPAAX_LOG(LogPhysics, Trace, "World bounds ON: [{},{}]..[{},{}], response {}",
                       m_WorldBoundsMin.x, m_WorldBoundsMin.y, m_WorldBoundsMax.x, m_WorldBoundsMax.y,
                       ToString(m_WorldBoundsResponse));
         }
@@ -97,8 +94,6 @@ namespace Opaax
         // The bodies die with the world; the map must not outlive them as stale handles.
         m_Bodies.clear();
         m_World.reset();
-
-        OPAAX_LOG(LogPhysics, Info, "Physics shut down");
     }
 
     // =========================================================================
@@ -127,14 +122,6 @@ namespace Opaax
         // LAST, so every contact and overlap this step produced has already been delivered before
         // anything is reaped — a body that touches something on the way out still reports it.
         EnforceWorldBounds(lWorld);
-
-        // The SUCCESS branch, once ([[L15]]). A subsystem that logged only failures would read
-        // identically whether it simulated forty bodies or none at all.
-        if (!m_bLoggedFirstStep)
-        {
-            m_bLoggedFirstStep = true;
-            OPAAX_LOG(LogPhysics, Info, "Simulating {} body/bodies", GetBodyCount());
-        }
     }
 
     // =========================================================================
@@ -325,7 +312,7 @@ namespace Opaax
         }
 
         m_bLoggedMotion = true;
-        OPAAX_LOG(LogPhysics, Info, "Body {} has moved {:.1f} units from where it was built — the solver is live",
+        OPAAX_LOG(LogPhysics, Trace, "Body {} has moved {:.1f} units from where it was built — the solver is live",
                   EntityBits(InEntity), lDistance);
     }
 
@@ -439,7 +426,7 @@ namespace Opaax
         if (!m_bLoggedFirstTouch && (m_OverlapEventCount > 0 || m_CollisionEventCount > 0))
         {
             m_bLoggedFirstTouch = true;
-            OPAAX_LOG(LogPhysics, Info, "First touches dispatched — {} overlap, {} collision",
+            OPAAX_LOG(LogPhysics, Trace, "First touches dispatched — {} overlap, {} collision",
                       m_OverlapEventCount, m_CollisionEventCount);
         }
     }
@@ -551,16 +538,6 @@ namespace Opaax
 
             // Published BEFORE the reap, so a handler still sees a live entity.
             lBus.Publish(PhysicsExitedWorldBounds{ static_cast<EntityID>(lBits), lPosition });
-
-            // Once, and only for the first ([[L15]]): "World bounds ON" says the feature is
-            // configured, which is a different claim from anything ever having left them. Not per
-            // exit — a level draining into a pit would print a line per body.
-            if (!m_bLoggedFirstExit)
-            {
-                m_bLoggedFirstExit = true;
-                OPAAX_LOG(LogPhysics, Info, "Entity {} left the world bounds at ({:.0f},{:.0f}) — {}",
-                          lBits, lPosition.x, lPosition.y, ToString(m_WorldBoundsResponse));
-            }
 
             if (m_WorldBoundsResponse == EWorldBoundsResponse::EventAndDestroy)
             {

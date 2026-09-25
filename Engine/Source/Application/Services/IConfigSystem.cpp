@@ -108,7 +108,7 @@ namespace Opaax
             return;
         }
 
-        OPAAX_LOG(LogConfigSystem, Info, "Config [{}] Created", InConfig.FileName());
+        OPAAX_LOG(LogConfigSystem, Trace, "Config [{}] Created", InConfig.FileName());
     }
 
     bool ConfigSystem::SaveConfig(ConfigTypeID InId)

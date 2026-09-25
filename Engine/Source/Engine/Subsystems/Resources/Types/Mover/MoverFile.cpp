@@ -56,7 +56,7 @@ namespace Opaax
             return false;
         }
 
-        OPAAX_LOG(LogMoverFile, Info, "Loaded {} mode name(s) from '{}'",
+        OPAAX_LOG(LogMoverFile, Trace, "Loaded {} mode name(s) from '{}'",
                   OutData.EntryCount(), InAbsPath.CStr());
         return true;
     }

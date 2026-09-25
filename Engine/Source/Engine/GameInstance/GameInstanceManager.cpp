@@ -31,7 +31,6 @@ namespace Opaax
         m_Paths     = &OpaaxApplication::GetAppService<IPaths>();
         m_Config    = &OpaaxApplication::GetAppService<IConfigSystem>().Get<Config_Engine>().GetData();
 
-        OPAAX_LOG(LogGameInstanceManager, Info, "GameInstanceManager started (no game yet — the host starts it)");
         return true;
     }
 
@@ -110,9 +109,5 @@ namespace Opaax
 
     void GameInstanceManager::Shutdown()
     {
-        // The count, not just the fact: this line and the "started" one are the manager's own
-        // lifetime (engine-long), and without a number they read as if the GAME were too.
-        OPAAX_LOG(LogGameInstanceManager, Info, "GameInstanceManager shutdown ({} game session(s) ran)",
-                  m_SessionsStarted);
     }
 }

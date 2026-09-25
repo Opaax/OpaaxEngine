@@ -87,21 +87,9 @@ namespace Opaax::Editor
         // and the level's grid never lands here.
         const float lAnchor = ViewportOverlays::AnchorHalfExtent(lWorld->GetCameraView(), ViewportPx());
 
-        const Uint64 lOutlined = ViewportOverlays::EnqueueSelectionOutline(
+        ViewportOverlays::EnqueueSelectionOutline(
             m_Context.Engine.GetDebugDraw(), *lWorld, m_Context.PrefabDocument.Selection().Ids(), lAnchor);
-        const Uint64 lIcons    = ViewportOverlays::EnqueueEntityIcons(
-            m_Context.Engine.GetDebugDraw(), *lWorld, lAnchor);
-
-        if (!m_bOutlineLogged && lOutlined > 0)
-        {
-            OPAAX_LOG(LogPrefabPanel, Info, "Selection outline enqueued for {} entity(ies)", lOutlined);
-            m_bOutlineLogged = true;
-        }
-        if (!m_bIconsLogged && lIcons > 0)
-        {
-            OPAAX_LOG(LogPrefabPanel, Info, "Drawing {} entity icon(s) — entities with nothing to render", lIcons);
-            m_bIconsLogged = true;
-        }
+        ViewportOverlays::EnqueueEntityIcons(m_Context.Engine.GetDebugDraw(), *lWorld, lAnchor);
 
         // NAMING ITS OWN WORLD — the whole reason P6 gave a view a Source. Framed by this panel's
         // camera, which was just published as the world's view.
@@ -397,7 +385,5 @@ namespace Opaax::Editor
     {
         m_RenderTarget.reset();
         m_Framebuffer.reset();
-
-        OPAAX_LOG(LogPrefabPanel, Info, "PrefabPanel shutdown");
     }
 }

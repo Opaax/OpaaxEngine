@@ -19,14 +19,12 @@ namespace Opaax
     {
         m_WorldManager = &OpaaxApplication::GetAppService<IEngine>().GetWorldManager();
 
-        OPAAX_LOG(LogCameraManager, Info, "CameraManager started");
         return true;
     }
 
     void CameraManager::Shutdown()
     {
         m_WorldManager = nullptr;
-        OPAAX_LOG(LogCameraManager, Info, "CameraManager shutdown");
     }
 
     // =========================================================================

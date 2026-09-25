@@ -203,8 +203,6 @@ namespace Sandbox
         m_Menu       = nullptr;
         m_MenuButton = nullptr;
         m_bOpen      = false;
-
-        OPAAX_LOG(LogPauseMenu, Info, "Pause menu shutdown — opened {} time(s)", m_Opens);
     }
 
     void PauseMenuSubsystem::Open()

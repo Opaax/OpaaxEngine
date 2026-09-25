@@ -253,9 +253,5 @@ namespace Opaax::Editor
         OpaaxString  m_PendingDropPrefab;
         Vector2F     m_PendingDropPx  = {0.f, 0.f};   // viewport-local, where it was released
 
-        bool   m_bImageLogged    = false;
-        bool   m_bOutlineLogged  = false;
-        bool   m_bIconsLogged    = false;
-        bool   m_bGridLogged     = false;
     };
 }

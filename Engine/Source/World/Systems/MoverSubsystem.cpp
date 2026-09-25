@@ -48,7 +48,6 @@ namespace Opaax
 
         m_Modes = &lEngine.GetRegistries().MoverModes();
 
-        OPAAX_LOG(LogMover, Info, "Mover started (Play world, {} mode(s) registered)", m_Modes->Count());
         return true;
     }
 
@@ -56,8 +55,6 @@ namespace Opaax
     {
         m_MoverCache.clear();
         m_ModeCache.clear();
-
-        OPAAX_LOG(LogMover, Info, "Mover shutdown ({} mover(s) on the last step)", m_LastAdvanced);
     }
 
     // =========================================================================

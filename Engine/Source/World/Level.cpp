@@ -167,9 +167,6 @@ namespace Opaax
 
         if (lRefs.empty())
         {
-            // Trace, not silence: "the walk ran and found nothing" must stay distinguishable from
-            // "the walk never ran" (L15) without an Info line per map on every boot.
-            OPAAX_LOG(LogLevel, Trace, "Map '{}' names no hard reference", OutMounted.AssetRelPath.CStr());
             return;
         }
 
@@ -244,7 +241,7 @@ namespace Opaax
 
         const MapId lMapId = m_Mounted.back().Id;
 
-        OPAAX_LOG(LogLevel, Info, "Mounted '{}' (map id '{}') into world '{}' — {} entity(ies)",
+        OPAAX_LOG(LogLevel, Trace, "Mounted '{}' (map id '{}') into world '{}' — {} entity(ies)",
                   InAssetRelPath.CStr(), lMapId.IsValid() ? lMapId.CStr() : "(none)",
                   m_World.GetName().CStr(), lResult.EntitiesCreated);
 
@@ -281,7 +278,7 @@ namespace Opaax
             if (m_World.IsValid(lId)) { m_World.DestroyEntity(lId); }
         }
 
-        OPAAX_LOG(LogLevel, Info, "Unmounted '{}' from world '{}' — {} entity(ies) destroyed",
+        OPAAX_LOG(LogLevel, Trace, "Unmounted '{}' from world '{}' — {} entity(ies) destroyed",
                   m_Mounted[lFound].AssetRelPath.CStr(), m_World.GetName().CStr(), lDoomed.size());
 
         m_Mounted.erase(m_Mounted.begin() + static_cast<std::ptrdiff_t>(lFound));

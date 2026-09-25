@@ -45,7 +45,6 @@ namespace Opaax
         m_Input     = &lEngine.GetInput();
         m_GameInstances = &lEngine.GetGameInstances();
 
-        OPAAX_LOG(LogWorldManager, Info, "WorldManager started (no world yet — the host creates it)");
         return true;
     }
 
@@ -87,8 +86,6 @@ namespace Opaax
         {
             DestroyWorld(m_Worlds.back().get());
         }
-
-        OPAAX_LOG(LogWorldManager, Info, "WorldManager torn down");
     }
 
     void WorldManager::Shutdown()
@@ -99,8 +96,6 @@ namespace Opaax
         // would reach nobody anyway.
         m_ActiveWorld = nullptr; // clear the non-owning slot BEFORE releasing the owners
         m_Worlds.clear();
-
-        OPAAX_LOG(LogWorldManager, Info, "WorldManager shutdown");
     }
 
     // =========================================================================
@@ -182,7 +177,7 @@ namespace Opaax
                       InSource.GetName().CStr(), lInstantiated, lSnapshot.EntityCount());
         }
 
-        OPAAX_LOG(LogWorldManager, Info, "Cloned world '{}' ({}) -> '{}' ({}) — {} of {} entities",
+        OPAAX_LOG(LogWorldManager, Trace, "Cloned world '{}' ({}) -> '{}' ({}) — {} of {} entities",
                   InSource.GetName().CStr(), ToString(InSource.GetMode()),
                   lClone->GetName().CStr(), ToString(lClone->GetMode()),
                   lInstantiated, lSnapshot.EntityCount());
@@ -288,7 +283,7 @@ namespace Opaax
         // and a subsystem can reach a sibling during its own (F3, one scope down).
         InWorld.GetSubsystems().StartupAll();
 
-        OPAAX_LOG(LogWorldManager, Info, "World '{}' ({}) — {} of {} subsystem candidate(s) created",
+        OPAAX_LOG(LogWorldManager, Trace, "World '{}' ({}) — {} of {} subsystem candidate(s) created",
                   InWorld.GetName().CStr(), ToString(InWorld.GetMode()),
                   lCreated, m_Registries->WorldSubsystems().Count());
     }
@@ -350,8 +345,6 @@ namespace Opaax
 
         m_ActiveWorld = InWorld;
         m_ActiveWorld->OnActive();
-
-        OPAAX_LOG(LogWorldManager, Info, "New Active world -> '{}'", m_ActiveWorld->GetName().CStr());
 
         OnActiveWorldChanged.Broadcast(lOldWorld, m_ActiveWorld);
 

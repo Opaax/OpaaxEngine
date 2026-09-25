@@ -77,8 +77,6 @@ namespace Opaax
 
             m_Entries.emplace_back(InName, MakeUnique<T>());
 
-            OPAAX_LOG(LogMoverModeRegistry, Trace, "Registered mover mode '{}' ({} total)",
-                      InName.CStr(), m_Entries.size());
             return true;
         }
 

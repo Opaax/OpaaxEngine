@@ -1,5 +1,7 @@
 #include "World/Components/ComponentRegistry.h"
 
+#include <spdlog/fmt/ranges.h>   // fmt::join — the Sealed line names every entry
+
 namespace Opaax
 {
     // NOTE: every refusal below is an Error log + a false return, deliberately NOT OPAAX_ASSERT.
@@ -51,9 +53,6 @@ namespace Opaax
 
         m_Entries.emplace_back(Move(InEntry));
 
-        OPAAX_LOG(LogComponentRegistry, Trace, "Registered component '{}' ({} total)",
-                  lName, static_cast<Uint64>(m_Entries.size()));
-
         return true;
     }
 
@@ -66,8 +65,11 @@ namespace Opaax
 
         m_bSealed = true;
 
-        OPAAX_LOG(LogComponentRegistry, Info, "Sealed with {} component type(s).",
-                  static_cast<Uint64>(m_Entries.size()));
+        TDynArray<OpaaxStringID> lNames;
+        for (const TUniquePtr<IComponentEntry>& lEntry : m_Entries) { lNames.push_back(lEntry->GetName()); }
+
+        OPAAX_LOG(LogComponentRegistry, Info, "Sealed with {} component type(s): {}",
+                  static_cast<Uint64>(m_Entries.size()), fmt::join(lNames, ", "));
     }
 
     const IComponentEntry* ComponentRegistry::FindByName(OpaaxStringID InName) const noexcept

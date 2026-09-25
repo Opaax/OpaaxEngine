@@ -1,5 +1,7 @@
 #include "UI/UIWidgetRegistry.h"
 
+#include <spdlog/fmt/ranges.h>   // fmt::join — the Sealed line names every entry
+
 namespace Opaax
 {
     bool UIWidgetRegistry::RegisterFactory(const OpaaxStringID InName, FWidgetFactory InFactory)
@@ -25,7 +27,6 @@ namespace Opaax
         m_Names.emplace_back(InName);
         m_Factories.emplace_back(Move(InFactory));
 
-        OPAAX_LOG(LogUIWidgetRegistry, Trace, "Registered UI widget '{}' ({} total)", InName, static_cast<Uint64>(m_Names.size()));
         return true;
     }
 
@@ -34,7 +35,8 @@ namespace Opaax
         if (m_bSealed) { return; }
 
         m_bSealed = true;
-        OPAAX_LOG(LogUIWidgetRegistry, Info, "Sealed with {} UI widget type(s).", static_cast<Uint64>(m_Names.size()));
+        OPAAX_LOG(LogUIWidgetRegistry, Info, "Sealed with {} UI widget type(s): {}",
+                  static_cast<Uint64>(m_Names.size()), fmt::join(m_Names, ", "));
     }
 
     TUniquePtr<UIWidget> UIWidgetRegistry::Create(const OpaaxStringID InName) const

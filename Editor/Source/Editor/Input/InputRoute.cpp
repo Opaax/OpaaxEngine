@@ -2,17 +2,11 @@
 
 #include "Editor/PIE/PlayInEditor.h"
 
-#include "Core/Log/Logger.h"   // OPAAX_LOG + LogCategory
 #include "Engine/Subsystems/Input/InputManager.h"
 #include "World/World.h"
 #include "World/WorldManager.h"
 
 using namespace Opaax;
-
-namespace
-{
-    constexpr LogCategory LogInputRoute{"InputRoute"};
-}
 
 namespace Opaax::Editor
 {
@@ -83,9 +77,8 @@ namespace Opaax::Editor
             return;
         }
 
-        // A transition, so this logs once per change rather than every frame.
-        OPAAX_LOG(LogInputRoute, Info, "Input route {}", ToString(m_State));
-
+        // Not logged (LOG4): the route flips every time the pointer crosses the viewport's edge. The
+        // Input panel shows the state live.
         if (lPrevious == EInputRouteState::Open)
         {
             // THE reason this object holds state. The engine stops being told about releases the

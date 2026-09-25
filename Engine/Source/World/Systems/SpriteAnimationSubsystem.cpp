@@ -22,7 +22,6 @@ namespace Opaax
     {
         // No entities yet — the host spawns them in PostEngineStartup, and a PIE clone is
         // instantiated after CreateWorld (WS7). Everything here resolves on the first tick.
-        OPAAX_LOG(LogSpriteAnimation, Info, "SpriteAnimation started (Play world)");
         return true;
     }
 
@@ -41,14 +40,6 @@ namespace Opaax
             });
 
         m_LastAdvanced = lAdvanced;
-
-        // The SUCCESS branch, once ([[L15]]): a subsystem that only logged failures would be
-        // indistinguishable from one that found nothing to do.
-        if (!m_bLoggedFirstTick)
-        {
-            m_bLoggedFirstTick = true;
-            OPAAX_LOG(LogSpriteAnimation, Info, "Advancing {} animated sprite(s)", lAdvanced);
-        }
     }
 
     void SpriteAnimationSubsystem::Advance(const EntityID InEntity, SpriteComponent& InSprite,
@@ -110,7 +101,7 @@ namespace Opaax
 
         m_bLoggedMotion = true;
 
-        OPAAX_LOG(LogSpriteAnimation, Info, "Playing — step {} -> {} on the watched sprite",
+        OPAAX_LOG(LogSpriteAnimation, Trace, "Playing — step {} -> {} on the watched sprite",
                   m_ProbeStep, InStepIndex);
     }
 
@@ -248,7 +239,7 @@ namespace Opaax
         // must not look the same in the log.
         if (lResolved == InClip.StepCount())
         {
-            OPAAX_LOG(LogSpriteAnimation, Info, "Clip '{}' -> {} step(s) @ {} fps, all frames bound",
+            OPAAX_LOG(LogSpriteAnimation, Trace, "Clip '{}' -> {} step(s) @ {} fps, all frames bound",
                       InClipPath.CStr(), InClip.StepCount(), InClip.Fps);
         }
         else
@@ -279,7 +270,7 @@ namespace Opaax
 
             if (lIt->second.IsValid())
             {
-                OPAAX_LOG(LogSpriteAnimation, Info, "Library '{}' -> {} clip name(s)",
+                OPAAX_LOG(LogSpriteAnimation, Trace, "Library '{}' -> {} clip name(s)",
                           InPath.Path.CStr(), lIt->second.Get()->Data.EntryCount());
             }
             else
@@ -367,8 +358,5 @@ namespace Opaax
         m_ClipCache.clear();
         m_LibraryCache.clear();
         m_Warned.clear();
-
-        OPAAX_LOG(LogSpriteAnimation, Info, "SpriteAnimation shutdown ({} sprite(s) on the last tick)",
-                  m_LastAdvanced);
     }
 }

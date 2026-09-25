@@ -214,7 +214,7 @@ namespace Opaax
         // PLAY worlds specifically, not all of them — the editor starts a game while its EDIT
         // world is on screen, so a total count reads 1 there and cannot tell a correct boot from
         // a broken one. Total is printed alongside only as context.
-        OPAAX_LOG(LogInputMapping, Info,
+        OPAAX_LOG(LogInputMapping, Trace,
                   "Input mapping started before any play world exists ({} play world(s), {} total) — {} action(s), {} context(s)",
                   m_Context->Worlds.CountWorldsOfMode(EWorldMode::Play),
                   m_Context->Worlds.GetWorldCount(),
@@ -271,8 +271,5 @@ namespace Opaax
 
     void InputMappingSubsystem::Shutdown()
     {
-        OPAAX_LOG(LogInputMapping, Info,
-                  "Input mapping shutdown ({} action(s), {} context(s), {} binding(s) still registered)",
-                  m_Evaluator.GetActionCount(), m_Evaluator.GetContextCount(), GetBindingCount());
     }
 }

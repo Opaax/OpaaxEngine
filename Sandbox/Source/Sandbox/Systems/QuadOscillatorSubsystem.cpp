@@ -28,9 +28,7 @@ namespace Sandbox
 
     bool QuadOscillatorSubsystem::Startup()
     {
-        // No entities yet — see CaptureBaselines. Saying so out loud makes the ordering visible
-        // in the boot log rather than something to rediscover.
-        OPAAX_LOG(LogQuadOscillator, Info, "QuadOscillator started (Play world) — baselines captured on first tick");
+        // No entities yet — see CaptureBaselines.
         return true;
     }
 
@@ -116,7 +114,5 @@ namespace Sandbox
 
         m_Baselines.clear();
         m_bCaptured = false;
-
-        OPAAX_LOG(LogQuadOscillator, Info, "QuadOscillator shutdown");
     }
 }

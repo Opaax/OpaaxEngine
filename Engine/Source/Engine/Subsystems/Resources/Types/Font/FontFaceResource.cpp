@@ -35,7 +35,7 @@ namespace Opaax
         // would dangle.
         const OpaaxString lStem = PathString::Stem(OpaaxStringView(InPath)).ToString();
 
-        OPAAX_LOG(LogFontFaceResource, Info, "'{}' baked {} glyph(s), atlas {}x{}, {} kern pair(s)",
+        OPAAX_LOG(LogFontFaceResource, Trace, "'{}' baked {} glyph(s), atlas {}x{}, {} kern pair(s)",
                   lStem.CStr(), lResource.Face.GlyphCount(),
                   lResource.Face.AtlasWidth, lResource.Face.AtlasHeight,
                   lResource.Face.Kerning.size());

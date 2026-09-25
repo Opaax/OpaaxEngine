@@ -863,7 +863,5 @@ namespace Opaax::Editor
     {
         m_RenderTarget.reset();
         m_Framebuffer.reset();
-
-        OPAAX_LOG(LogUICanvasPanel, Info, "UICanvasPanel shutdown");
     }
 }

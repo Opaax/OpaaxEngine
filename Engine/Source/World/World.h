@@ -58,7 +58,6 @@ namespace Opaax
     private:
         void AddEntityCount();
         void RemoveEntityCount();
-        void LogEntityCount();
 
         // =========================================================================
         // Entity

@@ -65,7 +65,7 @@ namespace Opaax
             return false;
         }
 
-        OPAAX_LOG(LogSpriteSheetFile, Info, "Loaded {} frame(s) from '{}'",
+        OPAAX_LOG(LogSpriteSheetFile, Trace, "Loaded {} frame(s) from '{}'",
                   OutData.FrameCount(), InAbsPath.CStr());
         return true;
     }

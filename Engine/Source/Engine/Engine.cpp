@@ -491,25 +491,18 @@ namespace Opaax
         {
             return true;
         }
-        
-        OPAAX_ENGINE_LOG(Info, "Engine::Startup ----> Begin start up");
 
-        OPAAX_ENGINE_LOG(Info, "Engine::Startup ----> Cache Application services....");
         CacheAppServices();
 
-        OPAAX_ENGINE_LOG(Info, "Engine::Startup ----> Startup Engine Subsystems....");
         m_Subsystems.StartupAll();
 
-        OPAAX_ENGINE_LOG(Info, "Engine::Startup ----> Cache Engine Subsystems....");
         CacheSubsystems();
         
         if (m_Resources != nullptr)
         {
-            OPAAX_ENGINE_LOG(Info, "Engine::Startup ----> Push job system to Resources Manager");
             m_Resources->SetJobSystem(OpaaxApplication::GetAppService<IJobSystem>());
         }
         
-        OPAAX_ENGINE_LOG(Info, "Engine::Startup ----> Bind to world manager events");
         BindToWorldMgrEvents();
 
         m_bStarted  = true;
@@ -519,7 +512,7 @@ namespace Opaax
             m_EngineEventBus->GetEventBus().Publish(EngineStarted{});
         }
 
-        OPAAX_ENGINE_LOG(Info, "Engine::Startup ----> Finishing startup: ({} subsystem(s))", m_Subsystems.GetSystems().size());
+        OPAAX_ENGINE_LOG(Info, "Engine started — {} subsystem(s)", m_Subsystems.GetSystems().size());
         return true;
     }
 
@@ -556,7 +549,7 @@ namespace Opaax
 
         // Logged HERE, not after the call below, so the log reads in execution order: the worlds
         // are already gone by the time the session's own "GAME ENDED" line prints.
-        OPAAX_ENGINE_LOG(Info, "EndGame — {} play world(s) destroyed, now ending the game instance", lDestroyed);
+        OPAAX_ENGINE_LOG(Trace, "EndGame — {} play world(s) destroyed, now ending the game instance", lDestroyed);
 
         return m_GameInstances->EndGame();
     }
@@ -634,8 +627,6 @@ namespace Opaax
         }
 
         m_Subsystems.TearDownAll();
-
-        OPAAX_ENGINE_LOG(Info, "Engine torn down");
     }
 
     void Engine::Shutdown()

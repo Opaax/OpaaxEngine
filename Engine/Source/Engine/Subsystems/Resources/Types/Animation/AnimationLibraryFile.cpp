@@ -57,7 +57,7 @@ namespace Opaax
             return false;
         }
 
-        OPAAX_LOG(LogAnimationLibraryFile, Info, "Loaded {} clip name(s) from '{}'",
+        OPAAX_LOG(LogAnimationLibraryFile, Trace, "Loaded {} clip name(s) from '{}'",
                   OutData.EntryCount(), InAbsPath.CStr());
         return true;
     }

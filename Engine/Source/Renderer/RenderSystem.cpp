@@ -42,7 +42,6 @@ namespace Opaax
         m_Renderer2D = MakeUnique<Renderer2D>();
         m_Renderer2D->Init(*m_Device, InDesc.Limits, InDesc.SpriteShader);
 
-        OPAAX_LOG(LogRenderSystem, Info, "RenderSystem started.");
         return true;
     }
 

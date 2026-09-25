@@ -176,7 +176,7 @@ namespace Opaax
     {
         m_Data->Limits = ResolveLimits(InLimits);
 
-        OPAAX_LOG(LogRenderer2D, Info, "Renderer2D::Init(device) — {} quads and {} texture slots per batch",
+        OPAAX_LOG(LogRenderer2D, Trace, "Renderer2D::Init(device) — {} quads and {} texture slots per batch",
                   m_Data->Limits.MaxQuads, m_Data->Limits.MaxTextureSlots);
 
         const Uint32 lMaxVertices = m_Data->Limits.MaxQuads * 4u;
@@ -212,7 +212,6 @@ namespace Opaax
     {
         if (!m_Data) { return; }
 
-        OPAAX_LOG(LogRenderer2D, Info, "Renderer2D::Shutdown()");
         m_Data->QuadBindGroup.reset();
         m_Data->QuadPipeline.reset();   // before the shader it references
         m_Data->QuadVAO.reset();

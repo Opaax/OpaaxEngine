@@ -57,7 +57,7 @@ namespace Opaax
             return false;
         }
 
-        OPAAX_LOG(LogInputActionFile, Info, "Loaded input action '{}' ({}) from '{}'",
+        OPAAX_LOG(LogInputActionFile, Trace, "Loaded input action '{}' ({}) from '{}'",
                   OutData.Name, ToString(OutData.ValueType), InAbsPath.CStr());
         return true;
     }

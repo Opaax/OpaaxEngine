@@ -140,7 +140,6 @@ namespace Opaax
         // Cache the world owner — Render draws whatever it reports as the active world.
         m_WorldManager = &OpaaxApplication::GetAppService<IEngine>().GetWorldManager();
 
-        OPAAX_LOG(LogRendererManager, Info, "RendererManager started ({}x{})", lDesc.Width, lDesc.Height);
         return true;
     }
 
@@ -159,7 +158,6 @@ namespace Opaax
         m_FamilyCache.clear();
 
         m_RenderSystem.reset(); // ~RenderSystem = WaitIdle + teardown while the window/context is alive
-        OPAAX_LOG(LogRendererManager, Info, "RendererManager shutdown");
     }
     
     // =========================================================================
@@ -626,12 +624,7 @@ namespace Opaax
             // stops a missing file being retried once per sprite per frame.
             lIt = m_SheetCache.emplace(lKey.GetId(), Move(lRef)).first;
 
-            if (const SpriteSheetResource* lLoaded = lIt->second.IsValid() ? lIt->second.Get() : nullptr)
-            {
-                OPAAX_LOG(LogRendererManager, Info, "Sheet '{}' -> {} frame(s) of '{}'",
-                          InPath.Path.CStr(), lLoaded->Data.FrameCount(), lLoaded->Data.Texture.Path.CStr());
-            }
-            else
+            if (!lIt->second.IsValid() || lIt->second.Get() == nullptr)
             {
                 OPAAX_LOG(LogRendererManager, Warn, "Sheet '{}' did not load — the sprite draws nothing",
                           InPath.Path.CStr());
@@ -670,7 +663,7 @@ namespace Opaax
             // an unconditional "-> WxH" would cheerfully report a missing file as a 2x2 texture.
             if (const TextureResource* lLoaded = lIt->second.IsValid() ? lIt->second.Get() : nullptr)
             {
-                OPAAX_LOG(LogRendererManager, Info, "Texture '{}' -> {}x{}",
+                OPAAX_LOG(LogRendererManager, Trace, "Texture '{}' -> {}x{}",
                           InPath.Path.CStr(), lLoaded->Width, lLoaded->Height);
             }
             else
@@ -709,13 +702,7 @@ namespace Opaax
             // the empty placeholder face, which draws tofu.
             lIt = m_FaceCache.emplace(lKey.GetId(), Move(lRef)).first;
 
-            if (const FontFaceResource* lLoaded = lIt->second.IsValid() ? lIt->second.Get() : nullptr)
-            {
-                OPAAX_LOG(LogRendererManager, Info, "Face '{}' -> {} glyph(s), atlas {}x{}",
-                          InPath.Path.CStr(), lLoaded->Face.GlyphCount(),
-                          lLoaded->Face.AtlasWidth, lLoaded->Face.AtlasHeight);
-            }
-            else
+            if (!lIt->second.IsValid() || lIt->second.Get() == nullptr)
             {
                 OPAAX_LOG(LogRendererManager, Warn, "Face '{}' did not load — the text draws tofu",
                           InPath.Path.CStr());
@@ -806,12 +793,7 @@ namespace Opaax
 
             lIt = m_FamilyCache.emplace(lKey.GetId(), Move(lRef)).first;
 
-            if (const FontFamilyResource* lLoaded = lIt->second.IsValid() ? lIt->second.Get() : nullptr)
-            {
-                OPAAX_LOG(LogRendererManager, Info, "Family '{}' -> {} face(s)",
-                          InPath.Path.CStr(), lLoaded->Data.EntryCount());
-            }
-            else
+            if (!lIt->second.IsValid() || lIt->second.Get() == nullptr)
             {
                 OPAAX_LOG(LogRendererManager, Warn, "Family '{}' did not load — the text draws nothing",
                           InPath.Path.CStr());
@@ -926,7 +908,5 @@ namespace Opaax
         {
             m_RenderSystem->Resize(InResize.Width, InResize.Height);
         }
-
-        OPAAX_LOG(LogRendererManager, Trace, "Backbuffer resized to {}x{} (via event bus)", InResize.Width, InResize.Height);
     }
 }

@@ -183,9 +183,5 @@ namespace Opaax
         bool m_bHasMousePosition = false;
 
         mutable bool m_bWarnedOutOfRange = false;
-
-        // One-shot proof-of-life for the feed; see OnKeyPressed. NOT cleared by ResetState — it is
-        // about the run, not about the route.
-        bool m_bLoggedFirstKey = false;
     };
 }

@@ -51,7 +51,6 @@ namespace Opaax::Editor
     void EditorApplication::OnProvideServices(AppServiceLocator& InServices)
     {
         InServices.Provide<IEditorService, EditorService>();
-        OPAAX_LOG(LogEditorApp, Info, "IEditorService provided");
     }
     
     void EditorApplication::TickFrame()

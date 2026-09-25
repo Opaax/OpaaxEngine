@@ -42,14 +42,11 @@ namespace Opaax
     {
         // No ShouldCreate, so this runs in an Edit world too — which is the whole point, and also
         // why it must not assume any entity exists yet (WS7).
-        OPAAX_LOG(LogColliderDebug, Info, "Collider debug draw started (channel '{}')", "Physics");
         return true;
     }
 
     void ColliderDebugSubsystem::Shutdown()
     {
-        OPAAX_LOG(LogColliderDebug, Info, "Collider debug draw shutdown ({} outline(s) on the last tick)",
-                  m_LastDrawn);
     }
 
     // =========================================================================
@@ -80,13 +77,6 @@ namespace Opaax
             });
 
         m_LastDrawn = lDrawn;
-
-        // The success branch, once ([[L15]]) — "started" says nothing about whether it found any.
-        if (!m_bLoggedFirstTick)
-        {
-            m_bLoggedFirstTick = true;
-            OPAAX_LOG(LogColliderDebug, Info, "Drawing {} collider outline(s)", lDrawn);
-        }
     }
 
     // =========================================================================

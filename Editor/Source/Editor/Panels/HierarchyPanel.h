@@ -190,8 +190,5 @@ namespace Opaax::Editor
         /** The rows, and the drop they bank (§HR). */
         EntityTreeView m_Tree;
 
-        // One-shot: Draw() is per-frame, and BOTH empty states are silent — a clean log would otherwise be
-        // indistinguishable from an empty panel (L15). Logs the SUCCESS branch once, then never again.
-        bool m_bListLogged = false;
     };
 }

@@ -101,8 +101,6 @@ namespace Sandbox
 
         m_Root   = nullptr;
         m_Source = {};
-
-        OPAAX_LOG(LogHud, Info, "HUD shutdown — {} jump(s) counted", m_Model.Jumps);
     }
 
     void HudSubsystem::OnJump(const InputActionValue& /*InValue*/)

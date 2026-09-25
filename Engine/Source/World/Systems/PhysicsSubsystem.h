@@ -240,15 +240,10 @@ namespace Opaax
         /** Scratch for entities to reap this step — collected during the walk, destroyed after. */
         TDynArray<Uint32> m_BoundsVictims;
 
-        /** One-shot: the feature being CONFIGURED and anything having left are separate claims. */
-        bool m_bLoggedFirstExit = false;
-
         /** Reused by OverlapAABB so a per-frame query allocates nothing. */
         TDynArray<Uint64> m_QueryScratch;
 
-        /** One-shot log flags — a fixed step must not print sixty lines a second ([[L15]]). */
-        bool   m_bLoggedFirstStep = false;
-        Uint64 m_LastBuiltCount   = 0;
+        Uint64 m_LastBuiltCount = 0;
 
         /** The one body NoteBodyMoved watches, and the pose it was BUILT at. */
         EntityID m_ProbeEntity   = ENTITY_NONE;

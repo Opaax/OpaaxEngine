@@ -78,7 +78,6 @@ namespace Opaax
     private:
         WorldContext* m_Context = nullptr;   // borrowed; the World owns it
 
-        Uint64 m_LastDrawn         = 0;
-        bool   m_bLoggedFirstTick  = false;
+        Uint64 m_LastDrawn = 0;
     };
 }

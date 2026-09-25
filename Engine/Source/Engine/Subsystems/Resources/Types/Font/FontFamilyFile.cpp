@@ -58,7 +58,7 @@ namespace Opaax
             return false;
         }
 
-        OPAAX_LOG(LogFontFamilyFile, Info, "Loaded {} face(s) from '{}'",
+        OPAAX_LOG(LogFontFamilyFile, Trace, "Loaded {} face(s) from '{}'",
                   OutData.EntryCount(), InAbsPath.CStr());
         return true;
     }
