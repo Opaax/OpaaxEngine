@@ -3,7 +3,7 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 #include "Engine/Subsystems/EngineSubsystem.h"
 #include "World/World.h"
 #include "World/WorldEvents.h"
@@ -211,9 +211,6 @@ namespace Opaax
         // InputMappingSubsystem a context points at must be looked up when the world is built.
         GameInstanceManager* m_GameInstances = nullptr;
 
-        // ④ — resolved in Startup like the siblings above, put into every WorldContext, and used
-        // for this manager's own tick scope. Null in a bare test manager.
-        FrameProfiler*   m_Profiler  = nullptr;
         
         bool m_bPaused        = false;
         bool m_bStepRequested = false;

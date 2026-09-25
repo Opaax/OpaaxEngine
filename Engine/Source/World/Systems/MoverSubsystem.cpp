@@ -4,7 +4,7 @@
 #include "Application/Services/IEngine.h"
 #include "Application/Services/IPaths.h"
 #include "Core/Maths/Maths.h"
-#include "Core/Profiling/FrameProfiler.h"
+#include "Core/Profiling/Profiler.h"
 #include "Engine/Registries/EngineRegistries.h"
 #include "Engine/Subsystems/Resources/ResourceManager.h"
 #include "Engine/Subsystems/Resources/Types/Mover/MoveModeResource.h"
@@ -65,7 +65,7 @@ namespace Opaax
     // =========================================================================
     void MoverSubsystem::FixedUpdate(const double InFixedDeltaTime)
     {
-        OPAAX_STAT_SCOPE(m_Context->Profiler, "Mover");
+        OPAAX_STAT_SCOPE("Mover");
 
         World& lWorld = m_Context->OwningWorld;
 

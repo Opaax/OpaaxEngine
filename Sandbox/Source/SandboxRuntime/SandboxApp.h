@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "Application/OpaaxApplication.h"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 
 OPAAX_LOG_CATEGORY(SandBox);
 

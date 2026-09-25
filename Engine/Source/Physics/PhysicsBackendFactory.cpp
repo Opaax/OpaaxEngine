@@ -1,6 +1,6 @@
 #include "Physics/PhysicsAPI.h"
 
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 
 #include "Physics/Box2D/Box2DPhysicsWorld.h"
 

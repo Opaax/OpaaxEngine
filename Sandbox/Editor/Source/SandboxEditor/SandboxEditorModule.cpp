@@ -1,6 +1,6 @@
 #include "SandboxEditorModule.h"
 
-#include "Application/Services/ILogger.h"   // OPAAX_LOG + LogCategory
+#include "Core/Log/Logger.h"   // OPAAX_LOG + LogCategory
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Editor/EditorContext.h"   // the Panels factory receives EditorContext& (D10)
 #include "Commands/SandboxEditorCommandTags.h"
@@ -10,7 +10,6 @@
 #include "Components/HealthComponent.h"
 #include "Resources/WaveResource.h"
 
-// OPAAX_LOG expands to an unqualified ToSpdLevel(...) — bring Opaax into scope, as SandboxPanel does.
 using namespace Opaax;
 
 namespace

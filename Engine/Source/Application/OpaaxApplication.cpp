@@ -1,11 +1,14 @@
 #include "OpaaxApplication.h"
 
+#include <cstring>
+
+#include "Platform/CrashHandler.h"
 #include "Platform/IPlatform.h"
 #include "Application/Services/IPaths.h"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
+#include "Core/Profiling/Profiler.h"
 #include "Application/Services/IProjectManager.h"
 #include "Application/Services/IJobSystem.h"
-#include "Application/Services/IStatsService.h"
 
 #include "Engine/Config/Config_Engine.h"
 #include "Engine/Engine.h"
@@ -31,6 +34,18 @@
 #endif
 
 using namespace Opaax;
+
+namespace
+{
+    bool HasCommandLineFlag(const int InArgc, char** InArgv, const char* InFlag)
+    {
+        for (int i = 1; i < InArgc; ++i)
+        {
+            if (InArgv[i] != nullptr && std::strcmp(InArgv[i], InFlag) == 0) { return true; }
+        }
+        return false;
+    }
+}
 
 AppServiceLocator OpaaxApplication::m_Services = AppServiceLocator();
 
@@ -66,8 +81,13 @@ void OpaaxApplication::Bootstrap()
     IPaths& lPath = BootPaths();
     
     //Log
-    ILogger& lLogger = BootLogger(lPath);
+    // The singleton existed all along (I1, SG); this gives it sinks and replays what it held.
+    const OpaaxString lLogFile = lPath.SaveDir() + "/Log/OpaaxEngine.log";
+    Logger::Get().Init(lLogFile);
     OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Logger just initialized");
+
+    //Crash reporting — as early as it can know where to write (I1, SG).
+    CrashHandler::Get().Install({ lPath.SaveDir() + "/Crashes", lLogFile, true });
     OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Platform: {}", lPlatform.GetPlatformName().CStr());
     lPath.LogPaths();
     
@@ -84,9 +104,9 @@ void OpaaxApplication::Bootstrap()
     OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Job System");
     IJobSystem& lJobSystem = BootJobSystem();
 
-    //Stats — config-driven, so after the config system. May deliberately provide nothing.
+    //Stats — config-driven, so after the config system.
     OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Stats");
-    BootStatsService(lConfigSystem);
+    BootProfiler(lConfigSystem);
 
     //Window manager — the window itself is created later, in InitializeApplication (needs a GL/VK context).
     OPAAX_APP_LOG(Info, "OpaaxApplication::Bootstrap ----> Window Manager");
@@ -120,11 +140,6 @@ TUniquePtr<IPaths> OpaaxApplication::CreatePaths(const IPlatform& InPlatform, in
     return MakeUnique<Opaax::Paths>(InPlatform, InArgc, InArgv);
 }
 
-ILogger& OpaaxApplication::BootLogger(IPaths& Paths)
-{
-    return m_Services.Provide<ILogger, Opaax::Logger>(Paths);
-}
-
 IConfigSystem& OpaaxApplication::BootConfigSystem(const IPaths& Paths)
 {
     return m_Services.Provide<IConfigSystem, Opaax::ConfigSystem>(Paths);
@@ -140,7 +155,7 @@ IJobSystem& OpaaxApplication::BootJobSystem()
     return m_Services.Provide<IJobSystem, Opaax::JobSystem>();
 }
 
-IStatsService& OpaaxApplication::BootStatsService(IConfigSystem& ConfigSystem)
+void OpaaxApplication::BootProfiler(IConfigSystem& ConfigSystem)
 {
     // A dev build always profiles — that is what dev means, and it is the same signal IPaths keys
     // on (I12), never the editor flag: a debug GAME build is a dev build with no editor.
@@ -153,17 +168,13 @@ IStatsService& OpaaxApplication::BootStatsService(IConfigSystem& ConfigSystem)
     const bool lbEnable = lbDevBuild
                        || ConfigSystem.Get<Opaax::Config_Engine>().GetData().Stats.EnableInShipBuild;
 
+    // Disabled is the off switch (ST6): every OPAAX_STAT_SCOPE is then one predicted branch.
+    Profiler::Get().Init(lbEnable);
+
     if (!lbEnable)
     {
-        // NOT PROVIDING IT *IS* THE OFF SWITCH. The locator answers IStatsService::Null(), whose
-        // GetProfiler() is nullptr, so every OPAAX_STAT_SCOPE in the tree collapses to one
-        // predicted branch — no clock read, no virtual call, no second "disabled" state to keep
-        // correct (I3).
         OPAAX_APP_LOG(Info, "Stats DISABLED (ship build; set Stats.EnableInShipBuild to profile)");
-        return IStatsService::Null();
     }
-
-    return m_Services.Provide<IStatsService, Opaax::StatsService>();
 }
 
 IWindowManager& OpaaxApplication::BootWindowManager()
@@ -226,6 +237,14 @@ void OpaaxApplication::OnInitializeApplication()
 void OpaaxApplication::RunApplication()
 {
     EngineStartup();
+
+#if defined(OPAAX_WORKSPACE_DIR)
+    // Dev builds only (I12): proves the whole crash path — dump, stack, log copy, dialog.
+    if (HasCommandLineFlag(m_Argc, m_Argv, "--crash-test"))
+    {
+        CrashHandler::TriggerTestCrash();
+    }
+#endif
     
     while (bIsRunning)
     {
@@ -242,7 +261,7 @@ void OpaaxApplication::RunApplication()
         //     the same reason (IN2). The frame ending here still holds its Present, which happens
         //     after Engine().Loop() returns; publishing inside Loop would drop that row.
         // ----------------------------------------------------------------
-        Stats().BeginFrame();
+        Profiler::Get().BeginFrame();
 
         // ----------------------------------------------------------------
         // 0. Close the PREVIOUS frame's input, immediately before the new events arrive.
@@ -319,6 +338,12 @@ void OpaaxApplication::ShutdownApplication()
     OPAAX_APP_LOG(Trace, "Shutdown Application");
     
     m_Services.ShutdownAll();
+
+    Profiler::Get().Shutdown();
+    CrashHandler::Get().Uninstall();
+
+    // Last: every service above may still log on its way down.
+    Logger::Get().Shutdown();
 
     bHasShutdown    = true;
     bHasBootstrap   = false;
@@ -475,10 +500,8 @@ void OpaaxApplication::UnknownEvent(EventDispatcher& Dispatcher, Event& InEvent)
 
 IPlatform&          OpaaxApplication::Platform()        { return m_Services.Get<IPlatform>();       }
 IPaths&             OpaaxApplication::Paths()           { return m_Services.Get<IPaths>();          }
-ILogger&            OpaaxApplication::Logger()          { return m_Services.Get<ILogger>();         }
 IProjectManager&    OpaaxApplication::ProjectManager()  { return m_Services.Get<IProjectManager>(); }
 IConfigSystem&      OpaaxApplication::ConfigSystem()    { return m_Services.Get<IConfigSystem>();   }
 IJobSystem&         OpaaxApplication::JobSystem()       { return m_Services.Get<IJobSystem>();      }
-IStatsService&      OpaaxApplication::Stats()           { return m_Services.Get<IStatsService>();   }
 IWindowManager&     OpaaxApplication::WindowManager()   { return m_Services.Get<IWindowManager>();  }
 IEngine&            OpaaxApplication::Engine()          { return m_Services.Get<IEngine>();         }

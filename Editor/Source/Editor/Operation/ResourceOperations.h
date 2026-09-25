@@ -1,6 +1,7 @@
 #pragma once
 
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
+#include "Application/Services/IPaths.h"
 #include "Core/String/OpaaxString.hpp"
 
 #include "Editor/EditorContext.h"

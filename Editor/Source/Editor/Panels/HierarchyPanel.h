@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Editor/Panels/EntityTreeView.h"   // held BY VALUE — the rows
 #include "Editor/Panels/IEditorPanel.h"

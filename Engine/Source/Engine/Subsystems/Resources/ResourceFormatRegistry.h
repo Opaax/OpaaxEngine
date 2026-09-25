@@ -3,7 +3,7 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxStringID.hpp"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 
 #include "ResourceFormat.h"
 #include "ResourceHold.hpp"    // the one thing an entry can CALL (P5b) — brings ResourceManager.h

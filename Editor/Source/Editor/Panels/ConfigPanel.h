@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 #include "Core/Config/IConfig.h"          // ConfigTypeID — which config is current
 #include "Core/String/OpaaxString.hpp"    // the dirty baseline
 #include "Editor/Panels/IEditorPanel.h"

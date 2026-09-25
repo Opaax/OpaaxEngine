@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Engine/Subsystems/Resources/Types/Animation/AnimationLibraryData.h"
 

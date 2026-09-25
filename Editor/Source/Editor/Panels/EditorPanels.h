@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Application/Services/ILogger.h"   // OPAAX_LOG_CATEGORY
+#include "Core/Log/Logger.h"   // OPAAX_LOG_CATEGORY
 #include "Core/OpaaxTypes.h"                // TUniquePtr, TDynArray, Uint64
 #include "Editor/Panels/IEditorPanel.h"
 #include "Editor/Panels/PanelDesc.h"

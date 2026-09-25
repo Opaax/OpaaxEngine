@@ -1,5 +1,5 @@
 #include "IJobSystem.h"
-#include "ILogger.h"
+#include "Core/Log/Logger.h"
 #include "Application/OpaaxApplication.h"
 
 namespace Opaax

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 #include "Core/OpaaxTypes.h"             // TUniquePtr, Uint32
 #include "Core/Maths/MathTypes.h"
 #include "Editor/Panels/IEditorPanel.h"

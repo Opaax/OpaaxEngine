@@ -5,7 +5,7 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxStringID.hpp"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 
 #include "Engine/Registries/EngineRegistries.h"
 

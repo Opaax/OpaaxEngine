@@ -1,7 +1,7 @@
 #pragma once
 
 #include "IAppService.h"
-#include "ILogger.h"
+#include "Core/Log/Logger.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Jobs/JobHandle.h"
 

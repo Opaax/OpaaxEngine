@@ -2,7 +2,7 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 #include "Engine/Input/InputTypes.h"
 #include "Engine/Subsystems/Input/InputManager.h"   // KEY_STATE_COUNT — the mask's width
 

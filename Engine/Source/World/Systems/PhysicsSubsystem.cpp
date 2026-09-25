@@ -2,7 +2,7 @@
 
 #include "Core/Events/EventBus.h"
 #include "Core/Maths/Maths.h"   // DegreesToRadians — the transform authors degrees, the seam takes radians
-#include "Core/Profiling/FrameProfiler.h"
+#include "Core/Profiling/Profiler.h"
 #include "Engine/Config/EngineConfigData.h"
 #include "Engine/Subsystems/EventBus/EngineEventBus.h"
 #include "Physics/Collision/CollisionChannel.h"
@@ -111,7 +111,7 @@ namespace Opaax
             return;
         }
 
-        OPAAX_STAT_SCOPE(m_Context->Profiler, "Physics");
+        OPAAX_STAT_SCOPE("Physics");
 
         World& lWorld = m_Context->OwningWorld;
 

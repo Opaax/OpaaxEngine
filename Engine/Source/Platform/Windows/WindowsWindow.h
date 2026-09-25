@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "Window/Window.h"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 #include "GLFW/glfw3.h"
 
 namespace Opaax

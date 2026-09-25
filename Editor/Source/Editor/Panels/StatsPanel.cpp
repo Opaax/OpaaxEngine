@@ -3,7 +3,7 @@
 #include "Editor/EditorContext.h"
 #include "Editor/UI/IEditorGui.h"   // GetTime — the throttle's clock
 
-#include "Application/Services/IStatsService.h"
+#include "Core/Profiling/Profiler.h"
 
 #include <imgui.h>
 
@@ -44,7 +44,7 @@ namespace Opaax::Editor
 
     void StatsPanel::DrawContents()
     {
-        const FrameStats& lStats = m_Context.Stats.GetFrameStats();
+        const FrameStats& lStats = Profiler::Get().GetFrameStats();
 
         // The graph gets every frame — it is the one thing here that SHOULD move at frame rate, and
         // a hitch that only lands between two refreshes must still show up as a spike.

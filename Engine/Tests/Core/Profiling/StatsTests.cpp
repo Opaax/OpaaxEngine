@@ -6,8 +6,11 @@
 #include <doctest.h>
 
 #include "Core/Profiling/FrameProfiler.h"
+#include "Core/Profiling/Profiler.h"
 #include "Core/Profiling/StatsHistory.h"
 #include "Editor/Panels/StatsDisplay.h"   // header-only, no ImGui — the M2a include path (L55)
+
+#include <thread>
 
 using namespace Opaax;
 
@@ -246,10 +249,9 @@ TEST_CASE("FrameProfiler: Close ignores an out-of-range index")
 // ScopedStat
 // =============================================================================
 
-TEST_CASE("ScopedStat: a null profiler is a no-op, so an unattached manager needs no branch")
+TEST_CASE("ScopedStat: a null profiler is a no-op, so a disabled Profiler needs no branch at the site")
 {
-    // ISubsystemManager ticks with m_Profiler == nullptr whenever nobody attached one (every bare
-    // manager in a test), and it must not have to check.
+    // What OPAAX_STAT_SCOPE hands over when the Profiler is off or the thread is not the recording one.
     {
         const ScopedStat lStat(nullptr, "Nowhere");
     }
@@ -638,4 +640,81 @@ TEST_CASE("FrameStats: GpuMs defaults to NEGATIVE, which means 'no reading'")
     const FrameStats lStats;
 
     CHECK(lStats.GpuMs < 0.0);
+}
+
+// =============================================================================
+// Profiler — the I1 singleton's class, on OWN instances (SG4)
+// =============================================================================
+
+TEST_CASE("Profiler: disabled records nothing, and the scope site gets a null recorder")
+{
+    Profiler lProfiler;
+    lProfiler.Init(false);
+
+    CHECK(lProfiler.GetRecorder() == nullptr);
+
+    lProfiler.AddCount("Ignored", 3);
+    lProfiler.SubmitGpuMs(1.5);
+    lProfiler.BeginFrame();
+
+    CHECK(lProfiler.GetFrameStats().Profiler.IsEmpty());
+    CHECK(lProfiler.GetFrameStats().GpuMs < 0.0);
+}
+
+TEST_CASE("Profiler: enabled publishes the frame's scopes, counters and GPU reading at BeginFrame")
+{
+    Profiler lProfiler;
+    lProfiler.Init(true);
+
+    {
+        const ScopedStat lScope(lProfiler.GetRecorder(), "Update");
+    }
+    lProfiler.AddCount("Draw Calls", 2);
+    lProfiler.SubmitGpuMs(1.5);
+
+    CHECK(lProfiler.GetFrameStats().Profiler.IsEmpty());   // nothing readable until the boundary
+
+    lProfiler.BeginFrame();
+
+    const FrameStats& lStats = lProfiler.GetFrameStats();
+    REQUIRE(lStats.Profiler.Samples().size() == 1);
+    CHECK(std::string(lStats.Profiler.Samples()[0].Name) == "Update");
+    REQUIRE(lStats.Profiler.Counters().size() == 1);
+    CHECK(lStats.Profiler.Counters()[0].Value == 2);
+    CHECK(lStats.GpuMs == doctest::Approx(1.5));
+    CHECK(lStats.FrameMs == 0.0);   // the first boundary has no previous frame to measure
+}
+
+TEST_CASE("Profiler: only the thread that called Init records")
+{
+    Profiler lProfiler;
+    lProfiler.Init(true);
+
+    bool bWorkerGotRecorder = true;
+    std::thread lWorker([&]
+    {
+        bWorkerGotRecorder = lProfiler.GetRecorder() != nullptr;
+        lProfiler.AddCount("FromWorker", 1);
+    });
+    lWorker.join();
+
+    CHECK_FALSE(bWorkerGotRecorder);
+    CHECK(lProfiler.GetRecorder() != nullptr);
+
+    lProfiler.BeginFrame();
+    CHECK(lProfiler.GetFrameStats().Profiler.Counters().empty());
+}
+
+TEST_CASE("Profiler: Shutdown stops recording and keeps the last frame readable")
+{
+    Profiler lProfiler;
+    lProfiler.Init(true);
+    lProfiler.AddCount("Kept", 1);
+    lProfiler.BeginFrame();
+
+    lProfiler.Shutdown();
+
+    CHECK_FALSE(lProfiler.IsEnabled());
+    CHECK(lProfiler.GetRecorder() == nullptr);
+    CHECK(lProfiler.GetFrameStats().Profiler.Counters().size() == 1);
 }

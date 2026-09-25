@@ -3,7 +3,7 @@
 #include "Core/EngineAPI.h"
 #include "Core/GUID/Guid.h"
 #include "Core/OpaaxTypes.h"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 #include "Engine/Subsystems/EngineSubsystem.h"
 #include "Renderer/CameraView.h"
 #include "World/Entity/EntityTypes.h"

@@ -5,7 +5,7 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Hash/OpaaxHash.h"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 
 // =============================================================================
 // ResourceTypeID — cross-module type identity, stable across DLLs and runs.

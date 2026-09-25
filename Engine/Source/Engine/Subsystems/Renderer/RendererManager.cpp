@@ -5,7 +5,7 @@
 #include "Application/Services/IConfigSystem.h"
 #include "Application/Services/IPaths.h"
 #include "Application/Services/IEngine.h"
-#include "Application/Services/IStatsService.h"   // OPAAX_STAT_SCOPE — this subsystem opts in
+#include "Core/Profiling/Profiler.h"   // OPAAX_STAT_SCOPE — this subsystem opts in
 
 #include "Renderer/Config/Config_Renderer.h"
 
@@ -139,7 +139,6 @@ namespace Opaax
 
         // Cache the world owner — Render draws whatever it reports as the active world.
         m_WorldManager = &OpaaxApplication::GetAppService<IEngine>().GetWorldManager();
-        m_Profiler     = OpaaxApplication::GetAppService<IStatsService>().GetProfiler();
 
         OPAAX_LOG(LogRendererManager, Info, "RendererManager started ({}x{})", lDesc.Width, lDesc.Height);
         return true;
@@ -182,7 +181,7 @@ namespace Opaax
         {
             // Around RenderFrame only — the two clears below are bookkeeping, not frame work, and
             // F4 requires them to run whether or not anything rendered.
-            OPAAX_STAT_SCOPE(m_Profiler, "Renderer");
+            OPAAX_STAT_SCOPE("Renderer");
             RenderFrame();
         }
 
@@ -244,11 +243,10 @@ namespace Opaax
 
     void RendererManager::SubmitRenderCounters()
     {
-        // The GPU reading goes in whether or not the profiler is attached... except that with stats
-        // off there is nothing to submit to either, so one guard covers both.
-        if (m_Profiler == nullptr) { return; }
+        Profiler& lProfiler = Profiler::Get();
+        if (!lProfiler.IsEnabled()) { return; }
 
-        OpaaxApplication::GetAppService<IStatsService>().SubmitGpuMs(
+        lProfiler.SubmitGpuMs(
             m_RenderSystem ? m_RenderSystem->GetGpuFrameTimeMs() : -1.0);
 
         // OUTSIDE RenderFrame's early-outs, so a frame that drew nothing reports zeros rather than
@@ -260,13 +258,13 @@ namespace Opaax
 
         // Translated into NAMED counters here, at the adapter, so Core never learns what a draw call
         // is and the Stats panel needs no renderer type to display them.
-        m_Profiler->AddCount("Draw Calls",    lStats.DrawCalls);
-        m_Profiler->AddCount("Quads",         lStats.Quads);
-        m_Profiler->AddCount("Texture Slots", lStats.PeakTextureSlots);
+        lProfiler.AddCount("Draw Calls",    lStats.DrawCalls);
+        lProfiler.AddCount("Quads",         lStats.Quads);
+        lProfiler.AddCount("Texture Slots", lStats.PeakTextureSlots);
 
         // The UI's own cost, and the number the block was named for: 0 / 0 on an idle frame.
-        m_Profiler->AddCount("UI Layouts",  m_UILayouts);
-        m_Profiler->AddCount("UI Rebuilds", m_UIRebuilds);
+        lProfiler.AddCount("UI Layouts",  m_UILayouts);
+        lProfiler.AddCount("UI Rebuilds", m_UIRebuilds);
         m_UILayouts  = 0;
         m_UIRebuilds = 0;
     }

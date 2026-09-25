@@ -2,7 +2,7 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 #include "Core/String/OpaaxStringID.hpp"
 #include "Engine/Subsystems/Resources/ResourceRef.hpp"   // the caches hold Refs BY VALUE
 #include "Engine/Subsystems/Resources/ResourcePath.h"

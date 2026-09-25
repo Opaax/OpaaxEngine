@@ -411,6 +411,7 @@ if(WIN32)
     target_link_libraries(OpaaxEngine PRIVATE
         glad
         opengl32
+        dbghelp     # CrashHandler: minidump + symbolized stack
     )
 endif()
 

@@ -36,7 +36,6 @@ namespace
         ResourceManager  Resources;
         EngineEventBus   Events;
         DebugDraw        Debug;
-        FrameProfiler    Profiler;
         EngineConfigData Config;
         InputManager     Input;
         WorldManager     Worlds;
@@ -61,7 +60,7 @@ namespace
             REQUIRE(TheWorld != nullptr);
 
             TheWorld->SetContext(WorldContext{ *TheWorld, Resources, IPaths::Null(), Events,
-                                               Input, Config, /*Actions*/ nullptr, /*UI*/ nullptr, Debug, &Profiler });
+                                               Input, Config, /*Actions*/ nullptr, /*UI*/ nullptr, Debug});
             TheWorld->GetSubsystems().RegisterSubsystem<PhysicsSubsystem>(std::ref(*TheWorld->GetContext()));
             TheWorld->GetSubsystems().StartupAll();
 

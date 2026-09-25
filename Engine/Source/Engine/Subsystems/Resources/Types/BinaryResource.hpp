@@ -4,7 +4,7 @@
 
 #include "Core/OpaaxTypes.h"
 #include "Core/IO/FileIO.h"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 #include "Engine/Subsystems/Resources/ResourceConcept.hpp"
 
 // =============================================================================

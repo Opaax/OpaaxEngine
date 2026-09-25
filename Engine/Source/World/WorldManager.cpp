@@ -4,7 +4,7 @@
 #include "Application/Services/IConfigSystem.h"
 #include "Application/Services/IEngine.h"
 #include "Application/Services/IPaths.h"
-#include "Application/Services/IStatsService.h"   // OPAAX_STAT_SCOPE — this subsystem opts in
+#include "Core/Profiling/Profiler.h"   // OPAAX_STAT_SCOPE — this subsystem opts in
 #include "Engine/Config/Config_Engine.h"          // the EngineConfigData every WorldContext carries
 #include "Engine/GameInstance/GameInstance.h"
 #include "Engine/GameInstance/GameInstanceManager.h"
@@ -40,7 +40,6 @@ namespace Opaax
         m_Resources = &lEngine.GetResources();
         m_Events    = &lEngine.GetEngineEventBus();
         m_Debug     = &lEngine.GetDebugDraw();
-        m_Profiler  = OpaaxApplication::GetAppService<IStatsService>().GetProfiler();
         m_Paths     = &OpaaxApplication::GetAppService<IPaths>();
         m_Config    = &OpaaxApplication::GetAppService<IConfigSystem>().Get<Config_Engine>().GetData();
         m_Input     = &lEngine.GetInput();
@@ -67,7 +66,7 @@ namespace Opaax
 
         // Named HERE, by this manager, because this is the one that knows what the line means:
         // everything a world's subsystems do. A game's own scopes nest under it.
-        OPAAX_STAT_SCOPE(m_Profiler, "World");
+        OPAAX_STAT_SCOPE("World");
 
         m_ActiveWorld->GetSubsystems().UpdateAll(InDeltaTime);
     }
@@ -240,7 +239,6 @@ namespace Opaax
         // The context must exist BEFORE any subsystem is constructed — it IS the ctor argument.
         // A null sibling here means Startup never ran; the world then gets no subsystems rather
         // than a context full of dangling references.
-        // m_Profiler is deliberately NOT checked — null is its configured off state, not a failure.
         if (m_Resources == nullptr || m_Events == nullptr || m_Debug == nullptr || m_Paths == nullptr
             || m_Config == nullptr || m_Input == nullptr)
         {
@@ -251,8 +249,7 @@ namespace Opaax
         }
 
         // Resolved HERE, per world, and NOT part of the guard above: an Edit world legitimately has
-        // no game, so null is a supported state rather than a boot failure — Profiler's rule, not
-        // the guarded members'.
+        // no game, so null is a supported state rather than a boot failure.
         InputMappingSubsystem* lActions = nullptr;
         UISubsystem*           lUI      = nullptr;
 
@@ -266,7 +263,7 @@ namespace Opaax
         }
 
         InWorld.SetContext(WorldContext{InWorld, *m_Resources, *m_Paths, *m_Events, *m_Input, *m_Config,
-                                        lActions, lUI, *m_Debug, m_Profiler});
+                                        lActions, lUI, *m_Debug});
 
         WorldContext* lContext = InWorld.GetContext();
         OPAAX_ASSERT(lContext != nullptr);

@@ -1,8 +1,8 @@
 #include "Editor/Undo/EditorUndo.h"
 
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 
-using namespace Opaax;   // OPAAX_LOG expands to an unqualified ToSpdLevel(...)
+using namespace Opaax;
 
 namespace
 {

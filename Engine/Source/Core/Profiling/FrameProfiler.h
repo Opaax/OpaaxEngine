@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Core/OpaaxTypes.h"
-#include "Core/OpaaxMacro.hpp"   // OPAAX_CONCAT — the macro's unique local name
 
 #include <chrono>
 #include <cstring>   // strcmp — the fallback when two literals spell the same name
@@ -48,10 +47,8 @@ namespace Opaax
      * @class FrameProfiler
      *
      * The frame's named scopes, in the shape every engine has one (Unreal's SCOPE_CYCLE_COUNTER,
-     * Unity's ProfilerMarker) minus the part this codebase forbids: those reach a GLOBAL stat
-     * manager, and I1 allows no second static. So a scope takes its profiler by pointer, and the two
-     * tiers that would otherwise have nowhere to get one already have a carrier —
-     * IEngine::GetProfiler() for an engine subsystem, WorldContext::Profiler for a world subsystem.
+     * Unity's ProfilerMarker). The engine's one instance lives in the Profiler singleton (I1), which
+     * is what OPAAX_STAT_SCOPE reaches; this class is an ordinary instance a test can build.
      *
      * Core knows nothing about any of that: this file is a timer and a list. Nothing ticks it,
      * nothing is wrapped on an author's behalf, and ISubsystem does not mention it.
@@ -237,8 +234,8 @@ namespace Opaax
     /**
      * @class ScopedStat
      *
-     * RAII around FrameProfiler::Open/Close. Takes a POINTER and no-ops on null, so a manager with
-     * no profiler attached branches nowhere.
+     * RAII around FrameProfiler::Open/Close. Takes a POINTER and no-ops on null. The engine's
+     * scopes go through OPAAX_STAT_SCOPE (Profiler.h); a test times its own FrameProfiler with this.
      */
     class ScopedStat
     {
@@ -282,23 +279,3 @@ namespace Opaax
         std::chrono::steady_clock::time_point m_Start;
     };
 }
-
-/**
- * Time the enclosing block, Unreal's SCOPE_CYCLE_COUNTER shape.
- *
- *   OPAAX_STAT_SCOPE(m_Profiler, "Sprites");
- *
- * OPT-IN, always: nothing is measured unless an author asks for it here. Blanket-wrapping every
- * subsystem tick was tried and produced rows for work that does not exist (an InputManager under
- * Render), which is noise a reader has to learn to ignore.
- *
- * InProfiler MAY BE NULL, and that is the whole off switch. A build with stats disabled provides no
- * stats service, so IStatsService::Null() hands out nullptr and this costs one predicted branch —
- * no clock read, no virtual call. There is deliberately NO compile-time flag: it would buy back
- * under a microsecond a frame and would make Stats.EnableInShipBuild unreachable, since you cannot
- * runtime-enable what was compiled out.
- *
- * The name must outlive the frame — pass a literal.
- */
-#define OPAAX_STAT_SCOPE(InProfiler, InName) \
-    const ::Opaax::ScopedStat OPAAX_CONCAT(lStatScope_, __LINE__)((InProfiler), (InName))

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 
 #include "Editor/Resources/EditorResourceEvents.h"
 

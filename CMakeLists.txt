@@ -16,6 +16,12 @@ add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 # else about the build.
 add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/bigobj>)
 
+# Release keeps its symbols in a separate .pdb so a shipped crash dump names functions and lines
+# (CrashHandler). /DEBUG turns off /OPT:REF and /OPT:ICF by default; they are turned back on, so the
+# binary is what it was.
+add_compile_options("$<$<AND:$<CXX_COMPILER_ID:MSVC>,$<CONFIG:Release>>:/Zi>")
+add_link_options("$<$<AND:$<CXX_COMPILER_ID:MSVC>,$<CONFIG:Release>>:/DEBUG;/OPT:REF;/OPT:ICF>")
+
 # Options — editor and dev are TWO axes (ARCHITECTURE.md I12), one flag each.
 #   OPAAX_EDITOR_SUPPORT : does OpaaxEditorLib + the editor exe exist?
 #   OPAAX_DEV_BUILD      : where do assets resolve from — the source tree, or the exe dir?

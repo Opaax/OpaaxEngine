@@ -4,7 +4,7 @@
 
 #include <imgui.h>
 
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 
 namespace Opaax::Editor
 {

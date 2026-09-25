@@ -1,11 +1,11 @@
 #include "Editor/PIE/PlayInEditor.h"
 
-#include "Application/Services/ILogger.h"   // OPAAX_LOG + LogCategory
+#include "Core/Log/Logger.h"   // OPAAX_LOG + LogCategory
 #include "Application/Services/IEngine.h"
 #include "World/World.h"
 #include "World/WorldManager.h"
 
-using namespace Opaax;   // OPAAX_LOG expands to an unqualified ToSpdLevel(...)
+using namespace Opaax;
 
 namespace
 {

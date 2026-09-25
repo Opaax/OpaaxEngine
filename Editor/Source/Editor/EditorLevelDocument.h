@@ -2,7 +2,7 @@
 
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 #include "World/Entity/EntityTypes.h"   // MapId
 
 namespace Opaax

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Core/EngineAPI.h"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 #include "Core/String/OpaaxString.hpp"
 
 namespace Opaax

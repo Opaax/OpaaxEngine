@@ -1,7 +1,7 @@
 #include "OpenGLShader.h"
 #include <glm/gtc/type_ptr.hpp>
 
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 
 #include <glad/glad.h>
 

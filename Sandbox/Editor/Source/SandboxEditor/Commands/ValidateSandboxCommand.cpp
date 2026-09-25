@@ -1,6 +1,6 @@
 #include "Commands/ValidateSandboxCommand.h"
 
-#include "Application/Services/ILogger.h"   // OPAAX_LOG + LogCategory
+#include "Core/Log/Logger.h"   // OPAAX_LOG + LogCategory
 #include "Editor/EditorContext.h"
 #include "World/WorldManager.h"
 #include "World/World.h"
@@ -9,7 +9,6 @@
 #include "Components/HealthComponent.h"
 #include "Components/TagsComponent.h"
 
-// OPAAX_LOG expands to an unqualified ToSpdLevel(...) — bring Opaax into scope, as SandboxPanel does.
 using namespace Opaax;
 
 namespace

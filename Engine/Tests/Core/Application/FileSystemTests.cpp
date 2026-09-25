@@ -3,9 +3,6 @@
 // const& accessor), so these are its first tests. They run against a UNIQUE directory under the OS
 // temp dir — created, exercised and removed per case — so the suite never touches the repo and two
 // runs never collide.
-//
-// GetPathIfNCreate is deliberately NOT exercised on its failure branch: that path resolves ILogger
-// from the service locator, which this suite does not stand up.
 #include <doctest.h>
 
 #include <filesystem>
@@ -266,4 +263,11 @@ TEST_CASE("IFileSystem: Entry paths use forward slashes and resolve back to the 
     CHECK(lEntry.Name == "Wave01.wave");
     CHECK(lEntry.AbsPath.Find("\\") == -1);        // generic_string(): '/' on every platform
     CHECK(lFS.IsPathExist(lEntry.AbsPath));
+}
+
+TEST_CASE("IFileSystem: GetPathIfNCreate answers empty when the directories cannot be created")
+{
+    // The failure branch logs; the Logger singleton holds the line (no Init here), nothing crashes.
+    CHECK(IFileSystem::Null().GetPathIfNCreate(OpaaxString("W:/never/created")).IsEmpty());
+    CHECK(IFileSystem::Null().GetPathIfNCreate(OpaaxString()).IsEmpty());
 }

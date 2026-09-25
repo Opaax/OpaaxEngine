@@ -19,11 +19,38 @@
 
 ## I — Prime invariants (non-negotiable)
 
-**I1 — One static root.** `OpaaxApplication::m_Services` (a `static AppServiceLocator`) is the *only*
-mutable static in the engine. Everything else is instance-owned beneath it: the locator owns the services
+**I1 — One static root, plus a CLOSED list of process-wide singletons** (amended 2026-09-24, block SG,
+the user's call). `OpaaxApplication::m_Services` (a `static AppServiceLocator`) is the root. Everything
+that belongs to the app, the engine or a world is instance-owned beneath it: the locator owns the services
 (`TUniquePtr<IAppService>`), the `IEngine` service owns the `EngineSubsystemMgr`, the manager owns the
-subsystems. No `s_Data`, no function-local `static`, no singletons past the locator. This is the invariant
-the whole design optimizes (see **L2**); a proposal that adds a static is wrong by default, even a "clean" one.
+subsystems. No `s_Data`, no function-local `static`, no other singleton. This is the invariant the whole
+design optimizes (see **L2**); a proposal that adds a static is wrong by default, even a "clean" one.
+- **The closed list: `Logger` (`Core/Log/`), `Profiler` (`Core/Profiling/`), `CrashHandler`
+  (`Platform/`).** Instance-ownership built the tree; once it settled, these three were the facilities
+  whose service/carrier form cost more than it bought — a locator lookup on every one of ~660 log lines
+  plus two "no logger yet" workarounds; a `FrameProfiler*` threaded through five carriers (ST1 already
+  named the global stat manager every reference engine has); an OS callback that takes no user pointer.
+  **Adding a fourth is a contract amendment, never a drive-by.** Each member satisfies ALL of:
+- **SG1 — Process-wide by nature.** One per process, not per app / engine / world. It holds no engine or
+  game concept (no World, no Resource, no Entity).
+- **SG2 — Justified by REACH.** Needed outside the locator's lifetime, or at sites that cannot carry a
+  reference (every log line, every stat scope, an OS callback). "Convenient" is not reach.
+- **SG3 — Depends on nothing in the locator.** `Init` takes plain values (a path, a bool), never a service.
+- **SG4 — An ordinary class plus one accessor.** The class is constructible on its own and tests construct
+  THEIR OWN instance, never the global. `Get()` is defined **out-of-line in the engine DLL** — **I2**'s rule
+  for state-bearing accessors, so one instance is a link-time guarantee.
+- **SG5 — Safe outside `Init`…`Shutdown`.** Before `Init` and after `Shutdown` it degrades, never crashes.
+  The instance is deliberately **leaked** (the `OpaaxStringID` pool rule, **I2**), so a log line from a
+  static destructor still lands somewhere legal.
+- **The CrashHandler's shape.** A crash writes, *most robust first*: the minidump
+  (`Save/Crashes/Opaax_<stamp>.dmp`, before anything allocates), the symbolized stack into the log,
+  a copy of the log beside the dump (the next launch truncates the original), then the dialog —
+  the user's call, so a shipped crash is never silent. Every failure funnels into ONE path: the
+  non-SEH hooks (`terminate`, `SIGABRT`, pure call, invalid parameter) raise an exception so the OS
+  filter sees a real context. Symbols load at `Install`, never at crash time; Release links with
+  `/DEBUG` + `/OPT:REF,ICF` so a shipped dump is readable. **A test runner never installs it** —
+  the hooks are process-wide and a dialog would block CI; tests call `WriteReport` on their own
+  instance, and `--crash-test` (dev builds only, **I12**) proves the real path end to end.
 *The old static `RenderCommand`/`IRenderAPI` facade was **retired to `Legacy/RHI`** (2026-07-22, [[L14]]) —
 the render path is now instance-owned via `IRHIDevice` (`RenderSystem::m_Device`), zero facade statics; do not resurrect it.*
 
@@ -101,10 +128,12 @@ null-pointer checks around `Get<T>()`.
 **I4 — Gregory layer split decides App vs Engine.** Before placing any system, name its layer in Gregory's
 runtime diagram (Fig 1.16):
 - **App service** = Platform-Independence + Core-Systems layers — *passive facilities* you submit-to/query:
-  Platform, Paths, Logger, Config, ProjectManager, JobSystem, WindowManager, **Stats** (**ST2**).
-  They do not tick. *Stats is the case that tests this rule: it is told `BeginFrame()` once per
-  frame, which LOOKS like a tick and is a submission — the host says when, exactly as it does for
-  input (**IN2**). Being driven per frame is not the same as ticking.*
+  Platform, Paths, Config, ProjectManager, JobSystem, WindowManager. They do not tick.
+  *Logging and profiling are Core-Systems too, but they are **I1** singletons, not services (block SG):
+  the layer answers "app side, never engine"; I1's list answers "instance or singleton".
+  The Profiler is still the case that tests the tick rule: it is told `BeginFrame()` once per frame,
+  which LOOKS like a tick and is a submission — the host says when, exactly as it does for input
+  (**IN2**). Being driven per frame is not the same as ticking.*
 - **Engine** = Resources/Assets layer *and up* — anything that ticks per frame or owns game concepts
   (Resources, Renderer, World, Physics, Input). Lives as an `EngineSubsystem`, never as an app service.
 - Test: *ticks per frame or knows about textures/worlds* ⇒ engine. *Passive facility* ⇒ app service.
@@ -695,9 +724,14 @@ promise for each of them. The two phases exist so the device outlives everything
 Provided into the locator in strict dependency order — do not reorder without cause:
 
 ```
-Platform → Paths → Logger(Paths) → Config(Paths)+PreRegisterConfig
-        → ProjectManager(Paths) → JobSystem → WindowManager → Engine → OnProvideServices()
+Platform → Paths → [Logger::Init(SaveDir/Log)] → Config(Paths)+PreRegisterConfig
+        → ProjectManager(Paths) → JobSystem → [Profiler::Init(config)] → WindowManager → Engine
+        → OnProvideServices()
 ```
+`[bracketed]` steps are **I1** singletons: not provided, initialised in place at that point because of
+what they read (a path, a config). They exist before `Bootstrap` — a line logged before
+`Logger::Init` is held and replayed — and `ShutdownApplication` shuts them down **after**
+`ShutdownAll`, Logger last, so every service can still log on its way down.
 
 **BO1** — Config is loaded from disk here, *before* the Engine exists. JobSystem comes *after* Config
 (worker count is config-driven). (See **L1**.)
@@ -711,7 +745,9 @@ lines of defensive parsing, two key-constant namespaces, `DECLARE_CONFIG_DATA`,
 - **The codec THROWS; `TConfig::Load` catches**, keeps the in-memory defaults and returns **false** —
   a value `ConfigSystem` used to discard and now logs as a Warn naming the file. The hand-written
   parsers were tolerant per field (`contains()` + `is_string()`, times fourteen); this is the same
-  guarantee stated once. Core still does no logging (**I11**), so the Application layer says it.
+  guarantee stated once. The Application layer says it because it knows which file failed. *(This
+  used to read "Core does no logging": the logger was an Application service Core could not see.
+  Since block SG it is `Core/Log/Logger.h`, so Core MAY log — the `Profiler`'s one-shots do.)*
 - **Nested C++ structs mirror the file**, so `Engine.config` keeps its groups while the keys become
   the C++ names. Both `.config` files were regenerated in the same change; they are tracked, so a
   format change is a reviewable diff rather than a surprise. `OpaaxString` gained the json bridge it
@@ -1030,14 +1066,16 @@ the sampler limit the painter's algorithm held only *within* a batch and a later
 
 **ST1 — NAMED SCOPES, not fixed fields — and I1 is what shapes them.** `FrameProfiler`
 (`Core/Profiling/FrameProfiler.h`) holds a frame's `{Name, Milliseconds, Calls, Depth}` list;
-`ScopedStat` + `OPAAX_STAT_SCOPE(profiler, "Name")` is the RAII that fills it. This is the shape
-Unreal (`SCOPE_CYCLE_COUNTER`), Unity (`ProfilerMarker.Auto()`) and Godot all have, and the user asked
-for it by name — *"at the end i want something extensible to have something like all other engine"*,
-then again as *"STATS_SCOPE(ID) or somethings you judge better"*.
-- **Those engines reach a GLOBAL stat manager, which is exactly the static this codebase forbids.**
-  So a scope takes its profiler **by pointer**, and the two tiers that would otherwise have nowhere
-  to get one already have a carrier (**ST3**). A `nullptr` profiler is a no-op, so "not profiling"
-  costs no branch at any call site.
+`ScopedStat` + `OPAAX_STAT_SCOPE("Name")` (`Core/Profiling/Profiler.h`) is the RAII that fills it.
+This is the shape Unreal (`SCOPE_CYCLE_COUNTER`), Unity (`ProfilerMarker.Auto()`) and Godot all have,
+and the user asked for it by name — *"at the end i want something extensible to have something like
+all other engine"*, then again as *"STATS_SCOPE(ID) or somethings you judge better"*.
+- **Those engines reach a GLOBAL stat manager, and since block SG (2026-09-24) so does this one** —
+  the `Profiler` singleton, on **I1**'s closed list. Until then I1 forbade it, so a scope took its
+  profiler **by pointer** through five carriers (`Engine`, `RendererManager`, `WorldManager`,
+  `WorldContext::Profiler`, `EditorContext::Stats`); that plumbing is what the amendment deleted.
+  `ScopedStat` still takes a pointer and no-ops on null — the macro hands it
+  `Profiler::Get().GetRecorder()`, which is null while disabled or off the recording thread.
 - **The sample is recorded on `Open`, not on `Close`.** Closing innermost-first would emit children
   before their parent; reserving the slot on the way in leaves `Samples()` in **pre-order**, so
   `Depth` alone renders the tree and nothing sorts. Ten lines of bookkeeping instead of a sort per
@@ -1060,21 +1098,25 @@ then again as *"STATS_SCOPE(ID) or somethings you judge better"*.
 - **THERE IS NO COMPILE-TIME SWITCH, and a `#if` one was built and then DELETED** (2026-08-31). An
   `OPAAX_STATS` flag derived from `OPAAX_DEV_BUILD` shipped first; the user's question —
   *"what is the cost of StatsService::Null on ship game?"* — retired it, because the answer made the
-  flag worthless and its cost visible. **A null profiler pointer costs ONE PREDICTED BRANCH per
-  scope**: `ScopedStat`'s ctor returns before taking a timestamp, the pointer is raw so there is no
-  virtual call, and consumers cache it at `Startup` so there is no locator lookup. Under a
-  microsecond a frame at 200 scopes, against ~10 µs enabled.
+  flag worthless and its cost visible. **A disabled scope costs one exported call and ONE PREDICTED
+  BRANCH**: `Profiler::Get()` (out-of-line, **SG4**), a load of the enabled flag, and `ScopedStat`'s
+  ctor returns before taking a timestamp — no virtual call, no locator lookup. Under a microsecond
+  a frame at 200 scopes, against ~10 µs enabled.
   - **And the flag actively cost something: it made `Stats.EnableInShipBuild` unreachable.** You
     cannot runtime-enable what was compiled out, so the two switches were contradictory rather than
     complementary. **One switch — the config — and it is what lets a SHIPPED game be profiled
     without a rebuild**, which is the case Unreal keeps a whole `Test` configuration for.
 
-**ST2 — STATS ARE AN APP SERVICE, and the HOST owns the frame boundary.** `IStatsService`
-(`Application/Services/`) owns the `FrameStats`; `OpaaxApplication::RunApplication` calls
-`Stats().BeginFrame()` at the top of each iteration, beside `GetInput().EndFrame()`.
-- **I4's test says app service, not engine subsystem**: it knows nothing about textures or worlds
+**ST2 — STATS ARE THE `Profiler` SINGLETON, and the HOST owns the frame boundary.** `Profiler`
+(`Core/Profiling/`) owns the `FrameStats`; `OpaaxApplication::RunApplication` calls
+`Profiler::Get().BeginFrame()` at the top of each iteration, beside `GetInput().EndFrame()`.
+*(An app service, `IStatsService`, until block SG folded it in — the user's call, 2026-09-24.)*
+- **I4's test still says app side, never engine subsystem**: it knows nothing about textures or worlds
   and it does not tick — it is a *passive facility you submit scopes to*, the Logger's shape. What
   looks like a tick is `BeginFrame`, which is a SUBMISSION: the host tells it a frame ended.
+- **Recording is MAIN-THREAD ONLY.** `Init` names the recording thread; a scope or counter from any
+  other thread is a no-op. `FrameProfiler` is not thread-safe, and a global is reachable from a
+  worker in a way a carried pointer never was.
 - **IN2 already settled which frame that is.** `Engine::Loop` is the engine's tick, not the frame —
   which is why input's `EndFrame` lives in the host loop. Publishing stats inside `Loop` was the
   same misplacement [[L28]] describes, and it had the same consequence: the frame the panel read
@@ -1112,16 +1154,12 @@ body they cared about — Unreal's model exactly.
 - **The fix was DELETION, not a filter.** Suppressing near-zero rows would have kept the Core
   coupling and hidden a real 0.00 (a subsystem that stopped working looks identical to one that was
   never meant to run). Removing the wrapping removes both problems and shrinks the contract.
-- **The two carriers already existed, so opting in needs no new plumbing.**
-  `IStatsService::GetProfiler()` is resolved once in `Startup` and cached like any other sibling
-  (**F3**) — `Engine`, `RendererManager` and `WorldManager` all do it. A world subsystem takes
-  `WorldContext::Profiler`, which is precisely what **WS3** says that struct is for: the
-  registration site takes no arguments, so a dependency has nowhere else to arrive.
-- **`WorldContext::Profiler` is the ONE member of that struct that may be null**, and deliberately:
-  every other reference's absence is a boot failure, while this one's is a supported configuration.
-  `WorldManager::CreateSubsystemsFor` therefore does NOT null-check it beside the others.
-- **A GAME module's subsystem is one line** — `Sandbox`'s `QuadOscillatorSubsystem::Update` carried
-  `OPAAX_STAT_SCOPE(&m_Context->Profiler, "QuadOscillator")` and appeared in the tree under `World`,
+- **Opting in needs no plumbing at all.** Any tier — engine subsystem, world subsystem, game code —
+  writes `OPAAX_STAT_SCOPE("Name")`. *(Before block SG this rode two carriers: a cached
+  `IStatsService::GetProfiler()` and `WorldContext::Profiler`, the one nullable member of that struct.
+  Both are gone.)*
+- **A GAME module's subsystem is one line** — `Sandbox`'s `QuadOscillatorSubsystem::Update` carries
+  `OPAAX_STAT_SCOPE("QuadOscillator")` and appeared in the tree under `World`,
   with the engine still never naming the type. That was the extensibility claim, dogfooded rather
   than asserted ([[L23]]).
   **STALE AS OF 2026-09-07** — the user commented that registration out of `Sandbox.cpp`. The class
@@ -1193,11 +1231,13 @@ was left alone.
   lands a frame or two later, and *"the queries exist"* is not *"a result came back"*. Without it a
   harvest that never succeeds reads identically to one that works ([[L15]]).
 
-**ST6 — NOT PROVIDING THE SERVICE *IS* THE OFF SWITCH** (**I3**). `BootStatsService` either provides
-`StatsService` or returns `IStatsService::Null()`, whose `GetProfiler()` is `nullptr`. There is no
-`bEnabled` member anywhere and no disabled state to keep correct — the locator's null object, which
-this codebase already requires every service to have, IS the feature.
-- **Config-driven, hence provided AFTER the config system** ([[L1]]'s locked boot order, the same
+**ST6 — DISABLED IS THE OFF SWITCH, and there is exactly one flag.** `BootProfiler` calls
+`Profiler::Get().Init(enabled)`; while disabled, `GetRecorder()` is `nullptr`, every scope no-ops,
+`BeginFrame` publishes nothing and the panel reads an empty frame without a special case.
+*(Until block SG the off switch was NOT PROVIDING the service — the locator's null object (**I3**)
+answered a null profiler and there was no flag at all. A singleton always exists, so the one
+`m_bEnabled` it read is the honest replacement, and `GetRecorder` is its only reader on the hot path.)*
+- **Config-driven, hence decided AFTER the config system** ([[L1]]'s locked boot order, the same
   reason the job system's worker count is). `Stats.EnableInShipBuild` defaults **false**.
 - **A dev build always profiles**; the config answers only the question the build cannot. The
   provider keys on `defined(OPAAX_WORKSPACE_DIR)` — **I12**'s dev signal, the one `IPaths` uses —

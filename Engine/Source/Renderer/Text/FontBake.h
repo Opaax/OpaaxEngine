@@ -2,7 +2,7 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 #include "Renderer/Text/FontFaceData.h"   // DEFAULT_FONT_PIXEL_HEIGHT — the bake's default is its
 
 namespace Opaax

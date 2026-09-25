@@ -1,6 +1,6 @@
 #include "ShaderCompiler.h"
 
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 
 // OPAAX_HAS_GLSLANG is defined (0/1) by the engine build; treat absent as 0 for safety.
 #ifndef OPAAX_HAS_GLSLANG

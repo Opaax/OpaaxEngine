@@ -2,8 +2,8 @@
 
 #include <cmath>
 
-#include "Application/Services/ILogger.h"
-#include "Core/Profiling/FrameProfiler.h"   // OPAAX_STAT_SCOPE — the game side of ④
+#include "Core/Log/Logger.h"
+#include "Core/Profiling/Profiler.h"   // OPAAX_STAT_SCOPE — the game side of ④
 #include "World/Components/DummyComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/World.h"
@@ -54,7 +54,7 @@ namespace Sandbox
     {
         // ONE line is the whole cost of appearing in the Stats panel, from a GAME module the engine
         // has never heard of — and it costs a single branch when stats are off.
-        OPAAX_STAT_SCOPE(m_Context->Profiler, "QuadOscillator");
+        OPAAX_STAT_SCOPE("QuadOscillator");
 
         if (!m_bCaptured)
         {

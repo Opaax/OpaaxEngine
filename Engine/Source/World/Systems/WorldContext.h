@@ -6,7 +6,6 @@ namespace Opaax
     class ResourceManager;
     class EngineEventBus;
     class DebugDraw;
-    class FrameProfiler;
     class IPaths;
     class InputManager;
     class InputMappingSubsystem;
@@ -85,8 +84,8 @@ namespace Opaax
          * This frame's ACTIONS — the layer above Input that knows what keys MEAN (§IM).
          *
          * A POINTER, and NULL IS NORMAL: it belongs to the GameInstance, and an Edit world has no
-         * game (GI1). It therefore follows Profiler's rule rather than the guarded members' —
-         * deliberately absent from CreateSubsystemsFor's null check, because "there is no game" is
+         * game (GI1). It is therefore deliberately absent from CreateSubsystemsFor's null
+         * check, unlike the guarded members, because "there is no game" is
          * a supported state and not a boot failure. A Play-only subsystem can dereference it
          * safely; anything else must ask.
          *
@@ -105,18 +104,5 @@ namespace Opaax
          * way a world subsystem draws — there is deliberately no Render hook (see WorldManager).
          */
         DebugDraw& Debug;
-
-        /**
-         * Where OPAAX_STAT_SCOPE records (ST1). Here for the reason this struct exists at all: the
-         * registration site takes no arguments, so a subsystem has nowhere else to be handed one.
-         *
-         * A POINTER, and NULL is normal — it is what a build with stats disabled hands out, and
-         * OPAAX_STAT_SCOPE no-ops on it. The only reference here that may be absent, because it is
-         * the only one whose absence is a supported configuration rather than a boot failure.
-         *
-         * OPT-IN — a subsystem that names no scope simply never appears in the frame tree. Nothing
-         * measures a tick on the author's behalf.
-         */
-        FrameProfiler* Profiler;
     };
 }

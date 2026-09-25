@@ -2,7 +2,7 @@
 
 #include <limits>
 
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 #include "Renderer/Renderer2D.h"
 #include "UI/Widgets/UIMask.h"
 #include "UI/Widgets/UIPanel.h"

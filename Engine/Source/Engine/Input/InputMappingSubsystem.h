@@ -4,7 +4,7 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 #include "Core/Events/Delegate.h"
 #include "Engine/GameInstance/IGameInstanceSubsystem.h"
 #include "Engine/Input/InputActionEvaluator.h"

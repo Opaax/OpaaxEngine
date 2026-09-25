@@ -10,10 +10,10 @@
 #include <chrono>
 
 #include "Application/OpaaxApplication.h"
-#include "Application/Services/ILogger.h"
+#include "Core/Log/Logger.h"
 #include "Application/Services/IJobSystem.h"
 #include "Application/Services/IPaths.h"        // the startup level's path is asset-relative
-#include "Application/Services/IStatsService.h" // the borrowed FrameProfiler + OPAAX_STAT_SCOPE
+#include "Core/Profiling/Profiler.h"   // OPAAX_STAT_SCOPE
 #include "Platform/IPlatform.h"
 
 //Subsystems
@@ -271,8 +271,6 @@ namespace Opaax
             OPAAX_ENGINE_LOG(Warn, "Paths service is a Null service");
         }
 
-        // Null when stats are off, and that is NOT a warning — it is the configured state.
-        m_Profiler = lServices.Get<IStatsService>().GetProfiler();
     }
 
     // =============================================================================
@@ -597,7 +595,7 @@ namespace Opaax
         m_FrameInfo.m_DeltaTime = GetDeltaTime();
 
         {
-            OPAAX_STAT_SCOPE(m_Profiler, "Update");
+            OPAAX_STAT_SCOPE("Update");
             Update(m_FrameInfo.m_DeltaTime);
         }
 
@@ -609,7 +607,7 @@ namespace Opaax
             // INSIDE the loop, so the scope's own Calls IS the step count and its Milliseconds is
             // the total — the profiler merges a re-entered scope (ST1). A separate FixedSteps field
             // said the same thing a second way.
-            OPAAX_STAT_SCOPE(m_Profiler, "FixedUpdate");
+            OPAAX_STAT_SCOPE("FixedUpdate");
 
             FixedUpdate(m_FrameInfo.m_FixedDeltaTime);
             m_FrameInfo.m_AccumulatedDeltaTime -= m_FrameInfo.m_FixedDeltaTime;
@@ -618,7 +616,7 @@ namespace Opaax
         m_FrameInfo.m_AlphaPhysic = m_FrameInfo.m_AccumulatedDeltaTime / m_FrameInfo.m_FixedDeltaTime;
 
         {
-            OPAAX_STAT_SCOPE(m_Profiler, "Render");
+            OPAAX_STAT_SCOPE("Render");
             Render(m_FrameInfo.m_AlphaPhysic);
         }
     }
@@ -689,7 +687,7 @@ namespace Opaax
         // Scoped HERE rather than in Loop because the HOST calls it, after the frame's UI pass (F2).
         // It is also where vsync blocks, so leaving it unnamed would put most of the frame in a row
         // called "Other" and make the panel useless.
-        OPAAX_STAT_SCOPE(m_Profiler, "Present");
+        OPAAX_STAT_SCOPE("Present");
 
         if (m_RendererManager != nullptr)
         {

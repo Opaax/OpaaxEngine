@@ -1,7 +1,7 @@
 #include "World/Systems/ColliderDebugSubsystem.h"
 
 #include "Core/Maths/Maths.h"   // DegreesToRadians — the transform authors degrees
-#include "Core/Profiling/FrameProfiler.h"
+#include "Core/Profiling/Profiler.h"
 #include "Renderer/DebugDraw.h"
 #include "World/Components/ColliderComponent.h"
 #include "World/Components/TransformComponent.h"
@@ -57,7 +57,7 @@ namespace Opaax
     // =========================================================================
     void ColliderDebugSubsystem::Update(double)
     {
-        OPAAX_STAT_SCOPE(m_Context->Profiler, "ColliderDebug");
+        OPAAX_STAT_SCOPE("ColliderDebug");
 
         // Asking ONCE rather than per collider: the channel cannot change mid-tick, and a silenced
         // channel should cost a lookup, not a walk of every entity in the world.
