@@ -195,9 +195,6 @@ namespace Opaax::Editor
             // naming rule rather than two that can drift.
             const OpaaxStringID lName = DeriveTypeLeafName<typename Resolver::DrawableType>();
 
-            OPAAX_LOG(LogDrawerRegistry, Info, "Generic drawer: {} ({} properties)",
-                      lName, PropertyCount<typename Resolver::DrawableType>());
-
             m_Entries.emplace_back(
                 [lName](TSubject& InSubject, IEditorWidgets& InWidgets, EditorContext&) -> bool
                 {

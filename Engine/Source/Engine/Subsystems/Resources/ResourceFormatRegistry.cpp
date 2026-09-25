@@ -1,5 +1,7 @@
 #include "ResourceFormatRegistry.h"
 
+#include <spdlog/fmt/ranges.h>   // fmt::join — the Sealed line names every entry
+
 namespace Opaax
 {
     // NOTE: every refusal below is an Error log + a false return, never OPAAX_ASSERT — the same
@@ -75,9 +77,6 @@ namespace Opaax
             m_ByExtension.emplace(lExtension.GetId(), lEntryIndex);
         }
 
-        OPAAX_LOG(LogResourceFormatRegistry, Trace, "Registered resource format '{}' ({} extension(s), {} total)",
-                  InName, InFormat->ExtensionCount, static_cast<Uint64>(m_Entries.size()));
-
         return true;
     }
 
@@ -90,8 +89,12 @@ namespace Opaax
 
         m_bSealed = true;
 
-        OPAAX_LOG(LogResourceFormatRegistry, Info, "Sealed with {} resource format(s) over {} extension(s).",
-                  static_cast<Uint64>(m_Entries.size()), static_cast<Uint64>(m_ByExtension.size()));
+        TDynArray<OpaaxStringID> lNames;
+        for (const ResourceFormatEntry& lEntry : m_Entries) { lNames.push_back(lEntry.Name); }
+
+        OPAAX_LOG(LogResourceFormatRegistry, Info, "Sealed with {} resource format(s) over {} extension(s): {}",
+                  static_cast<Uint64>(m_Entries.size()), static_cast<Uint64>(m_ByExtension.size()),
+                  fmt::join(lNames, ", "));
     }
 
     const ResourceFormatEntry* ResourceFormatRegistry::FindByExtension(OpaaxStringID InExtension) const noexcept

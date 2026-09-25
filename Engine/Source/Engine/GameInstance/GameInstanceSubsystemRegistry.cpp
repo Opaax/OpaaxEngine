@@ -1,5 +1,7 @@
 #include "Engine/GameInstance/GameInstanceSubsystemRegistry.h"
 
+#include <spdlog/fmt/ranges.h>   // fmt::join — the Sealed line names every entry
+
 namespace Opaax
 {
     // NOTE: every refusal is an Error log + a false return, deliberately NOT OPAAX_ASSERT — an
@@ -37,9 +39,6 @@ namespace Opaax
 
         m_Entries.emplace_back(Move(InEntry));
 
-        OPAAX_LOG(LogGameInstanceSubsystemRegistry, Trace, "Registered game instance subsystem '{}' ({} total)",
-                  InName, static_cast<Uint64>(m_Entries.size()));
-
         return true;
     }
 
@@ -52,8 +51,11 @@ namespace Opaax
 
         m_bSealed = true;
 
-        OPAAX_LOG(LogGameInstanceSubsystemRegistry, Info, "Sealed with {} game instance subsystem type(s).",
-                  static_cast<Uint64>(m_Entries.size()));
+        TDynArray<OpaaxStringID> lNames;
+        for (const auto& lEntry : m_Entries) { lNames.push_back(lEntry->GetName()); }
+
+        OPAAX_LOG(LogGameInstanceSubsystemRegistry, Info, "Sealed with {} game instance subsystem type(s): {}",
+                  static_cast<Uint64>(m_Entries.size()), fmt::join(lNames, ", "));
     }
 
     const IGameInstanceSubsystemEntry* GameInstanceSubsystemRegistry::FindByName(OpaaxStringID InName) const noexcept
