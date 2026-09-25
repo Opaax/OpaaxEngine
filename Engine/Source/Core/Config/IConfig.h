@@ -3,11 +3,15 @@
 #include <cstdint>
 
 #include "Core/EngineAPI.h"
+#include "Core/Events/Delegate.h"
 #include "Core/String/OpaaxStringID.hpp"
 
 namespace Opaax
 {
 	using ConfigTypeID = uintptr_t;
+
+	// No payload: a subscriber already holds &GetData() and re-reads the fields it uses.
+	DECLARE_MULTICAST_DELEGATE(FOnConfigChanged)
 
 	class OPAAX_API IConfig
 	{
@@ -81,6 +85,22 @@ namespace Opaax
 		 */
 		virtual bool Save() = 0;
 
+		/**
+		 * Fired after this config's values changed, so a reader applies a change instead of polling
+		 * for one. Subscribe with AddMember(this, …) and RemoveAll(this) before the subscriber dies:
+		 * the config outlives every engine subsystem (I5), so a forgotten unsubscribe is a dangling
+		 * call. Main thread only.
+		 */
+		FOnConfigChanged& OnChanged() noexcept { return m_OnChanged; }
+
+		/** Called by the WRITER — whoever changed the values (the Config panel, Load). */
+		void NotifyChanged() { m_OnChanged.Broadcast(); }
+
+		// =============================================================================
+		// Members
+		// =============================================================================
+	private:
+		FOnConfigChanged m_OnChanged;
 	};
 }
 

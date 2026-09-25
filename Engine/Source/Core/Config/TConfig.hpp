@@ -115,6 +115,9 @@ namespace Opaax
             // are already covered (_WITH_DEFAULT), so what lands here is malformed json or a
             // wrong-typed value: keep the defaults and say so. Core does not log (I11); the caller
             // (ConfigSystem) turns the false into a Warn naming the file.
+            //
+            // Both branches ASSIGN m_Data, so both notify; the missing-file branch above keeps what
+            // is in memory and does not.
             try
             {
                 m_Data = TConfigCodec<TData>::FromText(lText);
@@ -122,9 +125,11 @@ namespace Opaax
             catch (const nlohmann::json::exception&)
             {
                 m_Data = TData{};
+                NotifyChanged();
                 return false;
             }
 
+            NotifyChanged();
             return true;
         }
 
