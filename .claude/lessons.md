@@ -343,6 +343,9 @@ logs **nothing wrong**. A clean log was fully consistent with a blank panel. Fix
   build. Not a code error ([[L5]]/[[L8]] — suspect the environment when the red is in something you didn't
   change). A GLFW window can outlive a bash `kill $PID`; kill by image name (`taskkill //F //IM Sandbox.exe`).
   Smoke pattern that behaves: `./app.exe > log 2>&1 & sleep N; taskkill //F //IM app.exe;` then grep the log.
+- **Amended 2026-09-25 (block LC, ARCHITECTURE §LOG):** the question stays, the ANSWER moved. A permanent
+  one-shot success line is not shipped where a panel shows the same state; assert arrival with a count on a
+  summary line, a unit test, or a throwaway harness ([[L81]]). Every user reads every line we ship.
 
 ## L16 — Type-check a plan's compile-level claims before building on them (2026-07-26)
 

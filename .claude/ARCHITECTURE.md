@@ -1280,6 +1280,35 @@ glitchy"*. Three independent sources, all fixed on the editor side with the engi
 
 ---
 
+## LOG — What deserves a log line (block LC, 2026-09-25 — the user's *"only necessary logs"*)
+
+Measured on the change: an editor session (boot + close) went from ~285 lines to **52, 22 of them
+Info+**; a 15 s game run from 187 to 66. Every rule below is about **Info and Trace**; the ~390
+Warn/Error sites were not touched.
+
+- **LOG1 — Warn / Error = something is wrong or was refused.** Nothing else earns the colour.
+- **LOG2 — Info = what a person wants to know happened, ONCE.** A project / level / map opened,
+  Play / Pause / Stop, a save, a world swap, a game started or ended, and a SHORT boot summary: the
+  two roots, the GPU in one line, the worker count, **one line per registry that names its entries**
+  (`Sealed with 13 component type(s): Transform, …`). Never one line per registered item, and never
+  "X started" / "X shutdown" per subsystem, panel or service — the Engine's own start and shutdown
+  lines cover them.
+- **LOG3 — Trace = detail for whoever is debugging THAT system.** Per-asset loads, world
+  created / activated / destroyed, config files, device limits, browser scans. **Trace is written
+  everywhere** — console, file and the Log panel (the user's call, asked and answered) — so it is
+  not free either: a Trace line per ITEM at boot is fine, a Trace line per anything at RUNTIME is not.
+- **LOG4 — Nothing per frame, per input event or per entity, at any level.** When a panel shows the
+  live state — Input (route, where a key went), Stats (first frame, GPU time), Hierarchy, the
+  viewport — **the panel replaces the log line.**
+- **One-shot success lines ([[L15]]'s `if (!m_bLogged)`) are not shipped where a panel shows the
+  same thing.** L15's question stays right — *does anything positively assert the thing happened?* —
+  but the answer is now a COUNT on a summary line (`constructed=20`, `2 map(s), 9 entity(ies)`), a
+  unit test, or a throwaway harness ([[L81]]), never a permanent line in every user's log. The few
+  one-shots that sit on a small probe (physics motion, sprite step, first touches) were demoted to
+  Trace rather than deleted with their machinery.
+
+---
+
 ## CAM — Camera (landed ①, 2026-08-26)
 
 **CAM1 — A world holds ONE resolved view; whoever produces it writes it there.** `CameraView`
@@ -2312,6 +2341,7 @@ count. The discriminating signal for that is in the boot log: the generic form l
 registration, so `Generic drawer: CameraComponent` **disappearing** is the proof the custom form took
 over, with Camera now absent beside the three already-custom drawers while Transform and Dummy
 remain. *(**L79**'s rule turned around: predict which counts move, and know why one does not.)*
+*(Since §LOG the per-drawer line is gone; the `drawers=N` count on the sealed line is the signal.)*
 
 **Growth points, named and not built:** ~~the HUD (theirs to design — one more submitted view, into the
 same target, with `ELoadOp::Load` and a pixel projection)~~ **BUILT 2026-09-14 as §UI — not a view of
@@ -2431,6 +2461,7 @@ each step, so the authored pose *is* the simulated one. **Visibility is a CHANNE
 (`DebugChannels::Physics`), which is the only version that also silences it in a dev build of `Game.exe`
 — something "just don't register it in the editor" could never have done. The gate is its absence:
 the editor logs `Drawing 8 collider outline(s)` in an **Edit** world with **zero** `[Physics]` lines.
+*(That one-shot is gone under §LOG; `ColliderDebugSubsystem::GetLastDrawnCount()` is the reading.)*
 
 **PH14 — Circles and capsules are POLYGONS OF LINES, not queue entries.** `DebugDraw` gained
 `DrawCircle`/`DrawCapsule` on ⑦-A P3's caller, and neither adds a drain path, an RHI primitive or a
@@ -4000,7 +4031,8 @@ are discovered from `OPAAX_PROPERTIES` **by field type** at registration
   - The gate asserts **both** cases (`LevelTests`): the SAME map with the bullet on the hard field
     has the prefab resident the moment it mounts, across a pump, released on unmount; on the soft
     field it holds nothing. *No Sandbox component declares a hard field yet — the user's gun is
-    their gameplay code; the smoke shows the walk ran (`names no hard reference`, Trace, per map).*
+    their gameplay code; `LevelTests` is the gate — the smoke's `names no hard reference` Trace
+    line was removed under §LOG.*
 
 **PF12 — The mutation verb names the world it acts on** (P8 V1).
 `EntityOps::TransformEntities(World&, ids, delta)` is the world-agnostic core;
@@ -4765,5 +4797,6 @@ the old groups opens fine (nlohmann ignores undeclared keys — pinned by a test
 - **Post-mortems / rules:** `.claude/lessons.md` (L1–**L94**).
 - **Live session state:** `.claude/CLAUDE.local.md` (current milestone, standing decisions).
 - **Working checklist:** `.claude/task/todo.md`.
+- **What the Logger (I1) may print:** §LOG (LOG1–LOG4).
 - **Ground truth for engine design:** `.claude/data/` — *Game Engine Architecture* (Gregory). Prefer it over
   generic advice.
