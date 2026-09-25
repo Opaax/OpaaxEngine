@@ -2811,3 +2811,21 @@ tests with one sink passed; the smoke diff caught it. **Rule:** replay over all 
 ## L103 — The Bash tool eats backslashes inside a quoted heredoc (2026-09-24, block SG)
 
 **Rule:** any edit script containing a backslash goes into a FILE via Write, then runs — or use Edit.
+
+## L104 — An editor-only feature is OFF in the game by default; price the ship cost before calling it "small" (2026-09-25, block LG — USER CORRECTION)
+
+My plan kept the Logger's history always on, "4096 short strings is under 1 MB, and a future
+in-game console could use it". They asked *"Really on ship?"*. A cost every shipped game pays for a
+panel only the editor draws, justified by a consumer nobody asked for, is [[L80]] again.
+**Rule:** a facility whose only consumer is the editor is opt-in by the editor host (a plain-value
+switch, SG3; here `EditorApplication`'s ctor, before Bootstrap), and the game pays one branch. Every
+plan names what the SHIP build pays for the feature.
+
+## L105 — A recorded test total is ONE SAMPLE; when a delta is off, diff per-case counts across runs (2026-09-25, block LG)
+
+LG1 came out +28 assertions against the recorded baseline while its new cases ran 30. Measuring
+`main` in a worktree gave 10089, not the recorded 10091. LG3's totals then moved between runs: the case
+"Prefab: the FULL round trip" asserts inside `if (lIsPartA)`, and which part it picks varies.
+**Rule:** check a delta by running the NEW cases in isolation (`-tc=`) and the rest with `-tce=`; when
+the total itself moves, diff `-r=xml` per-case `OverallResultsAsserts` over ~10 runs to name the case.
+Report a total that flickers as a range, with its cause, never a single number.
