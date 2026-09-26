@@ -2841,3 +2841,26 @@ on their project drive that nothing owns. **Rule:** scratch lives in
 `C:/Users/engue/AppData/Local/Temp/opaax/` (bash: `$TEMP/opaax`), by ABSOLUTE path in the Write tool
 and on the `python` command line — a bare `/tmp` resolves differently for bash and for Python. Prefer
 the Edit tool, which needs no scratch at all.
+
+## L107 — Before designing a NEW facility, list what the EXISTING one already does (2026-09-25, block CN — USER CORRECTION)
+
+I planned CVars end to end (service, handles, overrides, persistence, panel, D1-D11) and then the user
+asked *"maybe Configs are enough?"*. Their motive was ergonomics (`if (myVar > 1)`), and the tree already
+had it: `WorldManager` and `GameInstanceManager` cache `&Config.Get<T>().GetData()` and read fields with
+one load. The config panel already edited live memory; only the READERS copied at boot. What CVars add
+that configs cannot (set BY NAME FROM TEXT, per-user uncommitted values) had no caller. CVars were shelved
+with named triggers; the real gap — readers never told of a change — was a 20-line delegate (**BO1c**).
+**Rule:** before planning a facility, write the table "what the user wants -> does the existing system
+already do it?" from the CODE, and price the delta. If most rows say yes, propose the delta, not the
+system. The request's NAME ("CVars") is a hypothesis about the solution, not the requirement.
+
+## L108 — For HUMAN edits, a change event fires on COMMIT, not per sample (2026-09-25, block CN — USER CORRECTION)
+
+My plan said "a drag fires once per frame it actually changes, so an expensive reader defers to its own
+tick" — pushing a UI artefact (the gesture's sampling rate) onto every subscriber. The user: *"make sure
+the notify is not trigger every frame like a value is drag instead of set"*. `ConfigChangeTracker` HOLDS
+while `ImGui::IsAnyItemActive()` and fires once on release; a drag back to the start fires nothing.
+**Rule:** when an event is driven by a person editing, decide its granularity at the SOURCE (the
+gesture), where the gesture is known — never make each subscriber debounce. It is the same idea as
+**UN**'s one undo step per gesture. The trade (no live preview mid-drag) is a product call: state it
+when handing over.
