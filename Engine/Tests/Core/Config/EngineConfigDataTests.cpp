@@ -7,11 +7,14 @@
 // catches, so it is stated once instead of per field.
 #include <doctest.h>
 
+#include <cstring>
 #include <filesystem>
 
 #include "Core/Config/TConfig.hpp"
 #include "Core/IO/FileIO.h"
+#include "Core/String/OpaaxUtf8.h"
 #include "Engine/Config/EngineConfigData.h"
+#include "Renderer/Config/RendererConfigData.h"
 
 using namespace Opaax;
 
@@ -152,4 +155,154 @@ TEST_CASE("TConfig::Load: a misspelled ENUMERATOR is refused like any other unre
     CHECK(lProbe.GetData().Window.Mode  == EWindowMode::Windowed);
 
     fs::remove(lPath);
+}
+
+// =============================================================================
+// Change notification — a reader is TOLD, instead of copying at boot or polling.
+// =============================================================================
+
+namespace
+{
+    struct ChangeCounter
+    {
+        int Calls = 0;
+        void OnChanged() { ++Calls; }
+    };
+
+    OpaaxString TempConfigPath(const char* InName)
+    {
+        return Utf8::FromFsPath(fs::temp_directory_path() / InName);   // I7: never via CStr()
+    }
+}
+
+TEST_CASE("IConfig::NotifyChanged: every subscriber is called exactly once")
+{
+    ProbeConfig   lProbe;
+    ChangeCounter lMember;
+    int           lLambdaCalls = 0;
+
+    lProbe.OnChanged().AddMember(&lMember, &ChangeCounter::OnChanged);
+    lProbe.OnChanged().Add([&lLambdaCalls] { ++lLambdaCalls; });
+
+    lProbe.NotifyChanged();
+
+    CHECK(lMember.Calls == 1);
+    CHECK(lLambdaCalls  == 1);
+}
+
+TEST_CASE("IConfig::OnChanged: after RemoveAll(owner) the subscriber is no longer called")
+{
+    // The unsubscribe every engine subsystem owes at Shutdown — the config outlives it (I5).
+    ProbeConfig   lProbe;
+    ChangeCounter lMember;
+
+    lProbe.OnChanged().AddMember(&lMember, &ChangeCounter::OnChanged);
+    lProbe.OnChanged().RemoveAll(&lMember);
+
+    lProbe.NotifyChanged();
+
+    CHECK(lMember.Calls == 0);
+    CHECK_FALSE(lProbe.OnChanged().IsBound());
+}
+
+TEST_CASE("TConfig::Load: a successful read notifies once")
+{
+    const OpaaxString lPath = TempConfigPath("OpaaxConfigNotifyGood.config");
+    FileIO::WriteAllText(lPath, OpaaxString(R"({"Window":{"Width":900}})"));
+
+    ProbeConfig   lProbe;
+    ChangeCounter lMember;
+    lProbe.OnChanged().AddMember(&lMember, &ChangeCounter::OnChanged);
+
+    REQUIRE(lProbe.Load(lPath));
+
+    CHECK(lMember.Calls == 1);
+    CHECK(lProbe.GetData().Window.Width == 900u);   // the values ARE in place when it fires
+
+    fs::remove(Utf8::ToFsPath(lPath));
+}
+
+TEST_CASE("TConfig::Load: an unreadable file resets to defaults, and that is a change too")
+{
+    const OpaaxString lPath = TempConfigPath("OpaaxConfigNotifyBad.config");
+    FileIO::WriteAllText(lPath, OpaaxString("{ not json at all"));
+
+    ProbeConfig lProbe;
+    lProbe.GetData().Window.Width = 900u;   // a value the reset will take away
+
+    ChangeCounter lMember;
+    lProbe.OnChanged().AddMember(&lMember, &ChangeCounter::OnChanged);
+
+    REQUIRE_FALSE(lProbe.Load(lPath));
+
+    CHECK(lMember.Calls == 1);
+    CHECK(lProbe.GetData().Window.Width == 1280u);
+
+    fs::remove(Utf8::ToFsPath(lPath));
+}
+
+TEST_CASE("TConfig::Load: a MISSING file writes the defaults and does NOT notify")
+{
+    // Nothing in memory changed — the file was generated FROM memory.
+    const OpaaxString lPath = TempConfigPath("OpaaxConfigNotifyMissing.config");
+    fs::remove(Utf8::ToFsPath(lPath));
+
+    ProbeConfig   lProbe;
+    ChangeCounter lMember;
+    lProbe.OnChanged().AddMember(&lMember, &ChangeCounter::OnChanged);
+
+    REQUIRE(lProbe.Load(lPath));
+
+    CHECK(lMember.Calls == 0);
+    CHECK(fs::exists(Utf8::ToFsPath(lPath)));   // proves the branch taken was the generate one
+
+    fs::remove(Utf8::ToFsPath(lPath));
+}
+
+// =============================================================================
+// NeedRestart is honest — on the fields read at boot, OFF the ones a notify applies live.
+// =============================================================================
+
+namespace
+{
+    /** A property's flags, found by NAME — an index would silently follow a reorder. */
+    template<typename TProperties>
+    EPropertyFlags FlagsOf(const TProperties& InProperties, const char* InName)
+    {
+        EPropertyFlags lFlags = EPropertyFlags::None;
+        bool           bFound = false;
+
+        const auto lVisit = [&](const auto& InProperty)
+        {
+            if (std::strcmp(InProperty.Name, InName) == 0)
+            {
+                lFlags = InProperty.Meta.Flags;
+                bFound = true;
+            }
+        };
+        std::apply([&](const auto&... InEach) { (lVisit(InEach), ...); }, InProperties);
+
+        REQUIRE_MESSAGE(bFound, "no property named " << InName);
+        return lFlags;
+    }
+}
+
+TEST_CASE("EngineConfigData: Render.Backend needs a restart, Render.bInterpolation does not")
+{
+    const auto lRender = RenderSettings::GetProperties();
+    CHECK(HasFlag(FlagsOf(lRender, "Backend"), EPropertyFlags::NeedRestart));
+    CHECK_FALSE(HasFlag(FlagsOf(lRender, "bInterpolation"), EPropertyFlags::NeedRestart));
+
+    // The GROUP no longer claims it for both fields; the all-boot groups still do.
+    const auto lEngine = EngineConfigData::GetProperties();
+    CHECK_FALSE(HasFlag(FlagsOf(lEngine, "Render"), EPropertyFlags::NeedRestart));
+    CHECK(HasFlag(FlagsOf(lEngine, "Window"), EPropertyFlags::NeedRestart));
+}
+
+TEST_CASE("RendererConfigData: ClearColor is live, the batch limits need a restart")
+{
+    const auto lRenderer = RendererConfigData::GetProperties();
+    CHECK_FALSE(HasFlag(FlagsOf(lRenderer, "ClearColor"), EPropertyFlags::NeedRestart));
+    CHECK(HasFlag(FlagsOf(lRenderer, "MaxQuadsPerBatch"), EPropertyFlags::NeedRestart));
+    CHECK(HasFlag(FlagsOf(lRenderer, "MaxTextureSlots"), EPropertyFlags::NeedRestart));
 }

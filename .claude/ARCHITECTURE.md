@@ -509,7 +509,8 @@ editor-side `TPropertyDrawer<T>`, never a new `FLOAT_PROP`/`INT_PROP` macro here
   range is `Min == Max`, which every ImGui drag already reads as unbounded, so the ordinary property
   needs no flag) and `SetFlags(EPropertyFlags::NeedRestart)`. The restart flag sits on the **group**
   — one marker on `Window`, not fourteen — and it replaced a blanket "changes apply on restart"
-  sentence on the panel, which would have gone stale the day one value became live.
+  sentence on the panel, which would have gone stale the day one value became live. *That day came
+  (block CN): a group keeps the flag only while every field in it is read at boot — **BO1c**.*
   - **`SetTooltip(text)` (2026-09-02) is the third facet and the one that is NEITHER**, so it is
     worth saying why it does not break the rule: it selects no widget and cannot be derived from the
     type, because it is authored English about what the field MEANS. The trigger was the user asking
@@ -772,6 +773,28 @@ frame 500 appears then. Storage is therefore a `TDynArray` in **registration ord
 `IConfigSystem` itself (both systems share it; they differ only in `OnConfigRegistered`), and every
 consumer reads it **live** — the editor's `ConfigPanel` walks `GetConfigs()` each frame rather than
 building a list at seal time, which would have missed exactly those late arrivals, silently.
+
+**BO1c — a config TELLS its readers; nobody polls one** (block CN, 2026-09-25, the user's call:
+*"avoid watching a value each frame"* — and CVars were shelved for it, `plans/cvars.md`).
+`IConfig::OnChanged()` is an `FOnConfigChanged` multicast delegate with **no payload**: a reader
+already caches `&Config.Get<T>().GetData()` (the `WorldManager` shape) and re-reads the fields it uses.
+- **The WRITER notifies**, never the reader: the Config panel, and `TConfig::Load` on both branches that
+  assign the data (a missing file only writes the defaults out, so it stays silent).
+- **An edit is announced when it is COMMITTED, not per frame** (their ask): `ConfigChangeTracker`
+  (`Editor/Panels/`, header-only, tested) diffs `ToText()` against the text last announced and HOLDS
+  while `ImGui::IsAnyItemActive()`. A drag fires once on release; a drag back to the start fires
+  nothing; switching the shown config re-baselines silently. So a live reader updates on RELEASE,
+  and an expensive reader may still do its work inline.
+- **Subscribe in `Startup`, `RemoveAll(this)` in `Shutdown`.** The config outlives every engine
+  subsystem (**I5**), so a missed unsubscribe is a dangling call, not a leak. Main thread only.
+- **The event is per CONFIG, not per field.** A reader re-applies all it reads; editing Window.Title
+  re-copies `Render.bInterpolation` unchanged. Cheap and correct — per-field events would be machinery.
+- **`NeedRestart` is honest**: on a GROUP only while every field in it is read at boot; once a sibling
+  goes live, the flag moves onto the fields that still need it (Render: `Backend` keeps it,
+  `bInterpolation` is live). Pinned by name in `EngineConfigDataTests.cpp`.
+- **Live today:** `Renderer.ClearColor` (`RenderSystem::SetClearColor`) and `Engine.Render.bInterpolation`,
+  both applied by `RendererManager`. *Known, harmless: a runtime reload of a config the panel shows would
+  notify twice (Load, then the panel's diff) — nothing reloads a config at runtime yet.*
 **BO2** — The Engine service is **constructed** in `Bootstrap` (pre-window) but **started**
 (`Engine().Startup()`) later, in `EngineStartup()`, *after* the window exists.
 *(This supersedes L1's note that IEngine is created post-window — it is created in Bootstrap, started post-window.)*

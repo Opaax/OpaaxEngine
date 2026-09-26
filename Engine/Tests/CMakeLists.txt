@@ -181,6 +181,10 @@ set(OPAAX_TEST_SOURCES
     # categories, and the case-insensitive search. Header-only, ImGui-free.
     Editor/LogFilterTests.cpp
 
+    # Block CN S2. When the Config panel announces an edit — once per COMMITTED edit, a drag on
+    # release, a config switch silent. Header-only, ImGui-free.
+    Editor/ConfigChangeTrackerTests.cpp
+
     # NOTE: every quarantined suite now lives under Tests/Legacy/ with the code it exercises
     # (ARCHITECTURE.md X1) — ECS/*, Physics/CollisionProfile, Assets/AssetIdResolve and
     # Renderer/FontKerning. None are listed here; re-add live equivalents when the new world

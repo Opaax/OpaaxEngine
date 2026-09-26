@@ -137,6 +137,13 @@ namespace Opaax
         OpaaxApplication::GetAppService<IEngine>().GetEngineEventBus().GetEventBus()
             .Subscribe<WindowResize>(this, &RendererManager::HandleWindowResize);
 
+        // Told, not polled: what can change live is applied when the config says it changed.
+        m_RendererConfig = &lConfigSys.Get<Config_Renderer>();
+        m_RendererConfig->OnChanged().AddMember(this, &RendererManager::HandleRendererConfigChanged);
+
+        m_EngineConfig = &lConfigSys.Get<Config_Engine>();
+        m_EngineConfig->OnChanged().AddMember(this, &RendererManager::HandleEngineConfigChanged);
+
         // Cache the world owner — Render draws whatever it reports as the active world.
         m_WorldManager = &OpaaxApplication::GetAppService<IEngine>().GetWorldManager();
 
@@ -148,6 +155,19 @@ namespace Opaax
         // Unsubscribe BEFORE teardown — a late resize event must not reach a handler that
         // would touch a destroyed m_RenderSystem.
         OpaaxApplication::GetAppService<IEngine>().GetEngineEventBus().GetEventBus().UnsubscribeAll(this);
+
+        // Same reason, and the config outlives us — a missed RemoveAll is a dangling call (I5).
+        if (m_RendererConfig != nullptr)
+        {
+            m_RendererConfig->OnChanged().RemoveAll(this);
+            m_RendererConfig = nullptr;
+        }
+
+        if (m_EngineConfig != nullptr)
+        {
+            m_EngineConfig->OnChanged().RemoveAll(this);
+            m_EngineConfig = nullptr;
+        }
 
         // Drop the resource claims FIRST. Shutdown order is the reverse of registration, so the
         // ResourceManager is still alive here to take the releases — and its own FlushAll, which
@@ -908,5 +928,25 @@ namespace Opaax
         {
             m_RenderSystem->Resize(InResize.Width, InResize.Height);
         }
+    }
+
+    void RendererManager::HandleRendererConfigChanged()
+    {
+        if (!m_RenderSystem || m_RendererConfig == nullptr)
+        {
+            return;
+        }
+
+        m_RenderSystem->SetClearColor(m_RendererConfig->GetData().ClearColor);
+    }
+
+    void RendererManager::HandleEngineConfigChanged()
+    {
+        if (m_EngineConfig == nullptr)
+        {
+            return;
+        }
+
+        m_bInterpolate = m_EngineConfig->GetData().Render.bInterpolation;
     }
 }
