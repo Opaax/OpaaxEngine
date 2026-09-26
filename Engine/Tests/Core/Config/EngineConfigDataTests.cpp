@@ -7,12 +7,14 @@
 // catches, so it is stated once instead of per field.
 #include <doctest.h>
 
+#include <cstring>
 #include <filesystem>
 
 #include "Core/Config/TConfig.hpp"
 #include "Core/IO/FileIO.h"
 #include "Core/String/OpaaxUtf8.h"
 #include "Engine/Config/EngineConfigData.h"
+#include "Renderer/Config/RendererConfigData.h"
 
 using namespace Opaax;
 
@@ -255,4 +257,52 @@ TEST_CASE("TConfig::Load: a MISSING file writes the defaults and does NOT notify
     CHECK(fs::exists(Utf8::ToFsPath(lPath)));   // proves the branch taken was the generate one
 
     fs::remove(Utf8::ToFsPath(lPath));
+}
+
+// =============================================================================
+// NeedRestart is honest — on the fields read at boot, OFF the ones a notify applies live.
+// =============================================================================
+
+namespace
+{
+    /** A property's flags, found by NAME — an index would silently follow a reorder. */
+    template<typename TProperties>
+    EPropertyFlags FlagsOf(const TProperties& InProperties, const char* InName)
+    {
+        EPropertyFlags lFlags = EPropertyFlags::None;
+        bool           bFound = false;
+
+        const auto lVisit = [&](const auto& InProperty)
+        {
+            if (std::strcmp(InProperty.Name, InName) == 0)
+            {
+                lFlags = InProperty.Meta.Flags;
+                bFound = true;
+            }
+        };
+        std::apply([&](const auto&... InEach) { (lVisit(InEach), ...); }, InProperties);
+
+        REQUIRE_MESSAGE(bFound, "no property named " << InName);
+        return lFlags;
+    }
+}
+
+TEST_CASE("EngineConfigData: Render.Backend needs a restart, Render.bInterpolation does not")
+{
+    const auto lRender = RenderSettings::GetProperties();
+    CHECK(HasFlag(FlagsOf(lRender, "Backend"), EPropertyFlags::NeedRestart));
+    CHECK_FALSE(HasFlag(FlagsOf(lRender, "bInterpolation"), EPropertyFlags::NeedRestart));
+
+    // The GROUP no longer claims it for both fields; the all-boot groups still do.
+    const auto lEngine = EngineConfigData::GetProperties();
+    CHECK_FALSE(HasFlag(FlagsOf(lEngine, "Render"), EPropertyFlags::NeedRestart));
+    CHECK(HasFlag(FlagsOf(lEngine, "Window"), EPropertyFlags::NeedRestart));
+}
+
+TEST_CASE("RendererConfigData: ClearColor is live, the batch limits need a restart")
+{
+    const auto lRenderer = RendererConfigData::GetProperties();
+    CHECK_FALSE(HasFlag(FlagsOf(lRenderer, "ClearColor"), EPropertyFlags::NeedRestart));
+    CHECK(HasFlag(FlagsOf(lRenderer, "MaxQuadsPerBatch"), EPropertyFlags::NeedRestart));
+    CHECK(HasFlag(FlagsOf(lRenderer, "MaxTextureSlots"), EPropertyFlags::NeedRestart));
 }

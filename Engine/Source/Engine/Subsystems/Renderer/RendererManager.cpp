@@ -141,6 +141,9 @@ namespace Opaax
         m_RendererConfig = &lConfigSys.Get<Config_Renderer>();
         m_RendererConfig->OnChanged().AddMember(this, &RendererManager::HandleRendererConfigChanged);
 
+        m_EngineConfig = &lConfigSys.Get<Config_Engine>();
+        m_EngineConfig->OnChanged().AddMember(this, &RendererManager::HandleEngineConfigChanged);
+
         // Cache the world owner — Render draws whatever it reports as the active world.
         m_WorldManager = &OpaaxApplication::GetAppService<IEngine>().GetWorldManager();
 
@@ -158,6 +161,12 @@ namespace Opaax
         {
             m_RendererConfig->OnChanged().RemoveAll(this);
             m_RendererConfig = nullptr;
+        }
+
+        if (m_EngineConfig != nullptr)
+        {
+            m_EngineConfig->OnChanged().RemoveAll(this);
+            m_EngineConfig = nullptr;
         }
 
         // Drop the resource claims FIRST. Shutdown order is the reverse of registration, so the
@@ -929,5 +938,20 @@ namespace Opaax
         }
 
         m_RenderSystem->SetClearColor(m_RendererConfig->GetData().ClearColor);
+    }
+
+    void RendererManager::HandleEngineConfigChanged()
+    {
+        if (m_EngineConfig == nullptr)
+        {
+            return;
+        }
+
+        m_bInterpolate = m_EngineConfig->GetData().Render.bInterpolation;
+
+        // PROBE (block CN S4) — proves the Engine.config notify reached the renderer. Remove after
+        // the eye check.
+        OPAAX_LOG(LogRendererManager, Info, "PROBE Render.bInterpolation applied: {}",
+                  m_bInterpolate ? "ON" : "OFF");
     }
 }

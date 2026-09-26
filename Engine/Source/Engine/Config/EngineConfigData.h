@@ -25,9 +25,9 @@ namespace Opaax
     //   fold it. Serialization is the same one macro a component carries; there is no codec, no key
     //   constants and no parser here, which is the whole point (one idiom, not two).
     //
-    //   Every field is read ONCE AT BOOT today, which is what NeedRestart says on each group. The
-    //   flag sits on the GROUP rather than on every field, and it becomes per-field the day
-    //   something is read live.
+    //   NeedRestart sits on a GROUP whose every field is read once at boot, and moves onto the
+    //   FIELD once a sibling is read live — Render did (bInterpolation, block CN): Backend keeps
+    //   the flag, the group does not.
     //
     //   EVERY FIELD HERE HAS A READER. The Assets / Log / Physics groups and Render.Interpolation
     //   were deleted on 2026-08-21 — they had none, and a settings screen offering values that do
@@ -74,7 +74,7 @@ namespace Opaax
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(RenderSettings, Backend, bInterpolation)
 
         OPAAX_PROPERTIES(RenderSettings,
-                         OPAAX_PROP(Backend),
+                         OPAAX_PROP(Backend).SetFlags(EPropertyFlags::NeedRestart),
                          OPAAX_PROP(bInterpolation)
                              .SetTooltip("Smooth motion between fixed steps.\n"
                                          "Display only — gameplay always reads the raw pose.\n"
@@ -164,13 +164,13 @@ namespace Opaax
 
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(EngineConfigData, Window, Render, Physics, Stats)
 
-        // NeedRestart on every group, because every reader of this file reads it once during boot:
-        // the window is built from Window, RendererManager resolves Render.Backend at Startup, the
+        // NeedRestart on the groups read once during boot: the window is built from Window, the
         // stats service is provided-or-not in Bootstrap, and a physics world is built from Physics
-        // when a Play world starts — which a running one cannot be re-founded on.
+        // when a Play world starts — which a running one cannot be re-founded on. Render is mixed,
+        // so its flag lives on Backend (RendererManager resolves it at Startup).
         OPAAX_PROPERTIES(EngineConfigData,
                          OPAAX_PROP(Window).SetFlags(EPropertyFlags::NeedRestart),
-                         OPAAX_PROP(Render).SetFlags(EPropertyFlags::NeedRestart),
+                         OPAAX_PROP(Render),
                          OPAAX_PROP(Physics).SetFlags(EPropertyFlags::NeedRestart),
                          OPAAX_PROP(Stats).SetFlags(EPropertyFlags::NeedRestart))
     };

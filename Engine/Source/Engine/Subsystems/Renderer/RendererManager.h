@@ -21,6 +21,7 @@ namespace Opaax
     class RenderSystem;
     class Renderer2D;
     class Config_Renderer;
+    class Config_Engine;
     class World;
     class WorldManager;
     class IFramebuffer;
@@ -98,6 +99,9 @@ namespace Opaax
          * change live — ClearColor. The batch limits size GPU buffers at Startup and stay NeedRestart.
          */
         void HandleRendererConfigChanged();
+
+        /** Engine.config changed: apply Render.bInterpolation. Backend stays NeedRestart. */
+        void HandleEngineConfigChanged();
 
         /**
          * The frame's actual rendering. Separated from Render() so the debug-queue drain there is
@@ -323,6 +327,7 @@ namespace Opaax
 
         /** Subscribed to in Startup, released in Shutdown. Non-owning: the config outlives us (I5). */
         Config_Renderer* m_RendererConfig = nullptr;
+        Config_Engine*   m_EngineConfig   = nullptr;
         WorldManager*           m_WorldManager  = nullptr; // non-owning; active world = draw source
 
         // This frame's views, cleared beside the debug queue in Render() (F4). Keeps its capacity,
@@ -362,7 +367,7 @@ namespace Opaax
          */
         float m_FrameAlpha = 0.f;
 
-        /** Render.Interpolation, read once at Startup like every other config field. */
+        /** Render.bInterpolation — read at Startup, re-applied when Engine.config notifies a change. */
         bool m_bInterpolate = true;
 
         /** Blends performed on the last frame, and the one-shot that reports the first of them. */
