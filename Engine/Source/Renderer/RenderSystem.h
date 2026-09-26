@@ -140,6 +140,9 @@ namespace Opaax
          * @return Negative with no device, and until the first query result lands.
          */
         double GetGpuFrameTimeMs() const;
+
+        /** What every Clear-load pass clears to. Read per pass, so a change shows next frame. */
+        void SetClearColor(const Vector4F& InColor) noexcept { m_ClearColor = InColor; }
         // End Getters - Setters
         // =============================================================================
         

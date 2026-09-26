@@ -21,7 +21,8 @@ namespace Opaax
     //   cut, so shrinking them changes the draw call count and never the picture, which is exactly
     //   what makes the split path reachable in a small scene.
     //
-    //   All NeedRestart because RendererManager::Startup copies them into a RenderSystemDesc once.
+    //   The limits are NeedRestart: RendererManager::Startup sizes GPU buffers from them once.
+    //   ClearColor is LIVE — RendererManager applies it when the config notifies a change.
     // =============================================================================
     struct RendererConfigData
     {
@@ -34,7 +35,7 @@ namespace Opaax
                                                     MaxQuadsPerBatch, MaxTextureSlots)
 
         OPAAX_PROPERTIES(RendererConfigData,
-                         OPAAX_PROP(ClearColor).SetFlags(EPropertyFlags::NeedRestart),
+                         OPAAX_PROP(ClearColor),
                          OPAAX_PROP(MaxQuadsPerBatch)
                              .SetRange(1.f, 65536.f)
                              .SetFlags(EPropertyFlags::NeedRestart)

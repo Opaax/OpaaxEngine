@@ -137,6 +137,10 @@ namespace Opaax
         OpaaxApplication::GetAppService<IEngine>().GetEngineEventBus().GetEventBus()
             .Subscribe<WindowResize>(this, &RendererManager::HandleWindowResize);
 
+        // Told, not polled: what can change live is applied when the config says it changed.
+        m_RendererConfig = &lConfigSys.Get<Config_Renderer>();
+        m_RendererConfig->OnChanged().AddMember(this, &RendererManager::HandleRendererConfigChanged);
+
         // Cache the world owner — Render draws whatever it reports as the active world.
         m_WorldManager = &OpaaxApplication::GetAppService<IEngine>().GetWorldManager();
 
@@ -148,6 +152,13 @@ namespace Opaax
         // Unsubscribe BEFORE teardown — a late resize event must not reach a handler that
         // would touch a destroyed m_RenderSystem.
         OpaaxApplication::GetAppService<IEngine>().GetEngineEventBus().GetEventBus().UnsubscribeAll(this);
+
+        // Same reason, and the config outlives us — a missed RemoveAll is a dangling call (I5).
+        if (m_RendererConfig != nullptr)
+        {
+            m_RendererConfig->OnChanged().RemoveAll(this);
+            m_RendererConfig = nullptr;
+        }
 
         // Drop the resource claims FIRST. Shutdown order is the reverse of registration, so the
         // ResourceManager is still alive here to take the releases — and its own FlushAll, which
@@ -908,5 +919,20 @@ namespace Opaax
         {
             m_RenderSystem->Resize(InResize.Width, InResize.Height);
         }
+    }
+
+    void RendererManager::HandleRendererConfigChanged()
+    {
+        if (!m_RenderSystem || m_RendererConfig == nullptr)
+        {
+            return;
+        }
+
+        const LinearColor& lColor = m_RendererConfig->GetData().ClearColor;
+        m_RenderSystem->SetClearColor(lColor);
+
+        // PROBE (block CN S3) — proves the notify reached a subscriber. Remove after the eye check.
+        OPAAX_LOG(LogRendererManager, Info, "PROBE ClearColor applied ({:.3f}, {:.3f}, {:.3f}, {:.3f})",
+                  lColor.r, lColor.g, lColor.b, lColor.a);
     }
 }
