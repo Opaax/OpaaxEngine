@@ -928,11 +928,6 @@ namespace Opaax
             return;
         }
 
-        const LinearColor& lColor = m_RendererConfig->GetData().ClearColor;
-        m_RenderSystem->SetClearColor(lColor);
-
-        // PROBE (block CN S3) — proves the notify reached a subscriber. Remove after the eye check.
-        OPAAX_LOG(LogRendererManager, Info, "PROBE ClearColor applied ({:.3f}, {:.3f}, {:.3f}, {:.3f})",
-                  lColor.r, lColor.g, lColor.b, lColor.a);
+        m_RenderSystem->SetClearColor(m_RendererConfig->GetData().ClearColor);
     }
 }

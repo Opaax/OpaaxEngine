@@ -67,11 +67,6 @@ namespace Opaax::Editor
         // A drag announces on release, not per frame: IsAnyItemActive holds it for the gesture.
         if (m_ChangeTracker.Update(InConfig.GetConfigTypeID(), lText, ImGui::IsAnyItemActive()))
         {
-            // PROBE (block CN S3) — one line per COMMITTED edit, never per drag frame. Remove after
-            // the eye check.
-            OPAAX_LOG(LogConfigPanel, Info, "PROBE '{}' changed — notifying {} subscriber(s)",
-                      InConfig.GetName(), InConfig.OnChanged().Num());
-
             InConfig.NotifyChanged();
         }
 
