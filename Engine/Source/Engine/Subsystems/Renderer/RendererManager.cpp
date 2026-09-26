@@ -948,10 +948,5 @@ namespace Opaax
         }
 
         m_bInterpolate = m_EngineConfig->GetData().Render.bInterpolation;
-
-        // PROBE (block CN S4) — proves the Engine.config notify reached the renderer. Remove after
-        // the eye check.
-        OPAAX_LOG(LogRendererManager, Info, "PROBE Render.bInterpolation applied: {}",
-                  m_bInterpolate ? "ON" : "OFF");
     }
 }
