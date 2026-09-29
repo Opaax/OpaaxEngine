@@ -7,8 +7,7 @@ namespace Opaax
     namespace
     {
         // =====================================================================
-        // NullJobSystem — degrades by running every job INLINE on the calling
-        // thread (no workers, no marshalling). Callers never branch on validity.
+        // NullJobSystem — runs every job immediately on the calling thread.
         // =====================================================================
         class NullJobSystem final : public IJobSystem
         {
@@ -24,7 +23,7 @@ namespace Opaax
             JobHandle Submit(TFunction<void()> InWork, TFunction<void()> InOnComplete) override
             {
                 if (InWork)       { InWork(); }
-                if (InOnComplete) { InOnComplete(); } // no main-thread drain — run inline now
+                if (InOnComplete) { InOnComplete(); }
                 return JobHandle{};
             }
 
@@ -40,7 +39,7 @@ namespace Opaax
     }
 
     // =========================================================================
-    // Type tag + null object (out-of-line — one instance across the DLL/exe line).
+    // Type tag + null object (defined here so they are shared across the DLL/exe boundary).
     // =========================================================================
     ServiceTypeID IJobSystem::StaticTypeID() noexcept
     {
@@ -88,7 +87,7 @@ namespace Opaax
     {
         {
             TLockGuard<Mutex> lLock(m_QueueMutex);
-            if (m_Stopping.load(std::memory_order_acquire)) { return; } // already stopped — idempotent
+            if (m_Stopping.load(std::memory_order_acquire)) { return; } // already stopped
             m_Stopping.store(true, std::memory_order_release);
         }
         m_QueueCV.notify_all();
@@ -148,8 +147,7 @@ namespace Opaax
         TDynArray<JobHandle> lHandles;
         lHandles.reserve(InCount / InGrainSize + 1);
 
-        // Capture InBody by reference — every chunk completes before this function
-        // returns (the Wait loop below), so the reference can't dangle.
+        // InBody is captured by reference: every chunk finishes before we return.
         Uint32 lStart = 0;
         while (lStart < InCount)
         {
@@ -182,8 +180,7 @@ namespace Opaax
         const TSharedPtr<JobState>& lState = InHandle.GetState();
         if (!lState) { return; }
 
-        // NOTE: do not call from a worker thread — there is no work-stealing, so a
-        // worker blocking here while all workers are busy would deadlock.
+        // Not from a worker thread: without work-stealing it could deadlock.
         TUniqueLock<Mutex> lLock(m_DoneMutex);
         m_DoneCV.wait(lLock, [&lState] { return lState->bDone.load(std::memory_order_acquire); });
     }
@@ -218,8 +215,7 @@ namespace Opaax
                 lJob.Work();
             }
 
-            // Flip the done-flag under m_DoneMutex so a concurrent Wait can't miss the
-            // notify (store-then-notify with the waiter holding the same lock).
+            // Set under the lock so a concurrent Wait cannot miss the notify.
             {
                 TLockGuard<Mutex> lLock(m_DoneMutex);
                 if (lJob.State)

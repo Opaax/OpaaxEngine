@@ -1,7 +1,7 @@
 #include "IConfigSystem.h"
 #include "IPaths.h"
 
-#include "Core/String/OpaaxUtf8.h"   // I7
+#include "Core/String/OpaaxUtf8.h"
 
 #include <filesystem>
 
@@ -23,13 +23,13 @@ namespace Opaax
             void SaveAll() override {}
 
         protected:
-            void OnConfigRegistered(IConfig&) override {}   // defaults only — no project layout to load from
+            void OnConfigRegistered(IConfig&) override {}   // defaults only
             bool SaveConfig(ConfigTypeID) override { return false; }
         };
     }
 
     // =========================================================================
-    // Type tag + null object (out-of-line — one instance across the DLL/exe line).
+    // Type tag + null object (defined here so they are shared across the DLL/exe boundary).
     // =========================================================================
     ServiceTypeID IConfigSystem::StaticTypeID() noexcept
     {
@@ -44,7 +44,7 @@ namespace Opaax
     }
 
     // =========================================================================
-    // Registry — shared by both systems (the storage is the base's).
+    // Registry
     // =========================================================================
     IConfig* IConfigSystem::FindConfig(const ConfigTypeID InId) const noexcept
     {
@@ -66,8 +66,7 @@ namespace Opaax
         m_Configs.emplace_back(InFactory());
         IConfig& lConfig = *m_Configs.back();
 
-        // In the registry BEFORE the hook runs: a config that reads a sibling while loading must
-        // find itself already registered rather than register a second copy.
+        // Registered before the hook, so a config reading others while loading finds itself.
         OnConfigRegistered(lConfig);
 
         return lConfig;
@@ -88,18 +87,16 @@ namespace Opaax
             return OpaaxString(InFileName);
         }
         
-        // InFileName is an ASCII config name; the DIRECTORY is the part that can carry non-ASCII (I7).
+        // The directory may contain non-ASCII characters.
         return Utf8::FromFsPath(Utf8::ToFsPath(m_ConfigsDir) / InFileName);
     }
 
     void ConfigSystem::OnConfigRegistered(IConfig& InConfig)
     {
-        // IConfig::Load loads the file, or generates the default file if it is missing.
+        // Loads the file, or creates the default one if missing.
         const OpaaxString lPath = JoinConfigPath(InConfig.FileName());
 
-        // The return value used to be DISCARDED. It is the only signal that a file existed and could
-        // not be read — the config then runs on defaults, which looks identical to a clean boot from
-        // here (L15). Core cannot log, so saying it is this layer's job.
+        // False means the file exists but could not be read: warn, since it runs on defaults.
         if (!InConfig.Load(lPath))
         {
             OPAAX_LOG(LogConfigSystem, Warn,

@@ -32,18 +32,17 @@ namespace Opaax
         // =============================================================================
     public:
         /**
-         * Create + own the main window from the engine config. Idempotent (returns the existing window on repeat calls).
-         * @return 
+         * Creates the main window from the engine config. Returns the existing one if already created.
          */
         virtual Window* CreateMainWindow() = 0;
 
         /**
-         * @return The owned main window, or nullptr if none has been created.
+         * @return The main window, or nullptr if not created yet
          */
         virtual Window* GetMainWindow() const = 0;
 
         /**
-         * @return true if window is not nullptr false otherwise
+         * @return True if the main window exists
          */
         bool HasMainWindow() const { return GetMainWindow() != nullptr; }
 

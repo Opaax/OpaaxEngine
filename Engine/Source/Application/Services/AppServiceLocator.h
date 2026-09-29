@@ -36,15 +36,12 @@ namespace Opaax
         // =============================================================================
         
         /**
-         * provide: construct + own a real impl
-         * @tparam TInterface 
-         * @tparam TImpl 
-         * @tparam Args Ctor Params
-         * @param InArgs Ctor Params
-         * @return A reference of the constructed service
+         * Constructs and owns a service implementation.
+         * @param InArgs Constructor parameters
+         * @return The constructed service
          */
         template<class TInterface, class TImpl, typename... Args>
-        requires TIsBaseOf(TInterface, TImpl) && TIsBaseOf(IAppService, TInterface)
+        requires TIsBaseOf(TImpl, TInterface) && TIsBaseOf(TInterface, IAppService)
         TInterface& Provide(Args&&... InArgs)
         {
             TUniquePtr<TImpl>   lImpl   = MakeUnique<TImpl>(Forward<Args>(InArgs)...);
@@ -57,13 +54,9 @@ namespace Opaax
         }
 
         /**
-         * provide an ALREADY-CONSTRUCTED impl (ownership transferred). Same registration + shutdown
-         * ordering as Provide, but the caller chose the concrete type — used when a composition root
-         * overrides a service's implementation polymorphically (e.g. EditorApplication supplies
-         * EditorPaths for IPaths via a virtual factory). Registers under TInterface's key.
-         * @tparam TInterface
-         * @param InImpl the owning pointer to adopt
-         * @return A reference to the adopted service
+         * Takes ownership of an already-constructed service (e.g. EditorPaths for IPaths).
+         * @param InImpl The service to adopt
+         * @return The adopted service
          */
         template<class TInterface>
         requires std::is_base_of_v<IAppService, TInterface>
@@ -78,9 +71,7 @@ namespace Opaax
         }
 
         /**
-         * resolve: never null
-         * @tparam T
-         * @return A reference of the service or its null version
+         * @return The service, or its null object if not provided. Never null.
          */
         template<class T>
         requires std::is_base_of_v<IAppService, T>
@@ -92,7 +83,7 @@ namespace Opaax
                 return *static_cast<T*>(lIt->second.get());
             }
             
-            return T::Null(); // <-- null object
+            return T::Null();
         }
 
         //Not safe for now
@@ -112,7 +103,7 @@ namespace Opaax
         //template<class T> bool Has() const { return TryGet<T>() != nullptr; }
 
         /**
-         * Shutdown services in reverse order
+         * Shuts services down in reverse order.
          */
         void ShutdownAll()
         {

@@ -10,13 +10,9 @@ namespace Opaax
     inline constexpr LogCategory LogJobSystem{"JobSystem"};
     
     // =============================================================================
-    // IJobSystem — process-lifetime worker-thread pool, exposed as an app service.
-    //
-    // Off-thread work is submitted via Submit and runs on a pool worker thread; an
-    // optional OnComplete callback is marshalled back onto the MAIN thread during the
-    // next DrainCompletions() (the engine loop pumps it once per frame) so GPU /
-    // main-thread-affine finalization stays safe. Get<IJobSystem>() NEVER returns null —
-    // the null object runs every job inline on the calling thread.
+    // IJobSystem — worker thread pool.
+    //   Jobs run on a worker thread. The optional OnComplete callback runs on the main
+    //   thread during the next DrainCompletions() (once per frame).
     // =============================================================================
     class OPAAX_API IJobSystem : public IAppService
     {
@@ -31,42 +27,34 @@ namespace Opaax
         // =============================================================================
     public:
         /**
-         * Queue work to run on a worker thread. Returns a handle to poll / Wait on.
-         * @param InWork 
-         * @return 
+         * Queues work on a worker thread.
+         * @return A handle to poll or Wait on
          */
         virtual JobHandle Submit(TFunction<void()> InWork) = 0;
         
         /**
-         * Queue work on a worker thread; InOnComplete runs on the MAIN thread during the next DrainCompletions(). Use for any result handoff touching main-thread state.
-         * @param InWork 
-         * @param InOnComplete 
-         * @return 
+         * Queues work on a worker thread. InOnComplete then runs on the main thread,
+         * during the next DrainCompletions().
+         * @return A handle to poll or Wait on
          */
         virtual JobHandle Submit(TFunction<void()> InWork, TFunction<void()> InOnComplete) = 0;
         
         /**
-         * Run InBody over [0, InCount) split into InGrainSize chunks across the pool.
-         * Blocks until every chunk finishes (the caller runs the last chunk itself).
-         * Safe with no workers (runs inline).
-         * @param InCount 
-         * @param InBody 
-         * @param InGrainSize 
+         * Runs InBody over [0, InCount), split into InGrainSize chunks across the pool.
+         * Blocks until every chunk is done.
          */
         virtual void ParallelFor(Uint32 InCount, const TFunction<void(Uint32)>& InBody, Uint32 InGrainSize = 1) = 0;
         
         /**
-         * Block until the job behind InHandle has run. No-op for a null/complete handle.
-         * @param InHandle 
+         * Blocks until the job has run. Do not call from a worker thread.
          */
         virtual void Wait(const JobHandle& InHandle) = 0;
 
         /**
-         * Invoke queued main-thread completion callbacks. MAIN thread only — the engine loop calls this once per frame.
+         * Runs the pending completion callbacks. Main thread only.
          */
         virtual void DrainCompletions() = 0;
 
-        /***/
         virtual Uint32 GetWorkerCount() const noexcept = 0;
 
         //----- null object ----------------------------------------------------
@@ -74,8 +62,7 @@ namespace Opaax
     };
 
     // =============================================================================
-    // JobSystem — the real pool. Spawns (hardware_concurrency - reserved) workers at
-    // construction (clamped >= 1) and joins them at teardown.
+    // JobSystem — spawns (core count - reserved) workers, at least 1.
     // =============================================================================
     class OPAAX_API JobSystem final : public IJobSystem
     {
@@ -83,9 +70,7 @@ namespace Opaax
         // CTORs - DTOR
         // =============================================================================
     public:
-        // InReservedThreads: cores held back for the main thread + future dedicated
-        // long-lived threads (render / physics / AI). Worker count = hardware minus this,
-        // clamped to >= 1. Defaults to 1 (main thread only).
+        // InReservedThreads: cores kept free for the main thread and other dedicated threads.
         explicit JobSystem(Uint32 InReservedThreads = 1);
         ~JobSystem() override;
 
@@ -123,12 +108,10 @@ namespace Opaax
             TSharedPtr<JobState> State;
         };
 
-        /***/
         void WorkerLoop();
 
         /**
-         * Stop + join workers. Idempotent (m_Stopping-guarded) — both ~JobSystem() and
-         * OnShutdown() call it, so a stack instance and the locator teardown both clean up.
+         * Stops and joins the workers. Safe to call twice.
          */
         void StopAndJoin();
 
@@ -138,16 +121,16 @@ namespace Opaax
     private:
         TDynArray<Thread> m_Workers;
 
-        // Pending work queue — producers (Submit) push, workers pop.
+        // Pending jobs.
         TQueue<Job>       m_Queue;
         Mutex             m_QueueMutex;
         ConditionVariable m_QueueCV;
 
-        // Completion callbacks awaiting the main-thread drain.
+        // Completion callbacks waiting for DrainCompletions.
         TDynArray<TFunction<void()>> m_Completed;
         Mutex                        m_CompletedMutex;
 
-        // Backs Wait — notified each time a job flips its done-flag.
+        // Used by Wait: notified each time a job finishes.
         Mutex             m_DoneMutex;
         ConditionVariable m_DoneCV;
 

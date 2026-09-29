@@ -30,7 +30,7 @@ namespace Opaax
     namespace KEProjCFG = Opaax_Project_Identity;
     
     // =========================================================================
-    // Pure parser — tolerant: bad JSON / missing fields => empty values.
+    // Parser
     // =========================================================================
     ProjectIdentity ParseProjectIdentity(const OpaaxString& InJsonText)
     {
@@ -44,7 +44,7 @@ namespace Opaax
         }
         catch (const nlohmann::json::parse_error&)
         {
-            return lOut; // tolerant — empty identity on malformed JSON
+            return lOut;
         }
 
         const auto lReadString = [&lRoot](const char* InKey) -> OpaaxString
@@ -61,8 +61,7 @@ namespace Opaax
         lOut.EngineVersion = lReadString(Opaax_Project_Identity::PROJECT_ENGINE_VERSION_KEY);
         lOut.StartupLevel  = lReadString(Opaax_Project_Identity::PROJECT_STARTUP_LEVEL_KEY);
 
-        // Scene-era fallbacks, newest first — older .opaaxproj files predate the World > Level >
-        // Map vocabulary (X4) and store this as "startupScene" or, older still, "defaultScene".
+        // Old keys, newest first.
         if (lOut.StartupLevel.IsEmpty())
         {
             lOut.StartupLevel = lReadString(Opaax_Project_Identity::PROJECT_STARTUP_LEVEL_KEY_LEGACY);
@@ -74,7 +73,7 @@ namespace Opaax
 
         lOut.LoadingScreen = lReadString(Opaax_Project_Identity::PROJECT_LOADING_SCREEN_KEY);
 
-        // A number; anything else (absent, a string) keeps the default — tolerant, like every key here.
+        // Keeps the default if the key is missing or not a number.
         const auto lReadNumber = [&lRoot](const char* InKey, float& InOutValue)
         {
             if (lRoot.contains(InKey) && lRoot[InKey].is_number())
@@ -86,7 +85,6 @@ namespace Opaax
         lReadNumber(Opaax_Project_Identity::PROJECT_LOADING_SCREEN_MIN_SECONDS_KEY, lOut.LoadingScreenMinSeconds);
         lReadNumber(Opaax_Project_Identity::PROJECT_UI_REFERENCE_HEIGHT_KEY, lOut.UIReferenceHeight);
 
-        // A height of nothing is not a canvas; the default stands in and says so.
         if (lOut.UIReferenceHeight <= 0.f)
         {
             lOut.UIReferenceHeight = 1080.f;
@@ -95,7 +93,7 @@ namespace Opaax
     }
 
     // =========================================================================
-    // Type tag + null object (out-of-line — one instance across the DLL/exe line).
+    // Type tag + null object (defined here so they are shared across the DLL/exe boundary).
     // =========================================================================
     ServiceTypeID IProjectManager::StaticTypeID() noexcept
     {

@@ -3,16 +3,9 @@
 namespace Opaax
 {
     // =============================================================================
-    // IModule — the shared base for a game's host modules: the runtime module (IRuntimeModule, plugged
-    //   into the engine registries) and the editor module (IEditorModule, plugged into the editor's
-    //   extension routes). Both describe the SAME role — a game plugging content INTO a host — so they
-    //   share one type + lifetime here. Registration itself does NOT live on the base: each side registers
-    //   into a different registrar (ModuleRegistrar vs EditorExtensionRegistrar), so OnRegister stays on the
-    //   derived interface with its own signature. Marker only for now; identity/lifecycle can be added if
-    //   something ever holds an IModule* polymorphically.
-    //
-    // Header-only pure interface, no OPAAX_API: no exported symbols, no shared state, no cross-module
-    // identity tag (unlike services/subsystems). DLL-safe by construction.
+    // IModule — base for a game module plugged into a host
+    //   (IRuntimeModule for the engine, IEditorModule for the editor).
+    //   Each derived interface declares its own OnRegister.
     // =============================================================================
     class IModule
     {

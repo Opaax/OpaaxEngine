@@ -10,7 +10,7 @@ namespace Opaax
     namespace
     {
         // =====================================================================
-        // NullWindowManager — never owns a window. Consumers check GetMainWindow().
+        // NullWindowManager — never has a window.
         // =====================================================================
         class NullWindowManager final : public IWindowManager
         {
@@ -22,18 +22,16 @@ namespace Opaax
     }
 
     // =========================================================================
-    // Pure config -> props mapping.
+    // Config -> window props
     // =========================================================================
     WindowProps MakeWindowProps(const EngineConfigData& InData)
     {
-        // No parse: the config carries an EWindowMode, so a mode that is not one of the three is not
-        // representable rather than silently corrected.
         return WindowProps(InData.Window.Title, InData.Window.Width, InData.Window.Height,
                            InData.Window.Mode);
     }
 
     // =========================================================================
-    // Type tag + null object (out-of-line — one instance across the DLL/exe line).
+    // Type tag + null object (defined here so they are shared across the DLL/exe boundary).
     // =========================================================================
     ServiceTypeID IWindowManager::StaticTypeID() noexcept
     {
@@ -46,29 +44,4 @@ namespace Opaax
         static NullWindowManager s_Null;
         return s_Null;
     }
-
-    // // =========================================================================
-    // // WindowManager
-    // // =========================================================================
-    // Window* WindowManager::CreateMainWindow()
-    // {
-    //     if (m_Window)
-    //     {
-    //         OPAAX_LOG(LogWindowManager, Warn, "Main window already created");
-    //         return m_Window.get();
-    //     }
-    //
-    //     const EngineConfigData& lData = OpaaxApplication::GetAppService<IConfigSystem>().Get<Config_Engine>().GetData();
-    //
-    //     m_Window.reset(Window::Create(MakeWindowProps(lData)));
-    //
-    //     OPAAX_LOG(LogWindowManager, Info, "Main window created ({}x{})", m_Window->GetWidth(), m_Window->GetHeight())
-    //
-    //     return m_Window.get();
-    // }
-    //
-    // void WindowManager::OnShutdown()
-    // {
-    //     m_Window.reset(); // ~WindowsWindow -> Shutdown(), once (RAII)
-    // }
 }

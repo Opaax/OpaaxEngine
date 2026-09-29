@@ -1,8 +1,8 @@
 #pragma once
 
 #include "IAppService.h"
-#include "Core/OpaaxTypes.h"   // TUniquePtr (CreateFramebuffer's return)
-#include "World/WorldSpec.h"   // WorldSpec (by value across the seam)
+#include "Core/OpaaxTypes.h"
+#include "World/WorldSpec.h"
 
 namespace Opaax
 {
@@ -22,10 +22,8 @@ namespace Opaax
     struct CameraView;
 
     // =============================================================================
-    // IEngine — the engine, exposed as an application service. Owns the engine
-    // subsystems (Resources first; Render/Input/World/Physics later) and the
-    // per-frame tick that pumps them. The application host drives the lifecycle;
-    // Get<IEngine>() NEVER returns null (the null object is inert).
+    // IEngine — the engine as an application service. Owns the engine subsystems
+    // and ticks them each frame. The application drives its lifecycle.
     // =============================================================================
     class OPAAX_API IEngine : public IAppService
     {
@@ -40,184 +38,116 @@ namespace Opaax
         // Lifecycle — driven by the application host
     public:
         /**
-         * Start the engine subsystems. 
-         * Safe to call once
-         * @return 
+         * Starts the engine subsystems. Call once.
          */
         virtual bool Startup() = 0;
 
         /**
-         * Begin a GAME: create the GameInstance and start every registered session subsystem.
-         *
-         * BEFORE THE FIRST WORLD, and that ordering is the contract. A world subsystem's context
-         * is built inside CreateWorld, so a session created in reaction to a world would arrive
-         * too late for every world that already exists.
-         *
-         * Called by a runtime host between OnModulesRegistered and FinishStartup, and by the
-         * editor's PlayInEditor::Play. An editor sitting in an Edit world never calls it — there
-         * is legitimately no game, and IsGameRunning answers false all session.
-         *
-         * REFUSES LOUDLY when a game is already running.
-         *
-         * @return true when a game is running as a result of this call.
+         * Starts a game: creates the GameInstance and its subsystems.
+         * Must be called before the first world is created. Fails if a game is already running.
+         * @return True if a game is now running
          */
         virtual bool StartGame() = 0;
 
         /**
-         * End the game: destroy every PLAY world, then the GameInstance. That order, and it is
-         * the mirror of StartGame's.
-         *
-         * A SILENT no-op when no game is running — hosts call it unconditionally on the teardown
-         * path, so "there was nothing to end" is a normal answer.
-         *
-         * Destroying "every Play world" is what makes this the editor's Stop: the edit world is
-         * an Edit world, so the only thing that goes is the PIE clone.
-         *
-         * @return true when a game was actually ended.
+         * Ends the game: destroys every Play world, then the GameInstance.
+         * Does nothing if no game is running.
+         * @return True if a game was ended
          */
         virtual bool EndGame() = 0;
 
         /**
-         * @param InSpec Which world to open, in which mode.
-         * @return The created world, already active. Null only if the engine is not started.
+         * Opens the startup world.
+         * @param InSpec Which world to open, in which mode
+         * @return The created world, already active. Null if the engine is not started.
          */
         virtual World* FinishStartup(const WorldSpec& InSpec) = 0;
 
         /**
-         * Open InSpec's level into a NEW world, activate it, and destroy the one it replaces.
-         *
-         * The single path a level is opened by — `FinishStartup` is this call the first time, not
-         * a second route that has to be kept in step with it. An EMPTY `LevelPath` is a supported
-         * answer, not a misconfiguration (see WorldSpec): it gives a NullLevel world with an empty
-         * Level, which is what editing a map that belongs to no level needs.
-         *
-         * The new world is activated BEFORE the old one is destroyed, so no frame ever runs
-         * without an active world.
-         *
-         * @return The new world, already active, or null if the engine is not started.
+         * Opens a level into a new world, activates it, then destroys the previous one.
+         * An empty LevelPath gives an empty world.
+         * @return The new world, already active. Null if the engine is not started.
          */
         virtual World* OpenLevel(const WorldSpec& InSpec) = 0;
 
         /**
-         * Ask for InSpec to replace the active world at the START of the next frame — the route
-         * GAMEPLAY takes (**UI21**), where `OpenLevel` is the host's.
-         *
-         * The frame in between is what a loading cover exists for: `LevelLoadRequested` is
-         * published at once, so a listener draws over THIS frame's render, and the swap is one
-         * `OpenLevel` at the top of the next `Loop`, followed by `LevelLoadFinished`. Synchronous
-         * today; the same two events will bracket an asynchronous load, and no listener changes.
-         *
-         * A second request before the first resolves REPLACES it — last wins, said in the log.
+         * Opens a level at the start of the next frame (for gameplay code).
+         * Publishes LevelLoadRequested now and LevelLoadFinished after the swap,
+         * so a loading screen can be shown. A newer request replaces a pending one.
          */
         virtual void RequestOpenLevel(const WorldSpec& InSpec) = 0;
 
         /**
-         * Engine Loop
+         * Runs one engine frame.
          */
         virtual void Loop()                             = 0;
 
         /**
-         * Show the rendered frame on screen — swap the OS window's backbuffer. Host-driven, called
-         * once after the frame's render (F2 present-split). Named for what it presents: ONLY the
-         * backbuffer is ever shown; an offscreen primary target (editor viewport) is never presented.
+         * Swaps the window backbuffer. Called once per frame, after rendering.
          */
         virtual void PresentBackbuffer()                = 0;
 
         /**
-         * Draw the active world into InTarget, framed by InView, for THIS FRAME ONLY.
-         *
-         * IMMEDIATE MODE like the debug queue (F4): re-submit every frame, and stop submitting to
-         * stop drawing. Nothing is registered, so nothing has to be cleared before a target dies —
-         * the editor's ViewportPanel submits its offscreen FBO each frame so the world lands in a
-         * texture, and a second panel submitting a second one is what multi-view is.
-         *
-         * A frame with NO submissions draws the backbuffer framed by the active world, which is the
-         * runtime path and needs no caller at all.
-         *
-         * @param InTarget BORROWED for the frame — the submitter owns its lifetime (I5).
-         * @param InView In WORLD units; the matrices are composed against InTarget's pixels (CAM1).
-         * @param bInDrawOverlays Whether the debug queue draws in this view. False looks like the game.
-         * @param bInDrawUI Whether submitted canvases composite over it. Opt-in; a framing preview says no.
+         * Draws the active world into InTarget for this frame only. Submit again every frame.
+         * With no submission, the world is drawn to the backbuffer.
+         * @param InTarget Borrowed for the frame
+         * @param InView Camera view, in world units
+         * @param bInDrawOverlays Draw debug shapes in this view
+         * @param bInDrawUI Draw the submitted UI canvases over this view
          */
         virtual void SubmitRenderView(IRenderTarget& InTarget, const CameraView& InView, bool bInDrawOverlays,
                                       World* InSource = nullptr, bool bInDrawUI = false) = 0;
 
         /**
-         * Draw InCanvas over every view that opted into UI, THIS FRAME ONLY — the submission idiom
-         * above. The GameInstance's UI tenant is the caller; a canvas it stops submitting stops drawing.
-         * @param InCanvas BORROWED for the frame (I5).
-         * @param InTarget WHERE it draws. Null = over every view that opted into UI (the game).
-         *   Named = that target ALONE, cleared first — an editor panel previewing its own document
-         *   (**UI14**), which must not receive the game's canvases nor donate its own to the world.
-         * @param InView HOW a named target looks at it: a zoomed / panned designer view. Null = the
-         *   canvas's own (origin-centred, the reference height tall — the game's). With a view the
-         *   submitter has laid the canvas out itself; the pass does not size it to the target.
+         * Draws InCanvas for this frame only. Submit again every frame.
+         * @param InCanvas Borrowed for the frame
+         * @param InTarget Null draws over every view with UI enabled; otherwise only into
+         *   this target, cleared first (editor preview)
+         * @param InView Optional view for InTarget (zoom/pan). Null uses the canvas's own view.
          */
         virtual void SubmitUICanvas(UICanvas& InCanvas, IRenderTarget* InTarget = nullptr,
                                     const CameraView* InView = nullptr) = 0;
         
         /**
-         * The CALLER owns the result and must release it while the engine — and its GPU context — is still alive. 
-         * @param InSpec 
-         * @return Valid only after Startup; returns nullptr before it, or if the device is gone.
+         * Creates a framebuffer. Release it while the engine is still alive.
+         * @return Null before Startup or without a device
          */
         virtual TUniquePtr<IFramebuffer> CreateFramebuffer(const FramebufferSpec& InSpec) = 0;
 
         /**
-         * A GPU texture from pixels the caller already decoded (F2a — only the device creates one).
-         * The route a resource takes to the GPU: TextureResource::Initialize runs on the pump and
-         * has no device of its own, and caching one would outlive it.
-         *
-         * @param InPixels Tightly packed, InWidth * InHeight * InChannels bytes. Borrowed — the
-         *   caller may free it as soon as this returns.
-         * @param InChannels 4 = RGBA8, 3 = RGB8, 1 = R8 coverage.
-         * @return CALLER-OWNED, and released while the engine's GPU context is still alive.
-         *   nullptr before Startup, or with no device — which is also what a headless test gets.
+         * Creates a GPU texture from decoded pixels.
+         * @param InPixels Tightly packed, InWidth * InHeight * InChannels bytes. Copied.
+         * @param InChannels 4 = RGBA8, 3 = RGB8, 1 = R8
+         * @return Release it while the engine is still alive. Null before Startup or without a device.
          */
         virtual TUniquePtr<ITexture2D> CreateTexture(const void* InPixels, Uint32 InWidth,
                                                      Uint32 InHeight, Int32 InChannels) = 0;
 
         /**
-         * Called once per rendered frame.
-         * 
-         * Before Physic
-         * Before Render
-         * @param InDeltaTime 
+         * Called once per frame, before physics and render.
          */
         virtual void Update(double InDeltaTime)         = 0;
 
         /**
-         * Can be call multiple time by frame
-         * After Update
-         * Before Render
-         * @param InFixedDeltaTime 
+         * Called zero or more times per frame, after Update and before Render.
          */
         virtual void FixedUpdate(double InFixedDeltaTime) = 0;
 
         /**
-         * Called once per rendered frame.
-         * 
-         * After Update
-         * After Physic
-         * @param InAlphaPhysicStep 
+         * Called once per frame, after Update and physics.
+         * @param InAlphaPhysicStep Interpolation factor between physics steps
          */
         virtual void Render(double InAlphaPhysicStep)   = 0;
         
         /**
-         * Phase 1 of stopping: the frame loop has ended, but NOTHING is destroyed yet —
-         * subsystems, services, window and GPU context are all still alive.
-         *
-         * Subsystems release anything that needs a live sibling here, because Shutdown()
-         * cannot offer that guarantee. Called by the host at the end of RunApplication,
-         * before ShutdownApplication.
+         * First shutdown step: everything is still alive. Subsystems release here
+         * anything that depends on another subsystem.
          */
         virtual void TearDown()                         = 0;
 
         /**
-         * Phase 2: stop + destroy the engine subsystems (reverse of startup). Idempotent.
-         *
-         * Runs during locator teardown, AFTER TearDown(). Siblings may already be gone by
-         * the time a given subsystem's Shutdown runs — do not reach out of yourself here.
+         * Second shutdown step: destroys the subsystems in reverse order. Safe to call twice.
+         * Other subsystems may already be gone.
          */
         virtual void Shutdown()                         = 0;
         
@@ -234,26 +164,19 @@ namespace Opaax
         virtual WorldManager&               GetWorldManager() = 0;
 
         /**
-         * Owns the running GameInstance (0 or 1) — ask it IsGameRunning before reaching further.
-         * No game is a normal state, not a failure: it is what an editor in an Edit world has.
+         * Owns the running GameInstance, if any. Check IsGameRunning first.
          */
         virtual GameInstanceManager&        GetGameInstances() = 0;
 
         /**
-         * Enqueue from anywhere in the frame BEFORE the render that should show it — the renderer drains and clears it every frame, so a line must be
-         * re-submitted each frame it stays visible. Serves editor overlays and dev builds of the game alike; the engine has no idea which one is calling.
+         * Debug shapes, cleared every frame. Submit before the render, every frame.
          */
         virtual DebugDraw& GetDebugDraw() = 0;
 
         /**
-         * The engine end of the input chain — the application FEEDS this as OS events arrive, and everything else reads it. 
-         * Physical keys only: action maps are a game-layer concept built on top. 
-         * Read-only for every caller except the application that owns the feed.
+         * Keyboard and mouse state, fed by the application. Read-only for everyone else.
          */
         virtual InputManager& GetInput() = 0;
-
-        // NOTE: frame stats are NOT here. They are the Profiler singleton (I1): the HOST tells it
-        // about the frame boundary, and the engine is a consumer like anything else.
 
         // End Foundation subsystems
         // =============================================================================

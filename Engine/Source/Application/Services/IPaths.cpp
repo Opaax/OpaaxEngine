@@ -2,7 +2,7 @@
 #include "Core/Log/Logger.h"
 #include "Platform/IPlatform.h"
 
-#include "Core/String/OpaaxUtf8.h"   // I7 — the one OpaaxString <-> fs::path conversion
+#include "Core/String/OpaaxUtf8.h"
 
 #include <cstring>
 #include <filesystem>
@@ -26,7 +26,7 @@ namespace Opaax
         }
 
         // =====================================================================
-        // NullPaths — every root empty, every resolver a safe no-op.
+        // NullPaths — every path empty.
         // =====================================================================
         class NullPaths final : public IPaths
         {
@@ -48,12 +48,8 @@ namespace Opaax
             void        LogPaths()                            const override { OPAAX_APP_LOG(Warn, "Null Path Service"); }
         };
 
-        // InAbsPath expressed relative to InRoot, or EMPTY when it is not under it.
-        //
-        // weakly_canonical on BOTH sides, because the two arrive in different shapes: a file
-        // dialog answers `C:\...\Maps\Main.opaaxmap` while the roots were built with forward
-        // slashes. Comparing the strings would say "outside" for a file plainly inside.
-        // `weakly_` because the target need not exist yet (a Save As target).
+        // InAbsPath relative to InRoot, or empty if not under it.
+        // Both are normalized first (slashes differ; the file may not exist yet).
         OpaaxString RelativeUnder(const OpaaxString& InRoot, const OpaaxString& InAbsPath)
         {
             if (InRoot.IsEmpty())
@@ -72,7 +68,7 @@ namespace Opaax
 
             const fs::path lRelative = lAbs.lexically_relative(lRoot);
 
-            // Empty means unrelated paths; a leading ".." means it climbed OUT of the root.
+            // Empty or starting with "..": not under the root.
             if (lRelative.empty() || *lRelative.begin() == "..")
             {
                 return OpaaxString();
@@ -92,17 +88,15 @@ namespace Opaax
         const fs::path lExe     = Utf8::ToFsPath(InExePath);
         const fs::path lExeDir  = lExe.parent_path();
 
-        // Stays an fs::path, never a narrow std::string: .string() would encode it through the ANSI
-        // code page, and this name comes straight from the exe path (I7).
+        // Kept as fs::path: .string() would break non-ASCII names.
         const fs::path lAppName = lExe.stem();
 
-        // Editor bakes the source workspace; release leaves it empty -> the exe dir.
+        // No workspace (release): use the exe directory.
         const fs::path lWorkspace = InWorkspaceDir.IsEmpty()
                                         ? lExeDir
                                         : Utf8::ToFsPath(InWorkspaceDir);
 
-        // Project file: explicit --project (absolute kept, relative under the workspace),
-        // else the default <workspace>/<AppName>/<AppName>.opaaxproj.
+        // --project (relative to the workspace), else <workspace>/<AppName>/<AppName>.opaaxproj.
         fs::path lProjFile;
         if (!InProjectArg.IsEmpty())
         {
@@ -111,7 +105,6 @@ namespace Opaax
         }
         else
         {
-            // Appending an ASCII literal is encoding-invariant, so it needs no conversion.
             fs::path lLeaf = lAppName;
             lLeaf += ".opaaxproj";
             lProjFile = lWorkspace / lAppName / lLeaf;
@@ -134,7 +127,7 @@ namespace Opaax
     }
 
     // =========================================================================
-    // Type tag + null object (out-of-line — one instance across the DLL/exe line).
+    // Type tag + null object (defined here so they are shared across the DLL/exe boundary).
     // =========================================================================
     ServiceTypeID IPaths::StaticTypeID() noexcept
     {
@@ -166,8 +159,7 @@ namespace Opaax
 #endif
         const OpaaxString lExe = InPlatform.GetExecutablePath();
 
-        // --project on the command line wins; else the host's declared project (editor host names the
-        // game project); else empty -> ResolveProjectLayout uses the exe-stem default.
+        // --project first, then the host's project, else the default from the exe name.
         OpaaxString lProjArg = FindProjectArg(InArgc, InArgv);
         if (lProjArg.IsEmpty())
         {
@@ -179,7 +171,6 @@ namespace Opaax
 
     void Paths::LogPaths() const
     {
-        // The two roots; every other directory is derived from them (LOG2 — one line).
         OPAAX_APP_LOG(Info, "Project root '{}', engine root '{}'", ProjectRoot().CStr(), EngineRoot().CStr());
     }
 
@@ -212,8 +203,7 @@ namespace Opaax
             return OpaaxString();
         }
 
-        // The project first, so its own content keeps the unprefixed form every existing map file
-        // is written in — and so a project may shadow an engine path with one of its own.
+        // Project first: its paths have no prefix.
         if (const OpaaxString lProjectRel = RelativeUnder(m_Layout.AssetsDir, InAbsPath); !lProjectRel.IsEmpty())
         {
             return lProjectRel;
@@ -224,7 +214,6 @@ namespace Opaax
             return OpaaxString(ENGINE_MOUNT) + lEngineRel;
         }
 
-        // Under no mount: "this file cannot be named by a manifest", a real answer (see the header).
         return OpaaxString();
     }
 }
