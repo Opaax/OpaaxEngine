@@ -1,10 +1,11 @@
 #pragma once
 
 #include "Core/OpaaxTypes.h"
+#include "Core/Log/Logger.h"
 #include "Core/String/OpaaxString.hpp"
+
 #include "Window/Window.h"
 
-#include "Core/Log/Logger.h"
 #include "Application/Services/IAppService.h"
 
 namespace Opaax
@@ -12,15 +13,11 @@ namespace Opaax
     struct EngineConfigData;
 
     inline constexpr LogCategory LogWindowManager{"WindowManager"};
-
-    // Pure config -> props mapping (testable without GLFW).
+    
     OPAAX_API WindowProps MakeWindowProps(const EngineConfigData& InData);
 
     // =============================================================================
-    // IWindowManager — owns the application's main window. Window creation spins up a
-    // GL/VK context, so it is NOT done at construction: the live host calls
-    // CreateMainWindow() during InitializeApplication. Get<IWindowManager>() NEVER
-    // returns null — the null object simply has no window.
+    // IWindowManager — owns the application's main window.
     // =============================================================================
     class OPAAX_API IWindowManager : public IAppService
     {
@@ -46,7 +43,6 @@ namespace Opaax
         virtual Window* GetMainWindow() const = 0;
 
         /**
-         * 
          * @return true if window is not nullptr false otherwise
          */
         bool HasMainWindow() const { return GetMainWindow() != nullptr; }

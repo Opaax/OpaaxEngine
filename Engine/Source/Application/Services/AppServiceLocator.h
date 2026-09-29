@@ -3,6 +3,7 @@
 
 #include "IAppService.h"
 #include "Core/EngineAPI.h"
+#include "Core/OpaaxTRequire.hpp"
 #include "Core/OpaaxTypes.h"
 
 namespace Opaax
@@ -43,13 +44,14 @@ namespace Opaax
          * @return A reference of the constructed service
          */
         template<class TInterface, class TImpl, typename... Args>
-        requires std::is_base_of_v<TInterface, TImpl> && std::is_base_of_v<IAppService, TInterface>
+        requires TIsBaseOf(TInterface, TImpl) && TIsBaseOf(IAppService, TInterface)
         TInterface& Provide(Args&&... InArgs)
         {
-            TUniquePtr<TImpl> lImpl = MakeUnique<TImpl>(std::forward<Args>(InArgs)...);
-            TInterface&      lRef  = *lImpl;
-            const ServiceTypeID lId = TInterface::StaticTypeID();
-            m_Services[lId] = std::move(lImpl);
+            TUniquePtr<TImpl>   lImpl   = MakeUnique<TImpl>(Forward<Args>(InArgs)...);
+            TInterface&         lRef    = *lImpl;
+            const ServiceTypeID lId     = TInterface::StaticTypeID();
+            
+            m_Services[lId] = Move(lImpl);
             m_Order.emplace_back(lId);
             return lRef;
         }
@@ -69,7 +71,8 @@ namespace Opaax
         {
             TInterface&         lRef = *InImpl;
             const ServiceTypeID lId  = TInterface::StaticTypeID();
-            m_Services[lId] = std::move(InImpl);
+            
+            m_Services[lId] = Move(InImpl);
             m_Order.emplace_back(lId);
             return lRef;
         }

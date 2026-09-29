@@ -143,4 +143,16 @@ namespace Opaax
     {
         return std::move(Arg);
     }
+    
+    template <typename T>
+    constexpr T&& Forward(std::remove_reference_t<T>& Arg) noexcept
+    {
+        return static_cast<T&&>(Arg);
+    }
+
+    template <typename T>
+    constexpr T&& Forward(std::remove_reference_t<T>&& Arg) noexcept
+    {
+        return static_cast<T&&>(Arg);
+    }
 }

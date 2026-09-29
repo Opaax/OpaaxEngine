@@ -21,11 +21,6 @@ namespace Opaax
         };
     }
 
-    // NOTE: WindowModeFromString and ToString(EWindowMode) are GONE from here. ToString moved beside
-    // its enum in Core/Window/Window.h (I11's default rule — the exception that kept it here was
-    // really about the parser's logging), and the parser itself died with the string config field:
-    // an EWindowMode cannot hold an unknown mode, so there is nothing to fall back from.
-
     // =========================================================================
     // Pure config -> props mapping.
     // =========================================================================
