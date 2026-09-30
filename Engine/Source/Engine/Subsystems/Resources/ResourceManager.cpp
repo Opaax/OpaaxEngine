@@ -3,12 +3,11 @@
 namespace Opaax
 {
     // =========================================================================
-    // Lifecycle — Startup performs ZERO disk IO and ZERO GPU work (pools are
-    // lazy), which is exactly what lets Resources be the first engine subsystem.
+    // Lifecycle — Startup does no IO and no GPU work (pools are created on demand).
     // =========================================================================
     ResourceManager::~ResourceManager()
     {
-        // Unload while pools + manager are still alive (child-Ref dtors call back in).
+        // Unload while the pools and the manager are still alive.
         FlushAll();
     }
 
@@ -23,31 +22,27 @@ namespace Opaax
     }
 
     // =========================================================================
-    // The pump — the single point where pool mutation is finalised. Async payloads
-    // published this frame land via the job system's completion drain (the engine
-    // loop's job, not ours); here we sweep the graveyard, destroying every slot
-    // released since the previous pump. That deferral is the frame-stable guarantee:
-    // a pointer returned by Resolve() stays valid until the next Update().
+    // Update — destroys the slots released since the last Update. Deferring this is what
+    //   keeps pointers returned by Resolve() valid until the next Update().
     // =========================================================================
     void ResourceManager::Update(double /*InDeltaTime*/)
     {
         {
             TLockGuard<RecursiveMutex> lLock(m_Mutex);
-            ++m_PumpEpoch; // advance BEFORE collecting: a view from last frame is now stale
+            ++m_PumpEpoch; // before collecting: last frame's views are now stale
             for (TUniquePtr<IResourcePool>& lPool : m_Pools)
             {
                 if (lPool)
                 {
-                    lPool->CollectGarbage(); // may cascade-release composites -> Release re-locks (recursive)
+                    lPool->CollectGarbage(); // may release children (re-locks)
                 }
             }
         }
-        FirePendingCallbacks(); // deliver LoadAsync completions (user code runs outside the lock)
+        FirePendingCallbacks(); // LoadAsync callbacks, outside the lock
     }
 
-    // Poll each pending completion outside the lock (user callbacks may re-enter LoadAsync
-    // or do work). A closure returns true once it has fired; keep the still-loading ones,
-    // merging back any callbacks registered during firing.
+    // Poll pending completions outside the lock (callbacks may call LoadAsync).
+    // Keep the ones still loading, plus any registered during firing.
     void ResourceManager::FirePendingCallbacks()
     {
         TDynArray<TFunction<bool()>> lBatch;
@@ -60,7 +55,7 @@ namespace Opaax
         TDynArray<TFunction<bool()>> lStillPending;
         for (TFunction<bool()>& lPoll : lBatch)
         {
-            if (!lPoll()) { lStillPending.emplace_back(Move(lPoll)); } // still Loading -> keep
+            if (!lPoll()) { lStillPending.emplace_back(Move(lPoll)); } // still loading
         }
 
         TLockGuard<RecursiveMutex> lLock(m_Mutex);
@@ -70,13 +65,9 @@ namespace Opaax
 
     void ResourceManager::FlushAll()
     {
-        // NOTE: composite payloads release their child refs as they unload, so a
-        // pool holding composites should ideally flush before the pools it depends
-        // on. Flushing in creation order relies on the leak warning to surface
-        // anything still referenced — good enough for the current type set.
+        // Pools are flushed in creation order; the leak warning reports anything still referenced.
         TLockGuard<RecursiveMutex> lLock(m_Mutex);
-        // Drop pending completions FIRST — each holds an internal claim; releasing them
-        // before UnloadAll keeps in-flight async loads from tripping the leak warning.
+        // Drop pending completions first (each holds a claim), so async loads do not report leaks.
         m_PendingCallbacks.clear();
         for (TUniquePtr<IResourcePool>& lPool : m_Pools)
         {

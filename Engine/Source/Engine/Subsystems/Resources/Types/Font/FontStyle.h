@@ -10,27 +10,12 @@
 namespace Opaax
 {
     // =============================================================================
-    // FontStyle — the four axes a typeface is CHOSEN by: script, weight, width, slant.
-    //
-    //   Google Fonts' own vocabulary, deliberately, because that is where the files come from:
-    //   `roboto-greek-500-italic.ttf` states three of the four in its name. Naming the axes the way
-    //   the source names them is what makes "which file is this?" answerable without a table.
-    //
-    //   NOT under Renderer/: the layout walker never sees a style. It draws a face that has already
-    //   been chosen, so this is selection vocabulary and it lives with the family that resolves it.
-    //
-    //   Four enums rather than four numbers, so every one of them draws as a dropdown with no editor
-    //   code (**I15**) and a value outside the set is not expressible.
+    // FontStyle — the four axes that pick a face: script, weight, width, slant
+    //   (named like Google Fonts files, e.g. roboto-greek-500-italic.ttf).
     // =============================================================================
 
     /**
-     * Which SCRIPT a face covers — Google's subset names, one per file.
-     *
-     * The subset is a SELECTION key, not a bake instruction: `FontBake` asks the file what it
-     * carries. So this says which file to reach for, and the file says what is in it.
-     *
-     * No CJK member, and that is the same line `FontBake::BakeParams::LastCodepoint` draws: Chinese
-     * and Japanese need a dynamic atlas before they need an enumerator.
+     * Which script a face covers (Google Fonts subset names). No CJK yet.
      */
     enum class EFontSubset : Uint8
     {
@@ -66,10 +51,7 @@ namespace Opaax
     }
 
     /**
-     * Stroke weight, on the CSS/Google scale.
-     *
-     * The numbers are the enumerator VALUES, not decoration: "nearest weight" — what a family falls
-     * back to when it has no exact match — is then a subtraction rather than a table.
+     * Stroke weight (CSS scale). The values are the weights, so "nearest" is a subtraction.
      */
     enum class EFontWeight : Uint16
     {
@@ -104,19 +86,14 @@ namespace Opaax
         }
     }
 
-    /** The weight as its number, for the arithmetic the fallback ladder does. */
+    /** The weight as a number. */
     inline Uint16 WeightValue(const EFontWeight InWeight) noexcept
     {
         return static_cast<Uint16>(InWeight);
     }
 
     /**
-     * Horizontal proportion.
-     *
-     * NOTHING RESOLVES ANYTHING BUT `Normal` TODAY, and that is a property of the files rather than
-     * of this enum: the static Roboto export carries no width axis — condensed is a SEPARATE family
-     * (Roboto Condensed), or the variable font. The axis is here so that family drops in without a
-     * file-format change to every `.opaaxfont` already written.
+     * Horizontal proportion. Only Normal is used by the current font files.
      */
     enum class EFontWidth : Uint8
     {
@@ -140,7 +117,7 @@ namespace Opaax
         }
     }
 
-    /** Upright or slanted. An enum rather than a bool so it reads as an axis beside the other three. */
+    /** Upright or italic. */
     enum class EFontSlant : Uint8
     {
         Normal,
@@ -160,11 +137,7 @@ namespace Opaax
     }
 
     /**
-     * A request: "Roboto, greek, medium, italic". What a family is asked for and what one entry
-     * answers to.
-     *
-     * REFLECTED, so a field of this type folds into a tree node of four dropdowns with no drawer
-     * written for it — the same nesting a config's Window group already uses.
+     * A style request: "Roboto, greek, medium, italic". Reflected (four dropdowns in the editor).
      */
     struct FontStyleKey
     {

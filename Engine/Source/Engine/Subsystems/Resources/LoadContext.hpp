@@ -9,16 +9,11 @@
 #include "ResourcePool.hpp"
 
 // =============================================================================
-// LoadContext — composite loading (Level -> Textures), refcounts chain.
-//
-//   A loader receives LoadContext& and Acquire()s its hard dependencies through
-//   it: refs chain (releasing the parent releases them), and every Acquire records
-//   a forward+reverse edge in the dependency graph. The context carries the
-//   in-flight load chain, so a path already loading is a HARD CYCLE — Acquire
-//   fails it loudly. The hard-reference graph is therefore a DAG by construction.
-//
-//   Templated Acquire<TSub> is declared here and DEFINED in ResourceManager.h
-//   (needs the complete manager) — same cycle-break as ResourceRef.
+// LoadContext — loading with dependencies (Level -> Textures).
+//   A loader acquires its dependencies through it: they stay loaded while the parent
+//   holds them, and each one is recorded in the dependency graph. A path that is already
+//   loading is a cycle: Acquire fails.
+//   Acquire<TSub> is defined in ResourceManager.h (needs the complete manager).
 // =============================================================================
 namespace Opaax
 {
@@ -30,9 +25,8 @@ namespace Opaax
         // CTORS
         // =============================================================================
     public:
-        // bDeferred=false (sync): the manager publishes each slot inline as it loads.
-        // bDeferred=true (async): loads leave slots Loading + record them here for a
-        // single main-thread PublishAll() at the pump — Initialize() stays off the worker.
+        // Sync: each slot is published as it loads.
+        // Async (bDeferred): slots stay Loading and are published on the main thread by PublishAll().
         LoadContext(ResourceManager& InManager, ResourceDependencyGraph& InDeps, bool bInDeferred = false) noexcept
             : m_Manager(InManager)
             , m_Deps(InDeps)
@@ -48,19 +42,15 @@ namespace Opaax
         // =============================================================================
     public:
         /**
-         * Acquire a hard sub-dependency. Recursion into the manager; the returned Ref keeps it alive as long as the parent payload holds it. 
-         * A path already in the in-flight chain returns an INVALID ref (cycle) — the parent's Load then fails.
-         * @tparam TSub 
-         * @param InPath 
-         * @return 
+         * Loads a dependency. The returned Ref keeps it alive while the parent holds it.
+         * A path that is already loading (cycle) returns an invalid ref, and the parent's Load fails.
          */
         template<CResource TSub>
         ResourceRef<TSub> Acquire(const char* InPath); // defined in ResourceManager.h
         
         /**
-         * Push a path id entering its load; false if it is already loading (a cycle).
-         * @param InId 
-         * @return 
+         * Marks a path as loading.
+         * @return False if it is already loading (cycle)
          */
         bool PushLoading(Uint32 InId)
         {
@@ -73,9 +63,6 @@ namespace Opaax
             return true;
         }
 
-        /**
-         * 
-         */
         void PopLoading() noexcept
         {
             if (!m_Chain.empty())
@@ -84,7 +71,6 @@ namespace Opaax
             }
         }
 
-        /***/
         bool IsLoading(Uint32 InId) const noexcept
         {
             for (const Uint32 lId : m_Chain)
@@ -99,26 +85,25 @@ namespace Opaax
         }
 
         /**
-         * @return The resource whose Load is currently running (edge parent) — None at root.
+         * @return The resource currently loading (dependency parent), or None at the root
          */
         Uint32 CurrentParent() const noexcept
         {
             return m_Chain.empty() ? OpaaxGlobal::ID_None : m_Chain.back();
         }
 
-        // ----- deferred publish (async) -----------------------------------------
+        // Deferred publish (async)
         bool IsDeferred() const noexcept { return m_Deferred; }
 
-        // Record a freshly-filled Loading slot to publish at the pump. Accumulated in
-        // load order (post-order: children before their parent), so PublishAll finalizes
-        // dependencies first. Runs on the loading thread; the list is context-local.
+        // Records a filled Loading slot to publish on the main thread. Children come before
+        // their parent, so dependencies are published first.
         void AddPendingInit(IResourcePool* InPool, Uint32 InSlot)
         {
             m_PendingInit.emplace_back(InPool, InSlot);
         }
 
-        // Main-thread: publish every recorded slot (Initialize + flip Loaded), children
-        // first. The caller holds the manager lock. Idempotent — clears the list.
+        // Main thread: publishes every recorded slot, children first. The caller holds the
+        // manager lock. Clears the list.
         void PublishAll()
         {
             for (const PendingInit& lEntry : m_PendingInit)
@@ -132,7 +117,7 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        // A filled-but-not-yet-published slot (async): FinalizeSlot(Slot) on Pool at the pump.
+        // A filled slot waiting to be published (async).
         struct PendingInit
         {
             IResourcePool* Pool;
@@ -141,8 +126,8 @@ namespace Opaax
 
         ResourceManager&         m_Manager;
         ResourceDependencyGraph& m_Deps;
-        TDynArray<Uint32>        m_Chain;       // interned path ids currently in-flight
-        TDynArray<PendingInit>   m_PendingInit; // async: slots awaiting main-thread publish
-        bool                     m_Deferred;    // async load -> defer publish to the pump
+        TDynArray<Uint32>        m_Chain;       // path ids currently loading
+        TDynArray<PendingInit>   m_PendingInit; // async: slots waiting to be published
+        bool                     m_Deferred;    // async: publish on the main thread
     };
 }

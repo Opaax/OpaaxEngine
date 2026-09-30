@@ -45,8 +45,7 @@ namespace Opaax
             return false;
         }
 
-        // A misspelled enumerator THROWS out of the enum bridge rather than silently reading as the
-        // first value — which is what this catch is for, and why OutData is untouched on the way out.
+        // An unknown enum value throws; OutData is untouched then.
         try
         {
             OutData = lJson.get<FontFamilyData>();

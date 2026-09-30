@@ -8,10 +8,8 @@
 #include "Engine/Subsystems/Resources/ResourceConcept.hpp"
 
 // =============================================================================
-// BinaryResource — the reference CResource: a whole file loaded as raw bytes.
-// No GPU, no dependencies — the simplest thing that satisfies the contract, and
-// the M-RES-1 proving ground. Placeholder policy: a missing binary degrades to
-// an empty blob rather than failing the caller.
+// BinaryResource — a whole file loaded as raw bytes. The simplest resource type.
+// Placeholder policy: a missing file gives an empty blob.
 // =============================================================================
 namespace Opaax
 {
@@ -37,7 +35,7 @@ namespace Opaax
 
         static BinaryResource Placeholder() { return BinaryResource{}; } // empty blob
 
-        // Optional bytes accounting hook picked up by ResourcePool (if-constexpr).
+        // Optional size hook, used by ResourcePool.
         Uint64 ByteSize() const noexcept { return static_cast<Uint64>(Bytes.size()); }
     };
 }

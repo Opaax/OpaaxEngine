@@ -8,7 +8,7 @@
 #include "World/World.h"
 #include "World/WorldManager.h"
 #include "World/Components/CameraComponent.h"
-#include "World/Components/TransformComponent.h"   // WHERE the camera looks from
+#include "World/Components/TransformComponent.h"
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityHierarchy.h"
 #include "World/Entity/EntityMeta.h"
@@ -28,8 +28,7 @@ namespace Opaax
     }
 
     // =========================================================================
-    // Resolve — the rule, with nothing around it. First camera wins; none answers the
-    // default frame, so no caller has to special-case an empty world.
+    // Resolve — the first camera wins; no camera gives the default view.
     // =========================================================================
     CameraResolution CameraManager::Resolve(World& InWorld)
     {
@@ -42,7 +41,7 @@ namespace Opaax
 
                 if (lResolution.Count == 1)
                 {
-                    // WORLD (§HR) — a camera parented to the player follows it for free.
+                    // World transform: a camera parented to the player follows it.
                     const Vector2F lFrom = EntityHierarchy::WorldTransform(Entity{ InEntity, &InWorld }).Position;
 
                     lResolution.View   = CameraView{ lFrom, InCamera.OrthoSize };
@@ -54,8 +53,7 @@ namespace Opaax
     }
 
     // =========================================================================
-    // Update — Edit worlds are skipped entirely: the editor's camera owns that slot, and
-    // this is the ONE place the Edit/Play fork is stated.
+    // Update — Edit worlds are skipped: the editor's camera sets their view.
     // =========================================================================
     void CameraManager::Update(double /*DeltaTime*/)
     {
@@ -68,8 +66,7 @@ namespace Opaax
 
         const CameraResolution lResolution = Resolve(*lWorld);
 
-        // Written UNCONDITIONALLY, so removing the last camera mid-play snaps back to the default
-        // frame instead of freezing on the deleted one's last value.
+        // Always written, so removing the last camera resets to the default view.
         lWorld->SetCameraView(lResolution.View);
 
         ReportResolution(*lWorld, lResolution);

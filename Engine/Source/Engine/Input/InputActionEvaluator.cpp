@@ -9,7 +9,7 @@ namespace Opaax
 {
     namespace
     {
-        /** @return the dense index for InKey, or KEY_STATE_COUNT when it is out of range. */
+        /** @return The dense index for InKey, or KEY_STATE_COUNT when out of range */
         Uint16 ToKeyIndex(EKeyCode InKey) noexcept
         {
             const Uint16 lRaw = static_cast<Uint16>(InKey);
@@ -17,10 +17,7 @@ namespace Opaax
         }
 
         /**
-         * Held, OR pressed-and-released inside this frame.
-         *
-         * The second half is IN3: a tap that starts and ends between two reads leaves IsKeyDown
-         * false, and dropping it is exactly the input loss the edge latches exist to prevent.
+         * Held, or pressed and released within this frame (a quick tap).
          */
         bool IsActuated(const InputManager& InInput, EKeyCode InKey) noexcept
         {
@@ -92,13 +89,8 @@ namespace Opaax
         {
             if (lExisting.Name == InContext.Name)
             {
-                // IDEMPOTENT, and true is the honest answer: the postcondition the caller wants —
-                // "this context is active" — already holds. Adding it twice would double every
-                // binding, so refusing the WORK is right; refusing the CALL is not.
-                //
-                // Silent: two Play worlds coexist during a level swap (OpenLevel creates the new one
-                // before destroying the old), so each world's control subsystem adds the same context
-                // and the second one lands here EVERY time. A routine path is not news.
+                // Already active: nothing to do (adding it twice would double every binding).
+                // Happens every level change (both worlds add the same context), so no log.
                 return true;
             }
         }
@@ -111,8 +103,7 @@ namespace Opaax
         {
             if (ToKeyIndex(lBinding.Key) == InputManager::KEY_STATE_COUNT)
             {
-                // Gamepad codes live at 10000+. They are RESERVED but unfed (IN7), so accepting
-                // one would look supported and never fire — refused loudly instead.
+                // Gamepad codes (10000+) are reserved but not supported yet: refuse with a warning.
                 OPAAX_LOG(LogInputEvaluator, Warn,
                           "AddContext '{}' — binding for action '{}' uses key code {} which has no feed (gamepad is not wired yet). Skipped.",
                           InContext.Name, lBinding.Action, static_cast<Uint16>(lBinding.Key));
@@ -130,16 +121,12 @@ namespace Opaax
             lAccepted.Bindings.emplace_back(lBinding);
         }
 
-        // Counted BEFORE the move and the sort. Reading it back off m_Contexts.back() afterwards
-        // reports a DIFFERENT context's total, because a higher priority sorts to the FRONT — the
-        // first context added was the only one where back() happened to be the right answer, which
-        // is why "11 of 2 binding(s)" only appeared once a second context existed.
+        // Count before moving and sorting (sorting changes which context is at back()).
         const Uint64 lAcceptedCount = static_cast<Uint64>(lAccepted.Bindings.size());
 
         m_Contexts.emplace_back(Move(lAccepted));
 
-        // Highest priority first. stable_sort so two contexts at one priority keep the order they
-        // were added in, which makes "who consumes first" answerable rather than arbitrary.
+        // Highest priority first; stable_sort keeps insertion order for equal priorities.
         std::stable_sort(m_Contexts.begin(), m_Contexts.end(),
                          [](const InputMappingContext& InLeft, const InputMappingContext& InRight)
                          {
@@ -179,9 +166,7 @@ namespace Opaax
     // =========================================================================
     void InputActionEvaluator::Evaluate(const InputManager& InInput, double InDeltaTime, const InputKeyMask* InPreConsumed)
     {
-        // Captured BEFORE the values are cleared: Started and Completed are edges against the
-        // PREVIOUS frame's actuation, and that is the only thing carried across. The suppression
-        // flag rides alongside so a key held across a consumption boundary fires no phantom edge.
+        // Captured before clearing: Started/Completed compare with the previous frame.
         TDynArray<bool> lWasActuated;
         TDynArray<bool> lWasMaskSuppressed;
         lWasActuated.reserve(m_Actions.size());
@@ -201,8 +186,7 @@ namespace Opaax
             lEntry.State.bMaskSuppressed  = false;
         }
 
-        // Consumption is per KEY and lives for one frame only. It starts from what the UI already
-        // swallowed (UI10): a bound key the UI took is skipped exactly as a higher context's would be.
+        // Consumed keys (per key, this frame only), starting with the keys the UI used.
         InputKeyMask lConsumed{};
         if (InPreConsumed != nullptr)
         {
@@ -227,23 +211,20 @@ namespace Opaax
                     continue;
                 }
 
-                // A masked binding contributes no value, but a key physically down while masked is
-                // recorded so the un-mask frame does not read a rising edge (UI10). Checked here,
-                // not before FindEntry, so the flag lands on the action the key would have driven.
+                // A masked binding gives no value, but remember the key is down so unmasking
+                // does not produce a false press.
                 if (lConsumed[lIndex])
                 {
                     if (bActuated) { lEntry->State.bMaskSuppressed = true; }
                     continue;
                 }
 
-                // The raw value rides in x; Negate and Swizzle are what move it elsewhere, which
-                // is how four keys become one Axis2D without a composite concept in the format.
+                // The raw value goes in x; Negate and Swizzle move it (WASD -> Axis2D).
                 const Vector2F lRaw = Vector2F{bActuated ? 1.f : 0.f, 0.f};
 
                 lEntry->State.Value.Value += InputModifiers::ApplyAll(lRaw, lBinding.Modifiers);
 
-                // Consume only what is actually pressed: swallowing an untouched key would be a
-                // no-op with a confusing name.
+                // Consume only pressed keys.
                 if (lBinding.bConsume && bActuated)
                 {
                     lConsumed[lIndex] = true;
@@ -256,15 +237,11 @@ namespace Opaax
             ActionEntry&     lEntry = m_Actions[lIdx];
             InputActionState& lState = lEntry.State;
 
-            // AFTER the sum, which is the whole point: a binding's own modifiers see one key, and
-            // Normalize on four unit contributions changes nothing. Only here can the diagonal of
-            // a WASD composite be clamped to 1.
+            // Action modifiers apply to the sum (e.g. Normalize clamps the WASD diagonal to 1).
             lState.Value.Value = InputModifiers::ApplyAll(lState.Value.Value, lEntry.Action.Modifiers);
 
             lState.bTriggered = lState.Value.AsBool();
-            // A rise off a key that was merely UN-MASKED (still physically held from last frame) is
-            // not a press: it fires no Started, or a menu bound to the same key that closed it would
-            // reopen on the very next frame (UI10).
+            // A key held through an unmask is not a new press: no Started.
             lState.bStarted   = lState.bTriggered && !lWasActuated[lIdx] && !lWasMaskSuppressed[lIdx];
             lState.bCompleted = !lState.bTriggered && lWasActuated[lIdx];
 
@@ -280,8 +257,7 @@ namespace Opaax
             }
             else
             {
-                // Zeroed rather than remembered, which is what makes a route close self-healing:
-                // nothing carries a partial hold across an interruption the reader never saw.
+                // Reset rather than kept, so an interruption never leaves a partial hold.
                 lState.HeldSeconds  = 0.f;
                 lState.bHoldLatched = false;
             }

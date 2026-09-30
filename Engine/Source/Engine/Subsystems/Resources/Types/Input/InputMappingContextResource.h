@@ -9,12 +9,8 @@
 namespace Opaax
 {
     // =============================================================================
-    // InputMappingContextResource — a `.opaaxinputmap` as a RESOURCE. MoverResource's shape.
-    //
-    //   PLACEHOLDER: a missing context yields an EMPTY one, which adds no bindings and leaves
-    //   every action reading zero. The game runs and does not respond, rather than failing to
-    //   boot — degraded and visible, and AddContext logs how many bindings it accepted so "0"
-    //   is on the screen rather than inferred.
+    // InputMappingContextResource — a .opaaxinputmap as a resource.
+    //   Placeholder policy: an empty context (no bindings).
     // =============================================================================
     struct InputMappingContextResource final
     {
@@ -30,13 +26,13 @@ namespace Opaax
             InputMappingContextResource lResource;
             if (!InputMappingContextFile::Load(OpaaxString(InPath), lResource.Data))
             {
-                return std::nullopt;   // InputMappingContextFile already logged which reason it was
+                return std::nullopt;   // InputMappingContextFile already logged why
             }
 
             return lResource;
         }
 
-        /** An empty context: no bindings, so nothing is driven and nothing is consumed. */
+        /** An empty context: no bindings. */
         static InputMappingContextResource Placeholder() { return InputMappingContextResource{}; }
 
         Uint64 ByteSize() const noexcept

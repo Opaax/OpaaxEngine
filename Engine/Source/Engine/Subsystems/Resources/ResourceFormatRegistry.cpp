@@ -1,12 +1,10 @@
 #include "ResourceFormatRegistry.h"
 
-#include <spdlog/fmt/ranges.h>   // fmt::join — the Sealed line names every entry
+#include <spdlog/fmt/ranges.h>   // fmt::join
 
 namespace Opaax
 {
-    // NOTE: every refusal below is an Error log + a false return, never OPAAX_ASSERT — the same
-    // ruling ComponentRegistry::AddEntry carries, for the same reasons (a debugbreak is untestable
-    // in Debug and compiles away in Release, which is the build where a late registration matters).
+    // Refusals log an error and return false (not an assert, so Release builds report them too).
     bool ResourceFormatRegistry::AddEntry(Uint32 InTypeId, OpaaxStringID InName, const ResourceFormat* InFormat,
                                           ResourceAcquireFn InAcquire)
     {
@@ -41,8 +39,7 @@ namespace Opaax
             return false;
         }
 
-        // Normalize and check EVERY extension before claiming any: a type that half-registers would
-        // leave the table describing a loader that was refused.
+        // Check every extension before claiming any: no half registration.
         TDynArray<OpaaxStringID> lExtensions;
         lExtensions.reserve(InFormat->ExtensionCount);
 
@@ -58,8 +55,7 @@ namespace Opaax
 
             if (const ResourceFormatEntry* lOwner = FindByExtension(lExtension))
             {
-                // Two loaders for one extension means the answer to "what opens this file?" depends
-                // on registration order. Refuse, and name both sides so the fix is obvious.
+                // Two loaders for one extension: refuse, naming both.
                 OPAAX_LOG(LogResourceFormatRegistry, Error,
                           "Register '{}' — extension '{}' is already claimed by '{}'.",
                           InName, lExtension, lOwner->Name);

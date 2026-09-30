@@ -11,25 +11,17 @@
 
 namespace Opaax
 {
-    struct MoveModeResource;   // only NAMED — TResourcePath never completes its parameter
+    struct MoveModeResource;
 
     // =============================================================================
-    // MoverData — the modes one kind of thing can move in, under SHORT names. The `.opaaxmover`
-    //   payload, and the LIBRARY of the mover family.
-    //
-    //   ITS WHOLE JOB IS THE ALIAS, exactly as AnimationLibraryData's is. A tuning is its own
-    //   asset (MoveModeData), reusable and individually editable; this is what lets gameplay say
-    //   OPAAX_ID("Fly") instead of naming "Movers/Hero_Fly.opaaxmovemode" — so switching how
-    //   something moves is an integer compare, not a path.
-    //
-    //   A MOVER IS A BAG OF MODES, which is the whole design: a character that only walks has one
-    //   entry, and gaining flight is adding a second — never a new component and never a subclass.
+    // MoverData — the movement modes of one kind of entity, under short names (.opaaxmover).
+    //   Lets gameplay use OPAAX_ID("Fly") instead of a path. Gaining a mode means adding an entry.
     // =============================================================================
 
-    /** One alias: the name gameplay asks for, and the tuning it resolves to. */
+    /** One entry: the name gameplay uses, and its tuning. */
     struct MoverEntry
     {
-        /** What gameplay writes. The editor pre-fills it from the file stem (**I13**). */
+        /** The name gameplay uses. The editor pre-fills it from the file name. */
         OpaaxStringID Name;
 
         /** Asset-relative ("Movers/Hero_Ground.opaaxmovemode") or a mount. */
@@ -43,18 +35,14 @@ namespace Opaax
     };
 
     /**
-     * A mover: the named modes, and which one a component with no opinion starts in.
-     *
-     * NO OPAAX_PROPERTIES for Entries — it is a TDynArray and no property drawer draws a list, the
-     * same split AnimationLibraryData and SpriteSheetData both make. The editor folds over the
-     * SELECTED entry; the list itself is the panel's UI, which is what a list has to be to be
-     * reorderable.
+     * A mover: named modes, and the default mode.
+     * Entries are edited by the editor panel (lists are not drawn by the property system).
      */
     struct MoverData
     {
         TDynArray<MoverEntry> Entries;
 
-        /** Entered by a mover that names no mode of its own. */
+        /** Used when a mover names no mode. */
         OpaaxStringID DefaultMode;
 
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(MoverData, Entries, DefaultMode)
@@ -62,10 +50,7 @@ namespace Opaax
         Uint32 EntryCount() const noexcept { return static_cast<Uint32>(Entries.size()); }
 
         /**
-         * The entry called InName, or nullptr. Exact — no fallback.
-         *
-         * Public because the editor needs it too: "does this name already exist" is what stops a
-         * rename producing two entries one lookup can never tell apart.
+         * The entry named InName, or nullptr. Exact match only.
          */
         const MoverEntry* FindExact(const OpaaxStringID InName) const noexcept
         {
@@ -86,13 +71,8 @@ namespace Opaax
         }
 
         /**
-         * What InName resolves to: the entry itself, or — when the caller has NO OPINION (an
-         * invalid id) — the DefaultMode, then the first entry.
-         *
-         * A NAMED mode that is absent answers nullptr rather than falling back, so the caller can
-         * say so. Silently moving a different way for a misspelled name is the wrong-answer
-         * failure this codebase refuses; "I have no opinion" is a different question and is the
-         * only one that gets a default. AnimationLibraryData::Find, verbatim in shape.
+         * The mode for InName. An invalid id gives the DefaultMode, then the first entry.
+         * An unknown name gives nullptr (no silent fallback).
          */
         const MoverEntry* Find(const OpaaxStringID InName) const noexcept
         {

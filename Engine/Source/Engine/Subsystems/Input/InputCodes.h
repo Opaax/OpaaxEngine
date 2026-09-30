@@ -5,11 +5,8 @@
 namespace Opaax
 {
     // =============================================================================
-    // EKeyCode
-    //
-    // Canonical engine key / mouse / gamepad code. Values follow the GLFW/SDL
-    // numbering for keyboard + mouse so backend translation is a plain cast; mouse
-    // and gamepad live in reserved high ranges to stay collision-free.
+    // EKeyCode — key, mouse and gamepad codes. Keyboard and mouse follow GLFW numbering;
+    //   mouse and gamepad use reserved high ranges.
     // =============================================================================
     enum class EKeyCode : Uint16
     {

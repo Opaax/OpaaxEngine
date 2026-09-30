@@ -4,38 +4,24 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
-#include "Core/Maths/MathTypes.h"            // Vector2F — Physics.Gravity
-#include "Core/Maths/MathsJson.hpp"          // ...and the json bridge that writes it
-#include "Core/Reflection/OpaaxEnumJson.h"   // every enum field below writes its ToString label
+#include "Core/Maths/MathTypes.h"
+#include "Core/Maths/MathsJson.hpp"
+#include "Core/Reflection/OpaaxEnumJson.h"
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringJson.h"
-#include "Window/Window.h"                   // EWindowMode
-#include "Physics/PhysicsBackend.h"          // EPhysicsBackend
-#include "Physics/PhysicsTypes.h"            // EWorldBoundsResponse — PODs over Core, NOT the seam
-#include "RHI/RHIBackend.h"                  // EBackend
+#include "Window/Window.h"
+#include "Physics/PhysicsBackend.h"
+#include "Physics/PhysicsTypes.h"
+#include "RHI/RHIBackend.h"
 
 namespace Opaax
 {
     // =============================================================================
-    // EngineConfigData — the engine runtime block of <ProjectRoot>/Configs/Engine.config.
-    //
-    //   NESTED STRUCTS MIRROR THE FILE. Each group is a type of its own, so the json nests because
-    //   the C++ nests — instead of a flat struct plus a hand-written serializer that knew how to
-    //   fold it. Serialization is the same one macro a component carries; there is no codec, no key
-    //   constants and no parser here, which is the whole point (one idiom, not two).
-    //
-    //   NeedRestart sits on a GROUP whose every field is read once at boot, and moves onto the
-    //   FIELD once a sibling is read live — Render did (bInterpolation, block CN): Backend keeps
-    //   the flag, the group does not.
-    //
-    //   EVERY FIELD HERE HAS A READER. The Assets / Log / Physics groups and Render.Interpolation
-    //   were deleted on 2026-08-21 — they had none, and a settings screen offering values that do
-    //   nothing is worse than a short one. Each comes back with the system that reads it.
-    //   *Physics came back on 2026-09-07 with the physics seam, exactly on that clause.*
-    //
-    //   Defaults match the historical hardcoded values, so a missing config keeps behaviour
-    //   unchanged — and with _WITH_DEFAULT, so does a config missing any single key.
+    // EngineConfigData — the engine section of <ProjectRoot>/Configs/Engine.config.
+    //   Nested structs are nested JSON objects. A missing key keeps its default.
+    //   NeedRestart is set on a group when all its fields are read at startup,
+    //   otherwise on the individual fields.
     // =============================================================================
 
     struct WindowSettings
@@ -44,9 +30,6 @@ namespace Opaax
         Uint32      Width  = 1280;
         Uint32      Height = 720;
 
-        // A REAL enum, so the editor gives it a dropdown and a typo is not expressible. It still
-        // writes "Windowed" — the json bridge stores the ToString label, never the ordinal — so the
-        // file did not change when this stopped being a string.
         EWindowMode Mode = EWindowMode::Windowed;
 
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(WindowSettings, Title, Width, Height, Mode)
@@ -60,14 +43,11 @@ namespace Opaax
 
     struct RenderSettings
     {
-        // What the project ASKS for. Whether it can be honoured is ResolveSupportedBackend's answer,
-        // asked at the point of use — Vulkan is a legal thing to write here and is coerced, loudly.
+        // Requested backend. Unsupported backends (e.g. Vulkan without SDK) fall back, with a warning.
         EBackend Backend = EBackend::OpenGL;
 
         /**
-         * Blend a fixed-step pose toward the next one for DISPLAY, so motion does not step at the
-         * fixed rate on a faster screen. Deleted in the 2026-08-21 cleanup for having no reader;
-         * back with one (PH21). ON by default — the interpolated picture is the correct one.
+         * Interpolate fixed-step poses for display, so motion is smooth on fast screens.
          */
         bool bInterpolation = true;
 
@@ -84,8 +64,7 @@ namespace Opaax
     struct WorldBoundsSettings
     {
         /**
-         * OFF by default, and generously sized when on. A kill volume is the wrong default for an
-         * endless scroller, and a body quietly vanishing is worse than one falling forever.
+         * Off by default: a body falling forever is better than one silently destroyed.
          */
         bool bEnabled = false;
 
@@ -93,8 +72,8 @@ namespace Opaax
         Vector2F Max = {  100000.f,  100000.f };
 
         /**
-         * What the ENGINE does after the event, which always fires either way. EventOnly leaves
-         * the reaction to the game; EventAndDestroy also reaps the entity.
+         * What the engine does when a body leaves the bounds. The event always fires;
+         * EventAndDestroy also destroys the entity.
          */
         EWorldBoundsResponse Response = EWorldBoundsResponse::EventAndDestroy;
 
@@ -111,21 +90,20 @@ namespace Opaax
     struct PhysicsSettings
     {
         /**
-         * Which implementation backs IPhysicsWorld. A real enum, so the editor gives it a dropdown
-         * and an unbuildable backend is not expressible — the same treatment Render.Backend gets.
+         * Physics implementation.
          */
         EPhysicsBackend Backend = EPhysicsBackend::Box2D;
 
         /** Acceleration on dynamic bodies, world units / s^2. Y-up, so falling is negative. */
         Vector2F Gravity = { 0.f, -981.f };
 
-        /** How many world units make a metre. ~100 is the 2D convention the sprites are authored at. */
+        /** World units per metre (~100 in 2D). */
         float LengthUnitsPerMeter = 100.f;
 
-        /** Solver sub-steps per fixed step. Higher is a stabler stack for more cost. */
+        /** Solver sub-steps per fixed step. Higher is more stable but costs more. */
         Int32 SubStepCount = 4;
 
-        /** The optional kill volume. Its own type, so the json nests because the C++ nests. */
+        /** Optional kill volume. */
         WorldBoundsSettings WorldBounds;
 
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(PhysicsSettings, Backend, Gravity,
@@ -142,11 +120,7 @@ namespace Opaax
     struct StatsSettings
     {
         /**
-         * Profile a SHIPPING build. A dev build always profiles — that is what dev means — so this
-         * asks the one question the build cannot answer for itself, and it is a config rather than
-         * a CMake flag precisely so profiling a shipped game needs no recompile.
-         *
-         * Off by default: a shipped binary should not carry live instrumentation unless asked.
+         * Profile a shipping build (dev builds always profile). Off by default.
          */
         bool EnableInShipBuild = false;
 
@@ -164,10 +138,7 @@ namespace Opaax
 
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(EngineConfigData, Window, Render, Physics, Stats)
 
-        // NeedRestart on the groups read once during boot: the window is built from Window, the
-        // stats service is provided-or-not in Bootstrap, and a physics world is built from Physics
-        // when a Play world starts — which a running one cannot be re-founded on. Render is mixed,
-        // so its flag lives on Backend (RendererManager resolves it at Startup).
+        // NeedRestart on groups read at startup. Render is mixed, so only Backend has the flag.
         OPAAX_PROPERTIES(EngineConfigData,
                          OPAAX_PROP(Window).SetFlags(EPropertyFlags::NeedRestart),
                          OPAAX_PROP(Render),

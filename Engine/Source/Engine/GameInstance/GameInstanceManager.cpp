@@ -46,8 +46,7 @@ namespace Opaax
 
         if (m_Registries == nullptr)
         {
-            // A bare manager in a test. No candidates exist, so refusing is honest: a game with
-            // no subsystems would look like a working session and behave like nothing.
+            // No registry (e.g. in a test): refuse.
             OPAAX_LOG(LogGameInstanceManager, Error, "StartGame refused — no registries to create candidates from.");
             return false;
         }
@@ -81,8 +80,7 @@ namespace Opaax
 
         const Uint64 lCount = m_GameInstance->GetSubsystemCount();
 
-        // TearDown while every engine sibling a context points at is still alive, THEN Shutdown.
-        // Both are idempotent, so the destructor below repeats them harmlessly (LC1 / LC3).
+        // TearDown while everything is still alive, then Shutdown. Both are safe to repeat.
         m_GameInstance->TearDownSubsystems();
         m_GameInstance->ShutdownSubsystems();
         m_GameInstance.reset();
@@ -102,8 +100,7 @@ namespace Opaax
 
     void GameInstanceManager::TearDown()
     {
-        // The host's EndGame has normally already run. This is the safety net for one that never
-        // reached it, taken HERE because it is the last phase where the context's referents live.
+        // In case the host never called EndGame; the context's references are still alive here.
         EndGame();
     }
 

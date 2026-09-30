@@ -8,10 +8,8 @@
 namespace Opaax
 {
     // =============================================================================
-    // Config_Engine — the engine runtime config block (window/render/physics/...),
-    // loaded from <ProjectRoot>/Configs/<FileName>. All Load/Save plumbing lives in
-    // TConfig<EngineConfigData>; this type only supplies its identity (type tag +
-    // file name) and its data type.
+    // Config_Engine — the engine config (window, render, physics, ...),
+    // loaded from <ProjectRoot>/Configs/Engine.config.
     // =============================================================================
     class OPAAX_API Config_Engine final : public TConfig<EngineConfigData>
     {

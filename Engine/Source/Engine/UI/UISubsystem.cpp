@@ -26,15 +26,14 @@ namespace Opaax
 
     bool UISubsystem::Startup()
     {
-        // Resolve the sibling tenant: the create pass builds every subsystem before any Startup, so
-        // it exists whatever the registration order (F3, one tier down). Null-tolerant — a game
-        // without input mapping is odd but not a crash here.
+        // Every subsystem exists before any Startup, so the sibling is found whatever the order.
+        // May be null (a game without input mapping).
         if (GameInstance* lGame = OpaaxApplication::GetAppService<IEngine>().GetGameInstances().GetGameInstance())
         {
             m_Mapping = lGame->GetSubsystems().GetSubsystem<InputMappingSubsystem>();
         }
 
-        // The ONE height every asset is authored against (UI2) — the project's, never an asset's.
+        // Every UI asset uses the project's reference height.
         m_Canvas.SetReferenceHeight(OpaaxApplication::GetAppService<IProjectManager>().UIReferenceHeight());
 
         BuildLoadingCover();
@@ -75,11 +74,10 @@ namespace Opaax
         TUniquePtr<UIWidget> lTree = LoadTree(InAssetPath, lAuthoredHeight);
         if (!lTree)
         {
-            return nullptr;   // LoadTree said why; the caller says what it loses
+            return nullptr;   // LoadTree logged why
         }
 
-        // The panel previewed it at ITS height; this canvas draws at the project's. Said once,
-        // here, rather than discovered as "it looks different in the game".
+        // Warn when the asset was designed at another height than the project's.
         if (lAuthoredHeight != m_Canvas.GetReferenceHeight())
         {
             OPAAX_LOG(LogUISubsystem, Warn, "'{}' was authored at a reference height of {} but the canvas is {} — it will not look like the panel (set uiReferenceHeight in the project, or re-save the asset at {})",
@@ -97,7 +95,7 @@ namespace Opaax
     void UISubsystem::BuildLoadingCover()
     {
         UIWidget& lRoot = m_LoadingCanvas.Root();
-        lRoot.bVisible  = false;   // down until a level is asked for
+        lRoot.bVisible  = false;   // hidden until a level is requested
 
         const IProjectManager& lProject = OpaaxApplication::GetAppService<IProjectManager>();
         const OpaaxString      lAsset   = lProject.LoadingScreen();
@@ -105,7 +103,7 @@ namespace Opaax
 
         if (!lAsset.IsEmpty())
         {
-            // Alone on its canvas, so the asset's own height IS the canvas's — nothing to disagree with.
+            // Alone on its canvas, so the asset's own height is used.
             float lAuthoredHeight = 0.f;
             if (TUniquePtr<UIWidget> lTree = LoadTree(lAsset, lAuthoredHeight))
             {
@@ -137,9 +135,8 @@ namespace Opaax
 
     void UISubsystem::OnLevelLoadRequested(const LevelLoadRequested&)
     {
-        // Visibility is read when the canvas is DRAWN, so this covers the frame the request came
-        // in on, wherever in the frame that was. A request while the cover is already up (a second
-        // swap) restarts its clock.
+        // Visibility is read at draw time, so this frame is already covered.
+        // A new request while visible restarts the timer.
         m_LoadingCanvas.Root().bVisible = true;
         m_CoverElapsed  = 0.0;
         m_bLoadFinished = false;
@@ -147,10 +144,7 @@ namespace Opaax
 
     void UISubsystem::OnLevelLoadFinished(const LevelLoadFinished&)
     {
-        // The old world's widgets left through RemoveChild, which already forgot any pointer under
-        // them (UI9) — only the cover is this tenant's to bring down, and Update does, once the
-        // floor is met. With no floor that is THIS frame: the swap resolves at the top of the loop
-        // and this tick runs after it, before the render.
+        // Only the loading screen is ours to hide, once the minimum time is reached.
         m_bLoadFinished = true;
     }
 
@@ -172,8 +166,7 @@ namespace Opaax
             }
         }
 
-        // Route the raw feed through the canvas, and tell the mapping what the UI swallowed BEFORE
-        // it evaluates — this tenant is registered ahead of input mapping so its Update runs first.
+        // Route the input to the canvas and report what the UI used, before input mapping runs.
         InputKeyMask lConsumed{};
         UIInputRouter::Route(m_Context->Input, m_Canvas, m_InputMode, lConsumed);
 
@@ -182,8 +175,7 @@ namespace Opaax
             m_Mapping->ConsumeThisFrame(lConsumed);
         }
 
-        // Every frame, like a view: the renderer draws what was submitted and forgets it. The cover
-        // goes AFTER, so it draws over — and a hidden root costs no pass (UI21).
+        // Submitted every frame. The loading screen goes after, so it draws on top.
         IEngine& lEngine = OpaaxApplication::GetAppService<IEngine>();
         lEngine.SubmitUICanvas(m_Canvas);
         lEngine.SubmitUICanvas(m_LoadingCanvas);

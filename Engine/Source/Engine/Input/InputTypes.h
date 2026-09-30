@@ -1,8 +1,8 @@
 #pragma once
 
 #include "Core/OpaaxTypes.h"
-#include "Core/Reflection/OpaaxEnum.h"     // OPAAX_ENUM_VALUES — the two enums below stamp it
-#include "Core/Reflection/OpaaxProperty.h" // OPAAX_PROPERTIES — InputModifierData draws itself
+#include "Core/Reflection/OpaaxEnum.h"
+#include "Core/Reflection/OpaaxProperty.h"
 #include "Core/Maths/MathTypes.h"
 #include "Core/String/OpaaxStringID.hpp"
 #include "Engine/Input/InputActionValue.h"
@@ -11,29 +11,24 @@
 namespace Opaax
 {
     // =============================================================================
-    // EInputTrigger — WHEN a binding fires. Named on the BIND call, not on the mapping.
-    //
-    //   Unreal splits UInputTrigger (on the mapping) from ETriggerEvent (on the binding).
-    //   Collapsing them to one concept on the binding side is what the user's
-    //   `Bind(this, trigger, callback)` asks for, and it makes the mapping asset smaller:
-    //   a key mapping carries no trigger and no hold time at all.
+    // EInputTrigger — when a bound handler is called. Chosen when binding, not in the mapping.
     // =============================================================================
     enum class EInputTrigger : Uint8
     {
-        /** The frame the value became non-zero. A press. */
+        /** The frame the value became non-zero (press). */
         Started,
 
-        /** Every frame the value is non-zero. What a Move binding wants. */
+        /** Every frame the value is non-zero. */
         Triggered,
 
-        /** The frame the value returned to zero. A release. */
+        /** The frame the value returned to zero (release). */
         Completed,
 
-        /** ONCE, after the action's HoldSeconds of continuous actuation. */
+        /** Once, after HoldSeconds of continuous input. */
         Hold
     };
 
-    /** I11: the mapping lives with the enum, found by ADL. */
+    /** Enum to string. */
     inline const char* ToString(const EInputTrigger InTrigger) noexcept
     {
         switch (InTrigger)
@@ -56,30 +51,27 @@ OPAAX_ENUM_VALUES(Opaax::EInputTrigger, Started, Triggered, Completed, Hold)
 namespace Opaax
 {
     // =============================================================================
-    // EInputModifier — how one binding's raw value is transformed before it reaches the
-    //   action. A CLOSED set, applied in the order the mapping lists them: DeadZone-then-
-    //   Scale is not Scale-then-DeadZone, which is why this is an ordered list and not a
-    //   set of flags.
+    // EInputModifier — how a binding's raw value is transformed. Applied in the listed order.
     // =============================================================================
     enum class EInputModifier : Uint8
     {
-        /** Flip the sign. The `S` and `A` halves of a WASD composite. */
+        /** Flips the sign (S and A in a WASD setup). */
         Negate,
 
-        /** Move x into y. The `W`/`S` halves of a WASD composite, after Negate. */
+        /** Moves x into y (W and S in a WASD setup, after Negate). */
         Swizzle,
 
-        /** Below Lower reads zero; above Upper reads one; between, rescaled. */
+        /** Below Lower gives zero, above Upper gives one, rescaled in between. */
         DeadZone,
 
         /** Multiply per component. */
         Scalar,
 
-        /** Clamp magnitude to 1, so a diagonal is not faster than a straight line. */
+        /** Clamps the length to 1, so diagonals are not faster. */
         Normalize
     };
 
-    /** I11: the mapping lives with the enum, found by ADL. */
+    /** Enum to string. */
     inline const char* ToString(const EInputModifier InModifier) noexcept
     {
         switch (InModifier)
@@ -100,12 +92,7 @@ OPAAX_ENUM_VALUES(Opaax::EInputModifier, Negate, Swizzle, DeadZone, Scalar, Norm
 namespace Opaax
 {
     // =============================================================================
-    // InputModifierData — one step of a binding's modifier pipeline.
-    //
-    //   ONE struct with the union of knobs rather than a type per modifier: the set is
-    //   closed and tiny, and the editor already knows how to hide the fields a Type does
-    //   not use (MoveModePanel's fold, ⑦-A P5a-2). A registry of modifier types would buy
-    //   extensibility nobody has asked for and cost a resource or a variant for the params.
+    // InputModifierData — one modifier and its settings. Unused settings are ignored.
     // =============================================================================
     struct InputModifierData
     {
@@ -114,14 +101,11 @@ namespace Opaax
         /** Scalar only. Per component. */
         Vector2F Scale{1.f, 1.f};
 
-        /** DeadZone only. Below Lower is zero, above Upper is one, between is rescaled. */
+        /** DeadZone only. Below Lower gives zero, above Upper gives one, rescaled in between. */
         float DeadZoneLower = 0.25f;
         float DeadZoneUpper = 1.0f;
 
-        // REFLECTED, so both input panels draw a modifier with no per-type editor code — the Type
-        // field becomes a dropdown on its own, because TPropertyDrawer specialises for any enum
-        // that declared its values. The knobs a given Type ignores are still shown; which ones
-        // matter is a presentation question and this struct is deliberately not the place for it.
+        // Reflected, so the input panels draw it without custom code.
         OPAAX_PROPERTIES(InputModifierData,
                          OPAAX_PROP(Type).SetTooltip("Which transform. Applied in list order."),
                          OPAAX_PROP(Scale).SetTooltip("Scalar only: multiplied per component."),
@@ -132,10 +116,7 @@ namespace Opaax
     };
 
     // =============================================================================
-    // InputAction — what an action IS, resolved. Name, shape, and how long a Hold takes.
-    //
-    //   HoldSeconds lives HERE and not on the binding: "Crouch is a half-second hold" is a property
-    //   of the action, and putting it in both places is the two-sources trap (L30).
+    // InputAction — a resolved action: name, value type and hold duration.
     // =============================================================================
     struct InputAction
     {
@@ -144,23 +125,14 @@ namespace Opaax
         float           HoldSeconds = 0.5f;
 
         /**
-         * Applied to the SUM of every binding that fed this action, after they are added together.
-         *
-         * The level a binding's own modifiers cannot reach. Normalize is the reason it exists: a
-         * WASD composite is four bindings each contributing a unit vector, so normalizing them
-         * INDIVIDUALLY changes nothing and the diagonal still comes out 1.41x too fast. Only the
-         * total can be clamped, and only here.
+         * Applied to the sum of all bindings (e.g. Normalize to clamp the WASD diagonal).
          */
         TDynArray<InputModifierData> Modifiers;
     };
 
     // =============================================================================
-    // InputKeyBinding — one key feeding one action, through a modifier pipeline.
-    //
-    //   RESOLVED: the action is named, not pathed. The `.opaaxinputmap` asset references an
-    //   action by TResourcePath (that is what makes the editor field a resource picker), and
-    //   resolution happens ONCE when the context is added — resolving a path per key per
-    //   frame would be absurd. This is the form the evaluator actually runs on.
+    // InputKeyBinding — one key feeding one action, through modifiers.
+    //   The action is referenced by name (resolved once when the context is added).
     // =============================================================================
     struct InputKeyBinding
     {
@@ -170,16 +142,13 @@ namespace Opaax
         TDynArray<InputModifierData> Modifiers;
 
         /**
-         * Whether this key is swallowed from every LOWER-priority context.
-         *
-         * Per KEY, not per action — that is what makes a menu context stop `Jump` from
-         * firing rather than merely outrank it.
+         * The key is consumed: lower-priority contexts ignore it.
          */
         bool bConsume = true;
     };
 
     // =============================================================================
-    // InputMappingContext — a named set of bindings, pushed onto the stack at a priority.
+    // InputMappingContext — a named set of bindings, added with a priority.
     //   Higher priority is evaluated first and consumes first.
     // =============================================================================
     struct InputMappingContext
@@ -191,9 +160,8 @@ namespace Opaax
     };
 
     // =============================================================================
-    // InputActionState — one action's answer for this frame, and the little history the
-    //   trigger phases need. Everything except HeldSeconds is re-derived every frame from
-    //   InputManager, which is what makes a route close (IN5) self-healing.
+    // InputActionState — one action's state this frame.
+    //   Recomputed each frame from InputManager, except HeldSeconds.
     // =============================================================================
     struct InputActionState
     {
@@ -208,26 +176,20 @@ namespace Opaax
         /** The frame the value returned to zero. */
         bool bCompleted = false;
 
-        /** The ONE frame HeldSeconds is crossed. Not "is held" — that is bTriggered. */
+        /** True only on the frame HeldSeconds is reached. */
         bool bHold = false;
 
-        /** How long the action has been continuously actuated. Zeroed when it is not. */
+        /** How long the action has been active. Zero when it is not. */
         float HeldSeconds = 0.f;
 
         /**
-         * INTERNAL to the evaluator: this actuation has already fired its Hold.
-         *
-         * Separate from bHold because they answer different questions — bHold is "fire this
-         * frame" and must be true exactly once, while this must stay true until the action is
-         * released, or a held key would re-fire Hold every frame after the threshold.
+         * Internal: Hold already fired for this press (so it fires once).
          */
         bool bHoldLatched = false;
 
         /**
-         * INTERNAL to the evaluator: last frame a binding of this action was CONSUMED while its key
-         * was physically down (the UI swallowed it, or a higher context did — UI10 / IM6). Kept so
-         * the next frame does NOT fabricate a Started when the mask lifts on a still-held key: the
-         * value was forced to zero, so the plain rising-edge test would read a phantom press.
+         * Internal: a binding was consumed last frame while its key was down, so unmasking does not
+         * produce a false Started.
          */
         bool bMaskSuppressed = false;
 

@@ -16,26 +16,14 @@ namespace Opaax
     inline constexpr LogCategory LogUISubsystem{"UI"};
 
     // =============================================================================
-    // UISubsystem — the GameInstance's UI tenant: it OWNS the persistent canvas.
+    // UISubsystem — owns the game's UI canvas (HUD, menus). Lives for the whole game,
+    //   across level changes. Submitted every frame.
     //
-    //   The game outlives every world it plays through (GI1), so what hangs here — the HUD, a
-    //   pause menu — stays up across a level swap and is torn down whole at EndGame (GI6). The
-    //   canvas is submitted every frame (the view idiom, F4): the renderer lays it out for each
-    //   target that opted in and composites it over the world.
+    //   The loading screen is a second canvas drawn on top, shown from a level request until
+    //   the new level is ready (at least the project's loadingScreenMinSeconds).
+    //   The canvas uses the project's UI reference height.
     //
-    //   THE LOADING COVER IS A SECOND CANVAS (UI21), submitted after the first every frame with
-    //   its root's visibility as the flag. Visibility is read at DRAW time (UI3), so a level
-    //   requested mid-frame — a button in this tenant's own tick, a trigger in the world's — is
-    //   covered on THAT frame's render, whichever of the two it came from. Its tree is the
-    //   project's `loadingScreen` asset; black when the project names none. It stays up at least
-    //   the project's `loadingScreenMinSeconds` — a synchronous swap is one frame, which is a
-    //   flash, not a screen; the world underneath runs meanwhile.
-    //
-    //   THE CANVAS IS THE PROJECT'S REFERENCE HEIGHT (UI2). Every asset is authored against that
-    //   one number; an asset's own `ReferenceHeight` is what the panel previews at, and MountAsset
-    //   warns when the two disagree rather than letting the game draw what the panel did not show.
-    //
-    //   Gameplay reaches it through WorldContext::UI, the way it reaches input mapping.
+    //   Gameplay reaches it through WorldContext::UI.
     // =============================================================================
     class OPAAX_API UISubsystem final : public GameInstanceSubsystemBase
     {
@@ -60,27 +48,27 @@ namespace Opaax
         const UICanvas& GetCanvas() const noexcept { return m_Canvas; }
 
         /**
-         * Load a `.opaaxui` and hang its tree under InParent (the root when null) — the route a
-         * HUD or a menu takes (UI13). Warns once per asset when it was authored at another height
-         * than this canvas's. @return the tree's root, owned by the canvas; null when it did not load.
+         * Loads a .opaaxui and adds its tree under InParent (the root when null).
+         * Warns once if the asset was designed at another height.
+         * @return The tree's root (owned by the canvas), or null if it did not load
          */
         UIWidget* MountAsset(const OpaaxString& InAssetPath, UIWidget* InParent = nullptr);
 
-        /** The parse half of MountAsset, for a caller with a canvas of its own (the cover). */
+        /** Loads a .opaaxui tree without adding it (for another canvas). */
         TUniquePtr<UIWidget> LoadTree(const OpaaxString& InAssetPath, float& OutAuthoredHeight) const;
 
         // =========================================================================
-        // The loading cover (UI21) — drawn over everything while a level is on its way
+        // Loading screen
         // =========================================================================
     public:
-        /** The cover's own canvas, for a game that binds a progress bar into it later. */
+        /** The loading screen's canvas. */
         UICanvas& GetLoadingCanvas() noexcept { return m_LoadingCanvas; }
 
-        /** Up from a RequestOpenLevel until the swap is done. */
+        /** Shown from RequestOpenLevel until the level is ready. */
         bool IsCoverUp() const noexcept { return m_LoadingCanvas.Root().bVisible; }
 
         // =========================================================================
-        // Input mode (UI10) — Unreal's three, on the session
+        // Input mode
         // =========================================================================
     public:
         void         SetInputMode(EUIInputMode InMode) noexcept;
@@ -98,7 +86,7 @@ namespace Opaax
         // Internal
         // =========================================================================
     private:
-        /** The project's loading screen into the cover canvas, or a black image when it names none. */
+        /** Loads the project's loading screen, or a black image if none. */
         void BuildLoadingCover();
 
         void OnLevelLoadRequested(const LevelLoadRequested&);
@@ -108,13 +96,13 @@ namespace Opaax
         // Members
         // =========================================================================
     private:
-        GameInstanceContext*   m_Context = nullptr;   // borrowed; the GameInstance owns it
-        InputMappingSubsystem* m_Mapping = nullptr;   // sibling tenant, resolved in Startup; may be null
+        GameInstanceContext*   m_Context = nullptr;   // owned by the GameInstance
+        InputMappingSubsystem* m_Mapping = nullptr;   // resolved in Startup; may be null
         UICanvas               m_Canvas;
         UICanvas               m_LoadingCanvas;
         EUIInputMode           m_InputMode = EUIInputMode::GameAndUI;
 
-        /** The cover's clock: how long it has been up, the floor it must reach, and whether the load is done. */
+        /** Loading screen timer: time shown, minimum time, and whether loading is done. */
         double m_CoverElapsed    = 0.0;
         float  m_CoverMinSeconds = 0.f;
         bool   m_bLoadFinished   = false;

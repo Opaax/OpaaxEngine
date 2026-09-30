@@ -1,16 +1,7 @@
 // =============================================================================
-// InputKeyCodeList.h — every EKeyCode enumerator, ONCE, as data.
-//
-//   An X-MACRO LIST, the shape CollisionChannelList.h already uses: this file is included
-//   several times with OPAAX_KEY_CODE defined differently each time, so ToString, the
-//   TEnumValues list and anything else that needs the names all come from one source.
-//
-//   NO #pragma once, deliberately — it is included more than once on purpose.
-//
-//   IT MUST GROW WITH EKeyCode. The enum in InputCodes.h owns the VALUES (they follow GLFW
-//   numbering so backend translation stays a plain cast); this owns the NAMES. A code added
-//   there and not here has no label, so it cannot be written to or read from a mapping asset
-//   — which is why the two files sit side by side.
+// InputKeyCodeList.h — every EKeyCode name, as an X-macro list.
+//   Included several times with a different OPAAX_KEY_CODE (no #pragma once).
+//   Keep it in sync with EKeyCode in InputCodes.h.
 // =============================================================================
 OPAAX_KEY_CODE(None)
 OPAAX_KEY_CODE(AnyKey)

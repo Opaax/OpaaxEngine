@@ -7,7 +7,7 @@
 #include "FrameInfo.hpp"
 #include "Core/Events/EventBus.h"
 #include "Engine/Registries/EngineRegistries.h"
-#include "Engine/Subsystems/Resources/ResourceRef.hpp"   // ResolveStartupLevel returns one by value
+#include "Engine/Subsystems/Resources/ResourceRef.hpp"
 
 namespace Opaax
 {
@@ -26,10 +26,8 @@ namespace Opaax
     inline constexpr double MAX_FRAME_DELTA = 0.25;
 
     // =============================================================================
-    // Engine — the concrete IEngine. Owns the EngineSubsystemMgr and the engine's
-    // per-frame tick. Registers the ResourceManager (the first engine subsystem) and
-    // exposes it via GetResources(). Provided into the AppServiceLocator last, so it
-    // tears down FIRST (reverse-order) — before the window/GPU context dies.
+    // Engine — the concrete IEngine. Owns the engine subsystems and runs the frame.
+    // Provided last to the service locator, so it shuts down first (before the window).
     // =============================================================================
     class OPAAX_API Engine final : public IEngine
     {
@@ -54,41 +52,34 @@ namespace Opaax
         // =============================================================================
         // Native Engine
     private:
-        /** @return true if not started yet and world is not null */
+        /** @return True if not started yet and the world is not null */
         bool CanFinishStartup();
     
-        /**  */
         void RegisterNativeComponents();
 
-        /** Register the resource types the engine itself loads, and the extensions they claim. */
+        /** Registers the resource types the engine loads, and their extensions. */
         void RegisterNativeResourceFormats();
 
-        /** Register Default engine subsystems*/
+        /** Registers the default engine subsystems. */
         void RegisterNativeSubsystems();
 
         /**
-         * Register the WORLD subsystems the engine itself owns — the candidates every new world
-         * filters through ShouldCreate.
-         *
-         * The fourth native route, added with the first engine-owned world subsystem (⑥ S3). Until
-         * then every candidate came from a game or editor module, so the engine had a registry it
-         * never wrote to.
+         * Registers the engine's world subsystems (each world filters them with ShouldCreate).
          */
         void RegisterNativeWorldSubsystems();
         void RegisterNativeMoverModes();
 
         /**
-         * Register the SESSION subsystems the engine itself owns — the candidates every game
-         * creates, in order, when StartGame runs.
+         * Registers the engine's game-instance subsystems (created by StartGame, in order).
          */
         void RegisterNativeGameInstanceSubsystems();
 
-        /** UI U4 — the widget types a `.opaaxui` may name (**UI12**). */
+        /** Registers the widget types a .opaaxui can use. */
         void RegisterNativeUIWidgets();
         
-        /** Cache convenient subsystems */
+        /** Caches frequently used subsystems. */
         void CacheSubsystems();
-        /** Cache convenient app services*/
+        /** Caches frequently used app services. */
         void CacheAppServices();
         // End Native Engine
         // =============================================================================
@@ -105,15 +96,12 @@ namespace Opaax
         // Startup
     private:
         /**
-         * Load the level InSpec names, BEFORE the world exists.
-         * The world takes its name from the level's own data, so the level has to be read first.
-         *
-         * @return A null ref for an empty path (silent — a supported answer) and for one that
-         *   does not resolve (a warning). Either way the caller boots the NullLevel world.
+         * Loads the level named by InSpec, before the world is created.
+         * @return Null for an empty path (no warning) or a missing level (warning)
          */
         ResourceRef<LevelResource> ResolveLevel(const OpaaxString& InAssetRelPath) const;
 
-        /** Spend a RequestOpenLevel at the top of the frame — WS8's flag-then-resolve, one tier up. */
+        /** Opens the level requested by RequestOpenLevel, at the start of the frame. */
         void ResolvePendingLevel();
         // End Startup
         // =============================================================================
@@ -136,7 +124,7 @@ namespace Opaax
         
         //~Begin IAppService interface
     public:
-        void OnShutdown() override; // reverse-order locator teardown -> Shutdown()
+        void OnShutdown() override;
         //~End IAppService interface
         
         //~Begin IEngine interface
@@ -193,7 +181,7 @@ namespace Opaax
         //Handle Subsystem lifetime
         EngineSubsystemMgr m_Subsystems;
 
-        //Owned here because they are boot-order state, not the state of any one subsystem (see EngineRegistries.h)
+        // Owned here: registration state, not a subsystem's state (see EngineRegistries.h)
         EngineRegistries m_Registries;
         
         // Convenient ptrs
@@ -207,7 +195,7 @@ namespace Opaax
         //Internal
         bool m_bStarted = false;
 
-        /** The level a RequestOpenLevel asked for, spent at the next frame's start (UI21). */
+        /** Level requested by RequestOpenLevel, opened at the start of the next frame. */
         WorldSpec m_PendingLevel;
         bool      m_bLevelPending = false;
     };

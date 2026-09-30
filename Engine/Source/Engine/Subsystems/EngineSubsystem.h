@@ -5,20 +5,15 @@
 namespace Opaax
 {
     // =============================================================================
-    // IEngineSubsystem — marker interface for engine-owned subsystems.
-    //   Lifetime = engine (up on engine start, down on engine stop). Managed by
-    //   EngineSubsystemMgr. No CoreEngineApp coupling — the service-locator world
-    //   reaches shared facilities through OpaaxApplication::GetAppService<T>().
+    // IEngineSubsystem — interface for engine subsystems. Live from engine start to engine stop.
     // =============================================================================
     class OPAAX_API IEngineSubsystem : public Opaax::ISubsystem
     {
     };
 
     // =============================================================================
-    // EngineSubsystemBase — ctor/dtor boilerplate for concrete engine subsystems.
-    //   Leaves Startup()/Shutdown() pure (each concrete implements them) and inherits
-    //   the no-op Update/FixedUpdate/Render from ISubsystem. Stamp the concrete with
-    //   OPAAX_SUBSYSTEM_TYPE(ClassName) for GetTypeID/StaticTypeID.
+    // EngineSubsystemBase — base for concrete engine subsystems.
+    //   Add OPAAX_SUBSYSTEM_TYPE(ClassName) to the concrete class.
     // =============================================================================
     class OPAAX_API EngineSubsystemBase : public Opaax::IEngineSubsystem
     {
@@ -29,7 +24,7 @@ namespace Opaax
         EngineSubsystemBase()          = default;
         ~EngineSubsystemBase() override = default;
 
-        // Heap-owned via TUniquePtr in the manager — never copied or moved.
+        // Owned by the manager, never copied or moved.
         EngineSubsystemBase(const EngineSubsystemBase&)            = delete;
         EngineSubsystemBase& operator=(const EngineSubsystemBase&) = delete;
         EngineSubsystemBase(EngineSubsystemBase&&)                 = delete;
@@ -37,9 +32,8 @@ namespace Opaax
     };
 
     // =============================================================================
-    // EngineSubsystemMgr — owns + drives the engine subsystem list. Inherits
-    //   Register/Startup/Update/FixedUpdate/Render/Shutdown from ISubsystemManager
-    //   (registration order; reverse order for shutdown).
+    // EngineSubsystemMgr — owns and ticks the engine subsystems (registration order;
+    //   reverse order for shutdown).
     // =============================================================================
     class OPAAX_API EngineSubsystemMgr : public ISubsystemManager<IEngineSubsystem>
     {

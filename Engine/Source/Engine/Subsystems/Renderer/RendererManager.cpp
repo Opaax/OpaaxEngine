@@ -5,17 +5,17 @@
 #include "Application/Services/IConfigSystem.h"
 #include "Application/Services/IPaths.h"
 #include "Application/Services/IEngine.h"
-#include "Core/Profiling/Profiler.h"   // OPAAX_STAT_SCOPE — this subsystem opts in
+#include "Core/Profiling/Profiler.h"   // OPAAX_STAT_SCOPE
 
 #include "Renderer/Config/Config_Renderer.h"
 
 #include "Core/Events/EventBus.h"
 #include "Window/WindowEvents.h"
 
-#include "RHI/RHIBackend.h"       // BackendFromString
+#include "RHI/RHIBackend.h"
 #include "RHI/IGraphicsContext.h"
-#include "RHI/Framebuffer.h"      // FramebufferSpec + the TUniquePtr<IFramebuffer> deleter
-#include "RHI/Texture.h"          // the TUniquePtr<ITexture2D> deleter
+#include "RHI/Framebuffer.h"
+#include "RHI/Texture.h"
 
 #include "Renderer/CameraView.h"
 #include "Renderer/RenderSystem.h"
@@ -26,7 +26,7 @@
 #include "UI/UICanvas.h"
 
 #include "Renderer/ShaderSource.h"
-#include "Core/IO/FileIO.h"       // the host owns the read (see the shader load below)
+#include "Core/IO/FileIO.h"
 
 #include "World/WorldManager.h"
 #include "World/World.h"
@@ -34,15 +34,15 @@
 #include "World/Components/SpriteComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Components/TransformInterpolationComponent.h"
-#include "World/Entity/EntityHierarchy.h"   // ComposeChain — a child draws where its parent puts it
+#include "World/Entity/EntityHierarchy.h"   // ComposeChain
 
-#include "Core/Maths/Maths.h"     // DegreesToRadians — the transform authors degrees, the renderer takes radians
+#include "Core/Maths/Maths.h"
 
-#include "Engine/Subsystems/Resources/ResourceManager.h"          // Load<TextureResource> — the cache
+#include "Engine/Subsystems/Resources/ResourceManager.h"
 #include "Engine/Subsystems/Resources/Types/Texture/TextureResource.h"
-#include "Engine/Subsystems/Resources/Types/SpriteSheet/SpriteSheetResource.h" // the sheet a sprite may name instead
-#include "Engine/Subsystems/Resources/Types/Font/FontFaceResource.h"    // the baked atlas a text draws from
-#include "Engine/Subsystems/Resources/Types/Font/FontFamilyResource.h"  // the family a text may name instead
+#include "Engine/Subsystems/Resources/Types/SpriteSheet/SpriteSheetResource.h"
+#include "Engine/Subsystems/Resources/Types/Font/FontFaceResource.h"
+#include "Engine/Subsystems/Resources/Types/Font/FontFamilyResource.h"
 
 #include "Renderer/Text/Text2D.h"
 #include "World/Components/TextComponent.h"
@@ -55,10 +55,7 @@ namespace Opaax
     namespace
     {
         /**
-         * The four style axes as one integer, so a (family, style) pair keys a one-shot warning set.
-         *
-         * Every axis is small — nine subsets, nine weights, four widths, two slants — so a byte each
-         * is room to spare and the packing cannot collide.
+         * The four style axes packed in one integer (one byte each), used as a warning key.
          */
         Uint32 PackStyle(const FontStyleKey& InKey) noexcept
         {
@@ -69,11 +66,8 @@ namespace Opaax
         }
 
         /**
-         * The face a family answers with when it has nothing in the requested script.
-         *
-         * A VIEW ONTO THIS rather than an invalid one, because drawing nothing would make the wrong
-         * subset look like the wrong position, the wrong colour, or a component nobody wired — four
-         * indistinguishable bugs. A row of boxes says exactly one thing, and it is the true one.
+         * The face used when a family has nothing for the requested script: draws boxes,
+         * which makes the problem obvious.
          */
         const FontFaceData& TofuFace() noexcept
         {
@@ -87,7 +81,7 @@ namespace Opaax
     
     bool RendererManager::Startup()
     {
-        // Resolve host state (the adapter's job) and pack it into a plain desc for the module.
+        // Resolve host state and pack it into a plain desc for the render module.
         IConfigSystem&            lConfigSys = OpaaxApplication::GetAppService<IConfigSystem>();
         const EngineConfigData&   lEngineCfg = lConfigSys.Get<Config_Engine>().GetData();
         const RendererConfigData& lRenderCfg = lConfigSys.Get<Config_Renderer>().GetData();
@@ -101,8 +95,7 @@ namespace Opaax
             return false;
         }
 
-        // Host reads the shader off disk (module never touches IPaths / file IO) — literally, now:
-        // ShaderSource takes the TEXT and only parses/compiles it.
+        // The host reads the shader file; ShaderSource only parses and compiles the text.
         const OpaaxString lShaderPath =
             OpaaxApplication::GetAppService<IPaths>().EngineToAbsolute("Assets/Shaders/Sprite.glsl");
 
@@ -133,18 +126,18 @@ namespace Opaax
             return false;
         }
 
-        // React to window resize via the Tier-3 bus — replaces the per-frame size poll.
+        // Window resize comes through the event bus.
         OpaaxApplication::GetAppService<IEngine>().GetEngineEventBus().GetEventBus()
             .Subscribe<WindowResize>(this, &RendererManager::HandleWindowResize);
 
-        // Told, not polled: what can change live is applied when the config says it changed.
+        // Apply live config changes when notified.
         m_RendererConfig = &lConfigSys.Get<Config_Renderer>();
         m_RendererConfig->OnChanged().AddMember(this, &RendererManager::HandleRendererConfigChanged);
 
         m_EngineConfig = &lConfigSys.Get<Config_Engine>();
         m_EngineConfig->OnChanged().AddMember(this, &RendererManager::HandleEngineConfigChanged);
 
-        // Cache the world owner — Render draws whatever it reports as the active world.
+        // The active world is the one drawn.
         m_WorldManager = &OpaaxApplication::GetAppService<IEngine>().GetWorldManager();
 
         return true;
@@ -152,11 +145,10 @@ namespace Opaax
 
     void RendererManager::Shutdown()
     {
-        // Unsubscribe BEFORE teardown — a late resize event must not reach a handler that
-        // would touch a destroyed m_RenderSystem.
+        // Unsubscribe before teardown: a late resize must not reach a destroyed m_RenderSystem.
         OpaaxApplication::GetAppService<IEngine>().GetEngineEventBus().GetEventBus().UnsubscribeAll(this);
 
-        // Same reason, and the config outlives us — a missed RemoveAll is a dangling call (I5).
+        // Same for the config, which outlives us.
         if (m_RendererConfig != nullptr)
         {
             m_RendererConfig->OnChanged().RemoveAll(this);
@@ -169,42 +161,32 @@ namespace Opaax
             m_EngineConfig = nullptr;
         }
 
-        // Drop the resource claims FIRST. Shutdown order is the reverse of registration, so the
-        // ResourceManager is still alive here to take the releases — and its own FlushAll, which
-        // destroys the GPU handles, runs after this while the window's GL context is still up.
+        // Release the resources first, while the ResourceManager and the GL context are alive.
         m_TextureCache.clear();
         m_SheetCache.clear();
-        m_FaceCache.clear();     // holds the R8 atlases — same GL-context deadline as the textures
+        m_FaceCache.clear();     // holds the font atlases
         m_FamilyCache.clear();
 
-        m_RenderSystem.reset(); // ~RenderSystem = WaitIdle + teardown while the window/context is alive
+        m_RenderSystem.reset(); // waits idle, then tears down
     }
     
     // =========================================================================
-    // Render — the frame, then the drain.
-    //
-    // The debug queue and the submitted views are both strictly per-frame, and their producers
-    // refill them every frame (the editor's ViewportPanel does both in OnPreRender, before this
-    // runs). Clearing OUTSIDE RenderFrame is what keeps a frame we could NOT render — no render
-    // core, zero-size target — from letting either grow without bound: those early-outs skip the
-    // draw, never the drain.
+    // Render — the frame, then clear the per-frame queues.
+    //   The queues (debug draw, submitted views) are cleared even when nothing
+    //   could be rendered, so they never grow.
     // =========================================================================
     void RendererManager::Render(double InAlpha)
     {
-        // The alpha was PLUMBED here since the fixed step existed and discarded at this exact line
-        // for three milestones. It is the fraction of a fixed step the frame sits past the last
-        // one — display only, never written back into the world (PH21).
+        // Fraction of a fixed step past the last one, for display interpolation only.
         m_FrameAlpha = static_cast<float>(InAlpha);
 
         {
-            // Around RenderFrame only — the two clears below are bookkeeping, not frame work, and
-            // F4 requires them to run whether or not anything rendered.
+            // Around RenderFrame only: the clears below must run even if nothing rendered.
             OPAAX_STAT_SCOPE("Renderer");
             RenderFrame();
         }
 
-        // The SUCCESS branch, once ([[L15]]): the toggle being ON and anything being BLENDED are
-        // different claims, and only the second one says the feature works.
+        // Log once when something was actually interpolated.
         if (!m_bLoggedFirstBlend && m_BlendedThisFrame > 0)
         {
             m_bLoggedFirstBlend = true;
@@ -224,24 +206,22 @@ namespace Opaax
     DisplayPose RendererManager::PoseFor(World& InWorld, const EntityID InEntity,
                                          const TransformComponent& InTransform)
     {
-        // Each hop's local is blended on its own, then the chain is composed (§HR) — so a child of
-        // an interpolated body is drawn where the body is drawn, not one step behind it.
+        // Each parent's local pose is blended, then the chain is composed, so a child of an
+        // interpolated body is drawn with it.
         const auto lDisplayLocal = [this, &InWorld, InEntity, &InTransform](Entity InHop) -> TransformComponent
         {
             const TransformComponent* lLocal = InHop.GetHandle() == InEntity ? &InTransform
                                                                              : InHop.TryGet<TransformComponent>();
             if (lLocal == nullptr) { return TransformComponent{}; }
 
-            // OFF means "do not blend", which is NOT the same as alpha 0 — alpha 0 is the PREVIOUS
-            // pose, so expressing the toggle that way drew every fixed-step entity one step behind.
+            // Off means no blend (alpha 0 would be the previous pose, one step behind).
             if (!m_bInterpolate) { return *lLocal; }
 
             const auto* lPrevious = InWorld.GetRegistry().try_get<TransformInterpolationComponent>(InHop.GetHandle());
 
             const DisplayPose lBlend = ResolveDisplayPose(*lLocal, lPrevious, m_FrameAlpha);
 
-            // Counted for the drawn entity only, and only when the blend actually MOVED it: an
-            // entity at rest, or one with no previous pose, must not report as interpolated.
+            // Counted only when the blend actually moved the entity.
             if (InHop.GetHandle() == InEntity && lPrevious != nullptr && lPrevious->bHasPrevious
                 && (lBlend.Position != lLocal->Position || lBlend.RotationDeg != lLocal->Rotation))
             {
@@ -267,20 +247,17 @@ namespace Opaax
         lProfiler.SubmitGpuMs(
             m_RenderSystem ? m_RenderSystem->GetGpuFrameTimeMs() : -1.0);
 
-        // OUTSIDE RenderFrame's early-outs, so a frame that drew nothing reports zeros rather than
-        // leaving the previous frame's numbers on screen — the same reason the DebugDraw clear is
-        // out here (F4).
+        // Outside RenderFrame, so a frame that drew nothing reports zeros.
         const Renderer2DStats lStats = m_RenderSystem
                                            ? m_RenderSystem->GetRenderer2D().GetStats()
                                            : Renderer2DStats{};
 
-        // Translated into NAMED counters here, at the adapter, so Core never learns what a draw call
-        // is and the Stats panel needs no renderer type to display them.
+        // Published as named counters, so Core and the Stats panel know nothing of the renderer.
         lProfiler.AddCount("Draw Calls",    lStats.DrawCalls);
         lProfiler.AddCount("Quads",         lStats.Quads);
         lProfiler.AddCount("Texture Slots", lStats.PeakTextureSlots);
 
-        // The UI's own cost, and the number the block was named for: 0 / 0 on an idle frame.
+        // UI cost (0 / 0 on an idle frame).
         lProfiler.AddCount("UI Layouts",  m_UILayouts);
         lProfiler.AddCount("UI Rebuilds", m_UIRebuilds);
         m_UILayouts  = 0;
@@ -288,11 +265,8 @@ namespace Opaax
     }
 
     // =========================================================================
-    // RenderFrame — one device frame, N passes.
-    //
-    // The runtime path is a SUBMISSION rather than a branch: with nothing submitted the frame is the
-    // backbuffer framed by the active world, which is byte for byte what this drew before views
-    // could be submitted at all. One rule, one loop, nothing to keep in step.
+    // RenderFrame — one device frame, one pass per view.
+    //   With nothing submitted, the active world is drawn to the backbuffer.
     // =========================================================================
     void RendererManager::RenderFrame()
     {
@@ -305,15 +279,13 @@ namespace Opaax
 
         if (m_SubmittedViews.empty())
         {
-            // A world nobody produced a view for falls back to the default CameraView — the centred
-            // frame the engine drew before cameras existed (CAM1).
+            // No camera view for this world: use the default CameraView.
             SubmitRenderView(m_RenderSystem->GetBackbuffer(),
                              lWorld != nullptr ? lWorld->GetCameraView() : CameraView{},
                              /*bInDrawOverlays*/ true, /*InSource*/ nullptr, /*bInDrawUI*/ true);
         }
 
-        // Counted BEFORE the device frame opens, so a frame with nothing drawable opens none — the
-        // early-out this has always had, now per target rather than per frame.
+        // Counted before opening the device frame, so a frame with nothing to draw opens none.
         Uint32 lPasses = 0;
 
         for (const RenderPassRequest& lRequest : m_SubmittedViews)
@@ -324,7 +296,7 @@ namespace Opaax
             }
         }
 
-        // A targeted canvas is drawable on its own — a UI panel open with no viewport still renders.
+        // A canvas with its own target draws even without a viewport.
         for (const UICanvasRequest& lCanvasRequest : m_SubmittedCanvases)
         {
             if (lCanvasRequest.Target != nullptr && lCanvasRequest.Target->GetWidth() > 0
@@ -347,8 +319,7 @@ namespace Opaax
                 continue;
             }
 
-            // The view's OWN world when it named one, else the active one — which is every
-            // submission that existed before P6, so this line changes none of them.
+            // The view's own world if it named one, else the active world.
             RenderPass(*lRequest.Target, lRequest.Source != nullptr ? lRequest.Source : lWorld,
                        lRequest.View, lRequest.bDrawOverlays);
 
@@ -358,8 +329,7 @@ namespace Opaax
             }
         }
 
-        // A canvas that named its own target is a pass of its OWN, with no world under it — the
-        // editor previewing one document (**UI14**). Cleared, because nothing else drew there.
+        // A canvas with its own target gets its own pass, with no world (editor preview). Cleared.
         for (const UICanvasRequest& lCanvasRequest : m_SubmittedCanvases)
         {
             if (lCanvasRequest.Target != nullptr)
@@ -374,13 +344,11 @@ namespace Opaax
 
     void RendererManager::RenderPass(IRenderTarget& InTarget, World* InWorld, const CameraView& InView, bool bInDrawOverlays)
     {
-        // The target's size — not a cached window size — drives the view, so an undocked/resized
-        // viewport rescales the render (D2: resize is inverted).
+        // The target's size drives the view, so a resized viewport rescales the render.
         const Uint32 lWidth  = InTarget.GetWidth();
         const Uint32 lHeight = InTarget.GetHeight();
 
-        // The submitter says WHERE it is looked at from; this adapter is what knows pixels, so it
-        // composes the matrix.
+        // The submitter gives the view; the matrix is built here, where the pixels are known.
         RenderView lView;
         lView.ViewProjection = MakeViewProjection(InView, lWidth, lHeight);
         lView.Viewport       = Viewport{ 0, 0, lWidth, lHeight };
@@ -397,8 +365,7 @@ namespace Opaax
                 {
                     const DisplayPose lPose = PoseFor(*InWorld, InEntity, InXf);
 
-                    // Scale MULTIPLIES the component's own Size (③): the extent is what the thing
-                    // is, the scale is what the transform does to it.
+                    // Scale multiplies the component's Size.
                     lRenderer.DrawQuad(lPose.Position, InComp.Size * lPose.Scale, InComp.Color,
                                        Maths::DegreesToRadians(lPose.RotationDeg));
                 });
@@ -407,14 +374,9 @@ namespace Opaax
             DrawWorldTexts(*InWorld, lRenderer);
         }
 
-        // Debug overlay — each queued line as a thin rotated quad, so this reuses the world's batch
-        // and adds no RHI/shader/vertex-layout surface. The Debug band sorts above world geometry
-        // regardless of submission order, so no manual ordering is needed here.
-        //
-        // READ per pass, CLEARED once per frame (Render), and FILTERED BY WORLD: a primitive that
-        // named none belongs to the active world. Two views of ONE world both draw them; a view of
-        // another world draws only what was queued for it, or the level's grid would land in the
-        // prefab's coordinates and the prefab's outline in the level (⑦-C P8).
+        // Debug overlay — each line is a thin rotated quad in the world batch.
+        //   Read per pass, cleared once per frame. A primitive without a world belongs to the
+        //   active world; other worlds only draw what was queued for them.
         if (bInDrawOverlays)
         {
             const World* const lActive = (m_WorldManager != nullptr) ? m_WorldManager->GetActiveWorld() : nullptr;
@@ -428,12 +390,11 @@ namespace Opaax
                 if (!lBelongsHere(lLine.Source)) { continue; }
 
                 const DebugQuad lQuad = ToQuad(lLine);
-                // The LINE's band, not a hardcoded Debug: ③b's grid has to sit BEHIND world geometry,
-                // and everything else still defaults to Debug and draws above it.
+                // The line's own layer: the grid must be behind world geometry.
                 lRenderer.DrawQuad(lQuad.Center, lQuad.Size, lLine.Color, lQuad.RotationRad, lLine.Layer);
             }
 
-            // Boxes are ONE hollow quad each, not four thin ones — same band rule as the lines.
+            // Boxes are one hollow quad each, same layer rule.
             for (const DebugBox& lBox : m_DebugDraw.GetBoxes())
             {
                 if (!lBelongsHere(lBox.Source)) { continue; }
@@ -453,11 +414,10 @@ namespace Opaax
 
         for (const UICanvasRequest& lRequest : m_SubmittedCanvases)
         {
-            // A canvas that named a target is that target's alone — it does not pour into the
-            // world's views, and the world's canvases do not pour into it (**UI14**).
+            // A canvas with its own target is drawn only there, and world canvases are not drawn into it.
             if (lRequest.Target != nullptr) { continue; }
 
-            // Load, not Clear: the world is already in this target and the canvas goes over it.
+            // Load, not Clear: the canvas goes over the world.
             RenderCanvasPass(*lRequest.Canvas, InTarget, ELoadOp::Load);
         }
 
@@ -477,13 +437,11 @@ namespace Opaax
 
         if (lWidth == 0 || lHeight == 0) { return; }
 
-        // A canvas whose root is hidden draws nothing, so it opens no pass — what lets a cover be
-        // SUBMITTED every frame and only cost anything on the frames it is up (UI21).
+        // A canvas with a hidden root opens no pass, so a loading screen costs nothing when hidden.
         if (!InCanvas.Root().bVisible) { return; }
 
-        // The TARGET says how wide the canvas is (UI2), so the layout happens here rather than in
-        // whoever submitted it — Unity's willRenderCanvases. Unless the submitter brought a VIEW:
-        // then it laid the canvas out against its own target and this pass only looks at it.
+        // The target size drives the layout, unless the submitter gave its own view
+        // (then it already laid the canvas out).
         if (InView == nullptr)
         {
             InCanvas.SetTargetSize(lWidth, lHeight);
@@ -560,9 +518,7 @@ namespace Opaax
 
                 const DisplayPose lPose = PoseFor(InWorld, InEntity, InXf);
 
-                // Scale MULTIPLIES the authored size, the same rule a sprite's extent follows. X
-                // only: a text scaled differently on the two axes would need a non-uniform glyph
-                // path, and nothing asks for one.
+                // Scale multiplies the authored size (X only).
                 TextDrawParams lParams;
                 lParams.Color           = InText.Color;
                 lParams.Size            = InText.Size * lPose.Scale.x;
@@ -577,9 +533,7 @@ namespace Opaax
 
     bool RendererManager::ResolveSpriteDraw(const SpriteComponent& InSprite, ITexture2D*& OutTexture, SpriteUVRect& OutUV)
     {
-        // THE PRECEDENCE, in one place: a sheet wins when it is set, otherwise the texture. No image
-        // named at all is a normal authoring state — a component just added, or one whose image was
-        // cleared — so it draws nothing rather than a white quad that reads as a broken sprite.
+        // A sheet wins over a texture. No image at all draws nothing.
         const SpriteSheetData* lSheet = ResolveSheet(InSprite.Sheet);
 
         if (lSheet == nullptr)
@@ -600,9 +554,7 @@ namespace Opaax
 
         if (lFrame == nullptr)
         {
-            // A sheet with no frames at all is simply its whole texture, which is what an author
-            // sees the moment they create one — not worth a warning. An explicit index that does
-            // not exist IS worth one, ONCE per sheet: it is a typo with a plausible-looking result.
+            // A sheet with no frames is its whole texture. A missing frame index warns once.
             if (InSprite.Frame >= 0 && lSheet->FrameCount() > 0)
             {
                 const Uint32 lKey = OpaaxStringID(InSprite.Sheet.Path).GetId();
@@ -640,8 +592,7 @@ namespace Opaax
             ResourceRef<SpriteSheetResource> lRef =
                 OpaaxApplication::GetAppService<IEngine>().GetResources().Load<SpriteSheetResource>(lAbsolute.CStr());
 
-            // Cached even when the load FAILED, for ResolveTexture's reason: keeping the empty ref
-            // stops a missing file being retried once per sprite per frame.
+            // Cached even when loading failed, so a missing file is not retried every frame.
             lIt = m_SheetCache.emplace(lKey.GetId(), Move(lRef)).first;
 
             if (!lIt->second.IsValid() || lIt->second.Get() == nullptr)
@@ -673,14 +624,10 @@ namespace Opaax
             ResourceRef<TextureResource> lRef =
                 OpaaxApplication::GetAppService<IEngine>().GetResources().Load<TextureResource>(lAbsolute.CStr());
 
-            // Cached even when the load FAILED: the empty ref resolves to the magenta placeholder,
-            // and keeping it stops a missing file from being retried once per sprite per frame.
+            // Cached even when loading failed (magenta placeholder), so it is not retried every frame.
             lIt = m_TextureCache.emplace(lKey.GetId(), Move(lRef)).first;
 
-            // Logged ONCE per texture, on the branch that succeeded as well as the one that did
-            // not — a cache that only reports failures is indistinguishable from one that never
-            // ran. The two must not share a line: a failed ref resolves to the 2x2 placeholder, so
-            // an unconditional "-> WxH" would cheerfully report a missing file as a 2x2 texture.
+            // Logged once per texture, success or failure (on separate lines).
             if (const TextureResource* lLoaded = lIt->second.IsValid() ? lIt->second.Get() : nullptr)
             {
                 OPAAX_LOG(LogRendererManager, Trace, "Texture '{}' -> {}x{}",
@@ -695,8 +642,7 @@ namespace Opaax
 
         TextureResource* lResource = lIt->second.Get();
 
-        // Null while an async load is still in flight, or with no device at all — both mean "not
-        // drawable this frame", and neither is worth a per-frame log line.
+        // Null while loading or without a device: not drawable this frame. No log.
         return (lResource != nullptr) ? lResource->GetTexture() : nullptr;
     }
 
@@ -717,9 +663,7 @@ namespace Opaax
             ResourceRef<FontFaceResource> lRef =
                 OpaaxApplication::GetAppService<IEngine>().GetResources().Load<FontFaceResource>(lAbsolute.CStr());
 
-            // Cached even when the load FAILED, for ResolveTexture's reason: keeping the empty ref
-            // stops a missing file being retried once per text per frame. The failed ref resolves to
-            // the empty placeholder face, which draws tofu.
+            // Cached even when loading failed (empty placeholder face, draws boxes).
             lIt = m_FaceCache.emplace(lKey.GetId(), Move(lRef)).first;
 
             if (!lIt->second.IsValid() || lIt->second.Get() == nullptr)
@@ -735,8 +679,7 @@ namespace Opaax
             return FontFaceView{};
         }
 
-        // The atlas is null while the upload is still in flight. The view stays VALID: the walker
-        // lays the line out and draws none of it, so the frame after lands in the right place.
+        // The atlas is null while uploading; the layout is still done, nothing is drawn.
         return FontFaceView{ &lResource->Face, lResource->GetAtlas() };
     }
 
@@ -770,12 +713,12 @@ namespace Opaax
         lView.Texture = ResolveTexture(lSheet->Texture);
         if (lView.Texture == nullptr)
         {
-            return lView;   // still uploading — the widget re-arms
+            return lView;   // still uploading
         }
 
         lView.SizePx = { static_cast<float>(lView.Texture->GetWidth()), static_cast<float>(lView.Texture->GetHeight()) };
 
-        // ResolveSpriteDraw's rule: a frame the sheet does not have is the whole texture, warned once.
+        // A missing frame is the whole texture, warned once.
         const SpriteFrame* lFrame = lSheet->FrameAt(InFrame);
         if (lFrame == nullptr)
         {
@@ -827,9 +770,7 @@ namespace Opaax
 
     FontFaceView RendererManager::ResolveTextDraw(const TextComponent& InText)
     {
-        // THE PRECEDENCE, in one place: a family wins when it is set, otherwise the face named
-        // directly. Naming neither is a normal authoring state — a component just added — so it
-        // draws nothing rather than a row of boxes that reads as a broken font.
+        // A family wins over a face. Neither draws nothing.
         const FontFamilyData* lFamily = ResolveFamily(InText.Font);
 
         if (lFamily == nullptr)
@@ -839,8 +780,7 @@ namespace Opaax
 
         const FontFamilyEntry* lEntry = lFamily->Find(InText.Style);
 
-        // ONCE per (family, style), not per frame: this runs inside the draw loop, and the same
-        // sentence sixty times a second is noise rather than a diagnostic.
+        // Warn once per (family, style), not every frame.
         const Uint64 lWarnKey = (static_cast<Uint64>(OpaaxStringID(InText.Font.Path).GetId()) << 32)
                               |  static_cast<Uint64>(PackStyle(InText.Style));
 
@@ -857,8 +797,7 @@ namespace Opaax
 
         if (lEntry->Style != InText.Style && m_WarnedFontStyle.emplace(lWarnKey).second)
         {
-            // A fallback is never silent. The subset always matches — Find refuses to cross it — so
-            // what differed is one of the other three, and naming both cuts says which.
+            // Warn when falling back, naming both styles.
             OPAAX_LOG(LogRendererManager, Warn,
                       "Family '{}' has no {}/{}/{} face — drawing {}/{}/{} instead",
                       InText.Font.Path.CStr(),
@@ -917,10 +856,8 @@ namespace Opaax
     }
 
     // =========================================================================
-    // Bus handler — window resize (Tier-3). Forwards to the render core, which resizes the
-    // backbuffer. Runs at the frame's Flush, before Render. When an offscreen primary target is
-    // active its size is owned by its owner (the panel), independent of the window — this only
-    // keeps the backbuffer current for the runtime / undocked path.
+    // Window resize (event bus): resizes the backbuffer.
+    //   Offscreen targets (editor viewport) are sized by their owner.
     // =========================================================================
     void RendererManager::HandleWindowResize(const WindowResize& InResize)
     {

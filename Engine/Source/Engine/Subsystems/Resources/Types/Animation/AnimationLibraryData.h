@@ -11,26 +11,18 @@
 
 namespace Opaax
 {
-    struct AnimationClipResource;   // only NAMED — TResourcePath never completes its parameter
+    struct AnimationClipResource;
 
     // =============================================================================
-    // AnimationLibraryData — a character's clips under SHORT names. The `.opaaxanim` payload.
-    //
-    //   ITS WHOLE JOB IS THE ALIAS. A clip is its own asset (AnimationClipData), reusable and
-    //   individually editable; this is what lets gameplay say OPAAX_ID("Run") instead of naming
-    //   "Anims/Hero_Run.opaaxclip" — so switching state is an integer compare, not a string copy.
-    //
-    //   A component may skip it entirely and name one clip directly (SpriteAnimatorComponent),
-    //   because a spinning coin should not need two assets to exist.
-    //
-    //   EVERY MEMBER IS INLINE: the struct carries no OPAAX_API, so a member defined in the DLL's
-    //   .cpp is unresolvable from the exe (**I6**).
+    // AnimationLibraryData — a character's clips under short names (.opaaxanim).
+    //   Lets gameplay use OPAAX_ID("Run") instead of a clip path.
+    //   A component can also name a single clip directly.
     // =============================================================================
 
-    /** One alias: the name gameplay asks for, and the clip it resolves to. */
+    /** One entry: the name gameplay uses, and its clip. */
     struct AnimationLibraryEntry
     {
-        /** What gameplay writes. The editor pre-fills it from the clip's file stem (**I13**). */
+        /** The name gameplay uses. The editor pre-fills it from the clip's file name. */
         OpaaxStringID Name;
 
         /** Asset-relative ("Anims/Hero_Run.opaaxclip") or a mount. */
@@ -44,17 +36,14 @@ namespace Opaax
     };
 
     /**
-     * A library: the named clips, and which one a component with no opinion plays.
-     *
-     * NO OPAAX_PROPERTIES for Entries — it is a TDynArray and no property drawer draws a list, the
-     * same split SpriteSheetData makes for its frames. The editor folds over the SELECTED entry;
-     * the list itself is the panel's UI, which is what a list has to be to be reorderable.
+     * A library: named clips, and the default clip.
+     * Entries are edited by the editor panel (lists are not drawn by the property system).
      */
     struct AnimationLibraryData
     {
         TDynArray<AnimationLibraryEntry> Entries;
 
-        /** Played by a component that names no clip of its own. */
+        /** Played when a component names no clip. */
         OpaaxStringID DefaultClip;
 
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(AnimationLibraryData, Entries, DefaultClip)
@@ -62,10 +51,7 @@ namespace Opaax
         Uint32 EntryCount() const noexcept { return static_cast<Uint32>(Entries.size()); }
 
         /**
-         * The entry called InName, or nullptr. Exact — no fallback.
-         *
-         * Public because the editor needs it too: "does this name already exist" is what stops a
-         * rename producing two entries one lookup can never tell apart.
+         * The entry named InName, or nullptr. Exact match only.
          */
         const AnimationLibraryEntry* FindExact(const OpaaxStringID InName) const noexcept
         {
@@ -86,13 +72,8 @@ namespace Opaax
         }
 
         /**
-         * What InName resolves to: the entry itself, or — when the caller has NO OPINION (an
-         * invalid id) — the DefaultClip, then the first entry.
-         *
-         * A NAMED clip that is absent answers nullptr rather than falling back, so the caller can
-         * say so. Silently playing a different animation for a misspelled name is exactly the
-         * wrong-answer failure this codebase refuses; "I have no opinion" is a different question
-         * and is the only one that gets a default.
+         * The clip for InName. An invalid id gives the DefaultClip, then the first entry.
+         * An unknown name gives nullptr (no silent fallback).
          */
         const AnimationLibraryEntry* Find(const OpaaxStringID InName) const noexcept
         {

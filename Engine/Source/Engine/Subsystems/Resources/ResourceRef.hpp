@@ -5,14 +5,8 @@
 #include "ResourceHandle.hpp"
 
 // =============================================================================
-// ResourceRef<T> — ownership CLAIM (RAII), ~16B. Lives in CODE (game/engine
-// systems), never in data. Mirrors shared_ptr: add-ref on copy, release on
-// destruction. A Ref is a lifetime *claim*, not ownership — pools own everything.
-//
-//   Team rule: "in code it's a Ref, in data it's a Handle." Manual release calls
-//   never appear in game code. Bodies that touch the manager (copy / assign / dtor
-//   / Get) are declared here and DEFINED in ResourceManager.h, where the manager
-//   is a complete type — this breaks the Ref<->Manager template cycle.
+// ResourceRef<T> — keeps a resource loaded (RAII, like shared_ptr). Used in code, not data.
+//   Bodies that need the manager are defined in ResourceManager.h.
 // =============================================================================
 namespace Opaax
 {
@@ -25,14 +19,11 @@ namespace Opaax
         // CTORS - DTORS
         // =============================================================================
     public:
-        /**  empty claim (null manager) */
+        /** Empty ref. */
         ResourceRef() noexcept = default;
         
         /**
-         * Adopt the +1 that Load/Pin already applied — no extra add-ref.
-         * Manager-only in spirit; game code receives Refs from Load()/Pin(), never builds them.
-         * @param InManager 
-         * @param InHandle 
+         * Takes the ref that Load/Pin already added. Refs come from Load()/Pin(), not built by hand.
          */
         ResourceRef(ResourceManager* InManager, ResourceHandle<T> InHandle) noexcept
             : m_Manager(InManager)
@@ -44,17 +35,8 @@ namespace Opaax
         // Copy
         // =============================================================================
         
-        /**
-         * add-ref  — defined in ResourceManager.h
-         * @param InOther 
-         */
         ResourceRef(const ResourceRef& InOther);
 
-        /**
-         * release old + add-ref — defined in ResourceManager.h
-         * @param InOther 
-         * @return 
-         */
         ResourceRef& operator=(const ResourceRef& InOther);
 
         // =============================================================================
@@ -70,10 +52,8 @@ namespace Opaax
             InOther.m_Handle  = ResourceHandle<T>{};
         }
 
-        /** release old + steal — defined in ResourceManager.h */
         ResourceRef& operator=(ResourceRef&& InOther) noexcept;
 
-        /** release — defined in ResourceManager.h */
         ~ResourceRef();
 
         // =============================================================================
@@ -81,8 +61,7 @@ namespace Opaax
         // =============================================================================
     public:
         /**
-         * manager->Resolve<T> — defined in ResourceManager.h
-         * @return 
+         * @return The resource (manager->Resolve<T>)
          */
         T* Get() const noexcept;
         T* operator->() const noexcept { return Get(); }

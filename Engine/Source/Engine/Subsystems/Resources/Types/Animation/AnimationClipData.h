@@ -14,20 +14,12 @@
 
 namespace Opaax
 {
-    struct TextureResource;       // only NAMED — TResourcePath never completes its parameter
+    struct TextureResource;
     struct SpriteSheetResource;
 
     // =============================================================================
-    // AnimationClipData — ONE animation, as DATA. The `.opaaxclip` payload.
-    //
-    //   The SpriteSheetData / SpriteSheetFile / SpriteSheetResource stack, one layer over.
-    //
-    //   A CLIP IS ITS OWN ASSET so the things that hang off a clip — a notify track, curves —
-    //   can arrive as one field here, with no library, component or subsystem change. It also
-    //   makes a clip reusable across characters; a library-embedded clip is not.
-    //
-    //   TWO SOURCES, and the precedence is SpriteComponent's own rule one layer down: a clip
-    //   with a Sheet reads each step's Frame, one without reads each step's Texture.
+    // AnimationClipData — one animation (.opaaxclip).
+    //   With a Sheet, each step names a sheet frame; without, each step names a texture.
     // =============================================================================
 
     /** What happens when a clip reaches its end. */
@@ -38,7 +30,7 @@ namespace Opaax
         PingPong
     };
 
-    /** I11: the mapping lives with the enum, found by ADL. */
+    /** Enum to string. */
     inline const char* ToString(const EAnimPlayMode InMode) noexcept
     {
         switch (InMode)
@@ -59,19 +51,14 @@ namespace Opaax
     /** One entry in a clip: which picture, and how long it holds. */
     struct AnimationStep
     {
-        /** SHEET clips: the SpriteFrame's name. Resolved to an index ONCE, when the clip binds. */
+        /** Sheet clips: the frame name (resolved once, when the clip binds). */
         OpaaxStringID Frame;
 
-        /** TEXTURE-LIST clips: the image. Read only when the clip names no sheet. */
+        /** Texture clips: the image. Only used when the clip has no sheet. */
         TResourcePath<TextureResource> Texture;
 
         /**
-         * How many ticks this step holds, at the clip's Fps.
-         *
-         * Integer rather than seconds because pixel-art timing is quantized — Unreal's
-         * PaperFlipbook keyframe and Aseprite both count this way, and it removes float drift
-         * from the total. Zero is read as one: a step that shows for no time is a typo, not a
-         * feature, and dropping it silently would be the wrong-answer failure.
+         * How many ticks this step lasts, at the clip's Fps. Zero counts as one.
          */
         Uint32 Hold = 1;
 
@@ -90,19 +77,16 @@ namespace Opaax
 
     /**
      * A clip: which pictures, in which order, and how fast.
-     *
-     * NO OPAAX_PROPERTIES for Steps — it is a TDynArray and no property drawer draws a list. The
-     * editor folds over the clip's own fields and over the SELECTED step, both of which are
-     * reflected; the list itself is the panel's UI, which is what a list has to be to be reorderable.
+     * Steps are edited by the editor panel (lists are not drawn by the property system).
      */
     struct AnimationClipData
     {
-        /** Asset-relative ("Sheets/Hero.opaaxsheet"). SET means the steps name frames by Name. */
+        /** Asset-relative ("Sheets/Hero.opaaxsheet"). When set, steps name frames. */
         TResourcePath<SpriteSheetResource> Sheet;
 
         TDynArray<AnimationStep> Steps;
 
-        /** Ticks per second. The steps' Hold counts in these. */
+        /** Ticks per second. */
         float Fps = 12.f;
 
         EAnimPlayMode PlayMode = EAnimPlayMode::Loop;
@@ -119,11 +103,7 @@ namespace Opaax
         Uint32 StepCount() const noexcept { return static_cast<Uint32>(Steps.size()); }
 
         /**
-         * The whole clip's length in ticks — the sum of every step's Hold.
-         *
-         * Inline like every other member here: the struct carries no OPAAX_API (it is plain data,
-         * **I6**), so a member defined in the DLL's .cpp is unresolvable from the exe. Caught by
-         * the test link, which is the first thing outside the DLL to name one.
+         * Clip length in ticks (sum of every step's Hold).
          */
         Uint32 TotalTicks() const noexcept
         {
@@ -137,7 +117,7 @@ namespace Opaax
             return lTotal;
         }
 
-        /** The step InIndex names, or nullptr. Out of range answers null rather than clamping. */
+        /** The step at InIndex, or nullptr if out of range. */
         const AnimationStep* StepAt(Uint32 InIndex) const noexcept
         {
             return (InIndex < StepCount()) ? &Steps[InIndex] : nullptr;
@@ -152,18 +132,9 @@ namespace Opaax
     };
 
     /**
-     * Which step InClip is showing InTimeSeconds after it started.
-     *
-     * STATELESS — the answer is a pure function of the time, never of the previous frame — so
-     * playback cannot drift and a frame hitch skips ahead rather than queueing up the frames it
-     * missed. That is also what makes it testable with no world, no GL and no clock, the way
-     * MakeFrameUV, SliceGrid and PlanQuadBatches are.
-     *
-     * `bFinished` means "nothing new will be shown from here": the end of a Once clip, and any
-     * clip that cannot advance at all (no steps, a zero Fps). A Loop or PingPong clip that can
-     * advance never finishes.
-     *
-     * Degenerate input answers step 0 — never a division by zero, never an out-of-range index.
+     * Which step InClip shows InTimeSeconds after it started. Stateless (no drift; a hitch skips ahead).
+     * bFinished: nothing new will be shown (end of a Once clip, or a clip that cannot advance).
+     * Loop and PingPong clips never finish. Bad input gives step 0.
      */
     OPAAX_API AnimationSample SampleClip(const AnimationClipData& InClip, float InTimeSeconds);
 }

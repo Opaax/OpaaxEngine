@@ -1,6 +1,6 @@
 #pragma once
 
-#include <functional>   // std::ref — see TGameInstanceSubsystemEntry::CreateInto
+#include <functional>   // std::ref
 #include <type_traits>
 
 #include "Core/EngineAPI.h"
@@ -17,37 +17,25 @@ namespace Opaax
     inline constexpr LogCategory LogGameInstanceSubsystemRegistry{"GameInstanceSubsystemRegistry"};
 
     // =============================================================================
-    // IGameInstanceSubsystemEntry — the type-erased view of one registered game-instance
-    //   subsystem type. IWorldSubsystemEntry's shape, for the same reason: the engine stores
-    //   and calls these through an exported vtable while a GAME MODULE instantiates the
-    //   concrete entry.
-    //
-    //   NO ShouldCreate, deliberately. A world FILTERS its candidates because Edit and Play
-    //   worlds coexist and want different sets (WS2); there is only ever one kind of game, so
-    //   a filter here would be a hook with nothing to decide.
+    // IGameInstanceSubsystemEntry — type-erased entry for one registered game-instance subsystem type.
     // =============================================================================
     class OPAAX_API IGameInstanceSubsystemEntry
     {
     public:
         virtual ~IGameInstanceSubsystemEntry() = default;
 
-        /** Authoring name — logs and editor UI. */
+        /** Name, for logs and the editor. */
         virtual OpaaxStringID GetName() const = 0;
 
         /**
-         * Register this type into InManager, constructed from InContext.
-         *
-         * Goes through ISubsystemManager::RegisterSubsystem<T> (which forwards ctor args), so
-         * the manager needs NO change to carry a context — the entry is what remembers T.
+         * Registers this type into InManager, constructed from InContext.
          */
         virtual void CreateInto(GameInstanceSubsystemMgr& InManager, GameInstanceContext& InContext) const = 0;
     };
 
     // =============================================================================
-    // TGameInstanceSubsystemEntry<T> — the concrete entry, baked from T at the registration
-    //   site. NO OPAAX_API: exporting a class TEMPLATE exports nothing and makes every
-    //   consumer expect an instantiation the DLL never emits (I6). Header-only and per-TU is
-    //   exactly what lets a game module in a static lib register its own subsystem types.
+    // TGameInstanceSubsystemEntry<T> — concrete entry for T. Header-only (no OPAAX_API), so
+    //   game modules can register their own types.
     // =============================================================================
     template<typename T>
     requires std::is_base_of_v<IGameInstanceSubsystem, T>
@@ -60,13 +48,9 @@ namespace Opaax
 
         void CreateInto(GameInstanceSubsystemMgr& InManager, GameInstanceContext& InContext) const override
         {
-            // T's ctor must accept a GameInstanceContext& — the injection point (D3: no locator
-            // downstream). A type that doesn't fails to compile HERE, at its own registration.
-            //
-            // std::ref is LOAD-BEARING, not style — WS4, one tier up. RegisterSubsystem captures
-            // its ctor args BY VALUE into the factory lambda, and StartupAll clears m_Factories
-            // once it has consumed them, so passing InContext directly would copy the context into
-            // a lambda that is then destroyed and leave every stored reference dangling.
+            // T must be constructible from GameInstanceContext&.
+            // std::ref: the factory captures its arguments by value, and a copy would leave
+            // subsystems with dangling references.
             InManager.RegisterSubsystem<T>(std::ref(InContext));
         }
 
@@ -75,15 +59,8 @@ namespace Opaax
     };
 
     // =============================================================================
-    // GameInstanceSubsystemRegistry — every game-instance-subsystem type the engine and the
-    //   loaded modules know about, in registration order. The FIFTH member of
-    //   EngineRegistries (MR0), engine-owned type metadata rather than any subsystem's state.
-    //
-    //   These are CANDIDATES, not instances. Every game creates the whole list, in order.
-    //
-    //   SEALING: closes at the first CreateWorld like its siblings. A game is started before
-    //   the first world (BO4's fourth stage), so the window a module registers in is the same
-    //   one components and world subsystems get, and it closes at the same moment.
+    // GameInstanceSubsystemRegistry — every game-instance subsystem type, in registration order.
+    //   Every game creates all of them, in order. Closed (sealed) at the first CreateWorld.
     // =============================================================================
     class OPAAX_API GameInstanceSubsystemRegistry
     {
@@ -97,9 +74,7 @@ namespace Opaax
         // =========================================================================
         // Copy - Move Delete
         // =========================================================================
-        //
-        // REQUIRED by OPAAX_API, not hygiene: dllexport instantiates every implicitly-declared
-        // member, and copy-assigning a TDynArray<TUniquePtr<...>> fails to compile (C2280).
+        // Required by OPAAX_API: the implicit copy would not compile (C2280).
         GameInstanceSubsystemRegistry(const GameInstanceSubsystemRegistry&)            = delete;
         GameInstanceSubsystemRegistry& operator=(const GameInstanceSubsystemRegistry&) = delete;
         GameInstanceSubsystemRegistry(GameInstanceSubsystemRegistry&&)                 = delete;
@@ -110,32 +85,30 @@ namespace Opaax
         // =========================================================================
     public:
         /**
-         * Register T as a game-instance-subsystem candidate.
-         *
-         * @tparam T Derives IGameInstanceSubsystem and is constructible from GameInstanceContext&.
-         * @param InName The authoring name. Refused (and logged) when invalid or already taken.
-         * @return true when the registry accepted it.
+         * Registers T as a game-instance subsystem.
+         * @tparam T Derives IGameInstanceSubsystem, constructible from GameInstanceContext&
+         * @param InName Name. Refused (and logged) if invalid or already used.
+         * @return True if registered
          */
         template<typename T>
         requires std::is_base_of_v<IGameInstanceSubsystem, T>
         bool Register(OpaaxStringID InName)
         {
-            // NOTE: the entry is built here (T is known in the module's TU) but handed to an
-            // out-of-line sink, so the entry LIST is only ever touched DLL-side.
+            // Built here (T is known) but stored by an out-of-line function in the DLL.
             return AddEntry(MakeUnique<TGameInstanceSubsystemEntry<T>>(InName), InName);
         }
 
-        /** Idempotent. Called by WorldManager::CreateWorld — after this, Register refuses. */
+        /** Called by WorldManager::CreateWorld. After this, Register refuses. Safe to call twice. */
         void Seal() noexcept;
 
         // =========================================================================
         // Lookup
         // =========================================================================
     public:
-        /** @return the entry registered under InName, or nullptr. */
+        /** @return The entry registered under InName, or nullptr */
         const IGameInstanceSubsystemEntry* FindByName(OpaaxStringID InName) const noexcept;
 
-        /** Iterate every candidate in registration order — what StartGame walks. */
+        /** Every entry, in registration order. */
         template<typename TFunc>
         void ForEach(TFunc&& InFunc) const
         {
@@ -156,7 +129,7 @@ namespace Opaax
         // Functions
         // =========================================================================
     private:
-        /** Out-of-line sink for Register<T> — see the NOTE there. Takes ownership. */
+        /** Stores an entry (takes ownership). */
         bool AddEntry(TUniquePtr<IGameInstanceSubsystemEntry> InEntry, OpaaxStringID InName);
 
         // =========================================================================

@@ -3,13 +3,9 @@
 #include "Core/OpaaxTypes.h"
 
 // =============================================================================
-// ResourceDependencyGraph — forward + reverse edges between resources, keyed by
-// interned path id (OpaaxStringID). LoadContext::Acquire records an edge on every
-// composite acquisition; unload drops the node's edges.
-//
-//   M-RES-1: RECORDED, not consumed. M-RES-3 hot reload walks the REVERSE edges to
-//   answer "TextureA changed on disk — who is dirty?". Kept tiny and consumer-free
-//   on purpose (anti-god-object border, review C5/C6).
+// ResourceDependencyGraph — parent -> child and child -> parent links between resources,
+// keyed by path id. Recorded by LoadContext::Acquire, removed on unload.
+// Meant for hot reload (which resources depend on this file?).
 // =============================================================================
 namespace Opaax
 {
@@ -20,10 +16,7 @@ namespace Opaax
         // =============================================================================
     public:
         /**
-         * Parent hard-depends on Child (Level -> Texture). 
-         * Down-the-DAG only.
-         * @param InParentId 
-         * @param InChildId 
+         * Records that Parent depends on Child (Level -> Texture).
          */
         void AddEdge(Uint32 InParentId, Uint32 InChildId)
         {
@@ -32,8 +25,7 @@ namespace Opaax
         }
 
         /**
-         * Drop every edge touching InNodeId (both directions) — called on unload.
-         * @param InNodeId 
+         * Removes every link of InNodeId (both directions). Called on unload.
          */
         void RemoveNode(Uint32 InNodeId)
         {

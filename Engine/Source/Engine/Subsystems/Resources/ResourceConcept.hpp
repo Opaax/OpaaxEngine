@@ -6,23 +6,16 @@
 #include "Core/OpaaxTypes.h"
 
 // =============================================================================
-// ResourceConcept — THE compile-time contract (replaces an IResource base class).
-//
-//   A resource is a PLAIN STRUCT that satisfies CResource: no vtable, no base
-//   class, no two-phase init. The compiler rejects any type that doesn't provide
-//   the required static interface. Game code defines resource types with ZERO
-//   engine registration — satisfying the concept is the whole contract.
+// ResourceConcept — the compile-time contract for resource types (no base class).
+//   A resource is a plain struct satisfying CResource; nothing else to register.
 // =============================================================================
 namespace Opaax
 {
     // -------------------------------------------------------------------------
-    // Failure policy — per type. Deciding question (review C7): does a degraded
-    // substitute keep gameplay *correct*?
-    //   Placeholder — renderables (pink texture), audio (silence), localization
-    //                 (the key string): a degraded substitute is survivable.
-    //   FailFast    — anything that DRIVES logic (Level, DialogueTree, gameplay
-    //                 DBs): a placeholder there doesn't degrade, it lies. FailFast
-    //                 propagates up hard-reference chains.
+    // Failure policy, per type:
+    //   Placeholder — a substitute is acceptable (pink texture, silent audio, ...).
+    //   FailFast    — anything that drives logic (Level, gameplay data): a load failure
+    //                 gives null, and propagates to whatever depends on it.
     // -------------------------------------------------------------------------
     enum class EFailPolicy : Uint8
     {
@@ -31,14 +24,13 @@ namespace Opaax
     };
 
     // -------------------------------------------------------------------------
-    // Load state. A slot is Loading between an async request and its main-thread
-    // publish; Resolve gates on Loaded, so a Loading handle resolves to the fail
-    // policy (placeholder/null) until the payload lands — the streaming behavior.
+    // Load state. Loading = async request placed, not published yet; it resolves to the
+    // failure policy (placeholder/null) until then.
     // -------------------------------------------------------------------------
     enum class EResourceState : Uint8
     {
         Unloaded,
-        Loading, // async request placed, payload not yet published
+        Loading, // async request placed, not published yet
         Loaded,
         Failed
     };
@@ -48,25 +40,21 @@ namespace Opaax
 
     // =============================================================================
     // CResource — the contract every resource type must satisfy.
-    //
-    //   Two-phase loading. Load is the ANY-THREAD producer: pure file IO + CPU
-    //   decode (+ composite ctx.Acquire<Child>, which runs inline on the same
-    //   worker). It must be self-contained — no GPU, no shared mutable state.
-    //   The optional Initialize() below is the MAIN-THREAD "log-in" (GPU upload,
-    //   handle registration) run once during the pump, after Load's payload lands.
+    //   Load may run on any thread: file IO and CPU decode only (no GPU, no shared state).
+    //   The optional Initialize() runs on the main thread after Load (GPU upload).
     // =============================================================================
     template<typename T>
     concept CResource = requires(const char* InPath, LoadContext& InCtx)
     {
-        // Full object or nothing — no exceptions, no partially-built resources.
+        // Full object or nothing: no exceptions, no partial resources.
         { T::Load(InPath, InCtx) } -> std::same_as<std::optional<T>>;
-        // Built once per pool (pink texture, silent clip, empty table...).
+        // Built once per pool (pink texture, silent clip, empty table, ...).
         { T::Placeholder() }       -> std::same_as<T>;
         // Placeholder vs FailFast.
         { T::FailPolicy }          -> std::convertible_to<EFailPolicy>;
 
-        // Optional, detected at the pool with if-constexpr (not required here):
-        //   void   Initialize()      — main-thread GPU log-in, run once in the pump.
-        //   Uint64 ByteSize() const  — real payload bytes (else sizeof(T)).
+        // Optional, detected at compile time:
+        //   void   Initialize()      — main-thread GPU upload, run once.
+        //   Uint64 ByteSize() const  — payload size in bytes (else sizeof(T)).
     };
 }

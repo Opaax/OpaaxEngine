@@ -19,20 +19,12 @@ namespace Opaax
     inline constexpr LogCategory LogUICanvasResource{"UICanvasResource"};
 
     // =============================================================================
-    // UICanvasResource — a `.opaaxui` as a resource: the authored widget tree, as TEXT.
-    //
-    //   IT HOLDS THE TEXT, NOT A LIVE TREE, and that is the design rather than laziness: a widget
-    //   is a non-copyable node that knows its parent and its canvas, so handing out "the resource's
-    //   tree" would either share one mutable tree between every instance or need a deep clone per
-    //   widget type. Re-reading the text is the clone (**UI13**) — every `BuildTree` yields an
-    //   independent tree with no `Clone` override to keep in step as widget types are added.
-    //
-    //   A HUD is built once or twice per session, so the parse is not on any hot path; when one
-    //   ever is, the cache goes HERE and no consumer changes.
+    // UICanvasResource — a .opaaxui as a resource. Holds the file text, not a widget tree:
+    //   each BuildTree parses a new independent tree.
     // =============================================================================
     struct UICanvasResource final
     {
-        /** The file's bytes, verbatim. What BuildTree parses and what a reload replaces. */
+        /** The file contents. */
         OpaaxString Text;
 
         // ---- CResource contract --------------------------------------------------
@@ -42,8 +34,7 @@ namespace Opaax
 
         static std::optional<UICanvasResource> Load(const char* InPath, LoadContext& /*InCtx*/)
         {
-            // Only the BYTES are taken here. Parsing needs the widget registry, which a resource
-            // load has no route to — so it happens at BuildTree, where the caller has one (UI13).
+            // Only read the bytes: parsing needs the widget registry (done in BuildTree).
             const OpaaxString lText = FileIO::ReadAllText(OpaaxString(InPath));
 
             if (lText.IsEmpty())
@@ -58,7 +49,7 @@ namespace Opaax
             return lResource;
         }
 
-        /** An empty canvas. It builds a tree with a root and nothing in it, never a null. */
+        /** An empty canvas: builds a root with nothing in it. */
         static UICanvasResource Placeholder()
         {
             UICanvasResource lResource;
@@ -77,10 +68,9 @@ namespace Opaax
 
         // ---- Use ------------------------------------------------------------------
         /**
-         * Parse a FRESH tree out of the held text.
-         *
-         * @param OutReferenceHeight The canvas height the file was authored against.
-         * @return The root, or null when the text does not parse. Independent of every other call.
+         * Parses a new tree from the text.
+         * @param OutReferenceHeight The canvas height the file was designed for
+         * @return The root, or null if the text does not parse
          */
         TUniquePtr<UIWidget> BuildTree(const UIWidgetRegistry& InRegistry, float& OutReferenceHeight) const
         {

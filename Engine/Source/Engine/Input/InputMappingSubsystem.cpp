@@ -2,7 +2,7 @@
 
 #include "Application/Services/IPaths.h"
 #include "Engine/GameInstance/GameInstanceContext.h"
-#include "Engine/Subsystems/Input/InputKeyNames.h"   // ToString(EKeyCode) for the skip warnings
+#include "Engine/Subsystems/Input/InputKeyNames.h"   // ToString(EKeyCode)
 #include "Engine/Subsystems/Resources/ResourceManager.h"
 #include "Engine/Subsystems/Resources/Types/Input/InputActionResource.h"
 #include "Engine/Subsystems/Resources/Types/Input/InputMappingContextResource.h"
@@ -63,7 +63,7 @@ namespace Opaax
 
             const InputActionResource* lAction = lActionRef.Get();
 
-            // A Placeholder action has no name, which is exactly how a missing file shows up here.
+            // A missing file gives a placeholder action without a name.
             if (lAction == nullptr || !lAction->Data.Name.IsValid())
             {
                 OPAAX_LOG(LogInputMapping, Warn,
@@ -72,9 +72,7 @@ namespace Opaax
                 continue;
             }
 
-            // Registered on FIRST SIGHT, so a context is self-sufficient — nothing has to declare
-            // the actions before the map that uses them. A second context naming the same action
-            // finds it already there and reuses the same definition.
+            // Registered on first use, so a context needs no prior action declaration.
             if (m_Evaluator.FindAction(lAction->Data.Name) == nullptr)
             {
                 InputAction lDefinition;
@@ -95,9 +93,7 @@ namespace Opaax
             lContext.Bindings.emplace_back(Move(lBinding));
         }
 
-        // The refs go out of scope here on purpose: everything the evaluator needs — the name, the
-        // key, the modifier list — was COPIED above, so nothing downstream depends on the assets
-        // staying resident.
+        // Everything needed was copied, so the assets may be unloaded.
         return m_Evaluator.AddContext(lContext);
     }
 
@@ -132,8 +128,7 @@ namespace Opaax
             return;
         }
 
-        // Not refused: a caller may legitimately bind before the context that declares the action
-        // is added. But a typo is silent forever otherwise, which is the risk proposal 04 named.
+        // Allowed (the context may be added later), but warn: it may be a typo.
         OPAAX_LOG(LogInputMapping, Warn,
                   "Bind '{}' ({}) — no action of that name is registered yet. It will never fire unless one is added.",
                   InAction, ToString(InTrigger));
@@ -207,13 +202,7 @@ namespace Opaax
     // =========================================================================
     bool InputMappingSubsystem::Startup()
     {
-        // The PLAY world count is the GATE, not decoration: a game is started before any world
-        // that belongs to it, so anything other than 0 here means the session was created in
-        // reaction to a world and every WorldContext built before this point missed it.
-        //
-        // PLAY worlds specifically, not all of them — the editor starts a game while its EDIT
-        // world is on screen, so a total count reads 1 there and cannot tell a correct boot from
-        // a broken one. Total is printed alongside only as context.
+        // Check: the game must start before any Play world exists.
         OPAAX_LOG(LogInputMapping, Trace,
                   "Input mapping started before any play world exists ({} play world(s), {} total) — {} action(s), {} context(s)",
                   m_Context->Worlds.CountWorldsOfMode(EWorldMode::Play),
@@ -233,12 +222,9 @@ namespace Opaax
     void InputMappingSubsystem::Update(double InDeltaTime)
     {
         m_Evaluator.Evaluate(m_Context->Input, InDeltaTime, &m_PreConsumed);
-        m_PreConsumed = InputKeyMask{};   // one frame only (F4)
+        m_PreConsumed = InputKeyMask{};   // this frame only
 
-        // BY INDEX and re-read each step: a handler may Bind (growing m_Bindings and
-        // reallocating it) or RegisterAction (invalidating a state pointer) from inside its own
-        // callback. Broadcast itself iterates a snapshot, so adding a listener mid-dispatch is
-        // already safe — this is about the two containers around it.
+        // By index, re-read each step: a handler may Bind or RegisterAction during its callback.
         for (Uint64 lIdx = 0; lIdx < m_Bindings.size(); ++lIdx)
         {
             const OpaaxStringID lAction = m_Bindings[lIdx].Action;
@@ -249,7 +235,7 @@ namespace Opaax
                 continue;
             }
 
-            // COPIED, so a handler that registers an action cannot leave this dangling.
+            // Copied, so registering an action cannot leave it dangling.
             const InputActionState lState = *lFound;
 
             for (Uint8 lTrigger = 0; lTrigger < INPUT_TRIGGER_COUNT; ++lTrigger)

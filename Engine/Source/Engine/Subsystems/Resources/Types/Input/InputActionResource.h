@@ -9,11 +9,9 @@
 namespace Opaax
 {
     // =============================================================================
-    // InputActionResource — a `.opaaxaction` as a RESOURCE. MoveModeResource's shape.
-    //
-    //   PLACEHOLDER: a missing action yields the DEFAULTS — an unnamed Bool action. A mapping
-    //   entry pointing at it is then refused by name at AddContext, loudly, instead of
-    //   half-existing. Degraded and visible, which is the whole point of the policy.
+    // InputActionResource — a .opaaxaction as a resource.
+    //   Placeholder policy: a missing action gives the defaults (an unnamed Bool action),
+    //   which AddContext refuses with a warning.
     // =============================================================================
     struct InputActionResource final
     {
@@ -29,13 +27,13 @@ namespace Opaax
             InputActionResource lResource;
             if (!InputActionFile::Load(OpaaxString(InPath), lResource.Data))
             {
-                return std::nullopt;   // InputActionFile already logged which reason it was
+                return std::nullopt;   // InputActionFile already logged why
             }
 
             return lResource;
         }
 
-        /** An unnamed Bool action. Nothing binds to it, and AddContext says so. */
+        /** An unnamed Bool action. */
         static InputActionResource Placeholder() { return InputActionResource{}; }
 
         Uint64 ByteSize() const noexcept

@@ -5,12 +5,12 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/Log/Logger.h"
 #include "Engine/Subsystems/EngineSubsystem.h"
-#include "Engine/Subsystems/Resources/ResourceRef.hpp"   // the texture cache holds Refs BY VALUE
-#include "RHI/ICommandBuffer.h"    // ELoadOp — a canvas pass says whether it keeps what is there
-#include "Renderer/CameraView.h"  // a submitted view holds one BY VALUE
-#include "Renderer/DebugDraw.h"   // owned BY VALUE — full type, not a forward decl
-#include "UI/UIAssetProvider.h"   // implemented here: the face + texture caches ARE the provider
-#include "World/Entity/EntityTypes.h"   // EntityID — PoseFor takes one
+#include "Engine/Subsystems/Resources/ResourceRef.hpp"
+#include "RHI/ICommandBuffer.h"    // ELoadOp
+#include "Renderer/CameraView.h"
+#include "Renderer/DebugDraw.h"
+#include "UI/UIAssetProvider.h"
+#include "World/Entity/EntityTypes.h"   // EntityID
 
 
 // =============================================================================
@@ -42,22 +42,14 @@ namespace Opaax
     struct TextComponent;
     struct TransformComponent;
     class UICanvas;
-    struct DisplayPose;   // returned by value; only PoseFor's DEFINITION needs it complete
-
-    // INCLUDED, not forward-declared (⑦-C **K5**). Its second parameter is defaulted, and a default
-    // may be stated only once — on the definition — so a forward declaration here could no longer
-    // let this header write `TResourcePath<TextureResource>`. Including it costs nothing the old
-    // declaration was protecting against: ResourcePath.h pulls in a string and <type_traits>, and
-    // names no part of the resource system. (See the include block above.)
+    struct DisplayPose;
 
     inline constexpr LogCategory LogRendererManager{"RendererManager"};
 
     // =============================================================================
-    // RendererManager — the ENGINE ADAPTER for the portable RenderSystem. This is the
-    //   only render-side code allowed to reach host globals (services/config/paths): it
-    //   resolves them, builds a RenderSystemDesc, owns one RenderSystem, and drives its
-    //   frame each tick. All actual rendering lives in the RenderSystem module, which knows
-    //   nothing of this engine — so the same core runs unchanged in any other host.
+    // RendererManager — engine adapter for the portable RenderSystem. Reads the engine
+    //   config, services and paths, builds a RenderSystemDesc, owns the RenderSystem and
+    //   drives its frame. The RenderSystem itself knows nothing about the engine.
     // =============================================================================
     class OPAAX_API RendererManager final : public EngineSubsystemBase, public IUIAssetProvider
     {
@@ -71,7 +63,7 @@ namespace Opaax
         // CTORS - DTORS
         // =============================================================================
     public:
-        // Out-of-line — the owned TUniquePtr<RenderSystem> holds a forward-declared type.
+        // Out-of-line: RenderSystem is forward-declared.
         RendererManager();
         ~RendererManager() override;
 
@@ -88,132 +80,94 @@ namespace Opaax
         // =============================================================================
     private:
         /**
-         * Bus handler
-         * forwards a window resize to the render core (which resizes the backbuffer).
-         * @param InResize The Event
+         * Window resize (event bus): resizes the backbuffer.
          */
         void HandleWindowResize(const WindowResize& InResize);
 
         /**
-         * Renderer.config changed (the Config panel, once an edit is committed): apply what can
-         * change live — ClearColor. The batch limits size GPU buffers at Startup and stay NeedRestart.
+         * Renderer.config changed: applies ClearColor. Batch limits need a restart.
          */
         void HandleRendererConfigChanged();
 
-        /** Engine.config changed: apply Render.bInterpolation. Backend stays NeedRestart. */
+        /** Engine.config changed: applies Render.bInterpolation. Backend needs a restart. */
         void HandleEngineConfigChanged();
 
         /**
-         * The frame's actual rendering. Separated from Render() so the debug-queue drain there is
-         * unconditional — this body early-outs (no render core, zero-size target) and those exits
-         * must not leave the queue to accumulate.
+         * The actual rendering. Separate from Render() so the per-frame queues are always cleared.
          */
         void RenderFrame();
 
         /**
-         * ONE pass: compose the matrices for InTarget's pixels, open the pass, draw the world, then
-         * the debug overlays if this view wants them.
-         *
-         * InView is in world units and the matrices are composed HERE, against this target's size —
-         * that is CAM1's split, and it is what lets two views of different sizes frame the same
-         * world correctly without either producer knowing about pixels.
-         *
-         * @param bInDrawOverlays False for a view that must look like the GAME — a camera preview
-         *   shows no grid, no selection outline and no entity icons.
+         * One pass: builds the matrices for InTarget's size, draws the world, then the debug overlays.
+         * @param bInDrawOverlays False for a game-looking view (no grid, outline or icons)
          */
         void RenderPass(IRenderTarget& InTarget, World* InWorld, const CameraView& InView, bool bInDrawOverlays);
 
         /**
-         * The UI over a world view: every submitted canvas, laid out for THIS target's size, in a
-         * second pass into the same target that keeps what the world pass drew (ELoadOp::Load).
-         * Layout happens here rather than in the tenant's tick because the target is what says
-         * how wide the canvas is (CAM2).
+         * Draws every submitted canvas over a world view, laid out for this target's size
+         * (second pass, keeps what the world pass drew).
          */
         void RenderCanvases(IRenderTarget& InTarget);
 
         /**
-         * One canvas into InTarget. With InView the submitter laid the canvas out itself and the
-         * pass only projects through that view — the designer's zoom (**UI14**); without, the target
-         * sizes the canvas and the view is the canvas's own.
+         * Draws one canvas into InTarget. With InView, the submitter already laid it out
+         * (editor zoom); otherwise the target size drives the layout.
          */
         void RenderCanvasPass(UICanvas& InCanvas, IRenderTarget& InTarget, ELoadOp InLoadOp, const CameraView* InView = nullptr);
 
         /**
-         * Say ONCE that a frame needed more than one pass, naming the count.
-         *
-         * A smoke run cannot read the Stats panel, and "multi-view works" is not a thing a log can
-         * say — a NUMBER is (L59). One shot, because the answer stops being news after the first.
+         * Logs once the first time a frame needs more than one pass.
          */
         void ReportPassCount(Uint32 InPasses);
 
-        /** Every SpriteComponent in InWorld, in one pass. Split from RenderFrame so the world's
-         *  two draw sources read as two lines, not as one long body. */
+        /** Draws every SpriteComponent in InWorld. */
         void DrawWorldSprites(World& InWorld, Renderer2D& InRenderer);
 
-        /** Every TextComponent in InWorld. DrawWorldSprites' twin, one draw source per body. */
+        /** Draws every TextComponent in InWorld. */
         void DrawWorldTexts(World& InWorld, Renderer2D& InRenderer);
 
         /**
-         * Publish the batcher's frame counters as named stats (④). Called from Render, OUTSIDE
-         * RenderFrame's early-outs, so a frame that drew nothing reports zeros.
+         * Publishes the batch counters as named stats. Called even when nothing was drawn.
          */
         void SubmitRenderCounters();
 
         /**
-         * The GPU texture behind an asset-relative path, loading it once and keeping the claim.
-         *
-         * Cached by INTERNED PATH, so a hundred sprites sharing one image resolve to one integer
-         * lookup per draw and one load per session. Null when the path is empty (nothing to draw)
-         * or the texture has not finished uploading; a path that fails to load answers the magenta
-         * placeholder instead, which is visible rather than absent.
+         * The GPU texture for an asset-relative path. Loaded once and cached.
+         * Null for an empty path or while uploading; a failed load gives the magenta placeholder.
          */
         ITexture2D* ResolveTexture(const TResourcePath<TextureResource>& InPath);
 
         /**
-         * The sheet behind an asset-relative path, loading it once and keeping the claim.
-         *
-         * ResolveTexture's twin, cache and all — a sheet is a resource like any other and the same
-         * "one lookup per draw, one load per session" rule applies. Null when the path is empty.
+         * The sprite sheet for an asset-relative path. Loaded once and cached. Null for an empty path.
          */
         const SpriteSheetData* ResolveSheet(const TResourcePath<SpriteSheetResource>& InPath);
 
         /**
-         * What one sprite draws: its texture, and the sub-rectangle of it to sample.
-         *
-         * The ONE place the Sheet-wins-over-Texture precedence lives, so the Inspector's tooltip and
-         * the frame cannot disagree. A sheet naming a frame that does not exist warns ONCE and falls
-         * back to the whole texture rather than drawing nothing, which would read as a broken sprite.
-         *
-         * @return false when there is nothing to draw at all — the ordinary "no image named yet".
+         * What a sprite draws: its texture and the region to sample. A sheet wins over a texture.
+         * A missing sheet frame warns once and uses the whole texture.
+         * @return False when there is nothing to draw
          */
         bool ResolveSpriteDraw(const SpriteComponent& InSprite, ITexture2D*& OutTexture, SpriteUVRect& OutUV);
 
         /**
-         * The face behind an asset-relative `.ttf` path, loading it once and keeping the claim.
-         *
-         * ResolveTexture's shape a third time. Answers the metrics AND the atlas together, because
-         * the layout walker needs both and neither is usable alone.
+         * The font face (metrics and atlas) for an asset-relative .ttf path. Loaded once and cached.
          */
         FontFaceView ResolveFace(const TResourcePath<FontFaceResource>& InPath);
 
-        /** IUIAssetProvider — the same caches, reached by a widget that can only spell a path. */
+        /** IUIAssetProvider — the same caches, for UI widgets. */
         FontFaceView     ResolveFace(const char* InAssetPath) override;
         ITexture2D*      ResolveTexture(const char* InAssetPath) override;
         UISheetFrameView ResolveSheetFrame(const char* InSheetPath, Int32 InFrame) override;
 
         /**
-         * The family behind an asset-relative `.opaaxfont` path, loading it once and keeping the
-         * claim. Null when the path is empty.
+         * The font family for an asset-relative .opaaxfont path. Loaded once and cached.
+         * Null for an empty path.
          */
         const FontFamilyData* ResolveFamily(const TResourcePath<FontFamilyResource>& InPath);
 
         /**
-         * What one text component draws with.
-         *
-         * The ONE place the Font-wins-over-Face precedence lives, so the Inspector's tooltip and the
-         * frame cannot disagree. A family that has nothing in the requested SCRIPT, or that answers
-         * a different cut than the one asked for, warns ONCE — a family is consulted every frame, so
-         * anything per-draw would be noise rather than a diagnostic.
+         * What a text component draws with. A family wins over a face.
+         * Warns once when a family has nothing for the script, or gives a different style.
          */
         FontFaceView ResolveTextDraw(const TextComponent& InText);
 
@@ -221,64 +175,46 @@ namespace Opaax
         // Getters - Setter
     public:
         /**
-         * Present the backbuffer — called by Engine::PresentBackbuffer (host-driven, after TickFrame).
-         * Separate from Render so the editor can draw UI to the backbuffer before the swap (S7). No-op
-         * if the render core failed to start.
+         * Swaps the backbuffer. Called by Engine::PresentBackbuffer, after the editor UI.
+         * Does nothing if the render core failed to start.
          */
         void Present();
 
         /**
-         * Draw the active world into InTarget, framed by InView, for THIS FRAME ONLY.
-         *
-         * IMMEDIATE MODE, exactly like the debug queue beside it (F4): the list is drained by
-         * Render() and cleared every frame, so a producer that wants its view keeps submitting. That
-         * is what makes a panel that hides — or dies — stop costing a pass with nothing to unregister,
-         * and why there is no dangling-target window to order a shutdown around.
-         *
-         * SUBMITTING NOTHING IS THE RUNTIME PATH: a frame with no submissions draws the backbuffer
-         * framed by the active world, which is what this always did.
-         *
-         * @param InTarget BORROWED for the frame — the submitter owns it (I5).
-         * @param InView In WORLD units; the matrices are composed against InTarget's pixels (CAM1).
-         * @param bInDrawOverlays Whether the debug queue draws in this view. False makes it look
-         *   like the game.
-         * @param bInDrawUI Whether the submitted canvases composite over this view. OPT-IN: the
-         *   game's own view and the editor's viewport say yes; a framing preview stays clean.
+         * Draws the active world into InTarget for this frame only. Submit again every frame.
+         * With no submission, the world is drawn to the backbuffer.
+         * @param InTarget Borrowed for the frame
+         * @param InView Camera view, in world units
+         * @param bInDrawOverlays Draw debug shapes in this view
+         * @param bInDrawUI Draw the submitted UI canvases over this view
          */
         void SubmitRenderView(IRenderTarget& InTarget, const CameraView& InView, bool bInDrawOverlays,
                               World* InSource = nullptr, bool bInDrawUI = false);
 
         /**
-         * Draw InCanvas over every view that asked for UI, THIS FRAME ONLY — SubmitRenderView's
-         * idiom: cleared every frame, so a canvas that stops being submitted stops being drawn.
-         * @param InCanvas BORROWED for the frame; the submitter owns it (I5).
-         * @param InTarget Null = over every view that opted into UI. Named = that target alone,
-         *   with its own Clear pass — an editor panel previewing one document (**UI14**).
-         * @param InView A named target's own way of looking (zoomed, panned); null = the canvas's.
+         * Draws InCanvas for this frame only. Submit again every frame.
+         * @param InCanvas Borrowed for the frame
+         * @param InTarget Null draws over every view with UI enabled; otherwise only into this
+         *   target, cleared first (editor preview)
+         * @param InView Optional view for InTarget (zoom/pan). Null uses the canvas's own view.
          */
         void SubmitUICanvas(UICanvas& InCanvas, IRenderTarget* InTarget = nullptr, const CameraView* InView = nullptr);
 
         /**
-         * Create an offscreen framebuffer on the render core's device (F2a). The natural companion to
-         * SubmitRenderView: a caller that wants the world in a texture needs both — the backing
-         * store, then the target wrapping it. CALLER-OWNED, and it must be released before the render
-         * core shuts down. nullptr before Startup (no core yet) or if the device is gone.
+         * Creates an offscreen framebuffer. Release it before the render core shuts down.
+         * @return Null before Startup or without a device
          */
         TUniquePtr<IFramebuffer> CreateFramebuffer(const FramebufferSpec& InSpec);
 
         /**
-         * Upload decoded pixels to a GPU texture on the render core's device (F2a). Reached through
-         * IEngine by TextureResource::Initialize — the same arrangement CreateFramebuffer has with
-         * the editor's ViewportPanel, and for the same reason: the caller needs a GPU resource and
-         * must not hold a device.
-         *
-         * CALLER-OWNED; release it before the render core shuts down. nullptr before Startup.
+         * Uploads decoded pixels to a GPU texture (used by TextureResource::Initialize).
+         * Release it before the render core shuts down.
+         * @return Null before Startup
          */
         TUniquePtr<ITexture2D> CreateTexture(const void* InPixels, Uint32 InWidth, Uint32 InHeight, Int32 InChannels);
 
         /**
-         * @return The per-frame debug line queue, drained and cleared by Render(). Reached by game
-         *   and editor code through IEngine::GetDebugDraw(); always valid (owned by value).
+         * @return The debug shape queue, cleared every frame by Render()
          */
         DebugDraw& GetDebugDraw() noexcept { return m_DebugDraw; }
 
@@ -299,24 +235,18 @@ namespace Opaax
         // Types
         // =============================================================================
     private:
-        /** One submitted view: where it lands, how the world is framed for it, and what it shows. */
+        /** One submitted view: target, camera view and what it shows. */
         struct RenderPassRequest
         {
-            IRenderTarget* Target        = nullptr;  // non-owning; the submitter owns it (I5)
+            IRenderTarget* Target        = nullptr;  // not owned
             CameraView     View;
             bool           bDrawOverlays = true;
             bool           bDrawUI       = false;
 
             /**
-             * WHICH WORLD this view draws. NULL means the ACTIVE one (P6).
-             *
-             * Until now every view drew whatever `RenderFrame` resolved once at the top, so
-             * multi-view (**MV1**) meant N views of ONE world — which is all the Camera Preview
-             * ever needed. A prefab is edited in a world that is deliberately never active, so it
-             * could not be drawn at all. Null-means-active keeps every existing submission
-             * byte-identical, including the backbuffer fallback.
+             * The world this view draws. Null means the active world.
              */
-            World*         Source        = nullptr;  // non-owning; the submitter owns its lifetime
+            World*         Source        = nullptr;  // not owned
         };
 
         // =============================================================================
@@ -325,81 +255,71 @@ namespace Opaax
     private:
         TUniquePtr<RenderSystem> m_RenderSystem;
 
-        /** Subscribed to in Startup, released in Shutdown. Non-owning: the config outlives us (I5). */
+        /** Subscribed in Startup, released in Shutdown. Not owned. */
         Config_Renderer* m_RendererConfig = nullptr;
         Config_Engine*   m_EngineConfig   = nullptr;
-        WorldManager*           m_WorldManager  = nullptr; // non-owning; active world = draw source
+        WorldManager*           m_WorldManager  = nullptr; // not owned
 
-        // This frame's views, cleared beside the debug queue in Render() (F4). Keeps its capacity,
-        // so a steady frame allocates nothing.
+        // This frame's views, cleared every frame. Keeps its capacity.
         TDynArray<RenderPassRequest> m_SubmittedViews;
 
-        /** One submitted canvas: what to draw, and whether it belongs to one target alone. */
+        /** One submitted canvas, and optionally its own target. */
         struct UICanvasRequest
         {
-            UICanvas*      Canvas = nullptr;   // non-owning; the submitter owns it (I5)
-            IRenderTarget* Target = nullptr;   // null = the over-the-world path
-            CameraView     View;               // meaningful only with bHasView — a named target's own look
+            UICanvas*      Canvas = nullptr;   // not owned
+            IRenderTarget* Target = nullptr;   // null = over the world views
+            CameraView     View;               // used only with bHasView
             bool           bHasView = false;
         };
 
-        /** This frame's canvases, same lifetime as the views above. */
+        /** This frame's canvases. */
         TDynArray<UICanvasRequest> m_SubmittedCanvases;
 
-        /** The frame's UI work, summed over canvases and views, published as counters (ST). */
+        /** This frame's UI counters. */
         Uint32 m_UILayouts  = 0;
         Uint32 m_UIRebuilds = 0;
         bool   m_bLoggedFirstUI = false;
 
-        /** Whether ReportPassCount has already spoken. One line per session, not one per frame. */
+        /** Whether ReportPassCount already logged. */
         bool m_bMultiPassLogged = false;
 
         /**
-         * Where InEntity should be DRAWN: its raw pose, or the blend toward it when a fixed step
-         * wrote a previous one. Counts the blends it performs, so "interpolation is on" and
-         * "something was actually interpolated" stay different claims ([[L15]]).
+         * Where InEntity is drawn: its pose, or interpolated from the previous fixed step.
+         * Counts the blends it performs.
          */
         DisplayPose PoseFor(World& InWorld, EntityID InEntity, const TransformComponent& InTransform);
 
         /**
-         * This frame's progress through the fixed step, for DISPLAY only (**PH21**). Zero when
-         * interpolation is off, which makes every draw site read the raw pose with no branch.
+         * Progress through the fixed step, for display only. Zero when interpolation is off.
          */
         float m_FrameAlpha = 0.f;
 
-        /** Render.bInterpolation — read at Startup, re-applied when Engine.config notifies a change. */
+        /** Render.bInterpolation — read at Startup, updated on Engine.config change. */
         bool m_bInterpolate = true;
 
-        /** Blends performed on the last frame, and the one-shot that reports the first of them. */
+        /** Blends done last frame, and whether the first one was logged. */
         Uint64 m_BlendedThisFrame  = 0;
         bool   m_bLoggedFirstBlend = false;
 
-        // Per-frame debug lines. Owned here because this is what DRAINS it (I5): the queue's
-        // lifetime is the renderer's, and it cannot outlive its only consumer.
+        // Debug shapes. Owned here because the renderer consumes them.
         DebugDraw               m_DebugDraw;
 
-        // Interned asset path -> the claim keeping that texture loaded. Owned HERE because this is
-        // the one render-side class allowed to reach the ResourceManager (Renderer2D stays
-        // portable), and released in Shutdown — which runs BEFORE the ResourceManager's, i.e. while
-        // the GL context is still alive to delete the GPU handles.
+        // Asset path -> loaded texture. Released in Shutdown, before the ResourceManager's,
+        // while the GL context is still alive.
         TUnorderedMap<Uint32, ResourceRef<TextureResource>> m_TextureCache;
 
-        /** The same claim-and-keep cache for sheets. Released in Shutdown beside the textures'. */
+        /** Same cache for sprite sheets. */
         TUnorderedMap<Uint32, ResourceRef<SpriteSheetResource>> m_SheetCache;
 
-        /** Sheets already warned about for naming a frame they do not have — one line, not one per frame. */
+        /** Sheets already warned about for a missing frame. */
         TUnorderedSet<Uint32> m_WarnedFrameRange;
 
-        /** The same claim-and-keep caches for text: one per `.ttf`, one per `.opaaxfont`. */
+        /** Same caches for fonts: .ttf faces and .opaaxfont families. */
         TUnorderedMap<Uint32, ResourceRef<FontFaceResource>>   m_FaceCache;
         TUnorderedMap<Uint32, ResourceRef<FontFamilyResource>> m_FamilyCache;
 
         /**
-         * (family, style) pairs already warned about for resolving to nothing or to a different cut.
-         *
-         * Keyed on the REQUEST rather than on the family, because a family that lacks Greek and is
-         * asked for both Greek and Cyrillic has two things to say. Uint64 so the interned path id and
-         * the four packed axes both fit without colliding.
+         * (family, style) pairs already warned about. Font path id and packed style in one Uint64.
          */
         TUnorderedSet<Uint64> m_WarnedFontStyle;
     };

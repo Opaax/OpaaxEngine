@@ -7,37 +7,30 @@
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Engine/Input/InputTypes.h"
 #include "Engine/Input/InputTypesJson.h"
-#include "Engine/Subsystems/Input/InputKeyNames.h"   // EKeyCode serializes by LABEL
+#include "Engine/Subsystems/Input/InputKeyNames.h"   // EKeyCode saved by name
 #include "Engine/Subsystems/Resources/ResourcePath.h"
 #include "Engine/Subsystems/Resources/ResourcePathJson.h"
 
 namespace Opaax
 {
-    struct InputActionResource;   // only NAMED — TResourcePath never completes its parameter
+    struct InputActionResource;
 
     // =============================================================================
-    // InputMappingEntry — one key driving one action, through a modifier pipeline.
-    //
-    //   THE ACTION IS A PATH, not a name, and that is what makes the editor field a resource
-    //   picker rather than free text a typo can silently break. The name gameplay binds with
-    //   comes from the action asset itself; this side only says WHICH asset.
-    //
-    //   Resolution happens ONCE, when the context is added — InputMappingSubsystem loads each
-    //   action and hands the evaluator the resolved InputKeyBinding. Resolving a path per key
-    //   per frame would be absurd, which is why the runtime and asset forms differ at all.
+    // InputMappingEntry — one key driving one action, through modifiers.
+    //   The action is a path (resource picker in the editor), resolved once when the context is added.
     // =============================================================================
     struct InputMappingEntry
     {
         /** Asset-relative ("Input/Jump.opaaxaction") or a mount. */
         TResourcePath<InputActionResource> Action;
 
-        /** Written as a LABEL ("Space"), never an ordinal — a mapping file is hand-editable. */
+        /** Saved by name ("Space"). */
         EKeyCode Key = EKeyCode::None;
 
-        /** Applied IN ORDER. DeadZone-then-Scalar is not Scalar-then-DeadZone. */
+        /** Applied in order (DeadZone then Scalar differs from Scalar then DeadZone). */
         TDynArray<InputModifierData> Modifiers;
 
-        /** Whether this key is swallowed from every LOWER-priority context. Per KEY. */
+        /** The key is consumed: lower-priority contexts ignore it. */
         bool bConsume = true;
 
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(InputMappingEntry, Action, Key, Modifiers, bConsume)
@@ -49,20 +42,12 @@ namespace Opaax
     };
 
     // =============================================================================
-    // InputMappingContextData — a set of key mappings pushed as one unit. The
-    //   `.opaaxinputmap` payload.
-    //
-    //   PRIORITY LIVES HERE, not on the push call. Unreal puts it on AddMappingContext; ONE
-    //   source is the rule this codebase keeps (L30), and an override parameter can arrive the
-    //   day a caller wants one.
-    //
-    //   THIS IS THE UNIT OF REBINDING AND OF UI. A menu context at a higher priority whose
-    //   entries consume is what stops Jump from firing while a menu is up — not a flag on the
-    //   game, and not a second input path.
+    // InputMappingContextData — a set of key mappings added as one unit (.opaaxinputmap).
+    //   A higher-priority context that consumes keys (e.g. a menu) blocks lower ones.
     // =============================================================================
     struct InputMappingContextData
     {
-        /** Higher is evaluated — and consumes — first. */
+        /** Higher is evaluated (and consumes) first. */
         Int32 Priority = 0;
 
         TDynArray<InputMappingEntry> Mappings;
@@ -70,9 +55,7 @@ namespace Opaax
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(InputMappingContextData, Priority, Mappings)
 
         /**
-         * NO OPAAX_PROPERTIES for Mappings — it is a TDynArray and no property drawer draws a
-         * list, the same split MoverData and SpriteSheetData both make. The panel owns the list;
-         * the fold owns the selected entry.
+         * Edited by the editor panel (lists are not drawn by the property system).
          */
         OPAAX_PROPERTIES(InputMappingContextData,
                          OPAAX_PROP(Priority).SetTooltip("Higher contexts are evaluated first and consume keys first."))

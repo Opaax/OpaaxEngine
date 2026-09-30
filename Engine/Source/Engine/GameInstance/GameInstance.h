@@ -13,18 +13,9 @@ namespace Opaax
     inline constexpr LogCategory LogGameInstance{"GameInstance"};
 
     // =============================================================================
-    // GameInstance — one game session. Created by StartGame BEFORE any world exists and
-    //   destroyed by EndGame after the last Play world is gone, so it OUTLIVES every world
-    //   it plays through: level travel destroys one world and creates another, and the
-    //   session is what does not change across that.
-    //
-    //   It holds SUBSYSTEMS and a CONTEXT and nothing else. Everything session-scoped —
-    //   input mapping today, save/score later — is a tenant, never a member of this class.
-    //   That is what keeps "the game instance knows about a lot of things" from turning it
-    //   into a bag: it knows about a lot of things because its tenants do.
-    //
-    //   NO ShouldCreate filter on the candidates (unlike a World, WS2): Edit and Play worlds
-    //   coexist and want different subsystem sets, but there is only ever one kind of game.
+    // GameInstance — one game session. Created before the first world and destroyed after the
+    //   last Play world, so it survives level changes. Session-scoped features (input mapping,
+    //   save, score, ...) are game-instance subsystems.
     // =============================================================================
     class OPAAX_API GameInstance
     {
@@ -33,8 +24,7 @@ namespace Opaax
         // =========================================================================
     public:
         /**
-         * @param InContext COPIED into a stable heap slot owned by this instance, so a
-         *   subsystem may store GameInstanceContext& for the whole game (WS4's reasoning).
+         * @param InContext Copied and kept for the whole game, so subsystems can store a reference to it.
          */
         explicit GameInstance(const GameInstanceContext& InContext);
         ~GameInstance();
@@ -52,22 +42,17 @@ namespace Opaax
         // =========================================================================
     public:
         /**
-         * Create every candidate in InRegistry in registration order, then start them all.
-         *
-         * One StartupAll for the whole set, so the create pass finishes before any Startup
-         * runs and a subsystem can reach a sibling during its own (F3, one tier over).
-         *
-         * @return how many subsystems were created.
+         * Creates every registered subsystem in order, then starts them all.
+         * @return Number of subsystems created
          */
         Uint64 StartSubsystems(const GameInstanceSubsystemRegistry& InRegistry);
 
         /**
-         * LC TearDown for every subsystem, reverse order — the phase in which every engine
-         * sibling a context points at is still alive. Idempotent (LC3).
+         * First shutdown step, in reverse order. Safe to call twice.
          */
         void TearDownSubsystems();
 
-        /** LC Shutdown for every subsystem, reverse order. Idempotent (LC3). */
+        /** Shuts every subsystem down, in reverse order. Safe to call twice. */
         void ShutdownSubsystems();
 
         // =========================================================================
@@ -75,9 +60,7 @@ namespace Opaax
         // =========================================================================
     public:
         /**
-         * Runs BEFORE WorldManager's, because GameInstanceManager is registered before it and
-         * ISubsystemManager::UpdateAll walks registration order. That is what lets a session
-         * subsystem publish this frame's answer before any world subsystem reads it.
+         * Runs before the worlds' update, so session subsystems update first.
          */
         void Update(double InDeltaTime);
 
@@ -88,7 +71,7 @@ namespace Opaax
         GameInstanceSubsystemMgr&       GetSubsystems()       noexcept { return m_Subsystems; }
         const GameInstanceSubsystemMgr& GetSubsystems() const noexcept { return m_Subsystems; }
 
-        /** Stable for the whole game — the address a subsystem's stored reference points at. */
+        /** Stable for the whole game. */
         GameInstanceContext&       GetContext()       noexcept { return *m_Context; }
         const GameInstanceContext& GetContext() const noexcept { return *m_Context; }
 
@@ -101,8 +84,7 @@ namespace Opaax
         // Members
         // =========================================================================
     private:
-        // Heap, not by value: a subsystem stores GameInstanceContext&, and only a stable
-        // address makes that safe for the game's whole life.
+        // On the heap: subsystems keep a reference to it.
         TUniquePtr<GameInstanceContext> m_Context;
 
         GameInstanceSubsystemMgr m_Subsystems;
