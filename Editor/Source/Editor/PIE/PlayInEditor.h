@@ -12,8 +12,8 @@ namespace Opaax
 namespace Opaax::Editor
 {
     // =============================================================================
-    // EPlayState — where the editor is in the PIE cycle. Paused is a state, not a flag on
-    //   Playing: Step is only legal from it, and the toolbar enables its buttons off this.
+    // EPlayState — where the editor is in the Play cycle. Paused is a state (Step is only allowed
+    //   from it).
     // =============================================================================
     enum class EPlayState : Uint8
     {
@@ -25,20 +25,11 @@ namespace Opaax::Editor
     const char* ToString(EPlayState InState) noexcept;
 
     // =============================================================================
-    // PlayInEditor — the PIE state machine (Editor.md D6). Owned by EditorService, referenced by
-    //   EditorContext, exactly as EditorSelection is.
-    //
-    //   It is its own type because TWO front-ends drive it — the toolbar's buttons and
-    //   EditorService::RouteInput's reserved keys (D5 step 3). Holding the state inside the panel
-    //   would force EditorService to reach into a panel to answer a key press.
-    //
-    //   PIE = capture + re-instantiate, never a registry copy: Play CLONES the edit world into a
-    //   Play world (WorldManager::CloneWorld) and activates it; the edit world stays alive and
-    //   untouched, so Stop restores it by simply activating it again and destroying the clone.
-    //   That is why restore costs nothing and needs no undo.
-    //
-    //   Every verb REFUSES loudly from a wrong state rather than no-op'ing silently — a Play that
-    //   quietly did nothing is the kind of thing that gets debugged twice.
+    // PlayInEditor — the Play-in-editor state machine. Owned by EditorService, referenced by
+    //   EditorContext. Driven by the toolbar and by EditorService::RouteInput's keys.
+    //   Play clones the edit world into a Play world and activates it; the edit world stays untouched,
+    //   so Stop just reactivates it and destroys the clone (no undo needed).
+    //   Calls from a wrong state are refused with a log.
     // =============================================================================
     class PlayInEditor
     {
@@ -60,38 +51,28 @@ namespace Opaax::Editor
         // =============================================================================
     public:
         /**
-         * Start a GAME, then clone the ACTIVE (edit) world into a Play world and activate it.
-         *
-         * That order is the contract, not a preference: a world subsystem's context is built
-         * inside CreateWorld, so the game instance has to exist before the clone is made or every
-         * subsystem in it would be handed a session that is not there yet.
-         *
-         * The source is remembered so Stop can restore it. Refused unless the state is Edit and
-         * there is an active world to clone; a failed clone ends the game it just started.
-         *
-         * @return true when the Play world is live.
+         * Starts a game, then clones the active (edit) world into a Play world and activates it. The game
+         * must exist first: world subsystems get their context when the world is created.
+         * Refused unless in Edit with an active world; a failed clone ends the game.
+         * @return True when the Play world is live
          */
         bool Play();
 
-        /** Suspend the world tick. Refused unless Playing. */
+        /** Pauses the world tick. Refused unless Playing. */
         bool Pause();
 
-        /** Resume the world tick. Refused unless Paused. */
+        /** Resumes the world tick. Refused unless Paused. */
         bool Resume();
 
-        /** Pause if playing, resume if paused — what one key can drive. */
+        /** Pauses if playing, resumes if paused. */
         bool TogglePause();
 
-        /** Tick exactly one more frame, then stay paused. Refused unless Paused. */
+        /** Ticks one frame, then stays paused. Refused unless Paused. */
         bool Step();
 
         /**
-         * Re-activate the edit world, then end the game — that order, so no frame ever runs
-         * without an active world. Refused when already in Edit.
-         *
-         * EndGame is what destroys the clone: it destroys every PLAY world, and the edit world is
-         * an Edit world. So the clone and the session go together, in the right order, and this
-         * verb never names either of them.
+         * Reactivates the edit world, then ends the game (which destroys the Play clone). In that order,
+         * so no frame runs without an active world. Refused when already in Edit.
          */
         bool Stop();
 
@@ -111,12 +92,10 @@ namespace Opaax::Editor
     private:
         WorldManager& m_Worlds;
 
-        // The game bracket. PIE is one game session, so Play/Stop are StartGame/EndGame with a
-        // world clone in between — the same two verbs a runtime host calls around its whole run.
+        // The game session. Play/Stop are StartGame/EndGame with a world clone in between.
         IEngine& m_Engine;
 
-        // Non-owning: WorldManager owns every world (I5). Both are set by Play and cleared by
-        // Stop, and are only ever dereferenced between the two.
+        // Non-owning: WorldManager owns every world. Set by Play, cleared by Stop.
         World* m_EditWorld = nullptr;
         World* m_PlayWorld = nullptr;
 

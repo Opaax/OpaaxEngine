@@ -6,33 +6,33 @@
 #include "Editor/Operation/EditorSelection.hpp"
 #include "Editor/Operation/EditorViewport.hpp"
 #include "Editor/Operation/MapOperations.h"
-#include "Editor/PIE/PlayInEditor.h"   // IsEdit — the focus rule is about which camera owns the view
-#include "Editor/Undo/ComponentUndoables.h"   // ⑤ — the steps these verbs record
+#include "Editor/PIE/PlayInEditor.h"   // IsEdit
+#include "Editor/Undo/ComponentUndoables.h"
 #include "Editor/Undo/EditorUndo.h"
 #include "Editor/Undo/EntityUndoables.h"
 
-#include <cmath>                 // atan2 — the delta's turn, read off its own basis
-#include <glm/geometric.hpp>     // length — and its stretch
-#include <glm/mat2x2.hpp>        // the delta's LINEAR part, conjugated into an entity's own frame
-#include <glm/matrix.hpp>        // transpose — a rotation's inverse
+#include <cmath>                 // atan2
+#include <glm/geometric.hpp>     // length
+#include <glm/mat2x2.hpp>        // the delta's linear part
+#include <glm/matrix.hpp>        // transpose
 
 #include "Application/Services/IEngine.h"
 #include "Core/Log/Logger.h"
 #include "Core/Maths/Bounds2D.h"
 #include "Engine/Registries/EngineRegistries.h"
 #include "World/Components/ComponentRegistry.h"
-#include "Core/Maths/Maths.h"    // RadiansToDegrees — the transform authors degrees
-#include "World/Components/TransformComponent.h"   // I17 — the one position a drag writes
+#include "Core/Maths/Maths.h"    // RadiansToDegrees
+#include "World/Components/TransformComponent.h"
 #include "World/Entity/Entity.h"
-#include "World/Entity/EntityHierarchy.h"   // §HR — a drag moves the WORLD pose of the topmost selected
+#include "World/Entity/EntityHierarchy.h"   // drags move the world pose
 #include "World/Entity/EntityMeta.h"
 #include "World/Entity/EntityQuery.h"
-#include "World/Serialization/MapSerializer.h"   // ⑤ — what a create/delete step carries
+#include "World/Serialization/MapSerializer.h"
 #include "World/World.h"
 #include "World/WorldManager.h"
 
-#include "Application/Services/IPaths.h"         // ⑦-C — the marker stores an ASSET-relative path
-#include "Engine/Subsystems/Resources/ResourceManager.h"  // before PrefabResource — completes LoadContext
+#include "Application/Services/IPaths.h"         // the marker stores an asset-relative path
+#include "Engine/Subsystems/Resources/ResourceManager.h"  // before PrefabResource (completes LoadContext)
 #include "World/Components/PrefabInstanceComponent.h"
 #include "World/Prefab/PrefabFactory.h"
 #include "World/Prefab/PrefabFile.h"
@@ -62,18 +62,9 @@ namespace
     }
 
     /**
-     * A world-space linear delta re-expressed in the frame it was BUILT in:
-     * `Rot(-θ)·InLinear·Rot(θ)`, transpose standing in for the inverse since a rotation is
-     * orthonormal.
-     *
-     * THE FRAME IS THE GIZMO'S, NOT THE ENTITY'S, and getting that wrong is what made a
-     * multi-selection scale drift. A scale delta arrives as `R·S·R⁻¹` where R is the pose the
-     * gizmo was seated with; conjugating by R recovers a clean diagonal S for EVERY entity.
-     * Conjugating by each entity's own rotation only cancels for the one entity whose rotation
-     * happens to match the gizmo — every other one gets a non-diagonal matrix, whose `atan2`
-     * reports a turn nobody asked for.
-     *
-     * Zero returns InLinear untouched, so the unrotated case is bit-identical to what shipped.
+     * A world-space linear delta in the gizmo's frame: Rot(-a) * InLinear * Rot(a) (transpose is the
+     * inverse of a rotation). A scale delta R*S*R^-1 becomes a clean S for every entity; using each
+     * entity's own rotation made multi-selection scaling drift. Zero returns InLinear unchanged.
      */
     glm::mat2 ToGizmoFrame(const glm::mat2& InLinear, const float InFrameRad)
     {
@@ -88,9 +79,7 @@ namespace
     }
 
     /**
-     * InBase, then "InBase 1", "InBase 2"... — Unity's shape, and it only appends when it has to.
-     * Linear per attempt, which is nothing at authoring scale and needs no counter to keep in sync
-     * with entities that have been deleted or renamed.
+     * InBase, then "InBase 1", "InBase 2", ... (like Unity), only when needed.
      */
     OpaaxString MakeUniqueName(World& InWorld, const OpaaxString& InBase)
     {
@@ -113,8 +102,7 @@ namespace Opaax::Editor
 
         World* const lWorld = InContext.Worlds.GetActiveWorld();
 
-        // An invalid map is the WM2 state this verb exists to make unreachable — refuse loudly
-        // rather than quietly authoring something no Save can ever write.
+        // No map: the entity could never be saved. Refuse with an error.
         if (!InOwnerMap.IsValid())
         {
             OPAAX_LOG(LogEntityOps, Warn,
@@ -130,8 +118,7 @@ namespace Opaax::Editor
         InContext.Selection.Select(lEntity);
         lWorld->MarkChanged();
 
-        // THE VERB RECORDS ITS OWN STEP (⑤). Captured AFTER the fact, which is the only moment the
-        // entity exists to be captured — and it is what lets redo bring it back on the same Guid.
+        // The action records its own undo step, captured after the fact (redo brings it back with the same guid).
         InContext.Undo.Record(EntityCreate{
             MapSerializer::CaptureEntities(*lWorld, InContext.Engine.GetRegistries().Components(),
                                            { lEntity.GetHandle() }) });
@@ -150,9 +137,7 @@ namespace Opaax::Editor
         TDynArray<EntityID> lRoots;
         EntityHierarchy::TopmostOf(InWorld, InHandles, lRoots);
 
-        // NOT keeping the world pose: the prefab's authored root pose is what its local becomes,
-        // so a turret authored at the origin sits ON its new parent rather than staying where the
-        // prefab happened to be authored.
+        // Not keeping the world pose: the prefab's authored root pose becomes the local under the parent.
         for (const EntityID lRoot : lRoots)
         {
             EntityHierarchy::SetParent(Entity{ lRoot, &InWorld }, lParent, /*bKeepWorld*/false);
@@ -167,8 +152,7 @@ namespace Opaax::Editor
         World* const lWorld = InContext.Worlds.GetActiveWorld();
         if (lWorld == nullptr) { return 0; }
 
-        // Create's rule (**WM2**): without a map these entities would read as runtime-spawned and
-        // no Save could ever write them.
+        // Without a map these entities could never be saved.
         if (!InOwnerMap.IsValid())
         {
             OPAAX_LOG(LogEntityOps, Warn,
@@ -176,8 +160,8 @@ namespace Opaax::Editor
             return 0;
         }
 
-        // What the MARKER stores (**MP8**). Empty means the file is under neither asset root, so no
-        // map could name it — refuse rather than write a path that resolves on this machine only.
+        // The marker stores an asset-relative path. Empty means the file is outside every asset root:
+        // refuse (no map could reference it).
         const OpaaxString lAssetPath = InContext.Paths.AbsoluteToAsset(InAbsPath);
         if (lAssetPath.IsEmpty())
         {
@@ -189,11 +173,8 @@ namespace Opaax::Editor
 
         const ComponentRegistry& lRegistry = InContext.Engine.GetRegistries().Components();
 
-        // Through the RESOLVER, never the raw resource (P7): it hands the prefab back FLATTENED —
-        // its nested placements expanded — and goes through the ResourceManager underneath, which
-        // is what dedups a level placing many instances of one prefab. FailFast makes a missing or
-        // malformed file a null rather than an empty prefab that instantiates nothing and reports
-        // success.
+        // Through the resolver: the prefab comes flattened and loaded once. FailFast: a bad file gives
+        // null, not an empty prefab.
         ResourcePrefabResolver  lResolver(InContext.Paths, InContext.Resources, lRegistry);
         const PrefabData* const lPrefab = lResolver.Resolve(lAssetPath);
 
@@ -208,7 +189,7 @@ namespace Opaax::Editor
                                                                InOwnerMap, lRegistry);
         if (lInstance.IsEmpty())
         {
-            return 0;   // PrefabFactory logged which refusal it was
+            return 0;   // PrefabFactory logged why
         }
 
         const TDynArray<EntityID> lHandles = PlaceInstance(*lWorld, lInstance, InAtWorld, lRegistry);
@@ -219,14 +200,13 @@ namespace Opaax::Editor
             return 0;
         }
 
-        // Under the row it was dropped on (§HR), BEFORE the capture so the link is in the step.
+        // Parented under the drop row before the capture, so the link is in the undo step.
         ParentPlaced(*lWorld, lHandles, InParent);
 
-        // The WHOLE instance is selected — **K10**.
+        // The whole instance is selected.
         InContext.Selection.Replace(lWorld, lHandles);
 
-        // Captured AFTER the fact, exactly as Create does — it records what the world actually got,
-        // not what was asked for, so an entity Instantiate refused is not in the step either.
+        // Captured after the fact, so it records what was actually created.
         InContext.Undo.Record(PrefabInstantiate{
             MapSerializer::CaptureEntities(*lWorld, lRegistry, lHandles) });
 
@@ -243,8 +223,7 @@ namespace Opaax::Editor
 
         if (MapFactory::Instantiate(InInstance, InWorld, InRegistry) == 0) { return lHandles; }
 
-        // MapFactory answers only a count; the instance's derived guids are the way back to what it
-        // created, in the instance's order.
+        // MapFactory only returns a count; the derived guids find what it created, in order.
         lHandles.reserve(InInstance.Entities.size());
         for (const EntityData& lEntity : InInstance.Entities)
         {
@@ -254,9 +233,8 @@ namespace Opaax::Editor
             }
         }
 
-        // MOVED BEFORE THE CALLER CAPTURES, so a drop is ONE undo step rather than a place followed
-        // by a move. The instance's ROOTS move and their children ride along (§HR); the first root
-        // is the anchor and the rest keep their relative offsets.
+        // Moved before the caller captures, so a drop is one undo step. The roots move (children follow);
+        // the first root is the anchor.
         if (InAtWorld != nullptr && !lHandles.empty())
         {
             TDynArray<EntityID> lRoots;
@@ -295,8 +273,7 @@ namespace Opaax::Editor
             return false;
         }
 
-        // BEFORE writing anything: a prefab no map could reference is worse than no prefab, and the
-        // author would have a stray file to clean up (**MP8**).
+        // Check before writing: a prefab no map could reference would be a stray file.
         const OpaaxString lAssetPath = InContext.Paths.AbsoluteToAsset(InAbsPath);
         if (lAssetPath.IsEmpty())
         {
@@ -308,8 +285,7 @@ namespace Opaax::Editor
 
         const ComponentRegistry& lRegistry = InContext.Engine.GetRegistries().Components();
 
-        // THE SUBTREE, not the rows clicked (§HR): a prefab made of a parent takes its children,
-        // as Unity's does. Captured BEFORE the swap — nothing else can recover the originals.
+        // The subtree, not only the clicked rows (children come along). Captured before the swap.
         TDynArray<EntityID> lIds;
         EntityHierarchy::CollectSubtree(*lWorld, InContext.Selection.Ids(), lIds);
 
@@ -320,10 +296,8 @@ namespace Opaax::Editor
             return false;
         }
 
-        // An entity parented OUTSIDE the set becomes one of the prefab's roots. Its local is
-        // relative to a parent the file will not hold, so the prefab gets its WORLD pose instead —
-        // only this caller has the world to ask — and the instance's root is hung back under that
-        // parent below, so nothing moves and nothing changes place in the tree.
+        // An entity whose parent is outside the set becomes a prefab root, stored at its world pose; the
+        // instance's root is hung back under that parent below, so nothing moves.
         struct OutsideLink { Guid Template; Guid Parent; };
         TDynArray<OutsideLink> lOutside;
 
@@ -352,8 +326,7 @@ namespace Opaax::Editor
             }
         }
 
-        // The ORIGINALS' map, not the focused one: cutting a prefab out of map A while B is focused
-        // must not move the result to B. A purely runtime-spawned selection falls back.
+        // The originals' map, not the focused one. A runtime-only selection falls back to the focused map.
         const MapId lOwnerMap = lOriginals.OwnerId().IsValid() ? lOriginals.OwnerId()
                                                                : InContext.MapDocument.GetMapId();
         if (!lOwnerMap.IsValid())
@@ -365,20 +338,16 @@ namespace Opaax::Editor
 
         const PrefabData lPrefab = PrefabFactory::BuildPrefab(lForPrefab, lRegistry);
 
-        // Before the write — see EditorPrefabDocument::Save. Matters when this OVERWRITES a
-        // prefab that is already placed.
+        // Before the write (see EditorPrefabDocument::Save): matters when overwriting a placed prefab.
         ResourceOps::AboutToSave<PrefabResource>(InContext, InAbsPath);
 
         if (!PrefabFile::Save(InAbsPath, lPrefab))
         {
-            return false;   // PrefabFile logged it; nothing has been touched
+            return false;   // PrefabFile logged it; nothing changed
         }
 
-        // ⑦-C P4. Usually a no-op — a NEW prefab has no instances to update. It matters when this
-        // OVERWRITES a prefab that is already placed: every existing instance of that path then
-        // rebuilds against what was just written, keeping its own overrides. Announced here rather
-        // than left to the caller for the reason the other eight Save ops go through this seam: a
-        // write that does not announce is a write half the editor never hears about.
+        // Usually does nothing (a new prefab has no instances); when overwriting a placed prefab, every
+        // instance rebuilds against the new file, keeping its overrides.
         ResourceOps::SavedToDisk<PrefabResource>(InContext, InAbsPath);
 
         const Guid lInstanceId = Guid::New();
@@ -386,15 +355,11 @@ namespace Opaax::Editor
                                                               lRegistry);
         if (lInstance.IsEmpty())
         {
-            // The file is written and the originals are untouched — a recoverable state, which is
-            // why the write goes first. PrefabFactory logged the refusal.
+            // The file is written and the originals are untouched (recoverable). PrefabFactory logged why.
             return false;
         }
 
-        // THE SWAP. Destroy first so the derived guids cannot meet their own templates: an instance
-        // built from these very entities carries DIFFERENT ids (Guid::Derive), so a collision is not
-        // actually possible — but destroying first is also what makes the selection end up on the
-        // instance rather than on entities that are about to go.
+        // The swap. Destroy first, so the selection ends up on the instance.
         InContext.Selection.Clear();
         for (const EntityData& lEntity : lOriginals.Entities)
         {
@@ -406,8 +371,7 @@ namespace Opaax::Editor
 
         const Uint64 lCount = MapFactory::Instantiate(lInstance, *lWorld, lRegistry);
 
-        // The roots go back under the parents the originals had — a placement's root parent is
-        // scene state, not a prefab property, so it lands as ONE override on this record at save.
+        // The roots go back under the originals' parents (saved as one override on the record).
         for (const OutsideLink& lLink : lOutside)
         {
             Entity lRoot   = lWorld->FindByGuid(Guid::Derive(lInstanceId, lLink.Template));
@@ -429,8 +393,7 @@ namespace Opaax::Editor
         InContext.Selection.Replace(lWorld, lPlaced);
         lWorld->MarkChanged();
 
-        // ONE step for one gesture — see PrefabCreateFromSelection for why this is not two. The
-        // instance is captured AFTER the re-parenting so redo puts it back where it hangs.
+        // One undo step for the gesture. The instance is captured after re-parenting.
         InContext.Undo.Record(PrefabCreateFromSelection{
             Move(lOriginals), MapSerializer::CaptureEntities(*lWorld, lRegistry, lPlaced) });
 
@@ -448,8 +411,7 @@ namespace Opaax::Editor
         World* const lWorld = InContext.Worlds.GetActiveWorld();
         if (lWorld == nullptr) { return 0; }
 
-        // Which PLACEMENTS the selection touches. Deduped, because a multi-entity selection inside
-        // one instance must revert that instance once, not once per entity.
+        // The placements the selection touches, deduplicated (one revert per instance).
         TDynArray<Guid> lInstanceIds;
         TDynArray<Guid> lSelectedTargets;
 
@@ -482,17 +444,15 @@ namespace Opaax::Editor
         const ComponentRegistry& lRegistry = InContext.Engine.GetRegistries().Components();
         ResourcePrefabResolver   lResolver(InContext.Paths, InContext.Resources, lRegistry);
 
-        // One MapData naming every entity to restore, built from the TEMPLATES — which is what
-        // makes this a revert rather than a re-save of what is already there.
+        // One MapData of every entity to restore, built from the templates (that is what makes it a revert).
         MapData             lRestore;
-        MapData             lCreated;   // pieces the revert brings BACK — what undo must destroy
+        MapData             lCreated;   // pieces the revert brings back (undo destroys them)
         TDynArray<EntityID> lHandles;
-        TDynArray<EntityID> lOrphans;   // pieces whose TEMPLATE the prefab no longer has — taken away
+        TDynArray<EntityID> lOrphans;   // pieces no longer in the prefab (removed)
 
         for (const Guid& lInstanceId : lInstanceIds)
         {
-            // The path and the map come off any entity of the instance; every entity of one
-            // placement carries the same pair.
+            // The path and map come from any entity of the instance (all share them).
             OpaaxString lPrefabPath;
             MapId       lOwnerMap;
 
@@ -513,14 +473,12 @@ namespace Opaax::Editor
                 continue;
             }
 
-            // Built ONCE, against the prefab's own guids; the map is stamped afterwards because it
-            // is not knowable until a live entity has been found. `BuildInstance` refuses an
-            // invalid map, so a placeholder goes in and the real answer replaces it below.
+            // Built once from the prefab's guids; the map is set afterwards (BuildInstance needs a valid one,
+            // so a placeholder goes in first).
             MapData lPristine = PrefabFactory::BuildInstance(*lPrefab, lPrefabPath, lInstanceId,
                                                              MapId("Pending"), lRegistry);
 
-            // READ FROM A LIVE ENTITY, never assumed to be the focused map: reverting a placement
-            // that lives in an unfocused map must not re-stamp it into the cursor's map.
+            // Read from a live entity, not the focused map (the placement may be in another map).
             for (const EntityData& lProbe : lPristine.Entities)
             {
                 if (Entity lLive = lWorld->FindByGuid(lProbe.Id); lLive.IsValid())
@@ -530,11 +488,10 @@ namespace Opaax::Editor
                 }
             }
 
-            if (!lOwnerMap.IsValid()) { continue; }   // no entity of this placement is in the world
+            if (!lOwnerMap.IsValid()) { continue; }   // no entity of this placement in the world
 
-            // A PREFAB CAN REMOVE A PIECE (L87's other half): an entity of this placement whose
-            // template is no longer in the prefab is named by nothing above, and "be this again"
-            // means it goes. Selection-only reverts take only the selected ones.
+            // Entities whose template is no longer in the prefab are removed. A selection-only revert only
+            // removes selected ones.
             lWorld->Each<PrefabInstanceComponent>([&](EntityID InId, const PrefabInstanceComponent& InMarker)
             {
                 if (InMarker.InstanceId != lInstanceId) { return; }
@@ -567,8 +524,7 @@ namespace Opaax::Editor
 
                 if (!bInWholeInstance)
                 {
-                    // Selection-only: a DELETED entity cannot be selected, so it is not a target
-                    // here. Bringing deleted pieces back is what the whole-instance entry is for.
+                    // Selection only: a deleted entity cannot be selected (use the whole-instance revert).
                     if (!lLive.IsValid()) { continue; }
 
                     bool lSelected = false;
@@ -586,12 +542,8 @@ namespace Opaax::Editor
                 }
                 else
                 {
-                    // A DELETED piece of the placement. MapFactory::Restore recreates it on its own
-                    // Guid — that is what "be this again" means — and SKIPPING it here was why
-                    // deleting one half of a turret could never be undone by a revert.
-                    //
-                    // Kept so the undo step knows what to destroy: nothing else can tell that this
-                    // entity did not exist beforehand, and Restore leaves absent entities alone.
+                    // A deleted piece: MapFactory::Restore recreates it with its guid. Kept so the undo step knows
+                    // what to destroy.
                     lCreated.Entities.emplace_back(lEntity);
                 }
 
@@ -605,9 +557,8 @@ namespace Opaax::Editor
             return 0;
         }
 
-        // BEFORE, captured while the overrides are still on the entities — nothing else can
-        // recover them once Restore has run. The orphans are in it too, which is what lets undo
-        // bring them back; what redo must destroy again is captured on its own.
+        // Before, captured while the overrides are still there (orphans included, so undo restores
+        // them). What redo must destroy again is captured separately.
         for (const EntityID lOrphan : lOrphans) { lHandles.emplace_back(lOrphan); }
 
         MapData lBefore    = MapSerializer::CaptureEntities(*lWorld, lRegistry, lHandles);
@@ -615,15 +566,14 @@ namespace Opaax::Editor
 
         const Uint64 lReverted = MapFactory::Restore(lRestore, *lWorld, lRegistry);
 
-        // Out of the selection before they go, so no destroyed handle lingers there.
+        // Removed from the selection before they are destroyed.
         for (const EntityID lOrphan : lOrphans)
         {
             if (Entity lE{ lOrphan, lWorld }; InContext.Selection.Contains(lE)) { InContext.Selection.Toggle(lE); }
         }
         const Uint64 lRemoved = DestroyEntities(*lWorld, lOrphans);
 
-        // Handles re-resolved AFTER the restore: a recreated entity did not exist when the list
-        // above was built, and an After that omitted it would make redo silently drop it again.
+        // Handles resolved again after the restore (recreated entities did not exist before).
         TDynArray<EntityID> lAfterHandles;
         lAfterHandles.reserve(lRestore.Entities.size());
         for (const EntityData& lEntity : lRestore.Entities)
@@ -636,7 +586,7 @@ namespace Opaax::Editor
 
         lWorld->MarkChanged();
 
-        // Read BEFORE the move — a moved-from container is not required to still hold anything.
+        // Read before the move.
         const Uint64 lRecreated = lCreated.EntityCount();
 
         InContext.Undo.Record(PrefabRevert{
@@ -659,24 +609,23 @@ namespace Opaax::Editor
         if (!MapOps::CanEdit(InContext, "Rename Entity")) { return; }
 
         EntityMeta& lMeta = InEntity.Get<EntityMeta>();
-        if (lMeta.Name == InName) { return; }   // committing an untouched field is not an edit
+        if (lMeta.Name == InName) { return; }   // unchanged: not an edit
 
         OPAAX_LOG(LogEntityOps, Info, "Renamed '{}' -> '{}'", lMeta.Name.CStr(), InName.CStr());
 
-        // Two strings and a Guid: the whole step, and the reason a rename serializes nothing (⑤).
+        // Two strings and a guid: the whole step.
         InContext.Undo.Record(EntityRename{ InEntity.GetGuid(), lMeta.Name, InName });
 
         lMeta.Name = InName;
 
-        // EntityMeta is written straight through, so nothing else observes it — the same reason
-        // the Inspector's drawers need World::MarkChanged.
+        // EntityMeta is written directly, so mark the world changed.
         if (World* lWorld = InEntity.GetWorld()) { lWorld->MarkChanged(); }
     }
 
     bool EntityOps::Reparent(EditorContext& InContext, const EUndoWorld InScope, const EntityID InChild,
                              const EntityID InParent, const MapId InToMap)
     {
-        // The prefab world is Edit whatever the level is doing (PF10); only the level gates on PIE.
+        // The prefab world is always Edit; only the level checks for Play.
         if (InScope == EUndoWorld::Active && !MapOps::CanEdit(InContext, "Reparent")) { return false; }
 
         World* const lWorld = UndoWorld(InContext, InScope);
@@ -686,7 +635,7 @@ namespace Opaax::Editor
         Entity lParent{ InParent, lWorld };
         if (!lChild.IsValid()) { return false; }
 
-        // BEFORE, for the whole subtree: every entity's map may follow a cross-map drop.
+        // Before, for the whole subtree (a cross-map drop may change their map).
         TDynArray<EntityID> lSubtree;
         EntityHierarchy::CollectSubtree(*lWorld, { InChild }, lSubtree);
 
@@ -707,9 +656,9 @@ namespace Opaax::Editor
             lStep.Entries.emplace_back(Move(lEntry));
         }
 
-        if (!EntityHierarchy::SetParent(lChild, lParent)) { return false; }   // refused, and it said why
+        if (!EntityHierarchy::SetParent(lChild, lParent)) { return false; }   // refused (it logged why)
 
-        // A drop on a map HEADER: to root, in THAT map. A parent pulls its map on its own.
+        // A drop on a map header: to root, in that map. A parent brings its map by itself.
         if (!lParent.IsValid() && InToMap.IsValid())
         {
             for (const EntityID lId : lSubtree)
@@ -733,7 +682,7 @@ namespace Opaax::Editor
             lChanged = lChanged || lEntry.ParentAfter != lEntry.ParentBefore || lEntry.MapAfter != lEntry.MapBefore;
         }
 
-        if (!lChanged) { return false; }   // already there — SetParent said nothing, nothing to record
+        if (!lChanged) { return false; }   // already there: nothing to record
 
         lWorld->MarkChanged();
         UndoStack(InContext, InScope).Record(Move(lStep));
@@ -746,7 +695,7 @@ namespace Opaax::Editor
         World* const lWorld = UndoWorld(InContext, InScope);
         if (lWorld == nullptr) { return; }
 
-        // A copy: Reparent does not touch the selection, but the rule costs nothing.
+        // A copy: Reparent does not touch the selection, but it costs nothing.
         const TDynArray<EntityID> lIds = UndoSelection(InContext, InScope).Ids();
 
         Uint64 lDetached = 0;
@@ -763,7 +712,7 @@ namespace Opaax::Editor
     {
         if (!InContext.Selection.HasSelection())
         {
-            return;   // nothing to do, and nothing worth a log line — Delete on empty is ordinary
+            return;   // nothing selected (normal)
         }
 
         if (!MapOps::CanEdit(InContext, "Delete Entity")) { return; }
@@ -771,15 +720,12 @@ namespace Opaax::Editor
         World* const lWorld = InContext.Selection.GetWorld();
         if (lWorld == nullptr) { return; }
 
-        // COPY the handles before touching anything: the selection is about to be cleared and the
-        // entities destroyed, and iterating the live list while doing either is the shape that made
-        // the Hierarchy's Remove from Level assert. WITH THE SUBTREE (§HR): the world would cascade
-        // anyway, and the step must hold what the cascade takes or undo brings back half of it.
+        // Copy the handles first (the selection is cleared and the entities destroyed). With the subtree:
+        // the world would cascade anyway, and undo must restore all of it.
         TDynArray<EntityID> lIds;
         EntityHierarchy::CollectSubtree(*lWorld, InContext.Selection.Ids(), lIds);
 
-        // BEFORE the fact, unlike every other verb here: once these are destroyed nothing else in
-        // the editor can say what they were (⑤).
+        // Captured before, unlike other actions: once destroyed nothing can say what they were.
         EntityDelete lStep{ MapSerializer::CaptureEntities(
             *lWorld, InContext.Engine.GetRegistries().Components(), lIds), EUndoWorld::Active };
 
@@ -828,11 +774,10 @@ namespace Opaax::Editor
 
         lEntry->Add(lEntities, InEntity.GetHandle());
 
-        // Explicit, not left to the Inspector's "any item active" check: emplacing a component IS a
-        // content change whether or not a popup item still counts as active.
+        // Explicit: adding a component is a content change.
         InEntity.GetWorld()->MarkChanged();
 
-        // No payload — Add default-constructs, so there is nothing for a redo to restore (⑤).
+        // No payload: Add default-constructs, so redo has nothing to restore.
         InContext.Undo.Record(ComponentAdd{ InEntity.GetGuid(), InTypeName });
 
         OPAAX_LOG(LogEntityOps, Info, "Added component '{}' to entity '{}'",
@@ -858,12 +803,10 @@ namespace Opaax::Editor
 
         if (!lEntry->Has(lEntities, InEntity.GetHandle())) { return false; }
 
-        // Read while it still exists: without its values, undo would bring the type back at its
-        // defaults, which reads as data loss rather than as an undo (⑤).
+        // Read while it exists, so undo restores its values (not the defaults).
         nlohmann::json lData = lEntry->Save(lEntities, InEntity.GetHandle());
 
-        // Refuses an essential type on its own — the guarantee lives in the entry, not in every
-        // caller remembering it.
+        // Essential types are refused by the entry itself.
         if (!lEntry->Remove(lEntities, InEntity.GetHandle())) { return false; }
 
         InEntity.GetWorld()->MarkChanged();
@@ -885,21 +828,15 @@ namespace Opaax::Editor
         World* const lWorld = InContext.Selection.GetWorld();
         if (lWorld == nullptr) { return; }
 
-        // THE LEVEL'S surface, named explicitly. Everything below this line is world-agnostic and
-        // lives in TransformEntities, so the prefab viewport drives the SAME verb with its own world
-        // and its own selection rather than a second copy of the gizmo maths (**MP7**).
+        // The level's version. The world-agnostic part is TransformEntities, also used by the prefab viewport.
         TransformEntities(*lWorld, InContext.Selection.Ids(), InDelta);
     }
 
     bool EntityOps::TransformEntities(World& InWorld, const TDynArray<EntityID>& InEntities,
                                       const TransformDelta& InDelta)
     {
-        // The delta's LINEAR part carries the rotation and the scale; the translation is handled by
-        // running each position through the whole matrix below.
-        //
-        // CONJUGATED ONCE, HERE, in the gizmo's own frame — the answer is the same for every entity,
-        // which is both why it is out of the loop and why it is correct. Doing it per entity was the
-        // bug: only the entity matching the gizmo's pose came back clean.
+        // The delta's linear part holds rotation and scale; positions go through the whole matrix below.
+        // Converted once, in the gizmo's frame (the same for every entity).
         const glm::mat2 lWorldLinear{ Vector2F{ InDelta.Matrix[0][0], InDelta.Matrix[0][1] },
                                       Vector2F{ InDelta.Matrix[1][0], InDelta.Matrix[1][1] } };
 
@@ -908,11 +845,10 @@ namespace Opaax::Editor
         const float    lDeltaDegrees = Maths::RadiansToDegrees(std::atan2(lLinear[0][1], lLinear[0][0]));
         const Vector2F lDeltaScale{ glm::length(lLinear[0]), glm::length(lLinear[1]) };
 
-        // NOT logged per call: a drag lands one of these every frame it is held. The panel says so
-        // once, the way it does for the outline and the icons (L15 without the flood).
+        // Not logged per call (one per frame during a drag).
         bool lChanged = false;
 
-        // A selected child of a selected parent rides along — moved once, through its parent (§HR).
+        // A selected child of a selected parent moves once, with its parent.
         TDynArray<EntityID> lTopmost;
         EntityHierarchy::TopmostOf(InWorld, InEntities, lTopmost);
 
@@ -920,21 +856,14 @@ namespace Opaax::Editor
         {
             Entity lEntity{ lId, &InWorld };
 
-            // Every entity has one (I17), so a miss means the handle went stale between the measure
-            // and this call — skip it rather than emplacing a transform nobody asked for.
+            // Every entity has one, so a miss means a stale handle: skip it.
             if (lEntity.TryGet<TransformComponent>() == nullptr) { continue; }
 
-            // The delta is world-space, so it is applied to the WORLD pose and the verb stores the
-            // local that lands there. For a root the two are the same three fields.
+            // The delta is world-space: applied to the world pose, stored as local.
             TransformComponent lWorldXf = EntityHierarchy::WorldTransform(lEntity);
 
-            // The POSITION goes through the matrix rather than being offset by hand, which is what
-            // makes a rotate or a scale orbit the shared pivot instead of spinning each entity where
-            // it stands. For one entity the pivot IS its origin, so this reduces to no movement.
-            //
-            // INDIVIDUAL ORIGINS IS EXACTLY THE ABSENCE OF THIS STEP: an entity that is its own
-            // pivot cannot be moved by turning about itself, so the delta's rotation and scale still
-            // land below while the position is left alone. Nothing else differs between the modes.
+            // Positions go through the matrix, so rotate and scale orbit the shared pivot. Individual
+            // Origins skips this step (rotation and scale still apply, the position stays).
             const Vector4F lMoved =
                 InDelta.Origin == ETransformOrigin::Individual
                     ? Vector4F(lWorldXf.Position.x, lWorldXf.Position.y, 0.f, 1.f)
@@ -962,8 +891,8 @@ namespace Opaax::Editor
             return;
         }
 
-        // Not CanEdit: focusing is not an edit. The rule is about WHICH CAMERA owns the view — a
-        // Play world is framed by its CameraComponent, so moving the editor camera would be silent.
+        // Not CanEdit (focusing is not an edit): a Play world is framed by its CameraComponent, so moving
+        // the editor camera would do nothing.
         if (!InContext.PIE.IsEdit())
         {
             OPAAX_LOG(LogEntityOps, Warn, "Focus Selected ignored — a Play world is framed by its own camera");
@@ -979,10 +908,8 @@ namespace Opaax::Editor
         World* const lWorld = InContext.Selection.GetWorld();
         if (lWorld == nullptr) { return; }
 
-        // The anchor keeps an entity with nothing to draw framable — same question the viewport's
-        // icon answers, and asked of the same helper so the two cannot disagree about where it is.
-        // A fixed world size is right here: this runs before the camera has moved, so there is no
-        // meaningful pixel scale to convert from yet.
+        // The anchor size makes an entity with nothing to draw framable (same helper as the viewport icon).
+        // A fixed world size: the camera has not moved yet, so there is no pixel scale.
         Bounds2D lBounds;
         if (!EntityQuery::TryGetBounds(*lWorld, InContext.Selection.Ids(), lBounds, 25.f))
         {

@@ -9,11 +9,10 @@ namespace Opaax::Editor
     namespace
     {
         constexpr float k_ZoomStep    = 1.1f;
-        constexpr float k_OrthoSizeMin = 1.f;      // a single world unit fills half the viewport
+        constexpr float k_OrthoSizeMin = 1.f;      // one world unit fills half the viewport
         constexpr float k_OrthoSizeMax = 50000.f;
 
-        // Focus leaves the target filling ~80% of the height rather than touching the edges, and
-        // never zooms closer than this — a point-sized entity would otherwise fill the screen.
+        // Focus leaves the target filling about 80% of the height, and never zooms closer than the minimum.
         constexpr float k_FocusMargin       = 1.25f;
         constexpr float k_FocusMinOrthoSize = 100.f;
     }
@@ -39,7 +38,7 @@ namespace Opaax::Editor
             return;
         }
 
-        // Wheel UP zooms IN, which is a SMALLER half-extent — hence the negated exponent.
+        // Wheel up zooms in: a smaller half-extent, hence the negated exponent.
         const float lNewSize = Maths::Clamp(m_OrthoSize * Maths::Pow(k_ZoomStep, -InWheel),
                                             k_OrthoSizeMin, k_OrthoSizeMax);
         if (lNewSize == m_OrthoSize)
@@ -67,22 +66,19 @@ namespace Opaax::Editor
 
         m_Position = InBounds.Center;
 
-        // Fit BOTH axes. OrthoSize is the vertical half-extent and the width follows the aspect, so
-        // a wide selection is fitted by converting its horizontal need into a vertical one.
+        // Fit both axes: OrthoSize is the vertical half-extent and the width follows the aspect.
         const float lAspect = InViewportPx.x / InViewportPx.y;
         const float lNeeded = Maths::Max(InBounds.HalfExtent.y, InBounds.HalfExtent.x / lAspect);
 
-        // The margin keeps the target off the very edge; the floor is what stops a zero-extent
-        // target — an entity with only a transform — from collapsing the projection.
+        // The margin keeps the target off the edge; the floor stops a zero-size target collapsing the view.
         m_OrthoSize = Maths::Clamp(Maths::Max(lNeeded * k_FocusMargin, k_FocusMinOrthoSize),
                                    k_OrthoSizeMin, k_OrthoSizeMax);
 
-        // Focus is a JUMP, and it is the one gesture whose whole point is that the author cannot
-        // see the target — so it says where it went every time, not once.
+        // Focus jumps somewhere the author could not see, so it is logged every time.
         OPAAX_LOG(LogEditorCamera, Info, "Editor camera focused on ({}, {}) — orthoSize {}",
                   m_Position.x, m_Position.y, m_OrthoSize);
 
-        m_bSeeded      = true;   // an explicit framing must not be overwritten by the one-shot seed
+        m_bSeeded      = true;   // an explicit framing is not overwritten by the seed
         m_bMovedLogged = true;
     }
 
@@ -105,8 +101,7 @@ namespace Opaax::Editor
 
     void EditorCamera::SeedFromViewportHeight(float InHeightPx)
     {
-        // > 1 rather than > 0: the panel reports 1x1 until its first measured resize lands, and
-        // seeding off that would open the editor zoomed into half a world unit.
+        // > 1, not > 0: the panel reports 1x1 until its first real resize.
         if (m_bSeeded || InHeightPx <= 1.f)
         {
             return;

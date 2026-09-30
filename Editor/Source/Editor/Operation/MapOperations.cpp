@@ -66,8 +66,7 @@ namespace Opaax::Editor
 
         if (lLevel->SetPersistentMap(InMapId))
         {
-            // STRUCTURE GOES TO DISK AS IT CHANGES — see EditorLevelDocument::SaveManifest. Which
-            // map is the backdrop is a deliberate one-off choice, not an edit that wants batching.
+            // Level structure is saved immediately (see EditorLevelDocument::SaveManifest).
             InContext.LevelDocument.SaveManifest(*lLevel);
         }
     }
@@ -86,25 +85,22 @@ namespace Opaax::Editor
 
         if (!lLevel->RemoveMap(InMapId)) { return; }
 
-        // THE ONE STRUCTURAL CHANGE THAT INVALIDATES HISTORY (⑤): those entities are gone AND their
-        // map is unmounted, so undoing a step that names one would recreate it into a world no Save
-        // can write it from (**WM2**). Adding a map or choosing the persistent one touches no
-        // recorded entity, so neither clears.
+        // Clears the undo history: those entities are gone and their map unloaded, so undoing a step
+        // that names one would recreate it where no Save can write it.
         InContext.Undo.Clear();
 
-        // RECONCILE, never re-adopt: a fresh AdoptExisting would re-take every baseline from the
-        // world and quietly declare every other map's unsaved edits to be the clean state.
+        // Reconcile, not re-adopt: re-adopting would reset every other map's baseline and hide its
+        // unsaved edits.
         InContext.LevelDocument.TrackMounted(*lLevel, *InContext.Worlds.GetActiveWorld(),
                                              InContext.Engine.GetRegistries().Components(),
                                              InContext.Paths);
 
-        // The map is out of the level; the FILE is untouched, so Add Map puts it back.
+        // The map leaves the level; its file is untouched, so Add Map brings it back.
         InContext.LevelDocument.SaveManifest(*lLevel);
 
         if (!lWasFocused) { return; }
 
-        // The cursor was on what just left the world. Move it onto something still mounted rather
-        // than leaving it pointed at a map nothing can save.
+        // The cursor was on the removed map: move it to one still loaded.
         const TDynArray<Level::MountedMap>& lMounted = lLevel->GetMountedMaps();
 
         if (lMounted.empty()) { InContext.MapDocument.Clear(); }
@@ -120,10 +116,8 @@ namespace Opaax::Editor
 
         if (!lLevel->RemoveMissingMap(InAssetRelPath)) { return; }
 
-        // NOTHING to reconcile and no cursor to move: the entry never mounted, so no baseline was
-        // taken for it and it can never have been focused. Only the manifest changed — and that
-        // goes to disk as it changes (EditorLevelDocument::SaveManifest), which is the whole point:
-        // the next boot opens cleanly instead of warning again.
+        // Nothing to reconcile: the entry never loaded, so it has no baseline and was never focused.
+        // Only the level file changes, saved immediately, so the next boot stops warning.
         InContext.LevelDocument.SaveManifest(*lLevel);
     }
 }

@@ -14,23 +14,12 @@ namespace Opaax
 namespace Opaax::Editor
 {
     // =============================================================================
-    // EditorCamera — how the AUTHOR is looking at an Edit world. The Edit-side producer of
-    //   World::CameraView, opposite CameraManager's Play-side one; neither knows the other
-    //   exists, because the world's view slot is all they share (D4).
-    //
-    //   ONE instance for the editor's whole life, owned by EditorService and reached through
-    //   EditorContext. That is not a convenience — it is what makes pan and zoom survive a PIE
-    //   cycle: Play swaps the active world, this object is untouched, and Stop finds it exactly
-    //   where it was left. Legacy hung its editor camera off EditorSubsystem for the same reason.
-    //
-    //   It speaks the SAME vocabulary as CameraComponent — a position and an OrthoSize in world
-    //   units — so "zoom" here is nothing but a smaller vertical half-extent, and the editor can
-    //   never frame a world in a way the game could not.
-    //
-    //   IT IS DRIVEN FROM IMGUI, and that is forced rather than preferred (IN8): with an Edit
-    //   world on screen the input route is ClosedEditMode, so InputManager is never fed and would
-    //   report every button as up, forever. ViewportPanel measures the gesture while its window is
-    //   current and calls in here — the same source Ctrl+S already uses.
+    // EditorCamera — how the author looks at an Edit world. Produces World::CameraView for Edit
+    //   worlds (CameraManager does it for Play worlds).
+    //   One instance for the editor's lifetime, owned by EditorService, so pan and zoom survive a
+    //   Play/Stop cycle. Uses the same terms as CameraComponent (position, OrthoSize).
+    //   Driven from ImGui: in Edit mode the InputManager is not fed, so ViewportPanel measures the
+    //   gesture and calls in here.
     // =============================================================================
     class EditorCamera
     {
@@ -39,62 +28,41 @@ namespace Opaax::Editor
         // =============================================================================
     public:
         /**
-         * Grab-the-world pan, in SCREEN pixels: drag right and the content follows the cursor
-         * right, which means the camera moves left. Y is flipped once — screen-Y grows down,
-         * world-Y grows up.
-         *
-         * The viewport size is needed because a pixel is only worth a fixed number of world units
-         * at a given OrthoSize; zoomed in, the same drag covers less world.
+         * Pans by a drag in screen pixels: the content follows the cursor. Y is flipped (screen Y goes
+         * down, world Y goes up). The viewport size converts pixels to world units.
          */
         void Pan(const Vector2F& InScreenDelta, const Vector2F& InViewportPx);
 
         /**
-         * Scroll-wheel zoom ANCHORED at the cursor: the world point under the pointer is still
-         * under the pointer afterwards. Positive InWheel zooms in (a smaller OrthoSize).
-         *
-         * Read the world point, change the size, read it again, translate by the difference —
-         * salvaged from the legacy editor camera, which is where this was already right.
+         * Zooms around the cursor: the world point under the pointer stays under it. Positive InWheel
+         * zooms in (smaller OrthoSize).
          */
         void ZoomAtCursor(float InWheel, const Vector2F& InCursorLocalPx, const Vector2F& InViewportPx);
 
         /**
-         * Frame InBounds: centre on it and zoom so it fits, with a margin.
-         *
-         * Both axes matter, so this needs the viewport's pixel size — OrthoSize is the VERTICAL
-         * half-extent and the width follows the aspect, so a wide selection has to be fitted by
-         * width or it spills off the sides.
-         *
-         * A zero-extent target (an entity with only a transform) keeps a sane framing rather than
-         * collapsing the projection, which is what the minimum is for.
+         * Frames InBounds: centres on it and zooms so it fits both axes, with a margin. A zero-size
+         * target keeps a minimum size.
          */
         void FocusOn(const Bounds2D& InBounds, const Vector2F& InViewportPx);
 
         /**
-         * Put the camera exactly here — the primitive FocusOn is a policy over. An explicit framing
-         * counts as seeded, so the one-shot viewport seed never overwrites it. The UI designer's
-         * "1:1" (U13).
+         * Puts the camera exactly here. Counts as seeded, so the first-resize seed does not overwrite it.
          */
         void Set(const Vector2F& InPosition, float InOrthoSize) noexcept;
 
         /**
-         * Publish this camera as InWorld's view — but ONLY for an Edit world. A Play world is
-         * framed by its own CameraComponent, so this refuses rather than fighting CameraManager
-         * for the slot. THE ONE PLACE the Edit/Play fork is stated on the editor's side.
+         * Sets this camera as InWorld's view, for Edit worlds only (a Play world uses its CameraComponent).
          */
         void Apply(World& InWorld) const;
 
         /**
-         * Adopt the viewport's height as the starting OrthoSize, ONCE, the first time a real
-         * height exists.
-         *
-         * This is what makes the editor open on the framing it opened on before cameras existed —
-         * that view was one world unit per pixel, so half the panel's height IS the equivalent
-         * OrthoSize. Ignores the 1x1 the panel reports before its first measured resize.
+         * Takes the viewport's height as the starting OrthoSize, once, when a real height is first known
+         * (one world unit per pixel). Ignores the 1x1 reported before the first resize.
          */
         void SeedFromViewportHeight(float InHeightPx);
 
     private:
-        /** One Info the first time this camera actually moves — see m_bMovedLogged. */
+        /** Logs once, the first time this camera moves. */
         void LogFirstMove(const char* InGesture);
 
         // =============================================================================
@@ -113,9 +81,7 @@ namespace Opaax::Editor
 
         bool     m_bSeeded   = false;
 
-        // One-shot: the first pan or zoom says so. Two silent frames of "nothing moved" are
-        // otherwise indistinguishable between a gesture that never arrived and a camera that never
-        // reached the world, and only one of those is fixable from a log.
+        // Logs the first pan or zoom once (tells "no gesture" apart from "camera not applied").
         bool     m_bMovedLogged = false;
     };
 }

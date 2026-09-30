@@ -70,8 +70,7 @@ namespace Opaax::Editor
         World* const lWorld = InContext.Worlds.GetActiveWorld();
         Level* const lLevel = MapOps::ActiveLevel(InContext);
 
-        // Nothing at risk — no dialog at all, which is why the continuation is the only route
-        // through here rather than one branch of two.
+        // Nothing at risk: no dialog, proceed.
         if (lWorld == nullptr || lLevel == nullptr
             || !InContext.LevelDocument.IsDirty(*lWorld, InContext.Engine.GetRegistries().Components(), *lLevel))
         {
@@ -79,7 +78,7 @@ namespace Opaax::Editor
             return;
         }
 
-        // UNSAVED WORK IS CONFIRMED, NOT DISCARDED.
+        // Unsaved work: ask first.
         InContext.Dialogs.Confirm(
             OpaaxString("Unsaved changes"),
             OpaaxString("This level has unsaved changes.\nContinue and lose them?"),

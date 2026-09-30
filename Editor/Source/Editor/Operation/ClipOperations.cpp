@@ -14,7 +14,7 @@ namespace Opaax::Editor
 {
     namespace
     {
-        /** Record a whole-list replacement under InLabel, and publish it into the document. */
+        /** Records a whole-list replacement under InLabel, and applies it to the document. */
         void RecordSteps(EditorContext& InContext, TDynArray<AnimationStep> InAfter, const char* InLabel)
         {
             AnimationClipData& lData = InContext.ClipDocument.GetMutableData();
@@ -39,8 +39,7 @@ namespace Opaax::Editor
 
         TDynArray<AnimationStep> lAfter = lData.Steps;
 
-        // Copy the LAST step rather than appending a blank one: a run of frames is authored by
-        // adding and retargeting, so inheriting the hold and the texture is what saves the typing.
+        // Copy the last step (its hold and texture) instead of adding a blank one.
         lAfter.emplace_back(lAfter.empty() ? AnimationStep{} : lAfter.back());
 
         RecordSteps(InContext, Move(lAfter), "Add Step");
@@ -98,8 +97,7 @@ namespace Opaax::Editor
         const Int32 lLast      = static_cast<Int32>(lData.StepCount()) - 1;
         const Int32 lTarget    = (lTargetRaw < 0) ? 0 : ((lTargetRaw > lLast) ? lLast : lTargetRaw);
 
-        // Clamped rather than refused, so holding the button at the end of the list is quiet — but
-        // a move that lands where it started is NOT a step.
+        // Clamped rather than refused (holding the button at the end is quiet); no move is no step.
         if (lTarget == static_cast<Int32>(InIndex)) { return false; }
 
         TDynArray<AnimationStep> lAfter = lData.Steps;
@@ -142,17 +140,12 @@ namespace Opaax::Editor
             return false;   // AnimationClipFile logged why
         }
 
-        // Only after a SUCCESSFUL write: rebasing on a failed save would clear the dirty marker
-        // while the file still holds the old content — the marker lying is worse than the failure.
+        // Only after a successful write: otherwise the dirty marker would lie.
         InContext.ClipDocument.MarkSaved();
 
-        // AND PUBLISH IT. Without this an entity already playing this clip keeps playing whatever
-        // the ResourceManager parsed first, so editing the file changes nothing on screen — the
-        // exact defect [[L75]] records. Reload swaps the payload in place, so every ResourceRef
-        // already held stays valid and simply sees the new steps.
-        //
-        // Not resident is the ordinary case (nothing plays this clip yet) and answers false, so the
-        // result is deliberately not treated as a failure of the save.
+        // Reload the resource, or an entity already playing this clip keeps the first loaded version.
+        // Reload swaps the data in place, so existing refs see the new steps. Not loaded is normal
+        // (nothing plays it yet) and is not a failure.
         ResourceOps::SavedToDisk<AnimationClipResource>(InContext, InContext.ClipDocument.AbsPath());
 
         return true;

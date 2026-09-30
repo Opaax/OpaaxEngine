@@ -5,38 +5,28 @@ namespace Opaax::Editor
     struct EditorContext;
 
     // =============================================================================
-    // The editor's NATIVE viewport tools — the strip over the viewport (③b), one function per tool.
-    //
-    //   Each matches ViewportToolbarRegistry::DrawFunc, so a plain function pointer registers.
-    //   EditorService::RegisterNativeViewportTools states the ORDER and the grouping; what a tool
-    //   DRAWS is here — the EditorNativeCommands shape, one route over.
-    //
-    //   A tool's whole input is the context it is handed (D3): the locator is not available to it,
-    //   and a tool that INVOKES something dispatches a command by tag rather than reaching for the
-    //   subject, so the toolbar, the Edit menu and W/E/R stay three front-ends onto one verb.
-    //
-    //   These are CONTENTS, not chrome, so they call ImGui directly — the deliberate exception
-    //   IEditorGui carves out (MR2d).
+    // The editor's native viewport tools: the strip over the viewport, one function per tool.
+    //   Each matches ViewportToolbarRegistry::DrawFunc. EditorService::RegisterNativeViewportTools sets
+    //   the order. A tool only uses the context it is given, and dispatches commands by tag.
+    //   Tools are contents, so they call ImGui directly.
     // =============================================================================
     namespace NativeViewportTools
     {
         /** Move / Rotate / Scale, as a radio group. Dispatches EDITOR_COMMAND_GIZMO_*. */
         void DrawGizmoMode(EditorContext& InContext);
 
-        /** The snap toggle and the step for the ACTIVE mode. */
+        /** The snap toggle and the step of the active mode. */
         void DrawSnap(EditorContext& InContext);
 
-        /** The grid toggle. Its spacing is the translate snap step, so it belongs beside Snap. */
+        /** The grid toggle. Its spacing is the translate snap step. */
         void DrawGrid(EditorContext& InContext);
 
         /**
-         * The collider-outline toggle. Unlike Grid, the state it flips is NOT the editor's — it is
-         * the engine's `DebugDraw` channel, which is what lets one switch silence a producer that
-         * also runs in a dev build of Game.exe (F4b).
+         * The collider-outline toggle. Flips the engine's DebugDraw channel (also used in a dev Game.exe).
          */
         void DrawColliders(EditorContext& InContext);
 
-        /** Center / Origin / Individual — one button that cycles and names its state. */
+        /** Center / Origin / Individual: one button that cycles and shows its state. */
         void DrawPivot(EditorContext& InContext);
 
         /** Local / World, disabled while the mode is Scale. */

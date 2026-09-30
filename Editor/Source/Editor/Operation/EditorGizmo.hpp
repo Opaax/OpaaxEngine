@@ -1,14 +1,14 @@
 #pragma once
 
-#include <cmath>            // cos/sin — the pose Local adopts from the primary entity
-#include <glm/matrix.hpp>   // inverse — this frame's delta is M * inverse(M last frame)
+#include <cmath>            // cos/sin
+#include <glm/matrix.hpp>   // inverse
 
 #include "Core/Maths/MathTypes.h"
 #include "Core/OpaaxTypes.h"
 
 namespace Opaax::Editor
 {
-    /** What the gizmo manipulates. Unreal, Unity and Godot all bind these to W / E / R. */
+    /** What the gizmo manipulates (W / E / R, like Unreal, Unity and Godot). */
     enum class EGizmoMode : Uint8
     {
         Translate,
@@ -17,17 +17,9 @@ namespace Opaax::Editor
     };
 
     /**
-     * WHAT a rotation or a scale turns about.
-     *
-     * Center and Origin are ONE shared point for the whole selection — the difference is only which
-     * point, so N entities swing around it and keep their formation. Individual is a different KIND
-     * of answer: every entity turns about itself and nothing orbits anything (Blender calls it
-     * Individual Origins). Three modes rather than two because "rotate them as a group" and "rotate
-     * each of them" are both things an author wants, and neither substitutes for the other.
-     *
-     * For a single entity all three coincide — bounds are centred on the transform — so the choice
-     * only speaks on a multi-selection, and Center/Origin only diverge for a single entity the day
-     * a per-sprite Offset lands.
+     * What a rotation or scale turns about. Center and Origin are one shared point for the whole
+     * selection (entities keep their formation); Individual turns each entity about itself.
+     * For a single entity all three are the same.
      */
     enum class EGizmoPivot : Uint8
     {
@@ -36,14 +28,14 @@ namespace Opaax::Editor
         Individual
     };
 
-    /** WHICH AXES the handles run along: the world's, or the primary entity's own. */
+    /** Which axes the handles use: the world's, or the primary entity's own. */
     enum class EGizmoSpace : Uint8
     {
         World,
         Local
     };
 
-    /** I11 — an enum gets a free ToString found by ADL. Total and silent; a log label. */
+    /** Enum to string (for logs). */
     inline const char* ToString(const EGizmoMode InMode) noexcept
     {
         switch (InMode)
@@ -74,16 +66,9 @@ namespace Opaax::Editor
     }
 
     // =============================================================================
-    // EditorGizmo — the transform gizmo's SETTINGS: which mode is active, the pivot, the space,
-    //   whether snapping is on and by how much.
-    //
-    //   Owned by EditorService and reached through EditorContext, the EditorSelection /
-    //   EditorCamera shape — not a ViewportPanel member. The mode is set by an editor-wide shortcut
-    //   and the toolbar, and every surface that draws a gizmo follows the same choice.
-    //
-    //   THE DRAG ITSELF IS NOT HERE (⑦-C P8 V3). It was, until a second surface drew a gizmo: the
-    //   matrix ImGuizmo drives is per-drag state, and two panels reseating one matrix would fight a
-    //   live drag. That half is GizmoDrag below, owned per surface.
+    // EditorGizmo — the transform gizmo settings: mode, pivot, space, snapping and steps.
+    //   Owned by EditorService and reached through EditorContext, so every surface that draws a
+    //   gizmo uses the same settings. The drag itself is GizmoDrag, owned per surface.
     // =============================================================================
     class EditorGizmo
     {
@@ -102,11 +87,7 @@ namespace Opaax::Editor
         EGizmoPivot GetPivot() const noexcept                    { return m_Pivot; }
 
         /**
-         * Whether each entity should turn about ITSELF this frame.
-         *
-         * FALSE FOR TRANSLATE whatever the pivot says, and that is not a special case being papered
-         * over — a translation moves everything by the same offset, so "about its own origin" has
-         * no meaning there. Stated once here so the toolbar's label and the mutation agree.
+         * Whether each entity turns about itself this frame. Always false for translate.
          */
         bool UsesIndividualOrigins() const noexcept
         {
@@ -117,16 +98,9 @@ namespace Opaax::Editor
         EGizmoSpace GetSpace() const noexcept                    { return m_Space; }
 
         /**
-         * The space actually used this frame. **SCALE IS ALWAYS LOCAL**, whatever the toggle says.
-         *
-         * Not a simplification — the alternative is unrepresentable. Scaling along WORLD axes an
-         * entity that is rotated by R is a SHEAR, and `{Position, Rotation, Scale}` has nowhere to
-         * put one; the result would either skew visibly or come back as a bogus rotation. Unity
-         * forces local scale for the same reason. The toolbar shows the toggle disabled in Scale
-         * mode rather than letting it lie.
-         *
-         * ONE answer, read by both the toolbar and the panel, so the button and the behaviour
-         * cannot disagree.
+         * The space actually used this frame. Scale is always local: scaling a rotated entity along
+         * world axes is a shear, which Position/Rotation/Scale cannot hold. The toolbar shows the toggle
+         * disabled in Scale mode.
          */
         EGizmoSpace GetEffectiveSpace() const noexcept
         {
@@ -137,28 +111,21 @@ namespace Opaax::Editor
         // Snapping
         // =============================================================================
     public:
-        /** The toolbar's persistent toggle — "snap every drag", until turned off. */
+        /** The toolbar toggle: snap every drag. */
         void SetSnapEnabled(const bool bInEnabled) noexcept { m_bSnapEnabled = bInEnabled; }
         bool IsSnapEnabled() const noexcept                 { return m_bSnapEnabled; }
 
         /**
-         * Ctrl, read per frame. It INVERTS the toggle rather than setting it (Unity's behaviour):
-         * holding it snaps while the toggle is off, and suppresses snapping while it is on.
-         *
-         * That asymmetry is the point — the key keeps working for an author who never opens the
-         * toolbar, and stays useful for one who leaves the toggle on.
+         * Ctrl, read every frame. It inverts the toggle (like Unity): snaps while the toggle is off,
+         * suppresses snapping while it is on.
          */
         void SetSnapInverted(const bool bInInverted) noexcept { m_bSnapInverted = bInInverted; }
 
-        /** What the drag should actually do this frame. */
+        /** Whether this frame's drag snaps. */
         bool IsSnappingNow() const noexcept { return m_bSnapEnabled != m_bSnapInverted; }
 
         /**
-         * The step the active mode snaps to: world units, degrees, or a scale fraction.
-         *
-         * Per-mode because one number cannot mean all three — 15 units of translation is arbitrary
-         * where 15 degrees is the useful rotation step. Editable from the toolbar (③b); these were
-         * hard-coded constants in ③.
+         * The active mode's snap step: world units, degrees, or a scale fraction. Editable in the toolbar.
          */
         float GetSnapStep() const noexcept
         {
@@ -173,8 +140,7 @@ namespace Opaax::Editor
         }
 
         /**
-         * The step for one NAMED mode, regardless of which is active — the grid asks for the
-         * translate step while the author may be rotating.
+         * The step of a given mode, whatever is active (the grid asks for the translate step).
          */
         float GetSnapStep(const EGizmoMode InMode) const noexcept
         {
@@ -186,7 +152,7 @@ namespace Opaax::Editor
             }
         }
 
-        /** The step for one named mode — what a toolbar field edits. Clamped above zero. */
+        /** Sets a mode's step (from the toolbar). Clamped above zero. */
         float& SnapStepRef(const EGizmoMode InMode) noexcept
         {
             switch (InMode)
@@ -205,31 +171,21 @@ namespace Opaax::Editor
         EGizmoPivot m_Pivot = EGizmoPivot::Center;
         EGizmoSpace m_Space = EGizmoSpace::World;
 
-        // Snapping: a persistent toggle, plus this frame's Ctrl, which inverts it.
+        // Snapping: a toggle, plus this frame's Ctrl, which inverts it.
         bool  m_bSnapEnabled  = false;
         bool  m_bSnapInverted = false;
 
-        // ③'s constants, now editable from the toolbar. Session-only, like EditorCamera's pan and
-        // zoom — viewport state in this editor does not survive a restart.
+        // Snap steps. Session-only (not saved), like the editor camera.
         float m_SnapTranslate = 10.f;
         float m_SnapRotate    = 15.f;
         float m_SnapScale     = 0.1f;
     };
 
     // =============================================================================
-    // GizmoDrag — ONE surface's live drag: the matrix ImGuizmo drives and the delta it produced.
-    //   Owned by every panel that draws a gizmo, beside its selection and camera.
-    //
-    //   THE MATRIX IS STATE, AND THAT IS THE WHOLE TRICK. ImGuizmo captures its start pose on the
-    //   frame a drag begins and then drives the SAME matrix it was handed last frame, so the matrix
-    //   has to persist across frames rather than be rebuilt from the selection each time. Re-seating
-    //   it every frame would fight that captured state and the drag would fold back on itself. So it
-    //   follows the selection only while nothing is being dragged (ReseatAt) and is left strictly
-    //   alone in between.
-    //
-    //   The delta is BANKED, not applied: the panel measures inside the ImGui pass and spends it in
-    //   OnPreRender through EntityOps (**MP7**/**SEL3**), because a draw pass reads the world and
-    //   anything that writes it runs outside the pass.
+    // GizmoDrag — one surface's live drag: the matrix ImGuizmo drives and the delta it produced.
+    //   Owned by every panel that draws a gizmo. The matrix must persist across frames (ImGuizmo drives
+    //   the same matrix it was given last frame), so it only follows the selection while nothing is
+    //   dragged (ReseatAt). The delta is stored and applied later in OnPreRender through EntityOps.
     // =============================================================================
     class GizmoDrag
     {
@@ -240,15 +196,9 @@ namespace Opaax::Editor
         Matrix44F& Matrix() noexcept { return m_Matrix; }
 
         /**
-         * Put the gizmo back on InPivot, turned by InRotationRad, with unit scale.
-         *
-         * Call this ONLY when no drag is live.
-         *
-         * THE ROTATION IS WHAT MAKES `Local` MEAN ANYTHING. ③ always built this matrix with an
-         * identity rotation, so Local and World would have drawn identically; ③b feeds it the
-         * primary entity's rotation when the effective space is Local, and zero otherwise. Scale is
-         * always unit here — the matrix measures a DRAG, not the entity, and starting it anywhere
-         * else would make the first frame's delta report a scale nobody applied.
+         * Places the gizmo on InPivot, rotated by InRotationRad, unit scale. Only while no drag is live.
+         * The rotation is what makes Local space differ from World. Scale stays 1: the matrix measures
+         * the drag, not the entity.
          */
         void ReseatAt(const Vector2F& InPivot, const float InRotationRad) noexcept
         {
@@ -269,13 +219,8 @@ namespace Opaax::Editor
         }
 
         /**
-         * The pose the matrix was last seated with — the frame a banked delta's LINEAR part is
-         * expressed in.
-         *
-         * Remembered rather than re-derived at apply time, because a drag does not reseat: the
-         * frame is fixed for the whole gesture, and asking the selection again mid-drag could
-         * answer differently. Without it a scale is unrecoverable — `R·S·R⁻¹` cannot be reduced to
-         * S by anyone who does not know R.
+         * The pose the matrix was last placed with: the frame the delta's linear part is in. Fixed for
+         * the whole drag (a scale R*S*R^-1 cannot be recovered without R).
          */
         float GetFrameRad() const noexcept { return m_FrameRad; }
 
@@ -284,20 +229,10 @@ namespace Opaax::Editor
         // =============================================================================
     public:
         /**
-         * Bank this frame's motion, derived from the gizmo's OWN matrix rather than from ImGuizmo's
-         * `deltaMatrix` out-parameter.
-         *
-         * THAT PARAMETER CANNOT BE USED, and the reason is worth keeping: it means a different thing
-         * per mode. Translation hands back a per-frame increment; rotation hands back
-         * `modelInverse * rotation * model`, incremental AND conjugated about the pivot; but SCALE
-         * hands back a pure origin-centred `Scale(...)` whose factor is measured **since the drag
-         * started**. Used uniformly, that scales an entity's position about the WORLD ORIGIN and
-         * compounds every frame — invisible at (0,0) and badly wrong anywhere else.
-         *
-         * `M * inverse(M last frame)` has none of that. It is per-frame by construction, and because
-         * this matrix SITS ON THE PIVOT the conjugation falls out for free: the result maps each
-         * entity's old placement to its new one, so translate, rotate-about-pivot and
-         * scale-about-pivot are all just this one expression. One rule, no per-mode knowledge.
+         * Stores this frame's motion, computed as M * inverse(M last frame) from the gizmo's own matrix.
+         * ImGuizmo's deltaMatrix is not used: for scale it is cumulative and origin-centred, which
+         * scaled positions about the world origin. Because the matrix sits on the pivot, this one
+         * expression covers translate, rotate and scale about the pivot.
          */
         void BankFrameDelta() noexcept
         {
@@ -310,7 +245,7 @@ namespace Opaax::Editor
 
         bool HasPendingDelta() const noexcept { return m_bHasPending; }
 
-        /** The banked transform, cleared back to identity. */
+        /** The stored delta, reset to identity. */
         Matrix44F ConsumeDelta() noexcept
         {
             const Matrix44F lDelta = m_PendingDelta;
@@ -327,14 +262,13 @@ namespace Opaax::Editor
     private:
         Matrix44F  m_Matrix       = Matrix44F(1.f);
 
-        // What m_Matrix was last frame — the other half of the delta. Kept in step by ReseatAt while
-        // idle, so the first frame of a drag differences against the pre-drag pose.
+        // m_Matrix last frame (the other half of the delta). Kept in step by ReseatAt while idle.
         Matrix44F  m_PrevMatrix   = Matrix44F(1.f);
 
         Matrix44F  m_PendingDelta = Matrix44F(1.f);
         bool       m_bHasPending  = false;
 
-        // The pose ReseatAt last used. Fixed for the length of a drag, because a drag never reseats.
+        // The pose ReseatAt last used. Fixed during a drag.
         float      m_FrameRad     = 0.f;
     };
 }

@@ -41,8 +41,7 @@ namespace Opaax::Editor
             return false;
         }
 
-        // The game comes FIRST, before any Play world exists — see the header. StartGame logs
-        // its own refusal (a session already running).
+        // The game starts first, before any Play world exists (see the header). StartGame logs its own refusal.
         if (!m_Engine.StartGame())
         {
             return false;
@@ -51,8 +50,7 @@ namespace Opaax::Editor
         World* lPlayWorld = m_Worlds.CloneWorld(*lEditWorld, EWorldMode::Play);
         if (lPlayWorld == nullptr)
         {
-            // CloneWorld already logged why. Roll the game back rather than leaving a session with
-            // nothing to play — the state stays Edit and the editor keeps showing its world.
+            // CloneWorld logged why. End the game rather than keep a session with nothing to play.
             m_Engine.EndGame();
             return false;
         }
@@ -60,8 +58,7 @@ namespace Opaax::Editor
         m_EditWorld = lEditWorld;
         m_PlayWorld = lPlayWorld;
 
-        // The edit world is NOT destroyed or modified — it simply stops being the active one. That
-        // is the entire restore mechanism (Editor.md D6).
+        // The edit world is not destroyed or modified, only deactivated. That is how Stop restores it.
         m_Worlds.SetActiveWorld(lPlayWorld);
         m_Worlds.SetPaused(false);
 
@@ -130,16 +127,14 @@ namespace Opaax::Editor
             return false;
         }
 
-        // Re-activate BEFORE ending: EndGame destroys every Play world, and DestroyWorld clears
-        // the active slot when it is destroying the active world — which would leave the editor
-        // with no world for the rest of the frame.
+        // Reactivate before ending: EndGame destroys every Play world, including the active one, which
+        // would leave the editor with no world for the rest of the frame.
         if (m_EditWorld != nullptr)
         {
             m_Worlds.SetActiveWorld(m_EditWorld);
         }
 
-        // Takes the clone with it (every PLAY world), then the session. The edit world is an Edit
-        // world and is untouched — that asymmetry is the whole restore mechanism.
+        // Destroys the clone (every Play world) and ends the session. The edit world is untouched.
         m_Engine.EndGame();
 
         const OpaaxString lRestored = m_EditWorld != nullptr ? m_EditWorld->GetName() : OpaaxString("<none>");
@@ -147,7 +142,7 @@ namespace Opaax::Editor
         m_EditWorld = nullptr;
         m_PlayWorld = nullptr;
 
-        m_Worlds.SetPaused(false);   // a Stop while paused must not leave the edit world frozen
+        m_Worlds.SetPaused(false);   // a Stop while paused must not leave the edit world paused
         m_State = EPlayState::Edit;
 
         OPAAX_LOG(LogPlayInEditor, Info, "STOP — edit world '{}' restored, play clone destroyed", lRestored.CStr());

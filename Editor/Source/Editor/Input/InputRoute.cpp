@@ -34,8 +34,7 @@ namespace Opaax::Editor
     {
         const EInputRouteState lPrevious = m_State;
 
-        // D5's order, so the reason reported is the FIRST thing that is wrong rather than an
-        // arbitrary one of several.
+        // Checked in order, so the reason reported is the first thing wrong.
         const World* lActive = m_Worlds.GetActiveWorld();
 
         if (lActive == nullptr)
@@ -44,19 +43,17 @@ namespace Opaax::Editor
         }
         else if (!m_bViewportHovered && !m_bViewportFocused)
         {
-            // Step 2. Hovered OR focused: dragging out of the panel mid-gesture must not cut the
-            // input off, and a click-to-focus play session must survive the pointer wandering.
+            // Hovered or focused: dragging out of the panel mid-gesture must not cut input off.
             m_State = EInputRouteState::ClosedViewport;
         }
         else if (lActive->GetMode() != EWorldMode::Play)
         {
-            // Step 4. Edit belongs to the editor's own tools. There are none yet, so the input
-            // stops here — which is correct, not a gap.
+            // Edit mode: input belongs to the editor's tools, not the engine.
             m_State = EInputRouteState::ClosedEditMode;
         }
         else if (m_PIE.IsPaused())
         {
-            // A frozen world must not bank keystrokes to replay on resume.
+            // A paused game must not store keys to replay on resume.
             m_State = EInputRouteState::ClosedPaused;
         }
         else
@@ -64,9 +61,8 @@ namespace Opaax::Editor
             m_State = EInputRouteState::Open;
         }
 
-        // While Open, the game's pointer IS the viewport-local one (UI11) — the OS position is window
-        // pixels and the game hit-tests in its own view. Fed once per frame, here, so the game reads
-        // the same value everything else this frame does.
+        // While open, the game's pointer is the viewport-local position (the OS gives window pixels).
+        // Fed once per frame.
         if (m_State == EInputRouteState::Open)
         {
             m_Input.OnMouseMoved(m_PointerLocalPx.x, m_PointerLocalPx.y);
@@ -77,12 +73,10 @@ namespace Opaax::Editor
             return;
         }
 
-        // Not logged (LOG4): the route flips every time the pointer crosses the viewport's edge. The
-        // Input panel shows the state live.
+        // Not logged: the route flips every time the pointer crosses the viewport edge. The Input panel shows it.
         if (lPrevious == EInputRouteState::Open)
         {
-            // THE reason this object holds state. The engine stops being told about releases the
-            // instant the route closes, so anything held now would stay held forever.
+            // Once closed, the engine no longer receives releases, so anything held now would stay held.
             m_Input.ResetState();
         }
     }
