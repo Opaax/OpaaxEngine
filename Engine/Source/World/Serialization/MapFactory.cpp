@@ -9,9 +9,7 @@ namespace Opaax
 {
     namespace
     {
-        // Write one entity's recorded components onto it. Shared by both entry points so a loaded
-        // map and a restored one cannot diverge on what a payload means — including the two
-        // tolerance policies below, which exist because this runs at BOOT.
+        // Writes one entity's components onto it. Shared by Instantiate and Restore.
         void LoadComponents(const EntityData& InData, EntityRegistry& InEntities, const EntityID InEntity,
                             const ComponentRegistry& InRegistry)
         {
@@ -21,9 +19,7 @@ namespace Opaax
 
                 if (lEntry == nullptr)
                 {
-                    // Forward compatibility: a map written by a build that knew one more
-                    // component type must still open here, minus that component. Warn — this
-                    // IS data loss on the next save — but do not fail the load.
+                    // Unknown component (map from a newer build): warn and skip. It will be lost on the next save.
                     OPAAX_LOG(LogMapFactory, Warn,
                               "Unknown component '{}' on entity '{}' — skipped (not registered in this build).",
                               lComponent.TypeName, InData.Name.CStr());
@@ -36,15 +32,8 @@ namespace Opaax
                 }
                 catch (const nlohmann::json::exception& lError)
                 {
-                    // The symmetric half of the unknown-type case above, and it reaches further than
-                    // it looks: Instantiate runs at BOOT (Level::MountAll), so an escaping exception
-                    // takes the whole app down before a window exists. A missing key is already
-                    // handled — components use the _WITH_DEFAULT macro — so what lands here is a
-                    // wrong-typed value or a payload that is not an object at all: a hand-edited or
-                    // truncated file. BO4c's rule, one level down: warn, keep going.
-                    //
-                    // The component stays, at its defaults: Load emplaces before it reads, and the
-                    // map did say this entity carried one.
+                    // Wrong-typed value or non-object payload (hand-edited or truncated file): warn and continue.
+                    // This runs at startup, so an exception must not escape. The component keeps its defaults.
                     OPAAX_LOG(LogMapFactory, Warn,
                               "Component '{}' on entity '{}' could not be read ({}) — left at its defaults.",
                               lComponent.TypeName, InData.Name.CStr(), lError.what());
@@ -52,8 +41,8 @@ namespace Opaax
             }
         }
 
-        // Take off every registered component the record does NOT name — the undo of an Add.
-        // Remove refuses an essential type on its own, so this needs no exception of its own.
+        // Remove registered components the record does not name (undoes an Add).
+        // Essential types refuse by themselves.
         void RemoveUnrecorded(const EntityData& InData, EntityRegistry& InEntities, const EntityID InEntity,
                               const ComponentRegistry& InRegistry)
         {
@@ -86,8 +75,7 @@ namespace Opaax
 
             if (!lEntity.IsValid())
             {
-                // World already logged the reason (invalid or duplicate Guid). Skipping one
-                // entity beats abandoning the whole map.
+                // World logged why (invalid or duplicate guid). Skip this entity.
                 continue;
             }
 
@@ -98,9 +86,7 @@ namespace Opaax
             LoadComponents(lEntityData, InWorld.GetRegistry(), lEntity.GetHandle(), InRegistry);
         }
 
-        // Links are guids, so nothing above depended on order — but a link naming an entity that
-        // never arrived (skipped, or not in this file) would be saved back forever. Cleared, and
-        // said: the child now sits at its local pose as world, which the author will see.
+        // A parent that never arrived: clear the link (with a warning).
         for (const EntityData& lEntityData : InData.Entities)
         {
             if (!lEntityData.Parent.IsValid() || InWorld.FindByGuid(lEntityData.Parent).IsValid()) { continue; }
@@ -141,7 +127,7 @@ namespace Opaax
 
                 if (!lEntity.IsValid())
                 {
-                    continue;   // World logged the reason
+                    continue;   // World logged why
                 }
 
                 lEntity.Get<EntityMeta>().Parent = lEntityData.Parent;
@@ -153,8 +139,7 @@ namespace Opaax
             ++lRestored;
         }
 
-        // See the header: an in-place component write is invisible to the world, and the dirty
-        // check is gated on this number.
+        // A component written in place does not change the world's revision: bump it (dirty check).
         if (lRestored > 0)
         {
             InWorld.MarkChanged();

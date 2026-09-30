@@ -9,7 +9,7 @@ namespace Opaax
             return nullptr;
         }
 
-        // Linear over a handful of integer compares — a project has modes, not thousands of them.
+        // Linear search: there are few modes.
         for (const Entry& lEntry : m_Entries)
         {
             if (lEntry.Name == InName)

@@ -14,114 +14,50 @@ namespace Opaax
     inline constexpr LogCategory LogPrefabFactory{"PrefabFactory"};
 
     // =============================================================================
-    // PrefabFactory — a prefab's entities become ONE INSTANCE's entities.
-    //
-    //   ONE PUBLIC FUNCTION, AND IT TOUCHES NO WORLD. `BuildInstance` is a pure
-    //   PrefabData -> MapData transform; the caller hands the result to the existing
-    //   `MapFactory::Instantiate`, which is why the whole instantiate path needed no new
-    //   world-facing code (⑦-C **K1**/**K2**).
-    //
-    //   WHY NOT A MODE ON MapFactory::Instantiate. That function PRESERVES guids and refuses one
-    //   already live in the world, which is correct for loading a map beside another and is the
-    //   exact thing that makes a second instance of one prefab impossible. Teaching it a
-    //   "remap" flag would put two opposite identity policies behind one name; a separate named
-    //   transform in FRONT of it keeps `Instantiate` meaning one thing — **MP10**'s
-    //   CaptureWorld/CaptureMap split, one layer over.
-    //
-    //   Stateless, for MapFactory's and MapSerializer's reason.
+    // PrefabFactory — converts between prefabs and instances. Pure functions, no World.
+    //   The result of BuildInstance goes to MapFactory::Instantiate.
     // =============================================================================
     class OPAAX_API PrefabFactory
     {
     public:
         /**
-         * Build the entities ONE INSTANCE of InPrefab would have, ready for MapFactory::Instantiate.
-         *
-         * Three things happen to every entity, and each is load-bearing:
-         *   - its Guid becomes `Guid::Derive(InInstanceId, <the prefab's guid>)`, so two instances
-         *     of one prefab in one world do not collide (**WM3**) and a re-apply lands on the same
-         *     entities every time;
-         *   - its `OwnerMap` becomes InOwnerMap — a prefab's entities belong to no map (**WM2**),
-         *     and an instance's belong to the map it was placed in, or they read as
-         *     runtime-spawned and no Save would ever write them;
-         *   - it gains a `PrefabInstanceComponent` naming the prefab, the instance and the entity's
-         *     own template guid.
-         *
-         * REFUSED (an EMPTY MapData, with an Error) when InInstanceId is invalid, when InOwnerMap
-         * is invalid, or when `PrefabInstanceComponent` is not registered — an instance whose
-         * entities carried no marker would be untraceable the moment it existed, which is worse
-         * than not creating it.
-         *
-         * @param InPrefabAssetPath Asset-relative, as a component stores it ("Prefabs/X.opaaxprefab").
-         * @param InInstanceId Identifies this PLACEMENT. Mint one per instantiate (`Guid::New`).
-         * @return The instance's entities. `MapData::Id` is InOwnerMap. The caller can read the
-         *   derived guids off it BEFORE instantiating, which is how it finds the entities
-         *   afterwards — `MapFactory::Instantiate` answers only a count.
+         * The entities of one instance of InPrefab, ready for MapFactory::Instantiate:
+         *   - Guid = Guid::Derive(InInstanceId, prefab guid), so instances do not collide;
+         *   - OwnerMap = InOwnerMap, so they are saved with the map;
+         *   - a PrefabInstanceComponent naming the prefab, the instance and the template guid.
+         * Refused (empty result, error) if InInstanceId or InOwnerMap is invalid, or if
+         * PrefabInstanceComponent is not registered.
+         * @param InPrefabAssetPath Asset-relative ("Prefabs/X.opaaxprefab")
+         * @param InInstanceId Identifies this placement (Guid::New per instantiate)
+         * @return The instance's entities (MapData::Id is InOwnerMap)
          */
         static MapData BuildInstance(const PrefabData& InPrefab, const OpaaxString& InPrefabAssetPath,
                                      const Guid& InInstanceId, MapId InOwnerMap,
                                      const ComponentRegistry& InRegistry);
 
         /**
-         * The OTHER DIRECTION: captured world entities become a prefab (⑦-C P2).
-         *
-         * `BuildInstance`'s inverse, and deliberately its neighbour — the two ends of one round trip
-         * drift when they live apart. Both are pure, which is what lets the editor's "Create Prefab
-         * from Selection" be a thin verb over a transform a headless test can reach.
-         *
-         * Two things are REMOVED, and each is the same rule stated from the other side:
-         *   - `OwnerMap` is cleared. A prefab's entities belong to no map (**WM2**); an instance is
-         *     what stamps one, so carrying the authoring map into the file would make every
-         *     placement claim the map it was cut from.
-         *   - any `PrefabInstanceComponent` is dropped. Building a prefab out of entities that were
-         *     themselves an instance must not bake the OLD link into the new file — the result
-         *     would be a prefab whose entities claim to belong to a different prefab. A NESTED
-         *     placement is carried as a RECORD instead (P7): the caller folds first, and the
-         *     captured `Instances` come along into the file.
-         *
-         * GUIDS ARE KEPT AS CAPTURED. They become the file's TEMPLATE guids — the stable ids
-         * `BuildInstance` derives from and an override record keys by — so they must be the prefab's
-         * own, not re-minted on every save.
-         *
-         * @return The prefab. EMPTY when InCaptured is empty; that is a refusal the caller makes,
-         *   not one this makes, since an empty prefab is a legal document.
+         * The inverse: captured entities become a prefab.
+         *   - OwnerMap is cleared;
+         *   - PrefabInstanceComponents are removed (nested placements come as records, fold first).
+         * Guids are kept: they become the template guids.
+         * @return The prefab. Empty if InCaptured is empty.
          */
         static PrefabData BuildPrefab(const MapData& InCaptured, const ComponentRegistry& InRegistry);
 
         /**
-         * The prefab AS EVERY CONSUMER SEES IT (⑦-C P7): its own entities plus every nested
-         * placement expanded — recursively, since the resolver hands nested prefabs back flattened
-         * — with `OwnerMap` cleared and the nested markers stripped.
-         *
-         * This is what makes nesting cost `BuildInstance`, `Fold`, `Expand`, `Restore` and the
-         * reconciler NOTHING: they keep working over "the prefab's entities". A nested entity's
-         * in-prefab guid is `Derive(record.InstanceId, template)`, authored in the file and stable,
-         * and a level placement derives it once more — **PF2**'s composition, free.
-         *
-         * A VARIANT (no entities, one record) flattens to its base with the overrides applied.
-         * Cycles are the RESOLVER's to refuse (it owns the in-flight chain); a refused record
-         * simply expands to nothing here.
-         *
-         * PURE. Only IPrefabResolver implementations should need it.
+         * The prefab as consumers see it: its own entities plus every nested placement expanded,
+         * OwnerMap cleared, nested markers removed. A variant becomes its base with the overrides applied.
+         * Cycles are refused by the resolver.
          */
         static PrefabData Flatten(const PrefabData& InRaw, const OpaaxString& InPrefabAssetPath,
                                   const IPrefabResolver& InResolver, const ComponentRegistry& InRegistry);
 
         /**
-         * InState as a VARIANT of the prefab at InBaseAssetPath (⑦-C P7): the base's entities that
-         * InState still has become ONE record's overrides — a merge patch per entity that differs,
-         * null per one that is gone — and everything else stays the variant's own (loose entities,
-         * and nested placements folded to records). The base file is not touched.
-         *
-         * THE EDIT IS THE VARIANT. The author opens a prefab, moves a barrel and asks for a variant
-         * at that moment; this is what makes that moment the right one rather than a refusal. The
-         * base's entities are matched BY GUID: a world opened from the base carries its template
-         * guids, and a nested entity of the base carries `Derive(record, template)`, which is also
-         * what the base flattens to — so both fold into the same record. Unchanged, the record
-         * carries no override, and the variant is exactly "the base".
-         *
-         * @param InState Captured entities, expanded (a nested placement as marked entities).
-         * @return The variant, ready to write. EMPTY, with an Error, when the base cannot be
-         *   resolved — a variant of nothing is not a file worth writing.
+         * InState as a variant of the prefab at InBaseAssetPath: the base's entities become one record
+         * with overrides (a patch per changed entity, null per removed one); everything else stays
+         * the variant's own. Entities are matched to the base by guid. The base file is not changed.
+         * @param InState Captured entities, expanded
+         * @return The variant. Empty (with an error) if the base cannot be resolved.
          */
         static PrefabData BuildVariant(const MapData& InState, const OpaaxString& InBaseAssetPath,
                                        const IPrefabResolver& InResolver, const ComponentRegistry& InRegistry);

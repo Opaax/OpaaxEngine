@@ -13,7 +13,7 @@
 #include "World/Components/MoverComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Components/TransformInterpolationComponent.h"
-#include "World/Entity/EntityHierarchy.h"   // a mode moves the WORLD pose; the component is local (§HR)
+#include "World/Entity/EntityHierarchy.h"   // modes move the world pose
 #include "World/Systems/Movement/MoverModeRegistry.h"
 #include "World/Systems/PhysicsSubsystem.h"
 #include "World/Systems/WorldContext.h"
@@ -23,7 +23,7 @@ namespace Opaax
 {
     namespace
     {
-        /** Entity bits + 1, matching PhysicsSubsystem's encoding so the sweep can skip its own body. */
+        /** Entity bits + 1, like PhysicsSubsystem, so the sweep can skip its own body. */
         Uint64 ToUserData(EntityID InEntity) noexcept
         {
             return static_cast<Uint64>(static_cast<Uint32>(InEntity)) + 1ull;
@@ -43,7 +43,7 @@ namespace Opaax
     // =========================================================================
     bool MoverSubsystem::Startup()
     {
-        // Resolved from the manager, never through a lazy accessor that could re-enter boot (F3/L6).
+        // Found in the manager (never a lazy accessor that could re-enter startup).
         IEngine& lEngine = OpaaxApplication::GetAppService<IEngine>();
 
         m_Modes = &lEngine.GetRegistries().MoverModes();
@@ -66,8 +66,7 @@ namespace Opaax
 
         World& lWorld = m_Context->OwningWorld;
 
-        // A mover sweeps against the physics world, so without one there is nothing to sweep
-        // against — not an error, just a world where nothing moves this way.
+        // No physics world: nothing to sweep against, nothing moves. Not an error.
         PhysicsSubsystem* lPhysics = lWorld.GetSubsystems().GetSubsystem<PhysicsSubsystem>();
         IPhysicsWorld*    lSweep   = lPhysics != nullptr ? lPhysics->GetPhysicsWorld() : nullptr;
 
@@ -84,15 +83,13 @@ namespace Opaax
             [this, &lWorld, lSweep, lDelta, &lAdvanced](EntityID InEntity, MoverComponent& InMover,
                                                         TransformComponent& InLocal)
             {
-                // Before the mode writes: the LOCAL pose about to be overwritten is what the
-                // renderer blends FROM (**PH21**). Physics records its own the same way.
+                // Record the local pose before the mode changes it (for render interpolation).
                 auto& lPrevious = lWorld.GetRegistry().get_or_emplace<TransformInterpolationComponent>(InEntity);
                 lPrevious.Position     = InLocal.Position;
                 lPrevious.Rotation     = InLocal.Rotation;
                 lPrevious.bHasPrevious = true;
 
-                // A mode sweeps in WORLD space and never learns about parents (§HR): it is handed
-                // the world pose and the verb stores whatever local lands there.
+                // Modes work in world space; the result is stored back as local.
                 const Entity       lLive{ InEntity, &lWorld };
                 TransformComponent lWorldXf = EntityHierarchy::WorldTransform(lLive);
 
@@ -112,14 +109,13 @@ namespace Opaax
                                  TransformComponent& InTransform, IPhysicsWorld& InWorld,
                                  const float InDelta)
     {
-        // ---- the pending switch, applied BETWEEN steps rather than inside one -----------------
+        // ---- pending mode switch, applied between steps ---------------------------------------
         if (InMover.PendingMode.IsValid() && InMover.PendingMode != InMover.ModeName)
         {
             const MoveModeData* lFromParams = ResolveMode(InMover, InMover.ModeName);
             const MoveModeData* lToParams   = ResolveMode(InMover, InMover.PendingMode);
 
-            // A switch to a mode that cannot resolve is REFUSED rather than half-applied — leaving
-            // a mover naming a mode with no tuning would stop it dead with nothing to say.
+            // Refuse a switch to a mode that cannot be resolved.
             if (lToParams == nullptr)
             {
                 InMover.PendingMode = OpaaxStringID();
@@ -153,7 +149,7 @@ namespace Opaax
 
         if (lParams == nullptr)
         {
-            return;   // ResolveMode warned once about whichever half was missing
+            return;   // ResolveMode already warned
         }
 
         IMoverMode* lMode = m_Modes->Find(lParams->Mode);
@@ -180,7 +176,7 @@ namespace Opaax
     {
         if (InMover.Mover.IsEmpty())
         {
-            return nullptr;   // naming no mover is a real state, not a failure worth a line
+            return nullptr;   // no mover set: not an error
         }
 
         // ---- the bag ---------------------------------------------------------------------

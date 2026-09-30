@@ -15,22 +15,10 @@ namespace Opaax
             return nullptr;
         }
 
-        // Are these two json values the same AS THE ENGINE STORES THEM?
-        //
-        // THE FILE AND THE CAPTURE DO NOT AGREE BIT-FOR-BIT, and that is not a rounding nicety —
-        // it silently detaches properties from their prefab. Every component field is a `float`,
-        // but json numbers are `double`: a hand-authored prefab says `0.35`, the live component
-        // holds `0.35f`, and capturing it writes `0.3499999940395355`. A plain `==` then reports a
-        // difference on a value nobody touched, records it as an override, and that channel stops
-        // following the prefab FOREVER — the precise failure per-property overrides exist to avoid.
-        //
-        // So two FLOATING-POINT numbers are equal when they are equal at float precision, which is
-        // the only precision the value ever actually had. INTEGERS are compared exactly: narrowing
-        // them would make two ids above 2^24 compare equal, and nothing here is float-shaped.
-        //
-        // LIMIT, stated: a component that genuinely stored a `double` would be compared too
-        // loosely. None does — every field comes from a typed C++ member and they are all float,
-        // int, bool or string — and the day one does, this is the line that needs to know.
+        // Are two JSON values equal as the engine stores them?
+        //   Floats are compared at float precision: a file says 0.35 but a capture of the float writes
+        //   0.3499999940395355, and a plain == would record a false override. Integers compare exactly.
+        //   (A component storing a double would be compared too loosely; none does.)
         bool SameValue(const nlohmann::json& InLeft, const nlohmann::json& InRight)
         {
             if (InLeft.is_number_float() || InRight.is_number_float())
@@ -68,18 +56,11 @@ namespace Opaax
             return InLeft == InRight;
         }
 
-        // The merge-patch (RFC 7386) that turns InFrom into InTo: only the members that differ,
-        // recursing into nested objects so a Transform whose Position moved does not drag its
-        // Rotation and Scale along.
-        //
-        // nlohmann ships `diff` (RFC 6902, a JSON PATCH — an array of ops) but NOT a merge-patch
-        // producer, only the `merge_patch` applier. This is that missing half, and it is short
-        // because merge-patch is the simple format: an object of the changed members, `null` for a
-        // removed one.
+        // Builds the merge patch (RFC 7386) from InFrom to InTo: only the changed members,
+        // recursing into objects. nlohmann only provides the applier.
         nlohmann::json MakeMergePatch(const nlohmann::json& InFrom, const nlohmann::json& InTo)
         {
-            // Not both objects — the value is replaced wholesale. This is where an ARRAY lands, and
-            // it is the documented limit: merge-patch cannot address an element.
+            // Not both objects: replaced whole (arrays included; merge patch cannot address an element).
             if (!InFrom.is_object() || !InTo.is_object())
             {
                 return InTo;
@@ -87,7 +68,7 @@ namespace Opaax
 
             nlohmann::json lPatch = nlohmann::json::object();
 
-            // Members that changed or were added.
+            // Changed or added members.
             for (const auto& [lKey, lValue] : InTo.items())
             {
                 const auto lIt = InFrom.find(lKey);
@@ -101,7 +82,7 @@ namespace Opaax
                 }
             }
 
-            // Members that went away. `null` is merge-patch's removal.
+            // Removed members (null).
             for (const auto& [lKey, lValue] : InFrom.items())
             {
                 if (InTo.find(lKey) == InTo.end())
@@ -128,13 +109,12 @@ namespace Opaax
 
             if (lTemplate == nullptr)
             {
-                // Added on the instance — the whole payload, since there is nothing to diff against.
+                // Added on the instance: the whole payload.
                 lComponents[lInstance.TypeName.CStr()] = lInstance.Payload;
                 continue;
             }
 
-            // SameValue, not ==: a float that came from a file and one that came from a capture are
-            // the same number and different doubles. See SameValue.
+            // SameValue, not == (see SameValue).
             if (SameValue(lTemplate->Payload, lInstance.Payload)) { continue; }   // identical: no entry
 
             lComponents[lInstance.TypeName.CStr()] = MakeMergePatch(lTemplate->Payload, lInstance.Payload);
@@ -190,8 +170,7 @@ namespace Opaax
             InOutEntity.Name = OpaaxString(lName.c_str(), static_cast<Uint32>(lName.size()));
         }
 
-        // A parent override is the guid as the WORLD holds it (derived), or "" for detached.
-        // Unparseable reads as detached rather than as the template's — the patch did say so.
+        // A parent override is the derived guid, or "" for detached. Unparseable means detached.
         if (const auto lParentIt = InPatch.find(KEY_PARENT);
             lParentIt != InPatch.end() && lParentIt->is_string())
         {
@@ -212,8 +191,7 @@ namespace Opaax
 
             const OpaaxStringID lId(lTypeName);
 
-            // `null` REMOVES — merge-patch's own convention, and what an instance that deleted a
-            // component off its template records.
+            // null removes the component.
             if (lPatch.is_null())
             {
                 std::erase_if(InOutEntity.Components,
@@ -234,7 +212,7 @@ namespace Opaax
                 break;
             }
 
-            // Not on the template: the instance ADDED this component, so the patch is the payload.
+            // Not on the template: added by the instance, the patch is the payload.
             if (!lFound)
             {
                 InOutEntity.Components.emplace_back(lId, lPatch);

@@ -6,12 +6,9 @@
 namespace Opaax
 {
     // =============================================================================
-    // GroundMoveMode — walking, jumping and falling. The platformer mode.
-    //
-    //   Quake-style ground/air movement: friction while grounded, acceleration toward a desired
-    //   horizontal speed with reduced authority in the air, a jump spent only when grounded, and
-    //   the world's own gravity vector scaled per tuning. The geometric solve is the seam's
-    //   MoveCapsule, so slopes, steps and walls are collide-and-slide rather than policy.
+    // GroundMoveMode — walking, jumping and falling (platformer).
+    //   Quake-style: friction on the ground, acceleration with less control in the air, jump only
+    //   when grounded, and gravity. MoveCapsule handles slopes, steps and walls.
     // =============================================================================
     class OPAAX_API GroundMoveMode final : public IMoverMode
     {

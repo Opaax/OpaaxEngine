@@ -5,8 +5,7 @@
 namespace Opaax
 {
     // =============================================================================
-    // IWorldSubsystem — marker interface for world-owned subsystems.
-    //   Lifetime = world
+    // IWorldSubsystem — interface for world subsystems. Lives as long as its world.
     // =============================================================================
     class OPAAX_API IWorldSubsystem : public Opaax::ISubsystem
     {
@@ -31,7 +30,7 @@ namespace Opaax
     };
 
 	// =============================================================================
-    // EngineSubsystemMgr — owns + drives the world subsystem list.
+    // WorldSubsystemMgr — owns and ticks a world's subsystems.
     // =============================================================================
     class OPAAX_API WorldSubsystemMgr : public ISubsystemManager<IWorldSubsystem>
     {

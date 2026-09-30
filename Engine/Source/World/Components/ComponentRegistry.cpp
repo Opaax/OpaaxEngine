@@ -1,14 +1,10 @@
 #include "World/Components/ComponentRegistry.h"
 
-#include <spdlog/fmt/ranges.h>   // fmt::join — the Sealed line names every entry
+#include <spdlog/fmt/ranges.h>   // fmt::join
 
 namespace Opaax
 {
-    // NOTE: every refusal below is an Error log + a false return, deliberately NOT OPAAX_ASSERT.
-    // OPAAX_ASSERT is a __debugbreak (EngineAPI.h) — it takes the process down in Debug, which
-    // makes these paths untestable, and it compiles to NOTHING in Release, which is exactly the
-    // build where a game module registering late needs to be reported. An Error log is loud in
-    // both, and the false return lets the caller decide.
+    // Refusals log an error and return false (not an assert, so Release builds report them too).
     bool ComponentRegistry::AddEntry(TUniquePtr<IComponentEntry> InEntry, entt::id_type InTypeId)
     {
         if (InEntry == nullptr)
@@ -16,8 +12,7 @@ namespace Opaax
             return false;
         }
 
-        // Sealed means a world already exists. A type accepted now would be absent from every
-        // entity in that world without a single error — refuse loudly instead (Editor.md §3 L1).
+        // Sealed: a world exists, and a type added now would be missing from it.
         if (m_bSealed)
         {
             OPAAX_LOG(LogComponentRegistry, Error,
@@ -34,7 +29,7 @@ namespace Opaax
             return false;
         }
 
-        // The name is the on-disk key: a duplicate would make a map file ambiguous.
+        // The name is saved in map files: it must be unique.
         if (FindByName(lName) != nullptr)
         {
             OPAAX_LOG(LogComponentRegistry, Error, "Register '{}' — that name is already taken.",
@@ -42,8 +37,7 @@ namespace Opaax
             return false;
         }
 
-        // Re-registering the same TYPE under a second name would give one component two
-        // serialized forms; the round trip could then pick either.
+        // One type under two names would give it two saved forms.
         if (FindByTypeId(InTypeId) != nullptr)
         {
             OPAAX_LOG(LogComponentRegistry, Error, "Register '{}' — that type is already registered.",

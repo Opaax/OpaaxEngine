@@ -11,17 +11,8 @@ namespace Opaax
     OPAAX_LOG_CATEGORY(MoverModeRegistry);
 
     // =============================================================================
-    // MoverModeRegistry — which behaviours a `.opaaxmovemode` may name.
-    //
-    //   The fourth engine registry, and it sits in EngineRegistries beside the other three for
-    //   that aggregate's stated reason: a registry is TYPE METADATA, not one subsystem's state.
-    //   MoverSubsystem reads it; nothing owns it but the Engine.
-    //
-    //   MODES ARE STATELESS, so this owns ONE instance of each and every entity running that mode
-    //   shares it. A tuning is what differs per entity, and that is a resource.
-    //
-    //   SEALED with its siblings on the way to the first world (**MR2**): a mode registered later
-    //   would be missing from movers that already resolved against it.
+    // MoverModeRegistry — the movement modes a .opaaxmovemode can use.
+    //   Modes are stateless: one instance of each, shared. Sealed before the first world.
     // =============================================================================
     class OPAAX_API MoverModeRegistry
     {
@@ -45,11 +36,8 @@ namespace Opaax
         // =========================================================================
     public:
         /**
-         * Register T under InName — the id a `.opaaxmovemode` writes in its Mode field.
-         *
-         * @return false when sealed, when the name is invalid, or when it is already taken. A
-         *   duplicate is REFUSED rather than replacing, so a game module cannot silently shadow a
-         *   built-in mode that other assets already name.
+         * Registers T under InName (the name .opaaxmovemode files use).
+         * @return False if sealed, if the name is invalid, or if it is already used (no replacing)
          */
         template<typename T>
         requires std::is_base_of_v<IMoverMode, T>
@@ -80,14 +68,14 @@ namespace Opaax
             return true;
         }
 
-        /** Close to further registration. Idempotent. */
+        /** Closes registration. Safe to call twice. */
         void Seal() noexcept { m_bSealed = true; }
 
         // =========================================================================
         // Get
         // =========================================================================
     public:
-        /** The mode called InName, or nullptr. A name nothing registered is a real state. */
+        /** The mode named InName, or nullptr. */
         IMoverMode* Find(OpaaxStringID InName) const noexcept;
 
         Uint64 Count()    const noexcept { return static_cast<Uint64>(m_Entries.size()); }

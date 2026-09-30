@@ -20,8 +20,7 @@ namespace Opaax
 
     bool SpriteAnimationSubsystem::Startup()
     {
-        // No entities yet — the host spawns them in PostEngineStartup, and a PIE clone is
-        // instantiated after CreateWorld (WS7). Everything here resolves on the first tick.
+        // No entities yet: everything is resolved on the first tick.
         return true;
     }
 
@@ -49,15 +48,13 @@ namespace Opaax
 
         const AnimationClipData* lClip = ResolveClip(InAnim, lClipPath);
 
-        // Nothing named, or nothing loadable: the sprite keeps its AUTHORED frame. That is the
-        // Placeholder policy's whole point — a broken reference degrades, it does not blank.
+        // Nothing set, or nothing loadable: the sprite keeps its authored frame.
         if (lClip == nullptr)
         {
             return;
         }
 
-        // A clip SWITCH restarts at zero, which is what Unity and Godot both do and what a state
-        // machine expects: entering Run must not resume Run's old cursor.
+        // A clip change restarts at zero.
         if (InAnim.BoundClipPath != lClipPath)
         {
             InAnim.BoundClipPath = lClipPath;
@@ -94,11 +91,10 @@ namespace Opaax
 
             if (lFrame < 0)
             {
-                return;   // the name did not resolve; BindFrames already said so, once
+                return;   // unknown frame name, already warned
             }
 
-            // Assigned only when it CHANGED: a TResourcePath assignment is a string copy, and this
-            // runs per animated entity per frame.
+            // Assigned only when changed (a path assignment copies a string).
             if (InSprite.Sheet != InClip.Sheet)
             {
                 InSprite.Sheet = InClip.Sheet;
@@ -108,8 +104,7 @@ namespace Opaax
             return;
         }
 
-        // Texture-list clip: the step carries its own image, and the sheet must get out of the way
-        // because SpriteComponent's Sheet WINS over its Texture (SS3).
+        // Texture clip: clear the sheet, since a sheet wins over a texture.
         if (InStep.Texture.IsEmpty())
         {
             return;
@@ -129,7 +124,7 @@ namespace Opaax
     const AnimationClipData* SpriteAnimationSubsystem::ResolveClip(const SpriteAnimatorComponent& InAnim,
                                                                    OpaaxStringID& OutClipPath)
     {
-        // A Library WINS when set — SpriteComponent's Sheet-over-Texture rule, one layer over.
+        // A Library wins when set.
         if (!InAnim.Library.IsEmpty())
         {
             const AnimationLibraryData* lLibrary = ResolveLibrary(InAnim.Library);
@@ -163,7 +158,7 @@ namespace Opaax
 
         if (InAnim.ClipAsset.IsEmpty())
         {
-            return nullptr;   // names nothing — a real state, not an error
+            return nullptr;   // nothing set: not an error
         }
 
         OutClipPath = OpaaxStringID(InAnim.ClipAsset.Path);
@@ -207,8 +202,7 @@ namespace Opaax
             lBinding.emplace_back(lIndex);
         }
 
-        // Logged whichever way it went, and with NUMBERS: "bound" and "bound but resolved nothing"
-        // must not look the same in the log.
+        // Logged either way, with counts.
         if (lResolved == InClip.StepCount())
         {
             OPAAX_LOG(LogSpriteAnimation, Trace, "Clip '{}' -> {} step(s) @ {} fps, all frames bound",
@@ -236,8 +230,7 @@ namespace Opaax
             ResourceRef<AnimationLibraryResource> lRef =
                 m_Context->Resources.Load<AnimationLibraryResource>(ToAbsolute(InPath.Path).CStr());
 
-            // Cached even when the load FAILED: the empty ref keeps a missing file from being
-            // retried once per entity per frame.
+            // Cached even when loading failed, so a missing file is not retried every frame.
             lIt = m_LibraryCache.emplace(lKey.GetId(), Move(lRef)).first;
 
             if (lIt->second.IsValid())
@@ -323,8 +316,7 @@ namespace Opaax
 
     void SpriteAnimationSubsystem::Shutdown()
     {
-        // Released here, not in the destructor: DestroyWorld runs this while the ResourceManager is
-        // still alive (WS6/LC3), which is the only moment a claim can be given back cleanly.
+        // Released here (the ResourceManager is still alive), not in the destructor.
         m_FrameBindings.clear();
         m_SheetCache.clear();
         m_ClipCache.clear();

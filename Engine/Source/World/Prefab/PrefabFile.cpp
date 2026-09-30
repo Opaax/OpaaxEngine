@@ -13,7 +13,7 @@ namespace Opaax
             return false;
         }
 
-        // The SUCCESS branch is logged, not just the failures ([[L15]]).
+        // Log success too.
         OPAAX_LOG(LogPrefabFile, Info, "Saved {} entity(ies) to '{}'", InData.EntityCount(),
                   InAbsPath.CStr());
         return true;
@@ -23,9 +23,7 @@ namespace Opaax
     {
         const OpaaxString lText = FileIO::ReadAllText(InAbsPath);
 
-        // FileIO is tolerant by contract and answers "" for both a missing file and an empty one.
-        // Telling them apart would mean reaching IFileSystem, which the World layer does not
-        // reach — and it would change nothing, because an empty file is not a prefab either way.
+        // Missing or empty file: not a prefab.
         if (lText.IsEmpty())
         {
             OPAAX_LOG(LogPrefabFile, Error, "Prefab '{}' is missing, empty or unreadable",

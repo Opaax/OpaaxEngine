@@ -1,6 +1,6 @@
 #include "World/Systems/ColliderDebugSubsystem.h"
 
-#include "Core/Maths/Maths.h"   // DegreesToRadians — the transform authors degrees
+#include "Core/Maths/Maths.h"   // DegreesToRadians
 #include "Core/Profiling/Profiler.h"
 #include "Renderer/DebugDraw.h"
 #include "World/Components/ColliderComponent.h"
@@ -13,13 +13,13 @@ namespace Opaax
 {
     namespace
     {
-        /** Unreal's convention, near enough to be unsurprising: green blocks, yellow passes through. */
+        /** Green blocks, yellow passes through (like Unreal). */
         constexpr Vector4F kSolidColor{ 0.30f, 0.90f, 0.35f, 0.85f };
         constexpr Vector4F kOverlapColor{ 0.95f, 0.85f, 0.25f, 0.85f };
 
         constexpr float kThickness = 2.f;
 
-        /** Rotate a local offset into world space around the entity's own rotation. */
+        /** Rotates a local offset into world space, by the entity's rotation. */
         Vector2F RotateOffset(const Vector2F& InOffset, const float InRadians) noexcept
         {
             if (InOffset.x == 0.f && InOffset.y == 0.f)
@@ -40,8 +40,7 @@ namespace Opaax
     // =========================================================================
     bool ColliderDebugSubsystem::Startup()
     {
-        // No ShouldCreate, so this runs in an Edit world too — which is the whole point, and also
-        // why it must not assume any entity exists yet (WS7).
+        // Also runs in Edit worlds; entities may not exist yet.
         return true;
     }
 
@@ -56,8 +55,7 @@ namespace Opaax
     {
         OPAAX_STAT_SCOPE("ColliderDebug");
 
-        // Asking ONCE rather than per collider: the channel cannot change mid-tick, and a silenced
-        // channel should cost a lookup, not a walk of every entity in the world.
+        // Checked once: a hidden channel costs a lookup, not a walk of every entity.
         if (!m_Context->Debug.IsChannelEnabled(DebugChannels::Physics))
         {
             m_LastDrawn = 0;
@@ -71,7 +69,7 @@ namespace Opaax
         lWorld.Each<ColliderComponent, TransformComponent>(
             [this, &lWorld, &lDrawn](EntityID InEntity, ColliderComponent& InCollider, TransformComponent&)
             {
-                // WORLD, where the body actually is (§HR).
+                // World pose.
                 DrawCollider(InCollider, EntityHierarchy::WorldTransform(Entity{ InEntity, &lWorld }));
                 ++lDrawn;
             });
@@ -102,9 +100,7 @@ namespace Opaax
 
             case EColliderShape::Capsule:
             {
-                // The caps sit a radius in from each end, exactly as MakeShapeDesc builds them —
-                // an outline that used the full half-height would be taller than the shape it
-                // annotates, which is the kind of wrong that looks almost right.
+                // The caps sit a radius in from each end, like MakeShapeDesc builds them.
                 const float lHalfSpan = Maths::Max(0.f, InCollider.Size.y * 0.5f - InCollider.Radius);
                 const Vector2F lAxis  = RotateOffset({ 0.f, lHalfSpan }, lRadians);
 
@@ -116,8 +112,7 @@ namespace Opaax
             case EColliderShape::Box:
             default:
             {
-                // One hollow quad, carrying the entity's rotation — which is why DebugBox grew a
-                // RotationRad: the ramp in the physics test map is authored at -25 degrees.
+                // One hollow quad, rotated with the entity.
                 lDebug.DrawBox(lCenter, InCollider.Size, lColor, kThickness,
                                ERenderLayer::Debug, DebugChannels::Physics, lRadians);
                 break;

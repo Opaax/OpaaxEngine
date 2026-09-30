@@ -6,7 +6,7 @@ namespace Opaax
 {
     namespace
     {
-        // ToJson's body, shared by the copying and the CONSUMING entry points — MapJson's shape.
+        // Shared by the copying and consuming versions.
         template<typename TData>
         nlohmann::json BuildJson(TData&& InData)
         {
@@ -26,7 +26,7 @@ namespace Opaax
             lRoot[PrefabJson::KEY_VERSION]  = PrefabJson::PREFAB_FORMAT_VERSION;
             lRoot[PrefabJson::KEY_ENTITIES] = Move(lEntities);
 
-            // Omitted when empty — MapJson's rule, for the same reason (the round-trip gate).
+            // Omitted when empty.
             if (!InData.Instances.empty())
             {
                 lRoot[PrefabJson::KEY_INSTANCES] = EntityJson::InstancesToJson(InData.Instances);
@@ -64,8 +64,7 @@ namespace Opaax
 
         PrefabData lParsed;
 
-        // An EMPTY prefab is a real thing, not a broken one — the state a freshly created prefab
-        // is in before anything is put in it. A VARIANT has no entities at all, only a record.
+        // An empty prefab is valid (a new one, or a variant with only a record).
         const auto lEntitiesIt = InJson.find(KEY_ENTITIES);
         if (lEntitiesIt != InJson.end() && lEntitiesIt->is_array())
         {
@@ -78,7 +77,7 @@ namespace Opaax
             }
         }
 
-        EntityJson::InstancesFromJson(InJson, lParsed.Instances);   // v2; absent in v1, and tolerated
+        EntityJson::InstancesFromJson(InJson, lParsed.Instances);   // v2+; absent in v1
 
         OutData = Move(lParsed);
         return true;
@@ -96,7 +95,7 @@ namespace Opaax
 
     bool PrefabJson::Deserialize(const OpaaxString& InText, PrefabData& OutData)
     {
-        // No exceptions — a hand-edited file is an ordinary input here, not an exceptional one.
+        // No exceptions: a malformed file is a normal input.
         const nlohmann::json lJson = nlohmann::json::parse(InText.CStr(), nullptr, false);
 
         if (lJson.is_discarded())

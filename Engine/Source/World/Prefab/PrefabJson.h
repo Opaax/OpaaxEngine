@@ -13,58 +13,40 @@ namespace Opaax
     inline constexpr LogCategory LogPrefabJson{"PrefabJson"};
 
     // =============================================================================
-    // PrefabJson — the TEXT form of a Prefab: PrefabData <-> json. No file IO (that is
-    //   PrefabFile), no World (that is PrefabFactory). MapJson's shape, one document over.
-    //
-    //   The entity array itself is EntityJson's, shared with the map format so the two cannot
-    //   drift (⑦-C **P1a**). What is left here is the two lines that make this a PREFAB file:
-    //   its own version, and the absence of a `mapId`.
+    // PrefabJson — PrefabData <-> JSON. No file IO (PrefabFile), no World (PrefabFactory).
+    //   The entity array is EntityJson's, shared with the map format.
     // =============================================================================
     namespace PrefabJson
     {
         /**
-         * The format this build writes, and the highest it will read.
-         *
-         * Bumped ONLY for a change a v1 reader would MISREAD — the rule MAP_FORMAT_VERSION
-         * follows. Adding a field does not qualify, since FromJson ignores what it does not know.
-         *
-         * v2 (⑦-C P7) added `prefabInstances` — a prefab may place prefabs, and a variant is one
-         * such record and nothing else. It bumped by that rule: a v1 reader skipping the records
-         * would produce a prefab silently missing entities. The key is OMITTED when empty, so a
-         * prefab placing nothing re-serializes identically but for this number.
-         *
-         * v3 (§HR) added `parent` on an entity, making its Transform LOCAL — MapJson's v4, same
-         * rule, same omission for a root.
+         * The format version this build writes, and the highest it reads.
+         * Bump only for a change an older reader would misread (a new optional field does not count).
+         *   v2: prefabInstances (nested placements, variants).
+         *   v3: parent on entities (Transform becomes local).
          */
         inline constexpr Uint32 PREFAB_FORMAT_VERSION = 3;
 
-        // The document-level keys. Everything describing an ENTITY or a PLACEMENT is EntityJson's.
+        // Document keys. Entity and placement keys are EntityJson's.
         inline constexpr const char* KEY_VERSION   = EntityJson::KEY_VERSION;
         inline constexpr const char* KEY_ENTITIES  = EntityJson::KEY_ENTITIES;
         inline constexpr const char* KEY_INSTANCES = EntityJson::KEY_INSTANCES;
 
-        /** Serialize InData. Entities sorted by Guid, for EntityJson::EntitiesToJson's reasons. */
+        /** Serializes InData. Entities sorted by Guid. */
         OPAAX_API nlohmann::json ToJson(const PrefabData& InData);
 
         /**
-         * Parse InJson into OutData.
-         *
-         * TOLERANT AND TOTAL — never throws, exactly as MapJson::FromJson is (**MP3**), and
-         * OutData IS LEFT UNTOUCHED ON FAILURE so a failed read cannot half-replace a prefab the
-         * caller already held and then be written back over the original.
-         *
-         * @return false when InJson is not an object, or when its version is NEWER than
-         *   PREFAB_FORMAT_VERSION.
+         * Parses InJson into OutData. Never throws; OutData is untouched on failure.
+         * @return False if InJson is not an object, or its version is newer than PREFAB_FORMAT_VERSION
          */
         OPAAX_API bool FromJson(const nlohmann::json& InJson, PrefabData& OutData);
 
-        /** ToJson + dump, indented — a prefab file lives in git and a human reads the diff. */
+        /** ToJson + indented dump. */
         OPAAX_API OpaaxString Serialize(const PrefabData& InData);
 
-        /** Serialize by CONSUMING InData — identical bytes, component payloads moved not copied. */
+        /** Same text, moving the component payloads instead of copying them. */
         OPAAX_API OpaaxString Serialize(PrefabData&& InData);
 
-        /** Parse text (never throws) then FromJson. @return false on malformed json. */
+        /** Parses text (never throws), then FromJson. @return False on malformed JSON. */
         OPAAX_API bool Deserialize(const OpaaxString& InText, PrefabData& OutData);
     }
 }

@@ -8,8 +8,7 @@ namespace Opaax
 {
     namespace
     {
-        // One entity as data — the unit every capture below shares, so a subset capture and a
-        // whole-world one cannot disagree about what an entity IS.
+        // One entity as data, shared by every capture.
         EntityData CaptureOne(const EntityRegistry& InEntities, const ComponentRegistry& InRegistry,
                               const EntityID InEntity, const EntityMeta& InMeta)
         {
@@ -32,9 +31,7 @@ namespace Opaax
             return lData;
         }
 
-        // The shared walk. An invalid InMapId takes EVERYTHING — which is why this is private:
-        // the two public entry points are what decide that, so the ambiguity that made MP10
-        // possible is not reachable from outside this file.
+        // Shared walk. An invalid InMapId takes everything, so it stays private.
         MapData CaptureFiltered(const World& InWorld, const ComponentRegistry& InRegistry, MapId InMapId)
         {
             MapData lData;
@@ -43,13 +40,10 @@ namespace Opaax
 
             const auto lView = lRegistry.view<EntityMeta>();
 
-            // ONE allocation for the whole walk. This is the WORLD's entity count, so a filtered
-            // capture over-reserves — deliberately: an EntityData owns a string and a vector, and
-            // regrowing this move-constructs every one of them log2(n) times.
+            // Reserve the world's entity count once (over-reserves for a filtered capture).
             lData.Entities.reserve(lView.size());
 
-            // EntityMeta is emplaced by World::CreateEntityWithGuid, through which EVERY entity is
-            // created — so this view is the complete all-entities view, not a subset.
+            // Every entity has an EntityMeta.
             for (const auto [lEntity, lMeta] : lView.each())
             {
                 if (InMapId.IsValid() && lMeta.OwnerMap != InMapId)
@@ -60,16 +54,14 @@ namespace Opaax
                 lData.Entities.emplace_back(CaptureOne(lRegistry, InRegistry, lEntity, lMeta));
             }
 
-            // No log (LOG4): the editor's dirty check captures on a timer while the editor is simply
-            // open. What happens TO a map — MapFile's Save/Load — is what logs.
+            // No log: the editor's dirty check captures on a timer.
             return lData;
         }
     }
 
     MapData MapSerializer::CaptureWorld(const World& InWorld, const ComponentRegistry& InRegistry)
     {
-        // Id deliberately left invalid — a whole-world snapshot is not a map and never reaches a
-        // file. MapJson writes that as "" (MP1), so nothing can mistake it for one either.
+        // Id left invalid: a world snapshot is not a map (written as "").
         return CaptureFiltered(InWorld, InRegistry, MapId());
     }
 
@@ -77,9 +69,7 @@ namespace Opaax
     {
         if (!InMapId.IsValid())
         {
-            // NOTHING, and loudly. An invalid id names no map; the one thing it must never mean
-            // here is "everything", which is what the old defaulted-filter signature made it mean
-            // for any map whose entities had not claimed it yet (**MP10**).
+            // An invalid id captures nothing (with a warning), never everything.
             OPAAX_LOG(LogMapSerializer, Warn,
                       "CaptureMap on world '{}' with an invalid map id — captured nothing",
                       InWorld.GetName().CStr());
@@ -88,7 +78,7 @@ namespace Opaax
 
         MapData lData = CaptureFiltered(InWorld, InRegistry, InMapId);
 
-        // The map carries its OWN name to the file, so an empty one is still identifiable.
+        // The map carries its own name, so an empty map is still identified.
         lData.Id = InMapId;
 
         return lData;
@@ -109,16 +99,13 @@ namespace Opaax
 
             if (lMeta == nullptr)
             {
-                continue;   // destroyed under the caller, or never ours — see the header
+                continue;   // destroyed meanwhile, or not ours
             }
 
             lData.Entities.emplace_back(CaptureOne(lRegistry, InRegistry, lEntity, *lMeta));
         }
 
-        // NO LOG LINE, unlike its two neighbours. This one answers a question about a HANDFUL of
-        // entities on an interactive path — the editor calls it per recorded edit — so a line here
-        // says nothing the verb's own Info line does not, and one caller flooding the log is what
-        // it cost last time.
+        // No log: called for every recorded edit.
         return lData;
     }
 }

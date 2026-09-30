@@ -14,44 +14,33 @@
 
 namespace Opaax
 {
-    // Only NAMED here — TResourcePath never completes its parameter — so a component header does
-    // not drag the resource system into every TU that draws one.
+    // Forward-declared: TResourcePath only needs the name.
     struct FontFaceResource;
     struct FontFamilyResource;
 
     // =============================================================================
-    // TextComponent — a string drawn in the world. What ⑥ S4's whole font stack exists to serve.
-    //
-    //   WHERE it draws is TransformComponent's, exactly as a sprite's is. The position is the
-    //   TOP-LEFT of the first line and the text runs right and down from it — no alignment, because
-    //   centring belongs to a UI pass that does not exist yet.
-    //
-    //   TWO WAYS TO NAME A TYPEFACE, and the precedence is the contract: a Font family wins when it
-    //   is set, otherwise the Face, otherwise nothing is drawn. SpriteComponent's Sheet-over-Texture
-    //   rule, and the same reason — a single label, a debug readout, a game whose whole UI is one
-    //   weight, must not need a `.opaaxfont` beside it to be usable.
-    //
-    //   The Style is only consulted through a family. A Face names one file, and that file already
-    //   IS a weight and a slant and a script.
+    // TextComponent — text drawn in the world. The Transform is the top-left of the first line.
+    //   A Font family wins when set, otherwise the Face, otherwise nothing is drawn.
+    //   Style is only used with a family.
     // =============================================================================
     struct TextComponent
     {
-        /** What it says. UTF-8, so Greek and Cyrillic are ordinary content. '\n' breaks the line. */
+        /** UTF-8 text. '\n' breaks the line. */
         OpaaxString Text = "Text";
 
-        /** Asset-relative ("/Engine/Fonts/Roboto.opaaxfont"). Set, it WINS over Face. */
+        /** Asset-relative ("/Engine/Fonts/Roboto.opaaxfont"). Wins over Face. */
         TResourcePath<FontFamilyResource> Font;
 
-        /** Which cut of the family to ask for. Ignored with no Font — a Face is already one cut. */
+        /** Style to ask the family for. Ignored without a Font. */
         FontStyleKey Style;
 
-        /** One `.ttf` directly, for text that needs no family. Used only while Font is empty. */
+        /** A single .ttf, used when Font is empty. */
         TResourcePath<FontFaceResource> Face;
 
-        /** Cap-to-cap height in world units. Far above the 32px bake softens the edges. */
+        /** Cap height in world units. */
         float Size = 32.f;
 
-        /** Multiplied into the glyph coverage. White draws the face's own anti-aliasing unchanged. */
+        /** Multiplied with the glyphs. */
         LinearColor Color = { 1.f, 1.f, 1.f, 1.f };
 
         float LineHeightScale = 1.f;
@@ -59,20 +48,17 @@ namespace Opaax
         bool bKerning = true;
         bool bVisible = true;
 
-        /** Coarse band, then the fine tie-break inside it (lower = behind). See RenderLayer.h. */
+        /** Layer, then order within it (lower = behind). See RenderLayer.h. */
         ERenderLayer Layer        = ERenderLayer::Default;
         Int16        OrderInLayer = 0;
 
-        // Satisfies CComponent. _WITH_DEFAULT is the required variant, not a preference: the plain
-        // macro reads every field with at(), which THROWS on a missing key — so adding a field here
-        // would refuse every map saved before it existed, at boot, inside Level::MountAll.
+        // _WITH_DEFAULT: a missing key keeps its default, so maps saved before a new field still load.
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(TextComponent,
                                                     Text, Font, Style, Face, Size, Color,
                                                     LineHeightScale, bKerning, bVisible,
                                                     Layer, OrderInLayer)
 
-        // Style is a GROUP, not a widget: it describes its own fields, so the Inspector folds it into
-        // a tree node of four dropdowns with no drawer written for it (I15).
+        // Style shows as a group of four dropdowns.
         OPAAX_PROPERTIES(TextComponent,
                          OPAAX_PROP(Text).SetFlags(EPropertyFlags::Multiline)
                                          .SetTooltip("Enter breaks the line. UTF-8, so Greek and\n"

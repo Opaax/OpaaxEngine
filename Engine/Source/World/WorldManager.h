@@ -22,17 +22,10 @@ namespace Opaax
     inline constexpr LogCategory LogWorldManager{"WorldManager"};
 
     // =============================================================================
-    // WorldManager — the engine subsystem that OWNS every World (TUniquePtr). Multiple
-    //   worlds may coexist (editor + PIE later); one is the "active" world the renderer
-    //   draws. Ownership lives here; drivers hold non-owning World* handles.
-    //
-    //   CloneWorld is PIE: it snapshots one world into another running in a different mode,
-    //   leaving the source alive and untouched so Stop is just "activate the source again".
-    //
-    //   It creates NO world of its own (BO4). Starting a subsystem is infrastructure;
-    //   choosing which world to open is content, and that happens last: the host NAMES it
-    //   (OpaaxApplication::GetStartupWorldSpec) and Engine::FinishStartup creates it. There is
-    //   legitimately no active world between Startup and that call, and every consumer handles it.
+    // WorldManager — engine subsystem that owns every World. Several can coexist (edit world
+    //   and its Play copy); one is active (ticked and drawn).
+    //   CloneWorld makes the Play copy; the source is untouched, so Stop just re-activates it.
+    //   Creates no world itself: Engine::FinishStartup creates the startup world.
     // =============================================================================
     class OPAAX_API WorldManager final : public EngineSubsystemBase
     {
@@ -47,9 +40,8 @@ namespace Opaax
         // =========================================================================
     public:
         /**
-         * @param InRegistries The engine's type registries, BORROWED (Engine owns them). Sealed
-         *                     here on the way to the first world. Null is legal — a bare manager
-         *                     in a test simply has nothing to seal.
+         * @param InRegistries The engine's registries (owned by Engine), sealed at the first world.
+         *                     May be null in tests.
          */
         explicit WorldManager(EngineRegistries* InRegistries = nullptr);
         ~WorldManager() override = default;
@@ -62,41 +54,29 @@ namespace Opaax
         // World Lifetime
     public:
         /**
-         * Create a world and take ownership of it. Does NOT activate it — the caller decides
-         * (SetActiveWorld), because a PIE clone is created before it becomes active and the
-         * source world stays alive throughout.
-         *
-         * The FIRST call seals the engine registries: nothing may register a component or world
-         * subsystem type once a world exists to have been built without it (BO4).
-         *
-         * @param InName
-         * @param InMode What the world is for. Fixed at construction (see EWorldMode).
+         * Creates and owns a world. Does not activate it (call SetActiveWorld).
+         * The first call seals the engine registries.
+         * @param InMode What the world is for (cannot change)
          */
         World* CreateWorld(OpaaxString InName = "World", EWorldMode InMode = EWorldMode::Play);
 
         /**
-         *
-         * @param InSource The world to copy. Read-only; it need not be active.
-         * @param InMode   What the CLONE is for. Never inherited from the source.
-         * @return The clone, NOT activated (the caller decides), or null with no registries to
-         *         capture through — an empty "clone" would silently diverge.
+         * Copies InSource into a new world (Play In Editor).
+         * @param InSource The world to copy (read-only; need not be active)
+         * @param InMode   What the clone is for
+         * @return The clone, not activated; null without registries
          */
         World* CloneWorld(const World& InSource, EWorldMode InMode);
 
         void   DestroyWorld(World* InWorld);
 
         /**
-         * Destroy every world running in InMode.
-         *
-         * The mechanism behind IEngine::EndGame: a game owns the PLAY worlds, so ending one
-         * destroys exactly those and leaves an Edit world — the editor's authoring world —
-         * untouched. That is what makes one verb serve both hosts.
-         *
-         * @return how many worlds were destroyed.
+         * Destroys every world in InMode (IEngine::EndGame destroys the Play worlds; the Edit world stays).
+         * @return Number of worlds destroyed
          */
         Uint64 DestroyWorldsOfMode(EWorldMode InMode);
 
-        /** @return how many worlds are currently running in InMode. */
+        /** @return Number of worlds in InMode */
         Uint64 CountWorldsOfMode(EWorldMode InMode) const noexcept;
         // End World Lifetime
         // =========================================================================
@@ -109,35 +89,27 @@ namespace Opaax
 
         Uint64 GetWorldCount() const noexcept { return static_cast<Uint64>(m_Worlds.size()); }
 
-        /** The engine's registries, borrowed. Null only for a bare manager in a test. */
+        /** The engine's registries. Null only in tests. */
         EngineRegistries* GetRegistries() const noexcept { return m_Registries; }
 
         // End Getters
         // =========================================================================
 
         // =========================================================================
-        // Tick gate — PIE pause / step
+        // Tick gate — Play In Editor pause / step
     public:
         /**
-         * Suspend the active world's tick. The editor's Pause; nothing else sets it.
-         *
-         * Deliberately mode-agnostic: an Edit world can be paused too. The rule is about the
-         * TICK, not about what a world is for, and a gate that inspected the mode would need a
-         * reason no caller has.
+         * Pauses the active world's tick (editor Pause). Works for any mode.
          */
         void SetPaused(bool InPaused) noexcept { m_bPaused = InPaused; }
         bool IsPaused() const noexcept         { return m_bPaused; }
 
         /**
-         * Tick exactly ONE more frame, then stay paused — the editor's Step.
-         *
-         * A frame, not an Update: Engine::Loop runs Update once and FixedUpdate 0..N times, so
-         * stepping only the Update would advance the world while starving the fixed step. The
-         * request is consumed in Update and both hooks read the same per-frame decision.
+         * Ticks one more frame, then stays paused (editor Step). Covers Update and FixedUpdate.
          */
         void RequestStep() noexcept { m_bStepRequested = true; }
 
-        /** Whether the current frame is ticking the world — the decision Update took. */
+        /** Whether the world ticks this frame (decided in Update). */
         bool IsTickingThisFrame() const noexcept { return m_bTickThisFrame; }
 
         // End Tick gate
@@ -151,21 +123,15 @@ namespace Opaax
         bool Startup()  override;
 
         /**
-         * Tick the ACTIVE world's subsystems. Only the active one runs: a PIE clone and the edit
-         * world coexist, and exactly one of them is simulating.
+         * Ticks the active world's subsystems only.
          */
         void Update(double InDeltaTime) override;
         void FixedUpdate(double InFixedDeltaTime) override;
 
-        // NOTE: no Render override, deliberately (Editor.md §3). A world subsystem draws by
-        // submitting to DebugDraw from its Update — immediate mode, drained every frame by the
-        // renderer (F4). Giving subsystems a Render hook would create a second, competing draw
-        // path into a frame the RendererManager already owns.
+        // No Render override: world subsystems draw by submitting to DebugDraw.
 
         /**
-         * Destroys every remaining world THROUGH DestroyWorld,
-         * So each one announces itself while the bus and its subscribers are all still alive.
-         * Shutdown() is too late for that, which is exactly why this phase exists.
+         * Destroys every world through DestroyWorld, while the event bus and its subscribers are alive.
          */
         void TearDown() override;
 
@@ -177,8 +143,7 @@ namespace Opaax
         // =========================================================================
     private:
         /**
-         * Build InWorld's context, create the subsystem candidates it qualifies for, and start
-         * them. Called by CreateWorld, so it runs for a PIE clone exactly as for the first world.
+         * Builds InWorld's context, creates the subsystems it qualifies for, and starts them.
          */
         void CreateSubsystemsFor(World& InWorld);
 
@@ -186,29 +151,24 @@ namespace Opaax
         // Members
         // =========================================================================
     private:
-        EngineRegistries*               m_Registries = nullptr; // Engine owns
+        EngineRegistries*               m_Registries = nullptr; // owned by Engine
         TDynArray<TUniquePtr<World>>    m_Worlds;
-        World*                          m_ActiveWorld = nullptr; // non-owning;
+        World*                          m_ActiveWorld = nullptr; // not owned
         
         ResourceManager* m_Resources = nullptr;
         EngineEventBus*  m_Events    = nullptr;
         DebugDraw*       m_Debug     = nullptr;
 
-        // Resolves a level manifest's asset-relative map paths. Cached with the others in Startup;
-        // it is an APP service rather than an engine subsystem, which is the only difference.
+        // Resolves the manifest's asset-relative map paths.
         const IPaths*    m_Paths     = nullptr;
 
-        // ⑦-A — the engine's boot config, put into every WorldContext so a world subsystem can be
-        // configured without reaching the locator (D3). Read-only: this manager never writes it.
+        // Engine config, given to every WorldContext (read-only).
         const EngineConfigData* m_Config = nullptr;
 
-        // ⑦-A P5b — this frame's input, put into every WorldContext so a gameplay subsystem can
-        // read intent without reaching the locator (D3).
+        // This frame's input, given to every WorldContext.
         const InputManager* m_Input = nullptr;
 
-        // ⑦-B B2 — the running game, if any. Resolved per WORLD rather than cached once: a session
-        // comes and goes across PIE cycles while this manager lives the whole run, so the
-        // InputMappingSubsystem a context points at must be looked up when the world is built.
+        // The running game, if any. Looked up per world (games come and go across Play sessions).
         GameInstanceManager* m_GameInstances = nullptr;
 
         
