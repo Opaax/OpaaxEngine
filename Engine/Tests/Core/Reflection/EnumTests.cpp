@@ -1,9 +1,5 @@
-// Suite: OPAAX_ENUM_VALUES — the value list C++20 cannot generate, and the generic json bridge it
-// makes possible.
-//
-// The load-bearing claim is about BYTES: an enum is written as its ToString LABEL, never as an
-// ordinal. That is what let two config fields stop being strings without the file moving, and it is
-// what keeps inserting an enumerator from silently re-meaning every value already on disk.
+// Suite: OPAAX_ENUM_VALUES and the generic enum JSON bridge. An enum is saved as its label,
+// never its number, so inserting a value does not change what saved files mean.
 #include <doctest.h>
 
 #include "Core/Reflection/OpaaxEnum.h"
@@ -71,9 +67,7 @@ TEST_CASE("Enum json: an unknown label THROWS rather than picking something")
 {
     EWindowMode lMode = EWindowMode::Fullscreen;
 
-    // A typo used to become Windowed with a warning nobody reads. It is now the same event as any
-    // other unreadable value in a config: TConfig::Load catches, the defaults stand, ConfigSystem
-    // warns naming the file.
+    // An unknown label throws (TConfig::Load catches it and ConfigSystem warns).
     CHECK_THROWS_AS(nlohmann::json("Maximized").get_to(lMode), nlohmann::json::exception);
     CHECK_THROWS_AS(nlohmann::json("").get_to(lMode), nlohmann::json::exception);
 
@@ -86,7 +80,6 @@ TEST_CASE("Enum json: an unknown label THROWS rather than picking something")
 
 TEST_CASE("ResolveSupportedBackend: Vulkan is coerced, OpenGL passes through")
 {
-    // The half of the retired BackendFromString that was never about parsing.
     CHECK(ResolveSupportedBackend(EBackend::OpenGL) == EBackend::OpenGL);
     CHECK(ResolveSupportedBackend(EBackend::Vulkan) == EBackend::OpenGL);
 }

@@ -1,9 +1,5 @@
-// Suite: the layout container (UI/Widgets/UIStack.h) — UI23.
-//
-// The container owns its children's rects, and that is the whole contract: where each slot lands
-// for each axis, alignment and padding; that a hidden child KEEPS its slot; and the invalidation
-// numbers the seed reserved for "an ancestor whose size depends on its children" — a child's size
-// change re-lays the stack and every sibling, a child's content change re-lays nothing.
+// Suite: UIStack (UI/Widgets/UIStack.h). Where each slot lands per axis, alignment and padding;
+// a hidden child keeps its slot; a child's size change re-lays the stack, a content change does not.
 #include <doctest.h>
 
 #include "UI/UICanvas.h"
@@ -95,7 +91,7 @@ TEST_CASE("UIStack: a horizontal stack lays its children left-right, and Start i
     CheckVec(lB->GetBounds().Max(), {  -95.f, 50.f });
 }
 
-TEST_CASE("UIStack: a hidden child KEEPS its slot — visibility never re-lays (UI3)")
+TEST_CASE("UIStack: a hidden child KEEPS its slot — visibility never re-lays")
 {
     UICanvas lCanvas(1080.f);
     lCanvas.SetTargetSize(1920, 1080);

@@ -1,4 +1,4 @@
-// Suite: when the Config panel announces an edit (Editor/Panels/ConfigChangeTracker.h) — block CN S2.
+// Suite: when the Config panel announces an edit (Editor/Panels/ConfigChangeTracker.h).
 //
 // Once per COMMITTED edit: a drag is held until release, a switch of config is silent, and a drag
 // that ends where it started announces nothing.

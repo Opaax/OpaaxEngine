@@ -1,8 +1,5 @@
-// Suite: UIInputRouter (Engine/UI/UIInputRouter.h) — one frame of UI input, per mode.
-//
-// A REAL InputManager driven by its own feed and a REAL canvas with a button under the pointer:
-// the case each mode has to get right is which keys the game still hears afterwards. No game, no
-// world, no GL — the same reason InputActionEvaluator is tested apart from its subsystem.
+// Suite: UIInputRouter — one frame of UI input, per mode. Uses a real InputManager and a
+// canvas with a button under the pointer; what matters is which keys the game still gets.
 #include <doctest.h>
 
 #include "Engine/Subsystems/Input/InputCodes.h"

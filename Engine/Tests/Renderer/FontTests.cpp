@@ -1,16 +1,6 @@
-// Suite: the text stack's headless half — FontFaceData's lookups, FontBake's refusals, and the
-// FontFaceResource placeholder.
-//
-// WHAT IS NOT HERE, and why it is not a hole: baking a REAL typeface needs a real `.ttf`, and this
-// suite's standing rule is that it never reads the repo's assets ([[L20]] — the fixture is written
-// into a temp dir, or it is bytes). Embedding a 45 KB font to prove stb_truetype packs is also the
-// wrong instrument: what would fail is the vendor, not us. The real bake is gated by the smoke run's
-// COUNTING log line — `'roboto-greek-400-normal' baked N glyph(s), atlas WxH, K kern pair(s)` — which
-// discriminates because N and K are numbers a broken bake cannot produce ([[L15]], [[L59]]).
-//
-// What IS here is the part M5 got wrong and this rewrite exists to fix: the tables are keyed by
-// CODEPOINT, not by `char - 0x20`. Every case below uses codepoints above 0xFF for exactly that
-// reason — a Uint8-keyed table would pass an ASCII-only suite and lose every Greek glyph.
+// Suite: the text stack without a GPU — FontFaceData lookups, FontBake refusals, and the
+// FontFaceResource placeholder. A real bake needs a real .ttf and is checked by the smoke run's
+// "baked N glyph(s)" log line. Tables are keyed by codepoint: cases use codepoints above 0xFF.
 #include <doctest.h>
 
 #include "Engine/Subsystems/Resources/ResourceManager.h"   // completes LoadContext
@@ -32,7 +22,7 @@ namespace
 
     // The same three characters as UTF-8 BYTES, for the strings Measure walks. Explicit \x rather
     // than literal characters: this file has no BOM and the build sets no /utf-8, so a literal would
-    // be decoded by the ANSI code page — the mechanism under test one layer down ([[L21]]).
+    // be decoded by the ANSI code page — the mechanism under test one layer down.
     constexpr const char* U_GAMMA = "\xCE\x93";
     constexpr const char* U_ALPHA = "\xCE\xB1";
 
@@ -147,7 +137,7 @@ TEST_SUITE("FontFaceData")
     TEST_CASE("PackKey orders by first codepoint, then second, across the whole 32-bit range")
     {
         // The ordering has to hold for codepoints a Uint8 key could not even represent — the exact
-        // property M5's `(First << 8) | Second` packing lost the moment text stopped being ASCII.
+        // property the old `(First << 8) | Second` packing lost the moment text stopped being ASCII.
         CHECK(FontFaceData::PackKey(0x0041u, 0xFFFFu) < FontFaceData::PackKey(0x0042u, 0x0000u));
         CHECK(FontFaceData::PackKey(GAMMA,   ALPHA)   < FontFaceData::PackKey(GAMMA,   ZHE));
     }
@@ -531,7 +521,7 @@ TEST_SUITE("Text2D::Layout")
         CHECK(lLaidOut.y == doctest::Approx(lMeasured.y));
     }
 
-    // ---- The box (UI U2): wrap and horizontal alignment, the same walk. ----
+    // ---- The box: wrap and horizontal alignment, the same walk. ----
 
     TEST_CASE("wrapping breaks after the last space that fits, consumes it, and starts the next line at the origin")
     {

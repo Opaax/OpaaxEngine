@@ -1,15 +1,6 @@
-// Suite: PhysicsSubsystem (World/Systems/PhysicsSubsystem.h) — the world subsystem that owns the
-// physics world and reconciles one body per collider.
-//
-// A World needs no GL context, so the whole subsystem runs headless here: the fixture is
-// WorldTickGateTests' GatedWorld shape (context first, register with std::ref per WS4, then
-// StartupAll), driven through WorldManager so the tick path under test is the REAL one —
-// Update once, then the fixed steps it owes.
-//
-// This is what makes P1's claim gateable without eyes. WS7 says a world subsystem may not assume
-// entities exist at Startup, and these cases prove the consequence rather than restating it:
-// every entity below is spawned AFTER StartupAll, exactly like a host's PostEngineStartup or a
-// PIE clone's Instantiate, and the reconcile is what picks them up.
+// Suite: PhysicsSubsystem — owns the physics world and keeps one body per collider.
+// Runs headless, driven through WorldManager (the real tick path). Every entity is spawned after
+// StartupAll, like in a real host, so the reconcile is what picks them up.
 #include <doctest.h>
 
 #include "Application/Services/IPaths.h"
@@ -22,7 +13,7 @@
 #include "World/Components/ColliderComponent.h"
 #include "World/Components/RigidbodyComponent.h"
 #include "World/Components/TransformComponent.h"
-#include "World/Entity/Entity.h"   // World.h only forward-declares it
+#include "World/Entity/Entity.h"
 #include "World/Entity/EntityHierarchy.h"
 #include "World/Entity/EntityMeta.h"
 #include "World/Systems/PhysicsSubsystem.h"
@@ -58,8 +49,7 @@ namespace
             TheWorld->SetContext(WorldContext{ *TheWorld, Resources, IPaths::Null(), Events,
                                                Input, Config, /*Actions*/ nullptr, /*UI*/ nullptr, Debug});
 
-            // std::ref is load-bearing — WS4. By value, the context would be copied into a factory
-            // lambda that StartupAll then destroys.
+            // std::ref: by value, the context would be copied into a factory that StartupAll destroys.
             TheWorld->GetSubsystems().RegisterSubsystem<PhysicsSubsystem>(std::ref(*TheWorld->GetContext()));
             TheWorld->GetSubsystems().StartupAll();
 
@@ -107,7 +97,7 @@ namespace
 }
 
 // =============================================================================
-// Creation filter — the single line that replaces M9's whole PIE apparatus
+// Creation filter
 // =============================================================================
 
 TEST_CASE("PhysicsSubsystem: it is a PLAY-world subsystem and refuses an Edit world")
@@ -120,14 +110,14 @@ TEST_CASE("PhysicsSubsystem: it is a PLAY-world subsystem and refuses an Edit wo
 }
 
 // =============================================================================
-// Reconciliation — WS7 in practice
+// Reconciliation
 // =============================================================================
 
 TEST_CASE("PhysicsSubsystem: no bodies at Startup, and the first fixed step builds them")
 {
     PhysicsFixture lFixture;
 
-    // Nothing has been spawned yet, and nothing may have been assumed (WS7).
+    // Nothing spawned yet.
     CHECK(lFixture.Physics->GetBodyCount() == 0u);
 
     lFixture.SpawnBox(500.f, { 50.f, 50.f }, /*dynamic*/ true);
@@ -188,8 +178,7 @@ TEST_CASE("PhysicsSubsystem: adding a Rigidbody AFTER the body exists rebuilds i
     const float lStaticY = lFixture.PositionY(lEntity);
     CHECK(lStaticY == doctest::Approx(500.f));   // static: gravity does not touch it
 
-    // Now it gains a rigidbody. Without the rebuild it would stay static forever — the exact
-    // silent failure the BuiltType comparison exists to prevent.
+    // It now gains a rigidbody: without the rebuild it would stay static forever.
     RigidbodyComponent lBody;
     lBody.Type = EBodyType::Dynamic;
     lEntity.AddOrReplace<RigidbodyComponent>(lBody);
@@ -201,7 +190,7 @@ TEST_CASE("PhysicsSubsystem: adding a Rigidbody AFTER the body exists rebuilds i
 }
 
 // =============================================================================
-// The P1 gate: it falls, and it LANDS
+// It falls, and it lands
 // =============================================================================
 
 TEST_CASE("PhysicsSubsystem: a dynamic box falls and comes to rest on static geometry")
@@ -226,7 +215,7 @@ TEST_CASE("PhysicsSubsystem: a dynamic box falls and comes to rest on static geo
     CHECK(lFixture.PositionY(lFaller) == doctest::Approx(lRestY).epsilon(0.01));
 }
 
-TEST_CASE("PhysicsSubsystem: a dynamic body on a CHILD simulates in world space and stores its LOCAL (§HR)")
+TEST_CASE("PhysicsSubsystem: a dynamic body on a CHILD simulates in world space and stores its LOCAL")
 {
     PhysicsFixture lFixture;
 
@@ -265,7 +254,7 @@ TEST_CASE("PhysicsSubsystem: the tick GATE stops the simulation, and resuming co
     const float lMoving = lFixture.PositionY(lFaller);
     CHECK(lMoving < 500.f);
 
-    // WS8: the gate is WorldManager's and physics holds none of its own.
+    // The tick gate belongs to WorldManager; physics has none of its own.
     lFixture.Worlds.SetPaused(true);
     lFixture.TickFrames(30);
     CHECK(lFixture.PositionY(lFaller) == doctest::Approx(lMoving));

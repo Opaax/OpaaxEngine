@@ -1,11 +1,5 @@
-// Suite: AppServiceLocator — provide/resolve by interface type, null-object fallback,
-// reverse-order shutdown. The locator is header-inline so it compiles directly here;
-// IPlatform is OPAAX_API-exported (StaticTypeID/Null live in the engine DLL) and is
-// reached via the import lib.
-//
-// Two in-suite services (IServiceA/IServiceB) exercise the locator without depending on
-// any real service: the OPAAX_SERVICE_TYPE macro only DECLARES StaticTypeID(), so each
-// interface defines it (and its Null()) locally in this TU.
+// Suite: AppServiceLocator — provide/resolve by interface, null-object fallback, reverse-order
+// shutdown. Two local services (IServiceA/IServiceB) define their StaticTypeID and Null() in this file.
 #include <doctest.h>
 
 #include "Application/Services/AppServiceLocator.h"

@@ -1,10 +1,6 @@
-// Suite: UI bindings (UI/UIBinding.h) — UI24.
-//
-// A widget pulls a named value from a reflected object the game owns. What is gated: the reader
-// answers the four readable kinds by name and refuses the rest; the canvas's table resolves
-// "Source.Property" and warns ONCE; a bound text rebuilds when the value changes and NOT when it
-// holds (the per-frame pull must leave an idle canvas at 0/0); the {} format; the fill binding;
-// and both fields surviving the file.
+// Suite: UI bindings (UI/UIBinding.h). The reader answers the four readable kinds by name and
+// refuses the rest; the table resolves "Source.Property" and warns once; a bound text rebuilds
+// only when the value changes (idle canvas stays 0/0); the {} format; the fill binding; saving.
 #include <doctest.h>
 
 #include "Core/Maths/MathTypes.h"
@@ -231,7 +227,7 @@ TEST_CASE("UIBinding: both binding fields round-trip through the file, and a fil
     CHECK(static_cast<const UIText*>(lBack.Root->GetChildren()[0].get())->Binding == OpaaxString("Hud.Jumps"));
     CHECK(static_cast<const UIImage*>(lBack.Root->GetChildren()[1].get())->FillBinding == OpaaxString("Hud.Speed"));
 
-    // Written before U10: no key, no binding — the default (UI12).
+    // An older file: no key, so no binding.
     UICanvasFile::UICanvasDoc lOld;
     REQUIRE(UICanvasFile::Deserialize(OpaaxString(R"({"Version":1,"Root":{"Type":"UIPanel","Children":[{"Type":"UIText","Text":"Hi"}]}})"),
                                       lRegistry, lOld));

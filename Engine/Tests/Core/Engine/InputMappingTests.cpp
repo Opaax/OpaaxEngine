@@ -1,15 +1,5 @@
-// Suite: input mapping — modifiers, evaluation, priority/consumption, and binding (⑦-B B1).
-//
-// WHY THIS EXISTS.
-//   Gameplay reads OPAAX_ID("Jump"), not EKeyCode::Space. Everything between those two is pure:
-//   a modifier pipeline over Vector2F, a priority-sorted context stack, four trigger phases, and
-//   a delegate table. None of it needs a window, a world or a GL context, so all of it is gated
-//   here rather than by a screenshot.
-//
-//   The evaluator takes a REAL InputManager (InputManagerTests proves it constructs headlessly)
-//   and is driven through its own feed — OnKeyPressed / OnKeyReleased / EndFrame. No fake input
-//   source was invented for testability: an instrument that shares no code with the thing it
-//   measures is the point of [[L21]], and here the real feed IS available.
+// Suite: input mapping — modifiers, evaluation, priority/consumption and binding.
+//   All pure (no window, world or GL). Uses a real InputManager through its own feed.
 #include <cmath>
 
 #include <doctest.h>
@@ -26,7 +16,7 @@
 #include "Engine/Subsystems/Input/InputManager.h"
 #include "Engine/Subsystems/Resources/ResourceManager.h"
 #include "World/WorldManager.h"
-#include "Editor/Operation/InputOperations.h"   // MakeComposite2D — header-only, no ImGui
+#include "Editor/Operation/InputOperations.h"   // MakeComposite2D, header-only
 
 using namespace Opaax;
 
@@ -73,7 +63,7 @@ namespace
         return lBinding;
     }
 
-    /** Advance one whole frame: the readers run, then the frame boundary closes (IN2). */
+    /** Advances one frame: the readers run, then the frame ends. */
     void Step(InputActionEvaluator& InEval, InputManager& InInput, double InDelta = 1.0 / 60.0)
     {
         InEval.Evaluate(InInput, InDelta);
@@ -210,9 +200,8 @@ TEST_SUITE("InputActionEvaluator — actions and contexts")
         CHECK(lEval.GetContextAt(0)->Name == Name("Menu"));
         CHECK(lEval.GetContextAt(1)->Name == Name("Gameplay"));
 
-        // IDEMPOTENT: true because the postcondition holds, and the stack must NOT grow — a level
-        // swap has two Play worlds adding the same context, and doubling it would double every
-        // binding's contribution to its action.
+        // Adding it again returns true but must not grow the stack (both worlds add it during a
+        // level change; doubling would double every binding).
         CHECK(lEval.AddContext(lHigh));
         CHECK(lEval.GetContextCount() == 2);
 
@@ -237,8 +226,7 @@ TEST_SUITE("InputActionEvaluator — actions and contexts")
         lInput.OnKeyPressed(EKeyCode::D, false);
         Step(lEval, lInput);
 
-        // 1, not 2. This is the assertion the idempotence is FOR — a doubled stack would read 2
-        // and the character would walk at twice the speed after every level change.
+        // 1, not 2: a doubled stack would double the speed after every level change.
         CHECK(lEval.GetValue(Name("Move")).AsAxis1D() == doctest::Approx(1.f));
     }
 
@@ -257,7 +245,7 @@ TEST_SUITE("InputActionEvaluator — actions and contexts")
         CHECK(lEval.GetContextAt(0)->Bindings.size() == 1);
     }
 
-    TEST_CASE("A GAMEPAD binding is refused, because IN7 means it has no feed")
+    TEST_CASE("A GAMEPAD binding is refused: gamepad input has no feed yet")
     {
         InputActionEvaluator lEval;
         lEval.RegisterAction(MakeAction("Move", EInputValueType::Axis2D));
@@ -267,8 +255,7 @@ TEST_SUITE("InputActionEvaluator — actions and contexts")
         lContext.Bindings.emplace_back(Bind("Move", EKeyCode::A));
         lContext.Bindings.emplace_back(Bind("Move", EKeyCode::Gamepad_LeftX));
 
-        // Accepted-and-never-firing is the failure mode this engine refuses; the code range is
-        // reserved but nothing polls it, so the binding is dropped with a warning.
+        // Gamepad codes have no feed yet: the binding is dropped with a warning.
         CHECK(lEval.AddContext(lContext));
         REQUIRE(lEval.GetContextAt(0) != nullptr);
         CHECK(lEval.GetContextAt(0)->Bindings.size() == 1);
@@ -311,7 +298,7 @@ TEST_SUITE("InputActionEvaluator — triggers")
         CHECK_FALSE(lState->bCompleted);
     }
 
-    TEST_CASE("A key the UI pre-consumed drives no action, and the mask lasts one frame (UI10)")
+    TEST_CASE("A key the UI pre-consumed drives no action, and the mask lasts one frame")
     {
         InputActionEvaluator lEval;
         InputManager         lInput;
@@ -349,7 +336,7 @@ TEST_SUITE("InputActionEvaluator — triggers")
         CHECK(lState->bStarted);
     }
 
-    TEST_CASE("A full mask mid-hold reads as a release, and the hold does not re-fire on un-mask (UI10)")
+    TEST_CASE("A full mask mid-hold reads as a release, and the hold does not re-fire on un-mask")
     {
         InputActionEvaluator lEval;
         InputManager         lInput;
@@ -382,7 +369,7 @@ TEST_SUITE("InputActionEvaluator — triggers")
         CHECK_FALSE(lState->bStarted);
     }
 
-    TEST_CASE("A press and release inside ONE frame is not dropped (IN3)")
+    TEST_CASE("A press and release inside ONE frame is not dropped")
     {
         InputActionEvaluator lEval;
         InputManager         lInput;
@@ -393,8 +380,7 @@ TEST_SUITE("InputActionEvaluator — triggers")
         lContext.Bindings.emplace_back(Bind("Jump", EKeyCode::Space));
         lEval.AddContext(lContext);
 
-        // Both edges land before a single Evaluate — IsKeyDown is already false. A version that
-        // read only the held state would lose the tap entirely, which is what IN3 exists for.
+        // Both edges land before one Evaluate (IsKeyDown is already false); the tap must not be lost.
         lInput.OnKeyPressed(EKeyCode::Space, false);
         lInput.OnKeyReleased(EKeyCode::Space);
 
@@ -544,9 +530,7 @@ TEST_SUITE("InputActionEvaluator — composites, priority and consumption")
 
     TEST_CASE("The SAME key reaches a different action once a menu is pushed")
     {
-        // B4's shape, gated headlessly: a menu does not set a flag the game checks, it pushes a
-        // higher-priority context whose bindings consume. The key is held THROUGHOUT — the only
-        // thing that changes is which context owns it.
+        // A menu pushes a higher-priority context that consumes the key; the key stays held.
         InputActionEvaluator lEval;
         InputManager         lInput;
         lEval.RegisterAction(MakeAction("Jump", EInputValueType::Bool));
@@ -644,9 +628,7 @@ TEST_SUITE("MakeComposite2D — the editor's 2D composite verb")
 {
     TEST_CASE("The four generated rows drive the four directions")
     {
-        // The one piece of real LOGIC in the input editor: which direction gets which modifier.
-        // A swapped pair walks the character sideways when you press up, and nothing about the
-        // panel would look wrong — the same silent shape as B1's diagonal.
+        // Which direction gets which modifier: a swapped pair would move sideways on up.
         InputMappingEntry lTemplate;
         lTemplate.Action.Path = "Input/Move.opaaxaction";
         lTemplate.bConsume    = true;

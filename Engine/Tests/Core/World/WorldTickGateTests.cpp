@@ -1,15 +1,6 @@
-// Suite: WorldManager's PIE tick gate — pause and step (M4 S5).
-//
-// WHY THIS EXISTS.
-//   The editor's Pause/Step must not reach into the frame loop; it sets a flag and WorldManager's
-//   own tick path honours it. The subtle part is not "skip the update" — it is that Engine::Loop
-//   calls Update ONCE and FixedUpdate 0..N times per frame, so the two hooks have to agree about
-//   whether THIS frame is ticking. The decision is therefore taken once, in Update, and FixedUpdate
-//   only reads it. A step that advanced Update alone would starve the fixed step and desync a
-//   physics world from what the viewport shows.
-//
-//   Everything below drives WorldManager::Update / FixedUpdate directly — the same calls
-//   Engine::Loop makes — rather than the flags in isolation, because the ordering IS the design.
+// Suite: WorldManager's tick gate — pause and step. Engine::Loop calls Update once and
+// FixedUpdate 0..N times, so the decision is taken once in Update and FixedUpdate reads it
+// (a step must advance both). Driven through Update / FixedUpdate like Engine::Loop.
 #include <doctest.h>
 
 #include "Application/Services/IPaths.h"   // IPaths::Null() — the context's paths reference
@@ -50,7 +41,7 @@ namespace
 
     // A bare manager creates worlds with no subsystems (it has no engine to build a context from),
     // so the counter is injected the way CreateSubsystemsFor would have: context first, then
-    // register, then StartupAll. std::ref is load-bearing — see WS4.
+    // register, then StartupAll. std::ref is load-bearing.
     struct GatedWorld
     {
         ResourceManager  Resources;

@@ -1,9 +1,5 @@
-// Suite: UISafeArea (UI/Widgets/UISafeArea.h) — U5b.
-//
-// What is gated: that the inset rect is the one CHILDREN anchor to and the one a hit-test asks,
-// which is the whole reason it overrides its bounds rather than carrying a second rect. The
-// numbers are percentages of a known canvas, so "does it adapt to 21:9" is an assertion here
-// rather than something only a resized window could answer.
+// Suite: UISafeArea (UI/Widgets/UISafeArea.h). The inset rect is what children anchor to and
+// what hit-tests use. Values are percentages of a known canvas, so aspect changes can be asserted.
 #include <doctest.h>
 
 #include "UI/UICanvas.h"
@@ -111,7 +107,7 @@ TEST_CASE("UISafeArea: insets that would swallow the rect are fitted, never inve
 
     auto* lSafe = static_cast<UISafeArea*>(lCanvas.Root().AddChild(MakeUnique<UISafeArea>()));
 
-    // A hand-edited file is not the inspector (**UI19**'s lesson): 0.8 + 0.8 is authorable, and a
+    // A hand-edited file is not the inspector: 0.8 + 0.8 is authorable, and a
     // negative edge is too. Both must leave a rect that still resolves.
     UIMargin lBad;
     lBad.Left   = 0.8f;

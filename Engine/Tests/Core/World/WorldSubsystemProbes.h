@@ -1,18 +1,8 @@
 #pragma once
 
-// Probe world subsystems shaped EXACTLY like the ones a game module will define in M4:
-// derived from WorldSubsystemBase, stamped with OPAAX_SUBSYSTEM_TYPE, and deliberately
-// **not** OPAAX_API — the engine DLL never sees these types.
-//
-// They live in a HEADER included by two different test translation units on purpose. That
-// is the closest available proxy for `Sandbox/Module` (a static lib linked into the exe):
-// several TUs each emit their own COMDAT for the inline StaticTypeID(), and the exe linker
-// is what must fold them into one. See WorldSubsystemIdentityTests.cpp for why that matters.
-//
-// INSTRUMENT HAZARD (L21) — this namespace MUST have external linkage. An anonymous
-// namespace (or a `static` class) would give every TU its own genuinely distinct type, so
-// the cross-TU tag comparison would fail for a reason that has nothing to do with the
-// mechanism under test, and "fixing" it would hide the real answer.
+// Probe world subsystems shaped like a game module's: WorldSubsystemBase, OPAAX_SUBSYSTEM_TYPE,
+// not OPAAX_API. In a header included by two test TUs (like a static lib linked into the exe).
+// The namespace must have external linkage: an anonymous one would give each TU its own type.
 
 #include "Core/OpaaxTypes.h"
 #include "Core/Systems/Subsystem.h"

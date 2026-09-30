@@ -1,13 +1,6 @@
-// Suite: the physics SEAM (Physics/PhysicsAPI.h + Physics/IPhysicsWorld.h).
-//
-// This suite runs the real Box2D backend through the neutral interface and NOTHING ELSE — it never
-// names a b2* type, and it cannot: box2d is PRIVATE to OpaaxEngine.dll and its include dir is
-// private too. That is the point. OpaaxTests links the engine's import lib exactly like a game exe,
-// so a case that creates a world here is simultaneously a proof that the seam is properly exported
-// and that no consumer needs the vendor (L11).
-//
-// Physics is one of the very few engine paths that needs no GL context, so unlike the renderer it
-// can be gated by a test rather than by a smoke run and a pair of eyes.
+// Suite: the physics interface (PhysicsAPI.h + IPhysicsWorld.h) with the real Box2D backend.
+// Never names a b2* type: Box2D is private to the engine DLL, so this also proves the interface
+// is properly exported. Physics needs no GL context, so it can be fully tested here.
 #include <doctest.h>
 
 #include "Physics/Collision/CollisionChannel.h"
@@ -83,7 +76,7 @@ TEST_CASE("PhysicsAPI: the world round-trips gravity through the seam")
 }
 
 // =============================================================================
-// Bodies — the P0 gate: a body falls, and it lands
+// Bodies
 // =============================================================================
 
 TEST_CASE("IPhysicsWorld: a dynamic body falls under gravity")
@@ -237,8 +230,7 @@ TEST_CASE("CollisionChannel: a channel's bit is its ordinal, and names round-tri
     CHECK(CategoryBit(ECollisionChannel::WorldDynamic) == 2ull);
     CHECK(CategoryBit(ECollisionChannel::Pawn) == 4ull);
 
-    // Asserted against the ENUM rather than a hardcoded ordinal, so appending a channel cannot
-    // break a test that is about bit positions (the L10 lesson, one directory over).
+    // Compared with the enum, not a hardcoded number, so appending a channel does not break it.
     for (Uint8 i = 0; i < static_cast<Uint8>(ECollisionChannel::Count); ++i)
     {
         const auto lChannel = static_cast<ECollisionChannel>(i);
@@ -277,7 +269,7 @@ TEST_CASE("IPhysicsWorld: a ray filtered to a channel the shape is NOT on misses
 }
 
 // =============================================================================
-// The geometric mover — the character-controller primitive P5 is built on
+// MoveCapsule
 // =============================================================================
 
 TEST_CASE("IPhysicsWorld: MoveCapsule reports grounded when it lands on the floor")

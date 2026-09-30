@@ -1,8 +1,5 @@
-// Suite: ResolveDisplayPose — the fixed-step interpolation blend (⑦-A P6).
-//
-// Free and pure for ToQuad's reason: the arithmetic is what can be wrong, and it needs no world,
-// no GL context and no clock. The cases that matter are the ones a screenshot cannot judge — the
-// shortest-arc wrap, and the FIRST step, which has no previous pose to blend from.
+// Suite: ResolveDisplayPose — the fixed-step interpolation blend. Pure, so the arithmetic can be
+// tested directly: the shortest-arc wrap, and the first step (no previous pose).
 #include <doctest.h>
 
 #include "World/Components/TransformInterpolationComponent.h"
@@ -115,7 +112,7 @@ TEST_CASE("ResolveDisplayPose: a mover that did not move draws where it is")
 }
 
 // =============================================================================
-// §HR — the blended pose composes up the chain
+// The blended pose composes up the chain
 // =============================================================================
 TEST_CASE("ResolveDisplayPose: the display pose carries the current SCALE, unblended")
 {

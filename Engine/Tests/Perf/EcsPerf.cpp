@@ -1,12 +1,7 @@
-// Suite: ECS hot-path micro-benchmarks on the LIVE World/Entity API (not WorldOld — ARCHITECTURE X1).
-//
-// These map to the shmup hot path: spawning bullets and integrating their motion every frame.
-// The whole suite is SKIPPED by default (suite-level doctest::skip) so `build.bat test` and CI stay
-// fast and clean. Run explicitly, in RELEASE, via:  build.bat bench
+// Suite: ECS micro-benchmarks on the World/Entity API (spawning bullets, integrating motion).
+// Skipped by default. Run in Release with: build.bat bench
 //   -> OpaaxTests.exe --test-suite=perf --no-skip=true
-//
-// Budgets are deliberately LOOSE (see PerfBench.h) — they catch algorithmic/allocation regressions,
-// not micro-noise. Watch the printed ns/op for smaller drift.
+// Budgets are loose (see PerfBench.h): they catch algorithmic and allocation regressions.
 #include <doctest.h>
 
 #include "World/World.h"
@@ -18,7 +13,7 @@ using namespace Opaax;
 
 namespace
 {
-    // A representative "bullet": position + velocity POD. Value type, no vtable (D7 component rule).
+    // A representative "bullet": position + velocity POD. Value type, no vtable.
     struct BenchBullet
     {
         float X = 0.f, Y = 0.f, VX = 1.f, VY = 1.f;

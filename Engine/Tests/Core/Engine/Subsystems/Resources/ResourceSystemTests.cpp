@@ -1,8 +1,6 @@
-// Suite: Resources system (M-RES-1). Exercises the full core against BinaryResource
-// (leaf, Placeholder policy) and a test-local composite ManifestResource (FailFast,
-// acquires sub-manifests through LoadContext): dedup, refcount + RAII release,
-// generational stale-handle safety, composite load + release cascade, hard-cycle
-// detection, Placeholder-vs-FailFast resolve, bytes accounting, Pin, and TypeID.
+// Suite: the resource system, with BinaryResource (leaf, Placeholder) and a local composite
+// ManifestResource (FailFast, loads sub-manifests): dedup, refcounting, stale handles,
+// dependency release, cycles, fail policies, byte counts, Pin and TypeID.
 #include <doctest.h>
 
 #include <atomic>
@@ -101,9 +99,7 @@ namespace
     };
 
     // -------------------------------------------------------------------------
-    // GpuLikeResource — a leaf that records the thread its Load ran on and whose
-    // optional Initialize() (main-thread GPU "log-in") bumps a counter: lets the async
-    // tests prove Load runs on a worker and Initialize runs once, on the pump.
+    // GpuLikeResource — records the thread Load ran on, and counts Initialize calls (main thread).
     // -------------------------------------------------------------------------
     struct GpuLikeResource
     {
@@ -121,12 +117,11 @@ namespace
             return lRes;
         }
 
-        void Initialize() { ++InitCount; } // main-thread log-in (detected via if-constexpr)
+        void Initialize() { ++InitCount; } // main-thread initialize
         static GpuLikeResource Placeholder() { return GpuLikeResource{}; }
     };
 
-    // Pump the drain + GC until no resource of T is in flight (bounded so a stuck load
-    // can't hang the suite). Stands in for the engine loop's per-frame DrainCompletions.
+    // Runs completions and GC until no T is loading (bounded). Stands in for the engine loop.
     template<CResource T>
     void PumpUntilIdle(ResourceManager& InMgr, JobSystem& InJobs)
     {
@@ -400,10 +395,8 @@ TEST_CASE("Resources: LoadAsync loads off the main thread and publishes at the p
 
     GpuLikeResource* lLoaded = lMgr.Resolve(lRef.GetHandle());
     REQUIRE(lLoaded != nullptr);
-    // What the mid-load Resolve handed back was the PLACEHOLDER, a different object — asserted on
-    // identity rather than on a field, because both objects carry the same fields ([[L25]]). The
-    // placeholder is initialised too (see the case below), so counting InitCount here could not
-    // tell the two apart.
+    // The mid-load Resolve returned the placeholder, a different object: compared by identity
+    // (both have the same fields, and the placeholder is initialized too).
     CHECK(lLoaded != lWhileLoading);
     CHECK(lLoaded->InitCount == 1);                              // Initialize ran exactly once...
     CHECK(lLoaded->LoadThread != std::this_thread::get_id());    // ...and Load ran on a worker thread
@@ -412,9 +405,7 @@ TEST_CASE("Resources: LoadAsync loads off the main thread and publishes at the p
 // =============================================================================
 TEST_CASE("Resources: the placeholder is INITIALISED, like any other payload")
 {
-    // A substitute has to be as USABLE as the thing it substitutes for. For a GPU-backed type that
-    // means uploaded: an un-initialised magenta texture has no GPU handle and draws as nothing,
-    // which is the silent-wrong-answer failure the Placeholder policy exists to prevent.
+    // A GPU-backed placeholder must be uploaded, or it would draw nothing.
     ResourceManager lMgr;
     REQUIRE(lMgr.Startup());
 
@@ -603,10 +594,8 @@ TEST_CASE("Resources: CheckedView flags a Resolve pointer held across a pump")
 }
 
 // =============================================================================
-// Reload — the same slot, new bytes. Added the day the sprite sheet editor shipped: the editor
-// saves a file that a sprite is ALREADY holding, and without this the renderer kept drawing what
-// was loaded the first time. So the case that matters is not "the payload changed", it is "a ref
-// TAKEN BEFORE the reload sees the change".
+// Reload — same slot, new data. A ref taken before the reload must see the change
+// (e.g. the editor saves a sheet a sprite already holds).
 // =============================================================================
 TEST_CASE("ResourceManager::Reload: a ref taken BEFORE the reload sees the new payload")
 {
@@ -625,7 +614,7 @@ TEST_CASE("ResourceManager::Reload: a ref taken BEFORE the reload sees the new p
 
     CHECK(lMgr.Reload<BinaryResource>(lPath.c_str()));
 
-    // The SAME claim, never re-taken — this is the assertion the bug was about.
+    // The same claim, never taken again.
     CHECK(lHeld.IsValid());
     CHECK(Trim(std::string(reinterpret_cast<const char*>(lHeld.Get()->Bytes.data()),
                            lHeld.Get()->Bytes.size())) == "after!");
@@ -641,8 +630,7 @@ TEST_CASE("ResourceManager::Reload: a path nobody holds is FALSE, and is not a f
     ResourceManager lMgr;
     REQUIRE(lMgr.Startup());
 
-    // Never loaded, so nothing to update — and deliberately NOT a load, or saving a file would
-    // pull it into memory for nobody.
+    // Not loaded: nothing to update, and no load either.
     CHECK_FALSE(lMgr.Reload<BinaryResource>(lPath.c_str()));
     CHECK(lMgr.GetLoadedCount<BinaryResource>() == 0u);
 

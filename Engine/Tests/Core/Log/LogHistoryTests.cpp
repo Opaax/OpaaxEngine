@@ -1,4 +1,4 @@
-// Suite: LogHistory — the Logger's structured tail, read by the editor's Log panel (block LG).
+// Suite: LogHistory — the Logger's structured tail, read by the editor's Log panel.
 #include <doctest.h>
 
 #include "Core/Log/LogHistory.h"
@@ -98,8 +98,7 @@ TEST_CASE("Logger: history is off by default, and on it keeps the message WITHOU
     lLogger.Logf(ELogLevel::Warn, LogHistoryTest, "{} apples", 3);
     CHECK(lLogger.GetPendingCount() == 2);
 
-    // Two sinks, attached together (L102) — the sink text is the same "[Category] message" it always
-    // was, held lines included, whether or not the history kept them.
+    // Two sinks attached together: the sink text is "[Category] message", held lines included.
     std::ostringstream          lOutA;
     std::ostringstream          lOutB;
     TDynArray<spdlog::sink_ptr> lSinks;

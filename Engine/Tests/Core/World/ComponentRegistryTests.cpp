@@ -1,9 +1,5 @@
-// Suite: ComponentRegistry v2 — registration, refusal rules, sealing, and the type-erased
-// entry's Has/Add/Save/Load.
-//
-// The registry is INSTANCE-owned (I1) — the retired Legacy/ECS/ComponentRegistry was entirely
-// static, which is the part deliberately not salvaged. Every case here builds its own registry
-// or its own bare WorldManager, so nothing shares state.
+// Suite: ComponentRegistry — registration, refusals, sealing, and the entry's Has/Add/Save/Load.
+// Every case builds its own registry or WorldManager (no shared state).
 #include <doctest.h>
 
 #include <entt/entt.hpp>
@@ -142,7 +138,7 @@ TEST_CASE("ComponentRegistry: an empty name is refused")
 }
 
 // =============================================================================
-// Sealing — Editor.md §3 L1
+// Sealing
 // =============================================================================
 TEST_CASE("ComponentRegistry: Seal is idempotent and refuses every later registration")
 {
@@ -195,14 +191,14 @@ TEST_CASE("WorldManager: a manager with no registries still creates worlds")
 
 TEST_CASE("Engine: DummyComponent is registered natively, DLL-side, and found exe-side")
 {
-    // Natives are the ENGINE's job now, done in its ctor before any subsystem exists (MR2).
+    // Natives are the ENGINE's job now, done in its ctor before any subsystem exists.
     // Constructing an Engine only queues subsystem factories + registers natives — nothing
     // starts, no service is touched.
     Engine lEngine;
 
     // The cross-boundary statement: RegisterNativeTypes runs inside the DLL (Engine.cpp), the
     // type id below is computed HERE in the exe. A mismatch returns null — see
-    // ComponentIdentityTests.cpp for why this can be trusted (I2).
+    // ComponentIdentityTests.cpp for why this can be trusted.
     const IComponentEntry* lEntry =
         lEngine.GetRegistries().Components().FindByTypeId(entt::type_hash<DummyComponent>::value());
 

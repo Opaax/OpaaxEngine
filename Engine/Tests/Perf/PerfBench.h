@@ -1,17 +1,7 @@
-// PerfBench.h — tiny statistical micro-bench helper for the "perf" suite.
-//
-// WHY homegrown (not nanobench / Catch2-bench): a LOOSE regression gate only needs a stable
-// central-tendency number, and median-of-epochs gives exactly that. ~70 lines we fully own beat
-// a 3k-line vendored header (engine value #1: simple, understandable end-to-end). If you ever need
-// instruction-counter rigor, swap the body of Measure() — the call sites don't change.
-//
-// Model: the caller's lambda performs InOps operations; Measure() times the whole lambda once per
-// epoch across InEpochs epochs and returns the MEDIAN ns-per-op (outlier-robust — a GC pause / OS
-// hiccup in one epoch can't move the median). One warmup call pages memory in and primes caches
-// before timing begins.
-//
-// IMPORTANT: run this in the RELEASE OpaaxTests build (`build.bat bench`). Debug numbers are
-// dominated by iterator-debugging / no-inline overhead and are meaningless for budgets.
+// PerfBench.h — small micro-benchmark helper for the "perf" suite.
+//   Measure() runs the caller's lambda (InOps operations) once per epoch over InEpochs epochs and
+//   returns the median ns per op (robust to outliers), after one warm-up call.
+//   Run in Release (build.bat bench): Debug numbers are meaningless.
 #pragma once
 
 #include <algorithm>

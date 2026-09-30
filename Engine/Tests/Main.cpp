@@ -1,8 +1,5 @@
-// OpaaxTests entry point.
-//
-// doctest generates the test registry; we provide main() ourselves (CONFIG_IMPLEMENT,
-// not IMPLEMENT_WITH_MAIN). No logger setup: the Logger singleton holds lines until Init
-// gives it sinks, and nothing here calls Init, so engine code under test logs silently.
+// OpaaxTests entry point. doctest's registry with our own main(). The Logger is never
+// initialized here, so engine code under test logs nothing.
 #define DOCTEST_CONFIG_IMPLEMENT
 #include <doctest.h>
 

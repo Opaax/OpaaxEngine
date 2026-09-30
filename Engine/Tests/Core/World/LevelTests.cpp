@@ -1,9 +1,6 @@
-// Suite: Level — WHICH maps are in a world, and the two verbs that put them there or take them
-// out. Covers the MOUNT ORDER WM1a made a rule (persistent first), unmount-as-a-filter (WM2), the
-// authoring verbs, and the clone rule (a clone COPIES mount state and must never re-mount).
-//
-// Runs against a UNIQUE directory under the OS temp dir, created and removed per case — the
-// suite never touches the repo ([[L20]]).
+// Suite: Level — which maps are in a world. Mount order (persistent first), unmount as a filter,
+// the authoring verbs, and the clone rule (a clone copies the mount state and never mounts again).
+// Uses a unique directory under the OS temp dir, created and removed per case.
 #include <doctest.h>
 
 #include <filesystem>
@@ -13,7 +10,7 @@
 #include "Application/Services/IPaths.h"
 #include "Engine/Subsystems/Resources/ResourceFormatRegistry.h"
 #include "Engine/Subsystems/Resources/ResourceManager.h"
-#include "Engine/Subsystems/Resources/ResourcePathJson.h"   // P5b — a gun's fields, written as the map writer would
+#include "Engine/Subsystems/Resources/ResourcePathJson.h"
 #include "World/Components/ComponentRegistry.h"
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityMeta.h"
@@ -134,7 +131,7 @@ namespace
         }
     };
 
-    // P5b — the user's own case: a gun naming the bullet it spawns (hard) and the flash it draws
+    // The user's own case: a gun naming the bullet it spawns (hard) and the flash it draws
     // (soft). Real PrefabResource on both, so the only thing separating them is the declared policy.
     struct GunComponent
     {
@@ -177,7 +174,7 @@ namespace
 TEST_CASE("Level: the PERSISTENT map is mounted first, whatever its place in the manifest")
 {
     // Order is proven by a COLLISION, not by iteration order. Both maps carry the same Guid, and
-    // World::CreateEntityWithGuid REFUSES one already live (WM3) — so whichever name survives is
+    // World::CreateEntityWithGuid REFUSES one already live — so whichever name survives is
     // whichever map arrived first, and entt's storage order never enters into the answer.
     Fixture lFix("order");
     lFix.Dir.Write("Maps/Persistent.opaaxmap", MapText(SHARED_GUID, "FromPersistent", "Persistent"));
@@ -255,7 +252,7 @@ TEST_CASE("Level: a missing map costs that map, not the level")
 
 TEST_CASE("Level: a missing manifest entry can be REMOVED, which is the only repair there is")
 {
-    // The entry that never mounted has no MapId — an id comes from the file's entities (MP10) and
+    // The entry that never mounted has no MapId — an id comes from the file's entities and
     // there is no file — so RemoveMap cannot name it and the Hierarchy, which lists MOUNTED maps,
     // had no row to hang a menu on. Before this verb the level warned on every boot forever and the
     // only fix was hand-editing the .opaaxlevel.
@@ -358,7 +355,7 @@ TEST_CASE("Level: an empty level touches nothing and reports itself invalid")
 
 TEST_CASE("Level: unmounting destroys exactly that map's entities")
 {
-    // WM2's partition, exercised: the entities of map X are a FILTER over one registry, so
+    // The entities of map X are a FILTER over one registry, so
     // unmounting must take those and leave every other map standing.
     Fixture lFix("unmount");
     lFix.Dir.Write("Maps/Keep.opaaxmap", MapText("11111111111111111111111111111111", "Kept", "Keep"));
@@ -476,9 +473,9 @@ TEST_CASE("Level: AddMap and RemoveMap change the world AND the manifest")
 
 TEST_CASE("Level: adopting another level's mounts does NOT mount anything")
 {
-    // The PIE clone rule. A clone's entities arrive in the unfiltered snapshot (WM6), so the
+    // The PIE clone rule. A clone's entities arrive in the unfiltered snapshot, so the
     // Level has to copy what is mounted and put nothing in the world — mounting again would
-    // re-read every map and CreateEntityWithGuid would refuse the lot (WM3).
+    // re-read every map and CreateEntityWithGuid would refuse the lot.
     Fixture lSource("clone-src");
     lSource.Dir.Write("Maps/Only.opaaxmap", MapText("66666666666666666666666666666666", "InOnly", "Only"));
 
@@ -504,7 +501,7 @@ TEST_CASE("Level: adopting another level's mounts does NOT mount anything")
 }
 
 // =============================================================================
-// ⑦-C P5b — the composed gate: a mounted map HOLDS what its entities must have resident
+// A mounted map HOLDS what its entities must have resident
 // =============================================================================
 
 TEST_CASE("Level: a HARD reference is resident the moment its map mounts, and released when it unmounts")

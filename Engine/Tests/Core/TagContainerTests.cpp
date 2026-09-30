@@ -1,9 +1,6 @@
-// Suite: OpaaxTagContainer (Core/Tag/OpaaxTagContainer.h) — the set form.
-//
-// The container stores EXACTLY what was added and lets OpaaxTag::MatchesTag supply the hierarchy, so
-// the cases worth pinning are the two that would break if it ever started expanding parents into
-// storage: HasTag answers an ancestor that is NOT held, and Num/iteration still report only what the
-// caller put in.
+// Suite: OpaaxTagContainer. It stores exactly what was added; ancestors come from
+// OpaaxTag::MatchesTag. HasTag must answer ancestors that are not stored, while Num and iteration
+// report only what was added.
 #include <doctest.h>
 
 #include "Core/Tag/OpaaxTagContainer.h"

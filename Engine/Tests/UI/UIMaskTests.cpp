@@ -1,9 +1,5 @@
-// Suite: the UI mask (UI/Widgets/UIMask.h, UICanvas::BuildDrawList) — UI16 / UI17.
-//
-// The draw LIST is the seam that makes this testable at all: which mask applies to which quad is
-// decided by a tree walk that Submit would otherwise bury behind a GL context. Everything here is
-// about that pairing — the pixels (white shows, black hides) are the shader's half and are the
-// one thing only their eyes can confirm.
+// Suite: the UI mask (UI/Widgets/UIMask.h, UICanvas::BuildDrawList): which mask applies to which
+// quad. The pixels (white shows, black hides) are the shader's part.
 #include <doctest.h>
 
 #include "RHI/Texture.h"
@@ -234,7 +230,7 @@ TEST_CASE("UIImage: an authored texture PATH resolves through the provider; a ru
     CHECK(lImage->GetQuads()[0].Texture == &lF.Assets.Texture);
     CHECK(lF.Assets.LastPath == OpaaxString("UI/Art.png"));
 
-    // A code-set pointer OVERRULES the path (TX1's precedence), and is not asked for again.
+    // A code-set pointer OVERRULES the path, and is not asked for again.
     FakeTexture lRuntime;
     lImage->SetTexture(&lRuntime);
     const Uint32 lBefore = lF.Assets.Resolves;

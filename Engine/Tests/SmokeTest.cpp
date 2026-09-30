@@ -1,17 +1,6 @@
-// P0 smoke — proves three things at once:
-//   1. the doctest harness compiles, runs, and is discovered by CTest;
-//   2. the test exe can include engine headers (PUBLIC Source include propagates
-//      from the OpaaxEngine target);
-//   3. the test exe links + loads OpaaxEngine.dll across the DLL boundary.
-//
-// (3) is the milestone's central de-risk, and it needs a probe with three properties:
-// OPAAX_API, defined OUT-OF-LINE in a .cpp compiled into the DLL (so referencing it
-// forces a real cross-DLL import, unlike the many header-inline Core helpers the test
-// would otherwise compile itself), and pure enough to call with nothing initialised.
-//
-// ResolveProjectLayout is all three — and it is the successor of the OpaaxPath::IsAbsolutePath
-// this probe used until OpaaxPath was quarantined to Legacy/ (X1): same domain, same purity,
-// same out-of-line export. It documents itself as "no OS calls, no globals, no defines".
+// Smoke test: the doctest harness runs and is found by CTest, the test exe can include engine
+// headers, and it links and loads OpaaxEngine.dll (ResolveProjectLayout is an exported,
+// out-of-line, pure function, so calling it proves a real cross-DLL import).
 #include <doctest.h>
 
 #include "Application/Services/IPaths.h"

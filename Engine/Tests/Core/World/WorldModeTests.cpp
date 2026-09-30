@@ -1,23 +1,7 @@
-// Suite: EWorldMode + the WorldSpec seam (M4 S2).
-//
-// WHY THIS EXISTS.
-//   S2 split world creation into POLICY (the host answers GetStartupWorldSpec) and MECHANISM
-//   (IEngine::FinishStartup creates it). Before it, OpaaxApplication::CreateStartupWorld reached
-//   through the engine to drive WorldManager itself — the same smell MR0 removed for registries,
-//   and the subject of two user TODOs in the tree.
-//
-//   The load-bearing property is that a mode CANNOT be changed after construction. PIE-by-clone
-//   depends on it: Play runs a clone, so Stop restores the edit world by simply discarding the
-//   clone rather than undoing anything. A settable mode would re-introduce exactly the "put the
-//   world back after playing" problem cloning exists to avoid. That is enforced by the type (no
-//   setter exists), so the cases below pin the reachable half: what a mode IS at creation, and
-//   that the query which decides it has no side effects.
-//
-// WHAT THIS DELIBERATELY DOES NOT COVER.
-//   That the runtime host boots Play and the editor boots Edit is a WIRING fact — it depends on
-//   which override runs during a real boot, and a test constructing things directly cannot see
-//   it (L22: all 162 tests passed while the boot order was broken). Its gate is the ordered boot
-//   log of both hosts, checked in the S2 verification.
+// Suite: EWorldMode and WorldSpec.
+//   A world's mode cannot change after construction (Play In Editor runs a copy, so Stop just
+//   discards it). Tested here: the mode at creation, and that the startup spec query has no side
+//   effects. Which mode each host boots is checked by their boot log.
 #include <doctest.h>
 
 #include "World/WorldSpec.h"
@@ -63,7 +47,7 @@ TEST_CASE("world mode: WorldManager::CreateWorld forwards the mode")
     CHECK(lEdit->GetMode() == EWorldMode::Edit);
     CHECK(lPlay->GetMode() == EWorldMode::Play);
 
-    // Two worlds coexisting with different modes is the PIE shape S4/S5 need, and CreateWorld
+    // Two worlds coexisting with different modes is the PIE shape needs, and CreateWorld
     // must not have activated either — the caller decides (a clone is created before it is shown).
     CHECK(lWorlds.GetWorldCount() == 2u);
     CHECK(lWorlds.GetActiveWorld() == nullptr);

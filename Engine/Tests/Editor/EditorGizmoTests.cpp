@@ -1,14 +1,8 @@
-// Suite: the gizmo's delta math (GizmoDrag, Editor/Operation/EditorGizmo.hpp) and one case on the
-// settings half (EditorGizmo) that stayed on the context when the drag moved out (P8 V3).
-//
-// THE FIRST TEST TO REACH EDITOR CODE, and it is here because of a bug the user found by eye:
-// scaling an entity that was not at the world origin flung it and compounded every frame. The cause
-// was trusting ImGuizmo's `deltaMatrix`, which is a per-frame increment for translate and rotate but
-// a CUMULATIVE, ORIGIN-CENTRED scale for scale. At (0,0) that is invisible.
-//
-// GizmoDrag is header-only and touches no ImGui, so this needs the editor's include dir and no
-// link. What is pinned is the one expression the fix rests on — delta = M * inverse(M last frame),
-// with the matrix sitting ON THE PIVOT so the conjugation is free.
+// Suite: the gizmo's delta math (GizmoDrag, Editor/Operation/EditorGizmo.hpp) and the gizmo settings.
+//   ImGuizmo's deltaMatrix is a per-frame increment for translate and rotate, but a cumulative,
+//   origin-centred scale for scale; trusting it flung entities away from the origin. The fix:
+//   delta = M * inverse(M last frame), with the matrix on the pivot.
+//   GizmoDrag is header-only (no ImGui), so no editor link is needed.
 #include <doctest.h>
 
 #include <cmath>
@@ -199,11 +193,11 @@ TEST_CASE("GizmoDrag: ConsumeDelta clears, so an unspent frame cannot be applied
 }
 
 // =============================================================================
-// ③b — pivot and space
+// pivot and space
 // =============================================================================
 TEST_CASE("GizmoDrag: ReseatAt with a rotation is what makes Local differ from World")
 {
-    // ③ always built this matrix with an identity rotation, so the two spaces would have drawn
+    // The gizmo used to always built this matrix with an identity rotation, so the two spaces would have drawn
     // identically. The X axis of a gizmo seated at 90 degrees must point along world +Y.
     GizmoDrag lGizmo;
 
@@ -282,7 +276,7 @@ TEST_CASE("GizmoDrag: a rotation delta is unaffected by which frame it is read i
     CHECK(LocalScaleOf(lDelta, 20.f).x  == doctest::Approx(1.f));
 }
 
-TEST_CASE("GizmoDrag: an UNROTATED entity is bit-identical to the pre-③b path")
+TEST_CASE("GizmoDrag: an UNROTATED entity is bit-identical to the original path")
 {
     // The conjugation early-outs at zero degrees, so the overwhelmingly common case must not have
     // moved at all.

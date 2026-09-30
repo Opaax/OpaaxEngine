@@ -1,17 +1,10 @@
-// Suite: TextureResource — the first GPU-BACKED resource, and the first production caller of the
-// many-extensions-to-one-type format table.
+// Suite: TextureResource. Load (file IO + decode) is tested here; the GPU upload needs a GL
+// context and is covered by the runtime smoke test. Without a device, Initialize keeps the
+// decoded data instead of crashing.
 //
-// What is testable headless is the half that matters most: Load is pure file IO + CPU decode, so it
-// runs here exactly as it runs on a worker. The GPU half cannot be — there is no locator and no
-// device in this exe — and that is a designed property, not a hole: IEngine::Null() answers nullptr,
-// so Initialize degrades to "decoded, not uploaded" instead of crashing (I3). The upload itself is
-// gated by the runtime smoke test, which is the only place a GL context exists.
-//
-// The fixture PNG is 4x2 with a RED top row and a BLUE bottom row. Both asymmetries are deliberate:
-// 4 != 2 catches a swapped width/height, and the row colours catch a missing vertical flip — which
-// no dimension check could see, and which would silently render every sprite upside down.
-//
-// Runs against a unique temp directory, created and removed per case — never the repo's assets ([[L20]]).
+// The fixture PNG is 4x2 with a red top row and a blue bottom row: 4 != 2 catches swapped
+// width/height, the colours catch a missing vertical flip.
+// File cases use a unique temp directory, created and removed per case.
 #include <doctest.h>
 
 #include <cstring>
@@ -29,8 +22,7 @@ namespace
 {
     namespace fs = std::filesystem;
 
-    // 4x2 RGB PNG: top row red, bottom row blue. Written by a one-shot generator, kept as bytes so
-    // the suite depends on no image file and no content the user might move.
+    // 4x2 RGB PNG: top row red, bottom row blue. Stored as bytes (no image file needed).
     constexpr Uint8 k_Png4x2Rgb[] =
     {
         0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D,
@@ -82,7 +74,7 @@ namespace
         fs::path m_Path;
     };
 
-    /** A context to hand Load. Every case is a leaf load — nothing here acquires a child. */
+    /** A load context. Textures have no dependencies. */
     struct LoadFixture
     {
         ResourceManager Manager;
@@ -107,8 +99,7 @@ TEST_SUITE("TextureResource")
         CHECK(lTexture->Channels == 3);
         CHECK(lTexture->Pixels.size() == 4u * 2u * 3u);
 
-        // Reported from the DIMENSIONS, so it answers the same before and after the upload frees
-        // the CPU copy — the property the pool's accounting rests on.
+        // From the dimensions, so it is the same before and after the upload frees the pixels.
         CHECK(lTexture->ByteSize() == sizeof(TextureResource) + 24u);
     }
 
@@ -182,7 +173,7 @@ TEST_SUITE("TextureResource")
         std::optional<TextureResource> lTexture = TextureResource::Load(lPath.CStr(), lFixture.Ctx);
         REQUIRE(lTexture.has_value());
 
-        lTexture->Initialize();   // IEngine::Null() -> no device (I3)
+        lTexture->Initialize();   // IEngine::Null(): no device
 
         CHECK_FALSE(lTexture->IsUploaded());
         CHECK(lTexture->GetTexture() == nullptr);
@@ -222,9 +213,7 @@ TEST_SUITE("TextureResource")
 
     TEST_CASE("ONE type claims every image extension it decodes")
     {
-        // The multi-extension form's first production caller: before this type existed, only a test
-        // probe claimed more than one spelling. Both must resolve to the SAME id, or the browser
-        // would need one entry per extension and the editor would learn what a .jpg is.
+        // Every spelling must resolve to the same type id.
         ResourceFormatRegistry lRegistry;
         REQUIRE(lRegistry.Register<TextureResource>(OPAAX_ID("Texture")));
 

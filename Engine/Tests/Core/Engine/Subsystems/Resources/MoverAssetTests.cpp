@@ -1,23 +1,12 @@
-// Suite: the mover asset PAIR — `.opaaxmovemode` (the tuning) and `.opaaxmover` (the bag that
-// names them). ⑦-A P5a.
-//
-// Deliberately the animation suite's shape, because these are deliberately the animation pair's
-// shape: a MoveMode is the CLIP (one tuning, reusable across entities, the unit that grows) and a
-// Mover is the LIBRARY (an alias table, so gameplay says "Fly" instead of naming a path).
-//
-// The resolution rules are what actually matter here, and they are the ones the library got right
-// in ⑥ S3: a NAMED mode that is absent answers nullptr rather than falling back, because silently
-// moving a different way for a misspelled name is the wrong-answer failure this codebase refuses.
-// "I have no opinion" is a different question and is the only one that gets a default.
-//
-// File cases run against a unique temp directory, created and removed per case — never the repo's
-// own assets ([[L20]]).
+// Suite: the mover assets — .opaaxmovemode (a tuning) and .opaaxmover (named modes).
+// A named mode that is missing gives nullptr (no silent fallback); only "no opinion" gets the default.
+// File cases use a unique temp directory, created and removed per case.
 #include <doctest.h>
 
 #include <filesystem>
 #include <string>
 
-#include "Core/IO/FileIO.h"   // the malformed-file cases author their own bytes
+#include "Core/IO/FileIO.h"
 #include "Engine/Subsystems/Resources/Types/Mover/MoveModeData.h"
 #include "Engine/Subsystems/Resources/Types/Mover/MoveModeFile.h"
 #include "Engine/Subsystems/Resources/Types/Mover/MoverData.h"

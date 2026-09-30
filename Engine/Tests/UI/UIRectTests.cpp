@@ -70,7 +70,7 @@ TEST_CASE("UIRect: a stretched axis grows with the parent, a point axis does not
     CheckVec(lWide.Size(),   { 1960.f, 30.f });
 }
 
-TEST_CASE("UIRect: an INVERTED anchor pair is clamped, not honoured (UI19)")
+TEST_CASE("UIRect: an INVERTED anchor pair is clamped, not honoured")
 {
     const Bounds2D lParent = Bounds2D::FromCenterSize({ 0.f, 0.f }, { 1920.f, 1080.f });
 
@@ -107,7 +107,7 @@ TEST_CASE("UIRect: a normal pair is untouched by the clamp")
     CheckVec(lOut.Size(), { 500.f, 500.f });   // half the width, the full height — as authored
 }
 
-TEST_CASE("UIRect: FitRect is ResolveRect's inverse for every anchor shape, and keeps the anchors (U7)")
+TEST_CASE("UIRect: FitRect is ResolveRect's inverse for every anchor shape, and keeps the anchors")
 {
     // The designer's resize: a target rect in canvas units becomes SizeDelta + AnchoredPosition, so
     // dragging a grip never rewrites what the author anchored to.
@@ -143,7 +143,7 @@ TEST_CASE("UIRect: FitRect is ResolveRect's inverse for every anchor shape, and 
     CheckVec(lStretch.SizeDelta, { 550.f - 1920.f, 160.f - 540.f });
 }
 
-TEST_CASE("UIRect: every anchor preset keeps the widget where it is, and reads back as itself (U12)")
+TEST_CASE("UIRect: every anchor preset keeps the widget where it is, and reads back as itself")
 {
     // The designer's grid: a preset rewrites anchors + pivot and refits, so the resolved rect is
     // byte-for-byte where it was — only what happens on a resize changes. An off-centre parent and

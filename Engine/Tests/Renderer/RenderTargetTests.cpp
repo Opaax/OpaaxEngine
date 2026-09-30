@@ -1,11 +1,5 @@
-// Suite: IRenderTarget implementations (Renderer/RenderTarget.hpp).
-//
-// OffscreenRenderTarget is the D2 output contract — a NON-OWNING IRenderTarget that forwards
-// Bind/Unbind + size to a wrapped IFramebuffer, so the editor's ViewportPanel can render the world
-// into a texture. Both it and DefaultRenderTarget are header-inline, so this suite compiles them
-// directly — no GL, no DLL render symbol. A StubFramebuffer test double stands in for the concrete
-// OpenGLFramebuffer: it records Bind/Unbind calls and reports a settable size, letting us pin the
-// forwarding contract without a GPU context.
+// Suite: IRenderTarget implementations. OffscreenRenderTarget forwards Bind/Unbind and size to a
+// wrapped IFramebuffer (not owned). Tested with a StubFramebuffer, no GL.
 #include <doctest.h>
 
 #include "Renderer/RenderTarget.hpp"
@@ -44,7 +38,7 @@ TEST_CASE("OffscreenRenderTarget: size reads through to the wrapped framebuffer"
     CHECK(lTarget.GetWidth()  == 320u);
     CHECK(lTarget.GetHeight() == 240u);
 
-    // A resize of the underlying FBO is reflected immediately — the target caches nothing (D2: the
+    // A resize of the underlying FBO is reflected immediately — the target caches nothing (the
     // target's size is the single source of truth for the view each frame).
     lFb.Resize(800, 600);
     CHECK(lTarget.GetWidth()  == 800u);
@@ -83,7 +77,7 @@ TEST_CASE("OffscreenRenderTarget: a null framebuffer is inert, never dereference
     lTarget.Unbind();
 }
 
-TEST_CASE("DefaultRenderTarget: backbuffer path reports a null framebuffer (D4 unchanged)")
+TEST_CASE("DefaultRenderTarget: backbuffer path reports a null framebuffer")
 {
     DefaultRenderTarget lTarget(1280, 720);
 

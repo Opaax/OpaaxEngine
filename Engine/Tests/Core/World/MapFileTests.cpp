@@ -1,12 +1,7 @@
-// Suite: the M5 DISK layer — MapFile (.opaaxmap read/write) and MapResource (the CResource).
-//
-// The headline case is the FULL ROUND TRIP THROUGH DISK: World -> Capture -> Save -> load as a
-// MapResource -> Instantiate -> an equivalent world with GUIDs preserved. MapSnapshotTests proves
-// that round trip in memory; this proves the two layers M5 adds under it do not lose anything on
-// the way to a file and back, which is the only version of the claim an author cares about.
-//
-// Runs against a UNIQUE directory under the OS temp dir, created and removed per case — the suite
-// never touches the repo, and never the editor's own files ([[L20]]).
+// Suite: MapFile (.opaaxmap read/write) and MapResource. The main case is the full round trip
+// through disk: World -> Capture -> Save -> load as MapResource -> Instantiate -> the same world,
+// guids preserved.
+// Uses a unique directory under the OS temp dir, created and removed per case.
 #include <doctest.h>
 
 #include <filesystem>
@@ -167,7 +162,7 @@ TEST_CASE("MapFile: World -> Capture -> Save -> MapResource -> Instantiate rebui
 
 TEST_CASE("MapFile: a filtered save writes the MAP's entities and leaves runtime-spawned ones out")
 {
-    // WM2's rule finally exercised against a file: a runtime-spawned entity carries an invalid
+    // A runtime-spawned entity carries an invalid
     // OwnerMap and so can never match a valid filter. This is what keeps bullets and VFX out of
     // a saved map WITHOUT a special case anywhere.
     const ScopedTempDir lTemp("filtered");
@@ -225,11 +220,11 @@ TEST_CASE("MapFile: an EMPTY map saves and loads — clearing a world is a thing
 }
 
 // =============================================================================
-// MP10 — a map NAMES ITSELF, so an empty one is still a map
+// A map NAMES ITSELF, so an empty one is still a map
 // =============================================================================
-TEST_CASE("MapFile: an EMPTY map keeps its identity through the round trip (MP10)")
+TEST_CASE("MapFile: an EMPTY map keeps its identity through the round trip")
 {
-    // The case the whole MP10 fix exists for. Before it, a map with no entities had no MapId at
+    // Before it, a map with no entities had no MapId at
     // all — and an invalid MapId was read one layer up as "no filter, the whole world", so the
     // next save of this map would have written every entity in the world into it.
     const ScopedTempDir lTemp("empty_identity");
@@ -249,7 +244,7 @@ TEST_CASE("MapFile: an EMPTY map keeps its identity through the round trip (MP10
 TEST_CASE("MapFile: a map written BEFORE the mapId key still identifies itself from its entities")
 {
     // The migration path, and why the format version did NOT move: a v1 file has no `mapId`, and
-    // the entities are the authority (WM2) exactly as they always were.
+    // the entities are the authority exactly as they always were.
     const ScopedTempDir lTemp("legacy_id");
     const OpaaxString   lPath = lTemp.Sub("Legacy.opaaxmap");
 
@@ -308,7 +303,7 @@ TEST_CASE("MapFile: what New Map writes is ALREADY canonical — a fresh map is 
 {
     // The file New Map creates is an empty MapData carrying only its id. If that did not re-serialize
     // byte-identically, every brand-new map would open reporting unsaved changes it does not have,
-    // and the editor's adopt-time round-trip check (MP6) would warn on it.
+    // and the editor's adopt-time round-trip check would warn on it.
     const ScopedTempDir lTemp("new_map");
     const OpaaxString   lPath = lTemp.Sub("Rooftops.opaaxmap");
 
@@ -327,9 +322,9 @@ TEST_CASE("MapFile: what New Map writes is ALREADY canonical — a fresh map is 
     CHECK(MapJson::Serialize(lLoaded) == FileIO::ReadAllText(lPath));
 }
 
-TEST_CASE("MapSerializer: CaptureMap with an INVALID id captures NOTHING, never the world (MP10)")
+TEST_CASE("MapSerializer: CaptureMap with an INVALID id captures NOTHING, never the world")
 {
-    // The mechanism half of MP10. `Capture(world, registry, filter = {})` used to read an invalid
+    // `Capture(world, registry, filter = {})` used to read an invalid
     // filter as "the whole world" — correct for a PIE clone, catastrophic for "save this map".
     // Splitting it into two names is what makes the dangerous reading unwritable; this pins that
     // the surviving filtered entry point refuses rather than falls back.
@@ -455,13 +450,13 @@ TEST_CASE("MapResource: ByteSize grows with the map")
 }
 
 // =============================================================================
-// I7 — the path is UTF-8, and the file layer must not decode it as ANSI
+// The path is UTF-8, and the file layer must not decode it as ANSI
 // =============================================================================
 TEST_CASE("MapFile: a map saves and loads under a NON-ASCII path")
 {
     // \uXXXX escapes, never literal characters: this file has no BOM and the build sets no
     // /utf-8, so MSVC would decode literals using the ANSI code page — the exact mechanism under
-    // test ([[L21]]). U+65E5 U+672C are outside CP-1252 entirely, so this cannot pass by being
+    // test. U+65E5 U+672C are outside CP-1252 entirely, so this cannot pass by being
     // consistently wrong.
     namespace fs = std::filesystem;
 

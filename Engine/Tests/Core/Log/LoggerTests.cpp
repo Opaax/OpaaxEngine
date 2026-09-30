@@ -1,5 +1,4 @@
-// Suite: Logger — the I1 singleton's class, tested on OWN instances (SG4). The global is never
-// initialised by the test runner, which is what keeps the suite silent.
+// Suite: Logger, on local instances. The global one is never initialized here (keeps the suite silent).
 #include <doctest.h>
 
 #include "Core/Log/Logger.h"

@@ -1,24 +1,6 @@
-// Suite: WorldSubsystemRegistry — candidates, filtering, and ctor injection (M4 S3).
-//
-// WHY THIS EXISTS.
-//   A world runs a FILTERED set of subsystems chosen at creation. The registry holds
-//   CANDIDATES; each world walks them and takes the ones whose static ShouldCreate accepts it.
-//   That is the mechanism behind M4's headline gate — "an Edit-only overlay never EXISTS in a
-//   Play world" — and the reason ShouldCreate is static: deciding needs no instance, so a
-//   rejected candidate is never constructed rather than constructed-then-ignored.
-//
-//   The subsystems below take a WorldContext& by constructor. That is not decoration: it is
-//   the fix for Editor.md §3's stated injection rule, which cannot work — the registration site
-//   `WorldSubsystems().Register<T>()` takes no arguments (frozen by MR1), so there is nowhere
-//   to capture a dependency, and without the context a subsystem would have to reach the
-//   AppServiceLocator, which D3 forbids.
-//
-// WHAT THIS DOES NOT COVER.
-//   The tick path and the real per-world creation inside WorldManager need a started engine
-//   (WorldManager::Startup resolves ResourceManager/EngineEventBus/DebugDraw). A bare manager
-//   in a test has no engine, so it creates worlds with NO subsystems — asserted below as the
-//   documented behaviour, not worked around. The wiring gate is the hosts' ordered boot log
-//   (L22), exactly as it was for S2.
+// Suite: WorldSubsystemRegistry — candidates, filtering (static ShouldCreate), and constructor
+// injection (WorldContext&). A rejected candidate is never constructed.
+// A bare manager (no engine) creates worlds with no subsystems; that is asserted as is.
 #include <doctest.h>
 
 #include "Application/Services/IPaths.h"   // IPaths::Null() — the context's paths reference
@@ -69,7 +51,7 @@ namespace
     };
 
     // -------------------------------------------------------------------------
-    // Edit-only — the S5 shape (an editor overlay). One static function is the whole
+    // Edit-only (an editor overlay). One static function is the whole
     // cost of being selective.
     // -------------------------------------------------------------------------
     class EditOnlySubsystem : public WorldSubsystemBase
@@ -140,7 +122,7 @@ TEST_CASE("world subsystem registry: sealing refuses later registration")
     CHECK_FALSE(lRegistry.Register<EditOnlySubsystem>(Name("EditOnly")));
     CHECK(lRegistry.Count() == 1u);
 
-    lRegistry.Seal(); // idempotent (LC3)
+    lRegistry.Seal(); // idempotent
     CHECK(lRegistry.IsSealed());
 }
 
@@ -152,7 +134,7 @@ TEST_CASE("world subsystem registry: EngineRegistries seals BOTH registries toge
 
     lRegistries.SealAll();
 
-    // MR0's payoff: one seal covers every registry, so a second one cannot be forgotten.
+    // One seal covers every registry, so a second one cannot be forgotten.
     CHECK(lRegistries.Components().IsSealed());
     CHECK(lRegistries.WorldSubsystems().IsSealed());
 }
@@ -203,7 +185,7 @@ TEST_CASE("world subsystem registry: CreateInto constructs from the context and 
     // Stand in for what WorldManager::CreateWorld composes. These are the REAL types, just never
     // started — each is default-constructible and other suites already stack-allocate them, so
     // the context carries valid references rather than anything cast into place. Paths is the
-    // engine's own inert null object (I3) rather than a third StubPaths: nothing here loads.
+    // engine's own inert null object rather than a third StubPaths: nothing here loads.
     ResourceManager  lResources;
     EngineEventBus   lEvents;
     DebugDraw        lDebug;
@@ -240,7 +222,7 @@ TEST_CASE("world subsystem registry: CreateInto constructs from the context and 
     lWorld.GetSubsystems().UpdateAll(0.5);
     CHECK(lSubsystem->Accumulated() == doctest::Approx(0.5));
 
-    // Idempotent shutdown (LC3): DestroyWorld calls it, then ~World repeats it.
+    // Idempotent shutdown: DestroyWorld calls it, then ~World repeats it.
     lWorld.ShutdownSubsystems();
     CHECK_FALSE(lSubsystem->IsStarted());
     lWorld.ShutdownSubsystems();

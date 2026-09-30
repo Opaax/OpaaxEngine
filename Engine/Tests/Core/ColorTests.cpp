@@ -1,9 +1,5 @@
-// Suite: LinearColor — a distinct TYPE over Vector4F, so the editor can dispatch a picker on it.
-//
-// The load-bearing claim is the one about BYTES: a colour must serialize exactly as the vector it
-// replaced, or every .opaaxmap already on disk holds a key the component can no longer read — and
-// with NLOHMANN_..._WITH_DEFAULT that failure is SILENT (the field reverts to white) rather than
-// loud. So the round trip is not enough; the two dumps are compared directly.
+// Suite: LinearColor — a distinct type over Vector4F (the editor shows a colour picker for it).
+// It must serialize exactly like the Vector4F it replaced, or saved maps would silently read white.
 #include <doctest.h>
 
 #include "Core/Color/LinearColor.h"

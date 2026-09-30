@@ -1,11 +1,6 @@
-// Suite: OpaaxTag (Core/Tag/OpaaxTag.h) — the hierarchical gameplay label.
-//
-// The whole hierarchy is derived from the dotted text (I14), so these cases are really testing ONE
-// rule: a prefix names an ancestor only when it ends on a segment boundary. The case that
-// discriminates a correct implementation from a naive StartsWith is "DamageOverTime" vs "Damage".
-//
-// The ctor's malformed-text branch ASSERTS (__debugbreak in a Debug build), so it is exercised
-// through the constexpr predicate and the tolerant from_json path, never by constructing a bad tag.
+// Suite: OpaaxTag. The hierarchy comes from the dotted text: a prefix is an ancestor only when
+// it ends on a separator ("DamageOverTime" is not under "Damage").
+// Malformed text asserts in the ctor, so it is tested through the constexpr check and from_json.
 #include <doctest.h>
 
 #include "Core/Tag/OpaaxTag.h"
@@ -23,10 +18,9 @@ static_assert(!OpaaxTag::IsValidTagText("Damage..Fire"));
 static_assert(!OpaaxTag::IsValidTagText("Damage Fire"));
 static_assert(!OpaaxTag::IsValidTagText("."));
 
-// UTF-8 written as ESCAPES, never as literal characters (L21, I7): a literal would be decoded by the
-// build's own charset, which is part of what is under test. "D\u00E9g\u00E2ts" is "Degats" with
-// accents; its continuation bytes are NEGATIVE as signed char, which is exactly what a naive
-// `lChar <= ' '` control-byte scan refuses. \u65E5\u672C cannot survive a wrong encoding at all.
+// UTF-8 written as escapes, never as literal characters (the build's charset is part of what is
+// tested). Its continuation bytes are negative as signed char, which a naive control-byte check
+// would refuse.
 static_assert(OpaaxTag::IsValidTagText("D\u00E9g\u00E2ts.Feu"));
 static_assert(OpaaxTag::IsValidTagText("\u65E5\u672C.Tag"));
 
@@ -39,7 +33,7 @@ TEST_CASE("OpaaxTag: a UTF-8 name is a tag like any other, and its hierarchy sti
     CHECK(lTag.GetLeafName() == "Feu");
     CHECK(lTag.GetView() == "D\u00E9g\u00E2ts.Feu");
 
-    // 12 BYTES for 10 characters: the tag carries UTF-8 and never decodes it (I7).
+    // 12 bytes for 10 characters: the tag stores UTF-8 without decoding it.
     CHECK(lTag.GetView().GetLength() == 12u);
 }
 

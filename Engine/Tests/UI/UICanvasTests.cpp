@@ -1,7 +1,5 @@
-// Suite: the canvas walk (UI/UICanvas.h) — the invalidation contract the block was named for.
-//
-// The numbers are the design: a same-aspect resize lays out NOTHING, an aspect change re-lays
-// only what moved, an idle frame costs 0/0. The stats are asserted, not the pictures.
+// Suite: the canvas walk (UI/UICanvas.h) — invalidation. A same-aspect resize lays out nothing,
+// an aspect change only what moved, an idle frame costs 0/0. The stats are asserted.
 #include <doctest.h>
 
 #include "UI/UICanvas.h"
@@ -185,7 +183,7 @@ TEST_CASE("UICanvas: hit-test — the later sibling wins, hidden and pass-throug
     lOver->bHitTestable = false;
     CHECK(lCanvas.HitTest({ 0.f, 0.f }) == lUnder);
 
-    // Empty canvas space: the root covers it and must NOT answer (L29).
+    // Empty canvas space: the root covers it and must NOT answer.
     CHECK(lCanvas.HitTest({ 800.f, 400.f }) == nullptr);
 }
 
@@ -324,7 +322,7 @@ TEST_CASE("UICanvas: a reference-height change re-lays the root")
     CheckVec(lCanvas.Root().GetBounds().Size(), { 1280.f, 720.f });
 }
 
-TEST_CASE("UICanvas: Opacity multiplies down the tree, a subtree at 0 emits nothing, and changing it costs 0/0 (U8)")
+TEST_CASE("UICanvas: Opacity multiplies down the tree, a subtree at 0 emits nothing, and changing it costs 0/0")
 {
     UICanvas lCanvas(1080.f);
     lCanvas.SetTargetSize(1920, 1080);

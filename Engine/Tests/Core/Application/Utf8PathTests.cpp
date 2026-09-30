@@ -1,12 +1,7 @@
-// Suite: the I7 boundary — Core/String/OpaaxUtf8.h and the call sites that open files through it.
-//
-// Every Unicode name here is written with \uXXXX ESCAPES, never literal characters: this file has no
-// BOM and the build sets no /utf-8, so MSVC would decode literal bytes using the ANSI code page — the
-// exact mechanism under test. An instrument must not share a failure mode with the thing it measures
-// ([[L21]]). For the same reason the "did it really work?" checks go through std::filesystem's WIDE
-// API, not through the narrow one being tested.
-//
-// U+65E5 U+672C are outside CP-1252 entirely, so those cases cannot pass by being consistently wrong.
+// Suite: Core/String/OpaaxUtf8.h and the code that opens files through it.
+// Unicode names are written as \u escapes (no BOM, no /utf-8: literal bytes would be read with
+// the ANSI code page). Checks go through std::filesystem's wide API.
+// U+65E5 U+672C are outside CP-1252, so they cannot pass by being wrong both ways.
 #include <doctest.h>
 
 #include <filesystem>
@@ -16,7 +11,7 @@
 #include "Core/String/OpaaxUtf8.h"
 #include "Core/IO/FileIO.h"
 #include "Application/Services/IPaths.h"
-#include "Engine/Subsystems/Resources/ResourceManager.h"   // before BinaryResource — completes LoadContext
+#include "Engine/Subsystems/Resources/ResourceManager.h"   // before BinaryResource (completes LoadContext)
 #include "Engine/Subsystems/Resources/Types/BinaryResource.hpp"
 
 using namespace Opaax;
@@ -100,11 +95,7 @@ TEST_CASE("Utf8: empty in, empty out — every entry point, no crash")
 }
 
 // =============================================================================
-// Codepoint decoding — the same header seen from the text-rendering end (⑥ S4).
-//
-// Every sequence below is written as explicit \x BYTES, not as \uXXXX and never as literal
-// characters. The subject IS the byte decoder, so stating the bytes is stating the input; anything
-// else would put the source file's encoding between the case and the thing it measures ([[L21]]).
+// Codepoint decoding. Input written as explicit \x bytes.
 // =============================================================================
 TEST_CASE("Utf8::Decode: one, two, three and four byte sequences, each advancing by its own length")
 {
@@ -257,10 +248,6 @@ TEST_CASE("BinaryResource: loads a file from a non-ASCII directory")
     REQUIRE(lRes.has_value());
     CHECK(lRes->Bytes.size() == 5);
 }
-
-// NOTE: the shader path's encoding coverage now lives in the FileIO cases above — ShaderSource no
-// longer opens files at all (the host reads the text and passes it in), so there is nothing
-// encoding-sensitive left in it to test here.
 
 // =============================================================================
 // Path composition

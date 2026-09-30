@@ -1,16 +1,7 @@
-// Suite: the rect arithmetic behind BOTH the client-drawn window frame and the sprite sheet
-// editor's frame rects (Editor/UI/EditorRectGeometry.h).
-//
-// The window cases below still speak the window's own vocabulary, which is now an ALIAS of the
-// generic one — so they double as the guard that the alias still names the same thing.
-//
-// The editor draws its own title bar, so it re-implements what the OS used to do: hit-test the
-// resize border and turn a drag into a new window rect. A smoke run cannot reach ANY of it — it
-// never drags a window edge — so this is where the 8 regions, the corner priority and the
-// minimum-size clamp are held.
-//
-// The header names no UI backend precisely so this file can exist: OpaaxTests reaches editor
-// headers only when they pull no ImGui.
+// Suite: the rect maths behind the custom window frame and the sprite sheet editor's frame rects
+// (Editor/UI/EditorRectGeometry.h): the 8 resize regions, corner priority and the minimum size.
+// A manual run never drags a window edge, so this is where it is tested. The header uses no UI
+// backend, so the test can include it.
 #include <doctest.h>
 
 #include "Editor/UI/EditorRectGeometry.h"

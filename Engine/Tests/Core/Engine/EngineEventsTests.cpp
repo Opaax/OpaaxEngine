@@ -1,13 +1,5 @@
-// Suite: the engine's own Tier-3 lifetime payloads (EngineStarted / EngineTearingDown).
-//
-// These test the PAYLOADS against a bare EventBus, not the publish sites in Engine::Startup
-// and Engine::TearDown: starting a real Engine boots every subsystem, RendererManager
-// included, which needs a GPU context a headless runner has no way to provide. The publish
-// sites are covered by running a host (see the milestone notes).
-//
-// The property worth pinning is that two EMPTY structs stay distinct on the bus — the bus
-// keys by a hash of the type name, and empty types are exactly where a keying mistake would
-// silently deliver one lifetime event as the other.
+// Suite: the engine lifetime events (EngineStarted / EngineTearingDown) on a bare EventBus
+// (starting a real Engine needs a GPU context). Two empty structs must stay distinct on the bus.
 #include <doctest.h>
 
 #include "Core/Events/EventBus.h"

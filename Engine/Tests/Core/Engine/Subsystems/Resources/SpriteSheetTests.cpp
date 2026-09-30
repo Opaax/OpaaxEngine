@@ -1,19 +1,12 @@
-// Suite: the sprite sheet ASSET — its data, its `.opaaxsheet` file, and the two pure functions the
-// whole feature stands on (MakeFrameUV, SliceGrid).
-//
-// Both of those are free and pure precisely so they can be tested with no GL context, the way
-// MakeSortKey and MakeOutlineInnerHalf are — and the UV one earns it: getting the V flip backwards
-// draws a plausible-looking WRONG frame rather than failing, which is the failure class this
-// codebase treats as its worst.
-//
-// The file cases run against a unique temp directory, created and removed per case — never the
-// repo's own assets ([[L20]]).
+// Suite: the sprite sheet asset — data, .opaaxsheet file, MakeFrameUV and SliceGrid.
+// A wrong V flip would draw a plausible but wrong frame, so the UV maths is tested directly.
+// File cases use a unique temp directory, created and removed per case.
 #include <doctest.h>
 
 #include <filesystem>
 #include <string>
 
-#include "Core/IO/FileIO.h"   // the malformed-file cases author their own bytes
+#include "Core/IO/FileIO.h"
 #include "Engine/Subsystems/Resources/Types/SpriteSheet/SpriteSheetData.h"
 #include "Engine/Subsystems/Resources/Types/SpriteSheet/SpriteSheetFile.h"
 
@@ -145,8 +138,7 @@ TEST_CASE("SliceGrid: a 64x64 texture in 32px cells is 4 frames, ROW-MAJOR")
     CHECK(lFrames[2].Offset.x == doctest::Approx(0.f));
     CHECK(lFrames[2].Offset.y == doctest::Approx(32.f));
 
-    // Generated frames are UNNAMED — a "Frame_12" per cell would intern a string for the life of
-    // the process to say what the index already says.
+    // Generated frames have no name (a name per cell would intern strings for nothing).
     CHECK_FALSE(lFrames[0].Name.IsValid());
 }
 
@@ -202,8 +194,7 @@ TEST_CASE("FrameAt: a negative index means the sheet's own DefaultFrame")
 
 TEST_CASE("FrameAt: out of range answers NULL rather than clamping")
 {
-    // Deliberate: a caller that silently drew a different frame would be the silent-wrong-answer
-    // failure. Null is what lets RendererManager say so before falling back.
+    // Null lets RendererManager warn before falling back (no silent wrong frame).
     const SpriteSheetData lSheet = MakeProbeSheet();
 
     CHECK(lSheet.FrameAt(4)   == nullptr);
@@ -243,8 +234,7 @@ TEST_CASE("SpriteSheetFile: save then load round-trips every field")
 
 TEST_CASE("SpriteSheetFile: the text a save writes is the text a save writes again")
 {
-    // What the editor's dirty marker stands on: Serialize must be stable, or a `*` appears on a
-    // sheet nobody touched (the trap L30 records for the map baseline).
+    // The editor's dirty check relies on Serialize being stable.
     const SpriteSheetData lData = MakeProbeSheet();
 
     CHECK(SpriteSheetFile::Serialize(lData) == SpriteSheetFile::Serialize(lData));
@@ -280,8 +270,7 @@ TEST_CASE("SpriteSheetFile: a file missing keys keeps the defaults (_WITH_DEFAUL
 {
     const ScopedTempDir lDir("partial");
 
-    // Adding a field must never refuse a sheet written before it existed — the same rule that keeps
-    // every .opaaxmap loading (I8).
+    // Adding a field must not break sheets saved before it.
     const OpaaxString lPartial = lDir.Sub("Partial.opaaxsheet");
     REQUIRE(FileIO::WriteAllText(lPartial, OpaaxString("{\n    \"DefaultFrame\": 3\n}")));
 
