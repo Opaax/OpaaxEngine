@@ -9,11 +9,8 @@ namespace Opaax::Editor
     inline constexpr LogCategory LogEditorMoverDocument{"EditorMoverDocument"};
 
     // =============================================================================
-    // EditorMoverDocument — WHICH `.opaaxmover` is open, its live data, and whether that data
-    //   still matches what was last written.
-    //
-    //   EditorAnimationLibraryDocument's shape exactly, because a mover IS a library: an alias
-    //   table, so there is no canvas and no preview, only rows.
+    // EditorMoverDocument — which .opaaxmover is open, its editable data, and whether it matches
+    //   what was last written. A mover is an alias table: only rows, no canvas.
     // =============================================================================
     class EditorMoverDocument
     {
@@ -51,7 +48,7 @@ namespace Opaax::Editor
 
         const MoverData& GetData() const noexcept { return m_Data; }
 
-        /** The editable copy. Every mutation goes through a verb that also records an undo step. */
+        /** The editable copy. Every change goes through an action that records an undo step. */
         MoverData& GetMutableData() noexcept { return m_Data; }
 
         /** Whether the data differs from what was last written. Recomputed, never cached. */

@@ -8,8 +8,8 @@ namespace
     using namespace Opaax::Editor;
 
     /**
-     * tinyfiledialogs takes its patterns as a (char const* const*) array, so the request's owned
-     * strings are borrowed into one for the duration of the call.
+     * tinyfiledialogs takes its patterns as a (char const* const*) array: the request's strings are
+     * borrowed into one for the call.
      */
     TDynArray<const char*> BorrowFilters(const FileDialogRequest& InRequest)
     {
@@ -39,8 +39,7 @@ namespace Opaax::Editor
             InRequest.FilterDescription.CStr(),
             /*allowMultiple*/ 0);
 
-        // Cancel runs nothing — it is not an event, and every call site used to spell that as a
-        // bare `return` on a null.
+        // Cancel runs nothing.
         if (lPicked != nullptr && InOnChosen)
         {
             InOnChosen(OpaaxString(lPicked));
@@ -67,8 +66,7 @@ namespace Opaax::Editor
     void TinyFdEditorDialogs::Confirm(const OpaaxString& InTitle, const OpaaxString& InMessage,
                                       FAnswered InOnAnswered)
     {
-        // defaultButton 0 = NO. The safe answer is the default for a question that only ever
-        // guards something destructive.
+        // defaultButton 0 = No: the safe answer, since the question guards something destructive.
         const int lAnswer = tinyfd_messageBox(InTitle.CStr(), InMessage.CStr(),
                                               "yesno", "warning", /*defaultButton*/ 0);
 

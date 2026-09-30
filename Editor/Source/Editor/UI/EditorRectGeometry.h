@@ -5,19 +5,9 @@
 namespace Opaax::Editor
 {
     // =============================================================================
-    // EditorRectGeometry — which edge of a rect the cursor is on, and what a drag on that edge does
-    //   to it. Two callers with the same arithmetic and different units: the client-drawn WINDOW
-    //   frame (Int32 screen pixels) and a sprite sheet FRAME (float texture pixels).
-    //
-    //   NAMES NO UI BACKEND, deliberately. ImguiLayout.h is the tree's home for pure geometry and
-    //   would have been the place, but it includes imgui.h and OpaaxTests reaches editor headers
-    //   only when they pull no ImGui. This is the fiddliest logic behind both features and the part
-    //   a smoke run physically cannot exercise, so it is worth its own testable header.
-    //
-    //   Header-only value templates: no OPAAX_API (I6), no state, nothing to export. It was
-    //   WindowFrameGeometry.h until the sheet editor needed the identical eight-region hit test —
-    //   the names below are the generalisation, and the window's own vocabulary survives as aliases
-    //   at the bottom so the title bar reads exactly as it did.
+    // EditorRectGeometry — which edge of a rect the cursor is on, and what dragging that edge does.
+    //   Used by the window frame (Int32 screen pixels) and the sprite sheet frames (float texture
+    //   pixels). Header-only and ImGui-free so tests can include it.
     // =============================================================================
 
     enum class ERectEdge : Uint8
@@ -34,10 +24,8 @@ namespace Opaax::Editor
     };
 
     /**
-     * A rect as an origin and an extent.
-     *
-     * SIGNED origin, whatever T is: a monitor left of the primary gives a negative X, and a frame
-     * being dragged past the left edge of its texture goes negative before it is clamped back.
+     * A rect as an origin and an extent. The origin is signed whatever T is (a monitor left of the
+     * primary, or a frame dragged past its texture's left edge).
      */
     template<typename T>
     struct TEditorRect
@@ -49,12 +37,8 @@ namespace Opaax::Editor
     };
 
     /**
-     * Which edge InCursor sits on, within InThickness of InRect's border.
-     *
-     * CORNERS WIN over edges: a cursor in the top-left square answers TopLeft, never Top. A rect
-     * narrower than twice the thickness is all corner, which is the harmless end of that rule.
-     *
-     * @return None when the cursor is outside the rect, or inside its interior.
+     * Which edge InCursor is on, within InThickness of InRect's border. Corners win over edges.
+     * @return None when the cursor is outside the rect or in its interior
      */
     template<typename T>
     constexpr ERectEdge HitTestRect(const TEditorRect<T>& InRect, const T InCursorX,
@@ -84,11 +68,8 @@ namespace Opaax::Editor
     }
 
     /**
-     * InRect after dragging InEdge by (InDeltaX, InDeltaY), never smaller than the minimum.
-     *
-     * A left or top drag MOVES the origin as well as sizing, so the clamp has to give back what
-     * the minimum refused — otherwise the origin keeps walking while the size stands still and the
-     * rect slides out from under the cursor.
+     * InRect after dragging InEdge by (InDeltaX, InDeltaY), never smaller than the minimum. A left or
+     * top drag also moves the origin, so the clamp keeps the opposite edge in place.
      */
     template<typename T>
     constexpr TEditorRect<T> ResizeRect(TEditorRect<T> InRect, const ERectEdge InEdge,
@@ -153,14 +134,8 @@ namespace Opaax::Editor
     }
 
     /**
-     * InRect pushed and, if it has to be, shrunk to fit inside InWidth x InHeight from the origin.
-     *
-     * MOVE FIRST, SHRINK ONLY IF IT STILL DOES NOT FIT — dragging a frame off the left edge of its
-     * texture should slide it back, not silently make it narrower. A rect larger than the bounds is
-     * clamped to them, which is the only remaining answer.
-     *
-     * The window frame has no use for this (a window may hang off a monitor); a sheet frame must
-     * never name pixels the texture does not have.
+     * InRect moved (and shrunk only if it still does not fit) to lie inside InWidth x InHeight.
+     * Used for sheet frames, which must stay inside their texture.
      */
     template<typename T>
     constexpr TEditorRect<T> ClampRectInside(TEditorRect<T> InRect, const T InWidth, const T InHeight) noexcept
@@ -177,8 +152,7 @@ namespace Opaax::Editor
     }
 
     // =============================================================================
-    // The window frame's own vocabulary, unchanged. ImGuiTitleBar and its tests were written
-    // against these names and there is no reason for them to learn a generic one.
+    // The window frame's names, kept as aliases.
     // =============================================================================
     using WindowFrameRect  = TEditorRect<Int32>;
     using EWindowFrameEdge = ERectEdge;

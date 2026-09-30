@@ -2,10 +2,10 @@
 
 #include "Core/Config/IConfig.h"                // the second subject
 #include "Core/OpaaxTypes.h"                    // TFunction, TDynArray, Uint64
-#include "World/Entity/Entity.h"                // Entity::TryGet — the component resolver
-#include "UI/UIWidget.h"                        // the third subject (**UI18**)
-#include "Engine/Modules/ModuleRegistrar.h"     // DeriveTypeLeafName — a section's label
-#include "Editor/Properties/PropertyDrawers.h"  // the built-in widgets, so every call site has them
+#include "World/Entity/Entity.h"                // Entity::TryGet
+#include "UI/UIWidget.h"                        // the third subject
+#include "Engine/Modules/ModuleRegistrar.h"     // DeriveTypeLeafName (a section's label)
+#include "Editor/Properties/PropertyDrawers.h"  // the built-in widgets
 
 #include "Editor/UI/IEditorWidgets.h"
 
@@ -19,16 +19,8 @@ namespace Opaax::Editor
     struct EditorContext;
 
     // =============================================================================
-    // CContextDrawer — a drawer that wants MORE than its own fields: the subject it belongs to, and
-    //   the editor around it.
-    //
-    //   The wider Draw is OPTIONAL and detected, never required, so every existing drawer compiles
-    //   untouched — the same duck typing that already tells the custom form from the generic one.
-    //
-    //   WHAT IT IS FOR: a drawer that dispatches a COMMAND. Fields are written straight through a
-    //   T& and need nothing (**I15**); a verb needs the registry the context carries. The cost is
-    //   named rather than hidden — a drawer that takes the context can reach the whole editor, and
-    //   what keeps it to a verb is convention, not the type system.
+    // CContextDrawer — a drawer that also wants the subject it belongs to and the editor context
+    //   (typically to dispatch a command). Optional and detected, so plain drawers are unchanged.
     // =============================================================================
     template<typename TDrawer, typename TDrawable, typename TSubject>
     concept CContextDrawer = requires(TDrawer InDrawer, IEditorWidgets& InWidgets, TDrawable& InDrawable,
@@ -38,25 +30,18 @@ namespace Opaax::Editor
     };
 
     // =============================================================================
-    // TDrawerResolver<TSubject, TTarget> — "given one of these, is this drawer applicable, and what
-    //   does it draw?". DECLARED, NEVER DEFINED: a subject nobody taught the registry about is a
-    //   compile error, not an empty list.
-    //
-    //   It is the ONE customization point that makes a single registry serve components and configs
-    //   — and whatever comes next is one more specialization rather than a third registry.
-    //
-    //   Three members, and each earns its place:
-    //     DrawableType   what the properties/drawer actually operate on (a component IS the target;
-    //                    a config HOLDS its data)
-    //     Resolve        null when this entry does not apply to that subject
-    //     bDrawsSection  whether the entry frames itself with a header. The Inspector stacks many
-    //                    components in one panel, so each needs its own; the Config panel already
-    //                    names the config above the fields, so a second header would be noise.
+    // TDrawerResolver<TSubject, TTarget> — whether a drawer applies to a subject, and what it draws.
+    //   Declared, never defined: an unknown subject is a compile error. One specialization per subject
+    //   (components, configs, UI widgets) lets a single registry serve them all.
+    //     DrawableType   what the drawer operates on (a component is the target; a config holds its data)
+    //     Resolve        null when the entry does not apply to that subject
+    //     bDrawsSection  whether the entry draws its own header (the Inspector stacks many components;
+    //                    the Config panel already names the config)
     // =============================================================================
     template<typename TSubject, typename TTarget>
     struct TDrawerResolver;
 
-    /** Components: entt answers "does this entity have one?" — the Inspector never asks the reverse. */
+    /** Components: entt answers whether the entity has one. */
     template<typename TTarget>
     struct TDrawerResolver<Entity, TTarget>
     {
@@ -68,15 +53,8 @@ namespace Opaax::Editor
     };
 
     /**
-     * UI widgets: a widget arrives as a BASE reference, so the check is a cast (**UI18**).
-     *
-     * bDrawsSection is false because the panel already names the type above the fields — the
-     * Config panel's reason, not the Inspector's.
-     *
-     * This entry is why the UI panel has no `dynamic_cast` ladder of its own: the header above
-     * promised that a new subject is one more specialization rather than a third registry, and a
-     * hand-written ladder was exactly the thing that silently lost a type's fields when one was
-     * added and the ladder was not.
+     * UI widgets: a widget arrives as a base reference, so the check is a cast. No section header:
+     * the panel already names the type above the fields.
      */
     template<typename TTarget>
     struct TDrawerResolver<UIWidget, TTarget>
@@ -88,7 +66,7 @@ namespace Opaax::Editor
         static DrawableType* Resolve(UIWidget& InSubject) { return dynamic_cast<TTarget*>(&InSubject); }
     };
 
-    /** Configs: a config knows its own type id, so the check is an integer compare, not a cast. */
+    /** Configs: a config knows its own type id, so the check is an integer compare. */
     template<typename TTarget>
     struct TDrawerResolver<IConfig, TTarget>
     {
@@ -105,32 +83,15 @@ namespace Opaax::Editor
     };
 
     // =============================================================================
-    // TDrawerRegistry — the storage behind Drawers() and ConfigDrawers() (Editor.md D10). ONE class
-    //   for both, because they were the same thing twice: a list of "are you applicable, and if so
-    //   draw yourself" closures over some subject.
-    //
-    //   THE DESIGN, in one line: registration erases <TTarget, TDrawer> into a uniform
-    //   bool(TSubject&) closure that self-checks through TDrawerResolver.
-    //
-    //   That inversion is why the Inspector needs no entt introspection. It never asks "what
-    //   components does this entity have?" — an answer entt cannot give in typed form without a type
-    //   registry. It asks every registered drawer "are you applicable?", and each one answers for
-    //   itself. Registration order is display order. The property list (I15) does not change that: a
-    //   type describes ITS OWN fields, and nothing ever asks a subject what it holds.
-    //
-    //   TWO FORMS, one call, for both subjects. Register<TTarget, TDrawer>() is hand-written UI;
-    //   Register<TTarget>() is the DEFAULT drawer folded from the type's own property list
-    //   (OPAAX_PROPERTIES). The generic form exists because a component that is two floats should not
-    //   need a file of its own; the custom form stays for fields that need judgment — a tag picker,
-    //   a curve.
-    //
-    //   DUCK-TYPED contract, checked at instantiation, with NO base class (D7 declines OOP/virtual
-    //   drawers). A TDrawer must be default-constructible and callable as
-    //   void Draw(IEditorWidgets&, DrawableType&); its body may live in a .cpp, since the closure
-    //   only needs to CALL it. Worked example: EditorImguiConfigDrawer.
-    //
-    //   Registration STORES ONLY; nothing is constructed. It must: RegisterExtensions runs at the
-    //   OnModulesRegistered seam, before any world exists.
+    // TDrawerRegistry — the storage behind Drawers(), ConfigDrawers() and WidgetDrawers().
+    //   Registration wraps <TTarget, TDrawer> into a bool(TSubject&) closure that checks itself through
+    //   TDrawerResolver. So the Inspector never asks an entity what components it has: it asks every
+    //   drawer whether it applies. Registration order is display order.
+    //   Register<TTarget, TDrawer>() uses hand-written UI; Register<TTarget>() builds a default drawer
+    //   from the type's property list (OPAAX_PROPERTIES).
+    //   A TDrawer needs no base class: default-constructible with
+    //   void Draw(IEditorWidgets&, DrawableType&). Example: EditorImguiConfigDrawer.
+    //   Registration only stores; nothing is constructed (it runs before any world exists).
     // =============================================================================
     template<typename TSubject>
     class TDrawerRegistry
@@ -142,8 +103,7 @@ namespace Opaax::Editor
         template<typename TTarget, typename TDrawer>
         void Register()
         {
-            // Needed even here, where the drawer owns its own presentation: the ID SCOPE is not
-            // presentation (see the note on the generic form below).
+            // The ID scope is needed even here (see the generic form below).
             const OpaaxStringID lName = DeriveTypeLeafName<typename TDrawerResolver<TSubject, TTarget>::DrawableType>();
 
             m_Entries.emplace_back(
@@ -160,8 +120,7 @@ namespace Opaax::Editor
                     InWidgets.PushId(lName.CStr());
                     TDrawer lDrawer;
 
-                    // The wider form only when the drawer asked for it, so the narrow contract stays
-                    // the default and nothing existing has to change.
+                    // The wider form only when the drawer asks for it.
                     if constexpr (CContextDrawer<TDrawer, typename Resolver::DrawableType, TSubject>)
                     {
                         lDrawer.Draw(InWidgets, *lDrawable, InSubject, InContext);
@@ -178,11 +137,8 @@ namespace Opaax::Editor
         }
 
         /**
-         * The DEFAULT drawer, built from what the type says its fields are (CReflected).
-         *
-         * The one-argument form of the call above, so choosing between "generic" and "my own UI" is
-         * one template argument rather than a second route. A field type nobody wrote a
-         * TPropertyDrawer for fails to compile HERE, naming the type.
+         * The default drawer, built from the type's own property list (CReflected). A field type with no
+         * TPropertyDrawer fails to compile here, naming the type.
          */
         template<typename TTarget>
         requires CReflected<typename TDrawerResolver<TSubject, TTarget>::DrawableType>
@@ -190,9 +146,8 @@ namespace Opaax::Editor
         {
             using Resolver = TDrawerResolver<TSubject, TTarget>;
 
-            // Derived once, at registration: DeriveTypeLeafName is the same function that produced a
-            // component's key in a .opaaxmap, so the Inspector header and the on-disk name are one
-            // naming rule rather than two that can drift.
+            // Derived once: DeriveTypeLeafName also names the component in a .opaaxmap, so the Inspector
+            // header and the saved name match.
             const OpaaxStringID lName = DeriveTypeLeafName<typename Resolver::DrawableType>();
 
             m_Entries.emplace_back(
@@ -225,10 +180,8 @@ namespace Opaax::Editor
         }
 
         /**
-         * Draw the first applicable entry.
-         *
-         * @return false when nothing applied — which is what lets a caller tell "no drawer for this"
-         *   from "drew nothing", and is how the Config panel decides to fall back to its json view.
+         * Draws the first applicable entry.
+         * @return False when nothing applied (the Config panel then falls back to its json view)
          */
         bool DrawFirst(TSubject& InSubject, IEditorWidgets& InWidgets, EditorContext& InContext) const
         {
@@ -243,7 +196,7 @@ namespace Opaax::Editor
         // =============================================================================
         // Get - Set
     public:
-        /** The registered drawers in registration order (= display order). */
+        /** The registered drawers, in registration (display) order. */
         const TDynArray<TFunction<bool(TSubject&, IEditorWidgets&, EditorContext&)>>& Entries() const noexcept { return m_Entries; }
 
         Uint64 Count() const noexcept { return static_cast<Uint64>(m_Entries.size()); }
@@ -257,7 +210,7 @@ namespace Opaax::Editor
         TDynArray<TFunction<bool(TSubject&, IEditorWidgets&, EditorContext&)>> m_Entries;
     };
 
-    // Explicit at the call site, as the routes read: Drawers() / ConfigDrawers().
+    // Named per use: Drawers() / ConfigDrawers().
     using ComponentDrawerRegistry = TDrawerRegistry<Entity>;
     using UIWidgetDrawerRegistry  = TDrawerRegistry<UIWidget>;
     using ConfigDrawerRegistry    = TDrawerRegistry<IConfig>;

@@ -10,17 +10,12 @@ namespace Opaax::Editor
     struct EditorContext;
 
     // =============================================================================
-    // The steps the sheet editor's three verbs record. UN1's shape: a struct with Undo / Redo /
-    // Label, no base class and no registration, built by whoever made the edit.
-    //
-    // EVERY STEP CARRIES THE SHEET'S PATH, which the entity steps have no equivalent of. One sheet
-    // is open at a time and the undo stack outlives that: without the path, undoing after opening a
-    // second sheet would write the first one's frames into it. A step whose sheet is not the open
-    // one is a NO-OP WITH A WARNING — loud, because a silently skipped undo is indistinguishable
-    // from one that did nothing because there was nothing to do.
+    // The undo steps recorded by the sheet editor's actions. Plain structs with Undo / Redo / Label.
+    // Every step carries the sheet's path: undoing after opening another sheet does nothing and warns,
+    // instead of writing into the wrong file.
     // =============================================================================
 
-    /** The whole frame list was replaced — a slice is ONE act, however many frames it produced. */
+    /** The whole frame list was replaced (one slice, however many frames). */
     struct SheetSlice
     {
         OpaaxString            SheetPath;
@@ -33,10 +28,7 @@ namespace Opaax::Editor
     };
 
     /**
-     * Every unnamed frame got a name — ONE act, however many it filled.
-     *
-     * Its own type rather than a SheetSlice, because the Edit menu names the step ("Undo Auto-Name
-     * Frames") and "Undo Slice Sheet" would describe an edit that never happened.
+     * Every unnamed frame got a name, as one step. Its own type so the Edit menu names it correctly.
      */
     struct SheetAutoName
     {
@@ -50,12 +42,8 @@ namespace Opaax::Editor
     };
 
     /**
-     * ONE frame's rect or name changed — a drag on the canvas, or a field in the panel.
-     *
-     * The gesture pattern EntityComponentsEdit already uses, and for the same reason: a drag writes
-     * through the live data every frame, so the step is bracketed around the gesture rather than
-     * recorded per mutation. End() answers false when nothing actually moved, so a click that
-     * missed, or a drag that returned home, is not a step.
+     * One frame's rect or name changed (a canvas drag or a panel field). Bracketed around the
+     * gesture; End() returns false when nothing moved.
      */
     struct SheetFrameEdit
     {
@@ -64,10 +52,10 @@ namespace Opaax::Editor
         SpriteFrame Before;
         SpriteFrame After;
 
-        /** Cache the frame as the BEFORE half. */
+        /** Stores the frame as the before state. */
         void Begin(const EditorContext& InContext, Uint32 InIndex);
 
-        /** @return true when the frame differs from what Begin saw. */
+        /** @return True when the frame differs from what Begin saw. */
         bool End(const EditorContext& InContext);
 
         void        Undo(EditorContext& InContext);
@@ -75,7 +63,7 @@ namespace Opaax::Editor
         const char* Label() const noexcept { return "Edit Frame"; }
     };
 
-    /** Which frame a sprite with no opinion shows. */
+    /** The frame a sprite shows when none is named. */
     struct SheetDefaultFrame
     {
         OpaaxString SheetPath;

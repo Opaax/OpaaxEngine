@@ -6,28 +6,11 @@
 namespace Opaax::Editor
 {
     // =============================================================================
-    // IEditorDialogs — the editor's MODAL seam: pick a file, answer a question.
-    //
-    //   The second UI backend the editor names, and the one MR2d did not cover: file pickers and
-    //   message boxes were reached straight from command bodies, which is exactly the shape that
-    //   milestone removed for ImGui. It is a seam of its own rather than a section of IEditorGui
-    //   for the reason EditorContext already gives for keeping UIBackend beside Gui — it is the
-    //   NARROWER dependency, and a command that asks where to save a file has no business with the
-    //   menu bar.
-    //
-    //   THE RESULT ARRIVES BY CONTINUATION, NOT BY RETURN, AND THAT IS THE WHOLE POINT OF THE
-    //   SHAPE. The native implementation blocks and calls it INLINE before returning, so a caller
-    //   may safely capture EditorContext& and act at once. An in-editor implementation — an ImGui
-    //   modal, which is inherently multi-frame — would call it frames later instead, and a
-    //   returned value could never have expressed that. Writing the call sites this way is what
-    //   makes a second implementation a class swap rather than a rewrite of every one of them.
-    //
-    //   The constraint that shape imposes on any SECOND implementation: by the time a deferred
-    //   continuation runs, the world it captured may be gone. A native one cannot hit that; an
-    //   in-editor one must answer it (re-resolve from the context, or refuse to fire on a world
-    //   that changed).
-    //
-    //   No OPAAX_API: OpaaxEditorLib is a static lib archived into the editor exe, not a DLL.
+    // IEditorDialogs — the editor's modal dialogs: pick a file, answer a question.
+    //   The result arrives through a callback, not a return value. The native implementation blocks
+    //   and calls it before returning; an in-editor (multi-frame) implementation would call it later,
+    //   and would then have to handle the world having changed in between.
+    //   No OPAAX_API: OpaaxEditorLib is a static lib linked into the editor exe.
     // =============================================================================
 
     enum class EDialogAnswer : Uint8
@@ -36,13 +19,7 @@ namespace Opaax::Editor
         No
     };
 
-    /**
-     * I11's rule for an enum: a free ToString beside it.
-     *
-     * Two values because the one question asked today is a yes/no. A three-button
-     * Save/Don't Save/Cancel is the obvious next one and costs an enumerator plus tinyfd's
-     * "yesnocancel" — named, not built, because nothing asks it yet.
-     */
+    /** Enum to string (for logs). */
     inline const char* ToString(const EDialogAnswer InAnswer) noexcept
     {
         switch (InAnswer)
@@ -60,18 +37,16 @@ namespace Opaax::Editor
         OpaaxString Title;
 
         /**
-         * ABSOLUTE. A trailing separator means "open in this directory"; a full filename also
-         * pre-fills the name box.
+         * Absolute. A trailing separator opens that directory; a full filename also fills the name box.
          */
         OpaaxString DefaultPath;
 
         /**
-         * Patterns, e.g. "*.opaaxmap". PLURAL from the start: every caller today passes one, but
-         * an image field wants "*.png", "*.jpg", "*.tga" and a singular field would have to grow.
+         * Patterns, e.g. "*.opaaxmap".
          */
         TDynArray<OpaaxString> Filters;
 
-        /** What the filter row is called — "Opaax Map". */
+        /** The filter's display name, e.g. "Opaax Map". */
         OpaaxString FilterDescription;
     };
 
@@ -87,20 +62,20 @@ namespace Opaax::Editor
         // Types
         // =============================================================================
     public:
-        /** Called with an ABSOLUTE path. NOT called when the user cancels — cancel is not an event. */
+        /** Called with an absolute path. Not called when the user cancels. */
         using FPathChosen = TFunction<void(const OpaaxString& InAbsPath)>;
 
-        /** Always called: the caller branches on the answer rather than on being called. */
+        /** Always called; the caller checks the answer. */
         using FAnswered = TFunction<void(EDialogAnswer InAnswer)>;
 
         // =============================================================================
         // Functions
         // =============================================================================
     public:
-        /** Pick an EXISTING file. */
+        /** Picks an existing file. */
         virtual void OpenFile(const FileDialogRequest& InRequest, FPathChosen InOnChosen) = 0;
 
-        /** Pick a destination. Whether an existing file is warned about is the backend's business. */
+        /** Picks a destination. Whether overwriting is warned about is up to the backend. */
         virtual void SaveFile(const FileDialogRequest& InRequest, FPathChosen InOnChosen) = 0;
 
         /** A yes/no question. */

@@ -9,11 +9,8 @@ namespace Opaax::Editor
     inline constexpr LogCategory LogEditorInputMapDocument{"EditorInputMapDocument"};
 
     // =============================================================================
-    // EditorInputMappingContextDocument — WHICH `.opaaxinputmap` is open, its live data, and
-    //   whether that data still matches what was last written. EditorMoverDocument's shape.
-    //
-    //   THIS IS THE FILE REBINDING EDITS. An action never changes when a key does — the mapping
-    //   is what says which key reaches it, which is why the two are separate assets at all.
+    // EditorInputMappingContextDocument — which .opaaxinputmap is open, its editable data, and
+    //   whether it matches what was last written. This is the file a rebind edits.
     // =============================================================================
     class EditorInputMappingContextDocument
     {
@@ -51,7 +48,7 @@ namespace Opaax::Editor
 
         const InputMappingContextData& GetData() const noexcept { return m_Data; }
 
-        /** The editable copy. Every mutation goes through a verb that also records an undo step. */
+        /** The editable copy. Every change goes through an action that records an undo step. */
         InputMappingContextData& GetMutableData() noexcept { return m_Data; }
 
         /** Whether the data differs from what was last written. Recomputed, never cached. */

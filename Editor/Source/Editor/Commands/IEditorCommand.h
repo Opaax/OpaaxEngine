@@ -11,11 +11,8 @@
 namespace Opaax::Editor
 {
     // =============================================================================
-    // IEditorCommand — the type-erased command: run this verb with this payload.
-    //
-    //   IT KNOWS NOTHING ABOUT UNDO, and that is ⑤'s shape (**UN1**): a verb records its own step
-    //   because it is the one that knows what changed, so the dispatch has nothing to bracket and
-    //   the instance dies with its call, as it always did.
+    // IEditorCommand — the type-erased command: run this action with this payload. Knows nothing about
+    //   undo: each action records its own step.
     // =============================================================================
     class IEditorCommand
     {

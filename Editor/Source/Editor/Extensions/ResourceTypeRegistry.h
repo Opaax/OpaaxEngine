@@ -3,56 +3,42 @@
 #include "Core/OpaaxTypes.h"                    // TFunction, TDynArray, Uint64, Move
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
-#include "Engine/Subsystems/Resources/ResourceFormat.h"   // CResourceFormat — what may carry chrome
-#include "Engine/Subsystems/Resources/ResourceTypeID.hpp" // the key: one id per resource type
+#include "Engine/Subsystems/Resources/ResourceFormat.h"   // CResourceFormat
+#include "Engine/Subsystems/Resources/ResourceTypeID.hpp" // ResourceTypeID
 #include "Editor/Resources/ResourceScan.h"      // ResourceFile (the callback's argument)
-#include "Editor/Resources/ResourcePreviewClaim.h" // FResourcePreviewOpen — the preview facet's type
+#include "Editor/Resources/ResourcePreviewClaim.h" // FResourcePreviewOpen
 
 namespace Opaax::Editor
 {
     struct EditorContext;
 
     /**
-     * What a double-click on a file of this type does. Receives the context (D3 — a game's action
-     * reaches the world/resources through it, never through the locator) and the file that was
-     * activated. Optional: an empty action is a perfectly good registration for a type that only wants
-     * an icon and a label.
+     * What double-clicking a file of this type does. Receives the context and the file. Optional: a
+     * type may only want an icon and a label.
      */
     using FResourceActivate = TFunction<void(EditorContext&, const ResourceFile&)>;
 
     // =============================================================================
-    // ResourceTypeDesc — the EDITOR's half of one resource type: how it looks and what a
-    //   double-click does.
-    //
-    //   Keyed by ResourceTypeID, NOT by extension. The engine's ResourceFormatRegistry owns
-    //   extension -> type (many-to-one), so a texture claiming .png/.jpg/.tga is ONE entry here
-    //   with one icon and one action, and adding .webp never touches the editor.
-    //
-    //   NO type erasure, deliberately: DrawerRegistry needs a template because TComponent is a
-    //   type the editor cannot name, but chrome is two labels and a closure. A template would be
-    //   ceremony with nothing to erase (user decision, M2d plan §1.2).
+    // ResourceTypeDesc — the editor's side of one resource type: how it looks and what a double-click
+    //   does. Keyed by ResourceTypeID, not extension: the engine maps extensions to types, so one
+    //   texture entry covers .png/.jpg/.tga.
     // =============================================================================
     struct ResourceTypeDesc
     {
         Uint32               TypeId = 0;    // ResourceTypeID::Get<T>()
-        OpaaxStringID        Label;         // OPTIONAL override; invalid => the format's own Label
-        OpaaxString          Icon;          // OPTIONAL editor-assets-relative image; empty => the Glyph
-        OpaaxString          Glyph;         // short text, "[W]" — the fallback when Icon is absent or missing
+        OpaaxStringID        Label;         // optional override; invalid uses the format's Label
+        OpaaxString          Icon;          // optional editor-assets-relative image; empty uses the Glyph
+        OpaaxString          Glyph;         // short text, "[W]", used when Icon is absent or missing
         FResourceActivate    OnActivate;
-        FResourcePreviewOpen OnPreviewOpen; // OPTIONAL; absent => "no preview for this type"
+        FResourcePreviewOpen OnPreviewOpen; // optional; absent means no preview
     };
 
     class ResourceTypeRegistry;
 
     // =============================================================================
-    // ResourceTypeBuilder — the chained tail of a Register<T>() call.
-    //
-    //   Holds an INDEX, never a ResourceTypeDesc& : m_Entries is a TDynArray, so the next
-    //   Register reallocates and a stored reference would name freed memory the moment two
-    //   registrations were split across statements (the string-pool bug's shape, I2).
-    //
-    //   A refused registration yields an invalid index whose setters are no-ops, so a bogus
-    //   chain cannot write out of bounds and cannot make Count() lie.
+    // ResourceTypeBuilder — the chained tail of a Register<T>() call. Holds an index, not a reference
+    //   (the next Register may reallocate the array). A refused registration gets an invalid index
+    //   whose setters do nothing.
     // =============================================================================
     class ResourceTypeBuilder
     {
@@ -69,36 +55,28 @@ namespace Opaax::Editor
         // Functions
         // =============================================================================
     public:
-        /** Override the label the engine's format already carries — for a type the editor names differently. */
+        /** Overrides the label from the engine's format. */
         ResourceTypeBuilder& SetLabel(OpaaxStringID InLabel);
 
         /**
-         * The icon IMAGE, editor-assets-relative ("Icons/T_Map_Icon.png"). Searched in the PROJECT's
-         * editor assets first, then the editor tool's own — so a game ships an icon for its own
-         * resource type under the same relative name, and may override one of the editor's.
+         * The icon image, relative to editor assets ("Icons/T_Map_Icon.png"). Looked up in the project's
+         * editor assets first, then the editor's own, so a game can add or override icons.
          */
         ResourceTypeBuilder& SetIcon(OpaaxString InIcon);
 
         /**
-         * The short TEXT drawn when there is no icon image, "[L]".
-         *
-         * The fallback, not a lesser icon: a type that sets no image, or whose image file is
-         * missing, still draws something rather than a blank card.
+         * The short text drawn when there is no icon image ("[L]"), or the image is missing.
          */
         ResourceTypeBuilder& SetGlyph(OpaaxString InGlyph);
 
-        /** What a double-click does. Omitted, the browser logs the activation and nothing else. */
+        /** What a double-click does. If omitted, the browser only logs the activation. */
         ResourceTypeBuilder& SetActivate(FResourceActivate InActivate);
 
         /**
-         * What the Preview panel draws for this type, given the loaded resource.
-         *
-         * The TYPE IS NAMED HERE and nowhere else — the panel holds an IResourcePreviewClaim and
-         * knows nothing about textures or fonts. That is the point of the facet: adding a
-         * previewable type touches its own registration and no panel.
-         *
-         * @tparam TResource The resource type this chrome describes.
-         * @param InDraw Runs every frame the entry is open, with a claim already held for it.
+         * What the Preview panel draws for this type, given the loaded resource. The type is named only
+         * here; the panel knows nothing about textures or fonts.
+         * @tparam TResource The resource type
+         * @param InDraw Runs every frame the entry is open, with the resource already loaded
          */
         template<CResource TResource>
         ResourceTypeBuilder& SetPreview(typename TResourcePreviewClaim<TResource>::FDraw InDraw)
@@ -106,7 +84,7 @@ namespace Opaax::Editor
             return SetPreviewOpen(MakePreviewOpener<TResource>(Move(InDraw)));
         }
 
-        /** The type-erased half, for a caller that already built its opener. */
+        /** The type-erased form, for a caller that already built its opener. */
         ResourceTypeBuilder& SetPreviewOpen(FResourcePreviewOpen InOpen);
 
         // =============================================================================
@@ -118,17 +96,9 @@ namespace Opaax::Editor
     };
 
     // =============================================================================
-    // ResourceTypeRegistry — the real storage behind EditorExtensionRegistrar::ResourceTypes()
-    //   (Editor.md D10), replacing the M0 counts-only EditorRoute for this channel, as PanelRegistry
-    //   (M2a) and DrawerRegistry (M2b) did for theirs.
-    //
-    //   It answers ONE question — "how does this resource type look, and what opens it?" — while
-    //   the engine answers "which type is this file?". Adding a type touches no editor file beyond
-    //   its own chrome, and adding an EXTENSION touches no editor file at all.
-    //
-    //   Registration STORES ONLY. It runs at the OnModulesRegistered seam, before Engine::Startup,
-    //   so there is no context, no world and no scan yet — only the closure carries intent across
-    //   that gap.
+    // ResourceTypeRegistry — the storage behind EditorExtensionRegistrar::ResourceTypes(). Answers
+    //   "how does this type look, and what opens it?"; the engine answers "which type is this file?".
+    //   Registration only stores (it runs before any context, world or scan exists).
     // =============================================================================
     class ResourceTypeRegistry
     {
@@ -137,12 +107,10 @@ namespace Opaax::Editor
         // =============================================================================
     public:
         /**
-         * Register chrome for T, whose extensions the ENGINE already owns. Constrained on
-         * CResourceFormat, so chrome for a type that declared no format is a compile error here
-         * rather than an entry nothing can ever match.
-         *
-         * @tparam T A resource type carrying OPAAX_RESOURCE_FORMAT.
-         * @return A builder for the optional icon / label / action. Chained, never stored.
+         * Registers the editor side of T. Constrained on CResourceFormat, so a type with no format is a
+         * compile error.
+         * @tparam T A resource type with OPAAX_RESOURCE_FORMAT
+         * @return A builder for the optional icon / label / action. Chain it, do not store it
          */
         template<CResourceFormat T>
         ResourceTypeBuilder Register()
@@ -150,7 +118,7 @@ namespace Opaax::Editor
             return AddEntry(ResourceTypeID::Get<T>());
         }
 
-        /** @return The chrome registered for InTypeId, or nullptr — an O(n) walk over a handful of entries, on an integer compare. */
+        /** @return The entry for InTypeId, or nullptr (linear search over a few entries). */
         const ResourceTypeDesc* Find(Uint32 InTypeId) const
         {
             for (const ResourceTypeDesc& lEntry : m_Entries)
@@ -167,10 +135,10 @@ namespace Opaax::Editor
         // =============================================================================
         // Get - Set
     public:
-        /** @return The registered types in registration order. */
+        /** @return The registered types, in registration order. */
         const TDynArray<ResourceTypeDesc>& Entries() const noexcept { return m_Entries; }
 
-        /** @return How many types were registered — same signature EditorRoute had, so the seal log is unchanged. */
+        /** @return How many types were registered. */
         Uint64 Count() const noexcept { return static_cast<Uint64>(m_Entries.size()); }
         // End Get - Set
         // =============================================================================
@@ -181,7 +149,7 @@ namespace Opaax::Editor
     private:
         friend class ResourceTypeBuilder;
 
-        /** Store one entry. A second registration for the same type is dropped — the first wins. */
+        /** Stores one entry. A second registration for the same type is dropped (the first wins). */
         ResourceTypeBuilder AddEntry(Uint32 InTypeId)
         {
             if (Find(InTypeId) != nullptr)

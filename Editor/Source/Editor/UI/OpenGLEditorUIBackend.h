@@ -7,10 +7,8 @@ struct GLFWwindow;
 namespace Opaax::Editor
 {
     // =============================================================================
-    // OpenGLEditorUIBackend — IEditorUIBackend over ImGui_ImplOpenGL3 + ImGui_ImplGlfw
-    //   (InitForOpenGL). The only place imgui_impl_opengl3 is named; a future
-    //   VulkanEditorUIBackend sits behind the same interface (M1/VK). The new render path
-    //   is OpenGL-only today (S7), so M0 constructs this directly.
+    // OpenGLEditorUIBackend — IEditorUIBackend over ImGui_ImplOpenGL3 + ImGui_ImplGlfw. The only
+    //   place imgui_impl_opengl3 is named; a Vulkan version would implement the same interface.
     // =============================================================================
     class OpenGLEditorUIBackend final : public IEditorUIBackend
     {

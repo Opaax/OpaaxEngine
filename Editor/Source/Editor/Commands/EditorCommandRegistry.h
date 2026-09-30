@@ -14,15 +14,10 @@ namespace Opaax::Editor
     OPAAX_LOG_CATEGORY(EditorCommandRegistry);
 
     // =============================================================================
-    // EditorCommandRegistry — the real storage behind EditorExtensionRegistrar::Commands().
-    //
-    //   TAG-KEYED and TYPE-ERASED, so a caller invokes a verb it cannot name: the menu bar, the
-    //   Resource Browser and a game module all dispatch by OpaaxTag (I14) with a payload, and the
-    //   command's own type stays private to the TU that registered it.
-    //
-    //   The PARAMS TYPE IS CHECKED AT DISPATCH, not at compile time — that is the price of the
-    //   erasure, and the typeid gate is what makes a mismatch a logged refusal instead of a
-    //   reinterpret_cast into the wrong struct.
+    // EditorCommandRegistry — the storage behind EditorExtensionRegistrar::Commands().
+    //   Keyed by tag, type-erased: menus, the Resource Browser and game modules dispatch by OpaaxTag
+    //   with a payload, without knowing the command's type. The payload type is checked at dispatch
+    //   (a mismatch is logged and refused).
     // =============================================================================
     class EditorCommandRegistry
     {
@@ -36,7 +31,7 @@ namespace Opaax::Editor
         // Functions
         // =============================================================================
     public:
-        /** Store T under InTag. A tag registered twice keeps the FIRST command and warns. */
+        /** Stores T under InTag. A tag registered twice keeps the first command and warns. */
         template<EditorCommand<EditorContext> T>
         void Register(const OpaaxTag& InTag)
         {
@@ -57,14 +52,8 @@ namespace Opaax::Editor
         }
 
         /**
-         * Run the command registered under InTag.
-         *
-         * CONST because dispatching is a read: only Register mutates. That is what lets a panel or a
-         * menu closure invoke through EditorContext::Extensions, which is const by construction so
-         * nothing can register after the seal.
-         *
-         * @return false — with a log saying which — when no command carries that tag, or when
-         *   TParams is not the type it was registered with.
+         * Runs the command registered under InTag. Const: dispatching does not change the registry.
+         * @return False (logged) when no command has that tag, or TParams is not its registered type
          */
         template<typename TParams>
         bool Execute(const OpaaxTag& InTag, EditorContext& InContext, const TParams& InParams) const
@@ -87,15 +76,14 @@ namespace Opaax::Editor
                 return false;
             }
 
-            // NOTHING IS BRACKETED HERE (⑤, **UN1**). A verb records its own undo step because it
-            // is the one that knows what changed; the dispatch just runs it.
+            // No undo bracketing here: each action records its own undo step.
             IEditorCommand lCommand = lCommandEntry.Create();
             lCommand.Execute(InContext, InParams);
 
             return true;
         }
 
-        /** The argument-less form — every command that takes nothing is registered with NoParams. */
+        /** The argument-less form (commands registered with NoParams). */
         bool Execute(const OpaaxTag& InTag, EditorContext& InContext) const
         {
             return Execute(InTag, InContext, NoParams{});
@@ -104,7 +92,7 @@ namespace Opaax::Editor
         // =============================================================================
         // Get - Set
     public:
-        /** @return How many commands were registered — the seal log reports it like every other route. */
+        /** @return How many commands were registered. */
         Uint64 Count() const noexcept { return static_cast<Uint64>(m_Commands.size()); }
         // End Get - Set
         // =============================================================================

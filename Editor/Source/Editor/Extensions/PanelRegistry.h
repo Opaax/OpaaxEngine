@@ -3,7 +3,7 @@
 #include <concepts>
 
 #include "Core/OpaaxTypes.h"                // TUniquePtr, TDynArray, TFunction, Uint64, Move
-#include "Editor/Panels/IEditorPanel.h"     // the factory's return type must be complete
+#include "Editor/Panels/IEditorPanel.h"     // the factory needs the complete type
 #include "Editor/Panels/PanelDesc.h"
 
 namespace Opaax::Editor
@@ -11,18 +11,16 @@ namespace Opaax::Editor
     struct EditorContext;
 
     /**
-     * Builds one panel from the context (D3 — the panel receives its dependencies by ctor, never the
-     * locator). Deferred on purpose: registration happens at OnModulesRegistered, before Engine::Startup,
-     * so no EditorContext exists yet — the factory is what carries the intent across that gap.
+     * Builds one panel from the context. Deferred: panels register before any EditorContext exists.
      */
     using FPanelFactory = TFunction<TUniquePtr<IEditorPanel>(EditorContext&)>;
 
-    /** What Register<T> accepts: a panel built from nothing but the context. */
+    /** What Register<T> accepts: a panel constructed from the context only. */
     template<typename T>
     concept CEditorPanel = std::derived_from<T, IEditorPanel> && std::constructible_from<T, EditorContext&>;
 
     // =============================================================================
-    // PanelEntry — one registered panel: its description + the factory that builds it.
+    // PanelEntry — one registered panel: its description and the factory that builds it.
     // =============================================================================
     struct PanelEntry
     {
@@ -31,12 +29,9 @@ namespace Opaax::Editor
     };
 
     // =============================================================================
-    // PanelRegistry — the real storage behind EditorExtensionRegistrar::Panels() (Editor.md D10).
-    //   Native editor panels and game panels register through the exact same call, so there is no
-    //   privileged path for engine-side panels — the property M2a exists to prove.
-    //
-    //   Registration STORES ONLY; nothing is constructed here. EditorPanels runs every factory once,
-    //   in registration order, from EditorService::Initialize, where the context finally exists.
+    // PanelRegistry — the storage behind EditorExtensionRegistrar::Panels(). Editor panels and game
+    //   panels register the same way. Registration only stores; EditorPanels builds them all, in
+    //   order, from EditorService::Initialize.
     // =============================================================================
     class PanelRegistry
     {
@@ -55,10 +50,10 @@ namespace Opaax::Editor
         // =============================================================================
         // Get - Set
     public:
-        /** @return The registered panels in registration order (construction order). */
+        /** @return The registered panels, in registration (construction) order. */
         const TDynArray<PanelEntry>& Entries() const noexcept { return m_Entries; }
 
-        /** @return How many panels were registered — what the seal log reports. */
+        /** @return How many panels were registered. */
         Uint64 Count() const noexcept { return static_cast<Uint64>(m_Entries.size()); }
         // End Get - Set
         // =============================================================================

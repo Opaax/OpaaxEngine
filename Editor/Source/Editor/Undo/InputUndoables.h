@@ -10,17 +10,13 @@ namespace Opaax::Editor
     struct EditorContext;
 
     // =============================================================================
-    // The steps the input editors' verbs record. UN1's shape, and the mover editors' path guard:
-    // every step carries its document's PATH, so an undo after opening a second asset is a NO-OP
-    // WITH A WARNING rather than a write into the wrong file.
+    // The undo steps recorded by the input editors' actions.
+    // Every step carries the asset's path: undoing after opening another asset does nothing and warns,
+    // instead of writing into the wrong file.
     // =============================================================================
 
     /**
-     * An ACTION was edited — the whole struct, before and after.
-     *
-     * One step for every field, like MoveModeEdit and for its reason: an action is a flat fold
-     * plus a short modifier list, so "which field changed" is not a distinction the Edit menu
-     * could usefully make. The LABEL varies so add/remove of a modifier still reads correctly.
+     * An action was edited: the whole struct, before and after. The label says what changed.
      */
     struct InputActionEdit
     {
@@ -36,11 +32,7 @@ namespace Opaax::Editor
     };
 
     /**
-     * The whole MAPPING list was replaced — add, remove, rebind, reorder and the composite verb
-     * are all this.
-     *
-     * One type for every list verb because they are one edit to a reader: the list before, the
-     * list after. MoverEntriesEdit set the precedent.
+     * The whole mapping list was replaced (add, remove, rebind, reorder, 2D composite).
      */
     struct InputMappingsEdit
     {
@@ -48,7 +40,7 @@ namespace Opaax::Editor
         TDynArray<InputMappingEntry> Before;
         TDynArray<InputMappingEntry> After;
 
-        /** What the Edit menu shows — "Add Mapping", "Remove Mapping", "Add 2D Composite"… */
+        /** What the Edit menu shows: "Add Mapping", "Remove Mapping", "Add 2D Composite"... */
         const char* LabelText = "Edit Mappings";
 
         void        Undo(EditorContext& InContext);
@@ -56,7 +48,7 @@ namespace Opaax::Editor
         const char* Label() const noexcept { return LabelText; }
     };
 
-    /** Which priority the whole context is pushed at. Its own step: it is not a list edit. */
+    /** The priority the whole context is pushed at. */
     struct InputMapPriorityEdit
     {
         OpaaxString MapPath;

@@ -9,11 +9,8 @@ namespace Opaax::Editor
     inline constexpr LogCategory LogEditorAnimationLibraryDocument{"EditorAnimationLibraryDocument"};
 
     // =============================================================================
-    // EditorAnimationLibraryDocument — WHICH `.opaaxanim` is open, its live data, and whether that
-    //   data still matches what was last written.
-    //
-    //   The third document of this exact shape (map, level, sheet, clip, library) and the smallest:
-    //   a library is an alias table, so there is no canvas and no preview, only rows.
+    // EditorAnimationLibraryDocument — which .opaaxanim is open, its editable data, and whether it
+    //   matches what was last written. A library is an alias table: only rows, no canvas.
     // =============================================================================
     class EditorAnimationLibraryDocument
     {
@@ -51,7 +48,7 @@ namespace Opaax::Editor
 
         const AnimationLibraryData& GetData() const noexcept { return m_Data; }
 
-        /** The editable copy. Every mutation goes through a verb that also records an undo step. */
+        /** The editable copy. Every change goes through an action that records an undo step. */
         AnimationLibraryData& GetMutableData() noexcept { return m_Data; }
 
         /** Whether the data differs from what was last written. Recomputed, never cached. */

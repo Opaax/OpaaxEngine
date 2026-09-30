@@ -9,19 +9,13 @@ namespace Opaax::Editor
     struct EditorContext;
 
     // =============================================================================
-    // The step the family editor's verbs record. UN1's shape, and SpriteSheetUndoables' path guard:
-    // it carries the family's PATH, so an undo after opening a second family is a NO-OP WITH A
-    // WARNING rather than a write into the wrong file.
+    // The undo step recorded by the font family editor's actions.
+    // Every step carries the family's path: undoing after opening another family does nothing and warns,
+    // instead of writing into the wrong file.
     // =============================================================================
 
     /**
-     * The whole ENTRY list was replaced — add, remove and repoint are all this.
-     *
-     * ONE type for three verbs because they are one edit to a reader: the list before, the list
-     * after. The LABEL is the field that varies, so the Edit menu still names what happened.
-     *
-     * NO default field, unlike its animation sibling: a family has nothing to dangle. A style key
-     * always has a value on all four axes, so there is no "which one stands in" to keep valid.
+     * The whole entry list was replaced (add, remove, repoint). The label says which.
      */
     struct FontFamilyEntriesEdit
     {
@@ -29,7 +23,7 @@ namespace Opaax::Editor
         TDynArray<FontFamilyEntry>  Before;
         TDynArray<FontFamilyEntry>  After;
 
-        /** What the Edit menu shows — "Add Face", "Remove Face", "Edit Face". */
+        /** What the Edit menu shows: "Add Face", "Remove Face", "Edit Face". */
         const char* LabelText = "Edit Face List";
 
         void        Undo(EditorContext& InContext);

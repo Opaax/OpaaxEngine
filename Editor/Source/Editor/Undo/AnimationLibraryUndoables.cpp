@@ -7,7 +7,7 @@ namespace Opaax::Editor
 {
     namespace
     {
-        /** The open library's data when it is the one InPath names, else null WITH A LINE SAYING SO. */
+        /** The open library's data if it is the one InPath names, else null (and a warning). */
         AnimationLibraryData* TargetLibrary(EditorContext& InContext, const OpaaxString& InPath)
         {
             if (!InContext.LibraryDocument.IsOpen() || InContext.LibraryDocument.AbsPath() != InPath)

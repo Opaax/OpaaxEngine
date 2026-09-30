@@ -9,8 +9,7 @@ namespace Opaax::Editor
     {
         AnimationClipData lLoaded;
 
-        // Into a LOCAL first: a file that fails to parse must not half-replace the clip already
-        // being edited, and AnimationClipFile already leaves its out-parameter untouched on failure.
+        // Loaded into a local first, so a file that fails to parse does not half-replace the open one.
         if (!AnimationClipFile::Load(InAbsPath, lLoaded))
         {
             return false;

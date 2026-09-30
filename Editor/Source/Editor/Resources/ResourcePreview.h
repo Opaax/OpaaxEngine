@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Core/OpaaxTypes.h"                 // TDynArray, Uint32, Uint64
-#include "Editor/Resources/ResourceScan.h"   // ResourceFile — held BY VALUE
+#include "Editor/Resources/ResourceScan.h"   // ResourceFile, held by value
 
 namespace Opaax::Editor
 {
@@ -11,24 +11,14 @@ namespace Opaax::Editor
     struct ResourcePreviewEntry
     {
         ResourceFile File;
-        Uint32       TypeId = 0;   // ResourceTypeID::Get<T>() — resolved by the browser, not re-derived
+        Uint32       TypeId = 0;   // ResourceTypeID::Get<T>(), resolved by the browser
     };
 
     // =============================================================================
-    // ResourcePreview — WHICH resources are open for viewing, in the order they were opened.
-    //
-    //   Here rather than inside the Preview panel for the reason PIE, EditorSelection and
-    //   EditorMapDocument are: the WRITER and the READER are different objects. A type's activate
-    //   closure receives an EditorContext and nothing else — there is no typed getter for a live
-    //   panel, deliberately (EditorPanels owns panels as IEditorPanel) — so this is the one place
-    //   the two can meet.
-    //
-    //   A LIST, not one entry: comparing two images means having both on screen, which is the whole
-    //   reason to open a second one. Opening a path that is already open FOCUSES it instead of
-    //   duplicating it, so the list cannot grow by double-clicking the same file.
-    //
-    //   It stores WHAT was asked for, never the loaded resource: the panel owns the claims, so the
-    //   pixels' lifetime stays with the thing that draws them.
+    // ResourcePreview — which resources are open in the Preview panel, in opening order. Lives outside
+    //   the panel so a resource type's activate callback (which only gets EditorContext) can reach it.
+    //   A list, so two images can be compared. Opening an already open path focuses it instead.
+    //   Stores what was asked for, not the loaded resource (the panel holds the loads).
     // =============================================================================
     class ResourcePreview
     {
@@ -37,9 +27,7 @@ namespace Opaax::Editor
         // =============================================================================
     public:
         /**
-         * Open InFile, of resource type InTypeId, and focus it.
-         *
-         * Re-opening an already-open path only moves the focus — the same file cannot appear twice.
+         * Opens InFile, of resource type InTypeId, and focuses it. An already open path is only focused.
          */
         void Open(const ResourceFile& InFile, Uint32 InTypeId)
         {
@@ -56,7 +44,7 @@ namespace Opaax::Editor
             m_Focused = m_Entries.size() - 1;
         }
 
-        /** Close the entry at InIndex. Out of range is a no-op. */
+        /** Closes the entry at InIndex. Does nothing when out of range. */
         void Close(Uint64 InIndex)
         {
             if (InIndex >= m_Entries.size())
@@ -66,8 +54,7 @@ namespace Opaax::Editor
 
             m_Entries.erase(m_Entries.begin() + static_cast<Int64>(InIndex));
 
-            // Clamped rather than cleared: closing one of several should leave the rest focused
-            // somewhere valid, not collapse the whole panel to its empty state.
+            // Clamped rather than cleared: closing one of several keeps a valid focus.
             if (m_Focused >= m_Entries.size() && !m_Entries.empty())
             {
                 m_Focused = m_Entries.size() - 1;
@@ -81,7 +68,7 @@ namespace Opaax::Editor
     public:
         const TDynArray<ResourcePreviewEntry>& Entries() const noexcept { return m_Entries; }
 
-        /** @return Which entry the panel should scroll to / open. Meaningless while IsEmpty(). */
+        /** @return The entry the panel should scroll to / open. Meaningless while IsEmpty(). */
         Uint64 Focused() const noexcept { return m_Focused; }
 
         bool IsEmpty() const noexcept { return m_Entries.empty(); }

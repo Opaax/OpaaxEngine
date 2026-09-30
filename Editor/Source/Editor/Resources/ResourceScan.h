@@ -12,9 +12,8 @@ namespace Opaax
 namespace Opaax::Editor
 {
     // =============================================================================
-    // ResourceFile — one file on disk, as the browser sees it. Deliberately NOT a resource handle:
-    //   M2d is a FILE browser (overview §3.5), so nothing here is loaded, resolved or reference-counted.
-    //   The GUID-backed catalog is M3's job, when scene files need stable ids.
+    // ResourceFile — one file on disk, as the browser sees it. Not a resource handle: nothing here is
+    //   loaded or reference-counted.
     // =============================================================================
     struct ResourceFile
     {
@@ -25,8 +24,8 @@ namespace Opaax::Editor
     };
 
     // =============================================================================
-    // ResourceFolder — one directory level. Children are sorted at scan time, so every view renders
-    //   the same order and a rescan cannot reshuffle the list under the user.
+    // ResourceFolder — one directory level. Children are sorted at scan time, so a rescan does not
+    //   reshuffle the list.
     // =============================================================================
     struct ResourceFolder
     {
@@ -37,31 +36,26 @@ namespace Opaax::Editor
     };
 
     // =============================================================================
-    // ResourceRoot — one browsable tree with a display identity. The panel owns a small array of these
-    //   (Project + Editor today), which is what keeps "add another root" a one-line change.
+    // ResourceRoot — one browsable tree with a display name (Project, Editor).
     // =============================================================================
     struct ResourceRoot
     {
-        OpaaxStringID  Label;               // "Project" | "Editor" — compared when walking the breadcrumb
+        OpaaxStringID  Label;               // "Project" | "Editor"
         OpaaxString    AbsPath;
         ResourceFolder Tree;
         Uint64         FileCount   = 0;
         Uint64         FolderCount = 0;
-        bool           bExists     = false; // false => the directory is simply not there (a normal state)
+        bool           bExists     = false; // false: the directory does not exist (normal)
     };
 
-    // NOTE: NormalizeExtension moved to the ENGINE (Engine/Subsystems/Resources/ResourceFormat.h)
-    // when the engine took ownership of extension -> resource type. The scanner and the registry must
-    // agree byte-for-byte, and they only do that by calling the same function — which now has to live
-    // where both can reach it. PathString::Extension is the other half, in Core beside Stem.
+    // NormalizeExtension lives in the engine (Engine/Subsystems/Resources/ResourceFormat.h), so the
+    // scanner and the resource registry use the same function.
 
     /**
-     * Rebuild InOutRoot.Tree from disk, in full. Sorted, recursive, and driven entirely through
-     * IFileSystem::ListDirectory — this file includes no <filesystem> of its own.
-     *
-     * @param InFileSystem The platform's file system (IPlatform::GetFileSystem).
-     * @param InOutRoot Label + AbsPath are read; Tree, the counts and bExists are written.
-     * @return false when AbsPath is not an existing directory — InOutRoot is still left in a valid, empty state.
+     * Rebuilds InOutRoot.Tree from disk: sorted, recursive, through IFileSystem::ListDirectory.
+     * @param InFileSystem The platform's file system (IPlatform::GetFileSystem)
+     * @param InOutRoot Label and AbsPath are read; Tree, the counts and bExists are written
+     * @return False when AbsPath is not an existing directory (InOutRoot is left valid and empty)
      */
     bool ScanRoot(const IFileSystem& InFileSystem, ResourceRoot& InOutRoot);
 }

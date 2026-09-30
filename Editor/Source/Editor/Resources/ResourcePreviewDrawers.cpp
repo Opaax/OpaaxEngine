@@ -38,10 +38,8 @@ namespace Opaax::Editor::NativeResourcePreviews
         {
             lImage = InContext.UIBackend.GetTextureImage(*InFace.GetAtlas());
 
-            // STRAIGHT UVs, overriding the flip GetTextureImage applies. That flip is right for a
-            // TextureResource, whose pixels stb_image already turned bottom-up; a font atlas is
-            // stb_truetype's raw top-down buffer, so flipping it again renders the alphabet upside
-            // down. Two buffers with opposite row-0 orientations, one y-down widget.
+            // Straight UVs, overriding GetTextureImage's flip: a TextureResource is stored bottom-up, but a
+            // font atlas is stb_truetype's top-down buffer, so flipping it would draw it upside down.
             lImage.UV0 = { 0.f, 0.f };
             lImage.UV1 = { 1.f, 1.f };
         }

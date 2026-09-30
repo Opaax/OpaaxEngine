@@ -10,7 +10,7 @@ namespace Opaax::Editor
 {
     namespace
     {
-        /** Rebuild the open canvas from InText — only when it IS the one InPath names. */
+        /** Rebuilds the open canvas from InText, only if it is the one InPath names. */
         void RestoreInto(EditorContext& InContext, const OpaaxString& InPath, const OpaaxString& InText)
         {
             if (!InContext.UICanvasDocument.IsOpen() || InContext.UICanvasDocument.AbsPath() != InPath)

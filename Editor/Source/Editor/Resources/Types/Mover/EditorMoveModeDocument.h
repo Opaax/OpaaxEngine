@@ -9,12 +9,8 @@ namespace Opaax::Editor
     inline constexpr LogCategory LogEditorMoveModeDocument{"EditorMoveModeDocument"};
 
     // =============================================================================
-    // EditorMoveModeDocument — WHICH `.opaaxmovemode` is open, its live data, and whether that
-    //   data still matches what was last written.
-    //
-    //   The smallest document of the family: a tuning has no rows, no canvas and no preview — it
-    //   is a flat set of knobs, so the panel is a property fold over one struct. It is still a
-    //   DOCUMENT rather than a preview, because it is edited and saved.
+    // EditorMoveModeDocument — which .opaaxmovemode is open, its editable data, and whether it
+    //   matches what was last written. A tuning is a flat set of values.
     // =============================================================================
     class EditorMoveModeDocument
     {
@@ -52,7 +48,7 @@ namespace Opaax::Editor
 
         const MoveModeData& GetData() const noexcept { return m_Data; }
 
-        /** The editable copy. Every mutation goes through a verb that also records an undo step. */
+        /** The editable copy. Every change goes through an action that records an undo step. */
         MoveModeData& GetMutableData() noexcept { return m_Data; }
 
         /** Whether the data differs from what was last written. Recomputed, never cached. */

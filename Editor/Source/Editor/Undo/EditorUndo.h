@@ -9,27 +9,15 @@ namespace Opaax::Editor
     struct EditorContext;
 
     /**
-     * How many steps a session keeps, dropping the oldest past it.
-     *
-     * It bounds the memory the history holds, which is whatever the steps carry — a rename is two
-     * strings, a delete is its entities.
+     * How many steps a session keeps; the oldest are dropped past it. Bounds the history's memory.
      */
     inline constexpr Uint64 MAX_UNDO_STEPS = 100;
 
     // =============================================================================
-    // EditorUndo — THE STACK, and nothing else.
-    //
-    //   Record, Undo, Redo. It holds undoable objects, replays them, and names them for the Edit
-    //   menu. It knows nothing about worlds, entities, components, the selection or the UI, and it
-    //   includes no engine header at all: whoever made the edit is the one that knows what changed,
-    //   so it is the one that builds the step (**UN1**).
-    //
-    //   Owned by EditorService and reached through EditorContext — the EditorSelection/EditorGizmo
-    //   shape: the writers are the verbs and the panels, the readers are the Edit menu and the
-    //   shortcuts, and no panel owns either.
-    //
-    //   IT DOES NOT DECIDE WHETHER AN EDIT IS LEGAL. Undo and Redo are gated on MapOps::CanEdit by
-    //   the two commands that drive them, which is where every other editor policy already lives.
+    // EditorUndo — the undo stack: Record, Undo, Redo, and step names for the Edit menu.
+    //   Knows nothing about worlds, entities or UI: whoever makes an edit builds its step.
+    //   Owned by EditorService, reached through EditorContext. Whether an edit is allowed is decided
+    //   by the Undo/Redo commands (MapOps::CanEdit), not here.
     // =============================================================================
     class EditorUndo
     {
@@ -38,9 +26,8 @@ namespace Opaax::Editor
         // =============================================================================
     public:
         /**
-         * Keep InStep as the newest step, dropping everything that was redoable.
-         *
-         * A no-op while a step is being replayed, so an undo cannot record itself as the next step.
+         * Keeps InStep as the newest step, dropping everything redoable.
+         * Does nothing while a step is being replayed (an undo cannot record itself).
          */
         template<EditorUndoable<EditorContext> T>
         void Record(T InStep)
@@ -54,16 +41,16 @@ namespace Opaax::Editor
         // Playback
         // =============================================================================
     public:
-        /** Put the newest step back, and move it to the redo stack. */
+        /** Undoes the newest step and moves it to the redo stack. */
         void Undo(EditorContext& InContext);
 
-        /** Put the newest undone step forward again, and move it back to the undo stack. */
+        /** Redoes the newest undone step and moves it back to the undo stack. */
         void Redo(EditorContext& InContext);
 
         bool CanUndo() const noexcept { return !m_Undo.empty(); }
         bool CanRedo() const noexcept { return !m_Redo.empty(); }
 
-        /** What the next step is called, or "" — the Edit menu's "Undo Move". */
+        /** The next step's name, or "" (the Edit menu's "Undo Move"). */
         const char* UndoLabel() const noexcept;
         const char* RedoLabel() const noexcept;
 
@@ -72,11 +59,8 @@ namespace Opaax::Editor
         // =============================================================================
     public:
         /**
-         * Drop the history.
-         *
-         * Called by EditorService when the edited world is destroyed, and by the one structural
-         * level verb that unmounts a map — a step naming an entity of an unmounted map would
-         * recreate it into a world no Save can write it from (**WM2**).
+         * Clears the history. Called when the edited world is destroyed, and when a map is unloaded
+         * (a step naming one of its entities could not be saved anymore).
          */
         void Clear() noexcept;
 
@@ -84,7 +68,7 @@ namespace Opaax::Editor
         // Functions
         // =============================================================================
     private:
-        /** The one place a step reaches the stack: redo cleared, cap applied, one line logged. */
+        /** Pushes a step: clears redo, applies the cap, logs. */
         void Push(IEditorUndoable&& InStep);
 
         // =============================================================================
@@ -94,8 +78,7 @@ namespace Opaax::Editor
         TDynArray<IEditorUndoable> m_Undo;
         TDynArray<IEditorUndoable> m_Redo;
 
-        // True while a step is being replayed. PRIVATE: Record is what asks, so nothing outside
-        // has to remember to.
+        // True while a step is being replayed. Checked by Record.
         bool m_bApplying = false;
     };
 }
