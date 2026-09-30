@@ -11,13 +11,7 @@ namespace Opaax
     // =============================================================================
 
     /**
-     * @class TDelegate
-     * Single-cast, instance-bound callback holding at most one target (free function,
-     * lambda, or a bound member). Tier-2 of the event system: point-to-point between
-     * objects that already know each other. Not consumable, no "handled" concept.
-     *
-     * Header-only template — carries NO dllexport linkage (each module instantiates
-     * its own copy; see the "never OPAAX_API a template" rule).
+     * Single-cast callback: at most one target (function, lambda or member function).
      */
     template<typename... Args>
     class TDelegate
@@ -48,8 +42,7 @@ namespace Opaax
         // Invocation
     public:
         /**
-         * Invoke the bound target. Asserts (debug) when unbound — use ExecuteIfBound
-         * when a missing target is a legal state.
+         * Invokes the target. Asserts if unbound; use ExecuteIfBound when that is allowed.
          */
         FORCEINLINE void Execute(Args... InArgs) const
         {
@@ -75,17 +68,9 @@ namespace Opaax
     // =============================================================================
 
     /**
-     * @class TMulticastDelegate
-     * One-to-many callback list. Every bound listener is invoked on Broadcast, in
-     * registration order; no "handled"/consumption concept (that is Tier 1). Each Add
-     * returns a DelegateHandle the listener MUST keep and Remove before it dies — an
-     * unremoved listener that is destroyed = dangling call on the next Broadcast.
-     *
-     * Broadcast is re-entrancy safe: it iterates a snapshot, so a handler may Add,
-     * Remove, or RemoveAll during dispatch without invalidating iteration (a listener
-     * removed mid-broadcast still runs for the in-flight broadcast).
-     *
-     * Header-only template — carries NO dllexport linkage.
+     * Multi-cast callback list, invoked in registration order on Broadcast.
+     * Keep the handle from Add and Remove it before the listener is destroyed.
+     * Safe to Add/Remove during a Broadcast.
      */
     template<typename... Args>
     class TMulticastDelegate
@@ -97,7 +82,7 @@ namespace Opaax
         struct HandlerEntry
         {
             DelegateHandle           Handle;
-            void*                    Owner = nullptr;  // non-null for member binds; keyed by RemoveAll
+            void*                    Owner = nullptr;  // set for member binds (used by RemoveAll)
             TFunction<void(Args...)> Func;
         };
 
@@ -105,7 +90,7 @@ namespace Opaax
         // Functions
         // =============================================================================
     public:
-        /** Register a free function / lambda. @return handle for the matching Remove. */
+        /** Adds a function or lambda. @return Handle for Remove. */
         DelegateHandle Add(TFunction<void(Args...)> InFunc)
         {
             const DelegateHandle lHandle = DelegateHandle::Generate();
@@ -113,7 +98,7 @@ namespace Opaax
             return lHandle;
         }
 
-        /** Register a non-const member function on InObj. @return handle for Remove. */
+        /** Adds a member function on InObj. @return Handle for Remove. */
         template<typename T>
         DelegateHandle AddMember(T* InObj, void (T::*InMember)(Args...))
         {
@@ -122,7 +107,7 @@ namespace Opaax
             return lHandle;
         }
 
-        /** Remove a single registration by handle. @return true if one was removed. */
+        /** Removes one listener. @return True if one was removed. */
         bool Remove(DelegateHandle InHandle)
         {
             for (auto lIt = m_Entries.begin(); lIt != m_Entries.end(); ++lIt)
@@ -136,7 +121,7 @@ namespace Opaax
             return false;
         }
 
-        /** Remove every registration owned by InObj (bulk-unbind by owner). */
+        /** Removes every listener owned by InObj. */
         void RemoveAll(void* InObj)
         {
             for (auto lIt = m_Entries.begin(); lIt != m_Entries.end(); )
@@ -146,7 +131,7 @@ namespace Opaax
             }
         }
 
-        /** Drop all registrations. */
+        /** Removes all listeners. */
         void Clear() { m_Entries.clear(); }
 
         FORCEINLINE bool   IsBound() const noexcept { return !m_Entries.empty(); }
@@ -155,7 +140,7 @@ namespace Opaax
         // -----------------------------------------------------------------------------
         // Invocation
     public:
-        /** Invoke every bound listener in registration order (snapshot — re-entrant safe). */
+        /** Invokes every listener in registration order. */
         void Broadcast(Args... InArgs) const
         {
             const TDynArray<HandlerEntry> lSnapshot = m_Entries;
@@ -174,12 +159,8 @@ namespace Opaax
 }
 
 // =============================================================================
-// Declaration macros — Unreal-familiar surface.
-//
-// Each expands to a type alias of the underlying template; the alias name is
-// caller-chosen. The trailing ';' is baked in, so the no-semicolon call form
-// works: DECLARE_MULTICAST_DELEGATE_TwoParams(OnResized, Uint32, Uint32)
-// Delegates are void-return only.
+// Declaration macros (like Unreal). Each declares a type alias; void return only.
+//   DECLARE_MULTICAST_DELEGATE_TwoParams(OnResized, Uint32, Uint32)
 //
 //   DECLARE_DELEGATE[_NParams]           -> TDelegate<...>          (single-cast)
 //   DECLARE_MULTICAST_DELEGATE[_NParams] -> TMulticastDelegate<...> (one-to-many)

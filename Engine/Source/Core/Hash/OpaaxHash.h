@@ -29,8 +29,7 @@ namespace Opaax
             return Hash(String.CStr());
         }
 
-        // Counted, so it works on the non-terminated bytes a view usually holds. Same bytes give the
-        // same answer as the const char* form — that is what makes the two hashes interchangeable.
+        // Works on non-null-terminated views. Same result as the const char* version.
         static constexpr Uint32 Hash(OpaaxStringView View, Uint32 HashValue = FNV1a_OffsetBasis) noexcept
         {
             for (const char lChar : View)
@@ -45,9 +44,7 @@ namespace Opaax
         static constexpr Uint64 FNV1a_Prime64       = 1099511628211ull;
         static constexpr Uint64 FNV1a_OffsetBasis64 = 14695981039346656037ull;
 
-        // Wide, collision-resistant hash for stable identities (e.g. ResourceTypeID
-        // over a compile-time type signature). string_view-based: works on non
-        // null-terminated views and folds string literals via string_view's ctor.
+        // 64-bit hash for stable identities (e.g. ResourceTypeID).
         static constexpr Uint64 Hash64(std::string_view Str, Uint64 HashValue = FNV1a_OffsetBasis64) noexcept
         {
             for (const char lChar : Str)
@@ -65,10 +62,8 @@ namespace Opaax
 
 } // namespace Opaax
 
-// std::hash<OpaaxString> — so TUnorderedMap<OpaaxString, T> works with the DEFAULT hasher instead of
-// every call site naming OpaaxHash by hand. It lives here rather than in OpaaxString.hpp because that
-// header cannot include this one: OpaaxHash needs the full OpaaxString definition, so the include runs
-// one way only. Include Core/Hash/OpaaxHash.h to hash a string.
+// std::hash<OpaaxString>, so TUnorderedMap<OpaaxString, T> works with the default hasher.
+// Lives here because OpaaxString.hpp cannot include this header.
 template<>
 struct std::hash<Opaax::OpaaxString>
 {
@@ -78,7 +73,7 @@ struct std::hash<Opaax::OpaaxString>
     }
 };
 
-// Same bytes, same hash as the OpaaxString above — so a view can look up a key an owning string stored.
+// Same hash as OpaaxString, so a view can look up a string key.
 template<>
 struct std::hash<Opaax::OpaaxStringView>
 {

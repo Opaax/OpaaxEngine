@@ -40,8 +40,7 @@ namespace Opaax
 
 	public:
 		/**
-		 * File name within the project Configs/ dir (e.g. "Engine.config").
-		 * IConfigSystem resolves the absolute path as <ProjectRoot>/Configs/<FileName>.
+		 * File name inside the project Configs/ dir (e.g. "Engine.config").
 		 */
 		virtual const char* FileName() const = 0;
 
@@ -49,51 +48,39 @@ namespace Opaax
 		virtual ConfigTypeID GetConfigTypeID() const noexcept = 0;
 
 		/**
-		 * What this config is called in a log line or a UI list: the file name's STEM
-		 * ("Engine.config" -> "Engine").
-		 *
-		 * Derived rather than declared, so a config cannot end up with a display name that has
-		 * drifted from its file — the one stem rule (I13). Interned, so the text it hands out is
-		 * valid for the life of the process.
+		 * Display name: the file name without extension ("Engine.config" -> "Engine").
 		 */
 		OpaaxStringID GetName() const;
 
 		/**
-		 * The current values as text — the SAME text Save writes, from the same codec.
-		 *
-		 * The one generic way to render a config whose data type the caller cannot name; the editor's
-		 * Config panel shows it while per-field widgets wait on reflection.
+		 * The current values as text, same as what Save writes.
 		 */
 		virtual OpaaxString ToText() const = 0;
 
 		/**
-		 * Load the config from disk. If the file does not exist, a default file
-		 * is generated at InAbsPath and the in-memory defaults are kept.
-		 * @return true on success or after a successful default-generation;
-		 *         false if a file existed but failed to parse.
+		 * Loads the config from disk. If the file is missing, writes a default one.
+		 * @return False if the file exists but could not be parsed
 		 */
 		virtual bool Load(const OpaaxString& InAbsPath) = 0;
 
 		/**
-		 * Persist the current values back to InAbsPath.
+		 * Saves the current values to InAbsPath.
 		 */
 		virtual bool Save(const OpaaxString& InAbsPath) = 0;
 
 		/**
-		 * Persist back to the path the config was last loaded from (set by Load).
-		 * No-op + false if Load was never called. Used by the editor Config panel.
+		 * Saves to the path used by the last Load.
+		 * @return False if Load was never called
 		 */
 		virtual bool Save() = 0;
 
 		/**
-		 * Fired after this config's values changed, so a reader applies a change instead of polling
-		 * for one. Subscribe with AddMember(this, …) and RemoveAll(this) before the subscriber dies:
-		 * the config outlives every engine subsystem (I5), so a forgotten unsubscribe is a dangling
-		 * call. Main thread only.
+		 * Fired after the values changed. Subscribe with AddMember(this, ...) and call
+		 * RemoveAll(this) before the subscriber is destroyed. Main thread only.
 		 */
 		FOnConfigChanged& OnChanged() noexcept { return m_OnChanged; }
 
-		/** Called by the WRITER — whoever changed the values (the Config panel, Load). */
+		/** Called by whoever changed the values (Config panel, Load). */
 		void NotifyChanged() { m_OnChanged.Broadcast(); }
 
 		// =============================================================================
@@ -104,8 +91,8 @@ namespace Opaax
 	};
 }
 
-// Stamp on each concrete config. StaticTypeID() is DEFINED out-of-line in the .cpp so
-// there is one tag across the DLL/exe line.
+// Add to each concrete config. Define StaticTypeID() in the .cpp so the ID is
+// shared across the DLL/exe boundary.
 #define OPAAX_CONFIG_TYPE(ClassName)                                        \
 	static ::Opaax::ConfigTypeID StaticTypeID() noexcept;                   \
 	::Opaax::ConfigTypeID GetConfigTypeID() const noexcept override         \

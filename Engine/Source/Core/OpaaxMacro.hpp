@@ -2,8 +2,7 @@
 
 #define CONCAT_HELPER(x, y) x##y
 
-// The expanding form: CONCAT_HELPER pastes its arguments RAW, so a macro argument
-// (__LINE__, __COUNTER__) needs this extra pass to become its value first.
+// Expands its arguments first (for __LINE__, __COUNTER__), then concatenates.
 #define OPAAX_CONCAT(x, y) CONCAT_HELPER(x, y)
 
 #define STR(x) STR_HELPER(x)

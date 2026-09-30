@@ -16,46 +16,25 @@
 namespace Opaax::Utf8
 {
     // =============================================================================
-    // The UTF-8 boundary, in ONE place (ARCHITECTURE.md I7).
+    // UTF-8 helpers. Every engine string is UTF-8.
     //
-    // Every string the engine carries is UTF-8 — the platform layer fixed that by converting
-    // GetExecutablePath through CP_UTF8. The OS does not agree by default, and the two shortcuts that
-    // look right are the ones that are not: on MSVC, std::filesystem::path(const char*) and
-    // fstream(const char*) both decode using the ANSI code page, so a non-ASCII path silently resolves
-    // to a DIFFERENT FILE than the caller named — no exception, no error code, no signal.
-    //
-    // So: never build an fs::path or open a stream from OpaaxString::CStr(). Go through ToFsPath.
-    // std::fstream takes an fs::path since C++17, which makes every fix a one-line swap.
-    //
-    // This lives in Core because the layers that need it (Core config IO, the portable Renderer) sit
-    // BELOW Application and cannot reach IPlatform's filesystem. IFileSystem is one consumer of this
-    // rule, not the only legal way to touch a file.
-    //
-    // Header-only and stateless — no OPAAX_API (I6). Nothing here throws; malformed input degrades to
-    // U+FFFD, so the path simply does not exist and the caller gets its ordinary failure.
+    // Never build an fs::path or open a stream from OpaaxString::CStr(): on MSVC it uses the
+    // ANSI code page and opens a different file for non-ASCII paths. Use ToFsPath.
+    // Never throws; malformed input becomes U+FFFD.
     // =============================================================================
 
     // =============================================================================
-    // Codepoints — reading UTF-8 as CHARACTERS rather than as a path.
-    //
-    // The other half of the boundary, and the one text rendering needs: a glyph is keyed by
-    // codepoint, so "Γειά" has to become four numbers rather than eight bytes. Same file because it
-    // is the same invariant (**I7**) seen from the other end, and the same no-throw contract.
+    // Codepoints — decode UTF-8 text into characters (for text rendering).
     // =============================================================================
 
-    /** What malformed input decodes to — U+FFFD REPLACEMENT CHARACTER, the Unicode-sanctioned answer. */
+    /** Returned for malformed input: U+FFFD. */
     inline constexpr Uint32 REPLACEMENT = 0xFFFDu;
 
     /**
-     * Decode the codepoint at InOutCursor and advance past it.
-     *
-     * ALWAYS ADVANCES on a non-empty string — that is the contract that matters, because every caller
-     * is a `while` loop and a decoder that can stand still turns one bad byte into a hang. Malformed
-     * input (a stray continuation byte, a truncated sequence, an overlong form, a surrogate half)
-     * consumes ONE byte and answers REPLACEMENT, so the rest of the string still reads.
-     *
-     * @param InOutCursor Cursor into a NUL-terminated UTF-8 string. Advanced past the codepoint read.
-     * @return The codepoint, or 0 at the terminator — the loop condition, and the cursor stays put.
+     * Decodes the codepoint at InOutCursor and moves past it.
+     * Always advances on a non-empty string; malformed input consumes one byte and returns REPLACEMENT.
+     * @param InOutCursor Cursor into a null-terminated UTF-8 string
+     * @return The codepoint, or 0 at the terminator (the cursor does not move)
      */
     inline Uint32 Decode(const char*& InOutCursor) noexcept
     {
@@ -64,11 +43,10 @@ namespace Opaax::Utf8
 
         if (lLead == 0u)
         {
-            return 0u;   // the terminator: answer "done" WITHOUT advancing past it
+            return 0u;   // terminator: do not advance
         }
 
-        // How many bytes the lead announces. 0xC0/0xC1 are overlong two-byte forms and 0xF5+ is past
-        // U+10FFFF, so both are rejected by the lead alone rather than after decoding.
+        // Byte count from the lead byte. 0xC0/0xC1 (overlong) and 0xF5+ (past U+10FFFF) are rejected.
         Uint32 lLength   = 0u;
         Uint32 lCodepoint = 0u;
 
@@ -86,8 +64,7 @@ namespace Opaax::Utf8
         {
             const Uint8 lContinuation = lBytes[lIndex];
 
-            // Catches the truncated sequence too: a NUL is not 10xxxxxx, so a lead byte at the end of
-            // the string cannot walk the cursor past the terminator.
+            // Also catches a truncated sequence (the terminator is not a continuation byte).
             if ((lContinuation & 0xC0u) != 0x80u)
             {
                 ++InOutCursor;
@@ -97,8 +74,7 @@ namespace Opaax::Utf8
             lCodepoint = (lCodepoint << 6) | (lContinuation & 0x3Fu);
         }
 
-        // Overlong three/four-byte forms and the UTF-16 surrogate range. Both are encodable and both
-        // are illegal — a decoder that passes them on hands the caller a codepoint no font has.
+        // Reject overlong forms and UTF-16 surrogates.
         const bool bOverlong  = (lLength == 3u && lCodepoint < 0x800u)
                              || (lLength == 4u && lCodepoint < 0x10000u);
         const bool bSurrogate = (lCodepoint >= 0xD800u && lCodepoint <= 0xDFFFu);
@@ -157,13 +133,13 @@ namespace Opaax::Utf8
         return OpaaxString(lUtf8.c_str());
     }
 
-    /** UTF-8 -> fs::path. Goes through UTF-16 so the ANSI code page never sees it. */
+    /** UTF-8 -> fs::path (through UTF-16). */
     inline std::filesystem::path ToFsPath(const OpaaxString& InUtf8)
     {
         return std::filesystem::path(ToWide(InUtf8));
     }
 
-    /** fs::path -> UTF-8, forward slashes (the engine's path convention). */
+    /** fs::path -> UTF-8, with forward slashes. */
     inline OpaaxString FromFsPath(const std::filesystem::path& InPath)
     {
         return FromWide(InPath.generic_wstring());
@@ -171,8 +147,7 @@ namespace Opaax::Utf8
 
 #else
 
-    // POSIX: the native narrow encoding IS UTF-8, so both directions are already correct and the
-    // conversion collapses. Kept as the same two names so no call site is platform-aware.
+    // POSIX: the native encoding is already UTF-8.
 
     inline std::filesystem::path ToFsPath(const OpaaxString& InUtf8)
     {

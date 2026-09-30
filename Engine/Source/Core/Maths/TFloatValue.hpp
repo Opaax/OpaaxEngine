@@ -26,9 +26,7 @@ namespace Opaax
         // =============================================================================
         // Get - Set
         
-        /***/
         [[nodiscard]] constexpr ValueType GetValue() const { return m_value; }
-        /***/
         constexpr void SetValue(ValueType InValue) { m_value = InValue; }
         
         // End Get - Set

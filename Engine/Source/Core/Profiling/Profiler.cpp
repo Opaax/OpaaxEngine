@@ -15,7 +15,7 @@ namespace Opaax
 
     Profiler& Profiler::Get()
     {
-        // Leaked on purpose (SG5).
+        // Never destroyed.
         static Profiler* s_Instance = new Profiler();
         return *s_Instance;
     }
@@ -44,12 +44,10 @@ namespace Opaax
 
         const double lNow = NowSeconds();
 
-        // The frame that just ended becomes readable, whole — including its Present, which happens
-        // after the engine's tick.
+        // The frame that just ended becomes readable (including its Present).
         m_Stats.Profiler.Publish();
 
-        // The first call has no previous frame; the time since process start would put one absurd
-        // sample at the front of every graph.
+        // Skip the first call: there is no previous frame.
         m_Stats.FrameMs = m_LastFrameStart > 0.0 ? (lNow - m_LastFrameStart) * 1000.0 : 0.0;
 
         m_Stats.GpuMs    = m_RecordingGpuMs;

@@ -3,39 +3,29 @@
 #include "Core/OpaaxTypes.h"
 
 #include <chrono>
-#include <cstring>   // strcmp — the fallback when two literals spell the same name
+#include <cstring>   // strcmp
 
 namespace Opaax
 {
     /**
-     * One timed scope. Plain data — no lifetime, no ownership.
-     *
-     * Name is BORROWED and must outlive the frame; every producer passes a literal (the
-     * OPAAX_STAT_SCOPE call site passes a literal). Not an
-     * OpaaxStringView — I13 gives the view no CStr() on purpose and a UI needs a terminator; not an
-     * OpaaxStringID — interning is for keys, and this is display text on a per-frame path.
+     * One timed scope. Name must outlive the frame (pass a literal).
      */
     struct ScopeSample
     {
         const char* Name         = nullptr;
 
-        /** TOTAL across every call this frame, not one call's cost. */
+        /** Total time of every call this frame. */
         double      Milliseconds = 0.0;
 
-        /** How many times the scope was entered this frame. FixedUpdate's children run once per step. */
+        /** Times the scope was entered this frame. */
         Uint32      Calls        = 0;
 
-        /** Nesting level, 0 for a top-level scope. Samples are in pre-order, so this alone draws the tree. */
+        /** Nesting level, 0 at the top. Samples are in pre-order. */
         Uint8       Depth        = 0;
     };
 
     /**
-     * One named number for the frame — draw calls, quads, bullets alive.
-     *
-     * The COUNTING twin of ScopeSample, and deliberately the same shape: a name and a value, keyed
-     * by name, published on the same boundary. That symmetry is what keeps renderer nouns out of
-     * Core — nothing here knows what a draw call is — and what lets a game submit its own numbers
-     * without the engine or the Stats panel learning about them.
+     * One named counter for the frame (draw calls, quads, bullets alive, ...).
      */
     struct StatCounter
     {
@@ -44,26 +34,11 @@ namespace Opaax
     };
 
     /**
-     * @class FrameProfiler
+     * Named timing scopes for one frame (like Unreal's SCOPE_CYCLE_COUNTER).
+     * The engine's instance lives in the Profiler; tests can create their own.
      *
-     * The frame's named scopes, in the shape every engine has one (Unreal's SCOPE_CYCLE_COUNTER,
-     * Unity's ProfilerMarker). The engine's one instance lives in the Profiler singleton (I1), which
-     * is what OPAAX_STAT_SCOPE reaches; this class is an ordinary instance a test can build.
-     *
-     * Core knows nothing about any of that: this file is a timer and a list. Nothing ticks it,
-     * nothing is wrapped on an author's behalf, and ISubsystem does not mention it.
-     *
-     * DOUBLE-BUFFERED, and that is load-bearing rather than tidy. The wall-clock frame is
-     * Loop(N){Update,FixedUpdate,Render} -> editor UI pass(N) -> Present(N) -> Loop(N+1), and the
-     * Stats panel draws inside the UI pass. A single live list would hand it a frame with Present
-     * missing — the one row where the time actually is under vsync. Publishing at Loop's top means a
-     * reader always sees the last COMPLETE frame, one frame old.
-     *
-     * Nothing survives Publish(), matching DebugDraw's immediate-mode contract (F4): a scope that
-     * wants to be seen is re-entered every frame.
-     *
-     * Header-only with no static and no identity tag, so NO OPAAX_API (I6's header-only shape, the
-     * one ISubsystemManager already uses).
+     * Double-buffered: Publish() makes the recorded frame readable and starts a new one,
+     * so readers always see the last complete frame (including Present).
      */
     class FrameProfiler
     {
@@ -73,8 +48,7 @@ namespace Opaax
     public:
         FrameProfiler()
         {
-            // Both buffers, because Publish swaps them — reserving one would still allocate on the
-            // second frame. After warm-up a frame allocates nothing.
+            // Reserve both buffers (Publish swaps them), so a frame allocates nothing after warm-up.
             m_Recording.reserve(RESERVED_SAMPLES);
             m_Published.reserve(RESERVED_SAMPLES);
         }
@@ -84,15 +58,8 @@ namespace Opaax
         // =============================================================================
     public:
         /**
-         * Begin a scope. The sample is recorded HERE, not on Close — reserving the slot on the way
-         * in is what leaves Samples() in pre-order, so Depth alone renders the tree with no sort.
-         *
-         * A scope re-entered under the SAME parent reuses its row and counts a call, so the tree has
-         * one row per name however many times it ran (Unreal's stat rows, and the reason the display
-         * survives a catch-up frame: FixedUpdate ticks every subsystem once per step, so 15 steps
-         * would otherwise be 15 identical rows each).
-         *
-         * @return The sample's index, to hand back to Close. Callers use ScopedStat instead.
+         * Begins a scope. A scope re-entered under the same parent reuses its row and counts a call.
+         * @return The sample index, to pass to Close. Use ScopedStat instead of calling this directly.
          */
         Int32 Open(const char* InName)
         {
@@ -113,12 +80,8 @@ namespace Opaax
         }
 
         /**
-         * Add to the frame's counter named InName, creating it on first use.
-         *
-         * ADDS rather than sets, so a producer may submit per-object or once with a total and both
-         * read correctly. Order of first appearance is preserved, like the scopes.
-         *
-         * InName must outlive the frame — pass a literal.
+         * Adds InValue to the counter named InName (created on first use).
+         * InName must outlive the frame (pass a literal).
          */
         void AddCount(const char* InName, const Uint64 InValue)
         {
@@ -134,7 +97,7 @@ namespace Opaax
             m_RecordingCounters.emplace_back(InName, InValue);
         }
 
-        /** Close the scope Open returned InIndex for, ADDING how long this call took to its total. */
+        /** Closes the scope and adds its duration to the total. */
         void Close(const Int32 InIndex, const double InMilliseconds)
         {
             if (!m_OpenStack.empty()) { m_OpenStack.pop_back(); }
@@ -150,14 +113,11 @@ namespace Opaax
         // =============================================================================
     public:
         /**
-         * The frame is over: what was recorded becomes readable, and recording starts empty.
-         *
-         * Scopes AND counters cross together, so a reader can never see a draw-call count from one
-         * frame beside a Render time from another.
+         * Ends the frame: the recorded scopes and counters become readable, recording starts empty.
          */
         void Publish()
         {
-            m_Published.swap(m_Recording);   // swap, not copy — capacity stays with both buffers
+            m_Published.swap(m_Recording);
             m_Recording.clear();
 
             m_PublishedCounters.swap(m_RecordingCounters);
@@ -171,10 +131,10 @@ namespace Opaax
         // Read
         // =============================================================================
     public:
-        /** The last COMPLETE frame, in pre-order. Empty until the first Publish. */
+        /** The last complete frame, in pre-order. Empty until the first Publish. */
         const TDynArray<ScopeSample>& Samples() const noexcept { return m_Published; }
 
-        /** The last COMPLETE frame's counters, in order of first appearance. */
+        /** The last complete frame's counters, in order of first use. */
         const TDynArray<StatCounter>& Counters() const noexcept { return m_PublishedCounters; }
 
         bool IsEmpty() const noexcept { return m_Published.empty() && m_PublishedCounters.empty(); }
@@ -184,9 +144,7 @@ namespace Opaax
         // =============================================================================
     private:
         /**
-         * Pointer first — one call site means one literal, so this hits every time in practice.
-         * strcmp only covers two literals that happen to spell the same name, which would otherwise
-         * show up as two identical rows.
+         * Compares pointers first, then text (two literals with the same name).
          */
         static bool SameName(const char* InA, const char* InB) noexcept
         {
@@ -197,11 +155,7 @@ namespace Opaax
         }
 
         /**
-         * An already-recorded scope with this name under the CURRENTLY OPEN parent, or -1.
-         *
-         * Everything after the open parent is inside its subtree — nothing shallower can have been
-         * appended while it is still open — so the depth test alone separates children from
-         * grandchildren.
+         * @return Index of the scope with this name under the open parent, or -1
          */
         Int32 FindOpenSibling(const char* InName) const
         {
@@ -227,15 +181,13 @@ namespace Opaax
         TDynArray<ScopeSample> m_Published;   // last frame, complete
         TDynArray<StatCounter> m_RecordingCounters;
         TDynArray<StatCounter> m_PublishedCounters;
-        TDynArray<Int32>       m_OpenStack;   // indices of the scopes currently open, outermost first
+        TDynArray<Int32>       m_OpenStack;   // indices of the open scopes, outermost first
         Uint8                  m_Depth = 0;
     };
 
     /**
-     * @class ScopedStat
-     *
-     * RAII around FrameProfiler::Open/Close. Takes a POINTER and no-ops on null. The engine's
-     * scopes go through OPAAX_STAT_SCOPE (Profiler.h); a test times its own FrameProfiler with this.
+     * RAII scope around FrameProfiler::Open/Close. Does nothing on a null profiler.
+     * Engine code uses OPAAX_STAT_SCOPE (Profiler.h).
      */
     class ScopedStat
     {
@@ -263,7 +215,7 @@ namespace Opaax
         }
 
         // =============================================================================
-        // Copy - Move Delete (a scope is tied to one lexical block)
+        // Copy - Move Delete
         // =============================================================================
         ScopedStat(const ScopedStat&)            = delete;
         ScopedStat& operator=(const ScopedStat&) = delete;

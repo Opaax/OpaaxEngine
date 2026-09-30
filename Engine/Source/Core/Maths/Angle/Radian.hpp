@@ -10,7 +10,7 @@ namespace Opaax
     struct TDegree;
 
     template<CONCEPT_TIsFloat T>
-    struct TRadian final : public TFloatValue<T>   // no OPAAX_API — header-only value template (see TAngle)
+    struct TRadian final : public TFloatValue<T>
     {
         using Base = TFloatValue<T>;
 

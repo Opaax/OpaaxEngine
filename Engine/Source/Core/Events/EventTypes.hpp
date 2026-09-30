@@ -6,12 +6,7 @@
 namespace Opaax
 {
     // =============================================================================
-    // EEventType — Tier-1 dispatched events
-    //
-    // The runtime tag every Tier-1 Event carries; EventDispatcher matches on it
-    // (enum compare, no RTTI). Tier-1 is OS/window/input ONLY. Domain events
-    // (physics, editor, gameplay) are Tier-3 bus payloads — POD structs keyed by a
-    // hashed type-name — and deliberately do NOT get an entry here.
+    // EEventType — window and input event types. Other events go through the EventBus.
     // =============================================================================
     enum class EEventType : Uint8
     {
@@ -37,10 +32,7 @@ namespace Opaax
     };
 
     // =============================================================================
-    // EEventCategory — bitmask flags
-    //
-    // A single event may belong to several categories (e.g. a key press is both
-    // Input and Keyboard). Unscoped on purpose so the flags OR together as ints.
+    // EEventCategory — bitmask. An event can have several (a key press is Input | Keyboard).
     // =============================================================================
     enum class EEventCategory : Uint16
     {
@@ -52,8 +44,7 @@ namespace Opaax
         MouseButton = BIT(4),   // mouse button press / release
     };
 
-    // Scoped (enumerators don't leak into the namespace) but still bitmaskable — an
-    // event combines flags, e.g. EEventCategory::Input | EEventCategory::Keyboard.
+    // Scoped but still usable as a bitmask.
     constexpr EEventCategory operator|(EEventCategory InA, EEventCategory InB) noexcept
     {
         return static_cast<EEventCategory>(static_cast<Uint16>(InA) | static_cast<Uint16>(InB));

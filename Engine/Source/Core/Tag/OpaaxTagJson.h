@@ -6,19 +6,13 @@
 #include "Core/Tag/OpaaxTagContainer.h"
 
 // =============================================================================
-// The nlohmann bridge for tags — a tag is a STRING and a container is an ARRAY of them, because
-// that is what a human editing a .opaaxmap should see.
-//
-// Split out of the tag headers themselves, the way Core/Maths/MathsJson.hpp is split from
-// MathTypes.h: code that only matches tags never pays for json. Include this one to put an
-// OpaaxTag or an OpaaxTagContainer inside a component's NLOHMANN_DEFINE_TYPE_INTRUSIVE.
+// JSON for tags: a tag is a string, a container is an array of strings.
 // =============================================================================
 namespace Opaax
 {
     inline void to_json(nlohmann::json& Json, const OpaaxTag& Tag)
     {
-        // GetView, not ToString: an invalid tag must write "" and read back invalid, where ToString's
-        // "None" would read back as a real tag literally named None.
+        // GetView, not ToString: an invalid tag writes "" (not "None").
         const OpaaxStringView lText = Tag.GetView();
         Json = lText.IsEmpty() ? std::string() : std::string(lText.Data(), lText.GetLength());
     }
@@ -28,8 +22,7 @@ namespace Opaax
         const std::string     lText = Json.get<std::string>();
         const OpaaxStringView lView(lText);
 
-        // A hand-edited file is UNTRUSTED input, so malformed text reads back as the invalid tag
-        // rather than tripping the ctor's assert — that net exists for literals in code.
+        // Malformed text reads as the invalid tag (no assert).
         Tag = OpaaxTag::IsValidTagText(lView) ? OpaaxTag(lView) : OpaaxTag();
     }
 

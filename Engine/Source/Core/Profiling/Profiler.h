@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Core/EngineAPI.h"
-#include "Core/OpaaxMacro.hpp"   // OPAAX_CONCAT — the macro's unique local name
+#include "Core/OpaaxMacro.hpp"
 #include "Core/Log/Logger.h"
 #include "Core/Profiling/FrameStats.h"
 
@@ -12,12 +12,9 @@ namespace Opaax
     OPAAX_LOG_CATEGORY(Stats);
 
     // =============================================================================
-    // Profiler — an I1 singleton (SG1–SG5): the one FrameStats of the process. The host says where a
-    //   frame ends (BeginFrame, ST2); anyone may open a scope or submit a counter.
-    //
-    //   Disabled is the off switch (ST6): every scope then costs one predicted branch and no clock
-    //   read. Recording is MAIN-THREAD ONLY — FrameProfiler is not thread-safe, and with a global a
-    //   worker could otherwise reach it; off-thread scopes and counters are no-ops.
+    // Profiler — the engine-wide frame stats. The host marks the frame boundary (BeginFrame);
+    //   anyone can open a scope or submit a counter. When disabled, a scope costs one branch.
+    //   Main thread only: scopes and counters from other threads are ignored.
     // =============================================================================
     class OPAAX_API Profiler final
     {
@@ -25,7 +22,7 @@ namespace Opaax
         // Statics
         // =============================================================================
     public:
-        /** Out-of-line in the DLL and leaked (SG4/SG5). */
+        /** Never destroyed. */
         static Profiler& Get();
 
         // =============================================================================
@@ -44,32 +41,32 @@ namespace Opaax
         // Functions
         // =============================================================================
     public:
-        /** The CALLING thread becomes the one that records. */
+        /** The calling thread becomes the recording thread. */
         void Init(bool bInEnabled);
 
         /** Disables recording; the last published frame stays readable. */
         void Shutdown();
 
-        /** Publishes the frame that just ended and opens the next (ST2). */
+        /** Publishes the frame that just ended and starts the next. */
         void BeginFrame();
 
-        /** The device's reading, folded into the next published frame (ST8). */
+        /** GPU time, added to the next published frame. */
         void SubmitGpuMs(double InGpuMs);
 
-        /** A named counter for this frame (ST7). Accumulates. */
+        /** Adds to a named counter for this frame. */
         void AddCount(const char* InName, Uint64 InValue);
 
         // =============================================================================
         // Getters
         // =============================================================================
     public:
-        /** Null when disabled or off the recording thread — what OPAAX_STAT_SCOPE opens on. */
+        /** Null when disabled or not on the recording thread. */
         FrameProfiler* GetRecorder() noexcept
         {
             return m_bEnabled && std::this_thread::get_id() == m_RecordingThread ? &m_Stats.Profiler : nullptr;
         }
 
-        /** The last COMPLETE frame. Empty and zeroed while disabled. */
+        /** The last complete frame. Empty when disabled. */
         const FrameStats& GetFrameStats() const noexcept { return m_Stats; }
 
         bool IsEnabled() const noexcept { return m_bEnabled; }
@@ -78,7 +75,7 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        // Filled in place, never swapped: a reader may hold a reference across frames.
+        // Updated in place: a reader may keep a reference across frames.
         FrameStats      m_Stats;
         std::thread::id m_RecordingThread;
 
@@ -90,8 +87,7 @@ namespace Opaax
 }
 
 /**
- * Time the enclosing block, Unreal's SCOPE_CYCLE_COUNTER shape. OPT-IN (ST3); pass a literal, the
- * name must outlive the frame.
+ * Times the enclosing block. The name must be a literal.
  *
  *   OPAAX_STAT_SCOPE("Sprites");
  */

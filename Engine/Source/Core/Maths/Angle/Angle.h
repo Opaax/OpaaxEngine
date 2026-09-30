@@ -8,15 +8,8 @@
 namespace Opaax
 {
     /**
-     * @class TAngle
-     * Represent an angle in the engine.
-     * 
-     * @tparam T The angle type float or double
+     * An angle, stored as float or double.
      */
-    // Header-only value template — NO OPAAX_API. dllexport/dllimport on a class TEMPLATE exports nothing
-    // (a template is not code until instantiated); marking it dllimport makes consumers expect the
-    // instantiation from the DLL, which never exports it -> LNK2019. Stateless value types are DLL-safe by
-    // construction and instantiate per-TU (same convention as TFloatValue<T>).
     template<CONCEPT_TIsFloat T>
     class TAngle
     {

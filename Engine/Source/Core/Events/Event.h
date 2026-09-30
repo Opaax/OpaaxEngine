@@ -10,12 +10,8 @@ namespace Opaax
     // =============================================================================
 
     /**
-     * @class Event
-     * Events are stack-allocated value types
-     * never heap-allocated, never stored past the callback that produced them. A
-     * receiver stops propagation by returning true from its EventDispatcher handler
-     * (the dispatcher ORs that into bHandled). Concrete events stamp their identity
-     * with the OPAAX_EVENT_CLASS_TYPE / _CATEGORY macros below.
+     * Base window/input event. Stack-allocated, never stored.
+     * A handler returning true marks it handled.
      */
     class OPAAX_API Event
     {
@@ -57,14 +53,7 @@ namespace Opaax
     // =============================================================================
 
     /**
-     * @class EventDispatcher
-     * Stack-constructed around a live Event reference. Dispatch<T> matches the event's
-     * runtime type against T::GetStaticType() (enum compare — no RTTI / dynamic_cast).
-     * On match it invokes the handler with the down-cast event and ORs the handler's
-     * bool return into the event's bHandled.
-     *
-     * The handler is taken as a deduced functor (not TFunction) so a lambda binds with
-     * zero heap allocation — this runs on the per-keystroke / per-mouse-move path.
+     * Dispatches an event to a handler by type (no RTTI, no allocation).
      */
     class EventDispatcher
     {
@@ -79,8 +68,8 @@ namespace Opaax
         // =============================================================================
     public:
         /**
-         * Run InHandler iff the live event is a T. The handler returns bool ("handled").
-         * @return true if T matched the event's type (handler ran).
+         * Runs InHandler if the event is a T. The handler returns true if it handled the event.
+         * @return True if the event is a T
          */
         template<typename T, typename TFunc>
         bool Dispatch(TFunc&& InHandler)
@@ -101,8 +90,7 @@ namespace Opaax
     };
 
     // =============================================================================
-    // Stamping macros — implement the Event interface on a concrete event class.
-    //
+    // Implement the Event interface on a concrete event class:
     //   class WindowResizeEvent : public Event {
     //       OPAAX_EVENT_CLASS_TYPE(EEventType::WindowResize)
     //       OPAAX_EVENT_CLASS_CATEGORY(EEventCategory_Application)

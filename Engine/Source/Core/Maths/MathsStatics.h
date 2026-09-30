@@ -2,11 +2,6 @@
 
 #include <limits>
 
-/**
- * for checking super long value.
- * std::cout << std::setprecision (std::numeric_limits<double>::digits - 1)
- */
-
 namespace Opaax
 {
     // =============================================================================
@@ -35,17 +30,16 @@ namespace Opaax
     constexpr float FONE_HALF           = 0.5f;
     constexpr float FSMALL_NUMBER       = 1.e-8f;
     constexpr float FHALF_SMALL_NUMBER  = 1.e-4f;
-    constexpr float FLOAT_MAX           = 3.402823466e+38F; //@see FLT_MAX
-    constexpr float FLOAT_MIN           = 1.175494351e-38F; //@see FLT_MIN
+    constexpr float FLOAT_MAX           = 3.402823466e+38F; // FLT_MAX
+    constexpr float FLOAT_MIN           = 1.175494351e-38F; // FLT_MIN
     
-    /***
-     * smallest such that 1.0+OP_EPSILON != 1.0;
-     * @see FLT_EPSILON float.h
+    /**
+     * Smallest value such that 1.0 + epsilon != 1.0 (FLT_EPSILON).
      */
     constexpr float FEPSILON = 1.192092896e-07f;
     
     /**
-     * Also known as divine proportion, golden mean, or golden section - related to the Fibonacci Sequence = (1 + sqrt(5)) / 2
+     * Golden ratio: (1 + sqrt(5)) / 2
      */
     constexpr float FGOLDEN_RATIO       = 1.6180339887498948482045868343656381f;
     constexpr float FHUNDRED_PERCENT    = 100.f;
@@ -102,16 +96,14 @@ namespace Opaax
     constexpr double DONE_HALF                  = 0.5;
     constexpr double DSMALL_NUMBER              = 1.e-8;
     constexpr double DOUBLE_HALF_SMALL_NUMBER   = 1.e-4;
-    constexpr double DOUBLE_MAX                 = 1.7976931348623158e+308; //@see DBL_MAX
-    constexpr double DOUBLE_MIN                 = 2.2250738585072014e-308; //@see DBL_MIN
+    constexpr double DOUBLE_MAX                 = 1.7976931348623158e+308; // DBL_MAX
+    constexpr double DOUBLE_MIN                 = 2.2250738585072014e-308; // DBL_MIN
     /**
-     * smallest such that 1.0+OP_DOUBLE_EPSILON != 1.0
-     *
-     * @see DBL_EPSILON float.h
+     * Smallest value such that 1.0 + epsilon != 1.0 (DBL_EPSILON).
      */
     constexpr double DEPSILON = 2.2204460492503131e-016;
     /**
-     * Also known as divine proportion, golden mean, or golden section - related to the Fibonacci Sequence = (1 + sqrt(5)) / 2
+     * Golden ratio: (1 + sqrt(5)) / 2
      */
     constexpr double DGOLDEN_RATIO      = 1.6180339887498948482045868343656381;
     constexpr double DHUNDRED_PERCENT   = 100.;

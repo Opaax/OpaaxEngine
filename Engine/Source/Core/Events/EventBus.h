@@ -27,10 +27,8 @@ namespace Opaax
         }
 
         /**
-         * Stable per-type id: hash of the compiler's decorated signature for this
-         * instantiation (contains T). Identical in every module under one compiler —
-         * the DLL-safe alternative to a monotonic family-id counter (which, as a
-         * function-local template static, would differ per DLL/exe).
+         * Stable per-type id, from a hash of the function signature.
+         * Same in every module (DLL-safe).
          */
         template<typename T>
         constexpr Uint64 EventTypeKey() noexcept
@@ -40,22 +38,13 @@ namespace Opaax
     }
 
     // =============================================================================
-    // EventBus — Tier-3 (decoupled pub/sub)
+    // EventBus — decoupled publish/subscribe
     // =============================================================================
 
     /**
-     * @class EventBus
-     * Reusable pub/sub bus. One instance is owned per tier (Engine owns one; the
-     * editor will own its own). Payloads are trivially-copyable POD structs keyed by
-     * a compile-time hashed type id — sender and receiver never reference each other.
-     *
-     * Dispatch is immediate (Publish) or queued (Enqueue, delivered at Flush — the
-     * default choice). Dispatch snapshots the bucket, so a handler may (un)subscribe
-     * or publish during delivery. Not thread-safe in v1.
-     *
-     * Every Subscribe returns a DelegateHandle; the subscriber MUST Unsubscribe (or
-     * UnsubscribeAll(this)) before it dies — a live handler capturing a dangling
-     * object crashes the next Publish.
+     * Publish/subscribe bus. Events are plain structs keyed by type.
+     * Publish dispatches now; Enqueue dispatches at the next Flush (preferred).
+     * Unsubscribe before the subscriber is destroyed. Not thread-safe.
      */
     class OPAAX_API EventBus
     {
@@ -78,9 +67,7 @@ namespace Opaax
         // Subscription
         // =============================================================================
     public:
-        /** 
-         * Register a free function / lambda for TEvent. @return handle for Unsubscribe. 
-         */
+        /** Subscribes a function or lambda. @return Handle for Unsubscribe. */
         template<typename TEvent>
         DelegateHandle Subscribe(TFunction<void(const TEvent&)> InHandler)
         {
@@ -94,10 +81,7 @@ namespace Opaax
                 });
         }
 
-        /** 
-         * Register a member function on InObj for TEvent. 
-         * @return handle for Unsubscribe. 
-         */
+        /** Subscribes a member function on InObj. @return Handle for Unsubscribe. */
         template<typename TEvent, typename T>
         DelegateHandle Subscribe(T* InObj, void (T::*InMember)(const TEvent&))
         {
@@ -114,14 +98,14 @@ namespace Opaax
         /** Remove one subscription by handle. @return true if removed. */
         bool Unsubscribe(DelegateHandle InHandle);
 
-        /** Remove every subscription owned by InObj (call from the owner's teardown). */
+        /** Removes every subscription owned by InObj. */
         void UnsubscribeAll(void* InOwner);
 
         // =============================================================================
         // Publishing
         // =============================================================================
     public:
-        /** Immediate dispatch — invokes all TEvent subscribers now, on this thread. */
+        /** Dispatches now, on this thread. */
         template<typename TEvent>
         void Publish(const TEvent& InEvent)
         {
@@ -132,9 +116,7 @@ namespace Opaax
         }
 
         /**
-         * Queued dispatch (the default choice). Copies the payload into the frame queue;
-         * delivered at the next Flush. Events enqueued DURING Flush land in the next
-         * frame's queue (double-buffered).
+         * Queues the event for the next Flush. Events queued during Flush go to the next frame.
          */
         template<typename TEvent>
         void Enqueue(const TEvent& InEvent)
@@ -145,7 +127,7 @@ namespace Opaax
             EnqueueImpl([this, lPayload = InEvent]() { PublishImpl(Detail::EventTypeKey<TEvent>(), &lPayload); });
         }
 
-        /** Drain the queued events in FIFO order. Called once per frame by the owner. */
+        /** Dispatches the queued events in order. Called once per frame. */
         void Flush();
 
         // =============================================================================
@@ -157,7 +139,7 @@ namespace Opaax
         struct HandlerEntry
         {
             DelegateHandle Handle;
-            void*          Owner = nullptr;   // non-null for member subs; keyed by UnsubscribeAll
+            void*          Owner = nullptr;   // set for member subscriptions (used by UnsubscribeAll)
             ErasedHandler  Handler;
         };
 

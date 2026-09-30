@@ -9,20 +9,9 @@ namespace Opaax
 {
     // =========================================================================
     // OpaaxStringIDPool — thread-safe intern table, OpaaxString <-> Uint32.
-    //
-    // Defined in the .cpp, not the header, so the engine DLL owns the ONLY definition. See the
-    // OpaaxStringID class note (I2): a header-inline pool accessor lets each module emit its own
-    // function-local static, and the same string then interns to different ids on either side of the
-    // DLL/exe line. Index 0 is reserved for "None" — always valid, never removed.
-    //
-    // STORAGE — the map OWNS every text, the array only points at it. That is what makes a handed-out
-    // `const OpaaxString&` safe to hold after the lock drops: unordered_map keeps pointers and
-    // references to its elements valid across rehash, and nothing is ever erased here, so a pointer
-    // stays good for the life of the process. m_Strings may still reallocate, but the reader copies
-    // the POINTER out under the lock and the pointee never moves. Storing the text in a vector
-    // instead — the previous shape — meant a concurrent GetOrAdd could reallocate under a reader that
-    // had already released its shared lock and was about to copy from the old block. It also kept a
-    // second copy of every interned string, once as a vector element and once as a map key.
+    //   Defined in the .cpp so the engine DLL has the only instance.
+    //   Index 0 is "None". Entries are never removed and never move, so returned
+    //   references stay valid after the lock is released.
     // =========================================================================
     class OpaaxStringIDPool final
     {
@@ -39,7 +28,7 @@ namespace Opaax
             return Insert(InString);
         }
 
-        /*** Uint32 of an ALREADY-interned string, or ID_None. Never grows the table. */
+        /** Id of an already-interned string, or ID_None. Never adds. */
         Uint32 FindExisting(const OpaaxString& InString) const
         {
             std::shared_lock lLock(m_Mutex);
@@ -48,7 +37,7 @@ namespace Opaax
             return (lIt != m_Lookup.end()) ? lIt->second : OpaaxGlobal::ID_None;
         }
 
-        /*** Entries are immortal and address-stable, so this reference outlives the lock. */
+        /** Entries never move, so the reference stays valid after the lock. */
         const OpaaxString& Get(Uint32 InIndex) const
         {
             const OpaaxString* lText = nullptr;
@@ -69,7 +58,7 @@ namespace Opaax
         // Caller holds the write lock.
         Uint32 Insert(const OpaaxString& InString)
         {
-            // try_emplace, not find-then-insert: one hash lookup on the miss path instead of two.
+            // try_emplace: one lookup on a miss.
             const auto [lIt, lInserted] = m_Lookup.try_emplace(InString, static_cast<Uint32>(m_Strings.size()));
 
             if (lInserted)
@@ -81,20 +70,13 @@ namespace Opaax
         }
 
         std::unordered_map<OpaaxString, Uint32, OpaaxHash> m_Lookup;   // owns the text
-        TDynArray<const OpaaxString*>                      m_Strings;  // id -> text, into m_Lookup
+        TDynArray<const OpaaxString*>                      m_Strings;  // id -> text
         mutable std::shared_mutex                          m_Mutex;
     };
 
     // =========================================================================
-    // The single pool. This definition lives ONLY here, so every module — engine DLL, editor lib,
-    // game exe, test exe — reaches the same table through the exported accessor.
-    //
-    // IMMORTAL ON PURPOSE. The pointer is a function-local static (thread-safe lazy init via C++11
-    // magic statics), but the pool it names is never deleted, so the table outlives every static,
-    // every worker thread still draining at shutdown, and every id that resolves through it. A
-    // function-local OBJECT would be destroyed at exit and any ToString() ordered after that — from a
-    // later-destroyed static, say — would read a dead table. One deliberate, bounded allocation buys
-    // the FName property that a name handle is valid for as long as the process is.
+    // The single pool, shared by every module through the exported accessor.
+    // Never deleted, so ids stay valid during static destruction and shutdown.
     // =========================================================================
     OpaaxStringIDPool& OpaaxStringID::GetPool()
     {

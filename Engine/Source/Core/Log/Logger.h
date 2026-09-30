@@ -22,7 +22,7 @@ namespace Opaax
         Critical
     };
 
-    /** A compile-time name. Declare with OPAAX_LOG_CATEGORY; there is no registry (I14's shape). */
+    /** A log category name. Declare with OPAAX_LOG_CATEGORY. */
     struct LogCategory
     {
         constexpr explicit LogCategory(const char* InName)
@@ -37,9 +37,8 @@ namespace Opaax
     inline constexpr LogCategory LogOpaaxEngine     {"OpaaxEngine"};
 
     // =============================================================================
-    // Logger — an I1 singleton (SG1–SG5). Get() is the one engine-wide instance; tests build their
-    //   own. Until Init attaches sinks, lines are held (bounded) and replayed on Init, so Bootstrap's
-    //   first lines are never lost.
+    // Logger — the engine-wide logger (Get()); tests create their own.
+    //   Lines logged before Init are held and replayed on Init.
     // =============================================================================
     class OPAAX_API Logger final
     {
@@ -47,7 +46,7 @@ namespace Opaax
         // Statics
         // =============================================================================
     public:
-        /** Out-of-line in the DLL and leaked (SG4/SG5). */
+        /** Never destroyed. */
         static Logger& Get();
 
         static constexpr Uint32 MAX_PENDING_LINES = 256;
@@ -68,23 +67,22 @@ namespace Opaax
         // Functions
         // =============================================================================
     public:
-        /** Attaches the colour console and the file sink at InLogFile. A file that cannot be opened
-         *  leaves the console alone and says so. */
+        /** Adds the colour console and the file sink at InLogFile. */
         void Init(OpaaxStringView InLogFile);
 
-        /** Attaches the sinks and replays the held lines into EACH of them. */
+        /** Adds the sinks and replays the held lines into them. */
         void AttachSinks(const TDynArray<spdlog::sink_ptr>& InSinks);
         void AttachSink(const spdlog::sink_ptr& InSink);
 
-        /** Flushes and detaches every sink; later lines are held again, as before Init. */
+        /** Flushes and removes every sink; later lines are held again. */
         void Shutdown();
 
         void Flush();
 
-        /** "[Category] message" — the one line shape every sink receives. */
+        /** Formats "[Category] message". */
         void Log(ELogLevel InLevel, const LogCategory& InCategory, OpaaxStringView InMessage);
 
-        /** What OPAAX_LOG calls. The format string is checked at compile time. */
+        /** Called by OPAAX_LOG. The format string is checked at compile time. */
         template<typename... TArgs>
         void Logf(ELogLevel InLevel, const LogCategory& InCategory,
                   spdlog::format_string_t<TArgs...> InFormat, TArgs&&... InArgs)
@@ -97,13 +95,11 @@ namespace Opaax
         }
 
         /**
-         * Keep the last InCapacity lines, structured, for a reader like the editor's Log panel. Off (0)
-         * by default: a game never pays for it. The editor turns it on before Bootstrap, so the boot
-         * lines are kept too.
+         * Keeps the last InCapacity lines for the editor's Log panel. Off (0) by default.
          */
         void EnableHistory(Uint32 InCapacity);
 
-        /** LogHistory::CopySince, under the lock. The only way a reader sees the history. */
+        /** Copies the history lines newer than InAfterSequence. */
         Uint64 CopyHistorySince(Uint64 InAfterSequence, TDynArray<LogEntry>& OutEntries) const;
 
         // =============================================================================
@@ -128,7 +124,7 @@ namespace Opaax
             std::string                   Text;
         };
 
-        // Guards the sink list and the pending queue: spdlog's logger does not guard sinks().
+        // Guards the sinks and the pending lines.
         mutable std::mutex              m_Mutex;
         std::shared_ptr<spdlog::logger> m_Logger;
         std::deque<PendingLine>         m_Pending;
@@ -137,8 +133,7 @@ namespace Opaax
     };
 }
 
-// These do NOT swallow the semicolon — the call site supplies it, so a log statement
-// behaves like any other and `if (x) OPAAX_LOG(...); else` compiles.
+// The call site supplies the semicolon, like a normal statement.
 #define OPAAX_LOG(Category, Level, Format, ...) \
     ::Opaax::Logger::Get().Logf(::Opaax::ELogLevel::Level, Category, Format, ##__VA_ARGS__)
 

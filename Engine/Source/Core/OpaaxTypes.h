@@ -14,7 +14,7 @@
 #include <filesystem>
 
 // =============================================================================
-// Canonical type aliases — use these in engine code instead of bare std types.
+// Type aliases — use these in engine code instead of bare std types.
 //
 //   Integers:   Uint8/16/32/64, Int8/16/32/64        (cstdint fixed-width)
 //   Container:  TDynArray<T>                         (std::vector<T>)
@@ -33,16 +33,11 @@
 //               TUniqueLock<T>                       (std::unique_lock<T>)
 //               TQueue<T>                            (std::queue<T>)
 //
-// The T prefix marks a TEMPLATE alias. Non-template aliases (Thread, Mutex,
-// RecursiveMutex, ConditionVariable) stay bare, as do the MakeUnique/MakeShared
-// helpers — they are functions, not types.
-//   Misc:       Move(arg)                            (std::move)
+//   Misc:       Move(arg), Forward<T>(arg)           (std::move, std::forward)
 //
-// Strings: see Core/OpaaxString.hpp (OpaaxString) and Core/OpaaxStringID.hpp.
-//
-// Bare primitives (`int`, `unsigned`, `size_t`) are tolerated only at third-party
-// API boundaries (GLFW callbacks, stb_image, std::filesystem, nlohmann::json,
-// spdlog, GL types). New engine code should prefer the aliases above.
+// The T prefix marks a template alias.
+// Strings: see Core/String/OpaaxString.hpp and Core/String/OpaaxStringID.hpp.
+// Bare types (int, size_t, ...) are fine at third-party API boundaries.
 // =============================================================================
 namespace Opaax
 {

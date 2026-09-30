@@ -19,10 +19,10 @@ std::is_base_of_v<Base, Type>
 template <typename T>
 concept CONCEPT_TIsFloat = std::is_floating_point_v<T>;
 
-// Concept to ensure T is a integral type
+// Concept to ensure T is an integral type
 template <typename T>
 concept CONCEPT_TIsIntegral = std::integral<T>;
 
-// T must be either float OR int
+// T must be either float or integral
 template <typename T>
 concept CONCEPT_TIsFloatOrIntegral = CONCEPT_TIsFloat<T> || CONCEPT_TIsIntegral<T>;

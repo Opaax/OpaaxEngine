@@ -7,20 +7,9 @@
 namespace Opaax
 {
     /**
-     * @class OpaaxTagContainer
-     *
-     * A set of OpaaxTags — "what is this thing?" answered as a list. Unreal's FGameplayTagContainer.
-     *
-     * STORES EXACTLY WHAT WAS ADDED. Unreal expands and keeps every parent so HasTag is a hash hit;
-     * here the parents are implied by OpaaxTag::MatchesTag and a linear scan answers it, which at the
-     * handful-of-tags-per-entity scale this engine works at is both faster and honest — what you read
-     * back is what you put in, and Add/Remove need no bookkeeping to stay consistent.
-     *
-     * Duplicates are refused, so the order is registration order and nothing else.
-     *
-     * Header-only and stateless, so no OPAAX_API (I6).
-     *
-     * @see Core/Tag/OpaaxTagJson.h for the nlohmann bridge.
+     * A set of OpaaxTags (like Unreal's FGameplayTagContainer). Stores exactly what was
+     * added, in order, without duplicates; parents are matched through OpaaxTag::MatchesTag.
+     * @see Core/Tag/OpaaxTagJson.h for JSON.
      */
     class OpaaxTagContainer final
     {
@@ -30,7 +19,7 @@ namespace Opaax
     public:
         OpaaxTagContainer() = default;
 
-        /** Braced init — `OpaaxTagContainer{"Damage.Fire", "Element.Fire"}`. Invalid entries drop. */
+        /** OpaaxTagContainer{"Damage.Fire", "Element.Fire"}. Invalid entries are dropped. */
         OpaaxTagContainer(TInitArray<OpaaxTag> InTags)
         {
             m_Tags.reserve(InTags.size());
@@ -41,7 +30,7 @@ namespace Opaax
         // Functions
         // =============================================================================
     public:
-        /** @return false when InTag is invalid or already held. */
+        /** @return False if InTag is invalid or already present. */
         bool AddTag(OpaaxTag InTag)
         {
             if (!InTag.IsValid() || HasTagExact(InTag)) { return false; }
@@ -50,7 +39,7 @@ namespace Opaax
             return true;
         }
 
-        /** Removes the EXACT tag — removing "Damage" never touches "Damage.Fire". */
+        /** Removes the exact tag only ("Damage" does not remove "Damage.Fire"). */
         bool RemoveTag(OpaaxTag InTag)
         {
             for (Uint32 i = 0; i < Num(); ++i)
@@ -73,8 +62,7 @@ namespace Opaax
         }
 
         /**
-         * Hierarchical: true when ANY held tag is InTag or a descendant of it, so a container
-         * holding "Damage.Fire.Burn" answers true for "Damage".
+         * True if any tag is InTag or a descendant of it.
          */
         bool HasTag(OpaaxTag InTag) const noexcept
         {
@@ -94,7 +82,7 @@ namespace Opaax
             return false;
         }
 
-        /** Hierarchical. An EMPTY InOther asks for nothing, so nothing satisfies it: false. */
+        /** Hierarchical. False if InOther is empty. */
         bool HasAny(const OpaaxTagContainer& InOther) const noexcept
         {
             for (const OpaaxTag lTag : InOther)
@@ -104,7 +92,7 @@ namespace Opaax
             return false;
         }
 
-        /** Hierarchical. An EMPTY InOther demands nothing, so it is trivially satisfied: true. */
+        /** Hierarchical. True if InOther is empty. */
         bool HasAll(const OpaaxTagContainer& InOther) const noexcept
         {
             for (const OpaaxTag lTag : InOther)
@@ -114,7 +102,7 @@ namespace Opaax
             return true;
         }
 
-        /** "Damage.Fire, Element.Fire" — for logs and the Inspector. */
+        /** "Damage.Fire, Element.Fire" */
         OpaaxString ToString() const
         {
             OpaaxString lResult;
@@ -139,7 +127,7 @@ namespace Opaax
         // Operators
         // =============================================================================
     public:
-        /** Order-insensitive and EXACT: same tags, however they were added. */
+        /** Same tags, in any order. */
         bool operator==(const OpaaxTagContainer& Other) const noexcept
         {
             if (Num() != Other.Num()) { return false; }
