@@ -16,6 +16,6 @@ void __NAME__EditorApp::RegisterModules(Opaax::ModuleRegistrar& InRegistrar)
 
 void __NAME__EditorApp::OnRegisterEditorModules(Opaax::Editor::EditorExtensionRegistrar& InRegistrar)
 {
-    // D10: the game's editor extensions plug in here — after the game module, before the first world.
+    // The game's editor extensions plug in here: after the game module, before the first world.
     __NAME__EditorModule().OnRegister(InRegistrar);
 }

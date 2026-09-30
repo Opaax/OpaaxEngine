@@ -7,8 +7,7 @@ using namespace Opaax::Editor;
 
 namespace
 {
-    // Editor scratch for the add-field, not engine state: one exe, one Inspector, and nothing
-    // outside this function can reach it. I1 is about the engine's shared object graph.
+    // Editor scratch buffer for the add field (only this function uses it).
     char g_NewTagBuffer[96] = {};
 }
 
@@ -19,13 +18,12 @@ void TagsComponentDrawer::Draw(IEditorWidgets& InWidgets, Sandbox::TagsComponent
         return;
     }
 
-    // Removing inside the loop would invalidate the very range being walked, so the verb is QUEUED
-    // and applied after the draw pass — the same shape the Hierarchy's context menu needed.
+    // Removing inside the loop would invalidate the range, so the removal is queued until after the draw.
     OpaaxTag lToRemove;
 
     for (const OpaaxTag lTag : InComponent.Tags)
     {
-        // Keyed by the interned id: two tags never share a scope, and the label is not the identity.
+        // Keyed by the interned id: two tags never share a scope.
         InWidgets.PushId(lTag.GetName().GetId());
 
         if (InWidgets.SmallButton("x")) { lToRemove = lTag; }
@@ -49,8 +47,7 @@ void TagsComponentDrawer::Draw(IEditorWidgets& InWidgets, Sandbox::TagsComponent
                                                 /*bInSubmitOnEnter*/ true);
     InWidgets.SameLine();
 
-    // A typed field is UNTRUSTED input: gate on the predicate rather than letting the OpaaxTag ctor
-    // assert on every half-finished word (I14).
+    // Typed text is untrusted: check it first instead of letting the OpaaxTag ctor assert.
     const OpaaxStringView lTyped(g_NewTagBuffer);
     const bool            lIsValid = OpaaxTag::IsValidTagText(lTyped);
 

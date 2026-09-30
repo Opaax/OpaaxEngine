@@ -27,9 +27,7 @@ namespace SandboxEditor
             return;
         }
 
-        // The tag count is HIERARCHICAL (I14): an entity tagged "Sandbox.Quad.White" answers to
-        // "Sandbox", which nothing ever stored. This is the only place the MATCH — as opposed to
-        // tag storage — is exercised in the running app.
+        // The tag count is hierarchical: an entity tagged "Sandbox.Quad.White" matches "Sandbox".
         static const OpaaxTag lSandboxTag("Sandbox");
 
         Uint64 lTotal   = 0;

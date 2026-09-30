@@ -3,7 +3,7 @@
 #include <cmath>
 
 #include "Core/Log/Logger.h"
-#include "Core/Profiling/Profiler.h"   // OPAAX_STAT_SCOPE — the game side of ④
+#include "Core/Profiling/Profiler.h"   // OPAAX_STAT_SCOPE
 #include "World/Components/DummyComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/World.h"
@@ -36,8 +36,7 @@ namespace Sandbox
     {
         World& lWorld = m_Context->OwningWorld;
 
-        // DummyComponent is still the FILTER — this oscillates quads — but the position it banks
-        // and moves is the entity's transform, the one place a position lives.
+        // DummyComponent is the filter; the position moved is the entity's transform.
         lWorld.Each<TransformComponent, DummyComponent>(
             [this](EntityID InEntity, const TransformComponent& InXf, const DummyComponent&)
             {
@@ -50,8 +49,7 @@ namespace Sandbox
 
     void QuadOscillatorSubsystem::Update(double InDeltaTime)
     {
-        // ONE line is the whole cost of appearing in the Stats panel, from a GAME module the engine
-        // has never heard of — and it costs a single branch when stats are off.
+        // One line to appear in the Stats panel (a single branch when stats are off).
         OPAAX_STAT_SCOPE("QuadOscillator");
 
         if (!m_bCaptured)
@@ -65,16 +63,15 @@ namespace Sandbox
         World&          lWorld    = m_Context->OwningWorld;
         EntityRegistry& lRegistry = lWorld.GetRegistry();
 
-        // Drive from the BASELINES, not from a fresh view: iterating the stored list keeps each
-        // quad matched to its own origin and phase even if entities are added or removed, which
-        // a positional index into a view would not survive.
+        // Driven from the stored baselines, so each quad keeps its own origin and phase even if entities
+        // are added or removed.
         for (Uint64 lIndex = 0; lIndex < m_Baselines.size(); ++lIndex)
         {
             const Baseline& lBaseline = m_Baselines[lIndex];
 
             if (!lWorld.IsValid(lBaseline.Entity))
             {
-                continue; // destroyed since capture — skip, do not resurrect
+                continue; // destroyed since capture: skip it
             }
 
             TransformComponent* lXf = lRegistry.try_get<TransformComponent>(lBaseline.Entity);
@@ -93,9 +90,7 @@ namespace Sandbox
 
     void QuadOscillatorSubsystem::Shutdown()
     {
-        // Put the quads back where they started. Not strictly required — a Play world is thrown
-        // away — but it keeps the subsystem honest about the state it mutated, which matters the
-        // moment PIE clones a world instead of owning it (S4).
+        // Put the quads back where they started (keeps the subsystem clean about what it changed).
         World&          lWorld    = m_Context->OwningWorld;
         EntityRegistry& lRegistry = lWorld.GetRegistry();
 

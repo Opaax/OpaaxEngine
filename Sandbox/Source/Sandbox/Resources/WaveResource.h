@@ -8,19 +8,13 @@
 namespace Sandbox
 {
     // =============================================================================
-    // WaveResource — a `.wave` enemy-wave definition, and the first resource type the ENGINE has
-    //   never heard of.
-    //
-    //   It exists to prove the route rather than to parse anything: satisfying CResource is the
-    //   whole contract, and OPAAX_RESOURCE_FORMAT is what puts `.wave` in the engine's extension
-    //   table so the browser can name the file without the editor knowing what a wave is.
-    //
-    //   Placeholder policy: a wave that fails to load degrades to an empty one. Nothing drives
-    //   logic off it yet, so FailFast would only turn a content typo into a dead session.
+    // WaveResource — a .wave enemy-wave definition, a resource type the engine does not know.
+    //   Satisfying CResource is the whole contract; OPAAX_RESOURCE_FORMAT registers the .wave
+    //   extension. Not parsed yet. A wave that fails to load becomes an empty one.
     // =============================================================================
     struct WaveResource final
     {
-        Opaax::TDynArray<Opaax::Uint8> Bytes;   // the raw definition; parsing is a later milestone
+        Opaax::TDynArray<Opaax::Uint8> Bytes;   // the raw definition (not parsed yet)
 
         // ---- CResource contract --------------------------------------------------
         OPAAX_RESOURCE_FORMAT("Wave Definition", ".wave")

@@ -1,6 +1,6 @@
 #include "Systems/PauseMenuSubsystem.h"
 
-#include <algorithm>   // std::min / std::max — the fade's clamp
+#include <algorithm>   // std::min / std::max
 
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IEngine.h"          // RequestOpenLevel
@@ -35,11 +35,11 @@ namespace Sandbox
         /** How long the menu takes to fade in or out. */
         constexpr float kFadeSeconds = 0.15f;
 
-        /** The two levels Next Level swaps between; the world's name says which one is up. */
+        /** The two levels Next Level swaps between; the world's name tells which one is loaded. */
         constexpr const char* kLevelMain    = "Levels/Main.opaaxlevel";
         constexpr const char* kLevelPhysics = "Levels/PhysicsTest.opaaxlevel";
 
-        /** The modal's root: the focused widget while the menu is up, so Escape reaches it in UIOnly. */
+        /** The modal's root: focused while the menu is up, so Escape reaches it in UIOnly. */
         class PauseMenuPanel final : public UIWidget
         {
         public:
@@ -112,14 +112,13 @@ namespace Sandbox
 
         UICanvas& lCanvas = m_Context->UI->GetCanvas();
 
-        // The HUD button — lives in GameAndUI: a click opens the menu, everything else still reaches the game.
+        // The HUD button, in GameAndUI: a click opens the menu, everything else still reaches the game.
         m_MenuButton = AddButton(lCanvas.Root(), "MenuButton", "Menu",
                                  Anchored({ 1.f, 1.f }, { -24.f, -24.f }, { 160.f, 56.f }), 32.f);
         m_MenuButton->OnClick.AddMember(this, &PauseMenuSubsystem::Open);
 
-        // The modal's ROOT stays code — it is the Escape handler — and everything it shows is the
-        // asset hung under it (UI13), edited in the UI panel like the HUD. Added AFTER the button
-        // so it draws over it and is hit-tested first.
+        // The modal's root is built in code (it handles Escape); its content is the authored asset. Added
+        // after the button so it draws over it and is hit-tested first.
         auto lMenu     = MakeUnique<PauseMenuPanel>();
         lMenu->Name    = "PauseMenu";
         lMenu->bVisible = false;
@@ -131,10 +130,10 @@ namespace Sandbox
         UIButton* lResume = nullptr;
         UIButton* lNext   = nullptr;
 
-        // The tenant loads, checks the height against its canvas and hangs it under the modal's root.
+        // Loads the tree, checks its height against the canvas, and adds it under the modal's root.
         if (UIWidget* const lRoot = m_Context->UI->MountAsset(OpaaxString(kMenuAsset), m_Menu))
         {
-            // Bound BY NAME out of the authored tree (UI13): a renamed button goes quiet, and says so.
+            // Found by name in the authored tree: a renamed button stops working, and logs it.
             lResume = dynamic_cast<UIButton*>(lRoot->FindByName(OpaaxString(kResumeName)));
             lNext   = dynamic_cast<UIButton*>(lRoot->FindByName(OpaaxString(kNextLevelName)));
 
@@ -165,9 +164,8 @@ namespace Sandbox
             return;
         }
 
-        // Opacity is read at draw time (UI3), so this is a write and nothing else — no relayout, no
-        // rebuild. The panel goes invisible only once the fade OUT has landed, so its hit-test stops
-        // exactly when it stops being seen.
+        // Opacity is read at draw time, so this is just a write. The panel is hidden once the fade-out
+        // ends, so hit-testing stops when it stops being visible.
         const float lStep   = static_cast<float>(InDeltaTime) / kFadeSeconds;
         const float lTarget = m_bOpen ? 1.f : 0.f;
 
@@ -215,7 +213,7 @@ namespace Sandbox
         m_bOpen = true;
         ++m_Opens;
 
-        // Visible at once, faded in by Update; a re-open mid-fade-out simply reverses.
+        // Visible at once, faded in by Update; reopening mid-fade-out reverses it.
         m_Menu->bVisible = true;
         m_Context->UI->GetCanvas().SetFocus(m_Menu);
         m_Context->UI->SetInputMode(EUIInputMode::UIOnly);
@@ -241,9 +239,8 @@ namespace Sandbox
 
     void PauseMenuSubsystem::NextLevel()
     {
-        // A REQUEST, not a call: this runs inside the UI tick, and OpenLevel here would destroy the
-        // world this subsystem belongs to from under its own button. The engine swaps at the next
-        // frame's start, and the cover is up for this one (UI21).
+        // A request, not a call: this runs inside the UI tick, and opening a level now would destroy this
+        // world under its own button. The engine swaps at the start of the next frame.
         WorldSpec lSpec;
         lSpec.LevelPath = m_Context->OwningWorld.GetName() == OpaaxString("Main") ? kLevelPhysics : kLevelMain;
         lSpec.Mode      = EWorldMode::Play;
@@ -256,8 +253,8 @@ namespace Sandbox
 
     void PauseMenuSubsystem::OnMenuToggle(const InputActionValue& /*InValue*/)
     {
-        // Bindings outlive worlds (IM8). Only ever OPENS: while the menu is up the mapping is muted,
-        // so closing is the focused panel's Escape or the Resume button.
+        // Bindings outlive worlds. Only opens: while the menu is up the mapping is muted, so closing is
+        // Escape or the Resume button.
         if (!m_Context->OwningWorld.IsActive())
         {
             return;

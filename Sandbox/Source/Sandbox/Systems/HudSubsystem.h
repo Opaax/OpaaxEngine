@@ -2,7 +2,7 @@
 
 #include "Core/OpaaxTypes.h"
 #include "Core/Reflection/OpaaxProperty.h"
-#include "UI/UIBinding.h"   // UIBindingHandle — the source this owns on the canvas
+#include "UI/UIBinding.h"   // UIBindingHandle
 #include "World/Systems/WorldSubsystem.h"
 
 namespace Opaax
@@ -15,7 +15,7 @@ namespace Opaax
 
 namespace Sandbox
 {
-    /** What the HUD shows — the view model the authored tree pulls from as "Hud.<field>" (UI24). */
+    /** What the HUD shows: the model the authored tree reads as "Hud.<field>". */
     struct HudModel
     {
         Opaax::Uint32 Jumps = 0;
@@ -27,12 +27,9 @@ namespace Sandbox
     };
 
     /**
-     * The HUD (UI U2, AUTHORED since U4, BOUND since U10): a jump counter and a speed bar over the
-     * Play world.
-     *
-     * The tree is loaded from `UI/Hud.opaaxui` and hung under the GameInstance's persistent canvas;
-     * this names NO widget. It registers its model as the canvas's "Hud" source, writes the model,
-     * and the asset says which widget shows which field.
+     * The HUD: a jump counter and a speed bar over the Play world. The tree is loaded from
+     * UI/Hud.opaaxui and added under the GameInstance's canvas; this code names no widget. It
+     * registers its model as the canvas's "Hud" source and writes it; the asset binds the fields.
      */
     class HudSubsystem final : public Opaax::WorldSubsystemBase
     {
@@ -57,6 +54,6 @@ namespace Sandbox
 
         Opaax::UIWidget*       m_Root = nullptr;   // owned by the canvas until Shutdown takes it back
         HudModel               m_Model;            // read by the canvas until Shutdown removes the source
-        Opaax::UIBindingHandle m_Source;           // MY "Hud" — the next world's HUD registers its own
+        Opaax::UIBindingHandle m_Source;           // this world's "Hud" source (the next world registers its own)
     };
 }

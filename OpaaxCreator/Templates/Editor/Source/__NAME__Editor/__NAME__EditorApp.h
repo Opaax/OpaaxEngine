@@ -3,10 +3,9 @@
 #include "Editor/EditorApplication.h"
 
 // =============================================================================
-// __NAME__EditorApp — the game's editor executable (Editor.md D8): a thin composition of the
-// generic OpaaxEditorLib. It registers the SAME __NAME__Module as __NAME__.exe (D9), then the
-// game's editor extensions (D10). The editor is generic; the game registers into it — never
-// the reverse.
+// __NAME__EditorApp — the game's editor executable: a thin layer over the generic OpaaxEditorLib.
+// It registers the same __NAME__Module as __NAME__.exe, then the game's editor extensions. The
+// editor is generic; the game registers into it, never the reverse.
 // =============================================================================
 class __NAME__EditorApp final : public Opaax::Editor::EditorApplication
 {

@@ -8,8 +8,8 @@ __NAME__App::__NAME__App(int InArgc, char** InArgv) : Opaax::OpaaxApplication(In
 
 void __NAME__App::OnInitializeApplication()
 {
-    // Intentionally empty: __NAME__ registers no app-level config today. Kept as an override so
-    // the base's "not overridden" trace does not fire.
+    // Intentionally empty: __NAME__ registers no app-level config. Overridden so the base's
+    // "not overridden" trace does not fire.
 }
 
 void __NAME__App::RegisterModules(Opaax::ModuleRegistrar& InRegistrar)

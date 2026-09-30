@@ -20,7 +20,7 @@ namespace Sandbox
         const OpaaxStringID kGroundMode = OPAAX_ID("Ground");
         const OpaaxStringID kFlyMode    = OPAAX_ID("Fly");
 
-        /** The actions this game binds. The KEYS live in the mapping asset, not here. */
+        /** The actions this game binds. The keys are in the mapping asset. */
         const OpaaxStringID kMoveAction   = OPAAX_ID("Move");
         const OpaaxStringID kJumpAction   = OPAAX_ID("Jump");
         const OpaaxStringID kSwitchAction = OPAAX_ID("SwitchMode");
@@ -43,8 +43,7 @@ namespace Sandbox
 
         if (lActions == nullptr)
         {
-            // Play-only, so a game must exist — if it does not, say so rather than tick silently
-            // doing nothing for the rest of the session.
+            // Play-only, so a game must exist; if not, log it instead of silently doing nothing.
             OPAAX_LOG(LogPlayerControl, Error,
                       "Player control started with NO input mapping — this world has no game instance, so nothing will drive the movers.");
             return true;
@@ -78,7 +77,7 @@ namespace Sandbox
     }
 
     // =========================================================================
-    // Action handlers — run BEFORE Update, from the GameInstance's tick
+    // Action handlers (run before Update, from the GameInstance's tick)
     // =========================================================================
     bool PlayerControlSubsystem::IsOwningWorldActive() const
     {
@@ -96,8 +95,7 @@ namespace Sandbox
     {
         if (!IsOwningWorldActive()) { return; }
 
-        // Triggered stops firing when the value reaches zero, so without this the last direction
-        // would stick and the mover would walk into the wall forever.
+        // Triggered stops when the value reaches zero, so without this the last direction would stick.
         m_MoveDir = Vector2F{0.f, 0.f};
     }
 
@@ -127,22 +125,19 @@ namespace Sandbox
             {
                 InMover.Input.MoveDir = m_MoveDir;
 
-                // OR rather than assign: the edge is cleared by the MODE when it spends it, so
-                // overwriting with false here would eat a jump the mover had not used yet.
+                // OR, not assign: the mode clears the edge when it uses it, so writing false could drop a jump.
                 if (m_bJumpQueued) { InMover.Input.bJump = true; }
 
                 if (m_bSwitchQueued)
                 {
-                    // Queued, not applied — the subsystem fires OnModeExit/OnModeEnter between
-                    // steps rather than mid-step.
+                    // Queued: mode changes happen between steps, not mid-step.
                     InMover.PendingMode = (InMover.ModeName == kFlyMode) ? kGroundMode : kFlyMode;
                 }
 
                 ++lDriven;
             });
 
-        // Spent HERE, after every mover has seen them: the latches exist so a press that lands
-        // between two ticks still reaches the world exactly once.
+        // Cleared here, after every mover has seen them: a press between two ticks is used exactly once.
         m_bJumpQueued   = false;
         m_bSwitchQueued = false;
 

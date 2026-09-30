@@ -8,21 +8,16 @@
 
 namespace Opaax
 {
-    struct PrefabResource;   // NAMED, never completed — a path carries its type, not its header
+    struct PrefabResource;   // declared only: a path carries its type, not its header
 }
 
 namespace Sandbox
 {
     // =============================================================================
-    // GunComponent — the first component with a HARD reference (⑦-C P5b), and the case the
-    //   design was argued from: a gun must not stall on its first shot, so the bullet prefab it
-    //   spawns is `THardResourcePath` — resident the moment the gun's map mounts, released when it
-    //   unmounts. The muzzle flash is `TResourcePath` — soft, loaded when first drawn — so the
-    //   same type on the same component shows both policies side by side.
-    //
-    //   Declaring the field IS the whole opt-in: the registry finds it by type at registration,
-    //   the Inspector gives it a typed drop target, and the Level holds it. No engine header
-    //   names this component.
+    // GunComponent — a component with both kinds of resource reference. The bullet prefab is a
+    //   THardResourcePath (loaded when the gun's map loads, so the first shot does not stall); the
+    //   muzzle flash is a soft TResourcePath (loaded when first drawn). Declaring the fields is all it
+    //   takes: the Inspector gives them typed drop targets.
     // =============================================================================
     struct GunComponent
     {
