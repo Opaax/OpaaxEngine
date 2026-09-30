@@ -156,7 +156,7 @@ TEST_CASE("LevelFile: a failed load leaves the caller's data untouched")
 
 TEST_CASE("LevelFile: 'persistentMap' resolves to an index into the level's own maps")
 {
-    // WM1a: the always-mounted map is named by PATH in the file and held as an INDEX in memory,
+    // The persistent map is named by path in the file and held as an index in memory,
     // so "it is one of this level's maps" is decided once, here, and never re-checked.
     const ScopedTempDir lDir("persistent");
 

@@ -43,17 +43,13 @@ namespace Opaax
             return m_Mgr != nullptr && m_Mgr->GetPumpEpoch() != m_Epoch;
         }
 
-        /***/
         T* Get() const noexcept
         {
             OPAAX_ASSERT(!IsStale()) // used after an Update
             return m_Ptr;
         }
-        /***/
         T* operator->() const noexcept { return Get(); }
-        /***/
         T& operator*()  const noexcept { return *Get(); }
-        /***/
         explicit operator bool() const noexcept { return m_Ptr != nullptr; }
 
         // =============================================================================

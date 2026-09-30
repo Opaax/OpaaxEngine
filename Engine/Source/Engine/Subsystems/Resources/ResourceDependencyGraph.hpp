@@ -41,7 +41,6 @@ namespace Opaax
             }
         }
 
-        /***/
         void Clear() noexcept { m_Forward.clear(); m_Reverse.clear(); }
 
         

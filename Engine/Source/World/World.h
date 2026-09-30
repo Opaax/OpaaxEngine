@@ -99,10 +99,8 @@ namespace Opaax
         // =========================================================================
         // World Lifetime
         
-        /***/
         void OnActive();
 
-        /***/
         void OnDesactive();
 
         /**
@@ -111,7 +109,6 @@ namespace Opaax
          */
         bool IsActive() const noexcept { return m_bActive; }
         
-        /***/
         void Clear() noexcept;
         
         // End World Lifetime

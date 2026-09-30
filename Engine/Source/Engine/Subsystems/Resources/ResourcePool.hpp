@@ -257,7 +257,6 @@ namespace Opaax
             if (SlotMeta* lMeta = RefMeta(InHandle)) { ++lMeta->RefCount; }
         }
 
-        /***/
         void Release(HandleType InHandle) noexcept
         {
             SlotMeta* lMeta = RefMeta(InHandle);
@@ -270,7 +269,6 @@ namespace Opaax
             }
         }
 
-        /***/
         const OpaaxStringID* GetSource(HandleType InHandle) const noexcept
         {
             if (!InHandle.IsValid() || InHandle.Slot >= m_SlotCount) { return nullptr; }
@@ -293,7 +291,6 @@ namespace Opaax
         // =============================================================================
         //~Begin IResourcePool interface
     public:
-        /***/
         void UnloadAll() noexcept override
         {
             for (Uint32 lSlot = 0; lSlot < m_SlotCount; ++lSlot)
@@ -337,11 +334,8 @@ namespace Opaax
                 Unload(lEntry.Slot);
             }
         }
-        /***/
         Uint32 GetLoadedCount()  const noexcept override { return m_LoadedCount;  }
-        /***/
         Uint32 GetLoadingCount() const noexcept override { return m_LoadingCount; }
-        /***/
         Uint64 GetBytes()        const noexcept override { return m_TotalBytes;   }
         //~End IResourcePool interface
 
@@ -349,7 +343,6 @@ namespace Opaax
         // Internal
         // =============================================================================
     private:
-        /***/
         std::optional<T>& PayloadRef(Uint32 InSlot) noexcept
         {
             return (*m_Chunks[InSlot / ChunkSize])[InSlot % ChunkSize];
@@ -398,7 +391,6 @@ namespace Opaax
 
             return &lMeta;
         }
-        /***/
         Uint32 AllocSlot()
         {
             if (!m_FreeSlots.empty())
@@ -417,7 +409,6 @@ namespace Opaax
             }
             return lSlot;
         }
-        /***/
         void Unload(Uint32 InSlot) noexcept
         {
             SlotMeta&    lMeta      = MetaRef(InSlot);
@@ -438,7 +429,6 @@ namespace Opaax
             // Destroy last: children release on their own pools.
             PayloadRef(InSlot).reset();
         }
-        /***/
         T* PlaceholderOrNull() noexcept
         {
             if constexpr (T::FailPolicy == EFailPolicy::Placeholder)
@@ -458,7 +448,6 @@ namespace Opaax
                 return nullptr; // FailFast: null
             }
         }
-        /***/
         static void MaybeInitialize(T& InValue) noexcept
         {
             // Main-thread Initialize (GPU upload), if the type has one.

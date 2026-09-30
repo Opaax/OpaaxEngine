@@ -43,7 +43,6 @@ namespace Opaax
         // Move
         // =============================================================================
         
-        /***/
         ResourceRef(ResourceRef&& InOther) noexcept
             : m_Manager(InOther.m_Manager)
             , m_Handle(InOther.m_Handle)
@@ -70,11 +69,8 @@ namespace Opaax
         // =============================================================================
         // Get - Set
     public:
-        /***/
         ResourceHandle<T> GetHandle() const noexcept { return m_Handle; }
-        /***/
         bool              IsValid()   const noexcept { return m_Manager != nullptr && m_Handle.IsValid(); }
-        /***/
         explicit operator bool()      const noexcept { return IsValid(); }
         
         // End Get - Set

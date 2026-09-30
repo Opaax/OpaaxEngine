@@ -71,7 +71,6 @@ namespace Opaax
         // CTORS - DTORS
         // =============================================================================
     public:
-        /***/
         ResourceManager() = default;
         
         /**
@@ -153,19 +152,14 @@ namespace Opaax
         Uint64 GetPumpEpoch() const noexcept { return m_PumpEpoch; }
 
     public:
-        /***/
         template<CResource T> Uint32 GetLoadedCount();
-        /***/
         template<CResource T> Uint32 GetLoadingCount();
-        /***/
         template<CResource T> Uint64 GetBytes();
         // Load state of a handle (Unloaded if stale or never loaded).
         template<CResource T> EResourceState GetState(ResourceHandle<T> InHandle);
 
     public:
-        /***/
         template<CResource T> void AddRef(ResourceHandle<T> InHandle) noexcept;
-        /***/
         template<CResource T> void Release(ResourceHandle<T> InHandle) noexcept;
 
         /**
@@ -232,7 +226,6 @@ namespace Opaax
     // =============================================================================
     // ResourceManager — template definitions
     // =============================================================================
-    /***/
     template<CResource T>
     ResourcePool<T>& ResourceManager::GetOrCreatePool()
     {
@@ -293,7 +286,6 @@ namespace Opaax
         return ResourceRef<T>{ this, lHandle }; // takes the +1 from AcquireSlot
     }
 
-    /***/
     template<CResource T>
     ResourceRef<T> ResourceManager::Load(const char* InPath)
     {
@@ -301,7 +293,6 @@ namespace Opaax
         return LoadInternal<T>(InPath, lCtx);
     }
 
-    /***/
     template<CResource T>
     ResourceRef<T> ResourceManager::LoadAsync(const char* InPath, TFunction<void(LoadAsyncResult<T>)> InOnComplete)
     {
@@ -374,7 +365,6 @@ namespace Opaax
         return lRef;
     }
 
-    /***/
     template<CResource T>
     ResourceRef<T> ResourceManager::Find(const char* InPath)
     {
@@ -389,7 +379,6 @@ namespace Opaax
         return ResourceRef<T>{ this, lHandle }; // takes the +1 from FindLoadedSlot
     }
 
-    /***/
     template<CResource T>
     bool ResourceManager::Reload(const char* InPath)
     {
@@ -422,7 +411,6 @@ namespace Opaax
         return lSwapped;
     }
 
-    /***/
     template<CResource T>
     T* ResourceManager::Resolve(ResourceHandle<T> InHandle) noexcept
     {
@@ -430,7 +418,6 @@ namespace Opaax
         return GetOrCreatePool<T>().Get(InHandle);
     }
 
-    /***/
     template<CResource T>
     ResourceRef<T> ResourceManager::Pin(ResourceHandle<T> InHandle)
     {
@@ -445,7 +432,6 @@ namespace Opaax
         return ResourceRef<T>{ this, InHandle };
     }
 
-    /***/
     template<CResource T>
     void ResourceManager::AddRef(ResourceHandle<T> InHandle) noexcept
     {
@@ -453,7 +439,6 @@ namespace Opaax
         GetOrCreatePool<T>().AddRef(InHandle);
     }
 
-    /***/
     template<CResource T>
     void ResourceManager::Release(ResourceHandle<T> InHandle) noexcept
     {
@@ -461,7 +446,6 @@ namespace Opaax
         GetOrCreatePool<T>().Release(InHandle);
     }
 
-    /***/
     template<CResource T>
     Uint32 ResourceManager::GetLoadedCount()
     {
@@ -469,7 +453,6 @@ namespace Opaax
         return GetOrCreatePool<T>().GetLoadedCount();
     }
 
-    /***/
     template<CResource T>
     Uint32 ResourceManager::GetLoadingCount()
     {
@@ -477,7 +460,6 @@ namespace Opaax
         return GetOrCreatePool<T>().GetLoadingCount();
     }
 
-    /***/
     template<CResource T>
     Uint64 ResourceManager::GetBytes()
     {
@@ -485,7 +467,6 @@ namespace Opaax
         return GetOrCreatePool<T>().GetBytes();
     }
 
-    /***/
     template<CResource T>
     EResourceState ResourceManager::GetState(ResourceHandle<T> InHandle)
     {
@@ -552,7 +533,6 @@ namespace Opaax
         return *this;
     }
 
-    /***/
     template<typename T>
     ResourceRef<T>::~ResourceRef()
     {
@@ -562,7 +542,6 @@ namespace Opaax
         }
     }
 
-    /***/
     template<typename T>
     T* ResourceRef<T>::Get() const noexcept
     {
@@ -573,7 +552,6 @@ namespace Opaax
     // LoadContext::Acquire — needs the complete manager
     // =============================================================================
     
-    /***/
     template<CResource TSub>
     ResourceRef<TSub> LoadContext::Acquire(const char* InPath)
     {
