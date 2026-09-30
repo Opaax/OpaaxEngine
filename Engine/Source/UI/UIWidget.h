@@ -21,24 +21,16 @@ namespace Opaax
     class  UIBindingTable;
 
     // =============================================================================
-    // UIWidget — one node of a canvas tree. Knows nothing about the World: a canvas is an object
-    //   anyone can own (the GameInstance, a world subsystem, an editor panel).
+    // UIWidget — one node of a canvas tree. Does not know about the World.
     //
-    //   INVALIDATION, NOT POLLING. Authored fields are public so the editor's DrawProperties can
-    //   write them, and DIRTYING IS A VERB: code goes through the setters, which know which flag
-    //   they owe; the editor writes the field and calls InvalidateLayout(). Nothing compares
-    //   state frame to frame — an idle canvas resolves no rect and rebuilds no quad.
+    //   Invalidation, not polling: code goes through the setters, which mark what is dirty;
+    //   the editor writes fields directly then calls InvalidateLayout(). An idle canvas does no work.
+    //   Flags: Layout (rect), Content (quads), Subtree (something below is dirty).
+    //   Visibility, opacity and hit-testability are read when drawing / hit-testing.
+    //   A Rebuild whose input is not ready (atlas uploading) calls InvalidateContent() and runs
+    //   again next frame.
     //
-    //   Three flags: Layout (my rect must be re-resolved), Content (my quads must be rebuilt),
-    //   Subtree (something below me is dirty — the walk descends only where this is set).
-    //   Visibility, opacity and hit-testability are READ at submit / hit-test time and dirty nothing.
-    //
-    //   The walk CLEARS a node's flags before acting on them, so a Rebuild that finds its input
-    //   not ready (an atlas still uploading) calls InvalidateContent() and is simply visited again
-    //   next frame — waiting costs no polling anywhere.
-    //
-    //   INPUT BUBBLES (UIEvents.h): the canvas asks the hit widget, then its parents, until one
-    //   returns Handled. The base has no opinion — an image or a panel lets a click fall through.
+    //   Input bubbles (UIEvents.h). The base lets events through.
     // =============================================================================
     class OPAAX_API UIWidget
     {
@@ -57,18 +49,17 @@ namespace Opaax
         UIWidget& operator=(UIWidget&&)      = delete;
 
         // =============================================================================
-        // Authored state — public for reflection; the setters below are the route in code
+        // Authored state (public for reflection; use the setters in code)
         // =============================================================================
     public:
         OpaaxString Name;
         UIRect      Rect;
         bool        bVisible     = true;
-        /** Unity's raycastTarget: false lets a click pass through to whatever is behind. */
+        /** False lets clicks pass through (Unity's raycastTarget). */
         bool        bHitTestable = true;
         /**
-         * Unreal's RenderOpacity: MULTIPLIES down the tree, so fading a panel fades everything under
-         * it (a canvas group without a second type). Drawing only — a widget at 0 still takes a hit;
-         * `bVisible` is the flag that stops one.
+         * Multiplied down the tree (fading a panel fades its children). Drawing only: a widget at 0
+         * is still hit (use bVisible to stop that).
          */
         float       Opacity      = 1.f;
 
@@ -85,7 +76,7 @@ namespace Opaax
         // Identity
         // =============================================================================
     public:
-        /** The registry key a file names and the noun a log line uses — "UIImage", never a label. */
+        /** The type name, used in files and logs ("UIImage"). */
         virtual OpaaxStringID GetTypeName() const noexcept = 0;
 
         // =============================================================================
@@ -95,75 +86,68 @@ namespace Opaax
         UIWidget*                               GetParent()   const noexcept { return m_Parent; }
         const TDynArray<TUniquePtr<UIWidget>>&  GetChildren() const noexcept { return m_Children; }
 
-        /** Take ownership; drawn after (on top of) its siblings. @return the child, for chaining. */
+        /** Takes ownership; drawn after (on top of) its siblings. @return The child. */
         UIWidget* AddChild(TUniquePtr<UIWidget> InChild);
 
-        /** Take ownership at InIndex among my children (clamped to the end) — a duplicate lands beside its source. */
+        /** Takes ownership, at InIndex among my children (clamped). */
         UIWidget* AddChild(TUniquePtr<UIWidget> InChild, Uint64 InIndex);
 
-        /** Hand ownership back — undo wants the node, not a copy. Null when InChild is not mine. */
+        /** Gives ownership back (for undo). Null if InChild is not mine. */
         TUniquePtr<UIWidget> RemoveChild(UIWidget& InChild);
 
-        /** The canvas this node hangs under, or null while detached. */
+        /** The canvas this node is in, or null when detached. */
         UICanvas* GetCanvas() const noexcept { return m_Canvas; }
 
         /**
-         * Whether I place my children myself (a layout container). Under one, a child's anchors
-         * and anchored position are ignored — its `Rect.SizeDelta` is its desired size and the
-         * slot I hand it is its rect. The designer asks this before moving a child.
+         * Whether I lay out my children (a container). Then a child's anchors and position are ignored:
+         * its Rect.SizeDelta is its desired size and my slot is its rect.
          */
         bool ArrangesChildren() const noexcept { return m_bArrangesChildren; }
 
         /**
-         * The first descendant (or me) named InName, depth-first in tree order. Null when none is.
-         *
-         * How gameplay reaches an AUTHORED widget: a HUD loads its tree from a `.opaaxui` and binds
-         * the pieces it drives by name (**UI13**). First match wins — a duplicate name is an
-         * authoring mistake the editor shows, not something to arbitrate here.
+         * The first widget named InName (me or a descendant, depth-first), or null.
+         * Gameplay uses it to find authored widgets after loading a .opaaxui.
          */
         UIWidget* FindByName(const OpaaxString& InName);
 
         // =============================================================================
-        // Serialization — the base writes its own fields; a derived type chains (UI12)
+        // Serialization — the base writes its fields; derived types add theirs
         // =============================================================================
     public:
         /**
-         * Write MY fields (not my type tag, not my children) into InOutJson.
-         *
-         * An override calls `UIWidget::SaveFields` first, then adds its own — so a field on the
-         * base is written once, for every widget type, and a new leaf type states only what is new.
+         * Writes my fields (not the type, not the children). Overrides call UIWidget::SaveFields first.
          */
         virtual void SaveFields(nlohmann::json& InOutJson) const;
 
-        /** The mirror. A missing key keeps the constructed default, never throws (UI12). */
+        /** Reads my fields. A missing key keeps the default. */
         virtual void LoadFields(const nlohmann::json& InJson);
 
         // =============================================================================
-        // Input — override to take an event; the default lets it bubble on
+        // Input — override to handle an event; the default lets it bubble
         // =============================================================================
     public:
         virtual EUIReply OnPointerEvent(const UIPointerEvent& InEvent) { (void)InEvent; return EUIReply::Unhandled; }
         virtual EUIReply OnKeyEvent(const UIKeyEvent& InEvent)         { (void)InEvent; return EUIReply::Unhandled; }
 
         // =============================================================================
-        // Bindings — a widget with a bound field reads it here, once a frame, before the walk (UI24)
+        // Bindings — read once per frame, before the walk
         // =============================================================================
     public:
-        /** Read what my binding fields name and invalidate ONLY if it differs from what I show. */
+        /** Reads my bound fields and invalidates only if a value changed. */
         virtual void OnPullBindings(UIBindingTable& InBindings) { (void)InBindings; }
 
         // =============================================================================
         // Invalidation
         // =============================================================================
     public:
-        /** My rect must be re-resolved — and so my quads, and every descendant's rect. */
+        /** My rect must be resolved again (and my quads, and every descendant's rect). */
         void InvalidateLayout();
 
-        /** My quads must be rebuilt; the rect stands. */
+        /** My quads must be rebuilt (the rect is unchanged). */
         void InvalidateContent();
 
         // =============================================================================
-        // Resolved state — what the last canvas Update produced
+        // Resolved state (from the last canvas Update)
         // =============================================================================
     public:
         const Bounds2D&          GetBounds() const noexcept { return m_Bounds; }
@@ -174,8 +158,8 @@ namespace Opaax
         // =============================================================================
     protected:
         /**
-         * Emit my quads for the resolved bounds. Called only when content is dirty. Call
-         * InvalidateContent() from inside to be asked again next frame.
+         * Emits my quads for the resolved bounds. Called only when content is dirty.
+         * Call InvalidateContent() from here to run again next frame.
          */
         virtual void Rebuild(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads)
         {
@@ -183,12 +167,7 @@ namespace Opaax
         }
 
         /**
-         * Where I sit inside my parent. The default IS the layout rule (`ResolveRect`); a type
-         * overrides it when its rect is not simply its anchors — `UISafeArea` insets it (**UI20**).
-         *
-         * ONE virtual, and it is what my children anchor to and what a hit-test asks, so a widget
-         * that moves its own rect cannot disagree with either. The alternative was insets on EVERY
-         * widget, which is the flag-on-everything the seed already turned down.
+         * My rect inside my parent. Default: ResolveRect. Overridden by UISafeArea (insets).
          */
         virtual Bounds2D ResolveBounds(const Bounds2D& InParentBounds) const
         {
@@ -196,9 +175,8 @@ namespace Opaax
         }
 
         /**
-         * A container's half of the layout: one slot per child, in child order, inside my resolved
-         * bounds. Called only when `m_bArrangesChildren` is set (the ctor's statement, like
-         * `bHitTestable`), each time the walk descends into me. A child's rect IS its slot.
+         * Containers: one slot per child, in child order, inside my bounds. Called only when
+         * m_bArrangesChildren is set. A child's rect is its slot.
          */
         virtual void ArrangeChildren(TDynArray<Bounds2D>& OutSlots) const { (void)OutSlots; }
 
@@ -209,13 +187,13 @@ namespace Opaax
         // =============================================================================
     private:
         /**
-         * Resolve + rebuild where dirty, descend where marked; bInParentChanged forces a resolve.
-         * InSlot, when given, IS my rect (my parent arranged me) and my own Rect only sized it.
+         * Resolves and rebuilds what is dirty, descends where marked. bInParentChanged forces a resolve.
+         * InSlot, when given, is my rect (my parent placed me).
          */
         void UpdateTree(const Bounds2D& InParentBounds, const Bounds2D* InSlot, bool bInParentChanged,
                         const UIBuildContext& InContext, UICanvasStats& OutStats);
 
-        /** The deepest visible, hit-testable descendant (or me) containing InPoint; top-most first. */
+        /** The deepest visible, hit-testable widget (or me) containing InPoint, top-most first. */
         UIWidget* HitTest(const Vector2F& InPoint);
 
         /** OnPullBindings on me, then every descendant. */
@@ -228,8 +206,8 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        UIWidget*                        m_Parent = nullptr;   // non-owning
-        UICanvas*                        m_Canvas = nullptr;   // non-owning; set on attach
+        UIWidget*                        m_Parent = nullptr;   // not owned
+        UICanvas*                        m_Canvas = nullptr;   // not owned; set on attach
         TDynArray<TUniquePtr<UIWidget>>  m_Children;
 
         Bounds2D           m_Bounds;

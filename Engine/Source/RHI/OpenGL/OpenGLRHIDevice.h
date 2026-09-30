@@ -6,10 +6,8 @@
 namespace Opaax
 {
     // =============================================================================
-    // OpenGLRHIDevice — IRHIDevice for OpenGL. A thin wrapper that reuses every existing
-    //   OpenGL* resource impl + OpenGLCommandBuffer; it just knows it's OpenGL, so no
-    //   backend-dispatch query is needed. Owns the frame's immediate-executing command buffer;
-    //   Present forwards to the surface (IGraphicsContext::SwapBuffers).
+    // OpenGLRHIDevice — IRHIDevice for OpenGL. Owns the frame's command buffer; Present swaps
+    //   the surface.
     // =============================================================================
     class OPAAX_API OpenGLRHIDevice final : public IRHIDevice
     {
@@ -19,8 +17,7 @@ namespace Opaax
     public:
         OpenGLRHIDevice() = default;
 
-        /** Releases the timer queries. Safe here: RenderSystem::Shutdown drops the device while the
-         *  GL context is still current, and these are the DEVICE's own objects, not a caller's. */
+        /** Releases the timer queries (the GL context is still current here). */
         ~OpenGLRHIDevice() override;
 
         // =============================================================================
@@ -28,12 +25,8 @@ namespace Opaax
         // =============================================================================
     private:
         /**
-         * Read back whatever timer results the GPU has finished with, oldest first.
-         *
-         * NEVER blocks: it asks GL_QUERY_RESULT_AVAILABLE and stops at the first one that is not
-         * ready, because queries complete in submission order. A slot still pending when its turn
-         * to be reused comes round simply loses that sample — dropping one reading is cheaper than
-         * the pipeline stall that waiting for it would cost.
+         * Reads the finished timer results, oldest first. Never blocks: stops at the first result
+         * not ready. A slot still pending when reused loses its sample.
          */
         void HarvestGpuTimings();
 
@@ -72,17 +65,16 @@ namespace Opaax
         IGraphicsContext*   m_Surface = nullptr;
         OpenGLCommandBuffer m_CommandBuffer;
 
-        // GPU timing (④ S3) — a small ring of GL_TIME_ELAPSED queries. THREE deep: the GPU trails
-        // the CPU by about a frame, so one would always be read too early and two leaves no slack
-        // for a hitch. Uint32 rather than GLuint so glad stays out of this header.
+        // GPU timing: a ring of three GL_TIME_ELAPSED queries (the GPU trails the CPU by about a frame).
+        // Uint32 instead of GLuint keeps glad out of this header.
         static constexpr Uint32 GPU_TIMER_COUNT = 3;
 
         Uint32 m_TimerQueries[GPU_TIMER_COUNT] = {};
         bool   m_TimerPending[GPU_TIMER_COUNT] = {};
-        Uint32 m_TimerWrite   = 0;      // next slot to issue into, and the oldest pending one
-        bool   m_bTimerOpen   = false;  // a glBeginQuery is outstanding — only one may be
-        bool   m_bTimersReady = false;  // the queries were created; false disables timing entirely
+        Uint32 m_TimerWrite   = 0;      // next slot to issue, and the oldest pending
+        bool   m_bTimerOpen   = false;  // a query is running
+        bool   m_bTimersReady = false;  // false disables timing
 
-        double m_LastGpuMs = -1.0;      // -1 = nothing measured yet (see IRHIDevice)
+        double m_LastGpuMs = -1.0;      // -1 = nothing measured yet
     };
 }

@@ -1,7 +1,7 @@
 #include "Renderer/DebugDraw.h"
 
-#include <glm/geometric.hpp>       // glm::length, glm::normalize
-#include <glm/trigonometric.hpp>   // glm::atan, glm::cos, glm::sin
+#include <glm/geometric.hpp>
+#include <glm/trigonometric.hpp>
 
 namespace Opaax
 {
@@ -12,12 +12,8 @@ namespace Opaax
     }
 
     // =========================================================================
-    // ToQuad — the whole line-rendering trick: a segment is a quad of the segment's length,
-    // as thick as the line, centred on the midpoint and rotated onto the segment's direction.
-    // That is why DebugDraw needs no new RHI primitive, shader or vertex layout.
-    //
-    // glm::atan(0, 0) is 0 (IEEE atan2), so a degenerate zero-length segment produces a
-    // zero-width quad — invisible — rather than a NaN rotation that would poison the batch.
+    // ToQuad — a line is a thin quad of the segment's length, centred on the midpoint and rotated
+    // onto the segment. A zero-length segment gives a zero-width quad (no NaN).
     // =========================================================================
     DebugQuad ToQuad(const DebugLine& InLine) noexcept
     {
@@ -39,8 +35,7 @@ namespace Opaax
     {
         OutPoints.clear();
 
-        // Two points cannot enclose anything; a caller asking for fewer gets nothing rather than a
-        // degenerate shape it would have to recognise.
+        // Fewer than 3 points: nothing.
         if (InSegments < 3)
         {
             return;
@@ -70,8 +65,7 @@ namespace Opaax
         const Vector2F lAxis   = InCenter2 - InCenter1;
         const float    lLength = glm::length(lAxis);
 
-        // Degenerate: the two centres coincide, so the capsule IS a circle. Answering with one
-        // beats answering with a zero-length capsule the caller would have to special-case.
+        // Both centres are the same: the capsule is a circle.
         if (lLength < 1e-4f)
         {
             BuildCircleOutline(InCenter1, InRadius, InSegmentsPerCap * 2, OutPoints);
@@ -80,12 +74,11 @@ namespace Opaax
 
         OutPoints.reserve(InSegmentsPerCap * 2);
 
-        // The axis angle: each cap is a half-turn starting perpendicular to it, so the flanks fall
-        // out of the traversal instead of needing to be added.
+        // Each cap is a half-turn starting perpendicular to the axis, so the flanks come for free.
         const float lAxisAngle = glm::atan(lAxis.y, lAxis.x);
         const float lStep      = kPi / static_cast<float>(InSegmentsPerCap - 1);
 
-        // Cap around centre 2, sweeping from one flank to the other.
+        // Cap around centre 2.
         for (Uint32 i = 0; i < InSegmentsPerCap; ++i)
         {
             const float lAngle = lAxisAngle - kPi * 0.5f + lStep * static_cast<float>(i);
@@ -93,7 +86,7 @@ namespace Opaax
                                    InCenter2.y + InRadius * glm::sin(lAngle));
         }
 
-        // Cap around centre 1, the opposite half-turn — which closes the polygon.
+        // Cap around centre 1 (closes the polygon).
         for (Uint32 i = 0; i < InSegmentsPerCap; ++i)
         {
             const float lAngle = lAxisAngle + kPi * 0.5f + lStep * static_cast<float>(i);
@@ -118,12 +111,7 @@ namespace Opaax
     }
 
     // =========================================================================
-    // DrawBox — ONE entry, rendered as a single hollow quad.
-    //
-    // It used to enqueue four segments, corner to corner, whose joints overlapped by half a line
-    // width. That was the right call while a quad could only be solid; now that a quad carries the
-    // half-extent of its own hole, the border is a property of one quad — a quarter of the geometry
-    // and exact corners, with no mitring maths either way.
+    // DrawBox — one hollow quad (exact corners, a quarter of the geometry of four lines).
     // =========================================================================
     void DebugDraw::DrawBox(const Vector2F& InCenter, const Vector2F& InSize, const Vector4F& InColor,
                             float InThickness, ERenderLayer InLayer, DebugChannel InChannel,
@@ -141,7 +129,7 @@ namespace Opaax
                                float InThickness, ERenderLayer InLayer, DebugChannel InChannel,
                                const World* InSource)
     {
-        // Bounds are axis-aligned by definition, so no rotation can reach this one.
+        // Bounds are axis-aligned: no rotation.
         DrawBox(InBounds.Center, InBounds.Size(), InColor, InThickness, InLayer, InChannel, 0.f, InSource);
     }
 
@@ -182,8 +170,7 @@ namespace Opaax
             return;
         }
 
-        // The channel was already checked by the caller, so these go straight into the queue —
-        // re-testing it per segment would ask the same question twenty-four times.
+        // The caller already checked the channel.
         for (size_t i = 0; i < lCount; ++i)
         {
             const Vector2F& lFrom = m_OutlineScratch[i];

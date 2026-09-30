@@ -6,7 +6,6 @@
 
 namespace Opaax
 {
-    // NOTE: the IPipeline::Create factory dispatch lives in RHI/BackendFactory.cpp.
 
     OpenGLPipeline::OpenGLPipeline(const PipelineDesc& InDesc)
         : m_Shader(InDesc.Shader), m_Blend(InDesc.Blend)

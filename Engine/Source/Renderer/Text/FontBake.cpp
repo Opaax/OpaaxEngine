@@ -4,9 +4,7 @@
 
 #include "Renderer/Text/FontFaceData.h"
 
-// stb_truetype — the ONE implementation in the build, and it lives here for the same reason
-// STB_IMAGE_IMPLEMENTATION lives in TextureResource.cpp: rasterising is CPU work, above the RHI,
-// that every backend shares. Nothing else in the engine includes this header.
+// stb_truetype implementation (the only one in the build).
 #define STB_TRUETYPE_IMPLEMENTATION
 #include <stb/stb_truetype.h>
 
@@ -14,21 +12,16 @@ namespace Opaax::FontBake
 {
     namespace
     {
-        /** Padding between packed glyphs, in atlas texels — one is enough to stop bilinear bleed. */
+        /** Padding between glyphs, in atlas texels (stops bilinear bleed). */
         constexpr Int32 GLYPH_PADDING = 1;
 
         /**
-         * The offset table (12 bytes) plus one table record (16). Below this there is not even a
-         * header to read, and stb_truetype does not check.
+         * Smallest possible font file: offset table (12 bytes) + one table record (16).
          */
         constexpr Uint64 MIN_FONT_BYTES = 28u;
 
         /**
-         * Every codepoint in the scan window that this font actually has a glyph for.
-         *
-         * The probe is a cmap lookup per codepoint — ~13k of them across the default window, a few
-         * milliseconds — and it is what removes the "which range do I bake?" question entirely. A
-         * fontsource subset answers its own subset; a full face answers everything it carries.
+         * Every codepoint in the scan range that the font has a glyph for (one cmap lookup each).
          */
         TDynArray<Int32> GatherCoverage(const stbtt_fontinfo& InInfo, const BakeParams& InParams)
         {
@@ -46,8 +39,7 @@ namespace Opaax::FontBake
         }
 
         /**
-         * One packing attempt at InAtlasSize. Answers false when the glyphs did not all fit, which is
-         * the caller's signal to double and retry.
+         * One packing attempt at InAtlasSize. False if the glyphs do not fit (the caller doubles).
          */
         bool TryPack(const Uint8* InTtfBytes, const BakeParams& InParams, const TDynArray<Int32>& InCodepoints,
                      Uint32 InAtlasSize, TDynArray<Uint8>& OutPixels, TDynArray<stbtt_packedchar>& OutPacked)
@@ -66,7 +58,7 @@ namespace Opaax::FontBake
 
             stbtt_pack_range lRange{};
             lRange.font_size                       = InParams.PixelHeight;
-            lRange.first_unicode_codepoint_in_range = 0;   // 0 => use the explicit list below
+            lRange.first_unicode_codepoint_in_range = 0;   // 0 = use the list below
             lRange.array_of_unicode_codepoints     = const_cast<int*>(InCodepoints.data());
             lRange.num_chars                       = static_cast<int>(InCodepoints.size());
             lRange.chardata_for_range              = OutPacked.data();
@@ -78,12 +70,8 @@ namespace Opaax::FontBake
         }
 
         /**
-         * The packed rectangles as FontGlyphs.
-         *
-         * THE V COORDINATES ARE SWAPPED HERE, once, and this is the correction M5 got wrong twice.
-         * stb_truetype fills the atlas top-down (row 0 is the top), while Renderer2D's quad samples
-         * bottom-up — so the quad's UVMin (its bottom edge) must read the glyph's LAST row. Doing it
-         * at bake keeps the layout walker's maths straight and every draw free of a per-glyph fix-up.
+         * The packed rectangles as FontGlyphs. V is flipped here (stb packs top-down, Renderer2D
+         * samples bottom-up), so no draw needs to fix it.
          */
         void FillGlyphs(const TDynArray<Int32>& InCodepoints, const TDynArray<stbtt_packedchar>& InPacked,
                         const float InAtlasSize, FontFaceData& OutData)
@@ -105,7 +93,7 @@ namespace Opaax::FontBake
             }
         }
 
-        /** The N-squared kerning walk, already gated on the covered count by the caller. */
+        /** Kerning for every pair (N^2; the caller limits the glyph count). */
         void FillKerning(const stbtt_fontinfo& InInfo, const TDynArray<Int32>& InCodepoints,
                          const float InScale, FontFaceData& OutData)
         {
@@ -116,7 +104,7 @@ namespace Opaax::FontBake
                     const Int32 lRaw = stbtt_GetCodepointKernAdvance(&InInfo, lFirst, lSecond);
                     if (lRaw == 0)
                     {
-                        continue;   // an absent pair means zero, so storing zeros would only cost memory
+                        continue;   // absent pair = 0
                     }
 
                     OutData.Kerning.emplace_back(FontKerningPair{ static_cast<Uint32>(lFirst),
@@ -145,11 +133,7 @@ namespace Opaax::FontBake
             return false;
         }
 
-        // CHECKED BEFORE stbtt_InitFont, and that order is the whole point: the offset lookup is what
-        // reads the file's magic, and it answers -1 for anything that is not a font. Handing that -1
-        // straight to InitFont — the obvious one-liner — indexes before the buffer and SEGFAULTS. A
-        // `.ttf` that is really a PNG is an ordinary authoring mistake, and it must reach the
-        // placeholder policy rather than take the process down.
+        // Checked before stbtt_InitFont: for a non-font file the offset is -1, and InitFont would crash.
         const Int32 lOffset = stbtt_GetFontOffsetForIndex(InTtfBytes, 0);
         if (lOffset < 0)
         {
@@ -172,8 +156,7 @@ namespace Opaax::FontBake
             return false;
         }
 
-        // Grow by doubling. Written into LOCALS and only published at the end, so a failed bake leaves
-        // OutData and OutPixels exactly as the caller had them.
+        // Grow by doubling. Uses locals, so OutData/OutPixels are untouched on failure.
         TDynArray<Uint8>             lPixels;
         TDynArray<stbtt_packedchar>  lPacked;
         Uint32                       lAtlasSize = InParams.InitialAtlasSize;

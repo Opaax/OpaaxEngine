@@ -1,19 +1,8 @@
 // =============================================================================
-// BackendFactory.cpp
-// =============================================================================
-// The neutral translation unit that knows the graphics backend(s). It keeps the
-// backend-selecting factories in one place so no other TU has to:
-//   - ToString / ResolveSupportedBackend (naming, and which backends actually exist)
-//   - IGraphicsContext::Create / ApplyWindowHints
-//
-// New-path status: OpenGL-only. The old IRenderAPI/RenderCommand facade and the whole
-// Vulkan backend were retired to Legacy/RHI (the new path runs through IRHIDevice —
-// RHIDevice::Create in OpenGLRHIDevice.cpp). When a new-path VulkanRHIDevice lands, the
-// backend switch returns here.
-//
-// Resource creation is NOT here — it lives on the device (IRHIDevice::CreateXxx), framebuffers
-// included (F2a). IGraphicsContext::Create is the ONE free factory that survives, and only because
-// the context must exist BEFORE the device that inits against it — there is no device to ask yet.
+// BackendFactory.cpp — the backend-specific factories: backend names and availability,
+// IGraphicsContext::Create and ApplyWindowHints. OpenGL only for now.
+// Resources are created by the device (IRHIDevice::CreateXxx); the context is created here
+// because it must exist before the device.
 // =============================================================================
 
 #include "RHI/RHIBackend.h"
@@ -73,7 +62,7 @@ namespace Opaax
     {
         switch (InBackend)
         {
-            // OpenGL: leave GLFW at its defaults (a GL context) — preserves prior behavior.
+            // OpenGL: keep GLFW's defaults (a GL context).
             case EBackend::OpenGL:
             default:
                 break;

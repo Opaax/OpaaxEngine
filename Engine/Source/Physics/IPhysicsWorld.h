@@ -8,16 +8,9 @@
 namespace Opaax
 {
     // =============================================================================
-    // IPhysicsWorld — the backend-neutral 2D physics world, and THE SEAM.
-    //
-    //   Mirrors the RHI's IRHIDevice: nobody outside Physics/ calls a backend (Box2D, ...)
-    //   directly, a concrete world is built through PhysicsAPI::Create, and the choice is a
-    //   config string resolved once. A grep gate proves no b2* symbol appears above
-    //   Physics/Box2D/.
-    //
-    //   The interface speaks ENGINE concepts — world units, Y-up, opaque handles. Each
-    //   backend absorbs its own quirks behind these methods (poll-based events, length
-    //   units, native filter representation), so none of them surface above this line.
+    // IPhysicsWorld — backend-neutral 2D physics world. Nothing outside Physics/ calls a backend
+    //   directly; worlds are created through PhysicsAPI::Create. Works in world units, Y-up,
+    //   with opaque handles.
     // =============================================================================
     class OPAAX_API IPhysicsWorld
     {
@@ -32,11 +25,9 @@ namespace Opaax
         // =============================================================================
     public:
         /**
-         * Advance the simulation. Called from the physics subsystem's FixedUpdate at the
-         * engine's fixed timestep.
-         *
-         * @param InDeltaTime    seconds to advance
-         * @param InSubStepCount solver sub-steps for this step
+         * Advances the simulation (from the physics subsystem's FixedUpdate).
+         * @param InDeltaTime    Seconds to advance
+         * @param InSubStepCount Solver sub-steps
          */
         virtual void Step(float InDeltaTime, int InSubStepCount) = 0;
 
@@ -48,45 +39,42 @@ namespace Opaax
         // Bodies + shapes
         // =============================================================================
     public:
-        /** Create a body from neutral parameters; the handle is invalid on failure. */
+        /** Creates a body. The handle is invalid on failure. */
         virtual BodyHandle CreateBody(const BodyDesc& InDesc) = 0;
 
-        /** Destroy a body and all its shapes. Safe with an invalid handle (no-op). */
+        /** Destroys a body and its shapes. Does nothing for an invalid handle. */
         virtual void DestroyBody(BodyHandle InBody) = 0;
 
-        /** Attach one collision shape to a body. */
+        /** Adds one collision shape to a body. */
         virtual ShapeHandle AddShape(BodyHandle InBody, const ShapeDesc& InShape) = 0;
 
-        /** Read a body's world transform (world units, radians) — drives dynamic Transforms. */
+        /** Reads a body's world transform (world units, radians). */
         virtual void GetBodyTransform(BodyHandle InBody, Vector2F& OutPosition,
                                       float& OutRotation) const = 0;
 
-        /** Write a body's world transform — pushes static/kinematic Transforms into the sim. */
+        /** Writes a body's world transform (teleport). */
         virtual void SetBodyTransform(BodyHandle InBody, Vector2F InPosition, float InRotation) = 0;
 
         /**
-         * Drive a KINEMATIC body toward a target pose over InDeltaTime. It is swept during the
-         * next step, so it generates contacts and pushes dynamics — unlike a teleport. The
-         * mover uses this every step.
+         * Moves a kinematic body toward a target pose over InDeltaTime (swept next step, so it
+         * creates contacts and pushes dynamic bodies). Used by the mover every step.
          */
         virtual void SetBodyTargetTransform(BodyHandle InBody, Vector2F InPosition,
                                             float InRotation, float InDeltaTime) = 0;
 
         // =============================================================================
-        // Events — drained after Step
+        // Events — read after Step
         // =============================================================================
     public:
         /**
-         * Drain the sensor (overlap) begin/end pairs the last Step accumulated into the
-         * caller's buffers, which are cleared then filled. A is the sensor owner, B the
-         * visitor. Resolved to entity bits.
+         * The sensor (overlap) begin/end pairs from the last Step. The buffers are cleared then filled.
+         * A is the sensor owner, B the visitor. Entity bits.
          */
         virtual void GetSensorEvents(TDynArray<PhysicsContactPair>& OutBegan,
                                      TDynArray<PhysicsContactPair>& OutEnded) = 0;
 
         /**
-         * Drain the solid contact begin/end pairs the last Step accumulated (cleared then
-         * filled). A/B follow the backend's shape order. Resolved to entity bits.
+         * The solid contact begin/end pairs from the last Step (cleared then filled). Entity bits.
          */
         virtual void GetContactEvents(TDynArray<PhysicsContactPair>& OutBegan,
                                       TDynArray<PhysicsContactPair>& OutEnded) = 0;
@@ -96,17 +84,16 @@ namespace Opaax
         // =============================================================================
     public:
         /**
-         * Closest hit along InOrigin + normalize(InDirection) * InDistance.
-         *
-         * @param InChannelMask which channels are hittable (one bit per CategoryBit); ~0 hits
-         *   everything. The result's UserData is the hit body's raw user-data, 0 for no hit.
+         * Closest hit along InDirection, up to InDistance.
+         * @param InChannelMask Hittable channels (CategoryBit values); ~0 = all.
+         *   The result's UserData is the hit body's user data, 0 for no hit.
          */
         virtual PhysicsRayHit RayCastClosest(Vector2F InOrigin, Vector2F InDirection,
                                              float InDistance, Uint64 InChannelMask) = 0;
 
         /**
-         * Fill OutUserData (cleared first) with every overlapping shape's body user-data inside
-         * the world-space AABB [InMin..InMax], filtered by InChannelMask.
+         * Fills OutUserData (cleared first) with the body user data of every shape overlapping the
+         * box [InMin..InMax], filtered by InChannelMask.
          */
         virtual void OverlapAABB(Vector2F InMin, Vector2F InMax, Uint64 InChannelMask,
                                  TDynArray<Uint64>& OutUserData) = 0;
@@ -116,10 +103,8 @@ namespace Opaax
         // =============================================================================
     public:
         /**
-         * One kinematic collide-and-slide step for a capsule — the character-mover primitive,
-         * NOT a simulated body. Sweeps the capsule against the world and returns the resolved
-         * position, the clipped velocity and grounded info. Pure geometry: movement policy
-         * lives engine-side in the mover mode, never here.
+         * One collide-and-slide step for a capsule (not a simulated body). Returns the new position,
+         * the clipped velocity and ground info. Movement rules live in the mover modes.
          */
         virtual MoveCapsuleResult MoveCapsule(const MoveCapsuleInput& InInput) = 0;
     };

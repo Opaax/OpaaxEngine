@@ -2,7 +2,7 @@
 
 #ifdef OPAAX_PLATFORM_WINDOWS
 
-#include "Core/String/OpaaxUtf8.h"   // I7 — the one UTF-8 <-> path conversion
+#include "Core/String/OpaaxUtf8.h"
 
 #include <filesystem>
 #include <system_error>
@@ -27,8 +27,7 @@ namespace Opaax
             return false;
         }
 
-        // create_directories reports false when the directory ALREADY existed — a success under this
-        // contract — so ask the filesystem what is true now instead of trusting that return.
+        // create_directories returns false if it already existed: check that it exists now.
         const bool bIsDirectory = STDFileSyt::is_directory(lPath, lError);
         return bIsDirectory && !lError;
     }
@@ -60,8 +59,7 @@ namespace Opaax
             return false;
         }
 
-        // Manual increment with an error_code: the range-for form throws on a mid-walk failure, and a
-        // directory CAN change under us between the check above and the walk below.
+        // Manual increment with an error_code: the range-for throws on a mid-walk failure.
         STDFileSyt::directory_iterator lIt(lDir, lError);
         if (lError)
         {
@@ -74,14 +72,13 @@ namespace Opaax
             std::error_code lEntryError;
             const bool      bIsDirectory = lIt->is_directory(lEntryError);
 
-            // One unreadable child does not invalidate the rest of the listing.
+            // One unreadable entry does not stop the listing.
             if (lEntryError)
             {
                 continue;
             }
 
-            // generic_WSTRING, then one explicit conversion: the narrow generic_string() would encode
-            // back through the ANSI code page and hand the caller mojibake it would store as UTF-8.
+            // generic_wstring, then one explicit conversion (generic_string() would use the ANSI code page).
             OutEntries.emplace_back(
                 Utf8::FromWide(lIt->path().filename().generic_wstring()),
                 Utf8::FromWide(lIt->path().generic_wstring()),

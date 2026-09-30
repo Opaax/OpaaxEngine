@@ -17,13 +17,8 @@ namespace Opaax
     class ICommandBuffer;
 
     // =============================================================================
-    // IRHIDevice — the graphics device the renderer owns (one instance, created
-    //   by RHIDevice::Create for the selected backend). It knows its own backend, so it
-    //   creates resources directly. One object carries both resource creation and the frame
-    //   lifecycle; present lives HERE (Present -> the surface swap), never in a window class.
-    //
-    //   Resources are our existing TUniquePtr<I*> objects (the handle/pool DOD model is a
-    //   later addition). Frame recording still goes through ICommandBuffer.
+    // IRHIDevice — the graphics device (created by RHIDevice::Create). Creates GPU resources
+    //   and runs the frame, including Present.
     // =============================================================================
     class OPAAX_API IRHIDevice
     {
@@ -38,13 +33,12 @@ namespace Opaax
         // =============================================================================
     public:
         /**
-         * bring the device up against the already-created surface (context).
-         * @param InSurface
+         * Starts the device on an existing surface (context).
          */
         virtual void Init(IGraphicsContext& InSurface) = 0;
 
         // =============================================================================
-        // Resource creation — plain desc in, owning resource out.
+        // Resource creation
         // =============================================================================
     public:
         virtual TUniquePtr<IVertexArray>   CreateVertexArray()                                           = 0;
@@ -54,13 +48,9 @@ namespace Opaax
         virtual TUniquePtr<ITexture2D>     CreateTexture(Uint32 InWidth, Uint32 InHeight)                = 0;
 
         /**
-         * A texture from PIXELS the caller already decoded. Raw arguments rather than an image
-         * struct, like CreateIndexBuffer beside it — the device takes bytes, so it never learns
-         * what a file is and a second backend inherits the decode instead of repeating it.
-         *
-         * @param InPixels Tightly packed rows, InWidth * InHeight * InChannels bytes. Borrowed:
-         *   the call copies to the GPU and the caller may free it on return.
-         * @param InChannels 4 = RGBA8, 3 = RGB8, 1 = R8 coverage (swizzled into alpha).
+         * Creates a texture from decoded pixels.
+         * @param InPixels Tightly packed, InWidth * InHeight * InChannels bytes. Copied.
+         * @param InChannels 4 = RGBA8, 3 = RGB8, 1 = R8 (swizzled into alpha)
          */
         virtual TUniquePtr<ITexture2D>     CreateTexture(const void* InPixels, Uint32 InWidth,
                                                          Uint32 InHeight, Int32 InChannels)             = 0;
@@ -69,9 +59,7 @@ namespace Opaax
         virtual TUniquePtr<IBindGroup>     CreateBindGroup(const BindGroupLayout& InLayout)              = 0;
 
         /**
-         * An offscreen render target's backing store. Device-owned like every other GPU resource
-         * (F2a) — there is no free IFramebuffer::Create. The caller owns the returned framebuffer
-         * and must release it while the GPU context is still alive.
+         * Creates an offscreen framebuffer. Release it while the GPU context is alive.
          */
         virtual TUniquePtr<IFramebuffer>   CreateFramebuffer(const FramebufferSpec& InSpec)             = 0;
 
@@ -88,16 +76,9 @@ namespace Opaax
         virtual void            WaitIdle()                                                      = 0;
 
         /**
-         * How long the GPU spent on a recent frame, in milliseconds (④ S3).
-         *
-         * The device times ITSELF inside the BeginFrame/EndFrame bracket above, so this adds no
-         * call site anywhere — asking is the only thing a caller does. A per-PASS timer would need
-         * one on ICommandBuffer and has no caller, so it does not exist.
-         *
-         * @return The most recent AVAILABLE result, which is 1-2 frames old: reading a query in the
-         *   frame that issued it would block until the GPU caught up, which is the stall this
-         *   measurement exists to help find rather than cause. -1 until the first result lands, and
-         *   forever on a device with no timer support — a caller shows "no reading", not zero.
+         * GPU time of a recent frame, in milliseconds (measured between BeginFrame and EndFrame).
+         * @return The latest available result (1-2 frames old, to avoid stalling); -1 before the
+         *   first result or without timer support
          */
         virtual double          GetLastGpuFrameTimeMs() const                                   = 0;
     };

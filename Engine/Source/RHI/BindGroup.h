@@ -12,31 +12,21 @@ namespace Opaax
     // BindGroupLayout
     // =============================================================================
     /**
-     * @struct BindGroupLayout
-     *
-     * Describes the resource slots a bind group exposes — the input to IBindGroup::Create.
-     * Minimal on purpose: the engine's single sprite pipeline needs one camera UBO plus a
-     * fixed-size sampler array. Grow only when a second pipeline needs a different shape.
+     * The resource slots of a bind group: one uniform buffer and a sampler array.
      */
     struct BindGroupLayout
     {
-        Uint32 UniformBufferBinding = 0;   // binding point of the camera UBO (layout(binding = N))
-        Uint32 TextureSlotCount     = 0;   // length of the sampler array (sampler2D[N])
+        Uint32 UniformBufferBinding = 0;   // binding point of the camera UBO
+        Uint32 TextureSlotCount     = 0;   // length of the sampler array
     };
 
     // =============================================================================
     // IBindGroup
     // =============================================================================
     /**
-     * @interface IBindGroup
-     *
-     * Backend-agnostic bundle of shader-visible resources (a descriptor set). Consumers fill
-     * it (SetUniformBuffer / SetTexture) then bind it on the command buffer before drawing.
-     * On OpenGL this binds the UBO base + texture units; on Vulkan it maps to a VkDescriptorSet.
-     * The concrete impl is created via IRHIDevice::CreateBindGroup (OpenGLBindGroup today).
-     *
-     * The texture slots are mutable between draws (Renderer2D rebinds its batch's textures each
-     * flush) — backends that need immutable descriptors update per flush internally.
+     * Shader resources bound together (a descriptor set): fill it with SetUniformBuffer /
+     * SetTexture, then bind it before drawing. Textures may change between draws.
+     * Created by IRHIDevice::CreateBindGroup.
      */
     class OPAAX_API IBindGroup
     {

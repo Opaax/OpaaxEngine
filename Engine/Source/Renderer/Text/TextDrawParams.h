@@ -7,7 +7,7 @@
 
 namespace Opaax
 {
-    /** Where a line sits inside its box. */
+    /** Horizontal alignment in the box. */
     enum class ETextAlign : Uint8
     {
         Left,
@@ -27,43 +27,34 @@ namespace Opaax
     }
 
     // =============================================================================
-    // TextDrawParams — everything about a string that is not the string, the font or where it goes.
-    //
-    //   Deliberately small. Rotation, outline and letter-spacing are absent because nothing asks
-    //   for them; a rotated label wants the transform that already rotates every other component.
-    //   The BOX arrived with the UI (U2): a rect to wrap in and align against.
+    // TextDrawParams — how to draw a string: colour, size, box, alignment, layer.
     // =============================================================================
     struct TextDrawParams
     {
-        /** Multiplied into the glyph's coverage. White draws the face's own anti-aliasing unchanged. */
+        /** Multiplied with the glyphs. */
         Vector4F Color = { 1.f, 1.f, 1.f, 1.f };
 
         /**
-         * Cap-to-cap height in WORLD UNITS — an absolute size, not a multiplier on the bake.
-         *
-         * Absolute because that is what an author means ("18 tall"), and because the bake height is
-         * an implementation detail they should never have to divide by. Scaling far above the bake
-         * softens the edges; that is the cost of a bitmap atlas and the reason SDF exists.
+         * Cap height in world units (absolute). Far above the bake height, edges get soft.
          */
         float Size = 32.f;
 
-        /** Multiplies the face's natural line advance on '\n'. */
+        /** Multiplies the line advance. */
         float LineHeightScale = 1.f;
 
-        /** Off skips the pair lookup per glyph — visible on 'AV', 'To', 'Wa'. */
+        /** Off skips kerning. */
         bool bKerning = true;
 
         /**
-         * The box lines align in, from the origin rightward. 0 is a POINT: Center straddles the
-         * origin, Right ends on it — what a label pinned to a point wants.
+         * Box width for alignment. 0 is a point: Center is centred on it, Right ends on it.
          */
         float      BoxWidth = 0.f;
         ETextAlign HAlign   = ETextAlign::Left;
 
-        /** Break lines at BoxWidth — after the last space, or inside a word wider than the box. */
+        /** Wrap lines at BoxWidth (at the last space, or inside a word wider than the box). */
         bool bWrap = false;
 
-        /** The band the glyphs draw in, and the tie-break inside it. Every glyph shares both. */
+        /** Layer and order in layer, for every glyph. */
         ERenderLayer Layer        = ERenderLayer::Default;
         Int16        OrderInLayer = 0;
     };

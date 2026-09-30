@@ -1,6 +1,6 @@
 #include "UI/UIBinding.h"
 
-#include <cstdio>   // std::snprintf — the shortest float spelling
+#include <cstdio>   // std::snprintf
 
 namespace Opaax
 {
@@ -50,8 +50,7 @@ namespace Opaax
     {
         for (Uint64 lIndex = 0; lIndex < m_Names.size(); ++lIndex)
         {
-            // The TICKET decides, not the name: a source re-added under this name since belongs
-            // to whoever re-added it, and their entry stays.
+            // Match the ticket, not the name: an entry re-added under this name belongs to someone else.
             if (m_Names[lIndex] == InHandle.Name && m_Tickets[lIndex] == InHandle.Ticket)
             {
                 m_Names.erase(m_Names.begin() + static_cast<std::ptrdiff_t>(lIndex));

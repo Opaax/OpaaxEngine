@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cstring>       // std::strcmp — a property is found by its authored name
+#include <cstring>       // std::strcmp
 #include <tuple>
 #include <type_traits>
 
@@ -16,18 +16,13 @@ namespace Opaax
     inline constexpr LogCategory LogUIBinding{"UIBinding"};
 
     // =============================================================================
-    // UI bindings — a widget PULLS a named value from something the game owns (**UI24**).
-    //
-    //   MVVM's data half without its notification half: the source is any CReflected object (the
-    //   game's view model), read by property NAME through the reflection that already exists; the
-    //   widget compares what it read to what it showed and invalidates only on a change, so an
-    //   idle canvas stays 0/0. A per-frame pull is what replaces change notification at HUD scale.
-    //
-    //   A widget names its source as "Source.Property" — one field per bindable property, on the
-    //   widget that owns it (UMG's bind slot), never a list on the base.
+    // UI bindings — a widget reads a named value from a game object every frame.
+    //   The source is any reflected object, read by property name. A widget invalidates only
+    //   when the value changed, so an idle canvas does no work.
+    //   A widget names its source as "Source.Property", one field per bindable property.
     // =============================================================================
 
-    /** What a read produced. A widget converts it to what its property needs. */
+    /** A read value. The widget converts it to what it needs. */
     struct OPAAX_API UIBoundValue
     {
         enum class EKind : Uint8 { None, Bool, Integer, Number, Text };
@@ -36,7 +31,7 @@ namespace Opaax
         double      Number = 0.0;   // Bool / Integer / Number
         OpaaxString Text;           // Text
 
-        /** The value as a string: "true", "3", "0.5" (shortest, %g), or the text itself. */
+        /** The value as text: "true", "3", "0.5" (%g), or the text itself. */
         OpaaxString ToText() const;
         float       ToFloat() const noexcept { return static_cast<float>(Number); }
 
@@ -46,14 +41,12 @@ namespace Opaax
         }
     };
 
-    /** Answers "the value of the property called InProperty", or false when there is no such readable field. */
+    /** Reads the property named InProperty; false if there is no readable field with that name. */
     using UIBindingReader = TFunction<bool(const char* InProperty, UIBoundValue& OutValue)>;
 
     /**
-     * Read InSource's property named InProperty, by folding its property list.
-     *
-     * Bool, any integer, any float and OpaaxString are readable; anything else (a Vector, a nested
-     * group) answers false — a binding to it is refused loudly by the table, not shown as garbage.
+     * Reads InSource's property InProperty through its property list.
+     * Bool, integers, floats and OpaaxString are readable; anything else returns false.
      */
     template<CReflected T>
     bool ReadBoundProperty(const T& InSource, const char* InProperty, UIBoundValue& OutValue)
@@ -94,7 +87,7 @@ namespace Opaax
         return lFound;
     }
 
-    /** A reader over InSource — BORROWED: whoever registers it removes it before InSource dies. */
+    /** A reader over InSource (borrowed: remove it before InSource is destroyed). */
     template<CReflected T>
     UIBindingReader MakeBindingReader(const T& InSource)
     {
@@ -105,11 +98,8 @@ namespace Opaax
     }
 
     /**
-     * What Add hands back, and what Remove takes — so an owner can only ever remove ITS OWN source.
-     *
-     * Two worlds overlap during a level swap (the new one starts before the old one is destroyed),
-     * and both register "Hud": the new Add replaces, then the old Shutdown's Remove-by-name would
-     * delete the new one from under it. A ticket makes that Remove a no-op.
+     * Returned by Add, taken by Remove, so an owner only removes its own source (during a level
+     * change both worlds register "Hud"; the old one's Remove must not delete the new one).
      */
     struct UIBindingHandle
     {
@@ -120,35 +110,33 @@ namespace Opaax
     };
 
     // =============================================================================
-    // UIBindingTable — the named sources a canvas's widgets may pull from. Owned by the canvas.
+    // UIBindingTable — the named sources a canvas's widgets can read. Owned by the canvas.
     // =============================================================================
     class OPAAX_API UIBindingTable
     {
     public:
-        /** Make InSource readable as InName; a second Add under the same name REPLACES the first. */
+        /** Registers InSource as InName; a second Add with the same name replaces the first. */
         UIBindingHandle Add(OpaaxStringID InName, UIBindingReader InReader);
 
-        /** Forget the source InHandle registered — nothing, if that name has since been re-added by someone else. */
+        /** Removes the source InHandle registered (nothing if the name was re-added since). */
         void Remove(const UIBindingHandle& InHandle);
 
         bool   Has(OpaaxStringID InName) const noexcept;
         Uint64 Count() const noexcept { return m_Names.size(); }
 
         /**
-         * "Source.Property" → its value. False when the source is not registered or the property
-         * is not readable — warned ONCE per path, so a misspelling in a `.opaaxui` is one log
-         * line rather than sixty a second.
+         * "Source.Property" -> its value. False if the source or property is unknown (warned once per path).
          */
         bool Read(const OpaaxString& InPath, UIBoundValue& OutValue);
 
     private:
         TDynArray<OpaaxStringID>   m_Names;
-        TDynArray<UIBindingReader> m_Readers;   // parallel to m_Names; a handful of entries, so a scan is right
-        TDynArray<Uint64>          m_Tickets;   // parallel too: which Add owns the entry
+        TDynArray<UIBindingReader> m_Readers;   // same order as m_Names
+        TDynArray<Uint64>          m_Tickets;   // same order: which Add owns the entry
         TDynArray<OpaaxString>     m_Warned;
         Uint64                     m_NextTicket = 1;
     };
 
-    /** InFormat with its first "{}" replaced by InValue — or InValue alone when there is none. */
+    /** InFormat with its first "{}" replaced by InValue, or InValue alone when there is none. */
     OPAAX_API OpaaxString FormatBoundText(const OpaaxString& InFormat, const OpaaxString& InValue);
 }

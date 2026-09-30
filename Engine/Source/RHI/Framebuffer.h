@@ -9,11 +9,7 @@ namespace Opaax
     // FramebufferSpec
     // =============================================================================
     /**
-     * @struct FramebufferSpec
-     *
-     * Describes an offscreen render target. Minimal on purpose — one RGBA8 color
-     * attachment + an optional depth/stencil renderbuffer. Grow only when a pass
-     * needs MRT / float formats / sampling the depth.
+     * An offscreen render target: one RGBA8 colour attachment and an optional depth/stencil.
      */
     struct FramebufferSpec
     {
@@ -26,16 +22,8 @@ namespace Opaax
     // IFramebuffer
     // =============================================================================
     /**
-     * @interface IFramebuffer
-     *
-     * Backend-agnostic offscreen render target. The editor ViewportPanel composes
-     * one instead of touching GL directly; future post-process passes render into
-     * one.
-     *
-     * Created by the DEVICE — IRHIDevice::CreateFramebuffer, which picks the concrete
-     * impl because it already knows its own backend (F2a). There is deliberately no
-     * static IFramebuffer::Create: a free factory would hardcode the backend in a
-     * backend-neutral TU. Editor-side callers reach it via IEngine::CreateFramebuffer.
+     * Offscreen render target (editor viewport, future post-process passes).
+     * Created by IRHIDevice::CreateFramebuffer (editor code: IEngine::CreateFramebuffer).
      */
     class OPAAX_API IFramebuffer
     {
@@ -49,18 +37,18 @@ namespace Opaax
         // Functions
         // =============================================================================
     public:
-        // Make this framebuffer the active draw target (also sets the GL viewport to its size).
+        // Makes it the draw target (also sets the viewport to its size).
         virtual void Bind()   = 0;
-        // Restore the default (window) framebuffer.
+        // Restores the default (window) framebuffer.
         virtual void Unbind() = 0;
 
-        // Reallocate attachments at a new size. No-op on a zero dimension.
+        // Reallocates the attachments at a new size. Ignores a zero dimension.
         virtual void Resize(Uint32 InWidth, Uint32 InHeight) = 0;
 
         //------------------------------------------------------------------------------
         // Get
 
-        // Raw backend handle of the color attachment — for editor display (ImGui::Image) only.
+        // Raw colour attachment handle, for editor display (ImGui::Image) only.
         virtual Uint32 GetColorAttachmentID() const noexcept = 0;
         virtual Uint32 GetWidth()             const noexcept = 0;
         virtual Uint32 GetHeight()            const noexcept = 0;

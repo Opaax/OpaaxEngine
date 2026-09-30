@@ -3,7 +3,7 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Maths/MathTypes.h"
-#include "Core/Reflection/OpaaxEnum.h"   // OPAAX_ENUM_VALUES — every enum below is authored
+#include "Core/Reflection/OpaaxEnum.h"   // OPAAX_ENUM_VALUES
 
 namespace Opaax
 {
@@ -11,21 +11,18 @@ namespace Opaax
     // World creation
     // =============================================================================
     /**
-     * @struct PhysicsWorldDesc
-     *
-     * Neutral creation parameters for a physics world. All values are in WORLD units
-     * (Y-up); LengthUnitsPerMeter tells the backend how many world units make a metre so
-     * its internal tuning (sleep thresholds, speculative margins) stays sane.
+     * Physics world settings, in world units (Y-up). LengthUnitsPerMeter tells the backend how many
+     * world units make a metre.
      */
     struct PhysicsWorldDesc
     {
-        /** Acceleration applied to dynamic bodies, world units / s^2 (Y-up: negative falls). */
+        /** Acceleration on dynamic bodies, world units / s^2 (Y-up: negative falls). */
         Vector2F Gravity = { 0.f, -981.f };
 
-        /** World units per metre. 2D convention: ~100 units = 1 m. */
+        /** World units per metre (~100 in 2D). */
         float LengthUnitsPerMeter = 100.f;
 
-        /** Solver sub-steps per Step call. Higher = stabler stacks, more cost. */
+        /** Solver sub-steps per Step. Higher is more stable but costs more. */
         int SubStepCount = 4;
     };
 
@@ -33,11 +30,7 @@ namespace Opaax
     // Opaque handles
     // =============================================================================
     /**
-     * @struct BodyHandle
-     *
-     * Opaque reference to a physics body. The backend packs its own id into Id; neutral
-     * code only ever copies it and checks IsValid, so nothing above the seam learns the
-     * backend's handle type.
+     * Opaque physics body handle. Only copy it and check IsValid.
      */
     struct BodyHandle
     {
@@ -47,9 +40,7 @@ namespace Opaax
     };
 
     /**
-     * @struct ShapeHandle
-     *
-     * Opaque reference to a collision shape (see BodyHandle).
+     * Opaque collision shape handle.
      */
     struct ShapeHandle
     {
@@ -59,12 +50,11 @@ namespace Opaax
     };
 
     // =============================================================================
-    // Body / shape enums — shared by the component layer and the backend
+    // Body / shape enums
     // =============================================================================
     /**
-     * @enum EBodyType
-     * Simulation class of a rigid body. Static never moves (infinite mass); Kinematic moves
-     * only when driven by code (ignores forces, pushes dynamics); Dynamic is fully simulated.
+     * Static never moves; Kinematic moves only when driven by code (pushes dynamic bodies);
+     * Dynamic is fully simulated.
      */
     enum class EBodyType : Uint8
     {
@@ -74,9 +64,7 @@ namespace Opaax
     };
 
     /**
-     * @enum EColliderShape
-     * Primitive a collider approximates its entity with. Box uses HalfExtents; Circle uses
-     * Radius; Capsule uses Center1/Center2 + Radius.
+     * Collider shape. Box uses HalfExtents; Circle uses Radius; Capsule uses Center1/Center2 + Radius.
      */
     enum class EColliderShape : Uint8
     {
@@ -86,10 +74,7 @@ namespace Opaax
     };
 
     /**
-     * @enum EColliderMode
-     * How a collider participates in the solve. Solid blocks (collision response); Overlap
-     * passes through and fires overlap events. Orthogonal to the collider's CHANNEL, which
-     * says what it is rather than how it reacts.
+     * Solid blocks; Overlap passes through and fires overlap events.
      */
     enum class EColliderMode : Uint8
     {
@@ -98,9 +83,7 @@ namespace Opaax
     };
 
     /**
-     * @enum EWorldBoundsResponse
-     * What the engine does when a dynamic body leaves the world-bounds kill volume. The
-     * exit event ALWAYS fires; this selects only the engine's own follow-up.
+     * What the engine does when a dynamic body leaves the world bounds (the event always fires).
      */
     enum class EWorldBoundsResponse : Uint8
     {
@@ -109,13 +92,8 @@ namespace Opaax
     };
 
     // =============================================================================
-    // Enum labels — I11's free ToString, found by ADL.
-    //
-    //   Each of these is stamped with OPAAX_ENUM_VALUES at the bottom of the file, which is
-    //   what gives them BOTH halves for free: the json bridge writes and parses the label
-    //   (so a map stays readable and survives the enum being appended to), and the Inspector
-    //   draws a dropdown in which a wrong value is not expressible. That is also why there is
-    //   no hand-written FromString here — the same thing that retired RHI's BackendFromString.
+    // Enum to string. All these enums declare their values (bottom of the file), so they are
+    // saved by name and shown as dropdowns.
     // =============================================================================
     inline const char* ToString(EBodyType InType) noexcept
     {
@@ -163,11 +141,8 @@ namespace Opaax
     // Body / shape creation
     // =============================================================================
     /**
-     * @struct BodyDesc
-     *
-     * Neutral parameters for one physics body, translated from an entity's Rigidbody +
-     * Transform. Position is in world units, Rotation in radians. UserData carries the
-     * packed EntityID so contacts and queries resolve back to the owning entity.
+     * One physics body, from an entity's Rigidbody and Transform. Position in world units, rotation
+     * in radians. UserData is the packed EntityID (to find the entity from contacts and queries).
      */
     struct BodyDesc
     {
@@ -182,37 +157,29 @@ namespace Opaax
     };
 
     /**
-     * @struct ShapeGeometry
-     *
-     * The shape's FORM, separate from its material and filter. Type selects which fields are
-     * read; Offset is the local centre for all of them. Adding a primitive means a new
-     * EColliderShape value plus the fields it needs here plus one case in the backend — no
-     * ripple through ShapeDesc or its consumers.
+     * A shape's geometry. Type selects which fields are used; Offset applies to all.
      */
     struct ShapeGeometry
     {
         EColliderShape Type = EColliderShape::Box;
 
-        /** Local centre offset from the body origin, world units (every shape). */
+        /** Local offset from the body origin, world units. */
         Vector2F Offset = { 0.f, 0.f };
 
         /** Box: half width and half height, world units. */
         Vector2F HalfExtents = { 50.f, 50.f };
 
-        /** Circle / capsule end-cap radius, world units. */
+        /** Circle / capsule cap radius, world units. */
         float Radius = 50.f;
 
-        /** Capsule: the two semicircle centres, local and relative to Offset. */
+        /** Capsule: the two cap centres, relative to Offset. */
         Vector2F Center1 = { 0.f, 0.f };
         Vector2F Center2 = { 0.f, 0.f };
     };
 
     /**
-     * @struct ShapeDesc
-     *
-     * Neutral parameters to attach one collision shape to a body: the geometry, its material,
-     * and its collision filter. bIsSensor maps EColliderMode::Overlap. CategoryBits is the
-     * collider's own channel bit and MaskBits the set of channels it interacts with.
+     * One shape: geometry, material and filter. bIsSensor = Overlap mode. CategoryBits is the
+     * collider's channel bit; MaskBits the channels it interacts with.
      */
     struct ShapeDesc
     {
@@ -230,12 +197,8 @@ namespace Opaax
     // Events
     // =============================================================================
     /**
-     * @struct PhysicsContactPair
-     *
-     * One begin-or-end touch pair, resolved by the backend from shape -> body -> user-data to
-     * the two participating entities (packed EntityID bits, as set in BodyDesc::UserData).
-     * For overlap pairs A is the sensor owner and B the visitor; for solid contacts A/B follow
-     * the backend's shape order.
+     * One begin or end touch, as entity bits (BodyDesc::UserData). For overlaps A is the sensor
+     * owner and B the visitor.
      */
     struct PhysicsContactPair
     {
@@ -247,11 +210,8 @@ namespace Opaax
     // Queries
     // =============================================================================
     /**
-     * @struct PhysicsRayHit
-     *
-     * Closest hit from a ray cast. UserData is the hit body's raw user-data (0 when bHit is
-     * false or the shape is unresolved); the subsystem decodes it to an EntityID. Point and
-     * Normal are world-space; Fraction is the [0..1] position of the hit along the ray.
+     * Closest ray hit. UserData is the hit body's user data (0 when no hit). Point and Normal in
+     * world space; Fraction is the position along the ray [0..1].
      */
     struct PhysicsRayHit
     {
@@ -263,13 +223,10 @@ namespace Opaax
     };
 
     // =============================================================================
-    // Geometric mover (kinematic capsule sweep)
+    // Mover (kinematic capsule sweep)
     // =============================================================================
     /**
-     * @struct MoverCapsule
-     *
-     * Local-space capsule used by the geometric mover. A circle is the degenerate
-     * Center1 == Center2 case. World units.
+     * The mover's capsule in local space (Center1 == Center2 is a circle). World units.
      */
     struct MoverCapsule
     {
@@ -279,12 +236,9 @@ namespace Opaax
     };
 
     /**
-     * @struct MoveCapsuleInput
-     *
-     * One geometric collide-and-slide step: sweep Capsule from Position by Velocity*DeltaTime
-     * against the world, iterating the plane solver up to MaxIterations. GroundNormalY is the
-     * minimum surface-normal Y that counts as ground (cosine of the max walkable slope).
-     * No movement policy here — gravity, acceleration and jump live in the engine-side mode.
+     * One collide-and-slide step: sweeps Capsule from Position by Velocity*DeltaTime, up to
+     * MaxIterations. GroundNormalY is the minimum normal Y that counts as ground (cos of the
+     * max slope).
      */
     struct MoveCapsuleInput
     {
@@ -297,17 +251,13 @@ namespace Opaax
         float        GroundNormalY = 0.7f;
 
         /**
-         * Body user-data to skip during the sweep — the mover's OWN body, since it is a real
-         * kinematic body in the world. 0 ignores nothing. Encoded like BodyDesc::UserData.
+         * Body user data to ignore (the mover's own body). 0 ignores nothing.
          */
         Uint64 IgnoreUserData = 0;
     };
 
     /**
-     * @struct MoveCapsuleResult
-     *
-     * Post-sweep state: the resolved position, the velocity clipped against the touched planes
-     * (so the mover stops pushing into walls), and grounded info. World-space.
+     * Result: new position, velocity clipped against the touched planes, and ground info.
      */
     struct MoveCapsuleResult
     {

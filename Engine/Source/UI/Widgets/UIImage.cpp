@@ -11,7 +11,7 @@ namespace Opaax
 {
     namespace
     {
-        /** What a fill leaves standing: the rect cropped from its min edge on the filled axis. */
+        /** The rect left by a fill: cropped from its min edge on the filled axis. */
         Bounds2D FillClip(const Bounds2D& InRect, const EUIFill InFill, const float InAmount) noexcept
         {
             const Vector2F lMin  = InRect.Min();
@@ -100,8 +100,7 @@ namespace Opaax
     {
         UIWidget::SaveFields(InOutJson);
 
-        // The PATH is written; the runtime pointer beside it is not, because it is a borrowed
-        // handle that only code can hand over (**UI17**).
+        // Only the path is saved; the runtime pointer is set by code.
         InOutJson["Color"]       = Color;
         InOutJson["Texture"]     = Texture;
         InOutJson["Sheet"]       = Sheet;
@@ -134,8 +133,8 @@ namespace Opaax
             return;
         }
 
-        // Runtime pointer > sheet frame > texture (UI25). Something named but not ready draws
-        // nothing and asks again next frame (**UI3**); nothing named is a plain colour.
+        // Runtime pointer > sheet frame > texture. Named but not ready: draw nothing and retry;
+        // nothing named: a plain colour.
         UIResolvedImage lImage;
         bool            bNamed = false;
         if (!ResolveImageSource(InContext, m_Texture, Texture, Sheet, Frame, lImage, bNamed) && bNamed)
@@ -144,8 +143,7 @@ namespace Opaax
             return;
         }
 
-        // A border is a statement about ART, so it needs an image to measure against — the FRAME's
-        // size for a sheet; without one this is the single quad U1 shipped (**UI20**).
+        // A border needs an image to measure against (the frame size for a sheet); else one quad.
         if (!Border.IsZero() && lImage.Texture != nullptr)
         {
             BuildSlicedQuads(GetBounds(), Border, lImage.SizePx, OutQuads);
@@ -161,12 +159,11 @@ namespace Opaax
             lQuad.Texture = lImage.Texture;
         }
 
-        // The slice's UVs are 0..1 of the image; a frame is a sub-rect of its sheet's texture.
+        // The slice UVs are 0..1 of the image; a frame is a sub-rect of the sheet's texture.
         MapQuadUVsInto(OutQuads, lImage.UVMin, lImage.UVMax);
 
-        // The fill is a CLIP over whatever was emitted, not a second geometry path: it crops from
-        // the min edge so the bar empties toward it, and the UVs go with it so the texture is cut
-        // rather than squashed — for nine quads exactly as for one.
+        // The fill clips what was emitted, from the min edge, with its UVs (the texture is cut,
+        // not squashed), for 9 quads as for 1.
         if (Fill != EUIFill::None && lAmount < 1.f)
         {
             ClipQuadsTo(OutQuads, FillClip(GetBounds(), Fill, lAmount));

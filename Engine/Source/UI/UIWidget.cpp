@@ -38,8 +38,8 @@ namespace Opaax
         m_Children.emplace(m_Children.begin() + static_cast<std::ptrdiff_t>(std::min(InIndex, static_cast<Uint64>(m_Children.size()))),
                            std::move(InChild));
 
-        // A new child arrives with fresh flags; the walk only needs to reach it — unless I place my
-        // children, in which case every sibling's slot may have moved.
+        // The new child only needs to be reached by the walk, unless I lay out my children
+        // (then every slot may have moved).
         m_bSubtreeDirty = true;
         MarkSubtreeUp();
         if (m_bArrangesChildren) { InvalidateLayout(); }
@@ -59,8 +59,7 @@ namespace Opaax
         TUniquePtr<UIWidget> lRemoved = std::move(*lIt);
         m_Children.erase(lIt);
 
-        // Drop any pointer state resting under this subtree BEFORE the pointers can die — no walk
-        // ever touches freed memory looking for a stale hovered/pressed/focused widget.
+        // Clear pointer state under this subtree before it can be destroyed.
         if (m_Canvas != nullptr)
         {
             lRemoved->m_Canvas->OnDetached(*lRemoved);
@@ -68,10 +67,10 @@ namespace Opaax
 
         lRemoved->m_Parent        = nullptr;
         lRemoved->SetCanvasRecursive(nullptr);
-        lRemoved->m_bLayoutDirty  = true;   // it will be resolved against a new parent, if any
+        lRemoved->m_bLayoutDirty  = true;   // resolved again against its new parent
         lRemoved->m_bContentDirty = true;
 
-        if (m_bArrangesChildren) { InvalidateLayout(); }   // the siblings after it close the gap
+        if (m_bArrangesChildren) { InvalidateLayout(); }   // the following siblings move
 
         return lRemoved;
     }
@@ -135,9 +134,8 @@ namespace Opaax
         m_bContentDirty = true;
         MarkSubtreeUp();
 
-        // UP, through every ancestor whose layout depends on its children, and no further: my size
-        // shifts my siblings under a container, and the container's size may shift ITS siblings.
-        // A plain panel's rect owes nothing to what is under it, so the climb stops there.
+        // Up through every ancestor whose layout depends on its children (containers).
+        // A plain panel's rect does not, so the climb stops there.
         if (m_Parent != nullptr && m_Parent->m_bArrangesChildren && !m_Parent->m_bLayoutDirty)
         {
             m_Parent->InvalidateLayout();
@@ -152,8 +150,7 @@ namespace Opaax
 
     void UIWidget::MarkSubtreeUp()
     {
-        // A set flag implies every ancestor's is set (only this walk sets them; the update clears
-        // top-down after descending), so the first one already marked ends the climb.
+        // An already marked ancestor means all above it are marked too: stop.
         for (UIWidget* lNode = m_Parent; lNode != nullptr && !lNode->m_bSubtreeDirty; lNode = lNode->m_Parent)
         {
             lNode->m_bSubtreeDirty = true;
@@ -167,8 +164,7 @@ namespace Opaax
     void UIWidget::UpdateTree(const Bounds2D& InParentBounds, const Bounds2D* InSlot, const bool bInParentChanged,
                               const UIBuildContext& InContext, UICanvasStats& OutStats)
     {
-        // Snapshot, then clear: anything set from here on (a Rebuild re-arming, a child marking
-        // me) is next frame's work and survives.
+        // Snapshot, then clear: anything set from now on is next frame's work.
         const bool lLayout  = m_bLayoutDirty || bInParentChanged;
         bool       lContent = m_bContentDirty;
         const bool lSubtree = m_bSubtreeDirty;
@@ -181,12 +177,11 @@ namespace Opaax
 
         if (lLayout)
         {
-            // Arranged by my parent: the slot IS my rect. Otherwise my anchors say where I sit.
+            // Placed by my parent: the slot is my rect. Otherwise my anchors decide.
             const Bounds2D lBounds = InSlot != nullptr ? *InSlot : ResolveBounds(InParentBounds);
             ++OutStats.Layouts;
 
-            // Same rect from a changed parent (a corner-anchored child of a widening root): nothing
-            // below me moved, so nothing below me is re-resolved.
+            // Same rect from a changed parent: nothing below me moved.
             lChanged = lBounds.Center != m_Bounds.Center || lBounds.HalfExtent != m_Bounds.HalfExtent;
             m_Bounds = lBounds;
             lContent = lContent || lChanged;
@@ -213,11 +208,8 @@ namespace Opaax
             return;
         }
 
-        // A container hands each child its slot, and the slots depend on MY fields (spacing,
-        // alignment, a child added) as much as on my rect — so a re-layout of me re-arranges even
-        // when my rect came out the same. Each child re-resolves when I was re-laid; the same-rect
-        // compare above then stops what did not move. Cheap, and only reached when I or something
-        // under me is dirty.
+        // A container's slots depend on its fields too, so a re-layout always re-arranges the
+        // children; the same-rect check above stops what did not move.
         if (!lLayout && !lSubtree)
         {
             return;
@@ -250,7 +242,7 @@ namespace Opaax
             return nullptr;
         }
 
-        // Drawn last = on top, so the last child is asked first.
+        // Drawn last = on top, so the last child is checked first.
         for (auto lIt = m_Children.rbegin(); lIt != m_Children.rend(); ++lIt)
         {
             if (UIWidget* lHit = (*lIt)->HitTest(InPoint))

@@ -11,28 +11,24 @@ namespace Opaax::Text2D
         /** How many spaces a '\t' advances. */
         constexpr Uint32 TAB_SPACES = 4u;
 
-        /** The space advance used when the face has no space glyph at all, as a fraction of Size. */
+        /** Space advance when the face has no space glyph, as a fraction of Size. */
         constexpr float FALLBACK_SPACE_RATIO = 0.5f;
 
         /**
-         * The tofu box a missing codepoint draws, as fractions of Size. Roughly a capital's
-         * proportions, so a row of them reads as text that could not be shown rather than as debris.
+         * Box size for a missing codepoint, as fractions of Size (about a capital letter).
          */
         constexpr float TOFU_WIDTH_RATIO     = 0.55f;
         constexpr float TOFU_HEIGHT_RATIO    = 0.70f;
         constexpr float TOFU_ADVANCE_RATIO   = 0.65f;
 
         /**
-         * EstimateExtent's per-codepoint advance and per-line height, as fractions of Size.
-         *
-         * Both are ROUNDED UP from Roboto's real numbers (its average advance is nearer 0.55 of the
-         * bake height and its line advance 1.17). Over-estimating is the whole contract: an extent
-         * used for picking that comes up short makes the tail of a string unclickable.
+         * EstimateExtent's advance and line height, as fractions of Size. Rounded up on purpose
+         * (for picking, too big is better than too small).
          */
         constexpr float ESTIMATE_ADVANCE_RATIO = 0.62f;
         constexpr float ESTIMATE_LINE_RATIO    = 1.25f;
 
-        /** The face as the walk reads it — scale and the space advance resolved once per string. */
+        /** The face as used by the layout: scale and space advance resolved once per string. */
         struct WalkMetrics
         {
             const FontFaceData&   Face;
@@ -41,7 +37,7 @@ namespace Opaax::Text2D
             float                 SpaceAdvance;
         };
 
-        /** One codepoint's pen movement: the kerning BEFORE it, the advance AFTER it, the glyph. */
+        /** One codepoint's step: kerning before, advance after, the glyph. */
         struct PenStep
         {
             float            Kern    = 0.f;
@@ -51,9 +47,8 @@ namespace Opaax::Text2D
         };
 
         /**
-         * THE ONE ADVANCE RULE — the scan that finds a line's end and the emit that places it both
-         * step through here, which is what keeps a wrapped or aligned line the width it was measured.
-         * InOutPrevious is 0 at a line start (nothing kerns against it) and after a tab.
+         * The advance rule, shared by line measuring and placing (so they always agree).
+         * InOutPrevious is 0 at a line start and after a tab.
          */
         PenStep StepPen(const WalkMetrics& InM, const Uint32 InCodepoint, Uint32& InOutPrevious)
         {
@@ -79,18 +74,18 @@ namespace Opaax::Text2D
             return lStep;
         }
 
-        /** Where a line stops, where the next one starts, and how wide the stopped one is. */
+        /** Where a line ends, where the next starts, and the line's width. */
         struct LineSpan
         {
             const char* End   = nullptr;   // exclusive
-            const char* Next  = nullptr;   // the next line's first byte
+            const char* Next  = nullptr;   // first byte of the next line
             float       Width = 0.f;
-            bool        bLast = false;     // the string ended here
+            bool        bLast = false;     // end of the string
         };
 
         /**
-         * Find the end of the line starting at InStart: '\n', the terminator, or — wrapping — the
-         * last space before the box's edge (consumed), else the glyph that would cross it.
+         * Finds the end of the line starting at InStart: '\n', the end of the string, or (when
+         * wrapping) the last space before the box edge, else the glyph that would cross it.
          */
         LineSpan ScanLine(const WalkMetrics& InM, const char* InStart)
         {
@@ -100,7 +95,7 @@ namespace Opaax::Text2D
             Uint32      lPrevious = 0u;
             float       lWidth    = 0.f;
 
-            const char* lBreakEnd   = nullptr;   // the line's end if it breaks at the last space seen
+            const char* lBreakEnd   = nullptr;   // line end if it breaks at the last space
             const char* lBreakNext  = nullptr;
             float       lBreakWidth = 0.f;
 
@@ -118,7 +113,7 @@ namespace Opaax::Text2D
 
                 if (lCodepoint == ' ' || lCodepoint == '\t')
                 {
-                    // A blank crossing the edge IS the break — nothing of it is drawn.
+                    // A space crossing the edge is the break (not drawn).
                     if (lCrosses) { return { lBefore, lCursor, lWidth, false }; }
 
                     lBreakEnd   = lBefore;
@@ -127,8 +122,8 @@ namespace Opaax::Text2D
                 }
                 else if (lCrosses)
                 {
-                    // Back to the last blank; a word wider than the box breaks before this glyph. A
-                    // first glyph wider than the box is placed anyway (lWidth > 0 above).
+                    // Back to the last space; a word wider than the box breaks before this glyph.
+                    // A first glyph wider than the box is placed anyway.
                     if (lBreakEnd != nullptr) { return { lBreakEnd, lBreakNext, lBreakWidth, false }; }
                     return { lBefore, lBefore, lWidth, false };
                 }
@@ -137,7 +132,7 @@ namespace Opaax::Text2D
             }
         }
 
-        /** Place one line's glyphs, pen starting at InPenX on InBaselineY. */
+        /** Places one line's glyphs, pen at InPenX on InBaselineY. */
         void EmitLine(const WalkMetrics& InM, const FTextQuadSink& InSink, const char* InBegin, const char* InEnd,
                       float InPenX, const float InBaselineY)
         {
@@ -159,8 +154,7 @@ namespace Opaax::Text2D
 
                 if (lStep.Glyph == nullptr)
                 {
-                    // Tofu. Sits ON the baseline and is sized from Size rather than from the face,
-                    // because the face is precisely what does not know this character.
+                    // Box for a missing glyph: on the baseline, sized from Size.
                     TextQuad lQuad;
                     lQuad.Size   = { InM.Params.Size * TOFU_WIDTH_RATIO, InM.Params.Size * TOFU_HEIGHT_RATIO };
                     lQuad.Centre = { InPenX + lQuad.Size.x * 0.5f, InBaselineY + lQuad.Size.y * 0.5f };
@@ -170,14 +164,13 @@ namespace Opaax::Text2D
                 }
                 else if (lStep.Glyph->QuadSize.x > 0.f && lStep.Glyph->QuadSize.y > 0.f)
                 {
-                    // A blank glyph (space) emits nothing but still advances.
+                    // A blank glyph (space) draws nothing but still advances.
                     const FontGlyph& lGlyph = *lStep.Glyph;
 
                     TextQuad lQuad;
                     lQuad.Size   = { lGlyph.QuadSize.x * InM.Scale, lGlyph.QuadSize.y * InM.Scale };
 
-                    // QuadOffset is stb's, measured from the pen with Y going DOWN. This world's Y
-                    // goes up, so the vertical term subtracts and the horizontal one adds.
+                    // QuadOffset has Y down; the world has Y up.
                     lQuad.Centre = { InPenX      + (lGlyph.QuadOffset.x + lGlyph.QuadSize.x * 0.5f) * InM.Scale,
                                      InBaselineY - (lGlyph.QuadOffset.y + lGlyph.QuadSize.y * 0.5f) * InM.Scale };
                     lQuad.UVMin  = lGlyph.UVMin;
@@ -191,17 +184,10 @@ namespace Opaax::Text2D
         }
 
         /**
-         * THE ONE WALK, for every entry point.
-         *
-         * Measure, DrawString and the editor's preview differ by exactly one thing — what they do
-         * with each placed glyph — and writing the layout more than once is how they start
-         * disagreeing. Same argument Renderer2D::SubmitQuad makes for its two draw calls.
-         *
-         * Per line: SCAN for its end and width, then EMIT it — alignment needs the width before
-         * the first glyph lands, and wrapping needs the break before the glyph that crosses.
-         *
-         * @param InSink Empty to measure only.
-         * @return { widest line, total line-box height }.
+         * The layout walk shared by Measure, DrawString and the editor preview.
+         * Per line: find its end and width, then place it (alignment needs the width first).
+         * @param InSink Empty to only measure
+         * @return { widest line, total height }
          */
         Vector2F WalkText(const FTextQuadSink& InSink, const char* InUtf8, const Vector2F& InWorldPos,
                           const FontFaceView& InFace, const TextDrawParams& InParams)
@@ -218,8 +204,7 @@ namespace Opaax::Text2D
             const WalkMetrics lM{ lFace, InParams, lScale,
                                   (lSpace != nullptr) ? lSpace->XAdvance * lScale : InParams.Size * FALLBACK_SPACE_RATIO };
 
-            // The pen sits on the BASELINE, which is one ascent below the caller's top-left. Y is up
-            // here, so "below" subtracts — the one sign the whole layout turns on.
+            // The pen starts on the baseline, one ascent below the top (Y up, so subtract).
             const float lLineStep  = lFace.VMetrics.LineAdvance * InParams.LineHeightScale * lScale;
             float       lBaselineY = InWorldPos.y - lFace.VMetrics.Ascent * lScale;
 
@@ -263,9 +248,7 @@ namespace Opaax::Text2D
     Vector2F DrawString(Renderer2D& InRenderer, const char* InUtf8, const Vector2F& InWorldPos,
                         const FontFaceView& InFace, const TextDrawParams& InParams)
     {
-        // NO ATLAS means the face is still uploading: lay the line out, draw none of it, and the
-        // next frame draws it in the right place. The tofu boxes still go through, because a face
-        // with no glyphs has nothing to wait for.
+        // No atlas yet (still uploading): lay out, draw nothing. Missing-glyph boxes still draw.
         ITexture2D* lAtlas = InFace.Atlas;
 
         return WalkText([&InRenderer, &InParams, lAtlas](const TextQuad& InQuad)

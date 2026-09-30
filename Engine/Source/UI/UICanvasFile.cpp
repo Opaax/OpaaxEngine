@@ -16,7 +16,7 @@ namespace Opaax
         constexpr const char* KEY_TYPE      = "Type";
         constexpr const char* KEY_CHILDREN  = "Children";
 
-        /** One node: its type tag, its own fields, then its children. */
+        /** One node: its type, its fields, then its children. */
         nlohmann::json WriteNode(const UIWidget& InWidget)
         {
             nlohmann::json lJson;
@@ -38,7 +38,7 @@ namespace Opaax
             return lJson;
         }
 
-        /** Build one node and its subtree. Null when the type is unknown — the caller skips it. */
+        /** Builds one node and its subtree. Null for an unknown type (the caller skips it). */
         TUniquePtr<UIWidget> ReadNode(const nlohmann::json& InJson, const UIWidgetRegistry& InRegistry,
                                       Uint64& InOutSkipped)
         {
@@ -49,7 +49,7 @@ namespace Opaax
 
             if (!lWidget)
             {
-                // A type this build does not know: drop the NODE, keep the file (UI12).
+                // Unknown type: skip this node, keep the file.
                 OPAAX_LOG(LogUICanvasFile, Warn, "Unknown widget type '{}' — that node was skipped", lType.CStr());
                 ++InOutSkipped;
                 return nullptr;
@@ -109,7 +109,7 @@ namespace Opaax
         const Uint32 lVersion = lJson.value(KEY_VERSION, 0u);
         if (lVersion > UI_FORMAT_VERSION)
         {
-            // REFUSED, not guessed at: a newer shape may mean something different by the same key.
+            // Refuse a newer version rather than guessing.
             OPAAX_LOG(LogUICanvasFile, Error, "Format version {} is newer than this build reads ({})",
                       lVersion, UI_FORMAT_VERSION);
             return false;
@@ -129,8 +129,7 @@ namespace Opaax
         }
         catch (const nlohmann::json::exception& InError)
         {
-            // A misspelled enumerator THROWS out of the enum bridge rather than reading as the first
-            // value — which is what this catch is for, and why OutDoc is untouched on the way out.
+            // An unknown enum value throws; OutDoc is untouched then.
             OPAAX_LOG(LogUICanvasFile, Error, "Unreadable value: {}", InError.what());
             return false;
         }
@@ -206,7 +205,7 @@ namespace Opaax
         const nlohmann::json lJson = nlohmann::json::parse(InText.CStr(), nullptr, false);
         if (lJson.is_discarded() || !lJson.is_object())
         {
-            return nullptr;   // not a node — a paste of unrelated clipboard text is a no-op
+            return nullptr;   // not a node (e.g. unrelated clipboard text)
         }
 
         Uint64 lSkipped = 0;

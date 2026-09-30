@@ -10,23 +10,20 @@ namespace Opaax
 {
     struct CrashHandlerSettings
     {
-        /** Where Opaax_<timestamp>.dmp (and a copy of the log) land. Created if missing. */
+        /** Where Opaax_<timestamp>.dmp (and a copy of the log) are written. Created if missing. */
         OpaaxString DumpDir;
 
-        /** The live log file, copied beside the dump — the next launch truncates the original. */
+        /** The log file, copied next to the dump (the next launch overwrites the original). */
         OpaaxString LogFile;
 
-        /** A native box naming the dump, so a crash in a shipped game is never silent. */
+        /** A native message box naming the dump. */
         bool bShowDialog = true;
     };
 
     // =============================================================================
-    // CrashHandler — an I1 singleton (SG1–SG5): the OS keeps ONE unhandled-exception filter per
-    //   process and its callback takes no user pointer, so the state it reads is process-wide by
-    //   nature. Get() is what the hooks reach; a test builds its own instance and calls WriteReport.
-    //
-    //   A crash writes, most robust first: the minidump, the symbolized stack into the log, a copy
-    //   of the log beside the dump; then the dialog; then the process ends.
+    // CrashHandler — engine-wide crash reporting (Get()); tests create their own instance.
+    //   On a crash it writes a minidump, logs the stack, copies the log next to the dump,
+    //   shows a dialog, then the process ends.
     // =============================================================================
     class OPAAX_API CrashHandler final
     {
@@ -34,10 +31,10 @@ namespace Opaax
         // Statics
         // =============================================================================
     public:
-        /** Out-of-line in the DLL and leaked (SG4/SG5). */
+        /** Never destroyed. */
         static CrashHandler& Get();
 
-        /** Dev builds' `--crash-test`: a null write, reported like any real crash. */
+        /** Dev builds' --crash-test: a null write, reported like a real crash. */
         static void TriggerTestCrash();
 
         // =============================================================================
@@ -56,22 +53,21 @@ namespace Opaax
         // Functions
         // =============================================================================
     public:
-        /** Settings only — what WriteReport uses. Paths are converted here, not at crash time. */
+        /** Settings only (used by WriteReport). */
         void Configure(const CrashHandlerSettings& InSettings);
 
-        /** Configure + the process-wide hooks. Call on the main thread (its stack reserve is set). */
+        /** Configures and installs the process-wide hooks. Call on the main thread. */
         void Install(const CrashHandlerSettings& InSettings);
         void Uninstall();
 
         /**
-         * Dump, stack and log copy for InExceptionPointers (an EXCEPTION_POINTERS*), or for the
-         * calling thread right now when null. No dialog, no exit.
-         *
-         * @return The dump's path; empty when it could not be written.
+         * Writes the dump, stack and log copy for InExceptionPointers (EXCEPTION_POINTERS*), or for
+         * the current thread when null. No dialog, no exit.
+         * @return The dump's path; empty if it could not be written
          */
         OpaaxString WriteReport(void* InExceptionPointers);
 
-        /** WriteReport, the dialog, and the answer the OS filter returns. */
+        /** WriteReport, the dialog, and the value the OS filter returns. */
         long HandleCrash(void* InExceptionPointers);
 
         // =============================================================================

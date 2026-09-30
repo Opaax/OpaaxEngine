@@ -11,14 +11,8 @@
 namespace Opaax
 {
     /**
-     *@class OpenGLShader
-     *
-     * OpenGL IShader implementation. Prefers per-stage SPIR-V (the same artifact a Vulkan
-     * backend uses) via GL_ARB_gl_spirv: glShaderBinary + glSpecializeShader, then links.
-     * If the ShaderDesc carries no SPIR-V (glslang absent at build time) it falls back to
-     * compiling the GLSL source via glShaderSource — so OpenGL works without the Vulkan SDK.
-     * The name-based uniform setters remain for the interface but a SPIR-V program exposes
-     * no default-block uniforms — they degrade to a warn-noop (glGetUniformLocation == -1).
+     * OpenGL IShader. Uses SPIR-V (GL_ARB_gl_spirv) when available, else compiles the GLSL source.
+     * The name-based uniform setters do nothing on a SPIR-V program (no default-block uniforms).
      */
     class OPAAX_API OpenGLShader final : public IShader
     {
@@ -75,9 +69,7 @@ namespace Opaax
     private:
         Uint32 m_RendererID = 0;
 
-        // OpaaxString keys + OpaaxHash — uniform lookup is not on the per-vertex
-        //   hot path, only per draw call (batch flush). Per-call temporary
-        //   OpaaxString construction from const char* is acceptable.
+        // Uniform lookup by name (per draw call, not per vertex).
         TUnorderedMap<OpaaxString, Int32, OpaaxHash> m_UniformLocationCache;
     };
 }

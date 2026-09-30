@@ -6,17 +6,17 @@
 #include "Core/Reflection/OpaaxEnum.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
-#include "Engine/Subsystems/Resources/ResourcePath.h"       // a TYPED reference — what the drop target keys on (**UI19**)
+#include "Engine/Subsystems/Resources/ResourcePath.h"
 #include "Engine/Subsystems/Resources/ResourcePathJson.h"
 #include "Renderer/Text/TextDrawParams.h"
 #include "UI/UIWidget.h"
 
 namespace Opaax
 {
-    // NAMED, never completed — a path carries its type, not its header.
+    // Forward-declared: TResourcePath only needs the name.
     struct FontFaceResource;
 
-    /** Where the block of lines sits in the rect's height. */
+    /** Vertical position of the lines in the rect. */
     enum class EUIVAlign : Uint8
     {
         Top,
@@ -36,17 +36,10 @@ namespace Opaax
     }
 
     // =============================================================================
-    // UIText — a string laid out in a rect. Text2D's ONE walk (TX5) with the rect as its box:
-    //   wraps at the width, aligns inside it; the vertical alignment is a shift of the cached
-    //   quads by the extent the walk returns.
-    //
-    //   The face is named by ASSET PATH and resolved through the host (IUIAssetProvider) at
-    //   rebuild — this module cannot name a resource. An atlas still uploading re-arms the widget
-    //   for the next frame; a face the host cannot resolve draws nothing.
-    //
-    //   BOUND, the authored Text is the FORMAT (UI24): "Jumps: {}" with Binding "Hud.Jumps" shows
-    //   the value in the braces; a Text with no braces is replaced whole. Unbound (or unresolved),
-    //   it shows as written — which is what the editor's preview shows, having no sources.
+    // UIText — text laid out in a rect (wraps at the width, aligns inside).
+    //   The font is an asset path resolved through the host; while uploading it retries next frame.
+    //   With a Binding, Text is the format: "Jumps: {}" with "Hud.Jumps" shows the value in the
+    //   braces; without braces the value replaces the text. Unbound, the text shows as written.
     // =============================================================================
     class OPAAX_API UIText final : public UIWidget
     {
@@ -55,9 +48,9 @@ namespace Opaax
         // =============================================================================
     public:
         OpaaxString Text;
-        /** "Source.Property" to pull the text from each frame; empty = Text is what shows. */
+        /** "Source.Property" to read the text from; empty = Text is shown. */
         OpaaxString Binding;
-        /** A face's asset path. TYPED, so the editor gives it a `.ttf` drop target (**UI19**). */
+        /** A font face path (accepts a dropped .ttf). */
         TResourcePath<FontFaceResource> Font;
         float       Size            = 32.f;
         LinearColor Color;
@@ -96,7 +89,7 @@ namespace Opaax
 
         void OnPullBindings(UIBindingTable& InBindings) override;
 
-        /** What is drawn: the bound, formatted text when a binding resolved, else Text. */
+        /** What is drawn: the formatted bound value when available, else Text. */
         const OpaaxString& GetDisplayText() const noexcept { return m_bBound ? m_BoundText : Text; }
 
     protected:
@@ -106,8 +99,8 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        OpaaxString m_BoundText;        // the last formatted value
-        bool        m_bBound = false;   // whether a pull has ever resolved
+        OpaaxString m_BoundText;        // last formatted value
+        bool        m_bBound = false;   // whether a read ever succeeded
     };
 }
 

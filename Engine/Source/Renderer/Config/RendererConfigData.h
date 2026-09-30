@@ -12,24 +12,15 @@ namespace Opaax
 {
     // =============================================================================
     // RendererConfigData — <ProjectRoot>/Configs/Renderer.config.
-    //
-    //   ClearColor is a LinearColor rather than a Vector4F: the type is what makes the editor show
-    //   a colour picker, and its json is the vector's, so the file does not notice.
-    //
-    //   The two limits size ONE draw call — how many quads and how many distinct textures fit
-    //   before the frame splits. They are a cost knob only: a pass is sorted whole before it is
-    //   cut, so shrinking them changes the draw call count and never the picture, which is exactly
-    //   what makes the split path reachable in a small scene.
-    //
-    //   The limits are NeedRestart: RendererManager::Startup sizes GPU buffers from them once.
-    //   ClearColor is LIVE — RendererManager applies it when the config notifies a change.
+    //   The limits size one draw call (quads and textures per batch); they only change the
+    //   draw call count, never the picture. They need a restart. ClearColor applies live.
     // =============================================================================
     struct RendererConfigData
     {
         LinearColor ClearColor{0.0f, 0.0f, 0.0f, 1.0f};
 
         Uint32 MaxQuadsPerBatch = 10000;
-        Uint32 MaxTextureSlots  = 16;   // the sprite shader's sampler array length; 2 = white + one
+        Uint32 MaxTextureSlots  = 16;   // sampler array length in the sprite shader; 2 = white + one
 
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(RendererConfigData, ClearColor,
                                                     MaxQuadsPerBatch, MaxTextureSlots)

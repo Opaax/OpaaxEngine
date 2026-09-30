@@ -6,7 +6,7 @@ namespace Opaax
 {
     namespace
     {
-        /** Keep a pair of opposite edges inside InExtent, scaling both so their ratio survives. */
+        /** Keeps a pair of opposite edges inside InExtent, scaled to keep their ratio. */
         void FitPair(float& InOutLow, float& InOutHigh, const float InExtent) noexcept
         {
             InOutLow  = std::max(0.f, InOutLow);
@@ -36,9 +36,8 @@ namespace Opaax
             return;
         }
 
-        // The UVs keep the AUTHORED border (only fitted into the texture itself); the geometry is
-        // fitted into the rect. That is the asymmetry 9-slice rests on — a squeezed widget
-        // compresses its corner art rather than losing it.
+        // The UVs keep the authored border; the geometry is fitted into the rect (the corner art
+        // is compressed rather than cut).
         float lUvLeft = InBorderPixels.Left, lUvRight = InBorderPixels.Right;
         FitPair(lUvLeft, lUvRight, InTextureSize.x);
 
@@ -116,7 +115,7 @@ namespace Opaax
 
             lQuad.Bounds = Bounds2D::FromMinMax(lNewMin, lNewMax);
 
-            // Compacted in place: a clip runs per rebuild, and the dropped quads are the minority.
+            // Compacted in place.
             InOutQuads[lKept] = lQuad;
             ++lKept;
         }

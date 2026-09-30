@@ -6,8 +6,8 @@
 namespace Opaax
 {
     /**
-     * A container: a rect for children to anchor to, nothing drawn. The canvas root is one.
-     * Not hit-testable by default — an empty rect must not swallow a click (Unity's empty RectTransform).
+     * A container: a rect for children, draws nothing. The canvas root is one.
+     * Not hit-testable by default (an empty rect must not take clicks).
      */
     class OPAAX_API UIPanel final : public UIWidget
     {
@@ -15,11 +15,7 @@ namespace Opaax
         UIPanel() { bHitTestable = false; }
 
         /**
-         * EMPTY, and declared rather than inherited (**UI18**).
-         *
-         * Without it `GetProperties()` resolves to `UIWidget`'s, so a panel's inspector would draw
-         * the base fields a SECOND time under its own drawer. Every widget type states its own
-         * list, even when that list is nothing.
+         * Empty, but declared: otherwise the base fields would be drawn twice in the inspector.
          */
         OPAAX_PROPERTIES(UIPanel)
 

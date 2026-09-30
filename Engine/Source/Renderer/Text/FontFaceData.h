@@ -8,71 +8,48 @@
 namespace Opaax
 {
     // =============================================================================
-    // FontFaceData — one baked typeface as DATA: where every glyph sits in the atlas, how far the
-    //   pen moves, and how two of them tighten against each other.
-    //
-    //   KEYED BY CODEPOINT, not by an index into an ASCII table. That is the whole difference from
-    //   the retired M5 shape (a 95-slot array indexed by `char - 0x20`), and it is what lets a Greek
-    //   or Cyrillic face exist at all. A face holds whatever its file holds — sparse, so the map is
-    //   the honest container.
-    //
-    //   UNDER Renderer/, not under Resources/: this is what the layout walker reads, and the walker
-    //   is portable. `FontFaceResource` composes it the same way `TextureResource` composes an
-    //   `ITexture2D` — Resources depends on Renderer, never the other way.
-    //
-    //   NO GPU HANDLE HERE. The atlas texture is the resource's; pairing the two is `FontFaceView`'s
-    //   job, once per draw. Which is what keeps this struct testable with no device.
-    //
-    //   EVERY MEMBER IS INLINE: the struct carries no OPAAX_API, so a member defined in the DLL's
-    //   .cpp would be unresolvable from the exe (**I6**).
+    // FontFaceData — one baked font face: glyph atlas positions, advances and kerning, by codepoint.
+    //   Plain data (no GPU handle); FontFaceView pairs it with the atlas texture.
     // =============================================================================
 
     /**
-     * The height a face is rasterised at unless something says otherwise, and the one every face
-     * with no file behind it reports.
-     *
-     * Here rather than on FontBake::BakeParams because it is a property of BAKED DATA — what
-     * PixelHeight means — and because the tofu face below needs it without reaching for the baker.
+     * Default bake height.
      */
     inline constexpr float DEFAULT_FONT_PIXEL_HEIGHT = 32.f;
 
     /**
-     * One glyph's rectangle in the atlas, and what it does to the pen. All distances are in the
-     * face's BAKE pixels — a draw at another size scales them.
+     * One glyph: its atlas rectangle and how the pen moves. Distances in bake pixels.
      */
     struct FontGlyph
     {
         /**
-         * Normalised atlas coordinates, V ALREADY FLIPPED at bake. stb_truetype packs top-down and
-         * Renderer2D samples bottom-up, so correcting once here keeps the layout walker's maths
-         * straight and every draw free of a per-glyph fix-up.
+         * Atlas UVs, V already flipped at bake.
          */
         Vector2F UVMin = { 0.f, 0.f };
         Vector2F UVMax = { 0.f, 0.f };
 
-        /** Top-left of the glyph's box relative to the pen (x right, y DOWN — stb's convention). */
+        /** Top-left of the glyph box relative to the pen (x right, y down). */
         Vector2F QuadOffset = { 0.f, 0.f };
 
-        /** The box's width and height. Zero for a blank glyph like space, which draws nothing. */
+        /** Box size. Zero for a blank glyph (space). */
         Vector2F QuadSize = { 0.f, 0.f };
 
-        /** How far the pen moves after this glyph. Already PIXELS — NOT FreeType's 1/64th fixed-point. */
+        /** Pen advance after this glyph, in pixels. */
         float XAdvance = 0.f;
     };
 
-    /** The face's vertical rhythm, scaled to the bake height. */
+    /** Vertical metrics, at bake height. */
     struct FontVMetrics
     {
         float Ascent      = 0.f;   // above the baseline, positive
-        float Descent     = 0.f;   // below it, NEGATIVE
+        float Descent     = 0.f;   // below the baseline, negative
         float LineGap     = 0.f;
-        float LineAdvance = 0.f;   // Ascent - Descent + LineGap, precomputed for '\n'
+        float LineAdvance = 0.f;   // Ascent - Descent + LineGap
     };
 
     /**
-     * A signed pixel nudge applied BETWEEN two codepoints, on top of the first one's XAdvance.
-     * Negative pulls them together — 'AV', 'To', 'Wa'. Zero-advance pairs are dropped at bake, so
-     * a pair that is absent means 0.
+     * Extra spacing between two codepoints (negative pulls them together: 'AV', 'To').
+     * Absent pairs are 0.
      */
     struct FontKerningPair
     {
@@ -87,10 +64,10 @@ namespace Opaax
         // Members
         // =========================================================================
     public:
-        /** Every codepoint the source file actually carried, and where it landed. */
+        /** Every codepoint in the font, and its glyph. */
         TUnorderedMap<Uint32, FontGlyph> Glyphs;
 
-        /** SORTED by (First, Second) — GetKerning binary-searches it. */
+        /** Sorted by (First, Second) for binary search. */
         TDynArray<FontKerningPair> Kerning;
 
         FontVMetrics VMetrics;
@@ -98,7 +75,7 @@ namespace Opaax
         Uint32 AtlasWidth  = 0u;
         Uint32 AtlasHeight = 0u;
 
-        /** The pixel height everything above was baked at. A draw divides by it to get its scale. */
+        /** Bake height. A draw divides by it to get its scale. */
         float PixelHeight = 0.f;
 
         // =========================================================================
@@ -106,11 +83,7 @@ namespace Opaax
         // =========================================================================
     public:
         /**
-         * The glyph for InCodepoint, or nullptr when this face does not have it.
-         *
-         * NULLPTR RATHER THAN A SUBSTITUTE, deliberately: choosing what a missing glyph looks like is
-         * the caller's decision (Text2D draws a tofu box), and a face that quietly answered '?' would
-         * make "does this face cover this text?" unanswerable.
+         * The glyph for InCodepoint, or nullptr (the caller decides what to draw, e.g. a box).
          */
         const FontGlyph* FindGlyph(const Uint32 InCodepoint) const noexcept
         {
@@ -118,7 +91,7 @@ namespace Opaax
             return (lFound != Glyphs.end()) ? &lFound->second : nullptr;
         }
 
-        /** The nudge between two codepoints, in bake pixels. 0 when the pair is unkerned or absent. */
+        /** Kerning between two codepoints, in bake pixels. 0 if none. */
         float GetKerning(const Uint32 InFirst, const Uint32 InSecond) const noexcept
         {
             if (Kerning.empty())
@@ -139,12 +112,11 @@ namespace Opaax
 
         Uint32 GlyphCount() const noexcept { return static_cast<Uint32>(Glyphs.size()); }
 
-        /** No glyphs at all — a face that failed to bake, or the placeholder. Everything draws tofu. */
+        /** No glyphs (failed bake or placeholder): everything draws as boxes. */
         bool IsEmpty() const noexcept { return Glyphs.empty(); }
 
         /**
-         * The one ordering both the bake's sort and the lookup's search use. Shared so they cannot
-         * disagree, which is the only way a sorted-array lookup goes wrong.
+         * Ordering shared by the bake's sort and the lookup's search.
          */
         static constexpr Uint64 PackKey(const Uint32 InFirst, const Uint32 InSecond) noexcept
         {
@@ -152,14 +124,8 @@ namespace Opaax
         }
 
         /**
-         * A face with NO glyphs but usable metrics — so a string drawn with it lays out normally and
-         * comes out as a row of tofu boxes.
-         *
-         * The ONE definition of that, because three things want it and they must agree: a `.ttf`
-         * that failed to load, a family with nothing in the requested script, and any future "I have
-         * no face for you" answer. A zero PixelHeight divides by zero the moment a draw scales it,
-         * and a zero LineAdvance stacks every line on top of itself — which is why an empty
-         * value-initialised FontFaceData is NOT the same thing.
+         * A face with no glyphs but valid metrics, so text lays out normally as a row of boxes.
+         * Used for missing fonts and missing scripts. (A default FontFaceData has zero metrics.)
          */
         static FontFaceData Tofu() noexcept
         {

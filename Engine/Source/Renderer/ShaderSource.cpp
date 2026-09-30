@@ -19,11 +19,11 @@ namespace Opaax
         std::string        lLine;
         std::string        lVert;
         std::string        lFrag;
-        int                lStage = -1; // 0 = vertex, 1 = fragment, -1 = none/unknown
+        int                lStage = -1; // 0 = vertex, 1 = fragment, -1 = none
 
         while (std::getline(lStream, lLine))
         {
-            if (!lLine.empty() && lLine.back() == '\r') { lLine.pop_back(); } // CRLF tolerance
+            if (!lLine.empty() && lLine.back() == '\r') { lLine.pop_back(); } // CRLF
 
             const size_t lFirst = lLine.find_first_not_of(" \t");
             if (lFirst != std::string::npos && lLine.compare(lFirst, 5, "#type") == 0)
@@ -54,9 +54,7 @@ namespace Opaax
             return ShaderDesc{};
         }
 
-        // Compile both stages to SPIR-V when glslang is available (GL consumes it via
-        // GL_ARB_gl_spirv, Vulkan natively). Absent glslang the blobs stay empty and the
-        // OpenGL backend falls back to the GLSL source path.
+        // Compile both stages to SPIR-V when glslang is available. Without it, OpenGL uses the GLSL source.
         lDesc.VertexSpirv   = ShaderCompiler::CompileGLSLToSPIRV(EShaderStage::Vertex,   lDesc.VertexSrc,   lDesc.DebugName);
         lDesc.FragmentSpirv = ShaderCompiler::CompileGLSLToSPIRV(EShaderStage::Fragment, lDesc.FragmentSrc, lDesc.DebugName);
         return lDesc;

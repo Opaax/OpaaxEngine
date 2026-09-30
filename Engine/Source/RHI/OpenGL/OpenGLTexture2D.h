@@ -7,16 +7,8 @@
 namespace Opaax
 {
     /**
-     * @class OpenGLTexture2D
-     *
-     * OpenGL ITexture2D implementation. Uploads pixels the caller already decoded.
-     * Supports R8 (single-channel coverage), RGB and RGBA source images.
-     * R8 path swizzles coverage into alpha so the existing RGBA sprite shader
-     * reads it as (1,1,1,coverage) without a shader fork.
-     *
-     * It does NOT read files: decoding is CPU work every backend shares, so it lives one layer up
-     * in TextureResource (F2a — the device receives bytes). A path ctor here also meant stb_image
-     * opening the file with a narrow CRT call, which mis-resolves a non-ASCII path (I7).
+     * OpenGL ITexture2D. Uploads decoded pixels (R8, RGB or RGBA). R8 is swizzled into alpha,
+     * so the RGBA sprite shader reads (1,1,1,coverage). Does not read files (see TextureResource).
      */
     class OPAAX_API OpenGLTexture2D final : public ITexture2D
     {
@@ -25,21 +17,13 @@ namespace Opaax
         // =============================================================================
     public:
         /**
-         * Create a 1x1 solid colour texture — useful for coloured quads without
-         * needing a real texture (white pixel * tint colour in the shader)
-         * @param InWidth
-         * @param InHeight
+         * Solid white texture (coloured quads multiply it by the tint).
          */
         OpenGLTexture2D(Uint32 InWidth, Uint32 InHeight);
 
         /**
-         * Upload raw pixel bytes directly (no file/stb_image step).
-         * Channels: 4 = RGBA8, 3 = RGB8, 1 = R8 coverage (alpha-swizzled).
-         * Caller owns and frees InData after the ctor returns.
-         * @param InData
-         * @param InWidth
-         * @param InHeight
-         * @param InChannels
+         * Uploads raw pixels. Channels: 4 = RGBA8, 3 = RGB8, 1 = R8 (swizzled into alpha).
+         * InData is copied.
          */
         OpenGLTexture2D(const unsigned char* InData, Uint32 InWidth, Uint32 InHeight, Int32 InChannels);
 

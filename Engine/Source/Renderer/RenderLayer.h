@@ -8,18 +8,12 @@
 namespace Opaax
 {
     // =============================================================================
-    // ERenderLayer — X-Macro driven (Renderer/RenderLayerList.h)
+    // ERenderLayer — generated from Renderer/RenderLayerList.h
     // =============================================================================
     /**
-     * @enum ERenderLayer
-     * Coarse draw-order band for 2D draws. Renderer2D sorts the whole PASS by
-     * (Layer, OrderInLayer, texture) before cutting it into batches, so a higher band always
-     * draws on top regardless of submission order or of how many draw calls the frame took.
-     * The enum body and the matching
-     * g_RenderLayerIDs[] are both generated from RenderLayerList.h — adding a band
-     * means a single new line in that list file.
-     *
-     * Ascending value = back-to-front: Background behind, UI in front.
+     * Draw-order band for 2D. Renderer2D sorts each pass by (Layer, OrderInLayer, texture) before
+     * batching, so a higher band always draws on top. Add a band in RenderLayerList.h.
+     * Ascending = back to front: Background behind, UI in front.
      */
     enum class ERenderLayer : Uint8
     {
@@ -30,8 +24,7 @@ namespace Opaax
     };
 
     /**
-     * The band's label (I11 — an enum gets a free ToString found by ADL). Total and silent: it is a
-     * log line and a dropdown entry, never a lookup key. ToStringID below is the lookup one.
+     * The band's label, for logs and dropdowns. Use ToStringID for lookups.
      */
     inline const char* ToString(ERenderLayer InLayer) noexcept
     {
@@ -46,12 +39,8 @@ namespace Opaax
     }
 
     /**
-     * The bands as DATA, so any ERenderLayer field draws as a dropdown with no per-type editor code.
-     *
-     * Written out instead of stamped with OPAAX_ENUM_VALUES because the list lives in an #include and
-     * a preprocessor directive cannot appear inside a macro argument — the property that matters is
-     * kept either way: the values still come from RenderLayerList.h, so adding a band stays one line
-     * in one file. `Count` is absent on purpose: it is a bound, not a band.
+     * The bands as data, for editor dropdowns. Written out by hand (a #include cannot go inside
+     * OPAAX_ENUM_VALUES). Count is not a band.
      */
     template<>
     struct TEnumValues<ERenderLayer>
@@ -64,7 +53,7 @@ namespace Opaax
         };
     };
 
-    /*** Parallel canonical-name array. Index by static_cast<Uint8>(ERenderLayer). */
+    /** Name of each band. Index with static_cast<Uint8>(ERenderLayer). */
     inline const OpaaxStringID g_RenderLayerIDs[] =
     {
         #define OPAAX_RENDER_LAYER(Name) OPAAX_ID(#Name),
@@ -72,14 +61,14 @@ namespace Opaax
         #undef OPAAX_RENDER_LAYER
     };
 
-    /*** ERenderLayer -> canonical OpaaxStringID. O(1) LUT. */
+    /** ERenderLayer -> OpaaxStringID. */
     inline const OpaaxStringID& ToStringID(ERenderLayer InLayer) noexcept
     {
         const Uint8 lIdx = static_cast<Uint8>(InLayer);
         return (lIdx < static_cast<Uint8>(ERenderLayer::Count)) ? g_RenderLayerIDs[lIdx] : g_RenderLayerIDs[0];
     }
 
-    /*** OpaaxStringID -> ERenderLayer. Linear scan; pure integer compare per slot. */
+    /** OpaaxStringID -> ERenderLayer (linear search). */
     inline ERenderLayer RenderLayerFromStringID(const OpaaxStringID& InID) noexcept
     {
         for (Uint8 i = 0; i < static_cast<Uint8>(ERenderLayer::Count); ++i)

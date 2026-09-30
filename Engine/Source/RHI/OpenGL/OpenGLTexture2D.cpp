@@ -1,10 +1,7 @@
 #include "OpenGLTexture2D.h"
 
-// Logger.h FIRST, and the order is load-bearing: it reaches windows.h through spdlog, and
-// minwindef.h defines APIENTRY UNGUARDED while glad.h guards on !defined(APIENTRY). Whichever
-// lands second loses — so the windows.h-bearing header has to go first or the build warns C4005.
-// OpenGLShader.cpp and OpenGLVertexArray.cpp already sit this way round, which is why only this
-// file warned.
+// Logger.h first: through spdlog it includes windows.h, whose APIENTRY must come before glad.h
+// (otherwise warning C4005).
 #include "Core/Log/Logger.h"
 
 #include <glad/glad.h>
@@ -12,11 +9,10 @@
 
 namespace Opaax
 {
-    // NOTE: the ITexture2D::Create factory dispatch lives in RHI/BackendFactory.cpp.
 
     OpenGLTexture2D::OpenGLTexture2D(Uint32 InWidth, Uint32 InHeight)
     {
-        // White pixel — multiply by tint in shader to get any colour
+        // White pixel: multiplied by the tint in the shader.
         glCreateTextures(GL_TEXTURE_2D, 1, &m_RendererID);
         glTextureStorage2D(m_RendererID, 1, GL_RGBA8, static_cast<GLsizei>(InWidth), static_cast<GLsizei>(InHeight));
 
@@ -72,16 +68,15 @@ namespace Opaax
         const bool lIsR8 = (InChannels == 1);
         if (lIsR8)
         {
-            // Swizzle coverage into the alpha channel so the existing RGBA sprite shader
-            // reads it as (1,1,1,coverage) — color tint then multiplies cleanly.
-            // LINEAR + CLAMP_TO_EDGE prevents atlas-cell bleed at non-1.0 scale.
+            // Swizzle coverage into alpha, so the RGBA sprite shader reads (1,1,1,coverage).
+            // LINEAR + CLAMP_TO_EDGE avoids bleeding between atlas cells.
             const GLint lSwizzle[4] = { GL_ONE, GL_ONE, GL_ONE, GL_RED };
             glTextureParameteriv(m_RendererID, GL_TEXTURE_SWIZZLE_RGBA, lSwizzle);
             glTextureParameteri(m_RendererID, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
             glTextureParameteri(m_RendererID, GL_TEXTURE_WRAP_S,     GL_CLAMP_TO_EDGE);
             glTextureParameteri(m_RendererID, GL_TEXTURE_WRAP_T,     GL_CLAMP_TO_EDGE);
 
-            // Single-byte rows: non-mod-4 widths corrupt under the default 4-byte alignment.
+            // 1-byte rows: widths not multiple of 4 break the default 4-byte alignment.
             glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
         }
 

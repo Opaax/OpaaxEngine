@@ -5,7 +5,7 @@
 namespace Opaax
 {
 	// =============================================================================
-    // WindowManager — owns a single Window, created on demand from Config_Engine.
+    // WindowManager — owns the main window, created from Config_Engine.
     // =============================================================================
     class OPAAX_API WindowManager final : public IWindowManager
     {

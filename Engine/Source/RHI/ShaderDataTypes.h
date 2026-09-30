@@ -6,9 +6,7 @@
 namespace Opaax
 {
     /**
-     * @Enum EShaderDataType
-     * 
-     * Describes a single element in a vertex buffer layout
+     * Type of one vertex attribute.
      */
     enum class EShaderDataType : Uint8
     {
@@ -40,9 +38,7 @@ namespace Opaax
     }
     
     /**
-     * @Struct BufferElement
-     *
-     * One attribute in a BufferLayout
+     * One attribute in a BufferLayout.
      */
     struct OPAAX_API BufferElement
     {
