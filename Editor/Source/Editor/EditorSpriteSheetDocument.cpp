@@ -9,8 +9,7 @@ namespace Opaax::Editor
     {
         SpriteSheetData lLoaded;
 
-        // Into a LOCAL first: a file that fails to parse must not half-replace the sheet already
-        // being edited, and SpriteSheetFile already leaves its out-parameter untouched on failure.
+        // Into a local first: a failed parse must not replace the open sheet.
         if (!SpriteSheetFile::Load(InAbsPath, lLoaded))
         {
             return false;

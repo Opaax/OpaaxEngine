@@ -36,28 +36,23 @@ namespace Opaax::Editor
 
     void EditorPanels::Draw(IEditorGui& InGui)
     {
-        // Recomputed from scratch every frame: a panel closed or hidden since the last one must not
-        // keep answering "focused" to a shortcut router.
+        // Recomputed every frame (a closed panel must not keep the focus).
         m_Focused = OpaaxStringID();
 
         for (LivePanel& lLive : m_Panels)
         {
             if (!lLive.bVisible) { continue; }
 
-            // The close button is written straight into whatever it is handed, so it gets a LOCAL:
-            // routing the result back through SetVisible below keeps that one method the only thing
-            // that ever moves a panel's visibility, and therefore the only thing that has to log it.
+            // The close button writes into a local; SetVisible below is the only thing that changes visibility.
             bool lWantVisible = true;
 
             const bool lOpen = InGui.BeginPanelWindow(lLive.Desc.Id.CStr(),
                                                       lLive.Panel->GetWindowStyle(), lWantVisible);
 
-            // Asked INSIDE the bracket, where "the window just begun" is well-defined. A collapsed
-            // panel is skipped by lOpen but can still hold focus, so this is asked either way.
+            // Asked inside the window bracket. A collapsed panel can still hold focus.
             if (InGui.IsPanelWindowFocused()) { m_Focused = lLive.Desc.Id; }
 
-            // EndPanelWindow runs whether or not the body opened — the pairing every panel used to
-            // have to get right on its own.
+            // EndPanelWindow runs whether or not the body opened.
             if (lOpen) { lLive.Panel->DrawContents(); }
 
             InGui.EndPanelWindow();
@@ -103,9 +98,8 @@ namespace Opaax::Editor
 
         lLive->bVisible = bInVisible;
 
-        // THE one place a panel changes visibility, so this line cannot be bypassed — the menu, the
-        // close button and any later caller all arrive here. A menu click is preceded by the node's
-        // own "Menu: ..." line; a bare one of these is the close button.
+        // The only place a panel's visibility changes (menu, close button, ...). A menu click logs its own
+        // line first; a bare one of these is the close button.
         OPAAX_LOG(LogEditorPanels, Info, "Panel '{}' -> {}", InID, bInVisible ? "shown" : "hidden");
     }
 

@@ -64,8 +64,7 @@ namespace Opaax::Editor
         }
         ImGui::EndDisabled();
 
-        // Its own verb and its own undo step: priority is not a list edit, and a context that
-        // outranks another is the whole mechanism behind a menu swallowing Jump (**IM6**).
+        // Its own undo step: priority decides which context consumes a key first.
         int lPriority = static_cast<int>(InData.Priority);
         if (ImGui::InputInt("Priority", &lPriority))
         {
@@ -105,8 +104,7 @@ namespace Opaax::Editor
 
         ImGui::EndDisabled();
 
-        // FOUR bindings plus Negate/Swizzle is the correct way to build an Axis2D and a miserable
-        // thing to type. One click, and no composite concept in the file format (**IM5**).
+        // Four bindings plus Negate/Swizzle make an Axis2D: one click instead of typing it.
         ImGui::BeginDisabled(m_Selected < 0);
 
         if (ImGui::Button("Add 2D Composite (WASD)") && m_Selected >= 0)
@@ -137,8 +135,7 @@ namespace Opaax::Editor
 
             ImGui::PushID(static_cast<int>(lIndex));
 
-            // The KEY leads, because that is what an author is looking for when rebinding. The
-            // action's file stem follows it; the full path is in the fold below.
+            // The key first (what you look for when rebinding), then the action's file name.
             char lLabel[160];
             std::snprintf(lLabel, sizeof(lLabel), "%-14s  %s",
                           ToString(lEntry.Key),
@@ -165,9 +162,7 @@ namespace Opaax::Editor
 
         for (const EKeyCode lCandidate : TEnumValues<EKeyCode>::Values)
         {
-            // The gamepad range is reserved and unfed (**IN7**), so offering it here would let an
-            // author pick a binding that AddContext refuses at load. Filtered rather than
-            // explained.
+            // Gamepad codes are not supported yet (AddContext would refuse them): not offered.
             if (!IsKeyCodeBindable(lCandidate))
             {
                 continue;
@@ -201,8 +196,7 @@ namespace Opaax::Editor
 
         ImGui::PushID(static_cast<int>(lIndex));
 
-        // DrawProperties' own fold, opened up so `Key` can be SKIPPED — it is drawn below by a
-        // combo that hides the unfed gamepad range, which the generic enum drawer cannot do.
+        // DrawProperties' fold, done by hand so Key can be skipped (drawn below by a filtered combo).
         std::apply([this, &lEntry](const auto&... lProperties)
                    {
                        ([&]
@@ -217,7 +211,7 @@ namespace Opaax::Editor
 
         DrawKeyCombo(lEntry.Key);
 
-        // ---- the entry's own modifier pipeline ----------------------------------------------
+        // ---- the entry's own modifiers -----------------------------------------------------------
         ImGui::Separator();
         ImGui::TextUnformatted("Modifiers (this key only)");
 
@@ -261,8 +255,7 @@ namespace Opaax::Editor
 
         ImGui::PopID();
 
-        // The Inspector's bracket. The CLOSE goes through InputMapOps, which records the whole
-        // list before and after — one step for a rebind, exactly as it is one action to a reader.
+        // The close goes through InputMapOps, which records the whole list (one step per rebind).
         const bool lItemActive = ImGui::IsAnyItemActive();
 
         if (lItemActive && !m_bWasItemActive)

@@ -3,15 +3,15 @@
 #include "Core/Log/Logger.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
-#include "Engine/Subsystems/Resources/ResourceRef.hpp"   // the claim on the clip's sheet + textures
+#include "Engine/Subsystems/Resources/ResourceRef.hpp"   // claims on the sheet and textures
 #include "Editor/Panels/IEditorPanel.h"
-#include "Editor/Undo/AnimationClipUndoables.h"          // the open edit gestures
+#include "Editor/Undo/AnimationClipUndoables.h"          // open edit gestures
 
 namespace Opaax
 {
     OPAAX_LOG_CATEGORY(AnimationClipPanel);
 
-    struct TextureResource;      // only NAMED by the held claims
+    struct TextureResource;
     struct SpriteSheetResource;
     struct AnimationClipData;
     struct SpriteSheetData;
@@ -24,22 +24,10 @@ namespace Opaax::Editor
     struct EditorImage;
 
     // =============================================================================
-    // AnimationClipPanel — the clip EDITOR: the step list, the clip's settings, and a preview that
-    //   actually plays.
-    //
-    //   Opened by a double-click in the Resource Browser, through the seam that already answers
-    //   "what does a double-click do" (ResourceTypeBuilder::SetActivate) — the same route Map,
-    //   Level, the texture preview and the sheet editor use, so this needed no new plumbing.
-    //
-    //   It draws EditorAnimationClipDocument, which owns the data; the panel owns only the CLAIMS
-    //   on the images, the selection and the preview clock, all of which are presentation. That
-    //   split is what lets a Save command and an undo step write the clip without going through a
-    //   panel.
-    //
-    //   THE PREVIEW RUNS ON THE PANEL'S OWN CLOCK, not the world's. An Edit world has no
-    //   SpriteAnimationSubsystem by construction (it is Play-only), so authoring playback cannot
-    //   borrow one — and must not, because the thing being previewed is the DOCUMENT's copy, which
-    //   the running game has never seen.
+    // AnimationClipPanel — the clip editor: step list, clip settings, and a playing preview.
+    //   Opened by a double-click in the Resource Browser. The data is in EditorAnimationClipDocument;
+    //   the panel only holds the image claims, the selection and the preview clock.
+    //   The preview uses the panel's own clock (Edit worlds have no SpriteAnimationSubsystem).
     // =============================================================================
     class AnimationClipPanel final : public IEditorPanel
     {
@@ -66,36 +54,34 @@ namespace Opaax::Editor
         // Functions
         // =============================================================================
     private:
-        /** Name, dirty marker, Save, and what is true of the clip as a whole. */
+        /** Name, dirty marker, Save, and clip-wide info. */
         void DrawHeader(const AnimationClipData& InData);
 
-        /** The clip's own fields, bracketed for undo the way the Inspector brackets its drawers. */
+        /** The clip's own fields, with undo. */
         void DrawSettings(AnimationClipData& InData);
 
-        /** Play / pause / scrub, and the picture of whatever step the clock is on. */
+        /** Play / pause / scrub, and the image of the current step. */
         void DrawPreview(const AnimationClipData& InData);
 
-        /** One selectable row per step, with the buttons that reorder and remove it. */
+        /** One row per step, with reorder and remove buttons. */
         void DrawStepList(const AnimationClipData& InData);
 
-        /** The selected step's fields, plus the picker that names a sheet frame. */
+        /** The selected step's fields, and the sheet frame picker. */
         void DrawSelectedStep(AnimationClipData& InData);
 
-        /** The sheet's frame names as a combo — the reason a frame is worth naming at all. */
+        /** The sheet's frame names, as a combo. */
         void DrawFramePicker(const AnimationClipData& InData, Uint32 InStepIndex);
 
         /**
          * The image for InStepIndex: a crop of the sheet's texture, or the step's own texture.
-         *
-         * @return An invalid image when there is nothing to show, which the caller says out loud
-         *   rather than drawing a blank rectangle ([[L15]]).
+         * @return An invalid image when there is nothing to show (the caller says so)
          */
         EditorImage ResolveStepImage(const AnimationClipData& InData, Uint32 InStepIndex);
 
-        /** The clip's sheet, claimed once and dropped when the clip changes. Null when it names none. */
+        /** The clip's sheet, claimed once and released when the clip changes. Null when there is none. */
         const SpriteSheetData* ClaimSheet(const AnimationClipData& InData);
 
-        /** A texture by asset path, claimed once. Serves the sheet's image and a step's own alike. */
+        /** A texture by asset path, claimed once. */
         const TextureResource* ClaimTexture(const OpaaxString& InAssetPath);
 
         // =============================================================================
@@ -103,15 +89,15 @@ namespace Opaax::Editor
         // =============================================================================
     public:
         //~Begin IEditorPanel interface
-        /** Nothing to acquire — an image exists only once a clip is opened. */
+        /** Nothing to acquire. */
         void Startup()     override {}
 
-        /** Nothing the world's render depends on. */
+        /** Nothing the world render depends on. */
         void OnPreRender() override {}
 
         void DrawContents() override;
 
-        /** Release the claims while the ResourceManager and the GL context are both alive (LC3). */
+        /** Releases the claims while the ResourceManager and the GL context are alive. */
         void Shutdown()    override;
 
         PanelWindowStyle GetWindowStyle() const override { return { { 460.f, 560.f } }; }
@@ -123,7 +109,7 @@ namespace Opaax::Editor
     private:
         EditorContext& m_Context;
 
-        /** The sheet the open clip names, keyed so a re-read of the same one is free. */
+        /** The sheet the open clip names. */
         ResourceRef<SpriteSheetResource> m_SheetClaim;
         OpaaxString                      m_ClaimedSheetPath;
 
@@ -131,16 +117,16 @@ namespace Opaax::Editor
         ResourceRef<TextureResource> m_TextureClaim;
         OpaaxString                  m_ClaimedTexturePath;
 
-        /** Which step the list highlights. -1 = none. Presentation, not document state. */
+        /** Highlighted step. -1 = none. */
         Int32 m_Selected = -1;
 
         // =============================================================================
-        // The preview clock — the panel's own, never the world's
+        // The preview clock (the panel's own)
         // =============================================================================
         float m_PreviewTime    = 0.f;
         bool  m_bPreviewPlaying = true;
 
-        /** The open edit gestures, one per group of fields, for the Inspector's reason. */
+        /** The open undo gestures, one per group of fields. */
         ClipStepEdit     m_StepGesture;
         ClipSettingsEdit m_SettingsGesture;
         bool             m_bStepGestureOpen     = false;
@@ -148,7 +134,7 @@ namespace Opaax::Editor
         bool             m_bWasStepItemActive     = false;
         bool             m_bWasSettingsItemActive = false;
 
-        /** The largest edge the preview is drawn at, in pixels. */
+        /** Largest preview edge, in pixels. */
         static constexpr float MAX_PREVIEW_SIZE = 180.f;
     };
 }

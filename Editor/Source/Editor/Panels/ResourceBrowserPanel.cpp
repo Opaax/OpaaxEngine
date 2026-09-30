@@ -11,10 +11,10 @@
 #include "Application/Services/IEngine.h"
 #include "Application/Services/IPaths.h"
 #include "Platform/IFileSystem.h"
-#include "Engine/Registries/EngineRegistries.h"   // extension -> resource type, the engine's half
+#include "Engine/Registries/EngineRegistries.h"   // extension -> resource type
 #include "Engine/Subsystems/Resources/ResourceManager.h"
-#include "Engine/Subsystems/Resources/ResourceTypeID.hpp"        // which type a thumbnail is for
-#include "Engine/Subsystems/Resources/Types/Texture/TextureResource.h"   // icons are textures like any other
+#include "Engine/Subsystems/Resources/ResourceTypeID.hpp"
+#include "Engine/Subsystems/Resources/Types/Texture/TextureResource.h"
 
 #include <imgui.h>
 
@@ -27,7 +27,7 @@ namespace
     constexpr float k_TileSize      = 84.f;
     constexpr char  k_UnknownGlyph[] = "[ ? ]";
 
-    // The icon column in a Tree/List row: one line tall, so a row keeps its height.
+    // The icon column of a Tree/List row: one line tall.
     float RowIconSize() { return ImGui::GetTextLineHeight(); }
 }
 
@@ -47,12 +47,10 @@ namespace Opaax::Editor
     {
         m_Roots.emplace_back(OPAAX_ID("Project"), m_Context.Paths.AssetsDir());
 
-        // The engine's shipped content. Browsable AND draggable: AbsoluteToAsset names a file under
-        // it by its "/Engine/" mount, so a component can reference one (IPaths::ENGINE_MOUNT).
+        // The engine's content. Browsable and draggable (referenced through the "/Engine/" mount).
         m_Roots.emplace_back(OPAAX_ID("Engine"), m_Context.Paths.EngineAssetsDir());
 
-        // The editor's own per-project space. Absent when no edited project was declared — then there
-        // is simply one root fewer, which every view already handles.
+        // The editor's per-project space. Absent without an edited project (one root fewer).
         if (m_Context.EditorPathsOrNull != nullptr)
         {
             m_Roots.emplace_back(OPAAX_ID("Editor"), m_Context.EditorPathsOrNull->EditorAssetsDir());
@@ -64,8 +62,7 @@ namespace Opaax::Editor
 
     void ResourceBrowserPanel::Shutdown()
     {
-        // Before the ResourceManager's own flush and while the GL context is alive, so the icon
-        // textures are deleted on a live device (LC3).
+        // Before the ResourceManager's flush, while the GL context is alive.
         m_TypeIcons.clear();
     }
 
@@ -88,8 +85,7 @@ namespace Opaax::Editor
 
     void ResourceBrowserPanel::DrawContents()
     {
-        // Frozen header: the toolbar (and the breadcrumb in Tiles) stay pinned while only the content
-        // area below scrolls — Excel's "freeze panes", salvaged from the old browser.
+        // The toolbar and breadcrumb stay pinned; only the content area scrolls.
         DrawToolbar();
         if (m_View == EBrowserView::Tiles) { DrawBreadcrumb(); }
         ImGui::Separator();
@@ -146,7 +142,7 @@ namespace Opaax::Editor
             ImGui::PopID();
         }
 
-        // Applied AFTER the loop — never resize the path being iterated.
+        // Applied after the loop (never resize the path being iterated).
         if (bHome)                 { m_TilePath.clear(); }
         else if (lNavigateTo >= 0) { m_TilePath.resize(static_cast<size_t>(lNavigateTo) + 1); }
     }
@@ -169,7 +165,7 @@ namespace Opaax::Editor
             if (lIndex % lColumns != 0) { ImGui::SameLine(); }
         };
 
-        // Home: the roots themselves are the tiles.
+        // Home: the roots are the tiles.
         if (m_TilePath.empty())
         {
             for (const ResourceRoot& lRoot : m_Roots)
@@ -191,7 +187,7 @@ namespace Opaax::Editor
         const ResourceFolder* lFolder = ResolveTileFolder();
         if (lRoot == nullptr || lFolder == nullptr)
         {
-            return;   // the path self-healed to Home; next frame renders the roots
+            return;   // reset to Home; next frame shows the roots
         }
 
         if (!lRoot->bExists)
@@ -254,8 +250,7 @@ namespace Opaax::Editor
         const bool   bClicked = ImGui::InvisibleButton("##file", ImVec2(k_TileSize, k_TileSize));
         const bool   bHovered = ImGui::IsItemHovered();
 
-        // Attach behavior to the button (the last-submitted item) BEFORE the draw-list calls, which
-        // submit nothing of their own.
+        // Attach behaviour to the button (the last submitted item) before the draw-list calls.
         ApplyFileBehavior(InFile, InRoot, bClicked);
 
         const FileType lType     = FindType(InFile);
@@ -306,14 +301,13 @@ namespace Opaax::Editor
     {
         const bool bFiltering = !m_Filter.IsEmpty();
 
-        // A filtered branch with nothing matching under it is hidden entirely, rather than expanding
-        // into a chain of empty folders.
+        // A filtered branch with no match is hidden.
         if (bFiltering && !FolderHasMatch(InFolder)) { return; }
 
         ImGuiTreeNodeFlags lFlags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
         if (bIsRoot) { lFlags |= ImGuiTreeNodeFlags_DefaultOpen; }
 
-        // Filtering force-opens, so a match is never hidden behind a collapsed parent.
+        // Filtering opens folders, so a match is never hidden.
         if (bFiltering) { ImGui::SetNextItemOpen(true, ImGuiCond_Always); }
 
         ImGui::PushID(InFolder.RelPath.IsEmpty() ? InFolder.Name.CStr() : InFolder.RelPath.CStr());
@@ -364,7 +358,7 @@ namespace Opaax::Editor
         {
             if (!MatchesFilter(lFile)) { continue; }
 
-            // The full path is the row's whole point here — a flat list of bare names would be ambiguous.
+            // The full path (bare names would be ambiguous in a flat list).
             const OpaaxString lFullPath = FullPathOf(lFile, InRoot);
             DrawFileRow(lFile, InRoot, lFullPath.CStr());
             ++InOutRowCount;
@@ -384,9 +378,8 @@ namespace Opaax::Editor
         const FileType lType     = FindType(InFile);
         const float    lIconSize = RowIconSize();
 
-        // Indented past the icon column, then the ICON IS PAINTED OVER that indent on the draw list.
-        // Painting rather than laying out is what keeps the Selectable the last-submitted item, so
-        // ApplyFileBehavior's hover, click and drag-drop all still apply to the whole row.
+        // The icon is painted over the indent, so the Selectable stays the last submitted item
+        // (ApplyFileBehavior's hover, click and drag still apply to the whole row).
         char lLabel[512];
         snprintf(lLabel, sizeof(lLabel), "      %s", InDisplayName);
 
@@ -396,8 +389,7 @@ namespace Opaax::Editor
         const bool   bClicked = ImGui::Selectable(lLabel, m_SelectedPath == FullPathOf(InFile, InRoot));
         ApplyFileBehavior(InFile, InRoot, bClicked);
 
-        // No inset for a row: the icon is already only one line tall, so IconBox's tile inset would
-        // shrink it to nothing.
+        // No inset for a row (the icon is one line tall).
         ImguiDraw::IconBox(ImGui::GetWindowDrawList(), TileImageOf(InFile, lType), GlyphOf(lType),
                            lPos, ImVec2(lPos.x + lIconSize, lPos.y + lIconSize), /*InInset*/0.f);
 
@@ -413,13 +405,12 @@ namespace Opaax::Editor
         {
             m_SelectedPath = lFullPath;
 
-            // Discrete (a click), so no spam — and the only signal that a selection moved at all.
+            // A click (no spam).
             OPAAX_LOG(LogResourceBrowserPanel, Info, "Resource browser selected '{}'", lFullPath.CStr());
         }
 
-        // Drag it into a field. GENERIC: the type comes from the engine's format table, so every
-        // registered resource is draggable and adding one touches nothing here. A file outside every
-        // mount converts to an empty path and simply carries no payload — a real answer, not a failure.
+        // Drag into a field. The type comes from the engine's format table. A file outside every mount
+        // has no asset path and carries no payload.
         if (lType.Format != nullptr && ImGui::BeginDragDropSource())
         {
             SetResourceDragPayload(lType.Format->TypeId, m_Context.Paths.AbsoluteToAsset(InFile.AbsPath));
@@ -506,7 +497,7 @@ namespace Opaax::Editor
     {
         if (m_Context.EditorPathsOrNull == nullptr)
         {
-            return OpaaxString();   // no editor space at all — the glyph is the whole answer
+            return OpaaxString();   // no editor space: glyph only
         }
 
         const OpaaxString lProjectIcon = m_Context.EditorPathsOrNull->EditorAssetToAbsolute(InIconRel);
@@ -520,15 +511,12 @@ namespace Opaax::Editor
 
     void ResourceBrowserPanel::LoadTypeIcons()
     {
-        // EAGER, and the registry is what makes that the right call: ResourceTypes() was SEALED at
-        // OnModulesRegistered, so the set of icons is finite and known right here. Loading on first
-        // draw instead would spread a handful of tiny reads over arbitrary frames and report a
-        // missing file at whichever one happened to show it.
+        // Loaded at startup: the type registry is sealed, so the icon set is known now.
         for (const ResourceTypeDesc& lChrome : m_Context.Extensions.ResourceTypes().Entries())
         {
             if (lChrome.Icon.IsEmpty())
             {
-                continue;   // glyph-only, a perfectly good registration
+                continue;   // glyph only
             }
 
             const OpaaxString lAbsolute = ResolveIconPath(lChrome.Icon);
@@ -536,12 +524,8 @@ namespace Opaax::Editor
                                                     ? ResourceRef<TextureResource>{}
                                                     : m_Context.Resources.Load<TextureResource>(lAbsolute.CStr());
 
-            // Logged on BOTH branches: a cache that only reports failures cannot be told apart from
-            // one that never ran (the RendererManager texture cache's rule).
-            //
-            // A FAILED ref is DROPPED rather than cached, and that is not tidiness: ResourceRef::Get
-            // on a failed claim answers the PLACEHOLDER, so storing it would draw a magenta square
-            // where the glyph belongs. Nothing is retried either way — this runs once.
+            // Logged either way. A failed ref is dropped (Get() would return the magenta placeholder);
+            // nothing is retried.
             if (!lRef.IsValid())
             {
                 OPAAX_LOG(LogResourceBrowserPanel, Warn, "Icon '{}' did not load — that type draws its glyph",
@@ -577,12 +561,8 @@ namespace Opaax::Editor
 
     EditorImage ResourceBrowserPanel::TileImageOf(const ResourceFile& InFile, const FileType& InType) const
     {
-        // An image file shows ITSELF once something has loaded it. Find is the whole reason this is
-        // affordable: it answers "already resident?" and never turns into a load, so scrolling a
-        // folder cannot pull it into memory (Legacy's rule, kept).
-        //
-        // The claim is taken and dropped within the frame — held only so the payload cannot be
-        // collected between the question and the draw.
+        // An image file shows itself once something has loaded it. Find never loads, so scrolling a
+        // folder loads nothing. The claim is held only for this frame.
         if (InType.Format != nullptr && InType.Format->TypeId == ResourceTypeID::Get<TextureResource>())
         {
             const ResourceRef<TextureResource> lLoaded =
@@ -637,7 +617,7 @@ namespace Opaax::Editor
         const ResourceRoot* lRoot = ResolveTileRoot();
         if (lRoot == nullptr)
         {
-            m_TilePath.clear();   // a root that no longer exists strands the view otherwise
+            m_TilePath.clear();   // the root no longer exists
             return nullptr;
         }
 
@@ -658,7 +638,7 @@ namespace Opaax::Editor
             lValid  = i + 1;
         }
 
-        // Truncate at the first segment that stopped resolving (folder deleted since the last scan).
+        // Stop at the first segment that no longer exists (a deleted folder).
         if (lValid < static_cast<Uint32>(m_TilePath.size()))
         {
             m_TilePath.resize(lValid);

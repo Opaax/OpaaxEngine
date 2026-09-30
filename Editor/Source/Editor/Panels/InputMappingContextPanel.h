@@ -4,7 +4,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Editor/Panels/IEditorPanel.h"
 
-#include "Engine/Subsystems/Resources/Types/Input/InputMappingContextData.h"   // the gesture caches an entry
+#include "Engine/Subsystems/Resources/Types/Input/InputMappingContextData.h"
 
 namespace Opaax
 {
@@ -16,19 +16,9 @@ namespace Opaax::Editor
     struct EditorContext;
 
     // =============================================================================
-    // InputMappingContextPanel — the REBINDING editor: which keys reach which actions.
-    //
-    //   MoverPanel's shape: a list with add/remove/reorder, and a property fold over the selected
-    //   row. Nothing here opens an action — a key changes, the action it drives does not, which is
-    //   why the two are separate assets (**IM9**).
-    //
-    //   THE KEY COMBO IS HAND-DRAWN rather than left to the generic enum drawer, for one reason:
-    //   EKeyCode reserves the gamepad range and nothing feeds it (**IN7**), so offering those
-    //   would let an author pick a binding that is refused at load. The generic drawer cannot
-    //   filter, so this one does — every other field still comes from DrawProperties.
-    //
-    //   `Add 2D Composite` is the authoring cost of IM5's design paid once: four bindings plus
-    //   Negate/Swizzle is the correct way to build an Axis2D and a miserable thing to type.
+    // InputMappingContextPanel — the rebinding editor: which keys reach which actions. A list with
+    //   add/remove/reorder and the fields of the selected row. The key combo is hand-drawn to hide
+    //   gamepad codes (not supported yet). "Add 2D Composite" builds a WASD-style Axis2D in one click.
     // =============================================================================
     class InputMappingContextPanel final : public IEditorPanel
     {
@@ -55,16 +45,16 @@ namespace Opaax::Editor
         // Functions
         // =============================================================================
     private:
-        /** Name, dirty marker, Save and the context's priority. */
+        /** Name, dirty marker, Save and priority. */
         void DrawHeader(const InputMappingContextData& InData);
 
         /** Add / Remove / Up / Down / Add 2D Composite, and the rows. */
         void DrawMappingList(const InputMappingContextData& InData);
 
-        /** The selected row: action, key, consume, and its own modifier pipeline. */
+        /** The selected row: action, key, consume, and its modifiers. */
         void DrawSelectedMapping(InputMappingContextData& InData);
 
-        /** The filtered key dropdown — bindable codes only. @return true when it changed. */
+        /** The key dropdown (bindable codes only). @return True if it changed */
         bool DrawKeyCombo(EKeyCode& InOutKey);
 
         // =============================================================================
@@ -75,12 +65,12 @@ namespace Opaax::Editor
         /** Nothing to acquire. */
         void Startup()     override {}
 
-        /** Nothing the world's render depends on. */
+        /** Nothing the world render depends on. */
         void OnPreRender() override {}
 
         void DrawContents() override;
 
-        /** Nothing claimed, so nothing to release. */
+        /** Nothing to release. */
         void Shutdown()    override {}
 
         PanelWindowStyle GetWindowStyle() const override { return { { 460.f, 520.f } }; }
@@ -96,7 +86,7 @@ namespace Opaax::Editor
         Int32 m_SelectedModifier = -1;
 
         // =============================================================================
-        // The open edit gesture — the entry as it was when the first field went active
+        // The open edit gesture: the data as it was when the first field became active
         // =============================================================================
         InputMappingEntry m_GestureBefore;
         Uint32            m_GestureIndex   = 0;

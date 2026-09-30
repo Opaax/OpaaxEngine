@@ -2,17 +2,17 @@
 
 #include "Core/Log/Logger.h"
 #include "Core/String/OpaaxString.hpp"
-#include "Engine/Subsystems/Resources/ResourceRef.hpp"   // the icon cache holds Refs BY VALUE
+#include "Engine/Subsystems/Resources/ResourceRef.hpp"
 #include "Editor/Panels/IEditorPanel.h"
 #include "Editor/Resources/ResourceScan.h"
-#include "Editor/UI/IEditorUIBackend.h"                  // EditorImage — returned by value
+#include "Editor/UI/IEditorUIBackend.h"                  // EditorImage
 
 namespace Opaax
 {
     OPAAX_LOG_CATEGORY(ResourceBrowserPanel);
 
     struct ResourceFormatEntry;
-    struct TextureResource;   // only NAMED by the icon cache — the RHI stays out of this header
+    struct TextureResource;
 }
 
 namespace Opaax::Editor
@@ -21,20 +21,10 @@ namespace Opaax::Editor
     struct ResourceTypeDesc;
 
     // =============================================================================
-    // ResourceBrowserPanel — the dockable "Resource Browser": the project's files on disk, in three
-    //   views over ONE scanned tree.
-    //
-    //   It is a FILE browser, not a catalog (overview §3.5): nothing is loaded, resolved or
-    //   reference-counted, and there is no manifest. What a file MEANS comes entirely from
-    //   ResourceTypeRegistry — icon, label and double-click action, keyed by extension — so adding a
-    //   type never touches this panel.
-    //
-    //   The tree is rebuilt only on Startup and on Refresh, never per frame: ImGui redraws constantly,
-    //   the filesystem does not change constantly, and re-walking the disk at 60Hz would be both
-    //   wasteful and jittery.
-    //
-    //   Like Hierarchy and Inspector it is a NATIVE panel with no privileges — EditorService registers
-    //   it into the same PanelRegistry a game module registers into.
+    // ResourceBrowserPanel — the "Resource Browser": the project's files on disk, in three views
+    //   (tiles, tree, list) over one scanned tree. A file browser: nothing is loaded. A file's icon,
+    //   label and double-click action come from ResourceTypeRegistry.
+    //   Rescanned only on Startup and Refresh (not every frame).
     // =============================================================================
     class ResourceBrowserPanel final : public IEditorPanel
     {
@@ -62,10 +52,10 @@ namespace Opaax::Editor
         // Types
         // =============================================================================
     private:
-        /** Tiles = explorer grid (default), Tree = folder outline, List = flat. */
+        /** Tiles = grid (default), Tree = folder outline, List = flat. */
         enum class EBrowserView : Uint8 { Tiles, Tree, List };
 
-        /** What the browser knows about one file: what it IS (engine) and how it looks (editor). */
+        /** One file: its type (engine) and how it looks (editor). */
         struct FileType
         {
             const ResourceFormatEntry* Format = nullptr;
@@ -76,7 +66,7 @@ namespace Opaax::Editor
         // Functions
         // =============================================================================
     private:
-        /** Rescan every root from disk and log the outcome per root (the discrete, non-per-frame signal). */
+        /** Rescans every root and logs the result per root. */
         void Refresh();
 
         void DrawToolbar();
@@ -92,68 +82,59 @@ namespace Opaax::Editor
         void DrawFileRow(const ResourceFile& InFile, const ResourceRoot& InRoot, const char* InDisplayName);
 
         /**
-         * Selection, tooltip and double-click activation for the LAST-SUBMITTED item — so one function
-         * serves a tree Selectable and a tile InvisibleButton alike.
+         * Selection, tooltip and double-click for the last submitted item (tree row or tile).
          */
         void ApplyFileBehavior(const ResourceFile& InFile, const ResourceRoot& InRoot, bool bClicked);
 
-        /** @return The full display path of a file, "<Root>/<RelPath>" — its identity for selection + logs. */
+        /** @return The file's display path, "<Root>/<RelPath>" */
         OpaaxString FullPathOf(const ResourceFile& InFile, const ResourceRoot& InRoot) const;
 
         /**
-         * Resolve a file in two steps: the ENGINE says which resource type owns its extension, the
-         * EDITOR says how that type looks. Either half may be absent — an unregistered extension, or
-         * a registered format no editor module gave chrome to.
+         * Resolves a file: the engine gives the resource type of its extension, the editor gives how the
+         * type looks. Either may be missing.
          */
         FileType FindType(const ResourceFile& InFile) const;
 
-        /** @return The chrome's override, else the format's own label, else "Unknown type". */
+        /** @return The chrome's label, else the format's label, else "Unknown type" */
         static const char* LabelOf(const FileType& InType);
 
-        /** @return The type's fallback text, else the unknown-type glyph. Drawn only when there is no icon image. */
+        /** @return The type's fallback text, else the unknown-type glyph (used when there is no icon image) */
         static const char* GlyphOf(const FileType& InType);
 
-        /** Load every registered type's icon once, at Startup — the registry is sealed by then. */
+        /** Loads every registered type's icon once, at Startup. */
         void LoadTypeIcons();
 
         /**
-         * The type's icon image, from what LoadTypeIcons resolved.
-         *
-         * @return An INVALID image when the type registered none, when no editor space existed to
-         *   resolve it against, or when the file was missing — all of which draw the glyph instead.
+         * The type's icon image.
+         * @return An invalid image if the type has none, there is no editor space, or the file is missing
+         *   (the glyph is drawn instead)
          */
         EditorImage IconOf(const FileType& InType) const;
 
         /**
-         * What a TILE draws: the file's OWN image when it is already loaded, else its type's icon.
-         *
-         * Never loads anything — the thumbnail is a by-product of something else having loaded that
-         * texture (this panel's Preview, or the game's own sprites), which is what keeps browsing a
-         * folder of 500 images free.
+         * What a tile shows: the file's own image if already loaded, else its type's icon. Never loads.
          */
         EditorImage TileImageOf(const ResourceFile& InFile, const FileType& InType) const;
 
         /**
-         * An editor-assets-relative icon path made absolute: the PROJECT's editor space first, then
-         * the editor tool's own. Project-first is what lets a game override an editor icon.
-         *
-         * @return EMPTY when there is no editor space at all (no edited project).
+         * An icon path made absolute: the project's editor space first, then the editor's own
+         * (so a game can override an icon).
+         * @return Empty without an editor space
          */
         OpaaxString ResolveIconPath(const OpaaxString& InIconRel) const;
 
         bool MatchesFilter(const ResourceFile& InFile) const;
 
-        /** @return true if this folder, or anything under it, has a file passing the filter — what lets Tree hide empty branches. */
+        /** @return True if this folder or anything under it has a file passing the filter */
         bool FolderHasMatch(const ResourceFolder& InFolder) const;
 
         /**
-         * Walk m_TilePath to the folder it names, TRUNCATING it at the first segment that no longer
-         * resolves (a folder deleted since the last scan must not strand the view).
-         * @return nullptr at the Home level, where the roots themselves are the tiles.
+         * The folder m_TilePath names, truncating the path at the first missing segment.
+         * @return nullptr at Home (the roots are the tiles)
          */
         const ResourceFolder* ResolveTileFolder();
 
-        /** @return The root m_TilePath[0] names, or nullptr. */
+        /** @return The root m_TilePath[0] names, or nullptr */
         const ResourceRoot* ResolveTileRoot() const;
 
         // =============================================================================
@@ -161,17 +142,16 @@ namespace Opaax::Editor
         // =============================================================================
     public:
         //~Begin IEditorPanel interface
-        /** Builds the root list from the injected paths, then runs the first scan. */
+        /** Builds the root list, then scans. */
         void            Startup()               override;
 
-        /** Nothing the world's render depends on. */
+        /** Nothing the world render depends on. */
         void            OnPreRender()           override {}
 
-        /** Toolbar + breadcrumb pinned, the content area scrolling beneath them. */
+        /** Toolbar and breadcrumb pinned, content scrolling below. */
         void            DrawContents()          override;
 
-        /** Release the icon claims. Panels shut down while the ResourceManager and the GL context
-         *  are both still alive (LC3), which is what makes this the right place. */
+        /** Releases the icon claims (the ResourceManager and GL context are still alive). */
         void            Shutdown()              override;
 
         PanelWindowStyle GetWindowStyle() const override { return { { 520.f, 320.f } }; }
@@ -183,7 +163,7 @@ namespace Opaax::Editor
     private:
         EditorContext& m_Context;
 
-        // Project + Editor today. Data-driven on purpose: another root is one push_back in Startup.
+        // Project and Editor roots.
         TDynArray<ResourceRoot> m_Roots;
 
         EBrowserView            m_View = EBrowserView::Tiles;
@@ -192,11 +172,10 @@ namespace Opaax::Editor
         TDynArray<OpaaxString>  m_TilePath;
 
         OpaaxString             m_Filter;
-        OpaaxString             m_SelectedPath;   // "<Root>/<RelPath>" — highlight only; NOT EditorSelection
+        OpaaxString             m_SelectedPath;   // "<Root>/<RelPath>", highlight only (not EditorSelection)
 
-        // ResourceTypeID -> the claim keeping that type's icon loaded. Filled once at Startup from
-        // the SEALED type registry, and an entry is kept even when the load failed, so the draw path
-        // is a plain lookup with no I/O and no retry.
+        // ResourceTypeID -> the icon texture claim. Filled once at Startup (failed loads kept too,
+        // so drawing is a plain lookup).
         TUnorderedMap<Uint32, ResourceRef<TextureResource>> m_TypeIcons;
     };
 }

@@ -4,7 +4,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Editor/Panels/IEditorPanel.h"
 
-#include "Engine/Subsystems/Resources/Types/Mover/MoveModeData.h"   // the gesture caches the data
+#include "Engine/Subsystems/Resources/Types/Mover/MoveModeData.h"
 
 namespace Opaax
 {
@@ -16,16 +16,8 @@ namespace Opaax::Editor
     struct EditorContext;
 
     // =============================================================================
-    // MoveModePanel — the tuning EDITOR: one mode's knobs, and nothing else.
-    //
-    //   The simplest document panel in the editor. A tuning has no list, no canvas and no preview,
-    //   so this is a property fold over one struct plus a Save — which is exactly what makes the
-    //   knobs editable at all, since M9's answer (an ImGui virtual inside the engine) is forbidden
-    //   now (**MR2d**).
-    //
-    //   IT SHOWS ONLY THE KNOBS THE SELECTED MODE READS. MoveModeData carries every mode's fields
-    //   because it is ONE resource type — a clip is one type too — and deciding which of them
-    //   matter is a presentation question, so it is answered here rather than in the engine.
+    // MoveModePanel — the tuning editor: the fields of one movement mode. Only the fields the
+    //   selected mode uses are shown (MoveModeData holds every mode's fields).
     // =============================================================================
     class MoveModePanel final : public IEditorPanel
     {
@@ -55,7 +47,7 @@ namespace Opaax::Editor
         /** Name, dirty marker and Save. */
         void DrawHeader();
 
-        /** The knobs, bracketed for undo and committed through MoveModeOps. */
+        /** The fields, with undo, committed through MoveModeOps. */
         void DrawTuning(MoveModeData& InData);
 
         // =============================================================================
@@ -63,15 +55,15 @@ namespace Opaax::Editor
         // =============================================================================
     public:
         //~Begin IEditorPanel interface
-        /** Nothing to acquire — a tuning is floats. */
+        /** Nothing to acquire. */
         void Startup()     override {}
 
-        /** Nothing the world's render depends on. */
+        /** Nothing the world render depends on. */
         void OnPreRender() override {}
 
         void DrawContents() override;
 
-        /** Nothing claimed, so nothing to release. */
+        /** Nothing to release. */
         void Shutdown()    override {}
 
         PanelWindowStyle GetWindowStyle() const override { return { { 380.f, 400.f } }; }
@@ -84,7 +76,7 @@ namespace Opaax::Editor
         EditorContext& m_Context;
 
         // =============================================================================
-        // The open edit gesture — the tuning as it was when the first field went active
+        // The open edit gesture: the data as it was when the first field became active
         // =============================================================================
         MoveModeData m_GestureBefore;
         bool         m_bGestureOpen   = false;

@@ -1,6 +1,6 @@
 #include "Editor/EditorUICanvasDocument.h"
 
-#include <algorithm>   // std::reverse — a path is built leaf-to-root
+#include <algorithm>   // std::reverse
 
 #include "Core/String/OpaaxPathString.h"
 #include "UI/UICanvasFile.h"
@@ -11,7 +11,7 @@ namespace Opaax::Editor
 {
     namespace
     {
-        /** Move InSource's children onto InTarget, emptying InSource. The root itself is the canvas's. */
+        /** Moves InSource's children onto InTarget. */
         void AdoptChildren(UIWidget& InTarget, UIWidget& InSource)
         {
             while (!InSource.GetChildren().empty())
@@ -31,7 +31,7 @@ namespace Opaax::Editor
             return false;   // UICanvasFile logged why; the previous document stays open
         }
 
-        // Clear first, then adopt: opening a second canvas must not leave the first one's widgets.
+        // Clear first, then adopt: no widgets left from the previous canvas.
         while (!m_Canvas.Root().GetChildren().empty())
         {
             m_Canvas.Root().RemoveChild(*m_Canvas.Root().GetChildren().front());
@@ -82,8 +82,7 @@ namespace Opaax::Editor
         m_Canvas.SetReferenceHeight(lDoc.ReferenceHeight);
         AdoptChildren(m_Canvas.Root(), *lDoc.Root);
 
-        // The tree the selection named is gone; the PATH may still be valid, and Resolve answers
-        // null when it is not — which is why the selection is a path (**UI15**).
+        // The tree was replaced; the path may still be valid (Resolve returns null if not).
         return true;
     }
 
@@ -94,7 +93,7 @@ namespace Opaax::Editor
 
     OpaaxString EditorUICanvasDocument::Serialize() const
     {
-        // The root-taking overload: the canvas keeps owning its tree (UI12).
+        // The root overload: the canvas keeps its tree.
         return UICanvasFile::Serialize(m_Canvas.Root(), m_Canvas.GetReferenceHeight());
     }
 
@@ -121,7 +120,7 @@ namespace Opaax::Editor
         {
             if (lIndex >= lNode->GetChildren().size())
             {
-                return nullptr;   // the path names something that is no longer there
+                return nullptr;   // no longer there
             }
 
             lNode = lNode->GetChildren()[lIndex].get();
@@ -148,14 +147,14 @@ namespace Opaax::Editor
             }
         }
 
-        // Built leaf-to-root; a path reads root-to-leaf.
+        // Built leaf to root; a path reads root to leaf.
         std::reverse(lPath.begin(), lPath.end());
         return lPath;
     }
 
     namespace
     {
-        /** Deepest visible descendant of InNode containing InPoint, last child first; null when none. */
+        /** Deepest visible descendant of InNode containing InPoint, last child first; null if none. */
         const UIWidget* DeepestAt(const UIWidget& InNode, const Vector2F& InPoint)
         {
             if (!InNode.bVisible)
@@ -180,7 +179,7 @@ namespace Opaax::Editor
     {
         const UIWidget* lHit = DeepestAt(m_Canvas.Root(), InCanvasPoint);
 
-        // The root covers the whole canvas, so "the root was hit" is "nothing was" (UI4's rule).
+        // The root covers the whole canvas, so hitting the root means nothing was hit.
         return (lHit == nullptr || lHit == &m_Canvas.Root()) ? UIWidgetPath{} : PathOf(*lHit);
     }
 }

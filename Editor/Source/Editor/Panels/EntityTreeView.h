@@ -19,32 +19,27 @@ namespace Opaax::Editor
 {
     class EditorSelection;
 
-    /** What a dragged ROW landed on — banked for the caller to spend AFTER the walk (**MP7**). */
+    /** Where a dragged row was dropped, applied by the caller after the walk. */
     struct EntityTreeDrop
     {
         EntityID Child  = ENTITY_NONE;
-        EntityID Parent = ENTITY_NONE;   // invalid = to root
-        MapId    ToMap;                  // a map header names its map; invalid = keep the child's
+        EntityID Parent = ENTITY_NONE;   // invalid = root
+        MapId    ToMap;                  // a map header's map; invalid = keep the child's
     };
 
-    /** What a dragged PREFAB (from the browser) landed on — the same bank, one type over. */
+    /** Where a dragged prefab (from the browser) was dropped. */
     struct EntityTreePrefabDrop
     {
-        OpaaxString AssetPath;           // asset-relative, as the browser drags it
+        OpaaxString AssetPath;           // asset-relative
         EntityID    OnEntity = ENTITY_NONE;   // a row: instantiate as its child; invalid = a header
         MapId       ToMap;               // the header's map
     };
 
     // =============================================================================
-    // EntityTreeView — one world's entities as ImGui tree rows: a parent opens on its children, a
-    //   click selects, a row is a drag source and a drop target (§HR). Shared by the Hierarchy and
-    //   the prefab panel the way the viewport gestures are (**PF12**): the tree is the same tree
-    //   whichever document owns the world; only the verbs around it differ.
-    //
-    //   NOTHING IS APPLIED HERE. A drop arrives mid-walk, so it is banked and the panel spends it
-    //   once its pass is over — the rule every Hierarchy verb already follows.
-    //
-    //   Children are DERIVED per pass from EntityMeta::Parent — Rebuild once, then draw.
+    // EntityTreeView — one world's entities as tree rows: parents open on their children, a click
+    //   selects, a row can be dragged and dropped on. Shared by the Hierarchy and the prefab panel.
+    //   Drops are stored and applied by the panel after the walk. Children are rebuilt from
+    //   EntityMeta::Parent each pass.
     // =============================================================================
     class EntityTreeView
     {
@@ -52,10 +47,10 @@ namespace Opaax::Editor
         // Build
         // =============================================================================
     public:
-        /** The child map and the root list, from the world as it is now. Once per draw pass. */
+        /** The child map and the root list, from the world now. Once per pass. */
         void Rebuild(World& InWorld);
 
-        /** Entities with no (resolvable) parent, in registry order. The caller buckets these. */
+        /** Entities with no (resolvable) parent, in registry order. */
         const TDynArray<EntityID>& Roots() const noexcept { return m_Roots; }
 
         // =============================================================================
@@ -65,25 +60,25 @@ namespace Opaax::Editor
         using ContextMenuFn = TFunction<void(Entity)>;
 
         /**
-         * InEntity's row and, when open, its subtree. Ctrl toggles, a plain click replaces.
-         * InContextMenu runs right after the row so the panel can hang its popup on it.
+         * InEntity's row and, when open, its subtree. Ctrl toggles, a click replaces.
+         * InContextMenu runs right after the row (for the panel's popup).
          */
         void DrawNode(World& InWorld, EntityID InEntity, EditorSelection& InSelection,
                       const ContextMenuFn& InContextMenu);
 
         /**
-         * Make the LAST ITEM a drop target — a map header: a row dropped there goes to root in
-         * InMap; a prefab dropped there is instantiated into InMap.
+         * Makes the last item a drop target (a map header): a row goes to the root of InMap;
+         * a prefab is instantiated into InMap.
          */
         void AcceptRootDrop(MapId InMap);
 
-        /** A "drop here to unparent" row, drawn only while an entity is being dragged. */
+        /** A "drop here to unparent" row, only while an entity is dragged. */
         void DrawUnparentStrip(MapId InMap);
 
-        /** The row drop banked this pass, if any. Cleared. */
+        /** The row drop of this pass, if any. Cleared. */
         bool TakeDrop(EntityTreeDrop& OutDrop);
 
-        /** The prefab drop banked this pass, if any. Cleared. */
+        /** The prefab drop of this pass, if any. Cleared. */
         bool TakePrefabDrop(EntityTreePrefabDrop& OutDrop);
 
         // =============================================================================

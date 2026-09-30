@@ -6,13 +6,13 @@
 #include "Editor/Commands/EditorNativeCommandsTags.hpp"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Editor/Operation/FontFamilyOperations.h"
-#include "Editor/Properties/PropertyDrawers.h"   // the specializations DrawProperties folds over
+#include "Editor/Properties/PropertyDrawers.h"
 #include "Editor/UI/IEditorUIBackend.h"          // the atlas as an ImGui image
 
 #include "Application/Services/IPaths.h"
 #include "Engine/Subsystems/Resources/ResourceManager.h"
 #include "Engine/Subsystems/Resources/Types/Font/FontFaceResource.h"
-#include "Renderer/Text/Text2D.h"                // Layout — the SAME walk the viewport uses
+#include "Renderer/Text/Text2D.h"                // Layout: same as the viewport
 
 #include <imgui.h>
 
@@ -66,7 +66,7 @@ namespace Opaax::Editor
     {
         if (InPath == m_SampleFacePath)
         {
-            return;   // already held — this runs every frame
+            return;   // already held (runs every frame)
         }
 
         m_SampleFacePath = InPath;
@@ -109,14 +109,13 @@ namespace Opaax::Editor
 
         if (lFace->GetAtlas() == nullptr)
         {
-            // A frame or two: the bake ran on Load, the UPLOAD runs at the next pump (TX4).
+            // Upload pending: the bake ran on Load, the upload runs next pump.
             ImGui::TextDisabled("Uploading the atlas...");
             ImGui::TreePop();
             return;
         }
 
-        // ONE walk, an ImGui sink. The world's Y goes up and ImGui's goes down, so the origin is the
-        // top-left of the box and every quad's Y is negated into it.
+        // Same layout as the viewport, into ImGui. World Y is up, ImGui's is down: Y is negated.
         const EditorImage lImage  = m_Context.UIBackend.GetTextureImage(*lFace->GetAtlas());
         const ImVec2      lOrigin = ImGui::GetCursorScreenPos();
         ImDrawList* const lDraw   = ImGui::GetWindowDrawList();
@@ -141,15 +140,13 @@ namespace Opaax::Editor
                     return;
                 }
 
-                // THE V SWAP, per glyph. The quad carries the world's convention — UVMin is its
-                // BOTTOM edge — and ImGui's uv0 goes with the TOP-left corner (**TX9**).
+                // V swap per glyph: UVMin is the quad's bottom edge; ImGui's uv0 is the top-left.
                 lDraw->AddImage(static_cast<ImTextureID>(lImage.Handle), lMin, lMax,
                                 ImVec2(InQuad.UVMin.x, InQuad.UVMax.y),
                                 ImVec2(InQuad.UVMax.x, InQuad.UVMin.y), lColour);
             });
 
-        // The layout DREW into the draw list, which does not advance the cursor — so the box has to
-        // be reserved afterwards, or everything below would draw on top of the sample.
+        // Drawing into the draw list does not move the cursor: reserve the box afterwards.
         ImGui::Dummy(ImVec2(lExtent.x, lExtent.y));
 
         ImGui::TextDisabled("%s", m_SampleFacePath.CStr());
@@ -171,8 +168,7 @@ namespace Opaax::Editor
 
         if (lFound == nullptr)
         {
-            // The one axis with no fallback, and the loudest outcome — worth saying in full rather
-            // than leaving it as an empty result.
+            // No face for this script (no fallback): say it in full.
             ImGui::TextDisabled("No %s face in this family.", ToString(m_Ask.Subset));
             ImGui::TextDisabled("Text asking for it draws a row of boxes.");
         }
@@ -184,8 +180,7 @@ namespace Opaax::Editor
         }
         else
         {
-            // The subset always matches — Find refuses to cross it — so what differed is one of the
-            // other three, and naming both cuts says which.
+            // The script always matches, so one of the other three differs: name both styles.
             ImGui::TextDisabled("No %s / %s / %s — falls back to %s / %s / %s",
                                 ToString(m_Ask.Width),      ToString(m_Ask.Slant),      ToString(m_Ask.Weight),
                                 ToString(lFound->Style.Width), ToString(lFound->Style.Slant),
@@ -226,8 +221,7 @@ namespace Opaax::Editor
 
     void FontFamilyPanel::DrawPlaneSelectors()
     {
-        // The matrix is subset x weight, so width and slant have to be chosen OUTSIDE it. Two
-        // combos rather than a 4x larger table: 81 cells reads, 324 does not.
+        // The matrix is script x weight; width and slant are picked above it (81 cells, not 324).
         ImGui::SetNextItemWidth(140.f);
         if (ImGui::BeginCombo("Width", ToString(m_PlaneWidth)))
         {
@@ -273,7 +267,7 @@ namespace Opaax::Editor
     {
         constexpr Uint32 SUBSET_COUNT = static_cast<Uint32>(std::size(TEnumValues<EFontSubset>::Values));
 
-        // +1 for the weight labels down the left.
+        // +1 for the weight labels.
         if (!ImGui::BeginTable("FamilyMatrix", static_cast<int>(SUBSET_COUNT) + 1,
                                ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedFit
                              | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY))
@@ -281,7 +275,7 @@ namespace Opaax::Editor
             return;
         }
 
-        ImGui::TableSetupScrollFreeze(1, 1);   // the weight column and the subset row stay put
+        ImGui::TableSetupScrollFreeze(1, 1);   // the weight column and script row stay visible
         ImGui::TableSetupColumn("Weight");
 
         for (const EFontSubset lSubset : TEnumValues<EFontSubset>::Values)
@@ -304,15 +298,13 @@ namespace Opaax::Editor
                 const FontStyleKey lStyle{ lSubset, lWeight, m_PlaneWidth, m_PlaneSlant };
                 const Int32        lIndex = FindEntry(InData, lStyle);
 
-                // PushID per cell, not per row: two cells in one row would otherwise share an id and
-                // ImGui would route both clicks to the first (I16).
+                // PushID per cell, or two cells of a row would share an id.
                 ImGui::PushID(static_cast<int>(lWeight));
                 ImGui::PushID(static_cast<int>(lSubset));
 
                 if (lIndex < 0)
                 {
-                    // A face this family does not have. The button ADDS it, already carrying its
-                    // style — which is why there is no separate Add button anywhere on this panel.
+                    // A missing style: the button adds it (hence no separate Add button).
                     if (ImGui::SmallButton("+") && FamilyOps::AddEntry(m_Context, lStyle))
                     {
                         m_Selected = static_cast<Int32>(InData.EntryCount()) - 1;
@@ -323,8 +315,7 @@ namespace Opaax::Editor
                     const bool bSelected = (m_Selected == lIndex);
                     const bool bEmpty    = InData.Entries[static_cast<Uint32>(lIndex)].Face.IsEmpty();
 
-                    // An entry with no file yet is a real state — just added, or cleared — and it has
-                    // to look different from one that resolves, or a half-built family reads as done.
+                    // An entry without a file yet looks different from one that resolves.
                     if (ImGui::Selectable(bEmpty ? "?" : "*", bSelected))
                     {
                         m_Selected = lIndex;
@@ -358,12 +349,12 @@ namespace Opaax::Editor
             m_Selected       = -1;
             m_bGestureOpen   = false;
             m_bWasItemActive = false;
-            return;   // the list just changed under everything below
+            return;   // the list changed
         }
 
-        // The Inspector's bracket: a TPropertyDrawer writes straight through a reference and cannot
-        // report that it did, so the edges of "any item is active" open and close one step. The
-        // CLOSE goes through FamilyOps, which is what judges the style against the rest of the family.
+        // Like the Inspector: a drawer writes through a reference without reporting it, so an undo step
+        // opens when an item becomes active and closes when none is.
+        // The close goes through FamilyOps, which checks the style against the family.
         const bool lItemActive = ImGui::IsAnyItemActive();
 
         if (lItemActive && !m_bWasItemActive)

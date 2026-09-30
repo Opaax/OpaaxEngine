@@ -2,26 +2,15 @@
 
 #include "Core/Profiling/FrameStats.h"
 
-#include <cstring>   // strcmp — two literals may spell one scope name
+#include <cstring>   // strcmp
 
 namespace Opaax::Editor
 {
     // =============================================================================
-    // StatsDisplay — a FrameStats held STILL enough to read.
-    //
-    //   The engine's snapshot is per-frame and correct; drawing it directly is not readable. Two
-    //   things move that should not:
-    //
-    //     - every number, 60 times a second. The caller fixes that by refreshing on a throttle.
-    //     - the ROW SET. A frame whose accumulator took no fixed step has no FixedUpdate children,
-    //       so the rows below jump up and back. That is what this type fixes: a scope already known
-    //       keeps its place and reads 0.00 for the frames it did not run.
-    //
-    //   Rebuilds wholesale only when the frame is not a SUBSEQUENCE of what is displayed — a world
-    //   change, or a module registering a new subsystem. Rare, and one jump then is honest.
-    //
-    //   Header-only and free of ImGui so OpaaxTests can reach it: the fold below has an ordering
-    //   subtlety (the same name under two parents is two rows) that no smoke run would catch.
+    // StatsDisplay — FrameStats held still enough to read. The caller refreshes it on a throttle;
+    //   this keeps the row set stable: a known scope keeps its row and shows 0.00 on frames it did
+    //   not run. Rebuilt only when the frame is not a subsequence of what is shown (world change,
+    //   new subsystem). No ImGui, so it is tested.
     // =============================================================================
     class StatsDisplay
     {
@@ -29,7 +18,7 @@ namespace Opaax::Editor
         // Update
         // =============================================================================
     public:
-        /** Take InStats, keeping the current layout where it still fits. */
+        /** Takes InStats, keeping the current layout where it fits. */
         void Update(const FrameStats& InStats)
         {
             m_FrameMs = InStats.FrameMs;
@@ -42,7 +31,7 @@ namespace Opaax::Editor
             FoldCounters(InStats.Profiler.Counters());
         }
 
-        /** Drop the layout — the scopes of a world that is gone would linger at 0.00 forever. */
+        /** Drops the layout (a destroyed world's scopes would stay at 0.00 forever). */
         void Clear() noexcept
         {
             m_Scopes.clear();
@@ -60,21 +49,20 @@ namespace Opaax::Editor
 
         const TDynArray<StatCounter>& Counters() const noexcept { return m_Counters; }
 
-        /** The frame's measured total — everything at depth 0. The remainder is what nobody timed. */
+        /** The frame's measured total (depth 0). The remainder is what nobody timed. */
         double TopLevelMs() const noexcept
         {
             double lTotal = 0.0;
             for (const ScopeSample& lRow : m_Scopes)
             {
-                // Depth 0 only: a nested scope's time is already inside its parent's, and charging
-                // it twice would drive the unmeasured remainder negative.
+                // Depth 0 only: a nested scope's time is already in its parent's.
                 if (lRow.Depth == 0) { lTotal += lRow.Milliseconds; }
             }
 
             return lTotal;
         }
 
-        /** Frame time nobody measured: the OS event poll, and the editor's own UI pass. */
+        /** Frame time nobody measured: the OS event poll and the editor's UI pass. */
         double UnmeasuredMs() const noexcept
         {
             const double lRest = m_FrameMs - TopLevelMs();
@@ -95,11 +83,8 @@ namespace Opaax::Editor
         }
 
         /**
-         * Fold InIncoming into the displayed rows, or answer false if it does not fit.
-         *
-         * Matched as an ordered SUBSEQUENCE rather than by name: "Renderer" appears under both
-         * Update and Render at the same depth, so a name lookup would post the render cost onto the
-         * update row.
+         * Folds InIncoming into the shown rows, or returns false if it does not fit. Matched as an ordered
+         * subsequence, not by name ("Renderer" appears under both Update and Render).
          */
         bool TryFold(const TDynArray<ScopeSample>& InIncoming)
         {
@@ -117,8 +102,7 @@ namespace Opaax::Editor
                 ++lCursor;
             }
 
-            // Zero FIRST, so a scope that stopped running reads 0.00 rather than holding a stale
-            // number that looks like it is still costing something.
+            // Zero first, so a scope that stopped running shows 0.00, not a stale number.
             for (ScopeSample& lRow : m_Scopes)
             {
                 lRow.Milliseconds = 0.0;
@@ -135,11 +119,7 @@ namespace Opaax::Editor
         }
 
         /**
-         * Counters keyed by NAME — no parent, no depth, so a plain lookup is enough and the
-         * subsequence walk the scopes need would be overkill.
-         *
-         * A known counter that stops being submitted holds its place at 0 rather than collapsing,
-         * for the reason the scopes do: a row vanishing moves every row under it.
+         * Counters, by name. A counter no longer submitted keeps its row at 0 (so rows do not jump).
          */
         void FoldCounters(const TDynArray<StatCounter>& InIncoming)
         {

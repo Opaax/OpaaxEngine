@@ -1,6 +1,6 @@
 #include "Editor/Panels/SpriteSheetPanel.h"
 
-#include <cstdio>   // snprintf — the frame list's row labels
+#include <cstdio>   // snprintf
 
 #include "Editor/EditorContext.h"
 #include "Editor/EditorSpriteSheetDocument.h"
@@ -10,7 +10,7 @@
 #include "Editor/Commands/EditorNativeCommandsTags.hpp"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Editor/Operation/SheetOperations.h"
-#include "Editor/Properties/PropertyDrawers.h"   // the specializations DrawProperties folds over
+#include "Editor/Properties/PropertyDrawers.h"
 #include "Editor/Undo/EditorUndo.h"
 #include "Editor/UI/IEditorUIBackend.h"
 
@@ -27,11 +27,11 @@ namespace Opaax::Editor
 {
     namespace
     {
-        /** The frame outline, the selected one, and the frame a click landed in. */
+        /** Frame outline colours: normal, selected, and the frame under a click. */
         constexpr ImU32 k_FrameColor    = IM_COL32(255, 255, 255, 110);
         constexpr ImU32 k_SelectedColor = IM_COL32(255, 190,  60, 255);
 
-        /** One frame's rect on screen, given where the image was drawn and how much it was scaled. */
+        /** One frame's rect on screen, given where the image was drawn and its scale. */
         ImVec2 ToScreen(const ImVec2 InImageMin, const float InScale, const Vector2F& InTexel)
         {
             return ImVec2(InImageMin.x + InTexel.x * InScale, InImageMin.y + InTexel.y * InScale);
@@ -61,7 +61,7 @@ namespace Opaax::Editor
             ImGui::TextDisabled("No sprite sheet open.");
             ImGui::TextDisabled("Double-click a .opaaxsheet in the Resource Browser.");
 
-            // Nothing open means nothing to keep resident — the same rule the preview panel follows.
+            // Nothing open: nothing to keep loaded.
             m_Claim       = {};
             m_ClaimedPath = OpaaxString();
             m_Selected    = -1;
@@ -88,7 +88,7 @@ namespace Opaax::Editor
 
     void SpriteSheetPanel::DrawHeader(const SpriteSheetData& InData)
     {
-        // The dirty marker is derived by the document, so it cannot disagree with what a Save writes.
+        // The dirty marker comes from the document, so it matches what Save writes.
         const OpaaxString lName  = m_Context.SheetDocument.FileName();
         const bool        bDirty = m_Context.SheetDocument.IsDirty();
 
@@ -96,8 +96,7 @@ namespace Opaax::Editor
 
         ImGui::SameLine(ImGui::GetContentRegionAvail().x - 46.f);
 
-        // The button and Ctrl+S dispatch the SAME tag — the chord follows the focused panel, so
-        // saving here and saving the map are one command each rather than two code paths.
+        // The button and Ctrl+S dispatch the same command tag.
         ImGui::BeginDisabled(!bDirty);
         if (ImGui::SmallButton("Save"))
         {
@@ -113,19 +112,17 @@ namespace Opaax::Editor
     {
         if (!ImGui::TreeNodeEx("Grid", ImGuiTreeNodeFlags_DefaultOpen)) { return; }
 
-        // The grid's own fields, drawn from its property list — it is CReflected, so this is the
-        // whole of the UI for it and a new knob there needs nothing here.
+        // The grid's own fields, from its property list.
         DrawProperties(m_Context.Widgets, m_Context.SheetDocument.GetMutableData().Grid);
 
-        // Slicing needs the texture's SIZE, which the sheet does not store: how many pixels a path
-        // is, is the image's answer, and the panel is what has it loaded.
+        // Slicing needs the texture size, which only the loaded image gives.
         ImGui::BeginDisabled(InTexture == nullptr);
 
         if (ImGui::Button("Slice") && InTexture != nullptr)
         {
             if (SheetOps::Slice(m_Context, InTexture->Width, InTexture->Height))
             {
-                m_Selected = -1;   // the old selection named a frame from the list that just went
+                m_Selected = -1;   // the selected frame was removed
             }
         }
 
@@ -134,8 +131,7 @@ namespace Opaax::Editor
         ImGui::SameLine();
         ImGui::TextDisabled("replaces every frame");
 
-        // Beside Slice because it is what you press NEXT: SliceGrid generates unnamed frames, and
-        // an animation step names a frame by NAME, so an unnamed frame is one a clip cannot use.
+        // Next to Slice: sliced frames are unnamed, and animations reference frames by name.
         if (ImGui::Button("Auto-Name"))
         {
             SheetOps::AutoNameFrames(m_Context);
@@ -168,10 +164,8 @@ namespace Opaax::Editor
         DrawProperties(m_Context.Widgets, InData.Frames[lIndex]);
         ImGui::PopID();
 
-        // THE FIELD HALF OF THE GESTURE, read after the drawers ran — the Inspector's bracket, for
-        // its reason: a TPropertyDrawer writes straight through a reference and cannot report that
-        // it did, so the edges of "any item is active" are what open and close the step. A canvas
-        // drag is not an ImGui item, so the two sources never overlap.
+        // The fields' undo edges, like the Inspector. A canvas drag is not an ImGui item, so the two
+        // never overlap.
         const bool lItemActive = ImGui::IsAnyItemActive();
 
         if (lItemActive && !m_bWasItemActive && !m_bDraggingRect)
@@ -207,8 +201,7 @@ namespace Opaax::Editor
                                 : EditorImage{},
                             lSize);
 
-        // ONE scale for both axes — AspectFit preserves the ratio, so a per-axis scale would be the
-        // same number twice and would silently stop being true the day it is not.
+        // One scale for both axes (AspectFit keeps the ratio).
         const float lScale = (InTexture->Width > 0u) ? lSize.x / static_cast<float>(InTexture->Width) : 1.f;
 
         const bool   bHovered = ImGui::IsItemHovered();
@@ -220,9 +213,8 @@ namespace Opaax::Editor
         {
             const SpriteFrame& lFrame = InData.Frames[i];
 
-            // The rect is drawn in TEXTURE pixels scaled to the image, never from the grid: the
-            // frames are the truth, and a grid-derived overlay would stop matching the moment one
-            // rect is moved by hand.
+            // Drawn from the frames (texture pixels scaled to the image), never from the grid: frames can
+            // be moved by hand.
             const ImVec2 lMin = ToScreen(lImgMin, lScale, lFrame.Offset);
             const ImVec2 lMax = ToScreen(lImgMin, lScale, { lFrame.Offset.x + lFrame.Size.x,
                                                             lFrame.Offset.y + lFrame.Size.y });
@@ -231,8 +223,7 @@ namespace Opaax::Editor
 
             lDraw->AddRect(lMin, lMax, bSelected ? k_SelectedColor : k_FrameColor, 0.f, 0, bSelected ? 2.f : 1.f);
 
-            // Selection by click. Front-to-back would matter for overlapping frames; the first hit
-            // wins here, which is the submission order and therefore the frame INDEX order.
+            // Click selection: the first hit wins (frame index order).
             if (bHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left)
                 && lMouse.x >= lMin.x && lMouse.x <= lMax.x && lMouse.y >= lMin.y && lMouse.y <= lMax.y
                 && !bSelected)
@@ -257,8 +248,7 @@ namespace Opaax::Editor
 
         SpriteFrame& lFrame = InData.Frames[static_cast<Uint32>(m_Selected)];
 
-        // Everything below is in TEXTURE pixels, which is what the frame is stored in — converting
-        // once here beats converting the rect into screen space and the answer back again.
+        // Everything below is in texture pixels (what frames are stored in).
         const ImVec2 lMouse = ImGui::GetIO().MousePos;
         const float  lTexX  = (lMouse.x - InImageMin.x) / InScale;
         const float  lTexY  = (lMouse.y - InImageMin.y) / InScale;
@@ -275,9 +265,8 @@ namespace Opaax::Editor
             const bool lInside = lTexX >= lRect.X && lTexX < lRect.X + lRect.Width
                               && lTexY >= lRect.Y && lTexY < lRect.Y + lRect.Height;
 
-            // An edge RESIZES, the middle MOVES — which is why None-while-dragging is not an idle
-            // state but the move case; HitTestRect answers None for the interior and the outside
-            // alike, and only one of those is a grab.
+            // An edge resizes, the middle moves: HitTestRect returns None for both inside and outside,
+            // and only inside is a grab.
             if (lEdge == ERectEdge::None && !lInside) { return; }
 
             m_bDraggingRect = true;
@@ -304,9 +293,7 @@ namespace Opaax::Editor
             lNext = ResizeRect(lRect, m_DragEdge, lDX, lDY, 1.f, 1.f);
         }
 
-        // A frame may never name pixels the texture does not have — the sheet's own rule, and the
-        // reason ClampRectInside exists beside the resize rather than inside it (a window may
-        // legitimately hang off a monitor).
+        // A frame must stay inside the texture.
         lNext = ClampRectInside(lNext, static_cast<float>(InTexture.Width), static_cast<float>(InTexture.Height));
 
         lFrame.Offset = { lNext.X, lNext.Y };
@@ -317,8 +304,7 @@ namespace Opaax::Editor
             m_bDraggingRect = false;
             m_DragEdge      = ERectEdge::None;
 
-            // A drag that returned home is not a step — End says so, and the gesture is dropped
-            // either way so the next one cannot fold into it.
+            // A drag back to where it started is not a step. The gesture is dropped either way.
             if (m_bGestureOpen && m_Gesture.End(m_Context)) { m_Context.Undo.Record(Move(m_Gesture)); }
 
             m_Gesture      = SheetFrameEdit{};
@@ -340,8 +326,7 @@ namespace Opaax::Editor
         {
             const SpriteFrame& lFrame = InData.Frames[i];
 
-            // The NAME when there is one, the index when there is not — and the check is IsValid,
-            // never ToString, because an invalid id answers "None" and would print it as a name.
+            // The name when there is one, else the index (IsValid, not ToString, which gives "None").
             char lLabel[160];
             if (lFrame.Name.IsValid())
             {
@@ -394,8 +379,7 @@ namespace Opaax::Editor
             m_Claim       = m_Context.Resources.Load<TextureResource>(lAbsolute.CStr());
             m_ClaimedPath = InData.Texture.Path;
 
-            // Once per sheet opened, not per frame — the discrete event, and the only signal that
-            // the double-click reached this panel at all.
+            // Once per sheet opened, not per frame.
             if (m_Claim.IsValid())
             {
                 OPAAX_LOG(LogSpriteSheetPanel, Info, "Sheet image '{}' loaded", lAbsolute.CStr());
@@ -406,8 +390,7 @@ namespace Opaax::Editor
             }
         }
 
-        // IsValid, not Get() != nullptr: a failed claim answers the magenta PLACEHOLDER, and drawing
-        // that as if it were the sheet would hide the failure behind a picture (I16).
+        // IsValid, not Get() != nullptr: a failed claim returns the magenta placeholder.
         return m_Claim.IsValid() ? m_Claim.Get() : nullptr;
     }
 }

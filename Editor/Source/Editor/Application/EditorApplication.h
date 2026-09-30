@@ -27,9 +27,6 @@ namespace Opaax::Editor
         // Functions
         // =============================================================================
     protected:
-        /**
-         * 
-         */
         virtual void OnRegisterEditorModules(EditorExtensionRegistrar& InRegistrar) {}
     
     public:

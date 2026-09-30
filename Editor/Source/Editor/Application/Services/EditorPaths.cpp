@@ -1,7 +1,7 @@
 #include "Editor/Application/Services/EditorPaths.h"
 
-#include "Core/Log/Logger.h"   // OPAAX_APP_LOG (as the base IPaths.cpp does)
-#include "Core/String/OpaaxUtf8.h"         // I7 — shared with IPaths.cpp, no local copy
+#include "Core/Log/Logger.h"   // OPAAX_APP_LOG
+#include "Core/String/OpaaxUtf8.h"
 
 #include <filesystem>
 
@@ -15,10 +15,7 @@ namespace Opaax::Editor
     }
 
     // =========================================================================
-    // Editor space — <ProjectRoot>/Editor/*  (derived from the inherited ProjectRoot)
-    //   The named dirs compose over Paths::ProjectToAbsolute, which already does the fs::path join +
-    //   generic_string() normalisation — so this reuses the exact convention the base uses.
-    //   Recomputed on call (never a hot path); no cached EditorLayout state (Simple > clever).
+    // Editor space — <ProjectRoot>/Editor/* (built with Paths::ProjectToAbsolute, recomputed on call)
     // =========================================================================
     OpaaxString EditorPaths::EditorDir()        const { return ProjectToAbsolute(OpaaxString("Editor")); }
     OpaaxString EditorPaths::EditorAssetsDir()  const { return ProjectToAbsolute(OpaaxString("Editor/Assets")); }
@@ -38,9 +35,7 @@ namespace Opaax::Editor
     }
 
     // =========================================================================
-    // Tool space — <WorkspaceRoot>/Editor/*  (the editor binary's own content)
-    //   Anchored on WorkspaceRoot rather than ProjectRoot, so it answers the same thing whichever
-    //   project is open — or none at all.
+    // Tool space — <WorkspaceRoot>/Editor/* (the editor's own content, independent of the project)
     // =========================================================================
     OpaaxString EditorPaths::ToolDir() const
     {

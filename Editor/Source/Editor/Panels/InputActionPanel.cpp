@@ -61,8 +61,7 @@ namespace Opaax::Editor
 
     void InputActionPanel::DrawFields(InputActionData& InData)
     {
-        // Modifiers is a TDynArray with no OPAAX_PROP, so the fold skips it on its own and the
-        // list below owns it — the same split MoverData and SpriteSheetData make.
+        // Modifiers has no OPAAX_PROP, so the fold skips it; the list below draws it.
         DrawProperties(m_Context.Widgets, InData);
     }
 
@@ -103,8 +102,7 @@ namespace Opaax::Editor
 
         ImGui::EndDisabled();
 
-        // ORDER IS SHOWN because order is authored: the index prefix is what makes
-        // "DeadZone then Scalar" legible as different from the reverse (**IM5**).
+        // The index prefix shows the order (DeadZone then Scalar differs from the reverse).
         for (Uint32 lIndex = 0; lIndex < InData.Modifiers.size(); ++lIndex)
         {
             ImGui::PushID(static_cast<int>(lIndex));
@@ -128,10 +126,9 @@ namespace Opaax::Editor
             ImGui::PopID();
         }
 
-        // The Inspector's bracket, covering the WHOLE panel: a TPropertyDrawer writes straight
-        // through a reference and cannot report that it did, so the edges of "any item is active"
-        // open and close one step. One bracket for fields and modifier knobs alike, because both
-        // are edits to the same document and an author does not think of them as different.
+        // One undo bracket for the whole panel (fields and modifiers are edits of one document).
+        // A drawer writes through a reference without reporting it, so the step opens when an item
+        // becomes active and closes when none is.
         const bool lItemActive = ImGui::IsAnyItemActive();
 
         if (lItemActive && !m_bWasItemActive)

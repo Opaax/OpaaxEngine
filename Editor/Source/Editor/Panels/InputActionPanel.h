@@ -4,7 +4,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Editor/Panels/IEditorPanel.h"
 
-#include "Engine/Subsystems/Resources/Types/Input/InputActionData.h"   // the gesture caches the data
+#include "Engine/Subsystems/Resources/Types/Input/InputActionData.h"
 
 namespace Opaax
 {
@@ -16,18 +16,9 @@ namespace Opaax::Editor
     struct EditorContext;
 
     // =============================================================================
-    // InputActionPanel — the ACTION editor: what an action is, and what its total is scaled by.
-    //
-    //   MoveModePanel's shape — a property fold over one struct plus a Save — with one list, the
-    //   action-level modifiers.
-    //
-    //   IT SHOWS NO KEYS, deliberately. Which keys reach an action is a mapping context's
-    //   business (**IM9**), which is exactly why rebinding never opens this file.
-    //
-    //   THE MODIFIER LIST IS NOT THE SAME LIST THE MAPPINGS HAVE. These apply to the SUM of every
-    //   binding that fed the action, which is the only level a diagonal can be clamped at
-    //   (**IM5**) — a `Normalize` here is what stops WASD being 1.41x faster on the diagonal, and
-    //   the same modifier on a binding would do nothing at all.
+    // InputActionPanel — the action editor: the action's fields and its modifiers.
+    //   Shows no keys (mapping contexts bind keys). These modifiers apply to the sum of all bindings
+    //   (e.g. Normalize clamps the WASD diagonal; on a binding it would do nothing).
     // =============================================================================
     class InputActionPanel final : public IEditorPanel
     {
@@ -57,10 +48,10 @@ namespace Opaax::Editor
         /** Name, dirty marker and Save. */
         void DrawHeader();
 
-        /** Name, value type, hold seconds, description — bracketed for undo. */
+        /** Name, value type, hold seconds, description, with undo. */
         void DrawFields(InputActionData& InData);
 
-        /** The action-level modifier pipeline: add, remove, reorder, and each one's knobs. */
+        /** The action's modifiers: add, remove, reorder, and each one's settings. */
         void DrawModifiers(InputActionData& InData);
 
         // =============================================================================
@@ -68,15 +59,15 @@ namespace Opaax::Editor
         // =============================================================================
     public:
         //~Begin IEditorPanel interface
-        /** Nothing to acquire — an action is a name and a few numbers. */
+        /** Nothing to acquire. */
         void Startup()     override {}
 
-        /** Nothing the world's render depends on. */
+        /** Nothing the world render depends on. */
         void OnPreRender() override {}
 
         void DrawContents() override;
 
-        /** Nothing claimed, so nothing to release. */
+        /** Nothing to release. */
         void Shutdown()    override {}
 
         PanelWindowStyle GetWindowStyle() const override { return { { 380.f, 420.f } }; }
@@ -89,7 +80,7 @@ namespace Opaax::Editor
         EditorContext& m_Context;
 
         // =============================================================================
-        // The open edit gesture — the action as it was when the first field went active
+        // The open edit gesture: the data as it was when the first field became active
         // =============================================================================
         InputActionData m_GestureBefore;
         bool            m_bGestureOpen   = false;

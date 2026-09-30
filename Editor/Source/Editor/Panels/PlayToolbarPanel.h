@@ -8,13 +8,9 @@ namespace Opaax::Editor
     struct EditorContext;
 
     // =============================================================================
-    // PlayToolbarPanel — the PIE controls (Editor.md D6). Play / Pause / Step / Stop, plus the
-    //   current state and which world is live.
-    //
-    //   A PANEL, registered through Panels() like any other — NOT a menu (that route is M5) and not
-    //   a privileged widget drawn by EditorService. It holds no state of its own: every button
-    //   forwards to EditorContext::PIE, which is the same object the reserved keys drive, so the
-    //   two front-ends can never disagree about what "playing" means.
+    // PlayToolbarPanel — Play In Editor controls: Play / Pause / Step / Stop, plus the current state
+    //   and which world is live. Holds no state: the buttons dispatch to EditorContext::PIE, the same
+    //   object the F-keys use.
     // =============================================================================
     class PlayToolbarPanel final : public IEditorPanel
     {
@@ -42,13 +38,13 @@ namespace Opaax::Editor
         // =============================================================================
     public:
         //~Begin IEditorPanel interface
-        /** Nothing to acquire — the panel reaches PIE through the context. */
+        /** Nothing to acquire. */
         void Startup()     override {}
 
-        /** Nothing the world's render depends on. */
+        /** Nothing the world render depends on. */
         void OnPreRender() override {}
 
-        /** The four buttons; each is disabled in the states where its verb would be refused. */
+        /** The four buttons; each is disabled when its action would be refused. */
         void DrawContents() override;
 
         /** Nothing to release. */

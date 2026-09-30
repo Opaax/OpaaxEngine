@@ -9,7 +9,7 @@
 
 namespace Opaax::Editor
 {
-    /** The Log panel's level buttons. Critical shares Error's: both answer "what broke?". */
+    /** The Log panel's level buttons. Critical shares Error's. */
     enum class ELogLevelFilter : Uint8
     {
         Trace,
@@ -30,7 +30,7 @@ namespace Opaax::Editor
         }
     }
 
-    /** **I11** — the button's label. */
+    /** The button's label. */
     inline const char* ToString(const ELogLevelFilter InFilter) noexcept
     {
         switch (InFilter)
@@ -43,7 +43,7 @@ namespace Opaax::Editor
         }
     }
 
-    /** ASCII case-insensitive substring. An empty needle is found everywhere. */
+    /** ASCII case-insensitive substring. An empty needle always matches. */
     inline bool ContainsNoCase(const std::string_view InText, const std::string_view InNeedle) noexcept
     {
         if (InNeedle.size() > InText.size()) { return false; }
@@ -63,8 +63,7 @@ namespace Opaax::Editor
     }
 
     // =============================================================================
-    // LogFilter — which lines the Log panel shows. Header-only and ImGui-free, so the rule is tested
-    //   on its own; the panel only draws the controls that write it.
+    // LogFilter — which lines the Log panel shows. No ImGui, so it can be tested; the panel draws the controls.
     // =============================================================================
     struct LogFilter
     {
@@ -74,8 +73,7 @@ namespace Opaax::Editor
         std::string Search;
 
         /**
-         * The categories switched OFF. A set of hidden rather than of shown, so a category that
-         * first logs after the author filtered is shown — nobody has decided to hide it yet.
+         * Hidden categories (a set of hidden ones, so a new category is shown by default).
          */
         TUnorderedSet<OpaaxStringID> HiddenCategories;
 

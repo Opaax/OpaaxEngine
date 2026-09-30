@@ -16,15 +16,9 @@ namespace Opaax::Editor
     inline constexpr LogCategory LogEditorMapDocument{"EditorMapDocument"};
 
     // =============================================================================
-    // EditorMapDocument — WHICH of the level's maps is FOCUSED. A cursor, and only that.
-    //
-    //   It owns no baseline and cannot save. Every mounted map's unsaved state lives in
-    //   EditorLevelDocument, one owner, because a second baseline for the same map would rebase on
-    //   Save Map while the other did not and the dirty marker would start lying ([[L30]]).
-    //
-    //   What the focus decides is which map the SINGLE-map commands act on — Save Map, Save Map
-    //   As, Remove Open Map, Set Open Map Persistent — and which group the Hierarchy opens. It
-    //   decides nothing about what a Save Level writes: that is every map (**MP9**).
+    // EditorMapDocument — which of the level's maps is focused. Only a cursor: no baseline, no save
+    //   (EditorLevelDocument owns those). The focus decides which map the single-map commands act on
+    //   (Save Map, Save Map As, Remove Open Map, Set Open Map Persistent).
     // =============================================================================
     class EditorMapDocument
     {
@@ -42,16 +36,12 @@ namespace Opaax::Editor
         // =============================================================================
     public:
         /**
-         * Point the cursor at a map. Reads the file ONLY to ask its entities which map they claim.
-         *
-         * The MapId comes from the FILE's entities, not from its name — they are the authority on
-         * which map they belong to (**WM2**), and a file renamed on disk does not re-stamp what is
-         * inside it. A file with nobody to ask falls back to the stem ("Main.opaaxmap" -> "Main"),
-         * which is also the right default for a map that does not exist yet.
+         * Focuses a map. Reads the file only to find which map its entities claim; falls back to the
+         * file name ("Main.opaaxmap" -> "Main"), also used for a map that does not exist yet.
          */
         void Focus(const OpaaxString& InAbsPath);
 
-        /** Point at nothing — no map is focused. */
+        /** Focuses nothing. */
         void Clear();
 
         // =============================================================================
@@ -62,7 +52,7 @@ namespace Opaax::Editor
         const OpaaxString& AbsPath()  const noexcept { return m_AbsPath; }
         MapId              GetMapId() const noexcept { return m_MapId; }
 
-        /** Just the file name, for the menu bar — "Main.opaaxmap". Empty when none is focused. */
+        /** The file name, for the menu bar ("Main.opaaxmap"). Empty when none is focused. */
         OpaaxString FileName() const;
 
         // =============================================================================
@@ -70,10 +60,7 @@ namespace Opaax::Editor
         // =============================================================================
     private:
         /**
-         * The MapId InData's entities claim, or InAbsPath's file stem when none of them does.
-         *
-         * Takes the MAP, not a world: a world holds several maps (**WM1a**), so its first valid
-         * OwnerMap answers a different question than the one being asked.
+         * The MapId InData's entities claim, or InAbsPath's file name when none does.
          */
         static MapId DeriveMapId(const OpaaxString& InAbsPath, const MapData& InData);
 

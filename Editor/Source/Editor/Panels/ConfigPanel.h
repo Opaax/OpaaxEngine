@@ -1,8 +1,8 @@
 #pragma once
 
 #include "Core/Log/Logger.h"
-#include "Core/Config/IConfig.h"          // ConfigTypeID — which config is current
-#include "Core/String/OpaaxString.hpp"    // the dirty baseline
+#include "Core/Config/IConfig.h"          // ConfigTypeID
+#include "Core/String/OpaaxString.hpp"
 #include "Editor/Panels/ConfigChangeTracker.h"
 #include "Editor/Panels/IEditorPanel.h"
 
@@ -16,20 +16,10 @@ namespace Opaax::Editor
     struct EditorContext;
 
     // =============================================================================
-    // ConfigPanel — every registered config on the left, the current one on the right (the shape
-    //   Unreal's Project Settings uses).
-    //
-    //   THE LIST IS READ LIVE, every frame, and that is the requirement rather than a shortcut:
-    //   IConfigSystem::Get<T>() auto-registers on a miss, so a system that reads its config during
-    //   FinishStartup — or on frame 500 — registers long after the editor sealed its extensions. A
-    //   list built once would miss those silently. Walking it costs nothing while the panel is shut.
-    //
-    //   The right pane draws the config's own PROPERTY LIST through a registered drawer
-    //   (ConfigDrawers()), and falls back to IConfig::ToText() — the same text Save writes — for a
-    //   config nobody registered, so an unknown config is readable rather than blank.
-    //
-    //   DIRTY IS DERIVED, never flagged: the text the config serializes to now, against what it
-    //   serialized to when this panel last showed or saved it.
+    // ConfigPanel — every registered config on the left, the current one on the right (like Unreal's
+    //   Project Settings). The list is read every frame (configs can register at any time).
+    //   The right side uses a registered drawer, or shows IConfig::ToText() for unknown configs.
+    //   Dirty is derived from the text.
     // =============================================================================
     class ConfigPanel final : public IEditorPanel
     {
@@ -56,21 +46,17 @@ namespace Opaax::Editor
         // Functions
         // =============================================================================
     private:
-        /** The list of configs. Sets m_Current when one is clicked. */
+        /** The config list. Sets m_Current on click. */
         void DrawList();
 
-        /** Name, file and values of InConfig. */
+        /** InConfig's name, file and values. */
         void DrawCurrent(IConfig& InConfig);
 
-        /** The Save button and what it is enabled by. */
+        /** The Save button. */
         void DrawSaveBar(IConfig& InConfig, const OpaaxString& InCurrentText);
 
         /**
-         * The config the right pane draws.
-         *
-         * Resolved through the registry every frame rather than held as a pointer — the id survives
-         * anything the registry does, a pointer would not. Falls back to the first registered config,
-         * so the pane is never blank while any config exists.
+         * The config shown on the right, looked up by id every frame. Falls back to the first one.
          */
         IConfig* ResolveCurrent() const;
 
@@ -79,10 +65,10 @@ namespace Opaax::Editor
         // =============================================================================
     public:
         //~Begin IEditorPanel interface
-        /** Nothing to acquire — the registry is reached through the context. */
+        /** Nothing to acquire. */
         void Startup()     override {}
 
-        /** Nothing the world's render depends on. */
+        /** Nothing the world render depends on. */
         void OnPreRender() override {}
 
         void DrawContents() override;
@@ -102,20 +88,16 @@ namespace Opaax::Editor
         /** Width of the list pane. */
         static constexpr float LIST_WIDTH = 160.f;
 
-        // Which config is current, by id rather than by pointer. Zero until something is clicked,
-        // which ResolveCurrent reads as "the first one".
+        // The current config's id. Zero until something is clicked (then the first one is shown).
         ConfigTypeID m_Current = 0;
 
-        // What the right pane last reported. A pane that resolved nothing draws an empty rectangle,
-        // which is indistinguishable from a clean run in a log — so the SUCCESS branch says which
-        // config it is showing, and by which path, once per change (**L15**).
+        // What the right side last showed, logged once per change.
         ConfigTypeID m_Reported = 0;
 
-        // What the shown config serialized to when it was selected, or last saved. Compared against
-        // the live text each frame — that comparison IS the dirty flag.
+        // The config's text when selected or last saved (the dirty baseline).
         OpaaxString m_Baseline;
 
-        // When an edit is announced to the config's readers — once it is committed, not per frame.
+        // Decides when an edit is announced (once committed).
         ConfigChangeTracker m_ChangeTracker;
     };
 }

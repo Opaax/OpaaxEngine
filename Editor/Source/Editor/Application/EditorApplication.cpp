@@ -5,12 +5,12 @@
 #include "Editor/Application/Services/EditorService.h"
 #include "Editor/Application/Services/EditorPaths.h"
 #include "Editor/Imgui/Configs/Config_EditorImgui.h"
-#include "Editor/Panels/LogPanel.h"   // MAX_LINES — the history keeps what the panel can show
+#include "Editor/Panels/LogPanel.h"   // MAX_LINES
 
 #include "Application/Services/IConfigSystem.h"
 
-#include "Application/Services/IEngine.h"   // Engine().Loop() — full type, not just the fwd decl
-#include "Core/Log/Logger.h"   // OPAAX_LOG + LogCategory
+#include "Application/Services/IEngine.h"
+#include "Core/Log/Logger.h"
 
 #include <string>
 
@@ -30,8 +30,7 @@ namespace Opaax::Editor
     EditorApplication::EditorApplication(int InArgc, char** InArgv)
         : OpaaxApplication(InArgc, InArgv)
     {
-        // Here, not in EditorService: this runs before Bootstrap, so the Log panel gets the boot lines.
-        // A game never calls it, so the history costs a shipped build nothing (block LG).
+        // Here, before Bootstrap, so the Log panel gets the boot lines. The game never enables it.
         Logger::Get().EnableHistory(LogPanel::MAX_LINES);
     }
     

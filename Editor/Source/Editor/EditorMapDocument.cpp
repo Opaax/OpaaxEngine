@@ -4,7 +4,7 @@
 
 #include "Core/IO/FileIO.h"
 #include "World/Serialization/MapData.h"
-#include "World/Serialization/MapFile.h"   // StemId — one naming rule, shared with Load
+#include "World/Serialization/MapFile.h"   // StemId
 #include "World/Serialization/MapJson.h"
 
 namespace Opaax::Editor
@@ -13,12 +13,10 @@ namespace Opaax::Editor
     {
         if (InData.Id.IsValid())
         {
-            return InData.Id;   // the map's own name — declared, or what its entities claim (MP10)
+            return InData.Id;   // the map's own name (declared, or claimed by its entities)
         }
 
-        // The file does not exist yet (a Save As target), so there was nothing to declare it. Same
-        // rule MapFile::Load applies to a file that does, from the same function — a naming rule
-        // with two copies is a naming rule with two answers.
+        // The file does not exist yet (Save As target): same naming rule as MapFile::Load.
         return MapFile::StemId(InAbsPath);
     }
 
@@ -26,8 +24,7 @@ namespace Opaax::Editor
     {
         m_AbsPath = InAbsPath;
 
-        // Read through MapJson rather than MapFile::Load: this happens on every focus change and
-        // MapFile logs an Info per read, which would turn clicking between maps into log noise.
+        // MapJson, not MapFile::Load: this runs on every focus change and MapFile logs each read.
         const OpaaxString lOnDisk = FileIO::ReadAllText(m_AbsPath);
 
         MapData lData;

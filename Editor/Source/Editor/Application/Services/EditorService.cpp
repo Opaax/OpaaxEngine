@@ -12,12 +12,12 @@
 #include "Editor//Application/Services/EditorPaths.h"
 #include "Editor/Commands/EditorNativeCommands.h"
 #include "Editor/Commands/EditorNativeCommandsTags.hpp"
-#include "Editor/Imgui/ImGuiEditorGui.h"        // the concrete IEditorGui this service picks
-#include "Editor/UI/TinyFdEditorDialogs.h"      // ...and the concrete IEditorDialogs
+#include "Editor/Imgui/ImGuiEditorGui.h"        // the concrete IEditorGui
+#include "Editor/UI/TinyFdEditorDialogs.h"      // the concrete IEditorDialogs
 #include "Editor/Toolbar/EditorNativeViewportTools.h"
 
 #include "Editor/Operation/EditorGizmo.hpp"
-#include "Editor/Operation/EditorViewport.hpp"   // the grid toggle lives on the viewport (③b)
+#include "Editor/Operation/EditorViewport.hpp"   // grid toggle
 #include "Editor/Operation/LevelOperations.h"
 #include "Editor/Panels/CameraPreviewPanel.h"
 #include "Editor/Panels/ConfigPanel.h"
@@ -47,7 +47,7 @@
 #include "UI/Widgets/UIText.h"
 #include "Engine/Subsystems/Resources/Types/UI/UICanvasResource.h"
 #include "Editor/Panels/PrefabPanel.h"
-#include "Renderer/RenderTarget.hpp"   // the panels own OffscreenRenderTargets by TUniquePtr
+#include "Renderer/RenderTarget.hpp"
 #include "Editor/Panels/SpriteSheetPanel.h"
 #include "Editor/Panels/LogPanel.h"
 #include "Editor/Panels/StatsPanel.h"
@@ -58,11 +58,11 @@
 #include "Engine/Registries/EngineRegistries.h"
 #include "Renderer/Config/Config_Renderer.h"
 #include "Engine/Subsystems/Input/InputEvents.h"
-#include "World/Serialization/LevelResource.hpp"   // the types whose chrome is registered below
+#include "World/Serialization/LevelResource.hpp"
 #include "World/Serialization/MapResource.hpp"
-#include "World/Prefab/PrefabResource.hpp"          // ⑦-C — registered as a native resource type
+#include "World/Prefab/PrefabResource.hpp"
 #include "Editor/Operation/ResourceOperations.h"
-#include "Engine/Subsystems/Resources/ResourceTypeID.hpp"   // the id the preview is opened with
+#include "Engine/Subsystems/Resources/ResourceTypeID.hpp"
 #include "Engine/Subsystems/Resources/Types/Texture/TextureResource.h"
 #include "Engine/Subsystems/Resources/Types/SpriteSheet/SpriteSheetResource.h"
 #include "Engine/Subsystems/Resources/Types/Animation/AnimationClipResource.h"
@@ -73,13 +73,13 @@
 #include "Engine/Subsystems/Resources/Types/Input/InputMappingContextResource.h"
 #include "Engine/Subsystems/Resources/Types/Font/FontFaceResource.h"
 #include "Engine/Subsystems/Resources/Types/Font/FontFamilyResource.h"
-#include "Editor/Resources/ResourcePreviewDrawers.h"   // what a preview DRAWS; no ImGui in this file
-#include "Editor/Properties/NativeComponentDrawers.h"  // the three that name a resource two ways
+#include "Editor/Resources/ResourcePreviewDrawers.h"   // what a preview draws (no ImGui here)
+#include "Editor/Properties/NativeComponentDrawers.h"
 #include "World/World.h"
 #include "World/WorldManager.h"
 #include "World/Entity/Entity.h"
-#include "World/Components/CameraComponent.h"      // the engine-native components the
-#include "World/Components/ColliderComponent.h"    // editor draws by default (I15)
+#include "World/Components/CameraComponent.h"      // engine components
+#include "World/Components/ColliderComponent.h"    // drawn by default
 #include "World/Components/DummyComponent.h"
 #include "World/Components/MoverComponent.h"
 #include "World/Components/PrefabInstanceComponent.h"
@@ -97,7 +97,7 @@ namespace
 
     using namespace Opaax::Editor;
 
-    /** True while the EDIT world is the one on screen — MapOps::CanEdit's rule, asked per frame. */
+    /** True while the edit world is on screen (MapOps::CanEdit's rule). */
     bool IsEditing(const EditorContext& InContext) { return InContext.PIE.IsEdit(); }
 
     /** True while a Play clone is running or paused. */
@@ -108,11 +108,8 @@ namespace
 
 namespace Opaax::Editor
 {
-    // The one place the editor names a UI backend, the way ImGuiEditorGui::Init already names
-    // OpenGLEditorUIBackend one level down. Built here rather than in InitGUI so m_Gui is never
-    // null — the context holds a reference to it. The modal backend is picked the same way, and
-    // is a SEPARATE choice: it is the OS's dialogs, not ImGui's, and swapping one does not imply
-    // swapping the other.
+    // The only place the editor picks a UI backend. Built here so m_Gui is never null (the context
+    // references it). The dialog backend is picked separately (OS dialogs, not ImGui).
     EditorService::EditorService()
         : m_Gui(MakeUnique<ImGuiEditorGui>())
         , m_Dialogs(MakeUnique<TinyFdEditorDialogs>())
@@ -155,8 +152,7 @@ namespace Opaax::Editor
         m_MapDocument       = MakeUnique<EditorMapDocument>();
         m_LevelDocument     = MakeUnique<EditorLevelDocument>();
 
-        // ⑦-C P3. What a prefab path is resolved with when a map is folded on the way to disk.
-        // Bound here because this is the only place holding both (**MR1a**'s shape).
+        // What prefab paths are resolved with when a map is folded for saving.
         m_LevelDocument->BindPrefabSources(OpaaxApplication::GetAppService<IPaths>(),
                                            OpaaxApplication::GetAppService<IEngine>().GetResources());
         m_SheetDocument     = MakeUnique<EditorSpriteSheetDocument>();
@@ -184,7 +180,7 @@ namespace Opaax::Editor
 
     void EditorService::CreateEditorContext(Window* InWindow, IEngine& InEngine)
     {
-        // --- EditorContext: Built after the UIBackend so it can hold a reference to it. ---------------------------------------
+        // --- EditorContext: built after the UI backend, so it can reference it ------------------------------
         m_Context = MakeUnique<EditorContext>(EditorContext{
             InEngine,
             InEngine.GetWorldManager(),
@@ -223,16 +219,15 @@ namespace Opaax::Editor
             m_EditorPaths
         });
 
-        // ⑦-C P4. AFTER the context, because it holds one. The reconciler is the only listener a
-        // plain Reload cannot serve: a prefab's instances are entities, not refs.
+        // After the context, because it holds one. The reconciler handles prefab instances (entities,
+        // which a plain Reload cannot update).
         m_PrefabReconciler = MakeUnique<PrefabReconciler>(*m_Context);
         m_PrefabReconciler->Bind(*m_ResourceEvents);
     }
 
     void EditorService::ClearEditorContext()
     {
-        // Unbound BEFORE the context it holds goes: a delegate still pointing at a destroyed
-        // listener is the one failure a Tier-2 broadcast cannot survive.
+        // Unbind before the context it holds is destroyed.
         if (m_PrefabReconciler != nullptr && m_ResourceEvents != nullptr)
         {
             m_PrefabReconciler->Unbind(*m_ResourceEvents);
@@ -258,14 +253,11 @@ namespace Opaax::Editor
 
 
 
-        // Ahead of the pass, not inside it: a shortcut can execute a command that destroys the
-        // world, and doing that before any widget is submitted is safer than mid-pass. ImGui's
-        // global route defers its decision, so the chords fire either way.
+        // Before the UI pass: a shortcut may run a command that destroys the world.
         HandleAuthoringShortcuts();
 
-        // ONE pass, one owner. The dockspace, the menu bar and every panel window — including the
-        // Viewport, which samples the FBO Engine().Loop() just rendered into — are all emitted by
-        // the gui, so nothing here decides what is drawn or in what order.
+        // One UI pass, owned by the gui: dockspace, menu bar and every panel (including the Viewport,
+        // which samples the FBO Engine().Loop() just rendered).
         m_Gui->Draw(*m_Context);
     }
 
@@ -296,14 +288,10 @@ namespace Opaax::Editor
         lFile.AddCommand("Exit", Tags::EDITOR_COMMAND_QUIT);
 
         // --- Native Edit  --------------------------
-        // Enabled only while editing: all three are refused in a Play world anyway, and a menu that
-        // states the rule beats one that answers a click with a log line nobody reads.
+        // Enabled only while editing (they are refused in a Play world anyway).
         EditorTitleBarCategory& lEdit = lMenu.Category("Edit");
 
-        // FIRST, where every editor puts them. Greyed with an empty stack rather than answering a
-        // click with nothing — the same rule as the entries below, one step earlier.
-        // The LABEL names the step — "Undo Move (Ctrl+Z)". A stack of unnamed steps is a stack an
-        // author has to guess at, which is why every reference editor spells the verb out.
+        // Undo/Redo first, greyed when empty. The label names the step ("Undo Move (Ctrl+Z)").
         lEdit.AddCommand("Undo", Tags::EDITOR_COMMAND_UNDO)
              .SetEnabled([](const EditorContext& InContext) { return InContext.Undo.CanUndo(); })
              .SetLabel([](const EditorContext& InContext)
@@ -323,7 +311,7 @@ namespace Opaax::Editor
              });
         lEdit.AddSeparator();
 
-        // An EMPTY map id = "the focused map", which is the only one a menu entry can name.
+        // An empty map id = the focused map.
         lEdit.AddCommand("Create Entity", Tags::EDITOR_COMMAND_CREATE_ENTITY)
              .SetEnabled(IsEditing)
              .SetParams(MapIdParams{});
@@ -331,10 +319,8 @@ namespace Opaax::Editor
         lEdit.AddSeparator();
         lEdit.AddCommand("Focus Selected", Tags::EDITOR_COMMAND_FOCUS_SELECTED).SetEnabled(IsEditing);
 
-        // --- Gizmo mode (③), as radio entries -----------------------------------------------
-        // The tick reads the live mode rather than a remembered one, so the menu and the W/E/R keys
-        // cannot disagree — the same reason BindPanelToggles reads EditorPanels. Discoverability is
-        // the whole point: a mode reachable only by a key nobody documented is folklore.
+        // --- Gizmo mode, as radio entries -------------------------------------------------------------
+        // The tick reads the live mode, so the menu and the W/E/R keys always agree.
         lEdit.AddSeparator();
         lEdit.AddCommand("Gizmo: Translate (W)", Tags::EDITOR_COMMAND_GIZMO_TRANSLATE)
              .SetChecked([](const EditorContext& InContext) { return InContext.Gizmo.GetMode() == EGizmoMode::Translate; });
@@ -360,7 +346,7 @@ namespace Opaax::Editor
     {
         PanelRegistry& lPanelsRegistry = m_Extensions.Panels();
         
-        //Visible by default
+        // Visible by default
         lPanelsRegistry.Register<ViewportPanel>(PanelDesc       {.Id = ViewportPanel::PanelID()});
         lPanelsRegistry.Register<PlayToolbarPanel>(PanelDesc    {.Id = PlayToolbarPanel::PanelID()});
         lPanelsRegistry.Register<HierarchyPanel>(PanelDesc      {.Id = HierarchyPanel::PanelID()});
@@ -368,12 +354,11 @@ namespace Opaax::Editor
         lPanelsRegistry.Register<ResourceBrowserPanel>(PanelDesc{.Id = ResourceBrowserPanel::PanelID()});
         lPanelsRegistry.Register<LogPanel>(PanelDesc            {.Id = LogPanel::PanelID()});
         
-        //Hidden by default
+        // Hidden by default
         lPanelsRegistry.Register<CameraPreviewPanel>(PanelDesc  {.Id = CameraPreviewPanel::PanelID(),   .DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<ResourcePreviewPanel>(PanelDesc{.Id = ResourcePreviewPanel::PanelID(), .DefaultVisibility = EPanelVisibility::Hidden});
         lPanelsRegistry.Register<SpriteSheetPanel>(PanelDesc    {.Id = SpriteSheetPanel::PanelID(),     .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_SHEET});
-        // ⑦-C P6. Hidden until a prefab is opened, and its SaveCommand is what routes Ctrl+S to
-        // the prefab rather than to the map ([[L86]]'s fix, which is why no panel hand-writes a save).
+        // Hidden until a prefab is opened. Its SaveCommand routes Ctrl+S to the prefab.
         lPanelsRegistry.Register<PrefabPanel>(PanelDesc         {.Id = PrefabPanel::PanelID(),          .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_PREFAB, .UndoCommand = Tags::EDITOR_COMMAND_UNDO_PREFAB, .RedoCommand = Tags::EDITOR_COMMAND_REDO_PREFAB, .DeleteCommand = Tags::EDITOR_COMMAND_DELETE_PREFAB_SELECTION});
         lPanelsRegistry.Register<AnimationClipPanel>(PanelDesc  {.Id = AnimationClipPanel::PanelID(),   .DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_CLIP});
         lPanelsRegistry.Register<AnimationLibraryPanel>(PanelDesc{.Id = AnimationLibraryPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_LIBRARY});
@@ -437,7 +422,7 @@ namespace Opaax::Editor
         lCommands.Register<SaveInputMapCommand>(Tags::EDITOR_COMMAND_SAVE_INPUT_MAP);
         lCommands.Register<SaveFamilyCommand>(Tags::EDITOR_COMMAND_SAVE_FAMILY);
 
-        // UI U4 — a first-class document type gets its own New, the way a map and a level do.
+        // A document type gets its own New, like maps and levels.
         lCommands.Register<NewUICommand>(Tags::EDITOR_COMMAND_NEW_UI);
         lCommands.Register<SaveUICommand>(Tags::EDITOR_COMMAND_SAVE_UI);
         lCommands.Register<DeleteUIWidgetCommand>(Tags::EDITOR_COMMAND_DELETE_UI_WIDGET);
@@ -457,19 +442,16 @@ namespace Opaax::Editor
     {
         ViewportToolbarRegistry& lTools = m_Extensions.ViewportTools();
 
-        // ORDER and GROUPING are the composition root's call; what each tool DRAWS lives in
-        // Editor/Toolbar/EditorNativeViewportTools.cpp — the EditorNativeCommands shape, one route
-        // over. A tool is a plain function, so a game module registers one with this same line.
+        // Order and grouping are decided here; what each tool draws is in
+        // Editor/Toolbar/EditorNativeViewportTools.cpp. A game module registers a tool the same way.
         lTools.Add(OPAAX_ID("GizmoMode"), NativeViewportTools::DrawGizmoMode);
         lTools.AddSeparator();
 
-        // Grid sits beside Snap WITHOUT a separator, because it is one of them: the grid's spacing
-        // IS the translate step, so the two belong in the same group.
+        // Grid next to Snap without a separator: the grid spacing is the translate step.
         lTools.Add(OPAAX_ID("Snap"), NativeViewportTools::DrawSnap);
         lTools.Add(OPAAX_ID("Grid"), NativeViewportTools::DrawGrid);
 
-        // Beside Grid because it is the same KIND of control — what the viewport shows you rather
-        // than what a drag does — even though the state it flips is the engine's, not the editor's.
+        // Next to Grid: it changes what the viewport shows, not what a drag does.
         lTools.Add(OPAAX_ID("Colliders"), NativeViewportTools::DrawColliders);
         lTools.AddSeparator();
 
@@ -479,16 +461,10 @@ namespace Opaax::Editor
 
     void EditorService::RegisterNativeDrawers()
     {
-        // The ENGINE's own components, through the same route and the same generic form a game's
-        // component takes. They were registered by the GAME module until 2026-09-01 — so a fresh
-        // project had a blank Inspector for every engine type until it remembered to register four
-        // things it does not own. Every other native route already had its RegisterNativeX().
-        //
-        // No drawer code exists for any of these: all four are CReflected, so the fold reads
-        // OPAAX_PROPERTIES and the registration IS the whole implementation (I15).
-        // UI WIDGETS (U5 fix, **UI18**). Every registered widget type owes a drawer, or its own
-        // fields are invisible in the UI panel — the bug their eyes found on UIMask's Texture.
-        // The count check below is what makes the NEXT omission loud instead of silent.
+        // The engine's own components, through the same route a game's components use. They are all
+        // reflected, so registering is all there is to do.
+        // UI widgets too: every widget type needs a drawer or its fields are invisible in the UI panel.
+        // The count check below reports a missing one.
         UIWidgetDrawerRegistry& lWidgetDrawers = m_Extensions.UIWidgetDrawers();
         lWidgetDrawers.Register<UIPanel>();
         lWidgetDrawers.Register<UIImage>();
@@ -498,9 +474,7 @@ namespace Opaax::Editor
         lWidgetDrawers.Register<UISafeArea>();
         lWidgetDrawers.Register<UIStack>();
 
-        // THROUGH THE LOCATOR, not m_Context: this runs at the OnModulesRegistered seam, where the
-        // EditorContext does not exist yet (the registry header's "registration STORES ONLY" rule).
-        // Reading m_Context here is a null dereference, which is exactly what it was.
+        // Through the locator, not m_Context: the EditorContext does not exist yet at this point.
         const Uint64 lWidgetTypes =
             OpaaxApplication::GetAppService<IEngine>().GetRegistries().UIWidgets().Count();
         if (lWidgetDrawers.Count() != lWidgetTypes)
@@ -517,29 +491,23 @@ namespace Opaax::Editor
 
         ComponentDrawerRegistry& lDrawers = m_Extensions.Drawers();
 
-        // Every entity has one (I17), so this is the drawer that always shows.
+        // Every entity has one.
         lDrawers.Register<TransformComponent>();
 
-        // The three that name a resource TWO WAYS get a custom drawer, because the generic fold
-        // shows both fields with no hint which one the renderer will actually use. It adds ONE line
-        // above the same properties — the fields are still the property list's, so a new field
-        // appears here without touching these (NativeComponentDrawers).
+        // Components that name a resource two ways get a custom drawer: it adds one line saying which
+        // field the renderer uses, above the normal property list.
         lDrawers.Register<SpriteComponent,          NativeComponentDrawers::SpriteComponentDrawer>();
         lDrawers.Register<SpriteAnimatorComponent,  NativeComponentDrawers::SpriteAnimatorComponentDrawer>();
         lDrawers.Register<TextComponent,            NativeComponentDrawers::TextComponentDrawer>();
 
-        // The one drawer that takes the CONTEXT, and only to dispatch a verb: the button that opens
-        // the Camera Preview. Its fields still come from the property list, so this is the generic
-        // fold plus one line.
+        // Takes the context only for its button (opens the Camera Preview); the fields are the normal list.
         lDrawers.Register<CameraComponent,          NativeComponentDrawers::CameraComponentDrawer>();
 
-        // ⑦-C P1b. Custom because the component is IDENTITY: the generic fold would offer three
-        // editable fields, and retyping a guid breaks the link rather than re-pointing it.
+        // Custom: the component is identity (editing a guid would break the link).
         lDrawers.Register<PrefabInstanceComponent,  NativeComponentDrawers::PrefabInstanceComponentDrawer>();
         lDrawers.Register<DummyComponent>();
 
-        // ⑦-A. Both are CReflected, so the generic fold IS the implementation — the collider's
-        // shape and channel come out as dropdowns from their enum type alone (I15).
+        // Reflected, so the generic drawer is enough (enums become dropdowns).
         lDrawers.Register<ColliderComponent>();
         lDrawers.Register<RigidbodyComponent>();
         lDrawers.Register<MoverComponent>();
@@ -547,10 +515,8 @@ namespace Opaax::Editor
 
     void EditorService::RegisterNativeConfigDrawers()
     {
-        // The engine's and the editor's own configs, through the SAME route and the same registry
-        // template a game's config would use. All draw from their data type's OPAAX_PROPERTIES —
-        // there is no config-shaped drawer code anywhere, only the resolver that says which config a
-        // drawer is for.
+        // Engine and editor configs, through the same route a game's config would use. Drawn from their
+        // OPAAX_PROPERTIES; only the resolver (which config) is config-specific.
         m_Extensions.ConfigDrawers().Register<Config_Engine>();
         m_Extensions.ConfigDrawers().Register<Config_Renderer>();
         m_Extensions.ConfigDrawers().Register<Config_EditorImgui, EditorImguiConfigDrawer>();
@@ -558,9 +524,7 @@ namespace Opaax::Editor
 
     void EditorService::RegisterNativeResourceTypes()
     {
-        // The glyph and the image are BOTH set: the image is what shows, the glyph is what shows if
-        // it cannot be found. Neither names an extension — that label comes from the FORMAT,
-        // engine-side.
+        // Both are set: the image shows, the glyph is the fallback if the image is missing.
         m_Extensions.ResourceTypes().Register<MapResource>()
             .SetIcon(OpaaxString("Icons/T_Map_Icon.png"))
             .SetGlyph(OpaaxString("[M]"))
@@ -570,10 +534,7 @@ namespace Opaax::Editor
                                                         MapPathParams{InFile.AbsPath});
             });
 
-        // ⑦-C P1b. Double-click PLACES ONE into the focused map — the verb a prefab is FOR, and the
-        // only one that exists yet. It becomes "open the prefab editor" at P6, when there is an
-        // editor to open; instantiating stays reachable from the Hierarchy and the viewport drop,
-        // which are the same command with a different front-end (**MR2b**).
+        // Double-click places one into the focused map (also possible from the Hierarchy and a viewport drop).
         m_Extensions.ResourceTypes().Register<PrefabResource>()
             .SetGlyph(OpaaxString("[P]"))
             .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
@@ -582,10 +543,7 @@ namespace Opaax::Editor
                                                         InContext, PrefabPathParams{InFile.AbsPath});
             });
 
-        // Double-click OPENS THE PREVIEW, through the seam that already answers "what does a
-        // double-click do" — the same one Map and Level use to open a document. That is why the
-        // Inspector's TPropertyDrawer contract did not have to grow an EditorContext to get a
-        // texture preview: the preview lives where a context already is (I15 untouched).
+        // Double-click opens the preview (the same route maps and levels use to open their document).
         m_Extensions.ResourceTypes().Register<TextureResource>()
             .SetIcon(OpaaxString("Icons/T_Texture_Icon.png"))
             .SetGlyph(OpaaxString("[T]"))
@@ -596,9 +554,7 @@ namespace Opaax::Editor
             })
             .SetPreview<TextureResource>(&NativeResourcePreviews::DrawTexture);
 
-        // A `.ttf` previews its BAKED ATLAS, which is the only way to see what the engine actually
-        // made of the file — the glyph count, the atlas it needed and the metrics are what a wrong
-        // bake shows up in.
+        // A .ttf previews its baked atlas: glyph count, atlas size and metrics.
         m_Extensions.ResourceTypes().Register<FontFaceResource>()
             .SetGlyph(OpaaxString("[F]"))
             .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
@@ -608,10 +564,7 @@ namespace Opaax::Editor
             })
             .SetPreview<FontFaceResource>(&NativeResourcePreviews::DrawFontFace);
 
-        // A family has no preview and no document editor: it is an alias TABLE, and the thing worth
-        // looking at is the face it resolves to. Chrome only, so the browser can still tell one
-        // from a map at a glance.
-        // A family opens its EDITOR, for the sheet's and the library's reason: it is a document.
+        // A family opens its editor (it is a document).
         m_Extensions.ResourceTypes().Register<FontFamilyResource>()
             .SetGlyph(OpaaxString("[FF]"))
             .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
@@ -622,7 +575,7 @@ namespace Opaax::Editor
                 }
             });
 
-        // A canvas opens its EDITOR, for the family's and the sheet's reason: it is a document.
+        // A canvas opens its editor (it is a document).
         m_Extensions.ResourceTypes().Register<UICanvasResource>()
             .SetGlyph(OpaaxString("[UI]"))
             .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
@@ -636,8 +589,7 @@ namespace Opaax::Editor
                 }
             });
 
-        // A sheet opens its EDITOR, not the preview: it is a document with its own panel, the way a
-        // map and a level are, and the browser's double-click is the one seam that says so.
+        // A sheet opens its editor, not the preview (it is a document with its own panel).
         m_Extensions.ResourceTypes().Register<SpriteSheetResource>()
             .SetIcon(OpaaxString("Icons/T_SpriteSheet_Icon.png"))
             .SetGlyph(OpaaxString("[S]"))
@@ -649,7 +601,7 @@ namespace Opaax::Editor
                 }
             });
 
-        // A clip opens its EDITOR too, for the sheet's reason: it is a document with its own panel.
+        // A clip opens its editor too.
         m_Extensions.ResourceTypes().Register<AnimationClipResource>()
             .SetGlyph(OpaaxString("[C]"))
             .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
@@ -670,9 +622,7 @@ namespace Opaax::Editor
                 }
             });
 
-        // ⑦-A P5a. Both open their EDITOR, for the clip's and the library's reason: they are
-        // documents with their own panels. A tuning is the smallest document in the editor and is
-        // still a document — it is edited and saved.
+        // Both open their editor (they are documents).
         m_Extensions.ResourceTypes().Register<MoveModeResource>()
             .SetGlyph(OpaaxString("[MM]"))
             .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
@@ -693,8 +643,8 @@ namespace Opaax::Editor
                 }
             });
 
-        // ⑦-B B3. Two types, two editors, and the split is the point: an action is what gameplay
-        // binds, a context is which keys reach it, and a rebind opens only the second (**IM9**).
+        // Two types, two editors: an action is what gameplay binds, a context is which keys reach it
+        // (a rebind only opens the context).
         m_Extensions.ResourceTypes().Register<InputActionResource>()
             .SetGlyph(OpaaxString("[IA]"))
             .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
@@ -773,16 +723,11 @@ namespace Opaax::Editor
     
     void EditorService::HandleActiveWorldChanged(World* InOld, World* InNew)
     {
-        // Selection FIRST, so no panel notified below can read one pointing into the old world.
-        //
-        // Retarget rather than clear: a clone preserves entity GUIDs (WM3), so the entity selected in
-        // Edit has a counterpart in the Play world and the selection survives Play AND Stop. Clearing
-        // would be safe too, but it would throw away the exact guarantee the snapshot core exists for.
+        // Selection first, so no panel notified below reads one pointing into the old world.
+        // Retargeted by guid (a clone keeps them), so the selection survives Play and Stop.
         if (m_Selection != nullptr && m_Selection->HasSelection())
         {
-            // EVERY entry, in order, so a multi-selection survives Play and Stop exactly as a single
-            // one does. The Guids are read BEFORE anything is cleared — they are the only thing that
-            // means anything across the two worlds.
+            // Every entry, in order. Guids are read before anything is cleared.
             World* const        lOldWorld = m_Selection->GetWorld();
             TDynArray<Guid>     lGuids;
 
@@ -793,9 +738,7 @@ namespace Opaax::Editor
 
             m_Selection->Clear();
 
-            // Whatever has no counterpart is DROPPED rather than kept: Entity holds a raw World*, so
-            // a survivor of the old world would dangle the moment it dies. An entity destroyed during
-            // play simply leaves the selection, and the rest of it stays.
+            // Entries without a counterpart are dropped (Entity holds a raw World*).
             for (const Guid& lGuid : lGuids)
             {
                 if (InNew == nullptr) { break; }
@@ -809,25 +752,21 @@ namespace Opaax::Editor
 
     void EditorService::HandleWorldDestroyed(World* InWorld)
     {
-        // FIRST, and ahead of the selection guard below: a step names entities of the EDIT world,
-        // so the history dies with it whether or not anything is selected. Asked of the MODE rather
-        // than of a recorded world id — that is what keeps EditorUndo free of World entirely (⑤) —
-        // and it is the same answer: a PIE cycle destroys the Play clone, so Play/Stop keeps the
-        // history exactly as Unreal does.
+        // First: undo steps name entities of the edit world, so the history goes with it. Play/Stop
+        // keeps the history (the Play copy is destroyed, not the edit world).
         if (m_Undo != nullptr && InWorld != nullptr && InWorld->GetMode() == EWorldMode::Edit)
         {
             m_Undo->Clear();
         }
 
-        // The active world's death already came through HandleActiveWorldChanged (DestroyWorld clears
-        // the active slot first). This covers the other case — a NON-active world dying while holding
-        // the selection, which nothing else would notice.
+        // The active world's death came through HandleActiveWorldChanged. This covers a non-active
+        // world dying while it holds the selection.
         if (m_Selection == nullptr || !m_Selection->HasSelection() || InWorld == nullptr)
         {
             return;
         }
 
-        // One world per selection by construction, so one compare covers every entry.
+        // A selection is in one world, so one compare covers every entry.
         if (m_Selection->GetWorld() == InWorld)
         {
             m_Selection->Clear();
@@ -844,10 +783,8 @@ namespace Opaax::Editor
     {
         if (m_Context == nullptr || m_MapDocument == nullptr || m_LevelDocument == nullptr) { return; }
 
-        // The engine already opened this level into the world (FinishStartup -> OpenLevel), so the
-        // manifest is READ OFF THE WORLD'S LEVEL rather than re-read from the file: the Level IS
-        // the "what did I load" answer the editor used to have to reconstruct. Only the file's
-        // PATH still comes from the project, because a Save needs somewhere to write.
+        // The engine already opened this level: read the manifest from the world's Level. Only the file
+        // path comes from the project (Save needs it).
         const OpaaxString lLevelRel = OpaaxApplication::GetAppService<IProjectManager>().StartupLevel();
 
         LevelOps::AdoptOpen(*m_Context, lLevelRel.IsEmpty()
@@ -862,9 +799,8 @@ namespace Opaax::Editor
     // =============================================================================
 
     /**
-     * Init the editor GUI
-     * @param InWindow 
-     * @return false if not initialized correctly
+     * Initializes the editor GUI.
+     * @return False if it failed
      */
     bool EditorService::InitGUI(Window* InWindow)
     {
@@ -873,9 +809,7 @@ namespace Opaax::Editor
             return false;
         }
 
-        // AFTER Init (there is no font atlas before the context exists) and BEFORE the first frame.
-        // Here rather than inside the implementation because WHICH typeface is a config question:
-        // this is the composition root, so a second backend inherits the choice unchanged.
+        // After Init (no font atlas before) and before the first frame. The typeface comes from config.
         m_Gui->SetUIFont(ResolveUIFont());
 
         return true;
@@ -886,14 +820,12 @@ namespace Opaax::Editor
         IConfigSystem& lConfigSys = OpaaxApplication::GetAppService<IConfigSystem>();
         if (lConfigSys.IsNull())
         {
-            return {};   // no config, no opinion — the backend keeps its default
+            return {};   // no config: keep the default font
         }
 
         const EditorImguiConfigData& lCFG = lConfigSys.Get<Config_EditorImgui>().GetData();
 
-        // The config states MOUNT paths ("/Engine/Fonts/…") because that is what survives a shipped
-        // build; the seam takes absolute ones because a toolkit opens files, not mounts. This is the
-        // one place the two meet.
+        // The config uses mount paths ("/Engine/Fonts/..."); the GUI needs absolute ones.
         IPaths& lPaths = OpaaxApplication::GetAppService<IPaths>();
 
         EditorUIFont lFont;
@@ -913,8 +845,7 @@ namespace Opaax::Editor
 
     void EditorService::ClearGUI()
     {
-        // Teardown, not Shutdown: the gui owns the panels, so it owns the order they die in
-        // (panels -> backend, F2a/LC3). Non-virtual on IEditorGui, so that cannot be got wrong here.
+        // Teardown: the gui owns the panels and destroys them before the backend.
         m_Gui->Teardown();
     }
 
@@ -927,9 +858,7 @@ namespace Opaax::Editor
             return {};
         }
 
-        // ImGui does not create directories, and its save fails SILENTLY when one is missing — so the dir
-        // has to exist before the first write, not on first save. GetPathIfNCreate is exactly that, and
-        // logs its own failure detail.
+        // ImGui does not create directories and fails silently to save without one, so create it now.
         const OpaaxString lSaveDir = lEditorPaths->EditorSaveDir();
         const IFileSystem& lFileSystem = OpaaxApplication::GetAppService<IPlatform>().GetFileSystem();
 
@@ -967,8 +896,7 @@ namespace Opaax::Editor
 
     void EditorService::BuildGUIs()
     {
-        // BOTH live objects, each from the registry the registrar owns — one shape, one place, so
-        // the next route that grows live state lands here without a decision.
+        // Both live objects, each from its registry.
         m_Gui->TitleBar().Build(m_Extensions.TitleBar());
         m_Gui->Panels().Build(m_Extensions.Panels(), *m_Context);
 
@@ -993,8 +921,7 @@ namespace Opaax::Editor
         RegisterNativeDrawers();
         RegisterNativeConfigDrawers();
 
-        // AFTER the commands, because the mode buttons dispatch by tag and a toolbar registered
-        // ahead of them would name commands that do not exist yet.
+        // After the commands: the mode buttons dispatch by tag.
         RegisterNativeViewportTools();
 
         m_Extensions.EditWorldSystems().Bind(
@@ -1005,7 +932,7 @@ namespace Opaax::Editor
             InCollect(m_Extensions);
         }
 
-        // AFTER the game module, so its panels get a toggle too, and before the seal.
+        // After the game module (its panels get a toggle too), before sealing.
         BindPanelToggles();
 
         m_Extensions.Seal();
@@ -1022,7 +949,7 @@ namespace Opaax::Editor
     {
         IEngine& lEngine = OpaaxApplication::GetAppService<IEngine>();
 
-        // Resolved before anything reads it: ResolveLayoutIniPath below, then the EditorContext.
+        // Resolved before anything reads it (ResolveLayoutIniPath, then the EditorContext).
         CacheEditorPaths();
         
         IWindowManager& lWindows = OpaaxApplication::GetAppService<IWindowManager>();
@@ -1033,19 +960,18 @@ namespace Opaax::Editor
             return;
         }
 
-        // The editor draws its own title bar, so the OS must not draw one. A runtime verb rather
-        // than a WindowProps field because WindowManager::CreateMainWindow builds those from
-        // EngineConfigData alone — there is no host seam to override at creation.
+        // The editor draws its own title bar, so the OS must not. Set here: the window is created from
+        // EngineConfigData alone.
         lWindow->SetDecorated(false);
 
-        // No gui means editor without ui so it make no sense init
+        // No gui: the editor makes no sense without UI.
         if (!InitGUI(lWindow))
         {
             //TODO Log
             return;
         }
         
-        // Many systems rely on world so do not continue the init
+        // Many systems need the world: stop here.
         if (!SetWorldManagerFromEngine(lEngine))
         {
             //TODO Logs
@@ -1062,17 +988,14 @@ namespace Opaax::Editor
     {
         if (!m_Gui->IsReady()) { return; }
 
-        // Re-decide the input route ONCE per frame, here rather than inside RouteInput: a rule
-        // evaluated only when an event arrives cannot notice that input STOPPED — and "the route
-        // just closed" is precisely the case that has to reset the engine's held keys. Reads the
-        // viewport hover/focus the panel pushed last frame, BEFORE OnPreRender clears it.
+        // Decide the input route once per frame, here: a rule evaluated only on events cannot notice that
+        // input stopped (which is when the engine's held keys must be reset). Uses last frame's viewport
+        // hover/focus, before OnPreRender clears it.
         if (m_InputRoute != nullptr) { m_InputRoute->Evaluate(); }
 
         m_Gui->BeginFrame();
 
-        // Apply any pending viewport resize (measured last DrawContents) BEFORE Engine().Loop()
-        // renders the world, so Render() reads the new FBO size this frame (deferred-resize
-        // handshake, §5).
+        // Apply a pending viewport resize before Engine().Loop() renders, so this frame uses the new size.
         m_Gui->Panels().OnPreRender();
     }
 
@@ -1080,29 +1003,26 @@ namespace Opaax::Editor
     {
         if (!m_Gui->IsReady()) { return; }
 
-        // Once per frame, ahead of everything that reads it — the Hierarchy draws a `*` per map.
+        // Once per frame, before anything reads it (the Hierarchy shows a * per map).
         RefreshDirtyCache();
 
         DrawGUI();
 
-        // Submit the UI to the backbuffer AFTER Engine().Loop() has rendered the world into the FBO
-        // (see EditorApplication::TickFrame). The host presents the backbuffer once, after this.
+        // Submit the UI after Engine().Loop() rendered the world into the FBO. The host presents after this.
         m_Gui->EndFrame();
     }
 
     bool EditorService::RouteInput(Event& InEvent)
     {
-        if (!m_Gui->IsReady()) { return false; } // UI not up (pre-Initialize / no window) — pass through
+        if (!m_Gui->IsReady()) { return false; } // UI not up: pass through
         
-        // Keyboard is NOT exempted. IsKeyboardOwnedByUI only goes true for a text field, and a
-        // field that has the keyboard must always win, viewport or not.
+        // Keyboard is not exempt: a text field that has the keyboard always wins.
         const bool lViewportHovered = m_InputRoute != nullptr && m_InputRoute->IsViewportHovered();
 
         bool lConsumed = false;
 
-        // The editor OWNS the game's pointer POSITION (UI11): the OS event is in window pixels, but
-        // the game's window is the viewport image, so InputRoute feeds the viewport-local position
-        // once per frame instead. A raw window-pixel move must never reach the engine.
+        // The editor feeds the game's pointer position (viewport-local, once per frame via InputRoute).
+        // A raw window-pixel move must never reach the engine.
         if (InEvent.GetEventType() == MouseMovedEvent::GetStaticType())
         {
             return true;
@@ -1116,28 +1036,23 @@ namespace Opaax::Editor
         {
             lConsumed = m_Gui->IsKeyboardOwnedByUI();
         }
-        // else: window/application events (close, resize, ...) always fall through to the base app.
+        // Otherwise: window/application events (close, resize, ...) go to the base app.
 
-        // Step 3 — the reserved editor keys, AFTER the capture check on purpose: a shortcut must not
-        // fire while a text field owns the keyboard, and D5 orders it exactly this way.
+        // Reserved editor keys, after the capture check: no shortcut while a text field has the keyboard.
         if (!lConsumed && HandleReservedKeys(InEvent))
         {
             return true;
         }
 
-        // Steps 2 + 4 — the route. Consuming here is what withholds the event from the engine:
-        // EditorApplication::OnEvent returns early on true, so "the editor ate it" and "the engine
-        // never saw it" are the same statement, and there is no second gate downstream to keep in
-        // sync. Window events are exempt — close and resize are the application's business no
-        // matter where the pointer is.
+        // The route. Consuming here keeps the event from the engine (EditorApplication::OnEvent returns
+        // early on true). Window events are exempt (close and resize belong to the application).
         if (!lConsumed && InEvent.IsInCategory(EEventCategory::Input)
             && m_InputRoute != nullptr && !m_InputRoute->IsOpen())
         {
             lConsumed = true;
         }
 
-        // No log here (LOG4): one line per key or click drowned everything else. The Input panel
-        // shows where input goes, live.
+        // No log here (too noisy); the Input panel shows where input goes.
         return lConsumed;
     }
 
@@ -1151,12 +1066,11 @@ namespace Opaax::Editor
         const auto& lKey = static_cast<const KeyPressedEvent&>(InEvent);
         if (lKey.IsRepeat())
         {
-            // Holding F7 must not stream steps; every PIE verb is a discrete command.
+            // Holding F7 must not stream steps.
             return false;
         }
         
-        // Bare function keys, not chords: the KeyPressed payload carries no modifier state, so
-        // Ctrl+P-style shortcuts are not expressible today. M-Input owns that.
+        // Bare function keys: KeyPressed carries no modifier state, so Ctrl+P-style shortcuts are not possible yet.
         const OpaaxTag* lCommand = nullptr;
         switch (lKey.GetKeyCode())
         {
@@ -1184,12 +1098,8 @@ namespace Opaax::Editor
             return;
         }
 
-        // NOT WHILE PIE RUNS — the same rule MapOps::CanEdit applies, for the same reason. The
-        // active world is then the Play CLONE, whose entities carry the source's OwnerMap
-        // (MapFactory restores it) and whose Level adopted the source's mounts. Checking it would
-        // compare a world being SIMULATED against the authored baseline: every map goes dirty the
-        // moment the game moves anything, and the capture is paid on the frames that can least
-        // afford it. The edit world is untouched throughout, so there is nothing to re-derive.
+        // Not while Play runs: the active world is the Play copy, and comparing a simulated world with the
+        // authored baseline would mark every map dirty. The edit world does not change during Play.
         if (!m_Context->PIE.IsEdit()) { return; }
 
         const World* const lWorld = m_Context->Worlds.GetActiveWorld();
@@ -1198,10 +1108,8 @@ namespace Opaax::Editor
         const Level* const lLevel = lWorld->GetLevel();
         if (lLevel == nullptr) { return; }
 
-        // THROTTLED, and it now COALESCES rather than bounds. The document skips the whole capture
-        // when the world's revision has not moved (MP5), so an idle editor is already free; what is
-        // left to bound is a DRAG, which bumps the revision every frame it is held. Four times a
-        // second is far below what an eye can tell from instant.
+        // Throttled to 4 per second. The document skips the capture when the world revision has not moved,
+        // so an idle editor is free; this limits the cost during a drag.
         constexpr double k_DirtyCheckInterval = 0.25;
 
         const double lNow = m_Gui->GetTime();
@@ -1209,34 +1117,19 @@ namespace Opaax::Editor
 
         m_LastDirtyCheck = lNow;
 
-        // The THROTTLE lives here because this is where the frame clock is; the ANSWERS live in the
-        // document, beside the records they are derived from, so the Hierarchy can read one per map
-        // without a capture (**MP5**).
+        // The throttle is here (the frame clock); the answers are in the document (next to the baselines).
         m_LevelDocument->RefreshDirty(*lWorld, m_Context->Engine.GetRegistries().Components(), *lLevel);
     }
 
     void EditorService::HandleAuthoringShortcuts()
     {
-        // Ctrl+S goes through IMGUI, not through HandleReservedKeys — and the reason is worth
-        // keeping. D5's step 3 runs inside the event route, where the editor decides whether the
-        // ENGINE gets fed. With an Edit world open the route is ClosedEditMode, so every input
-        // event is consumed there and InputManager never sees Ctrl at all: IsCtrlDown() would be
-        // false forever, precisely where Ctrl+S is wanted.
-        //
-        // The split is principled rather than a workaround. F5-F8 are PIE control and must fire
-        // while the GAME owns the keyboard, so they belong in the route ahead of the feed. Ctrl+S
-        // is an authoring command that only means anything while the EDITOR owns the keyboard —
-        // which is exactly when ImGui's view of the keyboard is the authoritative one.
+        // Ctrl+S goes through ImGui, not HandleReservedKeys: with an Edit world open the input route
+        // consumes every event, so InputManager never sees Ctrl. F5-F8 must work while the game has the
+        // keyboard (so they are in the route); Ctrl+S only matters while the editor has it.
         if (m_Context == nullptr) { return; }
 
-        // ONE chord, whichever document is in front — the target follows the focused panel, which
-        // the draw loop measured while that panel's window was open, and the panel DECLARES it
-        // (PanelDesc::SaveCommand and, since P8 V3/V4, Undo/Redo/DeleteCommand). Invalid = the
-        // level's verb.
-        //
-        // A LOOKUP, not a chain. Ctrl+S used to be a hand-written ladder of "is the sheet focused?
-        // the clip? the library?" and it was forgotten FOUR times ([[L86]]); Ctrl+Z was then a bool
-        // that only swallowed the chord. A panel adding a document cannot forget a list elsewhere.
+        // One chord for every document: the target follows the focused panel, which declares it
+        // (PanelDesc::SaveCommand, Undo/Redo/DeleteCommand). Invalid = the level's command.
         const auto lCommandForFocused = [this](const OpaaxTag& InDefault, OpaaxTag PanelDesc::* InMember)
         {
             const OpaaxStringID lFocused = m_Gui->Panels().FocusedPanel();
@@ -1258,9 +1151,7 @@ namespace Opaax::Editor
                 lCommandForFocused(Tags::EDITOR_COMMAND_SAVE_MAP, &PanelDesc::SaveCommand), *m_Context);
         }
 
-        // Ctrl+Z / Ctrl+Y. NOT Ctrl+Shift+Z: Shortcut takes one modifier, and Ctrl+Y is what
-        // Windows and Unreal both use anyway. SAMPLED ONCE EACH — Shortcut() is an edge query, so
-        // asking the same chord twice in one frame answers true only the first time.
+        // Ctrl+Z / Ctrl+Y (Shortcut takes one modifier). Each is sampled once: Shortcut() is an edge query.
         if (m_Gui->Shortcut(EKeyCode::LeftControl, EKeyCode::Z))
         {
             m_Context->Extensions.Commands().Execute(
@@ -1273,16 +1164,9 @@ namespace Opaax::Editor
                 lCommandForFocused(Tags::EDITOR_COMMAND_REDO, &PanelDesc::RedoCommand), *m_Context);
         }
 
-        // F and Delete are EDITOR-WIDE, not the viewport's. They were measured on the viewport
-        // first, which meant they did nothing from the Hierarchy — the panel an author is most
-        // likely to be in when deleting something. Their subject is the SELECTION, and the
-        // selection is not owned by any one panel, so neither are its verbs. (Delete follows the
-        // focused panel like the chords above; F stays the level's — the prefab panel claims it
-        // itself, because its subject there is a camera no command can reach.)
-        //
-        // What made a bare key unsafe was never the route, it was a text field: guarding on
-        // IsKeyboardOwnedByUI is what lets these be global, so typing "Fred" into the name field
-        // cannot frame and delete the selection.
+        // F and Delete are editor-wide: their subject is the selection, which no panel owns. (Delete
+        // follows the focused panel like the chords above; the prefab panel handles F itself.)
+        // Guarded by IsKeyboardOwnedByUI, so typing in a text field does not trigger them.
         if (m_Gui->IsKeyboardOwnedByUI()) { return; }
 
         if (m_Gui->Shortcut(EKeyCode::F))
@@ -1296,14 +1180,9 @@ namespace Opaax::Editor
                 lCommandForFocused(Tags::EDITOR_COMMAND_DELETE_ENTITY, &PanelDesc::DeleteCommand), *m_Context);
         }
 
-        // W / E / R — the binding Unreal, Unity and Godot all share, so an author already knows it.
-        // Editor-wide beside F and Delete for SEL7's reason: the gizmo's subject is the SELECTION,
-        // and the selection belongs to no single panel. The WantCaptureKeyboard guard above is what
-        // keeps a bare letter safe — typing "Water" into a name field must not switch modes.
-        //
-        // EDIT ONLY, unlike F and Delete: W/E/R are also the game's movement keys, and a running
-        // game owns them. The menu entries stay live either way — they are unambiguous, and a mode
-        // set ahead of Stop is a reasonable thing to want.
+        // W / E / R (like Unreal, Unity and Godot). Editor-wide, like F and Delete; the keyboard guard
+        // keeps typing safe. Edit only: in Play they are the game's movement keys. The menu entries
+        // always work.
         if (!m_Context->PIE.IsEdit()) { return; }
 
         if (m_Gui->Shortcut(EKeyCode::W))
@@ -1324,28 +1203,20 @@ namespace Opaax::Editor
 
     void EditorService::OnShutdown()
     {
-        // Reverse-order teardown: EditorService is provided last, so this runs FIRST — the engine, the
-        // window and its GL context are all still alive (LC). Order within:
+        // Reverse-order teardown: EditorService is provided last, so it shuts down first, while the
+        // engine, the window and its GL context are still alive.
 
-        // 0. Unsubscribe while the WorldManager is still alive, and BEFORE the panels/selection those
-        //    handlers touch are destroyed — WorldManager::TearDown destroys every world and would
-        //    otherwise call back into a half-torn-down editor.
+        // 0. Unsubscribe from the WorldManager before the panels and selection its handlers use are destroyed.
         ClearWorldManager();
 
-        // 1. The whole UI stack, panels first then the backend — ONE call, because the gui owns
-        //    both and IEditorGui::Teardown is non-virtual (MR2e). That ordering is not a style
-        //    choice: the Viewport registered first so it dies LAST, and its Shutdown clears the
-        //    engine's primary render target while the engine is alive and frees the FBO while the
-        //    GL context is still current. Destroying that context is also what FLUSHES the dock
-        //    layout. All of it must precede m_Context.reset(): panels hold a reference into it.
+        // 1. The whole UI (panels, then backend): the Viewport frees its FBO while the GL context is
+        //    current. Destroying the context also saves the dock layout. Before m_Context.reset().
         ClearGUI();
 
-        // 4. Selection, PIE and the input route — after the panels that read them, before the
-        //    context they are referenced from. All three hold only non-owning references, so there
-        //    is nothing to undo; the route is dropped before the engine it would reset.
+        // 4. Selection, PIE and the input route: after the panels that read them.
         ClearEditorSystems();
 
-        // 5. The context refs last (nothing points into them anymore).
+        // 5. The context references last.
         ClearEditorContext();
     }
 }

@@ -4,7 +4,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Editor/Panels/IEditorPanel.h"
 
-#include "Engine/Subsystems/Resources/Types/Animation/AnimationLibraryData.h"   // the gesture caches an entry
+#include "Engine/Subsystems/Resources/Types/Animation/AnimationLibraryData.h"
 
 namespace Opaax
 {
@@ -16,15 +16,9 @@ namespace Opaax::Editor
     struct EditorContext;
 
     // =============================================================================
-    // AnimationLibraryPanel — the library EDITOR: a name, a clip, one row each.
-    //
-    //   The smallest of the document panels, and deliberately so: a library is an ALIAS TABLE, so
-    //   there is nothing to draw but rows. No canvas, no preview — the clip panel owns those.
-    //
-    //   An entry is CReflected, so DrawProperties gives the name field AND the typed drop target
-    //   with no drawer written here. What it cannot give is judgement about the REST of the
-    //   library — a duplicate name makes one clip unreachable — so the gesture closes through
-    //   LibraryOps::CommitEntryEdit, which is where that policy lives.
+    // AnimationLibraryPanel — the library editor: one row per (name, clip).
+    //   Entries are reflected, so DrawProperties gives the fields. Duplicate names are checked by
+    //   LibraryOps::CommitEntryEdit when an edit closes.
     // =============================================================================
     class AnimationLibraryPanel final : public IEditorPanel
     {
@@ -51,13 +45,13 @@ namespace Opaax::Editor
         // Functions
         // =============================================================================
     private:
-        /** Name, dirty marker, Save, and the default-clip picker. */
+        /** Name, dirty marker, Save, and the default clip picker. */
         void DrawHeader(const AnimationLibraryData& InData);
 
-        /** One selectable row per entry, and the buttons that add, remove and reorder them. */
+        /** One row per entry, with add, remove and reorder buttons. */
         void DrawEntryList(const AnimationLibraryData& InData);
 
-        /** The selected entry's two fields, bracketed for undo and committed through LibraryOps. */
+        /** The selected entry's two fields, with undo, committed through LibraryOps. */
         void DrawSelectedEntry(AnimationLibraryData& InData);
 
         // =============================================================================
@@ -65,15 +59,15 @@ namespace Opaax::Editor
         // =============================================================================
     public:
         //~Begin IEditorPanel interface
-        /** Nothing to acquire — a library holds paths, and this panel resolves none of them. */
+        /** Nothing to acquire. */
         void Startup()     override {}
 
-        /** Nothing the world's render depends on. */
+        /** Nothing the world render depends on. */
         void OnPreRender() override {}
 
         void DrawContents() override;
 
-        /** Nothing claimed, so nothing to release. */
+        /** Nothing to release. */
         void Shutdown()    override {}
 
         PanelWindowStyle GetWindowStyle() const override { return { { 420.f, 340.f } }; }
@@ -85,11 +79,11 @@ namespace Opaax::Editor
     private:
         EditorContext& m_Context;
 
-        /** Which entry the list highlights. -1 = none. Presentation, not document state. */
+        /** Highlighted entry. -1 = none. */
         Int32 m_Selected = -1;
 
         // =============================================================================
-        // The open edit gesture — the entry as it was when the first field went active
+        // The open edit gesture: the entry as it was when the first field became active
         // =============================================================================
         AnimationLibraryEntry m_GestureBefore;
         Uint32                m_GestureIndex   = 0;

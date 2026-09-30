@@ -1,13 +1,13 @@
 #include "Editor/Panels/MoverPanel.h"
 
-#include <cstdio>   // snprintf — the entry list's row labels
+#include <cstdio>   // snprintf
 
 #include "Editor/Commands/EditorCommandRegistry.h"
 #include "Editor/Commands/EditorNativeCommandsTags.hpp"
 #include "Editor/EditorContext.h"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Editor/Operation/MoverOperations.h"
-#include "Editor/Properties/PropertyDrawers.h"   // the specializations DrawProperties folds over
+#include "Editor/Properties/PropertyDrawers.h"
 #include "Editor/Resources/Types/Mover/EditorMoverDocument.h"
 #include "Editor/Undo/EditorUndo.h"
 
@@ -62,8 +62,7 @@ namespace Opaax::Editor
         }
         ImGui::EndDisabled();
 
-        // The default is what a mover naming no mode starts in, so it is picked from the names that
-        // exist rather than typed — a typo here would silently fall through to the first entry.
+        // Picked from existing names rather than typed (a typo would fall through to the first entry).
         const char* lCurrent = InData.DefaultMode.IsValid() ? InData.DefaultMode.CStr() : "(first entry)";
 
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 8.f);
@@ -126,8 +125,7 @@ namespace Opaax::Editor
         {
             const MoverEntry& lEntry = InData.Entries[lIndex];
 
-            // The FIRST row is what a mover falls back to when the default names nothing, so it is
-            // worth seeing which one that is without reading the combo.
+            // The first row is the fallback when the default names nothing: show which one it is.
             const bool bIsFallback = !InData.DefaultMode.IsValid() && lIndex == 0;
             const bool bIsDefault  = InData.DefaultMode.IsValid() && lEntry.Name == InData.DefaultMode;
 
@@ -161,9 +159,9 @@ namespace Opaax::Editor
         DrawProperties(m_Context.Widgets, InData.Entries[lIndex]);
         ImGui::PopID();
 
-        // The Inspector's bracket: a TPropertyDrawer writes straight through a reference and cannot
-        // report that it did, so the edges of "any item is active" open and close one step. The
-        // CLOSE goes through MoverOps, which is what judges the name against the rest of the list.
+        // Like the Inspector: a drawer writes through a reference without reporting it, so an undo step
+        // opens when an item becomes active and closes when none is.
+        // The close goes through MoverOps, which checks the name against the list.
         const bool lItemActive = ImGui::IsAnyItemActive();
 
         if (lItemActive && !m_bWasItemActive)
