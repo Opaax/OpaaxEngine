@@ -66,8 +66,7 @@ namespace Opaax::Editor
 
     void EditorTitleBarCategory::Draw(EditorContext& InContext) const
     {
-        // An empty menu would open onto nothing — a category someone declared and never filled is
-        // simply not on the bar.
+        // An empty category is not shown.
         if (m_Children.empty()) { return; }
 
         const bool bEnabled = !m_IsEnabled || m_IsEnabled(InContext);

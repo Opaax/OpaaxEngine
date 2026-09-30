@@ -41,7 +41,7 @@ namespace Opaax::Editor::ImguiDraw
         ImVec2 lA, lB;
         ImguiLayout::Inset(InMin, InMax, CARD_INSET, lA, lB);
 
-        // The tab is a fraction of the BODY, not of the tile, so the folder keeps its shape at any size.
+        // The tab is a fraction of the body, so the folder keeps its shape at any size.
         const float lTabH = (lB.y - lA.y) * 0.26f;
         const float lTabW = (lB.x - lA.x) * 0.30f;
 

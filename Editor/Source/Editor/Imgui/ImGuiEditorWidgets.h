@@ -5,15 +5,9 @@
 namespace Opaax::Editor
 {
     // =============================================================================
-    // ImGuiEditorWidgets — IEditorWidgets over ImGui. Owned by ImGuiEditorGui and reached through
-    //   IEditorGui::Widgets(), the Backend() shape: it is the SAME backend as the gui, unlike
-    //   IEditorDialogs which is the OS.
-    //
-    //   Named apart from Editor/ImguiLibrary/ImguiWidgets.h, which is a namespace of panel-side
-    //   helpers and a different thing entirely.
-    //
-    //   Stateless — every call forwards. It is a class rather than free functions only so a second
-    //   backend can replace it.
+    // ImGuiEditorWidgets — IEditorWidgets over ImGui. Owned by ImGuiEditorGui, reached through
+    //   IEditorGui::Widgets(). Stateless; a class so another backend can replace it.
+    //   Not the same as Editor/ImguiLibrary/ImguiWidgets.h (panel-side helpers).
     // =============================================================================
     class ImGuiEditorWidgets final : public IEditorWidgets
     {

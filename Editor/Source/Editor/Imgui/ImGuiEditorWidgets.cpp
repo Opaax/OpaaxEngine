@@ -5,8 +5,7 @@
 namespace
 {
     /**
-     * Every ImGui drag reads min >= max as "no bounds", so an unset range (0, 0) passes through
-     * verbatim and the ordinary property costs no branch.
+     * ImGui drags read min >= max as unbounded, so an unset range (0, 0) passes through as is.
      */
     constexpr float DRAG_SPEED = 0.1f;
 }
@@ -52,13 +51,12 @@ namespace Opaax::Editor
 
     bool ImGuiEditorWidgets::Button(const char* InLabel, const float InWidth, const char* InTooltip)
     {
-        // Negative width fills, matching ImGui's own convention; 0 fits the label.
+        // Negative width fills (ImGui's convention); 0 fits the label.
         const float lWidth = InWidth < 0.f ? ImGui::CalcItemWidth() : InWidth;
 
         const bool lClicked = ImGui::Button(InLabel, ImVec2(lWidth, 0.f));
 
-        // The hover query lives HERE rather than at the call site, which is what keeps the seam
-        // free of submission-order semantics.
+        // The hover check is done here, not by the caller.
         if (InTooltip != nullptr && ImGui::IsItemHovered())
         {
             ImGui::SetTooltip("%s", InTooltip);
@@ -90,8 +88,7 @@ namespace Opaax::Editor
 
     bool ImGuiEditorWidgets::DragInt16(const char* InLabel, Int16& InValue, const Int16 InMin, const Int16 InMax)
     {
-        // DragScalar on the REAL type: a round trip through Int32 would let a drag past 32767 wrap
-        // to a large negative value instead of clamping.
+        // DragScalar on the real type: via Int32 a drag past 32767 would wrap instead of clamping.
         return ImGui::DragScalar(InLabel, ImGuiDataType_S16, &InValue, DRAG_SPEED, &InMin, &InMax);
     }
 
@@ -102,8 +99,8 @@ namespace Opaax::Editor
 
     bool ImGuiEditorWidgets::DragUint32(const char* InLabel, Uint32& InValue, const Uint32 InMin, const Uint32 InMax)
     {
-        // Same reason as Int16, at the other end: via Int32 a drag below zero wraps to ~4 billion.
-        // A max that does not exceed the min is passed as null, i.e. unbounded above.
+        // Same for the low end: via Int32 a drag below zero would wrap to ~4 billion. A max not above the
+        // min is passed as null (unbounded).
         return ImGui::DragScalar(InLabel, ImGuiDataType_U32, &InValue, DRAG_SPEED, &InMin,
                                  InMax > InMin ? &InMax : nullptr);
     }
@@ -124,8 +121,7 @@ namespace Opaax::Editor
     bool ImGuiEditorWidgets::InputTextMultiline(const char* InLabel, char* InBuffer, const Uint32 InSize,
                                                 const Uint32 InLineCount)
     {
-        // Width 0 = "fill the remaining space", which is what every other field here does. The height
-        // is rows x line height, so the box scales with the UI font rather than with a pixel guess.
+        // Width 0 fills the remaining space; height is rows x line height (scales with the font).
         const ImVec2 lSize(0.f, ImGui::GetTextLineHeight() * static_cast<float>(InLineCount));
 
         return ImGui::InputTextMultiline(InLabel, InBuffer, InSize, lSize);

@@ -5,16 +5,13 @@
 #include <imgui.h>
 
 // =============================================================================
-// ImguiLayout — GEOMETRY. Pure functions of numbers: no ImGui state read, none written, nothing
-//   drawn. The half of the library that is testable without a context.
+// ImguiLayout — geometry only: pure functions, no ImGui state. Testable without a context.
 // =============================================================================
 namespace Opaax::Editor::ImguiLayout
 {
     /**
-     * Fit InWidth x InHeight inside a square of InMax without distorting it.
-     *
-     * A zero dimension answers a square box rather than dividing by zero — the honest result for an
-     * image whose shape is not known yet.
+     * Fits InWidth x InHeight inside a square of InMax without distorting it. A zero dimension gives a
+     * square box.
      */
     inline ImVec2 AspectFit(const Uint32 InWidth, const Uint32 InHeight, const float InMax) noexcept
     {
@@ -38,7 +35,7 @@ namespace Opaax::Editor::ImguiLayout
         OutMax = ImVec2(lX + InSide, lY + InSide);
     }
 
-    /** [InMin, InMax] shrunk by InFraction of its size on every side. 0.16 is the tile card's inset. */
+    /** [InMin, InMax] shrunk by InFraction of its size on every side. */
     inline void Inset(const ImVec2 InMin, const ImVec2 InMax, const float InFraction,
                       ImVec2& OutMin, ImVec2& OutMax) noexcept
     {

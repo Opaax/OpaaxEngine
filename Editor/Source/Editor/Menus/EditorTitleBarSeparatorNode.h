@@ -7,12 +7,8 @@ namespace Opaax::Editor
     /**
      * @class EditorTitleBarSeparatorNode
      *
-     * A rule between entries. A node rather than a flag on the entry below it, because a separator
-     * is POSITIONAL: it lives in the same ordered child list as everything else, so where it was
-     * written is where it draws — and a category can end up with one at either end or none at all
-     * without any entry having to know.
-     *
-     * Its id is invalid: there is nothing to label and nothing to look it up by.
+     * A separator between entries. A node in the ordered child list, so it draws where it was added.
+     * Its id is invalid.
      */
     class EditorTitleBarSeparatorNode final : public IEditorTitleBarNode
     {

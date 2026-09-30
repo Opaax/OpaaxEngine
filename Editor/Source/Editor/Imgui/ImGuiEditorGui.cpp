@@ -3,7 +3,7 @@
 #include <imgui.h>
 #include <ImGuizmo.h>
 
-#include <cstdio>   // snprintf — the host window's label
+#include <cstdio>   // snprintf
 
 #include "ImguiHelper.h"
 #include "Application/Services/IConfigSystem.h"
@@ -14,7 +14,7 @@
 #include "Editor/EditorContext.h"
 #include "Editor/Application/EditorApplication.h"
 #include "Editor/Panels/EditorPanels.h"
-#include "Editor/Panels/IEditorPanel.h"   // PanelWindowStyle — the window chrome's one parameter
+#include "Editor/Panels/IEditorPanel.h"   // PanelWindowStyle
 #include "Editor/UI/OpenGLEditorUIBackend.h"
 
 using namespace Opaax;
@@ -30,18 +30,9 @@ namespace
     }
 
     /**
-     * EKeyCode -> ImGuiKey, total over the keyboard.
-     *
-     * EKeyCode follows GLFW's numbering, so the contiguous runs are the same ones
-     * imgui_impl_glfw.cpp walks by arithmetic in its own KeyToImGuiKey; the rest is by name, which
-     * is also what keeps this correct where the engine's numbering has drifted from GLFW's (the
-     * numpad operators — see the FIXME in InputCodes.h).
-     *
-     * Deliberately covers the WHOLE keyboard rather than the keys in use: a partial table answering
-     * "no such key" for the next shortcut anyone adds would fail silently.
-     *
-     * @return ImGuiKey_None for a non-keyboard code (mouse, gamepad) — a call-site error, which
-     *   Shortcut asserts on.
+     * EKeyCode -> ImGuiKey, for the whole keyboard (a partial table would silently miss the next
+     * shortcut). Contiguous runs are converted by arithmetic (EKeyCode follows GLFW), the rest by name.
+     * @return ImGuiKey_None for a non-keyboard code (mouse, gamepad); Shortcut asserts on it
      */
     ImGuiKey ToImGuiKey(const EKeyCode InKey) noexcept
     {
@@ -120,10 +111,10 @@ namespace
         }
     }
 
-    /** Vertical frame padding for the caption row — what makes the menu bar title-bar height. */
+    /** Vertical frame padding for the caption row (makes the menu bar title-bar height). */
     constexpr float k_TitleBarPaddingY = 8.f;
 
-    /** The chord bit for a modifier KEY. Left and Right fold together — ImGui's mods are side-agnostic. */
+    /** The chord bit for a modifier key. Left and right count the same. */
     ImGuiKeyChord ToModifier(const EKeyCode InKey) noexcept
     {
         switch (InKey)
@@ -135,7 +126,7 @@ namespace
         case EKeyCode::LeftSuper:   case EKeyCode::RightSuper:   return ImGuiMod_Super;
 
         default:
-            OPAAX_ASSERT(false);   // not a modifier key — a call-site error, not a runtime state
+            OPAAX_ASSERT(false);   // not a modifier key (a call-site error)
             return 0;
         }
     }
@@ -188,7 +179,7 @@ namespace Opaax::Editor
 
     bool ImGuiEditorGui::Init(Window& InWindow, OpaaxString InLayoutIniPath)
     {
-        // Checked BEFORE the context exists, so a failure has nothing to unwind.
+        // Checked before the context exists, so a failure has nothing to undo.
         auto* lNativeWindow = static_cast<GLFWwindow*>(InWindow.GetNativeWindow());
         if (lNativeWindow == nullptr)
         {
@@ -211,9 +202,8 @@ namespace Opaax::Editor
         //ImGui::StyleColorsClassic();
         //ImGui::StyleColorsLight();
 
-        // --- Dock layout persistence. Set BEFORE the first NewFrame: that is where ImGui loads the ini
-        //     (it only ever loads once, on the frame it first sees a filename). Empty => no
-        //     persistence rather than a stray file next to the exe. ------------------------------
+        // --- Dock layout file. Set before the first NewFrame (ImGui loads it once, there). Empty means
+        //     no file. ---
         m_LayoutIniPath = Move(InLayoutIniPath);
         lIO.IniFilename = m_LayoutIniPath.IsEmpty() ? nullptr : m_LayoutIniPath.CStr();
 
@@ -222,8 +212,7 @@ namespace Opaax::Editor
             OPAAX_LOG(LogEditorGui, Trace, "Dock layout: {}", m_LayoutIniPath.CStr());
         }
 
-        // The renderer impl (OpenGL today, S7) — last, because ImGui_ImplOpenGL3_Init needs the
-        // context that now exists.
+        // The renderer backend last: ImGui_ImplOpenGL3_Init needs the context.
         m_Backend = MakeUnique<OpenGLEditorUIBackend>(lNativeWindow);
         m_Backend->Init();
 
@@ -234,14 +223,13 @@ namespace Opaax::Editor
     {
         if (InFont.Path.IsEmpty())
         {
-            return;   // keep ProggyClean — an unset config is a choice, not an error
+            return;   // no font configured: keep the default
         }
 
         ImGuiIO& lIO = ImGui::GetIO();
 
-        // NoLoadError turns ImGui's assert-on-missing-file into a null return, which is what makes a
-        // mistyped config path survivable: the editor keeps its default font instead of dying on an
-        // IM_ASSERT before it has drawn a single frame.
+        // NoLoadError: a missing file returns null instead of asserting, so a wrong path keeps the
+        // default font.
         ImFontConfig lPrimaryCfg;
         lPrimaryCfg.Flags |= ImFontFlags_NoLoadError;
 
@@ -253,10 +241,8 @@ namespace Opaax::Editor
             return;
         }
 
-        // MERGED into the primary, not stacked beside it: the fallbacks are SUBSET files, so the
-        // result has to be one typeface that happens to cover Greek and Cyrillic — not three fonts a
-        // caller would have to choose between per string. ImGui 1.92 loads glyphs on demand, so no
-        // range table is needed and merging costs nothing until a character is actually drawn.
+        // Merged into the primary: one font that covers the other scripts. ImGui loads glyphs on demand,
+        // so no range table is needed.
         Uint32 lMerged = 0u;
         for (const OpaaxString& lFallback : InFont.Fallbacks)
         {
@@ -287,8 +273,8 @@ namespace Opaax::Editor
 
         m_Backend->Shutdown();
 
-        // DestroyContext FLUSHES the dock layout through the io.IniFilename pointer that still aims
-        // at m_LayoutIniPath — so that member is not cleared, here or anywhere.
+        // DestroyContext saves the dock layout through io.IniFilename, which still points at
+        // m_LayoutIniPath, so that member is never cleared.
         ImGui::DestroyContext();
         m_Backend.reset();
     }
@@ -299,9 +285,8 @@ namespace Opaax::Editor
         CheckStyle();
         ImGui::NewFrame();
 
-        // ③ — right after ImGui's own NewFrame, as ImGuizmo's header asks. Needed even though the
-        // ViewportPanel calls SetDrawlist: this is what clears the per-frame hotspot flags IsOver()
-        // reads, and a stale one would leave the marquee suppressed after the cursor left a handle.
+        // Right after ImGui's NewFrame, as ImGuizmo requires: it resets the per-frame hover state IsOver()
+        // reads.
         ImGuizmo::BeginFrame();
     }
 
@@ -330,19 +315,17 @@ namespace Opaax::Editor
             ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus |
             ImGuiWindowFlags_MenuBar;
 
-        // snprintf, not ImGui's ImFormatString — that one lives in imgui_internal.h. The FORMAT is
-        // copied verbatim from DockSpaceOverViewport; it is what the saved layout is keyed on.
+        // snprintf (ImFormatString is in imgui_internal.h). The format matches DockSpaceOverViewport; the
+        // saved layout is keyed on it.
         char lLabel[32];
         std::snprintf(lLabel, sizeof(lLabel), "WindowOverViewport_%08X", lViewport->ID);
 
-        // Pos/Size rather than WorkPos/WorkSize: the bar is INSIDE this window now, so there is no
-        // reserved strip above it to avoid.
+        // Pos/Size rather than WorkPos/WorkSize: the bar is inside this window.
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.f);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.f, 0.f));
 
-        // Taller than a menu strip — this is a caption. Pushed before Begin because the menu bar's
-        // height is decided there, and kept through the bar so its items match it.
+        // Taller than a menu strip (it is a caption). Pushed before Begin, where the menu bar height is set.
         const ImVec2 lFramePadding = ImGui::GetStyle().FramePadding;
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(lFramePadding.x, k_TitleBarPaddingY));
 
@@ -362,7 +345,7 @@ namespace Opaax::Editor
 
         m_Panels.Draw(*this);
 
-        // LAST: it reads IsAnyItemActive, which only means anything once the panels have submitted.
+        // Last: it reads IsAnyItemActive, which is only meaningful after the panels submitted.
         m_ImGuiTitleBar.UpdateResizeBorder(InContext);
     }
 
@@ -405,8 +388,7 @@ namespace Opaax::Editor
 
         const bool lOpen = ImGui::Begin(InLabel, &bOutWantOpen);
 
-        // Popped right after Begin, not at End: the var applies to the window's own padding, which
-        // Begin has already consumed. Swallowing the pair here is why EndPanelWindow takes nothing.
+        // Popped right after Begin: the padding is used by Begin. So EndPanelWindow takes nothing.
         if (InStyle.bNoPadding) { ImGui::PopStyleVar(); }
 
         return lOpen;
@@ -414,8 +396,7 @@ namespace Opaax::Editor
 
     bool ImGuiEditorGui::IsPanelWindowFocused() const
     {
-        // RootAndChildWindows, so typing in the frame list's scroll child still counts as being in
-        // the panel — a focus test that a child window can turn off is one nobody can rely on.
+        // RootAndChildWindows, so typing in a child window still counts as the panel having focus.
         return ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
     }
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Core/Log/Logger.h"
-#include "Core/Maths/MathTypes.h"   // Vector2F — where a nested placement lands
+#include "Core/Maths/MathTypes.h"   // Vector2F
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Editor/Operation/EditorSelection.hpp"
@@ -20,30 +20,14 @@ namespace Opaax::Editor
     inline constexpr LogCategory LogEditorPrefabDocument{"EditorPrefabDocument"};
 
     // =============================================================================
-    // EditorPrefabDocument — WHICH `.opaaxprefab` is being edited, and in which world (⑦-C P6).
-    //
-    //   IT OWNS ITS DATA THE WAY EVERY OTHER DOCUMENT DOES (**SS4**/**AN8**), and here that means
-    //   owning a WORLD: the copy in the `ResourceManager` is what every placed instance was built
-    //   from, so editing that one would change the level under the author's hands and lose the work
-    //   on the next reload. The prefab's entities are instantiated into a world of their own, and
-    //   nothing outside this panel can see them.
-    //
-    //   THE WORLD IS CREATED ONCE AND NEVER DESTROYED while the editor runs, which is a decision
-    //   rather than laziness. `EditorService::HandleWorldDestroyed` clears the undo history whenever
-    //   an **Edit**-mode world dies (**UN1**) — correct while the only Edit world was the level's,
-    //   and a trap the moment a second one exists: closing the prefab panel would have wiped the
-    //   level's history. Reusing one world sidesteps it entirely, where a third `EWorldMode` would
-    //   have meant auditing 25 comparisons for "did this mean Edit-and-not-Preview".
-    //
-    //   The entities keep the prefab's OWN guids — they are the templates, so nothing is derived
-    //   here (**K2** applies to placements, not to the prefab itself).
-    //
-    //   IT OWNS ITS HISTORY TOO (P8 V3), AND ITS SELECTION (V4). The level's stack is the level's
-    //   (**UN1**); a step recorded here names this document's world (EUndoWorld::Prefab) and is
-    //   reached by the panel's declared Undo/Redo commands, Ctrl+S's exact shape. The selection is
-    //   here rather than on the panel because a step's replay touches it — a restore re-selects,
-    //   a destroy clears — and a step can reach a document, never a panel. All three are cleared
-    //   with the entities: a step or a handle from before an Open names nothing.
+    // EditorPrefabDocument — which .opaaxprefab is being edited, and in which world.
+    //   Holds its own copy, as an entity world only this panel sees (the ResourceManager's copy is
+    //   what placed instances were built from).
+    //   The world is created once and kept while the editor runs: destroying an Edit world clears the
+    //   level's undo history, so closing this panel must not destroy one.
+    //   Entities keep the prefab's own guids (they are the templates).
+    //   Also owns its undo history and selection (steps recorded here use EUndoWorld::Prefab). All
+    //   three are cleared when a new prefab is opened.
     // =============================================================================
     class EditorPrefabDocument
     {
@@ -52,54 +36,37 @@ namespace Opaax::Editor
         // =========================================================================
     public:
         /**
-         * Load InAbsPath and rebuild the editing world around it.
-         *
-         * The world is CLEARED first, so opening a second prefab cannot leave the first one's
-         * entities behind — one document, one world, one prefab at a time.
-         *
-         * @return false when the file did not load; the previous document is then left open, for
-         *   MP3's reason: a failed read must not half-replace what the author already had.
+         * Loads InAbsPath and rebuilds the editing world around it (cleared first).
+         * @return False when the file did not load; the previous document then stays open
          */
         bool Open(EditorContext& InContext, const OpaaxString& InAbsPath);
 
         /**
-         * Capture the editing world back into the file, then ANNOUNCE it (P4).
-         *
-         * The announce is the whole point of editing a prefab: `ResourceOps::SavedToDisk` reloads
-         * the resource and the reconciler re-applies it to every placement in the level, each
-         * keeping its own overrides. Until P6 that seam had no natural trigger.
+         * Writes the editing world back to the file, then announces it: ResourceOps::SavedToDisk reloads
+         * the resource and every placement in the level is updated, keeping its overrides.
          */
         bool Save(EditorContext& InContext);
 
         /**
-         * Write InAbsPath as a VARIANT of the open prefab — one record placing the FILE, with
-         * whatever the world differs by as its overrides — and open it (P7). Unity's Prefab
-         * Variant in this engine's own vocabulary: the base's changes keep reaching it, its own
-         * edits fold into the record. THE EDITS ARE THE VARIANT: move a barrel, ask for a variant,
-         * and the base file stays as it was while the move opens again as the variant's override.
-         *
-         * Refused onto the open file itself, or outside the asset trees (**MP8**).
+         * Writes InAbsPath as a variant of the open prefab (one record placing this file, with the
+         * current differences as overrides) and opens it. The base file is unchanged. Refused onto the
+         * open file itself or outside the asset folders.
          */
         bool SaveAsVariant(EditorContext& InContext, const OpaaxString& InAbsPath);
 
         /**
-         * Place one instance of the prefab at InAssetPath into the editing world, anchored at
-         * InAtWorld — a NESTED placement (P7). Selected whole and recorded on this stack; Save
-         * folds it back to a record.
-         *
-         * REFUSED when it would make the file place itself: the open prefab, or one that places it
-         * at any depth. The resolver refuses the same cycle at read time, but a refusal here costs
-         * an Error where one there costs the author a prefab that no longer loads whole.
-         *
-         * @param InAtWorld Where the anchor lands, or null for the prefab's authored positions.
-         * @param InParent  A row it was dropped on (§HR): the placement's roots hang under it with
-         *   the authored pose as their local. ENTITY_NONE places at root.
-         * @return How many entities were created. 0 means refused, and the log says why.
+         * Places one instance of the prefab at InAssetPath into the editing world (a nested placement).
+         * Selected and recorded on this document's stack; Save folds it back to a record. Refused when
+         * the prefab would contain itself (directly or at any depth).
+         * @param InAtWorld Where the anchor lands, or null for the prefab's authored positions
+         * @param InParent  A row it was dropped on: the roots hang under it with the authored pose as
+         *   their local. ENTITY_NONE places at root
+         * @return How many entities were created. 0 = refused (the log says why)
          */
         Uint64 Place(EditorContext& InContext, const OpaaxString& InAssetPath, const Vector2F* InAtWorld,
                      EntityID InParent = ENTITY_NONE);
 
-        /** Forget the document. The world is kept — see the class note. */
+        /** Forgets the document. The world is kept (see the class note). */
         void Close();
 
         // =========================================================================
@@ -108,29 +75,24 @@ namespace Opaax::Editor
         bool               IsOpen()  const noexcept { return !m_AbsPath.IsEmpty(); }
         const OpaaxString& AbsPath() const noexcept { return m_AbsPath; }
 
-        /** The world the prefab's entities live in, or null before anything was opened. */
+        /** The world holding the prefab's entities, or null before anything was opened. */
         World*             GetWorld() const noexcept { return m_World; }
 
         /**
-         * Bumped by every Open and Close — i.e. every time the world's entities were REPLACED.
-         * A reader holding entity handles compares against it: entt reuses handles, so a handle
-         * that survived a rebuild would silently name a different entity (**MV4**).
+         * Bumped by every Open and Close (whenever the entities were replaced). Compare against it when
+         * holding entity handles: entt reuses handles.
          */
         Uint64             Generation() const noexcept { return m_Generation; }
 
-        /** This document's own history — see the class note. */
+        /** This document's own undo history. */
         EditorUndo&        Undo() noexcept { return m_Undo; }
 
-        /** What is selected in THIS world — never the context's (entt reuses handles across worlds, **MV4**). */
+        /** The selection in this world (not the context's). */
         EditorSelection&   Selection() noexcept { return m_Selection; }
 
         /**
-         * Does the editing world differ from what was last written?
-         *
-         * DERIVED, never tracked — **MP5**'s rule, and for its reason: there is nothing to hook,
-         * because every edit goes through a drawer whose contract says "was it drawn", not "was it
-         * changed". Cached against the world's revision, so a per-frame caller costs nothing
-         * between edits (the level document's gate).
+         * Whether the editing world differs from what was last written. Derived, and cached against the
+         * world's revision, so calling it every frame is cheap.
          */
         bool IsDirty(EditorContext& InContext) const;
 
@@ -141,12 +103,12 @@ namespace Opaax::Editor
         // Members
         // =========================================================================
     private:
-        /** The prefab's entities as TEXT, as last read or written — IsDirty compares against it. */
+        /** The prefab's entities as text, as last read or written (IsDirty compares against it). */
         OpaaxString m_Baseline;
 
         OpaaxString m_AbsPath;
 
-        /** Non-owning: WorldManager owns it. Created on the first Open and kept (see the note). */
+        /** Non-owning: WorldManager owns it. Created on the first Open and kept. */
         World*      m_World = nullptr;
 
         Uint64      m_Generation = 0;
@@ -154,7 +116,7 @@ namespace Opaax::Editor
         EditorUndo      m_Undo;
         EditorSelection m_Selection;
 
-        /** IsDirty's cache, keyed by the world's revision — recomputed only when it moved. */
+        /** IsDirty's cache, keyed by the world's revision. */
         mutable Uint64 m_LastRevision = ~0ull;
         mutable bool   m_bDirty       = false;
     };

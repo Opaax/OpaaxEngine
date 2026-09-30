@@ -1,12 +1,11 @@
 #include "Editor/Properties/NativeComponentDrawers.h"
 
-#include <cstdio>   // snprintf — IEditorWidgets::TextDisabled takes finished text, not a format
+#include <cstdio>   // snprintf
 
-#include "Editor/Properties/PropertyDrawers.h"   // DrawProperties, and the specializations it folds over
+#include "Editor/Properties/PropertyDrawers.h"   // DrawProperties
 #include "Editor/UI/IEditorWidgets.h"
 
-// The camera's button is a DISPATCH, so it needs the registry the context carries — and the panel
-// only for its id.
+// The camera's button dispatches a command, so it needs the context's registry.
 #include "Editor/EditorContext.h"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Editor/Commands/EditorCommandRegistry.h"
@@ -14,7 +13,7 @@
 #include "Editor/Commands/EditorNativeCommandsTags.hpp"
 #include "Editor/Panels/CameraPreviewPanel.h"
 
-#include "Engine/Modules/ModuleRegistrar.h"      // DeriveTypeLeafName — the header's name, and the map key's
+#include "Engine/Modules/ModuleRegistrar.h"      // DeriveTypeLeafName
 
 #include "World/Components/CameraComponent.h"
 #include "World/Components/PrefabInstanceComponent.h"
@@ -27,10 +26,8 @@ namespace Opaax::Editor::NativeComponentDrawers
     namespace
     {
         /**
-         * Which of two exclusive references is in effect, said out loud — and, when both are set,
-         * which one is being ignored.
-         *
-         * The SECOND is the winner, matching how every one of these is documented: "set, it WINS".
+         * Says which of two exclusive references is in effect, and which one is ignored when both are set.
+         * The second one wins.
          */
         void DrawActiveSource(IEditorWidgets& InWidgets,
                               const char* InLoserLabel,  const bool bInLoserSet,
@@ -42,8 +39,7 @@ namespace Opaax::Editor::NativeComponentDrawers
 
             InWidgets.LabelText("Source", lActive);
 
-            // ONLY when both are set. One field filled and the other empty is the ordinary case and
-            // needs no sentence; a line that always shows is a line nobody reads.
+            // Only when both are set (one filled is the normal case).
             if (bInWinnerSet && bInLoserSet)
             {
                 char lNote[160];
@@ -62,7 +58,7 @@ namespace Opaax::Editor::NativeComponentDrawers
             }
         }
 
-        /** The header the generic drawer would have drawn, since the custom form does not. */
+        /** The header the generic drawer would have drawn. */
         template<typename TComponent>
         bool BeginComponent(IEditorWidgets& InWidgets)
         {
@@ -105,13 +101,10 @@ namespace Opaax::Editor::NativeComponentDrawers
     {
         if (!BeginComponent<CameraComponent>(InWidgets)) { return; }
 
-        // The component's own fields first, through the same fold the generic drawer uses — so a
-        // field added to CameraComponent shows up here without this file being touched.
+        // The component's own fields first, through the generic fold (new fields show up automatically).
         DrawProperties(InWidgets, InCamera);
 
-        // THE SAME VERB the Window menu invokes, reached by the tag rather than by touching
-        // EditorPanels: the button and the menu entry cannot drift apart, and a key binding would
-        // be a third front-end on the same one.
+        // The same command as the Window menu, dispatched by tag.
         if (InWidgets.Button("Open Preview", 0.f, "Show what this camera frames, in its own panel"))
         {
             InContext.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_TOGGLE_PANEL, InContext,
@@ -126,13 +119,12 @@ namespace Opaax::Editor::NativeComponentDrawers
 
         if (!InInstance.IsLinked())
         {
-            // Visible rather than blank — **MP11**'s rule: a state the app can produce (rename the
-            // `.opaaxprefab`, move it) has to be seen before anything can repair it.
+            // Shown rather than blank: a renamed or moved prefab must be visible to be fixed.
             InWidgets.TextDisabled("Broken link - this entity came from a prefab that cannot be named");
             return;
         }
 
-        // LabelText, never an input: read-only is the design, not a missing feature. See the header.
+        // Read-only by design (see the header).
         InWidgets.LabelText("Prefab", InInstance.Prefab.Path.CStr());
 
         char lBuffer[64];

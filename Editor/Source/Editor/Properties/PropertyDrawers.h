@@ -2,29 +2,20 @@
 
 #include "Core/Color/LinearColor.h"
 #include "Core/Maths/MathTypes.h"
-#include "Core/Reflection/OpaaxEnum.h"   // CEnumWithValues — the one drawer that serves every enum
+#include "Core/Reflection/OpaaxEnum.h"   // CEnumWithValues
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
-#include "Engine/Subsystems/Resources/ResourcePath.h"     // TResourcePath — the one that serves every resource
-#include "Engine/Subsystems/Resources/ResourceTypeID.hpp" // the id the drop target gates on
+#include "Engine/Subsystems/Resources/ResourcePath.h"     // TResourcePath
+#include "Engine/Subsystems/Resources/ResourceTypeID.hpp" // ResourceTypeID
 #include "Editor/Properties/PropertyDrawer.h"
 #include "Editor/Resources/ResourceDragDrop.h"
 
 namespace Opaax::Editor
 {
     // =============================================================================
-    // The BUILT-IN property drawers — the field types the engine's own value vocabulary is made of.
-    //
-    //   Bodies live in the .cpp; declarations only here, which is all the fold needs. NOTHING in
-    //   this file names a backend — every drawer speaks IEditorWidgets.
-    //
-    //   Dispatch is BY TYPE, which is why LinearColor gets the picker and a bare Vector4F gets four
-    //   drags: the type says what the value is, and PropertyMeta says how it behaves (a range).
-    //
-    //   OpaaxString earned its place when configs started drawing (title, mode, backend, paths). It
-    //   is the one built-in with real cost — ImGui's InputText wants a fixed buffer and a copy back,
-    //   since imgui_stdlib.cpp is not in the editor's ImGui target — which is exactly why it waited
-    //   for a caller instead of being guessed at.
+    // The built-in property drawers, for the engine's basic value types. Declarations only (bodies in
+    //   the .cpp); all use IEditorWidgets. Dispatch is by type: LinearColor gets a colour picker, a
+    //   plain Vector4F gets four drags.
     // =============================================================================
 
 #define OPAAX_DECLARE_PROPERTY_DRAWER(Type)                                                 \
@@ -47,33 +38,14 @@ namespace Opaax::Editor
 #undef OPAAX_DECLARE_PROPERTY_DRAWER
 
     // =============================================================================
-    // EVERY enum at once — one constrained partial specialization, not one per type.
-    //
-    //   An enum that stamped OPAAX_ENUM_VALUES gets a dropdown from that line alone; the labels are
-    //   I11's ToString, so the widget and the log and the file all read the same word. This is the
-    //   payoff for making the field a real type: a mode that is not one of the three is no longer
-    //   expressible, so nothing downstream needs a fallback for one.
-    //
-    //   Inline rather than in the .cpp because it is a template — PropertyDrawer.h already carries
-    //   <imgui.h> for the same reason.
+    // Every enum at once: an enum with OPAAX_ENUM_VALUES gets a dropdown, labelled by its ToString.
+    //   Inline because it is a template.
     // =============================================================================
     // =============================================================================
-    // EVERY resource reference at once — the same one-specialization-serves-all shape as the enum
-    //   drawer above, and the reason TResourcePath carries its type at all.
-    //
-    //   The field is filled by DRAGGING a file from the Resource Browser onto it. Typing a path was
-    //   the alternative and it is strictly worse authoring: the browser already knows which files
-    //   exist and what type each one is, so the only thing a text box adds is the chance to misspell
-    //   one. There is no picker button for the same reason a tag picker does not exist yet — the
-    //   drawer contract has no EditorContext, deliberately, so the browser is where "what files are
-    //   there?" is answered.
-    //
-    //   A payload of another resource type is REFUSED (no accept highlight, drag stays live), which
-    //   is what the type parameter buys: dropping a .wave on a texture field cannot compile a wrong
-    //   path into a component.
+    // Every resource reference at once. Filled by dragging a file from the Resource Browser onto it.
+    //   A file of another resource type is refused (no highlight, the drag stays live).
     // =============================================================================
-    // ONE specialization for BOTH load policies: whether a reference is soft or hard changes what
-    // the LOADER does, never what the field looks like or what may be dropped on it.
+    // One specialization for both load policies (soft or hard only changes what the loader does).
     template<typename TResource, EResourceLoad TLoad>
     struct TPropertyDrawer<TResourcePath<TResource, TLoad>>
     {
@@ -82,17 +54,12 @@ namespace Opaax::Editor
         {
             InWidgets.PushId(InLabel);
 
-            // A button, not a read-only text field: the button IS the drop target, and it reads as a
-            // slot to put something in rather than a field someone forgot to make editable.
-            //
-            // The full path rides as the TOOLTIP, because the button truncates and a path reading
-            // "Textures/He..." is worse than none when two of them share a prefix.
+            // A button, which is the drop target. The full path is its tooltip (the label truncates).
             const char* lText = InValue.IsEmpty() ? "(drop a resource here)" : InValue.Path.CStr();
 
             InWidgets.Button(lText, -1.f, InValue.IsEmpty() ? nullptr : InValue.Path.CStr());
 
-            // Immediately after the widget that receives it — the drop target is opened and closed
-            // by this call, and its header names no backend (only its .cpp does).
+            // Right after the receiving widget; opens and closes the drop target itself.
             if (OpaaxString lDropped; AcceptResourceDragPayload(ResourceTypeID::Get<TResource>(), lDropped))
             {
                 InValue.Path = Move(lDropped);

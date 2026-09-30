@@ -9,42 +9,18 @@
 namespace Opaax::Editor
 {
     // =============================================================================
-    // TPropertyDrawer<T> — the widget for a field of type T. DECLARED, NEVER DEFINED.
-    //
-    //   The customization point is a SPECIALIZATION, not a registry entry, and the primary template
-    //   is left undefined on purpose — the same trade TConfigCodec makes, for the same stated
-    //   reason: "you forgot to specialize" becomes a compile error naming the type instead of a
-    //   silent fallback. That is what makes visibility safe here. A drawer seen by one TU and not
-    //   another cannot instantiate the fold two different ways (a silent ODR break); the second TU
-    //   simply fails to build.
-    //
-    //   A registry would only buy registering a drawer for a type you cannot include — which nobody
-    //   needs — and would cost a lookup per field per frame plus something to seal.
-    //
-    //   The contract: static void Draw(IEditorWidgets&, const char* InLabel, T& InValue,
-    //   const PropertyMeta& InMeta). Uniform, so the fold needs no dispatch of its own — and the
-    //   meta arrives as ONE object so a new facet never changes this signature.
-    //
-    //   THE SEAM COMES FIRST because a drawer must name no backend: TPropertyDrawer is the point a
-    //   GAME extends to support a new field type (I15), and one that called ImGui directly would
-    //   bind every game's custom editor to it forever. See IEditorWidgets for why this is not
-    //   simply MR2d being violated.
+    // TPropertyDrawer<T> — the widget for a field of type T. Declared, never defined: a missing
+    //   specialization is a compile error naming the type, not a silent fallback.
+    //   Contract: static void Draw(IEditorWidgets&, const char* InLabel, T& InValue,
+    //   const PropertyMeta& InMeta). Games specialize it to support new field types, so drawers use
+    //   IEditorWidgets and never a backend directly.
     // =============================================================================
     template<typename T>
     struct TPropertyDrawer;
 
     /**
-     * What the META has to say, beside the value: the field's own explanation, then its flags.
-     *
-     * ONE place for both, and it is the right one — a TPropertyDrawer sees a value and a label, so
-     * a tooltip written per drawer would have to be remembered by every game that adds a field
-     * type. Here every described property gets it, generic and hand-written alike (I15's "the
-     * placement is the rule", the same argument that put PushId on the registry entry).
-     *
-     * Editing a NeedRestart field does nothing visible until the next launch, and a UI that stays
-     * silent about that reads as a bug in the field. Stated per property (usually per GROUP), never
-     * as a blanket line on the panel — the blanket version goes stale the day one value is read live
-     * and nobody remembers to update the sentence.
+     * Draws what the meta adds beside the value: the field's tooltip, then its flags (e.g. a
+     * NeedRestart field says the change applies on next launch). Done here so every drawer gets it.
      */
     inline void DrawPropertyNote(IEditorWidgets& InWidgets, const PropertyMeta& InMeta)
     {
@@ -61,18 +37,14 @@ namespace Opaax::Editor
         }
     }
 
-    // Declared ahead of DrawProperty because the two are MUTUALLY RECURSIVE: a group is a property
-    // whose value has properties of its own.
+    // Declared ahead of DrawProperty: the two call each other (a group is a property whose value has
+    // properties).
     template<CReflected TOwner>
     void DrawProperties(IEditorWidgets& InWidgets, TOwner& InOwner, const PropertyMeta& InInherited = {});
 
     /**
-     * InMeta with what it leaves UNSET taken from the group above it — the range and the drag step,
-     * the two facets that describe a VALUE rather than a field.
-     *
-     * A `UIMargin` is pixels on an image's Border and a fraction on a safe area's Insets, so the
-     * range cannot live on the type; stating it once on the group is what makes the four floats
-     * under it behave. A field's own range still wins.
+     * InMeta with its unset range and drag step taken from the group above (e.g. a UIMargin is pixels
+     * in one place and a fraction in another). A field's own range still wins.
      */
     inline PropertyMeta InheritMeta(const PropertyMeta& InMeta, const PropertyMeta& InInherited) noexcept
     {
@@ -92,14 +64,8 @@ namespace Opaax::Editor
     }
 
     /**
-     * Draw ONE value by hand, outside any property list — what a CUSTOM drawer uses to lay fields
-     * out in groups of its own choosing.
-     *
-     * The third facet of the same vocabulary (DrawProperty / DrawProperties / DrawField), and it
-     * exists so hand-grouping does not cost the type dispatch: this resolves the same
-     * TPropertyDrawer<T> the generic fold would have picked, so a LinearColor still gets the picker
-     * and an enum still gets its dropdown. The LABEL is the caller's, since inside a "Text" group
-     * the field's own name is usually redundant.
+     * Draws one value by hand, outside a property list (for custom drawers laying out their own
+     * groups). Uses the same TPropertyDrawer<T> as the generic fold. The label is the caller's.
      */
     template<typename TValue>
     void DrawField(IEditorWidgets& InWidgets, const char* InLabel, TValue& InValue,
@@ -109,10 +75,8 @@ namespace Opaax::Editor
     }
 
     /**
-     * Draw one described field of InOwner.
-     *
-     * The member pointer carries the field's type, so this resolves the right specialization with
-     * no runtime lookup and no type tag.
+     * Draws one described field of InOwner. The member pointer carries the field's type, so the right
+     * specialization is picked at compile time.
      */
     template<typename TProperty, typename TOwner>
     void DrawProperty(IEditorWidgets& InWidgets, const TProperty& InProperty, TOwner& InOwner,
@@ -120,13 +84,10 @@ namespace Opaax::Editor
     {
         using ValueType = typename TProperty::ValueType;
 
-        // The value facets, this field's own or the group's above it; the NOTE stays the field's.
+        // Value facets from the field or the group above; the note stays the field's own.
         const PropertyMeta lMeta = InheritMeta(InProperty.Meta, InInherited);
 
-        // A field that describes ITS OWN fields is a GROUP, not a widget — which is what lets a
-        // config nest (Window: {Title, Width…}) with one declaration doing the file, the C++ and the
-        // UI. Without this a nested type would demand a TPropertyDrawer specialization that could
-        // never sensibly exist.
+        // A field that describes its own fields is a group, not a widget (lets configs nest).
         if constexpr (CReflected<ValueType>)
         {
             if (InWidgets.BeginTreeNode(InProperty.Name))
@@ -144,10 +105,8 @@ namespace Opaax::Editor
     }
 
     /**
-     * Draw every property InOwner describes, in declaration order.
-     *
-     * Writes STRAIGHT INTO the live object, as a hand-written drawer does — the Inspector marks the
-     * world changed centrally off its own "any item active" check, so nothing here reports an edit.
+     * Draws every property InOwner describes, in declaration order. Writes directly into the object;
+     * the Inspector detects edits itself.
      */
     template<CReflected TOwner>
     void DrawProperties(IEditorWidgets& InWidgets, TOwner& InOwner, const PropertyMeta& InInherited)
@@ -159,7 +118,7 @@ namespace Opaax::Editor
                    TOwner::GetProperties());
     }
 
-    /** How many properties T describes — known at compile time, so it can be logged at registration. */
+    /** How many properties T describes (known at compile time). */
     template<CReflected T>
     constexpr Uint64 PropertyCount() noexcept
     {

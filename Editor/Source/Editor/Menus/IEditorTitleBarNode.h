@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Core/Log/Logger.h"   // OPAAX_LOG_CATEGORY — shared by every node's .cpp
+#include "Core/Log/Logger.h"   // OPAAX_LOG_CATEGORY
 #include "Core/OpaaxTypes.h"                // TFunction, Move
 #include "Core/String/OpaaxString.hpp"
-#include "Core/String/OpaaxStringID.hpp"    // interned identity — dedupe is an integer compare
+#include "Core/String/OpaaxStringID.hpp"    // interned identity
 
 namespace Opaax::Editor
 {
@@ -14,21 +14,13 @@ namespace Opaax::Editor
     class EditorTitleBarCommandNode;
 
     /**
-     * A live question asked at DRAW time — is this node enabled, is it shown checked.
-     *
-     * Optional everywhere: an EMPTY predicate means "always", which is what keeps the ordinary
-     * entry a single AddCommand line. Evaluated every frame, so a node greys itself the moment the
-     * editor's state changes rather than at some refresh point somebody has to remember.
+     * A condition checked at draw time (enabled, checked). Empty means always. Evaluated every frame.
      */
     using FMenuPredicate = TFunction<bool(const EditorContext&)>;
 
     /**
-     * A live LABEL, asked at draw time — for the entry whose TEXT is state, not just its enabled-ness.
-     *
-     * Optional like the predicates, and used by exactly one thing today: "Undo Move" rather than a
-     * bare "Undo", which every reference editor does because a stack of unnamed steps is a stack you
-     * have to guess at. Returns by value; a category only draws its children while it is open, so the
-     * string is built when a menu is on screen and never per frame.
+     * A label computed at draw time, for an entry whose text depends on state ("Undo Move"). Only
+     * built while its menu is open.
      */
     using FMenuLabel = TFunction<OpaaxString(const EditorContext&)>;
 
@@ -36,18 +28,9 @@ namespace Opaax::Editor
      * @class IEditorTitleBarNode
      *
      * One node of the menu bar: a category, a command or a separator.
-     *
-     * Identity is an OpaaxStringID and it doubles as the LABEL, so a category cannot be looked up
-     * by one name and drawn under another. CStr() into the intern pool is free and valid for the
-     * life of the process (I2), which is what the label passed to IEditorGui points into.
-     *
-     * A COMMAND node may override the drawn text with FMenuLabel — identity stays the id, which is
-     * what the lookups and the invocation log use, so the guarantee above is untouched: only what a
-     * leaf DISPLAYS becomes state-dependent, and only a leaf, which nothing looks up.
-     *
-     * The full slash path ("File/Save Map") is built ONCE at construction from the parent's, and is
-     * what the invocation log names — it is the only place in the editor that still speaks paths,
-     * and it is a read-out rather than the storage it used to be.
+     * Its identity is an OpaaxStringID, which is also its label. A command node may display a
+     * different text through FMenuLabel; lookups and logs still use the id.
+     * The full path ("File/Save Map") is built once at construction, for the log.
      */
     class IEditorTitleBarNode
     {
@@ -67,8 +50,7 @@ namespace Opaax::Editor
         // Copy - Move Delete
         // =============================================================================
 
-        // A node is owned by exactly one parent, through a TUniquePtr, and hands out references
-        // that outlive the call — copying one would be a second owner of the same entry.
+        // Owned by exactly one parent through a TUniquePtr: not copyable.
         IEditorTitleBarNode(const IEditorTitleBarNode&)            = delete;
         IEditorTitleBarNode& operator=(const IEditorTitleBarNode&) = delete;
 
@@ -77,22 +59,15 @@ namespace Opaax::Editor
         // =============================================================================
     public:
         /**
-         * Emit this node, through InContext.Gui — a node names no UI backend.
-         *
-         * CONST for the reason EditorCommandRegistry::Execute is: the tree is built before the
-         * extension registrar seals, and drawing must not be able to add to it afterwards.
+         * Draws this node through InContext.Gui. Const: the tree is sealed before drawing.
          */
         virtual void Draw(EditorContext& InContext) const = 0;
 
-        /** @return How many COMMAND nodes this node accounts for, itself and below. */
+        /** @return How many command nodes this node counts, itself and below. */
         virtual Uint64 CountCommands() const noexcept = 0;
 
         /**
-         * Narrow to a concrete kind, for the get-or-create lookups — null when this is not one.
-         *
-         * A pair of one-line virtuals rather than a dynamic_cast: the lookup asks "is the child
-         * under this id the kind I am about to extend?", and the node itself is the only thing
-         * that has to know the answer.
+         * Narrows to a concrete kind for the get-or-create lookups; null when it is not one.
          */
         virtual EditorTitleBarCategory*    AsCategory() noexcept { return nullptr; }
         virtual EditorTitleBarCommandNode* AsCommand()  noexcept { return nullptr; }
