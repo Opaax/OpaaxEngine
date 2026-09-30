@@ -14,32 +14,22 @@
 
 namespace Opaax
 {
-    struct TextureResource;   // only NAMED — TResourcePath never completes its parameter
+    struct TextureResource;
 
     // =============================================================================
-    // SpriteSheetData — a texture cut into named frames, as DATA.
-    //
-    //   The MapData / MapFile / MapResource stack, one layer over: this is the memory form,
-    //   SpriteSheetFile is the `.opaaxsheet` reader/writer, SpriteSheetResource is the CResource
-    //   adapter. Each knows only its neighbours.
-    //
-    //   THE FRAMES ARE THE TRUTH; the grid below only generated them. Slicing is an explicit act
-    //   that replaces the list, so nothing recomputes a rect behind the author's back and an
-    //   irregular packed atlas is describable at all.
+    // SpriteSheetData — a texture cut into named frames (.opaaxsheet).
+    //   The frame list is the truth; the grid settings only generated it.
     // =============================================================================
 
-    /** One frame's rectangle inside the sheet's texture. */
+    /** One frame's rectangle in the sheet's texture. */
     struct SpriteFrame
     {
         /**
-         * What animation will look this frame up by, so it IDENTIFIES rather than carries text
-         * (**I13**): four bytes and an integer compare, not a heap string per frame. Invalid is a
-         * real state — an unnamed frame is addressed by its index — so readers gate on IsValid()
-         * and never on ToString(), which answers "None".
+         * Name used by animations. May be invalid (the frame is then used by index).
          */
         OpaaxStringID Name;
 
-        /** TOP-LEFT corner in texture PIXELS, the way an artist and every atlas tool count. */
+        /** Top-left corner, in texture pixels. */
         Vector2F Offset = { 0.f, 0.f };
 
         /** Width and height in pixels. */
@@ -55,8 +45,7 @@ namespace Opaax
     };
 
     /**
-     * The last slice settings. AUTHORING MEMORY, not the source of truth — it is kept so re-slicing
-     * is repeatable, and it describes nothing about frames an author has since moved by hand.
+     * The last slice settings, kept so slicing again gives the same result.
      */
     struct SpriteSheetGrid
     {
@@ -77,20 +66,17 @@ namespace Opaax
     };
 
     /**
-     * A sheet: which image, which frames, and which frame a sprite that has no opinion shows.
-     *
-     * NO OPAAX_PROPERTIES — Frames is a TDynArray and no property drawer draws a list. The editor
-     * folds over the GRID and over the SELECTED FRAME, both of which are reflected; the list itself
-     * is the panel's own UI, which is what a list has to be to be reorderable.
+     * A sheet: its texture, its frames, and the default frame.
+     * Frames are edited by the editor panel (lists are not drawn by the property system).
      */
     struct SpriteSheetData
     {
-        /** Asset-relative ("Textures/Hero.png") or a mount ("/Engine/…"), like every other reference. */
+        /** Asset-relative ("Textures/Hero.png") or a mount ("/Engine/..."). */
         TResourcePath<TextureResource> Texture;
 
         TDynArray<SpriteFrame> Frames;
 
-        /** Shown by a sprite that names no frame of its own. Out of range answers nothing. */
+        /** Shown by a sprite that names no frame. */
         Uint32 DefaultFrame = 0;
 
         SpriteSheetGrid Grid;
@@ -100,12 +86,8 @@ namespace Opaax
         Uint32 FrameCount() const noexcept { return static_cast<Uint32>(Frames.size()); }
 
         /**
-         * The frame InIndex names, or nullptr.
-         *
-         * NEGATIVE MEANS "the sheet's own DefaultFrame" — the sentinel SpriteComponent::Frame uses,
-         * resolved here so the renderer and the editor cannot disagree about what -1 shows. An index
-         * past the end answers nullptr rather than clamping, so a caller can SAY SO before falling
-         * back; silently drawing a different frame is the failure this codebase refuses.
+         * The frame at InIndex, or nullptr. Negative means the DefaultFrame.
+         * Out of range gives nullptr (no clamping).
          */
         const SpriteFrame* FrameAt(Int32 InIndex) const noexcept
         {
@@ -115,7 +97,7 @@ namespace Opaax
         }
     };
 
-    /** A sub-rectangle of a texture in UV space — what Renderer2D::DrawSprite takes. */
+    /** A texture sub-rectangle in UV space (for Renderer2D::DrawSprite). */
     struct SpriteUVRect
     {
         Vector2F UVMin = { 0.f, 0.f };
@@ -123,26 +105,14 @@ namespace Opaax
     };
 
     /**
-     * InFrame's pixel rect as UVs of a texture InTexWidth x InTexHeight.
-     *
-     * IT CONTAINS THE V FLIP, and that is the whole reason it is one named function: TextureResource
-     * decodes bottom-up because GL samples that way (**I16**), while a frame's Offset.y is measured
-     * from the TOP. Getting it backwards draws a plausible-looking WRONG frame rather than failing,
-     * which is exactly the class of bug a pure function with a test exists to stop.
-     *
-     * Free and pure so the maths is testable with no GL context — MakeSortKey's shape. A zero
-     * texture dimension or a zero-sized frame answers the whole texture, never a divide by zero.
+     * InFrame's pixel rect as UVs of a texture InTexWidth x InTexHeight. Handles the V flip
+     * (textures are bottom-up for GL). A zero size gives the whole texture.
      */
     OPAAX_API SpriteUVRect MakeFrameUV(const SpriteFrame& InFrame, Uint32 InTexWidth, Uint32 InTexHeight);
 
     /**
-     * The frames a grid cuts out of a texture InTexWidth x InTexHeight, in ROW-MAJOR order —
-     * left to right, top to bottom, which is how every sheet in the wild is laid out and therefore
-     * what an index means.
-     *
-     * Also free and pure: slicing is the editor's most consequential button and it needs no UI to
-     * be tested. Cells that would fall outside the texture are dropped, so a grid that does not
-     * divide evenly yields the frames that fit rather than rectangles hanging off the edge.
+     * The frames a grid cuts out of a texture, in row-major order (left to right, top to bottom).
+     * Cells outside the texture are dropped.
      */
     OPAAX_API TDynArray<SpriteFrame> SliceGrid(const SpriteSheetGrid& InGrid, Uint32 InTexWidth, Uint32 InTexHeight);
 }

@@ -1,6 +1,6 @@
 #include "LogHistory.h"
 
-#include "Core/Log/Logger.h"   // ELogLevel's definition
+#include "Core/Log/Logger.h"
 
 namespace Opaax
 {
@@ -24,7 +24,7 @@ namespace Opaax
 
     Uint64 LogHistory::CopySince(const Uint64 InAfterSequence, TDynArray<LogEntry>& OutEntries) const
     {
-        // Sequences are contiguous, so the first unseen line is found by arithmetic, not a search.
+        // Sequences are contiguous, so the first unseen line is found by arithmetic.
         const Uint64 lFirstHeld = m_Entries.empty() ? 0 : m_Entries.front().Sequence;
         const Uint64 lSkip      = InAfterSequence >= lFirstHeld ? InAfterSequence - lFirstHeld + 1 : 0;
 

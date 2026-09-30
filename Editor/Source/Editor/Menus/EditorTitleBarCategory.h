@@ -9,16 +9,10 @@ namespace Opaax::Editor
     /**
      * @class EditorTitleBarCategory
      *
-     * A menu that opens: "File", or "Tools/Debug". A category IS a node, so a category holds
-     * categories and the bar nests as deep as it is written.
-     *
-     * ONE ordered child list holds categories, commands and separators together, so they interleave
-     * and registration order is draw order — the reason a separator can sit between two entries
-     * without either of them knowing.
-     *
-     * Children are TUniquePtr and that is LOAD-BEARING, not style: SubCategory() and AddCommand()
-     * hand back a reference the caller keeps and adds to, so storing children by value would leave
-     * that reference dangling the moment the next child reallocated the array.
+     * A menu that opens: "File", or "Tools/Debug". Categories can nest.
+     * One ordered child list holds categories, commands and separators, so registration order is draw
+     * order. Children are TUniquePtr because SubCategory() and AddCommand() return references the
+     * caller keeps.
      */
     class EditorTitleBarCategory final : public IEditorTitleBarNode
     {
@@ -35,36 +29,29 @@ namespace Opaax::Editor
         // Functions
         // =============================================================================
     private:
-        /** @return The child under InID that is a category / a command, or null. */
+        /** @return The child category / command under InID, or null. */
         EditorTitleBarCategory*    FindCategory(OpaaxStringID InID);
         EditorTitleBarCommandNode* FindCommand(OpaaxStringID InID);
 
     public:
         /**
-         * GET-OR-CREATE the sub-menu named InID.
-         *
-         * Get-or-create rather than add, because two modules naming the same menu mean the same
-         * menu: this is what makes a game module's "Tools" the editor's "Tools" with nobody
-         * coordinating. Keyed on the interned id, so the lookup is an integer compare.
+         * Gets or creates the sub-menu named InID, so two modules naming the same menu share it.
          */
         EditorTitleBarCategory& SubCategory(OpaaxStringID InID);
 
         /**
-         * Add an entry that dispatches InCommand.
-         *
-         * @param InLabel   What it reads as, and its identity within this category.
-         * @param InCommand The tag EditorCommandRegistry answers for. NOT resolved here — an
-         *   unregistered tag is reported by the registry at click time, so registration order
-         *   between menus and commands never matters.
-         * @return The new entry, so SetEnabled / SetChecked chain onto this call. A duplicate label
-         *   keeps the FIRST entry and warns, matching EditorCommandRegistry::Register.
+         * Adds an entry that dispatches InCommand.
+         * @param InLabel   Its text, and its identity within this category
+         * @param InCommand The command tag. Not checked here: an unknown tag is reported when clicked
+         * @return The new entry, so SetEnabled / SetChecked can be chained. A duplicate label keeps the
+         *   first entry and warns
          */
         EditorTitleBarCommandNode& AddCommand(OpaaxStringID InLabel, const OpaaxTag& InCommand);
 
-        /** Add a rule below the entries registered so far. */
+        /** Adds a separator below the entries so far. */
         void AddSeparator();
 
-        /** Grey this whole menu — asked every frame, unset means always enabled. */
+        /** Greys out the whole menu. Checked every frame; unset means always enabled. */
         EditorTitleBarCategory& SetEnabled(FMenuPredicate InPredicate);
 
         // =============================================================================
@@ -81,7 +68,7 @@ namespace Opaax::Editor
         // =============================================================================
         // Getter
 
-        /** The children in registration order — what Draw walks, and what EditorMenu counts. */
+        /** The children, in registration order. */
         const TDynArray<TUniquePtr<IEditorTitleBarNode>>& GetChildren() const noexcept { return m_Children; }
 
         bool IsEmpty() const noexcept { return m_Children.empty(); }

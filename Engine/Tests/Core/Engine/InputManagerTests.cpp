@@ -1,14 +1,5 @@
-// Suite: InputManager — held state, per-frame edges, and the route-close reset (M-Input S1).
-//
-// WHY THIS EXISTS.
-//   Input is the one subsystem whose correctness is entirely about WHEN. "Is W down" is trivial;
-//   "did W go down THIS frame" depends on a snapshot taken at exactly the right moment, and
-//   "the route closed while W was held" decides whether the player walks into a wall forever.
-//   Those three are what this pins.
-//
-//   EndFrame() stands in for Engine::Loop's call after Render — the only point between one
-//   frame's OS events and the next frame's, since the application polls BEFORE it ticks. Every
-//   test below drives feed-then-EndFrame in that order, because that order is the contract.
+// Suite: InputManager — held state, per-frame edges, and the reset when input stops being fed.
+//   Every test feeds events then calls EndFrame, the order the application uses.
 #include <doctest.h>
 
 #include "Engine/Subsystems/Input/InputCodes.h"
@@ -124,11 +115,8 @@ TEST_CASE("input: OS key-repeat does NOT re-fire the press edge")
 
 TEST_CASE("input: a tap that starts AND ends inside one frame is not lost")
 {
-    // THE case that decided the design. Readers look once per frame (during Update, after the
-    // events were polled), so a key that went down and back up in between is invisible to any
-    // previous-vs-current comparison — BOTH snapshots read "up". And a frame is easily long
-    // enough for a real keypress the moment the framerate dips. The edges are therefore LATCHED
-    // by the feed rather than derived, which is also why there is no m_Previous array.
+    // A key pressed and released between two reads must still be seen. Edges are latched by the
+    // feed rather than derived from snapshots (both snapshots would read "up").
     InputManager lInput;
 
     lInput.OnKeyPressed(EKeyCode::E, false);
@@ -209,10 +197,7 @@ TEST_CASE("input: ResetState releases everything held")
 
 TEST_CASE("input: ResetState leaves NO phantom release-edge")
 {
-    // THE discriminating case. A reset is not an event — it is an admission that the state is
-    // unknowable, because the OS is now delivering releases to someone else. If previous were
-    // snapshotted instead of cleared, every key held at the close would report
-    // WasReleasedThisFrame, and a reader would fire "on release" logic for input it never saw.
+    // A reset is not a release: a key held at reset must not report WasReleasedThisFrame.
     InputManager lInput;
 
     lInput.OnKeyPressed(EKeyCode::W, false);
@@ -270,8 +255,7 @@ TEST_CASE("input: gamepad codes are refused rather than half-supported")
 {
     InputManager lInput;
 
-    // EKeyCode reserves the range, but GLFW exposes pads by POLLING — there is no feed. Accepting
-    // the code would make IsKeyDown answer "false" forever while looking supported.
+    // Gamepad codes are reserved but have no feed yet: refuse them.
     lInput.OnKeyPressed(EKeyCode::Gamepad_FaceButton_Bottom, false);
 
     CHECK_FALSE(lInput.IsKeyDown(EKeyCode::Gamepad_FaceButton_Bottom));

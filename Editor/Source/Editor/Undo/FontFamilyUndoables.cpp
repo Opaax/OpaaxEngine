@@ -7,7 +7,7 @@ namespace Opaax::Editor
 {
     namespace
     {
-        /** The open family's data when it is the one InPath names, else null WITH A LINE SAYING SO. */
+        /** The open family's data if it is the one InPath names, else null (and a warning). */
         FontFamilyData* TargetFamily(EditorContext& InContext, const OpaaxString& InPath)
         {
             if (!InContext.FamilyDocument.IsOpen() || InContext.FamilyDocument.AbsPath() != InPath)

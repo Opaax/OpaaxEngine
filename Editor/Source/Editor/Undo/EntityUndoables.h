@@ -18,24 +18,17 @@ namespace Opaax::Editor
     struct EditorContext;
 
     // =============================================================================
-    // The steps an ENTITY verb records. Each carries exactly what its own inverse needs and
-    // nothing more, so a rename costs two strings rather than a snapshot of anything.
-    //
-    // Plain aggregates with three members — the TransformDelta/ComponentData shape. Building one
-    // at the call site IS the whole opt-in; there is no concept to declare and no label to
-    // register (**UN1**).
+    // The undo steps of entity actions. Each carries only what its inverse needs (a rename is two
+    // strings). Plain structs; building one at the call site is all it takes.
     // =============================================================================
 
     /**
-     * Entities were created.
-     *
-     * Redo brings them back ON THEIR ORIGINAL GUIDS, which is what every inter-entity reference
-     * stands on — and the reason a redo is never a second Execute: `EntityOps::Create` mints a
-     * fresh Guid and a freshly uniquified name, so re-running it would produce different entities.
+     * Entities were created. Redo brings them back with their original guids (re-running
+     * EntityOps::Create would make new ones).
      */
     struct EntityCreate
     {
-        /** What was created, captured after the fact. Its `Id` stays invalid — this is not a map. */
+        /** What was created, captured after the fact. */
         MapData Entities;
 
         void        Undo(EditorContext& InContext);
@@ -44,22 +37,15 @@ namespace Opaax::Editor
     };
 
     /**
-     * A prefab was instantiated (⑦-C P1b).
-     *
-     * EntityCreate's two bodies verbatim — an instance is entities, and undoing one is destroying
-     * them. It exists for its LABEL: "Undo Create Entity" after placing a prefab names the wrong
-     * verb, and the Edit menu shows that text.
-     *
-     * THE FILE IS NOT PART OF THIS. Undo takes back the placement, never the `.opaaxprefab` on
-     * disk (⑦-C **K6**, matching Unity) — a step that deleted an asset would be the one undo
-     * nobody expects.
+     * A prefab was placed. Same bodies as EntityCreate; a separate type for its label.
+     * The prefab file is not affected by undo.
      */
     struct PrefabInstantiate
     {
-        /** The instance's entities, captured after the fact — EntityCreate's rule. */
+        /** The instance's entities, captured after the fact. */
         MapData    Entities;
 
-        /** The level, or the prefab panel placing a NESTED prefab into its own world (P7). */
+        /** The level, or the prefab panel placing a nested prefab into its own world. */
         EUndoWorld Scope = EUndoWorld::Active;
 
         void        Undo(EditorContext& InContext);
@@ -68,28 +54,17 @@ namespace Opaax::Editor
     };
 
     /**
-     * A selection BECAME an instance of a new prefab (⑦-C P2) — one step for a swap, because it
-     * was one gesture.
-     *
-     * Two payloads because the edit destroyed one set of entities and created another, and undo has
-     * to put back exactly what was there. Recording it as an `EntityDelete` plus an
-     * `EntityInstantiate` would need TWO Ctrl+Z for one action, which is the classic way a
-     * composite verb ends up feeling broken.
-     *
-     * ORDER IS LOAD-BEARING in both directions: destroy first, restore second. `RestoreEntities`
-     * SELECTS what it brought back and `DestroyEntities` clears the selection, so doing them the
-     * other way round would leave nothing selected after an undo.
-     *
-     * THE FILE IS NOT PART OF THIS (⑦-C **K6**). Undo puts the original entities back and takes the
-     * instance away; the `.opaaxprefab` it wrote stays on disk, exactly as Unity leaves the asset.
-     * The prefab can be placed again from the browser, or deleted in the file system.
+     * A selection was replaced by an instance of a new prefab: one step for one gesture.
+     * Holds both sides (destroyed originals, created instance). Destroy first, then restore, both
+     * ways (restoring selects, destroying clears).
+     * The prefab file stays on disk after undo (like Unity).
      */
     struct PrefabCreateFromSelection
     {
-        /** What was selected, captured BEFORE the swap: nothing else can recover it. */
+        /** What was selected, captured before the swap. */
         MapData Originals;
 
-        /** What replaced it, captured after — the instance's derived guids. */
+        /** What replaced it (the instance), captured after. */
         MapData Instance;
 
         void        Undo(EditorContext& InContext);
@@ -98,15 +73,9 @@ namespace Opaax::Editor
     };
 
     /**
-     * Instance entities were put back to their prefab's values (⑦-C P3).
-     *
-     * Both sides are full component records rather than a hand-written inverse, for **UN4**'s
-     * reason: a revert is not exactly invertible by re-running anything — it removes components the
-     * template does not have and restores ones the instance had deleted, so only "be this again"
-     * in each direction is honest.
-     *
-     * No entity is created or destroyed here, which is why one type serves both directions with
-     * the same body: the guids are untouched throughout.
+     * Instance entities were reverted to their prefab's values. Both sides are full component
+     * records (a revert cannot be inverted by re-running anything). No entity is created or
+     * destroyed, so one body serves both directions.
      */
     struct PrefabRevert
     {
@@ -117,18 +86,14 @@ namespace Opaax::Editor
         MapData After;
 
         /**
-         * Pieces the revert BROUGHT BACK — entities the author had deleted from the instance.
-         *
-         * They need their own list because `MapFactory::Restore` leaves entities it does not name
-         * alone, so restoring `Before` cannot remove them: nothing in `Before` can express "and
-         * this one should not exist", since it was captured when it did not.
+         * Pieces the revert brought back (deleted from the instance by the author). Restoring Before
+         * cannot remove them, so undo destroys this list.
          */
         MapData Created;
 
         /**
-         * Pieces the revert TOOK AWAY — instance entities whose template the prefab no longer has
-         * (the prefab REMOVED a piece; L87's other half). `Before` holds them too, so undo brings
-         * them back by restoring it; this list is what redo destroys, since `After` never named them.
+         * Pieces the revert removed (no longer in the prefab). Before holds them, so undo brings them
+         * back; redo destroys this list.
          */
         MapData Destroyed;
 
@@ -138,12 +103,12 @@ namespace Opaax::Editor
     };
 
     /**
-     * Entities were destroyed — the same two bodies as EntityCreate, the other way round.
-     * Names its world (P8 V4): the level's Delete and the prefab panel's record the same type.
+     * Entities were destroyed: EntityCreate the other way round. Stores its world (the level and the
+     * prefab panel both record it).
      */
     struct EntityDelete
     {
-        /** What was destroyed, captured BEFORE the fact: nothing else can recover it. */
+        /** What was destroyed, captured before. */
         MapData    Entities;
 
         EUndoWorld Scope = EUndoWorld::Active;
@@ -154,12 +119,9 @@ namespace Opaax::Editor
     };
 
     /**
-     * A subtree was hung somewhere else (§HR): a drag in the Hierarchy, or Detach.
-     *
-     * One entry per entity of the subtree — the ROOT's parent and local change (the world pose
-     * is kept, so the local is what moved), and every entity's map follows a cross-map drop.
-     * Written back FIELD BY FIELD rather than through SetParent, which would recompute the local:
-     * a step restores the exact state, not the verb's answer.
+     * A subtree was moved under another parent (Hierarchy drag, or Detach). One entry per entity:
+     * the root's parent and local change, and maps follow a cross-map drop. Written back field by
+     * field (SetParent would recompute the local).
      */
     struct EntityReparent
     {
@@ -180,7 +142,7 @@ namespace Opaax::Editor
         const char* Label() const noexcept { return "Reparent"; }
     };
 
-    /** One entity was renamed. Nothing to serialize — a name is its own inverse. */
+    /** One entity was renamed. */
     struct EntityRename
     {
         Guid        EntityId;
@@ -193,20 +155,9 @@ namespace Opaax::Editor
     };
 
     /**
-     * A gizmo drag moved, turned or scaled the selection.
-     *
-     * ONE TYPE FOR ALL THREE MODES AND ANY COUNT. The payload is a before and an after
-     * TransformComponent per entity, which is the same three fields whichever handle was grabbed —
-     * so the mode is only the NAME, and one entity is a list of one. Splitting it per mode or per
-     * cardinality would be four types with identical bodies.
-     *
-     * THE ONLY STEP THAT SERIALIZES NOTHING AT ALL: it copies a POD component, twice.
-     *
-     * A whole drag is ONE of these because the panel owns it across frames — Begin on the grab,
-     * End on the release. The per-frame TransformSelectedCommand records nothing.
-     *
-     * NAMES ITS WORLD (P8 V3): the level's gizmo and the prefab panel's record the same type, and
-     * Scope is what makes Undo find the right entities — by guid, in that world.
+     * A gizmo drag moved, rotated or scaled the selection. Any mode, any count: a before and after
+     * TransformComponent per entity. A whole drag is one step (Begin on grab, End on release).
+     * Stores its world (the level gizmo and the prefab panel both record it).
      */
     struct EntityTransform
     {
@@ -219,19 +170,17 @@ namespace Opaax::Editor
 
         TDynArray<Entry> Entries;
 
-        /** "Move" / "Rotate" / "Scale" — the mode's own name, so the menu reads "Undo Move". */
+        /** "Move" / "Rotate" / "Scale", so the menu reads "Undo Move". */
         OpaaxString Name;
 
         EUndoWorld  Scope = EUndoWorld::Active;
 
-        /** Cache InIds' transforms in InWorld as the BEFORE half, dropping any step left open. */
+        /** Stores InIds' transforms in InWorld as the before state, dropping any open step. */
         void Begin(World& InWorld, const TDynArray<EntityID>& InIds, const char* InName, EUndoWorld InScope);
 
         /**
-         * Cache them again as the AFTER half.
-         *
-         * @return true when something actually moved. A grab with no motion, a drag that ended
-         *   where it started, and a closed step nobody opened all answer false — none is a step.
+         * Stores them again as the after state.
+         * @return True if something moved. A grab without motion is not a step
          */
         bool End(const EditorContext& InContext);
 

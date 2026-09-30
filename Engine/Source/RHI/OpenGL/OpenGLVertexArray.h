@@ -43,14 +43,14 @@ namespace Opaax
         
         const TDynArray<TUniquePtr<IVertexBuffer>>&  GetVertexBuffers()      const override { return m_VertexBuffers; }
         const IIndexBuffer*                         GetIndexBuffer()        const override { return m_IndexBuffer.get(); }
-        //~Begin IVertexArray interface
+        //~End IVertexArray interface
 
         // =============================================================================
         // Member
         // =============================================================================
     private:
         Uint32 m_RendererID = 0;
-        Uint32 m_VBOIndex   = 0; // tracks attribute index across multiple VBOs
+        Uint32 m_VBOIndex   = 0; // attribute index across VBOs
 
         TDynArray<TUniquePtr<IVertexBuffer>> m_VertexBuffers;
         TUniquePtr<IIndexBuffer>             m_IndexBuffer;

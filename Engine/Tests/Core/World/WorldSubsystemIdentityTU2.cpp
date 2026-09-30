@@ -1,9 +1,6 @@
-// The second translation unit of the world-subsystem identity probe.
-//
-// It contains no test cases. Its only job is to instantiate the identity machinery
-// (StaticTypeID, RegisterSubsystem<T>, GetSubsystem<T>) somewhere OTHER than the TU that
-// asserts on the results — a same-TU comparison could not distinguish "one tag per type"
-// from "one tag per translation unit", which is precisely the I2 question M4 rests on.
+// Second translation unit of the world subsystem identity test. No test cases: it instantiates
+// StaticTypeID, RegisterSubsystem<T> and GetSubsystem<T> in another TU, so the test can tell
+// "one tag per type" from "one tag per TU".
 
 #include "WorldSubsystemProbes.h"
 

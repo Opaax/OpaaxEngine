@@ -1,10 +1,6 @@
-// Suite: physics events (Physics/PhysicsEvents.h) — the touch edges PhysicsSubsystem publishes
-// after each step, and the overlap STATE it synthesizes between them.
-//
-// The interesting cases are not "an event fires". They are the ones M9 had to discover by running
-// it: that a Stayed must not outlive its Ended within the same step, and that a handler destroying
-// an entity must not produce a phantom event from the body it just killed. Both are here, and both
-// fail loudly if the ordering in DispatchPhysicsEvents is changed.
+// Suite: physics events — the contact edges PhysicsSubsystem publishes after each step, and
+// the overlap state it builds between them. Key cases: Stayed never comes after Ended in the
+// same step, and destroying an entity in a handler produces no phantom event.
 #include <doctest.h>
 
 #include "Application/Services/IPaths.h"
@@ -185,7 +181,7 @@ TEST_CASE("PhysicsEvents: nothing is published while the tick gate is closed")
 }
 
 // =============================================================================
-// The destroy-in-handler case — M9 found this by running it
+// Destroying an entity in a handler
 // =============================================================================
 
 TEST_CASE("PhysicsEvents: destroying the VISITOR in the Began handler yields no phantom Stayed or Ended")
@@ -206,8 +202,7 @@ TEST_CASE("PhysicsEvents: destroying the VISITOR in the Began handler yields no 
 
     CHECK(lFixture.OverlapBegan == 1u);
 
-    // Exactly the assertion M9's close-out records: one Began, and NOTHING afterwards from a body
-    // whose entity is gone. A Stayed here would mean the live-overlap set outlived its entity.
+    // One Began and nothing after it: a Stayed would mean the overlap outlived its entity.
     CHECK(lFixture.OverlapStayed == 0u);
     CHECK(lFixture.OverlapEnded == 0u);
 

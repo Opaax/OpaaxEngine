@@ -4,7 +4,7 @@
 #include <doctest.h>
 
 #include "Core/String/OpaaxString.hpp"
-#include "Core/Hash/OpaaxHash.h"   // std::hash<OpaaxString> lives here — see the note in that header
+#include "Core/Hash/OpaaxHash.h"   // std::hash<OpaaxString>
 
 #include <cstdint>
 #include <cstring>
@@ -130,9 +130,8 @@ TEST_CASE("OpaaxString: Append(nullptr) and zero-count are no-ops")
 
 TEST_CASE("OpaaxString: appending a string TO ITSELF does not read freed memory")
 {
-    // GrowHeap deletes the buffer the source pointer names, so the old code memcpy'd from freed
-    // memory. Both boundary crossings matter: SSO -> heap frees nothing but MOVES the bytes, and
-    // heap -> heap frees the block outright.
+    // GrowHeap frees the buffer the source points into. Both cases matter: SSO -> heap moves the
+    // bytes, heap -> heap frees the block.
 
     SUBCASE("SSO source, growth into the heap")
     {

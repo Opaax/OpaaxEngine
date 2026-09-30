@@ -9,12 +9,8 @@ namespace Opaax::Editor
     inline constexpr LogCategory LogEditorInputActionDocument{"EditorInputActionDocument"};
 
     // =============================================================================
-    // EditorInputActionDocument — WHICH `.opaaxaction` is open, its live data, and whether that
-    //   data still matches what was last written. EditorMoveModeDocument's shape exactly.
-    //
-    //   An action is nearly as small as a tuning: a name, a value shape, a hold time and a
-    //   modifier list. It NAMES NO KEYS — which keys reach it is a mapping context's business —
-    //   so this document has nothing to say about bindings and never opens two files at once.
+    // EditorInputActionDocument — which .opaaxaction is open, its editable data, and whether it
+    //   matches what was last written. An action names no keys (a mapping context does).
     // =============================================================================
     class EditorInputActionDocument
     {
@@ -52,7 +48,7 @@ namespace Opaax::Editor
 
         const InputActionData& GetData() const noexcept { return m_Data; }
 
-        /** The editable copy. Every mutation goes through a verb that also records an undo step. */
+        /** The editable copy. Every change goes through an action that records an undo step. */
         InputActionData& GetMutableData() noexcept { return m_Data; }
 
         /** Whether the data differs from what was last written. Recomputed, never cached. */

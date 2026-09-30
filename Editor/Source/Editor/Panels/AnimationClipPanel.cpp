@@ -1,7 +1,7 @@
 #include "Editor/Panels/AnimationClipPanel.h"
 
-#include <cmath>    // fmod — the scrub wraps a running clock
-#include <cstdio>   // snprintf — the step list's row labels
+#include <cmath>    // fmod
+#include <cstdio>   // snprintf
 
 #include "Editor/Resources/Types/Animation/EditorAnimationClipDocument.h"
 #include "Editor/EditorContext.h"
@@ -11,8 +11,8 @@
 #include "Editor/Commands/EditorNativeCommandsTags.hpp"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Editor/Operation/ClipOperations.h"
-#include "Editor/Properties/PropertyDrawers.h"   // the specializations DrawProperties folds over
-#include "Editor/Resources/ResourceDragDrop.h"   // the step list is a drop target for textures
+#include "Editor/Properties/PropertyDrawers.h"
+#include "Editor/Resources/ResourceDragDrop.h"   // the step list accepts dropped textures
 #include "Editor/Undo/EditorUndo.h"
 #include "Editor/UI/IEditorUIBackend.h"
 
@@ -40,11 +40,8 @@ namespace Opaax::Editor
         }
 
         /**
-         * InFull cropped to InFrame's pixel rect.
-         *
-         * Derived by LERPING INSIDE the UVs the backend reported rather than computing them from
-         * scratch, so this cannot disagree with the backend about which way up a texture is — the
-         * flip is EditorImage's to state (I16), and a second opinion here is how the two drift.
+         * InFull cropped to InFrame's pixel rect, interpolated inside the backend's UVs (so the flip
+         * always matches the backend).
          */
         EditorImage CropTo(const EditorImage& InFull, const SpriteFrame& InFrame,
                            const Uint32 InTexWidth, const Uint32 InTexHeight)
@@ -54,7 +51,7 @@ namespace Opaax::Editor
 
             if (lWidth <= 0.f || lHeight <= 0.f || InFrame.Size.x <= 0.f || InFrame.Size.y <= 0.f)
             {
-                return InFull;   // MakeFrameUV's refusal, one layer up: show everything, never divide by zero
+                return InFull;   // bad frame: show everything
             }
 
             EditorImage lCropped = InFull;
@@ -93,7 +90,7 @@ namespace Opaax::Editor
             ImGui::TextDisabled("No animation clip open.");
             ImGui::TextDisabled("Double-click a .opaaxclip in the Resource Browser.");
 
-            // Nothing open means nothing to keep resident — the sheet panel's rule.
+            // Nothing open: nothing to keep loaded.
             Shutdown();
             m_Selected    = -1;
             m_PreviewTime = 0.f;
@@ -126,8 +123,7 @@ namespace Opaax::Editor
 
         ImGui::SameLine(ImGui::GetContentRegionAvail().x - 46.f);
 
-        // The button and Ctrl+S dispatch the SAME tag — the chord follows the focused panel, so
-        // saving here and saving the sheet are one command each rather than two code paths.
+        // The button and Ctrl+S dispatch the same command tag.
         ImGui::BeginDisabled(!bDirty);
         if (ImGui::SmallButton("Save"))
         {
@@ -148,14 +144,13 @@ namespace Opaax::Editor
     {
         if (!ImGui::TreeNodeEx("Clip", ImGuiTreeNodeFlags_DefaultOpen)) { return; }
 
-        // The clip's own fields, drawn from its property list — it is CReflected, so this is the
-        // whole of the UI for them and a new knob there needs nothing here.
+        // The clip's own fields, from its property list.
         ImGui::PushID("ClipSettings");
         DrawProperties(m_Context.Widgets, InData);
         ImGui::PopID();
 
-        // The Inspector's bracket: a TPropertyDrawer writes straight through a reference and cannot
-        // report that it did, so the edges of "any item is active" open and close one step.
+        // Like the Inspector: a drawer writes through a reference without reporting it, so an undo step
+        // opens when an item becomes active and closes when none is.
         const bool lItemActive = ImGui::IsAnyItemActive();
 
         if (lItemActive && !m_bWasSettingsItemActive)
@@ -178,8 +173,8 @@ namespace Opaax::Editor
 
     void AnimationClipPanel::DrawPreview(const AnimationClipData& InData)
     {
-        // The panel's OWN clock: an Edit world has no SpriteAnimationSubsystem by construction, and
-        // what is being previewed is the document's copy, which no world has ever seen.
+        // The panel's own clock: Edit worlds have no SpriteAnimationSubsystem, and the preview shows the
+        // document's copy.
         if (m_bPreviewPlaying)
         {
             m_PreviewTime += ImGui::GetIO().DeltaTime;
@@ -196,7 +191,7 @@ namespace Opaax::Editor
         ImGui::TextDisabled("step %u / %u", InData.StepCount() > 0 ? lSample.Step + 1u : 0u,
                             InData.StepCount());
 
-        // Scrubbing pauses: a slider that fights a running clock is unusable.
+        // Scrubbing pauses the clock.
         const Uint32 lTicks  = InData.TotalTicks();
         const float  lLength = (InData.Fps > 0.f && lTicks > 0u)
                                    ? static_cast<float>(lTicks) / InData.Fps
@@ -218,7 +213,7 @@ namespace Opaax::Editor
 
         if (!lImage.IsValid())
         {
-            // Said out loud rather than drawn as a blank rectangle — the Dummy-fallback trap.
+            // Say it rather than draw an empty rectangle.
             ImGui::TextDisabled(InData.StepCount() == 0u ? "No steps yet — press Add Step."
                                                          : "This step has no picture to show.");
             return;
@@ -233,7 +228,7 @@ namespace Opaax::Editor
 
         if (lStep == nullptr) { return EditorImage{}; }
 
-        // TEXTURE-LIST clip: the step carries its own image.
+        // Texture clip: the step has its own image.
         if (InData.Sheet.IsEmpty())
         {
             const TextureResource* lTexture = ClaimTexture(lStep->Texture.Path);
@@ -243,7 +238,7 @@ namespace Opaax::Editor
                        : EditorImage{};
         }
 
-        // SHEET clip: the frame's rect, cropped out of the sheet's image.
+        // Sheet clip: the frame's rect, cropped from the sheet's image.
         const SpriteSheetData* lSheet = ClaimSheet(InData);
 
         if (lSheet == nullptr) { return EditorImage{}; }
@@ -282,7 +277,7 @@ namespace Opaax::Editor
         {
             if (ClipOps::RemoveStep(m_Context, static_cast<Uint32>(m_Selected)))
             {
-                m_Selected = -1;   // the old selection named a step that just went
+                m_Selected = -1;   // the selected step was removed
             }
         }
 
@@ -300,9 +295,8 @@ namespace Opaax::Editor
 
         ImGui::EndDisabled();
 
-        // A TEXTURE-LIST clip is authored by dragging: each drop appends a step, so the loop is
-        // drag, drop, drag, drop rather than Add Step then hunt for the field. Only offered when
-        // the clip names no sheet, because a sheet clip picks FRAMES and a texture would be ignored.
+        // A texture clip is built by dragging textures in (each drop adds a step). Only offered when
+        // the clip has no sheet (a sheet clip uses frames).
         if (InData.Sheet.IsEmpty())
         {
             ImGui::Button("Drop a texture here to add a step", ImVec2(-1.f, 0.f));
@@ -353,8 +347,7 @@ namespace Opaax::Editor
         DrawProperties(m_Context.Widgets, InData.Steps[lIndex]);
         ImGui::PopID();
 
-        // The same bracket the settings use, kept separate so a settings edit and a step edit
-        // cannot be recorded as one.
+        // Same as the settings, kept separate so a settings edit and a step edit are two undo steps.
         const bool lItemActive = ImGui::IsAnyItemActive();
 
         if (lItemActive && !m_bWasStepItemActive)
@@ -375,7 +368,7 @@ namespace Opaax::Editor
 
     void AnimationClipPanel::DrawFramePicker(const AnimationClipData& InData, const Uint32 InStepIndex)
     {
-        if (InData.Sheet.IsEmpty()) { return; }   // a texture-list clip picks no frame
+        if (InData.Sheet.IsEmpty()) { return; }   // a texture clip has no frames
 
         const SpriteSheetData* lSheet = ClaimSheet(InData);
 
@@ -398,8 +391,7 @@ namespace Opaax::Editor
         {
             const SpriteFrame& lFrame = lSheet->Frames[lIndex];
 
-            // An UNNAMED frame cannot be referenced — a step names a frame by name. Rather than
-            // hide it, the picker says so, because the fix is one click away in the sheet editor.
+            // An unnamed frame cannot be referenced (steps name frames): say so, it is fixed in the sheet editor.
             if (!lFrame.Name.IsValid()) { continue; }
 
             ++lNamed;
@@ -450,8 +442,7 @@ namespace Opaax::Editor
             }
         }
 
-        // IsValid, not Get() != nullptr: a failed claim answers the PLACEHOLDER, and treating that
-        // as the sheet would hide the failure behind an empty frame list (I16).
+        // IsValid, not Get() != nullptr: a failed claim returns the placeholder.
         return m_SheetClaim.IsValid() ? &m_SheetClaim.Get()->Data : nullptr;
     }
 

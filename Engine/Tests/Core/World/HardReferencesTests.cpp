@@ -1,13 +1,6 @@
-// Suite: ⑦-C P5b — the hard-ref acquire, headless.
-//
-// P5a gave a component the vocabulary (THardResourcePath<T>) and the registry the discovery
-// (GetHardRefFields); this is the honouring. Two pure halves are pinned here: WHAT a set of
-// entities must have resident (HardReferences::Collect over untyped data) and HOW a runtime type
-// id becomes a typed load (ResourceFormatEntry::Acquire). The composed case — a mounted map holding
-// them for as long as its entities live — is in LevelTests.
-//
-// Both halves are asserted from BOTH sides, the P5 spec's own rule: a hard field is collected and
-// a soft one is NOT, or the test passes in a build where everything eager-loads.
+// Suite: hard resource references. What a set of entities must have loaded
+// (HardReferences::Collect), and how a type id becomes a typed load (ResourceFormatEntry::Acquire).
+// Hard fields are collected, soft ones are not. The mounted-map case is in LevelTests.
 #include <doctest.h>
 
 #include <chrono>
@@ -106,7 +99,7 @@ TEST_CASE("HardReferences: an empty hard field is a state, not a reference; and 
     lTwo.Entities.emplace_back(GunMap("Prefabs/Bullet.opaaxprefab", "").Entities[0]);
     CHECK(HardReferences::Collect(lTwo, lRegistry).size() == 1);
 
-    // A component type this registry does not know contributes nothing — MP3's tolerance.
+    // A component type this registry does not know contributes nothing.
     MapData lUnknown = GunMap("Prefabs/Bullet.opaaxprefab", "");
     lUnknown.Entities[0].Components[0].TypeName = OpaaxStringID("NotRegistered");
     CHECK(HardReferences::Collect(lUnknown, lRegistry).empty());

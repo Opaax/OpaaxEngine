@@ -26,12 +26,11 @@ namespace Opaax
     void OpenGLRHIDevice::Init(IGraphicsContext& InSurface)
     {
         m_Surface = &InSurface;
-        // OpenGL state is global — the surface's context is already current (window created it).
+        // The surface's context is already current.
 
         glGenQueries(static_cast<GLsizei>(GPU_TIMER_COUNT), m_TimerQueries);
 
-        // A driver with no timer support leaves the names at 0; issuing against one would be a GL
-        // error every frame, so timing simply stays off and GetLastGpuFrameTimeMs answers -1.
+        // No timer support: timing stays off (GetLastGpuFrameTimeMs returns -1).
         m_bTimersReady = m_TimerQueries[0] != 0;
 
         OPAAX_LOG(LogOpenGLRHIDevice, Trace, "OpenGL RHI device initialized (GPU timing {})",
@@ -47,7 +46,7 @@ namespace Opaax
     }
 
     // =========================================================================
-    // Resource creation — reuse the existing OpenGL* impls (no GetBackend query).
+    // Resource creation
     // =========================================================================
     TUniquePtr<IVertexArray>   OpenGLRHIDevice::CreateVertexArray()                        { return MakeUnique<OpenGLVertexArray>(); }
     TUniquePtr<IVertexBuffer>  OpenGLRHIDevice::CreateVertexBuffer(Uint32 InSizeBytes)     { return MakeUnique<OpenGLVertexBuffer>(InSizeBytes); }
@@ -68,11 +67,10 @@ namespace Opaax
     // =========================================================================
     // Frame
     // =========================================================================
-    // GL executes immediately, so there is nothing to BEGIN — except the frame's GPU timer, which
-    // is exactly what this bracket is for (④ S3).
+    // GL runs immediately: only the GPU timer needs a begin.
     void OpenGLRHIDevice::BeginFrame()
     {
-        // Read results BEFORE issuing, so the slot about to be reused has had its last chance.
+        // Read results before issuing, so the reused slot got its chance.
         HarvestGpuTimings();
 
         if (m_bTimersReady)
@@ -86,7 +84,7 @@ namespace Opaax
 
     void OpenGLRHIDevice::EndFrame()
     {
-        // Nothing to flush before the swap; only the timer closes here.
+        // Only the timer ends here.
         if (!m_bTimerOpen)
         {
             return;
@@ -106,8 +104,7 @@ namespace Opaax
             return;
         }
 
-        // Oldest first — m_TimerWrite is both the next slot to issue into and the longest-pending
-        // one. Queries complete in submission order, so the first that is not ready ends the sweep.
+        // Oldest first. Queries complete in order, so stop at the first one not ready.
         for (Uint32 i = 0; i < GPU_TIMER_COUNT; ++i)
         {
             const Uint32 lSlot = (m_TimerWrite + i) % GPU_TIMER_COUNT;
@@ -122,7 +119,7 @@ namespace Opaax
 
             if (lAvailable == GL_FALSE)
             {
-                break;   // and NOT a wait — blocking here is the stall this tool exists to expose
+                break;   // do not wait (that would stall)
             }
 
             GLuint64 lNanoseconds = 0;
@@ -135,7 +132,7 @@ namespace Opaax
 
     void OpenGLRHIDevice::Present()
     {
-        if (m_Surface) { m_Surface->SwapBuffers(); }                   // present lives on the device, not the window
+        if (m_Surface) { m_Surface->SwapBuffers(); }
     }
 
     void OpenGLRHIDevice::SetViewport(Uint32 X, Uint32 Y, Uint32 Width, Uint32 Height)
@@ -152,8 +149,7 @@ namespace Opaax
     void OpenGLRHIDevice::WaitIdle() { glFinish(); }
 
     // =========================================================================
-    // Factory — OpenGL only for now. When the Vulkan device lands, this moves to a
-    // neutral TU (like BackendFactory) that knows every backend.
+    // Factory — OpenGL only for now.
     // =========================================================================
     TUniquePtr<IRHIDevice> RHIDevice::Create(EBackend InBackend, IGraphicsContext& InSurface)
     {

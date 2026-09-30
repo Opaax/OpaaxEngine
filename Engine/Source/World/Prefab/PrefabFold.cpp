@@ -19,8 +19,7 @@ namespace Opaax
             return (lEntry != nullptr) ? lEntry->GetName() : OpaaxStringID();
         }
 
-        // The marker as a typed value, or nothing. Never throws — a hand-edited payload is an
-        // ordinary input at this layer (**MP3**).
+        // The marker as a typed value, or nothing. Never throws.
         bool ReadMarker(const EntityData& InEntity, OpaaxStringID InMarkerName,
                         PrefabInstanceComponent& OutMarker)
         {
@@ -60,20 +59,18 @@ namespace Opaax
         const OpaaxStringID lMarkerName = MarkerName(InRegistry);
         if (!lMarkerName.IsValid())
         {
-            // Nothing can be carrying a marker, so there is nothing to fold. Not a refusal.
+            // Not registered: nothing to fold.
             return 0;
         }
 
-        // Grouped by placement, in FIRST-SEEN order; MapJson sorts the records on write (**MP2**),
-        // so nothing here has to care about ordering.
+        // Grouped by placement, in first-seen order (MapJson sorts records on write).
         TDynArray<PrefabInstanceRecord> lRecords;
-        TDynArray<TDynArray<Guid>>      lPresent;    // per record: the templates still in the world
-        TDynArray<MapData>              lPristine;   // per record: the instance AS BUILT — the diff's baseline
+        TDynArray<TDynArray<Guid>>      lPresent;    // per record: templates still in the world
+        TDynArray<MapData>              lPristine;   // per record: the instance as built (diff baseline)
         TDynArray<EntityData>           lLoose;
         lLoose.reserve(InOutData.Entities.size());
 
-        // BuildInstance refuses an invalid map; a capture that names none (the prefab document's
-        // own world) gets a placeholder, and OwnerMap is not part of the diff anyway.
+        // BuildInstance needs a map id: use a placeholder (OwnerMap is not compared).
         const MapId lBuildMap = InOutData.Id.IsValid() ? InOutData.Id : MapId("Pending");
 
         for (EntityData& lEntity : InOutData.Entities)
@@ -88,8 +85,7 @@ namespace Opaax
             const PrefabData* lPrefab = InResolver.Resolve(lMarker.Prefab.Path);
             if (lPrefab == nullptr)
             {
-                // EXPANDED, not dropped. A renamed prefab file must cost the author a link, never
-                // their level — see the header.
+                // Kept expanded: a renamed prefab loses its link, never the entities.
                 OPAAX_LOG(LogPrefabFold, Warn,
                           "Prefab '{}' could not be resolved — its entities are saved expanded, and "
                           "the link is lost", lMarker.Prefab.Path.CStr());
@@ -118,17 +114,13 @@ namespace Opaax
                 lRecords.emplace_back(PrefabInstanceRecord{ lMarker.Prefab.Path, lMarker.InstanceId, {} });
                 lPresent.emplace_back();
 
-                // The baseline is the instance Expand would BUILD, not the file's template: guids
-                // and parent links are derived per placement (§HR), so diffing against the raw
-                // template would record every child's parent as an override. This is what makes
-                // Fold the exact inverse of Expand, which applies the patch over the same build.
+                // Diff against the instance as built (derived guids and parents), not the raw template,
+                // so Fold is the exact inverse of Expand.
                 lPristine.emplace_back(PrefabFactory::BuildInstance(*lPrefab, lMarker.Prefab.Path,
                                                                     lMarker.InstanceId, lBuildMap, InRegistry));
             }
 
-            // WHICH TEMPLATES THIS PLACEMENT STILL HAS. The complement is what was DELETED, and
-            // without it a removal is unrepresentable — the record would be identical to one where
-            // the entity is simply unmodified, and Expand would bring it back.
+            // The templates this placement still has; the others were deleted.
             lPresent[lIndex].emplace_back(lMarker.TemplateGuid);
 
             const EntityData* lBaseline = lTemplate;
@@ -145,13 +137,11 @@ namespace Opaax
             }
         }
 
-        // THE REMOVALS, recorded as a NULL patch — merge-patch's own convention, and the same one
-        // PrefabOverrides already uses a level down for a deleted component. An entity of the
-        // prefab that this placement no longer has gets `"<templateGuid>": null`.
+        // Removed entities are recorded as a null patch.
         for (Uint64 lIndex = 0; lIndex < lRecords.size(); ++lIndex)
         {
             const PrefabData* lPrefab = InResolver.Resolve(lRecords[lIndex].Prefab);
-            if (lPrefab == nullptr) { continue; }   // already warned above
+            if (lPrefab == nullptr) { continue; }   // already warned
 
             for (const EntityData& lTemplate : lPrefab->Entities)
             {
@@ -164,14 +154,13 @@ namespace Opaax
                 if (lStillHere) { continue; }
 
                 lRecords[lIndex].Overrides.emplace_back(
-                    PrefabOverrideEntry{ lTemplate.Id, nlohmann::json() });   // null == removed
+                    PrefabOverrideEntry{ lTemplate.Id, nlohmann::json() });   // null = removed
             }
         }
 
         InOutData.Entities = Move(lLoose);
 
-        // APPENDED, not assigned: a MapData that already carried records (folded twice, or read
-        // from a file and folded again) must not lose them.
+        // Appended: existing records are kept.
         for (PrefabInstanceRecord& lRecord : lRecords)
         {
             InOutData.Instances.emplace_back(Move(lRecord));
@@ -192,16 +181,14 @@ namespace Opaax
             const PrefabData* lPrefab = InResolver.Resolve(lRecord.Prefab);
             if (lPrefab == nullptr)
             {
-                // The entities live only in the prefab file, so this placement is genuinely gone.
-                // Error rather than Warn: it is data the author will notice missing.
+                // The entities only exist in the prefab file: this placement is lost (error).
                 OPAAX_LOG(LogPrefabFold, Error,
                           "Prefab '{}' could not be resolved — that placement is missing from the map",
                           lRecord.Prefab.CStr());
                 continue;
             }
 
-            // Rebuilt through the SAME derivation the first placement used (**K2**), so every guid
-            // comes back identical and nothing that referenced one had its target moved.
+            // Same derivation as the first placement, so every guid comes back identical.
             MapData lInstance = PrefabFactory::BuildInstance(*lPrefab, lRecord.Prefab,
                                                              lRecord.InstanceId, InOutData.Id,
                                                              InRegistry);
@@ -210,16 +197,13 @@ namespace Opaax
             {
                 bool lRemoved = false;
 
-                // The patch is keyed by TEMPLATE guid, which BuildInstance derived from — so it is
-                // recovered the same way rather than stored a second time on the entity.
+                // The patch is keyed by template guid.
                 for (const PrefabOverrideEntry& lEntry : lRecord.Overrides)
                 {
                     const Guid lDerived = Guid::Derive(lRecord.InstanceId, lEntry.TemplateGuid);
                     if (lDerived != lEntity.Id) { continue; }
 
-                    // A NULL patch means this placement DELETED that piece of the prefab. Checked
-                    // before Apply, which reads null as "nothing to do" — the reading that made a
-                    // deletion silently come back.
+                    // A null patch means this entity was deleted from the placement.
                     lRemoved = lEntry.Patch.is_null();
                     if (!lRemoved) { PrefabOverrides::Apply(lEntry.Patch, lEntity); }
                     break;

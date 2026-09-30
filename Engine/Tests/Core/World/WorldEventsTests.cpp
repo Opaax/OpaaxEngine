@@ -1,13 +1,6 @@
-// Suite: WorldManager Tier-2 lifetime delegates (OnWorldCreated / OnWorldDestroyed /
-// OnActiveWorldChanged).
-//
-// WorldManager depends on nothing to broadcast — no bus, no service locator, no Engine —
-// so these construct a bare manager and bind a lambda. That independence is the point of
-// the design: Engine binds these same delegates to bridge them onto the EngineEventBus
-// (see Engine::HandleWorldCreated), but nothing here needs the Engine to exist.
-//
-// Every case builds the manager WITHOUT calling Startup(): it needs none of it to broadcast,
-// and a bare manager keeps the counts below to exactly the worlds each case makes itself.
+// Suite: WorldManager's lifetime delegates (OnWorldCreated / OnWorldDestroyed /
+// OnActiveWorldChanged). A bare manager (no Startup) broadcasts them, so the counts only include
+// the worlds each case creates.
 #include <doctest.h>
 
 #include "World/World.h"

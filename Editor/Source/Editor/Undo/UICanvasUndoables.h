@@ -8,20 +8,13 @@ namespace Opaax::Editor
     struct EditorContext;
 
     // =============================================================================
-    // The step the UI canvas editor's verbs record (**UI15**). UN1's shape, with
-    // SpriteSheetUndoables' path guard.
+    // The undo step recorded by the UI canvas editor's actions.
     // =============================================================================
 
     /**
-     * The whole TREE was replaced — add, remove, reparent and a property edit are all this.
-     *
-     * ONE type for every verb, and for a TREE that is not merely convenient: a step that restored
-     * PART of a tree could leave a parent pointing at a child that no longer exists. Text before,
-     * text after, and the reader rebuilds from scratch — the only shape that cannot half-restore.
-     * The LABEL is the field that varies, so the Edit menu still names what happened.
-     *
-     * It carries the canvas's PATH: an undo after opening a second `.opaaxui` is a NO-OP WITH A
-     * WARNING rather than a write into the wrong document.
+     * The whole tree was replaced (add, remove, reparent, property edit). Stored as text before and
+     * after, and rebuilt from scratch, so a tree is never half restored. The label says which edit.
+     * Carries the canvas path: undoing after opening another canvas does nothing and warns.
      */
     struct UITreeEdit
     {
@@ -29,7 +22,7 @@ namespace Opaax::Editor
         OpaaxString Before;
         OpaaxString After;
 
-        /** What the Edit menu shows — "Add Widget", "Delete Widget", "Reparent", "Edit Widget". */
+        /** What the Edit menu shows: "Add Widget", "Delete Widget", "Reparent", "Edit Widget". */
         const char* LabelText = "Edit UI";
 
         void        Undo(EditorContext& InContext);

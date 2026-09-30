@@ -2,7 +2,7 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
-#include "Core/Reflection/OpaaxEnum.h"   // OPAAX_ENUM_VALUES — the backend's own value list
+#include "Core/Reflection/OpaaxEnum.h"   // OPAAX_ENUM_VALUES
 
 namespace Opaax
 {
@@ -10,14 +10,7 @@ namespace Opaax
     // EPhysicsBackend
     // =============================================================================
     /**
-     * @enum EPhysicsBackend
-     *
-     * Which implementation backs IPhysicsWorld. Box2D is the only one today; a custom solver
-     * or a second library are the intended future entries. Selection happens once, from
-     * config, when a Play world builds its physics subsystem.
-     *
-     * Its own header rather than a member of PhysicsAPI.h, mirroring RHI/RHIBackend.h: the
-     * config data type names the enum and must not drag the whole seam in behind it.
+     * Physics implementation. Only Box2D for now.
      */
     enum class EPhysicsBackend : Uint8
     {
@@ -28,11 +21,7 @@ namespace Opaax
     // Backend naming
     // =============================================================================
     /**
-     * Human-readable name for logs, and the label this enum is WRITTEN as in a config. Found by
-     * ADL — every engine enum spells this ToString (I11).
-     *
-     * OPAAX_API because EngineConfigData::Physics::Backend is a real enum, which puts this on
-     * the path of every TU that serializes a config — the tests and the editor exe included.
+     * Name for logs and the value written in the config.
      */
     OPAAX_API const char* ToString(EPhysicsBackend InBackend) noexcept;
 }

@@ -16,47 +16,29 @@
 namespace Opaax
 {
     // =============================================================================
-    // InputActionData — ONE action, as DATA. The `.opaaxaction` payload.
-    //
-    //   ONE ASSET PER ACTION, like Unreal's UInputAction, and that was the user's call: an
-    //   action is the thing a game names and grows (a description today, a category or an
-    //   icon later), and per-action files are what make it addressable from the browser.
-    //
-    //   IT DOES NOT NAME ITS KEYS. Which key drives it is a MAPPING CONTEXT's business, which
-    //   is the whole reason rebinding never touches this file — and why one action can be
-    //   driven by four keys in one context and one key in another.
-    //
-    //   THE NAME IS THE IDENTITY gameplay uses (Bind(OPAAX_ID("Jump"), ...)), and it lives
-    //   HERE rather than in the mapping entry that references it: two contexts pointing at one
-    //   action must agree on what it is called, and the only way to guarantee that is for the
-    //   action to own its own name. The editor pre-fills it from the file stem (I13).
+    // InputActionData — one action (.opaaxaction), like Unreal's UInputAction.
+    //   Keys are not listed here: mapping contexts bind keys to actions.
+    //   The name is what gameplay binds to (OPAAX_ID("Jump")).
     // =============================================================================
     struct InputActionData
     {
-        /** What gameplay binds. Pre-filled from the file stem; renaming it breaks nothing else. */
+        /** The name gameplay binds to. The editor pre-fills it from the file name. */
         OpaaxStringID Name;
 
-        /** The shape of its value. Keys feed x; Negate and Swizzle are what move it (IM). */
+        /** The value type. */
         EInputValueType ValueType = EInputValueType::Bool;
 
         /**
-         * How long continuous actuation takes to fire the Hold trigger.
-         *
-         * Here and NOT on the binding: "Crouch is a half-second hold" is a property of the action, and
-         * two places to author it is the two-sources trap (L30).
+         * How long the action must be held for the Hold trigger.
          */
         float HoldSeconds = 0.5f;
 
         /**
-         * Applied to the SUM of every binding that feeds this action.
-         *
-         * The level a binding's own modifiers cannot reach, and the reason an Axis2D built from
-         * four keys needs one: normalizing each contribution individually changes nothing, so
-         * without a Normalize HERE the diagonal is 1.41x too fast.
+         * Applied to the sum of all bindings (e.g. Normalize for a WASD diagonal).
          */
         TDynArray<InputModifierData> Modifiers;
 
-        /** Free text for whoever opens this in a year. Never read by the engine. */
+        /** Free text. Not used by the engine. */
         OpaaxString Description;
 
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(InputActionData, Name, ValueType, HoldSeconds,

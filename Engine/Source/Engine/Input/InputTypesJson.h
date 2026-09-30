@@ -2,22 +2,15 @@
 
 #include <nlohmann/json.hpp>
 
-#include "Core/Maths/MathsJson.hpp"          // Vector2F
-#include "Core/Reflection/OpaaxEnumJson.h"   // EInputModifier, by LABEL
+#include "Core/Maths/MathsJson.hpp"
+#include "Core/Reflection/OpaaxEnumJson.h"
 #include "Engine/Input/InputTypes.h"
 
 namespace Opaax
 {
     // =============================================================================
-    // The nlohmann bridge for InputModifierData, SPLIT from the type the way
-    // ResourcePathJson.h and MathsJson.hpp are.
-    //
-    //   Split rather than intrusive because InputTypes.h is what the EVALUATOR includes, and the
-    //   evaluator has no business knowing json exists. A mapping asset is the only thing that
-    //   serializes a modifier, so the bridge lives on the asset's side of the line.
-    //
-    //   WITH DEFAULTS on the way in: a modifier authored before a knob existed still loads, and a
-    //   Scalar entry has no reason to spell out dead-zone bounds it never reads.
+    // JSON for InputModifierData. Kept apart so the evaluator does not include json.
+    // Missing keys keep their defaults.
     // =============================================================================
     inline void to_json(nlohmann::json& InJson, const InputModifierData& InValue)
     {

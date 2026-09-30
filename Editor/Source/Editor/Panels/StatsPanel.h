@@ -9,19 +9,10 @@ namespace Opaax::Editor
     struct EditorContext;
 
     // =============================================================================
-    // StatsPanel — where the frame went (④). Reads Profiler::GetFrameStats() and nothing else, so
-    //   the readout cannot disagree with what the engine measured.
-    //
-    //   Three blocks: the frame-time graph, the fixed-step count, and the scope tree — every named
-    //   scope in the frame, indented by its depth. Anything a producer wraps in OPAAX_STAT_SCOPE
-    //   appears here with no edit to this panel, which is the point of the profiler's shape.
-    //
-    //   EVERYTHING SLOW-MOVING IS DELIBERATE. The engine's snapshot is per-frame, and drawn raw it
-    //   is a wall of digits changing 60 times a second. The graph is the only thing that moves per
-    //   frame; the numbers refresh on a throttle and the row set is held still by StatsDisplay.
-    //
-    //   The HISTORY lives here, not in the engine: a snapshot is what every consumer agrees on, a
-    //   history length is a display choice (F4 — the engine retains nothing).
+    // StatsPanel — where the frame time went. Reads Profiler::GetFrameStats() only.
+    //   The frame-time graph, the counters, and every named scope indented by depth (anything wrapped
+    //   in OPAAX_STAT_SCOPE shows up). Only the graph moves every frame; the numbers refresh on a
+    //   throttle and StatsDisplay keeps the rows still. The history lives here, not in the engine.
     // =============================================================================
     class StatsPanel final : public IEditorPanel
     {
@@ -48,16 +39,16 @@ namespace Opaax::Editor
         // Functions
         // =============================================================================
     private:
-        /** Frame time, fps, and the graph. The graph reads the history, so it moves every frame. */
+        /** Frame time, fps, and the graph (updated every frame). */
         void DrawFrameTime();
 
         /** Every scope in the held snapshot, plus the unmeasured remainder. */
         void DrawBreakdown();
 
-        /** The frame's named counters — draw calls, quads, and whatever a game submits. */
+        /** The frame's counters (draw calls, quads, and whatever a game submits). */
         void DrawCounters();
 
-        /** Ceiling for the plot, in whole 60 Hz frames so it steps rather than drifting. */
+        /** The plot's ceiling, in whole 60 Hz frames. */
         float GraphCeilingMs() const;
 
         // =============================================================================
@@ -65,19 +56,19 @@ namespace Opaax::Editor
         // =============================================================================
     public:
         //~Begin IEditorPanel interface
-        /** Nothing to acquire — everything is read through the context. */
+        /** Nothing to acquire. */
         void Startup()     override {}
 
-        /** Nothing the world's render depends on. */
+        /** Nothing the world render depends on. */
         void OnPreRender() override {}
 
-        /** Samples the history, refreshes the held snapshot on the throttle, draws both blocks. */
+        /** Samples the history, refreshes the snapshot on the throttle, draws. */
         void DrawContents() override;
 
         /** Nothing to release. */
         void Shutdown()    override {}
 
-        /** The old world's subsystems would otherwise sit in the tree at 0.00 forever. */
+        /** Clears the rows (the old world's subsystems would stay at 0.00 forever). */
         void OnActiveWorldChanged(World* InOld, World* InNew) override;
 
         PanelWindowStyle GetWindowStyle() const override { return { { 420.f, 380.f } }; }
@@ -87,35 +78,30 @@ namespace Opaax::Editor
         // Members
         // =============================================================================
     private:
-        // ~2 seconds at 60 Hz — long enough to see a hitch, short enough that the graph still
-        // reacts to a change the author just made.
+        // ~2 seconds at 60 Hz.
         static constexpr Uint32 HISTORY_SAMPLES = 120;
 
-        // Four readable updates a second. The same interval EditorService throttles its dirty check
-        // with, and far below what an eye reads as lag.
+        // Four updates per second.
         static constexpr double REFRESH_INTERVAL = 0.25;
 
-        // Never below this, so an idle 16 ms frame does not fill the plot and read as a problem.
+        // Minimum ceiling, so an idle 16 ms frame does not fill the plot.
         static constexpr float MIN_GRAPH_CEILING_MS = 33.3f;
 
         EditorContext& m_Context;
 
-        // Pushed EVERY frame, so the graph is complete and smooth even though the numbers beside it
-        // are not. Sampled in DrawContents, NOT in OnPreRender: OnPreRender runs before
-        // Engine::Loop publishes, so it would push the frame BEFORE the one the text shows.
+        // Pushed every frame. Sampled in DrawContents: OnPreRender runs before Engine::Loop publishes.
         TStatsHistory<HISTORY_SAMPLES> m_FrameHistory;
 
         StatsDisplay m_Display;
         double       m_LastRefresh = 0.0;
 
-        // Held on the same throttle as m_Display, so NO text in this panel changes at frame rate.
-        // The graph's ceiling deliberately still reads the live maximum: a spike arriving between
-        // refreshes must not be clipped for a quarter of a second.
+        // Held on the same throttle, so no text changes every frame. The graph's ceiling still reads the
+        // live maximum (a spike must not be clipped).
         float m_ShownAvgMs = 0.f;
         float m_ShownMinMs = 0.f;
         float m_ShownMaxMs = 0.f;
 
-        // Negative = no reading. Double, not float, to match what the device reports.
+        // Negative = no reading.
         double m_ShownGpuMs = -1.0;
     };
 }

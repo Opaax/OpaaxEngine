@@ -7,14 +7,10 @@
 namespace Opaax
 {
     // =============================================================================
-    // CameraView — WHERE a world is being looked at from, in world units. The authored
-    //   half of RenderView: a producer writes one onto the World (World::SetCameraView),
-    //   and RendererManager turns it into matrices against the render target's pixels.
-    //
-    //   OrthoSize is the vertical HALF-EXTENT in world units and width follows the target's
-    //   aspect, so resizing SCALES the view instead of revealing more world — a 4K player
-    //   must not see four times the playfield. The default is the frame the engine drew
-    //   before a camera existed: centred, 600 units tall.
+    // CameraView — where a world is viewed from, in world units. Set on the World
+    //   (World::SetCameraView); RendererManager turns it into matrices for the target.
+    //   OrthoSize is the vertical half-extent; width follows the target's aspect, so resizing
+    //   scales the view instead of showing more world. Default: centred, 600 units tall.
     // =============================================================================
     struct CameraView
     {
@@ -23,55 +19,40 @@ namespace Opaax
     };
 
     // =============================================================================
-    // The two questions a view answers. Defined OUT OF LINE so <glm/gtc/matrix_transform.hpp>
-    //   stays out of every TU that includes World.h, and exported because the EDITOR calls
-    //   ScreenToWorld from the exe (I6 — the tell that has produced LNK2019 three times here).
+    // Defined in the .cpp (keeps glm headers out of World.h) and exported (used by the editor).
     // =============================================================================
 
     /**
-     * The VIEW half alone: a translation by -Position, because the world moves opposite to the
-     * camera. No size argument — framing is the projection's job, not the view's.
+     * The view matrix: a translation by -Position.
      */
     OPAAX_API Matrix44F MakeView(const CameraView& InView);
 
     /**
-     * The PROJECTION half alone: Y-up ortho, OrthoSize tall, width following the target's aspect.
-     * A zero dimension yields identity — there is nothing to frame.
+     * The projection: Y-up ortho, OrthoSize tall, width from the target's aspect.
+     * A zero dimension gives identity.
      */
     OPAAX_API Matrix44F MakeProjection(const CameraView& InView, Uint32 InWidth, Uint32 InHeight);
 
     /**
-     * Combined Proj * View for InView filling a target of InWidth x InHeight pixels.
-     * Y-up, centred on InView.Position. A zero dimension yields identity.
-     *
-     * DEFINED AS THE PRODUCT of the two above, so the halves and the whole cannot drift. The split
-     * exists because ImGuizmo takes view and projection SEPARATELY (③) — the renderer still wants
-     * only the product, which is why that stayed the named function rather than becoming a call site
-     * that multiplies.
+     * Projection * View for InView on a target of InWidth x InHeight pixels.
+     * Y-up, centred on InView.Position. A zero dimension gives identity.
      */
     OPAAX_API Matrix44F MakeViewProjection(const CameraView& InView, Uint32 InWidth, Uint32 InHeight);
 
     /**
-     * Viewport-local pixels (origin TOP-LEFT, Y growing down) -> world units.
-     *
-     * The inverse of MakeViewProjection's framing and the ONE rule for it: zoom-at-cursor
-     * needs it now, click-select and gizmo placement need the same answer later.
-     * Returns InView.Position for a degenerate viewport.
+     * Viewport pixels (origin top-left, Y down) -> world units.
+     * Returns InView.Position for an empty viewport.
      */
     OPAAX_API Vector2F ScreenToWorld(const CameraView& InView, const Vector2F& InViewportPx, const Vector2F& InLocalPx);
 
     /**
-     * World units -> viewport-local pixels (origin TOP-LEFT, Y growing down): the INVERSE of
-     * ScreenToWorld, kept beside it so the one rule has both directions and neither can drift.
-     * An overlay drawn over a rendered view (a selection outline) is what asks. Returns the
-     * viewport's centre for a degenerate viewport.
+     * World units -> viewport pixels (origin top-left, Y down). Inverse of ScreenToWorld.
+     * Returns the viewport centre for an empty viewport.
      */
     OPAAX_API Vector2F WorldToScreen(const CameraView& InView, const Vector2F& InViewportPx, const Vector2F& InWorld);
 
     /**
-     * World units covered by ONE viewport pixel — square, since width follows the aspect.
-     * OrthoSize is the vertical half-extent, so a pixel is (2 * OrthoSize) / height.
-     * Returns 1 (the pre-camera convention) for a zero height, so no caller divides by zero.
+     * World units per viewport pixel: (2 * OrthoSize) / height. 1 for a zero height.
      */
     OPAAX_API float WorldPerPixel(const CameraView& InView, float InViewportHeightPx);
 }

@@ -34,9 +34,8 @@ namespace Opaax::Editor
 
     namespace
     {
-        // Put InData's entities back and select them — recreating any that are gone, on their own
-        // Guids. MapFactory::Restore answers exactly this question ("be this again"), so create and
-        // delete share one body run in opposite directions.
+        // Restores InData's entities (recreating missing ones with their guids) and selects them.
+        // Create and delete share this, run in opposite directions.
         void RestoreEntities(EditorContext& InContext, const MapData& InData, const EUndoWorld InScope)
         {
             World* const lWorld = UndoWorld(InContext, InScope);
@@ -44,8 +43,7 @@ namespace Opaax::Editor
 
             MapFactory::Restore(InData, *lWorld, InContext.Engine.GetRegistries().Components());
 
-            // AFTER the restore: a recreated entity comes back on a new handle, and the selection
-            // stores handles.
+            // After the restore: a recreated entity has a new handle.
             TDynArray<EntityID> lIds;
             lIds.reserve(InData.Entities.size());
 
@@ -60,8 +58,7 @@ namespace Opaax::Editor
             UndoSelection(InContext, InScope).Replace(lWorld, lIds);
         }
 
-        // The inverse, and it clears the selection for the reason DestroySelected does: what was
-        // selected no longer exists.
+        // The inverse; clears the selection (what was selected no longer exists).
         void DestroyEntities(EditorContext& InContext, const MapData& InData, const EUndoWorld InScope)
         {
             World* const lWorld = UndoWorld(InContext, InScope);
@@ -80,8 +77,7 @@ namespace Opaax::Editor
             lWorld->MarkChanged();
         }
 
-        // Write one entity's name. Nothing observes EntityMeta, so the revision is bumped by hand —
-        // the same reason EntityOps::Rename does it.
+        // Writes one entity's name. EntityMeta is written directly, so mark the world changed.
         void WriteName(EditorContext& InContext, const Guid& InId, const OpaaxString& InName)
         {
             World* const lWorld = InContext.Worlds.GetActiveWorld();
@@ -101,8 +97,7 @@ namespace Opaax::Editor
                 && InLeft.Scale    == InRight.Scale;
         }
 
-        // Put one side of a drag back. Nothing else has to happen: a drag never changed the
-        // selection, so there is none to restore.
+        // Restores one side of a drag. A drag does not change the selection.
         void WriteTransforms(EditorContext& InContext, const EntityTransform& InStep, const bool bInBefore)
         {
             World* const lWorld = UndoWorld(InContext, InStep.Scope);
@@ -119,21 +114,20 @@ namespace Opaax::Editor
                 *lTransform = bInBefore ? lEntry.Before : lEntry.After;
             }
 
-            // A component written in place is invisible to the world (**MP5**).
+            // A component written in place is not seen by the world: mark it changed.
             lWorld->MarkChanged();
         }
     }
 
-    // The level-only verbs name the active world literally; EntityDelete carries its scope, being
-    // the one of these the prefab panel records too (P8 V4).
+    // The level-only steps use the active world; EntityDelete stores its scope (the prefab panel
+    // records it too).
     void EntityCreate::Undo(EditorContext& InContext) { DestroyEntities(InContext, Entities, EUndoWorld::Active); }
     void EntityCreate::Redo(EditorContext& InContext) { RestoreEntities(InContext, Entities, EUndoWorld::Active); }
 
     void PrefabInstantiate::Undo(EditorContext& InContext) { DestroyEntities(InContext, Entities, Scope); }
     void PrefabInstantiate::Redo(EditorContext& InContext) { RestoreEntities(InContext, Entities, Scope); }
 
-    // Destroy THEN restore, both ways: RestoreEntities selects what it brought back and
-    // DestroyEntities clears, so the opposite order would leave an empty selection.
+    // Destroy then restore, both ways: restoring selects, destroying clears the selection.
     void PrefabCreateFromSelection::Undo(EditorContext& InContext)
     {
         DestroyEntities(InContext, Instance, EUndoWorld::Active);
@@ -146,11 +140,9 @@ namespace Opaax::Editor
         RestoreEntities(InContext, Instance, EUndoWorld::Active);
     }
 
-    // A revert normally creates and destroys nothing, so "be this again" is the whole inverse
-    // (**UN4**) — EXCEPT when it brought a deleted piece back (undo takes it away again) or took
-    // an orphaned piece away (Before holds it, so restoring Before brings it back; redo destroys
-    // it again). Destroy first, restore second, both ways, for PrefabCreateFromSelection's reason:
-    // RestoreEntities selects what it brought back and DestroyEntities clears.
+    // A revert usually creates and destroys nothing, so restoring each side is the whole inverse,
+    // except when it brought a deleted piece back (undo removes it) or removed an orphan (Before
+    // holds it; redo removes it again). Destroy first, then restore, as above.
     void PrefabRevert::Undo(EditorContext& InContext)
     {
         DestroyEntities(InContext, Created, EUndoWorld::Active);
@@ -205,8 +197,7 @@ namespace Opaax::Editor
         Name  = InName != nullptr ? InName : "Transform";
         Scope = InScope;
 
-        // BY GUID, not by handle: a step outlives the drag, and a handle does not survive an undo
-        // that recreated the entity.
+        // By guid, not handle: a handle does not survive an undo that recreated the entity.
         for (const EntityID lId : InIds)
         {
             Entity lEntity{ lId, &InWorld };

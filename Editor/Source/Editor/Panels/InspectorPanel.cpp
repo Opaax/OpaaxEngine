@@ -1,12 +1,12 @@
 #include "Editor/Panels/InspectorPanel.h"
 
-#include <cstring>   // memcpy — the name field's edit buffer
+#include <cstring>   // memcpy
 
 #include "Editor/EditorContext.h"
-#include "Editor/Commands/EditorNativeCommands.h"       // the params the Inspector's verbs carry (⑤)
+#include "Editor/Commands/EditorNativeCommands.h"
 #include "Editor/Commands/EditorNativeCommandsTags.hpp"
 #include "Editor/Operation/EditorSelection.hpp"
-#include "Editor/Undo/EditorUndo.h"                     // the step a field edit records (⑤)
+#include "Editor/Undo/EditorUndo.h"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 
 #include "Application/Services/IEngine.h"
@@ -31,8 +31,7 @@ namespace Opaax::Editor
 
     void InspectorPanel::DrawContents()
     {
-        // A local COPY of the handle: Entity is a value type, and copying it once keeps the whole draw
-        // reading one consistent selection even if a drawer were to change it.
+        // A copy of the handle, so the whole draw uses one selection.
         Entity lSelected = m_Context.Selection.Get();
         if (!lSelected.IsValid())
         {
@@ -42,10 +41,7 @@ namespace Opaax::Editor
 
         DrawNameField(lSelected);
 
-        // SAY which one is being edited when there are several. This panel draws the PRIMARY only —
-        // multi-edit is its own slice, because a TPropertyDrawer sees one T& and not N — and an
-        // unexplained "I selected three and one appeared" reads as a bug rather than as a boundary.
-        // Naming it costs a line and is the difference (L15, applied to UI).
+        // Say which entity is edited when several are selected (only the primary is shown).
         if (const Uint64 lCount = m_Context.Selection.Count(); lCount > 1)
         {
             ImGui::TextDisabled("%llu selected - editing the last picked",
@@ -54,9 +50,8 @@ namespace Opaax::Editor
 
         ImGui::Separator();
 
-        // Ask every registered drawer whether it applies, rather than asking the entity what it has —
-        // the inversion that keeps this panel ignorant of every component type (DrawerRegistry).
-        // Every applicable drawer, not just the first — an entity carries several components.
+        // Ask every registered drawer whether it applies (the panel knows no component type).
+        // Every applicable drawer, not only the first.
         bool lAnyDrawn = false;
         for (const TFunction<bool(Entity&, IEditorWidgets&, EditorContext&)>& lEntry : m_Context.Extensions.Drawers().Entries())
         {
@@ -74,16 +69,9 @@ namespace Opaax::Editor
         DrawAddComponent(lSelected);
         DrawRemoveComponent(lSelected);
 
-        // THE ONE MUTATION THE WORLD CANNOT SEE. A drawer receives a raw TComponent& (DrawerRegistry)
-        // and writes straight through it, so no World method and no entt signal observes a field
-        // edit — and the dirty check is now gated on World::GetRevision().
-        //
-        // Asked of IMGUI rather than of the drawer: a `bool Draw()` contract would let one forgetful
-        // drawer report CLEAN WHILE DIRTY, which fails silently and permanently. This over-reports
-        // instead (any active widget anywhere costs one extra capture) and can never under-report.
-        //
-        // The trailing frame matters: a Checkbox commits on RELEASE, and ImGui has already cleared
-        // ActiveId by the time this line runs on that frame.
+        // A drawer writes a component directly, which the world cannot see; the dirty check is gated on
+        // World::GetRevision(), so mark the world changed. Asked of ImGui (not the drawer), so it can
+        // only over-report. The frame after also counts: a Checkbox commits on release.
         const bool lItemActive = ImGui::IsAnyItemActive();
 
         if (lItemActive || m_bWasItemActive)
@@ -91,16 +79,10 @@ namespace Opaax::Editor
             if (World* lWorld = lSelected.GetWorld()) { lWorld->MarkChanged(); }
         }
 
-        // ⑤ — THE EDIT GESTURE'S TWO EDGES, and the whole of the property step.
-        //
-        // The RISING edge is read AFTER the drawers ran, and that is correct rather than lucky:
-        // ImGui zeroes the drag accumulator on the frame an item is activated and trickles the
-        // click and the first move into different frames, so a Drag* has not written yet; InputText
-        // has only taken focus; a Checkbox commits on release. So the values captured here are the
-        // pre-edit ones.
-        //
-        // GLOBAL is the point, not a compromise: a resource dragged from the Browser holds ActiveId
-        // over there, so the bracket opens before the drop and closes on it.
+        // The undo step's two edges. The rising edge is read after the drawers ran: on activation
+        // frame nothing is written yet, so the captured values are the pre-edit ones.
+        // Global on purpose: a resource dragged from the Browser holds ActiveId there, so the step
+        // opens before the drop and closes on it.
         if (lItemActive && !m_bWasItemActive)
         {
             m_Edit.Begin(m_Context, lSelected, EUndoWorld::Active);
@@ -109,7 +91,7 @@ namespace Opaax::Editor
         {
             if (m_Edit.End(m_Context)) { m_Context.Undo.Record(Move(m_Edit)); }
 
-            // Closed either way — a step left holding entries would fold the next edit into it.
+            // Closed either way, so the next edit is not folded into it.
             m_Edit = EntityComponentsEdit{};
         }
 
@@ -124,8 +106,7 @@ namespace Opaax::Editor
             return;
         }
 
-        // Refresh from the entity only while the field is NOT being typed into — otherwise every
-        // frame would overwrite the keystrokes with the committed value.
+        // Refresh from the entity only while not typing (it would overwrite the keystrokes).
         if (!ImGui::IsItemActive())
         {
             const OpaaxString& lName = lMeta->Name;
@@ -139,8 +120,7 @@ namespace Opaax::Editor
 
         ImGui::SetNextItemWidth(-1.f);
 
-        // Committed on Enter OR on losing focus, so clicking away keeps what was typed rather than
-        // silently discarding it — the one behaviour a name field must not get wrong.
+        // Committed on Enter or when focus is lost (clicking away keeps the typed text).
         const bool lEnter = ImGui::InputText("##EntityName", m_NameBuffer, sizeof(m_NameBuffer),
                                              ImGuiInputTextFlags_EnterReturnsTrue);
 
@@ -164,8 +144,7 @@ namespace Opaax::Editor
             ImGui::OpenPopup("RemoveComponentPopup");
         }
 
-        // QUEUED and applied after the popup closes, exactly as Add is: removing mid-draw mutates
-        // the registry this pass is reading.
+        // Queued and applied after the popup closes (removing mid-draw would change what this pass reads).
         const IComponentEntry* lChosen = nullptr;
 
         if (ImGui::BeginPopup("RemoveComponentPopup"))
@@ -174,8 +153,7 @@ namespace Opaax::Editor
 
             lTypes.ForEach([&](const IComponentEntry& InEntry)
             {
-                // Essential types are never offered — the transform is what picking, the icons and
-                // both render joins stand on. Remove refuses one anyway; this keeps the menu honest.
+                // Essential types are never offered (Remove would refuse them anyway).
                 if (InEntry.IsEssential() || !InEntry.Has(lEntities, lHandle)) { return; }
 
                 ++lOffered;
@@ -207,8 +185,7 @@ namespace Opaax::Editor
             ImGui::OpenPopup("AddComponentPopup");
         }
 
-        // The verb is QUEUED and applied after the popup closes: emplacing mid-draw would mutate the
-        // registry this very pass is reading — the shape the Hierarchy's context menu already needed.
+        // Queued and applied after the popup closes (adding mid-draw would change what this pass reads).
         const IComponentEntry* lChosen = nullptr;
 
         if (ImGui::BeginPopup("AddComponentPopup"))
@@ -223,7 +200,7 @@ namespace Opaax::Editor
                 if (ImGui::MenuItem(InEntry.GetName().CStr())) { lChosen = &InEntry; }
             });
 
-            // Distinct from "no entry matched": every type is already on this entity.
+            // Different from "no match": every type is already on this entity.
             if (lOffered == 0) { ImGui::TextDisabled("Nothing left to add."); }
 
             ImGui::EndPopup();
@@ -231,9 +208,7 @@ namespace Opaax::Editor
 
         if (lChosen != nullptr)
         {
-            // BY TAG, like every other edit: the verb (and its MarkChanged and its log) moved into
-            // EntityOps, and the dispatch is what records the step. These two popups were the last
-            // place a panel reached entt directly (**SEL6**).
+            // By tag, like every edit: the dispatch records the undo step.
             m_Context.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_ADD_COMPONENT, m_Context,
                                                     ComponentTypeParams{ lChosen->GetName() });
         }

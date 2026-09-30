@@ -17,19 +17,8 @@ namespace Opaax
 
     // =============================================================================
     // ColliderDebugSubsystem — draws every collider's outline, every frame.
-    //
-    //   IT HAS NO ShouldCreate, and that is the point: a collider must be visible while you are
-    //   AUTHORING it, which is exactly when PhysicsSubsystem does not exist (PH6). So this one
-    //   runs in Edit and Play alike and reads the COMPONENTS rather than the simulation — the
-    //   outline is where the shape is authored to be, which in Play is also where it is, because
-    //   the transform is synced back from the body each step.
-    //
-    //   VISIBILITY IS A CHANNEL, NOT A MODE. Everything it submits goes on DebugChannels::Physics,
-    //   so one toggle outside the producer silences it — including in a dev build of Game.exe,
-    //   which is the case "just do not register it in the editor" could not have served (F4b).
-    //
-    //   It draws through WorldContext::Debug, which is the ONLY way a world subsystem draws:
-    //   immediate mode, re-submitted every frame, into a frame RendererManager already owns (WS5).
+    //   Runs in Edit and Play worlds (colliders must be visible while editing) and reads the components.
+    //   Drawn on DebugChannels::Physics, which can be toggled.
     // =============================================================================
     class OPAAX_API ColliderDebugSubsystem final : public WorldSubsystemBase
     {
@@ -59,24 +48,24 @@ namespace Opaax
         // Get
         // =============================================================================
     public:
-        /** Colliders outlined on the last tick — the number the logs assert on. */
+        /** Number of colliders drawn on the last tick. */
         Uint64 GetLastDrawnCount() const noexcept { return m_LastDrawn; }
 
         // =============================================================================
         // Functions
         // =============================================================================
     private:
-        /** One collider's outline, in whichever primitive its shape calls for. */
+        /** One collider's outline. */
         void DrawCollider(const ColliderComponent& InCollider, const TransformComponent& InTransform);
 
-        /** Sensors read differently from solids at a glance — the one thing colour must encode. */
+        /** Colour: sensors and solids differ. */
         static Vector4F ColorFor(const ColliderComponent& InCollider);
 
         // =============================================================================
         // Members
         // =============================================================================
     private:
-        WorldContext* m_Context = nullptr;   // borrowed; the World owns it
+        WorldContext* m_Context = nullptr;   // owned by the World
 
         Uint64 m_LastDrawn = 0;
     };

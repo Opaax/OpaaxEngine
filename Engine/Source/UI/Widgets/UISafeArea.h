@@ -7,19 +7,9 @@
 namespace Opaax
 {
     // =============================================================================
-    // UISafeArea — a container whose rect is its own MINUS the insets (**UI20**), Unreal's SafeZone.
-    //
-    //   A CONTAINER, not a flag on every widget: anything that must stay clear of a TV's overscan,
-    //   a phone's notch or a monitor's bezel is simply a child of one, and everything else keeps
-    //   reaching the true edge. Its bounds ARE the inset rect, so children, the hit-test and the
-    //   preview cannot disagree about where the safe rect is.
-    //
-    //   THE INSETS ARE FRACTIONS of its own rect, which is what makes it adapt: 0.05 per edge is
-    //   the 5% title-safe convention, and it stays 5% on 16:9 and on 21:9 alike. An absolute inset
-    //   would shrink to nothing as the target widened — the case their "adapting to all screen even
-    //   wide" is about.
-    //
-    //   It draws nothing and is not a hit target, exactly like UIPanel.
+    // UISafeArea — a container whose rect is its own minus the insets (like Unreal's SafeZone).
+    //   Children stay clear of overscan, notches and bezels. Insets are fractions of the rect
+    //   (0.05 = 5% title-safe on any aspect). Draws nothing, not hit-testable.
     // =============================================================================
     class OPAAX_API UISafeArea final : public UIWidget
     {
@@ -27,7 +17,7 @@ namespace Opaax
         // Authored state
         // =============================================================================
     public:
-        /** Per edge, a fraction of my resolved rect. Clamped at resolve, never trusted raw. */
+        /** Per edge, a fraction of my rect. Clamped at resolve. */
         UIMargin Insets{ 0.05f, 0.05f, 0.05f, 0.05f };
 
         OPAAX_PROPERTIES(UISafeArea,
@@ -40,11 +30,7 @@ namespace Opaax
         // =============================================================================
     public:
         /**
-         * Stretched over the parent and pass-through by default.
-         *
-         * A safe area that covers less than its parent is meaningless — the thing it exists to
-         * measure IS the parent's edges — so it is the one widget that does not start as a
-         * 100x100 box.
+         * Stretched over the parent and not hit-testable by default.
          */
         UISafeArea();
 
@@ -54,7 +40,7 @@ namespace Opaax
         void LoadFields(const nlohmann::json& InJson) override;
 
     protected:
-        /** My anchored rect, inset per edge. The one override the whole widget is made of. */
+        /** My rect, inset per edge. */
         Bounds2D ResolveBounds(const Bounds2D& InParentBounds) const override;
     };
 }

@@ -8,29 +8,10 @@
 namespace Opaax
 {
     // =============================================================================
-    // PrefabResource — a `.opaaxprefab` as a RESOURCE.
-    //
-    //   MapResource's shape (**WM4**), and for its reasons: a plain struct satisfying CResource,
-    //   no base class and no registration, whose whole body is an adapter. PrefabFile owns the
-    //   format, this owns the resource contract, and going through the ResourceManager is what
-    //   buys dedup — a level placing forty instances of one prefab parses the file ONCE — plus a
-    //   lifetime no caller hand-manages.
-    //
-    //   FAIL FAST, not Placeholder, and the deciding question is ResourceConcept's own: does a
-    //   degraded substitute keep gameplay CORRECT? An empty prefab does not degrade, it LIES —
-    //   the instantiate reports success, nothing appears, and no layer says why. That is the
-    //   silent-wrong-answer class this codebase treats as its worst.
-    //
-    //   NO LoadContext::Acquire, and since P5b that is a RULE for a prefab too (**PF11**): a hard
-    //   reference is held by the MAP that mounted the entity, not by this payload — the resolver
-    //   releases the prefab resource the moment an instance is instantiated, so a chain hung off
-    //   it would not outlive the gun it was meant to serve.
-    //
-    //   THE DATA IS RAW (P7): its own entities and its placement RECORDS, as the file holds them.
-    //   Consumers never read it directly — IPrefabResolver hands back the FLATTENED prefab.
-    //
-    //   No Initialize(): nothing here touches the GPU, so the payload is complete the moment Load
-    //   returns and the pool can publish it without a main-thread pass.
+    // PrefabResource — a .opaaxprefab as a resource (loaded once, shared by every placement).
+    //   FailFast: an empty prefab would silently place nothing.
+    //   Hard references are held by the map, not here.
+    //   Holds the raw data (own entities + records); consumers use IPrefabResolver (flattened).
     // =============================================================================
     struct PrefabResource final
     {
@@ -43,29 +24,22 @@ namespace Opaax
 
         static std::optional<PrefabResource> Load(const char* InPath, LoadContext& /*InCtx*/)
         {
-            // InCtx unused for now — see the Acquire note above; P5 is where it stops being.
             PrefabResource lResource;
             if (!PrefabFile::Load(OpaaxString(InPath), lResource.Data))
             {
-                return std::nullopt;   // PrefabFile already logged which of the reasons it was
+                return std::nullopt;   // PrefabFile already logged why
             }
 
             return lResource;
         }
 
         /**
-         * Required by the concept, and never resolved to under FailFast — the pool answers null
-         * for a failed FailFast handle rather than handing this out.
+         * Required by the concept; never used with FailFast.
          */
         static PrefabResource Placeholder() { return PrefabResource{}; }
 
         /**
-         * Optional accounting hook the pool picks up with if-constexpr.
-         *
-         * STRUCTURAL SIZE ONLY, for MapResource::ByteSize's reason: it counts the entity and
-         * component records and deliberately NOT the nlohmann::json payload trees hanging off
-         * them, because measuring those would mean walking every payload on a call that exists
-         * for a memory readout.
+         * Size of the entity and component records (not the JSON payloads).
          */
         Uint64 ByteSize() const noexcept
         {

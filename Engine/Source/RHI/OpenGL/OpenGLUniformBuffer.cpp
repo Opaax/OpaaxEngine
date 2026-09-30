@@ -4,12 +4,11 @@
 
 namespace Opaax
 {
-    // NOTE: the IUniformBuffer::Create factory dispatch lives in RHI/BackendFactory.cpp.
 
     OpenGLUniformBuffer::OpenGLUniformBuffer(Uint32 InSize, Uint32 InBinding)
     {
         glCreateBuffers(1, &m_RendererID);
-        // GL_DYNAMIC_DRAW — rewritten every frame (e.g. camera view-projection).
+        // GL_DYNAMIC_DRAW: rewritten every frame.
         glNamedBufferData(m_RendererID, InSize, nullptr, GL_DYNAMIC_DRAW);
         glBindBufferBase(GL_UNIFORM_BUFFER, InBinding, m_RendererID);
     }

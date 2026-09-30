@@ -11,7 +11,7 @@
 namespace Opaax
 {
     // =============================================================================
-    // WindowsPlatform — IPlatform backed by Win32 (GetModuleFileNameW, etc.).
+    // WindowsPlatform — IPlatform using Win32.
     // =============================================================================
     class OPAAX_API WindowsPlatform final : public IPlatform
     {
@@ -31,8 +31,7 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        // The platform's OWN concrete type, by value — the accessor narrows it to const IFileSystem&,
-        // so no call site knows or cares which one it got.
+        // Concrete type, by value; exposed as const IFileSystem&.
         WindowsFileSystem m_FileSystem;
     };
 }

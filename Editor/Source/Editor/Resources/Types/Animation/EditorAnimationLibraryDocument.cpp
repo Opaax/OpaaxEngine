@@ -9,8 +9,7 @@ namespace Opaax::Editor
     {
         AnimationLibraryData lLoaded;
 
-        // Into a LOCAL first: a file that fails to parse must not half-replace the library already
-        // being edited.
+        // Loaded into a local first, so a file that fails to parse does not half-replace the open one.
         if (!AnimationLibraryFile::Load(InAbsPath, lLoaded))
         {
             return false;

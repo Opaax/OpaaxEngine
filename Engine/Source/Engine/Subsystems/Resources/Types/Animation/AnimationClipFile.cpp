@@ -22,7 +22,7 @@ namespace Opaax
             return false;
         }
 
-        // The SUCCESS branch, not just the failures ([[L15]]).
+        // Log success too.
         OPAAX_LOG(LogAnimationClipFile, Info, "Saved {} step(s) @ {} fps to '{}'",
                   InData.StepCount(), InData.Fps, InAbsPath.CStr());
         return true;
@@ -32,7 +32,7 @@ namespace Opaax
     {
         const OpaaxString lText = FileIO::ReadAllText(InAbsPath);
 
-        // FileIO answers "" for a missing file and for an empty one alike; neither is a clip.
+        // Missing or empty file: not a clip.
         if (lText.IsEmpty())
         {
             OPAAX_LOG(LogAnimationClipFile, Error, "Clip '{}' is missing, empty or unreadable", InAbsPath.CStr());
@@ -47,9 +47,8 @@ namespace Opaax
             return false;
         }
 
-        // _WITH_DEFAULT keeps a default for every absent key, so an older file simply lacks the
-        // fields it predates. A WRONG-TYPED value still throws — and so does an unknown PlayMode
-        // label, which OpaaxEnumJson refuses on purpose. OutData is untouched on the way out.
+        // Missing keys keep their defaults. Wrong-typed values (or an unknown PlayMode) throw;
+        // OutData is untouched then.
         try
         {
             OutData = lJson.get<AnimationClipData>();

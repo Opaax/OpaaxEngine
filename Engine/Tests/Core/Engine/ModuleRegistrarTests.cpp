@@ -1,8 +1,5 @@
-// Suite: the Components() module route — the seam a game module registers through (D9).
-//
-// This is the M3 gate's "including module components" half. The test exe sits in exactly the
-// position a game module does: the component types below are defined HERE, while the
-// ComponentRegistry that stores them and the entt registry they land in live in the DLL.
+// Suite: ModuleRegistrar routes — how a game module registers its types. The types below are
+// defined in the test exe, like a game module; the registries live in the DLL.
 #include <doctest.h>
 
 #include <optional>
@@ -55,8 +52,7 @@ namespace TestGame
         InJson.at("Strength").get_to(InValue.Strength);
     }
 
-    // A module's world subsystem (M4): defined out here like a game type, constructed from the
-    // WorldContext, and never OPAAX_API — the S1 probe proved that resolves fine.
+    // A module world subsystem: defined here like a game type, built from the WorldContext.
     class PatrolSubsystem : public Opaax::WorldSubsystemBase
     {
     public:
@@ -81,9 +77,7 @@ namespace TestGame
     };
 }
 
-// GLOBAL NAMESPACE on purpose — the shape an editor module uses (M4 S5), and the one that exposed
-// the elaborated-name bug: with no "::" to strip, MSVC's "class"/"struct" keyword used to survive
-// into the registry key. Outside the anonymous namespace so the derived name is the real one.
+// Global namespace on purpose (like an editor module): MSVC's "class " prefix must be stripped.
 struct GlobalScopeComponent
 {
     int Value = 0;
@@ -141,7 +135,7 @@ TEST_CASE("ComponentRoute: a bound route forwards into the registry")
 }
 
 // =============================================================================
-// The derived name — MR1's call site survives because the name is optional
+// The derived name
 // =============================================================================
 TEST_CASE("ComponentRoute: an omitted name derives the type's LEAF name")
 {
@@ -164,10 +158,8 @@ TEST_CASE("ComponentRoute: a GLOBAL-namespace type derives a bare name, with no 
     ModuleRegistrar  lRegistrar;
     lRegistrar.BindEngineRegistries(lRegistries);
 
-    // The case that was broken until M4 S5. MSVC's type_name is elaborated ("class Foo"), and for a
-    // NAMESPACED type the "::" strip removed that keyword by accident — so nothing noticed until an
-    // editor-module subsystem, which lives in the global namespace, registered as
-    // "class QuadBoundsSubsystem". A component would have written that straight into a map file.
+    // MSVC's type_name is "class Foo"; for a namespaced type the "::" strip hid it, so only a
+    // global-namespace type shows whether "class " is stripped.
     REQUIRE(lRegistrar.Components().Register<GlobalScopeComponent>());
 
     CHECK(lRegistries.Components().FindByName(OpaaxStringID("GlobalScopeComponent")) != nullptr);
@@ -220,8 +212,6 @@ TEST_CASE("ComponentRoute: Count records refusals too")
 
 TEST_CASE("WorldSubsystemRoute: an unbound route refuses rather than dropping silently")
 {
-    // The M0 skeleton counted `Register<int>()`; the real route cannot accept an int at all, so
-    // this call site had to change with the registry (L16 — registry and consumer are one step).
     ModuleRegistrar lRegistrar; // deliberately NOT bound
 
     CHECK_FALSE(lRegistrar.WorldSubsystems().Register<TestGame::PatrolSubsystem>());
@@ -240,7 +230,7 @@ TEST_CASE("WorldSubsystemRoute: a bound route forwards into the engine registry"
 
     CHECK(lRegistries.WorldSubsystems().Count() == 1u);
 
-    // The name is derived from the type when omitted, exactly like Components() (MR1).
+    // The name is derived from the type when omitted, like Components().
     CHECK(lRegistries.WorldSubsystems().FindByName(OpaaxStringID(OpaaxString("PatrolSubsystem"))) != nullptr);
 }
 

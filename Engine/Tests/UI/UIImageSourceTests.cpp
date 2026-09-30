@@ -1,9 +1,6 @@
-// Suite: image sources (UI/UIImageSource.h) — UI25.
-//
-// One resolve serves UIImage and UIButton: a runtime pointer, then a sheet FRAME, then a texture.
-// What is gated: the precedence; a frame's UVs reaching the quad (and, sliced, every quad landing
-// inside the frame); "named but not ready" re-arming and "nothing named" not; and the new fields
-// surviving the file. The pixels are theirs — a stub answers what the renderer's caches would.
+// Suite: image sources (UI/UIImageSource.h), used by UIImage and UIButton: runtime pointer, then
+// sheet frame, then texture. Frame UVs, "named but not ready" retrying, and saving. A stub provider
+// stands in for the renderer's caches.
 #include <doctest.h>
 
 #include "RHI/Texture.h"

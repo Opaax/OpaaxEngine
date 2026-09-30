@@ -7,12 +7,7 @@ namespace Opaax
     class IRenderTarget;
 
     /**
-     * @class OpenGLCommandBuffer
-     *
-     * OpenGL ICommandBuffer. GL is immediate-mode, so every method executes its GL calls right
-     * away (there is no record/submit step — OpenGLRHIDevice reuses one instance per frame).
-     * BeginRenderPass binds the target's framebuffer + sets the viewport + optionally clears;
-     * the bind + DrawIndexed calls translate straight to GL state-set + glDrawElements.
+     * OpenGL ICommandBuffer. Every call runs immediately (no record/submit).
      */
     class OPAAX_API OpenGLCommandBuffer final : public ICommandBuffer
     {
@@ -44,6 +39,6 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        IRenderTarget* m_CurrentTarget = nullptr;   // bound between BeginRenderPass/EndRenderPass
+        IRenderTarget* m_CurrentTarget = nullptr;   // set between BeginRenderPass and EndRenderPass
     };
 }

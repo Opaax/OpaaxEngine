@@ -7,12 +7,10 @@
 
 namespace Opaax
 {
-    // NOTE: the IShader::Create factory dispatch lives in RHI/BackendFactory.cpp.
 
     OpenGLShader::OpenGLShader(const ShaderDesc& InDesc)
     {
-        // Prefer SPIR-V (portable, Vulkan-ready). Fall back to GLSL source when no SPIR-V was
-        // produced (glslang absent at build time) — keeps the OpenGL backend self-sufficient.
+        // Prefer SPIR-V; fall back to GLSL source when there is none (built without glslang).
         if (!InDesc.VertexSpirv.empty() && !InDesc.FragmentSpirv.empty())
         {
             CreateFromSpirv(InDesc.VertexSpirv, InDesc.FragmentSpirv);
@@ -49,8 +47,7 @@ namespace Opaax
     
     namespace
     {
-        // Confirm the driver can ingest SPIR-V binaries. Core in GL 4.6 — checked once,
-        // fail-loud if a stripped-down context somehow lacks the format.
+        // Check that the driver accepts SPIR-V (core in GL 4.6).
         bool SpirvBinaryFormatSupported()
         {
             GLint lNumFormats = 0;
@@ -66,7 +63,7 @@ namespace Opaax
             return false;
         }
 
-        // Load + specialize one SPIR-V stage. Returns the shader object, or 0 on failure (logged).
+        // Loads and specializes one SPIR-V stage. Returns the shader object, or 0 on failure (logged).
         GLuint MakeSpirvStage(GLenum InStage, const TDynArray<Uint32>& InSpirv)
         {
             const GLuint lShader = glCreateShader(InStage);
@@ -74,7 +71,7 @@ namespace Opaax
                            InSpirv.data(),
                            static_cast<GLsizei>(InSpirv.size() * sizeof(Uint32)));
 
-            // Specialize at entry point "main" — turns SPIR-V into an executable stage.
+            // Specialize at entry point "main".
             glSpecializeShader(lShader, "main", 0, nullptr, nullptr);
 
             GLint lSuccess = 0;
@@ -136,8 +133,7 @@ namespace Opaax
 
     void OpenGLShader::CompileAndLink(const char* InVertexSrc, const char* InFragmentSrc)
     {
-        // GLSL fallback (no SPIR-V available). The Sprite.glsl rewrite is valid desktop GLSL
-        // (UBO + explicit bindings/locations under #version 450 core), so this renders the same.
+        // GLSL fallback (no SPIR-V). Sprite.glsl is valid desktop GLSL (#version 450 core).
         const GLuint lVertexShader = glCreateShader(GL_VERTEX_SHADER);
         glShaderSource(lVertexShader, 1, &InVertexSrc, nullptr);
         glCompileShader(lVertexShader);

@@ -11,15 +11,10 @@ namespace Opaax::Editor
     struct EditorContext;
 
     // =============================================================================
-    // IEditorUndoable — the type-erased undo step.
-    //
-    //   Three virtuals, because a step is three questions: put it back, put it forward, what is it
-    //   called. EditorContext is only FORWARD-DECLARED here — Model<T>'s bodies are instantiated at
-    //   the Record<T>() call site, where the context is complete — which is what keeps the stack
-    //   free of every header the steps themselves need.
-    //
-    //   REDO IS NEVER A SECOND EXECUTE. A step re-asserts what it recorded; re-running the verb
-    //   would mint a fresh Guid (create) or re-open a dialog (save-as).
+    // IEditorUndoable — the type-erased undo step: Undo, Redo, Label.
+    //   EditorContext is only forward-declared; Model<T> is instantiated where Record<T>() is called.
+    //   Redo restores what was recorded; it never re-runs the action (that would make a new guid, or
+    //   reopen a dialog).
     // =============================================================================
     class IEditorUndoable
     {

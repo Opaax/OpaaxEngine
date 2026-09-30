@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Editor/Imgui/ImGuiEditorWidgets.h"   // held by value — needs the complete type
-#include "Editor/Imgui/ImGuiTitleBar.h"        // likewise
+#include "Editor/Imgui/ImGuiEditorWidgets.h"   // held by value (needs the complete type)
+#include "Editor/Imgui/ImGuiTitleBar.h"        // same
 #include "Editor/UI/IEditorGui.h"
-#include "Editor/UI/IEditorUIBackend.h"   // owned through a TUniquePtr — needs the complete type
+#include "Editor/UI/IEditorUIBackend.h"   // owned by TUniquePtr (needs the complete type)
 #include "Core/OpaaxTypes.h"              // TUniquePtr
 
 namespace Opaax {
@@ -13,9 +13,8 @@ namespace Opaax {
 namespace Opaax::Editor
 {
     // =============================================================================
-    // ImGuiEditorGui — the ImGui implementation of IEditorGui: the context, the impl backends, the
-    //   frame, the dockspace and the UI pass. The one place in the editor that names ImGui for host
-    //   chrome; a panel's contents are its own (MR2c).
+    // ImGuiEditorGui — the ImGui implementation of IEditorGui: the context, the backends, the frame,
+    //   the dockspace and the UI pass.
     // =============================================================================
     class ImGuiEditorGui final : public IEditorGui
     {
@@ -30,8 +29,7 @@ namespace Opaax::Editor
         // Copy - Move Delete
         // =============================================================================
 
-        // Owns the UI backend through a TUniquePtr (I6's corollary: an owner of a move-only member
-        // must say so, or the implicit copy is instantiated anyway).
+        // Owns the UI backend through a TUniquePtr (non-copyable).
         ImGuiEditorGui(const ImGuiEditorGui&)            = delete;
         ImGuiEditorGui& operator=(const ImGuiEditorGui&) = delete;
         
@@ -83,21 +81,17 @@ namespace Opaax::Editor
     private:
         TUniquePtr<IEditorUIBackend> m_Backend;
 
-        // The menu tree and the panel set are m_Menu/m_Panels on IEditorGui — bound by EditorService,
-        // not looked up per frame.
+        // The title bar and the panels are m_TitleBar/m_Panels on IEditorGui, bound by EditorService.
 
-        // The editor's own caption. Composed into the host window's menu bar by Draw; it holds the
-        // live border-drag state, which is why it is an object rather than a free function.
-        // The ImGui SIDE of the caption. Named apart from the base's m_TitleBar
-        // (EditorTitleBar, the backend-agnostic one) so neither shadows the other.
+        // The ImGui side of the caption (holds the border-drag state). Named apart from the base's
+        // m_TitleBar so neither hides the other.
         ImGuiTitleBar                m_ImGuiTitleBar;
 
-        // Stateless; held by value because the gui is what a caller reaches it through.
+        // Stateless; held by value.
         ImGuiEditorWidgets           m_Widgets;
 
-        // ImGui stores io.IniFilename as a BORROWED const char* — it never copies the string — so
-        // this must stay alive, and unmodified, until DestroyContext() (which saves through that
-        // very pointer). Assigned once in Init(); never cleared in Shutdown().
+        // ImGui keeps io.IniFilename as a borrowed pointer, so this must stay alive and unchanged until
+        // DestroyContext() (which saves through it). Set once in Init(); never cleared.
         OpaaxString                  m_LayoutIniPath;
     };
 }

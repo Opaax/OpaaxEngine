@@ -12,14 +12,12 @@ namespace Opaax
             if (lClaim->Path == InAssetPath) { return *lClaim; }
         }
 
-        // A FAILED load is claimed too, as an empty ref — otherwise a map with forty placements
-        // of a deleted prefab would retry the file forty times and log forty errors.
+        // A failed load is kept too (empty), so it is not retried for every placement.
         TUniquePtr<Claim> lClaim = MakeUnique<Claim>();
         lClaim->Path = InAssetPath;
         lClaim->Ref  = m_Resources.Load<PrefabResource>(m_Paths.AssetToAbsolute(InAssetPath).CStr());
 
-        // Held by POINTER across the flatten: it recurses into Resolve for nested paths, which
-        // grow the list, and the claim itself stays put on the heap.
+        // Kept by pointer: flattening recurses into Resolve, which grows the list.
         Claim* const lNew = lClaim.get();
         m_Claims.emplace_back(Move(lClaim));
 
@@ -42,8 +40,7 @@ namespace Opaax
 
         if (lClaim.bInFlight)
         {
-            // Reached from inside its own flatten: A places B places A. Loud, and the placement
-            // that closes the loop expands to nothing — the rest of both prefabs survives.
+            // A cycle (A places B places A): error, and this placement expands to nothing.
             OPAAX_LOG(LogPrefabFold, Error,
                       "Prefab '{}' places itself, directly or through another prefab — that placement "
                       "is refused", InAssetPath.CStr());
@@ -57,7 +54,7 @@ namespace Opaax
     {
         if (InOuter.IsEmpty() || InInner.IsEmpty()) { return false; }
 
-        // Over the RAW records, depth-first, with a visited list so a cycle terminates.
+        // Depth-first over the raw records, with a visited list so a cycle ends.
         TDynArray<OpaaxString> lVisited;
         TDynArray<OpaaxString> lPending;
         lPending.emplace_back(InOuter);

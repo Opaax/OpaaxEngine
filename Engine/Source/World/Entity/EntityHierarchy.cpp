@@ -124,8 +124,7 @@ namespace Opaax
 
         lMeta.Parent = lParentMeta.Id;
 
-        // A child lives in its parent's map. Only a mapped parent pulls; only mapped descendants
-        // follow — a runtime-spawned entity stays runtime (WM2).
+        // A child belongs to its parent's map. Runtime-spawned entities stay runtime.
         const MapId lTargetMap = lParentMeta.OwnerMap;
         if (lTargetMap.IsValid() && lMeta.OwnerMap != lTargetMap)
         {
@@ -149,8 +148,7 @@ namespace Opaax
     void EntityHierarchy::CollectSubtree(World& InWorld, const TDynArray<EntityID>& InRoots,
                                          TDynArray<EntityID>& OutIds)
     {
-        // Breadth-first over OutIds itself, so parents land before their children and a root that
-        // is also another root's descendant is taken once.
+        // Breadth-first: parents come before children, each entity once.
         for (const EntityID lRoot : InRoots)
         {
             if (InWorld.IsValid(lRoot) && !Contains(OutIds, lRoot)) { OutIds.emplace_back(lRoot); }

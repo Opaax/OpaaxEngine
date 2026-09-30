@@ -31,8 +31,7 @@ namespace Opaax::Editor
         const bool bEnabled = !m_IsEnabled || m_IsEnabled(InContext);
         const bool bChecked = m_IsChecked && m_IsChecked(InContext);
 
-        // Held in a local for the length of the call: MenuItem takes a borrowed pointer, and an
-        // id's CStr() is pool-immortal (I2) while a computed one is not.
+        // Kept in a local for the call: MenuItem borrows the pointer, and a computed label is temporary.
         const OpaaxString lComputed = m_Label ? m_Label(InContext) : OpaaxString();
 
         if (!InContext.Gui.MenuItem(m_Label ? lComputed.CStr() : GetLabel(), bChecked, bEnabled))
@@ -40,9 +39,7 @@ namespace Opaax::Editor
             return;
         }
 
-        // EVERY entry announces itself, from the one place they are all invoked — a command added
-        // later cannot forget to. The path is what a reader recognises, the tag what the registry
-        // was asked for, so a miss says which of the two was wrong.
+        // Every entry is logged here, with its path and its tag.
         OPAAX_LOG(LogEditorMenu, Info, "Menu: '{}' -> {}", GetPath().CStr(), m_Command);
 
         const EditorCommandRegistry& lCommands = InContext.Extensions.Commands();

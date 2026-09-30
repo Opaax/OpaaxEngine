@@ -9,10 +9,8 @@
 namespace Opaax
 {
     // =============================================================================
-    // Entity — a lightweight handle to one entity in a World: an (EntityID, World*)
-    //   pair, copyable and cheap. Every operation routes through the owning World's
-    //   registry, so raw entt never escapes the World layer. A default / null-handle
-    //   Entity is "invalid".
+    // Entity — a light handle to an entity in a World (EntityID + World*). Cheap to copy.
+    //   A default Entity is invalid.
     // =============================================================================
     class Entity
     {
@@ -27,10 +25,8 @@ namespace Opaax
         // Components
     public:
         /**
-         * @tparam T 
-         * @tparam Args 
-         * @param InArgs 
-         * @return The Component add to this entity
+         * Adds a component T.
+         * @return The added component
          */
         template<typename T, typename... Args>
         T& Add(Args&&... InArgs)
@@ -39,10 +35,8 @@ namespace Opaax
         }
 
         /**
-         * @tparam T 
-         * @tparam Args 
-         * @param InArgs 
-         * @return The new Component add or replaced
+         * Adds or replaces a component T.
+         * @return The component
          */
         template<typename T, typename... Args>
         T& AddOrReplace(Args&&... InArgs)
@@ -51,28 +45,25 @@ namespace Opaax
         }
 
         /**
-         * @tparam T 
-         * @return A ref of the component type T
+         * @return The component T (must exist)
          */
         template<typename T> 
         T& Get() { return m_World->GetRegistry().get<T>(m_Handle); }
         
         /**
-         * @tparam T 
-         * @return A Ptr of the component type T
+         * @return The component T, or nullptr
          */
         template<typename T> 
         T* TryGet() { return m_World->GetRegistry().try_get<T>(m_Handle); }
         
         /**
-         * @tparam T Component Type
-         * @return True if has the component of type T
+         * @return True if the entity has a component T
          */
         template<typename T> 
         bool Has() const  { return m_World->GetRegistry().all_of<T>(m_Handle); }
         
         /**
-         * @tparam T The component type to remove
+         * Removes the component T.
          */
         template<typename T> 
         void Remove() { m_World->GetRegistry().remove<T>(m_Handle); }

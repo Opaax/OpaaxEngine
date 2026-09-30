@@ -69,7 +69,7 @@ TEST_CASE("CameraView: a zero dimension yields identity rather than a divide")
 
 TEST_CASE("CameraView: the halves multiply back to the whole")
 {
-    // ③ split MakeView/MakeProjection out for ImGuizmo, which takes them separately. The split is
+    // We split MakeView/MakeProjection out for ImGuizmo, which takes them separately. The split is
     // only safe while the product still IS MakeViewProjection — a camera off the origin at a
     // non-square aspect is where a swapped multiplication order or a dropped translation shows up.
     const CameraView lView{ { 137.f, -64.f }, 250.f };

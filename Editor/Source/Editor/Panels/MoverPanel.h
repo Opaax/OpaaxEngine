@@ -4,7 +4,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Editor/Panels/IEditorPanel.h"
 
-#include "Engine/Subsystems/Resources/Types/Mover/MoverData.h"   // the gesture caches an entry
+#include "Engine/Subsystems/Resources/Types/Mover/MoverData.h"
 
 namespace Opaax
 {
@@ -16,15 +16,8 @@ namespace Opaax::Editor
     struct EditorContext;
 
     // =============================================================================
-    // MoverPanel — the mover EDITOR: a name, a tuning, one row each.
-    //
-    //   AnimationLibraryPanel's shape exactly, because a mover IS a library: an ALIAS TABLE, so
-    //   there is nothing to draw but rows. No canvas, no preview — the tuning has its own panel.
-    //
-    //   An entry is CReflected, so DrawProperties gives the name field AND the typed drop target
-    //   with no drawer written here. What it cannot give is judgement about the REST of the mover —
-    //   a duplicate name makes one mode unreachable — so the gesture closes through
-    //   MoverOps::CommitEntryEdit, which is where that policy lives.
+    // MoverPanel — the mover editor: one row per (name, tuning), like AnimationLibraryPanel.
+    //   Entries are reflected; duplicate names are checked by MoverOps::CommitEntryEdit.
     // =============================================================================
     class MoverPanel final : public IEditorPanel
     {
@@ -51,13 +44,13 @@ namespace Opaax::Editor
         // Functions
         // =============================================================================
     private:
-        /** Name, dirty marker, Save, and the default-mode picker. */
+        /** Name, dirty marker, Save, and the default mode picker. */
         void DrawHeader(const MoverData& InData);
 
-        /** One selectable row per entry, and the buttons that add, remove and reorder them. */
+        /** One row per entry, with add, remove and reorder buttons. */
         void DrawEntryList(const MoverData& InData);
 
-        /** The selected entry's two fields, bracketed for undo and committed through MoverOps. */
+        /** The selected entry's two fields, with undo, committed through MoverOps. */
         void DrawSelectedEntry(MoverData& InData);
 
         // =============================================================================
@@ -65,15 +58,15 @@ namespace Opaax::Editor
         // =============================================================================
     public:
         //~Begin IEditorPanel interface
-        /** Nothing to acquire — a mover holds paths, and this panel resolves none of them. */
+        /** Nothing to acquire. */
         void Startup()     override {}
 
-        /** Nothing the world's render depends on. */
+        /** Nothing the world render depends on. */
         void OnPreRender() override {}
 
         void DrawContents() override;
 
-        /** Nothing claimed, so nothing to release. */
+        /** Nothing to release. */
         void Shutdown()    override {}
 
         PanelWindowStyle GetWindowStyle() const override { return { { 420.f, 340.f } }; }
@@ -85,11 +78,11 @@ namespace Opaax::Editor
     private:
         EditorContext& m_Context;
 
-        /** Which entry the list highlights. -1 = none. Presentation, not document state. */
+        /** Highlighted entry. -1 = none. */
         Int32 m_Selected = -1;
 
         // =============================================================================
-        // The open edit gesture — the entry as it was when the first field went active
+        // The open edit gesture: the data as it was when the first field became active
         // =============================================================================
         MoverEntry m_GestureBefore;
         Uint32     m_GestureIndex   = 0;

@@ -7,12 +7,8 @@
 namespace Opaax
 {
     // =============================================================================
-    // Window event payloads (POD) + Tier-1 dispatched wrappers
-    //
-    // Convention: the bare-noun struct (WindowResize) is the POD payload — the
-    // Tier-2 delegate / Tier-3 bus currency, trivially copyable. The <Name>Event
-    // class wraps it for Tier-1 dispatch (adds identity + bHandled). One shape,
-    // defined once; GetPayload() hands the POD back for republish on the bus.
+    // Window events: a plain struct payload (WindowResize) and an Event wrapper (WindowResizeEvent).
+    // GetPayload() returns the struct, e.g. to publish it on the EventBus.
     // =============================================================================
 
     // -----------------------------------------------------------------------------

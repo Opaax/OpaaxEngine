@@ -1,12 +1,5 @@
-// Suite: the M5 TEXT layer — MapData <-> json, plus the Guid string form it rests on.
-//
-// The rule this suite exists to defend is WM2: an OpaaxStringID is an intern-table INDEX, so a
-// map that wrote one as a number would mean something different on the next run. Every interned
-// value must survive as its STRING, and the invalid id must survive as INVALID — not as the
-// literal "None" that OpaaxStringID::ToString() answers for it.
-//
-// No file IO here (that is MapFileTests) and no World (that is MapSnapshotTests): this is the
-// transformation alone.
+// Suite: MapData <-> JSON, and the Guid text form. Interned ids are table indices, so they must be
+// written as strings; an invalid id must stay invalid (not "None"). No file IO, no World.
 #include <doctest.h>
 
 #include "Core/GUID/Guid.h"
@@ -166,7 +159,7 @@ TEST_CASE("MapJson: round trip preserves guid, name, ownerMap and every componen
     CHECK(lParsedCrate->Name == OpaaxString("Crate"));
 }
 
-TEST_CASE("MapJson: an interned id is written as its STRING, never as its index (WM2)")
+TEST_CASE("MapJson: an interned id is written as its STRING, never as its index")
 {
     MapData lData;
     EntityData lEntity = MakeEntity(Guid::New(), "Tagged", MapId("Level01"));
@@ -196,7 +189,7 @@ TEST_CASE("OpaaxStringID: the reserved \"None\" text IS the invalid id")
 
 TEST_CASE("MapJson: an invalid OwnerMap is written as \"\", not as \"None\"")
 {
-    // WM2's default (invalid OwnerMap) means RUNTIME-SPAWNED. ToString() answers "None" for an
+    // An invalid OwnerMap means RUNTIME-SPAWNED. ToString() answers "None" for an
     // invalid id, and writing that unguarded would still round-trip correctly — see the test
     // above — but the file would claim a bullet belongs to a map called "None". A map file is
     // read by humans and diffed in git, so "" is the encoding that does not lie.
@@ -334,7 +327,7 @@ TEST_CASE("MapJson: a wrongly-typed field is tolerated rather than fatal")
 
 TEST_CASE("MapJson: an entity with no usable guid is SKIPPED, never given a fresh identity")
 {
-    // Minting one would silently retarget every reference that pointed at this entity (WM3).
+    // Minting one would silently retarget every reference that pointed at this entity.
     const Guid lGood = Guid::New();
 
     const nlohmann::json lJson{

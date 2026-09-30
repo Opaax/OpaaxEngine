@@ -13,8 +13,7 @@ namespace Opaax
 
         const OpaaxString lLower = InExtension.ToString().ToLower();
 
-        // A registrant may write "wave" or ".wave"; a scanner always produces the dotted form, so the
-        // dot is added here rather than trusted from either side.
+        // Accept "wave" or ".wave"; always store the dotted form.
         return OpaaxStringID(lLower[0] == '.' ? lLower : (OpaaxString(".") + lLower));
     }
 }

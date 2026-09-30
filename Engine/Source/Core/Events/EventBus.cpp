@@ -52,8 +52,7 @@ namespace Opaax
         const auto lIt = m_Handlers.find(InTypeKey);
         if (lIt == m_Handlers.end()) { return; }
 
-        // Snapshot the bucket — a handler may (un)subscribe or publish during dispatch,
-        // mutating m_Handlers under our feet. Iterating a copy keeps delivery stable.
+        // Iterate a copy: handlers may subscribe, unsubscribe or publish.
         const TDynArray<HandlerEntry> lSnapshot = lIt->second;
         for (const HandlerEntry& lEntry : lSnapshot)
         {
@@ -68,8 +67,7 @@ namespace Opaax
 
     void EventBus::Flush()
     {
-        // Swap first: events enqueued DURING dispatch go into the now-empty m_Queue and
-        // are delivered next frame — makes an infinite publish loop impossible.
+        // Swap first: events enqueued during dispatch are delivered next frame.
         TDynArray<TFunction<void()>> lDraining;
         lDraining.swap(m_Queue);
 

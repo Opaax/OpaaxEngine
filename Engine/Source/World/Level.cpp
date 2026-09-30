@@ -1,11 +1,11 @@
 #include "World/Level.h"
 
-#include <cstddef>   // std::ptrdiff_t — vector::erase takes a signed offset
+#include <cstddef>   // std::ptrdiff_t
 
 #include "Application/Services/IPaths.h"
-#include "Engine/Subsystems/Resources/ResourceManager.h"   // before the resources — completes LoadContext
-#include "Engine/Subsystems/Resources/ResourceFormatRegistry.h"   // P5b — a hard field's id -> a typed load
-#include "Engine/Subsystems/Resources/ResourceHold.hpp"           // P5b — completes IResourceHold for MountedMap's dtor
+#include "Engine/Subsystems/Resources/ResourceManager.h"   // before the resources (completes LoadContext)
+#include "Engine/Subsystems/Resources/ResourceFormatRegistry.h"
+#include "Engine/Subsystems/Resources/ResourceHold.hpp"           // completes IResourceHold
 #include "World/Components/ComponentRegistry.h"
 #include "World/Entity/EntityMeta.h"
 #include "World/Serialization/HardReferences.h"
@@ -38,16 +38,11 @@ namespace Opaax
 
     void Level::AdoptMountedFrom(const Level& InSource)
     {
-        // NOT a mount. The entities this describes are already in the world — they came from the
-        // snapshot MapSerializer::Capture took (WM6). Mounting them again would re-read every map
-        // and CreateEntityWithGuid would refuse every entity as a live duplicate (WM3), leaving a
-        // wall of warnings and a clone identical to the one this line already produced.
+        // Do not mount: the clone's entities are already in the world (copied from the snapshot).
+        // Mounting again would duplicate every entity.
         m_Data = InSource.m_Data;
 
-        // The ids and paths, NOT the hard-reference holds (P5b): those stay with the source, and a
-        // clone borrows them by living inside the source's lifetime — a PIE clone never outlives
-        // the edit world it was taken from. A second claim per clone would be correct and
-        // pointless; a clone that outlived its source would be a new rule, not a missing line.
+        // Copy ids and paths, not the resource holds: a clone never outlives its source.
         m_Mounted.clear();
         for (const MountedMap& lMap : InSource.m_Mounted)
         {
@@ -81,9 +76,7 @@ namespace Opaax
 
     bool Level::MountOne(const OpaaxString& InAssetRelPath, MountResult& OutResult)
     {
-        // Checked by PATH as well as by id: path catches the same file twice, id catches two files
-        // claiming one map. Both are needed — the id no longer goes invalid for an empty map
-        // (**MP10**), but two different paths can still name one map.
+        // Check by path (same file twice) and by id (two files with the same map id).
         if (IsMountedPath(InAssetRelPath))
         {
             OPAAX_LOG(LogLevel, Warn, "Map '{}' is already mounted — skipped", InAssetRelPath.CStr());
@@ -93,17 +86,14 @@ namespace Opaax
 
         const OpaaxString lAbsPath = m_Paths.AssetToAbsolute(InAssetRelPath);
 
-        // Through the ResourceManager, not MapFile::Load (WM4): it gives MapResource a real caller
-        // on every boot rather than only in its own test, and two worlds opening the same map then
-        // parse it once. The Ref is scoped to this call — once the entities exist the parsed
-        // MapData has no further consumer, and holding it would be a refcount with no purpose.
+        // Load through the ResourceManager (shared between worlds). The ref is only needed until
+        // the entities exist.
         const ResourceRef<MapResource> lRef = m_Resources.Load<MapResource>(lAbsPath.CStr());
         const MapResource* const       lMap = lRef.Get();
 
         if (lMap == nullptr)
         {
-            // FailFast: a missing map resolves to null rather than to an empty placeholder, which
-            // is the whole reason the policy is what it is.
+            // FailFast: a missing map gives null.
             OPAAX_LOG(LogLevel, Error, "Map '{}' failed to load — not mounted", InAssetRelPath.CStr());
             ++OutResult.MapsFailed;
             return false;
@@ -123,15 +113,10 @@ namespace Opaax
 
         MountedMap lMounted{ lMapId, InAssetRelPath };
 
-        // ⑦-C P5b. What the map's own entities must have resident, held by the record.
+        // The resources the map's entities need loaded up front.
         HoldHardReferences(lMap->Data, lMounted);
 
-        // ⑦-C P3. The map's PLACEMENTS, rebuilt from their prefabs and their overrides.
-        //
-        // Only the RECORDS are copied — they are a path, a guid and a patch — so this does not
-        // duplicate the map's entities to reach a mutable MapData. Instantiate is additive
-        // (**MapFactory**), which is what lets the placements go in as a second pass rather than
-        // forcing the whole map through one mutable copy.
+        // The map's prefab placements, rebuilt from their prefabs and overrides (second pass).
         if (!lMap->Data.Instances.empty())
         {
             MapData lPlacements;
@@ -146,7 +131,7 @@ namespace Opaax
             OPAAX_LOG(LogLevel, Info, "Map '{}' expanded {} of {} prefab placement(s)",
                       InAssetRelPath.CStr(), lExpanded, lMap->Data.InstanceCount());
 
-            // The placements' entities too — an instance's gun names a bullet like any other.
+            // Prefab placements have hard references too.
             HoldHardReferences(lPlacements, lMounted);
         }
 
@@ -155,11 +140,8 @@ namespace Opaax
     }
 
     // =============================================================================
-    // HoldHardReferences — the honouring of THardResourcePath (⑦-C P5b, **PF11**).
-    //
-    // What to hold is a pure question over the data (HardReferences::Collect); turning each id
-    // back into a typed load is the format registry's one erased call. The holds go on the
-    // record, so the map's own lifetime is the reference's — no release code anywhere.
+    // HoldHardReferences — loads every THardResourcePath the entities use, and keeps the holds on
+    //   the map's record so they are released with the map.
     // =============================================================================
     void Level::HoldHardReferences(const MapData& InData, MountedMap& OutMounted)
     {
@@ -187,8 +169,7 @@ namespace Opaax
 
             if (lHold == nullptr || !lHold->IsLoaded())
             {
-                // A FailFast type answers a null ref; the field is still hard, and a gun whose
-                // bullet did not load is a defect worth a line at boot rather than at the first shot.
+                // A FailFast type gives null: report it now rather than at first use.
                 OPAAX_LOG(LogLevel, Warn, "Map '{}' — hard reference '{}' ({}) did not load",
                           OutMounted.AssetRelPath.CStr(), lRef.Path.CStr(), lEntry->Name);
                 continue;
@@ -198,7 +179,7 @@ namespace Opaax
             ++lHeld;
         }
 
-        // The success branch, logged (L15): held and resident, with the count that says so.
+        // Log success, with the count.
         OPAAX_LOG(LogLevel, Info, "Map '{}' holds {} of {} hard reference(s)",
                   OutMounted.AssetRelPath.CStr(), lHeld, static_cast<Uint64>(lRefs.size()));
     }
@@ -207,8 +188,7 @@ namespace Opaax
     {
         MountResult lResult;
 
-        // PERSISTENT FIRST (WM1a). Mount order is the LEVEL's, not the manifest array's: every
-        // other map composes on top of the persistent one, so it has to already be there.
+        // Persistent map first: the other maps are added on top of it.
         if (!m_Data.IsEmpty())
         {
             MountOne(m_Data.PersistentMap(), lResult);
@@ -221,8 +201,7 @@ namespace Opaax
             }
         }
 
-        // The SUCCESS branch says what actually arrived, not merely that nothing failed — an empty
-        // world and a loaded one look identical in a log that only reports errors ([[L15]]).
+        // Log what was loaded (an empty world and a loaded one look the same otherwise).
         OPAAX_LOG(LogLevel, Info, "Level '{}' -> world '{}': {} map(s), {} entity(ies){}",
                   m_Data.Name.CStr(), m_World.GetName().CStr(),
                   lResult.MapsMounted, lResult.EntitiesCreated,
@@ -263,16 +242,14 @@ namespace Opaax
             return false;
         }
 
-        // COLLECT, then destroy. A map is a PARTITION of the world's one registry (WM2), so this
-        // is a filter and never a store to tear down — but destroying entities while iterating an
-        // entt view is not safe, so the handles are gathered first.
+        // Collect first, then destroy: destroying while iterating an entt view is unsafe.
         TDynArray<EntityID> lDoomed;
         m_World.Each<EntityMeta>([&lDoomed, InMapId](EntityID InId, const EntityMeta& InMeta)
         {
             if (InMeta.OwnerMap == InMapId) { lDoomed.emplace_back(InId); }
         });
 
-        // IsValid per handle: a destroyed parent already took its children with it (§HR).
+        // Check each: destroying a parent also destroyed its children.
         for (const EntityID lId : lDoomed)
         {
             if (m_World.IsValid(lId)) { m_World.DestroyEntity(lId); }
@@ -298,8 +275,7 @@ namespace Opaax
             return false;
         }
 
-        // Mounted BEFORE the manifest grows: a map that cannot be read must not be written into
-        // the level's data, or the next Save would persist an entry that never worked.
+        // Mount first: a map that cannot be read must not be added to the level.
         if (!Mount(InAssetRelPath))
         {
             return false;
@@ -311,9 +287,8 @@ namespace Opaax
 
     bool Level::RemoveMap(MapId InMapId)
     {
-        // The PERSISTENT map is refused. Removing it would silently re-point persistence at
-        // whatever ended up first in the list — a bigger decision than "remove this map", and one
-        // the author never made. SetPersistentMap first, then remove.
+        // Refuse the persistent map (removing it would silently change which map is persistent).
+        // Make another map persistent first.
         if (InMapId == GetPersistentMapId() && InMapId.IsValid())
         {
             OPAAX_LOG(LogLevel, Warn,
@@ -322,8 +297,7 @@ namespace Opaax
             return false;
         }
 
-        // The manifest entry is found through the MOUNT record: the level knows a map by its id
-        // and the manifest by its path, and this is the one place the two meet.
+        // The mount record links the map id to its manifest path.
         OpaaxString lAssetRelPath;
         for (const MountedMap& lMounted : m_Mounted)
         {
@@ -342,8 +316,7 @@ namespace Opaax
 
     bool Level::RemoveMissingMap(const OpaaxString& InAssetRelPath)
     {
-        // A mounted map has entities in the world; dropping only its manifest entry would leave
-        // them behind with nothing naming them. RemoveMap is the verb for that one.
+        // A mounted map has entities: use RemoveMap for it.
         if (IsMountedPath(InAssetRelPath))
         {
             OPAAX_LOG(LogLevel, Warn, "'{}' IS mounted — remove it by id so its entities go too",
@@ -359,9 +332,7 @@ namespace Opaax
             return false;
         }
 
-        // Same refusal as RemoveMap, and it matters MORE here: re-pointing persistence silently is
-        // exactly the surprise an author repairing a broken level does not need. Set another map
-        // persistent first — that one is mounted, so it can be named.
+        // Same refusal as RemoveMap.
         if (lIndex == m_Data.PersistentMapIndex)
         {
             OPAAX_LOG(LogLevel, Warn,
@@ -386,8 +357,7 @@ namespace Opaax
 
         m_Data.Maps.erase(m_Data.Maps.begin() + static_cast<std::ptrdiff_t>(InIndex));
 
-        // The persistent INDEX is a position, so anything removed ahead of it shifts it. Left
-        // alone it would silently start naming the next map along.
+        // Removing an entry before the persistent one shifts its index: fix it.
         if (m_Data.PersistentMapIndex > InIndex) { --m_Data.PersistentMapIndex; }
     }
 
@@ -400,8 +370,7 @@ namespace Opaax
             const Uint64 lIndex = FindInManifest(lMounted.AssetRelPath);
             if (lIndex >= m_Data.MapCount())
             {
-                // Mounted but not in the manifest — a standalone map (Level::Mount). Persistence
-                // is a manifest statement, so there is nothing to write it into.
+                // Mounted but not in the manifest (a standalone map): nothing to update.
                 OPAAX_LOG(LogLevel, Warn, "'{}' is mounted but is not one of level '{}'s maps",
                           lMounted.AssetRelPath.CStr(), m_Data.Name.CStr());
                 return false;
@@ -426,7 +395,7 @@ namespace Opaax
     {
         if (!InMapId.IsValid())
         {
-            return false;   // an invalid id means "runtime-spawned" (WM2), never a mounted map
+            return false;   // invalid means runtime-spawned
         }
 
         for (const MountedMap& lMounted : m_Mounted)
@@ -450,7 +419,7 @@ namespace Opaax
             if (lMounted.AssetRelPath == lPersistent) { return lMounted.Id; }
         }
 
-        return MapId();   // named by the manifest but not mounted (it failed to load)
+        return MapId();   // in the manifest but not mounted (failed to load)
     }
 
     void Level::OnWorldCleared() noexcept

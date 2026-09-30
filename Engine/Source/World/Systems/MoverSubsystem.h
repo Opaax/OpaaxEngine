@@ -2,7 +2,7 @@
 
 #include "Core/Log/Logger.h"
 #include "Core/EngineAPI.h"
-#include "Core/Maths/MathTypes.h"   // Vector2F — the motion probe
+#include "Core/Maths/MathTypes.h"   // Vector2F
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxStringID.hpp"
 #include "Engine/Subsystems/Resources/ResourceRef.hpp"
@@ -22,24 +22,14 @@ namespace Opaax
     struct TransformComponent;
     struct MoveModeData;
 
-    // Only NAMED by the held claims.
+    // Forward-declared for the caches.
     struct MoverResource;
     struct MoveModeResource;
 
     // =============================================================================
-    // MoverSubsystem — advances every MoverComponent through the mode its Mover asset names.
-    //
-    //   PLAY WORLDS ONLY, for PhysicsSubsystem's reason: it MOVES authored transforms.
-    //
-    //   IT RUNS IN FixedUpdate, AFTER PHYSICS, and the order is the design: a mover sweeps against
-    //   the world's shapes, so it must see the poses this step produced rather than last step's.
-    //   Registration order is what gives it that — the subsystem manager ticks in the order
-    //   candidates were registered.
-    //
-    //   THE TUNING COMES FROM AN ASSET, resolved through ref caches this subsystem owns —
-    //   SpriteAnimationSubsystem's shape, and for its reason: ResourceManager::Load takes an
-    //   absolute path while a TResourcePath is deliberately relative (**MP8**), and the resource
-    //   layer cannot reach IPaths.
+    // MoverSubsystem — advances every MoverComponent with the mode its Mover asset names.
+    //   Play worlds only. Runs in FixedUpdate after physics (registration order), so it sees
+    //   this step's poses. Loads the tuning assets through its own caches.
     // =============================================================================
     class OPAAX_API MoverSubsystem final : public WorldSubsystemBase
     {
@@ -49,7 +39,7 @@ namespace Opaax
     public:
         OPAAX_SUBSYSTEM_TYPE(MoverSubsystem)
 
-        /** Gameplay: Play worlds only. */
+        /** Play worlds only. */
         static bool ShouldCreate(const World& InWorld);
 
         // =============================================================================
@@ -72,43 +62,42 @@ namespace Opaax
         // Get
         // =============================================================================
     public:
-        /** How many movers were advanced on the last step — the number the logs assert on. */
+        /** Number of movers advanced on the last step. */
         Uint64 GetLastAdvanced() const noexcept { return m_LastAdvanced; }
 
         // =============================================================================
         // Functions
         // =============================================================================
     private:
-        /** One entity's step: resolve the mode, apply any pending switch, then tick it. */
+        /** One entity's step: resolve the mode, apply a pending switch, tick. */
         void Advance(EntityID InEntity, MoverComponent& InMover, TransformComponent& InTransform,
                      IPhysicsWorld& InWorld, float InDelta);
 
         /**
-         * The tuning InMover's bag resolves for InModeName, or nullptr when the bag, the name or
-         * the tuning cannot be resolved. Each failure logs ONCE per key.
+         * The tuning for InModeName in InMover, or nullptr. Each failure logs once.
          */
         const MoveModeData* ResolveMode(const MoverComponent& InMover, OpaaxStringID InModeName);
 
-        /** Asset-relative -> absolute, through the context's IPaths. */
+        /** Asset-relative -> absolute. */
         OpaaxString ToAbsolute(const OpaaxString& InAssetPath) const;
 
-        /** True the FIRST time InKey is passed, so a per-step path logs once and never again. */
+        /** True the first time InKey is seen (log once). */
         bool ShouldWarnOnce(Uint32 InKey);
 
         // =============================================================================
         // Members
         // =============================================================================
     private:
-        WorldContext* m_Context = nullptr;   // borrowed; the World owns it
+        WorldContext* m_Context = nullptr;   // owned by the World
 
-        /** Resolved once in Startup — the modes a `.opaaxmovemode` may name. */
+        /** Resolved in Startup. */
         const MoverModeRegistry* m_Modes = nullptr;
 
-        /** The ref caches, RendererManager::ResolveTexture's shape. */
+        /** Loaded resource caches. */
         TUnorderedMap<Uint32, ResourceRef<MoverResource>>    m_MoverCache;
         TUnorderedMap<Uint32, ResourceRef<MoveModeResource>> m_ModeCache;
 
-        /** Keys already warned about, so a missing tuning does not print sixty lines a second. */
+        /** Keys already warned about. */
         TUnorderedSet<Uint32> m_Warned;
 
         Uint64 m_LastAdvanced = 0;

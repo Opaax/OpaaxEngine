@@ -6,17 +6,13 @@
 namespace Opaax::Editor
 {
     // =============================================================================
-    // The UI designer's LAYOUT TARGET — what aspect the previewed canvas lays out at, now that
-    //   the VIEW (zoom, pan) no longer has to be the whole canvas (U13).
-    //
-    //   Header-only and ImGui-free, EditorRectGeometry's idiom, so the one piece of arithmetic
-    //   is asserted without a panel: a named aspect must lay the canvas out EXACTLY at that ratio,
-    //   or a corner-anchored widget would sit a pixel off where the game puts it.
+    // The UI designer's layout target: the aspect the previewed canvas is laid out at. Header-only and
+    //   ImGui-free so tests can check that a named aspect gives exactly that ratio.
     // =============================================================================
 
     enum class EUIPreviewAspect : Uint8
     {
-        Free,     // the framebuffer's own — the dock decides, today's behaviour
+        Free,     // the framebuffer's own (set by the dock)
         W16x9,
         W21x9,
         W4x3,
@@ -44,9 +40,8 @@ namespace Opaax::Editor
     };
 
     /**
-     * The pixel size the canvas is told it is shown in — only its RATIO matters to the layout
-     * (UI2), so a named aspect is its two integers × 120: 16:9 is exactly 1920×1080, never a
-     * rounded 1919. Free is the framebuffer's own size.
+     * The pixel size the canvas is laid out at. Only the ratio matters, so a named aspect is its two
+     * integers x 120 (16:9 is exactly 1920x1080). Free uses the framebuffer's size.
      */
     inline constexpr Vector2u32 PreviewLayoutSize(const EUIPreviewAspect InAspect, const Uint32 InFramebufferW,
                                                   const Uint32 InFramebufferH) noexcept

@@ -4,7 +4,7 @@ namespace Opaax
 {
     namespace
     {
-        /** How many cells of InCell (with InSpacing between them) fit in InAvailable pixels. */
+        /** How many cells (with spacing) fit in InAvailable pixels. */
         Uint32 CellsThatFit(const float InAvailable, const float InCell, const float InSpacing)
         {
             if (InCell <= 0.f || InAvailable < InCell) { return 0u; }
@@ -23,11 +23,10 @@ namespace Opaax
 
         if (lWidth <= 0.f || lHeight <= 0.f || InFrame.Size.x <= 0.f || InFrame.Size.y <= 0.f)
         {
-            return SpriteUVRect{};   // the whole texture — the same UVs DrawSprite defaults to
+            return SpriteUVRect{};   // whole texture
         }
 
-        // V IS FLIPPED: Offset.y counts DOWN from the top, GL samples UP from the bottom. So the
-        // frame's top edge is the LARGER v and lands in UVMax.
+        // V is flipped: Offset.y counts from the top, GL samples from the bottom.
         const float lU0 = InFrame.Offset.x / lWidth;
         const float lU1 = (InFrame.Offset.x + InFrame.Size.x) / lWidth;
         const float lV0 = 1.f - (InFrame.Offset.y + InFrame.Size.y) / lHeight;
@@ -56,7 +55,7 @@ namespace Opaax
 
         lFrames.reserve(static_cast<size_t>(lColumns) * lRows);
 
-        // ROW-MAJOR, which is what a frame INDEX means everywhere else.
+        // Row-major, like frame indices everywhere.
         for (Uint32 lRow = 0; lRow < lRows; ++lRow)
         {
             for (Uint32 lCol = 0; lCol < lColumns; ++lCol)
@@ -64,15 +63,13 @@ namespace Opaax
                 const float lX = InGrid.Margin.x + static_cast<float>(lCol) * (InGrid.CellSize.x + InGrid.Spacing.x);
                 const float lY = InGrid.Margin.y + static_cast<float>(lRow) * (InGrid.CellSize.y + InGrid.Spacing.y);
 
-                // An explicit column/row count may ask for more than the texture holds. Dropping the
-                // overhang beats emitting rectangles that sample outside the image.
+                // Drop cells that fall outside the texture.
                 if (lX + InGrid.CellSize.x > lWidth || lY + InGrid.CellSize.y > lHeight)
                 {
                     continue;
                 }
 
-                // UNNAMED on purpose: a generated "Frame_12" would intern a string per cell, for the
-                // life of the process, to say what the index already says.
+                // Unnamed: a generated name per cell would intern a string for nothing.
                 lFrames.emplace_back(SpriteFrame{ OpaaxStringID(), { lX, lY }, InGrid.CellSize });
             }
         }

@@ -1,15 +1,6 @@
-// Suite: the UI widget drawer DISPATCH (Editor/Extensions/DrawerRegistry.h) — UI18.
-//
-// THE BUG THIS EXISTS FOR: the UI panel picked a widget's property drawer with a hand-written
-// dynamic_cast ladder. A widget type nobody added to it silently lost its own fields (UIMask's
-// Texture was invisible), and the leaf types IN it lost their base fields (a UIText had no
-// editable Rect, because a leaf's property list does not repeat the base's).
-//
-// What is gated here is the part that broke: WHICH drawer a widget resolves to, and that the base
-// and leaf property lists are two distinct folds. The drawing itself cannot be — TPropertyDrawer's
-// bodies live in OpaaxEditorLib, which this suite does not link (it links the engine DLL only), so
-// calling DrawFirst here would not resolve. The runtime count check in
-// EditorService::RegisterNativeDrawers is what covers the rest, and it logs a NUMBER.
+// Suite: UI widget drawer dispatch (Editor/Extensions/DrawerRegistry.h): which drawer a widget
+// resolves to, and that base and leaf property lists are drawn separately. The drawing itself lives
+// in OpaaxEditorLib (not linked here); EditorService::RegisterNativeDrawers logs the count at runtime.
 #include <doctest.h>
 
 #include "Editor/Extensions/DrawerRegistry.h"
@@ -44,7 +35,7 @@ TEST_CASE("UIWidgetDrawers: every widget type resolves to ITS OWN drawer and no 
     UISafeArea  lSafe;
     UIStack     lStack;
 
-    // U9's container, through the same gate as U5b's.
+    // The stack container, like the safe area.
     CHECK(ResolvesTo<UIStack>(lStack));
     CHECK_FALSE(ResolvesTo<UIStack>(lPanel));
     CHECK_FALSE(ResolvesTo<UIPanel>(lStack));
@@ -77,14 +68,14 @@ TEST_CASE("UIWidgetDrawers: a leaf's property list does NOT repeat the base's �
 {
     // The second half of the bug. The panel draws the base fold first and THEN asks the registry;
     // if it only did the latter (as the ladder did), none of these base fields would be editable.
-    CHECK(PropertyCount<UIWidget>() == 5u);   // Name, Rect, bVisible, bHitTestable, Opacity (U8)
+    CHECK(PropertyCount<UIWidget>() == 5u);   // Name, Rect, bVisible, bHitTestable, Opacity
 
-    CHECK(PropertyCount<UIMask>()     == 2u); // Texture (invisible before UI18) + bShowMaskGraphic (U7)
+    CHECK(PropertyCount<UIMask>()     == 2u); // Texture + bShowMaskGraphic
     CHECK(PropertyCount<UISafeArea>() == 1u); // Insets, likewise
-    CHECK(PropertyCount<UIStack>()    == 5u); // Axis, Spacing, Padding, ChildAlign, bFitContent (U9)
+    CHECK(PropertyCount<UIStack>()    == 5u); // Axis, Spacing, Padding, ChildAlign, bFitContent
     CHECK(PropertyCount<UIText>()   > 1u);
-    CHECK(PropertyCount<UIImage>()  == 8u); // Color, Texture, Sheet, Frame, Border, Fill, FillAmount, FillBinding (U12)
-    CHECK(PropertyCount<UIButton>() == 8u); // four colours, bEnabled, Texture, Sheet, Frame (U12)
+    CHECK(PropertyCount<UIImage>()  == 8u); // Color, Texture, Sheet, Frame, Border, Fill, FillAmount, FillBinding
+    CHECK(PropertyCount<UIButton>() == 8u); // four colours, bEnabled, Texture, Sheet, Frame
 
     // A UIPanel adds nothing of its own, so the base fold is the WHOLE of its inspector — which is
     // why "the registry drew nothing for it" must not read as "this widget has no fields".

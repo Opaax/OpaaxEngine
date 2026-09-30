@@ -44,14 +44,11 @@ namespace Opaax::Editor
 
         const ComponentRegistry& lRegistry = m_Context.Engine.GetRegistries().Components();
 
-        // ONE resolver for both halves of this phase — it is built BEFORE the write, so what it
-        // flattens is the OLD prefab, which is the whole point of folding here (**PF8**).
+        // One resolver for this phase, built before the write, so it flattens the old prefab.
         ResourcePrefabResolver lResolver(m_Context.Paths, m_Context.Resources, lRegistry);
 
-        // The placements this save REACHES: those of the prefab itself, and those of any prefab
-        // that places it, at any depth (P7) — an outer prefab or a variant whose base just changed.
-        // Every other placement is left alone; folding the whole world would be correct but would
-        // rewrite entities nobody asked about.
+        // The placements this save affects: those of the prefab itself and of any prefab placing it, at
+        // any depth. Other placements are left alone.
         TDynArray<EntityID> lAffected;
         lWorld->Each<PrefabInstanceComponent>([&](EntityID InId, const PrefabInstanceComponent& InMarker)
         {
@@ -66,32 +63,29 @@ namespace Opaax::Editor
 
         if (lAffected.empty()) { return; }
 
-        // Captured and folded against the OLD payload, which is still resident — this is the whole
-        // reason the announce has two phases. The records hold the author's deviations and nothing
-        // else, because everything matching the old template diffs to nothing.
+        // Captured and folded against the old data (still loaded): the records then hold only the
+        // author's changes.
         m_Pending = MapSerializer::CaptureEntities(*lWorld, lRegistry, lAffected);
 
-        // TAKEN NOW, BEFORE the fold. `CaptureEntities` leaves `Id` invalid — a hand-picked set is
-        // not a map (**MP10**) — and it is recoverable only from the entities, which Fold is about
-        // to replace with records. Expand needs it, because BuildInstance refuses an invalid map.
+        // Taken before the fold (CaptureEntities leaves Id invalid, and Fold replaces the entities).
+        // Expand needs it: BuildInstance refuses an invalid map.
         m_Pending.Id = m_Pending.OwnerId();
 
-        // And the guids, for the same reason: Fold replaces the entities with records, and the
-        // orphan check in HandleSaved needs to know what was there.
+        // The guids too, for the orphan check in HandleSaved.
         for (const EntityData& lEntity : m_Pending.Entities) { m_Affected.emplace_back(lEntity.Id); }
 
         const Uint64 lFolded = PrefabFold::Fold(m_Pending, lResolver, lRegistry);
 
         if (lFolded == 0)
         {
-            m_Pending = MapData{};   // nothing foldable — leave the world alone
+            m_Pending = MapData{};   // nothing to fold: leave the world alone
             m_Affected.clear();
         }
     }
 
     void PrefabReconciler::HandleSaved(const ResourceSavedEvent& InEvent)
     {
-        // Taken and cleared FIRST, whatever happens below — both are one save's parameters.
+        // Taken and cleared first, whatever happens below.
         MapData             lPending  = Move(m_Pending);
         const TDynArray<Guid> lAffected = Move(m_Affected);
         m_Pending = MapData{};
@@ -106,25 +100,22 @@ namespace Opaax::Editor
 
         if (!lPending.Id.IsValid())
         {
-            // Banked in HandleSaving; without it Expand can build nothing.
+            // Stored in HandleSaving; without it Expand can build nothing.
             OPAAX_LOG(LogPrefabReconciler, Warn,
                       "Prefab '{}' saved, but its placements name no map — not re-applied",
                       InEvent.AssetPath.CStr());
             return;
         }
 
-        // Expanded against the NEW payload — the reload has already happened.
+        // Expanded against the new data (already reloaded).
         ResourcePrefabResolver lResolver(m_Context.Paths, m_Context.Resources, lRegistry);
         const Uint64 lExpanded = PrefabFold::Expand(lPending, lResolver, lRegistry);
 
-        // Restore, not Instantiate: these entities still exist and must keep their identities. It
-        // also REMOVES components the new prefab no longer has, which is what makes deleting a
-        // component from a prefab reach its instances.
+        // Restore, not Instantiate: the entities keep their identities. It also removes components the
+        // new prefab no longer has.
         const Uint64 lUpdated = MapFactory::Restore(lPending, *lWorld, lRegistry);
 
-        // AND DESTROYS WHAT THE PREFAB NO LONGER HAS. Restore names what the new template
-        // produced; an instance entity whose template was DELETED from the prefab is named by
-        // nothing and would stay behind — the user's report, found in a minute of real use.
+        // Destroy instance entities whose template was removed from the prefab (Restore does not name them).
         Uint64 lRemoved = 0;
 
         for (const Guid& lWas : lAffected)
@@ -139,7 +130,7 @@ namespace Opaax::Editor
             Entity lOrphan = lWorld->FindByGuid(lWas);
             if (!lOrphan.IsValid()) { continue; }
 
-            // Out of the selection first — a destroyed entity's handle must not linger there.
+            // Out of the selection first.
             if (m_Context.Selection.Contains(lOrphan)) { m_Context.Selection.Toggle(lOrphan); }
 
             lWorld->DestroyEntity(lOrphan.GetHandle());

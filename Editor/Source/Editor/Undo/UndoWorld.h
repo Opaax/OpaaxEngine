@@ -14,26 +14,23 @@ namespace Opaax::Editor
     struct EditorContext;
 
     /**
-     * WHICH document's world a step acts on (⑦-C P8 V3). A step resolves its world at REPLAY time
-     * (**UN2** — never a stored pointer, since the level's world is replaced by a PIE cycle), and
-     * until the prefab panel there was only one answer. One field on the step, one resolver here,
-     * instead of a second step type per document (**MP7**).
+     * Which document's world a step acts on. Resolved when the step is replayed (the level's world is
+     * replaced by each Play session, so no pointer is stored).
      */
     enum class EUndoWorld : Uint8
     {
-        Active,   // the level — WorldManager's active world
-        Prefab    // the prefab document's own world (**PF9**)
+        Active,   // the level (WorldManager's active world)
+        Prefab    // the prefab document's own world
     };
 
     /** The world InScope names right now, or null. */
     World* UndoWorld(const EditorContext& InContext, EUndoWorld InScope);
 
     /**
-     * The selection that lives in that world (P8 V4) — a restore re-selects what it brought back
-     * and a destroy clears, and each document has a selection of its own.
+     * The selection of that world's document (restoring selects, destroying clears).
      */
     EditorSelection& UndoSelection(const EditorContext& InContext, EUndoWorld InScope);
 
-    /** The stack a step of that scope is recorded on — a document owns its history (**PF10**). */
+    /** The undo stack for that scope (each document has its own history). */
     EditorUndo& UndoStack(const EditorContext& InContext, EUndoWorld InScope);
 }

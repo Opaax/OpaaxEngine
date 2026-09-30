@@ -11,7 +11,7 @@ namespace Opaax
     class IGraphicsContext;
 
     // =============================================================================
-    // RenderLimits — batcher sizing knobs (POD). Handed in at Init.
+    // RenderLimits — batch sizes. Given at Init.
     // =============================================================================
     struct RenderLimits
     {
@@ -20,13 +20,9 @@ namespace Opaax
     };
 
     // =============================================================================
-    // RenderSystemDesc — everything the RenderSystem needs at startup, as one descriptor
-    //   (the WindowProps pattern). The host adapter builds it from its own world (config,
-    //   window, paths); the RenderSystem pulls no host state directly — it takes this desc
-    //   in and logs out through OPAAX_LOG, nothing else crosses the line.
-    //   Surface is the already-created graphics context (make-current / present / vsync) —
-    //   the module stays windowing-agnostic. SpriteShader is source the HOST read off disk
-    //   (no IPaths / file IO inside the module).
+    // RenderSystemDesc — everything the RenderSystem needs at startup, built by the host
+    //   (config, window, shader source). Surface is the graphics context (make-current,
+    //   present, vsync). SpriteShader is source text the host read from disk.
     // =============================================================================
     struct RenderSystemDesc
     {

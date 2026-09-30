@@ -19,21 +19,17 @@ namespace Opaax
     // ShaderCompiler
     // =============================================================================
     /**
-     * @class ShaderCompiler
-     *
-     * Compiles Vulkan-flavored GLSL to SPIR-V via glslang. SPIR-V is the single portable
-     * shader IR: OpenGL consumes it through GL_ARB_gl_spirv, Vulkan natively. Backend-
-     * neutral — glslang types never leak past this TU.
+     * Compiles GLSL to SPIR-V with glslang (used by OpenGL through GL_ARB_gl_spirv and by Vulkan).
      */
     class OPAAX_API ShaderCompiler
     {
     public:
         /**
-         * Compile one GLSL stage to SPIR-V.
-         * @param InStage     vertex or fragment
-         * @param InGlsl      stage GLSL source (Vulkan rules: explicit bindings/locations)
-         * @param InDebugName label used in compile-error logs
-         * @return SPIR-V words, or an empty array on failure (logged fail-loud).
+         * Compiles one GLSL stage to SPIR-V.
+         * @param InStage     Vertex or fragment
+         * @param InGlsl      Stage source (explicit bindings/locations)
+         * @param InDebugName Name used in error logs
+         * @return SPIR-V words, or empty on failure (logged)
          */
         static TDynArray<Uint32> CompileGLSLToSPIRV(EShaderStage       InStage,
                                                     const OpaaxString& InGlsl,

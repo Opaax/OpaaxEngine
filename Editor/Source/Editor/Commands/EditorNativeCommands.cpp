@@ -3,11 +3,11 @@
 #include "Editor/EditorContext.h"
 #include "Editor/EditorLevelDocument.h"
 #include "Editor/EditorMapDocument.h"
-#include "Editor/Operation/EditorGizmo.hpp"   // SetMode — the three gizmo commands (③)
-#include "Editor/Operation/EditorSelection.hpp"   // the primary — what the Inspector's verbs act on
-#include "Editor/Undo/EditorUndo.h"           // the two commands that drive the stack (⑤)
-#include "Editor/Undo/EntityUndoables.h"      // EntityDelete — the prefab's Delete records one (P8 V4)
-#include "World/Serialization/MapSerializer.h"   // CaptureEntities — the step's payload, before the fact
+#include "Editor/Operation/EditorGizmo.hpp"   // SetMode
+#include "Editor/Operation/EditorSelection.hpp"   // the primary selection
+#include "Editor/Undo/EditorUndo.h"           // Undo / Redo
+#include "Editor/Undo/EntityUndoables.h"      // EntityDelete
+#include "World/Serialization/MapSerializer.h"   // CaptureEntities
 #include "Editor/Operation/EntityOps.h"
 #include "Editor/Operation/LevelOperations.h"
 #include "Editor/Operation/SheetOperations.h"
@@ -21,7 +21,7 @@
 #include "Editor/EditorUICanvasDocument.h"
 #include "Editor/Panels/UICanvasPanel.h"
 #include "Application/OpaaxApplication.h"
-#include "Application/Services/IProjectManager.h"   // New UI is authored at the project's reference height
+#include "Application/Services/IProjectManager.h"   // new UI uses the project's reference height
 #include "Engine/Registries/EngineRegistries.h"
 #include "UI/UICanvasFile.h"
 #include "UI/UIWidgetRegistry.h"
@@ -37,7 +37,7 @@
 #include "Editor/PIE/PlayInEditor.h"
 #include "Editor/Panels/EditorPanels.h"
 #include "Editor/Panels/PrefabPanel.h"
-#include "Renderer/RenderTarget.hpp"   // PrefabPanel owns one by TUniquePtr - its dtor needs the type
+#include "Renderer/RenderTarget.hpp"   // PrefabPanel holds one by TUniquePtr (its dtor needs the type)
 #include "Editor/Prefab/EditorPrefabDocument.h"
 
 #include "Application/Services/IEngine.h"
@@ -46,8 +46,8 @@
 #include "Platform/IFileSystem.h"
 #include "Window/Window.h"
 #include "Engine/Registries/EngineRegistries.h"
-#include "World/Entity/Entity.h"   // EntityOps::Create returns one by value
-#include "World/Entity/EntityHierarchy.h"   // §HR — Delete takes the subtree
+#include "World/Entity/Entity.h"   // EntityOps::Create returns one
+#include "World/Entity/EntityHierarchy.h"   // Delete takes the subtree
 #include "World/Level.h"
 #include "World/World.h"
 #include "World/WorldManager.h"
@@ -66,8 +66,7 @@ namespace
     using namespace Opaax::Editor;
 
     /**
-     * A map that belongs to no open level: a fresh world with an empty Level holding only it,
-     * rather than merging it into a level it is not part of.
+     * A map that belongs to no open level: a new world with an empty Level holding only this map.
      */
     void OpenStandaloneMap(EditorContext& InContext, const OpaaxString& InAbsPath)
     {
@@ -91,16 +90,13 @@ namespace
 
             lWorld->GetLevel()->Mount(lAssetRel);
 
-            // No manifest behind this world — an empty level path is what tells the document so.
+            // No level file behind this world: an empty level path says so.
             LevelOps::AdoptOpen(InContext, OpaaxString());
         });
     }
 
     /**
-     * A file-picker request in the editor's one shape.
-     *
-     * Every caller below states a title, a starting path and one extension, so the shape is stated
-     * here once instead of five times.
+     * A file-picker request: title, starting path, one extension.
      */
     FileDialogRequest MakeFileRequest(const char* InTitle, OpaaxString InDefaultPath,
                                       const char* InPattern, const char* InDescription)
@@ -115,10 +111,7 @@ namespace
     }
 
     /**
-     * The whole of New Map AFTER a destination has been chosen.
-     *
-     * Split out of the command rather than nested in its lambda so the interesting half stays
-     * readable — and callable with no dialog in front of it.
+     * New Map, after the destination was chosen.
      */
     void CreateMapAt(EditorContext& InContext, Level& InLevel, const OpaaxString& InAbsPath)
     {
@@ -132,9 +125,7 @@ namespace
             return;
         }
 
-        // NEW MEANS NEW. The OS save dialog warns about overwriting, but "New Map" truncating a map
-        // that already has entities in it is not a thing to leave to a dialog the author is used to
-        // clicking through. Open Map and Add Map are the verbs for a file that exists.
+        // New means new: an existing file is refused (Open Map and Add Map are for those).
         if (InContext.FileSystem.IsPathExist(InAbsPath))
         {
             OPAAX_LOG(LogEditorCommands, Warn,
@@ -143,41 +134,37 @@ namespace
             return;
         }
 
-        // WRITTEN BEFORE IT IS MOUNTED, because AddMap loads it through the ResourceManager and
-        // there has to be a file to load. Stamped with its own id (**MP10**) rather than left
-        // anonymous: that is what makes a map with nothing in it an ORDINARY map from its first
-        // frame — saveable, removable, and settable as persistent like any other.
+        // Written before it is loaded (AddMap loads it from disk), with its own map id, so an empty map is
+        // an ordinary map: saveable, removable, can be made persistent.
         MapData lData;
         lData.Id = MapFile::StemId(InAbsPath);
 
         if (!MapFile::Save(InAbsPath, lData))
         {
-            return; // MapFile logged which of the reasons it was
+            return; // MapFile logged why
         }
 
         if (!InLevel.AddMap(lAssetRel))
         {
-            return; // Level logged it — already in this level, or it would not mount
+            return; // Level logged why
         }
 
-        // RECONCILE, never re-adopt (**MP5**): the new map gets a record, every other map keeps the
-        // baseline it had.
+        // Reconcile, not re-adopt: the new map gets a record, every other map keeps its baseline.
         InContext.LevelDocument.TrackMounted(InLevel, *InContext.Worlds.GetActiveWorld(),
                                              InContext.Engine.GetRegistries().Components(),
                                              InContext.Paths);
 
-        // BOTH HALVES LAND TOGETHER. Writing the map file and leaving the membership pending was
-        // the worst of both: close the editor and the file stayed while the level forgot it.
+        // The map file and the level change land together.
         InContext.LevelDocument.SaveManifest(InLevel);
 
-        // Focused, because the only reason to make a map is to start putting things in it.
+        // Focused: a new map is made to be filled.
         MapOps::Focus(InContext, lAssetRel);
 
         OPAAX_LOG(LogEditorCommands, Info, "Created '{}' in level '{}'",
                   lAssetRel.CStr(), InLevel.GetData().Name.CStr());
     }
 
-    /** The whole of Add Map to Level after a file has been chosen. */
+    /** Add Map to Level, after a file was chosen. */
     void AddMapAt(EditorContext& InContext, Level& InLevel, const OpaaxString& InAbsPath)
     {
         const OpaaxString lAssetRel = InContext.Paths.AbsoluteToAsset(InAbsPath);
@@ -190,17 +177,16 @@ namespace
             return;
         }
 
-        // Mounts immediately: every map of the level is in the world (WM1a), so one that was just
-        // added is no exception.
+        // Loaded immediately: every map of the level is in the world.
         if (InLevel.AddMap(lAssetRel))
         {
-            // RECONCILE, never re-adopt: a fresh AdoptExisting would re-take every baseline from
-            // the world and quietly declare every other map's unsaved edits to be the clean state.
+            // Reconcile, not re-adopt: re-adopting would reset every other map's baseline and hide its
+            // unsaved edits.
             InContext.LevelDocument.TrackMounted(InLevel, *InContext.Worlds.GetActiveWorld(),
                                                  InContext.Engine.GetRegistries().Components(),
                                                  InContext.Paths);
 
-            // Structure goes to disk as it changes (EditorLevelDocument::SaveManifest).
+            // Level structure is saved immediately (EditorLevelDocument::SaveManifest).
             InContext.LevelDocument.SaveManifest(InLevel);
         }
     }
@@ -234,8 +220,7 @@ namespace Opaax::Editor
 
     void TogglePanelCommand::Execute(EditorContext& InContext, const Params& InParams)
     {
-        // No log here on purpose: EditorPanels::SetVisible is the single mutation point and announces
-        // it, so the close button — which cannot reach a command — is heard on the same line.
+        // Not logged here: EditorPanels::SetVisible logs it (also for the window's close button).
         InContext.Panels.SetVisible(InParams.PanelId, !InContext.Panels.IsVisible(InParams.PanelId));
     }
 
@@ -300,9 +285,7 @@ namespace Opaax::Editor
     {
         if (!MapOps::CanEdit(InContext, "Open Map")) { return; }
 
-        // WHICH map is this? Asked of the FILE's entities (WM2). The identity decides whether it
-        // is already in the world; the path could not, arriving in one shape from a file dialog
-        // and another from AssetToAbsolute.
+        // Which map is it? Read from the file's entities (paths come in different forms).
         MapData lData;
         if (!MapFile::Load(InParams.AbsPath, lData))
         {
@@ -315,11 +298,8 @@ namespace Opaax::Editor
 
         if (lLevel != nullptr && lLevel->IsMounted(lData.Id))
         {
-            // ALREADY IN THE WORLD, so this loads nothing: every map of the open level is mounted
-            // (WM1a). It moves the CURSOR — the selection survives untouched because none of the
-            // entities it points at go anywhere, and NOTHING IS CONFIRMED because nothing is at
-            // risk: every map keeps its own baseline (MP5), so the map being left stays as dirty
-            // as it was and Save Level will still write it.
+            // Already in the world: nothing loads, only the cursor moves. The selection is kept, and nothing
+            // is at risk (every map keeps its own baseline), so no confirmation.
             InContext.MapDocument.Focus(InParams.AbsPath);
             return;
         }
@@ -328,12 +308,9 @@ namespace Opaax::Editor
     }
 
     // =========================================================================
-    // Entity — thin by design. Every body is EntityOps', so the Edit menu, the Hierarchy's context
-    // menus and the viewport's keys cannot drift into three behaviours.
-    // =========================================================================
-    // THE POLICY GATE LIVES HERE, not in the stack: rewinding authored state while a Play clone is
-    // active would be written over by the next Stop, and EditorUndo deliberately knows nothing
-    // about worlds (⑤).
+    // Entity — thin wrappers over EntityOps, so the Edit menu, the Hierarchy menus and the viewport keys
+    // behave the same.
+    // The Play-mode check lives here, not in the undo stack (it knows nothing about worlds).
     void UndoCommand::Execute(EditorContext& InContext, const Params&)
     {
         if (!MapOps::CanEdit(InContext, "Undo")) { return; }
@@ -350,10 +327,8 @@ namespace Opaax::Editor
 
     void CreateEntityCommand::Execute(EditorContext& InContext, const Params& InParams)
     {
-        // The TARGET RIDES IN THE PAYLOAD, defaulting to the focused map — which is all a menu entry
-        // can name. The Hierarchy's header menu says WHICH map because it was clicked, and it used to
-        // reach EntityOps directly for exactly that reason; carrying the id is what let it come back
-        // through the dispatch, and therefore be recorded (⑤).
+        // The target map is in the payload; invalid means the focused map (all a menu entry can name).
+        // The Hierarchy's header menu passes the clicked map.
         const MapId lMap = InParams.Map.IsValid() ? InParams.Map : InContext.MapDocument.GetMapId();
 
         EntityOps::Create(InContext, lMap, OpaaxString("Entity"));
@@ -410,19 +385,17 @@ namespace Opaax::Editor
 
         if (!InContext.MapDocument.HasMap())
         {
-            SaveMapAsCommand{}.Execute(InContext, NoParams{}); // nothing to overwrite — ask where
+            SaveMapAsCommand{}.Execute(InContext, NoParams{}); // no file yet: ask where
             return;
         }
 
-        // ONE map — the FOCUSED one, because this entry is on the File menu and the cursor is what
-        // a File command has. The Hierarchy's per-map Save names its target instead (MapOps).
+        // The focused map (a File menu command). The Hierarchy's per-map Save names its target.
         MapOps::Save(InContext, InContext.MapDocument.GetMapId());
     }
 
     void InstantiatePrefabAtCommand::Execute(EditorContext& InContext, const Params& InParams)
     {
-        // The FOCUSED map, for SaveMapCommand's reason: a browser double-click has a cursor, not a
-        // named target. EntityOps refuses (with a Warn) when there is no focused map.
+        // The focused map, as for SaveMapCommand. EntityOps refuses (with a warning) when there is none.
         EntityOps::InstantiatePrefab(InContext, InParams.AbsPath, InContext.MapDocument.GetMapId());
     }
 
@@ -436,9 +409,7 @@ namespace Opaax::Editor
             return;
         }
 
-        // Named after the PRIMARY entity, so the common case is confirm-without-typing. A name is a
-        // debug label and may contain anything, so this is a suggestion the dialog can overwrite,
-        // never a path this command commits to.
+        // Default name: the primary entity's name. Only a suggestion the dialog can change.
         OpaaxString lSuggested = OpaaxString("Prefab");
         if (World* const lWorld = InContext.Worlds.GetActiveWorld(); lWorld != nullptr)
         {
@@ -510,15 +481,15 @@ namespace Opaax::Editor
 
         if (!lSelection.HasSelection() || lWorld == nullptr || lSelection.GetWorld() != lWorld)
         {
-            return;   // Delete on empty is ordinary — DestroySelected's rule
+            return;   // nothing selected (normal)
         }
 
-        // COPY the handles first: the selection is about to be cleared (DestroySelected's reason),
-        // and WITH THE SUBTREE (§HR) — the step must hold what the cascade takes.
+        // Copy the handles first (the selection is about to be cleared), with the subtree (undo must
+        // restore all of it).
         TDynArray<EntityID> lIds;
         EntityHierarchy::CollectSubtree(*lWorld, lSelection.Ids(), lIds);
 
-        // BEFORE the fact — once destroyed nothing can say what they were (⑤).
+        // Captured before destroying.
         EntityDelete lStep{ MapSerializer::CaptureEntities(
             *lWorld, InContext.Engine.GetRegistries().Components(), lIds), EUndoWorld::Prefab };
 
@@ -547,15 +518,14 @@ namespace Opaax::Editor
                                                       *InContext.Worlds.GetActiveWorld(),
                                                       InContext.Engine.GetRegistries().Components()))
                 {
-                    // The cursor follows the file it just wrote; the record already moved with it.
+                    // The cursor follows the file just written; the record already moved with it.
                     InContext.MapDocument.Focus(InPicked);
                 }
             });
     }
 
     // =============================================================================
-    // Level — the manifest is edited THROUGH the world's Level (WM1a), never through a second
-    // copy here: the Level is what mounts and unmounts, so it is what knows the truth.
+    // Level — the level file is edited through the world's Level (it loads and unloads the maps).
     // =============================================================================
 
     void OpenLevelCommand::Execute(EditorContext& InContext, const Params&)
@@ -602,7 +572,7 @@ namespace Opaax::Editor
             return;
         }
 
-        SheetOps::Save(InContext);   // SheetOps logs the write and rebases the dirty marker
+        SheetOps::Save(InContext);   // logs the write, updates the dirty baseline
     }
 
     void SaveClipCommand::Execute(EditorContext& InContext, const Params&)
@@ -613,7 +583,7 @@ namespace Opaax::Editor
             return;
         }
 
-        ClipOps::Save(InContext);   // ClipOps logs the write, rebases the marker and publishes it
+        ClipOps::Save(InContext);   // logs the write, updates the baseline, reloads
     }
 
     void SaveLibraryCommand::Execute(EditorContext& InContext, const Params&)
@@ -683,7 +653,7 @@ namespace Opaax::Editor
     }
 
     // =============================================================================
-    // UI canvas (U4)
+    // UI canvas
     // =============================================================================
 
     void NewUICommand::Execute(EditorContext& InContext, const Params&)
@@ -693,9 +663,7 @@ namespace Opaax::Editor
                             "*.opaaxui", "Opaax UI Canvas"),
             [&InContext](const OpaaxString& InPicked)
             {
-                // NEW MEANS NEW — NewMapCommand's rule: the OS dialog warns about overwriting, but
-                // truncating an authored canvas is not a thing to leave to a dialog the author is
-                // used to clicking through.
+                // New means new (as NewMapCommand): an existing canvas is not overwritten.
                 if (InContext.FileSystem.IsPathExist(InPicked))
                 {
                     OPAAX_LOG(LogEditorCommands, Warn,
@@ -704,7 +672,7 @@ namespace Opaax::Editor
                     return;
                 }
 
-                // Authored at the PROJECT's height (UI2), so what the panel shows is what the game draws.
+                // Authored at the project's reference height, so the panel shows what the game draws.
                 UICanvasFile::UICanvasDoc lDoc;
                 lDoc.ReferenceHeight = OpaaxApplication::GetAppService<IProjectManager>().UIReferenceHeight();
                 lDoc.Root            = MakeUnique<UIPanel>();
@@ -739,7 +707,7 @@ namespace Opaax::Editor
     void DeleteUIWidgetCommand::Execute(EditorContext& InContext, const Params&)
     {
         const UIWidgetPath& lSelected = InContext.UICanvasDocument.SelectedPath();
-        if (lSelected.empty()) { return; }   // Delete on nothing is ordinary — DestroySelected's rule
+        if (lSelected.empty()) { return; }   // nothing selected (normal)
 
         UICanvasOps::RemoveWidget(InContext, lSelected);
     }

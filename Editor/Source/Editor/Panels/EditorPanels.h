@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Core/Log/Logger.h"   // OPAAX_LOG_CATEGORY
-#include "Core/OpaaxTypes.h"                // TUniquePtr, TDynArray, Uint64
+#include "Core/OpaaxTypes.h"
 #include "Editor/Panels/IEditorPanel.h"
 #include "Editor/Panels/PanelDesc.h"
 
@@ -19,17 +19,9 @@ namespace Opaax::Editor
     class PanelRegistry;
 
     // =============================================================================
-    // EditorPanels — the live panels: every instance the registry described, plus whether each one
-    //   is on screen. Owned by EditorService, referenced from EditorContext.
-    //
-    //   IT IS THE ONLY PLACE THAT OPENS A PANEL WINDOW. A panel emits widgets; the label, the
-    //   first-use size and the close button are decided in Draw() below and emitted through
-    //   IEditorGui — so visibility is one bool per panel that both the menu tick and the X write,
-    //   and this file names no UI backend.
-    //
-    //   Construction is registration order, teardown is its reverse (LC3). The Viewport registers
-    //   first (natives before modules, MR2), which is what keeps its render-target handshake
-    //   independent of what a game module registers.
+    // EditorPanels — the live panels and whether each is visible. Owned by EditorService.
+    //   The only place that opens panel windows (label, first-use size, close button), through
+    //   IEditorGui. Created in registration order, destroyed in reverse.
     // =============================================================================
     class EditorPanels
     {
@@ -44,7 +36,7 @@ namespace Opaax::Editor
         // Copy - Move Delete
         // =============================================================================
 
-        // Owns panels through TUniquePtr (I6's corollary: an owner of a move-only member must say so).
+        // Owns panels through TUniquePtr.
         EditorPanels(const EditorPanels&)            = delete;
         EditorPanels& operator=(const EditorPanels&) = delete;
 
@@ -52,21 +44,18 @@ namespace Opaax::Editor
         // Functions
         // =============================================================================
     public:
-        /** Run every factory once, in registration order, and Startup each panel it produced. */
+        /** Runs every factory once, in registration order, and starts each panel. */
         void Build(const PanelRegistry& InRegistry, EditorContext& InContext);
 
-        /** Every panel, hidden or not — a hidden panel still has to clear what DrawContents measures. */
+        /** Every panel, hidden or not. */
         void OnPreRender();
 
         /**
-         * Open each visible panel's window and draw its contents.
-         *
-         * Called by IEditorGui::Draw, which owns the whole UI pass — not by the composition root.
-         * Takes the gui rather than the whole EditorContext: the window chrome is all this needs.
+         * Opens each visible panel's window and draws its contents. Called by IEditorGui::Draw.
          */
         void Draw(IEditorGui& InGui);
 
-        /** Shutdown + destroy in reverse construction order (LC3). Idempotent. */
+        /** Shuts down and destroys the panels in reverse order. Safe to call twice. */
         void Shutdown();
 
         void OnActiveWorldChanged(World* InOld, World* InNew);
@@ -74,22 +63,18 @@ namespace Opaax::Editor
         // =============================================================================
         // Get - Set
     public:
-        /** @return false for an unknown id — a menu tick for a panel nobody registered reads "off". */
+        /** @return False for an unknown id */
         bool IsVisible(OpaaxStringID InID) const noexcept;
 
         /**
-         * THE one place a panel's visibility moves — the Window menu, the window's own close button
-         * and anything later all arrive here, which is why the transition is logged here and nowhere
-         * else. A no-op when already in that state; unknown id logs a Warn and does nothing.
+         * The only place a panel's visibility changes (and is logged). Does nothing when already in that
+         * state; an unknown id logs a warning.
          */
         void SetVisible(OpaaxStringID InID, bool bInVisible);
 
         /**
-         * Which panel had keyboard focus when the last Draw ran, or an invalid id.
-         *
-         * Measured by the DRAW LOOP because that is the only place each panel's window is open —
-         * the same shape the ViewportPanel's measured size has, and the reason an editor-wide
-         * shortcut can mean different things in different panels without every panel owning a chord.
+         * The panel that had keyboard focus during the last Draw, or an invalid id. Lets editor-wide
+         * shortcuts act on the focused panel.
          */
         OpaaxStringID FocusedPanel() const noexcept { return m_Focused; }
 
@@ -113,7 +98,7 @@ namespace Opaax::Editor
 
         TDynArray<LivePanel> m_Panels;
 
-        /** The focused panel's id as of the last Draw. Invalid when the focus is elsewhere. */
+        /** The focused panel's id at the last Draw. Invalid when the focus is elsewhere. */
         OpaaxStringID        m_Focused;
     };
 }

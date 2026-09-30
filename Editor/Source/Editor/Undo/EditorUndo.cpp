@@ -21,8 +21,7 @@ namespace Opaax::Editor
             m_Undo.erase(m_Undo.begin());
         }
 
-        // A NUMBER, not "it worked": this is what says a whole drag landed as ONE step, which no
-        // screenshot of the viewport can show.
+        // Logs the count: shows that a whole drag landed as one step.
         OPAAX_LOG(LogEditorUndo, Info, "Recorded '{}' - undo depth {}",
                   m_Undo.back().Label(), static_cast<Uint64>(m_Undo.size()));
     }
@@ -41,9 +40,7 @@ namespace Opaax::Editor
     {
         if (!CanUndo())
         {
-            // SAYS SO. A silent return made "Ctrl+Z did nothing" indistinguishable from three
-            // different causes — the chord never fired, the command was gated, or no step was ever
-            // recorded — which is exactly the ambiguity that made a real report undiagnosable.
+            // Logged: otherwise "Ctrl+Z did nothing" could have three different causes.
             OPAAX_LOG(LogEditorUndo, Info, "Undo - nothing to undo ({} step(s) redoable)",
                       static_cast<Uint64>(m_Redo.size()));
             return;

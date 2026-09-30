@@ -8,11 +8,8 @@ namespace Opaax::Editor
     namespace
     {
         /**
-         * The open clip's data when it is the one InPath names, else null WITH A LINE SAYING SO.
-         *
-         * The stack is not per-document, so a step recorded against one clip can be replayed while
-         * another is open. Refusing is the only correct answer; saying nothing would look exactly
-         * like an undo that had nothing to do.
+         * The open clip's data if it is the one InPath names, else null (and a warning). The stack is not
+         * per document, so a step can be replayed while another clip is open.
          */
         AnimationClipData* TargetClip(EditorContext& InContext, const OpaaxString& InPath)
         {
@@ -59,14 +56,12 @@ namespace Opaax::Editor
 
         if (ClipPath != InContext.ClipDocument.AbsPath() || Index >= lData.StepCount())
         {
-            return false;   // the clip changed under the gesture — there is no step to record
+            return false;   // the clip changed during the gesture: no step
         }
 
         After = lData.Steps[Index];
 
-        // A gesture that changed nothing is not a step. Field by field rather than through the
-        // serializer: this runs on release, and a json dump would be work done to answer a
-        // question three fields already answer.
+        // A gesture that changed nothing is not a step (compared field by field, cheaper than serializing).
         return After.Frame != Before.Frame
             || After.Hold  != Before.Hold
             || After.Texture.Path != Before.Texture.Path;
@@ -109,8 +104,7 @@ namespace Opaax::Editor
 
         After = InContext.ClipDocument.GetData();
 
-        // The STEPS are deliberately not compared: they are ClipStepsEdit's and ClipStepEdit's, and
-        // a settings gesture that happened to overlap one must not swallow it.
+        // Steps are not compared: they belong to ClipStepsEdit / ClipStepEdit.
         return After.Fps        != Before.Fps
             || After.PlayMode   != Before.PlayMode
             || After.Sheet.Path != Before.Sheet.Path;
@@ -120,7 +114,7 @@ namespace Opaax::Editor
     {
         if (AnimationClipData* lData = TargetClip(InContext, ClipPath))
         {
-            // Only the settings — restoring Before wholesale would revert step edits made since.
+            // Only the settings: restoring Before wholesale would revert later step edits.
             lData->Fps      = Before.Fps;
             lData->PlayMode = Before.PlayMode;
             lData->Sheet    = Before.Sheet;

@@ -3,20 +3,20 @@
 #include "Editor/Commands/EditorNativeCommandsTags.hpp"
 #include "Editor/EditorContext.h"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
-#include "Editor/ImguiLibrary/ImguiWidgets.h"   // ToggleButton — the mode, snap and grid buttons
+#include "Editor/ImguiLibrary/ImguiWidgets.h"   // ToggleButton
 #include "Editor/Operation/EditorGizmo.hpp"
-#include "Editor/Operation/EditorViewport.hpp"   // the grid toggle lives on the viewport (③b)
+#include "Editor/Operation/EditorViewport.hpp"   // the grid toggle
 
-#include "Application/Services/IEngine.h"   // GetDebugDraw — the collider toggle's real subject
+#include "Application/Services/IEngine.h"   // GetDebugDraw
 #include "Renderer/DebugDraw.h"
 
 #include <imgui.h>
 
-#include <cstdio>   // snprintf — the pivot button's state-carrying label
+#include <cstdio>   // snprintf
 
 namespace
 {
-    /** Below this a snap step collapses every drag onto one point, so the toolbar clamps to it. */
+    /** Minimum snap step (below it every drag collapses onto one point). */
     constexpr float k_MinSnapStep = 0.001f;
 }
 
@@ -24,8 +24,7 @@ namespace Opaax::Editor::NativeViewportTools
 {
     void DrawGizmoMode(EditorContext& InContext)
     {
-        // BY TAG, so this is a THIRD front-end onto the same commands the Edit menu and W/E/R use.
-        // Calling EditorGizmo::SetMode directly here would be a fourth place to keep correct.
+        // Dispatched by tag: the same commands as the Edit menu and W/E/R.
         struct ModeEntry { const char* Label; EGizmoMode Mode; const OpaaxTag& Command; };
 
         const ModeEntry lModes[] = {
@@ -49,8 +48,7 @@ namespace Opaax::Editor::NativeViewportTools
 
     void DrawSnap(EditorContext& InContext)
     {
-        // The toggle and the STEP together: a toggle over a number you cannot change is half a
-        // control, and the step is what an author actually tunes per map.
+        // The toggle and its step together.
         EditorGizmo& lGizmo = InContext.Gizmo;
 
         if (ImguiWidgets::ToggleButton("Snap", lGizmo.IsSnapEnabled()))
@@ -63,15 +61,13 @@ namespace Opaax::Editor::NativeViewportTools
             ImGui::SetTooltip("Snap the gizmo to fixed steps.\nHold Ctrl to invert this while dragging.");
         }
 
-        // The step for the ACTIVE mode only — three fields at once would be a settings popup,
-        // and the one an author wants is always the one they are about to drag with.
+        // The step of the active mode only.
         ImGui::SameLine();
         ImGui::SetNextItemWidth(70.f);
 
         const EGizmoMode lMode = lGizmo.GetMode();
 
-        // Degrees for rotate, a fraction for scale, world units otherwise — the format says
-        // which, so the number is never ambiguous.
+        // Degrees for rotate, a fraction for scale, world units otherwise.
         const char* lFormat = lMode == EGizmoMode::Rotate ? "%.0f deg"
                             : lMode == EGizmoMode::Scale  ? "%.2f x"
                                                           : "%.1f u";
@@ -80,7 +76,7 @@ namespace Opaax::Editor::NativeViewportTools
         if (ImGui::DragFloat("##step", &lStep, lMode == EGizmoMode::Scale ? 0.01f : 0.5f,
                              0.f, 0.f, lFormat))
         {
-            // A zero or negative step would make ImGuizmo snap everything onto one point.
+            // A zero or negative step would snap everything onto one point.
             lStep = lStep < k_MinSnapStep ? k_MinSnapStep : lStep;
         }
     }
@@ -103,9 +99,8 @@ namespace Opaax::Editor::NativeViewportTools
 
     void DrawColliders(EditorContext& InContext)
     {
-        // The state lives on the ENGINE's DebugDraw, not on EditorViewport beside the grid: the
-        // producer is a world subsystem that also runs in a dev Game.exe, and F4b's whole point is
-        // that the toggle sits outside the producer rather than inside one host's UI.
+        // The state is the engine's DebugDraw, not EditorViewport: the collider outlines also exist in a
+        // dev Game.exe.
         DebugDraw& lDebug = InContext.Engine.GetDebugDraw();
 
         const bool bVisible = lDebug.IsChannelEnabled(DebugChannels::Physics);
@@ -125,15 +120,13 @@ namespace Opaax::Editor::NativeViewportTools
 
     void DrawPivot(EditorContext& InContext)
     {
-        // One button that NAMES ITS CURRENT STATE rather than a pair of radio buttons: there are
-        // only two values, so the label is the readout and clicking is the toggle.
+        // One button naming its current state (two values: the label shows it, a click toggles it).
         EditorGizmo& lGizmo = InContext.Gizmo;
 
-        // THREE states, so it cycles rather than toggles. The label is the readout.
+        // Three states, so it cycles. The label shows the current one.
         const EGizmoPivot lPivot = lGizmo.GetPivot();
 
-        // "###pivot" pins the ImGui ID to the part after it, so a label that changes with the
-        // state does not make this a different widget every time it is clicked.
+        // "###pivot" keeps the ImGui ID stable while the label changes.
         char lLabel[48];
         std::snprintf(lLabel, sizeof(lLabel), "Pivot: %s###pivot", ToString(lPivot));
 
@@ -157,8 +150,7 @@ namespace Opaax::Editor::NativeViewportTools
     {
         EditorGizmo& lGizmo = InContext.Gizmo;
 
-        // SCALE FORCES LOCAL, so the button says so and refuses rather than lying. A world-axis
-        // non-uniform scale of a rotated entity is a SHEAR, which TransformComponent cannot hold.
+        // Scale forces local (a world-axis scale of a rotated entity would be a shear), so the button is disabled.
         const bool bForced = lGizmo.GetMode() == EGizmoMode::Scale;
         const bool bLocal  = lGizmo.GetEffectiveSpace() == EGizmoSpace::Local;
 
@@ -171,8 +163,7 @@ namespace Opaax::Editor::NativeViewportTools
 
         ImGui::EndDisabled();
 
-        // OUTSIDE BeginDisabled: a disabled item does not report hover, and the one moment the
-        // tooltip is most needed is when the button will not move.
+        // Outside BeginDisabled: a disabled item reports no hover, and the tooltip explains why it is disabled.
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
         {
             ImGui::SetTooltip(bForced

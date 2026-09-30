@@ -18,7 +18,7 @@ namespace Opaax
 
     EUIReply UIButton::OnPointerEvent(const UIPointerEvent& InEvent)
     {
-        // A disabled button is inert: it does not take the click, so it falls through like an image.
+        // A disabled button does not take clicks (they fall through).
         if (!bEnabled)
         {
             return EUIReply::Unhandled;
@@ -29,7 +29,7 @@ namespace Opaax
             case EUIPointerEventType::Enter:
                 m_bHovered = true;
                 InvalidateContent();
-                return EUIReply::Unhandled;   // hover never consumes
+                return EUIReply::Unhandled;   // hover is never consumed
 
             case EUIPointerEventType::Leave:
                 m_bHovered = false;
@@ -50,8 +50,7 @@ namespace Opaax
                 m_bPressed = false;
                 InvalidateContent();
 
-                // A click needs the release to land inside; a drag-off cancels but still consumes,
-                // because this widget captured the press.
+                // A click needs the release inside; a drag-off cancels but is still consumed (we captured it).
                 if (lWasPressed && GetBounds().Contains(InEvent.Position))
                 {
                     OnClick.Broadcast();
@@ -68,7 +67,7 @@ namespace Opaax
     {
         UIWidget::SaveFields(InOutJson);
 
-        // OnClick is NOT written: a handler is code. Gameplay binds it by NAME after loading (UI13).
+        // OnClick is not saved: gameplay binds it by name after loading.
         InOutJson["Normal"]   = Normal;
         InOutJson["Hovered"]  = Hovered;
         InOutJson["Pressed"]  = Pressed;
@@ -95,8 +94,7 @@ namespace Opaax
 
     void UIButton::Rebuild(const UIBuildContext& InContext, TDynArray<UIQuad>& OutQuads)
     {
-        // The image's sources, the image's rule (UI25): named but not ready draws nothing and
-        // asks again; nothing named is the state colour on a plain quad.
+        // Same rule as UIImage: named but not ready draws nothing and retries; nothing named is a plain quad.
         UIResolvedImage lImage;
         bool            bNamed = false;
         if (!ResolveImageSource(InContext, m_Texture, Texture, Sheet, Frame, lImage, bNamed) && bNamed)

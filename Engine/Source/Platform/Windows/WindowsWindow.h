@@ -11,7 +11,7 @@ namespace Opaax
     inline constexpr LogCategory LogWindowsWindow{"WindowsWindow"};
 
     /**
-     * @class WindowsWindow
+     * Window implementation with GLFW (Windows).
      */
     class WindowsWindow : public Window
     {
@@ -96,23 +96,21 @@ namespace Opaax
     private:
         GLFWwindow* m_Window;
 
-        // Backend graphics context — owns make-current, glad load, vsync, present.
+        // Graphics context: make-current, glad loading, vsync, present.
         TUniquePtr<IGraphicsContext> m_Context;
 
         struct WindowData
         {
             OpaaxString Title;
 
-            // SIGNED: a monitor left of the primary gives a negative X, and SaveWindowedState
-            // writes glfwGetWindowPos straight in here.
+            // Signed: a monitor left of the primary gives a negative X.
             Int32 PosX = 0, PosY = 0;
 
             Uint32 Width, Height;
             Uint32 RefreshRate = GLFW_DONT_CARE;
             EWindowMode Mode;
 
-            // The host's STATED preference, which SetWindowed re-applies. Borderless overrides it
-            // while active without overwriting it, so leaving borderless restores what was asked for.
+            // The host's preference, restored by SetWindowed (Borderless overrides it while active).
             bool bDecorated = true;
 
             EventCallbackFunc EventCallback;

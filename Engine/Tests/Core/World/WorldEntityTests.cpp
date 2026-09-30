@@ -1,11 +1,7 @@
-// Suite: entity identity — Guid stamping, Guid-preserving creation, and the MapId partition.
-//
-// These two properties are what the M3 snapshot core rests on:
-//   1. CreateEntityWithGuid can restore an identity that already exists, because capture ->
-//      instantiate must preserve GUIDs or every inter-entity reference in a map breaks.
-//   2. EntityMeta::OwnerMap says which Map authored an entity. A World owns ONE registry, so
-//      a Map is a partition of it rather than a container; an invalid OwnerMap means the
-//      entity was spawned at runtime and no map should ever write it out.
+// Suite: entity identity — guid stamping, guid-preserving creation, and the MapId partition.
+//   1. CreateEntityWithGuid can restore an existing identity (capture -> instantiate keeps guids).
+//   2. EntityMeta::OwnerMap says which map an entity belongs to; invalid means runtime-spawned
+//      (never saved).
 #include <doctest.h>
 
 #include "World/Entity/Entity.h"
@@ -156,7 +152,7 @@ TEST_CASE("World: Clear releases every Guid")
 // =============================================================================
 //
 // The editor skips a whole capture + serialize per mounted map when this has not moved
-// (EditorLevelDocument::RefreshDirty, MP5). A mutation that fails to bump it therefore reads as
+// (EditorLevelDocument::RefreshDirty). A mutation that fails to bump it therefore reads as
 // "no unsaved changes" — silently, and until something unrelated bumps it. These pin the
 // chokepoints the gate is allowed to trust.
 TEST_CASE("World: the revision moves on every entity create and destroy")
@@ -192,7 +188,7 @@ TEST_CASE("World: a REFUSED create does not move the revision")
     const Guid lGuid = lWorld.CreateEntity("Original").GetGuid();
     const Uint64 lBefore = lWorld.GetRevision();
 
-    // A duplicate Guid is refused (WM3) — nothing was added, so nothing changed.
+    // A duplicate Guid is refused — nothing was added, so nothing changed.
     CHECK_FALSE(lWorld.CreateEntityWithGuid(lGuid, "Duplicate").IsValid());
     CHECK(lWorld.GetRevision() == lBefore);
 }

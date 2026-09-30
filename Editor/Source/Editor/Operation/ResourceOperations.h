@@ -15,29 +15,15 @@ namespace Opaax::Editor
     inline constexpr LogCategory LogResourceOps{"ResourceOps"};
 
     // =============================================================================
-    // ResourceOps — what happens AFTER a document writes its file.
-    //
-    //   EVERY DOCUMENT'S SAVE ENDED IN THE SAME HAND-WRITTEN LINE — `Resources.Reload<T>(path)` —
-    //   eight times, in eight `*Operations.cpp` files, and not one of them told anything else. That
-    //   duplication is the whole reason this exists: the reload is only HALF of what "saved" means,
-    //   and the other half had nowhere to live.
-    //
-    //   For a texture, a sheet or a clip the reload IS enough, because `ResourceManager::Reload`
-    //   swaps the payload in place and every live `ResourceRef` resolves to the new one. A PREFAB is
-    //   the exception, and it is what forced the announce: its instances were MATERIALIZED into
-    //   entities, so replacing the resource changes nothing already in the world.
+    // ResourceOps — what happens after a document writes its file: reload the resource and announce
+    //   the save. A reload is enough for textures, sheets or clips (the data is swapped in place).
+    //   Prefabs need the announce: their instances are entities, so a reload alone changes nothing.
     // =============================================================================
     namespace ResourceOps
     {
         /**
-         * The BEFORE half — call it immediately before writing the file.
-         *
-         * This is the only moment the previous state exists: the old file is still on disk and the
-         * old payload still resident. A listener that must read it (a prefab's instances, whose
-         * overrides are only meaningful against the template they were built from) runs here.
-         *
-         * OPTIONAL. A saver whose listeners do not need the old state can call `SavedToDisk` alone,
-         * which is what the eight document Save ops do.
+         * Call right before writing the file, while the old file and data still exist (a prefab's
+         * instances need them to keep their overrides). Optional: most savers only call SavedToDisk.
          */
         template<CResource T>
         void AboutToSave(EditorContext& InContext, const OpaaxString& InAbsPath)
@@ -51,18 +37,10 @@ namespace Opaax::Editor
         }
 
         /**
-         * Reload and announce — the AFTER half of "this document was saved".
-         *
-         * Call it INSTEAD of `Resources.Reload<T>(...)`, after the file is written. Together with
-         * `AboutToSave` it brackets the WRITE, which is the boundary that matters — not the reload.
-         *
-         * NOT RESIDENT IS NOT A FAILURE (`Reload`'s own rule): it means nobody was holding the
-         * resource, so there is nothing to swap. The event fires ANYWAY — a listener may care about
-         * the file having changed even when no `ResourceRef` existed, which is exactly a prefab
-         * whose instances are entities rather than refs.
-         *
-         * @param InAbsPath The file just written, absolute — what the resource layer is keyed by.
-         * @return what `Reload` answered: true when a resident copy was actually replaced.
+         * Reloads the resource and announces the save. Call it after the file is written.
+         * Not loaded is not a failure (nothing to swap); the event is sent anyway.
+         * @param InAbsPath The file just written, absolute
+         * @return True if a loaded copy was replaced
          */
         template<CResource T>
         bool SavedToDisk(EditorContext& InContext, const OpaaxString& InAbsPath)

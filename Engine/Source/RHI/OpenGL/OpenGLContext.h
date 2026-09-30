@@ -13,11 +13,7 @@ namespace Opaax
     // OpenGLContext
     // =============================================================================
     /**
-     * @class OpenGLContext
-     *
-     * IGraphicsContext for OpenGL over a GLFW window. Owns make-current, the glad
-     * function-pointer load, vsync, and the buffer swap. glad/GLFW are confined to
-     * this TU on the OpenGL side — nothing above RHI/ touches them.
+     * IGraphicsContext for OpenGL on a GLFW window: make current, glad loading, vsync, swap.
      */
     class OPAAX_API OpenGLContext final : public IGraphicsContext
     {
@@ -42,7 +38,7 @@ namespace Opaax
         // Functions
         // =============================================================================
     private:
-        // Verbose adapter/driver dump at init (renderer, vendor, GLSL, limits).
+        // Logs adapter and driver details at init.
         void LogAdapterInfo() const;
 
         // =============================================================================

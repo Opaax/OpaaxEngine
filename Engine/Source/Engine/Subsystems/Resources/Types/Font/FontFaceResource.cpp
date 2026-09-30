@@ -10,7 +10,7 @@ namespace Opaax
 {
     namespace
     {
-        /** Single-channel coverage — the R8 branch OpenGLTexture2D::Upload already carries. */
+        /** Single-channel (R8) coverage. */
         constexpr Int32 ATLAS_CHANNELS = 1;
     }
 
@@ -31,8 +31,7 @@ namespace Opaax
             return std::nullopt;
         }
 
-        // Named local: PathString::Stem answers a view into a temporary, and CStr() across a `;`
-        // would dangle.
+        // Named local: Stem returns a view into a temporary.
         const OpaaxString lStem = PathString::Stem(OpaaxStringView(InPath)).ToString();
 
         OPAAX_LOG(LogFontFaceResource, Trace, "'{}' baked {} glyph(s), atlas {}x{}, {} kern pair(s)",
@@ -66,9 +65,7 @@ namespace Opaax
 
     FontFaceResource FontFaceResource::Placeholder()
     {
-        // No glyphs and no atlas, deliberately: every codepoint misses, so the whole string draws as
-        // tofu boxes rather than as nothing at all. FontFaceData::Tofu is the ONE definition of that
-        // shape — a family with nothing in the requested script answers the same thing.
+        // No glyphs, no atlas: every character draws as a box (see FontFaceData::Tofu).
         FontFaceResource lResource;
         lResource.Face = FontFaceData::Tofu();
 
@@ -77,8 +74,7 @@ namespace Opaax
 
     Uint64 FontFaceResource::ByteSize() const noexcept
     {
-        // From the DIMENSIONS, not from Pixels.size(): Initialize empties that vector, and a payload's
-        // accounting must not change because the pump happened to run.
+        // From the dimensions: Initialize clears Pixels.
         return sizeof(FontFaceResource)
              + static_cast<Uint64>(Face.AtlasWidth) * static_cast<Uint64>(Face.AtlasHeight)
              + static_cast<Uint64>(Face.Glyphs.size())  * (sizeof(Uint32) + sizeof(FontGlyph))

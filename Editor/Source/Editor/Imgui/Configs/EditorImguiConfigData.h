@@ -19,15 +19,13 @@ namespace Opaax
         LinearColor WindowBackground    {.0f, .0f, .0f, .85f};
 
         /**
-         * The UI typeface, as a mount or asset-relative path. EMPTY keeps the toolkit's own default
-         * (ImGui's ProggyClean, which is ASCII-only).
+         * The UI font, as a mount or asset-relative path. Empty keeps ImGui's default (ASCII only).
          */
         OpaaxString UIFontPath { "/Engine/Fonts/Roboto/roboto-latin-400-normal.ttf" };
 
         /**
-         * Faces merged into the primary so the UI can DISPLAY the scripts the editor can author.
-         * Google ships Roboto subsetted, so covering Greek and Cyrillic is a list of files rather
-         * than one.
+         * Faces merged into the primary so the UI can show other scripts (e.g. Greek and Cyrillic, often
+         * shipped as separate files).
          */
         TDynArray<OpaaxString> UIFontFallbacks
         {
@@ -39,8 +37,7 @@ namespace Opaax
 
         float UIFontSizePx { 16.f };
 
-        // EVERY field goes in both lists. One left out of the json macro is not a smaller config —
-        // it is a field that silently never persists (WindowBackground was, until 2026-09-01).
+        // Every field goes in both lists: a field missing from the json macro is silently never saved.
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(EditorImguiConfigData,
             WindowPadding,
             TextColor,
@@ -50,12 +47,9 @@ namespace Opaax
             UIFontFallbacks,
             UIFontSizePx)
 
-        // UIFontFallbacks is the ONE exception to "every field in both lists": it is a TDynArray and
-        // no property drawer draws a list, the same split SpriteSheetData makes for its frames. It
-        // persists and is hand-editable; it simply has no widget.
-        //
-        // The font is applied once, when the UI comes up, so both drawn fields say so — the
-        // NeedRestart flag exists for exactly this and the drawer prints "(restart)" beside them.
+        // Exception: UIFontFallbacks is a list and no property drawer draws lists. It is saved and can be
+        // edited by hand; it just has no widget.
+        // The font is applied once at startup, so both font fields are marked NeedRestart.
         OPAAX_PROPERTIES(EditorImguiConfigData,
                         OPAAX_PROP(WindowPadding),
                         OPAAX_PROP(TextColor),

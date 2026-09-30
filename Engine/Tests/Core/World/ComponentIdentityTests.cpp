@@ -1,27 +1,11 @@
-// Suite: entt component-type identity across the DLL/exe boundary.
+// Suite: entt component type ids across the DLL/exe boundary.
+//   ComponentRegistry keys components on entt::type_hash<T>::value(); game modules register from
+//   the exe while the registry lives in the DLL. Both sides must compute the same id, or a module
+//   component would silently not round-trip. On MSVC entt hashes __FUNCSIG__ (ENTT_PRETTY_FUNCTION),
+//   which is stable per type; these tests go red if that ever changes.
 //
-// WHY THIS EXISTS (ARCHITECTURE.md I2, lesson L21).
-//   ComponentRegistry v2 keys every registered component on `entt::type_hash<T>::value()`, and the
-//   game module registers ITS components from the exe side while the engine's entt::registry lives
-//   in the DLL. If the two sides computed different ids for the same type, a module component would
-//   silently fail to round-trip: no crash, no null, just an empty view — the codebase's worst
-//   failure class (L18). That premise had to be PROVEN, not recalled, before the registry was built
-//   on top of it.
-//
-//   Static evidence: entt picks `ENTT_PRETTY_FUNCTION = __FUNCSIG__` on MSVC
-//   (Vendors/Entt/.../config/config.h), so `type_hash` is a constexpr hash of the type's signature
-//   STRING (core/type_info.hpp:106) — exactly the compiler-stable-per-type-string shape I2 mandates,
-//   not the per-module incrementing `type_index` counter it falls back to otherwise.
-//
-//   These cases are the runtime regression gate for that: they would go red if entt's config ever
-//   lost ENTT_PRETTY_FUNCTION (a vendor bump, a stray define), which is the one change that would
-//   silently re-introduce the hazard.
-//
-// THE INSTRUMENT (L21: it must not share a failure mode with the thing it measures).
-//   `EntityMeta` is emplaced by `World::CreateEntity`, whose body is compiled INTO THE DLL
-//   (World.cpp) — so the pool is created under the DLL's id. Everything below reads it from the
-//   exe side through header templates instantiated HERE. A disagreement therefore shows up as an
-//   absent pool / empty view rather than as anything the test itself computed.
+//   EntityMeta is added by World::CreateEntity, compiled in the DLL; the tests read it from the
+//   exe side, so a mismatch shows up as an empty view.
 #include <doctest.h>
 
 #include <entt/entt.hpp>

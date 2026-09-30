@@ -20,20 +20,16 @@ namespace Opaax
         virtual double GetTimeSeconds()      const = 0;
         
         /**
-         * Absolute path to the running executable (OS call — robust, unlike argv[0]).
-         * IPaths derives its base from this.
-         * @return 
+         * Absolute path to the running executable (from the OS, unlike argv[0]).
          */
         virtual OpaaxString GetExecutablePath() const = 0;
 
         /**
-         * 
-         * @return Windows Linux Max
+         * @return The platform name (Windows, Linux, Mac)
          */
         virtual OpaaxString GetPlatformName() const = 0;
 
         /**
-         * 
          * @return The platform file system
          */
         virtual const IFileSystem& GetFileSystem() const = 0;

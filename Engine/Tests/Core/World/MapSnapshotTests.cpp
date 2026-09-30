@@ -1,9 +1,5 @@
-// Suite: the M3 snapshot core — MapSerializer::Capture <-> MapFactory::Instantiate.
-//
-// The milestone gate lives here: capture -> instantiate must yield an equivalent world with
-// GUIDs PRESERVED. entt handles are runtime-only and are never assumed stable across worlds,
-// so the Guid is the only thing an inter-entity reference can survive on — if the round trip
-// re-mints identities, every such reference in a map silently points at the wrong entity.
+// Suite: MapSerializer::Capture <-> MapFactory::Instantiate. The round trip must keep the guids:
+// they are what inter-entity references rely on (entt handles are not stable across worlds).
 #include <doctest.h>
 
 #include "Core/Tag/OpaaxTagContainer.h"
@@ -45,7 +41,7 @@ namespace
         InJson.at("Speed").get_to(InValue.Speed);
     }
 
-    // A tag-carrying component, shaped exactly like Sandbox's TagsComponent (I14): a container
+    // A tag-carrying component, shaped exactly like Sandbox's TagsComponent: a container
     // member plus the NLOHMANN macro, which reaches the tag bridge through OpaaxTagJson.h.
     struct TaggedComponent
     {
@@ -127,7 +123,7 @@ TEST_CASE("Snapshot: a round trip into a DIFFERENT world preserves identity too"
 
     const Guid lGuid = lEntity.GetGuid();
 
-    // This is the PIE clone shape (M4): capture one world, instantiate into another.
+    // This is the PIE clone shape: capture one world, instantiate into another.
     World lTarget("Target");
     CHECK(MapFactory::Instantiate(MapSerializer::CaptureWorld(lSource, lRegistry), lTarget, lRegistry) == 1u);
 
@@ -298,7 +294,7 @@ TEST_CASE("Snapshot: a MALFORMED payload is skipped, and the rest of the map sti
     REQUIRE(lRegistry.Register<DummyComponent>("Dummy"));
 
     // Defaults cover a MISSING key; they cannot cover a key whose value is the wrong type, or a
-    // payload that is not an object at all — a hand-edited or truncated file. BO4c's rule applies
+    // payload that is not an object at all — a hand-edited or truncated file. The same rule applies
     // the same way it does one level up: a map that cannot be read is a warning, not a refusal
     // to boot.
     MapData    lData;
@@ -371,7 +367,7 @@ TEST_CASE("Snapshot: instantiating the same data twice refuses the duplicates")
 }
 
 // =============================================================================
-// Tags through the real snapshot core (I14)
+// Tags through the real snapshot core
 //
 // TagTests proves the json bridge in isolation; this proves the thing a game actually depends on —
 // that a tag survives ComponentRegistry -> Capture -> Instantiate and still matches its ancestors on
@@ -415,7 +411,7 @@ TEST_CASE("Snapshot: a tag container round-trips, and the hierarchy still answer
 }
 
 // =============================================================================
-// CameraComponent (①) — the first engine-native component whose value decides what the
+// CameraComponent — the first engine-native component whose value decides what the
 //   frame LOOKS like, so a silent round-trip failure would read as "the renderer broke".
 // =============================================================================
 TEST_CASE("Snapshot: a camera's framing survives capture -> instantiate")
@@ -450,7 +446,7 @@ TEST_CASE("Snapshot: a camera's framing survives capture -> instantiate")
 
 TEST_CASE("Snapshot: a TransformComponent payload missing a key keeps that field's DEFAULT")
 {
-    // I8's _WITH_DEFAULT rule, exercised on the type rather than asserted about it: a map saved
+    // The _WITH_DEFAULT rule, exercised on the type rather than asserted about it: a map saved
     // before a field existed must still open. The plain macro throws here, inside Level::MountAll,
     // at boot — which is how this failed once already.
     //
@@ -467,7 +463,7 @@ TEST_CASE("Snapshot: a TransformComponent payload missing a key keeps that field
     lEntity.Name     = "OldEntity";
     lEntity.OwnerMap = MapId("Level01");
 
-    // Only Position — as an older map that knew neither Rotation nor ③'s Scale would have written it.
+    // Only Position — as an older map that knew neither Rotation nor Scale would have written it.
     lEntity.Components.emplace_back(OpaaxStringID("Transform"),
                                     nlohmann::json{{"Position", {{"x", 10.f}, {"y", 20.f}}}});
 
@@ -482,7 +478,7 @@ TEST_CASE("Snapshot: a TransformComponent payload missing a key keeps that field
     CHECK(lRebuilt.Get<TransformComponent>().Rotation   == doctest::Approx(0.f)); // the default, not a throw
 
     // Scale is the field where the default MATTERS rather than merely being tidy: it multiplies the
-    // component's Size, so a zero here would render every entity authored before ③ as nothing at
+    // component's Size, so a zero here would render every entity authored before Scale as nothing at
     // all — invisible, with no error anywhere. Every `.opaaxmap` on disk hits this path.
     CHECK(lRebuilt.Get<TransformComponent>().Scale.x == doctest::Approx(1.f));
     CHECK(lRebuilt.Get<TransformComponent>().Scale.y == doctest::Approx(1.f));

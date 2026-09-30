@@ -1,9 +1,6 @@
-// Suite: the one entity-AABB rule (World/Entity/EntityQuery.h).
-//
-// This is the only part of block 2 a test can reach — picking, the marquee and focus all live in
-// the editor, which OpaaxTests cannot link. So everything that can be decided without pixels is
-// decided here: which tier an entity's bounds come from, that the anchor fallback is opt-in, and
-// that "topmost" means the renderer's order rather than iteration order.
+// Suite: entity bounds (World/Entity/EntityQuery.h). Picking, the marquee and focus live in the
+// editor; what can be decided without pixels is tested here: which bounds an entity gets, that the
+// anchor fallback is opt-in, and that "topmost" follows the draw order.
 #include <doctest.h>
 
 #include "Core/Maths/Bounds2D.h"
@@ -84,7 +81,7 @@ TEST_CASE("EntityQuery: bounds follow the transform's ROTATION")
     CHECK(lBounds.HalfExtent.y == doctest::Approx(50.f));
 }
 
-TEST_CASE("EntityQuery: a CHILD's bounds land where it draws — under its parent's pose, not at its local (§HR)")
+TEST_CASE("EntityQuery: a CHILD's bounds land where it draws — under its parent's pose, not at its local")
 {
     World lWorld("Parented");
 
@@ -121,7 +118,7 @@ TEST_CASE("EntityQuery: bounds follow the transform's SCALE")
     REQUIRE(EntityQuery::TryGetBounds(lQuad, lBounds));
 
     // The SAME multiply RendererManager applies. If these two ever disagree a scaled entity is
-    // clickable somewhere other than where it is drawn — the failure SEL1 exists to prevent, and
+    // clickable somewhere other than where it is drawn, and
     // one this file is the only thing that can catch (the draw path needs a GL context).
     CHECK(lBounds.HalfExtent.x == doctest::Approx(100.f));
     CHECK(lBounds.HalfExtent.y == doctest::Approx(10.f));

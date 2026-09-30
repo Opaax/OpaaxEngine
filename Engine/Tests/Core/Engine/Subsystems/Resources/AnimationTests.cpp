@@ -1,20 +1,12 @@
-// Suite: the animation CLIP asset — its data, its `.opaaxclip` file, and the pure function the
-// whole feature stands on (SampleClip).
-//
-// SampleClip is free and pure precisely so it can be tested with no world, no GL context and no
-// clock, the way MakeFrameUV, SliceGrid and PlanQuadBatches are. It earns it twice over: it is
-// STATELESS (the answer is a function of the time, never of the previous frame), so these cases
-// pin the whole playback model rather than one transition.
-//
-// Every timing case uses Fps = 1, so a second IS a tick and the expected values can be read off
-// the clip by eye. The file cases run against a unique temp directory, created and removed per
-// case — never the repo's own assets ([[L20]]).
+// Suite: the animation clip asset — data, .opaaxclip file, and SampleClip (stateless playback).
+// Timing cases use Fps = 1, so a second is a tick.
+// File cases use a unique temp directory, created and removed per case.
 #include <doctest.h>
 
 #include <filesystem>
 #include <string>
 
-#include "Core/IO/FileIO.h"   // the malformed-file cases author their own bytes
+#include "Core/IO/FileIO.h"
 #include "Engine/Subsystems/Resources/ResourceManager.h"        // completes LoadContext
 #include "Engine/Subsystems/Resources/ResourceFormatRegistry.h"
 #include "Engine/Subsystems/Resources/Types/Animation/AnimationClipData.h"
@@ -290,8 +282,7 @@ TEST_CASE("AnimationClipFile: save then load round-trips every field")
 
 TEST_CASE("AnimationClipFile: the text a save writes is the text a save writes again")
 {
-    // What the editor's dirty marker stands on: Serialize must be stable, or a `*` appears on a
-    // clip nobody touched (the trap L30 records for the map baseline).
+    // The editor's dirty check relies on Serialize being stable.
     const AnimationClipData lData = MakeProbeClip(3u, EAnimPlayMode::Once);
 
     CHECK(AnimationClipFile::Serialize(lData) == AnimationClipFile::Serialize(lData));
@@ -327,8 +318,7 @@ TEST_CASE("AnimationClipFile: a file missing keys keeps the defaults (_WITH_DEFA
 {
     const ScopedTempDir lDir("partial");
 
-    // Adding a field must never refuse a clip written before it existed — the same rule that keeps
-    // every .opaaxmap loading (I8). This is the case that will matter when the notify track lands.
+    // Adding a field must not break clips saved before it.
     const OpaaxString lPartial = lDir.Sub("Partial.opaaxclip");
     REQUIRE(FileIO::WriteAllText(lPartial, OpaaxString("{\n    \"Fps\": 24.0\n}")));
 
@@ -359,16 +349,11 @@ TEST_CASE("AnimationClipFile: a wrong TYPE and an unknown PlayMode label are bot
 }
 
 // =============================================================================
-// AnimationClipResource — the CResource adapter, through the REAL manager
-//
-//   The file cases above prove the FORMAT. These prove the RESOURCE: that the adapter refuses a
-//   bad file rather than half-loading it, and that its Placeholder policy resolves to something
-//   the animator can safely sample. Without them the whole `.opaaxclip` -> ResourceManager route
-//   would be verified only by the fact that it compiles.
+// AnimationClipResource — through the real ResourceManager
 // =============================================================================
 TEST_SUITE("AnimationClipResource")
 {
-    /** A context to hand Load. Every case is a leaf load — a clip acquires no child (SS3). */
+    /** A load context. Clips have no dependencies. */
     struct LoadFixture
     {
         ResourceManager         Manager;
@@ -427,9 +412,8 @@ TEST_SUITE("AnimationClipResource")
 
     TEST_CASE("a broken clip RESOLVES to the placeholder through the manager, never to null")
     {
-        // Placeholder vs FailFast is the difference that matters here, and it is only observable
-        // through the real manager: a failed claim reports IsValid() false while Get() still
-        // answers a payload. Gate on IsValid(), never on Get() != nullptr (I16).
+        // A failed claim: IsValid() is false, but Get() still returns the placeholder.
+        // Check IsValid(), not Get() != nullptr.
         const ScopedTempDir lDir("res_degrade");
         const OpaaxString   lPath = lDir.Sub("Broken.opaaxclip");
         REQUIRE(FileIO::WriteAllText(lPath, OpaaxString("[]")));

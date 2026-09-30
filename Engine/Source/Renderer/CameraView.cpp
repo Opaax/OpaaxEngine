@@ -25,9 +25,7 @@ namespace Opaax
 
     Matrix44F MakeViewProjection(const CameraView& InView, Uint32 InWidth, Uint32 InHeight)
     {
-        // The zero-size guard stays HERE as well as in MakeProjection: identity * view is the view,
-        // not identity, so deferring to the half would quietly change what a degenerate target
-        // answers for any camera that is not at the origin.
+        // Zero-size check here too: identity * view is the view, not identity.
         if (InWidth == 0 || InHeight == 0)
         {
             return Matrix44F(1.f);
@@ -46,8 +44,7 @@ namespace Opaax
         const float lHalfH = InView.OrthoSize;
         const float lHalfW = lHalfH * (InViewportPx.x / InViewportPx.y);
 
-        // Centre-relative pixels, then scaled to world half-extents. Y is negated once:
-        // screen-Y grows down, world-Y grows up.
+        // Centre-relative pixels scaled to world units. Y is flipped (screen down, world up).
         const Vector2F lCentred = InLocalPx - InViewportPx * 0.5f;
 
         return InView.Position + Vector2F(lCentred.x / (InViewportPx.x * 0.5f) * lHalfW,

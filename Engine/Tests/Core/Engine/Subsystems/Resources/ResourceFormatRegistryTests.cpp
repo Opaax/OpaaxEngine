@@ -1,11 +1,6 @@
-// Suite: ResourceFormatRegistry — "which resource type loads this file?", answered by extension.
-//
-// The point of the table is that the mapping is MANY-to-one: one loader claims .png AND .jpg AND
-// .tga, so the editor keys its icon and its double-click by TYPE and never sees an extension. The
-// cases below pin that, plus the two refusals that keep the answer unambiguous — a duplicate
-// extension, and a registration after the seal.
-//
-// Probe types are defined HERE, in the test exe — the same position a game module is in.
+// Suite: ResourceFormatRegistry — which resource type loads a file, by extension (several
+// extensions per type). Also the two refusals: duplicate extension, and registration after sealing.
+// Probe types are defined here, like a game module's.
 #include <doctest.h>
 
 #include <optional>
@@ -16,9 +11,7 @@ using namespace Opaax;
 
 namespace
 {
-    // A resource type claiming SEVERAL extensions — the shape the whole design exists for. The
-    // live one is TextureResource (see TextureResourceTests); this probe stays because a registry
-    // suite must be able to break the rules (duplicate claims, post-seal) without touching it.
+    // A type with several extensions (the real one is TextureResource).
     struct ProbeTextureResource
     {
         OPAAX_RESOURCE_FORMAT("Probe Texture", ".png", ".jpg", ".TGA")

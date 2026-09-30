@@ -7,7 +7,7 @@
 namespace Opaax
 {
     // =============================================================================
-    // Viewport — pixel rect the scene renders into (x, y from bottom-left).
+    // Viewport — pixel rect to render into (x, y from bottom-left).
     // =============================================================================
     struct Viewport
     {
@@ -18,14 +18,8 @@ namespace Opaax
     };
 
     // =============================================================================
-    // RenderView — the per-frame camera contract (POD). The renderer has NO camera
-    //   class; the host composes the matrices and hands over a snapshot. One BeginPass
-    //   per view, so split-screen / editor viewport / minimap are just more views.
-    //
-    //   What the host composes it FROM is CameraView (Renderer/CameraView.h): a position
-    //   and an OrthoSize in world units, which RendererManager turns into matrices against
-    //   the target's pixels. ViewProjection is the combined product because the batcher
-    //   only needs that; a View/Proj split lands when a consumer needs the two apart.
+    // RenderView — the camera for one pass (plain data). The host builds the matrix from a
+    //   CameraView; one BeginPass per view (split-screen, editor viewport, minimap, ...).
     // =============================================================================
     struct RenderView
     {

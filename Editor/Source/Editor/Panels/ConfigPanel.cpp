@@ -41,8 +41,7 @@ namespace Opaax::Editor
 
         for (const TUniquePtr<IConfig>& lConfig : lConfigs)
         {
-            // CStr() into the intern pool — valid for the life of the process (I2), so ImGui can
-            // hold it without a copy.
+            // CStr() points into the intern pool (valid for the whole process).
             if (ImGui::Selectable(lConfig->GetName().CStr(), lConfig.get() == lCurrent))
             {
                 m_Current = lConfig->GetConfigTypeID();
@@ -56,15 +55,13 @@ namespace Opaax::Editor
         ImGui::TextDisabled("%s", InConfig.FileName());
         ImGui::Separator();
 
-        // A registered drawer folds the config's own property list; anything else falls back to the
-        // json view, so a config nobody registered is still readable rather than blank.
+        // A registered drawer draws the config's properties; otherwise show its JSON text.
         const bool lDrawn = m_Context.Extensions.ConfigDrawers().DrawFirst(InConfig, m_Context.Widgets, m_Context);
 
-        // Re-serialized every frame rather than cached: it is both what the fallback shows and how
-        // dirty is DERIVED below, and a cache here would need an invalidation nobody owns.
+        // Serialized every frame: shown by the fallback, and used for the dirty state.
         const OpaaxString lText = InConfig.ToText();
 
-        // A drag announces on release, not per frame: IsAnyItemActive holds it for the gesture.
+        // A drag is announced on release (IsAnyItemActive holds it).
         if (m_ChangeTracker.Update(InConfig.GetConfigTypeID(), lText, ImGui::IsAnyItemActive()))
         {
             InConfig.NotifyChanged();
@@ -94,9 +91,7 @@ namespace Opaax::Editor
 
     void ConfigPanel::DrawSaveBar(IConfig& InConfig, const OpaaxString& InCurrentText)
     {
-        // DIRTY IS DERIVED, not flagged: what the config serializes to now, against what it
-        // serialized to when this panel last showed or saved it. Nothing has to remember to mark
-        // anything — the EditorLevelDocument shape, one scale down.
+        // Dirty is derived: the current text against the text when last shown or saved.
         const bool lDirty = InCurrentText != m_Baseline;
 
         ImGui::Separator();

@@ -8,7 +8,7 @@ namespace Opaax::Editor
 {
     namespace
     {
-        /** The open action's data when it is the one InPath names, else null WITH A LINE SAYING SO. */
+        /** The open action's data if it is the one InPath names, else null (and a warning). */
         InputActionData* TargetAction(EditorContext& InContext, const OpaaxString& InPath)
         {
             if (!InContext.InputActionDocument.IsOpen() || InContext.InputActionDocument.AbsPath() != InPath)
@@ -21,7 +21,7 @@ namespace Opaax::Editor
             return &InContext.InputActionDocument.GetMutableData();
         }
 
-        /** The open context's data when it is the one InPath names, else null WITH A LINE SAYING SO. */
+        /** The open context's data if it is the one InPath names, else null (and a warning). */
         InputMappingContextData* TargetMap(EditorContext& InContext, const OpaaxString& InPath)
         {
             if (!InContext.InputMapDocument.IsOpen() || InContext.InputMapDocument.AbsPath() != InPath)

@@ -12,53 +12,40 @@
 namespace Opaax
 {
     // =============================================================================
-    // ColliderComponent — the SHAPE an entity occupies in the physics world, and the component
-    //   that decides an entity is in it at all: PhysicsSubsystem builds one body per collider,
-    //   and reads the optional RigidbodyComponent beside it only to pick the body TYPE.
-    //
-    //   SIZE IS THE COLLIDER'S, NOT THE SPRITE'S. A hitbox is routinely smaller than the art
-    //   (and a platformer's usually is), so this never reads SpriteComponent::Size — the two
-    //   are independent on purpose, the way Transform owns position and each component owns
-    //   its own extent (I17's shape one level down).
-    //
-    //   WHICH FIELDS ARE READ DEPENDS ON Shape: Box uses Size, Circle uses Radius, Capsule uses
-    //   both (Radius as the end caps, Size.y as the total height). Offset applies to all three.
-    //   That is a live union rather than three components, because the alternative is three
-    //   registrations and three drawers for one idea.
-    //
-    //   CHANNEL, NOT PROFILE. The channel says WHAT this is, and it becomes the shape's category
-    //   bit; Mode says HOW it reacts. A per-channel response MATRIX is the CollisionProfile
-    //   resource, deliberately not built (PH4) — ShapeDesc already takes CategoryBits/MaskBits,
-    //   so it lands later as pure addition with no map migration.
+    // ColliderComponent — the shape an entity occupies in the physics world.
+    //   PhysicsSubsystem creates one body per collider; an optional RigidbodyComponent sets its type.
+    //   Independent from the sprite's size (hitboxes are often smaller than the art).
+    //   Box uses Size, Circle uses Radius, Capsule uses both (Radius for the caps, Size.y for the height).
+    //   Channel is what it is (its category bit); Mode is how it reacts.
     // =============================================================================
     struct ColliderComponent
     {
-        /** Which primitive approximates the entity. Decides which of the fields below are read. */
+        /** The shape type. Decides which fields below are used. */
         EColliderShape Shape = EColliderShape::Box;
 
         /** Solid blocks and reports contacts; Overlap passes through and reports overlaps. */
         EColliderMode Mode = EColliderMode::Solid;
 
-        /** WHAT this collider is. Becomes its category bit — the unit queries filter on. */
+        /** What this collider is (its category bit, used by queries). */
         ECollisionChannel Channel = ECollisionChannel::WorldStatic;
 
         /** Local offset from the entity's Transform, world units. */
         Vector2F Offset = { 0.f, 0.f };
 
-        /** Box: FULL width and height. Capsule: Size.y is the total height, Size.x unused. */
+        /** Box: full width and height. Capsule: Size.y is the total height, Size.x unused. */
         Vector2F Size = { 100.f, 100.f };
 
-        /** Circle: the radius. Capsule: the end-cap radius, and half its width. */
+        /** Circle: the radius. Capsule: the end-cap radius. */
         float Radius = 50.f;
 
-        // ---- material: what a contact FEELS like -----------------------------------------
-        /** Mass per unit area. Ignored on a static body, which has infinite mass regardless. */
+        // ---- material --------------------------------------------------------------------------
+        /** Mass per unit area. Ignored on a static body. */
         float Density = 1.f;
 
-        /** 0 slides forever, 1 grips hard. A platformer lives on this value. */
+        /** 0 slides forever, 1 grips hard. */
         float Friction = 0.3f;
 
-        /** Bounce. 0 lands dead, 1 returns all of the impact energy. */
+        /** Bounce. 0 does not bounce, 1 keeps all the energy. */
         float Restitution = 0.f;
 
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(ColliderComponent,

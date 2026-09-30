@@ -3,7 +3,7 @@
 namespace Opaax
 {
     // =========================================================================
-    // Config type tag (out-of-line — one tag across the DLL/exe line).
+    // Config type tag (defined here so it is shared across the DLL/exe boundary).
     // =========================================================================
     ConfigTypeID Config_Engine::StaticTypeID() noexcept
     {

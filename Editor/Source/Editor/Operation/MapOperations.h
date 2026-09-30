@@ -13,58 +13,43 @@ namespace Opaax::Editor
     struct EditorContext;
 
     // =============================================================================
-    // MapOps — the verbs that act on ONE NAMED MAP of the open level.
-    //
-    //   EVERY ONE OF THEM TAKES ITS TARGET. The menu bar used to carry "Remove Open Map" and
-    //   "Set Open Map Persistent", which acted on whatever map happened to be FOCUSED — and a
-    //   level holds several maps (**WM1a**), so an implicit focus is not how an author picks one
-    //   of them. Naming the target is what let those two entries leave the menu bar for the
-    //   Hierarchy's map headers, where the map you click IS the argument.
-    //
-    //   They live here rather than on EditorService because there are now two call sites choosing
-    //   the target differently — the File menu from the cursor, the Hierarchy from the header —
-    //   and a verb duplicated per call site is a verb that drifts.
+    // MapOps — actions on one given map of the open level. Each takes its target map explicitly
+    //   (a level holds several maps): the File menu passes the focused map, the Hierarchy passes the
+    //   clicked header.
     // =============================================================================
     namespace MapOps
     {
-        /** The ACTIVE world's Level, or null when there is no world (or a bare one). */
+        /** The active world's Level, or null when there is no world (or a bare one). */
         Level* ActiveLevel(const EditorContext& InContext);
 
         /**
-         * False while PIE runs: the active world is then a Play clone, not the authored map, and
-         * writing it back would persist simulation state over the file. The rule is about WHICH
-         * WORLD is on screen, which is why it reads the PIE state rather than a flag.
-         *
-         * @param InVerb Named in the refusal, so a rejected command still says which one it was.
+         * False during Play: the active world is then a Play copy, and writing it back would save
+         * simulation state over the file.
+         * @param InVerb The action name, used in the refusal message
          */
         bool CanEdit(const EditorContext& InContext, const char* InVerb);
 
         /**
-         * Move the editing cursor onto a map that is ALREADY MOUNTED — loads nothing (**MP7**),
-         * and the selection survives because none of its entities go anywhere.
-         *
-         * @param InAssetRelPath ASSET-RELATIVE, the shape the manifest names maps in.
+         * Moves the editing cursor onto an already loaded map. Loads nothing; the selection is kept.
+         * @param InAssetRelPath Asset-relative, as the level file names maps
          */
         void Focus(EditorContext& InContext, const OpaaxString& InAssetRelPath);
 
-        /** Write ONE map. Save Level is what writes them all (**MP9**). */
+        /** Writes one map. Save Level writes them all. */
         void Save(EditorContext& InContext, MapId InMapId);
 
-        /** Make InMapId the map every other one composes on top of (**WM1a**). */
+        /** Makes InMapId the persistent map (the one the others are composed on). */
         void SetPersistent(EditorContext& InContext, MapId InMapId);
 
         /**
-         * Unmount InMapId and drop it from the manifest. Level::RemoveMap REFUSES the persistent
-         * map; the cursor only moves when it was pointing at what just left.
+         * Unloads InMapId and removes it from the level. The persistent map is refused. The cursor only
+         * moves if it was on this map.
          */
         void RemoveFromLevel(EditorContext& InContext, MapId InMapId);
 
         /**
-         * Drop a manifest entry whose file never mounted — missing, renamed or moved.
-         *
-         * Takes a PATH because that is all such an entry has: a MapId comes from the file's
-         * entities and there is no file. Until this existed the only repair was hand-editing the
-         * `.opaaxlevel`, and the level warned on every boot for as long as nobody did.
+         * Removes a level entry whose file never loaded (missing, renamed or moved). Takes a path because
+         * there is no file to get a MapId from.
          */
         void RemoveMissingFromLevel(EditorContext& InContext, const OpaaxString& InAssetRelPath);
     }

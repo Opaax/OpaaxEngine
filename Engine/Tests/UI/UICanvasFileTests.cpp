@@ -1,9 +1,6 @@
-// Suite: the `.opaaxui` format (UI/UICanvasFile.h, UI/UIWidgetRegistry.h) — UI12 / UI13.
-//
-// A widget serializes ITSELF through SaveFields/LoadFields and the registry turns a type tag back
-// into one, so what is gated here is the round trip: every field of every type survives, the tree
-// shape survives, an unknown tag costs one NODE rather than the file, and a missing key takes the
-// default (which is what lets a field be added later without refusing files written before it).
+// Suite: the .opaaxui format (UI/UICanvasFile.h, UI/UIWidgetRegistry.h). Every field of every type
+// and the tree shape survive a round trip; an unknown type costs one node; a missing key keeps
+// its default.
 #include <doctest.h>
 
 #include "Engine/Subsystems/Resources/Types/UI/UICanvasResource.h"
@@ -139,7 +136,7 @@ TEST_CASE("UICanvasFile: every widget type round-trips its own fields and the tr
     CHECK(lBackButton->Pressed.r == doctest::Approx(0.33f));
 
     // And the text is STABLE: writing what was read gives the same bytes, which is what makes a
-    // dirty check a string compare (**UI15**) instead of a tree diff.
+    // dirty check a string compare instead of a tree diff.
     CHECK(UICanvasFile::Serialize(lBack) == lText1);
 }
 
@@ -250,7 +247,7 @@ TEST_CASE("UIWidget: FindByName takes the FIRST match in tree order, and misses 
     CHECK(lRoot.FindByName(OpaaxString("Nobody")) == nullptr);
 }
 
-TEST_CASE("UICanvasResource: BuildTree yields an INDEPENDENT tree every time (UI13)")
+TEST_CASE("UICanvasResource: BuildTree yields an INDEPENDENT tree every time")
 {
     const UIWidgetRegistry lRegistry = MakeRegistry();
 
@@ -329,7 +326,7 @@ TEST_CASE("UICanvasFile: U5b's two new fields round-trip, and a file without the
     CHECK(lOldImage->Border.IsZero());
 }
 
-TEST_CASE("UICanvasFile: a file written when the asset fields were STRINGS still reads (UI19)")
+TEST_CASE("UICanvasFile: a file written when the asset fields were STRINGS still reads")
 {
     // The zero-format-change claim, asserted rather than trusted. TResourcePath serializes as a
     // BARE STRING (ResourcePathJson.h), so a `.opaaxui` authored before the fields became typed
@@ -370,7 +367,7 @@ TEST_CASE("UICanvasFile: a file written when the asset fields were STRINGS still
     CHECK(lText2.Find("\"Font\": \"/Engine/Fonts/Roboto/roboto-latin-700-normal.ttf\"") >= 0);
 }
 
-TEST_CASE("UICanvasFile: CloneWidget is a deep copy through the format, and a node's text pastes back (U7)")
+TEST_CASE("UICanvasFile: CloneWidget is a deep copy through the format, and a node's text pastes back")
 {
     const UIWidgetRegistry lRegistry = MakeRegistry();
 
@@ -413,7 +410,7 @@ TEST_CASE("UICanvasFile: CloneWidget is a deep copy through the format, and a no
     CHECK(UICanvasFile::DeserializeNode(OpaaxString("[1, 2]"), lRegistry) == nullptr);
 }
 
-TEST_CASE("UIWidget: AddChild at an index inserts there, and past the end appends (U7)")
+TEST_CASE("UIWidget: AddChild at an index inserts there, and past the end appends")
 {
     UIPanel lParent;
 

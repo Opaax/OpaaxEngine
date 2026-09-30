@@ -8,8 +8,7 @@ namespace
     constexpr Opaax::Uint32  k_HalfChars    = 16;                  // one Uint64 in hex
     constexpr Opaax::Uint32  k_GuidChars    = k_HalfChars * 2;
 
-    // Big-endian nibbles, so lexicographic order over the text matches numeric order over the
-    // value — which is what lets a map file be sorted by its guid STRINGS (M5).
+    // Big-endian nibbles: sorting the text sorts the values.
     void WriteHex64(Opaax::Uint64 InValue, char* OutChars) noexcept
     {
         for (Opaax::Int32 lIndex = static_cast<Opaax::Int32>(k_HalfChars) - 1; lIndex >= 0; --lIndex)
@@ -19,8 +18,7 @@ namespace
         }
     }
 
-    // SplitMix64's finalizer — the standard 64-bit avalanche mix. Every input bit affects every
-    // output bit, which is what Derive needs from each of its stages.
+    // SplitMix64 finalizer: every input bit affects every output bit.
     Opaax::Uint64 Mix64(Opaax::Uint64 InValue) noexcept
     {
         InValue ^= InValue >> 30;
@@ -57,9 +55,7 @@ namespace
 namespace Opaax
 {
     // =========================================================================
-    // New — two 64-bit draws from a thread-local Mersenne engine, seeded once per
-    // thread from random_device. Forced non-zero so the invalid sentinel can never
-    // be minted by accident.
+    // New — two random 64-bit values (thread-local Mersenne engine). Never zero.
     // =========================================================================
     Guid Guid::New() noexcept
     {
@@ -79,9 +75,7 @@ namespace Opaax
     }
 
     // =========================================================================
-    // Derive — each half folds BOTH words of BOTH inputs, so the result cannot
-    // inherit a collision from one 64-bit half of either argument. Forced non-zero
-    // for New()'s reason: the invalid sentinel must never be mintable by accident.
+    // Derive — each half mixes all four input words. Never zero.
     // =========================================================================
     Guid Guid::Derive(const Guid& InInstance, const Guid& InTemplate) noexcept
     {
@@ -123,8 +117,7 @@ namespace Opaax
 
         const char* lChars = InText.CStr();
 
-        // Parsed into LOCALS first: a half-written OutGuid would be a different identity, not a
-        // rejected one, and the caller would have no way to tell.
+        // Parse into locals: OutGuid stays untouched on failure.
         Uint64 lHigh = 0;
         Uint64 lLow  = 0;
         if (!ReadHex64(lChars, lHigh) || !ReadHex64(lChars + k_HalfChars, lLow))

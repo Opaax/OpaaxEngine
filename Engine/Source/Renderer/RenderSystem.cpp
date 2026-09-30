@@ -12,7 +12,7 @@
 namespace Opaax
 {
     // =========================================================================
-    // CTORS - DTORS (out-of-line — owned TUniquePtr members are forward-declared)
+    // CTORS - DTORS (out-of-line: TUniquePtr members are forward-declared)
     // =========================================================================
     RenderSystem::RenderSystem()  = default;
     RenderSystem::~RenderSystem() { Shutdown(); }
@@ -49,7 +49,7 @@ namespace Opaax
     {
         if (IsValidDevice())
         {
-            // GPU-idle before dropping GPU resources
+            // Wait for the GPU before releasing resources.
             m_Device->WaitIdle();
         } 
         
@@ -87,8 +87,7 @@ namespace Opaax
             return;
         }
 
-        // The FRAME owns the counters, not a pass: ⑥'s multi-view runs several BeginPass/EndPass
-        // brackets in here and their draw calls all belong to one frame's total.
+        // Counters are per frame (a frame can have several passes).
         if (IsValidRenderer2D())
         {
             m_Renderer2D->ResetStats();

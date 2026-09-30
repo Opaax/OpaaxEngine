@@ -3,7 +3,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Editor/Panels/IEditorPanel.h"
-#include "Editor/Resources/ResourcePreviewClaim.h"   // the live preview this owns, one per entry
+#include "Editor/Resources/ResourcePreviewClaim.h"
 
 namespace Opaax
 {
@@ -16,21 +16,11 @@ namespace Opaax::Editor
     struct ResourcePreviewEntry;
 
     // =============================================================================
-    // ResourcePreviewPanel — what a double-click on a resource opens, STACKED.
-    //
-    //   THE SEAM IS THE ONE THAT ALREADY EXISTED: ResourceTypeBuilder::SetActivate is "what does a
-    //   double-click do", and Map and Level have used it since M2d. A texture opening a viewer is
-    //   the same shape, which is why the Inspector's TPropertyDrawer contract did NOT have to grow
-    //   an EditorContext to get a preview — the preview simply lives where a context already is
-    //   (I15 untouched).
-    //
-    //   It holds MANY previews, each in its own collapsible section with a close button, because
-    //   comparing two images means having both on screen. ResourcePreview owns the list; this panel
-    //   owns one CLAIM per entry — whoever draws the pixels keeps them alive.
-    //
-    //   It draws the identity of ANY resource (name, path, type) and the CONTENT of the ones it
-    //   knows how to show — today exactly one, TextureResource. That single branch is the honest
-    //   shape while there is one previewable type; the growth point is named in the .cpp.
+    // ResourcePreviewPanel — what a double-click on a resource opens (through
+    //   ResourceTypeBuilder::SetActivate, like maps and levels). Holds several previews, each in its
+    //   own collapsible section (to compare two images). ResourcePreview owns the list; this panel owns
+    //   one live preview per entry. Shows every resource's name, path and type, and the content of the
+    //   ones that have a preview.
     // =============================================================================
     class ResourcePreviewPanel final : public IEditorPanel
     {
@@ -57,23 +47,20 @@ namespace Opaax::Editor
         // Functions
         // =============================================================================
     private:
-        /** One entry's section: header, identity, content. @return true to close it. */
+        /** One entry's section. @return True to close it */
         bool DrawEntry(const ResourcePreviewEntry& InEntry, Uint64 InIndex, bool bInFocused);
 
-        /** Name / Path / Type — everything true of a resource whatever its type. */
+        /** Name / Path / Type. */
         void DrawIdentity(const ResourcePreviewEntry& InEntry) const;
 
         /**
-         * The live preview for InEntry, built from its type's chrome on first request and kept.
-         *
-         * Keyed by INTERNED path so a redraw is an integer lookup, never a Load — a Load of a
-         * resident path is only a dedup hit, but one that bumps a refcount once per frame.
-         *
-         * @return nullptr when the type registered no preview, or when the file did not load.
+         * The live preview for InEntry, built from its type's chrome on first request and kept
+         * (keyed by path id, so a redraw is a lookup).
+         * @return nullptr if the type has no preview, or the file did not load
          */
         IResourcePreviewClaim* ClaimFor(const ResourcePreviewEntry& InEntry);
 
-        /** Drop claims for paths no longer open, so closing a preview actually releases its image. */
+        /** Drops the previews of closed entries (releases their resources). */
         void ReleaseClosedClaims();
 
         // =============================================================================
@@ -81,15 +68,15 @@ namespace Opaax::Editor
         // =============================================================================
     public:
         //~Begin IEditorPanel interface
-        /** Nothing to acquire — a preview exists only once something is asked for. */
+        /** Nothing to acquire. */
         void Startup()     override {}
 
-        /** Nothing the world's render depends on. */
+        /** Nothing the world render depends on. */
         void OnPreRender() override {}
 
         void DrawContents() override;
 
-        /** Release every claim while the ResourceManager and the GL context are both alive (LC3). */
+        /** Releases every claim (the ResourceManager and GL context are still alive). */
         void Shutdown()    override;
 
         PanelWindowStyle GetWindowStyle() const override { return { { 320.f, 420.f } }; }
@@ -101,13 +88,8 @@ namespace Opaax::Editor
     private:
         EditorContext& m_Context;
 
-        // Interned abs path -> the live preview, which holds both the claim and the drawer. One per
-        // OPEN entry; pruned by ReleaseClosedClaims so a closed preview does not keep its resource
-        // resident forever.
-        //
-        // TYPE-ERASED, and that is the change the old TUnorderedMap<..., ResourceRef<TextureResource>>
-        // could not survive: this panel no longer names a single resource type, so a second
-        // previewable one costs a registration and nothing here (MR2g).
+        // Path id -> live preview (claim and drawer), one per open entry. Type-erased, so any
+        // previewable type works.
         TUnorderedMap<Uint32, TUniquePtr<IResourcePreviewClaim>> m_Claims;
     };
 }

@@ -10,8 +10,7 @@ namespace Opaax
 {
     void FlyMoveMode::OnModeEnter(MoverTickContext& InContext)
     {
-        // Without this, switching to flight mid-fall keeps the downward speed and the thing sinks
-        // for a moment before the intent takes over.
+        // Drop the fall speed when switching to flight.
         InContext.Mover.Velocity = { 0.f, 0.f };
     }
 
@@ -20,8 +19,7 @@ namespace Opaax
         MoverComponent&     lMover     = InContext.Mover;
         TransformComponent& lTransform = InContext.Transform;
 
-        // Intent straight to velocity: no acceleration curve, because a debug/noclip mode wants to
-        // go exactly where it is pointed. Both axes, unlike GroundMove which reads x alone.
+        // Input straight to velocity, both axes (no acceleration).
         const Vector2F lVelocity = lMover.Input.MoveDir * InContext.Params.MaxSpeed;
 
         MoveCapsuleInput lInput;

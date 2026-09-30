@@ -23,11 +23,11 @@ namespace Opaax::HardReferences
             for (const ComponentData& lComponent : lEntity.Components)
             {
                 const IComponentEntry* const lEntry = InRegistry.FindByName(lComponent.TypeName);
-                if (lEntry == nullptr) { continue; }   // a type this build does not know — MP3's tolerance
+                if (lEntry == nullptr) { continue; }   // unknown type: skip
 
                 for (const HardRefField& lField : lEntry->GetHardRefFields())
                 {
-                    // The json bridge writes a TResourcePath as its bare string (ResourcePathJson).
+                    // TResourcePath is saved as a plain string.
                     const auto lIt = lComponent.Payload.find(lField.Name.CStr());
                     if (lIt == lComponent.Payload.end() || !lIt->is_string()) { continue; }
 

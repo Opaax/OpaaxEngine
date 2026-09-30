@@ -1,9 +1,5 @@
-// Suite: the rect → quads geometry (UI/UISlice.h) — 9-slice and the fill clip, U5b.
-//
-// WHY IT IS PURE: a 9-slice needs a texture's SIZE, not a texture, so the whole of it is gated
-// here with no GL context, no provider and no canvas — ResolveRect's precedent one level down.
-// What a smoke run can see is the picture; what it cannot see is a corner that stretched by
-// half a pixel, or a border silently eating a rect narrower than itself.
+// Suite: rect -> quads geometry (UI/UISlice.h): 9-slice and the fill clip. Pure (a 9-slice only
+// needs the texture size).
 #include <cmath>
 
 #include <doctest.h>
@@ -169,7 +165,7 @@ TEST_CASE("UISlice: a clip keeps what is inside, cuts what straddles and DROPS w
     CHECK(lMiddle->UVMax.x == doctest::Approx(1.f / 3.f + (1.f / 3.f) * 0.5f));
 }
 
-TEST_CASE("UISlice: MapQuadUVsInto lands every sliced UV inside the frame's rect, and is the identity for a whole texture (U12)")
+TEST_CASE("UISlice: MapQuadUVsInto lands every sliced UV inside the frame's rect, and is the identity for a whole texture")
 {
     const Bounds2D lRect = Bounds2D::FromCenterSize({ 0.f, 0.f }, { 300.f, 120.f });
 

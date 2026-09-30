@@ -30,9 +30,7 @@ namespace Opaax::Editor
         {
             const InputActionData& lAfter = InContext.InputActionDocument.GetData();
 
-            // Compared through the FILE's own serializer rather than field by field: it is the one
-            // definition of "different" that cannot drift as fields are added, and it is exactly
-            // what IsDirty already asks.
+            // Compared through the file serializer: one definition of "different" (the same one IsDirty uses).
             if (InputActionFile::Serialize(lAfter) == InputActionFile::Serialize(InBefore))
             {
                 return false;
@@ -187,9 +185,8 @@ namespace Opaax::Editor
 
         const InputMappingEntry& lAfter = lData.Mappings[InIndex];
 
-        // Nothing to judge beyond "did it change": unlike a mover entry, a mapping has no name to
-        // collide and no default to orphan. Two rows binding one key to one action is redundant,
-        // not broken — the second is simply consumed by the first.
+        // Nothing to check beyond "did it change": two rows binding one key to one action are redundant,
+        // not broken.
         if (lAfter.Action.Path == InBefore.Action.Path
             && lAfter.Key == InBefore.Key
             && lAfter.bConsume == InBefore.bConsume
@@ -224,13 +221,11 @@ namespace Opaax::Editor
 
         const TDynArray<InputMappingEntry> lBefore = lData.Mappings;
 
-        // WHICH direction gets which modifier is the only real logic here, so it lives in a pure
-        // function this verb calls and a test can reach (see MakeComposite2D).
+        // Which direction gets which modifier is in MakeComposite2D (a pure, tested function).
         const TDynArray<InputMappingEntry> lComposite =
             MakeComposite2D(lTemplate, InUp, InDown, InLeft, InRight);
 
-        // REPLACED, not appended: the template row is what the author dropped the action on, and
-        // leaving it beside the four would bind a fifth key nobody asked for.
+        // Replaced, not appended: keeping the template row would bind a fifth key.
         lData.Mappings.erase(lData.Mappings.begin() + InTemplateIndex);
 
         lData.Mappings.insert(lData.Mappings.begin() + InTemplateIndex,

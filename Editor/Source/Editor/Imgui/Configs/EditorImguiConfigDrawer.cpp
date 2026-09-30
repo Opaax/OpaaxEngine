@@ -1,6 +1,6 @@
 #include "Editor/Imgui/Configs/EditorImguiConfigDrawer.h"
 
-#include "Editor/Properties/PropertyDrawers.h"   // TPropertyDrawer<LinearColor>, which DrawField resolves
+#include "Editor/Properties/PropertyDrawers.h"   // TPropertyDrawer<LinearColor>
 #include "Editor/UI/IEditorWidgets.h"
 
 namespace Opaax::Editor

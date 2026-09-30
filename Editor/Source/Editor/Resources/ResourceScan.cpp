@@ -1,8 +1,8 @@
 #include "Editor/Resources/ResourceScan.h"
 
 #include "Platform/IFileSystem.h"
-#include "Core/String/OpaaxPathString.h"                  // Extension — the ONE extension-of-a-path rule
-#include "Engine/Subsystems/Resources/ResourceFormat.h"   // NormalizeExtension — the ONE comparability rule
+#include "Core/String/OpaaxPathString.h"                  // Extension
+#include "Engine/Subsystems/Resources/ResourceFormat.h"   // NormalizeExtension
 
 #include <algorithm>
 #include <cstring>
@@ -56,7 +56,7 @@ namespace Opaax::Editor
                 }
             }
 
-            // Sorted here, once per scan, so every view renders the same order for free.
+            // Sorted once per scan, so every view shows the same order.
             std::sort(OutFolder.Folders.begin(), OutFolder.Folders.end(),
                 [](const ResourceFolder& InLeft, const ResourceFolder& InRight)
                 { return NameLess(InLeft.Name, InRight.Name); });

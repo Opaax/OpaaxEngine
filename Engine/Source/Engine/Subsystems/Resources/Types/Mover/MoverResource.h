@@ -9,14 +9,9 @@
 namespace Opaax
 {
     // =============================================================================
-    // MoverResource — a `.opaaxmover` as a RESOURCE. AnimationLibraryResource's shape.
-    //
-    //   PLACEHOLDER: a missing mover resolves no mode name, so the mover does not move. Nothing
-    //   crashes and nothing pretends — an entity that stands still is a readable failure.
-    //
-    //   IT DOES NOT Acquire ITS MODES, for AnimationLibraryResource's reason: LoadContext::Acquire
-    //   takes an ABSOLUTE path, and asset-relative -> absolute lives in IPaths, which the Resources
-    //   layer does not reach. MoverSubsystem resolves both, through ref caches it owns.
+    // MoverResource — a .opaaxmover as a resource.
+    //   Placeholder policy: an empty mover (does not move).
+    //   Its modes are loaded by MoverSubsystem (needs IPaths).
     // =============================================================================
     struct MoverResource final
     {
@@ -32,16 +27,16 @@ namespace Opaax
             MoverResource lResource;
             if (!MoverFile::Load(OpaaxString(InPath), lResource.Data))
             {
-                return std::nullopt;   // MoverFile already logged which reason it was
+                return std::nullopt;   // MoverFile already logged why
             }
 
             return lResource;
         }
 
-        /** An empty mover. Every Find answers nullptr, so nothing moves and nothing breaks. */
+        /** An empty mover: nothing moves. */
         static MoverResource Placeholder() { return MoverResource{}; }
 
-        /** Structural size — the entry records and their paths. */
+        /** Size of the entries and their paths. */
         Uint64 ByteSize() const noexcept
         {
             Uint64 lBytes = sizeof(MoverResource)

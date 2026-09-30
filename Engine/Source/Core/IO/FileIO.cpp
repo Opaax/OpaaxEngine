@@ -1,6 +1,6 @@
 #include "Core/IO/FileIO.h"
 
-#include "Core/String/OpaaxUtf8.h"   // I7 — never open a stream from CStr()
+#include "Core/String/OpaaxUtf8.h"
 
 #include <filesystem>
 #include <fstream>
@@ -48,7 +48,7 @@ namespace Opaax::FileIO
             return false;
         }
 
-        // Fill a local first: OutBytes must be untouched if the read fails half-way.
+        // Fill a local first: OutBytes stays untouched on failure.
         TDynArray<Uint8> lBytes(static_cast<size_t>(lSize));
 
         lFile.seekg(0, std::ios::beg);
@@ -72,9 +72,7 @@ namespace Opaax::FileIO
 
         if (lPath.has_parent_path())
         {
-            // error_code overload: a missing parent is an ordinary failure, not an exception. It
-            // reports false when the directory already existed, which is a success here — so ask
-            // what is true now rather than trusting the return (same contract as IFileSystem).
+            // Returns false if the directory already existed, so check that it exists now.
             std::error_code lError;
             fs::create_directories(lPath.parent_path(), lError);
 

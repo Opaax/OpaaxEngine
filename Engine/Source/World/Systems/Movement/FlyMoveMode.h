@@ -6,12 +6,7 @@
 namespace Opaax
 {
     // =============================================================================
-    // FlyMoveMode — free flight. No gravity, no friction, no jump.
-    //
-    //   Intent maps straight to velocity; the capsule sweep still resolves collisions, so a flying
-    //   thing slides along walls rather than passing through them. It is the SECOND mode, and its
-    //   real job is being one: a mover with two entries proves the switch, the transition hooks
-    //   and the per-mode tuning are all load-bearing rather than asserted.
+    // FlyMoveMode — free flight: no gravity, no friction, no jump. Still collides (slides on walls).
     // =============================================================================
     class OPAAX_API FlyMoveMode final : public IMoverMode
     {
@@ -19,7 +14,7 @@ namespace Opaax
         //~Begin IMoverMode interface
         void Tick(MoverTickContext& InContext) override;
 
-        /** Drop momentum carried in from the previous mode — a fall does not continue into flight. */
+        /** Drops the momentum from the previous mode. */
         void OnModeEnter(MoverTickContext& InContext) override;
         //~End IMoverMode interface
     };

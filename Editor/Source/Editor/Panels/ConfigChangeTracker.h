@@ -6,26 +6,19 @@
 namespace Opaax::Editor
 {
     // =============================================================================
-    // ConfigChangeTracker — WHEN the Config panel calls IConfig::NotifyChanged.
-    //
-    //   Once per COMMITTED edit, never per frame of a gesture: while a widget is still mid-edit (a
-    //   drag, a colour pick, typing) the change is held, and it is announced on the first frame
-    //   nothing is being edited. A drag that ends where it started announces nothing.
-    //
-    //   Derived, like the panel's dirty flag: this frame's text against the text last announced.
-    //   Header-only and ImGui-free — the panel passes "is a widget active" in as a bool.
+    // ConfigChangeTracker — decides when the Config panel calls IConfig::NotifyChanged: once per
+    //   committed edit (after a drag, pick or typing ends), never every frame. A drag ending where it
+    //   started announces nothing. Compares this frame's text with the last announced text.
     // =============================================================================
     class ConfigChangeTracker
     {
     public:
         /**
-         * Feed one frame of the shown config.
-         *
-         * @param InId        which config is shown. A different one re-baselines SILENTLY —
-         *                    selecting a config is not editing it.
-         * @param InText      what it serializes to now (IConfig::ToText).
-         * @param bInEditing  a widget is still mid-gesture.
-         * @return true on the frame the edit is committed — the caller notifies.
+         * Feeds one frame of the shown config.
+         * @param InId        The shown config. A different one resets the baseline silently.
+         * @param InText      Its current text (IConfig::ToText)
+         * @param bInEditing  A widget is still being edited
+         * @return True on the frame the edit is committed (the caller notifies)
          */
         bool Update(const ConfigTypeID InId, const OpaaxString& InText, const bool bInEditing)
         {

@@ -10,13 +10,7 @@ namespace Opaax
     // =============================================================================
 
     /**
-     * @struct JobState
-     *
-     * Heap control block shared between a queued job and every JobHandle that
-     * refers to it. The worker thread flips bDone once the job's work has run;
-     * handles observe completion through it. Lifetime is ref-counted via the
-     * TSharedPtr the handle holds, so the block outlives both the job and the
-     * handle independently.
+     * State shared between a queued job and its handles. bDone is set once the job has run.
      */
     struct JobState
     {
@@ -28,15 +22,8 @@ namespace Opaax
     // =============================================================================
 
     /**
-     * @class JobHandle
-     *
-     * Lightweight, copyable observer of a single submitted job. Carries no result
-     * payload by design (D-b) — results flow through the work/OnComplete lambda
-     * captures. A default-constructed (null) handle reports complete and waits as
-     * a no-op, so callers never branch on validity.
-     *
-     * Wait() routes through JobSubsystem so the completion condition variable stays
-     * owned by the pool; the handle itself only holds the shared state.
+     * Copyable handle to a submitted job. Carries no result (use the lambda captures).
+     * A null handle counts as complete.
      */
     class OPAAX_API JobHandle
     {

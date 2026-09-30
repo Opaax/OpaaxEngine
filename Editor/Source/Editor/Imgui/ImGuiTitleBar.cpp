@@ -13,18 +13,15 @@ namespace
     /** How far inside the window edge counts as the resize border. */
     constexpr Int32 k_BorderThickness = 6;
 
-    /** The floor a border drag clamps to — small enough to be useful, big enough to stay usable. */
+    /** The minimum size a border drag clamps to. */
     constexpr Int32 k_MinWindowWidth  = 480;
     constexpr Int32 k_MinWindowHeight = 320;
 
-    /** One caption button's width. Asked in two places — the drag's reservation and the button. */
+    /** One caption button's width (used by the drag region's reservation and the button). */
     float ButtonWidth() { return ImGui::GetFontSize() * 2.6f; }
 
     /**
-     * The three captions are PAINTED, not typed.
-     *
-     * ImGui's default font covers Basic Latin + Latin-1 only, so the glyphs these want — U+2014,
-     * U+25A1, U+2715 — would all render as boxes. Strokes on the draw list need no font at all.
+     * The caption glyphs are drawn with lines: ImGui's default font lacks the characters.
      */
     void PaintButtonGlyph(ImDrawList* InDrawList, const EWindowButtonKind InKind, const ImVec2 InCenter,
                           const float InSide, const ImU32 InColor)
@@ -45,7 +42,7 @@ namespace
 
         case EWindowButtonKind::Restore:
         {
-            // Two offset squares — the "already maximized" caption every OS uses.
+            // Two offset squares: the usual "restore" icon.
             const float lShift = InSide * 0.22f;
 
             InDrawList->AddRect(ImVec2(InCenter.x - lHalf + lShift, InCenter.y - lHalf - lShift),
@@ -128,7 +125,7 @@ namespace Opaax::Editor
         lResult.bDoubleClicked = ImGui::IsItemHovered()
                               && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
 
-        // Right-align whatever follows: the reservation above is only a width, this is the position.
+        // Right-align what follows.
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - lReserved);
 
         return lResult;
@@ -140,10 +137,7 @@ namespace Opaax::Editor
         const float  lWidth     = ButtonWidth();
         ImDrawList*  lDrawList  = ImGui::GetWindowDrawList();
 
-        // FLUSH, like every OS caption — and not merely cosmetic: a menu bar lays items out
-        // horizontally with ItemSpacing between them, so spaced buttons would overrun the width the
-        // drag region reserved and push Close off the edge. Pushed and popped INSIDE one call, so
-        // there is no pairing for a caller to get wrong.
+        // No spacing between the buttons (like every OS), otherwise they overflow the reserved width.
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.f, 0.f));
 
         const ImVec2 lMin = ImGui::GetCursorScreenPos();
@@ -154,7 +148,7 @@ namespace Opaax::Editor
 
         if (ImGui::IsItemActive() || ImGui::IsItemHovered())
         {
-            // Close gets the red every OS gives it; the other two the ordinary header highlight.
+            // Close gets the usual red; the other two the normal highlight.
             const ImU32 lHighlight = InKind == EWindowButtonKind::Close
                                          ? ImGui::GetColorU32(ImVec4(0.78f, 0.16f, 0.16f, 1.f))
                                          : ImGui::GetColorU32(ImGuiCol_HeaderHovered);
@@ -183,9 +177,8 @@ namespace Opaax::Editor
             return;
         }
 
-        // The HIT TEST runs in ImGui's own space — the main viewport's rect against GetMousePos().
-        // That is self-consistent whether or not multi-viewport is on, where a rect built from
-        // Window::GetPosition would only agree with the mouse in one of the two cases.
+        // Hit test in ImGui's space (main viewport rect vs GetMousePos()), consistent with or without
+        // multi-viewport.
         const ImGuiViewport* lViewport = ImGui::GetMainViewport();
 
         const WindowFrameRect lHitRect{
@@ -206,8 +199,7 @@ namespace Opaax::Editor
             }
             else
             {
-                // APPLIED against the real window rect, in screen pixels — the hit test's space is
-                // ImGui's, this one is the OS's, and only the edge travels between them.
+                // Applied to the real window rect in screen pixels (only the edge crosses between the two spaces).
                 Int32 lPosX = 0;
                 Int32 lPosY = 0;
                 lWindow.GetPosition(lPosX, lPosY);
@@ -238,8 +230,7 @@ namespace Opaax::Editor
         else if (lHovered != EWindowFrameEdge::None && !ImGui::IsAnyItemActive()
                  && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
         {
-            // Gated on IsAnyItemActive so a panel's own splitter, which lives in the same pixels,
-            // keeps winning.
+            // Skipped while an item is active, so a panel's splitter in the same pixels wins.
             m_ResizeEdge = lHovered;
         }
 

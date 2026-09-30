@@ -21,7 +21,7 @@ namespace Opaax
 
         if (InContext.Assets == nullptr)
         {
-            return false;   // nobody to ask — a test with no provider, or a plain colour
+            return false;   // no provider, or a plain colour
         }
 
         if (!InSheet.IsEmpty())
@@ -29,7 +29,7 @@ namespace Opaax
             const UISheetFrameView lFrame = InContext.Assets->ResolveSheetFrame(InSheet.Path.CStr(), InFrame);
             if (lFrame.Texture == nullptr)
             {
-                return false;   // still uploading, or the sheet did not load
+                return false;   // still uploading, or failed to load
             }
 
             Out.Texture = lFrame.Texture;

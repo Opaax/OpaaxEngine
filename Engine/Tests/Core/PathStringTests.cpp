@@ -1,6 +1,4 @@
-// Suite: PathString::Stem — the ONE path-stem rule, previously copied into MapFile::StemId and
-// LevelFile's FileStem. MapFileTests pins the same shapes through StemId; these pin them directly,
-// plus the edges neither caller ever expressed.
+// Suite: PathString::Stem, Extension and FileName.
 #include <doctest.h>
 
 #include "Core/String/OpaaxPathString.h"
@@ -49,8 +47,7 @@ TEST_CASE("PathString::Stem: the result VIEWS the path it was given, it does not
 }
 
 // -----------------------------------------------------------------------------
-// PathString::Extension — Stem's other half, and the reason both live here: the editor's scanner
-// had its own copy of this rule while the engine now owns the extension -> resource type table.
+// PathString::Extension
 // -----------------------------------------------------------------------------
 static_assert(PathString::Extension("Maps/Decor.opaaxmap") == ".opaaxmap");
 

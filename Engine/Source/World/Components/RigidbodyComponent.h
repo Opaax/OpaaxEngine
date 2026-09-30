@@ -9,35 +9,25 @@
 namespace Opaax
 {
     // =============================================================================
-    // RigidbodyComponent — HOW an entity is simulated. It carries no shape and no position:
-    //   the collider beside it is the shape, and TransformComponent is the position (I17).
-    //
-    //   IT IS OPTIONAL, AND ITS ABSENCE MEANS SOMETHING. An entity with a collider and no
-    //   rigidbody is STATIC — level geometry, which is the overwhelmingly common case and
-    //   should not need a second component to say so. Adding one is what makes a thing move.
-    //
-    //   Alone it does nothing at all: PhysicsSubsystem builds a body per COLLIDER, and reads
-    //   this to decide what kind. A rigidbody with no collider is a body with no shape, which
-    //   nothing can touch and gravity moves invisibly — so it is skipped, deliberately, rather
-    //   than made an error.
+    // RigidbodyComponent — how an entity is simulated (needs a ColliderComponent).
+    //   Optional: a collider without a rigidbody is static.
     // =============================================================================
     struct RigidbodyComponent
     {
         /** Static never moves, Kinematic moves only when driven, Dynamic is fully simulated. */
         EBodyType Type = EBodyType::Dynamic;
 
-        /** Multiplies world gravity for this body alone. 0 floats; negative falls upward. */
+        /** Gravity multiplier for this body. 0 floats; negative falls upward. */
         float GravityScale = 1.f;
 
-        /** Lock rotation. What a platformer character wants — a capsule that never tips over. */
+        /** Locks rotation (e.g. a platformer character). */
         bool bFixedRotation = false;
 
-        /** Velocity bleed per second. 0 keeps moving forever (in a frictionless direction). */
+        /** Velocity loss per second. */
         float LinearDamping  = 0.f;
         float AngularDamping = 0.f;
 
-        // _WITH_DEFAULT is required, not preferred: the plain macro reads every field with at(),
-        // which THROWS on a missing key, so adding a field would refuse every map saved before it.
+        // _WITH_DEFAULT: a missing key keeps its default, so maps saved before a new field still load.
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(RigidbodyComponent,
                                                     Type, GravityScale, bFixedRotation,
                                                     LinearDamping, AngularDamping)

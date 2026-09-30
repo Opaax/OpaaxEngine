@@ -1,8 +1,5 @@
-// Suite: the UI designer's layout target (Editor/UI/UIPreviewAspect.h) — U13.
-//
-// Zooming decoupled the preview's VIEW from the canvas's LAYOUT, so the aspect the canvas lays
-// out at became a named choice. The one thing to hold: a named aspect is EXACT, so what the
-// panel shows at 16:9 is what a 1920x1080 game draws — and Free is still the dock's own size.
+// Suite: the UI designer's layout aspect (Editor/UI/UIPreviewAspect.h). A named aspect is exact
+// (16:9 shows what a 1920x1080 game draws); Free uses the panel's own size.
 #include <doctest.h>
 
 #include "Core/String/OpaaxString.hpp"

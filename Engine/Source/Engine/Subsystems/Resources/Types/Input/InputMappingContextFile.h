@@ -11,30 +11,27 @@ namespace Opaax
     inline constexpr LogCategory LogInputMappingContextFile{"InputMapFile"};
 
     // =============================================================================
-    // InputMappingContextFile — a mapping context on DISK: the `.opaaxinputmap` reader and
-    //   writer. MoverFile's shape exactly, and for its reason: SAVE AND LOAD ARE ONE UNIT.
+    // InputMappingContextFile — reads and writes .opaaxinputmap files.
     // =============================================================================
     namespace InputMappingContextFile
     {
-        /** Lowercase, one spelling, matching the rest of the family. */
+        /** File extension. */
         inline constexpr const char* INPUT_MAP_EXTENSION = ".opaaxinputmap";
 
         /**
-         * Write InData to InAbsPath, replacing whatever was there.
-         *
-         * @return false if the parents could not be created or the file could not be opened. An
-         *   EMPTY context is a success — it is what a freshly created one is.
+         * Writes InData to InAbsPath, replacing any content (dump(4), sorted keys).
+         * @param InAbsPath Absolute UTF-8 path
+         * @return False if the file could not be written
          */
         OPAAX_API bool Save(const OpaaxString& InAbsPath, const InputMappingContextData& InData);
 
         /**
-         * Read InAbsPath into OutData. OutData is left UNTOUCHED on every failure path.
-         *
-         * @return false when the file is missing, empty, not json, or not an object.
+         * Reads InAbsPath into OutData. OutData is untouched on failure.
+         * @return False if the file is missing, empty, not JSON, or not an object
          */
         OPAAX_API bool Load(const OpaaxString& InAbsPath, InputMappingContextData& OutData);
 
-        /** InData as the exact text Save would write — what the editor's dirty check compares. */
+        /** InData as the exact text Save writes (used by the editor's dirty check). */
         OPAAX_API OpaaxString Serialize(const InputMappingContextData& InData);
     }
 }

@@ -11,9 +11,8 @@ namespace Opaax
     namespace
     {
         /**
-         * Quake-style ground/air velocity update — friction, then acceleration toward the desired
-         * speed, then the jump, then gravity. Gravity is the world's own vector scaled per tuning,
-         * so direction comes from the world and only the magnitude is a per-mover decision.
+         * Quake-style ground/air update: friction, acceleration toward the desired speed, jump, gravity.
+         * Gravity is the world's vector scaled by the tuning.
          */
         Vector2F SolveVelocity(const MoveModeData& InParams, Vector2F InVelocity, Vector2F InMoveDir,
                                const bool bInGrounded, const bool bInJump, Vector2F InWorldGravity,
@@ -21,12 +20,12 @@ namespace Opaax
         {
             Vector2F lVel = InVelocity;
 
-            // ---- friction, as a RATE (1/s) rather than a surface coefficient -----------------
+            // ---- friction, as a rate (1/s) -------------------------------------------------------
             const float lSpeed = Maths::Sqrt(lVel.x * lVel.x + lVel.y * lVel.y);
 
             if (lSpeed < InParams.MinSpeed)
             {
-                lVel = { 0.f, 0.f };   // snapped, so it never creeps at a pixel a second
+                lVel = { 0.f, 0.f };   // stop
             }
             else if (bInGrounded)
             {
@@ -37,17 +36,16 @@ namespace Opaax
                 lVel *= lNewSpeed / lSpeed;
             }
 
-            // ---- the horizontal speed the intent is asking for --------------------------------
+            // ---- desired horizontal speed ---------------------------------------------------------
             const float    lThrottle     = Maths::Clamp(InMoveDir.x, -1.f, 1.f);
             const Vector2F lDir          = lThrottle >= 0.f ? Vector2F{ 1.f, 0.f } : Vector2F{ -1.f, 0.f };
             const float    lDesiredSpeed = Maths::Min(Maths::Abs(lThrottle) * InParams.MaxSpeed,
                                                       InParams.MaxSpeed);
 
-            // Standing on something means the fall is over; without this the downward velocity
-            // accumulates while grounded and the first step off a ledge is a lurch.
+            // On the ground: stop the fall speed.
             if (bInGrounded) { lVel.y = 0.f; }
 
-            // ---- accelerate toward it, with less authority in the air -------------------------
+            // ---- accelerate, with less control in the air -----------------------------------------
             const float lCurrentSpeed = lVel.x * lDir.x + lVel.y * lDir.y;
             const float lAddSpeed     = lDesiredSpeed - lCurrentSpeed;
 
@@ -60,7 +58,7 @@ namespace Opaax
                 lVel += lAccelSpeed * lDir;
             }
 
-            // ---- the jump, spent only when there is something to push off --------------------
+            // ---- jump, only when grounded ---------------------------------------------------------
             if (bInGrounded && bInJump)
             {
                 lVel.y = InParams.JumpSpeed;
@@ -81,8 +79,7 @@ namespace Opaax
                                                  lMover.bGrounded, lMover.Input.bJump,
                                                  InContext.World.GetGravity(), InContext.DeltaTime);
 
-        // The jump edge is consumed HERE, so one request fires once however many fixed steps the
-        // frame ran — a held key that re-armed every step would be a different verb.
+        // Consume the jump request here, so it fires once per request.
         lMover.Input.bJump = false;
 
         MoveCapsuleInput lInput;

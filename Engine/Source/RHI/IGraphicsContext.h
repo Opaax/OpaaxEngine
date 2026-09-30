@@ -10,16 +10,8 @@ namespace Opaax
     // IGraphicsContext
     // =============================================================================
     /**
-     * @interface IGraphicsContext
-     *
-     * Owns the graphics-context side of the window: making the context current,
-     * loading the backend's function pointers, vsync, and presenting (swap).
-     * The window creates the OS/GLFW window; the context turns it into a render
-     * surface for the selected backend. This is the one sanctioned place a backend
-     * touches platform graphics bootstrap (glad for OpenGL; a swapchain for Vulkan).
-     *
-     * The concrete impl is selected by IGraphicsContext::Create, defined in the
-     * neutral backend TU (RHI/BackendFactory.cpp) — OpenGL-only today.
+     * The graphics context of a window: make current, load function pointers, vsync, present.
+     * Created by IGraphicsContext::Create (BackendFactory.cpp). OpenGL only for now.
      */
     class OPAAX_API IGraphicsContext
     {
@@ -34,17 +26,16 @@ namespace Opaax
         // =============================================================================
 
         /**
-         * Build the context for a backend over an already-created native window.
-         * @param InBackend      selected graphics backend
-         * @param InNativeWindow opaque native window handle (GLFWwindow* today)
-         * @return owning context, or nullptr on unknown backend (logged)
+         * Creates the context for a backend on an existing native window.
+         * @param InBackend      Graphics backend
+         * @param InNativeWindow Native window handle (GLFWwindow*)
+         * @return The context, or nullptr for an unknown backend (logged)
          */
         static TUniquePtr<IGraphicsContext> Create(EBackend InBackend, void* InNativeWindow);
 
         /**
-         * Apply backend-specific GLFW window hints. MUST run before glfwCreateWindow.
-         * OpenGL: no-op (driver default, behavior-preserving). Vulkan: GLFW_NO_API.
-         * @param InBackend selected graphics backend
+         * Sets backend-specific GLFW window hints. Call before glfwCreateWindow.
+         * OpenGL: nothing. Vulkan: GLFW_NO_API.
          */
         static void ApplyWindowHints(EBackend InBackend);
 
@@ -53,15 +44,15 @@ namespace Opaax
         // =============================================================================
     public:
         /**
-         * Make the context current + load the backend's function pointers + set vsync.
-         * @return false if context bring-up failed (e.g. glad could not load).
+         * Makes the context current, loads the function pointers and sets vsync.
+         * @return False if it failed (e.g. glad could not load)
          */
         virtual bool Init() = 0;
 
-        // Present the rendered frame to the window surface.
+        // Presents the frame to the window.
         virtual void SwapBuffers() = 0;
 
-        // Enable/disable vertical sync.
+        // Enables or disables vsync.
         virtual void SetVSync(bool InEnabled) = 0;
     };
 

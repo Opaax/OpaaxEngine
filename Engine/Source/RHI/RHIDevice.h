@@ -11,9 +11,7 @@ namespace Opaax
     class IGraphicsContext;
 
     // =============================================================================
-    // RHIDevice — the device factory. The single place that maps EBackend -> a concrete
-    //   IRHIDevice, creates it, and Init's it against the surface. Adding a backend =
-    //   one case here + that backend's device impl.
+    // RHIDevice — creates the IRHIDevice for an EBackend and starts it on the surface.
     // =============================================================================
     class OPAAX_API RHIDevice
     {

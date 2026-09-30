@@ -11,12 +11,7 @@ namespace Opaax
     struct TransformComponent;
 
     // =============================================================================
-    // MoverTickContext — everything a mode needs for one entity's step.
-    //
-    //   Params is the TUNING RESOURCE the mover's bag resolved for this mode, handed over as a
-    //   plain reference. M9 passed a type-erased IMoverModeParams* here and every mode opened with
-    //   an assert and a downcast; the tuning being a RESOURCE deleted both, along with the type
-    //   tag that made the downcast checkable.
+    // MoverTickContext — what a mode needs for one entity's step. Params is the mode's tuning asset.
     // =============================================================================
     struct MoverTickContext
     {
@@ -28,26 +23,16 @@ namespace Opaax
         float DeltaTime = 0.f;
 
         /**
-         * The mover's OWN body user-data, so the sweep skips its own kinematic body. 0 on the
-         * transition ticks, which do not sweep.
+         * The mover's own body user data (so the sweep skips it). 0 on transition calls.
          */
         Uint64 SelfUserData = 0;
     };
 
     // =============================================================================
-    // IMoverMode — a pluggable movement behaviour, and the anti-monolith seam.
-    //
-    //   A mode owns HOW something moves — its policy: gravity, acceleration, jumping — reads
-    //   intent and sync-state from the component, calls MoveCapsule for the geometric solve, and
-    //   writes the result back. New movement is a new MODE, never a component subclass and never
-    //   a branch inside an existing one.
-    //
-    //   MODES ARE STATELESS. All per-entity state lives on the component, so one instance serves
-    //   every entity running that mode — which is what lets the registry own one of each.
-    //
-    //   IT HAS NO CreateDefaultParams. M9's modes minted their own params type because the params
-    //   lived on the component; now a tuning is an asset the author picks, so a mode reads what it
-    //   is handed and has no opinion about where it came from.
+    // IMoverMode — a movement behaviour (gravity, acceleration, jump, ...).
+    //   Reads intent and state from the component, calls MoveCapsule, writes the result.
+    //   Stateless: per-entity state is on the component, so one instance serves every entity.
+    //   New movement = a new mode.
     // =============================================================================
     class OPAAX_API IMoverMode
     {
@@ -61,17 +46,15 @@ namespace Opaax
         // Tick
         // =============================================================================
     public:
-        /** Advance one entity's movement by InContext.DeltaTime. */
+        /** Advances one entity by InContext.DeltaTime. */
         virtual void Tick(MoverTickContext& InContext) = 0;
 
         // =============================================================================
-        // Transitions — fired by MoverSubsystem when an entity switches modes
+        // Transitions — called by MoverSubsystem when an entity switches modes
         // =============================================================================
     public:
         /**
-         * The context carries DeltaTime = 0 and does not sweep. Default no-op; a mode overrides
-         * these to reset per-entity state on the component (dropping carried-over momentum, say).
-         * The stateless contract still holds — they only touch the entity in the context.
+         * DeltaTime is 0 and nothing is swept. Override to reset per-entity state on the component.
          */
         virtual void OnModeEnter(MoverTickContext& /*InContext*/) {}
         virtual void OnModeExit(MoverTickContext& /*InContext*/) {}

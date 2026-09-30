@@ -5,10 +5,7 @@
 namespace Opaax
 {
     /**
-     * @class OpenGLUniformBuffer
-     *
-     * Implement IUniformBuffer for OpenGL via DSA (glCreateBuffers / glNamedBuffer*).
-     * Bound once to its binding point at construction (glBindBufferBase).
+     * OpenGL uniform buffer (DSA). Bound to its binding point at construction.
      */
     class OPAAX_API OpenGLUniformBuffer final : public IUniformBuffer
     {

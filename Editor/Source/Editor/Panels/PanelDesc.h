@@ -1,8 +1,8 @@
 #pragma once
 
 #include "Core/OpaaxTypes.h"               // Uint8
-#include "Core/String/OpaaxStringID.hpp"   // OPAAX_ID — the panel's interned identity
-#include "Core/Tag/OpaaxTag.h"             // the command Ctrl+S runs while this panel is focused
+#include "Core/String/OpaaxStringID.hpp"   // OPAAX_ID
+#include "Core/Tag/OpaaxTag.h"             // OpaaxTag
 
 namespace Opaax::Editor
 {
@@ -13,64 +13,41 @@ namespace Opaax::Editor
         Hidden
     };
 
-    /** **I11** — an enum gets a free ToString, found by ADL, declared with the enum. */
+    /** Enum to string. */
     inline const char* ToString(const EPanelVisibility InVisibility) noexcept
     {
         return InVisibility == EPanelVisibility::Hidden ? "hidden" : "visible";
     }
 
     // =============================================================================
-    // PanelDesc — everything the editor knows about a panel that is not the panel itself.
-    //
-    //   Id is the ONE identity: registry key, ImGui window label, and dock key in imgui.ini. It used
-    //   to be stated twice — here and again as a member inside the panel class — with nothing making
-    //   the two agree.
-    //
-    //   Data only, no ImGui type: a game module includes this header.
+    // PanelDesc — what the editor knows about a panel besides the panel itself. No ImGui types
+    //   (game modules include this). Id is the registry key, the window label and the dock key.
     // =============================================================================
     struct PanelDesc
     {
 
-        /** Identity, label and dock key. Displayed verbatim, so spaces are fine. */
+        /** Identity, label and dock key. Shown as is, spaces allowed. */
         OpaaxStringID Id;
 
-        /** The root menu category holding this panel's toggle — "Tools" for a tool-shaped panel. */
+        /** The root menu that holds this panel's toggle ("Tools" for tools). */
         OpaaxStringID Menu = OPAAX_ID("Panels");
 
         EPanelVisibility DefaultVisibility = EPanelVisibility::Visible;
 
         /**
-         * The command Ctrl+S runs while this panel is focused. Invalid = this panel does not save,
-         * and the chord falls through to the map.
-         *
-         * DECLARED HERE rather than matched in HandleAuthoringShortcuts, which used to hold a
-         * hand-written chain of "is the sheet focused? the clip? the library?". That chain was
-         * forgotten FOUR times — MoveMode and Mover shipped without it in ⑦-A, and both input
-         * panels in ⑦-B — and the failure is silent and expensive: Ctrl+S in a document editor
-         * saved the MAP instead, which is exactly the surprise the chain existed to prevent.
-         *
-         * A panel that owns a document is the only thing that knows what saving it means, so it
-         * says so at its registration and nothing central has to be kept in step.
+         * The command Ctrl+S runs while this panel is focused. Invalid = the panel does not save
+         * (Ctrl+S saves the level).
          */
         OpaaxTag SaveCommand;
 
         /**
-         * The commands Ctrl+Z / Ctrl+Y run while this panel is focused. Invalid = the LEVEL's
-         * history (**UN1**), which is right for every panel whose edits land on that stack.
-         *
-         * SaveCommand's rule one chord over, and for its reason: the target follows the focused
-         * panel, and a panel DECLARES its answer instead of a ladder elsewhere remembering it
-         * ([[L86]]). This was a bool that only SWALLOWED the chord (⑦-C P6 — Ctrl+Z in the prefab
-         * editor was undoing the level behind it); a document with a history of its own names the
-         * commands that step it (P8 V3).
+         * The commands Ctrl+Z / Ctrl+Y run while this panel is focused. Invalid = the level's history.
          */
         OpaaxTag UndoCommand;
         OpaaxTag RedoCommand;
 
         /**
-         * The command Delete runs while this panel is focused. Invalid = the level's selection.
-         * Declared for the same reason as the two above (P8 V4): a document with a selection of
-         * its own is the only thing that knows what deleting in it means.
+         * The command Delete runs while this panel is focused. Invalid = delete the level selection.
          */
         OpaaxTag DeleteCommand;
     };

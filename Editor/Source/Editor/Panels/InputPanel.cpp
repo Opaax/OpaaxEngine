@@ -15,11 +15,8 @@ using namespace Opaax;
 
 namespace
 {
-    // Display names, panel-local on purpose. The canonical table now EXISTS
-    // (Engine/Subsystems/Input/InputKeyNames.h) and this is deliberately still not it: that one is
-    // what a .opaaxinputmap writes, so it spells every code out. These abbreviate, which is right
-    // in a panel and wrong in a file format (IM10). Printables render as themselves, the groups a reader actually looks
-    // for get names, and anything else shows its code rather than a lie.
+    // Short display names for the panel (InputKeyNames.h has the full names used in files).
+    // Printable keys show as themselves; unknown ones show their code.
     OpaaxString KeyName(EKeyCode InKey)
     {
         switch (InKey)
@@ -53,7 +50,7 @@ namespace
             return OpaaxString("F") + OpaaxString::FromInt(lCode - static_cast<Uint16>(EKeyCode::F1) + 1);
         }
 
-        // Printable ASCII: the code IS the character (the enum follows GLFW numbering).
+        // Printable ASCII: the code is the character (GLFW numbering).
         if (lCode >= 33 && lCode <= 126)
         {
             const char lText[2] = { static_cast<char>(lCode), '\0' };
@@ -77,9 +74,8 @@ namespace Opaax::Editor
     {
         const InputManager& lInput = m_Context.Engine.GetInput();
 
-        // ---- Who is getting the input. First, because it explains every line below it: when the
-        //      editor owns it, the engine is not being told anything and the rest is frozen at its
-        //      last value — stale by design, not broken. -----------------------------------------
+        // ---- Who gets the input. First: when the editor has it, the engine gets nothing and the rest
+        //      shows its last values. ------------------------------------------------------------------
         const bool lGameHasIt = m_Context.Route.IsOpen();
 
         ImGui::Text("Focus:");
@@ -117,16 +113,14 @@ namespace Opaax::Editor
             ImGui::Text("Down:   %s", lLine.CStr());
         }
 
-        // ---- Mouse. Window pixels — world space needs the viewport rect and the camera. -------
+        // ---- Mouse, in window pixels --------------------------------------------------------------
         const Vector2F lPos   = lInput.GetMousePosition();
         const Vector2F lDelta = lInput.GetMouseDelta();
 
         ImGui::Text("Mouse:  %.0f, %.0f", lPos.x, lPos.y);
         ImGui::Text("Delta:  %+.0f, %+.0f", lDelta.x, lDelta.y);
 
-        // ---- Scroll, HELD. A wheel notch is one frame of non-zero and then gone — about 16 ms,
-        //      which is unreadable. The last non-zero value stays up briefly so the eye can catch
-        //      it; the engine's own value is untouched, this is display only. --------------------
+        // ---- Scroll, held on screen briefly (a notch lasts one frame). Display only. ----------------
         const Vector2F lScroll = lInput.GetScrollDelta();
 
         if (lScroll.x != 0.f || lScroll.y != 0.f)
@@ -155,9 +149,7 @@ namespace Opaax::Editor
     {
         ImGui::Separator();
 
-        // The SESSION, not the world: mapping lives on the GameInstance, so there is nothing to
-        // show while the editor is authoring. That absence is the honest answer, and it is the
-        // same one the log gives as "0 game session(s) ran" (GI1).
+        // Input mapping lives on the GameInstance: nothing to show while editing (no game).
         const GameInstanceManager& lGames = m_Context.Engine.GetGameInstances();
         const GameInstance*        lGame  = lGames.GetGameInstance();
 
@@ -187,9 +179,7 @@ namespace Opaax::Editor
             return;
         }
 
-        // The VALUE and the PHASE together. A value alone cannot tell "held" from "pressed this
-        // frame", which is exactly the distinction a binding is written against, so a panel
-        // showing only the number would leave the trigger half unobservable.
+        // Value and phase together (a value alone cannot tell "held" from "pressed this frame").
         lActions->ForEachAction([](const InputAction& InAction, const InputActionState& InState)
         {
             OpaaxString lPhase;

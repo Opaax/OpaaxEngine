@@ -1,12 +1,6 @@
-// Suite: PhysicsSubsystem's queries and its kill volume (⑦-A P4).
-//
-// The seam already has RayCastClosest and OverlapAABB, and PhysicsSeamTests covers them there —
-// in USER-DATA, which is meaningless to a caller. What is tested here is the resolution to
-// EntityID and the two decisions that go with it: an unresolvable hit is reported as a MISS, and
-// a query before Play is an empty answer rather than an error.
-//
-// The kill volume's interesting property is that it is LATCHED. "It fires" would pass for a
-// version that fires sixty times a second, which is the version that is useless.
+// Suite: PhysicsSubsystem's queries (results as entities) and its kill volume.
+// A hit without an entity is a miss; a query before Play is an empty answer.
+// The kill volume must fire once per exit, not every step.
 #include <doctest.h>
 
 #include "Application/Services/IPaths.h"

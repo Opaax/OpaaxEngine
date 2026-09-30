@@ -1,13 +1,5 @@
-// Suite: the mover RUNTIME — the mode registry, and the two modes' policy (⑦-A P5b).
-//
-// MoverSubsystem itself needs a started engine (its Startup resolves EngineRegistries through the
-// locator), so what is testable headlessly is the registry and the MODES, driven directly against
-// a real physics world. That is the half worth pinning anyway: a mode is pure policy plus one
-// MoveCapsule call, and the policy is where "almost right" hides — a jump that does not clear the
-// ground, gravity that fights the sweep, an air-steer that silently equals the ground one.
-//
-// The subsystem's own wiring (resolving a bag, switching modes, the ref caches) is gated by the
-// hosts' ordered boot log, exactly as WorldSubsystemRegistryTests says for its own case.
+// Suite: the mover runtime — the mode registry and the two modes, driven directly against a
+// real physics world (MoverSubsystem itself needs a started engine).
 #include <doctest.h>
 
 #include "Engine/Subsystems/Resources/Types/Mover/MoveModeData.h"
@@ -112,7 +104,7 @@ TEST_CASE("MoverModeRegistry: sealing refuses later registration")
     CHECK_FALSE(lRegistry.Register<FlyMoveMode>(OPAAX_ID("FlyMove")));
     CHECK(lRegistry.Count() == 1u);
 
-    lRegistry.Seal();   // idempotent (LC3)
+    lRegistry.Seal();   // safe to call twice
     CHECK(lRegistry.IsSealed());
 }
 

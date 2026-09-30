@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Core/Maths/MathTypes.h"   // Vector2F — the held scroll value
+#include "Core/Maths/MathTypes.h"   // Vector2F
 #include "Core/String/OpaaxString.hpp"
 #include "Editor/Panels/IEditorPanel.h"
 
@@ -9,17 +9,8 @@ namespace Opaax::Editor
     struct EditorContext;
 
     // =============================================================================
-    // InputPanel — five lines: who has the input, what is held, where the mouse is, how far it
-    //   moved, and the last wheel notch (Editor.md D5, M-Input).
-    //
-    //   READ-ONLY, and deliberately small. Input is otherwise entirely silent, so "nothing happens
-    //   when I press W" has several causes — and the FIRST line answers it, because "the editor
-    //   has the input" versus "the key is not arriving" are different problems. Everything beyond
-    //   those five lines was noise that made the panel harder to read, not easier.
-    //
-    //   Reads InputManager through EditorContext::Engine and the route through
-    //   EditorContext::Route — the same objects RouteInput gates on, never a second copy of the
-    //   rule, so the readout cannot disagree with the behaviour it is describing.
+    // InputPanel — who has the input, what is held, where the mouse is, how far it moved, and the
+    //   last scroll. Read-only. Reads the same objects RouteInput uses, so it cannot disagree with it.
     // =============================================================================
     class InputPanel final : public IEditorPanel
     {
@@ -47,13 +38,13 @@ namespace Opaax::Editor
         // =============================================================================
     public:
         //~Begin IEditorPanel interface
-        /** Nothing to acquire — everything is read through the context. */
+        /** Nothing to acquire. */
         void Startup()     override {}
 
-        /** Nothing the world's render depends on. */
+        /** Nothing the world render depends on. */
         void OnPreRender() override {}
 
-        /** Route state, held keys, last press/release, mouse position + delta, scroll. */
+        /** Route state, held keys, mouse position and delta, scroll. */
         void DrawContents() override;
 
         // =============================================================================
@@ -61,11 +52,8 @@ namespace Opaax::Editor
         // =============================================================================
     private:
         /**
-         * The running game's ACTIONS: name, shape, live value and which phases fired.
-         *
-         * Below the raw keys on purpose — the two halves of the input chain in the order they
-         * run, so a key that is down while its action reads zero is a visible contradiction
-         * rather than something to go looking for (IM1).
+         * The running game's actions: name, type, value and phases. Below the raw keys, so a held key
+         * whose action reads zero is visible.
          */
         void DrawActions();
 
@@ -81,9 +69,7 @@ namespace Opaax::Editor
     private:
         EditorContext& m_Context;
 
-        // A wheel notch is one frame of non-zero — about 16 ms, which the eye cannot catch. The
-        // last value is held on screen for a moment. DISPLAY ONLY: the engine's scroll is
-        // per-frame and untouched, so nothing downstream inherits this smoothing.
+        // The last scroll value, held on screen briefly. Display only.
         static constexpr float SCROLL_HOLD_SECONDS = 0.6f;
 
         Vector2F m_HeldScroll{0.f, 0.f};

@@ -1,6 +1,6 @@
 #include "UI/UIWidgetRegistry.h"
 
-#include <spdlog/fmt/ranges.h>   // fmt::join — the Sealed line names every entry
+#include <spdlog/fmt/ranges.h>   // fmt::join
 
 namespace Opaax
 {

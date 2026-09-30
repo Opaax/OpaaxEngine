@@ -11,22 +11,10 @@ namespace Opaax::Editor
     struct EditorContext;
 
     // =============================================================================
-    // ViewportToolbarRegistry — WHAT sits on the strip over the viewport, in registration order.
-    //
-    //   The eighth route on EditorExtensionRegistrar, registered natives-first then modules then
-    //   sealed (MR2), so a game module adds a tool with no change to OpaaxEditorLib — the same route
-    //   a panel, a menu entry or a drawer takes.
-    //
-    //   AN ITEM IS A CLOSURE, WHERE A MENU NODE IS A TAG, and the difference is principled rather
-    //   than a relapse (L37/L38 retired the original MenuRegistry's closures for exactly the opposite reason). A
-    //   menu node has ONE behaviour — invoke a command — so a tag says everything about it. A toolbar
-    //   item is a WIDGET: a toggle, a drag-float, a combo, a colour swatch. There is no uniform
-    //   behaviour to name, so tags here would mean a new item TYPE per widget kind, which is the
-    //   machinery "easy to add things to it" exists to avoid.
-    //
-    //   An item that wants to INVOKE something still should: the native mode buttons dispatch
-    //   EDITOR_COMMAND_GIZMO_* by tag rather than calling EditorGizmo, so the toolbar, the Edit menu
-    //   and W/E/R remain three front-ends onto one command.
+    // ViewportToolbarRegistry — what sits on the strip over the viewport, in registration order.
+    //   Natives register first, then modules, then it seals, so a game module can add a tool.
+    //   An item is a closure (a widget: toggle, drag-float, combo...), unlike a menu node which is a
+    //   command tag. Items that trigger actions should still dispatch commands by tag.
     // =============================================================================
     class ViewportToolbarRegistry
     {
@@ -48,9 +36,8 @@ namespace Opaax::Editor
         // =============================================================================
     public:
         /**
-         * Append one tool. InId is the item's ImGui ID SCOPE as well as its name, so two items that
-         * happen to label a widget the same cannot fight over hover and active state — I15's
-         * entry-is-an-ID-scope rule, which the Inspector needed for exactly this reason.
+         * Appends one tool. InId is also the item's ImGui ID scope, so two items with the same widget
+         * label do not collide.
          */
         void Add(const OpaaxStringID InId, DrawFunc InDraw)
         {
@@ -59,7 +46,7 @@ namespace Opaax::Editor
             m_Items.emplace_back(InId, std::move(InDraw), false);
         }
 
-        /** A vertical rule between groups. Collapses if it would lead or double up. */
+        /** A vertical separator between groups. Skipped if it would lead or repeat. */
         void AddSeparator()
         {
             if (m_Items.empty() || m_Items.back().bSeparator) { return; }
@@ -72,10 +59,8 @@ namespace Opaax::Editor
         // =============================================================================
     public:
         /**
-         * Draw every tool on one line, in registration order.
-         *
-         * SameLine between items rather than inside them: an item author writes ordinary ImGui and
-         * does not have to know it is on a strip, which is most of what makes adding one cheap.
+         * Draws every tool on one line, in registration order. SameLine is added between items, so an item
+         * is written as ordinary ImGui.
          */
         void Draw(EditorContext& InContext) const
         {

@@ -42,9 +42,7 @@ namespace Opaax
 
             EntityData lEntity;
 
-            // Identity first, and it is the one field with no default. A missing or malformed
-            // guid cannot be invented — a fresh one would silently retarget every reference
-            // that pointed at this entity (**WM3**) — so the entity is dropped instead.
+            // The guid has no default: a new one would break every reference to this entity. Skip it.
             if (!Guid::FromString(ReadString(lEntityJson, KEY_GUID), lEntity.Id))
             {
                 ++lSkipped;
@@ -54,9 +52,7 @@ namespace Opaax
             lEntity.Name     = ReadString(lEntityJson, KEY_NAME);
             lEntity.OwnerMap = IdFromText(ReadString(lEntityJson, KEY_OWNER_MAP));
 
-            // Absent means root. Present but unreadable ALSO means root — and says so, because a
-            // child silently landing at its local pose as world is the misread the version bump
-            // exists to prevent, and a hand-edited guid is the one way it can still happen.
+            // Absent means root. Unreadable also means root, with a warning.
             if (const OpaaxString lParentText = ReadString(lEntityJson, KEY_PARENT);
                 !lParentText.IsEmpty() && !Guid::FromString(lParentText, lEntity.Parent))
             {
@@ -69,7 +65,7 @@ namespace Opaax
             {
                 for (const auto& [lTypeName, lPayload] : lComponentsIt->items())
                 {
-                    if (lTypeName.empty()) { continue; }   // no name to look up in the registry
+                    if (lTypeName.empty()) { continue; }   // no name to look up
 
                     lEntity.Components.emplace_back(OpaaxStringID(lTypeName), lPayload);
                 }
@@ -82,17 +78,13 @@ namespace Opaax
     }
 
     // =========================================================================
-    // The placements — moved out of MapJson in ⑦-C P7 so a prefab file holding records shares
-    // the writer, exactly as the entity array was moved in P1a.
+    // Placements — shared by map and prefab files.
     // =========================================================================
     nlohmann::json EntityJson::InstancesToJson(const TDynArray<PrefabInstanceRecord>& InInstances)
     {
         nlohmann::json lInstances = nlohmann::json::array();
 
-        // SORTED BY InstanceId, for the reason entities are sorted by Guid (**MP2**): the file
-        // lives in git, and Fold produces these in the world's storage order, which reshuffles
-        // whenever an entity is destroyed. Sorting a copy of the pointers leaves the caller's
-        // order untouched.
+        // Sorted by InstanceId, so the file is stable in git. A copy of the pointers is sorted.
         TDynArray<const PrefabInstanceRecord*> lOrdered;
         lOrdered.reserve(InInstances.size());
         for (const PrefabInstanceRecord& lRecord : InInstances)
@@ -115,8 +107,7 @@ namespace Opaax
             nlohmann::json lOverrides = nlohmann::json::object();
             for (const PrefabOverrideEntry& lEntry : lRecord.Overrides)
             {
-                // Keyed by the guid's TEXT: nlohmann's object_t is a std::map, so the file's
-                // override order is sorted and stable without a comparator on Guid.
+                // Keyed by guid text; nlohmann objects are sorted, so the order is stable.
                 lOverrides[lEntry.TemplateGuid.ToString().CStr()] = lEntry.Patch;
             }
 
@@ -161,8 +152,7 @@ namespace Opaax
                     if (!Guid::FromString(OpaaxString(lGuidText.c_str(), static_cast<Uint32>(lGuidText.size())),
                                           lEntry.TemplateGuid))
                     {
-                        // An override naming no entity of the prefab cannot be applied to
-                        // anything; dropping it leaves that entity at the prefab's values.
+                        // An override naming no entity of the prefab cannot be applied: dropped.
                         continue;
                     }
 

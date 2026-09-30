@@ -15,13 +15,10 @@ namespace Opaax
 namespace Sandbox
 {
     /**
-     * The first menu (UI U3): a "Menu" button on the HUD (GameAndUI — a click opens it while the
-     * game keeps its keys), and a dimmed modal with Resume (UIOnly — the mapping is muted, Escape
-     * closes it through the focused panel). One owner for the menu; the world keeps running
-     * underneath, by design for now.
-     *
-     * The modal's contents are `UI/PauseMenu.opaaxui` (since U9), hung under a code-built root that
-     * handles Escape; the two buttons are bound by name, the HUD's shape.
+     * The pause menu: a "Menu" button on the HUD (GameAndUI: the game keeps its keys) and a dimmed modal
+     * with Resume (UIOnly: the mapping is muted, Escape closes it). The world keeps running underneath.
+     * The modal's content is UI/PauseMenu.opaaxui, under a code-built root that handles Escape; the
+     * buttons are found by name.
      */
     class PauseMenuSubsystem final : public Opaax::WorldSubsystemBase
     {
@@ -36,7 +33,7 @@ namespace Sandbox
     public:
         bool Startup() override;
 
-        /** The fade: Opacity chases 1 while open and 0 while closing; the panel hides when it gets there. */
+        /** The fade: Opacity moves toward 1 while open and 0 while closing; the panel hides at 0. */
         void Update(double InDeltaTime) override;
 
         void Shutdown() override;
@@ -48,7 +45,7 @@ namespace Sandbox
     private:
         void OnMenuToggle(const Opaax::InputActionValue& InValue);
 
-        /** Main ⇄ PhysicsTest through the deferred request — the level swap the cover is for (UI21). */
+        /** Main <-> PhysicsTest through a deferred level request. */
         void NextLevel();
 
     private:

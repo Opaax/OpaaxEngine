@@ -3,7 +3,7 @@
 #ifdef OPAAX_PLATFORM_WINDOWS
 
 #include "Core/Log/Logger.h"
-#include "Core/String/OpaaxUtf8.h"   // I7 — the one UTF-8 <-> UTF-16 idiom
+#include "Core/String/OpaaxUtf8.h"
 
 #include <csignal>
 #include <cstdio>
@@ -24,13 +24,13 @@ namespace Opaax
 
     namespace
     {
-        // Raised by the non-SEH hooks so every failure reaches the filter with a real context.
+        // Raised by the non-SEH hooks, so every failure reaches the filter with a real context.
         constexpr DWORD EXCEPTION_OPAAX_TERMINATE     = 0xE0A70001;
         constexpr DWORD EXCEPTION_OPAAX_ABORT         = 0xE0A70002;
         constexpr DWORD EXCEPTION_OPAAX_PURE_CALL     = 0xE0A70003;
         constexpr DWORD EXCEPTION_OPAAX_INVALID_PARAM = 0xE0A70004;
 
-        // Headroom for the handler itself when the crash IS a stack overflow.
+        // Stack reserved for the handler when the crash is a stack overflow.
         constexpr ULONG STACK_GUARANTEE_BYTES = 64 * 1024;
         constexpr int   MAX_STACK_FRAMES      = 64;
 
@@ -72,7 +72,7 @@ namespace Opaax
             RaiseAsCrash(EXCEPTION_OPAAX_INVALID_PARAM);
         }
 
-        /** Opaax_yyyymmdd_hhmmss — no heap, the crash may have corrupted it. */
+        /** Opaax_yyyymmdd_hhmmss, without heap allocation (the heap may be corrupted). */
         void FormatStamp(wchar_t (&OutStamp)[32])
         {
             SYSTEMTIME lNow;
@@ -86,7 +86,7 @@ namespace Opaax
             const HANDLE lProcess = GetCurrentProcess();
             const HANDLE lThread  = GetCurrentThread();
 
-            CONTEXT      lContext = InContext;   // StackWalk64 walks it in place
+            CONTEXT      lContext = InContext;   // StackWalk64 modifies it
             STACKFRAME64 lFrame{};
             lFrame.AddrPC.Offset    = lContext.Rip;
             lFrame.AddrPC.Mode      = AddrModeFlat;
@@ -148,7 +148,7 @@ namespace Opaax
 
     CrashHandler& CrashHandler::Get()
     {
-        // Leaked on purpose (SG5): a crash during static destruction must still find it.
+        // Never destroyed: a crash during static destruction must still find it.
         static CrashHandler* s_Instance = new CrashHandler();
         return *s_Instance;
     }
@@ -157,7 +157,7 @@ namespace Opaax
 
     CrashHandler::~CrashHandler()
     {
-        // Only a test's own instance gets here; Get()'s is leaked.
+        // Only a test's instance gets here (Get()'s is never destroyed).
         Uninstall();
 
         if (m_bSymbolsReady)
@@ -185,7 +185,7 @@ namespace Opaax
 
         if (!m_bSymbolsReady)
         {
-            // At configure time, never at crash time: loading symbols allocates and reads disk.
+            // At configure time, not at crash time: loading symbols allocates and reads the disk.
             SymSetOptions(SYMOPT_UNDNAME | SYMOPT_DEFERRED_LOADS | SYMOPT_LOAD_LINES);
             m_bSymbolsReady = SymInitialize(GetCurrentProcess(), nullptr, TRUE) != FALSE;
         }
@@ -240,7 +240,7 @@ namespace Opaax
 
         const std::wstring lDumpPath = m_DumpDirWide + L"/" + lStamp + L".dmp";
 
-        // 1. The dump — the one artefact that survives a corrupted heap.
+        // 1. The dump (survives a corrupted heap).
         bool lbDumped = false;
         const HANDLE lFile = CreateFileW(lDumpPath.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS,
                                          FILE_ATTRIBUTE_NORMAL, nullptr);
@@ -259,7 +259,7 @@ namespace Opaax
             CloseHandle(lFile);
         }
 
-        // 2. What happened and where, in the log.
+        // 2. The stack, in the log.
         CONTEXT lContext{};
         if (lPointers != nullptr)
         {
@@ -296,7 +296,7 @@ namespace Opaax
             OPAAX_LOG(LogCrashHandler, Critical, "Dump could NOT be written to {}", m_Settings.DumpDir);
         }
 
-        // 3. The log beside the dump: the next launch truncates the original.
+        // 3. The log next to the dump (the next launch overwrites the original).
         Logger::Get().Flush();
         if (!m_LogFileWide.empty())
         {
@@ -309,7 +309,7 @@ namespace Opaax
 
     long CrashHandler::HandleCrash(void* InExceptionPointers)
     {
-        // A crash inside the report (or a second thread crashing) must not recurse.
+        // A crash inside the report (or a second crashing thread) must not recurse.
         if (m_bHandling.test_and_set())
         {
             return EXCEPTION_EXECUTE_HANDLER;

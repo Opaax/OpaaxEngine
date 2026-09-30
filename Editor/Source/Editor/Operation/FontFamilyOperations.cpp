@@ -14,7 +14,7 @@ namespace Opaax::Editor
 {
     namespace
     {
-        /** Record a whole-list replacement under InLabel, and publish it into the document. */
+        /** Records a whole-list replacement under InLabel, and applies it to the document. */
         void RecordEntries(EditorContext& InContext, TDynArray<FontFamilyEntry> InAfter, const char* InLabel)
         {
             FontFamilyData& lData = InContext.FamilyDocument.GetMutableData();
@@ -30,7 +30,7 @@ namespace Opaax::Editor
             InContext.Undo.Record(Move(lStep));
         }
 
-        /** Whether any entry OTHER than InSkip already answers to InStyle. */
+        /** Whether an entry other than InSkip already has InStyle. */
         bool StyleTakenByOther(const FontFamilyData& InData, const FontStyleKey& InStyle, const Uint32 InSkip)
         {
             for (Uint32 lIndex = 0; lIndex < InData.EntryCount(); ++lIndex)
@@ -92,8 +92,8 @@ namespace Opaax::Editor
 
         FontFamilyEntry& lEntry = lData.Entries[InIndex];
 
-        // REVERTED, not merely refused: the drawer already wrote the duplicate into the document, so
-        // leaving it would ship a family where one face can never be resolved.
+        // Reverted, not just refused: the drawer already wrote the duplicate, and a duplicate style
+        // makes one face unreachable.
         if (StyleTakenByOther(lData, lEntry.Style, InIndex))
         {
             OPAAX_LOG(LogEditorFontFamilyDocument, Warn,
@@ -135,8 +135,7 @@ namespace Opaax::Editor
 
         InContext.FamilyDocument.MarkSaved();
 
-        // AND PUBLISH IT ([[L75]]): without this a TextComponent already holding this family keeps
-        // resolving styles against the first parse.
+        // Reload the resource, so a TextComponent already using this family sees the change.
         ResourceOps::SavedToDisk<FontFamilyResource>(InContext, InContext.FamilyDocument.AbsPath());
 
         return true;

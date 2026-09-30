@@ -16,11 +16,8 @@ namespace Opaax
         constexpr Int32 MAX_ORDER = std::numeric_limits<Int16>::max();
 
         /**
-         * Tree order, parents before children, so OrderInLayer reproduces it through F5's sort.
-         *
-         * InMask is the NEAREST ancestor mask, carried DOWN rather than walked up per widget — and
-         * a UIMask met on the way replaces it, which is the nearest-wins rule (**UI16**). InAlpha is
-         * the ancestors' opacity product, carried the same way; a subtree at 0 emits nothing.
+         * Tree order, parents first. InMask is the nearest ancestor mask (a UIMask replaces it);
+         * InAlpha is the ancestors' opacity product. A subtree at 0 alpha emits nothing.
          */
         void CollectTree(const UIWidget& InWidget, const UIMask* InMask, const float InAlpha, Int32& InOutOrder,
                          TDynArray<UIDrawItem>& OutItems)
@@ -32,7 +29,7 @@ namespace Opaax
                 return;
             }
 
-            // A mask is a container: from here down, this is the one that applies.
+            // A mask applies to everything below it.
             const UIMask* lMask = InMask;
             if (const auto* lAsMask = dynamic_cast<const UIMask*>(&InWidget)) { lMask = lAsMask; }
 
@@ -57,8 +54,7 @@ namespace Opaax
         : m_ReferenceHeight(InReferenceHeight)
         , m_Root(MakeUnique<UIPanel>())
     {
-        // The root IS the visible rect: stretched over it, and never a hit — the canvas covers the
-        // whole screen, so "the root was hit" would mean "the pointer is on screen" (L29).
+        // The root covers the visible rect and is never hit (it covers the whole screen).
         m_Root->Name           = "Root";
         m_Root->Rect.AnchorMin = { 0.f, 0.f };
         m_Root->Rect.AnchorMax = { 1.f, 1.f };
@@ -82,8 +78,7 @@ namespace Opaax
         m_TargetWidth  = InWidth;
         m_TargetHeight = InHeight;
 
-        // Width follows the aspect (CAM2). Equal aspects divide to the same float, so a same-aspect
-        // resize lands on the identical rect and dirties nothing — no epsilon, by construction.
+        // Width follows the aspect. Same aspect gives the exact same rect: nothing is dirtied.
         const float    lAspect = InHeight > 0 ? static_cast<float>(InWidth) / static_cast<float>(InHeight) : 0.f;
         const Bounds2D lNext   = Bounds2D::FromCenterSize({ 0.f, 0.f }, { m_ReferenceHeight * lAspect, m_ReferenceHeight });
 
@@ -126,9 +121,7 @@ namespace Opaax
     {
         UICanvasStats lStats;
 
-        // The pull is a poll by design — the one the seed allows, because a widget invalidates
-        // only when the value it read differs from what it shows. A canvas with no sources (the
-        // editor's document) skips the walk entirely.
+        // Read the bindings (widgets only invalidate on change). Skipped when there are no sources.
         if (m_Bindings.Count() > 0)
         {
             m_Root->PullBindings(m_Bindings);
@@ -157,13 +150,12 @@ namespace Opaax
         {
             const UIQuad& lQuad = *lItem.Quad;
 
-            // The mask travels WITH the quad — a value, like the outline beside it (**F4d**), so
-            // masked text and masked images take the same path as everything else.
+            // The mask goes with the quad.
             QuadMask lMask;
             if (lItem.Mask != nullptr)
             {
                 lMask.Rect    = lItem.Mask->GetBounds();
-                lMask.Texture = lItem.Mask->GetResolvedTexture();   // null = clip to the rect alone
+                lMask.Texture = lItem.Mask->GetResolvedTexture();   // null = clip to the rect
             }
 
             Vector4F lColor = lQuad.Color;
@@ -223,7 +215,7 @@ namespace Opaax
             UIWidget* lHit = HitTest(InEvent.Position);
             if (lHit != m_Hovered)
             {
-                // Enter/Leave are DELIVERED, not bubbled — Slate's shape.
+                // Enter/Leave are sent to the widget, not bubbled.
                 if (m_Hovered != nullptr)
                 {
                     m_Hovered->OnPointerEvent({ EUIPointerEventType::Leave, InEvent.Position, InEvent.Button });
@@ -235,7 +227,7 @@ namespace Opaax
                 }
             }
 
-            // A captured widget still tracks the move; otherwise the move itself is never "handled".
+            // A captured widget still gets the move.
             if (m_Pressed != nullptr)
             {
                 m_Pressed->OnPointerEvent(InEvent);
@@ -258,7 +250,7 @@ namespace Opaax
 
         if (InEvent.Type == EUIPointerEventType::Up)
         {
-            // The capturing widget hears its Up even released outside; else whatever is under it.
+            // The capturing widget gets its Up even if released outside; else the widget under it.
             UIWidget* lTarget  = (m_Pressed != nullptr) ? m_Pressed : HitTest(InEvent.Position);
             UIWidget* lHandler = BubblePointer(lTarget, InEvent);
 
@@ -303,7 +295,7 @@ namespace Opaax
 
     void UICanvas::OnDetached(UIWidget& InSubtreeRoot)
     {
-        // Any pointer resting on a node under InSubtreeRoot must be forgotten before it dies.
+        // Forget any pointer state on a node under InSubtreeRoot before it is destroyed.
         const auto lUnderSubtree = [&InSubtreeRoot](const UIWidget* InNode)
         {
             for (const UIWidget* lNode = InNode; lNode != nullptr; lNode = lNode->GetParent())

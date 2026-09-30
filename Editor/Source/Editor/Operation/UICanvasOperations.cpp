@@ -1,7 +1,7 @@
 #include "Editor/Operation/UICanvasOperations.h"
 #include "Editor/Operation/ResourceOperations.h"
 
-#include <algorithm>   // std::clamp — the reorder's bounds
+#include <algorithm>   // std::clamp
 
 #include "Application/OpaaxApplication.h"
 #include "Core/IO/FileIO.h"
@@ -24,7 +24,7 @@ namespace Opaax::Editor
             return OpaaxApplication::GetAppService<IEngine>().GetRegistries().UIWidgets();
         }
 
-        /** Record InBefore -> the tree as it is now, under InLabel. */
+        /** Records InBefore -> the current tree, under InLabel. */
         void Record(EditorContext& InContext, OpaaxString InBefore, const char* InLabel)
         {
             UITreeEdit lStep;
@@ -36,7 +36,7 @@ namespace Opaax::Editor
             InContext.Undo.Record(Move(lStep));
         }
 
-        /** Whether InMaybeAncestor is InPath's prefix — "is this node inside that subtree". */
+        /** Whether InMaybeAncestor is a prefix of InPath (the node is inside that subtree). */
         bool IsInside(const UIWidgetPath& InPath, const UIWidgetPath& InMaybeAncestor)
         {
             if (InMaybeAncestor.size() > InPath.size()) { return false; }
@@ -76,7 +76,7 @@ namespace Opaax::Editor
 
         OpaaxString lBefore = Snapshot(InContext);
 
-        // A fresh widget is named after its type, so the tree reads before anything is authored.
+        // A new widget is named after its type.
         lWidget->Name = InType.ToString();
 
         UIWidget* const lAdded = lParent->AddChild(Move(lWidget));
@@ -112,8 +112,7 @@ namespace Opaax::Editor
     {
         if (!InContext.UICanvasDocument.IsOpen() || InPath.empty()) { return false; }
 
-        // INTO ITS OWN SUBTREE is a cycle: the moved node would be its own ancestor and no walk
-        // would terminate. Refused here rather than survived downstream (**HR**'s rule).
+        // Moving a node into its own subtree would create a cycle: refused.
         if (IsInside(InNewParent, InPath))
         {
             OPAAX_LOG(LogEditorUICanvasDocument, Warn, "Reparent — a widget cannot move inside itself");
@@ -124,7 +123,7 @@ namespace Opaax::Editor
         UIWidget* const lParent = InContext.UICanvasDocument.Resolve(InNewParent);
 
         if (lWidget == nullptr || lParent == nullptr || lWidget->GetParent() == nullptr) { return false; }
-        if (lWidget->GetParent() == lParent) { return false; }   // already there — not a step
+        if (lWidget->GetParent() == lParent) { return false; }   // already there
 
         OpaaxString lBefore = Snapshot(InContext);
 
@@ -149,7 +148,7 @@ namespace Opaax::Editor
         const Int64 lFrom  = static_cast<Int64>(InPath.back());
         const Int64 lTo    = std::clamp(lFrom + InDelta, Int64{ 0 }, lCount - 1);
 
-        if (lTo == lFrom) { return false; }   // already at the end it was pushed toward
+        if (lTo == lFrom) { return false; }   // already at that end
 
         OpaaxString lBefore = Snapshot(InContext);
 
@@ -174,7 +173,7 @@ namespace Opaax::Editor
 
         OpaaxString lBefore = Snapshot(InContext);
 
-        // A same-named twin would shadow the original for FindByName; the suffix is Unity's.
+        // A duplicate name would hide the original from FindByName; add a suffix.
         lClone->Name = lWidget->Name + " (1)";
 
         UIWidget* const lAdded = lWidget->GetParent()->AddChild(Move(lClone), InPath.back() + 1);
@@ -200,7 +199,7 @@ namespace Opaax::Editor
         if (lParent == nullptr) { return {}; }
 
         TUniquePtr<UIWidget> lWidget = UICanvasFile::DeserializeNode(InText, Registry());
-        if (!lWidget) { return {}; }   // not a node — the clipboard held something else
+        if (!lWidget) { return {}; }   // not a widget node
 
         OpaaxString lBefore = Snapshot(InContext);
 
@@ -237,8 +236,7 @@ namespace Opaax::Editor
 
         InContext.UICanvasDocument.MarkSaved();
 
-        // AND PUBLISH IT ([[L75]]): without this a running game holding this canvas keeps the tree
-        // it built from the first parse, so a Save would not reach the HUD on screen.
+        // Reload the resource, so a running game using this canvas sees the change.
         ResourceOps::SavedToDisk<UICanvasResource>(InContext, lPath);
 
         OPAAX_LOG(LogEditorUICanvasDocument, Info, "Saved '{}'", lPath.CStr());

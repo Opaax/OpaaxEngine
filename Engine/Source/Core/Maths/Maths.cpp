@@ -4,10 +4,8 @@ using namespace Opaax;
 
 float Maths::Atan2(float Y, float X)
 {
-    //return atan2f(Y,X);
-    // atan2f occasionally returns NaN with perfectly valid input (possibly due to a compiler or library bug).
-    // We are replacing it with a minimax approximation with a max relative error of 7.15255737e-007 compared to the C library function.
-    // On PC this has been measured to be 2x faster than the std C version.
+    // Minimax approximation of atan2f (max relative error 7.15e-7): atan2f can return NaN
+    // on valid input, and this is about 2x faster.
 
     const float lAbsX = Abs(X);
     const float lAbsY = Abs(Y);

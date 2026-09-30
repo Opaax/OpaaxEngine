@@ -1,35 +1,10 @@
-// Suite: world-subsystem type identity for a subsystem the engine DLL never sees.
+// Suite: type identity of a world subsystem the engine DLL never sees (a game module's).
+//   GetSubsystem<T>() compares GetTypeID() with T::StaticTypeID() (the address of a function-local
+//   static). A game type is compiled into one module, so there is no second copy even though it is
+//   not exported. These tests go red if that changes.
 //
-// WHY THIS EXISTS (ARCHITECTURE.md I2, lessons L21/L22 — M4 S1).
-//   M4's whole point is that a GAME MODULE registers world subsystems: `Sandbox/Module` is a
-//   static lib, its subsystem types are compiled into the exe, and the engine DLL never names
-//   them. `GetSubsystem<T>()` resolves by comparing a virtual `GetTypeID()` against a
-//   caller-side `T::StaticTypeID()` (Subsystem.h:220), and `OPAAX_SUBSYSTEM_TYPE` keys that on
-//   the address of a function-local static.
-//
-//   I2 currently carries a CAVEAT saying a subsystem that is not dll-exported "would get a
-//   per-module copy". If that were true of the M4 shape, `GetSubsystem<T>()` would return
-//   nullptr for a module's own subsystem and the registry S3 builds on it would be worthless.
-//
-//   The caveat had never been tested. Before this file, EVERY live user of
-//   OPAAX_SUBSYSTEM_TYPE was an OPAAX_API engine subsystem (AudioManager, EngineEventBus,
-//   InputManager, RendererManager, ResourceManager, WorldManager) — the *exported* case. The
-//   "S9 proof" cited in I2 was a one-off runtime observation of that same exported case, so
-//   nothing had ever exercised the non-exported one. L21: prove the premise before designing
-//   on it; L22: a contract's claim is a premise, not a finding.
-//
-//   Expected answer, and the reason I2's caveat is too broad: a game type is compiled into
-//   ONE module, so there is no second copy to disagree with. "Not exported" only bites a type
-//   that two modules both instantiate (a header-only template static). These cases pin that
-//   reasoning so a future change which breaks it — exporting a world subsystem, or moving
-//   resolution into the DLL — goes red instead of silently returning null.
-//
-// THE INSTRUMENT (L21: it must not share a failure mode with the thing it measures).
-//   OpaaxTests links the engine IMPORT LIB exactly like Game.exe, so OPAAX_API is dllimport
-//   here and `WorldSubsystemMgr` is genuinely the DLL's type. The probes are defined in
-//   WorldSubsystemProbes.h and used from TWO TUs (this one and WorldSubsystemIdentityTU2.cpp)
-//   with EXTERNAL linkage, because a single-TU test could not tell "one tag per type" apart
-//   from "one tag per TU" — and an anonymous namespace would have guaranteed the wrong answer.
+//   The test exe links the engine import lib like a game. The probes (WorldSubsystemProbes.h) are
+//   used from two TUs with external linkage, to tell "one tag per type" from "one tag per TU".
 #include <doctest.h>
 
 #include "WorldSubsystemProbes.h"
@@ -58,7 +33,7 @@ TEST_CASE("world subsystem identity: structurally identical types get distinct t
 {
     // The two probes have the same base, layout and member bodies. Only per-type identity
     // separates them, so equality here would mean every module subsystem resolved to
-    // whichever one happened to be registered first (the L4 collision class).
+    // whichever one happened to be registered first.
     CHECK(ProbeWorldSubsystem::StaticTypeID() != SecondProbeWorldSubsystem::StaticTypeID());
     CHECK(ProbeTagFromOtherTU() != SecondProbeTagFromOtherTU());
 }
@@ -73,12 +48,12 @@ TEST_CASE("world subsystem identity: an exe-side tag does not collide with a DLL
 }
 
 // =============================================================================
-// The behavioural statement — how the failure would actually bite in M4
+// The behavioural statement — how the failure would actually bite
 // =============================================================================
 TEST_CASE("world subsystem identity: an instance registered in another TU resolves through the DLL's manager")
 {
     // WorldSubsystemMgr is the DLL's type (dllimport here) — the same one World owns as
-    // m_Subsystems. In M4 the registration happens from the module's factory and the lookup
+    // m_Subsystems. The registration happens from the module's factory and the lookup
     // from wherever game code asks, so the two halves are deliberately split across TUs.
     WorldSubsystemMgr lManager;
 
@@ -88,7 +63,7 @@ TEST_CASE("world subsystem identity: an instance registered in another TU resolv
     // Instantiated HERE, against an instance whose type this TU shares only through a header.
     ProbeWorldSubsystem* lResolvedHere = lManager.GetSubsystem<ProbeWorldSubsystem>();
 
-    // Null is the exact failure I2's caveat predicts. It cannot be an "empty manager"
+    // Null would be the failure. It cannot be an "empty manager"
     // false negative: the startup count below proves the instance exists and ran.
     REQUIRE(lResolvedHere != nullptr);
     CHECK(lResolvedHere->GetStartupCount() == 1);

@@ -11,68 +11,45 @@
 
 namespace Opaax
 {
-    // Only NAMED here — TResourcePath never completes its parameter — so a component header does
-    // not drag the resource system into every TU that animates one.
+    // Forward-declared: TResourcePath only needs the name.
     struct AnimationLibraryResource;
     struct AnimationClipResource;
 
     // =============================================================================
-    // SpriteAnimatorComponent — what drives a SpriteComponent's frame over time.
-    //
-    //   D7 exactly: authoring DATA, advanced by a world subsystem, never a polymorphic component.
-    //   It is additive — SpriteAnimationSubsystem writes into the SpriteComponent the renderer
-    //   already reads, so nothing in Renderer2D or RendererManager knows animation exists.
-    //
-    //   TWO WAYS TO NAME A CLIP, and the precedence is the contract: a Library wins when set and
-    //   Clip names an entry in it; otherwise ClipAsset is played directly. Both exist because a
-    //   one-off animated prop — a spinning coin — must not need a library to hold its single clip,
-    //   while a hero with five states must not pay a string copy to switch between them.
-    //   (SpriteComponent's own Sheet|Texture fork, one layer over.)
-    //
-    //   WHILE THIS DRIVES A SPRITE IT OWNS THAT SPRITE'S Sheet, Texture AND Frame. The sprite's
-    //   authored values are what shows when no animator is present — which, since the subsystem is
-    //   Play-only, is exactly what the editor viewport keeps showing.
+    // SpriteAnimatorComponent — animates a SpriteComponent's frame (via SpriteAnimationSubsystem).
+    //   A Library wins when set (Clip names one of its entries); otherwise ClipAsset is played.
+    //   While active it controls the sprite's Sheet, Texture and Frame. Play worlds only.
     // =============================================================================
     struct SpriteAnimatorComponent
     {
-        /** Asset-relative ("Anims/Hero.opaaxanim"). Set, it WINS over ClipAsset. */
+        /** Asset-relative ("Anims/Hero.opaaxanim"). Wins over ClipAsset. */
         TResourcePath<AnimationLibraryResource> Library;
 
-        /** Which of the library's clips, by its short name. INVALID = the library's DefaultClip. */
+        /** The library clip, by name. Invalid = the library's DefaultClip. */
         OpaaxStringID Clip;
 
         /** Asset-relative ("Anims/Coin_Spin.opaaxclip"). Played when Library is empty. */
         TResourcePath<AnimationClipResource> ClipAsset;
 
-        /** Per-entity multiplier on the clip's Fps. 0 freezes without changing bPlaying. */
+        /** Speed multiplier. 0 freezes. */
         float Speed = 1.f;
 
-        /** False freezes on the CURRENT step rather than reverting to the authored frame. */
+        /** False freezes on the current step. */
         bool bPlaying = true;
 
         // =============================================================================
-        // Transient — playback state, in NEITHER the json macro NOR the property table
-        //
-        //   So it cannot reach a `.opaaxmap`, and a PIE clone round-trips through the map
-        //   snapshot (MP5/WM6) — which means a cloned world starts every animation at zero for
-        //   free, with nothing to reset. Unreal's PaperFlipbookComponent::AccumulatedTime is the
-        //   same shape.
+        // Runtime playback state (not saved; a Play copy starts at zero)
         // =============================================================================
 
         /** Seconds into the current clip. */
         float PlayTime = 0.f;
 
         /**
-         * The interned PATH of the clip being played, so a switch restarts at zero.
-         *
-         * The path rather than the name, because it is the one identity both routes share: a
-         * library entry and a direct ClipAsset both resolve to a file.
+         * Path of the playing clip, so a change restarts at zero.
          */
         OpaaxStringID BoundClipPath;
 
-        // Satisfies CComponent. _WITH_DEFAULT is required, not preferred: the plain macro reads
-        // every field with at(), which THROWS on a missing key, so adding a field here would
-        // refuse every map saved before it existed — at boot, inside Level::MountAll.
+        // _WITH_DEFAULT: a missing key keeps its default, so maps saved before a new field still load.
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(SpriteAnimatorComponent,
                                                     Library, Clip, ClipAsset, Speed, bPlaying)
 

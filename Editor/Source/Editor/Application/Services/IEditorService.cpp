@@ -4,8 +4,7 @@ namespace Opaax::Editor
 {
     namespace
     {
-        // NullEditorService — locator fallback so Get<IEditorService>() never dereferences null. Inert:
-        // an editor executable always provides the real one, so this is only the template's safety net.
+        // NullEditorService — used when no editor service is provided. Does nothing.
         class NullEditorService final : public IEditorService
         {
         public:
@@ -13,12 +12,12 @@ namespace Opaax::Editor
             void Initialize()        override {}
             void BeginFrame()        override {}
             void EndFrame()          override {}
-            bool RouteInput(Event&)  override { return false; }   // inert: consumes nothing
-            void RegisterExtensions(const TFunction<void(EditorExtensionRegistrar&)>&) override {}   // inert
+            bool RouteInput(Event&)  override { return false; }   // consumes nothing
+            void RegisterExtensions(const TFunction<void(EditorExtensionRegistrar&)>&) override {}
         };
     }
 
-    // Out-of-line type tag — one instance across the lib, DLL-safe (mirrors OPAAX_SERVICE_TYPE's rule).
+    // Type tag, defined here (shared across the lib).
     ServiceTypeID IEditorService::StaticTypeID() noexcept
     {
         static const int s_Tag = 0;

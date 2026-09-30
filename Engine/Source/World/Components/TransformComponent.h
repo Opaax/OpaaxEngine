@@ -10,29 +10,10 @@
 namespace Opaax
 {
     // =============================================================================
-    // TransformComponent — WHERE an entity is, RELATIVE TO ITS PARENT (§HR). The one position in
-    //   the engine: World::CreateEntity emplaces it beside EntityMeta, so every entity has one and
-    //   Each<TransformComponent> is a complete view. That guarantee is what the editor's picking
-    //   and its icon for an entity with nothing to draw both stand on — an entity with no anchor
-    //   could not be clicked at all.
-    //
-    //   LOCAL, not world. A root's local is its world, which is every entity there was before
-    //   parenting; a child's is composed up the chain by EntityHierarchy::WorldTransform, and that
-    //   is what every reader (renderer, picking, physics, camera) asks for. Nothing reads Position
-    //   as a world coordinate any more except a writer that knows it holds a root.
-    //
-    //   It replaced the Position that used to sit on SpriteComponent, DummyComponent and
-    //   CameraComponent separately, where one entity could carry three of them and they could
-    //   disagree. Size stays on the components: an extent is what a thing IS, not where it is.
-    //
-    //   Rotation is DEGREES — what an author types into the Inspector. Renderer2D takes radians, so
-    //   the draw call converts (Maths::DegreesToRadians).
-    //
-    //   Scale arrived with ③'s gizmo and NOT before, which is X5's rule: it is a MULTIPLIER on the
-    //   Size its components carry, and it landed in the same change as its three readers — both
-    //   RendererManager passes and EntityQuery::TryGetBounds. A gizmo was the reader that made it
-    //   real; ImGuizmo forced the timing, since its decompose always answers a scale and discarding
-    //   one it had authored would have been a silent lie.
+    // TransformComponent — an entity's position, rotation and scale, relative to its parent.
+    //   Every entity has one (World::CreateEntity adds it).
+    //   Use EntityHierarchy::WorldTransform for the world pose.
+    //   Rotation is in degrees. Scale multiplies the Size of the other components.
     // =============================================================================
     struct TransformComponent
     {
@@ -41,12 +22,10 @@ namespace Opaax
         /** Degrees, counter-clockwise. */
         float    Rotation = 0.f;
 
-        /** A MULTIPLIER on the component's own Size, not an extent — 1 is unscaled. */
+        /** Multiplies the component's Size. 1 = unscaled. */
         Vector2F Scale    = { 1.f, 1.f };
 
-        // Satisfies CComponent. _WITH_DEFAULT is the required variant, not a preference: the plain
-        // macro reads every field with at(), which THROWS on a missing key — and it is exactly what
-        // lets Scale be added without touching a single `.opaaxmap` already on disk.
+        // _WITH_DEFAULT: a missing key keeps its default, so maps saved before a new field still load.
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(TransformComponent, Position, Rotation, Scale)
 
         OPAAX_PROPERTIES(TransformComponent,
@@ -56,15 +35,12 @@ namespace Opaax
     };
 
     // =============================================================================
-    // Composition — the pure half, and therefore the testable one (ResolveDisplayPose's idiom).
-    //
-    //   TRS only: position is rotated and scaled by the parent then translated, rotation adds,
-    //   scale multiplies. A child rotated under a NON-UNIFORMLY scaled parent is a shear, which
-    //   three fields cannot hold — Unity's `lossyScale` limit, accepted here for the same reason
-    //   the scale tool already forces Local space.
+    // Composition (pure functions)
+    //   Position is rotated and scaled by the parent then offset; rotation adds; scale multiplies.
+    //   A rotated child of a non-uniformly scaled parent cannot be represented (like Unity's lossyScale).
     // =============================================================================
 
-    /** InLocal placed under InParent (both in InParent's parent's frame). */
+    /** InLocal placed under InParent. */
     inline TransformComponent Compose(const TransformComponent& InParent, const TransformComponent& InLocal) noexcept
     {
         const float lRad = Maths::DegreesToRadians(InParent.Rotation);
@@ -83,9 +59,8 @@ namespace Opaax
     }
 
     /**
-     * The local that Compose(InParent, local) == InWorld — Compose's inverse.
-     * A zero parent scale axis has no inverse; that axis is passed through unscaled rather
-     * than divided into infinity.
+     * Inverse of Compose: the local such that Compose(InParent, local) == InWorld.
+     * A zero parent scale axis is passed through unscaled.
      */
     inline TransformComponent ToLocal(const TransformComponent& InParent, const TransformComponent& InWorld) noexcept
     {

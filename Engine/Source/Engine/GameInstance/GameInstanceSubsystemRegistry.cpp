@@ -1,12 +1,10 @@
 #include "Engine/GameInstance/GameInstanceSubsystemRegistry.h"
 
-#include <spdlog/fmt/ranges.h>   // fmt::join — the Sealed line names every entry
+#include <spdlog/fmt/ranges.h>   // fmt::join
 
 namespace Opaax
 {
-    // NOTE: every refusal is an Error log + a false return, deliberately NOT OPAAX_ASSERT — an
-    // assert is a __debugbreak in Debug (untestable) and nothing in Release, which is the build
-    // where a module registering late must be reported. WorldSubsystemRegistry::AddEntry, verbatim.
+    // Refusals log an error and return false (not an assert, so Release builds report them too).
     bool GameInstanceSubsystemRegistry::AddEntry(TUniquePtr<IGameInstanceSubsystemEntry> InEntry,
                                                 OpaaxStringID InName)
     {

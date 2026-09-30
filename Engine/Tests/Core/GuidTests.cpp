@@ -7,12 +7,8 @@
 using namespace Opaax;
 
 // =============================================================================
-// Guid::Derive — the identity an instance gives one of a template's entities (⑦-C **K2**).
-//
-//   The property under test is not "it returns something". It is that N instances of one
-//   prefab produce N DISTINCT identities, because MapFactory::Instantiate refuses a guid
-//   already live in the world (**WM3**) — so a colliding derivation is not a hash quality
-//   nitpick, it is an instance that silently fails to appear.
+// Guid::Derive — the identity of a prefab instance's entity. N instances of one prefab must give
+// N distinct guids (MapFactory::Instantiate refuses a guid already in the world).
 // =============================================================================
 TEST_CASE("Guid::Derive is deterministic")
 {

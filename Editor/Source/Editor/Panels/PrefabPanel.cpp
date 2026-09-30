@@ -10,22 +10,22 @@
 #include "Editor/Panels/EditorPanels.h"
 #include "Editor/Prefab/EditorPrefabDocument.h"
 #include "Editor/Extensions/DrawerRegistry.h"
-#include "Editor/Operation/EditorGizmo.hpp"     // the editor-wide settings the gizmo reads
-#include "Editor/Operation/EntityOps.h"         // TransformEntities — the world-explicit verb (PF12)
-#include "Editor/Resources/ResourceDragDrop.h"  // a prefab dropped on the preview (P7)
+#include "Editor/Operation/EditorGizmo.hpp"     // editor-wide gizmo settings
+#include "Editor/Operation/EntityOps.h"         // TransformEntities
+#include "Editor/Resources/ResourceDragDrop.h"  // prefab drops on the preview
 #include "Editor/UI/IEditorGui.h"
 #include "Editor/UI/IEditorUIBackend.h"
 #include "Editor/Viewport/ViewportOverlays.h"
 
 #include "Application/Services/IEngine.h"
 #include "Core/Maths/Bounds2D.h"
-#include "Engine/Subsystems/Resources/ResourceManager.h"   // before PrefabResource — LoadContext
+#include "Engine/Subsystems/Resources/ResourceManager.h"   // before PrefabResource (completes LoadContext)
 #include "RHI/Framebuffer.h"
 #include "Renderer/CameraView.h"
 #include "Renderer/RenderTarget.hpp"        // OffscreenRenderTarget
 
 #include "World/Entity/Entity.h"
-#include "World/Entity/EntityHierarchy.h"   // §HR — Detach gates on a parent existing
+#include "World/Entity/EntityHierarchy.h"   // Detach needs a parent
 #include "World/Entity/EntityMeta.h"
 #include "World/Entity/EntityQuery.h"
 #include "World/Prefab/PrefabResource.hpp"
@@ -35,8 +35,7 @@ namespace Opaax::Editor
 {
     namespace
     {
-        // Keeps an entity with nothing to draw framable — EntityOps::FocusSelected's value, for its
-        // reason: a fixed world size, since this runs before the camera has a meaningful pixel scale.
+        // Size used to frame an entity with nothing to draw (like EntityOps::FocusSelected).
         constexpr float k_FrameAnchor = 25.f;
     }
 
@@ -48,14 +47,14 @@ namespace Opaax::Editor
     }
 
     // =========================================================================
-    // OnPreRender — the ViewportPanel's order, for SEL3's reason: the click is spent against the
-    // frame that was RENDERED, before the resize and the camera move that would change it.
+    // OnPreRender — like the ViewportPanel: the click is used against the rendered frame, before the
+    // resize and camera move.
     // =========================================================================
     void PrefabPanel::OnPreRender()
     {
         World* const lWorld = m_Context.PrefabDocument.GetWorld();
 
-        // A hidden panel submits nothing, so it costs no pass while closed (**MV3**'s rule).
+        // A hidden panel submits nothing.
         if (lWorld == nullptr || !m_Context.Panels.IsVisible(PanelID())) { return; }
 
         PickGesture::Apply(m_PickGesture.Take(), *lWorld, m_Context.PrefabDocument.Selection(), ViewportPx(),
@@ -70,8 +69,7 @@ namespace Opaax::Editor
             m_RenderTarget = MakeUnique<OffscreenRenderTarget>(m_Framebuffer.get());
         }
 
-        // The deferred resize ViewportPanel and the Camera Preview both use: measured during the
-        // draw, applied before the next frame's pass.
+        // Deferred resize: measured during the draw, applied before the next frame's pass.
         if (m_PendingSize.x > 0 && m_PendingSize.y > 0
             && (m_PendingSize.x != m_Size.x || m_PendingSize.y != m_Size.y))
         {
@@ -83,16 +81,14 @@ namespace Opaax::Editor
         ApplyPendingFrame(*lWorld);
         m_Camera.Apply(*lWorld);   // an Edit world, so this never refuses
 
-        // Tagged with THIS world (the DebugDraw source rule), so the level's pass never sees them
-        // and the level's grid never lands here.
+        // Tagged with this world, so the level's pass does not draw them (and the level grid does not land here).
         const float lAnchor = ViewportOverlays::AnchorHalfExtent(lWorld->GetCameraView(), ViewportPx());
 
         ViewportOverlays::EnqueueSelectionOutline(
             m_Context.Engine.GetDebugDraw(), *lWorld, m_Context.PrefabDocument.Selection().Ids(), lAnchor);
         ViewportOverlays::EnqueueEntityIcons(m_Context.Engine.GetDebugDraw(), *lWorld, lAnchor);
 
-        // NAMING ITS OWN WORLD — the whole reason P6 gave a view a Source. Framed by this panel's
-        // camera, which was just published as the world's view.
+        // This panel's own world, framed by this panel's camera.
         m_Context.Engine.SubmitRenderView(*m_RenderTarget, lWorld->GetCameraView(), /*bInDrawOverlays*/ true, lWorld);
     }
 
@@ -114,13 +110,12 @@ namespace Opaax::Editor
             return;
         }
 
-        m_Camera.FocusOn(lBounds, ViewportPx());   // logs where it went, every time
+        m_Camera.FocusOn(lBounds, ViewportPx());   // logs where it went
     }
 
     void PrefabPanel::ApplyGizmoDrag(World& InWorld)
     {
-        // Straight through the verb (PF12): the command the level dispatches carries the PIE
-        // guard, which is the level's policy — this world is Edit whatever the level is doing.
+        // Directly through the verb: the level command has a Play guard, but this world is always Edit.
         EntityOps::TransformDelta lDelta;
         if (m_Gizmo.TakeDelta(m_Context.Gizmo, lDelta))
         {
@@ -139,18 +134,15 @@ namespace Opaax::Editor
             return;
         }
 
-        // THE ENTITIES WERE REPLACED — the moment to frame, since an opened prefab may sit anywhere
-        // in x/y. (The document cleared its own selection and history where it cleared the world.)
+        // The entities were replaced (a prefab was opened): frame them.
         if (m_Context.PrefabDocument.Generation() != m_ShownGeneration)
         {
             m_ShownGeneration = m_Context.PrefabDocument.Generation();
             m_bPendingFrame   = true;
         }
 
-        // THIS WINDOW'S route, which ImGui ranks above EditorService's global one — so with this
-        // panel focused the level's F does not fire. F is the one key measured here rather than
-        // declared: its subject is this panel's camera, which no command can reach. The text-field
-        // guard is the same one the global route uses: typing "Fred" into a name must not frame.
+        // This window's shortcut route, ranked above EditorService's, so the level's F does not fire.
+        // F is handled here because its subject is this panel's camera. Not while typing in a text field.
         if (!m_Context.Gui.IsKeyboardOwnedByUI() && ImGui::Shortcut(ImGuiKey_F))
         {
             m_bPendingFrame = true;
@@ -161,15 +153,13 @@ namespace Opaax::Editor
         ImGui::Text("%s%s", m_Context.PrefabDocument.AbsPath().CStr(), lDirty ? " *" : "");
         ImGui::Separator();
 
-        // The SAME verb Ctrl+S reaches, through the panel's SaveCommand — one save, not two
-        // ([[L86]], which is exactly the bug a second hand-written save path caused).
+        // The same command as Ctrl+S (the panel's SaveCommand): one save path.
         if (ImGui::Button("Save"))
         {
             m_Context.PrefabDocument.Save(m_Context);
         }
 
-        // Live whatever the document's state (P7): unsaved edits become the variant's overrides,
-        // and the base file is left alone — the moment the author moved a barrel is the moment.
+        // Always enabled: unsaved edits become the variant's overrides; the base file is not changed.
         ImGui::SameLine();
         if (ImGui::Button("Save As Variant..."))
         {
@@ -186,9 +176,7 @@ namespace Opaax::Editor
 
         ImGui::Separator();
 
-        // SPLIT HORIZONTALLY: the world on the left, everything else on the right (their call).
-        // Stacked vertically the preview got whatever was left under the tree and the property
-        // form, which on a docked panel is almost nothing — so the image scaled down to a stamp.
+        // Split horizontally: the world on the left, the rest on the right (stacked, the preview was too small).
         const float lAvailX   = ImGui::GetContentRegionAvail().x;
         const float lPreviewW = lAvailX * k_PreviewSplit;
 
@@ -220,14 +208,14 @@ namespace Opaax::Editor
     void PrefabPanel::RunPendingDrop()
     {
         const OpaaxString lPrefab = m_PendingDropPrefab;
-        m_PendingDropPrefab = OpaaxString();   // cleared FIRST — a refused drop must not retry
+        m_PendingDropPrefab = OpaaxString();   // cleared first, so a refused drop does not retry
 
         if (lPrefab.IsEmpty()) { return; }
 
         World* const lWorld = m_Context.PrefabDocument.GetWorld();
         if (lWorld == nullptr) { return; }
 
-        // This panel's camera, as published to the world in OnPreRender — the view the drop was seen in.
+        // This panel's camera, as published in OnPreRender (the view the drop was made in).
         const Vector2F lWorldPos = ScreenToWorld(lWorld->GetCameraView(), ViewportPx(), m_PendingDropPx);
 
         m_Context.PrefabDocument.Place(m_Context, lPrefab, &lWorldPos);
@@ -240,9 +228,7 @@ namespace Opaax::Editor
 
         ImGui::TextDisabled("Entities");
 
-        // THE SAME TREE THE HIERARCHY DRAWS (§HR), over this document's world and selection. A
-        // prefab's roots sit at the top; a row dragged onto another nests it, or onto the strip
-        // below to unparent. The drop is banked and spent after the walk.
+        // The same tree as the Hierarchy, over this document's world and selection.
         m_Tree.Rebuild(*lWorld);
 
         for (const EntityID lRoot : m_Tree.Roots())
@@ -259,7 +245,7 @@ namespace Opaax::Editor
             EntityOps::Reparent(m_Context, EUndoWorld::Prefab, lDrop.Child, lDrop.Parent);
         }
 
-        // A prefab dropped on a row: a NESTED placement under it, at its authored pose.
+        // A prefab dropped on a row: a nested placement under it, at its authored pose.
         EntityTreePrefabDrop lPrefabDrop;
         if (m_Tree.TakePrefabDrop(lPrefabDrop))
         {
@@ -271,7 +257,7 @@ namespace Opaax::Editor
     {
         if (!ImGui::BeginPopupContextItem("prefab_entity_ops")) { return; }
 
-        // Right-clicking a row that is NOT selected selects it — the Hierarchy's rule.
+        // Right-clicking an unselected row selects it (like the Hierarchy).
         EditorSelection& lSelection = m_Context.PrefabDocument.Selection();
         if (!lSelection.Contains(InEntity)) { lSelection.Select(InEntity); }
 
@@ -281,7 +267,7 @@ namespace Opaax::Editor
             lHasParent = lHasParent || EntityHierarchy::GetParent(Entity{ lId, InEntity.GetWorld() }).IsValid();
         }
 
-        // Queued, not run: the popup sits inside the tree walk (MP7's rule).
+        // Queued, not run (the popup is inside the tree walk).
         if (ImGui::MenuItem("Detach from Parent", nullptr, false, lHasParent)) { m_bPendingDetach = true; }
 
         ImGui::EndPopup();
@@ -297,25 +283,21 @@ namespace Opaax::Editor
             return;
         }
 
-        // THE SAME REGISTRY THE INSPECTOR USES, so a component gains a form here by being registered
-        // once (**MR2i**) and this panel never learns a component type.
+        // The Inspector's drawer registry, so this panel knows no component type.
         for (const TFunction<bool(Entity&, IEditorWidgets&, EditorContext&)>& lDrawer :
              m_Context.Extensions.Drawers().Entries())
         {
             lDrawer(lEntity, m_Context.Widgets, m_Context);
         }
 
-        // A drawer writes through a raw reference, which no World method sees — and IsDirty is gated
-        // on the revision. The Inspector's rule: any active widget, plus the release frame, marks.
+        // A drawer writes directly, which the world cannot see; mark changes like the Inspector does.
         const bool lItemActive = ImGui::IsAnyItemActive();
         if (lItemActive || m_bWasItemActive)
         {
             if (World* lWorld = lEntity.GetWorld()) { lWorld->MarkChanged(); }
         }
 
-        // THE EDIT GESTURE'S TWO EDGES — the Inspector's bracket, verbatim (P8 V4). The rising
-        // edge is read AFTER the drawers ran, which is what makes the captured values the pre-edit
-        // ones; the falling edge records onto the DOCUMENT's stack.
+        // The undo step's two edges, like the Inspector. The step goes on the document's stack.
         if (lItemActive && !m_bWasItemActive)
         {
             m_Edit.Begin(m_Context, lEntity, EUndoWorld::Prefab);
@@ -335,24 +317,22 @@ namespace Opaax::Editor
         const ImVec2 lAvail = ImGui::GetContentRegionAvail();
         if (lAvail.x <= 0.f || lAvail.y <= 0.f) { return; }
 
-        // THE FRAMEBUFFER IS SIZED TO THE REGION, so the image is drawn 1:1 and never rescaled.
+        // The framebuffer is sized to the region, so the image is drawn 1:1.
         m_PendingSize = { static_cast<Uint32>(lAvail.x), static_cast<Uint32>(lAvail.y) };
 
         const EditorImage lImage = m_Framebuffer != nullptr
                                        ? m_Context.UIBackend.GetViewportImage(*m_Framebuffer)
                                        : EditorImage{};
 
-        // Drawn at the FRAMEBUFFER's size rather than the region's: they agree from the frame after
-        // a resize, and using the region on the frame they disagree is exactly a stretch.
+        // Drawn at the framebuffer's size (it matches the region from the frame after a resize).
         const Vector2F lSizePx = ViewportPx();
         ImguiWidgets::Image(lImage, ImVec2(lSizePx.x, lSizePx.y));
 
-        // The image is the LAST SUBMITTED ITEM here, so these name it (the ViewportPanel's rule).
+        // The image is the last submitted item, so these refer to it.
         const bool   lHovered = ImGui::IsItemHovered();
         const ImVec2 lOrigin  = ImGui::GetItemRectMin();
 
-        // DROP A PREFAB TO NEST ONE (P7) — the ViewportPanel's target, verbatim: banked with the
-        // local pixel, run once the pass is over (**MP7**).
+        // Drop a prefab to nest one: stored with the pixel, run after the pass.
         {
             OpaaxString lDropped;
             if (AcceptResourceDragPayload(ResourceTypeID::Get<PrefabResource>(), lDropped))
@@ -366,8 +346,8 @@ namespace Opaax::Editor
 
         m_CameraGesture.Measure(lHovered, { lOrigin.x, lOrigin.y }, lSizePx);
 
-        // ONE left button, TWO consumers: a press on a handle belongs to the gizmo, so the marquee
-        // never sees it. No grid here, so translate snaps to the authored step.
+        // One left button, two users: a press on a handle is the gizmo's, so the marquee never sees it.
+        // No grid here, so translate snaps to the configured step.
         World* const lWorld = m_Context.PrefabDocument.GetWorld();
         const bool   lGizmoOwns = lWorld != nullptr
             && m_Gizmo.Measure(m_Context.Gizmo, *lWorld, m_Context.PrefabDocument.Selection(), lWorld->GetCameraView(), lSizePx,

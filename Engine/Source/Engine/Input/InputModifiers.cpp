@@ -22,8 +22,7 @@ namespace Opaax
                 return -InValue;
 
             case EInputModifier::Swizzle:
-                // A SWAP, so it is its own inverse — which is what makes a WASD composite read
-                // the same for the vertical pair as the horizontal one, plus a Negate.
+                // A swap, so it is its own inverse.
                 return Vector2F{InValue.y, InValue.x};
 
             case EInputModifier::Scalar:
@@ -31,8 +30,7 @@ namespace Opaax
 
             case EInputModifier::Normalize:
             {
-                // Shrink only. Growing a short vector to unit length would make a barely-pressed
-                // stick read as fully pressed, which is the opposite of what this is for.
+                // Shrink only: a slightly pressed stick must not read as fully pressed.
                 const float lLength = Magnitude(InValue);
                 if (lLength <= 1.f || lLength == 0.f)
                 {
@@ -44,9 +42,7 @@ namespace Opaax
 
             case EInputModifier::DeadZone:
             {
-                // RADIAL, which is correct for a stick AND degrades to the right thing for one
-                // axis, since the magnitude of (x, 0) is |x|. A per-component dead zone would let
-                // a diagonal escape the zone that neither axis alone could.
+                // Radial dead zone (per-component would let diagonals through).
                 const float lLength = Magnitude(InValue);
                 if (lLength == 0.f)
                 {

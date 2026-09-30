@@ -6,8 +6,7 @@ namespace Opaax
 {
     namespace
     {
-        // The slot InTexId already holds in this batch, or 0 — which doubles as "not bound yet",
-        // since slot 0 is the white texture and never appears in the table.
+        // InTexId's slot in this batch, or 0 if not bound (slot 0 is white, never in the table).
         Uint32 FindSlot(const TDynArray<Uint32>& InSlotTexIds, const Uint32 InTexId)
         {
             for (Uint32 i = 0; i < static_cast<Uint32>(InSlotTexIds.size()); ++i)
@@ -57,13 +56,11 @@ namespace Opaax
             Uint32 lSlot     = FindSlot(lSlotTexIds, lTexId);
             Uint32 lMaskSlot = (lMaskId != 0) ? FindSlot(lSlotTexIds, lMaskId) : 0u;
 
-            // How many NEW slots this quad would claim. A mask that is the same texture as the
-            // quad's own shares one slot, which is why they are counted together rather than
-            // checked one after the other (**UI16**).
+            // New slots this quad needs. A mask that is the quad's own texture shares its slot.
             Uint32 lNeeded = (lTexId != 0 && lSlot == 0) ? 1u : 0u;
             if (lMaskId != 0 && lMaskSlot == 0 && lMaskId != lTexId) { ++lNeeded; }
 
-            // Quad room first, then samplers: a full batch closes whatever texture comes next.
+            // Quads first, then samplers: a full batch closes.
             if (lQuadsInBatch >= lMaxQuads
                 || (lNeeded > 0 && static_cast<Uint32>(lSlotTexIds.size()) + lNeeded >= lMaxSlots))
             {
@@ -82,8 +79,7 @@ namespace Opaax
 
             if (lMaskId != 0)
             {
-                // Re-asked AFTER the texture was bound: when the two ids match, the mask rides the
-                // slot the texture just took.
+                // After binding the texture: when the ids match, the mask uses that slot.
                 lMaskSlot = FindSlot(lSlotTexIds, lMaskId);
 
                 if (lMaskSlot == 0)

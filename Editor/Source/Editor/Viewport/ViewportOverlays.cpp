@@ -4,22 +4,20 @@
 #include "Renderer/CameraView.h"
 #include "Renderer/DebugDraw.h"
 #include "World/Entity/Entity.h"
-#include "World/Entity/EntityMeta.h"    // the complete all-entities view, for the icon pass
-#include "World/Entity/EntityQuery.h"   // the ONE entity-AABB rule — outline and icon
+#include "World/Entity/EntityMeta.h"    // the all-entities view, for icons
+#include "World/Entity/EntityQuery.h"   // entity bounds for outline and icon
 #include "World/World.h"
 
 namespace Opaax::Editor::ViewportOverlays
 {
     namespace
     {
-        // Selection outline: orange because no Sandbox quad is; the padding pushes the border off
-        // the quad's own edge so it reads as an outline rather than a repaint of its rim. WORLD
-        // units, tuned against the Sandbox's 120x120 quads.
+        // Selection outline color and padding (world units), so the border sits just outside the quad.
         constexpr Vector4F k_OutlineColor     = { 1.f, 0.6f, 0.1f, 1.f };
         constexpr Vector2F k_OutlinePadding   = { 6.f, 6.f };
         constexpr float    k_OutlineThickness = 3.f;
 
-        // The icon for an entity that draws nothing. HALF-size in SCREEN pixels.
+        // Icon for an entity that draws nothing. Half-size in screen pixels.
         constexpr float    k_IconHalfPx    = 9.f;
         constexpr Vector4F k_IconColor     = { 0.55f, 0.75f, 1.f, 1.f };
         constexpr float    k_IconThickness = 2.f;
@@ -58,8 +56,7 @@ namespace Opaax::Editor::ViewportOverlays
 
         InWorld.Each<EntityMeta>([&](EntityID InId, const EntityMeta&)
         {
-            // An entity with an EXTENT is already visible — asking without an anchor is what
-            // distinguishes the two, and it is one call rather than a list of component checks.
+            // An entity with an extent is already visible.
             Bounds2D lUnused;
             if (EntityQuery::TryGetBounds(Entity{ InId, &InWorld }, lUnused))
             {
@@ -69,7 +66,7 @@ namespace Opaax::Editor::ViewportOverlays
             Bounds2D lIcon;
             if (!EntityQuery::TryGetBounds(Entity{ InId, &InWorld }, lIcon, InAnchorHalfExtent))
             {
-                return;   // no transform at all — not reachable through CreateEntity
+                return;   // no transform at all
             }
 
             InDraw.DrawBounds(lIcon, k_IconColor, k_IconThickness, ERenderLayer::Debug,

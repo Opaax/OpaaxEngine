@@ -1,10 +1,9 @@
-// Suite: CrashHandler — the report path on an OWN instance (SG4). Nothing is installed: the hooks
-// are process-wide and a test runner must keep the OS default. A real crash is proven by the
-// dev-only `--crash-test` smoke run instead.
+// Suite: CrashHandler — the report on a local instance. Nothing is installed (the hooks are
+// process-wide). A real crash is tested with the dev-only --crash-test run.
 #include <doctest.h>
 
 #include "Platform/CrashHandler.h"
-#include "Core/String/OpaaxUtf8.h"   // I7 — never an fs::path from CStr()
+#include "Core/String/OpaaxUtf8.h"
 
 #ifdef OPAAX_PLATFORM_WINDOWS
 

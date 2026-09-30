@@ -6,7 +6,7 @@
 #include "Core/Reflection/OpaaxEnum.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
-#include "Engine/Subsystems/Resources/ResourcePath.h"       // a TYPED reference (**UI19**)
+#include "Engine/Subsystems/Resources/ResourcePath.h"
 #include "Engine/Subsystems/Resources/ResourcePathJson.h"
 #include "UI/UIMargin.h"
 #include "UI/UIWidget.h"
@@ -15,7 +15,7 @@ namespace Opaax
 {
     class ITexture2D;
 
-    // NAMED, never completed — a path carries its type, not its header.
+    // Forward-declared: TResourcePath only needs the name.
     struct TextureResource;
     struct SpriteSheetResource;
 
@@ -23,8 +23,8 @@ namespace Opaax
     enum class EUIFill : Uint8
     {
         None,
-        Horizontal,   // from the left edge
-        Vertical      // from the bottom edge
+        Horizontal,   // from the left
+        Vertical      // from the bottom
     };
 
     inline const char* ToString(const EUIFill InFill) noexcept
@@ -39,11 +39,9 @@ namespace Opaax
     }
 
     // =============================================================================
-    // UIImage — a rect of colour, or an image tinted by it: a texture, or one FRAME of a sheet
-    //   (**UI25** — the sheet wins when both are named, the sprite's rule). ONE quad, unless a
-    //   Border makes it nine (**UI20**), measured against the frame. A fill crops both the rect
-    //   and the sampled UVs from the min edge, which is the health bar — and it is a CLIP over
-    //   whatever geometry was emitted, so a filled 9-slice keeps its caps.
+    // UIImage — a colour rect, or an image tinted by it (a texture, or a sheet frame; the sheet wins).
+    //   One quad, or nine with a Border (9-slice). FillAmount crops from the min edge (health bar)
+    //   and works with 9-slice too.
     // =============================================================================
     class OPAAX_API UIImage final : public UIWidget
     {
@@ -54,24 +52,21 @@ namespace Opaax
         LinearColor Color;
         EUIFill     Fill       = EUIFill::None;
         float       FillAmount = 1.f;
-        /** "Source.Property" to pull FillAmount from each frame (a 0..1 number); empty = authored (UI24). */
+        /** "Source.Property" to read FillAmount from (0..1); empty = the authored value. */
         OpaaxString FillBinding;
 
-        /** A texture's asset path. TYPED, so a `.png` can be DROPPED on it (**UI19**). */
+        /** A texture path (accepts a dropped .png). */
         TResourcePath<TextureResource> Texture;
 
-        /** A sheet's asset path — an icon cut from an atlas. Wins over Texture when set (**UI25**). */
+        /** A sheet path. Wins over Texture. */
         TResourcePath<SpriteSheetResource> Sheet;
 
-        /** Which frame of the sheet; -1 is the sheet's own default. */
+        /** Sheet frame; -1 = the sheet's default. */
         Int32 Frame = -1;
 
         /**
-         * The 9-slice border, in TEXTURE PIXELS — how much of each edge must NOT stretch (**UI20**).
-         *
-         * There is no Sliced mode to pick: a non-zero border on a texture IS sliced, and an
-         * all-zero one is the single quad this widget always emitted. Ignored without a texture,
-         * since a border is a statement about art.
+         * 9-slice border in texture pixels (the edges that do not stretch). All zero = one quad.
+         * Ignored without a texture.
          */
         UIMargin Border;
 
@@ -80,7 +75,7 @@ namespace Opaax
                          OPAAX_PROP(Texture),
                          OPAAX_PROP(Sheet).SetTooltip("An icon cut from a sheet. Wins over Texture when set."),
                          OPAAX_PROP(Frame).SetRange(-1.f, 4096.f).SetDragStep(1.f).SetTooltip("-1 is the sheet's own default frame."),
-                         OPAAX_PROP(Border).SetDragStep(1.f),   // pixels; flows to the four edges
+                         OPAAX_PROP(Border).SetDragStep(1.f),   // pixels
                          OPAAX_PROP(Fill),
                          OPAAX_PROP(FillAmount).SetRange(0.f, 1.f),
                          OPAAX_PROP(FillBinding).SetTooltip("Source.Property, pulled each frame into FillAmount."))
@@ -94,9 +89,7 @@ namespace Opaax
         void SetBorder(const UIMargin& InBorder);
 
         /**
-         * A RUNTIME texture, borrowed. It WINS over the authored path when set — `TextComponent`'s
-         * Font-over-Face precedence (**TX1**), so code that hands over an atlas is never overruled
-         * by what the file happens to name.
+         * A runtime texture, borrowed. Wins over the authored path when set.
          */
         void        SetTexture(ITexture2D* InTexture);
         ITexture2D* GetTexture() const noexcept { return m_Texture; }
@@ -120,7 +113,7 @@ namespace Opaax
         // =============================================================================
     private:
         ITexture2D* m_Texture    = nullptr;
-        bool        m_bFillBound = false;   // whether a pull has ever resolved — one log line
+        bool        m_bFillBound = false;   // whether a read ever succeeded (log once)
     };
 }
 

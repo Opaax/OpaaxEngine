@@ -8,16 +8,9 @@
 namespace Opaax
 {
     // =============================================================================
-    // Box2DPhysicsWorld — the Box2D 3.x implementation of IPhysicsWorld.
-    //
-    //   The ONLY place b2* appears above the grep gate. Owns one b2WorldId for its lifetime;
-    //   world <-> Box2D unit and vector conversions live entirely in the .cpp and never leak
-    //   through the interface.
-    //
-    //   NOT OPAAX_API and never named outside Physics/: it is reached only through
-    //   PhysicsAPI::Create, which is what keeps box2d PRIVATE to the engine DLL (L11 —
-    //   a static vendor lib linked PUBLIC gives every host its own copy of the vendor's
-    //   global state, and b2SetLengthUnitsPerMeter is exactly that).
+    // Box2DPhysicsWorld — IPhysicsWorld with Box2D 3.x. The only place b2* is used.
+    //   Not exported: created only through PhysicsAPI::Create, so Box2D stays private to the
+    //   engine DLL (one copy of its global state).
     // =============================================================================
     class Box2DPhysicsWorld final : public IPhysicsWorld
     {

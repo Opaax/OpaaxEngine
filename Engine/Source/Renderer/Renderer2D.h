@@ -6,7 +6,7 @@
 #include "Core/String/OpaaxString.hpp"
 #include "Core/Log/Logger.h"
 
-#include "Core/Maths/Bounds2D.h"   // QuadMask's rect
+#include "Core/Maths/Bounds2D.h"
 #include "Renderer/RenderLayer.h"
 
 namespace Opaax
@@ -22,44 +22,28 @@ namespace Opaax
     inline constexpr LogCategory LogRenderer2D{"Renderer2D"};
 
     /**
-     * Half-extent of an outlined quad's HOLE, in local 0..1 space — what the shader compares the
-     * fragment's local position against. `{0,0}` is a SOLID quad.
-     *
-     * Free and pure so the maths is testable with no GL context. Every degenerate input (zero size,
-     * negative thickness, a border thick enough to swallow the box) answers solid rather than a
-     * divide-by-zero or an inside-out hole.
+     * Half-extent of an outlined quad's hole, in local 0..1 space. {0,0} is a solid quad.
+     * Bad input (zero size, negative or too thick border) gives solid.
      */
     OPAAX_API Vector2F MakeOutlineInnerHalf(const Vector2F& InSize, float InThickness) noexcept;
 
     /**
-     * What MASKS a quad: a rect in the same space as the quad, and the texture sampled across it
-     * (**UI16**). WHITE SHOWS, BLACK HIDES — the fragment multiplies alpha by `mask.r * mask.a`.
-     *
-     * A default `QuadMask` masks nothing, which is what every draw that does not mention one
-     * passes, so the mask is a VALUE on the quad rather than a second pipeline — `InnerHalf`'s
-     * bargain (**F4d**), for the same reason: no extra flush, no branch in the batcher.
-     *
-     * A null Texture with a real Rect is a pure RECT CLIP: outside 0..1 is discarded and inside
-     * samples the white texture, so "clip to this box" costs no art.
+     * Masks a quad: a rect in the quad's space and a texture sampled across it.
+     * White shows, black hides (alpha *= mask.r * mask.a). A default QuadMask masks nothing.
+     * A null Texture with a real Rect clips to the rect.
      */
     struct QuadMask
     {
         Bounds2D    Rect;
-        ITexture2D* Texture = nullptr;   // borrowed for the batch, like every other draw texture
+        ITexture2D* Texture = nullptr;   // borrowed for the batch
 
-        /** A zero-size rect is no mask — the state a defaulted QuadMask is in. */
+        /** A zero-size rect means no mask. */
         bool IsActive() const noexcept { return Rect.HalfExtent.x > 0.f && Rect.HalfExtent.y > 0.f; }
     };
 
     /**
-     * What one FRAME of batching cost. Per frame, not per pass — multi-view runs several passes
-     * into one frame and the interesting numbers are the totals.
-     *
-     * DrawCalls is also the FLUSH count: Flush issues exactly one DrawIndexed, so shipping both
-     * would be the same number twice. Above 1 the frame split, which is a COST and no longer a
-     * correctness problem — a pass is sorted whole before it is cut. Why it split is readable from
-     * the other two: Quads past the batch limit means the buffer filled, PeakTextureSlots at the
-     * limit means the samplers did.
+     * One frame's batching counters (all passes). DrawCalls above 1 means the frame was split:
+     * Quads past the limit = buffer full; PeakTextureSlots at the limit = samplers full.
      */
     struct Renderer2DStats
     {
@@ -69,13 +53,8 @@ namespace Opaax
     };
 
     /**
-     * @class Renderer2D
-     *
-     * Instance-owned 2D batch renderer (one per render department — RendererManager owns it).
-     * Stateless from the caller's perspective per frame: call BeginPass/EndPass around your draw
-     * calls. A pass is RECORDED whole, then sorted once and cut into batches at EndPass — so draw
-     * order never depends on where a flush landed. One draw call per batch. All GPU state lives in
-     * the pImpl (Renderer2DData).
+     * 2D batch renderer (owned by RenderSystem). A pass is recorded whole, sorted, then split into
+     * batches at EndPass, so draw order never depends on batching. One draw call per batch.
      *
      * Usage:
      *          renderer.BeginPass(view, cmd);
@@ -83,8 +62,7 @@ namespace Opaax
      *          renderer.DrawSprite({0,0}, {100,100}, texture);     // textured quad
      *          renderer.EndPass();
      *
-     * Init()/Shutdown() build/release the GPU resources — call from the owner's Startup/Shutdown
-     * (render API up, context current), never mid-frame.
+     * Init()/Shutdown() create/release the GPU resources; never call them mid-frame.
      */
     class OPAAX_API Renderer2D
     {
@@ -92,7 +70,7 @@ namespace Opaax
         // CTORS - DTORS
         // =============================================================================
     public:
-        // Out-of-line — the owned TUniquePtr<Renderer2DData> holds a forward-declared type.
+        // Out-of-line: Renderer2DData is forward-declared.
         Renderer2D();
         ~Renderer2D();
 
@@ -109,12 +87,9 @@ namespace Opaax
         // =============================================================================
     public:
         /**
-         * Build the batch GPU resources through the device (the live path). All resources are
-         * created via InDevice, so nothing routes through a global backend factory.
-         *
-         * InLimits sizes the batch: the vertex/index buffers hold MaxQuads, and MaxTextureSlots
-         * caps the samplers a single draw may bind. Both are clamped to what the sprite shader
-         * and the buffers can honour, loudly.
+         * Creates the batch GPU resources through InDevice.
+         * InLimits sizes the batch (MaxQuads, MaxTextureSlots), clamped to what the shader and buffers
+         * support (with a warning).
          */
         void Init(IRHIDevice& InDevice, const RenderLimits& InLimits, const ShaderDesc& InShader);
 
@@ -125,23 +100,21 @@ namespace Opaax
         // =============================================================================
     public:
         /**
-         * Open a pass from a per-frame RenderView snapshot (the live path — no camera object).
-         * Sets the viewport, uploads the view-projection, and starts a fresh recording. Draws
-         * issued until EndPass() record into InCmd.
+         * Opens a pass: sets the viewport, uploads the view-projection, starts recording into InCmd.
          */
         void BeginPass(const RenderView& InView, ICommandBuffer& InCmd);
 
-        // Close the pass: sort everything recorded, cut it into batches, draw them.
+        // Closes the pass: sorts what was recorded, splits it into batches, draws them.
         void EndPass();
 
         // =============================================================================
         // Stats
         // =============================================================================
     public:
-        /** This frame's batching counters, complete once the last pass has ended. */
+        /** This frame's batching counters (complete after the last pass). */
         const Renderer2DStats& GetStats() const noexcept;
 
-        /** Zero them. The FRAME owner calls this (RenderSystem::BeginFrame), never a pass. */
+        /** Resets the counters. Called by RenderSystem::BeginFrame. */
         void ResetStats() noexcept;
 
         // =============================================================================
@@ -149,13 +122,13 @@ namespace Opaax
         // =============================================================================
     public:
         /**
-         * Draw a solid-colour quad.
-         * @param InPosition centre of the quad (Y-up world space)
-         * @param InSize full width and height
-         * @param InColor RGBA normalised [0,1]
-         * @param InRotationRad rotation around the quad centre, radians, CCW (default 0 = axis-aligned fast path)
-         * @param InLayer coarse draw-order band (default Default)
-         * @param InOrderInLayer fine tie-break within the band, lower = behind (default 0)
+         * Draws a solid-colour quad.
+         * @param InPosition Centre (Y-up world space)
+         * @param InSize Full width and height
+         * @param InColor RGBA [0,1]
+         * @param InRotationRad Rotation around the centre, radians, counter-clockwise
+         * @param InLayer Draw layer
+         * @param InOrderInLayer Order within the layer, lower = behind
          */
         void DrawQuad(const Vector2F& InPosition,
                       const Vector2F& InSize,
@@ -166,19 +139,15 @@ namespace Opaax
                       const QuadMask& InMask         = {});
 
         /**
-         * Draw a textured quad. The texture is bound to one of the batch's sampler slots; a batch
-         * that runs out of slots flushes and starts a new one, so a caller never manages binding.
-         *
-         * @param InPosition centre of the quad (Y-up world space)
-         * @param InSize full width and height
-         * @param InTexture sampled texture. BORROWED for the batch — it must outlive the flush,
-         *   which the owning ResourceRef guarantees for the frame it draws in.
-         * @param InTint multiplied into the sample; white draws the texture unchanged
-         * @param InRotationRad rotation around the quad centre, radians, CCW
-         * @param InLayer coarse draw-order band
-         * @param InOrderInLayer fine tie-break within the band, lower = behind
-         * @param InUVMin / @param InUVMax sub-rectangle to sample. Defaulted to the whole texture,
-         *   and present so an atlas — a sprite sheet, a glyph — needs no second entry point.
+         * Draws a textured quad.
+         * @param InPosition Centre (Y-up world space)
+         * @param InSize Full width and height
+         * @param InTexture Borrowed until the batch is drawn
+         * @param InTint Multiplied with the texture; white keeps it unchanged
+         * @param InRotationRad Rotation around the centre, radians, counter-clockwise
+         * @param InLayer Draw layer
+         * @param InOrderInLayer Order within the layer, lower = behind
+         * @param InUVMin / @param InUVMax Region to sample (default: whole texture)
          */
         void DrawSprite(const Vector2F& InPosition,
                         const Vector2F& InSize,
@@ -192,21 +161,14 @@ namespace Opaax
                         const QuadMask& InMask         = {});
 
         /**
-         * Draw a HOLLOW quad — a border of InThickness with nothing inside. ONE quad, not four
-         * lines, so an editor overlay costs a quarter of what DrawBox used to.
-         *
-         * UNTEXTURED by design: the shader reads the fragment's texcoord as its LOCAL position to
-         * find the border, which only holds while the UVs span the full 0..1. A textured outline
-         * sampling an atlas sub-rect would carve the hole in the wrong place, so there is
-         * deliberately no overload taking a texture.
-         *
-         * @param InPosition centre of the quad (Y-up world space)
-         * @param InSize full width and height, border included
-         * @param InColor RGBA normalised [0,1]
-         * @param InThickness border width in world units. Thick enough to close the hole draws solid.
-         * @param InRotationRad rotation around the centre, radians, CCW
-         * @param InLayer coarse draw-order band
-         * @param InOrderInLayer fine tie-break within the band, lower = behind
+         * Draws a hollow quad: a border of InThickness, empty inside. Untextured.
+         * @param InPosition Centre (Y-up world space)
+         * @param InSize Full width and height, border included
+         * @param InColor RGBA [0,1]
+         * @param InThickness Border width in world units (thick enough fills it)
+         * @param InRotationRad Rotation around the centre, radians, counter-clockwise
+         * @param InLayer Draw layer
+         * @param InOrderInLayer Order within the layer, lower = behind
          */
         void DrawQuadOutline(const Vector2F& InPosition,
                              const Vector2F& InSize,
@@ -221,19 +183,17 @@ namespace Opaax
         // Internal
         // =============================================================================
     private:
-        /** Drop the recording and re-seat the white texture as id 0. */
+        /** Clears the recording and sets the white texture as id 0. */
         void   StartPass();
 
-        /** Plan the recorded quads, then walk the plan gathering and drawing one batch at a time. */
+        /** Plans the recorded quads, then draws them one batch at a time. */
         void   EmitPass();
 
-        /** Upload InQuadCount gathered quads, bind the batch's samplers, issue the one DrawIndexed. */
+        /** Uploads a batch, binds its samplers, issues one DrawIndexed. */
         void   Flush(Uint32 InQuadCount, Uint32 InSlotCount);
 
         /**
-         * The ONE body that writes a quad's four vertices and its sort key. A coloured quad is a
-         * sprite on texture id 0 sampling the whole white texture, so both entry points come here —
-         * one place for the winding, the rotation and the key to be right or wrong.
+         * Writes a quad's four vertices and sort key. Used by every draw call.
          */
         void   SubmitQuad(const Vector2F& InPosition,
                           const Vector2F& InSize,
@@ -248,9 +208,7 @@ namespace Opaax
                           const QuadMask& InMask      = {});
 
         /**
-         * InTexture's id for this PASS — an existing one if it has been drawn already, else a fresh
-         * one. A pass may name more textures than a batch can bind; which of them share a draw call
-         * is the batch plan's answer, not this one's.
+         * InTexture's id for this pass (existing or new).
          */
         Uint32 GetTextureId(ITexture2D& InTexture);
 
@@ -258,7 +216,7 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        TUniquePtr<Renderer2DData> m_Data; // pImpl — GPU + batch state (defined in the .cpp)
+        TUniquePtr<Renderer2DData> m_Data; // GPU and batch state (defined in the .cpp)
     };
 
 } // namespace Opaax

@@ -3,7 +3,7 @@
 #include "Editor/EditorContext.h"
 #include "Editor/ImguiLibrary/ImguiWidgets.h"
 #include "Editor/Operation/EditorSelection.hpp"
-#include "Editor/Panels/EditorPanels.h"     // IsVisible — a hidden preview costs no pass
+#include "Editor/Panels/EditorPanels.h"     // IsVisible
 #include "Editor/UI/IEditorUIBackend.h"
 
 #include "Application/Services/IEngine.h"
@@ -11,7 +11,7 @@
 
 #include "Renderer/CameraView.h"
 #include "Renderer/RenderTarget.hpp"        // OffscreenRenderTarget
-#include "RHI/Framebuffer.h"                // IFramebuffer + FramebufferSpec (created by the device)
+#include "RHI/Framebuffer.h"                // IFramebuffer + FramebufferSpec
 
 #include "World/Components/CameraComponent.h"
 #include "World/Components/TransformComponent.h"
@@ -33,13 +33,13 @@ namespace Opaax::Editor
 
     void CameraPreviewPanel::Startup()
     {
-        // The engine's device builds the FBO (F2a) — the panel owns it, but never picks the backend.
+        // The engine's device creates the FBO; the panel owns it.
         m_Framebuffer = m_Context.Engine.CreateFramebuffer(
             FramebufferSpec{ m_Size.x, m_Size.y, /*DepthStencil*/ true });
 
         if (m_Framebuffer == nullptr)
         {
-            // Loud, not silent: the only other symptom is a permanently blank panel with a clean log.
+            // Log it: otherwise the panel would just stay blank.
             OPAAX_LOG(LogCameraPreviewPanel, Error, "CameraPreviewPanel startup — the engine created no "
                                                     "framebuffer; the preview will stay blank.");
             return;
@@ -50,7 +50,7 @@ namespace Opaax::Editor
 
     void CameraPreviewPanel::OnPreRender()
     {
-        // BEFORE the submit, so a camera picked this frame is previewed in this frame.
+        // Before the submit, so a camera selected this frame is shown this frame.
         TrackSelection();
 
         ApplyPendingResize();
@@ -58,10 +58,8 @@ namespace Opaax::Editor
     }
 
     // =========================================================================
-    // TrackSelection — a camera claims the preview; nothing else disturbs it.
-    //
-    // The PRIMARY selection, which is the entity the Inspector draws — so the panel and the button
-    // that opens it cannot disagree about which camera was meant.
+    // TrackSelection — a selected camera becomes the previewed one; other selections change nothing.
+    //   Uses the primary selection (what the Inspector shows).
     // =========================================================================
     void CameraPreviewPanel::TrackSelection()
     {
@@ -74,8 +72,7 @@ namespace Opaax::Editor
 
         Entity lSelected = m_Context.Selection.Get();
 
-        // The camera must belong to the world being DRAWN: a pass renders the ACTIVE world, so an
-        // Edit-world selection during PIE would frame the clone from a stranger's position.
+        // The camera must be in the active world (the one being drawn).
         if (!lSelected.IsValid() || lSelected.GetWorld() != lWorld)
         {
             return;
@@ -91,9 +88,7 @@ namespace Opaax::Editor
 
     // =========================================================================
     // TryResolveCameraView — the previewed entity, if it is still a camera in the active world.
-    //
-    // The same pair CameraManager::Resolve reads (a position from the transform, a size from the
-    // component), so the preview and the game cannot disagree about what a camera means.
+    //   Reads the same values as CameraManager::Resolve.
     // =========================================================================
     bool CameraPreviewPanel::TryResolveCameraView(CameraView& OutView) const
     {
@@ -104,8 +99,7 @@ namespace Opaax::Editor
             return false;
         }
 
-        // Rebuilt against the ACTIVE world, never a stored World*: TrackSelection only ever banks an
-        // entity of that world, and OnActiveWorldChanged forgets the id when it is replaced.
+        // Resolved in the active world (TrackSelection only stores entities of the active world).
         Entity lEntity{ m_Previewed, lWorld };
 
         if (!lEntity.IsValid())
@@ -121,7 +115,7 @@ namespace Opaax::Editor
             return false;
         }
 
-        // WORLD (§HR), the same answer CameraManager::Resolve gives the game.
+        // World pose, like CameraManager::Resolve.
         OutView = CameraView{ EntityHierarchy::WorldTransform(lEntity).Position, lCamera->OrthoSize };
 
         return true;
@@ -134,9 +128,7 @@ namespace Opaax::Editor
 
     void CameraPreviewPanel::SubmitView()
     {
-        // A hidden preview draws nothing, so it must not cost a whole pass. OnPreRender runs either
-        // way — this is the one panel where that matters, since the Viewport's target is what the
-        // editor is looking at and this one's is not.
+        // A hidden preview draws nothing and costs no pass.
         if (m_RenderTarget == nullptr || !m_Context.Panels.IsVisible(PanelID()))
         {
             return;
@@ -149,7 +141,7 @@ namespace Opaax::Editor
             return;
         }
 
-        // No overlays: a preview of the game decorated like the editor is not a preview.
+        // No overlays: the preview shows what the game shows.
         m_Context.Engine.SubmitRenderView(*m_RenderTarget, lView, /*bInDrawOverlays*/ false);
 
         if (!m_bPreviewLogged)
@@ -188,8 +180,7 @@ namespace Opaax::Editor
 
     void CameraPreviewPanel::DrawContents()
     {
-        // Measured here, applied by OnPreRender next frame — the deferred resize ViewportPanel
-        // documents: reallocating the FBO between the world render and the sample would tear.
+        // Measured here, applied by OnPreRender next frame (resizing between render and sample would tear).
         const ImVec2 lAvail = ImGui::GetContentRegionAvail();
 
         m_PendingSize.x = static_cast<Uint32>(lAvail.x);
@@ -199,8 +190,7 @@ namespace Opaax::Editor
 
         if (!TryResolveCameraView(lView))
         {
-            // Unity's answer, and it is the honest one: say WHY there is no picture. Drawing the
-            // last frame's stale image instead would look like a camera that stopped moving.
+            // Say why there is no picture (a stale image would look like a frozen camera).
             ImGui::TextDisabled("No camera");
             ImGui::TextDisabled("Select an entity with a CameraComponent.");
             ImGui::TextDisabled("It stays on that camera until you pick another.");
@@ -213,8 +203,7 @@ namespace Opaax::Editor
 
     void CameraPreviewPanel::Shutdown()
     {
-        // Nothing to unregister — the view is submitted per frame, so a panel that has stopped
-        // running has already stopped being drawn.
+        // Nothing to unregister: the view is submitted per frame.
         m_RenderTarget.reset();
         m_Framebuffer.reset();
     }

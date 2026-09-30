@@ -10,11 +10,8 @@ namespace Opaax
     // =============================================================================
 
     /**
-     * @class DelegateHandle
-     * Opaque, process-unique id for a single binding inside a TMulticastDelegate
-     * (and, later, a subscription on the event bus). Returned by every Add/Subscribe;
-     * required by the matching Remove/Unsubscribe. A default-constructed handle is
-     * invalid (id 0) and matches nothing.
+     * Unique id of one binding in a TMulticastDelegate or EventBus. Needed to remove it.
+     * A default handle is invalid (id 0).
      */
     class OPAAX_API DelegateHandle
     {
@@ -31,7 +28,7 @@ namespace Opaax
         // Functions
         // =============================================================================
     public:
-        /** Mint a fresh, process-unique handle. Thread-safe. */
+        /** Creates a new unique handle. Thread-safe. */
         static DelegateHandle Generate() noexcept;
 
         // -----------------------------------------------------------------------------

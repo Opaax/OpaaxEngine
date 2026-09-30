@@ -19,8 +19,7 @@ namespace Opaax::Editor
         // Copy - Move Delete
         // =============================================================================
 
-        // Owns nodes through TUniquePtr and hands out references into them (I6's corollary: an
-        // owner of a move-only member must say so, or the implicit copy is instantiated anyway).
+        // Owns nodes through TUniquePtr and hands out references into them (non-copyable).
         TitleBarRegistry(const TitleBarRegistry&)            = delete;
         TitleBarRegistry& operator=(const TitleBarRegistry&) = delete;
 
@@ -29,9 +28,8 @@ namespace Opaax::Editor
         // =============================================================================
     public:
         /**
-         * GET-OR-CREATE a root category — "File", "Level", "Tools".
-         *
-         * @return The category, so entries chain off it. Creation order is left-to-right bar order.
+         * Gets or creates a root category ("File", "Level", "Tools").
+         * @return The category, so entries chain off it. Creation order is the bar order.
          */
         EditorTitleBarCategory& Category(OpaaxStringID InID);
 
@@ -39,10 +37,10 @@ namespace Opaax::Editor
         // Consume
         // =============================================================================
     public:
-        /** The root categories in bar order — what EditorTitleBar walks. */
+        /** The root categories, in bar order. */
         const TDynArray<TUniquePtr<EditorTitleBarCategory>>& Categories() const noexcept { return m_Categories; }
 
-        /** @return How many COMMAND entries exist, at any depth — what the seal log reports. */
+        /** @return How many command entries exist, at any depth. */
         Uint64 Count() const noexcept;
 
         // =============================================================================

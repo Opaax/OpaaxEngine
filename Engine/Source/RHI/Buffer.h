@@ -5,29 +5,13 @@
 namespace Opaax
 {
     // =============================================================================
-    // BufferLayout — describes the full vertex layout to the GPU
-    //
-    // Usage:
+    // BufferLayout — the vertex layout, e.g.:
     //   BufferLayout lLayout = {
     //       { EShaderDataType::Float3 },  // position
     //       { EShaderDataType::Float4 },  // colour
     //       { EShaderDataType::Float2 },  // uv
     //       { EShaderDataType::Float  },  // texture index
     //   };
-    // =============================================================================
-
-    /**
-     * @Class BufferLayout
-     *
-     * Describes the full vertex layout to the GPU
-     *
-     * BufferLayout lLayout = {
-     * { EShaderDataType::Float3 },  // position
-     * { EShaderDataType::Float4 },  // colour
-     * { EShaderDataType::Float2 },  // uv
-     * { EShaderDataType::Float  },  // texture index
-     * };
-     */
     class OPAAX_API BufferLayout
     {
         // =============================================================================
@@ -64,7 +48,7 @@ namespace Opaax
     };
     
     /**
-     * @class IVertexBuffer
+     * Vertex buffer.
      */
     class OPAAX_API IVertexBuffer
     {
@@ -86,9 +70,7 @@ namespace Opaax
         //Get - Set
         
         /**
-         * Upload new data into a dynamic VBO (used by Renderer2D batch flush)
-         * @param InData 
-         * @param InSize 
+         * Uploads new data into a dynamic buffer.
          */
         virtual void SetData(const void* InData, Uint32 InSize) = 0;
         virtual void SetLayout(const BufferLayout& InLayout)    = 0;
@@ -97,7 +79,7 @@ namespace Opaax
     };
     
     /**
-     * @Class IIndexBuffer
+     * Index buffer.
      */
     class OPAAX_API IIndexBuffer
     {
@@ -122,7 +104,7 @@ namespace Opaax
     };
 
     /**
-     * @class IVertexArray
+     * Vertex array (vertex buffers + index buffer + layout).
      */
     class OPAAX_API IVertexArray
     {

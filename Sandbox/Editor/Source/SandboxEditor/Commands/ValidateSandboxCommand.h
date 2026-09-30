@@ -10,14 +10,8 @@ namespace Opaax::Editor
 namespace SandboxEditor
 {
     /**
-     * A check the GAME defines and the editor knows nothing about: every authored entity should
-     * carry the game's own HealthComponent, and the tag count beside it exercises the hierarchical
-     * match (I14).
-     *
-     * A COMMAND rather than a menu closure, which is what makes it reachable by tag from anywhere —
-     * a key binding, another panel, a second menu entry — instead of only from the one entry that
-     * used to carry its body. It satisfies EditorCommand<EditorContext> exactly as the editor's own
-     * verbs do: same concept, same registry, no privileged path (D10).
+     * A check defined by the game: every authored entity should have a HealthComponent. Also counts
+     * tags with a hierarchical match. A command, so it can be reached by tag (menu, key binding...).
      */
     struct ValidateSandboxCommand
     {

@@ -12,17 +12,10 @@ namespace Opaax::Editor
     struct EditorContext;
 
     // =============================================================================
-    // LogPanel — the log, inside the editor (block LG). Reads Logger::CopyHistorySince and nothing
-    //   else, so it shows exactly the lines the console and the file got, boot lines included (the
-    //   editor turns the history on before Bootstrap).
-    //
-    //   It keeps its OWN copy: the Logger's lock is held for the copy of the new lines, never while
-    //   drawing, and Clear empties this copy without touching what the engine holds.
-    //
-    //   FILTERING IS INCREMENTAL. m_Shown lists the sequences that pass the filter; a new line is
-    //   tested once, on arrival, and only a change to the filter walks every line again. That is
-    //   why m_Entries is kept CONTIGUOUS in sequence — a shown sequence finds its line by
-    //   subtraction, not by a search.
+    // LogPanel — the log inside the editor. Reads Logger::CopyHistorySince, so it shows the same
+    //   lines as the console and the file, boot lines included.
+    //   Keeps its own copy (Clear only empties it). Filtering is incremental: new lines are tested
+    //   once; only a filter change re-tests every line. m_Entries is contiguous in sequence.
     // =============================================================================
     class LogPanel final : public IEditorPanel
     {
@@ -32,7 +25,7 @@ namespace Opaax::Editor
     public:
         OPAAX_EDITOR_PANEL_NAME(Log);
 
-        /** What the panel shows at most — and what the editor asks the Logger to keep. */
+        /** Maximum lines shown (also what the editor asks the Logger to keep). */
         static constexpr Uint32 MAX_LINES = 4096;
 
         // =============================================================================
@@ -52,25 +45,25 @@ namespace Opaax::Editor
         // Functions
         // =============================================================================
     private:
-        /** Appends the lines logged since the last frame, oldest dropped past MAX_LINES. */
+        /** Appends the lines logged since last frame, dropping the oldest past MAX_LINES. */
         void PullNewLines();
 
-        /** Clear, the level buttons, the categories, the search. Refilters when any of them changed. */
+        /** Clear, level buttons, categories, search. Refilters when one of them changed. */
         void DrawToolbar();
 
-        /** The Categories dropdown: All / None, then one checkbox per category seen. @return changed. */
+        /** The Categories dropdown: All / None, then one checkbox per category. @return True if changed */
         bool DrawCategoryFilter();
 
-        /** Adds InCategory to m_Categories, in name order, the first time it is seen. */
+        /** Adds InCategory to m_Categories (sorted by name) the first time it is seen. */
         void NoteCategory(OpaaxStringID InCategory);
 
-        /** One level's button, "Warn 3". @return true when it was clicked. */
+        /** One level's button, "Warn 3". @return True if clicked */
         bool DrawLevelToggle(ELogLevelFilter InLevel);
 
-        /** Time | Level | Category | Message, clipped to the visible rows, following the bottom while it is there. */
+        /** Time | Level | Category | Message, clipped to the visible rows, following the bottom when there. */
         void DrawLines();
 
-        /** Rebuilds m_Shown from every held line — the filter changed. */
+        /** Rebuilds m_Shown from every line (the filter changed). */
         void Refilter();
 
         /** Empties the panel's copy (never the Logger's). */
@@ -97,27 +90,26 @@ namespace Opaax::Editor
     private:
         static constexpr size_t LEVEL_COUNT = static_cast<size_t>(ELogLevelFilter::Count);
 
-        /** Contiguous in sequence (see the header comment). */
+        /** Contiguous in sequence. */
         std::deque<LogEntry> m_Entries;
 
-        /** Sequences of the lines in m_Entries that pass m_Filter, oldest first. */
+        /** Sequences of the lines that pass m_Filter, oldest first. */
         std::deque<Uint64>   m_Shown;
 
-        /** Lines per level button in m_Entries — ALL of them, whatever the filter hides. */
+        /** Lines per level button (all of them, whatever the filter). */
         std::array<Uint32, LEVEL_COUNT> m_LevelCounts{};
 
         LogFilter            m_Filter;
 
         /**
-         * Every category that ever reached this panel, sorted by name — the dropdown's rows. Survives
-         * Clear: a category is an identity the author may have hidden, not a line.
+         * Every category seen, sorted by name (the dropdown's rows). Kept by Clear.
          */
         TDynArray<OpaaxStringID> m_Categories;
 
-        /** ImGui edits this; m_Filter.Search is its copy, taken when it changes. */
+        /** ImGui edits this; m_Filter.Search is its copy. */
         char                 m_SearchBuffer[128] = {};
 
-        /** Reused every frame for the copy out of the Logger, so pulling allocates nothing when idle. */
+        /** Reused every frame, so copying from the Logger allocates nothing when idle. */
         TDynArray<LogEntry>  m_Incoming;
 
         Uint64               m_LastSequence = 0;

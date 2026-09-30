@@ -1,7 +1,7 @@
 #include "Editor/Panels/UICanvasPanel.h"
 
 #include <algorithm>
-#include <cmath>       // std::fabs — the selection's pixel rect
+#include <cmath>       // std::fabs
 
 #include <imgui.h>
 
@@ -14,8 +14,8 @@
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Editor/ImguiLibrary/ImguiWidgets.h"
 #include "Editor/Operation/UICanvasOperations.h"
-#include "Editor/Properties/PropertyDrawers.h"   // the specializations DrawProperties folds over
-#include "Editor/UI/IEditorGui.h"                 // IsKeyboardOwnedByUI — the shortcut guard
+#include "Editor/Properties/PropertyDrawers.h"
+#include "Editor/UI/IEditorGui.h"                 // IsKeyboardOwnedByUI
 #include "Editor/UI/IEditorUIBackend.h"
 
 #include "Engine/Registries/EngineRegistries.h"
@@ -37,10 +37,10 @@ namespace Opaax::Editor
     {
         constexpr const char* DRAG_PAYLOAD = "OPAAX_UI_WIDGET";
 
-        /** How far from the selection's edge a press still counts as a grip, in image pixels. */
+        /** Distance from the selection's edge that counts as a grip, in image pixels. */
         constexpr float GRIP_PX = 6.f;
 
-        /** The registry every route here asks for the buildable type names. */
+        /** The widget type registry. */
         const UIWidgetRegistry& Registry()
         {
             return OpaaxApplication::GetAppService<IEngine>().GetRegistries().UIWidgets();
@@ -82,8 +82,7 @@ namespace Opaax::Editor
             m_RenderTarget = MakeUnique<OffscreenRenderTarget>(m_Framebuffer.get());
         }
 
-        // The deferred resize every offscreen panel uses: measured during the draw, applied before
-        // the next frame's pass.
+        // Deferred resize: measured during the draw, applied before the next frame's pass.
         if (m_PendingSize.x > 0 && m_PendingSize.y > 0
             && (m_PendingSize.x != m_Size.x || m_PendingSize.y != m_Size.y))
         {
@@ -93,14 +92,13 @@ namespace Opaax::Editor
 
         UICanvas& lCanvas = m_Context.UICanvasDocument.GetCanvas();
 
-        // THE LAYOUT TARGET is the chosen aspect, not the framebuffer (U13): the canvas lays out
-        // as the game would show it, and the view below decides which part the image shows.
+        // The canvas lays out at the chosen aspect (as the game shows it); the view decides what the
+        // image shows.
         const Vector2u32 lLayout = PreviewLayoutSize(m_Aspect, m_Size.x, m_Size.y);
         lCanvas.SetTargetSize(lLayout.x, lLayout.y);
 
-        // The view: seeded at 1:1 once a real size exists (today's picture) — again for every
-        // document opened, since each has its own reference height — then the gestures measured
-        // during the draw are spent here, outside the ImGui pass (SEL3).
+        // The view starts at 1:1 once a size exists (and again for each opened document); the gestures
+        // measured during the draw are applied here, outside the ImGui pass.
         if (m_ViewedPath != m_Context.UICanvasDocument.AbsPath())
         {
             m_ViewedPath  = m_Context.UICanvasDocument.AbsPath();
@@ -121,10 +119,8 @@ namespace Opaax::Editor
 
         m_ViewGesture.Spend(m_View, PreviewPx());
 
-        // NAMING ITS OWN TARGET — the whole reason U4 gave a canvas submission one: the game's
-        // canvases stay out of this framebuffer and this document stays out of the world (UI14) —
-        // and, since U13, bringing its own VIEW, so the pass projects through the zoom and leaves
-        // the layout target alone.
+        // Into this panel's own target (the game's canvases stay out of it, and it stays out of the
+        // world), with its own view (zoom) so the layout target is not changed.
         const CameraView lView = PreviewView();
         m_Context.Engine.SubmitUICanvas(lCanvas, m_RenderTarget.get(), &lView);
     }
@@ -150,7 +146,7 @@ namespace Opaax::Editor
 
         ImGui::SameLine();
 
-        // NoScrollWithMouse: the wheel over the image is the zoom's, not a scroll's.
+        // NoScrollWithMouse: the wheel zooms.
         ImGui::BeginChild("UIPreview", ImVec2(0.f, 0.f), ImGuiChildFlags_None, ImGuiWindowFlags_NoScrollWithMouse);
         DrawPreview();
         ImGui::EndChild();
@@ -180,8 +176,7 @@ namespace Opaax::Editor
 
     void UICanvasPanel::HandleShortcuts()
     {
-        // THIS WINDOW's route (PrefabPanel's F): the chords fire with the tree or the preview focused,
-        // never from another panel, and never while a name is being typed.
+        // This window's shortcut route: only while this panel is focused, never while typing a name.
         if (m_Context.Gui.IsKeyboardOwnedByUI()) { return; }
 
         EditorUICanvasDocument& lDoc      = m_Context.UICanvasDocument;
@@ -205,7 +200,7 @@ namespace Opaax::Editor
 
         if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_V))
         {
-            // Under the selection when there is one, else at the top level — the Add menu's rule.
+            // Under the selection if any, else at the top level.
             const char* lClipboard = ImGui::GetClipboardText();
             if (const UIWidgetPath lPath = UICanvasOps::PasteWidget(m_Context, OpaaxString(lClipboard), lSelected);
                 !lPath.empty())
@@ -245,7 +240,7 @@ namespace Opaax::Editor
             }
         }
 
-        // Sibling order is draw order AND, under a layout container, the order on screen.
+        // Sibling order is draw order, and screen order under a layout container.
         ImGui::SameLine();
         if (ImGui::ArrowButton("MoveUp", ImGuiDir_Up))     { UICanvasOps::MoveWidget(m_Context, lSelected, -1); }
         ImGui::SameLine();
@@ -258,7 +253,7 @@ namespace Opaax::Editor
         {
             UIWidget& lRoot = m_Context.UICanvasDocument.GetCanvas().Root();
 
-            // The ROOT is a drop target too — "move this back to the top level".
+            // The root is a drop target too ("move back to the top level").
             ImGui::TextDisabled("Canvas");
             if (ImGui::BeginDragDropTarget())
             {
@@ -301,8 +296,7 @@ namespace Opaax::Editor
             m_Context.UICanvasDocument.Select(InPath);
         }
 
-        // Drag to reparent. The PATH is banked at the source, the Hierarchy's rule — the payload
-        // itself carries nothing, because a path outlives the frame and a pointer might not.
+        // Drag to reparent. The path is stored at the source; the payload carries nothing.
         if (ImGui::BeginDragDropSource())
         {
             m_DragPath = InPath;
@@ -344,12 +338,12 @@ namespace Opaax::Editor
 
         if (ImGui::BeginPopup("UIAddWidget"))
         {
-            // Every REGISTERED type — a game module's own widget appears here with no edit (UI12).
+            // Every registered type (a game's widget types show up too).
             for (const OpaaxStringID& lName : Registry().GetNames())
             {
                 if (ImGui::Selectable(lName.CStr()))
                 {
-                    // Under the selection when there is one, else at the top level.
+                    // Under the selection if any, else at the top level.
                     const UIWidgetPath lPath = UICanvasOps::AddWidget(m_Context, lName,
                                                                       m_Context.UICanvasDocument.SelectedPath());
                     if (!lPath.empty())
@@ -374,16 +368,13 @@ namespace Opaax::Editor
                                       ? nullptr
                                       : m_Context.UICanvasDocument.SelectedWidget();
 
-        // THE GESTURE brackets the FIELDS below and nothing else. IsAnyItemActive is frame-global,
-        // so a verb button pressed elsewhere this frame (Delete, Duplicate, a preset) would open a
-        // gesture whose commit re-records the verb's own step as a phantom "Edit Widget". Sampled
-        // before the fields: an item already active is not one of theirs.
+        // The undo gesture covers the fields below only. IsAnyItemActive is frame-global, so it is
+        // sampled before the fields (a verb button pressed this frame must not open a phantom edit).
         bool lActiveBefore = ImGui::IsAnyItemActive();
 
         if (lWidget == nullptr)
         {
-            // Nothing selected is the CANVAS: its one field lives here, under the same gesture as a
-            // widget's, and the step it records carries the height with the tree (UI15).
+            // Nothing selected: the canvas's own field, under the same gesture.
             ImGui::TextDisabled("Canvas");
 
             float lHeight = lCanvas.GetReferenceHeight();
@@ -393,8 +384,7 @@ namespace Opaax::Editor
                 lCanvas.SetReferenceHeight(lHeight);
             }
 
-            // The game draws every asset at the PROJECT's height (UI2); this one is the preview's.
-            // A difference is said here, where the author is, before the mount log says it again.
+            // The game draws every asset at the project's height; warn here when this one differs.
             const float lProjectHeight = OpaaxApplication::GetAppService<IProjectManager>().UIReferenceHeight();
             ImGui::SameLine();
             ImGui::TextDisabled("(project: %.0f)", lProjectHeight);
@@ -409,16 +399,14 @@ namespace Opaax::Editor
         {
             ImGui::TextDisabled("%s", lWidget->GetTypeName().CStr());
 
-            // The RESOLVED rect, read-only: what the anchors actually produced, so an odd one reads
-            // as numbers here rather than as "it went somewhere" in the preview.
+            // The resolved rect, read-only: what the anchors produced.
             const Bounds2D& lBounds = lWidget->GetBounds();
             ImGui::TextDisabled("resolved  min (%.0f, %.0f)  size %.0f x %.0f%s",
                                 lBounds.Min().x, lBounds.Min().y, lBounds.Size().x, lBounds.Size().y,
                                 lWidget->GetParent() != nullptr && lWidget->GetParent()->ArrangesChildren()
                                     ? "  (placed by parent)" : "");
 
-            // The anchors as an author sets them — a preset, not four vectors — above the Rect
-            // that shows what it wrote. Meaningless under a container, which places the child.
+            // The anchor preset, above the Rect it writes. Not shown under a container (it places the child).
             const bool lArranged = lWidget->GetParent() != nullptr && lWidget->GetParent()->ArrangesChildren();
             ImGui::BeginDisabled(lArranged);
             if (ImGui::Button("Anchors...")) { ImGui::OpenPopup("UIAnchorPresets"); }
@@ -430,30 +418,24 @@ namespace Opaax::Editor
                 ImGui::EndPopup();
             }
 
-            // The preset is a verb with its own step; re-sampled so its press does not open the gesture.
+            // The preset has its own undo step; re-sampled so its press does not open the gesture.
             lActiveBefore = ImGui::IsAnyItemActive();
 
-            // TWO HALVES, and the ladder that used to be here drew only one of them (**UI18**):
-            //   the BASE fields every widget has (Name, Rect, visibility) — which a leaf type's own
-            //   property list does not repeat, so a UIText had no editable Rect at all;
-            //   then the TYPE's own, through the drawer registry, so a widget type nobody added to a
-            //   hand-written list cannot silently lose its fields.
+            // Two parts: the base fields every widget has (Name, Rect, visibility), then the type's own
+            // through the drawer registry.
             DrawProperties(m_Context.Widgets, static_cast<UIWidget&>(*lWidget));
 
             ImGui::Separator();
 
             if (!m_Context.Extensions.UIWidgetDrawers().DrawFirst(*lWidget, m_Context.Widgets, m_Context))
             {
-                // A registered widget type with no drawer: say so where the author is looking, rather
-                // than showing a short list that looks complete.
+                // A widget type without a drawer: say so.
                 ImGui::TextDisabled("No drawer registered for %s.", lWidget->GetTypeName().CStr());
             }
         }
 
-        // THE GESTURE: a drag is many frames, and a step per frame would flood the history. Open on
-        // the first active frame — one of THESE fields, not something active before them — and
-        // close when nothing is active any more: FontFamilyPanel's shape, with the whole TREE as
-        // the before-image because that is what a step carries (UI15).
+        // One undo step per gesture: opens on the first active frame of these fields, closes when
+        // nothing is active. The step carries the whole tree.
         const bool lActive = ImGui::IsAnyItemActive();
 
         if (lActive && !lActiveBefore && !m_bWasItemActive && !m_bGestureOpen)
@@ -469,7 +451,7 @@ namespace Opaax::Editor
 
         m_bWasItemActive = lActive;
 
-        // The widget's own state may have changed under the drawer; it cannot know to re-layout.
+        // The widget may have changed under the drawer: re-layout.
         if (lWidget != nullptr)
         {
             lWidget->InvalidateLayout();
@@ -544,28 +526,26 @@ namespace Opaax::Editor
 
         if (lAvail.x < 1.f || lAvail.y < 1.f) { return; }
 
-        // The framebuffer is sized to the REGION, so the image draws 1:1 and never rescales.
+        // The framebuffer is sized to the region, so the image is drawn 1:1.
         m_PendingSize = { static_cast<Uint32>(lAvail.x), static_cast<Uint32>(lAvail.y) };
 
         const EditorImage lImage = m_Framebuffer != nullptr
                                        ? m_Context.UIBackend.GetViewportImage(*m_Framebuffer)
                                        : EditorImage{};
 
-        // Drawn at the FRAMEBUFFER's size rather than the region's: they agree from the frame after
-        // a resize, and using the region on the frame they disagree is exactly a stretch.
+        // Drawn at the framebuffer's size (it matches the region from the frame after a resize).
         const Vector2F lSizePx = PreviewPx();
         ImguiWidgets::Image(lImage, ImVec2(lSizePx.x, lSizePx.y));
 
-        // The image is the item, so its rect and hover are readable right here — the viewport's
-        // rule for every gesture (the origin is only knowable at the item).
+        // The image is the last item, so its rect and hover can be read here.
         const ImVec2   lItemMin = ImGui::GetItemRectMin();
         const Vector2F lOrigin{ lItemMin.x, lItemMin.y };
         const bool     lHovered = ImGui::IsItemHovered();
 
-        // The view's gestures — middle-drag and the wheel — beside the designer's left button.
+        // View gestures (middle-drag, wheel) next to the designer's left button.
         m_ViewGesture.Measure(lHovered, lOrigin, lSizePx);
 
-        // F frames the canvas: THIS WINDOW's route, PrefabPanel's idiom, and never from a name field.
+        // F frames the canvas (this window only, never from a name field).
         if (lHovered && !m_Context.Gui.IsKeyboardOwnedByUI() && ImGui::Shortcut(ImGuiKey_F))
         {
             m_bFitPending = true;
@@ -585,7 +565,7 @@ namespace Opaax::Editor
                 if (ImGui::Selectable(ToString(lAspect), lAspect == m_Aspect))
                 {
                     m_Aspect      = lAspect;
-                    m_bFitPending = true;   // a new frame is worth seeing whole
+                    m_bFitPending = true;   // show the new frame whole
                 }
             }
             ImGui::EndCombo();
@@ -597,7 +577,7 @@ namespace Opaax::Editor
         ImGui::SameLine();
         if (ImGui::SmallButton("1:1")) { ResetView(); }
 
-        // One canvas unit per image pixel is 100%: the zoom reads in the author's terms.
+        // 100% = one canvas unit per image pixel.
         const float lReference = m_Context.UICanvasDocument.GetCanvas().GetReferenceHeight();
         ImGui::SameLine();
         ImGui::TextDisabled("%.0f%%", m_View.GetOrthoSize() > 0.f ? 100.f * (lReference * 0.5f) / m_View.GetOrthoSize() : 0.f);
@@ -615,9 +595,8 @@ namespace Opaax::Editor
 
         m_HoverPath = bInHovered ? lDoc.PickAt(PreviewToCanvas(lLocalPx)) : UIWidgetPath{};
 
-        // A grip on the SELECTION wins over whatever is under the pointer: the outline is drawn over
-        // the preview, so its handles are what the author sees there. The eight regions and their
-        // corner priority are EditorRectGeometry's — the title bar's and the sheet editor's.
+        // A grip on the selection wins over whatever is under the pointer. The eight regions come from
+        // EditorRectGeometry.
         ERectEdge lEdge = ERectEdge::None;
         if (bInHovered && !m_bPreviewDrag && !lDoc.SelectedPath().empty() && lDoc.SelectedWidget() != nullptr)
         {
@@ -637,7 +616,7 @@ namespace Opaax::Editor
             }
             else
             {
-                lDoc.Select(m_HoverPath);   // empty is bare canvas, and that clears
+                lDoc.Select(m_HoverPath);   // empty = bare canvas: clears
             }
 
             m_PreviewEdge      = lEdge;
@@ -649,7 +628,7 @@ namespace Opaax::Editor
 
         if (!m_bPreviewDrag)
         {
-            // Arrow keys while the pointer is over the preview: 1 unit, Shift for 10.
+            // Arrow keys over the preview: 1 unit, Shift for 10.
             if (bInHovered && !lDoc.SelectedPath().empty())
             {
                 const float lStep = lIO.KeyShift ? 10.f : 1.f;
@@ -670,8 +649,7 @@ namespace Opaax::Editor
 
         if (ImGui::IsMouseDown(ImGuiMouseButton_Left))
         {
-            // The TOTAL since the press: exact across frames, and the threshold ImGui applies before
-            // calling it a drag keeps a plain click from nudging.
+            // The total since the press (ImGui's drag threshold keeps a click from nudging).
             UIWidget* const lWidget = lDoc.SelectedWidget();
             if (!ImGui::IsMouseDragging(ImGuiMouseButton_Left) || lWidget == nullptr || lDoc.SelectedPath().empty())
             {
@@ -682,8 +660,7 @@ namespace Opaax::Editor
 
             if (m_PreviewEdge != ERectEdge::None)
             {
-                // Resized in PIXEL space, where the grip was hit, then the two corners back through
-                // the one pixel→canvas rule; FitRect keeps the anchors and solves the rest.
+                // Resized in pixel space, then both corners converted to canvas units; FitRect keeps the anchors.
                 const TEditorRect<float> lRect = ResizeRect(m_PressRectPx, m_PreviewEdge, lTotal.x, lTotal.y, 1.f, 1.f);
 
                 const Bounds2D lTarget = Bounds2D::FromMinMax(
@@ -699,13 +676,12 @@ namespace Opaax::Editor
             const Vector2F lStepPx{ lTotal.x - m_PreviewAppliedPx.x, lTotal.y - m_PreviewAppliedPx.y };
             m_PreviewAppliedPx = { lTotal.x, lTotal.y };
 
-            // Under a layout container the position is the container's, so a drag moves nothing —
-            // the resize above still counts, since SizeDelta is what the container reads (UI23).
+            // Under a layout container the position is the container's (only a resize counts).
             const bool lArranged = lWidget->GetParent() != nullptr && lWidget->GetParent()->ArrangesChildren();
 
             if (!lArranged && (lStepPx.x != 0.f || lStepPx.y != 0.f))
             {
-                // Pixels → canvas units, Y flipped: the canvas is Y-up and the image is not.
+                // Pixels -> canvas units, Y flipped (the canvas is Y-up).
                 const float lUnits = UnitsPerPreviewPixel();
                 lWidget->Rect.AnchoredPosition += Vector2F{ lStepPx.x * lUnits, -lStepPx.y * lUnits };
                 lWidget->InvalidateLayout();
@@ -714,7 +690,7 @@ namespace Opaax::Editor
             return;
         }
 
-        // Released: one step for the whole drag, none for a click that only selected.
+        // Released: one step for the whole drag, none for a plain click.
         m_bPreviewDrag = false;
         if (m_bPreviewMoved)
         {
@@ -730,7 +706,7 @@ namespace Opaax::Editor
         if (lWidget == nullptr || m_Context.UICanvasDocument.SelectedPath().empty()
             || (lWidget->GetParent() != nullptr && lWidget->GetParent()->ArrangesChildren()))
         {
-            return;   // nothing, or a widget whose position is its container's
+            return;   // nothing, or placed by its container
         }
 
         const OpaaxString lBefore = UICanvasOps::Snapshot(m_Context);
@@ -751,12 +727,12 @@ namespace Opaax::Editor
         const ImVec2 lClipMin{ InOrigin.x, InOrigin.y };
         const ImVec2 lClipMax{ InOrigin.x + lSizePx.x, InOrigin.y + lSizePx.y };
 
-        // A widget may sit partly off the canvas; its outline stops at the image like it does.
+        // A widget may be partly off the canvas; its outline stops at the image.
         lDraw->PushClipRect(lClipMin, lClipMax, true);
 
         const auto lRect = [&](const Bounds2D& InBounds, const ImU32 InColor, const float InThickness)
         {
-            // Two corners through the one canvas→pixel rule; Y flips, so min/max are re-sorted.
+            // Both corners through the canvas -> pixel rule; Y flips, so min/max are re-sorted.
             const Vector2F lA = CanvasToPreview(InBounds.Min()) + InOrigin;
             const Vector2F lB = CanvasToPreview(InBounds.Max()) + InOrigin;
 
@@ -771,8 +747,7 @@ namespace Opaax::Editor
             if (lWidget != nullptr) { lRect(lWidget->GetBounds(), InColor, InThickness); }
         };
 
-        // The SCREEN's edge — the layout target — under everything: zoomed out, it is what says
-        // where the game's window ends; zoomed in, it is off the image and costs nothing.
+        // The screen edge (layout target) under everything: shows where the game's window ends.
         lRect(lCanvas.GetVisibleBounds(), IM_COL32(200, 200, 200, 110), 1.f);
 
         if (m_HoverPath != lDoc.SelectedPath())
@@ -781,7 +756,7 @@ namespace Opaax::Editor
         }
         lOutline(lDoc.SelectedPath(), IM_COL32(255, 170, 40, 255), 2.f);
 
-        // The eight grips, on the same rect the hit-test reads.
+        // The eight grips, on the rect the hit-test uses.
         if (!lDoc.SelectedPath().empty() && lDoc.SelectedWidget() != nullptr)
         {
             const TEditorRect<float> lRect = SelectionRectPx();
@@ -817,7 +792,7 @@ namespace Opaax::Editor
 
         if (lWidget == nullptr) { return {}; }
 
-        // Two corners through the one canvas→pixel rule; Y flips, so min/max are re-sorted.
+        // Both corners through the canvas -> pixel rule; Y flips, so min/max are re-sorted.
         const Vector2F lA = CanvasToPreview(lWidget->GetBounds().Min());
         const Vector2F lB = CanvasToPreview(lWidget->GetBounds().Max());
 
@@ -855,7 +830,7 @@ namespace Opaax::Editor
 
     void UICanvasPanel::ResetView()
     {
-        // Half the reference height IS the canvas's own view (UI2): one canvas unit per image pixel.
+        // Half the reference height is the canvas's own view: one canvas unit per image pixel.
         m_View.Set({ 0.f, 0.f }, m_Context.UICanvasDocument.GetCanvas().GetReferenceHeight() * 0.5f);
     }
 

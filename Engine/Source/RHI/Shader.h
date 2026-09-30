@@ -11,12 +11,7 @@ namespace Opaax
     // ShaderDesc
     // =============================================================================
     /**
-     * @struct ShaderDesc
-     *
-     * Backend-neutral description of a shader program — the input to IShader::Create.
-     * Carries per-stage GLSL source (the compile input + debug label) AND the compiled
-     * SPIR-V blobs. SPIR-V is the portable IR every backend consumes: OpenGL via
-     * GL_ARB_gl_spirv, Vulkan natively. ShaderAsset fills the blobs via ShaderCompiler.
+     * A shader program description: per-stage GLSL source and compiled SPIR-V.
      */
     struct ShaderDesc
     {
@@ -28,15 +23,7 @@ namespace Opaax
     };
 
     /**
-     * @interface IShader
-     *
-     * Backend-agnostic shader program. Consumers (ShaderAsset, Renderer2D) hold a
-     * TUniquePtr<IShader> and never name a concrete backend type. The concrete impl
-     * is created via IRHIDevice::CreateShader (OpenGLShader today).
-     *
-     * Shader SOURCE portability (GLSL vs SPIR-V vs HLSL) is a separate concern and is
-     * NOT solved here — Create still takes GLSL strings. A future backend-neutral shader
-     * system replaces the source path without changing this interface.
+     * Shader program. Created by IRHIDevice::CreateShader.
      */
     class OPAAX_API IShader
     {

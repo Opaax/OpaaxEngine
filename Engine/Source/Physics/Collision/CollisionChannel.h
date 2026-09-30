@@ -8,16 +8,11 @@
 namespace Opaax
 {
     // =============================================================================
-    // ECollisionChannel — X-macro driven (Physics/Collision/CollisionChannelList.h)
+    // ECollisionChannel — generated from Physics/Collision/CollisionChannelList.h
     // =============================================================================
     /**
-     * @enum ECollisionChannel
-     * The object-type category of a collider — the unit collision filtering works in. The enum
-     * body and the matching name table are both generated from CollisionChannelList.h, so
-     * adding a channel is one new line there.
-     *
-     * The ordinal is also the filter category-bit index (see CategoryBit), which caps the set
-     * at 64 and means the list may only ever be appended to.
+     * What kind of object a collider is (used for collision filtering). Add a channel in
+     * CollisionChannelList.h. The value is also the filter bit index (at most 64; append only).
      */
     enum class ECollisionChannel : Uint8
     {
@@ -33,7 +28,7 @@ namespace Opaax
     // =============================================================================
     // Labels + values
     // =============================================================================
-    /** The channel's label (I11 — a free ToString found by ADL), for logs and the dropdown. */
+    /** The channel's label, for logs and dropdowns. */
     inline const char* ToString(ECollisionChannel InChannel) noexcept
     {
         switch (InChannel)
@@ -46,11 +41,8 @@ namespace Opaax
     }
 
     /**
-     * The channels as DATA, so any ECollisionChannel field draws as a dropdown and serializes by
-     * label with no per-type editor code. Written out rather than stamped with OPAAX_ENUM_VALUES
-     * for RenderLayer.h's reason: the list lives in an #include, and a preprocessor directive
-     * cannot appear inside a macro argument. `Count` is absent on purpose — it is a bound, not a
-     * channel.
+     * The channels as data, for editor dropdowns and saving by name. Written out by hand
+     * (a #include cannot go inside OPAAX_ENUM_VALUES). Count is not a channel.
      */
     template<>
     struct TEnumValues<ECollisionChannel>
@@ -63,7 +55,7 @@ namespace Opaax
         };
     };
 
-    /** Parallel canonical-name array. Index by static_cast<Uint8>(ECollisionChannel). */
+    /** Name of each channel. Index with static_cast<Uint8>(ECollisionChannel). */
     inline const OpaaxStringID g_CollisionChannelIDs[] =
     {
         #define OPAAX_COLLISION_CHANNEL(Name) OPAAX_ID(#Name),
@@ -71,7 +63,7 @@ namespace Opaax
         #undef OPAAX_COLLISION_CHANNEL
     };
 
-    /** Channel -> canonical id. O(1). */
+    /** Channel -> name id. */
     inline const OpaaxStringID& ToStringID(ECollisionChannel InChannel) noexcept
     {
         const Uint8 lIdx = static_cast<Uint8>(InChannel);
@@ -80,7 +72,7 @@ namespace Opaax
                    : g_CollisionChannelIDs[0];
     }
 
-    /** Id -> channel. Linear scan of a handful of integer compares. */
+    /** Name id -> channel (linear search). */
     inline ECollisionChannel CollisionChannelFromStringID(const OpaaxStringID& InID) noexcept
     {
         for (Uint8 i = 0; i < static_cast<Uint8>(ECollisionChannel::Count); ++i)
@@ -96,12 +88,12 @@ namespace Opaax
     // =============================================================================
     // Filter bits
     // =============================================================================
-    /** The single category bit a collider on this channel belongs to. */
+    /** The category bit of a collider on this channel. */
     inline Uint64 CategoryBit(ECollisionChannel InChannel) noexcept
     {
         return Uint64(1) << static_cast<Uint8>(InChannel);
     }
 
-    /** Every channel bit — the default "interacts with everything" mask. */
+    /** Every channel bit (collides with everything). */
     inline constexpr Uint64 AllChannelsMask() noexcept { return ~0ull; }
 }

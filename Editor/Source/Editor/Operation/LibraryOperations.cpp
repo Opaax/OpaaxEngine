@@ -16,19 +16,15 @@ namespace Opaax::Editor
     namespace
     {
         /**
-         * Record a whole-list replacement under InLabel, and publish it into the document.
-         *
-         * The default is carried in the same step and RE-VALIDATED here rather than at each call
-         * site: every list edit can dangle it, and a default naming a clip the library no longer
-         * has resolves to the FIRST entry — silently, and to a different clip than it says.
+         * Records a whole-list replacement under InLabel, and applies it to the document. The default is
+         * checked here too: a default naming a missing clip would silently fall back to the first entry.
          */
         void RecordEntries(EditorContext& InContext, TDynArray<AnimationLibraryEntry> InAfter,
                            const char* InLabel, const OpaaxStringID InAfterDefault)
         {
             AnimationLibraryData& lData = InContext.LibraryDocument.GetMutableData();
 
-            // Cleared rather than repointed: which clip should inherit the role is the author's
-            // call, and the empty default already MEANS "the first entry".
+            // Cleared rather than repointed (the author picks the new default; empty means the first entry).
             OpaaxStringID lDefault = InAfterDefault;
 
             if (lDefault.IsValid())
@@ -63,7 +59,7 @@ namespace Opaax::Editor
             InContext.Undo.Record(Move(lStep));
         }
 
-        /** The overload every edit that does not MOVE the default uses. */
+        /** Overload for edits that do not move the default. */
         void RecordEntries(EditorContext& InContext, TDynArray<AnimationLibraryEntry> InAfter,
                            const char* InLabel)
         {
@@ -72,7 +68,7 @@ namespace Opaax::Editor
             RecordEntries(InContext, Move(InAfter), InLabel, lDefault);
         }
 
-        /** Whether any entry OTHER than InSkip already answers to InName. */
+        /** Whether an entry other than InSkip already has InName. */
         bool NameTakenByOther(const AnimationLibraryData& InData, const OpaaxStringID InName,
                               const Uint32 InSkip)
         {
@@ -146,8 +142,8 @@ namespace Opaax::Editor
 
         AnimationLibraryEntry& lEntry = lData.Entries[InIndex];
 
-        // REVERTED, not merely refused: the drawer already wrote the duplicate into the document,
-        // so leaving it would ship a library where one clip can never be reached.
+        // Reverted, not just refused: the drawer already wrote the duplicate, and a duplicate name makes
+        // one clip unreachable.
         if (lEntry.Name.IsValid() && NameTakenByOther(lData, lEntry.Name, InIndex))
         {
             OPAAX_LOG(LogEditorAnimationLibraryDocument, Warn,
@@ -158,8 +154,7 @@ namespace Opaax::Editor
             return false;
         }
 
-        // A clip arrived on an unnamed entry: name it from the file stem so dropping one in is ONE
-        // action. Skipped when that name is taken, for the reason above.
+        // A clip dropped on an unnamed entry is named from the file stem (unless that name is taken).
         if (!lEntry.Name.IsValid() && !lEntry.Clip.IsEmpty())
         {
             const OpaaxStringView lStem = PathString::Stem(lEntry.Clip.Path);
@@ -180,10 +175,8 @@ namespace Opaax::Editor
             return false;   // a gesture that changed nothing is not a step
         }
 
-        // A RENAME CARRIES THE DEFAULT WITH IT. Without this, renaming the default entry leaves the
-        // default naming something that no longer exists — which does not fail, it falls through to
-        // the FIRST entry, so the library silently plays a different clip than it says it does.
-        // `SheetOps::Slice` clamps its DefaultFrame in the same step for exactly this reason.
+        // A rename carries the default with it; otherwise the default names nothing and silently falls
+        // back to the first entry.
         OpaaxStringID lDefault = lData.DefaultClip;
 
         if (lDefault.IsValid() && lDefault == InBefore.Name && lEntry.Name.IsValid())
@@ -191,7 +184,7 @@ namespace Opaax::Editor
             lDefault = lEntry.Name;
         }
 
-        // The list AFTER the fix-ups, with InBefore put back in place as the undo target.
+        // The list after the fix-ups, with InBefore restored as the undo target.
         TDynArray<AnimationLibraryEntry> lAfter  = lData.Entries;
         TDynArray<AnimationLibraryEntry> lBefore = lData.Entries;
         lBefore[InIndex] = InBefore;
@@ -241,8 +234,7 @@ namespace Opaax::Editor
 
         InContext.LibraryDocument.MarkSaved();
 
-        // AND PUBLISH IT, for ClipOps::Save's reason ([[L75]]): without this an entity already
-        // holding this library keeps resolving names against the first parse.
+        // Reload the resource, so an entity already using this library sees the change.
         ResourceOps::SavedToDisk<AnimationLibraryResource>(InContext, InContext.LibraryDocument.AbsPath());
 
         return true;

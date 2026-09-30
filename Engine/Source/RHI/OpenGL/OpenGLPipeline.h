@@ -7,12 +7,8 @@ namespace Opaax
     class IShader;
 
     /**
-     * @class OpenGLPipeline
-     *
-     * OpenGL IPipeline: there is no immutable pipeline object in GL, so this just stores the
-     * shader + blend state and applies them when the command buffer binds it (Apply). The
-     * vertex layout is carried by the bound VAO on GL, so PipelineDesc::VertexLayout is unused
-     * here (it exists for command-buffer backends that bake vertex input into the pipeline).
+     * OpenGL IPipeline: stores the shader and blend state, applied when bound.
+     * The vertex layout comes from the VAO, so PipelineDesc::VertexLayout is unused.
      */
     class OPAAX_API OpenGLPipeline final : public IPipeline
     {
@@ -27,8 +23,7 @@ namespace Opaax
         // Function
         // =============================================================================
     public:
-        // Backend-internal: called by OpenGLCommandBuffer::BindPipeline. Binds the shader
-        // program and applies the blend state.
+        // Called by OpenGLCommandBuffer::BindPipeline: binds the shader and applies the blend state.
         void Apply() const;
 
         // =============================================================================

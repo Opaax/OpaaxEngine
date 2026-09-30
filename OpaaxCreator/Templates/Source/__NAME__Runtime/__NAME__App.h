@@ -3,9 +3,8 @@
 #include "Application/OpaaxApplication.h"
 
 // =============================================================================
-// __NAME__App — the runtime host: a thin composition root over OpaaxApplication. It routes the
-// game module in; the engine does the rest (BO4 — the startup world is created LAST, named from
-// the .opaaxproj's "startupLevel", falling back to "Main").
+// __NAME__App — the runtime host: a thin layer over OpaaxApplication that adds the game module.
+// The startup world is created last, from the .opaaxproj's "startupLevel" (default "Main").
 // =============================================================================
 class __NAME__App : public Opaax::OpaaxApplication
 {

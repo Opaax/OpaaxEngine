@@ -6,13 +6,7 @@
 namespace Opaax
 {
     // =============================================================================
-    // The nlohmann bridge for TResourcePath<T>, SPLIT from the type the way LinearColorJson.h and
-    // OpaaxTagJson.h are.
-    //
-    // A BARE STRING on disk — "Textures/Hero.png", not {"Path": "..."}. The C++ type exists to make
-    // the reference typed for the compiler and the editor; a file has no use for that, and a nested
-    // object would make a hand-edited map noisier for nothing. It also means a field that was an
-    // OpaaxString before becoming a TResourcePath reads back unchanged.
+    // JSON for TResourcePath<T>: a plain string ("Textures/Hero.png").
     // =============================================================================
     template<typename TResource, EResourceLoad TLoad>
     void to_json(nlohmann::json& InJson, const TResourcePath<TResource, TLoad>& InValue)
@@ -23,8 +17,7 @@ namespace Opaax
     template<typename TResource, EResourceLoad TLoad>
     void from_json(const nlohmann::json& InJson, TResourcePath<TResource, TLoad>& InValue)
     {
-        // Throws type_error on a non-string, which MapFactory::Instantiate catches per component
-        // (I8) — tolerance lives there, once, not in every field.
+        // Throws type_error on a non-string (MapFactory::Instantiate catches it).
         InJson.get_to(InValue.Path);
     }
 }

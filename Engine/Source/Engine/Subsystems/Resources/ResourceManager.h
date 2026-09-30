@@ -22,44 +22,34 @@
 // =============================================================================
 // Load Resource
 // Sync:
-// ResourceRef<MyResourceType> MyResource = m_Resources->Load<MyResourceType>(ResoucePath);
+// Sync:
+//   ResourceRef<MyResourceType> MyResource = m_Resources->Load<MyResourceType>(Path);
 // Async 1:
-// ResourceRef<MyResourceType> MyResource = m_Resources->LoadAsync<MyResourceType>(ResoucePath);
-// if(MyResource.IsValid()){ Do thing } 
-//
+//   ResourceRef<MyResourceType> MyResource = m_Resources->LoadAsync<MyResourceType>(Path);
+//   if (MyResource.IsValid()) { ... }
 // Async 2:
-// m_Resources->LoadAsync<MyResourceType>(ResoucePath, [this](LoadAsyncResult<MyResourceType> LoadedResource)
-// {
-//      if (LoadedResource.bFailed) { fail... }
-//      else{ MyResource (from this) = LoadedResource.Ref;}
-// });
-// if(MyResource.IsValid()){ Do thing } 
+//   m_Resources->LoadAsync<MyResourceType>(Path, [this](LoadAsyncResult<MyResourceType> InResult)
+//   {
+//       if (InResult.bFailed) { ... }
+//       else { MyResource = InResult.Ref; }
+//   });
 // 
 // ================================ END USAGE ==================================
 // =============================================================================
 
 // =============================================================================
-// ResourceManager — routing. The first engine subsystem, a thin core service.
-//
-//   Owns one ResourcePool<T> per type (lazy-created, indexed by ResourceTypeID),
-//   plus the dependency graph. Public surface is FROZEN (review C5):
-//       Load / Resolve / Pin / FlushAll / Update
-//   Every future capability (hot reload, cooking, streaming, editor type info) is
-//   a separate system CONSUMING this API — never a manager feature.
-//
-//   This header is the umbrella: the crossing template bodies (ResourceRef<T>,
-//   LoadContext::Acquire, ResourceManager::Load...) are defined at the bottom,
-//   where the manager, the pools, the refs and the context are all complete —
-//   which is what breaks the Ref/Context <-> Manager template dependency cycle.
+// ResourceManager — loads and caches resources. One ResourcePool<T> per type
+//   (created on demand) plus the dependency graph.
+//   Hot reload, cooking, etc. should be separate systems using this API.
+//   Template bodies are defined at the bottom of this header, where every type is complete.
 // =============================================================================
 namespace Opaax
 {
     inline constexpr LogCategory LogResourceManager{"ResourceManager"};
 
     // =============================================================================
-    // LoadAsyncResult<T> — delivered to a LoadAsync completion callback, once, on the
-    // pump. Ref is the loaded claim (keep it to retain the resource); on failure it is
-    // empty, Status is Failed, and bFailed is true.
+    // LoadAsyncResult<T> — passed once to a LoadAsync callback. Keep Ref to keep the resource.
+    //   On failure Ref is empty and bFailed is true.
     // =============================================================================
     template<typename T>
     struct LoadAsyncResult
@@ -81,12 +71,10 @@ namespace Opaax
         // CTORS - DTORS
         // =============================================================================
     public:
-        /***/
         ResourceManager() = default;
         
         /**
-         * NOTE: FlushAll() in the body (see .cpp) — composite payloads hold child Refs
-         * whose dtors call back into the manager, so everything must unload while the manager + pools are still alive ("flush before context death").
+         * Calls FlushAll(): children must be unloaded while the manager and pools are alive.
          */
         ~ResourceManager() override;
 
@@ -103,134 +91,85 @@ namespace Opaax
         // =============================================================================
     public:
         /**
-         * Load (or dedup-share) a resource; returns an owning RAII claim.
-         * @tparam T 
-         * @param InPath 
-         * @return 
+         * Loads a resource, or shares it if already loaded.
+         * @return A claim that keeps it loaded
          */
         template<CResource T>
         ResourceRef<T> Load(const char* InPath);
 
         /**
-         * Kick an asynchronous load: returns a valid Loading claim immediately (Resolve
-         * yields the placeholder until it publishes). File IO + decode run on a worker
-         * (whole subtree, one job); Initialize + flip Loaded happen on the pump. Falls
-         * back to inline load when no real job system is set (the null object).
+         * Starts an async load and returns a Loading claim immediately (resolves to the placeholder
+         * until published). Loads on a worker; Initialize runs on the main thread in Update.
+         * Loads inline when there is no job system.
          *
-         * InOnComplete (optional) fires ONCE on the pump when the load settles — Loaded
-         * or Failed, and immediately-next-pump for an already-loaded path. While it is
-         * pending the manager holds an internal claim, so the resource survives to the
-         * callback even if you drop the returned Ref: keep result.Ref to retain it.
-         * @tparam T
-         * @param InPath
-         * @param InOnComplete
-         * @return
+         * InOnComplete (optional) is called once in Update when the load succeeds or fails,
+         * and the resource stays loaded until then. Keep InResult.Ref to keep it.
          */
         template<CResource T>
         ResourceRef<T> LoadAsync(const char* InPath, TFunction<void(LoadAsyncResult<T>)> InOnComplete = {});
 
         /**
-         * A claim on InPath IF it is already loaded — and NEVER a load.
-         *
-         * The question a browser has to ask: "may I show this one?". Load would answer it by
-         * pulling every file in the folder into memory, which is exactly what an asset browser must
-         * not do.
-         *
-         * @return An EMPTY ref (null manager) when the path is unknown or still loading — so Get()
-         *   answers nullptr rather than the type's placeholder, which is what "not resident" means.
+         * A claim on InPath only if it is already loaded; never loads (e.g. for an asset browser).
+         * @return An empty ref if unknown or still loading
          */
         template<CResource T>
         ResourceRef<T> Find(const char* InPath);
 
         /**
-         * Re-read a resource that is ALREADY resident, in place.
-         *
-         * The other half of Find's question: "this file changed on disk — everyone holding it
-         * should see the new one." Every existing ResourceRef stays valid and simply resolves to
-         * the new payload, because the slot, its refcount and its generation are untouched.
-         *
-         * NOT RESIDENT IS NOT A FAILURE, it is the answer "nobody was looking" — which is why this
-         * never loads. A caller that wants it loaded says Load.
-         *
-         * MAIN THREAD: the swap runs the type's Initialize, which is the GPU log-in (**I16**).
-         *
-         * @return false when InPath is not resident, is still loading, or failed to re-read — and
-         *   in that last case the OLD payload survives, since blanking a live resource because a
-         *   re-read failed is worse than keeping something stale.
+         * Reloads a resource that is already loaded, in place. Existing refs see the new data.
+         * Main thread only (runs Initialize).
+         * @return False if not loaded, still loading, or the reload failed (the old data is kept)
          */
         template<CResource T>
         bool Reload(const char* InPath);
         
         /**
-         * Frame-stable view. O(1). Never null for Placeholder-policy types
-         * Null for FailFast on stale/invalid. NEVER cache across a Resources.Update() pump.
-         * @tparam T 
-         * @param InHandle 
-         * @return 
+         * Frame-stable pointer. Never null for Placeholder types; null for FailFast on a stale or
+         * invalid handle. Do not keep it across an Update().
          */
         template<CResource T>
         T* Resolve(ResourceHandle<T> InHandle) noexcept;
         
         /**
-         * Bridge a data Handle to a lifetime claim (adds a ref). 
-         * Empty ref if the handle is stale/dead — Pin cannot resurrect an unloaded resource.
-         * @tparam T 
-         * @param InHandle 
-         * @return 
+         * Turns a handle into a claim (adds a ref). Empty if the handle is stale: cannot reload.
          */
         template<CResource T>
         ResourceRef<T> Pin(ResourceHandle<T> InHandle);
         
         /**
-         * Unload every resource in every pool (warns on leaks). 
-         * Flush BEFORE the GPU context dies; destroy the manager after everything else (boot/shutdown order).
+         * Unloads every resource in every pool (warns about leaks). Call before the GPU context dies.
          */
         void FlushAll();
 
         /**
-         * Inject the worker pool used by LoadAsync (the Engine wires this from the app service locator at Startup). Defaults to the null job system (inline loads).
-         * @param InJobs 
+         * Sets the job system used by LoadAsync (set by the Engine at Startup). Defaults to inline loads.
          */
         void SetJobSystem(IJobSystem& InJobs) noexcept { m_Jobs = &InJobs; }
         
         /**
-         * Monotonic pump counter (bumped each Update). A CheckedView snapshots it and flags itself stale once it advances — catches Resolve pointers held across a pump.
-         * @return 
+         * Counter incremented by each Update. Used to detect Resolve pointers kept across an Update.
          */
         Uint64 GetPumpEpoch() const noexcept { return m_PumpEpoch; }
 
     public:
-        /***/
         template<CResource T> Uint32 GetLoadedCount();
-        /***/
         template<CResource T> Uint32 GetLoadingCount();
-        /***/
         template<CResource T> Uint64 GetBytes();
-        // Current load state of a handle (Unloaded if stale/never-loaded). Drives the
-        // async completion callbacks (Loading -> keep polling; else fire).
+        // Load state of a handle (Unloaded if stale or never loaded).
         template<CResource T> EResourceState GetState(ResourceHandle<T> InHandle);
 
     public:
-        /***/
         template<CResource T> void AddRef(ResourceHandle<T> InHandle) noexcept;
-        /***/
         template<CResource T> void Release(ResourceHandle<T> InHandle) noexcept;
 
         /**
-         * Recursion target for composite loads: shares the in-flight LoadContext so the load chain (and cycle detection) accumulates across nested acquisitions.
-         * @tparam T
-         * @param InPath
-         * @param InCtx
-         * @return
+         * Load used by dependency loads: shares the LoadContext, so cycles are detected across levels.
          */
         template<CResource T>
         ResourceRef<T> LoadInternal(const char* InPath, LoadContext& InCtx);
         
         /**
-         * Record a hard-dependency edge (parent -> child) under the manager lock.
-         * Called by LoadContext::Acquire, which may run on a worker while loading a composite.
-         * @param InParentId 
-         * @param InChildId 
+         * Records a parent -> child dependency, under the lock. May run on a worker.
          */
         void AddDependencyEdge(Uint32 InParentId, Uint32 InChildId);
 
@@ -241,9 +180,8 @@ namespace Opaax
         template<CResource T>
         ResourcePool<T>& GetOrCreatePool();
 
-        // Poll every registered completion callback (main thread, on the pump): fire +
-        // drop the ones whose resource has settled, keep the still-loading ones. User
-        // callbacks run OUTSIDE the lock (they may re-enter LoadAsync / do work).
+        // Calls the completion callbacks of settled loads (main thread, outside the lock)
+        // and keeps the ones still loading.
         void FirePendingCallbacks();
 
         // =============================================================================
@@ -252,9 +190,9 @@ namespace Opaax
         
         //~Begin ISubsystem interface
     public:
-        bool Startup() override;             // builds nothing — pools are lazy
+        bool Startup() override;             // pools are created on demand
         void Shutdown() override;            // FlushAll + leak report
-        void Update(double DeltaTime) override; // the pump (single mutation point)
+        void Update(double DeltaTime) override; // destroys released slots
         //~End ISubsystem interface
 
         // =============================================================================
@@ -262,25 +200,21 @@ namespace Opaax
         // =============================================================================
     private:
         /**
-         * One coarse recursive lock guards ALL pool + registry + graph mutation.
-         * Recursive because unloading a composite cascade-releases its children on the same thread (Release re-enters).
-         * NEVER held across T::Load (the off-thread heavy work) so a worker's decode can't stall the main thread's Resolve — uncontended in steady state.
+         * One recursive lock for every pool, registry and graph change. Recursive because unloading
+         * releases children on the same thread. Never held during T::Load.
          */
         mutable RecursiveMutex              m_Mutex;
         TDynArray<TUniquePtr<IResourcePool>> m_Pools; // indexed by ResourceTypeID::Get<T>()
         ResourceDependencyGraph             m_Deps;
         IJobSystem*                         m_Jobs = &IJobSystem::Null(); // LoadAsync worker pool
-        Uint64                              m_PumpEpoch = 0; // ++ each Update (CheckedView staleness)
+        Uint64                              m_PumpEpoch = 0; // incremented each Update
 
-        // Pending LoadAsync completion callbacks. Each poll closure holds the internal
-        // claim + the user callback; returns true once it has fired (Loaded/Failed).
+        // Pending LoadAsync callbacks. Each returns true once it has fired.
         TDynArray<TFunction<bool()>>        m_PendingCallbacks;
     };
 
     // =============================================================================
-    // ResourceAsyncLoad — per-request state shared between the worker (fill) and the
-    // main-thread drain (publish). Heap-owned via TSharedPtr captured by both lambdas;
-    // owns the path string + the LoadContext across the thread boundary.
+    // ResourceAsyncLoad — state shared between the worker (load) and the main thread (publish).
     // =============================================================================
     struct ResourceAsyncLoad
     {
@@ -290,32 +224,27 @@ namespace Opaax
     };
 
     // =============================================================================
-    // ResourceManager — template definitions (all types complete below this line)
+    // ResourceManager — template definitions
     // =============================================================================
-    /***/
     template<CResource T>
     ResourcePool<T>& ResourceManager::GetOrCreatePool()
     {
         const Uint32 lId = ResourceTypeID::Get<T>();
         if (lId >= m_Pools.size()) { m_Pools.resize(lId + 1); }
         if (!m_Pools[lId])         { m_Pools[lId] = MakeUnique<ResourcePool<T>>(); }
-        // NOTE: safe — the slot at lId is only ever populated with a ResourcePool<T>.
+        // Safe: this slot only ever holds a ResourcePool<T>.
         return *static_cast<ResourcePool<T>*>(m_Pools[lId].get());
     }
     
     /**
-     * Load orchestration shared by sync Load and every composite Acquire: 
-     * AcquireSlot (locked) -> FillSlot (UNLOCKED — runs T::Load, child Acquires recurse here) -> publish (locked; inline for sync, deferred to the pump for async).
-     * @tparam T 
-     * @param InPath 
-     * @param InCtx 
-     * @return 
+     * Shared by Load and dependency loads: AcquireSlot (locked) -> FillSlot (unlocked, runs T::Load)
+     * -> publish (locked; now for sync, in Update for async).
      */
     template<CResource T>
     ResourceRef<T> ResourceManager::LoadInternal(const char* InPath, LoadContext& InCtx)
     {
         const OpaaxStringID lId(InPath);
-        if (!InCtx.PushLoading(lId.GetId())) // cycle guard — context-local, no lock needed
+        if (!InCtx.PushLoading(lId.GetId())) // cycle check
         {
             OPAAX_LOG(LogResourceManager, Error, "Hard dependency cycle on '{}'", InPath);
             return ResourceRef<T>{ this, ResourceHandle<T>{} };
@@ -332,7 +261,7 @@ namespace Opaax
 
         if (lNeedsFill)
         {
-            const bool lOk = lPool->FillSlot(lHandle, InPath, InCtx); // T::Load — UNLOCKED
+            const bool lOk = lPool->FillSlot(lHandle, InPath, InCtx); // T::Load, unlocked
 
             TLockGuard<RecursiveMutex> lLock(m_Mutex);
             if (!lOk)
@@ -346,26 +275,24 @@ namespace Opaax
             {
                 InCtx.AddPendingInit(lPool, lHandle.Slot);
             } 
-            // publish at the pump
+            // publish in Update
             else
             {
                 lPool->FinalizeSlot(lHandle.Slot);
-            }         // publish inline (main thread)
+            }         // publish now (main thread)
         }
 
         InCtx.PopLoading();
-        return ResourceRef<T>{ this, lHandle }; // adopt the +1 AcquireSlot applied
+        return ResourceRef<T>{ this, lHandle }; // takes the +1 from AcquireSlot
     }
 
-    /***/
     template<CResource T>
     ResourceRef<T> ResourceManager::Load(const char* InPath)
     {
-        LoadContext lCtx(*this, m_Deps); // synchronous -> LoadInternal publishes inline
+        LoadContext lCtx(*this, m_Deps); // sync: publishes inline
         return LoadInternal<T>(InPath, lCtx);
     }
 
-    /***/
     template<CResource T>
     ResourceRef<T> ResourceManager::LoadAsync(const char* InPath, TFunction<void(LoadAsyncResult<T>)> InOnComplete)
     {
@@ -375,19 +302,18 @@ namespace Opaax
         {
             TLockGuard<RecursiveMutex> lLock(m_Mutex);
             lPool   = &GetOrCreatePool<T>();
-            lHandle = lPool->AcquireSlot(InPath, lNeedsFill); // Loading claim, returned NOW
+            lHandle = lPool->AcquireSlot(InPath, lNeedsFill); // Loading claim, returned now
         }
 
         if (lNeedsFill)
         {
-            // Fill the whole subtree on one worker; publish (Initialize + Loaded) at the
-            // pump. With the null job system this runs inline (work + onComplete here).
+            // Load the whole tree on one worker; publish in Update. Inline without a job system.
             TSharedPtr<ResourceAsyncLoad> lJob = MakeShared<ResourceAsyncLoad>();
-            lJob->Path             = InPath; // own the string across the thread boundary
+            lJob->Path             = InPath; // owned across threads
             ResourceManager* lSelf = this;
 
             m_Jobs->Submit(
-                [lSelf, lPool, lHandle, lJob]() // WORKER — no lock across T::Load
+                [lSelf, lPool, lHandle, lJob]() // worker: no lock during T::Load
                 {
                     lJob->Ctx    = MakeUnique<LoadContext>(*lSelf, lSelf->m_Deps, /*deferred*/ true);
                     lJob->Filled = lPool->FillSlot(lHandle, lJob->Path.CStr(), *lJob->Ctx);
@@ -396,7 +322,7 @@ namespace Opaax
                         lJob->Ctx->AddPendingInit(lPool, lHandle.Slot);
                     } // root, after its children
                 },
-                [lSelf, lPool, lHandle, lJob]() // MAIN (drain) — publish children-first, else abandon
+                [lSelf, lPool, lHandle, lJob]() // main thread: publish children first, or abandon
                 {
                     TLockGuard<RecursiveMutex> lLock(lSelf->m_Mutex);
                     if (lJob->Ctx)
@@ -411,10 +337,9 @@ namespace Opaax
                 });
         }
 
-        ResourceRef<T> lRef{ this, lHandle }; // adopt the +1 AcquireSlot applied (fresh OR dedup)
+        ResourceRef<T> lRef{ this, lHandle }; // takes the +1 from AcquireSlot
 
-        // Optional completion: an internal claim (copy) keeps the resource alive until the
-        // callback fires on a pump — so a fire-and-forget caller need not hold the Ref.
+        // Optional callback: an internal claim keeps the resource loaded until it fires.
         if (InOnComplete)
         {
             ResourceRef<T>   lClaim = lRef;
@@ -423,14 +348,14 @@ namespace Opaax
                 [lSelf, lClaim = Move(lClaim), lCb = Move(InOnComplete)]() -> bool
                 {
                     const EResourceState lState = lSelf->GetState<T>(lClaim.GetHandle());
-                    if (lState == EResourceState::Loading) { return false; } // not settled — poll again
+                    if (lState == EResourceState::Loading) { return false; } // still loading: poll again
 
                     LoadAsyncResult<T> lResult;
                     lResult.Status  = lState;
                     lResult.bFailed = (lState != EResourceState::Loaded);
                     if (!lResult.bFailed) { lResult.Ref = lClaim; }
                     lCb(Move(lResult));
-                    return true; // fired -> drop; the internal claim releases here
+                    return true; // fired: releases the internal claim
                 };
 
             TLockGuard<RecursiveMutex> lLock(m_Mutex);
@@ -440,7 +365,6 @@ namespace Opaax
         return lRef;
     }
 
-    /***/
     template<CResource T>
     ResourceRef<T> ResourceManager::Find(const char* InPath)
     {
@@ -449,25 +373,22 @@ namespace Opaax
         const ResourceHandle<T> lHandle = GetOrCreatePool<T>().FindLoadedSlot(InPath);
         if (!lHandle.IsValid())
         {
-            return ResourceRef<T>{};   // null manager, so Get() is nullptr and not a placeholder
+            return ResourceRef<T>{};   // empty: Get() gives nullptr, not a placeholder
         }
 
-        return ResourceRef<T>{ this, lHandle }; // adopt the +1 FindLoadedSlot applied
+        return ResourceRef<T>{ this, lHandle }; // takes the +1 from FindLoadedSlot
     }
 
-    /***/
     template<CResource T>
     bool ResourceManager::Reload(const char* InPath)
     {
-        // Nothing resident, nothing to update — asked FIRST so a re-read of a file nobody holds
-        // costs one lookup instead of a full parse.
+        // Not loaded: nothing to reload (checked first to skip the parse).
         {
             TLockGuard<RecursiveMutex> lLock(m_Mutex);
             if (!GetOrCreatePool<T>().IsResident(InPath)) { return false; }
         }
 
-        // UNLOCKED, exactly as LoadInternal runs FillSlot: a composite's Load recurses through this
-        // manager, and it must not do so holding the lock through a file read.
+        // Unlocked, like FillSlot: dependency loads go through this manager.
         LoadContext      lCtx(*this, m_Deps);
         std::optional<T> lLoaded = T::Load(InPath, lCtx);
 
@@ -479,8 +400,7 @@ namespace Opaax
 
         TLockGuard<RecursiveMutex> lLock(m_Mutex);
 
-        // Re-checked under the lock: between the two, another thread may have released it. The
-        // freshly loaded payload is then simply dropped, which is the correct outcome.
+        // Check again under the lock: it may have been released meanwhile (then drop the new data).
         const bool lSwapped = GetOrCreatePool<T>().ReplaceIfLoaded(InPath, Move(*lLoaded));
 
         if (lSwapped)
@@ -491,7 +411,6 @@ namespace Opaax
         return lSwapped;
     }
 
-    /***/
     template<CResource T>
     T* ResourceManager::Resolve(ResourceHandle<T> InHandle) noexcept
     {
@@ -499,7 +418,6 @@ namespace Opaax
         return GetOrCreatePool<T>().Get(InHandle);
     }
 
-    /***/
     template<CResource T>
     ResourceRef<T> ResourceManager::Pin(ResourceHandle<T> InHandle)
     {
@@ -514,7 +432,6 @@ namespace Opaax
         return ResourceRef<T>{ this, InHandle };
     }
 
-    /***/
     template<CResource T>
     void ResourceManager::AddRef(ResourceHandle<T> InHandle) noexcept
     {
@@ -522,7 +439,6 @@ namespace Opaax
         GetOrCreatePool<T>().AddRef(InHandle);
     }
 
-    /***/
     template<CResource T>
     void ResourceManager::Release(ResourceHandle<T> InHandle) noexcept
     {
@@ -530,7 +446,6 @@ namespace Opaax
         GetOrCreatePool<T>().Release(InHandle);
     }
 
-    /***/
     template<CResource T>
     Uint32 ResourceManager::GetLoadedCount()
     {
@@ -538,7 +453,6 @@ namespace Opaax
         return GetOrCreatePool<T>().GetLoadedCount();
     }
 
-    /***/
     template<CResource T>
     Uint32 ResourceManager::GetLoadingCount()
     {
@@ -546,7 +460,6 @@ namespace Opaax
         return GetOrCreatePool<T>().GetLoadingCount();
     }
 
-    /***/
     template<CResource T>
     Uint64 ResourceManager::GetBytes()
     {
@@ -554,7 +467,6 @@ namespace Opaax
         return GetOrCreatePool<T>().GetBytes();
     }
 
-    /***/
     template<CResource T>
     EResourceState ResourceManager::GetState(ResourceHandle<T> InHandle)
     {
@@ -563,7 +475,7 @@ namespace Opaax
     }
 
     // =============================================================================
-    // ResourceRef<T> — crossing bodies (manager complete)
+    // ResourceRef<T> — bodies that need the complete manager
     // =============================================================================
     template<typename T>
     ResourceRef<T>::ResourceRef(const ResourceRef& InOther)
@@ -621,7 +533,6 @@ namespace Opaax
         return *this;
     }
 
-    /***/
     template<typename T>
     ResourceRef<T>::~ResourceRef()
     {
@@ -631,7 +542,6 @@ namespace Opaax
         }
     }
 
-    /***/
     template<typename T>
     T* ResourceRef<T>::Get() const noexcept
     {
@@ -639,17 +549,15 @@ namespace Opaax
     }
 
     // =============================================================================
-    // LoadContext::Acquire — crossing body (manager complete)
+    // LoadContext::Acquire — needs the complete manager
     // =============================================================================
     
-    /***/
     template<CResource TSub>
     ResourceRef<TSub> LoadContext::Acquire(const char* InPath)
     {
         const OpaaxStringID lChild(InPath);
 
-        // Cycle: acquiring something already loading up the chain. Fail loudly, do NOT
-        // record an edge (keeps the hard-reference graph a DAG).
+        // Cycle: already loading higher in the chain. Fail, and record no dependency.
         if (IsLoading(lChild.GetId()))
         {
             OPAAX_LOG(LogResourceManager, Error, "Hard dependency cycle on '{}'", InPath);

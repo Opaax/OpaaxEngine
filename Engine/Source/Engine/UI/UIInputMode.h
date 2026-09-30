@@ -5,14 +5,13 @@
 namespace Opaax
 {
     // =============================================================================
-    // EUIInputMode — Unreal's three modes, held by the UI tenant (there is no PlayerController
-    //   tier; the session is where the mode lives). It decides what the raw feed reaches.
+    // EUIInputMode — what the UI receives (like Unreal's input modes).
     // =============================================================================
     enum class EUIInputMode : Uint8
     {
-        GameOnly,    // the UI routes nothing; the mapping sees everything (the HUD)
-        UIOnly,      // the UI routes; the mapping is muted whole (a modal menu)
-        GameAndUI    // the UI routes first; what it handled is consumed before the mapping (default)
+        GameOnly,    // UI gets nothing; the game gets everything (HUD)
+        UIOnly,      // UI gets everything; the game nothing (modal menu)
+        GameAndUI    // UI first; what it handles does not reach the game (default)
     };
 
     inline const char* ToString(const EUIInputMode InMode) noexcept

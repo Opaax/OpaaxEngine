@@ -5,8 +5,8 @@
 namespace Opaax
 {
     // =============================================================================
-    // IGameInstanceSubsystem — marker interface for game-session-owned subsystems.
-    //   Lifetime = one game (StartGame -> EndGame), which outlives any single World.
+    // IGameInstanceSubsystem — a subsystem that lives for one game (StartGame -> EndGame),
+    //   across level changes.
     // =============================================================================
     class OPAAX_API IGameInstanceSubsystem : public ISubsystem
     {
@@ -31,7 +31,7 @@ namespace Opaax
     };
 
     // =============================================================================
-    // GameInstanceSubsystemMgr — owns + drives the game-instance subsystem list.
+    // GameInstanceSubsystemMgr — owns and ticks the game-instance subsystems.
     // =============================================================================
     class OPAAX_API GameInstanceSubsystemMgr : public ISubsystemManager<IGameInstanceSubsystem>
     {

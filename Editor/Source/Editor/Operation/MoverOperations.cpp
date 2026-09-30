@@ -19,19 +19,15 @@ namespace Opaax::Editor
     namespace
     {
         /**
-         * Record a whole-list replacement under InLabel, and publish it into the document.
-         *
-         * The default is carried in the same step and RE-VALIDATED here rather than at each call
-         * site: every list edit can dangle it, and a default naming a mode the mover no longer has
-         * resolves to the FIRST entry — silently, and to a different mode than it says.
+         * Records a whole-list replacement under InLabel, and applies it to the document. The default is
+         * checked here too: a default naming a missing mode would silently fall back to the first entry.
          */
         void RecordEntries(EditorContext& InContext, TDynArray<MoverEntry> InAfter,
                            const char* InLabel, const OpaaxStringID InAfterDefault)
         {
             MoverData& lData = InContext.MoverDocument.GetMutableData();
 
-            // Cleared rather than repointed: which mode should inherit the role is the author's
-            // call, and the empty default already MEANS "the first entry".
+            // Cleared rather than repointed (the author picks the new default; empty means the first entry).
             OpaaxStringID lDefault = InAfterDefault;
 
             if (lDefault.IsValid())
@@ -66,7 +62,7 @@ namespace Opaax::Editor
             InContext.Undo.Record(Move(lStep));
         }
 
-        /** The overload every edit that does not MOVE the default uses. */
+        /** Overload for edits that do not move the default. */
         void RecordEntries(EditorContext& InContext, TDynArray<MoverEntry> InAfter, const char* InLabel)
         {
             const OpaaxStringID lDefault = InContext.MoverDocument.GetData().DefaultMode;
@@ -74,7 +70,7 @@ namespace Opaax::Editor
             RecordEntries(InContext, Move(InAfter), InLabel, lDefault);
         }
 
-        /** Whether any entry OTHER than InSkip already answers to InName. */
+        /** Whether an entry other than InSkip already has InName. */
         bool NameTakenByOther(const MoverData& InData, const OpaaxStringID InName, const Uint32 InSkip)
         {
             for (Uint32 lIndex = 0; lIndex < InData.EntryCount(); ++lIndex)
@@ -150,8 +146,8 @@ namespace Opaax::Editor
 
         MoverEntry& lEntry = lData.Entries[InIndex];
 
-        // REVERTED, not merely refused: the drawer already wrote the duplicate into the document,
-        // so leaving it would ship a mover where one mode can never be reached.
+        // Reverted, not just refused: the drawer already wrote the duplicate, and a duplicate name makes
+        // one mode unreachable.
         if (lEntry.Name.IsValid() && NameTakenByOther(lData, lEntry.Name, InIndex))
         {
             OPAAX_LOG(LogEditorMoverDocument, Warn,
@@ -162,8 +158,7 @@ namespace Opaax::Editor
             return false;
         }
 
-        // A tuning arrived on an unnamed entry: name it from the file stem so dropping one in is
-        // ONE action. Skipped when that name is taken, for the reason above.
+        // A tuning dropped on an unnamed entry is named from the file stem (unless that name is taken).
         if (!lEntry.Name.IsValid() && !lEntry.ModeAsset.IsEmpty())
         {
             const OpaaxStringView lStem = PathString::Stem(lEntry.ModeAsset.Path);
@@ -184,9 +179,8 @@ namespace Opaax::Editor
             return false;   // a gesture that changed nothing is not a step
         }
 
-        // A RENAME CARRIES THE DEFAULT WITH IT. Without this, renaming the default entry leaves the
-        // default naming something that no longer exists — which does not fail, it falls through to
-        // the FIRST entry, so the mover silently moves a different way than it says it does.
+        // A rename carries the default with it; otherwise the default names nothing and silently falls
+        // back to the first entry.
         OpaaxStringID lDefault = lData.DefaultMode;
 
         if (lDefault.IsValid() && lDefault == InBefore.Name && lEntry.Name.IsValid())
@@ -194,7 +188,7 @@ namespace Opaax::Editor
             lDefault = lEntry.Name;
         }
 
-        // The list AFTER the fix-ups, with InBefore put back in place as the undo target.
+        // The list after the fix-ups, with InBefore restored as the undo target.
         TDynArray<MoverEntry> lAfter  = lData.Entries;
         TDynArray<MoverEntry> lBefore = lData.Entries;
         lBefore[InIndex] = InBefore;
@@ -243,8 +237,7 @@ namespace Opaax::Editor
 
         InContext.MoverDocument.MarkSaved();
 
-        // AND PUBLISH IT ([[L75]]): without this an entity already holding this mover keeps
-        // resolving names against the first parse.
+        // Reload the resource, so an entity already using this mover sees the change.
         ResourceOps::SavedToDisk<MoverResource>(InContext, InContext.MoverDocument.AbsPath());
 
         return true;
@@ -259,9 +252,7 @@ namespace Opaax::Editor
 
         const MoveModeData& lAfter = InContext.MoveModeDocument.GetData();
 
-        // Compared through the FILE's own serializer rather than field by field: it is the one
-        // definition of "different" that cannot drift as fields are added, and it is exactly what
-        // IsDirty already asks.
+        // Compared through the file serializer: one definition of "different" (the same one IsDirty uses).
         if (MoveModeFile::Serialize(lAfter) == MoveModeFile::Serialize(InBefore))
         {
             return false;   // a gesture that changed nothing is not a step

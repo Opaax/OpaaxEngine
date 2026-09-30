@@ -11,8 +11,7 @@ namespace Opaax
     {
         const nlohmann::json lJson = InData;
 
-        // dump(4) — the same indent maps and levels use, and nlohmann's object is sorted, so a
-        // hand-authored file that reads correctly also WRITES back byte-identical.
+        // dump(4), sorted keys.
         return OpaaxString(lJson.dump(4).c_str());
     }
 
@@ -24,7 +23,7 @@ namespace Opaax
             return false;
         }
 
-        // The SUCCESS branch, not just the failures ([[L15]]).
+        // Log success too.
         OPAAX_LOG(LogSpriteSheetFile, Info, "Saved {} frame(s) to '{}'",
                   InData.FrameCount(), InAbsPath.CStr());
         return true;
@@ -34,15 +33,14 @@ namespace Opaax
     {
         const OpaaxString lText = FileIO::ReadAllText(InAbsPath);
 
-        // FileIO answers "" for a missing file and for an empty one alike; neither is a sheet.
+        // Missing or empty file: not a sheet.
         if (lText.IsEmpty())
         {
             OPAAX_LOG(LogSpriteSheetFile, Error, "Sheet '{}' is missing, empty or unreadable", InAbsPath.CStr());
             return false;
         }
 
-        // parse(input, callback, allow_exceptions): no callback, NO EXCEPTIONS — a malformed file is
-        // a return value here, exactly as MapJson reads one.
+        // No exceptions: a malformed file is a return value.
         const nlohmann::json lJson = nlohmann::json::parse(lText.CStr(), nullptr, false);
 
         if (lJson.is_discarded() || !lJson.is_object())
@@ -51,9 +49,7 @@ namespace Opaax
             return false;
         }
 
-        // _WITH_DEFAULT keeps a default for every absent key, so an older file simply lacks the
-        // fields it predates. A WRONG-TYPED value still throws, which is what this catch is for —
-        // OutData is untouched on the way out.
+        // Missing keys keep their defaults. Wrong-typed values throw; OutData is untouched then.
         try
         {
             OutData = lJson.get<SpriteSheetData>();

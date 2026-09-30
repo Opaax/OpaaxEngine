@@ -26,11 +26,6 @@ TEST_CASE("MakeWindowProps: maps the engine config window fields 1:1")
     CHECK(lProps.Mode == EWindowMode::Borderless);
 }
 
-// NOTE: the WindowModeFromString cases are GONE with the function. The config field is an
-// EWindowMode now, so "an unknown mode" is not a state MakeWindowProps can be handed — the parse,
-// and the fallback it needed, moved into the generic enum reader (Core/Reflection/EnumTests.cpp),
-// where an unknown LABEL throws instead of quietly becoming Windowed.
-
 TEST_CASE("IWindowManager: the null manager owns no window and is never null")
 {
     AppServiceLocator lLocator;

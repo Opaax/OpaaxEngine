@@ -1,10 +1,6 @@
-// Suite: EngineConfigData through the GENERIC codec — the one every config now shares with every
-// component (NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT + TConfigCodec's default).
-//
-// The behaviour these cases pin is the behaviour the deleted hand-written parser had, and the
-// reason it could be deleted: missing keys keep defaults, malformed input keeps defaults, and the
-// round trip is exact. What moved is WHERE tolerance lives — the codec throws, TConfig::Load
-// catches, so it is stated once instead of per field.
+// Suite: EngineConfigData through the generic codec (the same macro as components).
+// Missing keys keep defaults, malformed input keeps defaults, and the round trip is exact.
+// The codec throws; TConfig::Load catches.
 #include <doctest.h>
 
 #include <cstring>
@@ -53,9 +49,7 @@ TEST_CASE("EngineConfigData: full schema reads every group")
 
 TEST_CASE("EngineConfigData: an unknown group is IGNORED, not a failure")
 {
-    // The Assets / Log / Physics groups were deleted on 2026-08-21 (no reader). A config file
-    // written before that still opens: nlohmann skips keys the struct does not declare, so a
-    // stale file loses only the values that never did anything.
+    // A config with groups that no longer exist still opens (unknown keys are skipped).
     const EngineConfigData lData = Parse(R"({
         "Window":  {"Width":1920},
         "Assets":  {"EngineRoot":"E/A"},
@@ -103,7 +97,7 @@ TEST_CASE("EngineConfigData: the file NESTS because the C++ nests")
 }
 
 // =============================================================================
-// Tolerance — moved OUT of the parser and into TConfig::Load, once
+// Tolerance — in TConfig::Load
 // =============================================================================
 TEST_CASE("TConfig::Load: a file it cannot parse keeps the defaults and answers FALSE")
 {
@@ -111,8 +105,7 @@ TEST_CASE("TConfig::Load: a file it cannot parse keeps the defaults and answers 
     CHECK_THROWS(Parse("{ not json"));
     CHECK_THROWS(Parse(R"({"Window":{"Width":"not a number"}})"));
 
-    // LOAD is where that becomes policy: a config file nobody can read must not take a boot down
-    // (**BO4c**'s rule, one level lower), and the false is what ConfigSystem turns into a Warn.
+    // Load turns it into policy: an unreadable config must not stop the boot (ConfigSystem warns).
     const fs::path lPath = fs::temp_directory_path() / "OpaaxConfigTolerance.config";
     FileIO::WriteAllText(OpaaxString(lPath.string().c_str()), OpaaxString("{ not json at all"));
 
@@ -140,9 +133,7 @@ TEST_CASE("TConfig::Load: a file it CAN parse answers true")
 
 TEST_CASE("TConfig::Load: a misspelled ENUMERATOR is refused like any other unreadable value")
 {
-    // The composed case: an enum field went from string to type, so a hand-edited typo is no longer
-    // quietly corrected to Windowed by a FromString nobody watches — it is the same event as a
-    // string where a number belongs, and ConfigSystem warns naming the file.
+    // A typo in an enum value is refused like any unreadable value (ConfigSystem warns).
     const fs::path lPath = fs::temp_directory_path() / "OpaaxConfigBadEnum.config";
     FileIO::WriteAllText(OpaaxString(lPath.string().c_str()),
                          OpaaxString(R"({"Window":{"Width":900,"Mode":"Borderles"}})"));
@@ -158,7 +149,7 @@ TEST_CASE("TConfig::Load: a misspelled ENUMERATOR is refused like any other unre
 }
 
 // =============================================================================
-// Change notification — a reader is TOLD, instead of copying at boot or polling.
+// Change notification
 // =============================================================================
 
 namespace
@@ -171,7 +162,7 @@ namespace
 
     OpaaxString TempConfigPath(const char* InName)
     {
-        return Utf8::FromFsPath(fs::temp_directory_path() / InName);   // I7: never via CStr()
+        return Utf8::FromFsPath(fs::temp_directory_path() / InName);
     }
 }
 
@@ -192,7 +183,7 @@ TEST_CASE("IConfig::NotifyChanged: every subscriber is called exactly once")
 
 TEST_CASE("IConfig::OnChanged: after RemoveAll(owner) the subscriber is no longer called")
 {
-    // The unsubscribe every engine subsystem owes at Shutdown — the config outlives it (I5).
+    // The unsubscribe every subsystem must do in Shutdown (the config outlives it).
     ProbeConfig   lProbe;
     ChangeCounter lMember;
 
@@ -260,7 +251,7 @@ TEST_CASE("TConfig::Load: a MISSING file writes the defaults and does NOT notify
 }
 
 // =============================================================================
-// NeedRestart is honest — on the fields read at boot, OFF the ones a notify applies live.
+// NeedRestart is set on the fields read at startup, not on the ones applied live.
 // =============================================================================
 
 namespace

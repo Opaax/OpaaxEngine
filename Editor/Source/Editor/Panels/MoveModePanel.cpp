@@ -11,8 +11,8 @@
 
 #include <imgui.h>
 
-#include <cstring>   // strcmp — IsRelevant tests a property's NAME
-#include <tuple>     // std::apply — the property fold, opened up so a field can be skipped
+#include <cstring>   // strcmp
+#include <tuple>     // std::apply
 
 using namespace Opaax;
 
@@ -21,16 +21,11 @@ namespace Opaax::Editor
     namespace
     {
         /**
-         * Whether InField is a knob InMode actually reads.
-         *
-         * The one place the editor knows what a mode uses. It is a NAME test rather than a registry
-         * lookup because the registry answers with an IMoverMode, which has no opinion about
-         * presentation — and a mode a game registers is unknown here, so it falls through to
-         * showing EVERYTHING, which is the honest answer for a mode this editor has never met.
+         * Whether InMode uses InField. Tested by name; an unknown mode (e.g. a game's) shows everything.
          */
         bool IsRelevant(const OpaaxStringID InMode, const char* InField)
         {
-            // Flight has no ground under it: gravity, friction, jumping and slopes are all silent.
+            // Flight has no ground: gravity, friction, jumping and slopes do not apply.
             if (InMode == OPAAX_ID("FlyMove"))
             {
                 return std::strcmp(InField, "MaxSpeed") == 0
@@ -84,9 +79,7 @@ namespace Opaax::Editor
     {
         const OpaaxStringID lMode = InData.Mode;
 
-        // DrawProperties' own fold, opened up so each field can be SKIPPED: which knobs matter
-        // depends on the mode, and hiding the ones it ignores is the difference between a tuning
-        // panel and a list of every float the format can hold.
+        // DrawProperties' fold, done by hand so fields the mode ignores can be skipped.
         std::apply([this, lMode, &InData](const auto&... lProperties)
                    {
                        ([&]
@@ -99,8 +92,8 @@ namespace Opaax::Editor
                    },
                    MoveModeData::GetProperties());
 
-        // The Inspector's bracket: a TPropertyDrawer writes straight through a reference and cannot
-        // report that it did, so the edges of "any item is active" open and close one step.
+        // Like the Inspector: a drawer writes through a reference without reporting it, so an undo step
+        // opens when an item becomes active and closes when none is.
         const bool lItemActive = ImGui::IsAnyItemActive();
 
         if (lItemActive && !m_bWasItemActive)

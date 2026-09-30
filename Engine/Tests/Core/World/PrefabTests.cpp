@@ -1,13 +1,7 @@
-// Suite: ⑦-C P1 — the prefab as a document (PrefabJson / PrefabFile / PrefabResource) and as a
-// placement (PrefabFactory::BuildInstance -> MapFactory::Instantiate).
-//
-// THE GATE IS "TWICE INTO ONE WORLD". A prefab file carries the guids it authored, and
-// World::CreateEntityWithGuid REFUSES one already live (WM3) — so before Guid::Derive existed, a
-// second instance of one prefab was not merely wrong, it silently did not appear. Every other case
-// here is scaffolding around that one.
-//
-// Runs against a UNIQUE directory under the OS temp dir, created and removed per case — the suite
-// never touches the repo, and never the editor's own files ([[L20]]).
+// Suite: the prefab as a document (PrefabJson / PrefabFile / PrefabResource) and as a placement
+// (PrefabFactory::BuildInstance -> MapFactory::Instantiate). Main case: one prefab placed twice in
+// one world (World::CreateEntityWithGuid refuses duplicate guids, hence Guid::Derive).
+// Uses a unique directory under the OS temp dir, created and removed per case.
 #include <doctest.h>
 
 #include <filesystem>
@@ -79,7 +73,7 @@ namespace
     }
 
     // A two-entity prefab, authored the way one is CREATED: by capturing entities out of a world
-    // and dropping their map membership. That is P2's verb; doing it by hand here keeps this suite
+    // and dropping their map membership. BuildPrefab does it; doing it by hand here keeps this suite
     // independent of the editor.
     PrefabData MakePrefab(const ComponentRegistry& InRegistry)
     {
@@ -97,7 +91,7 @@ namespace
         PrefabData lPrefab;
         lPrefab.Entities = Move(lCaptured.Entities);
 
-        // A prefab's entities belong to no map (**WM2**) — an instance stamps one.
+        // A prefab's entities belong to no map — an instance stamps one.
         for (EntityData& lEntity : lPrefab.Entities)
         {
             lEntity.OwnerMap = MapId();
@@ -138,7 +132,7 @@ TEST_CASE("Prefab: one prefab instantiated TWICE into one world gives two live i
     REQUIRE(lSecond.EntityCount() == 2);
 
     // Both go in through the UNCHANGED MapFactory::Instantiate — the whole point of doing the
-    // remap as a MapData -> MapData pass in front of it (**K2**).
+    // remap as a MapData -> MapData pass in front of it.
     CHECK(MapFactory::Instantiate(lFirst,  lWorld, lRegistry) == 2);
     CHECK(MapFactory::Instantiate(lSecond, lWorld, lRegistry) == 2);
 
@@ -208,7 +202,7 @@ TEST_CASE("Prefab: the two instances are TOLD APART by InstanceId, not by the pr
 
 TEST_CASE("Prefab: BuildInstance is REPEATABLE — the same instance id lands on the same entities")
 {
-    // What makes re-applying a changed prefab (⑦-C P4) safe: it must find the entities it already
+    // What makes re-applying a changed prefab safe: it must find the entities it already
     // created rather than making a second set beside them.
     ComponentRegistry lRegistry;
     FillRegistry(lRegistry);
@@ -244,7 +238,7 @@ TEST_CASE("Prefab: an instance's entities are stamped into the TARGET map")
     CHECK(lInstance.Id == lMap);
     for (const EntityData& lEntity : lInstance.Entities)
     {
-        // An invalid OwnerMap reads as runtime-spawned (**WM2**), and no Save would ever write it —
+        // An invalid OwnerMap reads as runtime-spawned, and no Save would ever write it —
         // a placement that silently does not persist.
         CHECK(lEntity.OwnerMap == lMap);
     }
@@ -274,7 +268,7 @@ TEST_CASE("Prefab: BuildInstance REFUSES rather than building something untracea
 TEST_CASE("Prefab: a marker already in the FILE is replaced, never doubled")
 {
     // A prefab authored from entities that were themselves an instance carries a stale marker.
-    // Composing the two is nesting (⑦-C P7); until then the outer instance owns the entity, and
+    // Composing the two is nesting; until then the outer instance owns the entity, and
     // what must never happen is the payload appearing twice on one entity.
     ComponentRegistry lRegistry;
     FillRegistry(lRegistry);
@@ -302,7 +296,7 @@ TEST_CASE("Prefab: a marker already in the FILE is replaced, never doubled")
 }
 
 // =============================================================================
-// BuildPrefab — the other direction (⑦-C P2)
+// BuildPrefab — the other direction
 // =============================================================================
 TEST_CASE("Prefab: BuildPrefab clears OwnerMap and KEEPS the guids")
 {
@@ -321,7 +315,7 @@ TEST_CASE("Prefab: BuildPrefab clears OwnerMap and KEEPS the guids")
     REQUIRE(lPrefab.EntityCount() == 2);
     for (const EntityData& lEntity : lPrefab.Entities)
     {
-        // Belongs to no map — an instance is what stamps one (**WM2**).
+        // Belongs to no map — an instance is what stamps one.
         CHECK_FALSE(lEntity.OwnerMap.IsValid());
     }
 
@@ -336,7 +330,7 @@ TEST_CASE("Prefab: BuildPrefab clears OwnerMap and KEEPS the guids")
 TEST_CASE("Prefab: BuildPrefab STRIPS an existing instance marker rather than baking it in")
 {
     // Making a prefab out of entities that were themselves an instance must not produce a file
-    // whose entities claim to belong to a DIFFERENT prefab. Nesting is P7; flattening is the
+    // whose entities claim to belong to a DIFFERENT prefab. Nesting is separate; flattening is the
     // honest answer until then.
     ComponentRegistry lRegistry;
     FillRegistry(lRegistry);
@@ -418,7 +412,7 @@ TEST_CASE("Prefab: the FULL round trip — world entities -> prefab -> file -> t
 }
 
 // =============================================================================
-// PrefabFold — entities <-> instance records (⑦-C P3)
+// PrefabFold — entities <-> instance records
 // =============================================================================
 namespace
 {
@@ -511,7 +505,7 @@ TEST_CASE("PrefabFold: Fold -> Expand reproduces the entities, guids included")
     REQUIRE(lCaptured.EntityCount() == 2);
     CHECK(lCaptured.InstanceCount() == 0);
 
-    // The guids came back IDENTICAL, which is what an inter-entity reference survives on (**WM3**)
+    // The guids came back IDENTICAL, which is what an inter-entity reference survives on
     // — and it works because Expand re-derives rather than re-mints.
     std::unordered_set<Guid> lAfter;
     for (const EntityData& lEntity : lCaptured.Entities) { lAfter.insert(lEntity.Id); }
@@ -676,7 +670,7 @@ TEST_CASE("MapJson: a map with placements round-trips, and one WITHOUT is byte-i
     CHECK(lParsed.Instances[0].Prefab == OpaaxString("Prefabs/Gun.opaaxprefab"));
     CHECK(lParsed.Instances[0].InstanceId == lCaptured.Instances[0].InstanceId);
 
-    // The fixed point MP6 gates the whole layer on.
+    // The fixed point: the same bytes again.
     CHECK(MapJson::Serialize(lParsed) == lText);
 
     // AND the key is OMITTED when there is nothing to say, so every existing map on disk is
@@ -718,7 +712,7 @@ TEST_CASE("PrefabJson: round trip preserves entities, names and components")
 
     REQUIRE(lParsed.EntityCount() == lPrefab.EntityCount());
 
-    // Serializing the PARSED copy must give the same bytes — the fixed-point property MP6 gates
+    // Serializing the PARSED copy must give the same bytes — the fixed-point property
     // the map format on, asserted here directly.
     CHECK(PrefabJson::Serialize(lParsed) == lText);
 }
@@ -790,11 +784,11 @@ TEST_CASE("PrefabResource: a missing file resolves to NULL, never to an empty pr
 }
 
 // =============================================================================
-// §HR — the link derives with the identity it names
+// The link derives with the identity it names
 // =============================================================================
 namespace
 {
-    // A turret: a barrel PARENTED under its base, captured the way P2 captures — links intact.
+    // A turret: a barrel PARENTED under its base, captured like BuildPrefab expects — links intact.
     PrefabData MakeTurret(const ComponentRegistry& InRegistry, Guid& OutBase, Guid& OutBarrel)
     {
         World lAuthoring("Authoring");
@@ -814,7 +808,7 @@ namespace
     }
 }
 
-TEST_CASE("Prefab §HR: a turret placed TWICE — each barrel hangs under ITS base, on derived guids, and draws there")
+TEST_CASE("Prefab: a turret placed TWICE — each barrel hangs under ITS base, on derived guids, and draws there")
 {
     ComponentRegistry lRegistry;
     FillRegistry(lRegistry);
@@ -855,7 +849,7 @@ TEST_CASE("Prefab §HR: a turret placed TWICE — each barrel hangs under ITS ba
     }
 }
 
-TEST_CASE("PrefabFold §HR: an untouched placement folds to a BARE record — no phantom parent override")
+TEST_CASE("PrefabFold: an untouched placement folds to a BARE record — no phantom parent override")
 {
     ComponentRegistry lRegistry;
     FillRegistry(lRegistry);
@@ -871,13 +865,13 @@ TEST_CASE("PrefabFold §HR: an untouched placement folds to a BARE record — no
     MapData lCaptured = PlaceAndCapture(lWorld, lTurret, lRegistry, "Prefabs/Turret.opaaxprefab", Guid::New(), lMap);
 
     // The world's barrel names a DERIVED base; the file's names the template. Diffed against the
-    // raw template that is an override on every barrel of every placement — the L89 shape.
+    // raw template that is an override on every barrel of every placement.
     REQUIRE(PrefabFold::Fold(lCaptured, lResolver, lRegistry) == 1);
     REQUIRE(lCaptured.InstanceCount() == 1);
     CHECK(lCaptured.Instances[0].Overrides.empty());
 }
 
-TEST_CASE("PrefabFold §HR: a barrel DETACHED in one placement is one `parent` override, and comes back detached")
+TEST_CASE("PrefabFold: a barrel DETACHED in one placement is one `parent` override, and comes back detached")
 {
     ComponentRegistry lRegistry;
     FillRegistry(lRegistry);
@@ -919,7 +913,7 @@ TEST_CASE("PrefabFold §HR: a barrel DETACHED in one placement is one `parent` o
     CHECK(EntityHierarchy::WorldTransform(lBarrelAgain).Position.y == doctest::Approx(lWorldBefore.Position.y));
 }
 
-TEST_CASE("Prefab §HR: BuildPrefab drops a link to an entity OUTSIDE the set, and the roots stay roots")
+TEST_CASE("Prefab: BuildPrefab drops a link to an entity OUTSIDE the set, and the roots stay roots")
 {
     ComponentRegistry lRegistry;
     FillRegistry(lRegistry);
@@ -937,7 +931,7 @@ TEST_CASE("Prefab §HR: BuildPrefab drops a link to an entity OUTSIDE the set, a
     CHECK_FALSE(lPrefab.Entities[0].Parent.IsValid());
 }
 
-TEST_CASE("Prefab §HR — THE GATE: a turret file placed twice, one ROOT moved, saved and reloaded")
+TEST_CASE("Prefab — THE GATE: a turret file placed twice, one ROOT moved, saved and reloaded")
 {
     // Through real files, both formats. Two records; the untouched placement bare; the moved one
     // carrying ONE Transform override on its root and nothing on its barrel — which rides along

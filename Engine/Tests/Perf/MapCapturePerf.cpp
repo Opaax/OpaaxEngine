@@ -1,18 +1,11 @@
-// Suite: the cost of the SNAPSHOT CORE, measured on the three paths that actually pay it.
-//
+// Suite: the cost of the snapshot core on the three paths that pay it:
 //   DIRTY CHECK  CaptureMap + SerializeCompact — EditorLevelDocument::RefreshDirty, per mounted map.
-//   MAP SAVE     CaptureMap + Serialize        — MapFile::Save, indented because a file is read.
-//   PIE CLONE    CaptureWorld alone            — WorldManager::CloneWorld, which never makes text.
+//   MAP SAVE     CaptureMap + Serialize        — MapFile::Save.
+//   PIE CLONE    CaptureWorld alone            — WorldManager::CloneWorld.
+// Serialization is most of the cost of the first two. The numbers say at which entity count each
+// stops fitting in a frame.
 //
-// Capture ALONE would understate the first two by most of their cost: turning MapData into text is
-// two thirds of a check, and it is not optional there — the check IS a text comparison.
-//
-// WHY IT IS MEASURED: the check is gated on World::GetRevision() (MP5), so an idle editor pays
-// nothing — but every pass that DOES run costs this, and it grows with the level. The clone is not
-// gated by anything and cannot be: pressing Play captures the whole world. The numbers here say at
-// what entity count each stops fitting beside a frame.
-//
-// The whole suite is SKIPPED by default. Run in RELEASE via:  build.bat bench
+// Skipped by default. Run in Release with: build.bat bench
 #include <cstdio>
 #include <string>
 
@@ -30,7 +23,7 @@ using namespace Opaax;
 
 namespace
 {
-    // Four PODs, shaped like real authoring components: nlohmann by ADL, no base class (I8).
+    // Four PODs, shaped like real authoring components: nlohmann by ADL, no base class.
     // FOUR registered on purpose, TWO carried per entity — a capture pays a Has() probe for every
     // registered type on every entity, including the ones it does not have.
     struct BenchTransform

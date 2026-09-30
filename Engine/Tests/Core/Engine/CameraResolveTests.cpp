@@ -1,12 +1,5 @@
-// Suite: CameraManager::Resolve — which camera frames a world (①).
-//
-// Resolve is static and pure precisely so this suite can exist: it needs a World and nothing
-// else, no engine to boot and no GL context. That is also the claim the whole placement rests
-// on — a camera resolve has no per-world state, which is why CameraManager is one ENGINE
-// subsystem instead of one instance per world.
-//
-// The POSITIVE branch is what this pins. A smoke log can show the "no camera" warning fire,
-// but "the right camera won and these were its numbers" has nowhere to show up except here.
+// Suite: CameraManager::Resolve — which camera frames a world. Resolve is static and pure,
+// so it only needs a World.
 #include <doctest.h>
 
 #include "Engine/Subsystems/Camera/CameraManager.h"
@@ -26,9 +19,7 @@ TEST_CASE("Resolve: a world with no camera answers the DEFAULT frame, not an emp
     CHECK(lResolution.Count == 0u);
     CHECK(lResolution.Entity == ENTITY_NONE);
 
-    // The default view IS the fallback — the frame the engine drew before cameras existed.
-    // If this ever answered a zeroed CameraView the projection would collapse and the viewport
-    // would go black, which is the failure BO4c's rule exists to prevent.
+    // The default view is the fallback; a zeroed CameraView would give a black viewport.
     CHECK(lResolution.View.Position.x == doctest::Approx(0.f));
     CHECK(lResolution.View.Position.y == doctest::Approx(0.f));
     CHECK(lResolution.View.OrthoSize  == doctest::Approx(300.f));
@@ -70,8 +61,7 @@ TEST_CASE("Resolve: entities WITHOUT a camera are not counted")
 
 TEST_CASE("Resolve: several cameras — one wins and the COUNT reports the rest")
 {
-    // The count is not decoration: it is the whole of the "priority is not built" contract.
-    // Losing it would turn a world with three cameras into a silent coin flip.
+    // The count matters: it is how several cameras get reported.
     World lWorld("Crowded");
 
     for (int lIndex = 0; lIndex < 3; ++lIndex)
@@ -86,16 +76,14 @@ TEST_CASE("Resolve: several cameras — one wins and the COUNT reports the rest"
     CHECK(lResolution.Count == 3u);
     REQUIRE(lResolution.Entity != ENTITY_NONE);
 
-    // Whichever one won, the view is ONE OF THEM and never a blend or a default. Asserting the
-    // specific winner would pin entt's storage order, which is not a promise this rule makes.
+    // The winner is one of them (which one depends on entt's storage order).
     Entity lWinner = Entity(lResolution.Entity, &lWorld);
     CHECK(lResolution.View.OrthoSize == doctest::Approx(lWinner.Get<CameraComponent>().OrthoSize));
 }
 
 TEST_CASE("Resolve: a camera REMOVED falls back to the default rather than the last value")
 {
-    // The mid-play deletion case. Update writes the resolved view unconditionally, so this is
-    // what stops a destroyed camera from freezing the frame on its final position.
+    // Update always writes the resolved view, so a deleted camera does not freeze the frame.
     World lWorld("Transient");
 
     Entity lCamera = lWorld.CreateEntity("MainCamera");

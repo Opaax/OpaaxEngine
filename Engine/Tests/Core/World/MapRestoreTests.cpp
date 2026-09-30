@@ -1,13 +1,6 @@
-// Suite: the RESTORE half of the snapshot core — MapSerializer::CaptureEntities <-> MapFactory::Restore.
-//
-// This is what the editor's undo replays, so the gate is the one the map format already trusts:
-// capture a set of entities, edit the world, restore, capture again — and the two captures must
-// serialize BYTE-FOR-BYTE the same (MP6's standard, applied to a subset rather than a file).
-//
-// Restore answers a different question from Instantiate and the difference is the point: Instantiate
-// REFUSES a Guid that is already live, which is right for loading a map and wrong for putting one
-// back. The cases below pin all three of Restore's jobs — recreate what is gone, overwrite what is
-// there, and take off what the record does not name.
+// Suite: MapSerializer::CaptureEntities <-> MapFactory::Restore (what the editor's undo replays).
+// Capture, edit, restore, capture again: the two captures must serialize byte for byte the same.
+// Restore recreates what is gone, overwrites what is there, and removes what the record does not name.
 #include <doctest.h>
 
 #include "World/Components/ComponentRegistry.h"
@@ -259,7 +252,7 @@ TEST_CASE("Restore: an ESSENTIAL component the record lacks is refused and STAYS
 
     CHECK(MapFactory::Restore(lData, lWorld, lRegistry) == 1u);
 
-    // I17 — every entity has one, so removing it must be impossible rather than merely discouraged.
+    // Every entity has one, so removing it must be impossible rather than merely discouraged.
     CHECK(lHero.Has<TransformComponent>());
 }
 

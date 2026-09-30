@@ -21,9 +21,8 @@ namespace Opaax
     };
 }
 
-// Stamp on each *interface* (IPlatform, IPaths, ...). NOTE: StaticTypeID is
-// declared here but DEFINED out-of-line in the interface's .cpp — that gives one
-// tag shared across the DLL/exe boundary (see your dll-static-template-hazard note).
+// Add to each service interface (IPlatform, IPaths, ...). Define StaticTypeID in the
+// interface's .cpp so the ID is shared across the DLL/exe boundary.
 #define OPAAX_SERVICE_TYPE(Interface)                                       \
 static ::Opaax::ServiceTypeID StaticTypeID() noexcept;                  \
 ::Opaax::ServiceTypeID GetTypeID() const noexcept override              \

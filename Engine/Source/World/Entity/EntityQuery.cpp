@@ -1,8 +1,8 @@
 #include "World/Entity/EntityQuery.h"
 
-#include "Core/Maths/Maths.h"   // DegreesToRadians — the transform authors degrees
+#include "Core/Maths/Maths.h"   // DegreesToRadians
 
-#include "Renderer/Text/Text2D.h"   // EstimateExtent — a text's box with no face to ask
+#include "Renderer/Text/Text2D.h"   // EstimateExtent
 
 #include "World/Components/DummyComponent.h"
 #include "World/Components/SpriteComponent.h"
@@ -17,24 +17,23 @@ namespace Opaax
 {
     namespace
     {
-        // Below every drawn thing, so an icon never wins a click from a sprite behind it.
+        // Below every drawn thing, so an icon never takes a click from a sprite.
         constexpr Int32 RANK_ANCHOR_ONLY = INT32_MIN;
 
         /**
-         * One comparable integer per (layer, order). The layer step is 65536 and OrderInLayer is an
-         * Int16, so the fine key can never reach into the next band.
+         * One integer per (layer, order), for sorting.
          */
         constexpr Int32 MakeRank(ERenderLayer InLayer, Int16 InOrder) noexcept
         {
             return (static_cast<Int32>(InLayer) << 16) + static_cast<Int32>(InOrder);
         }
 
-        /** Where this entity sits in the renderer's order — the highest of what it draws. */
+        /** The entity's draw order (the highest of what it draws). */
         Int32 DrawRank(Entity& InEntity)
         {
             Int32 lRank = RANK_ANCHOR_ONLY;
 
-            // The value RendererManager submits a quad with: DrawQuad's own defaults.
+            // Same defaults as DrawQuad.
             if (InEntity.Has<DummyComponent>())
             {
                 lRank = MakeRank(ERenderLayer::Default, 0);
@@ -65,11 +64,11 @@ namespace Opaax
 
         if (InEntity.TryGet<TransformComponent>() == nullptr)
         {
-            // Only reachable for an entity built outside CreateEntity — every entity gets one.
+            // Only for an entity not made by CreateEntity (every entity has one).
             return false;
         }
 
-        // WORLD, walked (§HR): a child is clickable where it draws, not at its local offset.
+        // World pose: a child is clicked where it is drawn.
         const TransformComponent lWorldXf = EntityHierarchy::WorldTransform(InEntity);
 
         const float lRotation = Maths::DegreesToRadians(lWorldXf.Rotation);
@@ -77,9 +76,7 @@ namespace Opaax
         bool     lHasExtent = false;
         Bounds2D lBounds;
 
-        // The SAME multiply RendererManager applies (③) — a scaled entity has to be clickable at the
-        // size it draws, and this is the one body that keeps picking, the outline, focus-selected and
-        // the marquee agreeing about that (SEL1).
+        // Same scale as the renderer, so the clickable size matches the drawn size.
         const Vector2F lScale = lWorldXf.Scale;
 
         if (const DummyComponent* lQuad = InEntity.TryGet<DummyComponent>())
@@ -90,8 +87,7 @@ namespace Opaax
 
         if (const SpriteComponent* lSprite = InEntity.TryGet<SpriteComponent>())
         {
-            // Hit-testable whether or not it is VISIBLE: an author has to be able to select a
-            // sprite they just hid in order to show it again.
+            // Clickable even when hidden, so it can be selected and shown again.
             const Bounds2D lSpriteBounds =
                 Bounds2D::FromCenterSizeRotated(lWorldXf.Position, lSprite->Size * lScale, lRotation);
 
@@ -101,13 +97,8 @@ namespace Opaax
 
         if (const TextComponent* lText = InEntity.TryGet<TextComponent>())
         {
-            // TOP-LEFT ANCHORED, unlike every other renderable: the transform is where the first
-            // line STARTS, and the text runs right and down from it. So the box has to be offset by
-            // half its own extent rather than centred on the position.
-            //
-            // ESTIMATED, not measured — this query is headless by design and cannot reach the face
-            // cache. The estimate is deliberately generous so the whole string stays clickable
-            // (Text2D::EstimateExtent).
+            // Text is anchored top-left, so the box is offset by half its size.
+            // The size is an estimate (no font access here), on the generous side.
             TextDrawParams lParams;
             lParams.Size            = lText->Size * lScale.x;
             lParams.LineHeightScale = lText->LineHeightScale;
@@ -168,8 +159,7 @@ namespace Opaax
         EntityID lBest     = ENTITY_NONE;
         Int32    lBestRank = 0;
 
-        // EntityMeta is the complete all-entities view (CreateEntityWithGuid emplaces it), which is
-        // what makes "everything under the cursor" mean everything.
+        // Every entity has an EntityMeta.
         InWorld.Each<EntityMeta>([&](EntityID InId, const EntityMeta&)
         {
             Entity   lEntity{ InId, &InWorld };
@@ -182,8 +172,7 @@ namespace Opaax
 
             const Int32 lRank = DrawRank(lEntity);
 
-            // >= so a tie goes to the LAST iterated: equal sort keys resolve by submission order in
-            // the batch, and submission order is this order.
+            // >= : a tie goes to the last one, like draw order.
             if (lBest == ENTITY_NONE || lRank >= lBestRank)
             {
                 lBest     = InId;

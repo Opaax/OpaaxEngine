@@ -7,13 +7,7 @@
 namespace Opaax
 {
     // =============================================================================
-    // Bounds2D — an axis-aligned box in world units, as a centre and a HALF-extent. Centre-based
-    //   because everything that produces one is centre-based: a quad, a sprite and DebugDraw::DrawBox
-    //   all take a centre and a full size.
-    //
-    //   Stateless value type, so header-only and NOT OPAAX_API (I6). It answers the four questions
-    //   the editor asks of an entity: is this point inside it (click), does it overlap this region
-    //   (marquee), what box covers both of us (focus on several), and what box did this drag draw.
+    // Bounds2D — axis-aligned box in world units: centre and half-extent.
     // =============================================================================
     struct Bounds2D
     {
@@ -25,12 +19,7 @@ namespace Opaax
         // =============================================================================
 
         /**
-         * A HALF-EXTENT IS A DISTANCE AND IS NEVER SIGNED — hence the fabs, which is load-bearing.
-         *
-         * A negative `Scale` is a legal flip and makes `Size * Scale` negative, which the RENDERER
-         * wants (mirrored corners mirror the texture). A box does not: with a negative half-extent
-         * `Contains` compares `fabs(...) <= negative`, which is false for every point, so the entity
-         * silently stops being clickable, marquee-selectable and focusable.
+         * Half-extent is always positive: a negative Scale (flip) must not break Contains.
          */
         static Bounds2D FromCenterSize(const Vector2F& InCenter, const Vector2F& InSize) noexcept
         {
@@ -38,13 +27,7 @@ namespace Opaax
         }
 
         /**
-         * The AABB that covers a rotated box — NOT the box itself.
-         *
-         * A picked sprite draws rotated, so its axis-aligned cover has to grow with the angle or a
-         * turned sprite would stop being clickable at its own corners.
-         *
-         * Unsigned for the same reason as FromCenterSize — the cos/sin were already fabs'd, and the
-         * size has to be too or a flipped entity loses its bounds entirely.
+         * The axis-aligned box that covers a rotated box.
          */
         static Bounds2D FromCenterSizeRotated(const Vector2F& InCenter, const Vector2F& InSize,
                                               float InRotationRad) noexcept
@@ -57,7 +40,7 @@ namespace Opaax
             return Bounds2D{ InCenter, { lHx * lCos + lHy * lSin, lHx * lSin + lHy * lCos } };
         }
 
-        /** Two opposite corners in any order — a drag runs in any of four directions. */
+        /** From two opposite corners, in any order. */
         static Bounds2D FromMinMax(const Vector2F& InA, const Vector2F& InB) noexcept
         {
             const Vector2F lMin{ InA.x < InB.x ? InA.x : InB.x, InA.y < InB.y ? InA.y : InB.y };
@@ -74,24 +57,24 @@ namespace Opaax
         Vector2F Min() const noexcept { return { Center.x - HalfExtent.x, Center.y - HalfExtent.y }; }
         Vector2F Max() const noexcept { return { Center.x + HalfExtent.x, Center.y + HalfExtent.y }; }
 
-        /** FULL width and height — the form DebugDraw::DrawBox takes. */
+        /** Full width and height. */
         Vector2F Size() const noexcept { return { HalfExtent.x * 2.f, HalfExtent.y * 2.f }; }
 
-        /** Inclusive on the edge: clicking a sprite's exact border should hit it. */
+        /** Inclusive: a point on the edge is inside. */
         bool Contains(const Vector2F& InPoint) const noexcept
         {
             return std::fabs(InPoint.x - Center.x) <= HalfExtent.x
                 && std::fabs(InPoint.y - Center.y) <= HalfExtent.y;
         }
 
-        /** Touching counts, for the same reason Contains is inclusive. */
+        /** Inclusive: touching counts. */
         bool Intersects(const Bounds2D& InOther) const noexcept
         {
             return std::fabs(InOther.Center.x - Center.x) <= HalfExtent.x + InOther.HalfExtent.x
                 && std::fabs(InOther.Center.y - Center.y) <= HalfExtent.y + InOther.HalfExtent.y;
         }
 
-        /** Grow to cover InOther as well. */
+        /** Grows to also cover InOther. */
         void Encapsulate(const Bounds2D& InOther) noexcept
         {
             const Vector2F lMin = Min();

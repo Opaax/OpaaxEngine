@@ -1,9 +1,5 @@
-// Suite: DebugDraw (Renderer/DebugDraw.h) — the engine's per-frame debug line queue (Editor.md D10).
-//
-// Two halves, both GPU-free by design and therefore fully testable here: the QUEUE (DrawLine /
-// DrawBox / Clear — plain data, no GL) and the GEOMETRY (ToQuad — the line -> thin-rotated-quad
-// conversion that lets DebugDraw render through the existing Renderer2D::DrawQuad without a new RHI
-// primitive). Same "the interesting part needs no context" approach as Renderer/RenderTargetTests.cpp.
+// Suite: DebugDraw — the queue (plain data) and the geometry (ToQuad: line -> thin rotated quad).
+// No GL needed.
 #include <doctest.h>
 
 #include "Renderer/DebugDraw.h"
@@ -77,7 +73,7 @@ TEST_CASE("DebugDraw: DrawBox covers the rectangle it was given, corner to corne
     CHECK(std::fabs((lBox.Center.y + lBox.Size.y * 0.5f) - 23.f) < kEps);
 }
 
-TEST_CASE("DebugDraw: a primitive names its world, and null is what every pre-P8 caller means")
+TEST_CASE("DebugDraw: a primitive names its world, and null means the active one")
 {
     // The tag is an identity token only — the renderer compares pointers and never dereferences
     // one, so a non-null address that is not a World is all the test needs.
@@ -184,11 +180,11 @@ TEST_CASE("ToQuad: a degenerate zero-length segment is invisible, never NaN")
 }
 
 // =============================================================================
-// The draw BAND (③b)
+// The draw BAND
 // =============================================================================
 TEST_CASE("DebugDraw: a segment defaults to the Debug band, above world geometry")
 {
-    // Every caller written before ③b relies on this default. If it ever changed, selection
+    // Every caller relies on this default. If it ever changed, selection
     // outlines and entity icons would slide behind the sprites they annotate.
     DebugDraw lDraw;
     lDraw.DrawLine({ 0.f, 0.f }, { 1.f, 0.f }, { 1.f, 1.f, 1.f, 1.f });
@@ -211,7 +207,7 @@ TEST_CASE("DebugDraw: a segment can name a band BELOW world geometry")
 
 TEST_CASE("DebugDraw: a box carries the band it was given")
 {
-    // ③b's grid needs Background; everything else defaults to Debug and draws above the world. A
+    // The grid needs Background; everything else defaults to Debug and draws above the world. A
     // box that ignored its band would sit on the wrong side of the sprites.
     DebugDraw lDraw;
     lDraw.DrawBox({ 0.f, 0.f }, { 10.f, 10.f }, { 1.f, 1.f, 1.f, 1.f }, 1.f, ERenderLayer::Background);
@@ -324,7 +320,7 @@ TEST_CASE("MakeOutlineInnerHalf: a MIRRORED size is the same hole, not a solid q
 }
 
 // =============================================================================
-// Channels — the central toggle (F4b), landed with ⑦-A P3's second producer
+// Channels — the central toggle
 // =============================================================================
 
 TEST_CASE("DebugDraw: an unknown channel is ENABLED, so a new producer is visible by default")

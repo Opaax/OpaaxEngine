@@ -12,13 +12,12 @@
 //         Editor/Source/<Name>Editor/   editor host (<Name>EditorApp : EditorApplication
 //                                       + <Name>EditorModule : IEditorModule)
 //
-// The skeleton lives as REAL FILES in OpaaxCreator/Templates/ — this tool only walks
-// that tree substituting tokens (__NAME__, __NAME_UPPER__, __UUID__) in file names and
-// contents. When the engine architecture moves again, update the templates, not this file.
+// The skeleton is real files in OpaaxCreator/Templates/; this tool copies that tree, replacing
+// tokens (__NAME__, __NAME_UPPER__, __UUID__) in file names and contents. Update the templates,
+// not this file, when the engine changes.
 //
-// The project is created at the WORKSPACE ROOT (next to Sandbox/): add_subdirectory needs
-// it there, and ResolveProjectLayout's default is <workspace>/<exeStem>/<exeStem>.opaaxproj.
-// The tool also registers the project in the root CMakeLists.txt (idempotent append).
+// The project is created at the workspace root (next to Sandbox/), and added to the root
+// CMakeLists.txt (only once).
 //
 // Usage: OpaaxCreator <ProjectName> [WorkspaceRoot]     (MakeOpaax.bat passes both)
 // =============================================================================
@@ -119,8 +118,8 @@ namespace
     }
 
     // ------------------------------------------------------------------------- root CMakeLists
-    // Append add_subdirectory(<Name>) to the workspace CMakeLists.txt, unless an
-    // UNCOMMENTED one is already there (a commented "#add_subdirectory(X)" must not mask it).
+    // Appends add_subdirectory(<Name>) to the workspace CMakeLists.txt, unless an uncommented one is
+    // already there.
     bool RegisterInRootCMake(const fs::path& InRootCMake, const std::string& InName)
     {
         const std::string lNeedle = "add_subdirectory(" + InName + ")";
@@ -147,11 +146,11 @@ namespace
 
         for (const auto& lEntry : fs::recursive_directory_iterator(InTemplates))
         {
-            // Substitute tokens in the RELATIVE path too — template names carry __NAME__.
+            // Tokens are replaced in the relative path too (template names contain __NAME__).
             std::string lRel = lEntry.path().lexically_relative(InTemplates).generic_string();
             ReplaceAll(lRel, "__NAME_UPPER__", lUpper);
             ReplaceAll(lRel, "__NAME__", InName);
-            if (lRel == "gitignore") { lRel = ".gitignore"; } // stored dot-less so it can't ignore-shadow Templates/
+            if (lRel == "gitignore") { lRel = ".gitignore"; } // stored without the dot so it cannot hide Templates/ files
 
             const fs::path lTarget = InDest / lRel;
             if (lEntry.is_directory())
@@ -169,8 +168,8 @@ namespace
             WriteAllText(lTarget, lText);
         }
 
-        // Empty by design, so not in Templates/ (git would not keep an empty dir anyway).
-        // Editor/Assets is a resource-browser root — the editor warns when it is missing.
+        // Empty, so not in Templates/ (git does not keep empty dirs). Editor/Assets is a resource-browser
+        // root; the editor warns when it is missing.
         fs::create_directories(InDest / "Assets");
         fs::create_directories(InDest / "Editor" / "Assets");
     }
@@ -233,7 +232,7 @@ int main(int argc, char* argv[])
     {
         std::cerr << "[Opaax] Error: " << lError.what() << std::endl;
         std::error_code lIgnored;
-        fs::remove_all(lDest, lIgnored); // roll back the partial project — this run created it
+        fs::remove_all(lDest, lIgnored); // roll back the partial project (this run created it)
         return 1;
     }
 

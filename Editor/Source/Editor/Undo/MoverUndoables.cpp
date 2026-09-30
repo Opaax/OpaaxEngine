@@ -8,7 +8,7 @@ namespace Opaax::Editor
 {
     namespace
     {
-        /** The open mover's data when it is the one InPath names, else null WITH A LINE SAYING SO. */
+        /** The open mover's data if it is the one InPath names, else null (and a warning). */
         MoverData* TargetMover(EditorContext& InContext, const OpaaxString& InPath)
         {
             if (!InContext.MoverDocument.IsOpen() || InContext.MoverDocument.AbsPath() != InPath)
@@ -21,7 +21,7 @@ namespace Opaax::Editor
             return &InContext.MoverDocument.GetMutableData();
         }
 
-        /** The open tuning's data when it is the one InPath names, else null WITH A LINE SAYING SO. */
+        /** The open tuning's data if it is the one InPath names, else null (and a warning). */
         MoveModeData* TargetMode(EditorContext& InContext, const OpaaxString& InPath)
         {
             if (!InContext.MoveModeDocument.IsOpen() || InContext.MoveModeDocument.AbsPath() != InPath)

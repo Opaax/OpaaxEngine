@@ -5,7 +5,6 @@
 
 namespace Opaax
 {
-    // NOTE: the IBindGroup::Create factory dispatch lives in RHI/BackendFactory.cpp.
 
     OpenGLBindGroup::OpenGLBindGroup(const BindGroupLayout& InLayout)
         : m_Textures(InLayout.TextureSlotCount, nullptr)
@@ -27,7 +26,7 @@ namespace Opaax
 
     void OpenGLBindGroup::Bind() const
     {
-        // UBO already bound to its binding point at construction (OpenGLUniformBuffer) — no-op here.
+        // The UBO is bound to its binding point at construction.
         for (Uint32 i = 0; i < static_cast<Uint32>(m_Textures.size()); ++i)
         {
             if (m_Textures[i]) { m_Textures[i]->Bind(i); }

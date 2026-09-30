@@ -7,8 +7,7 @@ namespace Opaax
 {
     namespace
     {
-        // [date time.ms] [name] [level] [Category] message — spdlog's default, which is what every host
-        // actually printed (the old global set_pattern ran before the logger existed, so never applied).
+        // [date time.ms] [name] [level] [Category] message
         constexpr const char* LINE_PATTERN = "[%Y-%m-%d %H:%M:%S.%e] [%n] [%^%l%$] %v";
         constexpr const char* LOGGER_NAME  = "OPAAX_Engine";
 
@@ -28,14 +27,13 @@ namespace Opaax
 
     Logger& Logger::Get()
     {
-        // Leaked on purpose (SG5): a line from a static destructor must still land somewhere legal.
+        // Never destroyed, so logging from a static destructor still works.
         static Logger* s_Instance = new Logger();
         return *s_Instance;
     }
 
     Logger::Logger()
-        // Never registered with spdlog's global registry: two Loggers (the engine's, a test's) must
-        // not collide on a name.
+        // Not registered with spdlog, so several Loggers (engine, tests) can coexist.
         : m_Logger(std::make_shared<spdlog::logger>(LOGGER_NAME))
     {
         m_Logger->set_level(spdlog::level::trace);
@@ -64,7 +62,7 @@ namespace Opaax
             lSink->set_pattern(LINE_PATTERN);
         }
 
-        // Together, so the held lines reach the file as well as the console.
+        // Replay held lines to the file as well as the console.
         AttachSinks(lSinks);
 
         if (!lFileError.IsEmpty())
@@ -155,8 +153,7 @@ namespace Opaax
     {
         std::lock_guard lLock(m_Mutex);
 
-        // Before the sinks, and whether or not there are any: a line held for Init is in the history too.
-        // Interning under this lock is safe — the string pool has its own lock and never logs.
+        // Recorded in the history even before Init.
         if (m_History.IsEnabled())
         {
             m_History.Push(InLevel, OpaaxStringID(InCategory.Name), InLine.substr(InMessageStart));
@@ -170,8 +167,7 @@ namespace Opaax
             return;
         }
 
-        // No sink yet (or any more): hold the line. Keep the FIRST ones — at boot they are the ones
-        // that explain everything after.
+        // No sink yet: hold the line (keep the first ones).
         if (m_Pending.size() >= MAX_PENDING_LINES)
         {
             ++m_DroppedPending;

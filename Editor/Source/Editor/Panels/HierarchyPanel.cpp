@@ -2,9 +2,9 @@
 
 #include "Editor/EditorContext.h"
 #include "Application/Services/IPaths.h"
-#include "Editor/EditorLevelDocument.h"   // the throttled per-map dirty answers
+#include "Editor/EditorLevelDocument.h"   // per-map dirty state
 #include "Editor/EditorMapDocument.h"
-#include "Editor/Commands/EditorNativeCommands.h"       // MapIdParams — which map was clicked (⑤)
+#include "Editor/Commands/EditorNativeCommands.h"       // MapIdParams
 #include "Editor/Commands/EditorNativeCommandsTags.hpp"
 #include "Editor/Extensions/EditorExtensionRegistrar.h"
 #include "Editor/Operation/EditorSelection.hpp"
@@ -15,9 +15,9 @@
 #include "World/Level.h"
 #include "World/WorldManager.h"
 #include "World/Entity/Entity.h"
-#include "World/Entity/EntityHierarchy.h"   // §HR — Detach gates on a parent existing
+#include "World/Entity/EntityHierarchy.h"   // Detach needs a parent
 #include "World/Entity/EntityMeta.h"
-#include "World/Components/PrefabInstanceComponent.h"   // ⑦-C — the revert entries gate on the link
+#include "World/Components/PrefabInstanceComponent.h"   // the revert entries need the link
 
 #include <imgui.h>
 
@@ -27,18 +27,16 @@ namespace Opaax::Editor
 {
     namespace
     {
-        // One map's header and rows. A level holds a handful of maps, so a linear find over these
-        // beats a hash map and keeps the headers in MOUNT order instead of a hash order that would
-        // reshuffle between frames.
+        // One map's header and rows. Kept in a list (few maps) so headers stay in mount order.
         struct MapGroup
         {
-            MapId               Map;            // always VALID when bMounted (MP10); invalid = runtime
-            OpaaxString         AssetRelPath;   // empty unless the level mounted it
+            MapId               Map;            // valid when bMounted; invalid = runtime
+            OpaaxString         AssetRelPath;   // empty unless mounted by the level
             bool                bMounted    = false;
             bool                bPersistent = false;
             bool                bDirty      = false;
-            bool                bMissing    = false;   // in the manifest, never mounted — no file
-            TDynArray<EntityID> Roots;      // §HR: children draw under their parent, wherever it is
+            bool                bMissing    = false;   // in the manifest but never mounted
+            TDynArray<EntityID> Roots;      // roots only; children are drawn under their parent
         };
     }
 
@@ -71,8 +69,7 @@ namespace Opaax::Editor
 
     void HierarchyPanel::OnActiveWorldChanged(World* /*InOld*/, World* /*InNew*/)
     {
-        // A queued verb names a map of the world that just left. Dropping it beats running it
-        // against whatever is here now, where the id would either miss or hit the wrong map.
+        // A queued action names a map of the old world: drop it.
         m_Pending = PendingMapAction{};
     }
 
@@ -85,12 +82,9 @@ namespace Opaax::Editor
             return;
         }
 
-        // Rows ask Selection::Contains rather than comparing against one handle — every selected
-        // entity highlights, not just the primary the Inspector happens to be drawing.
+        // Rows use Selection::Contains, so every selected entity is highlighted.
 
-        // SEEDED FROM THE LEVEL, in mount order. Derived from the entities alone, a map with none
-        // of them produced no header at all — so the one panel that lists a level's maps could not
-        // show an empty one, which is exactly the map an author has just made and wants to fill.
+        // Headers come from the Level, in mount order, so an empty map still has a header.
         TDynArray<MapGroup> lGroups;
         Level* const        lLevel = MapOps::ActiveLevel(m_Context);
 
@@ -107,13 +101,8 @@ namespace Opaax::Editor
                     /*bMissing*/false, {}});
             }
 
-            // THE MANIFEST ENTRIES THAT NEVER MOUNTED — missing, renamed or moved. Derived here
-            // rather than asked of the Level, because it is the difference between two lists it
-            // already publishes and a getter would allocate one per frame to say the same thing.
-            //
-            // They get a row for the reason every mounted map does (**MP10**): this is the only
-            // place a level's maps are listed, so it is the only place one can be named — and an
-            // entry with no row was unreachable, which is why a broken level stayed broken.
+            // Manifest entries that never mounted (missing, renamed or moved) get a row too: this is the only
+            // place they can be removed from.
             for (const OpaaxString& lPath : lLevel->GetData().Maps)
             {
                 bool lListed = false;
@@ -130,11 +119,8 @@ namespace Opaax::Editor
             }
         }
 
-        // WM2: a Map is a PARTITION of the world's one registry, so bucketing is a FILTER over
-        // EntityMeta::OwnerMap and never a second store to keep in sync. An entity whose map is not
-        // mounted still gets a group — a bare world (no Level) lists exactly as it did before.
-        // ONLY THE ROOTS are bucketed (§HR): a child is drawn under its parent, whichever map
-        // either belongs to.
+        // Entities are bucketed by EntityMeta::OwnerMap. Unmounted maps still get a group. Only roots
+        // are bucketed; children are drawn under their parent.
         const Uint64 lCount = lWorld->GetEntityCount();
 
         m_Tree.Rebuild(*lWorld);
@@ -146,9 +132,7 @@ namespace Opaax::Editor
             MapGroup* lGroup = nullptr;
             for (MapGroup& lCandidate : lGroups)
             {
-                // A MISSING group carries an invalid MapId, and so does a runtime-spawned entity —
-                // so without this they match and every runtime entity files itself under a map that
-                // does not exist. Skip: a group with no file can own nothing.
+                // A missing group has an invalid MapId, like runtime entities: skip it so they do not match.
                 if (lCandidate.bMissing) { continue; }
 
                 if (lCandidate.Map == lMeta.OwnerMap) { lGroup = &lCandidate; break; }
@@ -173,29 +157,21 @@ namespace Opaax::Editor
 
         for (const MapGroup& lGroup : lGroups)
         {
-            // NO map is privileged here, and that is the fix: Save Level writes every one of them
-            // (MP9), so greying the unfocused maps claimed a difference that does not exist. The
-            // focused map only gets the softest hint there is — its group starts open.
+            // No map is privileged (Save Level writes them all); the focused map's group just starts open.
             const bool lIsFocused = lGroup.bMounted && lGroup.Map.IsValid() && lGroup.Map == lFocusedMap;
 
-            // Every mounted map names itself, empty or not (**MP10**). The runtime bucket is the
-            // one REAL difference that survives: nothing authored those, so no Save can ever write
-            // them, and saying so beats the surprise of losing them.
-            // A MISSING entry is named by its PATH: it has no MapId to print, and the path is also
-            // the only handle anything has on it.
+            // Every mounted map shows its name. The runtime group says its entities are not saved.
+            // A missing entry is shown by its path.
             OpaaxString lLabel = lGroup.bMissing ? lGroup.AssetRelPath
                                : lGroup.Map.IsValid() ? lGroup.Map.ToString()
                                                       : OpaaxString("(runtime - not saved)");
 
-            // `*` PER MAP, on the map — this is the only place every mounted map is listed, so it
-            // is the only place the marker can name which one changed. Read from the throttled
-            // cache (**MP5**); a live check here would be a capture per row per frame.
+            // A * per map, from the throttled cache (a live check would cost a capture per row).
             if (lGroup.bDirty)      { lLabel += " *"; }
             if (lGroup.bMissing)    { lLabel += "  [MISSING - file not found]"; }
             if (lGroup.bPersistent) { lLabel += "  [persistent]"; }
 
-            // The path is the stable ImGui id — a label can repeat, a path cannot. Missing entries
-            // need it as much as mounted ones: several of them would otherwise share "runtime".
+            // The path is the ImGui id (labels can repeat).
             ImGui::PushID(!lGroup.AssetRelPath.IsEmpty() ? lGroup.AssetRelPath.CStr() : "runtime");
 
             const bool lExpanded = ImGui::TreeNodeEx(
@@ -203,8 +179,7 @@ namespace Opaax::Editor
                 lIsFocused ? ImGuiTreeNodeFlags_DefaultOpen : ImGuiTreeNodeFlags_None,
                 "%s", lLabel.CStr());
 
-            // A drop ON THE HEADER: to root, in this map (§HR). A mounted map names itself; the
-            // runtime bucket names nothing, so a drop there only detaches.
+            // A drop on the header: to the root of this map. The runtime group only detaches.
             if (!lGroup.bMissing) { m_Tree.AcceptRootDrop(lGroup.Map); }
 
             DrawMapContextMenu(lGroup.Map, lGroup.AssetRelPath, lGroup.bMounted, lGroup.bPersistent,
@@ -216,7 +191,7 @@ namespace Opaax::Editor
                 continue;
             }
 
-            // The rows are the tree's (§HR): a root, its children under it, drag and drop banked.
+            // The rows: roots with their children, drag and drop stored for later.
             for (const EntityID lId : lGroup.Roots)
             {
                 m_Tree.DrawNode(*lWorld, lId, m_Context.Selection,
@@ -227,19 +202,18 @@ namespace Opaax::Editor
             ImGui::PopID();
         }
 
-        // AFTER the walk: anything queued above may destroy the very entities the rows just drew.
+        // After the walk: queued actions may destroy the entities the rows just drew.
         RunPendingAction();
 
-        // And the drop the tree banked — one verb, one step, on the level's stack.
+        // Then the stored drop: one command, one undo step.
         EntityTreeDrop lDrop;
         if (m_Tree.TakeDrop(lDrop))
         {
             EntityOps::Reparent(m_Context, EUndoWorld::Active, lDrop.Child, lDrop.Parent, lDrop.ToMap);
         }
 
-        // A PREFAB from the browser: onto a header, into that map at its authored position; onto
-        // a row, into that row's map as its child. The viewport's drop is the same verb with a
-        // world point instead.
+        // A prefab from the browser: on a header, into that map at its authored position; on a row,
+        // into that row's map as its child.
         EntityTreePrefabDrop lPrefabDrop;
         if (m_Tree.TakePrefabDrop(lPrefabDrop))
         {
@@ -249,8 +223,7 @@ namespace Opaax::Editor
                 lMap = Entity{ lPrefabDrop.OnEntity, lWorld }.Get<EntityMeta>().OwnerMap;
             }
 
-            // InstantiatePrefab refuses an invalid map itself (WM2) — the runtime bucket, or a row
-            // no map authored — and says so.
+            // InstantiatePrefab refuses an invalid map itself (and says so).
             EntityOps::InstantiatePrefab(m_Context, m_Context.Paths.AssetToAbsolute(lPrefabDrop.AssetPath),
                                          lMap, nullptr, lPrefabDrop.OnEntity);
         }
@@ -260,10 +233,7 @@ namespace Opaax::Editor
     void HierarchyPanel::DrawMapContextMenu(MapId InMapId, const OpaaxString& InAssetRelPath,
                                             bool InMounted, bool InPersistent, bool InMissing)
     {
-        // A MISSING entry gets exactly ONE verb. Nothing else applies — there is no file to save, no
-        // entities to focus, and making a file that does not exist the persistent map would be
-        // worse than the state it is in. This single entry is the whole repair path: before it, the
-        // only way out of a broken manifest was hand-editing the .opaaxlevel.
+        // A missing entry has one action: remove it from the level.
         if (InMissing)
         {
             if (!ImGui::BeginPopupContextItem("missing_map_ops")) { return; }
@@ -272,8 +242,7 @@ namespace Opaax::Editor
             ImGui::TextDisabled("This map's file could not be loaded.");
             ImGui::Separator();
 
-            // Disabled for the persistent map, matching RemoveMap's own refusal: dropping it would
-            // silently re-point persistence at whatever ended up first.
+            // Disabled for the persistent map (RemoveMap refuses it).
             if (ImGui::MenuItem("Remove from Level", nullptr, false, !InPersistent))
             {
                 m_Pending = PendingMapAction{EMapAction::RemoveMissing, InMapId, InAssetRelPath};
@@ -288,8 +257,7 @@ namespace Opaax::Editor
             return;
         }
 
-        // The runtime bucket is not a map: there is no file to save, nothing to remove it from, and
-        // nothing to make persistent. A menu with four dead entries would be worse than none.
+        // The runtime group is not a map: no menu.
         if (!InMounted) { return; }
 
         if (!ImGui::BeginPopupContextItem("map_ops")) { return; }
@@ -297,9 +265,7 @@ namespace Opaax::Editor
         ImGui::TextDisabled("%s", InAssetRelPath.CStr());
         ImGui::Separator();
 
-        // THE MAP YOU CLICKED IS THE ARGUMENT — the whole reason these verbs live on the header
-        // rather than the menu bar (MapOps' own rationale). The Edit menu's Create Entity has to
-        // fall back to the focused map because a menu entry names nothing.
+        // The clicked map is the argument (the Edit menu's Create Entity uses the focused map).
         if (ImGui::MenuItem("Create Entity"))
         {
             m_Pending = PendingMapAction{EMapAction::CreateEntity, InMapId, InAssetRelPath};
@@ -307,11 +273,8 @@ namespace Opaax::Editor
 
         ImGui::Separator();
 
-        // NOTHING IS EXECUTED HERE — every entry only RECORDS what was asked for, and Draw runs it
-        // after the walk is over. Calling straight through destroyed this frame's entities from the
-        // middle of the loop that was about to draw them: Remove from Level unmounts a map, and the
-        // rows below this header are handles collected before the click. entt asserted on the first
-        // one. A panel's draw pass READS the world; anything that writes it runs after the pass.
+        // Nothing runs here: entries only record the request, and Draw runs it after the walk
+        // (running it now could destroy entities the rows below are about to draw).
         if (ImGui::MenuItem("Save Map"))
         {
             m_Pending = PendingMapAction{EMapAction::Save, InMapId, InAssetRelPath};
@@ -319,9 +282,7 @@ namespace Opaax::Editor
 
         ImGui::Separator();
 
-        // DISABLED RATHER THAN REFUSED. Level::SetPersistentMap on the map that already is one is a
-        // no-op and RemoveMap refuses the persistent map outright — both would answer a click with
-        // a log line the author never reads. The menu states the rule instead.
+        // Disabled instead of refused: the menu shows what applies.
         if (ImGui::MenuItem("Set as Persistent", nullptr, false, !InPersistent))
         {
             m_Pending = PendingMapAction{EMapAction::SetPersistent, InMapId, InAssetRelPath};
@@ -345,9 +306,7 @@ namespace Opaax::Editor
     {
         if (!ImGui::BeginPopupContextItem("entity_ops")) { return; }
 
-        // Right-clicking a row that is NOT selected selects it, so "Delete Selected" always means
-        // the row under the cursor. Right-clicking one that IS part of a multi-selection leaves the
-        // set alone, so the menu acts on all of it — which is what an author expects either way.
+        // Right-clicking an unselected row selects it; right-clicking inside a multi-selection keeps it.
         if (!m_Context.Selection.Contains(InEntity))
         {
             m_Context.Selection.Select(InEntity);
@@ -356,17 +315,13 @@ namespace Opaax::Editor
         ImGui::TextDisabled("%llu selected", static_cast<unsigned long long>(m_Context.Selection.Count()));
         ImGui::Separator();
 
-        // ⑦-C P2. Queued like everything else here: it destroys the selected entities and creates
-        // an instance in their place, which is exactly the mid-walk mutation that made this queue
-        // exist. It also opens a modal, which must not happen inside the tree either.
+        // Queued: it destroys the selection and creates an instance, and opens a dialog.
         if (ImGui::MenuItem("Create Prefab from Selection..."))
         {
             m_Pending = PendingMapAction{EMapAction::CreatePrefab, MapId{}, {}};
         }
 
-        // ⑦-C P3. DISABLED rather than absent when nothing selected came from a prefab — MP7's
-        // rule: the menu states what applies instead of answering a click with a log line. The
-        // same rule for Detach (§HR): a root has nothing to detach from.
+        // Disabled when nothing selected comes from a prefab. Same for Detach (a root has no parent).
         bool lHasLink   = false;
         bool lHasParent = false;
         if (World* const lWorld = m_Context.Worlds.GetActiveWorld(); lWorld != nullptr)
@@ -388,8 +343,7 @@ namespace Opaax::Editor
 
         ImGui::Separator();
 
-        // A grey entry SAYS WHY: a selection that is not an instance (the originals an Undo of
-        // Create Prefab put back look exactly like one) otherwise reads as a verb that does nothing.
+        // A disabled entry says why.
         const auto lWhyDisabled = [lHasLink]()
         {
             if (!lHasLink && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
@@ -423,7 +377,7 @@ namespace Opaax::Editor
     void HierarchyPanel::RunPendingAction()
     {
         const PendingMapAction lAction = m_Pending;
-        m_Pending = PendingMapAction{};   // cleared FIRST — the action can re-enter nothing, but a
+        m_Pending = PendingMapAction{};   // cleared first, so a failed action does not run again next frame
                                           // failed one must not run again next frame either
 
         if (lAction.Action == EMapAction::None) { return; }
@@ -437,9 +391,8 @@ namespace Opaax::Editor
             case EMapAction::SetPersistent:  MapOps::SetPersistent(m_Context, lAction.Map);   break;
             case EMapAction::Remove:         MapOps::RemoveFromLevel(m_Context, lAction.Map); break;
             case EMapAction::RemoveMissing:  MapOps::RemoveMissingFromLevel(m_Context, lAction.AssetRelPath); break;
-            // BY TAG, like the Edit menu and the keys: the dispatch is what records an edit (⑤), so
-            // a verb called straight from here is a verb with no undo. The map rides in the payload
-            // because THIS call site is the one that knows which map was clicked.
+            // By tag, like the Edit menu and the keys: the dispatch records the undo step. The payload
+            // carries the clicked map.
             case EMapAction::CreateEntity:
                 m_Context.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_CREATE_ENTITY, m_Context,
                                                         MapIdParams{ lAction.Map });
@@ -447,16 +400,16 @@ namespace Opaax::Editor
             case EMapAction::DeleteSelected:
                 m_Context.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_DELETE_ENTITY, m_Context);
                 break;
-            // Straight to the verb: it records its own step per entity (§HR), like a drop does.
+            // Directly: it records its own undo step.
             case EMapAction::Detach:
                 EntityOps::DetachSelected(m_Context, EUndoWorld::Active);
                 break;
-            // No payload: the subject is the SELECTION, which the context already holds.
+            // No payload: the subject is the selection.
             case EMapAction::CreatePrefab:
                 m_Context.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_CREATE_PREFAB_FROM_SELECTION,
                                                         m_Context);
                 break;
-            // ONE command, and the scope is the payload — the TogglePanel shape (**MR2c**).
+            // One command; the scope is in the payload.
             case EMapAction::RevertPrefab:
                 m_Context.Extensions.Commands().Execute(Tags::EDITOR_COMMAND_REVERT_TO_PREFAB, m_Context,
                                                         PrefabRevertParams{ /*bWholeInstance*/false });

@@ -8,11 +8,8 @@ namespace Opaax::Editor
     namespace
     {
         /**
-         * The open sheet's data when it is the one InPath names, else null WITH A LINE SAYING SO.
-         *
-         * The stack is not per-document, so a step recorded against one sheet can be replayed while
-         * another is open. Refusing is the only correct answer; saying nothing would look exactly
-         * like an undo that had nothing to do.
+         * The open sheet's data if it is the one InPath names, else null (and a warning). The stack is not
+         * per document, so a step can be replayed while another sheet is open.
          */
         SpriteSheetData* TargetSheet(EditorContext& InContext, const OpaaxString& InPath)
         {
@@ -72,14 +69,12 @@ namespace Opaax::Editor
 
         if (SheetPath != InContext.SheetDocument.AbsPath() || Index >= lData.FrameCount())
         {
-            return false;   // the sheet changed under the gesture — there is no step to record
+            return false;   // the sheet changed during the gesture: no step
         }
 
         After = lData.Frames[Index];
 
-        // A gesture that moved nothing is not a step. Compared field by field rather than through
-        // the serializer: this runs on mouse-release, and a json dump per release would be work
-        // done only to answer a question three floats already answer.
+        // A gesture that moved nothing is not a step (compared field by field, cheaper than serializing).
         return After.Name       != Before.Name
             || After.Offset.x   != Before.Offset.x || After.Offset.y != Before.Offset.y
             || After.Size.x     != Before.Size.x   || After.Size.y   != Before.Size.y;

@@ -1,8 +1,5 @@
-// Suite: IFileSystem, through the concrete WindowsFileSystem (the interface is abstract — the whole
-// point of the split). The facade was unreachable before M2d (private, non-const methods behind a
-// const& accessor), so these are its first tests. They run against a UNIQUE directory under the OS
-// temp dir — created, exercised and removed per case — so the suite never touches the repo and two
-// runs never collide.
+// Suite: IFileSystem, through WindowsFileSystem. Each case uses its own directory under the OS
+// temp dir, removed afterwards.
 #include <doctest.h>
 
 #include <filesystem>
@@ -173,23 +170,17 @@ TEST_CASE("IFileSystem: ListDirectory APPENDS, so one container can accumulate s
 // =============================================================================
 // Encoding — the reason WindowsFileSystem exists
 // =============================================================================
-// The platform layer emits UTF-8 by construction (WindowsPlatform::GetExecutablePath converts through
-// CP_UTF8), so the filesystem must decode UTF-8 too. It did NOT before WindowsFileSystem: MSVC's
-// std::filesystem::path(const char*) uses the ANSI code page, and this case caught it red —
-// IsPathExist() answered false for a directory that plainly existed, and ListDirectory handed back
-// CP-1252 bytes the caller would have stored as UTF-8.
-//
-// The directory is created from a WIDE literal, so the name on disk is unambiguously Unicode and the
-// test cannot pass by being consistently wrong in both directions.
+// The platform emits UTF-8, so the file system must read UTF-8 too (MSVC's
+// std::filesystem::path(const char*) uses the ANSI code page). The directory is created from a wide
+// literal, so the name on disk is really Unicode.
 // =============================================================================
 TEST_CASE("WindowsFileSystem: non-ASCII paths round-trip as UTF-8, not as the ANSI code page")
 {
     const ScopedTempDir     lTemp("utf8_roundtrip");
     const WindowsFileSystem lFS;
 
-    // \u escapes, NOT literal accented characters: this file has no BOM and the build sets no /utf-8,
-    // so MSVC would decode literal bytes as the ANSI code page — the very confusion under test. A
-    // universal-character-name means the same thing regardless of how the file is stored.
+    // \u escapes, not literal characters: this file has no BOM and there is no /utf-8, so MSVC would
+    // read literal bytes with the ANSI code page.
     const fs::path lDir = fs::path(lTemp.Str().CStr()) / std::wstring(L"\u00C9clair_\u00DCnicode");
     std::error_code lError;
     fs::create_directories(lDir, lError);

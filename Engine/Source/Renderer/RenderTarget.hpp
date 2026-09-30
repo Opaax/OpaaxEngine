@@ -3,21 +3,13 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Maths/MathTypes.h"
-#include "RHI/Framebuffer.h" // OffscreenRenderTarget forwards Bind/size to a concrete IFramebuffer
+#include "RHI/Framebuffer.h"
 
 namespace Opaax
 {
     /**
-     * @class IRenderTarget
-     *
-     * Abstraction over "where does the renderer draw to".
-     *
-     * Runtime : DefaultRenderTarget — draws to the backbuffer (no-op bind).
-     * Editor  : OffscreenRenderTarget (below) — draws into an FBO the ViewportPanel owns and samples as a texture (D2, landed M1). 
-     *           Generic/engine-side, not editor-named: any future render-to-texture pass reuses it, the editor is just its first caller.
-     *
-     * The renderer draws through this interface without knowing whether it is rendering to
-     * screen or to an offscreen FBO.
+     * Where the renderer draws: the backbuffer (DefaultRenderTarget) or an offscreen
+     * framebuffer (OffscreenRenderTarget, e.g. the editor viewport).
      */
     class OPAAX_API IRenderTarget
     {
@@ -32,12 +24,12 @@ namespace Opaax
         // =============================================================================
         
         /**
-         * Called before scene render
+         * Called before rendering.
          */
         virtual void Bind()     = 0;
 
         /**
-         * Called after scene render
+         * Called after rendering.
          */
         virtual void Unbind()   = 0;
         
@@ -48,19 +40,14 @@ namespace Opaax
         virtual Uint32 GetHeight() const noexcept = 0;
         
         /**
-         * The offscreen framebuffer this target draws into, or nullptr for the swapchain backbuffer.
-         * A command-buffer backend dispatches on this: null -> present surface, non-null -> render into the framebuffer's image. GL ignores it (binds via Bind()).
-         * @return 
+         * The offscreen framebuffer, or nullptr for the backbuffer.
+         * Command-buffer backends use it; GL binds through Bind().
          */
         virtual IFramebuffer* GetFramebuffer() const noexcept { return nullptr; }
     };
 
     /**
-     * @class DefaultRenderTarget
-     *
-     * Draws directly to the GLFW backbuffer.
-     * Bind/Unbind are no-ops — the backbuffer is always the default framebuffer.
-     * Width/Height come from the GLFW window.
+     * Draws to the window backbuffer. Bind/Unbind do nothing.
      */
     class OPAAX_API DefaultRenderTarget final : public IRenderTarget
     {
@@ -77,9 +64,7 @@ namespace Opaax
         // =============================================================================
         
         /**
-         * Called by CoreEngineApp on WindowResizeEvent
-         * @param InWidth 
-         * @param InHeight 
+         * Called on window resize.
          */
         void OnResize(Uint32 InWidth, Uint32 InHeight) noexcept
         {
@@ -107,15 +92,8 @@ namespace Opaax
     };
 
     /**
-     * @class OffscreenRenderTarget
-     *
-     * Draws into an offscreen framebuffer instead of the backbuffer — the D2 output contract that
-     * lets the editor's ViewportPanel sample the world as a texture (and a future render-to-texture
-     * pass reuse the same primitive). Bind/Unbind + size forward to the wrapped IFramebuffer;
-     * GetFramebuffer() returns it non-null so a command-buffer backend dispatches into the image.
-     *
-     * NON-OWNING (I5): the FBO is owned by whoever created it (the ViewportPanel in M1). This wrapper
-     * only borrows the pointer, so it must not outlive the framebuffer.
+     * Draws into an offscreen framebuffer (e.g. the editor viewport samples it as a texture).
+     * Does not own the framebuffer: do not let it outlive it.
      */
     class OPAAX_API OffscreenRenderTarget final : public IRenderTarget
     {
@@ -138,7 +116,7 @@ namespace Opaax
         Uint32 GetWidth()  const noexcept override { return m_Framebuffer ? m_Framebuffer->GetWidth()  : 0; }
         Uint32 GetHeight() const noexcept override { return m_Framebuffer ? m_Framebuffer->GetHeight() : 0; }
 
-        // Non-null -> a command-buffer backend renders into this framebuffer's image (never presented).
+        // Non-null: a command-buffer backend renders into this framebuffer (never presented).
         IFramebuffer* GetFramebuffer() const noexcept override { return m_Framebuffer; }
         //~End IRenderTarget Interface
 
@@ -146,7 +124,7 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        IFramebuffer* m_Framebuffer = nullptr; // non-owning (I5) — the panel owns the FBO
+        IFramebuffer* m_Framebuffer = nullptr; // not owned
     };
 
 } // namespace Opaax

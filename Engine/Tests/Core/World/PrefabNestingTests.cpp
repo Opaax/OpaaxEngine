@@ -1,10 +1,7 @@
-// Suite: ⑦-C P7 — nesting + variants, the headless half.
-//
-// A prefab file may hold PLACEMENT RECORDS (the map's own, PF3) and every consumer reads the
-// prefab FLATTENED through the resolver: its own entities plus every record expanded, nested guids
-// `Derive(record.InstanceId, template)`. A VARIANT is a file with no entities and one record. The
-// stub resolver below flattens the way ResourcePrefabResolver does — cache, in-flight chain, cycle
-// refused — so these cases exercise the real composition, not a shortcut.
+// Suite: prefab nesting and variants. A prefab file can hold placement records; consumers read it
+// flattened (own entities plus expanded records, nested guids = Derive(record.InstanceId, template)).
+// A variant is a file with no entities and one record. The stub resolver flattens like
+// ResourcePrefabResolver (cache, in-flight chain, cycle refused).
 #include <doctest.h>
 
 #include "Engine/Subsystems/Resources/ResourceManager.h"   // before PrefabResource — completes LoadContext
@@ -147,10 +144,10 @@ TEST_CASE("PrefabJson v2: a record round-trips byte-exact, and a file placing no
     REQUIRE(lBack.Instances[0].Overrides.size() == 1);
     CHECK(lBack.Instances[0].Overrides[0].TemplateGuid == lTemplate);
 
-    // Byte-exact: the reader and the writer agree, which is the gate MP6 stands on.
+    // Byte-exact: the reader and the writer agree.
     CHECK(PrefabJson::Serialize(lBack) == lText);
 
-    // No records => no key: a prefab placing nothing is what it was before P7, but for the version.
+    // No records => no key: a prefab placing nothing is unchanged except for the version.
     PrefabData lPlain;
     lPlain.Entities.emplace_back(Piece("Only", 0.f));
     CHECK(PrefabJson::Serialize(lPlain).Find("prefabInstances") < 0);
@@ -246,7 +243,7 @@ TEST_CASE("Flatten: two placements of an outer prefab are six distinct entities,
     CHECK(PrefabFold::Expand(lMap, lResolver, lRegistry) == 2);
     REQUIRE(lMap.EntityCount() == 6);
 
-    // All distinct, and the nested one is PF2's composition: Derive(placement, Derive(record, tmpl)).
+    // All distinct, and the nested one is the composition: Derive(placement, Derive(record, tmpl)).
     for (Uint64 lI = 0; lI < 6; ++lI)
     {
         for (Uint64 lJ = lI + 1; lJ < 6; ++lJ) { CHECK(lMap.Entities[lI].Id != lMap.Entities[lJ].Id); }
@@ -583,10 +580,10 @@ TEST_CASE("Fold/Expand at the level: an override on a NESTED entity keys by its 
 }
 
 // =============================================================================
-// §HR — a link composes through nesting exactly as a guid does
+// A link composes through nesting exactly as a guid does
 // =============================================================================
 
-TEST_CASE("Flatten §HR: an inner prefab's link survives the outer derivation, and a level placement derives it once more")
+TEST_CASE("Flatten: an inner prefab's link survives the outer derivation, and a level placement derives it once more")
 {
     ComponentRegistry lRegistry;
     FillRegistry(lRegistry);
@@ -638,7 +635,7 @@ TEST_CASE("Flatten §HR: an inner prefab's link survives the outer derivation, a
     CHECK(EntityHierarchy::WorldTransform(lBarrel).Position.x == doctest::Approx(110.f));
 }
 
-TEST_CASE("BuildVariant §HR: a variant keeps the base's link, and records a re-parent as its own override")
+TEST_CASE("BuildVariant: a variant keeps the base's link, and records a re-parent as its own override")
 {
     ComponentRegistry lRegistry;
     FillRegistry(lRegistry);

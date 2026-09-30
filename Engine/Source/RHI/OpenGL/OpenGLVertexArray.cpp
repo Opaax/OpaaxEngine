@@ -6,8 +6,6 @@
 namespace Opaax
 {
 
-    // NOTE: the IVertexArray::Create factory dispatch lives in RHI/BackendFactory.cpp.
-
     OpenGLVertexArray::OpenGLVertexArray()
     {
         glCreateVertexArrays(1, &m_RendererID);
@@ -73,7 +71,7 @@ namespace Opaax
                     break;
                 }
             default:
-                OPAAX_CORE_ASSERT(false) // Unhandled shader data type
+                OPAAX_CORE_ASSERT(false) // unhandled shader data type
                 break;
             }
         }

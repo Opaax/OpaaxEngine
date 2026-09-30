@@ -6,14 +6,13 @@ namespace Opaax
 {
     namespace
     {
-        /** A fraction per edge, sane for any authored pair: never negative, never more than the rect. */
+        /** Sanitized per-edge fractions: never negative, never more than the rect. */
         void FitInsets(float& InOutLow, float& InOutHigh) noexcept
         {
             InOutLow  = std::max(0.f, InOutLow);
             InOutHigh = std::max(0.f, InOutHigh);
 
-            // At 1.0 the two edges meet and the rect vanishes; keep a sliver so a mis-typed inset
-            // leaves something on screen to fix rather than a widget that disappeared.
+            // At 1.0 the rect would vanish: keep a sliver so a typo stays visible.
             constexpr float lMaxSum = 0.9f;
 
             const float lSum = InOutLow + InOutHigh;
@@ -39,7 +38,7 @@ namespace Opaax
     {
         Insets = InInsets;
 
-        // My rect changes, so my whole subtree re-resolves — the insets are what children anchor to.
+        // My rect changes: the whole subtree re-resolves.
         InvalidateLayout();
     }
 

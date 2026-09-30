@@ -1,8 +1,5 @@
-// Suite: parenting (§HR) — the link on EntityMeta, the local/world composition, and what the
-// snapshot core does with both.
-//
-// The rule under test: you AUTHOR local and READ world, and the two never disagree. A root's
-// local is its world, so every pre-parenting map keeps its meaning; a child's world is walked.
+// Suite: parenting — the link on EntityMeta, local/world composition, and save/load.
+// You set the local and read the world; they always agree. A root's local is its world.
 #include <doctest.h>
 
 #include "World/Components/ComponentRegistry.h"

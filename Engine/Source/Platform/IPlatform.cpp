@@ -14,7 +14,7 @@ namespace Opaax
             double              GetTimeSeconds()        const override { return 0.0; }
             OpaaxString         GetExecutablePath()     const override { return OpaaxString("Null Exec Path"); }
             OpaaxString         GetPlatformName()       const override { return OpaaxString("Null Platform"); }
-            // Inert, like the rest of this object — a null platform has no business touching a disk.
+            // A null platform does not touch the disk.
             const IFileSystem&  GetFileSystem()         const override { return IFileSystem::Null(); }
         };
     }
@@ -27,5 +27,5 @@ namespace Opaax
     { 
 		static NullPlatform s_Null; 
         return s_Null; 
-	}   // one definition → DLL-safe
+	}   // defined here: shared across the DLL/exe boundary
 }

@@ -28,6 +28,6 @@ namespace Opaax
 
     void WindowManager::OnShutdown()
     {
-        m_Window.reset(); // ~WindowsWindow -> Shutdown(), once (RAII)
+        m_Window.reset(); // destroys the window
     }
 }

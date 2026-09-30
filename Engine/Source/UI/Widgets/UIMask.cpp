@@ -6,8 +6,7 @@ namespace Opaax
     {
         Texture.Path = InAssetPath;
 
-        // The mask is resolved by the canvas's draw walk, not by this widget's own quads — so what
-        // must be rebuilt is everything UNDER it, which is what a layout invalidation reaches.
+        // The mask applies when the children are drawn, so it is the children that must rebuild.
         InvalidateLayout();
     }
 
@@ -21,7 +20,7 @@ namespace Opaax
     {
         if (Texture.IsEmpty() || InContext.Assets == nullptr)
         {
-            m_Resolved = nullptr;   // an empty path is a pure rect clip, which needs no texture
+            m_Resolved = nullptr;   // empty path = rect clip, no texture
         }
         else
         {
@@ -29,15 +28,13 @@ namespace Opaax
 
             if (m_Resolved == nullptr)
             {
-                // Still uploading: ask again next frame rather than masking with nothing, which would
-                // flash the children UNMASKED for a frame.
+                // Still uploading: retry next frame (masking with nothing would flash the children).
                 InvalidateContent();
                 return;
             }
         }
 
-        // The graphic is its own quad, cut by itself like everything under it: a white shape on
-        // transparency shows as that shape.
+        // The mask's own graphic is masked by itself (a white shape on transparency shows as that shape).
         if (bShowMaskGraphic)
         {
             UIQuad& lQuad = OutQuads.emplace_back();

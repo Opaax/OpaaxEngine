@@ -4,7 +4,7 @@
 
 #include "Application/OpaaxApplication.h"
 #include "Application/Services/IConfigSystem.h"
-#include "Application/Services/Window/IWindowManager.h"   // ToString(EWindowMode)
+#include "Application/Services/Window/IWindowManager.h"
 #include "Window/WindowEvents.h"
 #include "Engine/Config/Config_Engine.h"
 
@@ -61,10 +61,10 @@ namespace Opaax
 		
 		const EngineConfigData& lData = OpaaxApplication::GetAppService<IConfigSystem>().Get<Config_Engine>().GetData();
 
-		// Backend chosen from engine config — drives window hints + context creation.
+		// Backend from the engine config: drives window hints and context creation.
 		const EBackend lBackend = ResolveSupportedBackend(lData.Render.Backend);
 
-		// MUST run before glfwCreateWindow (e.g. GLFW_NO_API for Vulkan). No-op for OpenGL.
+		// Must run before glfwCreateWindow (e.g. GLFW_NO_API for Vulkan). Nothing for OpenGL.
 		IGraphicsContext::ApplyWindowHints(lBackend);
 
 		m_Window = glfwCreateWindow(
@@ -76,10 +76,10 @@ namespace Opaax
 		
 		SetWindowMode(m_Data.Mode);
 
-		// NOTE: Hard crash here is correct — a null window is unrecoverable.
+		// A null window is unrecoverable: crash.
 		OPAAX_CORE_ASSERT(m_Window)
 
-		// Graphics context owns make-current + glad load + vsync (was inline GLFW here).
+		// The graphics context does make-current, glad loading and vsync.
 		m_Context = IGraphicsContext::Create(lBackend, m_Window);
 		OPAAX_CORE_ASSERT(m_Context)
 		if (!m_Context->Init())
@@ -87,7 +87,7 @@ namespace Opaax
 			OPAAX_LOG(LogWindowsWindow, Error, "WindowsWindow: graphics context failed to initialize.");
 		}
 
-		// NOTE: User pointer needed for all GLFW callbacks to reach WindowData safely.
+		// User pointer, so GLFW callbacks can reach WindowData.
 		glfwSetWindowUserPointer(m_Window, &m_Data);
 
 		RegisterGLFWCallbacks();
@@ -171,7 +171,7 @@ namespace Opaax
         });
  
         // ---- Char / text input ---------------------------------------------------
-        //Use this for text fields, debug console — NOT for gameplay input.
+        // For text fields and consoles, not for gameplay input.
         glfwSetCharCallback(m_Window, [](GLFWwindow* InWindow, unsigned int InCodepoint)
         {
             WindowData& lData = *static_cast<WindowData*>(glfwGetWindowUserPointer(InWindow));
@@ -272,8 +272,7 @@ namespace Opaax
 
 	void WindowsWindow::RequestClose()
 	{
-		// Sets the very flag ShouldClose reads, so the loop stops and WindowCloseEvent fires
-		// exactly as it does for a real click on the X — one close path, not two.
+		// Sets the flag ShouldClose reads: same path as clicking the X (WindowCloseEvent fires).
 		if (m_Window)
 		{
 			glfwSetWindowShouldClose(m_Window, GLFW_TRUE);
@@ -293,9 +292,9 @@ namespace Opaax
 		}
 		
 		glfwMakeContextCurrent(nullptr);
-		m_Context.reset();         // release the graphics context before its window
+		m_Context.reset();         // before its window
 		glfwDestroyWindow(m_Window);
-		m_Window = nullptr;        // can't be destroyed twice
+		m_Window = nullptr;        // cannot be destroyed twice
 	}
 
 	void WindowsWindow::SetWindowMode(EWindowMode mode)
@@ -320,8 +319,7 @@ namespace Opaax
 
 	void WindowsWindow::SetWindowed()
 	{
-		// The host's flag, not GLFW_TRUE: an editor drawing its own title bar is Windowed AND
-		// undecorated, and forcing decoration here would undo that on every mode change.
+		// Use the host's flag, not GLFW_TRUE: a window with a custom title bar is windowed and undecorated.
 		glfwSetWindowAttrib(
 		m_Window,
 		GLFW_DECORATED,
@@ -436,16 +434,14 @@ namespace Opaax
 
 		glfwSetWindowAttrib(m_Window, GLFW_DECORATED, bInDecorated ? GLFW_TRUE : GLFW_FALSE);
 
-		// Reads the attribute BACK rather than echoing the argument: the log has to be able to
-		// disagree with the request, or it says nothing about the window (L15).
+		// Read back from GLFW, so the log shows what actually happened.
 		OPAAX_LOG(LogWindowsWindow, Trace, "Window decoration requested {} — GLFW reports {}",
 		          bInDecorated ? "on" : "off", IsDecorated() ? "on" : "off");
 	}
 
 	bool WindowsWindow::IsDecorated() const
 	{
-		// Asked of GLFW rather than of m_Data.bDecorated: Borderless turns decoration off without
-		// touching the preference, so only the live attribute answers what is actually on screen.
+		// Ask GLFW (Borderless turns decoration off without changing the preference).
 		return m_Window != nullptr && glfwGetWindowAttrib(m_Window, GLFW_DECORATED) == GLFW_TRUE;
 	}
 

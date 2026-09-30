@@ -1,22 +1,7 @@
-// Suite: the GAME lifecycle — StartGame / EndGame, the GameInstance tier, and its registry (⑦-B B0).
-//
-// WHY THIS EXISTS.
-//   The engine had no "game" scope: EngineStartup brought up infrastructure and opened a world,
-//   and nothing in between said a game had started. ⑦-B adds a symmetric bracket —
-//   StartGame -> create the GameInstance -> first world -> ... -> EndGame -> destroy Play worlds
-//   -> destroy the GameInstance — because a session-scoped thing (input mapping) needs to exist
-//   BEFORE the first world and outlive every world it plays through.
-//
-//   The ordering is the whole design and it is NOT arbitrary: WorldManager::CreateWorld builds a
-//   world subsystem's WorldContext during creation and broadcasts OnWorldCreated only afterwards,
-//   so a session created in reaction to a world would be too late for every world that already
-//   exists. That is why StartGame is a phase and not an event handler.
-//
-// WHAT THIS DOES NOT COVER.
-//   Where the hosts CALL the bracket. A unit test constructing these types directly can verify the
-//   mechanism and says nothing about whether OpaaxApplication and PlayInEditor are wired to it —
-//   that gate is the hosts' ordered boot log (L22), which is why InputMappingSubsystem::Startup
-//   prints the world count it sees.
+// Suite: the game lifecycle — StartGame / EndGame, the GameInstance and its registry.
+//   StartGame -> GameInstance -> first world -> ... -> EndGame -> destroy Play worlds -> destroy
+//   the GameInstance. The game must exist before the first world (world contexts are built at
+//   creation). Where the hosts call these is checked by their boot log, not here.
 #include <doctest.h>
 
 #include "Application/Services/IPaths.h"
@@ -41,9 +26,7 @@ namespace
     OpaaxStringID Name(const char* InText) { return OpaaxStringID(OpaaxString(InText)); }
 
     // -------------------------------------------------------------------------
-    // A session subsystem. Records the context ADDRESS it was handed, which is the
-    // assertion that discriminates: comparing a field would pass against freed memory,
-    // because freed memory usually still holds the old value (L15 / WS4).
+    // Records the context address it was given (comparing a field could pass against freed memory).
     // -------------------------------------------------------------------------
     class ProbeSubsystem : public GameInstanceSubsystemBase
     {
@@ -185,8 +168,7 @@ TEST_SUITE("GameInstance")
         CHECK(lProbe->IsStarted());
         CHECK(ProbeSubsystem::s_StartCount == 1);
 
-        // IDENTITY, not contents: the context must be the GameInstance's own stable slot, so a
-        // stored GameInstanceContext& stays valid for the whole game (WS4 one tier up).
+        // Same address: the context is the GameInstance's own stable slot.
         CHECK(lProbe->Context() == &lGame.GetContext());
         CHECK(lSecond->Context() == &lGame.GetContext());
     }
@@ -229,8 +211,7 @@ TEST_SUITE("GameInstance")
             CHECK(ProbeSubsystem::s_ShutdownCount == 1);
         }
 
-        // The destructor repeats ShutdownSubsystems as a safety net; idempotence is what keeps
-        // that from double-shutting-down a subsystem the ordinary path already closed.
+        // The destructor calls ShutdownSubsystems again; it must not shut a subsystem down twice.
         CHECK(ProbeSubsystem::s_ShutdownCount == 1);
     }
 }
@@ -251,8 +232,7 @@ TEST_SUITE("GameInstanceManager")
     {
         GameInstanceManager lManager;
 
-        // False, not an error: hosts call this unconditionally on the teardown path, so "there
-        // was nothing to end" is a normal answer.
+        // False, not an error: hosts call it unconditionally.
         CHECK_FALSE(lManager.EndGame());
         CHECK_FALSE(lManager.IsGameRunning());
     }
@@ -275,8 +255,7 @@ TEST_SUITE("GameInstanceManager")
         CHECK(lGame->GetSubsystemCount() == 1);
         CHECK(ProbeSubsystem::s_StartCount == 1);
 
-        // A second StartGame is a caller mistake. Refusing loudly beats silently handing back the
-        // running one, which would hide a double-bracket in a host.
+        // A second StartGame is a caller mistake: refuse it loudly.
         CHECK_FALSE(lManager.StartGame());
         CHECK(lManager.GetGameInstance() == lGame);
         CHECK(ProbeSubsystem::s_StartCount == 1);
@@ -309,14 +288,11 @@ TEST_SUITE("GameInstanceManager")
         ProbeSubsystem* lProbe = lSecond->GetSubsystems().GetSubsystem<ProbeSubsystem>();
         REQUIRE(lProbe != nullptr);
 
-        // Reconstruction, not reset: the accumulated tick of the FIRST game is gone because the
-        // subsystem holding it was destroyed, not cleared. That is the property that makes a
-        // pushed input context unable to survive Stop, and why this is a tier and not a flag.
+        // Rebuilt, not reset: the first game's state is gone with its destroyed subsystem.
         CHECK(ProbeSubsystem::s_StartCount == 2);
         CHECK(lProbe->Accumulated() == doctest::Approx(0.0));
 
-        // The counter the log prints as "session #N" — what makes per-cycle vs once-per-editor
-        // answerable from a log rather than from reading this test.
+        // The counter the log prints as "session #N".
         CHECK(lManager.GetSessionsStarted() == 2);
 
         CHECK(lManager.EndGame());
@@ -337,8 +313,7 @@ TEST_SUITE("WorldManager::DestroyWorldsOfMode")
 
         lWorlds.SetActiveWorld(lEdit);
 
-        // This is EndGame's mechanism, and the asymmetry is the editor's whole restore story:
-        // the clone is a Play world, the authoring world is not.
+        // EndGame's mechanism: the Play copy goes, the edit world stays.
         CHECK(lWorlds.DestroyWorldsOfMode(EWorldMode::Play) == 2);
         CHECK(lWorlds.GetWorldCount() == 1);
         CHECK(lWorlds.GetActiveWorld() == lEdit);
@@ -369,9 +344,7 @@ TEST_SUITE("WorldManager::DestroyWorldsOfMode")
         CHECK(lFirst->IsActive());
         CHECK_FALSE(lSecond->IsActive());
 
-        // The level-swap shape: both worlds exist, the active slot moves. This is what a bound
-        // input handler asks, because a callback reaches every listener regardless of which
-        // world is ticking — and world MODE cannot answer it, since both of these are Play.
+        // Level change: both worlds exist and are Play; only the active flag tells them apart.
         lWorlds.SetActiveWorld(lSecond);
         CHECK_FALSE(lFirst->IsActive());
         CHECK(lSecond->IsActive());
@@ -389,9 +362,8 @@ TEST_SUITE("WorldManager::DestroyWorldsOfMode")
         lWorlds.CreateWorld("EditWorld", EWorldMode::Edit);
         lWorlds.CreateWorld("PlayA", EWorldMode::Play);
 
-        // This is what InputMappingSubsystem::Startup prints, and the split is the whole point:
-        // a total count reads 1 in the editor whether the boot order is right or wrong, so only
-        // the PLAY count can discriminate (L15).
+        // InputMappingSubsystem::Startup logs this: the total is 1 in the editor either way, only the
+        // Play count tells a correct boot order from a wrong one.
         CHECK(lWorlds.CountWorldsOfMode(EWorldMode::Play) == 1);
         CHECK(lWorlds.CountWorldsOfMode(EWorldMode::Edit) == 1);
         CHECK(lWorlds.GetWorldCount() == 2);

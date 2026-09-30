@@ -14,9 +14,8 @@ namespace Opaax::Editor
 {
     namespace
     {
-        // Resolve the (entity, type) pair a step names, or nothing. Both halves can legitimately
-        // fail — the entity may have been destroyed by a later step, the type may be gone from a
-        // build that dropped it — and neither is worth more than doing nothing.
+        // Resolves the (entity, type) pair a step names, or nothing (the entity may be destroyed, the
+        // type may be gone).
         struct Target
         {
             EntityRegistry*        Entities = nullptr;
@@ -66,8 +65,7 @@ namespace Opaax::Editor
             const Target lTarget = Resolve(InContext, InId, InTypeName);
             if (!lTarget.IsValid()) { return; }
 
-            // Refuses an essential type on its own (**I17**) — the guarantee lives in the entry,
-            // not in every caller remembering it.
+            // Essential types are refused by the entry itself.
             if (lTarget.Entry->Remove(*lTarget.Entities, lTarget.Handle))
             {
                 lTarget.Owner->MarkChanged();
@@ -83,8 +81,7 @@ namespace Opaax::Editor
 
     namespace
     {
-        // One entity's components, as data. CaptureEntities is the same walk the map writer uses, so
-        // a step and a saved map cannot disagree about what a component IS.
+        // One entity's components as data. Same walk as the map writer, so a step and a saved map agree.
         TDynArray<ComponentData> CaptureComponents(const EditorContext& InContext, const World& InWorld,
                                                    const EntityID InHandle, Guid& OutId)
         {
@@ -125,8 +122,7 @@ namespace Opaax::Editor
             {
                 const IComponentEntry* const lEntry = lTypes.FindByName(lComponent.TypeName);
 
-                // Absent means a later step took the component off. Restoring its VALUES must not
-                // put it back — that is ComponentRemove's job, and its own step.
+                // Absent means a later step removed the component. Restoring values must not add it back.
                 if (lEntry == nullptr || !lEntry->Has(lEntities, lEntity.GetHandle())) { continue; }
 
                 lEntry->Load(lEntities, lEntity.GetHandle(), lComponent.Payload);
@@ -143,8 +139,7 @@ namespace Opaax::Editor
         After.clear();
         Scope = InScope;
 
-        // The ENTITY's world, not the active one: a handle means nothing in another registry, and
-        // the prefab panel's entities are not the active world's.
+        // The entity's own world, not the active one (prefab panel entities live elsewhere).
         if (!InEntity.IsValid()) { return; }
 
         Before = CaptureComponents(InContext, *InEntity.GetWorld(), InEntity.GetHandle(), EntityId);
@@ -164,8 +159,7 @@ namespace Opaax::Editor
         const TDynArray<ComponentData> lNow = CaptureComponents(InContext, *lWorld,
                                                                 lEntity.GetHandle(), lNowId);
 
-        // NARROWED TO WHAT ACTUALLY CHANGED. A type missing from one side was added or removed and
-        // has its own step; the rest of the entity is not this step's business.
+        // Keep only what changed. A type missing on one side was added or removed (its own step).
         TDynArray<ComponentData> lBefore;
         TDynArray<ComponentData> lAfter;
 

@@ -3,7 +3,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
-#include "Engine/Subsystems/Resources/ResourcePath.h"       // a TYPED reference (**UI19**)
+#include "Engine/Subsystems/Resources/ResourcePath.h"
 #include "Engine/Subsystems/Resources/ResourcePathJson.h"
 #include "UI/UIWidget.h"
 
@@ -11,25 +11,14 @@ namespace Opaax
 {
     class ITexture2D;
 
-    // NAMED, never completed — a path carries its type, not its header.
+    // Forward-declared: TResourcePath only needs the name.
     struct TextureResource;
 
     // =============================================================================
-    // UIMask — a container that MASKS EVERYTHING UNDER IT (**UI16**), Unity's Mask.
-    //
-    //   WHITE SHOWS, BLACK HIDES. The texture is stretched across this widget's own rect and the
-    //   fragment multiplies alpha by `mask.r * mask.a` — a black-and-white png with no alpha reads
-    //   as its luminance, a white shape on transparency reads as its silhouette. One expression,
-    //   both intuitions, no mode to get wrong.
-    //
-    //   It masks its CHILDREN, not itself: text, images and buttons under it are all cut the same
-    //   way, because the mask rides on the QUAD rather than on the widget type.
-    //
-    //   AN EMPTY TEXTURE PATH IS A PURE RECT CLIP, free from the same mechanism: outside the rect
-    //   is discarded and inside samples white, so "clip to this box" needs no art.
-    //
-    //   It draws nothing of its own unless asked (Unity's "Show Mask Graphic"), and it is not a hit
-    //   target, so a mask never swallows a click meant for what it masks.
+    // UIMask — masks everything under it (like Unity's Mask). White shows, black hides
+    //   (alpha *= mask.r * mask.a). The texture is stretched over this widget's rect.
+    //   An empty texture path clips to the rect. Draws nothing itself unless bShowMaskGraphic,
+    //   and is not hit-testable.
     // =============================================================================
     class OPAAX_API UIMask final : public UIWidget
     {
@@ -37,10 +26,10 @@ namespace Opaax
         // Authored state
         // =============================================================================
     public:
-        /** A texture's asset path. EMPTY = clip to the rect alone; droppable (**UI19**). */
+        /** A texture path. Empty = clip to the rect. */
         TResourcePath<TextureResource> Texture;
 
-        /** Draw the mask's own shape too (white where it shows) — how an author sees where the cut is. */
+        /** Also draw the mask's own shape (to see where it cuts). */
         bool bShowMaskGraphic = false;
 
         OPAAX_PROPERTIES(UIMask,
@@ -62,11 +51,8 @@ namespace Opaax
         void LoadFields(const nlohmann::json& InJson) override;
 
         /**
-         * The resolved mask texture, or null for a pure rect clip.
-         *
-         * Resolved at REBUILD (through the provider, like every other asset a widget names) rather
-         * than at submit, because submit is const and has no host to ask — and a texture still
-         * uploading re-arms the widget instead of being polled (**UI3**).
+         * The resolved mask texture, or null for a rect clip. Resolved at rebuild (a texture still
+         * uploading re-arms the widget).
          */
         ITexture2D* GetResolvedTexture() const noexcept { return m_Resolved; }
 
@@ -77,6 +63,6 @@ namespace Opaax
         // Members
         // =============================================================================
     private:
-        ITexture2D* m_Resolved = nullptr;   // borrowed; the resource owns it
+        ITexture2D* m_Resolved = nullptr;   // borrowed
     };
 }

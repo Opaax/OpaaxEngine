@@ -13,26 +13,19 @@ namespace Opaax
     inline constexpr LogCategory LogUICanvasFile{"UICanvasFile"};
 
     // =============================================================================
-    // UICanvasFile — a widget tree on DISK: the `.opaaxui` reader and writer.
-    //
-    //   SAVE AND LOAD ARE ONE UNIT, `FontFamilyFile`'s stated rule — they are the two halves of one
-    //   format contract, and splitting them across files is how a writer and a reader drift. The
-    //   text form is public too: the editor's dirty check compares against it and its undo step
-    //   carries a whole tree as one (**UI12**).
-    //
-    //   A node names its TYPE and carries its own fields; the registry turns the name into an empty
-    //   widget and the widget reads itself (SaveFields/LoadFields). An UNKNOWN type is SKIPPED with
-    //   one warning — a file from a build that knows more widget types still opens.
+    // UICanvasFile — reads and writes .opaaxui files. A node names its type and holds its fields;
+    //   the registry creates the widget and the widget reads itself. Unknown types are skipped
+    //   (with one warning).
     // =============================================================================
     namespace UICanvasFile
     {
-        /** Lowercase, one spelling, matching `.opaaxsheet` / `.opaaxfont` / `.opaaxprefab`. */
+        /** File extension. */
         inline constexpr const char* UI_EXTENSION = ".opaaxui";
 
-        /** Bumped when the shape changes. A file carrying a newer one is refused, not guessed at. */
+        /** Format version. A newer version is refused. */
         inline constexpr Uint32 UI_FORMAT_VERSION = 1;
 
-        /** What a canvas is, as a file: its reference height and its root's children. */
+        /** A canvas file: reference height and the root's children. */
         struct UICanvasDoc
         {
             float                ReferenceHeight = 1080.f;
@@ -40,47 +33,41 @@ namespace Opaax
         };
 
         /**
-         * InDoc as text — `dump(4)`, keys sorted by nlohmann's object, NO trailing newline, so a
-         * hand-inspected file and a written one are byte-identical (**MP6**'s rule for maps).
+         * InDoc as text: dump(4), sorted keys, no trailing newline.
          */
         OPAAX_API OpaaxString Serialize(const UICanvasDoc& InDoc);
 
         /**
-         * The same text from a root that something else OWNS — the editor's live canvas, whose tree
-         * must not be moved into a doc just to be written.
+         * The same text from a root owned by someone else (the editor's live canvas).
          */
         OPAAX_API OpaaxString Serialize(const UIWidget& InRoot, float InReferenceHeight);
 
         /**
-         * Parse InText into OutDoc, building widgets through InRegistry.
-         *
-         * OutDoc is left UNTOUCHED on every failure path, so a file that fails to parse does not
-         * half-overwrite the tree the caller already had.
-         *
-         * @return false on malformed json or a version this build cannot read.
+         * Parses InText into OutDoc, creating widgets through InRegistry. OutDoc is untouched on failure.
+         * @return False on malformed JSON or an unsupported version
          */
         OPAAX_API bool Deserialize(const OpaaxString& InText, const UIWidgetRegistry& InRegistry, UICanvasDoc& OutDoc);
 
-        /** Write InDoc to InAbsPath, replacing whatever was there. */
+        /** Writes InDoc to InAbsPath, replacing any content. */
         OPAAX_API bool Save(const OpaaxString& InAbsPath, const UICanvasDoc& InDoc);
 
-        /** Read InAbsPath into OutDoc. Deserialize's guarantees, plus "the file could not be read". */
+        /** Reads InAbsPath into OutDoc (same guarantees as Deserialize). */
         OPAAX_API bool Load(const OpaaxString& InAbsPath, const UIWidgetRegistry& InRegistry, UICanvasDoc& OutDoc);
 
-        /** How many widgets InRoot's subtree holds, itself included. The log's number. */
+        /** Number of widgets in InRoot's subtree, itself included. */
         OPAAX_API Uint64 CountWidgets(const UIWidget& InRoot);
 
         // =============================================================================
-        // One NODE, not a whole canvas — the clipboard's unit, so a paste crosses documents.
+        // One node (the clipboard unit, so paste works across documents).
         // =============================================================================
 
-        /** InWidget and its subtree as text, in the file's node form. */
+        /** InWidget and its subtree as text. */
         OPAAX_API OpaaxString SerializeNode(const UIWidget& InWidget);
 
-        /** The mirror: a fresh subtree from InText, or null when it is not a node this build reads. */
+        /** A new subtree from InText, or null if it is not a node. */
         OPAAX_API TUniquePtr<UIWidget> DeserializeNode(const OpaaxString& InText, const UIWidgetRegistry& InRegistry);
 
-        /** A deep copy through the format — the only copy a non-copyable node has. */
+        /** A deep copy through the file format. */
         OPAAX_API TUniquePtr<UIWidget> CloneWidget(const UIWidget& InWidget, const UIWidgetRegistry& InRegistry);
     }
 }

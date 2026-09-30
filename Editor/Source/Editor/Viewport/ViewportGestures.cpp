@@ -1,14 +1,14 @@
 #include "Editor/Viewport/ViewportGestures.h"
 
 #include "Editor/Camera/EditorCamera.h"
-#include "Editor/ImguiLibrary/ImguiCursor.h"   // the infinite drag — wrap the cursor at the edge
+#include "Editor/ImguiLibrary/ImguiCursor.h"   // infinite drag (wraps the cursor at the edge)
 #include "Editor/Operation/EditorSelection.hpp"
 
 #include "Core/Maths/Bounds2D.h"
-#include "Renderer/CameraView.h"               // ScreenToWorld (CAM2)
+#include "Renderer/CameraView.h"               // ScreenToWorld
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityMeta.h"
-#include "World/Entity/EntityQuery.h"          // the ONE entity-AABB rule — pick and marquee
+#include "World/Entity/EntityQuery.h"          // entity bounds for pick and marquee
 #include "World/World.h"
 
 #include <imgui.h>
@@ -28,8 +28,8 @@ namespace Opaax::Editor
     {
         const ImGuiIO& lIO = ImGui::GetIO();
 
-        // The drag STARTS on the image and then belongs to the gesture: releasing is what ends it,
-        // not leaving the panel — panning to the edge of a level is exactly when you leave.
+        // The drag starts on the image, then belongs to the gesture until release (leaving the panel is
+        // normal when panning to the edge of a level).
         if (bInHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Middle))
         {
             m_bPanning = true;
@@ -42,8 +42,8 @@ namespace Opaax::Editor
 
         if (m_bPanning)
         {
-            // No correction to accumulate, unlike the gizmo: a pan reads MouseDelta, and the
-            // teleport zeroes it on the frame it jumps. One frame of no motion, invisible.
+            // No correction needed, unlike the gizmo: a pan reads MouseDelta, which is zero on the frame the
+            // cursor wraps.
             const Vector2F lWrapped = ImguiCursor::WrapInRect(ImVec2{ InOrigin.x, InOrigin.y },
                                                               ImVec2{ InOrigin.x + InSizePx.x, InOrigin.y + InSizePx.y });
 
@@ -57,7 +57,7 @@ namespace Opaax::Editor
             m_PendingPanPx.y += lIO.MouseDelta.y;
         }
 
-        // The wheel, unlike the drag, needs the pointer here — it is anchored at the cursor.
+        // The wheel needs the pointer over the image: it zooms around the cursor.
         if (bInHovered && lIO.MouseWheel != 0.f)
         {
             m_PendingZoom         = lIO.MouseWheel;
@@ -110,8 +110,8 @@ namespace Opaax::Editor
             {
                 m_bWasDrag = true;
 
-                // PAINTED HERE, in screen pixels, on the foreground list. A marquee is UI, not world
-                // geometry — DebugDraw would put it a frame behind and make it scale with the zoom.
+                // Drawn here in screen pixels on the foreground list: a marquee is UI (DebugDraw would lag a frame
+                // and scale with zoom).
                 const ImVec2 lFrom{ InOrigin.x + m_Pending.StartPx.x, InOrigin.y + m_Pending.StartPx.y };
                 const ImVec2 lTo = lIO.MousePos;
 
@@ -125,10 +125,10 @@ namespace Opaax::Editor
                 lDraw->AddRect(lFrom, lTo, lLine);
             }
 
-            return;   // still held — nothing to spend yet
+            return;   // still held: nothing to apply yet
         }
 
-        // Released: bank exactly one outcome.
+        // Released: store exactly one result.
         m_Pending.Kind = m_bWasDrag ? EKind::Box : EKind::Point;
         m_bSelecting   = false;
         m_bWasDrag     = false;

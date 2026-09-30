@@ -9,15 +9,9 @@
 namespace Sandbox
 {
     // =============================================================================
-    // QuadOscillatorSubsystem — the game's first real world subsystem (M4).
-    //
-    //   PLAY-ONLY: it is gameplay, so it must not run while you are authoring. That is the
-    //   whole of `ShouldCreate` — one static function, and in an Edit world this type is never
-    //   even CONSTRUCTED (the predicate is static precisely so no instance is needed to decide).
-    //
-    //   Everything it needs arrives through the WorldContext by constructor: the world whose
-    //   entities it moves. It never touches the AppServiceLocator (D3) and the engine has never
-    //   heard of this type — a game subsystem costs one `Register<T>()` and nothing else.
+    // QuadOscillatorSubsystem — a sample gameplay world subsystem. Play-only (ShouldCreate is static,
+    //   so it is never even constructed in an Edit world). Gets what it needs through the
+    //   WorldContext.
     // =============================================================================
     class QuadOscillatorSubsystem final : public Opaax::WorldSubsystemBase
     {
@@ -27,7 +21,7 @@ namespace Sandbox
     public:
         OPAAX_SUBSYSTEM_TYPE(QuadOscillatorSubsystem)
 
-        /** Gameplay: Play worlds only. Omitting this would create it everywhere. */
+        /** Play worlds only. */
         static bool ShouldCreate(const Opaax::World& InWorld);
 
         // =========================================================================
@@ -49,13 +43,8 @@ namespace Sandbox
         // =========================================================================
     private:
         /**
-         * Record each quad's starting position, so the oscillation has something to swing around
-         * instead of drifting.
-         *
-         * Deferred to the FIRST Update on purpose, not done in Startup: the world's entities are
-         * spawned by the host in PostEngineStartup, which runs AFTER the startup world — and
-         * therefore after this subsystem's Startup (BO4). At Startup the world is legitimately
-         * empty. This is the normal shape for a subsystem that reads world content.
+         * Records each quad's starting position, so the oscillation swings around it. Done on the first
+         * Update, not in Startup: the world's entities are loaded after this subsystem starts.
          */
         void CaptureBaselines();
 

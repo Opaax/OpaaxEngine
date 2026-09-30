@@ -16,21 +16,19 @@ namespace Opaax
     namespace
     {
         // =====================================================================
-        // The single resource-type registry. Lives in exactly one module (the
-        // engine DLL, where this TU compiles); reached from every module through
-        // the exported Intern/Count functions below.
+        // The single resource type registry, in the engine DLL, reached through the exported functions.
         // =====================================================================
         struct TypeEntry
         {
             Uint64      Hash;
-            std::string Name;   // full type signature — the collision-check key
+            std::string Name;   // full type signature
         };
 
         struct TypeRegistry
         {
             TDynArray<TypeEntry>         Entries;      // index == dense ResourceTypeID
             TUnorderedMap<Uint64, Uint32> HashToIndex;
-            Mutex                        Lock;         // lazy registration may come off worker threads (M2)
+            Mutex                        Lock;         // registration may happen on worker threads
         };
 
         TypeRegistry& GetRegistry()
@@ -50,9 +48,7 @@ namespace Opaax
             const TypeEntry& lExisting = lReg.Entries[lIt->second];
             if (lExisting.Name != InName)
             {
-                // Two distinct type signatures collided on one 64-bit hash — they would
-                // share a pool index, i.e. one pool reinterpreting the other's payload.
-                // Fatal in ALL builds by design (review ruling C2): fail loud, never corrupt.
+                // Two type signatures with the same hash would share a pool: fatal in every build.
                 OPAAX_LOG(LogResourceType, Critical, "ResourceTypeID hash collision (hash {}): '{}' vs '{}' — aborting", InHash, lExisting.Name, std::string(InName));
                 OPAAX_DEBUGBREAK();
                 std::abort();

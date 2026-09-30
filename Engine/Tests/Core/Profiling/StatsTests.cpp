@@ -1,14 +1,11 @@
-// Suite: the frame profiler + the sample ring (Core/Profiling/, ④).
-//
-// Both are pure and GPU-free, which is the whole reason the logic lives in them rather than in the
-// panel: the tree's SHAPE (pre-order, correct depths, a complete previous frame) and the ring's
-// wrap-around are exactly what a smoke run cannot check by eye.
+// Suite: the frame profiler and the sample ring. Both are pure: the tree's shape and the ring's
+// wrap-around are what a manual run cannot check.
 #include <doctest.h>
 
 #include "Core/Profiling/FrameProfiler.h"
 #include "Core/Profiling/Profiler.h"
 #include "Core/Profiling/StatsHistory.h"
-#include "Editor/Panels/StatsDisplay.h"   // header-only, no ImGui — the M2a include path (L55)
+#include "Editor/Panels/StatsDisplay.h"   // header-only, no ImGui
 
 #include <thread>
 
@@ -630,7 +627,7 @@ TEST_CASE("StatsDisplay: a counter that stops being submitted holds its row at z
 }
 
 // =============================================================================
-// GPU timing (S3) — the snapshot's second clock
+// GPU timing
 // =============================================================================
 
 TEST_CASE("FrameStats: GpuMs defaults to NEGATIVE, which means 'no reading'")
@@ -643,7 +640,7 @@ TEST_CASE("FrameStats: GpuMs defaults to NEGATIVE, which means 'no reading'")
 }
 
 // =============================================================================
-// Profiler — the I1 singleton's class, on OWN instances (SG4)
+// Profiler — on local instances
 // =============================================================================
 
 TEST_CASE("Profiler: disabled records nothing, and the scope site gets a null recorder")

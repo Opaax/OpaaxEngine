@@ -54,15 +54,13 @@ namespace Opaax
 
         if (!InOwnerMap.IsValid())
         {
-            // An invalid OwnerMap means "runtime-spawned" (**WM2**), so these entities would exist
-            // and no Save could ever write them — a placement that silently does not persist.
+            // Without an owner map the entities would be runtime-spawned and never saved.
             OPAAX_LOG(LogPrefabFactory, Error,
                       "Cannot build an instance of '{}' without a target map", InPrefabAssetPath.CStr());
             return lInstance;
         }
 
-        // The authoring name comes from the REGISTRY, never a literal here: it is the key written
-        // into the map file, and a second copy of it is how a writer and a reader drift.
+        // Name from the registry (it is the key saved in map files).
         const IComponentEntry* lMarkerEntry =
             InRegistry.FindByTypeId(entt::type_hash<PrefabInstanceComponent>::value());
 
@@ -86,20 +84,17 @@ namespace Opaax
             lEntity.Id       = Guid::Derive(InInstanceId, lTemplate.Id);
             lEntity.OwnerMap = InOwnerMap;
 
-            // The link derives WITH the identity it names (§HR): a barrel's parent is THIS
-            // placement's base. A link to anything outside the prefab cannot follow and is dropped.
+            // Parent links are derived with the guids; links to outside the prefab are dropped.
             lEntity.Parent   = Names(InPrefab.Entities, lTemplate.Parent) ? Guid::Derive(InInstanceId, lTemplate.Parent)
                                                                            : Guid{};
 
-            // The outer instance owns the entity: its marker replaces rather than stacks, erased
-            // first so the payload cannot appear twice. A FLATTENED prefab (P7) carries none, but
-            // a caller handing raw entities that were an instance might.
+            // The outer instance owns the entity: replace any existing marker.
             StripMarker(lEntity, lMarkerName);
 
             PrefabInstanceComponent lMarker;
             lMarker.Prefab.Path  = InPrefabAssetPath;
             lMarker.InstanceId   = InInstanceId;
-            lMarker.TemplateGuid = lTemplate.Id;   // the PREFAB's guid, not the derived one
+            lMarker.TemplateGuid = lTemplate.Id;   // the prefab's guid, not the derived one
 
             lEntity.Components.emplace_back(lMarkerName, nlohmann::json(lMarker));
 
@@ -116,8 +111,7 @@ namespace Opaax
     {
         PrefabData lPrefab;
 
-        // The marker's authoring name comes from the REGISTRY for BuildInstance's reason. Absent, no
-        // entity can be carrying one, so there is nothing to strip and this is not a refusal.
+        // Not registered: no entity can carry one, nothing to strip.
         const IComponentEntry* lMarkerEntry =
             InRegistry.FindByTypeId(entt::type_hash<PrefabInstanceComponent>::value());
         const OpaaxStringID    lMarkerName = (lMarkerEntry != nullptr) ? lMarkerEntry->GetName()
@@ -129,15 +123,12 @@ namespace Opaax
         {
             EntityData lEntity = lCaptured;
 
-            // Guids are KEPT — they become the file's template ids. See the header.
+            // Guids are kept: they become the file's template ids.
             lEntity.OwnerMap = MapId();
             StripMarker(lEntity, lMarkerName);
 
-            // A prefab's roots have no parent (§HR — WM2's "belongs to no map", one field over).
-            // The caller is expected to have put such an entity at its WORLD pose first; this only
-            // makes sure no file can name an entity it does not hold. Judged only for an UNFOLDED
-            // capture: once placements are records, an own entity may legitimately hang under one
-            // of their entities, and the flat set is not here to check against.
+            // Roots have no parent. Only checked for an unfolded capture (with placements, an entity may
+            // hang under a placement's entity).
             if (lEntity.Parent.IsValid() && InCaptured.Instances.empty() && !Names(InCaptured.Entities, lEntity.Parent))
             {
                 OPAAX_LOG(LogPrefabFactory, Warn, "Entity '{}' was parented outside the prefab — it becomes a root",
@@ -148,8 +139,7 @@ namespace Opaax
             lPrefab.Entities.emplace_back(Move(lEntity));
         }
 
-        // The RECORDS come along (P7): a capture that was folded first holds its nested placements
-        // here, and they are what the file stores — expanding them is the reader's business.
+        // Placements are stored as records; the reader expands them.
         lPrefab.Instances = InCaptured.Instances;
 
         OPAAX_LOG(LogPrefabFactory, Trace, "Built a prefab of {} entity(ies) and {} placement(s)",
@@ -162,23 +152,18 @@ namespace Opaax
                                       const IPrefabResolver& InResolver, const ComponentRegistry& InRegistry)
     {
         PrefabData lFlat;
-        lFlat.Entities = InRaw.Entities;   // its own, as authored
+        lFlat.Entities = InRaw.Entities;   // its own entities
 
         if (InRaw.Instances.empty()) { return lFlat; }
 
-        // The same expansion a map's placements get, on a placeholder map: BuildInstance refuses
-        // an invalid one, and the id is cleared off every entity below anyway (WM2 — a prefab's
-        // entities belong to no map).
+        // Expanded like a map's placements, on a placeholder map (the map id is cleared afterwards).
         MapData lPlacements;
         lPlacements.Id        = MapId("Prefab");
         lPlacements.Instances = InRaw.Instances;
 
         const Uint64 lExpanded = PrefabFold::Expand(lPlacements, InResolver, InRegistry);
 
-        // "As if these were the prefab's own": no map, no marker. The guid each carries —
-        // Derive(record.InstanceId, template) — IS the in-prefab identity a level's BuildInstance
-        // derives from again and an override record keys by; nothing else about the nesting has to
-        // survive into the flat view.
+        // Flattened: no map, no marker. Each keeps its derived guid (its identity inside the prefab).
         const OpaaxStringID lMarkerName = MarkerName(InRegistry);
 
         for (EntityData& lEntity : lPlacements.Entities)
@@ -218,14 +203,8 @@ namespace Opaax
         const Guid lInstanceId = Guid::New();
         MapData    lAsInstance = InState;
 
-        // Every entity the base has is re-marked as THIS instance of it — its own marker replaced,
-        // since a nested entity of the base names the nested prefab, and the base's flatten already
-        // carries that nesting. Fold then diffs each against its template and records what is gone.
-        //
-        // AND THE STATE IS PUT ON DERIVED GUIDS FIRST (§HR): the world holds the base's raw ids, but
-        // a record is applied over BuildInstance's derived entities, so a `parent` recorded raw
-        // would name nothing in the flat variant. Ids and in-base links derive together, exactly
-        // as a level placement's do; the marker keeps the raw id as the template it names.
+        // Every entity of the base is marked as this instance of it. Fold then diffs each against its
+        // template. Guids and parent links are derived first, like a level placement's.
         for (EntityData& lEntity : lAsInstance.Entities)
         {
             if (Names(lBase->Entities, lEntity.Parent)) { lEntity.Parent = Guid::Derive(lInstanceId, lEntity.Parent); }
@@ -245,8 +224,7 @@ namespace Opaax
 
         PrefabFold::Fold(lAsInstance, InResolver, InRegistry);
 
-        // An empty base marks nothing, so Fold produced no record for it — added by hand: a variant
-        // that names no base is not a variant.
+        // An empty base gives no record: add one (a variant must name its base).
         bool lNamed = false;
         for (const PrefabInstanceRecord& lRecord : lAsInstance.Instances)
         {

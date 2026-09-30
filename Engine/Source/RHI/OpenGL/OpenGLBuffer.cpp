@@ -4,7 +4,6 @@
 
 namespace Opaax
 {
-    // NOTE: the I*::Create factory dispatch lives in RHI/BackendFactory.cpp.
 
     //------------------------------------------------------------------------------
     // OpenGLVertexBuffer
@@ -13,7 +12,7 @@ namespace Opaax
     {
         glCreateBuffers(1, &m_RendererID);
         glBindBuffer(GL_ARRAY_BUFFER, m_RendererID);
-        // GL_DYNAMIC_DRAW — data changes every frame (batch vertex upload)
+        // GL_DYNAMIC_DRAW: updated every frame.
         glBufferData(GL_ARRAY_BUFFER, InSize, nullptr, GL_DYNAMIC_DRAW);
     }
     
@@ -42,7 +41,7 @@ namespace Opaax
     void OpenGLVertexBuffer::SetData(const void* InData, Uint32 InSize)
     {
         glBindBuffer(GL_ARRAY_BUFFER, m_RendererID);
-        // glBufferSubData — avoids reallocation, only updates content
+        // glBufferSubData: updates without reallocating.
         glBufferSubData(GL_ARRAY_BUFFER, 0, InSize, InData);
     }
     
@@ -51,8 +50,7 @@ namespace Opaax
 
     OpenGLIndexBuffer::OpenGLIndexBuffer(const Uint32* InIndices, Uint32 InCount)
     {
-        // NOTE: GL_ELEMENT_ARRAY_BUFFER must be bound to a VAO to be remembered.
-        //   We bind here during construction — the VAO must already be bound.
+        // The element buffer binding is stored in the VAO: the VAO must be bound here.
         glCreateBuffers(1, &m_RendererID);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_RendererID);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER,

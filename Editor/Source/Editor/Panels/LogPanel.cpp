@@ -27,7 +27,7 @@ namespace
         return "?";
     }
 
-    /** The console's colours, so a line reads the same in both places. Info keeps the theme's text. */
+    /** The console's colours, so a line looks the same in both. Info keeps the theme's text colour. */
     ImVec4 LevelColour(const ELogLevel InLevel)
     {
         switch (InLevel)
@@ -40,7 +40,7 @@ namespace
         }
     }
 
-    /** The colour a level BUTTON wears — its lines' colour. */
+    /** A level button's colour (its lines' colour). */
     ImVec4 LevelColour(const ELogLevelFilter InLevel)
     {
         switch (InLevel)
@@ -57,7 +57,7 @@ namespace
         return static_cast<size_t>(ToLevelFilter(InLevel));
     }
 
-    /** HH:MM:SS local time — the date is the file's business, not a panel column's. */
+    /** HH:MM:SS local time. */
     void FormatTime(const std::chrono::system_clock::time_point InTime, char (&OutText)[16])
     {
         const std::time_t lTime = std::chrono::system_clock::to_time_t(InTime);
@@ -89,9 +89,8 @@ namespace Opaax::Editor
 
         if (m_Incoming.empty()) { return; }
 
-        // The Logger dropped lines this panel never saw (hidden while more than MAX_LINES arrived).
-        // What is held here is older than a gap, so start over from the new lines — m_Entries must
-        // stay contiguous for EntryAt.
+        // The Logger dropped lines this panel never saw: start over from the new lines (m_Entries must
+        // stay contiguous for EntryAt).
         if (!m_Entries.empty() && m_Incoming.front().Sequence != m_Entries.back().Sequence + 1)
         {
             ClearLines();
@@ -189,7 +188,7 @@ namespace Opaax::Editor
         }
         ImGui::Separator();
 
-        // Checkboxes, not Selectables: a click toggles one and leaves the dropdown open for the next.
+        // Checkboxes, not Selectables: a click toggles and keeps the dropdown open.
         for (const OpaaxStringID lCategory : m_Categories)
         {
             bool bShown = m_Filter.IsShown(lCategory);
@@ -224,8 +223,7 @@ namespace Opaax::Editor
         const size_t lIndex = static_cast<size_t>(InLevel);
         bool&        bShown = m_Filter.ShowLevel[lIndex];
 
-        // Off reads as off: dimmed text on a plain frame. The "###" id keeps the button the same
-        // widget while its count changes.
+        // Off looks off: dimmed text. The "###" id keeps the button the same widget while its count changes.
         ImGui::PushStyleColor(ImGuiCol_Text, bShown ? LevelColour(InLevel) : ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
         if (!bShown)
         {
@@ -262,7 +260,7 @@ namespace Opaax::Editor
         ImGui::TableSetupColumn("Message",  ImGuiTableColumnFlags_WidthStretch);
         ImGui::TableHeadersRow();
 
-        // Read BEFORE this frame's rows grow the content: at the bottom last frame = follow the new lines.
+        // Read before this frame's rows are added: at the bottom last frame = follow new lines.
         const bool bFollow = ImGui::GetScrollY() >= ImGui::GetScrollMaxY();
 
         ImGuiListClipper lClipper;

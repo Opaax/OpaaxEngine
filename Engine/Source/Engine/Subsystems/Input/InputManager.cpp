@@ -99,8 +99,7 @@ namespace Opaax
     {
         if (InRepeat)
         {
-            // OS key-repeat is a text-entry concept, not a state change: the key was already down,
-            // and letting it through would make WasPressedThisFrame fire again mid-hold.
+            // Key repeat does not change state (WasPressedThisFrame must not fire again).
             return;
         }
 
@@ -138,8 +137,7 @@ namespace Opaax
 
         if (!m_bHasMousePosition)
         {
-            // First position of the run (or since a reset): there is no previous, so the delta must
-            // be zero rather than the cursor's distance from the origin.
+            // First position: no delta.
             m_MousePrevious      = m_MousePosition;
             m_bHasMousePosition  = true;
         }
@@ -147,8 +145,7 @@ namespace Opaax
 
     void InputManager::OnMouseScrolled(float InXOffset, float InYOffset)
     {
-        // Accumulated, not assigned: several wheel notches can land in one frame's PollEvents, and
-        // keeping only the last would silently drop them.
+        // Accumulated: several wheel events can arrive in one frame.
         m_ScrollDelta.x += InXOffset;
         m_ScrollDelta.y += InYOffset;
     }
@@ -160,8 +157,7 @@ namespace Opaax
     {
         m_Current.fill(false);
 
-        // The latches are CLEARED, not filled: a reset must not produce release-edges for presses
-        // the reader may never have observed. See the header — a reset is not an event.
+        // Edge flags are cleared, not set: a reset is not a release.
         m_PressedThisFrame.fill(false);
         m_ReleasedThisFrame.fill(false);
 

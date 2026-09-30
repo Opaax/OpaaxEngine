@@ -6,35 +6,16 @@
 namespace Opaax
 {
     // =============================================================================
-    // PhysicsEvents.h — Tier-3 bus payloads published by PhysicsSubsystem after each step.
-    //
-    //   PLAIN PODS, like WorldEvents.h beside them: adding a physics event is adding a struct
-    //   here, with no central registration and no enum entry. The Tier-1 EEventType list stays
-    //   closed to OS/window/input, exactly as its own comment says.
-    //
-    //   THEY ARE PUBLISHED, NOT ENQUEUED, and that is a deliberate departure from the bus's
-    //   stated default. `EventBus::Flush` runs at the TOP of `Engine::Loop`, before Update and
-    //   before the fixed-step catch-up loop — so an ENQUEUED contact would be delivered a whole
-    //   frame later, after the reconcile had already run and after any number of further steps.
-    //   A frame that ran three fixed steps would deliver three steps' worth of Began/Ended pairs
-    //   in one batch with no relationship to the simulation that produced them. Immediate
-    //   dispatch puts a handler right where M9 proved it works: after the Step that produced the
-    //   touch, with both entities still live.
-    //
-    //   A HANDLER MAY DESTROY AN ENTITY. That is the pickup case and it is supported: the next
-    //   step's ReconcileDeadBodies reaps the body, and a pair whose entity died is dropped rather
-    //   than ticked, so a destroyed sensor cannot emit a phantom Stayed or Ended.
-    //
-    //   Both worlds in a PIE session share the engine bus, but only the ACTIVE one ticks (WS5),
-    //   so exactly one of them is ever publishing.
+    // PhysicsEvents.h — events published on the EventBus by PhysicsSubsystem after each step.
+    //   Published immediately (not enqueued), right after the step that produced them.
+    //   A handler may destroy an entity: its body is removed next step and its pairs are dropped.
     // =============================================================================
 
     // =============================================================================
-    // Overlap — a collider whose Mode is Overlap (a sensor)
+    // Overlap — a collider in Overlap mode (a sensor)
     // =============================================================================
     /**
-     * A sensor and a visitor began overlapping. OverlapEntity owns the Overlap-mode collider;
-     * OtherEntity is what entered it.
+     * A visitor entered a sensor. OverlapEntity owns the sensor; OtherEntity entered it.
      */
     struct PhysicsOverlapBegan
     {
@@ -43,10 +24,7 @@ namespace Opaax
     };
 
     /**
-     * A sensor and a visitor are STILL overlapping, once per fixed step between Began and Ended.
-     *
-     * Synthesized by the subsystem, not by the backend — Box2D reports only begin and end touch,
-     * so the live-overlap set is what turns those two edges into a state.
+     * A visitor is still inside a sensor: once per fixed step between Began and Ended.
      */
     struct PhysicsOverlapStayed
     {
@@ -54,7 +32,7 @@ namespace Opaax
         EntityID OtherEntity   = ENTITY_NONE;
     };
 
-    /** A sensor and a visitor stopped overlapping. Same payload as Began. */
+    /** A visitor left a sensor. Same fields as Began. */
     struct PhysicsOverlapEnded
     {
         EntityID OverlapEntity = ENTITY_NONE;
@@ -62,11 +40,10 @@ namespace Opaax
     };
 
     // =============================================================================
-    // Collision — two colliders whose Mode is Solid
+    // Collision — two solid colliders
     // =============================================================================
     /**
-     * Two solid colliders began touching. A and B follow the backend's shape order, which is
-     * stable but carries no meaning — neither is "the one that hit the other".
+     * Two solid colliders started touching. A and B have no particular meaning.
      */
     struct PhysicsCollisionBegan
     {
@@ -74,7 +51,7 @@ namespace Opaax
         EntityID EntityB = ENTITY_NONE;
     };
 
-    /** Two solid colliders stopped touching. Same payload as Began. */
+    /** Two solid colliders stopped touching. Same fields as Began. */
     struct PhysicsCollisionEnded
     {
         EntityID EntityA = ENTITY_NONE;
@@ -85,15 +62,9 @@ namespace Opaax
     // World bounds — the optional kill volume
     // =============================================================================
     /**
-     * A dynamic body left the configured world bounds.
-     *
-     * Fires ONCE, on the inside-to-outside transition, not every step the body keeps falling — a
-     * body that left is a single occurrence, and a per-step version would be unusable in exactly
-     * the case it exists for.
-     *
-     * It fires whatever the configured response is: `EventAndDestroy` reaps the entity AFTER this
-     * is published, so a handler still sees a live entity and can read whatever it needs off it.
-     * LastPosition is where it was when it crossed out.
+     * A dynamic body left the world bounds. Fires once per exit, whatever the configured response.
+     * With EventAndDestroy the entity is destroyed after this event (still alive for handlers).
+     * LastPosition is where it left.
      */
     struct PhysicsExitedWorldBounds
     {

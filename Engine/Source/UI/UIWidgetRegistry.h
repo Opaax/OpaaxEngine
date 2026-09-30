@@ -11,15 +11,9 @@ namespace Opaax
     inline constexpr LogCategory LogUIWidgetRegistry{"UIWidgetRegistry"};
 
     // =============================================================================
-    // UIWidgetRegistry — the widget TYPES a `.opaaxui` may name, and how to build one.
-    //
-    //   `ComponentRegistry`'s shape one module over, and much smaller: a widget serializes ITSELF
-    //   through the SaveFields/LoadFields virtuals (**UI12**), so all this has to answer is
-    //   "given the name written in the file, make me an empty one of those".
-    //
-    //   AN UNKNOWN TAG IS A SKIPPED NODE, NOT A FAILED PARSE. A file written by a build that knows
-    //   a widget type this one does not must still open — the author loses that node, not the
-    //   screen. One warning per unknown name, never one per node.
+    // UIWidgetRegistry — the widget types a .opaaxui can use, and how to create them.
+    //   Widgets serialize themselves (SaveFields/LoadFields). An unknown type is a skipped node
+    //   (one warning per name), not a failed file.
     // =============================================================================
     class OPAAX_API UIWidgetRegistry
     {
@@ -28,10 +22,8 @@ namespace Opaax
         // =============================================================================
     public:
         /**
-         * Make T buildable under InName — the string the file carries.
-         *
-         * @return false when InName is empty or already taken; the registration is then dropped
-         *   with a warning rather than silently shadowing the first.
+         * Registers T under InName (the name in files).
+         * @return False if InName is empty or already used (dropped with a warning)
          */
         template<typename T>
         bool Register(const OpaaxStringID InName)
@@ -39,20 +31,20 @@ namespace Opaax
             return RegisterFactory(InName, []() -> TUniquePtr<UIWidget> { return MakeUnique<T>(); });
         }
 
-        /** Idempotent. Called once the first document opens; after it, Register refuses. */
+        /** Called when the first document opens. After this, Register refuses. Safe to call twice. */
         void Seal();
 
         // =============================================================================
         // Build
         // =============================================================================
     public:
-        /** A fresh widget of the type InName names, or null when nothing registered under it. */
+        /** A new widget of type InName, or null if not registered. */
         TUniquePtr<UIWidget> Create(OpaaxStringID InName) const;
 
-        /** Whether InName is buildable — what a file reader asks before warning. */
+        /** Whether InName is registered. */
         bool IsRegistered(OpaaxStringID InName) const noexcept;
 
-        /** Every registered name, in registration order — the panel's Add menu. */
+        /** Every registered name, in order (the panel's Add menu). */
         const TDynArray<OpaaxStringID>& GetNames() const noexcept { return m_Names; }
 
         Uint64 Count() const noexcept { return m_Names.size(); }
@@ -63,7 +55,7 @@ namespace Opaax
     private:
         using FWidgetFactory = TFunction<TUniquePtr<UIWidget>()>;
 
-        /** Out-of-line sink for Register<T> — keeps the template body free of the map's type. */
+        /** Stores a factory (keeps the template free of the map type). */
         bool RegisterFactory(OpaaxStringID InName, FWidgetFactory InFactory);
 
         // =============================================================================
@@ -71,7 +63,7 @@ namespace Opaax
         // =============================================================================
     private:
         TDynArray<OpaaxStringID> m_Names;
-        TDynArray<FWidgetFactory> m_Factories;   // parallel to m_Names; a handful of entries, so a scan is right
+        TDynArray<FWidgetFactory> m_Factories;   // same order as m_Names
         bool                      m_bSealed = false;
     };
 }

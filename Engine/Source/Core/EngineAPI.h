@@ -33,8 +33,7 @@
 
 // =============================================================================
 // Force Inline
-// NOTE: FORCEINLINE hints the compiler to always inline regardless of /Ob level.
-//   Use on hot-path trivial accessors only — do not sprinkle everywhere.
+// Always inline. Use on hot trivial accessors only.
 // =============================================================================
 #if defined(_MSC_VER)
 #define FORCEINLINE __forceinline

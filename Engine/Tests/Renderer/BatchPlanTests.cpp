@@ -1,9 +1,5 @@
-// Suite: the pass batch plan (Renderer/Renderer2DBatchPlan.h).
-//
-// This is the ⑥ bug's regression gate. Renderer2D used to sort INSIDE Flush, i.e. after the batch
-// had already been cut, so past MAX_QUADS or the sampler limit a later batch drew over an earlier
-// layer. Every case below is about the order the plan EMITS in, never about pixels — which is why
-// it needs no GL context.
+// Suite: the pass batch plan (Renderer/Renderer2DBatchPlan.h). Sorting happens before batching,
+// so a later batch never draws over an earlier layer. Tests the emit order, no GL needed.
 #include <doctest.h>
 
 #include "Renderer/Renderer2DBatchPlan.h"
@@ -21,10 +17,10 @@ namespace
     }
 
     /**
-     * The pre-U5 call, unchanged: nothing is masked.
+     * The unmasked call: nothing is masked.
      *
      * Every case below this line was written before masks existed and is UNTOUCHED — which is the
-     * point. An unmasked pass must plan exactly as it always did (**UI16**).
+     * point. An unmasked pass must plan exactly as it always did.
      */
     void PlanQuadBatches(const TDynArray<Uint64>& InKeys, const TDynArray<Uint32>& InTextureIds,
                          const QuadBatchLimits& InLimits, TDynArray<QuadPlacement>& OutPlan)
@@ -64,7 +60,7 @@ TEST_CASE("PlanQuadBatches: one batch emits in layer order, not submission order
 
 TEST_CASE("PlanQuadBatches: the sort survives the batch cut")
 {
-    // THE ⑥ REGRESSION GATE. Same input as above with room for two quads per flush: both
+    // THE REGRESSION CASE. Same input as above with room for two quads per flush: both
     // Background quads must land in batch 0 and both UI quads in batch 1, so the later flush
     // still draws on top. Sorting inside the flush cannot produce this — it would cut the pass
     // as [UI, Background] then [UI, Background] and paint background over UI.
@@ -165,7 +161,7 @@ TEST_CASE("PlanQuadBatches: degenerate limits terminate")
 }
 
 // =============================================================================
-// UI U5 — a masked quad needs its MASK bound too, so it may cost a SECOND slot (UI16).
+// A masked quad needs its mask bound too, so it may cost a second slot.
 // =============================================================================
 
 TEST_CASE("PlanQuadBatches: a masked quad gets a slot for its mask, and 0 means no mask")

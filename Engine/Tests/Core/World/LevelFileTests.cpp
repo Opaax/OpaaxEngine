@@ -1,12 +1,6 @@
-// Suite: LevelFile — the `.opaaxlevel` reader, and the rule that NAMES A WORLD.
-//
-// The level's name is the world's name (WorldSpec carries no name of its own), so these cases
-// pin where that name comes from: the `name` key when the author wrote one, the file's stem
-// otherwise. A level that names itself keeps its name wherever the file is moved to, which is
-// the whole reason the key beats mining the path.
-//
-// Runs against a UNIQUE directory under the OS temp dir, created and removed per case — the
-// suite never touches the repo ([[L20]]).
+// Suite: LevelFile — the .opaaxlevel reader, and the world's name: the "name" key if set, else the
+// file name (so a named level keeps its name when moved).
+// Uses a unique directory under the OS temp dir, created and removed per case.
 #include <doctest.h>
 
 #include <filesystem>
@@ -162,7 +156,7 @@ TEST_CASE("LevelFile: a failed load leaves the caller's data untouched")
 
 TEST_CASE("LevelFile: 'persistentMap' resolves to an index into the level's own maps")
 {
-    // WM1a: the always-mounted map is named by PATH in the file and held as an INDEX in memory,
+    // The persistent map is named by path in the file and held as an index in memory,
     // so "it is one of this level's maps" is decided once, here, and never re-checked.
     const ScopedTempDir lDir("persistent");
 
@@ -194,7 +188,7 @@ TEST_CASE("LevelFile: 'persistentMap' resolves to an index into the level's own 
 
     SUBCASE("a name matching no entry defaults, and the level still LOADS")
     {
-        // Tolerant and total (MP3): the author is warned, not refused. A level that stopped
+        // Tolerant and total: the author is warned, not refused. A level that stopped
         // opening over a mistyped optional field would cost far more than the field is worth.
         const OpaaxString lPath = lDir.Write("Ghost.opaaxlevel", R"({
             "version": 1,
@@ -238,7 +232,7 @@ TEST_CASE("LevelFile: an empty level has no persistent map to hand out")
 
 TEST_CASE("LevelFile: Save -> Load is a fixed point")
 {
-    // The writer half (MP4). A manifest the editor can author is only useful if reading back what
+    // The writer half. A manifest the editor can author is only useful if reading back what
     // it wrote gives the same level — including the persistent map, which is the one field that
     // could quietly degrade to "the first entry" without anyone noticing.
     const ScopedTempDir lDir("save");
@@ -260,7 +254,7 @@ TEST_CASE("LevelFile: Save -> Load is a fixed point")
     CHECK(lRead.PersistentMapIndex == 1);
     CHECK(lRead.PersistentMap() == OpaaxString("Maps/B.opaaxmap"));
 
-    // And the text is STABLE, which is what the editor's dirty check rests on (MP5): a second
+    // And the text is STABLE, which is what the editor's dirty check rests on: a second
     // Save of what was just read must not report the level as changed.
     CHECK(LevelFile::Serialize(lRead) == LevelFile::Serialize(lWritten));
 }

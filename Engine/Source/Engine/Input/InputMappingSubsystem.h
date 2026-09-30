@@ -1,6 +1,6 @@
 #pragma once
 
-#include <utility>   // std::forward — ForEachAction
+#include <utility>   // std::forward
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
@@ -16,31 +16,16 @@ namespace Opaax
 
     inline constexpr LogCategory LogInputMapping{"InputMapping"};
 
-    /** What a bound handler receives: the action's value at the moment it fired. */
+    /** Passed to a bound handler: the action's value when it fired. */
     DECLARE_MULTICAST_DELEGATE_OneParam(FOnInputAction, const InputActionValue&)
 
     // =============================================================================
-    // InputMappingSubsystem — the layer that turns KEYS into MEANING, and the first tenant
-    //   of the GameInstance tier.
+    // InputMappingSubsystem — turns raw keys (InputManager) into named actions.
+    //   Game-instance subsystem, so mapping contexts survive level changes.
+    //   Updated before the worlds, so action values are ready for gameplay.
     //
-    //   The other half of the input chain. Engine/Subsystems/Input/InputManager is the raw
-    //   end — what is held, what changed this frame, physical codes only, and its header says
-    //   outright that "there is no 'Jump' in here". This is where there is one.
-    //
-    //   SESSION-SCOPED, not world-scoped, and that is the requirement that chose the tier: a
-    //   pushed mapping context must survive level travel, and a UI context must outlive any
-    //   single world. It also means the stack cannot leak across a PIE cycle — Stop destroys
-    //   the whole game instance rather than resetting anything (GI6).
-    //
-    //   TICKS BEFORE EVERY WORLD (GameInstanceManager is registered before WorldManager), so
-    //   this frame's action values are published before any gameplay subsystem reads them.
-    //
-    //   GAMEPLAY BINDS; it does not poll. GetValue exists and reads the same table, but the
-    //   primary surface is Bind(action, trigger, this, &T::Handler) — and the ONE rule that
-    //   comes with it is that the owner must UnbindAll(this) in its Shutdown. A world
-    //   subsystem dies at PIE Stop while this is still alive for one more step (BO4d's
-    //   teardown order), so an un-removed binding is a dangling call on the next Broadcast —
-    //   which is exactly what TMulticastDelegate's own header warns about.
+    //   Gameplay binds handlers with Bind(action, trigger, this, &T::Handler).
+    //   The owner must call UnbindAll(this) in its Shutdown.
     // =============================================================================
     class OPAAX_API InputMappingSubsystem final : public GameInstanceSubsystemBase
     {
@@ -54,7 +39,7 @@ namespace Opaax
         // CTORS - DTORS
         // =========================================================================
     public:
-        /** @param InContext BORROWED, and stable for the whole game (GameInstance owns it). */
+        /** @param InContext Stable for the whole game. */
         explicit InputMappingSubsystem(GameInstanceContext& InContext) noexcept;
         ~InputMappingSubsystem() override = default;
 
@@ -62,33 +47,23 @@ namespace Opaax
         // Actions and contexts
         // =========================================================================
     public:
-        /** Declare an action. Refused for an empty or already-taken name. */
+        /** Declares an action. Refused for an empty or already used name. */
         bool RegisterAction(const InputAction& InAction);
 
         /**
-         * Push a mapping context. Higher priority is evaluated — and consumes — first.
-         *
-         * Bindings naming an unregistered action, or a gamepad code (IN7, no feed), are
-         * skipped with a warning rather than accepted and silently dead.
+         * Adds a mapping context. Higher priority is evaluated (and consumes keys) first.
+         * Bindings to unknown actions or gamepad codes are skipped with a warning.
          */
         bool AddContext(const InputMappingContext& InContext);
 
         /**
-         * Load a `.opaaxinputmap`, resolve every action it references, and push it under InName.
-         *
-         * THE ASSET ROUTE, and where the two forms of a mapping meet: on disk an entry names its
-         * action by PATH (so the editor field is a resource picker), and the evaluator needs it by
-         * NAME. Resolution happens HERE, once per AddContext — never per key per frame.
-         *
-         * Each referenced action is registered on first sight, so a context is self-sufficient:
-         * nothing has to declare the actions before adding the map that uses them.
-         *
-         * @param InName      What RemoveContext will ask for. The asset carries no name of its own.
-         * @param InAssetPath Asset-relative ("Input/Gameplay.opaaxinputmap").
+         * Loads a .opaaxinputmap, registers the actions it uses, and adds it as a context.
+         * @param InName      Name to use with RemoveContext
+         * @param InAssetPath Asset-relative path ("Input/Gameplay.opaaxinputmap")
          */
         bool AddContextAsset(OpaaxStringID InName, const OpaaxString& InAssetPath);
 
-        /** @return true when a context of that name was pushed and is now gone. */
+        /** @return True if a context with that name was removed */
         bool RemoveContext(OpaaxStringID InName);
 
         // =========================================================================
@@ -96,10 +71,8 @@ namespace Opaax
         // =========================================================================
     public:
         /**
-         * Call InMember on InOwner whenever InAction fires for InTrigger.
-         *
-         * @return the handle for a targeted Unbind. Keeping it is OPTIONAL — UnbindAll(this)
-         *   in the owner's Shutdown is the contract, and it needs no handle.
+         * Calls InMember on InOwner when InAction fires for InTrigger.
+         * @return Handle for Unbind (optional: UnbindAll(this) needs none)
          */
         template<typename T>
         DelegateHandle Bind(OpaaxStringID InAction, EInputTrigger InTrigger, T* InOwner,
@@ -109,20 +82,16 @@ namespace Opaax
             return DelegateFor(InAction, InTrigger).AddMember(InOwner, InMember);
         }
 
-        /** Lambda form. It has NO owner, so it can only be removed by handle. */
+        /** Lambda version. No owner, so it can only be removed by handle. */
         DelegateHandle Bind(OpaaxStringID InAction, EInputTrigger InTrigger,
                             TFunction<void(const InputActionValue&)> InCallback);
 
-        /** Remove one registration. @return true when one was removed. */
+        /** Removes one binding. @return True if removed */
         bool Unbind(OpaaxStringID InAction, EInputTrigger InTrigger, DelegateHandle InHandle);
 
         /**
-         * Remove EVERY member-binding owned by InOwner, across every action and trigger.
-         *
-         * THE LIFETIME CONTRACT. One call in the owner's Shutdown; without it a destroyed
-         * subsystem is still in a delegate list and the next Broadcast calls into freed memory.
-         *
-         * @return how many registrations were removed.
+         * Removes every member binding owned by InOwner. Call it in the owner's Shutdown.
+         * @return Number of bindings removed
          */
         Uint64 UnbindAll(void* InOwner);
 
@@ -130,30 +99,28 @@ namespace Opaax
         // Query
         // =========================================================================
     public:
-        /** This frame's value. Zero for an action that does not exist. */
+        /** This frame's value. Zero for an unknown action. */
         InputActionValue GetValue(OpaaxStringID InAction) const noexcept;
 
-        /** This frame's full state, or nullptr. */
+        /** This frame's state, or nullptr. */
         const InputActionState* FindState(OpaaxStringID InAction) const noexcept;
 
         Uint64 GetContextCount() const noexcept { return m_Evaluator.GetContextCount(); }
         Uint64 GetActionCount()  const noexcept { return m_Evaluator.GetActionCount(); }
 
-        /** Walk every action and its live state — what the editor's Input panel shows. */
+        /** Visits every action and its state (editor Input panel). */
         template<typename TFunc>
         void ForEachAction(TFunc&& InFunc) const { m_Evaluator.ForEachAction(std::forward<TFunc>(InFunc)); }
 
-        /** How many handlers are registered, across every action and trigger. */
+        /** Number of bound handlers. */
         Uint64 GetBindingCount() const noexcept;
 
         // =========================================================================
-        // Consumption from above (UI10)
+        // Keys consumed by the UI
         // =========================================================================
     public:
         /**
-         * Mark keys already spoken for THIS FRAME — the UI ORs in what a widget swallowed, before
-         * this subsystem's Update evaluates. A bound key thus taken drives no action. The mask is
-         * cleared each frame after Evaluate reads it (F4: nothing is retained).
+         * Marks keys as used this frame (by the UI). They drive no action. Cleared every frame.
          */
         void ConsumeThisFrame(const InputKeyMask& InConsumed);
 
@@ -164,7 +131,7 @@ namespace Opaax
     public:
         bool Startup() override;
 
-        /** Evaluate, then broadcast whatever fired. Both happen before any world ticks. */
+        /** Evaluates, then calls the handlers of what fired. Before any world ticks. */
         void Update(double InDeltaTime) override;
 
         void Shutdown() override;
@@ -174,10 +141,10 @@ namespace Opaax
         // Functions
         // =========================================================================
     private:
-        /** The four delegate slots for one action, found or created. Out-of-line for Bind<T>. */
+        /** The four delegates of an action, found or created. */
         FOnInputAction& DelegateFor(OpaaxStringID InAction, EInputTrigger InTrigger);
 
-        /** A bind naming an action nothing registered will never fire. Say so, once per name. */
+        /** Warns once per name when binding an unknown action. */
         void WarnIfUnknownAction(OpaaxStringID InAction, EInputTrigger InTrigger) const;
 
         // =========================================================================
@@ -188,7 +155,7 @@ namespace Opaax
         {
             OpaaxStringID Action;
 
-            /** Indexed by EInputTrigger. Four slots, so dispatch is an index, not a search. */
+            /** Indexed by EInputTrigger. */
             TFixedArray<FOnInputAction, INPUT_TRIGGER_COUNT> ByTrigger;
         };
 
@@ -198,7 +165,7 @@ namespace Opaax
 
         TDynArray<ActionDelegates> m_Bindings;
 
-        /** This frame's UI-consumed keys, ORed in by ConsumeThisFrame, cleared after Evaluate. */
+        /** Keys used by the UI this frame. Cleared after Evaluate. */
         InputKeyMask m_PreConsumed{};
     };
 }

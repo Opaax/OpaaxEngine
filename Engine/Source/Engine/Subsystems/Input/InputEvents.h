@@ -8,13 +8,8 @@
 namespace Opaax
 {
     // =============================================================================
-    // Input event payloads (POD) + Tier-1 dispatched wrappers
-    //
-    // Same split as the window events: the bare-noun struct (KeyPressed) is the POD
-    // payload — trivially copyable, the Tier-2 delegate / Tier-3 bus currency — and
-    // the <Name>Event class wraps it for Tier-1 dispatch. Flat: each event derives
-    // Event directly (no shared KeyEvent/MouseButtonEvent base) and stamps its own
-    // category. GetPayload() hands the POD back for bus republish.
+    // Input events: a plain struct payload (KeyPressed) and an Event wrapper (KeyPressedEvent).
+    // GetPayload() returns the struct, e.g. to publish it on the EventBus.
     // =============================================================================
 
     // -----------------------------------------------------------------------------
@@ -66,7 +61,7 @@ namespace Opaax
     };
 
     // -----------------------------------------------------------------------------
-    // KeyTyped — Unicode codepoint, for text input (NOT gameplay key detection)
+    // KeyTyped — Unicode codepoint, for text input (not for gameplay)
     struct KeyTyped
     {
         Uint32 Codepoint = 0;

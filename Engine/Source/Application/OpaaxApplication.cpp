@@ -13,7 +13,7 @@
 #include "Engine/Config/Config_Engine.h"
 #include "Engine/Engine.h"
 #include "Engine/Modules/ModuleRegistrar.h"
-#include "World/WorldManager.h" // GetWorldManager() is forward-declared on IEngine
+#include "World/WorldManager.h"
 #include "Engine/Subsystems/EventBus/EngineEventBus.h"
 #include "Engine/Subsystems/Input/InputEvents.h"
 #include "Engine/Subsystems/Input/InputManager.h"
@@ -80,12 +80,11 @@ void OpaaxApplication::Bootstrap()
     //Path
     IPaths& lPath = BootPaths();
     
-    //Log
-    // The singleton existed all along (I1, SG); this gives it sinks and replays what it held.
+    //Log — adds the sinks and replays the messages logged so far.
     const OpaaxString lLogFile = lPath.SaveDir() + "/Log/OpaaxEngine.log";
     Logger::Get().Init(lLogFile);
 
-    //Crash reporting — as early as it can know where to write (I1, SG).
+    //Crash reporting — as soon as we know where to write.
     CrashHandler::Get().Install({ lPath.SaveDir() + "/Crashes", lLogFile, true });
     lPath.LogPaths();
     
@@ -99,10 +98,10 @@ void OpaaxApplication::Bootstrap()
     //Jobsystem
     IJobSystem& lJobSystem = BootJobSystem();
 
-    //Stats — config-driven, so after the config system.
+    //Stats — reads the config, so after the config system.
     BootProfiler(lConfigSystem);
 
-    //Window manager — the window itself is created later, in InitializeApplication (needs a GL/VK context).
+    //Window manager — the window itself is created in InitializeApplication.
     IWindowManager& lWindowMgr = BootWindowManager();
     
     //Engine
@@ -123,7 +122,6 @@ IPlatform& OpaaxApplication::BootPlatform()
 
 IPaths& OpaaxApplication::BootPaths()
 {
-    // Adopt whatever CreatePaths built — runtime Paths by default, EditorPaths under the editor host.
     return m_Services.ProvideInstance<IPaths>(CreatePaths(Platform(), m_Argc, m_Argv));
 }
 
@@ -149,8 +147,7 @@ IJobSystem& OpaaxApplication::BootJobSystem()
 
 void OpaaxApplication::BootProfiler(IConfigSystem& ConfigSystem)
 {
-    // A dev build always profiles — that is what dev means, and it is the same signal IPaths keys
-    // on (I12), never the editor flag: a debug GAME build is a dev build with no editor.
+    // Dev builds always profile (editor or not).
 #if defined(OPAAX_WORKSPACE_DIR)
     constexpr bool lbDevBuild = true;
 #else
@@ -160,7 +157,7 @@ void OpaaxApplication::BootProfiler(IConfigSystem& ConfigSystem)
     const bool lbEnable = lbDevBuild
                        || ConfigSystem.Get<Opaax::Config_Engine>().GetData().Stats.EnableInShipBuild;
 
-    // Disabled is the off switch (ST6): every OPAAX_STAT_SCOPE is then one predicted branch.
+    // When disabled, OPAAX_STAT_SCOPE costs a single branch.
     Profiler::Get().Init(lbEnable);
 
     if (!lbEnable)
@@ -230,7 +227,7 @@ void OpaaxApplication::RunApplication()
     EngineStartup();
 
 #if defined(OPAAX_WORKSPACE_DIR)
-    // Dev builds only (I12): proves the whole crash path — dump, stack, log copy, dialog.
+    // Dev builds only: tests the crash path (dump, stack, log copy, dialog).
     if (HasCommandLineFlag(m_Argc, m_Argv, "--crash-test"))
     {
         CrashHandler::TriggerTestCrash();
@@ -248,30 +245,23 @@ void OpaaxApplication::RunApplication()
         }
         
         // ----------------------------------------------------------------
-        // 0a. Close the PREVIOUS frame's stats and open the next one — the same boundary, and for
-        //     the same reason (IN2). The frame ending here still holds its Present, which happens
-        //     after Engine().Loop() returns; publishing inside Loop would drop that row.
+        // 0a. Close the previous frame's stats (includes its Present) and open a new frame.
         // ----------------------------------------------------------------
         Profiler::Get().BeginFrame();
 
         // ----------------------------------------------------------------
-        // 0. Close the PREVIOUS frame's input, immediately before the new events arrive.
-        //
-        //    This is the host loop's frame boundary, and input's boundary has to be the same one:
-        //    everything that reads input — a game system in Update, an editor panel in its UI pass
-        //    AFTER Engine().Loop() returns — must see the same frame's presses. Closing it inside
-        //    Loop looked equivalent and was not: it wiped this frame's edges and deltas before the
-        //    editor ever drew them (IN2).
+        // 0. Close the previous frame's input, right before new events arrive.
+        //    Done here, not in Loop, so the editor UI sees the same input as the game.
         // ----------------------------------------------------------------
         Engine().GetInput().EndFrame();
 
         // ----------------------------------------------------------------
-        // 1. windows events (input, close, etc..)
+        // 1. Window events (input, close, ...)
         // ----------------------------------------------------------------
         lWindow->PollEvents();
 
         // ----------------------------------------------------------------
-        // 1.1 close event?
+        // 1.1 Close requested?
         // ----------------------------------------------------------------
         bIsRunning = !lWindow->ShouldClose();
         if (!bIsRunning)
@@ -280,21 +270,18 @@ void OpaaxApplication::RunApplication()
         }
         
         // ----------------------------------------------------------------
-        // 2. Tick — via the TickFrame seam (base = Engine().Loop(); editor wraps it with UI).
+        // 2. Tick (the editor adds its UI around Engine().Loop())
         // ----------------------------------------------------------------
         TickFrame();
 
         // ----------------------------------------------------------------
-        // 3. Present — the swap, SEPARATE from the frame render (S7 / D2). The host owns WHEN:
-        //    after TickFrame, so the editor's UI (drawn inside TickFrame) is on the backbuffer
-        //    before the swap. Runtime: the world was rendered straight to the backbuffer above.
+        // 3. Present — after TickFrame, so the editor UI is on the backbuffer before the swap.
         // ----------------------------------------------------------------
         Engine().PresentBackbuffer();
     }
 
-    // The loop has stopped but nothing is destroyed yet — every service, the window and the
-    // GPU context are still alive. Subsystems get their one chance here to release anything
-    // that needs a live sibling; ShutdownApplication() below is too late for that.
+    // Services, window and GPU context are still alive here, so subsystems can
+    // release what depends on them.
     EngineTeardown();
 }
 
@@ -307,9 +294,7 @@ void OpaaxApplication::OnEvent(Event& InEvent)
 {
     EventDispatcher lDispatcher(InEvent);
 
-    // NOTE: category flags are a BITMASK (an input event is Input|Keyboard, Input|Mouse, ...),
-    // so a single-value switch can never match a combined value — dispatch by bit-test via
-    // IsInCategory. All input events carry the Input bit; window events carry Application.
+    // Categories are a bitmask (Input|Keyboard, ...), so test bits instead of switching.
     if (InEvent.IsInCategory(EEventCategory::Application))
     {
         HandleApplicationEvent(lDispatcher, InEvent);
@@ -331,7 +316,7 @@ void OpaaxApplication::ShutdownApplication()
     Profiler::Get().Shutdown();
     CrashHandler::Get().Uninstall();
 
-    // Last: every service above may still log on its way down.
+    // Last: services may still log while shutting down.
     Logger::Get().Shutdown();
 
     bHasShutdown    = true;
@@ -348,22 +333,16 @@ void OpaaxApplication::EngineStartup()
 {
     PreEngineStartup();
 
-    // 1. Infrastructure. Every subsystem is constructed and started — and NO world exists,
-    //    which is what leaves ComponentRegistry unsealed for the steps below.
+    // 1. Start every subsystem. No world exists yet, so the registries stay open.
     Engine().Startup();
 
-    // 2. Content types.
-        // 2.1 Engine First
+    // 2. Content types: engine first, then the game modules.
     PopulateEngineRegistries();
-        //2.2 
     RegisterModules(*m_ModuleRegistrar);
-        //2.3 
     OnModulesRegistered();
 
-    // 3. The game. A Play startup world means this host IS a game, so its whole run is one
-    //    session. The editor's startup world is an Edit world and gets NO game — PlayInEditor
-    //    brackets one per PIE cycle instead.
-    //    BEFORE the world, always: a world subsystem's context is built inside CreateWorld.
+    // 3. The game. Only a Play startup world starts it here; the editor starts one per Play session.
+    //    Must happen before the world is created.
     const WorldSpec lStartupSpec = GetStartupWorldSpec();
 
     if (lStartupSpec.Mode == EWorldMode::Play)
@@ -379,9 +358,6 @@ void OpaaxApplication::EngineStartup()
 
 void OpaaxApplication::PopulateEngineRegistries()
 {
-    // ONE call, deliberately: binding each route by hand here is how a new registry ships with a
-    // route nobody wired — which is what happened to Resources(). BindEngineRegistries is the seam
-    // MR0 built for this, and it grows with the aggregate rather than with this function.
     m_ModuleRegistrar->BindEngineRegistries(Engine().GetRegistries());
 }
 
@@ -397,8 +373,7 @@ WorldSpec OpaaxApplication::GetStartupWorldSpec() const
 
 void OpaaxApplication::EngineTeardown()
 {
-    // Mirrors EngineStartup: the game ends before the engine is torn down, and it takes its
-    // Play worlds with it. Unconditional — a silent no-op when this host never started one.
+    // End the game (and its Play worlds) before the engine. No-op if no game was started.
     Engine().EndGame();
 
     Engine().TearDown();
@@ -423,8 +398,7 @@ void OpaaxApplication::HandleApplicationEvent(EventDispatcher& Dispatcher, Event
 
     Dispatcher.Dispatch<WindowLostFocusEvent>([this](WindowLostFocusEvent&)
     {
-        // The engine cannot do this itself: window events reach it only through this feed, and going
-        // via the bus would defer the reset to the next Flush — inside Loop, a frame late (IN4/IN5).
+        // Reset now: going through the event bus would be a frame late.
         Engine().GetInput().ResetState();
         return false;
     });
@@ -432,8 +406,7 @@ void OpaaxApplication::HandleApplicationEvent(EventDispatcher& Dispatcher, Event
 
 void OpaaxApplication::HandleAllInputEvent(EventDispatcher& Dispatcher, Event& InEvent)
 {
-    // The host feeds the engine because the host owns the only gate (IN1), and the feed must be
-    // immediate: the bus flushes inside Loop, i.e. AFTER PollEvents, so a subscription is too late (IN4).
+    // Fed directly: the event bus flushes inside Loop, which would be too late.
     InputManager& lInput = Engine().GetInput();
 
     Dispatcher.Dispatch<KeyPressedEvent>([&lInput](KeyPressedEvent& InKey)
@@ -472,8 +445,7 @@ void OpaaxApplication::HandleAllInputEvent(EventDispatcher& Dispatcher, Event& I
         return false;
     });
 
-    // NOTE: KeyTypedEvent is deliberately NOT fed. A Unicode codepoint is text entry, not a key
-    // state — it has no "down" to hold. It belongs to whatever owns a text field (ImGui today).
+    // KeyTypedEvent is text entry, not key state: left to text fields (ImGui).
     (void)InEvent;
 }
 

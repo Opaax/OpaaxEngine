@@ -1,23 +1,8 @@
-// Suite: WorldManager::CloneWorld — the PIE clone (M4 S4).
-//
-// WHY THIS EXISTS.
-//   Play clones the edit world into an isolated Play world that Stop throws away. The whole
-//   restore-is-free property rests on two claims this suite pins: the clone is FAITHFUL (same
-//   entities, same Guids — WM3, or every inter-entity reference silently retargets), and the two
-//   worlds are INDEPENDENT (entt handles are per-registry, so a clone must not be able to reach
-//   back into the world it copied).
-//
-//   CloneWorld is composition — Capture -> CreateWorld -> Instantiate — so the risk is not in the
-//   halves (M3 covers those) but in what the composition promises on top: an UNFILTERED capture,
-//   a mode that comes from the CALLER, and a source left untouched.
-//
-// WHAT THIS DOES NOT COVER.
-//   The clone's SUBSYSTEM set. Creating subsystems needs a started engine (WorldManager::Startup
-//   resolves ResourceManager/EngineEventBus/DebugDraw from the locator), which a test has no way
-//   to stand up — the same boundary WorldSubsystemRegistryTests.cpp documents. What is asserted
-//   here is the mechanism that decides it: the clone is built with ITS OWN mode. That mode drives
-//   the same filtered creation path every world takes, whose per-mode outcome is pinned by the
-//   registry suite and observed for real in the hosts' boot log (L22).
+// Suite: WorldManager::CloneWorld — the Play In Editor copy.
+//   The clone must be faithful (same entities, same guids) and independent (it cannot reach
+//   back into the source). It is Capture -> CreateWorld -> Instantiate: an unfiltered capture,
+//   a mode given by the caller, and an untouched source.
+//   Subsystem creation needs a started engine, so only the clone's mode is checked here.
 #include <doctest.h>
 
 #include "Engine/Registries/EngineRegistries.h"
@@ -58,7 +43,7 @@ namespace
     };
 
     // Registration must happen BEFORE the first CreateWorld: that call seals the registries
-    // (BO4), and a type registered after it would be missing from the world that already exists.
+    //, and a type registered after it would be missing from the world that already exists.
     void FillRegistries(EngineRegistries& InRegistries)
     {
         REQUIRE(InRegistries.Components().Register<TransformComponent>("Transform"));
@@ -98,7 +83,7 @@ TEST_CASE("world clone: entities arrive with the same Guids, names and owner map
 
     CHECK(lClone->GetEntityCount() == lSource->GetEntityCount());
 
-    // Identity survived — the SAME Guids resolve in the clone (WM3).
+    // Identity survived — the SAME Guids resolve in the clone.
     Entity lClonedHero = lClone->FindByGuid(lHeroGuid);
     REQUIRE(lClonedHero.IsValid());
     CHECK(lClonedHero.Get<EntityMeta>().Name == "Hero");
@@ -135,7 +120,7 @@ TEST_CASE("world clone: the capture is UNFILTERED, so runtime-spawned entities c
     lAuthored.Add<LoadoutComponent>(LoadoutComponent{1});
 
     // No owner map = runtime-spawned (a bullet). A SAVE would skip it; a clone must not, or the
-    // Play world starts out already diverged from the world it copied (WM2).
+    // Play world starts out already diverged from the world it copied.
     Entity lBullet = lSource->CreateEntity("Bullet");
     lBullet.Add<LoadoutComponent>(LoadoutComponent{2});
 
@@ -171,7 +156,7 @@ TEST_CASE("world clone: a component type the registry does not know does not sur
     World* lClone = lWorlds.CloneWorld(*lSource, EWorldMode::Play);
     REQUIRE(lClone != nullptr);
 
-    // A clone is a snapshot round trip, so it carries exactly what the registry knows (WM6).
+    // A clone is a snapshot round trip, so it carries exactly what the registry knows.
     // An unregistered type has no stable name to be written under — it is not a clone bug.
     Entity lCloned = lClone->FindByGuid(lGuid);
     REQUIRE(lCloned.IsValid());
@@ -193,7 +178,7 @@ TEST_CASE("world clone: the clone runs in the mode ASKED FOR, and the source kee
     REQUIRE(lEditWorld != nullptr);
 
     // The PIE direction: Edit -> Play. The mode is what ShouldCreate reads, so this is the line
-    // that makes the clone take the PLAY subsystem set and leave the edit overlays behind (WS2).
+    // that makes the clone take the PLAY subsystem set and leave the edit overlays behind.
     World* lPlayClone = lWorlds.CloneWorld(*lEditWorld, EWorldMode::Play);
     REQUIRE(lPlayClone != nullptr);
 
@@ -291,7 +276,7 @@ TEST_CASE("world clone: a manager with no registries REFUSES to clone")
 {
     // A bare manager can still CreateWorld — a world with no subsystems is a valid outcome there.
     // Cloning is different: with no ComponentRegistry the capture is empty by construction, so the
-    // "clone" would be an empty world masquerading as a copy. Refuse loudly instead (L22).
+    // "clone" would be an empty world masquerading as a copy. Refuse loudly instead.
     WorldManager lWorlds;
 
     World* lSource = lWorlds.CreateWorld("Bare", EWorldMode::Edit);

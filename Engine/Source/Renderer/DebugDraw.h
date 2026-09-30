@@ -2,41 +2,37 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
-#include "Core/Maths/Bounds2D.h"    // DrawBounds — the form every caller already holds
+#include "Core/Maths/Bounds2D.h"
 #include "Core/Maths/MathTypes.h"
-#include "Core/String/OpaaxStringID.hpp"   // DebugChannel — an already-interned, already-exported type
-#include "Renderer/RenderLayer.h"   // ERenderLayer — a segment states its own band
+#include "Core/String/OpaaxStringID.hpp"   // DebugChannel
+#include "Renderer/RenderLayer.h"   // ERenderLayer
 
 namespace Opaax
 {
     class World;
 
     // =============================================================================
-    // Channels — what a central toggle switches off (F4b)
+    // Channels — groups of debug shapes that can be switched off
     // =============================================================================
     /**
-     * A producer's name, so a consumer can silence it from OUTSIDE. `OpaaxStringID` exactly as F4b
-     * specifies: already `OPAAX_API`, already interned, and interned out-of-line in the DLL (I2),
-     * so an id agrees across the module boundary by construction — it adds no static of its own.
+     * A producer's name, so its shapes can be hidden from outside.
      */
     using DebugChannel = OpaaxStringID;
 
     /**
-     * The channels the engine itself produces on. A named constant rather than a bare `OPAAX_ID`
-     * at each call site, because the producer and the toggle agreeing on a STRING is precisely the
-     * thing that fails silently — a typo would simply never switch anything off.
+     * The engine's channels. Use these constants (a typo in a string would silently never match).
      */
     namespace DebugChannels
     {
-        /** Everything that never named a channel. Grid, selection outlines, gizmo helpers. */
+        /** Anything without a channel: grid, selection outlines, gizmo helpers. */
         inline const DebugChannel Default = OPAAX_ID("Default");
 
-        /** Collider outlines. ⑦-A P3 — the second producer, which is what earned this whole idea. */
+        /** Collider outlines. */
         inline const DebugChannel Physics = OPAAX_ID("Physics");
     }
 
     /**
-     * One queued debug segment, in world units. Plain data — no GPU state, no lifetime.
+     * One queued debug line, in world units.
      */
     struct DebugLine
     {
@@ -46,34 +42,26 @@ namespace Opaax
         float    Thickness = 1.f;
 
         /**
-         * WHICH BAND the segment draws in. Debug — above all world geometry — is right for an
-         * overlay that must not be hidden by what it annotates, and it is the only thing this queue
-         * could express until ③b needed a BACKGROUND grid: a grid drawn over every sprite is not a
-         * grid, it is a cage.
+         * Draw layer. Debug (above the world) by default; the editor grid uses Background.
          */
         ERenderLayer Layer = ERenderLayer::Debug;
 
-        /** WHICH WORLD the segment annotates. Null is the ACTIVE one — see the class note. */
+        /** The world this line belongs to. Null = the active world. */
         const World* Source = nullptr;
     };
 
     /**
-     * One queued rectangle OUTLINE, in world units. Its own entry rather than four DebugLines,
-     * because it renders as ONE hollow quad (Renderer2D::DrawQuadOutline) — the whole point of
-     * having it: a selection of N entities costs N quads instead of 4N.
+     * One queued rectangle outline, in world units (drawn as one hollow quad).
      */
     struct DebugBox
     {
         Vector2F Center    = { 0.f, 0.f };
-        Vector2F Size      = { 0.f, 0.f };   // FULL width and height, border included
+        Vector2F Size      = { 0.f, 0.f };   // full width and height, border included
         Vector4F Color     = { 1.f, 1.f, 1.f, 1.f };
         float    Thickness = 1.f;
 
         /**
-         * Rotation about the centre, radians, CCW. `Renderer2D::DrawQuadOutline` has always taken
-         * one and this queue simply never carried it, passing a hardcoded 0 at the drain — which a
-         * ROTATED collider made visible (⑦-A P3): its outline stayed axis-aligned while the shape
-         * it annotated did not.
+         * Rotation about the centre, radians, counter-clockwise.
          */
         float RotationRad = 0.f;
 
@@ -82,8 +70,7 @@ namespace Opaax
     };
 
     /**
-     * The oriented thin quad that covers a DebugLine — the form Renderer2D::DrawQuad consumes.
-     * Size is { segment length, line thickness }; RotationRad turns it onto the segment.
+     * The thin rotated quad covering a DebugLine: Size is { length, thickness }.
      */
     struct DebugQuad
     {
@@ -93,64 +80,34 @@ namespace Opaax
     };
 
     /**
-     * Line -> thin rotated quad. Pure geometry, so the whole line rendering path is unit-testable
-     * without a GL context. A zero-length segment yields Size.x == 0 (nothing drawn) and rotation 0
-     * — never NaN.
+     * Line -> thin rotated quad. A zero-length line gives Size.x == 0 and rotation 0 (never NaN).
      */
     OPAAX_API DebugQuad ToQuad(const DebugLine& InLine) noexcept;
 
     // =============================================================================
-    // Outline geometry — pure, and therefore the testable half
+    // Outline geometry (pure functions)
     // =============================================================================
     /**
-     * The closed polygon approximating a circle: InSegments points, evenly spaced, each exactly
-     * InRadius from InCenter. OutPoints is cleared first. The closing edge is implied — the caller
-     * joins last to first — so the point count IS the segment count.
-     *
-     * Free and pure for `ToQuad`'s reason: a circle drawn as segments needs no new RHI primitive,
-     * and the part that can be wrong is arithmetic a test can hold without a GL context.
+     * A circle as InSegments points, each InRadius from InCenter. OutPoints is cleared first.
+     * The last point connects back to the first.
      */
     OPAAX_API void BuildCircleOutline(Vector2F InCenter, float InRadius, Uint32 InSegments,
                                       TDynArray<Vector2F>& OutPoints);
 
     /**
-     * The closed polygon approximating a capsule: a half-turn of InSegmentsPerCap points around
-     * each end centre, joined by the two straight flanks. Every point is exactly InRadius from the
-     * cap centre it belongs to. OutPoints is cleared first; the closing edge is implied.
-     *
-     * A degenerate capsule (the two centres equal) is a circle, and comes out as one.
+     * A capsule as a closed polygon: a half-turn of InSegmentsPerCap points around each end,
+     * joined by the flanks. OutPoints is cleared first. Equal centres give a circle.
      */
     OPAAX_API void BuildCapsuleOutline(Vector2F InCenter1, Vector2F InCenter2, float InRadius,
                                        Uint32 InSegmentsPerCap, TDynArray<Vector2F>& OutPoints);
 
     /**
-     * @class DebugDraw
+     * Per-frame debug shape queue (lines, boxes, circles, capsules). Cleared every frame by the
+     * renderer: submit every frame to keep a shape visible. Works in the editor and in dev game
+     * builds. Owned by RendererManager; reached through IEngine::GetDebugDraw().
      *
-     * Per-frame debug line queue (Editor.md D10). Producers enqueue during the frame; the renderer
-     * drains it once, at Render, and clears it — nothing survives to the next frame, so a caller
-     * re-submits every frame it wants a line visible (immediate-mode, matching the editor's UI).
-     *
-     * Engine-owned, NOT editor-owned: it serves editor overlays AND dev builds of Game.exe, which
-     * never links OpaaxEditorLib. Owned by value by RendererManager — the thing that drains it —
-     * and reached through IEngine::GetDebugDraw().
-     *
-     * Lines, BOXES, and — since ⑦-A P3 gave them a caller — circles and capsules, which are
-     * polygons of lines rather than queue entries of their own: no new drain path, no new RHI
-     * primitive, and the renderer never learns they exist. Text and persistent durations still
-     * wait. A line becomes a thin rotated quad; a box becomes ONE hollow quad rather than four of
-     * them (F4d) — still one pipeline and one batch, which is the property worth keeping.
-     *
-     * EVERY SUBMISSION CARRIES A CHANNEL, and a disabled one is dropped HERE rather than at the
-     * drain (F4b): "stop calling" cannot be asked of a producer by a toggle that lives outside it,
-     * and filtering at submit means a silenced channel costs one lookup instead of memory it will
-     * never render. A channel nobody has touched is ENABLED — a new producer is visible by
-     * default, which is the right way round for debug output.
-     *
-     * EVERY SUBMISSION NAMES ITS WORLD, and null means the ACTIVE one (⑦-C P8 — the rule a render
-     * view already follows, one layer down). The queue is one list per frame and a pass drains only
-     * the primitives of the world it draws; without the tag a second edited world would receive the
-     * level's grid in its own coordinates and hand its outline back. No producer that existed
-     * before had to change: only the active world ticks, so null was always what they meant.
+     * Every shape has a channel (disabled channels are dropped on submit) and a world
+     * (null = the active world; a pass only draws its own world's shapes).
      */
     class OPAAX_API DebugDraw
     {
@@ -159,30 +116,25 @@ namespace Opaax
         // =============================================================================
     public:
         /**
-         * Queue a segment.
-         * @param InStart segment start, world units
-         * @param InEnd segment end, world units
-         * @param InColor RGBA normalised [0,1]
-         * @param InThickness line width in world units (1 unit = 1px at the render target's native size)
-         * @param InLayer draw band; the default keeps every existing caller above world geometry
-         * @param InSource the world this annotates; null is the active one
+         * Queues a line.
+         * @param InStart Start, world units
+         * @param InEnd End, world units
+         * @param InColor RGBA [0,1]
+         * @param InThickness Width in world units
+         * @param InLayer Draw layer (default: above the world)
+         * @param InSource The world it belongs to; null = the active world
          */
         void DrawLine(const Vector2F& InStart, const Vector2F& InEnd, const Vector4F& InColor,
                       float InThickness = 1.f, ERenderLayer InLayer = ERenderLayer::Debug,
                       DebugChannel InChannel = DebugChannels::Default, const World* InSource = nullptr);
 
         /**
-         * Queue an axis-aligned rectangle outline as ONE hollow quad.
-         *
-         * It used to be four segments; a border is now a property of a quad rather than four thin
-         * ones laid end to end, so this costs a quarter of the geometry and the corners are exact
-         * instead of overlapping by half a line width.
-         *
-         * @param InCenter rectangle centre, world units
-         * @param InSize full width and height, border included
-         * @param InColor RGBA normalised [0,1]
-         * @param InThickness border width in world units. Thick enough to close the middle draws solid.
-         * @param InLayer draw band
+         * Queues an axis-aligned rectangle outline (one hollow quad).
+         * @param InCenter Centre, world units
+         * @param InSize Full width and height, border included
+         * @param InColor RGBA [0,1]
+         * @param InThickness Border width in world units (thick enough fills it)
+         * @param InLayer Draw layer
          */
         void DrawBox(const Vector2F& InCenter, const Vector2F& InSize, const Vector4F& InColor,
                      float InThickness = 1.f, ERenderLayer InLayer = ERenderLayer::Debug,
@@ -190,20 +142,15 @@ namespace Opaax
                      const World* InSource = nullptr);
 
         /**
-         * The same box, taking the shape every caller already has.
-         *
-         * `EntityQuery::TryGetBounds` answers a Bounds2D and each call site was unpacking it into a
-         * centre and a size just to hand both back; this is the one that should be reached for.
+         * Same, from a Bounds2D.
          */
         void DrawBounds(const Bounds2D& InBounds, const Vector4F& InColor,
                         float InThickness = 1.f, ERenderLayer InLayer = ERenderLayer::Debug,
                         DebugChannel InChannel = DebugChannels::Default, const World* InSource = nullptr);
 
         /**
-         * Queue a circle OUTLINE as a closed polygon of segments.
-         *
-         * @param InSegments how many sides approximate it. The default reads round at any zoom a
-         *   2D editor reaches; fewer is legitimate for something small or numerous.
+         * Queues a circle outline.
+         * @param InSegments Number of sides
          */
         void DrawCircle(const Vector2F& InCenter, float InRadius, const Vector4F& InColor,
                         float InThickness = 1.f, ERenderLayer InLayer = ERenderLayer::Debug,
@@ -211,9 +158,7 @@ namespace Opaax
                         const World* InSource = nullptr);
 
         /**
-         * Queue a capsule OUTLINE — two half-turn caps joined by their flanks — as one closed
-         * polygon. InCenter1/InCenter2 are the cap centres in WORLD space, so a caller that has a
-         * local capsule offsets it first.
+         * Queues a capsule outline. InCenter1/InCenter2 are the cap centres, in world space.
          */
         void DrawCapsule(const Vector2F& InCenter1, const Vector2F& InCenter2, float InRadius,
                          const Vector4F& InColor, float InThickness = 1.f,
@@ -222,26 +167,26 @@ namespace Opaax
                          Uint32 InSegmentsPerCap = 12, const World* InSource = nullptr);
 
         // =============================================================================
-        // Channels — the central toggle (F4b)
+        // Channels
         // =============================================================================
     public:
-        /** Silence or restore a whole producer. Enabling one nobody disabled is a no-op. */
+        /** Hides or shows a channel. */
         void SetChannelEnabled(DebugChannel InChannel, bool bInEnabled);
 
-        /** True unless something explicitly disabled it — an unknown channel draws. */
+        /** True unless disabled. Unknown channels are drawn. */
         bool IsChannelEnabled(DebugChannel InChannel) const noexcept;
 
         // =============================================================================
-        // Consumption — the renderer's side
+        // Renderer side
         // =============================================================================
     public:
-        /*** Everything queued since the last Clear(), in submission order. */
+        /** Lines queued since the last Clear(), in order. */
         const TDynArray<DebugLine>& GetLines() const noexcept { return m_Lines; }
 
-        /*** Boxes queued since the last Clear(). Drained beside the lines, one quad each. */
+        /** Boxes queued since the last Clear(). */
         const TDynArray<DebugBox>& GetBoxes() const noexcept { return m_Boxes; }
 
-        /*** Drop BOTH queues. Called once per frame by the owner, drawn or not. */
+        /** Clears both queues. Called once per frame. */
         void Clear() noexcept;
 
         bool IsEmpty() const noexcept { return m_Lines.empty() && m_Boxes.empty(); }
@@ -250,7 +195,7 @@ namespace Opaax
         // Internal
         // =============================================================================
     private:
-        /** Queue m_OutlineScratch as a closed loop of segments. The channel is already checked. */
+        /** Queues m_OutlineScratch as a closed loop of lines. */
         void EmitClosedPolygon(const Vector4F& InColor, float InThickness, ERenderLayer InLayer,
                                const World* InSource);
 
@@ -262,15 +207,11 @@ namespace Opaax
         TDynArray<DebugBox>  m_Boxes;
 
         /**
-         * The channels somebody switched OFF, keyed by the id's integer. A disabled-set rather
-         * than an enabled-set, so the default answer is "draws": a producer added later is
-         * visible without anyone having to register it first.
-         *
-         * Not cleared by Clear() — a toggle is a setting, not per-frame state.
+         * Disabled channels (so a new channel is visible by default). Not cleared by Clear().
          */
         TUnorderedSet<Uint32> m_DisabledChannels;
 
-        /** Scratch for the outline builders, so a per-frame circle allocates nothing. */
+        /** Reused by the outline builders. */
         TDynArray<Vector2F> m_OutlineScratch;
     };
 }

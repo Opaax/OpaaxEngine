@@ -5,14 +5,12 @@
 
 namespace Opaax
 {
-    // OPAQUE declaration: the real enum (Engine/Subsystems/Input/InputCodes.h) has a fixed
-    // underlying type, so this module can carry a key without naming the Engine tier.
+    // Opaque declaration (fixed underlying type), so this module does not include the engine input headers.
     enum class EKeyCode : Uint16;
 
     // =============================================================================
-    // UI events — what a widget is asked, and its answer. Events BUBBLE: the hit widget is asked
-    //   first, then its parent, up to the root, until one answers Handled (Slate's FReply).
-    //   A widget with no opinion returns Unhandled and the event falls through to the game.
+    // UI events — events bubble: the hit widget first, then its parents, until one returns Handled.
+    //   Unhandled events go through to the game.
     // =============================================================================
     enum class EUIReply : Uint8
     {
@@ -20,7 +18,7 @@ namespace Opaax
         Handled
     };
 
-    /** The UI's own vocabulary for pointer buttons; the host maps physical codes onto it. */
+    /** UI pointer buttons (the host maps physical codes to them). */
     enum class EUIPointerButton : Uint8
     {
         None,
@@ -31,11 +29,11 @@ namespace Opaax
 
     enum class EUIPointerEventType : Uint8
     {
-        Move,    // delivered to the hovered widget, never bubbled, never handled
-        Enter,   // delivered, not bubbled
-        Leave,   // delivered, not bubbled
+        Move,    // sent to the hovered widget, not bubbled or handled
+        Enter,   // sent, not bubbled
+        Leave,   // sent, not bubbled
         Down,    // bubbled; the handler captures the pointer
-        Up       // bubbled from the capturing widget if any, else the hit
+        Up       // bubbled from the capturing widget, else the hit one
     };
 
     struct UIPointerEvent
@@ -45,10 +43,10 @@ namespace Opaax
         EUIPointerButton    Button   = EUIPointerButton::None;
     };
 
-    /** Bubbled from the FOCUSED widget. */
+    /** Bubbled from the focused widget. */
     struct UIKeyEvent
     {
-        EKeyCode Key      = static_cast<EKeyCode>(0);   // the real enum's None
+        EKeyCode Key      = static_cast<EKeyCode>(0);   // None
         bool     bPressed = true;                       // false = released
     };
 }

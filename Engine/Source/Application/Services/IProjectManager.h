@@ -8,19 +8,17 @@ namespace Opaax
     class IPaths;
 
     // =============================================================================
-    // ProjectIdentity — the non-derivable metadata stored in the .opaaxproj.
-    // Plain data, produced by ParseProjectIdentity so parsing stays pure + testable.
-    // No filesystem paths live here — IPaths owns the layout (see decision 5).
+    // ProjectIdentity — project metadata stored in the .opaaxproj. Paths live in IPaths.
     // =============================================================================
     struct ProjectIdentity
     {
         OpaaxString Name;          // display name
         OpaaxString Id;            // stable project id (uuid); "" if absent
         OpaaxString EngineVersion; // engine compat tag; "" if absent
-        OpaaxString StartupLevel;  // asset-relative scene; falls back to legacy "defaultScene"
-        OpaaxString LoadingScreen; // asset-relative `.opaaxui` drawn over a level swap; "" = a black cover (UI21)
-        float       LoadingScreenMinSeconds = 0.f; // the cover stays up at least this long; 0 = only as long as the load
-        float       UIReferenceHeight = 1080.f;    // canvas units are these many pixels tall — every HUD is authored against it (UI2)
+        OpaaxString StartupLevel;  // asset-relative level
+        OpaaxString LoadingScreen; // asset-relative .opaaxui shown while a level loads; "" = black screen
+        float       LoadingScreenMinSeconds = 0.f; // minimum time the loading screen stays up
+        float       UIReferenceHeight = 1080.f;    // UI canvas height, in pixels, that HUDs are designed for
     };
 
     namespace Opaax_Project_Identity
@@ -28,9 +26,7 @@ namespace Opaax
         inline const char* PROJECT_NAME_KEY                     = "name";
         inline const char* PROJECT_ID_KEY                       = "id";
         inline const char* PROJECT_ENGINE_VERSION_KEY           = "engineVersion";
-        // Read in order, first non-empty wins. "startupLevel" is the LIVE vocabulary (X4 —
-        // World > Level > Map); the two below it are Scene-era keys kept so existing
-        // .opaaxproj files keep opening. New projects should only ever write the first.
+        // Read in order, first non-empty wins. The last two are old keys, kept for old projects.
         inline const char* PROJECT_STARTUP_LEVEL_KEY            = "startupLevel";
         inline const char* PROJECT_STARTUP_LEVEL_KEY_LEGACY     = "startupScene";
         inline const char* PROJECT_STARTUP_LEVEL_KEY_DEFAULT    = "defaultScene";
@@ -39,15 +35,11 @@ namespace Opaax
         inline const char* PROJECT_UI_REFERENCE_HEIGHT_KEY       = "uiReferenceHeight";
     }
 
-    // Pure, tolerant parser — bad JSON or missing fields yield empty values, never throws.
-    //   InJsonText : the raw .opaaxproj contents.
+    // Parses the .opaaxproj text. Bad JSON or missing fields give empty values; never throws.
     OPAAX_API ProjectIdentity ParseProjectIdentity(const OpaaxString& InJsonText);
 
     // =============================================================================
-    // IProjectManager — identity of the active project, read from <ProjectRoot>/<Name>.opaaxproj.
-    //
-    // "What is this project" (name/id/version/startup scene). "Where is it" is IPaths'
-    // job — the two never overlap. Boots after Paths, before ConfigSystem.
+    // IProjectManager — metadata of the active project, read from <ProjectRoot>/<Name>.opaaxproj.
     // =============================================================================
     class OPAAX_API IProjectManager : public IAppService
     {
@@ -70,8 +62,7 @@ namespace Opaax
     };
 
     // =============================================================================
-    // ProjectManager — reads + parses Paths.ProjectFile() at construction.
-    //   Missing/unreadable file => empty identity (tolerant, never crashes).
+    // ProjectManager — reads the project file at construction. Missing file gives empty values.
     // =============================================================================
     class OPAAX_API ProjectManager final : public IProjectManager
     {

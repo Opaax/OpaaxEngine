@@ -25,8 +25,7 @@ TEST_CASE("ParseProjectIdentity: full schema reads every field")
 
 TEST_CASE("ParseProjectIdentity: 'startupLevel' is the live key and wins over both Scene-era ones")
 {
-    // X4 — the World > Level > Map vocabulary. A project carrying all three (mid-migration)
-    // must resolve to the new one, or migrating a project would silently change nothing.
+    // A project with all three keys must use the new one.
     const ProjectIdentity lId = ParseProjectIdentity(OpaaxString(
         R"({"name":"MyGame","startupLevel":"Levels/Main.opaaxlevel",)"
         R"("startupScene":"Scenes/Old.opaaxscene","defaultScene":"Scenes/Older.opaaxscene"})"));
@@ -34,7 +33,7 @@ TEST_CASE("ParseProjectIdentity: 'startupLevel' is the live key and wins over bo
     CHECK(lId.StartupLevel == "Levels/Main.opaaxlevel");
 }
 
-TEST_CASE("ParseProjectIdentity: 'loadingScreen' names the cover, and a project without one reads empty (UI21)")
+TEST_CASE("ParseProjectIdentity: 'loadingScreen' names the cover, and a project without one reads empty")
 {
     const ProjectIdentity lWith = ParseProjectIdentity(OpaaxString(
         R"({"name":"MyGame","startupLevel":"Levels/Main.opaaxlevel","loadingScreen":"UI/Loading.opaaxui"})"));
@@ -54,9 +53,9 @@ TEST_CASE("ParseProjectIdentity: 'loadingScreen' names the cover, and a project 
     CHECK(lBad.LoadingScreenMinSeconds == 0.f);
 }
 
-TEST_CASE("ParseProjectIdentity: 'uiReferenceHeight' is the canvas's height, 1080 when absent, bad or zero (U11)")
+TEST_CASE("ParseProjectIdentity: 'uiReferenceHeight' is the canvas's height, 1080 when absent, bad or zero")
 {
-    // The one number every HUD is authored against (UI2) — the PROJECT's, not each asset's.
+    // The one number every HUD is authored against — the PROJECT's, not each asset's.
     const ProjectIdentity lSet = ParseProjectIdentity(OpaaxString(R"({"name":"MyGame","uiReferenceHeight":720})"));
     CHECK(lSet.UIReferenceHeight == doctest::Approx(720.f));
 

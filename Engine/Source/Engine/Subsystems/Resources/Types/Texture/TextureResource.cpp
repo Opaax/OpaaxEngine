@@ -4,8 +4,7 @@
 #include "Application/Services/IEngine.h"
 #include "Core/IO/FileIO.h"
 
-// stb_image — the ONE implementation in the build. It lives here, above the RHI, because decoding
-// is CPU work every backend shares: a device only ever receives pixels (F2a).
+// stb_image implementation (the only one in the build).
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 
@@ -13,8 +12,7 @@ namespace Opaax
 {
     namespace
     {
-        // A placeholder has to be visible, not merely present. 2x2 so it tiles and filters into a
-        // flat block at any size, RGBA so it needs no format branch.
+        // 2x2 RGBA placeholder.
         constexpr Uint32 PLACEHOLDER_EXTENT   = 2;
         constexpr Int32  PLACEHOLDER_CHANNELS = 4;
         constexpr Uint8  PLACEHOLDER_RGBA[4]  = { 255, 0, 255, 255 };
@@ -22,9 +20,7 @@ namespace Opaax
 
     std::optional<TextureResource> TextureResource::Load(const char* InPath, LoadContext& /*InCtx*/)
     {
-        // Read the bytes ourselves rather than calling stbi_load(path): the narrow CRT entry point
-        // it uses decodes the path with the ANSI code page on MSVC, which resolves a DIFFERENT FILE
-        // than the caller named, silently (I7). FileIO already converts.
+        // Read the file ourselves: stbi_load(path) mishandles non-ASCII paths on MSVC.
         TDynArray<Uint8> lFileBytes;
         if (!FileIO::ReadAllBytes(OpaaxString(InPath), lFileBytes))
         {
@@ -32,8 +28,7 @@ namespace Opaax
             return std::nullopt;
         }
 
-        // Thread-local flip: Load may run on a worker, and the global setter is shared state.
-        // GL samples bottom-up, stb decodes top-down.
+        // Thread-local flip (Load may run on a worker). GL samples bottom-up, stb decodes top-down.
         stbi_set_flip_vertically_on_load_thread(1);
 
         Int32 lWidth = 0, lHeight = 0, lChannels = 0;
@@ -65,8 +60,7 @@ namespace Opaax
 
         Gpu = OpaaxApplication::GetAppService<IEngine>().CreateTexture(Pixels.data(), Width, Height, Channels);
 
-        // The GPU owns the only copy now. Keeping a CPU mirror would double every texture's cost for
-        // a reader nothing has: a sprite samples, it does not read back.
+        // Free the CPU copy: the GPU has the texture.
         Pixels.clear();
         Pixels.shrink_to_fit();
 
@@ -94,8 +88,7 @@ namespace Opaax
 
     Uint64 TextureResource::ByteSize() const noexcept
     {
-        // Computed from the DIMENSIONS, not from Pixels.size(): Initialize empties that vector, and a
-        // payload's accounting must not change because the pump happened to run.
+        // From the dimensions: Initialize clears Pixels.
         return sizeof(TextureResource)
              + static_cast<Uint64>(Width) * static_cast<Uint64>(Height) * static_cast<Uint64>(Channels);
     }

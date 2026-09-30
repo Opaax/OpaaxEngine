@@ -25,7 +25,7 @@ namespace Opaax
             return b2_staticBody;
         }
 
-        // 0 when the shape is stale — an end-touch event may name a shape destroyed since the step.
+        // 0 when the shape is stale (an end-touch event may name a destroyed shape).
         Uint64 EntityBitsFromShape(b2ShapeId InShape) noexcept
         {
             if (!b2Shape_IsValid(InShape)) { return 0; }
@@ -41,8 +41,7 @@ namespace Opaax
             return true;
         }
 
-        // A fixed buffer keeps the per-step mover work allocation-free; 8 planes is ample for 2D
-        // capsule movement (a floor and a couple of walls).
+        // Fixed buffer, so the mover allocates nothing; 8 planes is plenty in 2D.
         constexpr int kMaxMoverPlanes = 8;
 
         struct MoverPlaneContext
@@ -59,7 +58,7 @@ namespace Opaax
 
             auto* lCtx = static_cast<MoverPlaneContext*>(InContext);
 
-            // The mover is itself a kinematic body in the world; it must not collide with its own capsule.
+            // The mover is a kinematic body itself: skip its own capsule.
             if (lCtx->IgnoreUserData != 0 && EntityBitsFromShape(InShape) == lCtx->IgnoreUserData)
             {
                 return true;
@@ -79,7 +78,7 @@ namespace Opaax
     // =============================================================================
     Box2DPhysicsWorld::Box2DPhysicsWorld(const PhysicsWorldDesc& InDesc)
     {
-        // Global tuning: how many world units make a metre (sleep thresholds, speculative margins).
+        // World units per metre (sleep thresholds, speculative margins).
         b2SetLengthUnitsPerMeter(InDesc.LengthUnitsPerMeter);
 
         b2WorldDef lWorldDef = b2DefaultWorldDef();
@@ -156,9 +155,8 @@ namespace Opaax
         lDef.filter.categoryBits  = InShape.CategoryBits;
         lDef.filter.maskBits      = InShape.MaskBits;
 
-        // Sensor events on EVERY shape: a sensor needs them to report, and a solid visitor needs
-        // them to be SEEN by a sensor (Box2D 3.2 makes the visitor opt in). Contact events are
-        // solid-only, for OnCollisionEnter/Exit.
+        // Sensor events on every shape (Box2D 3.2 needs the visitor to opt in too).
+        // Contact events on solid shapes only.
         lDef.enableSensorEvents  = true;
         lDef.enableContactEvents = !InShape.bIsSensor;
 
@@ -206,7 +204,7 @@ namespace Opaax
         const b2BodyId    lId = b2LoadBodyId(InBody.Id);
         const b2Transform lTarget{ ToB2(InPosition), b2MakeRot(InRotation) };
 
-        // Sweeps toward the target over the step, so it generates contacts instead of teleporting.
+        // Swept toward the target, so it creates contacts instead of teleporting.
         b2Body_SetTargetTransform(lId, lTarget, InDeltaTime, true);
     }
 
@@ -265,12 +263,12 @@ namespace Opaax
     PhysicsRayHit Box2DPhysicsWorld::RayCastClosest(Vector2F InOrigin, Vector2F InDirection,
                                                     float InDistance, Uint64 InChannelMask)
     {
-        // A zero direction yields a zero-length ray, which cannot hit.
+        // A zero direction gives a zero-length ray (no hit).
         const b2Vec2 lTranslation = b2MulSV(InDistance, b2Normalize(ToB2(InDirection)));
 
         b2QueryFilter lFilter;
         lFilter.categoryBits = ~0ull;          // the query belongs to every category...
-        lFilter.maskBits     = InChannelMask;  // ...and accepts the channels the caller asked for.
+        lFilter.maskBits     = InChannelMask;  // ...and accepts the requested channels
 
         const b2RayResult lResult = b2World_CastRayClosest(m_WorldId, ToB2(InOrigin), lTranslation, lFilter);
 
@@ -301,7 +299,7 @@ namespace Opaax
     // =============================================================================
     MoveCapsuleResult Box2DPhysicsWorld::MoveCapsule(const MoveCapsuleInput& InInput)
     {
-        // The mover is a QUERY, not a shape: category ~0 (always queryable), mask = solid channels.
+        // The mover is a query, not a shape: category ~0, mask = solid channels.
         b2QueryFilter lFilter;
         lFilter.categoryBits = ~0ull;
         lFilter.maskBits     = InInput.ChannelMask;
@@ -329,7 +327,7 @@ namespace Opaax
             b2World_CollideMover(m_WorldId, b2Pos_zero, &lMover, lFilter, MoverPlaneFcn, &lCtx);
             const b2PlaneSolverResult lSolve = b2SolvePlanes(b2Sub(lTarget, lPos), lCtx.Planes, lCtx.Count);
 
-            // Anti-tunnel: never advance further than a shape cast of the solved translation allows.
+            // Anti-tunnelling: never go further than a shape cast allows.
             const float  lFraction = b2World_CastMover(m_WorldId, b2Pos_zero, &lMover, lSolve.delta, lFilter);
             const b2Vec2 lDelta    = b2MulSV(lFraction, lSolve.delta);
 

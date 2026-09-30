@@ -45,11 +45,10 @@ namespace Opaax::Editor
         {
             m_Context.Preview.CloseAll();
             ReleaseClosedClaims();
-            return;   // the list just changed under the loop below
+            return;   // the list changed
         }
 
-        // Collected, never applied inside the loop — closing an entry resizes the very array being
-        // iterated (the DrawBreadcrumb rule, one panel over).
+        // Collected, applied after the loop (closing an entry resizes the array being iterated).
         Int64 lCloseIndex = -1;
 
         const TDynArray<ResourcePreviewEntry>& lEntries = m_Context.Preview.Entries();
@@ -74,11 +73,10 @@ namespace Opaax::Editor
     // =============================================================================
     bool ResourcePreviewPanel::DrawEntry(const ResourcePreviewEntry& InEntry, const Uint64 InIndex, const bool bInFocused)
     {
-        // Scoped by PATH, not by index: an entry keeps its open/closed state when one above it is
-        // closed, which an index-keyed id would shuffle (I16's PushID-per-entry rule).
+        // Scoped by path, not index, so entries keep their open state when one above is closed.
         ImGui::PushID(InEntry.File.AbsPath.CStr());
 
-        // The newest / re-opened one springs open; the others keep whatever the user left them at.
+        // The newest (or re-opened) one opens; the others keep their state.
         if (bInFocused) { ImGui::SetNextItemOpen(true, ImGuiCond_Always); }
 
         const bool bOpen = ImGui::CollapsingHeader(InEntry.File.Name.CStr());
@@ -90,9 +88,7 @@ namespace Opaax::Editor
         {
             DrawIdentity(InEntry);
 
-            // NO TYPE ID IS COMPARED HERE any more. The chrome's SetPreview facet built the live
-            // object, and it is the only thing that named a resource type — which is what this
-            // panel's own growth-point note asked for when a second previewable type arrived.
+            // The type's preview object was built by its SetPreview callback; no type check here.
             if (IResourcePreviewClaim* lClaim = ClaimFor(InEntry))
             {
                 lClaim->Draw(m_Context);
@@ -109,8 +105,7 @@ namespace Opaax::Editor
 
     void ResourcePreviewPanel::DrawIdentity(const ResourcePreviewEntry& InEntry) const
     {
-        // The chrome's override first, then the FORMAT's own label — the same order the browser's
-        // tooltip uses, so the two windows cannot disagree about what a file is.
+        // The chrome's label first, then the format's (same order as the browser tooltip).
         const char* lLabel = "Unknown type";
         if (const ResourceTypeDesc* lChrome = m_Context.Extensions.ResourceTypes().Find(InEntry.TypeId);
             lChrome != nullptr && lChrome->Label.IsValid())
@@ -143,13 +138,12 @@ namespace Opaax::Editor
         const ResourceTypeDesc* lChrome = m_Context.Extensions.ResourceTypes().Find(InEntry.TypeId);
         if (lChrome == nullptr || !lChrome->OnPreviewOpen)
         {
-            return nullptr;   // NOT cached: a type with no preview has nothing to keep
+            return nullptr;   // not cached: this type has no preview
         }
 
         TUniquePtr<IResourcePreviewClaim> lClaim = lChrome->OnPreviewOpen(m_Context.Resources, InEntry.File);
 
-        // Once per open, not per frame: the discrete event, and the only signal that a double-click
-        // reached this panel at all.
+        // Once per open, not per frame.
         if (lClaim == nullptr)
         {
             OPAAX_LOG(LogResourcePreviewPanel, Warn, "Cannot preview '{}' — it did not load",

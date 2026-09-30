@@ -1,4 +1,4 @@
-// Suite: the Log panel's filter (Editor/Panels/LogFilter.h) — block LG2/LG3.
+// Suite: the Log panel's filter (Editor/Panels/LogFilter.h).
 //
 // What a line needs to be shown: its level's button on, its category not hidden, and the search
 // found in its message, ignoring case. Critical rides Error's button.

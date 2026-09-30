@@ -5,9 +5,7 @@
 namespace Opaax
 {
     /**
-     * @class OpenGLVertexBuffer
-     *
-     * Implement IVertexBuffer for OpenGL
+     * OpenGL vertex buffer.
      */
     class OPAAX_API OpenGLVertexBuffer final : public IVertexBuffer
     {
@@ -16,15 +14,12 @@ namespace Opaax
         // =============================================================================
     public:
         /**
-         * Dynamic VBO — data uploaded later via SetData()
-         * @param InSize 
+         * Dynamic buffer (data set later with SetData).
          */
         explicit OpenGLVertexBuffer(Uint32 InSize);
         
         /**
-         * Static VBO — data uploaded at construction
-         * @param InVertices 
-         * @param InSize 
+         * Static buffer (data uploaded now).
          */
         OpenGLVertexBuffer(const float* InVertices, Uint32 InSize);
         ~OpenGLVertexBuffer() override;
@@ -68,9 +63,7 @@ namespace Opaax
     };
     
     /**
-     * @class OpenGLIndexBuffer
-     *
-     * Implement IIndexBuffer for OpenGL
+     * OpenGL index buffer.
      */
     class OPAAX_API OpenGLIndexBuffer final : public IIndexBuffer
     {

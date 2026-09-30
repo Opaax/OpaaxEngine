@@ -10,11 +10,7 @@ namespace Opaax
     OPAAX_LOG_CATEGORY(OpenGLFramebuffer);
     
     /**
-     * @class OpenGLFramebuffer
-     *
-     * OpenGL IFramebuffer implementation: one GL_RGBA8 color texture + an optional
-     * GL_DEPTH24_STENCIL8 renderbuffer. Holds the GL handles that previously lived
-     * inline in the editor ViewportPanel.
+     * OpenGL IFramebuffer: one GL_RGBA8 colour texture and an optional GL_DEPTH24_STENCIL8 renderbuffer.
      */
     class OPAAX_API OpenGLFramebuffer final : public IFramebuffer
     {
@@ -35,9 +31,9 @@ namespace Opaax
         // Function
         // =============================================================================
     private:
-        // (re)create the color texture + depth RBO + FBO at the current size.
+        // (Re)creates the colour texture, depth renderbuffer and FBO at the current size.
         void Invalidate();
-        // delete the GL objects (idempotent).
+        // Deletes the GL objects (safe to call twice).
         void Release();
 
         // =============================================================================

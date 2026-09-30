@@ -6,7 +6,7 @@
 #include "Core/Log/Logger.h"
 
 #include "ResourceFormat.h"
-#include "ResourceHold.hpp"    // the one thing an entry can CALL (P5b) — brings ResourceManager.h
+#include "ResourceHold.hpp"    // ResourceHold, ResourceManager
 #include "ResourceTypeID.hpp"
 
 namespace Opaax
@@ -19,30 +19,18 @@ namespace Opaax
     struct ResourceFormatEntry
     {
         Uint32                TypeId = 0;        // ResourceTypeID::Get<T>()
-        OpaaxStringID         Name;              // authoring / log name, derived by the route
-        const ResourceFormat* Format = nullptr;  // -> a static constexpr; valid for the process
+        OpaaxStringID         Name;              // name, derived by the route
+        const ResourceFormat* Format = nullptr;  // static constexpr, valid for the process
 
         /**
-         * Load one file of this type and hand back an erased claim on it (P5b). THE ONE THING AN
-         * ENTRY CAN CALL: a hard reference is read from a component's json as a path and a type
-         * id, and this is how the id becomes a typed Load without anyone naming T again.
+         * Loads a file of this type and returns a type-erased hold on it.
          */
         ResourceAcquireFn     Acquire = nullptr;
     };
 
     // =============================================================================
-    // ResourceFormatRegistry — "which resource type loads this file?", answered by extension.
-    //
-    //   ONE erased call, unlike its two siblings' many. IComponentEntry / IWorldSubsystemEntry
-    //   exist because the engine CALLS through them (Save, CreateInto); a format was pure data
-    //   until ⑦-C P5b needed "load a file of type #N" — so an entry carries exactly that pointer
-    //   and nothing else. The editor's own ResourceTypeRegistry still needs no erasure at all.
-    //
-    //   MANY extensions map to ONE type. Register<TextureResource>() claims .png, .jpg and .tga
-    //   in one call, which is what keeps a new spelling out of every consumer downstream.
-    //
-    //   SEALING: seals with the other registries on the way to the first world (MR0/BO4). A type
-    //   registered after that would be missing from a session that already scanned its files.
+    // ResourceFormatRegistry — which resource type loads a file, by extension.
+    //   One type can claim several extensions. Sealed before the first world.
     // =============================================================================
     class OPAAX_API ResourceFormatRegistry
     {
@@ -57,8 +45,7 @@ namespace Opaax
         // Copy - Move Delete
         // =========================================================================
         //
-        // A registry is not a value, and OPAAX_API instantiates every implicitly-declared member
-        // (I6 corollary) — the same shape ComponentRegistry uses.
+        // Required by OPAAX_API: the implicit copy would not compile.
         ResourceFormatRegistry(const ResourceFormatRegistry&)            = delete;
         ResourceFormatRegistry& operator=(const ResourceFormatRegistry&) = delete;
         ResourceFormatRegistry(ResourceFormatRegistry&&)                 = delete;
@@ -69,27 +56,20 @@ namespace Opaax
         // =========================================================================
     public:
         /**
-         * Register T and claim every extension its `OPAAX_RESOURCE_FORMAT` names. Refused (and
-         * logged) when the registry is sealed, when InName is invalid, when the type is already
-         * registered, or when ANY of its extensions is already claimed by another type.
-         *
-         * Calls ResourceTypeID::Get<T>() eagerly — which is what gives the type its dense id
-         * before anything loads it, since the pools otherwise mint ids on the first Load<T>.
-         *
-         * @tparam T A resource type carrying OPAAX_RESOURCE_FORMAT.
-         * @param InName The authoring name; the route derives it from the type when omitted.
-         * @return true when the type was accepted.
+         * Registers T and every extension its OPAAX_RESOURCE_FORMAT lists. Refused (and logged)
+         * if sealed, if InName is invalid, if T is already registered, or if an extension is taken.
+         * @tparam T A resource type with OPAAX_RESOURCE_FORMAT
+         * @param InName The name (the route defaults it to the type name)
+         * @return True if registered
          */
         template<CResourceFormat T>
         bool Register(OpaaxStringID InName)
         {
-            // NOTE: the call is instantiated wherever T is known (a game module, the exe), but the
-            // entry LIST is only ever touched by the out-of-line sink below — i.e. DLL-side. Same
-            // arrangement as ComponentRegistry::Register.
+            // Built here (T is known) but stored by an out-of-line function in the DLL.
             return AddEntry(ResourceTypeID::Get<T>(), InName, &T::Format, &AcquireHold<T>);
         }
 
-        /** Idempotent. Called by EngineRegistries::SealAll — after this, Register refuses. */
+        /** Called by EngineRegistries::SealAll. After this, Register refuses. Safe to call twice. */
         void Seal() noexcept;
 
         // =========================================================================
@@ -97,17 +77,15 @@ namespace Opaax
         // =========================================================================
     public:
         /**
-         * @param InExtension An id from NormalizeExtension — NOT raw text. A plain integer lookup,
-         *   deliberately: the file browser calls this per file per frame, and the scanner already
-         *   normalized once at scan time. Raw text goes through NormalizeExtension first.
-         * @return The type claiming InExtension, or nullptr.
+         * @param InExtension An id from NormalizeExtension (not raw text)
+         * @return The type for InExtension, or nullptr
          */
         const ResourceFormatEntry* FindByExtension(OpaaxStringID InExtension) const noexcept;
 
-        /** @return The entry for InTypeId (ResourceTypeID::Get<T>()), or nullptr. */
+        /** @return The entry for InTypeId (ResourceTypeID::Get<T>()), or nullptr */
         const ResourceFormatEntry* FindByTypeId(Uint32 InTypeId) const noexcept;
 
-        /** Iterate every entry in registration order. */
+        /** Every entry, in registration order. */
         const TDynArray<ResourceFormatEntry>& Entries() const noexcept { return m_Entries; }
 
         // =========================================================================
@@ -116,14 +94,14 @@ namespace Opaax
     public:
         bool IsSealed() const noexcept { return m_bSealed; }
 
-        /** @return How many TYPES are registered — not how many extensions they claim between them. */
+        /** @return Number of registered types (not extensions) */
         Uint64 Count() const noexcept { return static_cast<Uint64>(m_Entries.size()); }
 
         // =========================================================================
         // Functions
         // =========================================================================
     private:
-        /** Out-of-line sink for Register<T> — see the NOTE there. */
+        /** Stores an entry. */
         bool AddEntry(Uint32 InTypeId, OpaaxStringID InName, const ResourceFormat* InFormat,
                       ResourceAcquireFn InAcquire);
 
@@ -133,8 +111,7 @@ namespace Opaax
     private:
         TDynArray<ResourceFormatEntry> m_Entries;
 
-        // Extension id -> INDEX into m_Entries, never a pointer: the array reallocates as types
-        // register, and a stored pointer would name freed memory (the string-pool bug's shape, I2).
+        // Extension id -> index into m_Entries (not a pointer: the array reallocates).
         TUnorderedMap<Uint32, Uint64>  m_ByExtension;
 
         bool m_bSealed = false;

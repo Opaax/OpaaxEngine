@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Core/EngineAPI.h"
-#include "Engine/Subsystems/Resources/ResourceManager.h"   // before PrefabResource — completes LoadContext
+#include "Engine/Subsystems/Resources/ResourceManager.h"   // before PrefabResource (completes LoadContext)
 
 #include "World/Prefab/PrefabFold.h"
 #include "World/Prefab/PrefabResource.hpp"
@@ -12,21 +12,9 @@ namespace Opaax
     class IPaths;
 
     // =============================================================================
-    // ResourcePrefabResolver — the ONE real IPrefabResolver: asset path -> loaded prefab.
-    //
-    //   It is what closes the gap `IPrefabResolver` exists to name: resolving a path needs `IPaths`
-    //   (an app service) and the `ResourceManager` (an engine subsystem), and both of its callers
-    //   already hold the pair — `Level` by construction (**WM8**), and the editor through its
-    //   context. So neither has to reach for anything, and the World layer still names no service.
-    //
-    //   IT HOLDS THE CLAIMS, and that is not caching for speed — it is LIFETIME. `Resolve` answers a
-    //   pointer INTO the resource pool, and that payload is only alive while some `ResourceRef`
-    //   holds it. Dropping the ref at the end of `Resolve` would return a pointer to something the
-    //   pool may already have unloaded. Keep the resolver alive for as long as its answers are used,
-    //   which for a fold or an expand is one call.
-    //
-    //   The dedup is a real second benefit: a map with forty placements of one prefab loads it once,
-    //   and the ResourceManager would have deduped anyway — this just skips forty lookups.
+    // ResourcePrefabResolver — IPrefabResolver using IPaths and the ResourceManager.
+    //   Keeps the loaded prefabs alive: Resolve returns pointers into them, so keep the resolver
+    //   alive while you use its results.
     // =============================================================================
     class OPAAX_API ResourcePrefabResolver final : public IPrefabResolver
     {
@@ -50,12 +38,8 @@ namespace Opaax
         // =========================================================================
         //~Begin IPrefabResolver interface
         /**
-         * @return the prefab's entities FLATTENED (P7 — its own plus every nested placement
-         *   expanded, see PrefabFactory::Flatten), or NULL when the path is empty, resolves outside
-         *   the asset trees, fails to load, or is ALREADY BEING FLATTENED — a prefab that places
-         *   itself, directly or through others, is refused there with an Error and the offending
-         *   placement expands to nothing. FailFast makes a failed load a null rather than an empty
-         *   prefab, which is exactly the distinction the fold needs to keep data.
+         * @return The flattened prefab, or null if the path is empty, cannot be loaded, or is
+         *   already being flattened (a cycle, reported as an error)
          */
         const PrefabData* Resolve(const OpaaxString& InAssetPath) const override;
         //~End IPrefabResolver interface
@@ -65,9 +49,7 @@ namespace Opaax
         // =========================================================================
     public:
         /**
-         * Does InOuter place InInner, directly or through any depth of nesting? What the
-         * reconciler asks to find the placements a saved prefab reaches (**PF8**). False for a
-         * path that does not resolve; terminates on a cycle.
+         * True if InOuter places InInner, at any depth. False if a path does not resolve.
          */
         bool Places(const OpaaxString& InOuter, const OpaaxString& InInner) const;
 
@@ -78,21 +60,20 @@ namespace Opaax
         struct Claim
         {
             OpaaxString                 Path;
-            ResourceRef<PrefabResource> Ref;        // KEEPS the payload alive — see the header note
-            TUniquePtr<PrefabData>      Flattened;  // what Resolve answers; null for a failed load
-            bool                        bInFlight = false;   // being flattened right now — the cycle guard
+            ResourceRef<PrefabResource> Ref;        // keeps the payload loaded
+            TUniquePtr<PrefabData>      Flattened;  // what Resolve returns; null for a failed load
+            bool                        bInFlight = false;   // cycle guard
         };
 
-        /** The claim for InAssetPath, loading and flattening it on first sight. */
+        /** The entry for InAssetPath, loaded and flattened on first use. */
         Claim& ClaimFor(const OpaaxString& InAssetPath) const;
 
         const IPaths&            m_Paths;
         ResourceManager&         m_Resources;
         const ComponentRegistry& m_Components;
 
-        // Mutable because Resolve is logically const — it answers a question — while physically
-        // needing to record the claim that makes its own answer valid. HEAP-OWNED, so a pointer a
-        // caller holds from Resolve(A) survives Resolve(B) growing the list.
+        // Mutable: Resolve is logically const but keeps what it loaded. On the heap, so pointers
+        // from Resolve(A) survive Resolve(B).
         mutable TDynArray<TUniquePtr<Claim>> m_Claims;
     };
 }

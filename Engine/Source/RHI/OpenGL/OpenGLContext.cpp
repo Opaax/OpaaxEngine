@@ -7,8 +7,6 @@
 
 namespace Opaax
 {
-    // NOTE: IGraphicsContext::Create + ApplyWindowHints (backend dispatch) live in
-    //   RHI/BackendFactory.cpp. This file holds only the OpenGL context impl.
 
     // =============================================================================
     // OpenGLContext
@@ -30,7 +28,7 @@ namespace Opaax
             return false;
         }
 
-        // VSync on by default (matches prior WindowsWindow behavior).
+        // VSync on by default.
         SetVSync(true);
 
         LogAdapterInfo();
@@ -49,7 +47,7 @@ namespace Opaax
         glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &lMaxTexUnits);
         glGetIntegerv(GL_MAX_TEXTURE_SIZE,        &lMaxTexSize);
         
-        // One line: what a bug report needs to know about the machine.
+        // One line with the GPU and driver info.
         OPAAX_LOG(LogOpenGLContext, Info, "OpenGL {} on {} ({}) — GLSL {}, {} texture units, max texture {}, VSync on",
                   lStr(GL_VERSION), lStr(GL_RENDERER), lStr(GL_VENDOR), lStr(GL_SHADING_LANGUAGE_VERSION),
                   lMaxTexUnits, lMaxTexSize);

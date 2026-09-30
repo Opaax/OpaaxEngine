@@ -78,7 +78,7 @@ namespace
     public:
         explicit StubPaths(OpaaxString InConfigsDir) : m_ConfigsDir(std::move(InConfigsDir)) {}
         OpaaxString ConfigsDir()   const override { return m_ConfigsDir; }
-        void        LogPaths()     const override {}   // IPaths added LogPaths() — stub no-op
+        void        LogPaths()     const override {}   // stub
 
         OpaaxString WorkspaceRoot() const override { return OpaaxString(); }
         OpaaxString EngineRoot()    const override { return OpaaxString(); }

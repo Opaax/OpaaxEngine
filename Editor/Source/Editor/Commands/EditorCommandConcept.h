@@ -7,9 +7,6 @@ namespace Opaax::Editor
 {
     /**
      * The payload of a command that takes no arguments.
-     *
-     * One shared type rather than an empty struct per command: the registry's typeid gate exists to
-     * catch a wrong PAYLOAD, and two commands that both take nothing have no payload to confuse.
      */
     struct NoParams {};
 

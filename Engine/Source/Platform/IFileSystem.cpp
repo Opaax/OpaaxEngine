@@ -7,8 +7,7 @@ namespace Opaax
     namespace
     {
         // =====================================================================
-        // NullFileSystem — every primitive fails, nothing reaches a disk. Silent by design: "there is
-        // no filesystem" is the answer, not an error, and callers already branch on false.
+        // NullFileSystem — every call fails, no disk access. No log: callers handle false.
         // =====================================================================
         class NullFileSystem final : public IFileSystem
         {
@@ -38,7 +37,7 @@ namespace Opaax
             return InPath;
         }
 
-        // Reachable before Logger::Init (Bootstrap creates directories): the line is held and replayed.
+        // May run before Logger::Init: the line is held and replayed.
         OPAAX_APP_LOG(Error, "IFileSystem cannot create: {}", InPath.CStr());
 
         return {};

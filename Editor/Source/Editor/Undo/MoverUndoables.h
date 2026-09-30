@@ -11,16 +11,13 @@ namespace Opaax::Editor
     struct EditorContext;
 
     // =============================================================================
-    // The steps the mover editors' verbs record. UN1's shape, and the library's path guard: every
-    // step carries its document's PATH, so an undo after opening a second asset is a NO-OP WITH A
-    // WARNING rather than a write into the wrong file.
+    // The undo steps recorded by the mover editors' actions.
+    // Every step carries the asset's path: undoing after opening another asset does nothing and warns,
+    // instead of writing into the wrong file.
     // =============================================================================
 
     /**
-     * The whole ENTRY list was replaced — add, remove, rename, repoint and reorder are all this.
-     *
-     * One type for five verbs because they are one edit to a reader: the list before, the list
-     * after. The LABEL is the field that varies, so the Edit menu still names what happened.
+     * The whole entry list was replaced (add, remove, rename, repoint, reorder). The label says which.
      */
     struct MoverEntriesEdit
     {
@@ -29,14 +26,13 @@ namespace Opaax::Editor
         TDynArray<MoverEntry> After;
 
         /**
-         * The default rides in the SAME step, because the edits that dangle it are the edits to the
-         * list: renaming the default entry orphans it, removing it deletes it. One Ctrl+Z has to
-         * put BOTH back — `LibraryEntriesEdit` set this precedent and `SheetOps::Slice` before it.
+         * The default is in the same step: renaming or removing the default entry changes it, and one
+         * Ctrl+Z must restore both.
          */
         OpaaxStringID BeforeDefault;
         OpaaxStringID AfterDefault;
 
-        /** What the Edit menu shows — "Add Mode", "Remove Mode", "Rename Mode"… */
+        /** What the Edit menu shows: "Add Mode", "Remove Mode", "Rename Mode"... */
         const char* LabelText = "Edit Mode List";
 
         void        Undo(EditorContext& InContext);
@@ -44,7 +40,7 @@ namespace Opaax::Editor
         const char* Label() const noexcept { return LabelText; }
     };
 
-    /** Which mode a mover with no opinion starts in. */
+    /** The mode a mover starts in when none is named. */
     struct MoverDefaultMode
     {
         OpaaxString   MoverPath;
@@ -57,11 +53,7 @@ namespace Opaax::Editor
     };
 
     /**
-     * A tuning was edited — the WHOLE struct, before and after.
-     *
-     * One step for every knob, unlike the library's five verbs, because a tuning has no structure
-     * to edit: it is a flat fold of floats, so "which field changed" is not a distinction the Edit
-     * menu could usefully make. The data is small enough that carrying two copies costs nothing.
+     * A tuning was edited: the whole struct, before and after (a flat set of floats).
      */
     struct MoveModeEdit
     {

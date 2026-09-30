@@ -1,11 +1,6 @@
-// Suite: ⑦-C P3 — PrefabOverrides, what one instance entity changed about its template.
-//
-// THE HEADLINE CASE is "the prefab moves a property the instance did not touch" — the one that
-// separates per-PROPERTY overrides from per-COMPONENT ones. Under a per-component model an author
-// who nudged a sprite's Size would stop receiving the prefab's later colour change, silently and
-// forever; that case is written out below and is the reason this file exists.
-//
-// Pure json in, pure json out — no World, no registry, no resources.
+// Suite: PrefabOverrides — what one instance entity changed from its template. Main case: the
+// prefab changes a property the instance did not touch, and the instance must get it (per-property,
+// not per-component). Pure JSON: no World, no registry.
 #include <doctest.h>
 
 #include "Engine/Subsystems/Resources/ResourcePathJson.h"
@@ -266,7 +261,7 @@ TEST_CASE("PrefabOverrides: an ARRAY is replaced wholesale — the documented me
 
 TEST_CASE("PrefabOverrides: Apply survives a malformed patch instead of throwing")
 {
-    // This runs at map load (**MP3**), where a hand-edited file is an ordinary input.
+    // This runs at map load, where a hand-edited file is an ordinary input.
     EntityData lEntity = Entity("A", { Component("Sprite", Sprite(1.0, 1.0, 1.0, "T.png")) });
     const EntityData lUntouched = lEntity;
 
@@ -278,7 +273,7 @@ TEST_CASE("PrefabOverrides: Apply survives a malformed patch instead of throwing
 }
 
 // =============================================================================
-// P5 — hard vs soft references, the part that is pure declaration
+// Hard vs soft references, the part that is pure declaration
 // =============================================================================
 
 namespace
@@ -315,7 +310,7 @@ namespace
     };
 }
 
-TEST_CASE("P5: the load policy is part of the TYPE")
+TEST_CASE("Hard refs: the load policy is part of the TYPE")
 {
     // static_assert as well as CHECK: these are compile-time guarantees, and a build that broke
     // one should not get as far as running.
@@ -332,11 +327,11 @@ TEST_CASE("P5: the load policy is part of the TYPE")
     CHECK(k_IsHardResourcePath<THardResourcePath<ProbeResource>>);
     CHECK_FALSE(k_IsHardResourcePath<TResourcePath<ProbeResource>>);
 
-    // The default is SOFT, which is what keeps every field written before P5 unchanged.
+    // The default is SOFT, which is what keeps every field written before hard references unchanged.
     CHECK(TResourcePath<ProbeResource>::LoadPolicy == EResourceLoad::Soft);
 }
 
-TEST_CASE("P5: the registry derives a component's hard fields, by type")
+TEST_CASE("Hard refs: the registry derives a component's hard fields, by type")
 {
     ComponentRegistry lRegistry;
     REQUIRE(lRegistry.Register<SoftOnlyComponent>("SoftOnly"));
@@ -355,15 +350,15 @@ TEST_CASE("P5: the registry derives a component's hard fields, by type")
     REQUIRE(lHard.size() == 1);
 
     // The name is the JSON KEY, which is what lets a loader reading untyped payloads find it —
-    // and the type id is what turns the value back into a typed load (P5b), named without ever
+    // and the type id is what turns the value back into a typed load, named without ever
     // completing ProbeResource.
     CHECK(lHard[0].Name   == OpaaxStringID("Bullet"));
     CHECK(lHard[0].TypeId == ResourceTypeID::Get<ProbeResource>());
 }
 
-TEST_CASE("P5: no ENGINE component is hard yet, and that is the migration being zero")
+TEST_CASE("Hard refs: no ENGINE component is hard yet, and that is the migration being zero")
 {
-    // Every field written before P5 stays soft, so this change loads every existing map and prefab
+    // Every field written before hard references stays soft, so this change loads every existing map and prefab
     // exactly as before. The day one goes hard, this case is what will say so.
     ComponentRegistry lRegistry;
     REQUIRE(lRegistry.Register<TransformComponent>("Transform", true));
@@ -374,7 +369,7 @@ TEST_CASE("P5: no ENGINE component is hard yet, and that is the migration being 
 }
 
 // =============================================================================
-// §HR — the parent link rides in the patch beside the name
+// The parent link rides in the patch beside the name
 // =============================================================================
 TEST_CASE("PrefabOverrides: a re-parented instance entity records ONE `parent` override, and it applies back")
 {

@@ -13,7 +13,7 @@ namespace Opaax
     }
 
     // =============================================================================
-    // Authored state — every one of these moves every child, so all of them owe a layout
+    // Authored state — every change moves the children, so each one invalidates the layout
     // =============================================================================
 
     void UIStack::SetAxis(const EUIAxis InAxis)
@@ -96,7 +96,7 @@ namespace Opaax
             return ResolveRect(Rect, InParentBounds);
         }
 
-        // Only a POINT-anchored axis can follow the content; a stretched one is the parent's to size.
+        // Only a point-anchored axis can fit the content; a stretched one is sized by the parent.
         UIRect lRect = Rect;
         if (Axis == EUIAxis::Vertical)
         {
@@ -114,13 +114,13 @@ namespace Opaax
     {
         const Bounds2D& lBounds = GetBounds();
 
-        // The inner rect, padding taken off each edge; a padding wider than the rect collapses it.
+        // The inner rect, padding removed; a padding wider than the rect collapses it.
         const Vector2F lMin{ lBounds.Min().x + Padding.Left,  lBounds.Min().y + Padding.Bottom };
         const Vector2F lMax{ std::max(lBounds.Max().x - Padding.Right, lMin.x),
                              std::max(lBounds.Max().y - Padding.Top,   lMin.y) };
 
         const bool lVertical = Axis == EUIAxis::Vertical;
-        float      lCursor   = lVertical ? lMax.y : lMin.x;   // the top, or the left
+        float      lCursor   = lVertical ? lMax.y : lMin.x;   // top, or left
 
         OutSlots.reserve(GetChildren().size());
 
@@ -130,7 +130,7 @@ namespace Opaax
 
             if (lVertical)
             {
-                // Down the axis; across it, Start is the LEFT.
+                // Down the axis; across it, Start is the left.
                 float lLeft = lMin.x, lRight = lMax.x;
                 switch (ChildAlign)
                 {
@@ -145,7 +145,7 @@ namespace Opaax
             }
             else
             {
-                // Along the axis; across it, Start is the TOP (the canvas is Y-up).
+                // Along the axis; across it, Start is the top (Y-up).
                 float lBottom = lMin.y, lTop = lMax.y;
                 switch (ChildAlign)
                 {

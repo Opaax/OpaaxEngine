@@ -7,31 +7,18 @@
 
 namespace Opaax
 {
-    /** The one byte that separates a tag's segments. */
+    /** Separator between tag segments. */
     inline constexpr char TAG_SEPARATOR = '.';
 
     /**
-     * @class OpaaxTag
+     * Hierarchical gameplay tag ("Damage.Fire.Burn"), 4 bytes. Like Unreal's FGameplayTag,
+     * without a registry: the hierarchy comes from the dotted text. A misspelled tag is valid
+     * but matches nothing.
      *
-     * Hierarchical gameplay label — "Damage.Fire.Burn" — in 4 bytes. Unreal's FGameplayTag, minus
-     * the registry. Trivially copyable, pass BY VALUE.
+     * The constructor interns the text, so keep tags used every frame in a member or a static.
      *
-     * THERE IS NO TAG REGISTRY, and that is the design (I14). The hierarchy is DERIVED from the
-     * dotted text: a tag IS-A another when its text starts with the other's AND the next byte is a
-     * separator. So there is no declaration table, no ini file, no boot ordering, and no new mutable
-     * static (I1) — the interned name is the only state, and OpaaxStringID already owns it.
-     * The price, stated plainly: a MISSPELLED tag is a perfectly valid tag that simply matches
-     * nothing, and there is no editor dropdown to pick from. Structural typos are caught (see
-     * IsValidTagText); semantic ones are not.
-     *
-     * COST — the ctor INTERNS, so a tag that appears in a per-frame test belongs in a member or a
-     * file-scope `static const OpaaxTag`, not rebuilt inside the loop. Exact comparison (operator==)
-     * is a single integer compare; MatchesTag is one prefix compare over the pool's bytes.
-     *
-     * Header-only and stateless, so no OPAAX_API (I6) — nothing to unify across the DLL line.
-     *
-     * @see OpaaxTagContainer for the set form (HasTag / HasAny / HasAll).
-     * @see Core/Tag/OpaaxTagJson.h for the nlohmann bridge (kept apart so matching costs no json).
+     * @see OpaaxTagContainer for a set of tags.
+     * @see Core/Tag/OpaaxTagJson.h for JSON.
      */
     class OpaaxTag final
     {
@@ -39,21 +26,16 @@ namespace Opaax
         // CTOR - DTOR
         // =============================================================================
     public:
-        /** The invalid tag: it matches nothing, and nothing matches it. */
+        /** Invalid tag: matches nothing. */
         constexpr OpaaxTag() noexcept = default;
 
         /**
-         * Implicit on purpose, so `HasTag("Damage.Fire")` reads the way it should.
-         *
-         * Empty text is the invalid tag, quietly. MALFORMED text is the invalid tag AND asserts,
-         * which is the right trade for a literal written by hand. Anything coming from a FILE or a
-         * TEXT FIELD is untrusted: gate it on IsValidTagText first, the way from_json does.
+         * Implicit, so HasTag("Damage.Fire") works. Empty text gives the invalid tag;
+         * malformed text also asserts. Check untrusted text with IsValidTagText first.
          */
         OpaaxTag(OpaaxStringView InText) : m_Name(Intern(InText)) {}
 
-        // A literal and an OpaaxString each get their OWN ctor rather than riding the view above:
-        // two user-defined conversions never chain, so `const char*` -> view -> tag would not
-        // compile at a call site. Same reason OpaaxStringID carries the same pair.
+        // Separate const char* and OpaaxString constructors: conversions do not chain.
         OpaaxTag(const char*        InText) : OpaaxTag(OpaaxStringView(InText)) {}
         OpaaxTag(const OpaaxString& InText) : OpaaxTag(OpaaxStringView(InText)) {}
 
@@ -65,8 +47,7 @@ namespace Opaax
         {
             if (InText.IsEmpty()) { return OpaaxStringID(); }
 
-            // Loud in dev, because with no registry this assert IS the typo net. Core cannot log
-            // (I11), so an assert is the only way to be loud from here.
+            // Assert on malformed text: the only typo check there is.
             if (!IsValidTagText(InText))
             {
                 OPAAX_ASSERT(false);
@@ -78,17 +59,8 @@ namespace Opaax
 
     public:
         /**
-         * Structural validity, not spelling: non-empty, no leading or trailing separator, no empty
-         * segment ("A..B"), no whitespace or control bytes.
-         *
-         * These rules are load-bearing rather than tidy — an empty segment would produce a parent
-         * that is not a prefix of its own child, and a stray space interns as a distinct name that
-         * nothing will ever match.
-         *
-         * UTF-8 SAFE, and only because the scan is unsigned (I7): '.' and the control bytes are
-         * ASCII, which never appear inside a multi-byte sequence — but `char` is signed on MSVC, so
-         * a plain `lChar <= ' '` would read every continuation byte as negative and refuse any
-         * non-ASCII tag name. Same reason PathString::Stem may scan for separators byte-wise.
+         * Structural check: non-empty, no leading/trailing separator, no empty segment ("A..B"),
+         * no whitespace or control characters. UTF-8 safe.
          */
         static constexpr bool IsValidTagText(OpaaxStringView InText) noexcept
         {
@@ -110,13 +82,9 @@ namespace Opaax
         }
 
         /**
-         * Hierarchical match: is this tag InParent, or a DESCENDANT of it?
+         * True if this tag is InParent or a descendant of it.
          * "Damage.Fire.Burn" matches "Damage.Fire" and "Damage"; "DamageOverTime" matches neither.
-         *
-         * An EXACT hit answers before touching the pool; only the descendant test reads the text,
-         * which costs the pool's shared lock. Prefer operator== where equality is what you mean.
-         *
-         * @return false whenever either side is invalid — an absent tag is inert in both directions.
+         * @return False if either tag is invalid
          */
         bool MatchesTag(OpaaxTag InParent) const noexcept
         {
@@ -126,20 +94,15 @@ namespace Opaax
             const OpaaxStringView lSelf   = GetView();
             const OpaaxStringView lParent = InParent.GetView();
 
-            // The separator check is the whole rule: a prefix only names an ancestor when it ends on
-            // a segment boundary.
+            // A prefix is an ancestor only if it ends on a separator.
             return lSelf.GetLength() > lParent.GetLength()
                 && lSelf[lParent.GetLength()] == TAG_SEPARATOR
                 && lSelf.StartsWith(lParent);
         }
 
         /**
-         * "Damage.Fire.Burn" -> "Damage.Fire". A root tag has no parent.
-         *
-         * Interns the parent if nobody named it before — a parent is a real name, so it earns a real
-         * slot. Repeat calls are lookups.
-         *
-         * @return The invalid tag at the root.
+         * "Damage.Fire.Burn" -> "Damage.Fire". Interns the parent.
+         * @return The invalid tag for a root tag
          */
         OpaaxTag GetParent() const
         {
@@ -159,26 +122,21 @@ namespace Opaax
         }
 
         /**
-         * The full dotted text, borrowed.
-         *
-         * Safe to hold, unlike most views (see OpaaxStringView's lifetime note): it points into the
-         * intern pool, whose entries are immortal and never move.
-         *
-         * @return An EMPTY view for the invalid tag — deliberately not the pool's "None" placeholder,
-         *   which would otherwise make the invalid tag read as an ancestor of anything called None.
+         * The full text. Safe to keep (points into the intern pool).
+         * @return Empty for the invalid tag
          */
         OpaaxStringView GetView() const noexcept
         {
             return IsValid() ? m_Name.GetView() : OpaaxStringView();
         }
 
-        /** A displayable copy. The invalid tag prints as "None", like every other unset id (I11). */
+        /** A copy of the text. The invalid tag gives "None". */
         OpaaxString ToString() const { return m_Name.ToString(); }
 
         // ----------------------------------------------------------------------------
         // Get - Set
     public:
-        /** The interned name — the tag's identity, and what every comparison here compares. */
+        /** The interned name. */
         constexpr OpaaxStringID GetName() const noexcept { return m_Name; }
 
         constexpr bool IsValid() const noexcept { return m_Name.IsValid(); }
@@ -187,7 +145,7 @@ namespace Opaax
         // Operators
         // =============================================================================
     public:
-        /** EXACT match, one integer compare. MatchesTag is the hierarchical form. */
+        /** Exact match. MatchesTag is the hierarchical version. */
         constexpr bool operator==(OpaaxTag Other) const noexcept { return m_Name == Other.m_Name; }
         constexpr bool operator!=(OpaaxTag Other) const noexcept { return m_Name != Other.m_Name; }
 
@@ -199,7 +157,7 @@ namespace Opaax
     };
 } // namespace Opaax
 
-// std::hash — the interned id is already a well-distributed table index, so it IS the hash.
+// std::hash<OpaaxTag>: the interned id is already a good hash.
 template <>
 struct std::hash<Opaax::OpaaxTag>
 {
@@ -209,8 +167,7 @@ struct std::hash<Opaax::OpaaxTag>
     }
 };
 
-// Formatter for spdlog / fmtlib — a view over the pool's bytes, never a copy. Goes through the
-// interned name rather than GetView(), so an invalid tag logs as "None" instead of vanishing.
+// Formatter for spdlog / fmtlib. An invalid tag logs as "None".
 #include <spdlog/fmt/fmt.h>
 
 template <>

@@ -12,8 +12,8 @@ namespace Opaax::Editor::ImguiWidgets
 
     void Image(const EditorImage& InImage, const ImVec2 InSize)
     {
-        // A Dummy rather than a null handle: drawing a null texture is a backend validation error,
-        // and reserving the space keeps the panel from jumping when the upload lands.
+        // A Dummy rather than a null texture (a backend error), keeping the space so the panel does not
+        // jump when the upload lands.
         if (!InImage.IsValid())
         {
             ImGui::Dummy(InSize);

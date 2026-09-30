@@ -14,8 +14,7 @@ namespace Opaax
         m_CurrentTarget = &InTarget;
         InTarget.Bind();
 
-        // Per-pass viewport = the target's full size (FBO bind also sets it, but the backbuffer
-        // target relies on this).
+        // Viewport = the target's full size (needed for the backbuffer).
         glViewport(0, 0, static_cast<GLsizei>(InTarget.GetWidth()), static_cast<GLsizei>(InTarget.GetHeight()));
 
         if (InLoadOp == ELoadOp::Clear)
@@ -42,7 +41,7 @@ namespace Opaax
 
     void OpenGLCommandBuffer::BindPipeline(IPipeline& InPipeline)
     {
-        // Backend invariant: the active backend's factory only produces OpenGLPipeline here.
+        // Only OpenGLPipeline exists on this backend.
         static_cast<OpenGLPipeline&>(InPipeline).Apply();
     }
 

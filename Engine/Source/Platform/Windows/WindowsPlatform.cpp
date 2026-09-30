@@ -2,7 +2,7 @@
 
 #ifdef OPAAX_PLATFORM_WINDOWS
 
-#include "Core/String/OpaaxUtf8.h"   // I7 — the one UTF-8 <-> UTF-16 idiom
+#include "Core/String/OpaaxUtf8.h"
 
 #include <thread>
 #include <chrono>
@@ -29,17 +29,17 @@ namespace Opaax
 
     OpaaxString WindowsPlatform::GetExecutablePath() const
     {
-        // Grow the buffer until the full path fits — long paths exceed MAX_PATH.
+        // Grow the buffer until the path fits (long paths exceed MAX_PATH).
         std::wstring lWide(MAX_PATH, L'\0');
         for (;;)
         {
             const DWORD lLen = GetModuleFileNameW(nullptr, lWide.data(), static_cast<DWORD>(lWide.size()));
             if (lLen == 0)            { return OpaaxString(); }            // failed
-            if (lLen < lWide.size())  { lWide.resize(lLen); break; }       // fit (no trailing null)
+            if (lLen < lWide.size())  { lWide.resize(lLen); break; }       // fits (no trailing null)
             lWide.resize(lWide.size() * 2);                                // truncated -> grow
         }
 
-        // Normalise to '/' (engine path convention) while still wide — one conversion, at the boundary.
+        // Convert to '/' while still wide, then one conversion.
         for (wchar_t& lCh : lWide) { if (lCh == L'\\') { lCh = L'/'; } }
 
         return Utf8::FromWide(lWide);

@@ -16,7 +16,7 @@ namespace Opaax
             return false;
         }
 
-        // No exceptions: a hand-edited manifest is an ordinary input, not an exceptional one.
+        // No exceptions: a malformed file is a normal input.
         const nlohmann::json lJson = nlohmann::json::parse(lText.CStr(), nullptr, false);
         if (lJson.is_discarded() || !lJson.is_object())
         {
@@ -37,8 +37,7 @@ namespace Opaax
             return false;
         }
 
-        // Built into a LOCAL and moved out at the end, so every failure above leaves the
-        // caller's level exactly as it was (MapFile::Load holds the same contract).
+        // Built in a local and moved at the end, so OutData is untouched on failure.
         LevelData lParsed;
 
         const auto lNameIt = lJson.find(KEY_NAME);
@@ -47,8 +46,7 @@ namespace Opaax
             lParsed.Name = OpaaxString(lNameIt->get<std::string>().c_str());
         }
 
-        // The stem is the fallback, never the source: a level that names itself keeps its name
-        // wherever the file is moved to.
+        // Stem only as a fallback: a level with a name keeps it when moved.
         if (lParsed.Name.IsEmpty())
         {
             lParsed.Name = PathString::Stem(InAbsPath).ToString();
@@ -59,8 +57,7 @@ namespace Opaax
         {
             for (const nlohmann::json& lEntry : *lMapsIt)
             {
-                // A non-string entry is skipped rather than fatal: one bad line in a manifest
-                // must not cost the author every other map in it.
+                // Skip a non-string entry instead of failing the whole level.
                 if (!lEntry.is_string()) { continue; }
 
                 const std::string lPath = lEntry.get<std::string>();
@@ -70,8 +67,7 @@ namespace Opaax
             }
         }
 
-        // Named by PATH in the file, held as an INDEX in memory — so "the persistent map is one of
-        // this level's maps" (WM1a) is resolved once, here, and never re-checked downstream.
+        // Saved as a path, held as an index (checked once, here).
         const auto lPersistIt = lJson.find(KEY_PERSISTENT_MAP);
         if (lPersistIt != lJson.end() && lPersistIt->is_string())
         {
@@ -82,8 +78,7 @@ namespace Opaax
                 if (lParsed.Maps[lIndex] == lWanted) { lParsed.PersistentMapIndex = lIndex; break; }
             }
 
-            // Loud when the name matched nothing. The level still loads with its first map
-            // persistent (MP3) — and a silent default is exactly what makes that unspottable.
+            // Warn: the level still loads, with its first map persistent.
             if (!lWanted.IsEmpty() && lParsed.PersistentMap() != lWanted)
             {
                 OPAAX_LOG(LogLevelFile, Warn,
@@ -114,8 +109,7 @@ namespace Opaax
         }
         lJson[KEY_MAPS] = Move(lMaps);
 
-        // Written even when it IS the first entry. "Absent means the first" is a READER's default
-        // (MP3); a file that states its persistent map keeps it when someone reorders the list.
+        // Always written, so reordering the list keeps the persistent map.
         if (!InData.IsEmpty())
         {
             lJson[KEY_PERSISTENT_MAP] = std::string(InData.PersistentMap().CStr());
@@ -132,8 +126,7 @@ namespace Opaax
             return false;
         }
 
-        // The SUCCESS branch is logged, not just the failures: "no error" and "it happened" are
-        // different statements, and only this one discriminates ([[L15]]).
+        // Log success too.
         OPAAX_LOG(LogLevelFile, Info, "Saved level '{}' — {} map(s), persistent '{}'",
                   InAbsPath.CStr(), InData.MapCount(),
                   InData.IsEmpty() ? "(none)" : InData.PersistentMap().CStr());

@@ -1,12 +1,10 @@
 #include "World/Systems/WorldSubsystemRegistry.h"
 
-#include <spdlog/fmt/ranges.h>   // fmt::join — the Sealed line names every entry
+#include <spdlog/fmt/ranges.h>   // fmt::join
 
 namespace Opaax
 {
-    // NOTE: every refusal is an Error log + a false return, deliberately NOT OPAAX_ASSERT — same
-    // reasoning as ComponentRegistry::AddEntry. An assert is a __debugbreak in Debug (untestable)
-    // and nothing in Release, which is the build where a module registering late must be reported.
+    // Refusals log an error and return false (not an assert, so Release builds report them too).
     bool WorldSubsystemRegistry::AddEntry(TUniquePtr<IWorldSubsystemEntry> InEntry, OpaaxStringID InName)
     {
         if (InEntry == nullptr)
@@ -14,8 +12,7 @@ namespace Opaax
             return false;
         }
 
-        // Sealed means a world already exists. A candidate accepted now would simply be absent
-        // from that world's subsystem set, with nothing to say so.
+        // Sealed: a world exists, and a type added now would be missing from it.
         if (m_bSealed)
         {
             OPAAX_LOG(LogWorldSubsystemRegistry, Error,
@@ -30,11 +27,7 @@ namespace Opaax
             return false;
         }
 
-        // Unlike ComponentRegistry there is no second key to check: a component's TYPE id is
-        // load-bearing because it maps to on-disk json, whereas a candidate is only ever
-        // identified by name. Registering the same type twice under two names is refused by the
-        // name check below only if the names collide — which is correct: two candidates of the
-        // same type WOULD both be created, and that is the caller's stated intent.
+        // Only the name is checked: the same type under two names is allowed (both are created).
         if (FindByName(InName) != nullptr)
         {
             OPAAX_LOG(LogWorldSubsystemRegistry, Error, "Register '{}' — that name is already taken.",

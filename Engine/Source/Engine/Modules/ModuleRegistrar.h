@@ -14,17 +14,8 @@ namespace Opaax
     inline constexpr LogCategory LogModuleRegistrar{"ModuleRegistrar"};
 
     // =============================================================================
-    // DeriveTypeLeafName<T> — the C++ type's leaf name: "Opaax::DummyComponent" -> "DummyComponent".
-    //
-    // Shared by every route that accepts an optional authoring name. Lives here because this is
-    // the header that already includes entt; the registries themselves take a REQUIRED name so
-    // they need no entt of their own.
-    //
-    // MSVC's type_name is ELABORATED ("class Opaax::DummyComponent"). For a namespaced type the
-    // "::" strip removes that keyword as a side effect, which is why it went unnoticed until a
-    // GLOBAL-namespace type registered (M4 S5) and produced the key "class QuadBoundsSubsystem".
-    // The keyword is therefore stripped explicitly, FIRST — a component's derived name is what
-    // gets written into map files, so a stray prefix there is an on-disk key nobody can read back.
+    // DeriveTypeLeafName<T> — the type's name without namespace: "Opaax::DummyComponent" -> "DummyComponent".
+    //   Also strips MSVC's "class "/"struct " prefix.
     // =============================================================================
     template<typename T>
     OpaaxStringID DeriveTypeLeafName()
@@ -49,17 +40,9 @@ namespace Opaax
     }
 
     // =============================================================================
-    // ComponentRoute — the Components() channel, LIVE since M3.
-    //
-    //   Forwards straight into the engine's ComponentRegistry. The call site is unchanged
-    //   from the M0 skeleton (MR1): `InRegistrar.Components().Register<TransformComponent>()`
-    //   still compiles, because the authoring name is OPTIONAL and derived from the type
-    //   when omitted.
-    //
-    //   On the derived name: it is the C++ type's leaf name, and it becomes the key written
-    //   into map files. Renaming the C++ type therefore orphans components already saved
-    //   under the old name — pass an explicit name to pin it. This is not silent when it
-    //   happens: MapFactory warns per unknown component as it skips them.
+    // ComponentRoute — registers components into the ComponentRegistry.
+    //   The name is optional (defaults to the type name) and is saved in map files:
+    //   renaming the C++ type breaks saved maps unless the name is given explicitly.
     // =============================================================================
     class OPAAX_API ComponentRoute
     {
@@ -68,11 +51,10 @@ namespace Opaax
         // =========================================================================
     public:
         /**
-         * Register T as a serializable component.
-         *
-         * @tparam T Any type satisfying CComponent — no base class, no engine boilerplate.
-         * @param InName Optional. Omitted, the type's leaf name is used ("DummyComponent").
-         * @return true when the registry accepted it.
+         * Registers T as a component.
+         * @tparam T Any type satisfying CComponent
+         * @param InName Optional. Defaults to the type name ("DummyComponent").
+         * @return True if registered
          */
         template<CComponent T>
         bool Register(OpaaxStringID InName = {})
@@ -81,8 +63,7 @@ namespace Opaax
 
             if (m_Registry == nullptr)
             {
-                // Unbound means EngineStartup never called BindEngineRegistries — a wiring
-                // bug that would otherwise drop every module component without a word.
+                // Not bound: BindEngineRegistries was never called.
                 OPAAX_LOG(LogModuleRegistrar, Error,
                           "Components().Register — route is not bound to a ComponentRegistry; registration dropped.");
                 return false;
@@ -91,12 +72,11 @@ namespace Opaax
             return m_Registry->Register<T>(InName.IsValid() ? InName : DeriveTypeLeafName<T>());
         }
 
-        /** Wire this route to the live registry. Called once, before any module registers. */
+        /** Connects this route to the registry. Called once, before any module registers. */
         void Bind(ComponentRegistry* InRegistry) noexcept { m_Registry = InRegistry; }
 
         /**
-         * How many times a module asked — refusals included, so a mismatch with the
-         * registry's own Count() is visible rather than inferred.
+         * Number of registration requests, including refused ones.
          */
         Uint64 Count() const noexcept { return m_Count; }
 
@@ -104,19 +84,13 @@ namespace Opaax
         // Members
         // =========================================================================
     private:
-        ComponentRegistry* m_Registry = nullptr; // non-owning; the engine owns it (I5)
+        ComponentRegistry* m_Registry = nullptr; // owned by the engine
         Uint64             m_Count    = 0;
     };
 
     // =============================================================================
-    // WorldSubsystemRoute — the WorldSubsystems() channel, LIVE since M4.
-    //
-    //   Forwards into the engine's WorldSubsystemRegistry. The call site is unchanged from the
-    //   M0 skeleton (MR1): `InRegistrar.WorldSubsystems().Register<WaveSpawnSubsystem>()` still
-    //   compiles, because the authoring name is OPTIONAL and derived from the type when omitted.
-    //
-    //   Unlike a component name, this one is NOT an on-disk key — a candidate is identified by
-    //   name only in logs and editor UI, so renaming the C++ type is safe here.
+    // WorldSubsystemRoute — registers world subsystems into the WorldSubsystemRegistry.
+    //   The name is optional (defaults to the type name); it is only used in logs and the editor.
     // =============================================================================
     class OPAAX_API WorldSubsystemRoute
     {
@@ -125,12 +99,11 @@ namespace Opaax
         // =========================================================================
     public:
         /**
-         * Register T as a world-subsystem candidate — a type each new world may instantiate,
-         * depending on T's optional static ShouldCreate(const World&).
-         *
-         * @tparam T Derives IWorldSubsystem and is constructible from WorldContext&.
-         * @param InName Optional. Omitted, the type's leaf name is used.
-         * @return true when the registry accepted it.
+         * Registers T as a world subsystem. Each new world creates it unless T::ShouldCreate(const World&)
+         * returns false.
+         * @tparam T Derives IWorldSubsystem, constructible from WorldContext&
+         * @param InName Optional. Defaults to the type name.
+         * @return True if registered
          */
         template<typename T>
         requires std::is_base_of_v<IWorldSubsystem, T>
@@ -140,8 +113,7 @@ namespace Opaax
 
             if (m_Registry == nullptr)
             {
-                // Unbound means EngineStartup never called BindEngineRegistries — a wiring bug
-                // that would otherwise drop every module subsystem without a word.
+                // Not bound: BindEngineRegistries was never called.
                 OPAAX_LOG(LogModuleRegistrar, Error,
                           "WorldSubsystems().Register — route is not bound to a WorldSubsystemRegistry; registration dropped.");
                 return false;
@@ -150,12 +122,11 @@ namespace Opaax
             return m_Registry->Register<T>(InName.IsValid() ? InName : DeriveTypeLeafName<T>());
         }
 
-        /** Wire this route to the live registry. Called once, before any module registers. */
+        /** Connects this route to the registry. Called once, before any module registers. */
         void Bind(WorldSubsystemRegistry* InRegistry) noexcept { m_Registry = InRegistry; }
 
         /**
-         * How many times a module asked — refusals included, so a mismatch with the registry's
-         * own Count() is visible rather than inferred.
+         * Number of registration requests, including refused ones.
          */
         Uint64 Count() const noexcept { return m_Count; }
 
@@ -163,16 +134,13 @@ namespace Opaax
         // Members
         // =========================================================================
     private:
-        WorldSubsystemRegistry* m_Registry = nullptr; // non-owning; the engine owns it (I5)
+        WorldSubsystemRegistry* m_Registry = nullptr; // owned by the engine
         Uint64                  m_Count    = 0;
     };
 
     // =============================================================================
-    // MoverModeRoute — the MoverModes() channel, LIVE since ⑦-A P5b.
-    //
-    //   Forwards into the engine's MoverModeRegistry. A mode's name IS an on-disk key — a
-    //   `.opaaxmovemode` writes it in its Mode field — so unlike a world subsystem, the name is
-    //   REQUIRED and renaming it breaks assets that name it.
+    // MoverModeRoute — registers mover modes into the MoverModeRegistry.
+    //   The name is required: .opaaxmovemode files store it.
     // =============================================================================
     class OPAAX_API MoverModeRoute
     {
@@ -181,11 +149,10 @@ namespace Opaax
         // =========================================================================
     public:
         /**
-         * Register T as a movement behaviour a tuning asset may name.
-         *
-         * @tparam T Derives IMoverMode and is default-constructible (modes are STATELESS).
-         * @param InName The id a `.opaaxmovemode` writes. Required — it is a file key.
-         * @return true when the registry accepted it.
+         * Registers T as a movement mode.
+         * @tparam T Derives IMoverMode, default-constructible (stateless)
+         * @param InName The name .opaaxmovemode files use. Required.
+         * @return True if registered
          */
         template<typename T>
         requires std::is_base_of_v<IMoverMode, T>
@@ -203,30 +170,23 @@ namespace Opaax
             return m_Registry->Register<T>(InName);
         }
 
-        /** Wire this route to the live registry. Called once, before any module registers. */
+        /** Connects this route to the registry. Called once, before any module registers. */
         void Bind(MoverModeRegistry* InRegistry) noexcept { m_Registry = InRegistry; }
 
-        /** How many times a module asked — refusals included. */
+        /** Number of registration requests, including refused ones. */
         Uint64 Count() const noexcept { return m_Count; }
 
         // =========================================================================
         // Members
         // =========================================================================
     private:
-        MoverModeRegistry* m_Registry = nullptr; // non-owning; the engine owns it (I5)
+        MoverModeRegistry* m_Registry = nullptr; // owned by the engine
         Uint64             m_Count    = 0;
     };
 
     // =============================================================================
-    // ResourceFormatRoute — the Resources() channel.
-    //
-    //   Forwards into the engine's ResourceFormatRegistry: which resource type loads which file
-    //   extensions. A game registering its own resource type is the reason this table is engine-wide
-    //   rather than editor-side — the editor then only says what its icon is.
-    //
-    //   Like a world subsystem's and unlike a component's, this name is NOT an on-disk key: a file
-    //   is matched by EXTENSION, so the name appears only in logs and editor UI and the C++ type is
-    //   safe to rename.
+    // ResourceFormatRoute — registers resource types and their file extensions.
+    //   The name is only used in logs and the editor.
     // =============================================================================
     class OPAAX_API ResourceFormatRoute
     {
@@ -235,12 +195,10 @@ namespace Opaax
         // =========================================================================
     public:
         /**
-         * Register T as a loadable resource type, claiming every extension its
-         * OPAAX_RESOURCE_FORMAT names.
-         *
-         * @tparam T A resource type carrying OPAAX_RESOURCE_FORMAT (CResourceFormat).
-         * @param InName Optional. Omitted, the type's leaf name is used.
-         * @return true when the registry accepted it.
+         * Registers T as a resource type, for the extensions its OPAAX_RESOURCE_FORMAT lists.
+         * @tparam T A resource type with OPAAX_RESOURCE_FORMAT
+         * @param InName Optional. Defaults to the type name.
+         * @return True if registered
          */
         template<CResourceFormat T>
         bool Register(OpaaxStringID InName = {})
@@ -249,8 +207,7 @@ namespace Opaax
 
             if (m_Registry == nullptr)
             {
-                // Unbound means EngineStartup never called BindEngineRegistries — a wiring bug that
-                // would otherwise drop every module resource type without a word.
+                // Not bound: BindEngineRegistries was never called.
                 OPAAX_LOG(LogModuleRegistrar, Error,
                           "Resources().Register — route is not bound to a ResourceFormatRegistry; registration dropped.");
                 return false;
@@ -259,12 +216,11 @@ namespace Opaax
             return m_Registry->Register<T>(InName.IsValid() ? InName : DeriveTypeLeafName<T>());
         }
 
-        /** Wire this route to the live registry. Called once, before any module registers. */
+        /** Connects this route to the registry. Called once, before any module registers. */
         void Bind(ResourceFormatRegistry* InRegistry) noexcept { m_Registry = InRegistry; }
 
         /**
-         * How many times a module asked — refusals included, so a mismatch with the registry's
-         * own Count() is visible rather than inferred.
+         * Number of registration requests, including refused ones.
          */
         Uint64 Count() const noexcept { return m_Count; }
 
@@ -272,25 +228,16 @@ namespace Opaax
         // Members
         // =========================================================================
     private:
-        ResourceFormatRegistry* m_Registry = nullptr; // non-owning; the engine owns it (I5)
+        ResourceFormatRegistry* m_Registry = nullptr; // owned by the engine
         Uint64                  m_Count    = 0;
     };
 
     // =============================================================================
-    // ModuleRegistrar — the single object a game module registers INTO (Editor.md D9).
-    //   Handed to OpaaxApplication::RegisterModules between Bootstrap and EngineStartup:
-    //   the engine registries exist (post-BootEngine), no world exists yet (pre-Startup).
-    //     Components()      -> ComponentRegistry        (LIVE, M3)
-    //     WorldSubsystems() -> WorldSubsystemRegistry   (LIVE, M4)
-    //     Resources()       -> ResourceFormatRegistry   (LIVE)
-    //     MoverModes()      -> MoverModeRegistry        (LIVE, ⑦-A)
-    //
-    //   ENGINE LAYER, not Application (moved M3). It exists to front the engine registries,
-    //   and by I4's test a registrar that knows about component types knows about worlds.
-    //   The M0 skeleton could live in Application only because it knew nothing — it counted.
-    //   OpaaxApplication now holds it behind a forward declaration, so no Application header
-    //   pulls in World/ or entt; composition roots include this header directly, which is
-    //   exactly the reaching-across-layers a composition root is for (SE).
+    // ModuleRegistrar — what a game module registers into, before any world exists.
+    //     Components()      -> ComponentRegistry
+    //     WorldSubsystems() -> WorldSubsystemRegistry
+    //     Resources()       -> ResourceFormatRegistry
+    //     MoverModes()      -> MoverModeRegistry
     // =============================================================================
     class OPAAX_API ModuleRegistrar
     {
@@ -306,8 +253,7 @@ namespace Opaax
         const MoverModeRoute&      MoverModes()      const noexcept { return m_MoverModes; }
 
         /**
-         * Point every live route at the engine's registries. Must run BEFORE the first
-         * module registers, or registrations are dropped (loudly).
+         * Connects every route to the engine registries. Must run before any module registers.
          */
         void BindEngineRegistries(EngineRegistries& InRegistries) noexcept
         {

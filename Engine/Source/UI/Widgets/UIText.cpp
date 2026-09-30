@@ -55,13 +55,13 @@ namespace Opaax
         UIBoundValue lValue;
         if (!InBindings.Read(Binding, lValue))
         {
-            return;   // warned once by the table; the authored text stands
+            return;   // warned once; show the authored text
         }
 
         OpaaxString lText = FormatBoundText(Text, lValue.ToText());
         if (m_bBound && lText == m_BoundText)
         {
-            return;   // the value held: nothing to rebuild
+            return;   // unchanged: nothing to rebuild
         }
 
         if (!m_bBound)
@@ -121,7 +121,7 @@ namespace Opaax
             return;
         }
 
-        // The upload is still in flight (TX4): nothing to sample yet, ask again next frame.
+        // Atlas still uploading: retry next frame.
         if (lFace.Atlas == nullptr)
         {
             InvalidateContent();
@@ -141,7 +141,7 @@ namespace Opaax
 
         const Uint64 lFirst = OutQuads.size();
 
-        // Text2D anchors at the TOP-LEFT and walks down; the rect's top-left is the origin.
+        // Text2D starts at the top-left and goes down.
         const Vector2F lExtent = Text2D::Layout(lText.CStr(), { lBounds.Min().x, lBounds.Max().y }, lFace, lParams,
             [this, &OutQuads, &lFace](const TextQuad& InQuad)
             {

@@ -7,27 +7,17 @@ namespace Opaax::Editor
     class IEditorWidgets;
 
     // =============================================================================
-    // EditorImguiConfigDrawer — the hand-written UI for EditorImguiConfigData.
-    //
-    //   WHAT IT BUYS: grouping (Text / Window / …) over a FLAT data type. Nesting the fields into
-    //   structs would group them too, but it would nest the .config file with them — and how a
-    //   theme reads on screen is not a reason to change what it looks like on disk. Presentation is
-    //   exactly what a custom drawer is for; the generic fold cannot express it because the group
-    //   headers it emits come from the data's own shape.
-    //
-    //   It costs the fold's other half: a field added to EditorImguiConfigData does NOT appear here
-    //   on its own. Add it to a group below, or it is invisible.
-    //
-    //   DUCK-TYPED, no base class (D7): default-constructible, and callable as
-    //   Draw(IEditorWidgets&, EditorImguiConfigData&). The registry only ever CALLS it, so the body
-    //   lives in the .cpp and this header names no backend.
+    // EditorImguiConfigDrawer — the hand-written UI for EditorImguiConfigData: groups (Text, Window...)
+    //   over a flat data type, so the .config file stays flat. A field added to the data does not
+    //   appear here automatically: add it to a group.
+    //   No base class: default-constructible, callable as Draw(IEditorWidgets&, EditorImguiConfigData&).
     // =============================================================================
     struct EditorImguiConfigDrawer
     {
         // =============================================================================
         // Functions
         // =============================================================================
-        /** Registry contract — the fields, then the block-level actions. */
+        /** Draws the fields, then the block-level actions. */
         void Draw(IEditorWidgets& InWidgets, EditorImguiConfigData& InData);
     };
 }

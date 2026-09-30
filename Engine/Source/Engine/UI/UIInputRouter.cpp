@@ -9,7 +9,7 @@ namespace Opaax::UIInputRouter
 {
     namespace
     {
-        /** The UI pointer button for a raw code, or None for anything that is not a mouse button. */
+        /** The UI button for a raw code, or None if not a mouse button. */
         EUIPointerButton ToPointerButton(const EKeyCode InKey) noexcept
         {
             switch (InKey)
@@ -45,7 +45,7 @@ namespace Opaax::UIInputRouter
 
         const Vector2F lPoint = InCanvas.ScreenToCanvas(InInput.GetMousePosition());
 
-        // Move first, so hover is current before a press hit-tests.
+        // Move first, so hover is up to date before a press.
         InCanvas.RoutePointer({ EUIPointerEventType::Move, lPoint, EUIPointerButton::None });
 
         // The three mouse buttons the UI understands.
@@ -69,13 +69,12 @@ namespace Opaax::UIInputRouter
             }
             else if (InInput.IsKeyDown(lButton) && InCanvas.GetPressed() != nullptr)
             {
-                // A button held after a captured press: keep swallowing it so a drag never leaks
-                // mid-gesture into the world.
+                // Keep consuming a button held after a captured press, so a drag does not reach the world.
                 Consume(OutConsumed, lButton);
             }
         }
 
-        // Keyboard edges to the focused widget. The mouse range is handled above; skip it.
+        // Keyboard to the focused widget (mouse was handled above).
         for (Uint16 lIndex = 1; lIndex < InputManager::KEY_STATE_COUNT; ++lIndex)
         {
             const EKeyCode lKey = static_cast<EKeyCode>(lIndex);
@@ -93,7 +92,7 @@ namespace Opaax::UIInputRouter
 
         if (InMode == EUIInputMode::UIOnly)
         {
-            // The game hears nothing this frame — every key is spoken for.
+            // The game gets nothing this frame.
             for (Uint16 lIndex = 0; lIndex < InputManager::KEY_STATE_COUNT; ++lIndex)
             {
                 OutConsumed[lIndex] = true;

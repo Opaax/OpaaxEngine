@@ -1,7 +1,7 @@
 #include "World/Systems/PhysicsSubsystem.h"
 
 #include "Core/Events/EventBus.h"
-#include "Core/Maths/Maths.h"   // DegreesToRadians — the transform authors degrees, the seam takes radians
+#include "Core/Maths/Maths.h"   // DegreesToRadians
 #include "Core/Profiling/Profiler.h"
 #include "Engine/Config/EngineConfigData.h"
 #include "Engine/Subsystems/EventBus/EngineEventBus.h"
@@ -12,7 +12,7 @@
 #include "World/Components/RigidbodyComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Components/TransformInterpolationComponent.h"
-#include "World/Entity/EntityHierarchy.h"   // bodies live in WORLD space; the component is local (§HR)
+#include "World/Entity/EntityHierarchy.h"   // bodies are in world space
 #include "World/Systems/WorldContext.h"
 #include "World/World.h"
 
@@ -21,10 +21,7 @@ namespace Opaax
     namespace
     {
         /**
-         * Entity bits -> body user-data, OFFSET BY ONE so a valid entity never encodes as 0 —
-         * which is what the seam reserves for "unresolved" (a stale shape in an end-touch event).
-         * Entity 0 is a perfectly ordinary entity, so without the offset it would be indistinguishable
-         * from no entity at all.
+         * Entity bits -> body user data, plus one: 0 means "unresolved" for the physics backend.
          */
         Uint64 ToUserData(EntityID InEntity) noexcept
         {
@@ -33,7 +30,7 @@ namespace Opaax
 
         Uint32 EntityBits(EntityID InEntity) noexcept { return static_cast<Uint32>(InEntity); }
 
-        /** The inverse of ToUserData. 0 is the seam's "unresolved", and yields ENTITY_NONE. */
+        /** Inverse of ToUserData. 0 gives ENTITY_NONE. */
         EntityID FromUserData(Uint64 InUserData) noexcept
         {
             return InUserData == 0
@@ -78,7 +75,7 @@ namespace Opaax
             return false;
         }
 
-        // No entities yet, by contract (WS7) — the first FixedUpdate is what populates the world.
+        // No entities yet: the first FixedUpdate creates the bodies.
         if (m_bWorldBoundsEnabled)
         {
             OPAAX_LOG(LogPhysics, Trace, "World bounds ON: [{},{}]..[{},{}], response {}",
@@ -91,7 +88,7 @@ namespace Opaax
 
     void PhysicsSubsystem::Shutdown()
     {
-        // The bodies die with the world; the map must not outlive them as stale handles.
+        // The bodies are destroyed with the world; forget their handles.
         m_Bodies.clear();
         m_World.reset();
     }
@@ -110,7 +107,7 @@ namespace Opaax
 
         World& lWorld = m_Context->OwningWorld;
 
-        // Dead first: a body whose entity is gone must not emit contacts for this step.
+        // Remove dead bodies first, so they emit no contacts.
         ReconcileDeadBodies(lWorld);
         ReconcileLiveBodies(lWorld);
 
@@ -119,8 +116,7 @@ namespace Opaax
         SyncDynamicTransforms(lWorld);
         DispatchPhysicsEvents(lWorld);
 
-        // LAST, so every contact and overlap this step produced has already been delivered before
-        // anything is reaped — a body that touches something on the way out still reports it.
+        // Last, so this step's contacts and overlaps are delivered before anything is removed.
         EnforceWorldBounds(lWorld);
     }
 
@@ -139,7 +135,7 @@ namespace Opaax
             }
         }
 
-        // Collected during the walk, destroyed after it — never mutate m_Bodies mid-iteration.
+        // Collected during the walk, destroyed after.
         for (const Uint32 lBits : m_DeadBodyVictims)
         {
             RemoveBodyForEntity(static_cast<EntityID>(lBits));
@@ -157,9 +153,8 @@ namespace Opaax
                 const auto lFound = m_Bodies.find(EntityBits(InEntity));
                 if (lFound != m_Bodies.end())
                 {
-                    // Already built as the right kind: nothing to do. A MISMATCH means the entity
-                    // gained or lost a Rigidbody after the body existed, so rebuild — which is what
-                    // makes the order components were added stop mattering.
+                    // Already built with the right type. A different type means a Rigidbody was added or
+                    // removed: rebuild.
                     if (lFound->second.BuiltType == lWanted)
                     {
                         return;
@@ -178,7 +173,7 @@ namespace Opaax
     {
         const auto* lRigidbody = InWorld.GetRegistry().try_get<RigidbodyComponent>(InEntity);
 
-        // Box2D simulates in WORLD space; the component is local to a parent (§HR).
+        // Box2D works in world space; the component is local.
         const TransformComponent lWorldXf = EntityHierarchy::WorldTransform(Entity{ InEntity, &InWorld });
 
         BodyDesc lBody;
@@ -223,8 +218,7 @@ namespace Opaax
         m_World->DestroyBody(lFound->second.Handle);
         m_Bodies.erase(lFound);
 
-        // Scrub the live overlaps this body was in, or a pair that can no longer end would sit
-        // there being Stayed forever — a body with no shape reports nothing, including its Ended.
+        // Remove this body's live overlaps, or they would stay forever.
         m_StaleOverlaps.clear();
         for (const auto& [lKey, lPair] : m_LiveOverlaps)
         {
@@ -247,8 +241,7 @@ namespace Opaax
     {
         for (const auto& [lBits, lRecord] : m_Bodies)
         {
-            // Static and kinematic bodies are DRIVEN, not read: writing their pose back would
-            // fight whatever authored or animated it.
+            // Static and kinematic bodies are driven, not read back.
             if (!lRecord.bSyncToTransform)
             {
                 continue;
@@ -265,16 +258,13 @@ namespace Opaax
             float    lRotation = 0.f;
             m_World->GetBodyTransform(lRecord.Handle, lPosition, lRotation);
 
-            // The pose we are ABOUT to overwrite becomes the previous one, so the renderer has
-            // both ends of this step to blend between (**PH21**). Recorded here rather than in a
-            // pass of its own because this is the one place that knows a write is coming.
+            // Record the current pose as the previous one, for render interpolation.
             auto& lPrevious = InWorld.GetRegistry().get_or_emplace<TransformInterpolationComponent>(lEntity);
             lPrevious.Position     = lTransform->Position;
             lPrevious.Rotation     = lTransform->Rotation;
             lPrevious.bHasPrevious = true;
 
-            // The body answers in WORLD; the verb stores the local that lands there (§HR). For a
-            // root that is the same write as before. Read as world first so the scale is world too.
+            // The body gives a world pose; store the matching local.
             const Entity       lLive{ lEntity, &InWorld };
             TransformComponent lWorldXf = EntityHierarchy::WorldTransform(lLive);
             lWorldXf.Position = lPosition;
@@ -300,7 +290,7 @@ namespace Opaax
         m_World->GetSensorEvents(m_SensorBegan, m_SensorEnded);
         m_World->GetContactEvents(m_ContactBegan, m_ContactEnded);
 
-        // ---- overlap: Began -------------------------------------------------------------
+        // ---- overlap: Began --------------------------------------------------------------------
         for (const PhysicsContactPair& lPair : m_SensorBegan)
         {
             const EntityID lSensor  = FromUserData(lPair.EntityA);
@@ -316,7 +306,7 @@ namespace Opaax
             lBus.Publish(PhysicsOverlapBegan{ lSensor, lVisitor });
         }
 
-        // ---- overlap: Ended, BEFORE the survivors tick -----------------------------------
+        // ---- overlap: Ended, before Stayed ----------------------------------------------------
         for (const PhysicsContactPair& lPair : m_SensorEnded)
         {
             m_LiveOverlaps.erase(PairKey(lPair.EntityA, lPair.EntityB));
@@ -332,9 +322,8 @@ namespace Opaax
             lBus.Publish(PhysicsOverlapEnded{ lSensor, lVisitor });
         }
 
-        // ---- overlap: Stayed, for whatever survived both edges ---------------------------
-        // A handler above may have destroyed an entity, so each survivor is re-validated here
-        // rather than trusted: a dead sensor must not keep reporting.
+        // ---- overlap: Stayed -------------------------------------------------------------------
+        // A handler may have destroyed an entity: check again.
         m_StaleOverlaps.clear();
 
         for (const auto& [lKey, lPair] : m_LiveOverlaps)
@@ -356,7 +345,7 @@ namespace Opaax
             m_LiveOverlaps.erase(lKey);
         }
 
-        // ---- solid contacts: edges only, no state to keep ---------------------------------
+        // ---- solid contacts: begin/end only ----------------------------------------------------
         for (const PhysicsContactPair& lPair : m_ContactBegan)
         {
             const EntityID lA = FromUserData(lPair.EntityA);
@@ -392,8 +381,7 @@ namespace Opaax
     {
         RaycastHit lResult;
 
-        // Nothing is playing, so nothing can be hit. A state, not an error — asking before Play is
-        // a legitimate thing for a tool or a script to do.
+        // Not playing: nothing to hit. Not an error.
         if (m_World == nullptr)
         {
             return lResult;
@@ -407,8 +395,7 @@ namespace Opaax
 
         const EntityID lEntity = FromUserData(lHit.UserData);
 
-        // A hit whose body carries no resolvable entity is reported as a MISS rather than as a hit
-        // on ENTITY_NONE: every caller would have to check, and most would forget.
+        // A hit without an entity is reported as a miss.
         if (lEntity == ENTITY_NONE)
         {
             return lResult;
@@ -460,8 +447,7 @@ namespace Opaax
 
         for (const auto& [lBits, lRecord] : m_Bodies)
         {
-            // Only bodies that MOVE on their own can leave: a static collider outside the bounds
-            // was authored there, and reaping it would delete level geometry.
+            // Only moving bodies can leave (static colliders outside are level geometry).
             if (!lRecord.bSyncToTransform)
             {
                 continue;
@@ -476,12 +462,12 @@ namespace Opaax
 
             if (bInside)
             {
-                // Back inside: un-latch, so leaving again reports again.
+                // Back inside: can report again.
                 m_OutOfBounds.erase(lBits);
                 continue;
             }
 
-            // Already reported. A body that keeps falling is one occurrence, not sixty a second.
+            // Already reported.
             if (m_OutOfBounds.find(lBits) != m_OutOfBounds.end())
             {
                 continue;
@@ -489,7 +475,7 @@ namespace Opaax
 
             m_OutOfBounds.insert(lBits);
 
-            // Published BEFORE the reap, so a handler still sees a live entity.
+            // Published before removal, so handlers see a live entity.
             lBus.Publish(PhysicsExitedWorldBounds{ static_cast<EntityID>(lBits), lPosition });
 
             if (m_WorldBoundsResponse == EWorldBoundsResponse::EventAndDestroy)
@@ -498,12 +484,12 @@ namespace Opaax
             }
         }
 
-        // Collected during the walk, destroyed after it — never mutate m_Bodies mid-iteration.
+        // Collected during the walk, destroyed after.
         for (const Uint32 lBits : m_BoundsVictims)
         {
             const auto lEntity = static_cast<EntityID>(lBits);
 
-            // A handler may already have destroyed it, which is a supported thing to do.
+            // A handler may already have destroyed it.
             if (InWorld.IsValid(lEntity))
             {
                 InWorld.DestroyEntity(lEntity);
@@ -519,8 +505,7 @@ namespace Opaax
     // =========================================================================
     EBodyType PhysicsSubsystem::ResolveBodyType(const RigidbodyComponent* InRigidbody) noexcept
     {
-        // No rigidbody means STATIC: level geometry is the common case and should not need a
-        // second component to say what it already is.
+        // No rigidbody means static.
         return InRigidbody != nullptr ? InRigidbody->Type : EBodyType::Static;
     }
 
@@ -530,14 +515,13 @@ namespace Opaax
         lShape.Geometry.Type   = InCollider.Shape;
         lShape.Geometry.Offset = InCollider.Offset;
 
-        // The component authors FULL size, the seam takes half extents. Halved here, once, so no
-        // caller has to remember which convention it is holding.
+        // Components store full size; the backend takes half extents.
         lShape.Geometry.HalfExtents = InCollider.Size * 0.5f;
         lShape.Geometry.Radius      = InCollider.Radius;
 
         if (InCollider.Shape == EColliderShape::Capsule)
         {
-            // The caps sit a radius in from each end, so a capsule of Size.y is exactly that tall.
+            // The caps sit a radius in from each end, so the total height is Size.y.
             const float lHalfSpan = Maths::Max(0.f, InCollider.Size.y * 0.5f - InCollider.Radius);
             lShape.Geometry.Center1 = { 0.f, -lHalfSpan };
             lShape.Geometry.Center2 = { 0.f,  lHalfSpan };
@@ -548,8 +532,7 @@ namespace Opaax
         lShape.Friction    = InCollider.Friction;
         lShape.Restitution = InCollider.Restitution;
 
-        // The channel IS the category bit. What it collides WITH is everything, until the
-        // CollisionProfile resource lands and fills the mask (PH4).
+        // The channel is the category bit; it collides with everything for now.
         lShape.CategoryBits = CategoryBit(InCollider.Channel);
         lShape.MaskBits     = AllChannelsMask();
 

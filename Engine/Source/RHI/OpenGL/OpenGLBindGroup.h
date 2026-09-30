@@ -9,12 +9,8 @@ namespace Opaax
     class ITexture2D;
 
     /**
-     * @class OpenGLBindGroup
-     *
-     * OpenGL IBindGroup: stores the camera UBO + the batch's texture pointers and binds the
-     * texture units when the command buffer binds it (Bind). The UBO is bound to its binding
-     * point at construction by OpenGLUniformBuffer, so it needs no per-bind work here — the
-     * pointer is kept for parity with a descriptor-set backend (Vulkan).
+     * OpenGL IBindGroup: keeps the camera UBO and the textures, and binds the texture units in
+     * Bind. The UBO is bound at its own construction.
      */
     class OPAAX_API OpenGLBindGroup final : public IBindGroup
     {
@@ -38,15 +34,14 @@ namespace Opaax
         // Function
         // =============================================================================
     public:
-        // Backend-internal: called by OpenGLCommandBuffer::BindBindGroup. Binds each set
-        // texture to its unit.
+        // Called by OpenGLCommandBuffer::BindBindGroup: binds each texture to its unit.
         void Bind() const;
 
         // =============================================================================
         // Members
         // =============================================================================
     private:
-        IUniformBuffer*        m_UniformBuffer = nullptr;   // bound at its own construction (GL)
-        TDynArray<ITexture2D*> m_Textures;                  // sized to layout.TextureSlotCount
+        IUniformBuffer*        m_UniformBuffer = nullptr;   // bound at its own construction
+        TDynArray<ITexture2D*> m_Textures;                  // sized to TextureSlotCount
     };
 }

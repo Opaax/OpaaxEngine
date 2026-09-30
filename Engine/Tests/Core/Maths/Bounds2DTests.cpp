@@ -1,9 +1,5 @@
-// Suite: the axis-aligned box (Core/Maths/Bounds2D.h).
-//
-// Pure geometry, so all of it is testable with no world and no GL context — which matters because
-// it is what every hit test in the editor stands on. The rotated cover and the any-direction
-// FromMinMax are the two that would fail silently: a turned sprite would simply stop being
-// clickable near its corners, and a drag made right-to-left would select nothing.
+// Suite: Bounds2D. What every editor hit test relies on. The rotated cover and FromMinMax in any
+// order are the two that would fail silently (unclickable corners, a reversed drag selecting nothing).
 #include <doctest.h>
 
 #include "Core/Maths/Bounds2D.h"

@@ -20,8 +20,7 @@ namespace Opaax::Editor
 
         TDynArray<SpriteFrame> lSliced = SliceGrid(lData.Grid, InTexWidth, InTexHeight);
 
-        // A grid that cuts nothing is a refusal, not a result: replacing an authored frame list
-        // with an empty one because the cell size was mistyped is data loss with an undo step.
+        // A grid that cuts nothing is refused (a mistyped cell size would wipe the frames).
         if (lSliced.empty())
         {
             OPAAX_LOG(LogEditorSpriteSheetDocument, Warn,
@@ -37,8 +36,7 @@ namespace Opaax::Editor
 
         lData.Frames = Move(lSliced);
 
-        // The default may now name a frame that no longer exists — clamped here rather than left
-        // for a reader to trip over. It rides in the same step, so one Ctrl+Z puts both back.
+        // The default may name a frame that no longer exists: clamp it, in the same undo step.
         if (lData.DefaultFrame >= lData.FrameCount()) { lData.DefaultFrame = 0; }
 
         InContext.Undo.Record(Move(lStep));
@@ -49,7 +47,7 @@ namespace Opaax::Editor
 
     namespace
     {
-        /** Whether any frame already carries InName — the uniqueness half of AutoNameFrames. */
+        /** Whether any frame already has InName. */
         bool NameInUse(const TDynArray<SpriteFrame>& InFrames, const OpaaxStringID InName)
         {
             for (const SpriteFrame& lFrame : InFrames)
@@ -72,11 +70,10 @@ namespace Opaax::Editor
 
         for (Uint32 lIndex = 0; lIndex < lNamed.size(); ++lIndex)
         {
-            // An authored name is never overwritten. That is what makes this button safe to press
-            // twice, and safe to press on a sheet somebody has already named by hand.
+            // A name set by the author is never overwritten (safe to press twice).
             if (lNamed[lIndex].Name.IsValid()) { continue; }
 
-            // Step past any name already in use rather than producing a duplicate.
+            // Skip names already in use.
             OpaaxStringID lCandidate;
 
             for (Uint32 lSuffix = lIndex; ; ++lSuffix)
@@ -139,17 +136,11 @@ namespace Opaax::Editor
             return false;   // SpriteSheetFile logged why
         }
 
-        // Only after a SUCCESSFUL write: rebasing on a failed save would clear the dirty marker
-        // while the file still holds the old content — the marker lying is worse than the failure.
+        // Only after a successful write: otherwise the dirty marker would lie.
         InContext.SheetDocument.MarkSaved();
 
-        // AND PUBLISH IT. The editor edits its own copy, so without this the renderer keeps drawing
-        // whatever the ResourceManager loaded the first time a sprite named this sheet — re-slicing
-        // changed the file and nothing on screen. Reload swaps the payload in place, so every
-        // ResourceRef already held stays valid and simply sees the new frames.
-        //
-        // Not resident is the ordinary case (no sprite uses this sheet yet) and answers false, so
-        // the result is deliberately not treated as a failure of the save.
+        // Reload the resource, so sprites already using this sheet see the new frames. Not loaded is
+        // normal (no sprite uses it yet) and is not a failure.
         ResourceOps::SavedToDisk<SpriteSheetResource>(InContext, InContext.SheetDocument.AbsPath());
 
         return true;

@@ -8,10 +8,7 @@
 
 namespace Opaax
 {
-    // NOTE: ModuleRegistrar is an ENGINE-layer type (it fronts the engine registries) and is
-    // held by pointer on purpose — including its header here would pull World/ and entt into
-    // every consumer of this Application header. Composition roots that actually register
-    // something include Engine/Modules/ModuleRegistrar.h themselves.
+    // Forward-declared to keep World/ and entt out of this header.
     class ModuleRegistrar;
 
     class IEngine;
@@ -25,8 +22,7 @@ namespace Opaax
 
     // =============================================================================
     // OpaaxApplication — base application host. Owns the AppServiceLocator and boots
-    // the app-level services (Platform, Paths, ...) in dependency order. Successor to
-    // CoreEngineApp's host role; the engine itself will become a service (IEngine).
+    // the app-level services (Platform, Paths, ...) in dependency order.
     // =============================================================================
     class OPAAX_API OpaaxApplication
     {
@@ -59,7 +55,7 @@ namespace Opaax
 
     protected:
         /**
-         * Factory seam for the Paths service. Editor vs Standalone do not need the same paths
+         * Creates the Paths service. Editor and standalone use different paths.
          */
         virtual TUniquePtr<IPaths> CreatePaths(const IPlatform& InPlatform, int InArgc, char** InArgv);
     private:
@@ -67,27 +63,25 @@ namespace Opaax
         IProjectManager&    BootProjectManager(const IPaths& Paths);
         IJobSystem&         BootJobSystem();
 
-        /** Enables the Profiler singleton, or not: dev builds always, ship builds by config (ST6). */
+        /** Enables the Profiler: always in dev builds, from config in ship builds. */
         void                BootProfiler(IConfigSystem& ConfigSystem);
         IWindowManager&     BootWindowManager();
         IEngine&            BootEngine();
         
     protected:
         /**
-         * IConfigSystem::Get also register is not registered yet
-         * But here you can Pre register config at application boot
-         * @param ConfigSystem
+         * Pre-registers configs at boot. IConfigSystem::Get also registers on first use.
          */
         virtual void PreRegisterConfig(IConfigSystem& ConfigSystem);
 
         /**
-         * Child app can add their services here
+         * Child apps add their own services here.
          */
         virtual void OnProvideServices(AppServiceLocator& InServices) {}
 
     public:
         /**
-         * Provide the app-level services into the locator, in dependency order.
+         * Provides the app-level services, in dependency order.
          */
         void Bootstrap();
         
@@ -104,7 +98,7 @@ namespace Opaax
         
     public:
         /**
-         * Initialize the app
+         * Initializes the app.
          */
         void InitializeApplication();
         
@@ -115,27 +109,25 @@ namespace Opaax
         // Flow
     protected:
         /**
-         * Called once per RunApplication iteration.
-         * Give a change to child app to override the order of the frame (i.e) The editor need to know about layout/ui to render into the Viewport panel
+         * Called once per loop iteration. Child apps can reorder the frame
+         * (the editor renders into its viewport panel).
          */
         virtual void TickFrame();
 
     public:
         /**
-         * The app loop
+         * The app loop.
          */
         void RunApplication();
         
         /**
-         * Mainly Window event to dispatch to other services. Virtual so a composition root (the editor)
-         * can intercept events at the window-callback site BEFORE the base enqueues them to the engine bus.
-         * Base is unchanged; runtime has no override.
-         * @param InEvent
+         * Receives window events and forwards them to the engine.
+         * Child apps (the editor) can intercept them first.
          */
         virtual void OnEvent(Event& InEvent);
         
         /**
-         * Make the application shutdown explicit
+         * Shuts the application down.
          */
         void ShutdownApplication();
         
@@ -145,21 +137,17 @@ namespace Opaax
         // =============================================================================
         // Engine
         /**
-        * Before engine start
-        * Engine subsystem not start yet
-        */
+         * Called before the engine subsystems start.
+         */
         virtual void PreEngineStartup() {}
         
-        /***/
         void EngineStartup();
 
         /**
-         * After engine start
-         * Engine subsystem has start
+         * Called after the engine subsystems started.
          */
         virtual void PostEngineStartup(){}
         
-        /***/
         void EngineTeardown();
         
         // Engine
@@ -169,18 +157,14 @@ namespace Opaax
         // Modules
     protected:
         /**
-         * 
+         * Registers the game modules into the engine registries.
          */
         virtual void RegisterModules(ModuleRegistrar& InRegistrar) {}
         
-        /**
-         * 
-         */
         void PopulateEngineRegistries();
         
         /**
-         * Fires in EngineStartup AFTER RegisterModules (game module registered) and BEFORE the
-         * startup world exists.
+         * Called after RegisterModules, before the startup world is created.
          */
         virtual void OnModulesRegistered() {}
         
@@ -190,7 +174,7 @@ namespace Opaax
         // =============================================================================
         // Startup world
         /**
-         * @return The Startup world spec base on project configs
+         * @return The startup world spec, from the project config
          */
         virtual WorldSpec GetStartupWorldSpec() const;
 
@@ -215,7 +199,7 @@ namespace Opaax
         template<typename T>
         static T& GetAppService(){ return GetServices().Get<T>(); }
 
-        // Convenience accessors — never null (the locator returns the null object).
+        // Never null: the locator returns a null object when a service is missing.
         IPlatform&          Platform();
         IPaths&             Paths();
         IProjectManager&    ProjectManager();

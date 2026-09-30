@@ -6,9 +6,9 @@
 #include "Editor/Camera/EditorCamera.h"
 #include "Editor/Operation/EditorGizmo.hpp"
 #include "Editor/Operation/EditorSelection.hpp"
-#include "Editor/Prefab/EditorPrefabDocument.h"      // ⑦-C P6
-#include "Editor/Prefab/PrefabReconciler.h"          // ⑦-C P4
-#include "Editor/Resources/EditorResourceEvents.h"   // ⑦-C P4
+#include "Editor/Prefab/EditorPrefabDocument.h"
+#include "Editor/Prefab/PrefabReconciler.h"
+#include "Editor/Resources/EditorResourceEvents.h"
 #include "Editor/Undo/EditorUndo.h"
 #include "Editor/Operation/EditorViewport.hpp"
 #include "Editor/Resources/ResourcePreview.h"
@@ -34,11 +34,9 @@
 namespace Opaax::Editor
 {
     // =============================================================================
-    // EditorService — the concrete IEditorService and the editor's composition root (D3). At
-    //   Initialize() it resolves its engine dependencies ONCE (the only place editor code touches the
-    //   locator) and builds the EditorContext that every panel/drawer receives by ctor. Owns nothing
-    //   the engine owns — the context is references. Provided last (OnProvideServices), so it tears
-    //   down FIRST (reverse order), before the engine service it references.
+    // EditorService — the IEditorService, and the editor's composition root. Initialize() resolves
+    //   its engine dependencies once (the only editor code that uses the locator) and builds the
+    //   EditorContext passed to every panel and drawer. Provided last, so it shuts down first.
     // =============================================================================
     class EditorService final : public IEditorService
     {
@@ -46,7 +44,7 @@ namespace Opaax::Editor
         // Ctor - Dtor
         // =============================================================================
     public:
-        /** Out-of-line: it picks the concrete IEditorGui, which only the .cpp needs to name. */
+        /** Out-of-line: it picks the concrete IEditorGui, only named in the .cpp. */
         EditorService();
         ~EditorService() override = default;
         
@@ -65,36 +63,30 @@ namespace Opaax::Editor
         // Editor Native
     private:
         /**
-         * Resolves the app's IPaths to EditorPaths ONCE, into m_EditorPaths. EditorApplication::CreatePaths
-         * falls back to a plain Paths when no edited project is declared, so this genuinely can end up null —
-         * every consumer treats that as "no editor space", never as an error.
+         * Resolves the app's IPaths as EditorPaths, once. May be null (no edited project).
          */
         void CacheEditorPaths();
 
         /**
-         * Create editor systems
+         * Creates the editor systems.
          */
         void CreateEditorSystems(IEngine& InEngine);
 
-        /**
-         * 
-         */
         void ClearEditorSystems();
         
         /**
-         * Create the editor context
+         * Creates the editor context.
          */
         void CreateEditorContext(Window* InWindow, IEngine& InEngine);
         
-        /***/
         void ClearEditorContext();
 
         /**
-         * Called when the init is done
+         * Called when init is done.
          */
         void PostInitialized();
         
-        /** The authoring shortcuts, then the gui's one UI pass. */
+        /** The editor shortcuts, then the gui's UI pass. */
         void DrawGUI();
         
         // End Editor Native
@@ -105,58 +97,42 @@ namespace Opaax::Editor
     private:
 
         /**
-         * Registers the editor's OWN panels into m_Extensions.Panels(), first — before the game module and
-         * before Seal() (the D9/§2 "engine natives -> game module -> seal" order, one level down). Native
-         * panels get no special route: they are built by the same factory loop as game panels (D10).
+         * Registers the editor's own panels, before the game module's and before sealing. Built by the
+         * same loop as game panels.
          */
         void RegisterNativePanels();
 
         /**
-         * The editor's own menu commands, into m_Extensions.TitleBar() — same route, same ordering rule
-         * and same lack of privilege as RegisterNativePanels (M5 S4).
+         * Registers the editor's own menu entries (same route and order as the panels).
          */
         void RegisterNativeMenus();
         
         /**
-         * The editor's own commands, into m_Extensions.Commands() — the author loop's verbs, keyed
-         * by the tags in EditorNativeCommandsTags.hpp. Same route, same ordering rule and same lack
-         * of privilege as RegisterNativePanels: the menu bar, the Resource Browser and Ctrl+S all
-         * reach them BY TAG, exactly as a game module's command would be reached.
+         * Registers the editor's own commands, keyed by the tags in EditorNativeCommandsTags.hpp.
+         * The menu bar, the Resource Browser and Ctrl+S reach them by tag, like a game's commands.
          */
         void RegisterNativeEditorCommand();
         
         /**
-         * No extension here, and none anywhere else in the editor: the engine's ResourceFormatRegistry
-         * owns which files a type claims (Engine::RegisterNativeResourceFormats), so this says only
-         * what the browser shows and what a double-click does.
+         * Registers how the browser shows each resource type and what a double-click does.
+         * File extensions come from the engine's ResourceFormatRegistry.
          */
         void RegisterNativeResourceTypes();
 
         /**
-         * The ENGINE's own components into m_Extensions.Drawers(), so a game project gets an
-         * Inspector for them without registering four types it does not own. Same route, same
-         * ordering rule and same lack of privilege as RegisterNativePanels.
-         *
-         * All four are CReflected, so the generic Register<T>() is the entire implementation.
+         * Registers drawers for the engine's own components (all reflected, so the generic drawer).
          */
         void RegisterNativeDrawers();
 
         /**
-         * The engine's and the editor's own configs into m_Extensions.ConfigDrawers(), so the Config panel draws
-         * their fields instead of their json. Same registry template, same two forms and the same
-         * ordering rule as the component drawers — only the resolver differs.
+         * Registers drawers for the engine and editor configs (drawn from their properties, not JSON).
          */
         void RegisterNativeConfigDrawers();
 
         /**
-         * The editor's own viewport tools, into m_Extensions.ViewportTools() (③b) — gizmo mode,
-         * snapping, grid, pivot and space. Same route and same lack of privilege as the panels: a
-         * game module adds a tool with the identical call.
-         *
-         * States the ORDER and the grouping only; each tool's widgets live in
-         * Editor/Toolbar/EditorNativeViewportTools.h, the EditorNativeCommands shape.
-         *
-         * Runs AFTER RegisterNativeEditorCommand, because the mode buttons dispatch by tag.
+         * Registers the editor's viewport tools (gizmo mode, snapping, grid, pivot, space): order and
+         * grouping only; the widgets are in Editor/Toolbar/EditorNativeViewportTools.h.
+         * Runs after RegisterNativeEditorCommand (the mode buttons dispatch by tag).
          */
         void RegisterNativeViewportTools();
 
@@ -167,41 +143,34 @@ namespace Opaax::Editor
         // World
     private:
         /**
-         * Cache the world mgr from engine
-         * @param InEngine 
-         * @return true if world manager != nullptr
+         * Caches the world manager from the engine.
+         * @return True if it is not null
          */
         bool SetWorldManagerFromEngine(IEngine& InEngine);
 
         /**
-         * Unbind delegate from World manager
-         * Make sure to clear the cache ptr.
+         * Unbinds from the world manager and clears the cached pointer.
          */
         void ClearWorldManager();
 
         /**
-         * Bind to World mgr delegates.
-         * Should be call only if world is valid
+         * Binds to the world manager delegates. Call only when the world is valid.
          */
         void BindToWorldManagerDelegates();
         
         /**
-         * Unbind from World mgr delegates.
-         * Should be call only if world is valid and before clearing the world mgr cache
+         * Unbinds from the world manager delegates. Call before clearing the cached pointer.
          */
         void UnbindFromWorldManagerDelegates();
         
         /**
-         * The active world was replaced (PIE Play/Stop, or the active world being destroyed).
-         * Retargets the selection FIRST, then notifies every panel — so no panel can observe a
-         * selection pointing into the world that was just left.
+         * The active world changed (Play/Stop, or the active world destroyed). Retargets the selection
+         * first, then notifies the panels.
          */
         void HandleActiveWorldChanged(World* InOld, World* InNew);
 
         /**
-         * A world is going away. Clears the selection when it belonged to that world — the safety
-         * net HandleActiveWorldChanged cannot provide, since a NON-active world can die too
-         * (Entity holds a raw World*, so a stale one dangles).
+         * A world is being destroyed: clears the selection if it belonged to it (also for non-active worlds).
          */
         void HandleWorldDestroyed(World* InWorld);
         // End World
@@ -210,7 +179,7 @@ namespace Opaax::Editor
         // Level
         // =============================================================================
         
-        /** Adopt the level the engine opened at boot, and one of its maps for editing. */
+        /** Adopts the level the engine opened at startup, and one of its maps. */
         void AdoptStartupLevel();
         
         // End Level
@@ -220,58 +189,39 @@ namespace Opaax::Editor
         // GUI
     private:
         /**
-         * 
-         * @param InWindow 
-         * @return False if not initialized correctly
+         * Initializes the GUI.
+         * @return False if it failed
          */
         bool InitGUI(Window* InWindow);
 
-        /** The whole UI stack down, panels then backend — IEditorGui::Teardown owns that order. */
+        /** Shuts the UI down (panels, then backend). */
         void ClearGUI();
 
         /**
-         * Resolves <ProjectRoot>/Editor/Save/imgui.ini — the dock layout ImGui loads on the first frame and
-         * rewrites as it changes — CREATING the directory if absent (ImGui will not, and its save fails
-         * silently on a missing dir).
-         *
-         * @return The absolute ini path, or an EMPTY string if the editor's path service is unavailable, in
-         *   which case the caller must leave IniFilename null (ImGui's own "don't persist" contract).
+         * Resolves <ProjectRoot>/Editor/Save/imgui.ini (the dock layout), creating the directory if needed
+         * (ImGui does not, and fails silently).
+         * @return The absolute path, or empty if the editor paths are unavailable (then layouts are not saved)
          */
         OpaaxString ResolveLayoutIniPath() const;
 
         /**
-         * The editor's UI typeface, from config, with every path turned absolute.
-         *
-         * A config states MOUNT paths so a shipped build resolves them; a toolkit opens files. This
-         * is the one place the two meet, and it is why `IEditorGui::SetUIFont` documents its
-         * argument as absolute.
-         *
-         * @return An empty primary when there is no config or none is set, which keeps the
-         *   backend's own default font.
+         * The editor's UI font from config, with absolute paths (the config uses mount paths).
+         * @return An empty primary when none is set (keeps the backend's default font)
          */
         EditorUIFont ResolveUIFont() const;
 
         /**
-         * Ctrl+S, in the UI pass.
-         *
-         * NOT in HandleReservedKeys, and not by choice of style: with an Edit world open the input
-         * route is ClosedEditMode, so the engine's InputManager never receives Ctrl and could not
-         * answer IsCtrlDown(). See the body for why the split (route-level F-keys vs UI-pass
-         * chords) is the right shape rather than a workaround.
+         * Ctrl+S and the other chords, in the UI pass (not in HandleReservedKeys: with an Edit world open
+         * the engine never receives Ctrl).
          */
         void HandleAuthoringShortcuts();
         
         /**
-         * The reserved editor keys — D5's step 3, and only that step. Runs AFTER ImGui's capture
-         * check, so a shortcut can never fire while a text field has the keyboard.
-         *
-         * @return true when the key was a reserved one and the editor consumed it.
+         * The reserved editor keys. Runs after ImGui's capture check (never while a text field has the keyboard).
+         * @return True if the key was reserved and consumed
          */
         bool HandleReservedKeys(Event& InEvent);
         
-        /**
-         * 
-         */
         void BuildGUIs();
         
         
@@ -282,18 +232,14 @@ namespace Opaax::Editor
         // Panels
     private:
         /**
-         * Runs AFTER the game module has registered (so its panels get a toggle too) and BEFORE the seal.
+         * Runs after the game module registered (its panels get a toggle too) and before sealing.
          */
         void BindPanelToggles();
         // End Panels
         // =============================================================================
 
         /**
-         * Re-derive the per-map dirty answers, at most 4×/s (**MP5**).
-         *
-         * The throttle is here because the frame clock is; the answers live in EditorLevelDocument
-         * beside the baselines they come from, so the Hierarchy can mark every map without a
-         * capture per row. Runs at the top of EndFrame, before anything that reads it.
+         * Recomputes the per-map dirty state, at most 4 times per second. Runs at the start of EndFrame.
          */
         void RefreshDirtyCache();
 
@@ -320,7 +266,7 @@ namespace Opaax::Editor
         //~End IEditorService interface
 
         //~Begin IAppService interface
-        void OnShutdown() override;   // release the context while the engine it references is still alive
+        void OnShutdown() override;   // release the context while the engine is still alive
         //~End IAppService interface
 
         // =============================================================================
@@ -330,12 +276,10 @@ namespace Opaax::Editor
         const EditorPaths*              m_EditorPaths = nullptr;
         WorldManager*                   m_WorldMgr = nullptr;
         
-        // Built in the ctor and never reset — the context holds a reference to it until OnShutdown's
-        // last step, well after ClearGUI().
+        // Built in the ctor and kept until the end of OnShutdown (the context references it).
         TUniquePtr<IEditorGui>          m_Gui;
 
-        // Beside the gui, and built with it: the concrete modal backend. It owns no OS resource and
-        // has nothing to shut down, so unlike the gui it needs no Clear step.
+        // The dialog backend. Owns no OS resource, so it needs no Clear step.
         TUniquePtr<IEditorDialogs>      m_Dialogs;
 
         EditorExtensionRegistrar        m_Extensions;
@@ -343,13 +287,13 @@ namespace Opaax::Editor
         TUniquePtr<ResourcePreview>     m_Preview;     
         TUniquePtr<EditorSelection>     m_Selection;
 
-        /** P4 - 'a document was saved', two-phase. Owned here; referenced by EditorContext. */
+        /** "A document was saved", two-phase. Referenced by EditorContext. */
         TUniquePtr<EditorResourceEvents> m_ResourceEvents;
 
-        /** P6 - the open prefab and the world it is edited in. */
+        /** The open prefab and its world. */
         TUniquePtr<EditorPrefabDocument> m_PrefabDocument;
 
-        /** P4 - the only listener that a Reload cannot serve: a prefab's instances are entities. */
+        /** Updates prefab instances when a prefab is saved (a Reload cannot: they are entities). */
         TUniquePtr<PrefabReconciler>     m_PrefabReconciler;   
         TUniquePtr<EditorViewport>      m_Viewport;    
         TUniquePtr<EditorCamera>        m_Camera;      
@@ -361,17 +305,17 @@ namespace Opaax::Editor
         TUniquePtr<EditorLevelDocument> m_LevelDocument;
         TUniquePtr<EditorSpriteSheetDocument> m_SheetDocument;
 
-        /** The open `.opaaxclip` and its data (S3), beside the sheet document and for its reason. */
+        /** The open .opaaxclip and its data. */
         TUniquePtr<EditorAnimationClipDocument> m_ClipDocument;
 
-        /** The open `.opaaxanim` and its data (S4) — the alias table the clip document feeds. */
+        /** The open .opaaxanim and its data. */
         TUniquePtr<EditorAnimationLibraryDocument> m_LibraryDocument;
         TUniquePtr<EditorFontFamilyDocument>       m_FamilyDocument;
 
-        /** UI U4 — the open `.opaaxui` and the canvas the panel previews (**UI14**). */
+        /** The open .opaaxui and its canvas. */
         TUniquePtr<EditorUICanvasDocument>         m_UICanvasDocument;
 
-        /** ⑦-A P5a — the mover pair, the same clip/library split one family over. */
+        /** The mover documents (tuning and mover). */
         TUniquePtr<EditorMoveModeDocument>         m_MoveModeDocument;
         TUniquePtr<EditorMoverDocument>            m_MoverDocument;
         TUniquePtr<EditorInputActionDocument>      m_InputActionDocument;

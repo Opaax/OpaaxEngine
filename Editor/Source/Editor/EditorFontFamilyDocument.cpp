@@ -9,8 +9,7 @@ namespace Opaax::Editor
     {
         FontFamilyData lLoaded;
 
-        // Into a LOCAL first: a file that fails to parse must not half-replace the family already
-        // being edited.
+        // Into a local first: a failed parse must not replace the open family.
         if (!FontFamilyFile::Load(InAbsPath, lLoaded))
         {
             return false;

@@ -2,7 +2,7 @@
 
 #include "Core/Log/Logger.h"
 
-// OPAAX_HAS_GLSLANG is defined (0/1) by the engine build; treat absent as 0 for safety.
+// OPAAX_HAS_GLSLANG (0/1) comes from the build; absent means 0.
 #ifndef OPAAX_HAS_GLSLANG
 #define OPAAX_HAS_GLSLANG 0
 #endif
@@ -19,8 +19,7 @@ namespace Opaax
 #if OPAAX_HAS_GLSLANG
     namespace
     {
-        // glslang requires one process-wide InitializeProcess / FinalizeProcess pair.
-        // A function-local static inits on first compile and finalizes at process teardown.
+        // glslang needs one InitializeProcess / FinalizeProcess per process (function-local static).
         struct GlslangProcess
         {
             GlslangProcess()  { glslang::InitializeProcess(); }
@@ -55,8 +54,7 @@ namespace Opaax
         const char* lSrc = InGlsl.CStr();
         lShader.setStrings(&lSrc, 1);
 
-        // Target Vulkan SPIR-V — the one artifact a future Vulkan backend consumes, and that
-        // GL_ARB_gl_spirv accepts (requires the GLSL to use explicit bindings/locations).
+        // Vulkan SPIR-V target (also accepted by GL_ARB_gl_spirv with explicit bindings/locations).
         constexpr int lGlslVersion = 450;
         lShader.setEnvInput (glslang::EShSourceGlsl, lStage, glslang::EShClientVulkan, lGlslVersion);
         lShader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_0);
@@ -88,8 +86,7 @@ namespace Opaax
     }
 #else  // OPAAX_HAS_GLSLANG
 
-    // glslang not available (no Vulkan SDK at build time). Returns empty SPIR-V — callers
-    // fall back to the GLSL source path (OpenGL only; a Vulkan backend needs glslang).
+    // No glslang (no Vulkan SDK): returns empty SPIR-V; OpenGL uses the GLSL source.
     TDynArray<Uint32> ShaderCompiler::CompileGLSLToSPIRV(EShaderStage /*InStage*/,
                                                          const OpaaxString& /*InGlsl*/,
                                                          const OpaaxString& /*InDebugName*/)

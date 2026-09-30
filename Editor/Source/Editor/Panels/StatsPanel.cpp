@@ -1,7 +1,7 @@
 #include "Editor/Panels/StatsPanel.h"
 
 #include "Editor/EditorContext.h"
-#include "Editor/UI/IEditorGui.h"   // GetTime — the throttle's clock
+#include "Editor/UI/IEditorGui.h"   // GetTime
 
 #include "Core/Profiling/Profiler.h"
 
@@ -16,10 +16,10 @@ namespace
     /** Pixels of indent per nesting level in the scope tree. */
     constexpr float k_ScopeIndent = 14.f;
 
-    /** One 60 Hz frame. The graph's ceiling steps in these so it never drifts under the line. */
+    /** One 60 Hz frame. The graph's ceiling steps in these. */
     constexpr float k_FrameMs60 = 1000.f / 60.f;
 
-    /** Percentage of the frame InMilliseconds represents. Zero for a frame with no duration. */
+    /** Percentage of the frame InMilliseconds is. Zero for an empty frame. */
     float PercentOfFrame(const double InMilliseconds, const double InFrameMs)
     {
         if (InFrameMs <= 0.0) { return 0.f; }
@@ -46,8 +46,7 @@ namespace Opaax::Editor
     {
         const FrameStats& lStats = Profiler::Get().GetFrameStats();
 
-        // The graph gets every frame — it is the one thing here that SHOULD move at frame rate, and
-        // a hitch that only lands between two refreshes must still show up as a spike.
+        // The graph gets every frame (a spike between two refreshes must still show).
         m_FrameHistory.Push(static_cast<float>(lStats.FrameMs));
 
         const double lNow = m_Context.Gui.GetTime();
@@ -78,24 +77,21 @@ namespace Opaax::Editor
 
         if (lNeeded <= MIN_GRAPH_CEILING_MS) { return MIN_GRAPH_CEILING_MS; }
 
-        // Whole frames, so an ageing spike steps the ceiling down once instead of sliding the whole
-        // plot every frame as the maximum drifts.
+        // Whole frames, so the ceiling steps down once instead of sliding every frame.
         return std::ceil(lNeeded / k_FrameMs60) * k_FrameMs60;
     }
 
     void StatsPanel::DrawFrameTime()
     {
-        // The AVERAGE, not the last frame: an instantaneous fps is unreadable at 60 Hz, and the
-        // number an author acts on is the one the last two seconds sustained.
+        // The average over the history (an instant fps is unreadable).
         const double lFps = m_ShownAvgMs > 0.f ? 1000.0 / m_ShownAvgMs : 0.0;
 
         ImGui::Text("%.0f FPS", lFps);
         ImGui::SameLine();
         ImGui::TextDisabled("(%.2f ms avg)", m_ShownAvgMs);
 
-        // GPU sits HERE and not in the breakdown below, because it runs ALONGSIDE the CPU rather
-        // than inside the frame: a row in that table would be counted against the total and drive
-        // the "Other" remainder negative. Negative means the device gave no reading.
+        // GPU time runs alongside the CPU, so it is shown here, not in the breakdown (it would push
+        // "Other" negative). Negative means no reading.
         ImGui::SameLine();
 
         if (m_ShownGpuMs >= 0.0)
@@ -128,8 +124,7 @@ namespace Opaax::Editor
         ImGui::TextDisabled("min %.2f   max %.2f   (%u frames)",
                             m_ShownMinMs, m_ShownMaxMs, m_FrameHistory.Count());
 
-        // No separate fixed-step readout: the FixedUpdate row's own "xN" is the step count, because
-        // that scope sits inside the catch-up loop. A count stuck above 1 is the spiral of death.
+        // The FixedUpdate row's "xN" is the step count. A count stuck above 1 is the spiral of death.
     }
 
     void StatsPanel::DrawBreakdown()
@@ -140,8 +135,7 @@ namespace Opaax::Editor
             return;
         }
 
-        // Which frame the rows below describe — they are a held snapshot, not the graph's newest
-        // sample, and stating its total is what lets a reader check that the rows add up.
+        // Which frame the rows describe (a held snapshot), and its total, so the rows can be checked.
         ImGui::Text("Breakdown");
         ImGui::SameLine();
         ImGui::TextDisabled("(%.2f ms frame)", m_Display.FrameMs());
@@ -165,8 +159,7 @@ namespace Opaax::Editor
             if (lIndent > 0.f) { ImGui::Indent(lIndent); }
             ImGui::TextUnformatted(lSample.Name != nullptr ? lSample.Name : "(unnamed)");
 
-            // Only when it ran more than once — a "x1" on every row is noise. This is how a
-            // catch-up frame reads: the fixed-step children say how many steps they served.
+            // Only when it ran more than once (the fixed-step children show the step count).
             if (lSample.Calls > 1)
             {
                 ImGui::SameLine();
@@ -182,10 +175,8 @@ namespace Opaax::Editor
             ImGui::Text("%.1f", PercentOfFrame(lSample.Milliseconds, m_Display.FrameMs()));
         }
 
-        // What the engine did NOT measure: the host's event poll and, in this build, the editor's
-        // whole UI pass. Named rather than hidden — the rows have to add up to the frame or the
-        // panel is lying about where the time went. The editor's own cost is deliberately not
-        // broken out: it is not the game's cost, and a shipped build has none of it.
+        // What the engine did not measure: the event poll and the editor's UI pass. Shown so the rows
+        // add up to the frame.
         const double lUnmeasured = m_Display.UnmeasuredMs();
 
         ImGui::TableNextRow();
@@ -233,9 +224,7 @@ namespace Opaax::Editor
 
             ImGui::TableSetColumnIndex(1);
 
-            // Plain, every counter alike. Draw Calls used to go amber above 1 because a split frame
-            // WAS a drawing bug (⑥); F5 made it a cost, and a colour with no budget behind it just
-            // cries wolf at a batch limit the author configured.
+            // All counters look the same (no warning colour: a split frame only costs time).
             ImGui::Text("%llu", lCounter.Value);
         }
 

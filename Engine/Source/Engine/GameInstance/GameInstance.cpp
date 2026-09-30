@@ -11,8 +11,7 @@ namespace Opaax
 
     GameInstance::~GameInstance()
     {
-        // Safety net for a host that never reached TearDown. Both are idempotent, so the
-        // ordinary path (EndGame -> TearDown -> Shutdown -> destroy) does nothing here.
+        // In case the host never reached TearDown. Both calls are safe to repeat.
         ShutdownSubsystems();
     }
 

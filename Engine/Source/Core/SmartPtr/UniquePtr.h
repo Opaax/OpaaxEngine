@@ -3,8 +3,7 @@
 namespace Opaax
 {
     /**
-     * @class UniquePtr
-     * @tparam T 
+     * Owning pointer, like std::unique_ptr.
      */
     template <typename T>
     class UniquePtr
@@ -57,8 +56,7 @@ namespace Opaax
         // =============================================================================
     public:
         /**
-         * 
-         * @param NewPtr 
+         * Deletes the current pointer and takes NewPtr.
          */
         void Reset(T* NewPtr = nullptr)
         {
@@ -67,8 +65,7 @@ namespace Opaax
         }
 
         /**
-         * 
-         * @return 
+         * Gives up ownership without deleting.
          */
         T* Release()
         {
@@ -77,10 +74,6 @@ namespace Opaax
             return Result;
         }
 
-        /**
-         * 
-         * @return 
-         */
         T* Get() const
         {
             return Ptr;

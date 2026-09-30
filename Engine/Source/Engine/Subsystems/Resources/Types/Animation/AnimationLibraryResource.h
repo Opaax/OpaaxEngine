@@ -9,14 +9,9 @@
 namespace Opaax
 {
     // =============================================================================
-    // AnimationLibraryResource — a `.opaaxanim` as a RESOURCE. AnimationClipResource's shape.
-    //
-    //   PLACEHOLDER: a missing library resolves no clip name, so the animator leaves the sprite's
-    //   AUTHORED frame alone. Degraded and visible, never a lie.
-    //
-    //   IT DOES NOT Acquire ITS CLIPS, for SS3's placement reason: LoadContext::Acquire takes an
-    //   ABSOLUTE path and asset-relative -> absolute lives in IPaths, which the Resources layer
-    //   does not reach. SpriteAnimationSubsystem resolves both, through the ref caches it owns.
+    // AnimationLibraryResource — a .opaaxanim as a resource.
+    //   Placeholder policy: a missing library leaves the sprite on its authored frame.
+    //   Its clips are loaded by SpriteAnimationSubsystem (needs IPaths).
     // =============================================================================
     struct AnimationLibraryResource final
     {
@@ -32,16 +27,16 @@ namespace Opaax
             AnimationLibraryResource lResource;
             if (!AnimationLibraryFile::Load(OpaaxString(InPath), lResource.Data))
             {
-                return std::nullopt;   // AnimationLibraryFile already logged which reason it was
+                return std::nullopt;   // AnimationLibraryFile already logged why
             }
 
             return lResource;
         }
 
-        /** An empty library. Every Find answers nullptr, so nothing animates and nothing breaks. */
+        /** An empty library: nothing animates. */
         static AnimationLibraryResource Placeholder() { return AnimationLibraryResource{}; }
 
-        /** Structural size — the entry records and their paths. */
+        /** Size of the entries and their paths. */
         Uint64 ByteSize() const noexcept
         {
             Uint64 lBytes = sizeof(AnimationLibraryResource)

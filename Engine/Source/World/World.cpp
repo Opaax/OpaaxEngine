@@ -1,9 +1,9 @@
 #include "World.h"
 
-#include "World/Components/TransformComponent.h"   // emplaced on every entity, beside EntityMeta
+#include "World/Components/TransformComponent.h"   // added to every entity
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityMeta.h"
-#include "World/Level.h"   // complete type for the TUniquePtr<Level> member's destructor
+#include "World/Level.h"   // complete type for TUniquePtr<Level>
 
 namespace Opaax
 {
@@ -15,16 +15,13 @@ namespace Opaax
         , m_Name(std::move(InName))
         , m_Mode(InMode)
     {
-        // The mode is in the log because it is otherwise invisible: an Edit and a Play world
-        // differ only by which subsystems they get (S3), so an ordered boot log is the only
-        // place the distinction shows up before PIE exists.
+        // Log the mode: Edit and Play worlds differ only by their subsystems.
         OPAAX_LOG(LogWorld, Trace, "World '{}' created ({})", m_Name.CStr(), ToString(m_Mode));
     }
 
     World::~World()
     {
-        // Safety net only — DestroyWorld normally got here first, while the engine siblings a
-        // subsystem might reach were all still alive. Idempotent, so the normal path costs nothing.
+        // In case DestroyWorld did not run first. Safe to repeat.
         ShutdownSubsystems();
 
         OPAAX_LOG(LogWorld, Trace, "World '{}' destroyed ({} entity(ies))", m_Name.CStr(), m_EntityCount);
@@ -90,8 +87,7 @@ namespace Opaax
             return Entity{};
         }
 
-        // Two entities under one Guid would make FindByGuid answer arbitrarily, and the
-        // second Register would silently evict the first mapping.
+        // Two entities with one guid would make FindByGuid ambiguous.
         if (m_Guids.Contains(InGuid))
         {
             OPAAX_LOG(LogWorld, Error, "CreateEntityWithGuid — '{}' refused: that Guid is already live in world '{}'",
@@ -102,9 +98,7 @@ namespace Opaax
         const EntityID lEnt  = m_Registry.create();
         EntityMeta&    lMeta = m_Registry.emplace<EntityMeta>(lEnt, EntityMeta{ InGuid, Move(InName), InOwnerMap });
 
-        // Every entity has a position, unconditionally — that is what makes Each<TransformComponent>
-        // complete and every entity anchorable. A map's payload fills this one rather than fighting
-        // it: IComponentEntry::Load uses get_or_emplace.
+        // Every entity has a Transform. Map data fills it (IComponentEntry::Load uses get_or_emplace).
         m_Registry.emplace<TransformComponent>(lEnt);
 
         m_Guids.Register(lMeta.Id, lEnt);
@@ -132,8 +126,7 @@ namespace Opaax
         
         if (const EntityMeta* lMeta = m_Registry.try_get<EntityMeta>(InEntity))
         {
-            // CASCADE (§HR): a child cannot outlive its parent. Collected first — destroying inside
-            // the view is unsafe, and the pool may move lMeta out from under us — then recursed.
+            // Cascade: children die with their parent. Collected first (destroying inside the view is unsafe).
             const Guid lId = lMeta->Id;
             m_Guids.Unregister(lId);
 
@@ -152,7 +145,7 @@ namespace Opaax
 
     Entity World::FindByGuid(const Guid& InGuid)
     {
-        // ENTITY_NONE handle -> an invalid Entity (null-safe lookup).
+        // ENTITY_NONE gives an invalid Entity.
         return Entity{ m_Guids.Resolve(InGuid), this };
     }
 
@@ -175,11 +168,10 @@ namespace Opaax
         m_Registry.clear();
         m_Guids.Clear();
         m_EntityCount = 0;
-        ++m_Revision;   // wiping every entity is the largest content change there is
+        ++m_Revision;   // every entity removed
 
-        // The Level's mount records describe entities that no longer exist. Cleared, not
-        // unmounted: there is nothing left to destroy, and a Level still claiming a map would
-        // refuse to mount it again.
+        // The Level's mounts describe entities that no longer exist: clear them (a Level still
+        // claiming a map would refuse to mount it again).
         if (m_Level != nullptr) { m_Level->OnWorldCleared(); }
 
         OPAAX_LOG(LogWorld, Trace, "World '{}' cleared", m_Name.CStr());

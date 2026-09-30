@@ -6,20 +6,11 @@
 namespace Opaax::Editor
 {
     // =============================================================================
-    // EditorSelection — WHAT the author has selected. Owned by EditorService, referenced by
-    //   EditorContext so panels and drawers read and write it without a locator. The Hierarchy and
-    //   the viewport both write; the Inspector and the viewport's outline read.
-    //
-    //   A SET, with a PRIMARY. Get() answers the primary — the last entity touched — which is what
-    //   lets the Inspector keep drawing exactly one entity while everything else grows a multi-
-    //   selection around it: multi-SELECT is this block's job, multi-EDIT is not, and keeping the
-    //   old accessor honest is what holds that line.
-    //
-    //   Stored as EntityID plus one World*, not as Entity handles: every member of a selection is
-    //   in the same world by construction (selecting in another world replaces the set), so one
-    //   pointer is the whole difference and there is no way for two entries to disagree about it.
-    //   Entity holds a raw World*, so this is invalidated from OUTSIDE — EditorService subscribes
-    //   to WorldManager and retargets every entry by GUID, or clears, on each world change.
+    // EditorSelection — what the author has selected. Owned by EditorService, referenced by
+    //   EditorContext. The Hierarchy and the viewport write it; the Inspector and the outline read it.
+    //   A set with a primary (the last entity touched, what the Inspector shows).
+    //   Stored as EntityIDs plus one World* (all entries are in the same world). EditorService
+    //   retargets every entry by guid, or clears, when the world changes.
     // =============================================================================
     class EditorSelection
     {
@@ -27,14 +18,14 @@ namespace Opaax::Editor
         // Write
         // =============================================================================
     public:
-        /** Replace the whole selection with one entity. A plain click, and every pre-② caller. */
+        /** Replaces the selection with one entity (a plain click). */
         void Select(Entity InEntity)
         {
             Clear();
             Add(InEntity);
         }
 
-        /** Add without dropping what is already selected — a Ctrl+drag marquee. */
+        /** Adds without dropping the current selection (Ctrl+drag marquee). */
         void Add(Entity InEntity)
         {
             if (!InEntity.IsValid() || Contains(InEntity)) { return; }
@@ -43,7 +34,7 @@ namespace Opaax::Editor
             m_Ids.emplace_back(InEntity.GetHandle());
         }
 
-        /** In if out, out if in — Ctrl+click. Removing the primary promotes whatever is left. */
+        /** Toggles one entity (Ctrl+click). Removing the primary promotes the last remaining one. */
         void Toggle(Entity InEntity)
         {
             if (!InEntity.IsValid()) { return; }
@@ -60,7 +51,7 @@ namespace Opaax::Editor
             Add(InEntity);
         }
 
-        /** Replace with a whole list — a marquee's ordinary outcome. Skips invalid handles. */
+        /** Replaces with a list (a marquee). Skips invalid handles. */
         void Replace(World* InWorld, const TDynArray<EntityID>& InIds)
         {
             Clear();
@@ -84,8 +75,7 @@ namespace Opaax::Editor
         // =============================================================================
     public:
         /**
-         * The PRIMARY — the last entity added — or an invalid Entity when nothing is selected.
-         * The Inspector draws this one and only this one.
+         * The primary (last added), or an invalid Entity when nothing is selected. The Inspector shows it.
          */
         Entity Get() const noexcept
         {
@@ -106,12 +96,12 @@ namespace Opaax::Editor
             return false;
         }
 
-        /** Every selected handle, in selection order. The outline and focus-selected walk this. */
+        /** Every selected handle, in selection order. */
         const TDynArray<EntityID>& Ids() const noexcept { return m_Ids; }
 
         Uint64 Count() const noexcept { return m_Ids.size(); }
 
-        /** The world every entry belongs to, or null when empty. */
+        /** The world of the selection, or null when empty. */
         World* GetWorld() const noexcept { return m_World; }
 
         // =============================================================================

@@ -6,14 +6,12 @@
 
 namespace Opaax
 {
-    // NOTE: this impl is selected by OpenGLRHIDevice::CreateFramebuffer — the device knows its own
-    // backend, so no free factory has to dispatch on one (F2a).
 
     // =============================================================================
     // CTOR - DTOR
     // =============================================================================
     OpenGLFramebuffer::OpenGLFramebuffer(const FramebufferSpec& InSpec)
-        : m_Width(InSpec.Width  ? InSpec.Width  : 1u)   // guard a zero-size first frame
+        : m_Width(InSpec.Width  ? InSpec.Width  : 1u)   // avoid a zero size
         , m_Height(InSpec.Height ? InSpec.Height : 1u)
         , m_DepthStencil(InSpec.DepthStencil)
     {
@@ -78,8 +76,7 @@ namespace Opaax
     void OpenGLFramebuffer::Bind()
     {
         glBindFramebuffer(GL_FRAMEBUFFER, m_FBO);
-        // NOTE: Viewport must match the FBO dimensions, not the GLFW window — a window-sized
-        //   viewport over a differently-sized FBO was the historical deformed-sprite bug.
+        // The viewport must match the framebuffer size, not the window.
         glViewport(0, 0,
             static_cast<GLsizei>(m_Width),
             static_cast<GLsizei>(m_Height));
@@ -92,8 +89,8 @@ namespace Opaax
 
     void OpenGLFramebuffer::Resize(Uint32 InWidth, Uint32 InHeight)
     {
-        if (InWidth == 0 || InHeight == 0)                  { return; } // ignore degenerate sizes
-        if (InWidth == m_Width && InHeight == m_Height && m_FBO) { return; } // no-op
+        if (InWidth == 0 || InHeight == 0)                  { return; } // ignore zero sizes
+        if (InWidth == m_Width && InHeight == m_Height && m_FBO) { return; } // unchanged
 
         m_Width  = InWidth;
         m_Height = InHeight;

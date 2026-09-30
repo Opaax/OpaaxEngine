@@ -8,7 +8,7 @@
 
 namespace Opaax
 {
-    /** Which way a stack lays its children out. */
+    /** Stack direction. */
     enum class EUIAxis : Uint8
     {
         Vertical,     // top to bottom
@@ -20,13 +20,13 @@ namespace Opaax
         return InAxis == EUIAxis::Horizontal ? "Horizontal" : "Vertical";
     }
 
-    /** Where a child sits ACROSS the stack's axis. Start is left (vertical) or top (horizontal). */
+    /** Placement across the stack's axis. Start is left (vertical) or top (horizontal). */
     enum class EUIAlign : Uint8
     {
         Start,
         Center,
         End,
-        Stretch   // the child fills the cross axis; its own size there is ignored
+        Stretch   // fills the cross axis
     };
 
     inline const char* ToString(const EUIAlign InAlign) noexcept
@@ -42,15 +42,9 @@ namespace Opaax
     }
 
     // =============================================================================
-    // UIStack — a layout container: its children are laid out one after another along an axis
-    //   (**UI23**). Godot's BoxContainer with the axis as a field, rather than two classes.
-    //
-    //   THE CONTAINER OWNS ITS CHILDREN'S RECTS (UMG's slot rule): a child's `Rect.SizeDelta` is its
-    //   desired size and its anchors, pivot and anchored position are ignored. Vertical stacks from
-    //   the top down, horizontal from the left. A HIDDEN child keeps its slot (Unreal's Hidden, not
-    //   Collapsed) — visibility stays a draw-time flag (UI3); remove the child to close the gap.
-    //
-    //   Draws nothing and is not a hit target, like UIPanel.
+    // UIStack — lays its children out one after another along an axis (like Godot's BoxContainer).
+    //   It owns the children's rects: a child's Rect.SizeDelta is its desired size; anchors, pivot
+    //   and position are ignored. A hidden child keeps its slot. Draws nothing, not hit-testable.
     // =============================================================================
     class OPAAX_API UIStack final : public UIWidget
     {
@@ -63,7 +57,7 @@ namespace Opaax
         UIMargin Padding;              // inside my rect, canvas units
         EUIAlign ChildAlign = EUIAlign::Center;
 
-        /** My size ALONG the axis follows the children (padding included) — only when that axis is point-anchored. */
+        /** My size along the axis follows the children (only when that axis is point-anchored). */
         bool bFitContent = false;
 
         OPAAX_PROPERTIES(UIStack,
@@ -91,7 +85,7 @@ namespace Opaax
         void LoadFields(const nlohmann::json& InJson) override;
 
     protected:
-        /** My anchored rect — with the axis extent replaced by the content's when bFitContent. */
+        /** My rect, with the axis size from the content when bFitContent. */
         Bounds2D ResolveBounds(const Bounds2D& InParentBounds) const override;
 
         void ArrangeChildren(TDynArray<Bounds2D>& OutSlots) const override;
@@ -100,7 +94,7 @@ namespace Opaax
         // Internal
         // =============================================================================
     private:
-        /** The children's desired extents along the axis, spacing and padding included. */
+        /** The children's total size along the axis, spacing and padding included. */
         float ContentExtent() const noexcept;
     };
 }

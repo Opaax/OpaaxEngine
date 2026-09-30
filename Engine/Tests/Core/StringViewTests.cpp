@@ -1,7 +1,5 @@
-// Suite: OpaaxStringView — the one property that matters is that NOTHING reads past the view's
-// length. Most cases below therefore run over a slice of a longer buffer, or over bytes with no
-// terminator at all: a stray strlen/strcmp/strstr in the implementation passes a naive test and
-// fails these ([[L21]] — the instrument must be able to fail).
+// Suite: OpaaxStringView — nothing may read past the view's length. Most cases use a slice of a
+// longer buffer, or bytes with no terminator, so a stray strlen/strcmp/strstr fails.
 #include <doctest.h>
 
 #include "Core/String/OpaaxString.hpp"

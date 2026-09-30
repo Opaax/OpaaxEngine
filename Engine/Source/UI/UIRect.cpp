@@ -1,12 +1,12 @@
 #include "UI/UIRect.h"
 
-#include <algorithm>   // std::max — the inverted-anchor clamp
+#include <algorithm>   // std::max
 
 namespace Opaax
 {
     namespace
     {
-        /** The anchor rect InRect spans inside InParent — what both directions are measured from. */
+        /** The anchor rect of InRect inside InParent. */
         struct AnchorFrame
         {
             Vector2F Min;
@@ -18,14 +18,8 @@ namespace Opaax
             const Vector2F lParentMin  = InParent.Min();
             const Vector2F lParentSize = InParent.Size();
 
-            // AN INVERTED ANCHOR PAIR IS CLAMPED, NOT HONOURED (**UI19**). AnchorMax below AnchorMin
-            // gives a NEGATIVE anchor size, which flows into a negative widget size, and Bounds2D's
-            // FromMinMax then silently SORTS the corners — so the widget lands somewhere plausible and
-            // wrong instead of anywhere it was put. Clamping here fixes it for every caller at once,
-            // because this is the one place a rect's anchors are ever measured.
-            //
-            // Only the INVERSION is clamped: anchors outside 0..1 are legitimate (Unity allows them)
-            // and do not produce the negative size this exists to stop.
+            // An inverted anchor pair is clamped (it would give a negative size, and the rect would end
+            // up somewhere wrong). Anchors outside 0..1 are allowed.
             const Vector2F lAnchorMax{ std::max(InRect.AnchorMin.x, InRect.AnchorMax.x),
                                        std::max(InRect.AnchorMin.y, InRect.AnchorMax.y) };
 
@@ -74,8 +68,7 @@ namespace Opaax
     void ApplyAnchorPreset(UIRect& InOutRect, const EUIAnchorX InX, const EUIAnchorY InY,
                            const Bounds2D& InCurrent, const Bounds2D& InParent) noexcept
     {
-        // X reads left-to-right as authored; Y is listed top-down for the author but the canvas is
-        // Y-UP, so Top is anchor 1 and Bottom is anchor 0.
+        // X is left to right. Y is listed top-down, but the canvas is Y-up: Top is 1, Bottom is 0.
         AxisAnchors(static_cast<Uint8>(InX), InX == EUIAnchorX::Stretch, InOutRect.AnchorMin.x, InOutRect.AnchorMax.x);
 
         const Uint8 lYFlipped = InY == EUIAnchorY::Top ? 2 : InY == EUIAnchorY::Middle ? 1 : 0;

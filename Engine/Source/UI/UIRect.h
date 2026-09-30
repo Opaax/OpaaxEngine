@@ -11,22 +11,15 @@
 namespace Opaax
 {
     // =============================================================================
-    // UIRect — how a widget sits inside its parent. Unity's RectTransform fields, Y-UP like the
-    //   world: anchor (0,0) is the parent's bottom-left. The RESOLVED rect is a Bounds2D, which
-    //   is what the renderer draws and what a hit-test asks.
-    //
-    //   Anchors absorb the aspect ratio: a widget anchored to a corner follows that corner when
-    //   the visible canvas widens, one anchored 0..1 stretches with it (CAM2 — width follows the
-    //   target; the canvas never sees pixels).
+    // UIRect — how a widget sits in its parent (like Unity's RectTransform), Y-up: anchor (0,0)
+    //   is the parent's bottom-left. Anchors follow the aspect ratio: a corner-anchored widget
+    //   follows its corner; a 0..1 anchored one stretches.
     // =============================================================================
     struct UIRect
     {
         /**
-         * Where in the parent, 0..1. Equal = a point anchor; different = the widget stretches.
-         *
-         * An INVERTED pair (Max below Min) is clamped at resolve rather than honoured — see
-         * ResolveRect. Authoring one is easy (two drag fields, no ordering between them) and the
-         * un-clamped result is a widget that silently moves somewhere else (**UI19**).
+         * Where in the parent, 0..1. Equal = a point; different = the widget stretches.
+         * An inverted pair (Max below Min) is clamped.
          */
         Vector2F AnchorMin = { 0.5f, 0.5f };
         Vector2F AnchorMax = { 0.5f, 0.5f };
@@ -34,18 +27,17 @@ namespace Opaax
         /** Where in the widget the anchored position points, 0..1. */
         Vector2F Pivot = { 0.5f, 0.5f };
 
-        /** Pivot's offset from the anchor reference point, canvas units. */
+        /** Pivot offset from the anchor point, canvas units. */
         Vector2F AnchoredPosition = { 0.f, 0.f };
 
-        /** Size minus the anchor rect's size — the full size for a point anchor. */
+        /** Size minus the anchor rect's size (the full size for a point anchor). */
         Vector2F SizeDelta = { 100.f, 100.f };
 
-        // _WITH_DEFAULT is required, not preferred: the plain macro reads with at(), which THROWS
-        // on a missing key, so adding a field here would refuse every `.opaaxui` written before it.
+        // _WITH_DEFAULT: a missing key keeps its default, so older .opaaxui files still load.
         NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(UIRect,
                                                     AnchorMin, AnchorMax, Pivot, AnchoredPosition, SizeDelta)
 
-        // Fractions drag by a hundredth, canvas units by one — the step is what makes each editable.
+        // Drag steps: fractions by 0.01, canvas units by 1.
         OPAAX_PROPERTIES(UIRect,
                          OPAAX_PROP(AnchorMin).SetRange(0.f, 1.f).SetDragStep(0.01f),
                          OPAAX_PROP(AnchorMax).SetRange(0.f, 1.f).SetDragStep(0.01f),
@@ -55,18 +47,18 @@ namespace Opaax
     };
 
     /**
-     * The rect InRect describes inside InParent. Pure, so the maths is testable with nothing else built.
+     * The rect InRect gives inside InParent.
      */
     OPAAX_API Bounds2D ResolveRect(const UIRect& InRect, const Bounds2D& InParent) noexcept;
 
     /**
-     * The inverse: InOutRect's SizeDelta and AnchoredPosition so that ResolveRect lands on InTarget
-     * inside InParent. Anchors and pivot are kept — a resize handle edits a size, never an anchor.
+     * Inverse: sets InOutRect's SizeDelta and AnchoredPosition so ResolveRect gives InTarget.
+     * Anchors and pivot are kept.
      */
     OPAAX_API void FitRect(UIRect& InOutRect, const Bounds2D& InTarget, const Bounds2D& InParent) noexcept;
 
     // =============================================================================
-    // Anchor presets — Unity's 4x4 grid, the way an author actually sets anchors (U12).
+    // Anchor presets — Unity's 4x4 grid
     // =============================================================================
 
     enum class EUIAnchorX : Uint8 { Left, Center, Right, Stretch };
@@ -81,14 +73,12 @@ namespace Opaax
     };
 
     /**
-     * Set InOutRect's anchors AND pivot to the preset, then FitRect it to InCurrent inside
-     * InParent — so the widget does not move on screen; only what it does on a resize changes.
-     * The pivot follows the anchor (Unity's Shift+Alt click, made the only behaviour), 0.5 on a
-     * stretched axis.
+     * Sets InOutRect's anchors and pivot to the preset, then fits it to InCurrent so the widget
+     * does not move on screen. The pivot follows the anchor (0.5 on a stretched axis).
      */
     OPAAX_API void ApplyAnchorPreset(UIRect& InOutRect, EUIAnchorX InX, EUIAnchorY InY,
                                      const Bounds2D& InCurrent, const Bounds2D& InParent) noexcept;
 
-    /** Which preset InRect's anchors are, for the highlight; bKnown = false for anything else. */
+    /** The preset InRect's anchors match; bKnown = false if none. */
     OPAAX_API UIAnchorPreset CurrentAnchorPreset(const UIRect& InRect) noexcept;
 }

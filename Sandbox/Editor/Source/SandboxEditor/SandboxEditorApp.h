@@ -3,9 +3,9 @@
 #include "Editor/Application/EditorApplication.h"
 
 // =============================================================================
-// SandboxEditorApp — the game's editor executable (Editor.md D8): a thin composition of the generic
-// OpaaxEditorLib. It registers the SAME SandboxModule as Sandbox.exe (D9) and populates the same demo
-// world. The editor is generic; the game registers into it — never the reverse.
+// SandboxEditorApp — the game's editor executable: a thin layer over the generic OpaaxEditorLib.
+// It registers the same SandboxModule as Sandbox.exe. The editor is generic; the game registers
+// into it, never the reverse.
 // =============================================================================
 class SandboxEditorApp final : public Opaax::Editor::EditorApplication
 {
