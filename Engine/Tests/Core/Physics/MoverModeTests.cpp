@@ -299,6 +299,53 @@ TEST_CASE("FlyMoveMode: OnModeEnter drops momentum carried in from a fall")
 }
 
 // =============================================================================
+// Owner — a mode reads its entity's other components (a game mode's own state)
+// =============================================================================
+
+namespace
+{
+    struct BoostComponent
+    {
+        float Speed = 0.f;
+    };
+
+    /** Takes its horizontal speed from a sibling component, the way a game mode reads its tuning. */
+    class BoostMoveMode final : public IMoverMode
+    {
+    public:
+        void Tick(MoverTickContext& InContext) override
+        {
+            const BoostComponent* lBoost = InContext.Owner ? InContext.Owner.TryGet<BoostComponent>() : nullptr;
+            InContext.Mover.Velocity.x = lBoost != nullptr ? lBoost->Speed : -1.f;
+        }
+    };
+}
+
+TEST_CASE("IMoverMode: Owner reaches the entity's other components")
+{
+    const TUniquePtr<IPhysicsWorld> lPhysics = MakeWorldWithFloor();
+
+    World  lWorld("Owner");
+    Entity lEntity = lWorld.CreateEntity("Boosted");
+    lEntity.Add<BoostComponent>(BoostComponent{ 321.f });
+
+    BoostMoveMode      lMode;
+    MoverComponent     lMover = MakeMover();
+    TransformComponent lTransform;
+    const MoveModeData lParams;
+
+    MoverTickContext lTick{ *lPhysics, lMover, lTransform, lParams, 1.f / 60.f, 0, lEntity };
+    lMode.Tick(lTick);
+    CHECK(lMover.Velocity.x == doctest::Approx(321.f));
+
+    // A context built without an owner is invalid rather than pointing anywhere.
+    MoverTickContext lNoOwner{ *lPhysics, lMover, lTransform, lParams, 1.f / 60.f, 0 };
+    CHECK_FALSE(lNoOwner.Owner.IsValid());
+    lMode.Tick(lNoOwner);
+    CHECK(lMover.Velocity.x == doctest::Approx(-1.f));
+}
+
+// =============================================================================
 // The capsule the modes sweep
 // =============================================================================
 

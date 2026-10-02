@@ -2,6 +2,7 @@
 
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
+#include "World/Entity/Entity.h"
 
 namespace Opaax
 {
@@ -26,6 +27,12 @@ namespace Opaax
          * The mover's own body user data (so the sweep skips it). 0 on transition calls.
          */
         Uint64 SelfUserData = 0;
+
+        /**
+         * The entity being moved, so a mode can read its other components (a game mode's own state
+         * or tuning). Invalid when a mode is driven outside a world.
+         */
+        Entity Owner;
     };
 
     // =============================================================================
