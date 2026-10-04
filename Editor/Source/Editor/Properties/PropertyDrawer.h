@@ -43,27 +43,6 @@ namespace Opaax::Editor
     void DrawProperties(IEditorWidgets& InWidgets, TOwner& InOwner, const PropertyMeta& InInherited = {});
 
     /**
-     * InMeta with its unset range and drag step taken from the group above (e.g. a UIMargin is pixels
-     * in one place and a fraction in another). A field's own range still wins.
-     */
-    inline PropertyMeta InheritMeta(const PropertyMeta& InMeta, const PropertyMeta& InInherited) noexcept
-    {
-        PropertyMeta lMeta = InMeta;
-
-        if (lMeta.RangeMin == lMeta.RangeMax)
-        {
-            lMeta.RangeMin = InInherited.RangeMin;
-            lMeta.RangeMax = InInherited.RangeMax;
-        }
-        if (lMeta.DragStep == 0.f)
-        {
-            lMeta.DragStep = InInherited.DragStep;
-        }
-
-        return lMeta;
-    }
-
-    /**
      * Draws one value by hand, outside a property list (for custom drawers laying out their own
      * groups). Uses the same TPropertyDrawer<T> as the generic fold. The label is the caller's.
      */
