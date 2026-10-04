@@ -7,37 +7,12 @@
 #include "Core/String/OpaaxStringID.hpp"
 #include "Core/Log/Logger.h"
 
+#include "Engine/Reflection/TypeName.h"   // DeriveTypeLeafName
 #include "Engine/Registries/EngineRegistries.h"
 
 namespace Opaax
 {
     inline constexpr LogCategory LogModuleRegistrar{"ModuleRegistrar"};
-
-    // =============================================================================
-    // DeriveTypeLeafName<T> — the type's name without namespace: "Opaax::QuadComponent" -> "QuadComponent".
-    //   Also strips MSVC's "class "/"struct " prefix.
-    // =============================================================================
-    template<typename T>
-    OpaaxStringID DeriveTypeLeafName()
-    {
-        OpaaxStringView lName = entt::type_name<T>::value();
-
-        for (const OpaaxStringView lKeyword : {"class ", "struct ", "enum ", "union "})
-        {
-            if (lName.StartsWith(lKeyword))
-            {
-                lName.RemovePrefix(lKeyword.GetLength());
-                break;
-            }
-        }
-
-        const Int32 lSeparator = lName.FindLast("::");
-        const OpaaxStringView lLeaf = (lSeparator < 0)
-                                          ? lName
-                                          : lName.SubString(static_cast<Uint32>(lSeparator) + 2);
-
-        return OpaaxStringID(lLeaf.ToString());
-    }
 
     // =============================================================================
     // ComponentRoute — registers components into the ComponentRegistry.
@@ -233,11 +208,50 @@ namespace Opaax
     };
 
     // =============================================================================
+    // DataAssetRoute — registers the struct types a .opaaxdata can hold. The saved name is the
+    //   C++ type name (no namespace).
+    // =============================================================================
+    class OPAAX_API DataAssetRoute
+    {
+    public:
+        /**
+         * Registers T as a data asset type: it can then be created, edited and loaded as a .opaaxdata.
+         * @tparam T A struct with OPAAX_PROPERTIES and NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT
+         * @return True if registered
+         */
+        template<CDataAsset T>
+        bool Register()
+        {
+            ++m_Count;
+
+            if (m_Registry == nullptr)
+            {
+                OPAAX_LOG(LogModuleRegistrar, Error,
+                          "DataAssets().Register — route is not bound to a DataAssetTypeRegistry; registration dropped.");
+                return false;
+            }
+
+            return m_Registry->Register<T>();
+        }
+
+        /** Connects this route to the registry. Called once, before any module registers. */
+        void Bind(DataAssetTypeRegistry* InRegistry) noexcept { m_Registry = InRegistry; }
+
+        /** Number of registration requests, including refused ones. */
+        Uint64 Count() const noexcept { return m_Count; }
+
+    private:
+        DataAssetTypeRegistry* m_Registry = nullptr; // owned by the engine
+        Uint64                 m_Count    = 0;
+    };
+
+    // =============================================================================
     // ModuleRegistrar — what a game module registers into, before any world exists.
     //     Components()      -> ComponentRegistry
     //     WorldSubsystems() -> WorldSubsystemRegistry
     //     Resources()       -> ResourceFormatRegistry
     //     MoverModes()      -> MoverModeRegistry
+    //     DataAssets()      -> DataAssetTypeRegistry
     // =============================================================================
     class OPAAX_API ModuleRegistrar
     {
@@ -246,11 +260,13 @@ namespace Opaax
         WorldSubsystemRoute& WorldSubsystems() noexcept { return m_WorldSubsystems; }
         ResourceFormatRoute& Resources()       noexcept { return m_ResourceFormats; }
         MoverModeRoute&      MoverModes()      noexcept { return m_MoverModes; }
+        DataAssetRoute&      DataAssets()      noexcept { return m_DataAssets; }
 
         const ComponentRoute&      Components()      const noexcept { return m_Components; }
         const WorldSubsystemRoute& WorldSubsystems() const noexcept { return m_WorldSubsystems; }
         const ResourceFormatRoute& Resources()       const noexcept { return m_ResourceFormats; }
         const MoverModeRoute&      MoverModes()      const noexcept { return m_MoverModes; }
+        const DataAssetRoute&      DataAssets()      const noexcept { return m_DataAssets; }
 
         /**
          * Connects every route to the engine registries. Must run before any module registers.
@@ -261,6 +277,7 @@ namespace Opaax
             m_WorldSubsystems.Bind(&InRegistries.WorldSubsystems());
             m_ResourceFormats.Bind(&InRegistries.Resources());
             m_MoverModes.Bind(&InRegistries.MoverModes());
+            m_DataAssets.Bind(&InRegistries.DataAssets());
         }
 
     private:
@@ -268,5 +285,6 @@ namespace Opaax
         WorldSubsystemRoute m_WorldSubsystems;
         ResourceFormatRoute m_ResourceFormats;
         MoverModeRoute      m_MoverModes;
+        DataAssetRoute      m_DataAssets;
     };
 }

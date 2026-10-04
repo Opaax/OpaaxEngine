@@ -22,6 +22,7 @@
 #include "Engine/Input/InputMappingSubsystem.h"
 #include "Engine/UI/UISubsystem.h"
 #include "Engine/Subsystems/Resources/Types/UI/UICanvasResource.h"
+#include "Engine/Subsystems/Resources/Types/DataAsset/DataAssetResource.h"
 #include "UI/Widgets/UIButton.h"
 #include "UI/Widgets/UIImage.h"
 #include "UI/Widgets/UIMask.h"
@@ -150,6 +151,9 @@ namespace Opaax
 
         // An authored widget tree (.opaaxui). Each instance builds its own widgets from it.
         m_Registries.Resources().Register<UICanvasResource>(OPAAX_ID("UICanvas"));
+
+        // Any game struct registered with DataAssets(): one extension, the type is inside the file.
+        m_Registries.Resources().Register<DataAssetResource>(OPAAX_ID("DataAsset"));
     }
 
     void Engine::RegisterNativeUIWidgets()

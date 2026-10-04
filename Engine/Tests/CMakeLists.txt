@@ -57,6 +57,7 @@ set(OPAAX_TEST_SOURCES
     # ⑦-A P5a. The animation pair's shape one family over — a MoveMode is the clip, a Mover is the
     # library — so the resolution rules under test are the ones ⑥ S3 settled.
     Core/Engine/Subsystems/Resources/MoverAssetTests.cpp
+    Core/Engine/Subsystems/Resources/DataAssetTests.cpp
     Core/Engine/CameraResolveTests.cpp
     Core/Engine/ModuleRegistrarTests.cpp
     Core/Engine/InputManagerTests.cpp
