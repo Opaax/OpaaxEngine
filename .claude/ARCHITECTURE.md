@@ -542,7 +542,7 @@ editor-side `TPropertyDrawer<T>`, never a new `FLOAT_PROP`/`INT_PROP` macro here
   A label here is a *property name*, and the Inspector stacks every applicable drawer into one
   window — so two types that share a field name are one ImGui id, twice: the widgets fight over
   hover and active state, and ImGui 1.92 reports *"visible items with conflicting ID"* on hover.
-  Not an edge case: `DummyComponent` and `SpriteComponent` share `Position`, `Size` and `Color`
+  Not an edge case: `QuadComponent` and `SpriteComponent` share `Position`, `Size` and `Color`
   **by design**, so the collision arrived with the first entity carrying both. `TDrawerRegistry`
   therefore wraps every entry — generic *and* hand-written — in `ImGui::PushID(<drawn type name>)`.
   **The placement is the rule**: a `TPropertyDrawer` sees one field and cannot know what else the
@@ -662,7 +662,7 @@ unconditionally and `Each<TransformComponent>` is a complete view. That guarante
 it is what the editor stands on, and it was pulled a whole block forward *because* of that.
 *Amended 2026-09-13 (**§HR**): the position is LOCAL to the entity's parent; a root's local is its
 world. Readers ask `EntityHierarchy::WorldTransform`, never the field.*
-- **The hole it filled:** `Position` used to live separately on `SpriteComponent`, `DummyComponent`
+- **The hole it filled:** `Position` used to live separately on `SpriteComponent`, `QuadComponent`
   and `CameraComponent`, so one entity could carry three of them and they could disagree — and an
   entity carrying none had **no position at all**, which meant it could not be picked, framed, or
   drawn an icon. Unreal (`USceneComponent` on every `AActor`), Unity (a `Transform` you cannot
@@ -1434,7 +1434,7 @@ is current, which is the same source **IN8** already sends `Ctrl+S` to.
   cannot be told apart from "the gesture never arrived", and only one of those is fixable.
 
 **CAM5 — `CameraComponent::Position` is DEBT ON PURPOSE.** It carries the standing comment
-`SpriteComponent` and `DummyComponent` already carry: it moves the day a transform exists. That makes
+`SpriteComponent` and `QuadComponent` already carry: it moves the day a transform exists. That makes
 ③'s fold **three** components, not two — recorded in `.claude/plans/engine-sequence.md` §③.
 
 **CAM6 — What ① deliberately did NOT build** ([[L23]] — never an API with no caller): follow, shake,
@@ -2652,7 +2652,7 @@ new route shipped unbound.*
 **MR1** — The call-site API is **final now**; only the route *bodies* change (M0 counts; M3/M4 forward to
 real registries). Do not change how modules call in. **`Components()` went real in M3** and the call site
 did survive verbatim, because the authoring name is *optional*: omitted, `ComponentRoute` derives the C++
-type's leaf name (`Opaax::DummyComponent` → `"DummyComponent"`). That derived name is the key written into
+type's leaf name (`Opaax::QuadComponent` → `"QuadComponent"`). That derived name is the key written into
 map files, so renaming the C++ type orphans components already saved — pass an explicit name to pin it.
 Not silent when it happens: `MapFactory` warns per unknown component as it skips them.
 **`ModuleRegistrar` moved to the ENGINE layer in M3** (`Engine/Modules/`): it exists to front the engine

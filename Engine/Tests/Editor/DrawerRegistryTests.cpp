@@ -4,7 +4,7 @@
 #include <doctest.h>
 
 #include "Editor/Extensions/DrawerRegistry.h"
-#include "World/Components/DummyComponent.h"
+#include "World/Components/QuadComponent.h"
 #include "World/Components/TransformComponent.h"
 
 using namespace Opaax;
@@ -12,9 +12,9 @@ using namespace Opaax::Editor;
 
 namespace
 {
-    struct StubDummyDrawer
+    struct StubQuadDrawer
     {
-        void Draw(IEditorWidgets&, DummyComponent&) {}
+        void Draw(IEditorWidgets&, QuadComponent&) {}
     };
 }
 
@@ -22,10 +22,10 @@ TEST_CASE("DrawerRegistry: HasTarget knows typed and erased registrations, and n
 {
     ComponentDrawerRegistry lDrawers;
 
-    CHECK_FALSE(lDrawers.HasTarget(entt::type_hash<DummyComponent>::value()));
+    CHECK_FALSE(lDrawers.HasTarget(entt::type_hash<QuadComponent>::value()));
 
-    lDrawers.Register<DummyComponent, StubDummyDrawer>();
-    CHECK(lDrawers.HasTarget(entt::type_hash<DummyComponent>::value()));
+    lDrawers.Register<QuadComponent, StubQuadDrawer>();
+    CHECK(lDrawers.HasTarget(entt::type_hash<QuadComponent>::value()));
 
     // An erased entry names its target by id: the route the generic component drawer takes.
     const entt::id_type lTransformId = entt::type_hash<TransformComponent>::value();

@@ -234,6 +234,13 @@ namespace Opaax
                             entt::type_hash<T>::value());
         }
 
+        /**
+         * Lets files that use an old component name still load: InOldName resolves to the type now
+         * registered as InName. A file read this way warns once, and is written back with the new name.
+         * @return False if sealed, if InName is not registered, or if InOldName is already a name
+         */
+        bool AddAlias(OpaaxStringID InOldName, OpaaxStringID InName);
+
         /** Called by WorldManager::CreateWorld. After this, Register refuses. Safe to call twice. */
         void Seal() noexcept;
 
@@ -241,7 +248,7 @@ namespace Opaax
         // Lookup
         // =========================================================================
     public:
-        /** @return The entry registered under InName, or nullptr */
+        /** @return The entry registered under InName (or an alias of it), or nullptr */
         const IComponentEntry* FindByName(OpaaxStringID InName) const noexcept;
 
         /** @return The entry for InTypeId, or nullptr */
@@ -275,7 +282,15 @@ namespace Opaax
         // Members
         // =========================================================================
     private:
+        struct Alias
+        {
+            OpaaxStringID          OldName;
+            const IComponentEntry* Entry = nullptr;
+            mutable bool           bWarned = false;
+        };
+
         TDynArray<TUniquePtr<IComponentEntry>> m_Entries;
+        TDynArray<Alias>                      m_Aliases;
         bool                                  m_bSealed = false;
     };
 }

@@ -122,11 +122,11 @@ TEST_CASE("MapJson: round trip preserves guid, name, ownerMap and every componen
 
     EntityData lHero = MakeEntity(lHeroId, "Hero", lMap);
     lHero.Components.push_back(MakeComponent("Stats", nlohmann::json{{"Health", 100}, {"Speed", 4.5}}));
-    lHero.Components.push_back(MakeComponent("Dummy", nlohmann::json{{"Position", {12.0, -3.0}}}));
+    lHero.Components.push_back(MakeComponent("Quad", nlohmann::json{{"Position", {12.0, -3.0}}}));
     lSource.Entities.push_back(Move(lHero));
 
     EntityData lCrate = MakeEntity(lCrateId, "Crate", lMap);
-    lCrate.Components.push_back(MakeComponent("Dummy", nlohmann::json{{"Position", {0.0, 0.0}}}));
+    lCrate.Components.push_back(MakeComponent("Quad", nlohmann::json{{"Position", {0.0, 0.0}}}));
     lSource.Entities.push_back(Move(lCrate));
 
     MapData lParsed;
@@ -405,7 +405,7 @@ namespace
 
         EntityData lHero = MakeEntity(Guid::New(), "Hero", MapId("Level01"));
         lHero.Components.push_back(MakeComponent("Stats", nlohmann::json{{"Health", 100}, {"Speed", 4.5}}));
-        lHero.Components.push_back(MakeComponent("Dummy", nlohmann::json{{"Position", {12.0, -3.0}}}));
+        lHero.Components.push_back(MakeComponent("Quad", nlohmann::json{{"Position", {12.0, -3.0}}}));
         lData.Entities.push_back(Move(lHero));
 
         EntityData lBullet = MakeEntity(Guid::New(), "Bullet", MapId());   // runtime-spawned

@@ -82,7 +82,7 @@
 #include "World/Entity/Entity.h"
 #include "World/Components/CameraComponent.h"      // engine components
 #include "World/Components/ColliderComponent.h"    // drawn by default
-#include "World/Components/DummyComponent.h"
+#include "World/Components/QuadComponent.h"
 #include "World/Components/MoverComponent.h"
 #include "World/Components/PrefabInstanceComponent.h"
 #include "World/Components/RigidbodyComponent.h"
@@ -507,7 +507,7 @@ namespace Opaax::Editor
 
         // Custom: the component is identity (editing a guid would break the link).
         lDrawers.Register<PrefabInstanceComponent,  NativeComponentDrawers::PrefabInstanceComponentDrawer>();
-        lDrawers.Register<DummyComponent>();
+        lDrawers.Register<QuadComponent>();
 
         // Reflected, so the generic drawer is enough (enums become dropdowns).
         lDrawers.Register<ColliderComponent>();

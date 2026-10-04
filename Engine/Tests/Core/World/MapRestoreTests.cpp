@@ -4,7 +4,7 @@
 #include <doctest.h>
 
 #include "World/Components/ComponentRegistry.h"
-#include "World/Components/DummyComponent.h"
+#include "World/Components/QuadComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityMeta.h"
@@ -34,7 +34,7 @@ namespace
     void FillRegistry(ComponentRegistry& InRegistry, const bool bInTransformEssential = false)
     {
         REQUIRE(InRegistry.Register<TransformComponent>("Transform", bInTransformEssential));
-        REQUIRE(InRegistry.Register<DummyComponent>("Dummy"));
+        REQUIRE(InRegistry.Register<QuadComponent>("Quad"));
         REQUIRE(InRegistry.Register<HealthComponent>("Health"));
     }
 
@@ -83,7 +83,7 @@ TEST_CASE("Restore: capture -> edit -> restore round-trips BYTE-FOR-BYTE")
     lHero.Get<TransformComponent>().Position = Vector2F{12.f, -3.f};
 
     Entity lCrate = lWorld.CreateEntity("Crate", lMap);
-    lCrate.Add<DummyComponent>();
+    lCrate.Add<QuadComponent>();
 
     // An entity NOT in the record — it must come through the restore untouched.
     Entity lBystander = lWorld.CreateEntity("Bystander", lMap);
@@ -102,7 +102,7 @@ TEST_CASE("Restore: capture -> edit -> restore round-trips BYTE-FOR-BYTE")
     lHero.Get<TransformComponent>().Position = Vector2F{-500.f, 7.f};
     lHero.Get<HealthComponent>().Hp          = 3;
     lHero.Get<EntityMeta>().Name             = "Renamed";
-    lHero.Add<DummyComponent>();
+    lHero.Add<QuadComponent>();
     lCrate.Destroy();
 
     CHECK(MapFactory::Restore(lBefore, lWorld, lRegistry) == 2u);
@@ -226,11 +226,11 @@ TEST_CASE("Restore: REMOVES a component the record does not name — undo of an 
     const MapData lData = MapSerializer::CaptureEntities(lWorld, lRegistry,
                                                          TDynArray<EntityID>{ lHero.GetHandle() });
 
-    lHero.Add<DummyComponent>();
-    REQUIRE(lHero.Has<DummyComponent>());
+    lHero.Add<QuadComponent>();
+    REQUIRE(lHero.Has<QuadComponent>());
 
     CHECK(MapFactory::Restore(lData, lWorld, lRegistry) == 1u);
-    CHECK_FALSE(lHero.Has<DummyComponent>());
+    CHECK_FALSE(lHero.Has<QuadComponent>());
 }
 
 TEST_CASE("Restore: an ESSENTIAL component the record lacks is refused and STAYS")

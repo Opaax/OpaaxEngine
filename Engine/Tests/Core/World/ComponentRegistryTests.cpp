@@ -5,7 +5,7 @@
 #include <entt/entt.hpp>
 
 #include "World/Components/ComponentRegistry.h"
-#include "World/Components/DummyComponent.h"
+#include "World/Components/QuadComponent.h"
 #include "World/Entity/Entity.h"
 #include "World/World.h"
 #include "World/WorldManager.h"
@@ -49,7 +49,7 @@ namespace
     // Concept-satisfaction is a COMPILE-time gate, so it is asserted at compile time. A type
     // without the json pair simply won't instantiate Register<T> — no runtime case can show that.
     static_assert(CComponent<ProbeComponent>, "ProbeComponent must satisfy CComponent");
-    static_assert(CComponent<DummyComponent>, "DummyComponent must satisfy CComponent");
+    static_assert(CComponent<QuadComponent>, "QuadComponent must satisfy CComponent");
     static_assert(!CComponent<EntityMeta>,
                   "EntityMeta is identity, not user data — the snapshot core writes it by hand "
                   "and it must NOT be registrable as an ordinary component.");
@@ -84,7 +84,7 @@ TEST_CASE("ComponentRegistry: an unregistered type resolves to nullptr, not to s
     REQUIRE(lRegistry.Register<ProbeComponent>("Probe"));
 
     CHECK(lRegistry.FindByName(OpaaxStringID("NeverRegistered")) == nullptr);
-    CHECK(lRegistry.FindByTypeId(entt::type_hash<DummyComponent>::value()) == nullptr);
+    CHECK(lRegistry.FindByTypeId(entt::type_hash<QuadComponent>::value()) == nullptr);
 }
 
 TEST_CASE("ComponentRegistry: ForEach visits every entry in registration order")
@@ -92,14 +92,14 @@ TEST_CASE("ComponentRegistry: ForEach visits every entry in registration order")
     ComponentRegistry lRegistry;
 
     REQUIRE(lRegistry.Register<ProbeComponent>("Probe"));
-    REQUIRE(lRegistry.Register<DummyComponent>("Dummy"));
+    REQUIRE(lRegistry.Register<QuadComponent>("Quad"));
 
     TDynArray<OpaaxStringID> lSeen;
     lRegistry.ForEach([&](const IComponentEntry& InEntry) { lSeen.push_back(InEntry.GetName()); });
 
     REQUIRE(lSeen.size() == 2u);
     CHECK(lSeen[0] == OpaaxStringID("Probe"));
-    CHECK(lSeen[1] == OpaaxStringID("Dummy"));
+    CHECK(lSeen[1] == OpaaxStringID("Quad"));
 }
 
 // =============================================================================
@@ -110,7 +110,7 @@ TEST_CASE("ComponentRegistry: a duplicate NAME is refused (it would make a map f
     ComponentRegistry lRegistry;
 
     REQUIRE(lRegistry.Register<ProbeComponent>("Taken"));
-    CHECK_FALSE(lRegistry.Register<DummyComponent>("Taken"));
+    CHECK_FALSE(lRegistry.Register<QuadComponent>("Taken"));
 
     // The first registration must survive intact — a refusal is not a replacement.
     CHECK(lRegistry.Count() == 1u);
@@ -153,7 +153,7 @@ TEST_CASE("ComponentRegistry: Seal is idempotent and refuses every later registr
 
     // The whole point: a type accepted now would be missing from every entity in the world
     // that already exists, with no error anywhere.
-    CHECK_FALSE(lRegistry.Register<DummyComponent>("TooLate"));
+    CHECK_FALSE(lRegistry.Register<QuadComponent>("TooLate"));
     CHECK(lRegistry.Count() == 1u);
 }
 
@@ -175,7 +175,7 @@ TEST_CASE("WorldManager: the registries seal at the FIRST CreateWorld, not befor
     CHECK(lRegistries.Components().IsSealed());
 
     // And the seal means what it says.
-    CHECK_FALSE(lRegistries.Components().Register<DummyComponent>("TooLate"));
+    CHECK_FALSE(lRegistries.Components().Register<QuadComponent>("TooLate"));
 }
 
 TEST_CASE("WorldManager: a manager with no registries still creates worlds")
@@ -189,7 +189,7 @@ TEST_CASE("WorldManager: a manager with no registries still creates worlds")
     CHECK(lManager.GetWorldCount() == 1u);
 }
 
-TEST_CASE("Engine: DummyComponent is registered natively, DLL-side, and found exe-side")
+TEST_CASE("Engine: QuadComponent is registered natively, DLL-side, and found exe-side")
 {
     // Natives are the ENGINE's job now, done in its ctor before any subsystem exists.
     // Constructing an Engine only queues subsystem factories + registers natives — nothing
@@ -200,10 +200,10 @@ TEST_CASE("Engine: DummyComponent is registered natively, DLL-side, and found ex
     // type id below is computed HERE in the exe. A mismatch returns null — see
     // ComponentIdentityTests.cpp for why this can be trusted.
     const IComponentEntry* lEntry =
-        lEngine.GetRegistries().Components().FindByTypeId(entt::type_hash<DummyComponent>::value());
+        lEngine.GetRegistries().Components().FindByTypeId(entt::type_hash<QuadComponent>::value());
 
     REQUIRE(lEntry != nullptr);
-    CHECK(lEntry->GetName() == OpaaxStringID("Dummy"));
+    CHECK(lEntry->GetName() == OpaaxStringID("Quad"));
 }
 
 // =============================================================================
@@ -322,19 +322,41 @@ namespace
     };
 }
 
+TEST_CASE("ComponentRegistry: an alias loads an old name as the current type, and guards that name")
+{
+    ComponentRegistry lRegistry;
+    REQUIRE(lRegistry.Register<QuadComponent>("Quad"));
+
+    CHECK(lRegistry.AddAlias(OpaaxStringID("Dummy"), OpaaxStringID("Quad")));
+    CHECK(lRegistry.FindByName(OpaaxStringID("Dummy")) == lRegistry.FindByName(OpaaxStringID("Quad")));
+
+    // Saved back under the current name: the entry is the Quad one.
+    CHECK(lRegistry.FindByName(OpaaxStringID("Dummy"))->GetName() == OpaaxStringID("Quad"));
+
+    // The old name stays taken, or one file key would mean two types.
+    CHECK_FALSE(lRegistry.Register<ProbeComponent>("Dummy"));
+
+    // No alias to nothing, and no alias over a live name.
+    CHECK_FALSE(lRegistry.AddAlias(OpaaxStringID("Ghost"), OpaaxStringID("Missing")));
+    CHECK_FALSE(lRegistry.AddAlias(OpaaxStringID("Quad"), OpaaxStringID("Quad")));
+
+    lRegistry.Seal();
+    CHECK_FALSE(lRegistry.AddAlias(OpaaxStringID("Square"), OpaaxStringID("Quad")));
+}
+
 TEST_CASE("ComponentRegistry: an entry walks its component's fields without its C++ type")
 {
     ComponentRegistry lRegistry;
-    REQUIRE(lRegistry.Register<DummyComponent>("Dummy"));
+    REQUIRE(lRegistry.Register<QuadComponent>("Quad"));
     REQUIRE(lRegistry.Register<ProbeComponent>("Probe"));
 
-    const IComponentEntry* lDummy = lRegistry.FindByName(OpaaxStringID("Dummy"));
+    const IComponentEntry* lQuad = lRegistry.FindByName(OpaaxStringID("Quad"));
     const IComponentEntry* lProbe = lRegistry.FindByName(OpaaxStringID("Probe"));
-    REQUIRE(lDummy != nullptr);
+    REQUIRE(lQuad != nullptr);
     REQUIRE(lProbe != nullptr);
 
     // Only a type that lists its fields can be drawn generically.
-    CHECK(lDummy->IsReflected());
+    CHECK(lQuad->IsReflected());
     CHECK_FALSE(lProbe->IsReflected());
 
     World  lWorld("VisitTest");
@@ -342,18 +364,18 @@ TEST_CASE("ComponentRegistry: an entry walks its component's fields without its 
     EntryVisitor lVisitor;
 
     // Absent: nothing visited.
-    CHECK_FALSE(lDummy->VisitProperties(lWorld.GetRegistry(), lEntity.GetHandle(), lVisitor));
+    CHECK_FALSE(lQuad->VisitProperties(lWorld.GetRegistry(), lEntity.GetHandle(), lVisitor));
     CHECK(lVisitor.Names.empty());
 
-    lEntity.Add<DummyComponent>();
-    CHECK(lDummy->VisitProperties(lWorld.GetRegistry(), lEntity.GetHandle(), lVisitor));
+    lEntity.Add<QuadComponent>();
+    CHECK(lQuad->VisitProperties(lWorld.GetRegistry(), lEntity.GetHandle(), lVisitor));
 
     REQUIRE(lVisitor.Names.size() == 2u);
     CHECK(lVisitor.Names[0] == OpaaxString("Size"));
     CHECK(lVisitor.Names[1] == OpaaxString("Color"));
 
     // The edit reached the live component.
-    CHECK(lEntity.Get<DummyComponent>().Size.x == doctest::Approx(7.f));
+    CHECK(lEntity.Get<QuadComponent>().Size.x == doctest::Approx(7.f));
 
     // Not reflected: refused even when present.
     lEntity.Add<ProbeComponent>();

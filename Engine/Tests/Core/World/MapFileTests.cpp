@@ -12,7 +12,7 @@
 #include "Core/String/OpaaxUtf8.h"
 #include "Engine/Subsystems/Resources/ResourceManager.h"   // before MapResource — completes LoadContext
 #include "World/Components/ComponentRegistry.h"
-#include "World/Components/DummyComponent.h"
+#include "World/Components/QuadComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityMeta.h"
@@ -87,7 +87,7 @@ namespace
     void FillRegistry(ComponentRegistry& InRegistry)
     {
         REQUIRE(InRegistry.Register<TransformComponent>("Transform"));
-        REQUIRE(InRegistry.Register<DummyComponent>("Dummy"));
+        REQUIRE(InRegistry.Register<QuadComponent>("Quad"));
         REQUIRE(InRegistry.Register<StatsComponent>("Stats"));
     }
 
@@ -121,12 +121,12 @@ TEST_CASE("MapFile: World -> Capture -> Save -> MapResource -> Instantiate rebui
 
     Entity lHero = lSource.CreateEntity("Hero", lMap);
     lHero.Add<StatsComponent>(StatsComponent{100, 4.5f});
-    lHero.Add<DummyComponent>();
+    lHero.Add<QuadComponent>();
     lHero.Get<TransformComponent>().Position = Vector2F{12.f, -3.f};
 
     Entity lCrate = lSource.CreateEntity("Crate", lMap);
-    lCrate.Add<DummyComponent>();
-    lCrate.Get<DummyComponent>().Color = Vector4F{0.25f, 0.5f, 0.75f, 1.f};
+    lCrate.Add<QuadComponent>();
+    lCrate.Get<QuadComponent>().Color = Vector4F{0.25f, 0.5f, 0.75f, 1.f};
 
     const Guid lHeroId  = lHero.GetGuid();
     const Guid lCrateId = lCrate.GetGuid();
@@ -155,7 +155,7 @@ TEST_CASE("MapFile: World -> Capture -> Save -> MapResource -> Instantiate rebui
     Entity lRestoredCrate = lRestored.FindByGuid(lCrateId);
     REQUIRE(lRestoredCrate.IsValid());
     CHECK(lRestoredCrate.Get<EntityMeta>().Name == OpaaxString("Crate"));
-    CHECK(lRestoredCrate.Get<DummyComponent>().Color.z == doctest::Approx(0.75f));
+    CHECK(lRestoredCrate.Get<QuadComponent>().Color.z == doctest::Approx(0.75f));
 
     lResources.FlushAll();
 }
@@ -442,7 +442,7 @@ TEST_CASE("MapResource: ByteSize grows with the map")
         EntityData lEntity;
         lEntity.Id   = Guid::New();
         lEntity.Name = OpaaxString("Entity");
-        lEntity.Components.push_back(ComponentData{ OpaaxStringID("Dummy"), nlohmann::json::object() });
+        lEntity.Components.push_back(ComponentData{ OpaaxStringID("Quad"), nlohmann::json::object() });
         lPopulated.Data.Entities.push_back(Move(lEntity));
     }
 

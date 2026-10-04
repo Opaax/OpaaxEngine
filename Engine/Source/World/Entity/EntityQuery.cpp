@@ -4,7 +4,7 @@
 
 #include "Renderer/Text/Text2D.h"   // EstimateExtent
 
-#include "World/Components/DummyComponent.h"
+#include "World/Components/QuadComponent.h"
 #include "World/Components/SpriteComponent.h"
 #include "World/Components/TextComponent.h"
 #include "World/Components/TransformComponent.h"
@@ -34,7 +34,7 @@ namespace Opaax
             Int32 lRank = RANK_ANCHOR_ONLY;
 
             // Same defaults as DrawQuad.
-            if (InEntity.Has<DummyComponent>())
+            if (InEntity.Has<QuadComponent>())
             {
                 lRank = MakeRank(ERenderLayer::Default, 0);
             }
@@ -79,7 +79,7 @@ namespace Opaax
         // Same scale as the renderer, so the clickable size matches the drawn size.
         const Vector2F lScale = lWorldXf.Scale;
 
-        if (const DummyComponent* lQuad = InEntity.TryGet<DummyComponent>())
+        if (const QuadComponent* lQuad = InEntity.TryGet<QuadComponent>())
         {
             lBounds    = Bounds2D::FromCenterSizeRotated(lWorldXf.Position, lQuad->Size * lScale, lRotation);
             lHasExtent = true;

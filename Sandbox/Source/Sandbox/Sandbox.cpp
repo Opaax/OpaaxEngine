@@ -20,7 +20,7 @@ namespace
 
 void SandboxModule::OnRegister(Opaax::ModuleRegistrar& InRegistrar)
 {
-    // A game-owned component: saved and loaded like any engine type. (DummyComponent is an engine
+    // A game-owned component: saved and loaded like any engine type. (QuadComponent is an engine
     // type, registered by the engine.)
     InRegistrar.Components().Register<Sandbox::HealthComponent>();
 

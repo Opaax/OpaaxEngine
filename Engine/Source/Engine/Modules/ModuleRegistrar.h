@@ -14,7 +14,7 @@ namespace Opaax
     inline constexpr LogCategory LogModuleRegistrar{"ModuleRegistrar"};
 
     // =============================================================================
-    // DeriveTypeLeafName<T> — the type's name without namespace: "Opaax::DummyComponent" -> "DummyComponent".
+    // DeriveTypeLeafName<T> — the type's name without namespace: "Opaax::QuadComponent" -> "QuadComponent".
     //   Also strips MSVC's "class "/"struct " prefix.
     // =============================================================================
     template<typename T>
@@ -53,7 +53,7 @@ namespace Opaax
         /**
          * Registers T as a component.
          * @tparam T Any type satisfying CComponent
-         * @param InName Optional. Defaults to the type name ("DummyComponent").
+         * @param InName Optional. Defaults to the type name ("QuadComponent").
          * @return True if registered
          */
         template<CComponent T>

@@ -145,7 +145,7 @@ namespace Opaax
 // Lists the fields the editor can edit. Put it next to
 // NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT:
 //
-//   OPAAX_PROPERTIES(DummyComponent,
+//   OPAAX_PROPERTIES(QuadComponent,
 //       OPAAX_PROP(Position),
 //       OPAAX_PROP(Size).SetRange(1.f, 4096.f))
 // =============================================================================

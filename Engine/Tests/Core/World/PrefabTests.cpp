@@ -10,7 +10,7 @@
 
 #include "Engine/Subsystems/Resources/ResourceManager.h"   // before PrefabResource — completes LoadContext
 #include "World/Components/ComponentRegistry.h"
-#include "World/Components/DummyComponent.h"
+#include "World/Components/QuadComponent.h"
 #include "World/Components/PrefabInstanceComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Entity/Entity.h"
@@ -68,7 +68,7 @@ namespace
     void FillRegistry(ComponentRegistry& InRegistry)
     {
         REQUIRE(InRegistry.Register<TransformComponent>("Transform", /*bEssential*/true));
-        REQUIRE(InRegistry.Register<DummyComponent>("Dummy"));
+        REQUIRE(InRegistry.Register<QuadComponent>("Quad"));
         REQUIRE(InRegistry.Register<PrefabInstanceComponent>("PrefabInstance"));
     }
 
@@ -81,7 +81,7 @@ namespace
 
         Entity lBody = lAuthoring.CreateEntity("Body", MapId("Source"));
         lBody.Get<TransformComponent>().Position = Vector2F{3.f, 4.f};
-        lBody.Add<DummyComponent>();
+        lBody.Add<QuadComponent>();
 
         Entity lMuzzle = lAuthoring.CreateEntity("Muzzle", MapId("Source"));
         lMuzzle.Get<TransformComponent>().Position = Vector2F{-1.f, 0.5f};
@@ -376,7 +376,7 @@ TEST_CASE("Prefab: the FULL round trip — world entities -> prefab -> file -> t
     World lWorld("Session");
     Entity lA = lWorld.CreateEntity("Part A", MapId("Level01"));
     lA.Get<TransformComponent>().Position = Vector2F{7.f, 8.f};
-    lA.Add<DummyComponent>();
+    lA.Add<QuadComponent>();
     Entity lB = lWorld.CreateEntity("Part B", MapId("Level01"));
 
     const MapData    lCaptured = MapSerializer::CaptureEntities(
@@ -407,7 +407,7 @@ TEST_CASE("Prefab: the FULL round trip — world entities -> prefab -> file -> t
     if (lIsPartA)
     {
         CHECK(lPlaced.Get<TransformComponent>().Position.x == doctest::Approx(7.f));
-        CHECK(lPlaced.Has<DummyComponent>());
+        CHECK(lPlaced.Has<QuadComponent>());
     }
 }
 

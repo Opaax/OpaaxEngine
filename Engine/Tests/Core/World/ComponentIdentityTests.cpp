@@ -10,7 +10,7 @@
 
 #include <entt/entt.hpp>
 
-#include "World/Components/DummyComponent.h"
+#include "World/Components/QuadComponent.h"
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityMeta.h"
 #include "World/World.h"
@@ -71,11 +71,11 @@ TEST_CASE("entt type identity: a component added exe-side is visible to a DLL-si
 
     // Entity::Add<T> is a header template -> the emplace, and the pool it may create, happen
     // under the EXE's id.
-    lEntity.Add<DummyComponent>();
+    lEntity.Add<QuadComponent>();
 
     // World::FindByGuid routes through World.cpp (DLL side) to resolve the handle; reading the
     // component back through a differently-instantiated template must find the same storage.
     Entity lFound = lWorld.FindByGuid(lEntity.GetGuid());
     REQUIRE(lFound.IsValid());
-    CHECK(lFound.Has<DummyComponent>());
+    CHECK(lFound.Has<QuadComponent>());
 }

@@ -2,7 +2,7 @@
 
 #include "World/Components/CameraComponent.h"
 #include "World/Components/ColliderComponent.h"
-#include "World/Components/DummyComponent.h"
+#include "World/Components/QuadComponent.h"
 #include "World/Components/RigidbodyComponent.h"
 #include "World/Components/SpriteComponent.h"
 #include "World/Components/TransformComponent.h"
@@ -110,7 +110,8 @@ namespace Opaax
     {
         // Essential: every entity has one (CreateEntity adds it); it cannot be removed.
         m_Registries.Components().Register<TransformComponent>("Transform", /*bEssential*/true);
-        m_Registries.Components().Register<DummyComponent>("Dummy");
+        m_Registries.Components().Register<QuadComponent>("Quad");
+        m_Registries.Components().AddAlias("Dummy", "Quad");   // its old name, still read from older maps
         m_Registries.Components().Register<SpriteComponent>("Sprite");
         m_Registries.Components().Register<CameraComponent>("Camera");
         m_Registries.Components().Register<SpriteAnimatorComponent>("SpriteAnimator");

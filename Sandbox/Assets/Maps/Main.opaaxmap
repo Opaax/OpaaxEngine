@@ -84,7 +84,11 @@
         },
         {
             "components": {
-                "Dummy": {
+                "HealthComponent": {
+                    "Current": 100,
+                    "Max": 100
+                },
+                "Quad": {
                     "Color": {
                         "w": 1.0,
                         "x": 1.0,
@@ -95,10 +99,6 @@
                         "x": 120.0,
                         "y": 120.0
                     }
-                },
-                "HealthComponent": {
-                    "Current": 100,
-                    "Max": 100
                 },
                 "TagsComponent": {
                     "Tags": [
@@ -164,7 +164,11 @@
         },
         {
             "components": {
-                "Dummy": {
+                "HealthComponent": {
+                    "Current": 100,
+                    "Max": 100
+                },
+                "Quad": {
                     "Color": {
                         "w": 1.0,
                         "x": 0.20000000298023224,
@@ -175,10 +179,6 @@
                         "x": 120.0,
                         "y": 120.0
                     }
-                },
-                "HealthComponent": {
-                    "Current": 100,
-                    "Max": 100
                 },
                 "Sprite": {
                     "Color": {
@@ -242,7 +242,11 @@
         },
         {
             "components": {
-                "Dummy": {
+                "HealthComponent": {
+                    "Current": 100,
+                    "Max": 100
+                },
+                "Quad": {
                     "Color": {
                         "w": 1.0,
                         "x": 1.0,
@@ -253,10 +257,6 @@
                         "x": 120.0,
                         "y": 120.0
                     }
-                },
-                "HealthComponent": {
-                    "Current": 100,
-                    "Max": 100
                 },
                 "TagsComponent": {
                     "Tags": [
