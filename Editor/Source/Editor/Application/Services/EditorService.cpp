@@ -75,6 +75,8 @@
 #include "Engine/Subsystems/Resources/Types/Font/FontFamilyResource.h"
 #include "Editor/Resources/ResourcePreviewDrawers.h"   // what a preview draws (no ImGui here)
 #include "Editor/Properties/NativeComponentDrawers.h"
+#include "Editor/Properties/WidgetPropertyVisitor.h"
+#include "World/Components/ComponentRegistry.h"
 #include "World/World.h"
 #include "World/WorldManager.h"
 #include "World/Entity/Entity.h"
@@ -513,6 +515,55 @@ namespace Opaax::Editor
         lDrawers.Register<MoverComponent>();
     }
 
+    void EditorService::RegisterGenericComponentDrawers()
+    {
+        const ComponentRegistry&  lComponents = OpaaxApplication::GetAppService<IEngine>().GetRegistries().Components();
+        ComponentDrawerRegistry&  lDrawers    = m_Extensions.Drawers();
+        Uint64                    lAdded      = 0;
+        OpaaxString               lNames;   // PROBE
+
+        lComponents.ForEach([&](const IComponentEntry& InEntry)
+        {
+            if (!InEntry.IsReflected() || lDrawers.HasTarget(InEntry.GetTypeId()))
+            {
+                return;
+            }
+
+            // The registry owns its entries for the whole run, so the pointer outlives the drawer.
+            const IComponentEntry* lEntry = &InEntry;
+
+            lDrawers.RegisterErased(InEntry.GetTypeId(),
+                [lEntry](Entity& InSubject, IEditorWidgets& InWidgets, EditorContext&) -> bool
+                {
+                    EntityRegistry& lRegistry = InSubject.GetWorld()->GetRegistry();
+
+                    if (!lEntry->Has(lRegistry, InSubject.GetHandle()))
+                    {
+                        return false;
+                    }
+
+                    const char* lName = lEntry->GetName().CStr();
+                    InWidgets.PushId(lName);
+
+                    if (InWidgets.CollapsingHeader(lName))
+                    {
+                        WidgetPropertyVisitor lVisitor(InWidgets);
+                        lEntry->VisitProperties(lRegistry, InSubject.GetHandle(), lVisitor);
+                    }
+
+                    InWidgets.PopId();
+                    return true;
+                });
+
+            lNames += lNames.IsEmpty() ? "" : ", ";   // PROBE
+            lNames += InEntry.GetName().CStr();       // PROBE
+            ++lAdded;
+        });
+
+        OPAAX_LOG(LogEditorService, Info, "PROBE generic component drawers: {} ({})", lAdded,   // PROBE
+                  lNames.IsEmpty() ? "none" : lNames.CStr());
+    }
+
     void EditorService::RegisterNativeConfigDrawers()
     {
         // Engine and editor configs, through the same route a game's config would use. Drawn from their
@@ -931,6 +982,9 @@ namespace Opaax::Editor
         {
             InCollect(m_Extensions);
         }
+
+        // After the game module, so its own drawers win.
+        RegisterGenericComponentDrawers();
 
         // After the game module (its panels get a toggle too), before sealing.
         BindPanelToggles();

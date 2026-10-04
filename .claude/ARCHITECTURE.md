@@ -3079,7 +3079,7 @@ the worst of the three states, and no build or test can see it. So the list is m
 | Route | Where | Without it |
 |---|---|---|
 | `Components().Register<T>()` | `Engine::RegisterNativeComponents` | not addable, not serialized |
-| `Drawers().Register<T>()` | `EditorService::RegisterNativeDrawers` | **blank Inspector** — the ⑥ S4 bug |
+| `Drawers().Register<T, TDrawer>()` | only for a CUSTOM UI | a reflected type is drawn from its fields anyway (`RegisterGenericComponentDrawers`, 2026-10-04); an UNreflected one is still a **blank Inspector** — the ⑥ S4 bug |
 | `EntityQuery::TryGetBounds` + `DrawRank` | if it RENDERS | unclickable, wrong outline, "nothing to render" icon (**TX7**) |
 | a draw pass | `RendererManager` | invisible |
 

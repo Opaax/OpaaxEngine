@@ -8,6 +8,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Core/Reflection/OpaaxProperty.h"
+#include "Engine/Reflection/PropertyVisitor.h"
 #include "Engine/Subsystems/Resources/ResourcePath.h"
 #include "Engine/Subsystems/Resources/ResourceTypeID.hpp"
 #include "World/Components/ComponentConcept.hpp"
@@ -71,6 +72,16 @@ namespace Opaax
          * Lets a loader of untyped JSON load them up front. Found from the property list at registration.
          */
         virtual const TDynArray<HardRefField>& GetHardRefFields() const = 0;
+
+        /** True when the type lists its fields (OPAAX_PROPERTIES), so it can be visited. */
+        virtual bool IsReflected() const = 0;
+
+        /**
+         * Walks InEntity's component fields, in declaration order. Lets the editor draw a game's
+         * component with no code written for it.
+         * @return False when InEntity has no such component, or the type is not reflected
+         */
+        virtual bool VisitProperties(EntityRegistry& InRegistry, EntityID InEntity, IPropertyVisitor& InVisitor) const = 0;
     };
 
     // =============================================================================
@@ -127,6 +138,21 @@ namespace Opaax
         {
             T& lComponent = InRegistry.get_or_emplace<T>(InEntity);
             InJson.get_to(lComponent);
+        }
+
+        bool IsReflected() const override { return CReflected<T>; }
+
+        bool VisitProperties(EntityRegistry& InRegistry, EntityID InEntity, IPropertyVisitor& InVisitor) const override
+        {
+            if constexpr (CReflected<T>)
+            {
+                if (T* lComponent = InRegistry.try_get<T>(InEntity))
+                {
+                    ::Opaax::VisitProperties(*lComponent, InVisitor);
+                    return true;
+                }
+            }
+            return false;
         }
 
     private:

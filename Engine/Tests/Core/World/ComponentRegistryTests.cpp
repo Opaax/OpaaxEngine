@@ -289,3 +289,73 @@ TEST_CASE("ComponentEntry: Save on an entity without the component yields a null
     // Capture asks Has() before Save(), but a null return keeps the entry honest on its own.
     CHECK(lEntry->Save(lWorld.GetRegistry(), lEntity.GetHandle()).is_null());
 }
+
+namespace
+{
+    /** Counts what it sees and edits Size, the way the editor's widgets would. */
+    class EntryVisitor final : public IPropertyVisitor
+    {
+    public:
+        TDynArray<OpaaxString> Names;
+
+        void Visit(const char* InName, Vector2F& InValue, const PropertyMeta&) override
+        {
+            Names.emplace_back(InName);
+            InValue = { 7.f, 8.f };
+        }
+        void Visit(const char* InName, LinearColor&, const PropertyMeta&) override { Names.emplace_back(InName); }
+
+        void Visit(const char*, bool&, const PropertyMeta&) override {}
+        void Visit(const char*, Int16&, const PropertyMeta&) override {}
+        void Visit(const char*, Int32&, const PropertyMeta&) override {}
+        void Visit(const char*, Uint32&, const PropertyMeta&) override {}
+        void Visit(const char*, float&, const PropertyMeta&) override {}
+        void Visit(const char*, Vector3F&, const PropertyMeta&) override {}
+        void Visit(const char*, Vector4F&, const PropertyMeta&) override {}
+        void Visit(const char*, OpaaxString&, const PropertyMeta&) override {}
+        void Visit(const char*, OpaaxStringID&, const PropertyMeta&) override {}
+        void VisitEnum(const char*, const char* const*, Uint32, Uint32&, const PropertyMeta&) override {}
+        void VisitResourcePath(const char*, OpaaxString&, Uint32, const PropertyMeta&) override {}
+        bool BeginGroup(const char*, const PropertyMeta&) override { return true; }
+        void EndGroup() override {}
+        void VisitUnsupported(const char*, std::string_view) override {}
+    };
+}
+
+TEST_CASE("ComponentRegistry: an entry walks its component's fields without its C++ type")
+{
+    ComponentRegistry lRegistry;
+    REQUIRE(lRegistry.Register<DummyComponent>("Dummy"));
+    REQUIRE(lRegistry.Register<ProbeComponent>("Probe"));
+
+    const IComponentEntry* lDummy = lRegistry.FindByName(OpaaxStringID("Dummy"));
+    const IComponentEntry* lProbe = lRegistry.FindByName(OpaaxStringID("Probe"));
+    REQUIRE(lDummy != nullptr);
+    REQUIRE(lProbe != nullptr);
+
+    // Only a type that lists its fields can be drawn generically.
+    CHECK(lDummy->IsReflected());
+    CHECK_FALSE(lProbe->IsReflected());
+
+    World  lWorld("VisitTest");
+    Entity lEntity = lWorld.CreateEntity("Visited");
+    EntryVisitor lVisitor;
+
+    // Absent: nothing visited.
+    CHECK_FALSE(lDummy->VisitProperties(lWorld.GetRegistry(), lEntity.GetHandle(), lVisitor));
+    CHECK(lVisitor.Names.empty());
+
+    lEntity.Add<DummyComponent>();
+    CHECK(lDummy->VisitProperties(lWorld.GetRegistry(), lEntity.GetHandle(), lVisitor));
+
+    REQUIRE(lVisitor.Names.size() == 2u);
+    CHECK(lVisitor.Names[0] == OpaaxString("Size"));
+    CHECK(lVisitor.Names[1] == OpaaxString("Color"));
+
+    // The edit reached the live component.
+    CHECK(lEntity.Get<DummyComponent>().Size.x == doctest::Approx(7.f));
+
+    // Not reflected: refused even when present.
+    lEntity.Add<ProbeComponent>();
+    CHECK_FALSE(lProbe->VisitProperties(lWorld.GetRegistry(), lEntity.GetHandle(), lVisitor));
+}

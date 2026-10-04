@@ -130,6 +130,12 @@ namespace Opaax::Editor
         void RegisterNativeConfigDrawers();
 
         /**
+         * Gives every reflected component that has no drawer (typically a game's) the generic one, drawn
+         * through its registry entry. After the game's editor module, so a custom drawer still wins.
+         */
+        void RegisterGenericComponentDrawers();
+
+        /**
          * Registers the editor's viewport tools (gizmo mode, snapping, grid, pivot, space): order and
          * grouping only; the widgets are in Editor/Toolbar/EditorNativeViewportTools.h.
          * Runs after RegisterNativeEditorCommand (the mode buttons dispatch by tag).

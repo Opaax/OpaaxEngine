@@ -5,6 +5,7 @@
 #include "Core/Reflection/OpaaxEnum.h"   // CEnumWithValues
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
+#include "Engine/Reflection/PropertyVisitor.h"            // EnumLabels
 #include "Engine/Subsystems/Resources/ResourcePath.h"     // TResourcePath
 #include "Engine/Subsystems/Resources/ResourceTypeID.hpp" // ResourceTypeID
 #include "Editor/Properties/PropertyDrawer.h"
@@ -45,6 +46,21 @@ namespace Opaax::Editor
     // Every resource reference at once. Filled by dragging a file from the Resource Browser onto it.
     //   A file of another resource type is refused (no highlight, the drag stays live).
     // =============================================================================
+    /**
+     * A resource reference as a drop target, for any resource type. Shared by the typed drawer below
+     * and by the type-erased one.
+     * @param InResourceTypeId Only files of this resource type are accepted
+     */
+    void DrawResourcePathField(IEditorWidgets& InWidgets, const char* InLabel, OpaaxString& InPath,
+                               Uint32 InResourceTypeId);
+
+    /**
+     * An enum as a dropdown over its labels. Shared by the typed drawer below and the type-erased one.
+     * @param InOutIndex The selected label; written when the user picks another
+     */
+    void DrawEnumIndexField(IEditorWidgets& InWidgets, const char* InLabel, const char* const* InLabels,
+                            Uint32 InCount, Uint32& InOutIndex);
+
     // One specialization for both load policies (soft or hard only changes what the loader does).
     template<typename TResource, EResourceLoad TLoad>
     struct TPropertyDrawer<TResourcePath<TResource, TLoad>>
@@ -52,29 +68,7 @@ namespace Opaax::Editor
         static void Draw(IEditorWidgets& InWidgets, const char* InLabel,
                          TResourcePath<TResource, TLoad>& InValue, const PropertyMeta&)
         {
-            InWidgets.PushId(InLabel);
-
-            // A button, which is the drop target. The full path is its tooltip (the label truncates).
-            const char* lText = InValue.IsEmpty() ? "(drop a resource here)" : InValue.Path.CStr();
-
-            InWidgets.Button(lText, -1.f, InValue.IsEmpty() ? nullptr : InValue.Path.CStr());
-
-            // Right after the receiving widget; opens and closes the drop target itself.
-            if (OpaaxString lDropped; AcceptResourceDragPayload(ResourceTypeID::Get<TResource>(), lDropped))
-            {
-                InValue.Path = Move(lDropped);
-            }
-
-            if (!InValue.IsEmpty())
-            {
-                InWidgets.SameLine();
-                if (InWidgets.SmallButton("x")) { InValue.Path = OpaaxString(); }
-            }
-
-            InWidgets.SameLine();
-            InWidgets.Text(InLabel);
-
-            InWidgets.PopId();
+            DrawResourcePathField(InWidgets, InLabel, InValue.Path, ResourceTypeID::Get<TResource>());
         }
     };
 
@@ -83,27 +77,16 @@ namespace Opaax::Editor
     {
         static void Draw(IEditorWidgets& InWidgets, const char* InLabel, T& InValue, const PropertyMeta&)
         {
-            if (!InWidgets.BeginCombo(InLabel, ToString(InValue)))
+            constexpr Uint32 lCount = static_cast<Uint32>(EnumValueCount<T>());
+
+            Uint32 lIndex = 0;
+            for (Uint32 i = 0; i < lCount; ++i)
             {
-                return;
+                if (TEnumValues<T>::Values[i] == InValue) { lIndex = i; break; }
             }
 
-            for (const T lCandidate : TEnumValues<T>::Values)
-            {
-                const bool bSelected = lCandidate == InValue;
-
-                if (InWidgets.Selectable(ToString(lCandidate), bSelected))
-                {
-                    InValue = lCandidate;
-                }
-
-                if (bSelected)
-                {
-                    InWidgets.SetDefaultFocus();
-                }
-            }
-
-            InWidgets.EndCombo();
+            DrawEnumIndexField(InWidgets, InLabel, PropertyVisitorDetail::EnumLabels<T>(), lCount, lIndex);
+            InValue = TEnumValues<T>::Values[lIndex];
         }
     };
 }

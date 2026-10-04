@@ -6,8 +6,6 @@
 #include "Commands/SandboxEditorCommandTags.h"
 #include "Commands/ValidateSandboxCommand.h"
 #include "Drawers/TagsComponentDrawer.h"
-#include "Components/GunComponent.h"
-#include "Components/HealthComponent.h"
 #include "Resources/WaveResource.h"
 
 using namespace Opaax;
@@ -30,13 +28,8 @@ void SandboxEditorModule::OnRegister(Opaax::Editor::EditorExtensionRegistrar& In
     InRegistrar.TitleBar().Category("Tools").SubCategory("Debug")
                .AddCommand("Validate Sandbox", SandboxEditor::Tags::SANDBOX_COMMAND_VALIDATE);
 
-    // The game's own components only (engine components are registered by
-    // EditorService::RegisterNativeDrawers). The default drawer, built from OPAAX_PROPERTIES.
-    InRegistrar.Drawers().Register<Sandbox::HealthComponent>();
-
-    // Same default drawer; the two prefab fields accept a .opaaxprefab dragged from the browser.
-    InRegistrar.Drawers().Register<Sandbox::GunComponent>();
-
+    // Components with OPAAX_PROPERTIES (Health, Gun) need no line here: the editor draws them from
+    // their fields. Register a drawer only to replace that UI.
     // Hand-written: tags are added/removed from a validated vocabulary, not typed as a field.
     InRegistrar.Drawers().Register<Sandbox::TagsComponent, TagsComponentDrawer>();
 
