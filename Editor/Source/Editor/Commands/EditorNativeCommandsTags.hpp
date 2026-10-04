@@ -94,6 +94,7 @@ namespace Opaax::Editor::Tags
     //Mover
     inline const OpaaxTag EDITOR_COMMAND_SAVE_MOVE_MODE = OpaaxTag("Editor.Command.SaveMoveMode");
     inline const OpaaxTag EDITOR_COMMAND_SAVE_MOVER     = OpaaxTag("Editor.Command.SaveMover");
+    inline const OpaaxTag EDITOR_COMMAND_SAVE_DATA_ASSET = OpaaxTag("Editor.Command.SaveDataAsset");
 
     // Input: an action and its mapping context are separate assets, saved separately.
     inline const OpaaxTag EDITOR_COMMAND_SAVE_INPUT_ACTION = OpaaxTag("Editor.Command.SaveInputAction");

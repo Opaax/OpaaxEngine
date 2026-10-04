@@ -5,6 +5,7 @@
 #include "Components/HealthComponent.h"
 #include "Components/TagsComponent.h"
 #include "Resources/WaveResource.h"
+#include "Data/EnemyStats.h"
 #include "Systems/HudSubsystem.h"
 #include "Systems/PauseMenuSubsystem.h"
 #include "Systems/PlayerControlSubsystem.h"
@@ -45,6 +46,9 @@ void SandboxModule::OnRegister(Opaax::ModuleRegistrar& InRegistrar)
     // A resource type the engine does not know, with its own extension. Registered here (not
     // editor-side) because a wave is game content, so Sandbox.exe needs it too.
     InRegistrar.Resources().Register<Sandbox::WaveResource>();
+
+    // A data asset type: this line is all it takes to get .opaaxdata files of it, editable in the editor.
+    InRegistrar.DataAssets().Register<Sandbox::EnemyStats>();
 
     OPAAX_LOG(LogSandboxModule, Info,
         "RegisterModule: components={}, worldSubsystems={}, resourceFormats={}",

@@ -14,6 +14,8 @@
 #include "Editor/Operation/ClipOperations.h"
 #include "Editor/Operation/LibraryOperations.h"
 #include "Editor/Operation/InputOperations.h"
+#include "Editor/Operation/DataAssetOperations.h"
+#include "Editor/Resources/Types/DataAsset/EditorDataAssetDocument.h"
 #include "Editor/Operation/MoverOperations.h"
 #include "Editor/Operation/FontFamilyOperations.h"
 #include "Editor/Operation/UICanvasOperations.h"
@@ -606,6 +608,17 @@ namespace Opaax::Editor
         }
 
         MoveModeOps::Save(InContext);
+    }
+
+    void SaveDataAssetCommand::Execute(EditorContext& InContext, const Params&)
+    {
+        if (!InContext.DataAssetDocument.IsOpen())
+        {
+            OPAAX_LOG(LogEditorCommands, Warn, "Save Data Asset ignored — no data asset is open");
+            return;
+        }
+
+        DataAssetOps::Save(InContext);
     }
 
     void SaveMoverCommand::Execute(EditorContext& InContext, const Params&)

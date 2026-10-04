@@ -23,6 +23,7 @@
 #include "Editor/Resources/Types/Input/EditorInputActionDocument.h"
 #include "Editor/Resources/Types/Input/EditorInputMappingContextDocument.h"
 #include "Editor/Resources/Types/Mover/EditorMoveModeDocument.h"
+#include "Editor/Resources/Types/DataAsset/EditorDataAssetDocument.h"
 #include "Editor/Resources/Types/Mover/EditorMoverDocument.h"
 #include "Editor/PIE/PlayInEditor.h"
 #include "Editor/UI/IEditorGui.h"
@@ -326,6 +327,7 @@ namespace Opaax::Editor
         TUniquePtr<EditorMoverDocument>            m_MoverDocument;
         TUniquePtr<EditorInputActionDocument>      m_InputActionDocument;
         TUniquePtr<EditorInputMappingContextDocument> m_InputMapDocument;
+        TUniquePtr<EditorDataAssetDocument>           m_DataAssetDocument;
         
         TUniquePtr<EditorContext>       m_Context;
         

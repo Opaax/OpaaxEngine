@@ -30,6 +30,8 @@
 #include "Editor/Panels/AnimationClipPanel.h"
 #include "Editor/Panels/AnimationLibraryPanel.h"
 #include "Editor/Panels/MoveModePanel.h"
+#include "Editor/Panels/DataAssetPanel.h"
+#include "Engine/Subsystems/Resources/Types/DataAsset/DataAssetResource.h"
 #include "Editor/Panels/InputActionPanel.h"
 #include "Editor/Panels/InputMappingContextPanel.h"
 #include "Editor/Panels/MoverPanel.h"
@@ -166,6 +168,7 @@ namespace Opaax::Editor
         m_MoverDocument     = MakeUnique<EditorMoverDocument>();
         m_InputActionDocument = MakeUnique<EditorInputActionDocument>();
         m_InputMapDocument    = MakeUnique<EditorInputMappingContextDocument>();
+        m_DataAssetDocument   = MakeUnique<EditorDataAssetDocument>();
     }
 
     void EditorService::ClearEditorSystems()
@@ -211,6 +214,7 @@ namespace Opaax::Editor
             *m_MoverDocument,
             *m_InputActionDocument,
             *m_InputMapDocument,
+            *m_DataAssetDocument,
             m_Extensions,
             m_Gui->Panels(),
             *m_Preview,
@@ -366,6 +370,7 @@ namespace Opaax::Editor
         lPanelsRegistry.Register<AnimationLibraryPanel>(PanelDesc{.Id = AnimationLibraryPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_LIBRARY});
         lPanelsRegistry.Register<MoveModePanel>(PanelDesc{.Id = MoveModePanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_MOVE_MODE});
         lPanelsRegistry.Register<MoverPanel>(PanelDesc{.Id = MoverPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_MOVER});
+        lPanelsRegistry.Register<DataAssetPanel>(PanelDesc{.Id = DataAssetPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_DATA_ASSET});
         lPanelsRegistry.Register<InputActionPanel>(PanelDesc{.Id = InputActionPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_INPUT_ACTION});
         lPanelsRegistry.Register<InputMappingContextPanel>(PanelDesc{.Id = InputMappingContextPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_INPUT_MAP});
         lPanelsRegistry.Register<FontFamilyPanel>(PanelDesc{.Id = FontFamilyPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_FAMILY});
@@ -420,6 +425,7 @@ namespace Opaax::Editor
         lCommands.Register<SaveLibraryCommand>(Tags::EDITOR_COMMAND_SAVE_LIBRARY);
         lCommands.Register<SaveMoveModeCommand>(Tags::EDITOR_COMMAND_SAVE_MOVE_MODE);
         lCommands.Register<SaveMoverCommand>(Tags::EDITOR_COMMAND_SAVE_MOVER);
+        lCommands.Register<SaveDataAssetCommand>(Tags::EDITOR_COMMAND_SAVE_DATA_ASSET);
         lCommands.Register<SaveInputActionCommand>(Tags::EDITOR_COMMAND_SAVE_INPUT_ACTION);
         lCommands.Register<SaveInputMapCommand>(Tags::EDITOR_COMMAND_SAVE_INPUT_MAP);
         lCommands.Register<SaveFamilyCommand>(Tags::EDITOR_COMMAND_SAVE_FAMILY);
@@ -672,6 +678,17 @@ namespace Opaax::Editor
                 if (InContext.MoveModeDocument.Open(InFile.AbsPath))
                 {
                     InContext.Panels.SetVisible(MoveModePanel::PanelID(), true);
+                }
+            });
+
+        // Every data asset type opens the same panel; its fields come from the registered struct.
+        m_Extensions.ResourceTypes().Register<DataAssetResource>()
+            .SetGlyph(OpaaxString("[D]"))
+            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
+            {
+                if (InContext.DataAssetDocument.Open(InFile.AbsPath, InContext.Engine.GetRegistries().DataAssets()))
+                {
+                    InContext.Panels.SetVisible(DataAssetPanel::PanelID(), true);
                 }
             });
 
