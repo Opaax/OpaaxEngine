@@ -517,10 +517,8 @@ namespace Opaax::Editor
 
     void EditorService::RegisterGenericComponentDrawers()
     {
-        const ComponentRegistry&  lComponents = OpaaxApplication::GetAppService<IEngine>().GetRegistries().Components();
-        ComponentDrawerRegistry&  lDrawers    = m_Extensions.Drawers();
-        Uint64                    lAdded      = 0;
-        OpaaxString               lNames;   // PROBE
+        const ComponentRegistry& lComponents = OpaaxApplication::GetAppService<IEngine>().GetRegistries().Components();
+        ComponentDrawerRegistry& lDrawers    = m_Extensions.Drawers();
 
         lComponents.ForEach([&](const IComponentEntry& InEntry)
         {
@@ -554,14 +552,7 @@ namespace Opaax::Editor
                     InWidgets.PopId();
                     return true;
                 });
-
-            lNames += lNames.IsEmpty() ? "" : ", ";   // PROBE
-            lNames += InEntry.GetName().CStr();       // PROBE
-            ++lAdded;
         });
-
-        OPAAX_LOG(LogEditorService, Info, "PROBE generic component drawers: {} ({})", lAdded,   // PROBE
-                  lNames.IsEmpty() ? "none" : lNames.CStr());
     }
 
     void EditorService::RegisterNativeConfigDrawers()
