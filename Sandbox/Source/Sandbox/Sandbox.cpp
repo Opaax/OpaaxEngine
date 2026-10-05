@@ -6,6 +6,7 @@
 #include "Components/TagsComponent.h"
 #include "Resources/WaveResource.h"
 #include "Data/EnemyStats.h"
+#include "Data/WeaponStats.h"
 #include "Components/EnemyComponent.h"
 #include "Systems/HudSubsystem.h"
 #include "Systems/PauseMenuSubsystem.h"
@@ -50,6 +51,7 @@ void SandboxModule::OnRegister(Opaax::ModuleRegistrar& InRegistrar)
 
     // A data asset type: this line is all it takes to get .opaaxdata files of it, editable in the editor.
     InRegistrar.DataAssets().Register<Sandbox::EnemyStats>();
+    InRegistrar.DataAssets().Register<Sandbox::WeaponStats>();
 
     // A component pointing at one of those assets (the editor draws it with no code of its own).
     InRegistrar.Components().Register<Sandbox::EnemyComponent>();
