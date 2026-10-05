@@ -421,9 +421,6 @@ namespace Opaax::Editor
                 DataAssetFile::Contents lContents;
                 m_DragSubTypePath = InFile.AbsPath;
                 m_DragSubTypeId   = DataAssetFile::Load(InFile.AbsPath, lContents) ? lContents.Type.GetId() : 0;
-
-                OPAAX_LOG(LogResourceBrowserPanel, Info, "PROBE dragging data asset '{}' holding '{}'",   // PROBE
-                          InFile.Name.CStr(), m_DragSubTypeId != 0 ? lContents.Type.CStr() : "(unreadable)");
             }
 
             const Uint32 lSubType = lType.Format->TypeId == ResourceTypeID::Get<DataAssetResource>() ? m_DragSubTypeId : 0;
