@@ -2093,6 +2093,8 @@ warning.
   either, and `Docs/TODO.txt` reserves asset creation for a factory pattern ("Create asset type
   (Unreal pattern? asset action + Factory?)"). Building a one-off menu entry now would pre-empt that
   design. **Trigger: that factory, or the first time copying a file to start one costs real time.**
+  *(2026-10-05: the trigger is set — the Right-Click Actions block owns "Create", and data assets
+  (**DA6**) are its first customer.)*
 
 **AN9 — Named, not built:** notify tracks (`{Uint32 Tick; OpaaxTag Tag;}` — **I14**'s tag is already
 the right type and the subsystem already reaches the bus through `WorldContext::Events`, so it is
@@ -2598,6 +2600,60 @@ the same reason RHI's did, **`BackendFromString` does not exist**: the enum json
 *The rule is about the SEAM (`IPhysicsWorld.h`, and `PhysicsAPI.h` which includes it), not about
 `PhysicsTypes.h`* — that one is PODs over Core with no backend and no interface, so P4's
 `WorldBounds` group includes it for `EWorldBoundsResponse` at no cost.
+
+---
+
+## DA — Data assets and the runtime type schema (block DA, 2026-10-04/05 — CLOSED, user-verified; record `.claude/plans/data-assets.md`)
+
+Why it exists: the first game (removed) showed that one "struct of numbers as a file" cost 7 files /
+~540 lines, and that a game component was a blank Inspector unless its editor module registered it
+again. Gregory (*GEA* §14.2–14.3): the editor's object model may differ from the runtime's, and a
+type SCHEMA (fields, widget hints, defaults) is what drives it. `OPAAX_PROPERTIES` already was that
+schema; only compile-time templates could read it.
+
+**DA1 — `IPropertyVisitor` is the schema at runtime** (`Engine/Reflection/PropertyVisitor.h`). One
+virtual per field kind the editor can draw (bool, Int16/32, Uint32, float, Vector2/3/4, LinearColor,
+OpaaxString, OpaaxStringID), an enum as an index into its labels, a resource path + its
+`ResourceTypeID`, a data asset ref + its data type, groups for nested reflected structs, and
+`VisitUnsupported` — a field nothing can draw is REPORTED, never silently dropped (that silence was the
+blank-Inspector bug). `VisitProperties<T>` is generated from `GetProperties()` with the same
+`InheritMeta` rules as `DrawProperty`. The editor's `WidgetPropertyVisitor` forwards every visit to the
+SAME `TPropertyDrawer<T>`, so a field looks identical whichever path drew it.
+
+**DA2 — A reflected component needs NO editor code.** `IComponentEntry::VisitProperties` walks a
+component through its registry entry; `EditorService::RegisterGenericComponentDrawers` runs after the
+game's editor module and gives every reflected component without a drawer the generic one.
+`DrawerRegistry::HasTarget` (keyed by `TypeIdOf`) is what lets a custom drawer still win. **MR2i**'s
+drawer row is amended accordingly.
+
+**DA3 — One resource type for every data struct; the type is INSIDE the file.** A game writes a struct
+with `OPAAX_PROPERTIES` + `NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT` and calls
+`DataAssets().Register<T>()`. `.opaaxdata` = `{"Data": {...}, "Type": "T"}`; the saved name is the C++
+leaf name (no custom names — renaming the struct renames it in files, like an unnamed component).
+`DataAssetResource` is FailFast and needs no registry to LOAD (it keeps `Type` + raw `Data`);
+`As<T>()` reads it as T on first use and caches it, and `Reload` replaces the whole resource so the
+cache follows — which is what makes a held `TDataAssetHandle<T>` read the newly saved values. A wrong
+type is null + one warning; a missing key keeps T's default; a value of the wrong JSON type fails
+rather than guessing. `DataAssetTypeRegistry` (6th member of `EngineRegistries`) serves the EDITOR:
+create / read any registered type without its C++ type.
+
+**DA4 — One editor document and one panel for every data type.** `EditorDataAssetDocument` owns its
+copy (**AN8**); an unregistered type is shown read-only as raw JSON and never rewritten. Undo stores the
+whole value as JSON before/after a gesture (`DataAssetEdit`, keyed by path). Save writes, then
+`ResourceOps::SavedToDisk` reloads.
+
+**DA5 — A typed picker is a drag payload SUB-TYPE.** `TDataAssetRef<T>` (light header: the field +
+JSON; `DataAssetHandle.h` has the loader) draws as a drop target that accepts only a `.opaaxdata`
+holding T. The drop target has no paths, so the DRAG SOURCE (Resource Browser) reads the dragged file's
+`Type` once per file and puts its id in the payload. `ResourceDragPayload.h` is pure (encode / decode
+/ `Accepts`) and tested; sub-type 0 on a target keeps every pre-existing drop field unchanged, and an
+unreadable data asset carries sub-type 0, which a typed field refuses.
+
+**DA6 — Named, not built:** "Create ▸ Data Asset ▸ T" belongs to the Right-Click Actions block (their
+call), on **AN8**'s reserved factory ground · migrating `MoveModeData` onto data assets (deletes ~7
+files) · default-value propagation (Gregory's schemas omit unchanged keys so a new default reaches old
+files; ours writes every key) · Behaviours (behaviour in the property class), the next block they
+discussed.
 
 ---
 
