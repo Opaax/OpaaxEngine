@@ -109,6 +109,8 @@ namespace Opaax
                                  TransformComponent& InTransform, IPhysicsWorld& InWorld,
                                  const float InDelta)
     {
+        const Entity lOwner{ InEntity, &m_Context->OwningWorld };
+
         // ---- pending mode switch, applied between steps ---------------------------------------
         if (InMover.PendingMode.IsValid() && InMover.PendingMode != InMover.ModeName)
         {
@@ -126,7 +128,7 @@ namespace Opaax
                 {
                     if (IMoverMode* lFrom = m_Modes->Find(lFromParams->Mode))
                     {
-                        MoverTickContext lExit{ InWorld, InMover, InTransform, *lFromParams, 0.f, 0 };
+                        MoverTickContext lExit{ InWorld, InMover, InTransform, *lFromParams, 0.f, 0, lOwner };
                         lFrom->OnModeExit(lExit);
                     }
                 }
@@ -136,7 +138,7 @@ namespace Opaax
 
                 if (IMoverMode* lTo = m_Modes->Find(lToParams->Mode))
                 {
-                    MoverTickContext lEnter{ InWorld, InMover, InTransform, *lToParams, 0.f, 0 };
+                    MoverTickContext lEnter{ InWorld, InMover, InTransform, *lToParams, 0.f, 0, lOwner };
                     lTo->OnModeEnter(lEnter);
                 }
 
@@ -164,7 +166,7 @@ namespace Opaax
             return;
         }
 
-        MoverTickContext lTick{ InWorld, InMover, InTransform, *lParams, InDelta, ToUserData(InEntity) };
+        MoverTickContext lTick{ InWorld, InMover, InTransform, *lParams, InDelta, ToUserData(InEntity), lOwner };
         lMode->Tick(lTick);
     }
 

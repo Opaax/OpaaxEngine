@@ -2864,3 +2864,44 @@ while `ImGui::IsAnyItemActive()` and fires once on release; a drag back to the s
 gesture), where the gesture is known — never make each subscriber debounce. It is the same idea as
 **UN**'s one undo step per gesture. The trade (no live preview mid-drag) is a product call: state it
 when handing over.
+
+## L109 — A bulk scripted edit is verified by a DRY RUN against the live file, never by memory (2026-09-29, chore/clean-comments)
+
+Cleaning ~700 files of comments, I edited by line-number ranges through a guarded helper (every line in
+a range must be a comment line). After a context compaction I wrote a whole script from recalled line
+numbers; the guard would have passed wrong-but-comment-only ranges. A dry-run printer (each range with
+one line of context either side, each trailing-comment target line) caught three real slips before any
+write: a range one line short (a dangling comment tail), a trailing edit aimed at the `.h` instead of the
+`.cpp`, and a second edit on a file already shifted by the first. One slip still landed: replacement text
+starting with ` * ` on top of the inherited indent put doc lines one space deep; a grep for
+`^(    )*      \* ` found it.
+**Rule:** for any scripted multi-file edit — (1) dry-run and READ the context lines, a context line that
+is itself a comment means the range cuts a block; (2) all edits to one file in ONE call; (3) after
+applying, grep for the shape of the slip you can make (odd indent, doubled blank lines vs `main`, left
+refs) across everything touched. Never re-run a partially applied script without removing what landed.
+
+## L110 — The first game is a test of the ENGINE'S ERGONOMICS; when the user is the game dev, I teach, I do not build (2026-10-04, first game — USER CORRECTION)
+
+**What happened:** asked to "start the first game", I designed and built all of it: a component, a
+mover mode, two world subsystems, a test exe, six hand-written asset files, a pure model. Every gate
+was green and they verified the jump works. Then: *"I really do not like how to program a game in this
+engine right now"* — remove the game, keep the engine fixes; *"its boring to create an .Opaax[Type] for
+every new type"*; *"FULL ecs … for designing its hard"*; *"next time … step by step … I kinda need a
+tuto to make game by my self."* Two concrete symptoms proved it before they said it: (1) they tuned
+the jump by editing `JumpSpeed` in the `.opaaxmovemode` — the obvious place — which my mode never
+read; the live tuning was hidden on a component. (2) One feature cost ~4 C++ types + 3 registrations
++ 6 asset files; one "struct of numbers as an asset" costs the engine 7 files / ~540 lines.
+
+**Why I got it wrong:** I optimised for "the game works" (my gates) when the real deliverable of a
+FIRST game on a solo dev's own engine is the answer to "is this engine pleasant to make games in?"
+— which only THEY can answer, and only by writing the game themselves. Building it for them hid
+every ergonomic cost behind my fluency with the codebase.
+
+**Rules for next time:**
+- **When the user will be the game developer, the default mode is TUTORIAL:** small steps they type
+  themselves, each with what to expect, and I review. I write engine code; they write game code.
+- **Count the authoring cost of a feature as a metric** (types, registrations, files, places a
+  designer must look). If tuning a thing has two plausible homes and only one is live, that is a
+  defect, not a detail — the dead one must go or forward.
+- **A first game is an engine audit.** Its friction list is the engine's next backlog, and it should
+  be surfaced as such, not absorbed by me writing the boilerplate.

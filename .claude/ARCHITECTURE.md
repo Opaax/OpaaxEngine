@@ -2553,6 +2553,11 @@ a plain `const MoveModeData&`. Modes are **STATELESS** (all per-entity state is 
 reason — owns ONE instance of each. **A mode's name IS an on-disk key**, so unlike a world subsystem
 the name is required at registration and a duplicate is REFUSED rather than replacing: a game module
 must not silently shadow a built-in that assets already name.
+- **`MoverTickContext::Owner` (2026-10-04, from the first game).** Statelessness left a game mode
+  no route to its OWN entity's state or tuning (`MoveModeData` is a fixed field set a game cannot
+  extend), so the context carries the moved `Entity`, set on tick and on enter/exit, invalid when a
+  mode is driven outside a world (tests). Per-entity state still lives on components; the mode
+  reaches it through `Owner.TryGet<T>()`.
 
 **PH20 — THE MOVER TICKS AFTER PHYSICS, and registration order is the only thing that says so.** A
 mover sweeps against the world's shapes, so it must see the poses THIS step produced rather than last

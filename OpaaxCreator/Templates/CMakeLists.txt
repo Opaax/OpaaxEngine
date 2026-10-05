@@ -1,6 +1,6 @@
 # =============================================================================
-# __NAME__Module (D9) — the game content unit: a STATIC lib linked by BOTH __NAME__.exe and
-# __NAME__Editor.exe. Links Engine only, never an editor header (D4). This is the PRIMARY game
+# __NAME__Module — the game content unit: a STATIC lib linked by BOTH __NAME__.exe and
+# __NAME__Editor.exe. Links Engine only, never an editor header. This is the PRIMARY game
 # module — it takes the project's name (Source/__NAME__/, entry __NAME__.h/.cpp). Real game content
 # grows here; it is reached transitively through the link, never globbed into an exe.
 # =============================================================================
@@ -91,7 +91,7 @@ if(NOT OPAAX_DEV_BUILD)
 endif()
 
 # =============================================================================
-# __NAME__Editor.exe (editor host) — Engine + OpaaxEditorLib + __NAME__Module (Editor.md D8).
+# __NAME__Editor.exe (editor host) — Engine + OpaaxEditorLib + __NAME__Module.
 # Built only under OPAAX_EDITOR_SUPPORT (OpaaxEditorLib exists only then — NOT shipped in release).
 # Editor/Source/__NAME__Editor/ holds the thin composition (__NAME__EditorApp + main). Shares
 # __NAME__Module with __NAME__.exe; adds the editor via the lib.

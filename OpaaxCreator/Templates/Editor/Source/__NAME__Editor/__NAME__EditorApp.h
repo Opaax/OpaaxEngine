@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Editor/EditorApplication.h"
+#include "Editor/Application/EditorApplication.h"
 
 // =============================================================================
 // __NAME__EditorApp — the game's editor executable: a thin layer over the generic OpaaxEditorLib.
