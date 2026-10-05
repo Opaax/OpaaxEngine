@@ -68,7 +68,7 @@ TEST_CASE("ComponentRegistry: a registered type is findable by name and by type 
     const IComponentEntry* lByName = lRegistry.FindByName(OpaaxStringID("Probe"));
     REQUIRE(lByName != nullptr);
 
-    const IComponentEntry* lById = lRegistry.FindByTypeId(entt::type_hash<ProbeComponent>::value());
+    const IComponentEntry* lById = lRegistry.Find<ProbeComponent>();
     REQUIRE(lById != nullptr);
 
     // Both lookups must land on the SAME entry — two entries for one type would mean the
@@ -84,7 +84,7 @@ TEST_CASE("ComponentRegistry: an unregistered type resolves to nullptr, not to s
     REQUIRE(lRegistry.Register<ProbeComponent>("Probe"));
 
     CHECK(lRegistry.FindByName(OpaaxStringID("NeverRegistered")) == nullptr);
-    CHECK(lRegistry.FindByTypeId(entt::type_hash<QuadComponent>::value()) == nullptr);
+    CHECK(lRegistry.Find<QuadComponent>() == nullptr);
 }
 
 TEST_CASE("ComponentRegistry: ForEach visits every entry in registration order")
@@ -115,7 +115,7 @@ TEST_CASE("ComponentRegistry: a duplicate NAME is refused (it would make a map f
     // The first registration must survive intact — a refusal is not a replacement.
     CHECK(lRegistry.Count() == 1u);
     CHECK(lRegistry.FindByName(OpaaxStringID("Taken"))->GetTypeId()
-          == entt::type_hash<ProbeComponent>::value());
+          == TypeIdOf<ProbeComponent>());
 }
 
 TEST_CASE("ComponentRegistry: registering the same TYPE twice is refused")
@@ -200,7 +200,7 @@ TEST_CASE("Engine: QuadComponent is registered natively, DLL-side, and found exe
     // type id below is computed HERE in the exe. A mismatch returns null — see
     // ComponentIdentityTests.cpp for why this can be trusted.
     const IComponentEntry* lEntry =
-        lEngine.GetRegistries().Components().FindByTypeId(entt::type_hash<QuadComponent>::value());
+        lEngine.GetRegistries().Components().Find<QuadComponent>();
 
     REQUIRE(lEntry != nullptr);
     CHECK(lEntry->GetName() == OpaaxStringID("Quad"));

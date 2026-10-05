@@ -13,7 +13,7 @@ namespace Opaax
         OpaaxStringID MarkerName(const ComponentRegistry& InRegistry)
         {
             const IComponentEntry* const lEntry =
-                InRegistry.FindByTypeId(entt::type_hash<PrefabInstanceComponent>::value());
+                InRegistry.Find<PrefabInstanceComponent>();
             return lEntry != nullptr ? lEntry->GetName() : OpaaxStringID();
         }
 
@@ -62,7 +62,7 @@ namespace Opaax
 
         // Name from the registry (it is the key saved in map files).
         const IComponentEntry* lMarkerEntry =
-            InRegistry.FindByTypeId(entt::type_hash<PrefabInstanceComponent>::value());
+            InRegistry.Find<PrefabInstanceComponent>();
 
         if (lMarkerEntry == nullptr)
         {
@@ -113,7 +113,7 @@ namespace Opaax
 
         // Not registered: no entity can carry one, nothing to strip.
         const IComponentEntry* lMarkerEntry =
-            InRegistry.FindByTypeId(entt::type_hash<PrefabInstanceComponent>::value());
+            InRegistry.Find<PrefabInstanceComponent>();
         const OpaaxStringID    lMarkerName = (lMarkerEntry != nullptr) ? lMarkerEntry->GetName()
                                                                       : OpaaxStringID();
 

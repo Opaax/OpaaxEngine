@@ -3129,6 +3129,11 @@ subsystem → `"class QuadBoundsSubsystem"`), because there was no `::` left to 
 serious rather than cosmetic: a derived name is the key written into map files, so the first
 global-namespace component would have written an unreadable one. Stripped explicitly now, with both
 routes covered by a test.
+- **The name now comes from the engine, not entt** (2026-10-05): `Core/Reflection/TypeInfo.h` owns
+  `TypeSignature` / `TypeNameOf` / `TypeIdOf` / `DeriveTypeLeafName`, so data assets, reflection and the
+  editor carry no vendor type. `TypeNameStabilityTests` pins `TypeNameOf<T>() == entt::type_name<T>`
+  for every kind of type, because derived names are map keys. Rule: a vendor's API appears only in the
+  code that wraps it (entt → World/, box2d → `Physics/Box2D/`, glfw → the platform window/input).
 
 ---
 

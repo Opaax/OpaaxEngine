@@ -5,6 +5,7 @@
 #include "Core/EngineAPI.h"
 #include "Core/OpaaxTypes.h"
 #include "Core/Hash/OpaaxHash.h"
+#include "Core/Reflection/TypeInfo.h"
 #include "Core/Log/Logger.h"
 
 // =============================================================================
@@ -15,21 +16,6 @@ namespace Opaax
 {
     inline constexpr LogCategory LogResourceType{"ResourceType"};
     
-    // -------------------------------------------------------------------------
-    // Type signature from the compiler: unique per type, also used for collision checks.
-    // -------------------------------------------------------------------------
-    template<typename T>
-    constexpr std::string_view ResourceTypeName() noexcept
-    {
-#if defined(_MSC_VER)
-        return __FUNCSIG__;
-#elif defined(__clang__) || defined(__GNUC__)
-        return __PRETTY_FUNCTION__;
-#else
-        return "";
-#endif
-    }
-
     // -------------------------------------------------------------------------
     // Registry functions (the registry lives in ResourceTypeID.cpp).
     //   InternResourceType: same hash but different name is fatal.
@@ -47,7 +33,8 @@ namespace Opaax
         static Uint32 Get() noexcept
         {
             // Cached per module, but the value comes from the shared registry.
-            constexpr std::string_view lName = ResourceTypeName<T>();
+            // The signature is unique per type, so it also serves the collision check.
+            constexpr std::string_view lName = TypeSignature<T>();
             constexpr Uint64           lHash = OpaaxHash::Hash64(lName);
             static const Uint32        s_Index = InternResourceType(lHash, lName);
             return s_Index;

@@ -58,7 +58,7 @@ namespace Opaax
                 return nullptr;
             }
 
-            if (m_View == nullptr || m_View->GetTypeId() != entt::type_hash<T>::value())
+            if (m_View == nullptr || m_View->GetTypeId() != TypeIdOf<T>())
             {
                 if (m_bViewFailed) { return nullptr; }
 

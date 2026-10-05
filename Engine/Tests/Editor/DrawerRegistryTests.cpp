@@ -22,13 +22,13 @@ TEST_CASE("DrawerRegistry: HasTarget knows typed and erased registrations, and n
 {
     ComponentDrawerRegistry lDrawers;
 
-    CHECK_FALSE(lDrawers.HasTarget(entt::type_hash<QuadComponent>::value()));
+    CHECK_FALSE(lDrawers.HasTarget(TypeIdOf<QuadComponent>()));
 
     lDrawers.Register<QuadComponent, StubQuadDrawer>();
-    CHECK(lDrawers.HasTarget(entt::type_hash<QuadComponent>::value()));
+    CHECK(lDrawers.HasTarget(TypeIdOf<QuadComponent>()));
 
     // An erased entry names its target by id: the route the generic component drawer takes.
-    const entt::id_type lTransformId = entt::type_hash<TransformComponent>::value();
+    const TypeId lTransformId = TypeIdOf<TransformComponent>();
     CHECK_FALSE(lDrawers.HasTarget(lTransformId));
 
     lDrawers.RegisterErased(lTransformId, [](Entity&, IEditorWidgets&, EditorContext&) { return false; });

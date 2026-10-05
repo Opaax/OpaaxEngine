@@ -302,7 +302,7 @@ namespace Opaax::Editor
         TDynArray<OutsideLink> lOutside;
 
         MapData lForPrefab = lOriginals;
-        if (const IComponentEntry* lTransformEntry = lRegistry.FindByTypeId(entt::type_hash<TransformComponent>::value()))
+        if (const IComponentEntry* lTransformEntry = lRegistry.Find<TransformComponent>())
         {
             for (EntityData& lEntity : lForPrefab.Entities)
             {

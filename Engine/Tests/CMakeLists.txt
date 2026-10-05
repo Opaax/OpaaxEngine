@@ -75,6 +75,7 @@ set(OPAAX_TEST_SOURCES
     Core/World/WorldEventsTests.cpp
     Core/World/ComponentIdentityTests.cpp
     Core/World/ComponentRegistryTests.cpp
+    Core/World/TypeNameStabilityTests.cpp
     Core/World/WorldEntityTests.cpp
     Core/World/MapSnapshotTests.cpp
     Core/World/MapRestoreTests.cpp

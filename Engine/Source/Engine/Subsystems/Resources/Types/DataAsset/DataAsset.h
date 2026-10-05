@@ -7,7 +7,7 @@
 #include "Core/OpaaxTypes.h"
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Engine/Reflection/PropertyVisitor.h"
-#include "Engine/Reflection/TypeName.h"
+#include "Core/Reflection/TypeInfo.h"
 
 namespace Opaax
 {
@@ -40,7 +40,7 @@ namespace Opaax
     public:
         virtual ~IDataAssetObject() = default;
 
-        virtual entt::id_type  GetTypeId() const noexcept = 0;
+        virtual TypeId         GetTypeId() const noexcept = 0;
         virtual void           Visit(IPropertyVisitor& InVisitor) = 0;
         virtual nlohmann::json ToJson() const = 0;
     };
@@ -51,7 +51,7 @@ namespace Opaax
     public:
         T Value;
 
-        entt::id_type  GetTypeId() const noexcept override         { return entt::type_hash<T>::value(); }
+        TypeId         GetTypeId() const noexcept override         { return TypeIdOf<T>(); }
         void           Visit(IPropertyVisitor& InVisitor) override { VisitProperties(Value, InVisitor); }
         nlohmann::json ToJson() const override                     { return nlohmann::json(Value); }
     };

@@ -62,7 +62,7 @@ namespace Opaax
         return nullptr;
     }
 
-    const IDataAssetTypeEntry* DataAssetTypeRegistry::FindByTypeId(const entt::id_type InTypeId) const noexcept
+    const IDataAssetTypeEntry* DataAssetTypeRegistry::FindByTypeId(const TypeId InTypeId) const noexcept
     {
         for (const TUniquePtr<IDataAssetTypeEntry>& lEntry : m_Entries)
         {

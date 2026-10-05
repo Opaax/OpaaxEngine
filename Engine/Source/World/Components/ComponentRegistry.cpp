@@ -5,7 +5,7 @@
 namespace Opaax
 {
     // Refusals log an error and return false (not an assert, so Release builds report them too).
-    bool ComponentRegistry::AddEntry(TUniquePtr<IComponentEntry> InEntry, entt::id_type InTypeId)
+    bool ComponentRegistry::AddEntry(TUniquePtr<IComponentEntry> InEntry, TypeId InTypeId)
     {
         if (InEntry == nullptr)
         {
@@ -117,7 +117,7 @@ namespace Opaax
         return nullptr;
     }
 
-    const IComponentEntry* ComponentRegistry::FindByTypeId(entt::id_type InTypeId) const noexcept
+    const IComponentEntry* ComponentRegistry::FindByTypeId(TypeId InTypeId) const noexcept
     {
         for (const TUniquePtr<IComponentEntry>& lEntry : m_Entries)
         {

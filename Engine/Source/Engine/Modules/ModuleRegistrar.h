@@ -7,7 +7,7 @@
 #include "Core/String/OpaaxStringID.hpp"
 #include "Core/Log/Logger.h"
 
-#include "Engine/Reflection/TypeName.h"   // DeriveTypeLeafName
+#include "Core/Reflection/TypeInfo.h"   // DeriveTypeLeafName
 #include "Engine/Registries/EngineRegistries.h"
 
 namespace Opaax

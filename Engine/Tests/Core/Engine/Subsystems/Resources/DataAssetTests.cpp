@@ -86,7 +86,7 @@ TEST_CASE("DataAssetTypeRegistry: a struct registers under its C++ name, once")
 
     const IDataAssetTypeEntry* lEntry = lRegistry.FindByName(OpaaxStringID("TestTuning"));
     REQUIRE(lEntry != nullptr);
-    CHECK(lEntry == lRegistry.FindByTypeId(entt::type_hash<TestTuning>::value()));
+    CHECK(lEntry == lRegistry.FindByTypeId(TypeIdOf<TestTuning>()));
     CHECK(lRegistry.FindByName(OpaaxStringID("OtherTuning")) == nullptr);
 
     // A default value, through the entry alone.

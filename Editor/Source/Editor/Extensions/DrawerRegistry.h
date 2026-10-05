@@ -106,7 +106,7 @@ namespace Opaax::Editor
             // The ID scope is needed even here (see the generic form below).
             const OpaaxStringID lName = DeriveTypeLeafName<typename TDrawerResolver<TSubject, TTarget>::DrawableType>();
 
-            m_TargetTypeIds.emplace_back(entt::type_hash<TTarget>::value());
+            m_TargetTypeIds.emplace_back(TypeIdOf<TTarget>());
             m_Entries.emplace_back(
                 [lName](TSubject& InSubject, IEditorWidgets& InWidgets, EditorContext& InContext) -> bool
                 {
@@ -151,7 +151,7 @@ namespace Opaax::Editor
             // header and the saved name match.
             const OpaaxStringID lName = DeriveTypeLeafName<typename Resolver::DrawableType>();
 
-            m_TargetTypeIds.emplace_back(entt::type_hash<TTarget>::value());
+            m_TargetTypeIds.emplace_back(TypeIdOf<TTarget>());
             m_Entries.emplace_back(
                 [lName](TSubject& InSubject, IEditorWidgets& InWidgets, EditorContext&) -> bool
                 {
@@ -183,18 +183,18 @@ namespace Opaax::Editor
 
         /**
          * An entry built without the target's C++ type (e.g. from a type-erased registry entry).
-         * @param InTargetTypeId entt::type_hash of the target, so HasTarget knows it is covered
+         * @param InTargetTypeId TypeIdOf the target, so HasTarget knows it is covered
          */
-        void RegisterErased(entt::id_type InTargetTypeId, TFunction<bool(TSubject&, IEditorWidgets&, EditorContext&)> InEntry)
+        void RegisterErased(TypeId InTargetTypeId, TFunction<bool(TSubject&, IEditorWidgets&, EditorContext&)> InEntry)
         {
             m_TargetTypeIds.emplace_back(InTargetTypeId);
             m_Entries.emplace_back(Move(InEntry));
         }
 
         /** Whether a drawer is already registered for this target type. */
-        bool HasTarget(const entt::id_type InTargetTypeId) const noexcept
+        bool HasTarget(const TypeId InTargetTypeId) const noexcept
         {
-            for (const entt::id_type lId : m_TargetTypeIds)
+            for (const TypeId lId : m_TargetTypeIds)
             {
                 if (lId == InTargetTypeId) { return true; }
             }
@@ -232,7 +232,7 @@ namespace Opaax::Editor
         TDynArray<TFunction<bool(TSubject&, IEditorWidgets&, EditorContext&)>> m_Entries;
 
         /** Parallel to m_Entries: the target type each entry draws. */
-        TDynArray<entt::id_type> m_TargetTypeIds;
+        TDynArray<TypeId> m_TargetTypeIds;
     };
 
     // Named per use: Drawers() / ConfigDrawers().

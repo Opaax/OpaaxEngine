@@ -22,7 +22,7 @@ namespace Opaax
         /** The name written in files ("JumpTuning"). */
         virtual OpaaxStringID GetName() const noexcept = 0;
 
-        virtual entt::id_type GetTypeId() const noexcept = 0;
+        virtual TypeId GetTypeId() const noexcept = 0;
 
         /** A default-constructed value. */
         virtual TUniquePtr<IDataAssetObject> Create() const = 0;
@@ -38,7 +38,7 @@ namespace Opaax
         TDataAssetTypeEntry() : m_Name(DataAssetTypeName<T>()) {}
 
         OpaaxStringID GetName() const noexcept override   { return m_Name; }
-        entt::id_type GetTypeId() const noexcept override { return entt::type_hash<T>::value(); }
+        TypeId        GetTypeId() const noexcept override { return TypeIdOf<T>(); }
 
         TUniquePtr<IDataAssetObject> Create() const override { return MakeUnique<TDataAssetObject<T>>(); }
 
@@ -85,7 +85,7 @@ namespace Opaax
         // =============================================================================
     public:
         const IDataAssetTypeEntry* FindByName(OpaaxStringID InName) const noexcept;
-        const IDataAssetTypeEntry* FindByTypeId(entt::id_type InTypeId) const noexcept;
+        const IDataAssetTypeEntry* FindByTypeId(TypeId InTypeId) const noexcept;
 
         /** Every entry, in registration order. */
         template<typename TFunc>

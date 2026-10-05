@@ -1,8 +1,9 @@
 // Suite: entt component type ids across the DLL/exe boundary.
-//   ComponentRegistry keys components on entt::type_hash<T>::value(); game modules register from
-//   the exe while the registry lives in the DLL. Both sides must compute the same id, or a module
-//   component would silently not round-trip. On MSVC entt hashes __FUNCSIG__ (ENTT_PRETTY_FUNCTION),
-//   which is stable per type; these tests go red if that ever changes.
+//   entt finds a component's pool by entt::type_hash<T>::value(); game modules add components from
+//   the exe while the world lives in the DLL. Both sides must compute the same id, or a module
+//   component would silently be invisible. On MSVC entt hashes __FUNCSIG__ (ENTT_PRETTY_FUNCTION),
+//   which is stable per type; these tests go red if that ever changes. (ComponentRegistry itself
+//   keys on the engine's TypeIdOf<T>.)
 //
 //   EntityMeta is added by World::CreateEntity, compiled in the DLL; the tests read it from the
 //   exe side, so a mismatch shows up as an empty view.

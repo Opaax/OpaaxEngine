@@ -6,8 +6,6 @@
 #include <tuple>
 #include <type_traits>
 
-#include <entt/entt.hpp>   // entt::type_name
-
 #include "Core/Color/LinearColor.h"
 #include "Core/Maths/MathTypes.h"
 #include "Core/OpaaxTypes.h"
@@ -15,7 +13,7 @@
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
-#include "Engine/Reflection/TypeName.h"
+#include "Core/Reflection/TypeInfo.h"
 #include "Engine/Subsystems/Resources/ResourcePath.h"
 #include "Engine/Subsystems/Resources/ResourceTypeID.hpp"
 
@@ -160,7 +158,7 @@ namespace Opaax
         }
         else
         {
-            InVisitor.VisitUnsupported(InName, entt::type_name<TValue>::value());
+            InVisitor.VisitUnsupported(InName, TypeNameOf<TValue>());
         }
     }
 

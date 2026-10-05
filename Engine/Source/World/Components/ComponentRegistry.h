@@ -8,6 +8,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Core/Reflection/OpaaxProperty.h"
+#include "Core/Reflection/TypeInfo.h"
 #include "Engine/Reflection/PropertyVisitor.h"
 #include "Engine/Subsystems/Resources/ResourcePath.h"
 #include "Engine/Subsystems/Resources/ResourceTypeID.hpp"
@@ -40,8 +41,8 @@ namespace Opaax
         /** Name saved in map files. */
         virtual OpaaxStringID GetName() const = 0;
 
-        /** entt's type id (stable across the DLL boundary). */
-        virtual entt::id_type GetTypeId() const = 0;
+        /** The engine's type id (stable across modules). */
+        virtual TypeId GetTypeId() const = 0;
 
         /** @return True if InEntity has this component */
         virtual bool Has(const EntityRegistry& InRegistry, EntityID InEntity) const = 0;
@@ -99,7 +100,7 @@ namespace Opaax
         }
 
         OpaaxStringID GetName()     const override { return m_Name; }
-        entt::id_type GetTypeId()   const override { return entt::type_hash<T>::value(); }
+        TypeId        GetTypeId()   const override { return TypeIdOf<T>(); }
         bool          IsEssential() const override { return m_bEssential; }
 
         bool Has(const EntityRegistry& InRegistry, EntityID InEntity) const override
@@ -231,7 +232,7 @@ namespace Opaax
         {
             // Built here (T is known) but stored by an out-of-line function in the DLL.
             return AddEntry(MakeUnique<TComponentEntry<T>>(InName, bInEssential),
-                            entt::type_hash<T>::value());
+                            TypeIdOf<T>());
         }
 
         /**
@@ -252,7 +253,11 @@ namespace Opaax
         const IComponentEntry* FindByName(OpaaxStringID InName) const noexcept;
 
         /** @return The entry for InTypeId, or nullptr */
-        const IComponentEntry* FindByTypeId(entt::id_type InTypeId) const noexcept;
+        const IComponentEntry* FindByTypeId(TypeId InTypeId) const noexcept;
+
+        /** @return The entry for T, or nullptr */
+        template<typename T>
+        const IComponentEntry* Find() const noexcept { return FindByTypeId(TypeIdOf<T>()); }
 
         /** Every entry, in registration order. */
         template<typename TFunc>
@@ -276,7 +281,7 @@ namespace Opaax
         // =========================================================================
     private:
         /** Stores an entry (takes ownership). */
-        bool AddEntry(TUniquePtr<IComponentEntry> InEntry, entt::id_type InTypeId);
+        bool AddEntry(TUniquePtr<IComponentEntry> InEntry, TypeId InTypeId);
 
         // =========================================================================
         // Members
