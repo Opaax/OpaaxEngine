@@ -46,9 +46,6 @@ namespace Opaax::Editor
         m_RawData = Move(lContents.Data);
 
         MarkSaved();
-
-        OPAAX_LOG(LogEditorDataAssetDocument, Info, "PROBE data asset opened: '{}' type '{}' ({})",   // PROBE
-                  FileName().CStr(), m_Type.CStr(), IsTypeKnown() ? "editable" : "read-only");
         return true;
     }
 
