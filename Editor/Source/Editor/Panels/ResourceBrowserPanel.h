@@ -174,6 +174,11 @@ namespace Opaax::Editor
         OpaaxString             m_Filter;
         OpaaxString             m_SelectedPath;   // "<Root>/<RelPath>", highlight only (not EditorSelection)
 
+        // The data type of the .opaaxdata being dragged, read once per file (a drag rebuilds its payload
+        // every frame).
+        OpaaxString             m_DragSubTypePath;
+        Uint32                  m_DragSubTypeId = 0;
+
         // ResourceTypeID -> the icon texture claim. Filled once at Startup (failed loads kept too,
         // so drawing is a plain lookup).
         TUnorderedMap<Uint32, ResourceRef<TextureResource>> m_TypeIcons;

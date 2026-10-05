@@ -1,6 +1,9 @@
 #include "Editor/Properties/PropertyDrawers.h"
 
 #include <cstring>   // memcpy
+#include <string>
+
+#include "Engine/Subsystems/Resources/Types/DataAsset/DataAssetResource.h"
 
 #include <glm/gtc/type_ptr.hpp>   // value_ptr
 
@@ -133,33 +136,53 @@ namespace Opaax::Editor
         }
     }
 
+    namespace
+    {
+        /** A path field as a drop target. InSubTypeId 0 accepts any file of the resource type. */
+        void DrawDropPathField(IEditorWidgets& InWidgets, const char* InLabel, OpaaxString& InPath,
+                               const Uint32 InResourceTypeId, const Uint32 InSubTypeId, const char* InEmptyText)
+        {
+            InWidgets.PushId(InLabel);
+
+            // A button, which is the drop target. The full path is its tooltip (the label truncates).
+            const bool  bEmpty = InPath.IsEmpty();
+            const char* lText  = bEmpty ? InEmptyText : InPath.CStr();
+
+            InWidgets.Button(lText, -1.f, bEmpty ? nullptr : InPath.CStr());
+
+            // Right after the receiving widget; opens and closes the drop target itself.
+            if (OpaaxString lDropped; AcceptResourceDragPayload(InResourceTypeId, lDropped, InSubTypeId))
+            {
+                InPath = Move(lDropped);
+            }
+
+            if (!InPath.IsEmpty())
+            {
+                InWidgets.SameLine();
+                if (InWidgets.SmallButton("x")) { InPath = OpaaxString(); }
+            }
+
+            InWidgets.SameLine();
+            InWidgets.Text(InLabel);
+
+            InWidgets.PopId();
+        }
+    }
+
+    void DrawDataAssetRefField(IEditorWidgets& InWidgets, const char* InLabel, OpaaxString& InPath,
+                               const OpaaxStringID InDataType)
+    {
+        const std::string lEmpty = std::string("(drop a ") + (InDataType.IsValid() ? InDataType.CStr() : "data asset")
+                                 + " here)";
+
+        DrawDropPathField(InWidgets, InLabel, InPath, ResourceTypeID::Get<DataAssetResource>(), InDataType.GetId(),
+                          lEmpty.c_str());
+    }
+
     void DrawResourcePathField(IEditorWidgets& InWidgets, const char* InLabel, OpaaxString& InPath,
                                const Uint32 InResourceTypeId)
     {
-        InWidgets.PushId(InLabel);
-
-        // A button, which is the drop target. The full path is its tooltip (the label truncates).
-        const bool  bEmpty = InPath.IsEmpty();
-        const char* lText  = bEmpty ? "(drop a resource here)" : InPath.CStr();
-
-        InWidgets.Button(lText, -1.f, bEmpty ? nullptr : InPath.CStr());
-
-        // Right after the receiving widget; opens and closes the drop target itself.
-        if (OpaaxString lDropped; AcceptResourceDragPayload(InResourceTypeId, lDropped))
-        {
-            InPath = Move(lDropped);
-        }
-
-        if (!InPath.IsEmpty())
-        {
-            InWidgets.SameLine();
-            if (InWidgets.SmallButton("x")) { InPath = OpaaxString(); }
-        }
-
-        InWidgets.SameLine();
-        InWidgets.Text(InLabel);
-
-        InWidgets.PopId();
+        DrawDropPathField(InWidgets, InLabel, InPath, InResourceTypeId, 0, "(drop a resource here)");
     }
 
     void DrawEnumIndexField(IEditorWidgets& InWidgets, const char* InLabel, const char* const* InLabels,

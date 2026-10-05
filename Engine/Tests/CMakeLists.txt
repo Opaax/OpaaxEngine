@@ -175,6 +175,7 @@ set(OPAAX_TEST_SOURCES
     # old ladder showed none of them. Both halves gated.
     Editor/UIWidgetDrawerTests.cpp
     Editor/DrawerRegistryTests.cpp
+    Editor/ResourceDragPayloadTests.cpp
 
     # UI U13. The designer's layout target: a named aspect is EXACT (16:9 is 1920x1080, never a
     # rounded 1919), Free is the dock's own size. Header-only, ImGui-free.

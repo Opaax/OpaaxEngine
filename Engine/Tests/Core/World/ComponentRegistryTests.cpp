@@ -316,6 +316,7 @@ namespace
         void Visit(const char*, OpaaxStringID&, const PropertyMeta&) override {}
         void VisitEnum(const char*, const char* const*, Uint32, Uint32&, const PropertyMeta&) override {}
         void VisitResourcePath(const char*, OpaaxString&, Uint32, const PropertyMeta&) override {}
+        void VisitDataAssetRef(const char*, OpaaxString&, OpaaxStringID, const PropertyMeta&) override {}
         bool BeginGroup(const char*, const PropertyMeta&) override { return true; }
         void EndGroup() override {}
         void VisitUnsupported(const char*, std::string_view) override {}

@@ -42,6 +42,13 @@ namespace Opaax::Editor
         DrawPropertyNote(m_Widgets, InMeta);
     }
 
+    void WidgetPropertyVisitor::VisitDataAssetRef(const char* InName, OpaaxString& InPath,
+                                                  const OpaaxStringID InDataType, const PropertyMeta& InMeta)
+    {
+        DrawDataAssetRefField(m_Widgets, InName, InPath, InDataType);
+        DrawPropertyNote(m_Widgets, InMeta);
+    }
+
     bool WidgetPropertyVisitor::BeginGroup(const char* InName, const PropertyMeta& InMeta)
     {
         if (!m_Widgets.BeginTreeNode(InName))

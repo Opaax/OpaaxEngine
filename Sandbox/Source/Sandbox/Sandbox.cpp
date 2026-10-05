@@ -6,6 +6,7 @@
 #include "Components/TagsComponent.h"
 #include "Resources/WaveResource.h"
 #include "Data/EnemyStats.h"
+#include "Components/EnemyComponent.h"
 #include "Systems/HudSubsystem.h"
 #include "Systems/PauseMenuSubsystem.h"
 #include "Systems/PlayerControlSubsystem.h"
@@ -49,6 +50,9 @@ void SandboxModule::OnRegister(Opaax::ModuleRegistrar& InRegistrar)
 
     // A data asset type: this line is all it takes to get .opaaxdata files of it, editable in the editor.
     InRegistrar.DataAssets().Register<Sandbox::EnemyStats>();
+
+    // A component pointing at one of those assets (the editor draws it with no code of its own).
+    InRegistrar.Components().Register<Sandbox::EnemyComponent>();
 
     OPAAX_LOG(LogSandboxModule, Info,
         "RegisterModule: components={}, worldSubsystems={}, resourceFormats={}",

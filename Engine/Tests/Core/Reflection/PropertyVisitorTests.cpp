@@ -4,6 +4,7 @@
 #include <string>
 
 #include "Engine/Reflection/PropertyVisitor.h"
+#include "Engine/Subsystems/Resources/Types/DataAsset/DataAssetRef.h"
 
 using namespace Opaax;
 
@@ -39,6 +40,14 @@ namespace
                          OPAAX_PROP(Bounded).SetRange(-1.f, 1.f))
     };
 
+    struct VisitorTestData
+    {
+        float Value = 0.f;
+
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(VisitorTestData, Value)
+        OPAAX_PROPERTIES(VisitorTestData, OPAAX_PROP(Value))
+    };
+
     struct VisitorTestSubject
     {
         bool                               bEnabled = true;
@@ -48,6 +57,7 @@ namespace
         OpaaxString                        Label    = OpaaxString("hello");
         EVisitorTestMode                   Mode     = EVisitorTestMode::Walk;
         TResourcePath<VisitorTestResource> Asset;
+        TDataAssetRef<VisitorTestData>     Stats;
         VisitorTestInner                   Inner;
         TDynArray<int>                     NotDrawable;
 
@@ -59,6 +69,7 @@ namespace
                          OPAAX_PROP(Label),
                          OPAAX_PROP(Mode),
                          OPAAX_PROP(Asset),
+                         OPAAX_PROP(Stats),
                          OPAAX_PROP(Inner).SetRange(0.f, 10.f).SetDragStep(0.5f),
                          OPAAX_PROP(NotDrawable))
     };
@@ -104,6 +115,13 @@ namespace
             LastResourceTypeId = InResourceTypeId;
         }
 
+        void VisitDataAssetRef(const char* InName, OpaaxString&, const OpaaxStringID InDataType,
+                               const PropertyMeta&) override
+        {
+            Add("dataasset", InName);
+            Lines.back() += std::string(" ") + InDataType.CStr();
+        }
+
         bool BeginGroup(const char* InName, const PropertyMeta&) override
         {
             Add("group", InName);
@@ -142,6 +160,7 @@ TEST_CASE("PropertyVisitor: every field is visited once, in declaration order, b
         "string Label",
         "enum Mode 3 Walk",
         "resource Asset",
+        "dataasset Stats VisitorTestData",   // the data type it accepts, by its saved name
         "group Inner",
         "float Amount [0,10]",     // inherits the group's range
         "float Bounded [-1,1]",    // its own range wins

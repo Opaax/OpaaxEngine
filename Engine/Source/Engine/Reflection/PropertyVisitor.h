@@ -15,6 +15,7 @@
 #include "Core/Reflection/OpaaxProperty.h"
 #include "Core/String/OpaaxString.hpp"
 #include "Core/String/OpaaxStringID.hpp"
+#include "Engine/Reflection/TypeName.h"
 #include "Engine/Subsystems/Resources/ResourcePath.h"
 #include "Engine/Subsystems/Resources/ResourceTypeID.hpp"
 
@@ -56,6 +57,12 @@ namespace Opaax
                                        const PropertyMeta& InMeta) = 0;
 
         /**
+         * A data asset reference: its asset-relative path and the data type it accepts ("EnemyStats").
+         */
+        virtual void VisitDataAssetRef(const char* InName, OpaaxString& InPath, OpaaxStringID InDataType,
+                                       const PropertyMeta& InMeta) = 0;
+
+        /**
          * A nested reflected struct. Return false to skip its fields (e.g. a collapsed tree node);
          * EndGroup is only called after a true.
          */
@@ -73,6 +80,15 @@ namespace Opaax
 
         template<typename TResource, EResourceLoad TLoad>
         inline constexpr bool k_IsResourcePath<TResourcePath<TResource, TLoad>> = true;
+
+        /** A TDataAssetRef<T>, recognised by its marker (the header is above this one). */
+        template<typename T>
+        concept CDataAssetRefField = requires(T& InValue)
+        {
+            typename T::DataType;
+            requires T::k_IsDataAssetRef;
+            { InValue.Path } -> std::convertible_to<OpaaxString&>;
+        };
 
         template<typename T>
         inline constexpr bool k_IsPlainVisit =
@@ -137,6 +153,10 @@ namespace Opaax
         {
             InVisitor.VisitResourcePath(InName, InValue.Path,
                                         ResourceTypeID::Get<typename TValue::ResourceType>(), InMeta);
+        }
+        else if constexpr (CDataAssetRefField<TValue>)
+        {
+            InVisitor.VisitDataAssetRef(InName, InValue.Path, DeriveTypeLeafName<typename TValue::DataType>(), InMeta);
         }
         else
         {

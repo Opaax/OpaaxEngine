@@ -7,6 +7,7 @@
 #include "Core/String/OpaaxStringID.hpp"
 #include "Engine/Reflection/PropertyVisitor.h"            // EnumLabels
 #include "Engine/Subsystems/Resources/ResourcePath.h"     // TResourcePath
+#include "Engine/Subsystems/Resources/Types/DataAsset/DataAssetRef.h"   // TDataAssetRef
 #include "Engine/Subsystems/Resources/ResourceTypeID.hpp" // ResourceTypeID
 #include "Editor/Properties/PropertyDrawer.h"
 #include "Editor/Resources/ResourceDragDrop.h"
@@ -53,6 +54,21 @@ namespace Opaax::Editor
      */
     void DrawResourcePathField(IEditorWidgets& InWidgets, const char* InLabel, OpaaxString& InPath,
                                Uint32 InResourceTypeId);
+
+    /**
+     * A data asset reference as a drop target: only a .opaaxdata holding InDataType is accepted.
+     */
+    void DrawDataAssetRefField(IEditorWidgets& InWidgets, const char* InLabel, OpaaxString& InPath,
+                               OpaaxStringID InDataType);
+
+    template<CDataAsset T>
+    struct TPropertyDrawer<TDataAssetRef<T>>
+    {
+        static void Draw(IEditorWidgets& InWidgets, const char* InLabel, TDataAssetRef<T>& InValue, const PropertyMeta&)
+        {
+            DrawDataAssetRefField(InWidgets, InLabel, InValue.Path, DataAssetTypeName<T>());
+        }
+    };
 
     /**
      * An enum as a dropdown over its labels. Shared by the typed drawer below and the type-erased one.

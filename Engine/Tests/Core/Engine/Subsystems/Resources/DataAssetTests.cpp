@@ -10,7 +10,7 @@
 
 #include "Engine/Subsystems/Resources/ResourceManager.h"
 #include "Engine/Subsystems/Resources/Types/DataAsset/DataAssetFile.h"
-#include "Engine/Subsystems/Resources/Types/DataAsset/DataAssetRef.h"
+#include "Engine/Subsystems/Resources/Types/DataAsset/DataAssetHandle.h"
 #include "Engine/Subsystems/Resources/Types/DataAsset/DataAssetResource.h"
 #include "Engine/Subsystems/Resources/Types/DataAsset/DataAssetTypeRegistry.h"
 
