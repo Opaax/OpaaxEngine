@@ -2905,3 +2905,26 @@ every ergonomic cost behind my fluency with the codebase.
   defect, not a detail — the dead one must go or forward.
 - **A first game is an engine audit.** Its friction list is the engine's next backlog, and it should
   be surfaced as such, not absorbed by me writing the boilerplate.
+
+## L111 — A vendor's API belongs only in the code that wraps that vendor (2026-10-05, block DA — USER CORRECTION)
+
+**What happened:** data assets needed a per-type id, and I reached for the one already in reach —
+`entt::id_type` / `entt::type_hash` — in `DataAsset.h`, the data-asset registry, `PropertyVisitor.h`,
+`DrawerRegistry.h`, and moved `DeriveTypeLeafName` (built on `entt::type_name`) into a new header. The
+user: *"You should never use vendor stuff in core scripts except for the works we attend of the vendor
+code (even that we should wrap it). If I want to remove entt its breaking DataAsset which has no
+relation with entt."* The engine already HAD vendor-free type identity, twice: `ResourceTypeID` and
+`EventBus` each hash `__FUNCSIG__` privately. Fix: one Core facility, `Core/Reflection/TypeInfo.h`
+(`TypeSignature`, `TypeNameOf`, `TypeId`/`TypeIdOf`, `DeriveTypeLeafName`), every non-ECS user moved
+onto it, component lookups via `ComponentRegistry::Find<T>()`, and a test proving `TypeNameOf<T>` ==
+`entt::type_name<T>` so derived map keys cannot change.
+
+**Rules for next time:**
+- **Before typing `vendor::` outside that vendor's wrapper layer, stop.** entt belongs in World/ (the
+  ECS wrapper); glfw in the window/input platform code; box2d below `Physics/Box2D/` (**PH1** already
+  says so for box2d). Reflection, resources, the editor and data are never a wrapper layer.
+- **"Already in reach" is the tell.** The vendor type was convenient because a sibling header pulled it
+  in — that is how a dependency spreads without anyone choosing it. Grep for an engine-owned
+  equivalent first (`__FUNCSIG__`, `OpaaxHash`): there usually is one, often duplicated.
+- **When moving a name source off a vendor, prove the output is IDENTICAL** with a test against the
+  vendor, while it is still linked — names derived from types end up in files.

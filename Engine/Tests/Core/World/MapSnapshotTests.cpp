@@ -6,7 +6,7 @@
 #include "Core/Tag/OpaaxTagJson.h"
 #include "World/Components/ComponentRegistry.h"
 #include "World/Components/CameraComponent.h"
-#include "World/Components/DummyComponent.h"
+#include "World/Components/QuadComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityMeta.h"
@@ -54,7 +54,7 @@ namespace
     void FillRegistry(ComponentRegistry& InRegistry)
     {
         REQUIRE(InRegistry.Register<TransformComponent>("Transform"));
-        REQUIRE(InRegistry.Register<DummyComponent>("Dummy"));
+        REQUIRE(InRegistry.Register<QuadComponent>("Quad"));
         REQUIRE(InRegistry.Register<StatsComponent>("Stats"));
     }
 }
@@ -73,11 +73,11 @@ TEST_CASE("Snapshot: capture -> clear -> instantiate rebuilds an equivalent worl
 
     Entity lHero = lWorld.CreateEntity("Hero", lMap);
     lHero.Add<StatsComponent>(StatsComponent{100, 4.5f});
-    lHero.Add<DummyComponent>();
+    lHero.Add<QuadComponent>();
     lHero.Get<TransformComponent>().Position = Vector2F{12.f, -3.f};
 
     Entity lCrate = lWorld.CreateEntity("Crate", lMap);
-    lCrate.Add<DummyComponent>();
+    lCrate.Add<QuadComponent>();
 
     const Guid lHeroGuid  = lHero.GetGuid();
     const Guid lCrateGuid = lCrate.GetGuid();
@@ -102,13 +102,13 @@ TEST_CASE("Snapshot: capture -> clear -> instantiate rebuilds an equivalent worl
     // Component values survived, both the exe-side type and the engine-side one.
     REQUIRE(lNewHero.Has<StatsComponent>());
     CHECK(lNewHero.Get<StatsComponent>() == StatsComponent{100, 4.5f});
-    REQUIRE(lNewHero.Has<DummyComponent>());
+    REQUIRE(lNewHero.Has<QuadComponent>());
     CHECK(lNewHero.Get<TransformComponent>().Position.x == doctest::Approx(12.f));
     CHECK(lNewHero.Get<TransformComponent>().Position.y == doctest::Approx(-3.f));
 
     Entity lNewCrate = lWorld.FindByGuid(lCrateGuid);
     REQUIRE(lNewCrate.IsValid());
-    CHECK(lNewCrate.Has<DummyComponent>());
+    CHECK(lNewCrate.Has<QuadComponent>());
     CHECK_FALSE(lNewCrate.Has<StatsComponent>()); // it never had one
 }
 
@@ -216,24 +216,24 @@ TEST_CASE("Snapshot: capturing an empty world yields empty data, not a crash")
 TEST_CASE("Snapshot: an UNREGISTERED component type is not captured")
 {
     ComponentRegistry lRegistry;
-    REQUIRE(lRegistry.Register<DummyComponent>("Dummy")); // StatsComponent deliberately absent
+    REQUIRE(lRegistry.Register<QuadComponent>("Quad")); // StatsComponent deliberately absent
 
     World  lWorld("Partial");
     Entity lEntity = lWorld.CreateEntity("Subject", MapId("Level01"));
-    lEntity.Add<DummyComponent>();
+    lEntity.Add<QuadComponent>();
     lEntity.Add<StatsComponent>(StatsComponent{50, 2.f});
 
     const MapData lData = MapSerializer::CaptureWorld(lWorld, lRegistry);
 
     REQUIRE(lData.EntityCount() == 1u);
     REQUIRE(lData.Entities[0].Components.size() == 1u);
-    CHECK(lData.Entities[0].Components[0].TypeName == OpaaxStringID("Dummy"));
+    CHECK(lData.Entities[0].Components[0].TypeName == OpaaxStringID("Quad"));
 }
 
 TEST_CASE("Snapshot: an unknown component name is skipped, and the entity still loads")
 {
     ComponentRegistry lRegistry;
-    REQUIRE(lRegistry.Register<DummyComponent>("Dummy"));
+    REQUIRE(lRegistry.Register<QuadComponent>("Quad"));
 
     // Hand-built data standing in for a map written by a build that knew one more type.
     MapData lData;
@@ -241,7 +241,7 @@ TEST_CASE("Snapshot: an unknown component name is skipped, and the entity still 
     lEntityData.Id       = Guid::New();
     lEntityData.Name     = "FromTheFuture";
     lEntityData.OwnerMap = MapId("Level01");
-    lEntityData.Components.push_back(ComponentData{OpaaxStringID("Dummy"), nlohmann::json(DummyComponent{})});
+    lEntityData.Components.push_back(ComponentData{OpaaxStringID("Quad"), nlohmann::json(QuadComponent{})});
     lEntityData.Components.push_back(ComponentData{OpaaxStringID("NotInThisBuild"), nlohmann::json{{"x", 1}}});
     lData.Entities.push_back(Move(lEntityData));
 
@@ -252,13 +252,13 @@ TEST_CASE("Snapshot: an unknown component name is skipped, and the entity still 
 
     Entity lEntity = lWorld.FindByGuid(lData.Entities[0].Id);
     REQUIRE(lEntity.IsValid());
-    CHECK(lEntity.Has<DummyComponent>());
+    CHECK(lEntity.Has<QuadComponent>());
 }
 
 TEST_CASE("Snapshot: a payload written BEFORE a field existed loads that field's default")
 {
     ComponentRegistry lRegistry;
-    REQUIRE(lRegistry.Register<DummyComponent>("Dummy"));
+    REQUIRE(lRegistry.Register<QuadComponent>("Quad"));
 
     // The shape of an already-saved .opaaxmap after someone adds a field to the component: the
     // keys that existed when it was written, and nothing for the ones that came later. This is
@@ -269,7 +269,7 @@ TEST_CASE("Snapshot: a payload written BEFORE a field existed loads that field's
     lEntityData.Id       = Guid::New();
     lEntityData.Name     = "WrittenLastWeek";
     lEntityData.OwnerMap = MapId("Level01");
-    lEntityData.Components.emplace_back(OpaaxStringID("Dummy"),
+    lEntityData.Components.emplace_back(OpaaxStringID("Quad"),
                                         nlohmann::json{{"Size", Vector2F{5.f, 6.f}}});
     lData.Entities.emplace_back(Move(lEntityData));
 
@@ -279,19 +279,19 @@ TEST_CASE("Snapshot: a payload written BEFORE a field existed loads that field's
 
     Entity lEntity = lWorld.FindByGuid(lData.Entities[0].Id);
     REQUIRE(lEntity.IsValid());
-    REQUIRE(lEntity.Has<DummyComponent>());
+    REQUIRE(lEntity.Has<QuadComponent>());
 
-    const DummyComponent& lLoaded = lEntity.Get<DummyComponent>();
+    const QuadComponent& lLoaded = lEntity.Get<QuadComponent>();
     CHECK(lLoaded.Size.x == doctest::Approx(5.f));   // what the file had
     CHECK(lLoaded.Size.y == doctest::Approx(6.f));
-    CHECK(lLoaded.Color.r == doctest::Approx(DummyComponent{}.Color.r));   // what it did not
-    CHECK(lLoaded.Color.a == doctest::Approx(DummyComponent{}.Color.a));
+    CHECK(lLoaded.Color.r == doctest::Approx(QuadComponent{}.Color.r));   // what it did not
+    CHECK(lLoaded.Color.a == doctest::Approx(QuadComponent{}.Color.a));
 }
 
 TEST_CASE("Snapshot: a MALFORMED payload is skipped, and the rest of the map still loads")
 {
     ComponentRegistry lRegistry;
-    REQUIRE(lRegistry.Register<DummyComponent>("Dummy"));
+    REQUIRE(lRegistry.Register<QuadComponent>("Quad"));
 
     // Defaults cover a MISSING key; they cannot cover a key whose value is the wrong type, or a
     // payload that is not an object at all — a hand-edited or truncated file. The same rule applies
@@ -302,14 +302,14 @@ TEST_CASE("Snapshot: a MALFORMED payload is skipped, and the rest of the map sti
     lBroken.Id       = Guid::New();
     lBroken.Name     = "HandEdited";
     lBroken.OwnerMap = MapId("Level01");
-    lBroken.Components.emplace_back(OpaaxStringID("Dummy"), nlohmann::json("not an object"));
+    lBroken.Components.emplace_back(OpaaxStringID("Quad"), nlohmann::json("not an object"));
     lData.Entities.emplace_back(Move(lBroken));
 
     EntityData lFine;
     lFine.Id       = Guid::New();
     lFine.Name     = "Intact";
     lFine.OwnerMap = MapId("Level01");
-    lFine.Components.emplace_back(OpaaxStringID("Dummy"), nlohmann::json(DummyComponent{}));
+    lFine.Components.emplace_back(OpaaxStringID("Quad"), nlohmann::json(QuadComponent{}));
     lData.Entities.emplace_back(Move(lFine));
 
     World lWorld("Corrupt");
@@ -323,7 +323,7 @@ TEST_CASE("Snapshot: a MALFORMED payload is skipped, and the rest of the map sti
     // What the case is really about: the ENTITY AFTER the broken one still loaded.
     Entity lIntact = lWorld.FindByGuid(lData.Entities[1].Id);
     REQUIRE(lIntact.IsValid());
-    CHECK(lIntact.Has<DummyComponent>());
+    CHECK(lIntact.Has<QuadComponent>());
 }
 
 // =============================================================================

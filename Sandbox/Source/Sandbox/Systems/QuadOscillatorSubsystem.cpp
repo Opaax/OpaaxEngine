@@ -4,7 +4,7 @@
 
 #include "Core/Log/Logger.h"
 #include "Core/Profiling/Profiler.h"   // OPAAX_STAT_SCOPE
-#include "World/Components/DummyComponent.h"
+#include "World/Components/QuadComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/World.h"
 
@@ -36,9 +36,9 @@ namespace Sandbox
     {
         World& lWorld = m_Context->OwningWorld;
 
-        // DummyComponent is the filter; the position moved is the entity's transform.
-        lWorld.Each<TransformComponent, DummyComponent>(
-            [this](EntityID InEntity, const TransformComponent& InXf, const DummyComponent&)
+        // QuadComponent is the filter; the position moved is the entity's transform.
+        lWorld.Each<TransformComponent, QuadComponent>(
+            [this](EntityID InEntity, const TransformComponent& InXf, const QuadComponent&)
             {
                 m_Baselines.emplace_back(InEntity, InXf.Position);
             });

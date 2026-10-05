@@ -5,6 +5,9 @@
 #include "Components/HealthComponent.h"
 #include "Components/TagsComponent.h"
 #include "Resources/WaveResource.h"
+#include "Data/EnemyStats.h"
+#include "Data/WeaponStats.h"
+#include "Components/EnemyComponent.h"
 #include "Systems/HudSubsystem.h"
 #include "Systems/PauseMenuSubsystem.h"
 #include "Systems/PlayerControlSubsystem.h"
@@ -20,7 +23,7 @@ namespace
 
 void SandboxModule::OnRegister(Opaax::ModuleRegistrar& InRegistrar)
 {
-    // A game-owned component: saved and loaded like any engine type. (DummyComponent is an engine
+    // A game-owned component: saved and loaded like any engine type. (QuadComponent is an engine
     // type, registered by the engine.)
     InRegistrar.Components().Register<Sandbox::HealthComponent>();
 
@@ -45,6 +48,13 @@ void SandboxModule::OnRegister(Opaax::ModuleRegistrar& InRegistrar)
     // A resource type the engine does not know, with its own extension. Registered here (not
     // editor-side) because a wave is game content, so Sandbox.exe needs it too.
     InRegistrar.Resources().Register<Sandbox::WaveResource>();
+
+    // A data asset type: this line is all it takes to get .opaaxdata files of it, editable in the editor.
+    InRegistrar.DataAssets().Register<Sandbox::EnemyStats>();
+    InRegistrar.DataAssets().Register<Sandbox::WeaponStats>();
+
+    // A component pointing at one of those assets (the editor draws it with no code of its own).
+    InRegistrar.Components().Register<Sandbox::EnemyComponent>();
 
     OPAAX_LOG(LogSandboxModule, Info,
         "RegisterModule: components={}, worldSubsystems={}, resourceFormats={}",

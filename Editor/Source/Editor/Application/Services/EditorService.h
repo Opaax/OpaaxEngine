@@ -23,6 +23,7 @@
 #include "Editor/Resources/Types/Input/EditorInputActionDocument.h"
 #include "Editor/Resources/Types/Input/EditorInputMappingContextDocument.h"
 #include "Editor/Resources/Types/Mover/EditorMoveModeDocument.h"
+#include "Editor/Resources/Types/DataAsset/EditorDataAssetDocument.h"
 #include "Editor/Resources/Types/Mover/EditorMoverDocument.h"
 #include "Editor/PIE/PlayInEditor.h"
 #include "Editor/UI/IEditorGui.h"
@@ -128,6 +129,12 @@ namespace Opaax::Editor
          * Registers drawers for the engine and editor configs (drawn from their properties, not JSON).
          */
         void RegisterNativeConfigDrawers();
+
+        /**
+         * Gives every reflected component that has no drawer (typically a game's) the generic one, drawn
+         * through its registry entry. After the game's editor module, so a custom drawer still wins.
+         */
+        void RegisterGenericComponentDrawers();
 
         /**
          * Registers the editor's viewport tools (gizmo mode, snapping, grid, pivot, space): order and
@@ -320,6 +327,7 @@ namespace Opaax::Editor
         TUniquePtr<EditorMoverDocument>            m_MoverDocument;
         TUniquePtr<EditorInputActionDocument>      m_InputActionDocument;
         TUniquePtr<EditorInputMappingContextDocument> m_InputMapDocument;
+        TUniquePtr<EditorDataAssetDocument>           m_DataAssetDocument;
         
         TUniquePtr<EditorContext>       m_Context;
         

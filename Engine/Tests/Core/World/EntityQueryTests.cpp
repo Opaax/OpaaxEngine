@@ -4,7 +4,7 @@
 #include <doctest.h>
 
 #include "Core/Maths/Bounds2D.h"
-#include "World/Components/DummyComponent.h"
+#include "World/Components/QuadComponent.h"
 #include "World/Components/SpriteComponent.h"
 #include "World/Components/TextComponent.h"
 #include "World/Components/TransformComponent.h"
@@ -22,7 +22,7 @@ namespace
     {
         Entity lEntity = InWorld.CreateEntity(InName);
         lEntity.Get<TransformComponent>().Position = InPos;
-        lEntity.Add<DummyComponent>().Size         = InSize;
+        lEntity.Add<QuadComponent>().Size         = InSize;
 
         return lEntity;
     }
@@ -41,7 +41,7 @@ TEST_CASE("EntityQuery: bounds come from the extent component, centred on the TR
     REQUIRE(EntityQuery::TryGetBounds(lQuad, lBounds));
 
     // The position is the transform's, the size is the component's — the split this block exists to
-    // make. Reading a position off DummyComponent would not compile any more, but centring on the
+    // make. Reading a position off QuadComponent would not compile any more, but centring on the
     // ORIGIN instead would still "work" and be silently wrong for every entity but one.
     CHECK(lBounds.Center.x == doctest::Approx(100.f));
     CHECK(lBounds.Center.y == doctest::Approx(-50.f));

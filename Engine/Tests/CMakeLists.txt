@@ -35,6 +35,7 @@ set(OPAAX_TEST_SOURCES
     Core/ColorTests.cpp
     Core/Reflection/PropertyTests.cpp
     Core/Reflection/EnumTests.cpp
+    Core/Reflection/PropertyVisitorTests.cpp
     Core/Config/EngineConfigDataTests.cpp
     Core/Application/AppServiceLocatorTests.cpp
     Core/Application/PathsTests.cpp
@@ -56,6 +57,7 @@ set(OPAAX_TEST_SOURCES
     # ⑦-A P5a. The animation pair's shape one family over — a MoveMode is the clip, a Mover is the
     # library — so the resolution rules under test are the ones ⑥ S3 settled.
     Core/Engine/Subsystems/Resources/MoverAssetTests.cpp
+    Core/Engine/Subsystems/Resources/DataAssetTests.cpp
     Core/Engine/CameraResolveTests.cpp
     Core/Engine/ModuleRegistrarTests.cpp
     Core/Engine/InputManagerTests.cpp
@@ -73,6 +75,7 @@ set(OPAAX_TEST_SOURCES
     Core/World/WorldEventsTests.cpp
     Core/World/ComponentIdentityTests.cpp
     Core/World/ComponentRegistryTests.cpp
+    Core/World/TypeNameStabilityTests.cpp
     Core/World/WorldEntityTests.cpp
     Core/World/MapSnapshotTests.cpp
     Core/World/MapRestoreTests.cpp
@@ -172,6 +175,8 @@ set(OPAAX_TEST_SOURCES
     # registry runs here: a type with no drawer showed only its base fields, and a leaf in the
     # old ladder showed none of them. Both halves gated.
     Editor/UIWidgetDrawerTests.cpp
+    Editor/DrawerRegistryTests.cpp
+    Editor/ResourceDragPayloadTests.cpp
 
     # UI U13. The designer's layout target: a named aspect is EXACT (16:9 is 1920x1080, never a
     # rounded 1919), Free is the dock's own size. Header-only, ImGui-free.

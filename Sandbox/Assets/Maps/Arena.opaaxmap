@@ -2,7 +2,7 @@
     "entities": [
         {
             "components": {
-                "Dummy": {
+                "Quad": {
                     "Color": {
                         "w": 1.0,
                         "x": 0.25,
@@ -28,7 +28,7 @@
         },
         {
             "components": {
-                "Dummy": {
+                "Quad": {
                     "Color": {
                         "w": 1.0,
                         "x": 0.75,

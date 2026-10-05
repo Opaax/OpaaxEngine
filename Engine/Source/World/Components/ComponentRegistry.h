@@ -8,6 +8,8 @@
 #include "Core/Log/Logger.h"
 
 #include "Core/Reflection/OpaaxProperty.h"
+#include "Core/Reflection/TypeInfo.h"
+#include "Engine/Reflection/PropertyVisitor.h"
 #include "Engine/Subsystems/Resources/ResourcePath.h"
 #include "Engine/Subsystems/Resources/ResourceTypeID.hpp"
 #include "World/Components/ComponentConcept.hpp"
@@ -39,8 +41,8 @@ namespace Opaax
         /** Name saved in map files. */
         virtual OpaaxStringID GetName() const = 0;
 
-        /** entt's type id (stable across the DLL boundary). */
-        virtual entt::id_type GetTypeId() const = 0;
+        /** The engine's type id (stable across modules). */
+        virtual TypeId GetTypeId() const = 0;
 
         /** @return True if InEntity has this component */
         virtual bool Has(const EntityRegistry& InRegistry, EntityID InEntity) const = 0;
@@ -71,6 +73,16 @@ namespace Opaax
          * Lets a loader of untyped JSON load them up front. Found from the property list at registration.
          */
         virtual const TDynArray<HardRefField>& GetHardRefFields() const = 0;
+
+        /** True when the type lists its fields (OPAAX_PROPERTIES), so it can be visited. */
+        virtual bool IsReflected() const = 0;
+
+        /**
+         * Walks InEntity's component fields, in declaration order. Lets the editor draw a game's
+         * component with no code written for it.
+         * @return False when InEntity has no such component, or the type is not reflected
+         */
+        virtual bool VisitProperties(EntityRegistry& InRegistry, EntityID InEntity, IPropertyVisitor& InVisitor) const = 0;
     };
 
     // =============================================================================
@@ -88,7 +100,7 @@ namespace Opaax
         }
 
         OpaaxStringID GetName()     const override { return m_Name; }
-        entt::id_type GetTypeId()   const override { return entt::type_hash<T>::value(); }
+        TypeId        GetTypeId()   const override { return TypeIdOf<T>(); }
         bool          IsEssential() const override { return m_bEssential; }
 
         bool Has(const EntityRegistry& InRegistry, EntityID InEntity) const override
@@ -127,6 +139,21 @@ namespace Opaax
         {
             T& lComponent = InRegistry.get_or_emplace<T>(InEntity);
             InJson.get_to(lComponent);
+        }
+
+        bool IsReflected() const override { return CReflected<T>; }
+
+        bool VisitProperties(EntityRegistry& InRegistry, EntityID InEntity, IPropertyVisitor& InVisitor) const override
+        {
+            if constexpr (CReflected<T>)
+            {
+                if (T* lComponent = InRegistry.try_get<T>(InEntity))
+                {
+                    ::Opaax::VisitProperties(*lComponent, InVisitor);
+                    return true;
+                }
+            }
+            return false;
         }
 
     private:
@@ -205,8 +232,15 @@ namespace Opaax
         {
             // Built here (T is known) but stored by an out-of-line function in the DLL.
             return AddEntry(MakeUnique<TComponentEntry<T>>(InName, bInEssential),
-                            entt::type_hash<T>::value());
+                            TypeIdOf<T>());
         }
+
+        /**
+         * Lets files that use an old component name still load: InOldName resolves to the type now
+         * registered as InName. A file read this way warns once, and is written back with the new name.
+         * @return False if sealed, if InName is not registered, or if InOldName is already a name
+         */
+        bool AddAlias(OpaaxStringID InOldName, OpaaxStringID InName);
 
         /** Called by WorldManager::CreateWorld. After this, Register refuses. Safe to call twice. */
         void Seal() noexcept;
@@ -215,11 +249,15 @@ namespace Opaax
         // Lookup
         // =========================================================================
     public:
-        /** @return The entry registered under InName, or nullptr */
+        /** @return The entry registered under InName (or an alias of it), or nullptr */
         const IComponentEntry* FindByName(OpaaxStringID InName) const noexcept;
 
         /** @return The entry for InTypeId, or nullptr */
-        const IComponentEntry* FindByTypeId(entt::id_type InTypeId) const noexcept;
+        const IComponentEntry* FindByTypeId(TypeId InTypeId) const noexcept;
+
+        /** @return The entry for T, or nullptr */
+        template<typename T>
+        const IComponentEntry* Find() const noexcept { return FindByTypeId(TypeIdOf<T>()); }
 
         /** Every entry, in registration order. */
         template<typename TFunc>
@@ -243,13 +281,21 @@ namespace Opaax
         // =========================================================================
     private:
         /** Stores an entry (takes ownership). */
-        bool AddEntry(TUniquePtr<IComponentEntry> InEntry, entt::id_type InTypeId);
+        bool AddEntry(TUniquePtr<IComponentEntry> InEntry, TypeId InTypeId);
 
         // =========================================================================
         // Members
         // =========================================================================
     private:
+        struct Alias
+        {
+            OpaaxStringID          OldName;
+            const IComponentEntry* Entry = nullptr;
+            mutable bool           bWarned = false;
+        };
+
         TDynArray<TUniquePtr<IComponentEntry>> m_Entries;
+        TDynArray<Alias>                      m_Aliases;
         bool                                  m_bSealed = false;
     };
 }

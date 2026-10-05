@@ -114,6 +114,27 @@ namespace Opaax
     }
 
     /**
+     * InMeta with its unset range and drag step taken from the group above (e.g. a UIMargin is pixels
+     * in one place and a fraction in another). A field's own range still wins.
+     */
+    constexpr PropertyMeta InheritMeta(const PropertyMeta& InMeta, const PropertyMeta& InInherited) noexcept
+    {
+        PropertyMeta lMeta = InMeta;
+
+        if (lMeta.RangeMin == lMeta.RangeMax)
+        {
+            lMeta.RangeMin = InInherited.RangeMin;
+            lMeta.RangeMax = InInherited.RangeMax;
+        }
+        if (lMeta.DragStep == 0.f)
+        {
+            lMeta.DragStep = InInherited.DragStep;
+        }
+
+        return lMeta;
+    }
+
+    /**
      * A type that lists its properties (OPAAX_PROPERTIES). Optional.
      */
     template<typename T>
@@ -124,7 +145,7 @@ namespace Opaax
 // Lists the fields the editor can edit. Put it next to
 // NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT:
 //
-//   OPAAX_PROPERTIES(DummyComponent,
+//   OPAAX_PROPERTIES(QuadComponent,
 //       OPAAX_PROP(Position),
 //       OPAAX_PROP(Size).SetRange(1.f, 4096.f))
 // =============================================================================

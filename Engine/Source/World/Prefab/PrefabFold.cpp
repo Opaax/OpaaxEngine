@@ -14,7 +14,7 @@ namespace Opaax
         OpaaxStringID MarkerName(const ComponentRegistry& InRegistry)
         {
             const IComponentEntry* lEntry =
-                InRegistry.FindByTypeId(entt::type_hash<PrefabInstanceComponent>::value());
+                InRegistry.Find<PrefabInstanceComponent>();
 
             return (lEntry != nullptr) ? lEntry->GetName() : OpaaxStringID();
         }

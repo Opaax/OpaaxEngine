@@ -2,7 +2,7 @@
 
 #include "World/Components/CameraComponent.h"
 #include "World/Components/ColliderComponent.h"
-#include "World/Components/DummyComponent.h"
+#include "World/Components/QuadComponent.h"
 #include "World/Components/RigidbodyComponent.h"
 #include "World/Components/SpriteComponent.h"
 #include "World/Components/TransformComponent.h"
@@ -22,6 +22,7 @@
 #include "Engine/Input/InputMappingSubsystem.h"
 #include "Engine/UI/UISubsystem.h"
 #include "Engine/Subsystems/Resources/Types/UI/UICanvasResource.h"
+#include "Engine/Subsystems/Resources/Types/DataAsset/DataAssetResource.h"
 #include "UI/Widgets/UIButton.h"
 #include "UI/Widgets/UIImage.h"
 #include "UI/Widgets/UIMask.h"
@@ -110,7 +111,8 @@ namespace Opaax
     {
         // Essential: every entity has one (CreateEntity adds it); it cannot be removed.
         m_Registries.Components().Register<TransformComponent>("Transform", /*bEssential*/true);
-        m_Registries.Components().Register<DummyComponent>("Dummy");
+        m_Registries.Components().Register<QuadComponent>("Quad");
+        m_Registries.Components().AddAlias("Dummy", "Quad");   // its old name, still read from older maps
         m_Registries.Components().Register<SpriteComponent>("Sprite");
         m_Registries.Components().Register<CameraComponent>("Camera");
         m_Registries.Components().Register<SpriteAnimatorComponent>("SpriteAnimator");
@@ -149,6 +151,9 @@ namespace Opaax
 
         // An authored widget tree (.opaaxui). Each instance builds its own widgets from it.
         m_Registries.Resources().Register<UICanvasResource>(OPAAX_ID("UICanvas"));
+
+        // Any game struct registered with DataAssets(): one extension, the type is inside the file.
+        m_Registries.Resources().Register<DataAssetResource>(OPAAX_ID("DataAsset"));
     }
 
     void Engine::RegisterNativeUIWidgets()

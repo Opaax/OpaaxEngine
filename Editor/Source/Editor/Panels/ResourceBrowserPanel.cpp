@@ -15,6 +15,8 @@
 #include "Engine/Subsystems/Resources/ResourceManager.h"
 #include "Engine/Subsystems/Resources/ResourceTypeID.hpp"
 #include "Engine/Subsystems/Resources/Types/Texture/TextureResource.h"
+#include "Engine/Subsystems/Resources/Types/DataAsset/DataAssetFile.h"
+#include "Engine/Subsystems/Resources/Types/DataAsset/DataAssetResource.h"
 
 #include <imgui.h>
 
@@ -413,7 +415,17 @@ namespace Opaax::Editor
         // has no asset path and carries no payload.
         if (lType.Format != nullptr && ImGui::BeginDragDropSource())
         {
-            SetResourceDragPayload(lType.Format->TypeId, m_Context.Paths.AbsoluteToAsset(InFile.AbsPath));
+            // A data asset also says which struct it holds, so a typed field can refuse the others.
+            if (lType.Format->TypeId == ResourceTypeID::Get<DataAssetResource>() && m_DragSubTypePath != InFile.AbsPath)
+            {
+                DataAssetFile::Contents lContents;
+                m_DragSubTypePath = InFile.AbsPath;
+                m_DragSubTypeId   = DataAssetFile::Load(InFile.AbsPath, lContents) ? lContents.Type.GetId() : 0;
+            }
+
+            const Uint32 lSubType = lType.Format->TypeId == ResourceTypeID::Get<DataAssetResource>() ? m_DragSubTypeId : 0;
+
+            SetResourceDragPayload(lType.Format->TypeId, m_Context.Paths.AbsoluteToAsset(InFile.AbsPath), lSubType);
 
             const float lIconSize = RowIconSize();
             ImguiWidgets::Image(TileImageOf(InFile, lType), ImVec2(lIconSize, lIconSize));

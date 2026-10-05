@@ -7,7 +7,7 @@
 
 #include "Engine/Registries/EngineRegistries.h"
 #include "World/Components/ComponentRegistry.h"
-#include "World/Components/DummyComponent.h"
+#include "World/Components/QuadComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Entity/Entity.h"
 #include "World/Entity/EntityMeta.h"
@@ -47,7 +47,7 @@ namespace
     void FillRegistries(EngineRegistries& InRegistries)
     {
         REQUIRE(InRegistries.Components().Register<TransformComponent>("Transform"));
-        REQUIRE(InRegistries.Components().Register<DummyComponent>("Dummy"));
+        REQUIRE(InRegistries.Components().Register<QuadComponent>("Quad"));
         REQUIRE(InRegistries.Components().Register<LoadoutComponent>("Loadout"));
     }
 }
@@ -69,11 +69,11 @@ TEST_CASE("world clone: entities arrive with the same Guids, names and owner map
 
     Entity lHero = lSource->CreateEntity("Hero", lMap);
     lHero.Add<LoadoutComponent>(LoadoutComponent{42});
-    lHero.Add<DummyComponent>();
+    lHero.Add<QuadComponent>();
     lHero.Get<TransformComponent>().Position = Vector2F{12.f, -3.f};
 
     Entity lCrate = lSource->CreateEntity("Crate", lMap);
-    lCrate.Add<DummyComponent>();
+    lCrate.Add<QuadComponent>();
 
     const Guid lHeroGuid  = lHero.GetGuid();
     const Guid lCrateGuid = lCrate.GetGuid();
@@ -91,13 +91,13 @@ TEST_CASE("world clone: entities arrive with the same Guids, names and owner map
 
     REQUIRE(lClonedHero.Has<LoadoutComponent>());
     CHECK(lClonedHero.Get<LoadoutComponent>() == LoadoutComponent{42});
-    REQUIRE(lClonedHero.Has<DummyComponent>());
+    REQUIRE(lClonedHero.Has<QuadComponent>());
     CHECK(lClonedHero.Get<TransformComponent>().Position.x == doctest::Approx(12.f));
     CHECK(lClonedHero.Get<TransformComponent>().Position.y == doctest::Approx(-3.f));
 
     Entity lClonedCrate = lClone->FindByGuid(lCrateGuid);
     REQUIRE(lClonedCrate.IsValid());
-    CHECK(lClonedCrate.Has<DummyComponent>());
+    CHECK(lClonedCrate.Has<QuadComponent>());
     CHECK_FALSE(lClonedCrate.Has<LoadoutComponent>()); // it never had one
 
     // The clone is a world in its own right: its own identity, and the manager owns both.

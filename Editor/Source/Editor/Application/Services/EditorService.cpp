@@ -30,6 +30,8 @@
 #include "Editor/Panels/AnimationClipPanel.h"
 #include "Editor/Panels/AnimationLibraryPanel.h"
 #include "Editor/Panels/MoveModePanel.h"
+#include "Editor/Panels/DataAssetPanel.h"
+#include "Engine/Subsystems/Resources/Types/DataAsset/DataAssetResource.h"
 #include "Editor/Panels/InputActionPanel.h"
 #include "Editor/Panels/InputMappingContextPanel.h"
 #include "Editor/Panels/MoverPanel.h"
@@ -75,12 +77,14 @@
 #include "Engine/Subsystems/Resources/Types/Font/FontFamilyResource.h"
 #include "Editor/Resources/ResourcePreviewDrawers.h"   // what a preview draws (no ImGui here)
 #include "Editor/Properties/NativeComponentDrawers.h"
+#include "Editor/Properties/WidgetPropertyVisitor.h"
+#include "World/Components/ComponentRegistry.h"
 #include "World/World.h"
 #include "World/WorldManager.h"
 #include "World/Entity/Entity.h"
 #include "World/Components/CameraComponent.h"      // engine components
 #include "World/Components/ColliderComponent.h"    // drawn by default
-#include "World/Components/DummyComponent.h"
+#include "World/Components/QuadComponent.h"
 #include "World/Components/MoverComponent.h"
 #include "World/Components/PrefabInstanceComponent.h"
 #include "World/Components/RigidbodyComponent.h"
@@ -164,6 +168,7 @@ namespace Opaax::Editor
         m_MoverDocument     = MakeUnique<EditorMoverDocument>();
         m_InputActionDocument = MakeUnique<EditorInputActionDocument>();
         m_InputMapDocument    = MakeUnique<EditorInputMappingContextDocument>();
+        m_DataAssetDocument   = MakeUnique<EditorDataAssetDocument>();
     }
 
     void EditorService::ClearEditorSystems()
@@ -209,6 +214,7 @@ namespace Opaax::Editor
             *m_MoverDocument,
             *m_InputActionDocument,
             *m_InputMapDocument,
+            *m_DataAssetDocument,
             m_Extensions,
             m_Gui->Panels(),
             *m_Preview,
@@ -364,6 +370,7 @@ namespace Opaax::Editor
         lPanelsRegistry.Register<AnimationLibraryPanel>(PanelDesc{.Id = AnimationLibraryPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_LIBRARY});
         lPanelsRegistry.Register<MoveModePanel>(PanelDesc{.Id = MoveModePanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_MOVE_MODE});
         lPanelsRegistry.Register<MoverPanel>(PanelDesc{.Id = MoverPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_MOVER});
+        lPanelsRegistry.Register<DataAssetPanel>(PanelDesc{.Id = DataAssetPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_DATA_ASSET});
         lPanelsRegistry.Register<InputActionPanel>(PanelDesc{.Id = InputActionPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_INPUT_ACTION});
         lPanelsRegistry.Register<InputMappingContextPanel>(PanelDesc{.Id = InputMappingContextPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_INPUT_MAP});
         lPanelsRegistry.Register<FontFamilyPanel>(PanelDesc{.Id = FontFamilyPanel::PanelID(),.DefaultVisibility = EPanelVisibility::Hidden, .SaveCommand = Tags::EDITOR_COMMAND_SAVE_FAMILY});
@@ -418,6 +425,7 @@ namespace Opaax::Editor
         lCommands.Register<SaveLibraryCommand>(Tags::EDITOR_COMMAND_SAVE_LIBRARY);
         lCommands.Register<SaveMoveModeCommand>(Tags::EDITOR_COMMAND_SAVE_MOVE_MODE);
         lCommands.Register<SaveMoverCommand>(Tags::EDITOR_COMMAND_SAVE_MOVER);
+        lCommands.Register<SaveDataAssetCommand>(Tags::EDITOR_COMMAND_SAVE_DATA_ASSET);
         lCommands.Register<SaveInputActionCommand>(Tags::EDITOR_COMMAND_SAVE_INPUT_ACTION);
         lCommands.Register<SaveInputMapCommand>(Tags::EDITOR_COMMAND_SAVE_INPUT_MAP);
         lCommands.Register<SaveFamilyCommand>(Tags::EDITOR_COMMAND_SAVE_FAMILY);
@@ -505,12 +513,52 @@ namespace Opaax::Editor
 
         // Custom: the component is identity (editing a guid would break the link).
         lDrawers.Register<PrefabInstanceComponent,  NativeComponentDrawers::PrefabInstanceComponentDrawer>();
-        lDrawers.Register<DummyComponent>();
+        lDrawers.Register<QuadComponent>();
 
         // Reflected, so the generic drawer is enough (enums become dropdowns).
         lDrawers.Register<ColliderComponent>();
         lDrawers.Register<RigidbodyComponent>();
         lDrawers.Register<MoverComponent>();
+    }
+
+    void EditorService::RegisterGenericComponentDrawers()
+    {
+        const ComponentRegistry& lComponents = OpaaxApplication::GetAppService<IEngine>().GetRegistries().Components();
+        ComponentDrawerRegistry& lDrawers    = m_Extensions.Drawers();
+
+        lComponents.ForEach([&](const IComponentEntry& InEntry)
+        {
+            if (!InEntry.IsReflected() || lDrawers.HasTarget(InEntry.GetTypeId()))
+            {
+                return;
+            }
+
+            // The registry owns its entries for the whole run, so the pointer outlives the drawer.
+            const IComponentEntry* lEntry = &InEntry;
+
+            lDrawers.RegisterErased(InEntry.GetTypeId(),
+                [lEntry](Entity& InSubject, IEditorWidgets& InWidgets, EditorContext&) -> bool
+                {
+                    EntityRegistry& lRegistry = InSubject.GetWorld()->GetRegistry();
+
+                    if (!lEntry->Has(lRegistry, InSubject.GetHandle()))
+                    {
+                        return false;
+                    }
+
+                    const char* lName = lEntry->GetName().CStr();
+                    InWidgets.PushId(lName);
+
+                    if (InWidgets.CollapsingHeader(lName))
+                    {
+                        WidgetPropertyVisitor lVisitor(InWidgets);
+                        lEntry->VisitProperties(lRegistry, InSubject.GetHandle(), lVisitor);
+                    }
+
+                    InWidgets.PopId();
+                    return true;
+                });
+        });
     }
 
     void EditorService::RegisterNativeConfigDrawers()
@@ -630,6 +678,17 @@ namespace Opaax::Editor
                 if (InContext.MoveModeDocument.Open(InFile.AbsPath))
                 {
                     InContext.Panels.SetVisible(MoveModePanel::PanelID(), true);
+                }
+            });
+
+        // Every data asset type opens the same panel; its fields come from the registered struct.
+        m_Extensions.ResourceTypes().Register<DataAssetResource>()
+            .SetGlyph(OpaaxString("[D]"))
+            .SetActivate([](EditorContext& InContext, const ResourceFile& InFile)
+            {
+                if (InContext.DataAssetDocument.Open(InFile.AbsPath, InContext.Engine.GetRegistries().DataAssets()))
+                {
+                    InContext.Panels.SetVisible(DataAssetPanel::PanelID(), true);
                 }
             });
 
@@ -931,6 +990,9 @@ namespace Opaax::Editor
         {
             InCollect(m_Extensions);
         }
+
+        // After the game module, so its own drawers win.
+        RegisterGenericComponentDrawers();
 
         // After the game module (its panels get a toggle too), before sealing.
         BindPanelToggles();

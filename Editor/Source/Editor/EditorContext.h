@@ -36,6 +36,7 @@ namespace Opaax
         class EditorMoverDocument;            // the open .opaaxmover and its data
         class EditorInputActionDocument;      // the open .opaaxaction and its data
         class EditorInputMappingContextDocument; // the open .opaaxinputmap and its data
+        class EditorDataAssetDocument;        // the open .opaaxdata, any registered type
         class EditorExtensionRegistrar; // the sealed extension routes
         class EditorPaths;              // IPaths subclass: the editor directories
         class EditorPanels;             // live panels and visibility
@@ -128,6 +129,9 @@ namespace Opaax
 
             // The open mapping context: which keys reach which actions (what a rebind edits).
             EditorInputMappingContextDocument& InputMapDocument;
+
+            // The open data asset (.opaaxdata), whatever struct it holds.
+            EditorDataAssetDocument& DataAssetDocument;
 
             // The sealed extension routes (Inspector: Drawers(), Resource Browser: ResourceTypes()).
             // Const: registration is closed before this context is built.

@@ -4,6 +4,7 @@
 
 #include "Engine/GameInstance/GameInstanceSubsystemRegistry.h"
 #include "Engine/Subsystems/Resources/ResourceFormatRegistry.h"
+#include "Engine/Subsystems/Resources/Types/DataAsset/DataAssetTypeRegistry.h"
 #include "UI/UIWidgetRegistry.h"
 #include "World/Components/ComponentRegistry.h"
 #include "World/Systems/Movement/MoverModeRegistry.h"
@@ -60,6 +61,10 @@ namespace Opaax
         UIWidgetRegistry&       UIWidgets()       noexcept { return m_UIWidgets; }
         const UIWidgetRegistry& UIWidgets() const noexcept { return m_UIWidgets; }
 
+        /** Struct types a .opaaxdata can hold. */
+        DataAssetTypeRegistry&       DataAssets()       noexcept { return m_DataAssets; }
+        const DataAssetTypeRegistry& DataAssets() const noexcept { return m_DataAssets; }
+
         // =========================================================================
         // Functions
         // =========================================================================
@@ -75,6 +80,7 @@ namespace Opaax
             m_MoverModes.Seal();
             m_GameInstanceSubsystems.Seal();
             m_UIWidgets.Seal();
+            m_DataAssets.Seal();
         }
 
         // =========================================================================
@@ -87,5 +93,6 @@ namespace Opaax
         MoverModeRegistry             m_MoverModes;
         GameInstanceSubsystemRegistry m_GameInstanceSubsystems;
         UIWidgetRegistry              m_UIWidgets;
+        DataAssetTypeRegistry         m_DataAssets;
     };
 }

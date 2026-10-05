@@ -30,7 +30,7 @@
 
 #include "World/WorldManager.h"
 #include "World/World.h"
-#include "World/Components/DummyComponent.h"
+#include "World/Components/QuadComponent.h"
 #include "World/Components/SpriteComponent.h"
 #include "World/Components/TransformComponent.h"
 #include "World/Components/TransformInterpolationComponent.h"
@@ -357,11 +357,11 @@ namespace Opaax
 
         Renderer2D& lRenderer = m_RenderSystem->GetRenderer2D();
 
-        // Draw the active world: a solid quad per DummyComponent, a textured one per Sprite.
+        // Draw the active world: a solid quad per QuadComponent, a textured one per Sprite.
         if (InWorld != nullptr)
         {
-            InWorld->Each<TransformComponent, DummyComponent>(
-                [this, &lRenderer, InWorld](EntityID InEntity, TransformComponent& InXf, DummyComponent& InComp)
+            InWorld->Each<TransformComponent, QuadComponent>(
+                [this, &lRenderer, InWorld](EntityID InEntity, TransformComponent& InXf, QuadComponent& InComp)
                 {
                     const DisplayPose lPose = PoseFor(*InWorld, InEntity, InXf);
 

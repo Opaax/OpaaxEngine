@@ -5,7 +5,7 @@
 namespace Opaax
 {
     // Refusals log an error and return false (not an assert, so Release builds report them too).
-    bool ComponentRegistry::AddEntry(TUniquePtr<IComponentEntry> InEntry, entt::id_type InTypeId)
+    bool ComponentRegistry::AddEntry(TUniquePtr<IComponentEntry> InEntry, TypeId InTypeId)
     {
         if (InEntry == nullptr)
         {
@@ -50,6 +50,29 @@ namespace Opaax
         return true;
     }
 
+    bool ComponentRegistry::AddAlias(const OpaaxStringID InOldName, const OpaaxStringID InName)
+    {
+        if (m_bSealed || !InOldName.IsValid())
+        {
+            OPAAX_LOG(LogComponentRegistry, Error, "AddAlias '{}' -> '{}' refused (sealed or empty name).",
+                      InOldName, InName);
+            return false;
+        }
+
+        const IComponentEntry* lEntry = FindByName(InName);
+
+        if (lEntry == nullptr || FindByName(InOldName) != nullptr)
+        {
+            OPAAX_LOG(LogComponentRegistry, Error,
+                      "AddAlias '{}' -> '{}' refused: the target is not registered, or the old name is taken.",
+                      InOldName, InName);
+            return false;
+        }
+
+        m_Aliases.push_back(Alias{ InOldName, lEntry });
+        return true;
+    }
+
     void ComponentRegistry::Seal() noexcept
     {
         if (m_bSealed)
@@ -76,10 +99,25 @@ namespace Opaax
             }
         }
 
+        for (const Alias& lAlias : m_Aliases)
+        {
+            if (lAlias.OldName == InName)
+            {
+                if (!lAlias.bWarned)
+                {
+                    lAlias.bWarned = true;
+                    OPAAX_LOG(LogComponentRegistry, Warn,
+                              "Component '{}' is now '{}' — loaded under the new name; save the file to update it.",
+                              InName, lAlias.Entry->GetName());
+                }
+                return lAlias.Entry;
+            }
+        }
+
         return nullptr;
     }
 
-    const IComponentEntry* ComponentRegistry::FindByTypeId(entt::id_type InTypeId) const noexcept
+    const IComponentEntry* ComponentRegistry::FindByTypeId(TypeId InTypeId) const noexcept
     {
         for (const TUniquePtr<IComponentEntry>& lEntry : m_Entries)
         {

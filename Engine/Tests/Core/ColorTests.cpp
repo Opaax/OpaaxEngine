@@ -4,7 +4,7 @@
 
 #include "Core/Color/LinearColor.h"
 #include "Core/Color/LinearColorJson.h"
-#include "World/Components/DummyComponent.h"
+#include "World/Components/QuadComponent.h"
 
 using namespace Opaax;
 
@@ -18,7 +18,7 @@ TEST_CASE("LinearColor: serializes byte-for-byte as the Vector4F it replaced")
 
 TEST_CASE("LinearColor: a component's colour keeps the key shape already on disk")
 {
-    const nlohmann::json lPayload = nlohmann::json(DummyComponent{})["Color"];
+    const nlohmann::json lPayload = nlohmann::json(QuadComponent{})["Color"];
 
     // What every saved map holds under that key: the vector's four named components, not r/g/b/a.
     REQUIRE(lPayload.is_object());

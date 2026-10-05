@@ -531,6 +531,14 @@ namespace Opaax::Editor
         void Execute(EditorContext& InContext, const Params&);
     };
 
+    /** Writes the open .opaaxdata and reloads it. */
+    struct SaveDataAssetCommand
+    {
+        using Params = NoParams;
+
+        void Execute(EditorContext& InContext, const Params&);
+    };
+
     /** Writes the open .opaaxaction and reloads it. */
     struct SaveInputActionCommand
     {
